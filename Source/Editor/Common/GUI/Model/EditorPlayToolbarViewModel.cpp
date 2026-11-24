@@ -42,7 +42,7 @@ namespace sw::editor
         outState._bPlaying                        = playState == PlaySessionState::Playing && bSimulating == false ? SW_TRUE : SW_FALSE;
         outState._bSimulating                     = playState == PlaySessionState::Playing && bSimulating ? SW_TRUE : SW_FALSE;
         outState._bPaused                         = playState == PlaySessionState::Paused ? SW_TRUE : SW_FALSE;
-        outState._timeScale                       = editor::getSubsystem<GameTimeScale>().get();
+        outState._timeScale                       = editor::getSubsystem<GameTimeScale>().getSetting(); // 정지(0)가 아니라 정한 배율 — 정지 메뉴가 뜬 채 끌면 0 부터 적혀 재개해도 멈춘다
     }
 
     void EditorPlayToolbarViewModel::requestSession( EditorPlaySessionKind session )
