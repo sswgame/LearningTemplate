@@ -23,6 +23,31 @@ namespace
     }
 } // namespace
 
+/** @brief [NetClockTest] 결함: 지연이 늘어난 뒤에도 짧던 때의 추정을 이어 가, 왕복의 절반을 더하면 지연을 두 번 셌다 — 받은 시각은 지금 지연만큼 뒤다 */
+SW_TEST_CASE( NetClockTest, ReceivedTickFollowsTheCurrentLatency )
+{
+    NetClock clock;
+    clock.reset( NetClockSide::Replica );
+    uint32 serverTick = 100;
+    for ( uint32 frame = 0; frame < 60; ++frame ) // 지연 없음
+    {
+        ++serverTick;
+        clock.observe( serverTick );
+        clock.advance( kClockFrame );
+    }
+    SW_EXPECT_NEAR( static_cast<float64>( serverTick ) + 1.0, clock.getReceivedTick(), 1.0e-6 );
+    constexpr uint32 kDelayTicks = 12;
+    for ( uint32 frame = 0; frame < 60; ++frame ) // 한쪽 지연 12 틱
+    {
+        ++serverTick;
+        if ( frame >= kDelayTicks )
+            clock.observe( serverTick - kDelayTicks );
+        clock.advance( kClockFrame );
+    }
+    SW_EXPECT_NEAR( static_cast<float64>( serverTick - kDelayTicks ) + 1.0, clock.getReceivedTick(), 1.0e-6 );
+    SW_EXPECT_TRUE( clock.getServerTick() > clock.getReceivedTick() + 10.0 ); // 되돌아가지 않는 추정은 앞선 채다
+}
+
 /** @brief [NetClockTest] 서버의 시각은 흐른 시간이다 — 프레임 길이가 달라도 같은 수열이고, 간격이 긴 기능은 그 배수에서 돈다. 멈춘 긴 프레임은 상한까지만 흐른다 */
 SW_TEST_CASE( NetClockTest, AuthorityCountsElapsedTimeOnOneSequence )
 {
