@@ -480,7 +480,7 @@ namespace sw
             if ( loaded.has_value() == false )
                 SW_LOG_INFO_ID( "AssetManager.IdentityScanCacheDropped", "%# '%#' - scanning every source asset", loaded.error().message(), loaded.error().detail() );
             vector<AssetIdentityIssue> listIssue;
-            const AssetDatabase        database = AssetDatabase::scan( roots._content.str(), rules, listIssue, &cache );
+            const AssetDatabase        database = AssetDatabase::scan( roots._content, rules, listIssue, &cache );
             const expected<void>       saved    = cache.save( cachePath );
             if ( saved.has_value() == false )
                 SW_LOG_INFO_ID( "AssetManager.IdentityScanCacheNotSaved", "%# '%#' - the next run scans again", saved.error().message(), saved.error().detail() );

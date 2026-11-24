@@ -521,34 +521,34 @@ namespace sw
     #else
         #error "Unsupported platform"
     #endif
-                const string                 tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
-                const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
-                if ( tintPath.has_value() == false || FileUtil::isRegularFile( FileUtil::toDiskPath( tintText ) ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText } );
+                const AbsolutePath           tintText = FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName ) );
+                const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText.str() );
+                if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText.str() } );
                 // 이름은 부를 때마다 새로 잡는다 — 같은 바이트(같은 해시)를 병렬 작업 둘이 같은 이름으로 쓰면 먼저 끝난 쪽이 지운 파일을 다른 쪽이 못 열었다
                 // ("Failed to open sw_tint_<해시>.spv"). 만들기가 곧 자리 잡기(`reserveUniquePath`)라 두 작업이 같은 이름을 갖지 않는다.
                 const uint64                           hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
                 fixed_string<constant::buffer::kMax32> tintStem;
                 formatstring( tintStem.data(), tintStem.capacity(), "sw_tint_%#", hash );
-                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::getTempDirectory().join( tintStem ), ".spv", false ).str();
+                const AbsolutePath spirvPath = FileUtil::reserveUniquePath( FileUtil::getTempDirectory().join( tintStem ), ".spv", false );
                 if ( spirvPath.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory().str() } );
                 StringBuilder<constant::buffer::kMax512> wgslBuilder;
-                wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath ) );
-                const string wgslPath( wgslBuilder.view() ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
-                if ( FileUtil::writeFile( FileUtil::toDiskPath( spirvPath ), inoutBytecode.data(), inoutBytecode.size() ) == false )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath } );
+                wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath.str() ) );
+                const AbsolutePath wgslPath( FileUtil::toDiskPath( wgslBuilder.view() ) ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
+                if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath.str() } );
                 string                toolOutput;
                 const auto            onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
                            {
                     toolOutput += line;
                     toolOutput += ' ';
                 } );
-                const expected<int32> exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath, spirvPath } ), {}, onOutput );
+                const expected<int32> exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath.str(), spirvPath.str() } ), {}, onOutput );
                 vector<uint8>         wgslBytes;
-                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( FileUtil::toDiskPath( wgslPath ), wgslBytes );
-                (void)FileUtil::removeFile( FileUtil::toDiskPath( spirvPath ) );
-                (void)FileUtil::removeFile( FileUtil::toDiskPath( wgslPath ) );
+                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
+                (void)FileUtil::removeFile( spirvPath );
+                (void)FileUtil::removeFile( wgslPath );
                 if ( exitCode.has_value() == false )
                     return unexpected( exitCode.error() );
                 if ( bRead == false )

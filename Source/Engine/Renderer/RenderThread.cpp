@@ -57,7 +57,7 @@ namespace sw
              */
             struct ScreenshotFileWrite
             {
-                string                     _path;
+                AbsolutePath               _path;
                 vector<uint8>              _bytes;    ///< GPU 에서 읽은 그대로의 바이트
                 RHITextureMipSpan          _layout{}; ///< `_pData` 는 비운다 - 워커는 `_bytes` 로 읽는다
                 RHIFormat                  _format{ RHIFormat::R8G8B8A8_UNORM };
@@ -94,7 +94,7 @@ namespace sw
                     --*write._pInFlight;
                     return;
                 }
-                (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( write._path ) ); // 실패하면 아래 쓰기가 경로와 함께 알린다
+                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
                 const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
                 if ( write._kind == ScreenshotWriteKind::Packet )
                 {
@@ -763,7 +763,7 @@ namespace sw
             pWrite->_pMailbox = RenderThreadInternal::findMailbox();
             pWrite->_format   = constant::render::kBackBufferFormat;
             pWrite->_kind     = RenderThreadInternal::ScreenshotWriteKind::Packet;
-            if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout ) )
+            if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_path.str(), pWrite->_bytes, pWrite->_layout ) )
             {
                 pWrite->_layout._pData = nullptr;
                 engine::getSubsystem<TaskManager>()
@@ -914,14 +914,14 @@ namespace sw
         // 그 프레임의 그림은 지금만 있어 GPU 읽기는 여기(디바이스 스레드)서 하고, 풀기 · 인코딩 · 쓰기는 워커가 한다(패킷 사진과 같다).
         // 예전에는 장마다 이 스레드에서 써 다음 프레임이 PNG 인코딩만큼 늦었다. 끝 알림(`reportCompleted`)은 워커가 다 쓴 뒤 한다.
         auto pWrite        = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
-        pWrite->_path      = std::move( _requestedScreenshotPath );
+        pWrite->_path      = FileUtil::toDiskPath( std::move( _requestedScreenshotPath ) );
         pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
         pWrite->_pInFlight = _pRequestedScreenshotWritesInFlight;
         pWrite->_ticket    = _requestedScreenshotTicket;
         pWrite->_output    = _requestedScreenshotOutput;
         pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::render::kBackBufferFormat : _requestedScreenshotFormat;
         _requestedScreenshotPath.clear();
-        const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout )
+        const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path.str(), pWrite->_bytes, pWrite->_layout )
                                                                        : _pFrameRenderer->getCapture().readbackTexture( _requestedScreenshotTexture, pWrite->_bytes, pWrite->_layout );
         pWrite->_layout._pData      = nullptr;
         _requestedScreenshotTexture = 0;

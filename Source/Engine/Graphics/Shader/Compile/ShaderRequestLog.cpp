@@ -172,22 +172,22 @@ namespace sw
         return listDesc;
     }
 
-    expected<ShaderRequestLog> ShaderRequestLog::readFolder( string_view folder )
+    expected<ShaderRequestLog> ShaderRequestLog::readFolder( const AbsolutePath& folder )
     {
         ShaderRequestLog requestLog;
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
+        if ( FileUtil::isDirectory( folder ) == false )
             return requestLog; // 기록한 실행이 아직 없다
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), kFileExtension, listFile, false ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the shader request logs", folder } );
-        for ( const string& path : listFile )
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( folder, kFileExtension, listFile, false ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the shader request logs", folder.str() } );
+        for ( const AbsolutePath& path : listFile )
         {
             string text;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a shader request log", path } );
+            if ( FileUtil::readTextFile( path, text ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a shader request log", path.str() } );
             expected<void> merged = requestLog.mergeText( text );
             if ( merged.has_value() == false )
-                return unexpected( merged.error().prependDetail( ": " ).prependDetail( path ) );
+                return unexpected( merged.error().prependDetail( ": " ).prependDetail( path.str() ) );
         }
         return requestLog;
     }
@@ -244,7 +244,7 @@ namespace sw
 
     bool ShaderRequestLog::warmFromFolder( string_view folder )
     {
-        const expected<ShaderRequestLog> requestLog = readFolder( folder );
+        const expected<ShaderRequestLog> requestLog = readFolder( FileUtil::toDiskPath( folder ) );
         if ( requestLog.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ShaderRequestLog.ReadFailed", "%#: %#", requestLog.error().message(), requestLog.error().detail() );

@@ -28,10 +28,10 @@ namespace
     }
 
     /** @brief 맵을 사용자 바인딩 파일로 쓰고 그 글을 돌려줍니다. */
-    sw::string saveText( const sw::InputMap& map, const sw::string& path )
+    sw::string saveText( const sw::InputMap& map, const sw::AbsolutePath& path )
     {
         sw::string text;
-        SW_EXPECT_TRUE( sw::InputRemapSerializer::save( map, path ) && sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( path ), text ) );
+        SW_EXPECT_TRUE( sw::InputRemapSerializer::save( map, path.str() ) && sw::FileUtil::readTextFile( path, text ) );
         return text;
     }
 } // namespace
@@ -43,7 +43,7 @@ SW_TEST_CASE( InputMapXMLTest, UserBindingsRoundTripEveryKind )
 {
     sw::InputMap map;
     fillEveryBindingKind( map );
-    const sw::string first = saveText( map, sw::test::makeScratchPath( "first.xml" ).str() );
+    const sw::string first = saveText( map, sw::test::makeScratchPath( "first.xml" ) );
 
     sw::InputMap reread;
     SW_REQUIRE_TRUE( sw::InputRemapSerializer::load( reread, sw::test::makeScratchPath( "first.xml" ).str() ) );
@@ -54,7 +54,7 @@ SW_TEST_CASE( InputMapXMLTest, UserBindingsRoundTripEveryKind )
     const sw::ActionBinding* pSave = reread.getBinding( sw::hashed_string( "Save" ), 0 );
     SW_REQUIRE_TRUE( pSave != nullptr );
     SW_EXPECT_TRUE( pSave->_kind == sw::BindingKind::Shortcut && pSave->_modifierMask == static_cast<uint8>( sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
-    SW_EXPECT_EQUAL( first, saveText( reread, sw::test::makeScratchPath( "second.xml" ).str() ) );
+    SW_EXPECT_EQUAL( first, saveText( reread, sw::test::makeScratchPath( "second.xml" ) ) );
 }
 
 /**

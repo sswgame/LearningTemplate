@@ -128,7 +128,7 @@ namespace sw
             case CookInputKind::DiskFile:
                 return FileUtil::isRegularFile( FileUtil::toDiskPath( _source ) ) ? ContentHash::computeFile( _source ) : 0;
             case CookInputKind::Listing:
-                return CookJob::computeListingHash( _source, _extension );
+                return CookJob::computeListingHash( FileUtil::toDiskPath( _source ), _extension );
         }
         return 0;
     }
@@ -182,11 +182,11 @@ namespace sw
             (void)pJob->recordDiskInput( diskPath, 0 ); // 실패는 오류 로그로 남는다 — 읽기는 이미 실패라 돌려줄 것이 없다
     }
 
-    bool CookJob::collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile )
+    bool CookJob::collectFiles( const AbsolutePath& folderPath, string_view extension, vector<string>& outListFile )
     {
         outListFile.clear();
         // 폴더가 없으면 빈 목록이 맞다(목록 해시 0 으로 기록된다). 도중에 멈춘 부분 목록은 구울 것을 빠뜨리므로 실패다(`FileUtil::collectFiles` 가 경로를 알린다).
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), extension, outListFile, true ) == false )
+        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, extension, outListFile, true ) == false )
             return false;
         VectorUtil::sort( outListFile );
         CookJob* pJob = CookJobInternal::_t_pCurrent;
@@ -195,7 +195,7 @@ namespace sw
         CookInput input;
         input._kind = CookInputKind::Listing;
         // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
-        if ( CookJobInternal::makeAbsoluteDiskPath( folderPath, input._source ) == false )
+        if ( CookJobInternal::makeAbsoluteDiskPath( folderPath.str(), input._source ) == false )
             return false;
         input._extension   = string( extension );
         input._contentHash = computeListingHash( folderPath, extension );
@@ -203,20 +203,20 @@ namespace sw
         return true;
     }
 
-    uint64 CookJob::computeListingHash( string_view folderPath, string_view extension )
+    uint64 CookJob::computeListingHash( const AbsolutePath& folderPath, string_view extension )
     {
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) == false )
+        if ( FileUtil::isDirectory( folderPath ) == false )
             return 0;
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         // 도중에 멈춘 목록의 해시는 믿을 수 없다 — "폴더 없음"(0)으로 돌려 기록과 어긋나게 해 다음 검사가 다시 굽게 한다(경로는 `FileUtil::collectFiles` 가 알린다).
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), extension, listFile, true ) == false )
+        if ( FileUtil::collectFiles( folderPath, extension, listFile, true ) == false )
             return 0;
-        const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folderPath ) );
+        const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folderPath.str() ) );
         vector<string> listRelative;
         listRelative.reserve( listFile.size() );
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            const string normalized = FileUtil::normalizeSeparators( filePath );
+            const string normalized = FileUtil::normalizeSeparators( filePath.str() );
             listRelative.push_back( normalized.size() > root.size() ? string( normalized.substr( root.size() + 1 ) ) : normalized );
         }
         VectorUtil::sort( listRelative );

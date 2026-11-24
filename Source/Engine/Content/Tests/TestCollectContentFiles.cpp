@@ -46,12 +46,12 @@ SW_TEST_CASE( CollectContentFilesTest, GamePackDomainsAreListedByName )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "game/zeta" ) ) );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "game/alpha" ) ) );
     vector<string> listDomain;
-    SW_REQUIRE_TRUE( AssetPaths::collectGamePackDomains( root.str(), listDomain ) );
+    SW_REQUIRE_TRUE( AssetPaths::collectGamePackDomains( root, listDomain ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listDomain.size() );
     SW_EXPECT_EQUAL( string( "game/alpha" ), listDomain[0] );
     SW_EXPECT_EQUAL( string( "game/zeta" ), listDomain[1] );
 
     vector<string> listNone;
-    SW_EXPECT_TRUE( AssetPaths::collectGamePackDomains( FileUtil::joinPath( root.str(), "game/alpha" ), listNone ) );
+    SW_EXPECT_TRUE( AssetPaths::collectGamePackDomains( root.join( "game/alpha" ), listNone ) );
     SW_EXPECT_TRUE( listNone.empty() );
 }

@@ -192,7 +192,7 @@ SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOrigina
     { return DataInheritanceSchema{ "Doc" }; } ).withAsset( id ),
                                                 flatText, bComposed ) );
     SW_EXPECT_LOG( "ResourceLayer.SaveWouldBake" );
-    SW_EXPECT_FALSE( ResourceComposer::saveText( domain.makeDiskPath( "doc.xml" ).str(), ResourceSaveText::makeComplete( flatText ) ) );
+    SW_EXPECT_FALSE( ResourceComposer::saveText( domain.makeDiskPath( "doc.xml" ), ResourceSaveText::makeComplete( flatText ) ) );
     string onDisk;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( domain.makeDiskPath( "doc.xml" ), onDisk ) );
     SW_EXPECT_TRUE( onDisk.find( "base" ) != string::npos );
@@ -211,7 +211,7 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
     constexpr string_view       kParent = R"(<Doc a="1" b="2" />)";
     constexpr string_view       kFull   = R"(<Doc a="1" b="3" />)";
 
-    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path.str(), kFull, kParent, schema, "parent.xml", [kFull]( const string& )
+    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", [kFull]( const string& )
     { return string{ kFull }; } ) );
     string written;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, written ) );
@@ -219,7 +219,7 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
     SW_EXPECT_TRUE( written.find( "a=" ) == string::npos ); // 부모와 같은 칸은 적지 않는다
 
     SW_EXPECT_LOG( "ResourceSave.DeltaNotSaved" );
-    SW_EXPECT_FALSE( ResourceComposer::saveDelta( path.str(), R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
+    SW_EXPECT_FALSE( ResourceComposer::saveDelta( path, R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
     { return string{ "different" }; } ) );
     string kept;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, kept ) );

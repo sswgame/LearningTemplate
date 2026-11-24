@@ -46,17 +46,17 @@ namespace
         [[nodiscard]] static vector<LoadedMaterial> loadAll()
         {
             vector<LoadedMaterial>                   listLoaded;
-            vector<string>                           listPath;
+            vector<AbsolutePath>                     listPath;
             StringBuilder<constant::buffer::kMax256> folder;
             folder.appendFormat( "%#/%#", ProcessRoots::get()._project.str(), kLibraryFolder );
             SW_EXPECT_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder.view() ), ".material", listPath, true ) );
-            for ( const string& path : listPath )
+            for ( const AbsolutePath& path : listPath )
             {
-                const size_t contentAt = path.find( "Content/" );
+                const size_t contentAt = path.str().find( "Content/" );
                 SW_EXPECT_TRUE( contentAt != string::npos );
                 if ( contentAt == string::npos )
                     continue;
-                LoadedMaterial loaded{ path.substr( contentAt + 8 ), Material::create() };
+                LoadedMaterial loaded{ path.str().substr( contentAt + 8 ), Material::create() };
                 SW_EXPECT_TRUE_MSG( loaded._material->loadFromAsset( AssetID{ loaded._id } ), loaded._id.c_str() );
                 listLoaded.push_back( std::move( loaded ) );
             }
@@ -118,16 +118,16 @@ SW_TEST_CASE( MaterialLibraryTest, FeatureCombinationsMatchTheirRenderState )
 SW_TEST_CASE( MaterialLibraryTest, TerrainMaterialsDeformVertices )
 {
     static constexpr const utf8*             kTerrainShader = "engine/shaders/terrain.hlsl";
-    vector<string>                           listPath;
+    vector<AbsolutePath>                     listPath;
     StringBuilder<constant::buffer::kMax256> folder;
     folder.appendFormat( "%#/Content/engine/materials", ProcessRoots::get()._project.str() );
     SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder.view() ), ".material", listPath, true ) );
     uint32 terrainCount = 0;
-    for ( const string& path : listPath )
+    for ( const AbsolutePath& path : listPath )
     {
-        const size_t contentAt = path.find( "Content/" );
+        const size_t contentAt = path.str().find( "Content/" );
         SW_REQUIRE_TRUE( contentAt != string::npos );
-        const string               id       = path.substr( contentAt + 8 );
+        const string               id       = path.str().substr( contentAt + 8 );
         const shared_ptr<Material> material = Material::create();
         SW_REQUIRE_TRUE_MSG( material->loadFromAsset( AssetID{ id } ), id.c_str() );
         if ( material->getShaderPath() != kTerrainShader )
@@ -159,17 +159,17 @@ SW_TEST_CASE( MaterialLibraryTest, LayeredShadingModelMatchesLobeValues )
 {
     static constexpr const utf8*             kEnvironmentShader = "engine/shaders/environment_surface.hlsl";
     static constexpr const utf8*             kAppearanceShader  = "engine/shaders/appearance_lit.hlsl";
-    vector<string>                           listPath;
+    vector<AbsolutePath>                     listPath;
     StringBuilder<constant::buffer::kMax256> folder;
     folder.appendFormat( "%#/Content/engine/materials", ProcessRoots::get()._project.str() );
     SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder.view() ), ".material", listPath, true ) );
     uint32 coatCount        = 0;
     uint32 anisotropicCount = 0;
-    for ( const string& path : listPath )
+    for ( const AbsolutePath& path : listPath )
     {
-        const size_t contentAt = path.find( "Content/" );
+        const size_t contentAt = path.str().find( "Content/" );
         SW_REQUIRE_TRUE( contentAt != string::npos );
-        const string               id       = path.substr( contentAt + 8 );
+        const string               id       = path.str().substr( contentAt + 8 );
         const shared_ptr<Material> material = Material::create();
         SW_REQUIRE_TRUE_MSG( material->loadFromAsset( AssetID{ id } ), id.c_str() );
         const bool bEnvironment = material->getShaderPath() == kEnvironmentShader;

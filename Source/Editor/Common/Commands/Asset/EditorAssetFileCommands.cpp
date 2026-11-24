@@ -286,7 +286,7 @@ namespace sw::editor
                 AssetIdentityRules rules;
                 if ( assetID.empty() )
                     return true;
-                return loadIdentityRules( rules ) && rules.assignNewIdentity( absPath, assetID );
+                return loadIdentityRules( rules ) && rules.assignNewIdentity( FileUtil::toDiskPath( absPath ), assetID );
             }
 
             /** @brief 손으로 적는 글을 임포트 산출물 폴더에 만들려 하면(`AssetIdentityRules::isMisplacedInDerivedFolder`) 이유를 알리고 true 입니다. 규칙을 읽지 못해도 만들지 않는다. */
@@ -842,7 +842,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorAssetFileCommands.ReplaceOutsideResources", "'%#' is outside the resource tree - only an asset has an identity to keep", string( targetAbs ) );
             return false;
         }
-        if ( EditorAssetFileCommandsInternal::loadIdentityRules( rules ) == false || rules.replaceContentKeepingIdentity( targetAbs, assetID, newContentAbs ) == false )
+        if ( EditorAssetFileCommandsInternal::loadIdentityRules( rules ) == false || rules.replaceContentKeepingIdentity( FileUtil::toDiskPath( targetAbs ), assetID, FileUtil::toDiskPath( newContentAbs ) ) == false )
             return false;
         SW_LOG_INFO_ID( "Asset.ContentReplaced", "Replaced the content of '%#' and kept its asset GUID", assetID );
         return true;

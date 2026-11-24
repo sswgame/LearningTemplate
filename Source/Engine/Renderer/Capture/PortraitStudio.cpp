@@ -118,7 +118,7 @@ namespace sw
                     const bool bDDS = ImageFileWriter::writeDDSRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
                     path.clear();
                     path.appendFormat( "%#.png", _pBase[index] );
-                    const bool bPNG = ImageFileWriter::writePNGRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
+                    const bool bPNG = ImageFileWriter::writePNGRGBA8( FileUtil::toDiskPath( path.view() ), rgbaBytes, capture._width, capture._height );
                     outWritten      = bDDS && bPNG ? 1 : 0;
                 }
             };
@@ -251,8 +251,8 @@ namespace sw
     {
         if ( prefabList.empty() )
             return false;
-        const string directory = outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory );
-        (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+        const AbsolutePath directory = FileUtil::toDiskPath( outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory ) );
+        (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
         // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 읽은 장이 상한(`kMaxHeldCaptureBytes`)에 닿거나 끝나면 장마다 워커가 제 칸에 한다(`WriteJob`).
         PortraitStudio          portrait;
@@ -267,7 +267,7 @@ namespace sw
             for ( const string& path : listPath )
             {
                 StringBuilder<constant::buffer::kMax512> base;
-                base.appendFormat( "%#/%#.portrait", directory, makeFileStem( path ) );
+                base.appendFormat( "%#/%#.portrait", directory.str(), makeFileStem( path ) );
                 listBase.emplace_back( base.view() );
             }
             vector<uint8>                          listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다

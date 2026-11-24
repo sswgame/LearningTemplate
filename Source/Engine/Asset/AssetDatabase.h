@@ -112,13 +112,13 @@ namespace sw
          * @brief 막 생긴 파일 @p absPath(리소스 id @p assetID)에 새 GUID 를 줍니다. 베낀 글이 든 머리 · 베낀 원본의 옛 서술은 새 것으로 바꾼다(복사본은 새 에셋이다).
          * @return 읽거나 쓰지 못하면 오류를 남기고 false 입니다. 정체성이 없는 파일(건너뛰는 파일 · `.meta` 자신)은 할 일이 없어 true 입니다.
          */
-        [[nodiscard]] bool assignNewIdentity( string_view absPath, string_view assetID ) const;
+        [[nodiscard]] bool assignNewIdentity( const AbsolutePath& absPath, string_view assetID ) const;
         /**
          * @brief 에셋 @p targetAbs 의 내용을 @p newContentAbs 의 바이트로 바꾸고 정체성(GUID)은 그대로 둡니다 — 지우고 다시 만들면 새 GUID 가 되어 가리키던 참조가 끊긴다.
          * @details 우리 형식 글은 새 글에 옛 머리를 다시 쓰고, 원본은 바이트만 바꾼다(곁의 `.meta` 는 그대로). 쓰기가 지면 옛 바이트로 되돌린다.
          * @return 대상에 정체성이 없거나(머리 · `.meta` 없음 — `asset-ids --fix` 먼저) 읽기 · 쓰기가 지면 오류를 남기고 false 입니다(디스크는 시작 상태).
          */
-        [[nodiscard]] bool replaceContentKeepingIdentity( string_view targetAbs, string_view targetID, string_view newContentAbs ) const;
+        [[nodiscard]] bool replaceContentKeepingIdentity( const AbsolutePath& targetAbs, string_view targetID, const AbsolutePath& newContentAbs ) const;
     };
 
     /**
@@ -244,7 +244,7 @@ namespace sw
          * @brief 디스크 폴더 @p contentRoot(리소스 id 의 뿌리, `Content`)를 훑어 색인을 짓습니다. 정체성을 드는 파일만 읽는다.
          * @details 폴더를 훑지 못하면 `Unreadable` 하나를 낸다. @p pCache(판 `kScanPayloadVersion`)를 주면 크기 · 시각이 그대로인 파일은 열지 않고 그 줄을 쓴다.
          */
-        static AssetDatabase scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache = nullptr );
+        static AssetDatabase scan( const AbsolutePath& contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache = nullptr );
         /** @brief 훑기 캐시에 두는 글(머리 글 한 줄 · `.meta` 글)의 판입니다. 남기는 글의 규칙이나 머리 글의 읽기 규칙을 바꾸면 올린다. */
         static constexpr uint32 kScanPayloadVersion = 1;
 

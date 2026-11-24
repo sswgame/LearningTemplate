@@ -129,7 +129,7 @@ namespace sw
     {
         (void)bStopping; // 받은 묶음은 정지 중에도 보낸다 — 시도 수 상한과 상태는 매니페스트가 지킨다
         // 동의는 묶을 때 정해져 보낼 줄(Queued)에 선 묶음만 올라간다. 보고 프로세스(기본 업로더)와 같은 폴더를 보아도 그쪽은 매니페스트를 쓰지 않는다.
-        const uint32 sentCount = CrashReportService::runReporter( job._reportsFolder, *_pCrashUploader );
+        const uint32 sentCount = CrashReportService::runReporter( FileUtil::toDiskPath( job._reportsFolder ), *_pCrashUploader );
         SW_LOG_INFO_ID( "TelemetryUploadLink.CrashReportsSent", "[TelemetryUpload] crash reports: %# sent from '%#'", sentCount, job._reportsFolder.c_str() );
     }
 } // namespace sw

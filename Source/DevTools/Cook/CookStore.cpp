@@ -39,7 +39,7 @@ namespace sw
     bool CookStore::reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const
     {
         CookRecord record;
-        if ( CookRecord::read( makeRecordPath( outputID ), record ) == false )
+        if ( CookRecord::read( FileUtil::toDiskPath( makeRecordPath( outputID ) ), record ) == false )
             return false;
         if ( record.isFresh( desc ) == false )
         {
@@ -55,7 +55,7 @@ namespace sw
             return true;
         // DDC 의 출력을 출력 옆 임시 파일로 흘려 쓰고(DDC 가 본문 해시를 본다), 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
         const AbsolutePath tempPath = FileUtil::makeWriteTempPath( FileUtil::toDiskPath( outputPath ) );
-        if ( _derivedDataCache.find( record._key, CookJob::makeKeyDescription( desc, record._listInput ), tempPath.str() ) == false )
+        if ( _derivedDataCache.find( record._key, CookJob::makeKeyDescription( desc, record._listInput ), tempPath ) == false )
         {
             (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
@@ -104,7 +104,7 @@ namespace sw
         if ( finished.has_value() )
             return *finished;
         const CookRecord record = CookRecord::make( job, step._outputHash );
-        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), FileUtil::toDiskPath( outputPath ) ) == false || record.write( FileUtil::toDiskPath( makeRecordPath( outputID ) ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore2", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;
@@ -125,7 +125,7 @@ namespace sw
             return CookResult::Failed;
         }
         const CookRecord record = CookRecord::make( job, outputHash );
-        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), FileUtil::toDiskPath( outputPath ) ) == false || record.write( FileUtil::toDiskPath( makeRecordPath( outputID ) ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;

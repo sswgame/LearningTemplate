@@ -256,7 +256,7 @@ namespace sw
                 const string     memoryPath              = makeMemoryPath( projectPath, culture );
                 TranslationTable translation;
                 translation.setCulture( culture );
-                if ( const expected<void> read = FileUtil::exists( FileUtil::toDiskPath( path ) ) ? translation.loadFromFile( path ) : expected<void>{}; read.has_value() == false )
+                if ( const expected<void> read = FileUtil::exists( FileUtil::toDiskPath( path ) ) ? translation.loadFromFile( FileUtil::toDiskPath( path ) ) : expected<void>{}; read.has_value() == false )
                 {
                     inoutResult._report._listIssue.push_back( { path, describe( read.error() ), true } );
                     return;
@@ -351,7 +351,7 @@ namespace sw
                 for ( size_t tableIndex = 0; tableIndex < outListTable.size(); ++tableIndex )
                 {
                     const string tablePath = LocalizationProject::makeSiblingPath( outAbsolutePath, outProject._listStringTable[tableIndex] );
-                    if ( const expected<void> read = outListTable[tableIndex].loadFromFile( tablePath ); read.has_value() == false )
+                    if ( const expected<void> read = outListTable[tableIndex].loadFromFile( FileUtil::toDiskPath( tablePath ) ); read.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                         return false;
@@ -386,7 +386,7 @@ namespace sw
                         outListTable[tableIndex].setCulture( project._sourceCulture );
                         continue;
                     }
-                    if ( const expected<void> read = outListTable[tableIndex].loadFromFile( tablePath ); read.has_value() == false )
+                    if ( const expected<void> read = outListTable[tableIndex].loadFromFile( FileUtil::toDiskPath( tablePath ) ); read.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "LocalizationTools.StringTableNotLoaded", "String table is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                         return false;
@@ -479,7 +479,7 @@ namespace sw
         if ( bAllGames )
         {
             vector<string> listPackDomain;
-            (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // 다 읽지 못하면 이유를 남겼다
+            (void)AssetPaths::collectGamePackDomains( FileUtil::toDiskPath( editor::getSubsystem<AssetPaths>().getRootFolderPath() ), listPackDomain ); // 다 읽지 못하면 이유를 남겼다
             for ( const string& packDomain : listPackDomain )
             {
                 listGameFolder.push_back( editor::EditorPaths::findContentFolder( FileUtil::joinPath( packDomain, localizationFolder ) ) );
@@ -718,7 +718,7 @@ namespace sw
             const string     translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
             TranslationTable translation;
             translation.setCulture( culture );
-            if ( const expected<void> read = FileUtil::exists( FileUtil::toDiskPath( translationPath ) ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
+            if ( const expected<void> read = FileUtil::exists( FileUtil::toDiskPath( translationPath ) ) ? translation.loadFromFile( FileUtil::toDiskPath( translationPath ) ) : expected<void>{}; read.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "LocalizationTools.ExportPoFailed", "[ExportPo] %# (%#)", read.error().message(), read.error().detail() );
                 bAllWritten = false;
@@ -793,7 +793,7 @@ namespace sw
         const string     translationPath = LocalizationProject::makeTranslationPath( absolute, culture );
         TranslationTable translation;
         translation.setCulture( culture );
-        if ( const expected<void> read = FileUtil::exists( FileUtil::toDiskPath( translationPath ) ) ? translation.loadFromFile( translationPath ) : expected<void>{}; read.has_value() == false )
+        if ( const expected<void> read = FileUtil::exists( FileUtil::toDiskPath( translationPath ) ) ? translation.loadFromFile( FileUtil::toDiskPath( translationPath ) ) : expected<void>{}; read.has_value() == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.ImportPoFailed", "[ImportPo] %# (%#)", read.error().message(), read.error().detail() );
             return false;

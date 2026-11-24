@@ -148,15 +148,15 @@ namespace sw
         Internal::appendChunk( outBytes, "IEND", vector<uint8>{} );
     }
 
-    bool ImageFileWriter::writePNGRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+    bool ImageFileWriter::writePNGRGBA8( const AbsolutePath& path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
     {
         vector<uint8> bytes;
         encodePNGRGBA8( rgbaBytes, width, height, bytes );
         if ( bytes.empty() )
             return false;
-        if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWritePNG", "Failed to write PNG '%#'", string( path ).c_str() );
+            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWritePNG", "Failed to write PNG '%#'", string( path.str() ).c_str() );
             return false;
         }
         return true;

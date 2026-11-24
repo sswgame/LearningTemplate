@@ -401,7 +401,7 @@ namespace sw
                 }
                 const string path = runner.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false ||
-                     ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
+                     ImageFileWriter::writePNGRGBA8( FileUtil::toDiskPath( path ), bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reason;
                     reason.appendFormat( "%#: could not write %#", step.describe(), path );

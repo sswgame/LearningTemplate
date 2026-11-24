@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -27,7 +28,7 @@ namespace sw
          */
         [[nodiscard]] static bool writeDDS( string_view path, const vector<uint8>& payload, uint32 width, uint32 height, uint32 mipCount, uint32 dxgiFormat, uint32 rowBytes );
         /** @brief RGBA8 을 PNG 로 씁니다. 실패하면 false 입니다. */
-        [[nodiscard]] static bool writePNGRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height );
+        [[nodiscard]] static bool writePNGRGBA8( const AbsolutePath& path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height );
         /** @brief RGBA8 의 PNG 바이트입니다(파일 없이 — 테스트 · 업로드). */
         static void encodePNGRGBA8( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, vector<uint8>& outBytes );
     };

@@ -983,7 +983,7 @@ namespace sw
             const string variantText  = xmlDoc.saveToString();
             const bool   bCompleteDoc = PrefabAssetInternal::writeNodesToXML( completeRoot, _listNestedInstance, PrefabAssetInternal::kRootParent );
             const bool   bWritten     = bCompleteDoc && variantText.empty() == false &&
-                                  ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( variantText, completeDoc.saveToString() ) );
+                                  ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( variantText, completeDoc.saveToString() ) );
             if ( bWritten == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML2", "Failed to write prefab XML: %#", absPath.str() );
@@ -1038,7 +1038,7 @@ namespace sw
         const string text         = xmlDoc.saveToString();
         const string completeText = completeDoc.saveToString();
         // 상위 폴더는 저장 입구가 만든다. 실패는 로그로 남긴다(SceneDocument::saveToFile 과 같은 형태).
-        const bool writeOk = text.empty() == false && ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, completeText ) );
+        const bool writeOk = text.empty() == false && ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML", "Failed to write prefab XML: %#", absPath.str() );
@@ -1153,7 +1153,7 @@ namespace sw
             arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex << node._localID;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || arch.saveToFile( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || arch.saveToFile( absPath ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabBinary", "Failed to write prefab binary: %#", absPath.str() );
             return false;

@@ -313,7 +313,7 @@ namespace sw::editor
                     }
 
                     vector<string> listPackDomain;
-                    (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // 없으면 아래 기대가 실패한다
+                    (void)AssetPaths::collectGamePackDomains( FileUtil::toDiskPath( editor::getSubsystem<AssetPaths>().getRootFolderPath() ), listPackDomain ); // 없으면 아래 기대가 실패한다
                     (void)context.expect( listPackDomain.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackDomain.size() ),
                                           "All packs does not list every game pack" );
                     pPanel->setShowAllPacks( context.getTestState<ActivePackTestState>()._bWasShowingAllPacks == SW_TRUE );

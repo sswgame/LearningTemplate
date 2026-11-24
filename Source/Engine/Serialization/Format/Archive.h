@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Serialization/Serializer/StringPool.h"
 
@@ -89,7 +90,7 @@ namespace sw
         void setReadModeAndResetPosition( bool bReadMode );
 
         /** @brief 현재 버퍼 내용을 파일로 저장합니다. */
-        [[nodiscard]] bool saveToFile( string_view fileName ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& fileName ) const;
 
         /** @brief 지정된 크기만큼 바이트를 씁니다. */
         void writeBytes( const void* pBuffer, uint64 byteSize );

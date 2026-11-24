@@ -61,7 +61,7 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
         string                       saveToXMLText() const;
         [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
@@ -164,7 +164,7 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( string_view absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
         string                       saveToXMLText() const;
         [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 

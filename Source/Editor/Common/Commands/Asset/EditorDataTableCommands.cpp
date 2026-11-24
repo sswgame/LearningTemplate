@@ -30,7 +30,7 @@ namespace sw::editor
                 for ( const string& tablePath : sheet._listTablePath )
                 {
                     SourceStringTable& table = outListTable.emplace_back();
-                    if ( const expected<void> read = table.loadFromFile( tablePath ); read.has_value() == false )
+                    if ( const expected<void> read = table.loadFromFile( FileUtil::toDiskPath( tablePath ) ); read.has_value() == false )
                     {
                         SW_LOG_WARNING_ID( "EditorDataTableCommands.StringTableCannotRead", "String table '%#' cannot be read - it is not shown and saving will not overwrite it: %# (%#)", tablePath.c_str(),
                                            read.error().message(), read.error().detail() );
@@ -47,7 +47,7 @@ namespace sw::editor
                 outTable.setCulture( culture );
                 if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) == false )
                     return true;
-                const expected<void> read = outTable.loadFromFile( path );
+                const expected<void> read = outTable.loadFromFile( FileUtil::toDiskPath( path ) );
                 if ( read.has_value() )
                     return true;
                 SW_LOG_WARNING_ID( "EditorDataTableCommands.TranslationTableCannotRead", "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %# (%#)", path.c_str(),

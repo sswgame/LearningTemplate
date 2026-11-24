@@ -390,12 +390,12 @@ namespace sw
                     DataInheritance::reportBaseNotFound( baseID, absPath.str() );
                     return false;
                 }
-                return ResourceComposer::saveDelta( absPath.str(), saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID );
+                return ResourceComposer::saveDelta( absPath, saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID );
             }
         }
         // 프리셋 차이는 프리셋과 같은 칸을 뺐다 — 빈 칸까지 모두 쓴 펼친 글이 짝이다.
         const string completeText = XMLSerializer::serialize( this, *StaticType(), SerializeContext::deriveFromDefault( SerializePurpose::Authoring ).setWriteEmptyValues( true ) );
-        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( saveText, completeText ) ) == false )
+        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( saveText, completeText ) ) == false )
         {
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould2", "%#: audio event library could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

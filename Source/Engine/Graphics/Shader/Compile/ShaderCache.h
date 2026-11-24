@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/BusyClock.h"
@@ -209,7 +210,7 @@ namespace sw
         optional<ShaderEnginePolicy> _enginePolicy                       SW_GUARDED_BY( _mutexCache ); ///< 요청에 싣는 엔진 설정 사본(`findEnginePolicy`) — 워커가 설정을 직접 읽지 않게 요청을 받는 자리에서 싣는다
         uint64 _replaceCount                                             SW_GUARDED_BY( _mutexCache ); ///< `replaceCompiled` 수. 로드가 시작할 때의 값보다 뒤에 바뀐 항목을 가린다
         ShaderRequestLog _requestLog                                     SW_GUARDED_BY( _mutexCache ); ///< 이 실행이 공급자까지 간 요청(백엔드 교체로 메모리 캐시를 비워도 남는다) — `_requestLogPath` 가 있을 때만 모은다
-        string                                                           _requestLogPath;              ///< `-shader-request-log` 의 파일. 비면 기록하지 않는다. 기동(`initialize`)에서만 쓰고 로드 워커는 읽기만 한다
+        AbsolutePath                                                     _requestLogPath;              ///< `-shader-request-log` 의 파일. 비면 기록하지 않는다. 기동(`initialize`)에서만 쓰고 로드 워커는 읽기만 한다
         Subscription                                                     _configReloadedSubscription;  ///< 설정 다시 읽기 알림 구독(`onConfigReloaded`)
         DevCounter                                                       _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         DevCounter                                                       _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다

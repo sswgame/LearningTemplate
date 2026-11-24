@@ -90,6 +90,6 @@ namespace sw
             return false;
         }
 
-        return ResourceComposer::saveDelta( absPath.str(), XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
+        return ResourceComposer::saveDelta( absPath, XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
     }
 } // namespace sw

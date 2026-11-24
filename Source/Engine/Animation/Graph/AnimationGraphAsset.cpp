@@ -151,14 +151,14 @@ namespace sw
             return false;
         const string fullText = toXML();
         if ( _baseID.empty() )
-            return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( fullText ) );
+            return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( fullText ) );
         AnimationGraphAsset parent;
         if ( parent.loadFromAsset( AssetID{ _baseID } ) == false )
         {
             DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
             return false;
         }
-        return ResourceComposer::saveDelta( absPath.str(), fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
+        return ResourceComposer::saveDelta( absPath, fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
         {
             AnimationGraphAsset reread;
             return reread.parseText( deltaText, absPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) ) ? reread.toXML() : string{};

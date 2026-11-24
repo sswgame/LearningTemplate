@@ -42,21 +42,21 @@ namespace
         }
 
         /** @brief 파일의 @p offset 바이트를 뒤집습니다. */
-        static bool writeFlippedByte( const string& path, uint64 offset )
+        static bool writeFlippedByte( const AbsolutePath& path, uint64 offset )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || offset >= bytes.size() )
+            if ( FileUtil::readFile( path, bytes ) == false || offset >= bytes.size() )
                 return false;
             bytes[static_cast<size_t>( offset )] ^= 0x5Au;
-            return FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() );
+            return FileUtil::writeFile( path, bytes.data(), bytes.size() );
         }
 
         /** @brief 파일 끝의 헤더를 읽습니다. */
-        static PackHeader readHeader( const string& path )
+        static PackHeader readHeader( const AbsolutePath& path )
         {
             vector<uint8> bytes;
             PackHeader    header{};
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) && bytes.size() >= sizeof( PackHeader ) )
+            if ( FileUtil::readFile( path, bytes ) && bytes.size() >= sizeof( PackHeader ) )
                 Memory::copy( &header, bytes.data() + bytes.size() - sizeof( PackHeader ), sizeof( PackHeader ) );
             return header;
         }
@@ -82,8 +82,8 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
     SW_REQUIRE_TRUE( packs.mountPatchPack( packPath.str(), 100, {}, &trust ) );
     SW_EXPECT_TRUE( packs.unmountPack( packPath.str() ) );
 
-    const PackHeader header = Util::readHeader( packPath.str() );
-    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath.str(), header._stringPoolOffset + 1 ) ); // 첫 항목 경로의 첫 글자
+    const PackHeader header = Util::readHeader( packPath );
+    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath, header._stringPoolOffset + 1 ) ); // 첫 항목 경로의 첫 글자
     SW_EXPECT_FALSE( packs.mountPatchPack( packPath.str(), 100, {}, &trust ) );
 
     // 서명하지 않은 쓰기의 팩(블록 해시 표 없음)은 색인 요약이 맞아도 신뢰로 열지 않는다.
@@ -92,7 +92,7 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
     } ) );
     vector<uint8> fileBytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
-    const PackHeader unsignedHeader = Util::readHeader( packPath.str() );
+    const PackHeader unsignedHeader = Util::readHeader( packPath );
     PackIndexTrust   unsignedTrust{ &provider, {} };
     test::FakeNetSecurityProvider::computeFakeDigest( fileBytes.data() + unsignedHeader._indexOffset, static_cast<int32>( fileBytes.size() - unsignedHeader._indexOffset ),
                                                       unsignedTrust._indexDigest._arrByte );
@@ -112,7 +112,7 @@ SW_TEST_CASE( PackPatchTest, TamperedPayloadBlockFailsAtRead )
     const PackIndexTrust trust{ &provider, *written->_indexDigest };
 
     // 페이로드는 오프셋 0 부터다 — 그 자리의 항목(경로 해시 순 첫 항목)의 첫 블록을 바꾼다.
-    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath.str(), 0 ) );
+    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath, 0 ) );
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str(), &trust ) );
     string        tamperedPath;

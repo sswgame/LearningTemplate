@@ -571,7 +571,7 @@ namespace sw
         XMLDocument parentDoc;
         if ( _baseScenePath.empty() || buildXML( fullDoc ) == false || parent.buildXML( parentDoc ) == false )
             return false;
-        if ( ResourceComposer::saveDelta( absPath.str(), fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
+        if ( ResourceComposer::saveDelta( absPath, fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
             return false;
         SW_LOG_INFO_ID( "SceneDocument.SavedDelta", "Saved '%#' as a difference from '%#' -> %#", _name, _baseScenePath, absPath.str() );
         return true;
@@ -808,7 +808,7 @@ namespace sw
         file.writeBytes( arch.getData(), arch.getSize() );
         file.writeBytes( content.getData(), content.getSize() );
 
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && file.saveToFile( absPath.str() );
+        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && file.saveToFile( absPath );
         if ( bOk )
             SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                             static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );

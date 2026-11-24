@@ -1108,7 +1108,7 @@ namespace sw
         XMLDocument fullDoc;
         if ( doc.parse( saveToString() ) == false || fullDoc.parse( saveFullToString() ) == false )
             return false;
-        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
     }
 
     string Material::saveToString() const

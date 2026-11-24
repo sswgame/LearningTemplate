@@ -659,7 +659,7 @@ namespace sw::editor
         const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
-        else if ( _replay.loadFromFile( diskPath->str() ) == false )
+        else if ( _replay.loadFromFile( *diskPath ) == false )
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotLoadInput2", "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
     }
 

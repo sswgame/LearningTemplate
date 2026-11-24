@@ -16,6 +16,7 @@
 #include "Core/File/ContentFileSource.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -83,7 +84,7 @@ namespace sw
         /** @brief 경로 @p path 를 거울에 받아 둔 경로를 @p outMirrorPath 에 담습니다. 없는 파일 · 받지 못함이면 false 입니다. */
         [[nodiscard]] bool ensureMirrored( string_view path, string& outMirrorPath ) const;
         /** @brief 파일 하나를 구간으로 받아 @p mirrorPath 에 원자적으로 씁니다. */
-        [[nodiscard]] bool downloadFile( const string& relative, uint64 sizeBytes, const string& mirrorPath ) const;
+        [[nodiscard]] bool downloadFile( const string& relative, uint64 sizeBytes, const AbsolutePath& mirrorPath ) const;
         /** @brief GET 하나를 보내고 성공 본문을 담습니다. 404 는 @p outbMissing 을 켜고 false 입니다. */
         [[nodiscard]] bool fetch( const string& url, vector<uint8>& outBody, bool& outbMissing ) const;
 

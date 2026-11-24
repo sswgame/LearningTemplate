@@ -97,7 +97,7 @@ namespace sw::editor
     {
         if ( EditorContentWrite::warnIfReadOnly( filePath, EditorContentWriteKind::Save ) ) // 프리셋 단추 · 패널 저장이 모두 지나는 쓰기 입구다
             return false;
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) && ResourceComposer::saveText( filePath, ResourceSaveText::makeComplete( makePresetText( presetName ) ) );
+        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) && ResourceComposer::saveText( FileUtil::toDiskPath( filePath ), ResourceSaveText::makeComplete( makePresetText( presetName ) ) );
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const string& filePath )

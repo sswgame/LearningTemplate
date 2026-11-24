@@ -106,7 +106,7 @@ namespace
         static constexpr string_view kValidAttributes = "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _blendMode=\"Additive\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" "
                                                         "_lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\" _velocityMin=\"-1, 2, -1\" _velocityMax=\"1, 4, 1\" _gravity=\"0, -9.8, 0\"";
 
-        [[nodiscard]] static bool writeScratchFile( const string& path, string_view text ) { return FileUtil::writeFile( FileUtil::toDiskPath( path ), reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
+        [[nodiscard]] static bool writeScratchFile( const AbsolutePath& path, string_view text ) { return FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
     };
     using Util = VFXEffectDefTestUtil;
 
@@ -150,7 +150,7 @@ SW_TEST_CASE( VFXEffectDefTest, VariantMergesEmittersByName )
     string          flat;
     SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child.vfx.xml", DataInheritanceSchema::makeFromType( *VFXEffectDef::StaticType() ), source, flat ) );
     const AbsolutePath path = test::makeScratchPath( "variant.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( path.str(), flat ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( path, flat ) );
 
     VFXEffectDef effect;
     SW_REQUIRE_TRUE( effect.loadFromDiskFile( path.str() ) );
@@ -502,7 +502,7 @@ SW_TEST_CASE( VFXEffectDefTest, EffectValidationRules )
 SW_TEST_CASE( VFXEffectDefTest, LoadReadsTheDocumentAndSortsCurves )
 {
     const AbsolutePath path = test::makeScratchPath( "valid.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( path.str(), Util::makeEffectXML( Util::kValidAttributes ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXML( Util::kValidAttributes ) ) );
 
     VFXEffectDef effect;
     SW_REQUIRE_TRUE( effect.loadFromDiskFile( path.str() ) );
@@ -524,11 +524,11 @@ SW_TEST_CASE( VFXEffectDefTest, UnknownAttributeLeavesAnEmptyEffect )
 {
     SW_EXPECT_LOG( "Serialization.OrphanValue" );
     const AbsolutePath goodPath = test::makeScratchPath( "good.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( goodPath.str(), Util::makeEffectXML( Util::kValidAttributes ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( goodPath, Util::makeEffectXML( Util::kValidAttributes ) ) );
     const AbsolutePath                       badPath = test::makeScratchPath( "bad.vfx.xml" );
     StringBuilder<constant::buffer::kMax512> badAttributes;
     badAttributes.appendFormat( "%# _notAField=\"1\"", Util::kValidAttributes );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( badPath.str(), Util::makeEffectXML( badAttributes.view() ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( badPath, Util::makeEffectXML( badAttributes.view() ) ) );
 
     VFXEffectDef effect;
     SW_REQUIRE_TRUE( effect.loadFromDiskFile( goodPath.str() ) );
@@ -541,7 +541,7 @@ SW_TEST_CASE( VFXEffectDefTest, MissingRequiredFieldLeavesAnEmptyEffect )
 {
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     const AbsolutePath path = test::makeScratchPath( "partial.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( path.str(), Util::makeEffectXML( "_name=\"Sparks\" _duration=\"1\" _spawnRate=\"40\"" ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXML( "_name=\"Sparks\" _duration=\"1\" _spawnRate=\"40\"" ) ) );
     VFXEffectDef effect;
     SW_EXPECT_FALSE( effect.loadFromDiskFile( path.str() ) );
     SW_EXPECT_TRUE( effect._listEmitter.empty() );
@@ -561,15 +561,15 @@ SW_TEST_CASE( VFXEffectDefTest, MissingOrEmptyFilesFail )
     SW_EXPECT_FALSE( effect.loadFromDiskFile( test::makeScratchPath( "missing.vfx.xml" ).str() ) );
 
     const AbsolutePath brokenPath = test::makeScratchPath( "broken.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( brokenPath.str(), "<VFXEffectDef" ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( brokenPath, "<VFXEffectDef" ) );
     SW_EXPECT_FALSE( effect.loadFromDiskFile( brokenPath.str() ) );
 
     const AbsolutePath otherKindPath = test::makeScratchPath( "otherkind.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( otherKindPath.str(), "<RenderPipelineDesc></RenderPipelineDesc>" ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( otherKindPath, "<RenderPipelineDesc></RenderPipelineDesc>" ) );
     SW_EXPECT_FALSE( effect.loadFromDiskFile( otherKindPath.str() ) );
 
     const AbsolutePath noEmitterPath = test::makeScratchPath( "noemitter.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( noEmitterPath.str(), "<VFXEffectDef></VFXEffectDef>" ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( noEmitterPath, "<VFXEffectDef></VFXEffectDef>" ) );
     SW_EXPECT_FALSE( effect.loadFromDiskFile( noEmitterPath.str() ) );
 }
 
@@ -579,7 +579,7 @@ SW_TEST_CASE( VFXEffectDefTest, PoolTooSmallWarnsButLoads )
     SW_EXPECT_LOG( "VFXEffectDef.VFXEmitterMayNeed" );
     const AbsolutePath path = test::makeScratchPath( "pool.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile(
-        path.str(), Util::makeEffectXML( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
+        path, Util::makeEffectXML( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
     VFXEffectDef effect;
     SW_EXPECT_TRUE( effect.loadFromDiskFile( path.str() ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );

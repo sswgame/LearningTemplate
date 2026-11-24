@@ -666,7 +666,7 @@ namespace sw
         if ( xml.empty() )
             return false;
         const string completeXML = toXML( ResourceFieldWrite::WriteAll );
-        const bool   bOk         = ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( xml, completeXML ) );
+        const bool   bOk         = ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( xml, completeXML ) );
         if ( bOk )
             SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;

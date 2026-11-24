@@ -22,7 +22,7 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
     vector<uint8>  bytes;
     vector<string> listFile;
     SW_REQUIRE_TRUE( AssetIO::readBinaryFile( filePath.str(), bytes ) );
-    SW_REQUIRE_TRUE( CookJob::collectFiles( folder.str(), ".txt", listFile ) );
+    SW_REQUIRE_TRUE( CookJob::collectFiles( folder, ".txt", listFile ) );
 
     SW_REQUIRE_EQUAL( size_t( 2 ), job.getInputs().size() );
     for ( const CookInput& input : job.getInputs() )

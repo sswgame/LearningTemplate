@@ -22,6 +22,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 
@@ -169,9 +170,9 @@ namespace sw
          *          목록 입력의 id 는 폴더의 절대 경로다(리소스 id 로 줄이지 않는다 — 도메인 폴더는 id 로 줄이면 같은 폴더로 돌아오지 않는다).
          * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(부분 목록 — 구울 것을 빠뜨린다) false 입니다.
          */
-        [[nodiscard]] static bool collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile );
+        [[nodiscard]] static bool collectFiles( const AbsolutePath& folderPath, string_view extension, vector<string>& outListFile );
         /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없거나 순회가 도중에 멈췄으면 0 입니다. */
-        static uint64 computeListingHash( string_view folderPath, string_view extension );
+        static uint64 computeListingHash( const AbsolutePath& folderPath, string_view extension );
 
         /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `allowDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool recordDiskInput( string_view diskPath, uint64 contentHash );

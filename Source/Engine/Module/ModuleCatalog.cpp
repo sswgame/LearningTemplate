@@ -450,23 +450,23 @@ namespace sw
         return {};
     }
 
-    expected<void> ModuleCatalog::loadDirectory( string_view directoryPath )
+    expected<void> ModuleCatalog::loadDirectory( const AbsolutePath& directoryPath )
     {
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the module catalog folder does not exist", directoryPath } );
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), ".json", listFile, false ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "the module catalog folder cannot be listed", directoryPath } );
+        if ( FileUtil::isDirectory( directoryPath ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "the module catalog folder does not exist", directoryPath.str() } );
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( directoryPath, ".json", listFile, false ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the module catalog folder cannot be listed", directoryPath.str() } );
         VectorUtil::sort( listFile );
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, kManifestExtension, true ) == false )
+            if ( StringUtil::endsWith( filePath.str(), kManifestExtension, true ) == false )
                 continue;
             string text;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "a module manifest cannot be read", filePath } );
+            if ( FileUtil::readTextFile( filePath, text ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "a module manifest cannot be read", filePath.str() } );
             ModuleManifest manifest;
-            if ( expected<void> parsed = parseManifest( text, filePath, manifest ); parsed.has_value() == false )
+            if ( expected<void> parsed = parseManifest( text, filePath.str(), manifest ); parsed.has_value() == false )
                 return parsed;
             if ( expected<void> added = addManifest( std::move( manifest ) ); added.has_value() == false )
                 return added;

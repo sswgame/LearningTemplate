@@ -261,7 +261,7 @@ namespace sw::editor
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
                     const optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
-                    if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( imageFile->str(), listAtlas[mapIndex], atlasSize, atlasSize ) == false )
+                    if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( *imageFile, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
                         return false;

@@ -57,43 +57,43 @@ namespace sw
             }
 
             /** @brief @p shadersDir(`<도메인>/shaders`)의 `.hlsli` 가 include 루트 도메인의 `.hlsli` 와 같은 상대 경로이면 그 쌍을 적습니다. 문제가 없으면 true 입니다. */
-            [[nodiscard]] static bool findShadowedInDir( const vector<ShaderIncludeRootDomain>& listRootDomain, const string& shadersDir, vector<string>& outListProblem )
+            [[nodiscard]] static bool findShadowedInDir( const vector<ShaderIncludeRootDomain>& listRootDomain, const AbsolutePath& shadersDir, vector<string>& outListProblem )
             {
-                vector<string> listOwn;
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( shadersDir ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( shadersDir ), ".hlsli", listOwn, true ) == false )
+                vector<AbsolutePath> listOwn;
+                if ( FileUtil::isDirectory( shadersDir ) && FileUtil::collectFiles( shadersDir, ".hlsli", listOwn, true ) == false )
                 {
-                    appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", shadersDir );
+                    appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", shadersDir.str() );
                     return false;
                 }
                 unordered_set<string> setOwnKey;
-                for ( const string& ownPath : listOwn )
+                for ( const AbsolutePath& ownPath : listOwn )
                 {
-                    const string normOwn = FileUtil::normalizeSeparators( ownPath );
+                    const string normOwn = FileUtil::normalizeSeparators( ownPath.str() );
                     if ( normOwn.find( "/bin/" ) == string::npos )
-                        setOwnKey.insert( makeRelativeKey( normOwn, shadersDir ) );
+                        setOwnKey.insert( makeRelativeKey( normOwn, shadersDir.str() ) );
                 }
 
                 const string ownDirLower = StringUtil::toLower( shadersDir.c_str() );
                 bool         bClean      = true;
                 for ( const ShaderIncludeRootDomain& rootDomain : listRootDomain )
                 {
-                    const string& rootDir = rootDomain._shadersFolder.str();
+                    const AbsolutePath rootDir = rootDomain._shadersFolder;
                     if ( StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
                         continue;
-                    vector<string> listRootHeader;
-                    if ( FileUtil::collectFiles( FileUtil::toDiskPath( rootDir ), ".hlsli", listRootHeader, true ) == false )
+                    vector<AbsolutePath> listRootHeader;
+                    if ( FileUtil::collectFiles( rootDir, ".hlsli", listRootHeader, true ) == false )
                     {
-                        appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", rootDir );
+                        appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", rootDir.str() );
                         bClean = false;
                         continue;
                     }
-                    for ( const string& headerPath : listRootHeader )
+                    for ( const AbsolutePath& headerPath : listRootHeader )
                     {
-                        const string normHeader = FileUtil::normalizeSeparators( headerPath );
-                        const string key        = normHeader.find( "/bin/" ) == string::npos ? makeRelativeKey( normHeader, rootDir ) : string{};
+                        const string normHeader = FileUtil::normalizeSeparators( headerPath.str() );
+                        const string key        = normHeader.find( "/bin/" ) == string::npos ? makeRelativeKey( normHeader, rootDir.str() ) : string{};
                         if ( key.empty() == false && setOwnKey.find( key ) != setOwnKey.end() )
                         {
-                            appendProblem( outListProblem, "%#: header '%#' has the same name as '%#/shaders/%#' and would hide it (rename it)", shadersDir, key, rootDomain._domain, key );
+                            appendProblem( outListProblem, "%#: header '%#' has the same name as '%#/shaders/%#' and would hide it (rename it)", shadersDir.str(), key, rootDomain._domain, key );
                             bClean = false;
                         }
                     }
@@ -197,7 +197,7 @@ namespace sw
 
     bool ShaderIncludeResolver::findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem ) const
     {
-        return ShaderSourceInternal::findShadowedInDir( _listRootDomain, shadersFolder.str(), outListProblem );
+        return ShaderSourceInternal::findShadowedInDir( _listRootDomain, shadersFolder, outListProblem );
     }
 
     ShaderSourceResolver::ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver )

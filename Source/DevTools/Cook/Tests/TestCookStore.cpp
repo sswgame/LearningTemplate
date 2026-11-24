@@ -164,26 +164,26 @@ SW_TEST_CASE( CookRecordTest, RoundTripsAndRejectsBrokenRecords )
     record._listInput.push_back( CookInput{ ._kind = CookInputKind::Resource, ._source = "game/a b/x.xml", ._extension = {}, ._contentHash = 7 } );
     record._listInput.push_back( CookInput{ ._kind = CookInputKind::Listing, ._source = "game/folder", ._extension = ".material", ._contentHash = 9 } );
     const AbsolutePath path = root.join( "x.cookrec" );
-    SW_REQUIRE_TRUE( record.write( path.str() ) );
+    SW_REQUIRE_TRUE( record.write( path ) );
 
     CookRecord readBack;
-    SW_REQUIRE_TRUE( CookRecord::read( path.str(), readBack ) );
+    SW_REQUIRE_TRUE( CookRecord::read( path, readBack ) );
     SW_EXPECT_EQUAL( record._key, readBack._key );
     SW_EXPECT_EQUAL( record._outputHash, readBack._outputHash );
     SW_REQUIRE_EQUAL( size_t( 2 ), readBack._listInput.size() );
     SW_EXPECT_TRUE( record._listInput[0] == readBack._listInput[0] );
     SW_EXPECT_TRUE( record._listInput[1] == readBack._listInput[1] );
 
-    SW_EXPECT_FALSE( CookRecord::read( FileUtil::joinPath( root.str(), "missing.cookrec" ), readBack ) ); // 처음 굽는 작업 — 조용히 false
+    SW_EXPECT_FALSE( CookRecord::read( root.join( "missing.cookrec" ), readBack ) ); // 처음 굽는 작업 — 조용히 false
 
     SW_EXPECT_LOG( "Cook.RecordInvalid" );
     const AbsolutePath oldFormat = root.join( "old.cookrec" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( oldFormat, "SWCOOKREC 1\nkey 0123456789abcdef\noutput 0123456789abcdef\n" ) );
-    SW_EXPECT_FALSE( CookRecord::read( oldFormat.str(), readBack ) );
+    SW_EXPECT_FALSE( CookRecord::read( oldFormat, readBack ) );
     const AbsolutePath                       shortHash = root.join( "short.cookrec" );
     StringBuilder<constant::buffer::kMax128> shortHashText;
     shortHashText.appendFormat( "%#\nkey 0123\noutput 0123456789abcdef\n", CookRecord::kHeader );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( shortHash, shortHashText.view() ) );
-    SW_EXPECT_FALSE( CookRecord::read( shortHash.str(), readBack ) );
+    SW_EXPECT_FALSE( CookRecord::read( shortHash, readBack ) );
     SW_EXPECT_EQUAL( 0ull, readBack._key ); // 거절한 기록은 빈 값으로 돌려준다
 }

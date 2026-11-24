@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -114,7 +115,7 @@ namespace sw
          * @param outResult 바이트 · 새로 썼는지
          * @return 성공하면 true 입니다.
          */
-        [[nodiscard]] static bool cookShader( const ShaderCompileDesc& desc, string_view outputPath, ShaderCookResult& outResult );
+        [[nodiscard]] static bool cookShader( const ShaderCompileDesc& desc, const AbsolutePath& outputPath, ShaderCookResult& outResult );
 
         // "무엇을 쿠킹할지"와 "모두 쿠킹"은 여기 없다. 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라 `Renderer/Cook/ShaderCookDriver` 에 있다.
         // 산출물이 최신인지는 컴파일의 쿠킹 기록(`ShaderCompiler::findCurrentRecord`) 하나로 본다 — 최신이면 컴파일은 DDC 적중이라 쿠커가 따로 판정하지 않는다.

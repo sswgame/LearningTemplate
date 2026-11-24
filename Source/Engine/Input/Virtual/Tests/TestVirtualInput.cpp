@@ -199,7 +199,7 @@ SW_TEST_CASE( InputReplayTest, FileRoundTrips )
     SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path.str() ) ) );
 
     InputReplay loaded;
-    SW_REQUIRE_TRUE( loaded.loadFromFile( path.str() ) );
+    SW_REQUIRE_TRUE( loaded.loadFromFile( path ) );
     SW_EXPECT_EQUAL( string( "demo" ), loaded.getReplayName() );
     SW_REQUIRE_EQUAL( uint32( 2 ), loaded.getFrameCount() );
     SW_EXPECT_NEAR( 0.25f, loaded.getFrames()[0]._deltaTime, 1.0e-5f );
@@ -225,7 +225,7 @@ SW_TEST_CASE( InputReplayTest, SaveLoadSaveKeepsBytes )
     SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( firstPath.str() ) ) );
 
     InputReplay loaded;
-    SW_REQUIRE_TRUE( loaded.loadFromFile( firstPath.str() ) );
+    SW_REQUIRE_TRUE( loaded.loadFromFile( firstPath ) );
     SW_REQUIRE_TRUE( loaded.saveToFile( *AbsolutePath::tryMake( secondPath.str() ) ) );
 
     vector<uint8> firstBytes;
@@ -255,12 +255,12 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     const auto refuses = [&]( const vector<uint8>& bytes )
     {
         SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
-        SW_EXPECT_FALSE( replay.loadFromFile( path.str() ) );
+        SW_EXPECT_FALSE( replay.loadFromFile( path ) );
         SW_EXPECT_EQUAL( string( "kept" ), replay.getReplayName() );
         SW_EXPECT_EQUAL( uint32( 1 ), replay.getFrameCount() );
     };
 
-    SW_EXPECT_FALSE( replay.loadFromFile( test::makeScratchPath( "nothing.swreplay" ).str() ) );
+    SW_EXPECT_FALSE( replay.loadFromFile( test::makeScratchPath( "nothing.swreplay" ) ) );
     refuses( vector<uint8>( good.begin(), good.begin() + 3 ) ); // 머리말이 없다
 
     vector<uint8> badMagic = good;

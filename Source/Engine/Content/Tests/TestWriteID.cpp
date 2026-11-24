@@ -55,18 +55,18 @@ SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
     // 쓰기 경로가 그 규칙을 지난다(엔진이 선 프로세스는 규칙이 걸려 있다) — 파일이 생기지 않는다.
     StringBuilder<constant::buffer::kMax512> upperFileBuilder;
     upperFileBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/Upper.txt", content.str() );
-    const string upperFile = string( upperFileBuilder.view() );
+    const AbsolutePath upperFile = FileUtil::toDiskPath( string( upperFileBuilder.view() ) );
     SW_EXPECT_LOG( "File.CreateRefused" );
-    SW_EXPECT_FALSE( FileUtil::writeTextFile( FileUtil::toDiskPath( upperFile ), "x" ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( upperFile ) ) );
+    SW_EXPECT_FALSE( FileUtil::writeTextFile( upperFile, "x" ) );
+    SW_EXPECT_FALSE( FileUtil::exists( upperFile ) );
 
     // 폴더를 만드는 입구도 같은 규칙이다 — 대문자 이름의 빈 폴더가 생기지 않는다. 소문자 폴더는 만든다.
     StringBuilder<constant::buffer::kMax512> upperFolderBuilder;
     upperFolderBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/UpperFolder", content.str() );
-    const string upperFolder = string( upperFolderBuilder.view() );
+    const AbsolutePath upperFolder = FileUtil::toDiskPath( string( upperFolderBuilder.view() ) );
     SW_EXPECT_LOG( "File.CreateRefused" );
-    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( upperFolder ) ) );
-    SW_EXPECT_FALSE( FileUtil::isDirectory( FileUtil::toDiskPath( upperFolder ) ) );
+    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( upperFolder ) );
+    SW_EXPECT_FALSE( FileUtil::isDirectory( upperFolder ) );
     StringBuilder<constant::buffer::kMax512> lowerFolder;
     lowerFolder.appendFormat( "%#/scratch/write_id_test_not_yet/lower_folder", content.str() );
     SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( lowerFolder.view() ) ) );

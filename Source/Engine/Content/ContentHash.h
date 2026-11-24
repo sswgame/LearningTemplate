@@ -94,7 +94,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief `ContentHash::computeFile` 의 본문입니다. */
-        uint64 computeFile( string_view absPath ) SW_EXCLUDES_LOCK( _mutex );
+        uint64 computeFile( const AbsolutePath& absPath ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 영속 캐시 파일의 판입니다. 항목 모양이나 해시 규칙을 바꾸면 올린다 — 다른 판의 파일은 빈 캐시로 읽는다. */
         static constexpr uint32 kCacheFormatVersion = 1;
         /** @brief 로컬 영속 캐시 파일(`<프로젝트>/Saved/ContentHashCache.bin`)입니다. */
@@ -111,7 +111,7 @@ namespace sw
         /** @brief `ContentHash::clearCache` 의 본문입니다. */
         void clear() SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 프로세스가 @p filePath 를 바꿨습니다 — 그 항목을 "자기 쓰기" 표로 바꿉니다(아무 스레드, 쓰기 관찰자 `WriteObserver` 가 부른다). */
-        void recordOwnWrite( string_view filePath ) SW_EXCLUDES_LOCK( _mutex );
+        void recordOwnWrite( const AbsolutePath& filePath ) SW_EXCLUDES_LOCK( _mutex );
 
     private:
         /** @brief 파일 계층에 거는 쓰기 관찰자입니다 — 서브시스템이 창구를 함께 상속하지 않고 멤버로 든다(기반은 하나). */
@@ -139,7 +139,7 @@ namespace sw
         mutable mutex                               _mutex;
         unordered_map<string, Entry> _mapEntry      SW_GUARDED_BY( _mutex );
         uint64 _writeSerial                         SW_GUARDED_BY( _mutex );    ///< 자기 쓰기 알림마다 오른다
-        string _cachePath                           SW_GUARDED_BY( _mutex );    ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
+        AbsolutePath _cachePath                     SW_GUARDED_BY( _mutex );    ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
         atomic<uint64>                              _hashedByteCount;           ///< 해시하려고 읽은 바이트 누적(워커가 함께 더한다)
         WriteObserver                               _writeObserver;             ///< 파일 계층에 건 쓰기 관찰자
         PlatformFileUtil::WriteObserverRegistration _writeObserverRegistration; ///< 쓰기 관찰자 등록 — 내릴 때 뗀다(관찰자는 하나라 둘째는 단언)

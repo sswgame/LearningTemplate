@@ -19,6 +19,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -248,7 +249,7 @@ namespace sw
         /** @brief 매니페스트를 더합니다. 같은 이름이 이미 있으면 오류입니다. */
         [[nodiscard]] expected<void> addManifest( ModuleManifest manifest );
         /** @brief 폴더의 `*.module.json` 을 모두 읽어 더합니다. 폴더가 없거나 하나라도 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadDirectory( string_view directoryPath );
+        [[nodiscard]] expected<void> loadDirectory( const AbsolutePath& directoryPath );
 
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const ModuleManifest* findManifest( string_view name ) const;

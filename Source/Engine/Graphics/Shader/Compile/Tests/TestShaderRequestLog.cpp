@@ -115,7 +115,7 @@ SW_TEST_CASE( ShaderRequestLogTest, RejectsWrongHeaderOrBadLineWithoutPartialAdd
 SW_TEST_CASE( ShaderRequestLogTest, ReadFolderMergesChildFiles )
 {
     const AbsolutePath               folder  = sw::test::makeScratchPath( "ShaderRequests" );
-    const expected<ShaderRequestLog> missing = ShaderRequestLog::readFolder( FileUtil::joinPath( folder.str(), "none" ) );
+    const expected<ShaderRequestLog> missing = ShaderRequestLog::readFolder( folder.join( "none" ) );
     SW_REQUIRE_TRUE( missing.has_value() );
     SW_EXPECT_EQUAL( size_t( 0 ), missing->size() );
 
@@ -129,7 +129,7 @@ SW_TEST_CASE( ShaderRequestLogTest, ReadFolderMergesChildFiles )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "Scenario.playground.vk.shaderrequests" ), vkChild.makeText() ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "notes.txt" ), "not a request log" ) );
 
-    const expected<ShaderRequestLog> merged = ShaderRequestLog::readFolder( folder.str() );
+    const expected<ShaderRequestLog> merged = ShaderRequestLog::readFolder( folder );
     SW_REQUIRE_TRUE( merged.has_value() );
     SW_EXPECT_EQUAL( size_t( 2 ), merged->size() );
 }

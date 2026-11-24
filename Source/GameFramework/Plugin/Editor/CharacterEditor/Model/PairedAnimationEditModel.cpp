@@ -69,7 +69,7 @@ namespace sw::editor
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
         const string text         = saveToXMLText();
         const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
-        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
+        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", absPath.str() } );
         _state.markSaved( text );
         return {};

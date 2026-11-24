@@ -258,25 +258,25 @@ namespace sw
         for ( const auto& [key, source] : _mapSource )
         {
             (void)key;
-            const bool bOverrideChanged = ( source._resolvedOverridePath.empty() == false && FileUtil::isSameDiskPath( source._resolvedOverridePath, changedPath ) ) ||
-                                          ( source._resolvedQualityPath.empty() == false && FileUtil::isSameDiskPath( source._resolvedQualityPath, changedPath ) );
-            if ( source._pReload != nullptr && ( FileUtil::isSameDiskPath( source._resolvedPath, changedPath ) || bOverrideChanged ) )
+            const bool bOverrideChanged = ( source._resolvedOverridePath.empty() == false && FileUtil::isSameDiskPath( source._resolvedOverridePath.str(), changedPath ) ) ||
+                                          ( source._resolvedQualityPath.empty() == false && FileUtil::isSameDiskPath( source._resolvedQualityPath.str(), changedPath ) );
+            if ( source._pReload != nullptr && ( FileUtil::isSameDiskPath( source._resolvedPath.str(), changedPath ) || bOverrideChanged ) )
                 return source._pReload( *this, source ) ? ReloadResult::Reloaded : ReloadResult::Failed;
         }
         return ReloadResult::NotTracked;
     }
 
-    OptionalFileRead ConfigManager::readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, const string& resolvedQualityPath,
+    OptionalFileRead ConfigManager::readLayeredFile( const AbsolutePath& resolvedPath, const AbsolutePath& resolvedOverridePath, const AbsolutePath& resolvedQualityPath,
                                                      const string& qualityTier, string& outJSON, string& outLabel )
     {
-        outLabel                    = resolvedPath;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedPath ), outJSON );
+        outLabel                    = resolvedPath.str();
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, outJSON );
         if ( read != OptionalFileRead::Read )
             return read;
         if ( resolvedOverridePath.empty() == false )
         {
             string                 overrideJSON;
-            const OptionalFileRead overrideRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedOverridePath ), overrideJSON );
+            const OptionalFileRead overrideRead = FileUtil::readOptionalTextFile( resolvedOverridePath, overrideJSON );
             if ( overrideRead == OptionalFileRead::Failed )
                 return OptionalFileRead::Failed;          // 이유는 읽기가 오류로 남겼다
             if ( overrideRead == OptionalFileRead::Read ) // 덮어쓰기 층은 선택이다 — 없으면 바탕만
@@ -286,20 +286,20 @@ namespace sw
                     return OptionalFileRead::Failed;
                 // 합친 글의 모르는 키 · 범위 밖 값은 어느 층에서 왔는지 모른다 — 출처에 층을 모두 적는다.
                 outLabel += " + ";
-                outLabel += resolvedOverridePath;
+                outLabel += resolvedOverridePath.str();
             }
         }
         if ( qualityTier.empty() )
             return OptionalFileRead::Read;
         // 단계를 골랐으면 표는 필수다 — 없는 표를 "단계 없음" 으로 읽으면 고른 단계가 조용히 무시된다.
         string                 tiersJSON;
-        const OptionalFileRead tiersRead = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedQualityPath ), tiersJSON );
+        const OptionalFileRead tiersRead = FileUtil::readOptionalTextFile( resolvedQualityPath, tiersJSON );
         if ( tiersRead == OptionalFileRead::Missing )
             SW_LOG_ERROR_ID( "Config.RenderQualityMissing", "Render quality tier '%#' was chosen but the tier table %# is missing", qualityTier.c_str(), resolvedQualityPath.c_str() );
         if ( tiersRead != OptionalFileRead::Read )
             return OptionalFileRead::Failed;
         StringBuilder<constant::buffer::kMax512> qualityLabel;
-        qualityLabel.appendFormat( "%#[%#]", resolvedQualityPath, qualityTier );
+        qualityLabel.appendFormat( "%#[%#]", resolvedQualityPath.str(), qualityTier );
         const string base = std::move( outJSON );
         if ( applyQualityTier( base, tiersJSON, qualityTier, qualityLabel.c_str(), outJSON ) == false )
             return OptionalFileRead::Failed;

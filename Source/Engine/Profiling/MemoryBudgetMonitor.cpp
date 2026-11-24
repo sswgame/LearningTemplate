@@ -70,21 +70,21 @@ namespace sw
         return {};
     }
 
-    bool MemoryBudgetMonitor::loadBudgetFile( string_view absolutePath )
+    bool MemoryBudgetMonitor::loadBudgetFile( const AbsolutePath& absolutePath )
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr || FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) == false )
+        if ( pProfiler == nullptr || FileUtil::exists( absolutePath ) == false )
             return true;
 
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_ERROR_ID( "MemoryBudget.CannotReadMemoryBudget", "Cannot read the memory budget file '%#'", absolutePath );
+            SW_LOG_ERROR_ID( "MemoryBudget.CannotReadMemoryBudget", "Cannot read the memory budget file '%#'", absolutePath.str() );
             return false;
         }
         if ( const expected<void> applied = applyBudgetJSON( text, *pProfiler ); applied.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "MemoryBudget.InvalidMemoryBudgetFile", "Invalid memory budget file '%#': %# (%#)", absolutePath, applied.error().message(), applied.error().detail() );
+            SW_LOG_ERROR_ID( "MemoryBudget.InvalidMemoryBudgetFile", "Invalid memory budget file '%#': %# (%#)", absolutePath.str(), applied.error().message(), applied.error().detail() );
             return false;
         }
         return true;

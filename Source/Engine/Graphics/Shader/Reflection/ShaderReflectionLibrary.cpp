@@ -222,7 +222,7 @@ namespace sw
         return "reflection.manifest";
     }
 
-    bool ShaderReflectionLibrary::save( const EntryMap& mapEntry, string_view absDirectory )
+    bool ShaderReflectionLibrary::save( const EntryMap& mapEntry, const AbsolutePath& absDirectory )
     {
         if ( absDirectory.empty() )
             return false;
@@ -253,8 +253,8 @@ namespace sw
         if ( bytes.empty() )
             return false;
 
-        const string outPath = FileUtil::joinPath( absDirectory, getManifestFileName() );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( absDirectory ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( outPath ), bytes.data(), bytes.size() ) == false )
+        const AbsolutePath outPath = absDirectory.join( getManifestFileName() );
+        if ( FileUtil::ensureDirectoryExists( absDirectory ) == false || FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderReflectionLibrary.FailedWriteReflectionManifest", "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;
@@ -276,14 +276,14 @@ namespace sw
         return readManifestInternal( AssetID{ manifestRelative.view() }, outMapEntry );
     }
 
-    bool ShaderReflectionLibrary::loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry )
+    bool ShaderReflectionLibrary::loadManifestFile( const AbsolutePath& absManifestPath, EntryMap& outMapEntry )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         outMapEntry.clear();
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( absManifestPath ), bytes ) == false )
+        if ( FileUtil::readFile( absManifestPath, bytes ) == false )
             return false;
-        return parseManifestInternal( bytes, absManifestPath, outMapEntry );
+        return parseManifestInternal( bytes, absManifestPath.str(), outMapEntry );
     }
 
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )

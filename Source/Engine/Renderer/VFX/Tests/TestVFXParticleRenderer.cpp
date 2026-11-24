@@ -35,10 +35,10 @@ namespace
 
     string readEngineShader( const utf8* pFileName )
     {
-        const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
-        string       text;
+        const AbsolutePath projectRoot = ProcessRoots::get()._project;
+        string             text;
         if ( projectRoot.empty() == false )
-            std::ignore = FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), pFileName ) ), text );
+            std::ignore = FileUtil::readTextFile( projectRoot.join( "Content/engine/shaders" ).join( pFileName ), text );
         return text;
     }
 } // namespace
@@ -49,10 +49,10 @@ SW_TEST_CASE( VFXParticleRendererTest, ShaderReadsOrderRangeFromFlags )
     SW_EXPECT_TRUE( shaderslot::kParticleOrderBuffer < shaderslot::kInstanceBuffer );
     SW_EXPECT_TRUE( shaderslot::kParticleOrderBuffer < shaderslot::kSRVSlotCount );
 
-    const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
+    const AbsolutePath projectRoot = ProcessRoots::get()._project;
     SW_REQUIRE_FALSE( projectRoot.empty() );
     string particleText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders/particle.hlsl" ) ), particleText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( projectRoot.join( "Content/engine/shaders/particle.hlsl" ), particleText ) );
     fixed_string<constant::buffer::kMax128> declaration;
     formatstring( declaration.data(), declaration.capacity(), "SW_DECLARE_STRUCTURED_BUFFER( uint, %#, SW_SLOT_PARTICLE_ORDER_SRV );", shaderslot::resname::kParticleOrder );
     SW_EXPECT_TRUE( particleText.find( declaration.c_str() ) != string::npos );

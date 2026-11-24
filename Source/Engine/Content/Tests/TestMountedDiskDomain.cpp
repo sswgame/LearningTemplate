@@ -117,9 +117,9 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
     const ScopedContentSource contentSource{ *pPacks };
     AssetPaths&               paths = engine::getSubsystem<AssetPaths>();
 
-    const string       insideRoot  = FileUtil::joinPath( paths.getRootFolderPath(), "game/playground/maps/editortest.scene.xml" );
+    const AbsolutePath insideRoot  = FileUtil::toDiskPath( FileUtil::joinPath( paths.getRootFolderPath(), "game/playground/maps/editortest.scene.xml" ) );
     const AbsolutePath outsideRoot = domain.makeDiskPath( "outside.txt" );
-    SW_REQUIRE_TRUE( FileUtil::exists( FileUtil::toDiskPath( insideRoot ) ) );
+    SW_REQUIRE_TRUE( FileUtil::exists( insideRoot ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( outsideRoot, "OUTSIDE" ) );
     const AssetID outsideID = ScopedScratchDomain::makeID( "outside.txt" );
 
@@ -143,7 +143,7 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
 
     // 리소스 루트 안 폴더는 붙일 수 없다 — 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다.
     SW_EXPECT_LOG( "AssetPaths.MountInsideContentRoot" );
-    SW_EXPECT_FALSE( paths.mountDiskDomain( "insideroot", FileUtil::joinPath( paths.getRootFolderPath(), "game" ) ) );
+    SW_EXPECT_FALSE( paths.mountDiskDomain( "insideroot", FileUtil::toDiskPath( FileUtil::joinPath( paths.getRootFolderPath(), "game" ) ) ) );
 }
 
 /**
@@ -158,16 +158,16 @@ SW_TEST_CASE( MountedDiskDomainTest, UnmountedDomainNoLongerResolves )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( first ) && FileUtil::ensureDirectoryExists( second ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( first.join( "a.txt" ), "A" ) );
 
-    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", first.str() ) );
+    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", first ) );
     SW_EXPECT_TRUE( findLoose( "unmounttest/a.txt" ).has_value() );
     SW_EXPECT_LOG( "AssetPaths.MountConflict" );
-    SW_EXPECT_FALSE( paths.mountDiskDomain( "unmounttest", second.str() ) );
+    SW_EXPECT_FALSE( paths.mountDiskDomain( "unmounttest", second ) );
 
     SW_REQUIRE_TRUE( paths.unmountDiskDomain( "unmounttest" ) );
     SW_EXPECT_FALSE( paths.isMountedDiskDomainID( "unmounttest/a.txt" ) );
     SW_EXPECT_FALSE( findLoose( "unmounttest/a.txt" ).has_value() );
 
-    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", second.str() ) );
+    SW_REQUIRE_TRUE( paths.mountDiskDomain( "unmounttest", second ) );
     SW_EXPECT_TRUE( paths.unmountDiskDomain( "unmounttest" ) );
 
     SW_EXPECT_LOG( "AssetPaths.DomainNotMounted" );

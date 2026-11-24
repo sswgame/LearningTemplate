@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
@@ -46,7 +47,7 @@ namespace sw
          * @details 항목은 키 순서로 씁니다. 같은 항목 집합이면 넣은 순서와 상관없이 같은 바이트입니다.
          * @param absDirectory 매니페스트를 놓을 절대 디렉터리(`.../shaders/bin/<rhi>`)
          */
-        [[nodiscard]] static bool save( const EntryMap& mapEntry, string_view absDirectory );
+        [[nodiscard]] static bool save( const EntryMap& mapEntry, const AbsolutePath& absDirectory );
 
         /**
          * @brief 매니페스트 하나를 통째로 읽습니다. 캐시하지 않고 신선도도 따지지 않습니다.
@@ -61,7 +62,7 @@ namespace sw
          * @brief 디스크의 매니페스트 파일 하나(쿠킹 스테이징 — 리소스 트리 밖)를 통째로 읽습니다. 쿠킹본 판정(`ShaderCookDriver::verifyCookedShaders`)이 키를 견줄 때 씁니다.
          * @return 파일이 없거나 형식이나 내용이 맞지 않으면 false 입니다(그때 `outMapEntry` 는 비어 있습니다).
          */
-        [[nodiscard]] static bool loadManifestFile( string_view absManifestPath, EntryMap& outMapEntry );
+        [[nodiscard]] static bool loadManifestFile( const AbsolutePath& absManifestPath, EntryMap& outMapEntry );
 
         /**
          * @brief 셰이더 하나의 리플렉션을 쿠킹된 매니페스트에서 조회합니다(쿠킹본 정책의 공급자 `CookedShaderBytecodeProvider` 가 부른다 — 소스 정책은 실행 중 바이트코드에서 만든다).

@@ -150,10 +150,10 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 
-    bool InputReplay::loadFromFile( string_view filePath )
+    bool InputReplay::loadFromFile( const AbsolutePath& filePath )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), bytes ) == false )
+        if ( FileUtil::readFile( filePath, bytes ) == false )
             return false;
 
         ByteReader   reader{ bytes.data(), bytes.size() };
@@ -168,14 +168,14 @@ namespace sw
         // 버전이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
         if ( header._version != kReplayVersion )
         {
-            SW_LOG_WARNING_ID( "InputReplay.InputReplayVersionNot", "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath );
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayVersionNot", "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath.str() );
             return false;
         }
         const uint8* pName = nullptr;
         pName              = reader.readView( header._nameLength );
         if ( reader.hasOverflowed() )
         {
-            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedName", "Input replay is truncated in its name — refusing to load: %#", filePath );
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedName", "Input replay is truncated in its name — refusing to load: %#", filePath.str() );
             return false;
         }
         string replayName( reinterpret_cast<const utf8*>( pName ), header._nameLength );
@@ -193,7 +193,7 @@ namespace sw
         } );
         if ( bFramesRead == false )
         {
-            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay promises %# frames but is truncated or holds a non-finite frame time — refusing to load: %#", header._frameCount, filePath );
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay promises %# frames but is truncated or holds a non-finite frame time — refusing to load: %#", header._frameCount, filePath.str() );
             return false;
         }
 

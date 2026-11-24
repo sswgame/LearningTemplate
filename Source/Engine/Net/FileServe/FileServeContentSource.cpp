@@ -129,10 +129,10 @@ namespace sw
         return stat;
     }
 
-    bool FileServeContentSource::downloadFile( const string& relative, uint64 sizeBytes, const string& mirrorPath ) const
+    bool FileServeContentSource::downloadFile( const string& relative, uint64 sizeBytes, const AbsolutePath& mirrorPath ) const
     {
         AtomicFileWriter   writer;
-        const AbsolutePath mirrorDiskPath = FileUtil::toDiskPath( mirrorPath );
+        const AbsolutePath mirrorDiskPath = mirrorPath;
         if ( FileUtil::ensureParentDirectoryExists( mirrorDiskPath ) == false || writer.open( mirrorDiskPath ).has_value() == false )
             return false;
         vector<uint8> chunk;
@@ -169,20 +169,20 @@ namespace sw
         // shortcut: 같은 파일을 두 스레드가 처음 함께 열면 둘 다 받는다(원자 교체라 결과는 같다) — 받는 중 표를 두는 것은 겹침이 측정에 보일 때.
         StringBuilder<constant::buffer::kMax512> pathBuilder;
         pathBuilder.appendFormat( "%#/%#", _mirrorRoot, relative );
-        const string mirrorPath( pathBuilder.view() );
+        const AbsolutePath mirrorPath( FileUtil::toDiskPath( pathBuilder.view() ) );
         pathBuilder.append( kStampExtension );
-        const string stampPath{ pathBuilder.view() };
-        string       stampText;
+        const AbsolutePath stampPath{ FileUtil::toDiskPath( pathBuilder.view() ) };
+        string             stampText;
         StringUtil::appendNumber( stampText, stat._sizeBytes );
         stampText += " ";
         StringUtil::appendNumber( stampText, stat._modifiedNanos );
         string     existingStamp;
-        const bool bFresh = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( FileUtil::toDiskPath( mirrorPath ) );
+        const bool bFresh = FileUtil::readOptionalTextFile( stampPath, existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( mirrorPath );
         if ( bFresh == false )
         {
-            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), stampText ) == false )
+            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( stampPath, stampText ) == false )
             {
-                SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath );
+                SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath.str() );
                 // PC 에서 받는 사이 다시 구웠을 수 있다(구간이 416) — 다음 열기가 상태를 다시 묻게 기억을 지운다.
                 ScopedLock<mutex> lock{ _mutex };
                 _mapRemoteStat.erase( relative );
@@ -190,8 +190,8 @@ namespace sw
             }
         }
         ScopedLock<mutex> lock{ _mutex };
-        _mapMirrored[relative] = mirrorPath;
-        outMirrorPath          = mirrorPath;
+        _mapMirrored[relative] = mirrorPath.str();
+        outMirrorPath          = mirrorPath.str();
         return true;
     }
 

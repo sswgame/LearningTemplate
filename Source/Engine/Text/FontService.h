@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -95,8 +96,8 @@ namespace sw
         [[nodiscard]] bool initializeFromCatalog( FontCatalogDef catalog );
         /** @brief 연 면, 연쇄, 경고 기록을 모두 해제합니다. 다시 `initialize` 할 수 있습니다. */
         void shutdown();
-        /** @brief 파일 이름으로 시스템 글꼴을 찾습니다(`SystemFontLocator::findSystemFontFile`). 없으면 빈 글입니다. 에디터 ImGui 글꼴이 같은 색인을 쓴다. */
-        [[nodiscard]] string findSystemFontFile( string_view fileName ) { return _systemFontLocator.findSystemFontFile( fileName ); }
+        /** @brief 파일 이름으로 시스템 글꼴을 찾습니다(`SystemFontLocator::findSystemFontFile`). 없으면 빈 경로입니다. 에디터 ImGui 글꼴이 같은 색인을 쓴다. */
+        [[nodiscard]] AbsolutePath findSystemFontFile( string_view fileName ) { return _systemFontLocator.findSystemFontFile( fileName ); }
 
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override { shutdown(); }

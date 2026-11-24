@@ -217,26 +217,26 @@ namespace sw
         _spoolWorker.stop(); // shutdown 이 넘긴 일을 모두 기다렸다 — 남은 일이 없다
     }
 
-    void TelemetryService::initialize( string_view spoolFolder, const TelemetryContext& context )
+    void TelemetryService::initialize( const AbsolutePath& spoolFolder, const TelemetryContext& context )
     {
-        using Internal          = TelemetryServiceInternal;
-        const string folderPath = FileUtil::trimTrailingSlashes( spoolFolder );
+        using Internal                = TelemetryServiceInternal;
+        const AbsolutePath folderPath = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( spoolFolder.str() ) );
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다. 폴더 읽기는 잠금 밖이다.
-        vector<string> listLeftover;
-        vector<string> listFile;
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), "", listFile, false ) )
+        vector<string>       listLeftover;
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, "", listFile, false ) )
         {
-            for ( const string& path : listFile )
+            for ( const AbsolutePath& path : listFile )
             {
-                if ( Internal::isSpoolFile( path ) )
-                    listLeftover.push_back( path );
+                if ( Internal::isSpoolFile( path.str() ) )
+                    listLeftover.push_back( path.str() );
             }
             VectorUtil::sort( listLeftover, Internal::SpoolFileLess{} );
         }
 
         ScopedLock<mutex> lock{ _mutex };
-        _spoolFolder.set( folderPath );
+        _spoolFolder.set( folderPath.str() );
         _context.set( context );
         _stats = TelemetryStats{};
         _listPendingLine.clear();
@@ -256,7 +256,7 @@ namespace sw
         ScopedLock<mutex> spoolLock{ _spoolMutex };
         _spoolStats = TelemetryStats{};
         _listClosedFile.swap( listLeftover );
-        _currentFile.clear();
+        _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
         _fileIndex         = 0;
@@ -316,7 +316,7 @@ namespace sw
         context._buildID     = ModuleBuildID::find( nullptr )._id;
         context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         // 스풀은 사용자 설정 파일 옆이다 — 자동화가 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 같이 옮겨 간다.
-        const string folder = FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" );
+        const AbsolutePath folder = FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" ) );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
         if ( loadSchema( AssetID{ engineSchema } ) == false )
@@ -331,12 +331,12 @@ namespace sw
         bindConsentSetting( userSettings );
 
         // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
-        const string crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
+        const AbsolutePath crashFolder = FileUtil::toDiskPath( engine::getSubsystem<CrashHandler>().getReportFolder() );
         if ( crashFolder.empty() == false )
         {
             CrashReportService& crashReports = engine::getSubsystem<CrashReportService>();
-            const string        reportsFolder =
-                FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+            const AbsolutePath  reportsFolder =
+                FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder.str() ) ), CrashReportService::kReportsFolderName ) );
             crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
             crashReports.bindConsentSetting( userSettings );
             crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
@@ -583,7 +583,7 @@ namespace sw
         ScopedLock<mutex> spoolLock{ _spoolMutex };
         outListFilePath = _listClosedFile;
         if ( _currentFile.empty() == false )
-            outListFilePath.push_back( _currentFile );
+            outListFilePath.push_back( _currentFile.str() );
     }
 
     bool TelemetryService::isInitialized() const
@@ -743,11 +743,11 @@ namespace sw
         return root.describe(); // 이벤트 줄과 같은 규칙(U+FFFD)
     }
 
-    string TelemetryService::makeFilePathSpoolLocked( uint32 fileIndex ) const
+    AbsolutePath TelemetryService::makeFilePathSpoolLocked( uint32 fileIndex ) const
     {
         StringBuilder<constant::buffer::kMax256> name;
         name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
-        return FileUtil::joinPath( _spoolFolder.get(), name.c_str() );
+        return FileUtil::toDiskPath( FileUtil::joinPath( _spoolFolder.get(), name.c_str() ) );
     }
 
     void TelemetryService::writeLinesSpoolLocked( const TelemetrySpoolJob& job )
@@ -768,7 +768,7 @@ namespace sw
             if ( bFull )
             {
                 // 이 줄을 넣으면 상한을 넘는다 — 모은 것을 쓰고 파일을 닫은 뒤 새 파일로.
-                if ( chunk.empty() == false && FileUtil::appendTextFile( FileUtil::toDiskPath( _currentFile ), chunk ) )
+                if ( chunk.empty() == false && FileUtil::appendTextFile( _currentFile, chunk ) )
                     _currentFileBytes += chunk.size();
                 chunk.clear();
                 closeCurrentFileSpoolLocked();
@@ -789,7 +789,7 @@ namespace sw
         }
         if ( chunk.empty() == false )
         {
-            if ( FileUtil::appendTextFile( FileUtil::toDiskPath( _currentFile ), chunk ) )
+            if ( FileUtil::appendTextFile( _currentFile, chunk ) )
                 _currentFileBytes += chunk.size();
             else
                 SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFileCannot", "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
@@ -800,8 +800,8 @@ namespace sw
     {
         if ( _currentFile.empty() )
             return;
-        _listClosedFile.push_back( _currentFile );
-        _currentFile.clear();
+        _listClosedFile.push_back( _currentFile.str() );
+        _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
         ++_fileIndex;
@@ -823,11 +823,11 @@ namespace sw
             const bool   bOver     = fileCount > settings._maxFiles || totalBytes > settings._maxTotalBytes;
             if ( bOver == false )
                 break;
-            const string oldest      = _listClosedFile.front();
-            uint64       oldestBytes = 0;
-            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( oldest ), oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
+            const AbsolutePath oldest      = FileUtil::toDiskPath( _listClosedFile.front() );
+            uint64             oldestBytes = 0;
+            (void)FileUtil::tryGetFileSize( oldest, oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
             totalBytes -= MathUtil::min( totalBytes, oldestBytes );
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( oldest ) ); // 실패는 removeFile 이 경고로 남긴다
+            (void)FileUtil::removeFile( oldest ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
             ++_spoolStats._droppedFiles;
         }
@@ -843,13 +843,13 @@ namespace sw
                 ScopedLock<mutex> spoolLock{ _spoolMutex };
                 if ( _listClosedFile.empty() || job._nowSeconds < _uploadRetryAtSeconds )
                     return; // 보낼 것이 없거나 물러서는 중이다
-                batch._filePath = _listClosedFile.front();
+                batch._filePath = FileUtil::toDiskPath( _listClosedFile.front() );
                 pUploader       = _pUploader;
                 _pUploadingWith = pUploader; // `releaseUploader` 가 이 보내기가 끝나길 기다린다
             }
             // 잠금 밖 — 파일 읽기와 보내기. 끝점이 느려도 게임 스레드는 기다리지 않는다(목록을 바꾸는 것은 이 스레드뿐이라 맨 앞 파일은 그대로다).
             batch._sessionID             = _context->_sessionID;
-            const bool            bRead  = FileUtil::readTextFile( FileUtil::toDiskPath( batch._filePath ), batch._content );
+            const bool            bRead  = FileUtil::readTextFile( batch._filePath, batch._content );
             TelemetryUploadResult result = TelemetryUploadResult::Kept;
             if ( bRead )
             {
@@ -869,7 +869,7 @@ namespace sw
                 else if ( result == TelemetryUploadResult::Sent )
                 {
                     _uploadBackoff.reset();
-                    (void)FileUtil::removeFile( FileUtil::toDiskPath( batch._filePath ) ); // 실패는 removeFile 이 경고로 남긴다
+                    (void)FileUtil::removeFile( batch._filePath ); // 실패는 removeFile 이 경고로 남긴다
                     _listClosedFile.erase( _listClosedFile.begin() );
                     ++_spoolStats._uploadedFiles;
                     bNext = true;
@@ -895,7 +895,7 @@ namespace sw
     {
         vector<string> listFile = _listClosedFile;
         if ( _currentFile.empty() == false )
-            listFile.push_back( _currentFile );
+            listFile.push_back( _currentFile.str() );
         for ( const string& path : listFile )
         {
             if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
@@ -904,7 +904,7 @@ namespace sw
         _listClosedFile.clear();
         if ( _currentFile.empty() == false )
             ++_fileIndex;
-        _currentFile.clear();
+        _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
     }

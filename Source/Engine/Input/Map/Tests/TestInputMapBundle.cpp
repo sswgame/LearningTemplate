@@ -309,14 +309,14 @@ SW_TEST_CASE( InputMapBundleTest, CommonActionTableMatchesTheCommonFiles )
  */
 SW_TEST_CASE( InputMapBundleTest, EveryGamePackBundleLoads )
 {
-    const AbsolutePath presetFolder = ProcessRoots::get()._project.join( "Config/Game" );
-    vector<string>     listPreset;
+    const AbsolutePath   presetFolder = ProcessRoots::get()._project.join( "Config/Game" );
+    vector<AbsolutePath> listPreset;
     SW_REQUIRE_TRUE( FileUtil::collectFiles( presetFolder, ".json", listPreset, false ) );
     SW_REQUIRE_TRUE( listPreset.empty() == false );
-    for ( const string& presetPath : listPreset )
+    for ( const AbsolutePath& presetPath : listPreset )
     {
         GameConfig preset;
-        SW_REQUIRE_TRUE_MSG( ConfigManager::readConfigFile( preset, presetPath ) == ConfigReadResult::Loaded, presetPath.c_str() );
+        SW_REQUIRE_TRUE_MSG( ConfigManager::readConfigFile( preset, presetPath.str() ) == ConfigReadResult::Loaded, presetPath.c_str() );
         SW_EXPECT_TRUE_MSG( InputMapBundle::validatePack( preset._packRoot.get() ), presetPath.c_str() );
     }
 }

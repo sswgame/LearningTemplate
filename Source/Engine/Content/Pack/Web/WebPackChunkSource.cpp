@@ -16,7 +16,7 @@ namespace sw
         struct WebPackChunkRequest
         {
             string                     _url;
-            string                     _localPath;
+            AbsolutePath               _localPath;
             PackChunkFetchDoneDelegate _onDone;
         };
 
@@ -27,7 +27,7 @@ namespace sw
             /** @brief 페이지 기준 팩 자리입니다 — 웹 패키지(`Scripts/package/web_package.py`)가 미룬 청크를 이 폴더에 둔다. */
             static constexpr const utf8* kRemoteFolder = "Packs/";
 
-            void fetch( const string& packFileName, const string& localPath, PackChunkFetchDoneDelegate onDone ) override
+            void fetch( const string& packFileName, const AbsolutePath& localPath, PackChunkFetchDoneDelegate onDone ) override
             {
                 StringBuilder<constant::buffer::kMax256> url;
                 url.appendFormat( "%#%#", kRemoteFolder, packFileName );
@@ -56,9 +56,9 @@ namespace sw
             static void onSuccess( emscripten_fetch_t* pFetch )
             {
                 const WebPackChunkRequest& request  = *static_cast<const WebPackChunkRequest*>( pFetch->userData );
-                const bool                 bWritten = FileUtil::writeFile( FileUtil::toDiskPath( request._localPath ), reinterpret_cast<const uint8*>( pFetch->data ), static_cast<uint64>( pFetch->numBytes ) );
+                const bool                 bWritten = FileUtil::writeFile( request._localPath, reinterpret_cast<const uint8*>( pFetch->data ), static_cast<uint64>( pFetch->numBytes ) );
                 if ( bWritten == false )
-                    SW_LOG_ERROR_ID( "WebPackChunkSource.WriteFailed", "Chunk pack '%#' was fetched but could not be written to %#", request._url, request._localPath );
+                    SW_LOG_ERROR_ID( "WebPackChunkSource.WriteFailed", "Chunk pack '%#' was fetched but could not be written to %#", request._url, request._localPath.str() );
                 finish( pFetch, bWritten );
             }
 

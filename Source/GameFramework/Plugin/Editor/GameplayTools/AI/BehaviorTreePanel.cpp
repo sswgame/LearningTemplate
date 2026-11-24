@@ -156,7 +156,7 @@ namespace sw::editor
             return false;
         }
         const string completeText = _model.write(); // 차이(`_base`)면 부모와 같은 칸을 뺐다 — 펼친 글이 짝이다
-        if ( ResourceComposer::saveText( diskPath->str(), ResourceSaveText::makeWithComplete( *saveText, completeText ) ) == false )
+        if ( ResourceComposer::saveText( *diskPath, ResourceSaveText::makeWithComplete( *saveText, completeText ) ) == false )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );

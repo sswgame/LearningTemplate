@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -27,10 +28,10 @@ namespace sw
     /** @brief 올릴 묶음 하나 — 닫힌 스풀 파일 하나입니다. 첫 줄이 문맥 줄(세션 · 빌드 · 플랫폼)입니다. */
     struct TelemetryUploadBatch
     {
-        string _filePath{};
-        string _content{};
-        string _sessionID{};
-        uint32 _eventCount{ 0 };
+        AbsolutePath _filePath{};
+        string       _content{};
+        string       _sessionID{};
+        uint32       _eventCount{ 0 };
     };
 } // namespace sw
 

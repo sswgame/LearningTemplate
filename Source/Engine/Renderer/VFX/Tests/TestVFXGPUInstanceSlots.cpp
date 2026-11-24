@@ -20,10 +20,10 @@ namespace
     {
         static string readEngineShader( const utf8* pFileName )
         {
-            const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
-            string       text;
+            const AbsolutePath projectRoot = ProcessRoots::get()._project;
+            string             text;
             if ( projectRoot.empty() == false )
-                std::ignore = FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), pFileName ) ), text );
+                std::ignore = FileUtil::readTextFile( projectRoot.join( "Content/engine/shaders" ).join( pFileName ), text );
             return text;
         }
 

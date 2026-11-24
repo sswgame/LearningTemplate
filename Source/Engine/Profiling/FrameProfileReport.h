@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -89,6 +90,6 @@ namespace sw
         vector<FrameProfileScopeSummary> _listScope;
 
         /** @brief JSON 으로 씁니다(부모 폴더를 만든다). 쓰지 못하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool saveToFile( string_view absPath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
     };
 } // namespace sw

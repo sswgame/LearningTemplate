@@ -56,7 +56,7 @@ namespace sw::editor
             {
                 ModuleCatalogSnapshot      snapshot;
                 const ModuleResolveContext context = makeResolveContext();
-                expected<void>             loaded  = snapshot._catalog.loadDirectory( directory );
+                expected<void>             loaded  = snapshot._catalog.loadDirectory( FileUtil::toDiskPath( directory ) );
                 if ( loaded.has_value() )
                     loaded = snapshot._catalog.resolve( context, snapshot._resolution );
                 if ( loaded.has_value() )

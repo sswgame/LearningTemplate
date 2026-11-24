@@ -501,7 +501,7 @@ namespace sw
                     return true;
                 }
                 // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다.
-                return AssetPaths::collectGamePackDomains( params._resourceRoot, outListDomain );
+                return AssetPaths::collectGamePackDomains( FileUtil::toDiskPath( params._resourceRoot ), outListDomain );
             }
 
             /**
@@ -769,7 +769,7 @@ namespace sw
                 { outListing._listItem.push_back( PackItem{ PackStreamWriter::makePathHash( relativePath ), relativePath, absPath, source, {} } ); };
 
                 vector<string> listSourceFile;
-                if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
+                if ( CookJob::collectFiles( FileUtil::toDiskPath( domainDir ), "", listSourceFile ) == false )
                     return false;
                 for ( const string& absPath : listSourceFile )
                 {
@@ -792,7 +792,7 @@ namespace sw
                 }
 
                 vector<string> listStagedFile;
-                if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
+                if ( CookJob::collectFiles( FileUtil::toDiskPath( stagedDir ), "", listStagedFile ) == false )
                     return false;
                 for ( const string& absPath : listStagedFile )
                 {
@@ -967,8 +967,8 @@ namespace sw
                 writerDesc._compressionLevel = config._compression._level;
                 writerDesc._layoutMode       = config._layout._mode;
                 writerDesc._maxHolePercent   = static_cast<uint32>( config._layout._maxHolePercent );
-                writerDesc._previousPackPath = outputPath; // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
-                writerDesc._mountDomain      = domain;     // 형제 팩도 같은 도메인을 적는다 — 리더는 그대로 붙이고 마운트가 겹침을 거절한다
+                writerDesc._previousPackPath = FileUtil::toDiskPath( outputPath ); // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
+                writerDesc._mountDomain      = domain;                             // 형제 팩도 같은 도메인을 적는다 — 리더는 그대로 붙이고 마운트가 겹침을 거절한다
                 writerDesc._blockSize        = config._compression._blockSize;
                 writerDesc._writeWindowBytes = config._compression._writeWindowBytes;
 

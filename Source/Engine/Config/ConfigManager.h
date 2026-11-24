@@ -162,9 +162,9 @@ namespace sw
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            const string           resolvedPath         = resolveConfigPath( filePath );
-            const string           resolvedOverridePath = overridePath.empty() ? string() : resolveConfigPath( overridePath );
-            const string           resolvedQualityPath  = qualityTier.empty() ? string() : resolveConfigPath( qualityPath );
+            const AbsolutePath     resolvedPath         = resolveConfigPath( filePath );
+            const AbsolutePath     resolvedOverridePath = FileUtil::toDiskPath( overridePath.empty() ? string() : resolveConfigPath( overridePath ).str() );
+            const AbsolutePath     resolvedQualityPath  = FileUtil::toDiskPath( qualityTier.empty() ? string() : resolveConfigPath( qualityPath ).str() );
             string                 jsonStr;
             string                 label;
             const OptionalFileRead read = readLayeredFile( resolvedPath, resolvedOverridePath, resolvedQualityPath, qualityTier, jsonStr, label );
@@ -226,7 +226,7 @@ namespace sw
             for ( const auto& [key, source] : _mapSource )
             {
                 (void)key;
-                func( source._typeName, string_view( source._resolvedPath ) );
+                func( source._typeName, string_view( source._resolvedPath.str() ) );
             }
         }
 
@@ -331,9 +331,9 @@ namespace sw
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            const string           resolvedPath = resolveConfigPath( filePath );
+            const AbsolutePath     resolvedPath = resolveConfigPath( filePath );
             string                 jsonStr;
-            const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( resolvedPath ), jsonStr );
+            const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, jsonStr );
             if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
             if ( read == OptionalFileRead::Failed )
@@ -413,9 +413,9 @@ namespace sw
         {
             using ReloadFunc = bool ( * )( ConfigManager& manager, const ReloadSource& source );
 
-            string        _resolvedPath;
-            string        _resolvedOverridePath; ///< 덮어쓰기 파일(비면 층이 없다). 지금 없어도 생기면 다시 읽기가 합친다
-            string        _resolvedQualityPath;  ///< 품질 단계 표 파일(비면 층이 없다)
+            AbsolutePath  _resolvedPath;
+            AbsolutePath  _resolvedOverridePath; ///< 덮어쓰기 파일(비면 층이 없다). 지금 없어도 생기면 다시 읽기가 합친다
+            AbsolutePath  _resolvedQualityPath;  ///< 품질 단계 표 파일(비면 층이 없다)
             string        _qualityTier;          ///< 고른 품질 단계 이름(비면 층이 없다)
             hashed_string _typeName;             ///< 리플렉션 타입 이름(`EngineConfig`)
             ReloadFunc    _pReload{ nullptr };   ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
@@ -426,7 +426,7 @@ namespace sw
          *        @p outLabel 은 오류 표시용 출처입니다.
          * @return 바탕이 없으면 `Missing`(로그 없음), 어느 쪽이든 읽지 못했거나 합치지 못했거나 단계를 골랐는데 표가 없으면 `Failed`(오류를 남겼다)입니다.
          */
-        [[nodiscard]] static OptionalFileRead readLayeredFile( const string& resolvedPath, const string& resolvedOverridePath, const string& resolvedQualityPath,
+        [[nodiscard]] static OptionalFileRead readLayeredFile( const AbsolutePath& resolvedPath, const AbsolutePath& resolvedOverridePath, const AbsolutePath& resolvedQualityPath,
                                                                const string& qualityTier, string& outJSON, string& outLabel );
         /** @brief `PlatformConfigOverride::apply` 를 부릅니다(헤더가 그 형식을 모르게 둔다). */
         [[nodiscard]] static bool applyOverride( const string& baseJSON, const utf8* pOverrideJSON, const utf8* pOverrideLabel, string& outJSON );
@@ -476,11 +476,11 @@ namespace sw
          * @brief 설정 파일의 경로입니다. 절대 경로면 그대로, 상대 경로면 프로젝트 루트(`ProcessRoots::_project`) 아래다 - 한 곳이다.
          * @details 예전에는 작업 폴더 → 프로젝트 → 실행 파일 폴더를 차례로 찾았다(띄운 자리에 따라 다른 설정 파일을 읽었다). 있는지는 묻지 않는다 - 읽기가 답한다.
          */
-        [[nodiscard]] static string resolveConfigPath( const string& filePath )
+        [[nodiscard]] static AbsolutePath resolveConfigPath( const string& filePath )
         {
             if ( FileUtil::isAbsolutePath( filePath ) )
-                return filePath;
-            return FileUtil::joinPath( ProcessRoots::get()._project.str(), filePath );
+                return FileUtil::toDiskPath( filePath );
+            return ProcessRoots::get()._project.join( filePath );
         }
 
         /**

@@ -20,12 +20,11 @@ namespace sw
     /**
      * @struct CommandLineDiskPath
      * @brief 디스크 경로 인자의 저장 형식입니다. `ArgumentList.xxx` 에서 기본값을 `CommandLineDiskPath{}` 로 적은 줄이 이 형식이다.
-     * @details `parse` 가 받을 때 한 번 절대화한다 - 상대 경로는 **기동 때 넘긴 기준 폴더**(그 셸의 작업 폴더) 기준이다(R5). 읽는 쪽은 `string` 으로 꺼내며
-     *          늘 절대 경로다. 예전에는 받은 글을 그대로 두어, 읽는 쪽마다 실행 중 작업 폴더로 다시 풀었다(작업 폴더를 바꾸면 산출물 위치가 바뀌었다).
+     * @details `parse` 가 받을 때 한 번 절대화한다 - 상대 경로는 **기동 때 넘긴 기준 폴더**(그 셸의 작업 폴더) 기준이다(R5). 읽는 쪽은 `AbsolutePath` 로 꺼낸다(글로 꺼내도 늘 절대 경로다). 예전에는 받은 글을 그대로 두어, 읽는 쪽마다 실행 중 작업 폴더로 다시 풀었다(작업 폴더를 바꾸면 산출물 위치가 바뀌었다).
      */
     struct CommandLineDiskPath
     {
-        string _path;
+        AbsolutePath _path;
     };
 } // namespace sw
 
@@ -365,8 +364,8 @@ namespace sw
     template <typename T>
     bool CommandLineManager::readValue( const ArgumentInfo& argument, T& outValue )
     {
-        static_assert( std::is_same_v<T, bool> || std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_same_v<T, string> || std::is_same_v<T, string_view>,
-                       "커맨드라인 값은 bool·정수·부동소수·string·string_view 로만 꺼낼 수 있습니다" );
+        static_assert( std::is_same_v<T, bool> || std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_same_v<T, string> || std::is_same_v<T, string_view> || std::is_same_v<T, AbsolutePath>,
+                       "커맨드라인 값은 bool·정수·부동소수·string·string_view·AbsolutePath(디스크 경로 인자) 로만 꺼낼 수 있습니다" );
 
         const ArgumentInfo::Value* pTargetValue{ nullptr };
         if ( argument._bParsed != SW_FALSE )
@@ -374,32 +373,44 @@ namespace sw
         else
             return false;
 
-        // 요청 타입 → 저장 타입. bool 을 먼저 걸러야 한다(bool 도 정수 타입이다).
-        using StoredType = std::conditional_t<std::is_same_v<T, bool>, bool,
-                                              std::conditional_t<std::is_integral_v<T>, int32,
-                                                                 std::conditional_t<std::is_floating_point_v<T>, float32, string>>>;
-
-        // 경로 인자는 절대 경로 글로 꺼낸다(저장 형식만 다르다).
-        if constexpr ( std::is_same_v<StoredType, string> )
+        // 디스크 경로 인자만 형식으로 꺼낸다 — 글 인자는 절대 경로라고 말할 수 없다.
+        if constexpr ( std::is_same_v<T, AbsolutePath> )
         {
             const CommandLineDiskPath* pDiskPath = std::get_if<CommandLineDiskPath>( pTargetValue );
-            if ( pDiskPath != nullptr )
-            {
-                outValue = T{ pDiskPath->_path };
-                return true;
-            }
+            if ( pDiskPath == nullptr )
+                return false;
+            outValue = pDiskPath->_path;
+            return true;
         }
-
-        const StoredType* pStoredValue = std::get_if<StoredType>( pTargetValue );
-        if ( pStoredValue == nullptr )
-            return false;
-
-        if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, string_view> )
-            outValue = T{ *pStoredValue };
         else
-            outValue = static_cast<T>( *pStoredValue );
+        {
+            // 요청 타입 → 저장 타입. bool 을 먼저 걸러야 한다(bool 도 정수 타입이다).
+            using StoredType = std::conditional_t<std::is_same_v<T, bool>, bool,
+                                                  std::conditional_t<std::is_integral_v<T>, int32,
+                                                                     std::conditional_t<std::is_floating_point_v<T>, float32, string>>>;
 
-        return true;
+            // 경로 인자는 절대 경로 글로 꺼낸다(저장 형식만 다르다).
+            if constexpr ( std::is_same_v<StoredType, string> )
+            {
+                const CommandLineDiskPath* pDiskPath = std::get_if<CommandLineDiskPath>( pTargetValue );
+                if ( pDiskPath != nullptr )
+                {
+                    outValue = T{ pDiskPath->_path.str() };
+                    return true;
+                }
+            }
+
+            const StoredType* pStoredValue = std::get_if<StoredType>( pTargetValue );
+            if ( pStoredValue == nullptr )
+                return false;
+
+            if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, string_view> )
+                outValue = T{ *pStoredValue };
+            else
+                outValue = static_cast<T>( *pStoredValue );
+
+            return true;
+        }
     }
 
     template <typename T>

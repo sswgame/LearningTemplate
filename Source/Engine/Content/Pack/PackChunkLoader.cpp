@@ -79,7 +79,7 @@ namespace sw
         for ( const string& packName : listToFetch )
         {
             const shared_ptr<SharedState> pShared = _pShared;
-            _pSource->fetch( packName, FileUtil::joinPath( packsDirectory, packName ), SW_DELEGATE_LAMBDA( PackChunkFetchDoneDelegate, [pShared, packName]( bool bFetched )
+            _pSource->fetch( packName, FileUtil::toDiskPath( FileUtil::joinPath( packsDirectory, packName ) ), SW_DELEGATE_LAMBDA( PackChunkFetchDoneDelegate, [pShared, packName]( bool bFetched )
             {
                 ScopedLock<mutex> lock{ pShared->_mutex };
                 pShared->_mapState[packName] = bFetched ? FileState::Local : FileState::Failed;

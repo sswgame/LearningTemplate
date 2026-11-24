@@ -28,11 +28,11 @@ namespace sw
         }
 
         /** @brief @p path 에 @p pText 를 쓰고 쓰기 시각을 한 시간 전으로 돌립니다(바깥 도구가 오래전에 쓴 파일 — 시간 창 밖이라 캐시된다). */
-        void writeHourOldFile( const string& path, const utf8* pText )
+        void writeHourOldFile( const AbsolutePath& path, const utf8* pText )
         {
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), pText ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
             const int64 hourAgo = FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond;
-            SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( FileUtil::toDiskPath( path ), hourAgo ) );
+            SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, hourAgo ) );
         }
 
         AbsolutePath makeCachePath()
@@ -69,18 +69,18 @@ SW_TEST_CASE( ContentHashCacheTest, SecondProcessReadsNoBytes )
 {
     const AbsolutePath path      = test::makeScratchPath( "aged.txt" );
     const AbsolutePath cachePath = makeCachePath();
-    writeHourOldFile( path.str(), "aged content" );
+    writeHourOldFile( path, "aged content" );
     const uint64 expected = ContentHash::computeBytes( makeBytes( "aged content" ) );
     {
         ContentHashCache first;
         SW_REQUIRE_TRUE( first.load( cachePath ).has_value() ); // 파일이 아직 없다 — 빈 캐시로 성공
-        SW_EXPECT_EQUAL( first.computeFile( path.str() ), expected );
+        SW_EXPECT_EQUAL( first.computeFile( path ), expected );
         SW_EXPECT_NOT_EQUAL( first.getHashedByteCount(), uint64( 0 ) );
         SW_REQUIRE_TRUE( first.save().has_value() );
     }
     ContentHashCache second;
     SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
-    SW_EXPECT_EQUAL( second.computeFile( path.str() ), expected );
+    SW_EXPECT_EQUAL( second.computeFile( path ), expected );
     SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 0 ) );
 }
 
@@ -98,8 +98,8 @@ SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
     {
         ContentHashCache first;
         SW_REQUIRE_TRUE( first.load( cachePath ).has_value() );
-        first.recordOwnWrite( path.str() );
-        SW_EXPECT_EQUAL( first.computeFile( path.str() ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
+        first.recordOwnWrite( path );
+        SW_EXPECT_EQUAL( first.computeFile( path ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
         SW_REQUIRE_TRUE( first.save().has_value() );
     }
     // 바깥 도구가 같은 틱에 같은 크기로 다시 썼다 — 도장이 같다.
@@ -107,7 +107,7 @@ SW_TEST_CASE( ContentHashCacheTest, StampInsideTheWriteWindowIsHashedAgain )
     SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, writeTicks ) );
     ContentHashCache second;
     SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
-    SW_EXPECT_EQUAL( second.computeFile( path.str() ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
+    SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
     SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 4 ) );
 }
 
@@ -119,12 +119,12 @@ SW_TEST_CASE( ContentHashCacheTest, ExternalRewriteInTheOwnWriteTickIsSeen )
     int64 writeTicks = 0;
     SW_REQUIRE_TRUE( FileUtil::getFileWriteTime( path, writeTicks ) );
     ContentHashCache cache;
-    cache.recordOwnWrite( path.str() );
-    SW_EXPECT_EQUAL( cache.computeFile( path.str() ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
+    cache.recordOwnWrite( path );
+    SW_EXPECT_EQUAL( cache.computeFile( path ), ContentHash::computeBytes( makeBytes( "aaaa" ) ) );
     // 바깥 도구가 같은 틱에 같은 크기로 다시 썼다 — 도장이 같고 이 캐시에는 알림이 없다.
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "bbbb" ) );
     SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, writeTicks ) );
-    SW_EXPECT_EQUAL( cache.computeFile( path.str() ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
+    SW_EXPECT_EQUAL( cache.computeFile( path ), ContentHash::computeBytes( makeBytes( "bbbb" ) ) );
 }
 
 /** @brief [ContentHashCacheTest] 다른 판의 캐시 파일은 빈 캐시로 읽는다 — 항목을 믿지 않고 다시 해시한다(오류가 아니다). */
@@ -132,11 +132,11 @@ SW_TEST_CASE( ContentHashCacheTest, CacheFromAnotherVersionIsDropped )
 {
     const AbsolutePath path      = test::makeScratchPath( "versioned.txt" );
     const AbsolutePath cachePath = makeCachePath();
-    writeHourOldFile( path.str(), "versioned" );
+    writeHourOldFile( path, "versioned" );
     {
         ContentHashCache first;
         SW_REQUIRE_TRUE( first.load( cachePath ).has_value() );
-        SW_EXPECT_NOT_EQUAL( first.computeFile( path.str() ), uint64( 0 ) );
+        SW_EXPECT_NOT_EQUAL( first.computeFile( path ), uint64( 0 ) );
         SW_REQUIRE_TRUE( first.save().has_value() );
     }
     vector<uint8> bytes;
@@ -150,7 +150,7 @@ SW_TEST_CASE( ContentHashCacheTest, CacheFromAnotherVersionIsDropped )
     SW_REQUIRE_TRUE( FileUtil::writeFile( cachePath, bytes.data(), bytes.size() ) );
     ContentHashCache second;
     SW_REQUIRE_TRUE( second.load( cachePath ).has_value() );
-    SW_EXPECT_EQUAL( second.computeFile( path.str() ), ContentHash::computeBytes( makeBytes( "versioned" ) ) );
+    SW_EXPECT_EQUAL( second.computeFile( path ), ContentHash::computeBytes( makeBytes( "versioned" ) ) );
     SW_EXPECT_EQUAL( second.getHashedByteCount(), uint64( 9 ) );
 }
 

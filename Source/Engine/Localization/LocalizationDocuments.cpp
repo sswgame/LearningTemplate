@@ -132,22 +132,22 @@ namespace sw
                 return unexpected( atSource( Error{ ErrorKind::InvalidArgument, "an entry field is missing or unreadable", key }.appendDetail( ": " ).appendDetail( firstIssue ), sourceName ) );
             }
 
-            [[nodiscard]] static expected<void> readTextFile( string_view absolutePath, string& outText )
+            [[nodiscard]] static expected<void> readTextFile( const AbsolutePath& absolutePath, string& outText )
             {
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), outText ) )
+                if ( FileUtil::readTextFile( absolutePath, outText ) )
                     return {};
-                return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath } );
+                return unexpected( Error{ ErrorKind::NotFound, "cannot read the file", absolutePath.str() } );
             }
 
-            [[nodiscard]] static bool writeTextFile( string_view absolutePath, const string& text )
+            [[nodiscard]] static bool writeTextFile( const AbsolutePath& absolutePath, const string& text )
             {
                 // 정체성 머리는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다. 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
                 string       existing;
-                const bool   bExisting   = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absolutePath ), existing ) == OptionalFileRead::Read;
+                const bool   bExisting   = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read;
                 const string textToWrite = bExisting ? AssetGUIDHeader::carryOver( existing, text ) : text;
                 if ( bExisting && existing == textToWrite )
                     return true;
-                return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absolutePath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absolutePath ), textToWrite );
+                return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, textToWrite );
             }
         };
     } // namespace
@@ -225,11 +225,11 @@ namespace sw
         return {};
     }
 
-    expected<void> SourceStringTable::loadFromFile( string_view absolutePath )
+    expected<void> SourceStringTable::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
-        { return loadFromXMLText( text, absolutePath ); } );
+        { return loadFromXMLText( text, absolutePath.str() ); } );
     }
 
     string SourceStringTable::saveToXMLText() const
@@ -257,7 +257,7 @@ namespace sw
 
     bool SourceStringTable::saveToFile( const AbsolutePath& absPath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), saveToXMLText() );
+        return LocalizationDocumentsInternal::writeTextFile( absPath, saveToXMLText() );
     }
 
     const SourceTextEntry* SourceStringTable::findEntry( string_view key ) const
@@ -317,11 +317,11 @@ namespace sw
         return {};
     }
 
-    expected<void> TranslationTable::loadFromFile( string_view absolutePath )
+    expected<void> TranslationTable::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
-        { return loadFromXMLText( text, absolutePath ); } );
+        { return loadFromXMLText( text, absolutePath.str() ); } );
     }
 
     string TranslationTable::saveToXMLText() const
@@ -347,7 +347,7 @@ namespace sw
 
     bool TranslationTable::saveToFile( const AbsolutePath& absPath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), saveToXMLText() );
+        return LocalizationDocumentsInternal::writeTextFile( absPath, saveToXMLText() );
     }
 
     const TranslationEntry* TranslationTable::findEntry( string_view key ) const
@@ -453,7 +453,7 @@ namespace sw
     expected<void> LocalizationProject::loadFromFile( string_view absolutePath )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
+        return LocalizationDocumentsInternal::readTextFile( FileUtil::toDiskPath( absolutePath ), text ).and_then( [&]()
         { return loadFromXMLText( text, absolutePath ); } );
     }
 

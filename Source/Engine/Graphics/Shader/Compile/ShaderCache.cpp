@@ -113,7 +113,7 @@ namespace sw
         }
         _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &ShaderCache::onConfigReloaded, this ) );
         // 요청 기록은 명시 인자로만 켠다(묶음 검증의 시나리오 체인 — Test/Scenario/CMakeLists.txt). 다음 검증이 시간을 재기 전에 이 목록만 컴파일해 DDC 를 데운다(`ShaderRequestLog`).
-        _requestLogPath.clear();
+        _requestLogPath = {};
         (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SHADER_REQUEST_LOG, _requestLogPath ); // 없으면 기록하지 않는다
         return true;
     }
@@ -374,8 +374,8 @@ namespace sw
             text        = _requestLog.makeText();
             _requestLog = ShaderRequestLog{};
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _requestLogPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( _requestLogPath ), text ) == false )
-            SW_LOG_WARNING_ID( "ShaderCache.RequestLogNotWritten", "Could not write the shader request log '%#' - the next warm-up compiles nothing for this run", _requestLogPath );
+        if ( FileUtil::ensureParentDirectoryExists( _requestLogPath ) == false || FileUtil::writeTextFile( _requestLogPath, text ) == false )
+            SW_LOG_WARNING_ID( "ShaderCache.RequestLogNotWritten", "Could not write the shader request log '%#' - the next warm-up compiles nothing for this run", _requestLogPath.str() );
     }
 } // namespace sw
 

@@ -30,7 +30,7 @@ SW_TEST_CASE( FrameProfileReportTest, JSONRoundTrips )
     report._listScope.push_back( scope );
 
     const AbsolutePath path = test::makeScratchPath( "report.profile.json" );
-    SW_REQUIRE_TRUE( report.saveToFile( path.str() ) );
+    SW_REQUIRE_TRUE( report.saveToFile( path ) );
     string text;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_EXPECT_TRUE( text.find( "\"_allocationsPerFrameX10\"" ) != string::npos );

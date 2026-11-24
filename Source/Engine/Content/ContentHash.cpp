@@ -83,7 +83,7 @@ namespace sw
 
     uint64 ContentHash::computeFile( string_view absPath )
     {
-        return engine::getSubsystem<ContentHashCache>().computeFile( absPath );
+        return engine::getSubsystem<ContentHashCache>().computeFile( FileUtil::toDiskPath( absPath ) );
     }
 
     void ContentHash::clearCache()
@@ -101,7 +101,7 @@ namespace sw
 
     void ContentHashCache::WriteObserver::recordFileWritten( string_view filePath )
     {
-        _owner.recordOwnWrite( filePath );
+        _owner.recordOwnWrite( FileUtil::toDiskPath( filePath ) );
     }
 
     ContentHashCache::ContentHashCache()
@@ -137,11 +137,11 @@ namespace sw
         return FileUtil::normalizeSeparators( path );
     }
 
-    uint64 ContentHashCache::computeFile( string_view absPath )
+    uint64 ContentHashCache::computeFile( const AbsolutePath& absPath )
     {
-        const string key = makeKey( absPath );
+        const string key = makeKey( absPath.str() );
         FileStamp    stamp{};
-        const bool   bStamped   = FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), stamp );
+        const bool   bStamped   = FileUtil::getFileStamp( absPath, stamp );
         uint64       serialSeen = 0;
         bool         bHadEntry  = false;
         if ( bStamped )
@@ -157,7 +157,7 @@ namespace sw
             }
         }
 
-        const uint64 hash = ContentHashInternal::readFileHash( absPath, _hashedByteCount );
+        const uint64 hash = ContentHashInternal::readFileHash( absPath.str(), _hashedByteCount );
         // 자기 쓰기도 시간 창이 지나야 남긴다 — 쓴 그 틱에 바깥 도구가 같은 크기로 다시 쓰면 도장으로 알 길이 없다(두 프로세스의 순서 없는 경합).
         if ( bStamped == false || hash == 0 || ContentHash::isStampStable( stamp ) == false )
             return hash;
@@ -170,11 +170,11 @@ namespace sw
         return hash;
     }
 
-    void ContentHashCache::recordOwnWrite( string_view filePath )
+    void ContentHashCache::recordOwnWrite( const AbsolutePath& filePath )
     {
-        const string      key = makeKey( filePath );
+        const string      key = makeKey( filePath.str() );
         FileStamp         stamp{};
-        const bool        bFile = FileUtil::getFileStamp( FileUtil::toDiskPath( filePath ), stamp );
+        const bool        bFile = FileUtil::getFileStamp( filePath, stamp );
         ScopedLock<mutex> lock{ _mutex };
         ++_writeSerial;
         if ( bFile )
@@ -192,7 +192,7 @@ namespace sw
     {
         {
             ScopedLock<mutex> lock{ _mutex };
-            _cachePath = cachePath.str();
+            _cachePath = cachePath;
         }
         vector<uint8> bytes;
         if ( FileUtil::isRegularFile( cachePath ) == false )
@@ -235,7 +235,7 @@ namespace sw
     expected<void> ContentHashCache::save() const
     {
         vector<uint8> bytes;
-        string        cachePath;
+        AbsolutePath  cachePath;
         {
             ScopedLock<mutex> lock{ _mutex };
             if ( _cachePath.empty() )
@@ -260,8 +260,8 @@ namespace sw
             }
             writer.writePodAt( countOffset, count );
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( cachePath ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( cachePath ), bytes.data(), bytes.size() ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be written", cachePath } );
+        if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, bytes.data(), bytes.size() ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be written", cachePath.str() } );
         return {};
     }
 

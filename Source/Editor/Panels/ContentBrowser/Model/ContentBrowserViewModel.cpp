@@ -299,7 +299,7 @@ namespace sw::editor
         if ( _bShowAllPacks || packRoot.empty() )
         {
             vector<string> listPackDomain;
-            (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // game/ 이 없으면 팩 루트가 없다
+            (void)AssetPaths::collectGamePackDomains( FileUtil::toDiskPath( editor::getSubsystem<AssetPaths>().getRootFolderPath() ), listPackDomain ); // game/ 이 없으면 팩 루트가 없다
             for ( const string& packDomain : listPackDomain )
             {
                 const string packName = FileUtil::normalizePath( packDomain ).str();

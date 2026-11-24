@@ -383,7 +383,7 @@ namespace sw
             if ( resolved.has_value() == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "neither absolute nor relative (drive-relative or rootless)", newValue } );
             CommandLineDiskPath diskPath;
-            diskPath._path  = resolved->str();
+            diskPath._path  = *resolved;
             argument._value = std::move( diskPath );
             return {};
         }

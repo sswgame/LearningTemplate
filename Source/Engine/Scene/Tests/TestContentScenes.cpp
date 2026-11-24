@@ -22,15 +22,15 @@ SW_TEST_CASE( ContentScenesTest, EngineAndActiveGameScenesLoad )
     uint32       sceneCount   = 0;
     for ( const string& folder : listFolder )
     {
-        vector<string> listPath;
+        vector<AbsolutePath> listPath;
         SW_EXPECT_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), ".scene.xml", listPath, true ) );
-        for ( const string& path : listPath )
+        for ( const AbsolutePath& path : listPath )
         {
             SceneDocument                            document;
-            const bool                               bLoaded = document.loadXMLFromDiskFile( path );
+            const bool                               bLoaded = document.loadXMLFromDiskFile( path.str() );
             StringBuilder<constant::buffer::kMax512> failure;
             if ( bLoaded == false )
-                failure.appendFormat( "%#: could not be loaded (see the log)", path );
+                failure.appendFormat( "%#: could not be loaded (see the log)", path.str() );
             SW_EXPECT_EQUAL( string(), string( failure.view() ) );
             ++sceneCount;
         }

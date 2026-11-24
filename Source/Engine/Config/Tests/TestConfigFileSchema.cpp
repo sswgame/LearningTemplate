@@ -194,12 +194,12 @@ namespace
  */
 SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
 {
-    const sw::string projectRoot = sw::FileUtil::normalizeSeparators( sw::ProcessRoots::get()._project.str() );
+    const sw::AbsolutePath projectRoot = sw::ProcessRoots::get()._project;
     SW_REQUIRE_FALSE( projectRoot.empty() );
-    const sw::string configRoot = sw::FileUtil::joinPath( projectRoot, "Config" );
+    const sw::AbsolutePath configRoot = projectRoot.join( "Config" );
 
     sw::vector<sw::string> listFilePath;
-    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( sw::FileUtil::toDiskPath( configRoot ), "", listFilePath, true ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( configRoot, "", listFilePath, true ) );
 
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )

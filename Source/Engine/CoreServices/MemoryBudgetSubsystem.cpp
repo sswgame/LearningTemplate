@@ -25,7 +25,7 @@ namespace sw
         {
             _bBudgetFileRead = SW_TRUE;
             if ( _crashHandler.isCrashReporterRun() == false )
-                (void)_monitor.loadBudgetFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
+                (void)_monitor.loadBudgetFile( ProcessRoots::get()._project.join( MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
         }
         _monitor.onFrameEnd();
     }

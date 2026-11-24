@@ -156,7 +156,7 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
     bool DialogueGraphAsset::loadFromXMLText( string_view xmlView )

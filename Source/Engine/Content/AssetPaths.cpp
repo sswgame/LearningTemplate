@@ -35,7 +35,7 @@ namespace sw
          */
         struct AssetPathTable
         {
-            string         _resourceRootFolderPath{}; ///< Content/ 최상위 루트(유일한 기준점)
+            AbsolutePath   _resourceRootFolderPath{}; ///< Content/ 최상위 루트(유일한 기준점)
             vector<string> _listSearchPriority{};     ///< 검색 우선순위 토큰 목록
             vector<string> _listResourceFolder{};     ///< findLooseFile 의 검색 루트 목록
             vector<string> _listHostExcludedGroup{};  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
@@ -152,27 +152,27 @@ namespace sw
             /** @brief 두 표의 내용이 같으면 true 입니다(`publishTable` 이 같은 표를 다시 쓴다). */
             static bool isSameTable( const AssetPathTable& left, const AssetPathTable& right )
             {
-                return left._resourceRootFolderPath == right._resourceRootFolderPath &&
+                return left._resourceRootFolderPath.str() == right._resourceRootFolderPath.str() &&
                        left._listSearchPriority == right._listSearchPriority && left._listResourceFolder == right._listResourceFolder &&
                        left._listHostExcludedGroup == right._listHostExcludedGroup;
             }
 
             /** @brief @p root 아래 도메인(과 하위 폴더)의 디스크 폴더입니다. 없으면 빈 글입니다(새 표를 짓는 동안 그 표의 루트로 푼다). */
-            static string findDomainFolderUnder( const string& root, string_view domainName, string_view subFolder )
+            static string findDomainFolderUnder( const AbsolutePath& root, string_view domainName, string_view subFolder )
             {
                 if ( root.empty() || domainName.empty() )
                     return {};
-                const string domainDir = FileUtil::joinPath( root, domainName );
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( domainDir ) ) == false )
+                const AbsolutePath domainDir = root.join( domainName );
+                if ( FileUtil::isDirectory( domainDir ) == false )
                     return {};
                 if ( subFolder.empty() )
-                    return FileUtil::normalizeSeparators( domainDir );
-                const string targetDir = FileUtil::joinPath( domainDir, subFolder );
-                return FileUtil::isDirectory( FileUtil::toDiskPath( targetDir ) ) ? FileUtil::normalizeSeparators( targetDir ) : string{};
+                    return FileUtil::normalizeSeparators( domainDir.str() );
+                const AbsolutePath targetDir = domainDir.join( subFolder );
+                return FileUtil::isDirectory( targetDir ) ? FileUtil::normalizeSeparators( targetDir.str() ) : string{};
             }
 
             /** @brief @p root 와 우선순위 @p listPriority 로 검색 루트 목록을 짓습니다(디스크를 본다 — 잠금 밖에서 부른다). */
-            static vector<string> buildResourceFolders( const string& root, const vector<string>& listPriority )
+            static vector<string> buildResourceFolders( const AbsolutePath& root, const vector<string>& listPriority )
             {
                 vector<string> listFolder;
                 if ( root.empty() )
@@ -191,10 +191,10 @@ namespace sw
                     if ( token == "game" )
                     {
                         // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
-                        const GameConfig* pGameConfig = engine::findSubsystem<GameConfig>();
-                        const string      activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get(), {} ) : string();
-                        if ( activePack.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( activePack ) ) )
-                            appendFolder( FileUtil::normalizeSeparators( activePack ) );
+                        const GameConfig*  pGameConfig = engine::findSubsystem<GameConfig>();
+                        const AbsolutePath activePack  = FileUtil::toDiskPath( pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findDomainFolderUnder( root, pGameConfig->_packRoot.get(), {} ) : string() );
+                        if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
+                            appendFolder( FileUtil::normalizeSeparators( activePack.str() ) );
                         const string gameDir = findDomainFolderUnder( root, constant::path::kGamePack, {} );
                         if ( gameDir.empty() == false )
                         {
@@ -202,7 +202,7 @@ namespace sw
                             (void)AssetPaths::collectGamePackDomains( root, listPackDomain ); // 다 읽지 못하면 이유를 남겼다 - 읽은 팩만 찾는다
                             for ( const string& packDomain : listPackDomain )
                             {
-                                appendFolder( FileUtil::normalizeSeparators( FileUtil::joinPath( root, packDomain ) ) );
+                                appendFolder( FileUtil::normalizeSeparators( FileUtil::joinPath( root.str(), packDomain ) ) );
                             }
                             appendFolder( gameDir );
                         }
@@ -388,8 +388,8 @@ namespace sw
                     return true;
                 }
 
-                const string& resourceRoot      = getTable( state )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
-                const bool    bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
+                const AbsolutePath& resourceRoot      = getTable( state )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
+                const bool          bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
                 if ( bUnresolvablePath )
                     return false;
 
@@ -400,11 +400,11 @@ namespace sw
                     const size_t slash = rest.find( '/' );
                     if ( slash == string::npos )
                     {
-                        outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, constant::path::kGamePack ), rest );
+                        outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot.str(), constant::path::kGamePack ), rest );
                         outKeyUnderRoot = {};
                         return FileUtil::isDirectory( FileUtil::toDiskPath( outRoot ) );
                     }
-                    outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot, constant::path::kGamePack ), rest.substr( 0, slash ) );
+                    outRoot         = FileUtil::joinPath( FileUtil::joinPath( resourceRoot.str(), constant::path::kGamePack ), rest.substr( 0, slash ) );
                     outKeyUnderRoot = rest.substr( slash + 1 );
                     return FileUtil::isDirectory( FileUtil::toDiskPath( outRoot ) );
                 }
@@ -412,9 +412,9 @@ namespace sw
                 // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등). 도메인 이름만이면(`engine`) 그 도메인 루트다(빈 키) -
                 //    `game` 은 팩 이름까지가 도메인이라 이름만으로는 도메인이 아니다.
                 const bool bBareDomain = lowerRel.find( '/' ) == string_view::npos && lowerRel.find( ':' ) == string_view::npos && lowerRel != constant::path::kGamePack;
-                if ( bBareDomain && FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( resourceRoot, lowerRel ) ) ) )
+                if ( bBareDomain && FileUtil::isDirectory( resourceRoot.join( lowerRel ) ) )
                 {
-                    outRoot         = FileUtil::joinPath( resourceRoot, lowerRel );
+                    outRoot         = FileUtil::joinPath( resourceRoot.str(), lowerRel );
                     outKeyUnderRoot = {};
                     return true;
                 }
@@ -424,10 +424,10 @@ namespace sw
                     const string_view domain = lowerRel.substr( 0, firstSlash );
                     if ( domain.find( ':' ) == string_view::npos )
                     {
-                        const string candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
-                        if ( FileUtil::isDirectory( FileUtil::toDiskPath( candidateDomainDir ) ) )
+                        const AbsolutePath candidateDomainDir = resourceRoot.join( domain );
+                        if ( FileUtil::isDirectory( candidateDomainDir ) )
                         {
-                            outRoot         = candidateDomainDir;
+                            outRoot         = candidateDomainDir.str();
                             outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
                             return true;
                         }
@@ -444,15 +444,15 @@ namespace sw
              * @param relFolder 선택적 하위 폴더(비우면 root 바로 아래)
              * @return 있으면 normalizeSeparators 한 절대 경로, 없으면 빈 문자열
              */
-            static string tryUnderRoot( string_view root, string_view relFile, string_view relFolder )
+            static AbsolutePath tryUnderRoot( string_view root, string_view relFile, string_view relFolder )
             {
                 if ( root.empty() )
                     return {};
                 // 빈 키는 도메인 루트 자신이다(`game/playground` 처럼 팩 폴더를 가리키는 id — `mapGlobalIDToRoot` 가 빈 키로 돌려준다).
-                const string base         = relFolder.empty() ? string( root ) : FileUtil::joinPath( root, relFolder );
-                const string absolutePath = relFile.empty() ? base : FileUtil::joinPath( base, relFile );
-                if ( FileUtil::exists( FileUtil::toDiskPath( absolutePath ) ) )
-                    return FileUtil::normalizeSeparators( absolutePath );
+                const string       base         = relFolder.empty() ? string( root ) : FileUtil::joinPath( root, relFolder );
+                const AbsolutePath absolutePath = FileUtil::toDiskPath( relFile.empty() ? base : FileUtil::joinPath( base, relFile ) );
+                if ( FileUtil::exists( absolutePath ) )
+                    return absolutePath;
                 return {};
             }
 
@@ -467,7 +467,7 @@ namespace sw
             {
                 for ( const string& root : listRoot )
                 {
-                    const string hit = tryUnderRoot( root, relFile, relFolder );
+                    const string hit = tryUnderRoot( root, relFile, relFolder ).str();
                     if ( hit.empty() == false )
                         return hit;
                 }
@@ -562,7 +562,7 @@ namespace sw
         SW_LOG_INFO_ID( "AssetPaths.RootFolder", "RootFolder : %#", rootPath.str() );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
         // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
-        const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content.str() : string{};
+        const AbsolutePath resourceRootFolderPath = FileUtil::toDiskPath( FileUtil::isDirectory( ProcessRoots::get()._content ) ? ProcessRoots::get()._content.str() : string{} );
 
         vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
         if ( listSearchPriority.empty() )
@@ -626,7 +626,7 @@ namespace sw
         string keyUnderRoot;
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFile, domainRoot, keyUnderRoot ) )
         {
-            found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, {} );
+            found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, {} ).str();
 #if defined( SW_PLATFORM_POSIX )
             // 대소문자를 가리는 파일시스템: 소문자 키로 못 찾았으면 원래 표기로 다시 찾는다.
             if ( found.empty() && lowerFile != resourceID )
@@ -634,7 +634,7 @@ namespace sw
                 const string raw    = FileUtil::normalizeSeparators( resourceID );
                 const size_t slash  = raw.find( '/' );
                 const string rawKey = slash != string::npos ? raw.substr( slash + 1 ) : keyUnderRoot;
-                found               = AssetPathsInternal::tryUnderRoot( domainRoot, rawKey, {} );
+                found               = AssetPathsInternal::tryUnderRoot( domainRoot, rawKey, {} ).str();
             }
             // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있고, 기록해 둔 id(쿠킹 입력 등)는 소문자뿐이라 원래 표기가 없다 — 폴더를 훑어 소문자가 같은 항목으로 푼다.
             // 리소스 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
@@ -686,11 +686,11 @@ namespace sw
         for ( const string& root : AssetPathsInternal::getTable( state )._listResourceFolder )
         {
             // 리소스 트리는 소문자 규칙이다. 원래 표기는 대소문자를 가리는 파일시스템에서 소문자로 못 찾았을 때만 본다.
-            string found = AssetPathsInternal::tryUnderRoot( root, lowerFolder, {} );
+            AbsolutePath found = AssetPathsInternal::tryUnderRoot( root, lowerFolder, {} );
             if ( found.empty() && rawFolder != lowerFolder )
                 found = AssetPathsInternal::tryUnderRoot( root, rawFolder, {} );
-            if ( found.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( found ) ) )
-                outListFolder.push_back( std::move( found ) );
+            if ( found.empty() == false && FileUtil::isDirectory( found ) )
+                outListFolder.push_back( std::move( found.str() ) );
         }
     }
 
@@ -772,7 +772,7 @@ namespace sw
         return absPath;
     }
 
-    bool AssetPaths::mountDiskDomain( string_view domainName, string_view diskFolder )
+    bool AssetPaths::mountDiskDomain( string_view domainName, const AbsolutePath& diskFolder )
     {
         const string domain       = FileUtil::normalizePath( domainName ).str();
         const bool   bInvalidName = domain.empty() || domain.find_first_of( "/\\:" ) != string::npos || domain == "." || domain == "..";
@@ -781,16 +781,16 @@ namespace sw
             SW_LOG_ERROR_ID( "AssetPaths.MountNameInvalid", "Cannot mount disk domain '%#' - the name is one path component without ':'", domainName );
             return false;
         }
-        const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( diskFolder ) );
-        if ( FileUtil::isAbsolutePath( folder ) == false || FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
+        const AbsolutePath folder = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( diskFolder.str() ) ) );
+        if ( FileUtil::isAbsolutePath( folder.str() ) == false || FileUtil::isDirectory( folder ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetPaths.MountFolderMissing", "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountFolderMissing", "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder.str() );
             return false;
         }
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath ) );
-        if ( root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder ) )
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath.str() ) );
+        if ( root.empty() == false && FileUtil::isPathAtOrUnderRoot( root, folder.str() ) )
         {
-            SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder.str() );
             return false;
         }
         // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
@@ -804,18 +804,18 @@ namespace sw
             {
                 if ( mounted._domain != domain )
                     continue;
-                if ( FileUtil::isSameDiskPath( mounted._folder, folder ) ) // 디스크 폴더다 — 접은 키로 견주면 리눅스에서 대소문자만 다른 폴더가 같아진다
+                if ( FileUtil::isSameDiskPath( mounted._folder, folder.str() ) ) // 디스크 폴더다 — 접은 키로 견주면 리눅스에서 대소문자만 다른 폴더가 같아진다
                     return true;
                 conflictFolder = mounted._folder;
                 bConflict      = true;
                 break;
             }
             if ( bConflict == false )
-                state._listDiskDomain.push_back( MountedDiskDomain{ domain, folder } );
+                state._listDiskDomain.push_back( MountedDiskDomain{ domain, folder.str() } );
         }
         if ( bConflict )
         {
-            SW_LOG_ERROR_ID( "AssetPaths.MountConflict", "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder, conflictFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountConflict", "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder.str(), conflictFolder );
             return false;
         }
         clearPathCache();
@@ -875,7 +875,7 @@ namespace sw
 
     const string& AssetPaths::getRootFolderPath() const
     {
-        return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
+        return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath.str(); // 표는 놓지 않으므로 참조가 유효하다
     }
 
     const string& AssetPaths::getRootFolderPathFor( string_view resourceID ) const
@@ -979,21 +979,21 @@ namespace sw
         return false;
     }
 
-    bool AssetPaths::collectGamePackDomains( string_view contentRoot, vector<string>& outListDomain )
+    bool AssetPaths::collectGamePackDomains( const AbsolutePath& contentRoot, vector<string>& outListDomain )
     {
-        const string gameRoot = FileUtil::joinPath( contentRoot, constant::path::kGamePack );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( gameRoot ) ) == false )
+        const AbsolutePath gameRoot = contentRoot.join( constant::path::kGamePack );
+        if ( FileUtil::isDirectory( gameRoot ) == false )
             return true;
-        vector<string> listPackFolder;
-        if ( FileUtil::collectFolders( FileUtil::toDiskPath( gameRoot ), listPackFolder, false ) == false )
+        vector<AbsolutePath> listPackFolder;
+        if ( FileUtil::collectFolders( gameRoot, listPackFolder, false ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetPaths.GamePackFoldersUnder", "Game pack folders under '%#' could not all be listed - the packs left out are not seen", gameRoot );
+            SW_LOG_ERROR_ID( "AssetPaths.GamePackFoldersUnder", "Game pack folders under '%#' could not all be listed - the packs left out are not seen", gameRoot.str() );
             return false;
         }
         VectorUtil::sort( listPackFolder );
-        for ( const string& packFolder : listPackFolder )
+        for ( const AbsolutePath& packFolder : listPackFolder )
         {
-            outListDomain.push_back( FileUtil::joinPath( constant::path::kGamePack, FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( packFolder ) ) ) );
+            outListDomain.push_back( FileUtil::joinPath( constant::path::kGamePack, FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( packFolder.str() ) ) ) );
         }
         return true;
     }

@@ -35,7 +35,7 @@ namespace sw::test
             : _folder{ makeScratchPath( kDomain ) }
             , _bMounted{ SW_FALSE }
         {
-            _bMounted = FileUtil::ensureDirectoryExists( _folder ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder.str() );
+            _bMounted = FileUtil::ensureDirectoryExists( _folder ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
             if ( _bMounted == false )
             {
                 fixed_string<constant::buffer::kMax512> text;

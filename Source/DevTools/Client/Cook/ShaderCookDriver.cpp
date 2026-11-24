@@ -139,7 +139,7 @@ namespace sw
                     ShaderCookResult cookResult{};
                     outResult._bCompileFailed =
                         ShaderCooker::cookShader( ShaderCooker::makeCompileDesc( task._source, request._entryPoint, request._stage, task._format, _pState->_enginePolicy, request._listPermutation ),
-                                                  task._outPath, cookResult ) == false;
+                                                  FileUtil::toDiskPath( task._outPath ), cookResult ) == false;
                     outResult._bCooked      = cookResult._bWritten == SW_TRUE;
                     outResult._compileNanos = compileWatch.getElapsedNanoseconds();
                     if ( bSkipReflection || outResult._bCompileFailed )
@@ -216,7 +216,7 @@ namespace sw
                 }
                 const string                      manifestPath = FileUtil::joinPath( binDirectory, ShaderReflectionLibrary::getManifestFileName() );
                 ShaderReflectionLibrary::EntryMap mapManifest;
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( manifestPath ) ) == false || ShaderReflectionLibrary::loadManifestFile( manifestPath, mapManifest ) == false )
+                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( manifestPath ) ) == false || ShaderReflectionLibrary::loadManifestFile( FileUtil::toDiskPath( manifestPath ), mapManifest ) == false )
                 {
                     appendProblem( outListProblem, "%#: no readable reflection manifest - cook again", label );
                     return;
@@ -410,7 +410,7 @@ namespace sw
             {
                 for ( const auto& [binDirectory, manifest] : ioState._mapManifest )
                 {
-                    if ( ShaderReflectionLibrary::save( manifest, binDirectory ) == false )
+                    if ( ShaderReflectionLibrary::save( manifest, FileUtil::toDiskPath( binDirectory ) ) == false )
                     {
                         SW_LOG_ERROR_ID( "ShaderCooker.ShaderReflectionManifestCould", "Shader reflection manifest could not be written: %#", binDirectory );
                         ++ioState._summary._failedCount;

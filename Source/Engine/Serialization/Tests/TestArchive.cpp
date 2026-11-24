@@ -251,7 +251,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
     writeArch << sw::string( "TempArchiveFilePayload" );
     writeArch << -999.5f;
 
-    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath.str() ) );
+    SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( tempFilePath ) );
 
     sw::Archive readArch( tempFilePath.str(), true );

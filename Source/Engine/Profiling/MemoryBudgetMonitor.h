@@ -13,6 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -71,7 +72,7 @@ namespace sw
         /**
          * @brief 예산 파일을 읽어 활성 프로파일러에 겁니다. 파일이 없으면 예산 없이 true 입니다. 형식이 틀리면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool loadBudgetFile( string_view absolutePath );
+        [[nodiscard]] bool loadBudgetFile( const AbsolutePath& absolutePath );
 
         /**
          * @brief 프레임 끝에 한 번 부릅니다 — 예산 검사(새로 넘은 태그 경고), FrameProfiler 카운터.
