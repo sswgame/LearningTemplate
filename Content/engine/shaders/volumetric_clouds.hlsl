@@ -159,7 +159,7 @@ static float3 VolumetricClouds::computeViewDirection( float2 uv )
 static bool VolumetricClouds::isSkyVisible( int2 texel )
 {
     const int  divisor  = max( (int)( g_SkyCloudSample.w + 0.5f ), 1 );
-    const int2 origin   = texel * divisor - divisor / 2;
+    const int2 origin   = texel * divisor - ( divisor >> 1 ); // 양수의 반 — 정수 나눗셈이 아니라 자리 옮김이다(FXC X3556)
     const int2 rectEnd  = int2( g_ViewRectSize.xy ) - 1;
     const int  count    = divisor; // 덮는 폭은 텍셀 두 개(divisor × 2)이고 간격이 kCloudDepthProbeStride 다
     float      farthest = 0.0f;
