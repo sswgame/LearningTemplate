@@ -18,17 +18,16 @@ SW_DECLARE_STRUCTURED_BUFFER( float, g_VoxelPositions, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_VoxelIndices, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VoxelRW, 0 );
 
-static const uint kRowHeader      = 0u; // asuint( 일 수, 스레드 수, 지우기면 1, 디스패치 한 줄의 스레드 수 )
-static const uint kRowFirstJob    = 1u;
-static const uint kJobRowCount    = 9u;          // SceneVoxelizer::kJobRowCount
-static const uint kJobThreads     = 0u;          // asuint( 첫 스레드, 스레드 수, 점유 단어의 첫 단어, 발광 단어의 첫 단어(없으면 kNoEmission) )
-static const uint kJobDimension   = 1u;          // asuint( 격자 칸 수 X, Y, Z, 발광 순위(0 이면 발광 없음) )
-static const uint kJobClipFirst   = 2u;          // asuint( 구간 처음 칸 X, Y, Z, 인덱스 버퍼 안의 첫 인덱스 )
-static const uint kJobClipLast    = 3u;          // asuint( 구간 끝 칸(포함) X, Y, Z, 위치 버퍼 안의 첫 정점 )
-static const uint kJobOrigin      = 4u;          // 격자 시작점 xyz, 칸 크기
-static const uint kJobWorld       = 5u;          // 월드 행렬 네 행(행 벡터)
-static const uint kNoEmission     = 0xFFFFFFFFu; // SceneVoxelizer::kNoEmission
-static const uint kMaxSearchSteps = 32u;
+static const uint kRowHeader    = 0u; // asuint( 일 수, 스레드 수, 지우기면 1, 디스패치 한 줄의 스레드 수 )
+static const uint kRowFirstJob  = 1u;
+static const uint kJobRowCount  = 9u;          // SceneVoxelizer::kJobRowCount
+static const uint kJobThreads   = 0u;          // asuint( 첫 스레드, 스레드 수, 점유 단어의 첫 단어, 발광 단어의 첫 단어(없으면 kNoEmission) )
+static const uint kJobDimension = 1u;          // asuint( 격자 칸 수 X, Y, Z, 발광 순위(0 이면 발광 없음) )
+static const uint kJobClipFirst = 2u;          // asuint( 구간 처음 칸 X, Y, Z, 인덱스 버퍼 안의 첫 인덱스 )
+static const uint kJobClipLast  = 3u;          // asuint( 구간 끝 칸(포함) X, Y, Z, 위치 버퍼 안의 첫 정점 )
+static const uint kJobOrigin    = 4u;          // 격자 시작점 xyz, 칸 크기
+static const uint kJobWorld     = 5u;          // 월드 행렬 네 행(행 벡터)
+static const uint kNoEmission   = 0xFFFFFFFFu; // SceneVoxelizer::kNoEmission
 
 static const float kParallelEpsilon = 1.0e-8f; // 외적 길이의 제곱이 이보다 작으면 모서리가 상자 축과 평행이다
 static const float kOverlapSlack    = 1.0e-4f; // 상자를 살짝 키우는 비율 — 면에 정확히 닿는 삼각형이 이웃 칸에서 빠지지 않게 한다
@@ -54,7 +53,8 @@ uint findJobRow( uint thread, uint jobCount )
 {
     uint low  = 0u;
     uint high = jobCount;
-    SW_LOOP for ( uint searchStep = 0u; searchStep < kMaxSearchSteps && high - low > 1u; ++searchStep )
+    // 구간은 걸음마다 줄어(low < middle < high) 어떤 입력이어도 끝난다. 조건을 `&&` 로 더하지 않는다 — NVIDIA GL(ARB_gl_spirv)이 `단계 < 32 && high - low > 1` 의 탈출을 지워 GPU 가 멈췄다.
+    SW_LOOP while ( high - low > 1u )
     {
         const uint middle      = ( low + high ) >> 1u;
         const uint firstThread = asuint( g_VoxelJobs[kRowFirstJob + middle * kJobRowCount + kJobThreads].x );
