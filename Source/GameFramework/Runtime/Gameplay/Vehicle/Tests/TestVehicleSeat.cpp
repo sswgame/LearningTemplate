@@ -260,6 +260,26 @@ SW_TEST_CASE( VehicleSeatTest, RideFeelLeansAgainstTheAcceleration )
     SW_EXPECT_NEAR( 0.3f, feel.computeLean( float3{ 0.0f, 0.0f, -100.0f } )._x, 1e-5f ); // 자른다
 }
 
+/** @brief [VehicleSeatTest] 결함: 탈것이 순간이동하면(리스폰 · 문) 그 거리를 가속으로 재어 탑승자가 젖혀지고 카메라가 흔들렸다 — 새 자리에서 다시 잰다 */
+SW_TEST_CASE( VehicleSeatTest, TeleportedVehicleIsNotAnAcceleration )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    for ( int32 stepIndex = 0; stepIndex < 4; ++stepIndex )
+    {
+        rig.update();
+    }
+    rig._pVehicleRoot->teleportTo( float3{ 0.0f, 30.0f, 200.0f } );
+    for ( int32 stepIndex = 0; stepIndex < 4; ++stepIndex )
+    {
+        rig.update();
+        SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration().getLength(), 1.0e-3f );
+    }
+    rig._pVehicleRoot->setWorldPosition( float3{ 0.0f, 30.0f, 230.0f } ); // 알리지 않고 옮긴 것은 움직인 것이다
+    rig.update();
+    SW_EXPECT_TRUE( rig._pSeat->getRideAcceleration().getLength() > 1.0f );
+}
+
 /** @brief [VehicleSeatTest] 좌석이 탈것의 급정거를 재어(앞 가속 −) 탑승자를 앞으로 기울이고, 내리면 잰 값을 비운다 */
 SW_TEST_CASE( VehicleSeatTest, SeatMeasuresBrakingAndLeansTheRiderForward )
 {

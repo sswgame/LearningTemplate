@@ -3,6 +3,7 @@
  * @brief 탑승자가 쓰러지면 강제로 내리게 합니다. 같은 오브젝트의 체력 신호(`IHealthListener`)를 듣습니다. `VehicleSeatComponent::mount` 가 탑승자에게 이 컴포넌트를 붙입니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -31,6 +32,8 @@ namespace sw
         ~DismountOnDeathComponent() override = default;
 
         void onHealthChanged( const HealthChangedEvent& event );
+        /** @brief 쓰러져 물리로 떨어진 탑승자의 걷기 멈춤을 쥡니다. 체력을 다시 채우면(부활) 놓습니다. */
+        void holdMovement( Subscription&& suspension ) { _movementSuspension = std::move( suspension ); }
         /** @brief 탑승자가 사라지면 좌석을 비웁니다. 끊긴 핸들을 든 좌석은 다시 탈 수 없습니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
@@ -45,5 +48,6 @@ namespace sw
             void onHealthChanged( const HealthChangedEvent& event ) override;
         };
         HealthListenerPort _healthListenerPort;
+        Subscription       _movementSuspension; ///< 물리로 떨어진 뒤 부활까지 쥔 걷기 멈춤
     };
 } // namespace sw

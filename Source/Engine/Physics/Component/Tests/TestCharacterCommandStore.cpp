@@ -171,6 +171,56 @@ SW_TEST_CASE( CharacterCommandStoreTest, ResetPhysicsTeleportDropsInheritedMotio
 }
 
 /**
+ * @brief [CharacterCommandStoreTest] 결함: 속도를 잇는 순간이동(`TeleportPhysics`) · 월드 원점 이동이 떨어지던 속도를 지웠다 — 떨어지던 몸은 계속 떨어진다
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, TeleportPhysicsKeepsTheFall )
+{
+    GameObjectManager             manager;
+    CharacterControllerComponent* pCharacter = manager.createGameObject( hashed_string( "Walker" ) )->addComponent<CharacterControllerComponent>();
+    pCharacter->setLocalPosition( float3{ 0.0f, 50.0f, 0.0f } );
+    manager.beginPlay();
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( TestCharacterCommandStoreInternal::kFrame );
+    }
+    const float32 falling = pCharacter->getVelocity()._y;
+    SW_REQUIRE_TRUE( falling < -2.0f );
+    pCharacter->teleportTo( float3{ 100.0f, 80.0f, 0.0f } );
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    SW_EXPECT_TRUE( pCharacter->getVelocity()._y < falling );
+    pCharacter->teleportTo( float3{ 0.0f, 80.0f, 0.0f }, TeleportType::WorldOriginShift );
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    SW_EXPECT_TRUE( pCharacter->getVelocity()._y < falling );
+}
+
+/**
+ * @brief [CharacterCommandStoreTest] 결함: 2D 캐릭터는 운동을 지우는 순간이동 뒤에도 발사의 수평 관성이 남았다 — 3D 와 같이 수직 · 수평을 모두 지우고, 속도를 잇는 순간이동은 잇는다
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, ResetPhysicsTeleportStopsThe2DCharacter )
+{
+    GameObjectManager               manager;
+    CharacterController2DComponent* pCharacter = manager.createGameObject( hashed_string( "Walker2D" ) )->addComponent<CharacterController2DComponent>();
+    pCharacter->setLocalPosition( float3{ 0.0f, 50.0f, 0.0f } );
+    manager.beginPlay();
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    pCharacter->launch( float2{ 5.0f, 0.5f } );
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        manager.update( TestCharacterCommandStoreInternal::kFrame );
+    }
+    SW_REQUIRE_TRUE( pCharacter->getVelocity()._x > 4.0f );
+    const float32 falling = pCharacter->getVelocity()._y;
+    SW_REQUIRE_TRUE( falling < -2.0f );
+    pCharacter->teleportTo( float3{ 0.0f, 80.0f, 0.0f } );
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    SW_EXPECT_TRUE( pCharacter->getVelocity()._y < falling );
+    pCharacter->teleportTo( float3{ 0.0f, 90.0f, 0.0f }, TeleportType::ResetPhysics );
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    SW_EXPECT_NEAR( 0.0f, pCharacter->getVelocity()._x, 1.0e-3f );
+    SW_EXPECT_TRUE( pCharacter->getVelocity()._y > -2.0f );
+}
+
+/**
  * @brief [CharacterCommandStoreTest] 오르기 요청은 그 프레임만 중력 없이 준 속도로 움직이고(방식 Climbing), 부르지 않으면 그 자리에서 떨어지기 시작한다(오르던 속도를 잇지 않는다)
  */
 SW_TEST_CASE( CharacterCommandStoreTest, ClimbVelocityReplacesGravityForOneFrame )

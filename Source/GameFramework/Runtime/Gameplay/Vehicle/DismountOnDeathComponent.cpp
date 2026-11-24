@@ -11,10 +11,16 @@
 
 namespace sw
 {
-    DismountOnDeathComponent::DismountOnDeathComponent() = default;
+    DismountOnDeathComponent::DismountOnDeathComponent()
+        : _healthListenerPort{}
+        , _movementSuspension{}
+    {
+    }
 
     void DismountOnDeathComponent::onHealthChanged( const HealthChangedEvent& event )
     {
+        if ( event._kind == HealthChangeKind::Reset )
+            _movementSuspension.reset();
         if ( event._kind != HealthChangeKind::Died )
             return;
         GameObject*        pOwner   = getOwner();
