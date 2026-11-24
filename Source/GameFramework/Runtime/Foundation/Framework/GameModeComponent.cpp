@@ -265,7 +265,7 @@ namespace sw
             return;
         if ( _bViewsSpawned == SW_FALSE )
             scheduleFlush(); // 상태 저장 전에 걷었다(또는 처음) — 지금 상태대로 다시 세운다
-        // 디렉터 계약 ① 의 재는 자리 — 측정 문턱(RTS 유닛 2000 에서 2 ms 등)을 판정할 값을 모든 디렉터가 줄 추가 없이 낸다.
+        // 디렉터 계약 ① 의 재는 자리 — 걸음 시간을 모든 디렉터가 줄 추가 없이 낸다.
         {
             SW_PROFILE_SCOPE( kStepScopeName );
             updateGame( deltaTime );

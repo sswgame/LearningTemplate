@@ -25,7 +25,7 @@ namespace sw::editor
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
      * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorAssetIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
-     *          참조 칸은 아직 경로로 가리키므로(GUID 로 바꾸는 일은 docs/NEXT.md 2 단계) 고치는 자리는 경로 칸(`AssetReferenceFields` —
+     *          참조 칸은 아직 경로로 가리키므로 고치는 자리는 경로 칸(`AssetReferenceFields` —
      *          커밋 전 검사 · `py -3 -m Scripts move-asset` 과 같은 `Config/Dev/AssetReferenceFields.json`)의 값이다.
      *          정체성(GUID — `AssetDatabase.h`)의 짝을 지킨다: 옮기기 · 이름 바꾸기 · 휴지통 · 지우기는 원본 곁 `.meta` 를 함께 다루고, 새로 만들기 · 복제 · 가져오기는 새 GUID 를,
      *          내용 바꾸기(`replaceAssetContent`)는 옛 GUID 를 지킨다.

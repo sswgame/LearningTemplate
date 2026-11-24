@@ -556,7 +556,7 @@ def sanitize(arguments):
     if rc != 0:
         print(f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log')
         return rc
-    # 퍼저는 ASan 묶음 끝에 타깃마다 30 초(docs/NEXT.md 퍼저 타깃) — 클론은 위에서 이미 옮겼다.
+    # 퍼저는 ASan 묶음 끝에 타깃마다 30 초 — 클론은 위에서 이미 옮겼다.
     if kind == 'address' and run_fuzz([], FUZZ_SMOKE_SECONDS, sync=False) != 0:
         print('SANITIZE_FAILED=fuzz')
         return 1

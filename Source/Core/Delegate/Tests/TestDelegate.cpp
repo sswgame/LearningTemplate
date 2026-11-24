@@ -11,7 +11,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
-#include "Core/Time/MonotonicClock.h"
 
 static int32 s_TestValue{ 0 };
 namespace
@@ -787,56 +786,6 @@ SW_TEST_CASE( DelegateTest, SourceLeftOpenAtDestructionIsFatal, ._tags = "slow",
     const sw::test::ChildRunResult child = sw::test::runChildRole( "DelegateTest.OpenSourceChild", {}, kOpenSourceChildTimeoutSeconds );
     SW_EXPECT_TRUE_MSG( child._exitCode.has_value() && *child._exitCode != 0, child.getOutputTail() );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SubscriptionSource destroyed without closeSubscriptions" ), child.getOutputTail() );
-}
-
-/**
- * @brief [DelegateTest] 구독 비용(ns/짝 · 출처 만들고 지우기)을 로그로 남깁니다. 시간 문턱은 두지 않는다
- * @details 재는 법: Release `App --test --test-filter=DelegateTest.SubscribeCost` 5 번, 제어 블록 커밋과 그 앞에서 로그 `DelegateTest.SubscribeCost` 의 중앙값.
- *          판정(docs/NEXT.md 측정 "구독 제어 블록"): ns/짝 증가가 30 ns 를 넘으면 출처가 스레드 정책을 고르게 한다.
- */
-SW_TEST_CASE( DelegateTest, SubscribeCost, ._tags = "bench" )
-{
-    constexpr uint32 kListenerCounts[] = { 1, 8, 64 };
-    constexpr uint32 kPairsPerCount    = 64 * 1024;
-    constexpr uint32 kSourceCount      = 10000;
-
-    sw::MulticastDelegate<void( int32 )> multiDel;
-    sw::vector<sw::Subscription>         listSubscription;
-    for ( const uint32 listenerCount : kListenerCounts )
-    {
-        listSubscription.reserve( listenerCount );
-        const uint32        roundCount = kPairsPerCount / listenerCount;
-        const sw::Stopwatch stopwatch;
-        for ( uint32 round = 0; round < roundCount; ++round )
-        {
-            for ( uint32 listener = 0; listener < listenerCount; ++listener )
-            {
-                listSubscription.push_back( multiDel.add( sw::Delegate<void( int32 )>::create( []( int32 ) {} ) ) );
-            }
-            for ( sw::Subscription& subscription : listSubscription )
-            {
-                subscription.reset();
-            }
-            listSubscription.clear();
-        }
-        SW_LOG_INFO_ID( "DelegateTest.SubscribeCost", "add + reset with %# listeners: %# ns per pair", listenerCount,
-                        stopwatch.getElapsedNanoseconds() / static_cast<int64>( roundCount * listenerCount ) );
-    }
-    SW_EXPECT_FALSE( multiDel.isBound() );
-
-    const sw::Stopwatch                                       sourceStopwatch;
-    sw::vector<sw::unique_ptr<sw::MulticastDelegate<void()>>> listSource;
-    listSource.reserve( kSourceCount );
-    for ( uint32 sourceIndex = 0; sourceIndex < kSourceCount; ++sourceIndex )
-    {
-        listSource.push_back( sw::make_unique<sw::MulticastDelegate<void()>>() );
-        listSubscription.push_back( listSource.back()->add( sw::Delegate<void()>::create( []() {} ) ) );
-    }
-    listSource.clear(); // 출처가 먼저 사라진다 — 구독은 무효가 된다
-    SW_EXPECT_FALSE( listSubscription.front().isActive() );
-    listSubscription.clear();
-    SW_LOG_INFO_ID( "DelegateTest.SubscribeCost", "%# sources with one subscription created and destroyed: %# ns per source", kSourceCount,
-                    sourceStopwatch.getElapsedNanoseconds() / static_cast<int64>( kSourceCount ) );
 }
 
 namespace

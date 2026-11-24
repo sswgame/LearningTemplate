@@ -564,7 +564,7 @@ namespace sw
             if constexpr ( is_bitwise_relocatable_v<T> )
             {
                 // 바이트로 옮겨도 되는 형식은 링의 두 토막(앞 → 버퍼 끝, 버퍼 앞 → 감긴 끝)을 바이트로 옮긴다 — `vector::reserveInternal` 과 같은 규칙.
-                // 원소 루프는 마스크 때문에 컴파일러가 memcpy 로 바꾸지 못한다(벤치 `ContainerBenchTest.DequeGrowBitwise`).
+                // 원소 루프는 마스크 때문에 컴파일러가 memcpy 로 바꾸지 못한다.
                 const size_t firstCount = MathUtil::min( _size, _capacity - _head );
                 if ( firstCount > 0 )
                     Memory::copy( static_cast<void*>( pNewData ), static_cast<const void*>( _pData + _head ), firstCount * sizeof( T ) );

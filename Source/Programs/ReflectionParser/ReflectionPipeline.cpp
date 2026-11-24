@@ -64,7 +64,7 @@ namespace sw
             }
 
             /**
-             * @brief 한 모듈의 타입 · 열거형(`FQN\t모듈` 줄)에서 짧은 이름(리프)이 겹치면 둘을 적고 false 입니다(NEXT 5-4 W-R3 d).
+             * @brief 한 모듈의 타입 · 열거형(`FQN\t모듈` 줄)에서 짧은 이름(리프)이 겹치면 둘을 적고 false 입니다.
              * @details 레지스트리는 짧은 이름으로도 찾는다(씬 · 프리팹 · `addComponentByName`). 겹치면 나중에 오른 타입이 앞의 것을 가려
              *          런타임 경고만 남기고 다른 타입을 만든다 — 같은 모듈 안이면 생성 단계에서 막는다. 이름 비교는 `hashed_string` 처럼 대소문자를 무시한다.
              *          모듈 사이의 겹침(게임이 엔진 이름을 다시 쓰는 것)은 올리는 순서의 문제라 런타임 경고(`TypeRegistry::registerClass`)에 남긴다.
@@ -836,7 +836,7 @@ namespace sw
         }
         if ( total == 0 )
             return;
-        // 한 줄에 구역마다 `이름=바이트(백분율)` — 표로 바꿀 후보는 합계의 25 % 를 넘는 구역이다(docs/NEXT.md 5-4 W-R3 (a)). 이번 실행이 다시 만든 헤더만 센다.
+        // 한 줄에 구역마다 `이름=바이트(백분율)` — 표로 바꿀 후보는 합계의 25 % 를 넘는 구역이다. 이번 실행이 다시 만든 헤더만 센다.
         StringBuilder<constant::buffer::kMax1024> text;
         for ( size_t section = 0; section < _arrEmitBytes.size(); ++section )
         {

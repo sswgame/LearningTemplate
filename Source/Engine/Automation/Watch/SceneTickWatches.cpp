@@ -44,7 +44,6 @@ namespace sw
 
             /**
              * @brief 감시 값 `Scene.ComponentTickShare` 입니다. 컴포넌트 틱 시간 / 실제 프레임 시간(백분율)입니다.
-             * @details 문턱: 허브 부하에서 10% 를 넘으면 틱 주기 등급(`SW_REGISTER_TICK_TYPE` 에 주기, 위상은 오브젝트 id 로 흩는다)을 들인다 — 언리얼 `TickInterval` 자리.
              */
             [[nodiscard]] static bool readComponentTickShare( const GameObjectManager* pManager, float64& outValue )
             {

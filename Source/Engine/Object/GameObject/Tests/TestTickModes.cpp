@@ -1,6 +1,6 @@
 // TickModesTest — 일괄 경로(파도 · 모드)가 기준 길(오브젝트 칸, 한 오브젝트 = 한 스레드)과 같은 상태를 내는지(서브틱 · 선행 조건 · 틱 중 서브틱
 // 등록 · 해제 · 남의 오브젝트 쓰기를 섞어), 타입이 선언한 모드(`TickMode`)대로 가는지, 선행 조건 종류(순서만 · 쓰기를 봄)가 태스크 간선 · 레벨 장벽으로
-// 갈리는지 본다(NEXT 5-3 1 · 1b · 1c).
+// 갈리는지 본다.
 #include "pch.h"
 
 #include "Core/Testing/ScopedAssertCapture.h"
@@ -320,7 +320,7 @@ SW_TEST_CASE( TickModesTest, ParallelFrameSystemRunsThroughJobContext )
 
 /**
  * @brief [TickModesTest] 선행 조건 스테이지는 같은 (타입, 서브틱) 이웃을 한 일괄 목록으로 묶고 옛 순서(순서 키, 오브젝트 id — 기준 길)와 같은 상태를 낸다 —
- *        전체 재구축 뒤에도, 플레이 중 스폰한 팔로워를 증분으로 끼운 뒤(`flushStageEdits`)에도 같은 규칙이다(NEXT 5-3 1b)
+ *        전체 재구축 뒤에도, 플레이 중 스폰한 팔로워를 증분으로 끼운 뒤(`flushStageEdits`)에도 같은 규칙이다
  */
 SW_TEST_CASE( TickModesTest, StageNeighborBatchesMatchOldOrder )
 {
@@ -420,7 +420,7 @@ namespace
 
 /**
  * @brief [TickModesTest] 순서만 선행 조건은 같은 레벨 스테이지의 태스크 간선(`runAfter`)이 되고 쓰기를 보는 선행 조건만 레벨 장벽 · 적용을 넘는다 —
- *        순서는 사슬 그대로이고 일괄 길과 기준 길이 같은 값을 낸다(NEXT 5-3 선행 조건 간선 종류)
+ *        순서는 사슬 그대로이고 일괄 길과 기준 길이 같은 값을 낸다
  */
 SW_TEST_CASE( TickModesTest, OrderOnlyPrerequisitesBecomeTaskEdges )
 {
