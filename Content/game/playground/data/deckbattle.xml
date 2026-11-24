@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="5b83b21f36c24d7c96479f77ad65412c"?>
 <!--
-  장르 키트 시연 — 덱 빌딩 전투 한 판(maps/kit_cardgame). 공격 카드 하나(비용 1, 피해 6)뿐이다 — 덱은 디렉터가 이 카드 다섯 장으로 짠다.
+  덱 전투 미니게임(minigames/cardgame)의 카드 · 덱 · 상대 — 시작 덱은 공격 카드(비용 1, 피해 6) 여덟 장이라 섞인 순서와 상관없이 같은 판이다(시나리오 automation/cardgame 이 기댄다).
 -->
 <CardBattleCatalog>
 	<Card id="strike" name="Strike" cost="1" effects="Damage:6"/>
+	<Deck id="starter" cards="strike,strike,strike,strike,strike,strike,strike,strike"/>
+	<Enemy id="slime" name="Slime" hp="30" intents="Damage:5,Block:4,Damage:8"/>
 </CardBattleCatalog>
