@@ -79,8 +79,25 @@ SW_TEST_CASE( GimmickSignalTest, CuePresentsFromTheCueTableAndSendsTheEvent )
     SW_EXPECT_EQUAL( 1, sink._presentCount );
 }
 
+/** @brief [GimmickSignalTest] 흔들림만 적은 큐도 큐다 — 크기 · 길이 · 반경을 읽는다. 길이 없는 흔들림은 오류를 남기고 넣지 않는다 */
+SW_TEST_CASE( GimmickSignalTest, ShakeOnlyCueIsReadAndNeedsItsLength )
+{
+    AbilityCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<AbilityCatalog><AbilityPresentation tag="Explosion" shake="0.2" shakeSeconds="0.5" shakeRadius="20"/></AbilityCatalog>)", "GimmickSignalTest" ) );
+    const AbilityPresentationDef* pCue = catalog.findCue( TagID::request( "Explosion" ) );
+    SW_REQUIRE_NOT_NULL( pCue );
+    SW_EXPECT_NEAR( 0.2f, pCue->_shake, 1e-5f );
+    SW_EXPECT_NEAR( 0.5f, pCue->_shakeSeconds, 1e-5f );
+    SW_EXPECT_NEAR( 20.0f, pCue->_shakeRadius, 1e-5f );
+
+    SW_EXPECT_LOG( "AbilityCatalog.GameplayCueShakeWithoutTime" );
+    AbilityCatalog broken;
+    (void)broken.loadFromXMLText( R"(<AbilityCatalog><AbilityPresentation tag="Explosion" shake="0.2"/><AbilityPresentation tag="Other" sound="Any"/></AbilityCatalog>)", "GimmickSignalTest" );
+    SW_EXPECT_TRUE( broken.findCue( TagID::request( "Explosion" ) ) == nullptr );
+}
+
 /**
- * @brief [GimmickSignalTest] 소리 내기는 같은 오브젝트의 자극 원천에 반경을 걸어 다른 팀 감각의 질의에 잡히고, 다음 프레임 틱에서 거둬진다
+ * @brief [GimmickSignalTest] 소리 내기는 같은 오브젝트의 자극 원천에 반경을 걸어 다른 팀 감각의 질의에 잡히고, 연출 신호 "Noise" 를 내며, 다음 프레임 틱에서 거둬진다
  */
 SW_TEST_CASE( GimmickSignalTest, NoiseReachesTheAIStimulusIndex )
 {
@@ -92,9 +109,21 @@ SW_TEST_CASE( GimmickSignalTest, NoiseReachesTheAIStimulusIndex )
     SW_REQUIRE_NOT_NULL( pEmitter );
     manager.beginPlay();
 
-    vector<AIStimulus> listStimulus;
-    vector<Component*> listKey;
-    pEmitter->emit( 8.0f ); // 틱 밖이라 색인을 바로 고친다
+    vector<AIStimulus>     listStimulus;
+    vector<Component*>     listKey;
+    AbilityCatalog         catalog;
+    AbilityPresentationDef noiseCue;
+    noiseCue._cueTag = TagID::request( "Noise" );
+    catalog.addCue( noiseCue );
+    RecordingCueSink sink;
+    SubsystemScope   scope;
+    SW_REQUIRE_TRUE( scope.bind<const AbilityCatalog>( &catalog ) );
+    SW_REQUIRE_TRUE( scope.bind<IAbilityCueSink>( &sink ) );
+    game::ScopedGameScope scopedScope( scope );
+
+    pEmitter->emit( 8.0f );                   // 틱 밖이라 색인을 바로 고친다
+    SW_EXPECT_EQUAL( 1, sink._presentCount ); // 들리는 소리는 연출 신호 "Noise" 로 큐 표를 지난다
+    SW_EXPECT_NEAR( 15.0f, sink._lastPosition._x, 1e-5f );
     AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
     SW_EXPECT_EQUAL( pFloor->getObjectID(), listStimulus[0].getID() );

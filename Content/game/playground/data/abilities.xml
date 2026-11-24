@@ -356,4 +356,10 @@
   <!-- ===================================================================== -->
   <AbilityPresentation tag="AbilityPresentation.Hit" sound="ArenaProjectileHit" positional="false"/>
 
+  <!-- 기믹의 연출 신호(GimmickUtil::sendCue) — 어빌리티 큐와 같은 표다. 폭발은 자리에서 거리로 약해지는 카메라 흔들림을 낸다. -->
+  <AbilityPresentation tag="Explosion" sound="GimmickExplosion" shake="0.2" shakeSeconds="0.5" shakeRadius="20"/>
+  <AbilityPresentation tag="Destroyed" sound="GimmickBreak"/>
+  <AbilityPresentation tag="Stage" sound="GimmickBreak"/>
+  <AbilityPresentation tag="Noise" sound="GimmickNoise"/>
+
 </AbilityCatalog>

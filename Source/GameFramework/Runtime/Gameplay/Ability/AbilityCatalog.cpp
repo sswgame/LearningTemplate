@@ -441,10 +441,18 @@ namespace sw
         outDef._offset         = params._offset;
         outDef._bOnRemoved     = params._bOnRemoved ? SW_TRUE : SW_FALSE;
         outDef._bPositional    = params._bPositional ? SW_TRUE : SW_FALSE;
+        outDef._shake          = params._shake;
+        outDef._shakeSeconds   = params._shakeSeconds;
+        outDef._shakeRadius    = params._shakeRadius;
         // 보여 줄 것이 없는 정의는 적은 사람의 실수다 — 조용히 아무것도 하지 않는 큐로 두지 않는다.
-        if ( outDef._prefab.empty() && outDef._soundEvent.empty() )
+        if ( outDef._prefab.empty() && outDef._soundEvent.empty() && outDef._shake <= 0.0f )
         {
-            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueNeitherPrefab", "%#: gameplay cue '%#' has neither prefab nor sound - skipped", sourceName, pTag );
+            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueNeitherPrefab", "%#: gameplay cue '%#' has neither prefab, sound nor shake - skipped", sourceName, pTag );
+            return false;
+        }
+        if ( outDef._shake > 0.0f && outDef._shakeSeconds <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "AbilityCatalog.GameplayCueShakeWithoutTime", "%#: gameplay cue '%#' shakes the camera without shakeSeconds - skipped", sourceName, pTag );
             return false;
         }
         return true;

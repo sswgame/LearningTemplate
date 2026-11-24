@@ -153,7 +153,7 @@ namespace sw
         float32 _base{ 0.0f };
     };
 
-    /** @brief 게임플레이 큐 표현(`<AbilityPresentation …/>`)의 칸입니다. 프리팹이나 소리 중 하나는 적는다(읽기가 본다). */
+    /** @brief 게임플레이 큐 표현(`<AbilityPresentation …/>`)의 칸입니다. 프리팹 · 소리 · 흔들림 중 하나는 적는다(읽기가 본다). */
     REFLECT()
     struct SW_GF_API AbilityPresentationParams
     {
@@ -172,6 +172,14 @@ namespace sw
         bool _bOnRemoved{ false };
         PROPERTY()
         bool _bPositional{ true };
+        /** @brief 카메라 흔들림의 크기(m)입니다. 0 이면 흔들지 않는다. 적으면 `_shakeSeconds` 도 적는다. */
+        PROPERTY( Min = 0, Units = m )
+        float32 _shake{ 0.0f };
+        PROPERTY( Min = 0, Units = s )
+        float32 _shakeSeconds{ 0.0f };
+        /** @brief 흔들림이 거리로 약해져 사라지는 반경(m)입니다. 0 이면 거리와 무관하다. */
+        PROPERTY( Min = 0, Units = m )
+        float32 _shakeRadius{ 0.0f };
     };
 
     /** @brief 어빌리티(`<Ability id class cost cooldown retrigger activateOnGranted>`)의 칸입니다. */
@@ -297,9 +305,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 게임플레이 큐 하나가 무엇을 보여 줄지입니다(언리얼 `AbilityPresentationManager` 의 큐 태그 → 큐 노티파이에 해당). XML `<AbilityPresentation tag=… prefab=… sound=…/>`.
-     * @details 큐 태그의 가장 가까운 조상 정의가 맡는다("AbilityPresentation.Hit.Fire" 정의가 없으면 "AbilityPresentation.Hit"). 프리팹은 대상 자리에 스폰하고 소리는 그 자리에서 낸다.
-     *          둘 다 비어 있는 정의는 로드 오류다. 큐는 연출 전용이라 서버(클라이언트 코드 없음)에서는 실행하지 않는다.
+     * @brief 게임플레이 큐 하나가 무엇을 보여 줄지입니다(언리얼 `AbilityPresentationManager` 의 큐 태그 → 큐 노티파이에 해당). XML `<AbilityPresentation tag=… prefab=… sound=… shake=…/>`.
+     * @details 큐 태그의 가장 가까운 조상 정의가 맡는다("AbilityPresentation.Hit.Fire" 정의가 없으면 "AbilityPresentation.Hit"). 프리팹은 대상 자리에 스폰하고 소리는 그 자리에서 내며, 흔들림은 그 자리에서 씬의 흔들림 채널로 낸다
+     *          (카메라가 받는다 — 언리얼 GameplayCue 노티파이의 카메라 셰이크). 셋 다 비어 있는 정의는 로드 오류다. 큐는 연출 전용이라 서버(클라이언트 코드 없음)에서는 실행하지 않는다.
      */
     struct AbilityPresentationDef
     {
@@ -308,6 +316,9 @@ namespace sw
         hashed_string _soundEvent{};           ///< 대상 자리에서 낼 오디오 이벤트(빈 이름이면 없음)
         float3        _offset{};               ///< 대상 자리에서 더할 월드 오프셋
         uint8         _bOnRemoved{ SW_FALSE }; ///< 해제(`Removed`) 순간에도 낼지 여부. 기본은 걸림 · 실행 순간만
+        float32       _shake{ 0.0f };          ///< 카메라 흔들림의 크기(m, 0 이면 없음)
+        float32       _shakeSeconds{ 0.0f };   ///< 흔들림의 길이(초)
+        float32       _shakeRadius{ 0.0f };    ///< 흔들림이 사라지는 반경(m, 0 이면 거리와 무관)
         uint8         _bPositional{ SW_TRUE }; ///< 소리를 대상 자리에서 낼지(`postEventAt`), 아니면 2D 로 낼지(`postEvent`)
     };
 } // namespace sw
