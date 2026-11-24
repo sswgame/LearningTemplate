@@ -11,7 +11,7 @@ using namespace sw;
 SW_TEST_CASE( CookCodeFingerprintTest, EveryCookerHasItsOwnFingerprint )
 {
     vector<uint64> listSeen;
-    for ( const utf8* pName : { "Scene", "ScenePreload", "Prefab", "NavMesh", "VertexAnimation", "Pack", "ShaderCompiler" } )
+    for ( const utf8* pName : { "Scene", "ScenePreload", "SceneHLODMesh", "Prefab", "NavMesh", "VertexAnimation", "Pack", "ShaderCompiler" } )
     {
         const uint64 fingerprint = CookCodeFingerprint::find( pName );
         SW_EXPECT_TRUE_MSG( fingerprint != 0, pName );
