@@ -25,6 +25,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
@@ -479,6 +480,12 @@ namespace sw::editor
         if ( listMove.empty() )
         {
             outPlan._failure = "nothing to move";
+            return false;
+        }
+        // 플레이 중에는 옮기지 않는다 — 편집 씬은 롤백 스냅샷(바이트 · 조립 기록)에 있어 새 id 로 바꿔 끼울 수 없고, Stop 이 옛 id 를 되돌려 다음 저장이 그것을 쓴다.
+        if ( EditorPlaySession::isStopped() == false )
+        {
+            outPlan._failure = "stop playing first - the edited scene is in the play snapshot";
             return false;
         }
         if ( index.isReady() == false )

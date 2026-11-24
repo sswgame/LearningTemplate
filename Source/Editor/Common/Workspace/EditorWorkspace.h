@@ -111,7 +111,8 @@ namespace sw::editor
         /** @brief 여러 오브젝트를 한 번에 고릅니다(`EditorSelection::selectObjects` — 알림 한 번). 행마다 `selectGameObject` 를 부르면 제곱이다. */
         void selectGameObjects( const vector<GameObject*>& listObj, SelectionMode mode = SelectionMode::Replace );
         void selectComponent( GameObject* pObj, Component* pComp );
-        void remapSelectionByObjectName( GameObjectManager* pGameObjectManager );
+        /** @brief 씬 오브젝트가 원래 id 로 되돌아온 뒤(Stop) 선택을 잇습니다 — 사라진 것만 빼고(여러 선택 유지), 고른 컴포넌트는 키로 다시 찾습니다. */
+        void refreshSelectionAfterRestore();
 
         // ------------------------------------------------------------------------------
         // 2) 애셋 포커스

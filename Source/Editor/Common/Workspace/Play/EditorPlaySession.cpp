@@ -159,17 +159,17 @@ namespace sw::editor
 
             static void restorePlaySnapshot( PlaySessionData& data )
             {
+                // 진행 중인 로드는 늘 취소한다 — 플레이가 건 이동이 아직 끝나지 않았으면 씬 세대는 그대로이고, Stop 뒤에 끝나며 편집 씬을 저장 확인 없이 바꿔 끼웠다.
+                SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
+                sceneManager.cancelPendingAsyncLoads();
                 if ( data._snapshot._bHasSnapshot == SW_FALSE )
                     return;
 
                 // 플레이 중에 활성 씬이 바뀌었으면(게임 코드가 다음 레벨을 열었거나 씬 로드가 끝났다) 스냅샷은 현재 씬의 것이 아니다. 그 씬에
                 // 그대로 되돌리면 두 씬의 오브젝트가 섞이고, 활성 씬이 플레이 중에 연 씬의 소스 경로를 가진 채라 저장하면 그 씬 파일을
-                // 덮어쓴다. 편집하던 씬을 빈 씬으로 다시 만들고(이름과 소스 경로 복원) 거기에 되돌린다. 로드가 아직 진행 중이면 끝나면서 씬을 다시
-                // 바꾸므로 먼저 취소한다. 오브젝트는 원래 id 로 복원되므로 프리팹 연결도 id 로 다시 연결한다(아래 2).
-                SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
+                // 덮어쓴다. 편집하던 씬을 빈 씬으로 다시 만들고(이름과 소스 경로 복원) 거기에 되돌린다. 오브젝트는 원래 id 로 복원되므로 프리팹 연결도 id 로 다시 연결한다(아래 2).
                 if ( sceneManager.getSceneGeneration() != data._snapshot._sceneGeneration )
                 {
-                    sceneManager.cancelPendingAsyncLoads();
                     Scene* pRebuilt = sceneManager.createEmptyActiveScene( data._snapshot._sceneName );
                     if ( pRebuilt != nullptr )
                         pRebuilt->setSourcePath( data._snapshot._sceneSourcePath );
@@ -184,6 +184,10 @@ namespace sw::editor
                     data._snapshot._bHasSnapshot = SW_FALSE;
                     return;
                 }
+
+                // 지연 파괴를 먼저 끝낸다 — 마지막 프레임 · onEndPlay · 일시정지 중 삭제로 파괴가 예약된 오브젝트는 아직 원래 id 로 등록돼 있어, 그대로 다시 만들면
+                // 스토어가 새 id 를 주고 되돌리기 기록 · 선택의 핸들이 끊긴다(되돌리기의 `ObjectSnapshot` 재생성과 같은 규칙).
+                pObjects->processDeferredDestruction();
 
                 // 1. 플레이 도중 생성된 오브젝트를 파괴한다
                 destroySpawnedDuringPlay( data, *pObjects );
@@ -654,6 +658,14 @@ namespace sw::editor
             // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤이므로 맡긴 명령의 대상(id)이 다시 맞는다.
             if ( pCommandStack != nullptr )
                 pCommandStack->resumeHistory();
+            // 씬을 다시 만들었어도 편집하던 그 씬이다 — 워크스페이스가 "새 씬" 으로 여겨 미저장 표시 · 방금 되찾은 편집 내역을 버리지 않게 하고, 선택은 원래 id 로 잇는다.
+            // 선택 조회(②): 컨텍스트 없는 테스트에는 작업 공간이 없다.
+            EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
+            if ( pWorkspace != nullptr )
+            {
+                pWorkspace->setObservedSceneGeneration( editor::getSubsystem<SceneManager>().getSceneGeneration() );
+                pWorkspace->refreshSelectionAfterRestore();
+            }
             EditorTransaction keepTransaction{ "Keep Simulation Changes" }; // 남긴 오브젝트 모두가 되돌리기 한 단계다
             EditorPlaySessionInternal::applyKeptStates( *pData, keepTransaction );
         }

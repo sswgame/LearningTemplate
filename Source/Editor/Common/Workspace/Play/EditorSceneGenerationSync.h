@@ -25,8 +25,10 @@ namespace sw::editor
          * @details Undo 스택: 명령의 XML 스냅숏은 사라진 씬의 것이다 — 남기면 Edit 메뉴가 Undo 를 켜 둔 채로 두고, 눌러도 아무 일도 없거나
          *          이름이 같은 새 씬의 오브젝트를 덮어쓴다.
          *          프리팹 격리는 여기 없다 — 격리 스택은 프리팹 창(`PrefabEditorPanel`)이 자기 미리보기 씬과 함께 들어, 메인 씬이 바뀌어도 영향이 없다.
+         *          플레이 중(@p bPlaying)에 바뀐 씬은 편집 씬이 아니다(게임의 레벨 이동) — 미저장 표시는 Stop 이 되돌릴 편집 씬의 것이라 남긴다. 지우면 Stop 뒤 종료 · 씬 열기가
+         *          묻지 않고 편집을 버린다. Stop 은 되돌린 씬을 본 세대로 직접 적는다(`EditorPlaySession::setState`).
          * @param pCommandStack 없으면(nullptr) Undo 스택은 건너뛴다.
          */
-        [[nodiscard]] static bool apply( EditorWorkspace& workspace, uint64 generation, CommandStack* pCommandStack );
+        [[nodiscard]] static bool apply( EditorWorkspace& workspace, uint64 generation, bool bPlaying, CommandStack* pCommandStack );
     };
 } // namespace sw::editor

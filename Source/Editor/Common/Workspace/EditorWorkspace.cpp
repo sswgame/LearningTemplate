@@ -144,40 +144,18 @@ namespace sw::editor
         _scrollToComponentID = _selectedComponentID;
     }
 
-    void EditorWorkspace::remapSelectionByObjectName( GameObjectManager* pGameObjectManager )
+    void EditorWorkspace::refreshSelectionAfterRestore()
     {
-        if ( pGameObjectManager == nullptr )
+        if ( _pEditorSelection == nullptr )
             return;
-
-        const string name = getSelectedObjectName();
-        if ( name.empty() )
-        {
-            _selectedComponentID = 0;
+        // 오브젝트는 원래 id 로 돌아왔다 — 선택(핸들)은 그대로 맞고, 플레이 중에 생긴 것만 빠진다. 컴포넌트는 다시 만들어져 번호가 바뀌었을 수 있어 씬 파일과 같은 키로 다시 찾는다.
+        _pEditorSelection->pruneInvalid();
+        GameObject* const pPrimary = _pEditorSelection->getPrimaryObject();
+        Component* const  pResolved =
+            ( pPrimary != nullptr && _selectedComponentKey.empty() == false ) ? ComponentStableKey::findComponent( pPrimary, _selectedComponentKey ) : nullptr;
+        _selectedComponentID = pResolved != nullptr ? pResolved->getComponentID() : 0;
+        if ( pResolved == nullptr )
             _selectedComponentKey.clear();
-            return;
-        }
-
-        GameObject* pObj = pGameObjectManager->findGameObjectByName( hashed_string( name.c_str() ) );
-        if ( pObj == nullptr )
-        {
-            clearSelection();
-            return;
-        }
-
-        if ( _pEditorSelection != nullptr )
-            _pEditorSelection->selectObject( pObj, SelectionMode::Replace );
-
-        if ( _selectedComponentKey.empty() )
-        {
-            _selectedComponentID = 0;
-            return;
-        }
-
-        Component* pResolved = ComponentStableKey::findComponent( pObj, _selectedComponentKey );
-        if ( pResolved != nullptr )
-            _selectedComponentID = pResolved->getComponentID();
-        else
-            _selectedComponentID = 0;
     }
 
     void EditorWorkspace::notifyAssetsMoved( const EditorAssetMoveEvent& event )

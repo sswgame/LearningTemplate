@@ -595,6 +595,12 @@ namespace sw
             SW_LOG_ERROR_ID( "Scene.SaveRefused", "Scene save refused — %#", _saveBlockReason );
             return false;
         }
+        // 플레이 중인 씬은 저작 상태가 아니다 — 원본 파일에는 쓰지 않는다(사본은 쓴다 - 버그 보고).
+        if ( _bWorldPlaying && sourceID.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "SceneManager.SceneSaveWhilePlaying", "Scene save refused - the world is playing, '%#' would be overwritten with the play state", sourceID );
+            return false;
+        }
         Scene* pScene = getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
