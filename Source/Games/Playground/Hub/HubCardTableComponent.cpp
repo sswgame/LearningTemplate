@@ -124,6 +124,8 @@ namespace sw
                 table.stopRole();
                 return;
             }
+            if ( table._role != Role::None && table._routerSubscription.isActive() == false )
+                table.stopRole(); // 틱 사이에 세션이 닫히고 새로 열렸다 — 새 세션에 다시 건다
             table.startRole( *pLink );
             if ( table._role == Role::Server )
                 table._server.update();
