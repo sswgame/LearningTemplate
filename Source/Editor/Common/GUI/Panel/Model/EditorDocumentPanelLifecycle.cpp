@@ -87,7 +87,7 @@ namespace sw::editor
                 const bool   bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( event, _loadedAssetPath, _listRecentPath );
                 if ( previousPath != _loadedAssetPath )
                 {
-                    // 자동 저장 사본은 옛 id 로 적혀 있다 — 남기면 비정상 종료 뒤 없는 문서를 복구하라고 묻는다. 미저장이면 다음 주기가 새 id 로 다시 쓴다.
+                    // 자동 저장 사본은 문서의 GUID 로 적혀 새 자리를 따라간다. 정체성이 없는 문서의 사본만 옛 id 로 남아 지운다 — 미저장이면 다음 주기가 새 id 로 다시 쓴다.
                     EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), previousPath );
                     _lastCopyTextHash = 0;
                     // 파생의 모델이 든 경로(저장할 자리)도 새 자리여야 한다 — 새 자리에서 다시 읽어 맞추고, 미저장이면 편집한 글을 그 위에 얹는다(`markDocumentLoaded`).
