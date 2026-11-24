@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Client/ArenaViewComponent.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 

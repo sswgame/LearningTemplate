@@ -142,7 +142,7 @@ namespace sw
         _wallet.clear();
         _flags.clear();
         GameStateComponent* const pState = GameStateComponent::findOnOwner( *this );
-        if ( pState == nullptr || _storage.initialize( _pItemCatalog.get(), _storageSlotCount ) == false )
+        if ( pState == nullptr || _storage.initialize( *_pItemCatalog, _storageSlotCount ) == false )
             return false;
         const ScavengerExpeditionData data{ *_pCatalog, *_pWeatherCatalog, *_pThreatTable, *_pShopCatalog, *_pItemCatalog };
         return _expedition.initialize( data, _wallet, pState->getClock(), pState->getWeather(), _flags, _storage, _seed, _crewCount );

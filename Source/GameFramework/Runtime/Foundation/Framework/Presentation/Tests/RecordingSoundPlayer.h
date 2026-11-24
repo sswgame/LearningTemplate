@@ -18,6 +18,10 @@ namespace sw
     public:
         bool                         play( const AssetID&, const hashed_string& ) override { return false; }
         bool                         playMusic( const AssetID& ) override { return false; }
+        [[nodiscard]] bool           playAdaptiveMusic( const AssetID& ) override { return false; }
+        void                         stopMusic() override {}
+        void                         setMusicPaused( bool ) override {}
+        optional<float32>            findMusicSeconds() const override { return {}; }
         [[nodiscard]] bool           loadEvents( const AssetID& ) override { return true; }
         void                         unloadEvents( string_view ) override {}
         SoundPlayingID               postEvent( const hashed_string& eventName ) override { return record( eventName, 0.0f ); }

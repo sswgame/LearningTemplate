@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityViewComponent.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"

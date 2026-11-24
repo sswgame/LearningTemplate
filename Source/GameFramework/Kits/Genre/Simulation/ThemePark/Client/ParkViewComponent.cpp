@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Client/ParkViewComponent.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"

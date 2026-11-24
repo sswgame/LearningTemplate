@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmPlotViewComponent.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetManager.h"
