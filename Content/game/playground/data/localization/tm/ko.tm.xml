@@ -22,11 +22,13 @@
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
 		<entry source="Knight Sword (Merged)" text="기사 검(병합)" />
+		<entry source="Last squad standing - you win" text="마지막 분대 - 승리했습니다" />
 		<entry source="Longbow" text="장궁" />
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
 		<entry source="Notched Blade" text="이 빠진 칼" />
+		<entry source="People left" text="남은 인원" />
 		<entry source="Pistol" text="권총" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
 		<entry source="Recon Boots" text="정찰 부츠" />
@@ -42,5 +44,9 @@
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
 		<entry source="Travel Cape" text="여행 망토" />
+		<entry source="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" />
+		<entry source="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" />
+		<entry source="Your squad is out" text="분대가 탈락했습니다" />
+		<entry source="Zone" text="구역" />
 	</entries>
 </TranslationMemory>

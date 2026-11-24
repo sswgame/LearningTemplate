@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="bebb9510766746959dd21c1709bb0ab7"?>
+<!--
+  배틀로얄 미니게임(분대 셋 · 둘씩, 플레이어 말고는 컴퓨터) — BattleRoyale 키트. 낙하 → 좁아지는 구역의 전투 → 마지막 분대. 규칙(data/battleroyale.xml)은 게임 기능 BattleRoyale 이 미니게임 범위에 건다.
+  맵의 BattleRoyaleGameMode 오브젝트에 BattleRoyaleGameModeComponent → BattleRoyaleViewComponent(GF_Client_BattleRoyale) → HUDControllerComponent 가 그 순서로 붙는다.
+  입력은 걷기 공통 레이어와 BattleRoyale 레이어(battleroyale/data/battleroyale.input.xml)만 켠다. 짧은 대전이라 안에서 저장하지 않는다.
+  시나리오 automation/battleroyale_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="battleroyale" map="game/playground/battleroyale/maps/island.scene.xml" entry="SceneSwitch" portalSlot="12" save="Blocked" features="BattleRoyale" inputContexts="Movement,BattleRoyale" catalogs="BattleRoyaleCatalog"/>

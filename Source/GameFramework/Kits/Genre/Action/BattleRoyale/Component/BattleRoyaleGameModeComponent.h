@@ -1,0 +1,205 @@
+/**
+ * @file BattleRoyaleGameModeComponent.h
+ * @brief 배틀로얄 키트(`GF_BattleRoyale`)의 디렉터 — 낙하(비행기 → 자유 낙하 → 낙하산) → 좁아지는 구역의 전투 → 결과 한 판을 진행합니다.
+ * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — `BattleRoyaleMatch` · `BattleRoyaleFlightPath` · `BattleRoyaleSkydiver` · `BattleRoyaleGroundItem`)을 들고 씬과 잇는다.
+ *          입력 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_BattleRoyale` 의 `BattleRoyaleViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
+ *          0 번이 플레이어이고 나머지는 컴퓨터다(같은 분대의 동료 포함). 몸 · 사격은 여기서 최소로 둔다 — 평면을 걷고 사거리 안의 가장 가까운 적을 쏜다(명중 확률). 구역 피해 · 기절 · 부활 · 전멸 · 순위는 키트 규칙이다.
+ *          수치는 카탈로그(`BattleRoyaleCatalog`)와 씬 데이터다. 판이 끝나거나 플레이어 분대가 전멸하면 `_resultHoldSeconds` 뒤 미니게임을 끝낸다(디렉터 계약 ③) — 이기면 결과 값 `money`(`_victoryMoney`).
+ *          장르 완결 루프 시나리오: `game/playground/automation/battleroyale_slice.scenario.xml`.
+ */
+#pragma once
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
+#include "Core/Time/FixedStepTimer.h"
+
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleCatalog.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleDrop.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleLoot.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
+
+namespace sw
+{
+    /** @brief 판의 단계입니다(감시 값 `BattleRoyale.Phase` 의 수). */
+    ENUM()
+    enum class BattleRoyalePhase : uint8
+    {
+        Drop = 0, ///< 비행기에서 내려 땅에 닿기까지(모두 닿으면 전투)
+        Battle,   ///< 구역이 좁아지는 전투
+        Ended     ///< 판이 끝났거나 플레이어 분대가 전멸했다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class BattleRoyaleGameModeComponent
+     * @brief 낙하 → 전투 → 결과를 플레이어 입력 명령과 컴퓨터 분대로 진행합니다.
+     */
+    REFLECT( Category = "BattleRoyale", DisplayName = "Battle Royale Game Mode", Tooltip = "Runs one BattleRoyale match: drop, shrinking zone fight and result; person 0 from input commands, the rest by the computer" )
+    class SW_KIT_API BattleRoyaleGameModeComponent : public GameModeComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr int32 kPlayer      = 0;
+        static constexpr int32 kPlayerSquad = 0;
+
+        BattleRoyaleGameModeComponent();
+        virtual ~BattleRoyaleGameModeComponent() override;
+
+        void               serializeGameState( StateIO& io ) override;
+        [[nodiscard]] bool readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const override;
+
+        // ---- 명령(게임 스레드) ----
+        /**
+         * @brief 이번 프레임의 플레이어 입력을 넘깁니다. 이동 축 · 사격 · 쓰기를 누른 채인지는 마지막 값으로 덮고, 쓰기 누름은 다음 걸음이 쓸 때까지 모읍니다(뛰어내리기 · 낙하산).
+         * @details 쓰기를 누른 채 기절한 동료 곁에 서 있으면 살린다.
+         * @return 판이 열렸고 끝나지 않아 입력을 받으면 true 입니다(`isAcceptingInput`).
+         */
+        [[nodiscard]] bool submitPlayerInput( const float2& move, bool bFireHeld, bool bUseHeld, bool bUsePressed );
+
+        // ---- 읽기(클라이언트 모듈 · 감시 값) ----
+        /** @brief 판이 열렸고 끝나지 않아 입력 명령을 받으면 true 입니다. */
+        bool                                  isAcceptingInput() const { return isStarted() && _phase != BattleRoyalePhase::Ended; }
+        const BattleRoyaleMatch&              getMatch() const { return _match; }
+        const vector<BattleRoyaleGroundItem>& getGroundItems() const { return _listGroundItem; }
+        /** @brief 바닥 무더기 목록이 바뀔 때마다 늘어나는 번호입니다 — 뷰가 다시 세울지 정한다. */
+        uint32 getGroundItemRevision() const { return _groundItemRevision; }
+        int32  getPersonCount() const { return static_cast<int32>( _listPerson.size() ); }
+        /** @brief 사람의 절대 자리입니다(비행기 · 낙하 높이 포함). 없는 번호면 원점입니다. */
+        AbsolutePosition getPersonPosition( int32 person ) const;
+        /** @brief 판 좌표(0..맵 크기)의 자리를 땅 위의 절대 자리로 옮깁니다. */
+        AbsolutePosition toAbsolute( const float2& mapPosition ) const { return AbsolutePosition{ float3( mapPosition._x, _groundHeight, mapPosition._y ) }; }
+        /** @brief 플레이어의 체력 비율(0..1, 기절 중이면 0)입니다. */
+        float32 computePlayerHealthRatio() const;
+        bool    isPlayerDowned() const;
+        /** @brief 플레이어 분대가 이겼으면 true 입니다(끝난 뒤). */
+        bool              hasWon() const { return _phase == BattleRoyalePhase::Ended && _match.getMatchState().getWinningTeam() == kPlayerSquad; }
+        BattleRoyalePhase getMatchPhase() const { return _phase; }
+        int32             getPhase() const { return static_cast<int32>( _phase ); }
+        int32             getRemaining() const { return _match.countRemainingPlayers(); }
+        float32           getZoneRadius() const { return _match.getZone().getRadius(); }
+        /** @brief 아직 비행기에서 내리지 않았으면 0, 낙하 중이면 1, 땅에 닿았으면 2 입니다. */
+        int32 getPlayerDropStage() const;
+
+    protected:
+        [[nodiscard]] bool startGame() override;
+        void               onGameStarted() override;
+        void               updateGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지면 넘길 값이 없다. */
+        void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
+
+    private:
+        /** @brief 사람 하나의 몸입니다(체력 · 장비 · 판 자리는 키트 판이 가진다). 번호는 `BattleRoyaleMatch` 의 사람 번호다. */
+        struct Person
+        {
+            BattleRoyaleSkydiver _skydiver{};
+            Countdown            _weaponCooldown{};
+            float32              _jumpTime{ 0.0f };    ///< 컴퓨터가 뛰어내릴 비행 시각(초)
+            uint8                _bJumped{ SW_FALSE }; ///< 비행기에서 내렸다
+        };
+
+        /** @brief 씬 데이터의 분대로 판을 엽니다. 카탈로그 · 분대 구성이 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool openMatch( BattleRoyaleMatch& outMatch ) const;
+        /** @brief 비행 경로와 뛰어내릴 시각을 정하고 바닥 전리품을 놓습니다. */
+        [[nodiscard]] bool prepareDrop();
+        void               stepDrop( float32 deltaTime );
+        void               stepBattle( float32 deltaTime );
+        /** @brief 땅에 닿은 사람 @p person 을 맵 안의 자리로 판에 알립니다. */
+        void landPerson( int32 person );
+        void stepPlayer( float32 deltaTime );
+        /** @brief 컴퓨터 하나의 걸음 — 구역 안으로, 기절한 동료에게, 가까운 적에게 순으로 움직이고 닿으면 쏜다. */
+        void stepBot( int32 person, float32 deltaTime );
+        /** @brief @p person 을 @p direction 으로 한 걸음 옮깁니다. 맵 밖으로 나가지 않는다. */
+        void movePerson( int32 person, const float2& direction, float32 speed, float32 deltaTime );
+        /** @brief 사거리 안의 가장 가까운 적을 쏩니다(재사용 대기가 끝났을 때). */
+        void fire( int32 person, float32 interval, float32 hitChance );
+        /** @brief 닿는 바닥 무더기의 방어구 · 가방을 입고 무더기를 치웁니다. */
+        void            pickUpItems( int32 person );
+        optional<int32> findNearestEnemy( int32 person, float32 range ) const;
+        optional<int32> findDownedMate( int32 person, float32 range ) const;
+        void            settle();
+        void            endGame();
+
+    private:
+        PROPERTY( Category = "Squads", DisplayName = "Squad Count", Min = 2 )
+        int32 _squadCount;
+        PROPERTY( Category = "Squads", DisplayName = "Squad Size", Min = 1 )
+        int32 _squadSize;
+        PROPERTY( Category = "Match", DisplayName = "Seed", Tooltip = "Seed of the zone, the flight, the loot and the computer people (not 0)", Min = 1 )
+        uint32 _seed;
+        PROPERTY( Category = "Match", DisplayName = "Ground Height", Units = m )
+        float32 _groundHeight;
+        PROPERTY( Category = "People", DisplayName = "Player Speed", Min = 0.1, Units = "m/s" )
+        float32 _playerSpeed;
+        PROPERTY( Category = "People", DisplayName = "Bot Speed", Min = 0.1, Units = "m/s" )
+        float32 _botSpeed;
+        PROPERTY( Category = "Weapon", DisplayName = "Damage", Min = 0.1 )
+        float32 _weaponDamage;
+        PROPERTY( Category = "Weapon", DisplayName = "Range", Min = 0.1, Units = m )
+        float32 _weaponRange;
+        PROPERTY( Category = "Weapon", DisplayName = "Player Interval", Min = 0.05, Units = s )
+        float32 _playerFireInterval;
+        PROPERTY( Category = "Weapon", DisplayName = "Bot Interval", Min = 0.05, Units = s )
+        float32 _botFireInterval;
+        PROPERTY( Category = "Weapon", DisplayName = "Player Hit Chance", Min = 0.0, Max = 1.0 )
+        float32 _playerHitChance;
+        PROPERTY( Category = "Weapon", DisplayName = "Bot Hit Chance", Min = 0.0, Max = 1.0 )
+        float32 _botHitChance;
+        PROPERTY( Category = "Weapon", DisplayName = "Head Chance", Tooltip = "Chance that a hit lands on the head (the helmet absorbs) instead of the body", Min = 0.0, Max = 1.0 )
+        float32 _headChance;
+        PROPERTY( Category = "Use", DisplayName = "Pickup Radius", Min = 0.1, Units = m )
+        float32 _pickupRadius;
+        PROPERTY( Category = "Use", DisplayName = "Revive Range", Min = 0.1, Units = m )
+        float32 _reviveRange;
+        PROPERTY( Category = "Use", DisplayName = "Bot Rescue Range", Tooltip = "A computer person walks to a downed squad mate inside this range", Min = 0.1, Units = m )
+        float32 _botRescueRange;
+        PROPERTY( Category = "Loot", DisplayName = "Loot Data", Tooltip = "Loot catalog of the loot spots and supply drops (required when any is placed)" )
+        AssetRef<LootCatalog> _lootDataPath;
+        PROPERTY( Category = "Loot", DisplayName = "Loot Spot Kind", Tooltip = "LootSpot id (catalog) of every loot position" )
+        hashed_string _lootSpotKind;
+        PROPERTY( Category = "Loot", DisplayName = "Loot Positions", Tooltip = "Map positions of the loot spots", Units = m )
+        vector<float2> _listLootPosition;
+        PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
+        float32 _resultHoldSeconds;
+        PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
+        int32 _victoryMoney;
+
+        SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
+        SharedAssetRef<LootCatalog>         _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
+        BattleRoyaleMatch                   _match;
+        BattleRoyaleFlightPath              _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
+        FixedStepTimer                      _timer;
+        GameRandom                          _random;
+        Countdown                           _resultHold;
+        vector<Person>                      _listPerson;
+        vector<BattleRoyaleGroundItem>      _listGroundItem;
+        vector<BattleRoyaleEvent>           _listEvent;
+        vector<BattleRoyaleZoneEvent>       _listZoneEvent;
+        PROPERTY( RuntimeState, Min = 0 )
+        float32 _flightTime;
+        PROPERTY( RuntimeState )
+        BattleRoyalePhase      _phase;
+        uint32                 _groundItemRevision;
+        float2                 _commandMove; ///< 마지막 입력 명령 — 클라이언트 입력이라 싣지 않는다(아래 깃발도)
+        uint8                  _bFireHeld  : 1;
+        uint8                  _bUseHeld   : 1;
+        uint8                  _bUseQueued : 1; ///< 다음 걸음이 쓸 쓰기 누름
+        [[maybe_unused]] uint8 _reserved   : 5;
+    };
+} // namespace sw

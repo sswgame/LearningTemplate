@@ -101,6 +101,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Last squad standing - you win" source="Last squad standing - you win" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -114,6 +119,11 @@
 		<entry key="Notched Blade" source="Notched Blade" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="People left" source="People left" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pistol" source="Pistol" context="Weapon name">
@@ -195,6 +205,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Use - jump off the plane" source="Use - jump off the plane" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
@@ -203,6 +218,21 @@
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="You are down - wait for your squad" source="You are down - wait for your squad" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Your squad is out" source="Your squad is out" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Zone" source="Zone" context="TextWidget._text">
+			<origins>
+				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 	</entries>

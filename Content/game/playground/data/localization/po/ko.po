@@ -110,6 +110,12 @@ msgctxt "Knight Sword (Merged)"
 msgid "Knight Sword (Merged)"
 msgstr "기사 검(병합)"
 
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Last squad standing - you win"
+msgid "Last squad standing - you win"
+msgstr "마지막 분대 - 승리했습니다"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Longbow"
@@ -121,6 +127,12 @@ msgstr "장궁"
 msgctxt "Notched Blade"
 msgid "Notched Blade"
 msgstr "이 빠진 칼"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "People left"
+msgid "People left"
+msgstr "남은 인원"
 
 #. Context: Weapon name
 #: common/data/items.xml
@@ -199,3 +211,27 @@ msgstr "전사가 깨어난다."
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Use - jump off the plane"
+msgid "Use - jump off the plane"
+msgstr "쓰기 - 비행기에서 뛰어내리기"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "You are down - wait for your squad"
+msgid "You are down - wait for your squad"
+msgstr "기절했습니다 - 동료를 기다리세요"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Your squad is out"
+msgid "Your squad is out"
+msgstr "분대가 탈락했습니다"
+
+#. Context: TextWidget._text
+#: game/playground/battleroyale/ui/hud.ui.xml
+msgctxt "Zone"
+msgid "Zone"
+msgstr "구역"
+

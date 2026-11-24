@@ -17,8 +17,10 @@
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
+		<entry key="Last squad standing - you win" text="마지막 분대 - 승리했습니다" sourceHash="ddaaaecde8b4a637" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
+		<entry key="People left" text="남은 인원" sourceHash="6f27a40f6f8161a7" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
@@ -34,5 +36,9 @@
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
+		<entry key="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" sourceHash="ce3ab2b99b177051" />
+		<entry key="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" sourceHash="995b14b904f5e596" />
+		<entry key="Your squad is out" text="분대가 탈락했습니다" sourceHash="d6fb3828410be124" />
+		<entry key="Zone" text="구역" sourceHash="1667f96d19635ec7" />
 	</entries>
 </TranslationTable>
