@@ -1,4 +1,4 @@
-// ThemeParkWalkTest — 손님은 막힌 칸(가판 · 지을 땅)을 돌아 놀이기구 줄에 서고, 걷던 길이 상태로 왕복하며, 격자가 없으면 곧게 걷는다(nogpu, 에셋 없음).
+// ThemeParkWalkTest — 손님은 막힌 칸(가판 · 지을 땅)을 돌아 놀이기구 줄에 서고, 긴 줄도 막힌 칸을 돌아 늘어서며, 걷던 길이 상태로 왕복하며, 격자가 없으면 곧게 걷는다(nogpu, 에셋 없음).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
@@ -83,4 +83,39 @@ SW_TEST_CASE( ThemeParkWalkTest, WithoutGridGuestWalksStraight )
         bCrossed = bCrossed || test.isGuestOnBlockedCell();
     }
     SW_EXPECT_TRUE( bCrossed );
+}
+
+/** @brief [ThemeParkWalkTest] 벽 너머까지 닿는 긴 줄도 걷는 길을 따라 늘어서 막힌 칸에 서지 않고, 줄이 길어도 정문을 넘지 않는다 */
+SW_TEST_CASE( ThemeParkWalkTest, LongQueueFollowsTheWalkRoute )
+{
+    constexpr int32   kGuestCount = 60; // 간격 0.6 m — 길(약 23 m)보다 길다
+    ThemeParkWalkPark test;
+    ThemeParkSettings settings = test._settings;
+    settings._queuePatience    = 100000.0f;
+    SW_REQUIRE_TRUE( test._park.initialize( settings, &test._wallet ) );
+    test._park.bindWalkGrid( &test._grid );
+    ParkRide ride;
+    ride._id        = hashed_string( "wheel" );
+    ride._entrance  = float3{ 0.5f, 0.0f, 20.5f };
+    ride._capacity  = 1;
+    ride._cycleTime = 1000.0f;
+    SW_REQUIRE_TRUE( test._park.buildRide( ride, 0 ) == 0 );
+    for ( int32 guest = 0; guest < kGuestCount; ++guest )
+    {
+        SW_REQUIRE_TRUE( test._park.admitGuest( 50, 0.0f, 10.0f, 1.0f ) );
+    }
+    for ( int32 step = 0; step < kThemeParkWalkStepLimit && test._park.getRides()[0]._listQueue.size() + 1 < static_cast<size_t>( kGuestCount ); ++step )
+    {
+        test._park.update( kThemeParkWalkStep );
+    }
+    test._park.update( kThemeParkWalkStep );
+    SW_REQUIRE_EQUAL( size_t( kGuestCount - 1 ), test._park.getRides()[0]._listQueue.size() );
+    bool bPastWall = false;
+    for ( const ParkGuest& guest : test._park.getGuests() )
+    {
+        SW_EXPECT_TRUE( test._grid.isWalkable( test._grid.computeCell( guest._position ) ) );
+        SW_EXPECT_TRUE( guest._position._z >= 0.5f );
+        bPastWall = bPastWall || guest._position._z < 10.0f;
+    }
+    SW_EXPECT_TRUE( bPastWall );
 }

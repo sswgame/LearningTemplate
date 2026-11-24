@@ -149,6 +149,15 @@ namespace sw
         _landOwner = pLand != nullptr ? pLand->registerOwner( hashed_string( "ThemePark" ) ) : LandRegistry::kNoOwner;
     }
 
+    void ThemeParkSimulation::bindWalkGrid( const NavGrid* pGrid )
+    {
+        _pWalkGrid = pGrid;
+        for ( ParkRide& ride : _listRide )
+        {
+            ride._listQueuePoint.clear(); // 새 격자의 길로 다시 늘어선다
+        }
+    }
+
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )
     {
         const bool bClaimLand = _pLand != nullptr && _landOwner != LandRegistry::kNoOwner && ride._footprintSize._x > 0.0f && ride._footprintSize._z > 0.0f;
@@ -162,6 +171,7 @@ namespace sw
         }
         ParkRide built = ride;
         built._listQueue.clear();
+        built._listQueuePoint.clear();
         built._listRider.clear();
         built._cycleTimer.clear();
         built._totalRiders = 0;
@@ -457,17 +467,13 @@ namespace sw
                         chooseNextRide( guest );
                         break;
                     }
-                    // 줄의 위치는 입구에서 정문 쪽으로 늘어선다(그리기용).
-                    const ParkRide& ride      = _listRide[static_cast<size_t>( guest._targetRideIndex )];
-                    size_t          lineIndex = 0;
+                    ParkRide& ride      = _listRide[static_cast<size_t>( guest._targetRideIndex )];
+                    size_t    lineIndex = 0;
                     while ( lineIndex < ride._listQueue.size() && ride._listQueue[lineIndex] != guest._id )
                     {
                         ++lineIndex;
                     }
-                    float3        toGate = _settings._gatePosition - ride._entrance;
-                    const float32 length = toGate.getLength();
-                    toGate               = length > ThemeParkInternal::kMinDivisor ? toGate * ( 1.0f / length ) : float3{ 0.0f, 0.0f, -1.0f };
-                    guest._position      = ride._entrance + toGate * ( _settings._queueSpacing * static_cast<float32>( lineIndex + 1 ) );
+                    guest._position = computeQueuePosition( ride, lineIndex );
                     break;
                 }
                 case ParkGuestState::Riding:
@@ -606,6 +612,18 @@ namespace sw
         guest._walkTo       = to;
         guest._walkDuration = MathUtil::max( minSeconds, float3::getDistance( guest._position, to ) / MathUtil::max( ThemeParkInternal::kMinWalkSpeed, _settings._walkSpeed ) );
         guest._walkTimer    = guest._walkDuration;
+    }
+
+    float3 ThemeParkSimulation::computeQueuePosition( ParkRide& inoutRide, size_t lineIndex )
+    {
+        if ( inoutRide._listQueuePoint.empty() )
+        {
+            findWalkRoute( _pWalkGrid, _pathfinder, inoutRide._entrance, _settings._gatePosition, inoutRide._listQueuePoint );
+            inoutRide._listQueuePoint.insert( inoutRide._listQueuePoint.begin(), inoutRide._entrance );
+        }
+        const float32 length   = ISchedulePathing::computeLength( inoutRide._listQueuePoint );
+        const float32 distance = _settings._queueSpacing * static_cast<float32>( lineIndex + 1 );
+        return ISchedulePathing::computePointAlong( inoutRide._listQueuePoint, MathUtil::min( 1.0f, distance / MathUtil::max( ThemeParkInternal::kMinDivisor, length ) ) );
     }
 
     void ThemeParkSimulation::sendHome( ParkGuest& guest, ParkGuestThought thought )

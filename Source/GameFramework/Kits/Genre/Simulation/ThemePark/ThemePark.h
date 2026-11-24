@@ -70,7 +70,8 @@ namespace sw
 
         // ---- 운행 상태(시뮬레이션이 쓴다) ----
         PROPERTY()
-        vector<uint32> _listQueue{}; ///< 줄 선 손님 id(앞에서부터)
+        vector<uint32> _listQueue{};      ///< 줄 선 손님 id(앞에서부터)
+        vector<float3> _listQueuePoint{}; ///< 줄이 늘어서는 길의 점(입구에서 정문까지)이다. 처음 줄을 설 때 걷는 격자에서 구하는 사본이라 상태 바이트에 싣지 않는다
         PROPERTY()
         vector<uint32> _listRider{};  ///< 지금 탄 손님 id
         Countdown      _cycleTimer{}; ///< 리플렉션 밖 값 — 남은 시간은 시뮬레이션 본문이 손으로 싣는다
@@ -319,7 +320,7 @@ namespace sw
          */
         void bindLand( LandRegistry* pLand );
         /** @brief 손님이 돌아갈 장애물(가판 · 의자 · 지을 땅)의 격자를 빌립니다. nullptr 이면 곧게 걷는다. 격자는 시뮬레이션보다 오래 산다. */
-        void bindWalkGrid( const NavGrid* pGrid ) { _pWalkGrid = pGrid; }
+        void bindWalkGrid( const NavGrid* pGrid );
         /**
          * @brief @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다, 마지막이 @p to)을 @p outListPoint 에 채웁니다. 곧게 지날 수 있거나 격자가 없거나 격자 밖이면 @p to 하나입니다.
          * @details 손님의 걸음과 깔리는 길의 모습이 같은 함수를 부른다 — 길은 손님이 걷는 자리에 놓인다.
@@ -370,9 +371,11 @@ namespace sw
         void startWalking( ParkGuest& guest, const float3& destination );
         /** @brief @p to 까지의 다리 하나를 걷기 시작합니다. 아무리 짧아도 @p minSeconds 는 걸린다. */
         void startWalkLeg( ParkGuest& guest, const float3& to, float32 minSeconds );
-        void sendHome( ParkGuest& guest, ParkGuestThought thought );
-        void leaveQueue( ParkGuest& guest );
-        void updateParkRating();
+        /** @brief 놀이기구 @p inoutRide 의 줄에서 앞에서 @p lineIndex 번째(0 부터) 손님의 자리입니다 — 입구에서 정문으로 가는 걷는 길을 따라 늘어서고 정문을 넘지 않는다. */
+        float3 computeQueuePosition( ParkRide& inoutRide, size_t lineIndex );
+        void   sendHome( ParkGuest& guest, ParkGuestThought thought );
+        void   leaveQueue( ParkGuest& guest );
+        void   updateParkRating();
         /** @brief id 로 손님을 찾습니다. 목록이 id 오름차순이므로(새 손님은 뒤에 붙고 지울 때 순서를 지킵니다) 이분 탐색을 씁니다. */
         ParkGuest* findGuest( uint32 guestID );
         float32    nextRandom() { return _random.nextFloat(); }
