@@ -84,7 +84,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _markers.setPrefab( _markerPrefab.path() );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false && _leverAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "Scavenger.AvatarActionMissing", "Scavenger avatar: the actions must all be named (move '%#', use '%#', lever '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str(), _leverAction.c_str() );
@@ -159,12 +158,12 @@ namespace sw
             for ( const AreaDef& area : facility.getGraph().getAreas() )
             {
                 const float4& color = area._id == ship ? Internal::kShipColor : ( area._id == outside ? Internal::kOutsideColor : Internal::kRoomColor );
-                _markers.drawStanding( manager, director.computeAreaPosition( area._id ), Internal::kAreaSize, color );
+                _markers.showStanding( manager, _markerPrefab, director.computeAreaPosition( area._id ), Internal::kAreaSize, color );
             }
             for ( const AreaLink& link : facility.getGraph().getLinks() )
             {
                 const float3 middle = ( director.computeAreaPosition( link._from )._value + director.computeAreaPosition( link._to )._value ) * 0.5f;
-                _markers.drawStanding( manager, AbsolutePosition{ middle }, Internal::kDoorSize,
+                _markers.showStanding( manager, _markerPrefab, AbsolutePosition{ middle }, Internal::kDoorSize,
                                        facility.canTraverse( link._from, link._to ) ? Internal::kOpenDoorColor : Internal::kLockedDoorColor );
             }
             int32 scrapIndex = 0;
@@ -172,17 +171,17 @@ namespace sw
             {
                 const float32 column = static_cast<float32>( scrapIndex % Internal::kScrapColumns );
                 const float3  offset{ ( column - static_cast<float32>( Internal::kScrapColumns - 1 ) * 0.5f ) * Internal::kScrapSpacing, Internal::kAreaSize._y, Internal::kScrapRow };
-                _markers.drawStanding( manager, director.computeAreaPosition( scrap._areaID ) + offset, Internal::kScrapSize, scrap.isBody() ? Internal::kBodyColor : Internal::kScrapColor );
+                _markers.showStanding( manager, _markerPrefab, director.computeAreaPosition( scrap._areaID ) + offset, Internal::kScrapSize, scrap.isBody() ? Internal::kBodyColor : Internal::kScrapColor );
                 ++scrapIndex;
             }
             for ( const ScavengerThreat& threat : director.getThreats() )
             {
-                _markers.drawStanding( manager, director.computeAreaPosition( threat._areaID ), Internal::kThreatSize, Internal::kThreatColor );
+                _markers.showStanding( manager, _markerPrefab, director.computeAreaPosition( threat._areaID ), Internal::kThreatSize, Internal::kThreatColor );
             }
         }
         else
         {
-            _markers.drawStanding( manager, director.computeAreaPosition( ship ), Internal::kAreaSize, Internal::kShipColor );
+            _markers.showStanding( manager, _markerPrefab, director.computeAreaPosition( ship ), Internal::kAreaSize, Internal::kShipColor );
         }
         const int32 crewCount = expedition.getCrewCount();
         for ( int32 player = 0; player < crewCount; ++player )
@@ -192,7 +191,7 @@ namespace sw
                 continue;
             const float32 column = static_cast<float32>( player ) - static_cast<float32>( crewCount - 1 ) * 0.5f;
             const float3  offset{ column * Internal::kCrewSpacing, Internal::kAreaSize._y, 0.0f };
-            _markers.drawStanding( manager, director.computeAreaPosition( member._areaID ) + offset, Internal::kCrewSize, player == 0 ? Internal::kPlayerColor : Internal::kCrewColor );
+            _markers.showStanding( manager, _markerPrefab, director.computeAreaPosition( member._areaID ) + offset, Internal::kCrewSize, player == 0 ? Internal::kPlayerColor : Internal::kCrewColor );
         }
     }
 

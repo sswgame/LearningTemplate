@@ -58,13 +58,18 @@ namespace sw
         pMesh->setLocalRotation( float3{ 0.0f, yaw, 0.0f } );
         pMesh->setLocalScale( float3{ slot._prefabScale._x * scale._x, slot._prefabScale._y * scale._y, slot._prefabScale._z * scale._z } );
         const bool bSameTint = slot._tint._x == tint._x && slot._tint._y == tint._y && slot._tint._z == tint._z && slot._tint._w == tint._w;
-        if ( bSameTint == false )
+        if ( bSameTint == false && pMesh->getMaterial() != nullptr ) // 머티리얼은 비동기로 온다 — 온 프레임에 입힌다
         {
             _tintCache.apply( *pMesh, tint );
             slot._tint = tint;
         }
         ++_shownCount;
         return true;
+    }
+
+    void PrefabViewBatch::showStanding( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const AbsolutePosition& foot, const float3& size, const float4& tint )
+    {
+        (void)show( manager, prefab, foot + float3{ 0.0f, size._y * 0.5f, 0.0f }, size, 0.0f, tint );
     }
 
     void PrefabViewBatch::end( GameObjectManager& manager )

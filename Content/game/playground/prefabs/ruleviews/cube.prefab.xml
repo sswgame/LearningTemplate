@@ -1,5 +1,5 @@
 <?asset guid="f6418ed33e7a72367fdefc36aae0f8d5"?>
-<!-- 키트 클라이언트 뷰(PrefabViewBatch)가 늘려 쓰는 한 변 1 m 상자 — 트랙 조각 · 카드 · 레인 · 거점. 자리 · 크기 · 색은 뷰가 정한다. -->
+<!-- 키트 클라이언트 뷰(PrefabViewBatch)가 늘려 쓰는 한 변 1 m 상자 — 트랙 조각 · 카드 · 레인 · 거점 · 공포 판의 표식. 자리 · 크기 · 색은 뷰가 정한다. -->
 <Prefab formatVersion="1" name="RuleCube">
 	<GameObject _schemaVersion="0" _name="RuleCube" _bActive="true">
 		<_listComponent>

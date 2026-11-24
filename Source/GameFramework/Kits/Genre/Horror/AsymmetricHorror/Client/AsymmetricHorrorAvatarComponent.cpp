@@ -86,7 +86,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _markers.setPrefab( _markerPrefab.path() );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "AsymmetricHorror.AvatarActionMissing", "Asymmetric Horror avatar: the actions must all be named (move '%#', use '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str() );
@@ -157,36 +156,36 @@ namespace sw
         for ( int32 index = 0; index < match.getGeneratorCount(); ++index )
         {
             const AsymmetricHorrorGenerator& generator = *match.findGenerator( index );
-            _markers.drawStanding( manager, Director::toAbsolute( generator._position ), Internal::kGeneratorSize,
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( generator._position ), Internal::kGeneratorSize,
                                    generator._progress.isCompleted() ? Internal::kDoneGeneratorColor : Internal::kIdleGeneratorColor );
         }
         for ( int32 index = 0; index < match.getGateCount(); ++index )
         {
             const AsymmetricHorrorGate& gate   = *match.findGate( index );
             const float4&               closed = match.areGatesPowered() ? Internal::kPoweredGateColor : Internal::kClosedGateColor;
-            _markers.drawStanding( manager, Director::toAbsolute( gate._position ), Internal::kGateSize, gate._progress.isCompleted() ? Internal::kOpenGateColor : closed );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( gate._position ), Internal::kGateSize, gate._progress.isCompleted() ? Internal::kOpenGateColor : closed );
         }
         for ( const float3& hook : stage._listHook )
         {
-            _markers.drawStanding( manager, Director::toAbsolute( hook ), Internal::kHookSize, Internal::kHookColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( hook ), Internal::kHookSize, Internal::kHookColor );
         }
         for ( size_t index = 0; index < stage._listPallet.size(); ++index )
         {
             const PalletState state = match.getPalletState( static_cast<int32>( index ) );
             if ( state != PalletState::Broken )
-                _markers.drawStanding( manager, Director::toAbsolute( stage._listPallet[index] ), state == PalletState::Upright ? Internal::kPalletSize : Internal::kDroppedSize,
+                _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( stage._listPallet[index] ), state == PalletState::Upright ? Internal::kPalletSize : Internal::kDroppedSize,
                                        Internal::kPropColor );
         }
         for ( const float3& window : stage._listWindow )
         {
-            _markers.drawStanding( manager, Director::toAbsolute( window ), Internal::kWindowSize, Internal::kPropColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( window ), Internal::kWindowSize, Internal::kPropColor );
         }
         for ( const float3& locker : stage._listLocker )
         {
-            _markers.drawStanding( manager, Director::toAbsolute( locker ), Internal::kLockerSize, Internal::kPropColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( locker ), Internal::kLockerSize, Internal::kPropColor );
         }
         if ( match.isHatchOpen() )
-            _markers.drawStanding( manager, Director::toAbsolute( stage._hatch ), Internal::kHatchSize, Internal::kOpenHatchColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( stage._hatch ), Internal::kHatchSize, Internal::kOpenHatchColor );
         for ( int32 index = 0; index < match.getSurvivorCount(); ++index )
         {
             const AsymmetricHorrorSurvivor& survivor = *match.findSurvivor( index );
@@ -194,9 +193,9 @@ namespace sw
                 continue;
             const bool    bUpright = survivor._state == SurvivorState::Healthy || survivor._state == SurvivorState::Injured;
             const float4& upright  = survivor._state == SurvivorState::Healthy ? Internal::kHealthyColor : Internal::kInjuredColor;
-            _markers.drawStanding( manager, Director::toAbsolute( survivor._position ), bUpright ? Internal::kBodySize : Internal::kDownSize, bUpright ? upright : Internal::kDownColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( survivor._position ), bUpright ? Internal::kBodySize : Internal::kDownSize, bUpright ? upright : Internal::kDownColor );
         }
-        _markers.drawStanding( manager, Director::toAbsolute( match.getKiller()._position ), Internal::kKillerSize, Internal::kKillerColor );
+        _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( match.getKiller()._position ), Internal::kKillerSize, Internal::kKillerColor );
     }
 
     void AsymmetricHorrorAvatarComponent::fillHUD( AsymmetricHorrorHUDViewModel& outViewModel, const AsymmetricHorrorGameModeComponent& director )

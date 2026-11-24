@@ -38,6 +38,11 @@ namespace sw
          * @return 프리팹을 읽지 못했거나 메시가 없으면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool show( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const AbsolutePosition& position, const float3& scale, float32 yaw, const float4& tint );
+        /**
+         * @brief 하나를 바닥 자리 @p foot(절대 자리) 위에 세웁니다 — 한 변 1 m 이고 가운데가 원점인 프리팹을 @p size(m) 로 늘리고 그 높이의 절반만큼 올립니다.
+         * @details 세우지 못하는 까닭은 `show` 가 한 번 알린다.
+         */
+        void showStanding( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const AbsolutePosition& foot, const float3& size, const float4& tint );
         /** @brief 적지 않은 나머지 인스턴스를 끕니다. */
         void end( GameObjectManager& manager );
         /** @brief 세운 인스턴스를 모두 지웁니다(플레이 끝). */

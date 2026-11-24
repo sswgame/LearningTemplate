@@ -110,7 +110,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _markers.setPrefab( _markerPrefab.path() );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false && _lightAction.empty() == false && _healAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "SurvivalHorror.AvatarActionMissing", "Survival Horror avatar: the actions must all be named (move '%#', use '%#', light '%#', heal '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str(), _lightAction.c_str(), _healAction.c_str() );
@@ -174,7 +173,7 @@ namespace sw
         for ( const AreaDef& area : director.getGraph().getAreas() )
         {
             const float3 size{ area._width - Internal::kFloorInset, Internal::kFloorHeight, area._height - Internal::kFloorInset };
-            _markers.drawStanding( manager, Director::toAbsolute( area.getCenter() ), size, area._region == stage._darkRegion ? Internal::kDarkColor : Internal::kRoomColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( area.getCenter() ), size, area._region == stage._darkRegion ? Internal::kDarkColor : Internal::kRoomColor );
         }
         for ( const AreaLink& link : director.getGraph().getLinks() )
         {
@@ -183,15 +182,15 @@ namespace sw
             if ( pFrom == nullptr || pTo == nullptr )
                 continue;
             const float2 middle = ( pFrom->getCenter() + pTo->getCenter() ) * 0.5f;
-            _markers.drawStanding( manager, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
         }
         for ( size_t index = 0; index < stage._listSpot.size(); ++index )
         {
             const SurvivalHorrorSpot& spot = stage._listSpot[index];
             if ( director.isSpotUsed( index ) == false )
-                _markers.drawStanding( manager, Director::toAbsolute( spot._position ), Internal::findSpotSize( spot._kind ), Internal::findSpotColor( spot._kind ) );
+                _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( spot._position ), Internal::findSpotSize( spot._kind ), Internal::findSpotColor( spot._kind ) );
         }
-        _markers.drawStanding( manager, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
+        _markers.showStanding( manager, _markerPrefab, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
     }
 
     void SurvivalHorrorAvatarComponent::fillHUD( SurvivalHorrorHUDViewModel& outViewModel, const SurvivalHorrorGameModeComponent& director )

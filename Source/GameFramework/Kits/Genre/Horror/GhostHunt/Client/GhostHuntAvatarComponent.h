@@ -3,7 +3,7 @@
  * @brief 유령 사냥 키트의 클라이언트 쪽 — 입력 맵 액션을 손전등 · 스트로브 · 청소기 명령으로 바꾸고, 저택의 방 · 가구 · 유령 · 손전등 빛을 원시 도형으로 그리며 HUD 를 채웁니다.
  * @details 키트 세 갈래의 클라이언트 몫이다(`GF_Client_GhostHunt`, 전용 서버는 짓지 않는다). 디렉터(`GhostHuntGameModeComponent`)의 명령과 읽기 API 만 쓰고 규칙을 직접 고치지 않는다.
  *          디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다. 명령 · 그리기는 틱 뒤 게임 스레드에서 한다.
- *          `PostUpdate` 라 넘긴 입력은 다음 걸음이 쓰고 그리기는 이번 걸음의 결과를 보인다. 모습은 원시 도형 표식(`PrimitiveMarkerBatch`)이라 저장에 싣지 않는다.
+ *          `PostUpdate` 라 넘긴 입력은 다음 걸음이 쓰고 그리기는 이번 걸음의 결과를 보인다. 모습은 원시 도형 표식(`PrefabViewBatch`)이라 저장에 싣지 않는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -16,8 +16,8 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/PrimitiveMarkerBatch.h"
 
 namespace sw
 {
@@ -73,7 +73,7 @@ namespace sw
         AssetRef<PrefabAsset> _markerPrefab;
 
         TComponentHandle<GhostHuntGameModeComponent> _director;
-        PrimitiveMarkerBatch                         _markers;
+        PrefabViewBatch                              _markers;
         unique_ptr<GhostHuntHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
         uint8                                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
         uint8                                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)

@@ -96,7 +96,7 @@
 					                          _strobeAction="GhostHunt.Strobe"
 					                          _vacuumAction="GhostHunt.Vacuum"
 					                          _useAction="GhostHunt.Use"
-					                          _markerPrefab="game/playground/prefabs/primitivemarker.prefab.xml" />
+					                          _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
 					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
 					                        _bActive="true"
 					                        _documentPath="game/playground/ghosthunt/ui/hud.ui.xml" />

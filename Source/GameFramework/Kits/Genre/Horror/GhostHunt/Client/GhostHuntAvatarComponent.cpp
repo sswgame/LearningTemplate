@@ -107,7 +107,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        _markers.setPrefab( _markerPrefab.path() );
         _bActionsValid = _moveAction.empty() == false && _lightAction.empty() == false && _strobeAction.empty() == false && _vacuumAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "GhostHunt.AvatarActionMissing", "Ghost Hunt avatar: the actions must all be named (move '%#', light '%#', strobe '%#', vacuum '%#', use '%#') - the avatar reads no input", _moveAction.c_str(), _lightAction.c_str(), _strobeAction.c_str(), _vacuumAction.c_str(), _useAction.c_str() );
@@ -175,7 +174,7 @@ namespace sw
         for ( const AreaDef& area : director.getGraph().getAreas() )
         {
             const float3 size{ area._width - Internal::kFloorInset, Internal::kFloorHeight, area._height - Internal::kFloorInset };
-            _markers.drawStanding( manager, Director::toAbsolute( area.getCenter() ), size, mansion.isRoomLit( area._id ) ? Internal::kLitRoomColor : Internal::kDarkRoomColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( area.getCenter() ), size, mansion.isRoomLit( area._id ) ? Internal::kLitRoomColor : Internal::kDarkRoomColor );
         }
         for ( const AreaLink& link : director.getGraph().getLinks() )
         {
@@ -184,11 +183,11 @@ namespace sw
             if ( pFrom == nullptr || pTo == nullptr )
                 continue;
             const float2 middle = ( pFrom->getCenter() + pTo->getCenter() ) * 0.5f;
-            _markers.drawStanding( manager, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( middle ), Internal::kDoorSize, director.isLinkOpen( link ) ? Internal::kOpenColor : Internal::kLockedColor );
         }
         for ( const GhostFurnitureDef& furniture : pCatalog->getFurniture() )
         {
-            _markers.drawStanding( manager, Director::toAbsolute( director.computeFurniturePosition( furniture ) ), Internal::kFurnitureSize,
+            _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( director.computeFurniturePosition( furniture ) ), Internal::kFurnitureSize,
                                    mansion.isSearched( furniture._id ) ? Internal::kSearchedColor : Internal::kFurnitureColor );
         }
         for ( const HidingGhostDef& boo : pCatalog->getBoos() )
@@ -198,18 +197,18 @@ namespace sw
             if ( pFurniture == nullptr || pBoo->_state != HidingGhostState::Revealed )
                 continue;
             const AbsolutePosition top = Director::toAbsolute( director.computeFurniturePosition( *pFurniture ) ) + float3{ 0.0f, Internal::kFurnitureSize._y, 0.0f };
-            _markers.drawStanding( manager, top, Internal::kBooSize, Internal::kBooColor );
+            _markers.showStanding( manager, _markerPrefab, top, Internal::kBooSize, Internal::kBooColor );
         }
         for ( const GhostInstance& ghost : mansion.getEncounter().getGhosts() )
         {
             const float4* const pColor = Internal::findGhostColor( ghost._state );
             if ( pColor != nullptr )
-                _markers.drawStanding( manager, AbsolutePosition{ ghost._position }, Internal::kGhostSize, *pColor );
+                _markers.showStanding( manager, _markerPrefab, AbsolutePosition{ ghost._position }, Internal::kGhostSize, *pColor );
         }
-        _markers.drawStanding( manager, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
+        _markers.showStanding( manager, _markerPrefab, director.getPlayerPosition(), Internal::kPlayerSize, Internal::kPlayerColor );
         for ( int32 step = 1; director.isLightOn() && step <= Internal::kBeamMarkers; ++step )
         {
-            _markers.drawStanding( manager, director.getPlayerPosition() + director.getFacing() * ( static_cast<float32>( step ) * Internal::kBeamSpacing ), Internal::kBeamSize,
+            _markers.showStanding( manager, _markerPrefab, director.getPlayerPosition() + director.getFacing() * ( static_cast<float32>( step ) * Internal::kBeamSpacing ), Internal::kBeamSize,
                                    Internal::kBeamColor );
         }
     }
