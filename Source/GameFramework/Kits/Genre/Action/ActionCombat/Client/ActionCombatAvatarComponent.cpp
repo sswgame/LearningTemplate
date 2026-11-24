@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionCombatAvatarComponent.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -13,30 +12,25 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomDebugDraw.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Health/RuleHealthViewComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
-    namespace
-    {
-        struct ActionCombatAvatarComponentInternal
-        {
-            static constexpr float4  kPlayerColor             = float4( 0.2f, 0.6f, 1.0f, 1.0f );
-            static constexpr float4  kInvulnerablePlayerColor = float4( 0.6f, 0.9f, 1.0f, 1.0f );
-            static constexpr float32 kPlayerHeight            = 0.5f; ///< 플레이어 공을 띄우는 높이(m)
-            static constexpr float32 kPlayerRadius            = 0.28f;
-        };
-    } // namespace
-
     ActionCombatAvatarComponent::ActionCombatAvatarComponent()
         : _moveAction{ CommonInputActions::kMove }
         , _attackAction{}
         , _dashAction{}
         , _playerView{}
+        , _spherePrefab{}
+        , _roomLook{}
+        , _playerRadius{ 0.28f }
+        , _playerHeight{ 0.5f }
+        , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
+        , _invulnerableColor{ 0.6f, 0.9f, 1.0f, 1.0f }
         , _director{}
+        , _sphereViews{}
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
         , _bViewReset{ SW_FALSE }
@@ -74,6 +68,15 @@ namespace sw
         _bPlayerViewMissing = SW_FALSE;
     }
 
+    void ActionCombatAvatarComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+            _sphereViews.destroyAll( *pManager );
+        Component::onEndPlay();
+    }
+
     void ActionCombatAvatarComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -96,7 +99,7 @@ namespace sw
             (void)pDirector->submitPlayerInput( input.getVector2D( _moveAction ), input.wasActionTriggered( _attackAction ), input.wasActionTriggered( _dashAction ) );
         }
         pushPlayerHealthView( manager, *pDirector ); // 시간이 멈춘 프레임 · 복원 직후에도 넣는다
-        draw( *pDirector, manager );
+        showRoom( *pDirector, manager );
     }
 
     void ActionCombatAvatarComponent::pushPlayerHealthView( GameObjectManager& manager, const ActionCombatGameModeComponent& director )
@@ -120,18 +123,18 @@ namespace sw
         pView->applySnapshot( static_cast<float32>( director.getPlayerHP() ), static_cast<float32>( director.getPlayerMaxHP() ) );
     }
 
-    void ActionCombatAvatarComponent::draw( const ActionCombatGameModeComponent& director, const GameObjectManager& manager )
+    void ActionCombatAvatarComponent::showRoom( const ActionCombatGameModeComponent& director, GameObjectManager& manager )
     {
-        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        using Internal                 = ActionCombatAvatarComponentInternal;
-        const WorldOrigin&      origin = manager.getWorldOrigin();
-        const ActionRoom&       room   = director.getRoom();
-        const ActionCombatPhase phase  = director.getCombatPhase();
+        const ActionRoom&       room  = director.getRoom();
+        const ActionCombatPhase phase = director.getCombatPhase();
+        _sphereViews.begin();
+        (void)_sphereViews.show( manager, _spherePrefab, ActionRoomLook::makePosition( director.getPlayerPosition(), _playerHeight ), float3{ _playerRadius * 2.0f }, 0.0f,
+                                 room.isPlayerInvulnerable() ? _invulnerableColor : _playerColor );
         if ( phase == ActionCombatPhase::Hall || phase == ActionCombatPhase::Boss )
-            ActionRoomDebugDraw::draw( *pDraw, origin, room );
-        pDraw->drawSphere( ActionRoomDebugDraw::toScene( origin, director.getPlayerPosition(), Internal::kPlayerHeight ), Internal::kPlayerRadius,
-                           room.isPlayerInvulnerable() ? Internal::kInvulnerablePlayerColor : Internal::kPlayerColor );
+        {
+            _roomLook.forEachSphere( room, [this, &manager]( const AbsolutePosition& position, float32 radius, const float4& color )
+            { (void)_sphereViews.show( manager, _spherePrefab, position, float3{ radius * 2.0f }, 0.0f, color ); } );
+        }
+        _sphereViews.end( manager );
     }
 } // namespace sw

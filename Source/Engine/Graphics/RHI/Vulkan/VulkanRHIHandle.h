@@ -49,3 +49,4 @@ typedef VkFlags  VkPipelineStageFlags;
 struct VkImageCreateInfo;
 struct VkImageMemoryBarrier;
 struct VkMemoryAllocateInfo;
+struct VkSurfaceFormatKHR;

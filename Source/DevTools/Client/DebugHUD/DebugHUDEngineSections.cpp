@@ -20,7 +20,7 @@
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"

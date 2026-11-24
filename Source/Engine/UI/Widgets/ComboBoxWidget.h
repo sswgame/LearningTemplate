@@ -13,6 +13,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
+#include "Engine/UI/Widgets/UIBrush.h"
 
 namespace sw
 {
@@ -73,5 +74,23 @@ namespace sw
         vector<string> _listOption;
         PROPERTY( DisplayName = "Selected Index" )
         uint32 _selectedIndex;
+        PROPERTY( DisplayName = "Popup Background" )
+        UIBrush _popupBackground;
+        PROPERTY( DisplayName = "Popup Padding", Tooltip = "Left, top, right, bottom", Meta = "Units=ui" )
+        float4 _popupPadding;
+        PROPERTY( DisplayName = "Popup Shadow Color" )
+        float4 _popupShadowColor;
+        PROPERTY( DisplayName = "Popup Shadow Offset", Meta = "Units=ui" )
+        float2 _popupShadowOffset;
+        PROPERTY( DisplayName = "Popup Shadow Blur", Min = 0.0, Meta = "Units=ui" )
+        float32 _popupShadowBlur;
+        PROPERTY( DisplayName = "Option Height", Min = 1.0, Meta = "Units=ui" )
+        float32 _optionHeight;
+        PROPERTY( DisplayName = "Option Padding", Tooltip = "Left, top, right, bottom", Meta = "Units=ui" )
+        float4 _optionPadding;
+        PROPERTY( DisplayName = "Option Corner Radius", Min = 0.0, Meta = "Units=ui" )
+        float32 _optionCornerRadius;
+        PROPERTY( DisplayName = "Arrow Color" )
+        float4 _arrowColor;
     };
 } // namespace sw

@@ -37,6 +37,8 @@ namespace sw
         [[nodiscard]] virtual bool playAdaptiveMusic( const AssetID& assetID ) = 0;
         /** @brief 나고 있는 음악(배경 음악 · 적응형)을 멈춥니다. */
         virtual void stopMusic() = 0;
+        /** @brief 나고 있는 음악을 멈추거나 이어 냅니다. 적응형 음악의 구간 시계(`findMusicSeconds`)도 소리와 함께 서고 이어집니다. */
+        virtual void setMusicPaused( bool bPaused ) = 0;
         /**
          * @brief 적응형 음악의 지금 구간이 시작한 뒤로 흐른 시간(초)입니다. 나는 적응형 음악이 없으면 nullopt 입니다.
          * @details 오디오 장치가 렌더한 프레임으로 센 구간 시계다(블록마다 게시) — 소리와 어긋나지 않아 리듬 판정이 벽시계 대신 읽는다(언리얼 Quartz 시계 자리).

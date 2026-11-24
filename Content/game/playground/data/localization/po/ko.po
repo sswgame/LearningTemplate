@@ -1072,6 +1072,7 @@ msgstr "독성"
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
+
 #. Context: TextWidget._text
 #: game/playground/cardgame/ui/hud.ui.xml
 msgctxt "Turn"
@@ -1215,4 +1216,3 @@ msgstr "분대가 탈락했습니다"
 msgctxt "Zone"
 msgid "Zone"
 msgstr "구역"
-

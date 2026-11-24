@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"

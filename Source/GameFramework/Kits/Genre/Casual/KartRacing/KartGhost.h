@@ -87,15 +87,15 @@ namespace sw
 {
     /**
      * @class KartGhostPlayer
-     * @brief 고스트를 자기 차로 다시 돌립니다. 트랙(빌려 쓰는 포인터)이 있으면 땅과 부스트 패드를 기록할 때와 같이 씁니다.
+     * @brief 고스트를 자기 차로 다시 돌립니다. 트랙의 땅과 부스트 패드를 기록할 때와 같이 씁니다(고스트와 트랙은 빌려 쓴다).
      */
     class SW_KIT_API KartGhostPlayer
     {
     public:
         KartGhostPlayer();
 
-        /** @brief @p ghost(빌려 쓰는 포인터)를 처음부터 돌릴 준비를 합니다. */
-        void initialize( const KartGhost* pGhost, const KinematicVehicleSettings& settings, const KartTrack* pTrack );
+        /** @brief @p ghost 를 @p track 위에서 처음부터 돌릴 준비를 합니다. */
+        void initialize( const KartGhost& ghost, const KinematicVehicleSettings& settings, const KartTrack& track );
         /** @brief 한 걸음 진행합니다. 기록이 끝났으면 false 를 반환합니다. */
         bool step();
         /** @brief 프레임 시간만큼(고정 걸음으로 나눠) 진행하고, 진행한 걸음 수를 반환합니다. */

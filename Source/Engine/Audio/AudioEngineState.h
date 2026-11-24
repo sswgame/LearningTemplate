@@ -67,7 +67,7 @@ namespace sw
         hashed_string  _event{};                   ///< 이벤트 이름이다.
         hashed_string  _bus{};                     ///< 이벤트가 보내는 버스다.
         AudioPlayingID _playingID{ 0 };            ///< 재생 id 다.
-        float32        _elapsedSeconds{ 0.0f };    ///< 시작부터 흐른 시간(초)이다.
+        float32        _elapsedSeconds{ 0.0f };    ///< 시작부터 흐른 시간(초)이다. 멈춰 있던 시간은 세지 않는다.
         float32        _remainingSeconds{ -1.0f }; ///< 가장 긴 보이스가 끝날 때까지 남은 시간(초)이다. 반복이거나 클립을 아직 모르면 -1 이다.
         uint32         _voiceCount{ 0 };           ///< 인스턴스의 보이스 수다.
         uint32         _virtualVoiceCount{ 0 };    ///< 그중 가상 보이스 수다.
@@ -111,13 +111,13 @@ namespace sw
     {
         shared_ptr<const AudioMusicDef> _pDesc{};           ///< 지금 음악이다.
         AudioPlayingID                  _playingID{ 0 };    ///< 음악의 재생 id 다.
-        uint64                          _segmentStart{ 0 }; ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
-        uint64                          _pendingFrame{ 0 }; ///< 예약된 전환의 렌더 프레임이다.
+        uint64                          _segmentStart{ 0 }; ///< 현재 구간의 0 박이 있는 음악 시계의 프레임이다.
+        uint64                          _pendingFrame{ 0 }; ///< 예약된 전환의 음악 시계 프레임이다.
         optional<int32>                 _segment;           ///< 지금 구간이다(없으면 비어 있다).
         optional<int32>                 _pendingSegment;    ///< 예약된 다음 구간이다(없으면 비어 있다).
 
-        /** @brief @p renderedFrameCount 시각의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
-        AudioMusicStatus makeStatus( uint64 renderedFrameCount ) const;
+        /** @brief 음악 시계 @p musicClock 의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
+        AudioMusicStatus makeStatus( uint64 musicClock ) const;
     };
 } // namespace sw
 

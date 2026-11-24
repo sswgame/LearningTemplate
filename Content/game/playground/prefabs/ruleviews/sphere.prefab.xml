@@ -1,0 +1,21 @@
+<?asset guid="b92426b2b59ef865478a176cc6ad30e7"?>
+<!-- 키트 클라이언트 뷰(PrefabViewBatch)가 키워 쓰는 지름 1 m 공 — 유닛 · 탄 · 야영지. 자리 · 크기 · 색은 뷰가 정한다. -->
+<Prefab formatVersion="1" name="RuleSphere">
+	<GameObject _schemaVersion="0" _name="RuleSphere" _bActive="true">
+		<_listComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="None"
+			               _meshID="Sphere"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

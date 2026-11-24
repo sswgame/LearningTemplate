@@ -49,11 +49,10 @@ namespace sw
         , _hudViewModel{ nullptr }
         , _listLaneHeld{}
         , _musicStart{ 0.0f }
-        , _pausedSeconds{ 0.0f }
-        , _lastMusicSeconds{ 0.0f }
         , _musicPhase{ MusicPhase::Idle }
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
+        , _bMusicPaused{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -147,21 +146,21 @@ namespace sw
                 const bool bPlaying = GameSound::playAdaptiveMusic( AssetID( _music ) );
                 if ( bPlaying == false )
                     SW_LOG_ERROR_ID( "Rhythm.MusicNotPlaying", "Rhythm view: the music '%#' could not be played - the song does not advance", _music.c_str() );
-                _musicPhase       = bPlaying ? MusicPhase::Playing : MusicPhase::Refused;
-                _musicStart       = director.getMusicTime();
-                _pausedSeconds    = 0.0f;
-                _lastMusicSeconds = 0.0f;
+                _musicPhase   = bPlaying ? MusicPhase::Playing : MusicPhase::Refused;
+                _musicStart   = director.getMusicTime();
+                _bMusicPaused = SW_FALSE;
                 return;
             }
             case MusicPhase::Playing:
             {
+                if ( _bMusicPaused == _bInputLive ) // 시간이 멈추거나 다시 흐르기 시작한 프레임이다
+                {
+                    _bMusicPaused = _bInputLive == SW_TRUE ? SW_FALSE : SW_TRUE;
+                    GameSound::setMusicPaused( _bMusicPaused == SW_TRUE );
+                }
                 if ( musicSeconds.has_value() == false || director.getClock() != RhythmClock::Music )
-                    return; // 오디오 스레드가 아직 시작하지 않았거나, 시뮬레이션 시계의 판이다
-                // shortcut: 멈춘 동안에도 음악은 흐른다(오디오 엔진의 구간 시계를 멈추는 길이 없다) — 그 시간을 곡 시각에서 빼 노트는 잃지 않지만 소리와는 그만큼 어긋난다. 구간 시계 일시정지가 생기면 지운다.
-                if ( _bInputLive == SW_FALSE )
-                    _pausedSeconds += MathUtil::max( 0.0f, *musicSeconds - _lastMusicSeconds );
-                _lastMusicSeconds = *musicSeconds;
-                (void)director.submitMusicTime( _musicStart + *musicSeconds - _pausedSeconds ); // 끝난 판은 받지 않는다 — 할 일이 없다
+                    return;                                                    // 오디오 스레드가 아직 시작하지 않았거나, 시뮬레이션 시계의 판이다
+                (void)director.submitMusicTime( _musicStart + *musicSeconds ); // 끝난 판은 받지 않는다 — 할 일이 없다
                 return;
             }
             case MusicPhase::Refused:

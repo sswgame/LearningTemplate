@@ -13,7 +13,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"

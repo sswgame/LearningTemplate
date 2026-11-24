@@ -11,6 +11,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -180,9 +181,10 @@ namespace sw
     template <typename AssetType>
     void SharedAssetCache<AssetType>::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
     {
-        // shortcut: 객체 크기(sizeof)만 센다 — 에셋 안 컨테이너는 메모리 태그 표가 종류별로 센다. 종류가 크기 질의를 가지면 그때 그것을 부른다.
-        _pTable->forEachLive( [&outListEntry]( const string& key, const AssetType& /*asset*/, uint32 referenceCount )
-        { outListEntry.push_back( AssetMemoryEntry{ key, sizeof( AssetType ), 0, referenceCount } ); } );
+        // 읽으며 남긴 바이트(객체 + 안쪽 컨테이너)다. 재지 않는 구성(배포본)은 객체 크기만 안다.
+        const SharedAssetTable<AssetType>& table = *_pTable;
+        table.forEachLive( [&table, &outListEntry]( const string& key, const AssetType& /*asset*/, uint32 referenceCount )
+        { outListEntry.push_back( AssetMemoryEntry{ key, MathUtil::max<uint64>( sizeof( AssetType ), table.findLoadedBytes( key ) ), 0, referenceCount } ); } );
     }
 
     template <typename AssetType>

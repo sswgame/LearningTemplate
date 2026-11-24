@@ -156,7 +156,7 @@ namespace sw
         void stop( AudioPlayingID playingID, float32 fadeSeconds );
         /** @brief 에미터의 재생을 모두 멈춥니다. 페이드가 음수면 이벤트의 값을 씁니다. */
         void stopEmitter( AudioEmitterID emitterID, float32 fadeSeconds );
-        /** @brief 재생을 일시정지하거나 재개합니다. */
+        /** @brief 재생을 일시정지하거나 재개합니다. 적응형 음악이면 구간 시계 · 예약한 전환도 함께 멈췄다가 그 자리에서 이어집니다. */
         void setPaused( AudioPlayingID playingID, bool bPaused );
 
         // --- 게임 스레드: 적응형 음악 ------------------------------------------------------------------------------------
@@ -364,10 +364,12 @@ namespace sw
             AudioPlayingID                      _playingID{ 0 };
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _startFrame{ 0 };
-            float32                             _audibility{ 0.0f }; ///< 지난 블록 보이스 목표 게인의 최댓값이다.
-            float32                             _distance{ 0.0f };   ///< 지난 블록의 리스너 거리다.
-            bool                                _bInUse{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                _bStopping{ false }; ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint64                              _elapsedFrameCount{ 0 }; ///< 멈춰 있지 않던 블록만 센 렌더 프레임이다(음악 시계와 같은 규칙).
+            float32                             _audibility{ 0.0f };     ///< 지난 블록 보이스 목표 게인의 최댓값이다.
+            float32                             _distance{ 0.0f };       ///< 지난 블록의 리스너 거리다.
+            bool                                _bInUse{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                _bPaused{ false };       ///< 재생이 멈춰 있다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                _bStopping{ false };     ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         // AudioEngine.cpp: 명령, 보이스, 렌더
@@ -446,7 +448,7 @@ namespace sw
         optional<uint32> allocateInstance();
 
         // AudioEngine.cpp: 음악 플레이어에게 내주는 보이스 풀의 창(`IAudioMusicVoices`)
-        uint64             getMusicClock() const override { return _renderedFrameCount; }
+        uint64             getMusicClock() const override { return _musicFrameCount; }
         float32            findMusicParameter( const hashed_string& name ) const override { return getParameterValue( name ); }
         [[nodiscard]] bool startMusicVoice( const AudioMusicVoiceRequest& request ) override;
         void               fadeMusicVoices( AudioPlayingID playingID, int32 segment, uint32 fadeFrames, uint32 delayFrames ) override;
@@ -494,6 +496,7 @@ namespace sw
         AudioListenerState                           _arrListener[kMaxListenerCount]; /**< 리스너입니다. */
         DeterministicRandom64                        _random;                         /**< 컨테이너와 범위가 쓰는 난수입니다(시드는 `setRandomSeed`). */
         uint64                                       _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
+        uint64                                       _musicFrameCount;                /**< 음악 시계 — 음악이 멈춰 있지 않던 블록만 센 렌더 프레임입니다. */
         uint64                                       _appliedPlayingID;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
         uint64                                       _playedEventCount;               /**< 재생한 이벤트 수입니다. 게시용입니다. */
         uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다. 게시용입니다. */

@@ -52,6 +52,8 @@ namespace sw
     private:
         PROPERTY( Category = "Building", DisplayName = "Building Index", Tooltip = "Slot in the simulation building list" )
         int32 _buildingIndex;
+        PROPERTY( Category = "Building", DisplayName = "Block Inset", Tooltip = "Gap between a color block and its cells", Min = 0.0, Units = m )
+        float32 _blockInset;
 
         int32 _shownKey; ///< 지금 그린 단계 × 2 + 사람(−1 이면 아직 없다)
     };

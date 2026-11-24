@@ -61,6 +61,7 @@ namespace sw
         , _arrListener{}
         , _random{}
         , _renderedFrameCount{ 0 }
+        , _musicFrameCount{ 0 }
         , _appliedPlayingID{ 0 }
         , _playedEventCount{ 0 }
         , _droppedEventCount{ 0 }
@@ -100,6 +101,7 @@ namespace sw
         _blockOutput.allocate( layout );
         _blockCursor        = audio::kBlockFrameCount;
         _renderedFrameCount = 0;
+        _musicFrameCount    = 0;
         rebuildAttenuationTable();
         _bInitialized.store( true, std::memory_order_release );
         return true;
@@ -878,6 +880,12 @@ namespace sw
                     slot._bPausedRequest = command._bFlag;
                     slot._voice.setPaused( command._bFlag );
                 }
+                for ( EventInstance& instance : _listInstance )
+                {
+                    if ( instance._bInUse && instance._playingID == command._playingID )
+                        instance._bPaused = command._bFlag;
+                }
+                _musicPlayer.setPaused( command._playingID, command._bFlag );
                 break;
             }
             case CommandKind::SetBusUserVolume:
@@ -1013,6 +1021,7 @@ namespace sw
         pSlot->_priority        = kMusicVoicePriority;
         pSlot->_virtualMode     = AudioVirtualMode::KeepReal; // 박을 지키려면 가상으로 빠지지 않는다
         pSlot->_bLoop           = request._bLoop;
+        pSlot->_bPausedRequest  = _musicPlayer.isPaused(); // 멈춘 음악에 예약한 구간은 이어 낼 때 함께 흐른다
         pSlot->_bWaitingForClip = true;
         startWaitingVoice( *pSlot );
         return true;
@@ -1069,7 +1078,7 @@ namespace sw
                 seconds           = bEvent ? _listInstance[*slot._instanceIndex]._pDesc->_fadeOutSeconds : 0.0f;
             }
             const uint32 fadeFrames            = static_cast<uint32>( seconds * static_cast<float32>( audio::kSampleRate ) );
-            const bool   bStopVoiceImmediately = slot._bWaitingForClip || fadeFrames == 0 || slot._bVirtual;
+            const bool   bStopVoiceImmediately = slot._bWaitingForClip || fadeFrames == 0 || slot._bVirtual || slot._voice.isPaused(); // 멈춘 보이스는 페이드가 흐르지 않는다
             if ( bStopVoiceImmediately )
                 AudioVoicePool::free( slot );
             else
@@ -1106,16 +1115,16 @@ namespace sw
             graphSeed = _random.nextUint64(); // 그래프만 난수를 쓴다 — 파일 클립의 재생 순서가 바뀌지 않게
         }
 
-        // 음악 레이어와 스팅어는 정해진 렌더 프레임에 샘플 단위로 시작한다. 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
+        // 음악 레이어와 스팅어는 음악 시계의 정해진 프레임에 샘플 단위로 시작한다. 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
         const bool bScheduled = slot._musicSegment != constant::invalid_index::kInt32;
         uint32     delay      = 0;
         float64    skipFrames = 0.0;
         if ( bScheduled )
         {
-            if ( slot._startFrame >= _renderedFrameCount )
-                delay = static_cast<uint32>( slot._startFrame - _renderedFrameCount );
+            if ( slot._startFrame >= _musicFrameCount )
+                delay = static_cast<uint32>( slot._startFrame - _musicFrameCount );
             else
-                skipFrames = static_cast<float64>( _renderedFrameCount - slot._startFrame ) * static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate );
+                skipFrames = static_cast<float64>( _musicFrameCount - slot._startFrame ) * static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate );
         }
         slot._voice.start( std::move( pClip ), slot._bLoop, delay, bScheduled == false, graphSeed );
         if ( skipFrames > 0.0 )
@@ -1309,6 +1318,13 @@ namespace sw
         }
 
         _renderedFrameCount += audio::kBlockFrameCount;
+        if ( _musicPlayer.isPaused() == false )
+            _musicFrameCount += audio::kBlockFrameCount;
+        for ( EventInstance& instance : _listInstance )
+        {
+            if ( instance._bInUse && instance._bPaused == false )
+                instance._elapsedFrameCount += audio::kBlockFrameCount;
+        }
         publishState( realCount, virtualCount );
     }
 
@@ -1365,7 +1381,7 @@ namespace sw
             stats._instanceCount += instance._bInUse ? 1u : 0u;
         }
 
-        _published.publish( stats, _musicPlayer.makeStatus( _renderedFrameCount ), _appliedPlayingID, [this]( vector<AudioPlayingID>& listPlaying ) -> uint32
+        _published.publish( stats, _musicPlayer.makeStatus( _musicFrameCount ), _appliedPlayingID, [this]( vector<AudioPlayingID>& listPlaying ) -> uint32
         {
             uint32 voiceCount = 0;
             for ( const AudioVoiceSlot& slot : _voicePool )
@@ -1407,7 +1423,7 @@ namespace sw
                 status._event          = instance._pDesc->_name;
                 status._bus            = instance._pDesc->_bus;
                 status._playingID      = instance._playingID;
-                status._elapsedSeconds = _renderedFrameCount > instance._startFrame ? static_cast<float32>( _renderedFrameCount - instance._startFrame ) / sampleRate : 0.0f;
+                status._elapsedSeconds = static_cast<float32>( instance._elapsedFrameCount ) / sampleRate;
                 status._bStopping      = instance._bStopping;
                 bool    bUnknownEnd    = false;
                 float32 remaining      = 0.0f;

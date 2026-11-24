@@ -40,6 +40,16 @@ namespace sw
             _audio.stopMusic();
     }
 
+    void AudioSoundPlayer::setMusicPaused( bool bPaused )
+    {
+        if ( _audio.isInitialized() == false )
+            return;
+        if ( bPaused )
+            _audio.pauseMusic();
+        else
+            _audio.resumeMusic();
+    }
+
     optional<float32> AudioSoundPlayer::findMusicSeconds() const
     {
         const AudioEngine* const pEngine = findEngine();

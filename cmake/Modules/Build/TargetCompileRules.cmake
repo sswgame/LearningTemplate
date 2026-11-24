@@ -368,6 +368,21 @@ function(sw_require_template_definitions TARGET_NAME)
 	endif()
 endfunction()
 
+# ------------------------------------------------------------------------------
+# sw_open_dev_headers: 소스 목록 가운데 개발 전용 `Dev/` 의 C++ 파일에만 게이트 GATE 의 `[devopen]` 헤더를 연다(TargetLayers.toml). 소스의 include 자리는 타깃의 것보다 앞이라
+# 진짜 헤더를 잇는 파일이 `#error` 껍데기보다 먼저 잡힌다. 소스 속성이 다른 파일은 유니티 묶음에서 빠진다 — 묶음 안에서 다른 소스로 새지 않는다. 타깃을 만드는 디렉터리에서 부른다.
+# ------------------------------------------------------------------------------
+function(sw_open_dev_headers GATE)
+	if(NOT GATE IN_LIST SW_TARGET_LAYER_DEV_OPEN_GUARDS)
+		message(FATAL_ERROR "sw_open_dev_headers: '${GATE}' is not in [devopen] (Config/Rules/Layers/TargetLayers.toml)")
+	endif()
+	set(list_dev_source ${ARGN})
+	list(FILTER list_dev_source INCLUDE REGEX "/Dev/.*\\.cpp$")
+	if(list_dev_source)
+		set_property(SOURCE ${list_dev_source} APPEND PROPERTY INCLUDE_DIRECTORIES "${SW_TARGET_LAYER_STUB_DIR}/devopen/${GATE}")
+	endif()
+endfunction()
+
 function(sw_apply_module_layer_guard TARGET_NAME KIND MODULE_NAME CONTENT_OWNER)
 	if(KIND STREQUAL "rhi")
 		sw_apply_target_layer_guard(${TARGET_NAME} engine)

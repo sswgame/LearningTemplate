@@ -14,7 +14,7 @@
 #include "Editor/Viewport/Model/EditorGizmoEdit.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

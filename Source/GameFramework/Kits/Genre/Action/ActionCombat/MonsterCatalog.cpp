@@ -8,11 +8,17 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 namespace sw
 {
+    void MonsterStatsDef::applyTo( UnitStatsComponent& unit ) const
+    {
+        unit.setStats( _hp, _maxHP, _atk, _def, _speed, _invincibility );
+    }
+
     MonsterCatalog::MonsterCatalog()
         : _mapMonster{}
     {

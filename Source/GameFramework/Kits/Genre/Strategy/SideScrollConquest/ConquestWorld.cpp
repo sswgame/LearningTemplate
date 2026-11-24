@@ -63,26 +63,24 @@ namespace sw
     {
     }
 
-    void ConquestWorld::initialize( const ConquestCatalog* pCatalog )
+    bool ConquestWorld::initialize( const ConquestCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listSite.clear();
         _listBuilding.clear();
         _listUnit.clear();
         _eventBuffer.clear();
         _resource.clear();
-        _elapsed     = 0.0f;
-        _incomeTimer = 0.0f;
-        _waveTimer   = 0.0f;
-        _nextUnitID  = 1;
-        _bVictory    = SW_FALSE;
-        _bDefeat     = SW_FALSE;
-        if ( pCatalog == nullptr )
-            return;
-        const ConquestRules& rules = pCatalog->getRules();
+        _elapsed                   = 0.0f;
+        _incomeTimer               = 0.0f;
+        _waveTimer                 = 0.0f;
+        _nextUnitID                = 1;
+        _bVictory                  = SW_FALSE;
+        _bDefeat                   = SW_FALSE;
+        const ConquestRules& rules = catalog.getRules();
         _timer                     = FixedStepTimer( rules._fixedStep, 1.0f );
         _resource.merge( rules._startResources );
-        for ( const ConquestSiteDef& def : pCatalog->getSites() )
+        for ( const ConquestSiteDef& def : catalog.getSites() )
         {
             ConquestSite site;
             site._pDef       = &def;
@@ -91,13 +89,18 @@ namespace sw
             site._owner      = def._owner;
             _listSite.push_back( site );
         }
-        for ( const ConquestSiteDef& def : pCatalog->getSites() )
+        bool bComplete = true;
+        for ( const ConquestSiteDef& def : catalog.getSites() )
         {
             for ( const ConquestGarrisonDef& garrison : def._listGarrison )
             {
                 for ( int32 count = 0; count < garrison._count; ++count )
                 {
-                    (void)spawnUnit( garrison._unitID, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 이다. 카탈로그 로드가 이미 경고했다
+                    if ( spawnUnit( garrison._unitID, def._owner, def._x, ConquestOrder::Hold ).has_value() )
+                        continue;
+                    SW_LOG_ERROR_ID( "ConquestWorld.GarrisonUnitMissing", "ConquestWorld: site '%#' keeps a garrison of '%#' that is not in the catalog - the garrison is not placed", def._id.c_str(), garrison._unitID.c_str() );
+                    bComplete = false;
+                    break;
                 }
             }
         }
@@ -111,7 +114,7 @@ namespace sw
         RespawnPolicyEntry teamBase;
         teamBase._kind = RespawnPolicyKind::TeamBase;
         respawnRules._listPolicy.push_back( teamBase );
-        (void)_commander._respawn.initialize( respawnRules ); // 대기의 바닥은 카탈로그 칸(`commanderRespawn` 의 Min 0)이 이미 봤다
+        return _commander._respawn.initialize( respawnRules ) && bComplete; // 거절한 까닭은 부활 흐름이 남긴다
     }
 
     void ConquestWorld::update( float32 deltaTime )

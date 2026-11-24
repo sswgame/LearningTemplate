@@ -430,6 +430,7 @@ function(sw_add_game_module MODULE_NAME)
 	elseif(SW_TARGET_TYPE STREQUAL "Client")
 		sw_remove_excluded_sources(list_game_source ${SW_SERVER_ONLY_SOURCE_PATTERNS})
 	endif()
+	sw_open_dev_headers(game ${list_game_source}) # 디버그 그리기는 게임의 개발 전용 소스(Dev/)만 본다
 	sw_add_module_library(${target_name}
 		KIND game
 		DEV_TYPE MODULE

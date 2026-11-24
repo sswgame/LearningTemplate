@@ -93,7 +93,7 @@ namespace sw
             rule._lifeDelta = window._lifeDelta;
             settings._listGradeRule.push_back( rule );
         }
-        return outSession.initialize( _pChart.get(), &_judge, settings ); // 거절하면 판이 까닭을 남긴다
+        return outSession.initialize( *_pChart, _judge, settings ); // 거절하면 판이 까닭을 남긴다
     }
 
     bool RhythmGameModeComponent::startGame()

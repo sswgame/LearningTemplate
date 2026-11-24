@@ -10,6 +10,13 @@
 
 namespace sw
 {
+    AudioMusicPlayer::AudioMusicPlayer()
+        : _playback{}
+        , _bPaused{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
     void AudioMusicPlayer::start( IAudioMusicVoices& voices, shared_ptr<const AudioMusicDef> pMusic, AudioPlayingID playingID, float32 fadeSeconds )
     {
         if ( _playback._pDesc != nullptr )
@@ -38,7 +45,7 @@ namespace sw
         const uint32 fadeFrames = static_cast<uint32>( MathUtil::max( 0.0f, fadeSeconds ) * static_cast<float32>( audio::kSampleRate ) );
         if ( _playback._playingID != 0 )
         {
-            if ( fadeFrames == 0 )
+            if ( fadeFrames == 0 || isPaused() ) // 멈춘 보이스는 페이드가 흐르지 않아 끝나지 않는다 — 이미 들리지 않으니 바로 놓는다
                 voices.freeMusicVoices( _playback._playingID, kAnySegment );
             else
                 voices.fadeMusicVoices( _playback._playingID, kAnySegment, fadeFrames, 0 );
@@ -51,6 +58,13 @@ namespace sw
         _playback._pDesc.reset();
         _playback._segment        = nullopt;
         _playback._pendingSegment = nullopt;
+        _bPaused                  = SW_FALSE;
+    }
+
+    void AudioMusicPlayer::setPaused( AudioPlayingID playingID, bool bPaused )
+    {
+        if ( _playback._pDesc != nullptr && _playback._playingID == playingID )
+            _bPaused = bPaused ? SW_TRUE : SW_FALSE;
     }
 
     uint64 AudioMusicPlayer::computeSyncFrame( uint64 now, AudioMusicSync sync ) const
@@ -166,7 +180,7 @@ namespace sw
 
     void AudioMusicPlayer::update( IAudioMusicVoices& voices )
     {
-        if ( _playback._pDesc == nullptr )
+        if ( _playback._pDesc == nullptr || isPaused() )
             return;
         const uint64 now      = voices.getMusicClock();
         const uint64 blockEnd = now + audio::kBlockFrameCount;

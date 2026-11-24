@@ -4,6 +4,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -69,11 +70,17 @@ namespace sw
 
         struct ComboBoxWidgetInternal
         {
-            /** @brief 항목 버튼 하나의 높이와 목록과 상자 사이 틈(UI 단위)입니다. */
-            static constexpr float32 kOptionHeight = 32.0f;
-            static constexpr float32 kPopupGap     = 2.0f;
+            /** @brief 목록과 상자 사이 틈(UI 단위)입니다. */
+            static constexpr float32 kPopupGap = 2.0f;
             /** @brief 오른쪽 화살표 영역(안쪽 여백)입니다. */
             static constexpr float32 kArrowSpace = 32.0f;
+            /** @brief 화살표 삼각형 — 쌓는 가로 막대의 너비(위에서 아래)와 두께(UI 단위)입니다. */
+            static constexpr float32 kArrArrowWidth[] = { 10.0f, 6.0f, 2.0f };
+            static constexpr float32 kArrowStepHeight = 2.0f;
+            static constexpr float32 kArrowHalfHeight = kArrowStepHeight * static_cast<float32>( SW_COUNT_OF( kArrArrowWidth ) ) * 0.5f;
+            static constexpr float32 kDisabledAlpha   = 0.4f; ///< 꺼진 위젯의 화살표가 넘지 않는 불투명도
+            static constexpr float32 kContentPaddingX = 12.0f;
+            static constexpr float32 kContentPaddingY = 8.0f;
 
             static hashed_string makeOptionName( uint32 index )
             {
@@ -94,8 +101,20 @@ namespace sw
         , _popupScreen{ kInvalidUIScreenHandle }
         , _listOption{}
         , _selectedIndex{ constant::invalid_index::kUint32 }
+        , _popupBackground{ UIBrush::makeSolid( float4{ 0.1f, 0.11f, 0.14f, 0.98f }, 6.0f ) }
+        , _popupPadding{ 2.0f, 2.0f, 2.0f, 2.0f }
+        , _popupShadowColor{ 0.0f, 0.0f, 0.0f, 0.5f }
+        , _popupShadowOffset{ 0.0f, 4.0f }
+        , _popupShadowBlur{ 8.0f }
+        , _optionHeight{ 32.0f }
+        , _optionPadding{ 10.0f, 6.0f, 10.0f, 6.0f }
+        , _optionCornerRadius{ 4.0f }
+        , _arrowColor{ 0.85f, 0.88f, 0.95f, 1.0f }
     {
-        setContentPadding( float4{ 12.0f, 8.0f, ComboBoxWidgetInternal::kArrowSpace, 8.0f } );
+        using Internal                = ComboBoxWidgetInternal;
+        _popupBackground._borderColor = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
+        _popupBackground._borderWidth = 1.0f;
+        setContentPadding( float4{ Internal::kContentPaddingX, Internal::kContentPaddingY, Internal::kArrowSpace, Internal::kContentPaddingY } );
         unique_ptr<TextWidget> label = make_unique<TextWidget>();
         TextLayoutStyle        style = label->getTextStyle();
         style._bWrap                 = false;
@@ -176,13 +195,10 @@ namespace sw
         const UIRect                  rect = getGeometry().computeScreenBounds();
         unique_ptr<ComboBoxPopupRoot> root = make_unique<ComboBoxPopupRoot>(); // 화면 루트이며 뷰포트 전체를 덮는다
 
-        unique_ptr<BorderPanel> list      = make_unique<BorderPanel>();
-        UIBrush                 listBrush = UIBrush::makeSolid( float4{ 0.1f, 0.11f, 0.14f, 0.98f }, 6.0f );
-        listBrush._borderColor            = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
-        listBrush._borderWidth            = 1.0f;
-        list->setBackground( listBrush );
-        list->setContentPadding( float4{ 2.0f, 2.0f, 2.0f, 2.0f } );
-        list->setShadow( float4{ 0.0f, 0.0f, 0.0f, 0.5f }, 8.0f, float2{ 0.0f, 4.0f } );
+        unique_ptr<BorderPanel> list = make_unique<BorderPanel>();
+        list->setBackground( _popupBackground );
+        list->setContentPadding( _popupPadding );
+        list->setShadow( _popupShadowColor, _popupShadowBlur, _popupShadowOffset );
         WidgetLayoutSlot listSlot = list->getLayoutSlot();
         listSlot._offsetMin       = float2{ rect.getLeft(), rect.getBottom() + Internal::kPopupGap };
         listSlot._bAutoSize       = true;
@@ -196,10 +212,10 @@ namespace sw
         {
             unique_ptr<ButtonWidget> option = make_unique<ButtonWidget>();
             option->setName( Internal::makeOptionName( index ) );
-            option->setBackground( UIBrush::makeSolid( float4{}, 4.0f ) );
-            option->setContentPadding( float4{ 10.0f, 6.0f, 10.0f, 6.0f } );
+            option->setBackground( UIBrush::makeSolid( float4{}, _optionCornerRadius ) );
+            option->setContentPadding( _optionPadding );
             WidgetLayoutSlot optionSlot = option->getLayoutSlot();
-            optionSlot._heightOverride  = Internal::kOptionHeight;
+            optionSlot._heightOverride  = _optionHeight;
             option->setLayoutSlot( optionSlot );
             unique_ptr<TextWidget> text = make_unique<TextWidget>();
             text->setText( _listOption[index] );
@@ -226,16 +242,19 @@ namespace sw
     void ComboBoxWidget::paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
+        using Internal = ComboBoxWidgetInternal;
         // 아래 화살표: 가로 막대 셋을 줄여 쌓은 삼각형이다(오른쪽 끝에 놓으며, 오른쪽에서 왼쪽이면 왼쪽 끝).
         const float2& size    = getGeometry()._size;
-        const float32 centerX = isRightToLeft() ? ComboBoxWidgetInternal::kArrowSpace * 0.5f : size._x - ComboBoxWidgetInternal::kArrowSpace * 0.5f;
-        const float32 top     = size._y * 0.5f - 3.0f;
+        const float32 centerX = isRightToLeft() ? Internal::kArrowSpace * 0.5f : size._x - Internal::kArrowSpace * 0.5f;
+        const float32 top     = size._y * 0.5f - Internal::kArrowHalfHeight;
         CanvasBrush   arrow{};
-        arrow._color             = float4{ 0.85f, 0.88f, 0.95f, isEnabledInHierarchy() ? 1.0f : 0.4f };
-        const float32 arrWidth[] = { 10.0f, 6.0f, 2.0f };
-        for ( uint32 step = 0; step < 3; ++step )
+        arrow._color = _arrowColor;
+        if ( isEnabledInHierarchy() == false )
+            arrow._color._w = MathUtil::min( _arrowColor._w, Internal::kDisabledAlpha );
+        for ( size_t step = 0; step < SW_COUNT_OF( Internal::kArrArrowWidth ); ++step )
         {
-            painter.fillRect( float2{ centerX - arrWidth[step] * 0.5f, top + 2.0f * static_cast<float32>( step ) }, float2{ arrWidth[step], 2.0f }, arrow );
+            const float32 width = Internal::kArrArrowWidth[step];
+            painter.fillRect( float2{ centerX - width * 0.5f, top + Internal::kArrowStepHeight * static_cast<float32>( step ) }, float2{ width, Internal::kArrowStepHeight }, arrow );
         }
     }
 } // namespace sw

@@ -33,7 +33,7 @@
 #include "Engine/Engine.h"
 #include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"

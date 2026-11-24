@@ -4,12 +4,15 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
+#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
@@ -709,6 +712,12 @@ SW_TEST_CASE( MonsterCatalogTest, ReadsAllSections )
     SW_EXPECT_TRUE( pBoss->_archetype == sw::MonsterArchetype::RangedShooter );
     SW_EXPECT_EQUAL( 220, pBoss->_stats._hp );
     SW_EXPECT_EQUAL( 300, pBoss->_stats._maxHP );
+    sw::GameObjectManager   manager;
+    sw::UnitStatsComponent* pUnit = manager.createGameObject( sw::hashed_string( "Boss" ) )->addComponent<sw::UnitStatsComponent>();
+    SW_REQUIRE_NOT_NULL( pUnit );
+    pBoss->_stats.applyTo( *pUnit ); // 카탈로그의 스탯이 유닛에 그대로 옮는다
+    SW_EXPECT_EQUAL( 220, pUnit->getHP() );
+    SW_EXPECT_EQUAL( 300, pUnit->getMaxHP() );
     SW_EXPECT_NEAR( 1.25f, pBoss->_ai._firstAttackDelay, kRoomTolerance );
     SW_REQUIRE_EQUAL( size_t( 2 ), pBoss->_listShot.size() );
     SW_EXPECT_NEAR( 1.5f, pBoss->_listShot[1]._angle.radians(), kRoomTolerance );

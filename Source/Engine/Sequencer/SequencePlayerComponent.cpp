@@ -428,7 +428,7 @@ namespace sw
         SceneComponent*    pScene   = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr || pCenter == nullptr || pCenter->getPrimarySceneComponent() == nullptr )
             return;
-        // shortcut: 바닥 평면의 원 하나로 잰다 — 볼륨 겹침 계약(트리거 갈래 w-trigger)이 서면 그 모양 포함 검사로 옮긴다.
+        // 바닥 평면의 원이다(반지름 칸) — 다른 모양으로 가두려면 그 씬에 막는 콜라이더를 둔다(언리얼 BlockingVolume 자리).
         const float3  center   = pCenter->getPrimarySceneComponent()->getWorldPosition();
         const float3  position = pScene->getWorldPosition();
         const float32 dx       = position._x - center._x;

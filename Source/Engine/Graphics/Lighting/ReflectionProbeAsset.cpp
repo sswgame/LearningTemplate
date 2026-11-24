@@ -25,7 +25,7 @@ namespace sw
             static constexpr size_t kRadianceMapHeaderBytes = sizeof( uint32 ) * 3;
             /**
              * @brief filtered importance sampling 의 밉 치우침입니다. 쌍선형 샘플은 밉 텍셀 둘 너비를 덮으므로 텍셀 너비가 표본 간격의 반인 밉(−1)이면 표본 사이가 메워진다.
-             * @details GPU Gems 3 20.4 는 큐브맵 하드웨어 필터에 +1 을 쓴다. 옥타헤드럴 상자 밉에서 기준 적분과 견주면 +1 은 거친 단계를 너무 흐린다(64² 원본 · 표본 32 ·
+             * @details GPU Gems 3 20.4 는 큐브맵 하드웨어 필터에 +1 을 쓴다. 옥타헤드럴 밉에서 기준 적분과 견주면 +1 은 거친 단계를 너무 흐린다(64² 원본 · 표본 32 ·
              *          거칠기 1/3 ~ 1 의 평균 오차: +1 은 10 ~ 35 %, −1 은 1 ~ 5 % — ReflectionProbeAssetTest.FilteredImportanceSamplingMatchesTheReference).
              */
             static constexpr float32 kFilterLODBias = -1.0f;
@@ -33,9 +33,6 @@ namespace sw
             static constexpr float32 kSphereSolidAngle = 4.0f * MathUtil::kPi;
             /// @brief N = V 일 때 반사 방향의 pdf 는 하프 벡터 분포 D 의 이만큼이다 — pdf(L) = D · N·H / (4 · V·H), N·H = V·H.
             static constexpr float32 kReflectedDensityScale = 0.25f;
-            /// @brief 밉 텍셀 하나가 위 밉 텍셀 넷(2×2)의 평균이다.
-            static constexpr float32 kMipBoxWeight = 0.25f;
-
             /** @brief 한 축에서 상자 안의 점이 방향을 따라 상자 벽을 나가기까지의 거리입니다(시차 보정). 셰이더 lighting.hlsli 와 같은 식이다. */
             [[nodiscard]] static float32 computeAxisExit( float32 position, float32 direction, float32 center, float32 halfExtent )
             {
@@ -432,7 +429,20 @@ namespace sw
         if ( mipCount == 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "radiance map needs at least one mip" } );
         _listMip.resize( 1 );
-        // shortcut: 상자 평균은 텍셀마다 다른 입체각을 무시한다(옥타헤드럴은 큐브보다 고르다), 귀퉁이 번짐이 보이면 입체각 가중 평균으로 바꾼다.
+        // 밉 텍셀은 위 밉 텍셀 넷의 입체각 가중 평균이다 — 팔면체의 텍셀은 넓이가 같고 입체각은 넓이 × cosθ / r³ 이라 방향의 L1 길이³ 에 비례한다.
+        // 무게는 밉 0 에서 구해 합으로 내려온다 — 어느 밉에서나 구 전체의 적분이 같다.
+        const uint32    baseResolution = _listMip[0]._resolution;
+        vector<float32> listWeight( static_cast<size_t>( baseResolution ) * baseResolution );
+        for ( uint32 y = 0; y < baseResolution; ++y )
+        {
+            for ( uint32 x = 0; x < baseResolution; ++x )
+            {
+                const float3  direction = computeTexelDirection( baseResolution, x, y );
+                const float32 axisSum   = MathUtil::abs( direction._x ) + MathUtil::abs( direction._y ) + MathUtil::abs( direction._z );
+
+                listWeight[static_cast<size_t>( y ) * baseResolution + x] = axisSum * axisSum * axisSum;
+            }
+        }
         while ( getMipCount() < mipCount )
         {
             const Mip&   parent        = _listMip.back();
@@ -443,16 +453,27 @@ namespace sw
             Mip child;
             child._resolution = parentSize / 2u;
             child._listTexel.resize( static_cast<size_t>( child._resolution ) * child._resolution );
+            vector<float32> listChildWeight( child._listTexel.size() );
             for ( uint32 y = 0; y < child._resolution; ++y )
             {
                 for ( uint32 x = 0; x < child._resolution; ++x )
                 {
-                    const size_t top                                                   = static_cast<size_t>( y * 2u ) * parentSize + x * 2u;
-                    const size_t low                                                   = top + parentSize;
-                    child._listTexel[static_cast<size_t>( y ) * child._resolution + x] = ( parent._listTexel[top] + parent._listTexel[top + 1u] + parent._listTexel[low] + parent._listTexel[low + 1u] ) * ReflectionProbeAssetInternal::kMipBoxWeight;
+                    const size_t top        = static_cast<size_t>( y * 2u ) * parentSize + x * 2u;
+                    const size_t arrTexel[] = { top, top + 1u, top + parentSize, top + parentSize + 1u };
+                    float3       sum{};
+                    float32      weightSum = 0.0f;
+                    for ( const size_t texelIndex : arrTexel )
+                    {
+                        sum = sum + parent._listTexel[texelIndex] * listWeight[texelIndex];
+                        weightSum += listWeight[texelIndex];
+                    }
+                    const size_t childIndex      = static_cast<size_t>( y ) * child._resolution + x;
+                    child._listTexel[childIndex] = sum * ( 1.0f / weightSum );
+                    listChildWeight[childIndex]  = weightSum;
                 }
             }
             _listMip.push_back( std::move( child ) );
+            listWeight = std::move( listChildWeight );
         }
         return {};
     }

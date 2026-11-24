@@ -163,9 +163,9 @@ namespace sw
         bool playAdaptiveMusic( const AssetID& assetID );
         /** @brief 현재 재생 중인 배경음악(BGM)을 중지합니다. */
         void stopMusic();
-        /** @brief 배경음악을 일시정지합니다. */
+        /** @brief 배경음악을 일시정지합니다. 적응형 음악은 구간 시계도 함께 섭니다. */
         void pauseMusic();
-        /** @brief 일시정지된 배경음악을 재개합니다. */
+        /** @brief 일시정지된 배경음악을 멈춘 자리에서 재개합니다. */
         void resumeMusic();
         /** @brief 마지막으로 요청된 배경음악 경로입니다. 재생 중이 아니면 비어 있습니다. 요청 시점에 정해집니다. */
         string getMusicPath() const { return _musicPath; }

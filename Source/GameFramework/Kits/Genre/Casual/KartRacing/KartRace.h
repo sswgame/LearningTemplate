@@ -68,7 +68,7 @@ namespace sw
         float32 _redShellLockAngle{ 75.0f }; ///< 단위는 도(degree)이다
         uint32  _seed{ GameRandom::kDefaultSeed };
         uint8   _bRubberBand{ SW_TRUE };
-        uint8   _bItems{ SW_TRUE };
+        uint8   _bItems{ SW_TRUE }; ///< 아이템 상자가 있는 경기다 — 켜면 카탈로그가 필요하다(`KartRace::initialize`)
     };
 } // namespace sw
 
@@ -158,7 +158,7 @@ namespace sw
      * @brief 한 경기를 진행합니다. 트랙과 아이템 · 탄 카탈로그는 빌려 쓰므로 경기보다 오래 살아야 합니다.
      * @details 카탈로그는 생성 인자로 받는다(기체 대전과 같은 길 — 경기가 게임 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 그대로 연다).
      * @code
-     *     if ( race.initialize( settings, &track, &items, &projectiles ) == false ) { ... } // 아이템의 탄이 탄 카탈로그에 없다
+     *     if ( race.initialize( settings, track, &items, &projectiles ) == false ) { ... } // 아이템의 탄이 탄 카탈로그에 없다
      *     (void)race.addRacer( kartSettings, false ); // 사람
      *     (void)race.addRacer( kartSettings, true );  // AI
      *     race.start();
@@ -179,10 +179,10 @@ namespace sw
         KartRace();
 
         /**
-         * @brief 경기를 엽니다. 아이템이 없는 경기는 두 카탈로그 모두 nullptr 이어도 됩니다.
-         * @return 날거나 놓이는 아이템의 탄(`KartItemDef::_projectileID`)이 탄 카탈로그에 없으면 오류를 남기고 false 입니다. 그 아이템은 써도 나가지 않습니다.
+         * @brief 경기를 엽니다. 아이템은 설정(`KartRaceSettings::_bItems`)으로만 끕니다 — 꺼진 경기만 두 카탈로그가 nullptr 이어도 됩니다.
+         * @return 아이템을 켠 채 카탈로그를 주지 않으면 오류를 남기고 false 이며 경기는 그대로입니다. 날거나 놓이는 아이템의 탄(`KartItemDef::_projectileID`)이 탄 카탈로그에 없어도 오류와 false 이고, 그 아이템은 써도 나가지 않습니다.
          */
-        [[nodiscard]] bool initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog );
+        [[nodiscard]] bool initialize( const KartRaceSettings& settings, const KartTrack& track, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog );
         /** @brief 차를 추가하고 차 번호를 반환합니다(`Waiting` 단계에서만 가능합니다). 대기 단계가 아니거나 트랙이 없으면 이유를 돌려줍니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
         [[nodiscard]] expected<int32> addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI );
         void                          setRacerAI( int32 racer, const KartAISettings& settings );
@@ -200,8 +200,8 @@ namespace sw
          * @details 드리프트는 보상 없이 끊고, 부스트와 니트로는 남긴다(`KinematicVehicleMotor::reset` 은 니트로까지 비운다).
          */
         void placeRacer( int32 racer, const float3& position, float32 yaw );
-        /** @brief 차 @p racer 의 입력을 @p pGhost 에 기록합니다(빌려 쓰는 포인터). 출발 위치에서 기록을 시작하고 결승에서 멈춥니다. */
-        void startGhostRecording( int32 racer, KartGhost* pGhost );
+        /** @brief 차 @p racer 의 입력을 @p ghost 에 기록합니다(빌려 쓴다). 출발 위치에서 기록을 시작하고 결승에서 멈춥니다. */
+        void startGhostRecording( int32 racer, KartGhost& ghost );
         /** @brief 아이템을 쥐여 줍니다(테스트와 이벤트용). 들고 있던 아이템은 바뀝니다. */
         void giveItem( int32 racer, const hashed_string& itemID );
         /** @brief 들고 있는 아이템을 씁니다. 없거나, 경기 중이 아니거나, 이미 들어온 차면 false 를 반환합니다. */

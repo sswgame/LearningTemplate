@@ -39,10 +39,12 @@ namespace sw
     {
         vector<uint32> _listVoxelWordOffset;       ///< 볼륨마다 복셀 단어 버퍼 안의 첫 단어
         vector<uint32> _listEmissionWordOffset;    ///< 볼륨마다 발광 칸(순위) 단어의 첫 단어 — 점유 단어 바로 뒤. 발광하는 메시가 없으면 `SceneVoxelizer::kNoEmission`
+        vector<uint32> _listStaticWordOffset;      ///< 볼륨마다 정적 사본의 점유 첫 단어(읽는 자리들 뒤). 움직이는 층이 없는 장면이면 `SceneVoxelizer::kNoStaticCopy`
+        vector<uint32> _listStaticEmissionOffset;  ///< 볼륨마다 정적 사본의 발광 첫 단어. 발광하는 메시가 없거나 정적 사본이 없으면 `SceneVoxelizer::kNoEmission`
         vector<uint32> _listPaletteRow;            ///< 볼륨마다 발광 목록(`SceneVoxelScene::_listEmissionPalette`)의 첫 입력 행 — 볼륨 행들 뒤
         vector<uint32> _listHistoryOffset;         ///< 볼륨마다 기록 버퍼 안의 첫 float4(`RealtimeProbeHistoryAllocator` 가 볼륨 정체로 매긴 구간 — 이어지지 않을 수 있다)
         vector<uint32> _listFirstThread;           ///< 볼륨마다 첫 스레드 번호(= 앞 볼륨들의 프로브 수의 합)
-        uint32         _totalVoxelWords{ 0 };      ///< 점유 단어와 발광 단어의 합
+        uint32         _totalVoxelWords{ 0 };      ///< 점유 단어와 발광 단어의 합(정적 사본 포함)
         uint32         _totalHistoryElements{ 0 }; ///< 기록 버퍼 용량(float4, 할당기의 용량 — 빈 구간 포함)
         uint32         _totalProbes{ 0 };
     };
@@ -138,10 +140,14 @@ namespace sw
         [[nodiscard]] bool hasPendingPaint() const { return _bPaintPending == SW_TRUE && _bActive == SW_TRUE; }
         /** @brief 복셀 버퍼(점유 비트 · 발광 순위)입니다. 프레임 그래프 표가 칠하는 프레임에 등록한다(`SceneVoxels`). */
         const RHIStructuredBuffer& getVoxelBuffer() const { return _voxelBuffer; }
-        /** @brief 다시 칠할 구간의 칸을 지우는 디스패치를 기록합니다(`scene_voxelize.hlsl`). 이어서 UAV 배리어를 걸고 `dispatchVoxelPaint` 를 부른다. */
-        void dispatchVoxelClear( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso ) const;
-        /** @brief 다시 칠할 구간에 닿는 메시를 칠하는 디스패치를 기록합니다. 기록하면 이 장면이 칠해진 것이다. */
-        void dispatchVoxelPaint( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso );
+        /** @brief 복셀 칠하기의 디스패치 수입니다(지우기 → 칠하기 → 되돌리기 → 움직이는 것 칠하기 — `SceneVoxelPaintPlan`). */
+        static constexpr uint32 kVoxelDispatchCount = 4;
+        /** @brief @p dispatchIndex 번째 디스패치에 할 일이 있는지입니다. 없으면 배리어도 걸지 않는다. */
+        [[nodiscard]] bool hasVoxelDispatch( uint32 dispatchIndex ) const { return _arrVoxelThreadCount[dispatchIndex] != 0; }
+        /** @brief @p dispatchIndex 번째 디스패치를 기록합니다(`scene_voxelize.hlsl`, 앞 디스패치와 사이에 UAV 배리어). */
+        void dispatchVoxelPass( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, uint32 dispatchIndex ) const;
+        /** @brief 디스패치를 모두 기록했음을 적습니다 — 이 장면이 칠해진 것이다. */
+        void finishVoxelPaint() { _bPaintPending = SW_FALSE; }
         /** @brief 이번 프레임에 컴퓨트가 도는지입니다. */
         [[nodiscard]] bool isActive() const { return _bActive == SW_TRUE; }
         /** @brief 프로브 기록 버퍼(컴퓨트 u0 — 프레임을 넘어 남는다)입니다. 프레임 그래프 표가 크기와 함께 등록한다(`ProbeHistory`). */
@@ -170,6 +176,8 @@ namespace sw
             uint64                            _volumeID{ 0 };
             uint32                            _wordOffset{ 0 };
             uint32                            _emissionOffset{ 0 };
+            uint32                            _staticWordOffset{ 0 };
+            uint32                            _staticEmissionOffset{ 0 };
             shared_ptr<const SceneVoxelScene> _pScene{};
         };
         /** @brief 위치 흐름의 GPU 복사 하나입니다(렌더 프록시 정점 버퍼의 앞 구간 → 위치 버퍼). 기록할 때까지 메시를 쥔다. */
@@ -180,7 +188,7 @@ namespace sw
             uint64           _sizeBytes{ 0 };
         };
 
-        /** @brief 바뀐 장면을 칠할 일을 짜고 버퍼를 갖춥니다. 버퍼를 만들지 못하면 오류를 남기고 false 입니다. @p outChanged 는 다시 칠하는 구간이 있는지입니다. */
+        /** @brief 바뀐 장면을 칠할 일을 짜고 버퍼를 갖춥니다. 버퍼를 만들지 못하면 오류를 남기고 false 입니다. @p outChanged 는 정적 층을 다시 칠하는지입니다(움직이는 것만 칠한 프레임은 기록의 누적을 되돌려 세지 않는다 — 섞어 따라간다). */
         [[nodiscard]] bool prepareVoxelPaint( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeLayout& layout, bool bCreateMissingMeshes, bool& outChanged );
         /** @brief 칠할 일의 입력 행 · 인덱스를 올리고 위치 복사를 쌓습니다. 버퍼를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool uploadPaint( IRHIDevice* pDevice, const SceneVoxelPaintPlan& plan, bool bCreateMissingMeshes );
@@ -188,25 +196,23 @@ namespace sw
         void dispatchVoxelJobs( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const RHIStructuredBuffer& jobBuffer, uint32 threadCount ) const;
 
     private:
-        RHIStructuredBuffer           _voxelBuffer;                 ///< 볼륨들의 점유 비트 · 발광 순위 단어(uint, 프로브 갱신 t2, 칠하기 u0, 프레임을 넘어 남는다)
-        RHIStructuredBuffer           _voxelClearJobBuffer;         ///< 지우기 디스패치의 입력 행(칠하기 t0)
-        RHIStructuredBuffer           _voxelPaintJobBuffer;         ///< 칠하기 디스패치의 입력 행(칠하기 t0)
-        RHIStructuredBuffer           _voxelPositionBuffer;         ///< 칠할 메시들의 LOD 0 위치(float 셋씩, 칠하기 t1) — 렌더 프록시 위치 흐름의 GPU 복사
-        RHIStructuredBuffer           _voxelIndexBuffer;            ///< 칠할 메시들의 LOD 0 인덱스(칠하기 t2)
-        RHIStructuredBuffer           _historyBuffer;               ///< 프로브마다 원시 SH9 계수 float4 일곱과 가시성 모먼트(`RealtimeProbeHistoryAllocator::kFloat4PerProbe`, 컴퓨트 u0, 프레임을 넘어 남는다)
-        RHIStructuredBuffer           _paramBuffer;                 ///< 입력 행(컴퓨트 t1)
-        vector<float4>                _listRowScratch;              ///< 입력 행 업로드 임시 버퍼
-        vector<PaintedVolume>         _listPainted;                 ///< 지금 복셀 버퍼에 칠해진 볼륨들(요청 차례)
-        vector<PendingPositionCopy>   _listPendingCopy;             ///< 이번 프레임 업로드 단계가 기록할 위치 복사
-        vector<uint32>                _listIndexScratch;            ///< 인덱스 업로드 임시 버퍼
-        vector<float32>               _listPositionScratch;         ///< GPU 버퍼가 없는 메시(동적 메시)의 위치 업로드 임시 버퍼
-        RealtimeProbeHistoryAllocator _historyAllocator;            ///< 볼륨 정체마다의 기록 구간(드나든 볼륨만 새로 시작한다)
-        uint32                        _framesSinceInputChange{ 0 }; ///< 기록을 되돌리거나 복셀이 바뀐 뒤의 갱신 프레임 수(`getAccumulatedFrames`)
+        RHIStructuredBuffer           _voxelBuffer;                            ///< 볼륨들의 점유 비트 · 발광 순위 단어(uint, 프로브 갱신 t2, 칠하기 u0, 프레임을 넘어 남는다)
+        RHIStructuredBuffer           _arrVoxelJobBuffer[kVoxelDispatchCount]; ///< 디스패치마다의 입력 행(칠하기 t0)
+        RHIStructuredBuffer           _voxelPositionBuffer;                    ///< 칠할 메시들의 LOD 0 위치(float 셋씩, 칠하기 t1) — 렌더 프록시 위치 흐름의 GPU 복사
+        RHIStructuredBuffer           _voxelIndexBuffer;                       ///< 칠할 메시들의 LOD 0 인덱스(칠하기 t2)
+        RHIStructuredBuffer           _historyBuffer;                          ///< 프로브마다 원시 SH9 계수 float4 일곱과 가시성 모먼트(`RealtimeProbeHistoryAllocator::kFloat4PerProbe`, 컴퓨트 u0, 프레임을 넘어 남는다)
+        RHIStructuredBuffer           _paramBuffer;                            ///< 입력 행(컴퓨트 t1)
+        vector<float4>                _listRowScratch;                         ///< 입력 행 업로드 임시 버퍼
+        vector<PaintedVolume>         _listPainted;                            ///< 지금 복셀 버퍼에 칠해진 볼륨들(요청 차례)
+        vector<PendingPositionCopy>   _listPendingCopy;                        ///< 이번 프레임 업로드 단계가 기록할 위치 복사
+        vector<uint32>                _listIndexScratch;                       ///< 인덱스 업로드 임시 버퍼
+        vector<float32>               _listPositionScratch;                    ///< GPU 버퍼가 없는 메시(동적 메시)의 위치 업로드 임시 버퍼
+        RealtimeProbeHistoryAllocator _historyAllocator;                       ///< 볼륨 정체마다의 기록 구간(드나든 볼륨만 새로 시작한다)
+        uint32                        _framesSinceInputChange{ 0 };            ///< 기록을 되돌리거나 복셀이 바뀐 뒤의 갱신 프레임 수(`getAccumulatedFrames`)
         uint32                        _frameCounter{ 0 };
         float32                       _error{ 0.0f }; ///< `getError`
         uint32                        _totalProbes{ 0 };
-        uint32                        _clearThreadCount{ 0 };
-        uint32                        _paintThreadCount{ 0 };
+        uint32                        _arrVoxelThreadCount[kVoxelDispatchCount]{};
         uint8                         _bActive{ SW_FALSE };
         uint8                         _bReportedUnavailable{ SW_FALSE };
         uint8                         _bPaintPending{ SW_FALSE }; ///< 짠 칠하기를 아직 기록하지 않았다

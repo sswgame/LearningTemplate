@@ -32,6 +32,7 @@ namespace sw
         bool               playMusic( const AssetID& assetID ) override;
         [[nodiscard]] bool playAdaptiveMusic( const AssetID& assetID ) override;
         void               stopMusic() override;
+        void               setMusicPaused( bool bPaused ) override;
         optional<float32>  findMusicSeconds() const override;
         [[nodiscard]] bool loadEvents( const AssetID& assetID ) override;
         void               unloadEvents( string_view path ) override;

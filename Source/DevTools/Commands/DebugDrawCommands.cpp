@@ -7,8 +7,8 @@
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 
 namespace sw
 {

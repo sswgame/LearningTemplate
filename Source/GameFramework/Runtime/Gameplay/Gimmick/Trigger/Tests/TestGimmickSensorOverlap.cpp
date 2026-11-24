@@ -9,6 +9,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
+#include "Engine/Reflection/PropertyInfo.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
@@ -72,6 +74,37 @@ SW_TEST_CASE( GimmickSensorOverlapTest, PawnLoginRangeAndLogout )
     SW_EXPECT_EQUAL( 1, pSensor->getOccupantCount() );
 
     manager.destroyGameObject( pPawn ); // 접속 끊김
+    Internal::run( manager, 3 );
+    SW_EXPECT_EQUAL( 0, pSensor->getOccupantCount() );
+}
+
+/**
+ * @brief [GimmickSensorOverlapTest] 트리거도 세는 센서는 몸과 트리거를 따로 센다 — 트리거만 나가면 몸이 남고, 둘 다 나가야 0 이다
+ */
+SW_TEST_CASE( GimmickSensorOverlapTest, BodyAndTriggerLeaveSeparately )
+{
+    using Internal = TestGimmickSensorOverlapInternal;
+    GameObjectManager manager;
+    GameObject*       pPlate = manager.createGameObject( hashed_string( "Plate" ) );
+    (void)Internal::addBox( *pPlate, float3{}, 2.0f, PhysicsBodyType::Static, true );
+    GimmickSensorComponent* pSensor = pPlate->addComponent<GimmickSensorComponent>();
+    SW_REQUIRE_NOT_NULL( pSensor );
+    const PropertyInfo* pCountTriggers = pSensor->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_bCountTriggers" ) );
+    SW_REQUIRE_NOT_NULL( pCountTriggers );
+    *static_cast<bool*>( pCountTriggers->getRawPtr( static_cast<void*>( pSensor ) ) ) = true;
+    manager.beginPlay();
+    Internal::run( manager, 2 );
+
+    GameObject*           pPawn  = manager.createGameObject( hashed_string( "Pawn" ) );
+    RigidBody2DComponent* pBody  = Internal::addBox( *pPawn, float3{ 0.5f, 0.0f, 0.0f }, 0.25f, PhysicsBodyType::Dynamic, false );
+    RigidBody2DComponent* pRange = Internal::addBox( *pPawn, float3{}, 0.75f, PhysicsBodyType::Dynamic, true );
+    SW_REQUIRE_TRUE( pBody != nullptr && pRange != nullptr );
+    Internal::run( manager, 3 );
+    SW_EXPECT_EQUAL( 1, pSensor->getOccupantCount() );
+    pRange->setActive( false ); // 범위만 나간다
+    Internal::run( manager, 3 );
+    SW_EXPECT_EQUAL( 1, pSensor->getOccupantCount() );
+    pBody->setActive( false ); // 몸도 나간다
     Internal::run( manager, 3 );
     SW_EXPECT_EQUAL( 0, pSensor->getOccupantCount() );
 }

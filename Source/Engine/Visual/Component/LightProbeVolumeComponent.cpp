@@ -64,6 +64,7 @@ namespace sw
         , _probeDataRevision{ 0 }
         , _pRealtimeVoxelScene{}
         , _realtimeVoxelSetGeneration{ 0 }
+        , _realtimeVoxelChangeGeneration{ 0 }
         , _realtimeVoxelBounds{}
         , _realtimeVoxelCellSize{ 0.0f }
     {
@@ -83,22 +84,24 @@ namespace sw
         return AABB{ center - half, center + half };
     }
 
-    shared_ptr<const SceneVoxelScene> LightProbeVolumeComponent::findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration ) const
+    shared_ptr<const SceneVoxelScene> LightProbeVolumeComponent::findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration, uint64& outMeshChangeGeneration ) const
     {
         const AABB bounds = computeRealtimeVoxelBounds();
         // 상자(볼륨을 옮기거나 키웠다) · 칸 크기가 그대로여야 캐시를 쓸 수 있다. 프리미티브 집합은 부르는 쪽이 세대로 따진다(바뀐 칸만 다시 칠한다).
         const bool bSameBounds    = _realtimeVoxelBounds._min == bounds._min && _realtimeVoxelBounds._max == bounds._max;
         const bool bUsable        = _pRealtimeVoxelScene != nullptr && bSameBounds && MathUtil::nearEqual( _realtimeVoxelCellSize, _voxelSize );
         outPrimitiveSetGeneration = _realtimeVoxelSetGeneration;
+        outMeshChangeGeneration   = _realtimeVoxelChangeGeneration;
         return bUsable ? _pRealtimeVoxelScene : nullptr;
     }
 
-    void LightProbeVolumeComponent::setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration ) const
+    void LightProbeVolumeComponent::setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration, uint64 meshChangeGeneration ) const
     {
-        _pRealtimeVoxelScene        = std::move( scene );
-        _realtimeVoxelSetGeneration = primitiveSetGeneration;
-        _realtimeVoxelBounds        = computeRealtimeVoxelBounds();
-        _realtimeVoxelCellSize      = _voxelSize;
+        _pRealtimeVoxelScene           = std::move( scene );
+        _realtimeVoxelSetGeneration    = primitiveSetGeneration;
+        _realtimeVoxelChangeGeneration = meshChangeGeneration;
+        _realtimeVoxelBounds           = computeRealtimeVoxelBounds();
+        _realtimeVoxelCellSize         = _voxelSize;
     }
 
     bool LightProbeVolumeComponent::computeStreamingBounds( AABB& outBox ) const

@@ -3,6 +3,7 @@
 #include "Engine/UI/Widgets/RotatorWidget.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -23,6 +24,9 @@ namespace sw
             static constexpr uint32  kArrowSteps     = 5;
             static constexpr float32 kArrowThickness = 2.0f;
             static constexpr float32 kArrowBaseWidth = 6.0f;
+            /** @brief 고를 것이 없거나 꺼진 화살표가 넘지 않는 불투명도와 위아래 안쪽 여백입니다. */
+            static constexpr float32 kInactiveAlpha   = 0.35f;
+            static constexpr float32 kContentPaddingY = 8.0f;
         };
     } // namespace
 } // namespace sw
@@ -37,8 +41,10 @@ namespace sw
         , _bHasReleasePoint{ false }
         , _listOption{}
         , _selectedIndex{ constant::invalid_index::kUint32 }
+        , _arrowColor{ 0.85f, 0.88f, 0.95f, 1.0f }
     {
-        setContentPadding( float4{ RotatorWidgetInternal::kArrowSpace, 8.0f, RotatorWidgetInternal::kArrowSpace, 8.0f } );
+        using Internal = RotatorWidgetInternal;
+        setContentPadding( float4{ Internal::kArrowSpace, Internal::kContentPaddingY, Internal::kArrowSpace, Internal::kContentPaddingY } );
         unique_ptr<TextWidget> label = make_unique<TextWidget>();
         TextLayoutStyle        style = label->getTextStyle();
         style._bWrap                 = false;
@@ -155,7 +161,9 @@ namespace sw
         const float2& size    = getGeometry()._size;
         const bool    bActive = _listOption.size() >= 2 && isEnabledInHierarchy();
         CanvasBrush   arrow{};
-        arrow._color         = float4{ 0.85f, 0.88f, 0.95f, bActive ? 1.0f : 0.35f };
+        arrow._color = _arrowColor;
+        if ( bActive == false )
+            arrow._color._w = MathUtil::min( _arrowColor._w, Internal::kInactiveAlpha );
         const float32 center = static_cast<float32>( Internal::kArrowSteps - 1 ) * 0.5f;
         const float32 top    = size._y * 0.5f - static_cast<float32>( Internal::kArrowSteps ) * 0.5f * Internal::kArrowThickness;
         for ( uint32 side = 0; side < 2; ++side )

@@ -207,7 +207,7 @@ namespace sw
          * @brief 덱(@p listDeckCardID 의 정의 id 목록)을 섞어 첫 턴을 엽니다. 카탈로그에 없는 id 는 건너뜁니다.
          * @return 덱이 비면 false 를 반환한다.
          */
-        [[nodiscard]] bool initialize( const CardBattleCatalog* pCatalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
+        [[nodiscard]] bool initialize( const CardBattleCatalog& catalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
                                        const CardBattleEnemy& enemy, uint32 seed );
         /** @brief 손의 @p handIndex 번째 패를 씁니다. 에너지가 모자라거나 내 턴이 아니면 false 를 반환합니다. */
         [[nodiscard]] bool playCard( int32 handIndex );

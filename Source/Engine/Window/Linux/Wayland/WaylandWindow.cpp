@@ -456,8 +456,10 @@ namespace sw
                 (void)pSurface;
                 State&         state  = *static_cast<State*>( pData );
                 WaylandOutput* pEntry = state.findOutput( pOutput );
-                if ( pEntry != nullptr )
-                    pEntry->_bEntered = SW_TRUE;
+                if ( pEntry == nullptr )
+                    return;
+                pEntry->_bEntered      = SW_TRUE;
+                state._bOutputsChanged = true; // 창이 다른 출력에 들었다 - 화면 출력 능력(HDR)이 출력마다 다르다(Win32 의 WM_MOVE 와 같은 자리)
             }
 
             static void onSurfaceLeave( void* pData, wl_surface* pSurface, wl_output* pOutput )

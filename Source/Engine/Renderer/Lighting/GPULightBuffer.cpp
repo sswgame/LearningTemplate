@@ -78,24 +78,27 @@ namespace sw
             }
 
             /**
-             * @brief 프리미티브 집합이 바뀐 뒤의 복셀 장면입니다 — 그 사이 등록 · 해제된 메시 칸만 다시 모으고(`SceneVoxelizer::updateScene`), 기록이 모자라면 다시 만듭니다.
-             * @details 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 장면을 그대로 둔다 — 같은 포인터라 GPU 가 다시 칠하지도 않는다.
+             * @brief 프리미티브가 드나들거나 움직인 뒤의 복셀 장면입니다 — 그 사이 바뀐 메시 칸만 다시 모으고(`SceneVoxelizer::updateScene`), 기록이 모자라면 다시 만듭니다.
+             * @details 움직인 칸은 GPUScene 빌더가 지난 프레임에 가져간 더티다(빛을 빌더보다 먼저 모은다) — 격자는 한 프레임 늦게 따라간다. 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 장면을 그대로 둔다 — 같은 포인터라 GPU 가 다시 칠하지도 않는다.
              *          모은 것이 바뀌면 사본을 고쳐 새 포인터로 넣는다(지난 장면은 렌더 스레드가 칠한 장면으로 들고 있다).
              */
             static shared_ptr<const SceneVoxelScene> refreshVoxelScene( shared_ptr<const SceneVoxelScene> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
-                                                                        const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 generation )
+                                                                        const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 cacheChangeGeneration )
             {
+                const uint64   generation       = primitives.getSetGeneration();
+                const uint64   changeGeneration = primitives.getMeshChangeGeneration();
                 vector<uint32> listChangedSlot;
                 if ( primitives.collectMeshSetChanges( cacheGeneration, listChangedSlot ) == false )
                 {
                     shared_ptr<const SceneVoxelScene> pRebuilt = make_shared<SceneVoxelScene>( SceneVoxelizer::makeScene( primitives, pSceneDefault, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
-                    volume.setRealtimeVoxelScene( pRebuilt, generation );
+                    volume.setRealtimeVoxelScene( pRebuilt, generation, changeGeneration );
                     return pRebuilt;
                 }
-                SceneVoxelScene updated = *pCached;
+                primitives.appendMeshChanges( cacheChangeGeneration, listChangedSlot );
+                SceneVoxelScene updated = *pCached; // 정적 층은 나눠 든다 — 움직이는 목록만 베낀다
                 if ( SceneVoxelizer::updateScene( updated, primitives, pSceneDefault, listChangedSlot ) )
                     pCached = make_shared<SceneVoxelScene>( std::move( updated ) );
-                volume.setRealtimeVoxelScene( pCached, generation );
+                volume.setRealtimeVoxelScene( pCached, generation, changeGeneration );
                 return pCached;
             }
 
@@ -105,17 +108,17 @@ namespace sw
             static void appendRealtimeVolume( const Scene& scene, const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
                                               vector<RealtimeProbeRequest>& inoutListRequest )
             {
-                const PrimitiveRegistry&          primitives      = manager.getPrimitiveRegistry();
-                const uint64                      generation      = primitives.getSetGeneration();
-                uint64                            cacheGeneration = 0;
-                shared_ptr<const SceneVoxelScene> pVoxelScene     = volume.findRealtimeVoxelScene( cacheGeneration );
+                const PrimitiveRegistry&          primitives            = manager.getPrimitiveRegistry();
+                uint64                            cacheGeneration       = 0;
+                uint64                            cacheChangeGeneration = 0;
+                shared_ptr<const SceneVoxelScene> pVoxelScene           = volume.findRealtimeVoxelScene( cacheGeneration, cacheChangeGeneration );
                 if ( pVoxelScene == nullptr )
                 {
                     pVoxelScene = make_shared<SceneVoxelScene>( SceneVoxelizer::makeScene( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
-                    volume.setRealtimeVoxelScene( pVoxelScene, generation );
+                    volume.setRealtimeVoxelScene( pVoxelScene, primitives.getSetGeneration(), primitives.getMeshChangeGeneration() );
                 }
-                else if ( cacheGeneration != generation )
-                    pVoxelScene = refreshVoxelScene( std::move( pVoxelScene ), primitives, scene.getMaterial(), volume, cacheGeneration, generation );
+                else if ( cacheGeneration != primitives.getSetGeneration() || cacheChangeGeneration != primitives.getMeshChangeGeneration() )
+                    pVoxelScene = refreshVoxelScene( std::move( pVoxelScene ), primitives, scene.getMaterial(), volume, cacheGeneration, cacheChangeGeneration );
                 if ( pVoxelScene->_grid.isEmpty() )
                     return; // 상자가 유효하지 않다 — 갱신할 장면이 없다
 

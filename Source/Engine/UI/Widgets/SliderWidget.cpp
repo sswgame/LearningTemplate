@@ -21,6 +21,13 @@ namespace sw
             static constexpr float32 kThumbSize      = 16.0f;
             /** @brief 한 단계를 정하지 않았을 때의 범위 비율입니다. */
             static constexpr float32 kDefaultStepFraction = 0.05f;
+            /** @brief 꺼진 슬라이더의 불투명도 배율입니다. */
+            static constexpr float32 kDisabledAlpha = 0.4f;
+            /** @brief 진행 막대의 기본 두께와 모서리 반지름(UI 단위)입니다. */
+            static constexpr float32 kProgressThickness    = 12.0f;
+            static constexpr float32 kProgressCornerRadius = 4.0f;
+
+            static float4 makeStateColor( const float4& color, bool bEnabled ) { return float4{ color._x, color._y, color._z, bEnabled ? color._w : color._w * kDisabledAlpha }; }
         };
     } // namespace
 } // namespace sw
@@ -34,6 +41,9 @@ namespace sw
         , _minValue{ 0.0f }
         , _maxValue{ 1.0f }
         , _step{ 0.0f }
+        , _trackColor{ 0.3f, 0.32f, 0.38f, 0.9f }
+        , _fillColor{ 0.95f, 0.75f, 0.2f, 1.0f }
+        , _thumbColor{ 0.95f, 0.95f, 0.98f, 1.0f }
         , _bDragging{ SW_FALSE }
     {
     }
@@ -170,7 +180,6 @@ namespace sw
         using Internal         = SliderWidgetInternal;
         const float2& size     = getGeometry()._size;
         const bool    bOn      = isEnabledInHierarchy();
-        const float32 alpha    = bOn ? 1.0f : 0.4f;
         const float32 half     = Internal::kThumbSize * 0.5f;
         const float32 usable   = MathUtil::max( 0.0f, size._x - Internal::kThumbSize );
         const float32 trackY   = ( size._y - Internal::kTrackThickness ) * 0.5f;
@@ -181,17 +190,17 @@ namespace sw
 
         const float32 radius = Internal::kTrackThickness * 0.5f;
         CanvasBrush   track{};
-        track._color        = float4{ 0.3f, 0.32f, 0.38f, 0.9f * alpha };
+        track._color        = Internal::makeStateColor( _trackColor, bOn );
         track._cornerRadius = float4{ radius, radius, radius, radius };
         painter.fillRect( float2{ half, trackY }, float2{ usable, Internal::kTrackThickness }, track );
         CanvasBrush fill        = track;
-        fill._color             = float4{ 0.95f, 0.75f, 0.2f, alpha };
+        fill._color             = Internal::makeStateColor( _fillColor, bOn );
         const float32 fillStart = isRightToLeft() ? half + thumbX : half;
         const float32 fillWidth = isRightToLeft() ? usable - thumbX : thumbX;
         if ( fillWidth > 0.0f )
             painter.fillRect( float2{ fillStart, trackY }, float2{ fillWidth, Internal::kTrackThickness }, fill );
         CanvasBrush thumb{};
-        thumb._color        = float4{ 0.95f, 0.95f, 0.98f, alpha };
+        thumb._color        = Internal::makeStateColor( _thumbColor, bOn );
         thumb._cornerRadius = float4{ half, half, half, half };
         painter.fillRect( float2{ thumbX, ( size._y - Internal::kThumbSize ) * 0.5f }, float2{ Internal::kThumbSize, Internal::kThumbSize }, thumb );
     }
@@ -253,14 +262,14 @@ namespace sw
     {
         (void)context;
         (void)availableSize;
-        return float2{ SliderWidget::kDefaultLength, 12.0f };
+        return float2{ SliderWidget::kDefaultLength, SliderWidgetInternal::kProgressThickness };
     }
 
     void ProgressBarWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         const float2& size   = getGeometry()._size;
-        const float32 radius = MathUtil::min( 4.0f, size._y * 0.5f );
+        const float32 radius = MathUtil::min( SliderWidgetInternal::kProgressCornerRadius, size._y * 0.5f );
         CanvasBrush   background{};
         background._color        = _backgroundColor;
         background._cornerRadius = float4{ radius, radius, radius, radius };
@@ -286,7 +295,7 @@ namespace sw
         outInfo._rangeMin   = _minValue;
         outInfo._rangeMax   = _maxValue;
         outInfo._rangeValue = _value;
-        outInfo._rangeStep  = _step > 0.0f ? _step : ( _maxValue - _minValue ) * 0.05f; // 0 은 범위의 5% (좌우 액션과 같은 규칙)
+        outInfo._rangeStep  = _step > 0.0f ? _step : ( _maxValue - _minValue ) * SliderWidgetInternal::kDefaultStepFraction; // 0 은 범위의 5% (좌우 액션과 같은 규칙)
     }
 
     void ProgressBarWidget::describeAccessible( AccessibleInfo& outInfo )

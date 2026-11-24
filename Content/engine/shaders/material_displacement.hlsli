@@ -16,7 +16,8 @@
  * 뷰 깊이는 늘 카메라의 뷰-투영(g_ViewProj)에서 읽는다 — 그림자 패스도 같은 값이라 그림자와 본 패스가 같은 계수 · 같은 변위로 같은 윤곽을 그린다.
  * 높이는 정점 간격에 맞춘 밉으로 읽는다 — 도메인에는 화면 미분이 없어, 정점이 담지 못하는 주파수를 걸러 먼 표면의 읽기가 흩어지지 않는다.
  * 밉은 변마다 그 변의 두 끝점 UV · 변 계수만으로 정하고(Displacement::computeEdgeHeightMipLevel) 패치 안은 세 변의 밉을 섞는다(blendEdgeHeightMipLevels) —
- * 변을 나누는 두 패치가 그 변 위에서 같은 밉으로 읽어 틈이 없다(변 계수와 같은 규칙).
+ * 변을 나누는 두 패치가 그 변 위에서 같은 밉으로 읽어 틈이 없다(변 계수와 같은 규칙). 원래 꼭짓점은 여러 패치가 나누므로 변이 아니라 그 꼭짓점의 뷰 깊이와
+ * 메시 하나에 같은 값(UV 밀도 · 평균 변 길이 — 배치 표)으로 고른다(computeVertexHeightMipLevel). 정점에는 칸을 더하지 않는다.
  * 셰이딩 노멀: 노멀 맵이 없으면 변위가 만든 기울기로 다시 구한다(표면 기울기 — Mikkelsen 2020 · HDRP, Displacement::computeDisplacementNormal).
  * 노멀 맵이 있으면 그 맵이 높이 맵과 짝이라 보고 메시 노멀에 맵을 얹는다 — 둘을 함께 쓰면 같은 디테일이 두 번 든다(언리얼 · HDRP 변위도 노멀 맵으로 셰이딩한다).
  * 이음매(같은 위치에 노멀 · UV 가 다른 정점이 둘 이상 — 정점 탄젠트 w 의 크기)에서는 변위를 0 으로 눌러 양쪽이 같은 자리에 온다(Displacement::computeSeamFade). 누르는 폭은
@@ -49,7 +50,8 @@ struct MaterialControlPoint
     float4 _color : COLOR;
     float4 _tangent : TEXCOORD3;   ///< 탄젠트를 쓰지 않는 셰이더는 0
     float  _seam : TEXCOORD7;      ///< 이음매 꼭짓점이면 1 + 변 묶음, 아니면 0(정점 탄젠트 w 의 크기)
-    float  _viewDepth : TEXCOORD6; ///< 카메라 뷰 깊이(카메라 뷰-투영의 w) — 변 계수만 읽는다
+    float  _viewDepth : TEXCOORD6; ///< 카메라 뷰 깊이(카메라 뷰-투영의 w) — 변 계수와 꼭짓점 밉이 읽는다
+    float2 _meanEdge : TEXCOORD9;  ///< 배치 메시의 평균 변 — x 월드 길이, y UV 길이(UV 가 없으면 0)
     uint   _materialIndex : TEXCOORD4;
     uint   _instanceSlot : TEXCOORD5;
     float  _appearance : TEXCOORD15;
@@ -71,7 +73,8 @@ struct Displacement
     static float computeEdgeFactor( float3 position0, float3 position1, float viewDepth0, float viewDepth1, float density, float maxFactor );
     static float computeOffset( float height, float scale, float midLevel );
     static float computeEdgeHeightMipLevel( float2 uvA, float2 uvB, float edgeFactor, float2 textureSize );
-    static float blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2 );
+    static float computeVertexHeightMipLevel( float viewDepth, float2 meanEdge, float density, float maxFactor, float2 textureSize );
+    static float blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2, float3 vertexMip );
     static void computeUVTangentFrame( float3 position0, float3 position1, float3 position2, float2 uv0, float2 uv1, float2 uv2, out float3 outTangent, out float3 outBitangent );
     static float readSeamCode( float tangentW );
     static float computeEdgeSeam( float seamCodeA, float seamCodeB );
@@ -102,10 +105,24 @@ static float Displacement::computeEdgeHeightMipLevel( float2 uvA, float2 uvB, fl
     return log2( max( texelSpan, 1.0f ) );
 }
 
-/** @brief 한 점의 높이 밉 — 세 변의 밉을 b1·b2 · b2·b0 · b0·b1 로 섞는다. 변 위에서는 그 변의 밉 하나, 원래 꼭짓점은 0(어느 패치에서나 같다 — C++ 짝의 shortcut 주석). */
-static float Displacement::blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2 )
+/**
+ * @brief 원래 꼭짓점의 높이 밉 — 그 꼭짓점의 뷰 깊이에서 메시의 평균 변을 나눈 정점 간격이 걸치는 텍셀 수의 log2(0 이상, 변의 밉과 같은 식).
+ * @details 꼭짓점의 뷰 깊이와 배치 하나에 같은 값만 읽어 꼭짓점을 나누는 어느 패치에서나 같다(틈이 없다). @p meanEdge 는 x 월드 길이, y UV 길이다.
+ */
+static float Displacement::computeVertexHeightMipLevel( float viewDepth, float2 meanEdge, float density, float maxFactor, float2 textureSize )
 {
-    return Displacement::blendEdges( barycentric, edgeMip0, edgeMip1, edgeMip2 );
+    const float upper     = clamp( maxFactor, 1.0f, kDisplacementMaxTessFactor );
+    const float factor    = clamp( meanEdge.x / max( viewDepth, kDisplacementMinViewDepth ) * density, 1.0f, upper );
+    const float texelSpan = meanEdge.y * max( textureSize.x, textureSize.y ) / factor;
+    return log2( max( texelSpan, 1.0f ) );
+}
+
+/** @brief 한 점의 높이 밉 — 세 변의 밉을 b1·b2 · b2·b0 · b0·b1 로 섞는다. 변 위에서는 그 변의 밉 하나, 원래 꼭짓점은 그 꼭짓점의 밉(@p vertexMip — 어느 패치에서나 같다). */
+static float Displacement::blendEdgeHeightMipLevels( float3 barycentric, float edgeMip0, float edgeMip1, float edgeMip2, float3 vertexMip )
+{
+    const float3 weight = barycentric.yzx * barycentric.zxy;
+    const bool   bEdges = weight.x + weight.y + weight.z > kDisplacementMinWeight;
+    return bEdges ? Displacement::blendEdges( barycentric, edgeMip0, edgeMip1, edgeMip2 ) : dot( barycentric, vertexMip );
 }
 
 /** @brief 세 변의 값을 b1·b2 · b2·b0 · b0·b1 로 섞는다 — 변 위에서는 그 변의 값 하나, 원래 꼭짓점은 0. */
@@ -187,6 +204,15 @@ float4 computeControlPointTangent( VertexContext context )
 }
 #endif
 
+/** @brief 배치 메시의 평균 변 — x 월드 길이(인스턴스 배율 포함), y UV 길이(UV 가 없으면 0). */
+float2 computeMeanEdge( VertexContext context )
+{
+    const BatchData batch = BatchData::load( context._instance._meshBatchIndex );
+    const float4x4  world = context._instance._world;
+    const float     scale = pow( abs( dot( cross( world[0].xyz, world[1].xyz ), world[2].xyz ) ), 1.0f / 3.0f );
+    return float2( batch._meanEdgeLength * scale, batch._uvDensity > 0.0f ? batch._meanEdgeLength / batch._uvDensity : 0.0f );
+}
+
 MaterialControlPoint VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint vertexID : SV_VertexID )
 {
     MaterialControlPoint output;
@@ -201,6 +227,7 @@ MaterialControlPoint VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( 
     output._color                  = context._input._color;
     output._tangent                = computeControlPointTangent( context );
     output._viewDepth              = mul( worldPosition, g_ViewProj ).w;
+    output._meanEdge               = computeMeanEdge( context );
     output._seam                   = Displacement::readSeamCode( context._input._tangent.w );
     output._materialIndex          = context._instance._materialIndex;
     output._instanceSlot           = instanceSlot;
@@ -255,6 +282,7 @@ MaterialControlPoint interpolateControlPoint( MaterialControlPoint point0, Mater
     controlPoint._color         = point0._color * barycentric.x + point1._color * barycentric.y + point2._color * barycentric.z;
     controlPoint._tangent       = float4( point0._tangent.xyz * barycentric.x + point1._tangent.xyz * barycentric.y + point2._tangent.xyz * barycentric.z, point0._tangent.w );
     controlPoint._viewDepth     = point0._viewDepth * barycentric.x + point1._viewDepth * barycentric.y + point2._viewDepth * barycentric.z;
+    controlPoint._meanEdge      = point0._meanEdge;
     controlPoint._seam          = point0._seam;
     controlPoint._materialIndex = point0._materialIndex;
     controlPoint._instanceSlot  = point0._instanceSlot;
@@ -313,7 +341,12 @@ void storeDisplacedVaryings( inout MaterialInterpolants output, MaterialControlP
     const float  edgeMip0      = Displacement::computeEdgeHeightMipLevel( patch[1]._uv, patch[2]._uv, constants._arrEdge[0], heightSize );
     const float  edgeMip1      = Displacement::computeEdgeHeightMipLevel( patch[2]._uv, patch[0]._uv, constants._arrEdge[1], heightSize );
     const float  edgeMip2      = Displacement::computeEdgeHeightMipLevel( patch[0]._uv, patch[1]._uv, constants._arrEdge[2], heightSize );
-    const float  heightMip     = Displacement::blendEdgeHeightMipLevels( barycentric, edgeMip0, edgeMip1, edgeMip2 );
+    const float  density       = material._tessellationDensity;
+    const float  maxFactor     = material._tessellationMaxFactor;
+    const float3 vertexMip     = float3( Displacement::computeVertexHeightMipLevel( patch[0]._viewDepth, patch[0]._meanEdge, density, maxFactor, heightSize ),
+                                         Displacement::computeVertexHeightMipLevel( patch[1]._viewDepth, patch[1]._meanEdge, density, maxFactor, heightSize ),
+                                         Displacement::computeVertexHeightMipLevel( patch[2]._viewDepth, patch[2]._meanEdge, density, maxFactor, heightSize ) );
+    const float  heightMip     = Displacement::blendEdgeHeightMipLevels( barycentric, edgeMip0, edgeMip1, edgeMip2, vertexMip );
     const float  height        = MaterialTexture::sampleLevel( material._displacementMap, controlPoint._uv, heightMip ).r;
     const float3 seam          = saturate( float3( patch[0]._seam, patch[1]._seam, patch[2]._seam ) );
     const float3 edgeSeam      = float3( Displacement::computeEdgeSeam( patch[1]._seam, patch[2]._seam ), Displacement::computeEdgeSeam( patch[2]._seam, patch[0]._seam ),

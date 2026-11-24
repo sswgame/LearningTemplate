@@ -38,6 +38,9 @@ namespace sw::test
         /// @brief 평면이 지나는 층을 고를 때의 여유(칸 크기 비율, scene_voxelize.hlsl kLayerSlack).
         static constexpr float32 kLayerSlack = 1.0e-2f;
 
+        /// @brief 일 하나에서 월드 행렬(되돌리기는 정적 사본의 자리)이 시작하는 행(scene_voxelize.hlsl kJobWorld).
+        static constexpr uint32 kJobWorldRow = 5;
+
         SceneVoxelGrid _grid{};
         vector<uint32> _listWord{}; ///< 점유 비트(칸 번호 / 32 번째 단어의 칸 번호 % 32 번째 비트)
 
@@ -108,6 +111,8 @@ namespace sw::test
             }
             executeJobs( plan._listClearRow, listPosition, listIndex, inoutWords );
             executeJobs( plan._listPaintRow, listPosition, listIndex, inoutWords );
+            executeJobs( plan._listRestoreRow, listPosition, listIndex, inoutWords );
+            executeJobs( plan._listMovingRow, listPosition, listIndex, inoutWords );
         }
 
         /**
@@ -282,12 +287,28 @@ namespace sw::test
         {
             const uint32 jobCount    = readBits( listRow[0]._x );
             const uint32 threadCount = readBits( listRow[0]._y );
-            const bool   bClear      = readBits( listRow[0]._z ) != 0u;
+            const uint32 mode        = readBits( listRow[0]._z );
             for ( uint32 jobIndex = 0; jobIndex < jobCount; ++jobIndex )
             {
                 const Job job = loadJob( listRow, jobIndex );
                 SW_ASSERT( job._firstThread + job._threadCount <= threadCount );
-                if ( bClear )
+                if ( mode == SceneVoxelizer::kJobModeRestore )
+                {
+                    const float4& staticRow            = listRow[1u + jobIndex * SceneVoxelizer::kJobRowCount + kJobWorldRow];
+                    const uint32  staticWordOffset     = readBits( staticRow._x );
+                    const uint32  staticEmissionOffset = readBits( staticRow._y );
+                    forEachCell( job._clip, [&job, &inoutWords, staticWordOffset, staticEmissionOffset]( uint32 cellX, uint32 cellY, uint32 cellZ )
+                    {
+                        const uint32 index = job._grid.computeCellIndex( cellX, cellY, cellZ );
+                        const uint32 bit   = 1u << ( index & 31u );
+                        uint32&      word  = inoutWords[job._wordOffset + ( index >> 5 )];
+                        word               = ( word & ~bit ) | ( inoutWords[staticWordOffset + ( index >> 5 )] & bit );
+                        if ( job._emissionOffset != SceneVoxelizer::kNoEmission && staticEmissionOffset != SceneVoxelizer::kNoEmission )
+                            inoutWords[job._emissionOffset + index] = inoutWords[staticEmissionOffset + index];
+                    } );
+                    continue;
+                }
+                if ( mode == SceneVoxelizer::kJobModeClear )
                 {
                     forEachCell( job._clip, [&job, &inoutWords]( uint32 cellX, uint32 cellY, uint32 cellZ )
                     {

@@ -41,7 +41,7 @@ namespace sw
         int32            _musicSegment{ constant::invalid_index::kInt32 }; ///< 음악 레이어의 구간이다(-1 = 음악 아님).
         int32            _musicLayer{ constant::invalid_index::kInt32 };   ///< 음악 레이어 번호다.
         float32          _musicGain{ 1.0f };                               ///< 파라미터로 페이드하는 레이어 게인이다.
-        uint64           _startFrame{ 0 };                                 ///< 음악에서 소리가 시작할 렌더 프레임이다. 클립이 늦게 와도 박을 지킨다.
+        uint64           _startFrame{ 0 };                                 ///< 음악에서 소리가 시작할 음악 시계의 프레임이다. 클립이 늦게 와도 박을 지킨다.
         AudioVirtualMode _virtualMode{ AudioVirtualMode::Virtualize };
         bool             _bLoop{ SW_FALSE };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool             _bInUse{ false };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

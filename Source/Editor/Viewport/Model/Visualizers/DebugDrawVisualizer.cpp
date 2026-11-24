@@ -16,7 +16,7 @@
 
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 

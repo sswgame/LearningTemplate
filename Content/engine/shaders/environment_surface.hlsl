@@ -185,21 +185,23 @@ struct EnvironmentSurface
     float           _coatWeight;    ///< 코트 무게(모서리 마모 자리는 0)
     float           _coatRoughness; ///< 코트 거칠기
     float           _anisotropy;    ///< 비등방(0..1 — 탄젠트 방향으로 늘어난다)
-    float3          _tangent;       ///< 비등방 방향(메시 탄젠트 — 메시 UV u)
+    float3          _tangent;       ///< 비등방 방향(표면 UV 의 u — 메시 탄젠트 또는 월드 축 투영의 dP/du)
 
     static EnvironmentSurface make( PixelContext context );
-    static float3 getTangent( PixelContext context );
+    static float4 getTangent( PixelContext context, bool bProjected );
 };
 
 #if defined( SW_MATERIAL_USES_TANGENT )
-static float3 EnvironmentSurface::getTangent( PixelContext context )
+static float4 EnvironmentSurface::getTangent( PixelContext context, bool bProjected )
 {
-    return context._tangent.xyz;
+    if ( bProjected )
+        return SurfaceFunction::computeTriplanarFaceTangent( context._normal, SurfaceFunction::findDominantAxis( context._normal ) );
+    return context._tangent;
 }
 #else
-static float3 EnvironmentSurface::getTangent( PixelContext context )
+static float4 EnvironmentSurface::getTangent( PixelContext context, bool bProjected )
 {
-    return float3( 1.0f, 0.0f, 0.0f ); // 깊이 · 그림자 패스 — 조명을 하지 않는다
+    return float4( 1.0f, 0.0f, 0.0f, 1.0f ); // 깊이 · 그림자 패스 — 조명을 하지 않는다
 }
 #endif
 
@@ -208,17 +210,15 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     return EnvironmentSurface::make( context )._surface;
 }
 
-/**
- * @brief 층을 순서대로 쌓은 한 점.
- * @details shortcut: 월드 축 투영(`_patternShape.w`)이어도 비등방 방향은 메시 탄젠트다 — 헤어라인 결 무늬는 투영 UV 를 따라 둘이 어긋난다. 월드 투영 헤어라인 프리셋이 생기면
- *          pbr_lit.hlsl 의 computeWorldAlignedUV 처럼 투영의 dP/du 를 탄젠트로 낸다.
- */
+/** @brief 층을 순서대로 쌓은 한 점. */
 static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
 {
-    MaterialData material = context._material;
-    const float3 position = context._worldPosition;
-    const float3 normal   = context._normal;
-    const float2 uv       = ( material._patternShape.w > 0.5f ) ? SurfaceFunction::projectDominantAxis( position, normal ) : context._uv;
+    MaterialData material   = context._material;
+    const float3 position   = context._worldPosition;
+    const float3 normal     = context._normal;
+    const bool   bProjected = material._patternShape.w > 0.5f;
+    const float2 uv         = bProjected ? SurfaceFunction::projectDominantAxis( position, normal ) : context._uv;
+    const float4 tangent    = EnvironmentSurface::getTangent( context, bProjected );
 
     // 밑 — 색 × 텍스처(없으면 흰색이라 값 그대로). ORM 은 glTF 배치(R 가림 · G 거칠기 · B 금속도).
     const float2 textureUv     = uv * material._textureTiling;
@@ -228,7 +228,7 @@ static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
     float        roughness     = material._roughness * orm.g;
     float        metallic      = material._metallic * orm.b;
 #if defined( SW_MATERIAL_USES_TANGENT )
-    float3 surfaceNormal = applyNormalMap( material._normalMap, material._normalScale, textureUv, normal, context._tangent );
+    float3 surfaceNormal = applyNormalMap( material._normalMap, material._normalScale, textureUv, normal, tangent );
 #else
     float3 surfaceNormal = normal;
 #endif
@@ -301,7 +301,7 @@ static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
     result._coatWeight         = saturate( coat );
     result._coatRoughness      = saturate( material._clearCoatRoughness );
     result._anisotropy         = saturate( material._anisotropy );
-    result._tangent            = EnvironmentSurface::getTangent( context );
+    result._tangent            = tangent.xyz;
     return result;
 }
 

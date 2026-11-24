@@ -16,6 +16,8 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -123,6 +125,22 @@ namespace sw
                 inoutListRow.push_back( float4{ world._41, world._42, world._43, world._44 } );
             }
 
+            /** @brief 되돌리기 일의 행렬 자리 — 첫 행에 정적 사본의 점유 · 발광 첫 단어, 나머지는 읽지 않는다. */
+            static void appendRestoreRows( const SceneVoxelPaintTarget& target, vector<float4>& inoutListRow )
+            {
+                inoutListRow.push_back( packBits( target._staticWordOffset, target._staticEmissionOffset, 0u, 0u ) );
+                inoutListRow.push_back( float4{} );
+                inoutListRow.push_back( float4{} );
+                inoutListRow.push_back( float4{} );
+            }
+
+            /** @brief 격자 전체 구간 하나로 바꿉니다. */
+            static void setFullRange( const SceneVoxelGrid& grid, vector<SceneVoxelGrid::CellRange>& outListRange )
+            {
+                outListRange.clear();
+                outListRange.push_back( grid.getFullRange() );
+            }
+
             /** @brief 메시의 정점 · 인덱스 자리를 얻습니다(처음 본 메시면 끝에 붙인다). */
             static SceneVoxelPaintPlan::MeshSpan acquireMeshSpan( const shared_ptr<Mesh>& mesh, unordered_map<const Mesh*, uint32>& inoutMapSpan, SceneVoxelPaintPlan& inoutPlan )
             {
@@ -135,6 +153,24 @@ namespace sw
                 inoutPlan._indexCount += mesh->getIndexCount();
                 return inoutPlan._listMesh.back();
             }
+
+            /** @brief 구간 @p range 에 닿는 원천 하나를 칠할 일을 덧붙입니다. 칠하지 않는 원천 · 닿지 않는 원천이면 덧붙이지 않습니다. */
+            static void appendPaintJob( const SceneVoxelPaintTarget& target, const SceneVoxelGrid::CellRange& range, const AABB& rangeBox, const SceneVoxelSource& source,
+                                        unordered_map<const Mesh*, uint32>& inoutMapSpan, SceneVoxelPaintPlan& inoutPlan, vector<float4>& inoutListRow, uint32& inoutThreadCount, uint32& inoutJobCount )
+            {
+                if ( source.isPainted() == false || source._box.intersects( rangeBox ) == false )
+                    return;
+                const SceneVoxelPaintPlan::MeshSpan span          = acquireMeshSpan( source._mesh, inoutMapSpan, inoutPlan );
+                const uint32                        triangleCount = source._indexCount / 3u;
+                appendJobRows( target, range, inoutThreadCount, triangleCount, target._pScene->findEmissionRank( source._packedEmission ), span._firstIndex + source._firstIndex, span._firstVertex,
+                               inoutListRow );
+                appendMatrixRows( source._world, inoutListRow );
+                inoutThreadCount += triangleCount;
+                ++inoutJobCount;
+            }
+
+            /** @brief 원천의 발광입니다(칠하지 않으면 0). */
+            static uint32 getEmission( const SceneVoxelSource& source ) { return source.isPainted() ? source._packedEmission : 0u; }
         };
     } // namespace
 
@@ -144,12 +180,14 @@ namespace sw
         scene._grid = SceneVoxelGrid::make( bounds, cellSize );
         if ( scene._grid.isEmpty() )
             return scene;
-        const AABB gridBounds = scene._grid.getBounds();
-        scene._listSource.reserve( primitives.getAll().size() );
+        const AABB               gridBounds = scene._grid.getBounds();
+        vector<SceneVoxelSource> listSource;
+        listSource.reserve( primitives.getAll().size() );
         for ( const PrimitiveComponent* pPrimitive : primitives.getAll() )
         {
-            scene._listSource.push_back( SceneVoxelizerInternal::makeSource( pPrimitive, pSceneDefault, gridBounds ) );
+            listSource.push_back( SceneVoxelizerInternal::makeSource( pPrimitive, pSceneDefault, gridBounds ) );
         }
+        scene.setStaticSources( std::move( listSource ) );
         scene.rebuildEmissionPalette();
         return scene;
     }
@@ -158,26 +196,58 @@ namespace sw
     {
         if ( inoutScene._grid.isEmpty() )
             return false;
+        using Internal                                   = SceneVoxelizerInternal;
         const AABB                         gridBounds    = inoutScene._grid.getBounds();
         const vector<PrimitiveComponent*>& listPrimitive = primitives.getAll();
-        // 메시 칸 영역이 늘었으면 원천 목록도 늘린다(늘린 칸은 아직 칠하지 않았다).
-        if ( inoutScene._listSource.size() < listPrimitive.size() )
-            inoutScene._listSource.resize( listPrimitive.size() );
-        bool bChanged = false;
+        const SceneVoxelSource             emptySource{};
+        vector<SceneVoxelSource>           listStatic; // 정적 층이 바뀔 때만 베낀다
+        bool                               bStaticChanged   = false;
+        bool                               bMovingChanged   = false;
+        bool                               bEmissionChanged = false;
         for ( const uint32 slot : listChangedSlot )
         {
-            if ( slot >= inoutScene._listSource.size() )
+            const PrimitiveComponent* const pPrimitive = slot < listPrimitive.size() ? listPrimitive[slot] : nullptr;
+            SceneVoxelSource                current    = Internal::makeSource( pPrimitive, pSceneDefault, gridBounds );
+            auto                            moving     = std::lower_bound( inoutScene._listMovingSource.begin(), inoutScene._listMovingSource.end(), slot, []( const SceneVoxelMovingSource& entry, uint32 value )
+                                           { return entry._slot < value; } );
+            if ( moving != inoutScene._listMovingSource.end() && moving->_slot == slot )
+            {
+                if ( current.isSamePaint( moving->_source ) == false )
+                {
+                    bEmissionChanged = bEmissionChanged || Internal::getEmission( current ) != Internal::getEmission( moving->_source );
+                    bMovingChanged   = true;
+                    moving->_source  = std::move( current );
+                }
+                // 빈 칸은 움직이는 층에서 나간다 — 다음 물체가 이 칸을 쓰면 정적으로 다시 시작한다. 격자 밖으로 나간 물체는 남는다(드나들 때마다 정적 층을 오가지 않는다).
+                if ( pPrimitive == nullptr )
+                    (void)inoutScene._listMovingSource.erase( moving );
                 continue;
-            SceneVoxelSource  current = SceneVoxelizerInternal::makeSource( slot < listPrimitive.size() ? listPrimitive[slot] : nullptr, pSceneDefault, gridBounds );
-            SceneVoxelSource& kept    = inoutScene._listSource[slot];
+            }
+            const vector<SceneVoxelSource>& listKept = bStaticChanged ? listStatic : inoutScene.getStaticSources();
+            const SceneVoxelSource&         kept     = slot < listKept.size() ? listKept[slot] : emptySource;
             if ( current.isSamePaint( kept ) )
                 continue;
-            kept     = std::move( current );
-            bChanged = true;
+            bEmissionChanged = bEmissionChanged || Internal::getEmission( current ) != Internal::getEmission( kept );
+            // 칠해 둔 것이 바뀌었으면(움직임 · 다시 지은 메시) 이제부터 움직이는 층이다. 드나든 것은 정적 층이다.
+            const bool bMovesNow = kept.isPainted() && current.isPainted();
+            if ( bStaticChanged == false )
+                listStatic = inoutScene.getStaticSources();
+            bStaticChanged = true;
+            if ( listStatic.size() < listPrimitive.size() )
+                listStatic.resize( listPrimitive.size() ); // 메시 칸 영역이 늘었다(늘린 칸은 아직 칠하지 않았다)
+            if ( slot >= listStatic.size() )
+                continue;
+            listStatic[slot] = bMovesNow ? SceneVoxelSource{} : current;
+            if ( bMovesNow == false )
+                continue;
+            (void)inoutScene._listMovingSource.insert( moving, SceneVoxelMovingSource{ slot, std::move( current ) } );
+            inoutScene._bMovingLayer = SW_TRUE;
         }
-        if ( bChanged )
+        if ( bStaticChanged )
+            inoutScene.setStaticSources( std::move( listStatic ) );
+        if ( bEmissionChanged )
             inoutScene.rebuildEmissionPalette();
-        return bChanged;
+        return bStaticChanged || bMovingChanged;
     }
 
     void SceneVoxelizer::collectDirtyRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& outListRange )
@@ -186,14 +256,17 @@ namespace sw
         if ( scene._grid.isEmpty() )
             return;
         // 격자 모양이 다르면 칸 번호가, 발광 목록이 다르면 이미 칠한 순위의 뜻이 다르다.
-        bool                   bWhole    = painted._grid.hasSameShape( scene._grid ) == false || painted._listEmissionPalette != scene._listEmissionPalette;
-        uint64                 cellCount = 0;
-        const SceneVoxelSource emptySource{};
-        const size_t           slotCount = MathUtil::max( painted._listSource.size(), scene._listSource.size() );
+        bool                            bWhole    = painted._grid.hasSameShape( scene._grid ) == false || painted._listEmissionPalette != scene._listEmissionPalette;
+        uint64                          cellCount = 0;
+        const SceneVoxelSource          emptySource{};
+        const vector<SceneVoxelSource>& listBefore = painted.getStaticSources();
+        const vector<SceneVoxelSource>& listAfter  = scene.getStaticSources();
+        // 정적 층을 나눠 든 장면은 볼 것이 없다(움직이는 것만 바뀐 프레임).
+        const size_t slotCount = painted._pListStaticSource == scene._pListStaticSource ? size_t{ 0 } : MathUtil::max( listBefore.size(), listAfter.size() );
         for ( size_t slot = 0; bWhole == false && slot < slotCount; ++slot )
         {
-            const SceneVoxelSource& before = slot < painted._listSource.size() ? painted._listSource[slot] : emptySource;
-            const SceneVoxelSource& after  = slot < scene._listSource.size() ? scene._listSource[slot] : emptySource;
+            const SceneVoxelSource& before = slot < listBefore.size() ? listBefore[slot] : emptySource;
+            const SceneVoxelSource& after  = slot < listAfter.size() ? listAfter[slot] : emptySource;
             if ( before.isSamePaint( after ) )
                 continue;
             for ( const SceneVoxelSource* pSource : { &before, &after } )
@@ -206,10 +279,54 @@ namespace sw
             }
             bWhole = cellCount > scene._grid.getCellCount();
         }
-        if ( bWhole == false )
+        if ( bWhole )
+            SceneVoxelizerInternal::setFullRange( scene._grid, outListRange );
+    }
+
+    void SceneVoxelizer::appendMovingRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& inoutListRange )
+    {
+        if ( scene._grid.isEmpty() )
             return;
-        outListRange.clear();
-        outListRange.push_back( scene._grid.getFullRange() );
+        const auto appendRange = [&scene, &inoutListRange]( const SceneVoxelSource& source )
+        {
+            SceneVoxelGrid::CellRange range{};
+            if ( source.isPainted() && scene._grid.findCellRange( source._box, range ) )
+                inoutListRange.push_back( range );
+        };
+        // 두 목록은 칸 번호 오름차순이다 — 나란히 훑어 같은 칸끼리 견준다.
+        const vector<SceneVoxelMovingSource>& listBefore  = painted._listMovingSource;
+        const vector<SceneVoxelMovingSource>& listAfter   = scene._listMovingSource;
+        size_t                                beforeIndex = 0;
+        size_t                                afterIndex  = 0;
+        while ( beforeIndex < listBefore.size() || afterIndex < listAfter.size() )
+        {
+            const uint32 beforeSlot = beforeIndex < listBefore.size() ? listBefore[beforeIndex]._slot : constant::invalid_index::kUint32;
+            const uint32 afterSlot  = afterIndex < listAfter.size() ? listAfter[afterIndex]._slot : constant::invalid_index::kUint32;
+            const bool   bSameSlot  = beforeSlot == afterSlot;
+            if ( bSameSlot && listBefore[beforeIndex]._source.isSamePaint( listAfter[afterIndex]._source ) )
+            {
+                ++beforeIndex;
+                ++afterIndex;
+                continue;
+            }
+            if ( beforeSlot <= afterSlot )
+            {
+                appendRange( listBefore[beforeIndex]._source );
+                ++beforeIndex;
+            }
+            if ( afterSlot <= beforeSlot )
+            {
+                appendRange( listAfter[afterIndex]._source );
+                ++afterIndex;
+            }
+        }
+        uint64 cellCount = 0;
+        for ( const SceneVoxelGrid::CellRange& range : inoutListRange )
+        {
+            cellCount += range.getCellCount();
+        }
+        if ( cellCount > scene._grid.getCellCount() )
+            SceneVoxelizerInternal::setFullRange( scene._grid, inoutListRange );
     }
 
     SceneVoxelPaintPlan SceneVoxelizer::planPaint( const vector<SceneVoxelPaintTarget>& listTarget )
@@ -219,46 +336,65 @@ namespace sw
         unordered_map<const Mesh*, uint32> mapSpan;
         vector<SceneVoxelGrid::CellRange>  listRange;
         const float4x4                     identity{};
-        uint32                             clearJobCount = 0;
-        uint32                             paintJobCount = 0;
-        plan._listClearRow.push_back( float4{} ); // 머리 행 — 수를 다 센 뒤에 채운다
-        plan._listPaintRow.push_back( float4{} );
+        uint32                             clearJobCount   = 0;
+        uint32                             paintJobCount   = 0;
+        uint32                             restoreJobCount = 0;
+        uint32                             movingJobCount  = 0;
+        for ( vector<float4>* pListRow : { &plan._listClearRow, &plan._listPaintRow, &plan._listRestoreRow, &plan._listMovingRow } )
+        {
+            pListRow->push_back( float4{} ); // 머리 행 — 수를 다 센 뒤에 채운다
+        }
         for ( const SceneVoxelPaintTarget& target : listTarget )
         {
-            const SceneVoxelScene& scene = *target._pScene;
+            const SceneVoxelScene& scene   = *target._pScene;
+            const bool             bLayers = target._staticWordOffset != kNoStaticCopy;
+            SW_ASSERT( bLayers || scene._listMovingSource.empty() ); // 움직이는 층이 있는 장면은 정적 사본 자리를 받는다(`RealtimeProbeUpdater::planLayout`)
             if ( target._pPainted != nullptr )
-            {
                 collectDirtyRanges( *target._pPainted, scene, listRange );
-            }
             else
+                Internal::setFullRange( scene._grid, listRange );
+            // 정적 층 — 움직이는 층이 있으면 정적 사본에, 없으면 읽을 자리에 바로 칠한다.
+            SceneVoxelPaintTarget staticTarget = target;
+            if ( bLayers )
             {
-                listRange.clear();
-                listRange.push_back( scene._grid.getFullRange() );
+                staticTarget._wordOffset     = target._staticWordOffset;
+                staticTarget._emissionOffset = target._staticEmissionOffset;
             }
             for ( const SceneVoxelGrid::CellRange& range : listRange )
             {
-                Internal::appendJobRows( target, range, plan._clearThreadCount, range.getCellCount(), 0u, 0u, 0u, plan._listClearRow );
+                Internal::appendJobRows( staticTarget, range, plan._clearThreadCount, range.getCellCount(), 0u, 0u, 0u, plan._listClearRow );
                 Internal::appendMatrixRows( identity, plan._listClearRow );
                 plan._clearThreadCount += range.getCellCount();
                 ++clearJobCount;
                 // 끈 것은 칸 단위라 바뀐 상자보다 넓다 — 그 칸들의 상자에 닿는 원천을 다시 칠해야 가장자리 칸이 비지 않는다.
                 const AABB rangeBox = scene._grid.computeRangeBounds( range );
-                for ( const SceneVoxelSource& source : scene._listSource )
+                for ( const SceneVoxelSource& source : scene.getStaticSources() )
                 {
-                    if ( source.isPainted() == false || source._box.intersects( rangeBox ) == false )
-                        continue;
-                    const SceneVoxelPaintPlan::MeshSpan span          = Internal::acquireMeshSpan( source._mesh, mapSpan, plan );
-                    const uint32                        triangleCount = source._indexCount / 3u;
-                    Internal::appendJobRows( target, range, plan._paintThreadCount, triangleCount, scene.findEmissionRank( source._packedEmission ), span._firstIndex + source._firstIndex,
-                                             span._firstVertex, plan._listPaintRow );
-                    Internal::appendMatrixRows( source._world, plan._listPaintRow );
-                    plan._paintThreadCount += triangleCount;
-                    ++paintJobCount;
+                    Internal::appendPaintJob( staticTarget, range, rangeBox, source, mapSpan, plan, plan._listPaintRow, plan._paintThreadCount, paintJobCount );
+                }
+            }
+            if ( bLayers == false )
+                continue;
+            // 움직이는 층 — 정적 층이 바뀐 구간과 움직인 것의 낡은 · 새 구간을 정적 사본으로 되돌리고, 거기 닿는 움직이는 메시만 칠한다.
+            if ( target._pPainted != nullptr )
+                appendMovingRanges( *target._pPainted, scene, listRange );
+            for ( const SceneVoxelGrid::CellRange& range : listRange )
+            {
+                Internal::appendJobRows( target, range, plan._restoreThreadCount, range.getCellCount(), 0u, 0u, 0u, plan._listRestoreRow );
+                Internal::appendRestoreRows( target, plan._listRestoreRow );
+                plan._restoreThreadCount += range.getCellCount();
+                ++restoreJobCount;
+                const AABB rangeBox = scene._grid.computeRangeBounds( range );
+                for ( const SceneVoxelMovingSource& moving : scene._listMovingSource )
+                {
+                    Internal::appendPaintJob( target, range, rangeBox, moving._source, mapSpan, plan, plan._listMovingRow, plan._movingThreadCount, movingJobCount );
                 }
             }
         }
-        plan._listClearRow[0] = Internal::packBits( clearJobCount, plan._clearThreadCount, SW_TRUE, kThreadsPerRow );
-        plan._listPaintRow[0] = Internal::packBits( paintJobCount, plan._paintThreadCount, SW_FALSE, kThreadsPerRow );
+        plan._listClearRow[0]   = Internal::packBits( clearJobCount, plan._clearThreadCount, kJobModeClear, kThreadsPerRow );
+        plan._listPaintRow[0]   = Internal::packBits( paintJobCount, plan._paintThreadCount, kJobModePaint, kThreadsPerRow );
+        plan._listRestoreRow[0] = Internal::packBits( restoreJobCount, plan._restoreThreadCount, kJobModeRestore, kThreadsPerRow );
+        plan._listMovingRow[0]  = Internal::packBits( movingJobCount, plan._movingThreadCount, kJobModePaint, kThreadsPerRow );
         return plan;
     }
 } // namespace sw
