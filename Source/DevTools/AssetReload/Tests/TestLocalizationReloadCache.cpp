@@ -53,7 +53,7 @@ SW_TEST_CASE_F( LocalizationReloadCacheTest, HotReloadGoesThroughTheAssetCacheRe
     const sw::AbsolutePath folder = _domain.getFolder();
     LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("ui.title": { "source": "Mystery Island" })" );
     LocalizationTestUtil::writeTranslation( folder.str(), "ko", R"("ui.title": { "text": "신비의 섬" })" );
-    const sw::string projectPath = LocalizationTestUtil::writeProject( folder.str(), "en", R"([ "ko" ])" );
+    const sw::string projectPath = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" ).str();
     SW_REQUIRE_TRUE( _loc.mountProject( sw::test::ScopedScratchDomain::toID( projectPath ), sw::LocalizationScope::Game ) );
     SW_REQUIRE_TRUE( _loc.setCurrentLanguage( "ko" ) );
     SW_EXPECT_EQUAL( sw::string( "신비의 섬" ), lookup( _loc, "ui.title" ) );

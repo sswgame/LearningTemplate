@@ -36,9 +36,9 @@ namespace sw::test
          * @param culturesJSON `[ "ko", "ja" ]` 같은 JSON 배열 글입니다.
          * @param extraProperties `"stagedCultures": [ "ko" ]` 처럼 문자열 목록 칸들의 JSON 글입니다.
          */
-        static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJSON, string_view extraProperties = {} )
+        static AbsolutePath writeProject( const AbsolutePath& folder, string_view sourceCulture, string_view culturesJSON, string_view extraProperties = {} )
         {
-            const string                             projectPath = FileUtil::joinPath( folder, "test.locproject.xml" );
+            const string                             projectPath = FileUtil::joinPath( folder.str(), "test.locproject.xml" );
             StringBuilder<constant::buffer::kMax512> json;
             json.appendFormat( "{ \"cultures\": %#, \"stringTables\": [ \"test.strings.xml\" ]", culturesJSON );
             if ( extraProperties.empty() == false )
@@ -50,7 +50,7 @@ namespace sw::test
                 fixed_string<constant::buffer::kMax1024> message;
                 formatstring( message.data(), message.capacity(), "test project fields are not JSON: %#", json.view() );
                 reportFailure( __FILE__, __LINE__, message );
-                return projectPath;
+                return FileUtil::toDiskPath( projectPath );
             }
             XMLDocument   document;
             const XMLNode root = document.appendRoot( "LocalizationProject" );
@@ -65,13 +65,13 @@ namespace sw::test
                     (void)listNode.appendChild( "item", string_view{ list.at( index ).asString() } );
                 }
             }
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( projectPath ), document.saveToString() ) == false )
+            if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( projectPath ), document.saveToString() ) == false )
             {
                 fixed_string<constant::buffer::kMax512> message;
                 formatstring( message.data(), message.capacity(), "could not write %#", projectPath );
                 reportFailure( __FILE__, __LINE__, message );
             }
-            return projectPath;
+            return FileUtil::toDiskPath( projectPath );
         }
 
         /** @brief 원문 표를 씁니다. @p entriesJSON 은 `"Key": { "source": "…" }, …` 처럼 entries 객체의 안쪽입니다(`source` · `context` · `comment` · `maxLength` · `origins`). */

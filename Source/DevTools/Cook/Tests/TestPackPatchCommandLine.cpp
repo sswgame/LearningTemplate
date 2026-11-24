@@ -30,9 +30,9 @@ namespace
         static constexpr string_view kPublicKeyYFileName = "signing.y";
         static constexpr string_view kNewBuild           = "2"; // RunMakePatch.cmake 의 -pack-build 와 같다
 
-        static bool writePack( const string& folder, const vector<std::pair<string, string>>& listEntry )
+        static bool writePack( const AbsolutePath& folder, const vector<std::pair<string, string>>& listEntry )
         {
-            return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) && PackTestUtil::writeTextPack( FileUtil::joinPath( folder, "game.pack" ), "game", listEntry );
+            return FileUtil::ensureDirectoryExists( folder ) && PackTestUtil::writeTextPack( FileUtil::joinPath( folder.str(), "game.pack" ), "game", listEntry );
         }
 
         static string read( const PackManager& packs, string_view path )
@@ -47,44 +47,44 @@ namespace
 /** @brief [PackPatchCommandLineTest] `-make-patch` 의 입력 — 이전 빌드 팩 · 그 빌드 기록(1) · 새 빌드 팩과 테스트 서명 키를 인자 폴더에 쓴다 */
 SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, WriteInputs )
 {
-    const string root = test::getChildRoleArgument();
+    const AbsolutePath root = FileUtil::toDiskPath( test::getChildRoleArgument() );
     SW_REQUIRE_TRUE( root.empty() == false );
     INetSecurityProvider* const pProvider = engine::findSubsystem<INetSecurityProvider>();
     SW_REQUIRE_TRUE_MSG( pProvider != nullptr, "no INetSecurityProvider is published - GameFramework is not loaded" );
 
-    const string oldFolder = FileUtil::joinPath( root, Util::kOldFolder );
-    SW_REQUIRE_TRUE( Util::writePack( oldFolder, {
-                                                     {"keep.txt", "same"},
-                                                     {"edit.txt",  "old"},
-                                                     {"gone.txt",  "bye"}
+    const AbsolutePath oldFolder = root.join( Util::kOldFolder );
+    SW_REQUIRE_TRUE( Util::writePack( oldFolder.str(), {
+                                                           {"keep.txt", "same"},
+                                                           {"edit.txt",  "old"},
+                                                           {"gone.txt",  "bye"}
     } ) );
-    SW_REQUIRE_TRUE( Util::writePack( FileUtil::joinPath( root, Util::kNewFolder ), {
-                                                                                        {"keep.txt", "same"},
-                                                                                        {"edit.txt",  "new"},
-                                                                                        {"made.txt",   "hi"}
+    SW_REQUIRE_TRUE( Util::writePack( FileUtil::joinPath( root.str(), Util::kNewFolder ), {
+                                                                                              {"keep.txt", "same"},
+                                                                                              {"edit.txt",  "new"},
+                                                                                              {"made.txt",   "hi"}
     } ) );
-    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder, "1", FileUtil::joinPath( oldFolder, PackBuildRecord::kFileName ) ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder.str(), "1", oldFolder.join( PackBuildRecord::kFileName ) ) );
 
     string       privateKeyPem;
     NetPublicKey publicKey;
     SW_REQUIRE_TRUE( pProvider->createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, privateKeyPem, publicKey ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kKeyFileName ) ), privateKeyPem ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyXFileName ) ), HexUtil::encodeBytes( publicKey._x.data(), publicKey._x.size() ) ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyYFileName ) ), HexUtil::encodeBytes( publicKey._y.data(), publicKey._y.size() ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( Util::kKeyFileName ), privateKeyPem ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( Util::kPublicKeyXFileName ), HexUtil::encodeBytes( publicKey._x.data(), publicKey._x.size() ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( Util::kPublicKeyYFileName ), HexUtil::encodeBytes( publicKey._y.data(), publicKey._y.size() ) ) );
 }
 
 /** @brief [PackPatchCommandLineTest] `-make-patch` 의 산출 — 서명된 패치를 이전 빌드 폴더에 얹어 마운트하면 새 빌드의 내용이 보이고, 새 빌드 기록(2)이 다음 패치의 기준이 된다 */
 SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
 {
-    const string root = test::getChildRoleArgument();
+    const AbsolutePath root = FileUtil::toDiskPath( test::getChildRoleArgument() );
     SW_REQUIRE_TRUE( root.empty() == false );
     INetSecurityProvider* const pProvider = engine::findSubsystem<INetSecurityProvider>();
     SW_REQUIRE_TRUE_MSG( pProvider != nullptr, "no INetSecurityProvider is published - GameFramework is not loaded" );
 
-    const string outFolder    = FileUtil::joinPath( root, Util::kOutFolder );
-    const string manifestName = PackPatchBuilder::makeManifestFileName( Util::kNewBuild );
-    string       manifestText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, manifestName ) ), manifestText ) );
+    const AbsolutePath outFolder    = root.join( Util::kOutFolder );
+    const string       manifestName = PackPatchBuilder::makeManifestFileName( Util::kNewBuild );
+    string             manifestText;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( outFolder.join( manifestName ), manifestText ) );
     PackPatchManifest manifest;
     SW_REQUIRE_TRUE( PackPatchManifest::parse( manifestText, manifestName, manifest ) );
     SW_EXPECT_EQUAL( string( "1" ), manifest._fromBuild );
@@ -93,20 +93,20 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
 
     string xHex;
     string yHex;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyXFileName ) ), xHex ) );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, Util::kPublicKeyYFileName ) ), yHex ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( root.join( Util::kPublicKeyXFileName ), xHex ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( root.join( Util::kPublicKeyYFileName ), yHex ) );
     PackPatchTrust trust{};
     trust._pProvider            = pProvider;
     trust._publicKey._algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
     SW_REQUIRE_TRUE( HexUtil::decodeBytes( xHex, trust._publicKey._x ) && HexUtil::decodeBytes( yHex, trust._publicKey._y ) );
 
     // 런타임 적용 길 그대로 — 패치 팩 · 목록을 설치된 빌드(1) 폴더에 두고 폴더를 훑는다. 서명이 틀리면 마운트가 진다.
-    const string oldFolder = FileUtil::joinPath( root, Util::kOldFolder );
-    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, manifest._packFileName ) ), FileUtil::toDiskPath( FileUtil::joinPath( oldFolder, manifest._packFileName ) ) ) );
-    SW_REQUIRE_TRUE( FileUtil::copyFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, manifestName ) ), FileUtil::toDiskPath( FileUtil::joinPath( oldFolder, manifestName ) ) ) );
+    const AbsolutePath oldFolder = root.join( Util::kOldFolder );
+    SW_REQUIRE_TRUE( FileUtil::copyFile( outFolder.join( manifest._packFileName ), oldFolder.join( manifest._packFileName ) ) );
+    SW_REQUIRE_TRUE( FileUtil::copyFile( outFolder.join( manifestName ), oldFolder.join( manifestName ) ) );
     PackManager packs;
     SW_REQUIRE_TRUE( packs.setPatchTrust( trust ) );
-    SW_REQUIRE_TRUE( packs.scanAndMountPacks( oldFolder ) );
+    SW_REQUIRE_TRUE( packs.scanAndMountPacks( oldFolder.str() ) );
     SW_EXPECT_EQUAL( string( "same" ), Util::read( packs, "game/keep.txt" ) );
     SW_EXPECT_EQUAL( string( "new" ), Util::read( packs, "game/edit.txt" ) );
     SW_EXPECT_EQUAL( string( "hi" ), Util::read( packs, "game/made.txt" ) );
@@ -115,7 +115,7 @@ SW_TEST_CHILD_ROLE( PackPatchCommandLineTest, CheckPatch )
     string                                  recordText;
     fixed_string<constant::buffer::kMax128> recordFileName;
     formatstring( recordFileName.data(), recordFileName.capacity(), "%#%#", Util::kNewBuild, PackBuildRecord::kExtension );
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( outFolder, recordFileName ) ), recordText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( outFolder.join( recordFileName ), recordText ) );
     PackBuildRecord record;
     SW_REQUIRE_TRUE( PackBuildRecord::parse( recordText, "record", record ) );
     SW_EXPECT_EQUAL( string( Util::kNewBuild ), record._build );

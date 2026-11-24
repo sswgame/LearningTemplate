@@ -85,7 +85,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const string& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
                                            uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
@@ -94,23 +94,23 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "SceneNavigationCooker.SceneNavigationCookCould", "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "SceneNavigationCooker.SceneNavigationCookCould", "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         VectorUtil::sort( listFile );
-        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         CookStats         stats;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, Internal::kSceneSuffix, true ) == false )
+            if ( StringUtil::endsWith( filePath.str(), Internal::kSceneSuffix, true ) == false )
                 continue;
-            const string normalizedFile = FileUtil::normalizeSeparators( filePath );
+            const string normalizedFile = FileUtil::normalizeSeparators( filePath.str() );
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;

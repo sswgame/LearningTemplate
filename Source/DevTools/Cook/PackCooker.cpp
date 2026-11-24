@@ -107,7 +107,7 @@ namespace sw
             {
                 uint64         _pathHash{ 0 };
                 string         _relativePath;
-                string         _absPath;
+                AbsolutePath   _absPath;
                 PackItemSource _source{ PackItemSource::Source };
                 vector<uint8>  _listGeneratedByte; ///< `Generated` 의 바이트
             };
@@ -258,7 +258,7 @@ namespace sw
                 AssetReferenceFields properties;
                 if ( properties.load( params._projectRoot ) == false )
                 {
-                    SW_LOG_ERROR_ID( "PackCooker.ReferenceFieldsUnreadable", "Pack cook: the asset reference fields under %# could not be read - references cannot be followed", params._projectRoot );
+                    SW_LOG_ERROR_ID( "PackCooker.ReferenceFieldsUnreadable", "Pack cook: the asset reference fields under %# could not be read - references cannot be followed", params._projectRoot.str() );
                     return false;
                 }
 
@@ -487,12 +487,12 @@ namespace sw
                     if ( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( params._resourceRoot, pShared ) ) ) )
                         outListDomain.emplace_back( pShared );
                 }
-                const string gameRoot = FileUtil::joinPath( params._resourceRoot, constant::path::kGamePack );
+                const AbsolutePath gameRoot = params._resourceRoot.join( constant::path::kGamePack );
                 if ( params._gamePackFolder.empty() == false )
                 {
-                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( FileUtil::joinPath( gameRoot, params._gamePackFolder ) ) ) == false )
+                    if ( FileUtil::isDirectory( gameRoot.join( params._gamePackFolder ) ) == false )
                     {
-                        SW_LOG_ERROR_ID( "PackCooker.GamePackFolderDoes", "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot );
+                        SW_LOG_ERROR_ID( "PackCooker.GamePackFolderDoes", "Game pack folder '%#' does not exist under %#", params._gamePackFolder, gameRoot.str() );
                         return false;
                     }
                     StringBuilder<constant::buffer::kMax256> builder;
@@ -501,7 +501,7 @@ namespace sw
                     return true;
                 }
                 // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다.
-                return AssetPaths::collectGamePackDomains( FileUtil::toDiskPath( params._resourceRoot ), outListDomain );
+                return AssetPaths::collectGamePackDomains( params._resourceRoot, outListDomain );
             }
 
             /**
@@ -511,17 +511,17 @@ namespace sw
              */
             [[nodiscard]] static bool mergeGameCookRules( const PackCookParams& params, const vector<string>& listDomain, PackCookRules& inoutRules )
             {
-                const string   folder = FileUtil::joinPath( params._projectRoot, GameConfig::kConfigFolder );
-                vector<string> listConfigPath;
-                const bool     bListed = FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), false, [&listConfigPath]( const DirectoryEntry& entry )
-                    {
+                const AbsolutePath folder = params._projectRoot.join( GameConfig::kConfigFolder );
+                vector<string>     listConfigPath;
+                const bool         bListed = FileUtil::forEachDirectoryEntry( folder, false, [&listConfigPath]( const DirectoryEntry& entry )
+                        {
                     if ( entry._bDirectory == false && StringUtil::endsWith( entry._path, ".json" ) )
                         listConfigPath.emplace_back( entry._path );
                     return true;
                 } );
                 if ( bListed == false )
                 {
-                    SW_LOG_ERROR_ID( "PackCooker.GameConfigFolderUnreadable", "Pack cook: the game preset folder %# could not be listed - game cook rules cannot be merged", folder );
+                    SW_LOG_ERROR_ID( "PackCooker.GameConfigFolderUnreadable", "Pack cook: the game preset folder %# could not be listed - game cook rules cannot be merged", folder.str() );
                     return false;
                 }
                 VectorUtil::sort( listConfigPath );
@@ -598,7 +598,7 @@ namespace sw
                 const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
                 if ( AssetCookPath::isCookableSource( relativePath ) )
                     return true;
-                DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ FileUtil::toDiskPath( contentRoot ), engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
                 string                    flatText;
                 bool                      bComposed = false;
                 if ( ResourceComposer::compose( text, absPath, ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
@@ -638,9 +638,9 @@ namespace sw
                     vector<uint8> bytes;
                     bool          bRead = true;
                     if ( item._source == PackItemSource::Source )
-                        bRead = readSourceFile( item._relativePath, item._absPath, params._resourceRoot, references, ioTiming, bytes );
+                        bRead = readSourceFile( item._relativePath, item._absPath.str(), params._resourceRoot.str(), references, ioTiming, bytes );
                     else if ( item._source == PackItemSource::Staged )
-                        bRead = readStagedFile( item._absPath, ioTiming, bytes );
+                        bRead = readStagedFile( item._absPath.str(), ioTiming, bytes );
                     else
                         bytes = std::move( item._listGeneratedByte );
                     if ( bRead == false )
@@ -664,24 +664,24 @@ namespace sw
              * @brief 소스 파일 하나의 정체성(GUID)입니다 — 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름. 없으면 없음입니다.
              * @details 디스크 입구(`AssetIO::readTextFile`)로 읽는다 — 이 작업의 입력이 되어 GUID 가 바뀌면 팩을 다시 굽는다. 규칙은 저작 색인(`AssetDatabase::build`)과 같다.
              */
-            [[nodiscard]] static optional<AssetGUID> readPackedIdentity( const AssetIdentityRules& rules, AssetIdentityKind kind, const string& assetID, const string& absPath )
+            [[nodiscard]] static optional<AssetGUID> readPackedIdentity( const AssetIdentityRules& rules, AssetIdentityKind kind, const string& assetID, const AbsolutePath& absPath )
             {
                 if ( kind != AssetIdentityKind::Header && kind != AssetIdentityKind::Source )
                     return nullopt;
-                const string metaAbs = AssetMeta::makePath( absPath );
-                string       text;
-                AssetMeta    meta;
+                const AbsolutePath metaAbs = AssetMeta::makePath( absPath.str() );
+                string             text;
+                AssetMeta          meta;
                 if ( kind == AssetIdentityKind::Header && AssetIO::readTextFile( absPath, text ) )
                 {
                     const optional<AssetGUID> headerGUID = AssetGUIDHeader::read( text )._guid;
                     if ( headerGUID.has_value() )
                         return headerGUID;
                 }
-                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( FileUtil::toDiskPath( metaAbs ) ) && AssetIO::readTextFile( metaAbs, text ) )
-                    return meta.parseXML( text, AssetMeta::makePath( assetID ) );
+                if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( metaAbs ) && AssetIO::readTextFile( metaAbs, text ) )
+                    return meta.parseXML( text, AssetMeta::makePath( assetID ).str() );
                 if ( rules.isUnderDerivedFolder( assetID ) == false )
                     return nullopt;
-                const string_view           contentRoot = string_view( absPath ).substr( 0, absPath.size() - assetID.size() ); // 원본 경로는 리소스 id 로 끝난다(`makeAssetID`)
+                const string_view           contentRoot = string_view( absPath.str() ).substr( 0, absPath.str().size() - assetID.size() ); // 원본 경로는 리소스 id 로 끝난다(`makeAssetID`)
                 vector<AssetImportedSource> listSource;
                 rules.collectImportedSources( assetID, listSource );
                 for ( const AssetImportedSource& source : listSource )
@@ -706,7 +706,7 @@ namespace sw
                 const AssetIdentityKind kind    = rules.classify( assetID );
                 if ( kind == AssetIdentityKind::Skipped || kind == AssetIdentityKind::Sidecar )
                     return true;
-                const optional<AssetGUID> guid = readPackedIdentity( rules, kind, assetID, item._absPath );
+                const optional<AssetGUID> guid = readPackedIdentity( rules, kind, assetID, item._absPath.str() );
                 if ( guid.has_value() == false && rules.isUnderDerivedFolder( assetID ) )
                     return true;
                 if ( guid.has_value() == false )
@@ -724,7 +724,7 @@ namespace sw
                 string text;
                 if ( AssetIO::readTextFile( item._absPath, text ) == false )
                     return false;
-                const expected<vector<AssetIdentityRedirect>> rows = AssetRedirect::parseIdentityRows( text, item._absPath );
+                const expected<vector<AssetIdentityRedirect>> rows = AssetRedirect::parseIdentityRows( text, item._absPath.str() );
                 if ( rows.has_value() == false )
                     return false;
                 inoutIndex._listRedirect.insert( inoutIndex._listRedirect.end(), rows->begin(), rows->end() );
@@ -763,13 +763,13 @@ namespace sw
              */
             [[nodiscard]] static bool collectDomainItems( const PackConfig& config, const PackCookParams& params, const string& domain, const PackSelection& selection, DomainListing& outListing )
             {
-                const string domainDir = FileUtil::joinPath( params._resourceRoot, domain );
-                const string stagedDir = FileUtil::joinPath( params._cookedDir, domain );
-                const auto   addItem   = [&outListing]( const string& relativePath, const string& absPath, PackItemSource source )
+                const AbsolutePath domainDir = params._resourceRoot.join( domain );
+                const AbsolutePath stagedDir = params._cookedDir.join( domain );
+                const auto         addItem   = [&outListing]( const string& relativePath, const string& absPath, PackItemSource source )
                 { outListing._listItem.push_back( PackItem{ PackStreamWriter::makePathHash( relativePath ), relativePath, absPath, source, {} } ); };
 
                 vector<string> listSourceFile;
-                if ( CookJob::collectFiles( FileUtil::toDiskPath( domainDir ), "", listSourceFile ) == false )
+                if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
                     return false;
                 for ( const string& absPath : listSourceFile )
                 {
@@ -792,7 +792,7 @@ namespace sw
                 }
 
                 vector<string> listStagedFile;
-                if ( CookJob::collectFiles( FileUtil::toDiskPath( stagedDir ), "", listStagedFile ) == false )
+                if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
                     return false;
                 for ( const string& absPath : listStagedFile )
                 {
@@ -846,13 +846,13 @@ namespace sw
             static constexpr string_view kCookedPackLedgerName = "CookedPacks.txt";
 
             /** @brief 팩 폴더의 장부를 읽습니다. 없으면 빈 장부입니다. 읽지 못하면 false 입니다. */
-            [[nodiscard]] static bool readCookedPackLedger( const string& packOutputDir, unordered_set<string>& outSetName )
+            [[nodiscard]] static bool readCookedPackLedger( const AbsolutePath& packOutputDir, unordered_set<string>& outSetName )
             {
-                const string ledgerPath = FileUtil::joinPath( packOutputDir, kCookedPackLedgerName );
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( ledgerPath ) ) == false )
+                const AbsolutePath ledgerPath = packOutputDir.join( kCookedPackLedgerName );
+                if ( FileUtil::isRegularFile( ledgerPath ) == false )
                     return true;
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( ledgerPath ), text ) == false )
+                if ( FileUtil::readTextFile( ledgerPath, text ) == false )
                     return false;
                 size_t lineStart = 0;
                 while ( lineStart < text.size() )
@@ -897,7 +897,7 @@ namespace sw
             }
 
             /** @brief 장부를 이름 순으로 씁니다. */
-            [[nodiscard]] static bool writeCookedPackLedger( const string& packOutputDir, const unordered_set<string>& setName )
+            [[nodiscard]] static bool writeCookedPackLedger( const AbsolutePath& packOutputDir, const unordered_set<string>& setName )
             {
                 vector<string> listName( setName.begin(), setName.end() );
                 VectorUtil::sort( listName );
@@ -906,7 +906,7 @@ namespace sw
                 {
                     text.append( name ).append( "\n" );
                 }
-                return FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( packOutputDir ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( packOutputDir, kCookedPackLedgerName ) ), text );
+                return FileUtil::ensureDirectoryExists( packOutputDir ) && FileUtil::writeTextFile( packOutputDir.join( kCookedPackLedgerName ), text );
             }
 
             /**
@@ -915,12 +915,12 @@ namespace sw
              *          (그대로 두면 마운트가 같은 도메인의 겹침으로 거절할 수 있다).
              * @return 목록을 못 읽거나 지우지 못하면 이유를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool removeStaleSiblingPacks( const string& packOutputDir, const string& domain, const vector<string>& listWrittenName, unordered_set<string>& inoutSetLedger )
+            [[nodiscard]] static bool removeStaleSiblingPacks( const AbsolutePath& packOutputDir, const string& domain, const vector<string>& listWrittenName, unordered_set<string>& inoutSetLedger )
             {
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( packOutputDir ) ) == false )
+                if ( FileUtil::isDirectory( packOutputDir ) == false )
                     return true;
                 vector<string> listPackFile;
-                if ( FileUtil::collectFiles( FileUtil::toDiskPath( packOutputDir ), ".pack", listPackFile, false ) == false )
+                if ( FileUtil::collectFiles( packOutputDir, ".pack", listPackFile, false ) == false )
                     return false;
                 const string                             baseName = PackCooker::makePackFileName( domain );
                 StringBuilder<constant::buffer::kMax256> prefixBuilder;
@@ -957,7 +957,7 @@ namespace sw
              * @details 목록(@p listing)은 나누기가 한 번 고른 것을 받아 이 몫의 경로 해시만 담는다 — 목록이 바뀌면 몫의 경로 해시가 설정 해시에 들어 있어 다시 굽는다.
              *          첫 팩(기본 청크 0 번)은 도메인 전체의 정체성 색인을 함께 담는다.
              */
-            static CookStreamedStep cookDomainPack( const PackConfig& config, const PackCookParams& params, const string& domain, const string& outputPath, const DomainListing& listing,
+            static CookStreamedStep cookDomainPack( const PackConfig& config, const PackCookParams& params, const string& domain, const AbsolutePath& outputPath, const DomainListing& listing,
                                                     const PackPart& part, PackCookTiming& ioTiming )
             {
                 constexpr CookStreamedStep kFailed{ CookStep::Failed, 0 };
@@ -967,8 +967,8 @@ namespace sw
                 writerDesc._compressionLevel = config._compression._level;
                 writerDesc._layoutMode       = config._layout._mode;
                 writerDesc._maxHolePercent   = static_cast<uint32>( config._layout._maxHolePercent );
-                writerDesc._previousPackPath = FileUtil::toDiskPath( outputPath ); // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
-                writerDesc._mountDomain      = domain;                             // 형제 팩도 같은 도메인을 적는다 — 리더는 그대로 붙이고 마운트가 겹침을 거절한다
+                writerDesc._previousPackPath = outputPath; // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
+                writerDesc._mountDomain      = domain;     // 형제 팩도 같은 도메인을 적는다 — 리더는 그대로 붙이고 마운트가 겹침을 거절한다
                 writerDesc._blockSize        = config._compression._blockSize;
                 writerDesc._writeWindowBytes = config._compression._writeWindowBytes;
 
@@ -987,7 +987,7 @@ namespace sw
                     // 정체성 규칙 — 도메인의 GUID → 팩 안 경로 색인을 첫 팩에 담는다(`AssetPackIndex`). 못 읽으면 색인 없이 굽지 않는다.
                     AssetIdentityRules identityRules;
                     AssetPackIndex     identityIndex;
-                    if ( identityRules.load( ProcessRoots::get()._project.str() ) == false )
+                    if ( identityRules.load( ProcessRoots::get()._project ) == false )
                         return kFailed;
                     for ( const PackItem& item : listing._listItem ) // 색인은 도메인 전체다 — 다른 몫에 담긴 원본도 센다
                     {
@@ -1017,17 +1017,17 @@ namespace sw
                 }
 
                 PackWriteResult writeResult;
-                if ( writePackItems( config, writerDesc, outputPath, params, references, listItem, ioTiming, writeResult ) == false )
+                if ( writePackItems( config, writerDesc, outputPath.str(), params, references, listItem, ioTiming, writeResult ) == false )
                     return kFailed;
                 // 나누기의 어림은 압축 전 · 펼치기 전 크기다 — 데이터 상속을 펼친 글이 커져 한도를 넘었으면 오류로 멈춘다(한도는 FAT32 같은 바깥 상한이라 넘긴 팩은 못 싣는다).
                 if ( writeResult._fileSize > config._split._maxPackBytes )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackOverSplitLimit", "Pack cook: %# is %# bytes - over the %#-byte split limit (expanded text grew past the estimate); lower _split._maxPackBytes or add a chunk rule",
-                                     outputPath, writeResult._fileSize, config._split._maxPackBytes );
+                                     outputPath.str(), writeResult._fileSize, config._split._maxPackBytes );
                     return kFailed;
                 }
                 ioTiming._write.add( writeResult._stats );
-                SW_LOG_INFO_ID( "PackCooker.PackCookWroteFiles", "Pack cook: wrote %# (%# files, %# bytes before compression)", outputPath, writeResult._stats._entryCount,
+                SW_LOG_INFO_ID( "PackCooker.PackCookWroteFiles", "Pack cook: wrote %# (%# files, %# bytes before compression)", outputPath.str(), writeResult._stats._entryCount,
                                 writeResult._stats._inputBytes );
                 return CookStreamedStep{ CookStep::Written, writeResult._contentHash };
             }
@@ -1255,9 +1255,9 @@ namespace sw
         return false;
     }
 
-    bool PackCooker::writeChunkManifests( const string& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest )
+    bool PackCooker::writeChunkManifests( const AbsolutePath& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest )
     {
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( packOutputDir ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( packOutputDir ) == false )
             return false;
         for ( const string& domain : listDomain )
         {
@@ -1303,7 +1303,7 @@ namespace sw
             return false;
         if ( listDomain.empty() )
         {
-            SW_LOG_ERROR_ID( "PackCooker.PackCookFoundNo", "Pack cook found no domain folder under %#", params._resourceRoot );
+            SW_LOG_ERROR_ID( "PackCooker.PackCookFoundNo", "Pack cook found no domain folder under %#", params._resourceRoot.str() );
             return false;
         }
 
@@ -1341,9 +1341,9 @@ namespace sw
         const Stopwatch                    totalWatch;
         const int64                        outputHashStart = store.getOutputHashNanos(); // 이 쿠킹의 몫만 센다
         unordered_set<string>              setLedger;                                    // 이 팩 폴더에 쿠커가 쓴 팩(형제 팩 정리의 근거)
-        if ( PackCookerInternal::readCookedPackLedger( params._packOutputDir, setLedger ) == false )
+        if ( PackCookerInternal::readCookedPackLedger( params._packOutputDir.str(), setLedger ) == false )
         {
-            SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnreadable", "Pack cook: the cooked pack ledger in %# could not be read", params._packOutputDir );
+            SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnreadable", "Pack cook: the cooked pack ledger in %# could not be read", params._packOutputDir.str() );
             return false;
         }
         // 기동 때 마운트하는 청크 — 기본과 이름 붙은 패턴 청크. 씬 청크 · 공유 청크는 도메인마다의 목록(`packchunks.<도메인 줄기>.xml`)에 적어 씬을 열 때 마운트한다.
@@ -1441,11 +1441,11 @@ namespace sw
             if ( PackCookerInternal::removeStaleSiblingPacks( params._packOutputDir, domain, listWrittenName, setLedger ) == false )
                 ++failedCount;
         }
-        if ( failedCount == 0 && PackCookerInternal::writeChunkManifest( params._packOutputDir, listDomain, selection, mapPlacedChunk, mapChunkPack ) == false )
+        if ( failedCount == 0 && PackCookerInternal::writeChunkManifest( params._packOutputDir.str(), listDomain, selection, mapPlacedChunk, mapChunkPack ) == false )
             ++failedCount;
-        if ( PackCookerInternal::writeCookedPackLedger( params._packOutputDir, setLedger ) == false )
+        if ( PackCookerInternal::writeCookedPackLedger( params._packOutputDir.str(), setLedger ) == false )
         {
-            SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnwritable", "Pack cook: the cooked pack ledger in %# could not be written", params._packOutputDir );
+            SW_LOG_ERROR_ID( "PackCooker.PackLedgerUnwritable", "Pack cook: the cooked pack ledger in %# could not be written", params._packOutputDir.str() );
             ++failedCount;
         }
         PackCookerInternal::logSummary( outPackCount, failedCount, desc._target, totalWatch.getElapsedNanoseconds(),

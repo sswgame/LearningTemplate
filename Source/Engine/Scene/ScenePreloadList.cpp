@@ -34,7 +34,7 @@ namespace sw
         };
     } // namespace
 
-    string ScenePreloadList::makeListPath( string_view scenePath )
+    AbsolutePath ScenePreloadList::makeListPath( string_view scenePath )
     {
         for ( const string_view suffix : { ScenePreloadListInternal::kSceneXML, ScenePreloadListInternal::kSceneBin } )
         {
@@ -42,7 +42,7 @@ namespace sw
             {
                 StringBuilder<constant::buffer::kMax512> builder;
                 builder.appendFormat( "%#%#", scenePath.substr( 0, scenePath.size() - suffix.size() ), kExtension );
-                return string( builder.view() );
+                return FileUtil::toDiskPath( builder.view() );
             }
         }
         return {};
@@ -68,7 +68,7 @@ namespace sw
         VectorUtil::sortUnique( outListPath );
     }
 
-    bool ScenePreloadList::write( string_view diskPath, const vector<string>& listPath )
+    bool ScenePreloadList::write( const AbsolutePath& diskPath, const vector<string>& listPath )
     {
         JSONDocument document;
         JSONValue    root = document.makeObject();

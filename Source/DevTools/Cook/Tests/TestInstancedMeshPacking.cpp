@@ -79,7 +79,7 @@ SW_TEST_CASE( InstancedMeshPackingTest, PackedAnchorMergesStaticMeshMembers )
     const test::ScopedScratchDomain domain;
     Util::writeScenes( domain );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
     SW_REQUIRE_TRUE( doc._listSceneObjectNode.empty() == false );
     SW_EXPECT_TRUE( doc._listSceneObjectNode[0]._instancePacking == SceneInstancePacking::StaticMeshes ); // 내부 씬의 설정이 앵커에 실렸다
     SW_REQUIRE_EQUAL( size_t{ 6 }, doc._listSceneObjectNode.size() );
@@ -115,7 +115,7 @@ SW_TEST_CASE( InstancedMeshPackingTest, UnpackedSourceKeepsMemberEntities )
     const test::ScopedScratchDomain domain;
     Util::writeScenes( domain );
     SceneDocument doc{};
-    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ).str() ) );
+    SW_REQUIRE_TRUE( doc.loadXMLFromDiskFile( domain.makeDiskPath( "outer.scene.xml" ) ) );
     Scene scene{ "Outer" };
     SW_REQUIRE_TRUE( scene.instantiate( doc ) );
     SW_EXPECT_TRUE( scene.getObjectManager()->findGameObjectByName( hashed_string( "Village/Rock1" ) ) != nullptr );

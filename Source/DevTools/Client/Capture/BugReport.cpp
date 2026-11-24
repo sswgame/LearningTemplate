@@ -88,7 +88,7 @@ namespace sw
             static string computeConfigHash()
             {
                 uint64 hash = 0;
-                if ( BugReport::computeFolderHash( FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfig ), hash ) == false )
+                if ( BugReport::computeFolderHash( ProcessRoots::get()._project.join( config::kDirConfig ), hash ) == false )
                     return string{};
                 return BugReport::formatHash( hash );
             }
@@ -194,8 +194,8 @@ namespace sw
             {
                 if ( listArgument.size() > 1 || engine::areEngineServicesBound() == false )
                     return false;
-                const string folder = listArgument.empty() ? BugReport::findLatestDirectory( BugReport::getRoot() ) : listArgument[0];
-                if ( BugReport::goTo( engine::getSubsystem<SceneManager>(), folder, outReply ) == false )
+                const AbsolutePath folder = FileUtil::toDiskPath( listArgument.empty() ? BugReport::findLatestDirectory( BugReport::getRoot() ) : listArgument[0] );
+                if ( BugReport::goTo( engine::getSubsystem<SceneManager>(), folder.str(), outReply ) == false )
                     return false;
                 BugReport recorded;
                 if ( BugReport::readInfo( folder, recorded ) == false )
@@ -204,16 +204,16 @@ namespace sw
                 for ( const string& line : BugReport::findEnvironmentMismatches( recorded, current._report ) )
                     SW_LOG_WARNING_ID( "BugReport.ReplayEnvironmentDiffers", "bugreport.replay: environment differs - %#", line );
                 InputManager& input = engine::getSubsystem<InputManager>();
-                if ( input.playSessionRecording( FileUtil::joinPath( folder, BugReport::kInputFileName ) ) == false )
+                if ( input.playSessionRecording( FileUtil::joinPath( folder.str(), BugReport::kInputFileName ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reply;
-                    reply.appendFormat( "bugreport.replay: no input recording in '%#'", folder );
+                    reply.appendFormat( "bugreport.replay: no input recording in '%#'", folder.str() );
                     outReply = string( reply.view() );
                     return false;
                 }
-                SW_LOG_INFO_ID( "BugReport.ReplayStarted", "bugreport.replay: playing %# input frames from %#", input.getSessionRecording().getFrameCount(), folder );
+                SW_LOG_INFO_ID( "BugReport.ReplayStarted", "bugreport.replay: playing %# input frames from %#", input.getSessionRecording().getFrameCount(), folder.str() );
                 StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "bugreport.replay -> %#", folder );
+                reply.appendFormat( "bugreport.replay -> %#", folder.str() );
                 outReply = string( reply.view() );
                 return true;
             }
@@ -236,7 +236,7 @@ namespace sw
 
 namespace sw
 {
-    bool BugReport::writeInfo( string_view directory ) const
+    bool BugReport::writeInfo( const AbsolutePath& directory ) const
     {
         using Internal = BugReportInternal;
         StringBuilder<constant::buffer::kMax1024> text;
@@ -253,14 +253,14 @@ namespace sw
         text.appendFormat( "%# = %#\n", Internal::kKeyConfigHash, _configHash );
         text.appendFormat( "%# = %#\n", Internal::kKeyInputFrames, _inputFrameCount );
         text.appendFormat( "%# = %#\n", Internal::kKeyInputSeconds, Internal::formatFloat( _inputSeconds ) );
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, kInfoFileName ) ), text.view() );
+        return FileUtil::writeTextFile( directory.join( kInfoFileName ), text.view() );
     }
 
-    bool BugReport::readInfo( string_view directory, BugReport& outReport )
+    bool BugReport::readInfo( const AbsolutePath& directory, BugReport& outReport )
     {
         string text;
         // 폴더는 언제든 사라질 수 있다(다른 프로세스의 보관 개수 정리 `SavedCleanup`). 없는 것은 오류가 아니라 "그 리포트가 없다" 다. 못 읽은 것은 읽기가 오류를 남긴다.
-        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, kInfoFileName ) ), text ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( directory.join( kInfoFileName ), text ) != OptionalFileRead::Read )
             return false;
         outReport              = BugReport{};
         const string_view body = FileUtil::skipUTF8Bom( text );
@@ -307,26 +307,26 @@ namespace sw
         return true;
     }
 
-    string BugReport::makeUniqueDirectory( string_view root, const ScreenshotLocalTime& localTime )
+    AbsolutePath BugReport::makeUniqueDirectory( const AbsolutePath& root, const ScreenshotLocalTime& localTime )
     {
         StringBuilder<constant::buffer::kMax32> baseName;
         baseName.appendFormat( "%04d%02d%02d-%02d%02d%02d", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
         // 같은 초에 다른 프로세스(병렬 실행)가 같은 이름을 고를 수 있다 — 만들기가 곧 자리 잡기다.
-        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( root, baseName.c_str() ) ), {}, true, BugReportInternal::kMaxSameSecondSuffix ).str();
+        return FileUtil::reserveUniquePath( root.join( baseName.c_str() ), {}, true, BugReportInternal::kMaxSameSecondSuffix );
     }
 
-    string BugReport::findLatestDirectory( string_view root )
+    string BugReport::findLatestDirectory( const AbsolutePath& root )
     {
-        vector<string> listFolder;
-        if ( FileUtil::collectFolders( FileUtil::toDiskPath( root ), listFolder, false ) == false || listFolder.empty() )
+        vector<AbsolutePath> listFolder;
+        if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
             return string{};
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 순이 시간 순이다. 같은 초의 -2 · -3 은 뒤에 온다(-10 이 -9 앞에 오지만 같은 초에 열 번은 드물다).
-        const string* pLatest = &listFolder[0];
-        for ( const string& folder : listFolder )
+        const string* pLatest = &listFolder[0].str();
+        for ( const AbsolutePath& folder : listFolder )
         {
-            if ( *pLatest < folder )
-                pLatest = &folder;
+            if ( *pLatest < folder.str() )
+                pLatest = &folder.str();
         }
         return *pLatest;
     }
@@ -356,20 +356,20 @@ namespace sw
         return string( text.c_str() );
     }
 
-    bool BugReport::computeFolderHash( string_view directory, uint64& outHash )
+    bool BugReport::computeFolderHash( const AbsolutePath& directory, uint64& outHash )
     {
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( directory ), {}, listFile, true ) == false )
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( directory, {}, listFile, true ) == false )
             return false;
         VectorUtil::sort( listFile );
         uint64        hash = HashUtil::kFNVOffset64;
         vector<uint8> bytes;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
             // 상대 경로를 같이 접는다 — 같은 바이트의 파일이 이름만 바뀌어도 다른 설정이다.
-            const string_view relative = string_view( filePath ).substr( MathUtil::min( filePath.size(), directory.size() ) );
+            const string_view relative = string_view( filePath.str() ).substr( MathUtil::min( filePath.str().size(), directory.str().size() ) );
             hash                       = HashUtil::appendBytes64( hash, relative.data(), relative.size() );
-            if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), bytes ) == false )
+            if ( FileUtil::readFile( filePath, bytes ) == false )
                 return false;
             hash = HashUtil::appendBytes64( hash, bytes.data(), bytes.size() );
         }
@@ -412,7 +412,7 @@ namespace sw
         // 로거는 비동기다 — 비우지 않으면 bugreport 직전 줄이 사본에 없다.
         Logger::flushGlobalForCrash();
         if ( ILogSink* pSink = Logger::getGlobalSink(); pSink != nullptr )
-            inputs._logFilePath = pSink->getLogFilePath();
+            inputs._logFilePath = FileUtil::toDiskPath( pSink->getLogFilePath() );
 
         if ( engine::areEngineServicesBound() == false )
             return inputs;
@@ -453,29 +453,29 @@ namespace sw
     bool BugReport::capture( const BugReportInputs& inputs, string& outDirectory )
     {
         outDirectory.clear();
-        const string directory = makeUniqueDirectory( inputs._root, inputs._localTime );
+        const AbsolutePath directory = makeUniqueDirectory( inputs._root, inputs._localTime );
         if ( directory.empty() )
         {
-            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotCreate", "bugreport: could not create a folder under '%#'", inputs._root );
+            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotCreate", "bugreport: could not create a folder under '%#'", inputs._root.str() );
             return false;
         }
 
         const BugReport& report = inputs._report;
         if ( report.writeInfo( directory ) == false )
         {
-            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite", "bugreport: could not write '%#'", FileUtil::joinPath( directory, kInfoFileName ) );
+            SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite", "bugreport: could not write '%#'", FileUtil::joinPath( directory.str(), kInfoFileName ) );
             return false;
         }
 
         if ( inputs._bRequestScreenshot )
         {
-            const optional<AbsolutePath> screenshotPath = AbsolutePath::tryMake( FileUtil::joinPath( directory, kScreenshotFileName ) );
+            const optional<AbsolutePath> screenshotPath = AbsolutePath::tryMake( FileUtil::joinPath( directory.str(), kScreenshotFileName ) );
             if ( screenshotPath.has_value() )
                 RenderThread::requestScreenshot( *screenshotPath );
             else
-                SW_LOG_WARNING_ID( "BugReport.ScreenshotPathNotAbsolute", "bugreport: the report folder '%#' is not absolute - no screenshot", directory );
+                SW_LOG_WARNING_ID( "BugReport.ScreenshotPathNotAbsolute", "bugreport: the report folder '%#' is not absolute - no screenshot", directory.str() );
         }
-        if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( FileUtil::toDiskPath( inputs._logFilePath ), FileUtil::toDiskPath( FileUtil::joinPath( directory, kLogFileName ) ) ) == false )
+        if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( inputs._logFilePath, directory.join( kLogFileName ) ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportLogFileCould", "bugreport: the log file could not be copied" );
 #if !defined( SW_SHIPPING )
         if ( inputs._pFrameProfiler != nullptr )
@@ -484,13 +484,13 @@ namespace sw
             string tracePath;
             string traceReply;
             if ( ProfilerTraceExport::saveRecentFrames( *inputs._pFrameProfiler, ProfilerTimeline::kFrameCapacity - 1,
-                                                        FileUtil::joinPath( directory, kTraceFileName ), "Game", tracePath, traceReply ) )
+                                                        FileUtil::joinPath( directory.str(), kTraceFileName ), "Game", tracePath, traceReply ) )
                 SW_LOG_INFO_ID( "BugReport.BugreportTimelineTraceSaved", "bugreport: timeline trace saved (%#)", traceReply );
         }
 #endif
         if ( inputs._pInputRecording != nullptr && inputs._pInputRecording->getFrameCount() > 0 )
         {
-            const optional<AbsolutePath> inputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kInputFileName ) );
+            const optional<AbsolutePath> inputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory.str(), kInputFileName ) );
             if ( inputPath.has_value() == false || inputs._pInputRecording->saveToFile( *inputPath ) == false )
                 SW_LOG_WARNING_ID( "BugReport.BugreportInputCould", "bugreport: the input recording could not be saved" );
             else
@@ -498,7 +498,7 @@ namespace sw
         }
         if ( inputs._pSceneManager != nullptr )
         {
-            const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kSceneFileName ) );
+            const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory.str(), kSceneFileName ) );
             if ( scenePath.has_value() == false || inputs._pSceneManager->saveActiveSceneCopy( *scenePath ) == false )
                 SW_LOG_WARNING_ID( "BugReport.BugreportSceneCopyCould", "bugreport: the scene copy could not be saved" );
         }
@@ -509,29 +509,29 @@ namespace sw
             repro.appendFormat( " -%#", inputs._backendFlag );
         if ( inputs._bEditor )
             repro.append( " -EnableEditor" );
-        repro.appendFormat( " -gv_devConsoleExec=\"bugreport.goto %#\"\n", directory );
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( directory, kReproFileName ) ), repro.view() ) == false )
+        repro.appendFormat( " -gv_devConsoleExec=\"bugreport.goto %#\"\n", directory.str() );
+        if ( FileUtil::writeTextFile( directory.join( kReproFileName ), repro.view() ) == false )
             SW_LOG_WARNING_ID( "BugReport.BugreportCouldNotWrite2", "bugreport: could not write the repro command" );
 
-        SW_LOG_INFO_ID( "BugReport.Saved", "Bug report saved to %# (note: %#)", directory, report._note );
-        outDirectory = directory;
+        SW_LOG_INFO_ID( "BugReport.Saved", "Bug report saved to %# (note: %#)", directory.str(), report._note );
+        outDirectory = directory.str();
         return true;
     }
 
-    string BugReport::getRoot()
+    AbsolutePath BugReport::getRoot()
     {
         const ProcessRoots& roots = ProcessRoots::get();
-        return FileUtil::joinPath( roots._bRunFromParent == 1 ? roots._run.str() : roots._saved.str(), kFolderName );
+        return FileUtil::toDiskPath( FileUtil::joinPath( roots._bRunFromParent == 1 ? roots._run.str() : roots._saved.str(), kFolderName ) );
     }
 
     bool BugReport::goTo( SceneManager& sceneManager, string_view directory, string& outReply )
     {
-        const string folder = directory.empty() ? findLatestDirectory( BugReport::getRoot() ) : string( directory );
-        BugReport    report;
+        const AbsolutePath folder = FileUtil::toDiskPath( directory.empty() ? findLatestDirectory( BugReport::getRoot() ) : string( directory ) );
+        BugReport          report;
         if ( folder.empty() || readInfo( folder, report ) == false )
         {
             StringBuilder<constant::buffer::kMax1024> reply;
-            reply.appendFormat( "bugreport.goto: no BugReport folder at '%#'", folder );
+            reply.appendFormat( "bugreport.goto: no BugReport folder at '%#'", folder.str() );
             outReply = string( reply.view() );
             return false;
         }
@@ -559,9 +559,9 @@ namespace sw
         }
         pCamera->setWorldPosition( report._cameraPosition );
         pCamera->lookAt( report._cameraPosition + computeForward( report._cameraRotationDegrees ) );
-        SW_LOG_INFO_ID( "BugReport.GotoMoved", "bugreport.goto moved the view camera to %# from %#", BugReportInternal::formatFloat3( report._cameraPosition ), folder );
+        SW_LOG_INFO_ID( "BugReport.GotoMoved", "bugreport.goto moved the view camera to %# from %#", BugReportInternal::formatFloat3( report._cameraPosition ), folder.str() );
         StringBuilder<constant::buffer::kMax1024> reply;
-        reply.appendFormat( "bugreport.goto -> %# (camera %#)", folder, BugReportInternal::formatFloat3( report._cameraPosition ) );
+        reply.appendFormat( "bugreport.goto -> %# (camera %#)", folder.str(), BugReportInternal::formatFloat3( report._cameraPosition ) );
         outReply = string( reply.view() );
         return true;
     }

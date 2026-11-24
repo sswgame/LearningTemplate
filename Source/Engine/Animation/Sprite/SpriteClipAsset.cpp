@@ -47,7 +47,7 @@ namespace sw
         return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool SpriteClipAsset::loadFromDiskFile( string_view diskPath )
+    bool SpriteClipAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         clear();
         if ( diskPath.empty() )
@@ -56,10 +56,10 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath.str() );
             return false;
         }
-        return loadFromXMLText( text, diskPath );
+        return loadFromXMLText( text, diskPath.str() );
     }
 
     bool SpriteClipAsset::loadFromXMLText( const string& text, string_view sourceLabel )

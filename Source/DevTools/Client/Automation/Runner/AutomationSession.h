@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
@@ -170,7 +171,7 @@ namespace sw
         unique_ptr<AutomationScenarioChain> _pChain;
         ScenarioRecorder                    _recorder;
         vector<string>                      _listRecordWatch;          ///< `-scenario-record-watches` 의 검사점
-        string                              _recordPath;               ///< `-scenario-record` 경로(비면 녹화하지 않는다)
+        AbsolutePath                        _recordPath;               ///< `-scenario-record` 경로(비면 녹화하지 않는다)
         string                              _reportPath;               ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;            ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
         string                              _runPolicyError;           ///< 대기 정책(`Config/Dev/ScenarioRun.json`)을 읽지 못한 까닭(읽었으면 빈 글) — 단계마다 읽기 오류로 끝낸다

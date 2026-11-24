@@ -11,7 +11,7 @@ namespace sw
 {
     bool FrameProfileReport::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || JSONSerializer::saveToFile( absPath.str(), this, *StaticType() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || JSONSerializer::saveToFile( absPath, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR_ID( "FrameProfileReport.SaveFailed", "[Profile] could not write the profile report %#", absPath.str() );
             return false;

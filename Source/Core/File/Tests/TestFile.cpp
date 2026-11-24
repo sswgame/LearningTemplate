@@ -292,21 +292,21 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
     const sw::string       content  = "collect-case";
     SW_EXPECT_TRUE( sw::FileUtil::writeFile( filePath, reinterpret_cast<const uint8*>( content.data() ), content.size() ) );
 
-    sw::vector<sw::string> listFolder;
+    sw::vector<sw::AbsolutePath> listFolder;
     SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, false ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFolder.size() ) );
     if ( listFolder.empty() == false )
-        SW_EXPECT_EQUAL( subDir.str(), listFolder[0] );
+        SW_EXPECT_EQUAL( subDir.str(), listFolder[0].str() );
 
-    sw::vector<sw::string> listFile;
+    sw::vector<sw::AbsolutePath> listFile;
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".bin", listFile, true ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
     if ( listFile.empty() == false )
     {
         // 수집한 경로를 **가공 없이** 다시 열 수 있어야 한다 — 이게 이 함수의 계약이다.
-        SW_EXPECT_EQUAL( filePath.str(), listFile[0] );
+        SW_EXPECT_EQUAL( filePath.str(), listFile[0].str() );
         sw::vector<uint8> readBuffer;
-        SW_EXPECT_TRUE( sw::FileUtil::readFile( sw::FileUtil::toDiskPath( listFile[0] ), readBuffer ) );
+        SW_EXPECT_TRUE( sw::FileUtil::readFile( listFile[0], readBuffer ) );
         SW_EXPECT_EQUAL( content, sw::string( readBuffer.begin(), readBuffer.end() ) );
     }
 }
@@ -380,28 +380,28 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 
     BLOCK( "비재귀 파일 — 바로 아래만, 확장자 필터가 걸린다" )
     {
-        sw::vector<sw::string> listFile;
+        sw::vector<sw::AbsolutePath> listFile;
         SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, false ) );
         SW_EXPECT_EQUAL( size_t( 1 ), listFile.size() );
     }
 
     BLOCK( "재귀 파일 — 하위까지 본다" )
     {
-        sw::vector<sw::string> listFile;
+        sw::vector<sw::AbsolutePath> listFile;
         SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".txt", listFile, true ) );
         SW_EXPECT_EQUAL( size_t( 2 ), listFile.size() );
     }
 
     BLOCK( "필터가 비면 전부" )
     {
-        sw::vector<sw::string> listFile;
+        sw::vector<sw::AbsolutePath> listFile;
         SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, "", listFile, true ) );
         SW_EXPECT_EQUAL( size_t( 3 ), listFile.size() );
     }
 
     BLOCK( "폴더 — 비재귀와 재귀" )
     {
-        sw::vector<sw::string> listFolder;
+        sw::vector<sw::AbsolutePath> listFolder;
         SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, false ) );
         SW_EXPECT_EQUAL( size_t( 1 ), listFolder.size() );
 
@@ -412,7 +412,7 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 
     BLOCK( "없는 디렉터리는 false — 던지지 않는다" )
     {
-        sw::vector<sw::string> listFile;
+        sw::vector<sw::AbsolutePath> listFile;
         SW_EXPECT_FALSE( sw::FileUtil::collectFiles( rootDir.join( "nope" ), "", listFile, true ) );
         SW_EXPECT_TRUE( listFile.empty() );
     }
@@ -438,7 +438,7 @@ SW_TEST_CASE( FileTest, CollectedPathsAreSortedOnEveryPlatform )
     SW_EXPECT_TRUE( listFile[0] == "keep-first" );
     SW_EXPECT_TRUE( std::is_sorted( listFile.begin() + 1, listFile.end() ) );
 
-    sw::vector<sw::string> listFolder;
+    sw::vector<sw::AbsolutePath> listFolder;
     SW_EXPECT_TRUE( sw::FileUtil::collectFolders( rootDir, listFolder, true ) );
     SW_EXPECT_EQUAL( size_t( 5 ), listFolder.size() );
     SW_EXPECT_TRUE( std::is_sorted( listFolder.begin(), listFolder.end() ) );
@@ -462,7 +462,7 @@ SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
     SW_EXPECT_EQUAL( sw::string( "3" ), text );
 
-    sw::vector<sw::string> listFile;
+    sw::vector<sw::AbsolutePath> listFile;
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "", listFile, false ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
 
@@ -490,7 +490,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
     SW_EXPECT_TRUE( sw::FileUtil::isDirectory( blockedPath.join( "child" ) ) );
 
     // 폴더 안에 임시 파일을 남기지 않는다.
-    sw::vector<sw::string> listFile;
+    sw::vector<sw::AbsolutePath> listFile;
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "", listFile, false ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listFile.size() ) );
 
@@ -519,10 +519,10 @@ SW_TEST_CASE( FileTest, NonASCIIPathRoundTrips )
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
     SW_EXPECT_EQUAL( sw::string( "저장됨" ), text );
 
-    sw::vector<sw::string> listFile;
+    sw::vector<sw::AbsolutePath> listFile;
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "txt", listFile, false ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
-    SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( listFile[0] ) == "세이브_1.txt" );
+    SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( listFile[0].str() ) == "세이브_1.txt" );
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
 }

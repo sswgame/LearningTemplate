@@ -164,7 +164,7 @@ namespace sw::editor
 
     bool ProfilerTimelineViewModel::loadTraceFile( string_view path )
     {
-        expected<ProfilerLoadedTrace> loaded = ProfilerTraceExport::loadTraceFile( path );
+        expected<ProfilerLoadedTrace> loaded = ProfilerTraceExport::loadTraceFile( FileUtil::toDiskPath( path ) );
         if ( loaded.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax512> statusBuilder;

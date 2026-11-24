@@ -16,6 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetFlowLog.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -153,7 +154,7 @@ namespace sw
          */
         [[nodiscard]] static bool mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport );
         /** @brief 파일들을 읽어 `mergeTraceJSON` 으로 합치고 @p outputPath 에 씁니다. 이름은 각 파일의 머리말 프로세스 이름입니다. */
-        [[nodiscard]] static bool mergeTraceFiles( const vector<string>& listInputPath, string_view outputPath, string& outReply );
+        [[nodiscard]] static bool mergeTraceFiles( const vector<AbsolutePath>& listInputPath, const AbsolutePath& outputPath, string& outReply );
         /**
          * @brief Trace Event JSON(이 파일이 낸 것, 또는 완전 이벤트 `X` 와 스레드 이름 메타를 가진 다른 도구의 것)을 읽습니다.
          * @details 시각은 마이크로초 → 나노초. 같은 (pid, tid) 는 한 스레드이고, 스레드 줄 이름은 `thread_name` 메타입니다(없으면 `tid <번호>`).
@@ -162,7 +163,7 @@ namespace sw
          */
         [[nodiscard]] static expected<ProfilerLoadedTrace> parseTraceJSON( string_view json );
         /** @brief 파일을 읽어 `parseTraceJSON` 으로 해석합니다(`_sourcePath` 에 경로). */
-        [[nodiscard]] static expected<ProfilerLoadedTrace> loadTraceFile( string_view path );
+        [[nodiscard]] static expected<ProfilerLoadedTrace> loadTraceFile( const AbsolutePath& path );
         /** @brief 기본 저장 폴더(`<프로젝트>/Saved/Traces`)에서 가장 최근 `.trace.json` 의 경로입니다. 없으면 빈 글. */
         static string findLatestTraceFile();
 

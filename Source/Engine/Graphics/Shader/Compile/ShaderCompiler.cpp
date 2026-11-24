@@ -868,7 +868,7 @@ namespace sw
         const expected<DerivedDataCache>&  cache = Internal::getDerivedDataCache();
         if ( input.has_value() == false || cache.has_value() == false )
             return nullopt;
-        const Internal::CompileAction action = Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), ContentHash::computeFile( input->_source.str() ) );
+        const Internal::CompileAction action = Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), ContentHash::computeFile( input->_source ) );
         CookRecord                    record;
         if ( cache->readRecord( action._actionKey, record ) == false || record.isFresh( action._jobDesc ) == false )
             return nullopt;
@@ -923,7 +923,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ShaderCompiler.DerivedDataUnavailable", "%#: %# (%#)", result._errorMessage, derivedDataCache.error().message(), derivedDataCache.error().detail() );
             return result;
         }
-        const uint64                  sourceHash = ContentHash::computeFile( input->_source.str() ); // 못 읽으면 0 — 컴파일도 같은 파일을 읽다 실패한다
+        const uint64                  sourceHash = ContentHash::computeFile( input->_source ); // 못 읽으면 0 — 컴파일도 같은 파일을 읽다 실패한다
         const Internal::CompileAction action     = Internal::makeCompileAction( desc, sourceHash );
         if ( action._bUseCache && Internal::findCached( *derivedDataCache, action, result._record, result._bytecode ) )
         {

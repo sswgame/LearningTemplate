@@ -34,11 +34,11 @@ namespace sw
              */
             static TaskResult runCrashReporter( const CommandLineManager& commandLine, EditorModuleHeadlessSession& /*editorModule*/ )
             {
-                string reporterFolder;
+                AbsolutePath reporterFolder;
                 if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
                     return TaskResult::NotRequested;
                 NullCrashReportUploader       uploader;
-                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( FileUtil::toDiskPath( reporterFolder ), uploader );
+                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, uploader );
                 SW_LOG_INFO_ID( "App.ReportSent", "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
                 return TaskResult::Finished;
             }

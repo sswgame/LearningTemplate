@@ -51,7 +51,7 @@ namespace sw
         template <typename DescType>
         [[nodiscard]] static bool loadDescFromDiskFile( string_view diskPath, DescType& outDesc )
         {
-            return loadDescFromDiskFileInternal( diskPath, &outDesc, DescType::StaticType() );
+            return loadDescFromDiskFileInternal( FileUtil::toDiskPath( diskPath ), &outDesc, DescType::StaticType() );
         }
 
         /** @brief 리플렉션 desc 를 XML 글에서 읽습니다(에디터가 저장하지 않은 편집을 미리 본다). 규칙 · 부모 펼치기는 파일 읽기와 같고 @p sourceName 은 로그에 찍는 이름입니다. */
@@ -94,7 +94,7 @@ namespace sw
          */
         [[nodiscard]] static bool loadDescInternal( const AssetID& assetID, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 디스크 파일 판입니다. */
-        [[nodiscard]] static bool loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo );
+        [[nodiscard]] static bool loadDescFromDiskFileInternal( const AbsolutePath& diskPath, void* pDesc, const TypeInfo* pTypeInfo );
         /**
          * @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다.
          * @param assetID 리소스 입구면 그 id(덮어쓰기 층 · 다시 읽기 기록), 디스크 입구면 빈 id 입니다.

@@ -58,11 +58,11 @@ namespace sw
 
 namespace sw
 {
-    expected<AutomationImage> AutomationImage::loadPpm( string_view path )
+    expected<AutomationImage> AutomationImage::loadPpm( const AbsolutePath& path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the image file", path } );
+        if ( FileUtil::readFile( path, bytes ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the image file", path.str() } );
         return parsePpm( bytes.data(), bytes.size() );
     }
 

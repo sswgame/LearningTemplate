@@ -81,9 +81,9 @@ namespace sw
         return state;
     }
 
-    uint64 ContentHash::computeFile( string_view absPath )
+    uint64 ContentHash::computeFile( const AbsolutePath& absPath )
     {
-        return engine::getSubsystem<ContentHashCache>().computeFile( FileUtil::toDiskPath( absPath ) );
+        return engine::getSubsystem<ContentHashCache>().computeFile( absPath );
     }
 
     void ContentHash::clearCache()

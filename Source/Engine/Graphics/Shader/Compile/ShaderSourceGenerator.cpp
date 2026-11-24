@@ -25,7 +25,7 @@ namespace sw
         (void)ShaderSourceGeneratorInternal::getList().remove( pGenerator ); // 올라 있지 않으면 할 일이 없다
     }
 
-    bool IShaderSourceGenerator::refreshAllRegistered( const AssetPaths& assetPaths, string_view contentRoot, uint32& outWrittenCount )
+    bool IShaderSourceGenerator::refreshAllRegistered( const AssetPaths& assetPaths, const AbsolutePath& contentRoot, uint32& outWrittenCount )
     {
         const vector<const IShaderSourceGenerator*> listGenerator = ShaderSourceGeneratorInternal::getList().withLock( []( const RegistrationList<const IShaderSourceGenerator>& list )
         { return list.getItems(); } );
@@ -33,7 +33,7 @@ namespace sw
     }
 
     bool IShaderSourceGenerator::refreshGenerators( const vector<const IShaderSourceGenerator*>& listGenerator, const bool bRequireGenerator, const AssetPaths& assetPaths,
-                                                    const string_view contentRoot, uint32& outWrittenCount )
+                                                    const AbsolutePath& contentRoot, uint32& outWrittenCount )
     {
         if ( listGenerator.empty() && bRequireGenerator )
         {

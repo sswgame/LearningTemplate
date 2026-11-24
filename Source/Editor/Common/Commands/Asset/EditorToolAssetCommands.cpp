@@ -111,7 +111,7 @@ namespace sw::editor
             template <typename TAsset>
             [[nodiscard]] static bool readDocument( TAsset& outData, const string& resolved )
             {
-                return outData.loadFromDiskFile( resolved );
+                return outData.loadFromDiskFile( FileUtil::toDiskPath( resolved ) );
             }
 
             template <typename TAsset>

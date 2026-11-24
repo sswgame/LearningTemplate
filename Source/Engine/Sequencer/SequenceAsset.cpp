@@ -129,7 +129,7 @@ namespace sw
         return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool SequenceAsset::loadFromDiskFile( string_view diskPath )
+    bool SequenceAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         *this = SequenceAsset{};
         if ( diskPath.empty() )
@@ -138,10 +138,10 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence2", "Could not read sequence file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence2", "Could not read sequence file '%#'", diskPath.str() );
             return false;
         }
-        return readText( text, diskPath, ResourceContext::forType( *StaticType() ) );
+        return readText( text, diskPath.str(), ResourceContext::forType( *StaticType() ) );
     }
 
     bool SequenceAsset::saveToFile( const AbsolutePath& absPath ) const

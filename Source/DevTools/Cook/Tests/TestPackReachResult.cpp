@@ -43,7 +43,7 @@ namespace
             }
         };
 
-        static bool loadRepositoryProperties( AssetReferenceFields& outParams ) { return outParams.load( ProcessRoots::get()._project.str() ); }
+        static bool loadRepositoryProperties( AssetReferenceFields& outParams ) { return outParams.load( ProcessRoots::get()._project ); }
 
         /** @brief 그래프를 세워 전체를 고릅니다(미루는 뿌리 없음). */
         static bool collect( const AssetReferenceFields& params, const PackCookRules& rules, const PackReachFiles& files, const MemorySource& source, PackReachResult& outResult )

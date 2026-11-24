@@ -28,7 +28,7 @@ namespace sw
 
         DeferredLibrary deferredLibrary{};
         deferredLibrary._moduleName = string{ moduleName };
-        deferredLibrary._shadowPath = string{ shadowPath };
+        deferredLibrary._shadowPath = FileUtil::toDiskPath( shadowPath );
         deferredLibrary._pHandle    = pHandle;
         deferredLibrary._batchID    = _batchID;
         _listLibrary.push_back( std::move( deferredLibrary ) );

@@ -71,12 +71,12 @@ namespace sw
         Internal::appendPartHeader( request._body, "manifest", "", "application/json" );
         request._body += bundle._manifest;
         request._body += "\r\n";
-        for ( const string& path : bundle._listFilePath )
+        for ( const AbsolutePath& path : bundle._listFilePath )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
+            if ( FileUtil::readFile( path, bytes ) == false )
                 continue;
-            const string fileName = FileUtil::getFileNamePart( path );
+            const string fileName = FileUtil::getFileNamePart( path.str() );
             Internal::appendPartHeader( request._body, Internal::makeFieldName( fileName ), fileName, "application/octet-stream" );
             request._body.append( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             request._body += "\r\n";

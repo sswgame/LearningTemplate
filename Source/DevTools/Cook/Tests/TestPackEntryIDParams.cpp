@@ -144,9 +144,9 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     const JSONValue listExempt = exemptionDoc.getRoot().get( "listExempt" );
     SW_REQUIRE_TRUE( listExempt.isArray() );
 
-    const string   contentRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._content.str() );
-    vector<string> listFile;
-    SW_REQUIRE_TRUE( FileUtil::collectFiles( FileUtil::toDiskPath( contentRoot ), "", listFile, true ) );
+    const AbsolutePath contentRoot = ProcessRoots::get()._content;
+    vector<string>     listFile;
+    SW_REQUIRE_TRUE( FileUtil::collectFiles( contentRoot, "", listFile, true ) );
 
     // 카탈로그 줄마다 항목 id 를 모은다.
     unordered_set<string> setID;

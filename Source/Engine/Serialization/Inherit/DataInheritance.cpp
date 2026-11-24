@@ -710,7 +710,7 @@ namespace sw
         return AssetIO::readTextAsset( AssetID{ assetID }, outText );
     }
 
-    DataInheritanceDiskSource::DataInheritanceDiskSource( string_view contentRoot, optional<uint32> maxDepth )
+    DataInheritanceDiskSource::DataInheritanceDiskSource( const AbsolutePath& contentRoot, optional<uint32> maxDepth )
         : DataInheritanceSource{ maxDepth }
         , _contentRoot{ contentRoot }
     {
@@ -718,7 +718,7 @@ namespace sw
 
     bool DataInheritanceDiskSource::readText( string_view assetID, string& outText )
     {
-        const string diskPath = FileUtil::joinPath( _contentRoot, assetID );
+        const AbsolutePath diskPath = _contentRoot.join( assetID );
         return AssetIO::readTextFile( diskPath, outText ); // 없는 파일도 작업의 입력(해시 0)으로 남는다 — 부모가 생기면 다시 굽는다
     }
 
@@ -991,23 +991,23 @@ namespace sw
         return true;
     }
 
-    bool DataInheritance::collectChildren( string_view contentRoot, string_view baseID, const vector<string>& listExtension, vector<string>& outListChildID )
+    bool DataInheritance::collectChildren( const AbsolutePath& contentRoot, string_view baseID, const vector<string>& listExtension, vector<string>& outListChildID )
     {
         outListChildID.clear();
         const string normalizedBase = FileUtil::normalizePath( baseID ).str();
         for ( const string& extension : listExtension )
         {
-            vector<string> listFile;
+            vector<AbsolutePath> listFile;
             if ( AssetPaths::collectContentFiles( contentRoot, extension, listFile ) == false )
                 return false;
-            for ( const string& filePath : listFile )
+            for ( const AbsolutePath& filePath : listFile )
             {
                 string text;
                 if ( AssetIO::readTextFile( filePath, text ) == false )
                     return false;
                 const string basePath = findBasePath( text );
                 string       relativePath;
-                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ).str() == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot, filePath, relativePath ) )
+                if ( basePath.empty() == false && FileUtil::normalizePath( basePath ).str() == normalizedBase && FileUtil::tryMakePathUnderRoot( contentRoot.str(), filePath.str(), relativePath ) )
                     outListChildID.push_back( FileUtil::normalizePath( relativePath ).str() );
             }
         }

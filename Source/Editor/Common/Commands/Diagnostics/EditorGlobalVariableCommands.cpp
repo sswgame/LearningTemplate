@@ -124,7 +124,7 @@ namespace sw::editor
     {
         vector<string> listName;
         XMLDocument    doc;
-        if ( doc.loadFromFile( filePath ) )
+        if ( doc.loadFromFile( FileUtil::toDiskPath( filePath ) ) )
         {
             EditorGlobalVariableCommandsInternal::forEachVariable( doc, [&listName]( const GlobalVariableInfo& info, const utf8* /*pValue*/ )
             {

@@ -132,7 +132,7 @@ namespace sw
         return parseText( text, path, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
-    bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
+    bool AnimationGraphAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         clear();
@@ -142,7 +142,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
             return false;
-        return parseText( text, diskPath, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
+        return parseText( text, diskPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
     }
 
     bool AnimationGraphAsset::saveToFile( const AbsolutePath& absPath ) const

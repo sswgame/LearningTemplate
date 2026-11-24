@@ -778,7 +778,7 @@ namespace sw::editor
     uint64 EditorAutosaveCommands::computeSourceHash( string_view sourceID )
     {
         const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        return sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
+        return sourcePath.has_value() ? ContentHash::computeFile( *sourcePath ) : 0;
     }
 
     uint64 EditorAutosaveCommands::computeDocumentSourceHash( const EditorDocumentAutosaveEntry& entry )
@@ -786,6 +786,6 @@ namespace sw::editor
         if ( entry._panelID.empty() )
             return computeSourceHash( entry._documentPath );
         const optional<AbsolutePath> filePath = EditorDocumentAutosaveEntry::resolveFileID( entry._documentPath );
-        return filePath.has_value() ? ContentHash::computeFile( filePath->str() ) : 0;
+        return filePath.has_value() ? ContentHash::computeFile( *filePath ) : 0;
     }
 } // namespace sw::editor

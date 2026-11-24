@@ -82,35 +82,35 @@ namespace sw
         };
     } // namespace
 
-    bool AssetIdentityRules::load( string_view projectRoot )
+    bool AssetIdentityRules::load( const AbsolutePath& projectRoot )
     {
-        const string path = FileUtil::joinPath( projectRoot, kConfigFile );
-        JSONDocument document;
+        const AbsolutePath path = projectRoot.join( kConfigFile );
+        JSONDocument       document;
         if ( document.loadFromFile( path ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetIdentityRules.ConfigUnreadable", "Asset identity rules %# could not be read", path );
+            SW_LOG_ERROR_ID( "AssetIdentityRules.ConfigUnreadable", "Asset identity rules %# could not be read", path.str() );
             return false;
         }
         AssetIdentityRules loaded;
         // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
-        bool            bValid   = JSONFields::readProperties( document.getRoot(), loaded, path, { "_comment", "listImportedFolder" } );
+        bool            bValid   = JSONFields::readProperties( document.getRoot(), loaded, path.str(), { "_comment", "listImportedFolder" } );
         const JSONValue imported = document.getRoot().get( "listImportedFolder" );
         if ( imported.isArray() == false || imported.size() == 0 )
         {
-            SW_LOG_ERROR_ID( "AssetIdentityRules.NoImportedFolder", "Asset identity rules %# need listImportedFolder", path );
+            SW_LOG_ERROR_ID( "AssetIdentityRules.NoImportedFolder", "Asset identity rules %# need listImportedFolder", path.str() );
             bValid = false;
         }
         for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
         {
             AssetImportedFolder folder;
-            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
-            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
-            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listOutputSuffix, "listOutputSuffix", path ) && bValid;
+            bValid = JSONFields::readProperties( imported.at( index ), folder, path.str() ) && bValid;
+            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path.str() ) && bValid;
+            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listOutputSuffix, "listOutputSuffix", path.str() ) && bValid;
             loaded._listImportedFolder.push_back( std::move( folder ) );
         }
-        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path ) && bValid;
-        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path ) && bValid;
-        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listKeptDerived, "listKeptDerived", path ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path.str() ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path.str() ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listKeptDerived, "listKeptDerived", path.str() ) && bValid;
         if ( bValid == false )
             return false;
         _listHeaderSuffix   = std::move( loaded._listHeaderSuffix );
@@ -276,11 +276,11 @@ namespace sw
         _source        = address->toText();
     }
 
-    string AssetMeta::makePath( string_view sourcePath )
+    AbsolutePath AssetMeta::makePath( string_view sourcePath )
     {
         StringBuilder<constant::buffer::kMax512> builder;
         builder.appendFormat( "%#%#", sourcePath, kExtension );
-        return string( builder.view() );
+        return FileUtil::toDiskPath( builder.view() );
     }
 
     string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
@@ -317,7 +317,7 @@ namespace sw
                 const AbsolutePath metaPath = AssetMeta::makePath( absPath );
                 AssetMeta          copied;
                 string             copiedText;
-                const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
+                const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ).str() ).has_value();
                 if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, guid, bCopied ? copied._listImportOverride : vector<AssetImportOverride>{} ) ) )
                 {
                     AssetRegistry::record( guid, assetID );
@@ -491,7 +491,7 @@ namespace sw
                     break;
                 }
                 case AssetIdentityKind::Source:
-                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ) ) ) )
+                    if ( setSidecarID.contains( Internal::toLowerID( AssetMeta::makePath( assetID ).str() ) ) )
                         break;
                     if ( rules.isUnderDerivedFolder( assetID ) )
                         listOutputID.push_back( &assetID );
@@ -571,29 +571,29 @@ namespace sw
         return build( listFile, rules, outListIssue );
     }
 
-    optional<AssetGUID> AssetIdentityRules::readIdentity( string_view absPath, string_view assetID ) const
+    optional<AssetGUID> AssetIdentityRules::readIdentity( const AbsolutePath& absPath, string_view assetID ) const
     {
         const AssetIdentityKind kind = classify( assetID );
         string                  text;
         const bool              bHeader = kind == AssetIdentityKind::Header;
         if ( bHeader == false && kind != AssetIdentityKind::Source )
             return nullopt;
-        if ( bHeader && FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) )
+        if ( bHeader && FileUtil::readTextFile( absPath, text ) )
         {
             const optional<AssetGUID> headerGUID = AssetGUIDHeader::read( text )._guid;
             if ( headerGUID.has_value() )
                 return headerGUID;
         }
-        const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( absPath ) );
+        const AbsolutePath metaPath = AssetMeta::makePath( absPath );
         if ( bHeader == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
         {
             AssetMeta meta;
-            return meta.parseXML( text, AssetMeta::makePath( assetID ) );
+            return meta.parseXML( text, AssetMeta::makePath( assetID ).str() );
         }
         // 자기 정체성이 없는 산출물 자리의 파일은 임포트 산출물이다 — 원본의 `.meta` 와 산출물 이름이 정체성이다.
-        if ( isUnderDerivedFolder( assetID ) == false || absPath.size() <= assetID.size() )
+        if ( isUnderDerivedFolder( assetID ) == false || absPath.str().size() <= assetID.size() )
             return nullopt;
-        const AbsolutePath          contentRoot = FileUtil::toDiskPath( absPath.substr( 0, absPath.size() - assetID.size() ) );
+        const AbsolutePath          contentRoot = FileUtil::toDiskPath( absPath.str().substr( 0, absPath.str().size() - assetID.size() ) );
         vector<AssetImportedSource> listSource;
         collectImportedSources( assetID, listSource );
         for ( const AssetImportedSource& source : listSource )
@@ -602,7 +602,7 @@ namespace sw
             if ( FileUtil::isRegularFile( sourceMetaPath ) == false || FileUtil::readTextFile( sourceMetaPath, text ) == false )
                 continue;
             AssetMeta                 meta;
-            const optional<AssetGUID> sourceGUID = meta.parseXML( text, AssetMeta::makePath( source._sourceID ) );
+            const optional<AssetGUID> sourceGUID = meta.parseXML( text, AssetMeta::makePath( source._sourceID ).str() );
             return sourceGUID.has_value() ? optional<AssetGUID>{ AssetGUID::fromName( *sourceGUID, source._outputName ) } : nullopt;
         }
         return nullopt;

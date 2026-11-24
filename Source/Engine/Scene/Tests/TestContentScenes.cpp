@@ -27,7 +27,7 @@ SW_TEST_CASE( ContentScenesTest, EngineAndActiveGameScenesLoad )
         for ( const AbsolutePath& path : listPath )
         {
             SceneDocument                            document;
-            const bool                               bLoaded = document.loadXMLFromDiskFile( path.str() );
+            const bool                               bLoaded = document.loadXMLFromDiskFile( path );
             StringBuilder<constant::buffer::kMax512> failure;
             if ( bLoaded == false )
                 failure.appendFormat( "%#: could not be loaded (see the log)", path.str() );

@@ -37,8 +37,8 @@ SW_TEST_CASE( ScenePreloadTest, PreloadsOnlyScenesWithAList )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "used.txt" ), "x" ) );
     const string scene = test::ScopedScratchDomain::makeID( "a.scene.xml" ).str();
     const string empty = test::ScopedScratchDomain::makeID( "empty.scene.xml" ).str();
-    SW_REQUIRE_TRUE( ScenePreloadList::write( domain.makeDiskPath( "a.preload.json" ).str(), vector<string>{ test::ScopedScratchDomain::makeID( "used.txt" ).str() } ) );
-    SW_REQUIRE_TRUE( ScenePreloadList::write( domain.makeDiskPath( "empty.preload.json" ).str(), vector<string>{} ) );
+    SW_REQUIRE_TRUE( ScenePreloadList::write( domain.makeDiskPath( "a.preload.json" ), vector<string>{ test::ScopedScratchDomain::makeID( "used.txt" ).str() } ) );
+    SW_REQUIRE_TRUE( ScenePreloadList::write( domain.makeDiskPath( "empty.preload.json" ), vector<string>{} ) );
 
     SceneManager sceneManager;
     SW_EXPECT_TRUE( sceneManager.preloadScene( scene ) );

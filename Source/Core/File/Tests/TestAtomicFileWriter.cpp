@@ -12,7 +12,7 @@ namespace
     /** @brief @p directory 안의 파일 수입니다(임시 파일이 남았는지 본다). */
     size_t countFiles( const sw::AbsolutePath& directory )
     {
-        sw::vector<sw::string> listFile;
+        sw::vector<sw::AbsolutePath> listFile;
         (void)sw::FileUtil::collectFiles( directory, "", listFile, false ); // 비었으면 빈 목록
         return listFile.size();
     }

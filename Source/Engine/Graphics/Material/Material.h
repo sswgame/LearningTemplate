@@ -136,7 +136,7 @@ namespace sw
          * @brief 디스크 파일에서 머티리얼을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(`XMLDocument::loadFromFile`).
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
-        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 파일로 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 현재 디스크립터를 XML 문자열로 만듭니다. */

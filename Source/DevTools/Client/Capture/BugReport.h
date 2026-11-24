@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -37,7 +38,7 @@ namespace sw
          * @details 혼자 뜬 실행은 `Saved/BugReports`, 부모가 실행 뿌리를 준 실행(백엔드별 체인의 자식)은 `<실행 뿌리>/BugReports` 다.
          *          예전에는 네 백엔드 자식이 `Saved/BugReports` 하나를 같이 써서, 앞서 간 형제가 다음 단계에서 모은 폴더를 `bugreport.goto` 가 "가장 최근" 으로 집었다(editor.bugreport dx12 가 카메라 0 자리로 갔다).
          */
-        [[nodiscard]] static string getRoot();
+        [[nodiscard]] static AbsolutePath getRoot();
         /** @brief 정보 파일 이름입니다. */
         static constexpr const utf8* kInfoFileName = "info.txt";
         /** @brief 스크린샷 파일 이름입니다(다음 프레임에 쓰입니다). */
@@ -70,16 +71,16 @@ namespace sw
         float32 _inputSeconds{ 0.0f };    ///< 담은 세션 입력 기록의 길이(초)
 
         /** @brief `<directory>/info.txt` 를 씁니다. */
-        [[nodiscard]] bool writeInfo( string_view directory ) const;
+        [[nodiscard]] bool writeInfo( const AbsolutePath& directory ) const;
         /** @brief `<directory>/info.txt` 를 읽습니다. 모르는 키는 건너뜁니다. 파일이 없으면 false 입니다. */
-        [[nodiscard]] static bool readInfo( string_view directory, BugReport& outReport );
+        [[nodiscard]] static bool readInfo( const AbsolutePath& directory, BugReport& outReport );
         /**
          * @brief `<root>/<yyyyMMdd-HHmmss>` 폴더를 만들고 경로를 돌려줍니다. 같은 이름이 이미 있으면 `-2`, `-3` … 을 붙입니다.
          * @return 만든 폴더 경로. 만들지 못하면 빈 문자열입니다.
          */
-        static string makeUniqueDirectory( string_view root, const ScreenshotLocalTime& localTime );
+        static AbsolutePath makeUniqueDirectory( const AbsolutePath& root, const ScreenshotLocalTime& localTime );
         /** @brief @p root 아래 BugReport 폴더 가운데 가장 최근(이름 순으로 마지막)의 경로입니다. 없으면 빈 문자열입니다. */
-        static string findLatestDirectory( string_view root );
+        static string findLatestDirectory( const AbsolutePath& root );
         /** @brief 시선 벡터를 pitch 와 yaw(도, roll 0)로 바꿉니다. */
         static float3 computeRotationDegrees( const float3& forward );
         /** @brief pitch 와 yaw(도)를 시선 벡터로 바꿉니다. */
@@ -90,7 +91,7 @@ namespace sw
          * @brief @p directory 아래 파일 전부(하위 폴더 포함)를 상대 경로 순으로 정렬해 "상대 경로 + 바이트" 를 FNV-1a 64 로 접습니다.
          * @details 순서를 정렬로 고정해 파일 시스템의 열거 순서가 해시를 바꾸지 않는다. 한 파일이라도 못 읽으면 false(부분 해시를 같은 설정으로 믿지 않는다).
          */
-        [[nodiscard]] static bool computeFolderHash( string_view directory, uint64& outHash );
+        [[nodiscard]] static bool computeFolderHash( const AbsolutePath& directory, uint64& outHash );
 
         /**
          * @brief 지금 엔진 상태에서 bugreport 입력을 모읍니다. 전역 엔진 서비스를 읽는 곳은 이 함수 하나입니다.
@@ -129,9 +130,9 @@ namespace sw
     struct BugReportInputs
     {
         BugReport            _report;                      ///< info.txt 에 쓸 값(메모, 씬, 백엔드, 빌드, 게임, 카메라)
-        string               _root;                        ///< BugReport 폴더들의 루트(엔진에서는 `Saved/BugReports`)
+        AbsolutePath         _root;                        ///< BugReport 폴더들의 루트(엔진에서는 `Saved/BugReports`)
         ScreenshotLocalTime  _localTime{};                 ///< 폴더 이름의 시각
-        string               _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogSink::getLogFilePath`). 비면 건너뛴다
+        AbsolutePath         _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogSink::getLogFilePath`). 비면 건너뛴다
         string               _backendFlag;                 ///< 재현 명령의 백엔드 플래그(쿠킹 표의 명령줄 이름 `dx12` · `wgpu`, `RHIBackendInfoTable::findCommandLineName`). 장치가 없으면 빔
         SceneManager*        _pSceneManager{ nullptr };    ///< 활성 씬 사본을 저장할 씬 관리자. 활성 씬이 없으면 null
         const FrameProfiler* _pFrameProfiler{ nullptr };   ///< 최근 프레임 trace 를 담을 프로파일러. null 이면 건너뛴다

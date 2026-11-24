@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -96,7 +97,7 @@ namespace sw
          * @param bRecursive 하위 폴더까지 감시할지 여부
          * @return 감시를 시작했으면 true. 실패하면 이유를 오류 로그로 남깁니다
          */
-        [[nodiscard]] virtual bool startWatching( string_view directoryPath, bool bRecursive = true ) = 0;
+        [[nodiscard]] virtual bool startWatching( const AbsolutePath& directoryPath, bool bRecursive = true ) = 0;
 
         /**
          * @brief 큐에 쌓인 파일 변경 이벤트를 꺼냅니다(메인 스레드의 업데이트 루프에서 부르십시오).
@@ -147,7 +148,7 @@ namespace sw
 
     protected:
         /** @brief 감시 중인 디렉터리입니다. 합성 리스캔 이벤트에 이 값을 넣습니다. */
-        string _directoryPath;
+        AbsolutePath _directoryPath;
 
         /** @brief 큐를 보호합니다. 플랫폼 워커가 넣고, 폴링하는 쪽이 꺼냅니다. */
         mutex _eventMutex;

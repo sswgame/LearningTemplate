@@ -9,7 +9,7 @@ namespace sw::editor
 {
     bool EditorPanelVisibility::saveToFile( string_view absPath ) const
     {
-        return JSONSerializer::saveToFile( absPath, this, *StaticType() );
+        return JSONSerializer::saveToFile( FileUtil::toDiskPath( absPath ), this, *StaticType() );
     }
 
     ConfigReadResult EditorPanelVisibility::loadFromFile( string_view absPath )

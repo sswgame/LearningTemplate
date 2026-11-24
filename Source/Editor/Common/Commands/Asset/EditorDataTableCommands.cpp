@@ -179,7 +179,7 @@ namespace sw::editor
         const string projectPath( projectPathView ); // @p outSheet 의 경로를 넘겨받았을 수 있으므로 비우기 전에 복사한다
         outSheet = LocalizationSheet{};
         LocalizationProject project;
-        if ( const expected<void> read = project.loadFromFile( projectPath ); read.has_value() == false )
+        if ( const expected<void> read = project.loadFromFile( FileUtil::toDiskPath( projectPath ) ); read.has_value() == false )
         {
             SW_LOG_WARNING_ID( "EditorDataTableCommands.LocalizationProjectCannotRead", "Localization project cannot be read: %# (%#)", read.error().message(), read.error().detail() );
             return false;

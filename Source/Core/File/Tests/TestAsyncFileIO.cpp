@@ -43,10 +43,10 @@ namespace
         {
             bytes[offset] = expectedByteAt( offset );
         }
-        sw::string path = sw::test::makeScratchPath( pName ).str();
-        if ( sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
-            path.clear();
-        return path;
+        sw::AbsolutePath path = sw::test::makeScratchPath( pName );
+        if ( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
+            path = {};
+        return path.str();
     }
 
     /** @brief @p bytes 가 파일의 [@p offset, @p offset + size) 구간과 같으면 true. */

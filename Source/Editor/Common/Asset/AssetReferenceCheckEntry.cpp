@@ -71,7 +71,7 @@ namespace sw::editor
             {
                 const AbsolutePath   projectRoot = ProcessRoots::get()._project;
                 AssetReferenceFields params;
-                if ( params.load( projectRoot.str() ) == false )
+                if ( params.load( projectRoot ) == false )
                     return -1;
                 uint32 problemCount = validateReflectedProperties( params );
 

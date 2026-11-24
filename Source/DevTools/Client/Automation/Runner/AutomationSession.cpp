@@ -142,7 +142,7 @@ namespace sw
         _runtime.detach();
         _pRunner.reset();
         _pChain.reset();
-        _recordPath.clear();
+        _recordPath    = {};
         _pRenderDriver = nullptr;
     }
 
@@ -153,7 +153,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AutomationSession.OutputMustRelativePath", "[ScenarioRecord] the output must be a relative path under Saved/Automation/ ending in .scenario.xml, got '%#'", string( outputPath ).c_str() );
             return false;
         }
-        _recordPath      = string( outputPath );
+        _recordPath      = FileUtil::toDiskPath( outputPath );
         _listRecordWatch = AutomationScenarioChain::splitList( watchList );
         SW_LOG_INFO_ID( "AutomationSession.RecordingPlayCheckpoint", "[ScenarioRecord] recording the play into %# (%# checkpoint(s))", _recordPath.c_str(), static_cast<uint32>( _listRecordWatch.size() ) );
         return true;
@@ -175,7 +175,7 @@ namespace sw
         if ( _recorder.isRecording() == false )
             return;
         ScenarioRecordSettings settings;
-        settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath ) ) ); // a.scenario.xml → a
+        settings._name                    = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( _recordPath.str() ) ) ); // a.scenario.xml → a
         settings._fixedDelta              = _pRunner != nullptr ? _pRunner->getScenario().getFixedDelta() : settings._fixedDelta;
         settings._firstFrame              = 0;
         settings._bIncludeSynthetic       = true;
@@ -198,14 +198,14 @@ namespace sw
             }
         }
         const ScenarioRecordOutput output = _recorder.stop( settings );
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _recordPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( _recordPath ), output._xmlText ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( _recordPath ) == false || FileUtil::writeTextFile( _recordPath, output._xmlText ) == false )
         {
             SW_LOG_ERROR_ID( "AutomationSession.CouldNotWrite", "[ScenarioRecord] could not write %#", _recordPath.c_str() );
             return;
         }
         SW_LOG_INFO_ID( "AutomationSession.WroteStepCheckpointEvent", "[ScenarioRecord] wrote %# (%# step(s), %# checkpoint(s), %# event(s) skipped) - replay with -scenario=%#", _recordPath.c_str(),
                         output._writtenStepCount, static_cast<uint32>( settings._listCheckpoint.size() ), output._skippedEventCount,
-                        ScenarioRecorder::makeReplayID( _recordPath ).c_str() );
+                        ScenarioRecorder::makeReplayID( _recordPath.str() ).c_str() );
     }
 
     void AutomationSession::applyPresentPolicy()
@@ -315,7 +315,7 @@ namespace sw
         _pRunner = make_unique<AutomationRunner>( _pLogPolicy );
         _pRunner->setReproduceInput( _reproduceInput );
         _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
-        _pRunner->startFromPath( AssetID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
+        _pRunner->startFromPath( AssetID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ).str() );
         // 겹친 정적 등록(감시 값 · 단계 · 차단 조건 …)이 있으면 단계를 돌리지 않는다 — 뒤의 등록이 조용히 빠진 채 도는 단계는 그 등록을 본 적이 없다. 단계마다 본다(뒤에 오른 모듈의 등록도).
         if ( const vector<string> listRejected = collectRejectedStaticRegistrations(); listRejected.empty() == false && _pRunner->isActive() )
         {

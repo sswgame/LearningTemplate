@@ -19,21 +19,21 @@ namespace sw
     {
         struct ModuleShadowCopyInternal
         {
-            static void tryDeleteFile( string_view path )
+            static void tryDeleteFile( const AbsolutePath& path )
             {
                 // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 종료의 ShadowCopyName::removeCopies, 그다음은 실행 뿌리째 주인 정리가 거둔다.
-                (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( path ) );
+                (void)FileUtil::tryRemoveFile( path );
             }
 
             static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
             {
                 // 원본 심볼은 Bin/Symbols 에, 섀도 복사본의 심볼은 그 복사본 옆에 둔다.
-                const string originalDebugPath = ModuleLibraryUtil::findBuiltDebugSymbolPath( originalModulePath );
-                const string shadowDebugPath   = ModuleLibraryUtil::getDebugSymbolPath( shadowModulePath ).str();
+                const AbsolutePath originalDebugPath = ModuleLibraryUtil::findBuiltDebugSymbolPath( originalModulePath );
+                const AbsolutePath shadowDebugPath   = ModuleLibraryUtil::getDebugSymbolPath( shadowModulePath );
                 if ( originalDebugPath.empty() )
                     return;
 
-                if ( FileUtil::copyFile( FileUtil::toDiskPath( originalDebugPath ), FileUtil::toDiskPath( shadowDebugPath ) ) == false )
+                if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
                     SW_LOG_WARNING_ID( "LiveReloadManager.FailedCopyDebugSymbols", "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
             }
 
@@ -127,11 +127,11 @@ namespace sw
 
 namespace sw
 {
-    bool ModuleShadowCopy::readModuleFile( string_view path, vector<uint8>& outBytes )
+    bool ModuleShadowCopy::readModuleFile( const AbsolutePath& path, vector<uint8>& outBytes )
     {
         for ( int32 retryIndex = 0; retryIndex < 10; ++retryIndex )
         {
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), outBytes ) )
+            if ( FileUtil::readFile( path, outBytes ) )
                 return true;
             ThreadUtil::sleepForMilliseconds( 100 );
         }
@@ -163,14 +163,14 @@ namespace sw
     bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath )
     {
         ++inoutSerials._reloadCount;
-        const string tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount );
-        const string shadowDir = ShadowCopyName::getDirectory();
+        const string       tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount );
+        const AbsolutePath shadowDir = ShadowCopyName::getDirectory();
 
         // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
         vector<uint8> bytes;
         if ( readModuleFile( params._originalModulePath, bytes ) == false )
         {
-            SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadModuleShadow", "Failed to read the module for a shadow copy (locked): %#", params._originalModulePath );
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadModuleShadow", "Failed to read the module for a shadow copy (locked): %#", params._originalModulePath.str() );
             return false;
         }
 
@@ -187,7 +187,7 @@ namespace sw
                              params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
             return false;
         }
-        if ( shouldRejectDelayImports( params._moduleName, params._originalModulePath, bytes ) )
+        if ( shouldRejectDelayImports( params._moduleName, params._originalModulePath.str(), bytes ) )
             return false;
         if ( ModuleShadowCopyInternal::rewriteLibraryNames( params, inoutSerials, inoutLibraryName, bytes ) == false )
         {
@@ -197,12 +197,12 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         // 로더는 import 를 파일 이름으로 맞춘다 — 복사본 파일 이름이 곧 세대 이름이다. 같은 모듈의 앞 세대와 겹치지 않게 복사본마다 제 폴더에 둔다.
-        const string shadowDirectory = FileUtil::joinPath( shadowDir, tempName );
-        const string shadowPath      = FileUtil::joinPath( shadowDirectory, inoutLibraryName._current );
-        const bool   bWritten        = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( shadowDirectory ) ) && FileUtil::writeFile( FileUtil::toDiskPath( shadowPath ), bytes.data(), bytes.size() );
+        const AbsolutePath shadowDirectory = shadowDir.join( tempName );
+        const AbsolutePath shadowPath      = shadowDirectory.join( inoutLibraryName._current );
+        const bool         bWritten        = FileUtil::ensureDirectoryExists( shadowDirectory ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
 #else
-        const string shadowPath = FileUtil::joinPath( shadowDir, ModuleLibraryUtil::formatSharedLibraryName( tempName ) );
-        const bool   bWritten   = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( shadowDir ) ) && FileUtil::writeFile( FileUtil::toDiskPath( shadowPath ), bytes.data(), bytes.size() );
+        const AbsolutePath shadowPath = shadowDir.join( ModuleLibraryUtil::formatSharedLibraryName( tempName ) );
+        const bool         bWritten   = FileUtil::ensureDirectoryExists( shadowDir ) && FileUtil::writeFile( shadowPath, bytes.data(), bytes.size() );
 #endif
         if ( bWritten == false )
         {
@@ -212,23 +212,23 @@ namespace sw
             return false;
         }
 
-        ModuleShadowCopyInternal::copyDebugSymbolsIfPresent( params._originalModulePath, shadowPath );
-        outShadowPath = shadowPath;
+        ModuleShadowCopyInternal::copyDebugSymbolsIfPresent( params._originalModulePath.str(), shadowPath.str() );
+        outShadowPath = shadowPath.str();
         return true;
     }
 
-    void ModuleShadowCopy::removeArtifacts( string_view shadowPath )
+    void ModuleShadowCopy::removeArtifacts( const AbsolutePath& shadowPath )
     {
         if ( shadowPath.empty() )
             return;
         ModuleShadowCopyInternal::tryDeleteFile( shadowPath );
-        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ).str() );
+        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath.str() ) );
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
         string_view directoryPath;
-        FileUtil::getDirectoryPart( shadowPath, directoryPath );
-        vector<string> listLeftFile;
-        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory(), directoryPath ) && FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), "", listLeftFile, false ) && listLeftFile.empty() )
+        FileUtil::getDirectoryPart( shadowPath.str(), directoryPath );
+        vector<AbsolutePath> listLeftFile;
+        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory().str(), directoryPath ) && FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), "", listLeftFile, false ) && listLeftFile.empty() )
             (void)FileUtil::removeDirectory( FileUtil::toDiskPath( directoryPath ) );
 #endif
     }

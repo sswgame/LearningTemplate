@@ -34,7 +34,7 @@ namespace sw
          * @brief 덮어쓰기(`kUserDataRootVariable`)를 보지 않은 OS 규칙의 데이터 폴더입니다. 모르면(샌드박스 · 환경 변수 없음) 빈 글입니다(멈추지 않는다).
          * @details 자동화가 사람의 폴더를 건드리지 않았는지 볼 때 쓴다(`AutomationUserDataRoot`) — 그 실행은 덮어쓰기로 옮겨 가 있어 `getDataDirectory` 로는 사람의 폴더를 모른다.
          */
-        static string findPlatformDataDirectory( string_view gameName );
+        static AbsolutePath findPlatformDataDirectory( string_view gameName );
         /** @brief `findPlatformDataDirectory` 의 설정 폴더 판입니다(리눅스는 `$XDG_CONFIG_HOME` 쪽). */
         static string findPlatformConfigDirectory( string_view gameName );
     };

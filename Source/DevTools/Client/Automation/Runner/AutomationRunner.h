@@ -232,7 +232,7 @@ namespace sw
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const override { return _outputDirectory; }
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
-        string resolveOutputPath( string_view file ) const override;
+        AbsolutePath resolveOutputPath( string_view file ) const override;
         /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
         uint32 getFrameIndex() const override { return _run._frameIndex; }
         /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). 단계의 `seconds` · `timeoutSeconds` 속성이 씁니다. */

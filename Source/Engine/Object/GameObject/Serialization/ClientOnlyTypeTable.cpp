@@ -30,17 +30,17 @@ namespace sw
             static unordered_set<string> load()
             {
                 unordered_set<string> setName;
-                const string          path = FileUtil::joinPath( ProcessRoots::get()._binary.str(), ClientOnlyTypeTable::kTableFile );
+                const AbsolutePath    path = ProcessRoots::get()._binary.join( ClientOnlyTypeTable::kTableFile );
                 JSONDocument          document;
                 if ( document.loadFromFile( path ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ClientOnlyTypeTable.TableUnreadable", "Client-only type table %# could not be read - client-only components in scenes are reported as unknown types", path );
+                    SW_LOG_ERROR_ID( "ClientOnlyTypeTable.TableUnreadable", "Client-only type table %# could not be read - client-only components in scenes are reported as unknown types", path.str() );
                     return setName;
                 }
                 const JSONValue listType = document.getRoot().get( "listType" );
                 if ( listType.isArray() == false )
                 {
-                    SW_LOG_ERROR_ID( "ClientOnlyTypeTable.TableInvalid", "Client-only type table %# needs listType", path );
+                    SW_LOG_ERROR_ID( "ClientOnlyTypeTable.TableInvalid", "Client-only type table %# needs listType", path.str() );
                     return setName;
                 }
                 for ( size_t index = 0; index < listType.size(); ++index )

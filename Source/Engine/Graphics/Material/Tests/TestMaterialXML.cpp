@@ -303,7 +303,7 @@ SW_TEST_CASE( MaterialXMLTest, RuntimeSwitchVariantsMatchSetStaticSwitch )
     sw::Material&                                    material  = *pMaterial;
     sw::StringBuilder<sw::constant::buffer::kMax256> toonPath;
     toonPath.appendFormat( "%#/Content/engine/materials/toon.material", sw::ProcessRoots::get()._project.str() );
-    SW_REQUIRE_TRUE( material.loadFromDiskFile( toonPath.view() ) );
+    SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::FileUtil::toDiskPath( toonPath.view() ) ) );
     sw::vector<sw::vector<sw::string>> listDefine;
     sw::vector<uint64>                 listHash;
     material.collectRuntimeSwitchVariants( listDefine, listHash );
@@ -328,7 +328,7 @@ SW_TEST_CASE( MaterialXMLTest, SetStaticSwitchRejectsUndeclaredSwitch )
     sw::Material&                                    material  = *pMaterial;
     sw::StringBuilder<sw::constant::buffer::kMax256> toonPath;
     toonPath.appendFormat( "%#/Content/engine/materials/toon.material", sw::ProcessRoots::get()._project.str() );
-    SW_REQUIRE_TRUE( material.loadFromDiskFile( toonPath.view() ) );
+    SW_REQUIRE_TRUE( material.loadFromDiskFile( sw::FileUtil::toDiskPath( toonPath.view() ) ) );
     const uint64 assetHash = material.getPermutationHash();
     SW_EXPECT_LOG( "Material.StaticSwitchUnknown" );
     SW_EXPECT_FALSE( material.setStaticSwitch( sw::hashed_string( "NoSuchSwitch" ), true ) );

@@ -44,7 +44,7 @@ namespace
  */
 SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass )
 {
-    const sw::string base = sw::AutomationUserDataRoot::getBaseFolder();
+    const sw::string base = sw::AutomationUserDataRoot::getBaseFolder().str();
     // 판정할 뿌리를 `<base><꼬리>` 로 만든다 — 경로라 잘리지 않게 StringBuilder 를 쓴다.
     sw::StringBuilder<sw::constant::buffer::kMax1024> root;
     for ( const sw::string_view tail : { "/Runs/12-34/userdata", "/Runs/12-34/dx12/userdata", "/UserData/sequence.playground.velmora_carry/" } )
@@ -73,7 +73,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, OnlyRootsUnderTheAutomationFolderPass 
  */
 SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
 {
-    const sw::string                                  base = sw::AutomationUserDataRoot::getBaseFolder(); // `.../Saved/Automation`
+    const sw::string                                  base = sw::AutomationUserDataRoot::getBaseFolder().str(); // `.../Saved/Automation`
     sw::StringBuilder<sw::constant::buffer::kMax1024> otherCasedBuilder;
     otherCasedBuilder.appendFormat( "%#/automation/Runs/12-34", sw::FileUtil::getDirectoryPart( base ) );
     const sw::string_view otherCased = otherCasedBuilder.view();
@@ -92,7 +92,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, CaseOnlyDifferenceFollowsTheOSRule )
  */
 SW_TEST_CASE( AutomationUserDataRootTest, StatePathsMayNotPointAtThePersonFolders )
 {
-    const sw::string                                  base = sw::AutomationUserDataRoot::getBaseFolder();
+    const sw::string                                  base = sw::AutomationUserDataRoot::getBaseFolder().str();
     sw::StringBuilder<sw::constant::buffer::kMax1024> path;
     path.appendFormat( "%#/PersonEditor", sw::FileUtil::getDirectoryPart( base ) );
     const sw::string             person( path.view() );
@@ -122,10 +122,10 @@ SW_TEST_CASE( AutomationUserDataRootTest, StatePathsMayNotPointAtThePersonFolder
 SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomationFolder )
 {
     ScopedUserDataRoot                                restore;
-    const sw::string                                  platformFolder = sw::UserDataPath::findPlatformDataDirectory( "" );
+    const sw::string                                  platformFolder = sw::UserDataPath::findPlatformDataDirectory( "" ).str();
     sw::StringBuilder<sw::constant::buffer::kMax1024> path;
     if ( platformFolder.empty() )
-        path.appendFormat( "%#/Other", sw::FileUtil::getDirectoryPart( sw::AutomationUserDataRoot::getBaseFolder() ) );
+        path.appendFormat( "%#/Other", sw::FileUtil::getDirectoryPart( sw::AutomationUserDataRoot::getBaseFolder().str() ) );
     else
         path.append( sw::string_view{ platformFolder } );
     const sw::string outside( path.view() );
@@ -136,7 +136,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
     SW_EXPECT_TRUE( allowed.has_value() && *allowed == outside );
 
     path.clear();
-    path.appendFormat( "%#/unit_test_root", sw::AutomationUserDataRoot::getBaseFolder() );
+    path.appendFormat( "%#/unit_test_root", sw::AutomationUserDataRoot::getBaseFolder().str() );
     const sw::string inside( path.view() );
     SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, inside ) );
     const sw::expected<sw::string> accepted = sw::AutomationUserDataRoot::resolve( false );
@@ -151,17 +151,17 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
  */
 SW_TEST_CASE( AutomationUserDataRootTest, FolderStampChangesWhenAFileIsAdded )
 {
-    const sw::string folder = sw::FileUtil::joinPath( sw::AutomationUserDataRoot::getBaseFolder(), "unit_test_stamp" );
-    (void)sw::FileUtil::removeDirectory( sw::FileUtil::toDiskPath( folder ) );
+    const sw::AbsolutePath folder = sw::AutomationUserDataRoot::getBaseFolder().join( "unit_test_stamp" );
+    (void)sw::FileUtil::removeDirectory( folder );
     const sw::UserDataFolderStamp missing = sw::UserDataFolderStamp::take( folder );
     SW_EXPECT_FALSE( missing._bExists );
 
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( folder ) ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
     const sw::UserDataFolderStamp empty = sw::UserDataFolderStamp::take( folder );
     SW_EXPECT_TRUE( empty != missing );
     SW_EXPECT_TRUE( sw::UserDataFolderStamp::take( folder ) == empty );
 
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( sw::FileUtil::joinPath( folder, "save.dat" ) ), "x" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( folder.join( "save.dat" ), "x" ) );
     SW_EXPECT_TRUE( sw::UserDataFolderStamp::take( folder ) != empty );
-    (void)sw::FileUtil::removeDirectory( sw::FileUtil::toDiskPath( folder ) );
+    (void)sw::FileUtil::removeDirectory( folder );
 }

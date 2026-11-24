@@ -110,7 +110,7 @@ namespace sw
          * @brief 이 디버그 키 맵의 사용자 바인딩 파일 경로를 정합니다(`makeUserBindingsPath`). 맵을 처음 만들 때 이 파일의 재배치를 읽으므로 첫 `update` 전에 부릅니다.
          *        빈 경로면 읽지도 저장하지도 않습니다(테스트, 헤드리스).
          */
-        void          setUserBindingsPath( string_view filePath ) { _userBindingsPath = FileUtil::toDiskPath( string( filePath ) ); }
+        void          setUserBindingsPath( string_view filePath ) { _userBindingsPath = FileUtil::toDiskPath( filePath ); }
         const string& getUserBindingsPath() const { return _userBindingsPath.str(); }
         /** @brief 디버그 키 맵의 재배치를 사용자 파일에 저장합니다. 경로가 없으면 false 입니다. */
         [[nodiscard]] bool saveUserBindings() const;

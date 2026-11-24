@@ -138,7 +138,7 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
-    SW_REQUIRE_TRUE( loc.mountProject( sw::test::ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( folder.str(), "en", "[]" ) ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( sw::test::ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( folder, "en", "[]" ).str() ), sw::LocalizationScope::Game ) );
 
     bool bListed{ false };
     for ( const sw::string& language : loc.getAvailableLanguages() )

@@ -1092,7 +1092,7 @@ namespace sw
         return loadComposed( text, assetID.view(), ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
-    bool Material::loadFromDiskFile( string_view diskPath )
+    bool Material::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         XMLDocument doc;
         if ( doc.loadFromFile( diskPath ) == false )

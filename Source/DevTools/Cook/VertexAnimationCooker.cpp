@@ -69,26 +69,26 @@ namespace sw
         return desc;
     }
 
-    uint32 VertexAnimationCooker::cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store,
+    uint32 VertexAnimationCooker::cookAll( const AbsolutePath& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store,
                                            uint32& outFailedCount )
     {
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould3", "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould3", "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         VectorUtil::sort( listFile );
-        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( framesPerSecond );
         CookStats         stats;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, VertexAnimationCookList::kExtension, true ) == false )
+            if ( StringUtil::endsWith( filePath.str(), VertexAnimationCookList::kExtension, true ) == false )
                 continue;
-            const string normalizedFile = FileUtil::normalizeSeparators( filePath );
+            const string normalizedFile = FileUtil::normalizeSeparators( filePath.str() );
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;

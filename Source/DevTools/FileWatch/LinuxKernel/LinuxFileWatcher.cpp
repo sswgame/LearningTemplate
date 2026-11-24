@@ -49,18 +49,18 @@ namespace sw
         stopWatching();
     }
 
-    bool LinuxFileWatcher::startWatching( string_view directoryPath, bool bRecursive )
+    bool LinuxFileWatcher::startWatching( const AbsolutePath& directoryPath, bool bRecursive )
     {
         if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
         {
-            SW_LOG_ERROR_ID( "LinuxFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath.c_str(), string{ directoryPath }.c_str() );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath.c_str(), directoryPath.c_str() );
             return false;
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 fd · 스레드를 거둔다
 
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
+        if ( FileUtil::isDirectory( directoryPath ) == false )
         {
-            SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", string{ directoryPath }.c_str() );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", directoryPath.c_str() );
             return false;
         }
 
@@ -80,10 +80,10 @@ namespace sw
             return false;
         }
 
-        _directoryPath = FileUtil::normalizeSeparators( string{ directoryPath } );
+        _directoryPath = directoryPath;
         _bRecursive    = bRecursive;
 
-        const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath );
+        const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath.str() );
         if ( bAdded == false )
         {
             // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 **루트조차** 걸지 못한
@@ -219,7 +219,7 @@ namespace sw
         if ( mask & IN_Q_OVERFLOW )
         {
             SW_LOG_WARNING_ID( "LinuxFileWatcher.InotifyQueueOverflowEmitting", "inotify queue overflow — emitting synthetic rescan event." );
-            pushRelativeChange( FileWatcherAction::Modified, _directoryPath, {} );
+            pushRelativeChange( FileWatcherAction::Modified, _directoryPath.str(), {} );
             return true;
         }
 
@@ -236,7 +236,7 @@ namespace sw
         {
             removeWatch( watchDescriptor );
             // 하위 폴더가 사라지는 것은 평범한 변경이지만, 루트가 사라지면 이 뒤로 아무 변경도 오지 않는다.
-            if ( watchedDir == _directoryPath )
+            if ( watchedDir == _directoryPath.str() )
             {
                 reportWatchLost( "the watched root directory was deleted or moved" );
                 return false;
@@ -270,13 +270,13 @@ namespace sw
         return true;
     }
 
-    bool LinuxFileWatcher::addWatchRecursive( string_view directoryPath )
+    bool LinuxFileWatcher::addWatchRecursive( const AbsolutePath& directoryPath )
     {
-        if ( addWatchDirectory( directoryPath ) == false )
+        if ( addWatchDirectory( directoryPath.str() ) == false )
             return false;
 
         uint32 failedCount{ 0 };
-        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directoryPath ), true, [this, &failedCount]( const DirectoryEntry& entry )
+        (void)FileUtil::forEachDirectoryEntry( directoryPath, true, [this, &failedCount]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory && addWatchDirectory( entry._path ) == false )
                 ++failedCount;
@@ -325,9 +325,9 @@ namespace sw
         // (감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.
         const string absoluteFile = FileUtil::joinPath( absoluteDirectory, name );
         string       relative;
-        const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath, absoluteFile, relative );
+        const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath.str(), absoluteFile, relative );
 
         // 상한 · 넘침 표시 · 연속 중복 합치기는 FileWatcher::pushChange 가 한다.
-        pushChange( action, _directoryPath, bUnderRoot ? string_view{ relative } : name );
+        pushChange( action, _directoryPath.str(), bUnderRoot ? string_view{ relative } : name );
     }
 } // namespace sw

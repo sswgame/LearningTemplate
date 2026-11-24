@@ -142,25 +142,25 @@ namespace sw
         return _setFile.find( key ) != _setFile.end() || _setFolder.find( key ) != _setFolder.end();
     }
 
-    bool AssetReferenceFields::load( string_view projectRoot )
+    bool AssetReferenceFields::load( const AbsolutePath& projectRoot )
     {
-        const string path = FileUtil::joinPath( projectRoot, kConfigFile );
-        JSONDocument document;
+        const AbsolutePath path = projectRoot.join( kConfigFile );
+        JSONDocument       document;
         if ( document.loadFromFile( path ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigUnreadable", "Asset reference fields %# could not be read", path );
+            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigUnreadable", "Asset reference fields %# could not be read", path.str() );
             return false;
         }
         AssetReferenceFieldsConfig config;
         using Internal         = AssetReferenceFieldsInternal;
         const JSONValue root   = document.getRoot();
-        bool            bValid = JSONFields::readProperties( root, config, path );
+        bool            bValid = JSONFields::readProperties( root, config, path.str() );
         bValid                 = _identityRules.load( projectRoot ) && bValid;
-        bValid                 = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
-        bValid                 = Internal::hasNoEmptyText( config._listUncheckedDomain, "listUncheckedDomain", path ) && bValid;
-        bValid                 = Internal::hasNoEmptyText( config._listTextExtension, "listTextExtension", path ) && bValid;
-        bValid                 = Internal::hasNoEmptyText( config._listCMakeFile, "listCMakeFile", path ) && bValid;
-        bValid                 = Internal::hasNoEmptyText( config._listCMakeArgument, "listCMakeArgument", path ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listDomain, "listDomain", path.str() ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listUncheckedDomain, "listUncheckedDomain", path.str() ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listTextExtension, "listTextExtension", path.str() ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listCMakeFile, "listCMakeFile", path.str() ) && bValid;
+        bValid                 = Internal::hasNoEmptyText( config._listCMakeArgument, "listCMakeArgument", path.str() ) && bValid;
         if ( bValid == false )
             return false;
         _listDomain          = std::move( config._listDomain );
@@ -172,19 +172,19 @@ namespace sw
         return loadGeneratedProperties( projectRoot );
     }
 
-    bool AssetReferenceFields::loadGeneratedProperties( string_view projectRoot )
+    bool AssetReferenceFields::loadGeneratedProperties( const AbsolutePath& projectRoot )
     {
-        const string path = FileUtil::joinPath( projectRoot, kGeneratedFile );
-        JSONDocument document;
+        const AbsolutePath path = projectRoot.join( kGeneratedFile );
+        JSONDocument       document;
         if ( document.loadFromFile( path ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedUnreadable", "Generated asset reference fields %# could not be read", path );
+            SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedUnreadable", "Generated asset reference fields %# could not be read", path.str() );
             return false;
         }
         const JSONValue listOwner = document.getRoot().get( "listOwner" );
         if ( listOwner.isArray() == false )
         {
-            SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid", "Generated asset reference fields %# need listOwner", path );
+            SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid", "Generated asset reference fields %# need listOwner", path.str() );
             return false;
         }
         for ( size_t ownerIndex = 0; ownerIndex < listOwner.size(); ++ownerIndex )
@@ -192,7 +192,7 @@ namespace sw
             const JSONValue listField = listOwner.at( ownerIndex ).get( "listField" );
             if ( listField.isArray() == false )
             {
-                SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid2", "Generated asset reference fields %#: owner %# needs listField", path, static_cast<uint32>( ownerIndex ) );
+                SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid2", "Generated asset reference fields %#: owner %# needs listField", path.str(), static_cast<uint32>( ownerIndex ) );
                 return false;
             }
             for ( size_t fieldIndex = 0; fieldIndex < listField.size(); ++fieldIndex )
@@ -200,7 +200,7 @@ namespace sw
                 const auto field = listField.at( fieldIndex ).read<string>();
                 if ( field.has_value() == false || field->empty() )
                 {
-                    SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid3", "Generated asset reference fields %#: owner %# field %# is not a non-empty string", path, static_cast<uint32>( ownerIndex ),
+                    SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid3", "Generated asset reference fields %#: owner %# field %# is not a non-empty string", path.str(), static_cast<uint32>( ownerIndex ),
                                      static_cast<uint32>( fieldIndex ) );
                     return false;
                 }

@@ -134,7 +134,7 @@ namespace sw
         return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool DialogueGraphAsset::loadFromDiskFile( string_view diskPath )
+    bool DialogueGraphAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         _listSpeaker.clear();
@@ -146,10 +146,10 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue2", "Could not read dialogue graph file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "DialogueGraph.CouldNotReadDialogue2", "Could not read dialogue graph file '%#'", diskPath.str() );
             return false;
         }
-        return readText( text, diskPath, ResourceContext::forType( *StaticType() ) );
+        return readText( text, diskPath.str(), ResourceContext::forType( *StaticType() ) );
     }
 
     bool DialogueGraphAsset::saveToFile( const AbsolutePath& absPath ) const

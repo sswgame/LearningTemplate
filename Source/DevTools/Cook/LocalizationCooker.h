@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/CookJob.h"
@@ -31,7 +32,7 @@ namespace sw
          * @details 출력 하나가 쿠킹 작업 하나다 — 입력(프로젝트 · 원문 표 · 그 문화권 번역 표)은 작업 안의 읽기로 기록된다. 문화권 목록은 작업 밖에서 프로젝트 파일을 읽어 정한다.
          * @return 쓴(다시 쓴 것 포함) 표 수입니다. 실패는 @p outFailedCount 로 센다(프로젝트를 읽지 못함 · 화면에 나올 글이 없는 문화권 · 해시 충돌 · 쓰기 실패).
          */
-        static uint32 cookAll( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount );
+        static uint32 cookAll( const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount );
         /**
          * @brief 프로젝트 @p projectID 를 새 관리자에 올려 @p culture 의 표 바이트를 만듭니다(쿠킹 작업 안에서 부른다 — 테스트도 이 길로 굽는다).
          * @return 프로젝트를 다 읽지 못했거나 그 문화권에 화면에 나올 글이 없거나 키 해시가 겹치면 오류를 남기고 false 입니다.

@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    CookStore::CookStore( string recordRootPath, DerivedDataCache derivedDataCache )
+    CookStore::CookStore( AbsolutePath recordRootPath, DerivedDataCache derivedDataCache )
         : _recordRootPath{ std::move( recordRootPath ) }
         , _derivedDataCache{ std::move( derivedDataCache ) }
         , _outputHashNanos{ 0 }
@@ -26,20 +26,20 @@ namespace sw
         expected<DerivedDataCache> derivedDataCache = DerivedDataCache::open( DerivedDataBucket::Cook );
         if ( derivedDataCache.has_value() == false )
             return unexpected( derivedDataCache.error() );
-        return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), std::move( *derivedDataCache ) };
+        return CookStore{ ProcessRoots::get()._derivedData.join( "CookRecord" ), std::move( *derivedDataCache ) };
     }
 
-    string CookStore::makeRecordPath( string_view outputID ) const
+    AbsolutePath CookStore::makeRecordPath( string_view outputID ) const
     {
         StringBuilder<constant::buffer::kMax512> builder;
         builder.appendFormat( "%#.cookrec", outputID );
-        return FileUtil::joinPath( _recordRootPath, builder.view() );
+        return _recordRootPath.join( builder.view() );
     }
 
-    bool CookStore::reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const
+    bool CookStore::reuseFreshOutput( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath ) const
     {
         CookRecord record;
-        if ( CookRecord::read( FileUtil::toDiskPath( makeRecordPath( outputID ) ), record ) == false )
+        if ( CookRecord::read( makeRecordPath( outputID ), record ) == false )
             return false;
         if ( record.isFresh( desc ) == false )
         {
@@ -50,32 +50,32 @@ namespace sw
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.
         // 해시는 내용 해시 캐시로 구한다 — 도장(크기 · 시각)이 지난번과 같으면 큰 팩을 다시 읽지 않는다.
-        const bool bOutputCurrent = FileUtil::isRegularFile( FileUtil::toDiskPath( outputPath ) ) && hashOutputFile( outputPath ) == record._outputHash;
+        const bool bOutputCurrent = FileUtil::isRegularFile( outputPath ) && hashOutputFile( outputPath ) == record._outputHash;
         if ( bOutputCurrent )
             return true;
         // DDC 의 출력을 출력 옆 임시 파일로 흘려 쓰고(DDC 가 본문 해시를 본다), 그 해시가 기록과 같을 때만 출력과 바꿔 끼운다 — 다르면 출력 자리를 건드리지 않는다(메모리로 들지도 않는다).
-        const AbsolutePath tempPath = FileUtil::makeWriteTempPath( FileUtil::toDiskPath( outputPath ) );
+        const AbsolutePath tempPath = FileUtil::makeWriteTempPath( outputPath );
         if ( _derivedDataCache.find( record._key, CookJob::makeKeyDescription( desc, record._listInput ), tempPath ) == false )
         {
             (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_INFO_ID( "CookStore.CookFreshRecordBut", "Cook: '%#' has a fresh record but no DDC entry (or it could not be copied) - cooked again", outputID );
             return false;
         }
-        if ( hashOutputFile( tempPath.str() ) != record._outputHash )
+        if ( hashOutputFile( tempPath ) != record._outputHash )
         {
             (void)FileUtil::tryRemoveFile( tempPath );
             SW_LOG_WARNING_ID( "CookStore.CookDDCEntryDoes", "Cook: the DDC entry of '%#' does not match its record - cooked again", outputID );
             return false;
         }
-        if ( FileUtil::replaceFile( tempPath, FileUtil::toDiskPath( outputPath ) ) == false )
+        if ( FileUtil::replaceFile( tempPath, outputPath ) == false )
         {
-            SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath );
+            SW_LOG_WARNING_ID( "CookStore.CookCouldNotWrite", "Cook: could not write '%#' from the DDC - cooked again", outputPath.str() );
             return false;
         }
         return true;
     }
 
-    uint64 CookStore::hashOutputFile( string_view outputPath ) const
+    uint64 CookStore::hashOutputFile( const AbsolutePath& outputPath ) const
     {
         const Stopwatch watch;
         const uint64    hash = ContentHash::computeFile( outputPath );
@@ -98,13 +98,13 @@ namespace sw
         return nullopt;
     }
 
-    CookResult CookStore::finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const
+    CookResult CookStore::finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, const AbsolutePath& outputPath ) const
     {
         const optional<CookResult> finished = validateFinishedJob( job, step._step, outputID );
         if ( finished.has_value() )
             return *finished;
         const CookRecord record = CookRecord::make( job, step._outputHash );
-        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), FileUtil::toDiskPath( outputPath ) ) == false || record.write( FileUtil::toDiskPath( makeRecordPath( outputID ) ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore2", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;
@@ -112,7 +112,7 @@ namespace sw
         return CookResult::Cooked;
     }
 
-    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const
+    CookResult CookStore::finishCook( const CookJob& job, CookStep step, string_view outputID, const AbsolutePath& outputPath ) const
     {
         const optional<CookResult> finished = validateFinishedJob( job, step, outputID );
         if ( finished.has_value() )
@@ -121,11 +121,11 @@ namespace sw
         const uint64 outputHash = hashOutputFile( outputPath );
         if ( outputHash == 0 )
         {
-            SW_LOG_ERROR_ID( "CookStore.CookReportedWrittenBut", "Cook: '%#' was reported written but cannot be read back", outputPath );
+            SW_LOG_ERROR_ID( "CookStore.CookReportedWrittenBut", "Cook: '%#' was reported written but cannot be read back", outputPath.str() );
             return CookResult::Failed;
         }
         const CookRecord record = CookRecord::make( job, outputHash );
-        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), FileUtil::toDiskPath( outputPath ) ) == false || record.write( FileUtil::toDiskPath( makeRecordPath( outputID ) ) ) == false )
+        if ( _derivedDataCache.store( record._key, job.makeKeyDescription(), outputPath ) == false || record.write( makeRecordPath( outputID ) ) == false )
         {
             SW_LOG_ERROR_ID( "CookStore.CookCouldNotStore", "Cook: could not store '%#' in the DDC or write its record", outputID );
             return CookResult::Failed;
@@ -141,7 +141,7 @@ namespace sw
         return result;
     }
 
-    uint32 CookStore::removeUnrequestedOutputs( string_view cookedDir, uint32& outFailedCount ) const
+    uint32 CookStore::removeUnrequestedOutputs( const AbsolutePath& cookedDir, uint32& outFailedCount ) const
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -151,31 +151,31 @@ namespace sw
             return 0;
         }
         constexpr string_view kRecordSuffix = ".cookrec";
-        const string          recordRoot    = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _recordRootPath ) );
-        vector<string>        listRecord;
+        const AbsolutePath    recordRoot    = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _recordRootPath.str() ) ) );
+        vector<AbsolutePath>  listRecord;
         // 기록 폴더가 아직 없으면 지울 옛 출력도 없다. 도중에 멈춘 목록이면 지울 것을 빠뜨리므로 실패로 센다(경로는 collectFiles 가 알린다).
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( recordRoot ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( recordRoot ), kRecordSuffix, listRecord, true ) == false )
+        if ( FileUtil::isDirectory( recordRoot ) && FileUtil::collectFiles( recordRoot, kRecordSuffix, listRecord, true ) == false )
             ++outFailedCount;
         uint32 removedCount = 0;
-        for ( const string& recordPath : listRecord )
+        for ( const AbsolutePath& recordPath : listRecord )
         {
-            const string normalized = FileUtil::normalizeSeparators( recordPath );
-            if ( normalized.size() <= recordRoot.size() + 1 + kRecordSuffix.size() )
+            const string normalized = FileUtil::normalizeSeparators( recordPath.str() );
+            if ( normalized.size() <= recordRoot.str().size() + 1 + kRecordSuffix.size() )
                 continue;
-            const string outputID = normalized.substr( recordRoot.size() + 1, normalized.size() - recordRoot.size() - 1 - kRecordSuffix.size() );
+            const string outputID = normalized.substr( recordRoot.str().size() + 1, normalized.size() - recordRoot.str().size() - 1 - kRecordSuffix.size() );
             if ( _setRequestedID.contains( outputID ) )
                 continue;
-            const string outputPath = FileUtil::joinPath( cookedDir, outputID );
-            if ( FileUtil::isRegularFile( FileUtil::toDiskPath( outputPath ) ) == false ) // 팩 기록처럼 쿠킹 폴더에 출력이 없는 것은 이 정리의 몫이 아니다
+            const AbsolutePath outputPath = cookedDir.join( outputID );
+            if ( FileUtil::isRegularFile( outputPath ) == false ) // 팩 기록처럼 쿠킹 폴더에 출력이 없는 것은 이 정리의 몫이 아니다
                 continue;
-            if ( FileUtil::removeFile( FileUtil::toDiskPath( outputPath ) ) )
+            if ( FileUtil::removeFile( outputPath ) )
             {
                 SW_LOG_INFO_ID( "CookStore.CookRemovedNoCooker", "Cook: removed '%#' - no cooker requested it this run (its source is gone or is no longer cooked)", outputID );
                 ++removedCount;
             }
             else
             {
-                SW_LOG_ERROR_ID( "CookStore.CookCouldNotRemove", "Cook: could not remove the unrequested output '%#'", outputPath );
+                SW_LOG_ERROR_ID( "CookStore.CookCouldNotRemove", "Cook: could not remove the unrequested output '%#'", outputPath.str() );
                 ++outFailedCount;
             }
         }

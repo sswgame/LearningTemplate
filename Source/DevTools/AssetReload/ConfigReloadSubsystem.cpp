@@ -41,7 +41,7 @@ namespace sw
             return SubsystemInitResult::Succeeded;
         }
         // 걸지 못하면 빈 구독이다 — 개발 도구 하나 때문에 기동을 멈추지 않는다(감시 창구가 이유를 남겼다).
-        _configWatch = _fileWatch.watch( configFolder.str(), FileWatchDepth::Tree, { ".json" }, SW_DELEGATE_METHOD( FileChangeDelegate, &ConfigReloadSubsystem::onConfigFileChanged, this ) );
+        _configWatch = _fileWatch.watch( configFolder, FileWatchDepth::Tree, { ".json" }, SW_DELEGATE_METHOD( FileChangeDelegate, &ConfigReloadSubsystem::onConfigFileChanged, this ) );
         return SubsystemInitResult::Succeeded;
     }
 

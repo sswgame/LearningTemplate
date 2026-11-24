@@ -22,7 +22,7 @@ namespace sw::editor
              */
             static bool importGraph( const AssetPaths& assetPaths, string_view /*relativePath*/ )
             {
-                (void)MaterialGraphGeneratedPaths::refreshAll( assetPaths, assetPaths.getRootFolderPath(), nullptr );
+                (void)MaterialGraphGeneratedPaths::refreshAll( assetPaths, FileUtil::toDiskPath( assetPaths.getRootFolderPath() ), nullptr );
                 return true;
             }
         };

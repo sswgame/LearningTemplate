@@ -269,7 +269,7 @@ namespace sw::editor
         if ( FileUtil::exists( FileUtil::toDiskPath( clipDataPath ) ) == false )
             return true;
         JSONDocument document;
-        if ( document.loadFromFile( clipDataPath ) == false ) // 원본 모델 옆 디스크 파일이라 디스크 입구로 읽는다
+        if ( document.loadFromFile( FileUtil::toDiskPath( clipDataPath ) ) == false ) // 원본 모델 옆 디스크 파일이라 디스크 입구로 읽는다
         {
             SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotValid", "Clip data '%#' is not valid JSON", clipDataPath.c_str() );
             return false;

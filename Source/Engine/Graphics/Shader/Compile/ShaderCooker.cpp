@@ -266,7 +266,7 @@ namespace sw
 
         // 무변경 재쿠킹이 파일을 건드리지 않는다 — 내용 해시는 도장(크기 · 시각)이 그대로면 파일을 다시 읽지 않는다.
         const AbsolutePath outputFile = outputPath;
-        const bool         bCurrent   = FileUtil::isRegularFile( outputFile ) && ContentHash::computeFile( outputPath.str() ) == compileResult._record._outputHash;
+        const bool         bCurrent   = FileUtil::isRegularFile( outputFile ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash;
         if ( bCurrent == false )
         {
             if ( FileUtil::ensureParentDirectoryExists( outputFile ) == false || FileUtil::writeFile( outputFile, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )

@@ -19,16 +19,16 @@ namespace
     {
     public:
         /** @brief 감시 루트를 정해 둡니다. 합성 리스캔 이벤트가 이 값을 답니다. */
-        explicit StubFileWatcher( sw::string_view watchRoot ) { _directoryPath = sw::string{ watchRoot }; }
+        explicit StubFileWatcher( sw::string_view watchRoot ) { _directoryPath = sw::FileUtil::toDiskPath( watchRoot ); }
 
-        [[nodiscard]] bool startWatching( sw::string_view, bool ) override { return true; }
+        [[nodiscard]] bool startWatching( const sw::AbsolutePath&, bool ) override { return true; }
         void               stopWatching() override {}
         bool               isWatching() const override { return true; }
 
         /** @brief 보호된 `pushChange` 를 테스트에서 부를 수 있게 엽니다. */
         void push( sw::FileWatcherAction action, sw::string_view filename )
         {
-            pushChange( action, _directoryPath, filename );
+            pushChange( action, _directoryPath.str(), filename );
         }
 
         /** @brief 디렉터리까지 직접 정해 넣습니다 — 이벤트마다 그 파일의 디렉터리를 주는 워처의 모양입니다. */

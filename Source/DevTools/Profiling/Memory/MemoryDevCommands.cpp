@@ -64,10 +64,10 @@ namespace sw
                 MemorySnapshot       snapshot;
                 if ( captureLocal( policy, snapshot, outReply ) == false )
                     return true;
-                string root = MemorySnapshotExport::getDefaultRoot( policy );
+                string root = MemorySnapshotExport::getDefaultRoot( policy ).str();
                 if ( listArgument.size() == 1 && DevCommandRegistry::readDiskPathArgument( listArgument[0], root, outReply ) == false )
                     return true; // 답이 이유다(절대 경로만 받는다)
-                const string folder = MemorySnapshotExport::reserveFolder( root );
+                const AbsolutePath folder = MemorySnapshotExport::reserveFolder( FileUtil::toDiskPath( root ) );
                 if ( folder.empty() )
                 {
                     StringBuilder<constant::buffer::kMax1024> reply;
@@ -83,7 +83,7 @@ namespace sw
                 }
                 pExport->writeAsync( make_shared<const MemorySnapshot>( std::move( snapshot ) ), folder );
                 StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "memory.export -> %#", folder );
+                reply.appendFormat( "memory.export -> %#", folder.str() );
                 outReply = string( reply.view() );
                 return true;
             }
@@ -103,15 +103,15 @@ namespace sw
                     outReply = "memory.exportinfo: no policy";
                     return true;
                 }
-                const string                            folder = MemorySnapshotExport::findLatestFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
+                const AbsolutePath                      folder = MemorySnapshotExport::findLatestFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
                 fixed_string<constant::buffer::kMax128> fileName;
                 formatstring( fileName.data(), fileName.capacity(), "%#.csv", sheetName );
-                const string  path = FileUtil::joinPath( folder, fileName.view() );
-                vector<uint8> listByte;
-                if ( folder.empty() || FileUtil::readFile( FileUtil::toDiskPath( path ), listByte ) == false )
+                const AbsolutePath path = folder.join( fileName.view() );
+                vector<uint8>      listByte;
+                if ( folder.empty() || FileUtil::readFile( path, listByte ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reply;
-                    reply.appendFormat( "memory.exportinfo: no file '%#'", path );
+                    reply.appendFormat( "memory.exportinfo: no file '%#'", path.str() );
                     outReply = string( reply.view() );
                     return true;
                 }

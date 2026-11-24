@@ -27,11 +27,11 @@ namespace sw
         struct ModuleRebuildStepInternal
         {
             /** @brief 빌드 트리(바이너리 폴더의 부모 — `ModuleCompiler` 가 `cmake --build` 를 부르는 자리)입니다. 없으면(패키지 · 복사한 바이너리) 빈 글입니다. */
-            static string findBuildDirectory()
+            static AbsolutePath findBuildDirectory()
             {
-                const string parentDir  = FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) );
-                const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "build.ninja" ) ) ) || FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) );
-                return bBuildTree ? parentDir : string{};
+                const AbsolutePath parentDir  = FileUtil::toDiskPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) ) );
+                const bool         bBuildTree = FileUtil::isRegularFile( parentDir.join( "build.ninja" ) ) || FileUtil::isRegularFile( parentDir.join( "CMakeCache.txt" ) );
+                return FileUtil::toDiskPath( bBuildTree ? parentDir.str() : string{} );
             }
 
             /** @brief 판 머리를 판 글로 덮습니다(원본은 실행기에 맡긴다 — 시나리오 끝에 되돌린다). 실패하면 그 까닭입니다. */
@@ -44,17 +44,17 @@ namespace sw
                 const expected<ModuleRebuildVariant> variant = AutomationReloadSteps::parseVariant( tableText, variantPath.str(), variantName );
                 if ( variant.has_value() == false )
                     return unexpected( variant.error() );
-                const string buildDir = findBuildDirectory();
+                const AbsolutePath buildDir = findBuildDirectory();
                 if ( buildDir.empty() )
                     return unexpected( Error{ ErrorKind::Unsupported, "no CMake build tree next to the binary folder - this run cannot rebuild modules", ProcessRoots::get()._binary.str() } );
                 // 판 머리는 CMake 가 기본 글로 만든다(추적 소스를 고치지 않으려고 빌드 트리에 둔다) — 없으면 판을 받는 소스가 없는 빌드다. 지어낸 자리에 쓰지 않는다.
-                const string headerPath = FileUtil::joinPath( FileUtil::joinPath( buildDir, "generated" ), variant->_header );
-                string       original;
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( headerPath ) ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( headerPath ), original ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "the variant header is not in the build tree (does CMake generate it for this module?)", headerPath } );
-                context.restoreFileAtEnd( headerPath, std::move( original ) );
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( headerPath ), variant->_text ) == false )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the variant header", headerPath } );
+                const AbsolutePath headerPath = buildDir.join( "generated" ).join( variant->_header );
+                string             original;
+                if ( FileUtil::isRegularFile( headerPath ) == false || FileUtil::readTextFile( headerPath, original ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "the variant header is not in the build tree (does CMake generate it for this module?)", headerPath.str() } );
+                context.restoreFileAtEnd( headerPath.str(), std::move( original ) );
+                if ( FileUtil::writeTextFile( headerPath, variant->_text ) == false )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the variant header", headerPath.str() } );
                 return {};
             }
 

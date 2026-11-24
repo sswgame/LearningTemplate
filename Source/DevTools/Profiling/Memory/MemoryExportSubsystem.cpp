@@ -68,7 +68,7 @@ namespace sw
         return engine::getSubsystem<TaskManager>().getStagePendingCount( _writeStage );
     }
 
-    void MemoryExportSubsystem::writeAsync( shared_ptr<const MemorySnapshot> pSnapshot, string folder )
+    void MemoryExportSubsystem::writeAsync( shared_ptr<const MemorySnapshot> pSnapshot, const AbsolutePath& folder )
     {
         const auto writeNow = [pSnapshot, folder]()
         {
@@ -86,7 +86,7 @@ namespace sw
     void MemoryExportSubsystem::exportOnLoopEnd()
     {
         const CommandLineManager* pCommandLine = engine::findSubsystem<CommandLineManager>();
-        string                    root;
+        AbsolutePath              root;
         if ( pCommandLine == nullptr || pCommandLine->getArgument( CommandLineArgument::MEMORY_EXPORT, root ) == false )
             return;
         const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
@@ -95,7 +95,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MemoryExport.NoPolicy", "-memory-export: %# (%#)", policy.error().message(), policy.error().detail() );
             return;
         }
-        const string folder = MemorySnapshotExport::reserveFolder( root );
+        const AbsolutePath folder = MemorySnapshotExport::reserveFolder( root );
         if ( folder.empty() )
             return; // 이유는 `FileUtil::reserveUniquePath` 가 남겼다
         const MemorySnapshot               snapshot = MemorySnapshotSources::makeEngine( policy->_allocationSiteLimit ).collect( MemorySnapshot::makeTimeLabel(), "local" );

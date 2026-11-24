@@ -50,14 +50,14 @@ namespace sw
         return listPath;
     }
 
-    string AutomationScenarioChain::makeStageReportPath( string_view reportPath, size_t stageIndex, size_t stageCount )
+    AbsolutePath AutomationScenarioChain::makeStageReportPath( string_view reportPath, size_t stageIndex, size_t stageCount )
     {
         if ( reportPath.empty() || stageCount <= 1 )
-            return string( reportPath );
+            return FileUtil::toDiskPath( reportPath );
         // 확장자 앞에 단계 번호를 넣는다(폴더 이름의 점은 FileUtil 이 확장자로 읽지 않는다).
         StringBuilder<constant::buffer::kMax1024> path;
         path.appendFormat( "%#.%#%#", FileUtil::removeExtension( reportPath ), static_cast<uint64>( stageIndex + 1 ), FileUtil::getExtension( reportPath ) );
-        return string( path.view() );
+        return FileUtil::toDiskPath( path.view() );
     }
 
     void AutomationScenarioChain::begin( vector<string> listPath, bool bKeepGoing, uint32 repeatedFailureLimit )

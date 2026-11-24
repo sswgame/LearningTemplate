@@ -166,10 +166,10 @@ SW_TEST_CASE( ContentHashTest, OwnRewriteOfTheSameSizeIsSeenAtOnce )
     {
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
         const uint64 expected = ContentHash::computeBytes( makeBytes( pText ) );
-        SW_EXPECT_EQUAL( ContentHash::computeFile( path.str() ), expected );
-        SW_EXPECT_EQUAL( ContentHash::computeFile( path.str() ), expected ); // 두 번째는 캐시에서 — 같은 값이어야 한다
+        SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected );
+        SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected ); // 두 번째는 캐시에서 — 같은 값이어야 한다
     }
     SW_REQUIRE_TRUE( FileUtil::removeFile( path ) );
     // 지운 파일은 못 읽음(0)이다. 스트림 해시는 크기를 조용히 묻고(tryGetFileSize) 없음을 값(NotFound)으로 돌려주므로 로그는 없다 — 판단은 부른 쪽 몫이다.
-    SW_EXPECT_EQUAL( ContentHash::computeFile( path.str() ), uint64( 0 ) );
+    SW_EXPECT_EQUAL( ContentHash::computeFile( path ), uint64( 0 ) );
 }

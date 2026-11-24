@@ -78,7 +78,7 @@ namespace sw
          * @details 게임 · 기동 스레드에서 부른다(엔진 설정 사본을 뜬다). 기록이 없으면 할 일이 없다고 남기고 true 다. 기록을 읽지 못했거나 컴파일이 하나라도 지면 false 입니다 —
          *          기록은 성공한 요청만 적으므로 지는 컴파일은 지금 소스의 오류다(시간을 재는 실행보다 먼저 드러난다).
          */
-        [[nodiscard]] static bool warmFromFolder( string_view folder );
+        [[nodiscard]] static bool warmFromFolder( const AbsolutePath& folder );
 
     private:
         /** @brief 요청 하나의 줄입니다. */

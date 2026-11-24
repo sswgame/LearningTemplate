@@ -100,7 +100,7 @@ namespace sw::editor
                     if ( texture._resolvedPath.empty() )
                         bStale = true; // 못 찾았던 파일이 생겼을 수 있다
                     else
-                        bStale = ContentHash::computeFile( texture._resolvedPath ) != texture._contentHash; // 읽지 못하면 0 — 다시 읽어 실패를 알린다
+                        bStale = ContentHash::computeFile( FileUtil::toDiskPath( texture._resolvedPath ) ) != texture._contentHash; // 읽지 못하면 0 — 다시 읽어 실패를 알린다
                 }
                 return bStale;
             }

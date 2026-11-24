@@ -559,14 +559,14 @@ namespace sw::editor
                 }
                 const optional<AbsolutePath> targetPath = editor::getSubsystem<AssetPaths>().findLooseFile( targetID );
                 AssetIdentityRules           rules;
-                if ( targetPath.has_value() == false || rules.load( ProcessRoots::get()._project.str() ) == false )
+                if ( targetPath.has_value() == false || rules.load( ProcessRoots::get()._project ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "no asset '%#' or no asset identity rules", targetID );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const optional<AssetGUID> before = rules.readIdentity( targetPath->str(), targetID );
+                const optional<AssetGUID> before = rules.readIdentity( *targetPath, targetID );
                 if ( before.has_value() == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -581,7 +581,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const optional<AssetGUID> after = rules.readIdentity( targetPath->str(), targetID );
+                const optional<AssetGUID> after = rules.readIdentity( *targetPath, targetID );
                 if ( after.has_value() == false || *after != *before )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;

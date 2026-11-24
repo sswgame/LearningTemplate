@@ -593,7 +593,7 @@ namespace sw
         }
     }
 
-    bool JSONSerializer::saveToFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+    bool JSONSerializer::saveToFile( const AbsolutePath& absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
                                      const SerializeContext& context )
     {
         JSONDocument doc;

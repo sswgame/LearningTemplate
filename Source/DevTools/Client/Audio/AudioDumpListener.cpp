@@ -57,19 +57,19 @@ namespace sw
                 AudioDumpBuffer* const pBuffer = engine::findSubsystem<AudioDumpBuffer>();
                 if ( pBuffer == nullptr || pBuffer->_listSample.empty() )
                     return;
-                vector<float32>& listSample   = pBuffer->_listSample;
-                const string     path         = gv_audioDumpPath.get();
-                const uint32     channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
-                vector<uint8>    bytes;
+                vector<float32>&   listSample   = pBuffer->_listSample;
+                const AbsolutePath path         = FileUtil::toDiskPath( gv_audioDumpPath.get() );
+                const uint32       channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
+                vector<uint8>      bytes;
                 AudioWAVEncoder::encodeFloat32( listSample.data(), static_cast<uint32>( listSample.size() / channelCount ), channelCount,
                                                 AudioChannelLayoutUtil::getChannelMask( layout ), audio::kSampleRate, bytes );
                 listSample.clear();
-                if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
+                if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
                 {
-                    SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path );
+                    SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path.str() );
                     return;
                 }
-                SW_LOG_INFO_ID( "AudioService.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path, channelCount );
+                SW_LOG_INFO_ID( "AudioService.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path.str(), channelCount );
             }
         };
 

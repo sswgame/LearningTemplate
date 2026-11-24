@@ -55,7 +55,7 @@ namespace sw
          * @brief 파일의 내용 해시입니다. 크기와 쓰기 시각이 지난번과 같으면 파일을 열지 않습니다(`ContentHashCache`). 읽지 못하면 0 입니다. 엔진 서비스가 없으면 멈춘다.
          * @details "파일이 바뀌었나" 를 묻는 쪽(핫 리로드의 자기 저장 거르기 · 미리보기 자동 갱신)은 도장이 아니라 이 값을 비교한다 — 같은 틱 · 같은 크기의 다시 쓰기도 놓치지 않는다.
          */
-        static uint64 computeFile( string_view absPath );
+        static uint64 computeFile( const AbsolutePath& absPath );
         /**
          * @brief @p stamp 를 열쇠로 내용 값을 캐시해도 되는지 — 쓴 지 시간 창(2 초)이 지났는지입니다.
          * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 값이 돌아왔다(셰이더 쿠킹 판정 테스트가 전체 실행에서만 졌다).

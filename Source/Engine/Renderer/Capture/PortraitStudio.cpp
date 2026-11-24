@@ -115,7 +115,7 @@ namespace sw
                     }
                     StringBuilder<constant::buffer::kMax512> path;
                     path.appendFormat( "%#.dds", _pBase[index] );
-                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
+                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( FileUtil::toDiskPath( path.view() ), rgbaBytes, capture._width, capture._height );
                     path.clear();
                     path.appendFormat( "%#.png", _pBase[index] );
                     const bool bPNG = ImageFileWriter::writePNGRGBA8( FileUtil::toDiskPath( path.view() ), rgbaBytes, capture._width, capture._height );

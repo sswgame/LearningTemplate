@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/FileWatch/FileWatcher.h"
@@ -35,7 +36,7 @@ namespace sw
         ~LinuxFileWatcher() override;
 
         /** @brief inotify · eventfd 를 열고 워커를 띄웁니다. */
-        [[nodiscard]] bool startWatching( string_view directoryPath, bool bRecursive = true ) override;
+        [[nodiscard]] bool startWatching( const AbsolutePath& directoryPath, bool bRecursive = true ) override;
         /** @brief eventfd 로 워커를 깨운 뒤 모든 watch 를 뗍니다. */
         void stopWatching() override;
         /** @brief 워커가 돌고 있으면 true 입니다. */
@@ -49,7 +50,7 @@ namespace sw
         /** @brief inotify 이벤트 하나(감시 wd, 마스크, wd 기준 이름)를 변경으로 바꿔 큐에 넣습니다. 루트를 잃으면 알리고 false 를 반환합니다. */
         [[nodiscard]] bool handleWatchEvent( int32 watchDescriptor, uint32 mask, string_view name );
         /** @brief 디렉터리를(재귀면 하위 디렉터리까지) inotify 에 등록합니다. */
-        bool addWatchRecursive( string_view directoryPath );
+        bool addWatchRecursive( const AbsolutePath& directoryPath );
         /** @brief 디렉터리 하나만 inotify 에 등록하고 wd 맵에 넣습니다. */
         bool addWatchDirectory( string_view directoryPath );
         /** @brief wd 를 해제하고 맵에서 지웁니다. */

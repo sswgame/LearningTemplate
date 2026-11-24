@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -24,13 +25,13 @@ namespace sw
     struct SW_API InputRemapSerializer
     {
         /** @brief 맵의 모든 액션 · 바인딩을 @p filePath 에 씁니다. 경로가 비었거나 쓰지 못하면 false 입니다. */
-        [[nodiscard]] static bool save( const InputMap& map, string_view filePath );
+        [[nodiscard]] static bool save( const InputMap& map, const AbsolutePath& filePath );
         /**
          * @brief @p filePath 의 사용자 바인딩을 읽어 @p map 에 묶습니다.
          * @return 파일이 없거나 깨진 칸이 있거나, 가상 커서가 마우스로 바꾸는 스틱 · 패드 버튼을 다시 묶은 바인딩이 있으면 false 입니다.
          *         그 바인딩은 넣지 않는다(맵 읽기와 같은 거절).
          */
-        [[nodiscard]] static bool load( InputMap& map, string_view filePath );
+        [[nodiscard]] static bool load( InputMap& map, const AbsolutePath& filePath );
 
         /** @brief `modifier` 속성 글자(`Ctrl`, `Ctrl+Shift` …)를 수정 키 마스크로 읽습니다. 모르는 이름 · 빈 글 · 같은 이름 두 번이면 false 입니다. */
         [[nodiscard]] static bool tryParseModifierNames( string_view text, uint8& outModifierMask );

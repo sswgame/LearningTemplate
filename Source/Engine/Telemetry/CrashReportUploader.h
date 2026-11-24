@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -27,10 +28,10 @@ namespace sw
     /** @brief 올릴 묶음 — 묶음 폴더의 매니페스트와 파일들입니다. */
     struct CrashReportUploadBundle
     {
-        vector<string> _listFilePath{}; ///< 덤프 · 컨텍스트 · 스택 · 빵부스러기 · 로그(매니페스트 제외)
-        string         _folder{};
-        string         _sessionID{};
-        string         _manifest{}; ///< manifest.json 의 글
+        vector<AbsolutePath> _listFilePath{}; ///< 덤프 · 컨텍스트 · 스택 · 빵부스러기 · 로그(매니페스트 제외)
+        string               _folder{};
+        string               _sessionID{};
+        string               _manifest{}; ///< manifest.json 의 글
     };
 } // namespace sw
 

@@ -66,7 +66,7 @@ namespace sw
                 const AbsolutePath root = layer._rootPath.getParent();
                 if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( root ) == false )
                     return 0;
-                vector<string> listForeign;
+                vector<AbsolutePath> listForeign;
                 (void)FileUtil::forEachDirectoryEntry( root, false, [&listForeign]( const DirectoryEntry& entry )
                 {
                     const string name    = FileUtil::getFileNamePart( entry._path );
@@ -74,12 +74,12 @@ namespace sw
                     for ( uint32 index = 0; index < static_cast<uint32>( DerivedDataBucket::Count ); ++index )
                         bBucket = bBucket || name == getBucketName( static_cast<DerivedDataBucket>( index ) );
                     if ( entry._bDirectory && bBucket == false )
-                        listForeign.push_back( string( entry._path ) );
+                        listForeign.push_back( FileUtil::toDiskPath( entry._path ) );
                     return true;
                 } ); // 도중에 멈추면 남은 폴더는 다음 정리가 지운다
                 uint32 removed = 0;
-                for ( const string& folder : listForeign )
-                    removed += FileUtil::removeDirectory( FileUtil::toDiskPath( folder ) ) ? 1u : 0u;
+                for ( const AbsolutePath& folder : listForeign )
+                    removed += FileUtil::removeDirectory( folder ) ? 1u : 0u;
                 if ( removed > 0 )
                     SW_LOG_INFO_ID( "DDC.ForeignFoldersRemoved", "DDC '%#': removed %# folders that belong to no bucket", root.str(), removed );
                 return removed;
@@ -355,7 +355,7 @@ namespace sw
             return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ overrideRoot.join( bucketName ), DerivedDataAccess::ReadWrite } } };
         const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
         JSONDocument       document;
-        if ( document.loadFromFile( path.str() ) == false )
+        if ( document.loadFromFile( path ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path.str() } );
         const JSONValue layers = document.getRoot().get( "_listLayer" );
         if ( layers.isArray() == false || layers.size() == 0 )

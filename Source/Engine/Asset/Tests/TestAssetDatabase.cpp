@@ -179,10 +179,10 @@ SW_TEST_CASE( AssetDatabaseTest, OutputOnDiskReadsTheIdentityOfItsSource )
     const AbsolutePath       mesh       = sw::test::makeScratchPath( "common/models/rock.mesh" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourceMeta ) && FileUtil::writeTextFile( sourceMeta, AssetMeta::makeText( "common/models_raw/rock.glb", source ) ) );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( mesh ) && FileUtil::writeTextFile( mesh, "mesh" ) );
-    const optional<AssetGUID> guid = rules.readIdentity( mesh.str(), "common/models/rock.mesh" );
+    const optional<AssetGUID> guid = rules.readIdentity( mesh, "common/models/rock.mesh" );
     SW_REQUIRE_TRUE( guid.has_value() );
     SW_EXPECT_TRUE( *guid == AssetGUID::fromName( source, ".mesh" ) );
-    SW_EXPECT_FALSE( rules.readIdentity( mesh.str(), "common/models/gone.mesh" ).has_value() );
+    SW_EXPECT_FALSE( rules.readIdentity( mesh, "common/models/gone.mesh" ).has_value() );
 }
 
 SW_TEST_CASE( AssetDatabaseTest, ReportsBrokenPairsAndCopiesWithoutGuessing )
@@ -260,7 +260,7 @@ SW_TEST_CASE( AssetDatabaseTest, MetaTextRoundTripsAndRejectsOtherShapes )
     SW_REQUIRE_TRUE( read.has_value() );
     SW_EXPECT_TRUE( *read == guid );
     SW_EXPECT_EQUAL( string( "hit.ogg" ), meta._source );
-    SW_EXPECT_EQUAL( string( "a/b/hit.ogg.meta" ), AssetMeta::makePath( "a/b/hit.ogg" ) );
+    SW_EXPECT_EQUAL( string( "a/b/hit.ogg.meta" ), AssetMeta::makePath( "a/b/hit.ogg" ).str() );
     const AbsolutePath diskSource = sw::test::makeScratchPath( "a/b/hit.ogg" );
     SW_EXPECT_TRUE( AssetMeta::makePath( diskSource ) == diskSource.getParent().join( "hit.ogg.meta" ) ); // 디스크 판은 형식으로 곁 파일을 잇는다
 

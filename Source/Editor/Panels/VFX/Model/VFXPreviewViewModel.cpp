@@ -334,7 +334,7 @@ namespace sw::editor
 
     bool VFXPreviewViewModel::updateContentHash( string_view diskPath, uint64& inoutHash )
     {
-        const uint64 hash = ContentHash::computeFile( diskPath );
+        const uint64 hash = ContentHash::computeFile( FileUtil::toDiskPath( diskPath ) );
         if ( hash == 0 || hash == inoutHash )
             return false;
         inoutHash = hash;

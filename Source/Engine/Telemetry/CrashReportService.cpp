@@ -102,7 +102,7 @@ namespace sw
 
             [[nodiscard]] static bool saveManifest( const AbsolutePath& bundleFolder, const JSONDocument& document )
             {
-                return document.saveToFile( bundleFolder.join( CrashReportService::kManifestFileName ).str(), 2 );
+                return document.saveToFile( bundleFolder.join( CrashReportService::kManifestFileName ), 2 );
             }
 
             static string readText( const AbsolutePath& path )
@@ -145,7 +145,7 @@ namespace sw
                 vector<AbsolutePath> listFile;
                 string               log;
                 if ( fixedLogPath.empty() == false )
-                    log = readText( FileUtil::toDiskPath( string( fixedLogPath ) ) );
+                    log = readText( FileUtil::toDiskPath( fixedLogPath ) );
                 else if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
                     return log;
                 VectorUtil::sort( listFile );
@@ -522,7 +522,7 @@ namespace sw
             const JSONValue files = root.get( "files" );
             for ( size_t index = 0; index < files.size(); ++index )
             {
-                bundle._listFilePath.push_back( FileUtil::joinPath( folder.str(), files.at( index ).get( "name" ).asString() ) );
+                bundle._listFilePath.push_back( folder.join( files.at( index ).get( "name" ).asString() ) );
             }
             const CrashReportUploadResult result = uploader.upload( bundle );
             if ( result == CrashReportUploadResult::Kept )

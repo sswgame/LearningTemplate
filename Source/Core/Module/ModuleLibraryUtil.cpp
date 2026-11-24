@@ -127,7 +127,7 @@ namespace sw
 #endif
     }
 
-    string ModuleLibraryUtil::findBuiltDebugSymbolPath( string_view libraryPath )
+    AbsolutePath ModuleLibraryUtil::findBuiltDebugSymbolPath( string_view libraryPath )
     {
         const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
         string_view        fileName;
@@ -144,7 +144,7 @@ namespace sw
         AbsolutePath found = symbolDirectory.join( fileName );
         if ( FileUtil::exists( found ) == false )
             found = FileUtil::toDiskPath( FileUtil::exists( besideLibrary ) ? besideLibrary.str() : string{} );
-        return found.str();
+        return found;
     }
 
     AbsolutePath ModuleLibraryUtil::getModuleDirectory()
@@ -177,13 +177,13 @@ namespace sw
         return true;
     }
 
-    string ModuleLibraryUtil::findModuleLibraryPath( string_view baseName )
+    AbsolutePath ModuleLibraryUtil::findModuleLibraryPath( string_view baseName )
     {
         const string fileName = formatSharedLibraryName( baseName );
         // 옮긴 모듈은 그 폴더에만 있다 — 없으면 그 경로를 돌려 부르는 쪽이 "없다" 를 알리게 한다(활성 게임의 `Bin/Modules` 사본으로 넘어가지 않는다).
         const string_view movedDirectory = ModuleLibraryUtilInternal::findModuleSubdirectory( baseName );
         if ( movedDirectory.empty() == false )
-            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), fileName );
+            return ProcessRoots::get()._binary.join( movedDirectory ).join( fileName );
         AbsolutePath modulePath = getModuleDirectory().join( fileName );
         if ( FileUtil::exists( modulePath ) == false )
         {
@@ -191,7 +191,7 @@ namespace sw
             if ( FileUtil::exists( binaryPath ) )
                 modulePath = binaryPath;
         }
-        return modulePath.str();
+        return modulePath;
     }
 
     void* ModuleLibraryUtil::loadLibraryAt( const AbsolutePath& libraryPath )

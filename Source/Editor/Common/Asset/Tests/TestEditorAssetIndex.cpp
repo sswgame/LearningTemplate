@@ -266,7 +266,7 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCacheReopensOnlyChangedFiles )
     const string_view otherText = "<Scene>\n  <Sprite _texture=\"game/a/new.png\"/>\n</Scene>\n";
     write( sceneID, sceneText, stable );
     write( spriteID, "png", stable );
-    write( AssetMeta::makePath( spriteID ), AssetMeta::makeText( spriteID, first ), stable );
+    write( AssetMeta::makePath( spriteID ).str(), AssetMeta::makeText( spriteID, first ), stable );
     SW_EXPECT_EQUAL( size_t{ 1 }, Internal::findReferrerIDs( scan(), spriteID ).size() );
 
     write( sceneID, otherText, stable ); // 크기 · 시각이 같다 — 열지 않았으니 앞 참조가 보인다
@@ -275,7 +275,7 @@ SW_TEST_CASE( EditorAssetIndexTest, ScanCacheReopensOnlyChangedFiles )
     SW_EXPECT_TRUE( cached.findGUID( spriteID ) == optional<AssetGUID>{ first } );
 
     write( sceneID, otherText, stable + FileUtil::kFileTimeTicksPerSecond );
-    write( AssetMeta::makePath( spriteID ), AssetMeta::makeText( spriteID, second ), stable + FileUtil::kFileTimeTicksPerSecond );
+    write( AssetMeta::makePath( spriteID ).str(), AssetMeta::makeText( spriteID, second ), stable + FileUtil::kFileTimeTicksPerSecond );
     const EditorAssetIndex changed = scan();
     SW_EXPECT_TRUE( Internal::findReferrerIDs( changed, spriteID ).empty() );
     SW_EXPECT_TRUE( changed.findGUID( spriteID ) == optional<AssetGUID>{ second } );

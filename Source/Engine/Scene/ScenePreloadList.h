@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/SceneIterationKey.h"
@@ -32,13 +33,13 @@ namespace sw
         /**
          * @brief 씬 파일 경로(`….scene.xml` 또는 `….scene.bin`)의 프리로드 목록 경로(`….preload.json`)를 만듭니다. 씬 파일이 아니면 빈 문자열입니다.
          */
-        static string makeListPath( string_view scenePath );
+        static AbsolutePath makeListPath( string_view scenePath );
 
         /** @brief @p objects 의 모든 오브젝트 컴포넌트에서 에셋 경로를 모아 @p outListPath 에 오름차순 · 중복 없이 채웁니다(먼저 비운다). */
         static void collect( SceneIterationKey key, const GameObjectManager& objects, vector<string>& outListPath );
 
         /** @brief 목록을 디스크 절대 경로 @p diskPath 에 씁니다(쿠킹 출력). */
-        [[nodiscard]] static bool write( string_view diskPath, const vector<string>& listPath );
+        [[nodiscard]] static bool write( const AbsolutePath& diskPath, const vector<string>& listPath );
         /**
          * @brief 리소스 id @p listAssetID 의 목록을 읽습니다(팩 · 낱개 파일). 파일이 없거나 형식이 틀리면 오류를 남기고 false 입니다.
          * @details 파일이 **없는** 씬(쿠킹 전 Dev 실행)은 부르는 쪽이 `AssetIO::hasAsset` 로 먼저 묻는다 — 없는 파일을 오류로 세지 않는다.

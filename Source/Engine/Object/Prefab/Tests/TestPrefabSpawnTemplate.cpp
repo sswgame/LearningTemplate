@@ -234,7 +234,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
 
     // 쿠커의 길: 펼쳐서 이진으로 쓴다(`PrefabCooker::cookAll`).
     PrefabAsset source;
-    SW_REQUIRE_TRUE( source.loadFromDiskFile( domain.makeDiskPath( "cart.prefab.xml" ).str() ) );
+    SW_REQUIRE_TRUE( source.loadFromDiskFile( domain.makeDiskPath( "cart.prefab.xml" ) ) );
     PrefabCache cooker;
     SW_REQUIRE_TRUE( cooker.flattenNestedInstances( source ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, source.getNestedInstances().size() );

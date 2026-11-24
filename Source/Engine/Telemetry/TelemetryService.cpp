@@ -316,7 +316,7 @@ namespace sw
         context._buildID     = ModuleBuildID::find( nullptr )._id;
         context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         // 스풀은 사용자 설정 파일 옆이다 — 자동화가 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 같이 옮겨 간다.
-        const AbsolutePath folder = FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" ) );
+        const AbsolutePath folder = userSettings.getUserFilePath().getParent().join( "telemetry" );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
         if ( loadSchema( AssetID{ engineSchema } ) == false )

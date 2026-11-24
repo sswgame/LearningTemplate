@@ -242,9 +242,9 @@ namespace sw
         return summary;
     }
 
-    bool ShaderRequestLog::warmFromFolder( string_view folder )
+    bool ShaderRequestLog::warmFromFolder( const AbsolutePath& folder )
     {
-        const expected<ShaderRequestLog> requestLog = readFolder( FileUtil::toDiskPath( folder ) );
+        const expected<ShaderRequestLog> requestLog = readFolder( folder );
         if ( requestLog.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ShaderRequestLog.ReadFailed", "%#: %#", requestLog.error().message(), requestLog.error().detail() );
@@ -252,11 +252,11 @@ namespace sw
         }
         if ( requestLog->size() == 0 )
         {
-            SW_LOG_INFO_ID( "ShaderRequestLog.NothingToWarm", "No shader request log under '%#' yet - nothing to warm", folder );
+            SW_LOG_INFO_ID( "ShaderRequestLog.NothingToWarm", "No shader request log under '%#' yet - nothing to warm", folder.str() );
             return true;
         }
         const ShaderWarmSummary summary = requestLog->compileAll( ShaderEnginePolicy::capture() );
-        SW_LOG_INFO_ID( "ShaderRequestLog.Warmed", "Shader warm-up from '%#': %# request(s), %# skipped (source gone), %# failed", folder, summary._requestCount, summary._missingSourceCount,
+        SW_LOG_INFO_ID( "ShaderRequestLog.Warmed", "Shader warm-up from '%#': %# request(s), %# skipped (source gone), %# failed", folder.str(), summary._requestCount, summary._missingSourceCount,
                         summary._failedCount );
         return summary._failedCount == 0;
     }

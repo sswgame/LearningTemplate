@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -45,10 +46,10 @@ namespace sw
         /** @brief 교체되어 내려갈 차례를 기다리는 옛 라이브러리입니다. */
         struct DeferredLibrary
         {
-            string _moduleName;
-            string _shadowPath;
-            void*  _pHandle{ nullptr };
-            uint32 _batchID{ 0 };
+            string       _moduleName;
+            AbsolutePath _shadowPath;
+            void*        _pHandle{ nullptr };
+            uint32       _batchID{ 0 };
         };
 
         vector<DeferredLibrary> _listLibrary;   ///< 언로드를 미룬 옛 라이브러리. 오래된 것부터

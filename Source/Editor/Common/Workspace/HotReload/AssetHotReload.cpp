@@ -234,7 +234,7 @@ namespace sw::editor
         }
 
         _pIdentityRules = make_unique<AssetIdentityRules>();
-        if ( _pIdentityRules->load( ProcessRoots::get()._project.str() ) == false )
+        if ( _pIdentityRules->load( ProcessRoots::get()._project ) == false )
             _pIdentityRules.reset(); // 이유는 load 가 남겼다 — 색인은 기동 때 것 그대로다
 
         FileWatchService* const pFileWatch = findSubsystem<FileWatchService>();
@@ -246,17 +246,17 @@ namespace sw::editor
         const FileChangeDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileChangeDelegate, &AssetHotReload::onResourceFileChanged, this ) };
         const FileChangeDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileChangeDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
         const string&            rootFolder = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-        _resourceWatch                      = pFileWatch->watch( rootFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
+        _resourceWatch                      = pFileWatch->watch( FileUtil::toDiskPath( rootFolder ), FileWatchDepth::Tree, listExtension, fileWatchDelegate );
         if ( _resourceWatch.isActive() == false )
             return false; // 감시 창구가 이유를 남겼다
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
-        _contentWatch = pFileWatch->watch( rootFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
+        _contentWatch = pFileWatch->watch( FileUtil::toDiskPath( rootFolder ), FileWatchDepth::Tree, {}, treeWatchDelegate );
         // 작업 도메인(시나리오 사본 · 가져오기 · 미리보기)은 리소스 루트 밖, 실행 뿌리 아래라 따로 건다. 못 걸면 작업 도메인의 바깥 변경만 다시 읽지 않는다.
         const string& scratchFolder = AssetPaths::getScratchFolderPath();
         if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchFolder ) ) )
         {
-            _scratchResourceWatch = pFileWatch->watch( scratchFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
-            _scratchContentWatch  = pFileWatch->watch( scratchFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
+            _scratchResourceWatch = pFileWatch->watch( FileUtil::toDiskPath( scratchFolder ), FileWatchDepth::Tree, listExtension, fileWatchDelegate );
+            _scratchContentWatch  = pFileWatch->watch( FileUtil::toDiskPath( scratchFolder ), FileWatchDepth::Tree, {}, treeWatchDelegate );
         }
         return _resourceWatch.isActive();
     }
@@ -361,7 +361,7 @@ namespace sw::editor
         const string absPath  = AssetHotReloadInternal::makeDiskPath( targetID );
         if ( FileUtil::isRegularFile( FileUtil::toDiskPath( absPath ) ) == false )
             return;
-        const optional<AssetGUID> guid = _pIdentityRules->readIdentity( absPath, targetID );
+        const optional<AssetGUID> guid = _pIdentityRules->readIdentity( FileUtil::toDiskPath( absPath ), targetID );
         if ( guid.has_value() )
             AssetRegistry::record( *guid, targetID );
     }
@@ -498,7 +498,7 @@ namespace sw::editor
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
-        const uint64 contentHash = ContentHash::computeFile( diskPath->str() );
+        const uint64 contentHash = ContentHash::computeFile( *diskPath );
         if ( contentHash != 0 )
             _mapAppliedContentHash[FileUtil::normalizePath( relativePath ).str()] = contentHash;
         applyChangedFile( relativePath );
@@ -509,7 +509,7 @@ namespace sw::editor
         const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ).str() );
         if ( itApplied == _mapAppliedContentHash.end() )
             return false;
-        const bool bSame = ContentHash::computeFile( AssetHotReloadInternal::makeDiskPath( relativePath ) ) == itApplied->second;
+        const bool bSame = ContentHash::computeFile( FileUtil::toDiskPath( AssetHotReloadInternal::makeDiskPath( relativePath ) ) ) == itApplied->second;
         if ( bSame == false )
             _mapAppliedContentHash.erase( itApplied ); // 그 뒤에 바깥에서 또 바뀌었다 — 반영한다
         return bSame;

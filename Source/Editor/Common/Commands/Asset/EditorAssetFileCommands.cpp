@@ -232,11 +232,11 @@ namespace sw::editor
                     uniqueSource.insert( FileUtil::normalizeSeparators( move._sourceAbs ) );
                 for ( const EditorAssetMove& move : listMove )
                 {
-                    const string sidecar = AssetMeta::makePath( move._sourceAbs );
+                    const string sidecar = AssetMeta::makePath( move._sourceAbs ).str();
                     if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( FileUtil::toDiskPath( sidecar ) ) == false )
                         continue;
                     if ( uniqueSource.count( FileUtil::normalizeSeparators( sidecar ) ) == 0 )
-                        listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ) } );
+                        listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ).str() } );
                 }
                 return listResult;
             }
@@ -277,7 +277,7 @@ namespace sw::editor
             }
 
             /** @brief 정체성 규칙(`Config/Dev/AssetIdentity.json`)을 읽습니다. 읽지 못하면 오류를 남기고 false 입니다(규칙 없이 정체성을 쓰지 않는다). */
-            [[nodiscard]] static bool loadIdentityRules( AssetIdentityRules& outRules ) { return outRules.load( ProcessRoots::get()._project.str() ); }
+            [[nodiscard]] static bool loadIdentityRules( AssetIdentityRules& outRules ) { return outRules.load( ProcessRoots::get()._project ); }
 
             /** @brief 막 생긴 파일(새로 만들기 · 복제 · 가져오기)에 새 GUID 를 줍니다. 리소스 트리 밖이면 정체성이 없다(할 일 없음). */
             [[nodiscard]] static bool assignNewIdentity( const string& absPath )
@@ -545,7 +545,7 @@ namespace sw::editor
         }
         // 고치는 규칙은 커밋 전 검사 · move-asset · 참조 검사와 같은 칸 목록이다 — 글을 찾아 바꾸지 않고 경로 칸의 값만 바꾼다. 목록이 없으면 옮기지 않는다(고치지 못한 참조를 남기지 않게).
         AssetReferenceFields params;
-        if ( params.load( ProcessRoots::get()._project.str() ) == false )
+        if ( params.load( ProcessRoots::get()._project ) == false )
         {
             StringBuilder<constant::buffer::kMax256> failureBuilder;
             failureBuilder.appendFormat( "could not read %#", AssetReferenceFields::kConfigFile );
@@ -634,7 +634,7 @@ namespace sw::editor
             return false;
         }
         AssetReferenceFields params;
-        if ( params.load( ProcessRoots::get()._project.str() ) == false )
+        if ( params.load( ProcessRoots::get()._project ) == false )
             return false;
         EditorAssetMovePlan                                      rewritePlan = outPlan;
         vector<EditorAssetFileCommandsInternal::PreparedRewrite> listRewrite;
@@ -803,7 +803,7 @@ namespace sw::editor
 
         // 에셋과 곁의 정체성 서술(.meta)을 한 번에 보낸다 — 휴지통에서 되살리면 둘이 함께 온다.
         const string         assetPath = FileUtil::normalizeSeparators( absolutePath );
-        const AbsolutePath   metaPath  = FileUtil::toDiskPath( AssetMeta::makePath( assetPath ) );
+        const AbsolutePath   metaPath  = AssetMeta::makePath( assetPath );
         vector<AbsolutePath> listPath{ FileUtil::toDiskPath( assetPath ) };
         if ( FileUtil::isRegularFile( metaPath ) )
             listPath.push_back( metaPath );
@@ -827,7 +827,7 @@ namespace sw::editor
             return false;
         }
         // .meta 는 에셋이 실제로 지워진 뒤에만 지운다 — 남은 에셋에서 정체성을 떼면 다음에 새 GUID 를 받아 가리키던 참조가 끊긴다.
-        const string metaPath = AssetMeta::makePath( abs );
+        const string metaPath = AssetMeta::makePath( abs ).str();
         if ( FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( metaPath ) ) == false )
             SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaKept", "Deleted '%#' but its .meta could not be removed - delete it too (asset-ids reports it)", abs );
         return true;

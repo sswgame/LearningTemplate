@@ -17,10 +17,10 @@ SW_TEST_CASE( CollectContentFilesTest, LeavesTheScratchDomainOut )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "game/playground/maps/a.scene.xml" ), "<Scene/>" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( AssetPaths::kScratchDomain ).join( "left.scene.xml" ), "<broken" ) );
 
-    vector<string> listFile;
-    SW_REQUIRE_TRUE( AssetPaths::collectContentFiles( root.str(), ".xml", listFile ) );
+    vector<AbsolutePath> listFile;
+    SW_REQUIRE_TRUE( AssetPaths::collectContentFiles( root, ".xml", listFile ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), listFile.size() );
-    SW_EXPECT_TRUE( StringUtil::endsWith( FileUtil::normalizeSeparators( listFile[0] ), "game/playground/maps/a.scene.xml" ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( FileUtil::normalizeSeparators( listFile[0].str() ), "game/playground/maps/a.scene.xml" ) );
 }
 
 SW_TEST_CASE( CollectContentFilesTest, DomainlessFolderListsEveryDomain )

@@ -16,14 +16,14 @@ namespace
     struct PackPatchBuilderTestUtil
     {
         /** @brief @p folder 에 도메인 팩 하나를 씁니다. */
-        static bool writePack( const string& folder, string_view fileName, string_view domain, const vector<std::pair<string, string>>& listEntry )
+        static bool writePack( const AbsolutePath& folder, string_view fileName, string_view domain, const vector<std::pair<string, string>>& listEntry )
         {
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
+            if ( FileUtil::ensureDirectoryExists( folder ) == false )
                 return false;
-            return PackTestUtil::writeTextPack( FileUtil::joinPath( folder, fileName ), domain, listEntry );
+            return PackTestUtil::writeTextPack( FileUtil::joinPath( folder.str(), fileName ), domain, listEntry );
         }
 
-        static PackPatchBuildParams makeParams( const string& newPacks, const string& record, const string& output, string_view build )
+        static PackPatchBuildParams makeParams( const string& newPacks, const AbsolutePath& record, const AbsolutePath& output, string_view build )
         {
             PackPatchBuildParams params{};
             params._packsDirectory     = newPacks;
@@ -126,9 +126,9 @@ SW_TEST_CASE( PackPatchBuilderTest, PatchTurnsTheOldBuildIntoTheNewOne )
                                                                                 {"edit.txt",  "new"},
                                                                                 {"made.txt",   "hi"}
     } ) );
-    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder.str(), "1", recordPath.str() ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( oldFolder.str(), "1", recordPath ) );
 
-    SW_REQUIRE_TRUE( PackPatchBuilder::makePatch( Util::makeParams( newFolder.str(), recordPath.str(), output.str(), "2" ) ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::makePatch( Util::makeParams( newFolder.str(), recordPath, output, "2" ) ) );
 
     string manifestText;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( output.join( PackPatchBuilder::makeManifestFileName( "2" ) ), manifestText ) );
@@ -167,8 +167,8 @@ SW_TEST_CASE( PackPatchBuilderTest, SameContentIsRejected )
     SW_REQUIRE_TRUE( Util::writePack( folder.str(), "game.pack", "game", {
                                                                              { "a.txt", "1" }
     } ) );
-    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( folder.str(), "1", recordPath.str() ) );
-    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath.str(), FileUtil::joinPath( root.str(), "out" ), "2" ) ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( folder.str(), "1", recordPath ) );
+    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath, root.join( "out" ), "2" ) ) );
 }
 
 /** @brief [PackPatchBuilderTest] 입력이 어긋나면 만들지 않는다: 같은 빌드 번호, 쓸 수 없는 이름, 없는 기록, 패치를 쓰지 않는 빌드 */
@@ -188,13 +188,13 @@ SW_TEST_CASE( PackPatchBuilderTest, BadInputIsRejected )
     SW_REQUIRE_TRUE( Util::writePack( folder.str(), "game.pack", "game", {
                                                                              { "a.txt", "1" }
     } ) );
-    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( folder.str(), "1", recordPath.str() ) );
-    SW_REQUIRE_TRUE( PackPatchBuilder::writeNoPatchingRecord( noPatching.str() ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::writeBuildRecord( folder.str(), "1", recordPath ) );
+    SW_REQUIRE_TRUE( PackPatchBuilder::writeNoPatchingRecord( noPatching ) );
 
-    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath.str(), output.str(), "1" ) ) );
-    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath.str(), output.str(), "../2" ) ) );
-    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), FileUtil::joinPath( root.str(), "absent.xml" ), output.str(), "2" ) ) );
-    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), noPatching.str(), output.str(), "2" ) ) );
-    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( "", recordPath.str(), output.str(), "2" ) ) );
+    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath, output, "1" ) ) );
+    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), recordPath, output, "../2" ) ) );
+    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), root.join( "absent.xml" ), output, "2" ) ) );
+    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( folder.str(), noPatching, output, "2" ) ) );
+    SW_EXPECT_FALSE( PackPatchBuilder::makePatch( Util::makeParams( "", recordPath, output, "2" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( output ) ); // 실패한 입력은 아무것도 쓰지 않는다
 }

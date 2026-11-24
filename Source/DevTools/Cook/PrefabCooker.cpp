@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    uint32 PrefabCooker::cookAll( string_view sourceRoot, string_view cookedDir, const CookStore& store, const uint64 reflectionFingerprint, uint32& outFailedCount )
+    uint32 PrefabCooker::cookAll( const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store, const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -27,40 +27,40 @@ namespace sw
             return 0;
         }
 
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( sourceRoot, {}, listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "PrefabCooker.PrefabCookCouldNot", "Prefab cook could not list '%#' - nothing is cooked", sourceRoot );
+            SW_LOG_ERROR_ID( "PrefabCooker.PrefabCookCouldNot", "Prefab cook could not list '%#' - nothing is cooked", sourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         // 순서를 정한다 — 같은 쿠킹본을 쓰는 두 소스 가운데 어느 것이 먼저인지가 실행마다 같아야 한다.
         VectorUtil::sort( listFile );
 
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot ) );
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot.str() ) );
         string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
         out += '/';
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
         CookStats             stats;
         const CookJobDesc     desc = makeCookJobDesc( reflectionFingerprint );
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            const string normalized = FileUtil::normalizeSeparators( filePath );
-            const bool   bXML       = StringUtil::endsWith( normalized, ".prefab.xml", true );
-            const bool   bJSON      = StringUtil::endsWith( normalized, ".prefab.json", true );
-            if ( ( bXML || bJSON ) == false || normalized.size() <= root.size() + 1 )
+            const AbsolutePath normalized = filePath;
+            const bool         bXML       = StringUtil::endsWith( normalized.str(), ".prefab.xml", true );
+            const bool         bJSON      = StringUtil::endsWith( normalized.str(), ".prefab.json", true );
+            if ( ( bXML || bJSON ) == false || normalized.str().size() <= root.size() + 1 )
                 continue;
 
             // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
-            const string                             outputID = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
+            const string                             outputID = AssetCookPath::toCookedPath( normalized.str().substr( root.size() + 1 ) );
             StringBuilder<constant::buffer::kMax512> outputPathBuilder;
             outputPathBuilder.appendFormat( "%#%#", out, outputID );
             const string outputPath = string( outputPathBuilder.view() );
             const string outputKey  = StringUtil::toLower( outputPath.c_str() );
             if ( uniqueSetWrittenKey.contains( outputKey ) )
             {
-                SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookWouldOverwrite", "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
+                SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookWouldOverwrite", "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized.str(), outputPath );
                 ++outFailedCount;
                 continue;
             }
@@ -76,7 +76,7 @@ namespace sw
                 const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
                 if ( outputFile.has_value() == false || bFlattened == false || asset.saveToBinaryFile( *outputFile ) == false )
                 {
-                    SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookFailed", "Prefab cook failed for '%#'", normalized );
+                    SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookFailed", "Prefab cook failed for '%#'", normalized.str() );
                     return CookStep::Failed;
                 }
                 return CookStep::Written;

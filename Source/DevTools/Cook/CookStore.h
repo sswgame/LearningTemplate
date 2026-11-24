@@ -16,6 +16,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/CookJob.h"
@@ -74,7 +75,7 @@ namespace sw
     class CookStore
     {
     public:
-        CookStore( string recordRootPath, DerivedDataCache derivedDataCache );
+        CookStore( AbsolutePath recordRootPath, DerivedDataCache derivedDataCache );
 
         /** @brief 로컬 저장소입니다. 기록은 `<프로젝트>/Saved/CookRecord`, DDC 는 `Config/Dev/DerivedData.json` 의 층 목록입니다. 설정을 못 읽으면 오류입니다. */
         [[nodiscard]] static expected<CookStore> makeLocal();
@@ -89,12 +90,12 @@ namespace sw
         template <typename CookFunction>
         [[nodiscard]] CookResult cookFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
         {
-            if ( reuseFreshOutput( desc, outputID, outputPath ) )
+            if ( reuseFreshOutput( desc, outputID, FileUtil::toDiskPath( outputPath ) ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
             CookJob        job( desc );
             const CookStep step = cook();
-            return record( outputID, finishCook( job, step, outputID, outputPath ) );
+            return record( outputID, finishCook( job, step, outputID, FileUtil::toDiskPath( outputPath ) ) );
         }
 
         /**
@@ -104,12 +105,12 @@ namespace sw
         template <typename CookFunction>
         [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
         {
-            if ( reuseFreshOutput( desc, outputID, outputPath ) )
+            if ( reuseFreshOutput( desc, outputID, FileUtil::toDiskPath( outputPath ) ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
             CookJob                job( desc );
             const CookStreamedStep step = cook();
-            return record( outputID, finishStreamedCook( job, step, outputID, outputPath ) );
+            return record( outputID, finishStreamedCook( job, step, outputID, FileUtil::toDiskPath( outputPath ) ) );
         }
 
         /**
@@ -122,10 +123,10 @@ namespace sw
          *          것으로 세지 않아 옛 파일이 지워진다. 실패한 출력은 요청한 것으로 세어 지우지 않는다.
          *          **모든 쿠커를 돌린 뒤, 실패가 없을 때만 부른다** — 돌지 않은 쿠커의 출력도 요청에 없는 것으로 보인다. 기록은 남긴다(소스가 돌아오면 DDC 로 다시 쓴다).
          */
-        [[nodiscard]] uint32 removeUnrequestedOutputs( string_view cookedDir, uint32& outFailedCount ) const;
+        [[nodiscard]] uint32 removeUnrequestedOutputs( const AbsolutePath& cookedDir, uint32& outFailedCount ) const;
 
         /** @brief 출력 @p outputID 의 기록 파일 경로입니다. */
-        string                  makeRecordPath( string_view outputID ) const;
+        AbsolutePath            makeRecordPath( string_view outputID ) const;
         const DerivedDataCache& getDerivedDataCache() const { return _derivedDataCache; }
         /** @brief 이 저장소로 만든 출력의 결과 수입니다(누적). */
         const CookStats& getStats() const { return _stats; }
@@ -134,14 +135,14 @@ namespace sw
 
     private:
         /** @brief 출력 파일의 내용 해시를 `ContentHash::computeFile`(도장이 그대로면 읽지 않는다)로 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
-        uint64 hashOutputFile( string_view outputPath ) const;
+        uint64 hashOutputFile( const AbsolutePath& outputPath ) const;
 
         /** @brief 기록이 새것이고 DDC 에 그 출력이 있으면 출력 파일에 쓰고 true 입니다. */
-        [[nodiscard]] bool reuseFreshOutput( const CookJobDesc& desc, string_view outputID, string_view outputPath ) const;
+        [[nodiscard]] bool reuseFreshOutput( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath ) const;
         /** @brief 작업이 쓴 출력으로 기록과 DDC 를 씁니다. */
-        [[nodiscard]] CookResult finishCook( const CookJob& job, CookStep step, string_view outputID, string_view outputPath ) const;
+        [[nodiscard]] CookResult finishCook( const CookJob& job, CookStep step, string_view outputID, const AbsolutePath& outputPath ) const;
         /** @brief 작업이 쓰면서 센 출력 해시로 기록을 쓰고 출력 파일을 DDC 로 복사합니다. */
-        [[nodiscard]] CookResult finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, string_view outputPath ) const;
+        [[nodiscard]] CookResult finishStreamedCook( const CookJob& job, const CookStreamedStep& step, string_view outputID, const AbsolutePath& outputPath ) const;
         /** @brief 끝난 작업이 기록할 수 있는지 봅니다 — `Skipped` · `Failed` 는 그 결과를, 입력이 없는 작업은 `Failed` 를, 기록할 것이면 nullopt 입니다. */
         [[nodiscard]] static optional<CookResult> validateFinishedJob( const CookJob& job, CookStep step, string_view outputID );
         /** @brief 에셋 캐시를 모두 비웁니다(작업의 시작 조건 — 파일 머리말). */
@@ -150,7 +151,7 @@ namespace sw
         CookResult record( string_view outputID, CookResult result ) const;
 
     private:
-        string                        _recordRootPath;
+        AbsolutePath                  _recordRootPath;
         DerivedDataCache              _derivedDataCache;
         mutable CookStats             _stats;           ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다
         mutable unordered_set<string> _setRequestedID;  ///< 이 저장소로 `cookFile` 한 출력 id(`removeUnrequestedOutputs` 의 기준)

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/CookJob.h"
 
@@ -23,7 +24,7 @@ namespace sw
          *          쓰지 않고 실패로 센다 — 배포본이 부품 없이 스폰하는 것을 쿠킹에서 막는다.
          *          프리팹마다 작업(`CookJob`) 하나로 베이크하고 @p store 의 기록이 새것이면 DDC 의 출력을 다시 쓴다(`CookStore::cookFile`). 중첩 원본도 그 작업의 입력이다.
          */
-        static uint32 cookAll( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint64 reflectionFingerprint, uint32& outFailedCount );
+        static uint32 cookAll( const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store, uint64 reflectionFingerprint, uint32& outFailedCount );
         /** @brief 프리팹 쿠킹 작업의 키 값입니다. 설정 해시는 리플렉션 지문(`CookReflectionFingerprint`)입니다. */
         static CookJobDesc makeCookJobDesc( uint64 reflectionFingerprint );
     };

@@ -42,7 +42,7 @@ namespace sw
          * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/BuildLayout.cmake`). `setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
          *          게임 팩마다 PDB 이름이 같아(`SWGame.pdb`) 폴더로 가른다.
          */
-        static string findBuiltDebugSymbolPath( string_view libraryPath );
+        static AbsolutePath findBuiltDebugSymbolPath( string_view libraryPath );
 
         // ------------------------------------------------------------------------------
         // 1-1) 위치. 모듈 DLL 은 `Bin/Modules`, 엔진, GameFramework, 서드파티 DLL 은 `Bin` 에 둔다.
@@ -57,7 +57,7 @@ namespace sw
          * @brief 모듈 이름 @p baseName 의 라이브러리 경로를 찾습니다. `Bin/Modules` 에 있으면 그 경로를, 없으면 `Bin` 의 경로를 반환합니다(GameFramework 처럼 Bin 에 남는 공유 라이브러리).
          * @details 둘 다 없으면 `Bin/Modules` 의 경로를 반환한다. 부르는 쪽은 이 경로로 "없다"를 알린다.
          */
-        static string findModuleLibraryPath( string_view baseName );
+        static AbsolutePath findModuleLibraryPath( string_view baseName );
         /**
          * @brief 모듈 @p baseName 을 `Bin/Modules` 대신 `Bin/<binRelativeDirectory>` 에서 찾게 합니다. 디버그 심볼은 `Bin/Symbols/<binRelativeDirectory>` 입니다.
          * @details 함께 지은 게임 팩(`Bin/Games/<게임>/SWGame`)을 `-game=` 으로 고를 때 기동이 모듈을 올리기 전에 한 번 부른다. 모듈 하나만 둔다 —

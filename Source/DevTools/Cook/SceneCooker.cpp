@@ -176,14 +176,14 @@ namespace sw
             }
 
             /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */
-            static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const string& scenePath, string_view relativeScene,
+            static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const AbsolutePath& scenePath, string_view relativeScene,
                                        string_view activePackRoot, const string& outputPath )
             {
                 SceneDocument doc{};
                 // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedRead", "Scene cook failed to read '%#'.", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedRead", "Scene cook failed to read '%#'.", scenePath.str() );
                     return CookStep::Failed;
                 }
                 // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
@@ -195,7 +195,7 @@ namespace sw
                 }
 
                 // Packed Level: 묶는 씬을 넣은 앵커의 정적 메시를 인스턴스 메시로 바꾼다(에디터는 원본을 편집한다). 바뀐 엔티티도 아래에서 바이너리 상태로 쿠킹된다.
-                if ( SceneCooker::packStaticMeshes( services, doc, scenePath ) == false )
+                if ( SceneCooker::packStaticMeshes( services, doc, scenePath.str() ) == false )
                     return CookStep::Failed;
                 // 쿠킹 전에 "상태가 있는 엔티티" 수를 세 둔다. 쿠킹하고 나면 XML 이 비워져 셀 수 없다.
                 uint32 statefulCount{ 0 };
@@ -210,21 +210,21 @@ namespace sw
                 // 모르는 타입의 컴포넌트는 원문 그대로 쿠킹돼 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
                 if ( missingComponentCount > 0 )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookComponentsUnknown", "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookComponentsUnknown", "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath.str(), missingComponentCount );
                     return CookStep::Failed;
                 }
                 // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
                 // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
                 if ( cookedCount < statefulCount )
                 {
-                    SW_LOG_WARNING_ID( "SceneCooker.SceneEntitiesCouldNot", "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath, statefulCount - cookedCount,
+                    SW_LOG_WARNING_ID( "SceneCooker.SceneEntitiesCouldNot", "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath.str(), statefulCount - cookedCount,
                                        statefulCount );
                 }
                 // 레이어를 넘는 참조도 쿠킹 실패다 — 레이어를 끈 채 오른 쪽의 참조가 조용히 끊긴다.
-                if ( validateDataLayerReferences( services, doc, scenePath ) == false )
+                if ( validateDataLayerReferences( services, doc, scenePath.str() ) == false )
                     return CookStep::Failed;
                 // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
-                if ( SceneCellSplitter::split( services, doc, scenePath ) == false )
+                if ( SceneCellSplitter::split( services, doc, scenePath.str() ) == false )
                     return CookStep::Failed;
                 // 쿠킹본은 펼친 결과만 싣는다 — 런타임의 짓는 길이 하나다.
                 doc.stripAuthoringInstanceData();
@@ -234,7 +234,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedWrite", "Scene cook failed to write '%#'.", outputPath );
                     return CookStep::Failed;
                 }
-                SW_LOG_INFO_ID( "SceneCooker.CookedEntitiesBinaryState", "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath, outputPath, static_cast<uint32>( doc.computeTotalEntityCount() ),
+                SW_LOG_INFO_ID( "SceneCooker.CookedEntitiesBinaryState", "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath.str(), outputPath, static_cast<uint32>( doc.computeTotalEntityCount() ),
                                 cookedCount );
                 return CookStep::Written;
             }
@@ -243,26 +243,26 @@ namespace sw
              * @brief 씬 하나의 프리로드 목록(`ScenePreloadList`)을 만들어 @p outputPath 에 씁니다. 씬을 런타임과 같은 길로 지어 컴포넌트의 에셋 경로 프로퍼티를 모은다.
              * @details 씬 쿠킹과 따로 도는 작업이다(쿠킹 기록은 작업 하나에 출력 하나). 입력은 씬이 지어지며 읽은 모든 것이라, 프리팹을 고치면 목록도 다시 구워진다.
              */
-            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineServices& services, const string& scenePath, const string& outputPath )
+            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineServices& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed", "Scene preload cook failed to read '%#'.", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed", "Scene preload cook failed to read '%#'.", scenePath.str() );
                     return CookStep::Failed;
                 }
                 Scene source{ "ScenePreload.Source", services };
                 source.setBuildAllDataLayers(); // 끈 레이어의 에셋도 쿠킹본이 켜면 쓴다
                 if ( source.instantiate( doc ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookCould", "Scene preload cook could not build '%#'.", scenePath );
+                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookCould", "Scene preload cook could not build '%#'.", scenePath.str() );
                     return CookStep::Failed;
                 }
                 vector<string> listPath;
                 ScenePreloadList::collect( key, *source.getObjectManager(), listPath );
                 if ( ScenePreloadList::write( outputPath, listPath ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed2", "Scene preload cook failed to write '%#'.", outputPath );
+                    SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookFailed2", "Scene preload cook failed to write '%#'.", outputPath.str() );
                     return CookStep::Failed;
                 }
                 return CookStep::Written;
@@ -373,7 +373,7 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
+    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store,
                                        const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
@@ -384,7 +384,7 @@ namespace sw
             return 0;
         }
 
-        const string resourceRoot( sourceRoot );
+        const AbsolutePath resourceRoot( sourceRoot );
         if ( resourceRoot.empty() )
         {
             SW_LOG_ERROR_ID( "SceneCooker.SceneCookCouldNot2", "Scene cook could not resolve the content root." );
@@ -407,16 +407,16 @@ namespace sw
             return 0;
         }
 
-        vector<string> listSceneFile;
+        vector<AbsolutePath> listSceneFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listSceneFile ) == false )
         {
-            SW_LOG_ERROR_ID( "SceneCooker.SceneCookCouldNot3", "Scene cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "SceneCooker.SceneCookCouldNot3", "Scene cook could not list '%#' - nothing is cooked", resourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         VectorUtil::sort( listSceneFile );
 
-        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
@@ -427,11 +427,11 @@ namespace sw
         int64     cookedNanoseconds  = 0;
         int64     slowestNanoseconds = 0;
         string    slowestScene;
-        for ( const string& scenePath : listSceneFile )
+        for ( const AbsolutePath& scenePath : listSceneFile )
         {
-            if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )
+            if ( StringUtil::endsWith( scenePath.str(), ".scene.xml", true ) == false )
                 continue;
-            const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( MathUtil::min( normalizedRoot.size() + 1, scenePath.size() ) );
+            const string relativeScene = FileUtil::normalizeSeparators( scenePath.str() ).substr( MathUtil::min( normalizedRoot.size() + 1, scenePath.str().size() ) );
             if ( SceneCookerInternal::isEditorOnlyScene( relativeScene ) )
                 continue;
 
@@ -460,10 +460,10 @@ namespace sw
             const bool bSceneWritten = result == CookResult::Cooked || result == CookResult::Reused;
             if ( bSceneWritten == false )
                 continue;
-            const string     preloadID     = ScenePreloadList::makeListPath( outputID );
-            const string     preloadPath   = ScenePreloadList::makeListPath( outputPath );
-            const CookResult preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
-            { return SceneCookerInternal::cookPreloadList( SceneIterationKey{}, services, scenePath, preloadPath ); } );
+            const string       preloadID     = ScenePreloadList::makeListPath( outputID ).str();
+            const AbsolutePath preloadPath   = ScenePreloadList::makeListPath( outputPath );
+            const CookResult   preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath.str(), [&]()
+              { return SceneCookerInternal::cookPreloadList( SceneIterationKey{}, services, scenePath, preloadPath ); } );
             outFailedCount += preloadResult == CookResult::Failed ? 1u : 0u;
         }
 

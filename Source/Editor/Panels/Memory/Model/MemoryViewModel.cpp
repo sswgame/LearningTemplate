@@ -115,7 +115,7 @@ namespace sw::editor
         jobResult._folder = input._folder;
         if ( input._bWholeSnapshot != SW_FALSE && input._pSnapshot != nullptr )
         {
-            const expected<MemoryExportResult> result = MemorySnapshotExport::writeSnapshot( *input._pSnapshot, input._folder );
+            const expected<MemoryExportResult> result = MemorySnapshotExport::writeSnapshot( *input._pSnapshot, FileUtil::toDiskPath( input._folder ) );
             if ( result.has_value() )
                 jobResult._fileCount = static_cast<uint32>( result->_listFile.size() );
             else
@@ -127,7 +127,7 @@ namespace sw::editor
         }
         else
         {
-            const expected<MemoryExportFile> file = MemorySnapshotExport::writeTable( input._table, FileUtil::joinPath( input._folder, input._fileName ) );
+            const expected<MemoryExportFile> file = MemorySnapshotExport::writeTable( input._table, FileUtil::toDiskPath( FileUtil::joinPath( input._folder, input._fileName ) ) );
             if ( file.has_value() )
                 jobResult._fileCount = 1;
             else
@@ -500,7 +500,7 @@ namespace sw::editor
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "NoPolicyStatus", TextArgumentList().addText( "reason", string{ policy.error().detail() } ) );
             return string{};
         }
-        const string folder = MemorySnapshotExport::reserveFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
+        const string folder = MemorySnapshotExport::reserveFolder( MemorySnapshotExport::getDefaultRoot( *policy ) ).str();
         if ( folder.empty() )
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "ExportFailedStatus", TextArgumentList().addText( "reason", "could not create the export folder" ) );
         return folder;

@@ -31,9 +31,9 @@ namespace sw
 
     FileWatchService::~FileWatchService() = default; // 감시자의 소멸자가 워커를 멈추고 합류한다
 
-    Subscription FileWatchService::watch( string_view folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
+    Subscription FileWatchService::watch( const AbsolutePath& folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
     {
-        const string normalizedFolder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folder ) );
+        const AbsolutePath normalizedFolder = FileUtil::toDiskPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folder.str() ) ) );
         if ( normalizedFolder.empty() )
         {
             SW_LOG_WARNING_ID( "FileWatchService.EmptyFolder", "File watch: the folder is empty (no content root folder) - hot reload is off" );
@@ -46,19 +46,19 @@ namespace sw
         entry._id               = _idAllocator.allocate();
         entry._rootID           = *rootID;
         entry._folder           = normalizedFolder;
-        entry._comparableFolder = FileUtil::makeComparableDiskPath( normalizedFolder );
+        entry._comparableFolder = FileUtil::makeComparableDiskPath( normalizedFolder.str() );
         entry._depth            = depth;
         entry._listExtension    = listExtension;
         entry._onMatch          = onMatch;
         const uint64 id         = entry._id;
         _listWatch.push_back( std::move( entry ) );
-        SW_LOG_TRACE_ID( "FileWatchService.RegisteredWatch", "Registered watch %# (ext count %#)", normalizedFolder, static_cast<uint32>( listExtension.size() ) );
+        SW_LOG_TRACE_ID( "FileWatchService.RegisteredWatch", "Registered watch %# (ext count %#)", normalizedFolder.str(), static_cast<uint32>( listExtension.size() ) );
         return _subscriptions.issue( id );
     }
 
-    optional<uint64> FileWatchService::acquireRoot( const string& folder, FileWatchDepth depth )
+    optional<uint64> FileWatchService::acquireRoot( const AbsolutePath& folder, FileWatchDepth depth )
     {
-        const ComparableDiskPath comparableFolder = FileUtil::makeComparableDiskPath( folder );
+        const ComparableDiskPath comparableFolder = FileUtil::makeComparableDiskPath( folder.str() );
         for ( const Root& root : _listRoot )
         {
             const bool bSameFolder = root._comparablePath == comparableFolder && ( root._depth == FileWatchDepth::Tree || depth == FileWatchDepth::Folder );
@@ -70,17 +70,17 @@ namespace sw
         if ( pWatcher == nullptr )
         {
             // 설계상 없는 것이다(웹 — 브라우저 파일 시스템에는 바깥 편집이 없다) — 경고가 아니라 정보 한 줄이다.
-            SW_LOG_INFO_ID( "FileWatchService.NoNativeWatcher", "File watch: this platform has no OS file watcher - '%#' is not watched", folder );
+            SW_LOG_INFO_ID( "FileWatchService.NoNativeWatcher", "File watch: this platform has no OS file watcher - '%#' is not watched", folder.str() );
             return nullopt;
         }
         if ( pWatcher->startWatching( folder, depth == FileWatchDepth::Tree ) == false )
         {
-            SW_LOG_ERROR_ID( "FileWatchService.FailedStartWatching", "File watch: failed to start watching %#", folder );
+            SW_LOG_ERROR_ID( "FileWatchService.FailedStartWatching", "File watch: failed to start watching %#", folder.str() );
             return nullopt;
         }
         Root root{};
         root._id                = _idAllocator.allocate();
-        root._path              = folder;
+        root._path              = folder.str();
         root._comparablePath    = comparableFolder;
         root._depth             = depth;
         root._pWatcher          = std::move( pWatcher );
@@ -210,26 +210,26 @@ namespace sw
         {
             if ( entry._rootID != root._id )
                 continue;
-            if ( FileUtil::isDirectory( FileUtil::toDiskPath( entry._folder ) ) == false )
+            if ( FileUtil::isDirectory( entry._folder ) == false )
                 continue;
 
-            vector<string> listFile;
-            if ( FileUtil::collectFiles( FileUtil::toDiskPath( entry._folder ), {}, listFile, entry._depth == FileWatchDepth::Tree ) == false )
-                SW_LOG_WARNING_ID( "FileWatchService.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._folder );
-            for ( const string& filePath : listFile )
+            vector<AbsolutePath> listFile;
+            if ( FileUtil::collectFiles( entry._folder, {}, listFile, entry._depth == FileWatchDepth::Tree ) == false )
+                SW_LOG_WARNING_ID( "FileWatchService.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._folder.str() );
+            for ( const AbsolutePath& filePath : listFile )
             {
-                if ( isExtensionAllowed( entry, filePath ) == false )
+                if ( isExtensionAllowed( entry, filePath.str() ) == false )
                     continue;
                 uint64 mtime = 0;
-                if ( FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( filePath ), mtime ) == false || mtime < sinceTimestamp )
+                if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false || mtime < sinceTimestamp )
                     continue; // 그 사이 지워졌거나 그 뒤로 바뀌지 않았다
 
-                const string normalized = FileUtil::makeComparableDiskPath( filePath ).str(); // 집합 키
+                const string normalized = FileUtil::makeComparableDiskPath( filePath.str() ).str(); // 집합 키
                 if ( uniqueSetEmittedPath.insert( normalized ).second == false )
                     continue;
 
                 string relative{};
-                if ( FileUtil::makeRelativePath( root._path, filePath, relative ) == false || relative.empty() )
+                if ( FileUtil::makeRelativePath( root._path, filePath.str(), relative ) == false || relative.empty() )
                     continue;
 
                 FileChangeEvent changeEvent{};

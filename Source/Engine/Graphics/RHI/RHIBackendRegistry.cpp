@@ -30,7 +30,7 @@ namespace sw
             {
                 RHIBackendRegistry& reg        = engine::getSubsystem<RHIBackendRegistry>();
                 const string        dllName    = ModuleLibraryUtil::formatSharedLibraryName( pModuleBaseName );
-                const string        modulePath = ModuleLibraryUtil::findModuleLibraryPath( pModuleBaseName ); // Bin/Modules
+                const string        modulePath = ModuleLibraryUtil::findModuleLibraryPath( pModuleBaseName ).str(); // Bin/Modules
 
                 if ( reg.tryLoadModule( backend, modulePath ) )
                     return true;

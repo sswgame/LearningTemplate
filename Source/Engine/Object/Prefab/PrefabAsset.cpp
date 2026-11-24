@@ -604,24 +604,24 @@ namespace sw
         return readJSONSource( doc, bRead, absPath );
     }
 
-    bool PrefabAsset::loadFromDiskFile( string_view diskPath )
+    bool PrefabAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         // 형식은 확장자 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
         // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        if ( StringUtil::endsWith( diskPath, ".prefab.json", true ) )
+        if ( StringUtil::endsWith( diskPath.str(), ".prefab.json", true ) )
         {
             JSONDocument doc;
             const bool   bRead = doc.loadFromFile( diskPath );
-            return readJSONSource( doc, bRead, string( diskPath ) );
+            return readJSONSource( doc, bRead, string( diskPath.str() ) );
         }
-        if ( StringUtil::endsWith( diskPath, ".prefab.xml", true ) )
+        if ( StringUtil::endsWith( diskPath.str(), ".prefab.xml", true ) )
         {
-            AssetLoadScope loadScope( "Prefab", diskPath );
+            AssetLoadScope loadScope( "Prefab", diskPath.str() );
             XMLDocument    doc;
             const bool     bRead = doc.loadDataFile( diskPath ); // 머리의 조건 · 층 단계는 리소스 읽기와 같은 길을 지난다. 부모(`_base`)는 `resolveVariant` 가 합친다
-            return readXMLSource( doc, bRead, string( diskPath ), loadScope );
+            return readXMLSource( doc, bRead, string( diskPath.str() ), loadScope );
         }
-        SW_LOG_ERROR_ID( "PrefabAsset.NotPrefabSourceFile", "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath );
+        SW_LOG_ERROR_ID( "PrefabAsset.NotPrefabSourceFile", "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath.str() );
         return false;
     }
 

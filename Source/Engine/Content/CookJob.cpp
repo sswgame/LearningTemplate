@@ -123,10 +123,10 @@ namespace sw
             case CookInputKind::Resource:
             {
                 const optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( _source ); // 읽기다 — 없는 입력은 해시 0
-                return absPath.has_value() ? ContentHash::computeFile( absPath->str() ) : 0;
+                return absPath.has_value() ? ContentHash::computeFile( *absPath ) : 0;
             }
             case CookInputKind::DiskFile:
-                return FileUtil::isRegularFile( FileUtil::toDiskPath( _source ) ) ? ContentHash::computeFile( _source ) : 0;
+                return FileUtil::isRegularFile( FileUtil::toDiskPath( _source ) ) ? ContentHash::computeFile( FileUtil::toDiskPath( _source ) ) : 0;
             case CookInputKind::Listing:
                 return CookJob::computeListingHash( FileUtil::toDiskPath( _source ), _extension );
         }

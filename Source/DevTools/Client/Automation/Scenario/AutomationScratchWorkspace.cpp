@@ -48,13 +48,13 @@ namespace sw
              * @brief 원본 파일들의 GUID 마다 사본의 GUID 를 정해 @p outMapGUID(원본 → 사본) · @p outListIdentity(사본 → 사본 id)에 담습니다.
              * @details 자기 정체성(머리 · `.meta`)은 사본 폴더 id 를 이름으로, 임포트 산출물은 사본 원본의 GUID 와 산출물 이름으로 — 사본을 디스크에서 읽을 때(`readIdentity`)와 같은 규칙이다.
              */
-            static void collectIdentities( const AssetIdentityRules& rules, string_view sourceDir, const vector<string>& listSourceFile, const AutomationScratchFolder& folder,
+            static void collectIdentities( const AssetIdentityRules& rules, const AbsolutePath& sourceDir, const vector<AbsolutePath>& listSourceFile, const AutomationScratchFolder& folder,
                                            unordered_map<AssetGUID, AssetGUID>& outMapGUID, vector<CopiedIdentity>& outListIdentity )
             {
-                for ( const string& sourceFile : listSourceFile )
+                for ( const AbsolutePath& sourceFile : listSourceFile )
                 {
                     string relative;
-                    if ( FileUtil::makeRelativePath( sourceDir, sourceFile, relative ) == false )
+                    if ( FileUtil::makeRelativePath( sourceDir.str(), sourceFile.str(), relative ) == false )
                         continue; // 복사가 그 파일에서 오류로 멈춘다
                     const string              sourceID = FileUtil::joinPath( folder._sourceID, FileUtil::normalizeSeparators( relative ) );
                     const optional<AssetGUID> guid     = rules.readIdentity( sourceFile, sourceID );
@@ -69,7 +69,7 @@ namespace sw
                         // 산출물이면 사본 원본의 GUID 에서 난다. 원본이 사본 폴더 밖이면 산출물 사본은 새 원본 없는 파일이라 자기 이름을 갖는다.
                         string                    sourceRelative;
                         const bool                bCopiedSource = FileUtil::tryMakePathUnderRoot( folder._sourceID, source._sourceID, sourceRelative );
-                        const optional<AssetGUID> owner         = bCopiedSource ? rules.readIdentity( FileUtil::joinPath( sourceDir, sourceRelative ), source._sourceID ) : optional<AssetGUID>{};
+                        const optional<AssetGUID> owner         = bCopiedSource ? rules.readIdentity( sourceDir.join( sourceRelative ), source._sourceID ) : optional<AssetGUID>{};
                         if ( owner.has_value() == false || AssetGUID::fromName( *owner, source._outputName ) != *guid )
                             continue;
                         copy = AssetGUID::fromName( AssetGUID::fromName( *owner, folder._scratchID ), source._outputName );
@@ -144,64 +144,64 @@ namespace sw
         if ( expected<void> valid = folder.validate(); valid.has_value() == false )
             return valid;
         const AssetPaths&            assetPaths = engine::getSubsystem<AssetPaths>();
-        const string                 sourceDir  = FileUtil::joinPath( assetPaths.getRootFolderPath(), folder._sourceID );
+        const AbsolutePath           sourceDir  = FileUtil::toDiskPath( FileUtil::joinPath( assetPaths.getRootFolderPath(), folder._sourceID ) );
         const optional<AbsolutePath> scratchAt  = assetPaths.toDiskPath( folder._scratchID ); // 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`)
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sourceDir ) ) == false )
+        if ( FileUtil::isDirectory( sourceDir ) == false )
         {
             return unexpected( Error{ ErrorKind::NotFound, "<Scratch from> is not a folder under Content/", folder._sourceID } );
         }
         if ( scratchAt.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> does not resolve to a disk folder", folder._scratchID } );
-        const string& scratchDir = scratchAt->str();
+        const AbsolutePath scratchDir = *scratchAt;
         // 지난 실행(중단된 것 포함)이 남긴 사본을 통째로 지운다 — 잔여 파일이 다음 실행의 이름을 바꾸지 않게 한다.
-        if ( FileUtil::removeDirectory( FileUtil::toDiskPath( scratchDir ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( scratchDir ) ) == false )
+        if ( FileUtil::removeDirectory( scratchDir ) == false || FileUtil::ensureDirectoryExists( scratchDir ) == false )
         {
-            return unexpected( Error{ ErrorKind::ExternalFailure, "could not reset the scratch folder", scratchDir } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not reset the scratch folder", scratchDir.str() } );
         }
-        vector<string> listSourceFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( sourceDir ), "", listSourceFile, true ) == false )
+        vector<AbsolutePath> listSourceFile;
+        if ( FileUtil::collectFiles( sourceDir, "", listSourceFile, true ) == false )
         {
-            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the scratch source folder", sourceDir } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the scratch source folder", sourceDir.str() } );
         }
         AssetIdentityRules identityRules;
-        if ( identityRules.load( ProcessRoots::get()._project.str() ) == false )
+        if ( identityRules.load( ProcessRoots::get()._project ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the asset identity rules could not be read", AssetIdentityRules::kConfigFile } );
         unordered_map<AssetGUID, AssetGUID>                        mapGUID;
         vector<AutomationScratchWorkspaceInternal::CopiedIdentity> listIdentity;
         AutomationScratchWorkspaceInternal::collectIdentities( identityRules, sourceDir, listSourceFile, folder, mapGUID, listIdentity );
-        for ( const string& sourceFile : listSourceFile )
+        for ( const AbsolutePath& sourceFile : listSourceFile )
         {
             string relative;
-            if ( FileUtil::makeRelativePath( sourceDir, sourceFile, relative ) == false )
+            if ( FileUtil::makeRelativePath( sourceDir.str(), sourceFile.str(), relative ) == false )
             {
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not place a source file under the scratch source folder", sourceFile } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not place a source file under the scratch source folder", sourceFile.str() } );
             }
-            const string targetFile = FileUtil::joinPath( scratchDir, relative );
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( targetFile ) ) ) == false )
+            const AbsolutePath targetFile = scratchDir.join( relative );
+            if ( FileUtil::ensureDirectoryExists( targetFile.getParent() ) == false )
             {
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the folder of a scratch file", targetFile } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the folder of a scratch file", targetFile.str() } );
             }
             vector<uint8> bytes;
-            if ( FileUtil::readFile( FileUtil::toDiskPath( sourceFile ), bytes ) == false )
+            if ( FileUtil::readFile( sourceFile, bytes ) == false )
             {
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a scratch source file", sourceFile } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a scratch source file", sourceFile.str() } );
             }
             // NUL 이 든 파일은 바이너리다 — 그대로 복사한다. 글 파일은 원본 id 를 사본 id 로, 원본 GUID 를 사본 GUID 로 바꾼다(경로로도 GUID 로도 사본끼리 이어진다).
             const bool bBinary = std::find( bytes.begin(), bytes.end(), uint8{ 0 } ) != bytes.end();
             if ( bBinary )
             {
-                if ( FileUtil::writeFile( FileUtil::toDiskPath( targetFile ), bytes.data(), bytes.size() ) == false )
+                if ( FileUtil::writeFile( targetFile, bytes.data(), bytes.size() ) == false )
                 {
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile } );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile.str() } );
                 }
                 continue;
             }
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
             // 픽스처가 시나리오의 별칭(`as=` — `scratch/tilesetedit/…`)으로 서로를 가리키면 그 id 는 사본 id 그대로라 바꿀 것이 없다(tilesetedit · uiaudit).
             const string text = rebaseIdentities( AutomationScratch::rebaseText( sourceText, folder._sourceID, folder._scratchID ), mapGUID );
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( targetFile ), text ) == false )
+            if ( FileUtil::writeTextFile( targetFile, text ) == false )
             {
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not write a scratch file", targetFile.str() } );
             }
         }
         for ( const AutomationScratchWorkspaceInternal::CopiedIdentity& identity : listIdentity )

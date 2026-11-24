@@ -59,7 +59,7 @@ namespace sw
                 /** @brief 소스 · include 해석기입니다 — 컴파일러와 같은 규칙으로 계획과 컴파일이 함께 쓴다(쿠킹 시작 때 한 번 만든다). */
                 optional<ShaderSourceResolver> _resolver;
                 /** @brief 쿠킹 출력의 루트(`--cooked-dir`)입니다. 바이너리는 `<여기>/<domain>/shaders/bin/<rhi>` 에 쓴다 — 씬 · 프리팹 쿠킹본과 같은 스테이징이다. */
-                string _cookedDir;
+                AbsolutePath _cookedDir;
                 /**
                  * @brief 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
                  *        압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
@@ -80,9 +80,9 @@ namespace sw
                 const ShaderCookRequest* _pRequest{ nullptr };
                 ShaderSourceID           _source;
                 string                   _normPath; ///< 소스의 절대 경로(로그)
-                string                   _outDir;
+                AbsolutePath             _outDir;
                 string                   _fileName;
-                string                   _outPath;
+                AbsolutePath             _outPath;
                 ShaderTargetFormat       _format{ ShaderTargetFormat::DXBC_D3D11 };
             };
 
@@ -139,7 +139,7 @@ namespace sw
                     ShaderCookResult cookResult{};
                     outResult._bCompileFailed =
                         ShaderCooker::cookShader( ShaderCooker::makeCompileDesc( task._source, request._entryPoint, request._stage, task._format, _pState->_enginePolicy, request._listPermutation ),
-                                                  FileUtil::toDiskPath( task._outPath ), cookResult ) == false;
+                                                  task._outPath, cookResult ) == false;
                     outResult._bCooked      = cookResult._bWritten == SW_TRUE;
                     outResult._compileNanos = compileWatch.getElapsedNanoseconds();
                     if ( bSkipReflection || outResult._bCompileFailed )
@@ -153,13 +153,13 @@ namespace sw
                     {
                         outResult._reflection = std::move( *reflected );
                         // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
-                        outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath );
+                        outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath.str() );
                         outResult._bReflected     = true;
                     }
                     else
                     {
                         // 리플렉션이 빠진 바이너리는 런타임이 빈 레이아웃으로 읽는다 — 읽지 못한 것으로 세어 쿠킹을 실패시킨다.
-                        SW_LOG_ERROR_ID( "ShaderCooker.ReflectionFailed", "Shader reflection failed for %#: %# (%#)", task._outPath, reflected.error().message(), reflected.error().detail() );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ReflectionFailed", "Shader reflection failed for %#: %# (%#)", task._outPath.str(), reflected.error().message(), reflected.error().detail() );
                         outResult._bUnreadable = true;
                     }
                     outResult._reflectNanos = reflectWatch.getElapsedNanoseconds();
@@ -167,24 +167,24 @@ namespace sw
             };
 
             /** @brief 쿠커 폴더 @p binDirectory 에서 @p manifest 에 없는 파일(바이너리 · 옛 스탬프)을 지우고 수를 @p ioRemovedCount 에 더합니다. 하나라도 못 지우면 false 입니다(그 파일이 남아 판정이 진다). */
-            [[nodiscard]] static bool removeUnlistedFiles( const string& binDirectory, const ShaderReflectionLibrary::EntryMap& manifest, uint32& ioRemovedCount )
+            [[nodiscard]] static bool removeUnlistedFiles( const AbsolutePath& binDirectory, const ShaderReflectionLibrary::EntryMap& manifest, uint32& ioRemovedCount )
             {
-                vector<string> listFile;
-                (void)FileUtil::collectFiles( FileUtil::toDiskPath( binDirectory ), "", listFile, false ); // 폴더가 없으면 지울 것도 없다
+                vector<AbsolutePath> listFile;
+                (void)FileUtil::collectFiles( binDirectory, "", listFile, false ); // 폴더가 없으면 지울 것도 없다
                 bool bAllRemoved = true;
-                for ( const string& filePath : listFile )
+                for ( const AbsolutePath& filePath : listFile )
                 {
-                    const string fileName = FileUtil::getFileNamePart( filePath );
+                    const string fileName = FileUtil::getFileNamePart( filePath.str() );
                     if ( fileName == ShaderReflectionLibrary::getManifestFileName() || manifest.find( fileName ) != manifest.end() )
                         continue;
-                    if ( FileUtil::removeFile( FileUtil::toDiskPath( filePath ) ) )
+                    if ( FileUtil::removeFile( filePath ) )
                     {
                         ++ioRemovedCount;
-                        SW_LOG_INFO_ID( "ShaderCooker.RemovedShaderBinaryNo", "Removed a shader binary no cook request makes: %#", filePath );
+                        SW_LOG_INFO_ID( "ShaderCooker.RemovedShaderBinaryNo", "Removed a shader binary no cook request makes: %#", filePath.str() );
                     }
                     else
                     {
-                        SW_LOG_ERROR_ID( "ShaderCooker.CouldNotRemoveStale", "Could not remove the stale shader binary: %#", filePath );
+                        SW_LOG_ERROR_ID( "ShaderCooker.CouldNotRemoveStale", "Could not remove the stale shader binary: %#", filePath.str() );
                         bAllRemoved = false;
                     }
                 }
@@ -205,26 +205,26 @@ namespace sw
              *        요청의 소스마다 바이너리가 하나라도 있는지.
              * @param mapRequest 그 폴더의 바이너리 파일 이름 → 요청
              */
-            static void verifyFolder( const string& binDirectory, string_view label, const unordered_map<string, const ShaderCookRequest*>& mapRequest, ShaderTargetFormat format,
+            static void verifyFolder( const AbsolutePath& binDirectory, string_view label, const unordered_map<string, const ShaderCookRequest*>& mapRequest, ShaderTargetFormat format,
                                       const ShaderEnginePolicy& enginePolicy, vector<string>& outListProblem )
             {
-                vector<string> listFile;
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( binDirectory ) ) == false || FileUtil::collectFiles( FileUtil::toDiskPath( binDirectory ), "", listFile, false ) == false )
+                vector<AbsolutePath> listFile;
+                if ( FileUtil::isDirectory( binDirectory ) == false || FileUtil::collectFiles( binDirectory, "", listFile, false ) == false )
                 {
                     appendProblem( outListProblem, "%#: no binary folder, or its files could not all be listed (never cooked?)", label );
                     return;
                 }
-                const string                      manifestPath = FileUtil::joinPath( binDirectory, ShaderReflectionLibrary::getManifestFileName() );
+                const AbsolutePath                manifestPath = binDirectory.join( ShaderReflectionLibrary::getManifestFileName() );
                 ShaderReflectionLibrary::EntryMap mapManifest;
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( manifestPath ) ) == false || ShaderReflectionLibrary::loadManifestFile( FileUtil::toDiskPath( manifestPath ), mapManifest ) == false )
+                if ( FileUtil::isRegularFile( manifestPath ) == false || ShaderReflectionLibrary::loadManifestFile( manifestPath, mapManifest ) == false )
                 {
                     appendProblem( outListProblem, "%#: no readable reflection manifest - cook again", label );
                     return;
                 }
                 unordered_set<string> uniqueCookedSource;
-                for ( const string& filePath : listFile )
+                for ( const AbsolutePath& filePath : listFile )
                 {
-                    const string fileName = FileUtil::getFileNamePart( filePath );
+                    const string fileName = FileUtil::getFileNamePart( filePath.str() );
                     if ( fileName == ShaderReflectionLibrary::getManifestFileName() )
                         continue;
                     const auto requestIt = mapRequest.find( fileName );
@@ -309,9 +309,9 @@ namespace sw
                     task._source   = source;
                     task._normPath = input->_source.str();
                     task._format   = fmt;
-                    task._outDir   = FileUtil::normalizeSeparators( FileUtil::joinPath( ioState._cookedDir, slot->_binDirectory ) );
+                    task._outDir   = ioState._cookedDir.join( slot->_binDirectory );
                     task._fileName = slot->_fileName;
-                    task._outPath  = FileUtil::joinPath( task._outDir, task._fileName );
+                    task._outPath  = task._outDir.join( task._fileName );
                     outListTask.push_back( std::move( task ) );
                 }
             }
@@ -334,7 +334,7 @@ namespace sw
                 for ( uint32 taskIndex = 0; taskIndex < static_cast<uint32>( listTask.size() ); ++taskIndex )
                 {
                     const FormatTask& task = listTask[taskIndex];
-                    uniqueBinFolder.insert( task._outDir );
+                    uniqueBinFolder.insert( task._outDir.str() );
                     const string chainKey = StringUtil::toLower( task._outPath.c_str() );
                     const auto   chainIt  = mapChainIndexByOutPath.find( chainKey );
                     if ( chainIt == mapChainIndexByOutPath.end() )
@@ -379,11 +379,11 @@ namespace sw
                     if ( result._bCompileFailed )
                     {
                         ++ioState._summary._failedCount;
-                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookFailed", "Shader cook failed: %# (%#) -> %#", task._normPath, task._pRequest->_entryPoint, task._outPath );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookFailed", "Shader cook failed: %# (%#) -> %#", task._normPath, task._pRequest->_entryPoint, task._outPath.str() );
                     }
 
                     // 새로 쿠킹했든 이미 최신이든 매니페스트에는 항상 넣는다. 같은 바이너리를 만드는 뒤 작업은 이미 든 항목을 건너뛴다.
-                    ShaderReflectionLibrary::EntryMap& manifest = ioState._mapManifest[task._outDir];
+                    ShaderReflectionLibrary::EntryMap& manifest = ioState._mapManifest[task._outDir.str()];
                     if ( manifest.find( task._fileName ) != manifest.end() )
                         continue;
                     if ( result._bReflected )
@@ -394,7 +394,7 @@ namespace sw
                     else if ( result._bUnreadable )
                     {
                         ++ioState._summary._failedCount;
-                        SW_LOG_ERROR_ID( "ShaderCooker.CookedShaderBinaryCould", "Cooked shader binary could not be read for the reflection manifest: %#", task._outPath );
+                        SW_LOG_ERROR_ID( "ShaderCooker.CookedShaderBinaryCould", "Cooked shader binary could not be read for the reflection manifest: %#", task._outPath.str() );
                     }
                 }
                 ioState._summary._compileMs = static_cast<uint32>( compileNanos / constant::time::kNanosecondsPerMillisecond );
@@ -408,15 +408,15 @@ namespace sw
              */
             static void writeManifests( CookState& ioState )
             {
-                for ( const auto& [binDirectory, manifest] : ioState._mapManifest )
+                for ( const auto& [outputFolder, manifest] : ioState._mapManifest )
                 {
-                    if ( ShaderReflectionLibrary::save( manifest, FileUtil::toDiskPath( binDirectory ) ) == false )
+                    if ( ShaderReflectionLibrary::save( manifest, FileUtil::toDiskPath( outputFolder ) ) == false )
                     {
-                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderReflectionManifestCould", "Shader reflection manifest could not be written: %#", binDirectory );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderReflectionManifestCould", "Shader reflection manifest could not be written: %#", outputFolder );
                         ++ioState._summary._failedCount;
                         continue;
                     }
-                    if ( removeUnlistedFiles( binDirectory, manifest, ioState._summary._removedCount ) == false )
+                    if ( removeUnlistedFiles( FileUtil::toDiskPath( outputFolder ), manifest, ioState._summary._removedCount ) == false )
                         ++ioState._summary._failedCount;
                 }
                 ShaderReflectionLibrary::clearCache();
@@ -424,17 +424,17 @@ namespace sw
         };
     } // namespace
 
-    ShaderCookSummary ShaderCookDriver::cookAllShaders( string_view        cookedDir,
-                                                        string_view        resourceRoot,
-                                                        ShaderTargetFormat targetFormat,
-                                                        ShaderCookScope    scope )
+    ShaderCookSummary ShaderCookDriver::cookAllShaders( const AbsolutePath& cookedDir,
+                                                        string_view         resourceRoot,
+                                                        ShaderTargetFormat  targetFormat,
+                                                        ShaderCookScope     scope )
     {
         // 표본은 빈 스테이징에만 굽는다 — 쿠커가 요청 밖의 바이너리를 지우므로 채워진 스테이징을 표본으로 덮으면 쿠킹본을 잃는다.
         vector<ShaderCookSampleAxis> listSampleAxis;
         if ( scope == ShaderCookScope::Sample )
         {
-            vector<string> listExisting;
-            (void)FileUtil::collectFiles( FileUtil::toDiskPath( cookedDir ), "", listExisting, true ); // 폴더가 없으면 빈 목록이다
+            vector<AbsolutePath> listExisting;
+            (void)FileUtil::collectFiles( cookedDir, "", listExisting, true ); // 폴더가 없으면 빈 목록이다
             const expected<vector<ShaderCookSampleAxis>> rule = loadSampleRule();
             if ( cookedDir.empty() || listExisting.empty() == false || rule.has_value() == false )
             {
@@ -444,7 +444,7 @@ namespace sw
                 }
                 else
                 {
-                    SW_LOG_ERROR_ID( "ShaderCooker.SampleNeedsEmptyStaging", "A sample cook needs an empty cooked folder (it would remove the binaries it does not cook): '%#'", cookedDir );
+                    SW_LOG_ERROR_ID( "ShaderCooker.SampleNeedsEmptyStaging", "A sample cook needs an empty cooked folder (it would remove the binaries it does not cook): '%#'", cookedDir.str() );
                 }
                 ShaderCookSummary nothingCooked{};
                 nothingCooked._failedCount = 1;
@@ -454,8 +454,8 @@ namespace sw
         }
 
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
-        const string rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot );
-        if ( rootDir.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) == false )
+        const AbsolutePath rootDir = FileUtil::toDiskPath( resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot ) );
+        if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.ContentRootDirectoryDoes", "Content root directory does not exist: '%#'", rootDir.c_str() );
             ShaderCookSummary nothingCooked{};
@@ -605,12 +605,12 @@ namespace sw
         }
     }
 
-    void ShaderCookDriver::verifyCookedShaders( string_view cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem )
+    void ShaderCookDriver::verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem )
     {
         using Internal                       = ShaderCookDriverInternal;
         const AssetPaths&         assetPaths = engine::getSubsystem<AssetPaths>();
         vector<ShaderCookRequest> listRequest;
-        if ( ShaderCookRequestCollector::collectAllRequests( assetPaths.getRootFolderPath(), listRequest ) == false )
+        if ( ShaderCookRequestCollector::collectAllRequests( FileUtil::toDiskPath( assetPaths.getRootFolderPath() ), listRequest ) == false )
         {
             outListProblem.emplace_back( "shader cook requests could not be collected - cannot tell which domains are cooked" );
             return;
@@ -638,7 +638,7 @@ namespace sw
             if ( shadersFolder.has_value() )
                 (void)resolver->getIncludeResolver().findShadowedHeaders( *shadersFolder, outListProblem ); // 가려진 헤더는 문제로 적힌다
             const string binDirectory = ShaderBinaryLocation::makeForDomain( domain, targetFormat )._binDirectory;
-            Internal::verifyFolder( FileUtil::joinPath( cookedDir, binDirectory ), binDirectory, mapFolder[binDirectory], targetFormat, enginePolicy, outListProblem );
+            Internal::verifyFolder( cookedDir.join( binDirectory ), binDirectory, mapFolder[binDirectory], targetFormat, enginePolicy, outListProblem );
         }
     }
 
@@ -646,7 +646,7 @@ namespace sw
     {
         outMapBinaryOrigin.clear();
         vector<ShaderCookRequest> listRequest;
-        if ( ShaderCookRequestCollector::collectAllRequests( engine::getSubsystem<AssetPaths>().getRootFolderPath(), listRequest ) == false )
+        if ( ShaderCookRequestCollector::collectAllRequests( FileUtil::toDiskPath( engine::getSubsystem<AssetPaths>().getRootFolderPath() ), listRequest ) == false )
             return false;
         for ( const ShaderCookRequest& request : listRequest )
         {
@@ -660,7 +660,7 @@ namespace sw
         return true;
     }
 
-    ShaderCookSummary ShaderCookDriver::cookRequests( string_view                      cookedDir,
+    ShaderCookSummary ShaderCookDriver::cookRequests( const AbsolutePath&              cookedDir,
                                                       const vector<ShaderCookRequest>& listRequest,
                                                       ShaderTargetFormat               targetFormat )
     {
@@ -681,7 +681,7 @@ namespace sw
             state._summary._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다
             return state._summary;
         }
-        state._cookedDir = FileUtil::normalizeSeparators( cookedDir );
+        state._cookedDir = cookedDir;
 
         // 같은 바이너리 이름에 다른 define 이 오면 한 파일을 두 변형이 덮어 틀린 셰이더가 조용히 실린다 — 쿠킹 실패로 세고 뒤 요청은 굽지 않는다.
         vector<uint8> listRejected( listRequest.size(), SW_FALSE );

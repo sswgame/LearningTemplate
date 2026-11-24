@@ -342,7 +342,7 @@ namespace sw
                                                           flat_map<string, const SourceTextEntry*>& outMapSource, string& outAbsolutePath )
             {
                 outAbsolutePath = resolveAbsolutePath( projectPath );
-                if ( const expected<void> read = outProject.loadFromFile( outAbsolutePath ); read.has_value() == false )
+                if ( const expected<void> read = outProject.loadFromFile( FileUtil::toDiskPath( outAbsolutePath ) ); read.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
                     return false;
@@ -555,7 +555,7 @@ namespace sw
         outResult                    = LocalizationGatherResult{};
         const string        absolute = Internal::resolveAbsolutePath( projectPath );
         LocalizationProject project;
-        if ( const expected<void> read = project.loadFromFile( absolute ); read.has_value() == false )
+        if ( const expected<void> read = project.loadFromFile( FileUtil::toDiskPath( absolute ) ); read.has_value() == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.LocalizationProjectNotLoaded", "Localization project is not loaded: %# (%#)", read.error().message(), read.error().detail() );
             return false;
@@ -890,7 +890,7 @@ namespace sw
             for ( const string& candidate : listProjectPath )
             {
                 LocalizationProject project;
-                if ( project.loadFromFile( candidate ).has_value() && project._name == file._projectName )
+                if ( project.loadFromFile( FileUtil::toDiskPath( candidate ) ).has_value() && project._name == file._projectName )
                     projectPath = candidate;
             }
             if ( projectPath.empty() )

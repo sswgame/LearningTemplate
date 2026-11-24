@@ -198,7 +198,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
     SW_EXPECT_TRUE( written.find( "Breathe" ) == sw::string::npos ); // 물려받은 칸은 쓰지 않는다
 
     sw::AnimationGraphAsset reread;
-    SW_REQUIRE_TRUE( reread.loadFromDiskFile( childPath.str() ) );
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( childPath ) );
     SW_EXPECT_EQUAL( graph.toXML(), reread.toXML() );
 
     graph._listLink[0]._blendSeconds = -1.0f; // 형식 기본값은 쓰지 않으므로 부모의 0.2 를 덮을 수 없다

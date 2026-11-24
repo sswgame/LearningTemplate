@@ -20,18 +20,18 @@ namespace sw
             static string makeFolderName( string_view gameName ) { return gameName.empty() ? string( "default" ) : StringUtil::toLower( gameName ); }
 
             /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 글. */
-            static string makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
+            static AbsolutePath makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
             {
                 string root;
                 if ( ProcessEnvironment::tryReadNonEmpty( pRootEnvironment, root ) )
-                    return FileUtil::joinPath( FileUtil::joinPath( root, pVendor ), makeFolderName( gameName ) );
+                    return FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( root, pVendor ), makeFolderName( gameName ) ) );
                 if ( pHomeRelative == nullptr )
-                    return string{};
+                    return {};
                 string home;
                 if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) == false )
-                    return string{};
+                    return {};
                 const utf8* pHome = home.c_str();
-                return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, pHomeRelative ), pVendor ), makeFolderName( gameName ) );
+                return FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, pHomeRelative ), pVendor ), makeFolderName( gameName ) ) );
             }
 
             /** @brief OS 사용자 폴더를 모를 때 멈춥니다 - 작업 폴더의 `Saved` 로 대신하면(옛 폴백) 세이브 · 설정이 띄운 자리마다 갈렸다. */
@@ -59,13 +59,13 @@ namespace sw
         using Internal = UserDataPathInternal;
         if ( string overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
             return overridden;
-        string directory = findPlatformDataDirectory( gameName );
+        string directory = findPlatformDataDirectory( gameName ).str();
         if ( directory.empty() )
             Internal::failUnknownUserFolder();
         return directory;
     }
 
-    string UserDataPath::findPlatformDataDirectory( string_view gameName )
+    AbsolutePath UserDataPath::findPlatformDataDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
 #if defined( SW_PLATFORM_WINDOWS )
@@ -76,7 +76,7 @@ namespace sw
         // 샌드박스 플랫폼은 사용자 폴더 규칙이 없다 — 플랫폼 부팅이 `kUserDataRootVariable` 을 앱 폴더로 정한다(Android `internalDataPath`, 웹 영속 마운트).
         // 덮어쓰기가 이미 답했어야 한다. 여기 닿았으면 부팅이 정하지 않은 것이다.
         (void)gameName;
-        return string{};
+        return {};
 #else
     #error "Unsupported platform"
 #endif
@@ -97,9 +97,9 @@ namespace sw
     {
         using Internal = UserDataPathInternal;
 #if defined( SW_PLATFORM_WINDOWS )
-        return Internal::makeUnderEnvironment( "LOCALAPPDATA", nullptr, "SWEngine", gameName );
+        return Internal::makeUnderEnvironment( "LOCALAPPDATA", nullptr, "SWEngine", gameName ).str();
 #elif defined( SW_PLATFORM_LINUX )
-        return Internal::makeUnderEnvironment( "XDG_CONFIG_HOME", ".config", "swengine", gameName );
+        return Internal::makeUnderEnvironment( "XDG_CONFIG_HOME", ".config", "swengine", gameName ).str();
 #elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
         // 샌드박스 플랫폼은 사용자 폴더 규칙이 없다 — 플랫폼 부팅이 `kUserDataRootVariable` 을 앱 폴더로 정한다(Android `internalDataPath`, 웹 영속 마운트).
         (void)gameName;

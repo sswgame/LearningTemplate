@@ -117,7 +117,7 @@ namespace sw::editor
     {
         EditorViewportOverlayFile file;
         file._listBar = _listBar;
-        return JSONSerializer::saveToFile( absPath, &file, *EditorViewportOverlayFile::StaticType() );
+        return JSONSerializer::saveToFile( FileUtil::toDiskPath( absPath ), &file, *EditorViewportOverlayFile::StaticType() );
     }
 
     ConfigReadResult EditorViewportOverlayLayout::loadFromFile( string_view absPath )

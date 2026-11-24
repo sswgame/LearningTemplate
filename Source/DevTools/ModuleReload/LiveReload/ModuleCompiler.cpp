@@ -118,12 +118,12 @@ namespace sw
         return _targetName;
     }
 
-    string ModuleCompiler::findBuildDirectory() const
+    AbsolutePath ModuleCompiler::findBuildDirectory() const
     {
         // 빌드 트리는 바이너리 폴더(Bin)의 부모다. 없으면(패키지 · 복사한 바이너리) 빈 글 - 예전에는 Bin 으로 물러나 `cmake --build` 가 엉뚱한 이유로 실패했다.
-        const string parentDir  = FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) );
-        const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "build.ninja" ) ) ) || FileUtil::isRegularFile( FileUtil::toDiskPath( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) );
-        return bBuildTree ? parentDir : string{};
+        const AbsolutePath parentDir  = FileUtil::toDiskPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) ) );
+        const bool         bBuildTree = FileUtil::isRegularFile( parentDir.join( "build.ninja" ) ) || FileUtil::isRegularFile( parentDir.join( "CMakeCache.txt" ) );
+        return FileUtil::toDiskPath( bBuildTree ? parentDir.str() : string{} );
     }
 
     void ModuleCompiler::failBeforeBuild( const string& moduleName )
@@ -212,8 +212,8 @@ namespace sw
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
         ThreadCrashStack::initializeCurrentThread();
-        const string buildDir = findBuildDirectory();
-        if ( buildDir.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( buildDir ) ) == false )
+        const AbsolutePath buildDir = findBuildDirectory();
+        if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
         {
             SW_LOG_ERROR_ID( "ModuleCompiler.NoCMakeBuildTree", "No CMake build tree (build.ninja / CMakeCache.txt) next to the binary folder '%#' - this build cannot compile modules", ProcessRoots::get()._binary.str() );
             failBeforeBuild( moduleName );
@@ -223,7 +223,7 @@ namespace sw
         const string targetDisplayName = targetName.empty() ? "all" : targetName;
         SW_LOG_INFO_ID( "ModuleCompiler.StartingCompilationTargetBuild", "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
 
-        ProcessCommand command = ProcessCommand::fromSearchPath( "cmake", { "--build", buildDir } );
+        ProcessCommand command = ProcessCommand::fromSearchPath( "cmake", { "--build", buildDir.str() } );
         if ( targetName.empty() == false )
         {
             command._listArgument.push_back( "--target" );
@@ -231,7 +231,7 @@ namespace sw
         }
 
         ProcessOptions options{};
-        options._workingDirectory = buildDir;
+        options._workingDirectory = buildDir.str();
         options._bCreateWindow    = false;
 
         unique_ptr<Process> pProcess = make_unique<Process>();

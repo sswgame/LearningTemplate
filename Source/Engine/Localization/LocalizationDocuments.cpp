@@ -450,11 +450,11 @@ namespace sw
         return {};
     }
 
-    expected<void> LocalizationProject::loadFromFile( string_view absolutePath )
+    expected<void> LocalizationProject::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( FileUtil::toDiskPath( absolutePath ), text ).and_then( [&]()
-        { return loadFromXMLText( text, absolutePath ); } );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
+        { return loadFromXMLText( text, absolutePath.str() ); } );
     }
 
     string LocalizationProject::makeSiblingPath( string_view projectPath, string_view fileName )

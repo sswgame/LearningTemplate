@@ -27,21 +27,21 @@ namespace sw
 
             struct Entry
             {
-                string _path;
-                int64  _writeTicks{ 0 };
-                bool   _bDirectory{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                AbsolutePath _path;
+                int64        _writeTicks{ 0 };
+                bool         _bDirectory{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief @p folder 바로 아래 항목을 새것부터 줄 세웁니다. */
-            static vector<Entry> listNewestFirst( const string& folder )
+            static vector<Entry> listNewestFirst( const AbsolutePath& folder )
             {
                 vector<Entry> listEntry;
-                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), false, [&listEntry]( const DirectoryEntry& entry )
+                (void)FileUtil::forEachDirectoryEntry( folder, false, [&listEntry]( const DirectoryEntry& entry )
                 {
                     Entry item;
-                    item._path       = string( entry._path );
+                    item._path       = FileUtil::toDiskPath( entry._path );
                     item._bDirectory = entry._bDirectory;
-                    (void)FileUtil::getFileWriteTime( FileUtil::toDiskPath( item._path ), item._writeTicks );
+                    (void)FileUtil::getFileWriteTime( item._path, item._writeTicks );
                     listEntry.push_back( std::move( item ) );
                     return true;
                 } );
@@ -51,7 +51,7 @@ namespace sw
             }
 
             /** @brief @p folder 에서 최신 @p keepCount 개 뒤의 오래된 항목을 @p trash 로 옮깁니다(이름만 바꿔 곧바로 끝난다). 옮긴 수를 @p inoutMoved 에 더합니다. */
-            static void moveOld( const string& folder, uint32 keepCount, int64 minAgeTicks, int64 nowTicks, const string& trash, uint32& inoutMoved, const StopToken& stopToken )
+            static void moveOld( const AbsolutePath& folder, uint32 keepCount, int64 minAgeTicks, int64 nowTicks, const AbsolutePath& trash, uint32& inoutMoved, const StopToken& stopToken )
             {
                 const vector<Entry> listEntry = listNewestFirst( folder );
                 for ( size_t index = keepCount; index < listEntry.size() && stopToken.isStopRequested() == false; ++index )
@@ -59,9 +59,9 @@ namespace sw
                     const Entry& entry = listEntry[index];
                     if ( nowTicks - entry._writeTicks < minAgeTicks )
                         continue;
-                    if ( inoutMoved == 0 && FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( trash ) ) == false )
+                    if ( inoutMoved == 0 && FileUtil::ensureDirectoryExists( trash ) == false )
                         return;
-                    if ( FileUtil::renamePath( FileUtil::toDiskPath( entry._path ), FileUtil::toDiskPath( FileUtil::joinPath( trash, to_string( inoutMoved ) ) ) ) ) // 다른 폴더의 같은 이름과 겹치지 않게 번호로
+                    if ( FileUtil::renamePath( entry._path, trash.join( to_string( inoutMoved ) ) ) ) // 다른 폴더의 같은 이름과 겹치지 않게 번호로
                         ++inoutMoved;
                 }
             }
@@ -116,13 +116,13 @@ namespace sw
                 continue;
             if ( rule._bPerChild == false )
             {
-                SavedCleanupSubsystemInternal::moveOld( folder.str(), rule._keepCount, minAgeTicks, nowTicks, trash.str(), moved, stopToken );
+                SavedCleanupSubsystemInternal::moveOld( folder, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
                 continue;
             }
-            for ( const SavedCleanupSubsystemInternal::Entry& child : SavedCleanupSubsystemInternal::listNewestFirst( folder.str() ) )
+            for ( const SavedCleanupSubsystemInternal::Entry& child : SavedCleanupSubsystemInternal::listNewestFirst( folder ) )
             {
-                if ( child._bDirectory && VectorUtil::contains( rule._listSkipChild, FileUtil::getFileNamePart( child._path ) ) == false )
-                    SavedCleanupSubsystemInternal::moveOld( child._path, rule._keepCount, minAgeTicks, nowTicks, trash.str(), moved, stopToken );
+                if ( child._bDirectory && VectorUtil::contains( rule._listSkipChild, FileUtil::getFileNamePart( child._path.str() ) ) == false )
+                    SavedCleanupSubsystemInternal::moveOld( child._path, rule._keepCount, minAgeTicks, nowTicks, trash, moved, stopToken );
             }
         }
         if ( moved > 0 )
@@ -133,17 +133,17 @@ namespace sw
         fixed_string<constant::buffer::kMax64> claimPrefix;
         formatstring( claimPrefix.data(), claimPrefix.capacity(), "%#%#-%#-", SavedCleanupSubsystemInternal::kClaimPrefix, Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
         uint32 claimCount = 0;
-        for ( const SavedCleanupSubsystemInternal::Entry& pile : SavedCleanupSubsystemInternal::listNewestFirst( trashRoot.str() ) )
+        for ( const SavedCleanupSubsystemInternal::Entry& pile : SavedCleanupSubsystemInternal::listNewestFirst( trashRoot ) )
         {
             if ( stopToken.isStopRequested() )
                 return;
-            const bool bClaimedRecently = StringUtil::startsWith( FileUtil::getFileNamePart( pile._path ), SavedCleanupSubsystemInternal::kClaimPrefix ) && nowTicks - pile._writeTicks < minAgeTicks;
+            const bool bClaimedRecently = StringUtil::startsWith( FileUtil::getFileNamePart( pile._path.str() ), SavedCleanupSubsystemInternal::kClaimPrefix ) && nowTicks - pile._writeTicks < minAgeTicks;
             if ( bClaimedRecently )
                 continue;
             fixed_string<constant::buffer::kMax128> claimedName;
             formatstring( claimedName.data(), claimedName.capacity(), "%#%#", claimPrefix.view(), claimCount++ );
             const AbsolutePath claimedPath = trashRoot.join( claimedName.view() );
-            if ( FileUtil::renamePath( FileUtil::toDiskPath( pile._path ), claimedPath ) == false )
+            if ( FileUtil::renamePath( pile._path, claimedPath ) == false )
                 continue; // 다른 프로세스가 먼저 차지했다(또는 아직 채우는 중이다) — 그쪽이 지운다
             (void)FileUtil::removeDirectory( claimedPath );
         }

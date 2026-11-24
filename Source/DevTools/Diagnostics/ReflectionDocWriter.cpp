@@ -248,11 +248,11 @@ namespace sw
         return string( out.view() );
     }
 
-    uint32 ReflectionDocWriter::writeMarkdown( const TypeRegistry& registry, const string_view outputDir )
+    uint32 ReflectionDocWriter::writeMarkdown( const TypeRegistry& registry, const AbsolutePath& outputDir )
     {
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( outputDir ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( outputDir ) == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionDocWriter.CannotCreateReflectionDocs", "Cannot create reflection docs folder '%#'", outputDir );
+            SW_LOG_ERROR_ID( "ReflectionDocWriter.CannotCreateReflectionDocs", "Cannot create reflection docs folder '%#'", outputDir.str() );
             return 0;
         }
 
@@ -307,7 +307,7 @@ namespace sw
                 page.append( makeEnumMarkdown( *pEnum ) );
                 ++enumCount;
             }
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( outputDir, fileName ) ), page.view() ) == false )
+            if ( FileUtil::writeTextFile( outputDir.join( fileName ), page.view() ) == false )
                 continue;
             ++fileCount;
             index.appendFormat( "| [%#](%#) | %# | %# |\n", pShownName, fileName, typeCount, enumCount );
@@ -318,10 +318,10 @@ namespace sw
             index.appendFormat( "- [`%#`](%#", pType->_fullyQualifiedName.c_str(), makeModuleFileName( pType->_moduleName ) );
             index.appendFormat( "#%#)\n", ReflectionDocWriterInternal::makeAnchor( pType->_fullyQualifiedName.view() ) );
         }
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( outputDir, "index.md" ) ), index.view() ) )
+        if ( FileUtil::writeTextFile( outputDir.join( "index.md" ), index.view() ) )
             ++fileCount;
         SW_LOG_INFO_ID( "ReflectionDocWriter.WroteReflectionDocsFiles", "Wrote reflection docs: %# files, %# types, %# enums -> %#", fileCount, static_cast<uint32>( listType.size() ),
-                        static_cast<uint32>( listEnum.size() ), outputDir );
+                        static_cast<uint32>( listEnum.size() ), outputDir.str() );
         return fileCount;
     }
 } // namespace sw

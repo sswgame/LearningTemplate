@@ -853,16 +853,16 @@ namespace sw
         AutomationHangPayload::assign( _hangPayload._game, AutomationHangPayload::kGameBytes, _reproduceInput._game );
         AutomationHangPayload::assign( _hangPayload._startedAt, AutomationHangPayload::kStartedAtBytes, _startedAt );
         AutomationHangPayload::assign( _hangPayload._reproduce, AutomationHangPayload::kReproduceBytes, makeReproduceCommand() );
-        AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath() );
+        AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath().str() );
         AutomationHangPayload::assign( _hangPayload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationResult::TimedOut ) );
         AutomationHangPayload::assign( _hangPayload._failureKind, AutomationHangPayload::kResultBytes, getEnumName( AutomationFailureKind::Hang ) );
         _hangPayload._startedUnixMs         = _startedUnixMs;
         _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
-        const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
+        const AbsolutePath reportDirectory = _reportWriter.getReportPath().getParent();
         if ( reportDirectory.empty() == false )
-            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( reportDirectory ) ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
-        _hangWatchdog.publish( _hangPayload );                                                // 감시가 뜨기 전에 한 번 채운다
+            (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
+        _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
         settings._startSeconds                   = _run._wallStartSeconds;
         settings._pExcludedBusy                  = _run._pCompileBusy;
@@ -1177,14 +1177,14 @@ namespace sw
         return static_cast<uint32>( seconds / _scenario.getFixedDelta() + 0.5f );
     }
 
-    string AutomationRunner::resolveOutputPath( string_view file ) const
+    AbsolutePath AutomationRunner::resolveOutputPath( string_view file ) const
     {
         const bool bAbsolute = file.empty() == false && ( file[0] == '/' || file[0] == '\\' || ( file.size() > 1 && file[1] == ':' ) );
         if ( bAbsolute )
-            return string( file );
+            return FileUtil::toDiskPath( file );
         StringBuilder<constant::buffer::kMax1024> path;
         path.appendFormat( "%#/%#", _outputDirectory, file );
-        return string( path.view() );
+        return FileUtil::toDiskPath( path.view() );
     }
 
     void AutomationRunner::endRun( InputManager* pInput )

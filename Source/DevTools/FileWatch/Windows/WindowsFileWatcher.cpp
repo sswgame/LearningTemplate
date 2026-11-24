@@ -57,16 +57,16 @@ namespace sw
         stopWatching();
     }
 
-    bool WindowsFileWatcher::startWatching( string_view directoryPath, bool bRecursive )
+    bool WindowsFileWatcher::startWatching( const AbsolutePath& directoryPath, bool bRecursive )
     {
         if ( _bIsWatching )
         {
-            SW_LOG_ERROR_ID( "WindowsFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath, directoryPath );
+            SW_LOG_ERROR_ID( "WindowsFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath.str(), directoryPath.str() );
             return false;
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 핸들 · 스레드를 거둔다
 
-        const string dirNt( directoryPath );
+        const string dirNt( directoryPath.str() );
         wstring      wDir = StringUtil::utf8ToUTF16( dirNt.c_str() );
         _hDirectory       = CreateFileW(
             wDir.c_str(),
@@ -80,7 +80,7 @@ namespace sw
         if ( _hDirectory == INVALID_HANDLE_VALUE )
         {
             _hDirectory = nullptr; // stopWatching 은 nullptr 로 "연 핸들 없음" 을 본다
-            SW_LOG_ERROR_ID( "WindowsFileWatcher.FailedOpenDirectoryWatching", "Failed to open directory for watching (error %#): %#", static_cast<uint32>( GetLastError() ), directoryPath );
+            SW_LOG_ERROR_ID( "WindowsFileWatcher.FailedOpenDirectoryWatching", "Failed to open directory for watching (error %#): %#", static_cast<uint32>( GetLastError() ), directoryPath.str() );
             return false;
         }
 
@@ -89,7 +89,7 @@ namespace sw
         {
             CloseHandle( _hDirectory );
             _hDirectory = nullptr;
-            SW_LOG_ERROR_ID( "WindowsFileWatcher.FailedCreateIOCompletion", "Failed to create IO completion port for directory watching: %#", directoryPath );
+            SW_LOG_ERROR_ID( "WindowsFileWatcher.FailedCreateIOCompletion", "Failed to create IO completion port for directory watching: %#", directoryPath.str() );
             return false;
         }
 
@@ -99,7 +99,7 @@ namespace sw
 
         _workerThread = sw::thread( ThreadCreationKey{}, &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
-        SW_LOG_INFO_ID( "WindowsFileWatcher.StartedWatchingDirectory", "Started watching directory: %#", directoryPath );
+        SW_LOG_INFO_ID( "WindowsFileWatcher.StartedWatchingDirectory", "Started watching directory: %#", directoryPath.str() );
         return true;
     }
 
@@ -208,7 +208,7 @@ namespace sw
             {
                 // 버퍼가 넘치면 놓친 변경이 생기므로, 감시 디렉터리에 대한 Modified 이벤트를 만들어 다시 훑게 한다.
                 // 파일 이름이 비어 있으면 "전부 다시 확인하라" 는 약속이다.
-                pushChange( FileWatcherAction::Modified, _directoryPath, {} );
+                pushChange( FileWatcherAction::Modified, _directoryPath.str(), {} );
                 continue;
             }
             pushNotifyEntries( buffer.data() );
@@ -225,7 +225,7 @@ namespace sw
             // 상한 · 넘침 표시 · 연속 중복 합치기는 FileWatcher::pushChange 가 한다.
             // 한 번 저장하면 LAST_WRITE 와 SIZE 가 잇달아 오는데 둘 다 Modified 로 합쳐지므로, 그 중복을 거르는 것도
             // 거기서 한다(세 플랫폼이 같은 규칙을 쓴다).
-            pushChange( toWindowsFileWatcherAction( pNotify->Action ), _directoryPath, fileName );
+            pushChange( toWindowsFileWatcherAction( pNotify->Action ), _directoryPath.str(), fileName );
             if ( pNotify->NextEntryOffset == 0 )
                 break;
             pNotify = reinterpret_cast<const FILE_NOTIFY_INFORMATION*>( reinterpret_cast<const uint8*>( pNotify ) + pNotify->NextEntryOffset );

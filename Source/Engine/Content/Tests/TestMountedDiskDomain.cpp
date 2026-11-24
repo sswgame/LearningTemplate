@@ -138,7 +138,7 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
         SW_EXPECT_TRUE( AssetIO::hasAsset( outsideID ) );
     }
     content.clear();
-    SW_EXPECT_TRUE( AssetIO::readTextFile( outsideRoot.str(), content ) );
+    SW_EXPECT_TRUE( AssetIO::readTextFile( outsideRoot, content ) );
     SW_EXPECT_EQUAL( string( "OUTSIDE" ), content );
 
     // 리소스 루트 안 폴더는 붙일 수 없다 — 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다.

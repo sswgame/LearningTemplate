@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 
@@ -35,7 +36,7 @@ namespace sw
          * @param store 기록과 DDC 입니다. 씬마다 작업 하나로 베이크하고 — 씬 · 프리팹 · 메시 등 씬을 세우며 읽은 것이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
          * @return 쓴 파일 수입니다. 실패는 @p outFailedCount 에 셉니다.
          */
-        static uint32 cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint64 reflectionFingerprint,
+        static uint32 cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const string& cookedDir, const CookStore& store, uint64 reflectionFingerprint,
                                uint32& outFailedCount );
         /** @brief 내비메시 쿠킹 작업의 키 값입니다. 설정 해시는 리플렉션 지문(`CookReflectionFingerprint`)입니다. */
         static CookJobDesc makeCookJobDesc( uint64 reflectionFingerprint );

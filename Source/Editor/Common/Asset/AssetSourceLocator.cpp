@@ -97,7 +97,7 @@ namespace sw::editor
     {
         const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
         JSONDocument       document;
-        if ( document.loadFromFile( path.str() ) == false )
+        if ( document.loadFromFile( path ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the source store config could not be read", path.str() } );
         const optional<string> root        = document.getRoot().readRequired<string>( "_root" );
         const optional<string> environment = document.getRoot().readRequired<string>( "_rootEnvironment" );

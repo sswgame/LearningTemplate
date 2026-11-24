@@ -998,15 +998,15 @@ namespace sw
         return true;
     }
 
-    bool AssetPaths::collectContentFiles( string_view contentRoot, string_view extension, vector<string>& outListFile )
+    bool AssetPaths::collectContentFiles( const AbsolutePath& contentRoot, string_view extension, vector<AbsolutePath>& outListFile )
     {
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( contentRoot ), extension, outListFile, true ) == false )
+        if ( FileUtil::collectFiles( contentRoot, extension, outListFile, true ) == false )
             return false;
         StringBuilder<constant::buffer::kMax512> scratchPrefixBuilder;
-        scratchPrefixBuilder.appendFormat( "%#/%#/", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( contentRoot ) ), kScratchDomain );
+        scratchPrefixBuilder.appendFormat( "%#/%#/", FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( contentRoot.str() ) ), kScratchDomain );
         const string_view scratchPrefix = scratchPrefixBuilder.view();
-        const auto        isScratch     = [scratchPrefix]( const string& path )
-        { return StringUtil::startsWith( FileUtil::normalizeSeparators( path ), scratchPrefix, true ); };
+        const auto        isScratch     = [scratchPrefix]( const AbsolutePath& path )
+        { return StringUtil::startsWith( path.str(), scratchPrefix, true ); };
         outListFile.erase( std::remove_if( outListFile.begin(), outListFile.end(), isScratch ), outListFile.end() );
         return true;
     }

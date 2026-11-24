@@ -215,7 +215,7 @@ namespace sw
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — OS 경로를 `loadXML` 에 넣으면 모든 구성에서 오류로 거절합니다.
          *          게임 런타임 코드는 쓰지 않습니다.
          */
-        [[nodiscard]] SW_API bool loadXMLFromDiskFile( string_view diskPath );
+        [[nodiscard]] SW_API bool loadXMLFromDiskFile( const AbsolutePath& diskPath );
         /** @brief XML 을 디스크 경로에 저장합니다. 셀로 나눈 문서(쿠킹본, `_listStreamingCell`)는 쓰지 않고 false 입니다 — 셀의 엔티티를 잃는다. */
         [[nodiscard]] SW_API bool saveToFile( const AbsolutePath& absPath ) const;
         /**
