@@ -410,7 +410,8 @@ namespace sw
         void openWorld( INetPeers& peers, uint64 sceneID );
         /**
          * @brief 클라이언트가 씬 @p sceneID 를 세웠습니다(`SceneNetLink::bind`). 서버가 알린 월드의 씬이면 그 세대가 이쪽 월드의 세대가 되고 서버에 들어왔다고 알립니다.
-         * @details 서버가 먼저 새 씬을 열면 그 메시지는 앞 씬의 오브젝트에 닿으면 안 된다 — 이쪽 씬이 다르면 세대는 0 이고, 서버는 들어온 연결에만 월드 범위 메시지를 보낸다.
+         * @details 부르기 전에는 어느 월드에도 들지 않는다 — 서버의 월드가 문서 없는 월드(0)여도 같다.
+         *          서버가 먼저 새 씬을 열면 그 메시지는 앞 씬의 오브젝트에 닿으면 안 된다 — 이쪽 씬이 다르면 세대는 0 이고, 서버는 들어온 연결에만 월드 범위 메시지를 보낸다.
          *          같은 씬을 다시 여는 것(재대결)은 씬 번호로 가를 수 없어 알림이 온 때 바뀐다.
          */
         void setLocalScene( INetPeers& peers, uint64 sceneID );
@@ -571,7 +572,7 @@ namespace sw
         uint32                                        _bindSerial;            ///< 월드를 올린 횟수(`getBindSerial`)
         uint32                                        _sentClock;             ///< 서버 — 마지막으로 알린 시계(`kClockSendTicks` 단위)
         uint64                                        _worldSceneID;          ///< 서버가 연 월드의 씬(서버는 연 것, 클라이언트는 알림)
-        uint64                                        _localSceneID;          ///< 클라이언트 — 이쪽에 선 씬(`setLocalScene`)
+        optional<uint64>                              _localSceneID;          ///< 클라이언트 — 이쪽에 선 씬(`setLocalScene`). 아직 없으면 비었다 — 문서 없는 월드의 씬 번호(0)와 가른다
         uint8                                         _announcedGeneration;   ///< 서버가 연 월드의 세대(서버는 연 것, 클라이언트는 알림). 0 이면 아직 없다
         uint8                                         _worldGeneration;       ///< 이쪽 월드의 세대. 클라이언트의 씬이 다르면 0
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
