@@ -13,7 +13,6 @@ namespace sw::editor
         if ( typeGeneration != _typeGeneration )
         {
             _listSlot.clear();
-            _mapDisplay.clear();
             _typeGeneration = typeGeneration;
         }
         for ( const unique_ptr<Slot>& pSlot : _listSlot )
@@ -24,38 +23,30 @@ namespace sw::editor
         }
 
         if ( bMayEvict && _listSlot.size() >= kMaxSlotCount )
-            _listSlot.clear(); // 표시 정보는 남긴다 — 프로퍼티별이라 검색 글과 무관하다
+            _listSlot.clear();
         ++_rebuildCount;
         Slot& slot          = *_listSlot.emplace_back( make_unique<Slot>() );
         slot._pType         = &type;
         slot._listDrawnName = listDrawnName;
         slot._filterText    = string{ filterText };
         InspectorPropertyLayout::collectPropertyGroups( type, listDrawnName, filter, slot._listGroup );
+        size_t itemCount = 0;
         for ( const InspectorPropertyGroup& group : slot._listGroup )
         {
-            for ( const PropertyInfo* pProp : group._listProperty )
+            itemCount += group._listItem.size();
+        }
+        slot._listDisplay.resize( itemCount ); // 줄이 주소를 들므로 채우기 전에 한 번만 잡는다
+        size_t displayIndex = 0;
+        for ( InspectorPropertyGroup& group : slot._listGroup )
+        {
+            for ( InspectorPropertyItem& item : group._listItem )
             {
-                if ( _mapDisplay.find( pProp ) != _mapDisplay.end() )
-                    continue;
-                unique_ptr<InspectorPropertyDisplay> pDisplay = make_unique<InspectorPropertyDisplay>();
-                pDisplay->_unit                               = InspectorPropertyLayout::getDisplayUnit( *pProp );
-                pDisplay->_favoriteKey                        = InspectorFavorites::makePropertyKey( type, *pProp );
-                _mapDisplay.emplace( pProp, std::move( pDisplay ) );
+                InspectorPropertyDisplay& display = slot._listDisplay[displayIndex++];
+                display._unit                     = InspectorPropertyLayout::getDisplayUnit( *item._pProperty );
+                display._favoriteKey              = InspectorFavorites::makePropertyKey( type, *item._pProperty );
+                item._pDisplay                    = &display;
             }
         }
         return slot._listGroup;
-    }
-
-    InspectorPropertyDisplay* InspectorLayoutCache::findDisplay( const PropertyInfo& prop )
-    {
-        const auto iter = _mapDisplay.find( &prop );
-        return iter != _mapDisplay.end() ? iter->second.get() : nullptr;
-    }
-
-    const InspectorPropertyDisplay& InspectorLayoutCache::getLaidOutDisplay( const PropertyInfo& prop ) const
-    {
-        const auto iter = _mapDisplay.find( &prop );
-        SW_ASSERT( iter != _mapDisplay.end() ); // 행은 이 캐시가 돌려준 묶음에서만 그린다
-        return *iter->second;
     }
 } // namespace sw::editor

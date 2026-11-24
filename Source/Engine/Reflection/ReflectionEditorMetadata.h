@@ -120,10 +120,60 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 에디터 메타데이터 줄이 붙는 대상입니다. */
+    enum class EditorMetadataTarget : uint8
+    {
+        Type,
+        Property,
+        Event,
+        Function,
+        Enum,
+        Enumerator,
+    };
+
+    /** @brief 에디터 메타데이터 줄의 칸입니다. 이름은 멤버 `_x` · `_bX` 의 X 다 — 생성기가 표(`PredefinedAnnotationField.xxx`)의 멤버 이름으로 짓는다. */
+    enum class EditorMetadataField : uint8
+    {
+        Category,
+        DisplayName,
+        Tooltip,
+        CustomMeta, ///< 글이 값이고 열쇠 칸이 키다
+        EditCondition,
+        FileFilter,
+        EditorPreview,
+        HideInMenu,
+        HideInInspector,
+        EditConditionHides,
+        ColorHDR,
+        Multiline,
+        CallInEditor,
+        Exec,
+        Hidden,
+        UIMinRange, ///< 숫자 칸
+        UIMaxRange, ///< 숫자 칸
+    };
+
+    /**
+     * @brief 개발 전용 생성 단위(`<이름>.gen.meta.cpp`)의 상수 줄 하나입니다 — 대상 하나의 칸 하나(언리얼 UHT 가 메타데이터를 `FMetaDataPairParam` 표로 넘기는 자리).
+     * @details 채우는 코드를 대상마다 내지 않는다. 엔진의 한 곳(`TypeEditorMetadataSource::fill`)이 줄을 돌며 넣는다. 그 대상에 없는 칸이면 멈춘다(생성기와 엔진이 어긋났다).
+     */
+    struct EditorMetadataRow
+    {
+        EditorMetadataTarget _target;
+        EditorMetadataField  _field;
+        const utf8*          _pName;            ///< 프로퍼티 · 이벤트 이름, 메서드의 찾는 이름, 열거자 이름. 타입 · 열거형 자신이면 nullptr
+        const utf8*          _pText{ nullptr }; ///< 글 칸의 글(플래그 칸이면 nullptr — 줄이 있으면 켠다)
+        const utf8*          _pKey{ nullptr };  ///< 커스텀 메타의 키
+        float32              _number{ 0.0f };   ///< 숫자 칸의 값
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct TypeEditorMetadataSet
      * @brief 타입 하나의 에디터 메타데이터 묶음입니다 — 타입 줄, 프로퍼티 · 이벤트(이름), 메서드(찾는 이름 `FunctionInfo::_hashName`).
-     * @details 개발 전용 생성 단위의 채우기 함수가 채우고 `TypeRegistry` 가 든다. 맵은 노드 기반이라 다 채운 뒤에는 원소 주소가 바뀌지 않는다 — 리플렉션 정보가 그 주소를 가리킨다.
+     * @details 개발 전용 생성 단위의 줄 표에서 채우고(`TypeEditorMetadataSource::fill`) `TypeRegistry` 가 든다. 맵은 노드 기반이라 다 채운 뒤에는 원소 주소가 바뀌지 않는다 — 리플렉션 정보가 그 주소를 가리킨다.
      */
     struct SW_API TypeEditorMetadataSet
     {
@@ -144,9 +194,12 @@ namespace sw
      */
     struct SW_API TypeEditorMetadataSource
     {
-        const utf8* _pFqn;                                 ///< 타입 FQN(`TypeInfo::_fullyQualifiedName`)
-        void ( *_pFill )( TypeEditorMetadataSet& outSet ); ///< 묶음을 채운다
+        const utf8*              _pFqn; ///< 타입 FQN(`TypeInfo::_fullyQualifiedName`)
+        const EditorMetadataRow* _pRow;
+        uint32                   _rowCount;
 
+        /** @brief 줄들을 묶음에 넣습니다. */
+        void fill( TypeEditorMetadataSet& outSet ) const;
         /** @brief 줄을 올립니다(정적 등록자). 같은 FQN 이 있으면 공용 거절 로그를 남기고 false 입니다(핫 리로드의 교체 이미지는 대체한다). */
         [[nodiscard]] static bool add( const TypeEditorMetadataSource* pSource );
         /** @brief 줄을 뺍니다(올린 모듈이 내려갈 때). */
@@ -158,9 +211,12 @@ namespace sw
     /** @struct EnumEditorMetadataSource @brief 개발 전용 생성 단위 하나가 올리는 열거형 줄입니다(`TypeEditorMetadataSource` 의 짝). */
     struct SW_API EnumEditorMetadataSource
     {
-        const utf8* _pFqn;
-        void ( *_pFill )( EnumEditorMetadata& outMetadata );
+        const utf8*              _pFqn;
+        const EditorMetadataRow* _pRow;
+        uint32                   _rowCount;
 
+        /** @brief 줄들을 열거형 묶음에 넣습니다. */
+        void                                   fill( EnumEditorMetadata& outMetadata ) const;
         [[nodiscard]] static bool              add( const EnumEditorMetadataSource* pSource );
         static void                            remove( const EnumEditorMetadataSource* pSource );
         static const EnumEditorMetadataSource* find( string_view fqn );

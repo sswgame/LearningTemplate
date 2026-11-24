@@ -32,7 +32,7 @@ namespace sw
         /** @brief 타입마다 적격 판정 · 서술자 칸을 만듭니다. 생성 오류가 있으면 모두 알리고 false 입니다. */
         [[nodiscard]] bool makePlan();
 
-        /** @brief `RegisterType` 안, `registry.registerClass` 앞에 서술자 표와 코덱을 `info._pFixedCodec` 에 거는 줄들을 씁니다. */
+        /** @brief 타입 서술자 함수(`Registrar<T>::getDesc`) 안, 서술자 앞에 필드 표와 코덱(`s_fixedCodec`)을 씁니다. 검증 함수는 앞서 낸 `kValidate` 다(타입이 검증 함수를 적었을 때). */
         void emitRegistration( CodeEmit& emit, size_t typeIndex ) const;
         /** @brief `<FQN> | <정규 문자열 또는 이유>` 한 줄(끝 줄바꿈 없음)입니다. 스탬프의 `schema` 줄로 적히고 `FixedSchemas.gen.txt` 가 그 줄을 모읍니다. */
         [[nodiscard]] string makeSchemaLine( size_t typeIndex ) const;

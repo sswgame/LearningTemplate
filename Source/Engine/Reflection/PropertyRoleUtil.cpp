@@ -7,9 +7,12 @@
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
@@ -72,7 +75,7 @@ namespace sw
                 static_assert( SW_COUNT_OF( kArrBlend ) == static_cast<size_t>( ReflectBuiltinIndex::kCount ), "kArrBlend must have one row per ReflectBuiltins.xxx type" );
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return nullptr;
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( prop._typeName );
+                const ReflectBuiltinIndex builtinIndex = prop.resolveValueFacts( engine::getSubsystem<TypeRegistry>() )._builtinIndex;
                 return builtinIndex < ReflectBuiltinIndex::kCount ? kArrBlend[static_cast<size_t>( builtinIndex )] : nullptr;
             }
         };

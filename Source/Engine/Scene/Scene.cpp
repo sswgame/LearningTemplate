@@ -235,8 +235,9 @@ namespace sw
             /**
              * @brief 엔티티의 상태를 오브젝트에 얹습니다. **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
              *        상태가 없으면 빈 엔티티라 다른 엔티티가 파일 id 로 가리킬 수 있게 배치에 기록만 한다.
+             * @return 바이너리 상태를 읽지 못하면(쿠킹본의 배치가 이 빌드와 다름 · 깨짐) false 입니다. 글 상태의 실패는 경고하고 이어 간다(저작 파일을 에디터에서 고칠 수 있게).
              */
-            static void applyEntityState( GameObject* pGo, const SceneDocument::SceneObjectNode& entity, const string& prefabInstanceState, ObjectStateBatch& batch )
+            [[nodiscard]] static bool applyEntityState( GameObject* pGo, const SceneDocument::SceneObjectNode& entity, const string& prefabInstanceState, ObjectStateBatch& batch )
             {
                 ObjectLoadContext context{ entity._statePurpose }; // 파일의 엔티티는 저작, 스트리밍이 떠 둔 엔티티는 스냅숏(런타임 칸이 실렸다)
                 context._pBatch  = &batch;
@@ -245,9 +246,10 @@ namespace sw
                 {
                     // 쿠킹된 상태의 참조는 이미 평평한 파일 id 다(`SceneObjectNode::_idScope`). 런타임 하위 레벨만 자기 범위로 한 번 더 옮긴다.
                     context._savedIDScope = entity._cookedStateIDScope;
-                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
-                        SW_LOG_WARNING_ID( "Scene.EmbeddedBinaryStateApply", "Embedded binary state apply failed for '%#'", entity._name );
-                    return;
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) != 0 )
+                        return true;
+                    SW_LOG_ERROR_ID( "Scene.EmbeddedBinaryStateApply", "Embedded binary state apply failed for '%#' - the load fails", entity._name );
+                    return false;
                 }
                 context._savedIDScope = entity._idScope;
                 if ( prefabInstanceState.empty() == false )
@@ -266,6 +268,7 @@ namespace sw
                 {
                     batch.addReferenceTarget( pGo, entity._fileID, hashed_string( entity._name.c_str() ) );
                 }
+                return true;
             }
 
             /**
@@ -486,9 +489,10 @@ namespace sw
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 부착은 부모를 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다).
         // 이름으로 찾으면 이름이 겹친 엔티티(병합)에서 자식이 앞의 것에 붙는다.
         ObjectStateBatch                              _batch{ ObjectIDSpace::Saved };
-        unordered_map<string, string>                 _mapPrefabBaseState; ///< 프리팹마다 원형 상태를 한 번만 만든다(같은 프리팹을 여럿 놓은 씬)
-        vector<GameObject*>                           _listPrefabObject;   ///< 프리팹 엔티티의 오브젝트 — 다 지은 뒤 중첩 부품을 스폰한다
-        vector<const SceneDocument::SceneObjectNode*> _listPrefabNode;     ///< 그 엔티티(`_listPrefabObject` 와 같은 순서)
+        unordered_map<string, string>                 _mapPrefabBaseState;    ///< 프리팹마다 원형 상태를 한 번만 만든다(같은 프리팹을 여럿 놓은 씬)
+        vector<GameObject*>                           _listPrefabObject;      ///< 프리팹 엔티티의 오브젝트 — 다 지은 뒤 중첩 부품을 스폰한다
+        vector<const SceneDocument::SceneObjectNode*> _listPrefabNode;        ///< 그 엔티티(`_listPrefabObject` 와 같은 순서)
+        bool                                          _bStateFailed{ false }; ///< 상태를 읽지 못한 엔티티가 있다 — 빈 오브젝트로 이어 가지 않고 끝에서 로드가 실패한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 여러 프레임에 나눠 짓는 셀 하나의 진행입니다. 버리면(다 짓지 않고) 배치를 잇지 않고 놓는다. */
@@ -802,7 +806,8 @@ namespace sw
             _mapInstanceMember[pGo->getObjectID()] = InstanceMember{ entity._instanceAnchorFileID, entity._idScope, entity._instancePartPath };
         if ( entity._listDataLayer.empty() == false )
             _mapObjectDataLayer[pGo->getObjectID()] = entity._listDataLayer;
-        SceneInternal::applyEntityState( pGo, entity, prefabInstanceState, context._batch );
+        if ( SceneInternal::applyEntityState( pGo, entity, prefabInstanceState, context._batch ) == false )
+            context._bStateFailed = true;
         // 떠 둔 프리팹 엔티티는 부품을 다시 스폰하지 않는다 — 부품도 엔티티로 떠 두었다(`captureCellNodes`).
         if ( entity._prefab.empty() == false && entity._statePurpose == SerializePurpose::Authoring )
         {
@@ -814,6 +819,11 @@ namespace sw
     bool Scene::finishNodeBuild( const vector<SceneDocument::SceneObjectNode>& listNode, NodeBuildContext& context )
     {
         ObjectStateBatch& batch = context._batch;
+        if ( context._bStateFailed )
+        {
+            batch.abandon(); // 엔티티마다의 까닭은 읽을 때 남겼다. 지은 오브젝트는 부른 쪽이 내린다
+            return false;
+        }
         // 옮기지 못한 핸들 PROPERTY 가 있으면 로드 오류다(배치가 필드를 적어 오류를 남겼다). 비우고 이어 가면 값이 조용히 사라진다.
         if ( batch.finish() == false )
         {

@@ -380,11 +380,11 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "leaves must be the first nodes" } );
             if ( bLeafSlot && ( node._firstLeaf != nodeIndex || node._leafCount != 1 ) )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a leaf must hold itself" } );
-            if ( node._firstLeaf + node._leafCount > _leafCount )
+            if ( static_cast<uint64>( node._firstLeaf ) + node._leafCount > _leafCount )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "leaf range out of bounds" } );
             if ( nodeIndex != root && ( node._parent < 0 || static_cast<uint32>( node._parent ) <= nodeIndex || static_cast<uint32>( node._parent ) >= _listNode.size() ) )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a parent must come after its child" } );
-            if ( node._firstChild + node._childCount > _listChildNode.size() )
+            if ( static_cast<uint64>( node._firstChild ) + node._childCount > _listChildNode.size() )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "child range out of bounds" } );
             uint32 leafSum = 0;
             for ( uint32 offset = 0; offset < node._childCount; ++offset )

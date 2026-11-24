@@ -99,15 +99,41 @@ namespace sw
         mutable atomic<uint64> _schemaHash;
         /**
          * @brief 이 타입의 `PROPERTY( Replicated )` 칸만 든 코덱(복제 스키마)입니다. `Replicated` 칸이 없으면 nullptr 입니다. 타입 전체가 적격이 아니어도 있을 수 있다.
-         * @details 생성 코드가 등록 때 한 번 건다(`s_fixedCodec._pReplicated = &s_replicatedCodec`). 읽는 길은 `ReplicatedLayout` 하나다.
+         * @details 생성 코드가 생성자 인자로 건다(`s_replicatedCodec` 이 앞선다). 읽는 길은 `ReplicatedLayout` 하나다.
          */
         const FixedCodec* _pReplicated;
 
-        /** @brief 적격 타입의 코덱입니다. 필드가 없으면 @p pField 는 nullptr 입니다. */
-        FixedCodec( const FixedFieldDesc* pField, uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, uint32 dependencyCount,
-                    BaseCastFunction pBaseCast, ReflectValidateFunction pValidate ) noexcept;
+        /** @brief 적격 타입의 코덱입니다. 필드가 없으면 @p pField 는 nullptr 입니다. 상수 초기화된다(생성 단위가 등록 코드 없이 정적 객체로 둔다). */
+        constexpr FixedCodec( const FixedFieldDesc* pField, const uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, const uint32 dependencyCount,
+                              const BaseCastFunction pBaseCast, const ReflectValidateFunction pValidate, const FixedCodec* pReplicated ) noexcept
+            : _pField{ pField }
+            , _pCanonical{ pCanonical }
+            , _pIneligibleReason{ nullptr }
+            , _pDependency{ pDependency }
+            , _pBaseCast{ pBaseCast }
+            , _pValidate{ pValidate }
+            , _fieldCount{ fieldCount }
+            , _dependencyCount{ dependencyCount }
+            , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
+            , _schemaHash{ 0 }
+            , _pReplicated{ pReplicated }
+        {
+        }
         /** @brief 적격이 아닌 타입입니다. @p pIneligibleReason 은 필드 이름과 이유입니다. */
-        explicit FixedCodec( const utf8* pIneligibleReason ) noexcept;
+        constexpr FixedCodec( const utf8* pIneligibleReason, const FixedCodec* pReplicated ) noexcept
+            : _pField{ nullptr }
+            , _pCanonical{ nullptr }
+            , _pIneligibleReason{ pIneligibleReason }
+            , _pDependency{ nullptr }
+            , _pBaseCast{ nullptr }
+            , _pValidate{ nullptr }
+            , _fieldCount{ 0 }
+            , _dependencyCount{ 0 }
+            , _dependencyState{ FixedDependencyState::Missing }
+            , _schemaHash{ 0 }
+            , _pReplicated{ pReplicated }
+        {
+        }
 
         bool isEligible() const noexcept { return _pIneligibleReason == nullptr; }
     };

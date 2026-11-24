@@ -122,5 +122,7 @@ namespace sw
         }
         /** @brief 지금 세대의 답이 없을 때 레지스트리에서 찾아 기록합니다(해제된 타입은 nullptr 로). 레지스트리가 없으면 칸을 건드리지 않고 nullptr 을 반환합니다. */
         const TypeInfo* findSlow( const hashed_string& fqn ) const;
+        /** @brief FQN 글로 찾습니다. 생성 코드의 놓친 경로(`swFindStaticType`)가 타입마다 이름 객체를 정적으로 두지 않게 한다 — 세대마다 한 번이라 그때 intern 한다. */
+        const TypeInfo* findSlow( const utf8* pFqn ) const;
     };
 } // namespace sw

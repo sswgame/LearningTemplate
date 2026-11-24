@@ -139,6 +139,50 @@ SW_TEST_CASE( SerializerUtilTest, KeysMatchExactlyAndUnknownNamesAreNotFound )
     SW_EXPECT_TRUE( listProp[*countIndex]._name == hashed_string( "_count" ) );
 }
 
+/** @brief [SerializerUtilTest] 값 비교는 형식대로 견준다 — 숫자 · 글(철자까지) · 열거형 · 처리기 값 · 구조체 안의 칸 · 개수가 같은 목록의 원소가 다르면 다르다 */
+SW_TEST_CASE( SerializerUtilTest, PropertyValuesCompareByType )
+{
+    const auto isEqualField = []( const utf8* pName, const SerializerSample& a, const SerializerSample& b )
+    { return SerializerUtil::arePropertyValuesEqual( getSampleProperty( pName ), ObjectAddress{ &a }, ObjectAddress{ &b }, getContext() ); };
+    const SerializerSample base;
+    SerializerSample       changed;
+    for ( const utf8* pName : { "_count", "_ratio", "_name", "_small", "_mode", "_bFirst", "_path" } )
+    {
+        SW_EXPECT_TRUE_MSG( isEqualField( pName, base, changed ), pName );
+    }
+    changed._count  = 1;
+    changed._ratio  = 0.5f;
+    changed._name   = "a";
+    changed._small  = 2;
+    changed._mode   = SerializerSampleMode::Fast;
+    changed._bFirst = 1;
+    SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &changed }, "Game/A.xml", getContext() ) );
+    for ( const utf8* pName : { "_count", "_ratio", "_name", "_small", "_mode", "_bFirst", "_path" } )
+    {
+        SW_EXPECT_FALSE_MSG( isEqualField( pName, base, changed ), pName );
+    }
+    SerializerSample upper = changed;
+    upper._name            = "A";
+    SW_EXPECT_FALSE( isEqualField( "_name", changed, upper ) );
+
+    const TypeInfo&     groupType = *SerializerSampleGroup::StaticType();
+    const PropertyInfo* pList     = groupType.findProperty( hashed_string( "_listText" ) );
+    const PropertyInfo* pPart     = groupType.findProperty( hashed_string( "_part" ) );
+    SW_REQUIRE_NOT_NULL( pList );
+    SW_REQUIRE_NOT_NULL( pPart );
+    SerializerSampleGroup left;
+    left._listText = { "a", "b" };
+    SerializerSampleGroup right{ left };
+    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    right._listText[1] = "c"; // 개수는 같다
+    right._part._extra = 2.0f;
+    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    right._listText = { "a" };
+    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+}
+
 /** @brief [SerializerUtilTest] 비트필드 하나를 글로 쓰거나 옮겨도 같은 바이트의 이웃 비트는 그대로이고, 불리언이 아닌 글은 거절한다 */
 SW_TEST_CASE( SerializerUtilTest, BitFieldHelpersTouchOnlyTheirOwnBit )
 {
@@ -457,6 +501,140 @@ SW_TEST_CASE( SchemaMigrateTest, WireTypeNameIsFoundOrEmpty )
     SW_EXPECT_TRUE( findWireTypeName( static_cast<uint32>( hashed_string( "int32" ).getHash() ) ) == hashed_string( "int32" ) );
     SW_EXPECT_FALSE( findWireTypeName( static_cast<uint32>( modeType.getHash() ) ).empty() );
     SW_EXPECT_TRUE( findWireTypeName( static_cast<uint32>( hashed_string::computeHash( string_view{ "SchemaMigrateTest.NoSuchType" } ) ) ).empty() );
+}
+
+/** @brief [BinarySerializerTest] 쿠킹 배치 스트림은 태그 스트림과 같은 값을 읽고 더 작으며, 이어 쓴 Archive 에서 끝을 알고, 켜지 않은 읽기와 배치가 다른 읽기는 하나도 쓰지 않고 거절한다 */
+SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
+{
+    SerializerSampleGroup source;
+    source._listText    = { "alpha", "beta" };
+    source._part._count = 11;
+    source._part._name  = "part";
+    source._part._extra = 2.25f;
+    source._count       = 42;
+
+    const TypeInfo&  type        = *SerializerSampleGroup::StaticType();
+    SerializeContext cookContext = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    cookContext.setSchemaLayout( true );
+
+    vector<uint8> taggedBytes;
+    vector<uint8> layoutBytes;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, taggedBytes ) );
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, layoutBytes, cookContext ) );
+    SW_EXPECT_TRUE( layoutBytes.size() < taggedBytes.size() );
+
+    const auto expectSame = [&source]( const SerializerSampleGroup& read )
+    {
+        SW_EXPECT_TRUE( read._listText == source._listText );
+        SW_EXPECT_EQUAL( source._part._count, read._part._count );
+        SW_EXPECT_EQUAL( source._part._name, read._part._name );
+        SW_EXPECT_EQUAL( source._part._extra, read._part._extra );
+        SW_EXPECT_EQUAL( source._count, read._count );
+    };
+    // 켠 문맥은 머리로 두 꼴을 가린다. 소프트 읽기도 모르는 칸이 없다.
+    SerializerSampleGroup strictRead;
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &strictRead, type, layoutBytes.data(), layoutBytes.size(), cookContext ) );
+    expectSame( strictRead );
+    SerializerSampleGroup     softRead;
+    vector<SchemaOrphanValue> listOrphan;
+    SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &softRead, type, layoutBytes.data(), layoutBytes.size(), &listOrphan, cookContext ) == SoftReadResult::Read );
+    SW_EXPECT_TRUE( listOrphan.empty() );
+    expectSame( softRead );
+
+    // 한 Archive 에 배치 스트림과 태그 스트림을 이어 써도 스스로 끝을 안다.
+    Archive archive;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, archive, cookContext ) );
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, archive ) );
+    Archive               reader( archive.getData(), archive.getSize() );
+    SerializerSampleGroup first;
+    SerializerSampleGroup second;
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &first, type, reader, cookContext ) );
+    SW_REQUIRE_TRUE( BinarySerializer::deserialize( &second, type, reader, cookContext ) );
+    expectSame( first );
+    expectSame( second );
+
+    // 켜지 않은 문맥(세이브 · 메시지 · 스냅샷)은 모르는 버전으로 거절한다 — 값을 하나도 쓰지 않는다.
+    SerializerSampleGroup untouched;
+    for ( const SerializePurpose purpose : { SerializePurpose::Authoring, SerializePurpose::Snapshot, SerializePurpose::SaveGame } )
+    {
+        SW_EXPECT_LOG( "BinarySerializer.BinaryStreamWireVersion" );
+        SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size(), SerializeContext::getDefault( purpose ) ) );
+    }
+    // 배치 해시가 다르면(다른 빌드의 쿠킹본) 값을 하나도 쓰지 않고 거절한다.
+    vector<uint8> otherLayout = layoutBytes;
+    otherLayout[sizeof( uint32 )] ^= 1;
+    SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutMismatch" );
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, otherLayout.data(), otherLayout.size(), cookContext ) );
+    listOrphan.clear();
+    SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &untouched, type, otherLayout.data(), otherLayout.size(), &listOrphan, cookContext ) == SoftReadResult::Rejected );
+    // 잘린 스트림은 읽지 않는다.
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), 2, cookContext ) );
+    SW_EXPECT_EQUAL( 0, untouched._count );
+    SW_EXPECT_TRUE( untouched._listText.empty() );
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size() - 1, cookContext ) );
+}
+
+/** @brief [BinarySerializerTest] 위조된 값 크기(32 비트 size_t 에서 자리와 더하면 넘치는 크기 포함)와 머리 개수가 틀린 배치 스트림은 읽지 않는다 — 값은 그대로다 */
+SW_TEST_CASE( BinarySerializerTest, CorruptPayloadSizeAndCountAreRejected )
+{
+    SerializerSampleGroup source;
+    source._listText = { "alpha" };
+    source._count    = 42;
+
+    const TypeInfo&  type        = *SerializerSampleGroup::StaticType();
+    SerializeContext cookContext = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    cookContext.setSchemaLayout( true );
+    vector<uint8> taggedBytes;
+    vector<uint8> layoutBytes;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, taggedBytes ) );
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, layoutBytes, cookContext ) );
+
+    const auto writeWordAt = []( vector<uint8>& inoutBytes, const size_t offset, const uint32 value )
+    { Memory::copy( inoutBytes.data() + offset, &value, sizeof( value ) ); };
+    const auto expectRejected = [&type]( const vector<uint8>& bytes, const SerializeContext& context )
+    {
+        SerializerSampleGroup     read;
+        vector<SchemaOrphanValue> listOrphan;
+        SW_EXPECT_FALSE( BinarySerializer::deserialize( &read, type, bytes.data(), bytes.size(), context ) );
+        SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &read, type, bytes.data(), bytes.size(), &listOrphan, context ) == SoftReadResult::NotParsed );
+        SW_EXPECT_TRUE( read._listText.empty() );
+        SW_EXPECT_EQUAL( 0, read._count );
+    };
+    // 첫 값의 크기 칸 — 태그 스트림은 머리 · 이름 해시 · 형식 해시 뒤, 배치 스트림은 머리 · 배치 해시 뒤다.
+    for ( const uint32 corruptSize : { 0xFFFFFFFFu, 0xFFFFFFFFu - 15u, static_cast<uint32>( taggedBytes.size() ) } )
+    {
+        vector<uint8> corruptTagged = taggedBytes;
+        writeWordAt( corruptTagged, sizeof( uint32 ) * 3, corruptSize );
+        expectRejected( corruptTagged, getContext() );
+        vector<uint8> corruptLayout = layoutBytes;
+        writeWordAt( corruptLayout, sizeof( uint32 ) * 2, corruptSize );
+        expectRejected( corruptLayout, cookContext );
+    }
+
+    uint32 header = 0;
+    Memory::copy( &header, layoutBytes.data(), sizeof( header ) );
+    vector<uint8> corruptCount = layoutBytes;
+    writeWordAt( corruptCount, 0, header + 1 );
+    SerializerSampleGroup read;
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &read, type, corruptCount.data(), corruptCount.size(), cookContext ) );
+}
+
+/** @brief [BinarySerializerTest] 배치 스트림이 담지 못하는 쓰기(모르는 칸을 다시 싣기 · 저작이 아닌 목적)는 오류로 멈춘다 */
+SW_TEST_CASE( BinarySerializerTest, SchemaLayoutRejectsWhatItCannotHold )
+{
+    const SerializerSampleGroup source;
+    const TypeInfo&             type        = *SerializerSampleGroup::StaticType();
+    SerializeContext            cookContext = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    cookContext.setSchemaLayout( true );
+    SerializeContext saveContext = SerializeContext::deriveFromDefault( SerializePurpose::SaveGame );
+    saveContext.setSchemaLayout( true );
+
+    SchemaOrphanValue unknown;
+    unknown._nameHash = hashed_string::computeHash( "_fieldOfAnotherBuild" );
+    vector<uint8> bytes;
+    SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutCannotHold" );
+    SW_EXPECT_FALSE( BinarySerializer::serializeKeepingUnknown( &source, type, vector<SchemaOrphanValue>{ unknown }, bytes, cookContext ) );
+    SW_EXPECT_FALSE( BinarySerializer::serialize( &source, type, bytes, saveContext ) );
 }
 
 /** @brief [XMLSerializerPropertyTest] 되풀이된 원소와 자리가 틀린 칸(속성 값을 원소로, 원소 칸을 속성으로)은 모르는 칸으로 알린다 — 알림 없이 초기값이 되지 않는다 */

@@ -678,9 +678,9 @@ namespace sw
                     const bool      bSequence  = prop._containerWrapper != nullptr && prop._containerWrapper->asSequence() != nullptr && bNested == false;
                     const TypeInfo* pFieldType = nullptr;
                     if ( bContainer == false )
-                        pFieldType = SerializerUtil::findNestedObjectType( prop._typeName, context );
+                        pFieldType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                     else if ( bSequence )
-                        pFieldType = SerializerUtil::findNestedObjectType( prop._elementTypeName, context );
+                        pFieldType = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
                     if ( pFieldType == nullptr || VectorUtil::contains( inoutStack, pFieldType ) )
                         continue;
                     const PropertyInfo* pKey = bContainer ? findKeyProperty( *pFieldType ) : nullptr;

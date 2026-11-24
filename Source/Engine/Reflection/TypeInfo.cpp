@@ -6,16 +6,19 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/pair.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -55,37 +58,106 @@ namespace sw
                     return lhs._fullyQualifiedName == rhs._fullyQualifiedName && lhs._fullyQualifiedName.empty() == false;
                 return lhs._name.isPredefinedType( kNone ) == false && lhs._name == rhs._name && lhs._name.empty() == false;
             }
+
+            /**
+             * @brief 형식 이름의 해시입니다. 이름 공간 한정(`sw::editor::`)과 공백은 접지 않습니다.
+             * @details 파서가 적는 철자는 libclang 판과 소스의 적은 꼴(한정했는지)에 따라 다를 수 있다. 쿠킹본은 대상(Windows · Linux · Android · 웹)이 나눠 쓰므로 같은 형식이
+             *          철자 때문에 갈리면 안 된다. 다른 이름 공간의 같은 이름은 같은 해시다 — 구조체 값은 제 배치 해시를 따로 싣고 열거형은 이름으로 실어 어긋나면 거기서 드러난다.
+             */
+            static uint64 computeTypeNameHash( const hashed_string& typeName )
+            {
+                const auto isIdentifierChar = []( const utf8 ch )
+                { return ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' ) || StringUtil::isDigitChar( ch ) || ch == '_'; };
+                const string_view text = typeName.view();
+                uint32            hash = 0;
+                size_t            from = 0;
+                while ( from < text.size() )
+                {
+                    size_t to = from;
+                    while ( to < text.size() && isIdentifierChar( text[to] ) )
+                        ++to;
+                    const bool bIdentifier = to > from;
+                    const bool bQualifier  = bIdentifier && text.substr( to, 2 ) == "::";
+                    if ( bIdentifier == false )
+                        ++to;
+                    const bool bSkipped = bQualifier || text[from] == ':' || text[from] == ' ';
+                    if ( bSkipped == false )
+                        hash = HashUtil::computeStringHash32( text.data() + from, to - from, false, hash );
+                    from = to;
+                }
+                return hash;
+            }
+
+            /** @brief 칸 하나의 배치 해시입니다 — 이름과 형식이고, 컨테이너면 원소 · 키 형식과 안쪽 단계까지입니다(`getSchemaLayoutHash`). */
+            static uint64 computePropertyLayoutHash( const PropertyInfo& prop )
+            {
+                uint64 hash = HashUtil::combine( prop.getNameHash(), computeTypeNameHash( prop._typeName ) );
+                hash        = HashUtil::combine( hash, computeTypeNameHash( prop._elementTypeName ) );
+                hash        = HashUtil::combine( hash, computeTypeNameHash( prop._keyTypeName ) );
+                for ( const NestedContainerInfo* pLevel = prop._nestedContainer; pLevel != nullptr; pLevel = pLevel->_elementNested )
+                {
+                    hash = HashUtil::combine( hash, computeTypeNameHash( pLevel->_elementTypeName ) );
+                    hash = HashUtil::combine( hash, computeTypeNameHash( pLevel->_keyTypeName ) );
+                }
+                return hash;
+            }
         };
     } // namespace
 
-    void TypeInfo::setPropertyTable( const PropertyDesc* pDesc, const size_t count )
+    TypeInfo::TypeInfo( const TypeDesc& desc )
+        : TypeInfo()
     {
-        _listProperty.clear();
-        _listProperty.reserve( count );
-        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
-        {
-            _listProperty.emplace_back( pDesc[descIndex] );
-        }
-    }
+        const auto toFlag = [&desc]( const uint32 flag ) -> uint8
+        { return ( desc._flags & flag ) != 0 ? SW_TRUE : SW_FALSE; };
+        _name               = hashed_string( desc._pName );
+        _fullyQualifiedName = hashed_string( desc._pFullyQualifiedName );
+        _parentFQN          = hashed_string( desc._pParentFQN );
+        _moduleName         = hashed_string( desc._pModuleName );
+        _size               = desc._size;
+        _destroyInstance    = desc._pDestroyInstance;
+        _addComponent       = desc._pAddComponent;
+        _pValidate          = desc._pValidate;
+        _pFixedCodec        = desc._pFixedCodec;
+        _bAbstract          = toFlag( TypeDescFlag::kAbstract );
+        _bStatic            = toFlag( TypeDescFlag::kStatic );
+        _bPrimitive         = toFlag( TypeDescFlag::kPrimitive );
+        _bInterface         = toFlag( TypeDescFlag::kInterface );
 
-    void TypeInfo::setMethodTable( const FunctionDesc* pDesc, const size_t count )
-    {
-        _listMethod.clear();
-        _listMethod.reserve( count );
-        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        // 적은 것이 없는 타입은 메타데이터 공유 기본값을 쓴다(힙 없음).
+        constexpr uint32 kMetadataFlags = TypeDescFlag::kOverridesTick | TypeDescFlag::kOverridesSubTick | TypeDescFlag::kOverridesSerializeState;
+        if ( ( desc._flags & kMetadataFlags ) != 0 || desc._version != 0 )
         {
-            if ( pDesc[descIndex]._pInvoke != nullptr || pDesc[descIndex]._pConstruct != nullptr )
-                _listMethod.emplace_back( pDesc[descIndex] );
+            TypeMetadata& metadata             = _metadata.edit();
+            metadata._bOverridesTick           = toFlag( TypeDescFlag::kOverridesTick );
+            metadata._bOverridesSubTick        = toFlag( TypeDescFlag::kOverridesSubTick );
+            metadata._bOverridesSerializeState = toFlag( TypeDescFlag::kOverridesSerializeState );
+            metadata._version                  = desc._version;
         }
-    }
 
-    void TypeInfo::setEventTable( const EventDesc* pDesc, const size_t count )
-    {
-        _listEvent.clear();
-        _listEvent.reserve( count );
-        for ( size_t descIndex = 0; descIndex < count; ++descIndex )
+        for ( uint32 index = 0; index < desc._interfaceCount; ++index )
         {
-            _listEvent.emplace_back( pDesc[descIndex] );
+            (void)_ownInterfaces.add( hashed_string( desc._pInterface[index]._pInterfaceFQN ), desc._pInterface[index]._portOffset ); // 겹침 · 넘침은 등록 검사가 오류로 알린다
+        }
+        for ( uint32 index = 0; index < desc._removedFieldCount; ++index )
+        {
+            _listRemovedField.push_back( hashed_string( desc._ppRemovedField[index] ) );
+        }
+        _listProperty.reserve( desc._propertyCount );
+        for ( uint32 index = 0; index < desc._propertyCount; ++index )
+        {
+            _listProperty.emplace_back( desc._pProperty[index] );
+        }
+        _listEvent.reserve( desc._eventCount );
+        for ( uint32 index = 0; index < desc._eventCount; ++index )
+        {
+            _listEvent.emplace_back( desc._pEvent[index] );
+        }
+        _listMethod.reserve( desc._methodCount );
+        for ( uint32 index = 0; index < desc._methodCount; ++index )
+        {
+            const FunctionDesc& method = desc._pMethod[index];
+            if ( method._pInvoke != nullptr || method._pConstruct != nullptr )
+                _listMethod.emplace_back( method );
         }
     }
 
@@ -317,6 +389,13 @@ namespace sw
         return ( flags & kDerivedHasSaveGameProperty ) != 0;
     }
 
+    uint32 TypeInfo::getSchemaLayoutHash() const
+    {
+        const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
+        SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return _derived._schemaLayoutHash.load( std::memory_order_relaxed );
+    }
+
     bool TypeInfo::usesPODCopyFastPath() const
     {
         const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
@@ -361,10 +440,13 @@ namespace sw
         };
 
         // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열이나 컨테이너를 가진 타입도 통째 복사로 간다.
-        bool bPOD      = true;
-        bool bSaveGame = false;
+        bool   bPOD       = true;
+        bool   bSaveGame  = false;
+        uint64 layoutHash = 0;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
+            if ( prop._metadata->isAuthored() )
+                layoutHash = HashUtil::combine( layoutHash, TypeInfoInternal::computePropertyLayoutHash( prop ) );
             if ( prop._metadata->_bSaveGame == SW_TRUE )
                 bSaveGame = true;
             if ( bPOD == false )
@@ -385,6 +467,7 @@ namespace sw
                 }
             }
         }
+        _derived._schemaLayoutHash.store( static_cast<uint32>( layoutHash ^ ( layoutHash >> 32 ) ), std::memory_order_relaxed ); // 아래 판정 비트의 release 가 함께 발행한다
         const bool   bValidator = ReflectionValidation::computeHasValidator( *this, resolver );
         const uint32 flags      = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u );
         _derived._derivedFlags.store( static_cast<uint8>( flags ), std::memory_order_release ); // 한 번에 바꾼다 — 읽기는 옛 판정이나 새 판정 하나를 본다

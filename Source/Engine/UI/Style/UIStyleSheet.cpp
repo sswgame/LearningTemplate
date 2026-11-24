@@ -218,7 +218,7 @@ namespace sw
                         const utf8*         pName = child.getName();
                         UIStyleField        field{};
                         const PropertyInfo* pProperty = styleType.findPropertyByNameText( pName );
-                        const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
+                        const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, pProperty->findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) ) : nullptr;
                         if ( pNested == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                         {
                             fixed_string<constant::buffer::kMax256> message;

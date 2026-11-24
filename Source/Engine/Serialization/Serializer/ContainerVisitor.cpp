@@ -155,7 +155,7 @@ namespace sw
         }
         else
         {
-            plan._pElementType = SerializerUtil::findNestedObjectType( nested._elementTypeName, context );
+            plan._pElementType = SerializerUtil::findNestedObjectType( nested._elementTypeName, nested.findBinding( nested._elementTypeName ), context );
             plan._kind         = ( plan._pElementType != nullptr ) ? ContainerElementKind::ValueObject : ContainerElementKind::Scalar;
         }
         return plan;

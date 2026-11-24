@@ -61,10 +61,10 @@ namespace sw::editor
             {
                 // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 리터럴을 두지 않는다.
                 const auto isParameterOf = []( const FunctionParameterInfo& parameter, ReflectBuiltinIndex builtinIndex )
-                { return ReflectedValueUtil::findBuiltinIndex( hashed_string( parameter._typeName.c_str() ) ) == builtinIndex; };
+                { return parameter._pType != nullptr && parameter._pType->_builtinIndex == builtinIndex; };
                 const bool bSignature = method._listParameter.size() == 3 && isParameterOf( method._listParameter[0], ReflectBuiltinOf<string>::kIndex ) &&
                                         isParameterOf( method._listParameter[1], ReflectBuiltinOf<uint32>::kIndex ) && isParameterOf( method._listParameter[2], ReflectBuiltinOf<string>::kIndex );
-                const bool bReturnsHandle = ReflectedValueUtil::findBuiltinIndex( hashed_string( method._returnTypeName.c_str() ) ) == ReflectBuiltinOf<GameObjectHandle>::kIndex;
+                const bool bReturnsHandle = method._pReturnType != nullptr && method._pReturnType->_builtinIndex == ReflectBuiltinOf<GameObjectHandle>::kIndex;
                 return bSignature && bReturnsHandle && method._invoker.isBound();
             }
 

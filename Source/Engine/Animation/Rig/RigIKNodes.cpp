@@ -144,7 +144,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigTwoBoneIKNode>( *this ); }
-            const utf8*         getTypeName() const override { return "TwoBoneIK"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -238,7 +237,6 @@ namespace sw
             void setFABRIK( bool bFABRIK ) { _bFABRIK = bFABRIK ? SW_TRUE : SW_FALSE; }
 
             unique_ptr<RigNode> clone() const override { return make_unique<RigChainIKNode>( *this ); }
-            const utf8*         getTypeName() const override { return _bFABRIK == SW_TRUE ? "FABRIKChain" : "CCDChain"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -302,7 +300,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigAimNode>( *this ); }
-            const utf8*         getTypeName() const override { return "Aim"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -428,7 +425,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigFootPlacementNode>( *this ); }
-            const utf8*         getTypeName() const override { return "FootPlacement"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -709,7 +705,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigStrideWarpingNode>( *this ); }
-            const utf8*         getTypeName() const override { return "StrideWarping"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
@@ -847,7 +842,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigFullBodyIKNode>( *this ); }
-            const utf8*         getTypeName() const override { return "FullBodyIK"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {

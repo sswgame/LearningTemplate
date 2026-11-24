@@ -56,14 +56,14 @@ namespace sw
                 Malformed ///< 잘렸거나, 범위 밖이거나, 뒤에 남는 바이트가 있다
             };
 
+            /** @brief 인자 타입의 꼴입니다. 부를 때마다 인자마다 불리므로 컴파일 때 정해진 갈래(`ReflectTypeOps`)만 본다 — 열거형이 등록됐는지는 계약(`validateRemoteCallContract`)이 본다. */
             static ArgumentKind findArgumentKind( const FunctionParameterInfo& parameter )
             {
                 if ( parameter._pType == nullptr )
                     return ArgumentKind::None;
-                const hashed_string       typeName     = parameter._pType->_pGetTypeName();
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                const ReflectBuiltinIndex builtinIndex = parameter._pType->_builtinIndex;
                 if ( builtinIndex == ReflectBuiltinIndex::kNone )
-                    return game::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr ? ArgumentKind::Enum : ArgumentKind::None;
+                    return parameter._pType->_bEnum == SW_TRUE ? ArgumentKind::Enum : ArgumentKind::None;
                 switch ( ReflectedValueUtil::getBuiltinClass( builtinIndex ) )
                 {
                     case ReflectBuiltinClass::Bool:
@@ -91,8 +91,7 @@ namespace sw
                 TaskValue          value;
                 if ( kind == ArgumentKind::None || parameter._pType->_pConvert( argument, value ) == false )
                     return false;
-                const hashed_string       typeName     = parameter._pType->_pGetTypeName();
-                const ReflectBuiltinIndex builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                const ReflectBuiltinIndex builtinIndex = parameter._pType->_builtinIndex;
                 switch ( kind )
                 {
                     case ArgumentKind::Bool:
@@ -142,10 +141,10 @@ namespace sw
                     }
                     case ArgumentKind::Enum:
                     {
-                        int64 raw = 0;
-                        if ( ReflectedValueUtil::readEnumValue( ReflectedValue( typeName, std::move( value ) ), typeName, raw ) == false )
+                        const EnumInfo* pEnumInfo = game::getSubsystem<TypeRegistry>().findEnum( parameter._pType->_pGetTypeName() );
+                        if ( pEnumInfo == nullptr )
                             return false;
-                        writer.writeVarInt( raw );
+                        writer.writeVarInt( pEnumInfo->readValueFromMemory( value.getRawPtr() ) ); // 위의 변환이 이미 이 열거형의 값으로 담았다
                         return true;
                     }
                     case ArgumentKind::None:
@@ -361,7 +360,11 @@ namespace sw
                 }
                 for ( const FunctionParameterInfo& parameter : function._listParameter )
                 {
-                    if ( RemoteCallInternal::findArgumentKind( parameter ) != RemoteCallInternal::ArgumentKind::None )
+                    const RemoteCallInternal::ArgumentKind kind  = RemoteCallInternal::findArgumentKind( parameter );
+                    const bool                             bWire = kind == RemoteCallInternal::ArgumentKind::Enum
+                                                                     ? game::getSubsystem<TypeRegistry>().findEnum( parameter._pType->_pGetTypeName() ) != nullptr
+                                                                     : kind != RemoteCallInternal::ArgumentKind::None;
+                    if ( bWire )
                         continue;
                     SW_LOG_ERROR_ID( "RemoteCall.ParameterNotWire", "Remote function %#::%# takes '%#' %# - remote arguments must be a string, number, bool or enum",
                                      type._name.c_str(), function._name.c_str(), parameter._typeName.c_str(), parameter._name.c_str() );

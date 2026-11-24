@@ -14,6 +14,7 @@
 
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -422,7 +423,7 @@ namespace sw
                 // 글 타입 판정은 내장 타입 표의 자리로 한다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다. 키를 드는 칸은 hashed_string 이기도 하다(오디오 자막 키).
                 if ( property._containerKind != ContainerKind::None )
                     return false;
-                const auto builtinIndex = ReflectedValueUtil::findBuiltinIndex( property._typeName );
+                const auto builtinIndex = property.resolveValueFacts( editor::getSubsystem<TypeRegistry>() )._builtinIndex;
                 return builtinIndex == ReflectBuiltinOf<string>::kIndex || builtinIndex == ReflectBuiltinOf<hashed_string>::kIndex;
             }
 

@@ -286,14 +286,15 @@ namespace sw::editor
         /** @brief 행 표의 한 줄입니다 — 값 행이 가리키는 값 자리. 이 표만 인스턴스 주소를 든다. */
         struct RowBinding
         {
-            MutableObjectAddress _instance{ nullptr };             ///< 프로퍼티를 가진 객체(원소 · 맵 값은 그 값 자리 — 원소 프로퍼티의 오프셋이 0 이다)
-            const PropertyInfo*  _pProp{ nullptr };                ///< 프로퍼티(원소 프로퍼티는 `_listElementProp` 의 것). 카테고리 머리 · 화면 밖 행은 nullptr
-            uint64               _key{ 0 };                        ///< `PropertyValueRow::_key`
-            uint32               _rootRowID{ 0 };                  ///< 깊이 0 조상 행 — 알림은 그 프로퍼티로 한다
-            uint32               _parentRowID{ 0 };                ///< 부모 행. 깊이 0 행은 자신이다 — 편집 경로(`buildEditPath`)가 이것으로 올라간다
-            uint32               _ordinal{ 0 };                    ///< 원소 · 맵 항목의 자리(경로 마디)
-            PropertyRowChild     _child{ PropertyRowChild::None }; ///< 부모 아래 갈래(경로 마디의 종류). None 이고 부모가 있으면 값 자리가 부모와 같다(키 원소)
-            uint8                _bDefaultOpen{ 0 };               ///< 펼침 상태를 적지 않았을 때 펼쳐져 있다(카테고리 머리)
+            MutableObjectAddress      _instance{ nullptr };             ///< 프로퍼티를 가진 객체(원소 · 맵 값은 그 값 자리 — 원소 프로퍼티의 오프셋이 0 이다)
+            const PropertyInfo*       _pProp{ nullptr };                ///< 프로퍼티(원소 프로퍼티는 `_listElementProp` 의 것). 카테고리 머리 · 화면 밖 행은 nullptr
+            InspectorPropertyDisplay* _pDisplay{ nullptr };             ///< 묶음 줄의 표시 정보. 깊이 0 값 행만 갖는다(중첩 필드 · 원소 · 맵 값은 nullptr)
+            uint64                    _key{ 0 };                        ///< `PropertyValueRow::_key`
+            uint32                    _rootRowID{ 0 };                  ///< 깊이 0 조상 행 — 알림은 그 프로퍼티로 한다
+            uint32                    _parentRowID{ 0 };                ///< 부모 행. 깊이 0 행은 자신이다 — 편집 경로(`buildEditPath`)가 이것으로 올라간다
+            uint32                    _ordinal{ 0 };                    ///< 원소 · 맵 항목의 자리(경로 마디)
+            PropertyRowChild          _child{ PropertyRowChild::None }; ///< 부모 아래 갈래(경로 마디의 종류). None 이고 부모가 있으면 값 자리가 부모와 같다(키 원소)
+            uint8                     _bDefaultOpen{ 0 };               ///< 펼침 상태를 적지 않았을 때 펼쳐져 있다(카테고리 머리)
         };
 
         /** @brief 행 @p rowID 의 행 표 줄입니다. 없으면 nullptr 입니다. */
@@ -312,17 +313,16 @@ namespace sw::editor
          * @brief 프로퍼티 @p prop 의 값 행(과 펼친 자식)을 채웁니다.
          * @param rootRowID 깊이 0 조상 행. 깊이 0 행이면 `constant::invalid_index::kUint32` 를 넘긴다(자신이 된다).
          * @param bDisabled 편집을 막는다(조상이 막혔거나 `EditCondition` 이 거짓이거나 막힌 컨테이너의 원소).
+         * @param pDisplay 묶음 줄의 표시 정보. 묶음 밖(중첩 필드 · 원소 · 맵 값)이면 nullptr 이고 단위를 그때 계산한다.
          */
         void appendValueRow( PropertyGridViewState& outState, MutableObjectAddress instance, const PropertyInfo& prop, uint16 depth, uint32 rootRowID, uint64 key,
-                             PropertyRowChild child, bool bDisabled );
+                             PropertyRowChild child, bool bDisabled, InspectorPropertyDisplay* pDisplay );
         /** @brief 펼친 노드 행 @p rowID 의 자식(구조체 필드 · 원소 · 맵 값)을 채웁니다. */
         void appendChildRows( PropertyGridViewState& outState, uint32 rowID, MutableObjectAddress instance, const PropertyInfo& prop );
         /** @brief 내장 값 행의 사본 · 숫자 범위 · 단위 · 읽기 전용 글을 채웁니다. */
-        void fillBuiltinRow( PropertyValueRow& row, MutableObjectAddress instance, const PropertyInfo& prop, const InspectorBuiltinValue& builtin );
+        void fillBuiltinRow( PropertyValueRow& row, MutableObjectAddress instance, const PropertyInfo& prop, const InspectorBuiltinValue& builtin, const InspectorPropertyDisplay* pDisplay );
         /** @brief 묶음 밖 임시 프로퍼티(컨테이너 원소 · 맵 값)를 하나 더해 @p containerProp 의 원소 프로퍼티로 채웁니다. 다음 `gather` 까지 주소가 그대로다. */
         const PropertyInfo& appendElementProperty( const PropertyInfo& containerProp );
-        /** @brief @p prop 의 표시 단위입니다. 묶음에 든 프로퍼티는 캐시한 값이고, 컨테이너 원소처럼 값으로 만든 임시 프로퍼티는 이번 호출에 계산합니다. */
-        const InspectorDisplayUnit& getDisplayUnit( const PropertyInfo& prop );
         /** @brief @p pInstance 의 기본값 비교 대상입니다. 묶은 컴포넌트 자신이면 그 타입의 기본 인스턴스(CDO), 그 밖(중첩 구조체 · 씬 밖 객체)은 비어 있습니다(메타 기본값 텍스트를 쓴다). */
         ObjectAddress findDefaultInstance( const void* pInstance, const TypeInfo& type ) const;
         /** @brief 즐겨찾기한 프로퍼티만 타입 표시 이름 머리 하나로 모아 @p inoutListGroup 을 바꿉니다. 하나도 없으면 비웁니다. */
@@ -369,7 +369,7 @@ namespace sw::editor
         InspectorFavorites*                   _pFavorites;         ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
         InspectorFavorites*                   _pActionFavorites;   ///< 메서드 액션 즐겨찾기 집합. nullptr 이면 쓰지 않는다
         InspectorLayoutCache                  _layoutCache;        ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
-        InspectorPropertyDisplay              _scratchDisplay;     ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
+        string                                _scratchUnitFormat;  ///< 묶음 밖 행(컨테이너 원소 · 중첩 필드)의 단위 붙은 서식 — 부를 때마다 다시 짓는다
         vector<InspectorPropertyGroup>        _listFilteredGroup;  ///< 즐겨찾기 · 바뀐 것만 보기로 거른 묶음 사본(저장 공간을 다시 쓴다)
         vector<RowBinding>                    _listBinding;        ///< 이번 `gather` 의 행 표(행 번호 → 값 자리)
         vector<unique_ptr<PropertyInfo>>      _listElementProp;    ///< 이번 `gather` 의 원소 · 맵 값 프로퍼티(행 표가 주소를 들므로 따로 할당한다)

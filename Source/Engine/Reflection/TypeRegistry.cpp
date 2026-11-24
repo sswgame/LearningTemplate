@@ -18,6 +18,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -147,6 +148,28 @@ namespace sw
     }
 
     static atomic<uint32> _s_typeIDCounter{ 0 }; // 실행 중에만 쓰는 로컬 인덱스(직렬화하지 않으므로 플랫폼과 무관하다)
+
+    void TypeRegistry::registerType( const TypeDesc& desc )
+    {
+        registerClass( TypeInfo{ desc } );
+        for ( uint32 index = 0; index < desc._aliasCount; ++index )
+        {
+            registerTypeAlias( desc._ppAlias[index], desc._pFullyQualifiedName );
+        }
+        for ( uint32 index = 0; index < desc._retiredTypeNameCount; ++index )
+        {
+            registerRetiredTypeName( desc._ppRetiredTypeName[index] );
+        }
+    }
+
+    void TypeRegistry::registerEnum( const EnumInfoDesc& desc )
+    {
+        registerEnum( EnumInfo::createFromDesc( desc ) );
+        for ( uint32 index = 0; index < desc._aliasCount; ++index )
+        {
+            registerEnumAlias( desc._ppAlias[index], desc._pFullyQualifiedName );
+        }
+    }
 
     void TypeRegistry::registerClass( TypeInfo info )
     {
@@ -345,7 +368,7 @@ namespace sw
         if ( pSource == nullptr )
             return;
         unique_ptr<TypeEditorMetadataSet> pSet = make_unique<TypeEditorMetadataSet>();
-        pSource->_pFill( *pSet );
+        pSource->fill( *pSet );
         info._metadata.edit()._pEditor = &pSet->_type;
         for ( PropertyInfo& prop : info._listProperty )
         {
@@ -377,7 +400,7 @@ namespace sw
         if ( pSource == nullptr )
             return;
         unique_ptr<EnumEditorMetadata> pMetadata = make_unique<EnumEditorMetadata>();
-        pSource->_pFill( *pMetadata );
+        pSource->fill( *pMetadata );
         info._pEditor                         = pMetadata.get();
         unique_ptr<EnumEditorMetadata>& pSlot = _mapEnumEditorMetadata[info._fullyQualifiedName];
         if ( pSlot != nullptr )
@@ -388,7 +411,7 @@ namespace sw
     void TypeRegistry::registerPendingTypes( TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead )
     {
         SW_PROFILE_SCOPE( "Reflection.registerPendingTypes" );
-        // 감시 값: 배치 하나의 등록 시간과 수 — 생성 코드를 상수 표로 바꿀지(설계 백로그 리플렉션 발전 방향 ③, 실기기 등록 20 ms 문턱) 판정할 근거다.
+        // 감시 값: 배치 하나의 등록 시간과 수(서술자 표에서 리플렉션 정보를 짓는 몫).
         GameTimer batchTimer;
         batchTimer.resetTimer();
         batchTimer.startTimer();
@@ -401,22 +424,16 @@ namespace sw
         TypeRegistrar* pCurrClass = pClassHead;
         while ( pCurrClass != nullptr )
         {
-            if ( pCurrClass->_registerFunc != nullptr )
-            {
-                pCurrClass->_registerFunc( *this );
-                ++classCount;
-            }
+            registerType( pCurrClass->_pGetDesc() );
+            ++classCount;
             pCurrClass = pCurrClass->_pNext;
         }
 
         EnumRegistrar* pCurrEnum = pEnumHead;
         while ( pCurrEnum != nullptr )
         {
-            if ( pCurrEnum->_registerFunc != nullptr )
-            {
-                pCurrEnum->_registerFunc( *this );
-                ++enumCount;
-            }
+            registerEnum( pCurrEnum->_pGetDesc() );
+            ++enumCount;
             pCurrEnum = pCurrEnum->_pNext;
         }
 
@@ -1000,6 +1017,11 @@ namespace sw
         return s_typeTableGeneration;
     }
 
+    const TypeInfo* TypeLookupCache::findSlow( const utf8* pFqn ) const
+    {
+        return findSlow( hashed_string{ pFqn } );
+    }
+
     const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
         // 레지스트리가 아직 없으면 칸을 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
@@ -1062,16 +1084,16 @@ namespace sw
 
     SW_DEFINE_REGISTRATION_CHAIN( TypeRegistrar::getChain, TypeRegistrar )
 
-    TypeRegistrar::TypeRegistrar( void ( *registerFunc )( TypeRegistry& ) )
-        : _registerFunc{ registerFunc }
+    TypeRegistrar::TypeRegistrar( const TypeDesc& ( *pGetDesc )() )
+        : _pGetDesc{ pGetDesc }
         , _pNext{ getChain().pushFront( this ) }
     {
     }
 
     SW_DEFINE_REGISTRATION_CHAIN( EnumRegistrar::getChain, EnumRegistrar )
 
-    EnumRegistrar::EnumRegistrar( void ( *registerFunc )( TypeRegistry& ) )
-        : _registerFunc{ registerFunc }
+    EnumRegistrar::EnumRegistrar( const EnumInfoDesc& ( *pGetDesc )() )
+        : _pGetDesc{ pGetDesc }
         , _pNext{ getChain().pushFront( this ) }
     {
     }

@@ -1,7 +1,7 @@
 // EXPECT-TYPE: sw::fixture::FixtureCatalogKeyUser
 // EXPECT-GEN: "_single", "CatalogKey"
 // EXPECT-GEN: "_listMany", "vector<CatalogKey>"
-// EXPECT-GEN: m._catalogKeyTag, "FixtureEntryDef"
+// EXPECT-GEN: PropertyMetadataTextKind::CatalogKeyTag, "FixtureEntryDef"
 // EXPECT-NOT-GEN: CatalogKey<FixtureEntryDef>"
 #pragma once
 #include "Core/Container/vector.h"

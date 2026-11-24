@@ -10,9 +10,11 @@
 #include "Engine/Reflection/PropertyHandle.h"
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -161,15 +163,14 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MetadataBoxCopiesByValue )
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, PropertyDescTableSharesDefaultMetadata )
 {
-    static constexpr const utf8*      kAlias[]      = { "oldValue" };
-    static constexpr sw::PropertyDesc kProperties[] = {
-        {  "value", "int32", 4u, sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr, nullptr,  kAlias, 1u, nullptr, nullptr, nullptr, nullptr, 0u,nullptr                             },
-        {"flagged",  "bool", 8u, sw::ContainerKind::None, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 0u, nullptr, nullptr, nullptr, nullptr, 0u,
-         []( sw::PropertyMetadata& m )
-         { m._bTransient = SW_TRUE; }},
+    static constexpr const utf8*              kAlias[] = { "oldValue" };
+    static constexpr sw::PropertyBindingDesc  kBinding{ nullptr, kAlias, 1u };
+    static constexpr sw::PropertyMetadataDesc kMeta{ sw::PropertyMetadataFlag::kTransient };
+    static constexpr sw::PropertyDesc         kProperties[] = {
+        { "value", "int32", 4u, nullptr, nullptr, &kBinding },
+        { "flagged", "bool", 8u, &kMeta },
     };
-    sw::TypeInfo info;
-    info.setPropertyTable( kProperties, 2 );
+    const sw::TypeInfo info{ sw::TypeDesc::makePrimitive( "DescTableTest", "DescTableTestModule", 16 ).withProperties( kProperties ) };
     SW_REQUIRE_EQUAL( size_t{ 2 }, info._listProperty.size() );
 
     const sw::PropertyInfo& plain   = info._listProperty[0];
@@ -187,6 +188,58 @@ SW_TEST_CASE( ReflectionTypeInfoTest, PropertyDescTableSharesDefaultMetadata )
     copy._metadata.edit()._bTransient = SW_TRUE; // 고치는 쪽만 제 사본을 짓는다
     SW_EXPECT_TRUE( plain._metadata->_bTransient == SW_FALSE );
     SW_EXPECT_TRUE( copy._metadata->_bTransient == SW_TRUE );
+}
+
+/**
+ * @brief [ReflectionTypeInfoTest] 상수 메타데이터 표(`PropertyMetadataDesc`)가 플래그 · 범위 · 글 칸 · 단위를 그 칸에만 넣는다
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, PropertyMetadataDescFillsItsColumns )
+{
+    static constexpr sw::PropertyMetadataText kText[] = {
+        {sw::PropertyMetadataTextKind::DefaultValue,     "7"},
+        {   sw::PropertyMetadataTextKind::AssetType, "Atlas"},
+        {   sw::PropertyMetadataTextKind::RepNotify, "onRep"},
+    };
+    static constexpr sw::PropertyMetadataDesc kDesc{ sw::PropertyMetadataFlag::kHasMinRange | sw::PropertyMetadataFlag::kReplicated, 2.0f, 1.0f,
+                                                     sw::ReflectUnitKind::None, 12u, kText, 3u };
+    sw::PropertyMetadata                      metadata;
+    kDesc.applyTo( metadata );
+    SW_EXPECT_TRUE( metadata._bHasMinRange == SW_TRUE );
+    SW_EXPECT_TRUE( metadata._bHasMaxRange == SW_FALSE );
+    SW_EXPECT_TRUE( metadata._bReplicated == SW_TRUE );
+    SW_EXPECT_TRUE( metadata._bTransient == SW_FALSE );
+    SW_EXPECT_EQUAL( 2.0f, metadata._minRange );
+    SW_EXPECT_EQUAL( 1.0f, metadata._maxRange );
+    SW_EXPECT_EQUAL( 12u, metadata._maxCount );
+    SW_EXPECT_EQUAL( sw::string( "7" ), metadata._defaultValue );
+    SW_EXPECT_EQUAL( sw::string( "Atlas" ), metadata._assetType );
+    SW_EXPECT_TRUE( metadata._repNotify == sw::hashed_string( "onRep" ) );
+    SW_EXPECT_TRUE( metadata._validate.empty() );
+    SW_EXPECT_TRUE( metadata._pEditCondition == nullptr );
+}
+
+/**
+ * @brief [ReflectionTypeInfoTest] 중첩 컨테이너 표에서 지은 단계는 프로퍼티가 들고 사본끼리 나눈다 — 원본이 사라져도 사본의 단계 사슬이 산다
+ */
+SW_TEST_CASE( ReflectionTypeInfoTest, NestedContainerDescOwnsItsLevels )
+{
+    static constexpr sw::NestedContainerDesc   kInner{ sw::ContainerKind::Sequence, "vector", "int32", "", nullptr, nullptr };
+    static constexpr sw::NestedContainerDesc   kOuter{ sw::ContainerKind::Sequence, "vector", "vector<int32>", "", nullptr, &kInner };
+    static constexpr sw::PropertyContainerDesc kContainer{ sw::ContainerKind::Sequence, "vector<int32>", nullptr, nullptr, &kOuter };
+    static constexpr sw::PropertyDesc          kDesc{ "_grid", "vector<vector<int32>>", 0u, nullptr, &kContainer };
+
+    sw::PropertyInfo copy;
+    {
+        const sw::PropertyInfo original{ kDesc };
+        copy = original;
+    }
+    SW_REQUIRE_NOT_NULL( copy._nestedContainer );
+    SW_EXPECT_TRUE( copy._bIsContainer == SW_TRUE );
+    SW_EXPECT_TRUE( copy._keyTypeName.empty() );
+    SW_EXPECT_TRUE( copy._nestedContainer->_elementTypeName == sw::hashed_string( "vector<int32>" ) );
+    SW_REQUIRE_NOT_NULL( copy._nestedContainer->_elementNested );
+    SW_EXPECT_TRUE( copy._nestedContainer->_elementNested->_elementTypeName == sw::hashed_string( "int32" ) );
+    SW_EXPECT_TRUE( copy._nestedContainer->_elementNested->_elementNested == nullptr );
 }
 
 /**
@@ -450,6 +503,48 @@ SW_TEST_CASE( ReflectionTypeInfoTest, ForEachMethodVisitsDeclaredOrder )
 }
 
 /**
+ * @brief [ReflectionTypeRegistryTest] 서술자로 등록한 타입은 옛 이름으로도 찾고, `forEachMethodWithBase` 는 기반부터 한 번씩 · 파생이 다시 선언한 것은 파생 것만 넘긴다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, RegisterTypeDescAliasesAndInheritedMethods )
+{
+    const sw::test::ScopedTestModule scopedModule( "TestTypeDesc" );
+    sw::TypeRegistry&                registry = sw::engine::getSubsystem<sw::TypeRegistry>();
+
+    static constexpr sw::FunctionDesc::InvokeFunction kInvoke = []( void*, const sw::TaskArgs& )
+    { return sw::TaskValue{}; };
+    static constexpr sw::FunctionDesc kBaseMethods[] = {
+        {"stop", "stop", "void", nullptr, nullptr, 0u, kInvoke},
+        {"play", "play", "void", nullptr, nullptr, 0u, kInvoke},
+    };
+    static constexpr sw::FunctionDesc kDerivedMethods[] = {
+        { "play", "play", "void", nullptr, nullptr, 0u, kInvoke, nullptr, sw::FunctionMetadataFlag::kConst },
+        { "rewind", "rewind", "void", nullptr, nullptr, 0u, kInvoke },
+    };
+    static constexpr const utf8*  kAliases[] = { "swtest::OldDescBase" };
+    static constexpr sw::TypeDesc kBase      = sw::TypeDesc{ "DescBase", "swtest::DescBase", "", "TestTypeDesc", 4 }.withMethods( kBaseMethods ).withAliases( kAliases );
+    static constexpr sw::TypeDesc kDerived   = sw::TypeDesc{ "DescDerived", "swtest::DescDerived", "swtest::DescBase", "TestTypeDesc", 8 }.withMethods( kDerivedMethods ).withVersion( 3u );
+    registry.registerType( kBase );
+    registry.registerType( kDerived );
+
+    const sw::TypeInfo* pBase    = registry.findType( sw::hashed_string( "swtest::DescBase" ) );
+    const sw::TypeInfo* pDerived = registry.findType( sw::hashed_string( "swtest::DescDerived" ) );
+    SW_REQUIRE_NOT_NULL( pBase );
+    SW_REQUIRE_NOT_NULL( pDerived );
+    SW_EXPECT_TRUE( registry.findType( sw::hashed_string( "swtest::OldDescBase" ) ) == pBase );
+    SW_EXPECT_EQUAL( 3u, pDerived->_metadata->getVersion() );
+    SW_EXPECT_EQUAL( size_t{ 8 }, pDerived->_size );
+
+    sw::vector<const sw::FunctionInfo*> listVisited;
+    pDerived->forEachMethodWithBase( [&listVisited]( const sw::FunctionInfo& method )
+    { listVisited.push_back( &method ); } );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listVisited.size() );
+    SW_EXPECT_TRUE( listVisited[0]->_hashName == sw::hashed_string( "stop" ) );
+    SW_EXPECT_TRUE( listVisited[1]->_hashName == sw::hashed_string( "play" ) );
+    SW_EXPECT_TRUE( listVisited[1]->_metadata->_bConst == SW_TRUE ); // 기반 것이 아니라 파생이 다시 선언한 것
+    SW_EXPECT_TRUE( listVisited[2]->_hashName == sw::hashed_string( "rewind" ) );
+}
+
+/**
  * @brief [ReflectionTypeInfoTest] 동적 메서드 호출
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
@@ -466,6 +561,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DynamicMethodInvoke )
     sw::FunctionInfo funcInfo;
     funcInfo._name     = "addScore";
     funcInfo._hashName = sw::hashed_string( "addScore" );
+    // 인자 타입의 갈래는 컴파일 때 정해진다 — 원격 호출 · 이벤트 배선이 부를 때마다 이름으로 찾지 않는다.
+    static_assert( sw::ReflectTypeOpsOf<int32>::kOps._builtinIndex == sw::ReflectBuiltinIndex::kint32 && sw::ReflectTypeOpsOf<int32>::kOps._bEnum == SW_FALSE );
+    static_assert( sw::ReflectTypeOpsOf<sw::ReflectBuiltinClass>::kOps._builtinIndex == sw::ReflectBuiltinIndex::kNone && sw::ReflectTypeOpsOf<sw::ReflectBuiltinClass>::kOps._bEnum == SW_TRUE );
     funcInfo._listParameter.push_back( sw::FunctionParameterInfo( "delta", "int32", {}, &sw::ReflectTypeOpsOf<int32>::kOps ) );
     funcInfo._invoker = SW_DELEGATE_LAMBDA( sw::Delegate<sw::TaskValue( void*, const sw::TaskArgs& )>, []( void* pObjPtr, const sw::TaskArgs& args ) -> sw::TaskValue
     {
@@ -504,12 +602,11 @@ namespace
             actor._score += args.get<int32>( 0 );
             return sw::TaskValue{ actor._score };
         }
-        static void fillAddScore( sw::FunctionMetadata& m ) { m._bConst = SW_TRUE; }
     };
 } // namespace
 
 /**
- * @brief [ReflectionTypeInfoTest] 메서드 서술자 표(`FunctionDesc`)로 지은 목록 — 인자 · 반환 · 메타데이터 채우기가 들고, 호출 함수가 없는 파서 생성자 줄은 빠진다
+ * @brief [ReflectionTypeInfoTest] 메서드 서술자 표(`FunctionDesc`)로 지은 목록 — 인자 · 반환 · 메타데이터가 들고, 생성 함수가 없는 파서 생성자 줄은 빠진다
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
 {
@@ -520,12 +617,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, MethodTableBuildsMethodList )
         { "delta", "int32", "1", &sw::ReflectTypeOpsOf<int32>::kOps, nullptr },
     };
     static constexpr sw::FunctionDesc kMethods[] = {
-        {"addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u, &MethodTableTestActor::invokeAddScore, &MethodTableTestActor::fillAddScore,                                                    nullptr},
-        {   "$ctor",    "$ctor",  "void",                            nullptr, nullptr, 0u,                               nullptr,                             nullptr, sw::ReflectDefaultCtorOf<MethodTableTestActor>::kConstruct},
+        { "addScore", "addScore", "int32", &sw::ReflectTypeOpsOf<int32>::kOps, kParams, 1u, &MethodTableTestActor::invokeAddScore, nullptr, sw::FunctionMetadataFlag::kConst },
+        sw::FunctionDesc::defaultConstructor<MethodTableTestActor>( "$ctor", "void" ),
     };
 
-    sw::TypeInfo info;
-    info.setMethodTable( kMethods, SW_COUNT_OF( kMethods ) );
+    const sw::TypeInfo info{ sw::TypeDesc::makePrimitive( "MethodTableTest", "MethodTableTestModule", 16 ).withMethods( kMethods ) };
     SW_REQUIRE_EQUAL( size_t{ 1 }, info._listMethod.size() );
     const sw::FunctionInfo& method = info._listMethod[0];
     SW_EXPECT_TRUE( method._hashName == sw::hashed_string( "addScore" ) );
@@ -1515,10 +1611,12 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_REQUIRE_NOT_NULL( pDerived );
     SW_EXPECT_EQUAL( 2u, pDerived->getPropertiesWithBase().size() );
 
-    // 기반이 바뀌어 다시 올라온다(핫 리로드). 파생 모듈은 그대로다 — 파생 쪽 목록이 새 기반을 본다.
-    base._listProperty = { makeProperty( "_a", 0 ), makeProperty( "_c", 4 ) };
+    // 기반이 바뀌어 다시 올라온다(핫 리로드). 파생 모듈은 그대로다 — 파생 쪽 목록 · 배치 해시가 새 기반을 본다.
+    const uint32 layoutHashBefore = pDerived->getSchemaLayoutHash();
+    base._listProperty            = { makeProperty( "_a", 0 ), makeProperty( "_c", 4 ) };
     registry.registerClass( base );
     SW_EXPECT_EQUAL( 3u, pDerived->getPropertiesWithBase().size() );
+    SW_EXPECT_TRUE( layoutHashBefore != pDerived->getSchemaLayoutHash() );
     SW_EXPECT_NOT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_c" ) ) );
 
     // 기반 모듈만 내려간다 — 파생 쪽 목록에 내려간 모듈의 프로퍼티가 남지 않는다.
@@ -1526,6 +1624,41 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
     SW_EXPECT_EQUAL( 1u, pDerived->getPropertiesWithBase().size() );
     SW_EXPECT_NULL( pDerived->findPropertyInHierarchy( sw::hashed_string( "_a" ) ) );
     registry.unregisterTypesByModule( "TestMergeDerived" );
+}
+
+/**
+ * @brief [ReflectionTypeRegistryTest] 쿠킹 배치 해시는 저작 저장이 쓰는 칸의 이름 · 형식(원소 · 키까지)만 본다 — 세이브 역할과 이름 공간 한정 철자는 같은 배치다
+ */
+SW_TEST_CASE( ReflectionTypeRegistryTest, SchemaLayoutHashFollowsTheAuthoredProperties )
+{
+    const auto computeHash = []( const utf8* pTypeName, const uint32 flags, const utf8* pElementTypeName )
+    {
+        sw::PropertyInfo property{ sw::hashed_string( "_value" ), sw::hashed_string( pTypeName ), 0 };
+        property._elementTypeName = sw::hashed_string( pElementTypeName );
+        if ( flags != 0 )
+        {
+            sw::PropertyMetadata& metadata = property._metadata.edit();
+            metadata._bTransient           = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
+            metadata._bRuntimeState        = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
+            metadata._bSaveGame            = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
+        }
+        sw::TypeInfo info;
+        info._name               = sw::hashed_string( "SchemaLayoutHashType" );
+        info._fullyQualifiedName = sw::hashed_string( "swtest::SchemaLayoutHashType" );
+        info._size               = 8;
+        info._listProperty       = { property };
+        info.computeDerivedFlags();
+        return info.getSchemaLayoutHash();
+    };
+    const uint32 plain = computeHash( "int32", 0u, "" );
+    SW_EXPECT_EQUAL( plain, computeHash( "int32", 4u, "" ) ); // 세이브 역할은 쿠킹본이 싣는 칸을 바꾸지 않는다
+    SW_EXPECT_TRUE( plain != computeHash( "int32", 1u, "" ) );
+    SW_EXPECT_TRUE( plain != computeHash( "int32", 2u, "" ) );
+    SW_EXPECT_TRUE( plain != computeHash( "float32", 0u, "" ) );
+    SW_EXPECT_TRUE( computeHash( "vector", 0u, "int32" ) != computeHash( "vector", 0u, "float32" ) );
+    SW_EXPECT_EQUAL( computeHash( "Foo", 0u, "" ), computeHash( "sw::editor::Foo", 0u, "" ) );
+    SW_EXPECT_EQUAL( computeHash( "Ref<editor::Foo, Bar>", 0u, "" ), computeHash( "sw::Ref<Foo,sw::Bar>", 0u, "" ) );
+    SW_EXPECT_TRUE( computeHash( "Ref<Foo>", 0u, "" ) != computeHash( "Ref<Bar>", 0u, "" ) );
 }
 
 /**

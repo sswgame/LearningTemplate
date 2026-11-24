@@ -16,7 +16,7 @@ namespace sw
 
     /**
      * @struct EnumInfoDesc
-     * @brief 생성기가 열거형마다 내는 등록 설명자입니다 — 항목 표(이름 · 값 배열) 하나와 표식 이름만 담고, 이름 표 · 값 표 · 인덱스 목록은 `EnumInfo::create` 가 짓는다.
+     * @brief 생성기가 열거형마다 내는 등록 설명자입니다 — 항목 표(이름 · 값 배열) 하나와 표식 이름만 담고, 이름 표 · 값 표 · 인덱스 목록은 `EnumInfo::createFromDesc` 가 짓는다.
      * @details 열거형마다 같은 맵 초기화 코드를 펼치지 않는다(magic_enum 이 이름 · 값 배열 하나에서 모든 조회를 푸는 것과 같은 모양). 값은 생성 코드에서
      *          `static_cast<int64>( E::X )` 라 컴파일러가 계산한다 — libclang 의 값을 숫자로 박지 않는다.
      */
@@ -25,11 +25,15 @@ namespace sw
         const utf8*                   _pName;
         const utf8*                   _pFullyQualifiedName;
         const utf8*                   _pModuleName;
-        span<const NamedValue<int64>> _listEntry;    ///< 선언 순서의 열거자 전부(표식 열거자 포함)
-        span<const NamedValue<int64>> _listRedirect; ///< 옛 열거자 이름 → 지금 값(`ValueAlias` · `Removed`)
-        const utf8*                   _pInvalidName; ///< `Invalid` 표식 열거자 이름. 없으면 nullptr
-        const utf8*                   _pCountName;   ///< `Count` 표식 열거자 이름(끝 열거자 `Count` 는 생성기가 자동으로 넣는다). 없으면 nullptr
-        bool                          _bIsBitFlag;   // NOLINT(sw-bool-flag): 생성 코드가 집합체 초기화로 한 번 채우는 일회용 설명자다(기본값 없는 비트필드는 순서 초기화를 깨뜨린다)
+        span<const NamedValue<int64>> _listEntry;          ///< 선언 순서의 열거자 전부(표식 열거자 포함)
+        span<const NamedValue<int64>> _listRedirect;       ///< 옛 열거자 이름 → 지금 값(`ValueAlias` · `Removed`)
+        const utf8*                   _pInvalidName;       ///< `Invalid` 표식 열거자 이름. 없으면 nullptr
+        const utf8*                   _pCountName;         ///< `Count` 표식 열거자 이름(끝 열거자 `Count` 는 생성기가 자동으로 넣는다). 없으면 nullptr
+        bool                          _bIsBitFlag;         // NOLINT(sw-bool-flag): 생성 코드가 집합체 초기화로 한 번 채우는 일회용 설명자다(기본값 없는 비트필드는 순서 초기화를 깨뜨린다)
+        uint8                         _size;               ///< 열거형의 바이트 크기
+        bool                          _bSigned;            ///< 밑바탕 타입이 부호 있는 정수다 NOLINT(sw-bool-flag): `_bIsBitFlag` 와 같다
+        const utf8* const*            _ppAlias{ nullptr }; ///< `ENUM( Alias = … )` 의 옛 이름 `_aliasCount` 개
+        uint32                        _aliasCount{ 0 };
     };
 
     /** @brief 열거자 하나(이름 · 값)입니다. `EnumInfo::_listEnumerator` 의 원소입니다. */
@@ -64,7 +68,7 @@ namespace sw
          */
         vector<hashed_string> _listDenseName;
         /**
-         * @brief 선언 순서의 열거자 목록입니다. `Count` 표식 열거자는 빠진다(에디터 선택지 · 반복은 이 목록을 돈다). 생성기가 채운 등록(`create`)에만 있습니다.
+         * @brief 선언 순서의 열거자 목록입니다. `Count` 표식 열거자는 빠진다(에디터 선택지 · 반복은 이 목록을 돈다). 생성기가 채운 등록(`createFromDesc`)에만 있습니다.
          * @details 이름 표(`_mapNameToValue`)에는 표식 열거자도 남는다 — 필드에 든 표식 값을 이름으로 쓰고 읽는 왕복(`tryParseText`)이 그 이름을 본다.
          */
         vector<EnumeratorInfo> _listEnumerator;
@@ -80,20 +84,12 @@ namespace sw
         /** @brief 비어 있는 이름-값 맵으로 만듭니다. */
         EnumInfo() noexcept;
 
-        /** @brief 생성 코드의 항목 표(@p desc)에서 열거형 정보를 짓습니다. 크기와 부호는 열거형 @p E 에서 읽습니다. */
-        template <typename E>
-        [[nodiscard]] static EnumInfo create( const EnumInfoDesc& desc )
-        {
-            static_assert( std::is_enum_v<E>, "EnumInfo::create needs an enum type" );
-            return createFromDesc( desc, static_cast<uint8>( sizeof( E ) ), std::is_signed_v<std::underlying_type_t<E>> );
-        }
-
         /**
          * @brief 항목 표에서 이름 표 · 값 표 · 리다이렉트 표 · 열거자 목록 · 인덱스 목록을 짓습니다.
          * @details 같은 값의 이름이 여럿이면 값 → 이름은 먼저 적은 열거자다. 표식(`Invalid` · `Count`)을 뺀 열거자 값이 `0..N-1` 로 빈틈없고 겹치지 않으면
          *          값이 곧 인덱스인 이름 목록(`_listDenseName`)을 채운다(비트 플래그 제외). 표식 이름이 표에 없으면 멈춘다 — 생성기가 이미 확인한다.
          */
-        [[nodiscard]] static EnumInfo createFromDesc( const EnumInfoDesc& desc, uint8 size, bool bSigned );
+        [[nodiscard]] static EnumInfo createFromDesc( const EnumInfoDesc& desc );
 
         /** @brief 커스텀 메타데이터를 조회합니다. 에디터 메타데이터가 붙지 않았으면(배포) nullptr 입니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;

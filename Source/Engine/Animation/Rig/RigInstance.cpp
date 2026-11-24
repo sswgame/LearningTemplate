@@ -138,7 +138,7 @@ namespace sw
             unique_ptr<RigNode> node = prototype->clone();
             if ( node->bind( bindContext ) == false )
             {
-                SW_LOG_ERROR_ID( "RigInstance.RigNodeCouldNot", "Rig '%#': node '%#' (%#) could not be bound", label, node->getName().c_str(), node->getTypeName() );
+                SW_LOG_ERROR_ID( "RigInstance.RigNodeCouldNot", "Rig '%#': node '%#' (%#) could not be bound", label, node->getName().c_str(), node->getTypeName().c_str() );
                 bOk = false;
                 continue;
             }

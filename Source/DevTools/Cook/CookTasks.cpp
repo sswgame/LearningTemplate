@@ -8,6 +8,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/Cook/CookReflectionFingerprint.h"
 #include "DevTools/Cook/CookStore.h"
 #include "DevTools/Cook/IShaderCookService.h"
 #include "DevTools/Cook/LocalizationCooker.h"
@@ -57,7 +58,8 @@ namespace sw
              * @details 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고, 그것은 엔진 안에만 있다. 형식과 규칙을 쓰는 곳이 엔진 하나다.
              *          @p bCrowdSettingsLoaded 가 거짓이면 코드 기본 프레임율로 베이크하지 않고 VAT 베이크를 실패로 센다(군중 표는 쿠킹 세션 전에 읽는다 — 작업 키의 설정이다).
              */
-            [[nodiscard]] static bool cookSceneStage( const string& cookedDir, const CookStore& cookStore, const AnimationCrowdSettings& crowdSettings, bool bCrowdSettingsLoaded )
+            [[nodiscard]] static bool cookSceneStage( const string& cookedDir, const CookStore& cookStore, const uint64 reflectionFingerprint, const AnimationCrowdSettings& crowdSettings,
+                                                      bool bCrowdSettingsLoaded )
             {
                 const string& resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 uint32        sceneFailedCount = 0;
@@ -65,11 +67,11 @@ namespace sw
                 const SceneEngineServices& sceneServices = engine::getSubsystem<SceneManager>().getEngineServices();
                 // 쿠커별 시간(`Headless.CookStageTimes`) — 씬 쿠킹 병렬화가 빌드 시간을 줄일 수 있는지의 근거다.
                 Stopwatch    stageStopwatch;
-                const uint32 sceneCount        = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, sceneFailedCount );
+                const uint32 sceneCount        = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, reflectionFingerprint, sceneFailedCount );
                 const int64  sceneMs           = stageStopwatch.getElapsedMilliseconds();
                 uint32       prefabFailedCount = 0;
                 stageStopwatch.restart();
-                [[maybe_unused]] const uint32 prefabCount                = PrefabCooker::cookAll( resourceRoot, cookedDir, cookStore, prefabFailedCount );
+                [[maybe_unused]] const uint32 prefabCount                = PrefabCooker::cookAll( resourceRoot, cookedDir, cookStore, reflectionFingerprint, prefabFailedCount );
                 const int64                   prefabMs                   = stageStopwatch.getElapsedMilliseconds();
                 uint32                        vertexAnimationFailedCount = bCrowdSettingsLoaded ? 0u : 1u;
                 stageStopwatch.restart();
@@ -81,7 +83,7 @@ namespace sw
                 // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
                 uint32 navMeshFailedCount = 0;
                 stageStopwatch.restart();
-                [[maybe_unused]] const uint32 navMeshCount = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, navMeshFailedCount );
+                [[maybe_unused]] const uint32 navMeshCount = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, reflectionFingerprint, navMeshFailedCount );
                 const int64                   navMeshMs    = stageStopwatch.getElapsedMilliseconds();
                 // 이진 번역 표 — 배포본은 저작 XML 대신 조회 사슬의 표만 읽는다(감사 A-16).
                 uint32 localizationFailedCount = 0;
@@ -353,11 +355,14 @@ namespace sw
                 unordered_map<string, vector<vector<string>>> mapRequestedShaderBinary;
                 if ( ( bCookPacks || bCookAll ) && cookShadersForPack( commandLine, cookedDir, mapRequestedShaderBinary ) == false )
                     return false;
+                // 리플렉션 지문은 세션 밖에서 한 번 — 기본 인스턴스를 만들며 게임 설정의 `<Defaults>` 를 읽을 수 있다(그 값은 지문에 든다).
+                const bool   bCooksScenes          = bCookScenes || bCookAll;
+                const uint64 reflectionFingerprint = bCooksScenes ? CookReflectionFingerprint::compute( engine::getSubsystem<TypeRegistry>() ) : 0;
                 // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
                 const CookSession cookSession{ engine::getSubsystem<AssetPaths>() };
                 bool              bSucceeded = true;
-                if ( bCookScenes || bCookAll )
-                    bSucceeded = cookSceneStage( cookedDir, cookStore, crowdSettings, bCrowdSettingsLoaded );
+                if ( bCooksScenes )
+                    bSucceeded = cookSceneStage( cookedDir, cookStore, reflectionFingerprint, crowdSettings, bCrowdSettingsLoaded );
                 // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
                 if ( bSucceeded && ( bCookPacks || bCookAll ) )
                     bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ) );

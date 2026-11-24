@@ -44,6 +44,8 @@ namespace sw
 
 namespace sw
 {
+    enum class ReflectBuiltinIndex : uint8; // 정의는 ReflectedValue.h
+
     struct UIPropertyPath;
 
     /** @struct UIBindingValue @brief 바인딩이 나르는 값 하나입니다(종류와 그 값). */
@@ -69,8 +71,8 @@ namespace sw
         bool isSameValue( const UIBindingValue& other ) const;
 
         // 바인딩 값과 프로퍼티 경로 도우미입니다.
-        /** @brief 리플렉션 타입 이름의 종류를 반환합니다. */
-        static UIBindingValueKind classifyType( const hashed_string& typeName );
+        /** @brief 내장 타입 자리의 종류를 반환합니다(`kNone` 은 Other). */
+        static UIBindingValueKind classifyType( ReflectBuiltinIndex builtinIndex );
         /** @brief @p from 종류의 값을 @p to 종류의 필드에 쓸 수 있는지 반환합니다(같은 Other 타입끼리는 `canBindPaths` 가 따로 확인합니다). */
         static bool canConvert( UIBindingValueKind from, UIBindingValueKind to );
         /** @brief 종류 이름입니다(오류 메시지용). */

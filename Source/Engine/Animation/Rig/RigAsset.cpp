@@ -78,10 +78,17 @@ namespace sw
 
     unique_ptr<RigNode> RigNodeRegistry::createNode( const hashed_string& typeName ) const
     {
-        const RigNodeFactory* pFactory = _registry.find( typeName );
-        if ( pFactory == nullptr || *pFactory == nullptr )
-            return nullptr;
-        return ( *pFactory )();
+        for ( uint32 index = 0; index < _registry.getCount(); ++index )
+        {
+            if ( _registry.getNameAt( index ) != typeName )
+                continue;
+            const RigNodeFactory pFactory = _registry.getItems()[index];
+            unique_ptr<RigNode>  node     = pFactory != nullptr ? pFactory() : nullptr;
+            if ( node != nullptr )
+                node->_typeName = _registry.getNameAt( index ); // 데이터의 철자가 아니라 등록 이름이다 — 이름 찾기는 대소문자를 무시해 "jiggle" 로 적은 노드가 종류 비교(`kTypeName`)에서 빠졌다
+            return node;
+        }
+        return nullptr;
     }
 
     vector<hashed_string> RigNodeRegistry::getTypeNames() const

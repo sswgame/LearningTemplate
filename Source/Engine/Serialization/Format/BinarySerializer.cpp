@@ -37,6 +37,8 @@ namespace sw
              */
             static constexpr uint32 kTaggedVersionShift = 24;
             static constexpr uint32 kTaggedCountMask    = ( 1u << kTaggedVersionShift ) - 1;
+            /** @brief 머리의 버전 바이트에서 배치 스트림(이름 · 형식 태그가 없고 머리 뒤에 배치 해시가 있다)을 나타내는 비트입니다. 값 인코딩의 버전은 나머지 비트다. */
+            static constexpr uint32 kSchemaLayoutBit = 0x80u;
 
             /**
              * @brief 이 빌드가 읽을 수 있는 버전인지 확인합니다. 현재 버전 하나뿐입니다. 더 높은 버전은 앞선 빌드가 쓴 것이고, 낮은 버전을 올리는 단계는 없습니다
@@ -74,7 +76,25 @@ namespace sw
                                    prop._name.c_str(), prop._typeName.c_str() );
             }
 
-            static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize,
+            /** @brief 필드 하나의 값 바이트입니다(스트림을 빌려 본다). */
+            struct FieldPayload
+            {
+                const uint8* _pBytes{ nullptr };
+                uint32       _byteCount{ 0 };
+            };
+
+            /**
+             * @brief 크기 머리와 그만큼의 값 바이트를 읽고 다음 필드 자리로 옮깁니다. 신뢰할 수 없는 크기를 남은 바이트와 견주는 곳은 여기 하나다(태그 스트림 · 배치 스트림).
+             * @details 남은 바이트는 `ByteReader` 가 뺄셈으로 견준다 — 자리에 크기를 더해 견주면 32 비트 `size_t`(웹)에서 넘쳐 지나간다.
+             */
+            [[nodiscard]] static bool readFieldPayload( ByteReader& reader, FieldPayload& outPayload )
+            {
+                outPayload._byteCount = reader.readPod<uint32>();
+                outPayload._pBytes    = reader.readView( outPayload._byteCount );
+                return reader.hasOverflowed() == false;
+            }
+
+            static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const FieldPayload& payload,
                                        BinaryWireVersion wireVersion )
             {
                 if ( pOutListOrphan == nullptr )
@@ -84,21 +104,26 @@ namespace sw
                 orphan._nameHash     = nameHash != 0 ? nameHash : name.getHash();
                 orphan._wireTypeHash = wireTypeHash;
                 orphan._wireVersion  = wireVersion;
-                orphan._listBinary.assign( pPayload, pPayload + payloadSize );
+                orphan._listBinary.assign( payload._pBytes, payload._pBytes + payload._byteCount );
                 pOutListOrphan->push_back( std::move( orphan ) );
             }
 
             /**
              * @brief 태그 스트림의 머리(버전 + 프로퍼티 수)를 읽습니다. 머리가 버전을 말한다 — 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
+             *        배치 스트림은 문맥이 받을 때만(`SerializeContext::setSchemaLayout`) 읽는다 — 신뢰할 수 없는 바이트(메시지 · 세이브 · 캐시)가 머리 비트 하나로 이름 · 형식 확인이 없는 꼴을
+             *        고르지 못하게, 받지 않는 문맥에서는 모르는 버전이다.
              * @return 머리를 읽지 못하거나 읽을 수 없는 버전이면 false 입니다.
              */
-            [[nodiscard]] static bool readTaggedHeader( ByteReader& reader, const TypeInfo& typeInfo, BinaryWireVersion& outWireVersion, uint32& outPropCount )
+            [[nodiscard]] static bool readTaggedHeader( ByteReader& reader, const TypeInfo& typeInfo, const SerializeContext& context, BinaryWireVersion& outWireVersion, uint32& outPropCount,
+                                                        bool& outbSchemaLayout )
             {
                 uint32 header{ 0 };
                 header = reader.readPod<uint32>();
                 if ( reader.hasOverflowed() )
                     return false;
-                const uint32 wireVersionNumber = header >> kTaggedVersionShift;
+                const uint32 versionByte       = header >> kTaggedVersionShift;
+                outbSchemaLayout               = context.usesSchemaLayout() && ( versionByte & kSchemaLayoutBit ) != 0;
+                const uint32 wireVersionNumber = outbSchemaLayout ? versionByte & ~kSchemaLayoutBit : versionByte;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
                 {
                     SW_LOG_WARNING_ID( "BinarySerializer.BinaryStreamWireVersion", "%#: binary stream is wire version %# but this build reads up to %# - not read", typeInfo._name.c_str(), wireVersionNumber,
@@ -156,8 +181,6 @@ namespace sw
             {
                 void*                      _pInstance;
                 const TypeInfo&            _typeInfo;
-                const uint8*               _pData;
-                size_t                     _dataSize;
                 const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
                 bool                       _bStrict; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -177,19 +200,11 @@ namespace sw
              */
             static FieldReadResult readTaggedField( TaggedReadState& state, ByteReader& reader, bool& outStop )
             {
-                outStop = true;
-                uint32 tagHash{ 0 };
-                uint32 wireTypeHash{ 0 };
-                uint32 payloadSize{ 0 };
-                tagHash                  = reader.readPod<uint32>();
-                wireTypeHash             = reader.readPod<uint32>();
-                payloadSize              = reader.readPod<uint32>();
-                const bool bTruncatedTag = reader.hasOverflowed();
-                if ( bTruncatedTag )
-                    return FieldReadResult::FieldFailed;
-
-                const size_t payloadStart = reader.getOffset();
-                if ( payloadStart + payloadSize > state._dataSize )
+                outStop                   = true;
+                const uint32 tagHash      = reader.readPod<uint32>();
+                const uint32 wireTypeHash = reader.readPod<uint32>();
+                FieldPayload payload{};
+                if ( readFieldPayload( reader, payload ) == false )
                     return FieldReadResult::FieldFailed;
 
                 // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
@@ -206,10 +221,9 @@ namespace sw
                     if ( state._bStrict && state._context.shouldSkipUnknownProperties() == false )
                         return FieldReadResult::FieldFailed;
                     if ( state._bStrict == false )
-                        pushOrphanVal( state._pOutListOrphan, {}, tagHash, wireTypeHash, state._pData + payloadStart, payloadSize, state._wireVersion );
+                        pushOrphanVal( state._pOutListOrphan, {}, tagHash, wireTypeHash, payload, state._wireVersion );
                     else
                         warnSkippedFieldOnce( state._typeInfo, tagHash );
-                    (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                     outStop = false;
                     return FieldReadResult::Read;
                 }
@@ -220,6 +234,14 @@ namespace sw
                 else
                     state._uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
+                return readMatchedField( state, prop, tagHash, wireTypeHash, payload, outStop );
+            }
+
+            /** @brief 프로퍼티가 정해진 필드 하나의 페이로드를 프로퍼티에 읽습니다(태그 스트림 · 배치 스트림 공통). @p outStop 은 `readTaggedField` 와 같다. */
+            static FieldReadResult readMatchedField( TaggedReadState& state, const PropertyInfo& prop, const uint32 tagHash, const uint32 wireTypeHash, const FieldPayload& payload,
+                                                     bool& outStop )
+            {
+                outStop = true;
                 // 저작 파일의 런타임 상태는 로드 오류다(XML · JSON 과 같다).
                 if ( SerializerUtil::isForbiddenInFile( prop, state._context ) )
                 {
@@ -229,7 +251,6 @@ namespace sw
                 // 이 목적이 다루지 않는 필드(옵트인 세이브의 나머지)는 읽지 않는다. 현재 값을 덮지 않는다(쓰기도 적지 않는다).
                 if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
                 {
-                    (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                     outStop = false;
                     return FieldReadResult::Read;
                 }
@@ -239,7 +260,7 @@ namespace sw
                     return FieldReadResult::ObjectRejected;
 
                 const FieldReadResult fieldResult =
-                    readTaggedPayload( prop, state._pInstance, state._pData + payloadStart, payloadSize, wireTypeHash, state._context, state._wireVersion );
+                    readTaggedPayload( prop, state._pInstance, payload._pBytes, payload._byteCount, wireTypeHash, state._context, state._wireVersion );
                 switch ( fieldResult )
                 {
                     case FieldReadResult::Read:
@@ -258,7 +279,7 @@ namespace sw
                         if ( state._bStrict )
                             warnUnreadableFieldOnce( state._typeInfo, prop );
                         else
-                            pushOrphanVal( state._pOutListOrphan, prop._name, tagHash, wireTypeHash, state._pData + payloadStart, payloadSize, state._wireVersion );
+                            pushOrphanVal( state._pOutListOrphan, prop._name, tagHash, wireTypeHash, payload, state._wireVersion );
                         break;
                     }
                     case FieldReadResult::ObjectRejected:
@@ -268,13 +289,52 @@ namespace sw
                     }
                 }
 
-                (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                 outStop = false;
                 return FieldReadResult::Read;
             }
 
             /**
-             * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
+             * @brief 배치 스트림(개수, 배치 해시, [크기, 페이로드]…)을 프로퍼티 차례로 읽습니다. 이름을 맞추지 않는다 — 배치 해시가 같으면 쓴 차례가 곧 이 타입의 차례다.
+             * @details 배치가 다르면 어느 값이 어느 칸인지 모르므로 하나도 읽지 않고 `ObjectRejected` 다(쿠킹본이 낡았다) — 안쪽 구조체의 어긋남이 칸 하나의 실패로 낮춰져 기본값으로 넘어가지 않는다. 싣지 않은 칸(목적 밖)은 지금 값 그대로다.
+             */
+            [[nodiscard]] static FieldReadResult readSchemaLayout( TaggedReadState& state, ByteReader& reader, const uint32 propCount )
+            {
+                const uint32 writtenKey = reader.readPod<uint32>();
+                if ( reader.hasOverflowed() )
+                    return FieldReadResult::FieldFailed;
+                if ( writtenKey != state._typeInfo.getSchemaLayoutHash() )
+                {
+                    SW_LOG_ERROR_ID( "BinarySerializer.SchemaLayoutMismatch", "%#: the cooked state was written for another layout of this type - not read, cook it again",
+                                     state._typeInfo._name.c_str() );
+                    return FieldReadResult::ObjectRejected;
+                }
+                FieldReadResult result    = FieldReadResult::Read;
+                uint32          readCount = 0;
+                // 쓰기와 같은 걷기다(`ReflectPropertyVisitor`) — 차례가 어긋날 수 없다.
+                const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
+                const bool                   bAllRead = propertyVisitor.visitProperties( state._typeInfo, static_cast<const void*>( state._pInstance ), [&]( const ReflectVisitConstField& field )
+                                  {
+                    const PropertyInfo& prop = field._property;
+                    if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
+                        return ReflectVisitFlow::Continue;
+                    FieldPayload payload{};
+                    if ( readFieldPayload( reader, payload ) == false )
+                    {
+                        result = FieldReadResult::FieldFailed;
+                        return ReflectVisitFlow::Stop;
+                    }
+                    bool bStop = false;
+                    result     = readMatchedField( state, prop, prop.getNameHash(), prop._typeName.getHash(), payload, bStop );
+                    ++readCount;
+                    return bStop ? ReflectVisitFlow::Stop : ReflectVisitFlow::Continue;
+                } );
+                if ( bAllRead && readCount != propCount )
+                    return FieldReadResult::FieldFailed; // 머리의 개수와 배치가 다르다 — 깨진 스트림이다
+                return result;
+            }
+
+            /**
+             * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다. 배치 스트림이면 `readSchemaLayout` 이 읽는다.
              * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 두 가지뿐이다.
              *          (1) 모르는 프로퍼티: 엄격은 `shouldSkipUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
              *          (2) 읽지 못한 프로퍼티(페이로드를 끝까지 읽지 못한 것 포함): 엄격은 `shouldSkipUnreadableProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다)
@@ -296,10 +356,17 @@ namespace sw
                 ByteReader        reader( pData, dataSize );
                 BinaryWireVersion wireVersion{};
                 uint32            propCount{ 0 };
-                if ( readTaggedHeader( reader, typeInfo, wireVersion, propCount ) == false )
+                bool              bSchemaLayout = false;
+                if ( readTaggedHeader( reader, typeInfo, context, wireVersion, propCount, bSchemaLayout ) == false )
                     return FieldReadResult::FieldFailed;
 
-                TaggedReadState state{ pInstance, typeInfo, pData, dataSize, context, pOutListOrphan, bStrict, bStrict == false || context.shouldSkipUnreadableProperties(), wireVersion };
+                TaggedReadState state{ pInstance, typeInfo, context, pOutListOrphan, bStrict, bStrict == false || context.shouldSkipUnreadableProperties(), wireVersion };
+                if ( bSchemaLayout )
+                {
+                    const FieldReadResult result = readSchemaLayout( state, reader, propCount );
+                    outListRestored              = state._rollback.getRestoredValues();
+                    return result;
+                }
                 if ( typeInfo.getPropertiesWithBase().size() > kFastPropBitmaskThreshold )
                     state._uniqueMatchedPropHashes.reserve( typeInfo.getPropertiesWithBase().size() );
 
@@ -383,11 +450,14 @@ namespace sw
                 header = reader.readPod<uint32>();
                 if ( reader.hasOverflowed() )
                     return false;
-                const uint32 propCount = header & kTaggedCountMask;
+                const uint32 propCount     = header & kTaggedCountMask;
+                const bool   bSchemaLayout = ( ( header >> kTaggedVersionShift ) & kSchemaLayoutBit ) != 0;
+                if ( bSchemaLayout && reader.skipBytes( sizeof( uint32 ) ) == false ) // 배치 해시
+                    return false;
                 for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
                 {
-                    // 이름 해시와 타입 해시는 읽는 쪽(`deserialize`)이 본다 — 크기만 세는 여기서는 건너뛴다.
-                    if ( reader.skipBytes( sizeof( uint32 ) * 2 ) == false )
+                    // 이름 해시와 타입 해시는 읽는 쪽(`deserialize`)이 본다 — 크기만 세는 여기서는 건너뛴다(배치 스트림에는 없다).
+                    if ( bSchemaLayout == false && reader.skipBytes( sizeof( uint32 ) * 2 ) == false )
                         return false;
                     const uint32 payloadSize = reader.readPod<uint32>();
                     if ( reader.hasOverflowed() || reader.skipBytes( payloadSize ) == false )
@@ -473,6 +543,15 @@ namespace sw
                 return false;
             }
         }
+        // 배치 스트림에는 모르는 칸을 실을 자리가 없다(쿠킹은 이 빌드의 칸만 쓴다). 배치 해시는 저작 저장이 쓰는 칸의 것이라 다른 목적의 칸 집합을 나타내지 못한다.
+        const bool bSchemaLayout     = context.usesSchemaLayout();
+        const bool bCannotHoldLayout = bSchemaLayout && ( listUnknown.empty() == false || context.getPurpose() != SerializePurpose::Authoring );
+        if ( bCannotHoldLayout )
+        {
+            SW_LOG_ERROR_ID( "BinarySerializer.SchemaLayoutCannotHold", "%#: a schema layout stream cannot hold %# kept unknown field(s) or a non-authoring save - the object is not written",
+                             typeInfo._name.c_str(), static_cast<uint32>( listUnknown.size() ) );
+            return false;
+        }
         ByteWriter writer( outListBuffer );
         uint32     propCount{ static_cast<uint32>( listUnknown.size() ) };
         // 칸 차례(기반부터)는 걷기 한 곳이 정한다(`ReflectPropertyVisitor`) — 세는 걸음과 쓰는 걸음이 같은 칸을 같은 차례로 본다.
@@ -486,7 +565,10 @@ namespace sw
         outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
         SW_ASSERT( propCount <= BinarySerializerInternal::kTaggedCountMask );
         // 머리의 위 8비트가 버전이다(`kTaggedVersionShift` 설명 참고). 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
-        writer.writePod( propCount | ( static_cast<uint32>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kTaggedVersionShift ) );
+        const uint32 versionByte = static_cast<uint32>( kCurrentBinaryWireVersion ) | ( bSchemaLayout ? BinarySerializerInternal::kSchemaLayoutBit : 0u );
+        writer.writePod( propCount | ( versionByte << BinarySerializerInternal::kTaggedVersionShift ) );
+        if ( bSchemaLayout )
+            writer.writePod( typeInfo.getSchemaLayoutHash() );
 
         const bool bAllWritten = propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
@@ -494,11 +576,14 @@ namespace sw
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 return ReflectVisitFlow::Continue;
 
-            uint32 hashVal = prop.getNameHash();
-            writer.writePod( hashVal );
+            if ( bSchemaLayout == false )
+            {
+                uint32 hashVal = prop.getNameHash();
+                writer.writePod( hashVal );
 
-            uint32 typeHash = prop._typeName.getHash();
-            writer.writePod( typeHash );
+                uint32 typeHash = prop._typeName.getHash();
+                writer.writePod( typeHash );
+            }
 
             size_t sizeHeaderPos = writer.getByteCount();
             uint32 dummySize{ 0 };

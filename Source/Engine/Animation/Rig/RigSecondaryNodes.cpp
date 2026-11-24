@@ -95,8 +95,6 @@ namespace sw
                 return node;
             }
 
-            const utf8* getTypeName() const override { return "SpringChain"; }
-
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {
 
@@ -307,7 +305,6 @@ namespace sw
         {
         public:
             unique_ptr<RigNode> clone() const override { return make_unique<RigPoseDriverNode>( *this ); }
-            const utf8*         getTypeName() const override { return "PoseDriver"; }
 
             [[nodiscard]] bool parse( RigXMLReader& reader ) override
             {

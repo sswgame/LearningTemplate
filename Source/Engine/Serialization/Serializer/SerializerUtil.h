@@ -219,7 +219,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다. */
         [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context );
-        /** @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다. */
+        /**
+         * @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다.
+         * @details 값 비교는 이 함수 하나다(diff · 프리팹 덮어쓰기 · 인스펙터의 기본값 · 혼합 값 표시) — 형식이 정한 길로 값을 바로 견주고, 처리기만 아는 값만 바이트로 옮겨 견준다.
+         *          구조체 안의 칸은 @p context 의 저장 목적이 다루는 것만 본다. 옮길 수 없는 값(`canCarryProperty` 가 거짓)은 같은지 알 수 없어 다르다고 답한다.
+         */
         SW_API static bool arePropertyValuesEqual( const PropertyInfo& prop, ObjectAddress instanceA, ObjectAddress instanceB, const SerializeContext& context );
         /** @brief 텍스트 하나를 프로퍼티 값으로 씁니다(비트필드는 그 비트만). 읽지 못하면 false 이고 값은 그대로입니다. 컨테이너는 받지 않습니다. */
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, MutableObjectAddress instance, string_view text, const SerializeContext& context );
@@ -286,8 +290,9 @@ namespace sw
          * @brief 이 타입 이름이 **중첩 객체**(프로퍼티를 풀어 쓰는 REFLECT 타입)이면 그 TypeInfo 를, 아니면 nullptr 를 반환합니다.
          * @details 텍스트 핸들러가 있거나(값을 한 줄로 쓴다) enum 이거나 기본형이면 중첩 객체가 아니다. `JSONSerializer` 와
          *          `XMLSerializer` 가 함께 쓴다. 한쪽만 규칙이 바뀌면 두 포맷이 같은 필드를 다르게 쓴다.
+         * @param pBinding @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소)입니다. 값마다 불리므로 이름 조회 · 공유 잠금 없이 답하게 늘 넘기고, 묶음이 없을 때만 nullptr 입니다.
          */
-        SW_API static const TypeInfo* findNestedObjectType( hashed_string typeName, const SerializeContext& context );
+        SW_API static const TypeInfo* findNestedObjectType( const hashed_string& typeName, const ReflectValueBinding* pBinding, const SerializeContext& context );
 
         /**
          * @brief 필수 칸(`PROPERTY( Required )`)이 빠졌는지 봅니다 — 적히지 않았거나, 이름 · 경로 형식(`isNameValueType`)인데 적힌 글이 비었다.
@@ -385,7 +390,7 @@ namespace sw
             switch ( context.getPurpose() )
             {
                 case SerializePurpose::Authoring:
-                    return prop._metadata->_bRuntimeState == SW_FALSE;
+                    return prop._metadata->isAuthored();
                 case SerializePurpose::Snapshot:
                     return true;
                 case SerializePurpose::SaveGame:

@@ -26,7 +26,7 @@ namespace sw
         hashed_string              _elementTypeName;
         hashed_string              _keyTypeName;
         const IContainerWrapper*   _wrapper;       ///< 생성 코드의 정적 래퍼 객체다(상태가 없다 — 모듈의 수명)
-        const NestedContainerInfo* _elementNested; ///< 원소나 값이 컨테이너일 때 쓴다. 생성 코드의 정적 객체다
+        const NestedContainerInfo* _elementNested; ///< 원소나 값이 컨테이너일 때 쓴다. 같은 프로퍼티의 다음 단계(`PropertyInfo::_pNestedLevels`)다
         /** @brief 프로퍼티 맨 바깥 단계의 원소 · 키 이름에 묶은 사실입니다(`PropertyInfo::getContainerShape` 가 채운다). 그 이름의 값에만 쓴다 — 안쪽 단계는 비어 이름으로 찾는다. */
         const ReflectValueBinding* _pElementBinding = nullptr;
         const ReflectValueBinding* _pKeyBinding     = nullptr;
@@ -72,7 +72,7 @@ namespace sw
          * @details 함수 포인터(`_pValidate` 등)와 같이 그 타입을 등록한 모듈의 수명이다. 모듈을 내리면 타입 등록이 먼저 지워진다.
          */
         const IContainerWrapper*   _containerWrapper;
-        const NestedContainerInfo* _nestedContainer; ///< 컨테이너일 때 중첩 구조 전체다. 생성 코드의 정적 객체다
+        const NestedContainerInfo* _nestedContainer; ///< 컨테이너일 때 중첩 구조 전체다(`_pNestedLevels` 의 맨 바깥 단계)
 
         /** @brief 값이 객체 밖에 있을 때 그 주소를 찾는 함수입니다. nullptr 이면 값은 `인스턴스 + _offset` 에 있습니다. */
         ValueAccessor _pValueAccessor;
@@ -99,6 +99,8 @@ namespace sw
          *          서술자로 만든 프로퍼티만 갖고(기본 생성은 없다 — 이름으로 찾는다), 사본끼리 나눈다.
          */
         shared_ptr<PropertyValueBindings> _pValueBindings;
+        /** @brief 중첩 단계들입니다(바깥 → 안). 서술자(`NestedContainerDesc`)에서 짓고 사본끼리 나눈다 — 단계의 `_elementNested` 가 이 목록의 다음 원소를 가리킨다. */
+        shared_ptr<const vector<NestedContainerInfo>> _pNestedLevels;
 
         uint32                 _bitOffset;
         ContainerKind          _containerKind;
@@ -344,36 +346,5 @@ namespace sw
          */
         size_t _offset;
         uint8  _bitMask;
-    };
-
-    /**
-     * @brief 생성 코드가 타입마다 내는 프로퍼티 서술자 표(`static constexpr ::sw::PropertyDesc kProperties[]`)의 한 줄입니다. 등록은 이 표를 돌며 `PropertyInfo` 를 짓습니다.
-     * @details 언리얼 UHT 의 `PropPointers`(정적 서술자 배열) 자리다. 예전에는 프로퍼티마다 즉시 호출 람다가 `PropertyInfo` 를 짓는 코드를 냈다(생성 `.gen.cpp` 10.9 MB).
-     *          글은 리터럴, 함수는 캡처 없는 람다의 포인터, 래퍼는 `ContainerWrapperOf` 의 정적 객체 주소라 표가 상수 초기화된다. 이름 해시는 따로 싣지 않는다 —
-     *          intern 항목이 이미 갖고 있어(`PropertyInfo::getNameHash`) 둘째 사본은 낡을 수만 있다.
-     *          칸 차례가 곧 생성기(`CodeGenerator::emitPropertyDesc`)가 내는 차례다. 칸을 더하면 둘을 함께 고친다(빠지면 뒤 칸이 밀려 컴파일 오류다 — 형식이 다르다).
-     */
-    struct PropertyDesc
-    {
-        /** @brief 칸 메타데이터(`PROPERTY( … )` 의 런타임 키)를 채우는 함수입니다. 적은 것이 없으면 nullptr 이고, 그 프로퍼티는 공유 기본값을 쓴다(힙 없음). */
-        using MetadataFillFunction = void ( * )( PropertyMetadata& metadata );
-
-        const utf8*                     _pName;
-        const utf8*                     _pTypeName;
-        size_t                          _offset;        ///< 비트필드 · 접근자 프로퍼티는 0
-        ContainerKind                   _containerKind; ///< 컨테이너가 아니면 None
-        const utf8*                     _pElementTypeName;
-        const utf8*                     _pKeyTypeName;
-        const IContainerWrapper*        _pContainerWrapper;
-        const NestedContainerInfo*      _pNestedContainer;
-        const utf8*                     _pHandleTargetTypeName;
-        const utf8* const*              _ppAlias; ///< `_aliasCount` 개의 옛 이름
-        uint32                          _aliasCount;
-        PropertyInfo::ValueAccessor     _pValueAccessor;
-        PropertyInfo::RepNotifyFunction _pRepNotify;
-        ReflectValidateFunction         _pValidate;
-        PropertyInfo::SetBitFunction    _pSetBit;   ///< 비트필드면 그 비트만 세우는 함수
-        size_t                          _ownerSize; ///< 비트필드의 주인 타입 크기(`resolveBitField`)
-        MetadataFillFunction            _pFillMetadata;
     };
 } // namespace sw

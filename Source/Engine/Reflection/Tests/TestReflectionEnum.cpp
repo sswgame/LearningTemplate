@@ -563,7 +563,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CreateFromEntryTable )
     static constexpr sw::NamedValue<int64> kArrRedirect[] = {
         { "OldFirst", 1 },
     };
-    const sw::EnumInfo info = sw::EnumInfo::createFromDesc( { "TableEnum", "swtest::TableEnum", "TestTableEnum", kArrEntry, kArrRedirect, "Unknown", "Count", false }, 1, false );
+    const sw::EnumInfo info = sw::EnumInfo::createFromDesc( { "TableEnum", "swtest::TableEnum", "TestTableEnum", kArrEntry, kArrRedirect, "Unknown", "Count", false, 1, false } );
 
     SW_EXPECT_TRUE( info._fullyQualifiedName == sw::hashed_string( "swtest::TableEnum" ) );
     SW_EXPECT_EQUAL( uint32( 1 ), static_cast<uint32>( info._size ) );
@@ -587,7 +587,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CreateFromEntryTable )
         { "One", 1},
         { "Max", 2},
     };
-    const sw::EnumInfo dense = sw::EnumInfo::createFromDesc( { "DenseEnum", "swtest::DenseEnum", "TestTableEnum", kArrDenseEntry, {}, nullptr, "Max", false }, 4, true );
+    const sw::EnumInfo dense = sw::EnumInfo::createFromDesc( { "DenseEnum", "swtest::DenseEnum", "TestTableEnum", kArrDenseEntry, {}, nullptr, "Max", false, 4, true } );
     SW_EXPECT_EQUAL( size_t( 2 ), dense._listDenseName.size() );
     SW_EXPECT_TRUE( dense.valueToCString( 1 ) == dense.toString( 1 ).data() );
     SW_EXPECT_TRUE( dense.valueToCString( 2 ) == nullptr );

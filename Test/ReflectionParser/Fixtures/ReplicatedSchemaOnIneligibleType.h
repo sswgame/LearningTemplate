@@ -1,5 +1,5 @@
 // EXPECT-GEN: s_arrReplicatedField
-// EXPECT-GEN: s_fixedCodec._pReplicated = &s_replicatedCodec;
+// EXPECT-GEN: , &s_replicatedCodec );
 // EXPECT-GEN: R=sw::fixture::ReplicatedSchemaHost|F=_health:int32:min=0:max=100:int|
 // EXPECT-NOT-GEN: F=_listCache
 #pragma once
