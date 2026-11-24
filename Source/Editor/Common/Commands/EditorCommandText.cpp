@@ -5,7 +5,9 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Localization/EditorDataText.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -57,6 +59,10 @@ namespace sw::editor
             return false;
         }
         _listUsed[static_cast<size_t>( pRow - _listRow.data() )] = SW_TRUE;
+        // 명령 글은 데이터라 컴파일이 아이콘 이름을 보지 못한다 — 명령 목록을 짓는 기동에서 알린다(그리기 전).
+        const EditorIconGlyphTable* pIconTable = editor::findSubsystem<EditorIconGlyphTable>(); // 선택: 에디터 컨텍스트 없이 명령 글만 읽는 테스트에는 없다
+        if ( pRow->_icon.empty() == false && pIconTable != nullptr && pIconTable->findGlyph( hashed_string{ string_view{ pRow->_icon } } ) == nullptr )
+            SW_LOG_ERROR_ID( "EditorCommand.UnknownIcon", "Editor command '%#' names icon '%#' which the icon table does not have", inoutDesc._id.c_str(), pRow->_icon.c_str() );
 
         inoutDesc._label            = EditorDataText::localize( pRow->_label );
         inoutDesc._iconName         = pRow->_icon;

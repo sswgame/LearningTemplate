@@ -31,6 +31,12 @@ namespace sw::editor
         static EditorComponentIconRow findRow( const TypeInfo* pType );
         /** @brief 오브젝트 줄의 아이콘입니다. 빌보드 종류 컴포넌트(빛 · 카메라)가 있으면 그 줄, 없으면 표의 오브젝트 아이콘 줄입니다. */
         static EditorComponentIconRow findObjectRow( const GameObject& object );
+        /**
+         * @brief 데이터가 이름으로 드는 컴포넌트 아이콘 · 색이 모두 아이콘 표 · 지금 테마에 있으면 true 입니다. 없는 것마다 오류를 남깁니다.
+         * @details 컴포넌트 선언의 메타(`Icon=` · `IconColor=`)와 컴포넌트 아이콘 표를 본다. 편집기가 설 때 한 번 부르고(틀리면 서지 않는다), 타입 테이블 세대가 바뀌면
+         *          (모듈 로드 · 리로드) 다시 본다 — 엔진 · 게임 선언은 에디터 목록을 모르므로 컴파일이 아니라 여기서 막는다.
+         */
+        [[nodiscard]] static bool validateNames();
         /** @brief 글리프(UTF-8 한 글자)의 코드 포인트입니다. 잘못된 글이면 0 입니다(감시 값이 숫자로 비교한다). */
         static uint32 decodeGlyph( const utf8* pGlyph );
     };
