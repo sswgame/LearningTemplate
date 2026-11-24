@@ -9,6 +9,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

@@ -370,7 +370,7 @@ SW_TEST_CASE( HousingLayoutTest, LoadRefusesMismatchesAndFollowsReplacement )
 SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
 {
     LandRegistry land;
-    land.initialize( 16, 16, 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
+    land.initialize( 16, 16, 1.0f, AbsolutePosition{} );
     HousingFixture home;
     SW_REQUIRE_TRUE( home._layout.bindLand( &land, int2{ 2, 2 } ) );
     SW_EXPECT_TRUE( home._layout.hasClaimedLand() );
