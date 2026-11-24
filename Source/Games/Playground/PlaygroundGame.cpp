@@ -124,7 +124,7 @@ namespace sw
     void PlaygroundGame::onUpdate( float32 deltaTime )
     {
         GameInstance::onUpdate( deltaTime );
-        _onlineFlow.update( getSubsystem<OnlineSession>() );
+        _onlineFlow.update( *this );
 
         if ( _clientPart != nullptr )
             _clientPart->update( deltaTime );

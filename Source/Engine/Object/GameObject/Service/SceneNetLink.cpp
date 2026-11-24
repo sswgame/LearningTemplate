@@ -26,6 +26,7 @@ namespace sw
     SceneNetLink::SceneNetLink( GameObjectManager& manager )
         : _value{}
         , _bindSerial{ 0 }
+        , _bServerWorld{ SW_FALSE }
     {
         (void)manager;
     }
@@ -41,7 +42,10 @@ namespace sw
         if ( value._role == NetLinkRole::Server )
             value._pRouter->openWorld( *value._pPeers, sceneID );
         else
+        {
             value._pRouter->setLocalScene( *value._pPeers, sceneID );
+            markServerWorld();
+        }
         _bindSerial = value._pRouter->getBindSerial();
         return true;
     }

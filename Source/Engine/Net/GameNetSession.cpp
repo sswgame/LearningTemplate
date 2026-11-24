@@ -409,6 +409,8 @@ namespace sw
 
     bool GameNetSession::initialize( const GameNetSessionParams& requested )
     {
+        if ( requested._role == GameNetRole::Client )
+            _onClientOpening.broadcast();
         shutdown();
         if ( requested._role == GameNetRole::None )
             return false;
@@ -1137,7 +1139,10 @@ namespace sw
         if ( bRetry )
             _connectFuture = startClientConnect();
         else
+        {
             _credentials = NetConnectCredentials{}; // 거절된 티켓은 다시 내밀지 않는다 — 새 티켓이 필요하다
+            _lostReason  = result._reason;
+        }
     }
 } // namespace sw
 

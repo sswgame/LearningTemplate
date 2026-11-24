@@ -89,7 +89,7 @@ namespace sw
         const SaveSlotCounts& getCounts() const { return _counts; }
         /**
          * @brief 읽은 세이브 바이트를 적용합니다 — 슬롯 불러오기와 자동 저장 되돌리기가 함께 지나는 한 길(감사 G-7).
-         * @details 옛 판 봉투는 먼저 이 빌드의 판으로 올린다(`GameStateSnapshot::upgradeEnvelope`). 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
+         * @details 옛 판 봉투는 먼저 이 빌드의 판으로 올린다(`GameStateSnapshot::upgradeEnvelope`). 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이거나 활성 씬이 서버의 월드이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
          *          @p sessionTravel 이 물렸으면 적용하지 않고 물렸다고 알린다. 넷 세션이 열려 있으면 실패로 끝낸다.
          */
         void applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied, uint32 sessionTravel );

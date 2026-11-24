@@ -51,6 +51,8 @@ namespace sw
         {
             /** @brief 세이브 찍기(`captureSnapshot( SaveGame )`)의 프로파일러 구간 이름입니다 — 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 의 재료(배포에는 재는 일도 칸도 없다). */
             static constexpr const utf8* kSaveCaptureScopeName = "GT.Save.capture";
+            /** @brief 세션 전 자리를 되살릴 때의 슬롯 이름입니다(`SaveGameLoadedEvent` · 로그). 파일 슬롯이 아니다. */
+            static constexpr const utf8* kPreSessionName = "session/before";
             /** @brief `Save.CapturePeakMs` 가 읽는 백분위입니다 — p100(창 안 최대). */
             static constexpr uint32 kPeakPercent = 100;
 
@@ -257,7 +259,8 @@ namespace sw
         wireContent._replicatedSchemaHash = replicatedChannel.computeSchemaHash();
         GameNetSession& netSession        = game::getSubsystem<GameNetSession>(); // `validateEngineServices` 가 있음을 확인했다
         netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
-        _bSecuritySet = SW_TRUE;
+        _bSecuritySet         = SW_TRUE;
+        _clientSessionOpening = netSession.onClientOpening().add( SW_DELEGATE_METHOD( Delegate<void()>, &GameInstance::onClientSessionOpening, this ) );
         if ( netSession.openFromLaunch( wireContent ) == false )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart5", "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
@@ -301,6 +304,8 @@ namespace sw
         if ( _pAutosave != nullptr && _bStarted == SW_TRUE )
             (void)_pAutosave->notifyQuit();
         _netClientSaveBlock.reset();
+        _clientSessionOpening.reset();
+        _preSessionSave.clear();
         getSubsystem<GameSceneFlow>().unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음 · 되감기) 빈 구독이다
         _pDevPart.reset();                                         // 게임이 세운 것을 보던 부분이라 파생보다 먼저 진다(남길 기록은 소멸자가 쓴다)
         if ( _bDerivedEntered == SW_TRUE )
@@ -520,11 +525,66 @@ namespace sw
 
     void GameInstance::updateNetSaveBlock()
     {
-        const bool bClient = game::getSubsystem<GameNetSession>().getRole() == GameNetRole::Client;
-        if ( bClient == false )
+        const bool bServerWorld = game::getSubsystem<GameNetSession>().getRole() == GameNetRole::Client || isInServerWorld();
+        if ( bServerWorld == false )
             _netClientSaveBlock.reset();
         else if ( _netClientSaveBlock.isActive() == false )
             _netClientSaveBlock = _saveLock.block( "net.client" );
+    }
+
+    bool GameInstance::isInServerWorld() const
+    {
+        const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+        const Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+        return pScene != nullptr && pScene->getObjectManager()->getSubsystem<SceneNetLink>().isServerWorld();
+    }
+
+    void GameInstance::onClientSessionOpening()
+    {
+        if ( isInServerWorld() )
+            return;
+        _preSessionSave.clear();
+        const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+        const bool                bInOwnWorld   = pSceneManager != nullptr && pSceneManager->getActiveScene() != nullptr && pSceneManager->isWorldPlaying() && _saveLock.isBlocked() == false;
+        if ( bInOwnWorld == false )
+            return; // 첫 씬 앞(실행 인자)이거나 저장할 수 없는 자리다(타이틀 · 씬을 여는 중 · 연출)
+        if ( _pAutosave != nullptr )
+            (void)_pAutosave->saveNow( AutosaveTrigger::AreaChanged ); // 맡기지 못했으면(쓰는 중) 마지막 저장이 남는다 — 미니게임에 들어가기 전과 같다
+        if ( captureSnapshot( SerializePurpose::SaveGame, _preSessionSave ) == false )
+        {
+            _preSessionSave.clear();
+            SW_LOG_ERROR_ID( "GameInstance.PreSessionNotCaptured", "The world before the net session could not be captured (see the messages above) - losing the server returns to the title or entrance scene" );
+        }
+    }
+
+    void GameInstance::leaveServerWorld()
+    {
+        GameSceneFlow& sceneFlow = getSubsystem<GameSceneFlow>();
+        if ( isInServerWorld() == false || sceneFlow.hasPendingSceneLoad() || sceneFlow.hasSessionTravel() )
+            return;
+        if ( _preSessionSave.empty() )
+        {
+            requestHomeScene();
+            return;
+        }
+        const vector<uint8> bytes = std::move( _preSessionSave );
+        _preSessionSave.clear();
+        SW_LOG_INFO_ID( "GameInstance.LeaveServerWorld", "Leaving the server's world - returning to the place before the net session" );
+        getSubsystem<GameSaveSlots>().applySlot( string( GameInstanceInternal::kPreSessionName ), bytes, SW_DELEGATE_LAMBDA( GameSaveSlots::AppliedFunction, [this]( bool bRestored )
+        {
+            const GameSceneFlow& flow = getSubsystem<GameSceneFlow>();
+            if ( bRestored == false && flow.hasPendingSceneLoad() == false && flow.hasSessionTravel() == false )
+                requestHomeScene(); // 까닭은 적용 길이 남겼다
+        } ),
+                                                 sceneFlow.beginSessionTravel() );
+    }
+
+    void GameInstance::requestHomeScene()
+    {
+        GameSceneFlow& sceneFlow = getSubsystem<GameSceneFlow>();
+        if ( sceneFlow.hasTitleScene() ? sceneFlow.requestTitleScene() : sceneFlow.requestEntranceScene() )
+            return;
+        SW_LOG_ERROR_ID( "GameInstance.HomeSceneNotRequested", "Neither the title nor the entrance scene of gamesettings could be requested - the player stays in the server's world (saving stays blocked)" );
     }
 
     bool GameInstance::serializeState( vector<uint8>& outBytes )

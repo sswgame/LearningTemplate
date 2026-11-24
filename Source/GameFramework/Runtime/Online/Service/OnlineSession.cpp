@@ -273,6 +273,11 @@ namespace sw
         return _settings._onlineHubServerID;
     }
 
+    float32 OnlineSession::getHubReconnectSeconds() const
+    {
+        return _settings._onlineHubReconnectSeconds;
+    }
+
     void OnlineSession::disconnect()
     {
         _client.shutdown();

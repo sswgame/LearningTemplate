@@ -313,6 +313,11 @@ namespace sw
          */
         [[nodiscard]] bool makeTicketClientParams( const NetAddress& serverAddress, const NetConnectCredentials& credentials, GameNetSessionParams& outParams ) const;
         /**
+         * @brief 클라이언트 세션을 여는 앞머리(`initialize`)의 알림입니다 — 앞 세션은 아직 닫히지 않았고 월드는 서버와 섞이기 전이다.
+         * @details 게임 인스턴스가 혼자 하던 자리를 여기서 찍어 둔다 — 여는 길(온라인 흐름 · 개발 명령)마다 적지 않는다(언리얼 `UGameInstance::NotifyPreClientTravel`).
+         */
+        MulticastDelegate<void()>& onClientOpening() { return _onClientOpening; }
+        /**
          * @brief 이 세션의 접속 보안 자리입니다 — 암호 제공자(게임 인스턴스가 넣는다)와 접속 인증기(서버 조립의 계정 키트가 묶는다).
          * @details 서버 설정 `_bGameConnectTicket` 이 켜졌을 때 `makeServerParams` 가 이 자리를 세션의 인증기로 끼운다.
          */
@@ -337,7 +342,10 @@ namespace sw
         bool isTicketBound() const { return _bTicketBound == SW_TRUE; }
         /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과 — 뒤에서 다시 시도한다 — 또는 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
         bool hasConnectFailed() const { return _bConnectFailureReported == SW_TRUE; }
-        /** @brief 붙어 있던 서버를 잃은 까닭입니다. 붙은 적이 없거나 다시 붙었으면 비어 있습니다 — 저절로 다시 붙지 않으므로 게임이 보고 정한다(`tryGetShutdownNotice` 의 사유와 함께). */
+        /**
+         * @brief 서버가 없어진 까닭입니다 — 붙어 있던 서버를 잃었거나 서버가 거절했다. 붙는 중이거나(시간 초과는 다시 시도한다) 붙어 있으면 비어 있습니다.
+         * @details 저절로 다시 붙지 않으므로 게임이 보고 정한다(`tryGetShutdownNotice` 의 사유와 함께). 남은 월드는 서버의 것이다(`SceneNetLink::isServerWorld`).
+         */
         const optional<NetDisconnectReason>& getLostReason() const { return _lostReason; }
         /** @brief 서버면 첫 샤드가 연 UDP 포트를 반환합니다(샤드 `n` 은 이 포트 + n, 한 포트를 나누면 모두 이 포트). 포트로 0 을 줬으면 운영체제가 고른 포트입니다. 클라이언트면 0 입니다. */
         uint16 getListenPort() const { return _listenPort; }
@@ -532,6 +540,7 @@ namespace sw
 
     private:
         vector<unique_ptr<Shard>>         _listShard;          ///< 포트 샤드마다 소켓 · 데코레이터 · 호스트 · 네트워크 스레드(클라이언트는 하나)
+        MulticastDelegate<void()>         _onClientOpening;    ///< 클라이언트 세션을 여는 앞머리의 알림(`onClientOpening`)
         GameNetTransportDecoratorDelegate _transportDecorator; ///< `setTransportDecorator` 가 건 것(없으면 비었다)
         GameNetLaunchOverrideDelegate     _launchOverride;     ///< `setLaunchOverride` 가 건 것(없으면 비었다)
         NetEndpointShardSet               _peers;              ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
@@ -558,7 +567,7 @@ namespace sw
         uint64                            _digestSentRevision;      ///< 클라이언트 — 합성 줄을 어디까지 보냈는가
         int32                             _digestServerConnection;  ///< 클라이언트 — 합성 줄을 보낼 연결. 음수면 붙어 있지 않다
         GameShutdownNotice                _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
-        optional<NetDisconnectReason>     _lostReason;              ///< 클라이언트 — 붙어 있던 서버를 잃은 까닭
+        optional<NetDisconnectReason>     _lostReason;              ///< 클라이언트 — 서버를 잃었거나 거절당한 까닭
         uint8                             _bServerJoined;           ///< 클라이언트 — 서버에 붙어 있다(`update` 가 본 사건으로)
         uint8                             _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
         uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다

@@ -299,7 +299,8 @@ namespace sw
         MinigameFlow&               minigameFlow = _owner.getSubsystem<MinigameFlow>();
         const bool                  bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
         // 맡긴 이동이 남았으면 활성 씬은 곧 내려간다 — 거기 풀면 성공을 알린 뒤 씬과 함께 사라진다. 세이브의 씬을 다시 요청해 그 이동을 대신한다.
-        const bool bStaysInScene = bInMinigame && sceneFlow.hasPendingSceneLoad() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
+        // 서버의 월드(잃은 서버의 사본)에도 풀지 않는다 — 복제된 오브젝트가 남고 저장이 막힌 채다. 같은 씬이어도 새로 연다.
+        const bool bStaysInScene = bInMinigame && sceneFlow.hasPendingSceneLoad() == false && _owner.isInServerWorld() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
         if ( savedSceneID->empty() || bStaysInScene )
         {
             const bool bRestored = restoreSlot( slot, bytes );

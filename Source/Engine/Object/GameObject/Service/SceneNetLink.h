@@ -101,11 +101,20 @@ namespace sw
         [[nodiscard]] uint8 getWorldGeneration() const;
         /** @brief 이 월드가 게임 상태를 정하는 쪽이면 true 입니다 — 혼자 하는 월드나 서버다. 클라이언트 월드는 서버가 정한 결과를 복제로 받는다(언리얼 `HasAuthority`). */
         [[nodiscard]] bool hasAuthority() const { return isBound() == false || _value._role != NetLinkRole::Client; }
+        /**
+         * @brief 이 월드의 상태가 서버의 것이면 true 입니다 — 클라이언트 링크가 한 번이라도 올랐다. 세션이 닫혀 링크가 비어도(`isBound` 거짓) 남는다.
+         * @details 서버를 잃은 클라이언트의 씬은 남의 세계를 비춘 사본이다 — 혼자 하는 월드로 돌아간 것이 아니다. 저장을 막고, 세이브 · 이어 하기는 씬을 새로 연다(`GameInstance::leaveServerWorld`).
+         *          벗어나는 길은 다른 씬(새 월드)뿐이다(언리얼은 연결을 잃으면 그 월드를 버리고 기본 맵을 연다).
+         */
+        [[nodiscard]] bool isServerWorld() const { return _bServerWorld == SW_TRUE; }
+        /** @brief 서버의 월드에서 찍은 상태를 이 월드에 되살렸습니다(미니게임에서 돌아온 씬) — 새 월드도 서버의 것이다. */
+        void markServerWorld() { _bServerWorld = SW_TRUE; }
         /** @brief 올라 있는 값입니다(`isBound` 일 때만 씁니다). */
         [[nodiscard]] const NetLinkValue& get() const { return _value; }
 
     private:
         NetLinkValue _value;
-        uint32       _bindSerial; ///< 올린 때의 라우터 번호(`NetMessageRouter::getBindSerial`). 달라졌으면 같은 라우터에 다른 씬이 나중에 올랐다
+        uint32       _bindSerial;   ///< 올린 때의 라우터 번호(`NetMessageRouter::getBindSerial`). 달라졌으면 같은 라우터에 다른 씬이 나중에 올랐다
+        uint8        _bServerWorld; ///< 클라이언트 링크가 오른 적이 있다(`isServerWorld`)
     };
 } // namespace sw

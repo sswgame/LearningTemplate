@@ -31,9 +31,10 @@ namespace sw
      */
     struct MinigameSuspendedScene
     {
-        string        _scenePath;    ///< 다시 열 씬(리소스 id)
-        vector<uint8> _snapshot;     ///< 찍은 씬(`SerializePurpose::Snapshot`). 세이브에서 되살린 칸이면 비었다
-        vector<uint8> _saveSnapshot; ///< 찍은 씬(`SerializePurpose::SaveGame`). 저장을 막는 미니게임이면 비었다
+        string        _scenePath;                ///< 다시 열 씬(리소스 id)
+        vector<uint8> _snapshot;                 ///< 찍은 씬(`SerializePurpose::Snapshot`). 세이브에서 되살린 칸이면 비었다
+        vector<uint8> _saveSnapshot;             ///< 찍은 씬(`SerializePurpose::SaveGame`). 저장을 막는 미니게임이면 비었다
+        uint8         _bServerWorld{ SW_FALSE }; ///< 서버의 월드에서 찍었다(`SceneNetLink::isServerWorld`) — 돌아온 씬도 서버의 것이다. 서버의 월드에서는 저장이 막혀 세이브에 실리지 않는다
     };
 
     /** @brief 하위 레벨로 들어간 칸의 돌아올 자리입니다 — 얹은 씬과 하위 레벨 이름(나올 때 뺀다). */

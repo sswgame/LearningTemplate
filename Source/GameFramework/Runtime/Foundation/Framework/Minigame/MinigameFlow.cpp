@@ -498,7 +498,8 @@ namespace sw
         if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
             (void)pAutosave->saveNow( AutosaveTrigger::AreaChanged, definition._name ); // 맡기지 못했으면(쓰는 중 · 막힘 — 쌓인 진입) 마지막 저장이 그대로 남는다
         MinigameSuspendedScene suspended;
-        suspended._scenePath = pScene->getSourcePath();
+        suspended._scenePath    = pScene->getSourcePath();
+        suspended._bServerWorld = pScene->getObjectManager()->getSubsystem<SceneNetLink>().isServerWorld() ? SW_TRUE : SW_FALSE;
         if ( _owner.captureSnapshot( SerializePurpose::Snapshot, suspended._snapshot ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.SceneNotCaptured", "Minigame '%#': the active scene could not be captured before switching scenes - nothing is entered", pName );
@@ -1127,6 +1128,8 @@ namespace sw
                 deliverResult( pReturn->_result );
                 return;
             }
+            if ( pSuspended->_bServerWorld == SW_TRUE )
+                pScene->getObjectManager()->getSubsystem<SceneNetLink>().markServerWorld();
             ++_restoreCount;
             SW_LOG_INFO_ID( "MinigameFlow.Restored", "Returned to '%#' - the captured scene is restored", pSuspended->_scenePath.c_str() );
             // 복원은 오브젝트를 되살리고 상태 적용 · 시작은 그 뒤 단계다 — 지금 알리면 보상이 복원 값에 덮인다(언리얼 레벨 전환 뒤 BeginPlay 이후의 결과 전달과 같은 자리).

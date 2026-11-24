@@ -8,6 +8,8 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 using namespace sw;
@@ -119,5 +121,42 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LostServerLeavesItsReason, ._timeout
     SW_EXPECT_TRUE( *client.getLostReason() == NetDisconnectReason::Remote );
     client.shutdown();
     SW_EXPECT_FALSE( client.getLostReason().has_value() );
+    server.shutdown();
+}
+
+/** @brief [GameNetSessionTicketLinkTest] 결함: 서버를 잃은 클라이언트의 씬이 세션이 닫히면 혼자 하는 월드로 여겨져 서버 세계가 저장됐다 — 클라이언트로 묶였던 월드는 세션이 닫혀도 서버의 것이고, 세션을 여는 앞머리를 알린다 */
+SW_TEST_CASE( GameNetSessionTicketLinkTest, ServerWorldOutlivesTheSession )
+{
+    GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
+    GameNetSession client{ engine::getSubsystem<ResourceComposition>() };
+    ServerConfig   config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0; // 운영체제가 고른다
+    GameNetSessionParams serverParams;
+    SW_REQUIRE_TRUE( server.makeServerParams( config, serverParams ) );
+    SW_REQUIRE_TRUE( server.initialize( serverParams ) );
+    uint32               openingCount = 0;
+    const Subscription   opening      = client.onClientOpening().add( SW_DELEGATE_LAMBDA( Delegate<void()>, [&openingCount, &client]()
+           {
+        ++openingCount;
+        SW_EXPECT_FALSE( client.isActive() ); // 아직 열지 않았다
+    } ) );
+    GameNetSessionParams clientParams;
+    clientParams._role          = GameNetRole::Client;
+    clientParams._serverAddress = NetAddress::makeLoopback( server.getListenPort() );
+    SW_REQUIRE_TRUE( client.initialize( clientParams ) );
+    SW_EXPECT_EQUAL( 1u, openingCount );
+
+    GameObjectManager serverWorld;
+    GameObjectManager clientWorld;
+    SW_REQUIRE_TRUE( serverWorld.getSubsystem<SceneNetLink>().bind( server.makeNetLink(), 0 ) );
+    SW_REQUIRE_TRUE( clientWorld.getSubsystem<SceneNetLink>().bind( client.makeNetLink(), 0 ) );
+    SW_EXPECT_FALSE( serverWorld.getSubsystem<SceneNetLink>().isServerWorld() ); // 서버 자신의 월드다
+    SW_EXPECT_TRUE( clientWorld.getSubsystem<SceneNetLink>().isServerWorld() );
+    clientWorld.getSubsystem<SceneNetLink>().unbind();
+    client.shutdown();
+    SW_EXPECT_FALSE( clientWorld.getSubsystem<SceneNetLink>().isBound() );
+    SW_EXPECT_TRUE( clientWorld.getSubsystem<SceneNetLink>().isServerWorld() );
+    serverWorld.getSubsystem<SceneNetLink>().unbind();
     server.shutdown();
 }
