@@ -3,6 +3,7 @@
 #include "Engine/Net/FileServe/FileServeContentSource.h"
 
 #include "Core/Concurrency/ScopedLock.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/BundledContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -100,14 +101,8 @@ namespace sw
         return false;
     }
 
-    FileServeContentSource::RemoteStat FileServeContentSource::findRemoteStat( const string& relative ) const
+    FileServeContentSource::RemoteStat FileServeContentSource::requestRemoteStat( const string& relative ) const
     {
-        {
-            ScopedLock<mutex> lock{ _mutex };
-            const auto        it = _mapRemoteStat.find( relative );
-            if ( it != _mapRemoteStat.end() )
-                return it->second;
-        }
         RemoteStat                               stat{};
         vector<uint8>                            body;
         bool                                     bMissing = false;
@@ -124,8 +119,6 @@ namespace sw
             else
                 SW_LOG_WARNING_ID( "FileServe.BadStat", "Fileserve answered '%#' for '%#' - treated as missing", FileServeContentSourceInternal::toText( body ), relative );
         }
-        ScopedLock<mutex> lock{ _mutex };
-        _mapRemoteStat[relative] = stat;
         return stat;
     }
 
@@ -155,41 +148,44 @@ namespace sw
         if ( tryMapToRelative( path, relative ) == false || relative.empty() )
             return false;
         {
-            ScopedLock<mutex> lock{ _mutex };
-            const auto        it = _mapMirrored.find( relative );
-            if ( it != _mapMirrored.end() )
+            UniqueLock<mutex> lock{ _mutex };
+            while ( _uniqueMirroring.contains( relative ) )
             {
-                outMirrorPath = it->second;
-                return true;
+                _mirrorCv.wait( lock );
             }
+            _uniqueMirroring.insert( relative );
         }
-        const RemoteStat stat = findRemoteStat( relative );
+        const AbsolutePath mirrorPath = _mirrorRoot.join( relative );
+        const bool         bMirrored  = refreshMirror( relative, mirrorPath );
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _uniqueMirroring.erase( relative );
+        }
+        _mirrorCv.notify_all();
+        if ( bMirrored )
+            outMirrorPath = mirrorPath;
+        return bMirrored;
+    }
+
+    bool FileServeContentSource::refreshMirror( const string& relative, const AbsolutePath& mirrorPath ) const
+    {
+        const RemoteStat stat = requestRemoteStat( relative );
         if ( stat._kind != RemoteKind::File )
             return false;
-        // shortcut: 같은 파일을 두 스레드가 처음 함께 열면 둘 다 받는다(원자 교체라 결과는 같다) — 받는 중 표를 두는 것은 겹침이 측정에 보일 때.
-        const AbsolutePath mirrorPath = _mirrorRoot.join( relative );
-        const AbsolutePath stampPath  = mirrorPath.appendSuffix( kStampExtension );
+        const AbsolutePath stampPath = mirrorPath.appendSuffix( kStampExtension );
         string             stampText;
         StringUtil::appendNumber( stampText, stat._sizeBytes );
         stampText += " ";
         StringUtil::appendNumber( stampText, stat._modifiedNanos );
         string     existingStamp;
         const bool bFresh = FileUtil::readOptionalTextFile( stampPath, existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( mirrorPath );
-        if ( bFresh == false )
-        {
-            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( stampPath, stampText ) == false )
-            {
-                SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath.str() );
-                // PC 에서 받는 사이 다시 구웠을 수 있다(구간이 416) — 다음 열기가 상태를 다시 묻게 기억을 지운다.
-                ScopedLock<mutex> lock{ _mutex };
-                _mapRemoteStat.erase( relative );
-                return false;
-            }
-        }
-        ScopedLock<mutex> lock{ _mutex };
-        _mapMirrored[relative] = mirrorPath;
-        outMirrorPath          = mirrorPath;
-        return true;
+        if ( bFresh )
+            return true;
+        // 받는 사이 PC 가 다시 구우면 구간마다 다른 판이 섞인다 — 다 받은 뒤의 상태가 처음과 같을 때만 도장을 찍는다(아니면 다음 열기가 다시 받는다).
+        if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) && requestRemoteStat( relative ) == stat && FileUtil::writeTextFile( stampPath, stampText ) )
+            return true;
+        SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath.str() );
+        return false;
     }
 
     AsyncFileHandle FileServeContentSource::open( string_view path ) const
@@ -201,13 +197,13 @@ namespace sw
     bool FileServeContentSource::isFile( string_view path ) const
     {
         string relative;
-        return tryMapToRelative( path, relative ) && relative.empty() == false && findRemoteStat( relative )._kind == RemoteKind::File;
+        return tryMapToRelative( path, relative ) && relative.empty() == false && requestRemoteStat( relative )._kind == RemoteKind::File;
     }
 
     bool FileServeContentSource::isFolder( string_view path ) const
     {
         string relative;
-        return tryMapToRelative( path, relative ) && findRemoteStat( relative )._kind == RemoteKind::Folder;
+        return tryMapToRelative( path, relative ) && requestRemoteStat( relative )._kind == RemoteKind::Folder;
     }
 
     bool FileServeContentSource::collectFiles( string_view folder, vector<string>& outListPath ) const
@@ -255,19 +251,17 @@ namespace sw
 
     AsyncReadHandle FileServeContentSource::readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const
     {
-        // shortcut: 처음 받는 파일은 부른 스레드에서 받는다(개발 전용 — 팩은 기동 때 대부분 열린다). 막는 시간이 보이면 받기를 AsyncFileIO 워커로 옮긴다.
-        AbsolutePath mirrorPath;
-        if ( ensureMirrored( path, mirrorPath ) == false )
-            mirrorPath = _mirrorRoot.join( ".fileserve-missing" ); // 디스크 소스가 없는 파일로 끝낸다 — 완료 콜백은 늘 한 번 온다
-        return _disk.readFileAsync( io, mirrorPath.str(), priority, onComplete );
+        return readRangeAsync( io, path, 0, AsyncFileIO::kWholeFile, priority, onComplete );
     }
 
     AsyncReadHandle FileServeContentSource::readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
                                                             const AsyncReadCompleteDelegate& onComplete ) const
     {
-        AbsolutePath mirrorPath;
-        if ( ensureMirrored( path, mirrorPath ) == false )
-            mirrorPath = _mirrorRoot.join( ".fileserve-missing" );
-        return _disk.readRangeAsync( io, mirrorPath.str(), offset, size, priority, onComplete );
+        // 받기는 망을 기다린다 — 부른 스레드(게임 · 렌더)가 아니라 여는 백엔드 스레드에서 한다. 소스는 매니저보다 오래 산다(`AndroidMain`).
+        const auto onOpen = SW_DELEGATE_LAMBDA( AsyncFileOpenDelegate, [this, pathText = string( path )]()
+        {
+            return open( pathText );
+        } );
+        return io.openAndReadRange( onOpen, offset, size, priority, onComplete );
     }
 } // namespace sw

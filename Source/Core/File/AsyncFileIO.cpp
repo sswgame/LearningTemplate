@@ -75,6 +75,7 @@ namespace sw
 
     AsyncReadRequest::AsyncReadRequest()
         : _path{}
+        , _onOpen{}
         , _pFile{}
         , _onComplete{}
         , _result{}
@@ -305,6 +306,7 @@ namespace sw
             if ( request._onComplete.isBound() )
                 request._onComplete( request._result );
             request._onComplete = {};
+            request._onOpen     = {};
         }
         request._doneStatus.store( static_cast<uint8>( status ), std::memory_order_release );
         request._state.store( static_cast<uint8>( AsyncReadState::Done ), std::memory_order_release );
@@ -391,7 +393,8 @@ namespace sw
     {
         if ( request._pFile == nullptr )
         {
-            const AsyncFileHandle file = AsyncFileHandle::open( request._path );
+            const AsyncFileHandle file = request._onOpen.isBound() ? request._onOpen() : AsyncFileHandle::open( request._path );
+            request._onOpen            = {};
             if ( file.isValid() == false )
                 return AsyncIOStatus::FileNotFound;
             request._pFile = file.getOpenFile();
@@ -500,6 +503,7 @@ namespace sw
                 request._onComplete( request._result );
             // 콜백이 든 것(캡처한 리더 · 약속)을 요청보다 먼저 놓는다 — 핸들을 든 쪽이 오래 쥐어도 그것까지 붙들지 않는다.
             request._onComplete = {};
+            request._onOpen     = {}; // 열기 전에 취소된 요청
         }
         request._doneStatus.store( static_cast<uint8>( request._result._status ), std::memory_order_release );
         {
@@ -797,6 +801,18 @@ namespace sw
             AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::FileNotFound );
             return AsyncReadHandle( pRequest );
         }
+        return submit( pRequest );
+    }
+
+    AsyncReadHandle AsyncFileIO::openAndReadRange( const AsyncFileOpenDelegate& onOpen, uint64 offset, uint64 size, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete )
+    {
+        shared_ptr<AsyncReadRequest> pRequest = sw::make_shared<AsyncReadRequest>();
+        pRequest->_onOpen                     = onOpen;
+        pRequest->_offset                     = offset;
+        pRequest->_size                       = size;
+        pRequest->_priority                   = priority;
+        pRequest->_memoryTag                  = Memory::getCurrentMemoryTag();
+        pRequest->_onComplete                 = onComplete;
         return submit( pRequest );
     }
 
