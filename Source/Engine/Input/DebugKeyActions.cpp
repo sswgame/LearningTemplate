@@ -207,8 +207,5 @@ namespace sw
 namespace sw
 {
     // 셸 디버그 키 맵 — 호스트 루프가 프레임마다 돌리고 개발 도구 · 개발 명령이 읽는다. 맵은 처음 돌 때 만든다(기동 단계의 입력 매니저에 붙는다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugKeyActions, HostOnly, Process, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pServiceParts->_pDebugKeyActions = &scope.emplaceSubsystem<DebugKeyActions>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DebugKeyActions, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugKeyActions ) );
 } // namespace sw

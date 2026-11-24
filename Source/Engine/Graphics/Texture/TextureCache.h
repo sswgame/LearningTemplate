@@ -225,7 +225,7 @@ namespace sw
         /**
          * @brief 렌더 텍스처의 크기를 알립니다(게임 스레드, 카메라가 붙을 때). 이미 만들어진 것은 바꾸지 않습니다(다음에 새로 만들 때부터).
          * @details 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게 하는 함수입니다. 렌더러는 항상 텍스처의 실제 크기로 그립니다.
-         *          카메라(아래 층)는 엔진 범위의 `IRenderTargetDeclarationSink` 로 찾아 부른다(`EngineSubsystemSet` 이 `getRenderTargetDeclarationSink` 를 그 타입으로 건다).
+         *          카메라(아래 층)는 엔진 범위의 `IRenderTargetDeclarationSink` 로 찾아 부른다(등록 줄이 `getRenderTargetDeclarationSink` 를 그 타입으로 건다).
          */
         void declareRenderTarget( string_view relativePath, uint32 width, uint32 height );
         /** @brief `declareRenderTarget` 으로 넘기는 렌더 타깃 크기 수신 객체입니다. 수명은 이 캐시와 같습니다. */

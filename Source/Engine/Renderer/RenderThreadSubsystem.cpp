@@ -56,8 +56,8 @@ namespace sw
 {
     SW_ENGINE_SUBSYSTEM( RenderThreadSubsystem, Process, Startup, ( RHISubsystem, FrameRendererSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        if ( build._pStartupSetup->_bRenderer == false )
+        if ( build._pStartupSetup->_bDedicatedServer )
             return;
-        build._pStartupParts->_pRenderThread = &scope.emplaceSubsystem<RenderThreadSubsystem>( scope.get<RHISubsystem>(), scope.get<FrameRendererSubsystem>() );
+        (void)scope.emplaceSubsystem<RenderThreadSubsystem>( scope.get<RHISubsystem>(), scope.get<FrameRendererSubsystem>() );
     } );
 } // namespace sw

@@ -1331,8 +1331,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( InputManager, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pStartupParts->_pInputManager = &scope.emplaceSubsystem<InputManager>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( InputManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( InputManager ) );
 } // namespace sw

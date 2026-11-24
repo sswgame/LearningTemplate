@@ -1,7 +1,7 @@
 /**
  * @file Engine/Presentation/IEngineUIDriver.h
  * @brief 엔진 루프 · 모듈 관리자가 런타임 UI 를 돌리는 창구입니다 — 엔진 루프는 UI 헤더를 읽지 않고 이 창구만 부릅니다(`IEngineRenderDriver` 와 같은 모양).
- * @details 구현은 `UISystem` 이고 기동 부품(`StartupParts::_pUIDriver`)과 엔진 서비스 칸으로 건다. 전용 서버는 UI 폴더를 짓지 않아 창구가 없고 엔진은 그 단계를 건너뛴다.
+ * @details 구현은 `UISystem` 이고 기동 범위와 엔진 서비스 칸에 이 타입으로 건다. 전용 서버는 UI 폴더를 짓지 않아 창구가 없고 엔진은 그 단계를 건너뛴다.
  *          언리얼 `FSlateApplication` 의 틱을 엔진 루프가 묻지 않고 호스트가 붙이는 것과 같은 자리다(기억).
  */
 #pragma once

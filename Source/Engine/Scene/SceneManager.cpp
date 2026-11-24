@@ -1201,8 +1201,5 @@ namespace sw
 namespace sw
 {
     // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pStartupParts->_pSceneManager = &scope.emplaceSubsystem<SceneManager>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
 } // namespace sw

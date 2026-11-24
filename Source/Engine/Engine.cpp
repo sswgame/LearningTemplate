@@ -39,11 +39,14 @@
 #include "Engine/CoreServices/ContentRootSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
 #include "Engine/CoreServices/DiagnosticsSubsystem.h"
+#include "Engine/CoreServices/LoggerSubsystem.h"
 #include "Engine/CoreServices/MemoryBudgetSubsystem.h"
-#include "Engine/EngineSubsystemSet.h"
+#include "Engine/CoreServices/NamePoolSubsystem.h"
+#include "Engine/CoreServices/StaticStorageSubsystem.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -135,7 +138,7 @@ namespace sw
 
     // 길이를 나누지 않는다: 기동 순서(코어 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
     // (`hostMask` · `startupParts` · `bDedicatedServer`)이 이어 주고 단계마다 실패하면 바로 나가므로, 함수로 가르면 같은 값을 넘기는 매개변수 묶음만 늘고
-    // 순서가 호출자 한 곳에서 안 보인다. 각 단계의 일은 서브시스템 목록(`EngineSubsystemSet`)이 이미 맡았다.
+    // 순서가 호출자 한 곳에서 안 보인다. 서비스 · 기동 단계에 무엇이 서는지는 서브시스템마다 제 .cpp 의 등록 줄이 말한다(`EngineSubsystemRegistration.h`).
     bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope )
     {
         // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 라이브러리 창구 · 자동화 구동기) 아래로
@@ -146,27 +149,37 @@ namespace sw
         // 진단(CRT 누수 검사 · 메모리 태그 추적 · 누수 창)은 Debug 만 — 할당마다 추적 비용이 붙는다. ASan 구성(Ninja-Release-ASan)도 끈다: Windows ASan 은 CRT 디버그 힙을
         // 쓸 수 없고(MemoryProfiler.cpp) 힙 오용은 ASan 이 직접 잡는다(언리얼 -EnableASan 도 메모리 추적을 더하지 않는다).
         constexpr bool kDiagnostics = build::kDebug;
-        // 서브시스템 목록은 `EngineSubsystemSet.cpp` 의 한 곳이다 — 테스트 하네스 · 기동 순서 테스트도 같은 함수로 채운다.
-        engine::CoreSetup coreSetup;
-        coreSetup._argc                       = argc;
-        coreSetup._ppArgv                     = pArgv;
-        coreSetup._bDiagnostics               = kDiagnostics;
-        coreSetup._bMemoryBudget              = true;
-        const engine::CoreParts coreParts     = engine::addCoreSubsystems( _coreScope, coreSetup );
-        CrashHandlerSubsystem*  pCrashHandler = coreParts._pCrashHandler;
-        _pCommandLineSubsystem                = coreParts._pCommandLine;
-        _pMemoryBudget                        = coreParts._pMemoryBudget;
-        if ( engine::initializeCoreSubsystems( _coreScope, coreParts ) == false )
+        // 코어 범위는 호스트 값(명령줄 인자)을 서로 넘겨 만들고 수가 적어 등록 줄 없이 여기서 채운다. 안의 객체를 묶는 서비스 칸은 주인 서브시스템의 .cpp 가 등록한다(`SW_ENGINE_SERVICE`).
+        // 교착 탐지(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 진단 서브시스템이 코어 범위의 첫째라, 잠금 추적을 그보다 늦게 켜면 이미 쥔 잠금을 놓친다.
+        const bool            bDeadlockDetection = build::kShipping == false && CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
+        DiagnosticsSubsystem& diagnostics        = _coreScope.emplaceSubsystem<DiagnosticsSubsystem>( kDiagnostics, bDeadlockDetection );
+        _coreScope.emplaceSubsystem<NamePoolSubsystem>();
+        CommandLineSubsystem& commandLine = _coreScope.emplaceSubsystem<CommandLineSubsystem>( argc, pArgv );
+        _pCommandLineSubsystem            = &commandLine;
+        _coreScope.emplaceSubsystem<LoggerSubsystem>( commandLine );
+        CrashHandlerSubsystem& crashHandler = _coreScope.emplaceSubsystem<CrashHandlerSubsystem>( &commandLine );
+        ContentRootSubsystem&  contentRoot  = _coreScope.emplaceSubsystem<ContentRootSubsystem>( commandLine, crashHandler );
+        _coreScope.emplaceSubsystem<StaticStorageSubsystem>();
+        _pMemoryBudget = &_coreScope.emplaceSubsystem<MemoryBudgetSubsystem>( crashHandler );
+        // 서브시스템 안의 객체도 서비스 칸이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
+        (void)_coreScope.exposeMember( commandLine, commandLine.getCommandLine() );         // 명령줄 — 주인은 명령줄 서브시스템이다(초기화 중 조회는 그 의존을 선언해야 한다)
+        (void)_coreScope.exposeMember( commandLine, commandLine.getGlobalVariables() );     // 전역 변수 표 — 같은 주인
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetPaths() );          // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getResourceTags() );        // 리소스 조건 태그 — 같은 주인
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getResourceComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
+        (void)_coreScope.exposeMember( crashHandler, crashHandler.getHandler() );           // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
+        if ( _coreScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전일 수 있다 — 낮은 층 보고는 stderr 에 동기로 쓰고 로거가 있으면 로그에도 남긴다.
             SW_LOW_LEVEL_ERROR( "Engine core scope failed: %s", _coreScope.getCollection().getError().c_str() );
             return false;
         }
+        (void)_coreScope.bind( diagnostics.findMemoryProfiler() ); // 진단 도구를 껐으면(배포본) 없어(nullptr) 걸지 않는다 — 선택 칸이다
         // 렌더 진단 정책을 명령줄(`-gv_…`, 코어 범위의 명령줄이 막 적용했다)이 든 값으로 내보낸다 — 기동 단계(셰이더 캐시 · 렌더러 초기화)가 이 사본을 읽는다.
         RenderDiagnostics::publish();
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
         // 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
-        if ( pCrashHandler->isCrashReporterRun() )
+        if ( crashHandler.isCrashReporterRun() )
         {
             _hostRole = role;
             _headlessState.enterHeadless();
@@ -183,10 +196,10 @@ namespace sw
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
         // 서비스 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
-        coreParts._pContentRoot->getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
+        contentRoot.getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // 리소스 조건의 쿠킹 축(`ResourceTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
         // 서비스 표가 서기 전이라 태그의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
-        ResourceTags& resourceTags    = coreParts._pContentRoot->getResourceTags();
+        ResourceTags& resourceTags    = contentRoot.getResourceTags();
         const bool    bPlatformTagged = resourceTags.setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
         const bool    bTargetTagged   = resourceTags.setAxisValue( "target", bDedicatedServer ? "server" : "client" );
         if ( bPlatformTagged == false || bTargetTagged == false )
@@ -198,9 +211,11 @@ namespace sw
         {
             // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
             _services.setParentScope( &_coreScope );
-            const engine::ServiceParts serviceParts = engine::addServiceSubsystems( _services );
-            _pEventDispatcher                       = serviceParts._pEventDispatcher;
-            _pDebugKeyActions                       = serviceParts._pDebugKeyActions;
+            // 무엇을 만드는지와 만드는 법 · 먼저 만들 것은 서브시스템마다 제 .cpp 의 등록 줄이다(중앙 목록이 없다). 호스트가 직접 쓰는 것은 범위에서 타입으로 찾는다.
+            engine::EngineSubsystemBuild serviceBuild;
+            engine::EngineRegistrationList::getGlobal().buildSubsystems( engine::EngineSubsystemStage::Services, _services, serviceBuild );
+            _pEventDispatcher = _services.find<EventDispatcher>();
+            _pDebugKeyActions = _services.find<DebugKeyActions>(); // 셸 디버그 키 맵 — 엔진 종료가 입력 매니저보다 먼저 맵을 놓는다
             // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 서비스 범위에 둔다. 프로세스 범위는 범위 사슬의
             // 뿌리다: 호스트가 범위를 넘겼으면 그것, 넘기지 않은 실행(테스트 하네스)은 코어 범위가 뿌리다.
             _services.emplaceSubsystem<ModuleRegistrationHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask );
@@ -213,27 +228,28 @@ namespace sw
         }
 
         // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
-        engine::StartupParts startupParts;
         BLOCK( "기동 단계 구성" )
         {
             _startup.setParentScope( &_services );
             // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
-            engine::StartupSetup startupSetup{ _headlessState };
-            startupSetup._bDedicatedServer = bDedicatedServer;
-            startupSetup._bRenderer        = bDedicatedServer == false; // 전용 서버 역할은 창 · RHI · 렌더러를 두지 않는다(그 구성은 렌더러를 짓지도 않는다)
-            startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
+            // 전용 서버 역할은 창 · RHI · 렌더러를 두지 않는다(그 구성은 렌더러를 짓지도 않는다) — 그 공장들이 `_bDedicatedServer` 를 보고 만들지 않는다.
+            engine::StartupSetup         startupSetup{ _headlessState, bDedicatedServer };
+            engine::EngineSubsystemBuild startupBuild;
+            startupBuild._pStartupSetup = &startupSetup;
+            engine::EngineRegistrationList::getGlobal().buildSubsystems( engine::EngineSubsystemStage::Startup, _startup, startupBuild );
             // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드 · 디버그 HUD)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
             if ( _startupExtension.isBound() )
-                _startupExtension( _startup, startupParts );
+                _startupExtension( _startup );
+            // 엔진 루프가 프레임마다 쓰는 것은 범위에서 타입으로 한 번 찾아 둔다. 서지 않는 것(전용 서버의 렌더러 · 오디오 · UI 창구)은 nullptr 다.
             // 다시 읽기 알림은 엔진 루프가 받는다.
-            _pConfigManager             = startupParts._pConfigManager;
+            _pConfigManager             = &_startup.get<ConfigManager>();
             _configReloadedSubscription = _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );
-            _pInputManager              = startupParts._pInputManager;
-            _pAudioDriver               = startupParts._pAudioDriver;
-            _pSceneManager              = startupParts._pSceneManager;
-            _pFontService               = startupParts._pFontService;
-            _pUIDriver                  = startupParts._pUIDriver;
-            _pRenderDriver              = startupParts._pRenderDriver;
+            _pInputManager              = _startup.find<InputManager>();
+            _pAudioDriver               = _startup.find<IEngineAudioDriver>();
+            _pSceneManager              = _startup.find<SceneManager>();
+            _pFontService               = _startup.find<FontService>();
+            _pUIDriver                  = _startup.find<IEngineUIDriver>();
+            _pRenderDriver              = _startup.find<IEngineRenderDriver>();
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
         // 칸은 타입마다 프로세스에 하나다 — 이미 엔진이 묶였으면 서지 않는다(프로세스당 엔진 하나가 계약이다).
@@ -249,7 +265,7 @@ namespace sw
             return false;
         }
         _pQuitRequest                      = &engine::getSubsystem<QuitRequest>();
-        TelemetryService& telemetryService = *startupParts._pTelemetry;
+        TelemetryService& telemetryService = _startup.get<TelemetryService>();
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
         SubsystemTimingReport::enableTiming( _startup.getCollection() );

@@ -94,7 +94,7 @@ namespace sw
 {
     SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Process, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        if ( build._pStartupSetup->_bRenderer == false )
+        if ( build._pStartupSetup->_bDedicatedServer )
             return;
         (void)scope.emplaceSubsystem<SceneRHISubsystem>( scope.get<RHISubsystem>() );
     } );

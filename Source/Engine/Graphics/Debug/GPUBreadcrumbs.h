@@ -136,7 +136,7 @@ namespace sw
     /**
      * @class GPUBreadcrumbLog
      * @brief GPU 브레드크럼의 세션 상태입니다 — 패스 이름 표(id = 칸 번호 + 1, 한 번 올린 이름은 바뀌지 않는다), CPU 가 마지막으로 기록한 패스, 소실을 보고했는지.
-     * @details 서비스 범위의 서브시스템이다(`EngineSubsystemSet` — 렌더 타깃 목록과 같은 자리). 예전에는 파일 정적이라 엔진을 다시 세워도 이전 실행의 소실 보고 표시가 남았다.
+     * @details 서비스 범위의 서브시스템이다(등록 줄 — 렌더 타깃 목록과 같은 자리). 예전에는 파일 정적이라 엔진을 다시 세워도 이전 실행의 소실 보고 표시가 남았다.
      *          `GPUBreadcrumbs` 창구만 부른다. 언리얼 `FGPUBreadcrumbs`(RHI 가 갖는 브레드크럼 상태)와 같은 자리.
      */
     class SW_API GPUBreadcrumbLog final : public Subsystem

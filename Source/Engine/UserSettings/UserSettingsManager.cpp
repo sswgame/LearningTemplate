@@ -1251,8 +1251,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UserSettingsManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pStartupParts->_pUserSettings = &scope.emplaceSubsystem<UserSettingsManager>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UserSettingsManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UserSettingsManager ) );
 } // namespace sw

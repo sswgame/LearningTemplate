@@ -20,7 +20,6 @@
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/DevToolsClientPart.h"
 
-#include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -43,22 +42,24 @@ namespace sw
             {
             }
 
-            void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts ) override
+            void addStartupSubsystems( SubsystemScope& startup ) override
             {
                 (void)startup.emplaceSubsystem<AudioDumpBuffer>();          // `-gv_audioDumpPath` 의 쌓은 렌더
                 (void)startup.emplaceSubsystem<AutomationScratchCounter>(); // 시나리오 사본을 끝까지 만든 횟수(세대 번호)
                 // `-scenario` 실행의 사용자 데이터 뿌리를 자동화 폴더 아래로 정한다 — 호스트 서비스(게임 · 로컬 저장)가 뿌리를 읽기 전이다. 밖이면 기동을 멈춘다(종료 11).
                 (void)startup.emplaceSubsystem<AutomationUserDataIsolation>();
                 // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(렌더러를 끈 기동은 렌더 쪽이 nullptr).
-                if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
+                FrameRendererSubsystem* const pFrameRenderer = startup.find<FrameRendererSubsystem>();
+                RenderThreadSubsystem* const  pRenderThread  = startup.find<RenderThreadSubsystem>();
+                if ( pFrameRenderer != nullptr && pRenderThread != nullptr )
                 {
-                    (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
+                    (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *pFrameRenderer, *pRenderThread );
                     (void)startup.emplaceSubsystem<CrashInjectionSubsystem>(); // `-gv_crashTest` — 렌더러 뒤에 죽어 백엔드 이름까지 보고에 든다
                     (void)startup.emplaceSubsystem<StartupCaptureSubsystem>(); // `-gv_screenshot` · `-gv_screenshotQuit` — 렌더 스레드의 실행 중 요청 창구로 찍는다
                 }
                 // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
-                if ( parts._pUISystem != nullptr )
-                    (void)startup.emplaceSubsystem<DebugHUD>( *parts._pUISystem, parts._pUserSettings );
+                if ( UISystem* const pUISystem = startup.find<UISystem>() )
+                    (void)startup.emplaceSubsystem<DebugHUD>( *pUISystem, startup.find<UserSettingsManager>() );
             }
 
             void onAfterSceneTick( InputMap* pShellMap ) override

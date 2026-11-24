@@ -473,7 +473,7 @@ SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
 
 /**
  * @brief [EngineRegistrationTest] 서브시스템이 든 명령줄 · 전역 변수 표의 칸은 주인(명령줄 서브시스템)을 안다 — 빌린 칸이면 초기화 중 조회가 의존 검사를 빠져나간다
- * @details 코어 범위가 `exposeMember` 로 건다(`engine::addCoreSubsystems`). 예전 `bind` 는 주인이 비어 선언을 빠뜨린 조회가 검사를 지났고, 범위를 허문 뒤에도 칸이 매달렸다.
+ * @details 코어 범위가 `exposeMember` 로 건다(`Engine::initialize`). 예전 `bind` 는 주인이 비어 선언을 빠뜨린 조회가 검사를 지났고, 범위를 허문 뒤에도 칸이 매달렸다.
  */
 SW_TEST_CASE( EngineRegistrationTest, CommandLineSlotsKnowTheirOwner )
 {

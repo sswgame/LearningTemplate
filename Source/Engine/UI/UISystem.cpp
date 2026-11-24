@@ -1197,10 +1197,9 @@ namespace sw
     // 화면 스택 — 위의 UI 서비스가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
     SW_ENGINE_SERVICE_SUBSYSTEM( UISystem, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
-        build._pStartupParts->_pUISystem = &uiSystem;
-        build._pStartupParts->_pUIDriver = &uiSystem.getEngineUIDriver();
-        const bool bExposed              = scope.exposeMember<IInputCaptureQuery>( uiSystem, uiSystem.getInputCaptureQuery() ) && scope.exposeMember<IUILayerVisibility>( uiSystem, uiSystem.getUILayerVisibility() ) &&
+        UISystem& uiSystem = scope.emplaceSubsystem<UISystem>();
+        (void)build;
+        const bool bExposed = scope.exposeMember<IInputCaptureQuery>( uiSystem, uiSystem.getInputCaptureQuery() ) && scope.exposeMember<IUILayerVisibility>( uiSystem, uiSystem.getUILayerVisibility() ) &&
                               scope.exposeMember<IEngineUIDriver>( uiSystem, uiSystem.getEngineUIDriver() );
         SW_ASSERT( bExposed );
         (void)bExposed;

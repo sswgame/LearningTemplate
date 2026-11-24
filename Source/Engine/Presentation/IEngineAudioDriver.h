@@ -1,7 +1,7 @@
 /**
  * @file Engine/Presentation/IEngineAudioDriver.h
  * @brief 엔진 루프가 오디오를 돌리는 창구입니다 — 엔진 루프는 오디오 헤더를 읽지 않고 이 창구만 부릅니다(`IEngineUIDriver` 와 같은 모양).
- * @details 구현은 `AudioService` 이고 기동 부품(`StartupParts::_pAudioDriver`)과 엔진 서비스 칸으로 건다. 전용 서버는 오디오 폴더를 짓지 않아 창구가 없고
+ * @details 구현은 `AudioService` 이고 기동 범위와 엔진 서비스 칸에 이 타입으로 건다. 전용 서버는 오디오 폴더를 짓지 않아 창구가 없고
  *          엔진은 그 단계를 건너뛴다(언리얼 데디케이티드 서버가 오디오 장치를 만들지 않는 자리 — 기억).
  */
 #pragma once

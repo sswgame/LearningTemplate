@@ -56,7 +56,7 @@ namespace sw
         static constexpr uint32 kNoPrimitive = SceneTransformPage::kNoPrimitive;
 
         /**
-         * @brief 빈 저장소를 만듭니다. 서비스 범위가 하나 들고(`EngineSubsystemSet`), 컴포넌트 · 계층 · 렌더 수집은 `engine::getSubsystem<SceneTransformStorage>()` 로 찾는다.
+         * @brief 빈 저장소를 만듭니다. 서비스 범위가 하나 들고(등록 줄 — `EngineSubsystemRegistration.h`), 컴포넌트 · 계층 · 렌더 수집은 `engine::getSubsystem<SceneTransformStorage>()` 로 찾는다.
          * @details 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 서비스 범위는 씬(엔진 범위)보다 먼저 서고 나중에 내려가 모든 컴포넌트보다 오래 산다
          *          (언리얼 `FSceneInterface` 의 트랜스폼 버퍼가 엔진 쪽 객체에 있는 자리).
          */

@@ -19,11 +19,6 @@ namespace sw
     class InputMap;
     class SubsystemScope;
 
-    namespace engine
-    {
-        struct StartupParts;
-    } // namespace engine
-
     /** @class IDevToolsClientPart @brief 개발 도구의 클라이언트 전용 부분입니다. 게임 스레드에서 부릅니다. */
     class SW_DEVTOOLS_API IDevToolsClientPart
     {
@@ -31,7 +26,7 @@ namespace sw
         virtual ~IDevToolsClientPart() = default;
 
         /** @brief 기동 단계에 클라이언트 전용 개발 서브시스템(셰이더 라이브 리로드 · 디버그 HUD)을 더합니다. */
-        virtual void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts ) = 0;
+        virtual void addStartupSubsystems( SubsystemScope& startup ) = 0;
         /** @brief 씬 틱 뒤 · 런타임 UI 앞입니다(디버그 HUD). */
         virtual void onAfterSceneTick( InputMap* pShellMap ) = 0;
         /** @brief 프레임 끝입니다(셰이더 재컴파일 · 강제 리로드 단축키 · 시작 인자 사진). 프로세스를 끝낼 종료 코드(`-gv_screenshotQuit`)를 돌려줍니다. */

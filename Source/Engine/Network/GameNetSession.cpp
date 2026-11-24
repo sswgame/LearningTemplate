@@ -1142,6 +1142,7 @@ namespace sw
     SW_ENGINE_SERVICE_SUBSYSTEM( GameNetSession, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         // 합성 기록은 코어 범위(리소스 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
-        build._pStartupParts->_pNetSession = &scope.emplaceSubsystem<GameNetSession>( requireSubsystem<const ResourceComposition>( scope.getScope() ) );
+        (void)build;
+        (void)scope.emplaceSubsystem<GameNetSession>( requireSubsystem<const ResourceComposition>( scope.getScope() ) );
     } );
 } // namespace sw

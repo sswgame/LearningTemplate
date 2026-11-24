@@ -324,8 +324,8 @@ namespace sw
     // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
     SW_ENGINE_SUBSYSTEM( ConfigManager, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        ConfigManager& configManager          = scope.emplaceSubsystem<ConfigManager>();
-        build._pStartupParts->_pConfigManager = &configManager;
+        ConfigManager& configManager = scope.emplaceSubsystem<ConfigManager>();
+        (void)build;
         // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 칸(`engine::getSubsystem<EngineConfig>()`)은 이 자리의 주소를 묶는다.
         (void)scope.exposeMember( configManager, configManager.getHostEngineConfig() );                     // 새 범위 - 겹치지 않는다
         (void)scope.exposeMember( configManager, configManager.getHostGameConfig() );                       // 새 범위 - 겹치지 않는다

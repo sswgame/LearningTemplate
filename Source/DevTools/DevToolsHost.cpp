@@ -31,7 +31,6 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"
-#include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Input/DebugKeyActions.h"
@@ -104,10 +103,12 @@ namespace sw
         ReflectionDump::runPending(); // `-gv_dumpReflection` — 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다
     }
 
-    void DevToolsHost::addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts )
+    void DevToolsHost::addStartupSubsystems( SubsystemScope& startup )
     {
+        // 엔진이 방금 넣은 서브시스템은 범위에서 타입으로 찾는다 — 서지 않는 것(전용 서버의 렌더러)은 nullptr 다.
+        IEngineRenderDriver* const pRenderDriver = startup.find<IEngineRenderDriver>();
         // RenderDoc — 그래픽 API 를 만들 때 끼어들므로 RHI 디바이스보다 먼저 올린다(기동 단계는 아직 초기화 전이다). `-renderdoc` 이면 설치 경로에서 로드한다.
-        if ( parts._pRHI != nullptr )
+        if ( pRenderDriver != nullptr ) // 렌더 드라이버는 RHI 와 같은 조건으로 선다
         {
             const CommandLineManager* const pCommandLine = locateSubsystem<CommandLineManager>( &startup );
             RenderDocCapture::initialize( pCommandLine != nullptr && pCommandLine->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
@@ -117,19 +118,19 @@ namespace sw
         // 리로드 결과 집계 — 설정 · 셰이더 · 에디터 에셋 리로드가 결과를 적는다(`reload.status`). 리로드 주인보다 먼저 선다(셰이더 라이브 리로드는 클라이언트 부분 `IDevToolsClientPart` 가 세운다).
         (void)startup.emplaceSubsystem<ReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다.
-        if ( parts._pConfigManager != nullptr )
-            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager, _fileWatch );
+        if ( ConfigManager* const pConfigManager = startup.find<ConfigManager>() )
+            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *pConfigManager, _fileWatch );
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
-        if ( parts._pNetSession != nullptr )
+        if ( GameNetSession* const pNetSession = startup.find<GameNetSession>() )
         {
-            (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *parts._pNetSession );
-            (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *parts._pNetSession );
+            (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *pNetSession );
+            (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *pNetSession );
         }
         // 프로파일러 출력의 실행 인자(Tracy · 종료 트레이스 · 느린 프레임 캡처) — 서비스 범위의 프레임 프로파일러가 이미 섰다.
         (void)startup.emplaceSubsystem<ProfilerLaunchSubsystem>();
         // 프레임 프로파일 실행(`-gv_profileFrames` · `-gv_profileSeconds`, 부하 시나리오의 측정 창) — 프레임 끝 훅이 돌린다. GPU 메모리 표는 렌더러 창구로 묻는다(전용 서버는 없다).
-        (void)startup.emplaceSubsystem<FrameProfileSession>( parts._pRenderDriver );
+        (void)startup.emplaceSubsystem<FrameProfileSession>( pRenderDriver );
         // 메모리 스냅숏 내보내기 — 개발 명령 `memory.export` 의 워커 쓰기와 `-memory-export` 의 루프 끝 쓰기의 주인이다.
         (void)startup.emplaceSubsystem<MemoryExportSubsystem>();
         // 틱별 상태 해시 이력(`-gv_stateHashHistory`) — 이력 서비스는 서비스 범위라 이미 섰다. 초기화 때 용량을 건다(서버 디버깅 S7).
@@ -138,15 +139,15 @@ namespace sw
         (void)startup.emplaceSubsystem<ServerPoseOverlay>();
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
         // 사용자 설정 파일 자리(`-gv_userSettingsFile`)도 초기화 전에 정한다 — 초기화가 그 자리를 읽는다.
-        if ( parts._pUserSettings != nullptr )
+        if ( UserSettingsManager* const pUserSettings = startup.find<UserSettingsManager>() )
         {
-            parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
+            pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
             if ( gv_userSettingsFile.get().empty() == false )
-                parts._pUserSettings->setUserFilePath( gv_userSettingsFile.getPath() );
+                pUserSettings->setUserFilePath( gv_userSettingsFile.getPath() );
         }
         // 클라이언트 전용 부분(셰이더 라이브 리로드 · 디버그 HUD) — 전용 서버는 그 소스를 짓지 않아 창구가 없다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
-            pClientPart->addStartupSubsystems( startup, parts );
+            pClientPart->addStartupSubsystems( startup );
     }
 
     void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )

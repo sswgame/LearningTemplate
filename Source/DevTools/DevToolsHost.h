@@ -58,7 +58,7 @@ namespace sw
         ContentFolderWatchService& getContentFolderWatch() { return *_pContentFolderWatch; }
 
         /** @brief 기동 확장 — 엔진이 기동 단계 범위를 채운 뒤 · 초기화 전에 부른다(`makeStartupExtension`). */
-        void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts );
+        void addStartupSubsystems( SubsystemScope& startup );
         /** @brief 엔진 초기화에 넘길 기동 확장입니다(`Engine::setStartupExtension`). */
         EngineStartupExtensionDelegate makeStartupExtension();
         /** @brief 엔진이 선 뒤 붙일 프레임 훅(프레임 앞 · 씬 틱 뒤 · 프레임 끝)입니다(`EngineFrameHookList::add`). */

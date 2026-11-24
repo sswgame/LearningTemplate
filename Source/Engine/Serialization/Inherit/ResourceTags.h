@@ -6,7 +6,7 @@
  *          - 쿠킹 축(`platform` · `target`): 쿠커가 펼쳐 쿠킹본에 남지 않는다. 런타임도 같은 값을 들고 있어(엔진 기동이 넣는다) 남은 식도 쿠커와 같은 답을 낸다.
  *          - 로드 축(`quality` · `locale` · `region` · `layer` · `feature` · `flag`): 쿠킹본에 `_when` 이 남고 읽을 때 정한다. 값이 바뀌면 그 태그를 읽은 리소스를 다시 읽는다(`ResourceComposition`).
  *          값은 엔진에 하나다 — 공유 캐시의 열쇠가 경로뿐이라 문맥이 둘이면 같은 경로가 두 결과를 가져야 한다(`docs/agents/DataInheritance.md` 조건 절의 한계 — 몇 축만 바꿔 끼운 미리보기 합성 `ResourceContext::withTagOverride` 만 예외다). 주인은 코어 범위의 리소스 루트
- *          (`ContentRootSubsystem`)이고 엔진 코드는 `engine::getSubsystem<ResourceTags>()` 로, 서비스 표가 서기 전의 기동 코드는 `CoreParts::_pContentRoot` 로 닿는다.
+ *          (`ContentRootSubsystem`)이고 엔진 코드는 `engine::getSubsystem<ResourceTags>()` 로, 서비스 표가 서기 전의 기동 코드는 리소스 루트 서브시스템(`Engine::initialize` 의 지역값)으로 닿는다.
  *
  *          언리얼은 플랫폼 ini 층과 Device Profile(쿠킹 · 실행 때 CVar 를 고른다), Godot 은 기능 태그(`feature tag`)로 프로젝트 설정 칸을 `칸.태그` 로 덮고,
  *          유니티는 플랫폼별 임포트 설정이 쿠킹 축만 갖는다(모두 기억에 의존). 여기는 Godot 처럼 태그 집합 하나에 묻되, 언리얼처럼 쿠킹 축과 실행 축을 나눠 쿠킹 축은 쿠킹본에서 지운다.

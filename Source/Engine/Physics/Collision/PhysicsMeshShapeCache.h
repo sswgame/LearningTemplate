@@ -7,7 +7,7 @@
  *          **층.** 물리(층 6)가 그래픽스의 메시 에셋 형식(`MeshAssetFormat`, 층 4)으로 `.mesh` 를 직접 읽는다. 메시를 다시 읽거나 비우면
  *          `MeshCache` 가 엔진 범위의 `IMeshDerivedCache`(이 표의 멤버가 그 타입으로 걸린다)를 불러 이 표를 비운다 — 그래픽스는 물리를 모른다.
  *
- *          **소유.** 표는 서비스 범위의 서브시스템 `PhysicsMeshShapeTable` 이 갖고(`EngineSubsystemSet`), 창구(`PhysicsMeshShapeCache`)는 서비스 표의 칸으로 찾는다.
+ *          **소유.** 표는 서비스 범위의 서브시스템 `PhysicsMeshShapeTable` 이 갖고(등록 줄 — `EngineSubsystemRegistration.h`), 창구(`PhysicsMeshShapeCache`)는 서비스 표의 칸으로 찾는다.
  *          칸이 비면(엔진 없는 도구 · 테스트) 메시 셰이프를 만들지 않는다. 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다.
  *
  *          **스레드.** 모든 함수는 어느 스레드에서 불러도 된다(씬 로드 워커가 미리 `acquire` 해 두면 게임 스레드의 바디 생성이 파일을 읽지 않는다).

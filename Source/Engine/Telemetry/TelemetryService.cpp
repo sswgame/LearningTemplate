@@ -924,8 +924,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( TelemetryService, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pStartupParts->_pTelemetry = &scope.emplaceSubsystem<TelemetryService>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( TelemetryService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( TelemetryService ) );
 } // namespace sw

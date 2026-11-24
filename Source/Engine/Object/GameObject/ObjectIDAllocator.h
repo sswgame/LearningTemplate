@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class ObjectIDAllocator
-     * @brief 오브젝트 id(`GameObject::getObjectID`) · 컴포넌트 id(`Component::getComponentID`)의 발급기입니다(서비스 범위의 서브시스템 — `EngineSubsystemSet`).
+     * @brief 오브젝트 id(`GameObject::getObjectID`) · 컴포넌트 id(`Component::getComponentID`)의 발급기입니다(서비스 범위의 서브시스템 — 등록 줄).
      * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`) · 편집 씬에서 플레이 씬으로 복사한 오브젝트 · 세이브에서 되살린 오브젝트가 같은 id 를 유지하려면
      *          한 엔진의 매니저들이 한 공간을 나눠야 한다 — 그래서 매니저가 아니라 엔진 범위가 든다(`SceneEngineServices::_pObjectIDAllocator` 로 내려간다).
      *          예전에는 프로세스 정적 카운터였다 — 엔진을 다시 세우거나 테스트가 엔진을 여러 번 세우면 번호가 이어져, 같은 입력에서 다른 id 가 나왔다. 엔진 범위면 엔진마다

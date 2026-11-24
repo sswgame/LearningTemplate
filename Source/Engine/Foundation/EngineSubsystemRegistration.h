@@ -22,7 +22,7 @@
  *          서비스를 더하려면 헤더에 칸 선언 한 줄, 범위에 넣는 .cpp 에 등록 한 줄이다. 줄이 빠지면 그 칸을 읽는 쪽이 링크 오류이고, 필수 칸이 비면 엔진이
  *          그 이름을 대며 서지 않는다(`engine::bindEngineServices`). 클라이언트 전용 폴더(Renderer)는 Server 타깃이 짓지 않으므로 그 등록도 없다.
  *
- *          이 헤더는 엔진 바닥 층(0)이다 — 위 층의 형식은 앞으로 선언만 한다. 공장이 쓰는 범위 · 호스트 값(`ServiceParts` · `StartupSetup` · `StartupParts`)도 여기 둔다.
+ *          이 헤더는 엔진 바닥 층(0)이다 — 위 층의 형식은 앞으로 선언만 한다. 공장이 읽는 호스트 값(`StartupSetup`)도 여기 둔다.
  */
 #pragma once
 #include "Core/Container/span.h"
@@ -37,77 +37,24 @@
 
 namespace sw
 {
-    class CompressionCodecRegistry;
-    class ConfigManager;
-    class DebugKeyActions;
-    class EngineDefaultAssetsSubsystem;
-    class EventDispatcher;
-    class FontService;
-    class FrameRendererSubsystem;
-    class GameNetSession;
-    class IEngineAudioDriver;
-    class IEngineRenderDriver;
-    class InputManager;
-    class ReflectionSubsystem;
-    class RenderThreadSubsystem;
-    class RHISubsystem;
-    class SceneManager;
-    class TelemetryService;
-    class UISystem;
-    class IEngineUIDriver;
-    class UserSettingsManager;
     struct HeadlessTaskState;
 
     namespace engine
     {
-        /** @brief 서비스 범위에서 호스트가 직접 쓰는 서브시스템입니다(범위가 소유한다). */
-        struct ServiceParts
+        /** @brief 기동 단계 공장이 읽는 호스트별 값입니다(`Engine::initialize` 가 채운다). */
+        struct StartupSetup
         {
-            EventDispatcher* _pEventDispatcher{ nullptr };
-            DebugKeyActions* _pDebugKeyActions{ nullptr }; ///< 셸 디버그 키 맵 — 엔진 종료가 입력 매니저보다 먼저 맵을 놓는다
+            HeadlessTaskState& _headlessState;
+            bool               _bDedicatedServer{ SW_FALSE }; ///< 전용 서버 역할 — 창 · RHI · 렌더러 · 렌더 스레드 · 씬 디바이스 공장이 만들지 않고, 오디오는 장치를 열지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /**
-         * @brief 기동 단계 범위의 호스트별 값입니다.
-         * @details `_reflection` · `_defaultAssets` 는 본문만 다른 대역을 넘기는 자리다(하네스). 비어 있으면 엔진의 클래스를 만든다.
-         *          넘기는 쪽(하네스)이 만든 것은 그쪽 태그로 센다 — 비어 있어 공장이 만들면 공장의 태그(`EngineSubsystemRecord::_memoryTag`) 아래다. 형식은 앞으로 선언만 한다 — 값을 만들고 없애는 쪽(`EngineSubsystemSet.h` 를 include 하는
-         *          호스트)과 그 자리를 비우는 공장(그 서브시스템의 .cpp)이 완전한 형식을 본다.
+         * @brief 공장 하나가 받는 값입니다. 서비스 범위 공장은 비어 있고, 기동 단계 공장은 `_pStartupSetup` 이 채워져 있다.
+         * @details 호스트가 직접 쓰는 서브시스템을 공장이 여기에 적어 돌려주지 않는다 — 호스트는 범위에서 타입으로 찾는다(`SubsystemScope::find`). 적는 칸과 범위의 칸이 두 벌이었다.
          */
-        struct StartupSetup
-        {
-            HeadlessTaskState&                       _headlessState;
-            bool                                     _bDedicatedServer{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                     _bRenderer{ false };           ///< 창 · RHI · 렌더러 · 렌더 스레드 · 씬 디바이스를 둔다(전용 서버 역할은 끈다 — `Engine::initialize`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            unique_ptr<ReflectionSubsystem>          _reflection{};
-            unique_ptr<EngineDefaultAssetsSubsystem> _defaultAssets{};
-        };
-
-        /** @brief 기동 단계 범위에서 호스트가 직접 쓰는 서브시스템입니다(범위가 소유한다). 렌더 쪽은 `_bRenderer` 가 꺼졌거나 서버 타깃이면 nullptr 입니다. */
-        struct StartupParts
-        {
-            CompressionCodecRegistry* _pCodecRegistry{ nullptr };
-            ConfigManager*            _pConfigManager{ nullptr };
-            RHISubsystem*             _pRHI{ nullptr };
-            IEngineRenderDriver*      _pRenderDriver{ nullptr }; ///< 엔진 루프의 렌더러 창구(`EngineRenderDriver`)
-            FrameRendererSubsystem*   _pFrameRendererSubsystem{ nullptr };
-            RenderThreadSubsystem*    _pRenderThread{ nullptr };
-            InputManager*             _pInputManager{ nullptr };
-            IEngineAudioDriver*       _pAudioDriver{ nullptr }; ///< 엔진 루프의 오디오 창구(`AudioService`). 서버는 오디오를 짓지 않아 비어 있다
-            SceneManager*             _pSceneManager{ nullptr };
-            UserSettingsManager*      _pUserSettings{ nullptr };
-            FontService*              _pFontService{ nullptr };
-            TelemetryService*         _pTelemetry{ nullptr };
-            UISystem*                 _pUISystem{ nullptr };
-            IEngineUIDriver*          _pUIDriver{ nullptr }; ///< 엔진 루프의 UI 창구(`UISystem`). 서버는 UI 를 짓지 않아 비어 있다
-            GameNetSession*           _pNetSession{ nullptr };
-        };
-
-        /** @brief 공장 하나가 받는 값입니다. 서비스 범위 공장은 `_pServiceParts` 만, 기동 단계 공장은 `_pStartupSetup` · `_pStartupParts` 만 채워져 있다. */
         struct EngineSubsystemBuild
         {
-            ServiceParts* _pServiceParts{ nullptr };
             StartupSetup* _pStartupSetup{ nullptr };
-            StartupParts* _pStartupParts{ nullptr };
         };
     } // namespace engine
 } // namespace sw
@@ -333,7 +280,7 @@ namespace sw::engine
     {
         /** @brief @p pObject 를 @p scope 에 타입 @p T 로 겁니다. */
         static bool bind( SubsystemScope& scope, void* pObject ) { return scope.bind( static_cast<T*>( pObject ) ); }
-        /** @brief 인자 없이 만들어 범위에 넣습니다(호스트가 직접 쓰지 않는 서브시스템 — 가장 흔한 공장). */
+        /** @brief 인자 없이 만들어 범위에 넣습니다(가장 흔한 공장). */
         static void emplace( EngineSubsystemFactoryScope& scope, EngineSubsystemBuild& build )
         {
             (void)build;
@@ -400,6 +347,6 @@ namespace sw::engine
     SW_ENGINE_SERVICE( Type, visibility );                                                \
     SW_ENGINE_SUBSYSTEM( Type, lifetime, stage, after, Function )
 
-/** @brief 인자 없이 만들고 호스트가 직접 쓰지 않는 공장입니다(`SW_ENGINE_SUBSYSTEM` 의 @p Function 자리). */
+/** @brief 인자 없이 만드는 공장입니다(`SW_ENGINE_SUBSYSTEM` 의 @p Function 자리). */
 #define SW_ENGINE_DEFAULT_FACTORY( Type ) &::sw::engine::EngineRegistrationOps<Type>::emplace
 // NOLINTEND(bugprone-macro-parentheses)

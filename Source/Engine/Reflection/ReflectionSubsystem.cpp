@@ -44,13 +44,11 @@ namespace sw
 
 namespace sw
 {
-    // 타입 표 — 하네스가 대역을 넘기지 않았으면 엔진의 표를 만든다.
+    // 타입 표
     SW_ENGINE_SUBSYSTEM( ReflectionSubsystem, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        engine::StartupSetup& setup = *build._pStartupSetup;
-        if ( setup._reflection == nullptr )
-            setup._reflection = sw::make_unique<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() );
-        const ReflectionSubsystem& reflection = scope.addSubsystem( std::move( setup._reflection ) );
+        (void)build;
+        const ReflectionSubsystem& reflection = scope.emplaceSubsystem<ReflectionSubsystem>( sw::make_unique<TypeRegistry>() );
         (void)scope.exposeMember( reflection, reflection.getTypeRegistry() ); // 새 범위 — 겹치지 않는다
     } );
 

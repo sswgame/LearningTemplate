@@ -204,11 +204,10 @@ namespace sw
 {
     SW_ENGINE_SUBSYSTEM( FrameRendererSubsystem, Process, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        if ( build._pStartupSetup->_bRenderer == false )
+        if ( build._pStartupSetup->_bDedicatedServer )
             return;
         unique_ptr<FrameRenderer> frameRenderer          = make_unique<FrameRenderer>(); // 공장이 도는 동안 형식의 용도 태그가 걸려 있다(`EngineSubsystemRecord::_memoryTag`)
         FrameRendererSubsystem&   frameRendererSubsystem = scope.emplaceSubsystem<FrameRendererSubsystem>( std::move( frameRenderer ), scope.get<RHISubsystem>() );
-        build._pStartupParts->_pFrameRendererSubsystem   = &frameRendererSubsystem;
         (void)scope.exposeMember( frameRendererSubsystem, frameRendererSubsystem.getFrameRenderer() );      // 새 범위 — 겹치지 않는다
         (void)scope.exposeMember( frameRendererSubsystem, frameRendererSubsystem.getOffscreenRenderers() ); // 화면 밖 씬 렌더러(진단 감시 값이 수를 읽는다)
     } );

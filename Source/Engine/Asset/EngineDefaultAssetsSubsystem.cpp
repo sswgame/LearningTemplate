@@ -64,10 +64,8 @@ namespace sw
 {
     SW_ENGINE_SUBSYSTEM( EngineDefaultAssetsSubsystem, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        engine::StartupSetup& setup = *build._pStartupSetup;
-        if ( setup._defaultAssets == nullptr )
-            setup._defaultAssets = sw::make_unique<EngineDefaultAssetsSubsystem>();
-        const EngineDefaultAssetsSubsystem& defaultAssets = scope.addSubsystem( std::move( setup._defaultAssets ) );
+        (void)build;
+        const EngineDefaultAssetsSubsystem& defaultAssets = scope.emplaceSubsystem<EngineDefaultAssetsSubsystem>();
         (void)scope.exposeMember( defaultAssets, defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
     } );
 

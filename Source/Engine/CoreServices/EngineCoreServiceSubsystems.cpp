@@ -43,15 +43,12 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, GameInstance, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pServiceParts->_pEventDispatcher = &scope.emplaceSubsystem<EventDispatcher>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( EventDispatcher ) );
 
     SW_ENGINE_SERVICE_SUBSYSTEM( CompressionCodecRegistry, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        build._pStartupParts->_pCodecRegistry = &scope.emplaceSubsystem<CompressionCodecRegistry>();
-        (void)scope.emplaceSubsystem<EngineCompressionCodecs>( *build._pStartupParts->_pCodecRegistry );
+        (void)build;
+        (void)scope.emplaceSubsystem<EngineCompressionCodecs>( scope.emplaceSubsystem<CompressionCodecRegistry>() );
     } );
 
     // 워커 수는 명령줄 `-workers=N` 이 정한다(없으면 코어 수). 명령줄은 코어 범위에 있어 상위 범위로 올라가며 찾는다 — 공장 범위의 먼저 만들 타입이 아니다.

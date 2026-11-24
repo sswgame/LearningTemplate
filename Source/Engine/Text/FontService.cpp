@@ -399,8 +399,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( FontService, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
-    {
-        build._pStartupParts->_pFontService = &scope.emplaceSubsystem<FontService>();
-    } );
+    SW_ENGINE_SERVICE_SUBSYSTEM( FontService, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( FontService ) );
 } // namespace sw
