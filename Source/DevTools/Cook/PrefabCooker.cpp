@@ -8,20 +8,17 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Cook/CookReflectionFingerprint.h"
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
-#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
-    uint32 PrefabCooker::cookAll( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
+    uint32 PrefabCooker::cookAll( string_view sourceRoot, string_view cookedDir, const CookStore& store, const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -46,7 +43,7 @@ namespace sw
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
         CookStats             stats;
-        const CookJobDesc     desc = makeCookJobDesc();
+        const CookJobDesc     desc = makeCookJobDesc( reflectionFingerprint );
         for ( const string& filePath : listFile )
         {
             const string normalized = FileUtil::normalizeSeparators( filePath );
@@ -96,13 +93,13 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    CookJobDesc PrefabCooker::makeCookJobDesc()
+    CookJobDesc PrefabCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "Prefab";
         desc._codeFingerprint = CookCodeFingerprint::find( "Prefab" );
         desc._target          = "Any";
-        desc._settingsHash    = CookReflectionFingerprint::compute( engine::getSubsystem<TypeRegistry>() ); // 덮어쓰기 · 변형 합치기가 타입 표(필수 · 열쇠 칸)를 본다
+        desc._settingsHash    = reflectionFingerprint; // 덮어쓰기 · 변형 합치기가 타입 표(필수 · 열쇠 칸)를 본다
         return desc;
     }
 } // namespace sw

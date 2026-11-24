@@ -7,7 +7,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Cook/CookReflectionFingerprint.h"
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -20,7 +19,6 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -87,7 +85,8 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount )
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+                                           uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
         if ( cookedDir.empty() )
@@ -105,7 +104,7 @@ namespace sw
         VectorUtil::sort( listFile );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc();
+        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         CookStats         stats;
         for ( const string& filePath : listFile )
         {
@@ -144,13 +143,13 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    CookJobDesc SceneNavigationCooker::makeCookJobDesc()
+    CookJobDesc SceneNavigationCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "NavMesh";
         desc._codeFingerprint = CookCodeFingerprint::find( "NavMesh" );
         desc._target          = "Any";
-        desc._settingsHash    = CookReflectionFingerprint::compute( engine::getSubsystem<TypeRegistry>() ); // 베이크 설정(내비 설정 표)은 읽기로 입력에 들고, 씬을 짓는 타입 표는 여기다
+        desc._settingsHash    = reflectionFingerprint; // 베이크 설정(내비 설정 표)은 읽기로 입력에 들고, 씬을 짓는 타입 표는 여기다
         return desc;
     }
 } // namespace sw

@@ -11,7 +11,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "DevTools/Cook/CookReflectionFingerprint.h"
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -375,7 +374,7 @@ namespace sw
     }
 
     uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
-                                       uint32& outFailedCount )
+                                       const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -420,8 +419,8 @@ namespace sw
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc( registry );
-        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( registry );
+        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
+        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );
 
         // 다시 구운 씬의 시간 합과 가장 느린 씬(요약 로그). 씬은 차례로 굽는다 — 에셋 캐시와 결과가 프로세스 하나의 것이라, 나눈다면 언리얼 멀티프로세스 쿡처럼 프로세스를 가른다.
         CookStats stats;
@@ -676,24 +675,24 @@ namespace sw
         return true;
     }
 
-    CookJobDesc SceneCooker::makePreloadCookJobDesc( const TypeRegistry& registry )
+    CookJobDesc SceneCooker::makePreloadCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "ScenePreload";
         desc._codeFingerprint = CookCodeFingerprint::find( "ScenePreload" );
         desc._target          = "Any";
-        desc._settingsHash    = CookReflectionFingerprint::compute( registry ); // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
+        desc._settingsHash    = reflectionFingerprint; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
         return desc;
     }
 
-    CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )
+    CookJobDesc SceneCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
     {
         CookJobDesc desc;
         desc._cookerName      = "Scene";
         desc._codeFingerprint = CookCodeFingerprint::find( "Scene" );
         desc._target          = "Any";
         // 쿠킹된 상태는 리플렉션 표로 쓴다 — 타입 · 프로퍼티가 바뀌면 같은 XML 이라도 다시 베이크한다.
-        desc._settingsHash = CookReflectionFingerprint::compute( registry );
+        desc._settingsHash = reflectionFingerprint;
         return desc;
     }
 

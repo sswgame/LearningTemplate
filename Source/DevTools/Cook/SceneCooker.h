@@ -75,24 +75,25 @@ namespace sw
          * @return 기록한 씬 파일 수입니다. 씬마다 옆에 프리로드 목록(`<씬>.preload.json`)도 굽지만 이 수에는 세지 않는다.
          *
          * @param store 기록과 DDC 입니다. 씬마다 작업(`CookJob`) 하나로 베이크하고, 기록이 새것이면 DDC 의 출력을 다시 씁니다(`CookStore::cookFile`).
+         * @param reflectionFingerprint 쿠킹에 한 번 구한 리플렉션 지문(`CookReflectionFingerprint::compute`)입니다. 다른 쿠커도 같은 값을 받습니다.
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스 실행은 쿠킹본을 읽지 않지만(`ContentSource::Source`), 소스 트리에 낡은 `.bin` 을 남기지 않는다.
          *          프리팹은 같은 실행에서 `PrefabCooker::cookAll` 가 쿠킹합니다. 실패를 세지 않으면 배포본(또는 `-cooked-content`)이 그 씬을 열 때에야
          *          "Cooked content requires the cooked scene" 으로 멈춘다.
          *          씬 작업의 입력은 씬이 지어지며 읽은 모든 것(씬, 프리팹, 그 프리팹의 중첩 원본 …)이다. 프리팹 하나를 고치면 그것을 쓰는 씬만 다시 베이크한다.
          */
         static uint32 cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
-                                     uint32& outFailedCount );
+                                     uint64 reflectionFingerprint, uint32& outFailedCount );
 
         /**
-         * @brief 씬 쿠킹 작업의 키 값입니다. 설정 해시는 @p registry 의 지문(`CookReflectionFingerprint`)입니다(쿠킹된 상태의 바이트가 그 표로 정해진다).
+         * @brief 씬 쿠킹 작업의 키 값입니다. 설정 해시는 리플렉션 지문(`CookReflectionFingerprint`)입니다(쿠킹된 상태의 바이트가 타입 표와 기본값으로 정해진다).
          */
-        static CookJobDesc makeCookJobDesc( const TypeRegistry& registry );
+        static CookJobDesc makeCookJobDesc( uint64 reflectionFingerprint );
 
         /**
          * @brief 씬 프리로드 목록 쿠킹 작업의 키 값입니다(`ScenePreloadList`). 씬 쿠킹과 따로 도는 작업이라 키가 따로다.
-         * @details 설정 해시는 @p registry 의 지문이다 — 씬이 지어질 때 읽은 입력(씬 · 프리팹) 말고도 어느 칸이 경로인지와 기본값을 타입 표가 정한다. 형식 버전은 `ScenePreloadList::kVersion`.
+         * @details 설정 해시는 리플렉션 지문이다 — 씬이 지어질 때 읽은 입력(씬 · 프리팹) 말고도 어느 칸이 경로인지와 기본값을 타입 표가 정한다. 형식 버전은 `ScenePreloadList::kVersion`.
          */
-        static CookJobDesc makePreloadCookJobDesc( const TypeRegistry& registry );
+        static CookJobDesc makePreloadCookJobDesc( uint64 reflectionFingerprint );
     };
 
 } // namespace sw
