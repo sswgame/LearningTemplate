@@ -1574,19 +1574,14 @@ namespace
         void       initialize() override {}
         void       shutdown() override {}
 
-        void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
+        void writeEvent( const sw::LogEvent& event ) override
         {
-            (void)level;
-            (void)pTag;
-            (void)pFile;
-            (void)line;
-            (void)pID;
             ++_writeCount;
             // 가드가 없으면 아래 대입이 경고 → 이 함수 → 대입 … 으로 끝없이 돈다. 테스트가 스택을 넘기지 않도록 여기서 끊는다.
             if ( _writeCount > kMaxWriteCount )
                 return;
             sw::fixed_string<4> tiny;
-            tiny          = ( pMessage != nullptr ) ? pMessage : "";
+            tiny          = ( event._pMessage != nullptr ) ? event._pMessage : "";
             _lastTinySize = tiny.size();
         }
 

@@ -113,13 +113,13 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     LogContextEntryCapture entryCapture;
     const Subscription     subscription = logger.registerLogWrittenListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &LogContextEntryCapture::onLog, &entryCapture ) );
 
-    logger.writeLog( LogLevel::Info, "Test", "plain line", __FILE__, __LINE__ );
+    logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "plain line", __FILE__, __LINE__ } );
     LogContext context;
     context._traceID     = LogTraceID{ 0x0123456789abcdefull, 0x1 };
     context._principalID = 0x42;
     {
         ScopedLogContext scope( context );
-        logger.writeLog( LogLevel::Info, "Test", "context line", __FILE__, __LINE__ );
+        logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "context line", __FILE__, __LINE__ } );
     }
     logger.shutdown();
 
@@ -130,9 +130,9 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     SW_EXPECT_TRUE_MSG( tagged.find( "[Test] [Info] [trace=0123456789abcdef0000000000000001 acct=0000000000000042] - context line\n" ) != string::npos,
                         tagged.c_str() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( entryCapture._listEntry.size() ) );
-    SW_EXPECT_TRUE( entryCapture._listEntry[0]._context.isEmpty() );
-    SW_EXPECT_TRUE( entryCapture._listEntry[1]._context._traceID == context._traceID );
-    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._context._principalID, uint64( 0x42 ) );
+    SW_EXPECT_TRUE( entryCapture._listEntry[0]._stamp._context.isEmpty() );
+    SW_EXPECT_TRUE( entryCapture._listEntry[1]._stamp._context._traceID == context._traceID );
+    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._stamp._context._principalID, uint64( 0x42 ) );
 }
 
 /**
@@ -151,7 +151,7 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     SW_EXPECT_FALSE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_EQUAL( tickNumber, uint64( 0 ) );
     Logger::setClockNumber( LogClock::Tick, 0 ); // 0 도 꼬리표가 붙는다 — 첫 틱
-    logger.writeLog( LogLevel::Info, "Test", "first tick", __FILE__, __LINE__ );
+    logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "first tick", __FILE__, __LINE__ } );
     Logger::setClockNumber( LogClock::Tick, 1234 );
     SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_TRUE( clock == LogClock::Tick );
@@ -160,16 +160,16 @@ SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
     context._principalID = 0x42;
     {
         ScopedLogContext scope( context );
-        logger.writeLog( LogLevel::Info, "Test", "tick and context", __FILE__, __LINE__ );
+        logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "tick and context", __FILE__, __LINE__ } );
     }
     // 리슨 호스트(App)는 고정 틱이 없어 프레임 번호를 "frame" 으로 적는다(결정 기록 5-12 `D7-3.6`).
     Logger::setClockNumber( LogClock::Frame, 77 );
     SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
     SW_EXPECT_TRUE( clock == LogClock::Frame );
     SW_EXPECT_EQUAL( tickNumber, uint64( 77 ) );
-    logger.writeLog( LogLevel::Info, "Test", "listen frame", __FILE__, __LINE__ );
+    logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "listen frame", __FILE__, __LINE__ } );
     Logger::clearClockNumber();
-    logger.writeLog( LogLevel::Info, "Test", "cleared", __FILE__, __LINE__ );
+    logger.writeEvent( LogEvent{ LogLevel::Info, "Test", "cleared", __FILE__, __LINE__ } );
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( pCapture->_listFormatted.size() ) );

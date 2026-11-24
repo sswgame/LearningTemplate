@@ -1,6 +1,6 @@
 /**
  * @file LogTypes.h
- * @brief 로그 한 줄을 나타내는 값 타입들입니다(`LogLevel` · `LogEntry` · `LogRecord`).
+ * @brief 로그 한 줄을 나타내는 값 타입들입니다(`LogLevel` · `LogEvent` · `LogEntry` · `LogRecord`).
  *
  * `Logger`(파사드)와 `ILogOutput`(출력 장치)이 **둘 다** 이 타입들을 쓰므로 따로 둡니다. 한쪽 헤더에 두면 장치 헤더가
  * 파사드를 include 하게 되어 의존 방향이 뒤집힙니다. `Logger.h` 가 이 헤더를 include 합니다.
@@ -12,11 +12,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) LogLevel / LogEntry / LogRecord — 심각도 · 한 줄 기록 · 비동기 큐 레코드
+    // 1) LogLevel / LogEvent / LogEntry / LogRecord — 심각도 · 남긴 순간의 사건 · 리스너가 받는 줄 · 비동기 큐 레코드
     // ------------------------------------------------------------------------------
     /**
      * @enum LogLevel
@@ -53,14 +54,69 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 줄을 남긴 순간의 시각 · 순번 · 시계 · 스레드 · 문맥입니다. 재는 곳은 `LogEvent` 의 생성자 하나다(`captureNow` 는 비공개).
+     * @details 미룬 줄(`ScopedDeferredLog`) · 싱크 앞의 backlog · 비동기 큐가 모두 이 값을 나른다 — 쓰는 순간에 다시 재면 늦게 쓴 줄의 시각 · 프레임이 틀린다.
+     *          spdlog `log_msg`(시각 · 스레드를 부른 자리에서 담는다) · 언리얼 `FOutputDevice::Serialize` 의 `Time` 인자와 같은 자리다.
+     */
+    struct SW_API LogStamp
+    {
+        friend struct LogEvent;
+
+        UnixMilliseconds _time{ 0 };     ///< UTC 벽시계
+        uint64           _sequence{ 0 }; ///< 프로세스에서 줄을 남긴 순서(1 부터). 시각이 같거나 벽시계가 거꾸로 가도 스레드 사이의 앞뒤를 가른다
+        uint64           _clockNumber{ 0 };
+        LogContext       _context{};     ///< 남긴 스레드의 로그 문맥(요청 추적 id · 주체)
+        uint32           _threadID{ 0 }; ///< 남긴 스레드의 번호(이 프로세스에서 처음 로그를 남긴 순서, 1 부터)
+        LogClock         _clock{ LogClock::Tick };
+        bool             _bHasClock{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+        /** @brief 다음에 남길 줄이 받을 순번입니다. 이 순간을 경계로 앞뒤 줄을 가를 때 쓴다(자동화의 프레임 시작). */
+        static uint64 getNextSequence();
+
+    private:
+        static LogStamp captureNow();
+    };
+
+    /**
+     * @brief 로그 사건 하나입니다. 남기는 순간에 만들어지고, 싱크는 이 값을 쓰기만 합니다(`ILogSink::writeEvent`).
+     * @details 글은 빌린다 — 태그 · 파일 · id 는 글자 상수, 본문은 부르는 동안만 산다. 나중에 쓸 줄은 본문을 따로 들고 `withMessage` 로 잇는다(시각 · 순번은 그대로).
+     */
+    struct SW_API LogEvent
+    {
+        LogStamp    _stamp{};
+        const utf8* _pTag{ nullptr };
+        const utf8* _pMessage{ nullptr };
+        const utf8* _pFile{ nullptr };
+        const utf8* _pID{ nullptr }; ///< 줄의 종류 id(`SW_LOG_ERROR_ID`)의 정적 글자. 없으면 nullptr
+        int32       _line{ 0 };
+        LogLevel    _level{ LogLevel::Info };
+
+        /** @brief 빈 칸입니다(고정 배열의 자리). 줄이 아니다 — 순번이 0 이다. */
+        constexpr LogEvent() noexcept = default;
+        /** @brief 지금 이 스레드가 남기는 줄입니다. 시각 · 순번 · 시계 · 스레드 · 문맥을 여기서 정합니다. */
+        LogEvent( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID = nullptr );
+
+        /** @brief 본문 포인터만 바꾼 같은 사건입니다. */
+        [[nodiscard]] LogEvent withMessage( const utf8* pMessage ) const
+        {
+            LogEvent event  = *this;
+            event._pMessage = pMessage;
+            return event;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 싱크 · 리스너에 넘기는 로그 한 줄입니다. */
     struct LogEntry
     {
         string      _tag;
         string      _message;
         string      _file;
-        string      _timeStamp;
-        LogContext  _context{};      ///< 줄을 쓴 스레드의 로그 문맥(요청 추적 id · 주체) — 리스너가 줄을 거를 수 있게
+        string      _timeStamp;      ///< `_stamp._time` 의 지역 시각 글
+        LogStamp    _stamp{};        ///< 줄을 남긴 순간(시각 · 순번 · 시계 · 스레드 · 문맥) — 리스너가 줄을 거르고 순서를 견준다
         const utf8* _pID{ nullptr }; ///< 줄의 종류 id(`SW_LOG_ERROR_ID`)의 정적 글자. id 없이 남긴 줄은 nullptr — 문구가 바뀌어도 같은 사건을 가리킨다
         int32       _line{ 0 };
         LogLevel    _level = LogLevel::Info;
@@ -128,7 +184,7 @@ namespace sw
 
     /**
      * @brief 비동기 lock-free 큐로 보내는 로그 레코드입니다. **출력 장치에 필요한 것이 모두** 들어 있습니다.
-     * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.
+     * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 남긴 순간의 시각(`LogStamp::_time`)이고 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.
      *          콘솔은 `_level` 로 색만 고릅니다.
      */
     struct LogRecord

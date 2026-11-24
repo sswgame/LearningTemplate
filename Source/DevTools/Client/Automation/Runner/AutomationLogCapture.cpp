@@ -45,7 +45,7 @@ namespace sw
         : _mutex{}
         , _listLogLine{}
         , _listenerSubscription{}
-        , _frameIndex{ 0 }
+        , _listFrameStart{}
         , _warningErrorCount{ 0 }
     {
     }
@@ -65,6 +65,13 @@ namespace sw
     void AutomationLogCapture::stop()
     {
         _listenerSubscription.reset();
+    }
+
+    void AutomationLogCapture::setFrameIndex( uint32 frameIndex )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _listFrameStart.empty() || _listFrameStart.back()._frameIndex != frameIndex )
+            _listFrameStart.push_back( FrameStart{ LogStamp::getNextSequence(), frameIndex } );
     }
 
     uint32 AutomationLogCapture::countLinesWithID( const string& id, const string& contains, uint32 sinceFrame ) const
@@ -98,6 +105,18 @@ namespace sw
         { return string_view( line._message ).find( needle ) != string_view::npos; } );
     }
 
+    uint32 AutomationLogCapture::findFrameIndex( uint64 sequence ) const
+    {
+        // 거의 모든 줄이 마지막 프레임의 것이라 뒤에서부터 본다.
+        for ( size_t index = _listFrameStart.size(); index > 0; --index )
+        {
+            const FrameStart& start = _listFrameStart[index - 1];
+            if ( start._firstSequence <= sequence )
+                return start._frameIndex;
+        }
+        return 0;
+    }
+
     void AutomationLogCapture::onLogWritten( const LogEntry& entry )
     {
         // 실행기 자신의 줄([Scenario])은 세지 않는다. 실패 줄이 단언 문구를 반복해 ExpectLog 를 맞추지 않게 하기 위해서다.
@@ -115,7 +134,7 @@ namespace sw
         line._message    = entry._message;
         line._id         = entry._pID != nullptr ? entry._pID : "";
         line._level      = entry._level;
-        line._frameIndex = _frameIndex.load( std::memory_order_relaxed );
+        line._frameIndex = findFrameIndex( entry._stamp._sequence );
         _listLogLine.push_back( std::move( line ) );
     }
 } // namespace sw

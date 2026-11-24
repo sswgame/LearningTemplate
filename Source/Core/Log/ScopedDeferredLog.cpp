@@ -28,11 +28,11 @@ namespace sw
         writeLines();
     }
 
-    bool ScopedDeferredLog::tryDefer( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
+    bool ScopedDeferredLog::tryDefer( const LogEvent& event )
     {
         if ( t_pDeferredLog == nullptr )
             return false;
-        t_pDeferredLog->_listLine.push_back( Line{ level, pTag, pFile, pID, line, string( pMessage != nullptr ? pMessage : "" ) } );
+        t_pDeferredLog->_listLine.push_back( Line{ event, string( event._pMessage != nullptr ? event._pMessage : "" ) } );
         return true;
     }
 
@@ -50,7 +50,7 @@ namespace sw
     {
         for ( const Line& deferred : _listLine )
         {
-            Logger::writeLogGlobal( deferred._level, deferred._pTag, deferred._message.c_str(), deferred._pFile, deferred._line, deferred._pID );
+            Logger::writeEventGlobal( deferred._event.withMessage( deferred._message.c_str() ) );
         }
         _listLine.clear();
     }
