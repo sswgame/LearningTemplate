@@ -1417,6 +1417,7 @@
 		<entry key="EdCommon.SaveRefusedTitle" source="Save refused">
 			<origins>
 				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
+				<item>Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ScaleSnap" source="Scale snap: scaling jumps in steps of the value on the right.">
