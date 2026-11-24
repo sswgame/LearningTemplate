@@ -413,6 +413,10 @@ namespace sw
         _currentRegion    = hashed_string{};
         _pendingEncounter = hashed_string{};
         _encounterRegion  = hashed_string{};
+        // 앞 판이 이번 프레임에 쌓은 자동 저장 알림은 되돌린 판의 것이 아니다.
+        _pendingArea       = hashed_string{};
+        _pendingBoss       = hashed_string{};
+        _pendingCheckpoint = hashed_string{};
         if ( const AdventureRegionCatalog* const pRegions = findRegions() )
             reconcileWithRegions( *pRegions );
     }

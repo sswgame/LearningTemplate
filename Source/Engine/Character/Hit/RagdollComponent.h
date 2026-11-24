@@ -31,6 +31,7 @@
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -95,6 +96,14 @@ namespace sw
          * @details 바디가 있으면 물리 에셋을 다시 읽어 다음 물리 프레임이 바디째 다시 세운다 — 절단이 뗀 바디 · 지운 관절(`detachBoneBodies`)이 돌아온다. 바디를 세우기 전(갓 스폰)이면 바꿀 것이 없다.
          */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+
+        /**
+         * @brief 쓰러진 상태(`RagdollState::Ragdoll`)만 싣습니다 — 쓰러질 때 끈 컨트롤러는 그대로 실리므로, 이것이 없으면 불러온 몸이 움직이지 못한 채 서 있다.
+         * @details 누운 자세는 싣지 않는다 — 되돌린 몸은 그 자리에서 다시 쓰러진다. 부분 래그돌 · 반응 · 기상은 잠깐의 섞임이라 애니메이션으로 시작한다.
+         */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. */
+        void restoreState( vector<uint8>&& bytes );
 
         /** @brief 물리 에셋 경로를 바꿉니다(바디를 다시 만듭니다). */
         void          setPhysicsAssetPath( string_view path );

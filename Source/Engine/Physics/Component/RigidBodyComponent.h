@@ -18,6 +18,7 @@
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Physics/Scene/SocketPhysicsBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -138,6 +139,10 @@ namespace sw
         ISocketPhysicsBody& getSocketPhysicsBody() { return _socketPhysics; }
         /** @brief 상태 해시에 트랜스폼과 선속도 · 각속도를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
+        /** @brief 움직이는 동적 바디의 선속도 · 각속도입니다(언리얼 `FRepMovement` 자리 — 자세는 트랜스폼이 싣는다). 멈춘 바디 · 정적 · 키네마틱은 쓰는 것이 없다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. 바디가 서는 물리 프레임에 듭니다. */
+        void restoreState( vector<uint8>&& bytes );
         /** @brief 셰이프를 덮는 월드 상자입니다 — 메시 없이 충돌만 있는 바닥 · 벽도 자기 크기만큼 스트리밍된다. 메시 에셋에서 점을 채우는 셰이프(`_meshPath`)는 잴 점이 없어 뺀다(그 메시를 그리는 컴포넌트가 낸다). */
         bool computeStreamingBounds( AABB& outBox ) const override;
 

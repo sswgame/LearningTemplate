@@ -10,6 +10,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -60,6 +61,11 @@ namespace sw
         [[nodiscard]] bool giveTo( const GameObject& target );
 
         const InventorySlot& getItem() const { return _item; }
+
+        /** @brief 든 조각의 개체 상태(내구도 · 꾸미기 · 뗀 부품)까지입니다(`Inventory::serializeSlot`). id · 수만 실리면 주운 물건이 새것이 된다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. 읽지 못하면 씬 데이터의 조각으로 둡니다. */
+        void restoreState( vector<uint8>&& bytes );
 
     private:
         /** @brief 닿은 몸이 줍습니다(`_bPickUpOnTouch`, 받을 가방이 있는 몸만). */

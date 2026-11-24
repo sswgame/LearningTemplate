@@ -6,6 +6,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 using namespace sw;
 
@@ -35,4 +36,25 @@ SW_TEST_CASE( RagdollSpawnStateResetTest, CollapsedRagdollReturnsToSpawnState )
     SW_EXPECT_EQUAL( pFresh->isAsleep(), pRagdoll->isAsleep() );
     SW_EXPECT_NEAR( pFresh->getBodyWeight( 0 ), pRagdoll->getBodyWeight( 0 ), 1.0e-6f );
     SW_EXPECT_EQUAL( pFresh->isBodyDynamic( 0 ), pRagdoll->isBodyDynamic( 0 ) );
+}
+
+/** @brief [RagdollSpawnStateResetTest] 쓰러진 상태는 코덱이 싣고 서 있는 몸은 쓰는 것이 없다 — 되돌린 몸은 다시 쓰러져 있다 */
+SW_TEST_CASE( RagdollSpawnStateResetTest, CollapsedStateTravelsThroughTheCodec )
+{
+    GameObjectManager manager;
+    RagdollComponent* pDead    = manager.createGameObject( hashed_string( "Dead" ) )->addComponent<RagdollComponent>();
+    RagdollComponent* pRebuilt = manager.createGameObject( hashed_string( "Rebuilt" ) )->addComponent<RagdollComponent>();
+    SW_REQUIRE_TRUE( pDead != nullptr && pRebuilt != nullptr );
+    Archive standing;
+    pDead->writeState( standing );
+    SW_EXPECT_EQUAL( uint64{ 0 }, static_cast<uint64>( standing.getSize() ) );
+
+    pDead->startRagdoll( float3{}, nullopt );
+    Archive collapsed;
+    pDead->writeState( collapsed );
+    vector<uint8> bytes;
+    collapsed.writeData( bytes );
+    SW_REQUIRE_FALSE( bytes.empty() );
+    pRebuilt->restoreState( std::move( bytes ) );
+    SW_EXPECT_TRUE( pRebuilt->getState() == RagdollState::Ragdoll );
 }

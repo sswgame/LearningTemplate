@@ -49,6 +49,7 @@
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Physics/Scene/DebrisBudget.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -153,6 +154,17 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
 
         void onBeginPlay() override;
+
+        /**
+         * @brief 부서진 상태(`makeNetworkSnapshot` — 끊김 · 쌓인 변형 · 떨어진 그룹의 자세)입니다. 맞은 적이 없으면 빈 바이트입니다(데이터에서 다시 시작한다).
+         * @details 온전한 메시와 강체는 쪼갤 때 꺼져 그대로 실리므로, 이 상태가 없으면 불러온 벽이 조각도 메시도 없이 사라진다. 떨어진 그룹의 속도 · 나이는 싣지 않는다(조각은 그 자리에서 다시 쉰다).
+         */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. 상태를 시작하기 전이면 쌓였다가 시작하는 물리 프레임에 적용됩니다. */
+        void restoreState( vector<uint8>&& bytes );
+        /** @brief 되돌렸지만 아직 적용하지 않은 바이트입니다. 그 동안은 이것이 곧 상태입니다. */
+        const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
+
         /** @brief 쪼갤 때의 자세와 그룹 자세를 옮깁니다(바디는 물리 씬이 옮긴다). */
         void onWorldOriginShifted( const float3& delta ) override;
 
@@ -374,6 +386,7 @@ namespace sw
         DestructionEventLog                    _eventLog;
         vector<optional<FractureGroupPose>>    _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다(없으면 비어 있다).
         FractureNetworkSync                    _networkSync;        ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
+        vector<uint8>                          _pendingStateBytes;  ///< 되돌렸지만 아직 적용하지 않은 상태(`restoreState`)
         LockedSwapQueue<FracturePendingDamage> _pendingDamage;      ///< 맞은 사건(물리 콜백 · 네트워크가 쌓고 틱이 가져간다)
         vector<PhysicsBodyHandle>              _listLeafStaticBody; ///< 잎마다 정적 바디다(앵커 그룹의 잎만).
         vector<FractureGroupRuntime>           _listRuntime;        ///< 그룹 번호 오름차순이다.

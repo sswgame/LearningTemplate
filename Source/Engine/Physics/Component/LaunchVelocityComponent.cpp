@@ -15,16 +15,15 @@ namespace sw
         : _speed{ 0.0f }
         , _localDirection{ 0.0f, 0.0f, 1.0f }
         , _alignGain{ 0.0f }
-        , _bLaunched{ SW_FALSE }
+        , _bLaunched{ false }
         , _bPending{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     void LaunchVelocityComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        _bPending = _bLaunched == SW_FALSE ? SW_TRUE : SW_FALSE;
+        _bPending = _bLaunched ? SW_FALSE : SW_TRUE;
     }
 
     void LaunchVelocityComponent::onTick( TickContext& context )
@@ -55,14 +54,14 @@ namespace sw
         const float3 worldDirection = float3::transformVector( _localDirection / length, pRoot->getWorldMatrix() );
         const float3 velocity       = worldDirection * ( _speed / MathUtil::max( worldDirection.getLength(), MathUtil::kEpsilon ) );
         pBody->setLinearVelocity( velocity );
-        _bLaunched = SW_TRUE;
+        _bLaunched = true;
     }
 
     void LaunchVelocityComponent::steerTowardVelocity()
     {
         // 날린 뒤에만, 정렬을 켠 것만 한다. 속도가 거의 없으면(박히거나 멈춘 화살) 방향이 정해지지 않으므로 건드리지 않는다.
         constexpr float32 kMinAlignSpeed = 0.5f;
-        if ( _bLaunched == SW_FALSE || _alignGain <= 0.0f )
+        if ( _bLaunched == false || _alignGain <= 0.0f )
             return;
         GameObject*           pOwner        = getOwner();
         RigidBodyComponent*   pBody         = pOwner != nullptr ? pOwner->getComponent<RigidBodyComponent>() : nullptr;

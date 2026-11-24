@@ -80,5 +80,6 @@ namespace sw
     {
         vector<DestructionDamageEvent> _listEvent;
         uint64                         _seed{ 0 };
+        uint32                         _firstEvent{ 0 }; ///< 기록 첫 사건의 상태 번호다 — 떠 둔 상태에서 이어 가면 그 앞 사건은 기록에 없다(상태 스냅샷이 대신한다)
     };
 } // namespace sw

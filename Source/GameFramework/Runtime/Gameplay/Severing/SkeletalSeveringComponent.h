@@ -33,8 +33,12 @@
 
 namespace sw
 {
+    struct MeshSkinVertex;
+    struct RHIVertex;
+
     class CharacterSurfaceState;
     class Mesh;
+    class SkeletalMeshComponent;
     class ValidationContext;
 } // namespace sw
 
@@ -54,6 +58,8 @@ namespace sw
         virtual ~SkeletalSeveringComponent() override = default;
 
         void onBeginPlay() override;
+        /** @brief 되돌린 잘린 영역(`_listSeveredRegion`)이 있으면 몸 메시가 서는 대로 다시 자릅니다(조각은 다시 떨어뜨리지 않는다). 그 뒤로는 할 일이 없습니다. */
+        void onTick( TickContext& context ) override;
         /** @brief 떨어뜨린 조각을 지웁니다. 조각은 몸(시체)과 함께 사라진다 — 적을 걷는 게임(웨이브)에서 조각이 쌓이지 않는다(언리얼 고어 조각의 수명을 시체에 묶는 자리). */
         void onEndPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
@@ -97,6 +103,12 @@ namespace sw
         /** @brief 치명적 맞음(`HitInfo::_bFatal`, `GameObjectEvents::_hitReceived`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
         void handleHit( const HitInfo& hit );
         void loadRegionTable();
+        /** @brief 영역 @p regionIndex 를 유닛 메시에서 빼고 캡을 붙입니다. 떨어진 조각의 정점(유닛 공간, 스킨)은 @p outListPieceVertex · @p outListPieceSkin 에 담는다. 자를 삼각형이 없으면 false 입니다. */
+        [[nodiscard]] bool cutBodyMesh( SkeletalMeshComponent& unit, uint32 regionIndex, vector<RHIVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin );
+        /** @brief 자른 영역의 래그돌 바디를 끄고 표면 상태에 피를 올립니다. */
+        void applySeveredRegion( uint32 regionIndex );
+        /** @brief 되돌린 영역들을 몸 메시에서 다시 자릅니다(틱 밖). */
+        void restoreSeveredRegions();
         /** @brief 떨어뜨린 조각 오브젝트를 모두 지웁니다. */
         void destroyPieces();
         /** @brief 영역 표의 영역들입니다. 표를 받지 못했으면 빈 목록입니다. */
@@ -114,12 +126,13 @@ namespace sw
         hashed_string _severedSurfaceChannel;
         PROPERTY( Category = "Severing", DisplayName = "Piece Mass", Min = 0.1, Units = kg )
         float32 _pieceMass;
+        PROPERTY( RuntimeState, Category = "Severing", DisplayName = "Severed Regions", Tooltip = "Runtime: regions already cut off, in order" )
+        vector<hashed_string> _listSeveredRegion;
 
         SharedAssetRef<FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
-        vector<hashed_string>     _listSeveredRegion;
         vector<GameObjectHandle>  _listPiece;
         Subscription              _hitSubscription; ///< 맞음 사건 구독(`handleHit`)
-        shared_ptr<Mesh>          _pIntactMesh;     ///< 처음 자르기 전의 몸 메시(자른 적이 없으면 nullptr) — 풀 반환이 다시 건다
+        shared_ptr<Mesh>          _pIntactMesh;     ///< 처음 자르기 전의 몸 메시(자른 적이 없으면 nullptr — 잘린 영역이 있는데 이것이 없으면 되돌린 영역을 아직 자르지 않았다) — 풀 반환이 다시 건다
         bool                      _bTableLoaded;
     };
 } // namespace sw
