@@ -10,6 +10,8 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -20,6 +22,16 @@ namespace sw
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "CQGM" );
             static constexpr uint32 kStateVersion = 1;
+
+            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
+            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
+            {
+                uint8 bResultShown     = 0;
+                uint8 bFinishRequested = 0;
+                inOldBody >> bResultShown >> bFinishRequested;
+                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
+                return inOldBody.isOk();
+            }
 
             static constexpr const utf8* kWinResult     = "win";
             static constexpr const utf8* kLoseResult    = "lose";
@@ -111,9 +123,6 @@ namespace sw
         , _eventLease{}
         , _listEvent{}
         , _resultHold{}
-        , _bResultShown{ SW_FALSE }
-        , _bFinishRequested{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
@@ -242,7 +251,7 @@ namespace sw
 
     void ConquestGameModeComponent::updateGame( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _bFinishRequested == SW_TRUE )
+        if ( deltaTime <= 0.0f )
             return;
         const bool bOver = _world.isVictory() || _world.isDefeat();
         if ( bOver == false && isAutoPlayOn() )
@@ -251,15 +260,13 @@ namespace sw
         reportEvents();
         if ( _world.isVictory() == false && _world.isDefeat() == false )
             return;
-        if ( _bResultShown == SW_FALSE )
+        if ( bOver == false )
         {
-            _bResultShown = SW_TRUE;
-            _resultHold.start( _resultHoldSeconds );
+            _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
             return;
         }
-        if ( _resultHold.update( deltaTime ) == false )
+        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
             return;
-        _bFinishRequested = SW_TRUE;
         (void)finishMinigame( hashed_string( _world.isVictory() ? ConquestGameModeComponentInternal::kWinResult : ConquestGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
     }
 
@@ -294,4 +301,9 @@ namespace sw
         _world      = std::move( restoredWorld );
         _resultHold = resultHold;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_TYPE_VERSION_PATCH( conquestGameModeState1To2, "sw::ConquestGameModeComponent", 1, 2, &ConquestGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

@@ -42,7 +42,7 @@ namespace sw
      * @class PartyGameModeComponent
      * @brief 라운드 열기 → 겨루기 → 순위 점수 → 다음 라운드 → 우승을 진행합니다.
      */
-    REFLECT( Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
+    REFLECT( Version = 2, Category = "PartyArena", DisplayName = "Party Game Mode", Tooltip = "Runs one PartyArena round series on the trampoline arena: the player from input commands, the rivals by bots" )
     class SW_KIT_API PartyGameModeComponent : public GameModeComponent
     {
     public:
@@ -129,8 +129,5 @@ namespace sw
         int32 _winner;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _playerRingOutCount; ///< 사람이 떨어진 수(모든 라운드)
-        PROPERTY( RuntimeState )
-        uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
-        [[maybe_unused]] uint8 _reserved         : 7;
     };
 } // namespace sw

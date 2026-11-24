@@ -35,7 +35,7 @@ namespace sw
      * @class KartGameModeComponent
      * @brief 출발 격자 → 카운트다운 → 바퀴 → 결승 순위 → 결과를 진행합니다.
      */
-    REFLECT( Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
+    REFLECT( Version = 2, Category = "KartRacing", DisplayName = "Kart Race Game Mode", Tooltip = "Runs one KartRacing race: the player kart from driver commands, the rivals by the kart AI, to the finish places" )
     class SW_KIT_API KartGameModeComponent : public GameModeComponent
     {
     public:
@@ -114,10 +114,5 @@ namespace sw
         KartRace                                 _race;
         vector<KartRaceEvent>                    _listEvent;
         Countdown                                _resultHold; ///< 순위가 정해진 뒤 결과를 보이는 시간
-        PROPERTY( RuntimeState )
-        uint8 _bResultShown : 1; ///< 결과 보이기를 시작했다
-        PROPERTY( RuntimeState )
-        uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
-        [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw

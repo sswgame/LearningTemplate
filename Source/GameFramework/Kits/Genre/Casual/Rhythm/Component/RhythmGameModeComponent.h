@@ -57,7 +57,7 @@ namespace sw
      * @class RhythmGameModeComponent
      * @brief 곡 열기 → 판정 → 깸(또는 실패) → 결과를 진행합니다.
      */
-    REFLECT( Category = "Rhythm", DisplayName = "Rhythm Game Mode", Tooltip = "Runs one Rhythm song: song time and lane presses arrive as commands, judged to a clear or a failure" )
+    REFLECT( Version = 2, Category = "Rhythm", DisplayName = "Rhythm Game Mode", Tooltip = "Runs one Rhythm song: song time and lane presses arrive as commands, judged to a clear or a failure" )
     class SW_KIT_API RhythmGameModeComponent : public GameModeComponent
     {
     public:
@@ -130,10 +130,5 @@ namespace sw
         Countdown                   _resultHold;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _musicTime; ///< 지금 곡 시각(초)
-        PROPERTY( RuntimeState )
-        uint8 _bResultShown : 1; ///< 결과 보이기를 시작했다
-        PROPERTY( RuntimeState )
-        uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
-        [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw

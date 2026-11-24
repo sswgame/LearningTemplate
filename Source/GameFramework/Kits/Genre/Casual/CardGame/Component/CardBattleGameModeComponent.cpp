@@ -7,6 +7,8 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -17,6 +19,16 @@ namespace sw
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "CBGM" );
             static constexpr uint32 kStateVersion = 1;
+
+            /** @brief 상태 칸 판 1 → 2: 결과 유지 깃발을 뺀다 — 끝난 걸음에 `Countdown` 을 걸고 다 된 걸음에 한 번 끝내는 길은 깃발 없이 선다(다른 디렉터와 같은 꼴). */
+            [[nodiscard]] static bool dropHoldFlags( Archive& inOldBody, Archive& outNewBody )
+            {
+                uint8 bResultShown     = 0;
+                uint8 bFinishRequested = 0;
+                inOldBody >> bResultShown >> bFinishRequested;
+                (void)outNewBody; // 남은 칸이 없다 — 읽지 않은 꼬리(손 본문)는 그대로 붙는다
+                return inOldBody.isOk();
+            }
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
@@ -53,9 +65,6 @@ namespace sw
         , _pCatalog{}
         , _battle{}
         , _timer{}
-        , _bResultShown{ SW_FALSE }
-        , _bFinishRequested{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
@@ -180,9 +189,9 @@ namespace sw
 
     void CardBattleGameModeComponent::settle()
     {
-        if ( _battle.getPhase() == CardBattlePhase::PlayerTurn || _bResultShown == SW_TRUE )
+        // 부르는 곳은 모두 플레이어 차례에 한 수를 둔 바로 뒤다(`isAwaitingCommand` · `updateGame` 의 차례 갈래) — 차례가 끝난 수에서 한 번만 여기를 지난다.
+        if ( _battle.getPhase() == CardBattlePhase::PlayerTurn )
             return;
-        _bResultShown = SW_TRUE;
         _timer.start( _resultHoldSeconds );
         getSoundQueue().queueEvent( _battle.getPhase() == CardBattlePhase::Won ? CardBattleGameModeComponentInternal::kEventWon : CardBattleGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "CardBattle.Finished", "[CardBattle] %# on turn %# with %# HP left", _battle.getPhase() == CardBattlePhase::Won ? "victory" : "defeat", _battle.getTurn(), _battle.getPlayerHP() );
@@ -190,7 +199,7 @@ namespace sw
 
     void CardBattleGameModeComponent::updateGame( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _bFinishRequested == SW_TRUE )
+        if ( deltaTime <= 0.0f )
             return;
         if ( _battle.getPhase() == CardBattlePhase::PlayerTurn )
         {
@@ -202,10 +211,9 @@ namespace sw
             }
             return;
         }
-        if ( _timer.update( deltaTime ) == false )
+        if ( _timer.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
             return;
-        _bFinishRequested = SW_TRUE;
-        const bool bWon   = _battle.getPhase() == CardBattlePhase::Won;
+        const bool bWon = _battle.getPhase() == CardBattlePhase::Won;
         (void)finishMinigame( hashed_string( bWon ? CardBattleGameModeComponentInternal::kWinResult : CardBattleGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
     }
 
@@ -240,4 +248,9 @@ namespace sw
         _battle = std::move( restoredBattle );
         _timer  = timer;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_TYPE_VERSION_PATCH( cardBattleGameModeState1To2, "sw::CardBattleGameModeComponent", 1, 2, &CardBattleGameModeComponentInternal::dropHoldFlags );
 } // namespace sw

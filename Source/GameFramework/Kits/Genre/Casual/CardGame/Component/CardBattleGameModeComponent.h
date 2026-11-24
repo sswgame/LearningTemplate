@@ -25,7 +25,7 @@ namespace sw
      * @class CardBattleGameModeComponent
      * @brief 덱 섞기 → 내 턴(카드 내기) ↔ 상대 턴 → 승패 → 결과를 진행합니다.
      */
-    REFLECT( Category = "CardGame", DisplayName = "Card Battle Game Mode", Tooltip = "Runs one deck battle of the card kit from play card and end turn commands, to victory or defeat" )
+    REFLECT( Version = 2, Category = "CardGame", DisplayName = "Card Battle Game Mode", Tooltip = "Runs one deck battle of the card kit from play card and end turn commands, to victory or defeat" )
     class SW_KIT_API CardBattleGameModeComponent : public GameModeComponent
     {
     public:
@@ -99,10 +99,5 @@ namespace sw
         SharedAssetRef<CardBattleCatalog> _pCatalog;
         CardBattle                        _battle;
         Countdown                         _timer; ///< 자동 플레이의 다음 수 · 결과를 보이는 시간
-        PROPERTY( RuntimeState )
-        uint8 _bResultShown : 1; ///< 결과 보이기를 시작했다
-        PROPERTY( RuntimeState )
-        uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
-        [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw
