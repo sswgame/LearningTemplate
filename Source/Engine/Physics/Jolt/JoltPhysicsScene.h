@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
@@ -17,6 +18,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/PhysicsPairFilter.h"
@@ -218,7 +220,8 @@ namespace sw
      *          일괄 이동은 모든 캐릭터가 단계 앞 사본을 보고(유니티 DOTS Character Controller 가 앞 스텝 충돌 월드를 읽는 것과 같다), 하나씩 옮기면 앞에 옮긴 캐릭터의 새 자리를 본다.
      *          셈은 Jolt 5.6.0 의 것을 그대로 옮겼다(경계 상자로 거른 뒤 좁은 단계). 두 캐릭터의 레이어가 씬의 레이어 표에서 막지 않으면 서로 통과한다
      *          (바디와 같은 표 — Jolt 의 `ObjectLayerPairFilter`, 언리얼 Pawn 채널 응답과 같다).
-     *          shortcut: 쌍을 모두 훑는다(O(n²)), 캐릭터가 수천 명이 되면 격자로 거른다.
+     *          상대는 수평 격자(`SpatialHashGrid2D`)로 먼저 거른다(Jolt 의 바디 넓은 단계 · 언리얼 Chaos 가속 구조의 자리) — 접촉 수집은 올린 차례 그대로라 결과는 모두 훑는 것과 같다.
+     *          사본은 이 형식이 쥐고 옮긴다 — 격자를 지나지 않고 사본을 옮길 수 없다.
      */
     class JoltCharacterSnapshotCollision final : public JPH::CharacterVsCharacterCollision
     {
@@ -226,11 +229,18 @@ namespace sw
         /** @brief @p layerFilter 는 씬의 레이어 표다(씬이 쥐고 이것보다 오래 산다 — 표를 바꾸면 다음 이동부터 본다). */
         explicit JoltCharacterSnapshotCollision( const JoltObjectLayerPairFilter& layerFilter );
 
-        /** @brief 캐릭터와 그 사본, 캐릭터의 엔진 레이어를 올립니다. 사본의 수명은 부르는 쪽(캐릭터 기록)이 쥔다. */
-        void add( const JPH::CharacterVirtual* pCharacter, const JPH::CharacterVirtual* pMirror, uint8 layer );
+        /** @brief 캐릭터와 그 사본, 캐릭터의 엔진 레이어를 올립니다. */
+        void add( const JPH::CharacterVirtual* pCharacter, JPH::Ref<JPH::CharacterVirtual> pMirror, uint8 layer );
         /** @brief 캐릭터를 내립니다. 남은 것의 차례는 그대로다(접촉 수집 차례가 바뀌지 않게). */
         void remove( const JPH::CharacterVirtual* pCharacter );
-        void clear() { _listEntry.clear(); }
+        void clear();
+        /** @brief 사본을 @p character 의 지금 자리 · 방향 · 속도로 옮깁니다(이동 확정). 게임 스레드, 일괄 이동 밖에서만. */
+        void commitPose( const JPH::CharacterVirtual& character );
+        /** @brief 사본을 @p position 으로 옮깁니다(순간이동). 게임 스레드, 일괄 이동 밖에서만. */
+        void setPosition( const JPH::CharacterVirtual& character, JPH::RVec3Arg position );
+        /** @brief 사본의 셰이프를 @p character 의 것으로 바꿉니다(겹침 한도 없이). 게임 스레드, 일괄 이동 밖에서만. */
+        void commitShape( const JPH::CharacterVirtual& character, const JPH::BroadPhaseLayerFilter& broadPhaseFilter, const JPH::ObjectLayerFilter& objectLayerFilter,
+                          const JPH::BodyFilter& bodyFilter, const JPH::ShapeFilter& shapeFilter, JPH::TempAllocator& allocator );
 
         void CollideCharacter( const JPH::CharacterVirtual* pCharacter, JPH::RMat44Arg centerOfMassTransform, const JPH::CollideShapeSettings& collideShapeSettings,
                                JPH::RVec3Arg baseOffset, JPH::CollideShapeCollector& ioCollector ) const override;
@@ -240,17 +250,35 @@ namespace sw
     private:
         struct Entry
         {
-            const JPH::CharacterVirtual* _pCharacter{ nullptr }; ///< 살아 있는 캐릭터(자기 자신을 거르는 열쇠)
-            const JPH::CharacterVirtual* _pMirror{ nullptr };    ///< 다른 캐릭터가 보는 사본 — 접촉의 상대 캐릭터로 넘긴다
-            uint8                        _layer{ 0 };            ///< 캐릭터의 엔진 레이어(`PhysicsCharacterDesc::_layer`)
+            const JPH::CharacterVirtual*    _pCharacter{ nullptr }; ///< 살아 있는 캐릭터(자기 자신을 거르는 열쇠)
+            JPH::Ref<JPH::CharacterVirtual> _pMirror{};             ///< 다른 캐릭터가 보는 사본 — 접촉의 상대 캐릭터로 넘긴다
+            SlotHandle                      _gridHandle{};          ///< 격자 핸들 — 올린 차례의 번호라 핸들 순서가 곧 접촉 수집 차례다
+            uint8                           _layer{ 0 };            ///< 캐릭터의 엔진 레이어(`PhysicsCharacterDesc::_layer`)
         };
+        /** @brief 질의 하나가 힙 없이 담는 상대 수입니다. 넘치면 힙을 쓴다. */
+        static constexpr size_t kInlineCandidateCount = 32;
+        /** @brief 격자 셀의 크기(m)입니다. 사람 크기 캡슐(지름 0.6 ~ 1 m)이 셀 하나 ~ 넷에 든다. */
+        static constexpr float32 kCellSize = 2.0f;
+        /** @brief 격자 질의에 더하는 여유(m)입니다. 좁은 판정은 질의 기준점(baseOffset)에서 셈해 월드 좌표와 반올림이 다르다. */
+        static constexpr float32 kQuerySlack = 0.01f;
 
-        /** @brief @p pCharacter 의 레이어입니다. 올리지 않은 캐릭터면 0 번 레이어로 본다(씬이 만든 캐릭터는 늘 올라 있다). */
-        uint8 findLayer( const JPH::CharacterVirtual* pCharacter ) const;
+        using CandidateList = small_vector<SlotHandle, kInlineCandidateCount>;
+
+        /** @brief @p pCharacter 의 칸입니다. 올리지 않은 캐릭터면 nullptr 입니다(씬이 만든 캐릭터는 늘 올라 있다). */
+        const Entry* findEntry( const JPH::CharacterVirtual* pCharacter ) const;
+        /** @brief 격자 핸들 @p gridHandle 의 칸입니다(격자에 있는 핸들만 넘긴다). */
+        const Entry& getEntry( SlotHandle gridHandle ) const;
+        /** @brief 사본을 바꾼 뒤 격자의 상자를 지금 사본에 맞춥니다. */
+        void refreshGrid( const Entry& entry );
+        /** @brief 월드 상자 @p bounds 에 수평으로 걸친 상대의 핸들을 올린 차례로 모읍니다. */
+        void collectCandidates( const JPH::AABox& bounds, CandidateList& outListCandidate ) const;
 
     private:
-        const JoltObjectLayerPairFilter* _pLayerFilter;
-        vector<Entry>                    _listEntry;
+        const JoltObjectLayerPairFilter*                        _pLayerFilter;
+        vector<Entry>                                           _listEntry; ///< 올린 차례 = 격자 핸들 순
+        unordered_map<const JPH::CharacterVirtual*, SlotHandle> _mapHandle; ///< 캐릭터 → 격자 핸들
+        SpatialHashGrid2D                                       _grid;      ///< 사본의 수평(XZ) 상자(패딩을 넓힌 것)
+        uint32                                                  _nextSequence;
     };
 
     /**
@@ -409,7 +437,6 @@ namespace sw
         struct CharacterRecord
         {
             JPH::Ref<JPH::CharacterVirtual> _pCharacter;
-            JPH::Ref<JPH::CharacterVirtual> _pMirror; ///< 다른 캐릭터가 보는 사본(`JoltCharacterSnapshotCollision`) — 이동을 확정할 때만 옮긴다
             PhysicsCharacterDesc3D          _desc{};
             PhysicsCharacterState3D         _state{};
             PhysicsBodyHandle               _innerBody{};       ///< 속 바디의 엔진 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.

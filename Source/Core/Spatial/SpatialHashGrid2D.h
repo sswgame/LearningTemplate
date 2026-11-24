@@ -57,6 +57,20 @@ namespace sw
         void clear();
 
         void queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const;
+        /**
+         * @brief 상자에 걸친 핸들마다 @p func( SlotHandle ) 를 부릅니다(min ≤ max). 차례는 정해져 있지 않고 같은 핸들이 여러 번 올 수 있습니다.
+         * @details `queryAABB` 의 좁힘까지만 한다 — 결과를 자기 버퍼(`small_vector` 등)에 모아 정렬 · 유일화하는 쪽이 쓴다. 읽기만 하므로 여러 스레드가 함께 불러도 된다.
+         */
+        template <typename Func>
+        void visitAABB( const AABB2D& bounds, Func&& func ) const
+        {
+            forEachCandidateHandle( CellRange::fromBounds( bounds._min._x, bounds._min._y, bounds._max._x, bounds._max._y, _cellSize ), [this, &bounds, &func]( SlotHandle handle )
+            {
+                const auto boundIt = _mapHandleBound.find( handle );
+                if ( boundIt != _mapHandleBound.end() && bounds.intersects( boundIt->second ) )
+                    func( handle );
+            } );
+        }
         void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<SlotHandle>& outListHandle ) const;
         void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<SlotHandle>& outListHandle ) const;
 
