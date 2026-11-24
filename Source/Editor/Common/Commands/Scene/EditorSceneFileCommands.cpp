@@ -221,8 +221,11 @@ namespace sw::editor
     {
         // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
         // 스택은 선택 조회(②): `apply` 가 nullptr 스택을 받는다(스택 없는 구성은 되돌릴 기록이 없다).
-        (void)EditorSceneGenerationSync::apply( editor::getSubsystem<EditorWorkspace>(), editor::getSubsystem<SceneManager>().getSceneGeneration(),
-                                                EditorPlaySession::isStopped() == false, editor::findSubsystem<CommandStack>() );
+        EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>();
+        const bool       bStopped  = EditorPlaySession::isStopped();
+        const bool       bChanged  = EditorSceneGenerationSync::apply( workspace, editor::getSubsystem<SceneManager>().getSceneGeneration(), bStopped == false, editor::findSubsystem<CommandStack>() );
+        if ( bChanged && bStopped )
+            workspace.captureSceneDiskBaseline();
     }
 
     bool EditorSceneFileCommands::tryBeginQuit()
@@ -259,6 +262,8 @@ namespace sw::editor
         const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( *targetPath, EditorContentWriteKind::Save ) )
             return false;
+        if ( targetPath.has_value() && editor::getSubsystem<EditorWorkspace>().validateSceneDiskOverwrite( *targetPath ) == false )
+            return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
 
@@ -279,6 +284,7 @@ namespace sw::editor
             return false;
         }
         editor::getSubsystem<EditorWorkspace>().clearSceneDirty();
+        editor::getSubsystem<EditorWorkspace>().captureSceneDiskBaseline();
         // 정상 저장한 씬의 자동 저장 사본은 지운다 — 남겨 두면 다음 비정상 종료 뒤 이미 저장한 일을 복구하라고 묻는다
         const Scene* pSavedScene = editor::getActiveScene();
         if ( pSavedScene != nullptr )

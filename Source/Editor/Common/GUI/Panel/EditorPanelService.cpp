@@ -95,7 +95,8 @@ namespace sw::editor
             const EditorDocumentPanelBase* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
             if ( pDocument == nullptr || pDocument->getDocumentAssetPath().empty() )
                 continue;
-            outList.push_back( EditorOpenDocument{ string{ pDocument->getDocumentAssetPath() }, pDocument->isDocumentDirty() } );
+            const bool bDirty = pDocument->isDocumentDirty();
+            outList.push_back( EditorOpenDocument{ string{ pDocument->getDocumentAssetPath() }, bDirty, bDirty ? pDocument->captureUnsavedText() : string{} } );
         }
     }
 

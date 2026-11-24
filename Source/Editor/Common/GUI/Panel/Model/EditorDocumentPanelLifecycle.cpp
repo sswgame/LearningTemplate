@@ -64,6 +64,7 @@ namespace sw::editor
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
+        , _documentSerial{ 0 }
         , _lastCopyTextHash{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
@@ -79,7 +80,16 @@ namespace sw::editor
             _assetsMovedSubscription = pWorkspace->onAssetsMoved().add(
                 SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const EditorAssetMoveEvent& event )
             {
-                const bool bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( event, _loadedAssetPath, _listRecentPath );
+                const string previousPath       = _loadedAssetPath;
+                const bool   bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( event, _loadedAssetPath, _listRecentPath );
+                if ( previousPath != _loadedAssetPath )
+                {
+                    // 자동 저장 사본은 옛 id 로 적혀 있다 — 남기면 비정상 종료 뒤 없는 문서를 복구하라고 묻는다. 미저장이면 다음 주기가 새 id 로 다시 쓴다.
+                    EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), previousPath );
+                    _lastCopyTextHash = 0;
+                    if ( isDocumentDirty() == false )
+                        captureDiskBaseline();
+                }
                 // 깨끗한 참조 문서는 디스크에서 고친 글을 다시 읽는다 — 옛 id 를 든 채 두면 다음 저장이 고친 참조를 옛 id 로 덮는다. 읽기는 다음 그리기의
                 // `ensureDocumentLoaded` 가 한다(옮기기는 다른 창의 그리기 안에서 돈다). 미저장 참조자는 계획이 거절해 여기 오지 않는다.
                 if ( bRewrittenReferrer && isDocumentDirty() == false && _bLoadFailed == SW_FALSE )
@@ -158,6 +168,7 @@ namespace sw::editor
         if ( focused.empty() )
             return;
         _loadedAssetPath = string{ focused };
+        ++_documentSerial;
         EditorDocumentOpenUtil::rememberRecent( _listRecentPath, _loadedAssetPath, kMaxRecentDocumentCount );
         _pendingFocusPath.clear();
         _bLoaded        = SW_FALSE;
@@ -173,6 +184,7 @@ namespace sw::editor
         clearDocumentDirty();
         resetDocumentHistory();
         syncDocumentUndoBaseline();
+        captureDiskBaseline();
         // 디스크의 글로 (다시) 읽었다 — 앞 편집의 사본은 낡았다(저장 안 함 · 다시 읽기). 복구 청이 이 문서면 사본 글을 되돌리기와 같은 길로 적용해 dirty 로 둔다(감사 E-1).
         EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
         _lastCopyTextHash = 0;
@@ -328,16 +340,16 @@ namespace sw::editor
         // 다른 문서로 바꾼 뒤 Ctrl+Z 할 때 앞 문서의 구간을 지금 문서의 텍스트에 붙여, 지금 문서가 깨진 채 dirty 가 되고 저장하면
         // 그대로 쓰인다. (구간 다시 짜기는 길이가 맞지 않아도 메모리를 넘지 않으므로, 막는 곳은 적용하는 쪽 하나면 된다.)
         // 패널은 `this` 가 아니라 표지로 잡는다 — 백엔드 교체는 패널을 다시 만들지만 되돌리기 스택은 남긴다. 사라진 패널의 항목은 건너뛴다.
-        const string                           documentPath = _loadedAssetPath;
-        const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
+        const uint32                           documentSerial = _documentSerial;
+        const shared_ptr<EditorDocumentPanel*> pTarget        = _pUndoTarget;
         transaction.recordDocumentText(
             *edit._pBefore, *edit._pAfter, edit._label, *_pUndoOwner,
-            SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
+            SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentSerial]( string_view snapshot )
         {
             EditorDocumentPanel* pPanel = *pTarget;
-            if ( pPanel == nullptr || documentPath != pPanel->_loadedAssetPath )
+            if ( pPanel == nullptr || documentSerial != pPanel->_documentSerial )
             {
-                SW_LOG_WARNING_ID( "EditorDocumentPanel.UndoSkippedNoLonger", "Undo skipped: '%#' is no longer open in its panel", documentPath );
+                SW_LOG_WARNING_ID( "EditorDocumentPanel.UndoSkippedNoLonger", "Undo skipped: the edited document is no longer open in its panel" );
                 return;
             }
             pPanel->restoreDocumentFromUndo( snapshot );

@@ -41,6 +41,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 namespace sw::editor
@@ -695,6 +696,17 @@ namespace sw::editor
             GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
             if ( pObjects != nullptr )
                 (void)notifyAssetUsers( *pObjects, relativePath );
+            // 미리보기 씬(프리팹 · 머티리얼 · 캐릭터 창)도 같은 에셋을 쓴다 — 빼면 게임 뷰는 새것, 열린 편집기는 옛것을 보인다.
+            SceneManager* const pSceneManager = findSubsystem<SceneManager>();
+            if ( pSceneManager != nullptr )
+            {
+                for ( const PreviewSceneEntry& preview : pSceneManager->getPreviewScenes() )
+                {
+                    GameObjectManager* const pPreviewObjects = preview._scene->getObjectManager();
+                    if ( pPreviewObjects != nullptr )
+                        (void)notifyAssetUsers( *pPreviewObjects, relativePath );
+                }
+            }
         }
         // 결과를 적는 한 곳 — 실패(캐시가 파일을 읽지 못해 이전 판으로 돈다)도 여기서 적는다. NotTracked 는 집계가 버린다.
         if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )

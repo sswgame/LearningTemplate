@@ -217,6 +217,21 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 글 @p text 가 옮기는 에셋을 경로나 GUID 로 적었으면 true 입니다. */
+            static bool hasMovedReference( const string& text, const EditorAssetMovePlan& plan )
+            {
+                if ( text.empty() )
+                    return false;
+                string scratch = text;
+                for ( const string& oldID : plan._listOldID )
+                {
+                    const optional<AssetGUID> guid = AssetRegistry::resolveGUID( oldID );
+                    if ( EditorAssetFileCommands::replaceReference( scratch, oldID, oldID ) > 0 || ( guid.has_value() && text.find( AssetRegistry::makeReferenceText( *guid ) ) != string::npos ) )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief @p path 가 원본 곁의 정체성 서술(`<파일>.meta`)이면 true 입니다. */
             static bool isSidecar( string_view path ) { return StringUtil::endsWith( path, AssetMeta::kExtension, true ); }
 
@@ -604,7 +619,7 @@ namespace sw::editor
         if ( pScene == nullptr || pScene->getSourcePath().empty() )
             return;
         const EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
-        outList.push_back( EditorOpenDocument{ pScene->getSourcePath(), pWorkspace != nullptr && pWorkspace->isSceneDirty() } );
+        outList.push_back( EditorOpenDocument{ pScene->getSourcePath(), pWorkspace != nullptr && pWorkspace->isSceneDirty(), {} } ); // 씬의 새 참조는 옮긴 뒤 메모리에서 바꿔 끼운다(`remapScene`)
     }
 
     optional<string> EditorAssetFileCommands::findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen )
@@ -612,7 +627,7 @@ namespace sw::editor
         for ( const EditorOpenDocument& document : listOpen )
         {
             const bool bReferrer = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
-            if ( document._bDirty && bReferrer )
+            if ( document._bDirty && ( bReferrer || EditorAssetFileCommandsInternal::hasMovedReference( document._unsavedText, plan ) ) )
                 return document._assetID;
         }
         return nullopt;

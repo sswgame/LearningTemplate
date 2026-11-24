@@ -749,6 +749,11 @@ msgctxt "EdCommon.ComponentCardOptions"
 msgid "More options for this component, including removing it."
 msgstr "컴포넌트 추가 옵션 및 삭제"
 
+#: Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp
+msgctxt "EdCommon.ContentChangedOnDisk"
+msgid "{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it"
+msgstr "{path} 이(가) 연 뒤 디스크에서 바뀌었습니다. 그 내용을 쓰려면 다시 열고, 덮어쓰려면 다시 저장하십시오."
+
 #: Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp
 msgctxt "EdCommon.ContentReadOnly"
 msgid "{path} is read-only - Check Out (lock) it in the Content Browser first"

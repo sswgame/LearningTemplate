@@ -37,6 +37,7 @@ namespace sw::editor
     {
         string _assetID;
         bool   _bDirty{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string _unsavedText{};   ///< 미저장 문서의 글(`EditorDocumentPanelBase::captureUnsavedText`) — 디스크에 아직 없는 참조를 옮기기 계획이 찾는다
     };
 
     /**

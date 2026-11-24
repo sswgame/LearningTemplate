@@ -24,11 +24,24 @@ namespace sw::editor
             if ( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) )
                 return false;
         }
-        if ( saveDocument() == false )
+        if ( validateDiskBeforeSave( listPath ) == false || saveDocument() == false )
             return false;
+        _diskBaseline.capture( listPath );
         clearDocumentDirty();
         onDocumentSaved();
         return true;
+    }
+
+    void EditorDocumentPanelBase::captureDiskBaseline()
+    {
+        vector<AbsolutePath> listPath;
+        collectFilesToSave( listPath );
+        _diskBaseline.capture( listPath );
+    }
+
+    bool EditorDocumentPanelBase::validateDiskBeforeSave( const vector<AbsolutePath>& listPath )
+    {
+        return _diskBaseline.validateOverwrite( listPath );
     }
 
     void EditorDocumentPanelBase::applyCloseChoice( EditorUnsavedChoice choice )

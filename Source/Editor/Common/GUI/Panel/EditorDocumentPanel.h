@@ -147,6 +147,8 @@ namespace sw::editor
         void onDocumentSaved() override;
         /** @brief 연 문서의 디스크 자리(`getDocumentDiskPath`)입니다. 다른 파일을 쓰거나 더 쓰는 패널(스프라이트 클립 · 타일맵 · 캐릭터 · 데이터 테이블)이 재정의한다. 풀지 못하면 더하지 않는다 — 저장 자신이 이유를 남기고 진다. */
         void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
+        /** @brief 문서 글(`captureDocumentText`)입니다 — 저장하지 않은 편집까지 담는다. */
+        string captureUnsavedText() const override { return captureDocumentText(); }
         /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
         static void appendFileToSave( string_view path, vector<AbsolutePath>& outListPath ); /**
                                                                                               * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
@@ -231,6 +233,7 @@ namespace sw::editor
         vector<string>                           _listRecentPath;
         vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128>  _openFilter;
+        uint32                                   _documentSerial;   ///< 연 문서의 번호(`acceptFocusedDocument` 마다 오른다) — 되돌리기 단계가 자기 문서인지 경로가 아니라 이것으로 본다(옮기면 경로가 바뀐다)
         uint64                                   _lastCopyTextHash; ///< 지난 자동 저장 사본의 글 해시(`takeAutosaveCopies`). 0 은 사본 없음 — 읽기 · 저장이 비운다
         uint8                                    _bLoaded        : 1;
         uint8                                    _bConfirmSwitch : 1;
