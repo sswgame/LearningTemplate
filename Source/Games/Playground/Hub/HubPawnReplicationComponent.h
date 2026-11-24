@@ -11,7 +11,8 @@
  *            의도로 서버의 폰에 닿고, 서버 상태의 탈것 번호가 바뀌면 클라이언트가 자리를 맞춘다(언리얼 `Possess` → `ClientRestart`). 타지 않은 말은 서버 권위 + 보간이다.
  *          - 남: 폰 · 말은 엔티티(`HubPawnPose`)로 오고 렌더 시각의 앞뒤 스냅샷을 보간해 프리팹 모습에 둔다. 캡슐은 켜 둔다(막히는 느낌이 서버와 같게 — 자리는 보간 지연만큼 과거다).
  *          고정 틱은 **실제 시간**으로 센다 — 게임 시간은 배율 · 정지 · 시나리오의 고정 프레임이 걸려 서버와 다르게 흐른다.
- *          shortcut: 자리는 월드 원점이 옮겨지지 않는 크기(±`HubRules::_worldHalfExtent`)의 허브만 본다 — 원점 이동(LWC)을 켜는 큰 허브가 되면 선의 자리를 절대 자리로 바꾼다.
+ *          **자리는 모두 절대다** — 선의 상태 · 모습, 예측 기록, 허브 규칙(`moveAvatar` · 경계), 관심 영역. 씬의 몸(물리 · 트랜스폼)에 닿는 자리에서만 그 월드의 원점으로 옮긴다
+ *          (`toLocalState` · `toAbsoluteState`). 서버와 클라이언트의 원점이 달라도, 예측 도중 원점이 옮겨져도 기록과 서버 상태가 같은 자리를 말한다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -42,6 +43,7 @@
 namespace sw
 {
     struct NetLinkValue;
+    struct WorldOrigin;
 
     class GameObject;
     class GameObjectManager;
@@ -49,7 +51,7 @@ namespace sw
     class PawnComponent;
 
     /**
-     * @brief 자기 폰 하나의 이동 상태입니다 — 걷는 몸, 탄 말, 지금 어느 쪽인가. 소유자 상태의 바이트이자 예측 기록의 상태다(`ReplicatedLayout`, 양자화하지 않는다).
+     * @brief 자기 폰 하나의 이동 상태입니다(자리는 절대) — 걷는 몸, 탄 말, 지금 어느 쪽인가. 소유자 상태의 바이트이자 예측 기록의 상태다(`ReplicatedLayout`, 양자화하지 않는다).
      * @details 칸을 바꾸면 와이어 버전이 바뀐다(`PlaygroundGame::onRegisterReplicatedTypes`).
      */
     REFLECT()
@@ -73,8 +75,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Replicated, Min = -4096, Max = 4096, Step = 0.01 )
-        float3 _position{}; ///< 폰은 루트(발 · 탔으면 안장), 말은 루트(m, 1 cm 간격)
+        PROPERTY( Replicated, Min = -32768, Max = 32768, Step = 0.01 )
+        float3 _position{}; ///< 폰은 루트(발 · 탔으면 안장), 말은 루트(절대, m, 1 cm 간격)
 
         PROPERTY( Replicated, Min = -3.2, Max = 3.2, Step = 0.001 )
         float32 _yaw{ 0.0f }; ///< 라디안, [-π, π] 로 감은 값
@@ -133,6 +135,10 @@ namespace sw
         [[nodiscard]] static bool writeState( const HubPawnState& state, vector<uint8>& outBytes );
         /** @brief 소유자 상태를 읽습니다. 깨졌거나 범위 밖이면 false 이고 @p outState 는 그대로입니다. */
         [[nodiscard]] static bool readState( const vector<uint8>& bytes, HubPawnState& outState );
+        /** @brief 절대 자리의 상태를 원점 @p origin 인 씬의 상태로 옮깁니다(몸에 넣기 전). 타지 않았으면 말 상태는 뜻이 없어 그대로입니다. */
+        [[nodiscard]] static HubPawnState toLocalState( const WorldOrigin& origin, const HubPawnState& state );
+        /** @brief 씬의 상태를 절대 자리의 상태로 옮깁니다(몸에서 읽은 뒤). */
+        [[nodiscard]] static HubPawnState toAbsoluteState( const WorldOrigin& origin, const HubPawnState& state );
         /** @brief 두 상태가 같다고 볼 만큼 가까운가입니다 — 같은 몸(탈것 번호)이고 자리가 @p tolerance 안이며 이동 방식 · 걸음새가 같다. */
         static bool isClose( const HubPawnState& left, const HubPawnState& right, float32 tolerance );
 
@@ -149,7 +155,7 @@ namespace sw
         {
             GameObjectHandle _object{};
             GameObjectHandle _controller{};       ///< 원격 조종자 오브젝트
-            float3           _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리 — 받지 않은 걸음은 여기로 되돌린다
+            float3           _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리(절대) — 받지 않은 걸음은 여기로 되돌린다
             uint32           _avatarID{ 0 };
             int32            _connectionID{ constant::invalid_index::kInt32 };
             uint8            _bSeen{ SW_FALSE }; ///< 이번 프레임의 접속 목록에 있다
@@ -198,13 +204,13 @@ namespace sw
         void         updateRemotePawnList( GameObjectManager& manager );
 
         // 공용
-        /** @brief 한 틱의 다음 상태입니다 — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다). */
+        /** @brief 한 틱의 다음 상태입니다(절대 → 절대) — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다). */
         HubPawnState simulateTick( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input, uint32 avatarID,
                                    CharacterMotionPass pass ) const;
         HubPawnState captureState( GameObjectManager& manager, const GameObject& pawnObject ) const;
         /** @brief 상태를 몸(걷는 몸 또는 탄 말)에 옮깁니다. */
         void        applyState( GameObjectManager& manager, GameObject& pawnObject, const HubPawnState& state ) const;
-        GameObject* spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& position ) const;
+        GameObject* spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& localPosition ) const;
         /** @brief 이 폰이 운전석에 앉은 말의 번호입니다(0 이면 앉지 않았다). */
         uint8                     findMountNumber( const GameObjectManager& manager, const GameObject& pawnObject ) const;
         MountMovementComponent*   findMount( GameObjectManager& manager, uint8 mountNumber ) const;
@@ -247,7 +253,7 @@ namespace sw
         vector<MeleeHitClaim>                        _listClaimScratch;  ///< 서버 — 허브에는 근접 주장이 없다(꺼내는 형식이 요구한다)
         vector<uint32>                               _listEntityScratch; ///< 클라이언트 — 보이는 엔티티
         vector<uint8>                                _bytesScratch;
-        float3                                       _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(그리기 보간)
+        float3                                       _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
         int64                                        _lastFrameNanoseconds; ///< 지난 넷 걸음 프레임의 실제 시각(0 이면 아직 없다)
         float32                                      _accumulator;
         float32                                      _pendingTriggerYaw;   ///< 클라이언트 — 모은 발동 순간의 시선

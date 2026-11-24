@@ -13,6 +13,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -343,12 +344,13 @@ namespace sw
     void HubPawnReplicationComponent::spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session )
     {
         ServerPawn pawn;
-        pawn._acceptedPosition = session._position;
-        pawn._avatarID         = session._avatarID;
-        pawn._connectionID     = session._connectionID;
-        pawn._bSeen            = SW_TRUE;
-        GameObject*    pObject = spawnPawnObject( manager, HubPawnReplicationComponentInternal::kServerPawnName, session._position );
-        PawnComponent* pPawn   = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        pawn._acceptedPosition     = session._position;
+        pawn._avatarID             = session._avatarID;
+        pawn._connectionID         = session._connectionID;
+        pawn._bSeen                = SW_TRUE;
+        const WorldOrigin& origin  = manager.getWorldOrigin();
+        GameObject*        pObject = spawnPawnObject( manager, HubPawnReplicationComponentInternal::kServerPawnName, origin.toLocal( session._position ) );
+        PawnComponent*     pPawn   = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
         // 언리얼 서버가 접속마다 PlayerController 를 세워 폰을 쥐게 하는 자리다 — 소유 연결(`PawnComponent::findInputConnection`)이 여기서 잡힌다.
         RemoteControllerComponent* pRemote =
             pPawn != nullptr ? RemoteControllerComponent::spawnForConnection( manager, hashed_string( "HubRemoteController" ), session._connectionID, *pPawn ) : nullptr;
@@ -358,10 +360,10 @@ namespace sw
             pawn._controller = pRemote->getOwner()->getHandle();
             pRemote->getOwner()->setAlwaysLoaded( true );
             // 저장된 자리 · 시작 자리에 다른 몸이 서 있으면 곁의 빈 자리에 세운다(언리얼 `FindTeleportSpot`). 빈 자리가 없거나 규칙이 받지 않으면 그 자리 그대로다(서로 밀려난다).
-            const optional<float3> spot = pObject->getComponent<CharacterControllerComponent>()->findFreeSpot( session._position, _spawnSearchRadius );
-            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, *spot, false ) == HubActionResult::Ok )
+            const optional<float3> spot = pObject->getComponent<CharacterControllerComponent>()->findFreeSpot( origin.toLocal( session._position ), _spawnSearchRadius );
+            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, origin.toAbsolute( *spot ), false ) == HubActionResult::Ok )
             {
-                pawn._acceptedPosition = *spot;
+                pawn._acceptedPosition = origin.toAbsolute( *spot );
                 pObject->getPrimarySceneComponent()->teleportTo( *spot );
             }
         }
@@ -440,6 +442,7 @@ namespace sw
 
     void HubPawnReplicationComponent::publishPoses( GameObjectManager& manager )
     {
+        const WorldOrigin& origin = manager.getWorldOrigin();
         for ( const ServerPawn& pawn : _listServerPawn )
         {
             const GameObject*                 pObject   = manager.resolveGameObject( pawn._object );
@@ -450,7 +453,7 @@ namespace sw
             HubPawnPose pose;
             pose._mountNumber                    = findMountNumber( manager, *pObject );
             const MountMovementComponent* pMount = pose._mountNumber != 0 ? findMount( manager, pose._mountNumber ) : nullptr;
-            pose._position                       = pMount != nullptr ? pRoot->getWorldPosition() : pMovement->getState()._motion._position;
+            pose._position                       = origin.toAbsolute( pMount != nullptr ? pRoot->getWorldPosition() : pMovement->getState()._motion._position );
             pose._yaw                            = MathUtil::wrapAngle( pMount != nullptr ? pMount->getFacingYaw() : pMovement->getFacingYaw() );
             if ( writePose( pose, _bytesScratch ) )
                 _server.setEntity( pawn._avatarID, kPawnTypeID, _bytesScratch );
@@ -465,7 +468,7 @@ namespace sw
             const MountMoveState state    = pMount->getState();
             const uint32         entityID = kMountEntityIDBase + static_cast<uint32>( mountIndex );
             HubPawnPose          pose;
-            pose._position = state._position;
+            pose._position = origin.toAbsolute( state._position );
             pose._yaw      = state._facingYaw;
             pose._gait     = state._gait;
             if ( writePose( pose, _bytesScratch ) )
@@ -532,7 +535,7 @@ namespace sw
                 pExit->setActive( false );
         }
         _prediction       = ClientPrediction<HubPawnState, HubPawnInput>{};
-        _previousPosition = pController->getMotionState()._position;
+        _previousPosition = manager.getWorldOrigin().toAbsolute( pController->getMotionState()._position );
         _localAvatarID    = avatarID; // 입력 틱은 이어 센다 — 줄이면 서버의 입력 창이 낡은 틱으로 본다
         SW_LOG_INFO_ID( "Hub.PawnPredicted", "[Hub] this client predicts the pawn of avatar %# (%# Hz)", avatarID, static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
         return true;
@@ -648,6 +651,7 @@ namespace sw
     void HubPawnReplicationComponent::applyDisplay( GameObjectManager& manager, GameObject& pawnObject )
     {
         const float32 alpha       = MathUtil::saturate( _accumulator / _tickInterval );
+        const float3  previous    = manager.getWorldOrigin().toLocal( _previousPosition ); // 틱 사이에 원점이 옮겨져도 지금 씬의 자리다
         const uint8   mountNumber = findMountNumber( manager, pawnObject );
         if ( mountNumber != 0 )
         {
@@ -655,12 +659,12 @@ namespace sw
             if ( pMount == nullptr )
                 return;
             const MountMoveState state = pMount->getState();
-            pMount->setState( state, float3::lerp( _previousPosition, state._position, alpha ) + _smoother.getOffset() );
+            pMount->setState( state, float3::lerp( previous, state._position, alpha ) + _smoother.getOffset() );
             return;
         }
         CharacterControllerComponent* const pController = pawnObject.getComponent<CharacterControllerComponent>();
         if ( pController != nullptr )
-            pController->setMotionDisplay( _previousPosition, alpha, _smoother.getOffset() );
+            pController->setMotionDisplay( previous, alpha, _smoother.getOffset() );
     }
 
     void HubPawnReplicationComponent::updateRemotePawnList( GameObjectManager& manager )
@@ -683,7 +687,7 @@ namespace sw
             const bool            bSampled = entityID != _localAvatarID && _client.sampleEntity( entityID, pFrom, pTo, alpha ) && readPose( pFrom->_buffer, from ) && readPose( pTo->_buffer, to );
             if ( bSampled == false )
                 continue;
-            const float3  position = float3::lerp( from._position, to._position, alpha );
+            const float3  position = manager.getWorldOrigin().toLocal( float3::lerp( from._position, to._position, alpha ) );
             const float32 yaw      = MathUtil::wrapAngle( MathUtil::lerpAngle( from._yaw, to._yaw, alpha ) );
             if ( pTo->_typeID == kMountTypeID )
             {
@@ -747,20 +751,24 @@ namespace sw
     HubPawnState HubPawnReplicationComponent::simulateTick( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input,
                                                             uint32 avatarID, CharacterMotionPass pass ) const
     {
-        HubPawnState        next     = state;
+        const WorldOrigin&  origin   = manager.getWorldOrigin();
+        const HubPawnState  local    = toLocalState( origin, state );
+        HubPawnState        next     = local;
         const bool          bOwnPawn = input._pawnEntityID == makePawnEntityID( avatarID, state._mountNumber );
         const ControlIntent intent   = bOwnPawn ? input._intent : HubPawnReplicationComponentInternal::makeNeutralIntent( input._intent );
         if ( state._mountNumber != 0 )
         {
             const MountMovementComponent* const pMount = findMount( manager, state._mountNumber );
             if ( pMount != nullptr )
-                next._ride = pMount->simulate( state._ride, intent, _tickInterval );
+                next._ride = pMount->simulate( local._ride, intent, _tickInterval );
+            next                 = toAbsoluteState( origin, next );
             next._ride._position = hub.getRules().clampInside( next._ride._position );
             return next;
         }
         CharacterMovementComponent* const pMovement = pawnObject.getComponent<CharacterMovementComponent>();
         if ( pMovement != nullptr )
-            next._walk = pMovement->simulate( state._walk, intent, _tickInterval, pass );
+            next._walk = pMovement->simulate( local._walk, intent, _tickInterval, pass );
+        next                         = toAbsoluteState( origin, next );
         next._walk._motion._position = hub.getRules().clampInside( next._walk._motion._position );
         return next;
     }
@@ -775,24 +783,43 @@ namespace sw
         const MountMovementComponent* const pMount = state._mountNumber != 0 ? findMount( manager, state._mountNumber ) : nullptr;
         if ( pMount != nullptr )
             state._ride = pMount->getState();
-        return state;
+        return toAbsoluteState( manager.getWorldOrigin(), state );
+    }
+
+    HubPawnState HubPawnReplicationComponent::toLocalState( const WorldOrigin& origin, const HubPawnState& state )
+    {
+        HubPawnState local            = state;
+        local._walk._motion._position = origin.toLocal( state._walk._motion._position );
+        if ( state._mountNumber != 0 )
+            local._ride._position = origin.toLocal( state._ride._position );
+        return local;
+    }
+
+    HubPawnState HubPawnReplicationComponent::toAbsoluteState( const WorldOrigin& origin, const HubPawnState& state )
+    {
+        HubPawnState absolute            = state;
+        absolute._walk._motion._position = origin.toAbsolute( state._walk._motion._position );
+        if ( state._mountNumber != 0 )
+            absolute._ride._position = origin.toAbsolute( state._ride._position );
+        return absolute;
     }
 
     void HubPawnReplicationComponent::applyState( GameObjectManager& manager, GameObject& pawnObject, const HubPawnState& state ) const
     {
-        if ( state._mountNumber != 0 )
+        const HubPawnState local = toLocalState( manager.getWorldOrigin(), state );
+        if ( local._mountNumber != 0 )
         {
-            MountMovementComponent* const pMount = findMount( manager, state._mountNumber );
+            MountMovementComponent* const pMount = findMount( manager, local._mountNumber );
             if ( pMount != nullptr && pMount->isNetDriven() )
-                pMount->setState( state._ride, state._ride._position );
+                pMount->setState( local._ride, local._ride._position );
             return;
         }
         CharacterMovementComponent* const pMovement = pawnObject.getComponent<CharacterMovementComponent>();
         if ( pMovement != nullptr && findMountNumber( manager, pawnObject ) == 0 )
-            pMovement->setState( state._walk );
+            pMovement->setState( local._walk );
     }
 
-    GameObject* HubPawnReplicationComponent::spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& position ) const
+    GameObject* HubPawnReplicationComponent::spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& localPosition ) const
     {
         AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
         GameObject* const   pObject       = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, _pawnPrefab.path(), pName ) : nullptr;
@@ -819,7 +846,7 @@ namespace sw
         pController->copyTuning( *pSourceController );
         pMovement->setNetDriven( true );
         pObject->setAlwaysLoaded( true ); // 존재는 접속 · 복제가 정한다 — 스트리밍 셀이 내리지 않는다
-        pRoot->teleportTo( position );
+        pRoot->teleportTo( localPosition );
         return pObject;
     }
 

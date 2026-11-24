@@ -3,6 +3,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
+
 #include "Games/Playground/Hub/HubPawnReplicationComponent.h"
 
 #include <limits>
@@ -78,4 +80,24 @@ SW_TEST_CASE( HubPawnStateTest, ClosenessFollowsTheDrivenBody )
     HubPawnState onFoot = riding;
     onFoot._mountNumber = 0;
     SW_EXPECT_FALSE( HubPawnReplicationComponent::isClose( riding, onFoot, 0.01f ) );
+}
+
+/** @brief [HubPawnStateTest] 원점이 다른 두 씬의 같은 절대 자리는 같은 상태다 — 씬 자리로 옮겼다 돌아오면 그대로이고, 타지 않은 말 상태는 옮기지 않는다 */
+SW_TEST_CASE( HubPawnStateTest, StatesSurviveAnOriginShift )
+{
+    const HubPawnState absolute = makeRidingState();
+    const WorldOrigin  origin{
+        double3{ 8192.0, 0.0, -4096.0 }
+    };
+    const HubPawnState local = HubPawnReplicationComponent::toLocalState( origin, absolute );
+    SW_EXPECT_TRUE( local._ride._position == float3( 70.125f - 8192.0f, 0.0f, 8.5f + 4096.0f ) );
+    SW_EXPECT_TRUE( HubPawnReplicationComponent::isClose( absolute, HubPawnReplicationComponent::toAbsoluteState( origin, local ), 0.001f ) );
+    SW_EXPECT_FALSE( HubPawnReplicationComponent::isClose( absolute, local, 0.001f ) );
+
+    HubPawnState walking            = absolute;
+    walking._mountNumber            = 0;
+    const HubPawnState walkingLocal = HubPawnReplicationComponent::toLocalState( origin, walking );
+    SW_EXPECT_TRUE( walkingLocal._ride._position == walking._ride._position );
+    SW_EXPECT_TRUE( HubPawnReplicationComponent::isClose( walking, HubPawnReplicationComponent::toAbsoluteState( origin, walkingLocal ), 0.001f ) );
+    SW_EXPECT_TRUE( HubPawnReplicationComponent::toLocalState( WorldOrigin{}, absolute )._ride._position == absolute._ride._position );
 }
