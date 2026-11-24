@@ -50,7 +50,7 @@ namespace sw
                 layer._color           = float4{ resolved._value._color._x, resolved._value._color._y, resolved._value._color._z, resolved._value._color._w * resolved._value._opacity };
                 layer._offset          = resolved._value._offset;
                 layer._scale           = resolved._value._scale;
-                layer._rotationDegrees = resolved._value._rotation.degrees();
+                layer._rotationRadians = resolved._value._rotation.radians();
                 layer._regionMin       = resolved._regionMin;
                 layer._regionMax       = resolved._regionMax;
                 layer._roughness       = resolved._roughness;
