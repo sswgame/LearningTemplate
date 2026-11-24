@@ -228,14 +228,14 @@ SW_TEST_CASE( CardDeckTest, SecretShuffleFollowsTheKey )
 {
     const auto makeSecretDeck = []( uint64 key, uint64 dealID, uint32 shuffleIndex )
     {
-        CardPile pile;
-        CardPile::makeStandardDeck( pile );
-        pile.shuffleSecret( SipHashKey{ key, 2 }, dealID, shuffleIndex );
+        sw::CardPile pile;
+        sw::CardPile::makeStandardDeck( pile );
+        pile.shuffleSecret( sw::SipHashKey{ key, 2 }, dealID, shuffleIndex );
         return pile;
     };
-    const CardPile base = makeSecretDeck( 1, 5, 0 );
+    const sw::CardPile base = makeSecretDeck( 1, 5, 0 );
     SW_EXPECT_EQUAL( 52, base.getCount() );
-    SW_EXPECT_FALSE( CardPile::hasDuplicateID( vector<const CardPile*>{ &base } ) );
+    SW_EXPECT_FALSE( sw::CardPile::hasDuplicateID( sw::vector<const sw::CardPile*>{ &base } ) );
     SW_EXPECT_TRUE( base.getCards() == makeSecretDeck( 1, 5, 0 ).getCards() );
     SW_EXPECT_FALSE( base.getCards() == makeSecretDeck( 9, 5, 0 ).getCards() );
     SW_EXPECT_FALSE( base.getCards() == makeSecretDeck( 1, 6, 0 ).getCards() );
