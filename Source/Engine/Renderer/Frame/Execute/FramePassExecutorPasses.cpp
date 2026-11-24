@@ -450,8 +450,7 @@ namespace sw
 
     bool FramePassExecutor::isTiledLightingReady( const FrameViewTarget& view ) const
     {
-        const bool bBuffers = view._deferredTileList.isValid() && view._deferredTileArgs.isValid();
-        bool       bReady   = bBuffers && _pDevice->supportsNativeBindlessSampling() && _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) != 0;
+        bool bReady = view._deferredTileCapacity > 0 && _pDevice->supportsNativeBindlessSampling() && _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) != 0;
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
             bReady = bReady && _psoManager.findDeferredTilePSO( tileClass ) != 0;
@@ -480,7 +479,7 @@ namespace sw
         const FrameViewTarget&                         view         = *_pActiveView;
         const RenderGraphPassDesc::ResolvedAttachment* pAlbedoInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::GBufferAlbedo );
         // 분류를 돌릴 수 있는 뷰만 등록했다(`registerViewResources` · `isTiledLightingReady`) — 판정을 다시 하지 않는다. 둘은 레벨 콜백이 UAV 로 옮겼다(이 패스의 선언).
-        if ( graphPass.isRegistered( ViewGraphResource::deferredTileArgs() ) == false || pAlbedoInput == nullptr )
+        if ( graphPass.isRegistered( ViewGraphResource::deferredTileArgs() ) == false || graphPass.isRegistered( ViewGraphResource::deferredTileList() ) == false || pAlbedoInput == nullptr )
             return false;
         const TransientAttachmentPool::Attachment albedo = activePool().find( pAlbedoInput->_attachment );
         RootConstants                             constants{};
@@ -498,8 +497,8 @@ namespace sw
         IRHIPassCommandList& cmd = *context._pCmd;
         cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) );
         // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeUAV( view._deferredTileArgs._uav, 0 );
-        cmd.bindComputeUAV( view._deferredTileList._uav, 1 );
+        cmd.bindComputeUAV( graphPass.getBufferUAV( ViewGraphResource::deferredTileArgs() ), 0 );
+        cmd.bindComputeUAV( graphPass.getBufferUAV( ViewGraphResource::deferredTileList() ), 1 );
         constants._mode = kModeClear;
         cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( 1, 1, 1 );
@@ -515,6 +514,8 @@ namespace sw
             return true;
         setIdentityWorld( context );
         context._passValues.setUint( passConstantNames()._deferredTileCapacity, view._deferredTileCapacity );
+        const RHIBufferSRVIndex tileListSRV = graphPass.getBufferSRV( ViewGraphResource::deferredTileList() );
+        const RHIBufferHandle   tileArgs    = graphPass.getBuffer( ViewGraphResource::deferredTileArgs() );
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
             const RHIPipelineStateHandle tilePSO = _psoManager.findDeferredTilePSO( tileClass );
@@ -522,8 +523,8 @@ namespace sw
             cmd.setPipelineState( tilePSO );
             if ( bindForDraw( context, tilePSO, kInvalidDescriptorIndex ) == false )
                 continue;
-            cmd.bindStructuredBuffer( view._deferredTileList._srv, shaderslot::kPassBuffer );
-            cmd.drawIndirect( view._deferredTileArgs._buffer, tileClass * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), 1 );
+            cmd.bindStructuredBuffer( tileListSRV, shaderslot::kPassBuffer );
+            cmd.drawIndirect( tileArgs, tileClass * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), 1 );
         }
         cmd.endRenderPass();
         return true;

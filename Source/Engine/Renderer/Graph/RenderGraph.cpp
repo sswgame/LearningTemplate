@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/EnumUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -12,6 +13,7 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
 
@@ -264,8 +266,60 @@ namespace sw
         IRHIDevice* _pCmdListDevice{ nullptr };
     };
 
+    struct RenderGraph::BufferPool
+    {
+        /// @brief 이만큼 이어서 쓰이지 않은 칸은 놓는다(`allocateBuffers` 횟수 — 첨부 풀의 쉰 프레임과 같은 뜻).
+        static constexpr uint32 kIdleRunsBeforeRelease = 120;
+
+        struct Request
+        {
+            hashed_string         _name;
+            RenderGraphBufferDesc _desc;
+            uint32                _firstLevel;
+            uint32                _lastLevel;
+        };
+        struct Slot
+        {
+            RHIStructuredBuffer _buffer;
+            RHIBufferUsage      _usage;
+            uint32              _elementSize;
+            uint32              _lastLevel; ///< 이번 실행에서 이 칸을 쓴 마지막 레벨(쓰지 않았으면 무효)
+            uint32              _idleRuns;
+        };
+
+        vector<Request> _listRequest;
+        vector<Slot>    _listSlot;
+        IRHIDevice*     _pDevice{ nullptr }; ///< 칸을 만든 디바이스
+
+        /** @brief 레벨 구간이 겹치지 않는 같은 모양의 칸입니다 — 이미 충분히 큰 가장 작은 칸, 없으면 이번 실행이 아직 쓰지 않아 키울 수 있는 칸, 그것도 없으면 새 칸. */
+        Slot& acquireSlot( const Request& request )
+        {
+            Slot* pReuse = nullptr;
+            for ( Slot& slot : _listSlot )
+            {
+                const bool bUnused = slot._lastLevel == constant::invalid_index::kUint32;
+                const bool bFree   = bUnused || slot._lastLevel < request._firstLevel;
+                const bool bFits   = slot._buffer._capacityElements >= request._desc._elementCount;
+                if ( slot._usage != request._desc._usage || slot._elementSize != request._desc._elementSize || bFree == false || ( bFits == false && bUnused == false ) )
+                    continue;
+                const bool bBetter = pReuse == nullptr || ( bFits && ( pReuse->_buffer._capacityElements < request._desc._elementCount || slot._buffer._capacityElements < pReuse->_buffer._capacityElements ) );
+                if ( bBetter )
+                    pReuse = &slot;
+            }
+            if ( pReuse == nullptr )
+            {
+                _listSlot.push_back( Slot{ RHIStructuredBuffer{}, request._desc._usage, request._desc._elementSize, constant::invalid_index::kUint32, 0 } );
+                pReuse = &_listSlot.back();
+            }
+            pReuse->_lastLevel = request._lastLevel;
+            pReuse->_idleRuns  = 0;
+            return *pReuse;
+        }
+    };
+
     RenderGraph::RenderGraph()
         : _pParallelScratch{ make_unique<ParallelScratch>() }
+        , _pBufferPool{ make_unique<BufferPool>() }
     {
     }
 
@@ -273,7 +327,7 @@ namespace sw
     RenderGraph::RenderGraph( RenderGraph&& ) noexcept            = default;
     RenderGraph& RenderGraph::operator=( RenderGraph&& ) noexcept = default;
 
-    void RenderGraph::releaseCommandLists()
+    void RenderGraph::releaseDeviceResources()
     {
         if ( _pParallelScratch == nullptr )
             return;
@@ -281,6 +335,13 @@ namespace sw
         _pParallelScratch->_pReturnCmdList.reset();
         _pParallelScratch->_listPassEntry.clear();
         _pParallelScratch->_pCmdListDevice = nullptr;
+        for ( BufferPool::Slot& slot : _pBufferPool->_listSlot )
+        {
+            slot._buffer.release( _pBufferPool->_pDevice );
+        }
+        _pBufferPool->_listSlot.clear();
+        _pBufferPool->_listRequest.clear();
+        _pBufferPool->_pDevice = nullptr;
     }
 
     optional<RHIBufferState> RenderGraphAccessUtil::findBufferState( RenderGraphAccess access )
@@ -360,6 +421,20 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "Renderer.GraphUnregisteredResource", "Render graph pass '%#' declared '%#' but nothing registered slot %# this frame - it gets no handle", _passName.c_str(),
                                   access._resource.c_str(), slot );
         return handle;
+    }
+
+    RHIBufferSRVIndex RenderGraphPassContext::findDeclaredSRV( const RenderGraphResourceAccess& access, uint32 slot ) const
+    {
+        const bool                           bFound = findDeclaredHandle( access, slot ) != 0;
+        const FrameBufferTable::Entry* const pEntry = bFound ? _pResourceTable->findEntry( access._resource, slot ) : nullptr;
+        return pEntry != nullptr ? pEntry->_srv : kInvalidDescriptorIndex;
+    }
+
+    RHIUnorderedAccessIndex RenderGraphPassContext::getBufferUAV( RenderGraphBufferUAV handle, uint32 slot ) const
+    {
+        const bool                           bFound = findDeclaredHandle( handle, slot ) != 0;
+        const FrameBufferTable::Entry* const pEntry = bFound ? _pResourceTable->findEntry( handle._name, slot ) : nullptr;
+        return pEntry != nullptr ? pEntry->_uav : kInvalidDescriptorIndex;
     }
 
     void RenderGraphPassContext::uavBarrier( RenderGraphBufferUAV handle, uint32 slot ) const
@@ -504,12 +579,64 @@ namespace sw
     void RenderGraph::importResources( const FrameBufferTable& table )
     {
         _listImportedResource.clear();
+        _pBufferPool->_listRequest.clear();
         for ( const uint32 entryIndex : table.getFirstEntries() )
         {
             const FrameBufferTable::Entry& entry = table.getEntries()[entryIndex];
-            if ( entry._bAttachment == false )
+            if ( entry._bGraphOwned == false )
                 importResource( entry._name, entry._viewable, entry._initialAccess );
         }
+    }
+
+    void RenderGraph::createBuffer( hashed_string name, const RenderGraphBufferDesc& desc )
+    {
+        SW_ASSERT( getResourceKind( name ) == RenderGraphResourceKind::Transient && desc._elementSize > 0 && desc._elementCount > 0 );
+        const RenderGraphResourceLifetime* pLifetime = findResourceLifetime( name );
+        if ( pLifetime == nullptr )
+            return;
+        _pBufferPool->_listRequest.push_back( BufferPool::Request{ name, desc, pLifetime->_firstLevel, pLifetime->_lastLevel } );
+    }
+
+    void RenderGraph::allocateBuffers( IRHIDevice& device, FrameBufferTable& table )
+    {
+        BufferPool& pool = *_pBufferPool;
+        if ( pool._pDevice != &device )
+        {
+            for ( BufferPool::Slot& slot : pool._listSlot )
+            {
+                slot._buffer.release( pool._pDevice );
+            }
+            pool._listSlot.clear();
+            pool._pDevice = &device;
+        }
+        for ( BufferPool::Slot& slot : pool._listSlot )
+        {
+            slot._lastLevel = constant::invalid_index::kUint32;
+            ++slot._idleRuns;
+        }
+        // 먼저 시작하는 것부터 — 앞에서 끝난 칸을 뒤의 것이 다시 쓴다.
+        VectorUtil::stableSort( pool._listRequest, []( const BufferPool::Request& left, const BufferPool::Request& right )
+        { return left._firstLevel < right._firstLevel; } );
+        for ( const BufferPool::Request& request : pool._listRequest )
+        {
+            const bool        bSRV = EnumUtil::hasFlag( request._desc._usage, RHIBufferUsage::Structured );
+            const bool        bUAV = EnumUtil::hasFlag( request._desc._usage, RHIBufferUsage::UnorderedAccess );
+            BufferPool::Slot& slot = pool.acquireSlot( request );
+            if ( slot._buffer.ensureCapacity( &device, request._desc._elementSize, request._desc._elementCount, request._desc._usage, bSRV, bUAV, nullptr ) )
+                table.registerGraphBuffer( request._name, slot._buffer );
+        }
+        for ( BufferPool::Slot& slot : pool._listSlot )
+        {
+            if ( slot._idleRuns >= BufferPool::kIdleRunsBeforeRelease )
+                slot._buffer.release( &device );
+        }
+        VectorUtil::removeIf( pool._listSlot, []( const BufferPool::Slot& slot )
+        { return slot._buffer.isValid() == false; } );
+    }
+
+    uint32 RenderGraph::getBufferSlotCount() const
+    {
+        return static_cast<uint32>( _pBufferPool->_listSlot.size() );
     }
 
     void RenderGraph::beginExecution( RenderGraphExecutionContext& context ) const
@@ -1011,7 +1138,7 @@ namespace sw
             _pParallelScratch = make_unique<ParallelScratch>();
         if ( _pParallelScratch->_pCmdListDevice != &device )
         {
-            releaseCommandLists(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다.
+            releaseDeviceResources(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다.
             _pParallelScratch->_pCmdListDevice = &device;
         }
         ParallelScratch& scratch = *_pParallelScratch;
@@ -1279,13 +1406,14 @@ namespace sw
         _levelPrologue( levelContext );
     }
 
-    void RenderGraph::touchResourceLifetime( hashed_string resource, size_t passIndex, bool bWritten )
+    void RenderGraph::touchResourceLifetime( hashed_string resource, size_t passIndex, uint32 level, bool bWritten )
     {
         const auto it = _mapResourceLifetimeIndex.find( resource );
         if ( it != _mapResourceLifetimeIndex.end() )
         {
             RenderGraphResourceLifetime& life = _listResourceLifetime[it->second];
             life._lastPassIndex               = passIndex;
+            life._lastLevel                   = level;
             if ( bWritten )
                 life._bWritten = true;
             else
@@ -1297,6 +1425,8 @@ namespace sw
         life._name           = resource;
         life._firstPassIndex = passIndex;
         life._lastPassIndex  = passIndex;
+        life._firstLevel     = level;
+        life._lastLevel      = level;
         life._bWritten       = bWritten;
         life._bRead          = bWritten == false;
         _mapResourceLifetimeIndex.emplace( resource, _listResourceLifetime.size() );
@@ -1314,19 +1444,36 @@ namespace sw
         _listResourceLifetime.clear();
         _mapResourceLifetimeIndex.clear();
 
-        for ( size_t passIndex = 0; passIndex < _listCompiledExecutionOrder.size(); ++passIndex )
+        const uint32 lastLevel = _listCompiledLevel.empty() ? 0 : static_cast<uint32>( _listCompiledLevel.size() - 1 );
+        size_t       passIndex = 0;
+        for ( uint32 level = 0; level < static_cast<uint32>( _listCompiledLevel.size() ); ++level )
         {
-            const auto it = _mapNameToIndex.find( _listCompiledExecutionOrder[passIndex] );
-            if ( it == _mapNameToIndex.end() )
-                continue;
-            const RenderGraphNode& node = _listNode[it->second];
-            for ( const hashed_string& input : node._listInput )
+            for ( const hashed_string& passName : _listCompiledLevel[level] )
             {
-                touchResourceLifetime( input, passIndex, false );
+                const RenderGraphNode& node = _listNode[_mapNameToIndex[passName]];
+                for ( const hashed_string& input : node._listInput )
+                {
+                    touchResourceLifetime( input, passIndex, level, false );
+                }
+                for ( const hashed_string& output : node._listOutput )
+                {
+                    touchResourceLifetime( output, passIndex, level, true );
+                }
+                ++passIndex;
             }
-            for ( const hashed_string& output : node._listOutput )
+        }
+        // 비동기 컴퓨트 패스는 뒤 레벨의 그래픽스 일과 GPU 에서 겹친다 — 그 패스가 쓰는 자원은 그래프 끝까지 산다.
+        for ( const RenderGraphNode& node : _listNode )
+        {
+            if ( node._queue != RHIQueueKind::AsyncCompute || _bAsyncComputeSupported == false )
+                continue;
+            for ( const RenderGraphResourceAccess& access : node._listAccess )
             {
-                touchResourceLifetime( output, passIndex, true );
+                const auto it = _mapResourceLifetimeIndex.find( access._resource );
+                if ( it == _mapResourceLifetimeIndex.end() )
+                    continue;
+                _listResourceLifetime[it->second]._firstLevel = 0;
+                _listResourceLifetime[it->second]._lastLevel  = lastLevel;
             }
         }
 
@@ -1339,6 +1486,8 @@ namespace sw
                 continue;
             life._firstPassIndex = 0;
             life._lastPassIndex  = lastPassIndex;
+            life._firstLevel     = 0;
+            life._lastLevel      = lastLevel;
         }
 
         // 아무도 쓰지 않은 것을 읽는 패스는 **지난 프레임 내용이나 0** 을 읽는다. 이미지는 그럴듯하게 나오고
@@ -1372,7 +1521,7 @@ namespace sw
     void RenderGraph::clear()
     {
         _listImportedResource.clear();
-        releaseCommandLists();
+        releaseDeviceResources();
         _listNode.clear();
         _listCompiledExecutionOrder.clear();
         _listCompiledLevel.clear();

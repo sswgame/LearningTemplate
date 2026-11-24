@@ -112,8 +112,8 @@ namespace sw
         void placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan );
         /** @brief 뷰의 HZB 피라미드 버퍼와 가림 타일 버퍼를 깊이 히스토리 크기에 맞춰 만들어 둡니다(`HZBLayout`). 깊이 히스토리가 없으면 만들지 않습니다. */
         void ensureHZB( FrameViewTarget& view );
-        /** @brief 뷰의 디퍼드 조명 타일 목록 · 간접 인자를 G버퍼 알베도 크기의 타일 수로 만들어 둡니다. 타일 분류를 쓸 수 없는 백엔드 · 파이프라인이면 만들지 않습니다. */
-        void ensureDeferredTiles( FrameViewTarget& view );
+        /** @brief 뷰의 디퍼드 조명 타일 수(`FrameViewTarget::_deferredTileCapacity`)를 G버퍼 알베도 크기로 정합니다. 타일 분류를 쓸 수 없는 백엔드 · 파이프라인이면 0 그대로입니다. */
+        void updateDeferredTileCapacity( FrameViewTarget& view );
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고)

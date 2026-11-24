@@ -35,7 +35,7 @@ namespace sw
     ENUM()
     enum class RenderGraphResourceKind : uint8
     {
-        Transient,  ///< 그래프 안에서 쓰고 버리는 첨부입니다. 선언하지 않은 이름의 값입니다.
+        Transient,  ///< 그래프 안에서 쓰고 버리는 첨부 · 버퍼(`RenderGraph::createBuffer`)입니다. 선언하지 않은 이름의 값입니다.
         Persistent, ///< 프레임을 넘어 내용이 이어지는 자원입니다(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브 기록). 이번 프레임에 쓰기 전에 읽으면 지난 프레임 값입니다.
         External,   ///< 그래프 밖 서브시스템이 갖고 프레임마다 채우는 자원입니다(인스턴스 버퍼 · 라이트 버퍼 · 컬링 결과). 그래프는 접근 순서만 정합니다.
     };
@@ -102,6 +102,18 @@ namespace sw
     {
         Texture,
         Buffer,
+    };
+
+    /**
+     * @struct RenderGraphBufferDesc
+     * @brief 그래프가 만드는 버퍼(`RenderGraph::createBuffer`)의 모양입니다 — 언리얼 RDG `FRDGBufferDesc` · 유니티 RenderGraph `BufferDesc` 자리다.
+     * @details 구조 버퍼(`RHIBufferUsage::Structured`)면 SRV 를, UAV 용도면 UAV 를 함께 만든다. 처음 내용은 정해지지 않는다 — 첫 패스가 쓰고 나서 읽는다.
+     */
+    struct RenderGraphBufferDesc
+    {
+        uint32         _elementSize{ 0 };
+        uint32         _elementCount{ 0 };
+        RHIBufferUsage _usage{ RHIBufferUsage::None };
     };
 
     /** @struct RenderGraphResourceAccess @brief 패스 하나가 자원 하나를 쓰는 방식입니다(이름 · 접근 · 종류). 접근 핸들(`RenderGraphHandle`)이 이것으로 바뀐다. */
@@ -191,6 +203,14 @@ namespace sw
         {
             return RHITextureHandle{ findDeclaredHandle( handle, slot ) };
         }
+        /** @brief 이 패스가 선언한 버퍼 접근 @p handle 의 뷰 칸 @p slot 을 읽는 SRV 번호입니다(패스 안에서 쓰고 나서 읽는 UAV 선언도 받는다). 규칙은 `getBuffer` 와 같고 SRV 없는 버퍼는 무효 번호입니다. */
+        template <RenderGraphAccess kAccess>
+        RHIBufferSRVIndex getBufferSRV( RenderGraphHandle<RenderGraphViewableKind::Buffer, kAccess> handle, uint32 slot = 0 ) const
+        {
+            return findDeclaredSRV( handle, slot );
+        }
+        /** @brief 이 패스가 쓰기로 선언한 버퍼 @p handle 의 뷰 칸 @p slot 의 UAV 번호입니다. 규칙은 `getBuffer` 와 같다. */
+        RHIUnorderedAccessIndex getBufferUAV( RenderGraphBufferUAV handle, uint32 slot = 0 ) const;
         /**
          * @brief 한 패스 안의 연속 디스패치(HZB 밉 사슬 · 컬링 → 정렬)가 앞 디스패치의 UAV 쓰기를 기다리게 합니다(뷰 칸 @p slot).
          * @details UAV 핸들만 받는다 — SRV 로 선언한 버퍼로는 부를 수 없다(형식). 같은 상태의 연속이라 전이로는 알 수 없는 의존이다.
@@ -239,8 +259,9 @@ namespace sw
         /** @brief 표에서 핸들을 찾습니다(선언 검사 · 오류 없음). 없으면 0 입니다. */
         uint64 findRegisteredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
         /** @brief 선언한 접근이면 표에서 핸들을 찾습니다. 선언하지 않았거나 표에 없으면 오류를 남기고 0 입니다. */
-        uint64 findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
-        void   transitionDeclared( const RenderGraphResourceAccess& declared, RenderGraphAccess target, uint32 slot ) const;
+        uint64            findDeclaredHandle( const RenderGraphResourceAccess& access, uint32 slot ) const;
+        RHIBufferSRVIndex findDeclaredSRV( const RenderGraphResourceAccess& access, uint32 slot ) const;
+        void              transitionDeclared( const RenderGraphResourceAccess& declared, RenderGraphAccess target, uint32 slot ) const;
 
     private:
         /// @brief 실행기의 개발 보기(`FramePassExecutor::prepareVisualizedAttachment` — `gpu.show` 가 선언 밖 첨부를 읽는 유일한 길)만 전체 리스트에 닿는다. 패스 몸통은 닿지 않는다.
@@ -407,6 +428,8 @@ namespace sw
         hashed_string _name;
         size_t        _firstPassIndex{ 0 };
         size_t        _lastPassIndex{ 0 };
+        uint32        _firstLevel{ 0 };   ///< 처음 쓰는 패스의 레벨 — 같은 레벨은 GPU 에서 겹칠 수 있어 메모리를 나누는 구간은 레벨로 잰다
+        uint32        _lastLevel{ 0 };    ///< 마지막으로 쓰는 패스의 레벨
         bool          _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool          _bRead{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /// @brief 수명 종류입니다. Transient 가 아니면 구간이 그래프 전체(첫 패스 ~ 마지막 패스)라 다른 자원과 메모리를 나눌 수 없습니다.
@@ -425,7 +448,7 @@ namespace sw
     public:
         /** @brief 빈 그래프를 만듭니다. */
         RenderGraph();
-        /** @brief 병렬 기록용 커맨드 리스트를 해제합니다. 디바이스가 살아 있을 때 `releaseCommandLists` 로 먼저 해제해야 합니다. */
+        /** @brief 병렬 기록용 커맨드 리스트와 만든 버퍼를 해제합니다. 디바이스가 살아 있을 때 `releaseDeviceResources` 로 먼저 해제해야 합니다. */
         ~RenderGraph();
 
         /** @brief 복사를 금지합니다. */
@@ -438,11 +461,11 @@ namespace sw
         RenderGraph& operator=( RenderGraph&& ) noexcept;
 
         /**
-         * @brief 병렬 기록이 노드마다 가지고 있는 커맨드 리스트를 해제합니다. 디바이스를 바꾸거나 해제하기 **전에** 부릅니다.
+         * @brief 병렬 기록이 노드마다 가지고 있는 커맨드 리스트와 그래프가 만든 버퍼(`createBuffer`)를 해제합니다. 디바이스를 바꾸거나 해제하기 **전에** 부릅니다.
          * @details 리스트는 프레임을 넘어 다시 쓴다(패스마다 프레임마다 래퍼와 백엔드 할당을 하지 않는다).
          *          `clear()` 도 이 함수를 부른다.
          */
-        void releaseCommandLists();
+        void releaseDeviceResources();
 
         /**
          * @brief 렌더 그래프에 새 렌더 패스 노드를 추가합니다.
@@ -471,6 +494,20 @@ namespace sw
         void importResource( hashed_string name, RenderGraphViewableKind type, RenderGraphAccess initialAccess );
         /** @brief 들인 자원을 표 @p table 의 등록으로 바꿉니다(첨부 등록 `FrameBufferTable::registerAttachment` 은 그래프의 것이라 빼고) — 프레임 · 뷰마다 실행 앞에 부른다. */
         void importResources( const FrameBufferTable& table );
+
+        /**
+         * @brief 이번 실행의 일시 버퍼 @p name 을 선언합니다 — 그래프 안에서 쓰고 버린다(언리얼 `FRDGBuilder::CreateBuffer`, 유니티 `CreateBuffer` 자리). 실제 버퍼는 `allocateBuffers` 가 준다.
+         * @details 주인마다(뷰마다) 버퍼를 들지 않는다 — 그래프 하나가 실행마다(뷰마다) 같은 버퍼를 다시 쓰고, 레벨 구간이 겹치지 않는 이름끼리도 나눈다. 프레임 · 그래프를 넘어 읽는 버퍼
+         *          (HZB · 컬링 결과)는 여기 두지 않는다 — 주인이 들고 들인다(`importResources`). 선언은 `importResources` 가 비운다(실행마다 다시 선언).
+         */
+        void createBuffer( hashed_string name, const RenderGraphBufferDesc& desc );
+        /**
+         * @brief 이번 실행이 선언한 일시 버퍼를 마련해 @p table 에 등록합니다(패스 몸통은 `getBuffer` · `getBufferSRV` · `getBufferUAV` 로 받는다). 셋업에서 실행 앞에 부릅니다.
+         * @details 못 만든 버퍼는 등록하지 않는다(오류는 남긴다) — 패스 몸통이 `isRegistered` 로 본다. 어느 패스도 선언하지 않은 이름은 만들지 않는다.
+         */
+        void allocateBuffers( IRHIDevice& device, FrameBufferTable& table );
+        /** @brief 그래프가 가진 실제 버퍼 수입니다(진단 · 테스트). */
+        uint32 getBufferSlotCount() const;
 
         /**
          * @brief 이 그래프를 돌릴 디바이스가 비동기 컴퓨트 큐를 갖는지 알립니다(능력 `RHICapabilities::_bAsyncCompute`). 컴파일 전에 부릅니다. 기본은 거짓입니다.
@@ -596,6 +633,8 @@ namespace sw
     private:
         /** @brief 병렬 기록이 프레임마다 다시 쓰는 데이터입니다(패스 엔트리 목록과 노드별 커맨드 리스트). 완전한 타입은 cpp 에만 있습니다. */
         struct ParallelScratch;
+        /** @brief 일시 버퍼의 선언과 실제 버퍼 칸입니다. 완전한 타입은 cpp 에만 있습니다. */
+        struct BufferPool;
         /** @brief 실행 계획의 패스 하나입니다 — 노드와 이 계획에서의 접근(꺼진 효과의 출력은 원본 이름으로 바뀐다). */
         struct PlanPass
         {
@@ -624,8 +663,8 @@ namespace sw
         static void applyExitAccesses( RenderGraphExecutionContext& context, const RenderGraphNode& node, const vector<RenderGraphResourceAccess>& listAccess );
         /** @brief 처음 접근과 다른 접근으로 남은 들인 자원을 되돌리는 전이를 `_listLevelBarrier` 에 모읍니다(마지막 패스 뒤). */
         void collectReturnBarriers( RenderGraphExecutionContext& context );
-        /** @brief 패스 @p passIndex 가 자원을 읽거나 썼음을 수명 표에 적습니다. 처음 보는 자원이면 항목을 만듭니다. */
-        void touchResourceLifetime( hashed_string resource, size_t passIndex, bool bWritten );
+        /** @brief 레벨 @p level 의 패스 @p passIndex 가 자원을 읽거나 썼음을 수명 표에 적습니다. 처음 보는 자원이면 항목을 만듭니다. */
+        void touchResourceLifetime( hashed_string resource, size_t passIndex, uint32 level, bool bWritten );
         /** @brief 추려 낸 배리어를 레벨 콜백에 넘깁니다. 콜백이 없거나 낼 것이 없으면 아무 일도 하지 않습니다. */
         void issueBarriers( IRHICommandList* pCmdList );
         /** @brief compile() 끝에서 리소스 수명을 채우고, 쓰이지 않는 자원과 쓰인 적 없는 자원을 로그로 알립니다. */
@@ -661,6 +700,7 @@ namespace sw
         /// @brief 배리어를 추리는 동안 쓰는 스크래치입니다. 자원 이름에서 `_listLevelBarrier` 인덱스를 찾는 맵이며, 레벨 안의 중복을 제거합니다.
         unordered_map<hashed_string, size_t> _mapLevelBarrierIndex;
         unique_ptr<ParallelScratch>          _pParallelScratch;
+        unique_ptr<BufferPool>               _pBufferPool;
         /// @brief compile() 이 계산한 리소스 수명입니다(처음과 마지막 사용 패스, 읽힘과 쓰임 여부).
         vector<RenderGraphResourceLifetime>  _listResourceLifetime;
         unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;

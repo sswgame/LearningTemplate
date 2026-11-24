@@ -373,39 +373,18 @@ namespace sw
         }
     }
 
-    void FrameViewResources::ensureDeferredTiles( FrameViewTarget& view )
+    void FrameViewResources::updateDeferredTileCapacity( FrameViewTarget& view )
     {
         // 분류 컴퓨트가 G버퍼를 샘플하고(네이티브 bindless) 간접 인자를 쓴다(간접 인자 능력 — 컬링과 같다). 조명 패스가 없는 파이프라인(포워드)은 쓸 곳이 없다.
         const bool bUsable = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() && _pDevice->getCapabilities()._bGPUCulling != SW_FALSE &&
                              VectorUtil::containsIf( _pipeline.getGraphPass(), []( const RenderGraphPassDesc& pass )
         { return pass._type == RenderPassKind::Lighting; } );
-        if ( bUsable == false || view._deferredTileList.isValid() )
+        if ( bUsable == false || view._deferredTileCapacity > 0 )
             return;
         const TransientAttachmentPool::Attachment albedo = view._transientPool.find( attachmentNames()._gbufferAlbedo );
         if ( albedo._texture == 0 )
             return;
         view._deferredTileCapacity = FrameRendererUtil::divideRoundUp( albedo._width, kDeferredTileSize ) * FrameRendererUtil::divideRoundUp( albedo._height, kDeferredTileSize );
-        // 간접 인자는 종류마다 RHIDrawIndirectCommand 하나다 — 분류의 지우기 디스패치가 프레임마다 다시 쓴다(처음 값은 그리지 않음).
-        vector<RHIDrawIndirectCommand> listInitialArgs( kDeferredTileClassCount );
-        for ( RHIDrawIndirectCommand& args : listInitialArgs )
-        {
-            args._vertexCount   = SW_DEFERRED_TILE_VERTEX_COUNT;
-            args._instanceCount = 0;
-        }
-        constexpr RHIBufferUsage kArgsUsage = RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-        constexpr RHIBufferUsage kListUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
-        const bool               bCreated   = view._deferredTileArgs.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), kDeferredTileClassCount, kArgsUsage, false, true,
-                                                                                     listInitialArgs.data() ) &&
-                              view._deferredTileList.ensureCapacity( _pDevice, static_cast<uint32>( sizeof( uint32 ) ), kDeferredTileClassCount * view._deferredTileCapacity, kListUsage, true, true,
-                                                                     nullptr );
-        if ( bCreated == false )
-        {
-            SW_LOG_ERROR_ID( "FrameViewResources.FailedCreateDeferredTiles", "Failed to create the deferred lighting tile buffers (%# tiles) - this view lights the whole screen with every lobe",
-                             view._deferredTileCapacity );
-            view._deferredTileArgs.release( _pDevice );
-            view._deferredTileList.release( _pDevice );
-            view._deferredTileCapacity = 0;
-        }
     }
 
     void FrameViewResources::releaseViewTransients( FrameViewTarget& view )
@@ -420,8 +399,6 @@ namespace sw
         {
             view._hzb                  = RHIStructuredBuffer{};
             view._occlusionTiles       = RHIStructuredBuffer{};
-            view._deferredTileList     = RHIStructuredBuffer{};
-            view._deferredTileArgs     = RHIStructuredBuffer{};
             view._deferredTileCapacity = 0;
             view._transientPool.clear();
             view._taaHistory.release( nullptr );
@@ -431,11 +408,9 @@ namespace sw
             return;
         }
 
-        // HZB · 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일은 G버퍼 크기를 따른다.
+        // HZB · 가림 타일은 깊이 히스토리 크기를, 디퍼드 조명 타일 수는 G버퍼 크기를 따른다.
         view._hzb.release( _pDevice );
         view._occlusionTiles.release( _pDevice );
-        view._deferredTileList.release( _pDevice );
-        view._deferredTileArgs.release( _pDevice );
         view._deferredTileCapacity = 0;
         // 깊이 히스토리도 풀 크기를 따른다.
         view._depthHistory.release( _pDevice );
@@ -491,7 +466,7 @@ namespace sw
             // 첨부의 크기를 따르는 자원 — 그 첨부가 처음 생긴 프레임에 함께 만든다(이미 있으면 그대로다).
             ensureDepthHistory( view );
             ensureHZB( view );
-            ensureDeferredTiles( view );
+            updateDeferredTileCapacity( view );
         }
         return bAllocated;
     }

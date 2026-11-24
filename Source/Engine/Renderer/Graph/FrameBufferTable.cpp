@@ -10,13 +10,25 @@ namespace sw
 {
     void FrameBufferTable::registerBuffer( hashed_string name, uint32 slot, const RHIStructuredBuffer& buffer, RenderGraphAccess initialAccess )
     {
+        registerBufferEntry( Entry{ name, slot, buffer._buffer.getPacked(), RenderGraphViewableKind::Buffer, initialAccess }, buffer );
+    }
+
+    void FrameBufferTable::registerGraphBuffer( hashed_string name, const RHIStructuredBuffer& buffer )
+    {
+        Entry entry{ name, 0, buffer._buffer.getPacked(), RenderGraphViewableKind::Buffer };
+        entry._bGraphOwned = true;
+        registerBufferEntry( entry, buffer );
+    }
+
+    void FrameBufferTable::registerBufferEntry( Entry entry, const RHIStructuredBuffer& buffer )
+    {
         // 크기 없는 버퍼는 받지 않는다 — 버퍼 보기(`RenderBufferInspector`)가 읽을 길이를 모르는 등록이 생기지 않게.
         if ( buffer._buffer != 0 && ( buffer._elementSize == 0 || buffer._capacityElements == 0 ) )
         {
-            SW_LOG_ERROR_ID( "FrameBufferTable.SizeMissing", "Frame resource '%#' slot %# was registered without an element size or capacity - the registration is ignored", name.c_str(), slot );
+            SW_LOG_ERROR_ID( "FrameBufferTable.SizeMissing", "Frame resource '%#' slot %# was registered without an element size or capacity - the registration is ignored", entry._name.c_str(),
+                             entry._slot );
             return;
         }
-        Entry entry{ name, slot, buffer._buffer.getPacked(), RenderGraphViewableKind::Buffer, initialAccess };
         entry._elementSize  = buffer._elementSize;
         entry._elementCount = buffer._capacityElements;
         entry._srv          = buffer._srv;
@@ -32,7 +44,7 @@ namespace sw
     void FrameBufferTable::registerAttachment( hashed_string name, RHITextureHandle texture )
     {
         Entry entry{ name, 0, texture.getPacked(), RenderGraphViewableKind::Texture };
-        entry._bAttachment = true;
+        entry._bGraphOwned = true;
         registerEntry( entry );
     }
 
@@ -86,12 +98,17 @@ namespace sw
         return it != _mapSlotEntry.end() && it->second.empty() == false ? &it->second : nullptr;
     }
 
-    uint64 FrameBufferTable::findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const
+    const FrameBufferTable::Entry* FrameBufferTable::findEntry( hashed_string name, uint32 slot ) const
     {
         const vector<uint32>* pSlots = findSlots( name );
         if ( pSlots == nullptr || slot >= pSlots->size() || ( *pSlots )[slot] == constant::invalid_index::kUint32 )
-            return 0;
-        const Entry& entry = _listEntry[( *pSlots )[slot]];
-        return entry._viewable == viewable ? entry._handle : 0;
+            return nullptr;
+        return &_listEntry[( *pSlots )[slot]];
+    }
+
+    uint64 FrameBufferTable::findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const
+    {
+        const Entry* pEntry = findEntry( name, slot );
+        return pEntry != nullptr && pEntry->_viewable == viewable ? pEntry->_handle : 0;
     }
 } // namespace sw

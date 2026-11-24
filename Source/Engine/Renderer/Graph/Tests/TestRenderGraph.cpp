@@ -1105,3 +1105,56 @@ SW_TEST_CASE( RenderGraphTest, UnorderedAccessReadWaitsForPriorWrite )
     SW_REQUIRE_EQUAL( size_t{ 2 }, graph.getExecutionLevels().size() );
     SW_EXPECT_EQUAL( size_t{ 2 }, graph.getExecutionLevels()[1].size() );
 }
+
+/**
+ * @brief [RenderGraphTest] 그래프가 만든 버퍼는 레벨 구간이 겹치지 않으면 한 버퍼를 나눠 쓰고, 다음 실행(다음 뷰)도 같은 버퍼를 다시 쓴다
+ * @details 사슬 Write A → Read A(Write B) → Read B(Write C) → Read C 에서 A · B, B · C 는 한 레벨에서 겹치고 A · C 는 겹치지 않는다.
+ *          변이: 겹침을 보지 않으면 칸이 하나, 나눠 쓰지 않으면 셋이다. 등록을 들이면 첫 사용의 전이가 사라진다.
+ */
+SW_TEST_CASE( RenderGraphTest, CreatedBuffersShareOneBufferWhenLevelsDoNotOverlap )
+{
+    const hashed_string bufferA( "TransientA" );
+    const hashed_string bufferB( "TransientB" );
+    const hashed_string bufferC( "TransientC" );
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "WriteA" ), { RenderGraphBufferUAV{ bufferA } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "WriteB" ), { RenderGraphBufferSRV{ bufferA }, RenderGraphBufferUAV{ bufferB } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "WriteC" ), { RenderGraphBufferSRV{ bufferB }, RenderGraphBufferUAV{ bufferC } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "ReadC" ), { RenderGraphBufferSRV{ bufferC }, RenderGraphTextureUAV{ hashed_string( "Out" ) } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    vector<RenderGraphBarrier> listBarrier;
+    collectIssuedBarriers( graph, listBarrier );
+
+    test::FakeRHIBufferFactory factory;
+    factory._bufferSRV = RHIBufferSRVIndex{ 1 };
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    constexpr RenderGraphBufferDesc kDesc{ sizeof( uint32 ), 64, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource };
+    RHIBufferHandle                 firstRunA{};
+    for ( uint32 run = 0; run < 2; ++run )
+    {
+        FrameBufferTable table;
+        graph.importResources( table );
+        for ( const hashed_string& name : { bufferC, bufferA, bufferB, hashed_string( "NoPassDeclaresIt" ) } )
+        {
+            graph.createBuffer( name, kDesc );
+        }
+        graph.allocateBuffers( device, table );
+        SW_EXPECT_EQUAL( 2u, graph.getBufferSlotCount() );
+        SW_EXPECT_EQUAL( 2u, factory._structuredCreateCount );
+        SW_EXPECT_TRUE( table.findBuffer( bufferA, 0 ) == table.findBuffer( bufferC, 0 ) );
+        SW_EXPECT_TRUE( table.findBuffer( bufferA, 0 ) != table.findBuffer( bufferB, 0 ) );
+        SW_EXPECT_TRUE( table.findEntry( hashed_string( "NoPassDeclaresIt" ), 0 ) == nullptr );
+        if ( run == 1 )
+            SW_EXPECT_TRUE( table.findBuffer( bufferA, 0 ) == firstRunA );
+        firstRunA = table.findBuffer( bufferA, 0 );
+        listBarrier.clear();
+        RenderGraphExecutionContext context;
+        SW_REQUIRE_TRUE( graph.execute( context ) );
+        const vector<RenderGraphBarrier> listA = findBarriersFor( listBarrier, bufferA );
+        SW_REQUIRE_EQUAL( size_t{ 2 }, listA.size() ); // 쓰기 앞 · 읽기 앞 — 들이지 않아 되돌림이 없다
+        SW_EXPECT_TRUE( listA[0]._access == RenderGraphAccess::UnorderedAccess );
+    }
+    graph.releaseDeviceResources();
+    SW_EXPECT_EQUAL( 0u, graph.getBufferSlotCount() );
+}

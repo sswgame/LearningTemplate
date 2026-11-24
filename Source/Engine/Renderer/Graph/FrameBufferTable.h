@@ -40,7 +40,7 @@ namespace sw
             uint32                  _elementCount{ 0 };                              ///< 원소 수(버퍼 용량, 텍스처는 0)
             RHIBufferSRVIndex       _srv{ kInvalidDescriptorIndex };                 ///< 버퍼의 SRV 번호(버퍼 보기가 읽는 셰이더를 찾는다)
             RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex };                 ///< 버퍼의 UAV 번호
-            bool                    _bAttachment{ false };                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화) — 그래프 첨부의 핸들만 알린다(`registerAttachment`)
+            bool                    _bGraphOwned{ false };                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화) — 그래프의 첨부 · 일시 버퍼의 핸들만 알린다(`registerAttachment` · `registerGraphBuffer`)
 
             /** @brief 버퍼 등록이면 그 버퍼, 아니면 0 입니다. */
             RHIBufferHandle getBuffer() const { return _viewable == RenderGraphViewableKind::Buffer ? RHIBufferHandle{ _handle } : RHIBufferHandle{}; }
@@ -66,6 +66,8 @@ namespace sw
          * @details 첨부의 시작 · 끝 상태는 그래프의 쓰기 사슬이 정한다 — 들이면 처음 쓰기의 전이가 사라지거나 끝에 되돌려진다.
          */
         void registerAttachment( hashed_string name, RHITextureHandle texture );
+        /** @brief 그래프가 만든 일시 버퍼 @p buffer 를 칸 0 으로 등록합니다 — 첨부처럼 들이지 않는다(시작 상태는 앞 이름의 끝 상태라 그래프의 첫 사용이 늘 전이를 낸다). */
+        void registerGraphBuffer( hashed_string name, const RHIStructuredBuffer& buffer );
 
         /** @brief 이름 @p name 칸 @p slot 의 버퍼입니다. 없으면 0 입니다. */
         RHIBufferHandle findBuffer( hashed_string name, uint32 slot ) const { return RHIBufferHandle{ findHandle( name, slot, RenderGraphViewableKind::Buffer ) }; }
@@ -77,9 +79,12 @@ namespace sw
         const vector<uint32>& getFirstEntries() const { return _listFirstEntry; }
         /** @brief 이름 @p name 의 칸마다 원소 번호입니다(`getEntries`, 등록하지 않은 칸은 `constant::invalid_index::kUint32`). 등록이 없으면 nullptr 입니다. 레벨 콜백이 이름의 모든 칸을 한 묶음으로 옮긴다. */
         const vector<uint32>* findSlots( hashed_string name ) const;
+        /** @brief 이름 @p name 칸 @p slot 의 등록입니다. 없으면 nullptr 입니다. */
+        const Entry* findEntry( hashed_string name, uint32 slot ) const;
 
     private:
         void   registerEntry( const Entry& entry );
+        void   registerBufferEntry( Entry entry, const RHIStructuredBuffer& buffer );
         uint64 findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const;
 
     private:
