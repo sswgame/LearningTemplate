@@ -5,7 +5,7 @@
  *
  * 한 패스가 네 번까지 디스패치한다(같은 PSO, 입력 행만 다르다 — 사이에 UAV 배리어). 움직이는 층이 없는 장면은 앞의 둘뿐이다.
  *   (1) 지우기: 스레드 하나가 칸 하나다. 다시 칠할 구간의 점유 비트 · 발광 순위를 0 으로 되돌린다.
- *   (2) 칠하기: 스레드 하나가 삼각형 하나다. 노멀의 가장 큰 축으로 투영한 칸(3 축 투영 — 기하 셰이더 없음)을 돌며, 칸 기둥에서 삼각형 평면이 지나는 층만 삼각형-상자 분리축
+ *   (2) 칠하기: 스레드 하나가 삼각형의 토막(투영한 칸 줄 몇 개) 하나다 — 격자를 가로지르는 큰 삼각형도 여러 스레드가 나눠 칠한다(C++ SceneVoxelizer::computeSliceCount). 노멀의 가장 큰 축으로 투영한 칸(3 축 투영 — 기하 셰이더 없음)을 돌며, 칸 기둥에서 삼각형 평면이 지나는 층만 삼각형-상자 분리축
  *       판정(Akenine-Möller 2001)으로 켠다 — 얇은 면도 빠짐없이 켜는 보수적 복셀화다. 겹치는 칸은 원자 OR, 발광은 순위의 원자 최댓값(더 밝은 쪽이 남는다).
  *   (3) 되돌리기: 스레드 하나가 칸 하나다. 바뀐 구간의 정적 사본(같은 버퍼의 다른 자리 — (1) · (2) 가 쓴 곳)을 읽을 자리로 옮긴다.
  *   (4) 움직이는 것 칠하기: (2) 와 같은 식으로 움직이는 메시만 읽을 자리 위에 칠한다.
@@ -20,19 +20,18 @@ SW_DECLARE_STRUCTURED_BUFFER( float, g_VoxelPositions, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_VoxelIndices, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VoxelRW, 0 );
 
-static const uint kRowHeader      = 0u; // asuint( 일 수, 스레드 수, 일 종류 kMode*, 디스패치 한 줄의 스레드 수 )
-static const uint kRowFirstJob    = 1u;
-static const uint kJobRowCount    = 9u;          // SceneVoxelizer::kJobRowCount
-static const uint kJobThreads     = 0u;          // asuint( 첫 스레드, 스레드 수, 점유 단어의 첫 단어, 발광 단어의 첫 단어(없으면 kNoEmission) )
-static const uint kJobDimension   = 1u;          // asuint( 격자 칸 수 X, Y, Z, 발광 순위(0 이면 발광 없음) )
-static const uint kJobClipFirst   = 2u;          // asuint( 구간 처음 칸 X, Y, Z, 인덱스 버퍼 안의 첫 인덱스 )
-static const uint kJobClipLast    = 3u;          // asuint( 구간 끝 칸(포함) X, Y, Z, 위치 버퍼 안의 첫 정점 )
-static const uint kJobOrigin      = 4u;          // 격자 시작점 xyz, 칸 크기
-static const uint kJobWorld       = 5u;          // 월드 행렬 네 행(행 벡터). 되돌리기는 첫 행에 asuint( 정적 사본의 점유 첫 단어, 발광 첫 단어 )
-static const uint kModeClear      = 1u;          // SceneVoxelizer::kJobModeClear
-static const uint kModeRestore    = 2u;          // SceneVoxelizer::kJobModeRestore
-static const uint kNoEmission     = 0xFFFFFFFFu; // SceneVoxelizer::kNoEmission
-static const uint kMaxSearchSteps = 32u;
+static const uint kRowHeader    = 0u; // asuint( 일 수, 스레드 수, 일 종류 kMode*, 디스패치 한 줄의 스레드 수 )
+static const uint kRowFirstJob  = 1u;
+static const uint kJobRowCount  = 9u;          // SceneVoxelizer::kJobRowCount
+static const uint kJobThreads   = 0u;          // asuint( 첫 스레드, 삼각형 하나를 나눈 토막 수(칠하기), 점유 단어의 첫 단어, 발광 단어의 첫 단어(없으면 kNoEmission) )
+static const uint kJobDimension = 1u;          // asuint( 격자 칸 수 X, Y, Z, 발광 순위(0 이면 발광 없음) )
+static const uint kJobClipFirst = 2u;          // asuint( 구간 처음 칸 X, Y, Z, 인덱스 버퍼 안의 첫 인덱스 )
+static const uint kJobClipLast  = 3u;          // asuint( 구간 끝 칸(포함) X, Y, Z, 위치 버퍼 안의 첫 정점 )
+static const uint kJobOrigin    = 4u;          // 격자 시작점 xyz, 칸 크기
+static const uint kJobWorld     = 5u;          // 월드 행렬 네 행(행 벡터). 되돌리기는 첫 행에 asuint( 정적 사본의 점유 첫 단어, 발광 첫 단어 )
+static const uint kModeClear    = 1u;          // SceneVoxelizer::kJobModeClear
+static const uint kModeRestore  = 2u;          // SceneVoxelizer::kJobModeRestore
+static const uint kNoEmission   = 0xFFFFFFFFu; // SceneVoxelizer::kNoEmission
 
 static const float kParallelEpsilon = 1.0e-8f; // 외적 길이의 제곱이 이보다 작으면 모서리가 상자 축과 평행이다
 static const float kOverlapSlack    = 1.0e-4f; // 상자를 살짝 키우는 비율 — 면에 정확히 닿는 삼각형이 이웃 칸에서 빠지지 않게 한다
@@ -41,6 +40,7 @@ static const float kLayerSlack      = 1.0e-2f; // 평면이 지나는 층을 고
 struct VoxelJob
 {
     uint   _firstThread;
+    uint   _sliceCount;
     uint   _wordOffset;
     uint   _emissionOffset;
     uint3  _dimension;
@@ -58,7 +58,8 @@ uint findJobRow( uint thread, uint jobCount )
 {
     uint low  = 0u;
     uint high = jobCount;
-    SW_LOOP for ( uint searchStep = 0u; searchStep < kMaxSearchSteps && high - low > 1u; ++searchStep )
+    // 구간은 걸음마다 줄어(low < middle < high) 어떤 입력이어도 끝난다. 조건을 `&&` 로 더하지 않는다 — NVIDIA GL(ARB_gl_spirv)이 `단계 < 32 && high - low > 1` 의 탈출을 지워 GPU 가 멈췄다.
+    SW_LOOP while ( high - low > 1u )
     {
         const uint middle      = ( low + high ) >> 1u;
         const uint firstThread = asuint( g_VoxelJobs[kRowFirstJob + middle * kJobRowCount + kJobThreads].x );
@@ -79,6 +80,7 @@ VoxelJob loadJob( uint row )
     const float4 origin    = g_VoxelJobs[row + kJobOrigin];
     VoxelJob     job;
     job._firstThread    = threads.x;
+    job._sliceCount     = threads.y;
     job._wordOffset     = threads.z;
     job._emissionOffset = threads.w;
     job._dimension      = dimension.xyz;
@@ -196,8 +198,8 @@ float3 loadCorner( VoxelJob job, float4x4 world, uint cornerIndex )
     return mul( float4( position, 1.0f ), world ).xyz - job._origin;
 }
 
-/** @brief 칠하기 — 삼각형 하나(@p triangleIndex 번째)와 겹치는 구간 안의 칸을 모두 켭니다. */
-void paintTriangle( VoxelJob job, float4x4 world, uint triangleIndex )
+/** @brief 칠하기 — 삼각형 하나(@p triangleIndex 번째)와 겹치는 구간 안의 칸 가운데 토막 @p slice 의 칸 줄을 모두 켭니다. 토막들을 합치면 삼각형 전체다. */
+void paintTriangle( VoxelJob job, float4x4 world, uint triangleIndex, uint slice )
 {
     const float3 cornerA = loadCorner( job, world, triangleIndex * 3u );
     const float3 cornerB = loadCorner( job, world, triangleIndex * 3u + 1u );
@@ -227,8 +229,11 @@ void paintTriangle( VoxelJob job, float4x4 world, uint triangleIndex )
     const float2 slope     = bPaint ? n.xy / n.z : float2( 0.0f, 0.0f );
     const float  spread    = halfSize * ( abs( slope.x ) + abs( slope.y ) ) + job._cellSize * kLayerSlack;
     const int2   columnEnd = bPaint ? last.xy : first.xy - int2( 1, 1 );
+    const uint   rowCount  = (uint)max( columnEnd.y - first.y + 1, 0 );
+    const int    rowFirst  = first.y + (int)( rowCount * slice / job._sliceCount );
+    const int    rowEnd    = first.y + (int)( rowCount * ( slice + 1u ) / job._sliceCount ); // 끝 제외
 
-    SW_LOOP for ( int columnV = first.y; columnV <= columnEnd.y; ++columnV )
+    SW_LOOP for ( int columnV = rowFirst; columnV < rowEnd; ++columnV )
     {
         SW_LOOP for ( int columnU = first.x; columnU <= columnEnd.x; ++columnU )
         {
@@ -272,7 +277,8 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
         else
         {
             const float4x4 world = float4x4( g_VoxelJobs[row + kJobWorld], g_VoxelJobs[row + kJobWorld + 1u], g_VoxelJobs[row + kJobWorld + 2u], g_VoxelJobs[row + kJobWorld + 3u] );
-            paintTriangle( job, world, thread - job._firstThread );
+            const uint     local = thread - job._firstThread;
+            paintTriangle( job, world, local / job._sliceCount, local % job._sliceCount );
         }
     }
 }

@@ -54,6 +54,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER_GATHER( Splines, "gameplay.splines", SplineVisualizerInternal::kVisualizerOrder, SW_EDITOR_ICON_NAME( "Curve" ), SW_LOCKEYREF( "EdPluginVisualizer", "SplinesLabel" ),
+    SW_EDITOR_VISUALIZER_GATHER( Splines, "gameplay.splines", SplineVisualizerInternal::kVisualizerOrder, SW_EDITOR_ICON_NAME( "Spline" ), SW_LOCKEYREF( "EdPluginVisualizer", "SplinesLabel" ),
                                  SW_LOCKEYREF( "EdPluginVisualizer", "SplinesTip" ), true, &SplineVisualizerInternal::gatherCurves );
 } // namespace sw::editor

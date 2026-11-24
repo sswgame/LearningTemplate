@@ -484,6 +484,29 @@ SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
 }
 
 /**
+ * @brief [SceneVoxelizerTest] 격자를 가로지르는 삼각형 몇 개는 줄마다 나눠 칠하고, 촘촘한 메시 · 구간이 작은 칠하기는 스레드를 늘리지 않는다
+ */
+SW_TEST_CASE( SceneVoxelizerTest, SliceCountFollowsTriangleSize )
+{
+    const sw::SceneVoxelGrid grid   = sw::SceneVoxelGrid::make( sw::AABB{
+                                                                  sw::float3{  0.0f,  0.0f,   0.0f},
+                                                                  sw::float3{128.0f, 16.0f, 128.0f}
+    },
+                                                                1.0f );
+    const sw::AABB           bounds = grid.getBounds();
+    SW_EXPECT_EQUAL( 128u, sw::SceneVoxelizer::computeSliceCount( grid, grid.getFullRange(), bounds, 1u ) );
+    SW_EXPECT_EQUAL( 91u, sw::SceneVoxelizer::computeSliceCount( grid, grid.getFullRange(), bounds, 2u ) ); // 바닥판 — ceil( 128 / √2 )
+    SW_EXPECT_EQUAL( 1u, sw::SceneVoxelizer::computeSliceCount( grid, grid.getFullRange(), bounds, 128u * 128u ) );
+    sw::SceneVoxelGrid::CellRange range{};
+    SW_REQUIRE_TRUE( grid.findCellRange( sw::AABB{
+                                             sw::float3{4.5f, 4.5f, 4.5f},
+                                             sw::float3{7.5f, 5.5f, 4.6f}
+    },
+                                         range ) );
+    SW_EXPECT_EQUAL( 4u, sw::SceneVoxelizer::computeSliceCount( grid, range, bounds, 1u ) ); // 다시 칠할 구간의 줄만 나눈다
+}
+
+/**
  * @brief [SceneVoxelizerTest] 같은 메시를 쓰는 원천들은 정점 · 인덱스를 한 번만 싣고, 격자 모양 · 발광 목록이 달라지면 격자 전체를 다시 칠한다
  */
 SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange )
@@ -508,7 +531,9 @@ SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange 
     SW_EXPECT_EQUAL( size_t( 1 ), plan._listMesh.size() );
     SW_EXPECT_EQUAL( cube->getVertexCount(), plan._vertexCount );
     SW_EXPECT_EQUAL( cube->getIndexCount(), plan._indexCount );
-    SW_EXPECT_EQUAL( 2u * ( cube->getIndexCount() / 3u ), plan._paintThreadCount );
+    const uint32 cubeTriangleCount = cube->getIndexCount() / 3u;
+    const uint32 sliceCount        = sw::SceneVoxelizer::computeSliceCount( scene._grid, scene._grid.getFullRange(), scene._grid.getBounds(), cubeTriangleCount );
+    SW_EXPECT_EQUAL( 2u * cubeTriangleCount * sliceCount, plan._paintThreadCount );
     SW_EXPECT_EQUAL( size_t( 1u + 2u * sw::SceneVoxelizer::kJobRowCount ), plan._listPaintRow.size() );
     SW_EXPECT_EQUAL( scene._grid.getCellCount(), plan._clearThreadCount );
 

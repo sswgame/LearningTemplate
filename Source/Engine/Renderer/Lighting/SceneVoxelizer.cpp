@@ -104,12 +104,12 @@ namespace sw
                 return float4{ BitUtil::bitsToFloat( x ), BitUtil::bitsToFloat( y ), BitUtil::bitsToFloat( z ), BitUtil::bitsToFloat( w ) };
             }
 
-            /** @brief 지우기 · 칠하기 일 하나의 앞 다섯 행(스레드 범위 · 자리 · 격자 · 구간)을 붙입니다. 배치는 scene_voxelize.hlsl 머리 주석이다. */
-            static void appendJobRows( const SceneVoxelPaintTarget& target, const SceneVoxelGrid::CellRange& range, uint32 firstThread, uint32 threadCount, uint32 emissionRank, uint32 firstIndex,
+            /** @brief 지우기 · 칠하기 일 하나의 앞 다섯 행(첫 스레드 · 토막 수 · 자리 · 격자 · 구간)을 붙입니다. 배치는 scene_voxelize.hlsl 머리 주석이다. */
+            static void appendJobRows( const SceneVoxelPaintTarget& target, const SceneVoxelGrid::CellRange& range, uint32 firstThread, uint32 sliceCount, uint32 emissionRank, uint32 firstIndex,
                                        uint32 firstVertex, vector<float4>& inoutListRow )
             {
                 const SceneVoxelGrid& grid = target._pScene->_grid;
-                inoutListRow.push_back( packBits( firstThread, threadCount, target._wordOffset, target._emissionOffset ) );
+                inoutListRow.push_back( packBits( firstThread, sliceCount, target._wordOffset, target._emissionOffset ) );
                 inoutListRow.push_back( packBits( grid._dimX, grid._dimY, grid._dimZ, emissionRank ) );
                 inoutListRow.push_back( packBits( range._arrFirst[0], range._arrFirst[1], range._arrFirst[2], firstIndex ) );
                 inoutListRow.push_back( packBits( range._arrLast[0], range._arrLast[1], range._arrLast[2], firstVertex ) );
@@ -162,10 +162,11 @@ namespace sw
                     return;
                 const SceneVoxelPaintPlan::MeshSpan span          = acquireMeshSpan( source._mesh, inoutMapSpan, inoutPlan );
                 const uint32                        triangleCount = source._indexCount / 3u;
-                appendJobRows( target, range, inoutThreadCount, triangleCount, target._pScene->findEmissionRank( source._packedEmission ), span._firstIndex + source._firstIndex, span._firstVertex,
+                const uint32                        sliceCount    = SceneVoxelizer::computeSliceCount( target._pScene->_grid, range, source._box, triangleCount );
+                appendJobRows( target, range, inoutThreadCount, sliceCount, target._pScene->findEmissionRank( source._packedEmission ), span._firstIndex + source._firstIndex, span._firstVertex,
                                inoutListRow );
                 appendMatrixRows( source._world, inoutListRow );
-                inoutThreadCount += triangleCount;
+                inoutThreadCount += triangleCount * sliceCount;
                 ++inoutJobCount;
             }
 
@@ -329,6 +330,22 @@ namespace sw
             SceneVoxelizerInternal::setFullRange( scene._grid, inoutListRange );
     }
 
+    uint32 SceneVoxelizer::computeSliceCount( const SceneVoxelGrid& grid, const SceneVoxelGrid::CellRange& range, const AABB& box, uint32 triangleCount )
+    {
+        SceneVoxelGrid::CellRange boxRange{};
+        if ( triangleCount == 0 || grid.findCellRange( box, boxRange ) == false )
+            return 1;
+        uint32 longest = 1;
+        for ( uint32 axis = 0; axis < 3; ++axis )
+        {
+            const uint32 first = MathUtil::max( boxRange._arrFirst[axis], range._arrFirst[axis] );
+            const uint32 last  = MathUtil::min( boxRange._arrLast[axis], range._arrLast[axis] );
+            if ( first <= last )
+                longest = MathUtil::max( longest, last - first + 1u );
+        }
+        return static_cast<uint32>( MathUtil::ceil( MathUtil::max( static_cast<float32>( longest ) / MathUtil::sqrt( static_cast<float32>( triangleCount ) ), 1.0f ) ) );
+    }
+
     SceneVoxelPaintPlan SceneVoxelizer::planPaint( const vector<SceneVoxelPaintTarget>& listTarget )
     {
         using Internal = SceneVoxelizerInternal;
@@ -362,7 +379,7 @@ namespace sw
             }
             for ( const SceneVoxelGrid::CellRange& range : listRange )
             {
-                Internal::appendJobRows( staticTarget, range, plan._clearThreadCount, range.getCellCount(), 0u, 0u, 0u, plan._listClearRow );
+                Internal::appendJobRows( staticTarget, range, plan._clearThreadCount, 1u, 0u, 0u, 0u, plan._listClearRow );
                 Internal::appendMatrixRows( identity, plan._listClearRow );
                 plan._clearThreadCount += range.getCellCount();
                 ++clearJobCount;
@@ -380,7 +397,7 @@ namespace sw
                 appendMovingRanges( *target._pPainted, scene, listRange );
             for ( const SceneVoxelGrid::CellRange& range : listRange )
             {
-                Internal::appendJobRows( target, range, plan._restoreThreadCount, range.getCellCount(), 0u, 0u, 0u, plan._listRestoreRow );
+                Internal::appendJobRows( target, range, plan._restoreThreadCount, 1u, 0u, 0u, 0u, plan._listRestoreRow );
                 Internal::appendRestoreRows( target, plan._listRestoreRow );
                 plan._restoreThreadCount += range.getCellCount();
                 ++restoreJobCount;
