@@ -93,6 +93,40 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
 }
 
 /**
+ * @brief [GPUMeshVertexPoolCopyTest] 복사를 기록하기 전에 나간 메시의 복사는 버린다 — 그 구간을 받은 다른 메시의 내용을 뒤늦게 덮지 않는다
+ * @details 그리지 않는 프레임(`FrameRenderer::executePacketWithoutDrawing`)은 풀을 고치기만 하고 복사를 기록하지 않는다. 변이: `retireEntry` 가 쌓인 복사를 남기면 A 의 복사 둘이 남아 진다.
+ */
+SW_TEST_CASE( GPUMeshVertexPoolCopyTest, CopiesOfARemovedMeshAreDropped )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory     = &factory;
+    const shared_ptr<Mesh> meshA = makeTriangle();
+    const shared_ptr<Mesh> meshB = makeTriangle();
+    for ( const shared_ptr<Mesh>& mesh : { meshA, meshB } )
+    {
+        SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
+    }
+    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() } ) ); // 기록하지 않는 프레임
+    SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() } ) ); // A 가 나가고 B 가 들어온다
+    SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
+    test::FakeRHICommandList list{ 0 };
+    pool.recordPendingCopies( list, device );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), list._listBufferCopy.size() );
+    for ( const test::FakeRHICommandList::BufferCopy& copy : list._listBufferCopy )
+    {
+        SW_EXPECT_EQUAL( meshB->getRenderData().getVertexBuffer(), copy._source );
+    }
+    pool.release( &device );
+    for ( const shared_ptr<Mesh>& mesh : { meshA, meshB } )
+    {
+        mesh->getRenderData().releaseRHI( &device );
+    }
+}
+
+/**
  * @brief [GPUMeshVertexPoolCopyTest] 프록시가 없는 메시(동적 메시)는 CPU 정점을 스테이징으로 올린다 — GPU 복사는 쌓이지 않는다
  * @details 변이: 프록시가 없는데도 복사를 쌓으면 원본 0 의 복사가 생겨 첫 단언이 진다.
  */

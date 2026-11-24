@@ -371,6 +371,12 @@ namespace sw
             beginFrameInternal();
         }
         /**
+         * @brief `beginFrame` 이 이번 프레임의 기록을 실제로 열었는지입니다. 렌더 스레드에서만 부른다.
+         * @details 스왑체인 이미지를 얻지 못한 프레임(서피스 손실 · 크기 0 · 다시 만들기 실패)은 기록해도 제출되지 않는다 — 한 번만 기록하는 일(정점 풀 복사)은 이것을 보고 다음 프레임으로 미룬다.
+         *          프레임을 늘 여는 백엔드(DX11 · GL · WebGPU)는 기본값이다.
+         */
+        virtual bool isFrameStarted() const { return true; }
+        /**
          * @brief 기록을 닫고 큐에 제출합니다. bPresent=false 면 제출만 하고 Present 는 하지 않습니다. 렌더 스레드에서만 부른다(`beginFrame` 과 같다).
          * @details 프레임 스트림에 열린 렌더 패스를 먼저 닫는다 — 패스는 프레임을 넘지 못한다(네 백엔드가 같다, `IRHICommandContext`). 예전에는 DX12 · Vulkan 만 백엔드에서 닫아
          *          DX11 · GL 은 열린 패스가 다음 프레임으로 넘어갔다.

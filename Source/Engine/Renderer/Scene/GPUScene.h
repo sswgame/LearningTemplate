@@ -166,6 +166,13 @@ namespace sw
     class SW_API GPUScene
     {
     public:
+        /** @brief 다단 정렬이 필요한 투명 배치 하나입니다. 배치 표를 올릴 때의 값이다 — 배치가 없는 씬은 표를 올리지 않으므로 지금 스냅샷의 배치 목록에서 되찾지 않는다. */
+        struct MultiPassSortBatch
+        {
+            uint32 _batchIndex{ 0 };    ///< 올린 배치 표의 번호
+            uint32 _instanceCount{ 0 }; ///< 그 배치의 인스턴스 수
+        };
+
         GPUScene()  = default;
         ~GPUScene() = default;
 
@@ -335,8 +342,8 @@ namespace sw
         uint32 getCompactArgsElement( uint32 head ) const { return _indirectCommandCount + head; }
         /** @brief 구간 머리 @p head 의 개수가 적힌 원소 번호입니다(원소의 첫 칸). */
         uint32 getCompactCountElement( uint32 head ) const { return 2u * _indirectCommandCount + head; }
-        /** @brief 다단 정렬이 필요한 투명 배치(`GPUBatchSortMode::MultiPass`)의 번호입니다(배치 번호 오름차순, 보통 비어 있다). */
-        const vector<uint32>& getMultiPassSortBatches() const { return _listMultiPassSortBatch; }
+        /** @brief 다단 정렬이 필요한 투명 배치(`GPUBatchSortMode::MultiPass`)입니다(배치 번호 오름차순, 보통 비어 있다). */
+        const vector<MultiPassSortBatch>& getMultiPassSortBatches() const { return _listMultiPassSortBatch; }
         /**
          * @brief 인스턴스 @p count 개짜리 배치를 정렬하는 단계를 차례로 적습니다(블록 정렬 → 블록을 두 배씩 합치기 → 차례를 칸으로). 앞 내용은 지운다.
          * @details 비교가 모두 오름차순인 바이토닉이라 개수 뒤의 칸을 무한대로 보고 건너뛰면 된다. 단계 사이에는 가시 목록의 UAV 배리어가 필요하다.
@@ -468,7 +475,7 @@ namespace sw
         vector<RHIDrawIndexedIndirectCommand>      _listScratchIndirectCmd;
         vector<GPUBatchInfo>                       _listScratchBatchInfo;
         vector<uint32>                             _listCompactSegmentCount; ///< 배치마다 압축 구간 머리면 배치 수, 아니면 0(배치 표와 함께 정한다)
-        vector<uint32>                             _listMultiPassSortBatch;  ///< `GPUBatchSortMode::MultiPass` 배치의 번호(배치 표와 함께 정한다)
+        vector<MultiPassSortBatch>                 _listMultiPassSortBatch;  ///< `GPUBatchSortMode::MultiPass` 배치의 번호(배치 표와 함께 정한다)
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
         /// @brief 바뀐 칸을 모은 구간입니다(스크래치).

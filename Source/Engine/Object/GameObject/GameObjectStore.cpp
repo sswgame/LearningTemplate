@@ -338,6 +338,46 @@ namespace sw
         outListGameObject.insert( outListGameObject.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
     }
 
+    void GameObjectStore::visitGameObjects( void ( *pVisit )( void* pContext, GameObject* pObj ), void* pContext ) const
+    {
+        const ScopedDeferredLog        deferredLog; // 콜백은 부르는 쪽 코드라 로그를 남길 수 있다 — 잠금을 놓은 뒤에 쓴다
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const IterationScope           iterationScope{};
+        for ( GameObject* pObj : _listGameObject )
+        {
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false )
+                pVisit( pContext, pObj );
+        }
+        for ( GameObject* pObj : _listPendingAdd )
+        {
+            if ( pObj != nullptr && pObj->isPendingDestroy() == false )
+                pVisit( pContext, pObj );
+        }
+    }
+
+    void GameObjectStore::visitComponentsOfType( const TypeInfo* pToType, void ( *pVisit )( void* pContext, Component* pComp ), void* pContext ) const
+    {
+        if ( pToType == nullptr )
+            return;
+        const ScopedDeferredLog        deferredLog; // `visitGameObjects` 와 같은 까닭
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        const IterationScope           iterationScope{};
+        for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
+        {
+            if ( isTypeDerivedFrom( pEntry->_pType, pToType ) == false )
+                continue;
+            for ( Component* pComp : pEntry->_listComponent )
+            {
+                // Debug 에서만 불변식을 확인한다. 소유자를 **먼저** 읽어야 한다. 컴포넌트 표시가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 대기인 것을
+                // 본 뒤에는 컴포넌트도 삭제 대기로 보인다. 순서를 바꾸면 그 사이에 표시한 다른 스레드 때문에 거짓으로 걸린다.
+                SW_ASSERT( pComp->getOwner()->isPendingDestroy() == false || pComp->isPendingDestroy() );
+                if ( pComp->isPendingDestroy() || pComp->isStaged() ) // 나눠 짓는 셀의 컴포넌트는 다 지어 드러날 때까지 보이지 않는다
+                    continue;
+                pVisit( pContext, pComp );
+            }
+        }
+    }
+
     void GameObjectStore::beginPlay()
     {
         // 표시를 먼저 켠다. 순회하는 동안 onBeginPlay 가 붙이는 컴포넌트도 대기열에 들어간다(이미 시작했으면 비트가 걸러 낸다).

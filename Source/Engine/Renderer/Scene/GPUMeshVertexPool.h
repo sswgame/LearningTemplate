@@ -130,7 +130,11 @@ namespace sw
         static constexpr uint32 kMaxPoolIndices = 3u * kMaxPoolVertices;
         static constexpr uint32 kMinPoolIndices = 3u * kMinPoolVertices;
 
-        /** @brief 항목의 정점 · 인덱스 구간을 늦게 돌려줍니다(받은 것이 있을 때만). */
+        /**
+         * @brief 항목의 정점 · 인덱스 구간을 늦게 돌려주고, 그 구간에 쌓인 채 기록하지 않은 복사를 버립니다(구간을 받은 항목만).
+         * @details 그리지 않는 프레임(`FrameRenderer::executePacketWithoutDrawing`)과 시작하지 못한 프레임은 복사를 기록하지 않는다 — 그 사이 구간이 다른 메시에 다시 나가면
+         *          뒤늦은 옛 복사가 새 내용(동적 메시의 곧바로 올린 정점)을 덮는다. 남은 복사의 원본 메시는 늘 풀에 든 살아 있는 메시다.
+         */
         void retireEntry( Entry& inoutEntry, uint64 retireStamp );
         /** @brief 더 큰 새 버퍼를 만들고 살아 있는 메시를 모두 앞에서부터 다시 이어 붙입니다. */
         void repack( IRHIDevice* pDevice );
@@ -159,6 +163,7 @@ namespace sw
             RHIBufferHandle _source{ 0 };
             uint64          _sourceOffset{ 0 };
             uint64          _sizeBytes{ 0 };
+            uint32          _base{ kInvalidBase }; ///< 도착 구간의 시작 정점 — 구간을 돌려줄 때 아직 기록하지 않은 복사를 이 값으로 찾아 버린다
         };
 
     private:

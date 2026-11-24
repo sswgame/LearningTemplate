@@ -95,7 +95,6 @@ namespace sw
         /** @brief 렌더 파이프라인을 고르는 데 쓰는 후보들입니다. 빈 경로는 "정하지 않음" 입니다. */
         struct PipelineChoice
         {
-            string_view _argumentPath;       ///< `initialize` 인자(테스트 · 도구)
             string_view _commandLinePath;    ///< `-gv_renderPipeline`
             string_view _deferredPath;       ///< 엔진 기본 디퍼드(`-gv_deferredShading` 일 때만)
             string_view _gamePath;           ///< 팩 설정(`PackEngineSettings::_renderPipeline`)
@@ -103,13 +102,11 @@ namespace sw
             bool        _bDeferred{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
-         * @brief 그릴 파이프라인을 고릅니다. 인자 → `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 기본 포워드 순서입니다.
+         * @brief 그릴 파이프라인을 고릅니다. `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 기본 포워드 순서입니다.
          * @details 명령줄은 측정 · 검증 스위치라 게임 데이터보다 앞선다(유니티 Graphics 설정의 Render Pipeline Asset 을 실행 인자가 덮는 것과 같다).
          */
         static string_view computePipelinePath( const PipelineChoice& choice )
         {
-            if ( choice._argumentPath.empty() == false )
-                return choice._argumentPath;
             if ( choice._commandLinePath.empty() == false )
                 return choice._commandLinePath;
             if ( choice._bDeferred && choice._deferredPath.empty() == false )

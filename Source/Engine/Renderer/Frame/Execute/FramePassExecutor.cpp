@@ -49,6 +49,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Renderer/Debug/MeshVertexCheck.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
@@ -152,6 +153,8 @@ namespace sw
     {
         _frameGraphExecutor.releaseResources();
         _bufferInspector.release();
+        if ( _meshVertexCheck != nullptr )
+            _meshVertexCheck->release( _pDevice );
         _nanCheckCommandList.reset();
         _frameEndCommandList.reset();
         _nanCheck.shutdown();
@@ -229,9 +232,21 @@ namespace sw
         _state._gpuFrameClock.writeFrameBegin( *_pCmd );
         // 프레임 업로드 단계 — 파이프라인 XML 의 패스가 아니라 실행기가 첫 리스트 맨 앞에 고정으로 기록한다(언리얼 RDG 초기 업로드 · 유니티 SRP 프레임 시작 CommandBuffer).
         // 정점 풀의 GPU 복사가 여기 든다 — 어느 파이프라인이든 그리기보다 먼저 풀이 채워진다(R-15).
-        _state._gpuScene.recordFrameUploads( *_pCmd, *pDevice );
-        // 실시간 프로브의 복셀 칠하기가 읽을 위치 흐름의 GPU 복사도 같은 단계다.
-        _state._probeUpdater.recordUploads( *_pCmd );
+        // 시작하지 못한 프레임(스왑체인 이미지를 얻지 못함)의 리스트는 제출되지 않는다 — 한 번만 기록하는 복사는 쌓아 둔 채 다음 프레임에 기록한다.
+        if ( pDevice->isFrameStarted() )
+        {
+            _state._gpuScene.recordFrameUploads( *_pCmd, *pDevice );
+            // 실시간 프로브의 복셀 칠하기가 읽을 위치 흐름의 GPU 복사도 같은 단계다.
+            _state._probeUpdater.recordUploads( *_pCmd );
+#if !defined( SW_SHIPPING )
+            if ( _state._pRenderDebug != nullptr )
+            {
+                if ( _meshVertexCheck == nullptr )
+                    _meshVertexCheck = make_unique<MeshVertexCheck>();
+                _meshVertexCheck->service( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
+            }
+#endif
+        }
 #if SW_PROFILE_COMPILED
         // 프레임 그래프 구간은 프로파일러 기록 중일 때만 쓴다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();

@@ -65,6 +65,7 @@ namespace sw
         // 스냅샷이 든 소유(메시 · 머티리얼 · 인스턴스)를 여기서 놓는다. 디바이스보다 먼저 불러야 한다(Graphics/README "소유와 수명" 4).
         _snapshot = GPUSceneSnapshot{};
         resetBatchBindings();
+        _listMultiPassSortBatch.clear();
         _indirectCommandCount = 0;
         _bBatchTablesDirty    = SW_TRUE;
         // 씬을 비우면 움직임 기록도 버린다 — 다음 씬의 첫 프레임은 카메라 움직임뿐이다.
@@ -534,7 +535,7 @@ namespace sw
             if ( infoBatch._blendMode == BlendMode::Transparent )
                 sortMode = ( infoBatch._instanceCount <= kGPUSortMaxElements ) ? GPUBatchSortMode::OneGroup : GPUBatchSortMode::MultiPass;
             if ( sortMode == GPUBatchSortMode::MultiPass )
-                _listMultiPassSortBatch.push_back( argIndex );
+                _listMultiPassSortBatch.push_back( MultiPassSortBatch{ argIndex, infoBatch._instanceCount } );
             _listScratchBatchInfo[argIndex]._sortMode = static_cast<uint32>( sortMode );
             if ( _listCompactSegmentCount[argIndex] != 0 )
             {
