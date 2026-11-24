@@ -21,7 +21,7 @@ namespace
             <Status id="Burning" kind="Age"/><Status id="Charged" kind="Countdown" steps="2"/>
             <Material id="Empty"/><Material id="Grass" flags="Flammable" burnSteps="2"/><Material id="Wood" flags="Flammable" burnSteps="9"/>
             <Material id="Metal" flags="Conductive"/><Material id="Ice"/><Material id="Water"/>
-            <Stimulus id="Fire"><On material="Ice" setMaterial="Water" event="Melted"/><On flag="Flammable" without="Burning" addStatus="Burning" event="Ignited"/></Stimulus>
+            <Stimulus id="Fire"><On elementMaterial="Ice" setMaterial="Water" event="Melted"/><On flag="Flammable" without="Burning" addStatus="Burning" event="Ignited"/></Stimulus>
             <Stimulus id="Electric"><On flag="Conductive" floodStatus="Charged" through="Conductive" event="Electrified"/></Stimulus>
             <Step>
                 <Expire status="Burning" stepsParam="burnSteps" setMaterial="Empty" event="BurnedOut"/>
@@ -88,7 +88,7 @@ SW_TEST_CASE( ElementGridTest, CatalogRefusesUndeclaredNames )
 {
     ElementRuleCatalog table;
     SW_EXPECT_LOG( "ElementRuleCatalog.NamesNothingDeclaredTable" );
-    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Material id="A"/><Stimulus id="S"><On material="B" setMaterial="A"/></Stimulus></ElementRules>)", "test" ) );
+    SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Material id="A"/><Stimulus id="S"><On elementMaterial="B" setMaterial="A"/></Stimulus></ElementRules>)", "test" ) );
     SW_EXPECT_LOG( "ElementRuleCatalog.FloodStatusNeedsThroughFlag" );
     SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Status id="X"/><Material id="A"/><Stimulus id="S"><On floodStatus="X"/></Stimulus></ElementRules>)", "test" ) );
 }

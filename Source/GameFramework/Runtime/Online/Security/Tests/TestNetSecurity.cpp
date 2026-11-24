@@ -71,6 +71,7 @@ SW_TEST_CASE( NetSecurityTest, ServerNeedsACertificatePair )
     SW_EXPECT_TRUE( hasErrorKind( NetSecurity::createServerTLSContext( files._provider, files._certificateFile, "", "" ), ErrorKind::InvalidArgument ) );
     SW_EXPECT_TRUE( hasErrorKind( NetSecurity::createServerTLSContext( files._provider, "", files._privateKeyFile, "" ), ErrorKind::InvalidArgument ) );
     const string missing = string( files._folder.join( "missing.key" ).str() );
+    SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_TRUE( hasErrorKind( NetSecurity::createServerTLSContext( files._provider, files._certificateFile, missing, "" ), ErrorKind::NotFound ) );
     SW_EXPECT_FALSE( NetSecurity::createServerTLSContext( files._provider, files._garbageFile, files._privateKeyFile, "" ).has_value() );
 }
@@ -83,5 +84,6 @@ SW_TEST_CASE( NetSecurityTest, ClientNeedsANameOrAPinnedCertificate )
     SW_EXPECT_TRUE( NetSecurity::createClientTLSContext( files._provider, files._certificateFile, "" ).has_value() );
     SW_EXPECT_TRUE( hasErrorKind( NetSecurity::createClientTLSContext( files._provider, files._garbageFile, "" ), ErrorKind::InvalidArgument ) );
     const string missing = string( files._folder.join( "missing.pem" ).str() );
+    SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_TRUE( hasErrorKind( NetSecurity::createClientTLSContext( files._provider, missing, "localhost" ), ErrorKind::NotFound ) );
 }
