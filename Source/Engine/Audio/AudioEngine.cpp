@@ -880,6 +880,11 @@ namespace sw
                     slot._bPausedRequest = command._bFlag;
                     slot._voice.setPaused( command._bFlag );
                 }
+                for ( EventInstance& instance : _listInstance )
+                {
+                    if ( instance._bInUse && instance._playingID == command._playingID )
+                        instance._bPaused = command._bFlag;
+                }
                 _musicPlayer.setPaused( command._playingID, command._bFlag );
                 break;
             }
@@ -1315,6 +1320,11 @@ namespace sw
         _renderedFrameCount += audio::kBlockFrameCount;
         if ( _musicPlayer.isPaused() == false )
             _musicFrameCount += audio::kBlockFrameCount;
+        for ( EventInstance& instance : _listInstance )
+        {
+            if ( instance._bInUse && instance._bPaused == false )
+                instance._elapsedFrameCount += audio::kBlockFrameCount;
+        }
         publishState( realCount, virtualCount );
     }
 
@@ -1413,7 +1423,7 @@ namespace sw
                 status._event          = instance._pDesc->_name;
                 status._bus            = instance._pDesc->_bus;
                 status._playingID      = instance._playingID;
-                status._elapsedSeconds = _renderedFrameCount > instance._startFrame ? static_cast<float32>( _renderedFrameCount - instance._startFrame ) / sampleRate : 0.0f;
+                status._elapsedSeconds = static_cast<float32>( instance._elapsedFrameCount ) / sampleRate;
                 status._bStopping      = instance._bStopping;
                 bool    bUnknownEnd    = false;
                 float32 remaining      = 0.0f;

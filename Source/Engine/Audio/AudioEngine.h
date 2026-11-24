@@ -364,10 +364,12 @@ namespace sw
             AudioPlayingID                      _playingID{ 0 };
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _startFrame{ 0 };
-            float32                             _audibility{ 0.0f }; ///< 지난 블록 보이스 목표 게인의 최댓값이다.
-            float32                             _distance{ 0.0f };   ///< 지난 블록의 리스너 거리다.
-            bool                                _bInUse{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                _bStopping{ false }; ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint64                              _elapsedFrameCount{ 0 }; ///< 멈춰 있지 않던 블록만 센 렌더 프레임이다(음악 시계와 같은 규칙).
+            float32                             _audibility{ 0.0f };     ///< 지난 블록 보이스 목표 게인의 최댓값이다.
+            float32                             _distance{ 0.0f };       ///< 지난 블록의 리스너 거리다.
+            bool                                _bInUse{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                _bPaused{ false };       ///< 재생이 멈춰 있다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                _bStopping{ false };     ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         // AudioEngine.cpp: 명령, 보이스, 렌더

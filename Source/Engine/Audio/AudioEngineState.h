@@ -67,7 +67,7 @@ namespace sw
         hashed_string  _event{};                   ///< 이벤트 이름이다.
         hashed_string  _bus{};                     ///< 이벤트가 보내는 버스다.
         AudioPlayingID _playingID{ 0 };            ///< 재생 id 다.
-        float32        _elapsedSeconds{ 0.0f };    ///< 시작부터 흐른 시간(초)이다.
+        float32        _elapsedSeconds{ 0.0f };    ///< 시작부터 흐른 시간(초)이다. 멈춰 있던 시간은 세지 않는다.
         float32        _remainingSeconds{ -1.0f }; ///< 가장 긴 보이스가 끝날 때까지 남은 시간(초)이다. 반복이거나 클립을 아직 모르면 -1 이다.
         uint32         _voiceCount{ 0 };           ///< 인스턴스의 보이스 수다.
         uint32         _virtualVoiceCount{ 0 };    ///< 그중 가상 보이스 수다.
