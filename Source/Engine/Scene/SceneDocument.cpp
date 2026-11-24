@@ -301,9 +301,11 @@ namespace sw
         _sourcePath = diskPath.str();
         AssetLoadScope loadScope( "Scene", diskPath.str() );
         XMLDocument    doc;
-        const bool     bRead = doc.loadFromFile( diskPath );
+        // 리소스 id 읽기와 같은 규칙으로 펼친다 — 날것으로 읽으면 쿠킹본에만 조건(`_when`)이 풀리지 않는다(개발 실행은 푼다).
+        string         baseID;
+        const bool     bRead = doc.loadDataFileAs( diskPath, ResourceContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &baseID );
         vector<string> listChain;
-        return readXMLSource( doc, bRead, string( diskPath.str() ), string{}, loadScope, listChain );
+        return readXMLSource( doc, bRead, string( diskPath.str() ), baseID, loadScope, listChain );
     }
 
     bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, const string& flattenedBaseID, AssetLoadScope& loadScope, vector<string>& inoutListChain )
@@ -326,23 +328,8 @@ namespace sw
             return false;
         }
 
-        // 씬 상속: 부모 위에 차이를 얹어 한 벌로 펼친 뒤 읽는다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
-        // 리소스 id 읽기는 규칙을 골라 이미 펼쳤다(@p flattenedBaseID 가 부모다). 디스크 파일은 `parseData` 가 카탈로그 표에 없는 이 칸을 그대로 둔다("자기 입구가 펼친다").
-        _baseScenePath        = flattenedBaseID;
-        const string basePath = DataInheritance::resolveBaseText( root.getAttributeText( DataInheritance::kBaseAttribute ) );
-        if ( basePath.empty() == false )
-        {
-            string flatText;
-            bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-            if ( ResourceComposer::compose( root.toString(), absPath, ResourceContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), flatText, bComposed ) == false || doc.parse( flatText ) == false )
-            {
-                SW_LOG_ERROR_ID( "SceneDocument.BaseSceneNotFlattened", "Scene '%#' could not be merged onto its base '%#' - the scene is not loaded", absPath, basePath );
-                *this = {};
-                return false;
-            }
-            root           = doc.getRoot( SceneDocumentInternal::kRoot );
-            _baseScenePath = basePath;
-        }
+        // 씬 상속: 두 입구(리소스 id · 디스크)가 부모 위에 차이를 얹어 한 벌로 펼친 글을 넘긴다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
+        _baseScenePath = flattenedBaseID;
 
         if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )
         {
