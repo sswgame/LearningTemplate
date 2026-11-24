@@ -598,11 +598,24 @@ namespace sw
         StringBuilder<constant::buffer::kMax512> lineBuilder;
         if ( bCompared )
         {
-            static constexpr const utf8* kArrResultName[] = { "pass", "pass near limit", "fail" };
+            // 판정 이름은 switch 로 — 판정을 더하고 이름을 빠뜨리면 컴파일이 멈춘다(`-Wswitch`).
+            const auto getResultName = []( GoldenResult result ) -> const utf8*
+            {
+                switch ( result )
+                {
+                    case GoldenResult::Pass:
+                        return "pass";
+                    case GoldenResult::PassNearLimit:
+                        return "pass near limit";
+                    case GoldenResult::Fail:
+                        return "fail";
+                }
+                return "";
+            };
             lineBuilder.appendFormat( "%# vs %#: %#%% differing (at most %#%%), mean distance %# (at most %#), largest deep region %# px (at most %#) - %#", file, goldenID,
                                       AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ), AutomationStepArgsUtil::formatNumber( limits._maxDifferingFraction * 100.0 ),
                                       AutomationStepArgsUtil::formatNumber( difference._meanDistance ), AutomationStepArgsUtil::formatNumber( limits._maxMeanDistance ),
-                                      difference._largestDeepRegionPixels, limits._maxDeepRegionPixels, kArrResultName[static_cast<uint32>( evaluation )] );
+                                      difference._largestDeepRegionPixels, limits._maxDeepRegionPixels, getResultName( evaluation ) );
         }
         const string line = string( lineBuilder.view() );
         if ( bCompared )

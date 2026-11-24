@@ -125,8 +125,27 @@ namespace sw
                 SceneSubLevelSubsystem& subLevels = pScene->getObjectManager()->getSubsystem<SceneSubLevelSubsystem>();
                 if ( listArgument.empty() )
                 {
-                    static constexpr const utf8* kArrStateName[] = { "loading", "queued", "building", "loaded", "failed", "removing" };
-                    vector<string>               listName;
+                    // 상태 이름은 switch 로 — 상태를 더하고 이름을 빠뜨리면 컴파일이 멈춘다(`-Wswitch`).
+                    const auto getStateName = []( SubLevelState state ) -> const utf8*
+                    {
+                        switch ( state )
+                        {
+                            case SubLevelState::Loading:
+                                return "loading";
+                            case SubLevelState::Queued:
+                                return "queued";
+                            case SubLevelState::Building:
+                                return "building";
+                            case SubLevelState::Loaded:
+                                return "loaded";
+                            case SubLevelState::Failed:
+                                return "failed";
+                            case SubLevelState::Removing:
+                                return "removing";
+                        }
+                        return "";
+                    };
+                    vector<string> listName;
                     subLevels.collectSubLevelNames( listName );
                     StringBuilder<constant::buffer::kMax512> reply;
                     reply.append( "sub-levels:" );
@@ -134,7 +153,7 @@ namespace sw
                     {
                         SubLevelState state{ SubLevelState::Queued };
                         (void)subLevels.findSubLevelState( name, state ); // 방금 모은 이름이다
-                        reply.appendFormat( " %#(%#)", name, kArrStateName[static_cast<uint32>( state )] );
+                        reply.appendFormat( " %#(%#)", name, getStateName( state ) );
                     }
                     outReply = string( reply.view() );
                     return true;

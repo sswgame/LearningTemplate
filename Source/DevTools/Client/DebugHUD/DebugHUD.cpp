@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -79,7 +80,7 @@ namespace sw
             static constexpr float4 kGraphColor{ 0.35f, 0.85f, 0.45f, 1.0f };
             static constexpr float4 kGraphBackground{ 0.0f, 0.0f, 0.0f, 0.45f };
 
-            static constexpr const utf8* kArrCornerName[] = { "topLeft", "topRight", "bottomLeft", "bottomRight" };
+            static constexpr auto kArrCornerName = makeEnumTable<DebugHUDCorner, const utf8*>( "topLeft", "topRight", "bottomLeft", "bottomRight" ); // 항목 수가 열거자 수와 다르면 컴파일이 멈춘다
 
             static const hashed_string& getShownSettingID()
             {
@@ -907,7 +908,7 @@ namespace sw
         for ( uint32 index = 0; index < static_cast<uint32>( DebugHUDCorner::Count ); ++index )
         {
             const bool bDigit = text.size() == 1 && text[0] == static_cast<utf8>( '0' + index );
-            if ( bDigit || StringUtil::equals( text, DebugHUDInternal::kArrCornerName[index] ) )
+            if ( bDigit || StringUtil::equals( text, DebugHUDInternal::kArrCornerName[static_cast<DebugHUDCorner>( index )] ) )
             {
                 outCorner = static_cast<DebugHUDCorner>( index );
                 return true;
@@ -919,7 +920,7 @@ namespace sw
     const utf8* DebugHUD::getCornerName( DebugHUDCorner corner )
     {
         const uint32 index = static_cast<uint32>( DebugHUDInternal::clampCorner( static_cast<int32>( corner ) ) );
-        return DebugHUDInternal::kArrCornerName[index];
+        return DebugHUDInternal::kArrCornerName[static_cast<DebugHUDCorner>( index )];
     }
 
     void DebugHUD::writeSetting( const hashed_string& settingID, const utf8* pVariableName, string_view value )
