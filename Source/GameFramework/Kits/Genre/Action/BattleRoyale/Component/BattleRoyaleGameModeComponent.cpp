@@ -41,6 +41,7 @@ namespace sw
 
             static constexpr float32 kAttackRangeRatio = 0.8f; ///< 컴퓨터는 사거리의 이 비율까지 다가간다(사거리 끝에서 멈칫거리지 않게)
             static constexpr float32 kMinDirection     = 1.0e-3f;
+            static constexpr float32 kRouteReach       = 0.3f; ///< 길의 점에 닿았다고 보는 거리(m)
 
             /** @brief @p from 에서 @p to 쪽 방향(길이 1, 같은 자리면 0)입니다. */
             static float2 makeDirection( const float2& from, const float2& to ) { return ( to - from ).normalizeOr( float2{ 0.0f, 0.0f }, kMinDirection ); }
@@ -60,6 +61,9 @@ namespace sw
         , _groundHeight{ 0.0f }
         , _playerSpeed{ 5.0f }
         , _botSpeed{ 4.0f }
+        , _bodyRadius{ 0.35f }
+        , _eyeHeight{ 1.2f }
+        , _botRouteInterval{ 0.5f }
         , _weaponDamage{ 22.0f }
         , _weaponRange{ 14.0f }
         , _playerFireInterval{ 0.4f }
@@ -77,6 +81,7 @@ namespace sw
         , _victoryMoney{ 60 }
         , _pCatalog{}
         , _pLootCatalog{}
+        , _terrain{}
         , _match{}
         , _flightPath{}
         , _timer{}
@@ -102,7 +107,7 @@ namespace sw
     bool BattleRoyaleGameModeComponent::openMatch( BattleRoyaleMatch& outMatch ) const
     {
         // 아이템 카탈로그는 게임이 걸었을 때만 있다(가방 무게) — 이 판의 장비는 배틀로얄 카탈로그의 것이라 없어도 된다.
-        if ( outMatch.initialize( _pCatalog.get(), game::findSubsystem<const ItemCatalog>(), _pLootCatalog.get(), _seed, nullptr ) == false )
+        if ( outMatch.initialize( _pCatalog.get(), game::findSubsystem<const ItemCatalog>(), _pLootCatalog.get(), _seed, &_terrain ) == false )
         {
             SW_LOG_ERROR_ID( "BattleRoyale.OpenFailed", "Battle royale game mode: the zone refused the catalog map size - the match does not open" );
             return false;
@@ -163,6 +168,7 @@ namespace sw
             return false;
         }
         _random = GameRandom( GameRandom::deriveSeed( _seed, BattleRoyaleGameModeComponentInternal::kPersonSalt ) );
+        _terrain.initialize( getObjectManager(), BattleRoyaleBodySettings{ _groundHeight, _bodyRadius, _eyeHeight } );
         if ( openMatch( _match ) == false || prepareDrop() == false )
             return false;
         _timer.reset();
@@ -242,7 +248,8 @@ namespace sw
     {
         const float3  landing = _listPerson[static_cast<size_t>( person )]._skydiver.getPosition();
         const float32 mapSize = _pCatalog->getMapSize();
-        _match.setPlayerPosition( person, float2{ MathUtil::clamp( landing._x, 0.0f, mapSize ), MathUtil::clamp( landing._z, 0.0f, mapSize ) } );
+        const float2  inMap{ MathUtil::clamp( landing._x, 0.0f, mapSize ), MathUtil::clamp( landing._z, 0.0f, mapSize ) };
+        _match.setPlayerPosition( person, _terrain.findStandingSpot( inMap, mapSize ) );
     }
 
     void BattleRoyaleGameModeComponent::stepDrop( float32 deltaTime )
@@ -289,18 +296,19 @@ namespace sw
         SW_LOG_INFO_ID( "BattleRoyale.BattleStarted", "[BattleRoyale] everyone landed - %# people, zone radius %#", _match.countRemainingPlayers(), getZoneRadius() );
     }
 
-    optional<int32> BattleRoyaleGameModeComponent::findNearestEnemy( int32 person, float32 range ) const
+    template <typename TPredicate>
+    optional<int32> BattleRoyaleGameModeComponent::findNearestPerson( int32 person, float32 range, TPredicate isCandidate ) const
     {
         const BattleRoyalePlayer& self        = *_match.findPlayer( person );
         float32                   bestSquared = range * range;
         optional<int32>           best{};
         for ( int32 other = 0; other < _match.getPlayerCount(); ++other )
         {
-            const BattleRoyalePlayer& candidate = *_match.findPlayer( other );
-            if ( candidate._team == self._team || candidate.isAlive() == false )
+            if ( other == person )
                 continue;
-            const float32 distanceSquared = float2::getDistanceSquared( self._position, candidate._position );
-            if ( distanceSquared > bestSquared )
+            const BattleRoyalePlayer& candidate       = *_match.findPlayer( other );
+            const float32             distanceSquared = float2::getDistanceSquared( self._position, candidate._position );
+            if ( distanceSquared > bestSquared || isCandidate( candidate ) == false )
                 continue;
             bestSquared = distanceSquared;
             best        = other;
@@ -308,23 +316,46 @@ namespace sw
         return best;
     }
 
+    optional<int32> BattleRoyaleGameModeComponent::findNearestEnemy( int32 person ) const
+    {
+        const int32 team = _match.findPlayer( person )->_team;
+        return findNearestPerson( person, _pCatalog->getMapSize() * 2.0f, [team]( const BattleRoyalePlayer& other )
+        { return other._team != team && other.isAlive(); } );
+    }
+
+    optional<int32> BattleRoyaleGameModeComponent::findVisibleEnemy( int32 person, float32 range ) const
+    {
+        const BattleRoyalePlayer& self = *_match.findPlayer( person );
+        return findNearestPerson( person, range, [this, &self]( const BattleRoyalePlayer& other )
+        {
+            return other._team != self._team && other.isAlive() && _terrain.hasLineOfSight( self._position, other._position );
+        } );
+    }
+
     optional<int32> BattleRoyaleGameModeComponent::findDownedMate( int32 person, float32 range ) const
     {
-        const BattleRoyalePlayer& self        = *_match.findPlayer( person );
-        float32                   bestSquared = range * range;
-        optional<int32>           best{};
-        for ( int32 other = 0; other < _match.getPlayerCount(); ++other )
+        const int32 team = _match.findPlayer( person )->_team;
+        return findNearestPerson( person, range, [team]( const BattleRoyalePlayer& other )
+        { return other._team == team && other.isDowned(); } );
+    }
+
+    void BattleRoyaleGameModeComponent::walkRoute( int32 person, const float2& goal, float32 deltaTime )
+    {
+        using Internal        = BattleRoyaleGameModeComponentInternal;
+        Person&      entry    = _listPerson[static_cast<size_t>( person )];
+        const float2 position = _match.findPlayer( person )->_position;
+        (void)entry._routeHold.update( deltaTime ); // 끝났는지는 바로 아래에서 본다
+        if ( entry._routeHold.isActive() == false )
         {
-            const BattleRoyalePlayer& candidate = *_match.findPlayer( other );
-            if ( other == person || candidate._team != self._team || candidate.isDowned() == false )
-                continue;
-            const float32 distanceSquared = float2::getDistanceSquared( self._position, candidate._position );
-            if ( distanceSquared > bestSquared )
-                continue;
-            bestSquared = distanceSquared;
-            best        = other;
+            _terrain.findRoute( position, goal, entry._listRoute );
+            entry._routeHold.start( _botRouteInterval );
         }
-        return best;
+        while ( entry._listRoute.size() > 1 && float2::getDistance( position, entry._listRoute.front() ) <= Internal::kRouteReach )
+        {
+            entry._listRoute.erase( entry._listRoute.begin() );
+        }
+        if ( entry._listRoute.empty() == false )
+            movePerson( person, Internal::makeDirection( position, entry._listRoute.front() ), _botSpeed, deltaTime );
     }
 
     void BattleRoyaleGameModeComponent::movePerson( int32 person, const float2& direction, float32 speed, float32 deltaTime )
@@ -334,7 +365,7 @@ namespace sw
             return;
         const float32 mapSize  = _pCatalog->getMapSize();
         const float2  step     = direction * ( speed * deltaTime / MathUtil::max( 1.0f, length ) ); // 대각선 입력이 더 빠르지 않게
-        const float2  position = _match.findPlayer( person )->_position + step;
+        const float2  position = _terrain.walk( _match.findPlayer( person )->_position, step );
         _match.setPlayerPosition( person, float2{ MathUtil::clamp( position._x, 0.0f, mapSize ), MathUtil::clamp( position._y, 0.0f, mapSize ) } );
     }
 
@@ -343,7 +374,7 @@ namespace sw
         Person& entry = _listPerson[static_cast<size_t>( person )];
         if ( entry._weaponCooldown.isActive() )
             return;
-        const optional<int32> target = findNearestEnemy( person, _weaponRange );
+        const optional<int32> target = findVisibleEnemy( person, _weaponRange );
         if ( target.has_value() == false )
             return;
         entry._weaponCooldown.restart( interval );
@@ -396,7 +427,7 @@ namespace sw
         const BattleRoyaleZone&   zone         = _match.getZone();
         const bool                bOutside     = zone.isInside( self._position ) == false;
         const bool                bMustMoveOn  = zone.getStage() == BattleRoyaleZoneStage::Shrinking && float2::getDistance( self._position, zone.getNextCenter() ) > zone.getNextRadius();
-        const optional<int32>     enemyInRange = findNearestEnemy( person, _weaponRange * Internal::kAttackRangeRatio );
+        const optional<int32>     enemyInRange = findVisibleEnemy( person, _weaponRange * Internal::kAttackRangeRatio );
         const bool                bReviving    = self._revivingTarget >= 0;
         const optional<int32>     downedMate   = findDownedMate( person, _botRescueRange );
         const bool                bRescue      = downedMate.has_value() && enemyInRange.has_value() == false && bOutside == false;
@@ -408,7 +439,7 @@ namespace sw
         }
         if ( bOutside || bMustMoveOn )
         {
-            movePerson( person, Internal::makeDirection( self._position, zone.getNextCenter() ), _botSpeed, deltaTime );
+            walkRoute( person, zone.getNextCenter(), deltaTime );
         }
         else if ( bRescue )
         {
@@ -416,13 +447,13 @@ namespace sw
             if ( float2::getDistance( self._position, matePosition ) <= _reviveRange )
                 (void)_match.beginRevive( person, *downedMate ); // 자리가 찼으면 다음 걸음에 다시 본다
             else
-                movePerson( person, Internal::makeDirection( self._position, matePosition ), _botSpeed, deltaTime );
+                walkRoute( person, matePosition, deltaTime );
         }
         else if ( enemyInRange.has_value() == false )
         {
-            const optional<int32> enemy = findNearestEnemy( person, _pCatalog->getMapSize() * 2.0f ); // 맵 어디든
+            const optional<int32> enemy = findNearestEnemy( person );
             if ( enemy.has_value() )
-                movePerson( person, Internal::makeDirection( self._position, _match.findPlayer( *enemy )->_position ), _botSpeed, deltaTime );
+                walkRoute( person, _match.findPlayer( *enemy )->_position, deltaTime );
         }
         fire( person, _botFireInterval, _botHitChance );
     }

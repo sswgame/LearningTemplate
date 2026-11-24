@@ -3,7 +3,7 @@
  * @brief 배틀로얄 키트(`GF_BattleRoyale`)의 디렉터 — 낙하(비행기 → 자유 낙하 → 낙하산) → 좁아지는 구역의 전투 → 결과 한 판을 진행합니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — `BattleRoyaleMatch` · `BattleRoyaleFlightPath` · `BattleRoyaleSkydiver` · `BattleRoyaleGroundItem`)을 들고 씬과 잇는다.
  *          입력 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_BattleRoyale` 의 `BattleRoyaleViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
- *          0 번이 플레이어이고 나머지는 컴퓨터다(같은 분대의 동료 포함). 몸 · 사격은 여기서 최소로 둔다 — 평면을 걷고 사거리 안의 가장 가까운 적을 쏜다(명중 확률). 구역 피해 · 기절 · 부활 · 전멸 · 순위는 키트 규칙이다.
+ *          0 번이 플레이어이고 나머지는 컴퓨터다(같은 분대의 동료 포함). 몸 · 사격은 여기서 최소로 둔다 — 평면을 걷고 사거리 안의 가장 가까운 보이는 적을 쏜다(명중 확률). 건물(씬의 정적 바디)은 걷기 · 시야를 막고 컴퓨터는 씬 내비메시의 길로 돌아간다(`BattleRoyaleSceneTerrain`). 구역 피해 · 기절 · 부활 · 전멸 · 순위는 키트 규칙이다.
  *          수치는 카탈로그(`BattleRoyaleCatalog`)와 씬 데이터다. 판이 끝나거나 플레이어 분대가 전멸하면 `_resultHoldSeconds` 뒤 미니게임을 끝낸다(디렉터 계약 ③) — 이기면 결과 값 `money`(`_victoryMoney`).
  *          장르 완결 루프 시나리오: `game/playground/automation/battleroyale_slice.scenario.xml`.
  */
@@ -27,6 +27,7 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleDrop.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleLoot.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleMatch.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleSceneTerrain.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -110,6 +111,8 @@ namespace sw
         {
             BattleRoyaleSkydiver _skydiver{};
             Countdown            _weaponCooldown{};
+            vector<float2>       _listRoute{}; ///< 컴퓨터가 지날 길의 점 — 다음 생각에 다시 구하므로 싣지 않는다(아래도)
+            Countdown            _routeHold{};
             float32              _jumpTime{ 0.0f };    ///< 컴퓨터가 뛰어내릴 비행 시각(초)
             uint8                _bJumped{ SW_FALSE }; ///< 비행기에서 내렸다
         };
@@ -120,18 +123,25 @@ namespace sw
         [[nodiscard]] bool prepareDrop();
         void               stepDrop( float32 deltaTime );
         void               stepBattle( float32 deltaTime );
-        /** @brief 땅에 닿은 사람 @p person 을 맵 안의 자리로 판에 알립니다. */
+        /** @brief 땅에 닿은 사람 @p person 을 맵 안의 설 자리(건물 안이면 그 곁)로 판에 알립니다. */
         void landPerson( int32 person );
         void stepPlayer( float32 deltaTime );
         /** @brief 컴퓨터 하나의 걸음 — 구역 안으로, 기절한 동료에게, 가까운 적에게 순으로 움직이고 닿으면 쏜다. */
         void stepBot( int32 person, float32 deltaTime );
-        /** @brief @p person 을 @p direction 으로 한 걸음 옮깁니다. 맵 밖으로 나가지 않는다. */
+        /** @brief 컴퓨터 @p person 을 @p goal 로 가는 내비메시 길을 따라 한 걸음 옮깁니다. 길은 `_botRouteInterval` 마다 다시 구한다. */
+        void walkRoute( int32 person, const float2& goal, float32 deltaTime );
+        /** @brief @p person 을 @p direction 으로 한 걸음 옮깁니다. 건물에 막히면 미끄러지고 맵 밖으로 나가지 않는다. */
         void movePerson( int32 person, const float2& direction, float32 speed, float32 deltaTime );
-        /** @brief 사거리 안의 가장 가까운 적을 쏩니다(재사용 대기가 끝났을 때). */
+        /** @brief 사거리 안의 가장 가까운 보이는 적을 쏩니다(재사용 대기가 끝났을 때). */
         void fire( int32 person, float32 interval, float32 hitChance );
         /** @brief 닿는 바닥 무더기의 방어구 · 가방을 입고 무더기를 치웁니다. */
-        void            pickUpItems( int32 person );
-        optional<int32> findNearestEnemy( int32 person, float32 range ) const;
+        void pickUpItems( int32 person );
+        /** @brief @p range 안에서 @p isCandidate( 사람 ) 이 고른 가장 가까운 다른 사람입니다. 조건은 지금까지의 가장 가까운 사람보다 가까울 때만 묻는다(시야 광선을 아낀다). */
+        template <typename TPredicate>
+        optional<int32> findNearestPerson( int32 person, float32 range, TPredicate isCandidate ) const;
+        /** @brief 맵 어디든 가장 가까운 선 적입니다(보이지 않아도). */
+        optional<int32> findNearestEnemy( int32 person ) const;
+        optional<int32> findVisibleEnemy( int32 person, float32 range ) const;
         optional<int32> findDownedMate( int32 person, float32 range ) const;
         void            settle();
         void            endGame();
@@ -149,6 +159,12 @@ namespace sw
         float32 _playerSpeed;
         PROPERTY( Category = "People", DisplayName = "Bot Speed", Min = 0.1, Units = "m/s" )
         float32 _botSpeed;
+        PROPERTY( Category = "People", DisplayName = "Body Radius", Tooltip = "Radius of the walking body that buildings stop", Min = 0.05, Units = m )
+        float32 _bodyRadius;
+        PROPERTY( Category = "People", DisplayName = "Eye Height", Tooltip = "Height of sight and fire lines - lower cover does not block them", Min = 0.1, Units = m )
+        float32 _eyeHeight;
+        PROPERTY( Category = "People", DisplayName = "Bot Route Interval", Tooltip = "Seconds between two navmesh routes of one computer person", Min = 0.05, Units = s )
+        float32 _botRouteInterval;
         PROPERTY( Category = "Weapon", DisplayName = "Damage", Min = 0.1 )
         float32 _weaponDamage;
         PROPERTY( Category = "Weapon", DisplayName = "Range", Min = 0.1, Units = m )
@@ -182,6 +198,7 @@ namespace sw
 
         SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
         SharedAssetRef<LootCatalog>         _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
+        BattleRoyaleSceneTerrain            _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
         BattleRoyaleMatch                   _match;
         BattleRoyaleFlightPath              _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
         FixedStepTimer                      _timer;

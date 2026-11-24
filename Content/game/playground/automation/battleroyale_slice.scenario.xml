@@ -4,7 +4,7 @@
   배틀로얄 미니게임(battleroyale — GF_BattleRoyale 키트)의 한 판 — 비행 → 플레이어가 뛰어내림 → 전투 시작 → 구역이 줄기 시작 → 자동 플레이로 판 끝 → 결과 보고 → 허브.
   플레이어 조작은 입력 맵 액션(BattleRoyale.Use)으로만 한다. 이긴 분대는 씨앗에 달려 판정하지 않는다 — 기절이 나오고 판이 끝나 결과가 나가는 것을 본다.
   비행 창: 경로는 81 ~ 141 m(맵 100 m, 어긋남 0.6)라 0.25 ~ 0.75 구간이 늘 1.6 초를 품는다(25 m/s).
-  감시 값: BattleRoyale.Phase(0 낙하, 1 전투, 2 끝) · .PlayerDropStage(0 비행기, 1 낙하, 2 땅) · .Remaining · .ZoneRadius.
+  감시 값: BattleRoyale.Phase(0 낙하, 1 전투, 2 끝) · .PlayerDropStage(0 비행기, 1 낙하, 2 땅) · .Remaining · .ZoneRadius, Nav.PathLength(건물을 돌아가는 길).
   실행: ctest -R Scenario.playground · App -scenario=game/playground/automation/battleroyale_slice.scenario.xml -unattended
 -->
 <Scenario name="game.playground.battleroyale_slice" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -14,6 +14,8 @@
 	<Expect watch="Save.Blocked" equals="1"/>
 	<WaitUntil watch="BattleRoyale.Remaining" equals="6" timeoutFrames="120"/>
 	<Expect watch="BattleRoyale.Phase" equals="0"/>
+	<!-- 건물(정적 바디)이 내비메시를 막아 곧은 6 m 를 돌아간다 -->
+	<WaitUntil watch="Nav.PathLength" target="RouteSouth" key="RouteNorth" atLeast="10" timeoutFrames="120"/>
 	<Expect watch="BattleRoyale.ZoneRadius" near="70.71" tolerance="0.1"/>
 	<AdvanceSimulation frames="96"/> <!-- 뛰어내릴 수 있는 구간(비행 1.6 초 — 시간이 내용) -->
 	<Expect watch="BattleRoyale.PlayerDropStage" equals="0"/>
