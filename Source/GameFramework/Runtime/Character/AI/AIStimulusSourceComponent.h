@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Name/TagID.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -53,6 +54,8 @@ namespace sw
         /** @brief 소리를 거둡니다. */
         void clearNoise() { reportNoise( 0.0f ); }
 
+        /** @brief 이 태그를 가진 오브젝트의 몸은 시각에 걸리지 않습니다(숨는 곳 · 은신). 소리는 그대로 들립니다. */
+        static TagID getHiddenTag() { return "State.Hidden"_tag; }
         /** @brief 팀 @p team 의 @p kind 층입니다. 범위 밖 팀은 단언으로 멈춥니다. */
         static const SpatialGridLayerDesc& getLayer( uint8 team, AIStimulusKind kind );
         /**
