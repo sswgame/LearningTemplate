@@ -16,6 +16,7 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/Tests/GameModeStateVersionTest.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
@@ -161,5 +162,16 @@ SW_TEST_CASE_F( KartGameModeTest, AutoPlayedRaceEndsWithPlacesAndReward )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listValue.size() );
     SW_EXPECT_EQUAL( int64{ 50 - place * 10 }, listValue[0]._amount );
     advance( 60 ); // 결과 0.5 초를 넘긴다
+    _manager.endPlay();
+}
+
+/** @brief [KartGameModeTest] 결과 유지 깃발이 있던 판 1 상태는 패치로 올라 읽히고 나머지 값이 그대로다(판 1 의 상태 칸은 `_bResultShown` · `_bFinishRequested` 둘이었다) */
+SW_TEST_CASE_F( KartGameModeTest, Version1StateIsPatchedAndReadsTheSame )
+{
+    _manager.beginPlay();
+    SW_REQUIRE_TRUE( _pGameMode->isStarted() );
+    advance( 30 );
+    constexpr uint8 kArrRemovedField[] = { 0, 0 };
+    test::GameModeStateVersionTest::expectVersion1ReadsTheSame( *_pGameMode, 0, kArrRemovedField );
     _manager.endPlay();
 }
