@@ -3,8 +3,12 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Panels/Prefab/Model/PrefabEditorViewModel.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -64,4 +68,18 @@ SW_TEST_CASE( PrefabEditorViewModelTest, WithoutASceneNothingIsGathered )
     SW_EXPECT_TRUE( state._bIsolating == SW_FALSE );
     SW_EXPECT_TRUE( state._bNested == SW_FALSE );
     SW_EXPECT_EQUAL( model.getStatus(), state._status );
+}
+
+/** @brief [PrefabEditorViewModelTest] 격리 중인 프리팹 파일을 옮기면 그 단계의 저장 자리가 새 자리다 — 옛 자리면 저장이 옛 파일을 되살린다 */
+SW_TEST_CASE( PrefabEditorViewModelTest, IsolationFollowsAMovedPrefab )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject* const pRoot = manager.createGameObject( sw::hashed_string( "Root" ) );
+    SW_REQUIRE_NOT_NULL( pRoot );
+    sw::editor::EditorPrefabIsolation isolation;
+    isolation.push( manager, "game/a/inner.prefab.xml", *pRoot, true );
+    isolation.remapPath( "game/a/other.prefab.xml", "game/b/other.prefab.xml" );
+    SW_EXPECT_TRUE( isolation.getPrefabPath() == "game/a/inner.prefab.xml" );
+    isolation.remapPath( "game/a/inner.prefab.xml", "game/b/inner.prefab.xml" );
+    SW_EXPECT_TRUE( isolation.getPrefabPath() == "game/b/inner.prefab.xml" );
 }

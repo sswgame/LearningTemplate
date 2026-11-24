@@ -275,6 +275,7 @@ namespace sw::editor
                 const uint64     generation = editor::getSubsystem<SceneManager>().getSceneGeneration();
                 EditorWorkspace& workspace  = context.getSubsystem<EditorWorkspace>();
                 workspace.setObservedSceneGeneration( generation );
+                workspace.captureSceneDiskBaseline(); // 앞 인스턴스의 기준은 함께 사라졌다 — 지금 디스크부터 다시 본다
                 // 선택 조회(②): 맡김 칸이 없는 호스트(테스트 · 도구)는 이어받을 것이 없다.
                 IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
                 vector<uint8>            bytes;

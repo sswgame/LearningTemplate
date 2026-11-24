@@ -101,6 +101,15 @@ namespace sw::editor
         _listFrame.push_back( std::move( frame ) );
     }
 
+    void EditorPrefabIsolation::remapPath( string_view oldPath, string_view newPath )
+    {
+        for ( PrefabIsolationFrame& frame : _listFrame )
+        {
+            if ( string_view{ frame._prefabPath } == oldPath )
+                frame._prefabPath = string{ newPath };
+        }
+    }
+
     bool EditorPrefabIsolation::pop( GameObjectManager* pManager, PrefabIsolationFrame& outFrame )
     {
         if ( _listFrame.empty() )
