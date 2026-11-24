@@ -1,8 +1,8 @@
 /**
  * @file RenderDebugRegistry.h
  * @brief 렌더링 런타임 디버그의 우편함입니다 — UI(에디터 렌더 디버거 창 · 개발 명령 · HUD)가 요청하고 렌더 스레드가 프레임 경계에서 처리해 값으로 공개합니다.
- * @details 넷을 나른다: 렌더 그래프 사본(`RenderGraphSnapshot`), 프레임 디버거(멈춤 지점 설정 · 드로우 기록 — 유니티 Frame Debugger), 프레임 통계(드로우 · 삼각형 상한),
- *          그래프 밖 버퍼 읽기(`FrameBufferTable` 등록분 — `RenderBufferInspector` 가 렌더 쪽에서 읽는다). `RenderTargetRegistry` 와 같은 꼴이다: 값만 복사해 넘기고
+ * @details 다섯을 나른다: 렌더 그래프 사본(`RenderGraphSnapshot`), 프레임 디버거(멈춤 지점 설정 · 드로우 기록 — 유니티 Frame Debugger), 프레임 통계(드로우 · 삼각형 상한),
+ *          그래프 밖 버퍼 읽기(`FrameBufferTable` 등록분 — `RenderBufferInspector` 가 렌더 쪽에서 읽는다), 메시 정점 대조 요청(`MeshVertexCheck`). `RenderTargetRegistry` 와 같은 꼴이다: 값만 복사해 넘기고
  *          공개 번호(`get…Serial`)로 다시 읽을지 안다. 렌더러는 호스트(`FrameRendererHost::_pRenderDebug`)로만 이것을 받아 화면 밖 렌더러는 기록하지 않는다.
  *          렌더러 쪽 훅은 배포 구성(`SW_SHIPPING`)에서 빠진다 — 그때 이 객체는 아무도 채우지 않는다.
  */
@@ -188,6 +188,14 @@ namespace sw
         /** @brief 마지막 결과를 복사합니다. 없으면 false 입니다. */
         [[nodiscard]] bool copyBufferContent( RenderBufferContent& outContent ) const;
 
+        // ------------------------------------------------------------------------------
+        // 4) 메시 정점 대조
+        // ------------------------------------------------------------------------------
+        /** @brief 다음 프레임에 그리는 메시의 GPU 정점을 CPU 정점과 견주어 달라고 요청합니다(`MeshVertexCheck` — 결과는 로그). */
+        void requestMeshVertexCheck() { _bMeshVertexCheckRequested.store( SW_TRUE, std::memory_order_release ); }
+        /** @brief 대조 요청이 있으면 꺼내고 true 입니다(렌더 스레드). */
+        [[nodiscard]] bool takeMeshVertexCheckRequest() { return _bMeshVertexCheckRequested.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE; }
+
     private:
         mutable mutex                          _mutex;
         vector<RenderGraphSnapshot> _listGraph SW_GUARDED_BY( _mutex );
@@ -218,6 +226,7 @@ namespace sw
         atomic<uint32> _bufferContentSerial{ 0 };
         atomic<uint32> _statsWantedFrames{ 0 };
         atomic<uint8>  _bGraphCaptureRequested{ SW_FALSE };
+        atomic<uint8>  _bMeshVertexCheckRequested{ SW_FALSE };
         atomic<uint8>  _bBufferListRequested{ SW_FALSE };
         atomic<uint8>  _bRecording{ SW_FALSE };
 

@@ -38,6 +38,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/GenericWindow.h"
@@ -657,6 +658,9 @@ namespace sw
                 StringBuilder<constant::buffer::kMax256> text;
                 text.appendFormat( "differs from its golden: %#", line );
                 addFailure( step, text.view(), AutomationFailureKind::GoldenMismatch );
+                // 그림이 어긋난 자리에서 GPU 정점을 CPU 정점과 견준다(결과는 로그) — 깨진 정점은 그 메시가 사라질 때까지만 남는다.
+                if ( RenderDebugRegistry* const pRenderDebug = engine::areEngineServicesBound() ? engine::findSubsystem<RenderDebugRegistry>() : nullptr )
+                    pRenderDebug->requestMeshVertexCheck();
                 return;
             }
         }

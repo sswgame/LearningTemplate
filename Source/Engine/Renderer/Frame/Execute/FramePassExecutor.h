@@ -47,6 +47,7 @@ namespace sw
     struct GPUMeshBatchPSO;
     class IRHICommandList;
     class IRHIDevice;
+    class MeshVertexCheck;
     class RenderPipelineAsset;
 
     /**
@@ -589,6 +590,8 @@ namespace sw
         vector<uint8> _listScratchPassState;
         /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
         RenderBufferInspector _bufferInspector;
+        /// @brief 자동화가 요청한 메시 정점 대조입니다(`RenderDebugRegistry::requestMeshVertexCheck`). 첫 프레임에 만들고, 되읽기 버퍼는 요청 때만 있다.
+        unique_ptr<MeshVertexCheck> _meshVertexCheck;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
         RHIBufferTransitionBatch _levelBufferTransitions;
         /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).
