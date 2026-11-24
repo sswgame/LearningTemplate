@@ -15,9 +15,12 @@
 		<entry source="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" />
 		<entry source="Enemy strength" text="적군 전력" />
 		<entry source="Enemy strength broken - you win" text="적군 전력이 바닥났습니다 - 승리" />
+		<entry source="Explored %" text="탐색 %" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
+		<entry source="Flasks" text="물약" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
+		<entry source="Geo" text="지오" />
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
@@ -48,10 +51,12 @@
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
+		<entry source="The warden has fallen" text="파수꾼이 쓰러졌습니다" />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
 		<entry source="Travel Cape" text="여행 망토" />
 		<entry source="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" />
 		<entry source="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" />
+		<entry source="You fell - your geo lies where you died" text="쓰러졌습니다 - 지오는 죽은 자리에 남습니다" />
 		<entry source="Your squad is out" text="분대가 탈락했습니다" />
 		<entry source="Zone" text="구역" />
 	</entries>

@@ -86,11 +86,29 @@ msgctxt "Enemy strength broken - you win"
 msgid "Enemy strength broken - you win"
 msgstr "적군 전력이 바닥났습니다 - 승리"
 
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "Explored %"
+msgid "Explored %"
+msgstr "탐색 %"
+
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "Flasks"
+msgid "Flasks"
+msgstr "물약"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
 msgctxt "GateCut"
 msgid "GateCut"
 msgstr ""
+
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "Geo"
+msgid "Geo"
+msgstr "지오"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -236,6 +254,12 @@ msgctxt "Tattered Cape"
 msgid "Tattered Cape"
 msgstr "해진 망토"
 
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "The warden has fallen"
+msgid "The warden has fallen"
+msgstr "파수꾼이 쓰러졌습니다"
+
 #. Context: SequenceTrackItem._text
 #: game/playground/data/cinematic.seq.xml
 msgctxt "The warrior wakes."
@@ -258,6 +282,12 @@ msgstr "쓰기 - 비행기에서 뛰어내리기"
 msgctxt "You are down - wait for your squad"
 msgid "You are down - wait for your squad"
 msgstr "기절했습니다 - 동료를 기다리세요"
+
+#. Context: TextWidget._text
+#: game/playground/metroidvania/ui/hud.ui.xml
+msgctxt "You fell - your geo lies where you died"
+msgid "You fell - your geo lies where you died"
+msgstr "쓰러졌습니다 - 지오는 죽은 자리에 남습니다"
 
 #. Context: TextWidget._text
 #: game/playground/battleroyale/ui/hud.ui.xml

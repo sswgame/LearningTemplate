@@ -14,6 +14,9 @@
 		<entry key="Double K.O. - the bout is a draw" text="더블 K.O. 시합이 무승부입니다" sourceHash="2f4f1c8b2a8b8859" />
 		<entry key="Enemy strength" text="적군 전력" sourceHash="b5143e5e2a708834" />
 		<entry key="Enemy strength broken - you win" text="적군 전력이 바닥났습니다 - 승리" sourceHash="3ecc332ccec2feeb" />
+		<entry key="Explored %" text="탐색 %" sourceHash="dba317bb17831f87" />
+		<entry key="Flasks" text="물약" sourceHash="75a3f0cc809b1eb9" />
+		<entry key="Geo" text="지오" sourceHash="eaeb8c19986395a2" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
 		<entry key="K.O. - you lose the bout" text="K.O. 시합에서 졌습니다" sourceHash="fb3474b00a384899" />
@@ -40,10 +43,12 @@
 		<entry key="Subtitle.Scout" text="정찰병" sourceHash="7d573c625719c1a5" />
 		<entry key="Subtitle.ScoutLine" text="능선에 움직임이 있다. 몸을 낮춰." sourceHash="f5effb26f2446842" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
+		<entry key="The warden has fallen" text="파수꾼이 쓰러졌습니다" sourceHash="f907141e36178ebd" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
 		<entry key="Use - jump off the plane" text="쓰기 - 비행기에서 뛰어내리기" sourceHash="ce3ab2b99b177051" />
 		<entry key="You are down - wait for your squad" text="기절했습니다 - 동료를 기다리세요" sourceHash="995b14b904f5e596" />
+		<entry key="You fell - your geo lies where you died" text="쓰러졌습니다 - 지오는 죽은 자리에 남습니다" sourceHash="fe7253fea05f4d7f" />
 		<entry key="Your squad is out" text="분대가 탈락했습니다" sourceHash="d6fb3828410be124" />
 		<entry key="Zone" text="구역" sourceHash="1667f96d19635ec7" />
 	</entries>

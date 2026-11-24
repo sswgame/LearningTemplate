@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="c830a74ff6714a32a3696db5c2f5b1b8"?>
 <!--
-  장르 키트 시연 — 메트로배니아 죽음과 휴식 한 바퀴(maps/kit_metroidvania). 쉬는 곳 bench, 보통 적 husk(5 geo) · 보스 hornet(300 geo).
+  메트로배니아 미니게임(minigames/metroidvania)의 규칙 — 게임 기능 Metroidvania 가 미니게임 범위에 건다. 방 그래프는 metroidvania/data/caverns.areas.xml(디렉터의 _areaDataPath).
+  능력 wings(2단 점프)를 주워야 알현실 문턱(4 m)을 넘는다. 체력 · 스태미나는 플레이어와 적이 같은 규칙을 쓰고, 보스는 받는 피해를 씬이 줄인다(_bossDamageTakenScale).
 -->
 <Metroidvania currency="geo">
 	<BaseMotor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/>
-	<Rules flaskCharges="2" flaskMaxCharges="3" flaskHeal="30" flaskHealPerUpgrade="10" riposteMultiplier="3" riposteTime="1" attackStamina="15" dodgeStamina="20" guardStaminaPerDamage="1" guardChip="0.25" corpseRadius="2"/>
-	<Health max="100" poise="30" poiseBreakDuration="1"/>
-	<Stamina max="100" regenRate="0" regenDelay="0"/>
-	<Parry><Window grade="Perfect" early="0.25" late="0.25"/></Parry>
+	<Rules flaskCharges="2" flaskMaxCharges="3" flaskHeal="40" flaskHealPerUpgrade="10" riposteMultiplier="2" riposteTime="1" attackStamina="12" dodgeStamina="20" guardStaminaPerDamage="1" guardChip="0.25" corpseRadius="1.5" charmNotches="3"/>
+	<Health max="100" poise="40" poiseRegenDelay="2" poiseRegenRate="20" poiseBreakDuration="1.2"/>
+	<Stamina max="100" regenRate="30" regenDelay="0.6"/>
+	<Parry><Window grade="Perfect" early="0.2" late="0.05"/></Parry>
+	<Ability id="wings" name="Moth Wings" flag="ability_wings"><Motor extraJumpCount="1"/></Ability>
+	<Charm id="edge" name="Keen Edge" cost="2"><Stats damage="5"/></Charm>
+	<Map region="caverns" price="5"/>
 	<Site id="bench" area="hall" rest="true"/>
+	<Site id="lift_hall" area="hall" fastTravel="true"/>
+	<Site id="lift_throne" area="throne" fastTravel="true"/>
+	<Pickup id="wings" area="gallery" ability="wings"/>
+	<Pickup id="edge" area="throne" charm="edge"/>
 	<Enemy id="husk" currency="5"/>
-	<Enemy id="hornet" boss="true" flag="boss.hornet" currency="300"/>
+	<Enemy id="warden" boss="true" flag="boss_warden" currency="60"/>
 </Metroidvania>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="43004fd106f34c54aad0badee421d7c0"?>
+<!--
+  메트로배니아 미니게임(동굴 세 방 — 2단 점프를 주워 알현실의 파수꾼을 쓰러뜨린다) — Metroidvania 키트. 규칙(data/metroidvania.xml)은 게임 기능 Metroidvania 가 미니게임 범위에 건다.
+  맵의 MetroidvaniaGameMode 오브젝트에 MetroidvaniaGameModeComponent → MetroidvaniaViewComponent(GF_Client_Metroidvania) → HUDControllerComponent 가 그 순서로 붙는다.
+  입력은 걷기 공통 레이어와 Metroidvania 레이어(metroidvania/data/metroidvania.input.xml)만 켠다. 탐험이라 안에서 저장한다.
+  시나리오 automation/metroidvania_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="metroidvania" map="game/playground/metroidvania/maps/caverns.scene.xml" entry="SceneSwitch" portalSlot="14" save="Allowed" features="Metroidvania" inputContexts="Movement,Metroidvania" catalogs="MetroidvaniaCatalog"/>

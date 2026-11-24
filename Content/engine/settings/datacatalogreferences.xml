@@ -144,6 +144,12 @@
 	<Field owner="MechArenaGameModeComponent" field="_listPlayerSkill" tag="MechSkillDef"/>
 	<Field owner="MechArenaGameModeComponent" field="_listAllyMech" tag="MechDef"/>
 	<Field owner="MechArenaGameModeComponent" field="_listEnemyMech" tag="MechDef"/>
+	<CatalogKey tag="MetroidvaniaEnemyDef" catalog="Metroidvania" entry="Enemy"/>
+	<CatalogKey tag="MetroidvaniaPickupDef" catalog="Metroidvania" entry="Pickup"/>
+	<CatalogKey tag="MetroidvaniaSiteDef" catalog="Metroidvania" entry="Site"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listEnemyKind" tag="MetroidvaniaEnemyDef"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listPickup" tag="MetroidvaniaPickupDef"/>
+	<Field owner="MetroidvaniaGameModeComponent" field="_listSite" tag="MetroidvaniaSiteDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>

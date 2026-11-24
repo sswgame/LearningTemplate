@@ -81,9 +81,24 @@
 				<item>game/playground/mecharena/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Explored %" source="Explored %" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Flasks" source="Flasks" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cutscenegate.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Geo" source="Geo" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Gilded Knight Helmet" source="Gilded Knight Helmet" context="Item name">
@@ -225,6 +240,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="The warden has fallen" source="The warden has fallen" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -253,6 +273,11 @@
 		<entry key="You are down - wait for your squad" source="You are down - wait for your squad" context="TextWidget._text">
 			<origins>
 				<item>game/playground/battleroyale/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="You fell - your geo lies where you died" source="You fell - your geo lies where you died" context="TextWidget._text">
+			<origins>
+				<item>game/playground/metroidvania/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Your squad is out" source="Your squad is out" context="TextWidget._text">
