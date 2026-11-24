@@ -73,13 +73,16 @@ namespace sw::editor
                 ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "NoInProcessGameIsRegisteredNetSimGameRegistryOnly" ) );
                 return;
             }
-            _gameIndex = MathUtil::clamp( _gameIndex, 0, static_cast<int32>( listGame.size() ) - 1 );
-            if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Game" ), "Game" ), listGame[static_cast<size_t>( _gameIndex )].c_str() ) )
+            _gameIndex           = MathUtil::clamp( _gameIndex, 0, static_cast<int32>( listGame.size() ) - 1 );
+            const bool bGameOpen = EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "Game" ), "Game" ), listGame[static_cast<size_t>( _gameIndex )].c_str() );
+            EditorSelfTestMarks::record( "multiplayer.inprocess.game" );
+            if ( bGameOpen )
             {
                 for ( size_t index = 0; index < listGame.size(); ++index )
                 {
                     if ( ImGui::Selectable( listGame[index].c_str(), static_cast<int32>( index ) == _gameIndex ) )
                         _gameIndex = static_cast<int32>( index );
+                    EditorSelfTestMarks::recordFormat( "multiplayer.inprocess.game.%#", listGame[index].c_str() );
                 }
                 ImGui::EndCombo();
             }

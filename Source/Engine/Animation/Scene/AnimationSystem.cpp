@@ -158,6 +158,8 @@ namespace sw
         , _pManager{ &manager }
         , _lodViewPosition{}
         , _frameIndex{ 0 }
+        , _updateFrame{ 0 }
+        , _nextUpdatePhase{ 0 }
         , _deltaSeconds{ 0.0f }
         , _expectedEvaluationMicroseconds{ 0.0f }
         , _activeMeshCount{ 0 }
@@ -691,6 +693,8 @@ namespace sw
         if ( _bOrderDirty == SW_TRUE || ( _componentAll.getSkeletalMeshCount() == 0 && _skeletalMeshList.getCount() > 0 ) )
             rebuildComponents();
         ++_frameIndex;
+        if ( deltaSeconds > 0.0f )
+            ++_updateFrame;
         _deltaSeconds = deltaSeconds;
         _crowd.beginFrame( deltaSeconds );
 

@@ -74,6 +74,39 @@ namespace sw::editor
         return true;
     }
 
+    const utf8* AdminToolUtil::getErrorName( uint16 errorCode )
+    {
+        switch ( errorCode )
+        {
+            case OnlineError::kUnauthenticated:
+                return "Unauthenticated";
+            case OnlineError::kForbidden:
+                return "Forbidden";
+            case OnlineError::kRateLimited:
+                return "RateLimited";
+            case OnlineError::kInvalidRequest:
+                return "InvalidRequest";
+            case OnlineError::kUnavailable:
+                return "Unavailable";
+            case OnlineError::kVersionMismatch:
+                return "VersionMismatch";
+            case OnlineError::kUpdateRequired:
+                return "UpdateRequired";
+            case OnlineError::kNotFound:
+                return "NotFound";
+            case OnlineError::kConflict:
+                return "Conflict";
+            case OnlineError::kFeatureDisabled:
+                return "FeatureDisabled";
+            case OnlineError::kBusy:
+                return "Busy";
+            case OnlineError::kInternal:
+                return "Internal";
+            default:
+                return "Error";
+        }
+    }
+
     const utf8* AdminToolUtil::getMethodName( uint16 method )
     {
         if ( method == AdminMethod::LookupAccount::kID )

@@ -103,7 +103,7 @@ namespace sw
         void postAudioCues( const vector<AudioSubtitleCue>& listCue );
         /** @brief 음성이 낸 줄마다 그 음성이 아직 나는지 @p pAudio 에 물어 둡니다. 오디오가 없으면(nullptr) 모두 끝난 것으로 봅니다. 엔진 프레임이 프레임마다 부릅니다. */
         void refreshVoiceState( const AudioEngine* pAudio );
-        /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 장면 전환 때 부릅니다). */
+        /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 시나리오 단계 되돌리기가 부릅니다). */
         void clear();
         /** @brief 시간을 흘리고(꺼져 있어도) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. UI 갱신의 화면 틱 앞 칸이 부릅니다. */
         void update( float32 deltaSeconds );

@@ -9,6 +9,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEngineState.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Localization/LocText.h"
@@ -327,6 +328,21 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        /**
+         * @brief 체인의 다음 단계 앞에서 떠 있는 자막을 비웁니다 — 새 프로세스에는 앞 단계의 자막이 없다.
+         * @details 자막은 씬이 아니라 엔진 서비스가 들어 단계를 넘어 남는다. 다음 단계가 시간을 멈추면(`gv_timeScale=0`) 읽기 시간이 흐르지 않아 촬영에 찍혔다.
+         */
+        void clearSubtitlesForNextStage()
+        {
+            if ( UISubtitleService* const pService = engine::findSubsystem<UISubtitleService>() )
+                pService->clear();
+        }
+    } // namespace
+
+    SW_AUTOMATION_STAGE_RESET( uiSubtitles, "UI subtitles", &clearSubtitlesForNextStage );
+
     SW_ENGINE_SERVICE_SUBSYSTEM( UISubtitleService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
