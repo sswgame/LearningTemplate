@@ -3,7 +3,8 @@
  * @brief 길이가 묶이지 않는 목록(기록 · 검사 결과 · 전역 변수 · 팔레트 · 로그 · 표)을 보이는 줄만 그리는 공용 위젯입니다. 화면 밖 줄은 높이만 둔다.
  * @details 목록을 그리는 길이 하나여야 가상화를 빠뜨리지 않는다 — Slate `SListView` · UI Toolkit `ListView` 는 가상화가 기본이라 안 쓰는 길이 없다. ImGui 는 손으로 켜야 해서
  *          패널마다 `ImGuiListClipper` 를 직접 쓰거나(일부) 전부 그렸다(나머지). 계층 · 프로퍼티 그리드는 ViewModel 이 줄 높이 구간을 내는 다른 길이다(`HierarchyViewModel`).
- *          shortcut: 줄 높이가 같은 목록만 받는다(ImGui 클리퍼가 첫 줄로 높이를 잰다) — 줄마다 높이가 다른 목록은 ViewModel 이 높이 구간을 내는 길(계층)로 옮길 때 이 위젯이 구간을 받게 넓힌다.
+ *          줄 높이가 같은 목록만 받는다(UI Toolkit `ListView` 의 FixedHeight · ImGui 클리퍼). 높이가 다른 긴 목록은 거르기 때문에 어차피 모든 줄을 도는 계층 · 프로퍼티 그리드뿐이고,
+ *          그 둘은 ViewModel 이 잰 높이로 화면 밖 줄을 건너뛴다 — 높이 구간의 이진 탐색을 여기 두면 쓰는 곳이 없다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
