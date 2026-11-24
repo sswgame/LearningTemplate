@@ -72,3 +72,28 @@ SW_TEST_CASE( CinematicCameraTest, SignalsReachThePlayerCameraManager )
     SW_EXPECT_FALSE( pCinematic->isCinematicActive() );
     SW_EXPECT_TRUE( pCameraManager->isBlending() );
 }
+
+/** @brief [CinematicCameraTest] 컷이 오기 전에 재생이 끝나면 예고한 대기 뷰를 거두고, 그 사이 다른 쪽이 갈음한 대기 뷰는 지우지 않는다 */
+SW_TEST_CASE( CinematicCameraTest, PlaybackEndReleasesThePendingView )
+{
+    using Util = CinematicCameraTestUtil;
+    GameObjectManager       manager;
+    GameObject*             pPlayer        = manager.createGameObject( hashed_string( "Player" ) );
+    CameraComponent*        pPlayerCamera  = pPlayer->addComponent<CameraComponent>();
+    CameraManagerComponent* pCameraManager = pPlayer->addComponent<CameraManagerComponent>();
+    SW_REQUIRE_TRUE( pPlayerCamera != nullptr && pCameraManager != nullptr );
+    GameObject*               pCut       = manager.createGameObject( hashed_string( "Cut" ) );
+    CinematicCameraComponent* pCinematic = manager.createGameObject( hashed_string( "Director" ) )->addComponent<CinematicCameraComponent>();
+
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CutPrewarm, pCut->getHandle(), 0.0f ) );
+    SW_REQUIRE_TRUE( pCameraManager->hasPendingView() );
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::PlaybackEnd, GameObjectHandle{}, 0.0f ) );
+    SW_EXPECT_FALSE( pCameraManager->hasPendingView() );
+
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CutPrewarm, pCut->getHandle(), 0.0f ) );
+    CameraPendingView other;
+    other._camera                   = pPlayer->getHandle();
+    const Subscription otherPending = pCameraManager->setPendingView( other );
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::PlaybackEnd, GameObjectHandle{}, 0.0f ) );
+    SW_EXPECT_TRUE( pCameraManager->getPendingView()._camera == pPlayer->getHandle() );
+}

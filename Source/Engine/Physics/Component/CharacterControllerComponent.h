@@ -6,6 +6,7 @@
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -141,6 +142,13 @@ namespace sw
          * @details 요청 속도(`setMoveVelocity`)는 조종 입력이라 남긴다. 순간이동(`teleportTo`)과 함께 부르면 "그 자리에 멈춰 놓기" 다(언리얼 `ETeleportType::ResetPhysics`). 아무 스레드에서 불러도 됩니다.
          */
         void stopMovementImmediately();
+        /**
+         * @brief 돌려준 구독을 쥔 동안 캐릭터를 시뮬레이션에서 뺍니다(탑승 · 래그돌 · 연출). 쥔 쪽이 여럿이면 마지막 하나가 놓을 때 돌아옵니다.
+         * @details 멈춘 동안 들어온 충격(점프 · 발사 · 루트 모션 · 필드)은 쌓지 않고 버린다 — 돌아온 첫 걸음에 몰아 나가지 않는다(언리얼 `MOVE_None` 이 대기 충격 · 루트 모션을 비우는 것과 같다).
+         *          `setActive` 로 끄고 켜면 먼저 끈 쪽의 뜻을 나중에 켠 쪽이 지운다(래그돌이 일어나며 좌석에 앉은 몸의 캡슐을 켰다) — 까닭마다 자기 구독을 쥔다. 게임 스레드, 틱 밖에서 부른다.
+         */
+        [[nodiscard]] Subscription suspend();
+        bool                       isSuspended() const { return _suspendCount.load( std::memory_order_relaxed ) > 0; }
         /**
          * @brief 딛고 선 면의 속도(컨베이어 · 흐르는 물, 월드 m/s)를 이번 물리 프레임에 더합니다. 프레임마다 다시 불러야 이어집니다(여럿이면 합).
          * @details 아무 스레드에서 불러도 됩니다. 트랜스폼을 직접 옮기면 순간이동이라 벽을 지나므로, 면이 나르는 것은 이것으로 넘깁니다.
@@ -293,6 +301,9 @@ namespace sw
          * @details 물리 고정 스텝(`onPrePhysicsStep`)과 손으로 돌리는 걸음(`simulateMotion`)이 함께 쓴다.
          */
         float3 beginStep( const CharacterCommand3D& command, float32 moveScale, float32 gravityY, float32 fixedDeltaTime );
+        void   releaseSuspension( uint64 suspensionID );
+        /** @brief 시뮬레이션 밖인 동안 쌓인 일회성 요청(점프 · 발사 · 루트 모션 · 면 속도 · 필드 · 오르기)을 버립니다. 이동 요청은 남긴다. */
+        void discardPendingCommands();
         /** @brief 옮긴 결과(`_state`)에서 이동 방식 · 수직 속도 · 공중 관성 · 바닥 회전을 잇습니다. */
         void finishStep( float32 fixedDeltaTime );
 
@@ -355,5 +366,8 @@ namespace sw
         uint8                                   _bStepClimb        : 1;    ///< 이번 스텝을 오르기로 움직였다(점프 · 발사가 없었다)
         uint8                                   _bManualSimulation : 1;    ///< 물리 고정 스텝 대신 `simulateMotion` 이 걸음을 돌린다
         [[maybe_unused]] uint8                  _reserved          : 5;
+        atomic<uint32>                          _suspendCount; ///< 살아 있는 `suspend` 구독 수
+        uint64                                  _nextSuspensionID;
+        SubscriptionList                        _suspensionSubscriptions; ///< `suspend` 가 낸 구독 — 맨 끝이라 먼저 닫힌다
     };
 } // namespace sw

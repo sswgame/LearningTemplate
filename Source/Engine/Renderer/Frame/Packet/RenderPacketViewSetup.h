@@ -83,6 +83,14 @@ namespace sw
         /** @brief 마지막 `collectExtraViews` 에서 자리(`RenderConfig::_maxExtraViewCount`)를 얻지 못한 추가 뷰 수입니다(감시 값 `RenderView.OverflowCount` — 게임 스레드). */
         uint32 getLastOverflowViewCount() const { return _lastOverflowViewCount; }
 
+        /**
+         * @brief 지난 프레임과 화면이 이어지지 않는 주 시점인지(컷) 답합니다 — 카메라가 바뀌었거나 월드 원점이 옮겨졌습니다.
+         * @details 컷 표시(`CameraComponent::markCut`)는 한 카메라 안의 끊김이다. 다른 카메라로 바뀌는 길(시퀀서 컷 · 우선순위 · 씬 전환 · 씬 뷰 ↔ 게임 뷰)은 아무도 표시하지 않아
+         *          앞 카메라의 TAA · 깊이 기록을 이었고, 원점 이동은 지난 뷰-투영(옛 원점)으로 새 좌표를 되짚어 카메라 재투영과 가림 판정이 어긋났다.
+         *          언리얼은 뷰 타깃 전환이 `bCameraCut` 을 세우고 원점 이동이 지난 뷰 행렬을 옮긴다(여기서는 한 프레임 버린다 — 드물고 한 길이다).
+         */
+        static bool isMainViewCut( uint64 previousCameraID, uint64 cameraID, const double3& previousOrigin, const double3& origin );
+
     private:
         /**
          * @brief 자동 렌더 배율(`gv_autoRenderScale`)에 렌더러의 GPU 프레임 표본(`GPUFrameClock`)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다.
@@ -111,5 +119,10 @@ namespace sw
         uint8   _bAutoRenderScaleActive : 1;
         /** @brief 활성 씬에 쓸 카메라가 없다는 오류를 이미 알렸는지입니다. 카메라가 생기면 다시 알릴 수 있게 내립니다. */
         uint8 _bMissingCameraReported : 1;
+        uint8 _bOriginShifted         : 1; ///< 이번 프레임에 월드 원점이 옮겨졌다(추가 뷰도 컷이다)
+        /** @brief 지난 프레임 주 시점 카메라입니다(0 = 없음). 컴포넌트 번호는 같은 엔진의 씬끼리 겹치지 않아 씬 전환도 다른 번호다. */
+        uint64 _lastMainCameraID;
+        /** @brief 지난 프레임 활성 씬의 월드 원점입니다. */
+        double3 _lastWorldOrigin;
     };
 } // namespace sw

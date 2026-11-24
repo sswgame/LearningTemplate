@@ -70,13 +70,13 @@ namespace sw
     void ScenarioPlayer::stopPlayback()
     {
         if ( isPlaying() )
-            endPlayback( ScenarioPlayEnd::Stopped, engine::findSubsystem<InputManager>() );
+            endPlayback( ScenarioPlayEnd::Stopped );
     }
 
-    void ScenarioPlayer::endPlayback( ScenarioPlayEnd end, InputManager* pInput )
+    void ScenarioPlayer::endPlayback( ScenarioPlayEnd end )
     {
         if ( _pRunner != nullptr )
-            _pRunner->stop( pInput, "playback stopped" ); // 끝난 실행기면 아무것도 하지 않는다 — 가상 입력은 실행기가 뗀다
+            _pRunner->stop( "playback stopped" ); // 끝난 실행기면 아무것도 하지 않는다 — 가상 입력은 실행기가 뗀다
         _pRunner.reset();
         if ( _options._bFixedDelta )
             setFixedFrameDelta( _previousFixedDelta );
@@ -109,7 +109,7 @@ namespace sw
             return kEngineFrameRunning;
         if ( _options._bStopOnHumanInput && context._pInput->getHumanInputSerial() != _humanInputSerial )
         {
-            endPlayback( ScenarioPlayEnd::StoppedByHuman, context._pInput );
+            endPlayback( ScenarioPlayEnd::StoppedByHuman );
             return kEngineFrameRunning;
         }
         const AutomationResult result = _pRunner->hasEnded() ? _pRunner->getResult() : _pRunner->onFrameEnd( *context._pInput );
@@ -120,14 +120,14 @@ namespace sw
             startRunner(); // 어트랙트 루프 — 처음부터 다시
             return kEngineFrameRunning;
         }
-        endPlayback( result == AutomationResult::Passed ? ScenarioPlayEnd::Completed : ScenarioPlayEnd::Failed, context._pInput );
+        endPlayback( result == AutomationResult::Passed ? ScenarioPlayEnd::Completed : ScenarioPlayEnd::Failed );
         return kEngineFrameRunning;
     }
 
-    EngineFrameExit ScenarioPlayer::onWindowClosed( const EngineFrameContext& context )
+    EngineFrameExit ScenarioPlayer::onWindowClosed( [[maybe_unused]] const EngineFrameContext& context )
     {
         if ( isPlaying() )
-            endPlayback( ScenarioPlayEnd::Stopped, context._pInput ); // 재생은 종료 코드를 정하지 않는다
+            endPlayback( ScenarioPlayEnd::Stopped ); // 재생은 종료 코드를 정하지 않는다
         return kEngineFrameRunning;
     }
 } // namespace sw

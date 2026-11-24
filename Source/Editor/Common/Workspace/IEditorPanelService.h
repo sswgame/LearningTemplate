@@ -37,6 +37,8 @@ namespace sw::editor
     {
         string _assetID;
         bool   _bDirty{ false };
+        string _unsavedText{};        ///< 미저장 문서의 글(`EditorDocumentPanelBase::captureUnsavedText`) — 디스크에 아직 없는 참조를 옮기기 계획이 찾는다
+        bool   _bFollowsMove{ true }; ///< 이 문서 자신을 옮겨도 미저장 편집이 새 자리를 따라간다
     };
 
     /**

@@ -13,6 +13,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
@@ -65,11 +66,12 @@ namespace sw
         CameraComponent* selectCamera( CameraRole role ) const;
 
         /**
-         * @brief 시퀀서 카메라 컷이 고른 카메라를 적습니다(nullptr 이면 풉니다). 게임 카메라 선택에서 직접 고른 카메라 · 레지스트리 규칙보다 먼저입니다.
-         * @details 언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리입니다. 그 카메라의 등록 구독이 풀리면 함께 풀립니다.
+         * @brief @p inoutClaim 이 쥔 컷 자리에 카메라를 적습니다(nullptr 이면 자리만 쥔다 — 컷 사이의 틈). 이 레지스트리의 자리가 아니면 새로 쥡니다. 구독이 풀리면 자리도 사라집니다.
+         * @details 언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리입니다. 시퀀스 · 킬캠 · 포토 모드가 겹치면 나중에 쥔 쪽이 보이고, 그쪽이 놓으면 아래 컷이 이어집니다 —
+         *          칸 하나를 함께 쓰면 먼저 끝난 쪽이 다른 쪽의 컷을 지우고, 컷 사이의 틈을 지나는 시퀀스가 남의 컷을 프레임마다 풀었습니다. 카메라의 등록 구독이 풀리면 그 칸도 비웁니다.
          */
-        void setCutCamera( CameraComponent* pCamera );
-        /** @brief 카메라 컷이 고른 카메라입니다. 없으면 nullptr 입니다. */
+        void setCutCamera( Subscription& inoutClaim, CameraComponent* pCamera );
+        /** @brief 쥔 컷 가운데 가장 나중에 쥔, 쓸 수 있는(`isUsableCamera`) 카메라입니다. 게임 카메라 선택에서 직접 고른 카메라 · 레지스트리 규칙보다 먼저입니다. 없으면 nullptr 입니다. */
         CameraComponent* getCutCamera() const;
 
         /**
@@ -104,6 +106,15 @@ namespace sw
         static bool isUsableCamera( const CameraComponent* pCamera );
 
     private:
+        /** @brief 컷 자리 하나입니다(`setCutCamera`). */
+        struct CutClaim
+        {
+            uint64           _id{ 0 };
+            CameraComponent* _pCamera{ nullptr };
+        };
+
+        /** @brief 컷 자리 @p id 의 구독이 풀렸습니다. */
+        void releaseCutClaim( uint64 id );
         /** @brief 카메라 등록 구독이 풀렸습니다. 순서를 지키며 빼고 컷 카메라였으면 풉니다. 주소로만 찾고 역참조하지 않는다. */
         void releaseCamera( CameraComponent* pCamera );
 
@@ -111,12 +122,14 @@ namespace sw
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. 카메라는 뷰마다 하나(화면 분할 · CCTV · 미리보기)라 많아야 수십 개이므로 선형 등록 목록으로 충분합니다. */
         RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera", SW_DELEGATE_METHOD( RegistrationList<CameraComponent>::ReleaseFunction, &CameraRegistry::releaseCamera, this ) };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
-        mutable mutex                _mutex;
-        mutable atomic<uint32>       _registrySerial{ 0 };               ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`). mutable: 바뀜 알림은 읽기 전용 레지스트리에서도 올린다(원자)
-        CameraComponent* _pCutCamera SW_GUARDED_BY( _mutex ){ nullptr }; ///< 시퀀서 카메라 컷(`setCutCamera`). 등록 해제가 함께 푼다
-        uint32                       _viewportWidth{ 0 };                ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
-        uint32                       _viewportHeight{ 0 };               ///< 게임 뷰포트 픽셀 높이
-        float32                      _pixelSnapUnit{ 0.0f };             ///< 2D 픽셀 스냅 단위(0 = 끔)
-        CameraShakeChannel           _shakeChannel;                      ///< 흔들림 요청 채널(`getShakeChannel`). 자기 잠금을 쓴다
+        mutable mutex                  _mutex;
+        mutable atomic<uint32>         _registrySerial{ 0 };                                                                                                 ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`). mutable: 바뀜 알림은 읽기 전용 레지스트리에서도 올린다(원자)
+        vector<CutClaim> _listCutClaim SW_GUARDED_BY( _mutex );                                                                                              ///< 컷 자리(쥔 순서 — 뒤가 이긴다, `setCutCamera`)
+        uint64 _lastCutClaimID         SW_GUARDED_BY( _mutex ){ 0 };                                                                                         ///< 마지막으로 내준 컷 자리의 id
+        uint32                         _viewportWidth{ 0 };                                                                                                  ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
+        uint32                         _viewportHeight{ 0 };                                                                                                 ///< 게임 뷰포트 픽셀 높이
+        float32                        _pixelSnapUnit{ 0.0f };                                                                                               ///< 2D 픽셀 스냅 단위(0 = 끔)
+        CameraShakeChannel             _shakeChannel;                                                                                                        ///< 흔들림 요청 채널(`getShakeChannel`). 자기 잠금을 쓴다
+        SubscriptionList               _cutSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &CameraRegistry::releaseCutClaim, this ) }; ///< 컷 자리의 구독
     };
 } // namespace sw

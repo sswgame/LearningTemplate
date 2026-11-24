@@ -210,6 +210,8 @@ namespace sw
         void setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation );
         /** @brief 에미터를 지웁니다. 그 에미터의 소리는 마지막 위치에 남아 끝까지 재생합니다. */
         void removeEmitter( AudioEmitterID emitterID );
+        /** @brief 엔진이 든 월드 자리(에미터 · 겉보기 자리 · 리스너)를 모두 @p delta 만큼 옮깁니다 — 월드 원점 이동(`SceneAudio::onWorldOriginShifted`). */
+        void shiftWorldOrigin( const float3& delta );
 
         // --- 게임 스레드: 읽기 ------------------------------------------------------------------------------------------
 
@@ -259,6 +261,7 @@ namespace sw
         const DevCounter& getRetireOverflowCount() const { return _retireOverflowCount; }
 
     private:
+        friend struct AudioEngineTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 명령 종류입니다. */
         enum class CommandKind : uint8
         {
@@ -279,6 +282,7 @@ namespace sw
             SetEmitterPropagation,
             SetEmitterParameter,
             RemoveEmitter,
+            ShiftWorldOrigin,
             SetParameter,
             StartSnapshot,
             StopSnapshot,
@@ -303,7 +307,7 @@ namespace sw
             hashed_string                       _path{};        ///< 클립 경로다.
             AudioClipPlayParams                 _clipParams{};  ///< PlayClip
             AudioListenerState                  _listener{};    ///< SetListener
-            float3                              _position{};    ///< SetEmitter
+            float3                              _position{};    ///< SetEmitter · ShiftWorldOrigin(옮길 양)
             float3                              _velocity{};    ///< SetEmitter
             AudioPropagation                    _propagation{}; ///< SetEmitterPropagation
             AudioPlayingID                      _playingID{ 0 };

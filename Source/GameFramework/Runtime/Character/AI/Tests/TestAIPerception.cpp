@@ -8,6 +8,7 @@
 
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 
@@ -98,6 +99,46 @@ SW_TEST_CASE( AIPerceptionTest, SharedQueryFindsRegisteredSources )
     pTarget = perception.findTarget( nearID );
     SW_REQUIRE_NOT_NULL( pTarget ); // 기억은 남는다
     SW_EXPECT_TRUE( pTarget->_bSeen == SW_FALSE );
+}
+
+/** @brief [AIPerceptionTest] 숨은 대상(`State.Hidden`)은 보이지 않고 소리는 들린다. 나오면 다시 보인다 */
+SW_TEST_CASE( AIPerceptionTest, HiddenObjectIsHeardButNotSeen )
+{
+    GameObjectManager          manager;
+    AIStimulusSourceComponent* pSource = Util::makeSource( manager, "Near", float3{ 3.0f, 0.0f, 0.0f } );
+    GameObject* const          pObject = pSource->getOwner();
+    vector<AIStimulus>         listStimulus;
+    vector<Component*>         listKey;
+    pObject->addTag( TargetFilter::getHiddenTag() );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_TRUE( listStimulus.empty() );
+    pSource->reportNoise( 5.0f );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStimulus.size() );
+    pSource->clearNoise();
+    pObject->removeTag( TargetFilter::getHiddenTag() );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStimulus.size() );
+}
+
+/** @brief [AIPerceptionTest] 쓰러졌거나(`State.Dead`) 꺼진 대상은 보이지 않는다 — 시체 · 풀에 돌아간 몸을 쫓지 않는다 */
+SW_TEST_CASE( AIPerceptionTest, DeadOrInactiveObjectIsNotSeen )
+{
+    GameObjectManager          manager;
+    AIStimulusSourceComponent* pSource = Util::makeSource( manager, "Near", float3{ 3.0f, 0.0f, 0.0f } );
+    GameObject* const          pObject = pSource->getOwner();
+    vector<AIStimulus>         listStimulus;
+    vector<Component*>         listKey;
+    pObject->addTag( TargetFilter::getDeadTag() );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_TRUE( listStimulus.empty() );
+    pObject->removeTag( TargetFilter::getDeadTag() );
+    pObject->setActive( false );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_TRUE( listStimulus.empty() );
+    pObject->setActive( true );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStimulus.size() );
 }
 
 /**

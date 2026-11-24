@@ -183,6 +183,14 @@ namespace sw
             pBody->endPhysics();
     }
 
+    void SocketBindingComponent::endPhysics()
+    {
+        if ( _state != SocketBindingState::ReleasedPhysics )
+            return;
+        endPhysicsIfRunning();
+        enterState( SocketBindingState::ReleasedAnimated );
+    }
+
     void SocketBindingComponent::enterState( SocketBindingState state )
     {
         _state = state;

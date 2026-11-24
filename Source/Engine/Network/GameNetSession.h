@@ -545,6 +545,7 @@ namespace sw
         GameNetWireContent                _wireContent;      ///< 열린 세션에 섞은 와이어 내용(닫으면 비운다)
         uint16                            _listenPort;
         GameNetRole                       _role;
+        Subscription                      _worldTimeShare;          ///< 열려 있는 동안 이 기계의 시간을 상대와 함께 쓴다(`GameTimeScale::shareWorldTime`)
         uint8                             _bTicketBound;            ///< 티켓에 묶인 세션이다 — 서버는 모든 연결에 티켓을 요구하고, 클라이언트는 티켓을 내민다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
         MetricRegistry*                   _pMetricRegistry;         ///< 서버 — 운영 지표(`bindMetricRegistry`, 전용 서버가 소유). nullptr 이면 세지 않는다

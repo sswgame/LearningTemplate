@@ -2933,6 +2933,8 @@
 		       text="{passed}({frameCount}프레임){reason}{reason2}" />
 		<entry source="{pass} #{draw}" text="{pass} #{draw}" />
 		<entry source="{path} is open - close it first" text="{path} 이(가) 열려 있습니다. 먼저 닫으십시오." />
+		<entry source="{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it"
+		       text="{path} 이(가) 연 뒤 디스크에서 바뀌었습니다. 그 내용을 쓰려면 다시 열고, 덮어쓰려면 다시 저장하십시오." />
 		<entry source="{path} is read-only - Check Out (lock) it in the Content Browser first"
 		       text="{path} 은(는) 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오." />
 		<entry source="{referrerCount} referencing file(s) are fixed in the same step. If a write fails, everything is put back"

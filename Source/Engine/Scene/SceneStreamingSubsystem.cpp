@@ -363,6 +363,15 @@ namespace sw
         return _mapObjectSlot.find( objectID ) != _mapObjectSlot.end();
     }
 
+    void SceneStreamingSubsystem::releaseObject( const uint64 objectID )
+    {
+        const auto slotIt = _mapObjectSlot.find( objectID );
+        if ( slotIt == _mapObjectSlot.end() )
+            return;
+        (void)VectorUtil::removeValue( getSlot( slotIt->second )._listObjectID, objectID );
+        _mapObjectSlot.erase( slotIt );
+    }
+
     bool SceneStreamingSubsystem::isCellObject( const uint64 objectID ) const
     {
         if ( _pScene == nullptr || _mapObjectSlot.empty() )

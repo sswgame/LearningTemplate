@@ -249,6 +249,8 @@ namespace sw
         }
         /** @brief 죽은 출력을 닫고 오프라인으로 넘깁니다(게임 스레드, `update`). */
         void closeLostOutput();
+        /** @brief 장치가 엔진을 당기지 않는 동안 엔진의 레이아웃을 바꾸고 오프라인 블록을 맞춥니다. 그래프가 거절하면 false 이고 지금 레이아웃 그대로다. */
+        [[nodiscard]] bool applyChannelLayout( AudioChannelLayout layout );
         /** @brief 스트림 · 장치를 닫고 렌더를 게임 스레드로 돌립니다(`closeLostOutput` · `suspendOutput` 의 공통 몸체). */
         void closeOutput();
         /** @brief 장치 없이 도는 동안 백오프 간격이 지났으면 장치를 다시 열어 엔진의 지금 레이아웃으로 출력을 잇습니다(게임 스레드, `update`). */

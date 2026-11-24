@@ -20,6 +20,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/NetSendThrottleSettings.h"
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/EngineFrameHooks.h"
@@ -215,6 +216,7 @@ namespace sw
         , _wireContent{}
         , _listenPort{ 0 }
         , _role{ GameNetRole::None }
+        , _worldTimeShare{}
         , _bTicketBound{ SW_FALSE }
         , _bConnectFailureReported{ SW_FALSE }
         , _pMetricRegistry{ nullptr }
@@ -498,8 +500,10 @@ namespace sw
                 return false;
             }
         }
-        _role        = params._role;
-        _wireContent = _runWireContent; // 위의 shutdown 이 앞 세션 것을 지웠다 — 연 뒤에 적는다
+        _role = params._role;
+        if ( GameTimeScale* const pTimeScale = engine::findSubsystem<GameTimeScale>() )
+            _worldTimeShare = pTimeScale->shareWorldTime(); // 이 기계만 멈추면 상대보다 뒤처진다 — 정지 메뉴는 열려도 시간은 흐른다
+        _wireContent = _runWireContent;                     // 위의 shutdown 이 앞 세션 것을 지웠다 — 연 뒤에 적는다
         if ( _role == GameNetRole::Client )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionConnecting", "Net session connecting to %#", _serverAddress.toString() );
         else if ( params._shardCount == 1 )
@@ -617,9 +621,10 @@ namespace sw
         _digestSentRevision     = 0;
         _digestServerConnection = -1;
         _listEventScratch.clear();
-        _latestServerTick        = 0;
-        _listenPort              = 0;
-        _role                    = GameNetRole::None;
+        _latestServerTick = 0;
+        _listenPort       = 0;
+        _role             = GameNetRole::None;
+        _worldTimeShare.reset();
         _bConnectFailureReported = SW_FALSE;
         _bServerTickKnown        = SW_FALSE;
         _bShutdownNoticeKnown    = SW_FALSE;

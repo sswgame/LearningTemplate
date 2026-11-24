@@ -24,6 +24,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -131,6 +132,18 @@ namespace sw
         shutdown(); // 종료도 알린다(구독자가 씬 오브젝트를 가리키는 기록을 비운다)
     }
 
+    void SceneManager::resetGameInstanceState( GameInstanceBoundary boundary )
+    {
+        // 끝난 게임의 영속 오브젝트(플레이어 · 음악)를 타이틀 · 다음 게임의 씬으로 옮기지 않는다 — 옮기면 새 게임이 세운 것과 겹친다.
+        if ( boundary == GameInstanceBoundary::Ended )
+            _listPersistentObjectID.clear();
+    }
+
+    const utf8* SceneManager::findGameInstanceState() const
+    {
+        return _listPersistentObjectID.empty() ? nullptr : "objects kept across scenes";
+    }
+
     /**
      * @brief 진행 중인 비동기 로드가 끝나기를 기다린 뒤 로드된 씬을 모두 해제합니다.
      */
@@ -188,6 +201,19 @@ namespace sw
         _listLoadedScene.clear();
         broadcastSceneObjectsInvalidated();
         SW_LOG_INFO_ID( "SceneManager.ShutDown", "Shut down." );
+    }
+
+    void SceneManager::collectScenes( vector<Scene*>& outListScene ) const
+    {
+        outListScene.clear();
+        outListScene.reserve( _listLoadedScene.size() + _listPreviewScene.size() );
+        for ( const unique_ptr<Scene>& scene : _listLoadedScene )
+        {
+            if ( scene != nullptr )
+                outListScene.push_back( scene.get() );
+        }
+        for ( const PreviewSceneEntry& preview : _listPreviewScene )
+            outListScene.push_back( preview._scene.get() );
     }
 
     Scene* SceneManager::createScene( string_view name )
@@ -595,6 +621,12 @@ namespace sw
             SW_LOG_ERROR_ID( "Scene.SaveRefused", "Scene save refused — %#", _saveBlockReason );
             return false;
         }
+        // 플레이 중인 씬은 저작 상태가 아니다 — 원본 파일에는 쓰지 않는다(사본은 쓴다 - 버그 보고).
+        if ( _bWorldPlaying && sourceID.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "SceneManager.SceneSaveWhilePlaying", "Scene save refused - the world is playing, '%#' would be overwritten with the play state", sourceID );
+            return false;
+        }
         Scene* pScene = getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
@@ -994,8 +1026,15 @@ namespace sw
                                pRoot->getName().c_str() );
             return;
         }
-        if ( isPersistent( pRoot ) == false )
-            _listPersistentObjectID.push_back( pRoot->getObjectID() );
+        if ( isPersistent( pRoot ) )
+            return;
+        _listPersistentObjectID.push_back( pRoot->getObjectID() );
+        // 씬이 내려도 남는 것이라 씬 안의 단위(스트리밍 셀 · 레이어 묶음 · 하위 레벨)와 함께 내려가지 않는다 — 내려가면 id 가 바뀌어 다음 전환에서 잃는다.
+        for ( const unique_ptr<Scene>& scene : _listLoadedScene )
+        {
+            if ( scene != nullptr && scene->getObjectManager() == pRoot->getManager() )
+                scene->releaseFromParts( *pRoot );
+        }
     }
 
     bool SceneManager::isPersistent( const GameObject* pObject ) const
@@ -1017,8 +1056,14 @@ namespace sw
             GameObject*    _pSource{ nullptr };
             ObjectIdentity _identity{};
             vector<uint8>  _bytes{};
+            vector<uint8>  _componentStateBytes{}; ///< PROPERTY 밖 상태(`ComponentStateCodec`)
             GameObject*    _pTarget{ nullptr };
         };
+        // 절대 자리를 지킨다 — 나가는 씬의 원점이 옮겨져 있으면 들어오는 씬의 원점 기준으로 다시 놓는다(스트리밍 셀 · 세이브가 떠 둔 상태와 같은 규칙).
+        const double3& sourceOrigin = pFrom->getWorldOrigin();
+        const double3& targetOrigin = pTo->getWorldOrigin();
+        const float3   originShift{ static_cast<float32>( sourceOrigin._x - targetOrigin._x ), static_cast<float32>( sourceOrigin._y - targetOrigin._y ),
+                                  static_cast<float32>( sourceOrigin._z - targetOrigin._z ) };
 
         vector<uint64> listKept;
         for ( const uint64 rootID : _listPersistentObjectID )
@@ -1036,7 +1081,8 @@ namespace sw
                 listCarried[cursor]._pSource->getChildren( listChild );
                 for ( GameObject* pChild : listChild )
                 {
-                    listCarried.push_back( CarriedObject{ pChild } );
+                    if ( pChild->isTransient() == false ) // 세운 쪽이 상태에서 다시 세우는 파생이다 — 옮기면 다시 세운 것과 겹친다
+                        listCarried.push_back( CarriedObject{ pChild } );
                 }
             }
 
@@ -1046,6 +1092,7 @@ namespace sw
                 carried._identity = ObjectStateSerializer::captureIdentity( carried._pSource );
                 if ( ObjectStateSerializer::saveToBinaryBuffer( carried._pSource, carried._bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == false )
                     carried._bytes.clear(); // 아래 로드가 실패로 알린다
+                ComponentStateCodec::captureObject( *carried._pSource, carried._componentStateBytes );
             }
             // 옮겨 심은 것끼리의 부착(부모 · 소켓 · 오브젝트 안)은 묶음이 **원래 id** 로 잇는다. 이름으로 찾지 않는다 — 들어오는 씬에 같은
             // 이름이 있으면 옮긴 오브젝트의 이름이 바뀌어(`MusicPlayer_2`), 이름으로 찾으면 들어오는 씬의 것에 붙는다.
@@ -1063,6 +1110,14 @@ namespace sw
             // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
             [[maybe_unused]] const bool bLinked = batch.finish();
             SW_ASSERT( bLinked );
+            SceneComponent* const pRootScene = listCarried.front()._pTarget != nullptr ? listCarried.front()._pTarget->getPrimarySceneComponent() : nullptr;
+            if ( pRootScene != nullptr && originShift != float3{} )
+                pRootScene->setLocalPosition( pRootScene->getLocalPosition() + originShift );
+            for ( const CarriedObject& carried : listCarried )
+            {
+                if ( carried._pTarget != nullptr && carried._componentStateBytes.empty() == false )
+                    ComponentStateCodec::restoreObject( *carried._pTarget, carried._componentStateBytes );
+            }
             // 중첩 프리팹 부품 표시도 같은 id 로 옮긴다 — 없으면 들어온 씬을 저장할 때 부품이 따로 엔티티로 적혀 다음 로드에서 두 벌이 된다.
             const PrefabInstanceRegistry& sourceParts = pSource->getSubsystem<PrefabInstanceRegistry>();
             PrefabInstanceRegistry&       targetParts = pTarget->getSubsystem<PrefabInstanceRegistry>();
@@ -1201,5 +1256,5 @@ namespace sw
 namespace sw
 {
     // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
 } // namespace sw

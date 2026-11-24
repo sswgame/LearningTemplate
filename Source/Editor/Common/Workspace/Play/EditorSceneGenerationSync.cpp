@@ -7,12 +7,13 @@
 
 namespace sw::editor
 {
-    bool EditorSceneGenerationSync::apply( EditorWorkspace& workspace, uint64 generation, CommandStack* pCommandStack )
+    bool EditorSceneGenerationSync::apply( EditorWorkspace& workspace, uint64 generation, bool bPlaying, CommandStack* pCommandStack )
     {
         if ( generation == workspace.getObservedSceneGeneration() )
             return false;
         workspace.setObservedSceneGeneration( generation );
-        workspace.clearSceneDirty();
+        if ( bPlaying == false )
+            workspace.clearSceneDirty();
         workspace.clearSelection();
         if ( pCommandStack != nullptr )
             pCommandStack->clear();

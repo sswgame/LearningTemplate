@@ -75,7 +75,7 @@ SW_TEST_CASE( InputFrameQueueTest, VirtualInputTakesTheSamePathAsRealInput )
     VirtualInputScript script;
     SW_REQUIRE_TRUE( virtualInput.initialize() );
     script.addEvent( 0, RawInputEvent::makeKeyDown( Key::A ) );
-    virtualInput.attachVirtualInput( &script, VirtualInputMode::Exclusive );
+    Subscription attachment = virtualInput.attachVirtualInput( script, VirtualInputMode::Exclusive );
     virtualInput.beginFrame( 0.016f );
 
     SW_EXPECT_TRUE( realInput.getKeyboard()->isKeyDown( Key::A ) && virtualInput.getKeyboard()->isKeyDown( Key::A ) );
@@ -90,7 +90,42 @@ SW_TEST_CASE( InputFrameQueueTest, VirtualInputTakesTheSamePathAsRealInput )
 
     realInput.endFrame();
     virtualInput.endFrame();
-    virtualInput.detachVirtualInput();
+    attachment.reset();
     virtualInput.shutdown();
     realInput.shutdown();
+}
+
+/** @brief [InputKeyboardFocusTest] 쥔 주인들 가운데 우선순위가 가장 높은 쪽이 받고, 덮은 동안 아래 주인이 놓아도 없는 주인에게 돌아가지 않습니다(놓는 순서와 무관). */
+SW_TEST_CASE( InputKeyboardFocusTest, HighestClaimReceives )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    Subscription textField = input.claimKeyboardFocus( InputKeyboardFocus::UI );
+    Subscription console   = input.claimKeyboardFocus( InputKeyboardFocus::DevConsole );
+    SW_EXPECT_TRUE( input.getKeyboardFocus() == InputKeyboardFocus::DevConsole );
+    Subscription tool = input.claimKeyboardFocus( InputKeyboardFocus::Tool );
+    SW_EXPECT_TRUE( input.getKeyboardFocus() == InputKeyboardFocus::Tool );
+    console.reset(); // 도구 창이 덮은 동안 콘솔이 사라진다 — 도구가 놓을 때 콘솔로 돌아가면 게임이 키보드를 영영 받지 못한다
+    SW_EXPECT_TRUE( input.getKeyboardFocus() == InputKeyboardFocus::Tool );
+    tool.reset();
+    SW_EXPECT_TRUE( input.getKeyboardFocus() == InputKeyboardFocus::UI );
+    textField.reset();
+    SW_EXPECT_TRUE( input.getKeyboardFocus() == InputKeyboardFocus::Game );
+    input.shutdown();
+}
+
+/** @brief [InputMouseLockTest] 새 조종자가 쥔 뒤 떠나는 조종자가 놓아도 잠금이 풀리지 않고, 마지막 쥔 것이 풀리면 커서가 돌아옵니다. */
+SW_TEST_CASE( InputMouseLockTest, LeavingOwnerKeepsTheNewLock )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    Subscription leaving = input.claimMouseLock( MouseLockMode::LockedInCenter );
+    Subscription entered = input.claimMouseLock( MouseLockMode::LockedInCenter );
+    leaving.reset(); // 이전 씬의 조종자가 새 조종자의 빙의 뒤에 사라진다
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::LockedInCenter );
+    SW_EXPECT_FALSE( input.getMouse()->isCursorVisible() );
+    entered.reset();
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::None );
+    SW_EXPECT_TRUE( input.getMouse()->isCursorVisible() );
+    input.shutdown();
 }

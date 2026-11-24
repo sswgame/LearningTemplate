@@ -160,3 +160,20 @@ SW_TEST_CASE( ScreenTransitionTest, SecondTransitionDuringFadeOutDoesNotDropFirs
     manager.update( 1.01f );
     SW_EXPECT_FALSE( manager.isBusy() );
 }
+
+/** @brief [ScreenTransitionTest] 어두워지는 중에 로딩 화면이 닫히며 밝히기를 청해도 전환의 액션은 까만 화면에서 불린다(옛 코드는 액션이 영영 불리지 않고 다음 전환도 거절됐다) */
+SW_TEST_CASE( ScreenTransitionTest, FadeInRequestDoesNotStallAFadeOut )
+{
+    ScreenTransitionManager manager;
+    TransitionProbe         probe;
+    probe._pManager = &manager;
+    SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
+    manager.update( 0.5f );
+    manager.fadeInFromBlack( 0.3f );
+    manager.update( 0.5f );
+    SW_EXPECT_EQUAL( 1, probe._actionCount );
+    manager.update( 1.01f );
+    SW_EXPECT_FALSE( manager.isBusy() );
+    manager.fadeInFromBlack( 1.0f ); // 전환이 없으면 검은 화면에서 밝힌다
+    SW_EXPECT_NEAR( 1.0f, manager.fade().getOverlayAlpha(), kTolerance );
+}

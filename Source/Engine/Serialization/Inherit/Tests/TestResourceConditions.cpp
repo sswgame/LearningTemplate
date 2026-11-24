@@ -174,6 +174,18 @@ SW_TEST_CASE( ResourceTagsTest, SettersKeepAxisArity )
     SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Night" ) );
     SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Winter" ) );
 
+    // 더한 몫은 주인마다다 — 한 주인이 놓아도 남의 몫과 넣어 둔 값은 남고, 다른 축을 바꾸는 동안 몫이 넣어 둔 값으로 굳지 않는다.
+    Subscription first  = engine::getSubsystem<ResourceTags>().addAxisValues( "layer", vector<string>{ "Winter", "Storm" } );
+    Subscription second = engine::getSubsystem<ResourceTags>().addAxisValues( "layer", vector<string>{ "Winter" } );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "low" ) );
+    first.reset();
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Winter" ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Storm" ) );
+    second.reset();
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Winter" ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Night" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "high" ) );
+
     SW_EXPECT_LOG( "ResourceTags.WrongArity" );
     SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().setAxisValue( "layer", "Winter" ) );
     SW_EXPECT_LOG( "ResourceTags.InvalidValue" );

@@ -658,6 +658,18 @@ namespace sw
                 _beginFrameHook( *_pDevice );
             _pDevice->beginFrame();
         }
+        // 열지 못한 프레임(스왑체인 이미지를 얻지 못함 · 크기 0)은 기록해도 제출되지 않는다 — 그린 척하면 한 번뿐인 일(정점 풀 · 프로브 칠하기 · 층 굽기 · 쿠키)과 지난 깊이 ·
+        // 노출 기록이 없는 그림을 있다고 믿는다. 그리지 않고 진행하는 프레임과 같은 길로 상태만 받고, 다음에 그리는 프레임이 시간 누적을 버린다.
+        if ( _pDevice->isFrameStarted() == false )
+        {
+            if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+                _pFrameRenderer->executePacketWithoutDrawing( _pDevice, packet );
+            _pDevice->endFrame( false, false );
+            RenderPresentCounter::addOne(); // 그리기 길로 프레임 끝까지 왔다 — 최소화한 동안도 시나리오(engine.windowpresent)가 이 수로 그 길을 지났음을 본다
+            if ( packet._screenshotPath.empty() == false )
+                reportPacketScreenshotNotWritten( packet ); // 이 게임 프레임의 그림은 없다 — 지난 그림을 대신 쓰지 않는다
+            return false;
+        }
 
         // 게임 뷰 렌더 타깃을 잡는다. 오프스크린도 프레임 스트림과 같은 스트림, 같은 제출이고, 순서는 큐 순서와
         // 아래 prepareTextureForShaderRead 의 배리어가 보장한다(별도 스트림이나 블로킹 제출을 두지 않는다).
@@ -766,7 +778,8 @@ namespace sw
             pWrite->_pMailbox = RenderThreadInternal::findMailbox();
             pWrite->_format   = constant::render::kBackBufferFormat;
             pWrite->_kind     = RenderThreadInternal::ScreenshotWriteKind::Packet;
-            if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_name, pWrite->_bytes, pWrite->_layout ) )
+            // 그래프가 그리지 않은 프레임의 캡처 텍스처에는 지난 프레임의 그림이 있다 — 이 프레임의 사진으로 쓰지 않는다(시나리오가 앞 씬의 그림을 통과로 봤을 자리).
+            if ( bGraphDrew && _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_name, pWrite->_bytes, pWrite->_layout ) )
             {
                 pWrite->_layout._pData = nullptr;
                 engine::getSubsystem<TaskManager>()
@@ -775,14 +788,12 @@ namespace sw
             }
             else
             {
-                SW_LOG_WARNING_ID( "RenderThread.PacketScreenshotNotWritten", "Packet screenshot was not written: %#", packet._screenshotPath.c_str() );
-                if ( pWrite->_pMailbox != nullptr )
-                    pWrite->_pMailbox->reportPacketCaptureCompleted();
+                reportPacketScreenshotNotWritten( packet );
             }
         }
 
         // 실행 중 요청(`requestScreenshot`: 개발 명령 screenshot, 에디터 버튼)을 처리한다.
-        writeRequestedScreenshot();
+        writeRequestedScreenshot( bGraphDrew );
         // 에디터 렌더 타깃 창의 CPU 읽기 요청이다. 스크린샷과 같은 위치에서 처리하며, endFrame 뒤라 이 프레임이 그린 내용이 들어 있다.
         readRequestedRenderTarget();
         // 개발 명령 `gpu.inspect x y` 의 첨부 값 읽기(한 번 — GPU 를 기다린다). 같은 이유로 endFrame 뒤다.
@@ -900,7 +911,14 @@ namespace sw
         _requestedScreenshotWaitFrames = _requestedScreenshot._texture == 0 ? RenderThreadInternal::kPresentCaptureWaitFrames : 0;
     }
 
-    void RenderThread::writeRequestedScreenshot()
+    void RenderThread::reportPacketScreenshotNotWritten( const RenderFramePacket& packet ) const
+    {
+        SW_LOG_WARNING_ID( "RenderThread.PacketScreenshotNotWritten", "Packet screenshot was not written: %#", packet._screenshotPath.c_str() );
+        if ( ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox() )
+            pMailbox->reportPacketCaptureCompleted();
+    }
+
+    void RenderThread::writeRequestedScreenshot( bool bGraphDrew )
     {
         if ( _requestedScreenshot._ticket == 0 || _pFrameRenderer == nullptr )
             return;
@@ -922,7 +940,7 @@ namespace sw
         pWrite->_ticket                 = request._ticket;
         pWrite->_output                 = request._output;
         pWrite->_format                 = request._texture == 0 ? constant::render::kBackBufferFormat : request._format;
-        const bool bRead                = request._texture == 0 ? readPresentedBytes( request._name, pWrite->_bytes, pWrite->_layout )
+        const bool bRead                = request._texture == 0 ? bGraphDrew && readPresentedBytes( request._name, pWrite->_bytes, pWrite->_layout ) // 그리지 않은 프레임의 캡처는 지난 그림이다
                                                                 : _pFrameRenderer->getCapture().readbackTexture( request._texture, pWrite->_bytes, pWrite->_layout );
         pWrite->_layout._pData          = nullptr;
         if ( bRead )

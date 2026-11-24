@@ -96,6 +96,8 @@ namespace sw
         /** @brief 질주 버튼 인덱스를 찾고 PrePhysics 에서 틱합니다. */
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 네트가 움직이는 동안의 시뮬레이션 자리를 옮깁니다(트랜스폼은 씬이 옮긴다). */
+        void onWorldOriginShifted( const float3& delta ) override;
 
         MountGait getGait() const { return _gait; }
         /** @brief 몸이 향한 방향의 속도입니다(m/s). */

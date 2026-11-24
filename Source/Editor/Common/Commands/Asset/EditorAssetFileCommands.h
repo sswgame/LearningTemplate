@@ -70,6 +70,7 @@ namespace sw::editor
         /**
          * @brief 미저장 문서 중 옮기는 에셋을 적은 참조 파일(@p plan 의 `_listReferrerID` · `_listUnfixedReferrer`)이 있으면 그 id 입니다.
          * @details 옮기기는 디스크의 참조 글을 고친다. 메모리의 미저장 문서는 옛 id 를 들고 있어 다음 저장이 고친 글을 덮는다 — 계획에서 "먼저 저장" 으로 거절한다(감사 P0-4).
+         *          디스크에 아직 없는 새 참조는 문서의 미저장 글(`EditorOpenDocument::_unsavedText`)에서 찾는다 — 놓치면 다음 저장이 사라진 옛 경로를 적는다.
          *          언리얼은 로드된 참조자를 메모리에서 고치고 dirty 로 표시한다. 이 엔진은 문서마다 메모리 꼴이 달라 고칠 수단이 없으니 거절이 그 자리다.
          */
         [[nodiscard]] static optional<string> findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen );

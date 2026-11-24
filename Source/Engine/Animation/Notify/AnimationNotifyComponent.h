@@ -19,6 +19,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -178,6 +179,7 @@ namespace sw
         vector<AnimationFootContactTracker>    _listFootContact;     ///< 테이블의 `<FootContact>` 와 인덱스가 같은 발 상태다.
         const AnimationNotifyTable*            _pFootContactTable;   ///< `_listFootContact` 를 만든 테이블이다. 바뀌면 상태를 새로 만든다.
         ComponentHandle                        _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
+        SceneTeleportCursor                    _teleport;            ///< 순간이동하면 열린 칼 궤적의 지난 자리를 잊는다
         float32                                _pendingDeltaSeconds; ///< 2D 에서 복사한 프레임의 이동 구간이다.
         AssetReloadWatch<AnimationNotifyTable> _tableReload;
         Subscription                           _boneRequirement;   ///< 발 닿음 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requireFootBones`)

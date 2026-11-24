@@ -19,6 +19,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
@@ -269,9 +270,13 @@ namespace sw
         }
         MinigameFlow& minigameFlow = _owner.getSubsystem<MinigameFlow>();
         const bool    bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
-        if ( savedSceneID->empty() || ( bInMinigame && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID() ) )
+        // 맡긴 이동이 남았으면 활성 씬은 곧 내려간다 — 거기 풀면 성공을 알린 뒤 씬과 함께 사라진다. 세이브의 씬을 다시 요청해 그 이동을 대신한다.
+        const bool bStaysInScene = bInMinigame && _owner.getSubsystem<GameSceneFlow>().hasPendingSceneLoad() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
+        if ( savedSceneID->empty() || bStaysInScene )
         {
             const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes );
+            if ( bRestored )
+                minigameFlow.discardPendingResults();
             if ( bRestored && bInMinigame )
                 minigameFlow.applySavedMinigame( std::move( listFrame ) );
             publishSlotLoaded( slot, bRestored, onApplied );
@@ -302,13 +307,20 @@ namespace sw
             publishSlotLoaded( pending._slot, false, pending._onApplied );
             return;
         }
-        publishSlotLoaded( pending._slot, _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes ), pending._onApplied );
+        const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes );
+        if ( bRestored )
+            _owner.getSubsystem<MinigameFlow>().discardPendingResults();
+        publishSlotLoaded( pending._slot, bRestored, pending._onApplied );
     }
 
     void GameSaveSlots::publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied )
     {
         if ( bLoaded )
+        {
             ++_counts._loaded;
+            if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+                pAutosave->resetProgress(); // 앞 진행의 체크포인트 · 요청으로 되돌린 진행을 저장하지 않는다(자동 저장 되돌리기는 아래 완료가 제 슬롯의 것으로 잇는다)
+        }
         SaveGameLoadedEvent event{};
         event._slot     = slot;
         event._bSuccess = bLoaded;

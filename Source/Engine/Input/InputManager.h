@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -115,9 +116,9 @@ namespace sw
          *          메시지를 받을 때 상태를 바로 바꾸면, 여기서 엣지를 지운 뒤 재생할 때 이미 눌린 키라서 "새로 눌림" 이 사라진다.
          *          끝에서 통합 InputMap(`getInputMap()`)을 갱신하므로, 그 맵을 따로 `update()` 하면 한 프레임에 두 번 흐른다.
          *          따로 만든 InputMap 은 만든 쪽이 갱신한다.
-         * @param deltaSeconds 지난 프레임의 실제 시간(초)입니다. 진동 타이머와 재연결 주기가 이 값으로 흐릅니다.
+         * @param unscaledDeltaSeconds 지난 프레임의 실제 시간(초, 게임 시간 배율 · 정지와 무관)입니다. 진동 · 가상 커서 · 길게 누르기 · 이벤트의 프레임 안 자리가 이 값으로 흐릅니다.
          */
-        void beginFrame( float32 deltaSeconds = 0.016f );
+        void beginFrame( float32 unscaledDeltaSeconds = 0.016f );
         /** @brief 프레임을 마치며 엣지 플래그와 원시 델타를 리셋합니다. */
         void endFrame();
         /** @brief 창이 포커스를 얻었습니다. 잠금은 다시 잡지 않으며, 클라이언트 영역을 눌러야 잡습니다(`isMouseLockActive`). */
@@ -198,6 +199,13 @@ namespace sw
         [[nodiscard]] bool openLocalUsers( uint32 userCount );
         /** @brief 로컬 멀티를 닫습니다. 통합 맵이 다시 모든 장치를 읽습니다. 열지 않았으면 아무것도 하지 않습니다. */
         void closeLocalUsers();
+        /**
+         * @brief 레이어를 모든 로컬 사용자의 맵에 넣습니다(`InputMap::pushLayer`) — 컷씬 막기 · 미니게임 문맥처럼 사람마다가 아니라 게임 전체의 것. 나중에 여는 사용자의 맵에도 넣습니다.
+         * @details 주 사용자의 맵에만 넣으면 분할 화면의 다른 사람은 컷씬 동안 움직이고, 넣은 채 사용자를 열면 사본이 남아 풀 곳이 없다.
+         */
+        [[nodiscard]] Subscription pushSharedLayer( const hashed_string& layer, bool bBlockLower = false );
+        /** @brief 레이어를 모든 로컬 사용자의 맵에서 켜 둡니다(`InputMap::enableLayer`). 나중에 여는 사용자의 맵에서도 켭니다. */
+        [[nodiscard]] Subscription enableSharedLayer( const hashed_string& layer );
         /** @brief 로컬 멀티가 열렸으면 그 사용자 수, 아니면 1 입니다. */
         uint32 getLocalUserCount() const { return _listUserDevices.empty() ? 1u : static_cast<uint32>( _listUserDevices.size() ); }
         /** @brief 로컬 사용자 @p userIndex 의 입력 맵입니다. 사용자 0 은 늘 통합 맵이고, 열리지 않은 사용자는 nullptr 입니다. */
@@ -214,11 +222,13 @@ namespace sw
         [[nodiscard]] Subscription bindTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
 
         /**
-         * @brief 키보드를 받을 쪽을 바꿉니다(개발 콘솔이 열고 닫을 때).
-         * @details 포커스가 `Game` 이 아닌 동안 눌린 키는 포커스가 돌아온 뒤에도 뗄 때까지 게임에 보이지 않는다.
+         * @brief @p owner 가 키보드를 쥡니다. 돌려준 구독이 쥔 동안이며, 쥔 주인들 가운데 우선순위(`InputKeyboardFocus` 순서)가 가장 높은 쪽이 받습니다. `Game` 은 아무도 쥐지 않은 상태라 쥘 수 없습니다.
+         * @details 칸 하나에 마지막으로 쓴 쪽이 이기게 두면 주인이 저마다 "내 값일 때만 되돌린다" 를 해야 하고, 쥔 순서와 놓는 순서가 어긋나면(도구 창이 콘솔을 덮은 동안 콘솔이 사라짐) 없는 주인에게 돌아간다.
+         *          포커스가 `Game` 이 아닌 동안 눌린 키는 포커스가 돌아온 뒤에도 뗄 때까지 게임에 보이지 않는다.
          *          콘솔을 닫은 Esc 가 다음 프레임에 게임의 "일시정지" 로 새지 않게 하기 위해서다. 포커스를 넘기기 전부터 눌려 있던 키(달리던 W)는 돌아오면 다시 보인다.
          */
-        void               setKeyboardFocus( InputKeyboardFocus focus );
+        [[nodiscard]] Subscription claimKeyboardFocus( InputKeyboardFocus owner );
+        /** @brief 지금 키보드를 받는 쪽입니다(아무도 쥐지 않았으면 `Game`). */
         InputKeyboardFocus getKeyboardFocus() const { return _keyboardFocus; }
         /** @brief 게임 쪽 조회가 이 키를 볼 수 있으면 true 입니다. 포커스가 `Game` 이고, 다른 포커스 동안 눌려서 아직 떼지 않은 키가 아니어야 합니다. */
         bool isKeyVisibleToGame( Key key ) const;
@@ -287,11 +297,14 @@ namespace sw
          */
         bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
 
-        void setMouseLockMode( MouseLockMode mode );
-        void setCursorVisible( bool bVisible );
+        /**
+         * @brief 마우스를 @p mode 로 잠그고 커서를 숨깁니다. 돌려준 구독이 풀리면 놓습니다 — 여럿이 쥐면 나중에 쥔 쪽의 방식이고, 하나라도 쥐고 있으면 풀리지 않습니다.
+         * @details 칸 하나를 함께 쓰면 떠나는 조종자(이전 씬 · 하위 레벨 · 분할 화면의 다른 사람)의 놓기가 새로 빙의한 조종자의 잠금을 푼다.
+         */
+        [[nodiscard]] Subscription claimMouseLock( MouseLockMode mode );
         /**
          * @brief OS 커서 모양을 바꿉니다(런타임 UI 가 호버한 위젯의 `UICursorShape` 로 프레임마다 부른다). 같은 모양이면 아무것도 하지 않습니다.
-         * @details 숨긴 커서(잠금 · `setCursorVisible( false )`)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 OS 커서를 쥐므로 이 모양은 창에 보이지 않고, 게임 뷰 패널이 `getCursorShape` 를 읽어 ImGui 커서로 낸다.
+         * @details 숨긴 커서(잠금)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 OS 커서를 쥐므로 이 모양은 창에 보이지 않고, 게임 뷰 패널이 `getCursorShape` 를 읽어 ImGui 커서로 낸다.
          */
         void        setCursorShape( CursorShape shape );
         CursorShape getCursorShape() const { return _cursorShape; }
@@ -315,31 +328,38 @@ namespace sw
         // 7) 가상 입력(Virtual Input). 테스트, 시나리오, 입력 리플레이가 OS 이벤트와 같은 경로로 입력을 넣는다
         // ------------------------------------------------------------------------------
         /**
-         * @brief 가상 입력 원천을 붙입니다. 빌려 쓰므로 떼기 전까지 살아 있어야 합니다. 이미 붙어 있으면 교체하고, 프레임 번호는 0 부터 다시 셉니다.
-         * @details 붙이는 순간 모든 장치 상태를 지운다. 사람이 누르고 있던 키가 테스트의 첫 프레임에 남지 않게 하기 위해서다.
+         * @brief 가상 입력 원천을 맨 위에 붙입니다. 돌려준 구독이 붙임의 주인이며, 풀리면 이 붙임과 그 위에 붙은 것을 모두 뗍니다.
+         * @details 붙임은 쌓인다 — 맨 위 원천만 이벤트를 내고, 아래 원천은 멈췄다가 위가 떨어지면 다시 낸다. 덮은 쪽(재생)은 덮인 쪽(시나리오)보다 오래 살지 못한다.
+         *          칸 하나를 덮어쓰면 먼저 붙인 쪽이 입력을 조용히 잃고, 자기 것이 아니라 떼지도 못해 덮은 쪽이 남는다.
+         *          프레임 번호는 붙임마다 0 부터 세고 멈춘 동안에도 흐른다(그동안의 이벤트는 내지 않는다 — 시나리오 시각과 어긋나지 않게).
+         *          붙이는 순간 모든 장치 상태를 지운다. 사람이 누르고 있던 키가 테스트의 첫 프레임에 남지 않게 하기 위해서다. 뗄 때도 지운다(가상 키가 눌린 채 남지 않게).
          *          배타 모드면 붙어 있는 동안 OS 의 키, 마우스, 패드 이벤트와 패드 폴링, 창 포커스 이벤트, 커서 가두기와 가운데 되돌리기를 하지 않고,
-         *          패드 연결은 가상 연결 이벤트가 정한다. 엔진 키보드 포커스(`setKeyboardFocus`, 개발 콘솔)는 가상 키에도 그대로 적용된다.
+         *          패드 연결은 가상 연결 이벤트가 정한다. 엔진 키보드 포커스(`claimKeyboardFocus`, 개발 콘솔)는 가상 키에도 그대로 적용된다.
+         * @param source 빌려 쓰므로 떼기 전까지 살아 있어야 합니다(구독을 원천보다 뒤에 선언한다). 이미 붙은 원천이면 오류를 남기고 빈 구독을 돌려줍니다.
          * @param bResetState false 면 장치 상태를 지우지 않습니다. `InputReplay::seekTo` 로 만든 상태에서 이어 재생할 때 씁니다.
          */
-        void attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode = VirtualInputMode::Exclusive, bool bResetState = true );
+        [[nodiscard]] Subscription attachVirtualInput( IVirtualInputSource& source, VirtualInputMode mode = VirtualInputMode::Exclusive, bool bResetState = true );
         /**
-         * @brief 가상 입력을 뗍니다. 커서 잠금을 지금 상태에 맞춰 다시 적용합니다.
-         * @param bResetState true 면 장치 상태를 지웁니다(가상 키가 눌린 채 남지 않게 하기 위해서입니다). 재생으로 만든 상태를 남기려면 false 를 넘깁니다.
+         * @brief 장치 상태를 지우고 @p source 를 배타로 붙여 @p listDeltaSeconds 의 프레임을 바로 돌린 뒤, 만든 상태를 남기고 뗍니다(되감기 · 탐색).
+         * @details 다시 만든 프레임은 실제 프레임이 아니므로 아래 붙임의 프레임 번호는 흐르지 않는다.
          */
-        void                 detachVirtualInput( bool bResetState = true );
-        bool                 isVirtualInputAttached() const { return _pVirtualInput != nullptr; }
-        IVirtualInputSource* getVirtualInput() const { return _pVirtualInput; }
-        /** @brief 배타 가상 입력이 붙어 OS 입력을 무시하는 중이면 true 입니다. */
-        bool isOSInputSuppressed() const { return _pVirtualInput != nullptr && _virtualInputMode == VirtualInputMode::Exclusive; }
+        void runVirtualFrames( IVirtualInputSource& source, const vector<float32>& listDeltaSeconds );
+        bool isVirtualInputAttached() const { return _listVirtualInput.empty() == false; }
+        /** @brief @p source 가 붙어 있으면(위에 덮여 멈췄어도) true 입니다. */
+        bool isVirtualInputAttached( const IVirtualInputSource& source ) const { return findVirtualInput( source ) != nullptr; }
+        /** @brief 지금 이벤트를 내는(맨 위) 원천입니다. 없으면 nullptr 입니다. */
+        IVirtualInputSource* getVirtualInput() const { return _listVirtualInput.empty() ? nullptr : _listVirtualInput.back()._pSource; }
+        /** @brief 배타 가상 입력이 (위에 덮여 있더라도) 붙어 OS 입력을 무시하는 중이면 true 입니다 — 시나리오가 부른 혼합 재생이 그 시나리오의 배타를 풀지 않습니다. */
+        bool isOSInputSuppressed() const;
         /**
          * @brief 무인 자동화(시나리오 `input="exclusive"`)가 사람의 마우스와 키보드 입력을 창 메시지 단계에서 버리게 합니다. 언리얼의 `-unattended` 와 같은 의미입니다.
          * @details `isOSInputSuppressed` 는 게임 입력(이 매니저의 장치)만 막는다. 이 표시는 그보다 앞 단계인 창 메시지 분배 셸과 에디터 UI(ImGui 플랫폼 백엔드의 커서 조회)까지 막는다.
-         *          창 이벤트(닫기, 크기, 포커스)는 그대로 둔다. 배타 가상 입력이 붙어 있을 때만 켜지고, `attachVirtualInput` 과 `detachVirtualInput` 이 끈다.
+         *          창 이벤트(닫기, 크기, 포커스)는 그대로 둔다. 배타 가상 입력이 붙어 있을 때만 켜지고, 맨 위 붙임에 적혀 그 붙임이 떨어질 때 꺼진다(위에 덮여 있는 동안에도 켜져 있다).
          *          입력 리플레이처럼 사람이 에디터를 계속 조작하는 배타 재생에서는 켜지 않는다.
          */
         void setOSDeviceInputBlocked( bool bBlocked );
         /** @brief 사람의 마우스, 키보드 이벤트를 버리는 중이면 true 입니다(`setOSDeviceInputBlocked`). */
-        bool isOSDeviceInputBlocked() const { return _bOSDeviceInputBlocked == SW_TRUE; }
+        bool isOSDeviceInputBlocked() const;
         /** @brief 창 메시지 @p event 를 입력 계층 앞에서 버려야 하면 true 입니다. 버리는 중인 마우스와 키보드 이벤트가 해당합니다. */
         bool shouldDropNativeEvent( const NativeWindowEvent& event ) const;
         /**
@@ -352,8 +372,8 @@ namespace sw
         uint64 getHumanInputSerial() const { return _humanInputSerial; }
         /** @brief 지금까지 OS 에서 받은 원시 마우스 이동 보고 수입니다(Win32 WM_INPUT, 이동 0 인 보고는 세지 않는다). 늘기만 한다 — 감시 값 `Input.RawMouseEvents`. */
         const DevCounter& getRawMouseEventCount() const { return _rawMouseEventCount; }
-        /** @brief 붙인 뒤 지난 `beginFrame` 횟수이며, 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
-        uint32 getVirtualFrameIndex() const { return _virtualFrameIndex; }
+        /** @brief @p source 를 붙인 뒤 지난 `beginFrame` 횟수이며, 다음 `beginFrame` 의 프레임 번호입니다. 붙어 있지 않으면 0 입니다. */
+        uint32 getVirtualFrameIndex( const IVirtualInputSource& source ) const;
         /** @brief 이번 `beginFrame` 이 장치에 적용한 원시 이벤트입니다(배타 가상 입력이면 가상 이벤트만). 입력 녹화가 읽으며, 다음 `beginFrame` 까지 유효합니다. */
         const vector<RawInputEvent>& getLastFrameEvents() const { return _listPolledEvent; }
         /** @brief 지금까지 `beginFrame` 을 부른 횟수입니다(프레임마다 한 번 읽는 쪽이 같은 프레임을 두 번 읽지 않게). */
@@ -366,7 +386,7 @@ namespace sw
         /** @brief 세션 입력 기록을 멈춥니다. 담은 프레임은 다음 시작까지 남습니다(버그 리포트가 읽는다). */
         void stopSessionRecording() { _sessionRecording.stopRecording(); }
         /**
-         * @brief @p filePath(.swreplay)를 세션 입력 기록으로 읽어 배타 가상 입력으로 붙입니다. 끝 프레임을 낸 다음 `beginFrame` 이 스스로 뗍니다.
+         * @brief @p filePath(.swreplay)를 세션 입력 기록으로 읽어 배타 가상 입력으로 붙입니다(앞 재생은 끝낸다). 끝 프레임을 낸 `beginFrame` 이 스스로 떼고, 덮었던 원천(시나리오)이 다시 냅니다.
          * @return 읽지 못하면 false 이고 붙이지 않습니다(있던 기록은 그대로).
          */
         [[nodiscard]] bool playSessionRecording( const AbsolutePath& filePath );
@@ -401,6 +421,58 @@ namespace sw
             InputSlot         _slot{};
             InputPressInstant _instant{};
         };
+
+        /** @brief 붙은 가상 입력 하나입니다(`attachVirtualInput`). */
+        struct VirtualInputAttachment
+        {
+            IVirtualInputSource* _pSource{ nullptr };                  ///< 붙인 원천(빌림)
+            uint64               _id{ 0 };                             ///< 주인 구독의 id
+            uint32               _frameIndex{ 0 };                     ///< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호
+            VirtualInputMode     _mode{ VirtualInputMode::Exclusive }; ///< 이 붙임의 모드
+            bool                 _bOSDeviceInputBlocked{ false };
+        };
+
+        /** @brief 마우스 잠금을 쥔 것 하나입니다(`claimMouseLock`). */
+        struct MouseLockClaim
+        {
+            uint64        _id{ 0 };
+            MouseLockMode _mode{ MouseLockMode::None };
+        };
+
+        /** @brief 마우스 잠금 @p id 의 구독이 풀렸습니다. */
+        void releaseMouseLock( uint64 id );
+        /** @brief 쥔 것들에서 잠금 방식 · 커서 표시를 다시 정해 장치와 OS 에 맞춥니다. */
+        void syncMouseLockClaims();
+
+        /** @brief 모든 사용자의 맵에 건 레이어 하나입니다(`pushSharedLayer` · `enableSharedLayer`). */
+        struct SharedLayer
+        {
+            hashed_string        _layer{};
+            uint64               _id{ 0 };
+            vector<Subscription> _listMapLayer{}; ///< 맵마다 건 구독(닫힌 사용자의 것은 무효다)
+            bool                 _bStacked{ false };
+            bool                 _bBlockLower{ false };
+        };
+
+        /** @brief 공유 레이어 @p shared 를 @p map 에 겁니다. */
+        static void applySharedLayer( SharedLayer& shared, InputMap& map );
+        /** @brief 공유 레이어를 지금 있는 모든 맵에 걸고 구독을 냅니다. */
+        Subscription addSharedLayer( const hashed_string& layer, bool bStacked, bool bBlockLower );
+        /** @brief 공유 레이어 @p id 의 구독이 풀렸습니다. */
+        void releaseSharedLayer( uint64 id );
+
+        /** @brief @p source 의 붙임입니다. 없으면 nullptr 입니다. */
+        const VirtualInputAttachment* findVirtualInput( const IVirtualInputSource& source ) const;
+        /** @brief @p source 를 맨 위에 쌓습니다. 이미 붙어 있으면 오류를 남기고 0, 아니면 붙임의 id 를 돌려줍니다. */
+        uint64 pushVirtualInput( IVirtualInputSource& source, VirtualInputMode mode, bool bResetState );
+        /** @brief 붙임 @p index 와 그 위를 모두 뗍니다. 커서 잠금과 패드 세션을 남은 붙임에 맞춥니다. */
+        void popVirtualInputs( size_t index, bool bResetState );
+        /** @brief 키보드를 쥔 주인 @p ownerID(`InputKeyboardFocus`)의 구독이 풀렸습니다. */
+        void releaseKeyboardFocus( uint64 ownerID );
+        /** @brief 쥔 주인들에서 키보드를 받을 쪽을 다시 고르고, 바뀌었으면 입력기 · 마우스 잠금을 맞춥니다. */
+        void syncKeyboardFocus();
+        /** @brief 붙임 @p id 의 구독이 풀렸습니다. */
+        void releaseVirtualInput( uint64 id );
 
         void dispatchRawEvent( const RawInputEvent& rawEvent );
         /** @brief 누름 이벤트면 그 컨트롤의 이번 프레임 첫 누름 순간을 적습니다(적용하기 전에 부른다 — 시선 누적은 그 이벤트 앞까지다). */
@@ -506,6 +578,10 @@ namespace sw
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<unique_ptr<InputMap>>              _listUserMap;             /**< 로컬 멀티의 사용자 1 부터의 입력 맵입니다(`openLocalUsers`). 닫혔으면 비었습니다. */
         vector<InputUserDevices>                  _listUserDevices;         /**< 로컬 멀티의 사용자마다 짝지은 장치입니다(사용자 0 포함). 닫혔으면 비었습니다. */
+        vector<MouseLockClaim>                    _listMouseLockClaim;      /**< 마우스 잠금을 쥔 것들입니다(뒤가 이긴다). */
+        uint64                                    _lastMouseLockID;         /**< 마지막으로 내준 잠금의 id 입니다. */
+        vector<SharedLayer>                       _listSharedLayer;         /**< 모든 사용자의 맵에 건 레이어입니다. */
+        uint64                                    _lastSharedLayerID;       /**< 마지막으로 내준 공유 레이어의 id 입니다. */
         vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         vector<QueuedRawEvent>                    _listQueuedEvent;         /**< 큐에서 꺼낸 칸입니다 — 뒤 입력 프레임 번호가 붙은 칸은 그 프레임의 beginFrame() 까지 넣은 순서대로 남는다. */
         vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
@@ -514,38 +590,42 @@ namespace sw
         [[maybe_unused]] optional<int2>           _lastRawMouseAbsolute;    /**< 직전 절대 원시 마우스 보고의 화면 픽셀 좌표입니다(Win32 원격 데스크톱 · 가상 머신 — `Win32RawMouseUtil::readMotion`). 등록을 바꾸면 비운다. */
         ClockFunction                             _pfnNowMicroseconds;      /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
         int64                                     _frameEndMicroseconds;    /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
-        IVirtualInputSource*                      _pVirtualInput;           /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
+        vector<VirtualInputAttachment>            _listVirtualInput;        /**< 붙은 가상 입력입니다(뒤가 위). 비었으면 OS 입력만 받습니다. */
         VirtualCursor                             _virtualCursor;           /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
         InputReplay                               _sessionRecording;        /**< 버그 리포트용 세션 입력 기록입니다(`startSessionRecording`, 고정 용량). */
         InputViewRect                             _gameView;                ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
-        uint32                                    _virtualFrameIndex;       /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
+        uint64                                    _lastVirtualInputID;      /**< 마지막으로 내준 붙임의 id 입니다(0 은 없음). */
         uint32                                    _beginFrameCount;         /**< `beginFrame` 을 부른 횟수입니다. */
         InputGlyphStyle                           _activeGlyphStyle;        /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */
         DelegateSlot<ActiveDeviceChangedDelegate> _onActiveDeviceChanged;
         DelegateSlot<GamepadConnectionDelegate>   _onGamepadConnectionChanged;
-        DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
-        DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
-        string                                    _pendingComposition;                        /**< 이어지는 조합 조각(`_bTextContinued`)을 마지막 조각까지 모으는 글입니다. 큐를 비우는 스레드만 쓴다. */
-        uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
-        uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
-        uint32                                    _arrSavedAccessibilityFlags[3];             /**< 접근성 단축키를 끄기 전의 OS 값입니다 — Windows 는 고정 · 토글 · 필터 키의 dwFlags, X11 은 [0] 에 XKB enabled_ctrls. */
-        InputKeyboardFocus                        _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
-        VirtualInputMode                          _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드입니다. */
-        CursorShape                               _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
-        [[maybe_unused]] uint16                   _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
-        uint8                                     _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
+        DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];        /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
+        DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount];  /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
+        string                                    _pendingComposition;                         /**< 이어지는 조합 조각(`_bTextContinued`)을 마지막 조각까지 모으는 글입니다. 큐를 비우는 스레드만 쓴다. */
+        uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];      /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
+        uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];    /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
+        uint32                                    _arrSavedAccessibilityFlags[3];              /**< 접근성 단축키를 끄기 전의 OS 값입니다 — Windows 는 고정 · 토글 · 필터 키의 dwFlags, X11 은 [0] 에 XKB enabled_ctrls. */
+        uint32                                    _arrKeyboardClaimCount[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다 쥔 구독 수입니다(`claimKeyboardFocus`). */
+        InputKeyboardFocus                        _keyboardFocus;                              /**< 지금 키보드를 받는 쪽입니다(쥔 주인 가운데 우선순위가 가장 높은 것). */
+        CursorShape                               _cursorShape;                                /**< OS 커서 모양입니다(`setCursorShape`). */
+        [[maybe_unused]] uint16                   _pendingHighSurrogate;                       /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
+        uint8                                     _consumedButtonMask;                         /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
         uint8                                     _bInitialized                    : 1;
         uint8                                     _bInputMuted                     : 1;
         uint8                                     _bWindowFocused                  : 1; /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
         uint8                                     _bMouseLockEngaged               : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
         uint8                                     _bAltHeld                        : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
         uint8                                     _bCursorHiddenApplied            : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
-        uint8                                     _bOSDeviceInputBlocked           : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
         uint8                                     _bNativeWindowFocused            : 1; /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
         uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
         uint8                                     _bBackgroundGamepadInput         : 1; /**< 배경에서도 패드를 폴링하는지입니다 — 엔진은 설정이 정한다(`initializeSubsystem`), 설정 없이 만든 단위 테스트는 켠 채로 시작한다. */
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
         DevCounter                                _rawMouseEventCount;                  /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
+        Subscription                              _sessionPlayback;                     /**< 세션 입력 기록 재생의 붙임입니다(`playSessionRecording`). */
+        SubscriptionList                          _mouseLockSubscriptions;              /**< 마우스 잠금의 구독입니다(`claimMouseLock`). */
+        SubscriptionList                          _sharedLayerSubscriptions;            /**< 공유 레이어의 구독입니다. */
+        SubscriptionList                          _keyboardFocusSubscriptions;          /**< 키보드를 쥔 구독입니다(`claimKeyboardFocus`). */
+        SubscriptionList                          _virtualInputSubscriptions;           /**< 가상 입력 붙임의 구독입니다. 다른 멤버보다 먼저 닫히게 맨 끝에 둔다. */
 
     private:
         SW_SERVICE_SLOT( InputManager, Required );

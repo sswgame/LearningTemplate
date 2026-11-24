@@ -289,6 +289,8 @@ namespace sw
             const bool bCarries3DContent = packet._gpuScene.getInstances().empty() == false || packet._listView.empty() == false;
             if ( bCarries3DContent )
                 SW_LOG_ERROR_ONCE_ID( "FrameRenderer.RenderPacketCarriesScene", "Render packet carries scene content but no main view (RenderFramePacket::setMainView) - the frame is not drawn" );
+            // 상태(텍스처 업로드 · GPU 장면)는 받고 다음에 그리는 프레임이 시간 누적을 버리게 한다 — 카메라가 없던 사이를 건너 지난 그림 · 지난 깊이를 잇지 않는다.
+            executePacketWithoutDrawing( pDevice, packet );
             return false;
         }
 

@@ -270,7 +270,7 @@ namespace sw
         return true;
     }
 
-    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade )
+    void LoadingScreenController::update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition )
     {
         UIScreen* pScreen = findLoadingScreen();
         if ( pScreen != nullptr )
@@ -295,10 +295,10 @@ namespace sw
                 // 닫고 검은 화면에서 씬으로 돌아온다 — 페이드는 Overlay 층이라 입력을 막지 않는다.
                 pScreen->close();
                 _loadingScreen = kInvalidUIScreenHandle;
-                fade.beginFadeIn( _settings._fadeInSeconds );
+                transition.fadeInFromBlack( _settings._fadeInSeconds );
             }
         }
-        syncFadeOverlay( fade.getOverlayAlpha() );
+        syncFadeOverlay( transition.fade().getOverlayAlpha() );
     }
 
     void LoadingScreenController::applyProgress( UIScreen& screen, optional<float32> loadProgress )

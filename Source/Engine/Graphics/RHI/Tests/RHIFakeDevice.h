@@ -275,6 +275,8 @@ namespace sw::test
         uint32                   _endNativeCount{ 0 };   /**< `endRenderPassNative` 횟수 — 기반이 열린 패스가 있을 때만 부른다 */
         uint32                   _drawNativeCount{ 0 };  /**< 나간 드로우 수(패스가 없어 버린 드로우는 세지 않는다) */
         uint32                   _blitNativeCount{ 0 };  /**< 백엔드에 닿은 블릿 수 */
+        uint32                   _copyRegionCount{ 0 };  /**< 백엔드에 닿은 버퍼 구간 복사 수 */
+        uint64                   _bufferBytes{ 256 };    /**< `findBufferBytes` 가 답할 모든 버퍼의 크기 */
         vector<RHITextureHandle> _listTransitionTexture; /**< 백엔드에 닿은 텍스처 전이의 핸들(차례대로) */
 
         /** @brief 진단을 낼 디바이스와 함께 만듭니다. */
@@ -308,25 +310,26 @@ namespace sw::test
             ++_beginNativeCount;
             return RHIRenderPassBeginResult::Begun;
         }
-        void endRenderPassNative() override { ++_endNativeCount; }
-        void drawNative( uint32, uint32 ) override { ++_drawNativeCount; }
-        void drawInstancedNative( uint32, uint32, uint32, uint32 ) override { ++_drawNativeCount; }
-        void drawIndexedInstancedNative( uint32, uint32, uint32, int32, uint32 ) override { ++_drawNativeCount; }
-        void drawIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
-        void drawIndexedIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
-        void setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
-        void dispatchComputeNative( uint32, uint32, uint32 ) override {}
-        void dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
-        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
-        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
-        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
-        void blitTextureNative( RHITextureHandle, RHITextureHandle ) override { ++_blitNativeCount; }
-        void transitionBufferNative( RHIBufferHandle, RHIBufferState ) override {}
-        void copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
-        void copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override {}
-        void uavBarrierNative( RHIBufferHandle ) override {}
-        void uavBarrierTextureNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
-        void updateConstantBufferNative( RHIBufferHandle, const void*, uint32 ) override {}
+        void   endRenderPassNative() override { ++_endNativeCount; }
+        void   drawNative( uint32, uint32 ) override { ++_drawNativeCount; }
+        void   drawInstancedNative( uint32, uint32, uint32, uint32 ) override { ++_drawNativeCount; }
+        void   drawIndexedInstancedNative( uint32, uint32, uint32, int32, uint32 ) override { ++_drawNativeCount; }
+        void   drawIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
+        void   drawIndexedIndirectNative( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override { ++_drawNativeCount; }
+        void   setComputePipelineStateNative( RHIPipelineStateHandle ) override {}
+        void   dispatchComputeNative( uint32, uint32, uint32 ) override {}
+        void   dispatchIndirectNative( RHIBufferHandle, uint32 ) override {}
+        void   prepareTextureForShaderReadNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void   prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void   prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void   blitTextureNative( RHITextureHandle, RHITextureHandle ) override { ++_blitNativeCount; }
+        void   transitionBufferNative( RHIBufferHandle, RHIBufferState ) override {}
+        void   copyBufferToReadbackNative( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
+        uint64 findBufferBytes( RHIBufferHandle ) const override { return _bufferBytes; }
+        void   copyBufferRegionNative( RHIBufferHandle, uint64, RHIBufferHandle, uint64, uint64 ) override { ++_copyRegionCount; }
+        void   uavBarrierNative( RHIBufferHandle ) override {}
+        void   uavBarrierTextureNative( RHITextureHandle texture ) override { _listTransitionTexture.push_back( texture ); }
+        void   updateConstantBufferNative( RHIBufferHandle, const void*, uint32 ) override {}
 
     private:
         FakeRHIDevice* _pDevice; ///< 진단을 든 디바이스

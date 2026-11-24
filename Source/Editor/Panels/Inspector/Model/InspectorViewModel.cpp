@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorMultiEdit.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
@@ -32,7 +33,6 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
 
 namespace sw::editor
 {
@@ -454,7 +454,7 @@ namespace sw::editor
     void InspectorViewModel::applyInstanceOverrides()
     {
         // 인스턴스의 차이는 앵커의 `<Part>` 로 저장된다 — 내부 씬 파일은 그대로다.
-        (void)editor::getSubsystem<SceneManager>().saveActiveScene(); // 실패는 저장이 알린다
+        (void)EditorSceneFileCommands::saveActiveScene(); // 실패는 저장이 알린다
     }
 
     void InspectorViewModel::setDataLayer( uint64 objectID, string_view layerName, bool bOn )

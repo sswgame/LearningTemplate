@@ -1,10 +1,13 @@
 // 미리보기 창 바탕의 미리보기 씬 · 선택 · 창 스택 · 시간 배율입니다(ImGui 없음). 그리기는 `EditorPreviewPanel.cpp`(MVVM View)다.
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -13,9 +16,15 @@
 #include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/ScenePlaySnapshot.h"
 
 namespace sw::editor
 {
@@ -91,6 +100,8 @@ namespace sw::editor
         : EditorDocumentPanel{ kind, bLoadOnOpen }
         , _viewport{}
         , _pSelection{ make_unique<EditorSelection>() }
+        , _pModuleState{}
+        , _moduleUnloadingSubscription{}
         , _bFocusApplied{ SW_FALSE }
         , _bPreviewPaused{ SW_FALSE }
         , _bFloorShown{ SW_TRUE }
@@ -120,7 +131,75 @@ namespace sw::editor
         applyWindowFocus( false );
         resetDocumentHistory(); // 창 스택의 명령은 이 씬의 키를 가리킨다 — 씬과 함께 버린다(되돌리기 어려운 결정 4)
         _pSelection->unbindPreviewScope();
+        _moduleUnloadingSubscription.reset();
+        _pModuleState.reset();
         _viewport.shutdown();
+    }
+
+    void EditorPreviewPanel::onModuleUnloading( string_view moduleName )
+    {
+        Scene* const             pScene   = _viewport.getScene();
+        GameObjectManager* const pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( pObjects == nullptr )
+            return;
+        // 여러 모듈이 이어 내려가면(게임 + 키트) 오브젝트는 처음 걸린 때 한 번만 맡는다 — 그때는 컴포넌트가 다 있다.
+        unordered_set<uint64> uniqueHeldID;
+        if ( _pModuleState != nullptr )
+        {
+            for ( const ScenePlaySnapshot::ObjectSnapshot& held : _pModuleState->_listSnapshot )
+                uniqueHeldID.insert( held._identity._objectID );
+        }
+        const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+        vector<GameObject*> listObject;
+        pObjects->getAllGameObjects( editor::EditorSceneIterationAccess::getKey(), listObject );
+        for ( const GameObject* pObject : listObject )
+        {
+            if ( pObject == nullptr || pObject->isPendingDestroy() || uniqueHeldID.contains( pObject->getObjectID() ) )
+                continue;
+            const bool bOwned = VectorUtil::containsIf( pObject->getComponents(), [hashModule]( const Component* pComponent )
+            { return pComponent != nullptr && pComponent->getTypeInfo() != nullptr && pComponent->getTypeInfo()->_moduleName == hashModule; } );
+            if ( bOwned == false )
+                continue;
+            ScenePlaySnapshot::ObjectSnapshot entry;
+            entry._identity = ObjectStateSerializer::captureIdentity( pObject );
+            if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == false )
+                continue; // 이유는 직렬화가 남겼다
+            if ( _pModuleState == nullptr )
+                _pModuleState = make_unique<ScenePlaySnapshot>();
+            _pModuleState->_listSnapshot.push_back( std::move( entry ) );
+        }
+    }
+
+    void EditorPreviewPanel::restoreModuleState()
+    {
+        if ( _pModuleState == nullptr )
+            return;
+        const unique_ptr<ScenePlaySnapshot> pState   = std::move( _pModuleState );
+        Scene* const                        pScene   = _viewport.getScene();
+        GameObjectManager* const            pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( pObjects == nullptr )
+            return;
+        ObjectStateBatch batch( ObjectIDSpace::Live );
+        for ( const ScenePlaySnapshot::ObjectSnapshot& held : pState->_listSnapshot )
+        {
+            GameObject* const pObject = pObjects->findGameObjectByID( held._identity._objectID );
+            if ( pObject == nullptr )
+                continue;
+            ObjectLoadContext context{ SerializePurpose::Snapshot };
+            context._pIdentity = &held._identity;
+            context._pBatch    = &batch;
+            if ( ObjectStateSerializer::loadFromBinaryBuffer( pObject, held._bytes.data(), held._bytes.size(), context ) == 0 )
+                SW_LOG_WARNING_ID( "EditorPreviewPanel.ModuleStateNotRestored", "%#: '%#' could not be restored after the module reload - reload the document", getPanelTitle(), pObject->getName().c_str() );
+        }
+        // `Live` 배치는 런타임 id 가 맞아 옮기지 못한 핸들을 실패로 치지 않는다. 늘 true 다.
+        [[maybe_unused]] const bool bLinked = batch.finish();
+        SW_ASSERT( bLinked );
+    }
+
+    void EditorPreviewPanel::prepareDocumentForSave()
+    {
+        restoreModuleState();
+        EditorDocumentPanel::prepareDocumentForSave();
     }
 
     void EditorPreviewPanel::acknowledgePreviewEdits()
@@ -162,6 +241,7 @@ namespace sw::editor
         if ( pScene == nullptr )
             return;
         _pSelection->bindPreviewScope( *pScene, getDocumentCommandStack() );
+        _moduleUnloadingSubscription = editor::getSubsystem<TypeRegistry>().subscribeModuleUnloading( SW_DELEGATE_METHOD( TypeRegistry::ModuleUnloadingDelegate, &EditorPreviewPanel::onModuleUnloading, this ) );
         populatePreviewScene( *pScene );
         framePreviewSubject(); // 처음 카메라 = 맞춤(F) — 창마다 따로 두던 frameSphere 를 한 곳으로
     }
@@ -177,6 +257,7 @@ namespace sw::editor
     void EditorPreviewPanel::preparePreviewFrame( bool bFocused )
     {
         ensurePreviewScene();
+        restoreModuleState();
         applyWindowFocus( bFocused );
     }
 

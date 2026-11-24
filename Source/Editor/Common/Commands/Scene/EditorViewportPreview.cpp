@@ -123,11 +123,11 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportPreview::applySequenceFrame( const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, vector<SequenceSpanState>& inoutListSpan )
+    void EditorViewportPreview::applySequenceFrame( const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, SequencePlaybackState& inoutState )
     {
         GameObjectManager* pManager = editor::getActiveObjectManager();
-        SequenceTimelineUtil::applyFrame( pManager, asset, bindings, frame );
-        SequenceTimelineUtil::applySpans( pManager, asset, bindings, frame, framesPerSecond, 1.0f, inoutListSpan ); // 미리보기는 지금 프레임만 맞춘다(속도 없음)
+        SequenceTimelineUtil::applyFrame( pManager, asset, bindings, frame, inoutState._cameraCut );
+        SequenceTimelineUtil::applySpans( pManager, asset, bindings, frame, framesPerSecond, 1.0f, inoutState._listSpan ); // 미리보기는 지금 프레임만 맞춘다(속도 없음)
     }
 
     void EditorViewportPreview::applyDialogueLine( string_view graphPath, uint32 speakerID, string_view text )

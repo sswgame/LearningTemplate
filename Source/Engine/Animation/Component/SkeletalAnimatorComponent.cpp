@@ -313,13 +313,13 @@ namespace sw
         , _baseHistory{}
         , _carryOverPose{}
         , _inertializer{}
-        , _sequencerClip{}
+        , _listSequencerOverride{}
+        , _sequencerOverrideSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &SkeletalAnimatorComponent::closeSequencerOverride, this ) }
+        , _nextSequencerOverrideID{ 1 }
         , _rootMotionDelta{}
         , _pSkeletalMesh{ nullptr }
         , _pNotifyListener{ nullptr }
         , _lastDeltaSeconds{ 0.0f }
-        , _sequencerTime{ 0.0f }
-        , _sequencerWeight{ 0.0f }
         , _initialTime{ 0.0f }
         , _carryOverElapsed{ 0.0f }
         , _carryOverDuration{ 0.0f }
@@ -1039,14 +1039,40 @@ namespace sw
         return false;
     }
 
-    void SkeletalAnimatorComponent::setSequencerOverride( const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight )
+    Subscription SkeletalAnimatorComponent::openSequencerOverride( uint64& outOverrideID )
     {
-        if ( clip != _sequencerClip )
-            _sequencerClip = clip; // 프레임마다 같은 클립이 온다 — 같으면 따라가기 목록을 다시 잡지 않는다
-        _sequencerTime   = time;
-        _sequencerWeight = ( _sequencerClip != nullptr ) ? MathUtil::clamp( weight, 0.0f, 1.0f ) : 0.0f;
+        outOverrideID = _nextSequencerOverrideID++;
+        SequencerOverride entry;
+        entry._overrideID = outOverrideID;
+        _listSequencerOverride.push_back( std::move( entry ) );
+        return _sequencerOverrideSubscriptions.issue( outOverrideID );
+    }
+
+    void SkeletalAnimatorComponent::closeSequencerOverride( uint64 overrideID )
+    {
+        VectorUtil::removeIf( _listSequencerOverride, [overrideID]( const SequencerOverride& entry )
+        { return entry._overrideID == overrideID; } );
         if ( _pSkeletalMesh != nullptr )
             _pSkeletalMesh->markPoseDirty();
+    }
+
+    void SkeletalAnimatorComponent::setSequencerOverride( uint64 overrideID, const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight )
+    {
+        SequencerOverride* const pEntry = VectorUtil::findBy<&SequencerOverride::_overrideID>( _listSequencerOverride, overrideID );
+        if ( pEntry == nullptr )
+            return; // 구독을 놓은 자리다
+        if ( clip != pEntry->_clip )
+            pEntry->_clip = clip; // 프레임마다 같은 클립이 온다 — 같으면 따라가기 목록을 다시 잡지 않는다
+        pEntry->_time   = time;
+        pEntry->_weight = ( pEntry->_clip != nullptr ) ? MathUtil::clamp( weight, 0.0f, 1.0f ) : 0.0f;
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
+    }
+
+    bool SkeletalAnimatorComponent::hasSequencerOverride() const
+    {
+        return VectorUtil::containsIf( _listSequencerOverride, []( const SequencerOverride& entry )
+        { return entry._weight > 0.0f; } );
     }
 
     void SkeletalAnimatorComponent::setSyncGroup( const hashed_string& groupName, float32 weight )
@@ -1073,7 +1099,7 @@ namespace sw
         // inertialization 중이면 남은 차이가 유닛마다 달라 묶음의 포즈와 같지 않다.
         const bool bInertializing = _inertializer.isActive() || _bInertializationPending == SW_TRUE;
         const bool bNotShareable  = bNotClip || bNextNotClip || bInertializing || _bCarryingOver == SW_TRUE || player.isCurrentLooping() == false || bLayered ||
-                                   _sequencerWeight > 0.0f;
+                                   hasSequencerOverride();
         if ( bNotShareable )
             return false;
         outRequest._pClip             = static_cast<const AnimationClip*>( pPlaying );
@@ -1091,7 +1117,7 @@ namespace sw
     {
         const bool bPlaying = _graphPlayer.getPlayer().getCurrentPlayable() != nullptr;
         const bool bLayered = _listLayer.empty() == false || _listGraphLayer.empty() == false;
-        return bPlaying || bLayered || _sequencerWeight > 0.0f;
+        return bPlaying || bLayered || hasSequencerOverride();
     }
 
     void SkeletalAnimatorComponent::appendPlayerPlayables( const AnimationPlayer& player, vector<const IAnimationPlayable*>& inoutListPlayable ) const
@@ -1650,11 +1676,13 @@ namespace sw
             applyLayer( layer, skeleton, pose, pMask );
         }
 
-        if ( _sequencerClip != nullptr && _sequencerWeight > 0.0f )
+        for ( const SequencerOverride& entry : _listSequencerOverride )
         {
+            if ( entry._weight <= 0.0f )
+                continue;
             _scratchPose.setToReference( skeleton );
-            sampleClipIntoPose( *_sequencerClip, _sequencerTime, skeleton, _scratchPose, pMask );
-            Pose::blend( pose, _scratchPose, _sequencerWeight, pose );
+            sampleClipIntoPose( *entry._clip, entry._time, skeleton, _scratchPose, pMask );
+            Pose::blend( pose, _scratchPose, entry._weight, pose );
         }
 
         // 모프 타깃 커브 — 이름이 그리는 메시의 모프 타깃과 같은 커브는 그 가중치가 된다(임포트가 glTF weights 채널을 타깃 이름의 커브로 싣는다).

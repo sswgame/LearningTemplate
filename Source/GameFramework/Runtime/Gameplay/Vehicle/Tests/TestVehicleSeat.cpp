@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -203,6 +204,47 @@ SW_TEST_CASE( VehicleSeatTest, RiderSurvivesTheVehicle )
     SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
 }
 
+/** @brief [VehicleSeatTest] 탈것을 모는 동안에도 탑승자의 조종자 오브젝트(가방 · 일지 주인)를 찾고, 내리면 평소 길이다 */
+SW_TEST_CASE( VehicleSeatTest, RiderKeepsItsPlayerWhileDriving )
+{
+    VehicleFixture    rig;
+    GameObject* const pPlayer = rig._pController->getOwner();
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    SW_EXPECT_FALSE( rig._pRiderPawn->isPossessed() );
+    SW_EXPECT_TRUE( PawnComponent::findControllerObject( rig._manager, *rig._pRider ) == pPlayer );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
+    SW_EXPECT_TRUE( PawnComponent::findControllerObject( rig._manager, *rig._pRider ) == pPlayer );
+    rig._pController->unpossess();
+    SW_EXPECT_TRUE( PawnComponent::findControllerObject( rig._manager, *rig._pRider ) == nullptr ); // 내린 뒤의 끈은 남지 않는다
+}
+
+/** @brief [VehicleSeatTest] 탄 채 찍은 상태(미니게임에서 돌아오기 · 세이브 · 핫 리로드)를 되살리면 다시 앉아 있다 — 빙의 · 이동 멈춤은 상태에 실리지 않아 다시 만든다 */
+SW_TEST_CASE( VehicleSeatTest, RestoredRiderSitsAgain )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( ObjectStateSerializer::saveToBinaryBuffer( rig._pVehicle, bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
+    rig._manager.destroyGameObject( rig._pVehicle );
+    rig.update();
+
+    // 탑승자는 그대로 있고 탈것이 되살아난다 — 되살아난 씬에서는 조종자가 자기 폰을 다시 쥐고 있다.
+    GameObject*       pRestored = rig._manager.createGameObject( hashed_string( "Car" ) );
+    ObjectLoadContext context{ SerializePurpose::Snapshot };
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), context ) != 0 );
+    VehicleSeatComponent* pSeat = pRestored->getComponent<VehicleSeatComponent>();
+    PawnComponent*        pPawn = pRestored->getComponent<PawnComponent>();
+    SW_REQUIRE_TRUE( pSeat != nullptr && pPawn != nullptr );
+    rig.update();
+    rig.update();
+    SW_EXPECT_TRUE( pSeat->getOccupant() == rig._pRider->getHandle() );
+    SW_EXPECT_TRUE( pPawn->getController() == rig._pController->getHandle() );
+    SW_EXPECT_TRUE( rig._pRiderRoot->getParent() == pRestored->getPrimarySceneComponent() );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
+    SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
+}
+
 // 내린 탑승자는 다시 평범한 자식이다. 표시가 남으면 다음에 붙은 부모가 사라져도 살아남는다.
 SW_TEST_CASE( VehicleSeatTest, DismountClearsTheKeptMark )
 {
@@ -258,6 +300,26 @@ SW_TEST_CASE( VehicleSeatTest, RideFeelLeansAgainstTheAcceleration )
     SW_EXPECT_NEAR( -0.2f, feel.computeLean( float3{ 0.0f, 0.0f, 10.0f } )._x, 1e-5f );  // 가속은 뒤로
     SW_EXPECT_NEAR( 0.2f, feel.computeLean( float3{ 10.0f, 0.0f, 0.0f } )._y, 1e-5f );   // 오른쪽으로 돌면 왼쪽으로
     SW_EXPECT_NEAR( 0.3f, feel.computeLean( float3{ 0.0f, 0.0f, -100.0f } )._x, 1e-5f ); // 자른다
+}
+
+/** @brief [VehicleSeatTest] 결함: 탈것이 순간이동하면(리스폰 · 문) 그 거리를 가속으로 재어 탑승자가 젖혀지고 카메라가 흔들렸다 — 새 자리에서 다시 잰다 */
+SW_TEST_CASE( VehicleSeatTest, TeleportedVehicleIsNotAnAcceleration )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    for ( int32 stepIndex = 0; stepIndex < 4; ++stepIndex )
+    {
+        rig.update();
+    }
+    rig._pVehicleRoot->teleportTo( float3{ 0.0f, 30.0f, 200.0f } );
+    for ( int32 stepIndex = 0; stepIndex < 4; ++stepIndex )
+    {
+        rig.update();
+        SW_EXPECT_NEAR( 0.0f, rig._pSeat->getRideAcceleration().getLength(), 1.0e-3f );
+    }
+    rig._pVehicleRoot->setWorldPosition( float3{ 0.0f, 30.0f, 230.0f } ); // 알리지 않고 옮긴 것은 움직인 것이다
+    rig.update();
+    SW_EXPECT_TRUE( rig._pSeat->getRideAcceleration().getLength() > 1.0f );
 }
 
 /** @brief [VehicleSeatTest] 좌석이 탈것의 급정거를 재어(앞 가속 −) 탑승자를 앞으로 기울이고, 내리면 잰 값을 비운다 */

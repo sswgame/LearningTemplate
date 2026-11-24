@@ -104,6 +104,8 @@ namespace sw
         , _previousTarget{}
         , _pendingView{}
         , _pendingViewMulticast{}
+        , _pendingViewID{ 0 }
+        , _pendingViewSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &CameraManagerComponent::releasePendingView, this ) }
         , _blender{}
         , _impulseListener{}
         , _shakeSubscription{}
@@ -177,15 +179,18 @@ namespace sw
         _blender.startFromPose( from, blend );
     }
 
-    void CameraManagerComponent::setPendingView( const CameraPendingView& view )
+    Subscription CameraManagerComponent::setPendingView( const CameraPendingView& view )
     {
+        _pendingViewSubscriptions.detach( _pendingViewID ); // 앞 예고는 갈음됐다
+        ++_pendingViewID;
         _pendingView = view;
         _pendingViewMulticast.broadcast( _pendingView );
+        return _pendingViewSubscriptions.issue( _pendingViewID );
     }
 
-    void CameraManagerComponent::clearPendingView()
+    void CameraManagerComponent::releasePendingView( uint64 id )
     {
-        if ( hasPendingView() == false )
+        if ( id != _pendingViewID || hasPendingView() == false )
             return;
         _pendingView = CameraPendingView{};
         _pendingViewMulticast.broadcast( _pendingView );

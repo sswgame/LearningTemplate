@@ -25,6 +25,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
@@ -214,6 +215,21 @@ namespace sw::editor
                     outListRewrite.push_back( std::move( rewrite ) );
                 }
                 return true;
+            }
+
+            /** @brief 글 @p text 가 옮기는 에셋을 경로나 GUID 로 적었으면 true 입니다. */
+            static bool hasMovedReference( const string& text, const EditorAssetMovePlan& plan )
+            {
+                if ( text.empty() )
+                    return false;
+                string scratch = text;
+                for ( const string& oldID : plan._listOldID )
+                {
+                    const optional<AssetGUID> guid = AssetRegistry::resolveGUID( oldID );
+                    if ( EditorAssetFileCommands::replaceReference( scratch, oldID, oldID ) > 0 || ( guid.has_value() && text.find( AssetRegistry::makeReferenceText( *guid ) ) != string::npos ) )
+                        return true;
+                }
+                return false;
             }
 
             /** @brief @p path 가 원본 곁의 정체성 서술(`<파일>.meta`)이면 true 입니다. */
@@ -481,6 +497,12 @@ namespace sw::editor
             outPlan._failure = "nothing to move";
             return false;
         }
+        // 플레이 중에는 옮기지 않는다 — 편집 씬은 롤백 스냅샷(바이트 · 조립 기록)에 있어 새 id 로 바꿔 끼울 수 없고, Stop 이 옛 id 를 되돌려 다음 저장이 그것을 쓴다.
+        if ( EditorPlaySession::isStopped() == false )
+        {
+            outPlan._failure = "stop playing first - the edited scene is in the play snapshot";
+            return false;
+        }
         if ( index.isReady() == false )
         {
             outPlan._failure = "the reference index is still building - try again in a moment";
@@ -597,15 +619,16 @@ namespace sw::editor
         if ( pScene == nullptr || pScene->getSourcePath().empty() )
             return;
         const EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
-        outList.push_back( EditorOpenDocument{ pScene->getSourcePath(), pWorkspace != nullptr && pWorkspace->isSceneDirty() } );
+        outList.push_back( EditorOpenDocument{ pScene->getSourcePath(), pWorkspace != nullptr && pWorkspace->isSceneDirty(), {} } ); // 씬의 새 참조는 옮긴 뒤 메모리에서 바꿔 끼운다(`remapScene`)
     }
 
     optional<string> EditorAssetFileCommands::findDirtyReferrerDocument( const EditorAssetMovePlan& plan, const vector<EditorOpenDocument>& listOpen )
     {
         for ( const EditorOpenDocument& document : listOpen )
         {
-            const bool bReferrer = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
-            if ( document._bDirty && bReferrer )
+            const bool bReferrer    = VectorUtil::contains( plan._listReferrerID, document._assetID ) || VectorUtil::contains( plan._listUnfixedReferrer, document._assetID );
+            const bool bStaysBehind = document._bFollowsMove == false && VectorUtil::contains( plan._listOldID, document._assetID );
+            if ( document._bDirty && ( bReferrer || bStaysBehind || EditorAssetFileCommandsInternal::hasMovedReference( document._unsavedText, plan ) ) )
                 return document._assetID;
         }
         return nullopt;

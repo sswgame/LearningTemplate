@@ -111,6 +111,8 @@ namespace sw
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 로드된 씬을 모두 내리고 종료합니다(유일한 종료 길, 소멸자도 이 길을 탄다). */
         void                    shutdownSubsystem() override;
+        void                    resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*             findGameInstanceState() const override;
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
 
@@ -268,6 +270,11 @@ namespace sw
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
         /**
+         * @brief 이 매니저가 가진 씬을 모두(로드된 씬, 미리보기 씬 차례) @p outListScene 에 담습니다.
+         * @details 모듈 경계(언로드 전에 그 모듈의 컴포넌트를 지우기 · 틱 단계 다시 짓기)는 모든 씬이 대상이다 — 미리보기 씬을 빠뜨리면 열린 편집기가 사라진 코드의 컴포넌트를 틱한다.
+         */
+        void collectScenes( vector<Scene*>& outListScene ) const;
+        /**
          * @brief 올라와 있는 모든 씬(로드된 씬 + 미리보기 씬)을 @p outListScene 에 모읍니다(비우고 채운다).
          * @details "어느 씬을 훑을 것인가" 를 한 곳에서 정한다 — 씬 사이 참조 검사(`SceneObjectReference::findReferenceTo`)처럼 전 씬을 훑는 쪽이 이것을 쓴다.
          */
@@ -278,7 +285,7 @@ namespace sw
         /**
          * @brief 루트 오브젝트를 플레이 중 씬 전환 너머로 가져갑니다 — 유니티 `Object.PersistAcrossScenes` · 언리얼 심리스 트래블의 액터 목록 자리입니다.
          * @details 활성 씬이 바뀔 때 표시된 루트와 그 자손을 새 씬에 **같은 오브젝트 · 컴포넌트 id** 로 다시 만듭니다(반사 상태 · 이름 · 소켓 부착이
-         *          따라가고 핸들이 이어집니다). 다시 만드는 것이라 포인터 · 반사되지 않은 런타임 상태는 새것이고 `onBeginPlay` 가 다시 불립니다
+         *          따라가고 핸들이 이어집니다). PROPERTY 밖 상태는 코덱이 있는 컴포넌트(`ComponentStateCodec` — 가방 · 지갑 · 퀘스트 일지 …)만 옮깁니다. 다시 만드는 것이라 포인터는 새것이고 `onBeginPlay` 가 다시 불립니다
          *          (되돌리기 · 핫 리로드와 같은 계약). 루트가 아니거나 플레이 중이 아니면 경고하고 무시합니다(유니티도 루트만 · 플레이 모드에서만 받는다). 플레이를 멈추면 표시를 잊습니다.
          */
         void markPersistent( GameObject* pRoot );

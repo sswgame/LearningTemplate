@@ -18,7 +18,7 @@ namespace sw
     class GameFeatureScope;
     class GameSceneFlow;
     struct MinigameDefinition;
-    class ScreenFade;
+    class ScreenTransitionManager;
     class SubsystemScope;
 
     /** @class ILoadingScreen @brief 씬을 비동기로 바꾸는 동안의 로딩 화면입니다(구현은 클라이언트 전용 `LoadingScreenController`). 게임 스레드에서 부릅니다. */
@@ -32,7 +32,7 @@ namespace sw
         /** @brief 로딩 화면을 띄웁니다. 띄우지 못하면(UI 가 없다) false 입니다. */
         virtual bool beginLoading() = 0;
         /** @brief 매 프레임 로딩 상태 · 진행률과 화면 페이드를 반영합니다. */
-        virtual void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenFade& fade ) = 0;
+        virtual void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionManager& transition ) = 0;
     };
 
     /** @class IGameInstanceClientHook @brief 게임 인스턴스의 클라이언트 전용 부분을 세우는 쪽입니다. */

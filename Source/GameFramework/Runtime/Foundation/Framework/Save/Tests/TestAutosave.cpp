@@ -103,6 +103,42 @@ namespace
     }
 } // namespace
 
+/** @brief [AutosaveTest] 되돌린 진행은 그 슬롯의 플레이 시간을 이어 세고, 앞 진행의 체크포인트 · 요청을 잊는다 — 되돌린 뒤 같은 체크포인트에 닿으면 다시 저장한다 */
+SW_TEST_CASE( AutosaveTest, RestoredProgressContinuesItsOwnTimeAndCheckpoints )
+{
+    sw::MemoryLocalDatabase                  database;
+    FakeGame                                 game;
+    const sw::unique_ptr<sw::GameLocalStore> firstStore = makeStore( database );
+    sw::AutosaveManager                      firstRun;
+    SW_REQUIRE_TRUE( firstRun.initialize( makeSettings(), *firstStore, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    step( firstRun, *firstStore, 0.0f );
+    step( firstRun, *firstStore, 100.0f );
+    SW_REQUIRE_TRUE( firstRun.saveNow( sw::AutosaveTrigger::Manual ) );
+    step( firstRun, *firstStore, 0.0f );
+    SW_REQUIRE_EQUAL( 1u, firstRun.getSaveCount() );
+
+    // 다시 켠 게임 — 잠깐 돌고(체크포인트에도 닿았다) 앞 실행의 슬롯으로 되돌린다.
+    const sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
+    sw::AutosaveManager                      manager;
+    SW_REQUIRE_TRUE( manager.initialize( makeSettings(), *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    step( manager, *store, 0.0f );
+    step( manager, *store, 5.0f );
+    manager.reachCheckpoint( sw::hashed_string( "Gate" ) );
+    SW_REQUIRE_TRUE( manager.restoreLatest() );
+    step( manager, *store, 0.0f ); // 쌓인 체크포인트 요청이 먼저 저장을 맡긴다
+    step( manager, *store, 0.0f );
+    SW_REQUIRE_FALSE( manager.isRestoring() );
+    SW_EXPECT_NEAR( 100.0, manager.getPlayTime(), 1.0e-6 );
+    SW_EXPECT_TRUE( manager.getLastCheckpointID().empty() );
+    SW_EXPECT_FALSE( manager.hasPendingRequest() );
+    manager.reachCheckpoint( sw::hashed_string( "Gate" ) );
+    SW_EXPECT_TRUE( manager.hasPendingRequest() );
+
+    manager.beginNewGame();
+    SW_EXPECT_NEAR( 0.0, manager.getPlayTime(), 1.0e-6 );
+    SW_EXPECT_FALSE( manager.hasPendingRequest() );
+}
+
 /**
  * @brief [AutosaveTest] 새 저장은 가장 새 슬롯의 다음에 쓰고(가장 새 것을 건드리지 않는다), 다시 시작한 관리자는 저장소의 슬롯 기록에서 순번과 슬롯을 잇는다
  */

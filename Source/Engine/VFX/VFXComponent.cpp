@@ -103,6 +103,9 @@ namespace sw
                 return pMaterial == nullptr || pMaterial->getBlendMode() == BlendMode::Opaque;
             }
 
+            /** @brief 지금 이펙트 품질의 생성 배율(0 이상)입니다. */
+            static float32 readSpawnScale() { return MathUtil::max( 0.0f, static_cast<float32>( gv_effectsSpawnScale ) ); }
+
             /** @brief 메시 id 의 로드입니다(`.mesh` 경로는 메시 캐시가 워커에서 읽고, 내장 도형은 메모리에서 바로 만들므로 빈 핸들이다 — `MeshComponent` 와 같은 규칙). */
             static MeshHandle requestMesh( const string& meshID )
             {
@@ -182,6 +185,7 @@ namespace sw
         , _worldSpaceFrame{}
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
+        , _spawnScale{ 1.0f }
         , _bPlayOnBegin{ true }
         , _bPlaying{ SW_FALSE }
     {
@@ -309,6 +313,14 @@ namespace sw
 
     void VFXComponent::play()
     {
+        // 이펙트 품질(사용자 설정)이 바뀌었으면 새 배율로 다시 짓고 시작한다 — 풀의 효과(`VFXEffectPool`)는 파일을 다시 읽지 않아 씬이 끝날 때까지 옛 품질이었다.
+        if ( VFXComponentInternal::readSpawnScale() != _spawnScale )
+        {
+            const vector<uint8> listEnabled = _listEmitterEnabled;
+            rebuildSimulations();
+            if ( listEnabled.size() == _listEmitterEnabled.size() )
+                _listEmitterEnabled = listEnabled;
+        }
         restartSimulations();
         // 월드 공간 입자의 기준 틀 — 재생 시작의 자리와 배율이다(회전은 없다 — 월드 축). 원점에서 먼 곳에서도 입자 좌표가 작아 정밀도를 지킨다(언리얼 Niagara LWC 타일과 같은 까닭).
         const float32 frameScale = getWorldMatrix().getMaximumAxisScale();
@@ -515,8 +527,9 @@ namespace sw
             return; // 방출기 없이 아무것도 그리지 않는다
         const VFXEffectDef& effect = *_pEffect;
         _listSimulation.reserve( effect._listEmitter.size() );
-        // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.
-        const float32 spawnScale = MathUtil::max( 0.0f, static_cast<float32>( gv_effectsSpawnScale ) );
+        // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 시뮬레이션을 지을 때 정한다 — 바꾸면 다음 재생부터 따른다(`play`).
+        const float32 spawnScale = VFXComponentInternal::readSpawnScale();
+        _spawnScale              = spawnScale;
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( effect._listEmitter.size() ); ++emitterIndex )
         {
             // 방출기 정의는 효과의 별칭 포인터다(사본 없음) — 렌더 스레드가 쥔 동안 효과가 산다.

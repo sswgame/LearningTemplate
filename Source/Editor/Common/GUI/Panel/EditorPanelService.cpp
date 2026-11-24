@@ -95,7 +95,10 @@ namespace sw::editor
             const EditorDocumentPanelBase* const pDocument = entry._pInstance != nullptr ? entry._pInstance->asDocumentPanel() : nullptr;
             if ( pDocument == nullptr || pDocument->getDocumentAssetPath().empty() )
                 continue;
-            outList.push_back( EditorOpenDocument{ string{ pDocument->getDocumentAssetPath() }, pDocument->isDocumentDirty() } );
+            const bool bDirty      = pDocument->isDocumentDirty();
+            string     unsavedText = bDirty ? pDocument->captureUnsavedText() : string{};
+            const bool bFollows    = bDirty == false || unsavedText.empty() == false; // 글이 있어야 새 자리에서 다시 읽은 뒤 편집을 얹는다
+            outList.push_back( EditorOpenDocument{ string{ pDocument->getDocumentAssetPath() }, bDirty, std::move( unsavedText ), bFollows } );
         }
     }
 

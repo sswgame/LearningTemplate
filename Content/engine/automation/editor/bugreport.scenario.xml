@@ -42,7 +42,7 @@
 	<ExpectLog id="BugReport.GotoMoved" atLeast="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<EditorWaitStable/>
-	<!-- bugreport.replay — 같은 폴더의 입력을 배타 가상 입력으로 다시 붙인다(시나리오 입력을 대신하므로 마지막 단계다). 같은 빌드 · 설정이라 환경 경고가 없어야 한다 -->
+	<!-- bugreport.replay — 같은 폴더의 입력을 배타 가상 입력으로 다시 붙인다(시나리오 입력을 덮으므로 마지막 단계다 — 재생 도중에 시나리오가 끝나고, 실행기가 제 입력과 함께 뗀다). 같은 빌드 · 설정이라 환경 경고가 없어야 한다 -->
 	<DevCommand line="bugreport.replay"/>
 	<ExpectLog id="BugReport.ReplayStarted" atLeast="1"/>
 	<ExpectLog id="BugReport.ReplayEnvironmentDiffers" count="0"/>

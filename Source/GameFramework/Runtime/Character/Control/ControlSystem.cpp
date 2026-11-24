@@ -268,7 +268,11 @@ namespace sw
                 pController = ControlSystemInternal::createAIController( manager, *pPawn );
             if ( pController == nullptr )
                 continue;
-            pController->setSpawnedForPawn( pPawn->getAutoPossess() == PawnAutoPossess::AI );
+            const bool bSpawnedForPawn = pPawn->getAutoPossess() == PawnAutoPossess::AI;
+            pController->setSpawnedForPawn( bSpawnedForPawn );
+            // 폰에서 다시 세우는 파생이다 — 스냅숏에 실으면 복원한 폰이 새 조종자를 또 세워, 이어 하기마다 폰을 쥐지 않은 조종자가 하나씩 남는다.
+            if ( bSpawnedForPawn )
+                pController->getOwner()->setTransient( true );
             pController->possess( *pPawn );
         }
         _listAutoPossessPawn.clear();

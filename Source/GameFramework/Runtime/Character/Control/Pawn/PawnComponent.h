@@ -84,10 +84,16 @@ namespace sw
         /** @brief 지금 쥔 조종자 컴포넌트입니다. 없으면 무효 핸들입니다. */
         const TComponentHandle<ControllerComponent>& getController() const { return _controller; }
         bool                                         isPossessed() const { return _controller.isValid(); }
+        /**
+         * @brief 탈것을 모는 동안 이 폰 대신 탈것을 쥔 조종자를 적습니다(무효면 내렸다). 좌석만 부릅니다.
+         * @details 빙의는 탈것으로 옮겨 가도 이 몸의 플레이어는 그대로다(언리얼은 탈것을 모는 동안에도 폰의 `PlayerState` 가 남는다). 이것이 없으면 탄 사람이 준 피해 · 받은 물건의 주인을
+         *          찾지 못한다(`findControllerObject`).
+         */
+        void setRidingController( const TComponentHandle<ControllerComponent>& controller ) { _ridingController = controller; }
         /** @brief 자동 빙의 @p autoPossess 가 로컬 플레이어의 것이면 그 번호입니다. 아니면(없음 · AI) 없음입니다. */
         static optional<uint32> findPlayerIndex( PawnAutoPossess autoPossess );
         /**
-         * @brief @p pawnObject 의 폰을 쥔 조종자의 오브젝트입니다. 폰이나 조종자가 없으면 nullptr 입니다.
+         * @brief @p pawnObject 의 폰을 쥔 조종자의 오브젝트입니다(탈것을 모는 중이면 탈것을 쥔 그 조종자). 폰이나 조종자가 없으면 nullptr 입니다.
          * @details 조종자 쪽 상태(플레이어 상태 · 가방 · 지갑)를 폰에서 찾는 길은 이것 하나다(언리얼 `APawn::GetController` → 그 `PlayerState`).
          */
         [[nodiscard]] static GameObject* findControllerObject( const GameObjectManager& manager, const GameObject& pawnObject );
@@ -171,6 +177,7 @@ namespace sw
 
         ControlIntent                         _intent;
         TComponentHandle<ControllerComponent> _controller;           ///< 쥔 조종자 컴포넌트
+        TComponentHandle<ControllerComponent> _ridingController;     ///< 탈것을 모는 동안 탈것을 쥔 조종자(`setRidingController`)
         atomic<int32>                         _yawOffsetUnits;       ///< 쌓인 요 오프셋(`kRotationOffsetUnitsPerRadian` 단위 고정소수점)
         atomic<int32>                         _pitchOffsetUnits;     ///< 쌓인 피치 오프셋
         atomic<int32>                         _requestedYawUnits;    ///< 요청된 조종 요(오프셋과 같은 단위)

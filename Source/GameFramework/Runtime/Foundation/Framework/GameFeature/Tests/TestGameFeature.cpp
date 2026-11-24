@@ -179,7 +179,7 @@ SW_TEST_CASE( GameFeatureTest, LeakCheckCatchesBindingsOutsideScope )
     SW_REQUIRE_TRUE( pScope->bindService( &tracked ) );
     // 범위 밖으로 건 것 — 되돌릴 일이 없다
     SW_REQUIRE_TRUE( fixture._gameScope.bind( &leaked ) );
-    fixture._inputMap.pushLayer( hashed_string( "leakyLayer" ) );
+    const Subscription leakedLayer = fixture._inputMap.pushLayer( hashed_string( "leakyLayer" ) );
     SW_REQUIRE_TRUE( fixture._variables.findVariable( "gv_testGameFeatureVolume" )->setValueFromString( "4" ) );
     pScope->finishActivation();
 
@@ -201,10 +201,8 @@ SW_TEST_CASE( GameFeatureTest, LeakCheckCatchesLayersEnabledOutsideTheStack )
     fixture._inputMap.registerLayer( menu, 0, false );
     const unique_ptr<GameFeatureScope> pScope   = fixture.makeScope( "enabledleak" );
     InputMap&                          inputMap = fixture._inputMap;
-    fixture._inputMap.setLayerEnabled( town, true ); // 되돌릴 일이 없다
-    inputMap.pushLayer( menu );                      // 범위로 건 것 — pop 이 꺼진 상태로 되돌린다
-    pScope->addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [&inputMap]()
-    { inputMap.popLayer( hashed_string( "menu" ) ); } ) );
+    fixture._inputMap.setLayerEnabled( town, true );        // 되돌릴 일이 없다
+    pScope->holdSubscription( inputMap.pushLayer( menu ) ); // 범위로 건 것
     pScope->finishActivation();
 
     SW_EXPECT_EQUAL( 1u, pScope->deactivate() );
@@ -218,13 +216,11 @@ SW_TEST_CASE( GameFeatureTest, LeakCheckIgnoresScopedAndPriorState )
     GameFeatureScopeFixture fixture;
     TestOtherService        prior;
     SW_REQUIRE_TRUE( fixture._gameScope.bind( &prior ) );
-    fixture._inputMap.pushLayer( hashed_string( "town" ) );
+    const Subscription townLayer = fixture._inputMap.pushLayer( hashed_string( "town" ) );
     {
         const unique_ptr<GameFeatureScope> pScope   = fixture.makeScope( "clean" );
         InputMap&                          inputMap = fixture._inputMap;
-        inputMap.pushLayer( hashed_string( "minigame" ) );
-        pScope->addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [&inputMap]()
-        { inputMap.popLayer( hashed_string( "minigame" ) ); } ) );
+        pScope->holdSubscription( inputMap.pushLayer( hashed_string( "minigame" ) ) );
         pScope->finishActivation();
         SW_EXPECT_EQUAL( 0u, pScope->deactivate() );
     }

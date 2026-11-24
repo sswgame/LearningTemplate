@@ -30,6 +30,19 @@ SW_TEST_CASE( SceneManagerTest, WorldPlayChangesAreBroadcastOnce )
     sceneManager.setWorldPlaying( false );
 }
 
+/** @brief [SceneManagerTest] 모든 씬 목록은 미리보기 씬도 담는다 — 모듈 경계가 빠뜨리면 열린 편집기가 사라진 코드의 컴포넌트를 틱한다 */
+SW_TEST_CASE( SceneManagerTest, AllScenesIncludePreviewScenes )
+{
+    SceneManager   sceneManager;
+    Scene* const   pActive  = sceneManager.createEmptyActiveScene( "Active" );
+    Scene* const   pPreview = sceneManager.createPreviewScene( "Preview", ScenePreviewPolicy{} );
+    vector<Scene*> listScene;
+    sceneManager.collectScenes( listScene );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listScene.size() );
+    SW_EXPECT_TRUE( listScene[0] == pActive );
+    SW_EXPECT_TRUE( listScene[1] == pPreview );
+}
+
 /** @brief [ScenePreloadTest] 목록이 있는 씬은 미리 읽기를 걸고(두 번 불러도 같다), 목록이 없거나 빈 씬은 걸지 않는다 */
 SW_TEST_CASE( ScenePreloadTest, PreloadsOnlyScenesWithAList )
 {

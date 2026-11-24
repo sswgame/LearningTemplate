@@ -153,6 +153,8 @@ namespace sw
     AutomationRunner::AutomationRunner( shared_ptr<AutomationLogPolicy> pLogPolicy )
         : _scenario{}
         , _inputScript{}
+        , _startPause{}
+        , _virtualInput{}
         , _evaluator{ std::move( pLogPolicy ) }
         , _run{}
         , _reportWriter{}
@@ -161,7 +163,6 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
-        , _bStartPauseHeld{ SW_FALSE }
         , _reserved{ 0 }
         , _startedAt{}
         , _reproduceInput{}
@@ -182,23 +183,12 @@ namespace sw
     {
         (void)restoreFilesNow(); // 끝맺지 못하고 사라지는 실행(행 감시 · 강제 종료 길)도 맡긴 파일을 되돌린다 — 못 쓴 파일은 쓰기가 오류로 남겼다
         releaseWriteFilter();
-        releaseStartPause();
     }
 
     void AutomationRunner::holdGameTimeUntilStart()
     {
-        if ( _bStartPauseHeld == SW_TRUE )
-            return;
-        engine::getSubsystem<GameTimeScale>().addPauseRequest();
-        _bStartPauseHeld = SW_TRUE;
-    }
-
-    void AutomationRunner::releaseStartPause()
-    {
-        if ( _bStartPauseHeld == SW_FALSE )
-            return;
-        engine::getSubsystem<GameTimeScale>().removePauseRequest();
-        _bStartPauseHeld = SW_FALSE;
+        if ( _startPause.isActive() == false )
+            _startPause = engine::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Host );
     }
 
     void AutomationRunner::forwardPendingScreenshot()
@@ -419,10 +409,10 @@ namespace sw
             const bool               bReady      = bSceneReady && bBlocked == false;
             // 배타 시나리오는 시작 조건을 기다리는 프레임에도 사람의 장치를 버린다. 기다리는 동안 게임이 실제 마우스 위치를 읽으면(건설 커서 등)
             // 그 값이 게임 상태에 남아 같은 시나리오가 실행마다 다른 결과를 낸다. 시작할 때 다시 붙여 가상 입력 프레임을 0 부터 센다.
-            const bool bBlockWhileWaiting = _scenario.getInputMode() == VirtualInputMode::Exclusive && input.getVirtualInput() != &_inputScript;
+            const bool bBlockWhileWaiting = _scenario.getInputMode() == VirtualInputMode::Exclusive && _virtualInput.isActive() == false;
             if ( bBlockWhileWaiting )
             {
-                input.attachVirtualInput( &_inputScript, VirtualInputMode::Exclusive );
+                _virtualInput = input.attachVirtualInput( _inputScript, VirtualInputMode::Exclusive );
                 input.setOSDeviceInputBlocked( true );
             }
             // 전경이 필요한 시나리오는 첫 프레임부터 창을 전경으로 가져오고, 얻을 때까지 시작하지 않는다 — 게임이 시작하며 켜는 상태(1인칭 커서 잠금)가
@@ -458,7 +448,7 @@ namespace sw
                 return;
             }
             _bStarted = SW_TRUE;
-            releaseStartPause(); // 시작 프레임부터 게임 시간이 흐른다
+            _startPause.reset(); // 시작 프레임부터 게임 시간이 흐른다
             // 상한을 다시 구한다 — 에디터 단계(CaptureEditorUI …)는 에디터 모듈이 실리며 등록돼, 시나리오를 읽던 때의 계산에는 그 단계 예산이 빠져 150 초로 남았다.
             // 행 감시도 같은 상한을 본다 — 바꿨으면 새 상한으로 다시 건다(옛 상한의 감시가 실행기보다 먼저 프로세스를 끝냈다).
             const float32 limitAtStart = computeWallLimitSeconds( _scenario );
@@ -471,7 +461,8 @@ namespace sw
                     startHangWatchdog();
                 }
             }
-            input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
+            _virtualInput.reset(); // 기다리는 동안의 붙임을 풀고 다시 붙여 가상 입력 프레임을 0 부터 센다
+            _virtualInput = input.attachVirtualInput( _inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             if ( GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
@@ -587,7 +578,7 @@ namespace sw
             reportOngoingWait();
         }
         if ( isActive() == false )
-            endRun( &input );
+            endRun();
         return getResult();
     }
 
@@ -882,7 +873,7 @@ namespace sw
         _hangWatchdog.publish( _hangPayload );
     }
 
-    AutomationResult AutomationRunner::onWindowClosed( InputManager* pInput )
+    AutomationResult AutomationRunner::onWindowClosed()
     {
         if ( isActive() )
         {
@@ -907,16 +898,16 @@ namespace sw
                 finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, "the window closed before the scenario ended", {} ) );
             }
         }
-        endRun( pInput );
+        endRun();
         return getResult();
     }
 
-    void AutomationRunner::stop( InputManager* pInput, string_view reason )
+    void AutomationRunner::stop( string_view reason )
     {
         if ( isActive() == false )
             return;
         finish( AutomationRunResult::skipped( reason, false ) );
-        endRun( pInput );
+        endRun();
     }
 
     void AutomationRunner::recordFailure( const AutomationStep& step, string_view message )
@@ -951,7 +942,7 @@ namespace sw
     {
         if ( isActive() == false )
             return;
-        releaseStartPause(); // 시작하지 못하고 끝나도(시작 시한 · 읽기 오류) 다음 단계에 정지가 남지 않는다
+        _startPause.reset(); // 시작하지 못하고 끝나도(시작 시한 · 읽기 오류) 다음 단계에 정지가 남지 않는다
         // 통과로 끝맺었는데 적힌 실패가 있으면 첫 실패 줄이 까닭이다 — 끝 단계 이름(`<Pass/>`)이 실패의 까닭으로 남지 않는다.
         const vector<string>& listFailure = _evaluator.getFailures();
         _runResult                        = runResult.concludeWithFailures( listFailure.empty() ? string_view{} : string_view{ listFailure.front() }, _evaluator.getFirstFailureKind() );
@@ -1016,7 +1007,7 @@ namespace sw
         ++_run._holdFrameCount;
         _run._waitingFor = waitingFor;
         // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
-        _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+        _inputScript.delayEventsFrom( input.getVirtualFrameIndex( _inputScript ), 1 );
         return AutomationStepHold::Hold;
     }
 
@@ -1051,7 +1042,7 @@ namespace sw
             return false;
         _run._bClockHeld = SW_TRUE; // 다음 프레임의 `holdClockForBackgroundJobs` 가 푼다
         // 이 프레임에 낼 입력 이벤트를 한 프레임 밀어 시나리오 프레임과 맞춘다(`holdClockForBackgroundJobs` 와 같다).
-        _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+        _inputScript.delayEventsFrom( input.getVirtualFrameIndex( _inputScript ), 1 );
         return true;
     }
 
@@ -1076,7 +1067,7 @@ namespace sw
         _run._bClockHeld = SW_TRUE;
         // 시작한 시나리오는 이 프레임을 세지 않는다. 이 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다(`holdUntilReady` 와 같다).
         if ( _bStarted == SW_TRUE )
-            _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+            _inputScript.delayEventsFrom( input.getVirtualFrameIndex( _inputScript ), 1 );
         // 시한은 `AutomationTimeLimits` 한 곳에 있다(저장 검증은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다).
         if ( nowSeconds - _run._clockHoldStartSeconds > AutomationTimeLimits::kClockHoldTimeoutSeconds )
         {
@@ -1180,7 +1171,7 @@ namespace sw
         return FileUtil::isAbsolutePath( file ) ? FileUtil::toDiskPath( file ) : _outputDirectory.join( file );
     }
 
-    void AutomationRunner::endRun( InputManager* pInput )
+    void AutomationRunner::endRun()
     {
         if ( _bEnded == SW_TRUE )
             return;
@@ -1189,9 +1180,8 @@ namespace sw
         _run.clearHeldStepState(); // 붙잡힌 채 끝난 단계의 상태(요청한 씬 로드 …)를 이 실행과 함께 걷는다
         (void)restoreFilesNow();   // 쓰기 게이트를 놓기 전에 — 되돌리는 쓰기도 같은 규칙을 받는다. 못 쓴 파일은 오류로 남는다
         releaseWriteFilter();
-        _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
-        if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
-            pInput->detachVirtualInput();
+        _hangWatchdog.stop();  // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
+        _virtualInput.reset(); // 이 실행이 부른 입력 재생(`bugreport.replay` …)도 함께 떨어진다
         _evaluator.stopLogCapture();
         if ( _runResult.has_value() == false )
             _runResult = AutomationRunResult::failed( AutomationFailureKind::Assertion, "the run ended without a result", describeRunPosition() ); // 끝맺는 길은 모두 판정을 정한다 — 남은 틈을 통과로 두지 않는다

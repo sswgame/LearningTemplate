@@ -134,14 +134,14 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _gpuBuffers{}
+        , _gpuBuffers{ getBeginFrameCount() }
         , _constantBufferMirror{}
         , _bufferRegistry{ kBindlessBufferCapacity }
         , _uavRegistry{ kBindlessBufferCapacity }
         , _arrBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
-        , _gpuTextures{}
+        , _gpuTextures{ getBeginFrameCount() }
         , _releaseQueue{}
         , _renderPassCache{}
         , _textureRegistry{ kBindlessTextureCount }
@@ -155,7 +155,7 @@ namespace sw
         , _bindlessDummyMemory{}
         , _dummyUBO{ nullptr }
         , _dummyUBOMemory{}
-        , _pipelineStates{}
+        , _pipelineStates{ getBeginFrameCount() }
         , _pipelineCache{ nullptr }
         , _transferSerials{ deviceGeneration }
         , _readbackTable{}
@@ -2393,6 +2393,9 @@ namespace sw
         {
             // 건너뛴 프레임이다. 버려진 리스트가 앞서 바꾼 레이아웃 기록을 바로 되돌려야 이 프레임 뒤의 읽기(스크린샷)가 실제 레이아웃을 본다.
             restoreDroppedFrameLayouts();
+            // 프레임이 나가지 않아도 업로드(그리지 않는 프레임의 인스턴스 · 텍스처 구간)와 지연 해제는 쌓인다 — 최소화한 동안 끝없이 자라지 않게 여기서 내고 기다려 거둔다.
+            // 이 프레임에 잡은 그리기가 없어 기다려도 막는 것이 없다(최소화한 루프는 `FramePacer` 가 재운다).
+            waitIdleInternal();
             return;
         }
 

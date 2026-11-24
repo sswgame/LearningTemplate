@@ -427,9 +427,9 @@ namespace sw
         , _listPendingCommandBuffer{}
         , _resourceFactory{}
         , _frameStreamContext{}
-        , _buffers{}
-        , _textures{}
-        , _pipelines{}
+        , _buffers{ getBeginFrameCount() }
+        , _textures{ getBeginFrameCount() }
+        , _pipelines{ getBeginFrameCount() }
         , _bindlessMutex{}
         , _textureTable{}
         , _bufferTable{}

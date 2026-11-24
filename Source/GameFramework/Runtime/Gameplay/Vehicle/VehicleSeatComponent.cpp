@@ -8,7 +8,7 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
@@ -66,6 +66,7 @@ namespace sw
         , _occupant{}
         , _occupantController{}
         , _previousVehicleController{}
+        , _riderSuspension{}
         , _seatInVehicle{ float4x4::Identity }
         , _lastSeatPosition{}
         , _lastSeatVelocity{}
@@ -75,10 +76,12 @@ namespace sw
         , _pendingBumpShake{ 0.0f }
         , _pendingFeedbackSpeed{ 0.0f }
         , _pendingFeedbackSlip{ 0.0f }
+        , _teleport{}
         , _rideSampleCount{ 0 }
         , _bFieldOfViewKickArmed{ 1 }
         , _bBumpArmed{ 1 }
         , _bRidePending{ 0 }
+        , _bRestorePending{ 0 }
         , _reservedRideFlags{ 0 }
     {
         setCanEverTick( true );
@@ -90,6 +93,12 @@ namespace sw
         (void)VehicleSeatSystem::getOrCreate( manager );
     }
 
+    void VehicleSeatComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        _bRestorePending = _occupant.isValid() ? SW_TRUE : SW_FALSE;
+    }
+
     void VehicleSeatComponent::onUnregister( GameObjectManager& manager )
     {
         // 탈것이 사라지므로 앉은 쪽은 지금 위치에서 내린다. 조종 시스템이 없으면 씬을 비우는 중이다. 시스템이 먼저 사라지기 때문이다. 이때는 탑승자도 사라지므로 핸들만 버린다.
@@ -98,6 +107,7 @@ namespace sw
         PawnComponent* pRider    = pOccupant != nullptr ? pOccupant->getComponent<PawnComponent>() : nullptr;
         if ( pRider != nullptr )
             (void)releaseRider( *pRider, true ); // 레지스트리에서는 이미 내렸다(`Component::dispatchUnregister`) — 좌석을 찾지 않는다
+        _riderSuspension.reset();
         _occupant                  = GameObjectHandle{};
         _occupantController        = TComponentHandle<ControllerComponent>{};
         _previousVehicleController = TComponentHandle<ControllerComponent>{};
@@ -109,6 +119,12 @@ namespace sw
     {
         using Internal = VehicleSeatComponentInternal;
         Component::onTick( context );
+        if ( _bRestorePending == SW_TRUE )
+        {
+            context.deferPostTickOnComponent( *this, []( VehicleSeatComponent& seat )
+            { seat.restoreRider(); } );
+            return;
+        }
         GameObject*           pVehicle = getOwner();
         const SceneComponent* pRoot    = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
         if ( isFree() || pRoot == nullptr || context.getDeltaTime() <= 0.0f )
@@ -120,6 +136,9 @@ namespace sw
             return;
         }
 
+        // 순간이동(리스폰 · 문)은 움직인 것이 아니다 — 새 자리에서 다시 잰다.
+        if ( _teleport.consume( *pRoot ).has_value() )
+            _rideSampleCount = 0;
         // 좌석 월드 위치의 2 차 차분 — 탈것이 바디로 움직이든(바퀴 차 · 배) 직접 옮기든(바디 없는 탈것 · 말) 같은 값이다.
         const float4x4 world    = pRoot->getWorldMatrix();
         const float3   position = float3::transform( _seatInVehicle.getTranslation(), world );

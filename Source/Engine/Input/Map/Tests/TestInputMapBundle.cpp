@@ -178,9 +178,9 @@ SW_TEST_CASE( InputMapBundleTest, LayerVirtualCursorFollowsItsLayer )
                                           "InputMapBundleTest" ) );
     const hashed_string command( "Command" );
     SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
-    map.pushLayer( command );
+    Subscription pushed = map.pushLayer( command );
     SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::LeftStick );
-    map.popLayer();
+    pushed.reset();
     SW_EXPECT_TRUE( map.getVirtualCursorStick() == InputMapVirtualCursor::Off );
 
     // 함께 켤 묶음은 쌓기 전에 본다 — 커서 레이어와 패드 A 를 묶은 레이어는 함께 켜지 못한다.

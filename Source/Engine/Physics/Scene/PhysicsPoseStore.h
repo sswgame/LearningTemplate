@@ -176,6 +176,7 @@ namespace sw
         float32 _moveVelocity{ 0.0f };     ///< 요청된 수평 속도 — 다시 부를 때까지 유지한다
         float32 _pendingJumpSpeed{ 0.0f }; ///< 0 이 아니면 다음 스텝에 준다
         bool    _bPendingClimb{ false };
+        bool    _bPendingStop{ false };
     };
 
     /** @struct VehicleDriverInput @brief 바퀴 차(`WheeledVehicleComponent`)가 물리 프레임 시작에 백엔드로 넘길 운전 입력입니다 — 다시 부를 때까지 유지한다. */

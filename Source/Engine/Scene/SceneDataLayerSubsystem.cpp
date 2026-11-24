@@ -24,6 +24,7 @@ namespace sw
         , _listGroup{}
         , _uniqueActiveLayer{}
         , _mapObjectGroup{}
+        , _layerTags{}
         , _activeSerial{ 0 }
         , _bDirty{ SW_FALSE }
     {
@@ -73,7 +74,8 @@ namespace sw
         ++_activeSerial;
         vector<string> listActive;
         collectActiveLayers( listActive );
-        (void)engine::getSubsystem<ResourceTags>().setAxisValues( "layer", listActive ); // '.' 이 든 레이어 이름은 태그가 될 수 없다 — `ResourceTags` 가 오류로 남긴다
+        // 새 몫을 건 뒤 앞 몫이 풀린다 — 그대로 켜진 레이어의 태그는 꺼졌다 켜지지 않는다. '.' 이 든 레이어 이름은 태그가 될 수 없다(`ResourceTags` 가 오류로 남긴다).
+        _layerTags = engine::getSubsystem<ResourceTags>().addAxisValues( "layer", listActive );
     }
 
     void SceneDataLayerSubsystem::update( float32 deltaTime )
@@ -191,6 +193,15 @@ namespace sw
     bool SceneDataLayerSubsystem::isListedObject( const uint64 objectID ) const
     {
         return _mapObjectGroup.find( objectID ) != _mapObjectGroup.end();
+    }
+
+    void SceneDataLayerSubsystem::releaseObject( const uint64 objectID )
+    {
+        const auto groupIt = _mapObjectGroup.find( objectID );
+        if ( groupIt == _mapObjectGroup.end() )
+            return;
+        (void)VectorUtil::removeValue( _listGroup[groupIt->second]._listObjectID, objectID );
+        _mapObjectGroup.erase( groupIt );
     }
 
     bool SceneDataLayerSubsystem::isGroupObject( const uint64 objectID ) const

@@ -407,6 +407,26 @@ SW_TEST_CASE( MinigameTest, ResultReachesSubscribers )
     SW_EXPECT_TRUE( listReceived.size() == 1 );
 }
 
+/** @brief [MinigameTest] 넘기지 못한 결과는 칸을 비워도(바깥 이동) 남고, 받을 씬에서 건 순서로 한 번만 꺼내지며, 진행이 갈리면 버린다 */
+SW_TEST_CASE( MinigameTest, PendingResultWaitsForItsScene )
+{
+    const string  town( "game/test/maps/town.scene.xml" );
+    MinigameStack stack;
+    stack.pushResult( town, MinigameResult{ hashed_string( "fishing" ), hashed_string( "win" ), {} } );
+    stack.pushResult( town, MinigameResult{ hashed_string( "kart" ), hashed_string( "lose" ), {} } );
+    stack.clear(); // MinigameFlow::clearForOutsideTravel 가 하는 비우기
+    SW_EXPECT_TRUE( stack.takeResults( string( "game/test/maps/arcade.scene.xml" ) ).empty() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, stack.getResultCount() );
+    const vector<MinigameResult> listTaken = stack.takeResults( town );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listTaken.size() );
+    SW_EXPECT_TRUE( listTaken[0]._minigame == hashed_string( "fishing" ) );
+    SW_EXPECT_TRUE( listTaken[1]._minigame == hashed_string( "kart" ) );
+    SW_EXPECT_TRUE( stack.takeResults( town ).empty() ); // 한 번만
+    stack.pushResult( town, MinigameResult{ hashed_string( "fishing" ), hashed_string( "win" ), {} } );
+    stack.clearResults(); // 세이브를 되살렸다 · 게임이 끝났다
+    SW_EXPECT_TRUE( stack.takeResults( town ).empty() );
+}
+
 /** @brief [MinigameTest] 결과 값 목록: 디렉터가 쥔 한 판 임시 상태가 결과의 값으로만 실려 받는 쪽에 닿는다(디렉터 계약 ③) */
 SW_TEST_CASE( MinigameTest, ResultCarriesDirectorOwnedValues )
 {

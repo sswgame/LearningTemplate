@@ -158,7 +158,7 @@ namespace sw
         if ( StringUtil::parseFloat( context._value, sensitivity ) == false )
             return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getAccessibilitySettings()._mouseSensitivity = float2{ sensitivity, sensitivity };
+            _targets._pInputMap->getMutableAccessibilitySettings()._mouseSensitivity = float2{ sensitivity, sensitivity };
         return true;
     }
 
@@ -168,7 +168,7 @@ namespace sw
         if ( StringUtil::parseFloat( context._value, sensitivity ) == false )
             return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getAccessibilitySettings()._gamepadSensitivity = float2{ sensitivity, sensitivity };
+            _targets._pInputMap->getMutableAccessibilitySettings()._gamepadSensitivity = float2{ sensitivity, sensitivity };
         return true;
     }
 
@@ -178,7 +178,7 @@ namespace sw
         if ( StringUtil::tryParseBool( context._value, bInvert ) == false )
             return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getAccessibilitySettings()._bInvertX = bInvert;
+            _targets._pInputMap->getMutableAccessibilitySettings()._bInvertX = bInvert;
         return true;
     }
 
@@ -188,7 +188,7 @@ namespace sw
         if ( StringUtil::tryParseBool( context._value, bInvert ) == false )
             return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getAccessibilitySettings()._bInvertY = bInvert;
+            _targets._pInputMap->getMutableAccessibilitySettings()._bInvertY = bInvert;
         return true;
     }
 
@@ -198,7 +198,7 @@ namespace sw
         if ( StringUtil::parseFloat( context._value, deadzone ) == false )
             return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getAccessibilitySettings()._stickDeadzoneOverride = deadzone;
+            _targets._pInputMap->getMutableAccessibilitySettings()._stickDeadzoneOverride = deadzone;
         return true;
     }
 
@@ -207,8 +207,8 @@ namespace sw
         // 토글 목록은 맵 정의와 따로 남으므로(`InputAccessibilitySettings`) 액션이 아직 없어도 적어 둔다 — 게임이 맵을 만들면 그대로 평가된다.
         if ( _targets._pInputMap == nullptr )
             return true;
-        _targets._pInputMap->getAccessibilitySettings().setToggleAction( hashed_string( context._param ),
-                                                                         StringUtil::equals( context._value, UserSettingsEngineHandlersInternal::kToggle ) );
+        _targets._pInputMap->getMutableAccessibilitySettings().setToggleAction( hashed_string( context._param ),
+                                                                                StringUtil::equals( context._value, UserSettingsEngineHandlersInternal::kToggle ) );
         return true;
     }
 

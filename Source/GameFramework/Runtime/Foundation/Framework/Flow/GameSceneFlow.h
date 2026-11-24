@@ -95,8 +95,12 @@ namespace sw
          */
         [[nodiscard]] bool requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded );
 
+        /** @brief 맡긴 게임 이동이 아직 끝나지 않았으면 true 입니다 — 활성 씬은 곧 내려간다. */
+        bool hasPendingSceneLoad() const { return _listPendingSceneLoad.empty() == false; }
         /** @brief 타이틀 씬이 있는 게임이면 true 입니다 — 세션 명령(타이틀로)을 걸지 정한다. */
         bool hasTitleScene() const;
+        /** @brief @p scenePath 가 타이틀 씬이면 true 입니다. */
+        bool isTitleScene( const string& scenePath ) const;
         /**
          * @brief 세션 명령(UI 전역 명령 `StartGame` · `ReturnToTitle`)의 등록 구독 하나를 맡깁니다. 여러 번 맡길 수 있고 `unregisterSessionCommands` 가 모두 거둡니다.
          * @details 거는 일은 클라이언트 전용 부분(`IGameInstanceClientHook::bindSessionCommands`)이 한다 — 씬 흐름은 UI 를 모른다. 게임 인스턴스가 종료의 맨 앞에서 거둔다.
@@ -125,6 +129,10 @@ namespace sw
         [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
         /** @brief 씬 로드 받아들임 알림입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄웁니다. */
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
+        /** @brief 활성 씬 @p scenePath 가 타이틀 씬이면 세이브를 막고, 아니면 풉니다 — 타이틀은 게임 진행이 아니라 저장하면 이어 하기가 타이틀을 연다. */
+        void updateTitleSaveBlock( const string& scenePath );
+        /** @brief 하던 진행을 잊게 합니다 — 타이틀로 · 시작이 부른다(`AutosaveManager::beginNewGame`). */
+        static void resetRunningProgress();
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 내고 묶인 함수를 부릅니다(요청 순서). 받는 쪽이 새 로드를 요청해도 된다 — 끝난 것을 먼저 목록에서 뺀 뒤 알린다. */
         void publishFinishedSceneLoads();
 
@@ -134,6 +142,7 @@ namespace sw
         ILoadingScreen*          _pLoadingScreen;                 ///< 같은 게임 범위의 로딩 화면(빌림, 없으면 nullptr — 전용 서버)
         SaveLock&                _saveLock;                       ///< 게임 인스턴스의 세이브 막기 문(빌림)
         vector<PendingSceneLoad> _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        Subscription             _titleSaveBlock;                 ///< 활성 씬이 타이틀인 동안 세이브를 막는다(`updateTitleSaveBlock`)
         Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
         vector<Subscription>     _listSessionCommandRegistration; ///< UI 전역 명령(StartGame · ReturnToTitle)의 등록 구독(`holdSessionCommand` 가 받는다)
         uint8                    _bResumingWorld;                 ///< 초기화 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다

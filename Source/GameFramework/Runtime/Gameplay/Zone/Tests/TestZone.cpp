@@ -15,11 +15,13 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/Reaction/RemoveStacksOnJumpComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/Reaction/TagPostProcessComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
@@ -154,6 +156,56 @@ SW_TEST_CASE( ZoneTest, EnterAndExitActionsKeepTheirSource )
     SW_EXPECT_TRUE( swamp.findOccupancy( fixture.hero().getHandle() ) == nullptr );
     fixture.leave( bog, compiled, "volume:Bog" );
     SW_EXPECT_FALSE( MovementConstraint::read( fixture.hero() )._bMoveBlocked == SW_TRUE );
+}
+
+/** @brief [ZoneTest] 탑승자 역할은 안에서 타고 내림을 따른다 — 안에서 탄 탑승자에게 진입, 안에서 내린 탑승자에게 이탈이 온다(탈것이 나갈 때 다시 푼 탑승자에게만 주면 내린 사람에게 건 것이 남는다) */
+SW_TEST_CASE( ZoneTest, RiderRoleFollowsMountingInside )
+{
+    ZoneFixture fixture;
+    ZoneProfile profile;
+    profile._listModule.push_back( ZoneFixture::makeModule( "root", "Action", {
+                                                                                  {"on",                                    "Enter"},
+                                                                                  {"do", "ability.applyEffect(effect=GE_Test_Root)"}
+    } ) );
+    profile._listModule.push_back( ZoneFixture::makeModule( "release", "Action", {
+                                                                                     {"on",                   "Exit"},
+                                                                                     {"do", "ability.removeEffect()"}
+    } ) );
+    for ( ZoneModuleDef& module : profile._listModule )
+        module._target = ZoneTargetRole::Riders;
+    ZoneCompiledProfile compiled;
+    SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
+
+    (void)fixture.hero().addComponent<SceneComponent>();
+    PawnComponent* pRider = fixture.hero().addComponent<PawnComponent>();
+    GameObject*    pCart  = fixture._manager.createGameObject( hashed_string( "Cart" ) );
+    (void)pCart->addComponent<SceneComponent>();
+    VehicleSeatComponent* pSeat = pCart->addComponent<VehicleSeatComponent>();
+    pSeat->setDriverSeat( false );
+
+    ZoneTracker        tracker;
+    const ActionSource source{ hashed_string( "volume:Swamp" ), GameObjectHandle{} };
+    const auto         runCart = [&]()
+    {
+        tracker.beginFrame();
+        tracker.touch( *pCart, ZoneSample{} );
+        tracker.dispatchOverlapEvents( fixture._manager, compiled, source, 0.1f );
+    };
+    runCart(); // 빈 수레가 먼저 들어왔다
+    SW_EXPECT_EQUAL( 0u, fixture._pHero->getActiveEffectCount() );
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *pRider, *pSeat ) == MountResult::Mounted );
+    runCart();
+    runCart();
+    SW_EXPECT_EQUAL( 1u, fixture._pHero->getActiveEffectCount() ); // 안에서 탄 탑승자에게 진입 한 번
+    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *pRider, true ) );
+    runCart();
+    SW_EXPECT_EQUAL( 0u, fixture._pHero->getActiveEffectCount() ); // 안에서 내린 탑승자에게 이탈
+
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *pRider, *pSeat ) == MountResult::Mounted );
+    runCart();
+    SW_EXPECT_EQUAL( 1u, fixture._pHero->getActiveEffectCount() );
+    fixture.leave( tracker, compiled, "volume:Swamp" ); // 탄 채 나간다
+    SW_EXPECT_EQUAL( 0u, fixture._pHero->getActiveEffectCount() );
 }
 
 /** @brief [ZoneTest] 트리거 계약: 안에서 생긴 대상은 첫 갱신에 진입 한 번(체류는 이어서), 안에서 지운 대상은 이탈 한 번 기록되고 처리기는 부르지 않는다(대상이 없다) */

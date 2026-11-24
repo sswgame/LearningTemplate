@@ -28,7 +28,7 @@ namespace sw
         , _cooldownRemaining{ 0.0f }
         , _priority{ 0 }
         , _bEnabled{ SW_TRUE }
-        , _overrideDef{}
+        , _pOverrideDef{}
         , _pCatalog{}
         , _pDef{ nullptr }
         , _catalogReload{}
@@ -90,7 +90,7 @@ namespace sw
     {
         if ( _bHasOverride == SW_TRUE )
         {
-            _pDef = &_overrideDef;
+            _pDef = _pOverrideDef.get();
             return;
         }
         _pDef = nullptr;
@@ -183,21 +183,23 @@ namespace sw
 
     void InteractableComponent::setDefinition( const InteractionDef& def )
     {
-        _overrideDef  = def;
+        _pOverrideDef = make_shared<const InteractionDef>( def ); // 진행 중인 세션은 앞 정의를 나눠 쥔 채 끝까지 읽는다
         _bHasOverride = SW_TRUE;
-        _pDef         = &_overrideDef;
+        _pDef         = _pOverrideDef.get();
         syncSpatialExtent();
     }
 
     shared_ptr<const InteractionDef> InteractableComponent::shareDefinition() const
     {
-        // 코드로 넣은 정의는 이 컴포넌트가 가진다 — 쥘 주인이 없어 빈 주인으로 가리킨다(예전 날 포인터와 같은 수명).
-        return _bHasOverride == SW_TRUE ? shared_ptr<const InteractionDef>{ shared_ptr<const InteractionDef>{}, &_overrideDef } : shared_ptr<const InteractionDef>{ _pCatalog, _pDef };
+        // 세션이 나눠 쥔다 — 대상이 진행 중에 사라져도 끝(취소 효과 · 시작 효과 지우기)까지 읽는다.
+        if ( _bHasOverride == SW_TRUE )
+            return _pOverrideDef;
+        return shared_ptr<const InteractionDef>{ _pCatalog, _pDef };
     }
 
     const InteractionDef* InteractableComponent::getDefinition() const
     {
-        return _bHasOverride == SW_TRUE ? &_overrideDef : _pDef;
+        return _bHasOverride == SW_TRUE ? _pOverrideDef.get() : _pDef;
     }
 
     void InteractableComponent::setInteractionID( const hashed_string& id )

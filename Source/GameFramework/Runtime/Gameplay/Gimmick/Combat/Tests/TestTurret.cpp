@@ -1,8 +1,17 @@
 #include "pch.h"
 
+#include "Core/Name/TagID.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeInfo.h"
+
+#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/TurretComponent.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
@@ -130,4 +139,59 @@ SW_TEST_CASE( TurretTest, TurretShotStopsAtAWallThatAppearsInFlight )
         }
     }
     SW_EXPECT_EQUAL( 1, bodyHits );
+}
+
+/** @brief [TurretTest] 숨은 대상(숨는 곳의 태그)은 AI 시각과 같이 포탑도 고르지 않고, 나오면 다시 고른다 */
+SW_TEST_CASE( TurretTest, HiddenTargetIsNotPicked )
+{
+    GameObjectManager manager;
+    GameObject* const pTurretObject = manager.createGameObject( hashed_string( "Turret" ) );
+    GameObject* const pPlayer       = manager.createGameObject( hashed_string( "Player" ) );
+    (void)pTurretObject->addComponent<SceneComponent>();
+    pPlayer->addComponent<SceneComponent>()->setLocalPosition( float3{ 0.0f, 0.0f, 5.0f } );
+    pPlayer->addTag( "Player"_tag );
+    TurretComponent* const    pTurret     = pTurretObject->addComponent<TurretComponent>();
+    const PropertyInfo* const pTargetTags = TurretComponent::StaticType()->findProperty( hashed_string( "_targetTags" ) );
+    SW_REQUIRE_NOT_NULL( pTargetTags );
+    static_cast<TagContainer*>( pTargetTags->getRawPtr( static_cast<void*>( pTurret ) ) )->addTag( "Player"_tag );
+    manager.beginPlay();
+
+    pTurret->stepOnce();
+    SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
+    pPlayer->addTag( TargetFilter::getHiddenTag() );
+    pTurret->stepOnce();
+    SW_EXPECT_FALSE( pTurret->getTarget().isValid() );
+    pPlayer->removeTag( TargetFilter::getHiddenTag() );
+    pTurret->stepOnce();
+    SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
+}
+
+/** @brief [TurretTest] 쓰러진 대상은 고르지 않고 부활하면 다시 고른다 — 쓰러짐 태그는 체력 원천의 알림이 붙이고 뗀다 */
+SW_TEST_CASE( TurretTest, DeadTargetIsNotPicked )
+{
+    GameObjectManager manager;
+    GameObject* const pTurretObject = manager.createGameObject( hashed_string( "Turret" ) );
+    GameObject* const pPlayer       = manager.createGameObject( hashed_string( "Player" ) );
+    (void)pTurretObject->addComponent<SceneComponent>();
+    pPlayer->addComponent<SceneComponent>()->setLocalPosition( float3{ 0.0f, 0.0f, 5.0f } );
+    pPlayer->addTag( "Player"_tag );
+    UnitStatsComponent* const pStats = pPlayer->addComponent<UnitStatsComponent>();
+    pStats->setStats( 10, 10, 0, 0, 0.0f, 0.0f );
+    TurretComponent* const    pTurret     = pTurretObject->addComponent<TurretComponent>();
+    const PropertyInfo* const pTargetTags = TurretComponent::StaticType()->findProperty( hashed_string( "_targetTags" ) );
+    SW_REQUIRE_NOT_NULL( pTargetTags );
+    static_cast<TagContainer*>( pTargetTags->getRawPtr( static_cast<void*>( pTurret ) ) )->addTag( "Player"_tag );
+    manager.beginPlay();
+
+    pTurret->stepOnce();
+    SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
+    GimmickDamageUtil::applyDamage( *pPlayer, nullptr, hashed_string( "Hazard" ), 50.0f );
+    SW_REQUIRE_TRUE( pStats->isDead() );
+    SW_EXPECT_FALSE( TargetFilter::isSelectable( *pPlayer ) );
+    pTurret->stepOnce();
+    SW_EXPECT_FALSE( pTurret->getTarget().isValid() );
+    pStats->setStats( 10, 10, 0, 0, 0.0f, 0.0f ); // 다시 세웠다
+    SW_EXPECT_FALSE( pStats->isDead() );
+    pTurret->stepOnce();
+    SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
 }

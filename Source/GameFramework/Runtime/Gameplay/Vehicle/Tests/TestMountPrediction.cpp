@@ -116,3 +116,16 @@ SW_TEST_CASE( MountPredictionTest, ControllerMountRefusesPrediction )
     SW_EXPECT_FALSE( pMount->setNetDriven( true ) );
     SW_EXPECT_FALSE( pMount->isNetDriven() );
 }
+
+/** @brief [MountPredictionTest] 네트가 움직이는 탈것의 시뮬레이션 자리는 월드 원점과 함께 옮겨진다 — 남으면 다음 걸음이 옛 원점의 자리에서 시작한다 */
+SW_TEST_CASE( MountPredictionTest, NetPositionFollowsTheWorldOrigin )
+{
+    GameObjectManager manager;
+    GameObject* const pHorse = manager.createGameObject( hashed_string( "Horse" ) );
+    pHorse->addComponent<SceneComponent>()->setLocalPosition( float3{ 100.0f, 0.0f, 0.0f } );
+    MountMovementComponent* const pMount = pHorse->addComponent<MountMovementComponent>();
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pMount->setNetDriven( true ) );
+    pMount->onWorldOriginShifted( float3{ -100.0f, 0.0f, 0.0f } );
+    SW_EXPECT_NEAR( 0.0f, pMount->getState()._position._x, 1.0e-4f );
+}

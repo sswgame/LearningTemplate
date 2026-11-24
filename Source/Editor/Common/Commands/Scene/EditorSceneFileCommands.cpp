@@ -50,6 +50,8 @@ namespace sw::editor
             /// @brief 게임 단계 — Save As 대화상자가 고른 디스크 경로에 활성 씬을 쓰고 알립니다. 미저장 확인에서 온 저장이면 이어서 그 동작을 한다.
             static void saveSceneAsRequested( string_view path )
             {
+                if ( isPlayStoppedForSceneFile() == false ) // 대화상자를 띄운 뒤 Play 를 눌렀다
+                    return;
                 EditorNotificationManager&   notifications = editor::getSubsystem<EditorNotificationManager>();
                 const optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( path ); // 대화상자는 절대 경로를 돌려준다
                 if ( absPath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *absPath ) == false )
@@ -63,7 +65,8 @@ namespace sw::editor
                     EditorSceneFileCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
             }
 
-            static bool isPlayStoppedForSceneSwap()
+            /** @brief 플레이 중이면 알리고 false 입니다 — 활성 씬은 플레이 중인 사본이라 바꿔 끼우거나 파일에 쓰지 않는다(유니티도 플레이 중 씬 저장을 막는다). */
+            static bool isPlayStoppedForSceneFile()
             {
                 if ( EditorPlaySession::isStopped() )
                     return true;
@@ -127,7 +130,7 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::tryOpenScene( string_view path )
     {
-        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneSwap() == false )
+        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
             return false;
 
         EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>(); // 필수
@@ -141,7 +144,7 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::tryCreateNewScene()
     {
-        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneSwap() == false )
+        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
             return false;
 
         EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>(); // 필수
@@ -218,7 +221,11 @@ namespace sw::editor
     {
         // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
         // 스택은 선택 조회(②): `apply` 가 nullptr 스택을 받는다(스택 없는 구성은 되돌릴 기록이 없다).
-        (void)EditorSceneGenerationSync::apply( editor::getSubsystem<EditorWorkspace>(), editor::getSubsystem<SceneManager>().getSceneGeneration(), editor::findSubsystem<CommandStack>() );
+        EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>();
+        const bool       bStopped  = EditorPlaySession::isStopped();
+        const bool       bChanged  = EditorSceneGenerationSync::apply( workspace, editor::getSubsystem<SceneManager>().getSceneGeneration(), bStopped == false, editor::findSubsystem<CommandStack>() );
+        if ( bChanged && bStopped )
+            workspace.captureSceneDiskBaseline();
     }
 
     bool EditorSceneFileCommands::tryBeginQuit()
@@ -246,6 +253,8 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::saveActiveScene()
     {
+        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
+            return false;
         SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
         const Scene*  pScene       = sceneManager.getActiveScene();
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
@@ -253,11 +262,15 @@ namespace sw::editor
         const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( *targetPath, EditorContentWriteKind::Save ) )
             return false;
+        if ( targetPath.has_value() && editor::getSubsystem<EditorWorkspace>().validateSceneDiskOverwrite( *targetPath ) == false )
+            return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
 
     bool EditorSceneFileCommands::saveActiveSceneAs( const AbsolutePath& absPath )
     {
+        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
+            return false;
         if ( EditorContentWrite::warnIfReadOnly( absPath, EditorContentWriteKind::Save ) )
             return false;
         return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
@@ -271,6 +284,7 @@ namespace sw::editor
             return false;
         }
         editor::getSubsystem<EditorWorkspace>().clearSceneDirty();
+        editor::getSubsystem<EditorWorkspace>().captureSceneDiskBaseline();
         // 정상 저장한 씬의 자동 저장 사본은 지운다 — 남겨 두면 다음 비정상 종료 뒤 이미 저장한 일을 복구하라고 묻는다
         const Scene* pSavedScene = editor::getActiveScene();
         if ( pSavedScene != nullptr )
@@ -280,6 +294,8 @@ namespace sw::editor
 
     void EditorSceneFileCommands::saveActiveSceneOrPrompt()
     {
+        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
+            return;
         Scene* pScene = editor::getActiveScene();
         if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
         {
@@ -372,7 +388,7 @@ namespace sw::editor
         struct EditorSceneSessionStepInternal
         {
             /** @brief 게임 단계 — UI(메뉴 · 대화상자 · 콘텐츠 브라우저 · 미저장 확인 창)가 남긴 씬 열기 · 다른 이름 저장 · 확인 선택 요청을 요청한 순서대로 합니다. 씬을 읽고 쓰는 일(`SceneManager`)은 게임 스레드가 한다. */
-            static void run( EditorContext& context, EditorPlaySessionWriteKey /*key*/ )
+            static void run( EditorContext& context, EditorPlaySessionWriteKey key )
             {
                 vector<EditorSceneFileRequest> listRequest;
                 if ( context.getSubsystem<EditorWorkspace>().takeSceneFileRequests( listRequest ) == false )
@@ -388,6 +404,9 @@ namespace sw::editor
                             EditorSceneFileCommandsInternal::saveSceneAsRequested( request._path );
                             break;
                         case EditorSceneFileRequestKind::UnsavedChoice:
+                            // 저장 · 버리기 · 이어지는 동작(열기 · 새 씬 · 종료)은 모두 편집 씬의 일이다 — 플레이 중(창을 띄운 뒤의 Play, 플레이 중 종료)이면 먼저 멈춰 되돌린다.
+                            if ( EditorSessionPolicy::shouldProceedWithAction( request._choice ) )
+                                EditorPlaySession::stop( key );
                             EditorSceneFileCommands::applyUnsavedSceneChoice( request._choice );
                             break;
                     }

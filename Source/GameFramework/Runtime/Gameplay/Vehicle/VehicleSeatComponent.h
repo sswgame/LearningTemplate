@@ -4,6 +4,7 @@
  *        좌석은 탈것 가속도(앞뒤 · 옆 G · 수직 충격)를 재어 탑승 가속감(탑승자 기울임 · 카메라 · 소리)을 냅니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -13,6 +14,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -116,6 +118,8 @@ namespace sw
         ~VehicleSeatComponent() override = default;
 
         void onRegister( GameObjectManager& manager ) override;
+        /** @brief 되살아난 탑승자가 있으면 첫 틱 뒤에 다시 앉힐 것으로 적습니다. */
+        void onBeginPlay() override;
         /** @brief 앉은 쪽이 있으면 내려 줍니다. 탈것이 사라질 때 부릅니다. */
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 앉은 쪽이 있으면 좌석 가속도를 재고 탑승 가속감을 냅니다. 비어 있으면 잰 값을 비웁니다. */
@@ -162,9 +166,11 @@ namespace sw
         PROPERTY( Category = "Seat", DisplayName = "Ride Feel", Tooltip = "How the seat acceleration leans the rider, kicks the camera and drives the ride sounds" )
         RideFeelSettings _rideFeel;
 
-        GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트
+        PROPERTY( RuntimeState )
+        GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트. 저장 · 스냅샷(미니게임에서 돌아오기 · 되감기 · 핫 리로드)에 실리고 되살아난 뒤 다시 앉힌다(`restoreRider`)
         TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
         TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것에 빙의해 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 빙의한다
+        Subscription                          _riderSuspension;           ///< 앉은 동안 탑승자의 걷기를 멈춘다
         float4x4                              _seatInVehicle;             ///< 탈 때 붙인 소켓 변환(탈것 기준). 기울임은 이 위에 얹는다
         float3                                _lastSeatPosition;          ///< 지난 틱의 좌석 월드 위치
         float3                                _lastSeatVelocity;          ///< 지난 틱의 좌석 월드 속도
@@ -174,16 +180,23 @@ namespace sw
         float32                               _pendingBumpShake;          ///< 틱 뒤 카메라에 걸 충격 크기(0 이면 없음)
         float32                               _pendingFeedbackSpeed;      ///< 틱 뒤 소리에 넘길 탈것 속력(m/s)
         float32                               _pendingFeedbackSlip;       ///< 틱 뒤 소리에 넘길 옆 미끄럼 가속(m/s²)
+        SceneTeleportCursor                   _teleport;                  ///< 탈것이 순간이동하면 잰 걸음을 버린다(가속이 아니다)
         int32                                 _rideSampleCount;           ///< 잰 걸음 수(0..2). 위치 · 속도가 모두 있어야 가속도를 낸다
         uint8                                 _bFieldOfViewKickArmed : 1; ///< 앞 가속이 문턱 아래로 내려가야 다음 킥을 건다
         uint8                                 _bBumpArmed            : 1; ///< 수직 가속이 문턱 아래로 내려가야 다음 충격을 건다
         uint8                                 _bRidePending          : 1; ///< 틱이 반응을 쟀고 `VehicleSeatSystem` 이 아직 걸지 않았다
-        [[maybe_unused]] uint8                _reservedRideFlags     : 5;
+        uint8                                 _bRestorePending       : 1; ///< 되살아난 탑승이다 — 조종자가 자기 폰을 쥔 뒤(첫 틱) 다시 앉힌다
+        [[maybe_unused]] uint8                _reservedRideFlags     : 4;
 
         /** @brief 카메라 킥 · 충격과 소리 파라미터를 겁니다(오디오 · 카메라 디렉터는 게임 스레드에서만 부른다). */
         void applyRideFeedback();
         /** @brief 이 좌석의 @p riderPawn 을 내립니다(`dismount` 의 몸 — 좌석을 찾지 않는다). 탑승자 오브젝트 · 매니저가 없으면 false 입니다. */
         [[nodiscard]] bool releaseRider( PawnComponent& riderPawn, bool bForced );
+        /**
+         * @brief 되살아난 탑승을 다시 만듭니다 — 빙의 · 이동 멈춤 · 소켓 붙임 · 탑승 자세는 상태에 실리지 않는다. 앉히지 못하면 탈것에 매달린 채 두지 않고 하차 자리에 내려놓습니다.
+         * @details 자동 빙의(`ControlSystem::autoPossess`)가 조종자에게 자기 폰을 쥐여 준 뒤에 부른다 — 그래야 탈 때처럼 조종자와 탈것의 앞 조종자(말 AI)를 다시 안다.
+         */
+        void restoreRider();
         /** @brief 탑승자의 소켓 변환에 기울임을 얹고 애니메이터 파라미터를 씁니다. */
         void applyRiderLean( GameObjectManager& manager );
     };

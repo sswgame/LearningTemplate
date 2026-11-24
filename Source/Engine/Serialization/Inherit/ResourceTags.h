@@ -15,6 +15,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -113,7 +114,7 @@ namespace sw
      * @brief 엔진의 태그 값과 축 표입니다. 넣는 쪽은 게임 스레드, 읽는 쪽은 로드 워커라 잠금으로 지킵니다. 값이 바뀌면 그 태그에 기댄 리소스를 다시 읽기 기록(`ResourceComposition`)에 알립니다.
      * @details 예전에는 함수 정적 상태(감춘 싱글턴)였다 — 엔진을 다시 세워도 남고 테스트가 서로 섞였다. 축 표 · 조건 컴파일처럼 상태가 없는 것만 정적이다.
      */
-    class SW_API ResourceTags
+    class SW_API ResourceTags final : public SubscriptionSource
     {
     public:
         static constexpr const utf8* kConditionName = "resourceTag"; ///< 그냥 이름을 받는 조건(`ConditionExpr` 의 `pBareCondition`)
@@ -121,6 +122,7 @@ namespace sw
 
         /** @brief @p composition 은 같은 주인(리소스 루트)이 든 다시 읽기 기록이다(이것보다 먼저 서고 나중에 사라진다). */
         explicit ResourceTags( ResourceComposition& composition );
+        ~ResourceTags() override;
 
         ResourceTags( const ResourceTags& )            = delete;
         ResourceTags& operator=( const ResourceTags& ) = delete;
@@ -139,6 +141,13 @@ namespace sw
         [[nodiscard]] bool setAxisValue( string_view axisName, string_view value );
         /** @brief 여러 값 축 @p axisName 의 값을 @p listValue 로 바꿉니다. 틀리면 `setAxisValue` 처럼 false 입니다. */
         [[nodiscard]] bool setAxisValues( string_view axisName, const vector<string>& listValue );
+        /**
+         * @brief 여러 값 축 @p axisName 에 값 @p listValue 를 더합니다. 돌려준 구독을 든 동안 켜지고, 구독이 사라지면 그 몫만 꺼집니다.
+         * @details 주인이 여럿인 축(씬마다의 데이터 레이어)의 길이다 — 켜진 태그는 넣어 둔 값과 살아 있는 몫의 합집합이라, 한 주인이 사라져도 남의 몫이 꺼지지 않는다.
+         *          로드 워커의 씬도 부른다(몫은 잠금이 지킨다).
+         * @return 모르는 축 · 값 하나 축 · 틀린 값이면 오류를 남기고 빈 구독입니다. 빈 목록도 빈 구독입니다.
+         */
+        [[nodiscard]] Subscription addAxisValues( string_view axisName, const vector<string>& listValue );
         /** @brief 여러 값 축 @p axisName 의 값 @p value 를 켜거나 끕니다. 틀리면 `setAxisValue` 처럼 false 입니다. */
         [[nodiscard]] bool setTagActive( string_view axisName, string_view value, bool bActive );
         /**
@@ -161,13 +170,28 @@ namespace sw
         [[nodiscard]] static bool compileTest( string_view text, string_view sourceName, ResourceTagTest& outTest );
 
     private:
-        /** @brief 태그 집합을 바꾸고 바뀐 태그를 다시 읽기 기록에 알립니다. 잠금 밖에서 알린다(기록은 자기 잠금이 있다). */
+        /** @brief 더한 값 하나입니다(`addAxisValues` 의 구독이 소유한다). */
+        struct Contribution
+        {
+            uint64         _id{ 0 };
+            vector<string> _listTag{}; ///< `축.값`
+        };
+
+        void releaseSubscription( uint64 id ) override;
+        /** @brief 넣어 둔 태그(더한 몫은 빼고)의 사본입니다 — 값을 고쳐 다시 넣는 쪽이 남의 몫을 제 값으로 굳히지 않게. */
+        [[nodiscard]] ResourceTagSet captureStored() const;
+        /** @brief 넣어 둔 태그를 바꾸고 바뀐 태그를 다시 읽기 기록에 알립니다. 잠금 밖에서 알린다(기록은 자기 잠금이 있다). */
         void replace( const ResourceTagSet& next, ResourceTagSet* pOutPrevious );
+        /** @brief 켜진 태그(`_tags`)를 넣어 둔 태그와 더한 몫의 합집합으로 다시 만들고 바뀐 태그를 돌려줍니다. */
+        [[nodiscard]] vector<string> rebuildTags() SW_REQUIRES_LOCK( _mutex );
 
     private:
-        ResourceComposition& _composition;
-        mutable mutex        _mutex;
-        ResourceTagSet _tags SW_GUARDED_BY( _mutex );
+        ResourceComposition&                   _composition;
+        mutable mutex                          _mutex;
+        ResourceTagSet _storedTags             SW_GUARDED_BY( _mutex ); ///< 넣어 둔 태그(`set*` · `exchange`)
+        vector<Contribution> _listContribution SW_GUARDED_BY( _mutex ); ///< 더한 몫(`addAxisValues`)
+        ResourceTagSet _tags                   SW_GUARDED_BY( _mutex ); ///< 켜진 태그 — 위 둘의 합집합
+        uint64 _nextContributionID             SW_GUARDED_BY( _mutex );
 
         SW_SERVICE_SLOT( ResourceTags, Required );
     };

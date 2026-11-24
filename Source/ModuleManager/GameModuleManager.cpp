@@ -206,10 +206,12 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        for ( const unique_ptr<Scene>& scene : engine::getSubsystem<SceneManager>().getLoadedScenes() )
+        vector<Scene*> listScene;
+        engine::getSubsystem<SceneManager>().collectScenes( listScene );
+        for ( Scene* const pScene : listScene )
         {
-            if ( scene != nullptr )
-                scene->getObjectManager()->markTickStagesDirty(); // 기본값은 다시 저장하지 않는다(ModuleTypeRegistry 의 같은 위치 참고).
+            if ( pScene->getObjectManager() != nullptr )
+                pScene->getObjectManager()->markTickStagesDirty(); // 기본값은 다시 저장하지 않는다(ModuleTypeRegistry 의 같은 위치 참고).
         }
     }
 
@@ -374,6 +376,9 @@ namespace sw
         destroyGameInstance( false );
         SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
         sceneManager.closeLoadedScenes();
+        // 앞 게임의 되찾지 못한 스냅숏도 함께 버린다 — 남기면 다음 리로드가 새 게임에 앞 게임의 상태를 얹고, 앞 실패가 건 씬 저장 막기가 새 게임에도 남는다.
+        _listGameSavedState.clear();
+        sceneManager.setSaveBlockReason( {} );
         // 기동처럼 월드를 플레이 전으로 두고 새 게임을 세운다 — 다음 `beginFrame` 이 켠다. 켜 둔 채면 게임이 세우는 오브젝트가 하나씩 플레이를 시작해
         // 기동(다 세운 뒤 한꺼번에 `beginPlay`)과 컴포넌트 틱 순서가 달라지고, 그림이 한 프레임 어긋난다(벤치 kaykit 의 애니메이션 알림).
         if ( canControlWorldPlay() == false )

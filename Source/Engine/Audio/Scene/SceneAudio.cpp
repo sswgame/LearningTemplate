@@ -189,7 +189,35 @@ namespace sw
     {
     }
 
-    SceneAudio::~SceneAudio() = default;
+    SceneAudio::~SceneAudio()
+    {
+        releaseEngineState();
+    }
+
+    void SceneAudio::releaseEngineState()
+    {
+        AudioEngine* const pEngine = findAudioEngine();
+        ScopedLock<mutex>  lock{ _mutex };
+        // 0 번(주 리스너)은 다음 씬의 첫 갱신이 덮는다 — 여기서 끄면 겹쳐 뜬 다음 씬의 소리가 한 블록 끊긴다.
+        for ( uint32 listenerIndex = 1; pEngine != nullptr && listenerIndex < AudioEngine::kMaxListenerCount; ++listenerIndex )
+        {
+            if ( ( _activeListenerMask & ( 1u << listenerIndex ) ) != 0 )
+                pEngine->setListener( listenerIndex, AudioListenerState{} );
+        }
+        for ( const ZoneValue& value : _listZoneValue )
+        {
+            if ( pEngine != nullptr )
+                pEngine->setSnapshotIntensity( value._snapshot, 0.0f );
+        }
+        _activeListenerMask = 0;
+        _listZoneValue.clear();
+        _bHasLastCameraPosition = SW_FALSE;
+    }
+
+    void SceneAudio::onSceneCleared()
+    {
+        releaseEngineState();
+    }
 
     AudioEngine* SceneAudio::findAudioEngine() const
     {
@@ -256,6 +284,8 @@ namespace sw
     void SceneAudio::applyPreviewPolicy( const ScenePreviewPolicy& policy )
     {
         _bUpdateEnabled = policy._bAudio;
+        if ( _bUpdateEnabled == false )
+            releaseEngineState();
     }
 
     void SceneAudio::update( const float32 deltaTime )
@@ -289,6 +319,8 @@ namespace sw
 
     void SceneAudio::onWorldOriginShifted( const float3& delta )
     {
+        if ( AudioEngine* const pEngine = findAudioEngine() )
+            pEngine->shiftWorldOrigin( delta );
         ScopedLock<mutex> lock{ _mutex };
         _primaryListenerPosition += delta;
         _lastCameraPosition += delta;
@@ -429,7 +461,7 @@ namespace sw
 
     void SceneAudio::updateReverbZones( AudioEngine& audioEngine )
     {
-        // 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다.
+        // 리버브 존 — 스냅샷마다 가장 큰 세기. 리스너처럼 프레임마다 넣는다(바뀐 것만 넣으면 겹쳐 뜬 앞 씬이 내려가며 0 으로 내린 값이 되살아나지 않는다). 이번에 거는 존이 없는 스냅샷은 0 으로 내린다.
         _listZoneCurrent.clear();
         for ( AudioReverbZoneComponent* pZone : _zone.getItems() )
         {
@@ -450,14 +482,7 @@ namespace sw
         }
         for ( const ZoneValue& current : _listZoneCurrent )
         {
-            const ZoneValue* pPrevious = nullptr;
-            for ( const ZoneValue& previous : _listZoneValue )
-            {
-                if ( previous._snapshot == current._snapshot )
-                    pPrevious = &previous;
-            }
-            if ( pPrevious == nullptr || MathUtil::abs( pPrevious->_intensity - current._intensity ) > MathUtil::kLooseEpsilon )
-                audioEngine.setSnapshotIntensity( current._snapshot, current._intensity );
+            audioEngine.setSnapshotIntensity( current._snapshot, current._intensity );
         }
         for ( const ZoneValue& previous : _listZoneValue )
         {

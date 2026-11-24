@@ -32,7 +32,7 @@ namespace sw
     /**
      * @class InputReplay
      * @brief 입력 계층 QA 녹화입니다(키 바인딩과 포커스까지 재현). 게임플레이 리플레이와 네트워크가 싣는 것은 행동(의도)이지 이것이 아닙니다.
-     * @details 재생은 `InputManager::attachVirtualInput( &replay )` 로 붙여서 한다. 녹화한 n 번째 프레임의 이벤트를 붙인 뒤 n 번째 `beginFrame` 에 낸다
+     * @details 재생은 `InputManager::attachVirtualInput( replay )` 로 붙여서 한다. 녹화한 n 번째 프레임의 이벤트를 붙인 뒤 n 번째 `beginFrame` 에 낸다
      *          (벽시계와 프레임 속도에는 영향받지 않는다). 일시정지는 떼는 것이고, 탐색은 `seekTo` 이다.
      */
     class SW_API InputReplay final : public IVirtualInputSource
@@ -61,7 +61,7 @@ namespace sw
 
         /**
          * @brief 장치 상태를 지우고 녹화한 [0, @p frameIndex) 프레임을 순서대로 재생해 그 프레임 직전 상태를 만듭니다(되감기와 탐색).
-         * @details 붙어 있던 가상 입력은 뗀다. 다음에 상태를 지우지 않고 붙이면(`attachVirtualInput( &replay, mode, false )`) @p frameIndex 부터 낸다.
+         * @details 이 리플레이의 붙임은 먼저 풀어야 한다(다른 원천의 붙임은 그대로 둔다). 다음에 상태를 지우지 않고 붙이면(`attachVirtualInput( replay, mode, false )`) @p frameIndex 부터 낸다.
          */
         void seekTo( InputManager& input, uint32 frameIndex );
 

@@ -836,6 +836,12 @@ namespace sw
         return isMergedMeshAwaited( hasMergedParts(), _bMeshMerged == SW_TRUE, _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE );
     }
 
+    bool CharacterAppearanceComponent::isAwaitingFit( const SpawnedPart& spawned ) const
+    {
+        const bool bFitted = spawned._bSocketPart == SW_FALSE && _state.getResolved()._listPart[spawned._partIndex]._fit.empty() == false;
+        return isFitAwaited( bFitted, spawned._bBaked == SW_TRUE, _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE );
+    }
+
     bool CharacterAppearanceComponent::findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const
     {
         const GameObject*        pOwner   = getOwner();
@@ -1475,8 +1481,9 @@ namespace sw
             // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
             const hashed_string& owner    = _state.getResolved()._listPart[spawned._partIndex]._owner;
             const bool           bVisible = _bPartsVisible && ( owner.empty() || VectorUtil::contains( _listHiddenSlot, owner ) == false );
-            forEachPartMesh( manager, spawned, [bVisible]( MeshComponent& mesh, const hashed_string& /*source*/ )
-            { mesh.setVisible( bVisible ); } );
+            const bool           bDrawn   = bVisible && isAwaitingFit( spawned ) == false;
+            forEachPartMesh( manager, spawned, [bDrawn]( MeshComponent& mesh, const hashed_string& /*source*/ )
+            { mesh.setVisible( bDrawn ); } );
             // 숨긴 동안 그 리그는 그리지 않는 유닛이라 쉬었을 수 있다 — 다시 보이는 순간 옛 입자 자리에서 튀지 않게 지금 포즈에서 다시 시작한다.
             if ( bVisible && spawned._bShown == SW_FALSE )
                 restartPartDynamics( manager, spawned );
@@ -1690,10 +1697,8 @@ namespace sw
         // 새로 입은 피팅 부품은 베이크한 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 베이크한 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
-            GameObject* pObject    = manager.resolveGameObject( spawned._object );
-            const bool  bUnfitted  = spawned._bSocketPart == SW_FALSE && spawned._bBaked == SW_FALSE;
-            const bool  bHidesPart = bUnfitted && resolved._listPart[spawned._partIndex]._fit.empty() == false;
-            if ( pObject != nullptr && bHidesPart )
+            GameObject* pObject = manager.resolveGameObject( spawned._object );
+            if ( pObject != nullptr && isAwaitingFit( spawned ) )
                 CharacterAppearanceComponentInternal::forEachMesh( *pObject, []( MeshComponent& mesh )
                 { mesh.setVisible( false ); } );
         }

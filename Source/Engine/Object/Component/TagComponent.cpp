@@ -11,6 +11,7 @@ namespace sw
 {
     TagComponent::TagComponent()
         : _tags{}
+        , _spawnTags{}
         , _pTagIndex{ nullptr }
     {
     }
@@ -27,6 +28,7 @@ namespace sw
             getOwner()->addTag( tag ); // 오브젝트의 길이 미룬다 — 틱 뒤에 이 함수로 다시 온다
             return;
         }
+        captureSpawnTags();
         _tags.addTag( tag );
         syncTagIndex();
     }
@@ -38,6 +40,7 @@ namespace sw
             getOwner()->removeTag( tag );
             return;
         }
+        captureSpawnTags();
         _tags.removeTag( tag );
         syncTagIndex();
     }
@@ -49,8 +52,26 @@ namespace sw
             getOwner()->clearTags();
             return;
         }
+        captureSpawnTags();
         _tags.clear();
         syncTagIndex();
+    }
+
+    void TagComponent::captureSpawnTags()
+    {
+        if ( _spawnTags.has_value() == false )
+            _spawnTags = _tags;
+    }
+
+    SpawnStateReset TagComponent::resetToSpawnState()
+    {
+        if ( _spawnTags.has_value() )
+        {
+            _tags = std::move( *_spawnTags );
+            _spawnTags.reset();
+            syncTagIndex();
+        }
+        return SpawnStateReset::Reset;
     }
 
     void TagComponent::onRegister( GameObjectManager& manager )
@@ -76,6 +97,7 @@ namespace sw
     void TagComponent::onPostLoad()
     {
         Component::onPostLoad();
+        _spawnTags.reset(); // 저작 값이 새로 실렸다
         syncTagIndex();
     }
 

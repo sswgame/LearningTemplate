@@ -20,7 +20,6 @@ namespace sw
     class AutomationLogPolicy;
     class AutomationRunner;
     class EngineFrameHookList;
-    class InputManager;
 
     /**
      * @class ScenarioPlayer
@@ -54,7 +53,7 @@ namespace sw
         /** @brief 실행기를 새로 세웁니다(처음 · 반복). */
         void startRunner();
         /** @brief 재생을 끝맺고(돌고 있으면 멈추고) 고정 프레임 시간을 되돌린 뒤 알린다. */
-        void endPlayback( ScenarioPlayEnd end, InputManager* pInput );
+        void endPlayback( ScenarioPlayEnd end );
         /** @brief 결정적 실행 정책의 프레임 고정 시간만 @p fixedFrameDelta 로 바꿉니다(App 이 다음 프레임부터 흘린다). */
         static void setFixedFrameDelta( float32 fixedFrameDelta );
 

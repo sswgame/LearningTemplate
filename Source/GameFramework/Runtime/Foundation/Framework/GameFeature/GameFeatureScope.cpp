@@ -122,6 +122,14 @@ namespace sw
         _listCleanup.push_back( std::move( cleanup ) );
     }
 
+    void GameFeatureScope::holdSubscription( Subscription subscription )
+    {
+        // 델리게이트는 복사할 수 있어야 해서 구독을 공유 블록에 둔다.
+        const shared_ptr<Subscription> pHeld = make_shared<Subscription>( std::move( subscription ) );
+        addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pHeld]()
+        { pHeld->reset(); } ) );
+    }
+
     void GameFeatureScope::rebindReloadedCatalogs()
     {
         for ( const Delegate<void()>& follow : _listFollow )
@@ -214,7 +222,7 @@ namespace sw
                  VectorUtil::contains( after._listInputLayer, layer ) )
                 continue;
             SW_LOG_ERROR_ID( "GameFeatureScope.LeakedEnabledInputLayer",
-                             "Game feature scope '%#': input layer '%#' is still enabled after leaving though it is not on the layer stack - it was enabled without a scope cleanup (use pushLayer/popLayer)",
+                             "Game feature scope '%#': input layer '%#' is still enabled after leaving though it is not on the layer stack - it was enabled without a scope cleanup (hold the pushLayer subscription in the scope)",
                              _name.c_str(), layer.c_str() );
             ++leakCount;
         }

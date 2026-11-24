@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
 
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
@@ -33,7 +34,7 @@ namespace sw
              * @brief 상호작용 정의가 이름 붙인 이펙트를 하는 쪽에 겁니다(건 길 @p sourceName). 이름이 비면 아무것도 하지 않습니다.
              * @details 하는 쪽에 AbilitySystemComponent 가 없는데 정의가 이펙트를 적었으면 데이터와 개체가 맞지 않는 것이라 오류다(대신 아무 일도 없는 것으로 넘기지 않는다).
              */
-            static void applyInteractionEffect( GameObject& owner, const InteractionDef& def, const hashed_string& effectID, const hashed_string& sourceName )
+            static void applyInteractionEffect( GameObject& owner, const InteractionDef& def, const hashed_string& effectID, const hashed_string& sourceName, bool bEndsWithSession )
             {
                 if ( effectID.size() == 0 )
                     return;
@@ -47,8 +48,9 @@ namespace sw
                 AbilityEffectSpec spec = pAbility->makeOutgoingSpecByID( effectID ); // 카탈로그에 없으면 경고를 남기고 빈 스펙이다
                 if ( spec.isValid() == false )
                     return;
-                spec._context._sourceName = sourceName;
-                (void)pAbility->applyGameplayEffectSpecToTarget( spec, pAbility ); // 거부되면 까닭이 대상의 이펙트 기록에 남는다
+                spec._context._sourceName      = sourceName;
+                spec._context._bTransientOwner = bEndsWithSession ? SW_TRUE : SW_FALSE; // 세션은 저장하지 않는다 — 진행 동안만의 효과가 세이브에 남으면 지울 쪽이 없다
+                (void)pAbility->applyGameplayEffectSpecToTarget( spec, pAbility );      // 거부되면 까닭이 대상의 이펙트 기록에 남는다
             }
 
             /** @brief 상호작용 @p def 의 건 길입니다 — 시작 효과는 `interaction:<id>`(끝날 때 지운다), 완료 · 취소 효과는 뒤에 `:complete` · `:cancel`(남는다). */
@@ -428,15 +430,15 @@ namespace sw
     {
         _listSessionEvent.clear();
         _session.pollEvents( _listSessionEvent );
-        const InteractableComponent* pEventTarget = context.getManager().resolveComponent( _focusComponent );
-        const InteractionDef*        pEventDef    = pEventTarget != nullptr ? pEventTarget->getDefinition() : nullptr;
+        // 세션이 쥔 정의로 본다 — 대상이 진행 중에 사라지거나(파괴 · 스트리밍) 표를 다시 읽어도 시작할 때 건 것을 끝이 지운다.
+        const InteractionDef* pEventDef = _session.getDefinition();
         for ( const InteractionSessionEvent event : _listSessionEvent )
         {
             if ( event == InteractionSessionEvent::Started )
             {
                 _montageStep = 0;
                 if ( pEventDef != nullptr )
-                    InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_startEffect, InteractorComponentInternal::makeSourceName( *pEventDef, "" ) );
+                    InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_startEffect, InteractorComponentInternal::makeSourceName( *pEventDef, "" ), pEventDef->_bEndStartEffect == SW_TRUE );
             }
             else if ( event == InteractionSessionEvent::StepCompleted )
                 ++_montageStep;
@@ -452,12 +454,12 @@ namespace sw
             if ( event == InteractionSessionEvent::Cancelled && pEventDef != nullptr )
             {
                 InteractorComponentInternal::endStartEffect( owner, *pEventDef );
-                InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_cancelEffect, InteractorComponentInternal::makeSourceName( *pEventDef, ":cancel" ) );
+                InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_cancelEffect, InteractorComponentInternal::makeSourceName( *pEventDef, ":cancel" ), false );
             }
             if ( event == InteractionSessionEvent::Completed && pEventDef != nullptr )
             {
                 InteractorComponentInternal::endStartEffect( owner, *pEventDef );
-                InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_completeEffect, InteractorComponentInternal::makeSourceName( *pEventDef, ":complete" ) );
+                InteractorComponentInternal::applyInteractionEffect( owner, *pEventDef, pEventDef->_completeEffect, InteractorComponentInternal::makeSourceName( *pEventDef, ":complete" ), false );
             }
             if ( event == InteractionSessionEvent::Cancelled )
             {
@@ -511,8 +513,15 @@ namespace sw
 
         InteractionView viewer;
         makeView( viewer );
-        gatherCandidates( manager, owner, viewer );
-        if ( _session.isActive() )
+        // 쓰러진 몸은 상호작용하지 않는다 — 조종은 그대로라 누른 채 죽으면 쥐고 있던 상호작용이 끝까지 간다.
+        const bool bDead = owner.hasTag( TargetFilter::getDeadTag(), true );
+        if ( bDead )
+            _listCandidate.clear();
+        else
+            gatherCandidates( manager, owner, viewer );
+        if ( _session.isActive() && bDead )
+            _session.cancel();
+        else if ( _session.isActive() )
             updateActiveSession( manager, viewer, context.getDeltaTime(), bHeld, bPressed );
         else
             updateFocusAndBegin( manager, owner, viewer, bPressed );

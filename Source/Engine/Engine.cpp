@@ -443,7 +443,7 @@ namespace sw
         if ( _frameHooks.isBound() )
             _frameHooks.notifyFrameBegin( makeFrameContext() );
         if ( _pInputManager != nullptr )
-            _pInputManager->beginFrame( deltaSeconds );
+            _pInputManager->beginFrame( unscaledDeltaSeconds ); // 장치는 게임 시간과 무관하다 — 배율을 곱하면 정지 동안 진동이 꺼지지 않고 가상 커서가 서며, 슬로 모션에서 길게 누르기 · 누른 순간이 늘어난다
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUIDriver != nullptr )
             _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간

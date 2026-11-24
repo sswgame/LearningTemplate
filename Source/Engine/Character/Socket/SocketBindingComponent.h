@@ -104,6 +104,9 @@ namespace sw
          */
         void setPhysicsBody( Component* pBodyComponent, ISocketPhysicsBody* pBody );
 
+        /** @brief 물리 풀림을 끝내고 지금 자리에 남습니다(쓰러진 몸이 부활했다). 물리 풀림이 아니면 아무것도 하지 않습니다. */
+        void endPhysics();
+
         /** @brief 지금 상태입니다. */
         SocketBindingState getState() const { return _state; }
         /** @brief 붙은(또는 돌아갈) 소켓 이름입니다. */

@@ -8,7 +8,6 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Localization/LocText.h"
@@ -146,14 +145,6 @@ namespace sw::editor
                     EditorPlaySession::play( key );
             }
 
-            static void stop( EditorPlaySessionWriteKey key )
-            {
-                EditorPlaySession::stop( key );
-                GameObjectManager* pObjectManager = editor::getActiveObjectManager();
-                if ( pObjectManager != nullptr )
-                    editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
-            }
-
             /**
              * @brief F8 Eject/Possess — 세션 종류(Simulate/Play)와 `_bEjected` 를 이 한 적용이 함께 바꾼다.
              * @details 플레이어 조종 중이면 조종을 놓는다 — 월드는 계속 돌고(Simulate) 에디터 카메라로 둘러본다. Eject 한 세션이면 다시 조종한다(언리얼 F8 Eject/Possess).
@@ -255,7 +246,7 @@ namespace sw::editor
                 EditorPlaySession::stepFrames( key, command._stepFrameCount );
                 break;
             case EditorUICommandKind::Stop:
-                Internal::stop( key );
+                EditorPlaySession::stop( key );
                 break;
             case EditorUICommandKind::ToggleEject:
                 Internal::toggleEject( key );

@@ -62,6 +62,11 @@ namespace sw
         bool usesCacheLayer() const { return _bUsesLayer == SW_TRUE; }
         /** @brief 이번 프레임에 캐시 층을 이미 다시 그렸음을 적습니다. 추가 뷰가 같은 프레임에 다시 그리지 않는다(타일은 모든 뷰가 같다). */
         void markRebuilt() { _bNeedsRebuild = SW_FALSE; }
+        /**
+         * @brief 이번 프레임에 다시 그린 층에 빠진 정적 배치가 있다고 적습니다(머티리얼 PSO 를 만드는 중) — 층은 이 프레임에만 쓰고 다음 `update` 가 다시 그린다.
+         * @details 정적 세대는 메시 집합 · 변환만 본다 — PSO 가 도착해도 오르지 않아, 빠진 채 유효로 두면 그 그림자가 집합이 바뀔 때까지 없다.
+         */
+        void markIncomplete();
         /** @brief 캐시를 버립니다(다음 `update` 가 모두 다시 그린다). 장치 교체 · 텍스처를 놓을 때 부른다. */
         void invalidate();
 

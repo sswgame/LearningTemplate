@@ -100,6 +100,8 @@ namespace sw
         bool isObjectInSubLevel( string_view name, uint64 objectID ) const;
         /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
         bool isListedObject( uint64 objectID ) const;
+        /** @brief 멤버 @p objectID 를 하위 레벨의 목록에서 뺍니다 — 하위 레벨을 내려도 남습니다(`Scene::releaseFromParts`). 든 적이 없으면 할 일이 없습니다. */
+        void releaseObject( uint64 objectID );
 
         /** @brief 이름 @p name 의 하위 레벨 앵커의 파일 id 입니다 — 넓은 값이라 씬 파일의 작은 id 와 겹치지 않고, 프로세스가 달라도 같다. */
         [[nodiscard]] static uint64 computeAnchorFileID( string_view name );

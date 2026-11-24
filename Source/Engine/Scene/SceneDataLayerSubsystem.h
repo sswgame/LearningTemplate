@@ -6,7 +6,7 @@
  * 켜진 레이어는 이름 집합이다. 엔티티는 붙은 레이어가 **모두** 켜졌을 때 오른다. 언리얼은 기본이 "하나라도"(Or)이고 And 를 고를 수 있다(기억에 의존). 여기는 And 만 둔다 —
  * 인스턴스 멤버가 앵커의 레이어를 더해 가지므로("겨울 앵커 안의 야간 등") 합집합이 곧 조건이 된다. "겨울이나 가을" 은 그 뜻의 레이어를 따로 선언한다.
  * 이름 집합이라 리소스 조건의 문맥 태그(`ResourceTags` 의 `layer` 축)로 그대로 넣는다 — 켜고 끌 때마다 넣고, 리소스는 `<_when _if="layer.Winter">` 로 값을 바꾼다.
- * 태그는 프로세스 값이라 씬이 여럿이면(에디터 세계와 플레이 세계) 마지막에 넣은 씬의 집합이다.
+ * 태그는 씬마다의 몫이다(`ResourceTags::addAxisValues` 의 구독을 이 서비스가 든다) — 씬이 여럿이면(로드 중인 다음 씬 · 에디터 세계와 플레이 세계) 합집합이고, 내린 씬은 제 몫만 거둔다.
  *
  * [올리는 방식 — 스트리밍 셀과 같다]
  * 레이어 집합이 같은 엔티티를 한 묶음(`Group`)으로 들고 있다가 묶음째 짓고 내린다(`Scene::instantiateLayerNodes` · `Scene::unloadCell`). 켜고 끄기는 다음 `DestroyPost` 에 처리한다 —
@@ -28,6 +28,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -118,6 +119,8 @@ namespace sw
         bool isGroupObject( uint64 objectID ) const;
         /** @brief 오브젝트 자신이 이 서비스의 목록에 들어 있으면 true 입니다(조상은 보지 않는다) — 조상이 다른 묶음에 든 오브젝트를 두 번 뜨지 않게 가린다(`Scene::collectCellGroup`). */
         bool isListedObject( uint64 objectID ) const;
+        /** @brief 오브젝트 @p objectID 를 묶음의 목록에서 뺍니다 — 묶음을 내려도 남습니다(`Scene::releaseFromParts`). 든 적이 없으면 할 일이 없습니다. */
+        void releaseObject( uint64 objectID );
 
         /** @brief 지금 상태를 값으로 찍습니다. */
         [[nodiscard]] State captureState() const;
@@ -138,6 +141,7 @@ namespace sw
         vector<Group>                 _listGroup;
         unordered_set<string>         _uniqueActiveLayer;
         unordered_map<uint64, uint32> _mapObjectGroup; ///< 지은 묶음 오브젝트 id → 묶음 번호(`isGroupObject`)
+        Subscription                  _layerTags;      ///< 켜진 레이어를 리소스 태그 `layer` 축에 더한 몫(`publishActiveLayers`)
         uint64                        _activeSerial;   ///< `getActiveSerial`
         uint8                         _bDirty : 1;     ///< 켜고 끄기가 있었다 — 다음 갱신이 처리한다
     };

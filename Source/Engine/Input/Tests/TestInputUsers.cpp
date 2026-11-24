@@ -60,7 +60,7 @@ SW_TEST_CASE( InputUsersTest, EachUserReadsOnlyTheirDevices )
     script.addEvent( 1, RawInputEvent::makeKeyUp( Key::Space ) );
     script.addGamepadConnection( 1, 1 );
     script.addEvent( 2, RawInputEvent::makeGamepadButtonDown( GamepadButton::A, 1 ) );
-    input.attachVirtualInput( &script, VirtualInputMode::Exclusive );
+    Subscription attachment = input.attachVirtualInput( script, VirtualInputMode::Exclusive );
 
     input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( pFirst->isActionDown( jump ) );
@@ -74,9 +74,25 @@ SW_TEST_CASE( InputUsersTest, EachUserReadsOnlyTheirDevices )
     SW_EXPECT_TRUE( pSecond->isActionDown( jump ) ); // 바인딩의 패드 0 은 "내 패드" — 짝지은 1 번이다
     input.endFrame();
 
-    input.detachVirtualInput();
+    attachment.reset();
     input.closeLocalUsers();
     SW_EXPECT_EQUAL( 1u, input.getLocalUserCount() );
     SW_EXPECT_NULL( input.findUserMap( 1 ) );
+    input.shutdown();
+}
+
+/** @brief [InputUsersTest] 로컬 멀티가 열린 동안 바꾼 플레이어 설정은 다른 사용자의 맵에도 바로 듣는다 */
+SW_TEST_CASE( InputUsersTest, SettingsChangedWhileOpenReachEveryUser )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "settings.input.xml" ), "<InputMap><layers><layer name=\"Game\"/></layers></InputMap>" ) );
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    SW_REQUIRE_TRUE( input.getInputMap().loadBundle( vector<AssetID>{ test::ScopedScratchDomain::makeID( "settings.input.xml" ) } ) );
+    SW_REQUIRE_TRUE( input.openLocalUsers( 2 ) );
+    input.getInputMap().getMutableAccessibilitySettings()._bInvertY = SW_TRUE;
+    SW_REQUIRE_NOT_NULL( input.findUserMap( 1 ) );
+    SW_EXPECT_TRUE( input.findUserMap( 1 )->getAccessibilitySettings()._bInvertY == SW_TRUE );
+    input.closeLocalUsers();
     input.shutdown();
 }
