@@ -247,6 +247,38 @@ SW_TEST_CASE( Texture2DStableSRVTest, ResizeKeepsSRV )
 }
 
 /**
+ * @brief [Texture2DStableSRVTest] 올라가 있던 CPU 텍스처는 장치가 바뀌면 되살아나고, 아무도 쓰지 않아 내린 것은 되살지 않는다
+ * @details 변이: `initRHI` 가 CPU 텍스처를 건너뛰면(예전 길) 핸들로 쥔 쪽(표면 변형 · 번짐 굽기)의 텍스처가 장치 교체 뒤 사라져 첫 단언이 진다.
+ *          정체를 핸들 값으로 두면 새 장치가 같은 값을 내 번호 단언이 진다.
+ */
+SW_TEST_CASE( Texture2DStableSRVTest, DeviceChangeRestoresCPUTexture )
+{
+    FakeBindlessFactory factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    FakeBindlessFactory newFactory;
+    test::FakeRHIDevice newDevice;
+    newDevice._pResourceFactory = &newFactory;
+    Texture2D texture;
+    texture.setCPUBytes( "cpu/restored", 2u, 2u, vector<uint8>( 2u * 2u * kRGBA8BytesPerPixel, 255u ) );
+    SW_REQUIRE_TRUE( texture.initRHI( &device ) );
+    SW_EXPECT_FALSE( texture.isRHIValid() ); // 아무도 빌리지 않았다
+    SW_REQUIRE_TRUE( texture.loadFromCPUBytes( &device ) );
+    const RHITextureHandle oldHandle = texture.getHandle();
+    const uint32           oldSerial = texture.getResidencySerial();
+
+    texture.releaseRHI( &device ); // 장치가 내려간다
+    SW_REQUIRE_TRUE( texture.initRHI( &newDevice ) );
+    SW_REQUIRE_TRUE( texture.isRHIValid() );
+    SW_EXPECT_EQUAL( oldHandle, texture.getHandle() ); // 새 장치의 핸들 표는 처음부터 센다 — 핸들로는 바뀐 것을 모른다
+    SW_EXPECT_TRUE( texture.getResidencySerial() != oldSerial );
+
+    texture.releaseUnused( &newDevice );
+    SW_REQUIRE_TRUE( texture.initRHI( &device ) );
+    SW_EXPECT_FALSE( texture.isRHIValid() );
+}
+
+/**
  * @brief [Texture2DStableSRVTest] 업로드가 실패해도 지키던 번호는 남는다 — 부르는 쪽(`TextureLoadOperation`)이 그 번호를 누락 체커로 다시 묶는다.
  * @details 변이: 실패 갈래가 `releaseRHI` 로 번호까지 놓으면 그 번호를 쥔 머티리얼이 다른 텍스처가 받은 칸을 그린다 — 지키는 번호가 비어 진다.
  */

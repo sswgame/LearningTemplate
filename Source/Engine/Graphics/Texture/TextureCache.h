@@ -374,7 +374,7 @@ namespace sw
         /** @brief 텍스처 객체입니다(`Ready` 가 아니면 쓰지 않는다). 핸들이 살아 있는 동안 유효합니다. */
         Texture2D* getTexture() const { return _pTexture; }
         /**
-         * @brief 올라간 GPU 텍스처의 정체(핸들 값)입니다. 준비 전이거나 올라가 있지 않으면 0 입니다.
+         * @brief 올라간 GPU 텍스처의 정체(`Texture2D::getResidencySerial`)입니다. 준비 전이거나 올라가 있지 않으면 0 입니다.
          * @details 디바이스 교체 · 크기 바꾸기로 값이 바뀐다 — 게임 코드는 같은지만 본다(RHI 형식 · `Texture2D.h` 를 모르고 다시 구울지 정한다).
          */
         uint64 getResidentIdentity() const;

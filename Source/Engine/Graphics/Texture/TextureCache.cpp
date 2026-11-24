@@ -324,7 +324,7 @@ namespace sw
                 pErased->releaseRHI( pDevice );
             if ( pPinned == nullptr )
                 return;
-            pPinned->releaseRHI( pDevice );
+            pPinned->releaseUnused( pDevice );
             {
                 UniqueLock<shared_mutex> lock{ _mutex };
                 const auto               it = _mapEntry.find( key );
@@ -1608,7 +1608,7 @@ namespace sw
 
     uint64 TextureLoadOperation::getResidentIdentity() const
     {
-        return getState() == AssetLoadState::Ready && _pTexture != nullptr ? _pTexture->getHandle().getPacked() : 0u;
+        return getState() == AssetLoadState::Ready && _pTexture != nullptr && _pTexture->isRHIValid() ? _pTexture->getResidencySerial() : 0u;
     }
 
     expected<void> TextureLoadOperation::runLoad()

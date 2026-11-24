@@ -201,6 +201,11 @@ namespace sw
          *         원본이 없거나 범위나 크기가 틀리거나 RHI 가 거절하면 `Rejected` 입니다.
          */
         [[nodiscard]] RHISubmitResult writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc );
+        /**
+         * @brief GPU 자원을 새로 만들 때마다 오르는 번호입니다(처음 올리기 · 장치 교체 · 크기 바꾸기 — 위쪽 밉 올리기는 아니다). 어느 스레드든 읽습니다.
+         * @details 렌더 타깃에 한 번 구운 쪽이 "내용이 사라졌는가" 를 이 값으로 안다. 핸들 값은 쓰지 않는다 — 새 장치의 핸들 표는 처음부터 다시 세어 같은 값이 나올 수 있다.
+         */
+        [[nodiscard]] uint32 getResidencySerial() const { return _residencySerial.load( std::memory_order_acquire ); }
         /** @brief CPU 픽셀 원본을 가진 텍스처이면 true 입니다. */
         bool                 hasCPUBytes() const { return _cpuBytes.empty() == false; }
         const vector<uint8>& getCPUBytes() const { return _cpuBytes; }
@@ -214,6 +219,8 @@ namespace sw
          *          참조가 0 인 CPU 텍스처는 GPU 자원이 없다는 캐시의 불변식을 지키기 위해서입니다.
          */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
+        /** @brief 아무도 쓰지 않아 GPU 자원을 내립니다(캐시의 참조가 0 — CPU 텍스처는 원본이 남는다). 장치 통보(`releaseRHI`)와 달리 새 장치에서 되살리지 않습니다. */
+        void releaseUnused( IRHIDevice* pDevice );
         /** @brief 디바이스가 바뀔 때 파일을 다시 읽어야 하는 텍스처(DDS)면 워커에서 미리 읽어 둡니다(`RHIRenderResource::prepareRHI`). */
         void prepareRHI() override;
 
@@ -314,9 +321,11 @@ namespace sw
         uint32                   _streamedMipCount;    ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
         int32                    _qualityMipDrop{ 0 }; ///< 마지막 업로드가 받은 텍스처 품질(버린 위쪽 밉 수) — 장치를 다시 세울 때(`initRHI`) 같은 품질로 다시 올린다
         RHIFormat                _format;
-        uint8                    _bRenderTarget;              ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
-        vector<uint8>            _cpuBytes;                   ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
-        unique_ptr<DDSImageData> _pPreparedImage;             ///< `prepareRHI` 가 워커에서 읽어 둔 DDS(다음 `initRHI` 가 올리고 놓는다)
-        uint8                    _bPrepareFailed{ SW_FALSE }; ///< `prepareRHI` 가 읽지 못했다(까닭은 그때 로그로 남겼다) - `initRHI` 가 다시 읽지 않는다
+        uint8                    _bRenderTarget;                  ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
+        vector<uint8>            _cpuBytes;                       ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
+        unique_ptr<DDSImageData> _pPreparedImage;                 ///< `prepareRHI` 가 워커에서 읽어 둔 DDS(다음 `initRHI` 가 올리고 놓는다)
+        atomic<uint32>           _residencySerial{ 0 };           ///< 업로드가 끝날 때마다 오른다(`getResidencySerial`)
+        uint8                    _bRestoreCPUTexture{ SW_FALSE }; ///< CPU 텍스처가 올라가 있던 채 장치가 내려갔다 — `initRHI` 가 새 장치에 다시 올린다
+        uint8                    _bPrepareFailed{ SW_FALSE };     ///< `prepareRHI` 가 읽지 못했다(까닭은 그때 로그로 남겼다) - `initRHI` 가 다시 읽지 않는다
     };
 } // namespace sw

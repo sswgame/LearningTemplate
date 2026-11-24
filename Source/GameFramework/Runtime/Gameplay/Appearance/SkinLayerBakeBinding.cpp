@@ -140,7 +140,7 @@ namespace sw
     {
         if ( set._listHandle.empty() || set._listHandle.front().isReady() == false )
             return 0;
-        return set._listHandle.front().getOperation()->getResidentIdentity(); // GPU 핸들 값 — 게임은 RHI · Texture2D 를 모르고 같은지만 본다
+        return set._listHandle.front().getOperation()->getResidentIdentity(); // 올라간 텍스처의 번호 — 게임은 RHI · Texture2D 를 모르고 같은지만 본다
     }
 
     bool SkinLayerBakeBinding::areInputsReady( const BakeSet& set )
@@ -184,7 +184,6 @@ namespace sw
         // 1) 맡긴 굽기가 그려졌으면 머티리얼을 새 결과로 바꾼다 — 그 전에는 옛 결과를 그린다.
         if ( _pending._key != 0 && _pending._bSubmitted == SW_TRUE && pCache->wasLayerBakedAfter( _pending._albedoPath, _pending._submitSerial ) )
         {
-            _pending._bakedHandle = findResultHandle( _pending );
             instance.setTextureParameter( hashed_string( kAlbedoParameter ), _pending._albedoPath );
             instance.setTextureParameter( hashed_string( kSurfaceParameter ), _pending._surfacePath );
             _applied = std::move( _pending ); // 옛 결과의 핸들은 여기서 놓인다(다른 캐릭터가 쥐지 않았으면 해제)
@@ -238,6 +237,7 @@ namespace sw
         if ( _pending._key != 0 && _pending._bSubmitted == SW_FALSE && areInputsReady( _pending ) )
         {
             _pending._submitSerial = pCache->getLayerBakeSerial();
+            _pending._bakedHandle  = findResultHandle( _pending ); // 맡길 때의 타깃 — 그 사이 장치가 바뀌면 아래에서 머티리얼을 바꾼 뒤 2) 가 다시 굽는다
             pCache->requestLayerBake( _pending._request );
             _pending._bSubmitted = SW_TRUE;
         }
