@@ -14,6 +14,7 @@ namespace sw
         : _listSlot{}
         , _listLiveSlot{}
         , _listFreeSlot{}
+        , _mapSlotByToken{}
         , _mapSlotByAddress{}
     {
     }
@@ -24,6 +25,7 @@ namespace sw
     {
         _listSlot.clear();
         _listSlot.resize( static_cast<size_t>( slotCount > 0 ? slotCount : 0 ) );
+        _mapSlotByToken.clear();
         _mapSlotByAddress.clear();
         _mapSlotByAddress.reserve( _listSlot.size() * 2 );
         _listLiveSlot.clear();
@@ -54,7 +56,10 @@ namespace sw
         const optional<size_t> livePosition = findLive( slotIndex );
         SW_ASSERT( livePosition.has_value() && "NetSlotTable::close takes a live slot" );
         _listLiveSlot.erase( _listLiveSlot.begin() + static_cast<std::ptrdiff_t>( *livePosition ) );
-        NetEndpointSlot& slot = _listSlot[static_cast<size_t>( slotIndex )];
+        NetEndpointSlot& slot      = _listSlot[static_cast<size_t>( slotIndex )];
+        const auto       tokenIter = _mapSlotByToken.find( static_cast<uint32>( slot.getConnectionToken() ) );
+        if ( tokenIter != _mapSlotByToken.end() && tokenIter->second == slotIndex )
+            _mapSlotByToken.erase( tokenIter );
         slot._state           = NetConnectionState::Disconnected;
         slot._bReleasePending = bHoldUntilReleased ? SW_TRUE : SW_FALSE;
         slot._connection.reset();
@@ -146,6 +151,19 @@ namespace sw
         if ( iter == _mapSlotByAddress.end() )
             return nullopt;
         return iter->second;
+    }
+
+    optional<int32> NetSlotTable::findByToken( uint32 connectionToken ) const
+    {
+        const auto iter = _mapSlotByToken.find( connectionToken );
+        if ( iter == _mapSlotByToken.end() )
+            return nullopt;
+        return iter->second;
+    }
+
+    void NetSlotTable::bindToken( int32 slotIndex )
+    {
+        _mapSlotByToken.emplace( static_cast<uint32>( _listSlot[static_cast<size_t>( slotIndex )].getConnectionToken() ), slotIndex );
     }
 
     void NetSlotTable::bindAddress( int32 slotIndex, const NetAddress& address )

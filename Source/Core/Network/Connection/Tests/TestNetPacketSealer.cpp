@@ -7,6 +7,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Tests/NetTestUtil.h"
+#include "Core/Network/Transport/NetTransport.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
@@ -200,6 +201,24 @@ namespace
             (void)outSignatureBytes;
             return false;
         }
+    };
+
+    /** @brief 클라이언트의 전송입니다 — NAT 재매핑(`_pCurrent` 를 바꾼다)과 가로챈 패킷을 남의 주소로 다시 보내는 공격(`_pRelay`)을 흉내 낸다. */
+    class ReboundTransport final : public INetTransport
+    {
+    public:
+        vector<uint8>      _lastBytes{};
+        LoopbackTransport* _pCurrent{ nullptr };
+        LoopbackTransport* _pRelay{ nullptr }; ///< 있으면 보내는 것만 이 주소에서 나간다
+
+        bool send( const NetAddress& to, const uint8* pData, int32 size ) override
+        {
+            _lastBytes.assign( pData, pData + size );
+            return ( _pRelay != nullptr ? _pRelay : _pCurrent )->send( to, pData, size );
+        }
+        bool       receive( NetAddress& outFrom, vector<uint8>& outBuffer ) override { return _pCurrent->receive( outFrom, outBuffer ); }
+        NetAddress getLocalAddress() const override { return _pCurrent->getLocalAddress(); }
+        void       update( float64 time ) override { _pCurrent->update( time ); }
     };
 
     struct NetPacketSealerTestInternal
@@ -406,4 +425,68 @@ SW_TEST_CASE( NetPacketSealerTest, EncryptedEndpointsExchangeAndReconnectWithFre
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), cluster.getServer().getAuthenticationFailureCount() );
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), cluster.getClient( 0 ).getAuthenticationFailureCount() );
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), cluster.getServer().getReplayRejectedCount() );
+}
+
+/** @brief [NetPacketSealerTest] 클라이언트의 주소가 바뀌면(이동망 · NAT 재매핑) 서버가 새 주소를 확인하고 연결을 이어 간다 — 주소로만 찾으면 5 초 뒤 끊긴다 */
+SW_TEST_CASE( NetPacketSealerTest, EncryptedConnectionFollowsTheClientToANewAddress )
+{
+    MixingSecurityProvider provider;
+    NetEndpointConfig      settings;
+    settings._debugHold           = NetDebugHold::Off;
+    settings._security._mode      = NetSecurityMode::Encrypted;
+    settings._security._pProvider = &provider;
+    LoopbackNetwork    network;
+    LoopbackTransport* pServerTransport = network.createEndpoint( 4000 );
+    LoopbackTransport* pOldTransport    = network.createEndpoint( 4001 );
+    LoopbackTransport* pNewTransport    = network.createEndpoint( 4002 );
+    LoopbackTransport* pOtherTransport  = network.createEndpoint( 4003 ); // 공격자
+    ReboundTransport   clientTransport;
+    clientTransport._pCurrent = pOldTransport;
+    NetEndpoint server;
+    NetEndpoint client;
+    SW_REQUIRE_TRUE( server.initialize( pServerTransport, settings ) );
+    SW_REQUIRE_TRUE( client.initialize( &clientTransport, settings ) );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64    time = 0.0;
+    const auto run  = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            client.update( time );
+            server.update( time );
+        }
+    };
+    run( 0.5 );
+    SW_REQUIRE_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( server.getConnectionAddress( 0 ) == NetAddress::makeLoopback( 4001 ) );
+
+    clientTransport._pCurrent = pNewTransport;
+    run( 10.0 );
+    SW_REQUIRE_TRUE( server.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_REQUIRE_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( server.getConnectionAddress( 0 ) == NetAddress::makeLoopback( 4002 ) );
+    SW_REQUIRE_TRUE( server.sendMessage( 0, NetChannelKind::ReliableOrdered, test::NetTestUtil::makeMessage( 77 ) ) );
+    run( 0.3 );
+    int32          connectionID = -1;
+    NetChannelKind channel      = NetChannelKind::Unreliable;
+    vector<uint8>  buffer;
+    SW_REQUIRE_TRUE( client.receiveMessage( connectionID, channel, buffer ) );
+    SW_EXPECT_EQUAL( 77, test::NetTestUtil::readMessageValue( buffer ) );
+
+    // 가로챈 진짜 패킷이 남의 주소에서 온다 — 경로 확인에 답하지 못하므로 트래픽을 돌리지 못한다.
+    clientTransport._pRelay = pOtherTransport;
+    run( 3.0 );
+    SW_EXPECT_TRUE( server.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( server.getConnectionAddress( 0 ) == NetAddress::makeLoopback( 4002 ) );
+    clientTransport._pRelay = nullptr;
+    run( 1.0 );
+    // 이미 받은 패킷을 다시 보내면 재전송 창이 거른다 — 묻지도 않는다.
+    const uint64 replayedCount = server.getReplayRejectedCount();
+    SW_EXPECT_TRUE( pOtherTransport->send( NetAddress::makeLoopback( 4000 ), clientTransport._lastBytes.data(), static_cast<int32>( clientTransport._lastBytes.size() ) ) );
+    run( 0.5 );
+    SW_EXPECT_EQUAL( replayedCount + 1, server.getReplayRejectedCount() );
+    SW_EXPECT_TRUE( server.getConnectionAddress( 0 ) == NetAddress::makeLoopback( 4002 ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), server.getAuthenticationFailureCount() );
 }

@@ -18,6 +18,11 @@
  *          응답은 값을 만든 윈도우와 그다음 윈도우 안(`NetChallenge::kWindowSeconds` 의 1~2배)에만 유효하다.
  *          값은 비밀 키의 SipHash 이고(`NetChallenge`), 위조한 주소로 슬롯을 채우는 공격을 막는 데까지만 쓴다.
  *
+ *          **주소가 바뀐 연결**(암호화 방식): 이동망 전환 · NAT 재매핑으로 클라이언트의 주소가 바뀌면 서버는 연결 값으로 슬롯을 찾고, 새 주소에서 온 패킷이 AEAD 로
+ *          열리면(위조가 아니다) 그 주소로 봉인한 경로 확인(`PathProbe`)을 보낸다. 같은 값의 답이 그 주소에서 와야 연결의 주소를 옮긴다 — 가로챈 패킷을 남의 주소로 다시 보내
+ *          그리로 트래픽을 돌리는 공격을 막는다(QUIC 연결 이동, RFC 9000 8.2 · 9.3). 확인 전에는 옛 주소로 보낸다. 평문 방식(개발용)은 패킷이 진짜인지 알 수 없어 옮기지 않는다.
+ *          샤드가 포트를 나누는 서버(`SO_REUSEPORT`)에서는 커널이 새 주소를 다른 샤드에 줄 수 있고, 그때는 타임아웃 뒤 다시 붙는다.
+ *
  *          **닫기**: 끊김 알림은 확인이 없어 묶음으로 잃으면 상대가 타임아웃까지 멈춘다. 그래서 알림을 보내고 닫은 연결은 그 바이트를 타임아웃만큼 들고,
  *          닫힌 줄 모르는 상대의 패킷이 오면 다시 보낸다(QUIC 의 닫기 상태, RFC 9000 10.2.1 — 간격을 두어 답한다).
  *
@@ -319,6 +324,7 @@ namespace sw
             Denied,
             Payload,
             Disconnect,
+            PathProbe, ///< 봉인한 64 비트 값 — 서버가 새 주소로 묻고 클라이언트가 그대로 되돌린다
             Count
         };
 
@@ -504,6 +510,7 @@ namespace sw
          */
         struct SealedDatagram
         {
+            NetAddress                            _from{};
             const uint8*                          _pBody{ nullptr };     ///< 체크섬 헤더 뒤의 본문
             uint64                                _connectionToken{ 0 }; ///< 확인한 때의 연결 값. 연 뒤에 슬롯이 아직 이 연결인지 본다
             optional<NetPacketSealer::OpenResult> _result{};             ///< 비어 있으면 받는 키가 없었다(그사이 닫혔다)
@@ -573,8 +580,14 @@ namespace sw
         [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<NetSlotSecurity>& outSecurity ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 수락의 공개 키와 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false 를 반환합니다. */
         [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetEndpointSlot& slot, int32 slotIndex, uint32 serverIndex ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
-        int32 sendSealed( NetEndpointSlot& slot, PacketKind type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 봉인하는 종류인가입니다(데이터 · 끊기 · 경로 확인). */
+        static bool isSealed( PacketKind type ) { return type == PacketKind::Payload || type == PacketKind::Disconnect || type == PacketKind::PathProbe; }
+        /** @brief 새 주소 @p from 에서 온 진짜 패킷입니다 — 그 주소로 경로 확인을 보냅니다(재요청 간격마다 한 번). */
+        void probePath( float64 nowSeconds, NetEndpointSlot& slot, const NetAddress& from ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 연 경로 확인을 처리합니다 — 클라이언트는 그대로 되돌리고, 서버는 묻고 있던 주소에서 온 같은 값이면 연결을 그 주소로 옮깁니다. */
+        void handlePathProbe( int32 slotIndex, const NetAddress& from, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 봉인하는 종류의 패킷을 만들어 @p to 로 보냅니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
+        int32 sendSealed( NetEndpointSlot& slot, const NetAddress& to, PacketKind type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)의 슬롯 · 연결 값을 확인해 `_listSealed` 에 넣습니다. 여는 것은 잠금 밖(`openSealedPackets`)이다. */
         void queueSealedPacket( float64 nowSeconds, PacketKind type, const NetAddress& from, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 잠금 밖에서 연 데이터그램 하나를 처리합니다. 슬롯이 그사이 닫혔거나 다른 연결이면 버립니다. */
