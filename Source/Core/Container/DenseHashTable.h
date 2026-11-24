@@ -208,39 +208,7 @@ namespace sw::internal
             {
                 if ( _listDenseData[currentIndex]._tag == tag && get_equal()( _listDenseData[currentIndex].getKey(), key ) )
                 {
-                    bumpIteratorGeneration(); // 지운 자리로 마지막 원소가 옮겨 온다 — 옛 이터레이터가 다른 원소를 가리키게 된다
-                    // 버킷 체인에서 분리한다
-                    if ( previousIndex == kEmptySlot )
-                        _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
-                    else
-                        _listDenseData[previousIndex]._next = _listDenseData[currentIndex]._next;
-
-                    const uint32 lastIndex = static_cast<uint32>( _listDenseData.size() - 1 );
-                    if ( currentIndex != lastIndex )
-                    {
-                        // 마지막 원소를 currentIndex 위치로 옮긴다.
-                        _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
-
-                        // lastIndex 를 가리키던 버킷 체인이 currentIndex 를 가리키게 바꾼다. 옮겨 온 노드의 태그로 버킷을 구한다(키를 다시 해시하지 않는다).
-                        const size_t lastBucketIndex   = computeBucketIndex( _listDenseData[currentIndex]._tag, _listBucket.size() );
-                        uint32       lastCurrentIndex  = _listBucket[lastBucketIndex];
-                        uint32       lastPreviousIndex = kEmptySlot;
-                        while ( lastCurrentIndex != kEmptySlot )
-                        {
-                            if ( lastCurrentIndex == lastIndex )
-                            {
-                                if ( lastPreviousIndex == kEmptySlot )
-                                    _listBucket[lastBucketIndex] = currentIndex;
-                                else
-                                    _listDenseData[lastPreviousIndex]._next = currentIndex;
-                                break;
-                            }
-                            lastPreviousIndex = lastCurrentIndex;
-                            lastCurrentIndex  = _listDenseData[lastCurrentIndex]._next;
-                        }
-                    }
-
-                    _listDenseData.pop_back();
+                    removeNode( currentIndex, previousIndex, bucketIndex );
                     return 1;
                 }
                 previousIndex = currentIndex;
@@ -385,6 +353,23 @@ namespace sw::internal
             return { newIndex, true };
         }
 
+        /**
+         * @brief 밀집 배열 번호로 노드를 지웁니다 — 이터레이터로 지우는 길이다. 키를 다시 해시하거나 견주지 않고 노드가 든 태그로 버킷을 찾아 체인에서 번호만 찾는다
+         *        (표준의 `erase( const_iterator )` 가 평균 O(1) 이고 키를 비교하지 않는 것과 같다).
+         */
+        void eraseAt( size_t index )
+        {
+            SW_CHECK_INDEX( index, _listDenseData.size() );
+            const uint32 targetIndex   = static_cast<uint32>( index );
+            const size_t bucketIndex   = computeBucketIndex( _listDenseData[targetIndex]._tag, _listBucket.size() );
+            uint32       previousIndex = kEmptySlot;
+            for ( uint32 currentIndex = _listBucket[bucketIndex]; currentIndex != targetIndex; currentIndex = _listDenseData[currentIndex]._next )
+            {
+                previousIndex = currentIndex;
+            }
+            removeNode( targetIndex, previousIndex, bucketIndex );
+        }
+
         /** @brief 원소 수가 버킷 수에 닿으면(부하율 1) 버킷을 두 배로 늘립니다. 버킷이 없으면 최소 개수로 만듭니다. */
         void check_expand()
         {
@@ -393,6 +378,44 @@ namespace sw::internal
         }
 
     private:
+        /** @brief 노드 @p currentIndex 를 체인(@p previousIndex 다음, 없으면 버킷 머리)에서 떼고 밀집 배열의 마지막 노드를 그 자리로 옮깁니다. */
+        void removeNode( uint32 currentIndex, uint32 previousIndex, size_t bucketIndex )
+        {
+            bumpIteratorGeneration(); // 지운 자리로 마지막 원소가 옮겨 온다 — 옛 이터레이터가 다른 원소를 가리키게 된다
+            // 버킷 체인에서 분리한다
+            if ( previousIndex == kEmptySlot )
+                _listBucket[bucketIndex] = _listDenseData[currentIndex]._next;
+            else
+                _listDenseData[previousIndex]._next = _listDenseData[currentIndex]._next;
+
+            const uint32 lastIndex = static_cast<uint32>( _listDenseData.size() - 1 );
+            if ( currentIndex != lastIndex )
+            {
+                // 마지막 원소를 currentIndex 위치로 옮긴다.
+                _listDenseData[currentIndex] = std::move( _listDenseData[lastIndex] );
+
+                // lastIndex 를 가리키던 버킷 체인이 currentIndex 를 가리키게 바꾼다. 옮겨 온 노드의 태그로 버킷을 구한다(키를 다시 해시하지 않는다).
+                const size_t lastBucketIndex   = computeBucketIndex( _listDenseData[currentIndex]._tag, _listBucket.size() );
+                uint32       lastCurrentIndex  = _listBucket[lastBucketIndex];
+                uint32       lastPreviousIndex = kEmptySlot;
+                while ( lastCurrentIndex != kEmptySlot )
+                {
+                    if ( lastCurrentIndex == lastIndex )
+                    {
+                        if ( lastPreviousIndex == kEmptySlot )
+                            _listBucket[lastBucketIndex] = currentIndex;
+                        else
+                            _listDenseData[lastPreviousIndex]._next = currentIndex;
+                        break;
+                    }
+                    lastPreviousIndex = lastCurrentIndex;
+                    lastCurrentIndex  = _listDenseData[lastCurrentIndex]._next;
+                }
+            }
+
+            _listDenseData.pop_back();
+        }
+
         /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞으므로 64비트 해시의 위쪽 비트도 버킷과 태그 비교에 반영됩니다. */
         static uint32 makeTag( size_t hash ) noexcept
         {

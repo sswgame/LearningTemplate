@@ -1640,6 +1640,44 @@ SW_TEST_CASE( UnorderedMapTest, FindOrInsertHashesTheKeyOnce )
 }
 
 /**
+ * @brief [UnorderedMapTest] 이터레이터로 지우면 키를 해시하지 않고, 돌며 지운 뒤에도 남은 원소가 모두 찾힌다
+ * @details 예전에는 이터레이터가 가리키는 키로 다시 찾아 지웠다(해시 + 체인의 키 비교).
+ */
+SW_TEST_CASE( UnorderedMapTest, EraseByIteratorDoesNotHashTheKey )
+{
+    uint32                                    hashCount = 0;
+    sw::unordered_map<HashCountingKey, int32> mapValue;
+    static constexpr int32                    kKeyCount = 100;
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        mapValue.try_emplace( HashCountingKey{ value, &hashCount }, value );
+
+    hashCount = 0;
+    for ( auto it = mapValue.begin(); it != mapValue.end(); )
+    {
+        if ( it->second % 3 == 0 )
+            it = mapValue.erase( it );
+        else
+            ++it;
+    }
+    SW_EXPECT_EQUAL( 0u, hashCount );
+    for ( int32 value = 0; value < kKeyCount; ++value )
+    {
+        const auto found = mapValue.find( HashCountingKey{ value, &hashCount } );
+        SW_EXPECT_EQUAL( value % 3 != 0, found != mapValue.end() );
+        SW_EXPECT_TRUE( found == mapValue.end() || found->second == value );
+    }
+
+    sw::unordered_set<int32> setValue;
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        setValue.insert( value );
+    for ( auto it = setValue.begin(); it != setValue.end(); )
+        it = *it % 2 == 0 ? setValue.erase( it ) : ++it;
+    SW_EXPECT_EQUAL( static_cast<size_t>( kKeyCount / 2 ), setValue.size() );
+    for ( int32 value = 0; value < kKeyCount; ++value )
+        SW_EXPECT_EQUAL( value % 2 != 0, setValue.contains( value ) );
+}
+
+/**
  * @brief [UnorderedSetTest] `unordered_set` 도 `shrink_to_fit` 으로 버퍼를 놓는다(`unordered_map` 과 같은 몸통) — 비운 뒤 놓고 다시 채워도 조회가 맞는다.
  */
 SW_TEST_CASE( UnorderedSetTest, ShrinkToFitKeepsLookupsCorrect )

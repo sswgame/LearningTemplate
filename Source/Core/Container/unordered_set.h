@@ -184,7 +184,9 @@ namespace sw
         {
             if ( pos == end() )
                 return end();
-            erase( *pos );
+            (void)*pos; // 낡은 이터레이터면 여기서 단언한다(세대 검사)
+            SW_SCOPED_RACE_WRITE();
+            this->eraseAt( pos._index );
             return iterator( this, pos._index );
         }
     };
