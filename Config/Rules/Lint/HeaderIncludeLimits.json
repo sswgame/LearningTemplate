@@ -4,6 +4,7 @@
         "Engine/Object/Component/Component.h": {"_limit": 10, "_reason": "틱 컨텍스트를 전방 선언으로 받는다(TickContext.h 사슬 다섯 개를 뺐다)"},
         "Engine/Object/GameObject/Registry/TagIndex.h": {"_limit": 7, "_reason": "오브젝트를 포인터로만 들어 GameObject.h 대신 ObjectFwd.h 를 포함한다"},
         "Engine/Reflection/EnumInfo.h": {"_limit": 4, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않는다 — 함수 호출 형식이 필요한 FunctionInfo.h 만 포함한다"},
+        "Engine/Reflection/TypeRegistry.h": {"_limit": 5, "_reason": "형식 정보를 포인터로만 다룬다 — TypeInfo.h · ReflectionCast.h 대신 ReflectionFwd.h, 멤버를 읽는 몸통은 cpp, 생성 코드의 등록자는 TypeRegistrar.h"},
         "Engine/Reflection/PropertyInfo.h": {"_limit": 2, "_reason": "태스크 형식(TaskTypes.h)을 쓰지 않고, 컨테이너는 종류 열거(ContainerKind.h)와 래퍼 앞선 선언만, 관찰자(IPropertyObserver)는 앞선 선언만 쓴다"},
         "Engine/Reflection/ReflectionMetadataBox.h": {"_limit": 0, "_reason": "상자 템플릿은 EngineMinimal 만 쓴다 — 매크로 · 컨테이너 래퍼 · 글 주소 · 캐스트 머리 포함을 지웠다"},
         "Engine/Reflection/EnumName.h": {"_limit": 7, "_reason": "열거 이름은 EnumInfo 만 본다 — TypeRegistry.h 대신 EnumInfo.h · TypeFqn.h · TypeLookupCache.h 를 포함한다"},

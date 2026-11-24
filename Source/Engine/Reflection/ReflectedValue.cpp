@@ -15,6 +15,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

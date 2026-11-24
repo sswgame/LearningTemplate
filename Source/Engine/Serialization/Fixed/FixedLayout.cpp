@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/FixedFieldDesc.h"
 

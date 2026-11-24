@@ -17,6 +17,7 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneObjectHash.h"
 

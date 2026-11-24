@@ -17,6 +17,7 @@
 #include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/Serializer.h"
