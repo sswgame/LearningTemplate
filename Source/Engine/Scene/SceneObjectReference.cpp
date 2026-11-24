@@ -133,7 +133,7 @@ namespace sw
         const uint64 fileID = targetScene.findFileID( objectID );
         if ( fileID == 0 || targetScene.getSourcePath().empty() )
             return false;
-        vector<const Scene*> listScene;
+        vector<Scene*> listScene;
         sceneManager.collectAllScenes( listScene );
         vector<const SceneObjectReference*> listReference;
         ReferenceCollector                  collector( typeRegistry, listReference );

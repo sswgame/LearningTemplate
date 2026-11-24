@@ -238,7 +238,7 @@ namespace sw
             if ( sceneSync == SceneSync::None )
                 return;
             vector<Scene*> listScene;
-            getSubsystem<SceneManager>().collectScenes( listScene );
+            getSubsystem<SceneManager>().collectAllScenes( listScene );
             for ( Scene* const pScene : listScene )
             {
                 if ( pScene->getObjectManager() != nullptr )
@@ -278,7 +278,7 @@ namespace sw
             // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             // 미리보기 씬(열린 프리팹 · 캐릭터 창)도 같다 — 창은 자기 상태를 위 알림에서 맡아 두고 새 이미지로 되돌린다(`EditorPreviewPanel`).
             vector<Scene*> listScene;
-            getSubsystem<SceneManager>().collectScenes( listScene );
+            getSubsystem<SceneManager>().collectAllScenes( listScene );
             for ( Scene* const pScene : listScene )
             {
                 if ( pScene->getObjectManager() == nullptr )
