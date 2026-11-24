@@ -136,10 +136,10 @@ else()
 endif()
 
 # 교착 탐지는 빌드 옵션이 아니다 — 배포가 아닌 구성에 늘 컴파일하고 시작 인자 `-deadlock-detection` 으로 켠다(Core/Concurrency/mutex.h).
-# 이 매크로는 헤더(컨테이너 할당자)에 영향을 주므로 모든 타겟에 동일하게 적용해야 한다.
+# 이 매크로는 헤더(컨테이너 저장 · 할당자)에 영향을 주므로 모든 타겟에 동일하게 적용해야 한다.
 if(SW_ENABLE_STL_CONTAINER)
 	target_compile_definitions(sw_global_options INTERFACE SW_ENABLE_STL_CONTAINER)
-	message(STATUS "[BuildConfig] SW_ENABLE_STL_CONTAINER=ON -> Using std::allocator as the container allocator")
+	message(STATUS "[BuildConfig] SW_ENABLE_STL_CONTAINER=ON -> Container storage and allocator are the std ones")
 endif()
 
 

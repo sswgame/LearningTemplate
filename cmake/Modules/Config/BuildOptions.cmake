@@ -85,7 +85,7 @@ option(SW_VCPKG_FORCE_INSTALL "설치 트리 및 스탬프가 일치해도 vcpkg
 # 3) 디버깅 및 진단 도구 옵션
 # ------------------------------------------------------------------------------
 option(SW_ENABLE_LTO "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화" ON)
-option(SW_ENABLE_STL_CONTAINER "컨테이너의 기본 할당자를 엔진 할당자 대신 std::allocator 로 바꾼다(컨테이너 형식은 두 구성에서 같다)" OFF)
+option(SW_ENABLE_STL_CONTAINER "std 짝이 있는 컨테이너의 저장과 기본 할당자를 std 구현으로 바꾼다(공개 형식 · API 는 같다 — Source/Core/Container/Std)" OFF)
 option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)
 
 # Release · Shipping 의 디버그 정보 — lines(함수 · 줄 표만: 크래시 스택이 이름 · 줄을 낸다) | full(지역 변수까지, 오브젝트 · 캐시 · 링크가 크게 는다) | none.
