@@ -1,6 +1,6 @@
 /**
  * @file AsyncLogSink.h
- * @brief 기본 로그 싱크입니다. 포맷 · 타임스탬프 · 리스너 · 비동기 큐를 맡고, 한 줄은 출력 장치(`ILogOutput`)에 넘깁니다.
+ * @brief 기본 로그 싱크입니다. 포맷 · 리스너 · 비동기 큐를 맡고, 한 줄은 출력 장치(`ILogOutput`)에 넘깁니다.
  */
 #pragma once
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
@@ -32,7 +32,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @class AsyncLogSink
-     * @brief 기본 로그 싱크입니다. 포맷 · 타임스탬프 · 리스너 · 비동기 큐를 맡고, **출력은 `ILogOutput` 에 넘깁니다.**
+     * @brief 기본 로그 싱크입니다. 포맷 · 리스너 · 비동기 큐를 맡고, **출력은 `ILogOutput` 에 넘깁니다.**
      * @details 장치마다 자기 락을 가지므로 파일 I/O 가 느려도 콘솔이 멈추지 않습니다. 기본으로 콘솔 · 파일 출력을 하나씩 달고
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
      *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
@@ -58,8 +58,8 @@ namespace sw
         /** @brief 큐를 모두 비우고 작업 스레드를 안전하게 끝냅니다. */
         void shutdown() override;
 
-        /** @brief 한 줄을 포맷해 리스너와 출력 장치에 넘깁니다. */
-        void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
+        /** @brief 사건을 포맷해 리스너와 출력 장치에 넘깁니다(큐에 넣거나 바로 쓴다). */
+        void writeEvent( const LogEvent& event ) override;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 어느 스레드에서나 부를 수 있습니다(`LockedMulticastDelegate`). */
         Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
 
@@ -97,8 +97,6 @@ namespace sw
         void flushQueue();
         /** @brief 장치마다 쌓인 버퍼를 디스크로 내보냅니다(작업 스레드가 쉬는 동안 간격마다 부른다). */
         void flushOutputs();
-        /** @brief 타임스탬프를 붙여 큐에 넣거나 바로 씁니다. */
-        void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
         /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */
         void submitRecord( LogRecord&& record );
         /** @brief 작업 스레드가 잠들었거나 잠들려 하면 깨웁니다(큐에 넣은 뒤 · 큐가 차 자리를 기다릴 때). */

@@ -47,7 +47,7 @@ namespace sw::editor
             {
                 if ( entry._level != LogLevel::Warning && entry._level != LogLevel::Error )
                     return;
-                if ( entry._context._traceID != _traceID )
+                if ( entry._stamp._context._traceID != _traceID )
                     return;
                 ScopedLock<mutex> lock{ _mutex };
                 _listWarning.push_back( entry._message );

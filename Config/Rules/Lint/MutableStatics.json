@@ -54,6 +54,8 @@
         "Source/Core/Foundation/Macros.cpp|s_dialogState": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다.",
         "Source/Core/Foundation/Macros.cpp|s_lowLevelReporterSlot": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다.",
         "Source/Core/GlobalVariable/GlobalVariableManager.cpp|s_pathBaseDirectory": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 경로 기준은 그 입구가 쓰는 프로세스 칸이다(글 변수 잠금은 변수가 가진다 — `GlobalString`).",
+        "Source/Core/Log/LogEvent.cpp|s_nextLogSequence": "로그 바닥 — 줄을 남긴 순서는 프로세스에 하나다. SW_LOG 는 서비스 범위가 서기 전 · 내린 뒤에도 불리고 그 줄도 같은 순서에 선다. 상수 초기화 원자 칸이다.",
+        "Source/Core/Log/LogEvent.cpp|s_nextLogThreadID": "스레드 번호 공간 — 스레드는 프로세스의 것이라 주인 범위가 없다(thread_local 칸이 이 번호를 받는다). 상수 초기화 원자 칸이다.",
         "Source/Core/Log/LogOnce.cpp|s_state": "수명 범위 소유 칸 — 저장소는 엔진 수명 범위(ScopeOwned)가 소유하고 엔진 종료 때 사라진다. 이름 풀 · 태그 · 한 번 알림은 Core 아래 층에서 문맥 없이 불려 서비스 범위에 둘 수 없다.",
         "Source/Core/Log/Logger.cpp|s_arrBacklog": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리).",
         "Source/Core/Log/Logger.cpp|s_backlogCount": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리).",

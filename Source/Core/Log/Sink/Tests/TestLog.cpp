@@ -26,6 +26,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 #include "Core/Testing/ThreadTestAccess.h"
+#include "Core/Time/WallClock.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -472,6 +473,120 @@ SW_TEST_CASE( LogTest, DeferredLinesAppearAfterTheOutermostLockIsReleased )
     SW_EXPECT_EQUAL( 3u, capture.getCount() );
 }
 
+namespace
+{
+    /** @brief 스코프 끝에서 시계 번호를 해제합니다. */
+    struct ClockNumberReset
+    {
+        ClockNumberReset()                                     = default;
+        ClockNumberReset( const ClockNumberReset& )            = delete;
+        ClockNumberReset& operator=( const ClockNumberReset& ) = delete;
+        ~ClockNumberReset() { sw::Logger::clearClockNumber(); }
+    };
+} // namespace
+
+/**
+ * @brief [LogTest] 미룬 줄의 시각 · 시계 · 스레드 · 문맥 · 순번은 남긴 순간의 것이다 — 나중에 닿아도 그 사이 다른 스레드가 남긴 줄보다 앞이다
+ */
+SW_TEST_CASE( LogTest, DeferredLineKeepsTheMomentItWasLogged )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+    const ClockNumberReset clockReset;
+
+    sw::LogContext context;
+    context._principalID = 0x42;
+    sw::Logger::setClockNumber( sw::LogClock::Frame, 10 );
+    const sw::UnixMilliseconds loggedFrom = sw::WallClock::nowUnixMilliseconds();
+    sw::UnixMilliseconds       loggedTo   = loggedFrom;
+    {
+        const sw::ScopedDeferredLog deferredLog;
+        {
+            const sw::ScopedLogContext contextScope{ context };
+            SW_LOG_INFO_ID( "TestLog.DeferredMoment", "%#deferred", kCapturePrefix );
+        }
+        loggedTo = sw::WallClock::nowUnixMilliseconds();
+        SW_REQUIRE_TRUE( sw::test::waitUntil( [loggedTo]()
+        { return sw::WallClock::nowUnixMilliseconds() > loggedTo; } ) ); // 쓰는 순간의 시각이 남긴 순간과 갈린다
+        sw::Logger::setClockNumber( sw::LogClock::Frame, 11 );
+        sw::thread other( sw::ThreadTestAccess::getKey(), []()
+        { SW_LOG_INFO_ID( "TestLog.DeferredMoment", "%#other", kCapturePrefix ); } );
+        other.join();
+        SW_REQUIRE_EQUAL( 1u, capture.getCount() ); // 다른 스레드의 줄은 미루지 않는다
+    }
+    SW_REQUIRE_EQUAL( 2u, capture.getCount() );
+    const sw::LogEntry& other    = capture.getEntries()[0];
+    const sw::LogEntry& deferred = capture.getEntries()[1];
+    SW_REQUIRE_TRUE( deferred._message == "[TestLog] deferred" );
+
+    SW_EXPECT_TRUE( loggedFrom <= deferred._stamp._time && deferred._stamp._time <= loggedTo );
+    SW_EXPECT_TRUE( deferred._stamp._time < other._stamp._time );
+    SW_EXPECT_TRUE( deferred._stamp._sequence < other._stamp._sequence );
+    SW_EXPECT_TRUE( deferred._stamp._bHasClock && deferred._stamp._clock == sw::LogClock::Frame );
+    SW_EXPECT_EQUAL( uint64( 10 ), deferred._stamp._clockNumber );
+    SW_EXPECT_EQUAL( uint64( 11 ), other._stamp._clockNumber );
+    SW_EXPECT_EQUAL( uint64( 0x42 ), deferred._stamp._context._principalID );
+    SW_EXPECT_TRUE( other._stamp._context.isEmpty() );
+    SW_EXPECT_TRUE( deferred._stamp._threadID != 0 && deferred._stamp._threadID != other._stamp._threadID );
+}
+
+/**
+ * @brief [LogTest] 크래시 비우기도 미룬 줄을 남긴 순간의 값으로 쓴다 — 범위가 끝날 때 다시 쓰지 않는다
+ */
+SW_TEST_CASE( LogTest, CrashFlushWritesDeferredLinesWithTheirOwnMoment )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+    const ClockNumberReset clockReset;
+    sw::Logger::setClockNumber( sw::LogClock::Tick, 10 );
+    {
+        const sw::ScopedDeferredLog deferredLog;
+        SW_LOG_INFO_ID( "TestLog.DeferredMoment", "%#deferred", kCapturePrefix );
+        const uint64 sequenceAfter = sw::LogStamp::getNextSequence();
+        sw::Logger::setClockNumber( sw::LogClock::Tick, 11 );
+        sw::ScopedDeferredLog::flushForCrash();
+        SW_REQUIRE_EQUAL( 1u, capture.getCount() );
+        SW_EXPECT_EQUAL( uint64( 10 ), capture.getEntries()[0]._stamp._clockNumber );
+        SW_EXPECT_TRUE( capture.getEntries()[0]._stamp._sequence < sequenceAfter );
+    }
+    SW_EXPECT_EQUAL( 1u, capture.getCount() );
+}
+
+/**
+ * @brief [LogTest] 싱크는 받은 사건의 값만 쓴다 — 리스너 · 비동기 큐를 지난 텍스트 줄이 쓰는 순간의 시계 · 시각을 다시 재지 않는다
+ */
+SW_TEST_CASE( LogTest, SinkWritesTheMomentOfTheEvent )
+{
+    sw::AsyncLogSink                   logger( sw::test::makeScratchPath( "sink.log" ) );
+    sw::unique_ptr<CapturingLogOutput> output     = sw::make_unique<CapturingLogOutput>();
+    CapturingLogOutput* const          pCapturing = output.get();
+    SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
+    sw::vector<sw::LogEntry> listEntry;
+    const sw::Subscription   subscription = logger.registerLogWrittenListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&listEntry]( const sw::LogEntry& entry )
+      { listEntry.push_back( entry ); } ) );
+    logger.initialize();
+
+    const ClockNumberReset clockReset;
+    sw::Logger::setClockNumber( sw::LogClock::Tick, 10 );
+    sw::LogEvent event{ sw::LogLevel::Info, "Test", "moment", __FILE__, __LINE__ };
+    event._stamp._time = sw::UnixMilliseconds{ ( event._stamp._time.toSeconds() - 3600 ) * 1000 + 42 }; // 한 시간 전, 42 ms
+    sw::Logger::setClockNumber( sw::LogClock::Tick, 11 );
+    logger.writeEvent( event );
+    logger.shutdown();
+
+    SW_REQUIRE_EQUAL( size_t( 1 ), listEntry.size() );
+    SW_EXPECT_TRUE( listEntry[0]._stamp._time == event._stamp._time );
+    SW_EXPECT_EQUAL( event._stamp._sequence, listEntry[0]._stamp._sequence );
+    SW_REQUIRE_EQUAL( size_t( 1 ), pCapturing->_listFormatted.size() );
+    const sw::string& line = pCapturing->_listFormatted[0];
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( line, ".042] [Test] [Info] [tick=10] - moment" ), line.c_str() );
+    sw::LocalCalendarTime calendar;
+    SW_REQUIRE_TRUE( sw::WallClock::toLocalCalendar( event._stamp._time.toSeconds(), calendar ) );
+    sw::fixed_string<sw::constant::buffer::kMax64> expectedTime;
+    sw::formatstring( expectedTime.data(), expectedTime.capacity(), "%#-%#-%# %#:%#:%#.042", calendar._year, calendar._month, calendar._day, calendar._hour, calendar._minute, calendar._second );
+    SW_EXPECT_EQUAL( sw::string_view( expectedTime.c_str() ), sw::string_view( listEntry[0]._timeStamp ) );
+}
+
 /**
  * @brief [LogTest] 줄의 범주는 id 의 영역이다(`LogEntry::getCategory`) — 파일마다 등록하는 호출자 이름은 없다
  */
@@ -613,7 +728,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
         }
     }
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ } ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
     logger.shutdown();
 
     // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다.
@@ -644,7 +759,7 @@ SW_TEST_CASE( LogTest, InvalidUTF8ByteIsEscapedNotTheWholeLine )
     CapturingLogOutput*                pCapture = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ } ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
@@ -873,7 +988,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
         SelfLoggingLogOutput*                pLogging = logging.get();
         SW_REQUIRE_TRUE( logger.addOutput( std::move( logging ) ) );
 
-        logger.writeLog( sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ );
+        logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ } );
         logger.shutdown();
 
         SW_EXPECT_EQUAL( 1u, pLogging->_writeCount );
@@ -1027,10 +1142,10 @@ SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
     logger.initialize();
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "TestLog.BlockHere", __FILE__, __LINE__ );
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "TestLog.BlockHere", __FILE__, __LINE__ } );
     SW_REQUIRE_TRUE( sw::test::waitUntil( [pBlocking]()
     { return pBlocking->_bHeld.load(); } ) ); // 작업 스레드가 장치 락을 쥔 채 멈췄다
-    logger.writeLog( sw::LogLevel::Info, "Test", "left in the queue", __FILE__, __LINE__ );
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "left in the queue", __FILE__, __LINE__ } );
 
     logger.flushForCrash();
     const bool bReturnedWhileHeld = pBlocking->_bOpen.load() == false; // 문이 시한으로 열리기 전에 돌아왔다
@@ -1054,7 +1169,7 @@ SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
     logger.initialize();
 
-    logger.writeLog( sw::LogLevel::Info, "Test", "TestLog.BlockHere", __FILE__, __LINE__ );
+    logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "TestLog.BlockHere", __FILE__, __LINE__ } );
     SW_REQUIRE_TRUE( sw::test::waitUntil( [pBlocking]()
     { return pBlocking->_bHeld.load(); } ) );
 
@@ -1065,7 +1180,7 @@ SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
         for ( uint32 index = 0; index < kLineCount; ++index )
         {
             sw::formatstring( arrLine, static_cast<uint32>( sizeof( arrLine ) ), "TestLog.LineOrder %#", index );
-            logger.writeLog( sw::LogLevel::Info, "Test", arrLine, __FILE__, __LINE__ );
+            logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", arrLine, __FILE__, __LINE__ } );
         }
     } );
     sw::ThreadUtil::sleepForMilliseconds( 100 ); // 쓰는 스레드가 큐를 채우고 넘칠 시간 — 짧아도 옳은 구현은 지지 않는다

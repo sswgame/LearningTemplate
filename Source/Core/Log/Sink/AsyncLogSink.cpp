@@ -48,19 +48,19 @@ namespace sw
          */
         struct LogDateCache
         {
-            std::time_t _timeSec{ -1 };
-            int32       _year{ 0 };
-            int32       _month{ 0 };
-            int32       _day{ 0 };
-            int32       _hour{ 0 };
-            utf8        _arrDate[constant::buffer::kMax32]{};
+            int64 _unixSeconds{ -1 };
+            int32 _year{ 0 };
+            int32 _month{ 0 };
+            int32 _day{ 0 };
+            int32 _hour{ 0 };
+            utf8  _arrDate[constant::buffer::kMax32]{};
         };
 
         thread_local LogDateCache t_logDateCache{};
 
         struct AsyncLogSinkInternal
         {
-            /** @brief 로그 줄에 찍는 시각 문자열과, 레코드가 나르는 달력 값(로그 파일 이름용)입니다. */
+            /** @brief 로그 줄에 찍는 시각 문자열(밀리초까지)과, 레코드가 나르는 달력 값(로그 파일 이름용)입니다. */
             struct DateStamp
             {
                 fixed_string<constant::buffer::kMax32> _text{};
@@ -70,47 +70,39 @@ namespace sw
                 int32                                  _hour{ 0 };
             };
 
-            /** @brief 지금 시각을 읽습니다. 같은 초 안에서는 스레드의 캐시 문자열을 재사용합니다. */
-            static DateStamp readDateStamp()
+            /** @brief 사건의 시각 @p time 을 지역 달력 글로 바꿉니다. 같은 초 안에서는 스레드의 캐시를 재사용합니다. */
+            static DateStamp makeDateStamp( UnixMilliseconds time )
             {
-                DateStamp         stamp{};
-                LogDateCache&     cache   = t_logDateCache;
-                const std::time_t timeSec = std::time( nullptr );
-                if ( timeSec == cache._timeSec )
+                DateStamp     stamp{};
+                LogDateCache& cache       = t_logDateCache;
+                const int64   unixSeconds = time.toSeconds();
+                if ( unixSeconds != cache._unixSeconds )
                 {
-                    stamp._text  = cache._arrDate;
-                    stamp._year  = cache._year;
-                    stamp._month = cache._month;
-                    stamp._day   = cache._day;
-                    stamp._hour  = cache._hour;
-                    return stamp;
+                    // 로그 줄은 날짜를 못 바꿔도 남긴다 — 바꾸지 못한 시각(플랫폼 범위 밖)은 0 날짜로 찍혀 눈에 띈다.
+                    LocalCalendarTime localTime{};
+                    (void)WallClock::toLocalCalendar( unixSeconds, localTime );
+                    formatstring( cache._arrDate, sizeof( cache._arrDate ), "%#-%#-%# %#:%#:%#", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute, localTime._second );
+                    cache._unixSeconds = unixSeconds;
+                    cache._year        = localTime._year;
+                    cache._month       = localTime._month;
+                    cache._day         = localTime._day;
+                    cache._hour        = localTime._hour;
                 }
-                // 로그 줄은 날짜를 못 바꿔도 남긴다 — 바꾸지 못한 시각(플랫폼 범위 밖)은 0 날짜로 찍혀 눈에 띈다.
-                LocalCalendarTime localTime{};
-                (void)WallClock::toLocalCalendar( static_cast<int64>( timeSec ), localTime );
-                stamp._year  = localTime._year;
-                stamp._month = localTime._month;
-                stamp._day   = localTime._day;
-                stamp._hour  = localTime._hour;
-
-                formatstring( cache._arrDate, sizeof( cache._arrDate ), "%#-%#-%# %#:%#:%#", stamp._year, stamp._month, stamp._day, stamp._hour, localTime._minute, localTime._second );
-                stamp._text    = cache._arrDate;
-                cache._timeSec = timeSec;
-                cache._year    = stamp._year;
-                cache._month   = stamp._month;
-                cache._day     = stamp._day;
-                cache._hour    = stamp._hour;
+                // 밀리초는 줄마다 다르다 — 미룬 줄이 같은 초 안의 다른 줄보다 먼저 남았는지 글에서도 보인다(언리얼 로그 줄의 밀리초와 같다).
+                formatstring( stamp._text.data(), stamp._text.capacity(), "%#.%03d", cache._arrDate, static_cast<int32>( time.count() % constant::time::kMillisecondsPerSecond ) );
+                stamp._year  = cache._year;
+                stamp._month = cache._month;
+                stamp._day   = cache._day;
+                stamp._hour  = cache._hour;
                 return stamp;
             }
 
-            /** @brief 시계 레이블(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)입니다. 정하지 않았으면 빈 글입니다. */
-            static fixed_string<32> makeClockTag()
+            /** @brief 시계 레이블(`Logger::setClockNumber` — 전용 서버의 틱, 리슨 호스트의 프레임)입니다. 남긴 순간 정하지 않았으면 빈 글입니다. */
+            static fixed_string<32> makeClockTag( const LogStamp& stamp )
             {
                 fixed_string<32> tickTag{};
-                LogClock         clock{ LogClock::Tick };
-                uint64           clockNumber{ 0 };
-                if ( Logger::getClockNumber( clock, clockNumber ) )
-                    formatstring( tickTag.data(), tickTag.capacity(), ( clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", clockNumber );
+                if ( stamp._bHasClock )
+                    formatstring( tickTag.data(), tickTag.capacity(), ( stamp._clock == LogClock::Frame ) ? "[frame=%#] " : "[tick=%#] ", stamp._clockNumber );
                 return tickTag;
             }
 
@@ -223,14 +215,6 @@ namespace sw
 
         _onLogWritten.removeAll(); // 남은 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
         _bInitialized = SW_FALSE;
-    }
-
-    /**
-     * @brief 로그 한 줄을 기록합니다(writeLogInternal 로 넘깁니다).
-     */
-    void AsyncLogSink::writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
-    {
-        writeLogInternal( level, pTag, pMessage, pFile, line, pID );
     }
 
     /**
@@ -478,18 +462,18 @@ namespace sw
         }
     }
 
-    void AsyncLogSink::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID )
+    void AsyncLogSink::writeEvent( const LogEvent& event )
     {
         using Internal = AsyncLogSinkInternal;
         if ( t_reentryDepth.deviceWrite > 0 )
         {
             // 출력 장치가 `write` 안에서 로그를 남겼다 — 장치의 락과 이 줄이 되돌아갈 `write` 가 맞물려 멈추므로 장치를 거치지 않고 stderr 로 바로 쓴다.
             utf8 arrLine[constant::buffer::kMax32]{};
-            formatstring( arrLine, sizeof( arrLine ), "%#", line );
+            formatstring( arrLine, sizeof( arrLine ), "%#", event._line );
             std::fputs( "[Logger] Log written from inside a log output, redirected to stderr: ", stderr );
-            std::fputs( pMessage != nullptr ? pMessage : "", stderr );
+            std::fputs( event._pMessage != nullptr ? event._pMessage : "", stderr );
             std::fputs( " -> ", stderr );
-            std::fputs( pFile != nullptr ? pFile : "", stderr );
+            std::fputs( event._pFile != nullptr ? event._pFile : "", stderr );
             std::fputs( ":", stderr );
             std::fputs( arrLine, stderr );
             std::fputs( "\n", stderr );
@@ -504,28 +488,27 @@ namespace sw
         {
             ++t_reentryDepth.heldLockReport;
             SW_LOW_LEVEL_ASSERT( bLoggedUnderLock == false, "Logged while holding a sw::mutex (%u held) - locks are leaf locks, log after releasing: %s",
-                                 mutex::getHeldLockDepth(), pMessage != nullptr ? pMessage : "" );
+                                 mutex::getHeldLockDepth(), event._pMessage != nullptr ? event._pMessage : "" );
             --t_reentryDepth.heldLockReport;
         }
 #endif
         const ScopedMemoryTag memoryScope{ kMemoryTag };
-        // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
-        const Internal::DateStamp stamp = Internal::readDateStamp();
+        // 1단계: 사건의 시각을 글로 바꾼다(같은 초 안에서는 캐시한 문자열을 재사용한다). 시각 · 시계 · 문맥은 남긴 순간의 것이다 — 여기서 재지 않는다
+        const Internal::DateStamp stamp = Internal::makeDateStamp( event._stamp._time );
 
-        const utf8* pEffectiveTag  = ( StringUtil::isNullOrEmpty( pTag ) ) ? constant::log::kDefaultLogTag : pTag;
-        const utf8* pEffectiveFile = ( StringUtil::isNullOrEmpty( pFile ) ) ? constant::log::kDefaultLogFile : pFile;
-        const utf8* pEffectiveMsg  = ( pMessage != nullptr ) ? pMessage : "";
+        const utf8* pEffectiveTag  = ( StringUtil::isNullOrEmpty( event._pTag ) ) ? constant::log::kDefaultLogTag : event._pTag;
+        const utf8* pEffectiveFile = ( StringUtil::isNullOrEmpty( event._pFile ) ) ? constant::log::kDefaultLogFile : event._pFile;
+        const utf8* pEffectiveMsg  = ( event._pMessage != nullptr ) ? event._pMessage : "";
 
-        // 문맥(요청 추적 id · 주체)은 부른 스레드의 것이라 큐에 넣기 전에 읽는다. 문맥이 없으면 꼬리표가 빈 글이라 줄은 바이트가 같다.
-        const LogContext& context = LogContext::getCurrent();
-        utf8              arrContextTag[LogContext::kMaxTagSize];
-        (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
-        const fixed_string<32> tickTag = Internal::makeClockTag();
+        // 문맥이 없으면 꼬리표가 빈 글이다.
+        utf8 arrContextTag[LogContext::kMaxTagSize];
+        (void)event._stamp._context.formatTag( arrContextTag, LogContext::kMaxTagSize );
+        const fixed_string<32> tickTag = Internal::makeClockTag( event._stamp );
 
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::buffer::kMax8192> formattedBuffer{};
-        const fixed_string<128>                  idTag = Internal::makeIDTag( pID );
-        Internal::formatLine( formattedBuffer, stamp, level, pEffectiveTag, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, line );
+        const fixed_string<128>                  idTag = Internal::makeIDTag( event._pID );
+        Internal::formatLine( formattedBuffer, stamp, event._level, pEffectiveTag, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, event._line );
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
         //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).
@@ -541,20 +524,20 @@ namespace sw
         if ( _onLogWritten.isBound() )
         {
             LogEntry entry;
-            entry._level     = level;
+            entry._level     = event._level;
             entry._tag       = pEffectiveTag;
             entry._message   = pEffectiveMsg;
             entry._file      = pEffectiveFile;
-            entry._line      = line;
-            entry._pID       = pID;
+            entry._line      = event._line;
+            entry._pID       = event._pID;
             entry._timeStamp = stamp._text.c_str();
-            entry._context   = context;
+            entry._stamp     = event._stamp;
             _onLogWritten.broadcast( entry );
         }
 
         // 5단계: 비동기 I/O 큐에 넣는다
         LogRecord record;
-        record._level     = level;
+        record._level     = event._level;
         record._formatted = pFormattedBuffer;
         record._year      = stamp._year;
         record._month     = stamp._month;
@@ -571,18 +554,14 @@ namespace sw
                 message        = escapedMessage;
             }
             JSONLogFields params;
-            params._time             = stamp._text.c_str();
-            params._unixMilliseconds = WallClock::nowUnixMilliseconds().count();
-            params._level            = level;
-            params._tag              = pEffectiveTag;
-            params._message          = message;
-            params._id               = pID != nullptr ? string_view{ pID } : string_view{};
-            params._file             = pEffectiveFile;
-            params._line             = line;
-            params._context          = context;
-            LogClock clock{ LogClock::Tick };
-            params._bHasClock = Logger::getClockNumber( clock, params._clockNumber );
-            params._clock     = clock;
+            params._stamp   = event._stamp;
+            params._time    = stamp._text.c_str();
+            params._level   = event._level;
+            params._tag     = pEffectiveTag;
+            params._message = message;
+            params._id      = event._pID != nullptr ? string_view{ event._pID } : string_view{};
+            params._file    = pEffectiveFile;
+            params._line    = event._line;
             JSONLinesLogOutput::appendLine( record._json, params );
         }
         submitRecord( std::move( record ) );

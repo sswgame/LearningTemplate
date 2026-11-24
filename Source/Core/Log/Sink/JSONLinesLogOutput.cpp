@@ -73,22 +73,23 @@ namespace sw
     {
         outLine.append( "{\"time\":\"" );
         JSONStringUtil::appendEscaped( outLine, params._time );
-        outLine.append( "\",\"ts\":" ).append( to_string( params._unixMilliseconds ) );
+        outLine.append( "\",\"ts\":" ).append( to_string( params._stamp._time.count() ) );
+        outLine.append( ",\"seq\":" ).append( to_string( params._stamp._sequence ) ).append( ",\"thread\":" ).append( to_string( params._stamp._threadID ) );
         outLine.append( ",\"level\":\"" ).append( params._level < LogLevel::Count ? JSONLinesInternal::kArrLevelName[params._level] : "info" ).append( "\"" );
         JSONLinesInternal::appendTextField( outLine, "tag", params._tag );
-        if ( params._bHasClock )
-            outLine.append( params._clock == LogClock::Frame ? ",\"frame\":" : ",\"tick\":" ).append( to_string( params._clockNumber ) );
-        if ( params._context._traceID.isValid() )
+        if ( params._stamp._bHasClock )
+            outLine.append( params._stamp._clock == LogClock::Frame ? ",\"frame\":" : ",\"tick\":" ).append( to_string( params._stamp._clockNumber ) );
+        if ( params._stamp._context._traceID.isValid() )
         {
             outLine.append( ",\"trace\":\"" );
-            HexUtil::appendUint64( outLine, params._context._traceID._high );
-            HexUtil::appendUint64( outLine, params._context._traceID._low );
+            HexUtil::appendUint64( outLine, params._stamp._context._traceID._high );
+            HexUtil::appendUint64( outLine, params._stamp._context._traceID._low );
             outLine.append( "\"" );
         }
-        if ( params._context._principalID != 0 )
+        if ( params._stamp._context._principalID != 0 )
         {
             outLine.append( ",\"acct\":\"" );
-            HexUtil::appendUint64( outLine, params._context._principalID );
+            HexUtil::appendUint64( outLine, params._stamp._context._principalID );
             outLine.append( "\"" );
         }
         if ( params._id.empty() == false )
