@@ -28,6 +28,57 @@ namespace sw
             static constexpr float32 kNeighborAlignment = 0.5f;
             static constexpr float32 kPercent           = 100.0f;
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventLanded   = "ScavengerLanded";
+            static constexpr const utf8* kEventDeparted = "ScavengerDeparted";
+            static constexpr const utf8* kEventDusk     = "ScavengerDusk";
+            static constexpr const utf8* kEventThreat   = "ScavengerThreat";
+            static constexpr const utf8* kEventDied     = "ScavengerDied";
+            static constexpr const utf8* kEventPickup   = "ScavengerPickup";
+            static constexpr const utf8* kEventLoaded   = "ScavengerLoaded";
+            static constexpr const utf8* kEventUnlocked = "ScavengerUnlocked";
+            static constexpr const utf8* kEventSold     = "ScavengerSold";
+            static constexpr const utf8* kEventBought   = "ScavengerBought";
+            static constexpr const utf8* kEventRefused  = "ScavengerRefused";
+            static constexpr const utf8* kEventWon      = "ScavengerWon";
+            static constexpr const utf8* kEventLost     = "ScavengerLost";
+
+            /** @brief 원정의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(할당량은 결과가 정한다). */
+            static const utf8* findSound( ScavengerEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case ScavengerEvent::Kind::Landed:
+                    {
+                        return kEventLanded;
+                    }
+                    case ScavengerEvent::Kind::ShipDeparted:
+                    {
+                        return kEventDeparted;
+                    }
+                    case ScavengerEvent::Kind::Dusk:
+                    {
+                        return kEventDusk;
+                    }
+                    case ScavengerEvent::Kind::ThreatSpawned:
+                    {
+                        return kEventThreat;
+                    }
+                    case ScavengerEvent::Kind::PlayerDied:
+                    {
+                        return kEventDied;
+                    }
+                    case ScavengerEvent::Kind::ScrapSold:
+                    {
+                        return kEventSold;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
         };
@@ -304,7 +355,10 @@ namespace sw
         if ( member._areaID == hashed_string( ScavengerExpedition::kShipAreaID ) )
         {
             if ( _expedition.depositToShip( player ) > 0 )
+            {
+                getSoundQueue().queueEvent( ScavengerGameModeComponentInternal::kEventLoaded );
                 return;
+            }
             ScavengerActionResult result = ScavengerActionResult::Ok;
             (void)_expedition.sellAllShipScrap( result ); // 회사가 아니면 거절한다
             return;
@@ -314,7 +368,8 @@ namespace sw
             if ( scrap._areaID != member._areaID )
                 continue;
             const int32 uid = scrap._uid;
-            (void)_expedition.pickUp( player, uid ); // 손이 찼으면 거절한다
+            if ( _expedition.pickUp( player, uid ) == ScavengerPickupResult::Ok ) // 손이 찼으면 거절한다
+                getSoundQueue().queueEvent( ScavengerGameModeComponentInternal::kEventPickup );
             return;
         }
         for ( const AreaLink& link : facility.getGraph().getLinks() )
@@ -325,7 +380,8 @@ namespace sw
             if ( bBeside && facility.canTraverse( link._from, link._to ) == false )
             {
                 const hashed_string roomID = link._to; // 잠금은 들어가는 방의 것이다
-                (void)_expedition.unlockDoor( roomID );
+                if ( _expedition.unlockDoor( roomID ) )
+                    getSoundQueue().queueEvent( ScavengerGameModeComponentInternal::kEventUnlocked );
                 return;
             }
         }
@@ -358,6 +414,7 @@ namespace sw
         if ( command._buyItemID.empty() == false && _expedition.getPhase() == ScavengerPhase::InOrbit )
         {
             const ShopResult bought = _expedition.buyFromTerminal( command._buyItemID, 1 );
+            getSoundQueue().queueEvent( bought == ShopResult::Ok ? ScavengerGameModeComponentInternal::kEventBought : ScavengerGameModeComponentInternal::kEventRefused );
             SW_LOG_INFO_ID( "Scavenger.Terminal", "[Scavenger] the terminal %# '%#' (shop result %#) - credits %#", bought == ShopResult::Ok ? "sold" : "refused", command._buyItemID.c_str(),
                             static_cast<int32>( bought ), getCredits() );
         }
@@ -457,6 +514,8 @@ namespace sw
         _expedition.pollEvents( _listEvent );
         for ( const ScavengerEvent& event : _listEvent )
         {
+            if ( const utf8* const pSound = ScavengerGameModeComponentInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
             switch ( event._kind )
             {
                 case Kind::ThreatSpawned:
@@ -508,6 +567,7 @@ namespace sw
         if ( _result == ScavengerResult::Ongoing )
             return;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( _result == ScavengerResult::Win ? ScavengerGameModeComponentInternal::kEventWon : ScavengerGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "Scavenger.Ended", "[Scavenger] %# - credits %#", _result == ScavengerResult::Win ? "quota met" : "quota missed", getCredits() );
     }
 

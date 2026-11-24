@@ -23,6 +23,72 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCCUtil::make( "SHGM" );
             static constexpr uint32 kStateVersion = 1;
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventSanity        = "SurvivalHorrorSanity";
+            static constexpr const utf8* kEventHallucination = "SurvivalHorrorHallucination";
+            static constexpr const utf8* kEventFlashlight    = "SurvivalHorrorFlashlight";
+            static constexpr const utf8* kEventDoor          = "SurvivalHorrorDoor";
+            static constexpr const utf8* kEventSolved        = "SurvivalHorrorSolved";
+            static constexpr const utf8* kEventFailed        = "SurvivalHorrorFailed";
+            static constexpr const utf8* kEventDocument      = "SurvivalHorrorDocument";
+            static constexpr const utf8* kEventPickup        = "SurvivalHorrorPickup";
+            static constexpr const utf8* kEventHeal          = "SurvivalHorrorHeal";
+            static constexpr const utf8* kEventSaved         = "SurvivalHorrorSaved";
+            static constexpr const utf8* kEventFight         = "SurvivalHorrorFight";
+            static constexpr const utf8* kEventShot          = "SurvivalHorrorShot";
+            static constexpr const utf8* kEventHurt          = "SurvivalHorrorHurt";
+            static constexpr const utf8* kEventWon           = "SurvivalHorrorWon";
+            static constexpr const utf8* kEventLost          = "SurvivalHorrorLost";
+
+            /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( SurvivalHorrorEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case SurvivalHorrorEvent::Kind::SanityLost:
+                    {
+                        return kEventSanity;
+                    }
+                    case SurvivalHorrorEvent::Kind::HallucinationStarted:
+                    {
+                        return kEventHallucination;
+                    }
+                    case SurvivalHorrorEvent::Kind::FlashlightDied:
+                    {
+                        return kEventFlashlight;
+                    }
+                    case SurvivalHorrorEvent::Kind::DoorUnlocked:
+                    {
+                        return kEventDoor;
+                    }
+                    case SurvivalHorrorEvent::Kind::PuzzleSolved:
+                    case SurvivalHorrorEvent::Kind::DeductionSolved:
+                    {
+                        return kEventSolved;
+                    }
+                    case SurvivalHorrorEvent::Kind::DeductionFailed:
+                    {
+                        return kEventFailed;
+                    }
+                    case SurvivalHorrorEvent::Kind::DocumentRead:
+                    {
+                        return kEventDocument;
+                    }
+                    case SurvivalHorrorEvent::Kind::Combined:
+                    {
+                        return kEventHeal;
+                    }
+                    case SurvivalHorrorEvent::Kind::Saved:
+                    {
+                        return kEventSaved;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
         };
@@ -191,7 +257,10 @@ namespace sw
             case SurvivalHorrorSpotKind::Pickup:
             {
                 if ( _session.getInventory().addItem( spot._id, spot._count ) > 0 )
+                {
                     _listUsedSpot[spotIndex] = SW_TRUE;
+                    getSoundQueue().queueEvent( SurvivalHorrorGameModeComponentInternal::kEventPickup );
+                }
                 break;
             }
             case SurvivalHorrorSpotKind::Document:
@@ -280,7 +349,10 @@ namespace sw
         for ( const int32 instanceID : listInstance )
         {
             if ( _session.tryUseItem( instanceID ) )
+            {
+                getSoundQueue().queueEvent( SurvivalHorrorGameModeComponentInternal::kEventHeal );
                 return;
+            }
         }
         for ( const int32 firstID : listInstance )
         {
@@ -310,6 +382,7 @@ namespace sw
             return; // 조사자 값이 범위 밖이면 전투가 이유를 남겼다
         _encounterSpot = static_cast<int32>( spotIndex );
         _turn.start( _turnSeconds );
+        getSoundQueue().queueEvent( _bArmed == SW_TRUE ? SurvivalHorrorGameModeComponentInternal::kEventShot : SurvivalHorrorGameModeComponentInternal::kEventFight );
         SW_LOG_INFO_ID( "SurvivalHorror.FightStarted", "[SurvivalHorror] fight with '%#' (%#)", pMonster->_id.c_str(), _bArmed == SW_TRUE ? "armed" : "unarmed" );
     }
 
@@ -320,6 +393,8 @@ namespace sw
         _turn.restart( _turnSeconds );
         const SurvivalHorrorTurnResult turn = _encounter.playNextTurn();
         _session.applyDamage( static_cast<float32>( turn._healthLoss ) * _damagePerPoint );
+        if ( turn._healthLoss > 0 )
+            getSoundQueue().queueEvent( SurvivalHorrorGameModeComponentInternal::kEventHurt );
         if ( turn._sanityLoss > 0 )
             _session.loseSanity( static_cast<float32>( turn._sanityLoss ) * _damagePerPoint, _stage._listSpot[static_cast<size_t>( _encounterSpot )]._id );
         if ( _encounter.getState() == SurvivalHorrorEncounterState::Ongoing )
@@ -361,8 +436,8 @@ namespace sw
             if ( command._bHealTriggered == SW_TRUE )
                 heal();
         }
-        if ( command._bLightTriggered == SW_TRUE )
-            (void)_session.trySetFlashlight( _session.isFlashlightOn() == false ); // 배터리가 없으면 켜지지 않는다
+        if ( command._bLightTriggered == SW_TRUE && _session.trySetFlashlight( _session.isFlashlightOn() == false ) ) // 배터리가 없으면 켜지지 않는다
+            getSoundQueue().queueEvent( SurvivalHorrorGameModeComponentInternal::kEventFlashlight );
         _session.update( deltaTime, isInDarkness() );
         settle();
     }
@@ -374,6 +449,8 @@ namespace sw
         _session.pollEvents( _listEvent );
         for ( const SurvivalHorrorEvent& event : _listEvent )
         {
+            if ( const utf8* const pSound = SurvivalHorrorGameModeComponentInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
             if ( event._kind == Kind::DoorUnlocked )
                 SW_LOG_INFO_ID( "SurvivalHorror.DoorUnlocked", "[SurvivalHorror] unlocked '%#'", event._id.c_str() );
             else if ( event._kind == Kind::PuzzleSolved )
@@ -390,6 +467,7 @@ namespace sw
         if ( _result == SurvivalHorrorResult::Ongoing )
             return;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( _result == SurvivalHorrorResult::Win ? SurvivalHorrorGameModeComponentInternal::kEventWon : SurvivalHorrorGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "SurvivalHorror.Ended", "[SurvivalHorror] %# - health %#, sanity %#", _result == SurvivalHorrorResult::Win ? "got out" : "died", getHealth(), getSanity() );
     }
 

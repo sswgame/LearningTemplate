@@ -28,6 +28,97 @@ namespace sw
             static constexpr float32 kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽
             static constexpr float32 kGhostWallGap     = 0.5f;  ///< 유령은 방의 벽에서 이만큼 안쪽에만 있다(m)
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventAppeared   = "GhostHuntAppeared";
+            static constexpr const utf8* kEventHurt       = "GhostHuntHurt";
+            static constexpr const utf8* kEventStunned    = "GhostHuntStunned";
+            static constexpr const utf8* kEventSuction    = "GhostHuntSuction";
+            static constexpr const utf8* kEventSurge      = "GhostHuntSurge";
+            static constexpr const utf8* kEventEscaped    = "GhostHuntEscaped";
+            static constexpr const utf8* kEventCaught     = "GhostHuntCaught";
+            static constexpr const utf8* kEventRoomLit    = "GhostHuntRoomLit";
+            static constexpr const utf8* kEventKey        = "GhostHuntKey";
+            static constexpr const utf8* kEventDoorOpened = "GhostHuntDoorOpened";
+            static constexpr const utf8* kEventCoins      = "GhostHuntCoins";
+            static constexpr const utf8* kEventWon        = "GhostHuntWon";
+            static constexpr const utf8* kEventLost       = "GhostHuntLost";
+
+            /** @brief 유령의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(공격은 맞았을 때만 낸다). */
+            static const utf8* findSound( GhostEventKind kind )
+            {
+                switch ( kind )
+                {
+                    case GhostEventKind::Appeared:
+                    {
+                        return kEventAppeared;
+                    }
+                    case GhostEventKind::Stunned:
+                    {
+                        return kEventStunned;
+                    }
+                    case GhostEventKind::SuctionStarted:
+                    {
+                        return kEventSuction;
+                    }
+                    case GhostEventKind::Surge:
+                    {
+                        return kEventSurge;
+                    }
+                    case GhostEventKind::Escaped:
+                    {
+                        return kEventEscaped;
+                    }
+                    case GhostEventKind::Caught:
+                    {
+                        return kEventCaught;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
+            /** @brief 저택의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( GhostMansionEventKind kind )
+            {
+                switch ( kind )
+                {
+                    case GhostMansionEventKind::RoomLit:
+                    {
+                        return kEventRoomLit;
+                    }
+                    case GhostMansionEventKind::KeyAwarded:
+                    {
+                        return kEventKey;
+                    }
+                    case GhostMansionEventKind::DoorOpened:
+                    {
+                        return kEventDoorOpened;
+                    }
+                    case GhostMansionEventKind::BooRevealed:
+                    {
+                        return kEventAppeared;
+                    }
+                    case GhostMansionEventKind::BooEscaped:
+                    {
+                        return kEventEscaped;
+                    }
+                    case GhostMansionEventKind::BooCaught:
+                    {
+                        return kEventCaught;
+                    }
+                    case GhostMansionEventKind::CoinsCollected:
+                    {
+                        return kEventCoins;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
 
@@ -238,6 +329,8 @@ namespace sw
                 continue;
             ItemStackList           loot;
             const GhostSearchResult result = _mansion.searchFurniture( furniture._id, furniture._bShake ? GhostSearchMode::Shake : GhostSearchMode::Vacuum, loot );
+            if ( loot.getItems().empty() == false )
+                getSoundQueue().queueEvent( GhostHuntGameModeComponentInternal::kEventCoins );
             for ( const ItemStack& stack : loot.getItems() )
             {
                 if ( stack._itemID == _pCatalog->getCurrency() )
@@ -327,11 +420,16 @@ namespace sw
                               float3::getHorizontalDistance( pGhost->_position, getPlayerPosition()._value ) <= _ghostReach;
             if ( bHit )
                 (void)DepletingValue::take( _health, event._amount ); // 다했는지는 아래에서 본다
+            const utf8* const pSound = bHit ? GhostHuntGameModeComponentInternal::kEventHurt : GhostHuntGameModeComponentInternal::findSound( event._type );
+            if ( pSound != nullptr )
+                getSoundQueue().queueEvent( pSound );
         }
         _listMansionEvent.clear();
         _mansion.pollEvents( _listMansionEvent );
         for ( const GhostMansionEvent& event : _listMansionEvent )
         {
+            if ( const utf8* const pSound = GhostHuntGameModeComponentInternal::findSound( event._type ) )
+                getSoundQueue().queueEvent( pSound );
             if ( event._type == GhostMansionEventKind::RoomLit )
                 SW_LOG_INFO_ID( "GhostHunt.RoomLit", "[GhostHunt] '%#' is lit (%# of %#)", event._id.c_str(), countLitRooms(), countRooms() );
             else if ( event._type == GhostMansionEventKind::KeyAwarded )
@@ -344,6 +442,7 @@ namespace sw
         if ( _result == GhostHuntResult::Ongoing )
             return;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( _result == GhostHuntResult::Win ? GhostHuntGameModeComponentInternal::kEventWon : GhostHuntGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "GhostHunt.Ended", "[GhostHunt] %# - %# coins", _result == GhostHuntResult::Win ? "every room is lit" : "the hunter fell", getCoins() );
     }
 

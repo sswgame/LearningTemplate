@@ -23,6 +23,91 @@ namespace sw
             static constexpr int32  kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
             static constexpr int32  kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventHit        = "AsymmetricHorrorHit";
+            static constexpr const utf8* kEventDowned     = "AsymmetricHorrorDowned";
+            static constexpr const utf8* kEventHooked     = "AsymmetricHorrorHooked";
+            static constexpr const utf8* kEventSacrificed = "AsymmetricHorrorSacrificed";
+            static constexpr const utf8* kEventRescued    = "AsymmetricHorrorRescued";
+            static constexpr const utf8* kEventGenerator  = "AsymmetricHorrorGenerator";
+            static constexpr const utf8* kEventPowered    = "AsymmetricHorrorPowered";
+            static constexpr const utf8* kEventGateOpened = "AsymmetricHorrorGateOpened";
+            static constexpr const utf8* kEventEscaped    = "AsymmetricHorrorEscaped";
+            static constexpr const utf8* kEventPallet     = "AsymmetricHorrorPallet";
+            static constexpr const utf8* kEventVaulted    = "AsymmetricHorrorVaulted";
+            static constexpr const utf8* kEventAbility    = "AsymmetricHorrorAbility";
+            static constexpr const utf8* kEventSkillCheck = "AsymmetricHorrorSkillCheck";
+            static constexpr const utf8* kEventWon        = "AsymmetricHorrorWon";
+            static constexpr const utf8* kEventLost       = "AsymmetricHorrorLost";
+
+            /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(판 끝은 결과가 정한다). */
+            static const utf8* findSound( AsymmetricHorrorEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case AsymmetricHorrorEvent::Kind::Hit:
+                    {
+                        return kEventHit;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Downed:
+                    {
+                        return kEventDowned;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Hooked:
+                    {
+                        return kEventHooked;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Sacrificed:
+                    {
+                        return kEventSacrificed;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Rescued:
+                    case AsymmetricHorrorEvent::Kind::WiggledFree:
+                    {
+                        return kEventRescued;
+                    }
+                    case AsymmetricHorrorEvent::Kind::GeneratorCompleted:
+                    {
+                        return kEventGenerator;
+                    }
+                    case AsymmetricHorrorEvent::Kind::GatesPowered:
+                    {
+                        return kEventPowered;
+                    }
+                    case AsymmetricHorrorEvent::Kind::GateOpened:
+                    case AsymmetricHorrorEvent::Kind::HatchOpened:
+                    {
+                        return kEventGateOpened;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Escaped:
+                    {
+                        return kEventEscaped;
+                    }
+                    case AsymmetricHorrorEvent::Kind::PalletDropped:
+                    case AsymmetricHorrorEvent::Kind::PalletBroken:
+                    case AsymmetricHorrorEvent::Kind::KillerStunned:
+                    {
+                        return kEventPallet;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Vaulted:
+                    {
+                        return kEventVaulted;
+                    }
+                    case AsymmetricHorrorEvent::Kind::KillerAbilityUsed:
+                    {
+                        return kEventAbility;
+                    }
+                    case AsymmetricHorrorEvent::Kind::SkillCheckStarted:
+                    {
+                        return kEventSkillCheck;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kDrawResult = "draw";
             static constexpr const utf8* kLoseResult = "lose";
@@ -236,6 +321,10 @@ namespace sw
         _match.pollEvents( _listEvent );
         for ( const AsymmetricHorrorEvent& event : _listEvent )
         {
+            const bool        bOthersOnly = event._kind == AsymmetricHorrorEvent::Kind::SkillCheckStarted && event._actor != AsymmetricHorrorGameModeComponentInternal::kPlayer; // 남의 스킬 체크는 알리지 않는다
+            const utf8* const pSound      = bOthersOnly ? nullptr : AsymmetricHorrorGameModeComponentInternal::findSound( event._kind );
+            if ( pSound != nullptr )
+                getSoundQueue().queueEvent( pSound );
             if ( event._kind == AsymmetricHorrorEvent::Kind::GeneratorCompleted )
                 SW_LOG_INFO_ID( "AsymmetricHorror.GeneratorCompleted", "[AsymmetricHorror] a generator runs (%# done)", _match.getCompletedGeneratorCount() );
             else if ( event._kind == AsymmetricHorrorEvent::Kind::Hooked )
@@ -253,6 +342,7 @@ namespace sw
         else
             _result = winner < 0 ? AsymmetricHorrorResult::Draw : AsymmetricHorrorResult::Lose;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( _result == AsymmetricHorrorResult::Win ? AsymmetricHorrorGameModeComponentInternal::kEventWon : AsymmetricHorrorGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "AsymmetricHorror.Ended", "[AsymmetricHorror] %# - %# escaped, %# sacrificed", AsymmetricHorrorGameModeComponentInternal::findResultName( _result ), countEscaped(),
                         countSacrificed() );
     }
