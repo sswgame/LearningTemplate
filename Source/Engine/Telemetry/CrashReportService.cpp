@@ -3,6 +3,7 @@
 #include "Engine/Telemetry/CrashReportService.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/EnumArray.h"
 #include "Core/Container/pair.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
@@ -25,9 +26,9 @@ namespace sw
     {
         struct CrashReportServiceInternal
         {
-            static constexpr const utf8* kArrConsentName[] = { "local", "ask", "send" };
-            static constexpr const utf8* kArrStateName[]   = { "local", "awaitingDecision", "queued", "sent", "declined" };
-            static constexpr uint32      kStateCount       = 5;
+            // 열거자 순서의 이름 표 — 항목 수가 열거자 수와 다르면 컴파일이 멈춘다(예전에는 맨 배열과 손으로 센 수 3 · 5 였다).
+            static constexpr auto kArrConsentName = makeEnumTable<CrashReportConsent, const utf8*>( "local", "ask", "send" );
+            static constexpr auto kArrStateName   = makeEnumTable<CrashReportState, const utf8*>( "local", "awaitingDecision", "queued", "sent", "declined" );
 
             /** @brief 크래시 파일(`crash_<세션>.<확장자>`)과 묶음 안 이름입니다. 컨텍스트 파일이 있어야 크래시로 친다. */
             struct CrashFileKind
@@ -44,11 +45,11 @@ namespace sw
 
             [[nodiscard]] static bool parseState( string_view text, CrashReportState& outState )
             {
-                for ( uint32 index = 0; index < kStateCount; ++index )
+                for ( const CrashReportState state : EnumRange<CrashReportState>{} )
                 {
-                    if ( StringUtil::equals( text, kArrStateName[index] ) )
+                    if ( StringUtil::equals( text, kArrStateName[state] ) )
                     {
-                        outState = static_cast<CrashReportState>( index );
+                        outState = state;
                         return true;
                     }
                 }
@@ -176,21 +177,21 @@ namespace sw
 {
     const utf8* toString( CrashReportConsent consent )
     {
-        return CrashReportServiceInternal::kArrConsentName[static_cast<uint32>( consent )];
+        return CrashReportServiceInternal::kArrConsentName[consent];
     }
 
     const utf8* toString( CrashReportState state )
     {
-        return CrashReportServiceInternal::kArrStateName[static_cast<uint32>( state )];
+        return CrashReportServiceInternal::kArrStateName[state];
     }
 
     bool parseCrashReportConsent( string_view text, CrashReportConsent& outConsent )
     {
-        for ( uint32 index = 0; index < 3; ++index )
+        for ( const CrashReportConsent consent : EnumRange<CrashReportConsent>{} )
         {
-            if ( StringUtil::equals( text, CrashReportServiceInternal::kArrConsentName[index] ) )
+            if ( StringUtil::equals( text, CrashReportServiceInternal::kArrConsentName[consent] ) )
             {
-                outConsent = static_cast<CrashReportConsent>( index );
+                outConsent = consent;
                 return true;
             }
         }

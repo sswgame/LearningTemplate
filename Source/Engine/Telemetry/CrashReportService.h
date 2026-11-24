@@ -28,7 +28,8 @@ namespace sw
     {
         Local = 0, ///< 묶음만 만들어 기계 안에 둔다(기본)
         Ask,       ///< 묶음마다 "보낼까요?" — 게임 UI 가 `decide` 로 답한다
-        Send       ///< 묶자마자 보낼 줄에 세운다
+        Send,      ///< 묶자마자 보낼 줄에 세운다
+        Count      ///< 값이 아니다 — 열거자 수(이름 표가 이 수와 다르면 컴파일이 멈춘다)
     };
 
     /** @brief 묶음 하나의 상태(매니페스트의 `state`)입니다. */
@@ -38,7 +39,8 @@ namespace sw
         AwaitingDecision, ///< 플레이어의 답을 기다린다
         Queued,           ///< 보낼 줄 — 보고 프로세스가 올린다
         Sent,             ///< 받는 쪽이 받았다
-        Declined          ///< 플레이어가 보내지 않기로 했다
+        Declined,         ///< 플레이어가 보내지 않기로 했다
+        Count             ///< 값이 아니다 — 열거자 수
     };
 
     SW_API const utf8* toString( CrashReportConsent consent );

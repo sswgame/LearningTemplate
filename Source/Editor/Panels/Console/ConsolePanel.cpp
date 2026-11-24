@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/ParsedLogLine.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
@@ -530,9 +531,9 @@ namespace sw::editor
         {
             ImGui::SameLine( 0.0f, 0.0f );
             if ( entry._bExpected )
-                ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), " %s (%s):", ConsoleLogRows::levelName( entry._level ), SW_LOCKEY( "EdText", "ExpectedByTest" ) );
+                ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), " %s (%s):", ParsedLogLine::getLevelLabel( entry._level ), SW_LOCKEY( "EdText", "ExpectedByTest" ) );
             else
-                ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), " %s:", ConsoleLogRows::levelName( entry._level ) );
+                ImGui::TextColored( EditorColorUtil::toImVec4( levelColor ), " %s:", ParsedLogLine::getLevelLabel( entry._level ) );
         }
         ImGui::SameLine( 0.0f, 0.0f );
         ImGui::TextUnformatted( " " );

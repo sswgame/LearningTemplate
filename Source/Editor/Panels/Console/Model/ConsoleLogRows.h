@@ -44,8 +44,6 @@ namespace sw::editor
          * @brief 스크롤이 맨 아래에 붙어 있는지 확인합니다. 붙어 있을 때만 새 로그를 따라 내려갑니다.
          * @details 위로 올려 읽는 중에는 새 로그가 와도 끌려 내려가지 않고, 다시 맨 아래로 내리면 따라가기가 돌아온다. 언리얼 Output Log 와 같다.
          */
-        /** @brief 로그 수준의 이름입니다. */
-        static const utf8* levelName( LogLevel level );
         /** @brief 한 행의 전체 문자열(시각, 태그, 수준, 메시지)을 만듭니다. 복사가 씁니다. */
         static string formatEntryLine( const LogEntry& entry );
         /** @brief `formatEntryLine` 끝에 찍은 자리(파일:줄)를 더합니다. 자리가 없으면 같습니다. */

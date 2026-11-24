@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Registry/RegistrationChain.h"
+#include "Core/String/NamedValue.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -38,8 +39,14 @@ namespace sw
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
             /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
-            /** @brief 스피커 모드의 설정 값입니다(`AudioSpeakerMode` 순서). */
-            static constexpr const utf8* kArrSpeakerModeName[] = { "auto", "stereo", "surround51", "surround71", "headphones" };
+            /** @brief 스피커 모드의 설정 값입니다(이름 → 값 — 열거자 순서와 묶이지 않는다). */
+            static constexpr NamedValue<AudioSpeakerMode> kArrSpeakerMode[] = {
+                {      "auto",       AudioSpeakerMode::Auto},
+                {    "stereo",     AudioSpeakerMode::Stereo},
+                {"surround51", AudioSpeakerMode::Surround51},
+                {"surround71", AudioSpeakerMode::Surround71},
+                {"headphones", AudioSpeakerMode::Headphones},
+            };
 
             /** @brief 장치 백엔드 등록자 사슬입니다(상수 초기화 — 정적 초기화 순서와 무관하다). */
             static SW_DEFINE_REGISTRATION_CHAIN( getRegistrarChain, AudioBackendRegistrar )
@@ -197,16 +204,7 @@ namespace sw
 
     bool AudioService::tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode )
     {
-        using Internal = AudioServiceInternal;
-        for ( uint32 modeIndex = 0; modeIndex < SW_COUNT_OF( Internal::kArrSpeakerModeName ); ++modeIndex )
-        {
-            if ( StringUtil::equals( text, Internal::kArrSpeakerModeName[modeIndex] ) )
-            {
-                outMode = static_cast<AudioSpeakerMode>( modeIndex );
-                return true;
-            }
-        }
-        return false;
+        return NamedValueUtil::find( AudioServiceInternal::kArrSpeakerMode, text, outMode );
     }
 
     bool AudioService::resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout )

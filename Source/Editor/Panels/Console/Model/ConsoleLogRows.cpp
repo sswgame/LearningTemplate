@@ -4,23 +4,15 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Log/ParsedLogLine.h"
 #include "Core/String/StringBuilder.h"
 
 namespace sw::editor
 {
-    const utf8* ConsoleLogRows::levelName( LogLevel level )
-    {
-        static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
-        const uint8                  index       = static_cast<uint8>( level );
-        if ( index >= 4 )
-            return "Info";
-        return kArrNames[index];
-    }
-
     string ConsoleLogRows::formatEntryLine( const LogEntry& entry )
     {
         StringBuilder<constant::buffer::kMax1024> lineBuilder;
-        lineBuilder.appendFormat( "[%#] [%#] [%#] - %#", entry._timeStamp, entry._tag, levelName( entry._level ), entry._message );
+        lineBuilder.appendFormat( "[%#] [%#] [%#] - %#", entry._timeStamp, entry._tag, ParsedLogLine::getLevelLabel( entry._level ), entry._message );
         return string( lineBuilder.view() );
     }
 

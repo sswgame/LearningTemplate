@@ -302,7 +302,20 @@ namespace sw
 
     void MetricRegistry::writePrometheusText( string& outText ) const
     {
-        static constexpr const utf8* kArrTypeName[] = { "counter", "gauge", "histogram" };
+        // 종류 이름은 switch 로 — 종류를 더하고 이름을 빠뜨리면 컴파일이 멈춘다(`-Wswitch`). 예전에는 종류 값으로 색인하는 맨 배열이었다.
+        const auto getTypeName = []( Kind kind ) -> const utf8*
+        {
+            switch ( kind )
+            {
+                case Kind::Counter:
+                    return "counter";
+                case Kind::Gauge:
+                    return "gauge";
+                case Kind::Histogram:
+                    return "histogram";
+            }
+            return "";
+        };
 
         ScopedLock<mutex>     lock{ _mutex };
         vector<const Family*> listFamily;
@@ -321,7 +334,7 @@ namespace sw
             outText += "\n# TYPE ";
             outText += pFamily->_name;
             outText.push_back( ' ' );
-            outText += kArrTypeName[static_cast<size_t>( pFamily->_kind )];
+            outText += getTypeName( pFamily->_kind );
             outText.push_back( '\n' );
             for ( const unique_ptr<Series>& series : pFamily->_listSeries )
             {
