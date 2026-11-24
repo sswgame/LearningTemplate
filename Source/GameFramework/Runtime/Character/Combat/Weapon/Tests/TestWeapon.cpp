@@ -89,9 +89,9 @@ SW_TEST_CASE( WeaponTest, FireRateIgnoresFrameRate )
     rifle._maxReserveAmmo = 0;
 
     WeaponState fast;
-    SW_REQUIRE_TRUE( fast.equip( rifle, WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( fast.equip( rifle, WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     WeaponState slow;
-    SW_REQUIRE_TRUE( slow.equip( rifle, WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( slow.equip( rifle, WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     SW_EXPECT_EQUAL( 10, WeaponTestUtil::holdTrigger( fast, 0.95f, 1.0f / 60.0f ) );
     SW_EXPECT_EQUAL( 10, WeaponTestUtil::holdTrigger( slow, 0.95f, 1.0f / 24.0f ) );
 }
@@ -102,7 +102,7 @@ SW_TEST_CASE( WeaponTest, FireRateIgnoresFrameRate )
 SW_TEST_CASE( WeaponTest, ReloadMovesOnlyWhatIsMissing )
 {
     WeaponState state;
-    SW_REQUIRE_TRUE( state.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 7 ) );
+    SW_REQUIRE_TRUE( state.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 7, WorldSeed::makeFixed( 1u ) ) );
     const Ray  aim;
     WeaponShot shot;
     for ( int32 shotIndex = 0; shotIndex < 5; ++shotIndex )
@@ -124,7 +124,7 @@ SW_TEST_CASE( WeaponTest, ReloadMovesOnlyWhatIsMissing )
     WeaponState empty;
     WeaponDef   oneShot   = WeaponTestUtil::makeRifle();
     oneShot._magazineSize = 1;
-    SW_REQUIRE_TRUE( empty.equip( oneShot, WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( empty.equip( oneShot, WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     SW_REQUIRE_TRUE( empty.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
     empty.update( 0.2f );
     SW_EXPECT_TRUE( empty.pullTrigger( aim, true, shot ) == WeaponFireResult::OutOfAmmo );
@@ -139,7 +139,7 @@ SW_TEST_CASE( WeaponTest, SemiAutoAndPellets )
     shotgun._bAutomatic  = SW_FALSE;
     shotgun._pelletCount = 8;
     WeaponState state;
-    SW_REQUIRE_TRUE( state.equip( shotgun, WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( state.equip( shotgun, WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     const Ray  aim;
     WeaponShot shot;
     SW_REQUIRE_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
@@ -155,7 +155,7 @@ SW_TEST_CASE( WeaponTest, SemiAutoAndPellets )
 SW_TEST_CASE( WeaponTest, StateRoundTripKeepsTheNextShot )
 {
     WeaponState original;
-    SW_REQUIRE_TRUE( original.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 7, 1234u ) );
+    SW_REQUIRE_TRUE( original.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 7, WorldSeed::makeFixed( 1234u ) ) );
     const Ray  aim;
     WeaponShot shot;
     SW_REQUIRE_TRUE( original.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
@@ -164,7 +164,7 @@ SW_TEST_CASE( WeaponTest, StateRoundTripKeepsTheNextShot )
     Archive written;
     original.writeState( written );
     WeaponState restored;
-    SW_REQUIRE_TRUE( restored.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( restored.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( original.getMagazineAmmo(), restored.getMagazineAmmo() );
@@ -179,14 +179,14 @@ SW_TEST_CASE( WeaponTest, StateRoundTripKeepsTheNextShot )
     WeaponDef other = WeaponTestUtil::makeRifle();
     other._id       = hashed_string( "pistol" );
     WeaponState wrong;
-    SW_REQUIRE_TRUE( wrong.equip( other, WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( wrong.equip( other, WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     Archive again( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( wrong.readState( again ) );
 
     ProjectileDef slug = WeaponTestUtil::makeRound();
     slug._id           = hashed_string( "slug" );
     WeaponState otherRound;
-    SW_REQUIRE_TRUE( otherRound.equip( WeaponTestUtil::makeRifle(), slug, 0 ) );
+    SW_REQUIRE_TRUE( otherRound.equip( WeaponTestUtil::makeRifle(), slug, 0, WorldSeed::makeFixed( 1u ) ) );
     Archive slugReading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( otherRound.readState( slugReading ) ); // 다른 탄을 장전한 총은 그 상태를 받지 않는다
 }
@@ -204,7 +204,7 @@ SW_TEST_CASE( WeaponTest, SoundsComeFromTheWeaponTable )
     weapon._reloadSound          = hashed_string( "Reload" );
     weapon._emptySound           = hashed_string( "Empty" );
     WeaponState state;
-    SW_REQUIRE_TRUE( state.equip( weapon, WeaponTestUtil::makeRound(), 1 ) );
+    SW_REQUIRE_TRUE( state.equip( weapon, WeaponTestUtil::makeRound(), 1, WorldSeed::makeFixed( 1u ) ) );
     const Ray      aim;
     WeaponShot     shot;
     GameSoundQueue queue;
@@ -237,7 +237,7 @@ SW_TEST_CASE( WeaponTest, SoundsComeFromTheWeaponTable )
     SW_EXPECT_TRUE( player.getPosted()[3] == hashed_string( "Empty" ) );
 
     WeaponState silent;
-    SW_REQUIRE_TRUE( silent.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 0 ) );
+    SW_REQUIRE_TRUE( silent.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     SW_EXPECT_TRUE( silent.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
     silent.queueSound( queue );
     SW_EXPECT_TRUE( queue.isEmpty() );

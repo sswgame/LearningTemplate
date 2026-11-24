@@ -94,11 +94,6 @@ namespace sw
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
         void onWorldOriginShifted( const float3& delta ) override;
-        /**
-         * @brief 무기 칸의 탄 퍼짐 씨앗입니다. 매치 서버는 운영체제 난수라 부를 때마다 다르고, 혼자 · 클라이언트는 정해진 값(되풀이할 수 있다)입니다.
-         * @details 서버의 씨앗을 클라이언트가 알면 서버가 낼 퍼짐을 미리 돌려 되받아 조준한다(Valve 가 서버 · 클라이언트의 퍼짐 씨앗을 가른 까닭). 클라이언트의 탄도선은 예측한 모습일 뿐이다.
-         */
-        static uint32 makeSpreadSeed( int32 weaponIndex, bool bServer );
 
         /** @brief 적 · 다른 플레이어에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 다시 시작합니다(`finishDown`). */
         void takeDamage( float32 amount );

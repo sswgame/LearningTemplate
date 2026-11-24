@@ -101,7 +101,7 @@ namespace sw
         return _pCombo != nullptr;
     }
 
-    bool ActionPlatformerCombatSimulation::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed )
+    bool ActionPlatformerCombatSimulation::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, WorldSeed seed )
     {
         if ( projectile._speed <= 0.0f )
         {

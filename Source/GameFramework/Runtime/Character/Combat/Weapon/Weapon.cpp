@@ -151,7 +151,7 @@ namespace sw
     {
     }
 
-    bool WeaponState::equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 spreadSeed )
+    bool WeaponState::equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, WorldSeed spreadSeed )
     {
         if ( weapon.canAccept( projectile ) == false )
         {
@@ -160,7 +160,7 @@ namespace sw
         }
         _def  = weapon;
         _shot = ResolvedShot::resolve( projectile, weapon._listModifier, {} );
-        _random.setSeed( spreadSeed );
+        _random.setSeed( spreadSeed.getValue() );
         _cooldown.clear();
         _reload.clear();
         _currentSpread = weapon._minSpread;

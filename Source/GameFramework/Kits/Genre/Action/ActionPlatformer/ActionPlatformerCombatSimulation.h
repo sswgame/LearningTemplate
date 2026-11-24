@@ -88,7 +88,7 @@ namespace sw
          * @brief 총에 탄 @p projectile 을 넣어 장비합니다(예비탄 @p reserveAmmo, 퍼짐 시드 @p seed).
          * @return 무기가 그 탄을 받지 않거나 탄이 광선(속도 0)이면 오류를 남기고 false 이며 장비는 그대로입니다. 2D 탄은 날아가는 것뿐이다(광선 판정은 게임의 몫이다).
          */
-        [[nodiscard]] bool equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed = 1u );
+        [[nodiscard]] bool equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, WorldSeed seed );
 
         /** @brief 공격 버튼입니다. `_attackBufferFrames` 동안 기억했다가, 쓸 수 있는 첫 프레임에 기술을 냅니다. */
         void pressAttack();

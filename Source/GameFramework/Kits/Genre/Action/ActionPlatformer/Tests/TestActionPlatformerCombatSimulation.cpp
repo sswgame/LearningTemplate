@@ -384,9 +384,9 @@ SW_TEST_CASE( ActionCombatSimulationTest, GunSpawnsPelletsAndReportsWhyItCannot 
     sw::ProjectileDef ray = ActionCombatSimulationTestUtil::makePellet();
     ray._speed            = 0.0f;
     SW_EXPECT_LOG( "ActionPlatformerCombatSimulation.GunNeedsFlyingProjectile" );
-    SW_EXPECT_FALSE( rig.equipGun( ActionCombatSimulationTestUtil::makeShotgun(), ray, 0 ) );
+    SW_EXPECT_FALSE( rig.equipGun( ActionCombatSimulationTestUtil::makeShotgun(), ray, 0, sw::WorldSeed::makeFixed( 1u ) ) );
 
-    SW_REQUIRE_TRUE( rig.equipGun( ActionCombatSimulationTestUtil::makeShotgun(), ActionCombatSimulationTestUtil::makePellet(), 0 ) );
+    SW_REQUIRE_TRUE( rig.equipGun( ActionCombatSimulationTestUtil::makeShotgun(), ActionCombatSimulationTestUtil::makePellet(), 0, sw::WorldSeed::makeFixed( 1u ) ) );
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{ 1.0f, 2.0f }, sw::float2{ 0.0f, 5.0f }, true ) == sw::WeaponFireResult::Fired );
     const sw::vector<sw::ProjectileState>& listShot = rig.getProjectiles();
     SW_REQUIRE_EQUAL( size_t( 3 ), listShot.size() );
@@ -434,7 +434,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     SW_REQUIRE_TRUE( original.initialize( catalog, moves, kSword ) );
     const sw::WeaponDef     gun    = ActionCombatSimulationTestUtil::makeShotgun();
     const sw::ProjectileDef pellet = ActionCombatSimulationTestUtil::makePellet();
-    SW_REQUIRE_TRUE( original.equipGun( gun, pellet, 0 ) );
+    SW_REQUIRE_TRUE( original.equipGun( gun, pellet, 0, sw::WorldSeed::makeFixed( 1u ) ) );
     original.pressAttack();
     original.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     original.pressParry();
@@ -456,13 +456,13 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     SW_REQUIRE_TRUE( otherCatalog.loadFromXMLText( R"(<ActionPlatformer><Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "other" ) );
     sw::ActionPlatformerCombatSimulation otherCombo;
     SW_EXPECT_FALSE( otherCombo.initialize( otherCatalog, moves, kSword ) );
-    SW_REQUIRE_TRUE( otherCombo.equipGun( gun, pellet, 0 ) );
+    SW_REQUIRE_TRUE( otherCombo.equipGun( gun, pellet, 0, sw::WorldSeed::makeFixed( 1u ) ) );
     sw::Archive forOther( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( otherCombo.readState( forOther ) );
 
     sw::ActionPlatformerCombatSimulation restored;
     SW_REQUIRE_TRUE( restored.initialize( catalog, moves, kLong ) );
-    SW_REQUIRE_TRUE( restored.equipGun( gun, pellet, 0 ) );
+    SW_REQUIRE_TRUE( restored.equipGun( gun, pellet, 0, sw::WorldSeed::makeFixed( 1u ) ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
@@ -556,7 +556,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, CombatDeterminism )
     const sw::ProjectileDef pellet = ActionCombatSimulationTestUtil::makePellet();
 
     const auto setup = [&]( sw::ActionPlatformerCombatSimulation& rig )
-    { return rig.initialize( catalog, moves, kSword ) && rig.equipGun( gun, pellet, 40, 7u ); };
+    { return rig.initialize( catalog, moves, kSword ) && rig.equipGun( gun, pellet, 40, sw::WorldSeed::makeFixed( 7u ) ); };
     const auto step = []( sw::ActionPlatformerCombatSimulation& rig, int32 stepIndex )
     {
         if ( stepIndex % 5 == 0 )

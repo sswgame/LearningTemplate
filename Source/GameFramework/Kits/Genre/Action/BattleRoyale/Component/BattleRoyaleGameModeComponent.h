@@ -185,6 +185,7 @@ namespace sw
         int32 _squadSize;
         PROPERTY( Category = "Match", DisplayName = "Seed", Tooltip = "Seed of the zone, the flight, the loot and the computer people (not 0)", Min = 1 )
         uint32 _seed;
+        uint32 _matchSeed; ///< 이 판의 씨앗(`startGame` 이 `_seed` 에서 정한다 — 서버 월드는 난수)
         PROPERTY( Category = "Match", DisplayName = "Ground Height", Units = m )
         float32 _groundHeight;
         PROPERTY( Category = "People", DisplayName = "Player Speed", Min = 0.1, Units = "m/s" )

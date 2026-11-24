@@ -28,6 +28,7 @@
 #include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Foundation/Random/WorldSeed.h"
 
 namespace sw
 {
@@ -204,10 +205,10 @@ namespace sw
         WeaponState();
 
         /**
-         * @brief 총을 들고 탄 @p projectile 을 장전해 탄창을 채웁니다. 예비탄은 @p reserveAmmo 입니다.
+         * @brief 총을 들고 탄 @p projectile 을 장전해 탄창을 채웁니다. 예비탄은 @p reserveAmmo, 탄 퍼짐의 씨앗은 @p spreadSeed 입니다.
          * @return 무기가 그 탄을 받지 않으면(`WeaponDef::canAccept`) 오류를 남기고 false 이며 상태는 그대로입니다.
          */
-        [[nodiscard]] bool equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 spreadSeed = 1u );
+        [[nodiscard]] bool equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, WorldSeed spreadSeed );
         /**
          * @brief 탄 · 부착물을 바꿔 조합을 다시 계산합니다(탄창 · 쿨다운은 그대로). 장전 · 부착물이 바뀔 때 한 번 부르고, 쏠 때는 든 결과를 씁니다.
          * @return 무기가 그 탄을 받지 않으면 오류를 남기고 false 이며 조합은 그대로입니다.

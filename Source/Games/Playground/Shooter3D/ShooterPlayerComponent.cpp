@@ -6,9 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 #include "Core/Math/Ray.h"
-#include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -21,7 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
@@ -804,21 +801,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 입력, 이동, 사격(DuringPhysics, 자기 오브젝트)
     // ------------------------------------------------------------------------------
-    uint32 ShooterPlayerComponent::makeSpreadSeed( int32 weaponIndex, bool bServer )
-    {
-        if ( bServer == false )
-            return 0x51ed270bu + static_cast<uint32>( weaponIndex );
-        const UUID uuid = UUID::generate(); // 운영체제 난수
-        ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
-        return reader.readUint32();
-    }
-
     bool ShooterPlayerComponent::equipWeapons()
     {
-        const NetLinkValue* const pLink        = SceneNetLink::findBoundFor( *this );
-        const bool                bServer      = pLink != nullptr && pLink->_role == NetLinkRole::Server;
-        const WeaponCatalog*      pCatalog     = game::findSubsystem<const WeaponCatalog>();
-        const ProjectileCatalog*  pProjectiles = game::findSubsystem<const ProjectileCatalog>();
+        const WeaponCatalog*     pCatalog     = game::findSubsystem<const WeaponCatalog>();
+        const ProjectileCatalog* pProjectiles = game::findSubsystem<const ProjectileCatalog>();
         if ( pCatalog == nullptr || pProjectiles == nullptr )
         {
             SW_LOG_ERROR_ID( "ShooterPlayer.NoWeaponCatalogGameService", "[Shooter] no WeaponCatalog or ProjectileCatalog game service - the player cannot be armed" );
@@ -851,7 +837,7 @@ namespace sw
             // 기본 탄과 받음은 게임이 기동할 때 봤다(`WeaponCatalog::validateProjectiles`). 여기서 틀리면 그 슬롯이 서지 않는다.
             const ProjectileDef* pProjectile = pProjectiles->find( pDef->_projectileID.key() );
             const bool           bEquipped   = pProjectile != nullptr &&
-                                   _arrWeapon[weaponIndex].equip( *pDef, *pProjectile, pDef->_maxReserveAmmo / 2, makeSpreadSeed( weaponIndex, bServer ) );
+                                   _arrWeapon[weaponIndex].equip( *pDef, *pProjectile, pDef->_maxReserveAmmo / 2, WorldSeed::makeForWorld( *this, 0x51ed270bu + static_cast<uint32>( weaponIndex ) ) );
             bArmed = bArmed && bEquipped;
         }
         return bArmed;

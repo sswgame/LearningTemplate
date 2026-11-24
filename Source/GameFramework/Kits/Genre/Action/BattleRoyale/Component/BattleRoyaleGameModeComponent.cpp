@@ -99,6 +99,7 @@ namespace sw
         : _squadCount{ 3 }
         , _squadSize{ 2 }
         , _seed{ 7 }
+        , _matchSeed{ 1 }
         , _groundHeight{ 0.0f }
         , _playerSpeed{ 5.0f }
         , _botSpeed{ 4.0f }
@@ -150,7 +151,7 @@ namespace sw
 
     bool BattleRoyaleGameModeComponent::openMatch( BattleRoyaleMatch& outMatch ) const
     {
-        if ( outMatch.initialize( *_pCatalog, *_pItemCatalog, _pLootCatalog.get(), _seed, _terrain ) == false )
+        if ( outMatch.initialize( *_pCatalog, *_pItemCatalog, _pLootCatalog.get(), _matchSeed, _terrain ) == false )
         {
             SW_LOG_ERROR_ID( "BattleRoyale.OpenFailed", "Battle royale game mode: the match refused the catalog (map size or supply drop loot) - the match does not open" );
             return false;
@@ -174,7 +175,7 @@ namespace sw
     bool BattleRoyaleGameModeComponent::prepareDrop()
     {
         using Internal = BattleRoyaleGameModeComponentInternal;
-        if ( BattleRoyaleFlightPath::makeRandom( _pCatalog->getFlightSettings(), _pCatalog->getMapSize(), GameRandom::deriveSeed( _seed, Internal::kFlightSalt ), _flightPath ) == false )
+        if ( BattleRoyaleFlightPath::makeRandom( _pCatalog->getFlightSettings(), _pCatalog->getMapSize(), GameRandom::deriveSeed( _matchSeed, Internal::kFlightSalt ), _flightPath ) == false )
             return false; // 비행 설정이 범위 밖이면 키트가 오류를 남긴다
         _listPerson.clear();
         for ( int32 person = 0; person < _match.getPlayerCount(); ++person )
@@ -194,7 +195,7 @@ namespace sw
             {
                 listSpot.push_back( BattleRoyaleLootSpot{ position, _lootSpotKind } );
             }
-            (void)BattleRoyaleGroundItem::placeMapLoot( *_pCatalog, *_pLootCatalog, listSpot, GameRandom::deriveSeed( _seed, Internal::kLootSalt ), _listGroundItem );
+            (void)BattleRoyaleGroundItem::placeMapLoot( *_pCatalog, *_pLootCatalog, listSpot, GameRandom::deriveSeed( _matchSeed, Internal::kLootSalt ), _listGroundItem );
         }
         ++_groundItemRevision;
         return true;
@@ -214,7 +215,8 @@ namespace sw
             SW_LOG_ERROR_ID( "BattleRoyale.UnknownLootSpot", "Battle royale game mode: loot spot '%#' is not in the catalog - the match does not open", _lootSpotKind.c_str() );
             return false;
         }
-        _random                                 = GameRandom( GameRandom::deriveSeed( _seed, BattleRoyaleGameModeComponentInternal::kPersonSalt ) );
+        _matchSeed                              = WorldSeed::makeForWorld( *this, _seed ).getValue(); // 다음 구역 · 비행 경로 · 전리품은 서버만 안다
+        _random                                 = GameRandom( GameRandom::deriveSeed( _matchSeed, BattleRoyaleGameModeComponentInternal::kPersonSalt ) );
         const GameObjectManager* const pManager = getObjectManager();
         SW_ASSERT( pManager != nullptr && "a game mode starts inside a scene" );
         _terrain.initialize( *pManager, BattleRoyaleBodySettings{ _groundHeight, _bodyRadius, _eyeHeight } );
@@ -453,7 +455,7 @@ namespace sw
             return false;
         const WeaponDef* const     pWeapon     = _pWeaponCatalog->find( _listWeaponID[static_cast<size_t>( weaponIndex )].key() );
         const ProjectileDef* const pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
-        if ( pProjectile == nullptr || inoutPerson._weapon.equip( *pWeapon, *pProjectile, 0 ) == false )
+        if ( pProjectile == nullptr || inoutPerson._weapon.equip( *pWeapon, *pProjectile, 0, WorldSeed::makeForWorld( *this, 1u ) ) == false )
             return false;
         inoutPerson._weaponIndex = weaponIndex;
         return true;

@@ -133,7 +133,7 @@ SW_TEST_CASE( ProjectileTest, ProjectileDecidesTheShot )
     SW_REQUIRE_TRUE( rifle.compileAccepts( "test" ) );
 
     WeaponState state;
-    SW_REQUIRE_TRUE( state.equip( rifle, *catalog.find( hashed_string( "rifle_round" ) ), 0 ) );
+    SW_REQUIRE_TRUE( state.equip( rifle, *catalog.find( hashed_string( "rifle_round" ) ), 0, WorldSeed::makeFixed( 1u ) ) );
     SW_EXPECT_NEAR( 10.0f, state.getShot()._damage, kProjectileTolerance );
     SW_EXPECT_TRUE( state.getShot().isHitscan() );
 
@@ -156,7 +156,7 @@ SW_TEST_CASE( ProjectileTest, AcceptsIsATagCondition )
     SW_EXPECT_FALSE( rifle.canAccept( *catalog.find( hashed_string( "shell" ) ) ) );
 
     WeaponState state;
-    SW_REQUIRE_TRUE( state.equip( rifle, *catalog.find( hashed_string( "rifle_round" ) ), 0 ) );
+    SW_REQUIRE_TRUE( state.equip( rifle, *catalog.find( hashed_string( "rifle_round" ) ), 0, WorldSeed::makeFixed( 1u ) ) );
     SW_EXPECT_LOG( "Weapon.LoadRefusedProjectile" );
     SW_EXPECT_FALSE( state.loadProjectile( *catalog.find( hashed_string( "shell" ) ), {} ) );
     SW_EXPECT_TRUE( state.getShot()._projectileID == hashed_string( "rifle_round" ) );

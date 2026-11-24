@@ -24,6 +24,7 @@ namespace sw
 {
     namespace
     {
+        /** @brief 무기 칸마다의 씨앗입니다 — 판은 결정적이라 판의 씨앗(`MechArenaSettings::_seed`)에서 나온다. 판의 씨앗은 여는 쪽이 정한다(`WorldSeed::makeForWorld`). */
         uint32 mixMechArenaSeed( uint32 seed, int32 pilot, int32 slot )
         {
             return GameRandom::deriveSeed( seed, HashUtil::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
@@ -637,7 +638,7 @@ namespace sw
                 const WeaponDef*     pWeapon     = slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
                 const ProjectileDef* pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
                 const bool           bEquipped   = pProjectile == nullptr || pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip(
-                                                                     *pWeapon, *pProjectile, pWeapon->_maxReserveAmmo, mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) );
+                                                                     *pWeapon, *pProjectile, pWeapon->_maxReserveAmmo, WorldSeed::makeFixed( mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) ) );
                 if ( bEquipped == false )
                     return false;
                 ++slotIndex;
