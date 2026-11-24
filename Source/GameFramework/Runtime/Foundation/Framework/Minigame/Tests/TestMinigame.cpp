@@ -361,6 +361,8 @@ SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
     SW_REQUIRE_EQUAL( size_t{ 1 }, state._listResult[0]._result._listValue.size() );
     SW_EXPECT_TRUE( state._listResult[0]._result._listValue[0]._amount == 30 );
     stack.clearResults();
+    vector<uint8> noResult;
+    stack.writeSaveState( noResult ); // 칸 셋 + 결과 수 0
     SW_REQUIRE_TRUE( listFrame.size() == 3 );
     SW_EXPECT_TRUE( listFrame[0]._minigame == hashed_string( "farm" ) );
     const MinigameSuspendedScene* const pSuspended = std::get_if<MinigameSuspendedScene>( &listFrame[0]._returnPoint );
@@ -390,11 +392,8 @@ SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
     vector<uint8> truncated = bytes;
     truncated.pop_back();
     SW_EXPECT_FALSE( MinigameStack::readSaveState( truncated, state ) );
-    SW_REQUIRE_TRUE( stack.isEmpty() == false );
-    vector<uint8> noResult;
-    stack.writeSaveState( noResult );
     vector<uint8> unknownKind                              = noResult;
-    unknownKind[unknownKind.size() - sizeof( uint32 ) - 1] = 0xFFu; // 마지막 칸의 갈래 번호(뒤는 결과 수) 자리
+    unknownKind[unknownKind.size() - sizeof( uint32 ) - 1] = 0xFFu; // 마지막 칸(입구)의 갈래 번호 — 뒤는 결과 수뿐이다
     SW_EXPECT_FALSE( MinigameStack::readSaveState( unknownKind, state ) );
     SW_EXPECT_TRUE( listFrame.size() == 3 );
 }
