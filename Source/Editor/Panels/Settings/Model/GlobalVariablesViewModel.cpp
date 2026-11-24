@@ -16,7 +16,7 @@
 #include "Editor/Common/Workspace/Undo/EditorStateTextHistory.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::editor

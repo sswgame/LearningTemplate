@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 
 #include "GameFramework/Runtime/World/Lifetime/FadeOutComponent.h"
