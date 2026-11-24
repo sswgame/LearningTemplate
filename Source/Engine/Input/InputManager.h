@@ -199,6 +199,13 @@ namespace sw
         [[nodiscard]] bool openLocalUsers( uint32 userCount );
         /** @brief 로컬 멀티를 닫습니다. 통합 맵이 다시 모든 장치를 읽습니다. 열지 않았으면 아무것도 하지 않습니다. */
         void closeLocalUsers();
+        /**
+         * @brief 레이어를 모든 로컬 사용자의 맵에 넣습니다(`InputMap::pushLayer`) — 컷씬 막기 · 미니게임 문맥처럼 사람마다가 아니라 게임 전체의 것. 나중에 여는 사용자의 맵에도 넣습니다.
+         * @details 주 사용자의 맵에만 넣으면 분할 화면의 다른 사람은 컷씬 동안 움직이고, 넣은 채 사용자를 열면 사본이 남아 풀 곳이 없다.
+         */
+        [[nodiscard]] Subscription pushSharedLayer( const hashed_string& layer, bool bBlockLower = false );
+        /** @brief 레이어를 모든 로컬 사용자의 맵에서 켜 둡니다(`InputMap::enableLayer`). 나중에 여는 사용자의 맵에서도 켭니다. */
+        [[nodiscard]] Subscription enableSharedLayer( const hashed_string& layer );
         /** @brief 로컬 멀티가 열렸으면 그 사용자 수, 아니면 1 입니다. */
         uint32 getLocalUserCount() const { return _listUserDevices.empty() ? 1u : static_cast<uint32>( _listUserDevices.size() ); }
         /** @brief 로컬 사용자 @p userIndex 의 입력 맵입니다. 사용자 0 은 늘 통합 맵이고, 열리지 않은 사용자는 nullptr 입니다. */
@@ -422,6 +429,23 @@ namespace sw
             bool                 _bOSDeviceInputBlocked{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다). 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버린다(`setOSDeviceInputBlocked`)
         };
 
+        /** @brief 모든 사용자의 맵에 건 레이어 하나입니다(`pushSharedLayer` · `enableSharedLayer`). */
+        struct SharedLayer
+        {
+            hashed_string        _layer{};
+            uint64               _id{ 0 };
+            vector<Subscription> _listMapLayer{};       ///< 맵마다 건 구독(닫힌 사용자의 것은 무효다)
+            bool                 _bStacked{ false };    ///< NOLINT(sw-bool-flag): 집합체다. 스택에 넣는다(아니면 켜기만)
+            bool                 _bBlockLower{ false }; ///< NOLINT(sw-bool-flag): 위와 같다. 막는 칸이다
+        };
+
+        /** @brief 공유 레이어 @p shared 를 @p map 에 겁니다. */
+        static void applySharedLayer( SharedLayer& shared, InputMap& map );
+        /** @brief 공유 레이어를 지금 있는 모든 맵에 걸고 구독을 냅니다. */
+        Subscription addSharedLayer( const hashed_string& layer, bool bStacked, bool bBlockLower );
+        /** @brief 공유 레이어 @p id 의 구독이 풀렸습니다. */
+        void releaseSharedLayer( uint64 id );
+
         /** @brief @p source 의 붙임입니다. 없으면 nullptr 입니다. */
         const VirtualInputAttachment* findVirtualInput( const IVirtualInputSource& source ) const;
         /** @brief @p source 를 맨 위에 쌓습니다. 이미 붙어 있으면 오류를 남기고 0, 아니면 붙임의 id 를 돌려줍니다. */
@@ -539,6 +563,8 @@ namespace sw
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<unique_ptr<InputMap>>              _listUserMap;             /**< 로컬 멀티의 사용자 1 부터의 입력 맵입니다(`openLocalUsers`). 닫혔으면 비었습니다. */
         vector<InputUserDevices>                  _listUserDevices;         /**< 로컬 멀티의 사용자마다 짝지은 장치입니다(사용자 0 포함). 닫혔으면 비었습니다. */
+        vector<SharedLayer>                       _listSharedLayer;         /**< 모든 사용자의 맵에 건 레이어입니다. */
+        uint64                                    _lastSharedLayerID;       /**< 마지막으로 내준 공유 레이어의 id 입니다. */
         vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         vector<QueuedRawEvent>                    _listQueuedEvent;         /**< 큐에서 꺼낸 칸입니다 — 뒤 입력 프레임 번호가 붙은 칸은 그 프레임의 beginFrame() 까지 넣은 순서대로 남는다. */
         vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
@@ -579,6 +605,7 @@ namespace sw
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
         DevCounter                                _rawMouseEventCount;                  /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
         Subscription                              _sessionPlayback;                     /**< 세션 입력 기록 재생의 붙임입니다(`playSessionRecording`). */
+        SubscriptionList                          _sharedLayerSubscriptions;            /**< 공유 레이어의 구독입니다. */
         SubscriptionList                          _keyboardFocusSubscriptions;          /**< 키보드를 쥔 구독입니다(`claimKeyboardFocus`). */
         SubscriptionList                          _virtualInputSubscriptions;           /**< 가상 입력 붙임의 구독입니다. 다른 멤버보다 먼저 닫히게 맨 끝에 둔다. */
 

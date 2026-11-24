@@ -115,7 +115,7 @@ namespace sw
          *          카메라 컴포넌트는 UI 를 모르고, 이 디렉터가 레이어 숨김 창구(`IUILayerVisibility`)에 "이 레이어를 숨겨 달라" 는 요청만 건다 — 어느 레이어인지는 게임 데이터(속성)가 정한다.
          *          `setViewOverride` 는 탑승 카메라가 매 프레임 부르는 원근 전용 함수라서 쓰지 않는다. 겹치면 끌 때 탑승 시점을 지운다.
          *          조작은 게임 입력 맵이 아니라 엔진의 포토 모드 입력 맵(`EngineDefaultAssets::_photoModeInputMap`)에서 읽는다. 그래서 게임마다 맵에 액션을 더하지 않아도 되고,
-         *          게임 키와 겹쳐도 게임이 멈춰 있어 부딪히지 않는다(언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 추가하는 것과 같다).
+         *          켜 있는 동안 게임 입력 레이어를 막아 게임 키와 겹쳐도 부딪히지 않는다(늘 켜지는 레이어는 남는다 — 게임이 끄기 액션을 거기 둔다. 언리얼 Enhanced Input 이 포토 모드 동안 전용 매핑 컨텍스트를 추가하는 것과 같다).
          *          아직 포즈가 없거나(프리셋 없음) 이미 켜 있거나 그 맵을 읽지 못하면(오류 로그) false 입니다.
          */
         [[nodiscard]] bool enterPhotoMode();
@@ -275,11 +275,12 @@ namespace sw
         bool            _bViewOverride;
 
         PhotoModeCamera      _photoMode;
-        unique_ptr<InputMap> _photoInputMap;  ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
-        bool                 _bPhotoModeCut;  ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
-        Subscription         _photoPause;     ///< 포토 모드가 건 게임 시간 정지 요청
-        Subscription         _photoLayerHide; ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
-        Subscription         _photoCut;       ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
+        unique_ptr<InputMap> _photoInputMap;   ///< 포토 모드 동안만 있는 엔진 포토 모드 입력 맵(`enterPhotoMode` 가 읽고 `exitPhotoMode` 가 버린다)
+        bool                 _bPhotoModeCut;   ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
+        Subscription         _photoPause;      ///< 포토 모드가 건 게임 시간 정지 요청
+        Subscription         _photoLayerHide;  ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
+        Subscription         _photoCut;        ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
+        Subscription         _photoInputBlock; ///< 포토 모드 동안 게임 입력 레이어를 막는 칸(`InputManager::pushSharedLayer`)
 
         SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
         CameraDirector                      _director;

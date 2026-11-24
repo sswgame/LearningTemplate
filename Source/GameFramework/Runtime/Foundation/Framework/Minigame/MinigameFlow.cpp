@@ -1132,7 +1132,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MinigameFlow.InputContextNeedsInput", "Minigame '%#' lists input contexts but the engine service InputManager is not bound to the game services", definition._name.c_str() );
             return false;
         }
-        InputMap& inputMap = pInput->getInputMap();
+        const InputMap& inputMap = pInput->getInputMap();
         for ( const hashed_string& layer : definition._listInputContext )
         {
             if ( inputMap.hasLayer( layer ) == false )
@@ -1140,10 +1140,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "MinigameFlow.InputContextMissing", "Minigame '%#': input context '%#' is not a layer of the game input map bundle", definition._name.c_str(), layer.c_str() );
                 return false;
             }
-            inputMap.pushLayer( layer );
-            // 같은 입력 맵을 끌 때 찾는다 — 입력 서비스는 엔진 수명이라 미니게임보다 오래 산다.
-            scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pInput, layer]()
-            { pInput->getInputMap().popLayer( layer ); } ) );
+            scope.holdSubscription( pInput->pushSharedLayer( layer ) ); // 한 화면의 모든 사용자가 같은 문맥이다
         }
         return true;
     }

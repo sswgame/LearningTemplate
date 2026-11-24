@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -98,7 +99,7 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Mouse Lock Action", Tooltip = "InputMap action that releases and re-locks the cursor of a pawn that wants mouse lock (Esc)" )
         hashed_string _mouseLockAction;
 
-        vector<hashed_string>           _listPushedLayer;         ///< 빙의 때 넣은 레이어들(뺄 때 이름으로)
+        vector<Subscription>            _listPawnLayer;           ///< 빙의한 폰의 입력 레이어(`InputMap::pushLayer`)
         GameObjectHandle                _previousPawn;            ///< 마지막으로 놓은 폰의 오브젝트(이벤트의 앞 폰)
         TComponentHandle<PawnComponent> _warnedPawn;              ///< 빠진 액션을 이미 경고한 폰
         uint8                           _bMouseLockRequested : 1; ///< 빙의한 폰을 위해 잠금을 유지하려 한다(토글 액션이 뒤집는다)

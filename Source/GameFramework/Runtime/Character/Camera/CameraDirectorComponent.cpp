@@ -43,6 +43,8 @@ namespace sw
         struct CameraDirectorComponentInternal
         {
             /** @brief 덮어쓴 시점 프리셋의 id 입니다. 카탈로그에 없으므로 저장하면 고정 포즈로 돌아온다. */
+            /** @brief 포토 모드 동안 게임 입력 레이어를 막는 칸의 이름입니다(액션이 없는 빈 레이어). */
+            static constexpr const utf8* kPhotoModeLayer   = "PhotoMode";
             static constexpr const utf8* kOverridePresetID = "__viewOverride";
             /** @brief 덮어쓴 원근 시점의 가까운 면(m)입니다. 탑승 카메라가 바로 앞 레일을 자르지 않게 짧게 둔다. */
             static constexpr float32 kOverrideNearPlane = 0.1f;
@@ -202,6 +204,7 @@ namespace sw
         , _photoPause{}
         , _photoLayerHide{}
         , _photoCut{}
+        , _photoInputBlock{}
         , _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _director{}
         , _channelImpulse{}
@@ -247,6 +250,7 @@ namespace sw
             _photoPause.reset();
             _photoLayerHide.reset();
             _photoCut.reset();
+            _photoInputBlock.reset();
         }
         CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
@@ -339,7 +343,11 @@ namespace sw
             SW_LOG_ERROR_ID( "CameraDirectorComponent.PhotoModeInputMap3", "Photo mode input map '%#' lacks the photo actions listed above - not entered", mapPath );
             return false;
         }
-        photoInputMap->setInputManager( game::findSubsystem<InputManager>() );
+        InputManager* const pInput = game::findSubsystem<InputManager>();
+        photoInputMap->setInputManager( pInput );
+        // 게임이 멈춰도 조종자는 프레임마다 의도를 만든다 — 막지 않으면 자유 카메라를 돌리는 입력이 폰의 시선 · 발동으로도 샌다(세션 중에는 멈추지도 않는다).
+        if ( pInput != nullptr )
+            _photoInputBlock = pInput->pushSharedLayer( hashed_string( CameraDirectorComponentInternal::kPhotoModeLayer ), true );
         _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
         _photoPause = game::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Player );
@@ -368,6 +376,7 @@ namespace sw
         _photoPause.reset();
         _photoLayerHide.reset();
         _photoCut.reset();
+        _photoInputBlock.reset();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
     }

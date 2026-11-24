@@ -814,11 +814,7 @@ namespace sw
         }
 
         if ( binding._cachedLayerIndex != ActionBinding::kInvalidLayerIndex && _listLayerStack.empty() )
-        {
-            if ( _listLayerEntry[binding._cachedLayerIndex]._bEnabled == SW_FALSE )
-                return false;
-            return true;
-        }
+            return isLayerRequested( _listLayerEntry[binding._cachedLayerIndex] );
 
         return isLayerActiveInternal( binding._layer );
     }
@@ -826,7 +822,7 @@ namespace sw
     bool InputMap::isLayerActiveInternal( const hashed_string& layer ) const
     {
         const LayerDef* pLayer = findLayer( layer );
-        if ( pLayer == nullptr || pLayer->_bEnabled == SW_FALSE )
+        if ( pLayer == nullptr || isLayerRequested( *pLayer ) == false )
             return false;
         if ( pLayer->_bAlwaysOn == SW_TRUE )
             return true;
@@ -838,7 +834,7 @@ namespace sw
                 if ( it->_name == layer )
                     return true;
                 const LayerDef* pTopLayer = findLayer( it->_name );
-                if ( pTopLayer != nullptr && pTopLayer->_bBlockLower == SW_TRUE )
+                if ( it->_bBlockLower || ( pTopLayer != nullptr && pTopLayer->_bBlockLower == SW_TRUE ) )
                     return false;
             }
             return false;

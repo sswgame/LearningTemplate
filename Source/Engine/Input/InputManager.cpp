@@ -85,6 +85,8 @@ namespace sw
         , _pInputMap{ nullptr }
         , _listUserMap{}
         , _listUserDevices{}
+        , _listSharedLayer{}
+        , _lastSharedLayerID{ 0 }
         , _listPolledEvent{}
         , _listQueuedEvent{}
         , _listFramePress{}
@@ -120,6 +122,7 @@ namespace sw
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
         , _bBackgroundGamepadInput{ SW_TRUE }
+        , _sharedLayerSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseSharedLayer, this ) }
         , _keyboardFocusSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseKeyboardFocus, this ) }
         , _virtualInputSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseVirtualInput, this ) }
     {
@@ -177,6 +180,8 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
+        _sharedLayerSubscriptions.detachAll();
+        _listSharedLayer.clear();
         _keyboardFocusSubscriptions.detachAll();
         for ( uint32& claimCount : _arrKeyboardClaimCount )
         {
@@ -564,8 +569,8 @@ namespace sw
                 return false; // 담지 못하는 바인딩은 맵이 알렸다
             listSource.push_back( std::move( source ) );
         }
-        vector<hashed_string> listLayer;
-        _pInputMap->collectLayerStack( listLayer );
+        vector<hashed_string> listEnabledLayer;
+        _pInputMap->collectEnabledLayers( listEnabledLayer );
         vector<unique_ptr<InputMap>> listUserMap;
         for ( uint32 userIndex = 1; userIndex < userCount; ++userIndex )
         {
@@ -576,15 +581,18 @@ namespace sw
             pUserMap->getAccessibilitySettings() = _pInputMap->getAccessibilitySettings();
             for ( const hashed_string& layer : _pInputMap->getLayerNames() )
             {
-                pUserMap->setLayerEnabled( layer, _pInputMap->isLayerEnabled( layer ) );
-            }
-            for ( const hashed_string& layer : listLayer )
-            {
-                pUserMap->pushLayer( layer );
+                pUserMap->setLayerEnabled( layer, VectorUtil::contains( listEnabledLayer, layer ) ); // 스택(주 사용자 폰의 레이어)은 베끼지 않는다 — 그 사람의 것이다
             }
             listUserMap.push_back( std::move( pUserMap ) );
         }
         _listUserMap = std::move( listUserMap );
+        for ( SharedLayer& shared : _listSharedLayer )
+        {
+            for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
+            {
+                applySharedLayer( shared, *pUserMap );
+            }
+        }
         _listUserDevices.resize( userCount );
         _listUserDevices[0]._bKeyboardMouse = SW_TRUE;
         pairLocalUsers();
@@ -600,6 +608,44 @@ namespace sw
         _listUserDevices.clear();
         if ( _pInputMap != nullptr )
             _pInputMap->setUserDevices( nullopt );
+    }
+
+    Subscription InputManager::pushSharedLayer( const hashed_string& layer, bool bBlockLower )
+    {
+        return addSharedLayer( layer, true, bBlockLower );
+    }
+
+    Subscription InputManager::enableSharedLayer( const hashed_string& layer )
+    {
+        return addSharedLayer( layer, false, false );
+    }
+
+    Subscription InputManager::addSharedLayer( const hashed_string& layer, bool bStacked, bool bBlockLower )
+    {
+        SharedLayer shared;
+        shared._layer       = layer;
+        shared._id          = ++_lastSharedLayerID;
+        shared._bStacked    = bStacked;
+        shared._bBlockLower = bBlockLower;
+        if ( _pInputMap != nullptr )
+            applySharedLayer( shared, *_pInputMap );
+        for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
+        {
+            applySharedLayer( shared, *pUserMap );
+        }
+        _listSharedLayer.push_back( std::move( shared ) );
+        return _sharedLayerSubscriptions.issue( _lastSharedLayerID );
+    }
+
+    void InputManager::applySharedLayer( SharedLayer& shared, InputMap& map )
+    {
+        shared._listMapLayer.push_back( shared._bStacked ? map.pushLayer( shared._layer, shared._bBlockLower ) : map.enableLayer( shared._layer ) );
+    }
+
+    void InputManager::releaseSharedLayer( uint64 id )
+    {
+        (void)VectorUtil::removeIf( _listSharedLayer, [id]( const SharedLayer& shared )
+        { return shared._id == id; } ); // 맵마다의 구독이 함께 풀린다
     }
 
     InputMap* InputManager::findUserMap( uint32 userIndex )

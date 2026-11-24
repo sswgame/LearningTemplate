@@ -18,7 +18,7 @@
  * @brief InputMap 의 정의 데이터(수명 주기, 바인딩 등록, 레이어 스택, 리바인드, 정의 조회)를 구현합니다.
  *
  * InputMap 은 책임마다 파일이 나뉜다(언리얼 Enhanced Input 이 매핑 컨텍스트 데이터 · 플레이어 입력 평가 · 에셋 직렬화를 가르는 나눔).
- *  - InputMap.cpp: 정의 데이터 — 생성자, bind*() 등록, 레이어 스택(pushLayer/popLayer), 리바인드, 정의 조회.
+ *  - InputMap.cpp: 정의 데이터 — 생성자, bind*() 등록, 레이어 스택(pushLayer · enableLayer), 리바인드, 정의 조회.
  *  - InputMapEvaluate.cpp: 평가기 · 상태 — update() 가 매 프레임 도는 상태 머신과 is/wasActionXxx() 상태 조회.
  *  - InputMapAsset.cpp: InputMap XML 정의 · 묶음의 로드와 저장.
  *  - InputBinding.cpp: 바인딩 종류 표(`BindingKinds`).
@@ -65,6 +65,8 @@ namespace sw
         , _listActionName{}
         , _listLayerName{}
         , _listLayerStack{}
+        , _listLayerEnable{}
+        , _lastLayerRequestID{ 0 }
         , _listSource{}
         , _actionBuffer{}
         , _nextGeneration{ 1 }
@@ -80,6 +82,7 @@ namespace sw
         , _bKeyboardFocusIgnored{ SW_FALSE }
         , _bReadsToolKeyboard{ SW_FALSE }
         , _reservedFlags{ 0 }
+        , _layerSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputMap::releaseLayer, this ) }
     {
     }
 
@@ -91,8 +94,7 @@ namespace sw
         _listLayerEntry.clear();
         _listActionName.clear();
         _listLayerName.clear();
-        _listLayerStack.clear();
-        _listSource.clear();
+        _listSource.clear(); // 레이어 칸은 남긴다 — 넣은 쪽(폰 · 미니게임)이 살아 있고, 다시 읽은 맵의 같은 이름 레이어에 다시 듣는다
         _currentSourceIndex = 0;
         _actionBuffer.clear();
         _defaultLayerName                     = hashed_string( InputMapDefaults::kDefaultLayerName );
@@ -315,61 +317,49 @@ namespace sw
             pLayer->_bEnabled = enabled ? SW_TRUE : SW_FALSE;
     }
 
-    void InputMap::pushLayer( const hashed_string& layer, bool blockLower, bool showCursor )
+    Subscription InputMap::pushLayer( const hashed_string& layer, bool bBlockLower )
     {
-        const hashed_string hLayer( layer );
-        const bool          bRegistered = findLayer( hLayer ) != nullptr;
-        LayerDef&           def         = ensureLayer( hLayer, 0, true, blockLower );
-
-        LayerStackEntry entry{};
-        entry._name = hLayer;
-        // push 가 만든 레이어는 pop 뒤에 꺼진다 — 등록되지 않았던 것은 켜지지 않았던 것이다.
-        entry._bEnabledBefore    = bRegistered ? def._bEnabled : SW_FALSE;
-        entry._bBlockLowerBefore = bRegistered ? def._bBlockLower : SW_FALSE;
-        for ( auto it = _listLayerStack.begin(); it != _listLayerStack.end(); ++it )
+        ensureLayer( layer, 0, false );
+        // 막지 않는 칸은 막는 칸 아래에 끼운다 — 막는 칸끼리, 막지 않는 칸끼리는 넣은 순서다.
+        size_t at = _listLayerStack.size();
+        while ( bBlockLower == false && at > 0 && _listLayerStack[at - 1]._bBlockLower )
         {
-            if ( it->_name == hLayer )
-            {
-                entry = *it; // 다시 넣기 — 처음 push 전의 값을 지킨다
-                _listLayerStack.erase( it );
-                break;
-            }
+            --at;
         }
-        def._bEnabled    = SW_TRUE;
-        def._bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
-        _listLayerStack.push_back( entry );
-        if ( _pInput != nullptr && showCursor )
-            _pInput->setCursorVisible( true );
+        _listLayerStack.insert( _listLayerStack.begin() + static_cast<ptrdiff_t>( at ), LayerStackEntry{ layer, ++_lastLayerRequestID, bBlockLower } );
+        return _layerSubscriptions.issue( _lastLayerRequestID );
     }
 
-    void InputMap::popLayer()
+    Subscription InputMap::enableLayer( const hashed_string& layer )
     {
-        if ( _listLayerStack.empty() == false )
-            eraseLayerStackEntry( _listLayerStack.size() - 1 );
+        _listLayerEnable.push_back( LayerEnableRequest{ layer, ++_lastLayerRequestID } );
+        return _layerSubscriptions.issue( _lastLayerRequestID );
     }
 
-    void InputMap::popLayer( const hashed_string& layer )
+    void InputMap::releaseLayer( uint64 id )
     {
-        const hashed_string hLayer( layer );
-        for ( size_t index = _listLayerStack.size(); index > 0; --index )
+        // 칸이거나 켜기 요청이다 — id 를 함께 쓰므로 한쪽에만 있다.
+        (void)VectorUtil::removeIf( _listLayerStack, [id]( const LayerStackEntry& entry )
+        { return entry._id == id; } );
+        (void)VectorUtil::removeIf( _listLayerEnable, [id]( const LayerEnableRequest& request )
+        { return request._id == id; } );
+    }
+
+    bool InputMap::isLayerRequested( const LayerDef& layer ) const
+    {
+        if ( layer._bEnabled == SW_TRUE )
+            return true;
+        for ( const LayerStackEntry& entry : _listLayerStack )
         {
-            if ( _listLayerStack[index - 1]._name == hLayer )
-            {
-                eraseLayerStackEntry( index - 1 );
-                break;
-            }
+            if ( entry._name == layer._name )
+                return true;
         }
-    }
-
-    void InputMap::eraseLayerStackEntry( size_t index )
-    {
-        const LayerStackEntry entry = _listLayerStack[index];
-        _listLayerStack.erase( _listLayerStack.begin() + static_cast<ptrdiff_t>( index ) );
-        LayerDef* pLayer = findLayer( entry._name );
-        if ( pLayer == nullptr )
-            return;
-        pLayer->_bEnabled    = entry._bEnabledBefore;
-        pLayer->_bBlockLower = entry._bBlockLowerBefore;
+        for ( const LayerEnableRequest& request : _listLayerEnable )
+        {
+            if ( request._name == layer._name )
+                return true;
+        }
+        return false;
     }
 
     string_view InputMap::getCurrentTopLayer() const
@@ -407,14 +397,6 @@ namespace sw
                 continue;
             def._bEnabled = ( name == hLayer ) ? SW_TRUE : SW_FALSE;
         }
-        // 켬을 통째로 다시 정한다 — 앞 칸들이 기억한 값은 버리고, 남긴 칸은 지금 값을 기억해 pop 이 아무것도 바꾸지 않는다.
-        const LayerDef* pLayer = findLayer( hLayer );
-        LayerStackEntry entry{};
-        entry._name              = hLayer;
-        entry._bEnabledBefore    = pLayer != nullptr ? pLayer->_bEnabled : SW_FALSE;
-        entry._bBlockLowerBefore = pLayer != nullptr ? pLayer->_bBlockLower : SW_FALSE;
-        _listLayerStack.clear();
-        _listLayerStack.push_back( entry );
     }
 
     bool InputMap::rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex )
