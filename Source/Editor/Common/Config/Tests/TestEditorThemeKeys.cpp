@@ -95,7 +95,7 @@ namespace
             collectMacroKeys( text, "SW_THEME_COLOR", scan._setColorKey );
             collectMacroKeys( text, "SW_THEME_METRIC_KEY", scan._setMetricKey );
             collectMacroKeys( text, "SW_THEME_METRIC", scan._setMetricKey );
-            if ( StringUtil::endsWith( filePath, "EditorThemeKey.h" ) == false ) // 목록에 적힌 것은 쓰임이 아니다
+            if ( StringUtil::endsWith( filePath.str(), "EditorThemeKey.h" ) == false ) // 목록에 적힌 것은 쓰임이 아니다
                 scan._allText += text;
         }
         // 데이터가 이름으로 드는 색: 컴포넌트 아이콘 표의 색과 컴포넌트 선언의 `IconColor=` 메타(키는 `Component.<이름>`).
