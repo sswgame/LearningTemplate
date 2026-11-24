@@ -66,6 +66,8 @@ namespace sw
         /** @brief 씬의 효과 목록(`ComponentRegistry`)에 등록합니다. 렌더러가 씬 전체를 훑지 않고 이 목록을 봅니다. */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 지난 틱의 방출기 자리를 옮깁니다 — 원점 이동을 방출기의 움직임으로 읽어 월드 공간 입자를 밀지 않게. */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief `_bPlayOnBegin` 이면 재생을 시작합니다. */
         void onBeginPlay() override;
         /** @brief 재생 중이면 시뮬레이션을 프레임 시간만큼 돌리고 입자를 냅니다. 방출이 끝나고 입자가 모두 사라지면 재생을 멈춥니다. */

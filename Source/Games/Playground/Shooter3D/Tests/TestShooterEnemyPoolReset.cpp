@@ -7,6 +7,7 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -56,7 +57,9 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, DeadEnemyComesBackAsFreshSpawn )
     SkeletalAnimatorComponent* pAnimator = pObject->getComponent<SkeletalAnimatorComponent>();
     SW_REQUIRE_TRUE( pEnemy != nullptr && pRagdoll != nullptr && pAnimator != nullptr );
 
-    SW_REQUIRE_TRUE( pEnemy->launch( GameObjectHandle{}, float3{ 1.0f, 0.0f, 2.0f }, 0.5f, 30.0f, 3.0f ) );
+    SW_REQUIRE_TRUE( pEnemy->launch( GameObjectHandle{
+    },
+                                     AbsolutePosition{ float3{ 1.0f, 0.0f, 2.0f } }, 0.5f, 30.0f, 3.0f ) );
     pEnemy->setNetEntityID( 7 );
     CharacterRayHit::deliverHit( *pObject, Util::makeFatalDamage() );    // 무기 판정이 보내는 자리(틱 밖)
     pAnimator->getParameters().setBool( hashed_string( "Dead" ), true ); // 적의 틱이 쓰는 값이다
@@ -73,7 +76,9 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, DeadEnemyComesBackAsFreshSpawn )
     SW_EXPECT_TRUE( pRagdoll->getState() == RagdollState::Animated );
     SW_EXPECT_FALSE( pAnimator->getParameters().isTrue( hashed_string( "Dead" ) ) );
 
-    SW_EXPECT_TRUE( pEnemy->launch( GameObjectHandle{}, float3{ 0.0f, 0.0f, 0.0f }, 0.0f, 30.0f, 3.0f ) );
+    SW_EXPECT_TRUE( pEnemy->launch( GameObjectHandle{
+    },
+                                    AbsolutePosition{ float3{ 0.0f, 0.0f, 0.0f } }, 0.0f, 30.0f, 3.0f ) );
     SW_EXPECT_TRUE( pEnemy->isAlive() );
 }
 
@@ -88,10 +93,29 @@ SW_TEST_CASE( ShooterEnemyPoolResetTest, ReplicaRestoresThePawnAutoPossess )
     PawnComponent*         pPawn  = pObject->getComponent<PawnComponent>();
     SW_REQUIRE_TRUE( pEnemy != nullptr && pPawn != nullptr );
 
-    pEnemy->launchReplica( GameObjectHandle{}, float3{ 0.0f, 0.0f, 0.0f }, 0.0f );
+    pEnemy->launchReplica( GameObjectHandle{
+    },
+                           AbsolutePosition{ float3{ 0.0f, 0.0f, 0.0f } }, 0.0f );
     SW_REQUIRE_TRUE( pPawn->getAutoPossess() == PawnAutoPossess::None );
 
     pool.release( manager, pObject->getHandle() );
     SW_EXPECT_TRUE( pPawn->getAutoPossess() == PawnAutoPossess::AI );
     SW_EXPECT_FALSE( pEnemy->isReplica() );
+}
+
+/** @brief [ShooterEnemyPoolResetTest] 월드 원점을 옮긴 씬에서 선 적의 시뮬레이션 자리는 절대 그대로이고, 모습만 원점만큼 옮긴 씬 자리에 선다 */
+SW_TEST_CASE( ShooterEnemyPoolResetTest, ShiftedOriginMovesOnlyTheView )
+{
+    GameObjectManager manager;
+    manager.setWorldOrigin( double3{ 100.0, 0.0, -50.0 } );
+    GameObject* const      pObject = manager.createGameObject( hashed_string( "Enemy" ) );
+    SceneComponent* const  pScene  = pObject->addComponent<SceneComponent>();
+    ShooterEnemyComponent* pEnemy  = pObject->addComponent<ShooterEnemyComponent>();
+    SW_REQUIRE_TRUE( pEnemy != nullptr && pScene != nullptr );
+
+    SW_REQUIRE_TRUE( pEnemy->launch( GameObjectHandle{
+    },
+                                     AbsolutePosition{ float3{ 101.0f, 0.0f, -48.0f } }, 0.5f, 30.0f, 3.0f ) );
+    SW_EXPECT_TRUE( pEnemy->getPosition()._value == float3( 101.0f, 0.0f, -48.0f ) );
+    SW_EXPECT_TRUE( pScene->getWorldPosition() == float3( 1.0f, 0.0f, 2.0f ) );
 }

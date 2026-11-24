@@ -73,7 +73,7 @@ namespace sw
                 SceneComponent* pScene = pTarget->getPrimarySceneComponent();
                 if ( pScene == nullptr || track._listChannel.size() < kSequenceTransformChannelCount )
                     return;
-                float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+                float3 arrValue[3] = { pScene->getZeroOriginPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
                 bool   arrKeyed[3] = { false, false, false };
                 for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
                 {
@@ -87,7 +87,7 @@ namespace sw
                 }
                 // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )
-                    pScene->setLocalPosition( arrValue[0] );
+                    pScene->setZeroOriginPosition( arrValue[0] ); // 키는 원점 0 기준이다 — 월드 원점을 옮겨도 루트가 제자리다
                 if ( arrKeyed[1] )
                     pScene->setLocalRotation( arrValue[1] );
                 if ( arrKeyed[2] )
@@ -498,7 +498,7 @@ namespace sw
                 const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
                 if ( pScene == nullptr )
                     return false;
-                const float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+                const float3 arrValue[3] = { pScene->getZeroOriginPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
                 for ( uint32 groupIndex = 0; groupIndex < 3; ++groupIndex )
                 {
                     pOutArrValue[groupIndex * 3 + 0] = arrValue[groupIndex]._x;
@@ -558,7 +558,7 @@ namespace sw
                 SceneComponent* pScene = pTarget->getPrimarySceneComponent();
                 if ( pScene == nullptr )
                     return;
-                pScene->setLocalPosition( float3{ pArrValue[0], pArrValue[1], pArrValue[2] } );
+                pScene->setZeroOriginPosition( float3{ pArrValue[0], pArrValue[1], pArrValue[2] } );
                 pScene->setLocalRotation( float3{ pArrValue[3], pArrValue[4], pArrValue[5] } );
                 pScene->setLocalScale( float3{ pArrValue[6], pArrValue[7], pArrValue[8] } );
                 return;

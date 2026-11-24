@@ -147,6 +147,8 @@ namespace sw
          * @return 맞았으면 true 이고 @p outHit 에 맞은 바디입니다(거리는 옮긴 광선 기준이며 옮긴 길이와 같은 방향의 값이다).
          */
         [[nodiscard]] bool raycastRewound( const GameObjectManager& manager, const Ray& ray, float32 maxDistance, uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit );
+        /** @brief 지금 조종 계정의 매치 점수를 순위표에 냅니다(서버, 틱 뒤 · 게임 스레드). 판이 끝날 때 플레이어가 부릅니다 — 클라이언트 · 매치가 아닌 판은 아무 일도 없다. */
+        void reportMatchScore();
         /** @brief 예측 스윕이 맞힌 적을 다음 입력 틱에 서버로 주장합니다(클라이언트, 틱 뒤). */
         void queueMeleeClaim( uint32 enemyEntityID );
         /** @brief 입력에 실어 보낸 맞음 주장 수입니다(클라이언트). */
@@ -199,6 +201,10 @@ namespace sw
         void recordEnemies();
         /** @brief 기다린 맞음 주장 가운데 그 프레임의 스윕이 기록된 것을 확인합니다(틱 뒤 · 게임 스레드). */
         void resolveClaims();
+        /** @brief 나간 조종 계정의 판을 끝냅니다(서버, 틱 뒤 · 게임 스레드) — 점수를 내고, 빈 자리를 맡기고, 매치 서버면 판을 처음부터 다시 엽니다. */
+        void finishLeftPlayer();
+        /** @brief 계정 @p accountID 의 매치 점수를 정의의 순위표에 냅니다(서버 권위 제출 — `ILeaderboardScoreSender`). 매치가 아니거나 이미 냈으면 아무 일도 없다. */
+        void reportMatchScore( uint64 accountID );
         /** @brief 지금 폰 의도를 만들 때 클라이언트가 보던 서버 틱입니다(조종 시스템이 이번 프레임에 읽은 입력 틱의 스탬프). */
         float32                    findShotViewTick() const;
         RemoteControllerComponent* findRemoteController() const;
@@ -254,11 +260,14 @@ namespace sw
         uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
         uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
         uint64                                            _controllerAccountID; ///< 서버 — 조종 연결의 주체(접속 티켓의 계정, 0 이면 없다). 끊기면 매칭 백필에 그 자리를 맡긴다
+        uint64                                            _leftAccountID;       ///< 서버 — 나간 조종 계정(틱 뒤 `finishLeftPlayer` 가 처리한다). 0 이면 없다
         int32                                             _controllerID;        ///< 서버 — 이 몸을 조종하는 연결(-1 이면 없다)
         Role                                              _role;
         uint8                                             _bPendingTriggerLook : 1; ///< 클라이언트 — `_pendingTriggerYaw` · `_pendingTriggerPitch` 가 채워졌다
         uint8                                             _bRemoteRequested    : 1; ///< 서버 — 원격 조종자 빙의를 틱 뒤로 예약했다
         uint8                                             _bClaimsScheduled    : 1; ///< 서버 — 주장 확인을 틱 뒤로 예약했다
+        uint8                                             _bLeaveScheduled     : 1; ///< 서버 — 나감 처리를 틱 뒤로 예약했다
+        uint8                                             _bScoreReported      : 1; ///< 서버 — 지금 조종 계정의 매치 점수를 냈다(한 사람에 한 번)
         [[maybe_unused]] uint8                            _reserved            : 5;
     };
 } // namespace sw

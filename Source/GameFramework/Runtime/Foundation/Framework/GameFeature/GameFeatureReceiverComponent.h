@@ -23,7 +23,7 @@ namespace sw
      * @brief 받는 이름(`_receiver`)이 같은 규칙(`GameFeatureScope::addComponent`)의 컴포넌트를 시작할 때 붙입니다. 파일 머리말 참고.
      * @details 이미 같은 형식의 컴포넌트가 있으면 붙이지 않는다 — 프리팹이 저작한 값이 이긴다. 그런 컴포넌트는 기능을 꺼도 떼지 않는다.
      *          게임 인스턴스가 없는 월드(에디터 편집 씬)에서는 아무것도 하지 않는다.
-     *          shortcut: 붙인 컴포넌트도 세이브에 든다(컴포넌트에는 저장하지 않는 표시가 없다) — 불러온 뒤에는 저작한 것처럼 남는다. 기능을 켠 채 저장하는 게임이 생기면 표시를 둔다.
+     *          붙인 컴포넌트는 파생이다(`Component::setTransient`) — 세이브 · 스냅샷에 들지 않고, 불러온 뒤 받는 쪽이 시작하며 다시 붙인다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game Feature Receiver", Tooltip = "Receives the components that active game features add to objects with this receiver name" )
     class SW_GF_API GameFeatureReceiverComponent : public Component

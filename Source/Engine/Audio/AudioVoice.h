@@ -86,14 +86,13 @@ namespace sw
         float64 getPosition() const { return _position; }
         /** @brief 페이드가 향하는 목표 게인입니다. 들림 판정에 쓰며, 페이드인 첫 블록도 들리는 것으로 봅니다. */
         float32 getFadeTarget() const { return _fadeTarget; }
-        /** @brief 스트리밍 창입니다(스트리밍 · 그래프 클립이 아니면 닫혀 있다). 진단 · 테스트가 되감은 횟수를 읽는다. */
-        const AudioStreamWindow& getStreamWindow() const { return _stream; }
         /** @brief 현재 적용 중인 페이드 게인입니다. */
         float32 getFadeGain() const { return _fadeGain; }
         /** @brief 클립입니다. */
         const AudioClipData* getClip() const { return _pClip.get(); }
 
     private:
+        friend struct AudioVoiceTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 지연과 페이드를 한 프레임 진행합니다. 페이드가 끝나 보이스를 멈춰야 하면 false 를 반환합니다. */
         bool stepFade();
         /**

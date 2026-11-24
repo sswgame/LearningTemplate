@@ -236,6 +236,8 @@ namespace sw
                 _offset = 0.0f;
             }
 
+            void applyWorldOffset( const float3& delta ) override { _chain.applyWorldOffset( delta ); }
+
             /**
              * @brief 출력: `speed`(지난 평가의 가장 빠른 입자 속도, m/s — 부품 교체 · 순간이동 뒤의 튐), `offset`(입자가 애니메이션 자세에서 가장 멀리 벗어난 거리, m — 사슬이 쉬는지).
              */

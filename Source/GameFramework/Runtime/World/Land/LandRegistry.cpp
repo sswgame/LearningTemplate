@@ -19,13 +19,13 @@ namespace sw
     {
     }
 
-    void LandRegistry::initialize( int32 width, int32 height, float32 cellSize, const float3& origin )
+    void LandRegistry::initialize( int32 width, int32 height, float32 cellSize, const AbsolutePosition& origin )
     {
         SW_ASSERT( cellSize > 0.0f ); // 전제 조건이다. 맞춰 돌지 않는다(판 상태는 받을 때 거절한다)
         _topology = GridTopology( width, height );
         _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), Cell{} );
         _listOwnerName.clear();
-        _origin   = origin;
+        _origin   = origin._value;
         _cellSize = cellSize;
         ++_revision;
     }
@@ -94,7 +94,7 @@ namespace sw
             ++_revision;
     }
 
-    bool LandRegistry::claimWorldRect( uint16 owner, const float3& center, const float3& size, bool bBlocking )
+    bool LandRegistry::claimWorldRect( uint16 owner, const AbsolutePosition& center, const float3& size, bool bBlocking )
     {
         int2 minCell;
         int2 maxCell;
@@ -102,7 +102,7 @@ namespace sw
         return claimRect( owner, minCell._x, minCell._y, maxCell._x, maxCell._y, bBlocking );
     }
 
-    void LandRegistry::releaseWorldRect( uint16 owner, const float3& center, const float3& size )
+    void LandRegistry::releaseWorldRect( uint16 owner, const AbsolutePosition& center, const float3& size )
     {
         int2 minCell;
         int2 maxCell;
@@ -137,20 +137,20 @@ namespace sw
         return cell._owner != kNoOwner && cell._owner != owner && cell._bBlocking == SW_TRUE;
     }
 
-    int2 LandRegistry::computeCell( const float3& worldPosition ) const
+    int2 LandRegistry::computeCell( const AbsolutePosition& position ) const
     {
-        return int2{ static_cast<int32>( MathUtil::floor( ( worldPosition._x - _origin._x ) / _cellSize ) ),
-                     static_cast<int32>( MathUtil::floor( ( worldPosition._z - _origin._z ) / _cellSize ) ) };
+        return int2{ static_cast<int32>( MathUtil::floor( ( position._value._x - _origin._x ) / _cellSize ) ),
+                     static_cast<int32>( MathUtil::floor( ( position._value._z - _origin._z ) / _cellSize ) ) };
     }
 
-    void LandRegistry::computeWorldRect( const float3& center, const float3& size, int2& outMin, int2& outMax ) const
+    void LandRegistry::computeWorldRect( const AbsolutePosition& center, const float3& size, int2& outMin, int2& outMax ) const
     {
         // 가장자리에 딱 닿는 칸은 넣지 않는다 — 2 m 사각은 1 m 칸 둘을 덮는다(셋이 아니다).
         constexpr float32 kEdgeEpsilon = 0.0001f;
         const float32     halfX        = MathUtil::max( 0.0f, size._x * 0.5f - kEdgeEpsilon );
         const float32     halfZ        = MathUtil::max( 0.0f, size._z * 0.5f - kEdgeEpsilon );
-        outMin                         = computeCell( float3{ center._x - halfX, center._y, center._z - halfZ } );
-        outMax                         = computeCell( float3{ center._x + halfX, center._y, center._z + halfZ } );
+        outMin                         = computeCell( center + float3{ -halfX, 0.0f, -halfZ } );
+        outMax                         = computeCell( center + float3{ halfX, 0.0f, halfZ } );
     }
 
     void LandRegistry::serializeState( StateIO& io )

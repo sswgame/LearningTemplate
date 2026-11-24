@@ -68,27 +68,27 @@
 		</AudioEventDef>
 		<AudioEventDef _name="CinematicCue" _bus="sfx" _priority="60" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/sounds/click.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SubtitleGuideLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.GuideLine" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" _subtitleKey="Subtitle.GuideLine" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SubtitleScoutLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Scout">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.ScoutLine" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" _subtitleKey="Subtitle.ScoutLine" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SubtitleLongLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/sounds/click.ogg" _subtitleKey="Subtitle.LongLine" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" _subtitleKey="Subtitle.LongLine" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmToolSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/harvestvalley/sounds/select_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_002.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmPlant"
@@ -102,7 +102,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1.5">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/harvestvalley/sounds/drop_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/drop_002.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmHarvest"
@@ -116,12 +116,12 @@
 		                _pitchMin="-1"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/harvestvalley/sounds/pluck_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/pluck_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmShip" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/harvestvalley/sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="VoxelLand"
@@ -135,7 +135,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/voxelcraft/sounds/footstep_grass_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="VoxelBlockBreak"
@@ -149,7 +149,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/voxelcraft/sounds/impact_soft_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="VoxelBlockPlace"
@@ -163,22 +163,22 @@
 		                _pitchMin="-1"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/voxelcraft/sounds/impact_plank_medium_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/starskirmish/sounds/select_004.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_004.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSBuilt" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/starskirmish/sounds/confirmation_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_003.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSBlocked" _bus="ui" _priority="70" _cooldownSeconds="1" _maxInstances="1" _steal="Reject">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/starskirmish/sounds/error_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_003.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSUnitDied"
@@ -193,32 +193,32 @@
 		                _pitchMax="1"
 		                _virtual="Stop">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/starskirmish/sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/themepark/sounds/select_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkBuilt" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/themepark/sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkBlocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/themepark/sounds/error_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaWaveStart" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/abilityarena/sounds/maximize_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/maximize_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaPlayerFell" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/abilityarena/sounds/error_004.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_004.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaEnemyFell"
@@ -232,7 +232,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/abilityarena/sounds/impact_punch_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaProjectileHit"
@@ -246,7 +246,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1.5">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/abilityarena/sounds/impact_punch_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterLand"
@@ -261,7 +261,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/shooter3d/sounds/footstep_concrete_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterHitEnemy"
@@ -276,7 +276,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/shooter3d/sounds/impact_metal_light_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterHitCover"
@@ -291,7 +291,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/shooter3d/sounds/impact_plank_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterEnemyDown"
@@ -307,8 +307,8 @@
 		                _pitchMax="0"
 		                _virtual="Stop">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/shooter3d/sounds/impact_metal_medium_000.ogg" />
-				<AudioClipEntry _path="game/playground/shooter3d/sounds/impact_metal_light_001.ogg" _volumeDb="-8" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_001.ogg" _volumeDb="-8" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- 발걸음(표면 종류 표의 반응 _sound — 덮어쓰기 층 shooter3d/layers/footsteps 가 종류마다 적는다). 밟은 자리에서 3D(Default 감쇠). 마른 · 젖은 반응이 다른 소리다.

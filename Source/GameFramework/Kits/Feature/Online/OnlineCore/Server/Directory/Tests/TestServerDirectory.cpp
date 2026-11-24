@@ -352,7 +352,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     SW_EXPECT_TRUE( reader.isRefreshing() );
     rig.pollAll();
     SW_EXPECT_FALSE( reader.isRefreshing() );
-    SW_EXPECT_EQUAL( uint64( 1 ), reader.getRefreshCount() );
+    SW_EXPECT_EQUAL( uint64( 1 ), reader.getRefreshCount().get() );
     SW_REQUIRE_EQUAL( size_t( 2 ), reader.getSnapshot().size() );
 
     sw::ServerStatus picked;
@@ -372,7 +372,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     reader.requestRefresh();
     reader.update( now + 2000 );
     rig.pollAll();
-    SW_EXPECT_EQUAL( uint64( 2 ), reader.getRefreshCount() );
+    SW_EXPECT_EQUAL( uint64( 2 ), reader.getRefreshCount().get() );
     SW_REQUIRE_EQUAL( size_t( 1 ), reader.getSnapshot().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), reader.getSnapshot()[0]._descriptor._serverID );
     SW_EXPECT_EQUAL( 2, reader.getSnapshot()[0]._load ); // 새 스냅숏은 기록의 부하에 서버 사이의 좌석 예약(1 에 고른 둘)을 더한다

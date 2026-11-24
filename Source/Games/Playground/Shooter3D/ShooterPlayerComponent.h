@@ -16,6 +16,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -87,9 +88,12 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
+        void onWorldOriginShifted( const float3& delta ) override;
 
         /** @brief 적에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 판을 처음부터 다시 시작합니다. */
         void takeDamage( float32 amount );
+        /** @brief 판을 처음부터 다시 엽니다(틱 뒤 · 게임 스레드) — 디렉터가 적을 걷고 감독을 다시 돌리며, 플레이어는 처음 자리에서 다시 시작합니다. */
+        void restartRound();
         /**
          * @brief 서버 판정 결과를 받습니다(클라이언트의 넷 폰이 소유자 상태에서 부른다). 맞힌 발 수가 오르면 맞음 표시 · 소리를 내고, HUD 체력은 이 값을 보입니다.
          * @details 클라이언트의 사격은 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않고 표시도 서버가 인정한 뒤에 낸다(언리얼 Lyra 의 서버 확인 맞음 표시와 같은 자리, 기억에 의존).
@@ -117,11 +121,12 @@ namespace sw
         [[nodiscard]] bool loadProjectile( const hashed_string& projectileID );
 
         // ---- 디렉터, 몸, 조종자가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
+        /** @brief 눈 자리입니다(씬 자리 — 카메라와 물리 질의가 그대로 쓴다). */
         float3 getEyePosition() const;
-        /** @brief 발 위치입니다(몸 이동의 위치이며, 없으면 처음 위치). */
-        float3 getFeetPosition() const;
+        /** @brief 발 위치입니다(절대 — 몸 이동의 위치이며, 없으면 처음 위치). */
+        AbsolutePosition getFeetPosition() const;
         /** @brief 그릴 발 자리입니다 — 시뮬레이션 자리에 예측 보정을 녹이는 오프셋을 더한 것(몸 · 카메라). 판정(사격 · 감독)은 `getFeetPosition` 입니다. */
-        float3             getDisplayFeetPosition() const;
+        AbsolutePosition   getDisplayFeetPosition() const;
         float32            getHealth() const { return _healthMachine.getHealth(); }
         float32            getMaxHealth() const { return _maxHealth; }
         bool               isAlive() const { return _healthMachine.isAlive(); }
@@ -156,6 +161,8 @@ namespace sw
         /** @brief 위와 같되 쓰기 가능한 몸입니다 — 틱 밖 · 틱 뒤(`flushPending`)에서만 부른다(쓰기 가능한 매니저를 꺼낸다). */
         GameObject* findMutableBodyObject();
         uint32      getHitCount() const { return _hitCount; }
+        /** @brief 매치 서버가 알려 준 이 판의 처치 수입니다(접속하지 않았으면 0). */
+        uint32 getServerKillCount() const { return _serverKillCount; }
 
     private:
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */

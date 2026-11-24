@@ -79,16 +79,16 @@ namespace sw
         void completeStep();
 
     private:
-        shared_ptr<const InteractionDef>     _pDef;
-        InteractionProgress                  _holdProgress;
-        EventBuffer<InteractionSessionEvent> _eventBuffer;
-        vector<InteractionEvent>             _listHoldEvent;
-        uint32                               _actorID;
-        uint32                               _beginCount; ///< 시작한 횟수 — 반응 단계가 열리는 때의 난수 씨앗에 든다
-        int32                                _stepIndex;
-        float32                              _mashProgress;
-        float32                              _reactionTime;     ///< 반응 단계에 들어와 지난 시간(초)
-        float32                              _reactionOpenTime; ///< 반응 단계가 열리는 때(초)
-        InteractionSessionState              _state;
+        shared_ptr<const InteractionDef>            _pDef;
+        InteractionProgress                         _holdProgress;
+        NotificationBuffer<InteractionSessionEvent> _eventBuffer;
+        vector<InteractionEvent>                    _listHoldEvent;
+        uint32                                      _actorID;
+        uint32                                      _beginCount; ///< 시작한 횟수 — 반응 단계가 열리는 때의 난수 씨앗에 든다
+        int32                                       _stepIndex;
+        float32                                     _mashProgress;
+        float32                                     _reactionTime;     ///< 반응 단계에 들어와 지난 시간(초)
+        float32                                     _reactionOpenTime; ///< 반응 단계가 열리는 때(초)
+        InteractionSessionState                     _state;
     };
 } // namespace sw

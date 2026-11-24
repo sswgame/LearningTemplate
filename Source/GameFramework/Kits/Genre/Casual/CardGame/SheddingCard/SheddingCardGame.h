@@ -178,12 +178,12 @@ namespace sw
         bool  hasColor( int32 player, SheddingCardColor color, uint16 exceptCardID ) const;
 
     private:
-        vector<CardPile>               _listHand;
-        EventBuffer<SheddingCardEvent> _eventBuffer;
-        CardPile                       _drawPile;
-        CardPile                       _discardPile;
-        SheddingCardSettings           _settings;
-        GameRandom                     _random;
+        vector<CardPile>                      _listHand;
+        NotificationBuffer<SheddingCardEvent> _eventBuffer;
+        CardPile                              _drawPile;
+        CardPile                              _discardPile;
+        SheddingCardSettings                  _settings;
+        GameRandom                            _random;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _currentPlayer;
         PROPERTY( RuntimeState, Min = -1, Max = 1 )

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="e97704b560cb37bb9aa620461b616db3"?>
 <!-- Playground 순위표(LeaderboardCatalog) — 서버 온라인 설정(Config/Server/Online/Playground.online.json 의 leaderboard 키트)이 읽는다.
-     arena_kills 는 한 판의 처치 수, 가장 좋은 기록을 남긴다. 이 견본은 클라이언트 제출을 받는다(clientSubmit) - 판을 도는 것이 클라이언트라서다.
-     전용 서버가 판을 돌리게 되면 서버가 점수를 내고 clientSubmit 을 끈다(키트 정책 - 클라이언트 점수는 믿지 않는다). -->
+     arena_kills 는 온라인 매치(minigames/shooter3d_match)의 처치 수, 가장 좋은 기록을 남긴다. 판을 도는 매치 서버가 점수를 내고(ILeaderboardScoreSender)
+     클라이언트 제출은 받지 않는다(키트 정책 - 클라이언트 점수는 믿지 않는다). -->
 <LeaderboardCatalog>
-	<Board id="arena_kills" order="Descending" update="Best" reset="None" clientSubmit="true"/>
+	<Board id="arena_kills" order="Descending" update="Best" reset="None" clientSubmit="false"/>
 </LeaderboardCatalog>

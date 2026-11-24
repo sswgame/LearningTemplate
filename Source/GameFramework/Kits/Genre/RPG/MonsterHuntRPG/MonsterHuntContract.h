@@ -100,11 +100,11 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<hashed_string>                      _listFound; ///< 지금 단계에서 찾은 단서
-        EventBuffer<MonsterHuntInvestigationEvent> _eventBuffer;
-        const MonsterHuntCatalog*                  _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그
-        const MonsterHuntContractDef*              _pContract;
-        QuestLog*                                  _pQuestLog;
+        vector<hashed_string>                             _listFound; ///< 지금 단계에서 찾은 단서
+        NotificationBuffer<MonsterHuntInvestigationEvent> _eventBuffer;
+        const MonsterHuntCatalog*                         _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그
+        const MonsterHuntContractDef*                     _pContract;
+        QuestLog*                                         _pQuestLog;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _stepIndex;
     };

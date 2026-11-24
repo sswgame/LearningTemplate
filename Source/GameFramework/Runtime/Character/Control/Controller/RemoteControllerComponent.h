@@ -3,6 +3,7 @@
  * @brief 원격 조종자입니다. 네트워크로 받은 의도를 냅니다. 의도는 네트워크 키트가 틱마다 넣어 주는 값(`receiveIntent`)이고 조종자가 사본을 소유합니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
@@ -61,13 +62,13 @@ namespace sw
         void   setNextInputTick( uint32 tick ) { _nextInputTick = tick; }
         uint32 getNextInputTick() const { return _nextInputTick; }
         /** @brief 뒤의 틱이 왔는데 빠져 있던 상대 틱 수입니다. */
-        uint32 getMissingTickCount() const { return _missingTickCount; }
+        const DevCounter& getMissingTickCount() const { return _missingTickCount; }
 
     private:
         TickRingBuffer<ControlIntent> _received;   ///< 받은 의도(사본). 읽은 틱은 지운다
         ControlIntent                 _lastIntent; ///< 마지막으로 받은 의도(발동 비트는 지운 채)
         uint32                        _nextInputTick;
-        uint32                        _missingTickCount;
+        DevCounter                    _missingTickCount;
         bool                          _bHasLastIntent;
     };
 } // namespace sw

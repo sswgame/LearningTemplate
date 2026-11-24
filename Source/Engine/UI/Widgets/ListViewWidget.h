@@ -57,9 +57,6 @@ namespace sw
         void scrollToItem( uint32 itemIndex );
         /** @brief 줄 위젯 @p row 가 지금 맡은 항목입니다. 이 목록의 줄이 아니거나 맡은 항목이 없으면(접힌 줄) 비어 있습니다. */
         [[nodiscard]] optional<uint32> findItemIndex( const Widget& row ) const;
-        /** @brief 지금까지 만든 줄 위젯 수입니다(테스트용이며, 보이는 줄 + 1 을 넘지 않습니다). */
-        uint32 getCreatedRowCount() const { return static_cast<uint32>( _listRowItem.size() ); }
-        /** @brief 지금까지 줄을 다시 연결한 횟수입니다(테스트용). */
 
         bool canScrollIntoView() const override { return true; }
         bool scrollIntoView( const Widget& widget ) override;
@@ -71,6 +68,7 @@ namespace sw
         void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
 
     private:
+        friend struct ListViewWidgetTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 보이는 줄 수 + 1 개까지 줄 위젯을 만듭니다(레이아웃 중에 만들며, 새 줄은 곧바로 배치됩니다). */
         void    ensureRowCount( uint32 rowCount );
         float32 getMaxScrollOffset() const;

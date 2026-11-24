@@ -15,7 +15,7 @@
 SW_TEST_CASE( AudioVorbisTest, DecodesARealOggFile )
 {
     sw::StringBuilder<sw::constant::buffer::kMax512> path;
-    path.appendFormat( "%#/Content/game/playground/shooter3d/sounds/footstep_concrete_000.ogg", sw::ProcessRoots::get()._project.str() );
+    path.appendFormat( "%#/Content/common/sounds/kenney_impact_sounds/footstep_concrete_000.ogg", sw::ProcessRoots::get()._project.str() );
     sw::vector<uint8> bytes;
     SW_REQUIRE_TRUE( sw::FileUtil::readFile( sw::FileUtil::toDiskPath( path.view() ), bytes ) );
     SW_REQUIRE_TRUE( bytes.size() > 4 );

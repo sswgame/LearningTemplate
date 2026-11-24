@@ -88,7 +88,9 @@ namespace sw
         /** @brief 풀 반환: 열린 구간 알림을 모두 닫고(끝 처리기를 부른다) 쌓인 알림 · 발 닿음 상태를 비웁니다. */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
         void                          onEndPlay() override;
-        void                          onPropertyChanged( hashed_string propertyName ) override;
+        /** @brief 열린 구간의 지난 칼날 자리를 옮깁니다 — 옮기지 않으면 다음 판정이 옛 원점에서 새 원점까지 쓴다. */
+        void onWorldOriginShifted( const float3& delta ) override;
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 알림 테이블 경로를 바꾸고 다시 받습니다. */
         void          setNotifyTablePath( string_view path );

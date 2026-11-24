@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 // 계정 키트의 게임 서버 조립(`gameConnect`, OnlineKits F5) — 전용 게임 서버의 UDP 게임 포트가 로그인 서버가 낸 접속 티켓만 받게 한다.
 // 로그인 서버와 같은 주 키로 티켓 확인기(`LoginTicketAuthority`)만 세우고(저장소 없음), 접속 인증기를 엔진의 자리(`GameConnectSecurity`)에 묶는다.
@@ -63,8 +64,11 @@ namespace sw
             {
                 // 받아들이기 정책은 매칭 키트(`gameServer`)가 `initialize` 에서 내놓는다 — 없으면 티켓이 맞는 계정은 모두 받는 서버다(배정 없는 상시 서버).
                 const IConnectAdmission* pAdmission = interfaces.find<const IConnectAdmission>();
-                const IConnectAdmission& admission  = pAdmission != nullptr ? *pAdmission : static_cast<const IConnectAdmission&>( _allowEveryAccount );
-                _pAuthenticator                     = make_unique<AccountConnectAuthenticator>( &_ticketAuthority, hashed_string( _serverName.c_str() ), admission );
+                // 매칭이 배정하는 서버의 티켓 이름은 서버 id 다 — 클라이언트는 배정(`MatchAssignment::_serverID`)만 안다. 다르면 받은 티켓이 모두 거절되므로 기동을 멈춘다.
+                if ( pAdmission != nullptr && _serverName != ServiceKeyUtil::makeHex64( context._serverID ) )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "gameConnect _serverName of a matchmaking game server must be its _serverID as 16 hex digits", _serverName } );
+                const IConnectAdmission& admission = pAdmission != nullptr ? *pAdmission : static_cast<const IConnectAdmission&>( _allowEveryAccount );
+                _pAuthenticator                    = make_unique<AccountConnectAuthenticator>( &_ticketAuthority, hashed_string( _serverName.c_str() ), admission );
                 _pAuthenticator->setNowMs( context._nowMs );
                 // 접속 보안 자리는 엔진의 네트워크 세션이 들고 있다(서비스).
                 GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();

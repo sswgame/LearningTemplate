@@ -43,9 +43,10 @@ namespace sw
         if ( pManager == nullptr || pOwner->findComponentByTypeName( rule._componentType ) != nullptr )
             return;
         SW_ASSERT( pManager->isStructuralMutationFrozen() == false ); // 기능은 게임 프레임 앞에서 켜지고 시작은 틱 전이다 — 미뤄지면 무엇을 붙였는지 알 수 없다
-        const Component* pAdded = pManager->addComponentByName( pOwner, rule._componentType );
+        Component* pAdded = pManager->addComponentByName( pOwner, rule._componentType );
         if ( pAdded == nullptr )
             return; // 까닭은 매니저가 알렸다
+        pAdded->setTransient( true );
         AddedEntry& added = _listAdded.emplace_back();
         added._ruleID     = rule._ruleID;
         added._component  = pAdded->getHandle();

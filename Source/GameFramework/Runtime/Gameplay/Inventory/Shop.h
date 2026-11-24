@@ -280,10 +280,10 @@ namespace sw
         bool  isRefused( const ShopDef& shop, const ShopState& runtime, const hashed_string& itemID ) const;
 
     private:
-        vector<ShopState>      _listRuntime;
-        EventBuffer<ShopEvent> _eventBuffer;
-        const ShopCatalog*     _pShopCatalog;
-        const ItemCatalog*     _pItemCatalog;
-        const GameplayContext* _pConditionContext;
+        vector<ShopState>             _listRuntime;
+        NotificationBuffer<ShopEvent> _eventBuffer;
+        const ShopCatalog*            _pShopCatalog;
+        const ItemCatalog*            _pItemCatalog;
+        const GameplayContext*        _pConditionContext;
     };
 } // namespace sw

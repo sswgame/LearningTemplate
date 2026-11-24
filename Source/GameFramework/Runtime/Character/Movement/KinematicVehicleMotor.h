@@ -369,11 +369,11 @@ namespace sw
         void           pushEvent( KinematicVehicleEvent::Kind kind, int32 value );
 
     private:
-        KinematicVehicleSettings           _settings;
-        EventBuffer<KinematicVehicleEvent> _eventBuffer;
-        FixedStepTimer                     _timer;
-        const IVehicleGround*              _pGround;
-        const SplinePath*                  _pRail;
+        KinematicVehicleSettings                  _settings;
+        NotificationBuffer<KinematicVehicleEvent> _eventBuffer;
+        FixedStepTimer                            _timer;
+        const IVehicleGround*                     _pGround;
+        const SplinePath*                         _pRail;
         PROPERTY( RuntimeState )
         float3 _position;
         PROPERTY( RuntimeState )

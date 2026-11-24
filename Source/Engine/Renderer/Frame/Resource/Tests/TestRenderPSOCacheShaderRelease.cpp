@@ -12,6 +12,24 @@
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct RenderPSOCacheTestAccess
+    {
+        static size_t countMaterialPSOs( const RenderPSOCache& cache, RenderPSOCache::MaterialPSOState state )
+        {
+            ScopedSharedLock<shared_mutex> lock{ cache._materialPSOMutex };
+            size_t                         count = 0;
+            for ( const auto& [key, entry] : cache._mapMaterialPSO )
+            {
+                count += entry._state == state ? 1u : 0u;
+            }
+            return count;
+        }
+    };
+} // namespace sw
+
 using namespace sw;
 
 namespace
@@ -147,7 +165,7 @@ SW_TEST_CASE( RenderPSOCacheTest, MaterialVariantKeyComparesEveryAxis )
     SW_EXPECT_TRUE( cache.beginMaterialPSO( vertex ) );
     SW_EXPECT_TRUE( cache.beginMaterialPSO( culling ) );
     SW_EXPECT_TRUE( cache.beginMaterialPSO( passPSO ) );
-    SW_EXPECT_EQUAL( size_t{ 5 }, cache.countMaterialPSOs( RenderPSOCache::MaterialPSOState::Building ) );
+    SW_EXPECT_EQUAL( size_t{ 5 }, RenderPSOCacheTestAccess::countMaterialPSOs( cache, RenderPSOCache::MaterialPSOState::Building ) );
 }
 
 /**

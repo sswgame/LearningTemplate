@@ -249,8 +249,13 @@ namespace sw
 
     void HubWorldComponent::tryStartLink()
     {
-        // 세션은 기동 때(전용 서버) 열리거나 플레이 중에(클라이언트 `net.ticketconnect`) 열린다 — 링크가 걸리는 첫 틱에 한 번 세운다.
+        // 세션은 기동 때(전용 서버) 열리거나 플레이 중에(클라이언트 `net.ticketconnect` · 온라인 흐름) 열린다 — 링크가 걸리는 첫 틱에 한 번 세운다.
         const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
+        if ( pLink == nullptr && _client.isActive() )
+        {
+            _client.shutdown(); // 매치 서버로 옮기며 허브 세션을 떠났다 — 다시 걸리면 새로 세운다
+            _bLinkTried = SW_FALSE;
+        }
         if ( _bLinkTried != SW_FALSE || _bRulesValid == SW_FALSE || pLink == nullptr )
             return;
         _bLinkTried              = SW_TRUE;

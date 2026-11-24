@@ -36,6 +36,7 @@ namespace sw
         void                evaluate( RigEvaluateContext& context ) override;
         void                collectWrittenBones( vector<uint32>& inoutListBone ) const override;
         void                reset() override { _chain.reset(); }
+        void                applyWorldOffset( const float3& delta ) override { _chain.applyWorldOffset( delta ); }
 
         const hashed_string&  getGroup() const { return _group; }
         const RigSpringChain& getChain() const { return _chain; }

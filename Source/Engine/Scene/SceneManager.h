@@ -238,6 +238,8 @@ namespace sw
          * @details 이미 활성인 씬에도 바로 올린다. 값이 비어 있으면(세션 없음) 씬의 링크는 비어 있어 혼자 도는 월드다.
          */
         void setNetLink( const NetLinkValue& value );
+        /** @brief 다음에 받아들이는 씬부터 넣을 넷 링크입니다 — 지금 활성 씬은 그대로 둔다. 다른 서버로 옮기며 씬도 바꿀 때 쓴다(떠나는 씬의 컴포넌트가 새 서버에 붙지 않게). */
+        void setNextSceneNetLink( const NetLinkValue& value ) { _netLink = value; }
         /** @brief 활성 씬이 바뀐 횟수입니다. 에디터가 씬 로드 · 새 씬 동기화에 씁니다. */
         uint64 getSceneGeneration() const { return _sceneGeneration; }
         /** @brief 비동기 로드가 진행 중이거나 교체 대기면 true 입니다. */

@@ -108,14 +108,12 @@ namespace sw
         /** @brief 잎이 속한 그룹 번호입니다. */
         uint32 getGroupOfLeaf( uint32 leaf ) const { return _listLeafGroup[leaf]; }
         /** @brief 잎을 포함한 활성 노드를 반환합니다. */
-        uint32  getActiveNodeOfLeaf( uint32 leaf ) const { return _listLeafActive[leaf]; }
-        bool    isNodeBroken( uint32 node ) const { return _listNodeBroken[node] != SW_FALSE; }
-        bool    isLinkBroken( uint32 link ) const { return _listLinkBroken[link] != SW_FALSE; }
-        bool    isLeafAnchored( uint32 leaf ) const { return _listLeafAnchored[leaf] != SW_FALSE; }
-        float32 getNodeStrain( uint32 node ) const { return _listNodeStrain[node]; }
-        float32 getLinkStrain( uint32 link ) const { return _listLinkStrain[link]; }
-        /** @brief 지난 지지 계산에서 연결이 받던 하중(뉴턴)입니다. 진단과 테스트에 씁니다. */
-        float32                   getLinkLoad( uint32 link ) const { return _listLinkLoad[link]; }
+        uint32                    getActiveNodeOfLeaf( uint32 leaf ) const { return _listLeafActive[leaf]; }
+        bool                      isNodeBroken( uint32 node ) const { return _listNodeBroken[node] != SW_FALSE; }
+        bool                      isLinkBroken( uint32 link ) const { return _listLinkBroken[link] != SW_FALSE; }
+        bool                      isLeafAnchored( uint32 leaf ) const { return _listLeafAnchored[leaf] != SW_FALSE; }
+        float32                   getNodeStrain( uint32 node ) const { return _listNodeStrain[node]; }
+        float32                   getLinkStrain( uint32 link ) const { return _listLinkStrain[link]; }
         const FractureGraph&      getGraph() const { return *_pGraph; }
         const DestructionProfile& getProfile() const { return _profile; }
         /** @brief 그룹의 질량(밀도 × 부피)과 질량 중심(메시 공간)을 반환합니다. */
@@ -139,6 +137,7 @@ namespace sw
         [[nodiscard]] bool readSnapshot( const uint8* pData, size_t size );
 
     private:
+        friend struct DestructionStateTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 잎의 연결 번호들을 반환합니다. */
         vector_reference<const uint32> getLeafLinks( uint32 leaf ) const;
         /** @brief 노드를 갈라 자식들을 활성으로 둡니다. 그룹은 다시 만들지 않으므로 호출한 쪽이 `regroup` 해야 합니다. */

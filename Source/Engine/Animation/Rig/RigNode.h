@@ -299,6 +299,8 @@ namespace sw
         virtual void collectWrittenBones( vector<uint32>& inoutListBone ) const = 0;
         /** @brief 실행 상태를 버립니다(순간이동이나 다시 켤 때). */
         virtual void reset() {}
+        /** @brief 월드 자리로 든 시뮬레이션 상태를 @p delta 만큼 옮깁니다(월드 원점 이동). */
+        virtual void applyWorldOffset( const float3& delta ) { (void)delta; }
         /** @brief 이름 붙은 조절 값을 받습니다(부모 바꾸기의 활성 부모 등). 모르는 조절이면 false 입니다. */
         virtual bool setControl( const hashed_string& control, float32 value )
         {

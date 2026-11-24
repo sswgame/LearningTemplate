@@ -9,6 +9,7 @@
  *          언리얼 Lyra 에서 경기 끝 보상을 GameplayEffect 로 플레이어 ASC 에 거는 자리, 용과 같이의 미니게임 상품이 본편 돈 · 아이템 · 회복으로 돌아오는 길과 같다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
@@ -106,7 +107,7 @@ namespace sw
         /** @brief 결과 값 이름 → 통화 · 평판 · 퀘스트 표와 그것을 받을 플레이어 상태 오브젝트를 정합니다. 씬 데이터는 PROPERTY 로 적고, 코드로 세우는 캐릭터 · 테스트가 이것을 부른다. */
         void setPlayerRewardTable( GameObjectHandle playerState, vector<MinigameRewardCurrency> listCurrency, vector<MinigameRewardReputation> listReputation, vector<MinigameRewardQuest> listQuest );
         /** @brief 준 보상 수입니다(감시 · 진단). */
-        uint32 getAppliedCount() const { return _appliedCount; }
+        const DevCounter& getAppliedCount() const { return _appliedCount; }
 
     private:
         /** @brief 흐름의 결과 알림입니다(`applyResult` 로 넘긴다 — 실패는 그 안에서 알렸다). */
@@ -130,6 +131,6 @@ namespace sw
         vector<MinigameRewardQuest> _listQuest;
 
         Subscription _finishedSubscription; ///< `MinigameFlow::onFinished` 구독(플레이 시작에 걸고 끝에 푼다)
-        uint32       _appliedCount;         ///< 준 보상 수
+        DevCounter   _appliedCount;         ///< 준 보상 수
     };
 } // namespace sw

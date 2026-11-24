@@ -12,6 +12,15 @@
 #include "Engine/UI/Layout/WrapPanel.h"
 #include "Engine/UI/WidgetTree/Tests/UITestWidgets.h"
 
+namespace sw
+{
+    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
+    struct GridPanelTestAccess
+    {
+        static uint32 getOutOfRangeCellCount( const GridPanel& panel ) { return panel._outOfRangeCellCount; }
+    };
+} // namespace sw
+
 using namespace sw;
 
 // ---------------------------------------------------------------------- 상자
@@ -196,7 +205,7 @@ SW_TEST_CASE( UILayoutPanelsTest, GridChildOutsideTheTracksGoesToTheLastOneAndWa
     slot._column     = 5;
     UITestLeaf& leaf = UITestUtil::addLeaf( grid, float2{ 1.0f, 1.0f }, slot );
     (void)UITestUtil::layout( tree, float2{ 300.0f, 100.0f } );
-    SW_EXPECT_EQUAL( 1u, grid.getOutOfRangeCellCount() );
+    SW_EXPECT_EQUAL( 1u, GridPanelTestAccess::getOutOfRangeCellCount( grid ) );
     UITestUtil::expectRect( leaf, 10.0f, 0.0f, 20.0f, 100.0f );
 }
 

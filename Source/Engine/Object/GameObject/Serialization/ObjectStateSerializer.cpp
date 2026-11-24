@@ -248,10 +248,11 @@ namespace sw
                 return static_cast<const MissingComponent*>( pComp )->tryGetOriginalElement( outElement );
             }
 
+            /** @brief 저장할 컴포넌트의 타입입니다. 곧 사라질 것과 파생 컴포넌트(`Component::isTransient`)는 없음이다 — 세 형식의 쓰기가 모두 이것으로 건너뛴다. */
             static const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
             {
                 const Component* pComp = static_cast<const Component*>( pInstance );
-                if ( pComp == nullptr || pComp->isPendingDestroy() )
+                if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isTransient() )
                     return nullptr;
                 return pComp->getTypeInfo();
             }
@@ -782,7 +783,7 @@ namespace sw
         identity._listComponent.reserve( pGameObject->getComponents().size() );
         for ( const Component* pComp : pGameObject->getComponents() )
         {
-            if ( pComp == nullptr || pComp->isPendingDestroy() )
+            if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->isTransient() )
                 continue;
             // 타입 FQN 으로 적는다. 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 FQN 과 비교한다. 컴포넌트 이름을 적으면 이름을 붙인
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊기고, 짧은 타입 이름을 적으면 이름이 같은 다른 타입이 id 를 가져간다.

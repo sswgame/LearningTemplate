@@ -183,4 +183,29 @@
 	<Redirect from="game/playground/lanternvale/automation/netpair/first.scenario.xml" to="game/playground/automation/netpair/hub_first.scenario.xml" />
 	<Redirect from="game/playground/lanternvale/automation/netpair/return.scenario.xml" to="game/playground/automation/netpair/hub_return.scenario.xml" />
 	<Redirect from="game/playground/lanternvale/maps/vale.scene.xml" to="game/playground/maps/hub.scene.xml" />
+	<IdentityRedirect from="94af8e24fea3c7378886441d8afd9f96" to="026f39a2f5f2af708b463bc4bc9807ee" />
+	<IdentityRedirect from="d2635a3986518b468ef4fb35258d785e" to="dd4b7d2ad707d7fc5e3828f8b2f470f3" />
+	<IdentityRedirect from="90a90d73e4eeb36a69455a702a3a05be" to="6595936b55ab040b806bb332f379e9c5" />
+	<IdentityRedirect from="7cfa33791e73535ef56108bafabfa459" to="5319f1cfcbbf50167b3c1448e85b657e" />
+	<IdentityRedirect from="0ab1e316079cc78d3b9935d39c33526a" to="3037ce5d66d92b235f62c20ef22d7f98" />
+	<IdentityRedirect from="d274c32f0c035243367c0d10e256f72d" to="8008f1802f62d0b15b7d397424ce8963" />
+	<IdentityRedirect from="5cd57510d22f830994048bc1be48af12" to="bdffc329a25334c5b1a3349779c664aa" />
+	<IdentityRedirect from="b6d40bd8aea80e4f1586f5ba130a6195" to="f60fb9750d604c4b2a298e791709b1fc" />
+	<IdentityRedirect from="6444c2114155857bf19969127b917524" to="53c7b16c54e631c55e4dec854a736915" />
+	<IdentityRedirect from="8d4100e8398002af99a382b5afc037e7" to="ab18b4ab325b58fc1196f0c28099eda5" />
+	<IdentityRedirect from="c94dc543663df880ea3418fc61b48308" to="0db52a02207170803234b71eff1eca8d" />
+	<IdentityRedirect from="e7c3e2b90678a66a5ec63a3010b8525a" to="f60fb9750d604c4b2a298e791709b1fc" />
+	<IdentityRedirect from="36bd0b6641a590ceeaab2bf02ac64b0b" to="b8485f170b38025c85d76378ecde6145" />
+	<IdentityRedirect from="b099ad6d3b7184bb8e9f02a035429dc6" to="e30af1cb2a4f53bf7e4ed1e9f50a898a" />
+	<IdentityRedirect from="0efcc48b967da229b570bc014fe7691e" to="a9cdbbc0d90e08595a54f70a3313eefe" />
+	<IdentityRedirect from="f375a956b8703557b7c5f91c2b9adce1" to="d2ff9b7c1a1cf3fff6353162baa6de85" />
+	<IdentityRedirect from="65f8ae238643eaa5dbd4fab5b005b6af" to="2ebd30701678e1ab1f907ce40e8f3fe3" />
+	<IdentityRedirect from="e326e841107c33704593d0ac3fd550c3" to="bef44cd8addd7234afb1a9083c27519c" />
+	<IdentityRedirect from="8b3b5fbbfbabffaa1e0ee71c5f485dad" to="52c7707dd6bde9ebb84ee4d0ed28d3a4" />
+	<IdentityRedirect from="26d57de997aab5baf7f8357ad4db16b6" to="62e3779c11884365aeb5dc4498710de9" />
+	<IdentityRedirect from="ccb1f69156803b5e1f7227941ea86e49" to="e33b48fa35106d821409b8172879a51f" />
+	<IdentityRedirect from="695f27fdc0df8309b865f5b714cc994b" to="5570485754b47c56eaa7474fa321677a" />
+	<IdentityRedirect from="701532203ad1a915ef3e9b16cd7a5379" to="fb86704f31d11ef99904fbc7768e25c6" />
+	<IdentityRedirect from="1d5c9a4a263f5b8cc0b7cbb8c9712980" to="a8ba669cb589550569c516fa32306fbe" />
+	<IdentityRedirect from="57beea7dd11d96bdcc9781ee5c0113f8" to="54c6729c87c6e28ec55f6ec295ba4cc6" />
 </Redirects>

@@ -21,15 +21,18 @@ SW_TEST_CASE( FractureComponentTest, UnknownBodyHasNoGroup )
  */
 SW_TEST_CASE( FractureComponentTest, EventGroupPoseIsEmptyWithoutFallenGroup )
 {
-    SW_EXPECT_FALSE( sw::FractureBaseComponent::makeEventGroupPose( nullptr ).has_value() );
+    SW_EXPECT_FALSE( sw::FractureBaseComponent::makeEventGroupPose( nullptr, sw::WorldOrigin{} ).has_value() );
     sw::FractureGroupRuntime runtime;
     runtime._groupID   = 4;
     runtime._position  = sw::float3{ 1.0f, 2.0f, 3.0f };
     runtime._bAnchored = SW_TRUE;
-    SW_EXPECT_FALSE( sw::FractureBaseComponent::makeEventGroupPose( &runtime ).has_value() );
+    SW_EXPECT_FALSE( sw::FractureBaseComponent::makeEventGroupPose( &runtime, sw::WorldOrigin{} ).has_value() );
     runtime._bAnchored                             = SW_FALSE;
-    const sw::optional<sw::FractureGroupPose> pose = sw::FractureBaseComponent::makeEventGroupPose( &runtime );
+    const sw::optional<sw::FractureGroupPose> pose = sw::FractureBaseComponent::makeEventGroupPose( &runtime, sw::WorldOrigin{
+                                                                                                                  sw::double3{ 100.0, 0.0, 0.0 }
+    } );
     SW_REQUIRE_TRUE( pose.has_value() );
     SW_EXPECT_EQUAL( pose->_groupID, 4u );
+    SW_EXPECT_EQUAL( pose->_position._x, 101.0f ); // 보내는 자리는 절대다
     SW_EXPECT_EQUAL( pose->_position._y, 2.0f );
 }

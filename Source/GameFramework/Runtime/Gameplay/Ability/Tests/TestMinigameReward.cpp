@@ -100,7 +100,7 @@ SW_TEST_CASE( MinigameRewardTest, ResultValuesApplyAsEffects )
     SW_EXPECT_TRUE( rig._pReward->applyResult( result ) );
     SW_EXPECT_NEAR( 70.0f, rig.health(), 1.0e-4f );
     SW_EXPECT_TRUE( rig._pAbility->getOwnedTagCounts().hasMatchingTag( "State.Hasted"_tag ) );
-    SW_EXPECT_EQUAL( 2u, rig._pReward->getAppliedCount() );
+    SW_EXPECT_EQUAL( 2u, rig._pReward->getAppliedCount().get() );
 }
 
 /** @brief [MinigameRewardTest] 표에 없는 이름은 오류이고 false 다 — 같은 결과의 다른 값(heal)은 그대로 걸린다 */
@@ -117,7 +117,7 @@ SW_TEST_CASE( MinigameRewardTest, UnknownValueNameIsError )
     } );
     SW_EXPECT_FALSE( rig._pReward->applyResult( result ) );
     SW_EXPECT_NEAR( 50.0f, rig.health(), 1.0e-4f );
-    SW_EXPECT_EQUAL( 1u, rig._pReward->getAppliedCount() );
+    SW_EXPECT_EQUAL( 1u, rig._pReward->getAppliedCount().get() );
 }
 
 /** @brief [MinigameRewardTest] 표의 이펙트가 카탈로그에 없으면 오류이고 아무것도 걸지 않는다 */
@@ -129,7 +129,7 @@ SW_TEST_CASE( MinigameRewardTest, EffectMissingFromCatalogIsError )
     SW_EXPECT_FALSE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
         MinigameResultValue{ hashed_string( "ghost" ), 1 }
     } ) ) );
-    SW_EXPECT_EQUAL( 0u, rig._pReward->getAppliedCount() );
+    SW_EXPECT_EQUAL( 0u, rig._pReward->getAppliedCount().get() );
 }
 
 /** @brief [MinigameRewardTest] 경제 · 진행: 결과 값은 플레이어 상태 오브젝트의 지갑 · 평판 · 퀘스트 일지에 닿고, 같은 값을 여러 표에 적으면 모두 준다. 0 이하의 통화 · 없는 받는 쪽은 오류다 */
@@ -155,7 +155,7 @@ SW_TEST_CASE( MinigameRewardTest, ResultValuesReachThePlayerState )
     } ) ) );
     SW_EXPECT_EQUAL( int64{ 15 }, pWallet->getWallet().getBalance( gold ) );
     SW_EXPECT_EQUAL( 10, pReputation->getReputation().getValue( town ) );
-    SW_EXPECT_EQUAL( 3u, rig._pReward->getAppliedCount() );
+    SW_EXPECT_EQUAL( 3u, rig._pReward->getAppliedCount().get() );
 
     SW_EXPECT_LOG( "MinigameReward.AmountNotPositive" );
     SW_EXPECT_FALSE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {
@@ -180,5 +180,5 @@ SW_TEST_CASE( MinigameRewardTest, EmptyResultIsNothing )
     MinigameRewardFixture rig;
     SW_REQUIRE_TRUE( rig._pReward != nullptr );
     SW_EXPECT_TRUE( rig._pReward->applyResult( MinigameRewardFixture::makeResult( {} ) ) );
-    SW_EXPECT_EQUAL( 0u, rig._pReward->getAppliedCount() );
+    SW_EXPECT_EQUAL( 0u, rig._pReward->getAppliedCount().get() );
 }

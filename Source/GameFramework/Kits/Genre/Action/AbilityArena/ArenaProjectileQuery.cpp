@@ -33,9 +33,9 @@ namespace sw
             const bool           bSameTeam = ( view._kind == ArenaUnitKind::Player ) == bFromPlayer;
             if ( bSameTeam || view._bAlive == SW_FALSE || projectile.hasHit( view._unitID ) )
                 continue;
-            const float32 ratio = lengthSquared > 0.0f ? MathUtil::clamp( ( view._position - from ).dot( segment ) / lengthSquared, 0.0f, 1.0f ) : 0.0f;
+            const float32 ratio = lengthSquared > 0.0f ? MathUtil::clamp( ( view._position._value - from ).dot( segment ) / lengthSquared, 0.0f, 1.0f ) : 0.0f;
             const float3  point = from + segment * ratio;
-            if ( float3::getDistance( point, view._position ) > reach || ratio >= hitRatio )
+            if ( float3::getDistance( point, view._position._value ) > reach || ratio >= hitRatio )
                 continue;
             pHit             = &view;
             hitRatio         = ratio;

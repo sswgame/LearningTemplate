@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="9dd16f4f092bcca59b028545dffa29a8"?>
+<!--
+  NileCity 월드 원점 시나리오 — 도시는 절대 자리에서 돌고 카메라 · 커서 · 모습만 씬 자리다. world.origin 으로 원점을 옮겨도 포인터 아래 칸이 같고, 거기에 짓고 허물 수 있다.
+  포인터는 화면 가운데에서 조금 벗어난 자리다(리그 초점은 칸 경계라 반올림에 흔들린다).
+  실행: ctest -R Scenario.nilecity (SW_ACTIVE_GAME=NileCity) · App -scenario=game/nilecity/automation/worldorigin.scenario.xml -unattended
+-->
+<Scenario name="game.nilecity.worldorigin" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_nileAutoPlay" value="0"/>
+	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
+	<MousePosition x="0.513" y="0.507"/>
+	<WaitUntil watch="City.CursorCellX" atLeast="0" timeoutFrames="10"/> <!-- 커서가 포인터 아래 땅 칸을 잡았다 -->
+	<AdvanceSimulation frames="4"/> <!-- 커서가 새 포인터 자리로 옮겨 온다(옮기기 전에도 값이 있어 조건으로 못 쓴다) -->
+	<Store watch="City.CursorCellX" as="cellX"/>
+	<Store watch="City.CursorCellZ" as="cellZ"/>
+	<DevCommand line="world.origin 64 32"/>
+	<AdvanceSimulation frames="4"/> <!-- 옮긴 원점의 카메라 포즈로 다시 고른다 — 같은 값이어야 하므로 조건으로 못 쓴다 -->
+	<Expect watch="City.CursorCellX" sameAs="cellX"/>
+	<Expect watch="City.CursorCellZ" sameAs="cellZ"/>
+	<Store watch="City.BuildCount" as="builds"/>
+	<Store watch="City.DemolishCount" as="demolishes"/>
+	<Tap slot="Mouse.Left" hold="1"/>
+	<WaitUntil watch="City.BuildCount" differsFrom="builds" timeoutFrames="10"/> <!-- 옮긴 원점에서 도로를 깔았다 -->
+	<DevCommand line="world.origin 0 0"/>
+	<AdvanceSimulation frames="4"/> <!-- 되돌린 원점의 카메라 포즈로 다시 고른다 -->
+	<Expect watch="City.CursorCellX" sameAs="cellX"/>
+	<Expect watch="City.CursorCellZ" sameAs="cellZ"/>
+	<Tap slot="Mouse.Right" hold="1"/>
+	<WaitUntil watch="City.DemolishCount" differsFrom="demolishes" timeoutFrames="10"/> <!-- 같은 칸의 도로를 허물었다 -->
+	<ExpectLog id="City.Demolished" count="1"/>
+	<Pass/>
+</Scenario>

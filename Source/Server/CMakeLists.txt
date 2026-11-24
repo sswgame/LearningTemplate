@@ -45,47 +45,45 @@ endif()
 sw_copy_tracy_runtime(Server)
 sw_emit_runtime_copies(Server)
 
-# 클라이언트 전용 형식 이름 표(`ClientOnlyTypeTable`) — 서버 구성만 읽는다(클라이언트 코드를 짓지 않아 그 형식을 모른다). 짓지 않는 소스의 헤더에서 빌드가 만들어
-# 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 두고, 패키지(`Scripts/package/pack.py`)가 함께 싣는다. 헤더 고르기는 짓지 않는 소스의 정본과 같다
+# 클라이언트 전용 형식 이름 표(`ClientOnlyTypeTable`) — 전용 서버로 선 프로세스만 읽는다(서버 구성은 클라이언트 코드를 짓지 않고, 개발 구성의 Server 는 클라이언트 모듈을 올리지 않아 그 형식을 모른다). 클라이언트 전용 소스의 헤더에서 빌드가 만들어
+# 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 두고, 패키지(`Scripts/package/pack.py`)가 함께 싣는다. 헤더 고르기는 클라이언트 전용 소스의 정본과 같다
 # (`SW_EXCLUDED_ENGINE_FOLDERS` · `SW_CLIENT_ONLY_SOURCE_PATTERNS`, 테스트 폴더는 뺀다). 언리얼이 쿠킹 때 서버에서 뺄 클래스 목록을 내는 자리와 같다.
-if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_glob_source_tree(list_source_header RECURSE "${CMAKE_SOURCE_DIR}/Source/*.h")
-	set(list_client_only_header "")
-	foreach(header IN LISTS list_source_header)
-		string(REPLACE "${CMAKE_SOURCE_DIR}/Source/" "" relative_header "${header}")
-		if(relative_header MATCHES "/Tests/")
-			continue()
-		endif()
-		set(client_only OFF)
-		foreach(pattern IN LISTS SW_CLIENT_ONLY_SOURCE_PATTERNS)
-			string(FIND "/${relative_header}" "${pattern}" pattern_index)
-			if(NOT pattern_index EQUAL -1)
-				set(client_only ON)
-			endif()
-		endforeach()
-		foreach(folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
-			string(FIND "${relative_header}" "Engine/${folder}/" folder_index)
-			if(folder_index EQUAL 0)
-				set(client_only ON)
-			endif()
-		endforeach()
-		if(client_only)
-			list(APPEND list_client_only_header "${header}")
+sw_glob_source_tree(list_source_header RECURSE "${CMAKE_SOURCE_DIR}/Source/*.h")
+set(list_client_only_header "")
+foreach(header IN LISTS list_source_header)
+	string(REPLACE "${CMAKE_SOURCE_DIR}/Source/" "" relative_header "${header}")
+	if(relative_header MATCHES "/Tests/")
+		continue()
+	endif()
+	set(client_only OFF)
+	foreach(pattern IN LISTS SW_CLIENT_ONLY_SOURCE_PATTERNS)
+		string(FIND "/${relative_header}" "${pattern}" pattern_index)
+		if(NOT pattern_index EQUAL -1)
+			set(client_only ON)
 		endif()
 	endforeach()
-	set(client_only_header_list "${CMAKE_BINARY_DIR}/generated/ClientOnlyTypeHeaders.list")
-	string(REPLACE ";" "\n" client_only_header_text "${list_client_only_header}")
-	sw_write_if_changed("${client_only_header_list}" "${client_only_header_text}")
-	set(client_only_table "${CMAKE_BINARY_DIR}/Bin/ClientOnlyTypes.json")
-	add_custom_command(
-		OUTPUT "${client_only_table}"
-		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/client_only_types.py" --headers "${client_only_header_list}" --output "${client_only_table}"
-		COMMAND "${CMAKE_COMMAND}" -E touch "${client_only_table}"
-		DEPENDS ${list_client_only_header} "${client_only_header_list}" "${CMAKE_SOURCE_DIR}/Scripts/generate/client_only_types.py"
-		COMMENT "[Server] Collecting client-only type names"
-		VERBATIM
-	)
-	add_custom_target(ClientOnlyTypes DEPENDS "${client_only_table}")
-	set_target_properties(ClientOnlyTypes PROPERTIES FOLDER "Source/Server")
-	add_dependencies(Server ClientOnlyTypes)
-endif()
+	foreach(folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
+		string(FIND "${relative_header}" "Engine/${folder}/" folder_index)
+		if(folder_index EQUAL 0)
+			set(client_only ON)
+		endif()
+	endforeach()
+	if(client_only)
+		list(APPEND list_client_only_header "${header}")
+	endif()
+endforeach()
+set(client_only_header_list "${CMAKE_BINARY_DIR}/generated/ClientOnlyTypeHeaders.list")
+string(REPLACE ";" "\n" client_only_header_text "${list_client_only_header}")
+sw_write_if_changed("${client_only_header_list}" "${client_only_header_text}")
+set(client_only_table "${CMAKE_BINARY_DIR}/Bin/ClientOnlyTypes.json")
+add_custom_command(
+	OUTPUT "${client_only_table}"
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/client_only_types.py" --headers "${client_only_header_list}" --output "${client_only_table}"
+	COMMAND "${CMAKE_COMMAND}" -E touch "${client_only_table}"
+	DEPENDS ${list_client_only_header} "${client_only_header_list}" "${CMAKE_SOURCE_DIR}/Scripts/generate/client_only_types.py"
+	COMMENT "[Server] Collecting client-only type names"
+	VERBATIM
+)
+add_custom_target(ClientOnlyTypes DEPENDS "${client_only_table}")
+set_target_properties(ClientOnlyTypes PROPERTIES FOLDER "Source/Server")
+add_dependencies(Server ClientOnlyTypes)

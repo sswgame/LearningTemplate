@@ -28,6 +28,7 @@
  *            서버가 검증해야 할 입력을 만들지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
@@ -466,7 +467,7 @@ namespace sw
         /** @brief 보이는 엔티티 수입니다(보류 제외). */
         int32 getEntityCount() const { return static_cast<int32>( _mapEntity.size() ) - _heldCount; }
         /** @brief 순서가 뒤바뀌어 마지막으로 적용한 틱보다 오래돼서 버린 갱신 수입니다. */
-        uint64 getStaleUpdateCount() const { return _staleUpdateCount; }
+        const DevCounter& getStaleUpdateCount() const { return _staleUpdateCount; }
 
     private:
         /** @brief 클라이언트 엔티티의 단계 — 한 id 는 둘 중 하나다(한 표에 들어 두 단계에 동시에 있을 수 없다). */
@@ -500,6 +501,6 @@ namespace sw
         const INetClientWorld*              _pWorld{ nullptr };
         int32                               _heldCount{ 0 }; ///< `_mapEntity` 가운데 `Held` 수
         EventBuffer<MMOClientEvent>         _eventBuffer{};
-        uint64                              _staleUpdateCount{ 0 };
+        DevCounter                          _staleUpdateCount;
     };
 } // namespace sw

@@ -4,6 +4,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
@@ -24,7 +25,7 @@ namespace sw
          * @class LeaderboardOnlineServerKit
          * @brief 순위표 키트의 서버 조립입니다.
          */
-        class LeaderboardOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountDirectory, AccountPresence>>
+        class LeaderboardOnlineServerKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<IAccountDirectory, const IAccountNameIndex, AccountPresence>>
         {
         public:
             LeaderboardOnlineServerKit()
@@ -32,6 +33,7 @@ namespace sw
                 , _listInlineBoardID{}
                 , _service{}
                 , _server{}
+                , _scoreSender{ _service }
                 , _afterDeleteAccount{ &_service }
             {
             }
@@ -61,6 +63,8 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IAccountStatSource>( context, entry, _service ); } )
                     .and_then( [&]
+                { return exposeInterface<ILeaderboardScoreSender>( context, entry, _scoreSender ); } ) // 전용 서버의 게임이 판의 점수를 낸다
+                    .and_then( [&]
                 { return addTTLRule( context, entry, scoreRule, kitConfig._pastScoreTTL ); } )
                     .and_then( [&]
                 { return addTTLRule( context, entry, resultRule, kitConfig._seasonResultTTL ); } );
@@ -71,8 +75,9 @@ namespace sw
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the leaderboard needs a cache (ranks live in sorted sets)" } );
                 LeaderboardServiceDependencies dependencies;
-                dependencies._pStore  = context._pStore;
-                dependencies._pRouter = context._pRouter;
+                dependencies._pStore     = context._pStore;
+                dependencies._pRouter    = context._pRouter;
+                dependencies._pNameIndex = interfaces.find<const IAccountNameIndex>();
                 _service.initialize( dependencies );
                 _service.setScheduler( context._pScheduler ); // 보드 등록 전 — 시즌 보드의 정산 작업이 예약 테이블에 걸린다
                 if ( expected<void> definitions = registerDefinitions(); definitions.has_value() == false )
@@ -136,6 +141,7 @@ namespace sw
             vector<string>                                                                  _listInlineBoardID; ///< 설정 `_listBoardID`
             LeaderboardService                                                              _service;
             LeaderboardServer                                                               _server;
+            LeaderboardScoreSender                                                          _scoreSender;        ///< `_service` 를 빌린다(뒤에 선언)
             AfterDeleteAccountMember<LeaderboardService, &LeaderboardService::eraseAccount> _afterDeleteAccount; ///< `_service` 를 빌린다(뒤에 선언)
         };
     } // namespace

@@ -60,7 +60,7 @@ SW_TEST_CASE( RemoteControllerTest, HoldsTheLastIntentAndTriggersOnce )
     SW_EXPECT_FALSE( rig._pPawn->wasButtonTriggered( 2 ) );
     SW_EXPECT_NEAR( 1.0f, rig._pPawn->getIntent()._move._y, 1e-3f );
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._controlYaw, 1e-3f );
-    SW_EXPECT_EQUAL( 0u, rig._pRemote->getMissingTickCount() ); // 프레임이 네트 틱보다 빠른 것은 빠진 틱이 아니다
+    SW_EXPECT_EQUAL( 0u, rig._pRemote->getMissingTickCount().get() ); // 프레임이 네트 틱보다 빠른 것은 빠진 틱이 아니다
 }
 
 /** @brief [RemoteControllerTest] 한 프레임에 여러 틱이 쌓이면 마지막 값에 그 사이의 발동을 모은다. */
@@ -89,7 +89,7 @@ SW_TEST_CASE( RemoteControllerTest, CountsGapsAndDropsOldTicks )
     rig.update();
     rig._pRemote->receiveIntent( 3, RemoteControllerTestRig::makeIntent( 0.5f, 0, false ) );
     rig.update();
-    SW_EXPECT_EQUAL( 2u, rig._pRemote->getMissingTickCount() );
+    SW_EXPECT_EQUAL( 2u, rig._pRemote->getMissingTickCount().get() );
     SW_EXPECT_NEAR( 0.5f, rig._pPawn->getIntent()._move._y, 1e-2f );
 
     rig._pRemote->receiveIntent( 2, RemoteControllerTestRig::makeIntent( -1.0f, 0, true ) );

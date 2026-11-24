@@ -196,10 +196,10 @@ namespace sw
         void                   finishIfDone();
 
     private:
-        RhythmPlaySettings       _settings;
-        vector<LaneQueue>        _listLane;
-        vector<int32>            _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)를 따른다
-        EventBuffer<RhythmEvent> _eventBuffer;
+        RhythmPlaySettings              _settings;
+        vector<LaneQueue>               _listLane;
+        vector<int32>                   _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)를 따른다
+        NotificationBuffer<RhythmEvent> _eventBuffer;
         PROPERTY( RuntimeState )
         vector<RhythmInputRecord> _listInputRecord;
         const RhythmChart*        _pChart;

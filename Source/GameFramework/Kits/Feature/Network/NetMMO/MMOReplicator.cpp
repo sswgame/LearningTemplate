@@ -743,7 +743,7 @@ namespace sw
                 ClientEntity& known = entityIter->second;
                 if ( tick < known._tick )
                 {
-                    ++_staleUpdateCount;
+                    _staleUpdateCount.add();
                     continue;
                 }
                 known._tick              = tick;
@@ -830,7 +830,7 @@ namespace sw
             ClientEntity& entry = entityIter->second;
             if ( tick < entry._tick )
             {
-                ++_staleUpdateCount; // 순서가 뒤바뀐 오래된 갱신이다. 더 새로운 상태를 덮어쓰지 않게 버린다
+                _staleUpdateCount.add(); // 순서가 뒤바뀐 오래된 갱신이다. 더 새로운 상태를 덮어쓰지 않게 버린다
                 continue;
             }
             entry._tick              = tick;

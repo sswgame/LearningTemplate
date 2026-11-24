@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetRegistry.h"
@@ -161,20 +162,12 @@ namespace sw
         }
     }
 
-    void MinigameFrame::takeMatchResult( MinigameResult& inoutResult ) const
+    void MinigameFrame::removeMatchScore( vector<MinigameResultValue>& inoutListValue ) const
     {
         if ( _matchID == 0 )
             return;
-        inoutResult._matchID    = _matchID;
-        inoutResult._matchBoard = _definition._matchBoard;
-        for ( size_t index = 0; index < inoutResult._listValue.size(); ++index )
-        {
-            if ( inoutResult._listValue[index]._name != _definition._matchScore )
-                continue;
-            inoutResult._matchScore = inoutResult._listValue[index]._amount;
-            inoutResult._listValue.erase( inoutResult._listValue.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        VectorUtil::removeIf( inoutListValue, [this]( const MinigameResultValue& value )
+        { return value._name == _definition._matchScore; } );
     }
 
     void MinigameStack::push( MinigameFrame frame )

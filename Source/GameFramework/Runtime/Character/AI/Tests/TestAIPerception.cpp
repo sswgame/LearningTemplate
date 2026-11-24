@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
+#include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 
 using namespace sw;
 
@@ -121,6 +122,26 @@ SW_TEST_CASE( AIPerceptionTest, RememberedPositionFollowsTheWorldOrigin )
     SW_REQUIRE_NOT_NULL( pTarget );
     SW_EXPECT_NEAR( -997.0f, pTarget->_lastKnownPosition._x, 1e-3f );
     SW_EXPECT_NEAR( -496.0f, pTarget->_lastKnownPosition._z, 1e-3f );
+}
+
+/**
+ * @brief [AIPerceptionTest] 시야 격자는 절대 자리다 — 월드 원점을 옮긴 뒤에도 눈 · 대상(씬 자리)을 같은 칸에서 읽는다
+ * @details 변이: `canSee` 가 씬 자리를 그대로 격자에 물으면 격자 밖이라 트인 곳도 막힌 것으로 읽는다.
+ */
+SW_TEST_CASE( AIPerceptionTest, SightGridIsAbsolute )
+{
+    GameObjectManager manager;
+    NavGrid           grid;
+    SW_REQUIRE_TRUE( grid.initialize( 8, 8, 1.0f, float3{ 500.0f, 0.0f, 0.0f } ) );
+    manager.setWorldOrigin( double3{ 500.0, 0.0, 0.0 } );
+    AIPerception perception;
+    const float3 eye{ 0.5f, 0.0f, 0.5f };
+    const float3 forward{ 1.0f, 0.0f, 0.0f };
+    const float3 target{ 7.5f, 0.0f, 0.5f };
+    perception.sense( manager, 1, eye, forward, &grid, 0.1f ); // 지금 월드 원점을 받는다
+    SW_EXPECT_TRUE( perception.canSee( eye, forward, target, &grid, false ) );
+    grid.setBlocked( 4, 0, true );
+    SW_EXPECT_FALSE( perception.canSee( eye, forward, target, &grid, false ) );
 }
 
 /**
