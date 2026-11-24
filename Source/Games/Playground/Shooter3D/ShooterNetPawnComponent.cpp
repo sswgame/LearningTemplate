@@ -244,6 +244,12 @@ namespace sw
 
     void ShooterNetPawnComponent::onEndPlay()
     {
+        stopRole();
+        Component::onEndPlay();
+    }
+
+    void ShooterNetPawnComponent::stopRole()
+    {
         _routerSubscription.reset();
         if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getMutableManager() != nullptr )
             MeleeSweepHistory::release( *getOwner()->getMutableManager() );
@@ -256,13 +262,21 @@ namespace sw
             pMovement->setNetDriven( false );
             pMovement->setDisplayOffset( float3{ 0.0f, 0.0f, 0.0f } );
         }
+        _listClaim.clear();
+        _listPendingClaim.clear();
         _role = Role::None;
-        Component::onEndPlay();
     }
 
     void ShooterNetPawnComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
+        if ( _role != Role::None && _routerSubscription.isActive() == false )
+        {
+            // 플레이 중에 세션이 닫혔다 — 닫힌 창구로 입력을 보내지 않고, 아무도 옮기지 않는 몸(netDriven)도 남기지 않는다. 조종 시스템을 쓰므로 틱 뒤에 놓는다.
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            { netPawn.stopRole(); } );
+            return;
+        }
         ShooterBodyMovementComponent*  pMovement = findMovement();
         const vector<ShooterArenaBox>* pListBox  = findArenaBoxes();
         const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || context.getDeltaTime() <= 0.0f;

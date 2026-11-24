@@ -197,6 +197,8 @@ namespace sw
         ShooterBodyMovementComponent*   findMovement() const;
         const PawnComponent*            findPawn() const;
         const ShooterGameModeComponent* findGameMode() const;
+        /** @brief 역할을 놓고 몸을 혼자 하는 길로 되돌립니다(게임 스레드) — 플레이를 마칠 때, 또는 세션이 닫혀 처리기 등록이 풀렸을 때. */
+        void stopRole();
         /** @brief 이번 서버 틱의 산 적을 랙 보정 기록과 복제 엔티티에 적습니다. */
         void recordEnemies();
         /** @brief 기다린 맞음 주장 가운데 그 프레임의 스윕이 기록된 것을 확인합니다(틱 뒤 · 게임 스레드). */
