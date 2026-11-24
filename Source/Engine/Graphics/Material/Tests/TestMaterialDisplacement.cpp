@@ -70,17 +70,31 @@ SW_TEST_CASE( MaterialDisplacementTest, EdgeHeightMipFollowsVertexSpacing )
 }
 
 /**
- * @brief [MaterialDisplacementTest] 패치 안의 밉 섞기 — 변 위에서는 그 변의 밉 하나라 나머지 두 변(이웃 패치마다 다르다)과 무관하고, 원래 꼭짓점은 어느 패치에서나 0, 가운데는 셋의 평균이다
+ * @brief [MaterialDisplacementTest] 패치 안의 밉 섞기 — 변 위에서는 그 변의 밉 하나라 나머지 두 변(이웃 패치마다 다르다)과 무관하고, 원래 꼭짓점은 변과 무관한 그 꼭짓점의 밉, 가운데는 셋의 평균이다
  * @details 패치의 세 변 · 안쪽 계수로 밉을 고르면 같은 변을 나누는 두 패치가 다른 밉으로 읽어 변위가 갈라진다 — 그 틈을 막는 성질이다.
  */
 SW_TEST_CASE( MaterialDisplacementTest, BlendedHeightMipMatchesNeighborOnSharedEdge )
 {
     const float3 onEdge0( 0.0f, 0.3f, 0.7f );
-    SW_EXPECT_NEAR( 2.5f, MaterialDisplacement::blendEdgeHeightMipLevels( onEdge0, 2.5f, 0.0f, 6.0f ), 1e-5f );
-    SW_EXPECT_NEAR( 2.5f, MaterialDisplacement::blendEdgeHeightMipLevels( onEdge0, 2.5f, 4.0f, 1.0f ), 1e-5f );
-    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::blendEdgeHeightMipLevels( float3( 1.0f, 0.0f, 0.0f ), 2.5f, 4.0f, 1.0f ) );
+    const float3 vertexMip( 1.5f, 2.0f, 3.5f );
+    SW_EXPECT_NEAR( 2.5f, MaterialDisplacement::blendEdgeHeightMipLevels( onEdge0, 2.5f, 0.0f, 6.0f, vertexMip ), 1e-5f );
+    SW_EXPECT_NEAR( 2.5f, MaterialDisplacement::blendEdgeHeightMipLevels( onEdge0, 2.5f, 4.0f, 1.0f, vertexMip ), 1e-5f );
+    SW_EXPECT_EQUAL( 1.5f, MaterialDisplacement::blendEdgeHeightMipLevels( float3( 1.0f, 0.0f, 0.0f ), 2.5f, 4.0f, 1.0f, vertexMip ) );
+    SW_EXPECT_EQUAL( 1.5f, MaterialDisplacement::blendEdgeHeightMipLevels( float3( 1.0f, 0.0f, 0.0f ), 0.0f, 0.0f, 9.0f, vertexMip ) ); // 다른 패치의 변
     const float32 third = 1.0f / 3.0f;
-    SW_EXPECT_NEAR( 3.0f, MaterialDisplacement::blendEdgeHeightMipLevels( float3( third, third, third ), 1.0f, 3.0f, 5.0f ), 1e-5f );
+    SW_EXPECT_NEAR( 3.0f, MaterialDisplacement::blendEdgeHeightMipLevels( float3( third, third, third ), 1.0f, 3.0f, 5.0f, vertexMip ), 1e-5f );
+}
+
+/** @brief [MaterialDisplacementTest] 꼭짓점의 높이 밉은 평균 변이 고른 메시에서 변의 밉과 같고, 멀수록 거칠며, UV 가 없으면 0 이다 */
+SW_TEST_CASE( MaterialDisplacementTest, VertexHeightMipMatchesEvenEdges )
+{
+    const float2  size( 256.0f, 256.0f );
+    const float32 depth  = 10.0f;
+    const float32 factor = MaterialDisplacement::computeEdgeTessFactor( float3( 0.0f, 0.0f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), depth, depth, 80.0f, 64.0f );
+    const float32 edge   = MaterialDisplacement::computeEdgeHeightMipLevel( float2( 0.0f, 0.0f ), float2( 0.5f, 0.0f ), factor, size );
+    SW_EXPECT_NEAR( edge, MaterialDisplacement::computeVertexHeightMipLevel( depth, 1.0f, 0.5f, 80.0f, 64.0f, size ), 1e-4f );
+    SW_EXPECT_NEAR( edge + 1.0f, MaterialDisplacement::computeVertexHeightMipLevel( depth * 2.0f, 1.0f, 0.5f, 80.0f, 64.0f, size ), 1e-4f );
+    SW_EXPECT_EQUAL( 0.0f, MaterialDisplacement::computeVertexHeightMipLevel( depth, 1.0f, 0.0f, 80.0f, 64.0f, size ) );
 }
 
 /** @brief [MaterialDisplacementTest] 위치 미분 — UV 가 월드 xz 를 2 배로 늘인 판이면 dP/du = (0.5, 0, 0), dP/dv = (0, 0, 0.5), UV 가 퇴화하면 0 이다 */
