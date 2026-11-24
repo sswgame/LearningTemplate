@@ -22,7 +22,7 @@ namespace sw
     };
 
     /** @brief 이 프로세스의 창 공장 자리입니다. */
-    struct SW_API WindowPlatform
+    struct WindowPlatform
     {
         /** @brief 등록된 공장입니다. 창이 없는 구성이면 nullptr 입니다. */
         static const WindowPlatformFactory* find();

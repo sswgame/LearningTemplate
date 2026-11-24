@@ -105,7 +105,7 @@ namespace sw
      * @brief 동기 그룹입니다. 가중치가 가장 큰 플레이어(리더)의 정규화 위치에 나머지(팔로워)를 맞춥니다(언리얼 Sync Group 의 마커 없는 위상 동기에 해당합니다).
      * @details 걷기 1.0 초와 달리기 0.7 초를 섞어도 발이 같은 위상을 딛는다. 리더의 가중치가 같으면 앞의 것이 리더다.
      */
-    struct SW_API AnimationSyncGroup
+    struct AnimationSyncGroup
     {
         /** @return 리더의 인덱스입니다. 목록이 비었으면 -1 입니다. */
         static int32 synchronize( AnimationPlayer* const* ppPlayer, const float32* pWeight, uint32 count );

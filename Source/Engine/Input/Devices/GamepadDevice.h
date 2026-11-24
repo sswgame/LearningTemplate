@@ -50,7 +50,7 @@ namespace sw
      * @brief 게임패드의 진동 출력 창구(`IInputFeedbackDevice`)입니다. 장치의 `setVibration` · `stopVibration`(플랫폼 백엔드 XInput · evdev 가 덮어쓴다)으로 넘깁니다.
      * @details 장치의 기반은 하나(`IInputDevice`)라 출력 인터페이스는 이 창구를 멤버로 들어 건다(`SubsystemScope::exposeMember` 와 같은 모양).
      */
-    class SW_API GamepadFeedbackOutput final : public IInputFeedbackDevice
+    class GamepadFeedbackOutput final : public IInputFeedbackDevice
     {
     public:
         explicit GamepadFeedbackOutput( GamepadDevice& owner );

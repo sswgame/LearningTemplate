@@ -11,7 +11,7 @@
 namespace sw
 {
     /** @class NamePoolSubsystem @brief 이름 풀 서브시스템입니다. */
-    class SW_API NamePoolSubsystem final : public Subsystem
+    class NamePoolSubsystem final : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */

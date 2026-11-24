@@ -19,7 +19,7 @@ namespace sw
     struct FractureAsset;
 
     /** @brief 앵커 판정 도우미입니다. 전부 static 입니다. */
-    struct SW_API FractureAnchorUtil
+    struct FractureAnchorUtil
     {
         /** @brief 잎이 가장 낮은 면에서 @p tolerance(월드 미터) 안에 닿는지 반환합니다(`Bottom` 모드). @p scale 은 오브젝트의 고른 배율입니다. */
         static bool isBottomLeaf( const FractureAsset& asset, uint32 leaf, float32 tolerance, float32 scale );

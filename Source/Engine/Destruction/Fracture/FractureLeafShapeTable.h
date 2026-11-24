@@ -25,7 +25,7 @@ namespace sw
     struct FractureAsset;
 
     /** @brief 파괴 조각의 충돌 껍질을 에셋에서 만드는 계산입니다. */
-    struct SW_API FractureLeafHullUtil
+    struct FractureLeafHullUtil
     {
         static constexpr uint32 kMaxPolygonPoint2D = 8; ///< 2D 물리 다각형의 최대 점 수다.
 

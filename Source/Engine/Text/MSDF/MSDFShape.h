@@ -58,7 +58,7 @@ namespace sw
     struct MSDFParams;
 
     /** @brief 글리프 모양입니다(윤곽 여럿). 좌표는 래스터 픽셀이고 y 가 위입니다. */
-    struct SW_API MSDFShape
+    struct MSDFShape
     {
         vector<MSDFContour> _listContour{};
 

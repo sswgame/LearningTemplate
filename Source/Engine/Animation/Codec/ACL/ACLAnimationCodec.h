@@ -14,7 +14,7 @@ namespace sw
      *          `precision` 을 넘지 않는 선에서 비트를 줄인다(오차는 `shell_distance` 만큼 떨어진 정점으로 측정한다). 런타임은
      *          `decompression_context` 로 시각을 찾아 트랙마다 쓰개(writer)에 값을 넘긴다.
      */
-    class SW_API ACLAnimationCodec final : public IAnimationCodec
+    class ACLAnimationCodec final : public IAnimationCodec
     {
     public:
         /** @brief 프로세스에 하나인 인스턴스입니다(상태가 없습니다). */

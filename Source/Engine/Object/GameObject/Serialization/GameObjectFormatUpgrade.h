@@ -14,7 +14,7 @@ namespace sw
      * @struct GameObjectFormatUpgrade
      * @brief 씬 · 프리팹 문서의 오브젝트 칸 이름 바꾸기입니다. 데이터만 고치는 순수 함수다.
      */
-    struct SW_API GameObjectFormatUpgrade
+    struct GameObjectFormatUpgrade
     {
         /**
          * @brief 문서 전체(엔티티 · 프리팹 오버라이드 · 중첩 오브젝트)의 `_siblingIndex` 속성 이름을 `_siblingOrder` 로 바꿉니다. 값은 그대로다 — 옛 0 부터 센 자리도 유효한 정렬 키다(설계 E-6).

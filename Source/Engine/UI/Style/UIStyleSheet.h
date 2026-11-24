@@ -41,7 +41,7 @@ namespace sw
      * @brief 복합 선택자들을 공백(자손 결합자, 아무 조상)으로 이은 것입니다. `>`, `+`, `*`, `[속성]` 은 쓰지 않습니다(읽으면 오류).
      * @details 특정도는 (#이름 수, .클래스 + :상태 수, 타입 수)의 사전 순서이며, 한 자리에 8 비트씩 담는다.
      */
-    struct SW_API UIStyleSelector
+    struct UIStyleSelector
     {
         vector<UIStyleSelectorPart> _listPart{}; ///< 왼쪽(먼 조상)에서 오른쪽(대상) 순서입니다.
         uint32                      _specificity{ 0 };

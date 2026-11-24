@@ -36,7 +36,7 @@ namespace sw
      *        (여럿이 함께 걸어도 한 오브젝트의 반응을 따로 본다 — 감시 값 `Surface.Object*`).
      */
     /** @brief 표면 종류 하나의 발걸음 기록입니다 — 센 수와 그 종류를 마지막으로 밟은 반응. */
-    struct SW_API SurfaceFootstepKindNote
+    struct SurfaceFootstepKindNote
     {
         uint32        _count{ 0 };
         hashed_string _lastSound{};
@@ -44,7 +44,7 @@ namespace sw
         uint8         _bLastWet{ SW_FALSE };
     };
 
-    struct SW_API SurfaceFootstepRecord
+    struct SurfaceFootstepRecord
     {
         /// 종류 이름 → 그 종류의 기록. 두 발이 한 프레임에 다른 종류를 디디면 "마지막 발걸음" 은 나중 것 하나라, 종류마다의 반응은 여기서 본다.
         unordered_map<hashed_string, SurfaceFootstepKindNote> _mapKind{};

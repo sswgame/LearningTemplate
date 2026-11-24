@@ -25,7 +25,7 @@ namespace sw
      *          CSS 가 시간 둘을 길이, 지연 순으로 읽는 것과 같다). 뒤 항목이 앞 항목을 덮어쓴다. 보간되는 필드는 실수 필드(색, 모서리, 두께, 그림자, 여백, 글자 크기, 외곽선, 불투명도)이고
      *          폰트와 전환 자신은 받지 않는다(로드 오류).
      */
-    struct SW_API UIStyleTransitionSpec
+    struct UIStyleTransitionSpec
     {
         struct Entry
         {
