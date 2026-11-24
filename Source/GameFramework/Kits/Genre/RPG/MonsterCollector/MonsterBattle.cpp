@@ -76,10 +76,10 @@ namespace sw
     {
     }
 
-    void MonsterBattle::initialize( const MonsterCollectorCatalog* pCatalog, const ElementChart* pChart, uint32 seed )
+    void MonsterBattle::initialize( const MonsterCollectorCatalog& catalog, const ElementChart& chart, uint32 seed )
     {
-        _pCatalog = pCatalog;
-        _pChart   = pChart;
+        _pCatalog = &catalog;
+        _pChart   = &chart;
         _random.setSeed( seed );
         _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, MonsterBattleInternal::kTurnOrderStream ) );
     }

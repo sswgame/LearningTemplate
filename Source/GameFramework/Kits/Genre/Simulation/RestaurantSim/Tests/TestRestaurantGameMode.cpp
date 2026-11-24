@@ -31,6 +31,8 @@ namespace
 
     constexpr const utf8* kRestaurantRecipeXML = R"(<RecipeCatalog><Recipe id="bowl" station="Stove" time="1"><In item="noodle"/><Out item="bowl"/></Recipe></RecipeCatalog>)";
 
+    constexpr const utf8* kRestaurantItemXML = R"(<ItemCatalog><Item id="noodle" maxStack="10"/></ItemCatalog>)";
+
     constexpr const utf8* kRestaurantShopXML = R"(<ShopCatalog><Shop id="market" buybackLimit="0"><Stock item="noodle" price="5"/></Shop></ShopCatalog>)";
 
     constexpr float32 kRestaurantFrame = 0.125f; ///< 분당 8 초 설정이면 한 프레임이 1 분이다
@@ -40,6 +42,7 @@ namespace
     {
         RestaurantCatalog            _catalog;
         RecipeCatalog                _recipes;
+        ItemCatalog                  _items;
         SubsystemScope               _scope;
         GameObjectManager            _manager;
         RestaurantGameModeComponent* _pGameMode{ nullptr };
@@ -49,8 +52,9 @@ namespace
             (void)domain.makeDiskFolder( "diner" ); // 폴더만 만든다
             if ( FileUtil::writeTextFile( domain.makeDiskPath( "diner/market.shops.xml" ), kRestaurantShopXML ) == false )
                 return false;
-            const bool bCatalogs = _catalog.loadFromXMLText( kRestaurantGameModeXML, "RestaurantGameModeTest" ) && _recipes.loadFromXMLText( kRestaurantRecipeXML, "RestaurantGameModeTest" );
-            if ( bCatalogs == false || _scope.bind<const RestaurantCatalog>( &_catalog ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false )
+            const bool bCatalogs = _catalog.loadFromXMLText( kRestaurantGameModeXML, "RestaurantGameModeTest" ) && _recipes.loadFromXMLText( kRestaurantRecipeXML, "RestaurantGameModeTest" ) &&
+                                   _items.loadFromXMLText( kRestaurantItemXML, "RestaurantGameModeTest" );
+            if ( bCatalogs == false || _scope.bind<const ItemCatalog>( &_items ) == false || _scope.bind<const RestaurantCatalog>( &_catalog ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false )
                 return false;
             StringBuilder<constant::buffer::kMax1024> sceneText;
             sceneText.appendFormat( "<RestaurantGameModeComponent _shops=\"%#\" _shop=\"market\" _buyCount=\"5\" _pantrySlotCount=\"20\" _startGold=\"100\" _dailyWage=\"10\" _priceStep=\"4\" "
@@ -99,9 +103,10 @@ SW_TEST_CASE( RestaurantGameModeTest, RestaurantWithoutShopsDoesNotOpen )
     SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
     RestaurantCatalog catalog;
     RecipeCatalog     recipes;
+    ItemCatalog       items;
     SubsystemScope    scope;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kRestaurantGameModeXML, "RestaurantGameModeTest" ) && recipes.loadFromXMLText( kRestaurantRecipeXML, "RestaurantGameModeTest" ) );
-    SW_REQUIRE_TRUE( scope.bind<const RestaurantCatalog>( &catalog ) && scope.bind<const RecipeCatalog>( &recipes ) );
+    SW_REQUIRE_TRUE( scope.bind<const RestaurantCatalog>( &catalog ) && scope.bind<const RecipeCatalog>( &recipes ) && scope.bind<const ItemCatalog>( &items ) );
     game::ScopedGameScope        scopedScope( scope );
     GameObjectManager            manager;
     RestaurantGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<RestaurantGameModeComponent>();

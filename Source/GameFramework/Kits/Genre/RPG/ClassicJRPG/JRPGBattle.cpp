@@ -55,18 +55,18 @@ namespace sw
     {
     }
 
-    void JRPGBattle::initialize( const JRPGCatalog* pCatalog, const TimingJudge* pJudge, const JRPGBattleSettings& settings, uint32 seed )
+    void JRPGBattle::initialize( const JRPGCatalog& catalog, const TimingJudge& judge, const JRPGBattleSettings& settings, uint32 seed )
     {
-        _pCatalog = pCatalog;
-        _pJudge   = pJudge;
+        _pCatalog = &catalog;
+        _pJudge   = &judge;
         _settings = settings;
         _random.setSeed( seed );
         _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, 0x27d4eb2fu ) );
     }
 
-    bool JRPGBattle::start( JRPGParty* pParty, const vector<hashed_string>& listEnemyID )
+    bool JRPGBattle::start( JRPGParty& party, const vector<hashed_string>& listEnemyID )
     {
-        _pParty = pParty;
+        _pParty = &party;
         _listEnemy.clear();
         _eventBuffer.clear();
         _turnOrder.initialize( TurnOrderMode::Rounds, _random.nextUint() );
@@ -76,7 +76,7 @@ namespace sw
         _rewardExp                    = 0;
         _rewardGold                   = 0;
         _result                       = JRPGBattleResult::Ongoing;
-        const bool bCannotStartBattle = _pCatalog == nullptr || pParty == nullptr || pParty->countAlive() == 0;
+        const bool bCannotStartBattle = _pCatalog == nullptr || party.countAlive() == 0;
         if ( bCannotStartBattle )
             return false;
         for ( const hashed_string& enemyID : listEnemyID )
@@ -94,8 +94,8 @@ namespace sw
             state._hp      = pEnemy->_arrStat[static_cast<size_t>( JRPGStat::MaxHP )];
             _listEnemy.push_back( state );
         }
-        _listCommand.assign( static_cast<size_t>( pParty->getMemberCount() ), JRPGCommand{} );
-        _listDefending.assign( static_cast<size_t>( pParty->getMemberCount() ), 0 );
+        _listCommand.assign( static_cast<size_t>( party.getMemberCount() ), JRPGCommand{} );
+        _listDefending.assign( static_cast<size_t>( party.getMemberCount() ), 0 );
         return _listEnemy.empty() == false;
     }
 
@@ -611,7 +611,7 @@ namespace sw
     bool JRPGBattle::isTimed( JRPGTimingKind kind, int32 memberIndex ) const
     {
         float32    offset       = 0.0f;
-        const bool bNoTimingHit = _pJudge == nullptr || _pTimingInput == nullptr || _pTimingInput->findPressOffset( kind, memberIndex, offset ) == false;
+        const bool bNoTimingHit = _pTimingInput == nullptr || _pTimingInput->findPressOffset( kind, memberIndex, offset ) == false;
         if ( bNoTimingHit )
             return false;
         return _pJudge->judge( 0.0f, offset ).isHit();

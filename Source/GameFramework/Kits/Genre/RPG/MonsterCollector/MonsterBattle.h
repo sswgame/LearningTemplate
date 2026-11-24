@@ -165,7 +165,7 @@ namespace sw
         MonsterBattle();
 
         /** @brief 카탈로그와 상성표를 빌립니다(이 전투보다 오래 살아야 합니다). */
-        void initialize( const MonsterCollectorCatalog* pCatalog, const ElementChart* pChart, uint32 seed );
+        void initialize( const MonsterCollectorCatalog& catalog, const ElementChart& chart, uint32 seed );
         /** @brief 양쪽 파티로 전투를 시작합니다. 맨 앞의 싸울 수 있는 개체가 나섭니다. @p bWild 가 true 면 볼과 도망을 쓸 수 있는 야생전입니다. */
         void start( const vector<MonsterInstance>& listPlayer, const vector<MonsterInstance>& listFoe, bool bWild );
         /** @brief 날씨를 설정합니다. @p turns 가 0 이하면 끝없이 지속되며(필드 날씨), id 가 비어 있으면 날씨를 없앱니다. 모르는 id 는 오류를 남기고 지금 날씨를 그대로 둡니다. */

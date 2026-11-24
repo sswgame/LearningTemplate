@@ -283,11 +283,10 @@ namespace sw
         RestaurantSimulation();
 
         /**
-         * @brief 새 식당을 엽니다. 돈은 빌린 지갑(@p pWallet 이며, 없으면 시장, 급여, 계산이 막힙니다)을 쓰고, 평판은 빌린 평판(세력 `_reputationFaction`)을 씁니다. 날은 빌린 시계를 따르며(디렉터가 날이 넘어갈 때 `advanceDay` 를 호출합니다), 재료는 빌린 창고(@p pantry)에 보관합니다. 창고는 식당보다 오래 살아야 합니다. 여러 장르가 섞인 게임이 플레이어 가방을 넘기면 "밭에서 식탁까지" 가 그대로 이어집니다.
+         * @brief 새 식당을 엽니다. 돈은 빌린 지갑을, 평판은 빌린 평판(세력 `_reputationFaction`)을 씁니다. 날은 빌린 시계를 따르며(디렉터가 날이 넘어갈 때 `advanceDay` 를 호출합니다), 재료는 빌린 창고(@p pantry)에 보관합니다. 빌린 것은 모두 식당보다 오래 살아야 합니다. 직원이 자라는지는 카탈로그의 `<ExperienceCurve>` 가 정합니다. 여러 장르가 섞인 게임이 플레이어 가방을 넘기면 "밭에서 식탁까지" 가 그대로 이어집니다.
          */
-        void initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog, const ShopCatalog* pShopCatalog,
-                         const ExperienceCurve* pStaffCurve, Wallet* pWallet, ReputationState* pReputation, WorldClock* pClock, Inventory& pantry,
-                         const RestaurantSettings& settings );
+        void initialize( const RestaurantCatalog& catalog, const RecipeCatalog& recipeCatalog, const ItemCatalog& itemCatalog, const ShopCatalog& shopCatalog, Wallet& wallet,
+                         ReputationState& reputation, const WorldClock& clock, Inventory& pantry, const RestaurantSettings& settings );
         /** @brief 조리 스테이션 수를 정합니다(예: "Stove" 2개, "Oven" 1개). */
         void setStationCount( const hashed_string& station, int32 count );
         /** @brief 직원을 고용하고 직원 index 를 반환합니다. */
@@ -411,14 +410,14 @@ namespace sw
         GameRandom           _random;
         PROPERTY( RuntimeState )
         hashed_string            _weatherID;
-        const RestaurantCatalog* _pCatalog;
+        const RestaurantCatalog* _pCatalog;    ///< 빌린 카탈로그(`initialize` 뒤 늘 있다 — 아래 빌림도 같다)
         Inventory*               _pPantry;     ///< 주방 창고(빌림)
         Wallet*                  _pWallet;     ///< 빌린 지갑
         ReputationState*         _pReputation; ///< 빌린 평판이다(공유 상태의 주인이 날이 넘어갈 때 갱신한다)
-        const WorldClock*        _pClock;      ///< 빌린 시계이다(날이 시세를 굴리는 시드가 된다). 없으면 날 0 이다
+        const WorldClock*        _pClock;      ///< 빌린 시계이다(날이 시세를 굴리는 시드가 된다)
         const RecipeCatalog*     _pRecipeCatalog;
         const ShopCatalog*       _pShopCatalog;
-        const ExperienceCurve*   _pStaffCurve;
+        const ExperienceCurve*   _pStaffCurve; ///< 카탈로그의 직원 곡선(적지 않은 식당이면 nullptr)
         PROPERTY( RuntimeState, Min = 0 )
         float32         _minutes; ///< 문을 연 뒤 지난 분
         RateAccumulator _arrival; ///< 손님 도착(명)

@@ -195,7 +195,7 @@ namespace sw
             SW_LOG_ERROR_ID( "JRPG.StartItemNotPacked", "JRPG game mode: start item '%#' is unknown or does not fit a bag of %# slots - the trail does not open", item.c_str(), _bagSlotCount );
             return false;
         }
-        _party.initialize( _pCatalog.get(), _pItemCatalog.get(), &_bag, &_wallet );
+        _party.initialize( *_pCatalog, *_pItemCatalog, _bag, _wallet );
         for ( const CatalogKey<JRPGClassDef>& hero : _listHero )
         {
             const JRPGClassDef* pClass = _pCatalog->findClass( hero.key() );
@@ -211,7 +211,7 @@ namespace sw
 
     bool JRPGGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || ( _listStartItem.empty() == false && acquireBoundCatalog( _pItemCatalog ) == false ) )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pItemCatalog ) == false )
             return false;
         if ( validateSetup() == false || openParty() == false )
             return false;
@@ -499,8 +499,8 @@ namespace sw
         _commandMove    = float2{ 0.0f, 0.0f };
         _strideProgress = 0.0f;
         ++_battleCount;
-        _battle.initialize( _pCatalog.get(), &_judge, _battleSettings, GameRandom::deriveSeed( _seed, static_cast<uint32>( _battleCount ) ) );
-        if ( _battle.start( &_party, listEnemyID ) == false )
+        _battle.initialize( *_pCatalog, _judge, _battleSettings, GameRandom::deriveSeed( _seed, static_cast<uint32>( _battleCount ) ) );
+        if ( _battle.start( _party, listEnemyID ) == false )
             return; // 까닭은 전투가 남겼다
         _bBossBattle   = bBoss ? SW_TRUE : SW_FALSE;
         _commandMember = findLivingMember( 0 ).value(); // 전투를 열었으니 산 멤버가 있다
@@ -677,18 +677,18 @@ namespace sw
         const bool          bInBattle  = isInBattle();
         if ( io.isReading() )
         {
-            if ( _pCatalog == nullptr )
+            if ( _pCatalog == nullptr || _pItemCatalog == nullptr )
             {
-                SW_LOG_ERROR_ID( "JRPG.StateNeedsCatalog", "JRPG game mode: state read before the JRPG catalog is loaded - refused" );
+                SW_LOG_ERROR_ID( "JRPG.StateNeedsCatalog", "JRPG game mode: state read before the JRPG and item catalogs are loaded - refused" );
                 io.fail();
                 return;
             }
             if ( io.check( restoredBag.initialize( _pItemCatalog.get(), _bagSlotCount ) ) == false )
                 return;
-            restoredParty.initialize( _pCatalog.get(), _pItemCatalog.get(), &_bag, &_wallet );
+            restoredParty.initialize( *_pCatalog, *_pItemCatalog, _bag, _wallet );
             restoredWalker.initialize( _pCatalog.get(), _seed );
-            restoredBattle.initialize( _pCatalog.get(), &_judge, _battleSettings, _seed );
-            restoredBattle.bindParty( &restoredParty );
+            restoredBattle.initialize( *_pCatalog, _judge, _battleSettings, _seed );
+            restoredBattle.bindParty( restoredParty );
         }
         io.value( io.isWriting() ? _wallet : restoredWallet );
         io.value( io.isWriting() ? _bag : restoredBag );
@@ -714,6 +714,6 @@ namespace sw
         _walker     = std::move( restoredWalker );
         _battle     = std::move( restoredBattle );
         _resultHold = resultHold;
-        _battle.bindParty( &_party );
+        _battle.bindParty( _party );
     }
 } // namespace sw

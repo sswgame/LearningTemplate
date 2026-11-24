@@ -90,22 +90,21 @@ namespace sw
     {
     }
 
-    void RestaurantSimulation::initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog,
-                                           const ShopCatalog* pShopCatalog, const ExperienceCurve* pStaffCurve,
-                                           Wallet* pWallet, ReputationState* pReputation, WorldClock* pClock, Inventory& pantry, const RestaurantSettings& settings )
+    void RestaurantSimulation::initialize( const RestaurantCatalog& catalog, const RecipeCatalog& recipeCatalog, const ItemCatalog& itemCatalog, const ShopCatalog& shopCatalog, Wallet& wallet,
+                                           ReputationState& reputation, const WorldClock& clock, Inventory& pantry, const RestaurantSettings& settings )
     {
-        _pCatalog       = pCatalog;
-        _pRecipeCatalog = pRecipeCatalog;
-        _pShopCatalog   = pShopCatalog;
-        _pStaffCurve    = pStaffCurve;
+        _pCatalog       = &catalog;
+        _pRecipeCatalog = &recipeCatalog;
+        _pShopCatalog   = &shopCatalog;
+        _pStaffCurve    = catalog.findStaffCurve();
         _settings       = settings;
         _pPantry        = &pantry;
-        _pWallet        = pWallet;
-        _pReputation    = pReputation;
-        _pClock         = pClock;
-        _stock.initialize( _pPantry );
-        _crafter.initialize( pRecipeCatalog );
-        _market.initialize( pShopCatalog, pItemCatalog );
+        _pWallet        = &wallet;
+        _pReputation    = &reputation;
+        _pClock         = &clock;
+        _stock.initialize( pantry );
+        _crafter.initialize( &recipeCatalog );
+        _market.initialize( &shopCatalog, &itemCatalog );
         _random.setSeed( settings._randomSeed );
         _stepTimer = FixedStepTimer( kStepMinutes, 24.0f * 60.0f );
         _listStaff.clear();
@@ -115,12 +114,9 @@ namespace sw
         _listSatisfaction.clear();
         _eventBuffer.clear();
         _listMenu.clear();
-        if ( pCatalog != nullptr )
+        for ( const DishDef& dish : catalog.getDishes() )
         {
-            for ( const DishDef& dish : pCatalog->getDishes() )
-            {
-                _listMenu.push_back( MenuEntry{ dish._id, dish._basePrice, SW_TRUE } );
-            }
+            _listMenu.push_back( MenuEntry{ dish._id, dish._basePrice, SW_TRUE } );
         }
         _today   = RestaurantDaySummary{};
         _minutes = 0.0f;
@@ -208,13 +204,13 @@ namespace sw
 
     ShopResult RestaurantSimulation::buyIngredient( const hashed_string& shopID, const hashed_string& itemID, int32 count )
     {
-        if ( _pWallet == nullptr )
-            return ShopResult::NotEnoughMoney;
+        if ( _pCatalog == nullptr )
+            return ShopResult::UnknownShop; // 열기 전이다
         int64            spent  = 0;
         const ShopResult result = _market.buy( shopID, itemID, count, *_pWallet, *_pPantry, &spent );
         if ( result != ShopResult::Ok )
             return result;
-        const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemID ) : 0;
+        const int32 shelfLife = _pCatalog->findShelfLife( itemID );
         _stock.recordBatch( itemID, count, shelfLife, spent / count );
         return ShopResult::Ok;
     }
@@ -272,6 +268,11 @@ namespace sw
 
     void RestaurantSimulation::closeDay( RestaurantDaySummary& outSummary )
     {
+        if ( _pCatalog == nullptr )
+        {
+            outSummary = RestaurantDaySummary{};
+            return; // 열기 전이다
+        }
         for ( RestaurantCustomer& customer : _listCustomer )
         {
             if ( customer._state == CustomerState::Eating || customer._state == CustomerState::WaitingCheckout )
@@ -294,9 +295,9 @@ namespace sw
             if ( staff._bHired == SW_FALSE )
                 continue;
             _today._wages += staff._dailyWage;
-            if ( _pWallet == nullptr || _pWallet->trySpend( currency, staff._dailyWage ) == false )
+            if ( _pWallet->trySpend( currency, staff._dailyWage ) == false )
             {
-                const int64 balance = _pWallet != nullptr ? _pWallet->getBalance( currency ) : 0;
+                const int64 balance = _pWallet->getBalance( currency );
                 if ( balance > 0 && _pWallet->trySpend( currency, balance ) == false )
                     SW_LOG_WARNING_ID( "RestaurantSimulation.CouldNotPayRemaining", "could not pay the remaining balance %# to '%#'", balance, staff._name.c_str() );
                 SW_LOG_WARNING_ID( "RestaurantSimulation.WageShort", "wage for '%#' is short by %#", staff._name.c_str(), staff._dailyWage - balance );
@@ -803,15 +804,13 @@ namespace sw
         _today._revenue += customer._price;
         _today._tips += tip;
         ++_today._served;
-        if ( _pWallet != nullptr )
-            _pWallet->add( getCurrency(), customer._price + tip );
+        _pWallet->add( getCurrency(), customer._price + tip );
         customer._state = CustomerState::Paid;
         customer._seat  = constant::invalid_index::kInt32;
         pushSatisfaction( satisfaction );
         const int32 reputationDelta = static_cast<int32>( MathUtil::round( ( satisfaction * 2.0f - 1.0f ) * static_cast<float32>( _settings._reputationPerServe ) ) );
         if ( reputationDelta != 0 )
-            if ( _pReputation != nullptr )
-                (void)_pReputation->changeValue( _settings._reputationFaction, reputationDelta );
+            (void)_pReputation->changeValue( _settings._reputationFaction, reputationDelta );
         _eventBuffer.push( RestaurantEvent{ customer._dishID, customer._price + tip, customer._id, RestaurantEvent::Kind::CustomerPaid } );
     }
 
@@ -836,8 +835,7 @@ namespace sw
         {
             ++_today._walkouts;
             pushSatisfaction( 0.0f );
-            if ( _pReputation != nullptr )
-                (void)_pReputation->changeValue( _settings._reputationFaction, -_settings._walkoutPenalty );
+            (void)_pReputation->changeValue( _settings._reputationFaction, -_settings._walkoutPenalty );
         }
         else
         {
@@ -867,9 +865,9 @@ namespace sw
     void RestaurantSimulation::rollMarketPrices()
     {
         if ( _pShopCatalog == nullptr )
-            return;
+            return; // 열기 전이다
         const vector<ShopDef>& listShop = _pShopCatalog->getAll();
-        const int32            day      = _pClock != nullptr ? _pClock->getDay() : 0;
+        const int32            day      = _pClock->getDay();
         for ( int32 shopIndex = 0; shopIndex < static_cast<int32>( listShop.size() ); ++shopIndex )
         {
             const float32 unit     = HashUtil::toUnitFloat( HashUtil::hashCoord( day, shopIndex, _settings._randomSeed ) );

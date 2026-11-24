@@ -12,8 +12,11 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 // RestaurantReadStateTest — 식당 상태 바이트의 신뢰 경계: 음수 값, 없는 손님 · 요리 · 직원, 겹친 줄과 자리, 규칙으로 나올 수 없는 주문을 거절하고 상태를 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다. 키트 GF_RestaurantSim(nogpu).
@@ -200,12 +203,14 @@ namespace
     {
         sw::Inventory            _pantry{};
         sw::Wallet               _wallet{};
+        sw::ReputationState      _reputation{};
         sw::RestaurantSimulation _simulation{};
 
         SW_DECLARE_STATE_IO_IN_PLACE()
         {
             io.value( _pantry );
             io.value( _wallet );
+            io.value( _reputation );
             io.value( _simulation );
         }
     };
@@ -213,13 +218,19 @@ namespace
     struct RestaurantReadStateTest
     {
         sw::RestaurantCatalog    _catalog{};
+        sw::RecipeCatalog        _recipes{};
+        sw::ItemCatalog          _items{};
+        sw::ShopCatalog          _shops{};
+        sw::Wallet               _wallet{};
+        sw::ReputationState      _reputation{};
+        sw::WorldClock           _clock{};
         sw::Inventory            _pantry{};
         sw::RestaurantSimulation _simulation{};
 
         RestaurantReadStateTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCatalogXML, "RestaurantReadStateTest" ) );
-            _simulation.initialize( &_catalog, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, _pantry, sw::RestaurantSettings{} );
+            _simulation.initialize( _catalog, _recipes, _items, _shops, _wallet, _reputation, _clock, _pantry, sw::RestaurantSettings{} );
         }
 
         bool read( const RestaurantFixture& fixture )
@@ -266,7 +277,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RestaurantDeterminism )
     const auto setup = [this, &recipes]( RestaurantRun& run )
     {
         run._wallet.add( sw::Wallet::getDefaultCurrency(), 1000 );
-        run._simulation.initialize( &_catalog, &recipes, nullptr, nullptr, nullptr, &run._wallet, nullptr, nullptr, run._pantry, sw::RestaurantSettings{} );
+        run._simulation.initialize( _catalog, recipes, _items, _shops, run._wallet, run._reputation, _clock, run._pantry, sw::RestaurantSettings{} );
         return true;
     };
     const auto step = []( RestaurantRun& run, int32 stepIndex )

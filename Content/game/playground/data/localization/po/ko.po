@@ -113,6 +113,12 @@ msgctxt "Broth Bowl"
 msgid "Broth Bowl"
 msgstr "맑은국수"
 
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Broth Noodles"
+msgid "Broth Noodles"
+msgstr "국수 사리"
+
 #. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)"
@@ -393,6 +399,12 @@ msgstr "금"
 msgctxt "HP"
 msgid "HP"
 msgstr "체력"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Harbor Fish"
+msgid "Harbor Fish"
+msgstr "항구 생선"
 
 #. Context: Item name
 #: common/data/items.xml

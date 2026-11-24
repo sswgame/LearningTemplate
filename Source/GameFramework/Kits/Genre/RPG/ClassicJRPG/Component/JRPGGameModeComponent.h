@@ -222,9 +222,9 @@ namespace sw
         float32 _resultHoldSeconds;
 
         SharedAssetRef<JRPGCatalog> _pCatalog;
-        SharedAssetRef<ItemCatalog> _pItemCatalog; ///< 시작 아이템이 없는 판이면 비었다
-        Inventory                   _bag;          ///< 이 판의 가방(파티가 빌린다)
-        TimingJudge                 _judge;        ///< 판정 창(전투가 빌린다)
+        SharedAssetRef<ItemCatalog> _pItemCatalog;
+        Inventory                   _bag;   ///< 이 판의 가방(파티가 빌린다)
+        TimingJudge                 _judge; ///< 판정 창(전투가 빌린다)
         JRPGParty                   _party;
         Wallet                      _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
         JRPGEncounterWalker         _walker;

@@ -23,9 +23,11 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 namespace sw
 {
@@ -106,7 +108,7 @@ namespace sw
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
     private:
-        /** @brief 식당 @p outSimulation 을 이 판의 카탈로그 · 지갑 · 창고로 엽니다(직원은 고용하지 않는다). */
+        /** @brief 식당 @p outSimulation 을 이 판의 카탈로그 · 지갑 · 평판 · 시계 · 창고로 엽니다(직원은 고용하지 않는다). */
         void initializeSimulation( RestaurantSimulation& outSimulation );
         /** @brief 카탈로그의 @p dishIndex 번째 요리를 만드는 스테이션입니다. 없는 요리이거나 아무 데서나 만드는 요리면 비어 있습니다. */
         hashed_string findDishStation( int32 dishIndex ) const;
@@ -160,6 +162,8 @@ namespace sw
         SharedAssetRef<RestaurantCatalog> _pCatalog;
         SharedAssetRef<RecipeCatalog>     _pRecipes;
         SharedAssetRef<ShopCatalog>       _pShops;
+        SharedAssetRef<ItemCatalog>       _pItemCatalog;
+        WorldClock                        _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
         SharedAssetRef<ReputationCatalog> _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
         ReputationState                   _reputation;         ///< 손님 평판(식당이 빌린다)
         Wallet                            _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다

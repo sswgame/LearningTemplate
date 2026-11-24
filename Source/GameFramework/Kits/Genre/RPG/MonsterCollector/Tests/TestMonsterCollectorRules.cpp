@@ -148,7 +148,7 @@ namespace
             _chart.addElement( "Rock" );
             SW_REQUIRE_TRUE( _chart.setMultiplier( "Water", "Fire", 2.0f ) );
             SW_REQUIRE_TRUE( _chart.setMultiplier( "Ghost", "Normal", 0.0f ) );
-            _battle.initialize( &_catalog, &_chart, 7 );
+            _battle.initialize( _catalog, _chart, 7 );
         }
 
         /** @brief 개체값 0 · 성격 없음인 개체를 만듭니다(HP 가득). 기술은 적은 순서대로 슬롯에 들어갑니다. */
@@ -1210,7 +1210,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRoundTrip )
     _battle.writeState( written );
     sw::Archive       reading( written.getData(), written.getSize() );
     sw::MonsterBattle restored;
-    restored.initialize( &_catalog, &_chart, 99 );
+    restored.initialize( _catalog, _chart, 99 );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( MonsterTestUtil::isSameState( _battle, restored ) );
     SW_EXPECT_EQUAL( 2, restored.getStage( player, sw::MonsterStat::Attack ) );
@@ -1237,7 +1237,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleStateRoundTrip )
 
     // 시작 전 전투도 왕복한다. 카탈로그 없이는 읽지 않는다.
     sw::MonsterBattle fresh;
-    fresh.initialize( &_catalog, &_chart, 5 );
+    fresh.initialize( _catalog, _chart, 5 );
     sw::Archive writtenFresh;
     fresh.writeState( writtenFresh );
     sw::Archive readingFresh( writtenFresh.getData(), writtenFresh.getSize() );
@@ -1526,7 +1526,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleDeterminism )
     const sw::vector<sw::MonsterInstance> listFoe{ make( "flamo", 50, "strike", "burnup" ), make( "rocky", 50, "strike", "growl" ) };
     const auto                            setup = [this, &listPlayer, &listFoe]( sw::MonsterBattle& battle ) -> bool
     {
-        battle.initialize( &_catalog, &_chart, 7 );
+        battle.initialize( _catalog, _chart, 7 );
         battle.start( listPlayer, listFoe, false ); // 트레이너전 — 볼 · 도망으로 끝나지 않는다
         return battle.getResult() == sw::MonsterBattleResult::Ongoing;
     };
@@ -1555,7 +1555,9 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, BattleDeterminism )
  */
 SW_TEST_CASE( MonsterCollectorTest, SurvivesSeedEqualToMixConstant )
 {
-    sw::MonsterBattle battle;
-    battle.initialize( nullptr, nullptr, 0x5bd1e995u );
+    const sw::MonsterCollectorCatalog catalog{};
+    const sw::ElementChart            chart{};
+    sw::MonsterBattle                 battle;
+    battle.initialize( catalog, chart, 0x5bd1e995u );
     SW_EXPECT_TRUE( battle.getResult() == sw::MonsterBattleResult::Ongoing );
 }

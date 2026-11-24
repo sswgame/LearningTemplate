@@ -30,8 +30,11 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Progression/SkillTree.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
 namespace sw
 {
@@ -107,6 +110,8 @@ namespace sw
         int32                      getFoundClueCount() const { return _foundClueCount; }
         const MonsterHuntMutagens& getMutagens() const { return _mutagens; }
         const SkillTreeState&      getSkills() const { return _skills; }
+        /** @brief 계약 퀘스트를 마쳤으면 1 입니다(감시 값). */
+        int32 getQuestDone() const;
         /** @brief 배운 스킬 랭크 수입니다(감시 값). */
         int32 getLearnedSkillCount() const { return static_cast<int32>( _listLearnedSkill.size() ); }
         /** @brief 변이원과 스킬이 더한 표식 위력(%)입니다. */
@@ -147,6 +152,8 @@ namespace sw
         [[nodiscard]] bool validateSetup() const;
         /** @brief 사냥꾼의 짐(오일 · 물약 · 명상할 술)으로 가방을 엽니다. */
         [[nodiscard]] bool openBag();
+        /** @brief 계약이 적은 퀘스트를 일지에서 시작합니다. 적지 않은 계약이면 빈 일지다. 적었는데 퀘스트 카탈로그 · 퀘스트가 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool openQuest();
         /** @brief 씬의 스킬 트리를 열고 점수를 줍니다. 트리를 적지 않은 판은 스킬이 없다. */
         [[nodiscard]] bool openSkills();
         /** @brief 배운 스킬과 열린 그룹의 변이원이 더한 능력치입니다. */
@@ -169,6 +176,8 @@ namespace sw
         CatalogKey<MonsterHuntContractDef> _contract;
         PROPERTY( Category = "Contract", DisplayName = "Monster", Tooltip = "Monster id (catalog) waiting at the lair" )
         CatalogKey<MonsterHuntMonsterDef> _monster;
+        PROPERTY( Category = "Contract", DisplayName = "Quests", Tooltip = "Quest catalog with the contract's quest; needed when the contract names one" )
+        AssetRef<QuestCatalog> _quests;
         PROPERTY( Category = "Contract", DisplayName = "Ask Step", Tooltip = "Money asked above the current offer", Min = 1 )
         int32 _askStep;
         PROPERTY( Category = "Gear", DisplayName = "Element Chart", Tooltip = "Oil and sign multipliers against the monster (required)" )
@@ -244,6 +253,10 @@ namespace sw
 
         SharedAssetRef<MonsterHuntCatalog>    _pCatalog;
         SharedAssetRef<ElementChart>          _pChart;
+        SharedAssetRef<RecipeCatalog>         _pRecipes;
+        SharedAssetRef<QuestCatalog>          _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
+        QuestLog                              _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
+        vector<QuestEvent>                    _listQuestEvent;
         SharedAssetRef<SkillTreeCatalog>      _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
         MonsterHuntMutagens                   _mutagens;
         SkillTreeState                        _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다

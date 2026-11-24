@@ -109,6 +109,8 @@ namespace sw
         , _pCatalog{}
         , _pRecipes{}
         , _pShops{}
+        , _pItemCatalog{}
+        , _clock{}
         , _pReputationCatalog{}
         , _reputation{}
         , _wallet{}
@@ -126,13 +128,12 @@ namespace sw
 
     void RestaurantGameModeComponent::initializeSimulation( RestaurantSimulation& outSimulation )
     {
-        // 시계 · 아이템 카탈로그는 쓰지 않는 판이다(nullptr 이면 끈다) — 날은 이 디렉터가 세고 재료는 아이템 정의 없이 쌓는다.
-        outSimulation.initialize( _pCatalog.get(), _pRecipes.get(), nullptr, _pShops.get(), _pCatalog->findStaffCurve(), &_wallet, &_reputation, nullptr, _pantry, _settings );
+        outSimulation.initialize( *_pCatalog, *_pRecipes, *_pItemCatalog, *_pShops, _wallet, _reputation, _clock, _pantry, _settings );
     }
 
     bool RestaurantGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireRequired( _shops.path(), _pShops ) == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _shops.path(), _pShops ) == false )
             return false;
         if ( _listIngredient.empty() || _pShops->find( _shop ) == nullptr || _pCatalog->getDishes().empty() )
         {
@@ -140,7 +141,9 @@ namespace sw
                              _pCatalog->getDishes().size(), _shop.c_str() );
             return false;
         }
-        if ( _pantry.initialize( nullptr, _pantrySlotCount ) == false )
+        WorldClockSettings clockSettings;
+        clockSettings._startHour = static_cast<float32>( _pCatalog->getOpenHour() );
+        if ( _pantry.initialize( _pItemCatalog.get(), _pantrySlotCount ) == false || _clock.initialize( clockSettings ) == false )
             return false;
         if ( _reputationCatalog.empty() == false && acquireRequired( _reputationCatalog.path(), _pReputationCatalog ) == false )
             return false;
@@ -249,6 +252,7 @@ namespace sw
     {
         if ( isStarted() == false || _phase != RestaurantPhase::Closed )
             return false;
+        _clock.advanceToHour( static_cast<float32>( _pCatalog->getOpenHour() ) ); // 다음 날 여는 시각
         _simulation.advanceDay();
         _reputation.advanceDay();
         reportEvents();
@@ -348,13 +352,14 @@ namespace sw
         Wallet               restoredWallet;
         Inventory            restoredPantry;
         ReputationState      restoredReputation;
+        WorldClock           restoredClock = _clock; // 설정은 이 판의 것이다
         RestaurantSimulation restoredSimulation;
         Countdown            resultHold = _resultHold;
         if ( io.isReading() )
         {
-            if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || restoredPantry.initialize( nullptr, _pantrySlotCount ) == false )
+            if ( _pCatalog == nullptr || _pRecipes == nullptr || _pShops == nullptr || _pItemCatalog == nullptr || restoredPantry.initialize( _pItemCatalog.get(), _pantrySlotCount ) == false )
             {
-                SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe and shop catalogs are loaded - refused" );
+                SW_LOG_ERROR_ID( "Restaurant.StateNeedsCatalog", "Restaurant game mode: state read before the restaurant, recipe, shop and item catalogs are loaded - refused" );
                 io.fail();
                 return;
             }
@@ -364,6 +369,7 @@ namespace sw
         io.value( io.isWriting() ? _wallet : restoredWallet );
         io.value( io.isWriting() ? _pantry : restoredPantry );
         io.value( io.isWriting() ? _reputation : restoredReputation );
+        io.value( restoredClock );
         io.value( io.isWriting() ? _simulation : restoredSimulation );
         io.value( resultHold );
         io.end();
@@ -374,6 +380,7 @@ namespace sw
         _wallet     = std::move( restoredWallet );
         _pantry     = std::move( restoredPantry );
         _reputation = std::move( restoredReputation );
+        _clock      = restoredClock;
         _simulation = std::move( restoredSimulation );
         _resultHold = resultHold;
     }

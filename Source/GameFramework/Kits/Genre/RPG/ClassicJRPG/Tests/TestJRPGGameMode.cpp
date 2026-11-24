@@ -111,9 +111,10 @@ SW_TEST_CASE( JRPGGameModeTest, TrailWithoutSceneDataDoesNotOpen )
 {
     SW_EXPECT_LOG( "JRPG.SetupIncomplete" );
     JRPGCatalog    catalog;
+    ItemCatalog    items;
     SubsystemScope scope;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kJRPGGameModeXML, "JRPGGameModeTest" ) );
-    SW_REQUIRE_TRUE( scope.bind<const JRPGCatalog>( &catalog ) );
+    SW_REQUIRE_TRUE( scope.bind<const JRPGCatalog>( &catalog ) && scope.bind<const ItemCatalog>( &items ) );
     game::ScopedGameScope  scopedScope( scope );
     GameObjectManager      manager;
     JRPGGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<JRPGGameModeComponent>();

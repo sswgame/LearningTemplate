@@ -89,6 +89,7 @@
 					<MonsterHuntGameModeComponent _localID="18066833828639407452"
 					                              _contract="silent_ferry"
 					                              _monster="mire_howler"
+					                              _quests="game/playground/monsterhuntrpg/data/quests.xml"
 					                              _askStep="30"
 					                              _elementChart="game/playground/monsterhuntrpg/data/hunt.elementchart.xml"
 					                              _oil="howler_oil"

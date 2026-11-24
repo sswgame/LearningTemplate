@@ -5,7 +5,7 @@
   플레이어와 같은 입력 맵 액션(Move · MonsterHunt.*)만 쓴다.
   디렉터는 키트 MonsterHuntGameModeComponent, 입력 · 그리기 · HUD 는 클라이언트 모듈 GF_Client_MonsterHuntRPG 의 MonsterHuntAvatarComponent.
   자리: (0,0)에서 시작, 4 m/s — 단서 x 4 · 8 · 12, 소굴 (16,0). 수치의 근거는 data/monsterhunt.xml 머리말.
-  감시 값: MonsterHunt.Phase(0 흥정, 1 조사, 2 사냥, 3 승리, 4 패배) · Reward · FoundClues · Knowledge · MonsterHP · PlayerHP · OilHits · Toxicity · LearnedSkills · SignIntensity · AttackReady · MonsterInReach · PlayerX · Minigame.LastResult.
+  감시 값: MonsterHunt.Phase(0 흥정, 1 조사, 2 사냥, 3 승리, 4 패배) · Reward · FoundClues · Knowledge · MonsterHP · PlayerHP · OilHits · Toxicity · QuestDone · LearnedSkills · SignIntensity · AttackReady · MonsterInReach · PlayerX · Minigame.LastResult.
   실행: ctest -R Scenario.playground
 -->
 <Scenario name="game.playground.monsterhuntrpg_slice" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -48,6 +48,7 @@
 	<Action name="MonsterHunt.Investigate"/>
 	<WaitUntil watch="MonsterHunt.Phase" equals="2" timeoutFrames="30"/>
 	<Expect watch="MonsterHunt.FoundClues" equals="3"/>
+	<Expect watch="MonsterHunt.QuestDone" equals="1"/> <!-- 계약 퀘스트도 단서 · 단계를 세어 끝났다 -->
 	<Expect watch="MonsterHunt.Knowledge" equals="1"/>
 	<ExpectLog id="MonsterHunt.WeaknessRevealed" contains="howler_oil" atLeast="1"/>
 	<!-- 사냥 — 다가오는 괴물에게 대체 표식(39), 칼에 오일, 물약 한 모금 -->

@@ -121,7 +121,7 @@ namespace
             SW_REQUIRE_TRUE( _recipeCatalog.loadFromXMLText( kMonsterHuntRecipeXML, "MonsterHuntTest" ) );
             SW_REQUIRE_TRUE( _inventory.initialize( &_itemCatalog, 16 ) );
             SW_EXPECT_EQUAL( 40, _inventory.addItem( "herb", 40 ) );
-            _alchemy.initialize( &_catalog, &_recipeCatalog );
+            _alchemy.initialize( _catalog, _recipeCatalog );
         }
 
         void brew( const sw::hashed_string& recipeID ) { SW_EXPECT_EQUAL( sw::CraftResult::Ok, _alchemy.brew( recipeID, _inventory, sw::hashed_string{}, 1 ) ); }
@@ -185,6 +185,7 @@ namespace
     /** @brief 계약 조사의 판입니다. */
     struct MonsterHuntContractTest
     {
+        sw::QuestLog           _questLog{}; ///< 진행 중인 퀘스트가 없는 일지
         sw::MonsterHuntCatalog _catalog{};
 
         MonsterHuntContractTest() { SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) ); }
@@ -410,7 +411,7 @@ SW_TEST_CASE_F( MonsterHuntAlchemyTest, StateRoundTrips )
     sw::Archive written;
     _alchemy.writeState( written );
     sw::MonsterHuntAlchemy restored;
-    restored.initialize( &_catalog, &_recipeCatalog );
+    restored.initialize( _catalog, _recipeCatalog );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
@@ -448,7 +449,8 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, KnowledgeRisesByKillsBookAndNeverFalls )
     sw::MonsterHuntCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) );
     sw::MonsterHuntBestiary bestiary;
-    bestiary.initialize( &catalog, nullptr );
+    const sw::ElementChart  chart{}; // 상성이 없는 판
+    bestiary.initialize( catalog, chart );
 
     SW_EXPECT_FALSE( bestiary.recordKill( "ghoul" ) );
     SW_EXPECT_EQUAL( 0, bestiary.getKnowledge( "ghoul" ) );
@@ -493,7 +495,8 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, JumpRevealsEveryWeaknessInBetween )
     sw::MonsterHuntCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) );
     sw::MonsterHuntBestiary bestiary;
-    bestiary.initialize( &catalog, nullptr );
+    const sw::ElementChart  chart{}; // 상성이 없는 판
+    bestiary.initialize( catalog, chart );
 
     sw::vector<const sw::MonsterHuntWeakness*> listWeakness;
     bestiary.collectKnownWeaknesses( "ghoul", listWeakness );
@@ -515,7 +518,7 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, JumpRevealsEveryWeaknessInBetween )
 }
 
 /**
- * @brief [MonsterHuntBestiaryTest] 배율은 지식과 상관없이 적용되며, 방어 속성을 적지 않으면 분류를 쓴다. 모르는 괴물 · 빈 속성 · 테이블 없음은 1 이다
+ * @brief [MonsterHuntBestiaryTest] 배율은 지식과 상관없이 적용되며, 방어 속성을 적지 않으면 분류를 쓴다. 모르는 괴물 · 빈 속성 · 줄이 없는 표는 1 이다
  */
 SW_TEST_CASE( MonsterHuntBestiaryTest, MultiplierIgnoresKnowledge )
 {
@@ -526,15 +529,16 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, MultiplierIgnoresKnowledge )
     chart.addElement( "Necrophage" );
     SW_REQUIRE_TRUE( chart.setMultiplier( "Silver", "Necrophage", 2.0f ) );
     sw::MonsterHuntBestiary bestiary;
-    bestiary.initialize( &catalog, &chart );
+    bestiary.initialize( catalog, chart );
 
     SW_EXPECT_EQUAL( 0, bestiary.getKnowledge( "ghoul" ) );
     SW_EXPECT_NEAR( 2.0f, bestiary.computeMultiplier( "ghoul", "Silver" ), kMonsterHuntTolerance );
     SW_EXPECT_NEAR( 1.0f, bestiary.computeMultiplier( "ghoul", sw::hashed_string{} ), kMonsterHuntTolerance );
     SW_EXPECT_NEAR( 1.0f, bestiary.computeMultiplier( "nobody", "Silver" ), kMonsterHuntTolerance );
 
+    const sw::ElementChart  emptyChart{};
     sw::MonsterHuntBestiary noChart;
-    noChart.initialize( &catalog, nullptr );
+    noChart.initialize( catalog, emptyChart );
     SW_EXPECT_NEAR( 1.0f, noChart.computeMultiplier( "ghoul", "Silver" ), kMonsterHuntTolerance );
 }
 
@@ -546,14 +550,15 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, StateRoundTripsAndRefusesBadEntries )
     sw::MonsterHuntCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kMonsterHuntXML, "MonsterHuntTest" ) );
     sw::MonsterHuntBestiary bestiary;
-    bestiary.initialize( &catalog, nullptr );
+    const sw::ElementChart  chart{}; // 상성이 없는 판
+    bestiary.initialize( catalog, chart );
     SW_EXPECT_TRUE( bestiary.investigate( "ghoul" ) );
     (void)bestiary.recordKill( "ghoul" );
 
     sw::Archive written;
     bestiary.writeState( written );
     sw::MonsterHuntBestiary restored;
-    restored.initialize( &catalog, nullptr );
+    restored.initialize( catalog, chart );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 1, restored.getKnowledge( "ghoul" ) );
@@ -726,7 +731,7 @@ SW_TEST_CASE_F( MonsterHuntCombatTest, ReadStateRefusesOutOfRangeAdrenaline )
 SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationWalksOrderDistanceAndSteps )
 {
     sw::MonsterHuntInvestigation investigation;
-    SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "griffin", nullptr ) );
+    SW_REQUIRE_TRUE( investigation.initialize( _catalog, "griffin", _questLog ) );
     SW_EXPECT_EQUAL( sw::hashed_string( "tracks" ), investigation.getStepID() );
 
     const sw::float3 atOrigin{ 0.0f, 0.0f, 0.0f };
@@ -772,7 +777,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationWalksOrderDistanceAndSteps
 SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
 {
     sw::MonsterHuntInvestigation investigation;
-    SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "interview", nullptr ) );
+    SW_REQUIRE_TRUE( investigation.initialize( _catalog, "interview", _questLog ) );
     SW_EXPECT_EQUAL( sw::hashed_string( "search" ), investigation.getStepID() );
     {
         const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( investigation );
@@ -790,7 +795,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
     }
 
     sw::MonsterHuntInvestigation noSteps;
-    SW_REQUIRE_TRUE( noSteps.initialize( &_catalog, "no_steps", nullptr ) );
+    SW_REQUIRE_TRUE( noSteps.initialize( _catalog, "no_steps", _questLog ) );
     SW_EXPECT_TRUE( noSteps.isSolved() );
     {
         const sw::vector<sw::MonsterHuntInvestigationEvent> listEvent = pollAll( noSteps );
@@ -799,7 +804,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
     }
 
     sw::MonsterHuntInvestigation unknown;
-    SW_EXPECT_FALSE( unknown.initialize( &_catalog, "nothing", nullptr ) );
+    SW_EXPECT_FALSE( unknown.initialize( _catalog, "nothing", _questLog ) );
     SW_EXPECT_TRUE( pollAll( unknown ).empty() );
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Solved, unknown.investigate( "blood", sw::float3{} ) );
 }
@@ -810,7 +815,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, EmptyLeadingStepsAreSkipped )
 SW_TEST_CASE_F( MonsterHuntContractTest, SenseOnlyOpenCluesWithinRadius )
 {
     sw::MonsterHuntInvestigation investigation;
-    SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "griffin", nullptr ) );
+    SW_REQUIRE_TRUE( investigation.initialize( _catalog, "griffin", _questLog ) );
 
     sw::vector<const sw::MonsterHuntClueDef*> listClue;
     investigation.senseClues( sw::float3{}, 100.0f, listClue );
@@ -847,7 +852,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationDrivesQuestLog )
     SW_REQUIRE_EQUAL( sw::QuestStartResult::Ok, questLog.start( "griffin_quest", 1 ) );
 
     sw::MonsterHuntInvestigation investigation;
-    SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "griffin", &questLog ) );
+    SW_REQUIRE_TRUE( investigation.initialize( _catalog, "griffin", questLog ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Found, investigation.investigate( "blood", sw::float3{} ) );
     SW_EXPECT_EQUAL( sw::QuestStatus::Active, questLog.getStatus( "griffin_quest" ) );
     SW_EXPECT_EQUAL( sw::MonsterHuntClueResult::Found, investigation.investigate( "feather", sw::float3{ 10.0f, 0.0f, 0.0f } ) );
@@ -860,7 +865,7 @@ SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationDrivesQuestLog )
 SW_TEST_CASE_F( MonsterHuntContractTest, InvestigationReadStateChecksFoundClues )
 {
     sw::MonsterHuntInvestigation investigation;
-    SW_REQUIRE_TRUE( investigation.initialize( &_catalog, "griffin", nullptr ) );
+    SW_REQUIRE_TRUE( investigation.initialize( _catalog, "griffin", _questLog ) );
     SW_REQUIRE_TRUE( readFixtureInvestigation( investigation, "griffin", 0, { "blood" } ) ); // 형식은 맞다
     SW_EXPECT_TRUE( investigation.isClueFound( "blood" ) );
 

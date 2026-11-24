@@ -1023,6 +1023,11 @@
 				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/question_001.ogg" />
 			</_listClip>
 		</AudioEventDef>
+		<AudioEventDef _name="MonsterHuntQuest" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_003.ogg" />
+			</_listClip>
+		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntLearn" _bus="sfx" _container="Random" _priority="70" _maxInstances="1" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip1.ogg" />

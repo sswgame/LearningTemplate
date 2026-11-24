@@ -22,10 +22,10 @@ namespace sw
     {
     }
 
-    void MonsterHuntBestiary::initialize( const MonsterHuntCatalog* pCatalog, const ElementChart* pChart )
+    void MonsterHuntBestiary::initialize( const MonsterHuntCatalog& catalog, const ElementChart& chart )
     {
-        _pCatalog = pCatalog;
-        _pChart   = pChart;
+        _pCatalog = &catalog;
+        _pChart   = &chart;
         _listEntry.clear();
         _eventBuffer.clear();
     }

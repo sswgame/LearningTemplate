@@ -21,7 +21,7 @@
 	<SkillColor skill="twin_gust" color="Blue"/>
 	<SkillColor skill="edge_honing" color="Red"/>
 	<Mutagen id="gale_gland" color="Blue" stat="signIntensity" value="20" matchValue="10"/>
-	<Contract id="silent_ferry" reward="100" limit="1.5" angerMax="1" angerScale="1" angerPerRound="0.1">
+	<Contract id="silent_ferry" quest="silent_ferry" reward="100" limit="1.5" angerMax="1" angerScale="1" angerPerRound="0.1">
 		<Step id="tracks">
 			<Clue id="torn_net" position="4,0,0" radius="1.5" order="0"/>
 			<Clue id="claw_mark" position="8,0,1" radius="1.5" order="1"/>

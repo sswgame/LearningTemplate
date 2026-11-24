@@ -20,6 +20,7 @@
 		<entry source="Boost overheated" text="부스트 과열" />
 		<entry source="Bramble Sprite" text="가시덤불 정령" />
 		<entry source="Broth Bowl" text="맑은국수" />
+		<entry source="Broth Noodles" text="국수 사리" />
 		<entry source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   스테이션 들이기 (F)   열기 (Enter)" />
 		<entry source="Buy (J)   Price up (K)   Price down (L)   Open (Enter)" text="사기 (J)   가격 올리기 (K)   가격 내리기 (L)   열기 (Enter)" />
 		<entry source="Buy more while open (J)" text="영업 중에도 살 수 있습니다 (J)" />
@@ -73,6 +74,7 @@
 		<entry source="Gold" text="금" />
 		<entry source="Guide" text="안내인" />
 		<entry source="HP" text="체력" />
+		<entry source="Harbor Fish" text="항구 생선" />
 		<entry source="Health Potion" text="체력 물약" />
 		<entry source="Heraldic Cape" text="문장 망토" />
 		<entry source="High Heels" text="하이힐" />

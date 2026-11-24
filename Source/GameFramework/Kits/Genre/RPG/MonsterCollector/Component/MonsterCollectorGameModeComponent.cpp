@@ -308,7 +308,7 @@ namespace sw
         _commandMove    = float2{ 0.0f, 0.0f };
         _strideProgress = 0.0f;
         ++_battleCount;
-        _battle.initialize( _pCatalog.get(), _pChart.get(), GameRandom::deriveSeed( _seed, static_cast<uint32>( _battleCount ) ) );
+        _battle.initialize( *_pCatalog, *_pChart, GameRandom::deriveSeed( _seed, static_cast<uint32>( _battleCount ) ) );
         _battle.start( _storage.getParty(), listFoe, true );
         _phase = MonsterCollectorPhase::Battle;
         getSoundQueue().queueEvent( MonsterCollectorGameModeComponentInternal::kEventEncounter );
@@ -468,7 +468,7 @@ namespace sw
                 io.fail();
                 return;
             }
-            restoredBattle.initialize( _pCatalog.get(), _pChart.get(), _seed );
+            restoredBattle.initialize( *_pCatalog, *_pChart, _seed );
         }
         io.value( io.isWriting() ? _storage : restoredStorage );
         if ( bInBattle )

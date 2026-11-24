@@ -35,9 +35,9 @@ namespace sw
     {
     }
 
-    void IngredientStock::initialize( Inventory* pInventory )
+    void IngredientStock::initialize( Inventory& inventory )
     {
-        _pInventory = pInventory;
+        _pInventory = &inventory;
         _listBatch.clear();
     }
 

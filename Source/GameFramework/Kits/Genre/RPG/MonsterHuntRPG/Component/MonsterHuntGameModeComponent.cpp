@@ -33,6 +33,7 @@ namespace sw
             static constexpr const utf8* kEventContract = "MonsterHuntContract";
             static constexpr const utf8* kEventClue     = "MonsterHuntClue";
             static constexpr const utf8* kEventLearn    = "MonsterHuntLearn";
+            static constexpr const utf8* kEventQuest    = "MonsterHuntQuest";
             static constexpr const utf8* kEventMutagen  = "MonsterHuntMutagen";
             static constexpr const utf8* kEventMonster  = "MonsterHuntMonster";
             static constexpr const utf8* kEventHit      = "MonsterHuntHit";
@@ -58,6 +59,7 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( monsterHuntAttackReady, "MonsterHunt.AttackReady", "1 when the attack cooldown is over", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getAttackReady );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntInReach, "MonsterHunt.MonsterInReach", "1 when the monster is within the attack reach", MonsterHuntGameModeComponent,
                                 &MonsterHuntGameModeComponent::getMonsterInReach );
+    SW_AUTOMATION_GETTER_WATCH( monsterHuntQuest, "MonsterHunt.QuestDone", "1 when the quest of the contract is completed", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getQuestDone );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntSkills, "MonsterHunt.LearnedSkills", "Skill ranks learned in this hunt", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getLearnedSkillCount );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntIntensity, "MonsterHunt.SignIntensity", "Sign intensity (percent) from skills and mutagens", MonsterHuntGameModeComponent,
                                 &MonsterHuntGameModeComponent::getSignIntensity );
@@ -66,6 +68,7 @@ namespace sw
     MonsterHuntGameModeComponent::MonsterHuntGameModeComponent()
         : _contract{}
         , _monster{}
+        , _quests{}
         , _askStep{ 30 }
         , _elementChart{}
         , _oil{}
@@ -104,6 +107,10 @@ namespace sw
         , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pChart{}
+        , _pRecipes{}
+        , _pQuests{}
+        , _questLog{}
+        , _listQuestEvent{}
         , _pSkillTreeCatalog{}
         , _mutagens{}
         , _skills{}
@@ -148,13 +155,36 @@ namespace sw
     {
         if ( _bag.initialize( nullptr, _bagSlotCount ) == false )
             return false;
-        _alchemy.initialize( _pCatalog.get(), nullptr );
+        _alchemy.initialize( *_pCatalog, *_pRecipes );
         const vector<hashed_string>& listAlcohol = _pCatalog->getAlchemy()._listAlcohol;
         const bool                   bPacked     = _bag.addItem( _oil.key(), 1 ) == 1 && _bag.addItem( _potion.key(), 1 ) == 1 && listAlcohol.empty() == false && _bag.addItem( listAlcohol.front(), 1 ) == 1;
         if ( bPacked == false )
             SW_LOG_ERROR_ID( "MonsterHunt.BagNotPacked", "Monster hunt game mode: oil '%#', potion '%#' and the first alcohol of the catalog do not fit %# slots - the contract does not open", _oil.c_str(),
                              _potion.c_str(), _bagSlotCount );
         return bPacked;
+    }
+
+    bool MonsterHuntGameModeComponent::openQuest()
+    {
+        const hashed_string& questID = _pCatalog->findContract( _contract.key() )->_questID; // 계약은 validateSetup 이 보았다
+        _questLog.initialize( nullptr );
+        if ( questID.empty() )
+            return true;
+        if ( acquireRequired( _quests.path(), _pQuests ) == false )
+            return false;
+        _questLog.initialize( _pQuests.get() );
+        const QuestStartResult result = _questLog.start( questID, _hunterLevel );
+        if ( result == QuestStartResult::Ok )
+            return true;
+        SW_LOG_ERROR_ID( "MonsterHunt.QuestNotStarted", "Monster hunt game mode: quest '%#' of contract '%#' does not start from '%#' (result %#) - the contract does not open", questID.c_str(), _contract.c_str(),
+                         _quests.c_str(), static_cast<int32>( result ) );
+        return false;
+    }
+
+    int32 MonsterHuntGameModeComponent::getQuestDone() const
+    {
+        const MonsterHuntContractDef* const pContract = _pCatalog != nullptr ? _pCatalog->findContract( _contract.key() ) : nullptr;
+        return pContract != nullptr && pContract->_questID.empty() == false && _questLog.getStatus( pContract->_questID ) == QuestStatus::Completed ? 1 : 0;
     }
 
     bool MonsterHuntGameModeComponent::openSkills()
@@ -252,13 +282,13 @@ namespace sw
 
     bool MonsterHuntGameModeComponent::startGame()
     {
-        if ( acquireBoundCatalog( _pCatalog ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false )
+        if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false || openQuest() == false )
             return false;
-        const bool bOpened = _haggle.initialize( _pCatalog.get(), _contract.key() ) && _investigation.initialize( _pCatalog.get(), _contract.key(), nullptr ) &&
+        const bool bOpened = _haggle.initialize( _pCatalog.get(), _contract.key() ) && _investigation.initialize( *_pCatalog, _contract.key(), _questLog ) &&
                              _combat.initialize( _pCatalog.get(), _seed ) && openBag() && openSkills();
         if ( bOpened == false )
             return false;
-        _bestiary.initialize( _pCatalog.get(), _pChart.get() );
+        _bestiary.initialize( *_pCatalog, *_pChart );
         _attackCooldown.clear();
         _dodge.clear();
         _monsterAttack.clear();
@@ -457,6 +487,15 @@ namespace sw
             getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventClue );
             SW_LOG_INFO_ID( "MonsterHunt.ClueFound", "[MonsterHunt] clue '%#' of step '%#'", event._clueID.c_str(), event._stepID.c_str() );
         }
+        _listQuestEvent.clear();
+        _questLog.pollEvents( _listQuestEvent );
+        for ( const QuestEvent& event : _listQuestEvent )
+        {
+            if ( event._kind != QuestEvent::Kind::Completed )
+                continue;
+            getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventQuest );
+            SW_LOG_INFO_ID( "MonsterHunt.QuestCompleted", "[MonsterHunt] quest '%#' is done", event._questID.c_str() );
+        }
         _listBestiaryEvent.clear();
         _bestiary.pollEvents( _listBestiaryEvent );
         for ( const MonsterHuntBestiaryEvent& event : _listBestiaryEvent )
@@ -551,6 +590,7 @@ namespace sw
         MonsterHuntCombat        restoredCombat;
         MonsterHuntAlchemy       restoredAlchemy;
         Inventory                restoredBag;
+        QuestLog                 restoredQuestLog;
         MonsterHuntMutagens      restoredMutagens;
         SkillTreeState           restoredSkills;
         Countdown                attackCooldown = _attackCooldown;
@@ -559,23 +599,25 @@ namespace sw
         Countdown                resultHold     = _resultHold;
         if ( io.isReading() )
         {
-            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
-                                restoredInvestigation.initialize( _pCatalog.get(), _contract.key(), nullptr ) && restoredCombat.initialize( _pCatalog.get(), _seed ) &&
+            const bool bReady = _pCatalog != nullptr && _pChart != nullptr && _pRecipes != nullptr && restoredHaggle.initialize( _pCatalog.get(), _contract.key() ) &&
+                                restoredInvestigation.initialize( *_pCatalog, _contract.key(), _questLog ) && restoredCombat.initialize( _pCatalog.get(), _seed ) &&
                                 restoredBag.initialize( nullptr, _bagSlotCount );
             if ( bReady == false )
             {
-                SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog and the element chart are loaded - refused" );
+                SW_LOG_ERROR_ID( "MonsterHunt.StateNeedsCatalog", "Monster hunt game mode: state read before the catalog, the recipes and the element chart are loaded - refused" );
                 io.fail();
                 return;
             }
-            restoredBestiary.initialize( _pCatalog.get(), _pChart.get() );
-            restoredAlchemy.initialize( _pCatalog.get(), nullptr );
+            restoredBestiary.initialize( *_pCatalog, *_pChart );
+            restoredAlchemy.initialize( *_pCatalog, *_pRecipes );
+            restoredQuestLog.initialize( _pQuests.get() );
             restoredMutagens.initialize( _pCatalog.get(), _hunterLevel );
             restoredSkills.initialize( _skills.getTree() );
             restoredSkills.addPoints( _skillPoints );
         }
         io.value( io.isWriting() ? _haggle : restoredHaggle );
         io.value( io.isWriting() ? _investigation : restoredInvestigation );
+        io.value( io.isWriting() ? _questLog : restoredQuestLog );
         io.value( io.isWriting() ? _bestiary : restoredBestiary );
         io.value( io.isWriting() ? _combat : restoredCombat );
         io.value( io.isWriting() ? _alchemy : restoredAlchemy );
@@ -600,7 +642,8 @@ namespace sw
         _mutagens       = std::move( restoredMutagens );
         _skills         = std::move( restoredSkills );
         _haggle         = restoredHaggle;
-        _investigation  = std::move( restoredInvestigation );
+        _investigation  = std::move( restoredInvestigation ); // 빌린 일지의 주소는 그대로다
+        _questLog       = std::move( restoredQuestLog );
         _bestiary       = std::move( restoredBestiary );
         _combat         = restoredCombat;
         _alchemy        = std::move( restoredAlchemy );

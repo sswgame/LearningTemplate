@@ -232,11 +232,12 @@ namespace sw
 
         JRPGBattle();
 
-        /** @brief 카탈로그와 판정 창을 빌립니다(판정이 없으면 타이밍은 항상 실패합니다). */
-        void initialize( const JRPGCatalog* pCatalog, const TimingJudge* pJudge, const JRPGBattleSettings& settings, uint32 seed );
+        /** @brief 카탈로그와 판정 창을 빌립니다(전투보다 오래 살아야 합니다). 타이밍을 쓰지 않는 판은 창이 없는 판정을 줍니다 — 타이밍은 항상 실패합니다. */
+        void initialize( const JRPGCatalog& catalog, const TimingJudge& judge, const JRPGBattleSettings& settings, uint32 seed );
+        /** @brief 타이밍 누름을 답할 곳을 빌립니다. nullptr 은 이 라운드에 누르지 않았다는 뜻입니다. */
         void setTimingInput( const IJRPGTimingInput* pTimingInput ) { _pTimingInput = pTimingInput; }
         /** @brief 파티와 적 목록으로 전투를 시작합니다. 모르는 적이 있거나 적이 없거나 싸울 멤버가 없으면 시작하지 않고 false 를 반환합니다(그 전투의 명령과 라운드는 거절됩니다). */
-        [[nodiscard]] bool start( JRPGParty* pParty, const vector<hashed_string>& listEnemyID );
+        [[nodiscard]] bool start( JRPGParty& party, const vector<hashed_string>& listEnemyID );
         /** @brief 멤버의 이번 라운드 명령을 정합니다. 쓸 수 없는 명령(쓰러진 멤버, 모르는 주문, 없는 멤버를 고른 회복과 부활, 포인트 부족, 참여 멤버가 쓰러진 합동기)이면 false 를 반환합니다. */
         [[nodiscard]] bool setCommand( int32 memberIndex, const JRPGCommand& command );
         void               resolveRound();
@@ -253,7 +254,7 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
         /** @brief 전투가 빌려 쓸 파티를 연결합니다. 새 전투에 `readState` 하기 전에 호출해야 합니다(파티는 `JRPGParty::readState` 로 따로 읽습니다). `start` 도 파티를 연결합니다. */
-        void bindParty( JRPGParty* pParty ) { _pParty = pParty; }
+        void bindParty( JRPGParty& party ) { _pParty = &party; }
 
         /** @brief DQ 식 물리 피해를 계산합니다. */
         static int32 computePhysicalDamage( const JRPGBattleSettings& settings, int32 attack, int32 defense, GameRandom& random );

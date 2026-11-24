@@ -41,4 +41,7 @@
   <Item id="blade_lantern" name="Lantern Blade" category="Weapon" slot="Weapon" value="30"><Stats attack="20"/></Item>
   <Item id="robe_wick" name="Wick Robe" category="Armor" slot="Armor" value="20"><Stats defense="12"/></Item>
   <Item id="tome_ember" name="Ember Tome" category="Quest"/>
+  <!-- 항구 식당 미니게임(game/playground restaurantsim)의 재료(장 · 레시피가 이 id 를 가리킨다). 외형이 없다. -->
+  <Item id="broth_noodle" name="Broth Noodles" category="Food" maxStack="20"/>
+  <Item id="harbor_fish" name="Harbor Fish" category="Food" maxStack="20"/>
 </ItemCatalog>

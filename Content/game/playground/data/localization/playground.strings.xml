@@ -99,6 +99,11 @@
 				<item>game/playground/data/restaurant.xml</item>
 			</origins>
 		</entry>
+		<entry key="Broth Noodles" source="Broth Noodles" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" source="Buy (J)   Price up (K)   Price down (L)   Add station (F)   Open (Enter)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
@@ -337,6 +342,11 @@
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Harbor Fish" source="Harbor Fish" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Health Potion" source="Health Potion" context="Item name">

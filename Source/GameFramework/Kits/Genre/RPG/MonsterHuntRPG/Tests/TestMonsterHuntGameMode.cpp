@@ -37,6 +37,7 @@ namespace
     <Step id="tracks"><Clue id="net" position="1,0,0" radius="2" order="0"/></Step>
     <Step id="lair"><Clue id="bones" position="1,0,0" radius="2" order="0"/></Step>
   </Contract>
+  <Contract id="sworn" quest="oath" reward="100"><Step id="tracks"><Clue id="net" position="1,0,0" radius="2" order="0"/></Step></Contract>
 </MonsterHuntCatalog>)";
 
     constexpr const utf8* kHuntChartXML =
@@ -53,6 +54,7 @@ namespace
     struct MonsterHuntGameModeFixture
     {
         MonsterHuntCatalog            _catalog;
+        RecipeCatalog                 _recipes; ///< 만드는 것이 없는 판
         SubsystemScope                _scope;
         GameObjectManager             _manager;
         MonsterHuntGameModeComponent* _pGameMode{ nullptr };
@@ -62,7 +64,7 @@ namespace
             (void)domain.makeDiskFolder( "marsh" ); // 폴더만 만든다
             if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/oils.elementchart.xml" ), kHuntChartXML ) == false )
                 return false;
-            if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false )
+            if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false )
                 return false;
             if ( _catalog.loadFromXMLText( kHuntCatalogXML, "MonsterHuntGameModeTest" ) == false || _scope.bind<const MonsterHuntCatalog>( &_catalog ) == false )
                 return false;
@@ -120,9 +122,10 @@ SW_TEST_CASE( MonsterHuntGameModeTest, ContractWithoutElementChartDoesNotOpen )
 {
     SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
     MonsterHuntCatalog catalog;
+    RecipeCatalog      recipes;
     SubsystemScope     scope;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kHuntCatalogXML, "MonsterHuntGameModeTest" ) );
-    SW_REQUIRE_TRUE( scope.bind<const MonsterHuntCatalog>( &catalog ) );
+    SW_REQUIRE_TRUE( scope.bind<const MonsterHuntCatalog>( &catalog ) && scope.bind<const RecipeCatalog>( &recipes ) );
     game::ScopedGameScope         scopedScope( scope );
     GameObjectManager             manager;
     MonsterHuntGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<MonsterHuntGameModeComponent>();
@@ -130,6 +133,20 @@ SW_TEST_CASE( MonsterHuntGameModeTest, ContractWithoutElementChartDoesNotOpen )
     manager.beginPlay();
     SW_EXPECT_FALSE( pGameMode->isStarted() );
     manager.endPlay();
+}
+
+/** @brief [MonsterHuntGameModeTest] 퀘스트를 적은 계약인데 씬이 퀘스트 카탈로그를 주지 않았으면 오류를 남기고 판을 열지 않는다 — 퀘스트 없이 대신 돌지 않는다 */
+SW_TEST_CASE( MonsterHuntGameModeTest, ContractQuestWithoutQuestCatalogDoesNotOpen )
+{
+    SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
+    const test::ScopedScratchDomain domain;
+    MonsterHuntGameModeFixture      fixture;
+    SW_REQUIRE_TRUE( fixture.initialize( domain ) );
+    game::ScopedGameScope scopedScope( fixture._scope );
+    SW_REQUIRE_TRUE( XMLSerializer::deserialize( fixture._pGameMode, *MonsterHuntGameModeComponent::StaticType(), R"(<MonsterHuntGameModeComponent _contract="sworn"/>)" ) );
+    fixture._manager.beginPlay();
+    SW_EXPECT_FALSE( fixture._pGameMode->isStarted() );
+    fixture._manager.endPlay();
 }
 
 /** @brief [MonsterHuntGameModeTest] 흥정으로 올린 보상, 단서가 올린 지식, 표식 · 오일 공격으로 쓰러뜨린 괴물이 승리로 이어진다 */
