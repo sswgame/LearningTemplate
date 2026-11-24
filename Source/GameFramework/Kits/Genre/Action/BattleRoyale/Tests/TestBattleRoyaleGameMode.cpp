@@ -11,6 +11,7 @@
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Component/BattleRoyaleGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -66,6 +67,7 @@ namespace
         WeaponCatalog                  _weapons{};
         ProjectileCatalog              _projectiles{};
         ItemCatalog                    _items{};
+        RecordingSoundPlayer           _soundPlayer{};
         SubsystemScope                 _scope{};
         GameObjectManager              _manager{};
         BattleRoyaleGameModeComponent* _pGameMode{ nullptr };
@@ -74,7 +76,7 @@ namespace
         {
             const bool bLoaded = _catalog.loadFromXMLText( kBattleRoyaleDirectorXML, "BattleRoyaleGameModeTest" ) && _weapons.loadFromXMLText( kBattleRoyaleDirectorWeaponXML, "BattleRoyaleGameModeTest" ) &&
                                  _projectiles.loadFromXMLText( kBattleRoyaleDirectorProjectileXML, "BattleRoyaleGameModeTest" ) && _items.loadFromXMLText( kBattleRoyaleDirectorItemXML, "BattleRoyaleGameModeTest" );
-            const bool bBound = bLoaded && _scope.bind<const BattleRoyaleCatalog>( &_catalog ) && _scope.bind<const WeaponCatalog>( &_weapons ) &&
+            const bool bBound = bLoaded && _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<const BattleRoyaleCatalog>( &_catalog ) && _scope.bind<const WeaponCatalog>( &_weapons ) &&
                                 _scope.bind<const ProjectileCatalog>( &_projectiles ) && _scope.bind<const ItemCatalog>( &_items );
             if ( bBound == false )
                 return false;

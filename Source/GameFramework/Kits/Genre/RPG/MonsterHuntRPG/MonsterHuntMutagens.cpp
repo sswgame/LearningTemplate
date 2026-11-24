@@ -104,7 +104,7 @@ namespace sw
         return matches;
     }
 
-    void MonsterHuntMutagens::computeStats( StatBlock& outStats ) const
+    void MonsterHuntMutagens::addStats( StatBlock& inoutStats ) const
     {
         if ( _pCatalog == nullptr )
             return;
@@ -115,7 +115,7 @@ namespace sw
             const bool                   bSkipMutagen = pMutagen == nullptr || pMutagen->_statID.empty() || isGroupOpen( group ) == false;
             if ( bSkipMutagen )
                 continue;
-            outStats.addValue( pMutagen->_statID, pMutagen->_value + static_cast<float32>( countMatches( group ) ) * pMutagen->_matchValue );
+            inoutStats.addValue( pMutagen->_statID, pMutagen->_value + static_cast<float32>( countMatches( group ) ) * pMutagen->_matchValue );
         }
     }
 

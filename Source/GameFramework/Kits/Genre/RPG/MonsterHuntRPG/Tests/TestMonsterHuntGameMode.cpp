@@ -16,6 +16,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Component/MonsterHuntGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -58,6 +59,7 @@ namespace
         MonsterHuntCatalog            _catalog;
         RecipeCatalog                 _recipes;
         ItemCatalog                   _items;
+        RecordingSoundPlayer          _soundPlayer{};
         SubsystemScope                _scope;
         GameObjectManager             _manager;
         MonsterHuntGameModeComponent* _pGameMode{ nullptr };
@@ -67,7 +69,7 @@ namespace
             (void)domain.makeDiskFolder( "marsh" ); // 폴더만 만든다
             if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/oils.elementchart.xml" ), kHuntChartXML ) == false )
                 return false;
-            if ( _recipes.loadFromXMLText( kHuntRecipeXML, "MonsterHuntGameModeTest" ) == false || FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false ||
+            if ( _recipes.loadFromXMLText( kHuntRecipeXML, "MonsterHuntGameModeTest" ) == false || FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false || _scope.bind<ISoundPlayer>( &_soundPlayer ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false ||
                  _scope.bind<const ItemCatalog>( &_items ) == false )
                 return false;
             if ( _catalog.loadFromXMLText( kHuntCatalogXML, "MonsterHuntGameModeTest" ) == false || _scope.bind<const MonsterHuntCatalog>( &_catalog ) == false )

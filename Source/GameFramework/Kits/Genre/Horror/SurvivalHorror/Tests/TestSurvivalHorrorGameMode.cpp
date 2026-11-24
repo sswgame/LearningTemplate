@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/Component/SurvivalHorrorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -41,13 +42,14 @@ namespace
         test::ScopedScratchDomain _domain{};
         SurvivalHorrorCatalog     _catalog{};
         ItemCatalog               _items{};
+        RecordingSoundPlayer      _soundPlayer{};
         SubsystemScope            _scope{};
 
         [[nodiscard]] bool setUp()
         {
             (void)_domain.makeDiskFolder( "survival/data" ); // 폴더만 만든다
             return FileUtil::writeTextFile( _domain.makeDiskPath( "survival/data/house.areas.xml" ), kSurvivalGameModeAreas ) &&
-                   _catalog.loadFromXMLText( kSurvivalGameModeXML, "SurvivalHorrorGameModeTest" ) && _scope.bind<SurvivalHorrorCatalog>( &_catalog ) && _scope.bind<const ItemCatalog>( &_items );
+                   _catalog.loadFromXMLText( kSurvivalGameModeXML, "SurvivalHorrorGameModeTest" ) && _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<SurvivalHorrorCatalog>( &_catalog ) && _scope.bind<const ItemCatalog>( &_items );
         }
 
         /** @brief 홀 가운데(4,4)에서 시작해 열쇠 · 지하실의 괴물을 지나 출구로 가는 집입니다. */

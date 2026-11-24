@@ -13,6 +13,7 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -28,6 +29,7 @@ namespace
     struct CardBattleGameModeTest
     {
         CardBattleCatalog                 _catalog{};
+        RecordingSoundPlayer              _soundPlayer{};
         SubsystemScope                    _scope{};
         unique_ptr<game::ScopedGameScope> _pScopeBinding{};
         GameObjectManager                 _manager{};
@@ -36,7 +38,7 @@ namespace
         CardBattleGameModeTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCardCatalogXML, "CardBattleGameModeTest" ) );
-            SW_REQUIRE_TRUE( _scope.bind<const CardBattleCatalog>( &_catalog ) );
+            SW_REQUIRE_TRUE( _scope.bind<ISoundPlayer>( &_soundPlayer ) && _scope.bind<const CardBattleCatalog>( &_catalog ) );
             _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<CardBattleGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );

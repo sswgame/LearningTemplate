@@ -232,8 +232,8 @@ namespace sw
 
     void MonsterHuntGameModeComponent::computeStats( StatBlock& outStats ) const
     {
-        _mutagens.computeStats( outStats );
-        _skills.computeStats( outStats );
+        _skills.computeStats( outStats ); // 비우고 채운다 — 변이원은 그 위에 더한다
+        _mutagens.addStats( outStats );
     }
 
     int32 MonsterHuntGameModeComponent::getSignIntensity() const

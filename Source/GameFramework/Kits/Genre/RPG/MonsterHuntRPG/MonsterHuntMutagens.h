@@ -60,7 +60,7 @@ namespace sw
         /** @brief 그 그룹에서 변이원과 색이 맞는 스킬 수를 반환합니다. */
         int32 countMatches( int32 group ) const;
         /** @brief 열린 그룹의 변이원 능력치(기본 값에 맞은 스킬 수 × 맞춤 값을 더한 것)를 더합니다. */
-        void computeStats( StatBlock& outStats ) const;
+        void addStats( StatBlock& inoutStats ) const;
         /** @brief 열린 슬롯에 끼운 스킬(능동 스킬 목록)을 반환합니다. */
         void collectEquippedSkills( vector<hashed_string>& outListSkill ) const;
         /**

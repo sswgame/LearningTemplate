@@ -11,6 +11,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Component/JRPGGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -53,13 +54,14 @@ namespace
     {
         JRPGCatalog            _catalog;
         ItemCatalog            _itemCatalog;
+        RecordingSoundPlayer   _soundPlayer{};
         SubsystemScope         _scope;
         GameObjectManager      _manager;
         JRPGGameModeComponent* _pGameMode{ nullptr };
 
         [[nodiscard]] bool initialize( const utf8* pSceneXML = kJRPGSceneXML )
         {
-            if ( _catalog.loadFromXMLText( kJRPGGameModeXML, "JRPGGameModeTest" ) == false || _scope.bind<const JRPGCatalog>( &_catalog ) == false )
+            if ( _catalog.loadFromXMLText( kJRPGGameModeXML, "JRPGGameModeTest" ) == false || _scope.bind<ISoundPlayer>( &_soundPlayer ) == false || _scope.bind<const JRPGCatalog>( &_catalog ) == false )
                 return false;
             if ( _itemCatalog.loadFromXMLText( kJRPGItemXML, "JRPGGameModeTest" ) == false || _scope.bind<const ItemCatalog>( &_itemCatalog ) == false )
                 return false;

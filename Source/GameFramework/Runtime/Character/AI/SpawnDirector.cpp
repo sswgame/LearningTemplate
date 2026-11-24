@@ -103,6 +103,7 @@ namespace sw
         _pTable = pTable;
         _random.setSeed( seed );
         _listAlive.clear();
+        _listAllowedTag.clear();
         _eventBuffer.clear();
         _listAliveCount.assign( pTable != nullptr ? pTable->getEntries().size() : 0, 0 );
         _budget           = pTable != nullptr ? pTable->getStartBudget() : 0.0f;

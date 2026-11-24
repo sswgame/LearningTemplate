@@ -177,7 +177,7 @@ namespace sw
 
         SpawnDirector();
 
-        /** @brief 테이블(빌려 씀)과 씨앗을 정하고, 시계와 예산과 살아 있는 개체를 처음으로 돌립니다. */
+        /** @brief 테이블(빌려 씀)과 씨앗을 정하고, 시계와 예산과 살아 있는 개체와 태그 거르기를 처음으로 돌립니다. */
         void initialize( const SpawnTable* pTable, uint32 seed );
         /** @brief 이 태그 중 하나를 가진 항목과 태그 없는 항목만 냅니다. 비우면 모두 냅니다. */
         void setAllowedTags( const vector<hashed_string>& listTag );

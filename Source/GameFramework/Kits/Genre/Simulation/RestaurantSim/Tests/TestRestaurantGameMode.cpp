@@ -16,6 +16,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Component/RestaurantGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -43,6 +44,7 @@ namespace
         RestaurantCatalog            _catalog;
         RecipeCatalog                _recipes;
         ItemCatalog                  _items;
+        RecordingSoundPlayer         _soundPlayer{};
         SubsystemScope               _scope;
         GameObjectManager            _manager;
         RestaurantGameModeComponent* _pGameMode{ nullptr };
@@ -54,7 +56,7 @@ namespace
                 return false;
             const bool bCatalogs = _catalog.loadFromXMLText( kRestaurantGameModeXML, "RestaurantGameModeTest" ) && _recipes.loadFromXMLText( kRestaurantRecipeXML, "RestaurantGameModeTest" ) &&
                                    _items.loadFromXMLText( kRestaurantItemXML, "RestaurantGameModeTest" );
-            if ( bCatalogs == false || _scope.bind<const ItemCatalog>( &_items ) == false || _scope.bind<const RestaurantCatalog>( &_catalog ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false )
+            if ( bCatalogs == false || _scope.bind<ISoundPlayer>( &_soundPlayer ) == false || _scope.bind<const ItemCatalog>( &_items ) == false || _scope.bind<const RestaurantCatalog>( &_catalog ) == false || _scope.bind<const RecipeCatalog>( &_recipes ) == false )
                 return false;
             StringBuilder<constant::buffer::kMax1024> sceneText;
             sceneText.appendFormat( "<RestaurantGameModeComponent _shops=\"%#\" _shop=\"market\" _buyCount=\"5\" _pantrySlotCount=\"20\" _startGold=\"100\" _dailyWage=\"10\" _priceStep=\"4\" "
