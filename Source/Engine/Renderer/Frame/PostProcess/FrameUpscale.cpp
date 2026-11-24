@@ -10,6 +10,7 @@
 
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
