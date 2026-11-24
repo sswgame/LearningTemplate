@@ -1072,7 +1072,7 @@ namespace sw
         }
     }
 
-    bool XMLSerializer::saveToFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+    bool XMLSerializer::saveToFile( const AbsolutePath& absPath, const void* pInstance, const TypeInfo& typeInfo,
                                     const SerializeContext& context )
     {
         if ( absPath.empty() )
@@ -1081,7 +1081,7 @@ namespace sw
         const string text = serialize( pInstance, typeInfo, context );
         if ( text.empty() )
         {
-            SW_LOG_ERROR_ID( "Serialization.EmptyOutput", "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), string{ absPath }.c_str() );
+            SW_LOG_ERROR_ID( "Serialization.EmptyOutput", "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), absPath.c_str() );
             return false;
         }
         // 빈 칸을 뺐을 수 있다(`SkipIfEmpty`) — 같은 객체를 빈 칸까지 쓴 짝을 함께 넘긴다.

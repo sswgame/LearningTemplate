@@ -86,14 +86,14 @@ namespace sw
         return _mapDebugAction->wasActionTriggered( actionName );
     }
 
-    string DebugKeyActions::makeUserBindingsPath( string_view userSettingsFilePath )
+    AbsolutePath DebugKeyActions::makeUserBindingsPath( const AbsolutePath& userSettingsFilePath )
     {
         if ( userSettingsFilePath.empty() )
             return {};
-        return FileUtil::joinPath( FileUtil::getDirectoryPart( userSettingsFilePath ), kUserBindingsFileName );
+        return userSettingsFilePath.getParent().join( kUserBindingsFileName );
     }
 
-    bool DebugKeyActions::saveUserBindings( const InputMap& map, string_view filePath )
+    bool DebugKeyActions::saveUserBindings( const InputMap& map, const AbsolutePath& filePath )
     {
         if ( filePath.empty() )
             return false;
@@ -139,28 +139,28 @@ namespace sw
 
         // 바꾼 것이 없으면 파일을 두지 않는다 — 기본 키로 되돌린 플레이어에게 낡은 파일이 남지 않게 한다.
         if ( changedCount == 0 )
-            return FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false || FileUtil::removeFile( FileUtil::toDiskPath( filePath ) );
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false )
+            return FileUtil::exists( filePath ) == false || FileUtil::removeFile( filePath );
+        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
             return false;
         return doc.saveCompleteToFile( filePath );
     }
 
-    bool DebugKeyActions::loadUserBindings( InputMap& map, string_view filePath )
+    bool DebugKeyActions::loadUserBindings( InputMap& map, const AbsolutePath& filePath )
     {
-        if ( filePath.empty() || FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
+        if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return true;
 
         // 플레이어 파일(`saveUserBindings` 가 디스크에 쓴 것)이라 디스크 입구로 읽는다.
         XMLDocument doc;
         if ( doc.loadFromFile( filePath ) == false )
         {
-            SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings", "Debug key user bindings '%#' could not be read - the default keys are used", filePath );
+            SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings", "Debug key user bindings '%#' could not be read - the default keys are used", filePath.str() );
             return false;
         }
         const XMLNode root = doc.getRoot( kRootElement );
         if ( root.isValid() == false )
         {
-            SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings2", "Debug key user bindings '%#' has no <%#> root - the default keys are used", filePath, kRootElement );
+            SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings2", "Debug key user bindings '%#' has no <%#> root - the default keys are used", filePath.str(), kRootElement );
             return false;
         }
         for ( XMLNode bindNode = root.findChild( kBindElement ); bindNode.isValid(); bindNode = bindNode.findNextSibling( kBindElement ) )
@@ -168,9 +168,9 @@ namespace sw
             // `modifier` 는 적지 않음(슬롯만 바꿈) · `None`(수정 키 없음) · 이름 셋이라 스키마 칸이 아니다.
             DebugKeyRebindParams params;
             InputSlot            slot{};
-            if ( XMLFields::readProperties( bindNode, params, filePath, { kModifierAttr } ) == false || InputSlot::tryParse( params._slot, slot ) == false )
+            if ( XMLFields::readProperties( bindNode, params, filePath.str(), { kModifierAttr } ) == false || InputSlot::tryParse( params._slot, slot ) == false )
             {
-                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, params._action.c_str(),
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath.str(), params._action.c_str(),
                                    params._slot.c_str() );
                 continue;
             }
@@ -191,7 +191,7 @@ namespace sw
                            map.rebindKeyShortcut( action, static_cast<uint32>( bindIndex ), static_cast<Key>( slot._controlIndex ), modifierMask );
             }
             if ( bApplied == false )
-                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, action.c_str(), params._slot.c_str(), bindIndex );
+                SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings4", "Debug key user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath.str(), action.c_str(), params._slot.c_str(), bindIndex );
         }
         return true;
     }

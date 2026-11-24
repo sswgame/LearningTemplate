@@ -103,6 +103,6 @@ SW_TEST_CASE_EACH( SurfaceKindTest, BrokenTableIsRejectedAtLoad, kArrBrokenSurfa
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, param._pXML ) );
     SW_EXPECT_LOG( param._pExpectedID );
     SurfaceKindTable table;
-    SW_EXPECT_FALSE_MSG( table.loadFromDiskFile( path.str() ), param._pXML );
+    SW_EXPECT_FALSE_MSG( table.loadFromDiskFile( path ), param._pXML );
     SW_EXPECT_TRUE( table._listKind.empty() );
 }

@@ -230,9 +230,9 @@ SW_TEST_CASE( LogTest, LoggerInitialized )
  */
 SW_TEST_CASE( LogTest, LogFolderExists )
 {
-    const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
+    const sw::AbsolutePath folderPath = sw::FileUtil::toDiskPath( sw::Logger::getGlobalSink()->getLogFolderPath() );
     if ( folderPath.empty() == false )
-        SW_EXPECT_TRUE( sw::FileUtil::isDirectory( sw::FileUtil::toDiskPath( folderPath ) ) );
+        SW_EXPECT_TRUE( sw::FileUtil::isDirectory( folderPath ) );
 }
 
 /**
@@ -564,7 +564,7 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
  */
 SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
 {
-    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ).str() ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();
 
     // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 테스트용 장치로 채우고, 한 개 더 시도한다.
@@ -607,7 +607,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
  */
 SW_TEST_CASE( LogTest, InvalidUTF8ByteIsEscapedNotTheWholeLine )
 {
-    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ).str() ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();
     sw::unique_ptr<CapturingLogOutput> output   = sw::make_unique<CapturingLogOutput>();
     CapturingLogOutput*                pCapture = output.get();
@@ -644,11 +644,11 @@ namespace
     struct FileLogOutputTest
     {
         /** @brief 그 시각에 쓰는 파일의 경로(`LOG_<연>-<월>-<일>-<시>_<세션>.txt`)입니다. */
-        static sw::string makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
+        static sw::AbsolutePath makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
         {
             sw::fixed_string<sw::constant::buffer::kMax256> fileName;
             sw::formatstring( fileName.data(), fileName.capacity(), "LOG_2099-1-2-%#_%#.txt", hour, sw::ProcessSession::getID() );
-            return sw::FileUtil::joinPath( output.getLogFolderPath(), fileName.view() );
+            return output.getLogFolderPath().join( fileName.view() );
         }
     };
 } // namespace
@@ -659,13 +659,13 @@ namespace
  */
 SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
 {
-    sw::FileLogOutput output{ sw::FileLogOutputFolder{ sw::test::makeScratchPath( "Logs" ).str() } };
+    sw::FileLogOutput output{ sw::FileLogOutputFolder{ sw::test::makeScratchPath( "Logs" ) } };
     output.write( makeProbeRecord( 3, sw::LogLevel::Info, "dropped before open\n" ) );
     SW_REQUIRE_TRUE( output.open() );
 
-    const sw::string firstPath  = makeProbeLogPath( output, 3 );
-    const sw::string secondPath = makeProbeLogPath( output, 4 );
-    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( sw::FileUtil::toDiskPath( firstPath ) ), "a line written before open created the file" );
+    const sw::AbsolutePath firstPath  = makeProbeLogPath( output, 3 );
+    const sw::AbsolutePath secondPath = makeProbeLogPath( output, 4 );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( firstPath ), "a line written before open created the file" );
 
     output.write( makeProbeRecord( 3, sw::LogLevel::Info, "probe line in hour 3\n" ) );
     output.write( makeProbeRecord( 4, sw::LogLevel::Error, "probe error in hour 4\n" ) );
@@ -673,12 +673,12 @@ SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
     // Error 는 줄마다 비운다 — 쓰는 중인 파일을 닫기 전에 다른 쪽이 열어 읽을 수 있어야 한다(크래시 직전의 Error 가 버퍼에 남지 않게,
     // 실행 중인 로그를 편집기 · tail 이 열 수 있게).
     sw::string secondText;
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( secondPath ), secondText ), "could not open the log file being written (opened exclusively?)" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::readTextFile( secondPath, secondText ), "could not open the log file being written (opened exclusively?)" );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( secondText, "probe error in hour 4" ), secondText );
 
     output.close();
     sw::string firstText;
-    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( firstPath ), firstText ) );
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( firstPath, firstText ) );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( firstText, "probe line in hour 3" ), firstText );
     SW_EXPECT_FALSE_MSG( sw::StringUtil::contains( firstText, "probe error in hour 4" ), "a line of another hour leaked into the file" );
 }
@@ -699,10 +699,10 @@ namespace
     class BlockedFolderLogOutput final : public sw::ILogOutput
     {
     public:
-        sw::string             _blockedFolder;
+        sw::AbsolutePath       _blockedFolder;
         sw::vector<sw::string> _listFormatted;
         uint8                  _bFolderReady : 1;
-        explicit BlockedFolderLogOutput( sw::string blockedFolder )
+        explicit BlockedFolderLogOutput( sw::AbsolutePath blockedFolder )
             : _blockedFolder{ std::move( blockedFolder ) }
             , _bFolderReady{ SW_TRUE }
         {
@@ -710,7 +710,7 @@ namespace
 
         [[nodiscard]] bool open() override
         {
-            _bFolderReady = sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( _blockedFolder ) );
+            _bFolderReady = sw::FileUtil::ensureDirectoryExists( _blockedFolder );
             return _bFolderReady;
         }
         void close() override {}
@@ -781,7 +781,7 @@ namespace
 SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
 {
     const sw::string scenario = sw::test::getChildRoleArgument();
-    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ).str() );
+    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) );
     GlobalSinkSwap   globalSinkSwap{ &logger };
 
     if ( scenario == "initialize" )
@@ -790,7 +790,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
         const sw::AbsolutePath blocker = sw::test::makeScratchPath( "blocker" );
         SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( blocker, "a file, not a folder" ) );
 
-        sw::unique_ptr<BlockedFolderLogOutput> output   = sw::make_unique<BlockedFolderLogOutput>( sw::FileUtil::joinPath( blocker.str(), "Logs" ) );
+        sw::unique_ptr<BlockedFolderLogOutput> output   = sw::make_unique<BlockedFolderLogOutput>( blocker.join( "Logs" ) );
         BlockedFolderLogOutput*                pBlocked = output.get();
         SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) ); // 아직 초기화 전이라 여기서는 열지 않는다
 
@@ -990,7 +990,7 @@ SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slo
  */
 SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
 {
-    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "crash.log" ).str() );
+    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "crash.log" ) );
     sw::unique_ptr<BlockingLogOutput> output    = sw::make_unique<BlockingLogOutput>();
     BlockingLogOutput* const          pBlocking = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
@@ -1017,7 +1017,7 @@ SW_TEST_CASE( LogTest, CrashFlushDoesNotWaitOnAHeldOutputLock )
 SW_TEST_CASE( LogTest, FullQueueKeepsLineOrder )
 {
     sw::ConsoleLogOutput::setMuted( true ); // 5000 줄을 테스트 출력에 쏟지 않는다
-    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "order.log" ).str() );
+    sw::AsyncLogSink                  logger( sw::test::makeScratchPath( "order.log" ) );
     sw::unique_ptr<BlockingLogOutput> output    = sw::make_unique<BlockingLogOutput>();
     BlockingLogOutput* const          pBlocking = output.get();
     SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );

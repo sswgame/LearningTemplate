@@ -17,11 +17,14 @@ namespace sw
      * @class AbsolutePath
      * @brief 검증을 지난 절대 경로 글입니다. 디스크 I/O(`FileUtil` 의 `exists` · `readTextFile` · `writeFile` …)는 이 형식만 받는다.
      * @details 문자열에서 만드는 길은 `tryMake` · `tryResolve`(빈 값을 돌려준다)와 `FileUtil::toDiskPath`(I/O 인자 자리 — 거절한 글은 빈 경로) 셋이다.
-     *          빈 경로는 `toDiskPath` 가 빈 글 · 상대 경로를 받았을 때만 생기고, 그 값을 받은 I/O 는 실패한다. 글에서 암시적으로 바뀌지 않는다(아래 static_assert).
+     *          빈 경로는 기본 생성과 `toDiskPath` 가 빈 글 · 상대 경로를 받았을 때만 생기고, 그 값을 받은 I/O 는 실패한다. 글에서 암시적으로 바뀌지 않는다(아래 static_assert).
      */
     class SW_API AbsolutePath
     {
     public:
+        /** @brief 빈 경로입니다(아직 정하지 않은 값 칸). 그 값을 받은 I/O 는 실패한다. */
+        AbsolutePath() = default;
+
         /** @brief @p path 가 엄격한 절대 경로면 true 입니다(Windows: `X:/` · `X:\` · UNC, POSIX: `/`). */
         [[nodiscard]] static bool isStrictAbsolute( string_view path );
         /** @brief 엄격한 절대 경로면 구분자를 `/` 로 맞춘 값을, 아니면 빈 값을 돌려줍니다. */
@@ -48,6 +51,11 @@ namespace sw
          *          — 성분을 바꾸는 일은 `join` · `getParent` 가 맡는다. 언리얼 `FPaths` 의 이름 붙이기 · `std::filesystem::path::operator+=` 와 같은 자리다.
          */
         [[nodiscard]] AbsolutePath appendSuffix( string_view suffix ) const;
+        /**
+         * @brief 마지막 성분의 확장자(점 포함)를 뗀 경로입니다(`a/b.png` → `a/b`). 확장자가 없거나 점으로 시작하는 이름이면 이 경로 그대로다.
+         * @details `FileUtil::removeExtension` 의 형식 판이다 — 확장자 바꾸기는 `removeExtension().appendSuffix( … )` 로 잇는다.
+         */
+        [[nodiscard]] AbsolutePath removeExtension() const;
 
         /** @brief 경로 글입니다(구분자 `/`). */
         [[nodiscard]] const string& str() const { return _path; }
@@ -57,6 +65,8 @@ namespace sw
 
         [[nodiscard]] bool operator==( const AbsolutePath& other ) const { return _path == other._path; }
         [[nodiscard]] bool operator!=( const AbsolutePath& other ) const { return _path != other._path; }
+        /** @brief 글의 바이트 순입니다(목록 정렬). */
+        [[nodiscard]] bool operator<( const AbsolutePath& other ) const { return _path < other._path; }
 
     private:
         friend struct FileUtil; // `toDiskPath` 가 거절한 글을 빈 경로로 만든다

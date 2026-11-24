@@ -134,11 +134,11 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
     using sw::test::LocalizationTestUtil;
     const sw::test::ScopedScratchDomain domain;
     const sw::AbsolutePath              folder = domain.getFolder();
-    LocalizationTestUtil::writeSourceTable( folder.str(), "en", R"("menu.start": { "source": "Start" }, "menu.items": { "source": "{n, plural, one {# item} other {# items}}" })" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("menu.start": { "source": "Start" }, "menu.items": { "source": "{n, plural, one {# item} other {# items}}" })" );
 
     sw::LocalizationManager loc;
     SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
-    SW_REQUIRE_TRUE( loc.mountProject( sw::test::ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( folder.str(), "en", "[]" ) ), sw::LocalizationScope::Game ) );
+    SW_REQUIRE_TRUE( loc.mountProject( sw::test::ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( folder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
 
     bool bListed{ false };
     for ( const sw::string& language : loc.getAvailableLanguages() )

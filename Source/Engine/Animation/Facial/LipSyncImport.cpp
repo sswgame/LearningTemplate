@@ -26,7 +26,7 @@ namespace sw
         return isVoiceAudio( assetID ) ? VisemeTrack::makePathForAudio( assetID ) : string{};
     }
 
-    uint32 LipSyncImport::importAll( const string& resourceRoot, const string& outputRoot, const LipSyncSettings& settings, uint32& outFailedCount )
+    uint32 LipSyncImport::importAll( const AbsolutePath& resourceRoot, const AbsolutePath& outputRoot, const LipSyncSettings& settings, uint32& outFailedCount )
     {
         IVoiceDecoder* const pDecoder = IVoiceDecoder::find();
         if ( pDecoder == nullptr )
@@ -35,18 +35,18 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, "", listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "LipSync.ListFailed", "Lip sync import could not list '%#' - nothing is imported", resourceRoot );
+            SW_LOG_ERROR_ID( "LipSync.ListFailed", "Lip sync import could not list '%#' - nothing is imported", resourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
-        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         uint32       writtenCount   = 0;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            const string normalized = FileUtil::normalizeSeparators( filePath );
+            const string normalized = FileUtil::normalizeSeparators( filePath.str() );
             const string relative   = normalized.substr( MathUtil::min( normalizedRoot.size() + 1, normalized.size() ) );
             if ( isVoiceAudio( relative ) == false )
                 continue;
@@ -60,9 +60,8 @@ namespace sw
             }
             VisemeTrack track;
             VisemeTrack::analyze( listSample, sampleRate, settings, track );
-            const string                 trackPath = VisemeTrack::makePathForAudio( outputRoot.empty() ? normalized : FileUtil::joinPath( outputRoot, relative ) );
-            const optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
-            if ( trackFile.has_value() == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( trackPath ) ) ) == false || track.saveToFile( *trackFile ) == false )
+            const AbsolutePath trackPath = FileUtil::toDiskPath( VisemeTrack::makePathForAudio( outputRoot.empty() ? normalized : outputRoot.join( relative ).str() ) );
+            if ( FileUtil::ensureDirectoryExists( trackPath.getParent() ) == false || track.saveToFile( trackPath ) == false )
             {
                 SW_LOG_ERROR_ID( "LipSync.WriteFailed", "Lip sync import could not write '%#'", trackPath.c_str() );
                 ++outFailedCount;

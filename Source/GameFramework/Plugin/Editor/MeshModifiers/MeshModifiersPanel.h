@@ -48,16 +48,16 @@ namespace sw::editor
         /** @brief 스택을 사이드카 문서에 씁니다(닫기 · 종료 확인의 Save). */
         [[nodiscard]] bool saveDocument() override;
         /** @brief 세션의 사이드카 문서 하나입니다(`MeshModifierSession::findSidecarPath`). */
-        void collectFilesToSave( vector<string>& outListPath ) const override;
+        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
         bool canSaveDocument() const override;
         /** @brief 스택은 패널 밖의 세션(`MeshModifierSession`)에 살아 있어 창을 닫아도 잃지 않는다 — 닫기는 묻지 않고, 종료 확인만 미저장 스택을 묻는다. */
         bool shouldAskBeforeClose() const override { return false; }
 
     protected:
-        [[nodiscard]] expected<string> tryMakeFileText( string_view absolutePath ) const override;
+        [[nodiscard]] expected<string> tryMakeFileText( const AbsolutePath& absolutePath ) const override;
         /** @brief 지금 고른 메시의 사이드카면 true 입니다 — 다른 메시의 사본은 그 메시를 고를 때까지 기다립니다. */
-        [[nodiscard]] bool isEditingFile( string_view absolutePath ) override;
-        [[nodiscard]] bool applyFileText( string_view absolutePath, const string& text ) override;
+        [[nodiscard]] bool isEditingFile( const AbsolutePath& absolutePath ) override;
+        [[nodiscard]] bool applyFileText( const AbsolutePath& absolutePath, const string& text ) override;
 
     private:
         /** @brief 세션 스택이 사이드카와 다르면 패널 dirty 를 올리고, 같아지면 내립니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). 스택이 기준이다. */

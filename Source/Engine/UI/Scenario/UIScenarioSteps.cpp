@@ -244,12 +244,12 @@ namespace sw
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
             static bool runLayoutDump( IAutomationStepContext& runner, const AutomationStep& step )
             {
-                const string file = step.readValidatedProperties<AutomationFileStepParams>()._file;
-                const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
+                const string       file = step.readValidatedProperties<AutomationFileStepParams>()._file;
+                const AbsolutePath path = runner.resolveOutputPath( file );
+                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> message;
-                    formatstring( message.data(), message.capacity(), "could not write %#", path );
+                    formatstring( message.data(), message.capacity(), "could not write %#", path.str() );
                     runner.recordFailure( step, message );
                 }
                 return true;

@@ -165,4 +165,12 @@ SW_TEST_CASE( AbsolutePathTest, AppendSuffixNamesASidecarAndRejectsComponentChan
     const optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root );
     SW_REQUIRE_TRUE( rootPath.has_value() );
     SW_EXPECT_TRUE( rootPath->appendSuffix( ".meta" ).empty() ); // 뿌리는 이름이 없다
+
+    // 확장자 떼기 — 마지막 성분의 점만 보고, 폴더 이름의 점 · 점으로 시작하는 이름은 확장자가 아니다.
+    SW_EXPECT_EQUAL( concat( root, "baseText/hit" ), file->removeExtension().str() );
+    const AbsolutePath dottedFolder = file->getParent().join( "v1.2/tool" );
+    SW_EXPECT_TRUE( dottedFolder.removeExtension() == dottedFolder );
+    const AbsolutePath hiddenName = file->getParent().join( ".clang-format" );
+    SW_EXPECT_TRUE( hiddenName.removeExtension() == hiddenName );
+    SW_EXPECT_TRUE( file->removeExtension().appendSuffix( ".wav" ) == file->getParent().join( "hit.wav" ) );
 }

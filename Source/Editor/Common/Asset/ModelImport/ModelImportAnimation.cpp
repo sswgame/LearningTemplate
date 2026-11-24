@@ -262,11 +262,11 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportAnimation::readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
+    bool ModelImportAnimation::readClipData( const AbsolutePath& sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
     {
         outMapExtra.clear();
-        const string clipDataPath = ModelImporter::makeClipDataPath( sourcePath );
-        if ( FileUtil::exists( FileUtil::toDiskPath( clipDataPath ) ) == false )
+        const AbsolutePath clipDataPath = ModelImporter::makeClipDataPath( sourcePath );
+        if ( FileUtil::exists( clipDataPath ) == false )
             return true;
         JSONDocument document;
         if ( document.loadFromFile( clipDataPath ) == false ) // 원본 모델 옆 디스크 파일이라 디스크 입구로 읽는다
@@ -275,13 +275,13 @@ namespace sw::editor
             return false;
         }
         const JSONValue root = document.getRoot();
-        if ( JSONFields::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
+        if ( JSONFields::hasOnlyKnownKeys( root, { "clips" }, clipDataPath.str() ) == false || root.get( "clips" ).isObject() == false )
             return false;
         const JSONValue clips = root.get( "clips" );
         for ( const string& clipName : clips.getMemberNames() )
         {
             const JSONValue clipValue = clips.get( clipName );
-            if ( JSONFields::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
+            if ( JSONFields::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath.str() ) == false )
                 return false;
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
@@ -297,10 +297,10 @@ namespace sw::editor
                 const JSONValue      notify = notifies.at( notifyIndex );
                 AnimationNotifyEvent event{};
                 // 이름과 시각은 여기서 필수다(스프라이트 클립은 같은 칸을 생략할 수 있어 구조체에 필수를 달지 않는다).
-                const bool bInvalidNotify = JSONFields::readProperties( notify, event, clipDataPath ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
+                const bool bInvalidNotify = JSONFields::readProperties( notify, event, clipDataPath.str() ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
                 if ( bInvalidNotify )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath, static_cast<uint32>( notifyIndex ), clipName );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.str(), static_cast<uint32>( notifyIndex ), clipName );
                     return false;
                 }
                 extra._listNotify.push_back( event );

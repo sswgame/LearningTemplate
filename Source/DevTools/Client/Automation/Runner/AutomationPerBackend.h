@@ -17,6 +17,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -37,13 +38,13 @@ namespace sw
     /** @struct AutomationPerBackendOptions @brief 백엔드마다 실행 하나의 입력입니다. */
     struct AutomationPerBackendOptions
     {
-        string                 _executablePath{};                      ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
+        AbsolutePath           _executablePath{};                      ///< 자식으로 띄울 App(이 프로세스의 실행 파일)
         string                 _scenarioPath{};                        ///< `-scenario` 의 값 그대로
         vector<string>         _listBackend{};                         ///< 명령줄 이름(`dx11` · `vk` …) — 쿠킹 표 순서
         vector<string>         _listPassThroughArgument{};             ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 백엔드 목록 · 로그 · 보고 · 백엔드 인자는 뺐다
-        string                 _logFilePath{};                         ///< 부모의 `-log-file`(비면 기본 폴더)
-        string                 _reportPath{};                          ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
-        string                 _shaderRequestLogPath{};                ///< 부모의 `-shader-request-log`(비면 기록하지 않는다) — 자식마다 `.<백엔드>` 를 붙여 넘긴다(자식이 한 파일을 덮지 않게)
+        AbsolutePath           _logFilePath{};                         ///< 부모의 `-log-file`(비면 기본 폴더)
+        AbsolutePath           _reportPath{};                          ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
+        AbsolutePath           _shaderRequestLogPath{};                ///< 부모의 `-shader-request-log`(비면 기록하지 않는다) — 자식마다 `.<백엔드>` 를 붙여 넘긴다(자식이 한 파일을 덮지 않게)
         int32                  _splitOffset{ -1 };                     ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
         AutomationBackendSplit _split{ AutomationBackendSplit::None }; ///< `-scenario-backend-split` — 백엔드 하나에만 줄 시나리오(`assignScenarios`)
         int32                  _slotCount{ 0 };                        ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
@@ -108,7 +109,7 @@ namespace sw
         static string makeResultLine( int32 exitCode, uint32 stageCount, uint32 failedCount, uint32 notRunCount );
 
         /** @brief 자식 경로 @p path 의 확장자 앞에 `.<백엔드>` 를 끼웁니다(`a/b.log` → `a/b.dx12.log`, 확장자가 없으면 끝에 붙인다). */
-        static string insertBackendSuffix( string_view path, string_view backend );
+        static AbsolutePath insertBackendSuffix( const AbsolutePath& path, string_view backend );
 
         /**
          * @brief 백엔드마다 자식을 동시에 띄우고 모두 끝나기를 기다린 뒤 모은 종료 코드를 돌려줍니다(파일 머리 주석의 규칙).

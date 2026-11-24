@@ -90,9 +90,9 @@ namespace sw
             struct Child
             {
                 string          _backend{};
-                string          _logPath{};
-                string          _reportPath{};
-                string          _runRoot{}; ///< 자식의 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`) — 죽이기 전 덤프도 여기 쓴다
+                AbsolutePath    _logPath{};
+                AbsolutePath    _reportPath{};
+                AbsolutePath    _runRoot{}; ///< 자식의 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`) — 죽이기 전 덤프도 여기 쓴다
                 ProcessCommand  _command{}; ///< 띄울 명령(슬롯이 비면 띄운다)
                 ProcessOptions  _options{}; ///< 자식의 환경(실행 뿌리 · 사용자 데이터 뿌리)
                 Process         _process{};
@@ -109,7 +109,7 @@ namespace sw
             static void observeProgress( Child& inoutChild )
             {
                 uint64 logBytes = 0;
-                if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( inoutChild._logPath ), logBytes ) == false || logBytes == inoutChild._observedLogBytes )
+                if ( FileUtil::tryGetFileSize( inoutChild._logPath, logBytes ) == false || logBytes == inoutChild._observedLogBytes )
                     return;
                 inoutChild._observedLogBytes = logBytes;
                 inoutChild._stallDeadline    = Deadline::afterSeconds( AutomationTimeLimits::kProcessStallSeconds );
@@ -134,19 +134,19 @@ namespace sw
             }
 
             /** @brief 자식이 쓴 단계 보고 하나의 `exitCode`(돌려준다) · `records[]`(@p outListRecordLine)를 읽습니다. 파일이 없거나 형식이 다르면 그 까닭입니다. */
-            [[nodiscard]] static expected<int32> readStageReport( const string& reportPath, vector<string>& outListRecordLine )
+            [[nodiscard]] static expected<int32> readStageReport( const AbsolutePath& reportPath, vector<string>& outListRecordLine )
             {
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( reportPath ), text ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath } );
+                if ( FileUtil::readTextFile( reportPath, text ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath.str() } );
                 JSONDocument document;
-                if ( document.parse( text, reportPath ) == false )
+                if ( document.parse( text, reportPath.str() ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report is not JSON", document.getLastError() } );
                 const JSONValue       root     = document.getRoot();
                 const optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
                 const JSONValue       records  = root.get( "records" );
                 if ( exitCode.has_value() == false || records.isArray() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report has no exitCode or records[]", reportPath } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report has no exitCode or records[]", reportPath.str() } );
                 outListRecordLine.clear();
                 for ( size_t i = 0; i < records.size(); ++i )
                     outListRecordLine.push_back( records.at( i ).asString() );
@@ -163,18 +163,18 @@ namespace sw
             };
 
             /** @brief 자식이 쓴 단계 보고 하나의 `exitCode` · `name` · `failure`(없으면 `reason`)를 읽습니다. 파일이 없거나 형식이 다르면 그 까닭입니다. */
-            [[nodiscard]] static expected<StageReportResult> readStageResult( const string& reportPath )
+            [[nodiscard]] static expected<StageReportResult> readStageResult( const AbsolutePath& reportPath )
             {
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( reportPath ), text ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath } );
+                if ( FileUtil::readTextFile( reportPath, text ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath.str() } );
                 JSONDocument document;
-                if ( document.parse( text, reportPath ) == false )
+                if ( document.parse( text, reportPath.str() ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report is not JSON", document.getLastError() } );
                 const JSONValue       root     = document.getRoot();
                 const optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
                 if ( exitCode.has_value() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report has no exitCode", reportPath } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report has no exitCode", reportPath.str() } );
                 StageReportResult runResult;
                 runResult._exitCode     = *exitCode;
                 runResult._name         = root.get( "name" ).asString();
@@ -253,7 +253,7 @@ namespace sw
                     const vector<string> listPath = AutomationScenarioChain::splitList( listScenarioList[childIndex] );
                     for ( size_t stage = 0; stage < listPath.size(); ++stage )
                     {
-                        const string             stageReportPath = AutomationScenarioChain::makeStageReportPath( child._reportPath, stage, listPath.size() );
+                        const AbsolutePath       stageReportPath = AutomationScenarioChain::makeStageReportPath( child._reportPath, stage, listPath.size() );
                         AutomationBackendRecords records{ child._backend, {} };
                         const expected<int32>    stageExitCode = readStageReport( stageReportPath, records._listRecordLine );
                         if ( stageExitCode.has_value() == false )
@@ -312,9 +312,9 @@ namespace sw
                     else
                         writer.valueNull();
                     writer.key( "log" );
-                    writer.valueString( pChild->_logPath );
+                    writer.valueString( pChild->_logPath.str() );
                     writer.key( "report" );
-                    writer.valueString( pChild->_reportPath );
+                    writer.valueString( pChild->_reportPath.str() );
                     writer.endObject();
                 }
                 writer.endArray();
@@ -329,7 +329,7 @@ namespace sw
                     writer.valueString( line );
                 writer.endArray();
                 writer.endObject();
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( options._reportPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( options._reportPath ), json ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( options._reportPath ) == false || FileUtil::writeTextFile( options._reportPath, json ) == false )
                     SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot", "[Scenario] per-backend: could not write the report %#", options._reportPath.c_str() );
             }
         };
@@ -462,11 +462,11 @@ namespace sw
         return string( textBuilder.view() );
     }
 
-    string AutomationPerBackend::insertBackendSuffix( string_view path, string_view backend )
+    AbsolutePath AutomationPerBackend::insertBackendSuffix( const AbsolutePath& path, string_view backend )
     {
-        StringBuilder<constant::buffer::kMax1024> pathBuilder;
-        pathBuilder.appendFormat( "%#.%#%#", FileUtil::removeExtension( path ), backend, FileUtil::getExtension( path ) );
-        return string( pathBuilder.view() );
+        StringBuilder<constant::buffer::kMax128> suffixBuilder;
+        suffixBuilder.appendFormat( ".%#%#", backend, FileUtil::getExtension( path.str() ) );
+        return path.removeExtension().appendSuffix( suffixBuilder.view() );
     }
 
     vector<string> AutomationPerBackend::findRecordMismatches( const vector<AutomationBackendRecords>& listRecords )
@@ -522,9 +522,9 @@ namespace sw
         using Internal            = AutomationPerBackendInternal;
         const string scenarioStem = getAutomationScenarioStem( options._scenarioPath ); // x.scenario.xml → x(스크립트의 `ScenarioDeclaration.stem` 과 같은 규칙)
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
-        StringBuilder<constant::buffer::kMax256> textBuilder3;
-        textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
-        const string defaultFolder = FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder3.view() ), {}, true );
+        StringBuilder<constant::buffer::kMax64> folderName;
+        folderName.appendFormat( "per-backend-%#", Process::getCurrentProcessID() );
+        const AbsolutePath defaultFolder = FileUtil::reserveUniquePath( makeAutomationOutputFolderPath().join( scenarioStem ).join( folderName.view() ), {}, true );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`GenericWindow::createMainWindow`).
         const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
@@ -554,27 +554,19 @@ namespace sw
                 listChild.push_back( std::move( pChild ) );
                 continue;
             }
-            StringBuilder<constant::buffer::kMax1024> defaultPath;
             if ( options._logFilePath.empty() )
-            {
-                defaultPath.appendFormat( "%#/%#.log", defaultFolder, backend );
-                pChild->_logPath = string( defaultPath.view() );
-            }
+                pChild->_logPath = defaultFolder.join( backend ).appendSuffix( ".log" );
             else
                 pChild->_logPath = insertBackendSuffix( options._logFilePath, backend );
             // 보고는 늘 받는다 — 부모가 단계 보고의 `records[]` 를 백엔드 사이에 견준다(`compareChildRecords`).
             if ( options._reportPath.empty() )
-            {
-                defaultPath.clear();
-                defaultPath.appendFormat( "%#/%#.json", defaultFolder, backend );
-                pChild->_reportPath = string( defaultPath.view() );
-            }
+                pChild->_reportPath = defaultFolder.join( backend ).appendSuffix( ".json" );
             else
                 pChild->_reportPath = insertBackendSuffix( options._reportPath, backend );
             // 앞 실행이 같은 경로에 남긴 단계 보고를 지운다 — 이번에 돌지 않은 단계의 낡은 기록을 견주지 않게. 없으면 지울 것이 없다(결과는 보지 않는다).
             const size_t stageCountOfChild = AutomationScenarioChain::splitList( scenarioList ).size();
             for ( size_t stage = 0; stage < stageCountOfChild; ++stage )
-                (void)FileUtil::removeFile( FileUtil::toDiskPath( AutomationScenarioChain::makeStageReportPath( pChild->_reportPath, stage, stageCountOfChild ) ) );
+                (void)FileUtil::removeFile( AutomationScenarioChain::makeStageReportPath( pChild->_reportPath, stage, stageCountOfChild ) );
 
             vector<string>                            listArgument;
             StringBuilder<constant::buffer::kMax1024> argument;
@@ -584,10 +576,10 @@ namespace sw
             argument.appendFormat( "-%#", backend );
             listArgument.emplace_back( argument.view() );
             argument.clear();
-            argument.appendFormat( "-log-file=%#", pChild->_logPath );
+            argument.appendFormat( "-log-file=%#", pChild->_logPath.str() );
             listArgument.emplace_back( argument.view() );
             argument.clear();
-            argument.appendFormat( "-scenario-report=%#", pChild->_reportPath );
+            argument.appendFormat( "-scenario-report=%#", pChild->_reportPath.str() );
             listArgument.emplace_back( argument.view() );
             if ( bTileWindows )
             {
@@ -601,22 +593,21 @@ namespace sw
             if ( options._shaderRequestLogPath.empty() == false )
             {
                 StringBuilder<constant::buffer::kMax256> requestLogArgument;
-                requestLogArgument.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::SHADER_REQUEST_LOG ), insertBackendSuffix( options._shaderRequestLogPath, backend ) );
+                requestLogArgument.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::SHADER_REQUEST_LOG ), insertBackendSuffix( options._shaderRequestLogPath, backend ).str() );
                 listArgument.push_back( string( requestLogArgument.view() ) );
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 
-            const optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
-            pChild->_command                        = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
+            pChild->_command = options._executablePath.empty() ? ProcessCommand{} : ProcessCommand::at( options._executablePath, std::move( listArgument ) );
             // 자식마다 제 실행 뿌리(`<이 실행 뿌리>/<백엔드>`) — 사용자 데이터 · 에디터 상태 · 시나리오 사본이 그 아래라 자식끼리 한 폴더를 다투지 않는다
             // (예전에는 한 자식이 다른 자식의 쓰는 중인 세이브 임시 파일을 잔재로 지웠다 — 와일드웨스트). 그 폴더의 주인은 이 부모다 — 띄우기 전에 비운다.
             const AbsolutePath childRunRoot = ProcessRoots::get()._run.join( backend );
             (void)FileUtil::removeDirectory( childRunRoot ); // 못 지우면 FileUtil 이 경고를 남긴다
-            pChild->_runRoot = childRunRoot.str();
+            pChild->_runRoot = childRunRoot;
             pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kRunRootVariable, childRunRoot.str() } );
             // 이 부모가 건 사용자 데이터 뿌리는 환경으로 물려 가므로 자식마다 덮는다. 비면(사람이 OS 폴더를 고름) 환경을 그대로 물려준다.
             if ( options._userDataRoot.empty() == false )
-                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, AutomationUserDataRoot::makeRunUserDataRoot( childRunRoot.str() ) } );
+                pChild->_options._listEnvironment.push_back( ProcessEnvironmentEntry{ kUserDataRootVariable, AutomationUserDataRoot::makeRunUserDataRoot( childRunRoot ).str() } );
             pChild->_bPending = true;
             listChild.push_back( std::move( pChild ) );
         }
@@ -664,13 +655,13 @@ namespace sw
             if ( bOverdue )
             {
                 string where;
-                if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( child._runRoot ) ) == false )
+                if ( FileUtil::ensureDirectoryExists( child._runRoot ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> text;
-                    text.appendFormat( "could not create the run root %#", child._runRoot );
+                    text.appendFormat( "could not create the run root %#", child._runRoot.str() );
                     where = string( text.view() );
                 }
-                else if ( const expected<string> dump = child._process.requestDump( FileUtil::joinPath( child._runRoot, Internal::kKillDumpFileName ) ); dump.has_value() )
+                else if ( const expected<string> dump = child._process.requestDump( child._runRoot.join( Internal::kKillDumpFileName ).str() ); dump.has_value() )
                     where = *dump;
                 else
                 {

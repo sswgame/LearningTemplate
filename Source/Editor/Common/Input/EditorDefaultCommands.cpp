@@ -89,7 +89,7 @@ namespace sw::editor
             {
                 if ( listPath.empty() )
                     return;
-                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( listPath[0] );
+                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( listPath[0] ) );
                 if ( sceneID.empty() )
                 {
                     SW_LOG_ERROR_ID( "Editor.OpenSceneOutsideContent", "Open Scene: '%#' is outside the content root and every mounted disk domain", listPath[0] );
@@ -249,7 +249,7 @@ namespace sw::editor
              * @brief 프리셋 열기 창의 결과(UI 프레임)를 게임 단계 씬 편집으로 넘깁니다 — 컴포넌트를 바꾸는 일은 UI 가 하지 않는다(`EditorCommandRegistry::requestSceneEdit`, 거래 하나가 되돌리기 한 단계).
              * @details 반환값을 버리면 프리셋을 골랐는데 아무 일도 일어나지 않는다. 파일이 없거나 XML 이 그 컴포넌트 타입과 맞지 않으면 실패를 알린다.
              */
-            static void requestLoadPreset( uint64 componentID, const string& presetPath )
+            static void requestLoadPreset( uint64 componentID, const AbsolutePath& presetPath )
             {
                 EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [componentID, presetPath]( EditorTransaction& transaction )
                 {
@@ -262,7 +262,7 @@ namespace sw::editor
             }
 
             /** @brief 프리셋 저장 창의 결과(UI 프레임)를 게임 단계로 넘깁니다 — 컴포넌트 값을 읽는 일도 씬을 쥔 쪽이 한다. 씬을 바꾸지 않아 거래는 빈 채로 닫힌다. */
-            static void requestSavePreset( uint64 componentID, const string& presetPath )
+            static void requestSavePreset( uint64 componentID, const AbsolutePath& presetPath )
             {
                 EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [componentID, presetPath]( EditorTransaction& /*transaction*/ )
                 {
@@ -286,12 +286,12 @@ namespace sw::editor
                 params._description         = "Component Preset";
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".preset.xml", ".xml" };
-                params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
+                params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath().str();
                 const uint64 componentID    = pComp->getComponentID();
                 FileDialog::open( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, [componentID]( const vector<string>& listPath )
                 {
                     if ( listPath.empty() == false )
-                        requestLoadPreset( componentID, listPath[0] );
+                        requestLoadPreset( componentID, FileUtil::toDiskPath( listPath[0] ) );
                 } ) );
             }
 
@@ -309,12 +309,12 @@ namespace sw::editor
                 params._description         = "Component Preset";
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".preset.xml" };
-                params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
+                params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath().str();
                 const uint64 componentID    = pComp->getComponentID();
                 FileDialog::open( params, SW_DELEGATE_LAMBDA( FileDialogDelegate, [componentID]( const vector<string>& listPath )
                 {
                     if ( listPath.empty() == false )
-                        requestSavePreset( componentID, listPath[0] );
+                        requestSavePreset( componentID, FileUtil::toDiskPath( listPath[0] ) );
                 } ) );
             }
 

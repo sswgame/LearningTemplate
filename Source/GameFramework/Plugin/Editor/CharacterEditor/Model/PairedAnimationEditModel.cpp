@@ -52,15 +52,15 @@ namespace sw::editor
         return true;
     }
 
-    bool PairedAnimationEditModel::loadFromFile( string_view absolutePath )
+    bool PairedAnimationEditModel::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "PairedAnimationEditModel.PairedAnimationFileCould", "Paired animation file could not be read: %#", string( absolutePath ).c_str() );
+            SW_LOG_WARNING_ID( "PairedAnimationEditModel.PairedAnimationFileCould", "Paired animation file could not be read: %#", string( absolutePath.str() ).c_str() );
             return false;
         }
-        return loadFromXMLText( text, absolutePath );
+        return loadFromXMLText( text, absolutePath.str() );
     }
 
     expected<void> PairedAnimationEditModel::saveDocument( const AbsolutePath& absPath )
@@ -69,7 +69,7 @@ namespace sw::editor
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
         const string text         = saveToXMLText();
         const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
-        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
+        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", absPath.str() } );
         _state.markSaved( text );
         return {};

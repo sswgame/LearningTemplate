@@ -111,7 +111,7 @@ namespace sw::editor
         return bSaved;
     }
 
-    void DataTablePanel::collectFilesToSave( vector<string>& outListPath ) const
+    void DataTablePanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         _model.collectFilesToSave( outListPath );
     }
@@ -127,7 +127,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing; // 아직 연 표가 없다 — 저장은 현지화 표만 본다
         const optional<AbsolutePath> diskPath = getDocumentDiskPath();
         // 읽지 못하면 모델이 아무 표도 열지 않고 저장을 막는다 — 앞 표의 글을 이 파일에 쓰지 않는다.
-        if ( diskPath.has_value() == false || _model.openGameDataFile( diskPath->str() ) == false )
+        if ( diskPath.has_value() == false || _model.openGameDataFile( *diskPath ) == false )
             return ToolAssetLoadResult::Malformed;
         return ToolAssetLoadResult::Loaded;
     }
@@ -520,8 +520,8 @@ namespace sw::editor
             const vector<GameDataFileEntry>& listGameDataFile = _model.getGameDataFiles();
             for ( const GameDataFileEntry& entry : listGameDataFile )
             {
-                const bool bSelected = FileUtil::isSameDiskPath( entry._absolutePath, _model.getGameDataPath() ); // 연 자리는 문서 id 를 푼 디스크 경로라 표기가 목록과 다를 수 있다
-                const bool bBlocked  = _model.isGameDataDirty() && bSelected == false;                            // 고친 표를 두고 다른 표로 가지 않는다 — 저장하거나 되돌린 뒤 고른다
+                const bool bSelected = FileUtil::isSameDiskPath( entry._absolutePath.str(), _model.getGameDataPath() ); // 연 자리는 문서 id 를 푼 디스크 경로라 표기가 목록과 다를 수 있다
+                const bool bBlocked  = _model.isGameDataDirty() && bSelected == false;                                  // 고친 표를 두고 다른 표로 가지 않는다 — 저장하거나 되돌린 뒤 고른다
                 ImGui::BeginDisabled( bBlocked );
                 if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) && bSelected == false )
                 {

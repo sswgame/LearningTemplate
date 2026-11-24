@@ -26,7 +26,7 @@ namespace sw::editor
     {
     }
 
-    BugReportViewModel::BugReportViewModel( string_view rootFolder )
+    BugReportViewModel::BugReportViewModel( const AbsolutePath& rootFolder )
         : _rootFolder{ rootFolder }
         , _listRow{}
         , _bRowsDirty{ SW_TRUE }
@@ -45,14 +45,14 @@ namespace sw::editor
 
     bool BugReportViewModel::captureNow( const string& note )
     {
-        string          directory;
+        AbsolutePath    directory;
         BugReportInputs inputs       = BugReport::makeInputs( note );
         inputs._root                 = _rootFolder;
         const bool bCaptured         = BugReport::capture( inputs, directory );
         _bRowsDirty                  = SW_TRUE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationKind::Success );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory.str(), NotificationKind::Success );
         else
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationKind::Error );
         return bCaptured;
@@ -61,18 +61,18 @@ namespace sw::editor
     void BugReportViewModel::readRows()
     {
         _listRow.clear();
-        vector<string> listFolder;
-        if ( FileUtil::collectFolders( FileUtil::toDiskPath( _rootFolder ), listFolder, false ) == false )
+        vector<AbsolutePath> listFolder;
+        if ( FileUtil::collectFolders( _rootFolder, listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
-        VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )
+        VectorUtil::sort( listFolder, []( const AbsolutePath& lhs, const AbsolutePath& rhs )
         { return rhs < lhs; } );
         _listRow.reserve( listFolder.size() );
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
             BugReportRow row{};
-            row._directory = folder;
-            row._name      = FileUtil::getFileNamePart( folder );
+            row._directory = folder.str();
+            row._name      = FileUtil::getFileNamePart( folder.str() );
             BugReport report;
             if ( BugReport::readInfo( folder, report ) )
                 row._note = report._note;

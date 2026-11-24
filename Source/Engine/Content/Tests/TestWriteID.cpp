@@ -15,7 +15,7 @@ SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 {
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "common/materials/new_not_yet.material" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "common/materials/new_not_yet.material" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "common/materials/new_not_yet.material" ) );
 }
 
 /**
@@ -32,7 +32,7 @@ SW_TEST_CASE( WriteIDTest, MixedCaseIDWritesLowercaseInTheResourceTree )
     string relative;
     SW_REQUIRE_TRUE( FileUtil::tryMakePathUnderRoot( domainRoot->str(), path->str(), relative ) );
     SW_EXPECT_EQUAL( string( "write_id_test_not_yet/mixedcase.xml" ), relative ); // 원래 철자를 돌려주는 판정이라 대소문자가 그대로 보인다
-    SW_EXPECT_EQUAL( string( "engine/write_id_test_not_yet/mixedcase.xml" ), assetPaths.toAssetID( path->str() ) );
+    SW_EXPECT_EQUAL( string( "engine/write_id_test_not_yet/mixedcase.xml" ), assetPaths.toAssetID( *path ) );
 }
 
 /**
@@ -55,18 +55,18 @@ SW_TEST_CASE( WriteIDTest, NewNamesUnderContentMustBeLowercase )
     // 쓰기 경로가 그 규칙을 지난다(엔진이 선 프로세스는 규칙이 걸려 있다) — 파일이 생기지 않는다.
     StringBuilder<constant::buffer::kMax512> upperFileBuilder;
     upperFileBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/Upper.txt", content.str() );
-    const string upperFile = string( upperFileBuilder.view() );
+    const AbsolutePath upperFile = FileUtil::toDiskPath( upperFileBuilder.view() );
     SW_EXPECT_LOG( "File.CreateRefused" );
-    SW_EXPECT_FALSE( FileUtil::writeTextFile( FileUtil::toDiskPath( upperFile ), "x" ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( upperFile ) ) );
+    SW_EXPECT_FALSE( FileUtil::writeTextFile( upperFile, "x" ) );
+    SW_EXPECT_FALSE( FileUtil::exists( upperFile ) );
 
     // 폴더를 만드는 입구도 같은 규칙이다 — 대문자 이름의 빈 폴더가 생기지 않는다. 소문자 폴더는 만든다.
     StringBuilder<constant::buffer::kMax512> upperFolderBuilder;
     upperFolderBuilder.appendFormat( "%#/scratch/write_id_test_not_yet/UpperFolder", content.str() );
-    const string upperFolder = string( upperFolderBuilder.view() );
+    const AbsolutePath upperFolder = FileUtil::toDiskPath( upperFolderBuilder.view() );
     SW_EXPECT_LOG( "File.CreateRefused" );
-    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( upperFolder ) ) );
-    SW_EXPECT_FALSE( FileUtil::isDirectory( FileUtil::toDiskPath( upperFolder ) ) );
+    SW_EXPECT_FALSE( FileUtil::ensureDirectoryExists( upperFolder ) );
+    SW_EXPECT_FALSE( FileUtil::isDirectory( upperFolder ) );
     StringBuilder<constant::buffer::kMax512> lowerFolder;
     lowerFolder.appendFormat( "%#/scratch/write_id_test_not_yet/lower_folder", content.str() );
     SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( lowerFolder.view() ) ) );
@@ -80,7 +80,7 @@ SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
     // engine 에만 있는 상대 키 — 읽기가 고른 그 파일에 쓴다(검색 순서의 앞 도메인에 새로 만들지 않는다).
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "engine/shaders/forward_lit.hlsl" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "engine/shaders/forward_lit.hlsl" ) );
 }
 
 // 작업 도메인은 폴더가 아직 없어도 도메인이다(빈 트리의 첫 쓰기) — 상대 키로 거절하지 않는다.
@@ -88,7 +88,7 @@ SW_TEST_CASE( WriteIDTest, ScratchDomainNeedsNoFolderYet )
 {
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( *path ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
 }
 
 SW_TEST_CASE( WriteIDTest, MissingRelativeKeyHasNoDomain )
@@ -107,7 +107,7 @@ SW_TEST_CASE( WriteIDTest, DiskPathIsNotAResourceID )
 {
     // 디스크 경로는 쓰기 입구에 들어오지 않는다 — 디스크에 쓰는 쪽은 `save*(AbsolutePath)` 를 바로 부른다.
     SW_EXPECT_LOG( "AssetPaths.WriteNotResourceID" );
-    SW_EXPECT_FALSE( engine::getSubsystem<AssetPaths>().toDiskPath( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine/x.txt" ) ).has_value() );
+    SW_EXPECT_FALSE( engine::getSubsystem<AssetPaths>().toDiskPath( ProcessRoots::get()._content.join( "engine/x.txt" ).str() ).has_value() );
     SW_EXPECT_TRUE( AssetPaths::normalizeAssetID( ProcessRoots::get()._content.str() ).empty() );
 }
 
@@ -117,5 +117,5 @@ SW_TEST_CASE( WriteIDTest, BareDomainIsTheDomainRoot )
     const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_TRUE( FileUtil::isDirectory( *path ) );
-    SW_EXPECT_EQUAL( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine" ), path->str() );
+    SW_EXPECT_EQUAL( ProcessRoots::get()._content.join( "engine" ).str(), path->str() );
 }

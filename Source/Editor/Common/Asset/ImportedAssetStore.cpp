@@ -46,41 +46,39 @@ namespace sw::editor
         return string( text.c_str(), text.size() );
     }
 
-    bool ImportedAssetStore::writeResultText( string_view diskPath, string_view text )
+    bool ImportedAssetStore::writeResultText( const AbsolutePath& diskPath, string_view text )
     {
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( diskPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( diskPath ), text );
+        return FileUtil::ensureParentDirectoryExists( diskPath ) && FileUtil::writeTextFile( diskPath, text );
     }
 
-    string ImportedAssetStore::findDomainFolder( string_view sourcePath )
+    AbsolutePath ImportedAssetStore::findDomainFolder( const AbsolutePath& sourcePath )
     {
-        const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
+        const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> segmentBuilder;
         segmentBuilder.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
         const size_t at = normalized.find( segmentBuilder.view() );
-        return at == string::npos ? string{} : normalized.substr( 0, at );
+        return at == string::npos ? AbsolutePath{} : FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
     }
 
-    string ImportedAssetStore::makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension )
+    AbsolutePath ImportedAssetStore::makeStorePath( const AbsolutePath& domainFolder, string_view kind, string_view key, string_view extension )
     {
-        StringBuilder<constant::buffer::kMax256> pathBuilder;
-        pathBuilder.appendFormat( "%#/%#/%#/%#/%#%#", domainFolder, kModelFolderName, kStoreFolderName, kind, key, extension );
-        return string( pathBuilder.view() );
+        return domainFolder.join( kModelFolderName ).join( kStoreFolderName ).join( kind ).join( key ).appendSuffix( extension );
     }
 
-    bool ImportedAssetStore::writeIfAbsent( string_view storePath, const void* pBytes, size_t byteCount )
+    bool ImportedAssetStore::writeIfAbsent( const AbsolutePath& storePath, const void* pBytes, size_t byteCount )
     {
         // 잠그지 않는다: 병렬 임포트의 두 원본이 같은 키를 써도 키가 내용 지문이라 같은 바이트이고, `FileUtil::writeFile` 은 저마다의 임시 파일에 쓴 뒤
         // 바꿔 끼운다(언리얼 DDC 의 내용 주소 쓰기와 같다) — 프로세스 전역 잠금이 지킬 상태가 없다.
-        const string path{ storePath };
-        if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) )
+        const AbsolutePath path{ storePath };
+        if ( FileUtil::exists( path ) )
         {
             vector<uint8> existing;
-            const bool    bSame = FileUtil::readFile( FileUtil::toDiskPath( path ), existing ) && existing.size() == byteCount && ( byteCount == 0 || Memory::compare( existing.data(), pBytes, byteCount ) == 0 );
+            const bool    bSame = FileUtil::readFile( path, existing ) && existing.size() == byteCount && ( byteCount == 0 || Memory::compare( existing.data(), pBytes, byteCount ) == 0 );
             if ( bSame == false )
                 SW_LOG_ERROR_ID( "ImportedAssetStore.ContentMismatch", "Shared import result '%#' exists with other bytes (a hash collision or a hand edit) - delete it and import again", path.c_str() );
             return bSame;
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( path ), static_cast<const uint8*>( pBytes ), byteCount ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeFile( path, static_cast<const uint8*>( pBytes ), byteCount ) == false )
         {
             SW_LOG_ERROR_ID( "ImportedAssetStore.WriteFailed", "Failed to write shared import result '%#'", path.c_str() );
             return false;
@@ -88,17 +86,17 @@ namespace sw::editor
         return true;
     }
 
-    bool ImportedAssetStore::writeSourceIfAbsent( const AssetPaths& assetPaths, string_view sourcePath, const void* pBytes, size_t byteCount )
+    bool ImportedAssetStore::writeSourceIfAbsent( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const void* pBytes, size_t byteCount )
     {
         if ( writeIfAbsent( sourcePath, pBytes, byteCount ) == false )
             return false;
         const string       assetID  = assetPaths.toAssetID( sourcePath );
-        const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( sourcePath ) );
+        const AbsolutePath metaPath = AssetMeta::makePath( sourcePath );
         if ( assetID.empty() || FileUtil::isRegularFile( metaPath ) )
             return true;
         if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, AssetGUID::fromName( assetID ) ) ) )
             return true;
-        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath );
+        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath.str() );
         return false;
     }
 
@@ -120,13 +118,13 @@ namespace sw::editor
         return StringUtil::endsWith( path, ".material" ) || StringUtil::endsWith( path, ".animset.xml" ) || StringUtil::endsWith( path, ".prefab.xml" );
     }
 
-    uint64 ImportedAssetStore::mixReferencedFiles( string_view importedPath, string_view text, uint64 hash )
+    uint64 ImportedAssetStore::mixReferencedFiles( const AbsolutePath& importedPath, string_view text, uint64 hash )
     {
         vector<string> listReference;
         collectReferences( text, listReference );
         VectorUtil::sort( listReference );
-        const string normalized = FileUtil::normalizeSeparators( importedPath );
-        const string marker     = ImportedAssetStoreInternal::makeMarker();
+        const string& normalized = importedPath.str();
+        const string  marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
             // 리소스 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 리소스 루트를 얻는다.
@@ -137,22 +135,21 @@ namespace sw::editor
             uint64       fileHash = 0;
             if ( rootEnd != string::npos )
             {
-                StringBuilder<constant::buffer::kMax512> fileBuilder;
-                fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
-                fileHash = AssetImportStampUtil::computeFileHash( fileBuilder.view() );
+                const AbsolutePath resourceRoot = FileUtil::toDiskPath( string_view( normalized ).substr( 0, rootEnd ) );
+                fileHash                        = AssetImportStampUtil::computeFileHash( resourceRoot.join( reference ) );
             }
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }
         return hash;
     }
 
-    void ImportedAssetStore::collectReferencedFiles( string_view importedPath, string_view text, vector<string>& outListPath )
+    void ImportedAssetStore::collectReferencedFiles( const AbsolutePath& importedPath, string_view text, vector<AbsolutePath>& outListPath )
     {
         vector<string> listReference;
         collectReferences( text, listReference );
         VectorUtil::sort( listReference );
-        const string normalized = FileUtil::normalizeSeparators( importedPath );
-        const string marker     = ImportedAssetStoreInternal::makeMarker();
+        const string& normalized = importedPath.str();
+        const string  marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
             const string                             domain = reference.substr( 0, reference.find( marker ) );
@@ -161,48 +158,47 @@ namespace sw::editor
             const size_t rootEnd = normalized.find( rootBuilder.view() );
             if ( rootEnd != string::npos )
             {
-                StringBuilder<constant::buffer::kMax512> fileBuilder;
-                fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
-                outListPath.push_back( string( fileBuilder.view() ) );
+                const AbsolutePath resourceRoot = FileUtil::toDiskPath( string_view( normalized ).substr( 0, rootEnd ) );
+                outListPath.push_back( resourceRoot.join( reference ) );
             }
         }
     }
 
-    uint32 ImportedAssetStore::removeUnreferenced( string_view resourceRoot, vector<string>& inoutListProblem )
+    uint32 ImportedAssetStore::removeUnreferenced( const AbsolutePath& resourceRoot, vector<string>& inoutListProblem )
     {
-        const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        vector<string> listFolder;
+        const AbsolutePath   root = resourceRoot.join( {} );
+        vector<AbsolutePath> listFolder;
         // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 보지 않는다(EditorContentScan 이 뺀다)
         if ( root.empty() || EditorContentScan::collectFolders( root, listFolder, true ) == false )
             return 0;
         uint32 removedCount = 0;
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
-            const string store = FileUtil::normalizeSeparators( folder );
-            if ( FileUtil::getFileNamePart( store ) != kStoreFolderName || FileUtil::getFileNamePart( FileUtil::getDirectoryPart( store ) ) != kModelFolderName )
+            const AbsolutePath store = folder;
+            if ( FileUtil::getFileNamePart( store.str() ) != kStoreFolderName || FileUtil::getFileNamePart( FileUtil::getDirectoryPart( store.str() ) ) != kModelFolderName )
                 continue;
             // 같은 도메인의 임포트 결과(`<x>/models/**`)가 가리키는 파일만 남긴다. 손 데이터는 저장소를 직접 가리키지 않는다(키가 내용과 함께 바뀐다) — 셋의 이름으로 찾는다.
-            vector<string> listResult;
-            vector<string> listStored;
-            const bool     bListed = EditorContentScan::collectFiles( FileUtil::getDirectoryPart( store ), "", listResult, true ) && EditorContentScan::collectFiles( store, "", listStored, true );
+            vector<AbsolutePath> listResult;
+            vector<AbsolutePath> listStored;
+            const bool           bListed = EditorContentScan::collectFiles( store.getParent(), "", listResult, true ) && EditorContentScan::collectFiles( store, "", listStored, true );
             if ( bListed == false )
             {
                 // 다 훑지 못한 목록으로 "가리키지 않는다" 를 판정하면 쓰는 파일을 지운다.
                 StringBuilder<constant::buffer::kMax512> problemBuilder;
-                problemBuilder.appendFormat( "%#: could not list the imported results - nothing is removed from it", store );
+                problemBuilder.appendFormat( "%#: could not list the imported results - nothing is removed from it", store.str() );
                 inoutListProblem.push_back( string( problemBuilder.view() ) );
                 continue;
             }
             unordered_set<string> setReferenced;
-            for ( const string& result : listResult )
+            for ( const AbsolutePath& result : listResult )
             {
-                if ( isReferrer( result ) == false )
+                if ( isReferrer( result.str() ) == false )
                     continue;
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( result ), text ) == false )
+                if ( FileUtil::readTextFile( result, text ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: could not read it to find its shared results - nothing is removed from %#", result, store );
+                    problemBuilder.appendFormat( "%#: could not read it to find its shared results - nothing is removed from %#", result.str(), store.str() );
                     inoutListProblem.push_back( string( problemBuilder.view() ) );
                     return removedCount;
                 }
@@ -213,18 +209,18 @@ namespace sw::editor
                     setReferenced.insert( FileUtil::getFileNamePart( reference ) );
                 }
             }
-            for ( const string& stored : listStored )
+            for ( const AbsolutePath& stored : listStored )
             {
-                const string fileName = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( stored ) );
+                const string fileName = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( stored.str() ) );
                 if ( setReferenced.find( fileName ) != setReferenced.end() )
                     continue;
                 // 키가 내용 해시라 파일 이름만으로 가른다. 저장소 안 파일끼리는 가리키지 않는다.
-                if ( FileUtil::removeFile( FileUtil::toDiskPath( stored ) ) )
+                if ( FileUtil::removeFile( stored ) )
                     ++removedCount;
                 else
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: could not remove the unreferenced shared result", stored );
+                    problemBuilder.appendFormat( "%#: could not remove the unreferenced shared result", stored.str() );
                     inoutListProblem.push_back( string( problemBuilder.view() ) );
                 }
             }

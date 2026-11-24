@@ -17,6 +17,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -68,11 +69,11 @@ namespace sw
     {
     public:
         /** @brief @p contentRoot 아래에서 리소스 id 를 찾습니다. @p maxDepth 는 쿠킹 시작이 뜬 깊이 상한입니다. */
-        DataInheritanceDiskSource( string_view contentRoot, optional<uint32> maxDepth );
+        DataInheritanceDiskSource( const AbsolutePath& contentRoot, optional<uint32> maxDepth );
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override;
 
     private:
-        string _contentRoot;
+        AbsolutePath _contentRoot;
     };
 
     /**
@@ -225,7 +226,7 @@ namespace sw
          * @param listExtension 볼 확장자(`.xml` · `.material`)입니다.
          * @return 폴더를 훑지 못하면 false 입니다.
          */
-        [[nodiscard]] static bool collectChildren( string_view contentRoot, string_view baseID, const vector<string>& listExtension, vector<string>& outListChildID );
+        [[nodiscard]] static bool collectChildren( const AbsolutePath& contentRoot, string_view baseID, const vector<string>& listExtension, vector<string>& outListChildID );
 
         /** @brief 사슬이 돌 때 남기는 오류입니다. 합치는 코드가 따로인 프리팹 변형도 같은 오류를 남깁니다. */
         static void reportCycle( string_view baseID, string_view sourceName );

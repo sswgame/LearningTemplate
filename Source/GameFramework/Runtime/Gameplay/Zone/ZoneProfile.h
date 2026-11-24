@@ -147,7 +147,7 @@ namespace sw
         /** @brief 리소스를 읽고(상속 · 모듈 에셋까지 합쳐) 칸 사이 규칙을 봅니다. 실패면 오류를 남기고 비운 채 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 디스크 파일을 읽습니다(테스트). 규칙은 `loadFromAsset` 과 같습니다. */
-        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
 
         /**
          * @brief 배치 덮어쓰기(③ 층)를 얹습니다. 모듈은 이름으로 합치고(`_op` — 합치기 · 바꾸기 · 빼기), 합칠 때 적은 칸만(종류 · 모듈 에셋 · 조건 · 대상이 비어 있지 않으면) 덮고

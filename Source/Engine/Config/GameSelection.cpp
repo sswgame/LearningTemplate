@@ -32,9 +32,9 @@ namespace sw
         if constexpr ( build::kStaticModules ) // 정적 구성은 링크한 게임 하나다
             return string{ config::kShippingGameName };
 
-        string       text;
-        const string path = FileUtil::joinPath( ModuleLibraryUtil::getModuleDirectory(), config::kFileActiveGame );
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
+        string             text;
+        const AbsolutePath path = ModuleLibraryUtil::getModuleDirectory().join( config::kFileActiveGame );
+        if ( FileUtil::readTextFile( path, text ) == false )
             return {};
         return string{ StringUtil::trim( text ) };
     }

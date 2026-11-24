@@ -203,7 +203,7 @@ namespace sw::editor
                 const EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
-                vector<string> listPath;
+                vector<AbsolutePath> listPath;
                 pDocument->collectFilesToSave( listPath );
                 if ( listPath.empty() )
                 {
@@ -247,10 +247,10 @@ namespace sw::editor
             {
                 if ( listArgument.empty() == false )
                     return false;
-                if ( const optional<string> changedPath = EditorSaveFileLock::unlock(); changedPath.has_value() )
+                if ( const optional<AbsolutePath> changedPath = EditorSaveFileLock::unlock(); changedPath.has_value() )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "'%#' changed while it was locked", *changedPath );
+                    replyBuilder.appendFormat( "'%#' changed while it was locked", changedPath->str() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }

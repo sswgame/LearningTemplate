@@ -37,10 +37,10 @@ namespace sw::editor
             }
 
             /** @brief 사람이 친 경로를 이 실행의 산출물 폴더(`ProcessRoots::_saved`) 아래로 풉니다 — 작업 폴더가 아니다. 경로가 아니면(드라이브 상대) 빈 값이라 읽기 · 쓰기가 실패로 알린다. */
-            static string resolveTypedPath( string_view typedPath )
+            static AbsolutePath resolveTypedPath( string_view typedPath )
             {
                 const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( typedPath, ProcessRoots::get()._saved );
-                return resolved.has_value() ? resolved->str() : string{};
+                return resolved.has_value() ? *resolved : AbsolutePath{};
             }
 
             /** @brief 세션이 띄운 전용 서버의 이력을 칸에 담습니다. 서버나 채널이 없으면 그 이유입니다(채널 읽기 실패는 비교기의 글이 대상). */
@@ -203,7 +203,7 @@ namespace sw::editor
                 const bool bCompare = listArgument.size() == 2 && listArgument[0] == "compare";
                 if ( bSave == false && bCompare == false )
                     return false;
-                string filePath;
+                AbsolutePath filePath;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], filePath, outReply ) == false )
                     return true;
                 EditorStateHashCompare& compare = getCompare();
@@ -217,9 +217,9 @@ namespace sw::editor
                     const bool                               bSaved = compare.saveToFile( 0, filePath );
                     StringBuilder<constant::buffer::kMax512> replyBuilder;
                     if ( bSaved )
-                        replyBuilder.appendFormat( "netplay sync saved %# tick(s) to %#", compare.getSource( 0 )._listSample.size(), filePath );
+                        replyBuilder.appendFormat( "netplay sync saved %# tick(s) to %#", compare.getSource( 0 )._listSample.size(), filePath.str() );
                     else
-                        replyBuilder.appendFormat( "netplay sync could not write %#", filePath );
+                        replyBuilder.appendFormat( "netplay sync could not write %#", filePath.str() );
                     outReply = string( replyBuilder.view() );
                     return true;
                 }

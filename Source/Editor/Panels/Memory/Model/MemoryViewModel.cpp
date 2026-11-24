@@ -112,7 +112,7 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
         MemoryPanelExportResult jobResult{};
-        jobResult._folder = input._folder;
+        jobResult._folder = input._folder.str();
         if ( input._bWholeSnapshot != SW_FALSE && input._pSnapshot != nullptr )
         {
             const expected<MemoryExportResult> result = MemorySnapshotExport::writeSnapshot( *input._pSnapshot, input._folder );
@@ -127,7 +127,7 @@ namespace sw::editor
         }
         else
         {
-            const expected<MemoryExportFile> file = MemorySnapshotExport::writeTable( input._table, FileUtil::joinPath( input._folder, input._fileName ) );
+            const expected<MemoryExportFile> file = MemorySnapshotExport::writeTable( input._table, input._folder.join( input._fileName ) );
             if ( file.has_value() )
                 jobResult._fileCount = 1;
             else
@@ -492,15 +492,15 @@ namespace sw::editor
         _filterIndex = index;
     }
 
-    string MemoryViewModel::reserveExportFolder()
+    AbsolutePath MemoryViewModel::reserveExportFolder()
     {
         const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
         if ( policy.has_value() == false )
         {
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "NoPolicyStatus", TextArgumentList().addText( "reason", string{ policy.error().detail() } ) );
-            return string{};
+            return {};
         }
-        const string folder = MemorySnapshotExport::reserveFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
+        const AbsolutePath folder = MemorySnapshotExport::reserveFolder( MemorySnapshotExport::getDefaultRoot( *policy ) );
         if ( folder.empty() )
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "ExportFailedStatus", TextArgumentList().addText( "reason", "could not create the export folder" ) );
         return folder;
@@ -510,7 +510,7 @@ namespace sw::editor
     {
         if ( _currentIndex < 0 )
             return;
-        const string folder = reserveExportFolder();
+        const AbsolutePath folder = reserveExportFolder();
         if ( folder.empty() )
             return;
         const MemorySnapshot& snapshot = *_listSnapshot[static_cast<size_t>( _currentIndex )];
@@ -538,7 +538,7 @@ namespace sw::editor
     {
         if ( _currentIndex < 0 )
             return;
-        const string folder = reserveExportFolder();
+        const AbsolutePath folder = reserveExportFolder();
         if ( folder.empty() )
             return;
         MemoryExportRequest request{};

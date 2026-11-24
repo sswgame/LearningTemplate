@@ -178,7 +178,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     const AbsolutePath  root = test::makeScratchPath( "TextureVariantDDS" );
     const AbsolutePath  path = root.join( "a.astc.dds" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
-    SW_REQUIRE_TRUE( ImageFileWriter::writeDDS( path.str(), payload, kWidth, kHeight, 4, DDSFormat::kDXGIASTC4x4Unorm, 32 ) );
+    SW_REQUIRE_TRUE( ImageFileWriter::writeDDS( path, payload, kWidth, kHeight, 4, DDSFormat::kDXGIASTC4x4Unorm, 32 ) );
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, bytes ) );
 

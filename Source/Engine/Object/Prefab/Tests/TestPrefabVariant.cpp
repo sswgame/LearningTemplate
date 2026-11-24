@@ -82,7 +82,7 @@ SW_TEST_CASE( PrefabVariantTest, CookedBinaryMatchesTheMergedSource )
     const test::ScopedScratchDomain domain;
     Util::writePair( domain );
     PrefabAsset source;
-    SW_REQUIRE_TRUE( source.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ).str() ) );
+    SW_REQUIRE_TRUE( source.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );
     SW_REQUIRE_TRUE( source.saveToBinaryFile( Util::makeAbsolute( domain.makeDiskPath( "child.prefab.bin" ).str() ) ) );
     PrefabAsset cooked;
     SW_REQUIRE_TRUE( cooked.loadFromBinaryFile( test::ScopedScratchDomain::makeID( "child.prefab.bin" ) ) );
@@ -109,7 +109,7 @@ SW_TEST_CASE( PrefabVariantTest, SaveKeepsVariantAndRoundTrips )
     SW_EXPECT_TRUE( savedText.find( "_localScale" ) == string::npos ); // 부모와 같은 칸은 쓰지 않는다
 
     PrefabAsset reread;
-    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath.str() ) );
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath ) );
     string before;
     string after;
     SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
@@ -123,7 +123,7 @@ SW_TEST_CASE( PrefabVariantTest, SaveOmitsDefaultValues )
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), Util::makeBase( "1,2,3" ) ) );
     PrefabAsset asset;
-    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "base.prefab.xml" ).str() ) );
+    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "base.prefab.xml" ) ) );
     const AbsolutePath savedPath = domain.makeDiskPath( "saved.prefab.xml" );
     SW_REQUIRE_TRUE( asset.saveToFile( Util::makeAbsolute( savedPath.str() ) ) );
 
@@ -133,7 +133,7 @@ SW_TEST_CASE( PrefabVariantTest, SaveOmitsDefaultValues )
     SW_EXPECT_TRUE( savedText.find( "_bActive" ) == string::npos ); // 기본값(켜짐)이다
 
     PrefabAsset reread;
-    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath.str() ) );
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath ) );
     string before;
     string after;
     SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
@@ -147,7 +147,7 @@ SW_TEST_CASE( PrefabVariantTest, JSONSaveOmitsDefaultValues )
     const test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.prefab.xml" ), Util::makeBase( "1,2,3" ) ) );
     PrefabAsset asset;
-    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "base.prefab.xml" ).str() ) );
+    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "base.prefab.xml" ) ) );
     const AbsolutePath savedPath = domain.makeDiskPath( "saved.prefab.json" );
     SW_REQUIRE_TRUE( asset.saveToFile( Util::makeAbsolute( savedPath.str() ) ) );
 
@@ -157,7 +157,7 @@ SW_TEST_CASE( PrefabVariantTest, JSONSaveOmitsDefaultValues )
     SW_EXPECT_TRUE( savedText.find( "\"_bActive\"" ) == string::npos ); // 기본값(켜짐)이다
 
     PrefabAsset reread;
-    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath.str() ) );
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath ) );
     string before;
     string after;
     SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
@@ -176,26 +176,26 @@ SW_TEST_CASE( PrefabVariantTest, BadVariantsFailToLoad )
         PrefabAsset asset;
         SW_EXPECT_LOG( "PrefabAsset.PrefabNotLoaded" );
         SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
-        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "orphan.prefab.xml" ).str() ) );
+        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "orphan.prefab.xml" ) ) );
     }
     {
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "a.prefab.xml" ), Util::makeVariant( idB, "" ) ) );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "b.prefab.xml" ), Util::makeVariant( idA, "" ) ) );
         PrefabAsset asset;
         SW_EXPECT_LOG( "DataInheritance.Cycle" );
-        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "a.prefab.xml" ).str() ) );
+        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "a.prefab.xml" ) ) );
     }
     {
         Util::writePair( domain, "<PrefabOverrides><Remove key=\"#00000000000000ff\" /></PrefabOverrides>" );
         PrefabAsset asset;
         SW_EXPECT_LOG( "PrefabOverrides.VariantTargetMissing" );
-        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ).str() ) );
+        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );
     }
     {
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "both.prefab.xml" ), Util::makeVariant( test::ScopedScratchDomain::makeID( "base.prefab.xml" ).str(), "<GameObject _schemaVersion=\"0\" _name=\"X\" />" ) ) );
         PrefabAsset asset;
         SW_EXPECT_LOG( "PrefabAsset.VariantHasBody" );
-        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "both.prefab.xml" ).str() ) );
+        SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "both.prefab.xml" ) ) );
     }
 }
 
@@ -250,7 +250,7 @@ SW_TEST_CASE( PrefabVariantTest, NestedInstancesAreInherited )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "child.prefab.xml" ), Util::makeVariant( baseID, ownNode.view() ) ) );
 
     PrefabAsset asset;
-    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ).str() ) );
+    SW_REQUIRE_TRUE( asset.loadFromDiskFile( domain.makeDiskPath( "child.prefab.xml" ) ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, asset.getNestedInstances().size() );
     SW_EXPECT_EQUAL( string( "Inherited" ), asset.getNestedInstances()[0]._name );
     SW_EXPECT_EQUAL( string( "Own" ), asset.getNestedInstances()[1]._name );

@@ -15,6 +15,7 @@
     #include "Core/Container/vector.h"
     #include "Core/File/Android/AndroidAssetFileReader.h"
     #include "Core/File/BundledContentFileSource.h"
+    #include "Core/File/FileUtil.h"
     #include "Core/File/ProcessRoots.h"
     #include "Core/File/UserDataPath.h"
     #include "Core/Log/Logger.h"
@@ -85,10 +86,9 @@ namespace
         if ( settings._maxResponseBodyBytes < sw::FileServeContentSource::kChunkBytes )
             sw::reportFatalError( "AndroidMain: EngineConfig _fileServe._maxResponseBodyBytes %# is below the Fileserve chunk (%# bytes)", settings._maxResponseBodyBytes,
                                   sw::FileServeContentSource::kChunkBytes );
-        mount._pClient = sw::make_unique<sw::PlainHTTPClient>( settings );
-        sw::StringBuilder<sw::constant::buffer::kMax1024> mirrorRoot;
-        mirrorRoot.appendFormat( "%#/%#", pInternalDataPath, kFileServeMirrorFolder );
-        mount._pSource = sw::make_unique<sw::FileServeContentSource>( *mount._pClient, baseURL, sw::ProcessRoots::get()._packs.str(), mirrorRoot.view() );
+        mount._pClient                    = sw::make_unique<sw::PlainHTTPClient>( settings );
+        const sw::AbsolutePath mirrorRoot = sw::FileUtil::toDiskPath( pInternalDataPath ).join( kFileServeMirrorFolder ); // OS 가 준 앱 폴더 글이다
+        mount._pSource                    = sw::make_unique<sw::FileServeContentSource>( *mount._pClient, baseURL, sw::ProcessRoots::get()._packs.str(), mirrorRoot );
         SW_LOG_INFO_ID( "AndroidMain.FileServeMounted", "Android: packs come from Fileserve %# (mirror %#/%#)", baseURL, pInternalDataPath, kFileServeMirrorFolder );
         return mount;
     }

@@ -76,7 +76,7 @@ namespace
         /** @brief `finalize` 뒤 항목 @p index 의 경로입니다. */
         string getPath( size_t index ) const { return string{ _pool.c_str() + _listEntry[index]._stringPoolOffset }; }
 
-        void write( string_view path ) const
+        void write( const AbsolutePath& path ) const
         {
             vector<uint8> bytes;
             const auto    append = [&bytes]( const void* pData, size_t size )
@@ -89,26 +89,26 @@ namespace
             append( _listBlock.data(), _listBlock.size() * sizeof( PackBlockEntryOnDisk ) );
             append( _pool.data(), _pool.size() );
             append( &_header, sizeof( PackHeader ) );
-            SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) );
+            SW_REQUIRE_TRUE( FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
         }
     };
 
     /** @brief 임시 팩 파일 하나입니다. 끝나면 지웁니다. */
     struct PackTestFile
     {
-        string _path;
+        AbsolutePath _path;
 
         PackTestFile()
-            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ).str() }
+            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ) }
         {
         }
-        ~PackTestFile() { (void)FileUtil::removeFile( FileUtil::toDiskPath( _path ) ); }
+        ~PackTestFile() { (void)FileUtil::removeFile( _path ); }
 
         /** @brief @p image 를 쓰고 여는 결과를 돌려줍니다. */
         bool open( const PackImage& image, PackReader& reader ) const
         {
             image.write( _path );
-            return reader.open( _path );
+            return reader.open( _path.str() );
         }
     };
 
@@ -270,9 +270,9 @@ SW_TEST_CASE( PackReaderTest, ShortFileIsRefused )
     SW_EXPECT_LOG( "PackReader.CorruptedPackHeader" );
     const PackTestFile file;
     const uint8        arrShort[4] = { 1, 2, 3, 4 };
-    SW_REQUIRE_TRUE( FileUtil::writeFile( FileUtil::toDiskPath( file._path ), arrShort, sizeof( arrShort ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( file._path, arrShort, sizeof( arrShort ) ) );
     PackReader reader;
-    SW_EXPECT_FALSE( reader.open( file._path ) );
+    SW_EXPECT_FALSE( reader.open( file._path.str() ) );
 }
 
 // 머리가 말하는 크기를 믿고 할당하지 않는다.
@@ -448,7 +448,7 @@ SW_TEST_CASE( PackReaderTest, RangeReadEqualsTheSameSliceOfAWholeRead )
     vector<std::pair<string, vector<uint8>>> listEntry;
     listEntry.emplace_back( "textures/mips.dds", content );
     listEntry.emplace_back( "small.txt", vector<uint8>{ 'h', 'i' } );
-    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
+    SW_REQUIRE_TRUE( PackTestUtil::writePack( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ), listEntry ) );
 
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str() ) );
@@ -529,7 +529,7 @@ SW_TEST_CASE( PackReaderTest, StoredEntryRangeReadReturnsTheSameSpan )
     const string        compressedPath = "data/level.xml";
     const bool          bStoredFirst   = PackStreamWriter::makePathHash( storedPath ) < PackStreamWriter::makePathHash( compressedPath );
     PackStreamWriter    writer;
-    SW_REQUIRE_TRUE( writer.open( packPath.str(), PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
+    SW_REQUIRE_TRUE( writer.open( packPath, PackTestUtil::makeDesc( "game/test", PackCompressionKind::Zlib ) ).has_value() );
     for ( uint32 order = 0; order < 2; ++order )
     {
         const bool bStored = ( order == 0 ) == bStoredFirst;

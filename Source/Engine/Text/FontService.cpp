@@ -327,10 +327,10 @@ namespace sw
             const bool               bWantsBold    = static_cast<uint16>( weight ) >= static_cast<uint16>( FontWeight::SemiBold );
             const bool               bUseBold      = bWantsBold && boldName.empty() == false;
             const string&            fileName      = bUseBold ? boldName : regularName;
-            const string             filePath      = _systemFontLocator.findSystemFontFile( fileName );
+            const AbsolutePath       filePath      = _systemFontLocator.findSystemFontFile( fileName );
             if ( filePath.empty() == false )
             {
-                opened._face        = openFontFile( AssetID{ filePath }, faceIndex, false );
+                opened._face        = openFontFile( AssetID{ filePath.str() }, faceIndex, false );
                 opened._bFauxBold   = bWantsBold && bUseBold == false ? SW_TRUE : SW_FALSE;
                 opened._bFauxItalic = slant == FontSlant::Italic ? SW_TRUE : SW_FALSE;
             }

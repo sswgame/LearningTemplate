@@ -64,18 +64,18 @@ namespace sw::editor
                     const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( kProbeFolderID );
                     if ( folder.has_value() == false )
                         return false;
-                    _folderAbs = folder->str();
-                    if ( FileUtil::removeDirectory( FileUtil::toDiskPath( _folderAbs ) ) == false ) // 앞 실행이 남긴 폴더다
+                    _folderAbs = *folder;
+                    if ( FileUtil::removeDirectory( _folderAbs ) == false ) // 앞 실행이 남긴 폴더다
                         return false;
-                    if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folderAbs ) ) == false )
+                    if ( FileUtil::ensureDirectoryExists( _folderAbs ) == false )
                         return false;
-                    return FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _folderAbs, pFileName ) ), "editor self test" );
+                    return FileUtil::writeTextFile( _folderAbs.join( pFileName ), "editor self test" );
                 }
                 /** @brief 테스트 폴더를 지우고 상태를 비웁니다. */
                 void removeProbeFolder( EditorSelfTestContext& context )
                 {
                     if ( _folderAbs.empty() == false )
-                        (void)context.expect( FileUtil::removeDirectory( FileUtil::toDiskPath( _folderAbs ) ), "could not remove the self test folder" );
+                        (void)context.expect( FileUtil::removeDirectory( _folderAbs ), "could not remove the self test folder" );
                     *this = ContentBrowserTestState{};
                 }
                 /** @brief 다음 단계로 넘어갑니다. 기다림 한도는 새 단계의 시작부터 셉니다. */
@@ -126,14 +126,14 @@ namespace sw::editor
                                 {
                                     fixed_string<constant::buffer::kMax512> text;
                                     formatstring( text.data(), text.capacity(), "the self test folder listing never arrived (entries %#, refresh pending %#, folder %#)", pPanel->getEntryCount(),
-                                                  pPanel->isFolderRefreshPending(), probe._folderAbs );
+                                                  pPanel->isFolderRefreshPending(), probe._folderAbs.str() );
                                     (void)context.expect( false, text.c_str() );
                                     probe.enterPhase( kPhaseCleanup, stepIndex );
                                 }
                                 return EditorSelfTestStep::Continue;
                             }
                             // 우클릭 Delete 와 같은 경로로 확인 모달을 열고 확인한다.
-                            pPanel->requestDeleteAsset( FileUtil::joinPath( probe._folderAbs, kDeletedFileName ) );
+                            pPanel->requestDeleteAsset( probe._folderAbs.join( kDeletedFileName ) );
                             (void)context.expect( pPanel->confirmDeleteAsset(), "confirming the delete did not delete the asset" );
                             // 파일 감시도 같은 변경을 알리지만 프레임이 지난 뒤다. 지운 직후 바로 다시 읽어야 한다.
                             (void)context.expect( pPanel->isFolderRefreshPending(), "deleting an asset did not refresh the folder listing" );
@@ -152,7 +152,7 @@ namespace sw::editor
                                 return EditorSelfTestStep::Continue;
                             }
                             // 에디터 밖(탐색기, git)의 변경을 흉내 낸다. 패널을 건드리지 않고 파일만 쓴다.
-                            (void)context.expect( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( probe._folderAbs, kAddedFileName ) ), "editor self test" ),
+                            (void)context.expect( FileUtil::writeTextFile( probe._folderAbs.join( kAddedFileName ), "editor self test" ),
                                                   "could not write the added file" );
                             probe.enterPhase( kPhaseWaitAdded, stepIndex );
                             return EditorSelfTestStep::Continue;
@@ -181,9 +181,9 @@ namespace sw::editor
                 }
 
             private:
-                string _folderAbs{};
-                uint32 _phase{ 0 };
-                uint32 _phaseStartStep{ 0 };
+                AbsolutePath _folderAbs{};
+                uint32       _phase{ 0 };
+                uint32       _phaseStartStep{ 0 };
             };
 
             /** @brief 콘텐츠 브라우저를 열고 그 탭이 보이게 합니다. 도킹 탭이 가려져 있으면 그리기가 실행되지 않습니다. */

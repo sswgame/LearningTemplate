@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
@@ -69,7 +70,7 @@ namespace sw
          * @param completedScreenshotCount 지금까지 렌더 스레드가 쓴 시나리오 스크린샷 수
          * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않고 체인도 남기지 않는다).
          */
-        [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing );
+        [[nodiscard]] bool begin( string_view scenarioArgument, const AbsolutePath& reportPath, bool bKeepGoing );
         /** @brief 지금 시나리오가 그린 프레임을 화면에 내보낼지 정합니다 — 무인 실행은 시나리오가 `present="true"` 일 때만 내보낸다. 렌더 스레드가 없으면(헤드리스) 할 일이 없다. */
         void applyPresentPolicy();
         /**
@@ -170,8 +171,8 @@ namespace sw
         unique_ptr<AutomationScenarioChain> _pChain;
         ScenarioRecorder                    _recorder;
         vector<string>                      _listRecordWatch;          ///< `-scenario-record-watches` 의 검사점
-        string                              _recordPath;               ///< `-scenario-record` 경로(비면 녹화하지 않는다)
-        string                              _reportPath;               ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
+        string                              _recordPath;               ///< `-scenario-record` 글(`Saved/Automation/…` — 디스크 자리는 `ScenarioRecorder::makeOutputDiskPath`. 비면 녹화하지 않는다)
+        AbsolutePath                        _reportPath;               ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;            ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
         string                              _runPolicyError;           ///< 대기 정책(`Config/Dev/ScenarioRun.json`)을 읽지 못한 까닭(읽었으면 빈 글) — 단계마다 읽기 오류로 끝낸다
         uint32                              _startWindowWidth;         ///< 시작할 때의 주 창 클라이언트 너비(둘째 단계부터 이 크기에서 시작한다, 창이 없으면 0)

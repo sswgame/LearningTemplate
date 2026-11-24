@@ -27,6 +27,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -48,7 +49,7 @@ namespace sw
         // 긴 캡처(`profile.trace record` · `-gv_profileTracePath`)
         atomic<bool> _bLongRecordingActive{ false };
         int64        _longRecordingEndNanos{ 0 }; ///< 0 이면 시간 제한 없음(`finishRecording` 이 끝낸다)
-        string       _longRecordingPath;
+        AbsolutePath _longRecordingPath;
         string       _longRecordingProcessName;
         // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)
         int64  _slowCooldownEndNanos{ 0 };

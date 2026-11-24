@@ -48,12 +48,12 @@ SW_TEST_CASE( ViewRectConstantsTest, PartialRectScalesAndKeepsPreviousScale )
 /** @brief [ViewRectConstantsTest] 셰이더 계약: PassCB 가 C++ 이 채우는 이름(`passConstantNames`)으로 두 상수를 float4 로 선언하고, PassTexture 가 UV 를 바꾼다. */
 SW_TEST_CASE( ViewRectConstantsTest, PassBufferDeclaresViewRectConstants )
 {
-    const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
+    const AbsolutePath projectRoot = ProcessRoots::get()._project;
     SW_REQUIRE_FALSE( projectRoot.empty() );
     string bindingText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding.hlsli" ) ), bindingText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( projectRoot.join( "Content/engine/shaders/binding.hlsli" ), bindingText ) );
     string textureText;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders/binding_texture.hlsli" ) ), textureText ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( projectRoot.join( "Content/engine/shaders/binding_texture.hlsli" ), textureText ) );
 
     const PassConstantNames&                names = passConstantNames();
     fixed_string<constant::buffer::kMax128> declaration;

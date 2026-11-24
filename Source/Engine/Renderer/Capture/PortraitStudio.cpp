@@ -96,7 +96,7 @@ namespace sw
             struct WriteJob
             {
                 const PortraitCapture* _pCapture{ nullptr };
-                const string*          _pBase{ nullptr }; ///< 확장자 앞까지의 쓸 경로
+                const AbsolutePath*    _pBase{ nullptr }; ///< 확장자 앞까지의 쓸 경로
 
                 /** @brief 장 @p index 를 DDS · PNG 로 쓰고, 둘 다 썼으면 제 칸 @p outWritten 에 1 을 씁니다(`runParallelInto` 본문). */
                 void operator()( uint32 index, uint8& outWritten ) const
@@ -113,12 +113,8 @@ namespace sw
                         outWritten = 0;
                         return;
                     }
-                    StringBuilder<constant::buffer::kMax512> path;
-                    path.appendFormat( "%#.dds", _pBase[index] );
-                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
-                    path.clear();
-                    path.appendFormat( "%#.png", _pBase[index] );
-                    const bool bPNG = ImageFileWriter::writePNGRGBA8( path.view(), rgbaBytes, capture._width, capture._height );
+                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( _pBase[index].appendSuffix( ".dds" ), rgbaBytes, capture._width, capture._height );
+                    const bool bPNG = ImageFileWriter::writePNGRGBA8( _pBase[index].appendSuffix( ".png" ), rgbaBytes, capture._width, capture._height );
                     outWritten      = bDDS && bPNG ? 1 : 0;
                 }
             };
@@ -247,12 +243,12 @@ namespace sw
         return true;
     }
 
-    bool PortraitStudio::renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, string_view outputDirectory, uint32 size )
+    bool PortraitStudio::renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, const AbsolutePath& outputDirectory, uint32 size )
     {
         if ( prefabList.empty() )
             return false;
-        const string directory = outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory );
-        (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( directory ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+        const AbsolutePath directory = outputDirectory.empty() ? ProcessRoots::get()._saved.join( "Portraits" ) : outputDirectory;
+        (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
         // 그리기 · 읽기(GPU)는 이 스레드가 차례로 하고, 옮기기(RGBA8) · 인코딩 · 쓰기(DDS · PNG)는 읽은 장이 상한(`kMaxHeldCaptureBytes`)에 닿거나 끝나면 장마다 워커가 제 칸에 한다(`WriteJob`).
         PortraitStudio          portrait;
@@ -262,13 +258,11 @@ namespace sw
         size_t                  heldBytes   = 0;
         const auto              flushWrites = [&]()
         {
-            vector<string> listBase;
+            vector<AbsolutePath> listBase;
             listBase.reserve( listPath.size() );
             for ( const string& path : listPath )
             {
-                StringBuilder<constant::buffer::kMax512> base;
-                base.appendFormat( "%#/%#.portrait", directory, makeFileStem( path ) );
-                listBase.emplace_back( base.view() );
+                listBase.push_back( directory.join( makeFileStem( path ) ).appendSuffix( ".portrait" ) );
             }
             vector<uint8>                          listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
             const PortraitStudioInternal::WriteJob job{ listCapture.data(), listBase.data() };

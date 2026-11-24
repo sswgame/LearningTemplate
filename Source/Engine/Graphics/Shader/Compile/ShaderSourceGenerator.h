@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Registry/RegistrationList.h"
 
 namespace sw
@@ -24,7 +25,7 @@ namespace sw
         /** @brief 생성기 이름입니다(등록 표의 이름 · 순서 · 로그). */
         [[nodiscard]] virtual const utf8* getName() const = 0;
         /** @brief @p contentRoot 아래 생성물을 소스 트리에 맞춥니다(바이트가 같으면 쓰지 않는다). 하나라도 실패하면 false — 쿠킹은 실패로 센다. 쓴 파일 수를 @p outWrittenCount 에 더한다. */
-        [[nodiscard]] virtual bool refreshAll( const AssetPaths& assetPaths, string_view contentRoot, uint32& outWrittenCount ) const = 0;
+        [[nodiscard]] virtual bool refreshAll( const AssetPaths& assetPaths, const AbsolutePath& contentRoot, uint32& outWrittenCount ) const = 0;
 
         /** @brief 생성기를 겁니다(정적 등록자가 부른다). 같은 이름이 이미 있으면 공용 거절 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool add( const IShaderSourceGenerator* pGenerator );
@@ -35,13 +36,13 @@ namespace sw
          * @brief 등록된 생성기를 이름 순으로 모두 돕니다(`refreshGenerators`). 개발 구성에서 등록이 0 이면 `ShaderCooker.NoSourceGenerator` 오류로 false 입니다.
          * @details 배포 구성은 생성기를 짓지 않는다 — 등록이 0 이어도 할 일이 없어 true 다.
          */
-        [[nodiscard]] static bool refreshAllRegistered( const AssetPaths& assetPaths, string_view contentRoot, uint32& outWrittenCount );
+        [[nodiscard]] static bool refreshAllRegistered( const AssetPaths& assetPaths, const AbsolutePath& contentRoot, uint32& outWrittenCount );
         /**
          * @brief @p listGenerator 를 차례로 돕니다. 비었거나(@p bRequireGenerator 일 때) 하나라도 실패하면 오류를 남기고 false 입니다(나머지는 계속 돈다).
          * @details 등록 표와 떼어 둔 본체다 — 테스트가 빈 목록 · 실패하는 생성기를 그대로 넘긴다.
          */
         [[nodiscard]] static bool refreshGenerators( const vector<const IShaderSourceGenerator*>& listGenerator, bool bRequireGenerator, const AssetPaths& assetPaths,
-                                                     string_view contentRoot, uint32& outWrittenCount );
+                                                     const AbsolutePath& contentRoot, uint32& outWrittenCount );
 
         /** @struct Registration @brief 생성기를 정적 객체로 겁니다 — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
         struct Registration final : StaticRegistrar<const IShaderSourceGenerator*>

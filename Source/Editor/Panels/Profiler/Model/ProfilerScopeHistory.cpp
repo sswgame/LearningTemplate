@@ -195,7 +195,7 @@ namespace sw::editor
         return false;
     }
 
-    bool ProfilerScopeHistory::saveToFile( string_view filePath ) const
+    bool ProfilerScopeHistory::saveToFile( const AbsolutePath& filePath ) const
     {
         string text = ProfilerScopeHistoryInternal::kCaptureHeader;
         text += "\nwindow ";
@@ -221,13 +221,13 @@ namespace sw::editor
             }
             text += "\n";
         }
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), text );
+        return FileUtil::writeTextFile( filePath, text );
     }
 
-    bool ProfilerScopeHistory::loadFromFile( string_view filePath )
+    bool ProfilerScopeHistory::loadFromFile( const AbsolutePath& filePath )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
+        if ( FileUtil::readTextFile( filePath, text ) == false )
             return false;
         const string_splitter listLine( text, '\n' );
         if ( listLine.getCount() < 3 || StringUtil::trim( listLine[0] ) != ProfilerScopeHistoryInternal::kCaptureHeader )

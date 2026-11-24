@@ -85,7 +85,7 @@ namespace sw
 
 namespace sw
 {
-    LocalDeviceKeyProvider::LocalDeviceKeyProvider( string_view keyFilePath, INetSecurityProvider* pSecurityProvider )
+    LocalDeviceKeyProvider::LocalDeviceKeyProvider( const AbsolutePath& keyFilePath, INetSecurityProvider* pSecurityProvider )
         : _keyFilePath{ keyFilePath }
         , _mutex{}
         , _pSecurityProvider{ pSecurityProvider }
@@ -102,7 +102,7 @@ namespace sw
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )
     {
         optional<Error> failure;
-        string          setAsidePath;
+        AbsolutePath    setAsidePath;
         {
             ScopedLock<mutex> lock{ _mutex };
             expected<void>    loaded = _bLoaded == SW_TRUE ? expected<void>{} : loadOrCreateKeyLocked( setAsidePath );
@@ -121,14 +121,14 @@ namespace sw
         return false;
     }
 
-    expected<void> LocalDeviceKeyProvider::loadOrCreateKeyLocked( string& outSetAsidePath )
+    expected<void> LocalDeviceKeyProvider::loadOrCreateKeyLocked( AbsolutePath& outSetAsidePath )
     {
         using Internal = LocalDeviceKeyProviderInternal;
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( _keyFilePath ) ) )
+        if ( FileUtil::isRegularFile( _keyFilePath ) )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( FileUtil::toDiskPath( _keyFilePath ), bytes ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file could not be read", _keyFilePath } ); // 잠김 · 권한 — 다음 요청이 다시 읽는다
+            if ( FileUtil::readFile( _keyFilePath, bytes ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file could not be read", _keyFilePath.str() } ); // 잠김 · 권한 — 다음 요청이 다시 읽는다
             if ( Internal::unprotectKey( bytes, _arrKey, kKeySize ) )
             {
                 Memory::wipe( bytes.data(), bytes.size() ); // DPAPI 가 없는 플랫폼에서는 파일 바이트가 곧 키다
@@ -138,29 +138,27 @@ namespace sw
             // 읽었는데 풀리지 않는다 — 0 바이트 · 쓰레기(전원이 나간 쓰기) · 다른 PC · 다른 사용자의 파일이다. 오류로 멈추면 그 사용자는 파일을 지울 때까지
             // 저장도 읽기도 못 한다. 지우지 않고 옆에 남긴 뒤 새 키를 만든다 — 다른 사용자의 파일이었으면 되돌려 놓아 옛 슬롯을 다시 푼다(유니티 PlayerPrefs 가 깨진 파일을 비우는 자리보다 보수적).
             // 앞서 남긴 것도 지우지 않는다(번호를 붙인 새 이름). 새 키는 아래 쓰기가 원래 이름에 바꿔 끼운다.
-            StringBuilder<constant::buffer::kMax512> setAsideBase;
-            setAsideBase.appendFormat( "%#%#", _keyFilePath, kUnreadableKeySuffix );
-            outSetAsidePath       = FileUtil::reserveUniquePath( FileUtil::toDiskPath( setAsideBase.view() ), "", false );
-            const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( FileUtil::toDiskPath( outSetAsidePath ), bytes.data(), bytes.size() ) );
+            outSetAsidePath       = FileUtil::reserveUniquePath( _keyFilePath.appendSuffix( kUnreadableKeySuffix ), "", false );
+            const bool bKeptAside = outSetAsidePath.empty() == false && ( bytes.empty() || FileUtil::writeFileDurable( outSetAsidePath, bytes.data(), bytes.size() ) );
             Memory::wipe( bytes.data(), bytes.size() ); // 다른 사용자의 키 파일일 수 있다
             if ( bKeptAside == false )
             {
-                outSetAsidePath.clear();
-                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file is unreadable and could not be set aside", _keyFilePath } );
+                outSetAsidePath = {};
+                return unexpected( Error{ ErrorKind::ExternalFailure, "Local store key file is unreadable and could not be set aside", _keyFilePath.str() } );
             }
         }
         if ( _pSecurityProvider == nullptr || _pSecurityProvider->fillRandomBytes( _arrKey, kKeySize ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "Could not generate a local store key (no security provider or no random bytes)" } );
         vector<uint8> bytes;
-        const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _keyFilePath ) ) &&
-                              FileUtil::writeFileDurable( FileUtil::toDiskPath( _keyFilePath ), bytes.data(), bytes.size() );
+        const bool    bWritten = Internal::protectKey( _arrKey, kKeySize, bytes ) && FileUtil::ensureParentDirectoryExists( _keyFilePath ) &&
+                              FileUtil::writeFileDurable( _keyFilePath, bytes.data(), bytes.size() );
         Memory::wipe( bytes.data(), bytes.size() ); // DPAPI 가 없는 플랫폼에서는 파일에 쓴 바이트가 곧 키다
         if ( bWritten == false )
         {
             Memory::wipe( _arrKey, sizeof( _arrKey ) ); // 쓰지 못한 키는 쓰이지 않는다 — 다음 요청이 새로 만든다
-            return unexpected( Error{ ErrorKind::ExternalFailure, "Could not write the local store key file", _keyFilePath } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "Could not write the local store key file", _keyFilePath.str() } );
         }
-        Internal::restrictToOwner( _keyFilePath );
+        Internal::restrictToOwner( _keyFilePath.str() );
         _bLoaded = SW_TRUE;
         return {};
     }

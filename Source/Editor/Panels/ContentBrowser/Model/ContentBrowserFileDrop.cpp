@@ -42,7 +42,8 @@ namespace sw::editor
         outPlan._listRejected.clear();
         for ( const ContentBrowserDroppedFile& file : listFile )
         {
-            if ( VectorUtil::contains( outPlan._listImport, file._path ) )
+            if ( VectorUtil::containsIf( outPlan._listImport, [&file]( const AbsolutePath& path )
+            { return path.str() == file._path; } ) )
                 continue; // 같은 파일을 두 번 놓았다 — 한 번만 받는다
             ContentBrowserFileDropRejection reason{ ContentBrowserFileDropRejection::NotRegularFile };
             bool                            bRejected = true;
@@ -63,7 +64,7 @@ namespace sw::editor
             if ( bRejected )
                 outPlan._listRejected.push_back( ContentBrowserRejectedFile{ file._path, reason } );
             else
-                outPlan._listImport.push_back( file._path );
+                outPlan._listImport.push_back( FileUtil::toDiskPath( file._path ) );
         }
     }
 

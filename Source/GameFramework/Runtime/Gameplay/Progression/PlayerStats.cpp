@@ -274,10 +274,10 @@ namespace sw
         return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeFile( absPath, archive.getData(), archive.getSize() );
     }
 
-    bool PlayerStats::loadFromFile( string_view path )
+    bool PlayerStats::loadFromFile( const AbsolutePath& path )
     {
         vector<uint8> bytes;
-        if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) == false || FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
+        if ( FileUtil::exists( path ) == false || FileUtil::readFile( path, bytes ) == false )
             return false;
         Archive archive( bytes.data(), bytes.size() );
         return readState( archive );

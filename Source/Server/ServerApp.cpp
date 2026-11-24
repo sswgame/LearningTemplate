@@ -540,11 +540,11 @@ namespace sw
 
     bool ServerApp::collectPreviousCrashes()
     {
-        const string crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
+        const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() || engine::areEngineServicesBound() == false )
             return true;
         CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();
-        const string        reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+        const AbsolutePath  reportsFolder = crashFolder.getParent().join( CrashReportService::kReportsFolderName );
         crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
         // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정(`ServerConfig::_crashReportConsent`)의 몫이다 — 기본은 기계 안에만(`local`).
         // 서버에는 "보낼까요?" 를 물을 사람이 없어 `ask` 는 받지 않고, 모르는 값은 오류로 기동을 멈춘다(보내지 않는 쪽으로 조용히 바꾸지 않는다).

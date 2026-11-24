@@ -39,39 +39,39 @@ namespace sw
 
 namespace sw
 {
-    bool EmitTemplateStore::loadDirectory( const string_view absDir, const string_view extension )
+    bool EmitTemplateStore::loadDirectory( const AbsolutePath& absDir, const string_view extension )
     {
         for ( string& content : _arrTemplate )
         {
             content.clear();
         }
 
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( absDir ) ) == false )
+        if ( FileUtil::isDirectory( absDir ) == false )
         {
-            SW_LOG_ERROR_ID( "EmitTemplateStore.NotDirectory", "Not a directory: %#", absDir );
+            SW_LOG_ERROR_ID( "EmitTemplateStore.NotDirectory", "Not a directory: %#", absDir.str() );
             return false;
         }
 
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( absDir ), extension, listFile, false ) == false )
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( absDir, extension, listFile, false ) == false )
         {
             // 일부 템플릿만 읽으면 빠진 템플릿의 출력이 조용히 비어 나온다 — 읽지 않는다(경로는 collectFiles 가 알린다).
-            SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplatesUnderCould", "Emit templates under '%#' could not all be listed", absDir );
+            SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplatesUnderCould", "Emit templates under '%#' could not all be listed", absDir.str() );
             return false;
         }
 
         bool arrLoaded[static_cast<size_t>( EmitTemplate::Count )] = {};
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
             // 하나라도 못 읽으면 그 템플릿의 출력이 조용히 빈다 - 읽지 않는다.
             string content;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), content ) == false )
+            if ( FileUtil::readTextFile( filePath, content ) == false )
             {
-                SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateCouldNot", "Emit template '%#' could not be read", filePath );
+                SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateCouldNot", "Emit template '%#' could not be read", filePath.str() );
                 return false;
             }
 
-            const string name  = FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) );
+            const string name  = FileUtil::removeExtension( FileUtil::getFileNamePart( filePath.str() ) );
             size_t       index = 0;
             while ( index < SW_COUNT_OF( kArrEmitTemplateName ) && name != kArrEmitTemplateName[index] )
             {
@@ -80,7 +80,7 @@ namespace sw
             // 모르는 이름은 철자가 틀린 골격이다 - 쓰이지 않고 남아 고친 줄 알게 한다.
             if ( index == SW_COUNT_OF( kArrEmitTemplateName ) )
             {
-                SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateNotKnown", "Emit template '%#' is not a known template (EmitTemplate) - rename or remove it", filePath );
+                SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateNotKnown", "Emit template '%#' is not a known template (EmitTemplate) - rename or remove it", filePath.str() );
                 return false;
             }
             _arrTemplate[index] = std::move( content );
@@ -92,13 +92,13 @@ namespace sw
         {
             if ( arrLoaded[index] )
                 continue;
-            SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateMissingUnder", "Emit template '%#%#' is missing under '%#'", kArrEmitTemplateName[index], extension, absDir );
+            SW_LOG_ERROR_ID( "EmitTemplateStore.EmitTemplateMissingUnder", "Emit template '%#%#' is missing under '%#'", kArrEmitTemplateName[index], extension, absDir.str() );
             bAllLoaded = false;
         }
         if ( bAllLoaded == false )
             return false;
 
-        SW_LOG_TRACE_ID( "EmitTemplateStore.LoadedTemplates", "Loaded %# templates from %#", static_cast<uint32>( listFile.size() ), absDir );
+        SW_LOG_TRACE_ID( "EmitTemplateStore.LoadedTemplates", "Loaded %# templates from %#", static_cast<uint32>( listFile.size() ), absDir.str() );
         return true;
     }
 

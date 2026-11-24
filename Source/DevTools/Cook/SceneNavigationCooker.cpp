@@ -85,7 +85,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
                                            uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
@@ -94,30 +94,30 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "SceneNavigationCooker.SceneNavigationCookCould", "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "SceneNavigationCooker.SceneNavigationCookCould", "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         VectorUtil::sort( listFile );
-        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         CookStats         stats;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, Internal::kSceneSuffix, true ) == false )
+            if ( StringUtil::endsWith( filePath.str(), Internal::kSceneSuffix, true ) == false )
                 continue;
-            const string normalizedFile = FileUtil::normalizeSeparators( filePath );
+            const string normalizedFile = FileUtil::normalizeSeparators( filePath.str() );
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
-            const string     outputID   = NavMeshAsset::makeCookedPath( relativePath );
-            const string     cookedPath = FileUtil::joinPath( cookedDir, outputID );
-            const CookResult result     = store.cookFile( desc, outputID, cookedPath, [&]()
-                {
+            const string       outputID   = NavMeshAsset::makeCookedPath( relativePath );
+            const AbsolutePath cookedPath = cookedDir.join( outputID );
+            const CookResult   result     = store.cookFile( desc, outputID, cookedPath, [&]()
+                  {
                 // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
                 string text;
                 if ( AssetIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
@@ -127,8 +127,7 @@ namespace sw
                     return CookStep::Failed;
                 if ( asset.getEntries().empty() )
                     return CookStep::Skipped;
-                const optional<AbsolutePath> cookedFile = FileUtil::requireAbsolutePath( cookedPath );
-                if ( cookedFile.has_value() == false || asset.saveToFile( *cookedFile ) == false )
+                if ( asset.saveToFile( cookedPath ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot4", "Navmesh cook could not write '%#'", cookedPath.c_str() );
                     return CookStep::Failed;

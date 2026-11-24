@@ -21,11 +21,11 @@ namespace sw::editor
         /** @brief 지금 상태를 BugReport 폴더에 모으고 그 폴더를 알립니다. */
         void runReportBug()
         {
-            string         directory;
+            AbsolutePath   directory;
             const bool     bCaptured     = BugReport::capture( BugReport::makeInputs( "editor" ), directory );
             EditorContext& editorContext = editor::getSubsystem<EditorContext>();
             if ( bCaptured )
-                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationKind::Success );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory.str(), NotificationKind::Success );
             else
                 editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationKind::Error );
         }

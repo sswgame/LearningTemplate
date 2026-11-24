@@ -25,16 +25,16 @@ namespace sw
         return parseDesc( assetID.view(), assetID, text, pDesc, pTypeInfo );
     }
 
-    bool ReflectedXMLFile::loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::loadDescFromDiskFileInternal( const AbsolutePath& diskPath, void* pDesc, const TypeInfo* pTypeInfo )
     {
         // 디스크 파일은 부르는 쪽이 이름(`loadDescFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         string text;
         if ( pTypeInfo != nullptr && AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_ERROR_ID( "Xml.FileNotFound", "XML load failed: %# (%#) - file not found", diskPath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR_ID( "Xml.FileNotFound", "XML load failed: %# (%#) - file not found", diskPath.str(), pTypeInfo->_name.c_str() );
             return false;
         }
-        return parseDesc( diskPath, AssetID{}, text, pDesc, pTypeInfo );
+        return parseDesc( diskPath.str(), AssetID{}, text, pDesc, pTypeInfo );
     }
 
     bool ReflectedXMLFile::parseDesc( string_view sourceName, const AssetID& assetID, const string& text, void* pDesc, const TypeInfo* pTypeInfo )
@@ -90,6 +90,6 @@ namespace sw
             return false;
         }
 
-        return ResourceComposer::saveDelta( absPath.str(), XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
+        return ResourceComposer::saveDelta( absPath, XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
     }
 } // namespace sw

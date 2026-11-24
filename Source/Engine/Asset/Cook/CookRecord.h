@@ -34,11 +34,11 @@ namespace sw
         static CookRecord make( const CookJob& job, uint64 outputHash );
 
         /** @brief 기록을 글로 씁니다. */
-        [[nodiscard]] bool write( string_view absPath ) const;
+        [[nodiscard]] bool write( const AbsolutePath& absPath ) const;
         /**
          * @brief 기록을 읽습니다. 파일이 없으면 false(조용히 — 처음 베이크하는 작업), 머리 줄이 다르거나 줄이 깨졌으면 이유를 경고하고 false 입니다.
          */
-        [[nodiscard]] static bool read( string_view absPath, CookRecord& outRecord );
+        [[nodiscard]] static bool read( const AbsolutePath& absPath, CookRecord& outRecord );
 
         /**
          * @brief 이 기록의 출력을 다시 써도 되는지 판정합니다. 입력마다 지금 내용 해시가 기록과 같고, @p desc 로 다시 구한 키가 기록의 키와 같아야 합니다.
@@ -142,11 +142,11 @@ namespace sw
          * @brief `find` 의 파일 꼴입니다 — 본문을 조각으로 흘려 @p outputPath 에 원자적으로 씁니다(부모 폴더를 만든다). 본문 해시가 맞을 때만 바꿔 끼우고 true 입니다.
          * @details 출력을 메모리로 들지 않는다(쿠킹 출력 · 큰 팩). 어긋난 항목은 @p outputPath 를 건드리지 않는다.
          */
-        [[nodiscard]] bool find( uint64 key, string_view keyDescription, string_view outputPath ) const;
+        [[nodiscard]] bool find( uint64 key, string_view keyDescription, const AbsolutePath& outputPath ) const;
         /** @brief 키의 출력을 쓰기 가능 층 모두에 씁니다. 읽기 전용 층은 건드리지 않습니다. 쓰기 가능 층 하나라도 못 쓰면 false 입니다. */
         [[nodiscard]] bool store( uint64 key, string_view keyDescription, const vector<uint8>& bytes ) const;
         /** @brief `store` 의 파일 꼴입니다 — 파일 @p sourcePath 를 조각으로 읽어 항목으로 씁니다(메모리로 들지 않는다). */
-        [[nodiscard]] bool store( uint64 key, string_view keyDescription, string_view sourcePath ) const;
+        [[nodiscard]] bool store( uint64 key, string_view keyDescription, const AbsolutePath& sourcePath ) const;
         /**
          * @brief 정리 규칙이 있는 층마다 오래 안 쓴 항목(마지막 쓰기 시각 — 찾기 히트가 갱신한다)을 지우고, 합계가 상한을 넘으면 오래된 것부터 더 지웁니다.
          * @details 쿠킹 시작에 한 번 부른다. 다른 프로세스가 읽는 중이라 못 지운 항목은 건너뛴다(다음 정리가 지운다). 지운 항목 찾기는 미스일 뿐이다.

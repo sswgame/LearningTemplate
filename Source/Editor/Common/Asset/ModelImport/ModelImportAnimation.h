@@ -95,6 +95,6 @@ namespace sw::editor
         [[nodiscard]] static bool readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve, float32& outDuration );
 
         /** @brief 부가 데이터(`<y>.clips.json`)를 읽습니다. 파일이 없으면 빈 맵으로 true 를 반환하고, 모르는 키나 잘못된 값이 있으면 false 를 반환합니다. */
-        [[nodiscard]] static bool readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra );
+        [[nodiscard]] static bool readClipData( const AbsolutePath& sourcePath, unordered_map<string, ClipExtra>& outMapExtra );
     };
 } // namespace sw::editor

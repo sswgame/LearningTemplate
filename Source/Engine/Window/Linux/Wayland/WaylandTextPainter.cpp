@@ -57,11 +57,11 @@ namespace sw
     {
         for ( const string_view fileName : listFileName )
         {
-            const string path = _systemFontLocator.findSystemFontFile( fileName );
+            const AbsolutePath path = _systemFontLocator.findSystemFontFile( fileName );
             if ( path.empty() )
                 continue;
             vector<uint8> bytes;
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false )
+            if ( FileUtil::readFile( path, bytes ) == false )
                 continue;
             const FontFaceID face = _pRasterizer->loadFace( std::move( bytes ), 0, fileName );
             if ( face != kInvalidFontFaceID )

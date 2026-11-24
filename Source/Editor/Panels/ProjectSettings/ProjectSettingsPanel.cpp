@@ -139,7 +139,7 @@ namespace sw::editor
         return bAllSaved;
     }
 
-    void ProjectSettingsPanel::collectFilesToSave( vector<string>& outListPath ) const
+    void ProjectSettingsPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         for ( const unique_ptr<Page>& pPage : _listPage )
         {
@@ -148,32 +148,32 @@ namespace sw::editor
         }
     }
 
-    ProjectSettingsPage* ProjectSettingsPanel::findPage( string_view absolutePath ) const
+    ProjectSettingsPage* ProjectSettingsPanel::findPage( const AbsolutePath& absolutePath ) const
     {
         for ( const unique_ptr<Page>& pPage : _listPage )
         {
-            if ( FileUtil::isSameDiskPath( pPage->_absolutePath, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( pPage->_absolutePath.str(), absolutePath.str() ) )
                 return pPage.get();
         }
         return nullptr;
     }
 
-    expected<string> ProjectSettingsPanel::tryMakeFileText( string_view absolutePath ) const
+    expected<string> ProjectSettingsPanel::tryMakeFileText( const AbsolutePath& absolutePath ) const
     {
         const Page* pPage = findPage( absolutePath );
         if ( pPage == nullptr )
-            return unexpected( Error{ ErrorKind::NotFound, "no settings page saves this file", absolutePath } );
+            return unexpected( Error{ ErrorKind::NotFound, "no settings page saves this file", absolutePath.str() } );
         return pPage->tryMakeText();
     }
 
-    bool ProjectSettingsPanel::isEditingFile( string_view absolutePath )
+    bool ProjectSettingsPanel::isEditingFile( const AbsolutePath& absolutePath )
     {
         if ( _bCatalogLoaded == false )
             reloadCatalog(); // 복원이 이 창을 막 열었다 — 목록은 그리기가 처음 만든다
         return findPage( absolutePath ) != nullptr;
     }
 
-    bool ProjectSettingsPanel::applyFileText( string_view absolutePath, const string& text )
+    bool ProjectSettingsPanel::applyFileText( const AbsolutePath& absolutePath, const string& text )
     {
         Page* pPage = findPage( absolutePath );
         if ( pPage == nullptr || pPage->restoreText( text ) == false )

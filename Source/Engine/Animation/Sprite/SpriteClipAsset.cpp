@@ -47,7 +47,7 @@ namespace sw
         return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool SpriteClipAsset::loadFromDiskFile( string_view diskPath )
+    bool SpriteClipAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         clear();
         if ( diskPath.empty() )
@@ -56,10 +56,10 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath );
+            SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite2", "Could not read sprite clip file '%#'", diskPath.str() );
             return false;
         }
-        return loadFromXMLText( text, diskPath );
+        return loadFromXMLText( text, diskPath.str() );
     }
 
     bool SpriteClipAsset::loadFromXMLText( const string& text, string_view sourceLabel )
@@ -80,7 +80,7 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
     bool SpriteClipAsset::loadFromXMLText( string_view xml )

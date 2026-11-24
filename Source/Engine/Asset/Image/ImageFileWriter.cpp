@@ -51,7 +51,7 @@ namespace sw
 
 namespace sw
 {
-    bool ImageFileWriter::writeDDSRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+    bool ImageFileWriter::writeDDSRGBA8( const AbsolutePath& path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
     {
         using Internal = ImageFileWriterInternal;
         if ( Internal::isSizeValid( rgbaBytes, width, height ) == false )
@@ -60,7 +60,7 @@ namespace sw
         return writeDDS( path, payload, width, height, 1, Internal::kDXGIR8G8B8A8Unorm, width * 4u );
     }
 
-    bool ImageFileWriter::writeDDS( string_view path, const vector<uint8>& payload, uint32 width, uint32 height, uint32 mipCount, uint32 dxgiFormat, uint32 rowBytes )
+    bool ImageFileWriter::writeDDS( const AbsolutePath& path, const vector<uint8>& payload, uint32 width, uint32 height, uint32 mipCount, uint32 dxgiFormat, uint32 rowBytes )
     {
         using Internal = ImageFileWriterInternal;
         vector<uint8> bytes;
@@ -95,9 +95,9 @@ namespace sw
         LittleEndianUtil::appendUint32( bytes, 1 ); // 배열 크기
         LittleEndianUtil::appendUint32( bytes, 0 ); // misc2
         bytes.insert( bytes.end(), payload.begin(), payload.end() );
-        if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWriteDDS", "Failed to write DDS '%#'", string( path ).c_str() );
+            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWriteDDS", "Failed to write DDS '%#'", path.c_str() );
             return false;
         }
         return true;
@@ -148,15 +148,15 @@ namespace sw
         Internal::appendChunk( outBytes, "IEND", vector<uint8>{} );
     }
 
-    bool ImageFileWriter::writePNGRGBA8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+    bool ImageFileWriter::writePNGRGBA8( const AbsolutePath& path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
     {
         vector<uint8> bytes;
         encodePNGRGBA8( rgbaBytes, width, height, bytes );
         if ( bytes.empty() )
             return false;
-        if ( FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {
-            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWritePNG", "Failed to write PNG '%#'", string( path ).c_str() );
+            SW_LOG_ERROR_ID( "ImageFileWriter.FailedWritePNG", "Failed to write PNG '%#'", path.c_str() );
             return false;
         }
         return true;

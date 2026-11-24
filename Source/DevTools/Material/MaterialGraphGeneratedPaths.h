@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -46,7 +47,7 @@ namespace sw
          * @brief @p contentRoot 아래 모든 그래프를 생성물로 맞춥니다. 하위 그래프가 바뀌면 쓰는 쪽도 달라지므로 늘 전부 봅니다(그래프 수가 적고 바뀌지 않으면 쓰지 않는다).
          * @return 하나라도 실패하면 false 입니다(나머지는 계속 본다). 쿠킹은 이것을 실패로 센다.
          */
-        [[nodiscard]] static bool refreshAll( const AssetPaths& assetPaths, string_view contentRoot, uint32* pOutWrittenCount );
+        [[nodiscard]] static bool refreshAll( const AssetPaths& assetPaths, const AbsolutePath& contentRoot, uint32* pOutWrittenCount );
     };
 
 } // namespace sw

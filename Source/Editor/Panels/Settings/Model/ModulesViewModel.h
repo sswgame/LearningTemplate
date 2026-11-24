@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 
@@ -39,11 +40,11 @@ namespace sw::editor
      * @class ModuleCatalogLoadJob
      * @brief 카탈로그 폴더를 워커에서 읽습니다 — 매니페스트는 모듈마다 파일 하나(100 개 넘음)라 키트가 늘수록 첫 그리기가 느려졌다.
      */
-    class ModuleCatalogLoadJob final : public EditorBackgroundTask<string, ModuleCatalogSnapshot>
+    class ModuleCatalogLoadJob final : public EditorBackgroundTask<AbsolutePath, ModuleCatalogSnapshot>
     {
     public:
         /** @brief 워커에 폴더 @p directory 를 읽으라고 요청합니다. */
-        void request( string_view directory );
+        void request( const AbsolutePath& directory );
 
     private:
         static void runJob( const TaskArgs& args );
@@ -71,7 +72,7 @@ namespace sw::editor
         /** @brief 카탈로그를 한 번 읽었으면 true 입니다(폴더가 비었어도). */
         bool isReady() const { return _bLoaded == SW_TRUE; }
         /** @brief 카탈로그 폴더 @p directory 를 이 자리에서 읽고 받아들입니다(테스트는 빈 폴더에 매니페스트를 써서 넘긴다). */
-        void                    reloadFrom( string_view directory );
+        void                    reloadFrom( const AbsolutePath& directory );
         const string&           getLoadError() const { return _loadError; }
         const ModuleCatalog&    getCatalog() const { return _catalog; }
         const ModuleResolution& getResolution() const { return _resolution; }
@@ -110,7 +111,7 @@ namespace sw::editor
         /** @brief 미리보기 중인 바꿈을 프로젝트 매니페스트에 씁니다. 성공하면 "다시 빌드" 띠가 켜진다. 성공 여부와 관계없이 미리보기를 닫는다. */
         void applyPending();
         /** @brief `applyPending` 과 같되 프로젝트 매니페스트 경로 @p path 를 받습니다(테스트가 소스 트리의 매니페스트를 고치지 않게 한다). */
-        void applyPendingTo( const string& path );
+        void applyPendingTo( const AbsolutePath& path );
         /** @brief 미리보기를 닫습니다(바꾸지 않는다). */
         void cancelPending() { _pendingModule.clear(); }
 
@@ -124,7 +125,7 @@ namespace sw::editor
 
     private:
         void               applySnapshot( ModuleCatalogSnapshot&& snapshot );
-        [[nodiscard]] bool writeProjectOverride( const string& path );
+        [[nodiscard]] bool writeProjectOverride( const AbsolutePath& path );
 
     private:
         ModuleCatalogLoadJob        _loadJob;

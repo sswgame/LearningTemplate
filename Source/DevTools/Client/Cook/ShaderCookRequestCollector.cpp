@@ -192,7 +192,7 @@ namespace sw
             /** @brief 훑은 파일 @p absPath 의 에셋 id(리소스 루트 `Content/` 기준 정규화 경로 — 팩 고르기의 id 와 같은 규칙)입니다. 훑는 루트가 도메인 하나여도 같다. 출처 칸에 든다. */
             static string makeOriginID( const string& absPath )
             {
-                const string resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                const string resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath().str();
                 string       relativePath;
                 if ( FileUtil::tryMakePathUnderRoot( resourceRoot, absPath, relativePath ) == false )
                 {
@@ -263,20 +263,20 @@ namespace sw
             }
 
             /** @brief 1) 렌더 파이프라인 XML(`pipeline` 폴더)의 패스마다 셰이더 요청을 더하고, 씬 메시 패스는 머티리얼과 곱할 목록에 넣습니다. */
-            [[nodiscard]] static bool collectPipelinePassRequests( string_view rootDir, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
+            [[nodiscard]] static bool collectPipelinePassRequests( const AbsolutePath& rootDir, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
                                                                    RequestList& outListRequest )
             {
-                vector<string> listXMLFile;
+                vector<AbsolutePath> listXMLFile;
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 셰이더를 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, ".xml", listXMLFile ) == false )
+                if ( FileUtil::isDirectory( rootDir ) && AssetPaths::collectContentFiles( rootDir, ".xml", listXMLFile ) == false )
                     return false;
-                for ( const string& xmlPath : listXMLFile )
+                for ( const AbsolutePath& xmlPath : listXMLFile )
                 {
-                    const string normXML = FileUtil::normalizeSeparators( xmlPath );
+                    const string normXML = FileUtil::normalizeSeparators( xmlPath.str() );
                     if ( normXML.find( "pipeline/" ) == string::npos && normXML.find( "pipeline.xml" ) == string::npos )
                         continue;
 
-                    const vector<string> pipelineOrigin{ makeOriginID( xmlPath ) };
+                    const vector<string> pipelineOrigin{ makeOriginID( xmlPath.str() ) };
                     RenderPipelineAsset  pipelineResource;
                     // 디스크로 훑은 소스 파일이다 — 디스크 입구로 읽는다(리소스 입구는 OS 경로를 받지 않는다).
                     if ( pipelineResource.loadFromDiskFile( xmlPath ) == false )
@@ -438,14 +438,14 @@ namespace sw
             }
 
             /** @brief 4) 머티리얼 에셋(.material)마다 런타임과 같은 define 목록으로 요청을 더하고, 패스와 곱할 머티리얼 변형 목록을 만듭니다. */
-            [[nodiscard]] static bool collectMaterialRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, RequestList& outListRequest )
+            [[nodiscard]] static bool collectMaterialRequests( const AbsolutePath& rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, RequestList& outListRequest )
             {
-                vector<string> listMaterialFile;
+                vector<AbsolutePath> listMaterialFile;
                 // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 머티리얼 변형을 빠뜨린 채 쿠킹하므로 실패다(경로는 collectContentFiles 가 알린다 — 작업 도메인 `scratch` 는 콘텐츠가 아니라 뺀다).
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rootDir ) ) && AssetPaths::collectContentFiles( rootDir, ".material", listMaterialFile ) == false )
+                if ( FileUtil::isDirectory( rootDir ) && AssetPaths::collectContentFiles( rootDir, ".material", listMaterialFile ) == false )
                     return false;
                 bool bAllRead = true;
-                for ( const string& matPath : listMaterialFile )
+                for ( const AbsolutePath& matPath : listMaterialFile )
                 {
                     // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 주의: XML 의 `_alwaysDefines` 만
                     // 손으로 긁으면 런타임이 얹는 품질 · SHADER_LOD · usage · 정적 스위치 · 멀티 컴파일이 빠져,
@@ -454,7 +454,7 @@ namespace sw
                     if ( material->loadFromDiskFile( matPath ) == false )
                     {
                         // 못 읽은 머티리얼(미지원 조합 포함)을 건너뛰면 그 변형이 빠진 채 쿠킹이 성공한다 — 배포에서만 물체가 사라진다. 남은 파일도 읽어 오류를 한 번에 모은다.
-                        SW_LOG_ERROR_ID( "ShaderCooker.MaterialUnreadable", "Shader cook: material '%#' could not be read - the cook fails instead of dropping its variants", matPath );
+                        SW_LOG_ERROR_ID( "ShaderCooker.MaterialUnreadable", "Shader cook: material '%#' could not be read - the cook fails instead of dropping its variants", matPath.str() );
                         bAllRead = false;
                         continue;
                     }
@@ -464,7 +464,7 @@ namespace sw
                     // 에셋 상태 + 런타임에 바꿀 수 있는 정적 스위치의 조합(collectMaterialRuntimeDefines).
                     vector<vector<string>> listRuntimeDefine;
                     collectMaterialRuntimeDefines( *material, listRuntimeDefine );
-                    appendMaterialVariants( *material, listRuntimeDefine, makeOriginID( matPath ), outListMaterialVariant, outListRequest );
+                    appendMaterialVariants( *material, listRuntimeDefine, makeOriginID( matPath.str() ), outListMaterialVariant, outListRequest );
                 }
                 return bAllRead;
             }
@@ -614,7 +614,7 @@ namespace sw
                 }
             }
 
-            [[nodiscard]] static bool collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
+            [[nodiscard]] static bool collectAllRequests( const AbsolutePath& rootDir, vector<ShaderCookRequest>& outListRequest )
             {
                 // 엔진 셰이더 경로는 데이터(enginedefaultassets.xml)에만 있다 — 못 읽으면 쿠킹 목록을 만들 수 없다(이유는 loadFromAsset 가 남긴다).
                 const unique_ptr<EngineDefaultAssets> loadedAssets = EngineDefaultAssets::load();
@@ -646,7 +646,7 @@ namespace sw
 
 namespace sw
 {
-    bool ShaderCookRequestCollector::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
+    bool ShaderCookRequestCollector::collectAllRequests( const AbsolutePath& rootDir, vector<ShaderCookRequest>& outListRequest )
     {
         return ShaderCookRequestCollectorInternal::collectAllRequests( rootDir, outListRequest );
     }

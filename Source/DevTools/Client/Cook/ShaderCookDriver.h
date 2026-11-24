@@ -13,6 +13,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/Cook/IShaderCookService.h"
 
@@ -82,10 +83,10 @@ namespace sw
          *              채워진 스테이징이면 실패다(쿠킹본을 표본으로 덮지 않는다)
          * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
-        static ShaderCookSummary cookAllShaders( string_view        cookedDir,
-                                                 string_view        resourceRoot = {},
-                                                 ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
-                                                 ShaderCookScope    scope        = ShaderCookScope::All );
+        static ShaderCookSummary cookAllShaders( const AbsolutePath& cookedDir,
+                                                 const AbsolutePath& resourceRoot = {},
+                                                 ShaderTargetFormat  targetFormat = ShaderTargetFormat::Count,
+                                                 ShaderCookScope     scope        = ShaderCookScope::All );
 
         /** @brief 요청 @p listRequest 가 쿠킹하는 도메인(`engine` · `game/<팩>`)을 처음 나온 순서로 모읍니다. `shaders` 폴더 칸이 없는 요청은 쿠킹도 실패하므로 여기서는 건너뜁니다. */
         static void collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain );
@@ -93,7 +94,7 @@ namespace sw
          * @brief 이 리소스 트리의 요청이 굽는 도메인마다 쿠킹 스테이징(@p cookedDir)의 @p targetFormat 바이너리가 소스와 맞는지 판정해 문제를 @p outListProblem 에 적습니다.
          * @details 굽는 것(`collectAllRequests`)과 판정하는 것이 같은 목록을 본다 — 설정의 도메인을 따로 훑으면 굽지 않는 폴더(에디터가 실행 때 컴파일하는 `editor/shaders`)를 "쿠킹되지 않음" 으로 잡는다.
          */
-        static void verifyCookedShaders( string_view cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem );
+        static void verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem );
         /**
          * @brief 이 리소스 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)와 그 출처 묶음을 모읍니다.
          * @details 팩 쿠커가 "닿은 출처가 요청했는데 팩에서 버리는" 바이너리를 경고로 가른다(`PackCookParams::_mapRequestedShaderBinary`). 요청을 모으지 못하면 false 입니다.
@@ -111,7 +112,7 @@ namespace sw
          *          같은 바이너리 파일을 만드는 요청이 여럿이면 그 요청들은 한 작업 사슬로 순서대로 돈다(두 스레드가 같은 파일을 쓰지 않는다).
          *          엔진 서비스가 묶이지 않았거나 워커가 없으면 이 스레드가 요청 순서대로 모두 돈다.
          */
-        static ShaderCookSummary cookRequests( string_view                      cookedDir,
+        static ShaderCookSummary cookRequests( const AbsolutePath&              cookedDir,
                                                const vector<ShaderCookRequest>& listRequest,
                                                ShaderTargetFormat               targetFormat = ShaderTargetFormat::Count );
     };

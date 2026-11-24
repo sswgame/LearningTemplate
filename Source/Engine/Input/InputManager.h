@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -366,7 +367,7 @@ namespace sw
          * @brief @p filePath(.swreplay)를 세션 입력 기록으로 읽어 배타 가상 입력으로 붙입니다. 끝 프레임을 낸 다음 `beginFrame` 이 스스로 뗍니다.
          * @return 읽지 못하면 false 이고 붙이지 않습니다(있던 기록은 그대로).
          */
-        [[nodiscard]] bool playSessionRecording( string_view filePath );
+        [[nodiscard]] bool playSessionRecording( const AbsolutePath& filePath );
         /** @brief 세션 입력 기록입니다(읽기 전용). */
         const InputReplay& getSessionRecording() const { return _sessionRecording; }
 

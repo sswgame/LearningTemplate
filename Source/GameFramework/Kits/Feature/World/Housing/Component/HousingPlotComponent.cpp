@@ -222,7 +222,7 @@ namespace sw
             /** @brief `housing.save <plot> <file>` — 부지 상태를 절대 경로(시나리오의 `{out}/…`)에 쓴다. */
             static bool runSave( const vector<string>& listArgument, string& outReply )
             {
-                string path;
+                AbsolutePath path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 HousingPlotComponent* pPlot = findPlot( listArgument[0] );
@@ -237,7 +237,7 @@ namespace sw
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax512> replyBuilder;
-                replyBuilder.appendFormat( "housing: saved %#", path );
+                replyBuilder.appendFormat( "housing: saved %#", path.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -245,7 +245,7 @@ namespace sw
             /** @brief `housing.load <plot> <file>` — 부지 상태를 바꾸고 뷰를 다시 세운다. */
             static bool runLoad( const vector<string>& listArgument, string& outReply )
             {
-                string path;
+                AbsolutePath path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 HousingPlotComponent* pPlot = findPlot( listArgument[0] );
@@ -260,7 +260,7 @@ namespace sw
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax512> replyBuilder;
-                replyBuilder.appendFormat( "housing: loaded %#", path );
+                replyBuilder.appendFormat( "housing: loaded %#", path.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -514,17 +514,17 @@ namespace sw
             SW_LOG_ERROR_ID( "HousingPlot.StateNotRestored", "Housing plot '%#': the saved state could not be read - the plot keeps its current layout", _settings._plotID.c_str() );
     }
 
-    bool HousingPlotComponent::saveToFile( string_view absolutePath ) const
+    bool HousingPlotComponent::saveToFile( const AbsolutePath& absolutePath ) const
     {
         Archive archive;
         writeState( archive );
-        if ( FileUtil::writeFile( FileUtil::toDiskPath( absolutePath ), archive.getData(), archive.getSize() ) )
+        if ( FileUtil::writeFile( absolutePath, archive.getData(), archive.getSize() ) )
             return true;
-        SW_LOG_ERROR_ID( "HousingPlot.SaveWriteFailed", "Housing plot '%#': cannot write '%#'", _settings._plotID.c_str(), absolutePath );
+        SW_LOG_ERROR_ID( "HousingPlot.SaveWriteFailed", "Housing plot '%#': cannot write '%#'", _settings._plotID.c_str(), absolutePath.str() );
         return false;
     }
 
-    bool HousingPlotComponent::loadFromFile( string_view absolutePath )
+    bool HousingPlotComponent::loadFromFile( const AbsolutePath& absolutePath )
     {
         if ( _netRole == HousingNetRole::Client )
         {
@@ -532,9 +532,9 @@ namespace sw
             return false;
         }
         vector<uint8> bytes;
-        if ( FileUtil::readFile( FileUtil::toDiskPath( absolutePath ), bytes ) == false )
+        if ( FileUtil::readFile( absolutePath, bytes ) == false )
         {
-            SW_LOG_ERROR_ID( "HousingPlot.LoadReadFailed", "Housing plot '%#': cannot read '%#'", _settings._plotID.c_str(), absolutePath );
+            SW_LOG_ERROR_ID( "HousingPlot.LoadReadFailed", "Housing plot '%#': cannot read '%#'", _settings._plotID.c_str(), absolutePath.str() );
             return false;
         }
         Archive archive( bytes.data(), bytes.size() );

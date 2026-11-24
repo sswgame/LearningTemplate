@@ -709,24 +709,22 @@ namespace sw
         } ) );
     }
 
-    BinaryExactVersionResult BinarySerializer::deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
-                                                                        size_t dataSize, uint32& outReadVersion, const SerializeContext& context )
+    BinaryExactVersionRead BinarySerializer::deserializeExactVersion( uint32 expectedVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData,
+                                                                      size_t dataSize, const SerializeContext& context )
     {
-        outReadVersion           = 0;
         const bool bInvalidInput = pInstance == nullptr || pData == nullptr;
         if ( bInvalidInput )
-            return BinaryExactVersionResult::Unreadable;
+            return {};
         ByteReader reader( pData, dataSize );
-        const auto loadedReadVersion = reader.readPod<uint32>();
+        const auto readVersion = reader.readPod<uint32>();
         if ( reader.hasOverflowed() )
-            return BinaryExactVersionResult::Unreadable;
-        outReadVersion = loadedReadVersion;
-        if ( outReadVersion != expectedVersion )
-            return BinaryExactVersionResult::VersionMismatch;
+            return {};
+        if ( readVersion != expectedVersion )
+            return { BinaryExactVersionResult::VersionMismatch, readVersion };
         const size_t bodyOffset = reader.getOffset();
         if ( deserialize( pInstance, typeInfo, pData + bodyOffset, dataSize - bodyOffset, context ) == false )
-            return BinaryExactVersionResult::Unreadable;
-        return BinaryExactVersionResult::Read;
+            return { BinaryExactVersionResult::Unreadable, readVersion };
+        return { BinaryExactVersionResult::Read, readVersion };
     }
 
     bool BinarySerializer::serializeCompressed( const void*             pInstance,

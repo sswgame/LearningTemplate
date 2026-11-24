@@ -59,7 +59,7 @@ namespace sw::editor
     }
 
 #if !defined( SW_SHIPPING )
-    string ProfilerViewModel::takeMergedNetPlayTrace()
+    AbsolutePath ProfilerViewModel::takeMergedNetPlayTrace()
     {
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>().takeUnopenedMergedTrace();
     }

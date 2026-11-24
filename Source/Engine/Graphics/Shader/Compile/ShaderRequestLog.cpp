@@ -172,22 +172,22 @@ namespace sw
         return listDesc;
     }
 
-    expected<ShaderRequestLog> ShaderRequestLog::readFolder( string_view folder )
+    expected<ShaderRequestLog> ShaderRequestLog::readFolder( const AbsolutePath& folder )
     {
         ShaderRequestLog requestLog;
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false )
+        if ( FileUtil::isDirectory( folder ) == false )
             return requestLog; // 기록한 실행이 아직 없다
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), kFileExtension, listFile, false ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the shader request logs", folder } );
-        for ( const string& path : listFile )
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( folder, kFileExtension, listFile, false ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the shader request logs", folder.str() } );
+        for ( const AbsolutePath& path : listFile )
         {
             string text;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a shader request log", path } );
+            if ( FileUtil::readTextFile( path, text ) == false )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a shader request log", path.str() } );
             expected<void> merged = requestLog.mergeText( text );
             if ( merged.has_value() == false )
-                return unexpected( merged.error().prependDetail( ": " ).prependDetail( path ) );
+                return unexpected( merged.error().prependDetail( ": " ).prependDetail( path.str() ) );
         }
         return requestLog;
     }
@@ -243,7 +243,7 @@ namespace sw
         return summary;
     }
 
-    bool ShaderRequestLog::warmFromFolder( string_view folder )
+    bool ShaderRequestLog::warmFromFolder( const AbsolutePath& folder )
     {
         const expected<ShaderRequestLog> requestLog = readFolder( folder );
         if ( requestLog.has_value() == false )
@@ -253,11 +253,11 @@ namespace sw
         }
         if ( requestLog->size() == 0 )
         {
-            SW_LOG_INFO_ID( "ShaderRequestLog.NothingToWarm", "No shader request log under '%#' yet - nothing to warm", folder );
+            SW_LOG_INFO_ID( "ShaderRequestLog.NothingToWarm", "No shader request log under '%#' yet - nothing to warm", folder.str() );
             return true;
         }
         const ShaderWarmSummary summary = requestLog->compileAll( ShaderEnginePolicy::capture() );
-        SW_LOG_INFO_ID( "ShaderRequestLog.Warmed", "Shader warm-up from '%#': %# request(s), %# skipped (source gone), %# failed", folder, summary._requestCount, summary._missingSourceCount,
+        SW_LOG_INFO_ID( "ShaderRequestLog.Warmed", "Shader warm-up from '%#': %# request(s), %# skipped (source gone), %# failed", folder.str(), summary._requestCount, summary._missingSourceCount,
                         summary._failedCount );
         return summary._failedCount == 0;
     }

@@ -3,6 +3,8 @@
  * @brief 이름 붙은 .tpl 골격을 로드하고 $VAR / ${VAR} 자리 표시자를 확장합니다.
  */
 #pragma once
+#include "Core/Path/AbsolutePath.h"
+
 #include "Engine/EngineMinimal.h"
 
 namespace sw
@@ -61,7 +63,7 @@ namespace sw
          * @brief 절대 경로 디렉터리에서 골격을 모두 로드합니다. 파일 이름(확장자 뺀 것)이 골격 이름입니다.
          * @return 폴더를 못 훑거나, 파일 하나라도 못 읽거나, `EmitTemplate` 의 골격이 하나라도 없거나, 모르는 이름의 파일이 있으면 이유를 알리고 false
          */
-        [[nodiscard]] bool loadDirectory( const string_view absDir, const string_view extension );
+        [[nodiscard]] bool loadDirectory( const AbsolutePath& absDir, const string_view extension );
 
         /** @brief 골격을 확장합니다. 모르는 변수는 빈 문자열입니다. */
         string render( EmitTemplate kind, TemplateVars vars ) const;

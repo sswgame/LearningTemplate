@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -51,9 +52,9 @@ namespace sw
     /** @brief 섀도 복사본 하나를 쓰는 데 필요한 입력입니다(`ModuleShadowCopy::writeShadowCopy`). */
     struct ShadowCopyParams
     {
-        string_view _moduleName;
-        string_view _originalModulePath;
-        bool        _bReplacingLoadedLibrary{ false }; ///< 이미 올라온 라이브러리를 바꾸는 리로드다(거절 로그의 안내 문구만 바뀐다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string_view  _moduleName;
+        AbsolutePath _originalModulePath;
+        bool         _bReplacingLoadedLibrary{ false }; ///< 이미 올라온 라이브러리를 바꾸는 리로드다(거절 로그의 안내 문구만 바뀐다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /** @brief 이 모듈이 의존하는 모듈 가운데 이 매니저가 올린 것입니다. 복사본의 import · NEEDED 를 그 의존의 지금 이름으로 바꿉니다. */
         vector<ShadowCopyModuleLibrary> _listDependencyLibrary;
         /** @brief 이 매니저에 등록된 모든 모듈입니다(자기 포함). Windows 에서 의존 목록에 없이 등록된 모듈을 import 하는지 봅니다. */
@@ -73,7 +74,7 @@ namespace sw
     struct ModuleShadowCopy
     {
         /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
-        [[nodiscard]] static bool readModuleFile( string_view path, vector<uint8>& outBytes );
+        [[nodiscard]] static bool readModuleFile( const AbsolutePath& path, vector<uint8>& outBytes );
 
         /**
          * @brief 모듈 라이브러리 바이트 @p bytes 에 지연 import 가 있으면 원인을 남기고 true 를 반환합니다 — 그런 라이브러리는 올리지 않습니다.
@@ -91,12 +92,12 @@ namespace sw
          *         실패하면 쓰다 만 복사본을 지웁니다.
          * @details 로드하기 **전에** 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
          */
-        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath );
+        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, AbsolutePath& outShadowPath );
 
         /**
          * @brief 섀도 복사본과 그 디버그 심볼을 지웁니다(Windows 는 비었으면 복사본 폴더까지). 경로가 비면 아무것도 하지 않습니다.
          * @details 아직 매핑된 복사본은 지금 지울 수 없다. 남은 것은 종료의 `ShadowCopyName::removeCopies`, 그래도 남으면 실행 뿌리째 주인 정리가 거둔다.
          */
-        static void removeArtifacts( string_view shadowPath );
+        static void removeArtifacts( const AbsolutePath& shadowPath );
     };
 } // namespace sw

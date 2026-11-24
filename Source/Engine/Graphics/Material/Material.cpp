@@ -1092,7 +1092,7 @@ namespace sw
         return loadComposed( text, assetID.view(), ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
-    bool Material::loadFromDiskFile( string_view diskPath )
+    bool Material::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         XMLDocument doc;
         if ( doc.loadFromFile( diskPath ) == false )
@@ -1108,7 +1108,7 @@ namespace sw
         XMLDocument fullDoc;
         if ( doc.parse( saveToString() ) == false || fullDoc.parse( saveFullToString() ) == false )
             return false;
-        return ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
+        return ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
     }
 
     string Material::saveToString() const

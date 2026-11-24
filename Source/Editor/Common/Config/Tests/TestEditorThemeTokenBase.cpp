@@ -23,12 +23,12 @@ namespace
             "_metric": { "Typography.FontSize": 14, "Typography.IconScale": 1, "Layout.Density": 1, "Spacing.Gap": 4 }
         })";
 
-        [[nodiscard]] static string writeTheme( string_view name, string_view text )
+        [[nodiscard]] static AbsolutePath writeTheme( string_view name, string_view text )
         {
             fixed_string<constant::buffer::kMax256> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#%#", name, EditorThemeTokens::kExtension );
             const AbsolutePath path = test::makeScratchPath( fileName );
-            return FileUtil::writeTextFile( path, text ) ? path.str() : string{};
+            return FileUtil::writeTextFile( path, text ) ? path : AbsolutePath{};
         }
     };
     using Util = EditorThemeTokenBaseTestUtil;
@@ -38,7 +38,7 @@ namespace
 SW_TEST_CASE( EditorThemeTokenBaseTest, ChildOverridesOnlyWrittenKeys )
 {
     SW_REQUIRE_FALSE( Util::writeTheme( "parentset", Util::kParent ).empty() );
-    const string childPath = Util::writeTheme( "childset", R"({
+    const AbsolutePath childPath = Util::writeTheme( "childset", R"({
         "_name": "childset", "_displayName": "Child", "_base": "parentset",
         "_color": { "Base.Back": "#102030" },
         "_metric": { "Spacing.Gap": 8 }
@@ -57,7 +57,7 @@ SW_TEST_CASE( EditorThemeTokenBaseTest, ChildOverridesOnlyWrittenKeys )
     SW_EXPECT_NEAR( 14.0f, *pFontSize, 0.0f );
 
     // 키 묶음은 부모와 같다 — 벌끼리의 키 대조가 그대로 돈다.
-    const expected<EditorThemeConfig> parentConfig = EditorThemeTokens::loadThemeFile( test::makeScratchPath( "parentset.tokens.json" ).str() );
+    const expected<EditorThemeConfig> parentConfig = EditorThemeTokens::loadThemeFile( test::makeScratchPath( "parentset.tokens.json" ) );
     SW_REQUIRE_TRUE( parentConfig.has_value() );
     string mismatchKey;
     SW_EXPECT_FALSE( EditorThemeTokens::findKeyMismatch( *parentConfig, config, mismatchKey ) );
@@ -66,14 +66,14 @@ SW_TEST_CASE( EditorThemeTokenBaseTest, ChildOverridesOnlyWrittenKeys )
 /** @brief [EditorThemeTokenBaseTest] 없는 부모와 순환은 읽기 실패다 — 자식 칸만으로 읽지 않는다 */
 SW_TEST_CASE( EditorThemeTokenBaseTest, MissingParentAndCycleFail )
 {
-    const string orphanPath = Util::writeTheme( "orphanset", R"({ "_name": "orphanset", "_base": "nosuchset", "_color": { "Base.Text": "#FFFFFF" }, "_metric": { "Spacing.Gap": 8 } })" );
+    const AbsolutePath orphanPath = Util::writeTheme( "orphanset", R"({ "_name": "orphanset", "_base": "nosuchset", "_color": { "Base.Text": "#FFFFFF" }, "_metric": { "Spacing.Gap": 8 } })" );
     SW_REQUIRE_FALSE( orphanPath.empty() );
     const expected<EditorThemeConfig> orphan = EditorThemeTokens::loadThemeFile( orphanPath );
     SW_REQUIRE_FALSE( orphan.has_value() );
     SW_EXPECT_TRUE( orphan.error().message().find( "file not found" ) != string_view::npos );
 
     SW_REQUIRE_FALSE( Util::writeTheme( "cycleb", R"({ "_name": "cycleb", "_base": "cyclea" })" ).empty() );
-    const string cyclePath = Util::writeTheme( "cyclea", R"({ "_name": "cyclea", "_base": "cycleb" })" );
+    const AbsolutePath cyclePath = Util::writeTheme( "cyclea", R"({ "_name": "cyclea", "_base": "cycleb" })" );
     SW_REQUIRE_FALSE( cyclePath.empty() );
     const expected<EditorThemeConfig> cycle = EditorThemeTokens::loadThemeFile( cyclePath );
     SW_REQUIRE_FALSE( cycle.has_value() );

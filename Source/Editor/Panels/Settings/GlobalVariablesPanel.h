@@ -52,7 +52,7 @@ namespace sw::editor
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         [[nodiscard]] bool saveDocument() override;
         /** @brief 세션 프리셋 문서 하나입니다(`GlobalVariablesViewModel::collectFilesToSave`). */
-        void collectFilesToSave( vector<string>& outListPath ) const override;
+        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
         void revertDocument() override;
         /** @brief 값 · Reset All · 프리셋 불러오기를 되돌리는 스택입니다. */
         CommandStack* findPanelCommandStack() override { return &_model.getCommandStack(); }
@@ -62,9 +62,9 @@ namespace sw::editor
         uint32 getListRebuildCount() const { return _model.getListRebuildCount(); }
 
     protected:
-        [[nodiscard]] expected<string> tryMakeFileText( string_view /*absolutePath*/ ) const override { return GlobalVariablesViewModel::makeSessionText(); } // 저장할 파일은 세션 문서 하나다
-        [[nodiscard]] bool             isEditingFile( string_view absolutePath ) override { return GlobalVariablesViewModel::isSessionFile( absolutePath ); }
-        [[nodiscard]] bool             applyFileText( string_view /*absolutePath*/, const string& text ) override { return _model.applySessionText( text ); }
+        [[nodiscard]] expected<string> tryMakeFileText( const AbsolutePath& /*absolutePath*/ ) const override { return GlobalVariablesViewModel::makeSessionText(); } // 저장할 파일은 세션 문서 하나다
+        [[nodiscard]] bool             isEditingFile( const AbsolutePath& absolutePath ) override { return GlobalVariablesViewModel::isSessionFile( absolutePath ); }
+        [[nodiscard]] bool             applyFileText( const AbsolutePath& /*absolutePath*/, const string& text ) override { return _model.applySessionText( text ); }
 
     private:
         /** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */

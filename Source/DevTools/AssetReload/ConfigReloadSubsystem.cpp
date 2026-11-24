@@ -41,7 +41,7 @@ namespace sw
             return SubsystemInitResult::Succeeded;
         }
         // 걸지 못하면 빈 구독이다 — 개발 도구 하나 때문에 기동을 멈추지 않는다(감시 창구가 이유를 남겼다).
-        _configWatch = _fileWatch.watch( configFolder.str(), FileWatchDepth::Tree, { ".json" }, SW_DELEGATE_METHOD( FileChangeDelegate, &ConfigReloadSubsystem::onConfigFileChanged, this ) );
+        _configWatch = _fileWatch.watch( configFolder, FileWatchDepth::Tree, { ".json" }, SW_DELEGATE_METHOD( FileChangeDelegate, &ConfigReloadSubsystem::onConfigFileChanged, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -79,7 +79,7 @@ namespace sw
     {
         if ( changeEvent._action == FileWatcherAction::Removed )
             return;
-        const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
+        const string fullPath = changeEvent.makePath().str();
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
         const float64      startSeconds = MonotonicClock::nowSeconds();
         const ReloadResult result       = reloadChangedFile( fullPath );

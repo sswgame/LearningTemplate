@@ -12,6 +12,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -97,7 +98,7 @@ namespace sw
         /**
          * @brief 크래시 파일 폴더(`CrashHandler::getReportFolder` — 로그 폴더), 묶음 폴더, 지금 세션 id 를 정합니다. 지금 세션의 파일은 묶지 않습니다(살아 있다).
          */
-        void initialize( string_view crashFolder, string_view reportsFolder, string_view currentSessionID );
+        void initialize( const AbsolutePath& crashFolder, const AbsolutePath& reportsFolder, string_view currentSessionID );
         void shutdown();
 
         /** @brief 동의를 정하고 이미 있는 묶음의 상태에 적용합니다(클래스 설명). */
@@ -118,30 +119,30 @@ namespace sw
          * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것 — App). 비면(기본) 띄우지 않습니다 — 테스트 실행 파일 같은
          *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(Engine)이 정합니다.
          */
-        void setReporterExecutable( string_view executablePath ) { _reporterExecutable = string( executablePath ); }
+        void setReporterExecutable( const AbsolutePath& executablePath ) { _reporterExecutable = executablePath; }
         /** @brief 보낼 것이 있고 보고 실행 파일이 정해져 있으면 보고 프로세스(`<실행 파일> -crash-reporter="<묶음 폴더>"`)를 기다리지 않고 띄웁니다. 띄웠으면 true 입니다. */
-        bool          launchReporterProcess() const;
-        const string& getReportsFolder() const { return _reportsFolder; }
+        bool                launchReporterProcess() const;
+        const AbsolutePath& getReportsFolder() const { return _reportsFolder; }
 
         /**
          * @brief 보고 프로세스의 일 — 보낼 줄의 묶음을 업로더로 올립니다. `Sent` 면 상태를 바꾸고 덤프를 지우며(매니페스트 · 작은 파일은 남긴다),
          *        실패(`Failed`)면 시도 수만 올리고, 보내지 않은 업로더(`Kept`)면 매니페스트를 건드리지 않습니다. 올린 수입니다.
          * @details 보고 프로세스와 게임 프로세스(`TelemetryUploadLink` 가 끝점을 받았을 때)가 같은 폴더로 부를 수 있습니다.
          */
-        static uint32 runReporter( string_view reportsFolder, ICrashReportUploader& uploader );
+        static uint32 runReporter( const AbsolutePath& reportsFolder, ICrashReportUploader& uploader );
 
     private:
-        [[nodiscard]] bool createBundle( string_view sessionID, const string& contextPath );
+        [[nodiscard]] bool createBundle( string_view sessionID, const AbsolutePath& contextPath );
         void               applyConsentToExisting();
         void               enforceReportCap();
         void               onSettingEvent( const UserSettingEvent& event );
         void               refreshConsentFromSetting();
 
     private:
-        string               _crashFolder;
-        string               _reportsFolder;
+        AbsolutePath         _crashFolder;
+        AbsolutePath         _reportsFolder;
         string               _currentSessionID;
-        string               _reporterExecutable;
+        AbsolutePath         _reporterExecutable;
         Subscription         _settingSubscription; ///< 동의 설정의 변경 통보 구독(`bindConsentSetting` ~ `shutdown`)
         UserSettingsManager* _pSettings;
         CrashReportConsent   _consent;

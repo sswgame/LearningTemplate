@@ -19,11 +19,11 @@ namespace sw
     {
         struct NetSecurityInternal
         {
-            [[nodiscard]] static expected<void> readPem( const string& fileName, string& outText )
+            [[nodiscard]] static expected<void> readPem( const AbsolutePath& fileName, string& outText )
             {
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( fileName ), outText ) )
+                if ( FileUtil::readTextFile( fileName, outText ) )
                     return {};
-                return unexpected( Error{ ErrorKind::NotFound, "cannot read the PEM file", fileName } );
+                return unexpected( Error{ ErrorKind::NotFound, "cannot read the PEM file", fileName.str() } );
             }
         };
 
@@ -31,19 +31,19 @@ namespace sw
         {
             static constexpr int32 kDevCertificateValidDays = 825; ///< 브라우저 상한과 같은 값 — 개발 PC 에서 2 년 남짓 쓰고 지워 다시 만든다
 
-            [[nodiscard]] static expected<void> ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile )
+            [[nodiscard]] static expected<void> ensureDevCertificate( INetSecurityProvider& provider, AbsolutePath& outCertificateFile, AbsolutePath& outPrivateKeyFile )
             {
                 const AbsolutePath folder = ProcessRoots::get()._derivedData.join( NetSecurity::kDevCertificateFolder );
-                outCertificateFile        = FileUtil::joinPath( folder.str(), NetSecurity::kDevCertificateBundleFile );
+                outCertificateFile        = folder.join( NetSecurity::kDevCertificateBundleFile );
                 outPrivateKeyFile         = outCertificateFile;
-                if ( FileUtil::isRegularFile( FileUtil::toDiskPath( outCertificateFile ) ) )
+                if ( FileUtil::isRegularFile( outCertificateFile ) )
                     return {};
                 string     certificatePem;
                 string     privateKeyPem;
                 const bool bMade = FileUtil::ensureDirectoryExists( folder ) &&
                                    provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem );
                 certificatePem += privateKeyPem; // 한 번의 원자적 쓰기 — 늘 한 쌍
-                const bool bCreated = bMade && FileUtil::writeTextFile( FileUtil::toDiskPath( outCertificateFile ), certificatePem );
+                const bool bCreated = bMade && FileUtil::writeTextFile( outCertificateFile, certificatePem );
                 if ( bCreated == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "cannot create the development certificate", folder.str() } );
                 SW_LOG_INFO_ID( "NetSecurity.CreatedDevelopmentTLSCertificate", "Created a development TLS certificate: %#", outCertificateFile.c_str() );
@@ -59,18 +59,18 @@ namespace sw
 {
     SW_DEFINE_DEV_ONLINE_EXTENSION( NetSecurityDevOptions, "the development TLS certificate (empty certificate / trust file)" )
 
-    expected<string> NetSecurity::resolveProjectPath( string_view path )
+    expected<AbsolutePath> NetSecurity::resolveProjectPath( string_view path )
     {
         // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다). 해석 규칙은 `AbsolutePath::tryResolve` 하나 - 드라이브 상대(`C:foo`)는 풀지 않는다.
         if ( path.empty() )
-            return string{};
+            return AbsolutePath{};
         const optional<AbsolutePath> resolved = AbsolutePath::tryResolve( path, ProcessRoots::get()._project );
         if ( resolved.has_value() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "not a file path (absolute or relative to the project root)", path } );
-        return string( resolved->str() );
+        return *resolved;
     }
 
-    expected<void> NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile )
+    expected<void> NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, AbsolutePath& outCertificateFile, AbsolutePath& outPrivateKeyFile )
     {
         expected<const NetSecurityDevOptions*> devOptions = DevOnlineExtension<NetSecurityDevOptions>::require();
         if ( devOptions.has_value() == false )
@@ -81,11 +81,11 @@ namespace sw
     expected<unique_ptr<ITLSContext>> NetSecurity::createServerTLSContext( INetSecurityProvider& provider, string_view certificateFile, string_view privateKeyFile,
                                                                            string_view privateKeyPassphrase )
     {
-        using Internal                   = NetSecurityInternal;
-        expected<string> certificatePath = resolveProjectPath( certificateFile );
+        using Internal                         = NetSecurityInternal;
+        expected<AbsolutePath> certificatePath = resolveProjectPath( certificateFile );
         if ( certificatePath.has_value() == false )
             return unexpected( certificatePath.error() );
-        expected<string> privateKeyPath = resolveProjectPath( privateKeyFile );
+        expected<AbsolutePath> privateKeyPath = resolveProjectPath( privateKeyFile );
         if ( privateKeyPath.has_value() == false )
             return unexpected( privateKeyPath.error() );
         if ( certificatePath->empty() != privateKeyPath->empty() )
@@ -115,21 +115,21 @@ namespace sw
     {
         using Internal = NetSecurityInternal;
         TLSContextConfig settings;
-        settings._role             = TLSRole::Client;
-        settings._serverName       = string( serverName );
-        settings._alpnProtocol     = string( alpnProtocol );
-        expected<string> trustPath = resolveProjectPath( trustFile );
+        settings._role                   = TLSRole::Client;
+        settings._serverName             = string( serverName );
+        settings._alpnProtocol           = string( alpnProtocol );
+        expected<AbsolutePath> trustPath = resolveProjectPath( trustFile );
         if ( trustPath.has_value() == false )
             return unexpected( trustPath.error() );
         if ( trustPath->empty() )
         {
-            string privateKeyPath;
+            AbsolutePath privateKeyPath;
             if ( expected<void> dev = ensureDevCertificate( provider, *trustPath, privateKeyPath ); dev.has_value() == false )
                 return unexpected( dev.error() );
             if ( expected<void> pem = Internal::readPem( *trustPath, settings._trustPem ); pem.has_value() == false )
                 return unexpected( pem.error() );
             if ( provider.computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "cannot compute the SHA-256 of the development certificate", *trustPath } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "cannot compute the SHA-256 of the development certificate", trustPath->str() } );
         }
         else if ( expected<void> pem = Internal::readPem( *trustPath, settings._trustPem ); pem.has_value() == false )
         {
@@ -140,7 +140,7 @@ namespace sw
         // (언리얼 SSL 모듈의 호스트 이름 검증 · 공개 키 고정 자리).
         if ( settings._serverName.empty() && settings._pinnedCertificateSHA256Hex.empty() &&
              provider.computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "a client TLS context needs a server name or a pinned certificate - the trust file is not one certificate", *trustPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a client TLS context needs a server name or a pinned certificate - the trust file is not one certificate", trustPath->str() } );
         return provider.createTLSContext( settings );
     }
 

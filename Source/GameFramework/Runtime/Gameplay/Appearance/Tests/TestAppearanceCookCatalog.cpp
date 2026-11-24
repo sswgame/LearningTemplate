@@ -20,8 +20,8 @@
  */
 SW_TEST_CASE( AppearanceCookTest, CookEntryCatalogsMatchTheRuntimeFiles )
 {
-    sw::PackConfig   config;
-    const sw::string path = sw::FileUtil::joinPath( sw::ProcessRoots::get()._project.str(), sw::PackConfig::kConfigPath );
+    sw::PackConfig         config;
+    const sw::AbsolutePath path = sw::ProcessRoots::get()._project.join( sw::PackConfig::kConfigPath );
     SW_REQUIRE_TRUE( sw::ConfigManager::readConfigFile( config, path ) == sw::ConfigReadResult::Loaded );
     SW_REQUIRE_TRUE( config._cookRules._listEntryCatalog.empty() == false );
 

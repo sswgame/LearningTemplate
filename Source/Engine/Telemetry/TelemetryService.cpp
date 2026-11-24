@@ -50,13 +50,13 @@ namespace sw
             /** @brief 지난 실행이 남긴 파일의 순서 — 시각(초), 같으면 이름. */
             struct SpoolFileLess
             {
-                bool operator()( const string& lhs, const string& rhs ) const
+                bool operator()( const AbsolutePath& lhs, const AbsolutePath& rhs ) const
                 {
                     // 그 사이 지워진 파일은 시각 0 으로 맨 앞에 선다 - 다음 정리가 목록에서 뺀다.
                     uint64 lhsTime = 0;
                     uint64 rhsTime = 0;
-                    (void)FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( lhs ), lhsTime );
-                    (void)FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( rhs ), rhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( lhs, lhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( rhs, rhsTime );
                     if ( lhsTime != rhsTime )
                         return lhsTime < rhsTime;
                     return lhs < rhs;
@@ -217,19 +217,19 @@ namespace sw
         _spoolWorker.stop(); // shutdown 이 넘긴 일을 모두 기다렸다 — 남은 일이 없다
     }
 
-    void TelemetryService::initialize( string_view spoolFolder, const TelemetryContext& context )
+    void TelemetryService::initialize( const AbsolutePath& spoolFolder, const TelemetryContext& context )
     {
-        using Internal          = TelemetryServiceInternal;
-        const string folderPath = FileUtil::trimTrailingSlashes( spoolFolder );
+        using Internal                = TelemetryServiceInternal;
+        const AbsolutePath folderPath = spoolFolder.join( {} );
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다. 폴더 읽기는 잠금 밖이다.
-        vector<string> listLeftover;
-        vector<string> listFile;
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderPath ) ) && FileUtil::collectFiles( FileUtil::toDiskPath( folderPath ), "", listFile, false ) )
+        vector<AbsolutePath> listLeftover;
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, "", listFile, false ) )
         {
-            for ( const string& path : listFile )
+            for ( const AbsolutePath& path : listFile )
             {
-                if ( Internal::isSpoolFile( path ) )
+                if ( Internal::isSpoolFile( path.str() ) )
                     listLeftover.push_back( path );
             }
             VectorUtil::sort( listLeftover, Internal::SpoolFileLess{} );
@@ -256,7 +256,7 @@ namespace sw
         ScopedLock<mutex> spoolLock{ _spoolMutex };
         _spoolStats = TelemetryStats{};
         _listClosedFile.swap( listLeftover );
-        _currentFile.clear();
+        _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
         _fileIndex         = 0;
@@ -316,7 +316,7 @@ namespace sw
         context._buildID     = ModuleBuildID::find( nullptr )._id;
         context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         // 스풀은 사용자 설정 파일 옆이다 — 자동화가 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 같이 옮겨 간다.
-        const string folder = FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" );
+        const AbsolutePath folder = userSettings.getUserFilePath().getParent().join( "telemetry" );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
         if ( loadSchema( AssetID{ engineSchema } ) == false )
@@ -331,12 +331,12 @@ namespace sw
         bindConsentSetting( userSettings );
 
         // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
-        const string crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
+        const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() == false )
         {
             CrashReportService& crashReports = engine::getSubsystem<CrashReportService>();
-            const string        reportsFolder =
-                FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+            const AbsolutePath  reportsFolder =
+                crashFolder.getParent().join( CrashReportService::kReportsFolderName );
             crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
             crashReports.bindConsentSetting( userSettings );
             crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
@@ -578,7 +578,7 @@ namespace sw
         }
     }
 
-    void TelemetryService::collectSpoolFiles( vector<string>& outListFilePath ) const
+    void TelemetryService::collectSpoolFiles( vector<AbsolutePath>& outListFilePath ) const
     {
         ScopedLock<mutex> spoolLock{ _spoolMutex };
         outListFilePath = _listClosedFile;
@@ -743,18 +743,18 @@ namespace sw
         return root.describe(); // 이벤트 줄과 같은 규칙(U+FFFD)
     }
 
-    string TelemetryService::makeFilePathSpoolLocked( uint32 fileIndex ) const
+    AbsolutePath TelemetryService::makeFilePathSpoolLocked( uint32 fileIndex ) const
     {
         StringBuilder<constant::buffer::kMax256> name;
         name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
-        return FileUtil::joinPath( _spoolFolder.get(), name.c_str() );
+        return _spoolFolder.get().join( name.view() );
     }
 
     void TelemetryService::writeLinesSpoolLocked( const TelemetrySpoolJob& job )
     {
         if ( job._listLine.empty() )
             return;
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _spoolFolder.get() ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
         {
             SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFolderCannot", "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( job._listLine.size() ) );
             return;
@@ -768,7 +768,7 @@ namespace sw
             if ( bFull )
             {
                 // 이 줄을 넣으면 상한을 넘는다 — 모은 것을 쓰고 파일을 닫은 뒤 새 파일로.
-                if ( chunk.empty() == false && FileUtil::appendTextFile( FileUtil::toDiskPath( _currentFile ), chunk ) )
+                if ( chunk.empty() == false && FileUtil::appendTextFile( _currentFile, chunk ) )
                     _currentFileBytes += chunk.size();
                 chunk.clear();
                 closeCurrentFileSpoolLocked();
@@ -789,7 +789,7 @@ namespace sw
         }
         if ( chunk.empty() == false )
         {
-            if ( FileUtil::appendTextFile( FileUtil::toDiskPath( _currentFile ), chunk ) )
+            if ( FileUtil::appendTextFile( _currentFile, chunk ) )
                 _currentFileBytes += chunk.size();
             else
                 SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFileCannot", "Telemetry spool file '%#' cannot be written", _currentFile.c_str() );
@@ -801,7 +801,7 @@ namespace sw
         if ( _currentFile.empty() )
             return;
         _listClosedFile.push_back( _currentFile );
-        _currentFile.clear();
+        _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
         ++_fileIndex;
@@ -810,10 +810,10 @@ namespace sw
     void TelemetryService::enforceLimitsSpoolLocked( const TelemetryPipelineConfig& settings )
     {
         uint64 totalBytes = _currentFileBytes;
-        for ( const string& path : _listClosedFile )
+        for ( const AbsolutePath& path : _listClosedFile )
         {
             uint64 byteCount = 0;
-            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( path ), byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
+            (void)FileUtil::tryGetFileSize( path, byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
             totalBytes += byteCount;
         }
         // 지금 파일은 지우지 않는다 — 상한을 넘는 만큼 가장 오래된 닫힌 파일부터(보내지 못한 채) 버린다.
@@ -823,11 +823,11 @@ namespace sw
             const bool   bOver     = fileCount > settings._maxFiles || totalBytes > settings._maxTotalBytes;
             if ( bOver == false )
                 break;
-            const string oldest      = _listClosedFile.front();
-            uint64       oldestBytes = 0;
-            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( oldest ), oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
+            const AbsolutePath oldest      = _listClosedFile.front();
+            uint64             oldestBytes = 0;
+            (void)FileUtil::tryGetFileSize( oldest, oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
             totalBytes -= MathUtil::min( totalBytes, oldestBytes );
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( oldest ) ); // 실패는 removeFile 이 경고로 남긴다
+            (void)FileUtil::removeFile( oldest ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
             ++_spoolStats._droppedFiles;
         }
@@ -849,7 +849,7 @@ namespace sw
             }
             // 잠금 밖 — 파일 읽기와 보내기. 끝점이 느려도 게임 스레드는 기다리지 않는다(목록을 바꾸는 것은 이 스레드뿐이라 맨 앞 파일은 그대로다).
             batch._sessionID             = _context->_sessionID;
-            const bool            bRead  = FileUtil::readTextFile( FileUtil::toDiskPath( batch._filePath ), batch._content );
+            const bool            bRead  = FileUtil::readTextFile( batch._filePath, batch._content );
             TelemetryUploadResult result = TelemetryUploadResult::Kept;
             if ( bRead )
             {
@@ -869,7 +869,7 @@ namespace sw
                 else if ( result == TelemetryUploadResult::Sent )
                 {
                     _uploadBackoff.reset();
-                    (void)FileUtil::removeFile( FileUtil::toDiskPath( batch._filePath ) ); // 실패는 removeFile 이 경고로 남긴다
+                    (void)FileUtil::removeFile( batch._filePath ); // 실패는 removeFile 이 경고로 남긴다
                     _listClosedFile.erase( _listClosedFile.begin() );
                     ++_spoolStats._uploadedFiles;
                     bNext = true;
@@ -893,18 +893,18 @@ namespace sw
 
     void TelemetryService::purgeSpoolLocked()
     {
-        vector<string> listFile = _listClosedFile;
+        vector<AbsolutePath> listFile = _listClosedFile;
         if ( _currentFile.empty() == false )
             listFile.push_back( _currentFile );
-        for ( const string& path : listFile )
+        for ( const AbsolutePath& path : listFile )
         {
-            if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
+            if ( FileUtil::exists( path ) && FileUtil::removeFile( path ) )
                 ++_spoolStats._purgedFiles;
         }
         _listClosedFile.clear();
         if ( _currentFile.empty() == false )
             ++_fileIndex;
-        _currentFile.clear();
+        _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
     }

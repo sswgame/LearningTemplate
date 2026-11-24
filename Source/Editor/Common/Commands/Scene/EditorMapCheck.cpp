@@ -28,13 +28,13 @@ namespace sw::editor
             /** @brief 활성 팩의 데이터 XML 을 리소스 id 로 모읍니다. 팩이 없으면 비어 있습니다. */
             static void collectPackAssets( vector<string>& outListAsset )
             {
-                const DataPath& packRoot = editor::getSubsystem<const GameConfig>()._packRoot;
-                const string    folder   = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : string{};
+                const DataPath&    packRoot = editor::getSubsystem<const GameConfig>()._packRoot;
+                const AbsolutePath folder   = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : AbsolutePath{};
                 if ( folder.empty() )
                     return;
-                vector<string> listFile;
-                (void)EditorContentScan::collectFiles( FileUtil::joinPath( folder, "data" ), ".xml", listFile, true ); // 데이터 폴더가 없는 팩이면 검사할 것도 없다
-                for ( const string& file : listFile )
+                vector<AbsolutePath> listFile;
+                (void)EditorContentScan::collectFiles( folder.join( "data" ), ".xml", listFile, true ); // 데이터 폴더가 없는 팩이면 검사할 것도 없다
+                for ( const AbsolutePath& file : listFile )
                 {
                     string assetID = editor::getSubsystem<AssetPaths>().toAssetID( file );
                     if ( assetID.empty() == false )

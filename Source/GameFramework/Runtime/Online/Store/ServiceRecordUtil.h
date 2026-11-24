@@ -120,8 +120,7 @@ namespace sw
         template <typename T>
         [[nodiscard]] static bool readCache( const vector<uint8>& bytes, T& outRecord )
         {
-            uint32 readVersion = 0;
-            return MixedBuildCodec::decode( bytes.data(), bytes.size(), getVersion<T>(), outRecord, readVersion ) == MixedBuildReadResult::Read;
+            return MixedBuildCodec::decode( bytes.data(), bytes.size(), getVersion<T>(), outRecord )._result == MixedBuildReadResult::Read;
         }
 
         /**

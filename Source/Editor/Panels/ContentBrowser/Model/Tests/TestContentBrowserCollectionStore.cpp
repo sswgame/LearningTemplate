@@ -100,17 +100,17 @@ SW_TEST_CASE( ContentBrowserCollectionStoreTest, PartlyReadFileIsNotOverwritten 
 
     ContentBrowserCollectionStore collections;
     SW_EXPECT_LOG( "ContentBrowserCollectionStore.NotRead" );
-    collections.loadFiles( local.str(), shared.str() );
+    collections.loadFiles( local, shared );
     SW_EXPECT_TRUE( collections.createCollection( "Mine", false ) );
-    SW_EXPECT_TRUE( collections.saveFile( local.str(), false ) );
+    SW_EXPECT_TRUE( collections.saveFile( local, false ) );
     SW_EXPECT_LOG( "ContentBrowserCollectionStore.NotOverwritten" );
-    SW_EXPECT_FALSE( collections.saveFile( shared.str(), true ) );
+    SW_EXPECT_FALSE( collections.saveFile( shared, true ) );
     string text;
     SW_EXPECT_TRUE( FileUtil::readTextFile( shared, text ) && text == kConflicted );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( shared, "collection\tKit\ta.mesh\n\n" ) );
-    collections.loadFiles( local.str(), shared.str() );
-    SW_EXPECT_TRUE( collections.saveFile( shared.str(), true ) );
+    collections.loadFiles( local, shared );
+    SW_EXPECT_TRUE( collections.saveFile( shared, true ) );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

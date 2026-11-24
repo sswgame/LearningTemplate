@@ -88,7 +88,7 @@ namespace sw::editor
              */
             static void openMergedNetPlayTrace( EditorContext& /*context*/ )
             {
-                const string mergedTracePath = ProfilerViewModel::takeMergedNetPlayTrace();
+                const AbsolutePath mergedTracePath = ProfilerViewModel::takeMergedNetPlayTrace();
                 if ( mergedTracePath.empty() == false )
                     (void)ProfilerPanel::openTraceInTimeline( EditorPanelManager::getInEditorContext(), mergedTracePath ); // 실패 이유는 그 함수가 로그에 남긴다
             }
@@ -477,12 +477,12 @@ namespace sw::editor
     }
 
 #if !defined( SW_SHIPPING )
-    bool ProfilerPanel::openTraceInTimeline( EditorPanelManager& panelManager, string_view path )
+    bool ProfilerPanel::openTraceInTimeline( EditorPanelManager& panelManager, const AbsolutePath& path )
     {
         ProfilerPanel* pPanel = panelManager.findPanel<ProfilerPanel>();
         if ( pPanel == nullptr || panelManager.setPanelOpen<ProfilerPanel>( true ) == false )
         {
-            SW_LOG_WARNING_ID( "ProfilerPanel.NoProfilerWindowOpen", "No Profiler window to open %# in", string( path ) );
+            SW_LOG_WARNING_ID( "ProfilerPanel.NoProfilerWindowOpen", "No Profiler window to open %# in", string( path.str() ) );
             return false;
         }
         if ( pPanel->_timeline.loadTraceFile( path ) == false )

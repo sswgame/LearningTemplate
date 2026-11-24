@@ -868,31 +868,31 @@ namespace sw
         return true;
     }
 
-    bool XMLDocument::loadFromFile( string_view absPath )
+    bool XMLDocument::loadFromFile( const AbsolutePath& absPath )
     {
         // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`AssetIO::readTextFile`).
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
             StringBuilder<constant::buffer::kMax256> error;
-            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath );
+            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath.str() );
             _lastError = string( error.view() );
             return false;
         }
-        return parse( text, absPath );
+        return parse( text, absPath.str() );
     }
 
-    bool XMLDocument::loadDataFile( string_view absPath )
+    bool XMLDocument::loadDataFile( const AbsolutePath& absPath )
     {
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
             StringBuilder<constant::buffer::kMax256> error;
-            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath );
+            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath.str() );
             _lastError = string( error.view() );
             return false;
         }
-        return parseData( text, absPath );
+        return parseData( text, absPath.str() );
     }
 
     bool XMLDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
@@ -1013,7 +1013,7 @@ namespace sw
         return wrapLongElementLines( escapeCarriageReturns( writer._result ) );
     }
 
-    bool XMLDocument::saveCompleteToFile( string_view absPath ) const
+    bool XMLDocument::saveCompleteToFile( const AbsolutePath& absPath ) const
     {
         if ( absPath.empty() )
             return false;
@@ -1021,7 +1021,7 @@ namespace sw
         const string text = saveToString();
         if ( text.empty() )
         {
-            SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", string{ absPath }.c_str() );
+            SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", absPath.c_str() );
             return false;
         }
         return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( text ) );

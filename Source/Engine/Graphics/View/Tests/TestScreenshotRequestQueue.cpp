@@ -33,7 +33,7 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, EachTicketReadsItsOwnResult )
 
     ScreenshotRequest request;
     SW_REQUIRE_TRUE( queue.take( request ) );
-    SW_EXPECT_EQUAL( first.str(), request._path ); // 덮어쓰지 않고 받은 차례다
+    SW_EXPECT_TRUE( first == request._path ); // 덮어쓰지 않고 받은 차례다
     SW_EXPECT_EQUAL( ticketA, request._ticket );
     queue.reportCompleted( request._ticket, false );
     SW_EXPECT_TRUE( queue.findResult( ticketA ) == ScreenshotTicketState::Failed );
@@ -77,9 +77,9 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, PacketSlotHoldsOne )
     SW_EXPECT_TRUE( queue.putForNextPacket( first ) );
     SW_EXPECT_FALSE( queue.putForNextPacket( makeShotPath( "q.png" ) ) );
     SW_EXPECT_TRUE( queue.hasUnfinishedRequest() );
-    string path;
+    AbsolutePath path;
     SW_REQUIRE_TRUE( queue.takeForPacket( path ) );
-    SW_EXPECT_EQUAL( first.str(), path );
+    SW_EXPECT_TRUE( first == path );
     SW_EXPECT_TRUE( queue.isPacketSlotFree() );
     SW_EXPECT_FALSE( queue.takeForPacket( path ) );
 }
@@ -114,7 +114,8 @@ SW_TEST_CASE( ScreenshotRequestQueueTest, PNGBytesAreTakenOnceByTicket )
     ScreenshotRequest request;
     SW_REQUIRE_TRUE( queue.take( request ) );
     SW_EXPECT_TRUE( request._output == ScreenshotOutput::PNGBytes );
-    SW_EXPECT_EQUAL( string{ "thumb.a" }, request._path );
+    SW_EXPECT_EQUAL( string{ "thumb.a" }, request._name );
+    SW_EXPECT_TRUE( request._path.empty() );
     SW_EXPECT_EQUAL( ticketA, request._ticket );
     queue.reportCompletedPNGBytes( request._ticket, true, vector<uint8>{ 1, 2, 3 } );
     SW_REQUIRE_TRUE( queue.take( request ) );

@@ -202,18 +202,18 @@ SW_TEST_CASE( OnlineServerConfigTest, KitRegistryRejectsDuplicateName )
  */
 SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
 {
-    const sw::AbsolutePath directory = sw::ProcessRoots::get()._project.join( "Config/Server/Online" );
-    sw::vector<sw::string> listFile;
+    const sw::AbsolutePath       directory = sw::ProcessRoots::get()._project.join( "Config/Server/Online" );
+    sw::vector<sw::AbsolutePath> listFile;
     SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( directory, ".json", listFile, false ) );
     int32 pairCount = 0;
-    for ( const sw::string& filePath : listFile )
+    for ( const sw::AbsolutePath& filePath : listFile )
     {
-        if ( filePath.find( ".online.json" ) != sw::string::npos )
+        if ( filePath.str().find( ".online.json" ) != sw::string::npos )
             continue;
         sw::string serverText;
         sw::string onlineText;
-        SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( filePath ), serverText ) );
-        SW_REQUIRE_TRUE_MSG( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( sw::OnlineServerConfig::makeConfigPath( filePath ) ), onlineText ), filePath.c_str() );
+        SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, serverText ) );
+        SW_REQUIRE_TRUE_MSG( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( sw::OnlineServerConfig::makeConfigPath( filePath.str() ) ), onlineText ), filePath.c_str() );
         sw::ConfigManager manager;
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::ServerConfig>( serverText, filePath.c_str() ), filePath.c_str() );
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::OnlineServerConfig>( onlineText, filePath.c_str() ), filePath.c_str() );

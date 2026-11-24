@@ -11,7 +11,7 @@ namespace sw::editor
         // 저장된 값을 먼저 읽고 등록한다 — 등록은 저장된 바를 덮지 않고 기본값만 적는다.
         const AbsolutePath path = EditorPaths::resolveEditorStateFile( kFileName );
         // 처음엔 파일이 없다(Missing). 깨진 파일은 키와 함께 오류를 남기고 기본 배치로 둔다(저장하면 다시 쓴다).
-        const bool bInvalidOverlayFile = path.empty() == false && _layout.loadFromFile( path.str() ) == ConfigReadResult::Invalid;
+        const bool bInvalidOverlayFile = path.empty() == false && _layout.loadFromFile( path ) == ConfigReadResult::Invalid;
         if ( bInvalidOverlayFile )
             SW_LOG_WARNING_ID( "SceneViewOverlayLayoutStore.ViewportOverlayLayoutNot", "Viewport overlay layout is not valid - the default layout is used until it is saved again: %#", path.c_str() );
         for ( const SceneViewOverlayBarDesc& desc : kArrBar )
@@ -40,7 +40,7 @@ namespace sw::editor
         const AbsolutePath path = EditorPaths::resolveEditorStateFile( kFileName );
         if ( path.empty() )
             return;
-        if ( _layout.saveToFile( path.str() ) == false )
+        if ( _layout.saveToFile( path ) == false )
             SW_LOG_WARNING_ID( "SceneViewOverlayLayoutStore.CouldNotSaveViewport", "Could not save the viewport overlay layout to '%#'", path.c_str() );
     }
 

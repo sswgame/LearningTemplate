@@ -82,15 +82,15 @@ namespace sw::editor
              * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(리소스 id 가 작업 폴더 상대 경로로 열렸다). 읽기에 쓰기 해석을 쓰면
              *          아직 없는 문서(새 문서)를 열 때마다 "만들 도메인을 모른다" 오류가 남았다.
              */
-            static string resolveToolDocumentPath( string_view path, const DocumentUse use )
+            static AbsolutePath resolveToolDocumentPath( string_view path, const DocumentUse use )
             {
                 if ( path.empty() )
                     return {};
                 if ( AbsolutePath::isStrictAbsolute( path ) )
-                    return FileUtil::normalizeSeparators( path );
+                    return FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
                 const AssetPaths&            paths    = editor::getSubsystem<AssetPaths>();
                 const optional<AbsolutePath> diskPath = use == DocumentUse::Read ? paths.findLooseFile( path ) : paths.toDiskPath( path );
-                return diskPath.has_value() ? diskPath->str() : string{};
+                return diskPath.has_value() ? *diskPath : AbsolutePath{};
             }
 
             /**
@@ -98,49 +98,47 @@ namespace sw::editor
              * @details 빈 경로를 파일 계층까지 넘기면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 그래서 부르는 쪽(`loadToolDocument`,
              *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
-            static string resolveDocumentPath( const ToolDocumentDef& desc, string_view path, const DocumentUse use )
+            static AbsolutePath resolveDocumentPath( const ToolDocumentDef& desc, string_view path, const DocumentUse use )
             {
                 if ( path.empty() == false )
                     return resolveToolDocumentPath( path, use );
                 if ( desc._pDefaultFileName == nullptr )
                     return {};
-                return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName ).str();
+                return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName );
             }
 
             // 도구 문서는 디스크 파일이다(받은 리소스 id 를 낱개 파일로 풀었거나 `Saved/Editor` 기본 문서) — 디스크 입구로 읽는다. 저장(`writeDocument`)도 디스크다.
             template <typename TAsset>
-            [[nodiscard]] static bool readDocument( TAsset& outData, const string& resolved )
+            [[nodiscard]] static bool readDocument( TAsset& outData, const AbsolutePath& resolved )
             {
                 return outData.loadFromDiskFile( resolved );
             }
 
             template <typename TAsset>
-            [[nodiscard]] static bool writeDocument( const TAsset& data, const string& resolved )
+            [[nodiscard]] static bool writeDocument( const TAsset& data, const AbsolutePath& resolved )
             {
-                const optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
-                return documentFile.has_value() && data.saveToFile( *documentFile );
+                return data.saveToFile( resolved );
             }
 
             /** @brief 타일셋은 런타임 읽기 그대로 읽는다(규칙 위반은 그 읽기가 로그로 남긴다). */
-            [[nodiscard]] static bool readDocument( TileSetContent& outData, const string& resolved )
+            [[nodiscard]] static bool readDocument( TileSetContent& outData, const AbsolutePath& resolved )
             {
                 string       text;
                 TileSetAsset asset;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( resolved ), text ) == false || asset.loadFromXMLText( text, resolved ) == false )
+                if ( FileUtil::readTextFile( resolved, text ) == false || asset.loadFromXMLText( text, resolved.str() ) == false )
                     return false;
                 outData = asset.getContent();
                 return true;
             }
 
-            [[nodiscard]] static bool writeDocument( const TileSetContent& data, const string& resolved )
+            [[nodiscard]] static bool writeDocument( const TileSetContent& data, const AbsolutePath& resolved )
             {
-                return FileUtil::writeTextFile( FileUtil::toDiskPath( resolved ), data.saveToXMLText() );
+                return FileUtil::writeTextFile( resolved, data.saveToXMLText() );
             }
 
-            [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved )
+            [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const AbsolutePath& resolved )
             {
-                const optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
-                return documentFile.has_value() && data.save( *documentFile );
+                return data.save( resolved );
             }
 
             /** @brief 상태 문구에 보일 경로입니다. 받은 경로(리소스 id)가 있으면 그것이고, 없으면 해석한 경로입니다. */
@@ -154,8 +152,8 @@ namespace sw::editor
             template <typename TAsset>
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDef& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
-                const string resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
-                if ( resolved.empty() || FileUtil::isRegularFile( FileUtil::toDiskPath( resolved ) ) == false )
+                const AbsolutePath resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
+                if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
                 {
                     if ( pOutStatus != nullptr )
                     {
@@ -163,18 +161,18 @@ namespace sw::editor
                         if ( resolved.empty() )
                             statusBuilder.appendFormat( "No %# file yet", desc._pLabel );
                         else
-                            statusBuilder.appendFormat( "No file yet: %#", makeShownPath( path, resolved ) );
+                            statusBuilder.appendFormat( "No file yet: %#", makeShownPath( path, resolved.str() ) );
                         *pOutStatus = string( statusBuilder.view() );
                     }
                     return ToolAssetLoadResult::Missing;
                 }
                 if ( readDocument( outData, resolved ) == false )
                 {
-                    SW_LOG_WARNING_ID( "EditorToolAssetCommands.CouldNotReadMalformed", "Could not read the %# '%#' (malformed or a newer format)", desc._pLabel, resolved );
+                    SW_LOG_WARNING_ID( "EditorToolAssetCommands.CouldNotReadMalformed", "Could not read the %# '%#' (malformed or a newer format)", desc._pLabel, resolved.str() );
                     if ( pOutStatus != nullptr )
                     {
                         StringBuilder<constant::buffer::kMax256> statusBuilder;
-                        statusBuilder.appendFormat( "Failed to read %#", makeShownPath( path, resolved ) );
+                        statusBuilder.appendFormat( "Failed to read %#", makeShownPath( path, resolved.str() ) );
                         *pOutStatus = string( statusBuilder.view() );
                     }
                     return ToolAssetLoadResult::Malformed;
@@ -182,7 +180,7 @@ namespace sw::editor
                 if ( pOutStatus != nullptr )
                 {
                     StringBuilder<constant::buffer::kMax256> statusBuilder;
-                    statusBuilder.appendFormat( "Loaded %#", makeShownPath( path, resolved ) );
+                    statusBuilder.appendFormat( "Loaded %#", makeShownPath( path, resolved.str() ) );
                     *pOutStatus = string( statusBuilder.view() );
                 }
                 return ToolAssetLoadResult::Loaded;
@@ -192,32 +190,30 @@ namespace sw::editor
             template <typename TAsset>
             [[nodiscard]] static bool saveToolDocument( const ToolDocumentDef& desc, const TAsset& data, string_view path )
             {
-                const string resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
+                const AbsolutePath resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
                 if ( resolved.empty() )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSaveNoFile", "Failed to save the %# - no file path and no default file", desc._pLabel );
                     return false;
                 }
                 // 다시 읽지 못할 문서가 멀쩡한 파일을 덮지 않게, 옆에 써서 읽어 본 뒤에 덮는다(쓰기는 값을 검사하지 않고 읽기가 검사한다).
-                StringBuilder<constant::buffer::kMax512> probePathBuilder;
-                probePathBuilder.appendFormat( "%#%#", resolved, kProbeFileSuffix );
-                const string probePath( probePathBuilder.view() );
-                TAsset       readBack;
-                const bool   bProbeWritten = writeDocument( data, probePath );
-                const bool   bReadsBack    = bProbeWritten && readDocument( readBack, probePath );
+                const AbsolutePath probePath = resolved.appendSuffix( kProbeFileSuffix );
+                TAsset             readBack;
+                const bool         bProbeWritten = writeDocument( data, probePath );
+                const bool         bReadsBack    = bProbeWritten && readDocument( readBack, probePath );
                 if ( bProbeWritten )
-                    (void)FileUtil::removeFile( FileUtil::toDiskPath( probePath ) );
+                    (void)FileUtil::removeFile( probePath );
                 if ( bProbeWritten && bReadsBack == false )
                 {
-                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.WouldNotReadBack", "The %# was not saved to '%#' - the file could not be read back (see the log above), so the saved file is kept", desc._pLabel, resolved );
+                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.WouldNotReadBack", "The %# was not saved to '%#' - the file could not be read back (see the log above), so the saved file is kept", desc._pLabel, resolved.str() );
                     return false;
                 }
                 if ( bProbeWritten == false || writeDocument( data, resolved ) == false )
                 {
-                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSave", "Failed to save the %# to '%#'", desc._pLabel, resolved );
+                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSave", "Failed to save the %# to '%#'", desc._pLabel, resolved.str() );
                     return false;
                 }
-                SW_LOG_INFO_ID( "EditorToolAssetCommands.Saved", "Saved the %# to '%#'", desc._pLabel, resolved );
+                SW_LOG_INFO_ID( "EditorToolAssetCommands.Saved", "Saved the %# to '%#'", desc._pLabel, resolved.str() );
                 return true;
             }
 
@@ -275,8 +271,8 @@ namespace sw::editor
 
     bool EditorToolAssetCommands::hasToolDocument( string_view path )
     {
-        const string resolved = EditorToolAssetInternal::resolveToolDocumentPath( path, EditorToolAssetInternal::DocumentUse::Read );
-        return resolved.empty() == false && FileUtil::isRegularFile( FileUtil::toDiskPath( resolved ) );
+        const AbsolutePath resolved = EditorToolAssetInternal::resolveToolDocumentPath( path, EditorToolAssetInternal::DocumentUse::Read );
+        return resolved.empty() == false && FileUtil::isRegularFile( resolved );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path )

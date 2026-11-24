@@ -71,25 +71,25 @@ namespace sw::editor
             {
                 const AbsolutePath   projectRoot = ProcessRoots::get()._project;
                 AssetReferenceFields params;
-                if ( params.load( projectRoot.str() ) == false )
+                if ( params.load( projectRoot ) == false )
                     return -1;
                 uint32 problemCount = validateReflectedProperties( params );
 
                 // 트리의 파일이 있는 것이다(임포트 산출물 포함 — ctest 는 임포트 단계 뒤에 돈다). 참조자는 그 가운데 글 에셋이다.
-                const string&  contentRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-                vector<string> listFile;
+                const AbsolutePath&  contentRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+                vector<AbsolutePath> listFile;
                 if ( EditorContentScan::collectFiles( contentRoot, "", listFile, true ) == false ) // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 트리의 에셋이 아니다(EditorContentScan)
                 {
-                    SW_LOG_ERROR_ID( "AssetReferenceCheck.ContentUnlisted", "Asset reference check: the files under %# could not be listed", contentRoot );
+                    SW_LOG_ERROR_ID( "AssetReferenceCheck.ContentUnlisted", "Asset reference check: the files under %# could not be listed", contentRoot.str() );
                     return -1;
                 }
                 AssetSourceLocator::collectStoredSources( contentRoot, listFile ); // 저장소 밖 원본의 산출물도 있는 것이다
-                AssetIDSet                   assets;
-                vector<pair<string, string>> listReferrer; // (디스크 경로, 리소스 id)
-                for ( const string& filePath : listFile )
+                AssetIDSet                         assets;
+                vector<pair<AbsolutePath, string>> listReferrer; // (디스크 경로, 리소스 id)
+                for ( const AbsolutePath& filePath : listFile )
                 {
                     string assetID;
-                    if ( FileUtil::makeRelativePath( contentRoot, filePath, assetID ) == false )
+                    if ( FileUtil::makeRelativePath( contentRoot.str(), filePath.str(), assetID ) == false )
                         continue;
                     assetID = FileUtil::normalizeSeparators( assetID );
                     assets.addFile( assetID );
@@ -101,7 +101,7 @@ namespace sw::editor
                 for ( const auto& [filePath, assetID] : listReferrer )
                 {
                     string text;
-                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
+                    if ( FileUtil::readTextFile( filePath, text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
                     StringBuilder<constant::buffer::kMax256> labelBuilder;
                     labelBuilder.appendFormat( "Content/%#", assetID );

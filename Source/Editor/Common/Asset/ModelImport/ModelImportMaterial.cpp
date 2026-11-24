@@ -132,7 +132,7 @@ namespace sw::editor
         return false;
     }
 
-    bool ModelImportMaterial::readSectionPBRMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::readSectionPBRMaterials( const cgltf_data& data, const AbsolutePath& sourcePath, ModelImportResult& inoutResult )
     {
         inoutResult._listPBRMaterial.clear();
         bool bAnyTextured = false;
@@ -263,7 +263,7 @@ namespace sw::editor
             ModelImportGeometry::optimizeTriangleRange( inoutBody, begin, triangleCount );
     }
 
-    bool ModelImportMaterial::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::collectSectionTextures( const cgltf_data& data, const AbsolutePath& sourcePath, ModelImportResult& inoutResult )
     {
         vector<uint8> listUsed( data.textures_count, SW_FALSE );
         for ( const ModelImportSection& section : inoutResult._listSection )
@@ -305,12 +305,12 @@ namespace sw::editor
             if ( readImageBytes( *pImage, sourcePath, texture ) == false )
                 return false;
             if ( texture._bytes.empty() )
-                SW_LOG_WARNING_ID( "ModelImporter.GlTFTextureNoReadable", "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath, textureIndex );
+                SW_LOG_WARNING_ID( "ModelImporter.GlTFTextureNoReadable", "glTF '%#': texture %# has no readable image bytes - the material samples white", sourcePath.str(), textureIndex );
         }
         return true;
     }
 
-    bool ModelImportMaterial::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         if ( result._listSection.empty() )
             return true;
@@ -324,11 +324,11 @@ namespace sw::editor
                 if ( writePBRMaterialFile( assetPaths, result._listPBRMaterial[section._materialIndex], section._fileStem, sourcePath, sideFolder ) == false )
                     return false;
             }
-            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath, result._listSection.size(), uniqueWrittenStem.size() );
+            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath.str(), result._listSection.size(), uniqueWrittenStem.size() );
             return true;
         }
-        const string   rawTextureFolder = makeRawTextureFolder( sourcePath );
-        vector<string> listTexturePath( result._listTexture.size() );
+        const AbsolutePath rawTextureFolder = makeRawTextureFolder( sourcePath );
+        vector<string>     listTexturePath( result._listTexture.size() );
         for ( size_t textureIndex = 0; textureIndex < result._listTexture.size(); ++textureIndex )
         {
             const ModelImportTexture& texture = result._listTexture[textureIndex];
@@ -342,13 +342,13 @@ namespace sw::editor
         const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
         if ( pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFEngineDefaultAssets", "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFEngineDefaultAssets", "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath.str() );
             return false;
         }
         string toonTemplateText;
         if ( AssetIO::readTextAsset( AssetID{ pDefaultAssets->_toonMaterialTemplate.get() }, toonTemplateText ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.ToonTemplateUnreadable", "glTF '%#': the toon material template could not be read", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.ToonTemplateUnreadable", "glTF '%#': the toon material template could not be read", sourcePath.str() );
             return false;
         }
 
@@ -361,7 +361,7 @@ namespace sw::editor
             const string materialText = ToonMaterialDef::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
             if ( materialText.empty() || writeSharedMaterial( assetPaths, materialText, toonTemplateText, pDefaultAssets->_toonMaterialTemplate.get(), section._fileStem, sourcePath, sideFolder ) == false )
             {
-                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material '%#' of %#", section._fileStem.c_str(), sourcePath );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material '%#' of %#", section._fileStem.c_str(), sourcePath.str() );
                 return false;
             }
         }
@@ -372,13 +372,13 @@ namespace sw::editor
             {
                 joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", key );
             }
-            SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath.str(), joined.c_str() );
         }
-        SW_LOG_INFO_ID( "ModelImporter.VRMMaterialSectionsTexture", "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
+        SW_LOG_INFO_ID( "ModelImporter.VRMMaterialSectionsTexture", "VRM '%#': %# material sections, %# texture sources", sourcePath.str(), result._listSection.size(), result._listTexture.size() );
         return true;
     }
 
-    bool ModelImportMaterial::readImageBytes( const cgltf_image& image, string_view sourcePath, ModelImportTexture& outTexture )
+    bool ModelImportMaterial::readImageBytes( const cgltf_image& image, const AbsolutePath& sourcePath, ModelImportTexture& outTexture )
     {
         const string mimeType = image.mime_type != nullptr ? string( image.mime_type ) : string();
         outTexture._extension = ( mimeType == "image/jpeg" ) ? ".jpg" : ".png";
@@ -400,7 +400,7 @@ namespace sw::editor
             const bool        bRead = StringUtil::endsWith( head, ";base64" ) && Base64Util::decode( uri.substr( comma + 1 ), outTexture._bytes );
             if ( bRead == false )
             {
-                SW_LOG_ERROR_ID( "ModelImport.ImageDataUnreadable", "glTF '%#': an embedded image is not base64 data", sourcePath );
+                SW_LOG_ERROR_ID( "ModelImport.ImageDataUnreadable", "glTF '%#': an embedded image is not base64 data", sourcePath.str() );
                 return false;
             }
             if ( StringUtil::contains( head, "image/jpeg" ) )
@@ -408,12 +408,12 @@ namespace sw::editor
             return true;
         }
         // 원본이 가리키는 바깥 파일을 못 읽으면 흰 텍스처로 임포트하지 않고 실패한다(빠진 파일이 결과에 말없이 묻힌다).
-        const string imagePath = ModelImportUtil::resolveURI( sourcePath, image.uri );
-        outTexture._extension  = FileUtil::getExtension( imagePath );
-        outTexture._sourcePath = imagePath;
+        const AbsolutePath imagePath = ModelImportUtil::resolveURI( sourcePath, image.uri );
+        outTexture._extension        = FileUtil::getExtension( imagePath.str() );
+        outTexture._sourcePath       = imagePath.str();
         if ( AssetSourceLocator::readBytes( imagePath, outTexture._bytes ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImport.ImageFileMissing", "glTF '%#': cannot read its image file %#", sourcePath, imagePath.c_str() );
+            SW_LOG_ERROR_ID( "ModelImport.ImageFileMissing", "glTF '%#': cannot read its image file %#", sourcePath.str(), imagePath.c_str() );
             return false;
         }
         return true;
@@ -430,7 +430,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    bool ModelImportMaterial::readPBRMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::readPBRMaterial( const cgltf_data& data, const AbsolutePath& sourcePath, ModelImportResult& inoutResult )
     {
         const cgltf_material* pMaterial = findTexturedPBRMaterial( data );
         if ( pMaterial == nullptr )
@@ -439,7 +439,7 @@ namespace sw::editor
         return readPBRMaterialValues( *pMaterial, rawName, sourcePath, inoutResult._pbrMaterial );
     }
 
-    bool ModelImportMaterial::readPBRMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPBRMaterial& outPBR )
+    bool ModelImportMaterial::readPBRMaterialValues( const cgltf_material& material, const string& rawName, const AbsolutePath& sourcePath, ModelImportPBRMaterial& outPBR )
     {
         const cgltf_pbr_metallic_roughness& pbr = material.pbr_metallic_roughness;
         outPBR._name                            = ModelImportUtil::makeFileStem( rawName.c_str() );
@@ -464,17 +464,17 @@ namespace sw::editor
         const bool           bSameORM = pAO != nullptr && pORM != nullptr && pAO->image == pORM->image;
         outPBR._occlusionStrength     = bSameORM ? material.occlusion_texture.scale : 0.0f;
         if ( pAO != nullptr && bSameORM == false )
-            SW_LOG_WARNING_ID( "ModelImporter.GlTFOcclusionTextureNot", "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
+            SW_LOG_WARNING_ID( "ModelImporter.GlTFOcclusionTextureNot", "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath.str() );
         outPBR._bAlphaCutoff = material.alpha_mode == cgltf_alpha_mode_mask ? SW_TRUE : SW_FALSE;
         outPBR._alphaCutoff  = material.alpha_cutoff;
         outPBR._bTwoSided    = material.double_sided != 0 ? SW_TRUE : SW_FALSE;
         if ( material.alpha_mode == cgltf_alpha_mode_blend )
-            SW_LOG_WARNING_ID( "ModelImporter.GlTFBlendAlphaOpaque", "glTF '%#': material '%#' is alphaMode BLEND - the PBR material is opaque (no translucent PBR permutation)", sourcePath, outPBR._name.c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.GlTFBlendAlphaOpaque", "glTF '%#': material '%#' is alphaMode BLEND - the PBR material is opaque (no translucent PBR permutation)", sourcePath.str(), outPBR._name.c_str() );
         outPBR._bPresent = SW_TRUE;
         return true;
     }
 
-    bool ModelImportMaterial::writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         const ModelImportPBRMaterial& pbr = result._pbrMaterial;
         if ( pbr._bPresent == SW_FALSE )
@@ -482,12 +482,12 @@ namespace sw::editor
         return writePBRMaterialFile( assetPaths, pbr, pbr._name, sourcePath, sideFolder );
     }
 
-    bool ModelImportMaterial::writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
-        const string rawTextureFolder = makeRawTextureFolder( sourcePath );
+        const AbsolutePath rawTextureFolder = makeRawTextureFolder( sourcePath );
         if ( rawTextureFolder.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
         // 텍스처 원본을 꺼내 두고(바이트가 같으면 건드리지 않는다) 텍스처 임포트가 만들 DDS 경로를 머티리얼에 적는다.
@@ -500,7 +500,7 @@ namespace sw::editor
             rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
             if ( texture._sourcePath.find( rawMarker.view() ) != string::npos )
             {
-                outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( texture._sourcePath ) );
+                outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( FileUtil::toDiskPath( texture._sourcePath ) ) );
                 return true;
             }
             return writeEmbeddedImage( assetPaths, texture, rawTextureFolder, outAssetPath );
@@ -515,7 +515,7 @@ namespace sw::editor
         string                                templateText;
         if ( pDefaultAssets == nullptr || AssetIO::readTextAsset( AssetID{ pDefaultAssets->_pbrMaterialTemplate.get() }, templateText ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate", "glTF '%#': the PBR material template could not be read", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate", "glTF '%#': the PBR material template could not be read", sourcePath.str() );
             return false;
         }
         XMLDocument   document;
@@ -524,7 +524,7 @@ namespace sw::editor
         const XMLNode properties = root.isValid() ? root.findChild( "_properties" ) : XMLNode{};
         if ( properties.isValid() == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate2", "glTF '%#': the PBR material template is not a material", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate2", "glTF '%#': the PBR material template is not a material", sourcePath.str() );
             return false;
         }
         root.setAttribute( "name", fileStem );
@@ -559,22 +559,22 @@ namespace sw::editor
         setAttribute( "_ormMap", "assetPath", ormPath );
         if ( bMissingProperty )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath.str() );
             return false;
         }
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#.material", fileStem );
-        const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
+        const AbsolutePath materialPath = sideFolder.join( ModelImportUtil::kMaterialFolder ).join( fileNameBuilder.view() );
         if ( writeSharedMaterial( assetPaths, document.saveToString(), templateText, pDefaultAssets->_pbrMaterialTemplate.get(), fileStem, sourcePath, sideFolder ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "ModelImporter.GlTFPBRMaterialAlbedo", "glTF '%#': PBR material %# (albedo%#%#)", sourcePath, materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
+        SW_LOG_INFO_ID( "ModelImporter.GlTFPBRMaterialAlbedo", "glTF '%#': PBR material %# (albedo%#%#)", sourcePath.str(), materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
         return true;
     }
 
-    bool ModelImportMaterial::writeEmbeddedImage( const AssetPaths& assetPaths, const ModelImportTexture& texture, string_view rawTextureFolder, string& outAssetPath )
+    bool ModelImportMaterial::writeEmbeddedImage( const AssetPaths& assetPaths, const ModelImportTexture& texture, const AbsolutePath& rawTextureFolder, string& outAssetPath )
     {
         // 규칙은 모델 옆에 꺼냈을 경로로 고른다(이름 꼬리 `_normal` · 모델 폴더 패턴). 고른 규칙을 저장소 폴더 이름에 남겨 텍스처 임포트가 같은 규칙으로 임포트한다(`TextureImportConfig::findMatchingRule`).
         TextureImportConfig config{};
@@ -582,7 +582,7 @@ namespace sw::editor
             return false; // 로드가 오류를 남겼다 — 없거나 깨진 설정을 기본 규칙으로 읽지 않는다
         fixed_string<constant::buffer::kMax256> fileName;
         formatstring( fileName.data(), fileName.capacity(), "%#%#", texture._fileStem, texture._extension );
-        const string           logicalPath = FileUtil::joinPath( rawTextureFolder, fileName );
+        const AbsolutePath     logicalPath = rawTextureFolder.join( fileName );
         TextureImportRuleMatch match       = config.findMatchingRule( assetPaths.toAssetID( logicalPath ) );
         if ( match.hasError() )
         {
@@ -591,9 +591,9 @@ namespace sw::editor
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
         rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
-        const string domain  = logicalPath.substr( 0, logicalPath.find( rawMarker.view() ) );
-        const string key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
-        const string rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
+        const AbsolutePath domain  = FileUtil::toDiskPath( string_view( logicalPath.str() ).substr( 0, logicalPath.str().find( rawMarker.view() ) ) );
+        const string       key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
+        const AbsolutePath rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
         if ( ImportedAssetStore::writeSourceIfAbsent( assetPaths, rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
             return false;
         outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
@@ -634,51 +634,48 @@ namespace sw::editor
         return document.saveToString();
     }
 
-    bool ModelImportMaterial::writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         SharedMaterialText shared;
         if ( makeSharedMaterialText( fullText, templateText, templatePath, shared ) == false )
             return false;
-        const string domain = ImportedAssetStore::findDomainFolder( sourcePath );
+        const AbsolutePath domain = ImportedAssetStore::findDomainFolder( sourcePath );
         if ( domain.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
-        const string sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
+        const AbsolutePath sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
         if ( ImportedAssetStore::writeIfAbsent( sharedPath, shared._text.data(), shared._text.size() ) == false )
             return false;
         // 손 데이터(씬 · 프리팹)가 부르는 슬롯 주소는 그대로 둔다 — 값은 공유 파일 한 벌이고 슬롯 파일은 그것을 가리키는 한 줄이다(언리얼 Redirector · 덮어쓰기 없는 Material Instance).
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#.material", fileStem );
-        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
+        const AbsolutePath slotPath = sideFolder.join( ModelImportUtil::kMaterialFolder ).join( fileNameBuilder.view() );
         return ImportedAssetStore::writeResultText( slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
     }
 
-    string ModelImportMaterial::findSharedMaterial( string_view sideFolder, string_view fileStem )
+    string ModelImportMaterial::findSharedMaterial( const AbsolutePath& sideFolder, string_view fileStem )
     {
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
         fileNameBuilder.appendFormat( "%#.material", fileStem );
-        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), fileNameBuilder.view() );
-        string       text;
-        XMLDocument  document;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( slotPath ), text ) == false || document.parse( text ) == false )
+        const AbsolutePath slotPath = sideFolder.join( ModelImportUtil::kMaterialFolder ).join( fileNameBuilder.view() );
+        string             text;
+        XMLDocument        document;
+        if ( FileUtil::readTextFile( slotPath, text ) == false || document.parse( text ) == false )
             return {};
         return string( document.getRoot( "MaterialDef" ).getAttributeText( "_base" ) );
     }
 
-    string ModelImportMaterial::makeRawTextureFolder( string_view sourcePath )
+    AbsolutePath ModelImportMaterial::makeRawTextureFolder( const AbsolutePath& sourcePath )
     {
-        const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
+        const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> marker;
         marker.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
         const size_t at = normalized.find( marker.view() );
         if ( at == string::npos )
             return {};
-        const string                             domain   = normalized.substr( 0, at );
-        const string                             relative = FileUtil::removeExtension( normalized.substr( at + marker.size() ) );
-        StringBuilder<constant::buffer::kMax256> folderBuilder;
-        folderBuilder.appendFormat( "%#/%#/%#", domain, ModelImportUtil::kRawTextureFolder, relative );
-        return string( folderBuilder.view() );
+        const AbsolutePath domain = FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
+        return domain.join( ModelImportUtil::kRawTextureFolder ).join( FileUtil::removeExtension( string_view( normalized ).substr( at + marker.size() ) ) );
     }
 } // namespace sw::editor

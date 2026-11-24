@@ -74,7 +74,7 @@ namespace sw::editor
 
         /** @brief XML 에서 읽어 덮어쓰기를 바꿉니다. 실패하면 그대로 두고 false 입니다. 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        [[nodiscard]] bool loadFromFile( string_view absolutePath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
         /** @brief 덮어쓰기를 비웁니다. 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         void   clear();
         string saveToXMLText() const { return _override.saveToXMLText(); }

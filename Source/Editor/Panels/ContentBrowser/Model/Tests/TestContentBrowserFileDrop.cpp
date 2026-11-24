@@ -58,7 +58,7 @@ SW_TEST_CASE( ContentBrowserFileDropTest, DroppedFilesAreFilteredBeforeImport )
     ContentBrowserFileDropPlan plan;
     ContentBrowserFileDropPlan::make( listFile, rules, plan );
     SW_REQUIRE_EQUAL( size_t{ 1 }, plan._listImport.size() );
-    SW_EXPECT_TRUE( plan._listImport[0] == texture );
+    SW_EXPECT_TRUE( plan._listImport[0].str() == texture );
     SW_REQUIRE_EQUAL( size_t{ 5 }, plan._listRejected.size() );
     SW_EXPECT_TRUE( plan._listRejected[0]._reason == ContentBrowserFileDropRejection::NotAbsolute );
     SW_EXPECT_TRUE( plan._listRejected[1]._reason == ContentBrowserFileDropRejection::ParentReference );

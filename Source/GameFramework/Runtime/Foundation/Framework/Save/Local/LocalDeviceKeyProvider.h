@@ -11,6 +11,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
@@ -31,7 +32,7 @@ namespace sw
         static constexpr const utf8* kUnreadableKeySuffix = ".unreadable";
 
         /** @brief @p keyFilePath 에 키를 두고, 새 키의 난수는 @p pSecurityProvider 에서 얻는다(빌려 쓴다). */
-        LocalDeviceKeyProvider( string_view keyFilePath, INetSecurityProvider* pSecurityProvider );
+        LocalDeviceKeyProvider( const AbsolutePath& keyFilePath, INetSecurityProvider* pSecurityProvider );
         ~LocalDeviceKeyProvider() override;
 
         [[nodiscard]] bool getSealKey( uint8 ( &outKey )[kKeySize] ) override;
@@ -41,10 +42,10 @@ namespace sw
          * @brief 키를 읽거나 만들어 둡니다. 실패하면 그 이유입니다 — 로그는 부르는 쪽이 잠금을 놓은 뒤 남긴다.
          * @param outSetAsidePath 풀리지 않는 키 파일을 옆으로 옮기고 새 키를 만들었으면 옮긴 경로(부르는 쪽이 경고한다)
          */
-        [[nodiscard]] expected<void> loadOrCreateKeyLocked( string& outSetAsidePath ) SW_REQUIRES_LOCK( _mutex );
+        [[nodiscard]] expected<void> loadOrCreateKeyLocked( AbsolutePath& outSetAsidePath ) SW_REQUIRES_LOCK( _mutex );
 
     private:
-        string                _keyFilePath;
+        AbsolutePath          _keyFilePath;
         mutable mutex         _mutex;
         INetSecurityProvider* _pSecurityProvider;
         uint8                 _arrKey[kKeySize] SW_GUARDED_BY( _mutex );

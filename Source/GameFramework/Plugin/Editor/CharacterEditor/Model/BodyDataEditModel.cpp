@@ -17,31 +17,31 @@ namespace sw::editor
     {
     }
 
-    bool BodyDataEditModel::openText( string_view text, string_view diskPath )
+    bool BodyDataEditModel::openText( string_view text, const AbsolutePath& diskPath )
     {
-        if ( _doc.parseKeepingComments( text, diskPath ) == false )
+        if ( _doc.parseKeepingComments( text, diskPath.str() ) == false )
         {
             _error = _doc.getLastError();
             close();
             return false;
         }
         _text     = _doc.saveToString(); // 저장 모양으로 맞춘 글이 기준이다 — 읽기만 해서는 미저장이 아니다
-        _diskPath = string( diskPath );
+        _diskPath = diskPath;
         _error.clear();
         _state.reset( _text );
         ++_revision;
         return true;
     }
 
-    bool BodyDataEditModel::openFile( string_view diskPath )
+    bool BodyDataEditModel::openFile( const AbsolutePath& diskPath )
     {
-        if ( isOpen() && StringUtil::equals( _diskPath, diskPath ) && isDirty() == false )
+        if ( isOpen() && _diskPath == diskPath && isDirty() == false )
             return true;
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( diskPath ), text ) == false )
+        if ( FileUtil::readTextFile( diskPath, text ) == false )
         {
             StringBuilder<constant::buffer::kMax512> error;
-            error.appendFormat( "%#: cannot read the file", diskPath );
+            error.appendFormat( "%#: cannot read the file", diskPath.str() );
             _error = string( error.view() );
             close();
             return false;
@@ -53,10 +53,10 @@ namespace sw::editor
     {
         if ( isOpen() == false || _diskPath.empty() )
             return false;
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _diskPath ), _text ) == false )
+        if ( FileUtil::writeTextFile( _diskPath, _text ) == false )
         {
             StringBuilder<constant::buffer::kMax512> error;
-            error.appendFormat( "%#: cannot write the file", _diskPath );
+            error.appendFormat( "%#: cannot write the file", _diskPath.str() );
             _error = string( error.view() );
             return false;
         }
@@ -69,7 +69,7 @@ namespace sw::editor
     {
         _doc.clear();
         _text.clear();
-        _diskPath.clear();
+        _diskPath = {};
         _state.reset( string{} );
         ++_revision;
     }
@@ -157,7 +157,7 @@ namespace sw::editor
 
     bool BodyDataEditModel::reparse( const string& text )
     {
-        if ( _doc.parseKeepingComments( text, _diskPath ) == false )
+        if ( _doc.parseKeepingComments( text, _diskPath.str() ) == false )
         {
             _error = _doc.getLastError();
             return false;

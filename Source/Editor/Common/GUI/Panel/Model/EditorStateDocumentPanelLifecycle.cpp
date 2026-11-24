@@ -14,26 +14,26 @@ namespace sw::editor
 {
     DocumentAutosaveResult EditorStateDocumentPanel::takeAutosaveCopies( vector<EditorDocumentAutosaveEntry>& inoutListEntry )
     {
-        vector<string> listPath;
+        vector<AbsolutePath> listPath;
         if ( isDocumentDirty() )
             collectFilesToSave( listPath );
         removeStaleCopies( listPath );
         DocumentAutosaveResult result = DocumentAutosaveResult::Nothing;
-        for ( const string& path : listPath )
+        for ( const AbsolutePath& path : listPath )
         {
             expected<string> text = tryMakeFileText( path );
             if ( text.has_value() == false )
             {
-                SW_LOG_WARNING_ID( "EditorStateDocumentPanel.CopyTextFailed", "Autosave: %# has no copy of %# - %# (%#)", getPanelTitle(), path, text.error().message(), text.error().detail() );
+                SW_LOG_WARNING_ID( "EditorStateDocumentPanel.CopyTextFailed", "Autosave: %# has no copy of %# - %# (%#)", getPanelTitle(), path.str(), text.error().message(), text.error().detail() );
                 continue;
             }
             const uint64 textHash   = ContentHash::computeBytes( reinterpret_cast<const uint8*>( text->data() ), text->size() );
-            uint64&      copiedHash = _mapCopyTextHash[path];
+            uint64&      copiedHash = _mapCopyTextHash[path.str()];
             if ( copiedHash == textHash )
                 continue;
             copiedHash = textHash;
             EditorDocumentAutosaveEntry entry{};
-            entry._documentPath = EditorDocumentAutosaveEntry::makeFileID( path );
+            entry._documentPath = EditorDocumentAutosaveEntry::makeFileID( path.str() );
             entry._text         = std::move( *text );
             inoutListEntry.push_back( std::move( entry ) );
             result = DocumentAutosaveResult::Ready;
@@ -48,11 +48,11 @@ namespace sw::editor
         if ( EditorAutosaveCommands::peekPendingDocumentRestore( documentPath, text ) )
         {
             const optional<AbsolutePath> filePath = EditorDocumentAutosaveEntry::resolveFileID( documentPath );
-            if ( filePath.has_value() && isEditingFile( filePath->str() ) )
+            if ( filePath.has_value() && isEditingFile( *filePath ) )
             {
                 const string fileID{ documentPath };
                 string       takenText;
-                if ( applyFileText( filePath->str(), string{ text } ) )
+                if ( applyFileText( *filePath, string{ text } ) )
                 {
                     (void)EditorAutosaveCommands::takePendingDocumentRestore( fileID, takenText ); // 방금 본 청이다 — 사본과 후보를 지운다
                     markDocumentDirty();
@@ -68,12 +68,14 @@ namespace sw::editor
             removeStaleCopies( {} );
     }
 
-    void EditorStateDocumentPanel::removeStaleCopies( const vector<string>& listPath )
+    void EditorStateDocumentPanel::removeStaleCopies( const vector<AbsolutePath>& listPath )
     {
         vector<string> listStale;
         for ( const auto& [path, textHash] : _mapCopyTextHash )
         {
-            if ( VectorUtil::contains( listPath, path ) == false )
+            const bool bKept = VectorUtil::containsIf( listPath, [&path = path]( const AbsolutePath& kept )
+            { return kept.str() == path; } );
+            if ( bKept == false )
                 listStale.push_back( path );
         }
         for ( const string& path : listStale )

@@ -16,21 +16,19 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 
 #include <condition_variable>
 
 namespace sw
 {
-    enum class ScreenshotOutput : uint8;
 
     class FrameRenderer;
     class OffscreenSceneRenderers;
     class IRHICommandContext;
     class IRHIDevice;
     class Scene;
-
-    enum class ScreenshotTicketState : uint8; // Engine/Graphics/View/ScreenshotTicketState.h
 
     /** @brief 렌더 스레드에서 실행할 일 하나입니다(`RenderThread::executeAndWait`). 디바이스는 그 스레드가 컨텍스트를 잡은 것입니다. */
     SW_DECLARE_DELEGATE( void, RenderCommandDelegate, IRHIDevice& );
@@ -243,11 +241,7 @@ namespace sw
         mutable mutex                                    _scenePendingMutex;                  ///< 아래 표를 지킨다(렌더 스레드가 프레임마다 쓰고 게임 스레드가 읽는다)
         array<ScenePendingJob, 1 + kMaxPreviewSceneView> _arrScenePending;                    ///< 지난 프레임에 그린 씬(주 화면 + 미리보기)마다의 값
         uint32                                           _scenePendingCount;                  ///< `_arrScenePending` 에 쓴 칸 수
-        string                                           _requestedScreenshotPath;            ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
-        uint32                                           _requestedScreenshotTicket;          ///< 받은 요청의 표(끝 알림이 이 표로 결과를 남긴다)
-        RHITextureHandle                                 _requestedScreenshotTexture;         ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
-        RHIFormat                                        _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
-        ScreenshotOutput                                 _requestedScreenshotOutput;          ///< 파일로 쓸지 PNG 바이트로 우편함에 둘지(`requestScreenshotPNGBytes`)
+        ScreenshotRequest                                _requestedScreenshot;                ///< 받은 `requestScreenshot` 요청(렌더 스레드만 쓴다). 표(`_ticket`)가 0 이면 요청이 없다. `_texture` 가 0 이면 Present 캡처다
         uint32                                           _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
         shared_ptr<atomic<uint32>>                       _pRequestedScreenshotWritesInFlight; ///< 워커가 쓰는 중인 실행 중 요청 수(잡이 같이 들어 이 객체보다 오래 살 수 있다). 0 이 아니면 다음 요청을 꺼내지 않는다
         struct PendingRenderTargetRead;

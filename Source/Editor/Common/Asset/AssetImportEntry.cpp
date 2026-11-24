@@ -46,7 +46,7 @@ namespace sw::editor
                             if ( bCheckOnly == false )
                                 SW_LOG_WARNING_ID( "AssetImportEntry.TextureImportDebugBuild", "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
                         }
-                        const string        configPath = TextureImporter::makeDefaultImportConfigPath();
+                        const AbsolutePath  configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) == false )
                         {
@@ -59,8 +59,8 @@ namespace sw::editor
                     }
                     case EditorImportKind::Model:
                     {
-                        const string      configPath = ModelImportConfig::makeDefaultConfigPath();
-                        ModelImportConfig config;
+                        const AbsolutePath configPath = ModelImportConfig::makeDefaultConfigPath();
+                        ModelImportConfig  config;
                         if ( config.loadFromFile( configPath ) == false )
                         {
                             SW_LOG_ERROR_ID( "AssetImportEntry.CannotImportModelsWithout", "Cannot import models without the import config: %#", configPath.c_str() );
@@ -78,7 +78,7 @@ namespace sw::editor
                     }
                     case EditorImportKind::TextureVariant:
                     {
-                        const string        configPath = TextureImporter::makeDefaultImportConfigPath();
+                        const AbsolutePath  configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) == false )
                         {

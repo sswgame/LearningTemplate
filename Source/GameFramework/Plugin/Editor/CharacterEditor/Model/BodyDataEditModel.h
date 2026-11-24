@@ -10,6 +10,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
@@ -39,18 +40,18 @@ namespace sw::editor
         BodyDataEditModel();
 
         /** @brief 글 @p text 를 문서로 엽니다(기록을 비우고 "저장된 상태" 로 맞춘다). 읽지 못하면 false 이고 이유는 `getError` 입니다. @p diskPath 는 저장할 곳(비면 저장하지 않는다). */
-        [[nodiscard]] bool openText( string_view text, string_view diskPath );
+        [[nodiscard]] bool openText( string_view text, const AbsolutePath& diskPath );
         /** @brief 디스크 파일 @p diskPath 를 엽니다. 같은 파일이 이미 열려 있고 고치지 않았으면 다시 읽지 않습니다. */
-        [[nodiscard]] bool openFile( string_view diskPath );
+        [[nodiscard]] bool openFile( const AbsolutePath& diskPath );
         /** @brief 지금 글을 연 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool save();
         void               close();
 
-        bool          isOpen() const { return _doc.getRoot().isValid(); }
-        bool          isDirty() const { return _state.isDirty( _text ); }
-        const string& getText() const { return _text; }
-        const string& getDiskPath() const { return _diskPath; }
-        const string& getError() const { return _error; }
+        bool                isOpen() const { return _doc.getRoot().isValid(); }
+        bool                isDirty() const { return _state.isDirty( _text ); }
+        const string&       getText() const { return _text; }
+        const AbsolutePath& getDiskPath() const { return _diskPath; }
+        const string&       getError() const { return _error; }
         /** @brief 편집 · 되돌리기마다 오르는 번호입니다(화면이 다시 읽을지 가른다). */
         uint32 getRevision() const { return _revision; }
 
@@ -86,7 +87,7 @@ namespace sw::editor
     private:
         XMLDocument                 _doc;
         string                      _text;
-        string                      _diskPath;
+        AbsolutePath                _diskPath;
         string                      _error;
         EditorDocumentState<string> _state;
         uint32                      _revision;

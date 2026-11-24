@@ -268,10 +268,10 @@ namespace sw
         return finishLoad( ReflectedXMLFile::loadDesc( assetID, *this ), path );
     }
 
-    bool VFXEffectDef::loadFromDiskFile( string_view diskPath )
+    bool VFXEffectDef::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         *this = VFXEffectDef{};
-        return finishLoad( ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ), diskPath );
+        return finishLoad( ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ), diskPath.str() );
     }
 
     shared_ptr<const VFXEffectDef> VFXEffectDef::makeFromXMLText( string_view xmlText, string_view sourceLabel )

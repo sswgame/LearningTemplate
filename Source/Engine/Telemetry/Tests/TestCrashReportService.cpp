@@ -15,15 +15,15 @@ namespace
     struct CrashReportServiceTest
     {
         CrashReportService _service;
-        string             _crashFolder;
-        string             _reportsFolder;
+        AbsolutePath       _crashFolder;
+        AbsolutePath       _reportsFolder;
 
         CrashReportServiceTest()
             : _service{}
-            , _crashFolder{ test::makeScratchPath( "crash" ).str() }
-            , _reportsFolder{ test::makeScratchPath( "reports" ).str() }
+            , _crashFolder{ test::makeScratchPath( "crash" ) }
+            , _reportsFolder{ test::makeScratchPath( "reports" ) }
         {
-            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _crashFolder ) );
+            (void)FileUtil::ensureDirectoryExists( _crashFolder );
             _service.initialize( _crashFolder, _reportsFolder, "current" );
         }
 
@@ -32,23 +32,23 @@ namespace
         {
             StringBuilder<constant::buffer::kMax128> fileName;
             fileName.appendFormat( "crash_%#.txt", sessionID );
-            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, fileName.view() ) ), "reason : boom\nBuildID : b1\n" );
+            (void)FileUtil::writeTextFile( _crashFolder.join( fileName.view() ), "reason : boom\nBuildID : b1\n" );
             fileName.clear();
             fileName.appendFormat( "crash_%#.dmp", sessionID );
-            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, fileName.view() ) ), "dump" );
+            (void)FileUtil::writeTextFile( _crashFolder.join( fileName.view() ), "dump" );
             fileName.clear();
             fileName.appendFormat( "crash_%#.breadcrumbs.txt", sessionID );
-            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, fileName.view() ) ), "one\ntwo\n" );
+            (void)FileUtil::writeTextFile( _crashFolder.join( fileName.view() ), "one\ntwo\n" );
             fileName.clear();
             fileName.appendFormat( "App_%#.txt", sessionID );
-            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, fileName.view() ) ), "session log" );
+            (void)FileUtil::writeTextFile( _crashFolder.join( fileName.view() ), "session log" );
         }
 
-        [[nodiscard]] string makeBundleFile( string_view sessionID, string_view fileName ) const
+        [[nodiscard]] AbsolutePath makeBundleFile( string_view sessionID, string_view fileName ) const
         {
             StringBuilder<constant::buffer::kMax128> bundleName;
             bundleName.appendFormat( "crash_%#", sessionID );
-            return FileUtil::joinPath( FileUtil::joinPath( _reportsFolder, bundleName.view() ), fileName );
+            return _reportsFolder.join( bundleName.view() ).join( fileName );
         }
 
         /** @brief 묶음 하나뿐일 때 그 요약입니다. */
@@ -89,13 +89,13 @@ SW_TEST_CASE_F( CrashReportServiceTest, CollectMovesCrashFilesAndSkipsTheCurrent
 
     SW_REQUIRE_EQUAL( _service.collectNewCrashes(), 1u );
 
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, "crash_old.txt" ) ) ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, "crash_old.dmp" ) ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, "crash_current.txt" ) ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( FileUtil::joinPath( _crashFolder, "App_old.txt" ) ) ) ); // 로그는 복사다 - 로그 폴더의 것은 로그 정리가 맡는다
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( makeBundleFile( "old", "crash.dmp" ) ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( _crashFolder.join( "crash_old.txt" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( _crashFolder.join( "crash_old.dmp" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( _crashFolder.join( "crash_current.txt" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( _crashFolder.join( "App_old.txt" ) ) ); // 로그는 복사다 - 로그 폴더의 것은 로그 정리가 맡는다
+    SW_EXPECT_TRUE( FileUtil::exists( makeBundleFile( "old", "crash.dmp" ) ) );
     string log;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( makeBundleFile( "old", "last.log" ) ), log ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( makeBundleFile( "old", "last.log" ), log ) );
     SW_EXPECT_EQUAL( log, string( "session log" ) );
 
     const CrashReportSummary report = readOnlyReport();
@@ -155,8 +155,8 @@ SW_TEST_CASE_F( CrashReportServiceTest, ReporterSendsQueuedBundleOnce )
     SW_EXPECT_EQUAL( uploader._listBundle[0]._sessionID, string( "old" ) );
     SW_EXPECT_EQUAL( uploader._listBundle[0]._listFilePath.size(), size_t{ 4 } ); // crash.txt · crash.dmp · crash.breadcrumbs.txt · last.log
     SW_EXPECT_TRUE( readOnlyReport()._state == CrashReportState::Sent );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( makeBundleFile( "old", "crash.dmp" ) ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( makeBundleFile( "old", "crash.txt" ) ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( makeBundleFile( "old", "crash.dmp" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( makeBundleFile( "old", "crash.txt" ) ) );
 
     SW_EXPECT_EQUAL( CrashReportService::runReporter( _reportsFolder, uploader ), 0u );
     SW_EXPECT_EQUAL( uploader._listBundle.size(), size_t{ 1 } );
@@ -178,7 +178,7 @@ SW_TEST_CASE_F( CrashReportServiceTest, ReporterStopsAtTheAttemptLimit )
     SW_EXPECT_EQUAL( uploader._listBundle.size(), size_t{ CrashReportService::kMaxAttempts } );
     SW_EXPECT_EQUAL( readOnlyReport()._attempts, CrashReportService::kMaxAttempts );
     SW_EXPECT_TRUE( readOnlyReport()._state == CrashReportState::Queued );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( makeBundleFile( "old", "crash.dmp" ) ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( makeBundleFile( "old", "crash.dmp" ) ) );
     SW_EXPECT_EQUAL( _service.countPendingUploads(), 0u );
 }
 
@@ -203,7 +203,7 @@ SW_TEST_CASE_F( CrashReportServiceTest, ReportCapRemovesTheExtraBundles )
 // 다른 프로세스의 보관 개수 정리가 목록을 읽은 뒤에 묶음을 지울 수 있다. 사라진 묶음은 오류 로그 없이 "없음" 이다(로그가 나면 이 테스트가 진다).
 SW_TEST_CASE_F( CrashReportServiceTest, BundleThatVanishedIsNotAnError )
 {
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( _reportsFolder, "crash_gone" ) ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( _reportsFolder.join( "crash_gone" ) ) );
 
     vector<CrashReportSummary> listReport;
     _service.collectReports( listReport );

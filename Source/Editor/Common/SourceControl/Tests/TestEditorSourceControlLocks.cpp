@@ -15,13 +15,13 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
 {
-    const string        root = FileUtil::normalizeSeparators( test::makeScratchPath( "repo" ).str() );
-    EditorSourceControl sourceControl{ root };
+    const AbsolutePath  root = test::makeScratchPath( "repo" );
+    EditorSourceControl sourceControl{ root.str() };
     sourceControl.setLocks( {
         SourceControlLock{ "Content/hero.prefab.xml", "alice", "7" }
     } );
 
-    const string             lockedPath = FileUtil::joinPath( root, "Content/hero.prefab.xml" );
+    const AbsolutePath       lockedPath = root.join( "Content/hero.prefab.xml" );
     const SourceControlLock* pLock      = sourceControl.findLock( lockedPath );
     SW_REQUIRE_NOT_NULL( pLock );
     SW_EXPECT_EQUAL( string( "alice" ), pLock->_owner );
@@ -29,10 +29,10 @@ SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
     expectedStatus.appendFormat( "Locked by alice (%#)", sourceControl.getProvider().getName() );
     SW_EXPECT_EQUAL( string( expectedStatus.view() ), sourceControl.describeStatus( lockedPath, false ) );
 
-    const string otherPath = FileUtil::joinPath( root, "Content/other.prefab.xml" );
+    const AbsolutePath otherPath = root.join( "Content/other.prefab.xml" );
     SW_EXPECT_NULL( sourceControl.findLock( otherPath ) );
     SW_EXPECT_TRUE( sourceControl.describeStatus( otherPath, false ).empty() );
-    SW_EXPECT_NULL( sourceControl.findLock( FileUtil::normalizeSeparators( test::makeScratchPath( "elsewhere/hero.prefab.xml" ).str() ) ) );
+    SW_EXPECT_NULL( sourceControl.findLock( test::makeScratchPath( "elsewhere/hero.prefab.xml" ) ) );
 }
 
 /**
@@ -40,11 +40,11 @@ SW_TEST_CASE( EditorSourceControlLocksTest, FindsTheLockOfARepositoryFile )
  */
 SW_TEST_CASE( EditorSourceControlLocksTest, ChangingTheProviderDropsTheLocks )
 {
-    const string        root = FileUtil::normalizeSeparators( test::makeScratchPath( "repo" ).str() );
-    EditorSourceControl sourceControl{ root };
+    const AbsolutePath  root = test::makeScratchPath( "repo" );
+    EditorSourceControl sourceControl{ root.str() };
     sourceControl.setLocks( {
         SourceControlLock{ "Content/hero.prefab.xml", "alice", "7" }
     } );
     sourceControl.setProvider( nullptr ); // 없음 공급자로 돌아간다
-    SW_EXPECT_NULL( sourceControl.findLock( FileUtil::joinPath( root, "Content/hero.prefab.xml" ) ) );
+    SW_EXPECT_NULL( sourceControl.findLock( root.join( "Content/hero.prefab.xml" ) ) );
 }

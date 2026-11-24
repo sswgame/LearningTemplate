@@ -121,17 +121,17 @@ SW_TEST_CASE( LiveReloadLogicTest, CycleFailsSort )
 SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
 {
     SW_EXPECT_EQUAL( string( "SWGame_3" ), ShadowCopyName::make( "SWGame", 3 ) );
-    SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory() ) );
+    SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory().str() ) );
 
     const AbsolutePath directory = test::makeScratchPath( "ShadowCopies" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory.join( "SWGame_1" ) ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "SWGame_1/SWGame.g1.dll" ), "copy" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "SWGame_2.so" ), "copy" ) );
-    SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory.str() ) );
-    vector<string> listLeft;
+    SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory ) );
+    vector<AbsolutePath> listLeft;
     SW_EXPECT_TRUE( FileUtil::collectFiles( directory, "", listLeft, true ) );
     SW_EXPECT_TRUE( listLeft.empty() );
-    SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( FileUtil::joinPath( directory.str(), "Missing" ) ) );
+    SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( directory.join( "Missing" ) ) );
 }
 
 namespace
@@ -152,11 +152,11 @@ namespace
         }
 
         /** @brief 내려갈 때 지워지는지 볼 섀도 복사본 자리의 파일을 만듭니다. */
-        static string makeShadowFile( string_view name )
+        static AbsolutePath makeShadowFile( string_view name )
         {
             const AbsolutePath path = test::makeScratchPath( name );
             SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "shadow" ) );
-            return path.str();
+            return path;
         }
     };
 } // namespace
@@ -166,13 +166,13 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
 {
     DeferredLibraryUnloadQueue queue( 2 );
     queue.unloadOldestBatch(); // 비어 있으면 아무 일도 없다
-    queue.deferUnload( "Null", nullptr, "ignored" );
+    queue.deferUnload( "Null", nullptr, test::makeScratchPath( "ignored" ) );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
 
-    const string a1 = DeferredUnloadTestUtil::makeShadowFile( "a1" );
-    const string a2 = DeferredUnloadTestUtil::makeShadowFile( "a2" );
-    const string b  = DeferredUnloadTestUtil::makeShadowFile( "b" );
-    const string c  = DeferredUnloadTestUtil::makeShadowFile( "c" );
+    const AbsolutePath a1 = DeferredUnloadTestUtil::makeShadowFile( "a1" );
+    const AbsolutePath a2 = DeferredUnloadTestUtil::makeShadowFile( "a2" );
+    const AbsolutePath b  = DeferredUnloadTestUtil::makeShadowFile( "b" );
+    const AbsolutePath c  = DeferredUnloadTestUtil::makeShadowFile( "c" );
 
     queue.beginBatch();
     queue.deferUnload( "A1", DeferredUnloadTestUtil::openSystemLibrary(), a1 );
@@ -180,33 +180,33 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
     queue.beginBatch();
     queue.deferUnload( "B", DeferredUnloadTestUtil::openSystemLibrary(), b );
     SW_EXPECT_EQUAL( 3u, queue.getLibraryCount() );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( a1 ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( a1 ) );
 
     queue.beginBatch();
     queue.deferUnload( "C", DeferredUnloadTestUtil::openSystemLibrary(), c ); // 배치 A 가 최근 둘 밖으로 나간다
     SW_EXPECT_EQUAL( 2u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( a1 ) ) );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( a2 ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( b ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( a1 ) );
+    SW_EXPECT_FALSE( FileUtil::exists( a2 ) );
+    SW_EXPECT_TRUE( FileUtil::exists( b ) );
 
     queue.unloadOldestBatch();
     SW_EXPECT_EQUAL( 1u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( b ) ) );
-    SW_EXPECT_TRUE( FileUtil::exists( FileUtil::toDiskPath( c ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( b ) );
+    SW_EXPECT_TRUE( FileUtil::exists( c ) );
 
     queue.unloadAll();
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( c ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( c ) );
 }
 
 /** @brief [LiveReloadLogicTest] 언로드 큐: 상한이 0 이면 넣자마자 내려간다(비운 목록의 끝을 읽지 않는다) */
 SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
 {
     DeferredLibraryUnloadQueue queue( 0 );
-    const string               path = DeferredUnloadTestUtil::makeShadowFile( "now" );
+    const AbsolutePath         path = DeferredUnloadTestUtil::makeShadowFile( "now" );
     queue.deferUnload( "Now", DeferredUnloadTestUtil::openSystemLibrary(), path );
     SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
-    SW_EXPECT_FALSE( FileUtil::exists( FileUtil::toDiskPath( path ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( path ) );
 }
 
 /** @brief [LiveReloadLogicTest] 섀도 복사본: 엔진 ABI 스탬프가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
@@ -218,24 +218,25 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
 
     ShadowCopyParams params{};
     params._moduleName         = "NotAModule";
-    params._originalModulePath = original.str();
+    params._originalModulePath = original;
     ShadowLibraryNameState name{};
     name._current = "current";
     name._loaded  = "loaded";
-    ShadowCopySerials serials{};
-    string            shadowPath{ "untouched" };
+    ShadowCopySerials  serials{};
+    const AbsolutePath untouched = original.appendSuffix( ".untouched" );
+    AbsolutePath       shadowPath{ untouched };
     SW_EXPECT_FALSE( ModuleShadowCopy::writeShadowCopy( params, serials, name, shadowPath ) );
-    SW_EXPECT_EQUAL( string( "untouched" ), shadowPath );
+    SW_EXPECT_TRUE( shadowPath == untouched );
     SW_EXPECT_EQUAL( string( "current" ), name._current );
 
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original.str(), bytes ) );
+    SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original, bytes ) );
     SW_EXPECT_EQUAL( size_t( 16 ), bytes.size() );
     SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original.str(), bytes ) ); // PE 가 아니면 지연 import 표도 없다
 
     ModuleShadowCopy::removeArtifacts( {} );
     SW_EXPECT_TRUE( FileUtil::exists( original ) );
-    ModuleShadowCopy::removeArtifacts( original.str() );
+    ModuleShadowCopy::removeArtifacts( original );
     SW_EXPECT_FALSE( FileUtil::exists( original ) );
 }
 

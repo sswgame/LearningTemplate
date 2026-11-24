@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
@@ -83,9 +84,9 @@ namespace sw::editor
         ProjectSettingsJSONDocument();
 
         /** @brief @p absolutePath 를 읽어 트리를 만듭니다. 읽지 못하거나 JSON 이 틀리면 그 이유이고 문서는 닫힌다. */
-        [[nodiscard]] expected<void> open( string_view absolutePath );
+        [[nodiscard]] expected<void> open( const AbsolutePath& absolutePath );
         /** @brief 글 @p text 를 파일 @p absolutePath 의 내용으로 열어 트리를 만듭니다(`open` 의 본체 — 테스트가 디스크 없이 부른다). */
-        [[nodiscard]] expected<void> openText( string_view absolutePath, string_view text );
+        [[nodiscard]] expected<void> openText( const AbsolutePath& absolutePath, string_view text );
         /** @brief 연 파일의 편집본 글 @p text 를 저장하지 않은 편집으로 엽니다(자동 저장 사본 복원 — 저장 기준은 디스크 글 그대로다). 열려 있지 않거나 글이 틀리면 false 이고 문서는 그대로입니다. */
         [[nodiscard]] bool restoreText( string_view text );
         /** @brief 파일을 다시 읽어 편집을 버립니다. */
@@ -148,7 +149,7 @@ namespace sw::editor
 
     private:
         vector<ProjectSettingsJSONNode> _listNode;
-        string                          _absolutePath;
+        AbsolutePath                    _absolutePath;
         string                          _sourceText; ///< 열 때 읽은 글 — 노드 범위(`_source`)가 가리킨다
         /// 마지막으로 읽거나 저장한 글과 트리 스냅숏 되돌리기 기록. 노드가 원문 범위를 들어 되돌린 트리도 바뀐 범위만 고쳐 쓴다
         EditorDocumentState<vector<ProjectSettingsJSONNode>> _state;

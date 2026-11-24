@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSupportSettings.h"
@@ -30,7 +31,7 @@ namespace sw
          * @brief @p contentFolder 아래 파일 모두를 그 상대 경로(리소스 id)로 담아 @p packPath 에 씁니다.
          * @return 폴더를 못 읽거나, 상대 경로가 정규형(소문자 · `/`)이 아니거나, 파일 수 · 파일 크기가 @p settings 의 한계를 넘거나, 쓰기가 실패하면 이유를 오류로 남기고 false 입니다.
          */
-        [[nodiscard]] static bool buildFromFolder( string_view contentFolder, string_view packPath, const ModSupportSettings& settings );
+        [[nodiscard]] static bool buildFromFolder( const AbsolutePath& contentFolder, const AbsolutePath& packPath, const ModSupportSettings& settings );
 
     private:
         /**

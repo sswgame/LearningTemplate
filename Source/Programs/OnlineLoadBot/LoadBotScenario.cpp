@@ -242,16 +242,16 @@ namespace sw
         return {};
     }
 
-    expected<LoadBotScenario> LoadBotScenario::loadFromFile( string_view path )
+    expected<LoadBotScenario> LoadBotScenario::loadFromFile( const AbsolutePath& path )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "cannot read the scenario", path } );
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "cannot read the scenario", path.str() } );
         expected<LoadBotScenario> scenario = loadFromXMLText( text );
         if ( scenario.has_value() )
             return scenario;
         Error error = scenario.error();
-        error.prependDetail( ": " ).prependDetail( path ); // 어느 파일인지 — 문장은 안쪽 리터럴 그대로다
+        error.prependDetail( ": " ).prependDetail( path.str() ); // 어느 파일인지 — 문장은 안쪽 리터럴 그대로다
         return unexpected( error );
     }
 

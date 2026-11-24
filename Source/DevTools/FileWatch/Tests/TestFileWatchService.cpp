@@ -30,7 +30,7 @@ namespace
             }
         }
 
-        [[nodiscard]] bool startWatching( string_view directoryPath, bool /*bRecursive*/ ) override
+        [[nodiscard]] bool startWatching( const AbsolutePath& directoryPath, bool /*bRecursive*/ ) override
         {
             _directoryPath = directoryPath;
             _listOpen.push_back( this );
@@ -38,16 +38,16 @@ namespace
         }
         void stopWatching() override {}
         bool isWatching() const override { return true; }
-        void push( FileWatcherAction action, string_view filename ) { pushChange( action, _directoryPath, filename ); }
+        void push( FileWatcherAction action, string_view filename ) { pushChange( action, _directoryPath.str(), filename ); }
 
     private:
         vector<FakeWatcher*>& _listOpen; ///< 테스트가 든 열린 감시자 목록(닫히면 nullptr)
     };
 
     /** @brief 케이스 폴더 아래 절대 경로입니다(감시자가 가짜라 폴더는 없어도 된다). */
-    string makeFolder( string_view relative )
+    AbsolutePath makeFolder( string_view relative )
     {
-        return FileUtil::normalizeSeparators( test::makeScratchPath( relative ).str() );
+        return test::makeScratchPath( relative );
     }
 
     /** @brief 받은 사건을 모으는 구독자입니다. */

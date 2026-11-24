@@ -91,7 +91,7 @@ namespace sw
         _listState.clear();
         _carriedFile = {};
         _onEvent.clear();
-        _userFilePath.clear();
+        _userFilePath       = {};
         _confirmSecondsLeft = 0.0f;
         _bUserFileLoaded    = SW_FALSE;
         _bStartupApplied    = SW_FALSE;
@@ -213,30 +213,29 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 사용자 파일
     // ------------------------------------------------------------------------------
-    bool UserSettingsManager::loadUserFile( string_view filePath )
+    bool UserSettingsManager::loadUserFile( const AbsolutePath& filePath )
     {
-        if ( filePath.empty() || FileUtil::exists( FileUtil::toDiskPath( filePath ) ) == false )
+        if ( filePath.empty() || FileUtil::exists( filePath ) == false )
             return false;
         // 사용자 파일은 엔진 필수 데이터와 달리 복구가 필요하다. 깨진 파일은 조용히 기본값으로 덮지 않고 `.corrupt` 로 치운 뒤
         // 오류를 남긴다 — 다음 저장이 새 파일을 만들고, 사용자는 치운 파일로 무엇이 있었는지 볼 수 있다.
         // 새 빌드가 쓴 파일(어느 주인의 판이 이 빌드보다 큼)도 `.newer` 로 옮긴다 — 읽은 값을 옛 판 번호로 다시 쓰면 새 빌드가 멱등이 아닌 올림(`Scale`)을 또 돌린다.
         string                           text;
-        const UserSettingsFileReadResult result = FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) ? loadUserJSON( text, filePath ) : UserSettingsFileReadResult::Unreadable;
+        const UserSettingsFileReadResult result = FileUtil::readTextFile( filePath, text ) ? loadUserJSON( text, filePath.str() ) : UserSettingsFileReadResult::Unreadable;
         if ( result == UserSettingsFileReadResult::Read )
             return true;
-        const bool                               bNewer = result == UserSettingsFileReadResult::NewerThanBuild;
-        StringBuilder<constant::buffer::kMax512> asidePath;
-        asidePath.appendFormat( "%#%#", filePath, bNewer ? ".newer" : ".corrupt" );
-        const bool                               bMovedAside = FileUtil::copyFile( FileUtil::toDiskPath( filePath ), FileUtil::toDiskPath( asidePath.view() ) ) && FileUtil::removeFile( FileUtil::toDiskPath( filePath ) );
+        const bool                               bNewer      = result == UserSettingsFileReadResult::NewerThanBuild;
+        const AbsolutePath                       asidePath   = filePath.appendSuffix( bNewer ? ".newer" : ".corrupt" );
+        const bool                               bMovedAside = FileUtil::copyFile( filePath, asidePath ) && FileUtil::removeFile( filePath );
         StringBuilder<constant::buffer::kMax512> movedText;
         if ( bMovedAside )
-            movedText.appendFormat( "moved to '%#'", asidePath.view() );
+            movedText.appendFormat( "moved to '%#'", asidePath.str() );
         else
             movedText.append( "could not be moved aside" );
         if ( bNewer )
-            SW_LOG_WARNING_ID( "UserSettings.FileNewerThanBuild", "User settings '%#' were written by a newer build - %# and starting from defaults", filePath, movedText.view() );
+            SW_LOG_WARNING_ID( "UserSettings.FileNewerThanBuild", "User settings '%#' were written by a newer build - %# and starting from defaults", filePath.str(), movedText.view() );
         else
-            SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath, movedText.view() );
+            SW_LOG_ERROR_ID( "UserSettings.FileUnreadable", "User settings '%#' could not be read - %# and starting from a fresh file", filePath.str(), movedText.view() );
         return false;
     }
 
@@ -310,41 +309,41 @@ namespace sw
         return UserSettingsFileEntry::makeJSON( _schema, listEntry, _carriedFile );
     }
 
-    bool UserSettingsManager::saveUserFile( string_view filePath ) const
+    bool UserSettingsManager::saveUserFile( const AbsolutePath& filePath ) const
     {
         if ( filePath.empty() )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( filePath ) ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
         {
-            SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath );
+            SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath.str() );
             return false;
         }
         // 글을 못 만들면(잘못된 UTF-8 값) 있던 파일을 덮지 않는다.
         const expected<string> text = makeUserJSON();
         if ( text.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "UserSettings.UserSettingsNotWritable", "User settings '%#' were not written: %# (%#)", filePath, text.error().message(), text.error().detail() );
+            SW_LOG_WARNING_ID( "UserSettings.UserSettingsNotWritable", "User settings '%#' were not written: %# (%#)", filePath.str(), text.error().message(), text.error().detail() );
             return false;
         }
         // 교체 재시도 sleep 이 이 안에 있다(`FileUtil::writeAtomically`, Core 라 프로파일러를 못 쓴다). 서비스가 묶이기 전 호출은 계측 없이 쓴다.
         const bool bWritten = [&]()
         {
             if ( engine::areEngineServicesBound() == false )
-                return FileUtil::writeTextFileDurable( FileUtil::toDiskPath( filePath ), *text );
+                return FileUtil::writeTextFileDurable( filePath, *text );
             SW_PROFILE_SCOPE( "GT.Settings.save" );
-            return FileUtil::writeTextFileDurable( FileUtil::toDiskPath( filePath ), *text );
+            return FileUtil::writeTextFileDurable( filePath, *text );
         }();
         if ( bWritten == false )
         {
-            SW_LOG_WARNING_ID( "UserSettings.FailedWriteUserSettings", "Failed to write user settings '%#'", filePath );
+            SW_LOG_WARNING_ID( "UserSettings.FailedWriteUserSettings", "Failed to write user settings '%#'", filePath.str() );
             return false;
         }
         return true;
     }
 
-    string UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
+    AbsolutePath UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
     {
-        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsFileEntry::kFileName );
+        return UserDataPath::getConfigDirectory( gameName ).join( UserSettingsFileEntry::kFileName );
     }
 
     // ------------------------------------------------------------------------------
@@ -1238,9 +1237,8 @@ namespace sw
             // 실행마다 새 폴더의 빈 자리다(`reserveUniquePath`) - 프로세스 id 파일을 그대로 쓰면 Windows 가 다시 쓴 id 의 옛 실행 설정을 읽었다.
             if ( bAutomatedRun )
             {
-                StringBuilder<constant::buffer::kMax256> basePath;
-                basePath.appendFormat( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() );
-                setUserFilePath( FileUtil::joinPath( FileUtil::reserveUniquePath( FileUtil::toDiskPath( basePath.view() ), {}, true ), UserSettingsFileEntry::kFileName ) );
+                const AbsolutePath basePath = ProcessRoots::get()._saved.join( "Automation/UserSettings" ).join( to_string( Process::getCurrentProcessID() ) );
+                setUserFilePath( FileUtil::reserveUniquePath( basePath, {}, true ).join( UserSettingsFileEntry::kFileName ) );
             }
             else
                 setUserFilePath( makeDefaultUserFilePath( gameName ) );

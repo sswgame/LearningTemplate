@@ -5,6 +5,8 @@
  *          따로 있어 어느 하나만 다시 쓸 수 있습니다.
  */
 #pragma once
+#include "Core/Path/AbsolutePath.h"
+
 #include "Engine/EngineMinimal.h"
 
 #include "Programs/ReflectionParser/CodeEmit.h"
@@ -40,10 +42,10 @@ namespace sw
         /** @brief 파싱해야 하는 입력 하나입니다. 키워드를 거를 때 읽은 내용을 파서에 그대로 넘깁니다(이중 I/O 방지). */
         struct PendingInput
         {
-            const string*  _pInputFile;
-            string         _content;
-            GeneratedPaths _paths;
-            uint64         _inputWriteTime; /**< 내용을 **읽기 전에** 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedFileUtil::writeStamp`) */
+            const AbsolutePath* _pInputFile;
+            string              _content;
+            GeneratedPaths      _paths;
+            uint64              _inputWriteTime; /**< 내용을 **읽기 전에** 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedFileUtil::writeStamp`) */
         };
 
         /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */
@@ -63,7 +65,7 @@ namespace sw
          * @param inputWriteTime 읽기 전에 측정한 입력 시각.
          * @param listDependency 이 입력을 파싱한 번역 단위가 include 한 프로젝트 헤더(스탬프에 적는다).
          */
-        [[nodiscard]] bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
+        [[nodiscard]] bool writeOutputs( const AbsolutePath& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
                                          const vector<StampDependency>& listDependency ) const;
         /**
          * @brief `--depfile` 이 있으면 모든 입력의 산출물을 목표로, 스탬프들의 의존을 합친 것을 Makefile 꼴로 씁니다. **실행마다** 씁니다.

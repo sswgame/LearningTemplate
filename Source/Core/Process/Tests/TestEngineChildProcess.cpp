@@ -25,7 +25,7 @@ namespace
  */
 SW_TEST_CASE( EngineChildProcessTest, AutomatedRunPassesUnattendedToChildren )
 {
-    const sw::string executable = sw::FileUtil::getExecutablePath();
+    const sw::AbsolutePath executable = sw::FileUtil::getExecutablePath();
 
     sw::CommandLineManager humanRun;
     parseCommandLine( humanRun, nullptr );
@@ -43,12 +43,12 @@ SW_TEST_CASE( EngineChildProcessTest, AutomatedRunPassesUnattendedToChildren )
 }
 
 /**
- * @brief [EngineChildProcessTest] 절대 경로가 아닌 실행 파일은 빈 명령이다(띄우기가 실패로 알린다)
+ * @brief [EngineChildProcessTest] 빈 실행 파일 경로는 빈 명령이다(띄우기가 실패로 알린다)
  */
-SW_TEST_CASE( EngineChildProcessTest, RelativeExecutableMakesEmptyCommand )
+SW_TEST_CASE( EngineChildProcessTest, EmptyExecutableMakesEmptyCommand )
 {
     sw::CommandLineManager humanRun;
     parseCommandLine( humanRun, nullptr );
-    const sw::ProcessCommand command = sw::EngineChildProcess::makeCommand( humanRun, "App", { "-x" } );
+    const sw::ProcessCommand command = sw::EngineChildProcess::makeCommand( humanRun, sw::AbsolutePath{}, { "-x" } );
     SW_EXPECT_TRUE( command._listArgument.empty() );
 }

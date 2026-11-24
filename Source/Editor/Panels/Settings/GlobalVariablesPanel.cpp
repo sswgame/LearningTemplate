@@ -215,7 +215,7 @@ namespace sw::editor
         return true;
     }
 
-    void GlobalVariablesPanel::collectFilesToSave( vector<string>& outListPath ) const
+    void GlobalVariablesPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         GlobalVariablesViewModel::collectFilesToSave( outListPath );
     }
@@ -321,9 +321,9 @@ namespace sw::editor
         }
         else
         {
-            for ( const string& presetFile : _model.getPresetFiles() )
+            for ( const AbsolutePath& presetFile : _model.getPresetFiles() )
             {
-                const string displayName = GlobalVariablesViewModel::makePresetDisplayName( presetFile );
+                const string displayName = GlobalVariablesViewModel::makePresetDisplayName( presetFile.str() );
                 if ( ImGui::MenuItem( displayName.c_str() ) && _model.loadPreset( presetFile ) )
                     markSessionDirty();
             }

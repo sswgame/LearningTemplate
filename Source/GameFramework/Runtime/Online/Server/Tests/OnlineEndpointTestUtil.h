@@ -54,9 +54,9 @@ namespace sw::test
     /** @brief 케이스 폴더에 글 파일 하나를 쓰고 절대 경로를 돌려줍니다(제공자 파일 · 신뢰 PEM). */
     [[nodiscard]] inline string writeScratchText( string_view name, string_view text )
     {
-        string path = FileUtil::normalizeSeparators( makeScratchPath( name ).str() );
-        SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) );
-        return path;
+        AbsolutePath path = makeScratchPath( name );
+        SW_EXPECT_TRUE( FileUtil::writeTextFile( path, text ) );
+        return path.str();
     }
 
     /** @brief 글을 JSON 문자열 안에 넣을 수 있게 고칩니다(PEM 의 줄바꿈 · 경로의 역슬래시). */

@@ -16,6 +16,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.h"
@@ -30,8 +31,8 @@ namespace sw
     /** @struct ModSessionRequest @brief 한 세션에 켤 모드와 그 자리입니다. */
     struct ModSessionRequest
     {
-        string              _installFolder;         ///< 모드 설치 폴더(절대 경로). 모드마다 `<id>/mod.xml` 과 `<id>/content.pack`(또는 개발 구성의 `<id>/content/`)
-        string              _buildFolder;           ///< 소스 모드(`content/`)를 묶은 팩을 둘 폴더(절대 경로). 개발 구성만 쓴다
+        AbsolutePath        _installFolder;         ///< 모드 설치 폴더(절대 경로). 모드마다 `<id>/mod.xml` 과 `<id>/content.pack`(또는 개발 구성의 `<id>/content/`)
+        AbsolutePath        _buildFolder;           ///< 소스 모드(`content/`)를 묶은 팩을 둘 폴더(절대 경로). 개발 구성만 쓴다
         vector<string>      _listEnabledID;         ///< 켤 모드 id(순서는 보지 않는다 — `ModResolver`)
         const ModAllowList* _pAllowList{ nullptr }; ///< 서버의 허용 목록. 클라이언트 · 싱글은 없다(nullptr)
     };
@@ -81,15 +82,15 @@ namespace sw
         [[nodiscard]] bool validateSaveCompatible( string_view savedText ) const override;
 
         /** @brief 모드 설치 폴더입니다 — 패키지는 실행 파일 옆 `Mods`, 저장소는 `Test/Mods`(시연 모드는 시나리오 · 테스트 자료). */
-        static string getInstallFolder();
+        static AbsolutePath getInstallFolder();
         /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/pack.py --mods`)가 여기서 베낀다. */
-        static string getExportFolder();
+        static AbsolutePath getExportFolder();
         /**
          * @brief 설치 폴더의 소스 모드 @p id(`<id>/content/`)를 배포 형태(`<내보내기 폴더>/<id>/mod.xml` + `content.pack`)로 묶습니다 — 배포 게임은 묶은 모드만 읽는다.
          * @details @p id 는 바깥 입력이라 형식(`ModManifest::isValidID`)부터 본다(경로를 id 로만 만든다). 매니페스트를 읽어 id 가 폴더와 같은지 보고, 팩은 같은 한계 · 경로 검사
          *          (`ModPackBuilder` · 마운트 전 검사와 같은 정책 데이터 @p packRoot 의 `modsupport`)를 지난다. 실패하면 이유를 오류로 남기고 false 이며, 쓴 것은 지운다.
          */
-        [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, string& outFolder );
+        [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, AbsolutePath& outFolder );
 
     private:
         /** @brief 이 세션이 바꾼 기본 리소스 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
@@ -97,17 +98,17 @@ namespace sw
         /** @brief 켤 모드의 매니페스트를 읽습니다(id 형식 · 파일 크기 · id 와 폴더 이름의 일치). */
         [[nodiscard]] static bool loadManifests( const ModSessionRequest& request, const ModSupportSettings& settings, vector<ModManifest>& outListManifest );
         /** @brief 모드 하나의 팩 경로를 정합니다 — 묶은 팩이면 그것, 소스 폴더면(개발 구성만) 묶어서 그 경로. 둘 다 있거나 없으면 오류입니다. */
-        [[nodiscard]] bool preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, string& outPackPath );
+        [[nodiscard]] bool preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, AbsolutePath& outPackPath );
         /**
          * @brief 팩을 검사하고 내용 해시를 구합니다(크기 · 도메인 없음 · 항목 수 · 항목 크기 · 경로 꼴 · 모드 접두 또는 밝힌 덮어쓰기 · 밝힌 덮어쓰기와 층이 모두 들었고 기본 리소스가 있음).
          * @details 층 폴더(`mods/<id>/layer/`)의 항목은 밝힌 층이어야 한다 — 엔진 층은 그 뿌리 아래 파일이면 무엇이든 얹으므로, 밝히지 않은 층 파일은 정책(`<Overridable>`)을 지나지 않고 기본 리소스를 바꾼다.
          */
-        [[nodiscard]] static bool validatePack( string_view packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash );
+        [[nodiscard]] static bool validatePack( const AbsolutePath& packPath, const ModManifest& manifest, const ModSupportSettings& settings, uint64& outContentHash );
 
     private:
         AssetManager&          _assets;
         vector<string>         _listMountedPackPath;   ///< 이 세션이 올린 팩(마운트 순서)
-        vector<string>         _listBuiltPackPath;     ///< 이 세션이 소스 모드에서 묶은 팩 파일(내린 뒤 지운다)
+        vector<AbsolutePath>   _listBuiltPackPath;     ///< 이 세션이 소스 모드에서 묶은 팩 파일(내린 뒤 지운다)
         vector<string>         _listOverridePath;      ///< 켠 모드가 덮어쓴 기본 리소스 id
         vector<string>         _listLayerPath;         ///< 켠 모드가 층을 얹은 기본 리소스 id
         vector<string>         _listPreviousLayerRoot; ///< 모드 층을 더하기 전의 엔진 층 목록(`ResourceLayers` — 내릴 때 되돌린다)

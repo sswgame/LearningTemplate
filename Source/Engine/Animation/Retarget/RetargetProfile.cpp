@@ -140,13 +140,13 @@ namespace sw
                 DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
                 return false;
             }
-            return ResourceComposer::saveDelta( absPath.str(), fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
+            return ResourceComposer::saveDelta( absPath, fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
             {
                 RetargetProfile reread;
                 return reread.loadFromXMLText( deltaText, absPath.str() ) ? reread.toXML() : string{};
             } );
         }
-        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
+        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, fullText ) ) == false ) // 차이면 펼친 글이 짝이다
         {
             SW_LOG_ERROR_ID( "RetargetProfile.WriteFailed", "Retarget profile could not be written: %#", absPath.str() );
             return false;

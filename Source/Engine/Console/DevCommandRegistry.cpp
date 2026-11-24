@@ -22,7 +22,7 @@ namespace sw
         }
     } // namespace
 
-    bool DevCommandRegistry::readDiskPathArgument( string_view argument, string& outAbsolutePath, string& outReply )
+    bool DevCommandRegistry::readDiskPathArgument( string_view argument, AbsolutePath& outAbsolutePath, string& outReply )
     {
         const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( argument );
         if ( absolutePath.has_value() == false )
@@ -32,7 +32,7 @@ namespace sw
             outReply.push_back( '\'' );
             return false;
         }
-        outAbsolutePath = absolutePath->str();
+        outAbsolutePath = *absolutePath;
         return true;
     }
 

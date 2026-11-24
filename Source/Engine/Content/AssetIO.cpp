@@ -179,9 +179,9 @@ namespace sw
         return CookJob::recordReadInput( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
-    bool AssetIO::readTextFile( string_view filePath, string& outText )
+    bool AssetIO::readTextFile( const AbsolutePath& filePath, string& outText )
     {
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), outText ) == false )
+        if ( FileUtil::readTextFile( filePath, outText ) == false )
         {
             CookJob::allowMissingDiskRead( filePath );
             return false;
@@ -189,9 +189,9 @@ namespace sw
         return CookJob::allowDiskRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
-    bool AssetIO::readBinaryFile( string_view filePath, vector<uint8>& outBytes )
+    bool AssetIO::readBinaryFile( const AbsolutePath& filePath, vector<uint8>& outBytes )
     {
-        if ( FileUtil::readFile( FileUtil::toDiskPath( filePath ), outBytes ) == false )
+        if ( FileUtil::readFile( filePath, outBytes ) == false )
         {
             CookJob::allowMissingDiskRead( filePath );
             return false;
@@ -363,14 +363,14 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( folder ) )
         {
             // 검색 순서의 모든 도메인 폴더를 합친다 — 팩 나열과 같은 합집합(같은 이름은 아래 정렬에서 앞선 표기가 남는다).
-            vector<string> listDiskFolder;
+            vector<AbsolutePath> listDiskFolder;
             engine::getSubsystem<AssetPaths>().collectLooseFolders( folder, listDiskFolder );
-            for ( const string& diskFolder : listDiskFolder )
+            for ( const AbsolutePath& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
-                if ( ContentFileSource::getCurrent().collectFiles( diskFolder, listDiskFile ) == false )
+                if ( ContentFileSource::getCurrent().collectFiles( diskFolder.str(), listDiskFile ) == false )
                 {
-                    SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
+                    SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder.str() );
                     return AssetFolderListing::Failed;
                 }
                 bFolderFound = true;

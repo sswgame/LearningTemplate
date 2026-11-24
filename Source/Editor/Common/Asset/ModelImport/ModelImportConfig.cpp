@@ -101,13 +101,13 @@ namespace sw::editor
     {
     }
 
-    bool ModelImportConfig::loadFromFile( string_view configPath )
+    bool ModelImportConfig::loadFromFile( const AbsolutePath& configPath )
     {
         _listRule.clear();
         string text;
-        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( configPath ), text ) != OptionalFileRead::Read || text.empty() )
+        if ( FileUtil::readOptionalTextFile( configPath, text ) != OptionalFileRead::Read || text.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImportConfig.FailedReadModelImportConfigFile", "Failed to read ModelImportConfig file: %#", configPath );
+            SW_LOG_ERROR_ID( "ModelImportConfig.FailedReadModelImportConfigFile", "Failed to read ModelImportConfig file: %#", configPath.str() );
             return false;
         }
         return loadFromJSONString( text );
@@ -276,8 +276,8 @@ namespace sw::editor
         return match;
     }
 
-    string ModelImportConfig::makeDefaultConfigPath()
+    AbsolutePath ModelImportConfig::makeDefaultConfigPath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfigEditor ), EditorPaths::kModelImportConfigFileName );
+        return ProcessRoots::get()._project.join( config::kDirConfigEditor ).join( EditorPaths::kModelImportConfigFileName );
     }
 } // namespace sw::editor

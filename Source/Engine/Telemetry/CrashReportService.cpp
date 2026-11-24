@@ -55,11 +55,11 @@ namespace sw
                 return false;
             }
 
-            static string makeCrashFilePath( const string& folder, string_view sessionID, const utf8* pExtension )
+            static AbsolutePath makeCrashFilePath( const AbsolutePath& folder, string_view sessionID, const utf8* pExtension )
             {
                 StringBuilder<constant::buffer::kMax256> name;
                 name.appendFormat( "crash_%#.%#", sessionID, pExtension );
-                return FileUtil::joinPath( folder, name.c_str() );
+                return folder.join( name.c_str() );
             }
 
             /** @brief 컨텍스트 파일 이름이면 세션 id 를 꺼냅니다(`crash_<세션>.txt` — `.stack.txt` · `.breadcrumbs.txt` 는 아니다). */
@@ -95,21 +95,21 @@ namespace sw
                 bool operator()( const CrashReportSummary& lhs, const CrashReportSummary& rhs ) const { return lhs._crashTime < rhs._crashTime; }
             };
 
-            [[nodiscard]] static bool loadManifest( const string& bundleFolder, JSONDocument& outDocument )
+            [[nodiscard]] static bool loadManifest( const AbsolutePath& bundleFolder, JSONDocument& outDocument )
             {
-                return outDocument.tryParse( readText( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ) ) );
+                return outDocument.tryParse( readText( bundleFolder.join( CrashReportService::kManifestFileName ) ) );
             }
 
-            [[nodiscard]] static bool saveManifest( const string& bundleFolder, const JSONDocument& document )
+            [[nodiscard]] static bool saveManifest( const AbsolutePath& bundleFolder, const JSONDocument& document )
             {
-                return document.saveToFile( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ), 2 );
+                return document.saveToFile( bundleFolder.join( CrashReportService::kManifestFileName ), 2 );
             }
 
-            static string readText( const string& path )
+            static string readText( const AbsolutePath& path )
             {
                 // 묶음 · 로그는 다른 프로세스의 보관 개수 정리(`SavedCleanup`)가 목록을 읽은 뒤에도 지울 수 있다 - 없는 것은 오류가 아니라 빈 내용이다.
                 string text;
-                if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( path ), text ) != OptionalFileRead::Read )
+                if ( FileUtil::readOptionalTextFile( path, text ) != OptionalFileRead::Read )
                     text.clear();
                 return text;
             }
@@ -124,15 +124,15 @@ namespace sw
             static void setState( const JSONDocument& manifest, CrashReportState state ) { manifest.getRoot().set( "state" ).setString( toString( state ) ); }
 
             /** @brief 묶음 폴더들(이름 `crash_*`)입니다. */
-            static void collectBundleFolders( const string& reportsFolder, vector<string>& outListFolder )
+            static void collectBundleFolders( const AbsolutePath& reportsFolder, vector<AbsolutePath>& outListFolder )
             {
                 outListFolder.clear();
-                vector<string> listFolder;
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( reportsFolder ) ) == false || FileUtil::collectFolders( FileUtil::toDiskPath( reportsFolder ), listFolder, false ) == false )
+                vector<AbsolutePath> listFolder;
+                if ( FileUtil::isDirectory( reportsFolder ) == false || FileUtil::collectFolders( reportsFolder, listFolder, false ) == false )
                     return;
-                for ( const string& folder : listFolder )
+                for ( const AbsolutePath& folder : listFolder )
                 {
-                    if ( StringUtil::startsWith( FileUtil::getFileNamePart( folder ), CrashReportService::kBundlePrefix ) )
+                    if ( StringUtil::startsWith( FileUtil::getFileNamePart( folder.str() ), CrashReportService::kBundlePrefix ) )
                         outListFolder.push_back( folder );
                 }
                 VectorUtil::sort( outListFolder );
@@ -140,21 +140,21 @@ namespace sw
 
             /** @brief 그 세션의 로그(`*_<세션>.txt`)를 이름 순으로 이어 끝 @p maxBytes 만 남깁니다. */
             /** @brief 세션의 로그 — 고정 이름(@p fixedLogPath, 크래시 컨텍스트의 `LogFile`)이면 그 파일, 아니면 크래시 폴더의 `*_<세션>.txt` 를 시간 순으로 잇는다. */
-            static string collectSessionLog( const string& crashFolder, string_view sessionID, string_view fixedLogPath, uint64 maxBytes )
+            static string collectSessionLog( const AbsolutePath& crashFolder, string_view sessionID, const AbsolutePath& fixedLogPath, uint64 maxBytes )
             {
-                vector<string> listFile;
-                string         log;
+                vector<AbsolutePath> listFile;
+                string               log;
                 if ( fixedLogPath.empty() == false )
-                    log = readText( string( fixedLogPath ) );
-                else if ( FileUtil::collectFiles( FileUtil::toDiskPath( crashFolder ), "", listFile, false ) == false )
+                    log = readText( fixedLogPath );
+                else if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
                     return log;
                 VectorUtil::sort( listFile );
                 string suffix( "_" );
                 suffix += sessionID;
                 suffix += ".txt";
-                for ( const string& path : listFile )
+                for ( const AbsolutePath& path : listFile )
                 {
-                    const string name = FileUtil::getFileNamePart( path );
+                    const string name = FileUtil::getFileNamePart( path.str() );
                     if ( StringUtil::startsWith( name, CrashReportService::kBundlePrefix ) || StringUtil::endsWith( name, suffix ) == false )
                         continue;
                     log += readText( path );
@@ -214,10 +214,10 @@ namespace sw
         shutdown();
     }
 
-    void CrashReportService::initialize( string_view crashFolder, string_view reportsFolder, string_view currentSessionID )
+    void CrashReportService::initialize( const AbsolutePath& crashFolder, const AbsolutePath& reportsFolder, string_view currentSessionID )
     {
-        _crashFolder      = FileUtil::trimTrailingSlashes( crashFolder );
-        _reportsFolder    = FileUtil::trimTrailingSlashes( reportsFolder );
+        _crashFolder      = crashFolder.join( {} );
+        _reportsFolder    = reportsFolder.join( {} );
         _currentSessionID = string( currentSessionID );
         _bInitialized     = SW_TRUE;
     }
@@ -263,17 +263,17 @@ namespace sw
     uint32 CrashReportService::collectNewCrashes()
     {
         using Internal            = CrashReportServiceInternal;
-        const bool bNoCrashFolder = _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( FileUtil::toDiskPath( _crashFolder ) ) == false;
+        const bool bNoCrashFolder = _bInitialized == SW_FALSE || _crashFolder.empty() || FileUtil::isDirectory( _crashFolder ) == false;
         if ( bNoCrashFolder )
             return 0;
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( _crashFolder ), "", listFile, false ) == false )
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( _crashFolder, "", listFile, false ) == false )
             return 0;
         uint32 createdCount = 0;
-        for ( const string& path : listFile )
+        for ( const AbsolutePath& path : listFile )
         {
             string sessionID;
-            if ( Internal::findSessionOfContextFile( FileUtil::getFileNamePart( path ), sessionID ) == false || sessionID == _currentSessionID )
+            if ( Internal::findSessionOfContextFile( FileUtil::getFileNamePart( path.str() ), sessionID ) == false || sessionID == _currentSessionID )
                 continue;
             if ( createBundle( sessionID, path ) )
                 ++createdCount;
@@ -283,13 +283,13 @@ namespace sw
         return createdCount;
     }
 
-    bool CrashReportService::createBundle( string_view sessionID, const string& contextPath )
+    bool CrashReportService::createBundle( string_view sessionID, const AbsolutePath& contextPath )
     {
         using Internal = CrashReportServiceInternal;
         StringBuilder<constant::buffer::kMax128> bundleName;
         bundleName.appendFormat( "%#%#", kBundlePrefix, sessionID );
-        const string bundleFolder = FileUtil::joinPath( _reportsFolder, bundleName.view() );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( bundleFolder ) ) || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( bundleFolder ) ) == false )
+        const AbsolutePath bundleFolder = _reportsFolder.join( bundleName.view() );
+        if ( FileUtil::isDirectory( bundleFolder ) || FileUtil::ensureDirectoryExists( bundleFolder ) == false )
             return false;
 
         JSONDocument    manifest;
@@ -297,8 +297,8 @@ namespace sw
         root.set( "schema" ).setInt( 1 );
         root.set( "session" ).setString( sessionID );
         uint64 crashTime = 0;
-        if ( FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( contextPath ), crashTime ) == false )
-            SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead", "Crash report: cannot read the time of %# - the bundle carries crashTime 0", contextPath );
+        if ( FileUtil::tryGetFileTimestamp( contextPath, crashTime ) == false )
+            SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead", "Crash report: cannot read the time of %# - the bundle carries crashTime 0", contextPath.str() );
         root.set( "crashTime" ).setUint( crashTime );
         root.set( "bundledBy" ).setString( _currentSessionID );
         const string    contextText = Internal::readText( contextPath );
@@ -307,13 +307,13 @@ namespace sw
         Internal::readContextInto( contextText, context );
         // 자주 보는 칸은 맨 위에 — 받는 쪽 목록 화면이 컨텍스트를 풀지 않고 보인다.
         // 값을 먼저 꺼낸다 — 루트에 칸을 더하면 루트의 멤버 저장소가 옮겨 가 앞서 받은 핸들(context)이 낡는다.
-        const string reason       = context.get( "reason" ).asString();
-        const string buildID      = context.get( "BuildID" ).asString();
-        const string build        = context.get( "Build" ).asString();
-        const string platform     = context.get( "Platform" ).asString();
-        const string rhi          = context.get( "RHI" ).asString();
-        const string gpu          = context.get( "GPU" ).asString();
-        const string fixedLogPath = context.get( CrashContextStore::kLogFileKey ).asString();
+        const string       reason       = context.get( "reason" ).asString();
+        const string       buildID      = context.get( "BuildID" ).asString();
+        const string       build        = context.get( "Build" ).asString();
+        const string       platform     = context.get( "Platform" ).asString();
+        const string       rhi          = context.get( "RHI" ).asString();
+        const string       gpu          = context.get( "GPU" ).asString();
+        const AbsolutePath fixedLogPath = FileUtil::toDiskPath( context.get( CrashContextStore::kLogFileKey ).asString() );
         root.set( "reason" ).setString( reason );
         root.set( "buildID" ).setString( buildID );
         root.set( "build" ).setString( build );
@@ -333,28 +333,28 @@ namespace sw
         uint32 breadcrumbCount = 0;
         for ( const Internal::CrashFileKind& kind : Internal::kArrCrashFile )
         {
-            const string source = Internal::makeCrashFilePath( _crashFolder, sessionID, kind._pExtension );
-            if ( FileUtil::exists( FileUtil::toDiskPath( source ) ) == false )
+            const AbsolutePath source = Internal::makeCrashFilePath( _crashFolder, sessionID, kind._pExtension );
+            if ( FileUtil::exists( source ) == false )
                 continue;
-            const string target = FileUtil::joinPath( bundleFolder, kind._pBundleName );
-            if ( FileUtil::copyFile( FileUtil::toDiskPath( source ), FileUtil::toDiskPath( target ) ) == false )
+            const AbsolutePath target = bundleFolder.join( kind._pBundleName );
+            if ( FileUtil::copyFile( source, target ) == false )
             {
                 SW_LOG_WARNING_ID( "CrashReport.CrashReportCouldNot", "Crash report: '%#' could not be copied into the bundle", source.c_str() );
                 continue;
             }
             if ( StringUtil::equals( kind._pExtension, "breadcrumbs.txt" ) )
                 breadcrumbCount = StringUtil::countChar( Internal::readText( target ), '\n' );
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( source ) ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
+            (void)FileUtil::removeFile( source ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
             const JSONValue entry = files.pushBack();
             entry.setObject();
             entry.set( "name" ).setString( kind._pBundleName );
             uint64 byteCount = 0;
-            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( target ), byteCount ) == false )
-                SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead2", "Crash report: cannot read the size of %#", target );
+            if ( FileUtil::tryGetFileSize( target, byteCount ) == false )
+                SW_LOG_WARNING_ID( "CrashReport.CrashReportCannotRead2", "Crash report: cannot read the size of %#", target.str() );
             entry.set( "bytes" ).setUint( byteCount );
         }
         const string log = Internal::collectSessionLog( _crashFolder, sessionID, fixedLogPath, kMaxLogBytes );
-        if ( log.empty() == false && FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( bundleFolder, "last.log" ) ), log ) )
+        if ( log.empty() == false && FileUtil::writeTextFile( bundleFolder.join( "last.log" ), log ) )
         {
             const JSONValue entry = files.pushBack();
             entry.setObject();
@@ -382,9 +382,9 @@ namespace sw
     void CrashReportService::applyConsentToExisting()
     {
         using Internal = CrashReportServiceInternal;
-        vector<string> listFolder;
+        vector<AbsolutePath> listFolder;
         Internal::collectBundleFolders( _reportsFolder, listFolder );
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false )
@@ -406,13 +406,13 @@ namespace sw
     void CrashReportService::enforceReportCap()
     {
         using Internal = CrashReportServiceInternal;
-        vector<string> listFolder;
+        vector<AbsolutePath> listFolder;
         Internal::collectBundleFolders( _reportsFolder, listFolder );
         if ( listFolder.size() <= kMaxReports )
             return;
         // 크래시 시각 순으로 — 오래된 것부터 지운다.
-        vector<pair<uint64, string>> listByTime;
-        for ( const string& folder : listFolder )
+        vector<pair<uint64, AbsolutePath>> listByTime;
+        for ( const AbsolutePath& folder : listFolder )
         {
             // 매니페스트를 읽지 못한 묶음은 가장 오래된 것으로 쳐 먼저 지운다(보낼 수 없는 묶음이다).
             JSONDocument           manifest;
@@ -422,7 +422,7 @@ namespace sw
         VectorUtil::sort( listByTime );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
         {
-            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( listByTime[index].second ) ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
+            (void)FileUtil::removeDirectory( listByTime[index].second ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
         }
     }
 
@@ -430,9 +430,9 @@ namespace sw
     {
         using Internal = CrashReportServiceInternal;
         outListReport.clear();
-        vector<string> listFolder;
+        vector<AbsolutePath> listFolder;
         Internal::collectBundleFolders( _reportsFolder, listFolder );
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false )
@@ -444,7 +444,7 @@ namespace sw
                 continue; // 깨진 매니페스트 — 읽기가 키와 함께 알렸다
             CrashReportSummary summary;
             summary._sessionID = root.get( "session" ).asString();
-            summary._folder    = folder;
+            summary._folder    = folder.str();
             summary._reason    = root.get( "reason" ).asString();
             summary._buildID   = root.get( "buildID" ).asString();
             summary._crashTime = *crashTime;
@@ -460,8 +460,8 @@ namespace sw
         using Internal = CrashReportServiceInternal;
         StringBuilder<constant::buffer::kMax128> bundleName;
         bundleName.appendFormat( "%#%#", kBundlePrefix, sessionID );
-        const string bundleFolder = FileUtil::joinPath( _reportsFolder, bundleName.view() );
-        JSONDocument manifest;
+        const AbsolutePath bundleFolder = _reportsFolder.join( bundleName.view() );
+        JSONDocument       manifest;
         if ( Internal::loadManifest( bundleFolder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::AwaitingDecision )
             return false;
         Internal::setState( manifest, bSend ? CrashReportState::Queued : CrashReportState::Declined );
@@ -484,22 +484,21 @@ namespace sw
     {
         if ( _reporterExecutable.empty() || countPendingUploads() == 0 )
             return false;
-        const optional<AbsolutePath>             executable = AbsolutePath::tryMake( _reporterExecutable );
         StringBuilder<constant::buffer::kMax512> reporterArgument;
-        reporterArgument.appendFormat( "%#=%#", kReporterArgument, _reportsFolder );
-        const ProcessCommand command   = executable.has_value() ? ProcessCommand::at( *executable, { string( reporterArgument.view() ) } ) : ProcessCommand{};
+        reporterArgument.appendFormat( "%#=%#", kReporterArgument, _reportsFolder.str() );
+        const ProcessCommand command   = ProcessCommand::at( _reporterExecutable, { string( reporterArgument.view() ) } );
         const bool           bLaunched = Process::launchDetached( command ).has_value();
         SW_LOG_INFO_ID( "CrashReport.CrashReportReporterProcess", "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
         return bLaunched;
     }
 
-    uint32 CrashReportService::runReporter( string_view reportsFolder, ICrashReportUploader& uploader )
+    uint32 CrashReportService::runReporter( const AbsolutePath& reportsFolder, ICrashReportUploader& uploader )
     {
         using Internal = CrashReportServiceInternal;
-        vector<string> listFolder;
-        Internal::collectBundleFolders( FileUtil::trimTrailingSlashes( reportsFolder ), listFolder );
+        vector<AbsolutePath> listFolder;
+        Internal::collectBundleFolders( reportsFolder.join( {} ), listFolder );
         uint32 sentCount = 0;
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::Queued )
@@ -509,12 +508,12 @@ namespace sw
             if ( attempts.has_value() == false || *attempts >= kMaxAttempts )
                 continue; // 깨진 매니페스트는 보내지 않는다(읽기가 알렸다)
             CrashReportUploadBundle bundle;
-            bundle._folder                = folder;
+            bundle._folder                = folder.str();
             bundle._sessionID             = root.get( "session" ).asString();
             expected<string> manifestText = manifest.dump( -1 );
             if ( manifestText.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "CrashReportService.ManifestNotWritable", "Crash report manifest in %# could not be written as JSON: %# (%#) - not sent", folder, manifestText.error().message(),
+                SW_LOG_ERROR_ID( "CrashReportService.ManifestNotWritable", "Crash report manifest in %# could not be written as JSON: %# (%#) - not sent", folder.str(), manifestText.error().message(),
                                  manifestText.error().detail() );
                 continue;
             }
@@ -522,7 +521,7 @@ namespace sw
             const JSONValue files = root.get( "files" );
             for ( size_t index = 0; index < files.size(); ++index )
             {
-                bundle._listFilePath.push_back( FileUtil::joinPath( folder, files.at( index ).get( "name" ).asString() ) );
+                bundle._listFilePath.push_back( folder.join( files.at( index ).get( "name" ).asString() ) );
             }
             const CrashReportUploadResult result = uploader.upload( bundle );
             if ( result == CrashReportUploadResult::Kept )
@@ -531,7 +530,7 @@ namespace sw
             {
                 Internal::setState( manifest, CrashReportState::Sent );
                 // 받는 쪽이 덤프를 가졌다 — 큰 파일만 지우고 매니페스트 · 글 파일은 "무엇을 보냈나" 로 남긴다.
-                (void)FileUtil::removeFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "crash.dmp" ) ) );
+                (void)FileUtil::removeFile( folder.join( "crash.dmp" ) );
                 ++sentCount;
             }
             else

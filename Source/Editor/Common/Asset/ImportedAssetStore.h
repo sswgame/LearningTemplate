@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -34,30 +35,30 @@ namespace sw::editor
         [[nodiscard]] static string makeKey( const void* pBytes, size_t byteCount, string_view settingsText );
 
         /** @brief @p sourcePath 의 도메인 폴더입니다(`<x>/models_raw/<y>` → `<x>`). `models_raw/` 구간이 없으면 빈 글입니다. */
-        [[nodiscard]] static string findDomainFolder( string_view sourcePath );
+        [[nodiscard]] static AbsolutePath findDomainFolder( const AbsolutePath& sourcePath );
 
         /**
          * @brief 임포트 결과 글 @p text 를 @p diskPath 에 씁니다(부모 폴더를 만든다). 실패하면 false 입니다 — 쓰기 실패 오류는 부르는 쪽이 자기 결과 이름으로 남긴다.
          * @details 결과에는 정체성 머리를 쓰지 않는다 — 결과의 GUID 는 원본 GUID 와 결과 이름에서 나오고(`AssetGUID::fromName`), 색인이 산출물마다 줄을 적는다(`AssetDatabase::build`).
          *          글에 적으면 원본을 옮길 때 글의 GUID 와 색인의 GUID 가 갈린다(유니티 Library · Godot `.godot/imported` 의 산출물도 자기 정체성이 없다).
          */
-        [[nodiscard]] static bool writeResultText( string_view diskPath, string_view text );
+        [[nodiscard]] static bool writeResultText( const AbsolutePath& diskPath, string_view text );
 
         /** @brief 저장소 파일 경로입니다(`<x>/models/_shared/<kind>/<key><extension>`). */
-        [[nodiscard]] static string makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension );
+        [[nodiscard]] static AbsolutePath makeStorePath( const AbsolutePath& domainFolder, string_view kind, string_view key, string_view extension );
 
         /**
          * @brief 저장소 파일을 씁니다. 이미 있으면 바이트가 같은지만 봅니다(병렬 임포트가 같은 키를 동시에 써도 한 벌이다).
          * @return 쓰기에 실패했거나 같은 이름의 파일 바이트가 다르면(해시 충돌 · 손댄 파일) 오류를 남기고 false 입니다 — 다른 모델이 쓰는 파일을 덮어쓰지 않는다.
          */
-        [[nodiscard]] static bool writeIfAbsent( string_view storePath, const void* pBytes, size_t byteCount );
+        [[nodiscard]] static bool writeIfAbsent( const AbsolutePath& storePath, const void* pBytes, size_t byteCount );
 
         /**
          * @brief 원본 폴더의 내용 주소 파일(`textures_raw/_shared/…` — 커밋한다)을 쓰고 곁의 `.meta` 가 없으면 함께 씁니다(`writeIfAbsent` 와 같은 쓰기 규칙).
          * @details 정체성은 리소스 id 의 이름 GUID(`AssetGUID::fromName`)다 — 경로가 곧 내용이라 두 사람이 같은 모델을 따로 임포트해도 같은 `.meta` 가 생긴다(무작위면 더하기 · 더하기 충돌).
          *          있던 `.meta` 는 그대로 둔다. 리소스 트리 밖(테스트 폴더)은 정체성이 없다.
          */
-        [[nodiscard]] static bool writeSourceIfAbsent( const AssetPaths& assetPaths, string_view sourcePath, const void* pBytes, size_t byteCount );
+        [[nodiscard]] static bool writeSourceIfAbsent( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const void* pBytes, size_t byteCount );
 
         /** @brief 글 @p text 에서 저장소를 가리키는 리소스 경로(`"…/models/_shared/…"` 따옴표 안)를 모두 찾아 @p outListPath 에 더합니다. */
         static void collectReferences( string_view text, vector<string>& outListPath );
@@ -69,15 +70,15 @@ namespace sw::editor
          * @brief @p importedPath(리소스 루트 아래 디스크 경로)가 가리키는 저장소 파일들의 바이트 해시를 @p hash 에 섞습니다(`ModelImporter::computeImportedHash`).
          * @details 공유 파일은 옆 폴더 밖이라 옆 폴더 해시에 들지 않는다. 지우거나 손대면 어긋남으로 잡히게 참조를 따라가 섞는다.
          */
-        [[nodiscard]] static uint64 mixReferencedFiles( string_view importedPath, string_view text, uint64 hash );
+        [[nodiscard]] static uint64 mixReferencedFiles( const AbsolutePath& importedPath, string_view text, uint64 hash );
         /** @brief @p importedPath 의 글 @p text 가 가리키는 저장소 파일의 디스크 경로를 정렬해 @p outListPath 에 더합니다(`mixReferencedFiles` 와 같은 풀이 — 풀지 못한 참조는 뺀다). */
-        static void collectReferencedFiles( string_view importedPath, string_view text, vector<string>& outListPath );
+        static void collectReferencedFiles( const AbsolutePath& importedPath, string_view text, vector<AbsolutePath>& outListPath );
 
         /**
          * @brief @p resourceRoot 아래 모든 저장소에서 같은 도메인의 임포트 결과가 가리키지 않는 파일을 지웁니다(원본을 고치면 옛 키의 파일이 남는다).
          * @details 범위를 정한 임포트(핫 리로드)는 부르지 않는다 — 전체 임포트(`ModelImporter::importAllModels`)가 끝난 뒤 직렬로 부른다.
          * @return 지운 파일 수입니다.
          */
-        static uint32 removeUnreferenced( string_view resourceRoot, vector<string>& inoutListProblem );
+        static uint32 removeUnreferenced( const AbsolutePath& resourceRoot, vector<string>& inoutListProblem );
     };
 } // namespace sw::editor

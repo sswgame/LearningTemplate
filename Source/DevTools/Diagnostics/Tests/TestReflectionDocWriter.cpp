@@ -20,9 +20,9 @@ SW_TEST_CASE( ReflectionDocWriterTest, WritesModulePagesAndIndexDeterministicall
     const sw::AbsolutePath  firstDir  = sw::test::makeScratchPath( "docs_first" );
     const sw::AbsolutePath  secondDir = sw::test::makeScratchPath( "docs_second" );
     const sw::TypeRegistry& registry  = sw::engine::getSubsystem<sw::TypeRegistry>();
-    const uint32            fileCount = sw::ReflectionDocWriter::writeMarkdown( registry, firstDir.str() );
+    const uint32            fileCount = sw::ReflectionDocWriter::writeMarkdown( registry, firstDir );
     SW_REQUIRE_TRUE( fileCount >= 2 );
-    SW_EXPECT_EQUAL( fileCount, sw::ReflectionDocWriter::writeMarkdown( registry, secondDir.str() ) );
+    SW_EXPECT_EQUAL( fileCount, sw::ReflectionDocWriter::writeMarkdown( registry, secondDir ) );
 
     sw::string index;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( firstDir.join( "index.md" ), index ) );

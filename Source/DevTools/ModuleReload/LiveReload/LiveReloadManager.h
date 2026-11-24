@@ -218,7 +218,7 @@ namespace sw
         struct PreparedShadow
         {
             void*                        _pHandle{ nullptr };
-            string                       _tempPath;
+            AbsolutePath                 _tempPath;
             FileStamp                    _sourceStamp{}; ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
             engine::ModuleRegistrarHeads _heads;         ///< 로드한 라이브러리의 정적 등록자 머리(커밋 때 올린다)
             engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)
@@ -236,8 +236,8 @@ namespace sw
         {
             IReloadableModuleClient* _pClient; ///< 모듈 주인 창구(없으면 교체만 하고 아무도 부르지 않는다 — 에디터 확장)
             string                   _moduleName;
-            string                   _originalModulePath;
-            string                   _tempModulePath;
+            AbsolutePath             _originalModulePath;
+            AbsolutePath             _tempModulePath;
             ShadowLibraryNameState   _libraryName;
             void*                    _pLibraryModule;
             FileStamp                _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 **다르면** 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
@@ -274,7 +274,7 @@ namespace sw
         void clearSlot( const CallbackRegistration& registration );
 
         /** @brief 바깥 빌드의 성공 스탬프 @p stampPath 의 내용(빌드마다 새 시각 글)을 @p outToken 에 읽습니다. 없거나 읽지 못하면 false 입니다(아직 구성되지 않은 빌드 트리). */
-        [[nodiscard]] static bool readBuildToken( string_view stampPath, string& outToken );
+        [[nodiscard]] static bool readBuildToken( const AbsolutePath& stampPath, string& outToken );
         /** @brief 섀도 복사본을 LoadLibrary 로 로드합니다. */
         [[nodiscard]] bool loadShadowCopyModule( ModuleRecord& context );
         /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
@@ -332,7 +332,7 @@ namespace sw
         vector<SharedLibrary>                            _listSharedModule;  ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
         FileWatchService&                                _fileWatch;         ///< 파일 감시 창구(빌림)
         Subscription                                     _moduleFolderWatch; ///< 모듈 폴더(하위 폴더 없이)의 구독. 첫 `registerModule` 이 건다
-        string                                           _buildStampPath;    ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
+        AbsolutePath                                     _buildStampPath;    ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         string                                           _seenBuildToken;    ///< 마지막으로 본 스탬프 내용(빌드마다 새 시각 글을 쓴다). 이것과 달라지면 바깥 빌드가 끝난 것이다 — 쓰기 시각이 아니라 내용으로 본다
         mutable mutex                                    _buildMutex;
         BuildEvent _buildEvent                           SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다

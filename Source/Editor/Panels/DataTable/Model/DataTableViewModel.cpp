@@ -200,13 +200,13 @@ namespace sw::editor
                     return false;
                 // 내보내기가 쓰는 자리다(`LocalizationTools::exportProjectPo` — 프로젝트 곁의 `po/<문화권>.po`)
                 StringBuilder<constant::buffer::kMax1024> argument;
-                argument.appendFormat( "--import-po=%#/po/%#.po", FileUtil::getDirectoryPart( _localizationSheet._projectPath ), _localizationSheet._listCulture[cultureIndex] );
+                argument.appendFormat( "--import-po=%#/po/%#.po", _localizationSheet._projectPath.getParent().str(), _localizationSheet._listCulture[cultureIndex] );
                 listArgument.push_back( string( argument.view() ) );
                 break;
             }
         }
         StringBuilder<constant::buffer::kMax1024> project;
-        project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath );
+        project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath.str() );
         listArgument.push_back( string( project.view() ) );
         ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
         if ( _pLocalizationToolJob->request( std::move( command ), ProcessRoots::get()._project.str() ) == false )
@@ -280,7 +280,7 @@ namespace sw::editor
         return bGameDataSaved && isAnyDirty() == false;
     }
 
-    void DataTableViewModel::collectFilesToSave( vector<string>& outListPath ) const
+    void DataTableViewModel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         if ( _bLocalizationDirty )
             EditorDataTableCommands::collectLocalizationFiles( _localizationSheet, outListPath );
@@ -294,7 +294,7 @@ namespace sw::editor
             return;
         clearLocalizationHistory();
         // 읽지 못한 테이블은 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
-        if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath, _localizationSheet ) == false )
+        if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath.str(), _localizationSheet ) == false )
             SW_LOG_WARNING_ID( "DataTablePanel.SomeLocalizationFilesCould", "Some localization files could not be read - see the warnings above" );
         _bLocalizationLoaded = SW_TRUE;
         _bLocalizationDirty  = SW_FALSE;
@@ -443,23 +443,23 @@ namespace sw::editor
         _bGameDataLoaded  = SW_TRUE;
     }
 
-    string DataTableViewModel::makeGameDataAssetID( string_view absolutePath )
+    string DataTableViewModel::makeGameDataAssetID( const AbsolutePath& absolutePath )
     {
         return editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
     }
 
-    bool DataTableViewModel::openGameDataFile( string_view absolutePath )
+    bool DataTableViewModel::openGameDataFile( const AbsolutePath& absolutePath )
     {
         // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_ERROR_ID( "DataTablePanel.CouldNotReadGame", "Could not read game data table '%#' - it is not opened", string( absolutePath ).c_str() );
-            _gameDataPath.clear();
+            SW_LOG_ERROR_ID( "DataTablePanel.CouldNotReadGame", "Could not read game data table '%#' - it is not opened", string( absolutePath.str() ).c_str() );
+            _gameDataPath = {};
             openGameDataText( string{} ); // 읽은 것이 없다 - 테이블을 비운다
             return false;
         }
-        _gameDataPath = string( absolutePath );
+        _gameDataPath = absolutePath;
         openGameDataText( std::move( text ) );
         return true;
     }
@@ -477,7 +477,7 @@ namespace sw::editor
     {
         if ( _gameDataPath.empty() )
             return false;
-        const string fileName = FileUtil::getFileNamePart( _gameDataPath );
+        const string fileName = FileUtil::getFileNamePart( _gameDataPath.str() );
         if ( _gameDataDocument.isParsed() == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
@@ -485,7 +485,7 @@ namespace sw::editor
         }
         if ( EditorContentWrite::warnIfReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
             return false;
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( _gameDataPath ), _selectedGameDataRawText ) == false )
+        if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );
             return false;

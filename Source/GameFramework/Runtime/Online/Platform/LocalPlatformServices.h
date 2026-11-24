@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Platform/PlatformServices.h"
@@ -31,7 +32,7 @@ namespace sw
         static constexpr const utf8* kCloudFolderName      = "cloud";
 
         /** @param folder 플랫폼 상태를 둘 폴더입니다. 지난 실행이 푼 업적 · 통계를 읽어 이어 갑니다. */
-        explicit LocalPlatformServices( string_view folder );
+        explicit LocalPlatformServices( const AbsolutePath& folder );
 
         const utf8* getStoreName() const override { return PlatformStoreName::kLocal; }
         bool        unlockAchievement( string_view achievementID ) override;
@@ -44,7 +45,7 @@ namespace sw
         /** @brief 바뀐 업적 · 통계 · 프레전스를 파일로 씁니다. */
         void update() override;
 
-        const string&         getFolder() const { return _folder; }
+        const string&         getFolder() const { return _folder.str(); }
         const vector<string>& getUnlockedAchievements() const { return _listUnlocked; }
         /** @brief 플랫폼이 가진 통계 값입니다. 없으면 0 입니다. */
         int64 getStat( string_view statID ) const;
@@ -60,7 +61,7 @@ namespace sw
         void reportUnreadable( const utf8* pFileName ) const;
 
     private:
-        string                   _folder;
+        AbsolutePath             _folder;
         vector<string>           _listUnlocked;
         flat_map<string, string> _mapStat;
         flat_map<string, string> _mapPresence;

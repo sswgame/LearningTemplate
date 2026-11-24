@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -91,32 +92,32 @@ namespace sw
          * @brief 사용자 설정 파일 경로 @p userSettingsFilePath 와 같은 폴더의 사용자 바인딩 파일 경로입니다. 설정 파일 경로가 비었으면(테스트, 헤드리스) 빈 경로입니다.
          * @details 자동화가 사용자 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 이 파일도 같이 옮겨 간다.
          */
-        static string makeUserBindingsPath( string_view userSettingsFilePath );
+        static AbsolutePath makeUserBindingsPath( const AbsolutePath& userSettingsFilePath );
         /**
          * @brief @p map 에서 **기본 바인딩과 다른 슬롯만** @p filePath 에 씁니다. 다른 것이 없으면 파일을 지웁니다. 키보드 키 · 단축키는 수정 키(`modifier`)도 함께 적습니다.
          * @details 디버그 키 맵과 에디터 입력 맵(`EditorInputActions`)이 같은 형식 · 같은 함수로 사용자 재배치를 저장한다.
          *          전체 스냅샷(`InputRemapSerializer::save`)을 두지 않는 까닭: 읽을 때 `bind*` 가 기본 바인딩 위에 더해져 재배치가 아니라 중복이 되고, 그 뒤 리소스의 기본 키를 바꿔도
          *          스냅샷이 옛 기본 키를 붙든다. 사용자가 바꾼 슬롯만 적으면 사용자 설정(`applyKeyBinding`)처럼 "기본값에서의 차이" 가 된다.
          */
-        [[nodiscard]] static bool saveUserBindings( const InputMap& map, string_view filePath );
+        [[nodiscard]] static bool saveUserBindings( const InputMap& map, const AbsolutePath& filePath );
         /**
          * @brief @p filePath 의 재배치를 @p map 에 적용합니다(`InputMap::rebindSlot`). 파일이 없으면 아무것도 하지 않고 true 입니다.
          * @details 없는 액션, 읽지 못하는 슬롯, 키 하나로 바꿀 수 없는 바인딩은 경고하고 건너뜁니다 — 리소스의 맵이 바뀌어도 낡은 파일이 기동을 막지 않는다.
          * @return 파일을 읽었으면(없는 것 포함) true, 읽지 못했으면 false 입니다.
          */
-        [[nodiscard]] static bool loadUserBindings( InputMap& map, string_view filePath );
+        [[nodiscard]] static bool loadUserBindings( InputMap& map, const AbsolutePath& filePath );
         /**
          * @brief 이 디버그 키 맵의 사용자 바인딩 파일 경로를 정합니다(`makeUserBindingsPath`). 맵을 처음 만들 때 이 파일의 재배치를 읽으므로 첫 `update` 전에 부릅니다.
          *        빈 경로면 읽지도 저장하지도 않습니다(테스트, 헤드리스).
          */
-        void          setUserBindingsPath( string_view filePath ) { _userBindingsPath = string( filePath ); }
-        const string& getUserBindingsPath() const { return _userBindingsPath; }
+        void          setUserBindingsPath( const AbsolutePath& filePath ) { _userBindingsPath = filePath; }
+        const string& getUserBindingsPath() const { return _userBindingsPath.str(); }
         /** @brief 디버그 키 맵의 재배치를 사용자 파일에 저장합니다. 경로가 없으면 false 입니다. */
         [[nodiscard]] bool saveUserBindings() const;
 
     private:
         unique_ptr<InputMap> _mapDebugAction;
-        string               _userBindingsPath; ///< 맵을 만들 때 정한 사용자 바인딩 파일 경로입니다(빈 값 = 저장하지 않는다).
+        AbsolutePath         _userBindingsPath; ///< 맵을 만들 때 정한 사용자 바인딩 파일 경로입니다(빈 값 = 저장하지 않는다).
         uint8                _bBound : 1;
 
         SW_SERVICE_SLOT( DebugKeyActions, Required );

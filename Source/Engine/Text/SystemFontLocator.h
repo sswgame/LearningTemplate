@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -30,7 +31,7 @@ namespace sw
          * @details 폴더 바로 아래를 먼저 보고, 리눅스는 하위 폴더까지 훑는다(배포판이 `truetype/<패밀리>/` 처럼 나누며, 훑은 결과는 이 값이 한 번 캐시한다).
          *          이름 비교는 대소문자를 가리지 않는다.
          */
-        string findSystemFontFile( string_view fileName );
+        AbsolutePath findSystemFontFile( string_view fileName );
 
     private:
         /**
@@ -38,16 +39,16 @@ namespace sw
          * @details Windows 는 `%WINDIR%/Fonts` 와 사용자 폰트 `%LOCALAPPDATA%/Microsoft/Windows/Fonts` 이고, 리눅스는 `/usr/share/fonts`, `/usr/local/share/fonts`,
          *          `~/.local/share/fonts` 이다. 비공개다 - 폴더 바로 아래만 보는 찾기가 다시 생기지 않게 한다(리눅스는 하위 폴더에 둔다).
          */
-        static vector<string> getSystemFontDirectories();
+        static vector<AbsolutePath> getSystemFontDirectories();
 
 #if defined( SW_PLATFORM_LINUX )
         /** @brief 하위 폴더 색인에서 @p fileName(대소문자 무시)의 경로를 찾습니다. 처음 부를 때 색인을 채웁니다. 없으면 빈 글입니다. */
-        string findInRecursiveIndex( string_view fileName ) SW_EXCLUDES_LOCK( _mutex );
+        AbsolutePath findInRecursiveIndex( string_view fileName ) SW_EXCLUDES_LOCK( _mutex );
 
     private:
-        mutex                                            _mutex;
-        bool _bIndexBuilt                                SW_GUARDED_BY( _mutex ){ false };
-        unordered_map<string, string> _mapFileNameToPath SW_GUARDED_BY( _mutex ); ///< 소문자 파일 이름 → 경로(앞 폴더가 이긴다)
+        mutex                                                  _mutex;
+        bool _bIndexBuilt                                      SW_GUARDED_BY( _mutex ){ false };
+        unordered_map<string, AbsolutePath> _mapFileNameToPath SW_GUARDED_BY( _mutex ); ///< 소문자 파일 이름 → 경로(앞 폴더가 이긴다)
 #endif
     };
 } // namespace sw

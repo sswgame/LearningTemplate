@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/SceneIterationKey.h"
@@ -38,7 +39,7 @@ namespace sw
         static void collect( SceneIterationKey key, const GameObjectManager& objects, vector<string>& outListPath );
 
         /** @brief 목록을 디스크 절대 경로 @p diskPath 에 씁니다(쿠킹 출력). */
-        [[nodiscard]] static bool write( string_view diskPath, const vector<string>& listPath );
+        [[nodiscard]] static bool write( const AbsolutePath& diskPath, const vector<string>& listPath );
         /**
          * @brief 리소스 id @p listAssetID 의 목록을 읽습니다(팩 · 낱개 파일). 파일이 없거나 형식이 틀리면 오류를 남기고 false 입니다.
          * @details 파일이 **없는** 씬(쿠킹 전 Dev 실행)은 부르는 쪽이 `AssetIO::hasAsset` 로 먼저 묻는다 — 없는 파일을 오류로 세지 않는다.

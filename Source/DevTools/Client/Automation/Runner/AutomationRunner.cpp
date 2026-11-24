@@ -121,11 +121,9 @@ namespace sw
              * @details 실행마다 새 폴더다 - 만들기가 곧 자리 잡기(`reserveUniquePath`)다. 예전에는 시나리오 이름만이라 나란히 도는 실행(백엔드 넷)이 같은 사진을 덮어썼고,
              *          그다음엔 프로세스 id 폴더를 그대로 써 Windows 가 다시 쓴 id 의 옛 산출물 위에 이어 썼다.
              */
-            static string makeOutputDirectory( string_view scenarioName )
+            static AbsolutePath makeOutputDirectory( string_view scenarioName )
             {
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() );
-                return FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder.view() ), {}, true );
+                return FileUtil::reserveUniquePath( makeAutomationOutputFolderPath().join( scenarioName ).join( to_string( Process::getCurrentProcessID() ) ), {}, true );
             }
 
             /**
@@ -224,7 +222,7 @@ namespace sw
         _writeFilterRegistration.reset();
     }
 
-    void AutomationRunner::startFromPath( const AssetID& assetID, string_view reportPath )
+    void AutomationRunner::startFromPath( const AssetID& assetID, const AbsolutePath& reportPath )
     {
         const string_view scenarioPath = assetID.view();
         markWallStart();
@@ -296,7 +294,7 @@ namespace sw
         return false;
     }
 
-    bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
+    bool AutomationRunner::startFromText( string_view xmlText, const AbsolutePath& reportPath )
     {
         markWallStart();
         _reportWriter.setReportPath( reportPath );
@@ -321,7 +319,7 @@ namespace sw
     bool AutomationRunner::prepareScratchFolders()
     {
         // 사본 id 는 시나리오가 적은 그대로다 — 작업 도메인이 이 프로세스의 실행 뿌리 아래라(`AssetPaths::getScratchFolderPath`) 나란히 도는 App 과 겹치지 않는다.
-        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
+        _scenario.bindOutputDirectory( _outputDirectory.str() ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {
             const expected<void> prepared = AutomationScratchWorkspace::prepare( folder );
@@ -371,14 +369,14 @@ namespace sw
         return _storedText.find( name );
     }
 
-    void AutomationRunner::restoreFileAtEnd( string absolutePath, string originalText )
+    void AutomationRunner::restoreFileAtEnd( const AbsolutePath& absolutePath, string originalText )
     {
-        for ( const std::pair<string, string>& entry : _listFileRestore )
+        for ( const std::pair<AbsolutePath, string>& entry : _listFileRestore )
         {
-            if ( FileUtil::isSameDiskPath( entry.first, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( entry.first.str(), absolutePath.str() ) )
                 return; // 처음 맡긴 글이 원본이다 — 두 번째 덮어쓰기 전의 글은 이미 바뀐 글이다
         }
-        _listFileRestore.emplace_back( std::move( absolutePath ), std::move( originalText ) );
+        _listFileRestore.emplace_back( absolutePath, std::move( originalText ) );
     }
 
     bool AutomationRunner::restoreFilesNow()
@@ -386,7 +384,7 @@ namespace sw
         bool bAllWritten = true;
         for ( auto it = _listFileRestore.rbegin(); it != _listFileRestore.rend(); ++it )
         {
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( it->first ), it->second ) == false )
+            if ( FileUtil::writeTextFile( it->first, it->second ) == false )
             {
                 SW_LOG_ERROR_ID( "Automation.RestoreFileFailed", "[Scenario] could not restore %# - restore it by hand (git checkout or rebuild)", it->first.c_str() );
                 bAllWritten = false;
@@ -617,7 +615,7 @@ namespace sw
         GlobalVariableManager&    variables        = engine::getSubsystem<GlobalVariableManager>();
         const GlobalVariableInfo* pReportPath      = variables.findVariable( "gv_profileReportPath" );
         const bool                bReportPathGiven = pReportPath != nullptr && pReportPath->getValueAsString().empty() == false;
-        if ( bReportPathGiven == false && variables.setValueFromString( "gv_profileReportPath", FileUtil::joinPath( _outputDirectory, "profile.report.json" ) ) == false )
+        if ( bReportPathGiven == false && variables.setValueFromString( "gv_profileReportPath", _outputDirectory.join( "profile.report.json" ).str() ) == false )
         {
             finish( AutomationRunResult::failed( AutomationFailureKind::LoadError, "<Load> could not set gv_profileReportPath", {} ) );
             return;
@@ -853,16 +851,16 @@ namespace sw
         AutomationHangPayload::assign( _hangPayload._game, AutomationHangPayload::kGameBytes, _reproduceInput._game );
         AutomationHangPayload::assign( _hangPayload._startedAt, AutomationHangPayload::kStartedAtBytes, _startedAt );
         AutomationHangPayload::assign( _hangPayload._reproduce, AutomationHangPayload::kReproduceBytes, makeReproduceCommand() );
-        AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath() );
+        AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath().str() );
         AutomationHangPayload::assign( _hangPayload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationResult::TimedOut ) );
         AutomationHangPayload::assign( _hangPayload._failureKind, AutomationHangPayload::kResultBytes, getEnumName( AutomationFailureKind::Hang ) );
         _hangPayload._startedUnixMs         = _startedUnixMs;
         _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
-        const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
+        const AbsolutePath reportDirectory = _reportWriter.getReportPath().getParent();
         if ( reportDirectory.empty() == false )
-            (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( reportDirectory ) ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
-        _hangWatchdog.publish( _hangPayload );                                                // 감시가 뜨기 전에 한 번 채운다
+            (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
+        _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
         settings._startSeconds                   = _run._wallStartSeconds;
         settings._pExcludedBusy                  = _run._pCompileBusy;
@@ -1177,14 +1175,9 @@ namespace sw
         return static_cast<uint32>( seconds / _scenario.getFixedDelta() + 0.5f );
     }
 
-    string AutomationRunner::resolveOutputPath( string_view file ) const
+    AbsolutePath AutomationRunner::resolveOutputPath( string_view file ) const
     {
-        const bool bAbsolute = file.empty() == false && ( file[0] == '/' || file[0] == '\\' || ( file.size() > 1 && file[1] == ':' ) );
-        if ( bAbsolute )
-            return string( file );
-        StringBuilder<constant::buffer::kMax1024> path;
-        path.appendFormat( "%#/%#", _outputDirectory, file );
-        return string( path.view() );
+        return FileUtil::isAbsolutePath( file ) ? FileUtil::toDiskPath( file ) : _outputDirectory.join( file );
     }
 
     void AutomationRunner::endRun( InputManager* pInput )

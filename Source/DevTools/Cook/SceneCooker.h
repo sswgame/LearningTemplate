@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -81,7 +82,7 @@ namespace sw
          *          "Cooked content requires the cooked scene" 으로 멈춘다.
          *          씬 작업의 입력은 씬이 지어지며 읽은 모든 것(씬, 프리팹, 그 프리팹의 중첩 원본 …)이다. 프리팹 하나를 고치면 그것을 쓰는 씬만 다시 베이크한다.
          */
-        static uint32 cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,
+        static uint32 cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
                                      uint64 reflectionFingerprint, uint32& outFailedCount );
 
         /**

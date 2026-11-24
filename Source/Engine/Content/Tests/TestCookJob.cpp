@@ -18,11 +18,11 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
     const AbsolutePath filePath = folder.join( "a.txt" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( filePath, "one" ) );
 
-    CookJob        job( CookJobDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 } );
-    vector<uint8>  bytes;
-    vector<string> listFile;
-    SW_REQUIRE_TRUE( AssetIO::readBinaryFile( filePath.str(), bytes ) );
-    SW_REQUIRE_TRUE( CookJob::collectFiles( folder.str(), ".txt", listFile ) );
+    CookJob              job( CookJobDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 } );
+    vector<uint8>        bytes;
+    vector<AbsolutePath> listFile;
+    SW_REQUIRE_TRUE( AssetIO::readBinaryFile( filePath, bytes ) );
+    SW_REQUIRE_TRUE( CookJob::collectFiles( folder, ".txt", listFile ) );
 
     SW_REQUIRE_EQUAL( size_t( 2 ), job.getInputs().size() );
     for ( const CookInput& input : job.getInputs() )

@@ -116,9 +116,9 @@ namespace sw
         return text;
     }
 
-    bool CSVTable::writeFile( string_view path ) const
+    bool CSVTable::writeFile( const AbsolutePath& path ) const
     {
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( path ), writeText() );
+        return FileUtil::writeTextFile( path, writeText() );
     }
 
     expected<MemorySnapshotPolicy> MemorySnapshotPolicy::parse( string_view jsonText, string_view sourceName )
@@ -255,49 +255,43 @@ namespace sw
         return table;
     }
 
-    string MemorySnapshotExport::getDefaultRoot( const MemorySnapshotPolicy& policy )
+    AbsolutePath MemorySnapshotExport::getDefaultRoot( const MemorySnapshotPolicy& policy )
     {
         const ProcessRoots& roots = ProcessRoots::get();
-        return FileUtil::joinPath( roots._bRunFromParent == 1 ? roots._run.str() : roots._saved.str(), policy._exportFolder );
+        return ( roots._bRunFromParent == 1 ? roots._run : roots._saved ).join( policy._exportFolder );
     }
 
-    string MemorySnapshotExport::reserveFolder( string_view root )
+    AbsolutePath MemorySnapshotExport::reserveFolder( const AbsolutePath& root )
     {
         // 같은 초에 다른 프로세스(병렬 실행)가 같은 이름을 고를 수 있다 — 만들기가 곧 자리 잡기다.
-        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( root, MemorySnapshot::makeTimeLabel() ) ), {}, true, MemorySnapshotExportInternal::kMaxSameSecondSuffix );
+        return FileUtil::reserveUniquePath( root.join( MemorySnapshot::makeTimeLabel() ), {}, true, MemorySnapshotExportInternal::kMaxSameSecondSuffix );
     }
 
-    string MemorySnapshotExport::findLatestFolder( string_view root )
+    AbsolutePath MemorySnapshotExport::findLatestFolder( const AbsolutePath& root )
     {
-        vector<string> listFolder;
-        if ( FileUtil::collectFolders( FileUtil::toDiskPath( root ), listFolder, false ) == false || listFolder.empty() )
-            return string{};
+        vector<AbsolutePath> listFolder;
+        if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
+            return {};
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 순이 시간 순이다.
-        const string* pLatest = &listFolder[0];
-        for ( const string& folder : listFolder )
-        {
-            if ( *pLatest < folder )
-                pLatest = &folder;
-        }
-        return *pLatest;
+        return *std::max_element( listFolder.begin(), listFolder.end() );
     }
 
-    expected<MemoryExportFile> MemorySnapshotExport::writeTable( const CSVTable& table, string_view path )
+    expected<MemoryExportFile> MemorySnapshotExport::writeTable( const CSVTable& table, const AbsolutePath& path )
     {
         if ( table.writeFile( path ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the CSV file", path } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the CSV file", path.str() } );
         MemoryExportFile file{};
-        file._path     = string{ path };
+        file._path     = string{ path.str() };
         file._rowCount = static_cast<uint32>( table._listRow.size() );
         SW_LOG_INFO_ID( "MemoryExport.SheetWritten", "memory export: %# rows=%# columns=%#", file._path, file._rowCount, table._listHeader.size() );
         return file;
     }
 
-    expected<MemoryExportResult> MemorySnapshotExport::writeSnapshot( const MemorySnapshot& snapshot, string_view folder )
+    expected<MemoryExportResult> MemorySnapshotExport::writeSnapshot( const MemorySnapshot& snapshot, const AbsolutePath& folder )
     {
         MemoryExportResult result{};
-        result._folder                     = string{ folder };
-        expected<MemoryExportFile> summary = writeTable( makeSummaryTable( snapshot ), FileUtil::joinPath( folder, kSummaryFileName ) );
+        result._folder                     = string{ folder.str() };
+        expected<MemoryExportFile> summary = writeTable( makeSummaryTable( snapshot ), folder.join( kSummaryFileName ) );
         if ( summary.has_value() == false )
             return unexpected( summary.error() );
         result._listFile.push_back( std::move( *summary ) );
@@ -306,7 +300,7 @@ namespace sw
             const MemorySheetKind                   kind = static_cast<MemorySheetKind>( sheetIndex );
             fixed_string<constant::buffer::kMax128> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#.csv", getMemorySheetSchema( kind )._pName );
-            expected<MemoryExportFile> file = writeTable( makeSheetTable( snapshot, kind ), FileUtil::joinPath( folder, fileName.view() ) );
+            expected<MemoryExportFile> file = writeTable( makeSheetTable( snapshot, kind ), folder.join( fileName.view() ) );
             if ( file.has_value() == false )
                 return unexpected( file.error() );
             result._listFile.push_back( std::move( *file ) );

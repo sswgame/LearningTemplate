@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Asset/ModelImport/ToonMaterialDef.h"
 #include "Editor/Common/Asset/ModelImport/VrmAvatarDef.h"
@@ -187,13 +188,13 @@ namespace sw::editor
     struct ModelImporter
     {
         /** @brief glTF 파일 하나를 메시, 스켈레톤, 부착 메시, 클립으로 읽습니다. 파일은 쓰지 않습니다. 규칙이나 부가 데이터가 잘못되었으면 false 입니다. */
-        [[nodiscard]] static bool readModelAsset( string_view sourcePath, const ModelImportRule& rule, ModelImportResult& outResult );
+        [[nodiscard]] static bool readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult );
 
         /**
          * @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. 스킨드 모델이면 옆 폴더에도 씁니다.
          * @param assetPaths 산출물 경로를 리소스 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
          */
-        [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, string_view sourcePath, const ModelImportRule& rule, string_view outputPath );
+        [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath );
         /**
          * @brief 규칙의 몸 메시(`body_surface`)에서 스킨 · 체형 모프를 장비 메시 @p inoutMesh 로 옮깁니다(`CharacterMeshUtil::transferBodySurface`).
          * @return 몸 메시를 읽지 못했거나 몸 표면에서 `body_surface_distance` 보다 먼 정점이 있으면 오류를 남기고 false 입니다(메시는 그대로).
@@ -215,35 +216,35 @@ namespace sw::editor
          * @details 절차는 `AssetImportStampUtil::importAll` 을 따른다. 텍스처와 같은 스탬프 형식과 판정을 쓴다. 원본마다 @p config 에서 규칙을 고른다.
          *          @p assetPaths 는 워커의 임포트가 산출물을 리소스 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
          */
-        [[nodiscard]] static AssetImportSummary importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode );
+        [[nodiscard]] static AssetImportSummary importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode );
         /**
          * @brief 손으로 쓴 애니메이션 셋의 리타깃 줄(`<clip … retarget="…"/>`)이 가리키는 원본 클립을 프로필로 구워 `AnimationSet::makeRetargetedClipPath` 에 둡니다. 검사 모드는 빠진 것만 보고합니다.
          * @details 구운 클립은 모델 가져오기 산출물(`models/`, 저장소에 두지 않는다)이다 — 언리얼 리타깃 배치가 만든 애니메이션 시퀀스와 같은 자리. 원본은 위에서 가져온 공유 클립이다.
          */
-        static void bakeRetargetedClips( const AssetPaths& assetPaths, string_view resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary );
+        static void bakeRetargetedClips( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary );
 
         /** @brief 원본 경로에 해당하는 메시 경로를 만듭니다(`<x>/models_raw/<y>.glb` → `<x>/models/<y>.mesh`). `models_raw/` 구간이 없으면 빈 문자열입니다. */
-        static string makeImportedModelPath( string_view rawModelPath );
+        static AbsolutePath makeImportedModelPath( const AbsolutePath& rawModelPath );
         /** @brief 임포트된 메시 경로의 옆 폴더를 만듭니다(`<x>/models/<y>.mesh` → `<x>/models/<y>`). 스킨드 모델의 나머지 출력이 이 폴더에 들어갑니다. */
-        static string makeImportedSideFolder( string_view importedMeshPath );
+        static AbsolutePath makeImportedSideFolder( const AbsolutePath& importedMeshPath );
         /**
          * @brief 옆 폴더의 파일 가운데 이 모델이 쓴 것을 경로 순으로 모읍니다 — 옆 폴더 아래에 결과를 두는 다른 원본(`<y>.glb` 의 `<y>/` 아래 `<y>/z.glb`)의 결과는 뺍니다.
          * @details 옆 폴더를 통째로 자기 것으로 보면 `<y>.glb` 만 다시 임포트할 때 `z` 의 결과를 지우고, `z` 를 임포트할 때마다 `<y>` 가 어긋난 것으로 보였다.
          */
-        static void collectSideFiles( string_view importedMeshPath, vector<string>& outListPath );
+        static void collectSideFiles( const AbsolutePath& importedMeshPath, vector<AbsolutePath>& outListPath );
         /** @brief 다시 임포트하기 앞서 이 모델이 옆 폴더에 쓴 파일을 지웁니다(규칙에서 빠진 클립 · 사라진 부착 메시가 남지 않게). 못 지우면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool clearSideFiles( string_view importedMeshPath );
+        [[nodiscard]] static bool clearSideFiles( const AbsolutePath& importedMeshPath );
         /** @brief 원본 경로에서 부가 데이터 경로를 만듭니다(`<y>.glb` → `<y>.clips.json`). */
-        static string makeClipDataPath( string_view sourcePath );
+        static AbsolutePath makeClipDataPath( const AbsolutePath& sourcePath );
 
         /**
          * @brief 원본 바이트, 부가 데이터, 적용한 규칙, 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. `.gltf` 이면 그것이 가리키는 외부 버퍼 파일도 포함합니다. 읽지 못하면 0 입니다.
          * @param imageRuleText 꺼낼 이미지의 텍스처 규칙을 고르는 글(`TextureImportConfig::makeSelectionText`)입니다. 이미지를 꺼내는 모델에만 섞는다.
          */
-        static uint64 computeSourceHash( string_view sourcePath, const ModelImportRule& rule, string_view imageRuleText );
+        static uint64 computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, string_view imageRuleText );
         /** @brief 임포트 결과 전체(`.mesh` 와 옆 폴더의 파일들)의 해시를 계산합니다. `.mesh` 가 없으면 0 입니다. */
-        static uint64 computeImportedHash( string_view importedMeshPath );
+        static uint64 computeImportedHash( const AbsolutePath& importedMeshPath );
         /** @brief `computeImportedHash` 가 섞는 결과 파일(`.mesh` · `.fracture` · 옆 폴더 파일 · 그것이 가리키는 공유 파일)을 모읍니다(DDC 덩어리). `.mesh` 가 없으면 아무것도 더하지 않습니다. */
-        static void collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath );
+        static void collectImportedFiles( const AbsolutePath& importedMeshPath, vector<AbsolutePath>& outListPath );
     };
 } // namespace sw::editor

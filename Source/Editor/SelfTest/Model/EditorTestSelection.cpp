@@ -109,13 +109,13 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorScenarioList::setFromFiles( const vector<string>& listFilePath, string_view root )
+    void EditorScenarioList::setFromFiles( const vector<AbsolutePath>& listFilePath, const AbsolutePath& root )
     {
         _listPath.clear();
-        for ( const string& filePath : listFilePath )
+        for ( const AbsolutePath& filePath : listFilePath )
         {
             string relative;
-            if ( FileUtil::tryMakePathUnderRoot( root, filePath, relative ) == false )
+            if ( FileUtil::tryMakePathUnderRoot( root.str(), filePath.str(), relative ) == false )
                 continue;
             const bool bScenario = StringUtil::endsWith( relative, EditorTestSelectionInternal::kScenarioSuffix ) &&
                                    string_view( relative ).find( EditorTestSelectionInternal::kAutomationFolder ) != string_view::npos;

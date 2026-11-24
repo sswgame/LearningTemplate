@@ -8,6 +8,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/SourceControl/SourceControlProvider.h"
@@ -72,12 +73,12 @@ namespace sw::editor
         /** @brief 잠금 목록을 다시 읽도록 요청합니다. */
         void requestRefresh();
         /** @brief 파일 하나(절대 경로)를 잠가 달라고 요청합니다. 공급자가 잠글 수 없으면 false 입니다. */
-        [[nodiscard]] bool requestLock( string_view absolutePath );
+        [[nodiscard]] bool requestLock( const AbsolutePath& absolutePath );
         /** @brief 파일 하나(절대 경로)의 잠금을 풀어 달라고 요청합니다. 공급자가 풀 수 없으면 false 입니다. */
-        [[nodiscard]] bool requestUnlock( string_view absolutePath );
+        [[nodiscard]] bool requestUnlock( const AbsolutePath& absolutePath );
 
         /** @brief 그 파일(절대 경로)의 잠금 정보를 반환합니다. 잠겨 있지 않으면 nullptr 입니다. */
-        const SourceControlLock* findLock( string_view absolutePath ) const;
+        const SourceControlLock* findLock( const AbsolutePath& absolutePath ) const;
         /** @brief 현재 공급자를 반환합니다. */
         const ISourceControlProvider& getProvider() const { return *_pProvider; }
         /** @brief 작업이 실행 중이거나 대기 중이면 true 입니다. */
@@ -87,7 +88,7 @@ namespace sw::editor
          * @brief 파일 하나의 상태 문구(툴팁)를 만듭니다. 잠금이나 읽기 전용이 아니면 빈 문자열입니다.
          * @param bReadOnly 파일이 읽기 전용인지 나타냅니다(`FileUtil::isReadOnlyFile`). 목록을 만들 때 측정한 값을 넘깁니다.
          */
-        string describeStatus( string_view absolutePath, bool bReadOnly ) const;
+        string describeStatus( const AbsolutePath& absolutePath, bool bReadOnly ) const;
 
         /** @brief 절대 경로를 저장소 기준의 `/` 경로로 바꿉니다. 저장소 밖이면 빈 문자열입니다. */
         static string makeRepositoryPath( string_view repositoryRoot, string_view absolutePath );

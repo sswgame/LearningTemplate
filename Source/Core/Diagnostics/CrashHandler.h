@@ -117,7 +117,7 @@ namespace sw
         /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다. 엔진은 로그 폴더를 준다 — 사용자가 폴더 하나만 보내면 되도록. */
         void setReportFolder( string_view folderPath ) { _reportFolder = folderPath; }
         /** @brief 덤프 · 리포트를 쓸 폴더입니다(정하지 않았으면 빈 글 — 작업 폴더에 쓴다). */
-        const utf8* getReportFolder() const { return _reportFolder.c_str(); }
+        AbsolutePath getReportFolder() const { return AbsolutePath::tryMake( _reportFolder.c_str() ).value_or( AbsolutePath{} ); }
         /**
          * @brief 크래시 보고가 **진척 없이** 버틸 수 있는 시간(초)입니다. 그동안 한 걸음도 나아가지 않으면 보고를 버리고 곧장 끝냅니다. 0 이면 기본값(20 초).
          * @details 보고는 죽어 가는 프로세스 안에서 돈다. 크래시가 남긴 락(힙 손상으로 abort 한 malloc 의 락 · 막힌 stdio · 로더)을

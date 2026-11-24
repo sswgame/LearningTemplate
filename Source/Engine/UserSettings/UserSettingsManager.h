@@ -15,6 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -210,23 +211,23 @@ namespace sw
          * @details 이전 판 파일은 스키마 주인별 `<Upgrade>` 단계로 올린다. 모르는 키 · 주인은 원문 그대로 보관해 다음 저장에 다시 쓰고, 범위 밖 값은 맞춰 넣고(경고),
          *          형식이 틀린 값은 기본값으로 둔다.
          */
-        [[nodiscard]] bool loadUserFile( string_view filePath );
+        [[nodiscard]] bool loadUserFile( const AbsolutePath& filePath );
         /** @brief 위와 같되 JSON 글에서 읽습니다. `Read` 가 아니면 상태를 바꾸지 않습니다. */
         [[nodiscard]] UserSettingsFileReadResult loadUserJSON( string_view jsonText, string_view sourceName );
         /** @brief 기본값과 다른 확정 값만 사용자 파일에 씁니다. 확인 대기 중인 설정은 되돌릴 값(옛 값)을 씁니다. */
-        [[nodiscard]] bool saveUserFile( string_view filePath ) const;
+        [[nodiscard]] bool saveUserFile( const AbsolutePath& filePath ) const;
         /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. 값에 잘못된 UTF-8 이 있으면 오류입니다(`UserSettingsFileEntry::makeJSON`). */
         [[nodiscard]] expected<string> makeUserJSON() const;
         /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(테스트와 헤드리스). 초기화 전에 정하면(기동 확장) 초기화가 그 자리를 읽고 쓴다. */
-        void          setUserFilePath( string_view filePath ) { _userFilePath = string( filePath ); }
-        const string& getUserFilePath() const { return _userFilePath; }
+        void                setUserFilePath( const AbsolutePath& filePath ) { _userFilePath = filePath; }
+        const AbsolutePath& getUserFilePath() const { return _userFilePath; }
         /** @brief 사용자 파일을 읽었는지(첫 실행이 아닌지) 반환합니다. */
         bool hasLoadedUserFile() const { return _bUserFileLoaded; }
         /**
          * @brief 사용자 폴더의 설정 파일 경로입니다. Windows 는 `%LOCALAPPDATA%/SWEngine/<game>/usersettings.json` 이고,
          *        Linux 는 `$XDG_CONFIG_HOME`(없으면 `~/.config`)`/swengine/<game>/usersettings.json` 입니다. 사용자 폴더를 모르면 `Saved/<game>/` 를 씁니다(`UserDataPath::getConfigDirectory`).
          */
-        static string makeDefaultUserFilePath( string_view gameName );
+        static AbsolutePath makeDefaultUserFilePath( string_view gameName );
 
         // ------------------------------------------------------------------------------
         // 3) 기동: 품질 자동 선택과 전체 적용
@@ -405,7 +406,7 @@ namespace sw
         vector<SettingState>                    _listState;
         UserSettingsFileContent                 _carriedFile; ///< 읽은 사용자 파일에서 이 빌드가 모르는 키 · 주인입니다. 저장이 원문 그대로 다시 쓴다.
         UserSettingEventDelegate                _onEvent;
-        string                                  _userFilePath;
+        AbsolutePath                            _userFilePath;
         float32                                 _confirmSecondsLeft;
         uint8                                   _bUserFileLoaded : 1;
         uint8                                   _bStartupApplied : 1;    ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.

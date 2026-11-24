@@ -45,7 +45,7 @@ namespace sw::editor
         void               drawLayerControls();
         [[nodiscard]] bool saveDocument() override;
         /** @brief 맵 모델이 쓸 자리(`TileMapViewModel::getPath` — 다른 이름으로 저장하면 연 문서와 다르다)입니다. */
-        void collectFilesToSave( vector<string>& outListPath ) const override;
+        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
         /** @brief 썸네일(아틀라스 이미지)을 해제합니다. */
         void shutdown() override;
         /** @brief 현재 선택한 플래그 레이어에서 켜진 셀 수를 반환합니다. 플래그 레이어가 아니면 0 입니다. 감시 값 `Editor.TileMapFlagCells` 가 읽습니다. */

@@ -1,5 +1,8 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
@@ -16,11 +19,20 @@ namespace
     {
         static inline uint32 s_scanCount = 0;
 
-        static void scanFolders( string_view folderAbs, vector<string>& outListChild )
+        static AbsolutePath makePath( string_view relative ) { return ProcessRoots::get()._saved.join( relative ); }
+
+        static AbsolutePath withTrailingSlash( const AbsolutePath& path )
+        {
+            StringBuilder<constant::buffer::kMax512> text;
+            text.appendFormat( "%#/", path.str() );
+            return FileUtil::toDiskPath( text.view() );
+        }
+
+        static void scanFolders( const AbsolutePath& folderAbs, vector<AbsolutePath>& outListChild )
         {
             (void)folderAbs;
             ++s_scanCount;
-            outListChild = { "zeta", "alpha" };
+            outListChild = { makePath( "zeta" ), makePath( "alpha" ) };
         }
     };
     using Util = ContentBrowserLogicTestUtil;
@@ -31,17 +43,17 @@ SW_TEST_CASE( ContentBrowserMoveQueueTest, MovesWaitInOrder )
 {
     ContentBrowserMoveQueue queue;
     SW_EXPECT_TRUE( queue.isEmpty() );
-    queue.addMove( "D:/c/a.mesh", "D:/c/x" );
-    queue.addMove( "D:/c/b.mesh", "D:/c/y" );
+    queue.addMove( Util::makePath( "c/a.mesh" ), Util::makePath( "c/x" ) );
+    queue.addMove( Util::makePath( "c/b.mesh" ), Util::makePath( "c/y" ) );
     SW_EXPECT_FALSE( queue.isEmpty() );
 
     ContentBrowserMoveQueue::Move move;
     SW_REQUIRE_TRUE( queue.takeNext( move ) );
-    SW_EXPECT_EQUAL( move._sourceAbs, string( "D:/c/a.mesh" ) );
-    SW_EXPECT_EQUAL( move._folderAbs, string( "D:/c/x" ) );
+    SW_EXPECT_TRUE( move._sourceAbs == Util::makePath( "c/a.mesh" ) );
+    SW_EXPECT_TRUE( move._folderAbs == Util::makePath( "c/x" ) );
     SW_EXPECT_FALSE( move._bRename );
     SW_REQUIRE_TRUE( queue.takeNext( move ) );
-    SW_EXPECT_EQUAL( move._sourceAbs, string( "D:/c/b.mesh" ) );
+    SW_EXPECT_TRUE( move._sourceAbs == Util::makePath( "c/b.mesh" ) );
     SW_EXPECT_FALSE( queue.takeNext( move ) );
     SW_EXPECT_TRUE( queue.isEmpty() );
 }
@@ -50,12 +62,12 @@ SW_TEST_CASE( ContentBrowserMoveQueueTest, MovesWaitInOrder )
 SW_TEST_CASE( ContentBrowserMoveQueueTest, SameAssetKeepsTheLastFolder )
 {
     ContentBrowserMoveQueue queue;
-    queue.addMove( "D:/c/a.mesh", "D:/c/x" );
-    queue.addMove( "D:\\c\\a.mesh", "D:/c/y" );
+    queue.addMove( Util::makePath( "c/a.mesh" ), Util::makePath( "c/x" ) );
+    queue.addMove( Util::makePath( "/c//a.mesh" ), Util::makePath( "c/y" ) );
 
     ContentBrowserMoveQueue::Move move;
     SW_REQUIRE_TRUE( queue.takeNext( move ) );
-    SW_EXPECT_EQUAL( move._folderAbs, string( "D:/c/y" ) );
+    SW_EXPECT_TRUE( move._folderAbs == Util::makePath( "c/y" ) );
     SW_EXPECT_TRUE( queue.isEmpty() );
 }
 
@@ -63,7 +75,7 @@ SW_TEST_CASE( ContentBrowserMoveQueueTest, SameAssetKeepsTheLastFolder )
 SW_TEST_CASE( ContentBrowserMoveQueueTest, RenameIsSingleAndDiscardable )
 {
     ContentBrowserMoveQueue queue;
-    queue.addMove( "D:/c/a.mesh", "D:/c/x" );
+    queue.addMove( Util::makePath( "c/a.mesh" ), Util::makePath( "c/x" ) );
     queue.addRename( "first" );
     queue.addRename( "second" );
 
@@ -76,31 +88,33 @@ SW_TEST_CASE( ContentBrowserMoveQueueTest, RenameIsSingleAndDiscardable )
     SW_EXPECT_TRUE( queue.isEmpty() );
 
     queue.addRename( "third" );
-    queue.addMove( "D:/c/b.mesh", "D:/c/x" );
+    queue.addMove( Util::makePath( "c/b.mesh" ), Util::makePath( "c/x" ) );
     queue.discardRename();
     SW_REQUIRE_TRUE( queue.takeNext( move ) );
     SW_EXPECT_FALSE( move._bRename );
-    SW_EXPECT_EQUAL( move._sourceAbs, string( "D:/c/b.mesh" ) );
+    SW_EXPECT_TRUE( move._sourceAbs == Util::makePath( "c/b.mesh" ) );
     SW_EXPECT_TRUE( queue.isEmpty() );
 }
 
 SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneBreadcrumbPerFolderBelowTheRoot )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
-    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content/", "D:\\Project\\Content\\game\\maps", listBreadcrumb );
+    const AbsolutePath               content = Util::makePath( "Content" );
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", Util::withTrailingSlash( content ), content.join( "game/maps" ), listBreadcrumb );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listBreadcrumb.size() );
     SW_EXPECT_TRUE( listBreadcrumb[0]._label == "Content" );
-    SW_EXPECT_TRUE( listBreadcrumb[0]._absolutePath == "D:/Project/Content" );
+    SW_EXPECT_TRUE( listBreadcrumb[0]._absolutePath == content );
     SW_EXPECT_TRUE( listBreadcrumb[1]._label == "game" );
-    SW_EXPECT_TRUE( listBreadcrumb[1]._absolutePath == "D:/Project/Content/game" );
+    SW_EXPECT_TRUE( listBreadcrumb[1]._absolutePath == content.join( "game" ) );
     SW_EXPECT_TRUE( listBreadcrumb[2]._label == "maps" );
-    SW_EXPECT_TRUE( listBreadcrumb[2]._absolutePath == "D:/Project/Content/game/maps" );
+    SW_EXPECT_TRUE( listBreadcrumb[2]._absolutePath == content.join( "game/maps" ) );
 }
 
 SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneBreadcrumb )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
-    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content/", listBreadcrumb );
+    const AbsolutePath               content = Util::makePath( "Content" );
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", content, Util::withTrailingSlash( content ), listBreadcrumb );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listBreadcrumb.size() );
     SW_EXPECT_TRUE( listBreadcrumb[0]._label == "Content" );
 }
@@ -109,55 +123,57 @@ SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneBreadcrumb )
 SW_TEST_CASE( ContentBrowserLogicTest, FolderOutsideTheRootIsASingleBreadcrumb )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
-    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content2/x", listBreadcrumb );
+    const AbsolutePath               outside = Util::makePath( "Content2/x" );
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", Util::makePath( "Content" ), outside, listBreadcrumb );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listBreadcrumb.size() );
     SW_EXPECT_TRUE( listBreadcrumb[0]._label == "x" );
-    SW_EXPECT_TRUE( listBreadcrumb[0]._absolutePath == "D:/Project/Content2/x" );
+    SW_EXPECT_TRUE( listBreadcrumb[0]._absolutePath == outside );
 
-    ContentBrowserBreadcrumb::makeFolderTrail( "Content", "", "D:/Project/y", listBreadcrumb );
+    ContentBrowserBreadcrumb::makeFolderTrail( "Content", AbsolutePath{}, outside, listBreadcrumb );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listBreadcrumb.size() );
-    SW_EXPECT_TRUE( listBreadcrumb[0]._label == "y" );
+    SW_EXPECT_TRUE( listBreadcrumb[0]._label == "x" );
 }
 
 SW_TEST_CASE( ContentBrowserLogicTest, FavoriteTrailStartsWithAnInertGroup )
 {
     vector<ContentBrowserBreadcrumb> listBreadcrumb;
-    ContentBrowserBreadcrumb::makeFavoriteTrail( "Maps", "D:/Project/Content/maps/", listBreadcrumb );
+    const AbsolutePath               maps = Util::makePath( "maps" );
+    ContentBrowserBreadcrumb::makeFavoriteTrail( "Maps", Util::withTrailingSlash( maps ), listBreadcrumb );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listBreadcrumb.size() );
     SW_EXPECT_TRUE( listBreadcrumb[0]._absolutePath.empty() ); // 누를 수 없다
     SW_EXPECT_TRUE( listBreadcrumb[1]._label == "Maps" );
-    SW_EXPECT_TRUE( listBreadcrumb[1]._absolutePath == "D:/Project/Content/maps" );
+    SW_EXPECT_TRUE( listBreadcrumb[1]._absolutePath == maps );
 
-    ContentBrowserBreadcrumb::appendChildBreadcrumb( "D:\\Project\\Content\\maps\\town\\", listBreadcrumb );
+    ContentBrowserBreadcrumb::appendChildBreadcrumb( Util::withTrailingSlash( maps.join( "town" ) ), listBreadcrumb );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listBreadcrumb.size() );
     SW_EXPECT_TRUE( listBreadcrumb[2]._label == "town" );
-    SW_EXPECT_TRUE( listBreadcrumb[2]._absolutePath == "D:/Project/Content/maps/town" );
+    SW_EXPECT_TRUE( listBreadcrumb[2]._absolutePath == maps.join( "town" ) );
 }
 
 SW_TEST_CASE( ContentBrowserFolderCacheTest, ScansOncePerFolderAndSortsChildren )
 {
     Util::s_scanCount = 0;
-    ContentBrowserFolderCache cache{ &Util::scanFolders };
-    const vector<string>&     listChild = cache.getOrScanChildFolders( "D:/a" );
+    ContentBrowserFolderCache   cache{ &Util::scanFolders };
+    const vector<AbsolutePath>& listChild = cache.getOrScanChildFolders( Util::makePath( "a" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listChild.size() );
-    SW_EXPECT_TRUE( listChild[0] == "alpha" );
+    SW_EXPECT_TRUE( listChild[0] == Util::makePath( "alpha" ) );
     SW_EXPECT_EQUAL( 1u, Util::s_scanCount );
 
-    (void)cache.getOrScanChildFolders( "D:/a/" ); // 같은 폴더다
+    (void)cache.getOrScanChildFolders( Util::withTrailingSlash( Util::makePath( "a" ) ) ); // 같은 폴더다
     SW_EXPECT_EQUAL( 1u, Util::s_scanCount );
     SW_EXPECT_EQUAL( 1u, cache.getCachedFolderCount() );
 
-    const vector<string>& listOther = cache.getOrScanChildFolders( "D:/b" );
+    const vector<AbsolutePath>& listOther = cache.getOrScanChildFolders( Util::makePath( "b" ) );
     SW_EXPECT_EQUAL( 2u, Util::s_scanCount );
     SW_EXPECT_EQUAL( size_t{ 2 }, listChild.size() ); // 표가 늘어도 앞서 받은 참조가 유효하다
     SW_EXPECT_EQUAL( size_t{ 2 }, listOther.size() );
 
     cache.clear();
-    (void)cache.getOrScanChildFolders( "D:/a" );
+    (void)cache.getOrScanChildFolders( Util::makePath( "a" ) );
     SW_EXPECT_EQUAL( 3u, Util::s_scanCount );
 
     ContentBrowserFolderCache noScan{ nullptr };
-    SW_EXPECT_TRUE( noScan.getOrScanChildFolders( "D:/a" ).empty() );
+    SW_EXPECT_TRUE( noScan.getOrScanChildFolders( Util::makePath( "a" ) ).empty() );
 }
 
 SW_TEST_CASE( ContentBrowserHistoryTest, BackAndForwardTraverseTheVisits )
@@ -167,25 +183,25 @@ SW_TEST_CASE( ContentBrowserHistoryTest, BackAndForwardTraverseTheVisits )
     SW_EXPECT_TRUE( history.stepBack() == nullptr );
     SW_EXPECT_TRUE( history.stepForward() == nullptr );
 
-    history.record( "D:/a", {} );
+    history.record( Util::makePath( "a" ), {} );
     SW_EXPECT_FALSE( history.canNavigateBack() ); // 지금 자리뿐이다
-    history.record( "D:/b", {} );
-    history.record( "D:/c", {} );
+    history.record( Util::makePath( "b" ), {} );
+    history.record( Util::makePath( "c" ), {} );
     const ContentBrowserHistoryEntry* pBack = history.stepBack();
     SW_REQUIRE_NOT_NULL( pBack );
-    SW_EXPECT_TRUE( pBack->_folderPathAbs == "D:/b" );
+    SW_EXPECT_TRUE( pBack->_folderPathAbs == Util::makePath( "b" ) );
     SW_EXPECT_TRUE( history.canNavigateForward() );
     const ContentBrowserHistoryEntry* pForward = history.stepForward();
     SW_REQUIRE_NOT_NULL( pForward );
-    SW_EXPECT_TRUE( pForward->_folderPathAbs == "D:/c" );
+    SW_EXPECT_TRUE( pForward->_folderPathAbs == Util::makePath( "c" ) );
     SW_EXPECT_FALSE( history.canNavigateForward() );
 }
 
 SW_TEST_CASE( ContentBrowserHistoryTest, SameFolderIsNotRecordedTwice )
 {
     ContentBrowserHistory history;
-    history.record( "D:/a", {} );
-    history.record( "D:\\a\\", {} );
+    history.record( Util::makePath( "a" ), {} );
+    history.record( Util::withTrailingSlash( Util::makePath( "/a/" ) ), {} );
     SW_EXPECT_FALSE( history.canNavigateBack() );
 }
 
@@ -193,14 +209,14 @@ SW_TEST_CASE( ContentBrowserHistoryTest, SameFolderIsNotRecordedTwice )
 SW_TEST_CASE( ContentBrowserHistoryTest, NewVisitDropsTheForwardPath )
 {
     ContentBrowserHistory history;
-    history.record( "D:/a", {} );
-    history.record( "D:/b", {} );
+    history.record( Util::makePath( "a" ), {} );
+    history.record( Util::makePath( "b" ), {} );
     (void)history.stepBack();
-    history.record( "D:/c", {} );
+    history.record( Util::makePath( "c" ), {} );
     SW_EXPECT_FALSE( history.canNavigateForward() );
     const ContentBrowserHistoryEntry* pBack = history.stepBack();
     SW_REQUIRE_NOT_NULL( pBack );
-    SW_EXPECT_TRUE( pBack->_folderPathAbs == "D:/a" );
+    SW_EXPECT_TRUE( pBack->_folderPathAbs == Util::makePath( "a" ) );
 }
 
 SW_TEST_CASE( ContentBrowserHistoryTest, OldestVisitsFallOffTheEnd )
@@ -209,8 +225,8 @@ SW_TEST_CASE( ContentBrowserHistoryTest, OldestVisitsFallOffTheEnd )
     for ( size_t index = 0; index < ContentBrowserHistory::kMaxEntryCount + 10; ++index )
     {
         fixed_string<constant::buffer::kMax32> folderPath;
-        formatstring( folderPath.data(), folderPath.capacity(), "D:/f%#", static_cast<uint64>( index ) );
-        history.record( folderPath, {} );
+        formatstring( folderPath.data(), folderPath.capacity(), "f%#", static_cast<uint64>( index ) );
+        history.record( Util::makePath( folderPath ), {} );
     }
     size_t                            backCount = 0;
     const ContentBrowserHistoryEntry* pEntry    = nullptr;
@@ -221,5 +237,5 @@ SW_TEST_CASE( ContentBrowserHistoryTest, OldestVisitsFallOffTheEnd )
     }
     SW_EXPECT_EQUAL( ContentBrowserHistory::kMaxEntryCount - 1, backCount );
     SW_REQUIRE_NOT_NULL( pEntry );
-    SW_EXPECT_TRUE( pEntry->_folderPathAbs == "D:/f10" );
+    SW_EXPECT_TRUE( pEntry->_folderPathAbs == Util::makePath( "f10" ) );
 }

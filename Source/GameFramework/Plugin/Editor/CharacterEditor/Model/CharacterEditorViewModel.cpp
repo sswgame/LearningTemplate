@@ -171,7 +171,7 @@ namespace sw::editor
             _status = string( status.view() );
             return false;
         }
-        if ( _sockets.loadFromFile( readPath->str() ) == false )
+        if ( _sockets.loadFromFile( *readPath ) == false )
         {
             StringBuilder<constant::buffer::kMax512> status;
             status.appendFormat( "Socket file '%#' could not be loaded (see log)", readPath->str() );
@@ -213,9 +213,9 @@ namespace sw::editor
             _status = string( status.view() );
             return;
         }
-        if ( model.isDirty() || ( model.isOpen() && StringUtil::equals( model.getDiskPath(), diskPath->c_str() ) ) )
+        if ( model.isDirty() || ( model.isOpen() && model.getDiskPath() == *diskPath ) )
             return; // 고친 파일은 다시 읽지 않는다 — 같은 파일은 이미 열렸다
-        if ( model.openFile( diskPath->c_str() ) == false )
+        if ( model.openFile( *diskPath ) == false )
             _status = model.getError();
     }
 
@@ -293,7 +293,7 @@ namespace sw::editor
         for ( const BodyDataEditModel* pModel : { &_bodyShapes, &_bodyProfiles, &_visuals } )
         {
             if ( pModel->isDirty() && pModel->getDiskPath().empty() == false )
-                outListAssetID.push_back( pModel->getDiskPath() );
+                outListAssetID.push_back( pModel->getDiskPath().str() );
         }
     }
 
@@ -319,7 +319,7 @@ namespace sw::editor
         const auto readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._refPosePath.c_str() ) );
         if ( readPath.has_value() == false )
             _status = "Reference pose file was not found - edit bones and Save to create it";
-        else if ( _pose.loadFromFile( readPath->str() ) == false )
+        else if ( _pose.loadFromFile( *readPath ) == false )
             _status = "Reference pose file could not be loaded (see log)";
         else
             _status.clear();
@@ -591,7 +591,7 @@ namespace sw::editor
         presetFile.appendFormat( "%#%#", presetID.c_str(), AppearanceDatabase::kPresetExtension );
         const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), presetFile.view() );
         const auto   writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        const bool   bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( writePath->str() ) ) && doc.saveCompleteToFile( writePath->str() );
+        const bool   bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( *writePath ) && doc.saveCompleteToFile( *writePath );
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax512> status;

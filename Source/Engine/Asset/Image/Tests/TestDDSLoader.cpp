@@ -108,7 +108,7 @@ SW_TEST_CASE( DDSLoaderTest, ReadsWhatImageFileWriterWrites )
         rgbaBytes[index] = static_cast<uint8>( index * 9u );
     }
     const AbsolutePath path = test::makeScratchPath( "image.dds" );
-    SW_REQUIRE_TRUE( ImageFileWriter::writeDDSRGBA8( path.str(), rgbaBytes, kWidth, kHeight ) );
+    SW_REQUIRE_TRUE( ImageFileWriter::writeDDSRGBA8( path, rgbaBytes, kWidth, kHeight ) );
     vector<uint8> fileBytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, fileBytes ) );
 

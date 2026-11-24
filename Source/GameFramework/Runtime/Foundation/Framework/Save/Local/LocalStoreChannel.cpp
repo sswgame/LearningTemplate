@@ -107,7 +107,7 @@ namespace sw
         SW_ASSERT( _store == nullptr );
         if ( pSecurityProvider != nullptr )
         {
-            _keyProvider = make_unique<LocalDeviceKeyProvider>( FileUtil::joinPath( UserDataPath::getDataDirectory( gameName ), LocalDeviceKeyProvider::kKeyFileName ), pSecurityProvider );
+            _keyProvider = make_unique<LocalDeviceKeyProvider>( UserDataPath::getDataDirectory( gameName ).join( LocalDeviceKeyProvider::kKeyFileName ), pSecurityProvider );
             _sealContext = LocalSealContext{ pSecurityProvider, _keyProvider.get(), nullptr };
         }
         const LocalStoreConfig            config{ LocalStoreBackend::kFileBackendName, location };

@@ -11,6 +11,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Time/GameTimer.h"
 
 #include "ModuleAPI/Service/IModuleCompiler.h"
@@ -81,8 +82,8 @@ namespace sw
         virtual string getTargetName() const override;
 
     private:
-        void   runBuildThread( const string& moduleName, const string& targetName, MemoryTag memoryTag, StopToken stopToken );
-        string findBuildDirectory() const;
+        void         runBuildThread( const string& moduleName, const string& targetName, MemoryTag memoryTag, StopToken stopToken );
+        AbsolutePath findBuildDirectory() const;
         /** @brief 빌드를 시작하지 못한 끝 경로입니다(빌드 폴더 없음 · 프로세스 시작 실패). 실패로 두고 리로드 관리자에 알리고 컴파일 중 표시를 내립니다. */
         void failBeforeBuild( const string& moduleName );
         /** @brief 빌드 프로세스의 출력 줄을 읽어 수준별로 로그에 남깁니다. 이미 로드된 바이너리를 못 덮어쓴 줄이면 그 표시를 올립니다. 프로세스가 끝나면 돌아옵니다. */

@@ -69,26 +69,26 @@ namespace sw
         return desc;
     }
 
-    uint32 VertexAnimationCooker::cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store,
+    uint32 VertexAnimationCooker::cookAll( const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, float32 framesPerSecond, const CookStore& store,
                                            uint32& outFailedCount )
     {
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould3", "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould3", "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         VectorUtil::sort( listFile );
-        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
+        const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( framesPerSecond );
         CookStats         stats;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, VertexAnimationCookList::kExtension, true ) == false )
+            if ( StringUtil::endsWith( filePath.str(), VertexAnimationCookList::kExtension, true ) == false )
                 continue;
-            const string normalizedFile = FileUtil::normalizeSeparators( filePath );
+            const string normalizedFile = FileUtil::normalizeSeparators( filePath.str() );
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
@@ -106,12 +106,12 @@ namespace sw
             }
             for ( const hashed_string& clipName : list._listClip )
             {
-                const string     outputID = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-                const CookResult result   = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir, outputID ), [&]()
-                  {
-                    VertexAnimationCookList      jobList;
-                    const optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, outputID ) );
-                    const bool                   bCooked    = outputPath.has_value() && jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, *outputPath, framesPerSecond );
+                const string       outputID   = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
+                const AbsolutePath outputPath = cookedDir.join( outputID );
+                const CookResult   result     = store.cookFile( desc, outputID, outputPath, [&]()
+                      {
+                    VertexAnimationCookList jobList;
+                    const bool              bCooked = jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, outputPath, framesPerSecond );
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );
                 outFailedCount += result == CookResult::Failed ? 1u : 0u;

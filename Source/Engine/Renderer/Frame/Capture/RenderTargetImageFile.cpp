@@ -16,7 +16,7 @@ namespace sw
     namespace
     {
         /** @brief RGBA8 을 PPM(P6: 아스키 헤더 + RGB 8bit)으로 씁니다. */
-        [[nodiscard]] bool writePpm( string_view outFilePath, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+        [[nodiscard]] bool writePpm( const AbsolutePath& outFilePath, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
         {
             StringBuilder<constant::buffer::kMax64> header;
             // PPM 헤더의 구분자는 아무 공백이면 된다. 공백만 써서 이스케이프 없이 적는다.
@@ -33,7 +33,7 @@ namespace sw
                 pOut[1] = pIn[1];
                 pOut[2] = pIn[2];
             }
-            return FileUtil::writeFile( FileUtil::toDiskPath( outFilePath ), outBytes.data(), outBytes.size() );
+            return FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() );
         }
     } // namespace
 } // namespace sw
@@ -125,7 +125,7 @@ namespace sw
         return true;
     }
 
-    bool RenderTargetImageFile::writeImageFile( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath )
+    bool RenderTargetImageFile::writeImageFile( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, const AbsolutePath& outFilePath )
     {
         vector<uint8> rgbaBytes;
         if ( unpackRGBA8( bytes, layout, format, rgbaBytes ) == false )
@@ -136,19 +136,19 @@ namespace sw
         return writeRGBA8File( rgbaBytes, layout._width, layout._height, outFilePath );
     }
 
-    bool RenderTargetImageFile::writeRGBA8File( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, string_view outFilePath )
+    bool RenderTargetImageFile::writeRGBA8File( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, const AbsolutePath& outFilePath )
     {
         bool bWritten = false;
-        if ( StringUtil::endsWith( outFilePath, ".png", true ) )
+        if ( StringUtil::endsWith( outFilePath.str(), ".png", true ) )
             bWritten = ImageFileWriter::writePNGRGBA8( outFilePath, rgbaBytes, width, height );
         else
             bWritten = writePpm( outFilePath, rgbaBytes, width, height );
         if ( bWritten == false )
         {
-            SW_LOG_ERROR_ID( "FrameRenderer.WriteImageFileCouldNotWrite", "writeImageFile: could not write %#.", string( outFilePath ).c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.WriteImageFileCouldNotWrite", "writeImageFile: could not write %#.", string( outFilePath.str() ).c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "FrameRenderer.Screenshot", "Screenshot: %#×%# -> %#", width, height, string( outFilePath ).c_str() );
+        SW_LOG_INFO_ID( "FrameRenderer.Screenshot", "Screenshot: %#×%# -> %#", width, height, string( outFilePath.str() ).c_str() );
         return true;
     }
 } // namespace sw

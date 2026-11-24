@@ -33,11 +33,11 @@ namespace sw
         };
     } // namespace
 
-    FileServeContentSource::FileServeContentSource( IHTTPClient& client, string_view baseURL, string_view mountRoot, string_view mirrorRoot )
+    FileServeContentSource::FileServeContentSource( IHTTPClient& client, string_view baseURL, string_view mountRoot, const AbsolutePath& mirrorRoot )
         : _client{ client }
         , _baseURL{ FileUtil::trimTrailingSlashes( baseURL ) }
         , _mountRoot{ FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( mountRoot ) ) }
-        , _mirrorRoot{ FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( mirrorRoot ) ) }
+        , _mirrorRoot{ mirrorRoot.join( {} ) }
         , _disk{}
     {
     }
@@ -129,10 +129,10 @@ namespace sw
         return stat;
     }
 
-    bool FileServeContentSource::downloadFile( const string& relative, uint64 sizeBytes, const string& mirrorPath ) const
+    bool FileServeContentSource::downloadFile( const string& relative, uint64 sizeBytes, const AbsolutePath& mirrorPath ) const
     {
         AtomicFileWriter   writer;
-        const AbsolutePath mirrorDiskPath = FileUtil::toDiskPath( mirrorPath );
+        const AbsolutePath mirrorDiskPath = mirrorPath;
         if ( FileUtil::ensureParentDirectoryExists( mirrorDiskPath ) == false || writer.open( mirrorDiskPath ).has_value() == false )
             return false;
         vector<uint8> chunk;
@@ -149,7 +149,7 @@ namespace sw
         return writer.commit().has_value();
     }
 
-    bool FileServeContentSource::ensureMirrored( string_view path, string& outMirrorPath ) const
+    bool FileServeContentSource::ensureMirrored( string_view path, AbsolutePath& outMirrorPath ) const
     {
         string relative;
         if ( tryMapToRelative( path, relative ) == false || relative.empty() )
@@ -167,22 +167,19 @@ namespace sw
         if ( stat._kind != RemoteKind::File )
             return false;
         // shortcut: 같은 파일을 두 스레드가 처음 함께 열면 둘 다 받는다(원자 교체라 결과는 같다) — 받는 중 표를 두는 것은 겹침이 측정에 보일 때.
-        StringBuilder<constant::buffer::kMax512> pathBuilder;
-        pathBuilder.appendFormat( "%#/%#", _mirrorRoot, relative );
-        const string mirrorPath( pathBuilder.view() );
-        pathBuilder.append( kStampExtension );
-        const string stampPath{ pathBuilder.view() };
-        string       stampText;
+        const AbsolutePath mirrorPath = _mirrorRoot.join( relative );
+        const AbsolutePath stampPath  = mirrorPath.appendSuffix( kStampExtension );
+        string             stampText;
         StringUtil::appendNumber( stampText, stat._sizeBytes );
         stampText += " ";
         StringUtil::appendNumber( stampText, stat._modifiedNanos );
         string     existingStamp;
-        const bool bFresh = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( stampPath ), existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( FileUtil::toDiskPath( mirrorPath ) );
+        const bool bFresh = FileUtil::readOptionalTextFile( stampPath, existingStamp ) == OptionalFileRead::Read && existingStamp == stampText && FileUtil::isRegularFile( mirrorPath );
         if ( bFresh == false )
         {
-            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( stampPath ), stampText ) == false )
+            if ( downloadFile( relative, stat._sizeBytes, mirrorPath ) == false || FileUtil::writeTextFile( stampPath, stampText ) == false )
             {
-                SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath );
+                SW_LOG_WARNING_ID( "FileServe.DownloadFailed", "Fileserve could not mirror '%#' to '%#' - treated as missing", relative, mirrorPath.str() );
                 // PC 에서 받는 사이 다시 구웠을 수 있다(구간이 416) — 다음 열기가 상태를 다시 묻게 기억을 지운다.
                 ScopedLock<mutex> lock{ _mutex };
                 _mapRemoteStat.erase( relative );
@@ -197,8 +194,8 @@ namespace sw
 
     AsyncFileHandle FileServeContentSource::open( string_view path ) const
     {
-        string mirrorPath;
-        return ensureMirrored( path, mirrorPath ) ? _disk.open( mirrorPath ) : AsyncFileHandle{};
+        AbsolutePath mirrorPath;
+        return ensureMirrored( path, mirrorPath ) ? _disk.open( mirrorPath.str() ) : AsyncFileHandle{};
     }
 
     bool FileServeContentSource::isFile( string_view path ) const
@@ -246,39 +243,31 @@ namespace sw
 
     bool FileServeContentSource::readFile( string_view path, vector<uint8>& outBytes ) const
     {
-        string mirrorPath;
-        return ensureMirrored( path, mirrorPath ) && _disk.readFile( mirrorPath, outBytes );
+        AbsolutePath mirrorPath;
+        return ensureMirrored( path, mirrorPath ) && _disk.readFile( mirrorPath.str(), outBytes );
     }
 
     bool FileServeContentSource::readTextFile( string_view path, string& outText ) const
     {
-        string mirrorPath;
-        return ensureMirrored( path, mirrorPath ) && _disk.readTextFile( mirrorPath, outText );
+        AbsolutePath mirrorPath;
+        return ensureMirrored( path, mirrorPath ) && _disk.readTextFile( mirrorPath.str(), outText );
     }
 
     AsyncReadHandle FileServeContentSource::readFileAsync( AsyncFileIO& io, string_view path, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete ) const
     {
         // shortcut: 처음 받는 파일은 부른 스레드에서 받는다(개발 전용 — 팩은 기동 때 대부분 열린다). 막는 시간이 보이면 받기를 AsyncFileIO 워커로 옮긴다.
-        string mirrorPath;
+        AbsolutePath mirrorPath;
         if ( ensureMirrored( path, mirrorPath ) == false )
-        {
-            StringBuilder<constant::buffer::kMax512> missingPath;
-            missingPath.appendFormat( "%#/.fileserve-missing", _mirrorRoot ); // 디스크 소스가 없는 파일로 끝낸다 — 완료 콜백은 늘 한 번 온다
-            mirrorPath.assign( missingPath.view() );
-        }
-        return _disk.readFileAsync( io, mirrorPath, priority, onComplete );
+            mirrorPath = _mirrorRoot.join( ".fileserve-missing" ); // 디스크 소스가 없는 파일로 끝낸다 — 완료 콜백은 늘 한 번 온다
+        return _disk.readFileAsync( io, mirrorPath.str(), priority, onComplete );
     }
 
     AsyncReadHandle FileServeContentSource::readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
                                                             const AsyncReadCompleteDelegate& onComplete ) const
     {
-        string mirrorPath;
+        AbsolutePath mirrorPath;
         if ( ensureMirrored( path, mirrorPath ) == false )
-        {
-            StringBuilder<constant::buffer::kMax512> missingPath;
-            missingPath.appendFormat( "%#/.fileserve-missing", _mirrorRoot );
-            mirrorPath.assign( missingPath.view() );
-        }
-        return _disk.readRangeAsync( io, mirrorPath, offset, size, priority, onComplete );
+            mirrorPath = _mirrorRoot.join( ".fileserve-missing" );
+        return _disk.readRangeAsync( io, mirrorPath.str(), offset, size, priority, onComplete );
     }
 } // namespace sw

@@ -12,6 +12,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/ContentSource.h"
@@ -67,9 +68,9 @@ namespace sw
          * @details 경로로 읽는 문서 로더(`XMLDocument::loadFromFile` · `JSONDocument::loadFromFile`)가 쓴다. 쿠킹 작업 안이면 그 작업의 입력으로 기록하고,
          *          쿠킹 세션 안인데 작업 밖이면 실패한다(`CookJob::allowDiskRead`) — `FileUtil` 로 바로 읽으면 기록에서 빠진다.
          */
-        [[nodiscard]] static bool readTextFile( string_view filePath, string& outText );
+        [[nodiscard]] static bool readTextFile( const AbsolutePath& filePath, string& outText );
         /** @brief 디스크 경로의 파일을 바이트로 읽습니다. 리소스 id 로 풀지 않습니다. 쿠킹 기록 규칙은 `readTextFile` 과 같습니다. */
-        [[nodiscard]] static bool readBinaryFile( string_view filePath, vector<uint8>& outBytes );
+        [[nodiscard]] static bool readBinaryFile( const AbsolutePath& filePath, vector<uint8>& outBytes );
 
         /**
          * @brief 상대 리소스 경로의 바이너리 데이터를 로드합니다. 찾는 순서는 `readTextAsset` 와 같습니다.

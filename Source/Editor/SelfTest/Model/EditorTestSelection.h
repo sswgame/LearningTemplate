@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw::editor
 {
@@ -72,7 +73,7 @@ namespace sw::editor
     {
     public:
         /** @brief 파일 목록에서 시나리오(`<영역>/automation/<이름>.scenario.xml`)만 @p root 기준 리소스 id 로 담아 정렬합니다. 고른 것이 사라졌으면 고르지 않은 것이 됩니다. */
-        void setFromFiles( const vector<string>& listFilePath, string_view root );
+        void setFromFiles( const vector<AbsolutePath>& listFilePath, const AbsolutePath& root );
         void choose( string_view path ) { _chosen = string( path ); }
 
         const vector<string>& getPaths() const { return _listPath; }

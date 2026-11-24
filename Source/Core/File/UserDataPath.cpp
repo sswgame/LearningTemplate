@@ -19,19 +19,18 @@ namespace sw
         {
             static string makeFolderName( string_view gameName ) { return gameName.empty() ? string( "default" ) : StringUtil::toLower( gameName ); }
 
-            /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 글. */
-            static string makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
+            /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 경로. */
+            static AbsolutePath makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
             {
                 string root;
                 if ( ProcessEnvironment::tryReadNonEmpty( pRootEnvironment, root ) )
-                    return FileUtil::joinPath( FileUtil::joinPath( root, pVendor ), makeFolderName( gameName ) );
+                    return FileUtil::toDiskPath( root ).join( pVendor ).join( makeFolderName( gameName ) );
                 if ( pHomeRelative == nullptr )
-                    return string{};
+                    return {};
                 string home;
                 if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) == false )
-                    return string{};
-                const utf8* pHome = home.c_str();
-                return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, pHomeRelative ), pVendor ), makeFolderName( gameName ) );
+                    return {};
+                return FileUtil::toDiskPath( home ).join( pHomeRelative ).join( pVendor ).join( makeFolderName( gameName ) );
             }
 
             /** @brief OS 사용자 폴더를 모를 때 멈춥니다 - 작업 폴더의 `Saved` 로 대신하면(옛 폴백) 세이브 · 설정이 띄운 자리마다 갈렸다. */
@@ -40,13 +39,13 @@ namespace sw
                 reportFatalError( "The user data folder is unknown (no LOCALAPPDATA / XDG_*_HOME / HOME) - set %# to choose it", kUserDataRootVariable );
             }
 
-            /** @brief 환경 변수 `kUserDataRootVariable` 이 값을 가지면 그 아래 `<game>` 폴더, 아니면 빈 글입니다(그때는 OS 의 사용자 폴더 규칙을 따른다). */
-            static string makeUnderRootOverride( string_view gameName )
+            /** @brief 환경 변수 `kUserDataRootVariable` 이 값을 가지면 그 아래 `<game>` 폴더, 아니면 빈 경로입니다(그때는 OS 의 사용자 폴더 규칙을 따른다). */
+            static AbsolutePath makeUnderRootOverride( string_view gameName )
             {
                 string root;
                 if ( ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) == false )
-                    return string{};
-                return FileUtil::joinPath( root, makeFolderName( gameName ) );
+                    return {};
+                return FileUtil::toDiskPath( root ).join( makeFolderName( gameName ) );
             }
         };
     } // namespace
@@ -54,18 +53,18 @@ namespace sw
 
 namespace sw
 {
-    string UserDataPath::getDataDirectory( string_view gameName )
+    AbsolutePath UserDataPath::getDataDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
-        if ( string overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
+        if ( AbsolutePath overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
             return overridden;
-        string directory = findPlatformDataDirectory( gameName );
+        AbsolutePath directory = findPlatformDataDirectory( gameName );
         if ( directory.empty() )
             Internal::failUnknownUserFolder();
         return directory;
     }
 
-    string UserDataPath::findPlatformDataDirectory( string_view gameName )
+    AbsolutePath UserDataPath::findPlatformDataDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
 #if defined( SW_PLATFORM_WINDOWS )
@@ -76,24 +75,24 @@ namespace sw
         // 샌드박스 플랫폼은 사용자 폴더 규칙이 없다 — 플랫폼 부팅이 `kUserDataRootVariable` 을 앱 폴더로 정한다(Android `internalDataPath`, 웹 영속 마운트).
         // 덮어쓰기가 이미 답했어야 한다. 여기 닿았으면 부팅이 정하지 않은 것이다.
         (void)gameName;
-        return string{};
+        return {};
 #else
     #error "Unsupported platform"
 #endif
     }
 
-    string UserDataPath::getConfigDirectory( string_view gameName )
+    AbsolutePath UserDataPath::getConfigDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
-        if ( string overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
+        if ( AbsolutePath overridden = Internal::makeUnderRootOverride( gameName ); overridden.empty() == false )
             return overridden;
-        string directory = findPlatformConfigDirectory( gameName );
+        AbsolutePath directory = findPlatformConfigDirectory( gameName );
         if ( directory.empty() )
             Internal::failUnknownUserFolder();
         return directory;
     }
 
-    string UserDataPath::findPlatformConfigDirectory( string_view gameName )
+    AbsolutePath UserDataPath::findPlatformConfigDirectory( string_view gameName )
     {
         using Internal = UserDataPathInternal;
 #if defined( SW_PLATFORM_WINDOWS )
@@ -103,7 +102,7 @@ namespace sw
 #elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
         // 샌드박스 플랫폼은 사용자 폴더 규칙이 없다 — 플랫폼 부팅이 `kUserDataRootVariable` 을 앱 폴더로 정한다(Android `internalDataPath`, 웹 영속 마운트).
         (void)gameName;
-        return string{};
+        return {};
 #else
     #error "Unsupported platform"
 #endif
@@ -147,12 +146,12 @@ namespace sw
         return LocalStoreLocation( Kind::Absolute, path.str() );
     }
 
-    string LocalStoreLocation::resolveDiskPath( string_view gameName ) const
+    AbsolutePath LocalStoreLocation::resolveDiskPath( string_view gameName ) const
     {
         if ( _kind == Kind::Memory )
             reportFatalError( "A memory local store location has no disk path - check getKind() first" );
         if ( _kind == Kind::UnderUserData )
-            return FileUtil::joinPath( UserDataPath::getDataDirectory( gameName ), _path );
-        return _path;
+            return UserDataPath::getDataDirectory( gameName ).join( _path );
+        return FileUtil::toDiskPath( _path );
     }
 } // namespace sw

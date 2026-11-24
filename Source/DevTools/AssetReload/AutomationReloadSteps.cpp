@@ -70,7 +70,7 @@ namespace sw
                         return true;
                     }
                 }
-                context.restoreFileAtEnd( configPath.str(), std::move( original ) );
+                context.restoreFileAtEnd( configPath, std::move( original ) );
                 // 쓰기 게이트가 허락한 폴더(`Config/Editor`)만 써진다 — 그 밖은 게이트가 까닭을 남기고 쓰기가 진다.
                 if ( FileUtil::writeTextFile( configPath, text ) == false )
                 {

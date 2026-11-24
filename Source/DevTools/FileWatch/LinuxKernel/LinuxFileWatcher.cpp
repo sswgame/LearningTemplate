@@ -49,18 +49,18 @@ namespace sw
         stopWatching();
     }
 
-    bool LinuxFileWatcher::startWatching( string_view directoryPath, bool bRecursive )
+    bool LinuxFileWatcher::startWatching( const AbsolutePath& directoryPath, bool bRecursive )
     {
         if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
         {
-            SW_LOG_ERROR_ID( "LinuxFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath.c_str(), string{ directoryPath }.c_str() );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.AlreadyWatchingStopBefore", "Already watching %# - stop it before watching %#", _directoryPath.c_str(), directoryPath.c_str() );
             return false;
         }
         stopWatching(); // 워커가 오류로 끝났으면 남은 fd · 스레드를 거둔다
 
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
+        if ( FileUtil::isDirectory( directoryPath ) == false )
         {
-            SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", string{ directoryPath }.c_str() );
+            SW_LOG_ERROR_ID( "LinuxFileWatcher.DirectoryDoesNotExist", "Directory does not exist: %#", directoryPath.c_str() );
             return false;
         }
 
@@ -80,7 +80,7 @@ namespace sw
             return false;
         }
 
-        _directoryPath = FileUtil::normalizeSeparators( string{ directoryPath } );
+        _directoryPath = directoryPath;
         _bRecursive    = bRecursive;
 
         const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath );
@@ -119,7 +119,7 @@ namespace sw
 
         {
             ScopedLock<mutex> lock{ _watchMutex };
-            for ( const pair<int32, string>& pair : _mapWatchDescriptorToPath )
+            for ( const pair<int32, AbsolutePath>& pair : _mapWatchDescriptorToPath )
             {
                 inotify_rm_watch( _inotifyFd, pair.first );
             }
@@ -223,7 +223,7 @@ namespace sw
             return true;
         }
 
-        string watchedDir;
+        AbsolutePath watchedDir;
         {
             ScopedLock<mutex> lock{ _watchMutex };
             auto              it = _mapWatchDescriptorToPath.find( watchDescriptor );
@@ -250,7 +250,7 @@ namespace sw
         const bool bNewRecursiveDirectory = ( mask & IN_CREATE ) && ( mask & IN_ISDIR ) && _bRecursive;
         if ( bNewRecursiveDirectory )
         {
-            const string childDir = FileUtil::normalizeSeparators( FileUtil::joinPath( watchedDir, name ) );
+            const AbsolutePath childDir = watchedDir.join( name );
             if ( addWatchDirectory( childDir ) == false )
                 SW_LOG_WARNING_ID( "LinuxFileWatcher.FailedWatchNewDirectory", "Failed to watch new directory: %#", childDir.c_str() );
             pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
@@ -270,15 +270,15 @@ namespace sw
         return true;
     }
 
-    bool LinuxFileWatcher::addWatchRecursive( string_view directoryPath )
+    bool LinuxFileWatcher::addWatchRecursive( const AbsolutePath& directoryPath )
     {
         if ( addWatchDirectory( directoryPath ) == false )
             return false;
 
         uint32 failedCount{ 0 };
-        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( directoryPath ), true, [this, &failedCount]( const DirectoryEntry& entry )
+        (void)FileUtil::forEachDirectoryEntry( directoryPath, true, [this, &failedCount]( const DirectoryEntry& entry )
         {
-            if ( entry._bDirectory && addWatchDirectory( entry._path ) == false )
+            if ( entry._bDirectory && addWatchDirectory( entry.makePath() ) == false )
                 ++failedCount;
             return true;
         } );
@@ -294,18 +294,17 @@ namespace sw
         return true;
     }
 
-    bool LinuxFileWatcher::addWatchDirectory( string_view directoryPath )
+    bool LinuxFileWatcher::addWatchDirectory( const AbsolutePath& directoryPath )
     {
-        const string normalized = FileUtil::normalizeSeparators( directoryPath );
-        const int32  wd         = inotify_add_watch( _inotifyFd, normalized.c_str(), kInotifyMask );
+        const int32 wd = inotify_add_watch( _inotifyFd, directoryPath.c_str(), kInotifyMask );
         if ( wd < 0 )
         {
-            SW_LOG_TRACE_ID( "LinuxFileWatcher.InotifyAddWatchFailed2", "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
+            SW_LOG_TRACE_ID( "LinuxFileWatcher.InotifyAddWatchFailed2", "inotify_add_watch failed (%#): %#", directoryPath.c_str(), strerror( errno ) );
             return false;
         }
 
         ScopedLock<mutex> lock{ _watchMutex };
-        _mapWatchDescriptorToPath[wd] = normalized;
+        _mapWatchDescriptorToPath[wd] = directoryPath;
         return true;
     }
 
@@ -319,15 +318,15 @@ namespace sw
         _mapWatchDescriptorToPath.erase( it );
     }
 
-    void LinuxFileWatcher::pushRelativeChange( FileWatcherAction action, string_view absoluteDirectory, string_view name )
+    void LinuxFileWatcher::pushRelativeChange( FileWatcherAction action, const AbsolutePath& absoluteDirectory, string_view name )
     {
         // inotify 는 watch 를 건 디렉터리를 기준으로 이름을 준다. 소비자는 `_directory` 와 `_filename` 을 이어 붙여 쓰므로
         // (감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.
-        const string absoluteFile = FileUtil::joinPath( absoluteDirectory, name );
+        const string absoluteFile = absoluteDirectory.join( name ).str();
         string       relative;
-        const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath, absoluteFile, relative );
+        const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath.str(), absoluteFile, relative );
 
         // 상한 · 넘침 표시 · 연속 중복 합치기는 FileWatcher::pushChange 가 한다.
-        pushChange( action, _directoryPath, bUnderRoot ? string_view{ relative } : name );
+        pushChange( action, _directoryPath.str(), bUnderRoot ? string_view{ relative } : name );
     }
 } // namespace sw

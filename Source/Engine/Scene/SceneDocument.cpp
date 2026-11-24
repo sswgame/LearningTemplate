@@ -294,16 +294,16 @@ namespace sw
         return readXMLSource( doc, bRead, absPath, baseID, loadScope, inoutListChain );
     }
 
-    bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
+    bool SceneDocument::loadXMLFromDiskFile( const AbsolutePath& diskPath )
     {
         // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         *this       = {};
-        _sourcePath = diskPath;
-        AssetLoadScope loadScope( "Scene", diskPath );
+        _sourcePath = diskPath.str();
+        AssetLoadScope loadScope( "Scene", diskPath.str() );
         XMLDocument    doc;
         const bool     bRead = doc.loadFromFile( diskPath );
         vector<string> listChain;
-        return readXMLSource( doc, bRead, string( diskPath ), string{}, loadScope, listChain );
+        return readXMLSource( doc, bRead, string( diskPath.str() ), string{}, loadScope, listChain );
     }
 
     bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, const string& flattenedBaseID, AssetLoadScope& loadScope, vector<string>& inoutListChain )
@@ -555,7 +555,7 @@ namespace sw
         XMLDocument xmlDoc;
         if ( buildXML( xmlDoc ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || xmlDoc.saveCompleteToFile( absPath.str() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || xmlDoc.saveCompleteToFile( absPath ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;
@@ -571,7 +571,7 @@ namespace sw
         XMLDocument parentDoc;
         if ( _baseScenePath.empty() || buildXML( fullDoc ) == false || parent.buildXML( parentDoc ) == false )
             return false;
-        if ( ResourceComposer::saveDelta( absPath.str(), fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
+        if ( ResourceComposer::saveDelta( absPath, fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath ) == false )
             return false;
         SW_LOG_INFO_ID( "SceneDocument.SavedDelta", "Saved '%#' as a difference from '%#' -> %#", _name, _baseScenePath, absPath.str() );
         return true;
@@ -808,7 +808,7 @@ namespace sw
         file.writeBytes( arch.getData(), arch.getSize() );
         file.writeBytes( content.getData(), content.getSize() );
 
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && file.saveToFile( absPath.str() );
+        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && file.saveToFile( absPath );
         if ( bOk )
             SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                             static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );

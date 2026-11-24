@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -37,7 +38,7 @@ namespace sw
          * @brief 스냅숏을 워커에서 @p folder(이미 있다)에 씁니다(`MemorySnapshotExport::writeSnapshot`). 결과는 로그(`MemoryExport.Written` · `MemoryExport.Failed`)로 남는다.
          * @details 큰 표(에셋 수천 줄)의 글 짓기 · 쓰기가 게임 스레드를 막지 않게 한다. 스냅숏은 공유 포인터로 넘겨 워커가 끝날 때까지 산다.
          */
-        void writeAsync( shared_ptr<const MemorySnapshot> pSnapshot, string folder );
+        void writeAsync( shared_ptr<const MemorySnapshot> pSnapshot, const AbsolutePath& folder );
         /** @brief 아직 끝나지 않은 쓰기 수입니다(끝 차단 · 감시 값). */
         uint32 getPendingWriteCount() const;
         /**

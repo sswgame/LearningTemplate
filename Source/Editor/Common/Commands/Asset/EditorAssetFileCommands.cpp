@@ -115,23 +115,23 @@ namespace sw::editor
             }
 
             /** @brief 파일 하나를 옮깁니다(복사한 뒤 원본을 지운다). 실패하면 대상을 지워 원본만 남긴다. */
-            [[nodiscard]] static bool moveFile( const string& sourceAbs, const string& destinationAbs )
+            [[nodiscard]] static bool moveFile( const AbsolutePath& sourceAbs, const AbsolutePath& destinationAbs )
             {
-                if ( FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( destinationAbs ) ) == false )
+                if ( FileUtil::copyFile( sourceAbs, destinationAbs ) == false )
                     return false;
-                if ( FileUtil::removeFile( FileUtil::toDiskPath( sourceAbs ) ) )
+                if ( FileUtil::removeFile( sourceAbs ) )
                     return true;
-                (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( destinationAbs ) ); // 원본이 남았으니 사본을 회수한다 — 실패해도 원본은 그대로다
+                (void)FileUtil::tryRemoveFile( destinationAbs ); // 원본이 남았으니 사본을 회수한다 — 실패해도 원본은 그대로다
                 return false;
             }
 
             /** @brief 참조 파일 하나에 쓸 글입니다. 적용 전에 모두 만들고, 쓰기가 하나라도 지면 `_originalText` 로 되돌린다. */
             struct PreparedRewrite
             {
-                string _referrerID;  ///< 옮긴 뒤의 리소스 id(참조자도 함께 옮기면 새 id)
-                string _referrerAbs; ///< 옮긴 뒤의 디스크 경로
-                string _originalText;
-                string _rewrittenText;
+                string       _referrerID;  ///< 옮긴 뒤의 리소스 id(참조자도 함께 옮기면 새 id)
+                AbsolutePath _referrerAbs; ///< 옮긴 뒤의 디스크 경로
+                string       _originalText;
+                string       _rewrittenText;
             };
 
             /** @brief 리소스 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
@@ -201,7 +201,7 @@ namespace sw::editor
                     else
                     {
                         rewrite._referrerID  = referrerID;
-                        rewrite._referrerAbs = referrerFile->str();
+                        rewrite._referrerAbs = *referrerFile;
                         VectorUtil::addUnique( inoutPlan._listOutsideDomain, getDomainOf( referrerID ) );
                     }
                     if ( params.rewrite( rewrite._rewrittenText, AssetReferenceFields::getSyntaxOf( referrerID ), listRule ) == 0 )
@@ -229,13 +229,13 @@ namespace sw::editor
                 // 옮기기마다 목록을 훑지 않는다(폴더를 옮기면 옮기는 파일 수의 제곱) — 곁 파일 경로는 원본 경로에 접미를 붙인 것이라 구분자만 맞추면 같은 글이다.
                 unordered_set<string> uniqueSource;
                 for ( const EditorAssetMove& move : listMove )
-                    uniqueSource.insert( FileUtil::normalizeSeparators( move._sourceAbs ) );
+                    uniqueSource.insert( move._sourceAbs.str() );
                 for ( const EditorAssetMove& move : listMove )
                 {
-                    const string sidecar = AssetMeta::makePath( move._sourceAbs );
-                    if ( isSidecar( move._sourceAbs ) || FileUtil::isRegularFile( FileUtil::toDiskPath( sidecar ) ) == false )
+                    const AbsolutePath sidecar = AssetMeta::makePath( move._sourceAbs );
+                    if ( isSidecar( move._sourceAbs.str() ) || FileUtil::isRegularFile( sidecar ) == false )
                         continue;
-                    if ( uniqueSource.count( FileUtil::normalizeSeparators( sidecar ) ) == 0 )
+                    if ( uniqueSource.count( sidecar.str() ) == 0 )
                         listResult.push_back( EditorAssetMove{ sidecar, AssetMeta::makePath( move._destinationAbs ) } );
                 }
                 return listResult;
@@ -250,12 +250,12 @@ namespace sw::editor
                 for ( size_t moveIndex = 0; moveIndex < inoutPlan._listMove.size(); ++moveIndex )
                 {
                     const EditorAssetMove& move = inoutPlan._listMove[moveIndex];
-                    if ( isSidecar( move._sourceAbs ) == false )
+                    if ( isSidecar( move._sourceAbs.str() ) == false )
                         continue;
                     PreparedRewrite     rewrite{};
                     AssetMeta           meta;
                     optional<AssetGUID> guid;
-                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( move._sourceAbs ), rewrite._originalText ) )
+                    if ( FileUtil::readTextFile( move._sourceAbs, rewrite._originalText ) )
                         guid = meta.parseXML( rewrite._originalText, inoutPlan._listOldID[moveIndex] );
                     if ( guid.has_value() == false )
                     {
@@ -264,7 +264,7 @@ namespace sw::editor
                         inoutPlan._failure = string( failureBuilder.view() );
                         return false;
                     }
-                    const string_view newSourceAbs = string_view{ move._destinationAbs }.substr( 0, move._destinationAbs.size() - AssetMeta::kExtension.size() );
+                    const string_view newSourceAbs = string_view{ move._destinationAbs.str() }.substr( 0, move._destinationAbs.str().size() - AssetMeta::kExtension.size() );
                     meta.renameSource( newSourceAbs );
                     rewrite._rewrittenText = meta.toXML();
                     if ( rewrite._rewrittenText == rewrite._originalText )
@@ -277,10 +277,10 @@ namespace sw::editor
             }
 
             /** @brief 정체성 규칙(`Config/Dev/AssetIdentity.json`)을 읽습니다. 읽지 못하면 오류를 남기고 false 입니다(규칙 없이 정체성을 쓰지 않는다). */
-            [[nodiscard]] static bool loadIdentityRules( AssetIdentityRules& outRules ) { return outRules.load( ProcessRoots::get()._project.str() ); }
+            [[nodiscard]] static bool loadIdentityRules( AssetIdentityRules& outRules ) { return outRules.load( ProcessRoots::get()._project ); }
 
             /** @brief 막 생긴 파일(새로 만들기 · 복제 · 가져오기)에 새 GUID 를 줍니다. 리소스 트리 밖이면 정체성이 없다(할 일 없음). */
-            [[nodiscard]] static bool assignNewIdentity( const string& absPath )
+            [[nodiscard]] static bool assignNewIdentity( const AbsolutePath& absPath )
             {
                 const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( absPath );
                 AssetIdentityRules rules;
@@ -290,12 +290,12 @@ namespace sw::editor
             }
 
             /** @brief 손으로 적는 글을 임포트 산출물 폴더에 만들려 하면(`AssetIdentityRules::isMisplacedInDerivedFolder`) 이유를 알리고 true 입니다. 규칙을 읽지 못해도 만들지 않는다. */
-            [[nodiscard]] static bool refuseDerivedFolder( string_view folderAbs, string_view stem, string_view suffix )
+            [[nodiscard]] static bool refuseDerivedFolder( const AbsolutePath& folderAbs, string_view stem, string_view suffix )
             {
                 // 이름을 잡기(`makeUniquePath` — 빈 파일을 만든다) 전에 묻는다. 겹쳐서 번호가 붙어도 폴더와 접미사는 같다.
                 StringBuilder<constant::buffer::kMax256> fileName;
                 fileName.appendFormat( "%#%#", stem, suffix );
-                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( folderAbs, fileName.view() ) );
+                const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( folderAbs.join( fileName.view() ) );
                 AssetIdentityRules rules;
                 if ( assetID.empty() )
                     return false;
@@ -306,7 +306,7 @@ namespace sw::editor
             }
 
             /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
-            [[nodiscard]] static bool failOnReadOnly( string_view absolutePath, EditorAssetMovePlan& inoutPlan )
+            [[nodiscard]] static bool failOnReadOnly( const AbsolutePath& absolutePath, EditorAssetMovePlan& inoutPlan )
             {
                 const optional<string> readOnlyPath = EditorContentWrite::findReadOnlyAtOrUnder( absolutePath );
                 if ( readOnlyPath.has_value() == false )
@@ -318,7 +318,7 @@ namespace sw::editor
             }
 
             /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`EditorContentWrite::warnIfReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
-            [[nodiscard]] static bool refuseDelete( string_view absolutePath )
+            [[nodiscard]] static bool refuseDelete( const AbsolutePath& absolutePath )
             {
                 return refuseOpenDocumentDelete( absolutePath ) || EditorContentWrite::warnIfReadOnly( absolutePath, EditorContentWriteKind::Delete );
             }
@@ -327,9 +327,9 @@ namespace sw::editor
              * @brief @p absolutePath(파일, 또는 폴더면 그 아래)에 열린 문서가 있으면 지우기를 거절하고 이유를 알린 뒤 true 입니다(감사 P0-4).
              * @details 연 문서를 지우면 다음 저장(Ctrl+S)이 파일을 되살린다. 유니티 · Godot 는 GUID · UID 로 연 문서를 끊고, 이 엔진은 경로가 정체라 거절이 그 자리다.
              */
-            [[nodiscard]] static bool refuseOpenDocumentDelete( string_view absolutePath )
+            [[nodiscard]] static bool refuseOpenDocumentDelete( const AbsolutePath& absolutePath )
             {
-                const string deletedID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::normalizeSeparators( absolutePath ) );
+                const string deletedID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( deletedID.empty() )
                     return false; // 리소스 트리 밖 파일은 문서로 열 수 없다
                 vector<EditorOpenDocument> listOpen;
@@ -376,10 +376,10 @@ namespace sw::editor
         outSuffix = string{ fileName.substr( dot ) };
     }
 
-    string EditorAssetFileCommands::makeUniquePath( string_view folderAbs, string_view stem, string_view suffix )
+    AbsolutePath EditorAssetFileCommands::makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix )
     {
         // 만들기가 곧 자리 잡기다(`reserveUniquePath`) — "있나 보고 고르기" 는 번호를 다 쓰면 있는 파일을 돌려줘 덮어썼다. 접미사가 빈 글이면 폴더다.
-        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( folderAbs, stem ) ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
+        return FileUtil::reserveUniquePath( folderAbs.join( stem ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
     }
 
     uint32 EditorAssetFileCommands::replaceReference( string& inoutText, string_view oldID, string_view newID )
@@ -408,16 +408,16 @@ namespace sw::editor
         return replaceCount;
     }
 
-    bool EditorAssetFileCommands::createFolder( string_view parentAbs, string& outFolderAbs )
+    bool EditorAssetFileCommands::createFolder( const AbsolutePath& parentAbs, AbsolutePath& outFolderAbs )
     {
         outFolderAbs = makeUniquePath( parentAbs, "new_folder", "" );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( outFolderAbs ) ) )
+        if ( FileUtil::ensureDirectoryExists( outFolderAbs ) )
             return true;
-        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotCreateFolder", "Could not create the folder '%#'", outFolderAbs );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotCreateFolder", "Could not create the folder '%#'", outFolderAbs.str() );
         return false;
     }
 
-    bool EditorAssetFileCommands::createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
+    bool EditorAssetFileCommands::createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, AbsolutePath& outAssetAbs )
     {
         string text;
         if ( assetTemplate._pfnSourcePath == nullptr )
@@ -446,31 +446,31 @@ namespace sw::editor
         {
             string uniqueStem;
             string uniqueSuffix;
-            splitAssetName( FileUtil::getFileNamePart( outAssetAbs ), uniqueStem, uniqueSuffix );
+            splitAssetName( FileUtil::getFileNamePart( outAssetAbs.str() ), uniqueStem, uniqueSuffix );
             fixed_string<constant::buffer::kMax256> nameAttribute;
             formatstring( nameAttribute.data(), nameAttribute.capacity(), "name=\"%#\"", uniqueStem );
             (void)replaceReference( text, assetTemplate._pNameAttribute, nameAttribute ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( outAssetAbs ), text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
+        if ( FileUtil::writeTextFile( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
         {
             SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
-        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs.str() );
         return false;
     }
 
-    bool EditorAssetFileCommands::duplicateAsset( string_view sourceAbs, string& outAssetAbs )
+    bool EditorAssetFileCommands::duplicateAsset( const AbsolutePath& sourceAbs, AbsolutePath& outAssetAbs )
     {
         string stem;
         string suffix;
-        splitAssetName( FileUtil::getFileNamePart( sourceAbs ), stem, suffix );
-        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix ) )
+        splitAssetName( FileUtil::getFileNamePart( sourceAbs.str() ), stem, suffix );
+        if ( EditorAssetFileCommandsInternal::refuseDerivedFolder( sourceAbs.getParent(), stem, suffix ) )
             return false;
-        outAssetAbs = makeUniquePath( FileUtil::getDirectoryPart( sourceAbs ), stem, suffix );
+        outAssetAbs = makeUniquePath( sourceAbs.getParent(), stem, suffix );
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
-        return FileUtil::copyFile( FileUtil::toDiskPath( sourceAbs ), FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
+        return FileUtil::copyFile( sourceAbs, outAssetAbs ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
 
     bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
@@ -501,20 +501,20 @@ namespace sw::editor
         const vector<EditorAssetMove> listExpanded = EditorAssetFileCommandsInternal::appendSidecarMoves( listMove );
         for ( const EditorAssetMove& move : listExpanded )
         {
-            EditorAssetMove normalized{ FileUtil::normalizeSeparators( move._sourceAbs ), FileUtil::normalizeSeparators( move._destinationAbs ) };
+            EditorAssetMove normalized{ move };
             const string    oldID = assetPaths.toAssetID( normalized._sourceAbs );
             const string    newID = assetPaths.toAssetID( normalized._destinationAbs );
             if ( oldID.empty() || newID.empty() || oldID == newID )
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
-                failureBuilder.appendFormat( "'%#' cannot move to '%#' (outside the resource tree or the same place)", normalized._sourceAbs, normalized._destinationAbs );
+                failureBuilder.appendFormat( "'%#' cannot move to '%#' (outside the resource tree or the same place)", normalized._sourceAbs.str(), normalized._destinationAbs.str() );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            if ( isValidAssetName( FileUtil::getFileNamePart( normalized._destinationAbs ) ) == false )
+            if ( isValidAssetName( FileUtil::getFileNamePart( normalized._destinationAbs.str() ) ) == false )
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
-                failureBuilder.appendFormat( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs ) );
+                failureBuilder.appendFormat( "'%#' is not a resource name - use lowercase letters, digits, '_', '-' and '.'", FileUtil::getFileNamePart( normalized._destinationAbs.str() ) );
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
@@ -525,7 +525,7 @@ namespace sw::editor
                 outPlan._failure = string( failureBuilder.view() );
                 return false;
             }
-            if ( FileUtil::exists( FileUtil::toDiskPath( normalized._destinationAbs ) ) || uniqueOldID.insert( oldID ).second == false )
+            if ( FileUtil::exists( normalized._destinationAbs ) || uniqueOldID.insert( oldID ).second == false )
             {
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
                 failureBuilder.appendFormat( "'%#' already exists or is moved twice - nothing was moved", newID );
@@ -545,7 +545,7 @@ namespace sw::editor
         }
         // 고치는 규칙은 커밋 전 검사 · move-asset · 참조 검사와 같은 칸 목록이다 — 글을 찾아 바꾸지 않고 경로 칸의 값만 바꾼다. 목록이 없으면 옮기지 않는다(고치지 못한 참조를 남기지 않게).
         AssetReferenceFields params;
-        if ( params.load( ProcessRoots::get()._project.str() ) == false )
+        if ( params.load( ProcessRoots::get()._project ) == false )
         {
             StringBuilder<constant::buffer::kMax256> failureBuilder;
             failureBuilder.appendFormat( "could not read %#", AssetReferenceFields::kConfigFile );
@@ -634,7 +634,7 @@ namespace sw::editor
             return false;
         }
         AssetReferenceFields params;
-        if ( params.load( ProcessRoots::get()._project.str() ) == false )
+        if ( params.load( ProcessRoots::get()._project ) == false )
             return false;
         EditorAssetMovePlan                                      rewritePlan = outPlan;
         vector<EditorAssetFileCommandsInternal::PreparedRewrite> listRewrite;
@@ -659,7 +659,7 @@ namespace sw::editor
         for ( ; movedCount < outPlan._listMove.size(); ++movedCount )
         {
             const EditorAssetMove& move = outPlan._listMove[movedCount];
-            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( move._destinationAbs ) ) == false || EditorAssetFileCommandsInternal::moveFile( move._sourceAbs, move._destinationAbs ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( move._destinationAbs ) == false || EditorAssetFileCommandsInternal::moveFile( move._sourceAbs, move._destinationAbs ) == false )
                 break;
         }
         bool bFailed = movedCount < outPlan._listMove.size();
@@ -677,7 +677,7 @@ namespace sw::editor
             for ( ; writtenCount < listRewrite.size(); ++writtenCount )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[writtenCount];
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( rewrite._referrerAbs ), rewrite._rewrittenText ) == false )
+                if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._rewrittenText ) == false )
                 {
                     bFailed = true;
                     StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -695,7 +695,7 @@ namespace sw::editor
             for ( size_t index = 0; index < writtenCount; ++index )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[index];
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( rewrite._referrerAbs ), rewrite._originalText ) == false )
+                if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._originalText ) == false )
                     listStuck.push_back( rewrite._referrerID );
             }
             for ( size_t index = movedCount; index > 0; --index )
@@ -753,39 +753,36 @@ namespace sw::editor
         return true;
     }
 
-    expected<vector<EditorAssetMove>> EditorAssetFileCommands::collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs )
+    expected<vector<EditorAssetMove>> EditorAssetFileCommands::collectFolderMoves( const AbsolutePath& sourceFolderAbs, const AbsolutePath& destinationParentAbs )
     {
-        const string source      = FileUtil::normalizeSeparators( sourceFolderAbs );
-        const string destination = FileUtil::joinPath( destinationParentAbs, FileUtil::getFileNamePart( source ) );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( source ) ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "not a folder", source } );
+        const AbsolutePath source      = sourceFolderAbs;
+        const AbsolutePath destination = destinationParentAbs.join( FileUtil::getFileNamePart( source.str() ) );
+        if ( FileUtil::isDirectory( source ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "not a folder", source.str() } );
         // 폴더를 자기 안으로 옮기면 끝없이 깊어진다
-        if ( FileUtil::isPathAtOrUnderRoot( source, destination ) )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "a folder cannot move into itself", FileUtil::getFileNamePart( source ) } );
-        if ( FileUtil::exists( FileUtil::toDiskPath( destination ) ) )
-            return unexpected( Error{ ErrorKind::AlreadyExists, "the destination already exists - nothing was moved", destination } );
-        vector<string> listFile;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( source ), "", listFile, true ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the folder", source } );
+        if ( FileUtil::isPathAtOrUnderRoot( source.str(), destination.str() ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a folder cannot move into itself", FileUtil::getFileNamePart( source.str() ) } );
+        if ( FileUtil::exists( destination ) )
+            return unexpected( Error{ ErrorKind::AlreadyExists, "the destination already exists - nothing was moved", destination.str() } );
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::collectFiles( source, "", listFile, true ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the folder", source.str() } );
         vector<EditorAssetMove> listMove;
-        for ( const string& fileAbs : listFile )
+        for ( const AbsolutePath& fileAbs : listFile )
         {
-            const string                             normalized = FileUtil::normalizeSeparators( fileAbs );
-            StringBuilder<constant::buffer::kMax512> destinationBuilder;
-            destinationBuilder.appendFormat( "%#%#", destination, string_view( normalized ).substr( source.size() ) );
-            listMove.push_back( EditorAssetMove{ normalized, string( destinationBuilder.view() ) } );
+            listMove.push_back( EditorAssetMove{ fileAbs, destination.join( string_view( fileAbs.str() ).substr( source.str().size() ) ) } );
         }
         if ( listMove.empty() )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the folder is empty - nothing to move", FileUtil::getFileNamePart( source ) } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the folder is empty - nothing to move", FileUtil::getFileNamePart( source.str() ) } );
         return listMove;
     }
 
-    bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorAssetIndex& inoutIndex, uint32& outFixedFileCount )
+    bool EditorAssetFileCommands::moveAsset( const AbsolutePath& sourceAbs, const AbsolutePath& destinationAbs, EditorAssetIndex& inoutIndex, uint32& outFixedFileCount )
     {
         outFixedFileCount = 0;
         EditorAssetMovePlan plan;
         if ( applyAssetMoves( {
-                                  EditorAssetMove{ string( sourceAbs ), string( destinationAbs ) }
+                                  EditorAssetMove{ sourceAbs, destinationAbs }
         },
                               inoutIndex, plan ) == false )
             return false; // 이유는 applyAssetMoves 가 알렸다(옮기기 전 거절 · 되돌림 · 되돌리지 못한 목록)
@@ -793,7 +790,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorAssetFileCommands::moveToTrash( string_view absolutePath )
+    bool EditorAssetFileCommands::moveToTrash( const AbsolutePath& absolutePath )
     {
         if ( EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
             return false;
@@ -802,9 +799,9 @@ namespace sw::editor
             return deleteAsset( absolutePath );
 
         // 에셋과 곁의 정체성 서술(.meta)을 한 번에 보낸다 — 휴지통에서 되살리면 둘이 함께 온다.
-        const string         assetPath = FileUtil::normalizeSeparators( absolutePath );
-        const AbsolutePath   metaPath  = FileUtil::toDiskPath( AssetMeta::makePath( assetPath ) );
-        vector<AbsolutePath> listPath{ FileUtil::toDiskPath( assetPath ) };
+        const AbsolutePath   assetPath = absolutePath;
+        const AbsolutePath   metaPath  = AssetMeta::makePath( assetPath );
+        vector<AbsolutePath> listPath{ assetPath };
         if ( FileUtil::isRegularFile( metaPath ) )
             listPath.push_back( metaPath );
         if ( FileUtil::moveToRecycleBin( listPath ) )
@@ -812,34 +809,34 @@ namespace sw::editor
             SW_LOG_INFO_ID( "Asset.Recycled", "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
             return true;
         }
-        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotMoveRecycle", "Could not move '%#' to the recycle bin - it is kept", assetPath );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotMoveRecycle", "Could not move '%#' to the recycle bin - it is kept", assetPath.str() );
         return false;
     }
 
-    bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
+    bool EditorAssetFileCommands::deleteAsset( const AbsolutePath& absolutePath )
     {
         if ( absolutePath.empty() || EditorAssetFileCommandsInternal::refuseDelete( absolutePath ) )
             return false;
-        const string abs{ absolutePath };
-        if ( FileUtil::removeFile( FileUtil::toDiskPath( abs ) ) == false )
+        const AbsolutePath abs{ absolutePath };
+        if ( FileUtil::removeFile( abs ) == false )
         {
-            SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDelete", "Could not delete '%#' - it is kept", abs );
+            SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDelete", "Could not delete '%#' - it is kept", abs.str() );
             return false;
         }
         // .meta 는 에셋이 실제로 지워진 뒤에만 지운다 — 남은 에셋에서 정체성을 떼면 다음에 새 GUID 를 받아 가리키던 참조가 끊긴다.
-        const string metaPath = AssetMeta::makePath( abs );
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( metaPath ) ) == false )
-            SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaKept", "Deleted '%#' but its .meta could not be removed - delete it too (asset-ids reports it)", abs );
+        const AbsolutePath metaPath = AssetMeta::makePath( abs );
+        if ( FileUtil::isRegularFile( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+            SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaKept", "Deleted '%#' but its .meta could not be removed - delete it too (asset-ids reports it)", abs.str() );
         return true;
     }
 
-    bool EditorAssetFileCommands::replaceAssetContent( string_view targetAbs, string_view newContentAbs )
+    bool EditorAssetFileCommands::replaceAssetContent( const AbsolutePath& targetAbs, const AbsolutePath& newContentAbs )
     {
         const string       assetID = editor::getSubsystem<AssetPaths>().toAssetID( targetAbs );
         AssetIdentityRules rules;
         if ( assetID.empty() )
         {
-            SW_LOG_ERROR_ID( "EditorAssetFileCommands.ReplaceOutsideResources", "'%#' is outside the resource tree - only an asset has an identity to keep", string( targetAbs ) );
+            SW_LOG_ERROR_ID( "EditorAssetFileCommands.ReplaceOutsideResources", "'%#' is outside the resource tree - only an asset has an identity to keep", string( targetAbs.str() ) );
             return false;
         }
         if ( EditorAssetFileCommandsInternal::loadIdentityRules( rules ) == false || rules.replaceContentKeepingIdentity( targetAbs, assetID, newContentAbs ) == false )
@@ -848,7 +845,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorAssetFileCommands::readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply )
+    bool EditorAssetFileCommands::readSourceFileArgument( const string& argument, AbsolutePath& outAbsolutePath, string& outReply )
     {
         if ( AbsolutePath::isStrictAbsolute( argument ) )
             return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
@@ -860,11 +857,11 @@ namespace sw::editor
             outReply = string( replyBuilder.view() );
             return false;
         }
-        outAbsolutePath = diskPath->str();
+        outAbsolutePath = *diskPath;
         return true;
     }
 
-    uint32 EditorAssetFileCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
+    uint32 EditorAssetFileCommands::importFiles( const AbsolutePath& destFolderAbs, const vector<AbsolutePath>& listSourcePath )
     {
         if ( destFolderAbs.empty() )
         {
@@ -873,18 +870,18 @@ namespace sw::editor
         }
 
         uint32 copied{ 0 };
-        for ( const string& sourcePath : listSourcePath )
+        for ( const AbsolutePath& sourcePath : listSourcePath )
         {
-            if ( FileUtil::exists( FileUtil::toDiskPath( sourcePath ) ) == false )
+            if ( FileUtil::exists( sourcePath ) == false )
             {
                 SW_LOG_WARNING_ID( "EditorAssetFileCommands.ImportSkippedMissing", "Import skipped (missing): %#", sourcePath.c_str() );
                 continue;
             }
 
             // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
-            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) ).str();
-            const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
-            if ( FileUtil::isSameDiskPath( sourcePath, plainPath ) )
+            const string       fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath.str() ) ).str();
+            const AbsolutePath plainPath = destFolderAbs.join( fileName );
+            if ( FileUtil::isSameDiskPath( sourcePath.str(), plainPath.str() ) )
             {
                 SW_LOG_TRACE_ID( "EditorAssetFileCommands.AlreadyFolder", "Already in folder: %#", fileName.c_str() );
                 continue;
@@ -892,8 +889,8 @@ namespace sw::editor
 
             // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 빈 이름은 원자적으로 잡는다(`reserveUniquePath` - 고유 이름의 입구 하나).
-            const string destPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( plainPath ) ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
-            if ( destPath.empty() || FileUtil::copyFile( FileUtil::toDiskPath( sourcePath ), FileUtil::toDiskPath( destPath ) ) == false )
+            const AbsolutePath destPath = FileUtil::reserveUniquePath( plainPath.removeExtension(), FileUtil::getExtension( fileName ), false, 10000, "_" );
+            if ( destPath.empty() || FileUtil::copyFile( sourcePath, destPath ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorAssetFileCommands.FailedImport", "Failed to import: %#", sourcePath.c_str() );
                 continue;

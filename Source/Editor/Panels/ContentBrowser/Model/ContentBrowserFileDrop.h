@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw::editor
 {
@@ -52,7 +53,7 @@ namespace sw::editor
      */
     struct ContentBrowserFileDropPlan
     {
-        vector<string>                     _listImport{};
+        vector<AbsolutePath>               _listImport{};
         vector<ContentBrowserRejectedFile> _listRejected{};
 
         /**

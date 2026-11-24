@@ -68,7 +68,7 @@ namespace sw
         VectorUtil::sortUnique( outListPath );
     }
 
-    bool ScenePreloadList::write( string_view diskPath, const vector<string>& listPath )
+    bool ScenePreloadList::write( const AbsolutePath& diskPath, const vector<string>& listPath )
     {
         JSONDocument document;
         JSONValue    root = document.makeObject();

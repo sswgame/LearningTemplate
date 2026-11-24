@@ -117,9 +117,8 @@ namespace sw
         template <typename TMessageTypes, typename TBody>
         [[nodiscard]] static bool convertBody( const vector<uint8>& bodyBytes, BitWriter& outBody )
         {
-            TBody  body{};
-            uint32 readVersion = 0;
-            if ( MixedBuildCodec::decode( bodyBytes.data(), bodyBytes.size(), TBody::kBusVersion, body, readVersion ) != MixedBuildReadResult::Read )
+            TBody body{};
+            if ( MixedBuildCodec::decode( bodyBytes.data(), bodyBytes.size(), TBody::kBusVersion, body )._result != MixedBuildReadResult::Read )
                 return false;
             return TMessageTypes::write( outBody, body );
         }

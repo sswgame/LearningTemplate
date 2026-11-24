@@ -16,6 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetFlowLog.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -112,7 +113,7 @@ namespace sw
          * @details 시간이 다 된 것은 `updateRecording` 이 알아챕니다(`Engine::endFrame` 이 프레임마다 부른다). 이미 진행 중이면 거절합니다.
          * @return 시작했으면 true
          */
-        [[nodiscard]] static bool startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
+        [[nodiscard]] static bool startRecording( FrameProfiler& profiler, float64 seconds, const AbsolutePath& path, string_view processName, uint32 budget,
                                                   string& outReply );
         /** @brief @p profiler 의 긴 캡처가 진행 중이면 true 입니다(상태는 프로파일러의 `ProfilerTraceSession` — 아무 스레드나 읽어도 된다). */
         static bool isRecording( const FrameProfiler& profiler );
@@ -153,7 +154,7 @@ namespace sw
          */
         [[nodiscard]] static bool mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport );
         /** @brief 파일들을 읽어 `mergeTraceJSON` 으로 합치고 @p outputPath 에 씁니다. 이름은 각 파일의 머리말 프로세스 이름입니다. */
-        [[nodiscard]] static bool mergeTraceFiles( const vector<string>& listInputPath, string_view outputPath, string& outReply );
+        [[nodiscard]] static bool mergeTraceFiles( const vector<AbsolutePath>& listInputPath, const AbsolutePath& outputPath, string& outReply );
         /**
          * @brief Trace Event JSON(이 파일이 낸 것, 또는 완전 이벤트 `X` 와 스레드 이름 메타를 가진 다른 도구의 것)을 읽습니다.
          * @details 시각은 마이크로초 → 나노초. 같은 (pid, tid) 는 한 스레드이고, 스레드 줄 이름은 `thread_name` 메타입니다(없으면 `tid <번호>`).
@@ -162,9 +163,9 @@ namespace sw
          */
         [[nodiscard]] static expected<ProfilerLoadedTrace> parseTraceJSON( string_view json );
         /** @brief 파일을 읽어 `parseTraceJSON` 으로 해석합니다(`_sourcePath` 에 경로). */
-        [[nodiscard]] static expected<ProfilerLoadedTrace> loadTraceFile( string_view path );
+        [[nodiscard]] static expected<ProfilerLoadedTrace> loadTraceFile( const AbsolutePath& path );
         /** @brief 기본 저장 폴더(`<프로젝트>/Saved/Traces`)에서 가장 최근 `.trace.json` 의 경로입니다. 없으면 빈 글. */
-        static string findLatestTraceFile();
+        static AbsolutePath findLatestTraceFile();
 
         /**
          * @brief 최근 @p frameCount 프레임을 모아 @p path 에 저장합니다.
@@ -173,21 +174,21 @@ namespace sw
          * @param outReply 실패 이유 또는 사건 · 스레드 수 요약
          * @return 쓰기에 성공하면 true. 기록된 프레임이 둘 미만이면 false(타임라인 기록이 꺼져 있었다).
          */
-        [[nodiscard]] static bool saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, string_view path, string_view processName,
-                                                    string& outSavedPath, string& outReply );
+        [[nodiscard]] static bool saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, const AbsolutePath& path, string_view processName,
+                                                    AbsolutePath& outSavedPath, string& outReply );
 
         /**
          * @brief 종료 때 트레이스 저장을 준비합니다 — 타임라인 링 버퍼 기록을 켜고 기동을 첫 프레임 구간으로 엽니다. @p path 는 로그에 알릴 저장 경로입니다.
          * @details 개발 도구가 `-gv_traceSaveOnExit=<경로>` 로 기동 단계에 부릅니다(`ProfilerLaunchSubsystem`). 여러 프로세스를 띄운 부모(에디터의 멀티 프로세스 재생)가
          *          프로세스마다 경로를 주고, 모두 끝난 뒤 그 파일들을 `mergeTraceJSON` 으로 합칩니다.
          */
-        static void startExitCapture( FrameProfiler& profiler, string_view path );
+        static void startExitCapture( FrameProfiler& profiler, const AbsolutePath& path );
         /**
          * @brief 지금을 마지막 구간의 끝으로 표시하고 링 버퍼의 최근 프레임을 @p path 에 저장합니다. 결과는 로그에 남깁니다(`Exit trace saved <경로>`).
          * @details 기동 단계가 내려갈 때 부릅니다(서비스가 아직 있다). @p processName 은 머리말의 프로세스 이름입니다.
          *          `startExitCapture` 의 기동 표시와 이 끝 표시로 구간이 늘 있다 — 프레임을 돌기 전에 멈춘 프로세스도 기동 사건을 저장한다.
          */
-        static void finishExitCapture( FrameProfiler& profiler, string_view path, string_view processName );
+        static void finishExitCapture( FrameProfiler& profiler, const AbsolutePath& path, string_view processName );
 
         /** @brief 개발 명령 `profile.trace` 의 첫 낱말이 가리키는 하위 명령입니다. */
         enum class CommandWord : uint8

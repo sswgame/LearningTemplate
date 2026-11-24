@@ -86,7 +86,7 @@ namespace sw::editor
          * @details 두 기반이 정한다(순수 가상) — 에셋 문서(`EditorDocumentPanel`)는 연 파일이 기본이고 다른 파일을 쓰는 패널이 재정의하며, 상태 문서(`EditorStateDocumentPanel`)는 패널마다 반드시 적는다.
          *          빠뜨리면 그 파일은 확인 없이 Core 원자적 쓰기에서 알림 없이 진다. 유니티 `AssetModificationProcessor.OnWillSaveAssets( paths )` 가 저장할 경로 목록으로 체크아웃을 묻는 자리다.
          */
-        virtual void collectFilesToSave( vector<string>& outListPath ) const = 0;
+        virtual void collectFilesToSave( vector<AbsolutePath>& outListPath ) const = 0;
         /** @brief 닫기 확인(Save / Don't Save / Cancel)을 기다리는 중이면 true 입니다. */
         bool isCloseConfirmPending() const { return _bConfirmClose; }
         /**

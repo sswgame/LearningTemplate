@@ -29,12 +29,12 @@ namespace sw
         return finishLoad( assetRelativePath );
     }
 
-    bool RenderPipelineAsset::loadFromDiskFile( string_view diskPath )
+    bool RenderPipelineAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         _desc = {};
         if ( ReflectedXMLFile::loadDescFromDiskFile( diskPath, _desc ) == false )
             return false;
-        return finishLoad( diskPath );
+        return finishLoad( diskPath.str() );
     }
 
     bool RenderPipelineAsset::finishLoad( string_view sourcePath )

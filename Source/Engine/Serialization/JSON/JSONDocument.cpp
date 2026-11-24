@@ -721,18 +721,18 @@ namespace sw
         return true;
     }
 
-    bool JSONDocument::loadFromFile( string_view absPath )
+    bool JSONDocument::loadFromFile( const AbsolutePath& absPath )
     {
         // 경로로 읽은 파일도 쿠킹 작업의 입력이다 — `FileUtil` 로 바로 읽으면 기록에서 빠진다(`AssetIO::readTextFile`).
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
             StringBuilder<constant::buffer::kMax256> error;
-            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath );
+            error.appendFormat( "%#: cannot read the file (or it was read during cooking outside a cook job)", absPath.str() );
             _lastError = string( error.view() );
             return false;
         }
-        return parse( text, absPath );
+        return parse( text, absPath.str() );
     }
 
     bool JSONDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
@@ -787,24 +787,24 @@ namespace sw
         return JSONDocumentInternal::dumpValue( _impl->root, indent );
     }
 
-    bool JSONDocument::saveToFile( string_view absPath, int32 indent ) const
+    bool JSONDocument::saveToFile( const AbsolutePath& absPath, int32 indent ) const
     {
         if ( absPath.empty() )
             return false;
         // 루트가 없는 문서(읽기에 실패해 비워졌거나 아직 아무것도 안 만든)는 "null" 이 된다 - 그대로 쓰면 있던 파일이 "null" 로 바뀐다.
         if ( getRoot().isNull() )
         {
-            SW_LOG_ERROR_ID( "JSONDocument.JSONDocumentNoRoot", "JSON document has no root - %# was not written", string{ absPath }.c_str() );
+            SW_LOG_ERROR_ID( "JSONDocument.JSONDocumentNoRoot", "JSON document has no root - %# was not written", absPath.c_str() );
             return false;
         }
         const expected<string> text = dump( indent );
         if ( text.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "JSONDocument.DumpFailed", "JSON document could not be written - %# was not written: %# (%#)", string{ absPath }.c_str(),
+            SW_LOG_ERROR_ID( "JSONDocument.DumpFailed", "JSON document could not be written - %# was not written: %# (%#)", absPath.c_str(),
                              text.error().message(), text.error().detail() );
             return false;
         }
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), *text );
+        return FileUtil::writeTextFile( absPath, *text );
     }
 
     string JSONDocument::unescapeString( string_view value )

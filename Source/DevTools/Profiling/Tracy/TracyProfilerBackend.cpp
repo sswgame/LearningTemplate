@@ -131,11 +131,10 @@ namespace sw
                 if ( ProcessEnvironment::tryRead( "TRACY_ONLY_LOCALHOST", tracyOnlyLocalhost ) == false )
                     (void)ProcessEnvironment::trySet( "TRACY_ONLY_LOCALHOST", "1" ); // 못 정해도 방화벽 허용 창이 뜰 뿐이다
                 // 엔진 DLL 과 같은 폴더(`Bin`)에 빌드가 둔다. 없으면(Tracy 를 끈 배포) 빈 표다 - 선택 구성 요소라 로드 실패 경고를 내지 않게 먼저 묻는다.
-                const AbsolutePath           clientText = ProcessRoots::get()._binary.join( "TracyClient.dll" );
-                const optional<AbsolutePath> clientPath = AbsolutePath::tryMake( clientText.str() );
-                if ( clientPath.has_value() == false || FileUtil::isRegularFile( clientText ) == false )
+                const AbsolutePath clientText = ProcessRoots::get()._binary.join( "TracyClient.dll" );
+                if ( FileUtil::isRegularFile( clientText ) == false )
                     return api;
-                void* const hClient = ModuleLibraryUtil::loadLibraryAt( *clientPath );
+                void* const hClient = ModuleLibraryUtil::loadLibraryAt( clientText );
                 if ( hClient == nullptr )
                     return api;
                 findClientFunction( hClient, "___tracy_connected", api._pfnConnected );

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw::editor
 {
@@ -28,11 +29,11 @@ namespace sw::editor
     struct EditorContentWrite
     {
         /** @brief @p absolutePath(파일, 또는 폴더면 그 아래 모든 파일)에서 처음 만난 읽기 전용 파일의 경로입니다. 없거나 모두 쓸 수 있으면 빈 값입니다. */
-        [[nodiscard]] static optional<string> findReadOnlyAtOrUnder( string_view absolutePath );
+        [[nodiscard]] static optional<string> findReadOnlyAtOrUnder( const AbsolutePath& absolutePath );
         /**
          * @brief @p absolutePath 에 읽기 전용 파일이 있으면 알림 · 경고 로그를 남기고 true 입니다(부르는 쪽은 아무것도 쓰지 않고 실패한다).
          * @details 쓰기 실패 로그만으로는 "먼저 잠가야 한다" 는 사실이 드러나지 않는다 — 그래서 실패 대신 이유를 알린다.
          */
-        [[nodiscard]] static bool warnIfReadOnly( string_view absolutePath, EditorContentWriteKind kind );
+        [[nodiscard]] static bool warnIfReadOnly( const AbsolutePath& absolutePath, EditorContentWriteKind kind );
     };
 } // namespace sw::editor

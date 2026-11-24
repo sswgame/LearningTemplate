@@ -15,6 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Task/DedicatedWorker.h"
@@ -168,7 +169,7 @@ namespace sw
         void onAfterSceneTick( const EngineFrameContext& context );
 
         /** @brief 스풀 폴더 · 문맥을 정하고 섭니다. 동의는 꺼진 채로 시작합니다. 폴더의 지난 스풀 파일을 닫힌 파일로 이어 받습니다(부른 스레드에서 폴더를 읽는다). */
-        void initialize( string_view spoolFolder, const TelemetryContext& context );
+        void initialize( const AbsolutePath& spoolFolder, const TelemetryContext& context );
         /** @brief 동의가 켜져 있으면 장면 요약 · `session.end` 를 남기고 쓰고, 지금 파일을 닫아 올립니다. 스풀 워커가 그 일을 마칠 때까지 기다립니다. 설정 구독을 뗍니다. */
         void shutdown();
 
@@ -218,14 +219,14 @@ namespace sw
         /** @brief 최근 사건(크래시 보고에 붙는 빵부스러기, 오래된 것부터)입니다. 동의와 상관없이 기계 안에만 남습니다. */
         void collectBreadcrumbs( vector<string>& outListBreadcrumb ) const;
         /** @brief 스풀 폴더의 파일(닫힌 것 · 지금 것)입니다. 스풀 워커가 아직 처리하지 않은 일은 반영되지 않습니다(`flush`). */
-        void collectSpoolFiles( vector<string>& outListFilePath ) const;
+        void collectSpoolFiles( vector<AbsolutePath>& outListFilePath ) const;
 
         bool                    isInitialized() const;
         bool                    isSessionSampled() const;
         TelemetryStats          getStats() const;
         const TelemetrySchema&  getSchema() const { return _schema; }
         const TelemetryContext& getContext() const { return _context.get(); }
-        const string&           getSpoolFolder() const { return _spoolFolder.get(); }
+        const AbsolutePath&     getSpoolFolder() const { return _spoolFolder.get(); }
 
     private:
         TelemetryRecordResult recordLocked( const TelemetryEvent& event ) SW_REQUIRES_LOCK( _mutex );
@@ -242,13 +243,13 @@ namespace sw
         void waitSpoolJob( uint64 jobID, const ITelemetryUploader* pReleasedUploader ) SW_EXCLUDES_LOCK( _mutex, _spoolMutex );
 
         // 스풀 워커 스레드(`TelemetrySpool`)
-        void   processSpoolJob( TelemetrySpoolJob& job, bool bStopping );
-        void   writeLinesSpoolLocked( const TelemetrySpoolJob& job ) SW_REQUIRES_LOCK( _spoolMutex );
-        string makeContextLineSpoolLocked( int32 schemaVersion ) const SW_REQUIRES_LOCK( _spoolMutex );
-        string makeFilePathSpoolLocked( uint32 fileIndex ) const SW_REQUIRES_LOCK( _spoolMutex );
-        void   closeCurrentFileSpoolLocked() SW_REQUIRES_LOCK( _spoolMutex );
-        void   enforceLimitsSpoolLocked( const TelemetryPipelineConfig& settings ) SW_REQUIRES_LOCK( _spoolMutex );
-        void   purgeSpoolLocked() SW_REQUIRES_LOCK( _spoolMutex );
+        void         processSpoolJob( TelemetrySpoolJob& job, bool bStopping );
+        void         writeLinesSpoolLocked( const TelemetrySpoolJob& job ) SW_REQUIRES_LOCK( _spoolMutex );
+        string       makeContextLineSpoolLocked( int32 schemaVersion ) const SW_REQUIRES_LOCK( _spoolMutex );
+        AbsolutePath makeFilePathSpoolLocked( uint32 fileIndex ) const SW_REQUIRES_LOCK( _spoolMutex );
+        void         closeCurrentFileSpoolLocked() SW_REQUIRES_LOCK( _spoolMutex );
+        void         enforceLimitsSpoolLocked( const TelemetryPipelineConfig& settings ) SW_REQUIRES_LOCK( _spoolMutex );
+        void         purgeSpoolLocked() SW_REQUIRES_LOCK( _spoolMutex );
         /** @brief 닫힌 파일을 오래된 것부터 올립니다. 파일 읽기 · 보내기 동안은 스풀 잠금을 놓는다. */
         void uploadClosedFiles( const TelemetrySpoolJob& job ) SW_EXCLUDES_LOCK( _spoolMutex );
         void onSettingEvent( const UserSettingEvent& event );
@@ -264,7 +265,7 @@ namespace sw
         vector<string> _listPendingLine     SW_GUARDED_BY( _mutex );
         vector<string> _listBreadcrumb      SW_GUARDED_BY( _mutex ); ///< 고리 — `_breadcrumbHead` 가 가장 오래된 자리
         vector<uint32> _listEventOccurrence SW_GUARDED_BY( _mutex ); ///< 스키마 사건마다 기록을 시도한 수(사건 표본의 열쇠)
-        OnceInit<string>                    _spoolFolder;            ///< initialize 가 한 번 정한다(shutdown 이 비운다). 스풀 워커도 읽는다.
+        OnceInit<AbsolutePath>              _spoolFolder;            ///< initialize 가 한 번 정한다(shutdown 이 비운다). 스풀 워커도 읽는다.
         string _currentScene                SW_GUARDED_BY( _mutex );
         UserSettingsManager*                _pSettings;
         float64 _sessionSeconds             SW_GUARDED_BY( _mutex );
@@ -277,21 +278,21 @@ namespace sw
         uint8                               _bSessionSampled : 1 SW_GUARDED_BY( _mutex );
 
         // 스풀 쪽 — 스풀 워커가 쓰고 조회가 읽는다. 잠금 순서는 `_mutex` → `_spoolMutex`(워커는 `_mutex` 를 잡지 않는다).
-        mutable mutex                       _spoolMutex;
-        std::condition_variable_any         _spoolProgress;               ///< 일 하나를 마치거나 올리기 하나가 끝날 때 깨운다(`waitSpoolJob`)
-        TelemetryStats _spoolStats          SW_GUARDED_BY( _spoolMutex ); ///< 스풀 쪽 계수(written · rotated · dropped · uploaded · purged)
-        vector<string> _listClosedFile      SW_GUARDED_BY( _spoolMutex ); ///< 올릴 파일(오래된 것부터)
-        string _currentFile                 SW_GUARDED_BY( _spoolMutex );
-        NullTelemetryUploader               _nullUploader;                ///< 기본 업로더(값) — 아무 데도 보내지 않는다
-        ITelemetryUploader* _pUploader      SW_GUARDED_BY( _spoolMutex ); ///< 빌린 업로더. 처음에는 `_nullUploader` 를 가리키고 비는 때가 없다
-        ITelemetryUploader* _pUploadingWith SW_GUARDED_BY( _spoolMutex ); ///< 지금 잠금 밖에서 보내고 있는 업로더(없으면 nullptr)
-        ExponentialBackoff _uploadBackoff   SW_GUARDED_BY( _spoolMutex ); ///< 연속 실패의 물러서기 — 실패가 시작될 때 그 일의 설정 값으로 다시 만든다
-        float64 _uploadRetryAtSeconds       SW_GUARDED_BY( _spoolMutex ); ///< 이 세션 시각 전에는 올리지 않는다
-        uint64 _currentFileBytes            SW_GUARDED_BY( _spoolMutex );
-        uint64 _completedJob                SW_GUARDED_BY( _spoolMutex ); ///< 스풀 워커가 마친 마지막 일의 id
-        uint32 _fileIndex                   SW_GUARDED_BY( _spoolMutex );
-        uint32 _currentFileEvents           SW_GUARDED_BY( _spoolMutex );
-        DedicatedWorker<TelemetrySpoolJob>  _spoolWorker; ///< 맨 뒤 — 생성자가 띄우고 소멸자가 멈춘다(처리 함수가 위 멤버를 쓴다)
+        mutable mutex                        _spoolMutex;
+        std::condition_variable_any          _spoolProgress;               ///< 일 하나를 마치거나 올리기 하나가 끝날 때 깨운다(`waitSpoolJob`)
+        TelemetryStats _spoolStats           SW_GUARDED_BY( _spoolMutex ); ///< 스풀 쪽 계수(written · rotated · dropped · uploaded · purged)
+        vector<AbsolutePath> _listClosedFile SW_GUARDED_BY( _spoolMutex ); ///< 올릴 파일(오래된 것부터)
+        AbsolutePath _currentFile            SW_GUARDED_BY( _spoolMutex );
+        NullTelemetryUploader                _nullUploader;                ///< 기본 업로더(값) — 아무 데도 보내지 않는다
+        ITelemetryUploader* _pUploader       SW_GUARDED_BY( _spoolMutex ); ///< 빌린 업로더. 처음에는 `_nullUploader` 를 가리키고 비는 때가 없다
+        ITelemetryUploader* _pUploadingWith  SW_GUARDED_BY( _spoolMutex ); ///< 지금 잠금 밖에서 보내고 있는 업로더(없으면 nullptr)
+        ExponentialBackoff _uploadBackoff    SW_GUARDED_BY( _spoolMutex ); ///< 연속 실패의 물러서기 — 실패가 시작될 때 그 일의 설정 값으로 다시 만든다
+        float64 _uploadRetryAtSeconds        SW_GUARDED_BY( _spoolMutex ); ///< 이 세션 시각 전에는 올리지 않는다
+        uint64 _currentFileBytes             SW_GUARDED_BY( _spoolMutex );
+        uint64 _completedJob                 SW_GUARDED_BY( _spoolMutex ); ///< 스풀 워커가 마친 마지막 일의 id
+        uint32 _fileIndex                    SW_GUARDED_BY( _spoolMutex );
+        uint32 _currentFileEvents            SW_GUARDED_BY( _spoolMutex );
+        DedicatedWorker<TelemetrySpoolJob>   _spoolWorker; ///< 맨 뒤 — 생성자가 띄우고 소멸자가 멈춘다(처리 함수가 위 멤버를 쓴다)
 
         SW_SERVICE_SLOT( TelemetryService, Required );
     };

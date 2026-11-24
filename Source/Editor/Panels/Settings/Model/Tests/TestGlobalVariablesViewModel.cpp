@@ -32,7 +32,7 @@ namespace
         }
 
         /** @brief 훑기가 끝날 때까지 폴링합니다(작업 시스템이 있으면 워커가 돈다). 시한 안에 끝나면 true 입니다. */
-        bool waitForPresetScan( string_view folder )
+        bool waitForPresetScan( const AbsolutePath& folder )
         {
             return test::waitUntil( [this, folder]()
             { return _model.pollPresetFilesIn( folder ) == false; } );
@@ -124,25 +124,25 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, ScanListsOnlyPresetFiles )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "a.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "b.xml" ), "<Other/>" ) );
 
-    SW_REQUIRE_TRUE( waitForPresetScan( folder.str() ) );
+    SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
 
     SW_REQUIRE_EQUAL( size_t{ 1 }, _model.getPresetFiles().size() );
-    SW_EXPECT_TRUE( GlobalVariablesViewModel::makePresetDisplayName( _model.getPresetFiles()[0] ) == "a" );
+    SW_EXPECT_TRUE( GlobalVariablesViewModel::makePresetDisplayName( _model.getPresetFiles()[0].str() ) == "a" );
 }
 
 SW_TEST_CASE_F( GlobalVariablesViewModelTest, CleanListIsNotScannedAgain )
 {
     const AbsolutePath folder = test::makeScratchPath( "presets" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-    SW_REQUIRE_TRUE( waitForPresetScan( folder.str() ) );
+    SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
     SW_EXPECT_TRUE( _model.getPresetFiles().empty() );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "late.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
-    SW_EXPECT_FALSE( _model.pollPresetFilesIn( folder.str() ) );
+    SW_EXPECT_FALSE( _model.pollPresetFilesIn( folder ) );
     SW_EXPECT_TRUE( _model.getPresetFiles().empty() );
 
     _model.markPresetListStale();
-    SW_REQUIRE_TRUE( waitForPresetScan( folder.str() ) );
+    SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, _model.getPresetFiles().size() );
 }
 
@@ -153,11 +153,11 @@ SW_TEST_CASE_F( GlobalVariablesViewModelTest, PresetSavedDuringScanIsListed )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "first.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
 
-    SW_EXPECT_TRUE( _model.pollPresetFilesIn( folder.str() ) ); // 훑기를 건다 — 결과는 아직 받지 않았다
+    SW_EXPECT_TRUE( _model.pollPresetFilesIn( folder ) ); // 훑기를 건다 — 결과는 아직 받지 않았다
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "second.gvpreset.xml" ), "<GlobalVariablesPreset/>" ) );
     _model.markPresetListStale(); // `savePreset` 이 쓴 뒤 하는 일
 
-    SW_REQUIRE_TRUE( waitForPresetScan( folder.str() ) );
+    SW_REQUIRE_TRUE( waitForPresetScan( folder ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, _model.getPresetFiles().size() );
 }
 
@@ -189,7 +189,7 @@ SW_TEST_CASE( GlobalVariablesViewModelUndoTest, EditsPresetAndResetAllUndoAsOneS
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( presetPath ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( presetPath, bCulling ? R"(<GlobalVariablesPreset><Var name="gv_shadowCascadeCulling" value="false"/></GlobalVariablesPreset>)"
                                                                    : R"(<GlobalVariablesPreset><Var name="gv_shadowCascadeCulling" value="true"/></GlobalVariablesPreset>)" ) );
-    SW_REQUIRE_TRUE( model.loadPreset( presetPath.str() ) );
+    SW_REQUIRE_TRUE( model.loadPreset( presetPath ) );
     SW_EXPECT_TRUE( pCulling->getValueAsBool() != bCulling );
 
     model.resetAllToDefault();

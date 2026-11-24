@@ -219,7 +219,7 @@ namespace sw
         if ( bFoundEvent == false )
             return;
 
-        const string eventPath = FileUtil::joinPath( "/dev/input", eventName );
+        const AbsolutePath eventPath = FileUtil::toDiskPath( "/dev/input" ).join( eventName );
 
         const int32 fd = open( eventPath.c_str(), O_RDWR | O_NONBLOCK );
         if ( fd < 0 )

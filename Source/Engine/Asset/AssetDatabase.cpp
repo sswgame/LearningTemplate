@@ -82,35 +82,35 @@ namespace sw
         };
     } // namespace
 
-    bool AssetIdentityRules::load( string_view projectRoot )
+    bool AssetIdentityRules::load( const AbsolutePath& projectRoot )
     {
-        const string path = FileUtil::joinPath( projectRoot, kConfigFile );
-        JSONDocument document;
+        const AbsolutePath path = projectRoot.join( kConfigFile );
+        JSONDocument       document;
         if ( document.loadFromFile( path ) == false )
         {
-            SW_LOG_ERROR_ID( "AssetIdentityRules.ConfigUnreadable", "Asset identity rules %# could not be read", path );
+            SW_LOG_ERROR_ID( "AssetIdentityRules.ConfigUnreadable", "Asset identity rules %# could not be read", path.str() );
             return false;
         }
         AssetIdentityRules loaded;
         // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
-        bool            bValid   = JSONFields::readProperties( document.getRoot(), loaded, path, { "_comment", "listImportedFolder" } );
+        bool            bValid   = JSONFields::readProperties( document.getRoot(), loaded, path.str(), { "_comment", "listImportedFolder" } );
         const JSONValue imported = document.getRoot().get( "listImportedFolder" );
         if ( imported.isArray() == false || imported.size() == 0 )
         {
-            SW_LOG_ERROR_ID( "AssetIdentityRules.NoImportedFolder", "Asset identity rules %# need listImportedFolder", path );
+            SW_LOG_ERROR_ID( "AssetIdentityRules.NoImportedFolder", "Asset identity rules %# need listImportedFolder", path.str() );
             bValid = false;
         }
         for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
         {
             AssetImportedFolder folder;
-            bValid = JSONFields::readProperties( imported.at( index ), folder, path ) && bValid;
-            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
-            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listOutputSuffix, "listOutputSuffix", path ) && bValid;
+            bValid = JSONFields::readProperties( imported.at( index ), folder, path.str() ) && bValid;
+            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path.str() ) && bValid;
+            bValid = AssetDatabaseInternal::hasNoEmptyText( folder._listOutputSuffix, "listOutputSuffix", path.str() ) && bValid;
             loaded._listImportedFolder.push_back( std::move( folder ) );
         }
-        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path ) && bValid;
-        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path ) && bValid;
-        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listKeptDerived, "listKeptDerived", path ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listHeaderSuffix, "listHeaderSuffix", path.str() ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listSkipPattern, "listSkipPattern", path.str() ) && bValid;
+        bValid = AssetDatabaseInternal::hasNoEmptyText( loaded._listKeptDerived, "listKeptDerived", path.str() ) && bValid;
         if ( bValid == false )
             return false;
         _listHeaderSuffix   = std::move( loaded._listHeaderSuffix );
@@ -292,7 +292,7 @@ namespace sw
         return meta.toXML();
     }
 
-    bool AssetIdentityRules::assignNewIdentity( string_view absPath, string_view assetID ) const
+    bool AssetIdentityRules::assignNewIdentity( const AbsolutePath& absPath, string_view assetID ) const
     {
         const AssetGUID guid = AssetGUID::create();
         switch ( classify( assetID ) )
@@ -302,7 +302,7 @@ namespace sw
                 return true;
             case AssetIdentityKind::Header:
             {
-                const AbsolutePath diskPath = FileUtil::toDiskPath( absPath );
+                const AbsolutePath diskPath = absPath;
                 string             text;
                 if ( FileUtil::readTextFile( diskPath, text ) && FileUtil::writeTextFile( diskPath, AssetGUIDHeader::write( text, guid ) ) )
                 {
@@ -314,7 +314,7 @@ namespace sw
             case AssetIdentityKind::Source:
             {
                 // 베낀 서술의 임포트 예외는 지킨다(유니티 Duplicate 와 같다) — 복사본은 새 에셋이지만 같은 임포트 설정이다. 읽지 못한 서술은 오류를 남기고 예외 없이 새로 쓴다(복사본의 정체성이 먼저다).
-                const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( absPath ) );
+                const AbsolutePath metaPath = AssetMeta::makePath( absPath );
                 AssetMeta          copied;
                 string             copiedText;
                 const bool         bCopied = FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, copiedText ) && copied.parseXML( copiedText, AssetMeta::makePath( assetID ) ).has_value();
@@ -330,16 +330,16 @@ namespace sw
         return false;
     }
 
-    bool AssetIdentityRules::replaceContentKeepingIdentity( string_view targetAbs, string_view targetID, string_view newContentAbs ) const
+    bool AssetIdentityRules::replaceContentKeepingIdentity( const AbsolutePath& targetAbs, string_view targetID, const AbsolutePath& newContentAbs ) const
     {
         const AssetIdentityKind kind = classify( targetID );
         if ( kind == AssetIdentityKind::Header )
         {
             string oldText;
             string newText;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( targetAbs ), oldText ) == false || FileUtil::readTextFile( FileUtil::toDiskPath( newContentAbs ), newText ) == false )
+            if ( FileUtil::readTextFile( targetAbs, oldText ) == false || FileUtil::readTextFile( newContentAbs, newText ) == false )
             {
-                SW_LOG_ERROR_ID( "AssetIdentity.ReplaceUnreadable", "Could not read '%#' or the new content '%#' - nothing was replaced", targetID, string( newContentAbs ) );
+                SW_LOG_ERROR_ID( "AssetIdentity.ReplaceUnreadable", "Could not read '%#' or the new content '%#' - nothing was replaced", targetID, string( newContentAbs.str() ) );
                 return false;
             }
             const AssetGUIDHeader header = AssetGUIDHeader::read( oldText );
@@ -349,37 +349,35 @@ namespace sw
                 return false;
             }
             // 쓰기는 임시 파일을 바꿔 끼운다(`writeTextFile`) — 지면 옛 글이 그대로다.
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( targetAbs ), AssetGUIDHeader::write( newText, *header._guid ) ) )
+            if ( FileUtil::writeTextFile( targetAbs, AssetGUIDHeader::write( newText, *header._guid ) ) )
                 return true;
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
-        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( FileUtil::toDiskPath( targetAbs ) ) ) == false )
+        if ( kind == AssetIdentityKind::Source && FileUtil::isRegularFile( AssetMeta::makePath( targetAbs ) ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceNoIdentity", "'%#' has no asset GUID to keep - run py -3 -m Scripts asset-ids --fix first, nothing was replaced", targetID );
             return false;
         }
         // 원본 · 정체성이 없는 파일은 바이트만 바꾼다(곁의 .meta 는 그대로). 지면 옛 바이트로 되돌린다.
-        StringBuilder<constant::buffer::kMax512> backupBuilder;
-        backupBuilder.appendFormat( "%#.replacing", targetAbs );
-        const string backupAbs( backupBuilder.view() );
-        if ( FileUtil::copyFile( FileUtil::toDiskPath( targetAbs ), FileUtil::toDiskPath( backupAbs ) ) == false )
+        const AbsolutePath backupAbs = targetAbs.appendSuffix( ".replacing" );
+        if ( FileUtil::copyFile( targetAbs, backupAbs ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
-        if ( FileUtil::copyFile( FileUtil::toDiskPath( newContentAbs ), FileUtil::toDiskPath( targetAbs ) ) )
+        if ( FileUtil::copyFile( newContentAbs, targetAbs ) )
         {
-            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( backupAbs ) ); // 남아도 다음 바꾸기가 덮는다
+            (void)FileUtil::tryRemoveFile( backupAbs ); // 남아도 다음 바꾸기가 덮는다
             return true;
         }
-        if ( FileUtil::copyFile( FileUtil::toDiskPath( backupAbs ), FileUtil::toDiskPath( targetAbs ) ) )
+        if ( FileUtil::copyFile( backupAbs, targetAbs ) )
         {
-            (void)FileUtil::tryRemoveFile( FileUtil::toDiskPath( backupAbs ) );
+            (void)FileUtil::tryRemoveFile( backupAbs );
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );
             return false;
         }
-        SW_LOG_ERROR_ID( "AssetIdentity.ReplaceRestoreFailed", "Could not replace '%#' nor put it back - the old bytes are kept in '%#'", targetID, backupAbs );
+        SW_LOG_ERROR_ID( "AssetIdentity.ReplaceRestoreFailed", "Could not replace '%#' nor put it back - the old bytes are kept in '%#'", targetID, backupAbs.str() );
         return false;
     }
 
@@ -517,11 +515,11 @@ namespace sw
         return database;
     }
 
-    AssetDatabase AssetDatabase::scan( string_view contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache )
+    AssetDatabase AssetDatabase::scan( const AbsolutePath& contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache )
     {
         using Internal                         = AssetDatabaseInternal;
-        const string                  root     = FileUtil::normalizeSeparators( contentRoot );
-        const AbsolutePath            rootPath = FileUtil::toDiskPath( root );
+        const AbsolutePath            root     = contentRoot;
+        const AbsolutePath            rootPath = root;
         vector<Internal::ScannedFile> listScanned;
         auto                          collectEntry = [&rootPath, &listScanned]( const DirectoryEntry& entry )
         {
@@ -536,7 +534,7 @@ namespace sw
         };
         if ( FileUtil::isDirectory( rootPath ) == false || FileUtil::forEachDirectoryEntry( rootPath, true, collectEntry ) == false )
         {
-            outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, root, {} } );
+            outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, root.str(), {} } );
             return AssetDatabase{};
         }
         vector<AssetIdentityFile> listFile;
@@ -554,7 +552,7 @@ namespace sw
                 {
                     file._text.assign( pCached->begin(), pCached->end() );
                 }
-                else if ( FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( root, assetID ) ), file._text ) == false )
+                else if ( FileUtil::readTextFile( root.join( assetID ), file._text ) == false )
                 {
                     outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::Unreadable, assetID, {} } );
                     continue;
@@ -571,34 +569,34 @@ namespace sw
         return build( listFile, rules, outListIssue );
     }
 
-    optional<AssetGUID> AssetIdentityRules::readIdentity( string_view absPath, string_view assetID ) const
+    optional<AssetGUID> AssetIdentityRules::readIdentity( const AbsolutePath& absPath, string_view assetID ) const
     {
         const AssetIdentityKind kind = classify( assetID );
         string                  text;
         const bool              bHeader = kind == AssetIdentityKind::Header;
         if ( bHeader == false && kind != AssetIdentityKind::Source )
             return nullopt;
-        if ( bHeader && FileUtil::readTextFile( FileUtil::toDiskPath( absPath ), text ) )
+        if ( bHeader && FileUtil::readTextFile( absPath, text ) )
         {
             const optional<AssetGUID> headerGUID = AssetGUIDHeader::read( text )._guid;
             if ( headerGUID.has_value() )
                 return headerGUID;
         }
-        const AbsolutePath metaPath = AssetMeta::makePath( FileUtil::toDiskPath( absPath ) );
+        const AbsolutePath metaPath = AssetMeta::makePath( absPath );
         if ( bHeader == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, text ) )
         {
             AssetMeta meta;
             return meta.parseXML( text, AssetMeta::makePath( assetID ) );
         }
         // 자기 정체성이 없는 산출물 자리의 파일은 임포트 산출물이다 — 원본의 `.meta` 와 산출물 이름이 정체성이다.
-        if ( isUnderDerivedFolder( assetID ) == false || absPath.size() <= assetID.size() )
+        if ( isUnderDerivedFolder( assetID ) == false || absPath.str().size() <= assetID.size() )
             return nullopt;
-        const string_view           contentRoot = absPath.substr( 0, absPath.size() - assetID.size() );
+        const AbsolutePath          contentRoot = FileUtil::toDiskPath( absPath.str().substr( 0, absPath.str().size() - assetID.size() ) );
         vector<AssetImportedSource> listSource;
         collectImportedSources( assetID, listSource );
         for ( const AssetImportedSource& source : listSource )
         {
-            const AbsolutePath sourceMetaPath = AssetMeta::makePath( FileUtil::toDiskPath( FileUtil::joinPath( contentRoot, source._sourceID ) ) );
+            const AbsolutePath sourceMetaPath = AssetMeta::makePath( contentRoot.join( source._sourceID ) );
             if ( FileUtil::isRegularFile( sourceMetaPath ) == false || FileUtil::readTextFile( sourceMetaPath, text ) == false )
                 continue;
             AssetMeta                 meta;

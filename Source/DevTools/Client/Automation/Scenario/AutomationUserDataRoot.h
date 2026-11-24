@@ -18,6 +18,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
@@ -31,9 +32,9 @@ namespace sw
         static constexpr string_view kRunSubfolder = "userdata";
 
         /** @brief 자동화 사용자 데이터 뿌리가 놓일 수 있는 폴더(`<Saved>/Automation` — 실행 뿌리 `Runs/…` 와 손으로 고른 `UserData/…`)입니다. */
-        static string getBaseFolder();
+        static AbsolutePath getBaseFolder();
         /** @brief 실행 뿌리 @p runRoot 의 사용자 데이터 뿌리(`<실행 뿌리>/userdata`)입니다. */
-        static string makeRunUserDataRoot( string_view runRoot );
+        static AbsolutePath makeRunUserDataRoot( const AbsolutePath& runRoot );
         /**
          * @brief 뿌리 @p root 가 @p baseFolder 의 아래(그 폴더 자신은 아님)인 엄격한 절대 경로인지 봅니다. `..` 마디는 거절합니다(정규화 전 글로 폴더를 벗어날 수 있다).
          * @return 아니면 그 이유(뿌리가 대상)입니다.
@@ -69,7 +70,7 @@ namespace sw
         [[nodiscard]] bool operator!=( const UserDataFolderStamp& other ) const { return ( *this == other ) == false; }
 
         /** @brief @p folder 와 그 아래 모든 항목을 훑어 찍습니다(폴더가 없으면 `_bExists` 가 거짓). */
-        [[nodiscard]] static UserDataFolderStamp take( string_view folder );
+        [[nodiscard]] static UserDataFolderStamp take( const AbsolutePath& folder );
     };
 
     /**
@@ -90,7 +91,7 @@ namespace sw
         /** @brief 정한 뿌리입니다(시나리오 실행이 아니거나 OS 폴더를 그대로 쓰면 빈 글). */
         const string& getRoot() const { return _root; }
         /** @brief 사람의 데이터 폴더(OS 규칙 · 활성 게임) 경로입니다. 모르면 빈 글. */
-        const string& getPlatformFolder() const { return _platformFolder; }
+        const AbsolutePath& getPlatformFolder() const { return _platformFolder; }
         /** @brief 기동 때 찍은 사람의 데이터 폴더입니다. */
         const UserDataFolderStamp& getPlatformStartStamp() const { return _platformStartStamp; }
 
@@ -100,7 +101,7 @@ namespace sw
 
     private:
         string              _root{};
-        string              _platformFolder{};
+        AbsolutePath        _platformFolder{};
         UserDataFolderStamp _platformStartStamp{};
     };
 } // namespace sw

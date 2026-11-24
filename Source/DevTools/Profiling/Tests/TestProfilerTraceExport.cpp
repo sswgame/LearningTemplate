@@ -465,10 +465,10 @@ SW_TEST_CASE( ProfilerTraceExportTest, ExitCaptureSavesWithoutAnyFrame )
 {
     const sw::unique_ptr<sw::FrameProfiler> pProfiler = sw::make_unique<sw::FrameProfiler>(); // 칸이 많아 힙에 둔다
     const sw::AbsolutePath                  path      = sw::test::makeScratchPath( "exit.trace.json" );
-    sw::ProfilerTraceExport::startExitCapture( *pProfiler, path.str() );
+    sw::ProfilerTraceExport::startExitCapture( *pProfiler, path );
     const uint64 beginNanos = static_cast<uint64>( sw::MonotonicClock::nowNanoseconds() );
     pProfiler->getTimeline().recordEvent( 0, beginNanos, beginNanos + 1, 0 ); // 기동 중 사건 하나 — beginFrame 은 부르지 않는다
-    sw::ProfilerTraceExport::finishExitCapture( *pProfiler, path.str(), "Client1" );
+    sw::ProfilerTraceExport::finishExitCapture( *pProfiler, path, "Client1" );
     pProfiler->getTimeline().setRecording( false ); // 네트워크 흐름 기록자를 돌려 놓는다
 
     sw::string json;

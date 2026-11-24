@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Half.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
@@ -29,11 +30,11 @@ namespace sw
          */
         static bool unpackRGBA8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRGBABytes );
         /** @brief 읽어 온 바이트를 RGBA8 로 풀어(`unpackRGBA8`) 파일로 씁니다(`writeRGBA8File`). */
-        [[nodiscard]] static bool writeImageFile( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
+        [[nodiscard]] static bool writeImageFile( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, const AbsolutePath& outFilePath );
         /**
          * @brief 이미 푼 RGBA8(`unpackRGBA8` 의 결과)을 파일로 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM(P6)입니다.
          * @details 픽셀을 먼저 들여다보는 쪽(편집기 UI 캡처의 마젠타 비율)이 푼 결과를 그대로 넘긴다 - 예전에는 `writeImageFile` 이 같은 그림을 한 번 더 풀었다.
          */
-        [[nodiscard]] static bool writeRGBA8File( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, string_view outFilePath );
+        [[nodiscard]] static bool writeRGBA8File( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, const AbsolutePath& outFilePath );
     };
 } // namespace sw

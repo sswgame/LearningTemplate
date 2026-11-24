@@ -247,41 +247,39 @@ namespace sw
                 InclusionCollector& collector = *static_cast<InclusionCollector*>( clientData );
                 if ( clang_Location_isInSystemHeader( clang_getLocationForOffset( collector._translationUnit, includedFile, 0 ) ) != 0 )
                     return;
-                CXString realName = clang_File_tryGetRealPathName( includedFile );
-                string   path     = clang_getCString( realName ) != nullptr ? string( clang_getCString( realName ) ) : string();
+                CXString               realName = clang_File_tryGetRealPathName( includedFile );
+                optional<AbsolutePath> path     = clang_getCString( realName ) != nullptr ? AbsolutePath::tryMake( clang_getCString( realName ) ) : nullopt;
                 clang_disposeString( realName );
-                if ( path.empty() )
+                if ( path.has_value() == false )
                 {
                     CXString fileName = clang_getFileName( includedFile );
-                    path              = clang_getCString( fileName ) != nullptr ? string( clang_getCString( fileName ) ) : string();
+                    path              = clang_getCString( fileName ) != nullptr ? AbsolutePath::tryMake( clang_getCString( fileName ) ) : nullopt;
                     clang_disposeString( fileName );
                 }
-                path                 = FileUtil::normalizeSeparators( path );
-                const bool bSkipPath = path.empty() || FileUtil::isPathUnderRoot( collector._outputDirPrefix, path ) ||
-                                       ( collector._outputDirRealPrefix.empty() == false && FileUtil::isPathUnderRoot( collector._outputDirRealPrefix, path ) );
+                const bool bSkipPath = path.has_value() == false || FileUtil::isPathUnderRoot( collector._outputDirPrefix, path->str() ) ||
+                                       ( collector._outputDirRealPrefix.empty() == false && FileUtil::isPathUnderRoot( collector._outputDirRealPrefix, path->str() ) );
                 if ( bSkipPath )
                     return;
-                const uint64 writeTime = GeneratedFileUtil::getWriteTime( path );
+                const uint64 writeTime = GeneratedFileUtil::getWriteTime( *path );
                 if ( writeTime == 0 )
                     return;
                 for ( const StampDependency& existing : *collector._pListDependency )
                 {
-                    if ( existing._path == path )
+                    if ( existing._path == *path )
                         return;
                 }
                 // 이번 실행이 시작된 뒤에 바뀐 것은 0 으로 — 파싱하는 동안 저장한 편집을 다음 실행이 놓치지 않게(`markRunStart`).
-                collector._pListDependency->push_back( StampDependency{ std::move( path ), writeTime >= collector._runStartTime ? 0 : writeTime } );
+                collector._pListDependency->push_back( StampDependency{ std::move( *path ), writeTime >= collector._runStartTime ? 0 : writeTime } );
             }
 
             /** @brief 번역 단위가 include 한 프로젝트 헤더들을 모읍니다(입력 자신도 들어간다 — 해가 없다). */
-            static vector<StampDependency> collectDependencies( CXTranslationUnit translationUnit, const string& outputDir, uint64 runStartTime )
+            static vector<StampDependency> collectDependencies( CXTranslationUnit translationUnit, const AbsolutePath& outputDir, uint64 runStartTime )
             {
                 vector<StampDependency> listDependency;
                 // 출력 폴더는 받은 꼴과 실제 경로 둘로 거른다 — clang 은 include 한 파일을 실제 경로로 주는데, 받은 경로는 8.3 짧은 이름
                 // (`RUNNER~1`)이거나 링크일 수 있다(Windows CI 의 TEMP 가 그렇다).
-                string             realOutputDir;
-                const bool         bHasRealOutputDir = FileUtil::makeCanonicalPath( FileUtil::toDiskPath( outputDir ), realOutputDir );
-                InclusionCollector collector{ translationUnit, FileUtil::normalizeSeparators( outputDir ), bHasRealOutputDir ? realOutputDir : string(),
+                const AbsolutePath realOutputDir = FileUtil::makeCanonicalPath( outputDir ).value_or( AbsolutePath{} );
+                InclusionCollector collector{ translationUnit, outputDir.str(), realOutputDir.str(),
                                               runStartTime, &listDependency };
                 for ( string* pPrefix : { &collector._outputDirPrefix, &collector._outputDirRealPrefix } )
                 {
@@ -349,7 +347,7 @@ namespace sw
         }
         // 출력 디렉터리를 include 경로 맨 앞에 한 번만 넣는다(원본이 다른 생성 헤더를 include 할 수 있다).
         _listIncludePath.reserve( options._listIncludePath.size() + 1 );
-        _listIncludePath.push_back( options._outputDir );
+        _listIncludePath.push_back( options._outputDir.str() );
         for ( const string& includePath : options._listIncludePath )
         {
             _listIncludePath.push_back( includePath );
@@ -366,8 +364,8 @@ namespace sw
         _runStartTime = GeneratedFileUtil::markRunStart( _pOptions->_outputDir );
 
         vector<PendingInput> listPending;
-        vector<string>       listVisitedInput;
-        for ( const string& inputFile : _pOptions->_listInputFile )
+        vector<AbsolutePath> listVisitedInput;
+        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             // 같은 헤더가 두 번 오면 한 번만 처리한다. 묶음 TU 에서는 둘째 대상이 선언을 하나도 못 받아 빈 산출물로 첫째를 덮는다.
             if ( std::find( listVisitedInput.begin(), listVisitedInput.end(), inputFile ) != listVisitedInput.end() )
@@ -378,7 +376,7 @@ namespace sw
             // `--dump` 는 무엇을 뽑았는지 보려는 실행이라 최신이어도 다시 파싱한다.
             if ( _pOptions->_bDump == false && _incrementalCheck.isUpToDate( inputFile, paths ) )
             {
-                SW_LOG_TRACE_ID( "ReflectionPipeline.UpDateSkippingAST", "Up-to-date, skipping AST parsing: %#", inputFile );
+                SW_LOG_TRACE_ID( "ReflectionPipeline.UpDateSkippingAST", "Up-to-date, skipping AST parsing: %#", inputFile.str() );
                 ++upToDate;
                 continue;
             }
@@ -386,9 +384,9 @@ namespace sw
             // 시각을 **읽기 전에** 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
             const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
             string       content;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( inputFile ), content ) == false )
+            if ( FileUtil::readTextFile( inputFile, content ) == false )
             {
-                SW_LOG_ERROR_ID( "ReflectionPipeline.FailedReadInput", "Failed to read input: %#", inputFile );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.FailedReadInput", "Failed to read input: %#", inputFile.str() );
                 ++errorCount;
                 continue;
             }
@@ -396,7 +394,7 @@ namespace sw
             // 리플렉션 매크로가 지워진 뒤에도 이전 registrar 가 남아 계속 컴파일되지 않도록 빈 산출물을 쓴다.
             if ( ReflectionPipelineInternal::hasReflectionKeywords( content ) == false )
             {
-                SW_LOG_TRACE_ID( "ReflectionPipeline.NoReflectionAnnotationsFound", "No reflection annotations found, emitting empty output: %#", inputFile );
+                SW_LOG_TRACE_ID( "ReflectionPipeline.NoReflectionAnnotationsFound", "No reflection annotations found, emitting empty output: %#", inputFile.str() );
                 ++noReflect;
                 if ( writeOutputs( inputFile, paths, ParsedHeader{}, inputWriteTime, {} ) == false )
                     ++errorCount;
@@ -450,7 +448,7 @@ namespace sw
     bool ReflectionPipeline::parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const
     {
         // 묶음 TU 의 원본 — 입력 헤더를 차례로 include 한다. 디스크에 쓰지 않고 내용으로 넘긴다(입력 헤더들도 이미 읽은 내용으로).
-        const string              batchPath = FileUtil::joinPath( _pOptions->_outputDir, ReflectionPipelineInternal::kBatchSourceName );
+        const string              batchPath = _pOptions->_outputDir.join( ReflectionPipelineInternal::kBatchSourceName ).str();
         string                    batchSource;
         vector<string>            listTargetFile;
         vector<ParserUnsavedFile> listUnsaved;
@@ -460,9 +458,9 @@ namespace sw
         StringBuilder<constant::buffer::kMax8192> batchSourceText;
         for ( const PendingInput& pending : listPending )
         {
-            batchSourceText.appendFormat( "#include \"%#\"\n", *pending._pInputFile );
-            listTargetFile.push_back( *pending._pInputFile );
-            listUnsaved.push_back( ParserUnsavedFile{ pending._pInputFile, &pending._content } );
+            batchSourceText.appendFormat( "#include \"%#\"\n", pending._pInputFile->str() );
+            listTargetFile.push_back( pending._pInputFile->str() );
+            listUnsaved.push_back( ParserUnsavedFile{ &pending._pInputFile->str(), &pending._content } );
         }
         batchSource = string( batchSourceText.view() );
 
@@ -488,10 +486,10 @@ namespace sw
             ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
         for ( size_t index = 0; index < listPending.size(); ++index )
         {
-            const string& inputFile = *listPending[index]._pInputFile;
+            const AbsolutePath& inputFile = *listPending[index]._pInputFile;
             if ( index >= listHeader.size() || listHeader[index]._bHasError == SW_TRUE )
             {
-                SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile.str() );
                 ++outErrorCount;
                 continue;
             }
@@ -505,22 +503,22 @@ namespace sw
 
     bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending ) const
     {
-        const string& inputFile = *pending._pInputFile;
-        SW_LOG_TRACE_ID( "ReflectionPipeline.Parsing", "── Parsing: %#", inputFile );
+        const AbsolutePath& inputFile = *pending._pInputFile;
+        SW_LOG_TRACE_ID( "ReflectionPipeline.Parsing", "── Parsing: %#", inputFile.str() );
 
         ParserContext                   context( _pSession->_config );
         const vector<ParserUnsavedFile> listUnsaved{
-            ParserUnsavedFile{ pending._pInputFile, &pending._content }
+            ParserUnsavedFile{ &pending._pInputFile->str(), &pending._content }
         };
         GameTimer phaseTimer;
         phaseTimer.resetTimer();
         phaseTimer.startTimer();
-        const bool bParsed = context.parse( inputFile, _listIncludePath, listUnsaved );
+        const bool bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved );
         phaseTimer.updateTimer();
         addPhaseTime( ParsePhase::Parse, phaseTimer.getDeltaTime() );
         if ( bParsed == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionPipeline.ParseFailed", "Parse failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ParseFailed", "Parse failed: %#", inputFile.str() );
             return false;
         }
 
@@ -530,7 +528,7 @@ namespace sw
         addPhaseTime( ParsePhase::Visit, phaseTimer.getDeltaTime() );
         if ( bVisited == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile.str() );
             return false;
         }
 
@@ -582,24 +580,24 @@ namespace sw
         return errorCount.load();
     }
 
-    bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
+    bool ReflectionPipeline::writeOutputs( const AbsolutePath& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
                                            const vector<StampDependency>& listDependency ) const
     {
-        FixedCodecGenerator fixedCodec( parsed, inputFile );
+        FixedCodecGenerator fixedCodec( parsed, inputFile.str() );
         const bool          bFixedPlanned = fixedCodec.makePlan();
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
-            ReflectionPipelineInternal::printParsedHeader( inputFile, parsed, fixedCodec );
+            ReflectionPipelineInternal::printParsedHeader( inputFile.str(), parsed, fixedCodec );
         if ( bFixedPlanned == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedFixed", "Code generation failed (fixed layout annotations): %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedFixed", "Code generation failed (fixed layout annotations): %#", inputFile.str() );
             return false;
         }
 
-        const CodeGenerator generator( parsed, fixedCodec, inputFile, *_pSession, _pOptions->_moduleName );
+        const CodeGenerator generator( parsed, fixedCodec, inputFile.str(), *_pSession, _pOptions->_moduleName );
         string              headerText;
         if ( generator.makeHeaderText( headerText ) == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile.str() );
             return false;
         }
 
@@ -614,14 +612,14 @@ namespace sw
         if ( GeneratedFileUtil::readStamp( paths._stampPath, existingStamp ) )
         {
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
-            const string& recordedSource = existingStamp._sourcePath;
-            const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::isSameDiskPath( recordedSource, inputFile ) == false &&
-                                     FileUtil::exists( FileUtil::toDiskPath( recordedSource ) );
+            const AbsolutePath& recordedSource = existingStamp._sourcePath;
+            const bool          bOtherOwner    = recordedSource.empty() == false && FileUtil::isSameDiskPath( recordedSource.str(), inputFile.str() ) == false &&
+                                     FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.GeneratedFileNameCollision", "Generated file name collision: '%#' and '%#' both generate '%#'. "
                                                                                   "Two reflected headers in the same module cannot share a file name.",
-                                 recordedSource, inputFile, paths._cppPath );
+                                 recordedSource.str(), inputFile.str(), paths._cppPath.str() );
                 return false;
             }
         }
@@ -687,7 +685,7 @@ namespace sw
                               GeneratedFileUtil::writeIfChanged( paths._editorMetadataPath, generator.makeEditorMetadataText() ) &&
                               GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
         if ( bWritten == false )
-            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile.str() );
         return bWritten;
     }
 
@@ -703,23 +701,23 @@ namespace sw
 
         vector<string> listTarget;
         vector<string> listDependency;
-        for ( const string& inputFile : _pOptions->_listInputFile )
+        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
-            listTarget.push_back( paths._cppPath );
-            listTarget.push_back( paths._headerPath );
-            listTarget.push_back( paths._editorMetadataPath );
+            listTarget.push_back( paths._cppPath.str() );
+            listTarget.push_back( paths._headerPath.str() );
+            listTarget.push_back( paths._editorMetadataPath.str() );
             GeneratedStamp stamp;
             if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false )
                 continue; // 스탬프가 없으면(이번 실행에 실패한 입력) 더할 의존이 없다 - 실패는 이미 오류로 셌다
             for ( const StampDependency& dependency : stamp._listDependency )
             {
-                listDependency.push_back( dependency._path );
+                listDependency.push_back( dependency._path.str() );
             }
         }
-        listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectionFlagOps ) );
-        listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ) );
-        listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ) );
+        listTarget.push_back( _pOptions->_outputDir.join( sw::config::kFileReflectionFlagOps ).str() );
+        listTarget.push_back( _pOptions->_outputDir.join( sw::config::kFileReflectedTypesList ).str() );
+        listTarget.push_back( _pOptions->_outputDir.join( sw::config::kFileAssetReferenceFieldsList ).str() );
         VectorUtil::sortUnique( listDependency );
 
         // 목표는 이 단계의 모든 산출물(CMake 의 OUTPUT 과 같은 목록), 의존은 스탬프들의 합. 경로는 절대 · 슬래시.
@@ -736,7 +734,7 @@ namespace sw
         text.append( '\n' );
         if ( GeneratedFileUtil::writeIfChanged( _pOptions->_depfilePath, text.view() ) == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionPipeline.FailedWriteDepfile", "Failed to write depfile %#", _pOptions->_depfilePath );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.FailedWriteDepfile", "Failed to write depfile %#", _pOptions->_depfilePath.str() );
             return false;
         }
         return true;
@@ -749,14 +747,14 @@ namespace sw
     bool ReflectionPipeline::writeFixedSchemaList() const
     {
         StringBuilder<constant::buffer::kMax8192> text;
-        for ( const string& inputFile : _pOptions->_listInputFile )
+        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
-            const string   stampPath = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath;
-            GeneratedStamp stamp;
+            const AbsolutePath stampPath = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath;
+            GeneratedStamp     stamp;
             // 입력마다 스탬프가 있다(애노테이션이 없는 헤더도 빈 산출물과 스탬프를 쓴다). 없으면 목록이 조용히 빠지므로 실패로 알린다.
             if ( GeneratedFileUtil::readStamp( stampPath, stamp ) == false )
             {
-                SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath.str() );
                 return false;
             }
             for ( const string& schemaLine : stamp._listFixedSchema )
@@ -765,14 +763,14 @@ namespace sw
                 text.append( '\n' );
             }
         }
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, fixedlayout::kSchemaListFile ), text.view() );
+        return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( fixedlayout::kSchemaListFile ), text.view() );
     }
 
     bool ReflectionPipeline::writeReflectedTypesList() const
     {
         vector<string> listLine;
         bool           bComplete = true;
-        for ( const string& inputFile : _pOptions->_listInputFile )
+        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             GeneratedStamp stamp;
             if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
@@ -802,13 +800,13 @@ namespace sw
             text.append( line );
             text.append( '\n' );
         }
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ), text.view() );
+        return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( sw::config::kFileReflectedTypesList ), text.view() );
     }
 
     bool ReflectionPipeline::writeAssetFieldList() const
     {
         vector<string> listLine;
-        for ( const string& inputFile : _pOptions->_listInputFile )
+        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             GeneratedStamp stamp;
             // 빠진 입력의 칸을 "경로가 아니다" 로 보면 끊어진 경로를 못 잡는다 - 쓰지 않는다.
@@ -826,7 +824,7 @@ namespace sw
             text.append( line );
             text.append( '\n' );
         }
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ), text.view() );
+        return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( sw::config::kFileAssetReferenceFieldsList ), text.view() );
     }
 
     void ReflectionPipeline::logEmitBytes() const
@@ -877,7 +875,7 @@ namespace sw
 
         // 입력마다 Flags 여부는 스탬프가 안다 - 생성 글에서 표식 글자를 찾지 않는다. 스탬프가 없는 입력은 이번 실행에 실패한 것이다(이미 오류로 셌다).
         bool bAnyFlags = false;
-        for ( const string& inputFile : _pOptions->_listInputFile )
+        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
             GeneratedStamp       stamp;
@@ -885,13 +883,13 @@ namespace sw
                 continue;
 
             bAnyFlags = true;
-            emit.linef( "#include \"%#\"", FileUtil::getFileNamePart( paths._headerPath ) );
+            emit.linef( "#include \"%#\"", FileUtil::getFileNamePart( paths._headerPath.str() ) );
         }
 
         if ( bAnyFlags == false )
             emit.line( emitdirective::kNoEnumFlags );
         emit.line( emitdirective::kEndif );
 
-        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectionFlagOps ), buffer.view() );
+        return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( sw::config::kFileReflectionFlagOps ), buffer.view() );
     }
 } // namespace sw

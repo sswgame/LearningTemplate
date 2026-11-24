@@ -29,17 +29,17 @@ namespace sw::editor
         struct ContentBrowserCommandsInternal
         {
             /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 문자열입니다. */
-            static string findAssetDiskPath( uint64 assetID )
+            static AbsolutePath findAssetDiskPath( uint64 assetID )
             {
                 string resourceID;
                 if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
-                    return string{};
+                    return {};
                 const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
-                return diskPath.has_value() ? string( diskPath->str() ) : string{};
+                return diskPath.has_value() ? *diskPath : AbsolutePath{};
             }
 
             /** @brief 대상 에셋의 절대 경로입니다. 누른 항목 → 선택 스냅숏 → 창의 지금 선택 순서로 고릅니다. 없으면 빈 문자열입니다. */
-            static string findTargetPath( const EditorCommandTarget& target )
+            static AbsolutePath findTargetPath( const EditorCommandTarget& target )
             {
                 const uint64 targetID = target._hoveredID != 0 ? target._hoveredID : ( target._listSelectedID.empty() ? 0 : target._listSelectedID.front() );
                 if ( targetID != 0 )
@@ -52,13 +52,13 @@ namespace sw::editor
             /** @brief 대상이 폴더가 아닌 파일이면 true 입니다(이름 바꾸기 · 복제 · 지우기 · 참조 · 잠금). */
             static bool hasFileTarget( const EditorCommandTarget& target )
             {
-                const string path = findTargetPath( target );
-                return path.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( path ) ) == false;
+                const AbsolutePath path = findTargetPath( target );
+                return path.empty() == false && FileUtil::isDirectory( path ) == false;
             }
 
             static bool hasTextAssetTarget( const EditorCommandTarget& target )
             {
-                const string path = findTargetPath( target );
+                const string path = findTargetPath( target ).str();
                 return path.empty() == false && EditorAssetIndex::isTextAsset( path );
             }
 
@@ -82,16 +82,16 @@ namespace sw::editor
 
             static void refreshSourceControl( const EditorCommandTarget& /*target*/ ) { getSourceControl().requestRefresh(); }
 
-            static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserViewModel::showInFileExplorer( findTargetPath( target ) ); }
+            static void showInExplorer( const EditorCommandTarget& target ) { ContentBrowserViewModel::showInFileExplorer( findTargetPath( target ).str() ); }
 
             static void copyRelativePath( const EditorCommandTarget& target ) { EditorClipboard::setText( EditorPaths::getAssetPaths().toAssetID( findTargetPath( target ) ) ); }
 
-            static void copyAbsolutePath( const EditorCommandTarget& target ) { EditorClipboard::setText( findTargetPath( target ) ); }
+            static void copyAbsolutePath( const EditorCommandTarget& target ) { EditorClipboard::setText( findTargetPath( target ).str() ); }
 
             /** @brief 창 요청 @p kind 를 대상 에셋으로 넣습니다. 대상이 없으면 아무것도 하지 않습니다. */
             static void postForTarget( ContentBrowserRequestKind kind, const EditorCommandTarget& target )
             {
-                const string path = findTargetPath( target );
+                const AbsolutePath path = findTargetPath( target );
                 if ( path.empty() == false )
                     ContentBrowserViewModel::postRequest( kind, path );
             }
@@ -116,8 +116,8 @@ namespace sw::editor
                 if ( listArgument.size() != 1 )
                     return false;
                 const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( folderAbs ) ) == false )
+                const AbsolutePath           folderAbs  = folderPath.has_value() ? *folderPath : AbsolutePath{};
+                if ( FileUtil::isDirectory( folderAbs ) == false )
                     return false;
                 ContentBrowserViewModel::postRequest( ContentBrowserRequestKind::OpenFolder, folderAbs );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;

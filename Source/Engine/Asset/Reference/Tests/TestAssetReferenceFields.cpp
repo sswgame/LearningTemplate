@@ -15,7 +15,7 @@ namespace
     /** @brief 저장소의 칸 목록을 읽습니다. */
     bool loadRepositoryProperties( AssetReferenceFields& outParams )
     {
-        return outParams.load( ProcessRoots::get()._project.str() );
+        return outParams.load( ProcessRoots::get()._project );
     }
 
     vector<string> extractPaths( const AssetReferenceFields& params, string_view text, AssetReferenceSyntax syntax )

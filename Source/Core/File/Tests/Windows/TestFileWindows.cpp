@@ -30,20 +30,20 @@ SW_TEST_CASE( FileTest, LongPathBeyondMaxPathIsWrittenAndRead )
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::toDiskPath( dir ) ) );
     sw::StringBuilder<sw::constant::buffer::kMax1024> filePathBuilder;
     filePathBuilder.appendFormat( "%#/long.txt", dir );
-    const sw::string filePath( filePathBuilder.view() );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( filePath ), "long path" ) );
+    const sw::AbsolutePath filePath( sw::FileUtil::toDiskPath( filePathBuilder.view() ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "long path" ) );
     sw::string text;
-    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( filePath ), text ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
     SW_EXPECT_EQUAL( sw::string( "long path" ), text );
 
-    SW_EXPECT_TRUE( sw::PlatformFileUtil::toWindowsFilePath( filePath ).compare( 0, 4, L"\\\\?\\" ) == 0 );
+    SW_EXPECT_TRUE( sw::PlatformFileUtil::toWindowsFilePath( filePath.str() ).compare( 0, 4, L"\\\\?\\" ) == 0 );
     SW_EXPECT_TRUE( sw::PlatformFileUtil::toWindowsFilePath( "C:/short/x.txt" ) == sw::wstring( L"C:\\short\\x.txt" ) );
 
     // 접두는 들어가는 쪽 표기다 — 나오는 경로에는 없어 짧은 폴더 아래의 긴 파일도 그 폴더 안으로 판정된다.
     const sw::AbsolutePath shortRoot = sw::test::makeScratchPath( "SwLongPathRoot" );
     sw::string             relativePath;
-    SW_REQUIRE_TRUE( sw::FileUtil::makeRelativePath( shortRoot.str(), filePath, relativePath ) );
-    SW_EXPECT_EQUAL( filePath.substr( shortRoot.str().size() + 1 ), sw::FileUtil::normalizeSeparators( relativePath ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::makeRelativePath( shortRoot.str(), filePath.str(), relativePath ) );
+    SW_EXPECT_EQUAL( filePath.str().substr( shortRoot.str().size() + 1 ), sw::FileUtil::normalizeSeparators( relativePath ) );
 }
 
 /**
@@ -61,7 +61,7 @@ SW_TEST_CASE( FileTest, PathQueriesBeyond4096CharactersSucceed )
     SW_REQUIRE_TRUE( sw::FileUtil::makeAbsolutePath( dir, absolutePath ) );
     SW_EXPECT_EQUAL( dir.size(), absolutePath.size() );
 
-    sw::string canonicalPath;
-    SW_REQUIRE_TRUE( sw::FileUtil::makeCanonicalPath( sw::FileUtil::toDiskPath( dir ), canonicalPath ) );
-    SW_EXPECT_TRUE( canonicalPath.size() >= 4300 );
+    const sw::optional<sw::AbsolutePath> canonicalPath = sw::FileUtil::makeCanonicalPath( sw::FileUtil::toDiskPath( dir ) );
+    SW_REQUIRE_TRUE( canonicalPath.has_value() );
+    SW_EXPECT_TRUE( canonicalPath->str().size() >= 4300 );
 }

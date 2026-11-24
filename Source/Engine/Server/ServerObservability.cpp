@@ -182,11 +182,11 @@ namespace sw
     {
         if ( _frameHistory == nullptr || _frameHistory->getCount() == 0 )
             return;
-        const string crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
+        const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() )
             return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
-        const string reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), ServerObservabilityInternal::kServerReportsFolderName );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( reportsFolder ) ) == false )
+        const AbsolutePath reportsFolder = crashFolder.getParent().join( ServerObservabilityInternal::kServerReportsFolderName );
+        if ( FileUtil::ensureDirectoryExists( reportsFolder ) == false )
             return; // 실패는 ensureDirectoryExists 가 남겼다
         string          netStatsLine;
         GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
@@ -196,8 +196,8 @@ namespace sw
         _frameHistory->writeReport( text, pReason, ProcessSession::getID(), netStatsLine );
         string fileName{ "frames_" };
         fileName.append( ProcessSession::getID() ).append( "_tick" ).append( to_string( tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
-        const string path = FileUtil::joinPath( reportsFolder, fileName );
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), text ) == false )
+        const AbsolutePath path = reportsFolder.join( fileName );
+        if ( FileUtil::writeTextFile( path, text ) == false )
         {
             SW_LOG_WARNING_ID( "Server.FrameHistoryCouldNot", "Frame history could not be written to '%#'", path.c_str() );
             return;

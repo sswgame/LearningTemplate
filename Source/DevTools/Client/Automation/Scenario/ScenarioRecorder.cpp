@@ -617,7 +617,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Automation.CouldNotCreateDomain", "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
             return false;
         }
-        return engine::getSubsystem<AssetPaths>().mountDiskDomain( kSavedDomain, savedFolder.str() ); // 거절하면 이유를 로그로 남긴다
+        return engine::getSubsystem<AssetPaths>().mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다
     }
 
     string ScenarioRecorder::makeReplayID( string_view outputPath )
@@ -629,5 +629,12 @@ namespace sw
         StringBuilder<constant::buffer::kMax1024> replayID;
         replayID.appendFormat( "%#%#", kSavedDomain, outputPath.substr( firstSlash ) );
         return string( replayID.view() );
+    }
+
+    AbsolutePath ScenarioRecorder::makeOutputDiskPath( string_view outputPath )
+    {
+        if ( isAllowedOutputPath( outputPath ) == false )
+            return {};
+        return ProcessRoots::get()._saved.join( outputPath.substr( outputPath.find( '/' ) ) );
     }
 } // namespace sw

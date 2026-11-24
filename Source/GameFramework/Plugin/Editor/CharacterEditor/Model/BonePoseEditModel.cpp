@@ -188,15 +188,15 @@ namespace sw::editor
         return true;
     }
 
-    bool BonePoseEditModel::loadFromFile( string_view absolutePath )
+    bool BonePoseEditModel::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
         {
-            SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould", "Reference pose file could not be read: %#", string( absolutePath ).c_str() );
+            SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould", "Reference pose file could not be read: %#", string( absolutePath.str() ).c_str() );
             return false;
         }
-        return loadFromXMLText( text, absolutePath );
+        return loadFromXMLText( text, absolutePath.str() );
     }
 
     void BonePoseEditModel::clear()
@@ -208,7 +208,7 @@ namespace sw::editor
     bool BonePoseEditModel::saveDocument( const AbsolutePath& absPath )
     {
         const string text = _override.saveToXMLText();
-        if ( ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeComplete( text ) ) == false ) // 뼈마다 모든 칸을 쓴다
+        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( text ) ) == false ) // 뼈마다 모든 칸을 쓴다
         {
             SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
             return false;

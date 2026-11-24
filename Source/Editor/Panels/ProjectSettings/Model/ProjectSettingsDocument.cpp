@@ -219,11 +219,11 @@ namespace sw::editor
         shutdown();
     }
 
-    ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, string_view absolutePath, string_view elementName )
+    ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, const AbsolutePath& absolutePath, string_view elementName )
     {
         shutdown();
         _pType       = &type;
-        _path        = string( absolutePath );
+        _path        = absolutePath;
         _elementName = string( elementName );
         _current     = ReflectedInstance::create( type );
         _default     = ReflectedInstance::create( type );
@@ -243,7 +243,7 @@ namespace sw::editor
         _default.reset();
         _pType      = nullptr;
         _readResult = ConfigReadResult::Missing;
-        _path.clear();
+        _path       = {};
         _elementName.clear();
         _state.reset( string{} );
     }
@@ -253,7 +253,7 @@ namespace sw::editor
         if ( isElementMode() == false )
             return ConfigManager::readConfigJSON( pInstance, *_pType, fileText, _path.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
         XMLDocument document;
-        if ( document.parse( fileText, _path ) == false || document.getRoot().isValid() == false )
+        if ( document.parse( fileText, _path.str() ) == false || document.getRoot().isValid() == false )
         {
             SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNotXML", "Project settings: %# is not XML - %#", _path.c_str(), document.getLastError().c_str() );
             return ConfigReadResult::Invalid;
@@ -268,7 +268,7 @@ namespace sw::editor
     {
         if ( _pType == nullptr || _current.isValid() == false )
             return ConfigReadResult::Invalid;
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( _path ) ) == false )
+        if ( FileUtil::isRegularFile( _path ) == false )
         {
             resetToDefault();
             _readResult = ConfigReadResult::Missing;
@@ -276,7 +276,7 @@ namespace sw::editor
             return _readResult;
         }
         string fileText;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( _path ), fileText ) == false )
+        if ( FileUtil::readTextFile( _path, fileText ) == false )
         {
             _readResult = ConfigReadResult::Invalid;
             return _readResult;
@@ -314,7 +314,7 @@ namespace sw::editor
         if ( _pType == nullptr || _current.isValid() == false )
             return;
         // 바탕 층은 값의 원본이 파일이다 — 기본값으로 되돌리기는 파일 값으로 되돌리기다(헤더의 형식은 값이 아니다).
-        const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( FileUtil::toDiskPath( _path ) );
+        const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( _path );
         if ( bRevertToFile )
         {
             (void)revert(); // 읽지 못하면 revert 가 상태를 Invalid 로 남기고 저장을 막는다
@@ -370,7 +370,7 @@ namespace sw::editor
         if ( isElementMode() )
         {
             XMLDocument document; // 차이 글은 파일이 아니라 그 요소 하나다
-            if ( document.parse( differenceText, _path ) == false || document.getRoot().isValid() == false ||
+            if ( document.parse( differenceText, _path.str() ) == false || document.getRoot().isValid() == false ||
                  ConfigManager::readConfigXMLElement( fresh.get(), *_pType, document.getRoot(), _path.c_str() ) == false )
                 return false;
         }
@@ -464,7 +464,7 @@ namespace sw::editor
     {
         // 요소는 남의 파일(팩 gamesettings.xml) 안에 산다 — 파일을 만들지 않는다.
         string fileText;
-        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( _path ), fileText ) != OptionalFileRead::Read )
+        if ( FileUtil::readOptionalTextFile( _path, fileText ) != OptionalFileRead::Read )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsMissingElement", "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
             return false;
@@ -474,7 +474,7 @@ namespace sw::editor
         if ( check.isValid() == false )
             return false;
         XMLDocument elementDocument;
-        const bool  bParsed   = elementDocument.parse( elementText, _path );
+        const bool  bParsed   = elementDocument.parse( elementText, _path.str() );
         const bool  bReadable = bParsed && ConfigManager::readConfigXMLElement( check.get(), *_pType, elementDocument.getRoot( _elementName.c_str() ), _path.c_str() );
         if ( bReadable == false )
         {
@@ -497,7 +497,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsRewritingDid", "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
             return false;
         }
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), newText );
+        return FileUtil::writeTextFile( _path, newText );
     }
 
     bool ProjectSettingsDocument::saveDocument()
@@ -516,7 +516,7 @@ namespace sw::editor
         if ( isElementMode() )
             bSaved = saveElement( text );
         else
-            bSaved = FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _path ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), text );
+            bSaved = FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeTextFile( _path, text );
         if ( bSaved == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );

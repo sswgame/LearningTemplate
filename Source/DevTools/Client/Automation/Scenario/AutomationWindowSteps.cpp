@@ -399,12 +399,12 @@ namespace sw
                             memset( &bytes[( static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ) ) * 4u], 0, 4u );
                     }
                 }
-                const string path = runner.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false ||
+                const AbsolutePath path = runner.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
+                if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
                      ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reason;
-                    reason.appendFormat( "%#: could not write %#", step.describe(), path );
+                    reason.appendFormat( "%#: could not write %#", step.describe(), path.str() );
                     runner.endScenario( AutomationStepEnd::Fail, reason.view() );
                     return true;
                 }

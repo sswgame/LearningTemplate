@@ -22,15 +22,15 @@ namespace sw
         struct ModuleCatalogLoaderInternal
         {
             /** @brief 매니페스트 파일 하나를 읽습니다. 못 읽거나 틀리면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readManifest( const string& manifestPath, ModuleManifest& outManifest )
+            [[nodiscard]] static bool readManifest( const AbsolutePath& manifestPath, ModuleManifest& outManifest )
             {
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( manifestPath ), text ) == false )
+                if ( FileUtil::readTextFile( manifestPath, text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotRead", "Module catalog: cannot read %#", manifestPath.c_str() );
                     return false;
                 }
-                if ( const expected<void> parsed = ModuleCatalog::parseManifest( text, manifestPath, outManifest ); parsed.has_value() == false )
+                if ( const expected<void> parsed = ModuleCatalog::parseManifest( text, manifestPath.str(), outManifest ); parsed.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %# (%#)", parsed.error().message(), parsed.error().detail() );
                     return false;
@@ -39,20 +39,20 @@ namespace sw
             }
 
             /** @brief 폴더의 `*.module.json` 을 읽습니다(@p bRecursive 면 하위 폴더까지, 경로 순). 폴더가 없으면 빈 목록으로 true 입니다. */
-            [[nodiscard]] static bool readManifestFolder( const string& directoryPath, bool bRecursive, vector<ModuleManifest>& outListManifest )
+            [[nodiscard]] static bool readManifestFolder( const AbsolutePath& directoryPath, bool bRecursive, vector<ModuleManifest>& outListManifest )
             {
-                vector<string> listFile;
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( directoryPath ) ) == false )
+                vector<AbsolutePath> listFile;
+                if ( FileUtil::isDirectory( directoryPath ) == false )
                     return true;
-                if ( FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), ".json", listFile, bRecursive ) == false )
+                if ( FileUtil::collectFiles( directoryPath, ".json", listFile, bRecursive ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotList", "Module catalog: cannot list %#", directoryPath.c_str() );
                     return false;
                 }
                 VectorUtil::sort( listFile );
-                for ( const string& filePath : listFile )
+                for ( const AbsolutePath& filePath : listFile )
                 {
-                    if ( StringUtil::endsWith( filePath, ModuleCatalog::kManifestExtension, true ) == false )
+                    if ( StringUtil::endsWith( filePath.str(), ModuleCatalog::kManifestExtension, true ) == false )
                         continue;
                     ModuleManifest manifest;
                     if ( readManifest( filePath, manifest ) == false )
@@ -171,9 +171,9 @@ namespace sw
     bool ModuleCatalogLoader::loadAndResolve( uint8 targetMask, ModuleCatalog& outCatalog, ModuleResolution& outResolution )
     {
         // 무엇을 올릴지는 모듈 매니페스트가 정한다 — 빌드가 실행 파일 옆 `Modules/` 에 복사해 둔 것을 CMake 와 같은 규칙으로 해석한다.
-        const string           catalogDirectory = ModuleLibraryUtil::getModuleDirectory();
+        const AbsolutePath     catalogDirectory = ModuleLibraryUtil::getModuleDirectory();
         vector<ModuleManifest> listManifest;
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( catalogDirectory ) ) == false )
+        if ( FileUtil::isDirectory( catalogDirectory ) == false )
         {
             SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogModuleCatalog", "Module catalog: Module catalog folder does not exist: %#", catalogDirectory.c_str() );
             return false;
@@ -184,7 +184,7 @@ namespace sw
         // 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)을 고르면(`GameSelection`) 그 매니페스트가 `Modules/` 의 프로젝트를 대신한다 — 켜짐 표가 게임별이다.
         // 고르지 않은 게임(활성 게임 포함)의 매니페스트는 그 게임만 닿는 키트를 빼는 데만 쓴다.
         vector<ModuleManifest> listGamePackProject;
-        if ( ModuleCatalogLoaderInternal::readManifestFolder( FileUtil::joinPath( ProcessRoots::get()._binary.str(), config::kDirBinGames ), true, listGamePackProject ) == false )
+        if ( ModuleCatalogLoaderInternal::readManifestFolder( ProcessRoots::get()._binary.join( config::kDirBinGames ), true, listGamePackProject ) == false )
             return false;
         const optional<size_t> projectIndex = ModuleCatalogLoaderInternal::findIndex( listManifest, config::kTargetGameModule );
         string                 movedModule;

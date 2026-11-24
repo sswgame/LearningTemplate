@@ -47,24 +47,24 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    string EditorPaths::findContentFolder( string_view folderID )
+    AbsolutePath EditorPaths::findContentFolder( string_view folderID )
     {
         const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
-        return folder.has_value() && FileUtil::isDirectory( *folder ) ? folder->str() : string{};
+        return folder.has_value() && FileUtil::isDirectory( *folder ) ? *folder : AbsolutePath{};
     }
 
     string EditorPaths::getSceneDialogFolderPath()
     {
-        return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kMapsFolder ) );
+        return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kMapsFolder ) ).str();
     }
 
     AbsolutePath EditorPaths::getEditorStateDirectory()
     {
         // 자동화 실행은 빈 폴더를 쓴다 — 사용자의 레이아웃 · 테마 · 최근 씬과 무관하게 시작하고, 사용자 상태에 쓰지 않는다.
         // `gv_editorStateDir` 는 디스크 경로 변수라 값을 받을 때 이미 절대로 풀었다(R5) — 여기서 다시 풀지 않는다.
-        const string& variableDir = gv_editorStateDir.get();
+        const AbsolutePath variableDir = gv_editorStateDir.getPath();
         if ( variableDir.empty() == false )
-            return EditorPathsInternal::ensureStateDirectory( FileUtil::toDiskPath( variableDir ) );
+            return EditorPathsInternal::ensureStateDirectory( variableDir );
         const ProcessRoots& roots = ProcessRoots::get();
         return EditorPathsInternal::ensureStateDirectory( editor::getSubsystem<CommandLineManager>().isAutomatedRun() ? roots._run.join( EditorPathsInternal::kRunStateFolder )
                                                                                                                       : roots._project.join( config::kDirSavedEditor ) );
@@ -72,9 +72,9 @@ namespace sw::editor
 
     AbsolutePath EditorPaths::resolveEditorStateFile( const utf8* pFileName )
     {
-        // 이름이 없으면 빈 경로다(그 경로의 I/O 는 없는 파일처럼 실패한다 — `FileUtil::toDiskPath` 의 빈 글과 같다).
+        // 이름이 없으면 빈 경로다(그 경로의 I/O 는 없는 파일처럼 실패한다).
         if ( StringUtil::isNullOrEmpty( pFileName ) )
-            return FileUtil::toDiskPath( {} );
+            return {};
         return getEditorStateDirectory().join( pFileName );
     }
 

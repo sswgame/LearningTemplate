@@ -47,19 +47,19 @@ namespace sw::editor
         return pURI != nullptr && pURI[0] != '\0' && StringUtil::startsWith( pURI, "data:" ) == false;
     }
 
-    string ModelImportUtil::resolveURI( string_view sourcePath, const utf8* pURI )
+    AbsolutePath ModelImportUtil::resolveURI( const AbsolutePath& sourcePath, const utf8* pURI )
     {
         string decoded{ pURI };
         decoded.push_back( '\0' ); // cgltf 는 널로 끝나는 글을 제자리에서 푼다
         decoded.resize( cgltf_decode_uri( decoded.data() ) );
-        string path = FileUtil::joinPath( FileUtil::getDirectoryPart( sourcePath ), decoded );
-        string canonicalPath;
-        if ( FileUtil::makeCanonicalPath( FileUtil::toDiskPath( path ), canonicalPath ) ) // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF
-            path = FileUtil::normalizeSeparators( canonicalPath );
-        return path;
+        // `../` 을 푼다 — 원본 옆이 아닌 textures_raw 의 이미지를 가리키는 glTF(`join` 은 상위 탈출을 거절한다).
+        const optional<AbsolutePath> path = AbsolutePath::tryResolve( decoded, sourcePath.getParent() );
+        if ( path.has_value() == false )
+            return {};
+        return FileUtil::makeCanonicalPath( *path ).value_or( *path );
     }
 
-    uint64 ModelImportUtil::mixExternalFiles( string_view sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash )
+    uint64 ModelImportUtil::mixExternalFiles( const AbsolutePath& sourcePath, const vector<uint8>& listByte, string_view imageRuleText, uint64 hash )
     {
         const cgltf_options options = makeOptions();
         cgltf_data*         pData   = nullptr;
@@ -70,10 +70,10 @@ namespace sw::editor
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
         rawMarker.appendFormat( "/%#/", kRawTextureFolder );
-        const auto mixFile = [&hash]( const string& path )
+        const auto mixFile = [&hash]( const AbsolutePath& path )
         {
             vector<uint8> fileBytes;
-            const bool    bRead = FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::readFile( FileUtil::toDiskPath( path ), fileBytes );
+            const bool    bRead = FileUtil::exists( path ) && FileUtil::readFile( path, fileBytes );
             if ( bRead && fileBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size(), false, hash );
         };
@@ -90,8 +90,8 @@ namespace sw::editor
                 bHasEmbeddedImage = true;
                 continue;
             }
-            const string imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri );
-            if ( imagePath.find( rawMarker.view() ) != string::npos )
+            const AbsolutePath imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri );
+            if ( imagePath.str().find( rawMarker.view() ) != string::npos )
                 continue;
             bHasEmbeddedImage = true;
             mixFile( imagePath );

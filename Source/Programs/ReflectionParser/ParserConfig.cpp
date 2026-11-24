@@ -27,9 +27,9 @@ namespace sw
              * @brief 커밋된 기본 설정(`--config`) 옆의 설정 파일 경로입니다 — 로컬 `parser_config.json` · `toolchain_config.json` 은 같은 폴더에 있다.
              * @details 예전에는 작업 폴더에서 위로 올라가며 찾았고, 그다음엔 프로젝트 루트를 추측했다 - 이제 CMake 가 기본 설정의 절대 경로를 넘긴다.
              */
-            static string makeSiblingPath( const string& defaultsPath, const utf8* pConfigRelPath )
+            static AbsolutePath makeSiblingPath( const AbsolutePath& defaultsPath, const utf8* pConfigRelPath )
             {
-                return FileUtil::joinPath( FileUtil::getDirectoryPart( defaultsPath ), FileUtil::getFileNamePart( pConfigRelPath ) );
+                return defaultsPath.getParent().join( FileUtil::getFileNamePart( pConfigRelPath ) );
             }
 
             /**
@@ -37,22 +37,22 @@ namespace sw
              * @return 선택 파일이 없거나 비었으면 null 객체와 true, 필수 파일(@p bRequired)이 없거나 있는데 못 읽거나 JSON 이 깨졌으면 false 입니다.
              * @details 깨진 설정을 기본값으로 대신하지 않는다 — 어느 칸이 왜 무시됐는지 남지 않고 libclang 오류가 엉뚱한 자리에서 난다.
              */
-            [[nodiscard]] static bool loadDocument( const string& path, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
+            [[nodiscard]] static bool loadDocument( const AbsolutePath& path, vector<AbsolutePath>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
             {
                 outDocument         = nlohmann::json{};
-                const bool bPresent = FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
+                const bool bPresent = FileUtil::isRegularFile( path );
                 if ( bPresent == false && bRequired )
                 {
-                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileMissing", "Parser setting file '%#' is missing - it is committed and required", path );
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileMissing", "Parser setting file '%#' is missing - it is committed and required", path.str() );
                     return false;
                 }
                 if ( bPresent == false )
                     return true;
 
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
+                if ( FileUtil::readTextFile( path, text ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileExists", "Parser setting file '%#' exists but cannot be read", path );
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileExists", "Parser setting file '%#' exists but cannot be read", path.str() );
                     return false;
                 }
                 inoutListLoadedFile.push_back( path );
@@ -64,7 +64,7 @@ namespace sw
                 }
                 catch ( const nlohmann::json::parse_error& exception )
                 {
-                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileNot", "Parser setting file '%#' is not valid JSON: %#", path, exception.what() );
+                    SW_LOG_ERROR_ID( "ParserConfig.ParserSettingFileNot", "Parser setting file '%#' is not valid JSON: %#", path.str(), exception.what() );
                     return false;
                 }
                 return true;
@@ -391,7 +391,7 @@ namespace sw
     {
     }
 
-    bool ParserConfig::load( const string& defaultsPath, const vector<string>& listTargetArg )
+    bool ParserConfig::load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg )
     {
         _listBaseArg.clear();
         _listForceInclude.clear();
@@ -407,19 +407,19 @@ namespace sw
         }
         const string kPlatformParserKey{ *platformParserKey };
 
-        if ( AbsolutePath::tryMake( defaultsPath ).has_value() == false )
+        if ( defaultsPath.empty() )
         {
-            SW_LOG_ERROR_ID( "ParserConfig.MustAbsolutePathGot", "%# must be an absolute path to %# (got '%#')", cli::kConfig, parserpath::kParserConfigDefaults, defaultsPath );
+            SW_LOG_ERROR_ID( "ParserConfig.MustAbsolutePathGot", "%# must be an absolute path to %# (got '%#')", cli::kConfig, parserpath::kParserConfigDefaults, defaultsPath.str() );
             return false;
         }
-        const string   localPath = ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kParserConfig );
-        nlohmann::json defaultsDoc;
-        nlohmann::json rawLocalDoc;
+        const AbsolutePath localPath = ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kParserConfig );
+        nlohmann::json     defaultsDoc;
+        nlohmann::json     rawLocalDoc;
         if ( ParserConfigInternal::loadDocument( defaultsPath, _listLoadedFile, defaultsDoc, true ) == false ||
              ParserConfigInternal::loadDocument( localPath, _listLoadedFile, rawLocalDoc ) == false )
             return false;
         // 로컬은 이 기계에 딸린 키만 받는다(`keepMachineLocalKeys`) — 나머지는 커밋된 기본값이 정한다.
-        const nlohmann::json localDoc = ParserConfigInternal::keepMachineLocalKeys( defaultsDoc, rawLocalDoc, localPath );
+        const nlohmann::json localDoc = ParserConfigInternal::keepMachineLocalKeys( defaultsDoc, rawLocalDoc, localPath.str() );
 
         BLOCK( "Load Base Arguments from Config" )
         {
@@ -434,7 +434,7 @@ namespace sw
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kClangFlags, ParserConfigInternal::applyClangFlagsSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kParsing, ParserConfigInternal::applyParsingSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kTuning, ParserConfigInternal::applyTuningSection );
-            if ( ParserConfigInternal::hasRequiredValues( *this, defaultsPath ) == false )
+            if ( ParserConfigInternal::hasRequiredValues( *this, defaultsPath.str() ) == false )
                 return false;
         }
 
@@ -495,23 +495,23 @@ namespace sw
                     llvmPath = pEnvLlvm;
             }
 
-            const string llvmClangDir = FileUtil::joinPath( llvmPath, _llvmClangRel );
-            if ( FileUtil::isDirectory( FileUtil::toDiskPath( llvmClangDir ) ) )
+            const AbsolutePath llvmClangDir = FileUtil::toDiskPath( llvmPath ).join( _llvmClangRel );
+            if ( FileUtil::isDirectory( llvmClangDir ) )
             {
-                vector<string> listClangSubFolder;
-                if ( FileUtil::collectFolders( FileUtil::toDiskPath( llvmClangDir ), listClangSubFolder, false ) == false )
-                    SW_LOG_ERROR_ID( "ParserConfig.ClangResourceFoldersUnder", "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir );
-                for ( const string& folder : listClangSubFolder )
+                vector<AbsolutePath> listClangSubFolder;
+                if ( FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false ) == false )
+                    SW_LOG_ERROR_ID( "ParserConfig.ClangResourceFoldersUnder", "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir.str() );
+                for ( const AbsolutePath& folder : listClangSubFolder )
                 {
-                    const string resourceDir = FileUtil::normalizeSeparators( folder );
-                    const string clangInc    = FileUtil::joinPath( folder, _clangIncludeRel );
-                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( clangInc ) ) == false )
+                    const string       resourceDir = FileUtil::normalizeSeparators( folder.str() );
+                    const AbsolutePath clangInc    = folder.join( _clangIncludeRel );
+                    if ( FileUtil::isDirectory( clangInc ) == false )
                         continue;
 
                     _listBaseArg.emplace_back( _flagResourceDir );
                     _listBaseArg.emplace_back( resourceDir );
                     _listBaseArg.emplace_back( _flagIsystem );
-                    _listBaseArg.emplace_back( clangInc );
+                    _listBaseArg.emplace_back( clangInc.str() );
                     break;
                 }
             }
@@ -521,22 +521,20 @@ namespace sw
         if ( kPlatformParserKey == "windows" ) // 대상이 Windows 일 때만 MSVC · SDK 헤더를 읽는다(교차 대상은 자기 sysroot 를 `--target-arg` 로 받는다)
             BLOCK( "Locate MSVC and Windows SDK Includes" )
             {
-                const string msvcInc = FileUtil::joinPath( msvcToolsDir, _msvcIncludeRel );
-                if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( msvcInc ) ) )
+                const AbsolutePath msvcInc = FileUtil::toDiskPath( msvcToolsDir ).join( _msvcIncludeRel );
+                if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
                 {
                     _listBaseArg.emplace_back( _flagIsystem );
-                    _listBaseArg.emplace_back( msvcInc );
+                    _listBaseArg.emplace_back( msvcInc.str() );
                 }
 
                 if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
                 {
-                    const string ucrtPath = FileUtil::joinPath(
-                        FileUtil::joinPath( FileUtil::joinPath( winSdkDir, _winSdkIncludeRel ), winSdkVer ),
-                        _winSdkUcrtRel );
-                    if ( FileUtil::isDirectory( FileUtil::toDiskPath( ucrtPath ) ) )
+                    const AbsolutePath ucrtPath = FileUtil::toDiskPath( winSdkDir ).join( _winSdkIncludeRel ).join( winSdkVer ).join( _winSdkUcrtRel );
+                    if ( FileUtil::isDirectory( ucrtPath ) )
                     {
                         _listBaseArg.emplace_back( _flagIsystem );
-                        _listBaseArg.emplace_back( ucrtPath );
+                        _listBaseArg.emplace_back( ucrtPath.str() );
                     }
                 }
             }

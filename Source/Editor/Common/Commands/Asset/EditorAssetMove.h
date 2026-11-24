@@ -7,14 +7,15 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw::editor
 {
     /** @brief 옮기기 하나입니다(디스크 경로). 이름 바꾸기도 같은 폴더 안의 옮기기다. */
     struct EditorAssetMove
     {
-        string _sourceAbs;
-        string _destinationAbs;
+        AbsolutePath _sourceAbs;
+        AbsolutePath _destinationAbs;
     };
 
     /**

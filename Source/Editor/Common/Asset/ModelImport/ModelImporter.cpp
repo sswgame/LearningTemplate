@@ -253,13 +253,13 @@ namespace sw::editor
              * @brief 스킨드 모델을 읽습니다. 모든 스킨이 한 스켈레톤을 쓰며, 관절 노드가 같으면 한 본입니다.
              * @param listSectionMaterialName 구간을 나누는 glTF 머티리얼마다의 이름입니다(VRM · 머티리얼이 여럿인 텍스처 glTF). 본 메시를 머티리얼 구간으로도 나눕니다.
              */
-            [[nodiscard]] static bool readSkinnedModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const ModelImportRule& rule, string_view sourcePath,
+            [[nodiscard]] static bool readSkinnedModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const ModelImportRule& rule, const AbsolutePath& sourcePath,
                                                         const vector<string>& listSectionMaterialName, ModelImportResult& outResult )
             {
                 unordered_map<const cgltf_node*, int32> mapJointBone;
                 vector<float4x4>                        listParentOffset;
                 vector<float4x4>                        listBoneInverseBind;
-                if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listParentOffset, listBoneInverseBind, sourcePath ) == false )
+                if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listParentOffset, listBoneInverseBind, sourcePath.str() ) == false )
                     return false;
                 outResult._skeleton.setPartial( rule._bPartialSkeleton == SW_TRUE );
                 const uint32 boneCount = outResult._skeleton.getBoneCount();
@@ -297,7 +297,7 @@ namespace sw::editor
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
                         {
                             if ( ModelImportGeometry::appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, &binding, body ) == false )
-                                return reportUnreadableMesh( sourcePath, *pNode, data );
+                                return reportUnreadableMesh( sourcePath.str(), *pNode, data );
                         }
                         continue;
                     }
@@ -309,16 +309,16 @@ namespace sw::editor
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
                         {
                             if ( ModelImportGeometry::appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrWorld, &rigidBinding, body ) == false )
-                                return reportUnreadableMesh( sourcePath, *pNode, data );
+                                return reportUnreadableMesh( sourcePath.str(), *pNode, data );
                         }
                         continue;
                     }
-                    if ( readAttachment( data, *pNode, *pJoint, mapJointBone, mapStemUse, sourcePath, outResult ) == false )
+                    if ( readAttachment( data, *pNode, *pJoint, mapJointBone, mapStemUse, sourcePath.str(), outResult ) == false )
                         return false;
                 }
                 if ( body._listIndex.empty() )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinButNo", "glTF '%#' has a skin but no triangles bound to it", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinButNo", "glTF '%#' has a skin but no triangles bound to it", sourcePath.str() );
                     return false;
                 }
                 if ( bSections )
@@ -335,16 +335,16 @@ namespace sw::editor
                     // LOD 는 구간 · 모프 없는 스킨드 메시만 받는다(`Mesh::setLODs`) — 규칙이 맞지 않는 모델에 걸렸으면 LOD 없이 쓰지 않고 임포트를 멈춘다.
                     if ( rule._listLOD.empty() == false && body._listMorphName.empty() == false )
                     {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFMorphTargetsImport", "glTF '%#' has morph targets - import rule '%#' asks for mesh LODs, which only meshes without morph targets take", sourcePath, rule._name.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFMorphTargetsImport", "glTF '%#' has morph targets - import rule '%#' asks for mesh LODs, which only meshes without morph targets take", sourcePath.str(), rule._name.c_str() );
                         return false;
                     }
                     ModelImportGeometry::makeMeshData( body, boneCount, outResult._mesh );
-                    if ( ModelImportGeometry::makeLODLevels( body, rule, sourcePath, boneCount, outResult._mesh._listLOD ) == false )
+                    if ( ModelImportGeometry::makeLODLevels( body, rule, sourcePath.str(), boneCount, outResult._mesh._listLOD ) == false )
                         return false;
                 }
                 if ( rule._listLOD.empty() == false && bSections )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsImport", "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath, rule._name.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsImport", "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath.str(), rule._name.c_str() );
                     return false;
                 }
                 outResult._mesh._skinBinding._listInverseBind = std::move( listBoneInverseBind );
@@ -355,14 +355,14 @@ namespace sw::editor
 
             /** @brief 애니메이션마다 클립 하나를 만들어 규칙의 코덱으로 압축합니다. 규칙의 클립 목록에 원본에 없는 이름이 있으면 false 입니다. */
             [[nodiscard]] static bool readClips( const cgltf_data& data, const unordered_map<const cgltf_node*, int32>& mapJointBone, const vector<float4x4>& listParentOffset,
-                                                 const ModelImportRule& rule, string_view sourcePath, ModelImportResult& inoutResult )
+                                                 const ModelImportRule& rule, const AbsolutePath& sourcePath, ModelImportResult& inoutResult )
             {
                 if ( rule._bImportAnimations == SW_FALSE )
                     return true;
                 const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodecByName( rule._animationCodec );
                 if ( pCodec == nullptr )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.GlTFUnknownAnimationCodec", "glTF '%#': unknown animation codec '%#'", sourcePath, rule._animationCodec.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFUnknownAnimationCodec", "glTF '%#': unknown animation codec '%#'", sourcePath.str(), rule._animationCodec.c_str() );
                     return false;
                 }
                 unordered_map<string, ModelImportAnimation::ClipExtra> mapExtra;
@@ -376,7 +376,7 @@ namespace sw::editor
                     const optional<uint32> foundBone = skeleton.findBoneIndex( hashed_string( rule._rootMotionBone ) );
                     if ( foundBone.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFRootMotionBone", "glTF '%#': root_motion_bone '%#' is not a joint", sourcePath, rule._rootMotionBone.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFRootMotionBone", "glTF '%#': root_motion_bone '%#' is not a joint", sourcePath.str(), rule._rootMotionBone.c_str() );
                         return false;
                     }
                     rootMotionBone = static_cast<int32>( *foundBone );
@@ -418,7 +418,7 @@ namespace sw::editor
                                                ModelImportAnimation::resampleAnimation( animation, skeleton, mapJointBone, listRest, listParentOffset, rule._animationSampleRate, morphDuration, rawClip );
                     if ( bChannelsRead == false )
                     {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipChannelWhose", "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath, clipName.c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipChannelWhose", "glTF '%#': clip '%#' has a channel whose keys cannot be read", sourcePath.str(), clipName.c_str() );
                         return false;
                     }
                     ModelImportClip imported{};
@@ -436,7 +436,7 @@ namespace sw::editor
                     }
                     if ( imported._clip.compressFrom( rawClip, *pCodec, settings, &imported._stats ) == false )
                     {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipCouldNot", "glTF '%#': clip '%#' could not be compressed with '%#'", sourcePath, clipName.c_str(), pCodec->getName() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFClipCouldNot", "glTF '%#': clip '%#' could not be compressed with '%#'", sourcePath.str(), clipName.c_str(), pCodec->getName() );
                         return false;
                     }
                     const string baseStem = ModelImportUtil::makeFileStem( clipName );
@@ -444,7 +444,7 @@ namespace sw::editor
                     imported._fileStem    = ModelImportUtil::makeNumberedStem( baseStem, useCount );
                     inoutResult._listClip.push_back( std::move( imported ) );
                 }
-                return validateClipNamesMatched( rule, listRequestedFound, mapExtra, sourcePath );
+                return validateClipNamesMatched( rule, listRequestedFound, mapExtra, sourcePath.str() );
             }
 
             /** @brief 클립 부가 데이터(루프 덮어쓰기 · 알림 · 커브)를 가져온 클립에 얹습니다. */
@@ -500,18 +500,18 @@ namespace sw::editor
              * @brief 파일을 읽어 cgltf 로 파싱 · 버퍼 로드 · 검증합니다. 옳지 않은 부모를 가진 장면 루트는 최상위 조상으로 바꿉니다.
              * @param inoutBytes 파일 바이트입니다. cgltf 는 GLB 의 JSON 청크와 BIN 청크를 이 안에서 가리키므로 @p outData 보다 오래 살아야 한다.
              */
-            [[nodiscard]] static bool parseGltf( string_view sourcePath, vector<uint8>& inoutBytes, GltfData& outData )
+            [[nodiscard]] static bool parseGltf( const AbsolutePath& sourcePath, vector<uint8>& inoutBytes, GltfData& outData )
             {
                 if ( AssetSourceLocator::readBytes( sourcePath, inoutBytes ) == false )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTF", "Failed to read glTF '%#'", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTF", "Failed to read glTF '%#'", sourcePath.str() );
                     return false;
                 }
                 const uint32 promotedCount = ModelImportGeometry::promoteSceneRootsToTopAncestor( inoutBytes );
                 if ( promotedCount > 0 )
-                    SW_LOG_WARNING_ID( "ModelImporter.GlTFSceneRootNode", "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath, promotedCount );
+                    SW_LOG_WARNING_ID( "ModelImporter.GlTFSceneRootNode", "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath.str(), promotedCount );
 
-                const string        path    = string( sourcePath );
+                const string        path    = string( sourcePath.str() );
                 const cgltf_options options = ModelImportUtil::makeOptions();
                 cgltf_result        result  = cgltf_parse( &options, inoutBytes.data(), inoutBytes.size(), &outData._pData );
                 if ( result == cgltf_result_success )
@@ -520,7 +520,7 @@ namespace sw::editor
                     result = cgltf_validate( outData._pData );
                 if ( result != cgltf_result_success )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTFCgltf", "Failed to read glTF '%#' (cgltf result %#)", sourcePath, static_cast<uint32>( result ) );
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedReadGlTFCgltf", "Failed to read glTF '%#' (cgltf result %#)", sourcePath.str(), static_cast<uint32>( result ) );
                     return false;
                 }
                 return true;
@@ -528,17 +528,17 @@ namespace sw::editor
 
             /** @brief 스킨이 있는 모델을 읽습니다. 규칙의 이동 · 재중심이나 LOD 는 스킨드 모델에 맞지 않아 거절합니다. 읽었으면 아바타에 없는 본을 경고합니다. */
             [[nodiscard]] static bool readSkinnedAsset( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<string>& listSectionMaterialName, const ModelImportRule& rule,
-                                                        string_view sourcePath, ModelImportResult& outResult )
+                                                        const AbsolutePath& sourcePath, ModelImportResult& outResult )
             {
                 const bool bMoves = rule._recenter != ModelRecenter::None || rule._arrTranslation[0] != 0.0f || rule._arrTranslation[1] != 0.0f || rule._arrTranslation[2] != 0.0f;
                 if ( bMoves )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinnedImportRule", "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFSkinnedImportRule", "glTF '%#' is skinned - import rule translation / recenter would break its bind matrices", sourcePath.str() );
                     return false;
                 }
                 if ( readSkinnedModel( data, listRoot, rule, sourcePath, listSectionMaterialName, outResult ) == false )
                     return false;
-                ModelImportVrm::warnMissingAvatarBones( outResult, sourcePath );
+                ModelImportVrm::warnMissingAvatarBones( outResult, sourcePath.str() );
                 return true;
             }
 
@@ -547,7 +547,7 @@ namespace sw::editor
              * @param listSectionMaterialName 구간을 나누는 glTF 머티리얼마다의 이름입니다(VRM · 머티리얼이 여럿인 텍스처 glTF). 비면 구간 없는 메시다.
              */
             [[nodiscard]] static bool readStaticModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const vector<string>& listSectionMaterialName,
-                                                       const ModelImportRule& rule, string_view sourcePath, ModelImportResult& outResult )
+                                                       const ModelImportRule& rule, const AbsolutePath& sourcePath, ModelImportResult& outResult )
             {
                 const bool                  bSections = listSectionMaterialName.empty() == false;
                 ModelImportUtil::MergedMesh merged;
@@ -557,16 +557,16 @@ namespace sw::editor
                 {
                     if ( ModelImportGeometry::appendNode( *pRoot, merged ) == false )
                     {
-                        SW_LOG_ERROR_ID( "ModelImporter.GlTFMeshUnderNode", "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath, ModelImportUtil::makeNodeName( data, *pRoot ).c_str() );
+                        SW_LOG_ERROR_ID( "ModelImporter.GlTFMeshUnderNode", "glTF '%#': a mesh under node '%#' has vertex data that cannot be read", sourcePath.str(), ModelImportUtil::makeNodeName( data, *pRoot ).c_str() );
                         return false;
                     }
                 }
                 if ( data.animations_count > 0 )
-                    SW_LOG_WARNING_ID( "ModelImporter.GlTFAnimationsButNo", "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, data.animations_count );
+                    SW_LOG_WARNING_ID( "ModelImporter.GlTFAnimationsButNo", "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath.str(), data.animations_count );
 
                 if ( merged._listIndex.empty() )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.GlTFNoTrianglesDefault", "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFNoTrianglesDefault", "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath.str(), merged._skippedPrimitiveCount );
                     return false;
                 }
                 // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePBRMaterial`).
@@ -578,7 +578,7 @@ namespace sw::editor
                 const bool bLODUnsupported = rule._listLOD.empty() == false && ( bSections || merged._listMorphName.empty() == false );
                 if ( bLODUnsupported )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsMorph", "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath,
+                    SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsMorph", "glTF '%#' has material sections or morph targets - import rule '%#' asks for mesh LODs, which only plain static meshes take", sourcePath.str(),
                                      rule._name.c_str() );
                     return false;
                 }
@@ -592,19 +592,19 @@ namespace sw::editor
                     return true;
                 }
                 ModelImportGeometry::makeMeshData( merged, 0, outResult._mesh );
-                return ModelImportGeometry::makeLODLevels( merged, rule, sourcePath, 0, outResult._mesh._listLOD );
+                return ModelImportGeometry::makeLODLevels( merged, rule, sourcePath.str(), 0, outResult._mesh._listLOD );
             }
 
             /**
              * @brief 파쇄는 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 이전 파일을 지웁니다. 규칙에서 빠진 파쇄가 남지 않게 하기 위해서다.
              * @return 스킨드 모델에 파쇄 규칙이 걸렸거나 쓰기 · 지우기에 실패하면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool writeFractureAsset( const ModelImportResult& result, const ModelImportRule& rule, string_view sourcePath, string_view outputPath )
+            [[nodiscard]] static bool writeFractureAsset( const ModelImportResult& result, const ModelImportRule& rule, string_view sourcePath, const AbsolutePath& outputPath )
             {
-                const string fracturePath = FractureAsset::makePathForMesh( outputPath );
+                const AbsolutePath fracturePath = FileUtil::toDiskPath( FractureAsset::makePathForMesh( outputPath.str() ) );
                 if ( rule._bFracture != SW_TRUE )
                 {
-                    if ( FileUtil::exists( FileUtil::toDiskPath( fracturePath ) ) && FileUtil::removeFile( FileUtil::toDiskPath( fracturePath ) ) == false )
+                    if ( FileUtil::exists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedRemoveStaleFracture", "Failed to remove stale fracture asset %#", fracturePath.c_str() );
                         return false;
@@ -622,9 +622,8 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %# (%#)", sourcePath, fractured.error().message(), fractured.error().detail() );
                     return false;
                 }
-                const FractureAsset&         fracture     = *fractured;
-                const optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath );
-                if ( fractureFile.has_value() == false || fracture.saveToFile( *fractureFile ) == false )
+                const FractureAsset& fracture = *fractured;
+                if ( fracture.saveToFile( fracturePath ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFractureAsset", "Failed to write fracture asset %#", fracturePath.c_str() );
                     return false;
@@ -638,10 +637,10 @@ namespace sw::editor
             static string makeFootprint( string_view path ) { return StringUtil::toLower( FileUtil::normalizeSeparators( FileUtil::removeExtension( path ) ).c_str() ); }
 
             /** @brief @p importedMeshPath 의 옆 폴더 아래에 결과를 두는 다른 원본들의 자리를 모읍니다(원본 폴더 `<x>/models_raw/<y>/` 의 모델 파일). */
-            static unordered_set<string> collectNestedFootprints( string_view importedMeshPath )
+            static unordered_set<string> collectNestedFootprints( const AbsolutePath& importedMeshPath )
             {
                 unordered_set<string>                   uniqueFootprint;
-                const string                            sideFolder = FileUtil::normalizeSeparators( FileUtil::removeExtension( importedMeshPath ) );
+                const string                            sideFolder = importedMeshPath.removeExtension().str();
                 StringBuilder<constant::buffer::kMax64> marker;
                 marker.appendFormat( "/%#/", ModelImportUtil::kImportedModelFolder );
                 const size_t folderAt = sideFolder.rfind( marker.view() );
@@ -649,14 +648,15 @@ namespace sw::editor
                     return uniqueFootprint;
                 StringBuilder<constant::buffer::kMax512> rawFolder;
                 rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImportUtil::kRawModelFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
-                if ( FileUtil::isDirectory( FileUtil::toDiskPath( rawFolder.view() ) ) == false )
+                const AbsolutePath rawPath = FileUtil::toDiskPath( rawFolder.view() ); // 폴더 이름 조각을 바꾼 글이다
+                if ( FileUtil::isDirectory( rawPath ) == false )
                     return uniqueFootprint;
-                vector<string> listSource;
-                (void)EditorContentScan::collectFiles( rawFolder.view(), "", listSource, true ); // 도중에 멈춘 목록은 훑기가 알린다
-                for ( const string& source : listSource )
+                vector<AbsolutePath> listSource;
+                (void)EditorContentScan::collectFiles( rawPath, "", listSource, true ); // 도중에 멈춘 목록은 훑기가 알린다
+                for ( const AbsolutePath& source : listSource )
                 {
-                    if ( ModelImportUtil::isSourceModel( source ) )
-                        uniqueFootprint.insert( makeFootprint( ModelImporter::makeImportedModelPath( FileUtil::normalizeSeparators( source ) ) ) );
+                    if ( ModelImportUtil::isSourceModel( source.str() ) )
+                        uniqueFootprint.insert( makeFootprint( ModelImporter::makeImportedModelPath( source ).str() ) );
                 }
                 return uniqueFootprint;
             }
@@ -677,15 +677,14 @@ namespace sw::editor
             }
 
             /** @brief 부착 메시를 옆 폴더에 쓰고 부착 표를 만듭니다(모델마다 다르므로 공용 스켈레톤이 아니라 모델 옆 파일에 든다). 쓰기에 실패하면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool writeAttachments( const AssetPaths& assetPaths, const ModelImportResult& result, const string& sideFolder, vector<SkeletonAttachment>& outListAttachment )
+            [[nodiscard]] static bool writeAttachments( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sideFolder, vector<SkeletonAttachment>& outListAttachment )
             {
                 for ( const ModelImportAttachment& attachment : result._listAttachment )
                 {
                     StringBuilder<constant::buffer::kMax256> partNameBuilder;
                     partNameBuilder.appendFormat( "%#%#", attachment._fileStem, MeshAssetFormat::kExtension );
-                    const string                 partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kPartFolder ), partNameBuilder.view() );
-                    const optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
-                    if ( partFile.has_value() == false || MeshAssetFormat::saveToFile( *partFile, attachment._mesh ) == false )
+                    const AbsolutePath partPath = sideFolder.join( ModelImportUtil::kPartFolder ).join( partNameBuilder.view() );
+                    if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAttachmentMesh", "Failed to write attachment mesh %#", partPath.c_str() );
                         return false;
@@ -705,28 +704,28 @@ namespace sw::editor
              * @details 언리얼이 임포트 때 기존 USkeleton 을 고르는 일을 내용 대조로 저절로 한다. 공용 폴더는 옆 폴더 밖이라 다시 임포트해도 지워지지 않는다.
              *          원본이 사라져 아무도 가리키지 않는 파일은 남는다(스켈레톤 하나는 작다).
              */
-            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
+            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, const AbsolutePath& outputPath, AbsolutePath& outSharedPath )
             {
-                const string                            normalized = FileUtil::normalizeSeparators( outputPath );
+                const string&                           normalized = outputPath.str();
                 StringBuilder<constant::buffer::kMax64> marker;
                 marker.appendFormat( "/%#/", ModelImportUtil::kImportedModelFolder );
                 const size_t folderEnd = normalized.rfind( marker.view() );
                 if ( folderEnd == string::npos )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.ImportedMeshOutsideModels", "Imported mesh '%#' is not under a '%#' folder - the shared skeleton has no place", outputPath, ModelImportUtil::kImportedModelFolder );
+                    SW_LOG_ERROR_ID( "ModelImporter.ImportedMeshOutsideModels", "Imported mesh '%#' is not under a '%#' folder - the shared skeleton has no place", outputPath.str(), ModelImportUtil::kImportedModelFolder );
                     return false;
                 }
                 const string                             body = skeleton.toXML();
                 const uint64                             hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, body.data(), body.size() );
                 StringBuilder<constant::buffer::kMax256> sharedPathBuilder;
                 sharedPathBuilder.appendFormat( "%#%#/skeleton_%#%#", string_view( normalized ).substr( 0, folderEnd + marker.size() ), ModelImportUtil::kSharedSkeletonFolder, hash, Skeleton::kExtension );
-                outSharedPath = string( sharedPathBuilder.view() );
+                outSharedPath = FileUtil::toDiskPath( sharedPathBuilder.view() ); // 폴더 이름 조각 앞까지의 글에 이었다
 
                 // 잠그지 않는다: 이름이 내용 지문이라 워커 둘이 같은 파일을 써도 같은 글이고, `writeTextFile` 은 저마다의 임시 파일에 쓴 뒤 바꿔 끼운다.
                 string existing;
-                if ( FileUtil::exists( FileUtil::toDiskPath( outSharedPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( outSharedPath ), existing ) && existing == body )
+                if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == body )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outSharedPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( outSharedPath ), body ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, body ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
                     return false;
@@ -738,15 +737,15 @@ namespace sw::editor
              * @brief 클립을 공유 저장소에 한 벌만 쓰고(같은 내용 · 같은 설정이면 모델 수와 상관없이 파일 하나다) 이름 → 파일 표(`<옆 폴더>/<y>.animset.xml`)를 쓰며 원본 · 압축 바이트 합을 더합니다.
              * @return 쓰기에 실패하면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool writeClips( const AssetPaths& assetPaths, const ModelImportResult& result, const ModelImportRule& rule, string_view sourcePath, const string& sideFolder, string_view stem, uint64& inoutRawByteTotal,
+            [[nodiscard]] static bool writeClips( const AssetPaths& assetPaths, const ModelImportResult& result, const ModelImportRule& rule, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder, string_view stem, uint64& inoutRawByteTotal,
                                                   uint64& inoutCompressedByteTotal )
             {
                 if ( result._listClip.empty() )
                     return true;
-                const string domain = ImportedAssetStore::findDomainFolder( sourcePath );
+                const AbsolutePath domain = ImportedAssetStore::findDomainFolder( sourcePath );
                 if ( domain.empty() )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
                     return false;
                 }
                 const string settingsText = rule.makeClipSettingsText();
@@ -759,7 +758,7 @@ namespace sw::editor
                     // 이름을 앞에 붙인다 - 키만으로는 Quick Open · 브라우저 · 로그에서 어떤 클립인지 알 수 없다(언리얼 · 유니티도 에셋을 이름으로 찾는다). 이름까지 같아야 한 벌이다.
                     StringBuilder<constant::buffer::kMax256> clipKeyBuilder;
                     clipKeyBuilder.appendFormat( "%#_%#", imported._fileStem, key );
-                    const string clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, clipKeyBuilder.view(), AnimationClip::kExtension );
+                    const AbsolutePath clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, clipKeyBuilder.view(), AnimationClip::kExtension );
                     if ( ImportedAssetStore::writeIfAbsent( clipPath, bytes.data(), bytes.size() ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationClip", "Failed to write animation clip %#", clipPath.c_str() );
@@ -774,7 +773,7 @@ namespace sw::editor
                 }
                 StringBuilder<constant::buffer::kMax256> setNameBuilder;
                 setNameBuilder.appendFormat( "%#%#", stem, AnimationSet::kExtension );
-                const string setPath = FileUtil::joinPath( sideFolder, setNameBuilder.view() );
+                const AbsolutePath setPath = sideFolder.join( setNameBuilder.view() );
                 if ( ImportedAssetStore::writeResultText( setPath, animationSet.saveToString() ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationSet", "Failed to write animation set %#", setPath.c_str() );
@@ -804,25 +803,25 @@ namespace sw::editor
             string_view getImportedLabel() const override { return "메시"; }
             uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "ModelImport" ); }
             /** @brief 결과 글이 `_shared/` · 머티리얼 리소스 경로를 적으므로 DDC 키에 리소스 경로를 넣는다. */
-            bool   isImportedPathEmbedded() const override { return true; }
-            void   collectImportedFiles( string_view importedPath, vector<string>& outListPath ) const override { ModelImporter::collectImportedFiles( importedPath, outListPath ); }
-            bool   isSourceFile( string_view path ) const override { return ModelImportUtil::isSourceModel( path ); }
-            string makeImportedPath( string_view sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
-            uint64 computeSourceHash( string_view sourcePath, string_view assetPath ) const override
+            bool         isImportedPathEmbedded() const override { return true; }
+            void         collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const override { ModelImporter::collectImportedFiles( importedPath, outListPath ); }
+            bool         isSourceFile( string_view path ) const override { return ModelImportUtil::isSourceModel( path ); }
+            AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
+            uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
                 if ( findRule( sourcePath, assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return ModelImporter::computeSourceHash( sourcePath, rule, _imageRuleText );
             }
-            uint64      computeImportedHash( string_view importedPath ) const override { return ModelImporter::computeImportedHash( importedPath ); }
-            const utf8* findUnsupportedReason( string_view sourcePath ) const override
+            uint64      computeImportedHash( const AbsolutePath& importedPath ) const override { return ModelImporter::computeImportedHash( importedPath ); }
+            const utf8* findUnsupportedReason( const AbsolutePath& sourcePath ) const override
             {
                 (void)sourcePath;
                 return nullptr;
             }
             /** @brief 규칙에 몸 메시(`body_surface`)가 있으면 그 메시의 임포트 결과(`transferBodySurface`)를 읽으므로 몸 메시를 임포트한 뒤에 직렬로 임포트합니다. */
-            bool hasOrderDependency( string_view sourcePath, string_view assetPath ) const override
+            bool hasOrderDependency( const AbsolutePath& sourcePath, string_view assetPath ) const override
             {
                 vector<AssetImportOverride> listOverride;
                 if ( AssetImportRuleUtil::readMetaOverrides( sourcePath, listOverride ) == false )
@@ -830,7 +829,7 @@ namespace sw::editor
                 const ModelImportRuleMatch match = _config.resolveRule( assetPath, listOverride );
                 return match.hasError() == false && match._rule._bodySurface.empty() == false; // 겹침 · 예외 오류는 importSource 가 전한다
             }
-            [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view assetPath ) const override
+            [[nodiscard]] bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
             {
                 ModelImportRule rule;
                 if ( findRule( sourcePath, assetPath, rule ) == false )
@@ -843,7 +842,7 @@ namespace sw::editor
              * @brief 리소스 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
              * @return 규칙이 겹치거나 서술 · 예외를 읽지 못하면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] bool findRule( string_view sourcePath, string_view assetPath, ModelImportRule& outRule ) const
+            [[nodiscard]] bool findRule( const AbsolutePath& sourcePath, string_view assetPath, ModelImportRule& outRule ) const
             {
                 vector<AssetImportOverride> listOverride;
                 if ( AssetImportRuleUtil::readMetaOverrides( sourcePath, listOverride ) == false )
@@ -868,7 +867,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool ModelImporter::readModelAsset( string_view sourcePath, const ModelImportRule& rule, ModelImportResult& outResult )
+    bool ModelImporter::readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult )
     {
         using Internal = ModelImporterInternal;
         outResult      = ModelImportResult{};
@@ -880,8 +879,8 @@ namespace sw::editor
 
         vector<const cgltf_node*> listRoot;
         ModelImportGeometry::collectSceneRoots( data, listRoot );
-        if ( ModelImportMaterial::readToonMaterials( data, sourcePath, outResult._listToonMaterial, outResult._listIgnoredMaterialKey ) == false ||
-             ModelImportVrm::readVrmAvatar( data, sourcePath, outResult ) == false )
+        if ( ModelImportMaterial::readToonMaterials( data, sourcePath.str(), outResult._listToonMaterial, outResult._listIgnoredMaterialKey ) == false ||
+             ModelImportVrm::readVrmAvatar( data, sourcePath.str(), outResult ) == false )
             return false;
         const bool bPBRSections = outResult._listToonMaterial.empty() && rule._bImportMaterials == SW_TRUE;
         if ( bPBRSections && ModelImportMaterial::readSectionPBRMaterials( data, sourcePath, outResult ) == false )
@@ -936,38 +935,37 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImporter::importModel( const AssetPaths& assetPaths, string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
+    bool ModelImporter::importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath )
     {
         using Internal = ModelImporterInternal;
         ModelImportResult result{};
         if ( readModelAsset( sourcePath, rule, result ) == false )
             return false;
         // 장비 메시 — 몸의 스킨 · 체형 모프를 옮겨 쓴다(쿠킹 단계 전이, 외형 피팅이 같은 체형을 장비에 베이크한다).
-        if ( rule._bodySurface.empty() == false && transferBodySurface( sourcePath, rule, result._mesh ) == false )
+        if ( rule._bodySurface.empty() == false && transferBodySurface( sourcePath.str(), rule, result._mesh ) == false )
             return false;
 
         // 옆 폴더는 임포트할 때마다 새로 쓴다. 규칙에서 빠진 클립과 사라진 부착 메시가 이전 파일로 남지 않게 하기 위해서다.
-        const string sideFolder = makeImportedSideFolder( outputPath );
+        const AbsolutePath sideFolder = makeImportedSideFolder( outputPath );
         if ( clearSideFiles( outputPath ) == false )
             return false;
-        const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
-        if ( outputFile.has_value() == false || MeshAssetFormat::saveToFile( *outputFile, result._mesh ) == false )
+        if ( MeshAssetFormat::saveToFile( outputPath, result._mesh ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeshAsset", "Failed to write mesh asset %#", outputPath );
+            SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeshAsset", "Failed to write mesh asset %#", outputPath.str() );
             return false;
         }
         if ( ModelImportMaterial::writeMaterialSections( assetPaths, result, sourcePath, sideFolder ) == false )
             return false;
         if ( ModelImportMaterial::writePBRMaterial( assetPaths, result, sourcePath, sideFolder ) == false )
             return false;
-        if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
+        if ( Internal::writeFractureAsset( result, rule, sourcePath.str(), outputPath ) == false )
             return false;
-        const string stem = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
+        const string stem = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath.str() ) );
         if ( result._bSkinned == SW_FALSE )
         {
             if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
                 return false;
-            SW_LOG_INFO_ID( "ModelImporter.ImportedModelTriangles", "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listIndex.size() / 3 );
+            SW_LOG_INFO_ID( "ModelImporter.ImportedModelTriangles", "Imported model: %# -> %# (%# triangles)", sourcePath.str(), outputPath.str(), result._mesh._listIndex.size() / 3 );
             return true;
         }
 
@@ -975,19 +973,19 @@ namespace sw::editor
         if ( Internal::writeAttachments( assetPaths, result, sideFolder, skeletonFileData._listAttachment ) == false )
             return false;
         // 스켈레톤은 내용당 한 벌이고, 모델 옆 파일은 그것을 가리키는 차이 없는 변형이다 — 데이터가 적은 경로(프리팹 · 본 LOD · 리타깃 프로필)는 그대로다.
-        string sharedSkeletonPath;
+        AbsolutePath sharedSkeletonPath;
         if ( Internal::writeSharedSkeleton( result._skeleton, outputPath, sharedSkeletonPath ) == false )
             return false;
         skeletonFileData._base = assetPaths.toAssetID( sharedSkeletonPath );
         StringBuilder<constant::buffer::kMax256> skeletonNameBuilder;
         skeletonNameBuilder.appendFormat( "%#%#", stem, Skeleton::kExtension );
-        const string skeletonPath = FileUtil::joinPath( sideFolder, skeletonNameBuilder.view() );
+        const AbsolutePath skeletonPath = sideFolder.join( skeletonNameBuilder.view() );
         if ( ImportedAssetStore::writeResultText( skeletonPath, skeletonFileData.toXML() ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
-        if ( ModelImportVrm::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
+        if ( ModelImportVrm::writeVrmAvatar( result, sourcePath.str(), sideFolder, stem ) == false )
             return false;
         if ( ModelImportVrm::writeSectionPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
             return false;
@@ -995,7 +993,7 @@ namespace sw::editor
         [[maybe_unused]] uint64 compressedByteTotal = 0;
         if ( Internal::writeClips( assetPaths, result, rule, sourcePath, sideFolder, stem, rawByteTotal, compressedByteTotal ) == false )
             return false;
-        SW_LOG_INFO_ID( "ModelImporter.ImportedSkinnedModelTriangles", "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
+        SW_LOG_INFO_ID( "ModelImporter.ImportedSkinnedModelTriangles", "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath.str(), outputPath.str(),
                         result._mesh._listIndex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
                         compressedByteTotal );
         return true;
@@ -1006,8 +1004,8 @@ namespace sw::editor
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
             return false;
 
-        const string& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
-        const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
+        const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 작업 도메인 사본은 실행 뿌리 아래다
+        const AbsolutePath  normalized   = resourceRoot.join( relativePath );
         if ( makeImportedModelPath( normalized ).empty() )
         {
             SW_LOG_WARNING_ID( "ModelImporter.ModelSourcesMustUnder", "Model sources must be under `%#` to be imported: %#", ModelImportUtil::kRawModelFolder, relativePath );
@@ -1040,7 +1038,7 @@ namespace sw::editor
         return true;
     }
 
-    AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
+    AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
         TextureImportConfig textureConfig{};
         if ( textureConfig.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == false )
@@ -1067,19 +1065,19 @@ namespace sw::editor
         return summary;
     }
 
-    void ModelImporter::bakeRetargetedClips( const AssetPaths& assetPaths, string_view resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary )
+    void ModelImporter::bakeRetargetedClips( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary )
     {
         // 손으로 쓴 셋(가져오기 산출물 `models/` 밖)의 `<clip … retarget="…"/>` 줄이 대상이다. 굽기는 클립 몇 개라 가볍다 — 가져올 때마다 다시 구워 원본 · 프로필이 바뀐 것을 놓치지 않는다.
-        vector<string> listSetFile;
+        vector<AbsolutePath> listSetFile;
         // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 굽지 않는다(EditorContentScan 이 뺀다)
         if ( EditorContentScan::collectFiles( resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
         {
             inoutSummary._listProblem.push_back( "retarget bake: the animation sets under the content root could not be listed" );
             return;
         }
-        for ( const string& setFile : listSetFile )
+        for ( const AbsolutePath& setFile : listSetFile )
         {
-            if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile ), "/models/" ) )
+            if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile.str() ), "/models/" ) )
                 continue;
             AnimationSet set;
             if ( set.loadCopyFromAsset( AssetID{ assetPaths.toAssetID( setFile ) } ) == false )
@@ -1106,7 +1104,7 @@ namespace sw::editor
                     }
                     continue;
                 }
-                const bool bBaked = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( outFile->str() ) ) ) &&
+                const bool bBaked = FileUtil::ensureDirectoryExists( outFile->getParent() ) &&
                                     PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
                 if ( bBaked == false )
                 {
@@ -1118,44 +1116,40 @@ namespace sw::editor
         }
     }
 
-    string ModelImporter::makeImportedModelPath( string_view rawModelPath )
+    AbsolutePath ModelImporter::makeImportedModelPath( const AbsolutePath& rawModelPath )
     {
         return AssetImportStampUtil::makeImportedPath( rawModelPath, ModelImportUtil::kRawModelFolder, ModelImportUtil::kImportedModelFolder,
                                                        MeshAssetFormat::kExtension );
     }
 
-    string ModelImporter::makeImportedSideFolder( string_view importedMeshPath )
+    AbsolutePath ModelImporter::makeImportedSideFolder( const AbsolutePath& importedMeshPath )
     {
-        return FileUtil::removeExtension( importedMeshPath );
+        return importedMeshPath.removeExtension();
     }
 
-    void ModelImporter::collectSideFiles( string_view importedMeshPath, vector<string>& outListPath )
+    void ModelImporter::collectSideFiles( const AbsolutePath& importedMeshPath, vector<AbsolutePath>& outListPath )
     {
         outListPath.clear();
-        const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( sideFolder ) ) == false )
+        const AbsolutePath sideFolder = makeImportedSideFolder( importedMeshPath );
+        if ( FileUtil::isDirectory( sideFolder ) == false )
             return;
-        (void)FileUtil::collectFiles( FileUtil::toDiskPath( sideFolder ), "", outListPath, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다음 대조가 다시 임포트한다
-        for ( string& path : outListPath )
-        {
-            path = FileUtil::normalizeSeparators( path );
-        }
+        (void)FileUtil::collectFiles( sideFolder, "", outListPath, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다음 대조가 다시 임포트한다
         const unordered_set<string> uniqueNested = ModelImporterInternal::collectNestedFootprints( importedMeshPath );
         if ( uniqueNested.empty() == false )
         {
-            VectorUtil::removeIf( outListPath, [&uniqueNested]( const string& path )
-            { return ModelImporterInternal::isInFootprint( path, uniqueNested ); } );
+            VectorUtil::removeIf( outListPath, [&uniqueNested]( const AbsolutePath& path )
+            { return ModelImporterInternal::isInFootprint( path.str(), uniqueNested ); } );
         }
         VectorUtil::sort( outListPath );
     }
 
-    bool ModelImporter::clearSideFiles( string_view importedMeshPath )
+    bool ModelImporter::clearSideFiles( const AbsolutePath& importedMeshPath )
     {
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         collectSideFiles( importedMeshPath, listFile );
-        for ( const string& path : listFile )
+        for ( const AbsolutePath& path : listFile )
         {
-            if ( FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
+            if ( FileUtil::removeFile( path ) )
                 continue;
             SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model file %#", path.c_str() );
             return false;
@@ -1163,14 +1157,12 @@ namespace sw::editor
         return true;
     }
 
-    string ModelImporter::makeClipDataPath( string_view sourcePath )
+    AbsolutePath ModelImporter::makeClipDataPath( const AbsolutePath& sourcePath )
     {
-        StringBuilder<constant::buffer::kMax256> pathBuilder;
-        pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( sourcePath ), ModelImportUtil::kClipDataSuffix );
-        return string( pathBuilder.view() );
+        return sourcePath.removeExtension().appendSuffix( ModelImportUtil::kClipDataSuffix );
     }
 
-    uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule, string_view imageRuleText )
+    uint64 ModelImporter::computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, string_view imageRuleText )
     {
         vector<uint8> bytes;
         if ( AssetSourceLocator::readBytes( sourcePath, bytes ) == false )
@@ -1200,7 +1192,7 @@ namespace sw::editor
         if ( pDefaultAssets == nullptr ||
              AssetIO::readTextAsset( AssetID{ ( bVrm ? pDefaultAssets->_toonMaterialTemplate : pDefaultAssets->_pbrMaterialTemplate ).get() }, templateText ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.MaterialTemplateUnreadable", "Model '%#': the material template could not be read - the import stamp cannot be computed", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.MaterialTemplateUnreadable", "Model '%#': the material template could not be read - the import stamp cannot be computed", sourcePath.str() );
             return 0;
         }
         hash                      = HashUtil::computeStringHash64( templateText.c_str(), templateText.size(), false, hash );
@@ -1222,15 +1214,15 @@ namespace sw::editor
             vector<uint8> bodyBytes;
             if ( AssetIO::readBinaryAsset( AssetID{ rule._bodySurface }, bodyBytes ) == false )
             {
-                SW_LOG_ERROR_ID( "ModelImporter.BodySurfaceUnreadable", "Model '%#': body mesh '%#' could not be read - the import stamp cannot be computed", sourcePath, rule._bodySurface.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.BodySurfaceUnreadable", "Model '%#': body mesh '%#' could not be read - the import stamp cannot be computed", sourcePath.str(), rule._bodySurface.c_str() );
                 return 0;
             }
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bodyBytes.data() ), bodyBytes.size(), false, hash );
         }
         // 부가 데이터(클립 반복, 알림, 커브)를 고쳐도 다시 임포트해야 한다.
-        vector<uint8> clipDataBytes;
-        const string  clipDataPath = makeClipDataPath( sourcePath );
-        const bool    bHasClipData = FileUtil::exists( FileUtil::toDiskPath( clipDataPath ) ) && FileUtil::readFile( FileUtil::toDiskPath( clipDataPath ), clipDataBytes ) && clipDataBytes.empty() == false;
+        vector<uint8>      clipDataBytes;
+        const AbsolutePath clipDataPath = makeClipDataPath( sourcePath );
+        const bool         bHasClipData = FileUtil::exists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false;
         if ( bHasClipData )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
@@ -1238,53 +1230,53 @@ namespace sw::editor
         return ModelImportUtil::mixExternalFiles( sourcePath, bytes, imageRuleText, hash );
     }
 
-    void ModelImporter::collectImportedFiles( string_view importedMeshPath, vector<string>& outListPath )
+    void ModelImporter::collectImportedFiles( const AbsolutePath& importedMeshPath, vector<AbsolutePath>& outListPath )
     {
         // 메시가 없어도(손으로 지웠다) 남은 옆 폴더 · 파쇄 파일은 이 원본의 결과다.
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( importedMeshPath ) ) )
-            outListPath.push_back( string( importedMeshPath ) );
-        const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
-        if ( FileUtil::isRegularFile( FileUtil::toDiskPath( fracturePath ) ) )
+        if ( FileUtil::isRegularFile( importedMeshPath ) )
+            outListPath.push_back( importedMeshPath );
+        const AbsolutePath fracturePath = FileUtil::toDiskPath( FractureAsset::makePathForMesh( importedMeshPath.str() ) );
+        if ( FileUtil::isRegularFile( fracturePath ) )
             outListPath.push_back( fracturePath );
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         collectSideFiles( importedMeshPath, listFile );
         unordered_set<string> uniqueShared;
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
             outListPath.push_back( file );
             string text;
-            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
+            if ( ImportedAssetStore::isReferrer( file.str() ) && FileUtil::readTextFile( file, text ) )
             {
-                vector<string> listShared;
+                vector<AbsolutePath> listShared;
                 ImportedAssetStore::collectReferencedFiles( importedMeshPath, text, listShared );
-                for ( string& shared : listShared )
+                for ( AbsolutePath& shared : listShared )
                 {
-                    if ( FileUtil::isRegularFile( FileUtil::toDiskPath( shared ) ) && uniqueShared.insert( shared ).second )
+                    if ( FileUtil::isRegularFile( shared ) && uniqueShared.insert( shared.str() ).second )
                         outListPath.push_back( std::move( shared ) );
                 }
             }
         }
     }
 
-    uint64 ModelImporter::computeImportedHash( string_view importedMeshPath )
+    uint64 ModelImporter::computeImportedHash( const AbsolutePath& importedMeshPath )
     {
         uint64 hash = AssetImportStampUtil::computeFileHash( importedMeshPath );
         if ( hash == 0 )
             return 0;
         // 옆의 `.fracture` 도 결과다. 지워지거나 바뀌면 어긋남이다.
-        const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
-        if ( FileUtil::exists( FileUtil::toDiskPath( fracturePath ) ) )
+        const AbsolutePath fracturePath = FileUtil::toDiskPath( FractureAsset::makePathForMesh( importedMeshPath.str() ) );
+        if ( FileUtil::exists( fracturePath ) )
         {
             const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
             hash                      = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
-        const string   sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
-        vector<string> listFile;
+        const string         sideFolder = makeImportedSideFolder( importedMeshPath ).str();
+        vector<AbsolutePath> listFile;
         collectSideFiles( importedMeshPath, listFile );
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
-            string relative = file;
+            string relative = file.str();
             if ( relative.size() > sideFolder.size() )
                 relative = relative.substr( sideFolder.size() );
             hash                  = HashUtil::computeStringHash64( relative.c_str(), relative.size(), false, hash );
@@ -1292,7 +1284,7 @@ namespace sw::editor
             hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
             // 옆 폴더 파일이 가리키는 공유 파일도 결과다 — 지우거나 손대면 어긋남이다.
             string text;
-            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
+            if ( ImportedAssetStore::isReferrer( file.str() ) && FileUtil::readTextFile( file, text ) )
                 hash = ImportedAssetStore::mixReferencedFiles( importedMeshPath, text, hash );
         }
         return hash;

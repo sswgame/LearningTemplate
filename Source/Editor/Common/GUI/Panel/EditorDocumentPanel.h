@@ -146,15 +146,15 @@ namespace sw::editor
         /** @brief 저장한 문서(`getLoadedAssetPath`)를 그 자리에서 캐시 · 씬 · 그것을 펼쳐 넣은 에셋에 반영합니다(`AssetHotReload::applySavedAsset`). 파일 감시의 늦은 사건을 기다리지 않는다. */
         void onDocumentSaved() override;
         /** @brief 연 문서의 디스크 자리(`getDocumentDiskPath`)입니다. 다른 파일을 쓰거나 더 쓰는 패널(스프라이트 클립 · 타일맵 · 캐릭터 · 데이터 테이블)이 재정의한다. 풀지 못하면 더하지 않는다 — 저장 자신이 이유를 남기고 진다. */
-        void collectFilesToSave( vector<string>& outListPath ) const override;
+        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
         /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
-        static void appendFileToSave( string_view path, vector<string>& outListPath ); /**
-                                                                                        * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
-                                                                                        * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
-                                                                                        *          함께 버렸다 — 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 되돌릴 수 없었다. 이제 플레이 경계는 메인(씬) 스택만 맡는다.
-                                                                                        *          언리얼은 전역 트랜잭션 버퍼 하나(에셋 편집도 같은 버퍼), 유니티 Undo 도 전역 하나, Godot 은 씬 · 리소스마다 history 를 두고 편집한 대상이 고른다 —
-                                                                                        *          에셋 문서를 씬과 따로 되돌리는 Godot 쪽을 따르고, 포커스 창이 스택을 고른다(`findPanelCommandStack`).
-                                                                                        */
+        static void appendFileToSave( string_view path, vector<AbsolutePath>& outListPath ); /**
+                                                                                              * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
+                                                                                              * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
+                                                                                              *          함께 버렸다 — 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 되돌릴 수 없었다. 이제 플레이 경계는 메인(씬) 스택만 맡는다.
+                                                                                              *          언리얼은 전역 트랜잭션 버퍼 하나(에셋 편집도 같은 버퍼), 유니티 Undo 도 전역 하나, Godot 은 씬 · 리소스마다 history 를 두고 편집한 대상이 고른다 —
+                                                                                              *          에셋 문서를 씬과 따로 되돌리는 Godot 쪽을 따르고, 포커스 창이 스택을 고른다(`findPanelCommandStack`).
+                                                                                              */
         CommandStack& getDocumentCommandStack() { return *_pDocumentStack; }
         /**
          * @brief 이 문서의 편집 알림 창구입니다 — 패널이 만들 때 자기 Model 에 넘기고, Model 이 문서를 바꾼 뒤 알린다(`DocumentEditRecorder::notifyEdited`, 감사 E-16).

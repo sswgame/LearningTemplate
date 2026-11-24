@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -69,11 +70,11 @@ namespace sw::editor
         void fromText( string_view text );
 
         /** @brief 파일을 읽습니다. 파일이 없으면 빈 집합으로 두고 false 입니다(처음 실행이면 정상). */
-        [[nodiscard]] bool loadFromFile( string_view filePath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& filePath );
         /** @brief 파일에 씁니다. 실패하면 경고하고 false 입니다. */
-        [[nodiscard]] bool saveToFile( string_view filePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& filePath ) const;
         /** @brief 저장 파일 경로입니다(에디터 상태 폴더의 만들 때 정한 파일). */
-        string getFilePath() const;
+        AbsolutePath getFilePath() const;
 
     private:
         vector<string> _listKey;   ///< 정렬되어 있고 중복이 없다

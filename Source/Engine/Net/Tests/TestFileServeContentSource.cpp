@@ -131,7 +131,7 @@ SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
     const string packPath( packPathBuilder.view() );
 
     {
-        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
+        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot };
         SW_EXPECT_TRUE( source.isFile( packPath ) );
         SW_EXPECT_TRUE( source.isFolder( mountRoot.str() ) );
         vector<uint8> bytes;
@@ -142,14 +142,14 @@ SW_TEST_CASE( FileServeContentSourceTest, MirrorsInChunksAndReusesFreshStamp )
         SW_EXPECT_EQUAL( uint64{ 3 }, source.getReceivedChunkCount().get() );
     }
     {
-        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
+        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot };
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_EQUAL( uint64{ 0 }, source.getReceivedChunkCount().get() );
     }
     client._mapFile["game.pack"]._modifiedNanos = 8;
     {
-        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot.str() };
+        const FileServeContentSource source{ client, FakeFileServeClient::kBase, mountRoot.str(), mirrorRoot };
         vector<uint8>                bytes;
         SW_REQUIRE_TRUE( source.readFile( packPath, bytes ) );
         SW_EXPECT_EQUAL( uint64{ 3 }, source.getReceivedChunkCount().get() );
@@ -165,7 +165,7 @@ SW_TEST_CASE( FileServeContentSourceTest, RefusesPathsOutsideTheMountAndEscaping
     FakeFileServeClient client;
     client._mapFile["a.pack"]          = FakeFileServeClient::File{ makePattern( 16 ), 1 };
     const AbsolutePath           mount = test::makeScratchPath( "FileServe/Packs" );
-    const FileServeContentSource source{ client, FakeFileServeClient::kBase, mount.str(), test::makeScratchPath( "FileServe/Mirror" ).str() };
+    const FileServeContentSource source{ client, FakeFileServeClient::kBase, mount.str(), test::makeScratchPath( "FileServe/Mirror" ) };
 
     SW_EXPECT_FALSE( source.isFile( test::makeScratchPath( "Elsewhere/a.pack" ).str() ) );
     StringBuilder<constant::buffer::kMax512> outsidePath;

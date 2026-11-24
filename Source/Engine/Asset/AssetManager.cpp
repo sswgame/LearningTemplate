@@ -471,7 +471,7 @@ namespace sw
             // 기동 때 한 번 훑는다 — 에디터가 만들고 옮기고 임포트한 에셋은 그 자리에서 줄을 고친다(`AssetRegistry::record` · `move`, 파일 감시 `AssetHotReload::recordIdentity`).
             const ProcessRoots& roots = ProcessRoots::get();
             AssetIdentityRules  rules;
-            if ( rules.load( roots._project.str() ) == false )
+            if ( rules.load( roots._project ) == false )
                 return false;
             // 기동마다 모든 머리 글 · `.meta` 를 열지 않는다 — 크기 · 시각이 그대로인 파일은 지난 훑기의 줄을 쓴다(언리얼 `CachedAssetRegistry.bin`).
             AssetScanCache       cache{ AssetDatabase::kScanPayloadVersion };
@@ -480,7 +480,7 @@ namespace sw
             if ( loaded.has_value() == false )
                 SW_LOG_INFO_ID( "AssetManager.IdentityScanCacheDropped", "%# '%#' - scanning every source asset", loaded.error().message(), loaded.error().detail() );
             vector<AssetIdentityIssue> listIssue;
-            const AssetDatabase        database = AssetDatabase::scan( roots._content.str(), rules, listIssue, &cache );
+            const AssetDatabase        database = AssetDatabase::scan( roots._content, rules, listIssue, &cache );
             const expected<void>       saved    = cache.save( cachePath );
             if ( saved.has_value() == false )
                 SW_LOG_INFO_ID( "AssetManager.IdentityScanCacheNotSaved", "%# '%#' - the next run scans again", saved.error().message(), saved.error().detail() );

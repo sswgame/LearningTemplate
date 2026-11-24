@@ -204,8 +204,8 @@ namespace sw::editor
     void EditorPreviewViewport::requestScreenshotIfAsked()
     {
         // 다 그려진 그림만 찍는다 — 주 화면 캡처와 같은 판정(`CaptureReadiness` — 이 씬의 에셋 일, 이 씬을 그린 하위 렌더러가 PSO 때문에 빠뜨린 배치). 프레임 수를 어림하지 않는다.
-        const bool   bNotReady = _pScene == nullptr || CaptureReadiness::countPendingJobs( _pScene->getObjectManager(), _sceneKey ) != 0;
-        const string path      = gv_editorPreviewScreenshot.get();
+        const bool         bNotReady = _pScene == nullptr || CaptureReadiness::countPendingJobs( _pScene->getObjectManager(), _sceneKey ) != 0;
+        const AbsolutePath path      = gv_editorPreviewScreenshot.getPath();
         if ( path.empty() || bNotReady )
             return;
         if ( requestImageFile( path ) == 0 )
@@ -214,14 +214,13 @@ namespace sw::editor
         gv_editorPreviewScreenshot.set( {} ); // 한 번만
     }
 
-    uint32 EditorPreviewViewport::requestImageFile( string_view path )
+    uint32 EditorPreviewViewport::requestImageFile( const AbsolutePath& path )
     {
-        const uint64                 renderTarget = getRenderTarget();
-        const bool                   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
-        const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
-        if ( absolutePath.has_value() == false || bNotDrawn )
+        const uint64 renderTarget = getRenderTarget();
+        const bool   bNotDrawn    = renderTarget == 0 || _submittedFrameCount == 0;
+        if ( path.empty() || bNotDrawn )
             return 0;
-        return RenderThread::requestScreenshot( *absolutePath, RHITextureHandle{ renderTarget }, RHIFormat::R8G8B8A8_UNORM );
+        return RenderThread::requestScreenshot( path, RHITextureHandle{ renderTarget }, RHIFormat::R8G8B8A8_UNORM );
     }
 
     uint32 EditorPreviewViewport::requestImagePNGBytes( string_view requestName )

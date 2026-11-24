@@ -61,11 +61,11 @@ SW_TEST_CASE( PackEngineSettingsTest, RejectsIncompleteOrUnknownSettings )
  */
 SW_TEST_CASE( PackEngineSettingsTest, EveryGamePackHasReadableEngineSettings )
 {
-    const sw::AbsolutePath presetFolder = sw::ProcessRoots::get()._project.join( "Config/Game" );
-    sw::vector<sw::string> listPreset;
+    const sw::AbsolutePath       presetFolder = sw::ProcessRoots::get()._project.join( "Config/Game" );
+    sw::vector<sw::AbsolutePath> listPreset;
     SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( presetFolder, ".json", listPreset, false ) );
     SW_REQUIRE_TRUE( listPreset.empty() == false );
-    for ( const sw::string& presetPath : listPreset )
+    for ( const sw::AbsolutePath& presetPath : listPreset )
     {
         sw::GameConfig preset;
         SW_REQUIRE_TRUE_MSG( sw::ConfigManager::readConfigFile( preset, presetPath ) == sw::ConfigReadResult::Loaded, presetPath.c_str() );

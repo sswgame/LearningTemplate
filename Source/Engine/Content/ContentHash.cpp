@@ -33,7 +33,7 @@ namespace sw
             static constexpr size_t kMinCacheEntryBytes = 28;
 
             /** @brief 파일을 조각으로 읽어 해시를 구하고 읽은 바이트를 @p inoutByteCount 에 더합니다(캐시 밖 본체). 못 읽으면 0 입니다. */
-            static uint64 readFileHash( string_view absPath, atomic<uint64>& inoutByteCount )
+            static uint64 readFileHash( const AbsolutePath& absPath, atomic<uint64>& inoutByteCount )
             {
                 uint64                 byteCount = 0;
                 const expected<uint64> hash      = ContentHash::computeFileStream( absPath, &byteCount );
@@ -63,17 +63,17 @@ namespace sw
         return HashUtil::appendBytes64( state, pData, size );
     }
 
-    expected<uint64> ContentHash::computeFileStream( string_view absPath, uint64* pOutByteCount )
+    expected<uint64> ContentHash::computeFileStream( const AbsolutePath& absPath, uint64* pOutByteCount )
     {
         uint64 fileSize = 0;
-        if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( absPath ), fileSize ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "file cannot be sized for its content hash", absPath } );
+        if ( FileUtil::tryGetFileSize( absPath, fileSize ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "file cannot be sized for its content hash", absPath.str() } );
         uint64        state = kInitialState;
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < fileSize; offset += kStreamChunkBytes )
         {
-            if ( FileUtil::readFile( FileUtil::toDiskPath( absPath ), chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "file cannot be read for its content hash", absPath } );
+            if ( FileUtil::readFile( absPath, chunk, offset, kStreamChunkBytes ) == false || chunk.empty() )
+                return unexpected( Error{ ErrorKind::ExternalFailure, "file cannot be read for its content hash", absPath.str() } );
             state = appendBytes( state, chunk.data(), chunk.size() );
             if ( pOutByteCount != nullptr )
                 *pOutByteCount += chunk.size();
@@ -81,7 +81,7 @@ namespace sw
         return state;
     }
 
-    uint64 ContentHash::computeFile( string_view absPath )
+    uint64 ContentHash::computeFile( const AbsolutePath& absPath )
     {
         return engine::getSubsystem<ContentHashCache>().computeFile( absPath );
     }
@@ -101,7 +101,7 @@ namespace sw
 
     void ContentHashCache::WriteObserver::recordFileWritten( string_view filePath )
     {
-        _owner.recordOwnWrite( filePath );
+        _owner.recordOwnWrite( FileUtil::toDiskPath( filePath ) );
     }
 
     ContentHashCache::ContentHashCache()
@@ -137,11 +137,11 @@ namespace sw
         return FileUtil::normalizeSeparators( path );
     }
 
-    uint64 ContentHashCache::computeFile( string_view absPath )
+    uint64 ContentHashCache::computeFile( const AbsolutePath& absPath )
     {
-        const string key = makeKey( absPath );
+        const string key = makeKey( absPath.str() );
         FileStamp    stamp{};
-        const bool   bStamped   = FileUtil::getFileStamp( FileUtil::toDiskPath( absPath ), stamp );
+        const bool   bStamped   = FileUtil::getFileStamp( absPath, stamp );
         uint64       serialSeen = 0;
         bool         bHadEntry  = false;
         if ( bStamped )
@@ -170,11 +170,11 @@ namespace sw
         return hash;
     }
 
-    void ContentHashCache::recordOwnWrite( string_view filePath )
+    void ContentHashCache::recordOwnWrite( const AbsolutePath& filePath )
     {
-        const string      key = makeKey( filePath );
+        const string      key = makeKey( filePath.str() );
         FileStamp         stamp{};
-        const bool        bFile = FileUtil::getFileStamp( FileUtil::toDiskPath( filePath ), stamp );
+        const bool        bFile = FileUtil::getFileStamp( filePath, stamp );
         ScopedLock<mutex> lock{ _mutex };
         ++_writeSerial;
         if ( bFile )
@@ -185,14 +185,14 @@ namespace sw
 
     AbsolutePath ContentHashCache::makeLocalCachePath()
     {
-        return AbsolutePath::tryMake( FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "ContentHashCache.bin" ) ).value();
+        return ProcessRoots::get()._derivedData.join( "ContentHashCache.bin" );
     }
 
     expected<void> ContentHashCache::load( const AbsolutePath& cachePath )
     {
         {
             ScopedLock<mutex> lock{ _mutex };
-            _cachePath = cachePath.str();
+            _cachePath = cachePath;
         }
         vector<uint8> bytes;
         if ( FileUtil::isRegularFile( cachePath ) == false )
@@ -235,7 +235,7 @@ namespace sw
     expected<void> ContentHashCache::save() const
     {
         vector<uint8> bytes;
-        string        cachePath;
+        AbsolutePath  cachePath;
         {
             ScopedLock<mutex> lock{ _mutex };
             if ( _cachePath.empty() )
@@ -260,8 +260,8 @@ namespace sw
             }
             writer.writePodAt( countOffset, count );
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( cachePath ) ) == false || FileUtil::writeFile( FileUtil::toDiskPath( cachePath ), bytes.data(), bytes.size() ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be written", cachePath } );
+        if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, bytes.data(), bytes.size() ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "content hash cache cannot be written", cachePath.str() } );
         return {};
     }
 

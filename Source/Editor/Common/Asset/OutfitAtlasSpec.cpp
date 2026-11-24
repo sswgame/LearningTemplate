@@ -137,7 +137,7 @@ namespace sw::editor
                     const string&                texture = findTexture( map, part._name );
                     RawImageData                 image;
                     const optional<AbsolutePath> textureFile = editor::getSubsystem<AssetPaths>().toDiskPath( texture );
-                    if ( textureFile.has_value() == false || RawImageData::loadImage( textureFile->str(), image ) == false || image.isValid() == false )
+                    if ( textureFile.has_value() == false || RawImageData::loadImage( *textureFile, image ) == false || image.isValid() == false )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMapTexture", "Outfit atlas map '%#': texture '%#' of part '%#' could not be read", map._name.c_str(), texture.c_str(), part._name.c_str() );
                         return false;
@@ -261,7 +261,7 @@ namespace sw::editor
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
                     const optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
-                    if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( imageFile->str(), listAtlas[mapIndex], atlasSize, atlasSize ) == false )
+                    if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( *imageFile, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
                         return false;

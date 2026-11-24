@@ -11,7 +11,7 @@ using namespace sw;
 SW_TEST_CASE( BugReportTest, ReportThatVanishedIsNotAnError )
 {
     BugReport report;
-    SW_EXPECT_FALSE( BugReport::readInfo( test::makeScratchPath( "SwNoSuchBugReport" ).str(), report ) );
+    SW_EXPECT_FALSE( BugReport::readInfo( test::makeScratchPath( "SwNoSuchBugReport" ), report ) );
 }
 
 /** @brief [BugReportTest] 재현 환경(플랫폼 · 타깃 · 씬 · 설정 해시)과 입력 기록 길이가 info.txt 를 돌아 그대로 온다 */
@@ -27,10 +27,10 @@ SW_TEST_CASE( BugReportTest, EnvironmentAndInputPropertiesRoundTrip )
     written._configHash      = BugReport::formatHash( 42 );
     written._inputFrameCount = 120;
     written._inputSeconds    = 2.0f;
-    SW_REQUIRE_TRUE( written.writeInfo( directory.str() ) );
+    SW_REQUIRE_TRUE( written.writeInfo( directory ) );
 
     BugReport read;
-    SW_REQUIRE_TRUE( BugReport::readInfo( directory.str(), read ) );
+    SW_REQUIRE_TRUE( BugReport::readInfo( directory, read ) );
     SW_EXPECT_EQUAL( string( "Windows" ), read._platform );
     SW_EXPECT_EQUAL( string( "App" ), read._target );
     SW_EXPECT_EQUAL( string( "0123456789abcdef" ), read._sceneHash );
@@ -64,19 +64,19 @@ SW_TEST_CASE( BugReportTest, FolderHashFollowsBytesAndNames )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "a.json" ), "{}" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "b.json" ), "[1]" ) );
     uint64 first = 0;
-    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory.str(), first ) );
+    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, first ) );
     uint64 again = 0;
-    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory.str(), again ) );
+    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, again ) );
     SW_EXPECT_EQUAL( first, again );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "b.json" ), "[2]" ) );
     uint64 changedBytes = 0;
-    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory.str(), changedBytes ) );
+    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, changedBytes ) );
     SW_EXPECT_TRUE( changedBytes != first );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "b.json" ), "[1]" ) );
     SW_REQUIRE_TRUE( FileUtil::renamePath( directory.join( "b.json" ), directory.join( "c.json" ) ) );
     uint64 renamed = 0;
-    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory.str(), renamed ) );
+    SW_REQUIRE_TRUE( BugReport::computeFolderHash( directory, renamed ) );
     SW_EXPECT_TRUE( renamed != first );
 }

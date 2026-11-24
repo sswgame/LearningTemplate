@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -29,12 +30,12 @@ namespace sw
          *          같은 뿌리에서 pid 가 다시 쓰여도 겹치지 않는다: 동시에 살아 있는 두 프로세스는 pid 가 다르고, 앞 프로세스는 이미 끝나 사본이 매핑돼 있지 않으므로
          *          새 프로세스의 매니저가 시작할 때 `removeCopies` 로 지우고(못 지워도 쓰기가 덮는다) 번호를 1 부터 다시 쓴다.
          */
-        static string getDirectory();
+        static AbsolutePath getDirectory();
 
         /**
          * @brief @p directoryPath 아래의 복사본(파일 · Windows 의 복사본 폴더 · 디버그 심볼 · 쓰다 만 임시 파일)을 지우고, 지운 수를 반환합니다.
          * @details 아직 올라와 있는 복사본은 OS 가 지우기를 거절하므로(Windows) 남는다 — 실행 뿌리째 주인이 거둔다.
          */
-        static uint32 removeCopies( string_view directoryPath );
+        static uint32 removeCopies( const AbsolutePath& directoryPath );
     };
 } // namespace sw

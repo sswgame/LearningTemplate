@@ -27,7 +27,7 @@ namespace sw::editor
             {
                 outListTable.clear();
                 bool bAllRead{ true };
-                for ( const string& tablePath : sheet._listTablePath )
+                for ( const AbsolutePath& tablePath : sheet._listTablePath )
                 {
                     SourceStringTable& table = outListTable.emplace_back();
                     if ( const expected<void> read = table.loadFromFile( tablePath ); read.has_value() == false )
@@ -41,11 +41,11 @@ namespace sw::editor
             }
 
             /** @brief 번역 테이블 하나를 읽습니다. 파일이 없으면 빈 테이블로 true 이고, 있는데 못 읽으면 false 입니다. */
-            [[nodiscard]] static bool readTranslation( const string& path, string_view culture, TranslationTable& outTable )
+            [[nodiscard]] static bool readTranslation( const AbsolutePath& path, string_view culture, TranslationTable& outTable )
             {
                 outTable = TranslationTable{};
                 outTable.setCulture( culture );
-                if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) == false )
+                if ( FileUtil::exists( path ) == false )
                     return true;
                 const expected<void> read = outTable.loadFromFile( path );
                 if ( read.has_value() )
@@ -113,8 +113,7 @@ namespace sw::editor
                 bool bAllWritten{ true };
                 for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
                 {
-                    const optional<AbsolutePath> tableFile = FileUtil::requireAbsolutePath( sheet._listTablePath[tableIndex] );
-                    if ( tableFile.has_value() == false || listTable[tableIndex].saveToFile( *tableFile ) == false )
+                    if ( listTable[tableIndex].saveToFile( sheet._listTablePath[tableIndex] ) == false )
                     {
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.StringTableCouldNot", "String table '%#' could not be written", sheet._listTablePath[tableIndex].c_str() );
                         bAllWritten = false;
@@ -124,11 +123,10 @@ namespace sw::editor
                 {
                     if ( listWritable[cultureIndex] == 0 )
                         continue;
-                    const string path = LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] );
-                    if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( FileUtil::toDiskPath( path ) ) == false )
+                    const AbsolutePath path = LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] );
+                    if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
                         continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
-                    const optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( path );
-                    if ( translationFile.has_value() == false || listTranslation[cultureIndex].saveToFile( *translationFile ) == false )
+                    if ( listTranslation[cultureIndex].saveToFile( path ) == false )
                     {
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot", "Translation table '%#' could not be written", path.c_str() );
                         bAllWritten = false;
@@ -169,14 +167,14 @@ namespace sw::editor
         return false;
     }
 
-    string EditorDataTableCommands::getGameDataFolderPath()
+    AbsolutePath EditorDataTableCommands::getGameDataFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kDataFolder ) );
     }
 
     bool EditorDataTableCommands::loadLocalizationProject( string_view projectPathView, LocalizationSheet& outSheet )
     {
-        const string projectPath( projectPathView ); // @p outSheet 의 경로를 넘겨받았을 수 있으므로 비우기 전에 복사한다
+        const AbsolutePath projectPath( FileUtil::toDiskPath( projectPathView ) ); // @p outSheet 의 경로를 넘겨받았을 수 있으므로 비우기 전에 복사한다
         outSheet = LocalizationSheet{};
         LocalizationProject project;
         if ( const expected<void> read = project.loadFromFile( projectPath ); read.has_value() == false )
@@ -184,7 +182,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorDataTableCommands.LocalizationProjectCannotRead", "Localization project cannot be read: %# (%#)", read.error().message(), read.error().detail() );
             return false;
         }
-        outSheet._projectPath   = string( projectPath );
+        outSheet._projectPath   = projectPath;
         outSheet._sourceCulture = project._sourceCulture;
         outSheet._listCulture   = project._listCulture;
         for ( const string& tableName : project._listStringTable )
@@ -197,8 +195,8 @@ namespace sw::editor
         vector<TranslationTable>  listTranslation( outSheet._listCulture.size() );
         for ( size_t cultureIndex = 0; cultureIndex < outSheet._listCulture.size(); ++cultureIndex )
         {
-            const string path = LocalizationProject::makeTranslationPath( projectPath, outSheet._listCulture[cultureIndex] );
-            bAllRead          = EditorDataTableCommandsInternal::readTranslation( path, outSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) && bAllRead;
+            const AbsolutePath path = LocalizationProject::makeTranslationPath( projectPath, outSheet._listCulture[cultureIndex] );
+            bAllRead                = EditorDataTableCommandsInternal::readTranslation( path, outSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) && bAllRead;
         }
 
         for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
@@ -223,9 +221,9 @@ namespace sw::editor
         return bAllRead;
     }
 
-    void EditorDataTableCommands::collectLocalizationFiles( const LocalizationSheet& sheet, vector<string>& outListPath )
+    void EditorDataTableCommands::collectLocalizationFiles( const LocalizationSheet& sheet, vector<AbsolutePath>& outListPath )
     {
-        for ( const string& tablePath : sheet._listTablePath )
+        for ( const AbsolutePath& tablePath : sheet._listTablePath )
             outListPath.push_back( tablePath );
         for ( const string& culture : sheet._listCulture )
             outListPath.push_back( LocalizationProject::makeTranslationPath( sheet._projectPath, culture ) );
@@ -235,11 +233,11 @@ namespace sw::editor
     {
         using Internal = EditorDataTableCommandsInternal;
         // 표 하나라도 잠그지 않았으면(읽기 전용) 아무것도 쓰지 않는다 — 반만 쓴 프로젝트를 남기지 않고, 패널 저장 · 표 단추가 같은 확인을 지난다.
-        vector<string> listPath;
+        vector<AbsolutePath> listPath;
         collectLocalizationFiles( inoutSheet, listPath );
-        for ( const string& path : listPath )
+        for ( const AbsolutePath& filePath : listPath )
         {
-            if ( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) )
+            if ( EditorContentWrite::warnIfReadOnly( filePath, EditorContentWriteKind::Save ) )
                 return false;
         }
         // 디스크의 지금 내용 위에 고친 줄만 적용한다. 그래야 수집기가 적은 출처, 번역가 메모, 검토 표시가 유지된다.
@@ -254,7 +252,7 @@ namespace sw::editor
         vector<uint8>            listWritable( inoutSheet._listCulture.size(), 1 );
         for ( size_t cultureIndex = 0; cultureIndex < inoutSheet._listCulture.size(); ++cultureIndex )
         {
-            const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
+            const AbsolutePath path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
             if ( Internal::readTranslation( path, inoutSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot2", "Translation table '%#' could not be read - it is not overwritten (fix the file and save again)", path.c_str() );
@@ -275,28 +273,28 @@ namespace sw::editor
         inoutSheet._listRemovedKey.clear();
 
         // 올린 프로젝트가 아니면 NotTracked — 다시 읽을 것이 없다. 저장은 끝났으니 다시 읽기 실패(관리자가 오류를 남겼다)는 실행 중 글이 예전 것이라는 알림이다.
-        const bool bReloadFailed = editor::getSubsystem<LocalizationManager>().reloadChangedFile( inoutSheet._projectPath ) == ReloadResult::Failed;
+        const bool bReloadFailed = editor::getSubsystem<LocalizationManager>().reloadChangedFile( inoutSheet._projectPath.str() ) == ReloadResult::Failed;
         SW_LOG_INFO_ID( "EditorDataTableCommands.SavedLocalizationProject", "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
         if ( bReloadFailed )
             SW_LOG_WARNING_ID( "EditorDataTableCommands.RunningGameKeepsPrevious", "The running game keeps the previous text of '%#' until it reloads", inoutSheet._projectPath.c_str() );
         return true;
     }
 
-    bool EditorDataTableCommands::collectGameDataFiles( string_view dataFolder, vector<GameDataFileEntry>& outList )
+    bool EditorDataTableCommands::collectGameDataFiles( const AbsolutePath& dataFolder, vector<GameDataFileEntry>& outList )
     {
         outList.clear();
 
-        vector<string> listFile;
-        const bool     bListed = FileUtil::collectFiles( FileUtil::toDiskPath( dataFolder ), ".xml", listFile, false );
+        vector<AbsolutePath> listFile;
+        const bool           bListed = FileUtil::collectFiles( dataFolder, ".xml", listFile, false );
 
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
-            if ( FileUtil::hasExtension( file, ".xml" ) == false )
+            if ( FileUtil::hasExtension( file.str(), ".xml" ) == false )
                 continue;
 
             GameDataFileEntry entry{};
-            entry._fileName     = FileUtil::getFileNamePart( file );
-            entry._absolutePath = FileUtil::normalizeSeparators( file );
+            entry._fileName     = FileUtil::getFileNamePart( file.str() );
+            entry._absolutePath = file;
             outList.push_back( std::move( entry ) );
         }
         return bListed;

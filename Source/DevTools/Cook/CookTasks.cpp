@@ -59,11 +59,11 @@ namespace sw
              * @details 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고, 그것은 엔진 안에만 있다. 형식과 규칙을 쓰는 곳이 엔진 하나다.
              *          @p bCrowdSettingsLoaded 가 거짓이면 코드 기본 프레임율로 베이크하지 않고 VAT 베이크를 실패로 센다(군중 표는 쿠킹 세션 전에 읽는다 — 작업 키의 설정이다).
              */
-            [[nodiscard]] static bool cookSceneStage( const string& cookedDir, const CookStore& cookStore, const uint64 reflectionFingerprint, const AnimationCrowdSettings& crowdSettings,
+            [[nodiscard]] static bool cookSceneStage( const AbsolutePath& cookedDir, const CookStore& cookStore, const uint64 reflectionFingerprint, const AnimationCrowdSettings& crowdSettings,
                                                       bool bCrowdSettingsLoaded )
             {
-                const string& resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-                uint32        sceneFailedCount = 0;
+                const AbsolutePath resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                uint32             sceneFailedCount = 0;
                 // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
                 const SceneEngineServices& sceneServices = engine::getSubsystem<SceneManager>().getEngineServices();
                 // 쿠커별 시간(`Headless.CookStageTimes`) — 씬 쿠킹 병렬화가 빌드 시간을 줄일 수 있는지의 근거다.
@@ -131,7 +131,7 @@ namespace sw
              *          `CookSession` 을 열기 **전에** 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
              *          쿠킹 요청이 만드는 바이너리와 그 출처도 같은 까닭으로 여기서 모아 @p outMapRequestedBinary 로 돌려준다(팩 단계는 받기만 한다).
              */
-            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, string_view cookedDir, unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )
+            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, const AbsolutePath& cookedDir, unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )
             {
                 // 셰이더 쿠커는 렌더러에 있다 — 렌더러를 짓지 않는 구성(전용 서버)의 팩에는 셰이더 바이너리가 없어 할 일이 없다.
                 IShaderCookService* const pService = IShaderCookService::find();
@@ -157,21 +157,21 @@ namespace sw
              * @details 빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
              *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
              */
-            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const string& cookedDir, const CookStore& cookStore,
+            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const AbsolutePath& cookedDir, const CookStore& cookStore,
                                                      unordered_map<string, vector<vector<string>>>&& mapRequestedShaderBinary )
             {
                 const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
 
                 PackConfig         packConfig;
                 const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath.str() ) != ConfigReadResult::Loaded )
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
                     return false;
                 }
 
                 PackCookParams params;
-                params._projectRoot  = ProcessRoots::get()._project.str(); // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
+                params._projectRoot  = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
                 params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 params._cookedDir    = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
@@ -198,8 +198,8 @@ namespace sw
                 string build;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, build );
                 if ( build.empty() )
-                    return PackPatchBuilder::writeNoPatchingRecord( FileUtil::joinPath( params._packOutputDir, PackBuildRecord::kFileName ) );
-                return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, FileUtil::joinPath( params._packOutputDir, PackBuildRecord::kFileName ) );
+                    return PackPatchBuilder::writeNoPatchingRecord( params._packOutputDir.join( PackBuildRecord::kFileName ) );
+                return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, params._packOutputDir.join( PackBuildRecord::kFileName ) );
             }
 
             /**
@@ -214,7 +214,7 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::PATCH_DIR, params._outputDirectory );
                 // 서명 — 개인 키는 저장소 밖 파일(`-patch-sign-key`)에서만 읽는다. 키를 줬는데 읽지 못하거나 제공자가 없으면 서명 없는 패치로 대신 만들지 않고 멈춘다.
                 // 제공자는 GameFramework 가 프로세스 범위에 공개한 모듈 서브시스템의 멤버다(`OpenSSLNetSecuritySubsystem` 이 든 `OpenSSLNetSecurityProvider`).
-                string signKeyPath;
+                AbsolutePath signKeyPath;
                 (void)commandLine.getArgument( CommandLineArgument::PATCH_SIGN_KEY, signKeyPath );
                 if ( signKeyPath.empty() == false )
                 {
@@ -224,15 +224,15 @@ namespace sw
                         SW_LOG_ERROR_ID( "Headless.PatchSignKeyGiven", "-patch-sign-key was given but no INetSecurityProvider is published (GameFramework is not loaded) - no patch is written" );
                         return false;
                     }
-                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( signKeyPath ), params._signer._privateKeyPem ) == false || params._signer._privateKeyPem.empty() )
+                    if ( FileUtil::readTextFile( signKeyPath, params._signer._privateKeyPem ) == false || params._signer._privateKeyPem.empty() )
                     {
-                        SW_LOG_ERROR_ID( "Headless.PatchSignKeyFile", "-patch-sign-key file '%#' could not be read or is empty - no patch is written", signKeyPath );
+                        SW_LOG_ERROR_ID( "Headless.PatchSignKeyFile", "-patch-sign-key file '%#' could not be read or is empty - no patch is written", signKeyPath.str() );
                         return false;
                     }
                 }
                 PackConfig         packConfig;
                 const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath.str() ) != ConfigReadResult::Loaded )
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
                     return false;
@@ -250,13 +250,13 @@ namespace sw
             static bool runCookShadersTask( HeadlessTaskContext& context )
             {
                 const CommandLineManager& commandLine = context._commandLine;
-                string                    cookedDir;
+                AbsolutePath              cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 // `-shader-request-dir` 는 모든 퍼뮤테이션 대신 지난 실행의 요청 기록만 컴파일해 셰이더 DDC 를 채운다 — 쿠킹본(스테이징 · 매니페스트 · 스탬프)은 쓰지 않는다.
-                string requestDir;
+                AbsolutePath requestDir;
                 if ( commandLine.getArgument( CommandLineArgument::SHADER_REQUEST_DIR, requestDir ) )
                     return ShaderRequestLog::warmFromFolder( requestDir );
-                SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessCookShaders", "Starting Headless (CookShaders) -> '%#'...", cookedDir.str() );
                 // 명령줄 백엔드(`-vulkan` …)를 주면 그 형식만, 주지 않으면 네 형식을 모두 굽는다(`ShaderTargetFormat::Count`).
                 ShaderTargetFormat shaderTarget = ShaderTargetFormat::Count;
                 RHIBackend         commandLineBackend{};
@@ -287,7 +287,7 @@ namespace sw
             static bool runVerifyShadersTask( HeadlessTaskContext& context )
             {
                 const CommandLineManager& commandLine = context._commandLine;
-                string                    cookedDir;
+                AbsolutePath              cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 // 굽기와 같은 규칙 — 명령줄 백엔드(`-dx12` …)를 주면 그 형식만, 주지 않으면 네 형식 모두를 본다(그 형식만 구운 폴더를 다른 형식으로 판정하지 않는다).
                 RHIBackend                commandLineBackend{};
@@ -301,7 +301,7 @@ namespace sw
                     bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }
                 if ( bAllCurrent )
-                    SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for %#", cookedDir, bOneBackend ? "the command-line backend" : "every backend" );
+                    SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for %#", cookedDir.str(), bOneBackend ? "the command-line backend" : "every backend" );
                 return bAllCurrent;
             }
 
@@ -321,14 +321,14 @@ namespace sw
                 const bool                bCookPacks  = isFlagGiven( commandLine, CommandLineArgument::COOK_PACKS );
                 const bool                bCookAll    = isFlagGiven( commandLine, CommandLineArgument::COOK_ALL );
                 const bool                bCookScenes = isFlagGiven( commandLine, CommandLineArgument::COOK_SCENES );
-                string                    cookedDir;
+                AbsolutePath              cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 if ( cookedDir.empty() )
                 {
                     SW_LOG_ERROR_ID( "Headless.CookingNeedsCookedDir", "Cooking needs -cooked-dir=<folder> (the staging folder of cooked scenes and prefabs)" );
                     return false;
                 }
-                SW_LOG_INFO_ID( "Headless.StartingHeadlessCook", "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
+                SW_LOG_INFO_ID( "Headless.StartingHeadlessCook", "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir.str() );
                 AnimationCrowdSettings crowdSettings{};
                 const bool             bCrowdSettingsLoaded = crowdSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
                 expected<CookStore>    localStore           = CookStore::makeLocal();

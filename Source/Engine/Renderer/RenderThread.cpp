@@ -21,7 +21,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
-#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
@@ -57,7 +56,8 @@ namespace sw
              */
             struct ScreenshotFileWrite
             {
-                string                     _path;
+                AbsolutePath               _path;     ///< 쓸 파일. 바이트 요청이면 비었다
+                string                     _name;     ///< 로그에 남길 이름(`ScreenshotRequest::_name`)
                 vector<uint8>              _bytes;    ///< GPU 에서 읽은 그대로의 바이트
                 RHITextureMipSpan          _layout{}; ///< `_pData` 는 비운다 - 워커는 `_bytes` 로 읽는다
                 RHIFormat                  _format{ RHIFormat::R8G8B8A8_UNORM };
@@ -65,7 +65,7 @@ namespace sw
                 shared_ptr<atomic<uint32>> _pInFlight;           ///< 실행 중 요청: 쓰는 중인 수(0 이 될 때까지 다음 요청을 꺼내지 않는다)
                 ScreenshotWriteKind        _kind{ ScreenshotWriteKind::Requested };
                 uint32                     _ticket{ 0 };                      ///< 실행 중 요청의 표(`ScreenshotRequestQueue::put` · `putForPNGBytes`)
-                ScreenshotOutput           _output{ ScreenshotOutput::File }; ///< 실행 중 요청: PNG 바이트면 `_path` 는 요청 이름이고 파일을 쓰지 않는다
+                ScreenshotOutput           _output{ ScreenshotOutput::File }; ///< 실행 중 요청: PNG 바이트면 파일을 쓰지 않는다
             };
 
             /** @brief 바이트 요청의 PNG 를 만들어 우편함에 둔다(`requestScreenshotPNGBytes`). 풀지 못하면 실패로 알린다. */
@@ -78,7 +78,7 @@ namespace sw
                     ImageFileWriter::encodePNGRGBA8( rgbaBytes, write._layout._width, write._layout._height, pngBytes );
                 const bool bEncoded = bUnpacked && pngBytes.empty() == false;
                 if ( bEncoded == false )
-                    SW_LOG_WARNING_ID( "Screenshot.BytesNotEncoded", "Screenshot byte request '%#' was not encoded", write._path.c_str() );
+                    SW_LOG_WARNING_ID( "Screenshot.BytesNotEncoded", "Screenshot byte request '%#' was not encoded", write._name.c_str() );
                 if ( write._pMailbox != nullptr )
                     write._pMailbox->reportCompletedPNGBytes( write._ticket, bEncoded, std::move( pngBytes ) );
             }
@@ -94,7 +94,7 @@ namespace sw
                     --*write._pInFlight;
                     return;
                 }
-                (void)FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( write._path ) ); // 실패하면 아래 쓰기가 경로와 함께 알린다
+                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
                 const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
                 if ( write._kind == ScreenshotWriteKind::Packet )
                 {
@@ -180,11 +180,7 @@ namespace sw
         , _scenePendingMutex{}
         , _arrScenePending{}
         , _scenePendingCount{ 0 }
-        , _requestedScreenshotPath{}
-        , _requestedScreenshotTicket{ 0 }
-        , _requestedScreenshotTexture{ 0 }
-        , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
-        , _requestedScreenshotOutput{ ScreenshotOutput::File }
+        , _requestedScreenshot{}
         , _requestedScreenshotWaitFrames{ 0 }
         , _pRequestedScreenshotWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }
         , _pPendingTargetRead{}
@@ -607,7 +603,7 @@ namespace sw
         takeScreenshotRequest();
         if ( _pFrameRenderer != nullptr )
         {
-            const bool bRequestedPresent = _requestedScreenshotPath.empty() == false && _requestedScreenshotTexture == 0;
+            const bool bRequestedPresent = _requestedScreenshot._ticket != 0 && _requestedScreenshot._texture == 0;
             _pFrameRenderer->getCapture().setPresentEnabled( _bScenarioCaptureEnabled.load( std::memory_order_acquire ) || bRequestedPresent );
         }
 
@@ -760,10 +756,11 @@ namespace sw
         {
             auto pWrite       = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
             pWrite->_path     = packet._screenshotPath;
+            pWrite->_name     = packet._screenshotPath.str();
             pWrite->_pMailbox = RenderThreadInternal::findMailbox();
             pWrite->_format   = constant::render::kBackBufferFormat;
             pWrite->_kind     = RenderThreadInternal::ScreenshotWriteKind::Packet;
-            if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout ) )
+            if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_name, pWrite->_bytes, pWrite->_layout ) )
             {
                 pWrite->_layout._pData = nullptr;
                 engine::getSubsystem<TaskManager>()
@@ -886,24 +883,20 @@ namespace sw
     void RenderThread::takeScreenshotRequest()
     {
         // 앞 요청을 워커가 쓰는 중이면 꺼내지 않는다 - 표의 결과가 요청 순서대로 나오게(끝 차단 `hasUnfinishedRequest` 가 받은 수와 처리 수를 견준다).
-        if ( _requestedScreenshotPath.empty() == false || _pRequestedScreenshotWritesInFlight->load() > 0 )
+        if ( _requestedScreenshot._ticket != 0 || _pRequestedScreenshotWritesInFlight->load() > 0 )
             return;
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         ScreenshotRequest             request;
         if ( pMailbox == nullptr || pMailbox->take( request ) == false )
             return;
-        _requestedScreenshotPath.swap( request._path );
-        _requestedScreenshotTicket  = request._ticket;
-        _requestedScreenshotTexture = request._texture;
-        _requestedScreenshotFormat  = request._format;
-        _requestedScreenshotOutput  = request._output;
+        _requestedScreenshot = std::move( request );
         // 렌더 타깃은 이번 프레임에 그려지므로 기다리지 않는다. Present 캡처는 켠 뒤 한 프레임을 더 그린다.
-        _requestedScreenshotWaitFrames = _requestedScreenshotTexture == 0 ? RenderThreadInternal::kPresentCaptureWaitFrames : 0;
+        _requestedScreenshotWaitFrames = _requestedScreenshot._texture == 0 ? RenderThreadInternal::kPresentCaptureWaitFrames : 0;
     }
 
     void RenderThread::writeRequestedScreenshot()
     {
-        if ( _requestedScreenshotPath.empty() || _pFrameRenderer == nullptr )
+        if ( _requestedScreenshot._ticket == 0 || _pFrameRenderer == nullptr )
             return;
         if ( _requestedScreenshotWaitFrames > 0 )
         {
@@ -913,18 +906,19 @@ namespace sw
 
         // 그 프레임의 그림은 지금만 있어 GPU 읽기는 여기(디바이스 스레드)서 하고, 풀기 · 인코딩 · 쓰기는 워커가 한다(패킷 사진과 같다).
         // 예전에는 장마다 이 스레드에서 써 다음 프레임이 PNG 인코딩만큼 늦었다. 끝 알림(`reportCompleted`)은 워커가 다 쓴 뒤 한다.
-        auto pWrite        = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
-        pWrite->_path      = std::move( _requestedScreenshotPath );
-        pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
-        pWrite->_pInFlight = _pRequestedScreenshotWritesInFlight;
-        pWrite->_ticket    = _requestedScreenshotTicket;
-        pWrite->_output    = _requestedScreenshotOutput;
-        pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::render::kBackBufferFormat : _requestedScreenshotFormat;
-        _requestedScreenshotPath.clear();
-        const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout )
-                                                                       : _pFrameRenderer->getCapture().readbackTexture( _requestedScreenshotTexture, pWrite->_bytes, pWrite->_layout );
-        pWrite->_layout._pData      = nullptr;
-        _requestedScreenshotTexture = 0;
+        const ScreenshotRequest request = std::move( _requestedScreenshot );
+        _requestedScreenshot            = ScreenshotRequest{};
+        auto pWrite                     = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
+        pWrite->_path                   = request._path;
+        pWrite->_name                   = request._name;
+        pWrite->_pMailbox               = RenderThreadInternal::findMailbox();
+        pWrite->_pInFlight              = _pRequestedScreenshotWritesInFlight;
+        pWrite->_ticket                 = request._ticket;
+        pWrite->_output                 = request._output;
+        pWrite->_format                 = request._texture == 0 ? constant::render::kBackBufferFormat : request._format;
+        const bool bRead                = request._texture == 0 ? readPresentedBytes( request._name, pWrite->_bytes, pWrite->_layout )
+                                                                : _pFrameRenderer->getCapture().readbackTexture( request._texture, pWrite->_bytes, pWrite->_layout );
+        pWrite->_layout._pData          = nullptr;
         if ( bRead )
         {
             (void)_pRequestedScreenshotWritesInFlight->fetch_add( 1 ); // 제출 전에 센다 - 다음 프레임의 `takeScreenshotRequest` 가 쓰는 중임을 놓치지 않는다
@@ -933,7 +927,7 @@ namespace sw
                 .submit();
             return;
         }
-        SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", pWrite->_path.c_str() );
+        SW_LOG_WARNING_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", pWrite->_name.c_str() );
         if ( pWrite->_pMailbox == nullptr )
             return; // 우편함이 먼저 내려갔으면 알릴 곳이 없다
         if ( pWrite->_output == ScreenshotOutput::PNGBytes )

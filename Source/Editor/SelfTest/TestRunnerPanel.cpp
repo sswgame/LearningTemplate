@@ -43,7 +43,7 @@ namespace sw::editor
             static const ImVec4 kFailColor;
 
             /** @brief 이 실행 파일이 있는 폴더(Bin)입니다. 테스트 실행 파일 · 시나리오 실행의 작업 폴더입니다. */
-            static string getBinDirectory() { return FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ); }
+            static string getBinDirectory() { return FileUtil::getDirectoryPart( FileUtil::getExecutablePath().str() ); }
 
             /** @brief 지금 백엔드의 App 명령줄 플래그(`-dx12` …)입니다. 모르면 빈 글이라 App 이 설정의 기본 백엔드로 뜬다. */
             static string makeBackendArgument()
@@ -192,9 +192,9 @@ namespace sw::editor
     {
         if ( _bScenarioListDirty == SW_TRUE )
         {
-            _bScenarioListDirty = SW_FALSE;
-            const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-            vector<string> listFilePath;
+            _bScenarioListDirty       = SW_FALSE;
+            const AbsolutePath   root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+            vector<AbsolutePath> listFilePath;
             // 옛 작업 도메인 자리의 찌꺼기는 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
             if ( EditorContentScan::collectFiles( root, ".xml", listFilePath, true ) == false )
                 listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다

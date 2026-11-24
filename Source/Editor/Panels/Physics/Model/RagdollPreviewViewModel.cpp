@@ -112,7 +112,7 @@ namespace sw::editor
 
     bool RagdollPreviewViewModel::saveDocument()
     {
-        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( FileUtil::toDiskPath( _loadedDiskPath ), _pDocument->getText() ) == false )
+        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( _loadedDiskPath, _pDocument->getText() ) == false )
         {
             _status = "The physics asset could not be saved - see the log";
             return false;
@@ -253,7 +253,7 @@ namespace sw::editor
         // 편집 사본 — 읽지 못하면 공유 캐시가 이미 거절했다.
         const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
                                                                                             : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
-        _loadedDiskPath                       = diskPath.has_value() ? diskPath->str() : string{};
+        _loadedDiskPath                       = diskPath.has_value() ? *diskPath : AbsolutePath{};
         _pDocument->clear();
         string text;
         if ( diskPath.has_value() && FileUtil::readTextFile( *diskPath, text ) )

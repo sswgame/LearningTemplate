@@ -49,7 +49,7 @@ namespace sw
         if ( gv_tracy )
             (void)TracyProfilerBackend::start( gv_tracyMemory );
         if ( gv_traceSaveOnExit.get().empty() == false )
-            ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit.get() );
+            ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit.getPath() );
         return SubsystemInitResult::Succeeded;
     }
 
@@ -58,7 +58,7 @@ namespace sw
         // 서비스 · 프로파일러가 아직 있다(기동 단계가 서비스보다 먼저 내려간다). 외부 출력은 프로세스 끝까지 켜져 있다 — 여기서는 요약 줄만 남긴다.
         TracyProfilerBackend::logSummary();
         if ( gv_traceSaveOnExit.get().empty() == false )
-            ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit.get(), getProcessName() );
+            ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), gv_traceSaveOnExit.getPath(), getProcessName() );
         const AssetLoadProfiler* const pAssetLoadProfiler = gv_assetLoadReport != 0 ? engine::findSubsystem<AssetLoadProfiler>() : nullptr;
         if ( pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->report( "session" );

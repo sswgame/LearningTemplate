@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -98,14 +99,14 @@ namespace sw
          * @details 실행 밖 파일(설정 · 빌드 트리의 판 머리)을 바꾸는 단계(`OverwriteConfig` · `RebuildModule`)의 짝이다. 되돌리기는 단계가 아니라 실행기의 끝 한 곳이라
          *          단계가 지거나 시나리오가 시한에 걸려도 빠지지 않는다(언리얼 자동화의 `AddCleanup` 자리).
          */
-        virtual void restoreFileAtEnd( string absolutePath, string originalText ) = 0;
+        virtual void restoreFileAtEnd( const AbsolutePath& absolutePath, string originalText ) = 0;
         /** @brief 맡긴 파일을 지금 모두 되돌리고 맡김을 비웁니다(`<RestoreOverwrites/>`). 하나라도 쓰지 못하면 false 입니다(오류는 쓰기가 남겼다). */
         [[nodiscard]] virtual bool restoreFilesNow() = 0;
 
         /** @brief 이 시나리오의 산출물 폴더입니다. */
-        virtual const string& getOutputDirectory() const = 0;
+        virtual const AbsolutePath& getOutputDirectory() const = 0;
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계가 파일을 쓸 때). */
-        virtual string resolveOutputPath( string_view file ) const = 0;
+        virtual AbsolutePath resolveOutputPath( string_view file ) const = 0;
         /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
         virtual uint32 getFrameIndex() const = 0;
         /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). */

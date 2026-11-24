@@ -140,7 +140,7 @@ namespace sw
 
 namespace sw
 {
-    AsyncLogSink::AsyncLogSink( string fixedLogFilePath )
+    AsyncLogSink::AsyncLogSink( AbsolutePath fixedLogFilePath )
         : _onLogWritten{}
         , _listOutput{}
         , _pFileOutput{ nullptr }
@@ -331,7 +331,7 @@ namespace sw
     {
         if ( _pFileOutput == nullptr )
             return {};
-        return _pFileOutput->getLogFolderPath();
+        return _pFileOutput->getLogFolderPath().str();
     }
 
     string AsyncLogSink::getLogFilePath()

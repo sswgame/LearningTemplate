@@ -102,7 +102,7 @@ namespace sw::editor
 
     bool VFXPreviewViewModel::saveDocument()
     {
-        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( FileUtil::toDiskPath( _loadedDiskPath ), _pDocument->getText() ) == false )
+        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( _loadedDiskPath, _pDocument->getText() ) == false )
         {
             _status = "The effect could not be saved - see the log";
             return false;
@@ -297,7 +297,7 @@ namespace sw::editor
         // 자동 갱신이 볼 내용 해시 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
         const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
                                                                                             : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
-        _loadedDiskPath                       = diskPath.has_value() ? diskPath->str() : string{};
+        _loadedDiskPath                       = diskPath.has_value() ? *diskPath : AbsolutePath{};
         _loadedContentHash                    = 0;
         _seenContentSerial                    = editor::getSubsystem<AssetHotReload>().getContentChangeSerial();
         if ( _loadedDiskPath.empty() == false )
@@ -313,7 +313,7 @@ namespace sw::editor
         // 편집 사본 — 읽지 못하면 공유 캐시가 이미 거절했다.
         string text;
         _pDocument->clear();
-        if ( _loadedDiskPath.empty() == false && FileUtil::readTextFile( FileUtil::toDiskPath( _loadedDiskPath ), text ) )
+        if ( _loadedDiskPath.empty() == false && FileUtil::readTextFile( _loadedDiskPath, text ) )
         {
             const expected<void> opened = _pDocument->load( *VFXEffectDef::StaticType(), text, assetPath );
             if ( opened.has_value() == false )
@@ -332,7 +332,7 @@ namespace sw::editor
         return updateContentHash( _loadedDiskPath, _loadedContentHash );
     }
 
-    bool VFXPreviewViewModel::updateContentHash( string_view diskPath, uint64& inoutHash )
+    bool VFXPreviewViewModel::updateContentHash( const AbsolutePath& diskPath, uint64& inoutHash )
     {
         const uint64 hash = ContentHash::computeFile( diskPath );
         if ( hash == 0 || hash == inoutHash )

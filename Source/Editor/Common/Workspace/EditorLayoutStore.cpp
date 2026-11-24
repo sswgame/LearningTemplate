@@ -38,38 +38,38 @@ namespace sw::editor
         return true;
     }
 
-    string EditorLayoutStore::getDefaultFolder()
+    AbsolutePath EditorLayoutStore::getDefaultFolder()
     {
         const AbsolutePath stateDirectory = EditorPaths::getEditorStateDirectory();
         if ( stateDirectory.empty() )
             return {};
-        return FileUtil::joinPath( stateDirectory.str(), kFolderName );
+        return stateDirectory.join( kFolderName );
     }
 
-    string EditorLayoutStore::makeImguiINIPath( string_view folder, string_view name )
+    AbsolutePath EditorLayoutStore::makeImguiINIPath( const AbsolutePath& folder, string_view name )
     {
         fixed_string<constant::buffer::kMax256> fileName;
         formatstring( fileName.data(), fileName.capacity(), "%#%#", name, kImguiSuffix );
-        return FileUtil::joinPath( folder, fileName );
+        return folder.join( fileName );
     }
 
-    string EditorLayoutStore::makeVisibilityPath( string_view folder, string_view name )
+    AbsolutePath EditorLayoutStore::makeVisibilityPath( const AbsolutePath& folder, string_view name )
     {
         fixed_string<constant::buffer::kMax256> fileName;
         formatstring( fileName.data(), fileName.capacity(), "%#%#", name, kVisibilitySuffix );
-        return FileUtil::joinPath( folder, fileName );
+        return folder.join( fileName );
     }
 
-    void EditorLayoutStore::collectNames( string_view folder, vector<string>& outListName )
+    void EditorLayoutStore::collectNames( const AbsolutePath& folder, vector<string>& outListName )
     {
         outListName.clear();
-        vector<string> listFile;
-        if ( FileUtil::isDirectory( FileUtil::toDiskPath( folder ) ) == false || FileUtil::collectFiles( FileUtil::toDiskPath( folder ), ".ini", listFile, false ) == false )
+        vector<AbsolutePath> listFile;
+        if ( FileUtil::isDirectory( folder ) == false || FileUtil::collectFiles( folder, ".ini", listFile, false ) == false )
             return;
         const string_view suffix{ kImguiSuffix };
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            const string fileName = FileUtil::getFileNamePart( filePath );
+            const string fileName = FileUtil::getFileNamePart( filePath.str() );
             if ( fileName.size() <= suffix.size() || StringUtil::endsWith( fileName, suffix ) == false )
                 continue;
             outListName.push_back( fileName.substr( 0, fileName.size() - suffix.size() ) );
@@ -77,22 +77,22 @@ namespace sw::editor
         VectorUtil::sort( outListName );
     }
 
-    bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility )
+    bool EditorLayoutStore::save( const AbsolutePath& folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility )
     {
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( folder ) == false )
             return false;
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( makeImguiINIPath( folder, name ) ), string( imguiINIText ) ) == false )
+        if ( FileUtil::writeTextFile( makeImguiINIPath( folder, name ), string( imguiINIText ) ) == false )
             return false;
         return panelVisibility.saveToFile( makeVisibilityPath( folder, name ) );
     }
 
-    bool EditorLayoutStore::load( string_view folder, string_view name, string& outImguiINIText, EditorPanelVisibility& outPanelVisibility )
+    bool EditorLayoutStore::load( const AbsolutePath& folder, string_view name, string& outImguiINIText, EditorPanelVisibility& outPanelVisibility )
     {
         outPanelVisibility._mapOpen.clear();
-        const string imguiPath = makeImguiINIPath( folder, name );
-        if ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( imguiPath ), outImguiINIText ) != OptionalFileRead::Read )
+        const AbsolutePath imguiPath = makeImguiINIPath( folder, name );
+        if ( FileUtil::readOptionalTextFile( imguiPath, outImguiINIText ) != OptionalFileRead::Read )
             return false;
-        const string visibilityPath = makeVisibilityPath( folder, name );
+        const AbsolutePath visibilityPath = makeVisibilityPath( folder, name );
         if ( outPanelVisibility.loadFromFile( visibilityPath ) == ConfigReadResult::Invalid )
         {
             outPanelVisibility._mapOpen.clear();
@@ -101,10 +101,10 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorLayoutStore::remove( string_view folder, string_view name )
+    bool EditorLayoutStore::remove( const AbsolutePath& folder, string_view name )
     {
-        const bool bImguiRemoved      = FileUtil::removeFile( FileUtil::toDiskPath( makeImguiINIPath( folder, name ) ) );
-        const bool bVisibilityRemoved = FileUtil::removeFile( FileUtil::toDiskPath( makeVisibilityPath( folder, name ) ) );
+        const bool bImguiRemoved      = FileUtil::removeFile( makeImguiINIPath( folder, name ) );
+        const bool bVisibilityRemoved = FileUtil::removeFile( makeVisibilityPath( folder, name ) );
         return bImguiRemoved && bVisibilityRemoved;
     }
 } // namespace sw::editor

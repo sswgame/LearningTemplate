@@ -125,31 +125,31 @@ namespace sw
         return unexpected( std::move( error ) );
     }
 
-    expected<void> PackStreamWriter::open( string_view packPath, const PackWriterDesc& desc )
+    expected<void> PackStreamWriter::open( const AbsolutePath& packPath, const PackWriterDesc& desc )
     {
         if ( _state != State::Closed || _packPath.empty() == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "pack stream writer writes one pack - make a new writer for the next", packPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "pack stream writer writes one pack - make a new writer for the next", packPath.str() } );
         const bool bBlockSizeValid = desc._blockSize >= kPackMinBlockSize && desc._blockSize <= kPackMaxBlockSize && ( desc._blockSize & ( desc._blockSize - 1 ) ) == 0;
         if ( bBlockSizeValid == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "pack block size must be a power of two within the format limits (PackConfig _blockSize)", packPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "pack block size must be a power of two within the format limits (PackConfig _blockSize)", packPath.str() } );
         if ( desc._writeWindowBytes == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "pack write window must not be zero (PackConfig _writeWindowBytes)", packPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "pack write window must not be zero (PackConfig _writeWindowBytes)", packPath.str() } );
         ICompressionCodec* pCodec = nullptr;
         if ( desc._compression != PackCompressionKind::None )
         {
             pCodec = PackCompressionUtil::findCodec( desc._compression );
             if ( pCodec == nullptr )
-                return unexpected( Error{ ErrorKind::NotFound, "pack compression type has no registered codec", packPath } );
+                return unexpected( Error{ ErrorKind::NotFound, "pack compression type has no registered codec", packPath.str() } );
         }
 
         _desc     = desc;
-        _packPath = string( packPath );
+        _packPath = packPath;
         _pCodec   = pCodec;
         _openWatch.restart();
         _state                          = State::Open;
-        const AbsolutePath packDiskPath = FileUtil::toDiskPath( packPath );
+        const AbsolutePath packDiskPath = packPath;
         if ( FileUtil::ensureParentDirectoryExists( packDiskPath ) == false )
-            return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath } );
+            return fail( Error{ ErrorKind::ExternalFailure, "pack parent folder cannot be made", packPath.str() } );
         // 앞 빌드 팩은 바꿔 끼우기 전까지 그대로라(임시 파일에 쓴다) 열기 뒤에 읽어도 된다.
         const expected<void> opened = _file.open( packDiskPath );
         if ( opened.has_value() == false )
@@ -165,7 +165,7 @@ namespace sw
 
     expected<void> PackStreamWriter::loadPreviousSlots()
     {
-        const bool bNoPrevious = _desc._layoutMode != PackLayoutMode::Slot || _desc._previousPackPath.empty() || FileUtil::exists( FileUtil::toDiskPath( _desc._previousPackPath ) ) == false;
+        const bool bNoPrevious = _desc._layoutMode != PackLayoutMode::Slot || _desc._previousPackPath.empty() || FileUtil::exists( _desc._previousPackPath ) == false;
         if ( bNoPrevious )
             return {};
         struct Placed
@@ -177,9 +177,9 @@ namespace sw
         vector<Placed> listPlaced;
         {
             PackReader reader; // 이 블록을 나가며 닫는다 — 바꿔 끼울 때 앞 팩을 쥐고 있지 않게
-            if ( reader.open( _desc._previousPackPath ) == false )
+            if ( reader.open( _desc._previousPackPath.str() ) == false )
             {
-                SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack", "Pack layout: previous pack '%#' could not be opened - the slot layout starts without it", _desc._previousPackPath );
+                SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack", "Pack layout: previous pack '%#' could not be opened - the slot layout starts without it", _desc._previousPackPath.str() );
                 return {};
             }
             vector<string> listPath;
@@ -203,7 +203,7 @@ namespace sw
             const uint64  nextBegin = index + 1 < listPlaced.size() ? listPlaced[index + 1]._offset : usedEnd;
             if ( nextBegin < placed._offset + placed._size )
             {
-                SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack3", "Pack layout: previous pack '%#' has overlapping payloads - the slot layout starts without it", _desc._previousPackPath );
+                SW_LOG_WARNING_ID( "PackWriter.PackLayoutPreviousPack3", "Pack layout: previous pack '%#' has overlapping payloads - the slot layout starts without it", _desc._previousPackPath.str() );
                 _mapPreviousSlot.clear();
                 return {};
             }
@@ -273,7 +273,7 @@ namespace sw
             }
         }
         if ( _listBlock.size() + listSlot.size() > MathUtil::kMaxUInt32 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "pack block count does not fit the 32-bit entry fields", _packPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "pack block count does not fit the 32-bit entry fields", _packPath.str() } );
 
         // 2. 압축 · CRC 는 블록마다 독립이라 병렬이다. 작은 창은 나누지 않는다 — 서비스가 없거나 워커가 없으면 `runParallel` 이 이 스레드에서 차례로 돈다.
         CompressJob job;
@@ -386,7 +386,7 @@ namespace sw
         if ( _state != State::Open )
         {
             _state = State::Closed;
-            return unexpected( Error{ ErrorKind::InvalidArgument, "pack stream writer is not open (or failed earlier)", _packPath } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "pack stream writer is not open (or failed earlier)", _packPath.str() } );
         }
         const expected<void> flushed = flushPending();
         if ( flushed.has_value() == false )
@@ -401,7 +401,7 @@ namespace sw
         expected<PackWriteResult> written = writeIndexAndCommit();
         if ( written.has_value() && bCompact )
         {
-            SW_LOG_INFO_ID( "PackWriter.SlotLayoutCompacted", "Pack layout: %# has %# hole bytes in %# payload bytes (over %# percent) - payloads are packed densely again", _packPath,
+            SW_LOG_INFO_ID( "PackWriter.SlotLayoutCompacted", "Pack layout: %# has %# hole bytes in %# payload bytes (over %# percent) - payloads are packed densely again", _packPath.str(),
                             holeBytes, regionBytes, _desc._maxHolePercent );
             written = compactCommitted();
         }
@@ -465,7 +465,7 @@ namespace sw
         appendIndex( _stringPoolBytes.data(), _stringPoolBytes.size() );
         appendIndex( &header, sizeof( PackHeader ) );
         if ( writeBytes( _file.getSize(), listIndexByte.data(), listIndexByte.size() ).has_value() == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "pack index could not be written (disk full?)", _packPath } );
+            return unexpected( Error{ ErrorKind::ExternalFailure, "pack index could not be written (disk full?)", _packPath.str() } );
 
         PackWriteResult result;
         if ( bBlockHash )
@@ -473,7 +473,7 @@ namespace sw
             PackDigest indexDigest;
             if ( listIndexByte.size() > static_cast<size_t>( MathUtil::kMaxInt32 ) ||
                  _desc._pDigestProvider->computeSHA256( listIndexByte.data(), static_cast<int32>( listIndexByte.size() ), indexDigest._arrByte ) == false )
-                return unexpected( Error{ ErrorKind::ExternalFailure, "pack index digest could not be computed", _packPath } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "pack index digest could not be computed", _packPath.str() } );
             result._indexDigest = indexDigest;
         }
         result._fileSize    = _file.getSize();
@@ -493,7 +493,7 @@ namespace sw
         // 원본은 조각으로 읽고(한 벡터로 들지 않는다) 새 파일은 임시 파일에 써서 바꿔 끼운다. 모두 덧붙이기라 내용 해시를 쓰면서 센다.
         _mapPreviousSlot.clear();
         _contentHash                = ContentHash::kInitialState;
-        const expected<void> opened = _file.open( FileUtil::toDiskPath( _packPath ) );
+        const expected<void> opened = _file.open( _packPath );
         if ( opened.has_value() == false )
             return unexpected( opened.error() );
         vector<uint8> chunk;
@@ -512,8 +512,8 @@ namespace sw
             for ( uint64 copied = 0; copied < storedSize; copied += chunk.size() )
             {
                 const uint64 size = storedSize - copied < PackWriterInternal::kCompactChunkBytes ? storedSize - copied : PackWriterInternal::kCompactChunkBytes;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( _packPath ), chunk, oldOffset + copied, size ) == false || chunk.size() != size )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "slot layout pack cannot be read back for compaction", _packPath } );
+                if ( FileUtil::readFile( _packPath, chunk, oldOffset + copied, size ) == false || chunk.size() != size )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "slot layout pack cannot be read back for compaction", _packPath.str() } );
                 const expected<void> appended = writeBytes( _file.getSize(), chunk.data(), chunk.size() );
                 if ( appended.has_value() == false )
                     return unexpected( appended.error() );

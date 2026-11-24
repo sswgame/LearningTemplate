@@ -205,44 +205,40 @@ namespace sw::editor
 
     bool EditorTransformCommands::saveComponentPreset( const Component* pComp, string_view presetName )
     {
-        const string folder   = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-        const string fileName = makeComponentPresetFileName( pComp, presetName );
+        const AbsolutePath folder   = EditorGlobalVariableCommands::getComponentPresetFolderPath();
+        const string       fileName = makeComponentPresetFileName( pComp, presetName );
         if ( folder.empty() || fileName.empty() )
         {
             SW_LOG_ERROR_ID( "EditorTransformCommands.ComponentPresetPresetFolder", "Component preset '%#': the preset folder of the active game could not be resolved", presetName );
             return false;
         }
-        return saveComponentPresetTo( pComp, FileUtil::joinPath( folder, fileName ) );
+        return saveComponentPresetTo( pComp, folder.join( fileName ) );
     }
 
-    bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, string_view filePath )
+    bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, const AbsolutePath& filePath )
     {
         const bool bInvalidPresetSaveArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || filePath.empty();
         if ( bInvalidPresetSaveArguments )
             return false;
 
-        string fullPath( filePath );
-        if ( StringUtil::endsWith( fullPath, EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
-        {
-            StringBuilder<constant::buffer::kMax256> pathBuilder;
-            pathBuilder.appendFormat( "%#%#", FileUtil::removeExtension( fullPath ), EditorTransformCommandsInternal::kPresetSuffix );
-            fullPath = string( pathBuilder.view() );
-        }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( fullPath ) ) == false )
+        AbsolutePath fullPath( filePath );
+        if ( StringUtil::endsWith( fullPath.str(), EditorTransformCommandsInternal::kPresetSuffix, true ) == false )
+            fullPath = fullPath.removeExtension().appendSuffix( EditorTransformCommandsInternal::kPresetSuffix );
+        if ( FileUtil::ensureParentDirectoryExists( fullPath ) == false )
             return false;
 
         // 저장 입구(`saveToFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
         return XMLSerializer::saveToFile( fullPath, pComp, *pComp->getTypeInfo() );
     }
 
-    bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, string_view presetFilePath )
+    bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, const AbsolutePath& presetFilePath )
     {
         const bool bInvalidPresetLoadArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || presetFilePath.empty();
         if ( bInvalidPresetLoadArguments )
             return false;
 
         string xmlData;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( presetFilePath ), xmlData ) == false )
+        if ( FileUtil::readTextFile( presetFilePath, xmlData ) == false )
             return false;
 
         return EditorTransformCommandsInternal::applyComponentXML( pComp, xmlData, "Apply Component Preset" );

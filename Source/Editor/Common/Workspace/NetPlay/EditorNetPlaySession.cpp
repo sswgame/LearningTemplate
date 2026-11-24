@@ -46,7 +46,7 @@ namespace sw::editor
         vector<string>          _listPendingLine{}; ///< 읽기 스레드가 넣는다(_mutex)
         string                  _label{};
         string                  _lastLine{};
-        string                  _tracePath{};
+        AbsolutePath            _tracePath{};
         NetEmulationReport      _emulationReport{};         ///< 마지막 `net.emulation stats` 답(게임 스레드)
         uint32                  _emulationReportCount{ 0 }; ///< 받은 보고 수(게임 스레드)
         NetStatsReport          _statsReport{};             ///< 마지막 `net.stats` 답(게임 스레드)
@@ -120,8 +120,8 @@ namespace sw::editor
     /** @brief 트레이스를 남겼을 프로세스 하나(이름 · 파일)입니다. */
     struct EditorNetPlayTraceSource
     {
-        string _label;
-        string _tracePath;
+        string       _label;
+        AbsolutePath _tracePath;
     };
 
     /** @brief 멈춤 잡의 입력입니다. UI 스레드가 만들어 넘긴다 - 워커는 이 사본만 본다. */
@@ -129,13 +129,13 @@ namespace sw::editor
     {
         vector<sw::thread*>              _listReader;      ///< 합류할 읽기 스레드(주인은 세션의 `_listStoppingProcess` - 잡이 끝날 때까지 산다)
         vector<EditorNetPlayTraceSource> _listTraceSource; ///< 트레이스를 켠 세션이면 프로세스마다 하나
-        string                           _traceDirectory;  ///< 비면 합치지 않는다
+        AbsolutePath                     _traceDirectory;  ///< 비면 합치지 않는다
     };
 
     /** @brief 멈춤 잡의 결과입니다. */
     struct EditorNetPlayStopResult
     {
-        string _mergedTracePath; ///< 합친 트레이스(없으면 빈 글)
+        AbsolutePath _mergedTracePath; ///< 합친 트레이스(없으면 빈 글)
     };
 
     /**
@@ -176,14 +176,14 @@ namespace sw::editor
                 return;
             // 종료 신호가 올라도 합류는 끝까지 한다 - 세션이 읽기 스레드를 남긴 채 사라지면 안 된다(합치기만 건너뛴다).
             if ( isStopRaised( readStopSignal( pState ) ) )
-                input._traceDirectory.clear();
+                input._traceDirectory = {};
             publish( pState, generation, runSessionJob( input ) );
         }
 
         /** @brief 트레이스를 남긴 프로세스의 파일을 모아 합칩니다. 둘 미만이면 빈 문자열입니다. */
-        static string mergeTraces( const EditorNetPlayStopInput& input )
+        static AbsolutePath mergeTraces( const EditorNetPlayStopInput& input )
         {
-            string mergedPath;
+            AbsolutePath mergedPath;
 #if !defined( SW_SHIPPING )
             if ( input._traceDirectory.empty() )
                 return mergedPath;
@@ -192,11 +192,11 @@ namespace sw::editor
             {
                 ProfilerTraceMergeInput mergeInput;
                 mergeInput._label     = source._label;
-                const bool bTraceRead = source._tracePath.empty() == false && FileUtil::readOptionalTextFile( FileUtil::toDiskPath( source._tracePath ), mergeInput._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
+                const bool bTraceRead = source._tracePath.empty() == false && FileUtil::readOptionalTextFile( source._tracePath, mergeInput._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
                 if ( bTraceRead )
                     listInput.push_back( std::move( mergeInput ) );
                 else
-                    SW_LOG_WARNING_ID( "NetPlay.NoTrace", "No trace from %# (%#)", source._label, source._tracePath );
+                    SW_LOG_WARNING_ID( "NetPlay.NoTrace", "No trace from %# (%#)", source._label, source._tracePath.str() );
             }
             if ( listInput.size() < 2 )
                 return mergedPath;
@@ -207,14 +207,14 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "NetPlay.TracesCouldNotMerged", "Traces could not be merged: %#", report );
                 return mergedPath;
             }
-            mergedPath = FileUtil::joinPath( input._traceDirectory, EditorNetPlaySession::kMergedTraceFileName );
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( mergedPath ), json ) == false )
+            mergedPath = input._traceDirectory.join( EditorNetPlaySession::kMergedTraceFileName );
+            if ( FileUtil::writeTextFile( mergedPath, json ) == false )
             {
-                SW_LOG_WARNING_ID( "NetPlay.MergedTraceCouldNot", "Merged trace could not be written to %#", mergedPath );
-                mergedPath.clear();
+                SW_LOG_WARNING_ID( "NetPlay.MergedTraceCouldNot", "Merged trace could not be written to %#", mergedPath.str() );
+                mergedPath = {};
                 return mergedPath;
             }
-            SW_LOG_INFO_ID( "NetPlay.TracesMerged", "Traces merged: %# -> %#", report, mergedPath );
+            SW_LOG_INFO_ID( "NetPlay.TracesMerged", "Traces merged: %# -> %#", report, mergedPath.str() );
             return mergedPath;
 #else
             (void)input;
@@ -281,10 +281,10 @@ namespace sw::editor
         stopAndWait(); // 다음 단계는 새 프로세스와 같은 자리다 - 남은 멈춤까지 끝낸다. 합친 트레이스는 아래에서 버린다
         _pendingSettings      = EditorNetPlaySettings{};
         _bMergedTraceUnopened = SW_FALSE;
-        _mergedTracePath.clear();
+        _mergedTracePath      = {};
     }
 
-    string EditorNetPlaySession::takeUnopenedMergedTrace()
+    AbsolutePath EditorNetPlaySession::takeUnopenedMergedTrace()
     {
         if ( _bMergedTraceUnopened == false )
             return {};
@@ -316,7 +316,7 @@ namespace sw::editor
         stopAndWait(); // 읽기 스레드를 남긴 채 사라지지 않는다. 합친 경로는 쓸 곳이 없다 - 로그에 남는다
     }
 
-    string EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
+    AbsolutePath EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
     {
 #if defined( SW_PLATFORM_WINDOWS )
         fixed_string<constant::buffer::kMax64> fileName;
@@ -324,7 +324,7 @@ namespace sw::editor
 #else
         const string_view fileName = pBaseName;
 #endif
-        return FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
+        return ProcessRoots::get()._binary.join( fileName );
     }
 
     void EditorNetPlaySession::readChildOutput( ChildProcess* pChild )
@@ -375,16 +375,14 @@ namespace sw::editor
         return port;
     }
 
-    string EditorNetPlaySession::makeTracePath( const string& fileStem ) const
+    AbsolutePath EditorNetPlaySession::makeTracePath( const string& fileStem ) const
     {
         if ( _traceDirectory.empty() )
             return {};
-        StringBuilder<constant::buffer::kMax256> pathBuilder;
-        pathBuilder.appendFormat( "%#/%#%#", _traceDirectory, fileStem, EditorNetPlaySessionInternal::kTraceExtension );
-        return string( pathBuilder.view() );
+        return _traceDirectory.join( fileStem ).appendSuffix( EditorNetPlaySessionInternal::kTraceExtension );
     }
 
-    bool EditorNetPlaySession::launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath )
+    bool EditorNetPlaySession::launchChild( const string& label, const AbsolutePath& executablePath, vector<string> listArgument, const AbsolutePath& tracePath )
     {
         unique_ptr<ChildProcess> pChild = make_unique<ChildProcess>();
         pChild->_label                  = label;
@@ -392,7 +390,7 @@ namespace sw::editor
         if ( tracePath.empty() == false )
         {
             StringBuilder<constant::buffer::kMax256> traceArgument;
-            traceArgument.appendFormat( "-gv_traceSaveOnExit=%#", tracePath );
+            traceArgument.appendFormat( "-gv_traceSaveOnExit=%#", tracePath.str() );
             listArgument.push_back( string( traceArgument.view() ) );
         }
         // 자동화 실행의 자식도 자동화 실행이다(EngineChildProcess) — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
@@ -403,7 +401,7 @@ namespace sw::editor
         ProcessOptions options;
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         options._bEndWithParent     = true; // 에디터가 죽으면 서버 · 클라이언트도 끝난다 — 고아가 포트를 쥐고 남지 않게(감사 E-15, 언리얼 PIE 별도 프로세스와 같다)
-        if ( FileUtil::exists( FileUtil::toDiskPath( executablePath ) ) == false || pChild->_process.launch( command, options ) == false )
+        if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {
             SW_LOG_ERROR_ID( "NetPlay.CouldNotLaunch", "Could not launch %#: %#", label, commandText );
             return false;
@@ -464,10 +462,10 @@ namespace sw::editor
             return false;
         _settings = settings;
         _listLogLine.clear();
-        _mergedTracePath.clear();
+        _mergedTracePath      = {};
         _bMergedTraceUnopened = SW_FALSE;
-        _traceDirectory.clear();
-        _port = settings._port != 0 ? settings._port : findFreeUDPPort();
+        _traceDirectory       = {};
+        _port                 = settings._port != 0 ? settings._port : findFreeUDPPort();
         if ( _port == 0 )
         {
             SW_LOG_ERROR_ID( "NetPlay.NoFreeUDPPort", "No free UDP port for the multiplayer session" );
@@ -480,20 +478,20 @@ namespace sw::editor
             {
                 fixed_string<constant::buffer::kMax64> folderName;
                 formatstring( folderName.data(), folderName.capacity(), "netplay_%#", WallClock::nowUnixMilliseconds().count() );
-                _traceDirectory = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ), folderName.view() );
+                _traceDirectory = ProcessRoots::get()._saved.join( "Traces" ).join( folderName.view() );
             }
             else
-                _traceDirectory = settings._traceDirectory;
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _traceDirectory ) ) == false )
+                _traceDirectory = FileUtil::toDiskPath( settings._traceDirectory );
+            if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
-                SW_LOG_ERROR_ID( "NetPlay.TraceFolderCouldNot", "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
-                _traceDirectory.clear();
+                SW_LOG_ERROR_ID( "NetPlay.TraceFolderCouldNot", "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory.str() );
+                _traceDirectory = {};
                 return false;
             }
         }
 #endif
-        const string                            serverPath = settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : settings._serverExecutablePath;
-        const string                            clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
+        const AbsolutePath                      serverPath = settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : FileUtil::toDiskPath( settings._serverExecutablePath );
+        const AbsolutePath                      clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : FileUtil::toDiskPath( settings._clientExecutablePath );
         StringBuilder<constant::buffer::kMax64> listenArgument;
         listenArgument.appendFormat( "-gv_netListenPort=%#", _port );
         StringBuilder<constant::buffer::kMax64> connectArgument;
@@ -572,7 +570,7 @@ namespace sw::editor
             return false;
         }
         SW_LOG_INFO_ID( "NetPlay.MultiplayerSessionStartedPlayer", "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", toString( settings._mode ), settings._clientCount, _port,
-                        _traceDirectory.empty() ? string( "off" ) : _traceDirectory );
+                        _traceDirectory.empty() ? string( "off" ) : _traceDirectory.str() );
         return true;
     }
 
@@ -822,7 +820,7 @@ namespace sw::editor
         }
     }
 
-    void EditorNetPlaySession::finishStop( const string& mergedTracePath )
+    void EditorNetPlaySession::finishStop( const AbsolutePath& mergedTracePath )
     {
         // 읽기 스레드는 합류했다 - 남은 줄은 모두 쌓여 있다.
         for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
@@ -837,6 +835,6 @@ namespace sw::editor
         _mergedTracePath      = mergedTracePath;
         _bMergedTraceUnopened = _mergedTracePath.empty() == false;
         _stopPhase            = StopPhase::Idle;
-        SW_LOG_INFO_ID( "NetPlay.SessionStopped", "Multiplayer session stopped%#%#", _mergedTracePath.empty() ? "" : " - merged trace ", _mergedTracePath );
+        SW_LOG_INFO_ID( "NetPlay.SessionStopped", "Multiplayer session stopped%#%#", _mergedTracePath.empty() ? "" : " - merged trace ", _mergedTracePath.str() );
     }
 } // namespace sw::editor

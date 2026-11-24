@@ -13,17 +13,17 @@
 
 namespace sw
 {
-    FileLogOutput::FileLogOutput( string fixedFilePath )
+    FileLogOutput::FileLogOutput( AbsolutePath fixedFilePath )
         : FileLogOutput( std::move( fixedFilePath ), FileLogOutputFolder{} )
     {
     }
 
     FileLogOutput::FileLogOutput( FileLogOutputFolder rollingFolder )
-        : FileLogOutput( string{}, std::move( rollingFolder ) )
+        : FileLogOutput( AbsolutePath{}, std::move( rollingFolder ) )
     {
     }
 
-    FileLogOutput::FileLogOutput( string fixedFilePath, FileLogOutputFolder rollingFolder )
+    FileLogOutput::FileLogOutput( AbsolutePath fixedFilePath, FileLogOutputFolder rollingFolder )
         : _mutex{}
         , _fixedFilePath{ std::move( fixedFilePath ) }
         , _rollingFolderPath{ std::move( rollingFolder._path ) }
@@ -51,36 +51,36 @@ namespace sw
 
         // 폴더를 알아내고 만드는 호출(`getCurrentPath` · `ensureDirectoryExists`)은 실패하면 로그를 남기고, 그 로그는 싱크를 거쳐 이 장치의 `write` 로 들어온다.
         // `write` 가 `_mutex` 를 잡으므로 `_mutex` 를 쥔 채 부르면 같은 스레드가 영구 정지한다 — 락 밖에서 하고, 결과만 락 안에서 넣는다.
-        string logFolderPath;
-        string fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다
+        AbsolutePath logFolderPath;
+        AbsolutePath fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다
         if ( _fixedFilePath.empty() )
         {
-            logFolderPath = _rollingFolderPath.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), constant::path::kLogsFolder ) : _rollingFolderPath;
+            logFolderPath = _rollingFolderPath.empty() ? ProcessRoots::get()._saved.join( constant::path::kLogsFolder ) : _rollingFolderPath;
         }
         else
         {
             fixedAbsPath  = _fixedFilePath; // `-log-file` 은 명령줄이 받을 때 절대화했다(CommandLineDiskPath)
-            logFolderPath = FileUtil::getDirectoryPart( fixedAbsPath );
+            logFolderPath = fixedAbsPath.getParent();
         }
         // 로그는 `PlatformFileUtil::openFile` 로 스스로 연다(쓰기 입구 `isWriteAllowed` 는 거절을 로그로 남겨 이 장치로 되돌아온다). 기본 자리는 Saved 아래라 버전 관리 트리 밖이고,
         // `-log-file` 로 받은 자리는 체크아웃하지 않은 파일(`findNotOpenForEdit`)이면 열지 않는다 — 락 밖이라 이유를 남겨도 된다.
-        SW_ASSERT( fixedAbsPath.empty() == false || FileUtil::isPathAtOrUnderRoot( ProcessRoots::get()._content.str(), logFolderPath ) == false );
+        SW_ASSERT( fixedAbsPath.empty() == false || FileUtil::isPathAtOrUnderRoot( ProcessRoots::get()._content.str(), logFolderPath.str() ) == false );
         if ( fixedAbsPath.empty() == false )
         {
-            if ( const optional<string> lockedPath = FileUtil::findNotOpenForEdit( FileUtil::toDiskPath( fixedAbsPath ) ); lockedPath.has_value() )
+            if ( const optional<AbsolutePath> lockedPath = FileUtil::findNotOpenForEdit( fixedAbsPath ); lockedPath.has_value() )
             {
-                SW_LOG_ERROR_ID( "FileLogOutput.LogFileNotOpenForEdit", "The log file '%#' is a checked-in read-only file - not written", *lockedPath );
+                SW_LOG_ERROR_ID( "FileLogOutput.LogFileNotOpenForEdit", "The log file '%#' is a checked-in read-only file - not written", lockedPath->str() );
                 return false;
             }
         }
-        const bool bFolderReady = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( logFolderPath ) );
+        const bool bFolderReady = FileUtil::ensureDirectoryExists( logFolderPath );
 
         ScopedLock<mutex> lock{ _mutex };
         if ( _bOpened )
             return true;
 
         _logFolderPath      = logFolderPath;
-        _currentLogFileName = fixedAbsPath;
+        _currentLogFileName = fixedAbsPath.str();
         if ( bFolderReady == false )
             return false; // 오류는 `ensureDirectoryExists` 가 남겼다. 열린 것이 아니므로 `write` 는 줄을 버린다
         _bOpened = true;
@@ -142,8 +142,7 @@ namespace sw
                           record._year, record._month, record._day, record._hour, ProcessSession::getID() );
             _currentLogFileName = expectedFileName.c_str();
 
-            const string logPath = FileUtil::joinPath( _logFolderPath, _currentLogFileName );
-            _pFile               = PlatformFileUtil::openFile( logPath.c_str(), "a" );
+            _pFile = PlatformFileUtil::openFile( _logFolderPath.join( _currentLogFileName ).c_str(), "a" );
         }
 
         if ( _pFile == nullptr )
@@ -160,7 +159,7 @@ namespace sw
         if ( _pFile == nullptr )
             return {};
         // 고정 경로는 이미 절대 경로다(open). 기본 이름은 폴더 안의 파일 이름만 들고 있다.
-        return _fixedFilePath.empty() ? FileUtil::joinPath( _logFolderPath, _currentLogFileName ) : _currentLogFileName;
+        return _fixedFilePath.empty() ? _logFolderPath.join( _currentLogFileName ).str() : _currentLogFileName;
     }
 
     void FileLogOutput::flushWithoutWaiting()

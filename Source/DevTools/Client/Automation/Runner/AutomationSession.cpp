@@ -197,8 +197,9 @@ namespace sw
                 SW_LOG_WARNING_ID( "AutomationSession.CheckpointSkipped", "[ScenarioRecord] checkpoint %# skipped: %#: %#", spec.c_str(), checkpoint.error().message(), checkpoint.error().detail() );
             }
         }
-        const ScenarioRecordOutput output = _recorder.stop( settings );
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( _recordPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( _recordPath ), output._xmlText ) == false )
+        const ScenarioRecordOutput output   = _recorder.stop( settings );
+        const AbsolutePath         diskPath = ScenarioRecorder::makeOutputDiskPath( _recordPath );
+        if ( FileUtil::ensureParentDirectoryExists( diskPath ) == false || FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
         {
             SW_LOG_ERROR_ID( "AutomationSession.CouldNotWrite", "[ScenarioRecord] could not write %#", _recordPath.c_str() );
             return;
@@ -224,15 +225,15 @@ namespace sw
             pWindow->showWindow( bPresentSkipped == false );
     }
 
-    bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
+    bool AutomationSession::begin( string_view scenarioArgument, const AbsolutePath& reportPath, bool bKeepGoing )
     {
         if ( gv_scenarioPresentInterval < 1 )
         {
             SW_LOG_ERROR_ID( "AutomationSession.PresentIntervalInvalid", "[Scenario] gv_scenarioPresentInterval=%# must be 1 or more (1 = present every frame)", gv_scenarioPresentInterval );
             return false;
         }
-        _reportPath    = string( reportPath );
-        _workingFolder = FileUtil::getCurrentPath();
+        _reportPath    = reportPath;
+        _workingFolder = FileUtil::getCurrentPath().str();
         if ( const GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
         {
             _startWindowWidth  = pWindow->getWidth();
@@ -277,7 +278,7 @@ namespace sw
         // 앞 단계가 프로세스의 작업 폴더를 옮겼으면(파일 대화상자 같은 것) 상대 경로를 쓰는 다음 단계가 엉뚱한 폴더에 쓴다 — 알리고 처음 폴더로 되돌린다.
         if ( _pChain->getStageIndex() > 0 && _workingFolder.empty() == false )
         {
-            const string currentFolder = FileUtil::getCurrentPath();
+            const string currentFolder = FileUtil::getCurrentPath().str();
             if ( currentFolder != _workingFolder )
             {
                 SW_LOG_WARNING_ID( "AutomationSession.WorkingFolderChangedDuring", "[Scenario] the working folder changed to '%#' during stage %# - restoring '%#'", currentFolder.c_str(),
@@ -595,8 +596,8 @@ namespace sw
             (void)_owner.beginRecording( recordPath, recordProbes );                                    // 거절하면 이유를 로그로 남기고 녹화 없이 돈다
         }
 
-        string scenarioPath;
-        string reportPath;
+        string       scenarioPath;
+        AbsolutePath reportPath;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
         IEngineRenderDriver* const pRenderDriver = engine.getRenderDriver();
         const bool                 bKeepGoing    = commandLine.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );

@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -28,7 +29,7 @@ namespace sw
          * @brief 교체된 옛 라이브러리를 지금 배치에 넣고, 배치가 상한을 넘으면 가장 오래된 배치를 언로드합니다. @p pHandle 이 nullptr 이면 아무것도 하지 않습니다.
          * @param shadowPath 라이브러리의 섀도 복사본 경로입니다. 언로드할 때 지웁니다.
          */
-        void deferUnload( string_view moduleName, void* pHandle, string_view shadowPath );
+        void deferUnload( string_view moduleName, void* pHandle, const AbsolutePath& shadowPath );
         /**
          * @brief 가장 오래된 배치 하나를 언로드합니다. 배치 안에서는 나중에 넣은 것(의존하는 쪽)부터 언로드합니다.
          * @details 언로드를 미룬 라이브러리는 **같은 배치의 미룬 라이브러리나 지금 살아 있는 라이브러리에만** 바인딩돼 있다(의존이 바뀌면 의존하는
@@ -45,10 +46,10 @@ namespace sw
         /** @brief 교체되어 내려갈 차례를 기다리는 옛 라이브러리입니다. */
         struct DeferredLibrary
         {
-            string _moduleName;
-            string _shadowPath;
-            void*  _pHandle{ nullptr };
-            uint32 _batchID{ 0 };
+            string       _moduleName;
+            AbsolutePath _shadowPath;
+            void*        _pHandle{ nullptr };
+            uint32       _batchID{ 0 };
         };
 
         vector<DeferredLibrary> _listLibrary;   ///< 언로드를 미룬 옛 라이브러리. 오래된 것부터

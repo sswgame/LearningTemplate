@@ -269,15 +269,15 @@ namespace sw::editor
         return pSession != nullptr && pSession->saveSidecar(); // 실패는 saveSidecar 가 알린다
     }
 
-    void MeshModifiersPanel::collectFilesToSave( vector<string>& outListPath ) const
+    void MeshModifiersPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
-        const MeshModifierSession* pSession = MeshModifierSession::find();
-        const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
+        const MeshModifierSession*   pSession = MeshModifierSession::find();
+        const optional<AbsolutePath> sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
         if ( sidecar.has_value() )
             outListPath.push_back( *sidecar );
     }
 
-    expected<string> MeshModifiersPanel::tryMakeFileText( string_view /*absolutePath*/ ) const
+    expected<string> MeshModifiersPanel::tryMakeFileText( const AbsolutePath& /*absolutePath*/ ) const
     {
         const MeshModifierSession* pSession = MeshModifierSession::find(); // 저장할 파일은 고른 메시의 사이드카 하나다
         if ( pSession == nullptr )
@@ -285,14 +285,14 @@ namespace sw::editor
         return pSession->tryMakeSidecarText();
     }
 
-    bool MeshModifiersPanel::isEditingFile( string_view absolutePath )
+    bool MeshModifiersPanel::isEditingFile( const AbsolutePath& absolutePath )
     {
-        const MeshModifierSession* pSession = MeshModifierSession::find();
-        const optional<string>     sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
-        return sidecar.has_value() && FileUtil::isSameDiskPath( *sidecar, absolutePath );
+        const MeshModifierSession*   pSession = MeshModifierSession::find();
+        const optional<AbsolutePath> sidecar  = pSession != nullptr ? pSession->findSidecarPath() : nullopt;
+        return sidecar.has_value() && FileUtil::isSameDiskPath( sidecar->str(), absolutePath.str() );
     }
 
-    bool MeshModifiersPanel::applyFileText( string_view /*absolutePath*/, const string& text )
+    bool MeshModifiersPanel::applyFileText( const AbsolutePath& /*absolutePath*/, const string& text )
     {
         MeshModifierSession* pSession = MeshModifierSession::find();
         return pSession != nullptr && pSession->restoreSidecarText( text );

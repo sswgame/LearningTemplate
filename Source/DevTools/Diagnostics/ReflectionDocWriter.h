@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -26,7 +27,7 @@ namespace sw
          * @brief @p registry 의 살아 있는 타입 · 열거형을 @p outputDir 에 씁니다(폴더가 없으면 만든다).
          * @return 쓴 파일 수. 하나도 쓰지 못했으면 0
          */
-        static uint32 writeMarkdown( const TypeRegistry& registry, string_view outputDir );
+        static uint32 writeMarkdown( const TypeRegistry& registry, const AbsolutePath& outputDir );
         /** @brief 타입 한 절(제목 · 부모 · 프로퍼티 표 · 함수 · 이벤트)입니다. */
         static string makeTypeMarkdown( const TypeInfo& type );
         /** @brief 열거형 한 절(값 표)입니다. */

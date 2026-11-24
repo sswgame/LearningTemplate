@@ -20,13 +20,13 @@ namespace sw::editor
         return ( bUnderConfig || bUnderResource ) && StringUtil::endsWith( relativePath, ".json" );
     }
 
-    void ProjectSettingsEntry::collectLoaded( const ConfigManager& configManager, string_view projectRoot, vector<ProjectSettingsEntry>& outListEntry )
+    void ProjectSettingsEntry::collectLoaded( const ConfigManager& configManager, const AbsolutePath& projectRoot, vector<ProjectSettingsEntry>& outListEntry )
     {
         outListEntry.clear();
         configManager.forEachFileSource( [projectRoot, &outListEntry]( const hashed_string& typeName, string_view resolvedPath )
         {
             string relativePath;
-            if ( FileUtil::makeRelativePath( projectRoot, resolvedPath, relativePath ) == false )
+            if ( FileUtil::makeRelativePath( projectRoot.str(), resolvedPath, relativePath ) == false )
                 return;
             relativePath = FileUtil::normalizeSeparators( relativePath );
             if ( isEditableLocation( relativePath ) == false )
@@ -35,7 +35,7 @@ namespace sw::editor
             entry._page         = string( typeName.c_str() );
             entry._typeName     = entry._page;
             entry._relativePath = std::move( relativePath );
-            entry._absolutePath = FileUtil::normalizeSeparators( resolvedPath );
+            entry._absolutePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( resolvedPath ) );
             outListEntry.push_back( std::move( entry ) );
         } );
         addOtherGamePresets( projectRoot, outListEntry );
@@ -43,7 +43,7 @@ namespace sw::editor
         { return lhs._page < rhs._page; } );
     }
 
-    void ProjectSettingsEntry::addOtherGamePresets( string_view projectRoot, vector<ProjectSettingsEntry>& inoutListEntry )
+    void ProjectSettingsEntry::addOtherGamePresets( const AbsolutePath& projectRoot, vector<ProjectSettingsEntry>& inoutListEntry )
     {
         for ( const utf8* pPresetFolder : { config::kDirRuntimeGamePreset, config::kDirRuntimeServerPreset } )
         {
@@ -56,52 +56,52 @@ namespace sw::editor
                 continue;
             const ProjectSettingsEntry active = *pLoaded; // 복사 — 아래 push_back 이 배열을 옮긴다
             pLoaded->_gameName                = FileUtil::removeExtension( FileUtil::getFileNamePart( active._relativePath ) );
-            vector<string> listPath;
-            if ( FileUtil::collectFiles( FileUtil::toDiskPath( FileUtil::joinPath( projectRoot, presetFolder ) ), ".json", listPath, false ) == false )
+            vector<AbsolutePath> listPath;
+            if ( FileUtil::collectFiles( projectRoot.join( presetFolder ), ".json", listPath, false ) == false )
             {
                 SW_LOG_ERROR_ID( "ProjectSettingsPanel.PresetFolderUnreadable", "Project settings: %# could not be listed - the other games' presets are missing", presetFolder );
                 continue;
             }
-            for ( const string& absolutePath : listPath )
+            for ( const AbsolutePath& absolutePath : listPath )
             {
-                if ( FileUtil::isSameDiskPath( absolutePath, active._absolutePath ) )
+                if ( FileUtil::isSameDiskPath( absolutePath.str(), active._absolutePath.str() ) )
                     continue;
                 ProjectSettingsEntry entry{};
-                entry._gameName = FileUtil::removeExtension( FileUtil::getFileNamePart( absolutePath ) );
+                entry._gameName = FileUtil::removeExtension( FileUtil::getFileNamePart( absolutePath.str() ) );
                 entry._typeName = active._typeName;
                 StringBuilder<constant::buffer::kMax256> pageBuilder;
                 pageBuilder.appendFormat( "%#/%#", active._typeName, entry._gameName );
                 entry._page         = string( pageBuilder.view() );
-                entry._relativePath = FileUtil::joinPath( presetFolder, FileUtil::getFileNamePart( absolutePath ) );
-                entry._absolutePath = FileUtil::normalizeSeparators( absolutePath );
+                entry._relativePath = FileUtil::joinPath( presetFolder, FileUtil::getFileNamePart( absolutePath.str() ) );
+                entry._absolutePath = absolutePath;
                 inoutListEntry.push_back( std::move( entry ) );
             }
         }
     }
 
-    bool ProjectSettingsEntry::collectTables( string_view projectRoot, const vector<ProjectSettingsEntry>& listTyped, vector<ProjectSettingsEntry>& outListEntry )
+    bool ProjectSettingsEntry::collectTables( const AbsolutePath& projectRoot, const vector<ProjectSettingsEntry>& listTyped, vector<ProjectSettingsEntry>& outListEntry )
     {
         outListEntry.clear();
-        const string   configFolder = FileUtil::joinPath( projectRoot, kTableFolder );
-        vector<string> listPath;
-        if ( FileUtil::collectFiles( FileUtil::toDiskPath( configFolder ), ".json", listPath, true ) == false )
+        const AbsolutePath   configFolder = projectRoot.join( kTableFolder );
+        vector<AbsolutePath> listPath;
+        if ( FileUtil::collectFiles( configFolder, ".json", listPath, true ) == false )
         {
-            SW_LOG_ERROR_ID( "ProjectSettingsPanel.TableFolderUnreadable", "Project settings: %# could not be listed - the table pages are missing", configFolder );
+            SW_LOG_ERROR_ID( "ProjectSettingsPanel.TableFolderUnreadable", "Project settings: %# could not be listed - the table pages are missing", configFolder.str() );
             return false;
         }
-        for ( const string& absolutePath : listPath )
+        for ( const AbsolutePath& absolutePath : listPath )
         {
             // 반사 형식 페이지가 있는 파일은 그 페이지가 고친다(형식 검사 · 기본값 차이 쓰기) — 같은 파일을 두 페이지가 들지 않는다.
             const bool bTyped = VectorUtil::containsIf( listTyped, [&absolutePath]( const ProjectSettingsEntry& typed )
-            { return FileUtil::isSameDiskPath( typed._absolutePath, absolutePath ); } );
+            { return FileUtil::isSameDiskPath( typed._absolutePath.str(), absolutePath.str() ); } );
             if ( bTyped )
                 continue;
             string relativePath;
-            if ( FileUtil::makeRelativePath( projectRoot, absolutePath, relativePath ) == false )
+            if ( FileUtil::makeRelativePath( projectRoot.str(), absolutePath.str(), relativePath ) == false )
                 continue;
             ProjectSettingsEntry entry{};
             entry._relativePath = FileUtil::normalizeSeparators( relativePath );
-            entry._absolutePath = FileUtil::normalizeSeparators( absolutePath );
+            entry._absolutePath = absolutePath;
             // 목록 이름은 `Config/` 아래 경로에서 `.json` 을 뗀 것이다(`Rules/Lint/NamingWords`) — 줄기 이름만이면 `Game/Playground` 와 `Server/Playground` 가 겹친다.
             entry._page = entry._relativePath.substr( string_view( kTableFolder ).size() + 1 );
             entry._page.resize( entry._page.size() - string_view( ".json" ).size() );

@@ -3,6 +3,8 @@
  * @brief 게임 스레드 → 렌더 스레드로 넘기는 프레임 제출 데이터입니다.
  */
 #pragma once
+#include "Core/Path/AbsolutePath.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Rain/RainOcclusionSettings.h"
@@ -127,7 +129,7 @@ namespace sw
         /** @brief 주 시점의 출력 사각형, 해상도 배율, 끌 기능, 컷 표시입니다. */
         RenderViewSettings _mainView;
         /** @brief 비지 않으면 이 패킷을 그린 뒤 화면에 나간 이미지를 이 경로에 PPM 으로 씁니다(자동화 시나리오의 `<Screenshot>`). */
-        string _screenshotPath;
+        AbsolutePath _screenshotPath;
         /**
          * @brief 이번 프레임에 그릴 미리보기 씬 패킷입니다(앞 `_scenePreviewCount` 개만 유효). 패킷마다 씬 하나, 스냅샷 하나, 출력 타깃 하나입니다.
          * @details 저장소는 남깁니다. 링을 돌며 다시 채우므로 미리보기 패킷의 스냅샷과 라이트 목록이 프레임마다 새로 할당되지 않습니다.
@@ -246,8 +248,8 @@ namespace sw
             _materialGlobals = MaterialGlobals{};
             _listView.clear();
             _canvas.clear();
-            _mainView = RenderViewSettings{};
-            _screenshotPath.clear();
+            _mainView          = RenderViewSettings{};
+            _screenshotPath    = {};
             _scenePreviewCount = 0;
             _deltas.clear();
             _sceneKey             = 0;

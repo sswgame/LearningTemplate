@@ -19,14 +19,14 @@ namespace
         static CookJobDesc makeDesc() { return CookJobDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 }; }
 
         /** @brief 끝난 작업 @p job 의 기록을 디스크에 썼다가 다시 읽습니다 — 판정은 쿠킹이 다음 실행에서 하듯 읽은 기록으로 한다. */
-        static CookRecord roundTrip( const CookJob& job, const string& recordPath )
+        static CookRecord roundTrip( const CookJob& job, const AbsolutePath& recordPath )
         {
             CookRecord record = CookRecord::make( job, uint64( 0x1234 ) );
             CookRecord loaded;
             if ( record.write( recordPath ) == false || CookRecord::read( recordPath, loaded ) == false )
             {
                 fixed_string<constant::buffer::kMax512> text;
-                formatstring( text.data(), text.capacity(), "could not write and read back the cook record %#", recordPath );
+                formatstring( text.data(), text.capacity(), "could not write and read back the cook record %#", recordPath.str() );
                 test::reportFailure( __FILE__, __LINE__, text );
             }
             return loaded;
@@ -70,7 +70,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
             CookJob job( Internal::makeDesc() );
             string  text;
             SW_REQUIRE_TRUE( AssetIO::readTextAsset( ScopedScratchDomain::makeID( "resource.txt" ), text ) );
-            record = Internal::roundTrip( job, recordPath.str() );
+            record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::Resource );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "two" ) );
@@ -86,8 +86,8 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         {
             CookJob       job( Internal::makeDesc() );
             vector<uint8> bytes;
-            SW_REQUIRE_TRUE( AssetIO::readBinaryFile( diskPath.str(), bytes ) );
-            record = Internal::roundTrip( job, recordPath.str() );
+            SW_REQUIRE_TRUE( AssetIO::readBinaryFile( diskPath, bytes ) );
+            record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::DiskFile );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( diskPath, "two" ) );
@@ -100,10 +100,10 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( folder.join( "a.entry" ), "a" ) );
         CookRecord record;
         {
-            CookJob        job( Internal::makeDesc() );
-            vector<string> listFile;
-            SW_REQUIRE_TRUE( CookJob::collectFiles( folder.str(), ".entry", listFile ) );
-            record = Internal::roundTrip( job, recordPath.str() );
+            CookJob              job( Internal::makeDesc() );
+            vector<AbsolutePath> listFile;
+            SW_REQUIRE_TRUE( CookJob::collectFiles( folder, ".entry", listFile ) );
+            record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::Listing );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "other.txt" ), "x" ) ); // 다른 확장자는 목록이 아니다
@@ -118,7 +118,7 @@ SW_TEST_CASE( CookRecordStalenessTest, EachInputKindGoesStaleWhenItsSourceChange
         {
             CookJob job( Internal::makeDesc() );
             CookJob::allowMissingRead( ScopedScratchDomain::makeID( "late.txt" ) );
-            record = Internal::roundTrip( job, recordPath.str() );
+            record = Internal::roundTrip( job, recordPath );
         }
         Internal::expectFreshSingleInput( record, CookInputKind::Resource );
         SW_EXPECT_EQUAL( uint64( 0 ), record._listInput[0]._contentHash );

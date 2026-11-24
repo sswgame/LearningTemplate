@@ -848,7 +848,7 @@ namespace sw
         return true;
     }
 
-    bool ResourceComposer::saveText( string_view absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride )
+    bool ResourceComposer::saveText( const AbsolutePath& absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride )
     {
         // 덮어쓰기 층을 얹어 읽은 사본을 원본 자리에 쓰면 층 값이 원본에 박힌다 - 고칠 자리는 층 파일이다.
         if ( engine::getSubsystem<ResourceComposition>().getLayers().empty() == false )
@@ -861,10 +861,10 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
             return false;
         string sourceText;
-        switch ( FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), sourceText ) )
+        switch ( FileUtil::readOptionalTextFile( absPath, sourceText ) )
         {
             case OptionalFileRead::Read:
             {
@@ -872,22 +872,22 @@ namespace sw
             }
             case OptionalFileRead::Missing:
             {
-                return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text.getText() );
+                return FileUtil::writeTextFile( absPath, text.getText() );
             }
             case OptionalFileRead::Failed:
             {
                 // 있는 파일을 읽지 못했다(잠김 · 디스크). 없는 파일처럼 쓰면 그 파일의 조건과 정체성(GUID)이 사라진다.
-                SW_LOG_ERROR_ID( "ResourceSave.SourceNotRead", "'%#' could not be read - not saved, its conditions and asset guid would be lost", string{ absPath }.c_str() );
+                SW_LOG_ERROR_ID( "ResourceSave.SourceNotRead", "'%#' could not be read - not saved, its conditions and asset guid would be lost", string{ absPath.str() }.c_str() );
                 return false;
             }
         }
         string               restoredText;
         const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
         const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
-        if ( restoreConditions( text, sourceText, absPath, tags, restoredText ) == false )
+        if ( restoreConditions( text, sourceText, absPath.str(), tags, restoredText ) == false )
             return false;
         // 정체성 머리(`<?asset guid?>`)는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다(고쳐 저장해도 GUID 는 그대로).
-        return FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), AssetGUIDHeader::carryOver( sourceText, restoredText ) );
+        return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carryOver( sourceText, restoredText ) );
     }
 
     expected<void> ResourceComposer::validateDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )
@@ -905,17 +905,17 @@ namespace sw
         return unexpected( Error{ ErrorKind::InvalidArgument, "the difference from base could not be made (see the log)", baseID } );
     }
 
-    bool ResourceComposer::saveDelta( const string_view absPath, const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread )
+    bool ResourceComposer::saveDelta( const AbsolutePath& absPath, const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread )
     {
         string deltaText;
         if ( const expected<void> delta = makeCheckedDelta( fullText, parentFullText, schema, baseID, reread, deltaText ); delta.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", string{ absPath }.c_str(), delta.error().message(), delta.error().detail() );
+            SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", string{ absPath.str() }.c_str(), delta.error().message(), delta.error().detail() );
             return false;
         }
         if ( saveText( absPath, ResourceSaveText::makeWithComplete( deltaText, fullText ) ) ) // 차이는 부모와 같은 칸을 뺐다 — 펼친 글이 빼지 않은 짝이다
             return true;
-        SW_LOG_ERROR_ID( "ResourceSave.WriteFailed", "'%#' could not be written", string{ absPath }.c_str() );
+        SW_LOG_ERROR_ID( "ResourceSave.WriteFailed", "'%#' could not be written", string{ absPath.str() }.c_str() );
         return false;
     }
 } // namespace sw

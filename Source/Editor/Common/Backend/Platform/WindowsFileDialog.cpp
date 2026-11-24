@@ -99,11 +99,11 @@ namespace sw
             outListPath.push_back( FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ).str() );
         else
         {
-            const string directoryPath = FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ).str();
+            const AbsolutePath directoryPath = FileUtil::toDiskPath( FileUtil::normalizePath( StringUtil::utf16ToUTF8( first.c_str() ) ).str() );
             while ( *pCurrent != L'\0' )
             {
                 const wstring fileNameW( pCurrent );
-                outListPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( directoryPath, StringUtil::utf16ToUTF8( fileNameW.c_str() ) ) ).str() );
+                outListPath.push_back( FileUtil::normalizePath( directoryPath.join( StringUtil::utf16ToUTF8( fileNameW.c_str() ) ).str() ).str() );
                 pCurrent += fileNameW.size() + 1;
             }
         }

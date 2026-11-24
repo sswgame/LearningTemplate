@@ -118,7 +118,7 @@ namespace sw
             /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleLoadStage)라 게임 · 킷의 타입까지 든다. */
             static bool runReflectionDocsTask( HeadlessTaskContext& context )
             {
-                string reflectionDocsDir;
+                AbsolutePath reflectionDocsDir;
                 (void)context._commandLine.getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir );
                 return ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) != 0;
             }
@@ -150,7 +150,7 @@ namespace sw
                 const shared_ptr<const LipSyncSettings> pLipSyncSettings   = SharedAssetCache<LipSyncSettings>::acquire( engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() ).snapshot();
                 uint32                                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32                 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-                string                                  lipSyncOutputDir;       // 비면 음성 곁(소스 트리)
+                AbsolutePath                            lipSyncOutputDir;       // 비면 음성 곁(소스 트리)
                 (void)context._commandLine.getArgument( CommandLineArgument::LIPSYNC_DIR, lipSyncOutputDir );
                 if ( pLipSyncSettings != nullptr )
                     lipSyncCount = LipSyncImport::importAll( engine::getSubsystem<AssetPaths>().getRootFolderPath(), lipSyncOutputDir, *pLipSyncSettings, lipSyncFailedCount );

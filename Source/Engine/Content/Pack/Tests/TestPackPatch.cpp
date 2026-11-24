@@ -20,7 +20,7 @@ namespace
     struct PackPatchTestUtil
     {
         /** @brief 서명 채널의 패치 팩(블록 해시 표 + 색인 요약)을 씁니다. */
-        static optional<PackWriteResult> writeSignedPack( const string& packPath, INetSecurityProvider& provider )
+        static optional<PackWriteResult> writeSignedPack( const AbsolutePath& packPath, INetSecurityProvider& provider )
         {
             vector<std::pair<string, vector<uint8>>> listEntry;
             listEntry.emplace_back( "game/test/data/a.xml", vector<uint8>( 3000, uint8{ 'a' } ) );
@@ -42,21 +42,21 @@ namespace
         }
 
         /** @brief 파일의 @p offset 바이트를 뒤집습니다. */
-        static bool writeFlippedByte( const string& path, uint64 offset )
+        static bool writeFlippedByte( const AbsolutePath& path, uint64 offset )
         {
             vector<uint8> bytes;
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) == false || offset >= bytes.size() )
+            if ( FileUtil::readFile( path, bytes ) == false || offset >= bytes.size() )
                 return false;
             bytes[static_cast<size_t>( offset )] ^= 0x5Au;
-            return FileUtil::writeFile( FileUtil::toDiskPath( path ), bytes.data(), bytes.size() );
+            return FileUtil::writeFile( path, bytes.data(), bytes.size() );
         }
 
         /** @brief 파일 끝의 헤더를 읽습니다. */
-        static PackHeader readHeader( const string& path )
+        static PackHeader readHeader( const AbsolutePath& path )
         {
             vector<uint8> bytes;
             PackHeader    header{};
-            if ( FileUtil::readFile( FileUtil::toDiskPath( path ), bytes ) && bytes.size() >= sizeof( PackHeader ) )
+            if ( FileUtil::readFile( path, bytes ) && bytes.size() >= sizeof( PackHeader ) )
                 Memory::copy( &header, bytes.data() + bytes.size() - sizeof( PackHeader ), sizeof( PackHeader ) );
             return header;
         }
@@ -74,7 +74,7 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
     test::FakeNetSecurityProvider provider;
     provider._bHashOk           = SW_TRUE;
     const AbsolutePath packPath = test::makeScratchPath( "patch_2.pack" );
-    const auto         written  = Util::writeSignedPack( packPath.str(), provider );
+    const auto         written  = Util::writeSignedPack( packPath, provider );
     SW_REQUIRE_TRUE( written.has_value() && written->_indexDigest.has_value() );
     const PackIndexTrust trust{ &provider, *written->_indexDigest };
 
@@ -82,17 +82,17 @@ SW_TEST_CASE( PackPatchTest, TamperedIndexFailsAtMount )
     SW_REQUIRE_TRUE( packs.mountPatchPack( packPath.str(), 100, {}, &trust ) );
     SW_EXPECT_TRUE( packs.unmountPack( packPath.str() ) );
 
-    const PackHeader header = Util::readHeader( packPath.str() );
-    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath.str(), header._stringPoolOffset + 1 ) ); // 첫 항목 경로의 첫 글자
+    const PackHeader header = Util::readHeader( packPath );
+    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath, header._stringPoolOffset + 1 ) ); // 첫 항목 경로의 첫 글자
     SW_EXPECT_FALSE( packs.mountPatchPack( packPath.str(), 100, {}, &trust ) );
 
     // 서명하지 않은 쓰기의 팩(블록 해시 표 없음)은 색인 요약이 맞아도 신뢰로 열지 않는다.
-    SW_REQUIRE_TRUE( PackTestUtil::writeTextPack( packPath.str(), "", {
-                                                                          { "game/test/data/a.xml", "a" }
+    SW_REQUIRE_TRUE( PackTestUtil::writeTextPack( packPath, "", {
+                                                                    { "game/test/data/a.xml", "a" }
     } ) );
     vector<uint8> fileBytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( packPath, fileBytes ) );
-    const PackHeader unsignedHeader = Util::readHeader( packPath.str() );
+    const PackHeader unsignedHeader = Util::readHeader( packPath );
     PackIndexTrust   unsignedTrust{ &provider, {} };
     test::FakeNetSecurityProvider::computeFakeDigest( fileBytes.data() + unsignedHeader._indexOffset, static_cast<int32>( fileBytes.size() - unsignedHeader._indexOffset ),
                                                       unsignedTrust._indexDigest._arrByte );
@@ -107,12 +107,12 @@ SW_TEST_CASE( PackPatchTest, TamperedPayloadBlockFailsAtRead )
     test::FakeNetSecurityProvider provider;
     provider._bHashOk           = SW_TRUE;
     const AbsolutePath packPath = test::makeScratchPath( "patch_3.pack" );
-    const auto         written  = Util::writeSignedPack( packPath.str(), provider );
+    const auto         written  = Util::writeSignedPack( packPath, provider );
     SW_REQUIRE_TRUE( written.has_value() && written->_indexDigest.has_value() );
     const PackIndexTrust trust{ &provider, *written->_indexDigest };
 
     // 페이로드는 오프셋 0 부터다 — 그 자리의 항목(경로 해시 순 첫 항목)의 첫 블록을 바꾼다.
-    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath.str(), 0 ) );
+    SW_REQUIRE_TRUE( Util::writeFlippedByte( packPath, 0 ) );
     PackReader reader;
     SW_REQUIRE_TRUE( reader.open( packPath.str(), &trust ) );
     string        tamperedPath;

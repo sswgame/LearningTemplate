@@ -386,9 +386,9 @@ namespace sw::editor
                 splitOptions._bDropEmpty = true;
                 for ( const string_view token : StringUtil::split( params._files, ";", splitOptions ) )
                 {
-                    string absolutePath;
-                    string reply;
-                    listPath.push_back( EditorAssetFileCommands::readSourceFileArgument( string( token ), absolutePath, reply ) ? absolutePath : string( token ) );
+                    AbsolutePath absolutePath;
+                    string       reply;
+                    listPath.push_back( EditorAssetFileCommands::readSourceFileArgument( string( token ), absolutePath, reply ) ? absolutePath.str() : string( token ) );
                 }
                 const float2 center{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
                 EditorSelfTestInput::dropFiles( listPath, center );

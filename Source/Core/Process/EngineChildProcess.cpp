@@ -9,10 +9,9 @@
 
 namespace sw
 {
-    ProcessCommand EngineChildProcess::makeCommand( const CommandLineManager& parent, string_view executablePath, vector<string> listArgument )
+    ProcessCommand EngineChildProcess::makeCommand( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument )
     {
-        const optional<AbsolutePath> executable = AbsolutePath::tryMake( executablePath );
-        if ( executable.has_value() == false )
+        if ( executablePath.empty() )
             return {};
         if ( parent.isAutomatedRun() )
         {
@@ -20,6 +19,6 @@ namespace sw
             unattended.appendFormat( "-%#", getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
             VectorUtil::addUnique( listArgument, string( unattended.view() ) );
         }
-        return ProcessCommand::at( *executable, std::move( listArgument ) );
+        return ProcessCommand::at( executablePath, std::move( listArgument ) );
     }
 } // namespace sw

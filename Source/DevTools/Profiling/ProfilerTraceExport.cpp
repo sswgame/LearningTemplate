@@ -110,11 +110,11 @@ namespace sw
         }
 
         /** @brief 기본 저장 경로 `<실행 산출물>/Traces/<접두어>_<유닉스 밀리초>.trace.json` 입니다(`ProcessRoots::_saved`). */
-        string makeDefaultTracePath( string_view prefix, int64 wallUnixMilliseconds )
+        AbsolutePath makeDefaultTracePath( string_view prefix, int64 wallUnixMilliseconds )
         {
             fixed_string<constant::buffer::kMax256> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#_%#%#", prefix, wallUnixMilliseconds, ProfilerTraceExport::kFileExtension );
-            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ), fileName.view() );
+            return ProcessRoots::get()._saved.join( "Traces" ).join( fileName.view() );
         }
 
         /** @brief 합치기에서 파일 하나의 정보입니다. */
@@ -659,13 +659,13 @@ namespace sw
                     return false;
                 }
                 // 파일 인자는 모두 절대 경로다(`DevCommandRegistry::readDiskPathArgument` - 작업 폴더 상대 경로를 받지 않는다).
-                vector<string> listInputPath;
-                string         outputPath;
+                vector<AbsolutePath> listInputPath;
+                AbsolutePath         outputPath;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], outputPath, outReply ) == false )
                     return false;
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
-                    string inputPath;
+                    AbsolutePath inputPath;
                     if ( DevCommandRegistry::readDiskPathArgument( listArgument[index], inputPath, outReply ) == false )
                         return false;
                     listInputPath.push_back( std::move( inputPath ) );
@@ -692,8 +692,8 @@ namespace sw
                     outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
                 }
-                string recordPath;
-                uint32 budget = 0;
+                AbsolutePath recordPath;
+                uint32       budget = 0;
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
                     const string& argument = listArgument[index];
@@ -711,8 +711,8 @@ namespace sw
                 }
                 return ProfilerTraceExport::startRecording( engine::getSubsystem<FrameProfiler>(), seconds, recordPath, "Game", budget, outReply );
             }
-            string path;
-            uint32 frameCount = ProfilerTimeline::kFrameCapacity - 1;
+            AbsolutePath path;
+            uint32       frameCount = ProfilerTimeline::kFrameCapacity - 1;
             for ( size_t index = 1; index < listArgument.size(); ++index )
             {
                 const string& argument = listArgument[index];
@@ -722,7 +722,7 @@ namespace sw
                 else if ( DevCommandRegistry::readDiskPathArgument( argument, path, outReply ) == false )
                     return false;
             }
-            string savedPath;
+            AbsolutePath savedPath;
             return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path, "Game", savedPath, outReply );
         }
     } // namespace
@@ -789,28 +789,28 @@ namespace sw
         return trace;
     }
 
-    expected<ProfilerLoadedTrace> ProfilerTraceExport::loadTraceFile( string_view path )
+    expected<ProfilerLoadedTrace> ProfilerTraceExport::loadTraceFile( const AbsolutePath& path )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "cannot read the trace file", path } );
+        if ( FileUtil::readTextFile( path, text ) == false )
+            return unexpected( Error{ ErrorKind::NotFound, "cannot read the trace file", path.str() } );
         expected<ProfilerLoadedTrace> trace = parseTraceJSON( text );
         if ( trace.has_value() )
-            trace->_sourcePath = string( path );
+            trace->_sourcePath = string( path.str() );
         return trace;
     }
 
-    string ProfilerTraceExport::findLatestTraceFile()
+    AbsolutePath ProfilerTraceExport::findLatestTraceFile()
     {
-        vector<string>     listFile;
-        const AbsolutePath folder = ProcessRoots::get()._saved.join( "Traces" );
+        vector<AbsolutePath> listFile;
+        const AbsolutePath   folder = ProcessRoots::get()._saved.join( "Traces" );
         if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
             return {};
-        string latest;
-        int64  latestStamp = -1;
-        for ( const string& file : listFile )
+        AbsolutePath latest;
+        int64        latestStamp = -1;
+        for ( const AbsolutePath& file : listFile )
         {
-            const string name = FileUtil::getFileNamePart( file );
+            const string name = FileUtil::getFileNamePart( file.str() );
             if ( name.size() <= 11 || name.find( kFileExtension ) == string::npos )
                 continue;
             // trace_<유닉스 밀리초>.trace.json — 숫자 부분이 가장 큰 것이 최근이다.
@@ -833,13 +833,13 @@ namespace sw
     namespace
     {
         /** @brief 모은 사건을 머리말과 함께 @p path 에 씁니다. */
-        [[nodiscard]] bool writeTraceFile( const string& path, const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
+        [[nodiscard]] bool writeTraceFile( const AbsolutePath& path, const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
                                            const vector<string>& listSlotName, const ProfilerTraceMeta& meta, string& outReply )
         {
-            if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             {
                 StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "cannot create the folder of %#", path );
+                reply.appendFormat( "cannot create the folder of %#", path.str() );
                 outReply = string( reply.view() );
                 return false;
             }
@@ -857,10 +857,10 @@ namespace sw
             }
             if ( beginNanos <= endNanos )
                 NetFlowLog::collect( beginNanos, endNanos, metaWithFlow._listFlow );
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, metaWithFlow ) ) == false )
+            if ( FileUtil::writeTextFile( path, ProfilerTraceExport::makeTraceJSON( listThread, listFrameBegin, listSlotName, metaWithFlow ) ) == false )
             {
                 StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "cannot write %#", path );
+                reply.appendFormat( "cannot write %#", path.str() );
                 outReply = string( reply.view() );
                 return false;
             }
@@ -870,13 +870,13 @@ namespace sw
                 eventCount += thread._listEvent.size();
             }
             StringBuilder<constant::buffer::kMax1024> reply;
-            reply.appendFormat( "saved %# (%# threads, %# events, %# frame marks, %# net flows)", path, listThread.size(), eventCount, listFrameBegin.size(), metaWithFlow._listFlow.size() );
+            reply.appendFormat( "saved %# (%# threads, %# events, %# frame marks, %# net flows)", path.str(), listThread.size(), eventCount, listFrameBegin.size(), metaWithFlow._listFlow.size() );
             outReply = string( reply.view() );
             return true;
         }
 
         /** @brief 링 버퍼의 최근 @p frameCount 프레임을 @p meta 머리말로 저장합니다(`saveRecentFrames` · 느린 틱 공용). */
-        [[nodiscard]] bool saveRecentFramesWithMeta( const FrameProfiler& profiler, uint32 frameCount, const string& path, const ProfilerTraceMeta& meta,
+        [[nodiscard]] bool saveRecentFramesWithMeta( const FrameProfiler& profiler, uint32 frameCount, const AbsolutePath& path, const ProfilerTraceMeta& meta,
                                                      string& outReply )
         {
             const ProfilerTimeline&        timeline = profiler.getTimeline();
@@ -894,7 +894,7 @@ namespace sw
         }
     } // namespace
 
-    bool ProfilerTraceExport::startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
+    bool ProfilerTraceExport::startRecording( FrameProfiler& profiler, float64 seconds, const AbsolutePath& path, string_view processName, uint32 budget,
                                               string& outReply )
     {
         ProfilerTraceSession& session = profiler.getTraceSession();
@@ -906,7 +906,7 @@ namespace sw
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
         session._longRecordingEndNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( seconds ) : 0;
-        session._longRecordingPath        = string( path );
+        session._longRecordingPath        = path;
         session._longRecordingProcessName = string( processName );
         session._bLongRecordingActive.store( true, std::memory_order_release );
         StringBuilder<constant::buffer::kMax128> reply;
@@ -953,14 +953,14 @@ namespace sw
         ProfilerTraceMeta meta = makeCurrentMeta( session._longRecordingProcessName );
         meta._bTruncated       = bTruncated;
 
-        const string savedPath = session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : session._longRecordingPath;
-        string       reply;
+        const AbsolutePath savedPath = session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : session._longRecordingPath;
+        string             reply;
         if ( writeTraceFile( savedPath, listThread, listFrameBegin, collectSlotNames( profiler ), meta, reply ) == false )
         {
             SW_LOG_ERROR_ID( "ProfilerTraceExport.TraceRecordingCouldNot", "Trace recording could not be written: %#", reply );
             return false;
         }
-        SW_LOG_INFO_ID( "ProfilerTraceExport.TraceRecordingSavedThreads", "Trace recording saved %# (%# threads, %# frame marks%#)", savedPath, listThread.size(), listFrameBegin.size(),
+        SW_LOG_INFO_ID( "ProfilerTraceExport.TraceRecordingSavedThreads", "Trace recording saved %# (%# threads, %# frame marks%#)", savedPath.str(), listThread.size(), listFrameBegin.size(),
                         bTruncated ? ", TRUNCATED" : "" );
         return true;
     }
@@ -998,12 +998,12 @@ namespace sw
             textBuilder.appendFormat( "Slow tick %#.%# ms", tickMicro / constant::time::kMicrosecondsPerMillisecond, ( tickMicro % constant::time::kMicrosecondsPerMillisecond ) / 100 );
             meta._listMarker.push_back(
                 { string( textBuilder.view() ), capture._slowBeginNanos } );
-            const string path = makeDefaultTracePath( "slowtick", meta._wallUnixMilliseconds );
-            string       reply;
+            const AbsolutePath path = makeDefaultTracePath( "slowtick", meta._wallUnixMilliseconds );
+            string             reply;
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
             {
                 ++capture._slowSavedFileCount;
-                SW_LOG_WARNING_ID( "ProfilerTraceExport.SlowTickUsBudget", "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, budgetMilliseconds, path );
+                SW_LOG_WARNING_ID( "ProfilerTraceExport.SlowTickUsBudget", "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, budgetMilliseconds, path.str() );
             }
             else
             {
@@ -1024,34 +1024,34 @@ namespace sw
         capture._slowFramesUntilSave = kSlowFrameFramesAfter;
     }
 
-    bool ProfilerTraceExport::saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, string_view path, string_view processName,
-                                                string& outSavedPath, string& outReply )
+    bool ProfilerTraceExport::saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, const AbsolutePath& path, string_view processName,
+                                                AbsolutePath& outSavedPath, string& outReply )
     {
         const ProfilerTraceMeta meta = makeCurrentMeta( processName );
-        outSavedPath                 = path.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : string( path );
+        outSavedPath                 = path.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : path;
         return saveRecentFramesWithMeta( profiler, frameCount, outSavedPath, meta, outReply );
     }
 
-    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler, string_view path )
+    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler, const AbsolutePath& path )
     {
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().setRecording( true );
         // 기동 자체를 첫 구간으로 연다 — 프레임을 몇 번 돌았는지와 상관없이 종료 저장에 구간이 생긴다(finishExitCapture 가 닫는다)
         profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
-        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", path );
+        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", path.str() );
     }
 
-    void ProfilerTraceExport::finishExitCapture( FrameProfiler& profiler, string_view path, string_view processName )
+    void ProfilerTraceExport::finishExitCapture( FrameProfiler& profiler, const AbsolutePath& path, string_view processName )
     {
         // 마지막 프레임부터 종료까지를 닫는다 — 구간의 끝은 마지막 프레임 시작이라, 닫지 않으면 마지막 프레임과 종료 사건이 빠지고
         // 접속 직후 멈춘 프로세스(멀티 프로세스 재생의 클라이언트)는 프레임 표시가 둘이 안 돼 저장하지 못했다
         profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
-        string savedPath;
-        string reply;
+        AbsolutePath savedPath;
+        string       reply;
         if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path, processName, savedPath, reply ) )
-            SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath, reply );
+            SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath.str(), reply );
         else
-            SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath, reply );
+            SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath.str(), reply );
     }
 
     bool ProfilerTraceExport::mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport )
@@ -1106,16 +1106,16 @@ namespace sw
         return true;
     }
 
-    bool ProfilerTraceExport::mergeTraceFiles( const vector<string>& listInputPath, string_view outputPath, string& outReply )
+    bool ProfilerTraceExport::mergeTraceFiles( const vector<AbsolutePath>& listInputPath, const AbsolutePath& outputPath, string& outReply )
     {
         vector<ProfilerTraceMergeInput> listInput;
-        for ( const string& path : listInputPath )
+        for ( const AbsolutePath& path : listInputPath )
         {
             ProfilerTraceMergeInput input;
-            if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), input._json ) == false )
+            if ( FileUtil::readTextFile( path, input._json ) == false )
             {
                 StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "cannot read %#", path );
+                reply.appendFormat( "cannot read %#", path.str() );
                 outReply = string( reply.view() );
                 return false;
             }
@@ -1128,15 +1128,15 @@ namespace sw
             outReply = report;
             return false;
         }
-        const string                              path( outputPath );
+        const AbsolutePath                        path( outputPath );
         StringBuilder<constant::buffer::kMax1024> reply;
-        if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), json ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, json ) == false )
         {
-            reply.appendFormat( "cannot write %#", path );
+            reply.appendFormat( "cannot write %#", path.str() );
             outReply = string( reply.view() );
             return false;
         }
-        reply.appendFormat( "%# -> %#", report, path );
+        reply.appendFormat( "%# -> %#", report, path.str() );
         outReply = string( reply.view() );
         return true;
     }

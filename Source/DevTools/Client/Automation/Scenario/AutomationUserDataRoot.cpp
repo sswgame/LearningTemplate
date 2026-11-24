@@ -60,7 +60,7 @@ namespace sw
                 string text;
                 if ( commandLine.findPendingGlobalValue( name, text ) == false || text.empty() )
                     return string{};
-                const optional<AbsolutePath> workingFolder = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+                const optional<AbsolutePath> workingFolder = AbsolutePath::tryMake( FileUtil::getCurrentPath().str() );
                 const optional<AbsolutePath> resolved      = workingFolder.has_value() ? AbsolutePath::tryResolve( text, *workingFolder ) : optional<AbsolutePath>{};
                 if ( resolved.has_value() == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a state path variable is not a usable path", text } );
@@ -71,7 +71,7 @@ namespace sw
             [[nodiscard]] static bool readIsolated( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 string     root;
-                const bool bUnder = ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) && AutomationUserDataRoot::validateUnderBase( root, AutomationUserDataRoot::getBaseFolder() ).has_value();
+                const bool bUnder = ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) && AutomationUserDataRoot::validateUnderBase( root, AutomationUserDataRoot::getBaseFolder().str() ).has_value();
                 outValue          = bUnder ? 1.0 : 0.0;
                 return true;
             }
@@ -79,7 +79,7 @@ namespace sw
             /** @brief 감시 값 `UserData.Root` — 이 실행의 사용자 데이터 폴더(활성 게임)입니다. 실행마다 다른 경로라 `<Record>` 로 견주지 않는다(진단용). */
             [[nodiscard]] static bool readRoot( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
             {
-                outValue.setText( UserDataPath::getDataDirectory( GameSelection::getName() ) );
+                outValue.setText( UserDataPath::getDataDirectory( GameSelection::getName() ).str() );
                 return true;
             }
 
@@ -104,14 +104,14 @@ namespace sw
                               "1 when the person's OS user data folder of the active game changed since this run started (entry count or latest write time)",
                               &AutomationUserDataRootInternal::readPlatformFolderChanged, nullptr );
 
-    string AutomationUserDataRoot::getBaseFolder()
+    AbsolutePath AutomationUserDataRoot::getBaseFolder()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Automation" );
+        return ProcessRoots::get()._saved.join( "Automation" );
     }
 
-    string AutomationUserDataRoot::makeRunUserDataRoot( string_view runRoot )
+    AbsolutePath AutomationUserDataRoot::makeRunUserDataRoot( const AbsolutePath& runRoot )
     {
-        return FileUtil::joinPath( runRoot, kRunSubfolder );
+        return runRoot.join( kRunSubfolder );
     }
 
     expected<void> AutomationUserDataRoot::validateUnderBase( string_view root, string_view baseFolder )
@@ -129,9 +129,9 @@ namespace sw
 
     vector<string> AutomationUserDataRoot::makePersonFolders()
     {
-        vector<string> listFolder{ FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor ) };
+        vector<string> listFolder{ ProcessRoots::get()._project.join( config::kDirSavedEditor ).str() };
         // 게임마다 폴더의 부모(`SWEngine` · `swengine`) — 모든 게임의 사람 세이브 · 설정이다. 모르면(샌드박스) 그 칸이 없다.
-        const string listGameFolder[] = { UserDataPath::findPlatformDataDirectory( "" ), UserDataPath::findPlatformConfigDirectory( "" ) };
+        const string listGameFolder[] = { UserDataPath::findPlatformDataDirectory( "" ).str(), UserDataPath::findPlatformConfigDirectory( "" ).str() };
         for ( const string& gameFolder : listGameFolder )
         {
             if ( gameFolder.empty() == false )
@@ -174,15 +174,15 @@ namespace sw
         {
             if ( bAllowOutside )
                 return root;
-            if ( expected<void> under = validateUnderBase( root, getBaseFolder() ); under.has_value() == false )
+            if ( expected<void> under = validateUnderBase( root, getBaseFolder().str() ); under.has_value() == false )
                 return unexpected( under.error() );
             return root;
         }
         if ( bAllowOutside )
             return string{}; // 사람이 고른 OS 사용자 폴더 그대로
         // 실행 뿌리는 실행마다 새 폴더다 — 옛 실행의 세이브가 없어 비울 것도, 거둘 형제도 없다(거두기는 `SavedCleanup`).
-        root = makeRunUserDataRoot( ProcessRoots::get()._run.str() );
-        if ( expected<void> under = validateUnderBase( root, getBaseFolder() ); under.has_value() == false )
+        root = makeRunUserDataRoot( ProcessRoots::get()._run ).str();
+        if ( expected<void> under = validateUnderBase( root, getBaseFolder().str() ); under.has_value() == false )
             return unexpected( under.error() ); // 부모가 실행 뿌리를 자동화 폴더 밖에 줬다
         if ( ProcessEnvironment::trySet( kUserDataRootVariable, root ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not set the user data root variable", root } );
@@ -194,18 +194,18 @@ namespace sw
         return gv_automationAllowOutsideUserData;
     }
 
-    UserDataFolderStamp UserDataFolderStamp::take( string_view folder )
+    UserDataFolderStamp UserDataFolderStamp::take( const AbsolutePath& folder )
     {
         UserDataFolderStamp stamp;
-        stamp._bExists = FileUtil::isDirectory( FileUtil::toDiskPath( folder ) );
+        stamp._bExists = FileUtil::isDirectory( folder );
         if ( stamp._bExists == false )
             return stamp;
-        (void)FileUtil::getFileWriteTime( FileUtil::toDiskPath( folder ), stamp._latestWriteTicks ); // 못 읽으면 0 — 항목 시각이 채운다
-        (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( folder ), true, [&stamp]( const DirectoryEntry& entry )
+        (void)FileUtil::getFileWriteTime( folder, stamp._latestWriteTicks ); // 못 읽으면 0 — 항목 시각이 채운다
+        (void)FileUtil::forEachDirectoryEntry( folder, true, [&stamp]( const DirectoryEntry& entry )
         {
             ++stamp._entryCount;
             int64 ticks = 0;
-            if ( FileUtil::getFileWriteTime( FileUtil::toDiskPath( entry._path ), ticks ) && ticks > stamp._latestWriteTicks )
+            if ( FileUtil::getFileWriteTime( entry.makePath(), ticks ) && ticks > stamp._latestWriteTicks )
                 stamp._latestWriteTicks = ticks;
             return true;
         } ); // 훑다 멈추면 그때까지의 수 — 다음에 찍을 때 달라져 바뀐 것으로 보인다(거짓 통과가 아니다)

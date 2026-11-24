@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotStorage.h"
@@ -27,7 +28,7 @@ namespace sw
         static constexpr const utf8* kPreviousGenerationSuffix = ".prev";
 
         /** @brief @p rootDirectory(`LocalStoreLocation::resolveDiskPath` 가 낸 경로)를 만들고 남은 임시 파일을 지웁니다. */
-        explicit FileLocalSlotStorage( string_view rootDirectory );
+        explicit FileLocalSlotStorage( const AbsolutePath& rootDirectory );
 
         LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
         LocalStoreResult readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;
@@ -35,9 +36,9 @@ namespace sw
         LocalStoreResult eraseSlot( const string& slot ) override;
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;
 
-        string makeSlotPath( const string& slot ) const;
+        AbsolutePath makeSlotPath( const string& slot ) const;
 
     private:
-        string _rootDirectory;
+        AbsolutePath _rootDirectory;
     };
 } // namespace sw

@@ -13,6 +13,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -61,7 +62,7 @@ namespace sw
          * @brief 폴더 @p folder 바로 아래의 기록 파일(`kFileExtension`)을 모두 읽어 하나로 합칩니다. 백엔드 자식마다 파일이 따로라 읽을 때 합친다.
          * @details 폴더가 없거나 기록이 없으면 빈 기록이다(첫 실행 — 데울 것이 없다). 읽지 못한 파일 · 틀린 글은 오류다.
          */
-        [[nodiscard]] static expected<ShaderRequestLog> readFolder( string_view folder );
+        [[nodiscard]] static expected<ShaderRequestLog> readFolder( const AbsolutePath& folder );
         /**
          * @brief @p inoutList 에서 소스를 풀 수 없는 요청을 빼고 그 소스를 @p outListMissing 에 적습니다(중복 없이).
          * @details 기록은 지난 실행의 것이라 그 뒤에 소스가 지워지거나 옮겨졌을 수 있다 — 없는 소스는 기록의 성질이지 결함이 아니어서 빼고 넘어간다(폴백이 아니다: 대신 고르는 값이 없다).
@@ -77,7 +78,7 @@ namespace sw
          * @details 게임 · 기동 스레드에서 부른다(엔진 설정 사본을 뜬다). 기록이 없으면 할 일이 없다고 남기고 true 다. 기록을 읽지 못했거나 컴파일이 하나라도 지면 false 입니다 —
          *          기록은 성공한 요청만 적으므로 지는 컴파일은 지금 소스의 오류다(시간을 재는 실행보다 먼저 드러난다).
          */
-        [[nodiscard]] static bool warmFromFolder( string_view folder );
+        [[nodiscard]] static bool warmFromFolder( const AbsolutePath& folder );
 
     private:
         /** @brief 요청 하나의 줄입니다. */

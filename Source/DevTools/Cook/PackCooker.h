@@ -23,6 +23,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/Cook/PackReachResult.h"
 
@@ -42,10 +43,10 @@ namespace sw
     /** @struct PackCookParams @brief 팩 쿠킹 한 번의 입력입니다. 모두 필수입니다(`_gamePackFolder` 만 비울 수 있다). */
     struct PackCookParams
     {
-        string                _projectRoot;                                          ///< 저장소 루트의 절대 경로 — 참조 칸 표(`AssetReferenceFields::kConfigFile` · `kGeneratedFile`)를 읽는다
-        string                _resourceRoot;                                         ///< `Content/` 의 절대 경로
-        string                _cookedDir;                                            ///< 씬 · 프리팹 · 레지스트리 쿠킹 산출물의 스테이징 루트(`--cooked-dir`)
-        string                _packOutputDir;                                        ///< 팩을 쓸 폴더(`--pack-dir`)
+        AbsolutePath          _projectRoot;                                          ///< 저장소 루트의 절대 경로 — 참조 칸 표(`AssetReferenceFields::kConfigFile` · `kGeneratedFile`)를 읽는다
+        AbsolutePath          _resourceRoot;                                         ///< `Content/` 의 절대 경로
+        AbsolutePath          _cookedDir;                                            ///< 씬 · 프리팹 · 레지스트리 쿠킹 산출물의 스테이징 루트(`--cooked-dir`)
+        AbsolutePath          _packOutputDir;                                        ///< 팩을 쓸 폴더(`--pack-dir`)
         string                _shaderFolder;                                         ///< 담을 셰이더 바이너리 폴더(`dx12` 등, 쿠킹 표의 `shader_folder`)
         string                _buildTarget;                                          ///< 빌드 타깃(`Game` · `Client` · `Server`) — 그 타깃이 빼는 종류를 팩에 넣지 않는다
         PackAutomationContent _automationContent{ PackAutomationContent::Excluded }; ///< 자동화 콘텐츠(시나리오)를 담는가 — 쿠킹하는 구성에 자동화 실행기가 있으면 `Included`
@@ -117,7 +118,7 @@ namespace sw
          * @brief 미룬 청크의 합친 목록 @p manifest 를 도메인마다 나눠 굽은 도메인 @p listDomain 의 파일(`PackChunkManifest::makeFileName`)만 씁니다 — 다른 도메인의 파일은 건드리지 않는다.
          * @details 청크는 이름의 도메인 줄기(`<줄기>.<청크>`), 씬은 id 의 도메인으로 가른다. 미룬 청크가 없는 도메인도 빈 목록을 쓴다(지난 쿠킹의 목록이 지운 팩을 가리키지 않게).
          */
-        [[nodiscard]] static bool writeChunkManifests( const string& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest );
+        [[nodiscard]] static bool writeChunkManifests( const AbsolutePath& packOutputDir, const vector<string>& listDomain, const PackChunkManifest& manifest );
         /**
          * @brief 팩 하나의 쿠킹 기록 id(`packs/<타깃>/<스테이징 해시>/<팩 이름>`)입니다.
          * @details 기록 자리(`<프로젝트>/Saved/CookRecord`)는 프리셋이 함께 쓰는데 팩의 입력인 스테이징(`--cooked-dir`)은 프리셋마다 다르다 — 스테이징마다 기록을 따로 둔다.

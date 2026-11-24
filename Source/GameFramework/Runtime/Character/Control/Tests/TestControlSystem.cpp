@@ -592,7 +592,7 @@ SW_TEST_CASE( IntentPlaybackTest, MissingFileReportsAnError )
 {
     SW_EXPECT_LOG( "File.NotFound" );
     ControlRig             rig;
-    const expected<uint32> started = IntentPlayback::startFromFile( rig._manager, test::makeScratchPath( "SwNoSuchIntentFile.swintent" ).str(), false );
+    const expected<uint32> started = IntentPlayback::startFromFile( rig._manager, test::makeScratchPath( "SwNoSuchIntentFile.swintent" ), false );
     SW_REQUIRE_FALSE( started.has_value() );
     SW_EXPECT_FALSE( started.error().message().empty() );
 }

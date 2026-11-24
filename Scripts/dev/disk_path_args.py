@@ -51,8 +51,8 @@ IO_PATH_ARGS: dict[str, tuple[int, ...]] = {
     "findPathIgnoringCase": (0,), "makePathIgnoringCase": (0,),
 }
 STRING_RETURNING = ("joinPath", "getDirectoryPart", "getFileNamePart", "normalizeSeparators", "toNativeSeparators", "trimTrailingSlashes",
-                    "replaceExtension", "removeExtension", "makeWriteTempPath", "reserveUniquePath", "getTempDirectory", "getCurrentPath",
-                    "getExecutablePath", "findPathIgnoringCase", "makePathIgnoringCase")
+                    "replaceExtension", "removeExtension",
+                    "getExecutablePath")
 # 앞 글자를 막는다 — `PlatformFileUtil::replaceFile` 정의 머리의 매개변수를 감싸던 자리(2026-11-21 병합 뒤 손으로 되돌렸다)
 CALL_PATTERN = re.compile(r"(?<![\w])((?:::\s*)?(?:sw\s*::\s*)?FileUtil\s*::\s*)(" + "|".join(IO_PATH_ARGS) + r")\s*\(")
 ROOT_FIELD = re.compile(r"(?:ProcessRoots\s*::\s*get\s*\(\s*\)|\broots)\s*\.\s*_(?:binary|project|content|packs|saved|derivedData|run)\s*$")   # ProcessRoots 칸(AbsolutePath)

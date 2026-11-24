@@ -8,6 +8,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -33,7 +34,7 @@ namespace sw
         static constexpr uint32 kGoldenMaxWidth = 160;
 
         /** @brief PPM(P6, 최대값 255) 파일을 읽습니다. 실패면 그 이유입니다(못 읽은 파일은 경로가 대상). */
-        [[nodiscard]] static expected<AutomationImage> loadPpm( string_view path );
+        [[nodiscard]] static expected<AutomationImage> loadPpm( const AbsolutePath& path );
         /** @brief 메모리의 PPM(P6, 최대값 255)을 읽습니다. 신뢰 경계다 — 틀린 머리말 · 짧은 화소는 오류입니다. */
         [[nodiscard]] static expected<AutomationImage> parsePpm( const uint8* pData, size_t size );
         /** @brief 이미지를 PPM(P6) 바이트로 씁니다. */

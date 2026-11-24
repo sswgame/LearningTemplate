@@ -175,7 +175,7 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. 카탈로그에 없는 id 의 값은 경고를 남기고 버립니다. */
         SW_DECLARE_STATE_IO();
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        [[nodiscard]] bool loadFromFile( string_view path );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& path );
 
     private:
         /** @brief 정의를 찾고 종류를 확인합니다. 맞지 않으면 경고를 남기고 nullptr 를 반환합니다. */

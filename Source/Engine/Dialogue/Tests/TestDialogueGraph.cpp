@@ -240,7 +240,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
     SW_EXPECT_TRUE( source.saveToFile( *filePath ) );
 
     DialogueGraphAsset loaded;
-    SW_REQUIRE_TRUE( loaded.loadFromDiskFile( filePath->str() ) );
+    SW_REQUIRE_TRUE( loaded.loadFromDiskFile( *filePath ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
     SW_EXPECT_EQUAL( parsed._listNode[1]._text, loaded._listNode[1]._text );

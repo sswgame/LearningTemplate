@@ -156,12 +156,12 @@ SW_TEST_CASE( AutomationImageMetricTest, LoadPpmFromFile )
     const AbsolutePath path = test::makeScratchPath( "image.ppm" );
     SW_REQUIRE_TRUE( FileUtil::writeFile( path, listByte.data(), listByte.size() ) );
 
-    const expected<AutomationImage> image = AutomationImage::loadPpm( path.str() );
+    const expected<AutomationImage> image = AutomationImage::loadPpm( path );
     SW_REQUIRE_TRUE( image.has_value() );
     SW_EXPECT_EQUAL( 9u, static_cast<uint32>( image->_listRGB[2] ) );
 
     const AbsolutePath              missing  = test::makeScratchPath( "missing.ppm" );
-    const expected<AutomationImage> notThere = AutomationImage::loadPpm( missing.str() );
+    const expected<AutomationImage> notThere = AutomationImage::loadPpm( missing );
     SW_REQUIRE_FALSE( notThere.has_value() );
     SW_EXPECT_TRUE( notThere.error().detail().find( "missing.ppm" ) != string_view::npos );
 }

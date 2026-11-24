@@ -330,15 +330,15 @@ namespace sw
             writeFloats( node, "extent", arrExtent, 3 );
             writeFloats( node, "color", arrColor, 4 );
         }
-        return document.saveToFile( absPath.str(), 1 );
+        return document.saveToFile( absPath, 1 );
     }
 
-    bool VisualLogger::loadFromFile( string_view diskPath )
+    bool VisualLogger::loadFromFile( const AbsolutePath& diskPath )
     {
         JSONDocument document;
         if ( document.loadFromFile( diskPath ) == false )
         {
-            SW_LOG_ERROR_ID( "VisualLogger.VisualLogCouldNot", "Visual log '%#' could not be read: %#", diskPath, document.getLastError().c_str() );
+            SW_LOG_ERROR_ID( "VisualLogger.VisualLogCouldNot", "Visual log '%#' could not be read: %#", diskPath.str(), document.getLastError().c_str() );
             return false;
         }
         const JSONValue root         = document.getRoot();
@@ -348,7 +348,7 @@ namespace sw
         const bool      bNotThisFile = version.has_value() == false || *version != kFileVersion || frame.has_value() == false || listNode.isArray() == false;
         if ( bNotThisFile )
         {
-            SW_LOG_ERROR_ID( "VisualLogger.VisualLogNotVersion", "Visual log '%#' is not a version %# visual log file", diskPath, kFileVersion );
+            SW_LOG_ERROR_ID( "VisualLogger.VisualLogNotVersion", "Visual log '%#' is not a version %# visual log file", diskPath.str(), kFileVersion );
             return false;
         }
         deque<VisualLogEntry> listLoaded;
@@ -357,7 +357,7 @@ namespace sw
             VisualLogEntry entry;
             if ( readEntry( listNode.at( index ), entry ) == false )
             {
-                SW_LOG_ERROR_ID( "VisualLogger.VisualLogEntryBroken", "Visual log '%#': entry %# is broken", diskPath, static_cast<uint32>( index ) );
+                SW_LOG_ERROR_ID( "VisualLogger.VisualLogEntryBroken", "Visual log '%#': entry %# is broken", diskPath.str(), static_cast<uint32>( index ) );
                 return false;
             }
             listLoaded.push_back( std::move( entry ) );

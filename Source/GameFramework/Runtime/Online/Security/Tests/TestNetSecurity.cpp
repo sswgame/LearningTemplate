@@ -50,16 +50,16 @@ namespace
     }
 } // namespace
 
-/** @brief [NetSecurityTest] 빈 경로는 "정하지 않음"이라 빈 글이고, 상대 경로는 프로젝트 아래이며, 드라이브 상대는 오류다(빈 글로 바꾸면 개발 인증서로 물러난다) */
+/** @brief [NetSecurityTest] 빈 경로는 "정하지 않음"이라 빈 경로이고, 상대 경로는 프로젝트 아래이며, 드라이브 상대는 오류다(빈 글로 바꾸면 개발 인증서로 물러난다) */
 SW_TEST_CASE( NetSecurityTest, ResolvesProjectPaths )
 {
-    const expected<string> unset = NetSecurity::resolveProjectPath( "" );
+    const expected<AbsolutePath> unset = NetSecurity::resolveProjectPath( "" );
     SW_REQUIRE_TRUE( unset.has_value() );
     SW_EXPECT_TRUE( unset->empty() );
-    const expected<string> relative = NetSecurity::resolveProjectPath( "Certificates/server.crt" );
+    const expected<AbsolutePath> relative = NetSecurity::resolveProjectPath( "Certificates/server.crt" );
     SW_REQUIRE_TRUE( relative.has_value() );
     const string& project = ProcessRoots::get()._project.str();
-    SW_EXPECT_TRUE( relative->substr( 0, project.size() ) == project && relative->find( "server.crt" ) != string::npos );
+    SW_EXPECT_TRUE( relative->str().substr( 0, project.size() ) == project && relative->str().find( "server.crt" ) != string::npos );
     SW_EXPECT_TRUE( hasErrorKind( NetSecurity::resolveProjectPath( "C:server.crt" ), ErrorKind::InvalidArgument ) );
 }
 

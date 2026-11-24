@@ -236,7 +236,7 @@ namespace sw::editor
         return true;
     }
 
-    void CharacterEditorPanel::collectFilesToSave( vector<string>& outListPath ) const
+    void CharacterEditorPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         vector<string> listAssetID;
         _document.collectFilesToSave( listAssetID );

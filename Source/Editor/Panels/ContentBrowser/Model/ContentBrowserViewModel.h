@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
@@ -93,8 +94,8 @@ namespace sw::editor
     /** @brief 이름이 있는 콘텐츠 루트입니다. 표시 이름과 절대 경로를 가집니다. */
     struct ContentBrowserRoot
     {
-        string _displayName;
-        string _absolutePath;
+        string       _displayName;
+        AbsolutePath _absolutePath;
     };
 
     /** @brief 에셋 명령(`Model/ContentBrowserCommands.cpp`)이 창에 넣는 요청의 종류입니다. 팝업 · 이름 칸은 창(View)이 연다. */
@@ -113,7 +114,7 @@ namespace sw::editor
     struct ContentBrowserRequest
     {
         ContentBrowserRequestKind _kind{ ContentBrowserRequestKind::Reveal };
-        string                    _absolutePath;
+        AbsolutePath              _absolutePath;
     };
 
     /**
@@ -145,9 +146,9 @@ namespace sw::editor
         /** @brief 참조 역색인이 마지막 `Content/` 변경을 반영했으면 @p outCurrent 가 true 입니다. 에디터 컨텍스트가 없으면 false 를 돌려줍니다(감시 값). */
         [[nodiscard]] static bool readReferenceIndexCurrent( bool& outCurrent );
         /** @brief 에셋 명령의 요청을 쌓고 창 열기를 요청합니다(창이 닫혀 있으면 다음 프레임에 열려 꺼낸다 — 언리얼 Sync to Content Browser). */
-        static void postRequest( ContentBrowserRequestKind kind, string_view absolutePath );
+        static void postRequest( ContentBrowserRequestKind kind, const AbsolutePath& absolutePath );
         /** @brief 창의 지금 선택(절대 경로)입니다 — 대상 없이 부른 명령(단축키)이 쓴다. 창이 한 번도 그려지지 않았으면 비어 있다. */
-        [[nodiscard]] static string findPublishedSelection();
+        [[nodiscard]] static AbsolutePath findPublishedSelection();
 
         // ------------------------------------------------------------------------------
         // 1) 프레임 — 창이 내용을 그리기 전에 한 번 부른다
@@ -168,10 +169,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         const vector<ContentBrowserRoot>&       getRoots() const { return _listRoot; }
         const vector<AssetEntry>&               getEntries() const { return _listEntry; }
-        const string&                           getSelectedFolderPath() const { return _selectedFolderAbs; }
+        const AbsolutePath&                     getSelectedFolderPath() const { return _selectedFolderAbs; }
         const vector<ContentBrowserBreadcrumb>& getBreadcrumbs() const { return _listBreadcrumb; }
         /** @brief 폴더 트리의 하위 폴더입니다. 처음 볼 때 한 번 디스크에서 읽는다. 참조는 재귀 중에도 유효하다. */
-        const vector<string>& getOrScanChildFolders( string_view folderAbs ) { return _folderCache.getOrScanChildFolders( folderAbs ); }
+        const vector<AbsolutePath>& getOrScanChildFolders( const AbsolutePath& folderAbs ) { return _folderCache.getOrScanChildFolders( folderAbs ); }
         /** @brief 폴더 트리 캐시를 비웁니다. 다음 그리기에서 디스크를 다시 읽는다. */
         void clearFolderTreeCache() { _folderCache.clear(); }
         /** @brief 폴더 목록을 다시 읽도록 예약했거나 읽는 중이면 true 입니다. */
@@ -180,13 +181,13 @@ namespace sw::editor
         void refreshAll();
 
         /** @brief 폴더로 이동합니다. 그 폴더가 속한 콘텐츠 루트에서 브레드크럼 경로도 함께 만듭니다. */
-        void openFolder( string_view absolutePath );
+        void openFolder( const AbsolutePath& absolutePath );
         /** @brief 폴더를 고르고 목록을 다시 읽게 합니다. @p listBreadcrumb 는 그 폴더의 브레드크럼 경로입니다. */
-        void selectFolder( string_view absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory = true );
+        void selectFolder( const AbsolutePath& absolutePath, const vector<ContentBrowserBreadcrumb>& listBreadcrumb, bool bRecordHistory = true );
         /** @brief 지금 브레드크럼 경로의 @p breadcrumbIndex 번째 조각까지로 이동합니다. */
         void selectBreadcrumb( size_t breadcrumbIndex );
         /** @brief 폴더가 속한 콘텐츠 루트에서 그 폴더까지의 브레드크럼 경로를 만듭니다. */
-        void makeTrailForFolder( string_view folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const;
+        void makeTrailForFolder( const AbsolutePath& folderAbs, vector<ContentBrowserBreadcrumb>& outListBreadcrumb ) const;
         bool canNavigateBack() const { return _history.canNavigateBack(); }
         bool canNavigateForward() const { return _history.canNavigateForward(); }
         void navigateBack();
@@ -208,11 +209,11 @@ namespace sw::editor
         /** @brief 종류 필터와 검색어 @p searchText 를 지나는 항목을 @p outListVisible 에 씁니다. 항목을 복사하지 않고 가리키기만 합니다. */
         void collectVisibleEntries( string_view searchText, vector<const AssetEntry*>& outListVisible ) const;
 
-        const string& getSelectedAssetPath() const { return _selectedAssetAbs; }
+        const AbsolutePath& getSelectedAssetPath() const { return _selectedAssetAbs; }
         /** @brief 항목을 고릅니다. 파일이면 작업 공간 포커스도 그 에셋으로 옮긴다. */
         void selectAsset( const AssetEntry& entry );
         /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
-        void selectAssetPath( string_view absolutePath );
+        void selectAssetPath( const AbsolutePath& absolutePath );
         /**
          * @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고릅니다(언리얼 "Browse to Asset" · Ctrl+B). 메인 씬에서 고른 오브젝트의 애셋(`EditorSelectionSync`)을 찾아갈 때 쓴다.
          * @return 디스크에 없는 애셋(쿠킹 묶음에만 있다)이면 false 이고 아무것도 바꾸지 않는다.
@@ -228,25 +229,25 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         [[nodiscard]] bool createNewFolder();
         [[nodiscard]] bool createNewAsset( const EditorNewAssetTemplate& assetTemplate );
-        bool               duplicateAsset( string_view absolutePath );
+        bool               duplicateAsset( const AbsolutePath& absolutePath );
         /** @brief 이름 바꾸기를 시작합니다. 시작했으면 true 이고 @p outStem 에 확장자를 뺀 이름을 씁니다. 폴더는 받지 않습니다. */
-        [[nodiscard]] bool beginRename( string_view absolutePath, string& outStem );
+        [[nodiscard]] bool beginRename( const AbsolutePath& absolutePath, string& outStem );
         /**
          * @brief 이름 바꾸기를 @p newName 으로 끝냅니다. 참조 역색인이 마지막 파일 변경을 따라오기 전이면 그때까지 미뤘다가 `update` 이 실행한다(입력은 그동안 열려 있다).
          * @details 언리얼이 에셋 레지스트리 스캔이 끝날 때까지 이름 바꾸기를 미루는 것과 같다 — 거절하면 늦게 닿은 파일 변경 알림 하나가 사용자의 Enter 를 버린다.
          */
         bool commitRename( string_view newName );
         /** @brief 이름 바꾸기를 끝냅니다. 역색인을 기다리던 이름도 버립니다. */
-        void          cancelRename();
-        const string& getRenamingPath() const { return _fileActions.getRenamingPath(); }
-        bool          isRenaming( const AssetEntry& entry ) const;
+        void                cancelRename();
+        const AbsolutePath& getRenamingPath() const { return _fileActions.getRenamingPath(); }
+        bool                isRenaming( const AssetEntry& entry ) const;
         /** @brief 에셋을 @p folderAbs 로 옮기고 참조를 고칩니다. 역색인이 따라오기 전이면 `commitRename` 처럼 미룬다. */
-        [[nodiscard]] bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs );
+        [[nodiscard]] bool moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs );
         /**
          * @brief 끌어 놓은 에셋 · 폴더의 옮기기를 확인 대기로 둡니다. 창이 미리보기(옮길 파일 수 · 고칠 참조 · 바깥 도메인 · 고칠 수 없는 참조)를 보이고 확인을 받는다.
          * @details 언리얼 콘텐츠 브라우저가 놓을 때 Move Here 를 묻는 자리다. 계획은 역색인이 따라온 뒤에 세운다(`updateMoveRequest`).
          */
-        void requestMoveToFolder( string_view sourceAbs, string_view folderAbs );
+        void requestMoveToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs );
         /** @brief 확인을 기다리는 옮기기가 있으면 true 입니다. */
         bool hasMoveRequest() const { return _moveRequestSourceAbs.empty() == false; }
         /** @brief 역색인이 따라왔고 아직 계획하지 않았으면 계획합니다. 확인 대화상자가 그릴 때마다 부른다. 계획했으면 true 입니다. */
@@ -254,14 +255,14 @@ namespace sw::editor
         /** @brief 계획한 옮기기의 미리보기입니다(`updateMoveRequest` 가 true 일 때만 뜻이 있다). */
         const EditorAssetMovePlan& getMoveRequestPlan() const { return _moveRequestPlan; }
         /** @brief 확인을 기다리는 옮기기의 대상 폴더(디스크 경로)입니다. */
-        const string& getMoveRequestFolderPath() const { return _moveRequestFolderAbs; }
+        const AbsolutePath& getMoveRequestFolderPath() const { return _moveRequestFolderAbs; }
         /** @brief 계획한 옮기기를 적용합니다(트랜잭션 — 지면 되돌린다). */
         bool confirmMoveRequest();
         /** @brief 기다리던 옮기기를 버립니다. */
         void cancelMoveRequest();
         /** @brief 지울 에셋을 정합니다. 확인은 창이 받는다. */
-        void          requestDeleteAsset( string_view absolutePath ) { _fileActions.requestDelete( absolutePath ); }
-        const string& getPendingDeletePath() const { return _fileActions.getPendingDeletePath(); }
+        void                requestDeleteAsset( const AbsolutePath& absolutePath ) { _fileActions.requestDelete( absolutePath ); }
+        const AbsolutePath& getPendingDeletePath() const { return _fileActions.getPendingDeletePath(); }
         /** @brief 기다리던 에셋을 휴지통으로 보냅니다. 성공하면 선택을 비우고 목록을 다시 읽게 합니다. */
         bool confirmDeleteAsset();
         void cancelDeleteAsset() { _fileActions.cancelDelete(); }
@@ -274,7 +275,7 @@ namespace sw::editor
          * @details 규칙의 한도는 설정(`EditorToolDefaults::_fileDropMaxMegabytes` · `_fileDropMaxCount`), 확장자는 임포트 종류 표다. 거른 파일은 사유와 함께 경고(`ContentBrowser.FileDropRejected`)로,
          *          받은 수는 `ContentBrowser.FileDropImported` 로 남긴다. 임포트한 파일 수를 돌려준다.
          */
-        uint32 importDroppedFiles( const vector<string>& listPath, string_view destFolderAbs );
+        uint32 importDroppedFiles( const vector<string>& listPath, const AbsolutePath& destFolderAbs );
 
         // ------------------------------------------------------------------------------
         // 5) 참조 찾기
@@ -283,7 +284,7 @@ namespace sw::editor
         bool                                 isReferenceIndexCurrent() const;
         const ContentBrowserReferenceSearch& getReferenceSearch() const { return _referenceSearch; }
         /** @brief 에셋의 참조(@p bDependencies 면 의존)를 찾습니다. 결과는 `getReferenceSearch` 입니다. */
-        void showReferences( string_view absolutePath, bool bDependencies );
+        void showReferences( const AbsolutePath& absolutePath, bool bDependencies );
         /** @brief 에디터 전역의 참조 역색인입니다(`AssetHotReload::getReferenceIndex`). */
         static const EditorAssetIndex& getReferenceIndex();
         /** @brief 역색인 스캔이 워커에서 진행 중이면 true 입니다. */
@@ -306,7 +307,7 @@ namespace sw::editor
         /** @brief 임포트 대화상자가 고른 경로를 대화상자를 연 때의 폴더로 임포트합니다. */
         void processPendingImports();
         /** @brief 목록과 폴더 트리를 다시 읽게 하고 @p absolutePath 를 고릅니다. 이 변경 전에 시작한 색인 스캔은 버린다. */
-        void selectAfterFileChange( string_view absolutePath );
+        void selectAfterFileChange( const AbsolutePath& absolutePath );
         /** @brief 옮기기가 고칠 역색인입니다. 마지막 변경을 아직 반영하지 않았으면 nullptr 입니다. */
         EditorAssetIndex* findCurrentReferenceIndex();
         /** @brief 역색인이 따라왔으면 미뤄 둔 옮기기를 실행합니다(`update`). */
@@ -315,15 +316,15 @@ namespace sw::editor
     private:
         vector<ContentBrowserRoot>       _listRoot;
         vector<AssetEntry>               _listEntry;
-        string                           _selectedFolderAbs;
+        AbsolutePath                     _selectedFolderAbs;
         vector<ContentBrowserBreadcrumb> _listBreadcrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
-        string                           _selectedAssetAbs;
-        string                           _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
+        AbsolutePath                     _selectedAssetAbs;
+        AbsolutePath                     _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
         ContentBrowserHistory            _history;              /**< 뒤로 가기 · 앞으로 가기 이력 */
         ContentBrowserFileActions        _fileActions;          /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
         ContentBrowserMoveQueue          _pendingMoves;         /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */
-        string                           _moveRequestSourceAbs; /**< 확인을 기다리는 끌어 놓기의 원본(파일 · 폴더). 비었으면 없다 */
-        string                           _moveRequestFolderAbs; /**< 그 대상 폴더 */
+        AbsolutePath                     _moveRequestSourceAbs; /**< 확인을 기다리는 끌어 놓기의 원본(파일 · 폴더). 비었으면 없다 */
+        AbsolutePath                     _moveRequestFolderAbs; /**< 그 대상 폴더 */
         EditorAssetMovePlan              _moveRequestPlan;      /**< 그 계획(미리보기) */
         ContentBrowserReferenceSearch    _referenceSearch;      /**< 마지막 참조 찾기의 결과(색인은 `AssetHotReload` 의 것) */
         ContentBrowserImportQueue        _importQueue;          /**< 파일 대화상자가 고른 임포트 경로. 메인 스레드가 꺼내 임포트한다 */

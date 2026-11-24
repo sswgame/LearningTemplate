@@ -63,25 +63,25 @@ namespace sw
             /** @brief 정리 규칙이 있는 층의 루트(버킷 폴더의 부모)에서 버킷이 아닌 폴더를 지웁니다 — 버킷이 없던 때의 항목 폴더(`<키 앞 두 글자>`)는 아무도 열지 않는다. */
             static uint32 removeForeignFolders( const DerivedDataLayer& layer )
             {
-                const string root = FileUtil::getDirectoryPart( layer._rootPath.str() );
-                if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( FileUtil::toDiskPath( root ) ) == false )
+                const AbsolutePath root = layer._rootPath.getParent();
+                if ( layer._evictionPolicy.has_value() == false || FileUtil::isDirectory( root ) == false )
                     return 0;
-                vector<string> listForeign;
-                (void)FileUtil::forEachDirectoryEntry( FileUtil::toDiskPath( root ), false, [&listForeign]( const DirectoryEntry& entry )
+                vector<AbsolutePath> listForeign;
+                (void)FileUtil::forEachDirectoryEntry( root, false, [&listForeign]( const DirectoryEntry& entry )
                 {
                     const string name    = FileUtil::getFileNamePart( entry._path );
                     bool         bBucket = false;
                     for ( uint32 index = 0; index < static_cast<uint32>( DerivedDataBucket::Count ); ++index )
                         bBucket = bBucket || name == getBucketName( static_cast<DerivedDataBucket>( index ) );
                     if ( entry._bDirectory && bBucket == false )
-                        listForeign.push_back( string( entry._path ) );
+                        listForeign.push_back( entry.makePath() );
                     return true;
                 } ); // 도중에 멈추면 남은 폴더는 다음 정리가 지운다
                 uint32 removed = 0;
-                for ( const string& folder : listForeign )
-                    removed += FileUtil::removeDirectory( FileUtil::toDiskPath( folder ) ) ? 1u : 0u;
+                for ( const AbsolutePath& folder : listForeign )
+                    removed += FileUtil::removeDirectory( folder ) ? 1u : 0u;
                 if ( removed > 0 )
-                    SW_LOG_INFO_ID( "DDC.ForeignFoldersRemoved", "DDC '%#': removed %# folders that belong to no bucket", root, removed );
+                    SW_LOG_INFO_ID( "DDC.ForeignFoldersRemoved", "DDC '%#': removed %# folders that belong to no bucket", root.str(), removed );
                 return removed;
             }
 
@@ -179,12 +179,12 @@ namespace sw
             }
 
             /** @brief 파일 @p sourcePath 를 조각으로 @p writer 끝에 붙입니다(한 벡터로 들지 않는다). */
-            [[nodiscard]] static bool appendFile( AtomicFileWriter& writer, string_view sourcePath )
+            [[nodiscard]] static bool appendFile( AtomicFileWriter& writer, const AbsolutePath& sourcePath )
             {
                 vector<uint8> chunk;
                 for ( uint64 offset = 0;; )
                 {
-                    if ( FileUtil::readFile( FileUtil::toDiskPath( sourcePath ), chunk, offset, ContentHash::kStreamChunkBytes ) == false || writer.append( chunk.data(), chunk.size() ).has_value() == false )
+                    if ( FileUtil::readFile( sourcePath, chunk, offset, ContentHash::kStreamChunkBytes ) == false || writer.append( chunk.data(), chunk.size() ).has_value() == false )
                         return false;
                     offset += chunk.size();
                     if ( chunk.size() < ContentHash::kStreamChunkBytes )
@@ -237,7 +237,7 @@ namespace sw
         return record;
     }
 
-    bool CookRecord::write( string_view absPath ) const
+    bool CookRecord::write( const AbsolutePath& absPath ) const
     {
         string text( kHeader );
         text.append( "\nkey " ).append( CookRecordInternal::toHex( _key ) );
@@ -250,19 +250,19 @@ namespace sw
             text.append( input._source );
         }
         text.append( "\n" );
-        return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( absPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( absPath ), text );
+        return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeTextFile( absPath, text );
     }
 
-    bool CookRecord::read( string_view absPath, CookRecord& outRecord )
+    bool CookRecord::read( const AbsolutePath& absPath, CookRecord& outRecord )
     {
         outRecord = CookRecord{};
         string                 text;
-        const OptionalFileRead read = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( absPath ), text );
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( absPath, text );
         if ( read == OptionalFileRead::Missing )
             return false;
         if ( read == OptionalFileRead::Failed )
         {
-            SW_LOG_WARNING_ID( "CookRecord.CookRecordCannotRead", "Cook record '%#' cannot be read - the job is cooked again", absPath );
+            SW_LOG_WARNING_ID( "CookRecord.CookRecordCannotRead", "Cook record '%#' cannot be read - the job is cooked again", absPath.str() );
             return false;
         }
         vector<string_view> listLine;
@@ -276,7 +276,7 @@ namespace sw
         }
         if ( listLine.empty() || StringUtil::trim( listLine[0] ) != kHeader )
         {
-            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' is not '%#' - the job is cooked again", absPath, kHeader );
+            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' is not '%#' - the job is cooked again", absPath.str(), kHeader );
             return false;
         }
         bool bHasKey    = false;
@@ -317,14 +317,14 @@ namespace sw
             }
             if ( bParsed == false )
             {
-                SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' line %# is malformed - the job is cooked again", absPath, lineIndex + 1 );
+                SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' line %# is malformed - the job is cooked again", absPath.str(), lineIndex + 1 );
                 outRecord = CookRecord{};
                 return false;
             }
         }
         if ( bHasKey == false || bHasOutput == false )
         {
-            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' has no key or output line - the job is cooked again", absPath );
+            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' has no key or output line - the job is cooked again", absPath.str() );
             outRecord = CookRecord{};
             return false;
         }
@@ -350,12 +350,12 @@ namespace sw
     expected<DerivedDataCache> DerivedDataCache::open( DerivedDataBucket bucket )
     {
         const string_view bucketName = CookRecordInternal::getBucketName( bucket );
-        string            overrideRoot;
+        AbsolutePath      overrideRoot;
         if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
-            return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ FileUtil::toDiskPath( overrideRoot ).join( bucketName ), DerivedDataAccess::ReadWrite } } };
+            return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ overrideRoot.join( bucketName ), DerivedDataAccess::ReadWrite } } };
         const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
         JSONDocument       document;
-        if ( document.loadFromFile( path.str() ) == false )
+        if ( document.loadFromFile( path ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path.str() } );
         const JSONValue layers = document.getRoot().get( "_listLayer" );
         if ( layers.isArray() == false || layers.size() == 0 )
@@ -423,9 +423,9 @@ namespace sw
     {
         struct Entry
         {
-            string _path;
-            uint64 _sizeBytes{ 0 };
-            uint64 _writeTime{ 0 };
+            AbsolutePath _path;
+            uint64       _sizeBytes{ 0 };
+            uint64       _writeTime{ 0 };
         };
         uint32      removedTotal = 0;
         const int64 now          = FileUtil::getCurrentFileWriteTime();
@@ -438,9 +438,9 @@ namespace sw
             const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
                  {
                 FileStamp stamp;
-                if ( entry._bDirectory == false && FileUtil::getFileStamp( FileUtil::toDiskPath( entry._path ), stamp ) )
+                if ( entry._bDirectory == false && FileUtil::getFileStamp( entry.makePath(), stamp ) )
                 {
-                    listEntry.push_back( Entry{ string( entry._path ), stamp._sizeBytes, stamp._writeTime } );
+                    listEntry.push_back( Entry{ entry.makePath(), stamp._sizeBytes, stamp._writeTime } );
                     totalBytes += stamp._sizeBytes;
                 }
                 return true;
@@ -458,7 +458,7 @@ namespace sw
             {
                 if ( static_cast<int64>( entry._writeTime ) >= cutoff && totalBytes <= layer._evictionPolicy->_maxSizeBytes )
                     break;
-                if ( FileUtil::tryRemoveFile( FileUtil::toDiskPath( entry._path ) ) == false )
+                if ( FileUtil::tryRemoveFile( entry._path ) == false )
                     continue; // 다른 프로세스가 읽는 중 — 다음 정리가 지운다
                 totalBytes -= entry._sizeBytes;
                 freedBytes += entry._sizeBytes;
@@ -491,7 +491,7 @@ namespace sw
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
             const AbsolutePath path = makeRecordPath( layerIndex, actionKey );
-            if ( CookRecord::read( path.str(), outRecord ) == false )
+            if ( CookRecord::read( path, outRecord ) == false )
                 continue;
             CookRecordInternal::touchEntry( _listLayer[layerIndex], path );
             return true;
@@ -505,7 +505,7 @@ namespace sw
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
             if ( _listLayer[layerIndex]._access == DerivedDataAccess::ReadWrite )
-                bAllWritten = record.write( makeRecordPath( layerIndex, actionKey ).str() ) && bAllWritten;
+                bAllWritten = record.write( makeRecordPath( layerIndex, actionKey ) ) && bAllWritten;
         }
         return bAllWritten;
     }
@@ -534,7 +534,7 @@ namespace sw
         return false;
     }
 
-    bool DerivedDataCache::find( uint64 key, string_view keyDescription, string_view outputPath ) const
+    bool DerivedDataCache::find( uint64 key, string_view keyDescription, const AbsolutePath& outputPath ) const
     {
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
@@ -543,10 +543,10 @@ namespace sw
                 continue;
             // 출력은 임시 파일에 흘려 쓰고 본문 해시가 맞을 때만 바꿔 끼운다 — 어긋난 항목이 출력 자리를 건드리지 않는다.
             AtomicFileWriter   writer;
-            const AbsolutePath outputDiskPath = FileUtil::toDiskPath( outputPath );
+            const AbsolutePath outputDiskPath = outputPath;
             if ( FileUtil::ensureParentDirectoryExists( outputDiskPath ) == false || writer.open( outputDiskPath ).has_value() == false )
             {
-                SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath );
+                SW_LOG_WARNING_ID( "DDC.OutputNotWritable", "DDC: cannot write '%#' from the cache - treated as a miss", outputPath.str() );
                 return false;
             }
             uint64                      payloadHash = 0;
@@ -586,12 +586,12 @@ namespace sw
         return bAllWritten;
     }
 
-    bool DerivedDataCache::store( uint64 key, string_view keyDescription, string_view sourcePath ) const
+    bool DerivedDataCache::store( uint64 key, string_view keyDescription, const AbsolutePath& sourcePath ) const
     {
         const expected<uint64> payloadHash = ContentHash::computeFileStream( sourcePath );
         if ( payloadHash.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "DDC.SourceUnreadable", "DDC: cannot read '%#' to store it - the next run cooks it again", sourcePath );
+            SW_LOG_WARNING_ID( "DDC.SourceUnreadable", "DDC: cannot read '%#' to store it - the next run cooks it again", sourcePath.str() );
             return false;
         }
         bool bAllWritten = true;

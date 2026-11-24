@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -37,10 +38,10 @@ namespace sw
 
         /**
          * @brief 설정이 준 경로 @p path 를 프로젝트 루트 기준으로 풉니다(`AbsolutePath::tryResolve` - 절대면 그대로, 상대면 프로젝트 아래).
-         * @return 빈 글은 "정하지 않음"이라 빈 글이다. 풀 수 없는 글(드라이브 상대)은 오류다 - 예전처럼 빈 글로 바꾸면 "정하지 않음"으로 읽혀
+         * @return 빈 글은 "정하지 않음"이라 빈 경로다. 풀 수 없는 글(드라이브 상대)은 오류다 - 예전처럼 빈 글로 바꾸면 "정하지 않음"으로 읽혀
          *         개발 인증서로 물러났다.
          */
-        [[nodiscard]] static expected<string> resolveProjectPath( string_view path );
+        [[nodiscard]] static expected<AbsolutePath> resolveProjectPath( string_view path );
 
         /**
          * @brief 서버 TLS 컨텍스트입니다. 실패하면 까닭입니다.
@@ -59,7 +60,7 @@ namespace sw
          * @brief 개발용 인증서 · 키가 없으면 만듭니다(서버 · 클라이언트가 같은 PC · 같은 폴더를 보는 경우). 쓴 경로를 돌려준다.
          * @details 확장점 `NetSecurityDevOptions` 가 비었으면(DevOnline 단위가 없는 구성 — 배포) 오류다.
          */
-        [[nodiscard]] static expected<void> ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile );
+        [[nodiscard]] static expected<void> ensureDevCertificate( INetSecurityProvider& provider, AbsolutePath& outCertificateFile, AbsolutePath& outPrivateKeyFile );
     };
 
     /**
@@ -68,7 +69,7 @@ namespace sw
      */
     struct NetSecurityDevOptions
     {
-        using EnsureDevCertificateFunction = expected<void> ( * )( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile );
+        using EnsureDevCertificateFunction = expected<void> ( * )( INetSecurityProvider& provider, AbsolutePath& outCertificateFile, AbsolutePath& outPrivateKeyFile );
 
         EnsureDevCertificateFunction _pEnsureDevCertificate{ nullptr };
 

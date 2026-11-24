@@ -27,7 +27,7 @@ namespace sw
     enum class ScreenshotOutput : uint8
     {
         File,     ///< `_path` 에 이미지 파일(확장자가 `.png` 면 PNG, 아니면 PPM)로 쓴다
-        PNGBytes, ///< PNG 바이트로 그 표에 둔다(`takePNGBytes`) — `_path` 는 로그에 남길 요청 이름이다. 파일을 거치지 않는다(언리얼 `ReadPixels` 처럼 픽셀을 메모리로 받는다)
+        PNGBytes, ///< PNG 바이트로 그 표에 둔다(`takePNGBytes`) — `_path` 는 비었다. 파일을 거치지 않는다(언리얼 `ReadPixels` 처럼 픽셀을 메모리로 받는다)
     };
 
     /**
@@ -36,7 +36,8 @@ namespace sw
      */
     struct ScreenshotRequest
     {
-        string           _path;                                ///< 쓸 파일 경로. 바이트 요청이면 로그에 남길 요청 이름
+        AbsolutePath     _path;                                ///< 쓸 파일 경로. 바이트 요청이면 비었다
+        string           _name;                                ///< 로그에 남길 이름(파일이면 그 경로 글)
         RHITextureHandle _texture{ 0 };                        ///< 0 이면 화면에 나간 이미지(Present 결과), 아니면 그 렌더 타깃
         RHIFormat        _format{ RHIFormat::R8G8B8A8_UNORM }; ///< `_texture` 의 포맷
         uint32           _ticket{ 0 };                         ///< `put` · `putForPNGBytes` 가 돌려준 표 — 끝 알림(`reportCompleted` · `reportCompletedPNGBytes`)이 이 표로 결과를 남긴다
@@ -105,7 +106,7 @@ namespace sw
          */
         [[nodiscard]] bool putForNextPacket( const AbsolutePath& filePath );
         /** @brief 패킷을 지을 때(엔진 게임 스레드) 맡긴 경로를 꺼내 @p outPath 에 담습니다. 맡긴 것이 없으면 false 이고 @p outPath 는 그대로입니다. */
-        bool takeForPacket( string& outPath );
+        bool takeForPacket( AbsolutePath& outPath );
         /** @brief 맡긴 패킷 사진이 없으면(다음 것을 받을 수 있으면) true 입니다. */
         [[nodiscard]] bool isPacketSlotFree() const;
         /** @brief 패킷이 실은 사진 하나를 처리했음을 알립니다(쓰지 못했어도 센다 — 기다리는 쪽이 끝을 안다). 렌더 스레드가 부릅니다. */
@@ -129,7 +130,7 @@ namespace sw
         mutable mutex                                       _mutex;
         deque<ScreenshotRequest> _listPending               SW_GUARDED_BY( _mutex ); ///< 받은 차례의 요청 줄
         array<TicketResult, kResultHistoryCount> _arrResult SW_GUARDED_BY( _mutex ); ///< 표마다의 결과(고리 — 표 번호가 자리다)
-        string _pendingPacketPath                           SW_GUARDED_BY( _mutex );
+        AbsolutePath _pendingPacketPath                     SW_GUARDED_BY( _mutex );
         uint32 _lastTicket                                  SW_GUARDED_BY( _mutex ){ 0 }; ///< 마지막으로 내준 표
         atomic<uint32>                                      _requestedSerial{ 0 };        ///< 받은 요청 수(처리 수와 견준다)
         atomic<uint32>                                      _completedSerial{ 0 };

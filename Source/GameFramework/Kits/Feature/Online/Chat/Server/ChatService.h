@@ -34,6 +34,7 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -78,8 +79,8 @@ namespace sw
     struct ChatServiceConfig
     {
         ChatSpamConfig _spam{};                  ///< 필수 — 채팅 키트 설정 `_spam`. 비면 `initialize` 가 거절한다
-        string         _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
-        string         _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
+        AbsolutePath   _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
+        AbsolutePath   _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
         int64          _sanctionCacheMs{ 60 * constant::time::kMillisecondsPerSecond };
         int32          _historyFlushMax{ 60 };                                                 ///< 트랜잭션 하나에 쓰는 기록 수이다. 색인 줄과 합쳐 상한 64 안에서 자른다

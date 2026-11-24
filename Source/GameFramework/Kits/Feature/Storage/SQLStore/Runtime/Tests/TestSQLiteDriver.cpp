@@ -261,7 +261,7 @@ SW_TEST_CASE( SQLiteDriverTest, OpenFailuresExplainAndLeaveNoConnection )
     SW_EXPECT_TRUE( error.find( garbagePath.str() ) != string::npos );
 
     error.clear();
-    error = describeError( pDriver->openConnection( FileUtil::joinPath( test::makeScratchPath( "no_such_folder" ).str(), "x.db" ), "" ) );
+    error = describeError( pDriver->openConnection( test::makeScratchPath( "no_such_folder" ).join( "x.db" ).str(), "" ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.empty() == false );
 }

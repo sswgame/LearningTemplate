@@ -228,7 +228,7 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
 SW_TEST_CASE( PackCookerTest, RealPackRulesExcludeLocalizationAuthoringTables )
 {
     PackConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, ProcessRoots::get()._project.join( PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
     fixed_string<constant::buffer::kMax128> stringTable;
     formatstring( stringTable.data(), stringTable.capacity(), "localization/engine%#", SourceStringTable::kExtension );
     fixed_string<constant::buffer::kMax128> translationTable;

@@ -308,7 +308,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "ShaderCompiler.DerivedDataUnavailable", "The shader DDC could not be opened (Config/Dev/DerivedData.json): %# (%#)", cache.error().message(), cache.error().detail() );
                     return unexpected( Error{ ErrorKind::ExternalFailure, "The shader DDC could not be opened (Config/Dev/DerivedData.json)", cache.error().detail() } );
                 }
-                const uint64  sourceHash = ContentHash::computeFile( input->_source.str() );
+                const uint64  sourceHash = ContentHash::computeFile( input->_source );
                 CompileAction action     = makeCompileAction( desc, sourceHash );
                 string        profile    = getTargetProfile( desc._stage, desc._targetFormat );
                 return CompileSetup{ std::move( desc ), *resolver, *input, &*cache, sourceHash, std::move( action ), std::move( profile ) };
@@ -374,7 +374,7 @@ namespace sw
 
                 // 소스는 엔진 파일 입구로 읽는다(`D3DCompileFromFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
                 const bool bPreprocessed = step == CompileStep::CompilePreprocessed;
-                if ( bPreprocessed == false && FileUtil::readFile( FileUtil::toDiskPath( setup._input._source.str() ), inoutText ) == false )
+                if ( bPreprocessed == false && FileUtil::readFile( setup._input._source, inoutText ) == false )
                     return CompilerRunResult::NoOutput;
 
                 vector<D3D_SHADER_MACRO> listMacro;
@@ -454,8 +454,8 @@ namespace sw
                     *ppIncludeSource = nullptr;
                     // DXC 는 include 폴더마다 후보 이름을 물어본다 - 없는 후보는 오류 로그 없이 실패로 돌려줘 다음 폴더로 넘어가게 한다.
                     vector<uint8>                bytes;
-                    const string                 candidate = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
-                    const optional<AbsolutePath> found     = _resolver.readInclude( candidate, bytes );
+                    const optional<AbsolutePath> candidate = AbsolutePath::tryMake( StringUtil::utf16ToUTF8( pFilename ) ); // 상대 후보(작업 폴더 기준)는 찾지 않는다
+                    const optional<AbsolutePath> found     = candidate.has_value() ? _resolver.readInclude( *candidate, bytes ) : nullopt;
                     if ( found.has_value() == false )
                         return E_FAIL; // 연 파일 · 없던 후보는 include 규칙이 작업(`CookJob`)에 적었다
                     DxcComPtr<IDxcBlobEncoding> blob;
@@ -498,19 +498,13 @@ namespace sw
             /** @brief DXC 라이브러리의 `DxcCreateInstance` 주소를 찾습니다(`ShaderCompiler::findDXCCreateInstance` 가 한 번 부른다). 빌드가 DXC 를 실행 파일 옆에 둔다(배포 구성의 테스트는 TestBin) - 다른 곳을 찾아다니지 않는다. */
             static void* loadDXCCreateInstance()
             {
-                const string                 libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
-                const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
-                if ( libraryPath.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "ShaderCompiler.DXCPathNotAbsolute", "DXC path is not absolute: %#", libraryText.c_str() );
-                    return nullptr;
-                }
-                void* const pLibrary = ModuleLibraryUtil::loadLibraryAt( *libraryPath );
+                const AbsolutePath libraryPath = FileUtil::getExecutablePath().getParent().join( ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
+                void* const        pLibrary    = ModuleLibraryUtil::loadLibraryAt( libraryPath );
                 if ( pLibrary == nullptr )
                     return nullptr;
                 void* const pCreateInstance = ModuleLibraryUtil::getDynamicSymbol( pLibrary, "DxcCreateInstance" );
                 if ( pCreateInstance == nullptr )
-                    SW_LOG_WARNING_ID( "ShaderCompiler.LoadedButDxcCreateInstanceNot", "%# loaded but DxcCreateInstance not found", libraryText.c_str() );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.LoadedButDxcCreateInstanceNot", "%# loaded but DxcCreateInstance not found", libraryPath.c_str() );
                 return pCreateInstance;
             }
 
@@ -623,34 +617,31 @@ namespace sw
     #else
         #error "Unsupported platform"
     #endif
-                const string                 tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
-                const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
-                if ( tintPath.has_value() == false || FileUtil::isRegularFile( FileUtil::toDiskPath( tintText ) ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText } );
+                const AbsolutePath tintText = FileUtil::getExecutablePath().getParent().join( kTintName );
+                if ( FileUtil::isRegularFile( tintText ) == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText.str() } );
                 // 이름은 부를 때마다 새로 잡는다 — 같은 바이트(같은 해시)를 병렬 작업 둘이 같은 이름으로 쓰면 먼저 끝난 쪽이 지운 파일을 다른 쪽이 못 열었다
                 // ("Failed to open sw_tint_<해시>.spv"). 만들기가 곧 자리 잡기(`reserveUniquePath`)라 두 작업이 같은 이름을 갖지 않는다.
                 const uint64                           hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
                 fixed_string<constant::buffer::kMax32> tintStem;
                 formatstring( tintStem.data(), tintStem.capacity(), "sw_tint_%#", hash );
-                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ) ), ".spv", false );
+                const AbsolutePath spirvPath = FileUtil::reserveUniquePath( FileUtil::getTempDirectory().join( tintStem ), ".spv", false );
                 if ( spirvPath.empty() )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory() } );
-                StringBuilder<constant::buffer::kMax512> wgslBuilder;
-                wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath ) );
-                const string wgslPath( wgslBuilder.view() ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
-                if ( FileUtil::writeFile( FileUtil::toDiskPath( spirvPath ), inoutBytecode.data(), inoutBytecode.size() ) == false )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath } );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory().str() } );
+                const AbsolutePath wgslPath = spirvPath.removeExtension().appendSuffix( ".wgsl" ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
+                if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath.str() } );
                 string                toolOutput;
                 const auto            onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
                            {
                     toolOutput += line;
                     toolOutput += ' ';
                 } );
-                const expected<int32> exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath, spirvPath } ), {}, onOutput );
+                const expected<int32> exitCode = Process::execute( ProcessCommand::at( tintText, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath.str(), spirvPath.str() } ), {}, onOutput );
                 vector<uint8>         wgslBytes;
-                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( FileUtil::toDiskPath( wgslPath ), wgslBytes );
-                (void)FileUtil::removeFile( FileUtil::toDiskPath( spirvPath ) );
-                (void)FileUtil::removeFile( FileUtil::toDiskPath( wgslPath ) );
+                const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
+                (void)FileUtil::removeFile( spirvPath );
+                (void)FileUtil::removeFile( wgslPath );
                 if ( exitCode.has_value() == false )
                     return unexpected( exitCode.error() );
                 if ( bRead == false )
@@ -755,7 +746,7 @@ namespace sw
                 // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
                 const wstring wPath         = StringUtil::utf8ToUTF16( input._source.c_str() );
                 const bool    bPreprocessed = step == CompileStep::CompilePreprocessed;
-                if ( bPreprocessed == false && FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), inoutText ) == false )
+                if ( bPreprocessed == false && FileUtil::readFile( input._source, inoutText ) == false )
                     return CompilerRunResult::NoOutput;
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );
@@ -1039,7 +1030,7 @@ namespace sw
         const expected<DerivedDataCache>&  cache = Internal::getDerivedDataCache();
         if ( input.has_value() == false || cache.has_value() == false )
             return nullopt;
-        const Internal::CompileAction action = Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), ContentHash::computeFile( input->_source.str() ) );
+        const Internal::CompileAction action = Internal::makeCompileAction( Internal::makeFullDesc( requestDesc ), ContentHash::computeFile( input->_source ) );
         CookRecord                    record;
         if ( cache->readRecord( action._actionKey, record ) == false || record.isFresh( action._jobDesc ) == false )
             return nullopt;
@@ -1080,7 +1071,7 @@ namespace sw
 
         // 이 컴파일의 작업 — 주 소스와 include 규칙이 읽은 것(없던 후보 포함)이 입력으로 적힌다. 컴파일러의 include 처리기는 이 스레드에서 불린다.
         CookJob job{ setup._action._jobDesc };
-        if ( job.recordDiskInput( setup._input._source.str(), setup._sourceHash ) == false )
+        if ( job.recordDiskInput( setup._input._source, setup._sourceHash ) == false )
         {
             result._errorMessage = "The shader source could not be recorded as a cook input (see the error above).";
             return result;

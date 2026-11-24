@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
@@ -162,7 +163,7 @@ namespace sw::editor
         ~ModelImportConfig() = default;
 
         /** @brief 파일에서 설정을 읽습니다. 규칙 파일은 필수다 — 없거나 읽지 못하면 오류를 남기고 false 입니다(규칙 없이 임포트하면 결과가 말없이 바뀐다). */
-        [[nodiscard]] bool loadFromFile( string_view configPath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& configPath );
 
         /** @brief JSON 문자열에서 설정을 읽습니다. 모르는 키 · 값, 숫자 세 개가 아닌 `translation`, 객체가 아닌 규칙은 오류입니다. */
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );
@@ -182,7 +183,7 @@ namespace sw::editor
         const vector<ModelImportRule>& getRules() const { return _listRule; }
 
         /** @brief 에디터 설정을 거치지 않은 기본 경로(`<프로젝트>/Config/Editor/ModelImportConfig.json`)를 반환합니다(프로젝트 루트는 기동 때 정한 값이라 워커에서 불러도 된다). */
-        static string makeDefaultConfigPath();
+        static AbsolutePath makeDefaultConfigPath();
 
     private:
         /** @brief 규칙 객체 @p ruleValue 의 키를 @p inoutRule 에 읽습니다(적지 않은 칸은 그대로). 규칙 파일과 서술의 예외가 함께 쓴다. 오류가 있으면 false 입니다. */

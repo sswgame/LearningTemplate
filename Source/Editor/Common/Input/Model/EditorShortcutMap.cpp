@@ -301,9 +301,9 @@ namespace sw::editor
         return count;
     }
 
-    string EditorShortcutMap::getUserBindingsPath()
+    AbsolutePath EditorShortcutMap::getUserBindingsPath()
     {
-        return EditorPaths::resolveEditorStateFile( kUserBindingsFileName ).str();
+        return EditorPaths::resolveEditorStateFile( kUserBindingsFileName );
     }
 
     void EditorShortcutMap::saveUserBindings() const

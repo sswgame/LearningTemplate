@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
@@ -70,7 +71,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool saveDocument();
         /** @brief `saveDocument` 가 쓸 파일입니다 — 고친 현지화 프로젝트의 표들과 열린 게임 데이터 파일(디스크 경로). */
-        void collectFilesToSave( vector<string>& outListPath ) const;
+        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const;
         /** @brief 고친 현지화 표를 디스크의 내용으로 되돌립니다. 게임 데이터 파일은 패널이 다시 엽니다(`openGameDataFile`). */
         void revertLocalization();
         bool isLocalizationDirty() const { return _bLocalizationDirty; }
@@ -161,11 +162,11 @@ namespace sw::editor
          * @brief 디스크 파일 @p absolutePath 를 읽어 엽니다(고친 글은 버린다 — 바꾸기 전 확인은 문서 패널이 한다). 다시 읽기도 이 길입니다.
          * @return 읽었으면 true 입니다. 못 읽으면 아무 파일도 열지 않습니다 — 앞 파일의 글을 든 채 열면 저장이 앞 파일의 내용을 이 파일에 쓴다.
          */
-        [[nodiscard]] bool openGameDataFile( string_view absolutePath );
+        [[nodiscard]] bool openGameDataFile( const AbsolutePath& absolutePath );
         /** @brief 목록 항목의 디스크 경로 @p absolutePath 를 문서 열기(워크스페이스 포커스)가 받는 리소스 id 로 바꿉니다. 리소스 트리 밖이면 빈 문자열입니다. */
-        static string makeGameDataAssetID( string_view absolutePath );
+        static string makeGameDataAssetID( const AbsolutePath& absolutePath );
         /** @brief 열린 게임 데이터 파일의 디스크 경로입니다. 비면 열린 파일이 없다. */
-        const string& getGameDataPath() const { return _gameDataPath; }
+        const string& getGameDataPath() const { return _gameDataPath.str(); }
         /**
          * @brief 열린 파일에 원문을 씁니다(Save File 단추 · `saveDocument`). XML 로 읽히지 않는 원문은 쓰지 않습니다 — 게임이 다음에 읽지 못하는 파일을 만들지 않는다. dirty 가 남아 저장 확인이 다시 묻습니다.
          * @return 썼으면 true 입니다. 열린 파일이 없으면 false 입니다.
@@ -219,7 +220,7 @@ namespace sw::editor
         LocalizationSheet                  _localizationSheet;
         vector<string>                     _listLocalizationProject;
         vector<GameDataFileEntry>          _listGameDataFile;
-        string                             _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
+        AbsolutePath                       _gameDataPath; ///< 열린 게임 데이터 파일의 디스크 경로(문서 패널이 정한 문서를 푼 자리)
         string                             _selectedGameDataRawText;
         string                             _savedGameDataRawText;
         CatalogDocument                    _gameDataDocument;

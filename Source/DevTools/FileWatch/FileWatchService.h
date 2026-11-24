@@ -13,6 +13,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Path/PathKey.h"
 #include "Core/Subsystem/Subsystem.h"
 
@@ -53,7 +54,7 @@ namespace sw
          * @param listExtension 점을 포함한 접미사(`.prefab.xml` 같은 복합 접미사도). 비면 모든 파일이다. 대소문자를 가리지 않는다.
          * @return OS 감시를 걸지 못하면 빈 구독입니다(이유를 로그에 남긴다).
          */
-        [[nodiscard]] Subscription watch( string_view folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch );
+        [[nodiscard]] Subscription watch( const AbsolutePath& folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch );
 
         /**
          * @brief 프레임에 한 번 — 모든 감시자의 변경을 꺼내 한 묶음으로 나눠 줍니다. 같은 파일에 같은 동작이 이어지면(사이에 다른 파일이 끼어도) 한 번만 알립니다.
@@ -80,7 +81,7 @@ namespace sw
         {
             uint64             _id{ 0 };     ///< 이 감시를 소유하는 구독의 번호
             uint64             _rootID{ 0 }; ///< 사건을 받을 루트 — 루트 둘이 겹쳐도 한 번만 받는다
-            string             _folder;
+            AbsolutePath       _folder;
             ComparableDiskPath _comparableFolder; ///< 등록할 때 한 번 접는다 — 사건마다 다시 만들지 않는다
             FileWatchDepth     _depth{ FileWatchDepth::Tree };
             vector<string>     _listExtension;
@@ -88,7 +89,7 @@ namespace sw
         };
 
         /** @brief @p folder 를 이미 보는 루트의 번호입니다. 없으면 감시자를 띄워 새 루트를 만들고, 못 만들면 빈 값입니다. */
-        [[nodiscard]] optional<uint64> acquireRoot( const string& folder, FileWatchDepth depth );
+        [[nodiscard]] optional<uint64> acquireRoot( const AbsolutePath& folder, FileWatchDepth depth );
         /** @brief 루트 하나의 변경을 꺼내 @p outListEvent 에 담습니다(리스캔 신호는 실제 변경 파일로 펼친다). */
         void pollRoot( Root& root, vector<FileChangeEvent>& outListEvent );
         /** @brief 파일 이름이 빈 리스캔 신호를 실제 변경 파일 목록으로 펼칩니다 — @p sinceTimestamp(파일 시계, 초) 이후에 바뀐 파일만. */

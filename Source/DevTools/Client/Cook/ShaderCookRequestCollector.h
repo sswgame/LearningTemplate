@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
@@ -26,6 +27,6 @@ namespace sw
          *          (`RenderPassKindInfo` 테이블, `selectRenderPassShader`, `FrameRendererUtil`)를 봅니다. 그것이 이 함수가 렌더러 층에 있는 이유입니다.
          * @return 엔진 기본 에셋(`EngineDefaultAssets`)을 읽지 못하면 false 입니다. 엔진 셰이더 경로가 그 데이터에만 있기 때문입니다.
          */
-        [[nodiscard]] static bool collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest );
+        [[nodiscard]] static bool collectAllRequests( const AbsolutePath& rootDir, vector<ShaderCookRequest>& outListRequest );
     };
 } // namespace sw

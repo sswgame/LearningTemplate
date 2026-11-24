@@ -446,7 +446,7 @@ namespace sw
         return true;
     }
 
-    bool TileMapXMLData::loadFromDiskFile( string_view diskPath )
+    bool TileMapXMLData::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         if ( diskPath.empty() )
             return false;
@@ -454,13 +454,13 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_ERROR_ID( "TileMap.FileNotFound", "TileMap file not found: %#", diskPath );
+            SW_LOG_ERROR_ID( "TileMap.FileNotFound", "TileMap file not found: %#", diskPath.str() );
             return false;
         }
 
         if ( loadFromXML( text ) == false )
             return false;
-        _sourcePath = diskPath;
+        _sourcePath = diskPath.str();
         return true;
     }
 
@@ -666,7 +666,7 @@ namespace sw
         if ( xml.empty() )
             return false;
         const string completeXML = toXML( ResourceFieldWrite::WriteAll );
-        const bool   bOk         = ResourceComposer::saveText( absPath.str(), ResourceSaveText::makeWithComplete( xml, completeXML ) );
+        const bool   bOk         = ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( xml, completeXML ) );
         if ( bOk )
             SW_LOG_INFO_ID( "TileMapXML.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;

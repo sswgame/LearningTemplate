@@ -121,7 +121,7 @@ namespace sw
         /** @brief 쌓인 기록을 `*.vlog.json` 으로 디스크 경로에 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 파일의 기록으로 바꿉니다(프레임 번호도 파일의 마지막 프레임 + 1 로 맞춘다). 읽지 못하면 오류를 남기고 false 이며 지금 기록은 그대로입니다. */
-        [[nodiscard]] bool loadFromFile( string_view diskPath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& diskPath );
 
     private:
         /** @brief 기록 하나를 지금 프레임 번호로 넣습니다(켜져 있을 때만). */

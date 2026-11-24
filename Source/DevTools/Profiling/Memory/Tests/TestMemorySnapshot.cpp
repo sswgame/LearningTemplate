@@ -191,7 +191,7 @@ SW_TEST_CASE( MemorySnapshotTest, SheetTableSplitsBytesAndWritesUnderKoreanFolde
 
     const AbsolutePath folder = test::makeScratchPath( "메모리 내보내기" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
-    const expected<MemoryExportResult> result = MemorySnapshotExport::writeSnapshot( snapshot, folder.str() );
+    const expected<MemoryExportResult> result = MemorySnapshotExport::writeSnapshot( snapshot, folder );
     SW_REQUIRE_TRUE( result.has_value() );
     SW_EXPECT_EQUAL( size_t{ 1 + kMemorySheetCount }, result->_listFile.size() );
 

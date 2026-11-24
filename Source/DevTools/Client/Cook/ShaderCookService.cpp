@@ -16,13 +16,13 @@ namespace sw
         class ShaderCookService final : public IShaderCookService
         {
         public:
-            bool cookAllShaders( string_view cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) override
+            bool cookAllShaders( const AbsolutePath& cookedDir, ShaderTargetFormat format, ShaderCookScope scope ) override
             {
                 const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir, {}, format, scope );
                 return summary.isClean();
             }
 
-            bool verifyCookedShaders( string_view cookedDir, ShaderTargetFormat format ) override
+            bool verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat format ) override
             {
                 vector<string> listProblem;
                 ShaderCookDriver::verifyCookedShaders( cookedDir, format, listProblem );

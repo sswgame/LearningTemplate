@@ -46,7 +46,7 @@ namespace sw
          * @brief 파일을 조각(`kStreamChunkBytes`)으로 읽어 내용 해시를 셉니다 — 캐시를 보지 않고, 파일을 한 벡터로 들지 않는다(큰 팩 · 모드 팩).
          * @return 열거나 읽지 못하면 오류입니다. 빈 파일은 `kInitialState` 다.
          */
-        [[nodiscard]] static expected<uint64> computeFileStream( string_view absPath, uint64* pOutByteCount = nullptr );
+        [[nodiscard]] static expected<uint64> computeFileStream( const AbsolutePath& absPath, uint64* pOutByteCount = nullptr );
         /** @brief `computeFileStream` 이 한 번에 읽는 바이트입니다. */
         static constexpr uint64 kStreamChunkBytes = 4 * constant::memory::kBytesPerMegabyte;
         /** @brief 바이트의 내용 해시입니다. */
@@ -55,7 +55,7 @@ namespace sw
          * @brief 파일의 내용 해시입니다. 크기와 쓰기 시각이 지난번과 같으면 파일을 열지 않습니다(`ContentHashCache`). 읽지 못하면 0 입니다. 엔진 서비스가 없으면 멈춘다.
          * @details "파일이 바뀌었나" 를 묻는 쪽(핫 리로드의 자기 저장 거르기 · 미리보기 자동 갱신)은 도장이 아니라 이 값을 비교한다 — 같은 틱 · 같은 크기의 다시 쓰기도 놓치지 않는다.
          */
-        static uint64 computeFile( string_view absPath );
+        static uint64 computeFile( const AbsolutePath& absPath );
         /**
          * @brief @p stamp 를 열쇠로 내용 값을 캐시해도 되는지 — 쓴 지 시간 창(2 초)이 지났는지입니다.
          * @details git 의 racy-git 과 같은 결함이다: 같은 틱 안에 같은 크기로 다시 쓴 파일은 (크기, 시각) 도장이 같아 옛 값이 돌아왔다(셰이더 쿠킹 판정 테스트가 전체 실행에서만 졌다).
@@ -94,7 +94,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief `ContentHash::computeFile` 의 본문입니다. */
-        uint64 computeFile( string_view absPath ) SW_EXCLUDES_LOCK( _mutex );
+        uint64 computeFile( const AbsolutePath& absPath ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 영속 캐시 파일의 판입니다. 항목 모양이나 해시 규칙을 바꾸면 올린다 — 다른 판의 파일은 빈 캐시로 읽는다. */
         static constexpr uint32 kCacheFormatVersion = 1;
         /** @brief 로컬 영속 캐시 파일(`<프로젝트>/Saved/ContentHashCache.bin`)입니다. */
@@ -111,7 +111,7 @@ namespace sw
         /** @brief `ContentHash::clearCache` 의 본문입니다. */
         void clear() SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 프로세스가 @p filePath 를 바꿨습니다 — 그 항목을 "자기 쓰기" 표로 바꿉니다(아무 스레드, 쓰기 관찰자 `WriteObserver` 가 부른다). */
-        void recordOwnWrite( string_view filePath ) SW_EXCLUDES_LOCK( _mutex );
+        void recordOwnWrite( const AbsolutePath& filePath ) SW_EXCLUDES_LOCK( _mutex );
 
     private:
         /** @brief 파일 계층에 거는 쓰기 관찰자입니다 — 서브시스템이 창구를 함께 상속하지 않고 멤버로 든다(기반은 하나). */
@@ -139,7 +139,7 @@ namespace sw
         mutable mutex                               _mutex;
         unordered_map<string, Entry> _mapEntry      SW_GUARDED_BY( _mutex );
         uint64 _writeSerial                         SW_GUARDED_BY( _mutex );    ///< 자기 쓰기 알림마다 오른다
-        string _cachePath                           SW_GUARDED_BY( _mutex );    ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
+        AbsolutePath _cachePath                     SW_GUARDED_BY( _mutex );    ///< `load` 가 정한 영속 파일 경로(빈 글이면 `save` 할 곳이 없다)
         atomic<uint64>                              _hashedByteCount;           ///< 해시하려고 읽은 바이트 누적(워커가 함께 더한다)
         WriteObserver                               _writeObserver;             ///< 파일 계층에 건 쓰기 관찰자
         PlatformFileUtil::WriteObserverRegistration _writeObserverRegistration; ///< 쓰기 관찰자 등록 — 내릴 때 뗀다(관찰자는 하나라 둘째는 단언)

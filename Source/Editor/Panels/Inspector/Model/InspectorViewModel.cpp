@@ -495,7 +495,7 @@ namespace sw::editor
     void InspectorViewModel::gatherPresets( const EditorCommandTarget& target, vector<InspectorPresetRow>& outListPreset )
     {
         outListPreset.clear();
-        vector<string>       listNewPresetFile;
+        vector<AbsolutePath> listNewPresetFile;
         const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
         if ( presetPoll == EditorTaskPoll::Ready )
         {
@@ -509,9 +509,9 @@ namespace sw::editor
         Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
         if ( pComp == nullptr )
             return;
-        for ( const string& presetFile : _listPresetFile )
+        for ( const AbsolutePath& presetFile : _listPresetFile )
         {
-            string displayName = EditorTransformCommands::getComponentPresetName( pComp, presetFile );
+            string displayName = EditorTransformCommands::getComponentPresetName( pComp, presetFile.str() );
             if ( displayName.empty() == false )
                 outListPreset.push_back( InspectorPresetRow{ presetFile, std::move( displayName ) } );
         }
@@ -529,12 +529,12 @@ namespace sw::editor
         return true;
     }
 
-    void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, string_view presetFile )
+    void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, const AbsolutePath& presetFile )
     {
         Component*        pComp = InspectorViewModelInternal::findTargetComponent( target );
         EditorTransaction transaction; // 하위 메뉴(`inspector.component.presets`)가 고른 끝 — 씬을 바꾸는 여기서 거래를 연다
-        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( transaction, pComp, string( presetFile ) ) == false )
-            SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile );
+        if ( pComp == nullptr || EditorTransformCommands::loadComponentPreset( transaction, pComp, presetFile ) == false )
+            SW_LOG_ERROR_ID( "InspectorPanel.CouldNotApplyComponent", "Could not apply component preset '%#'", presetFile.str() );
     }
 
     bool InspectorViewModel::hasTargetComponent( const EditorCommandTarget& target )

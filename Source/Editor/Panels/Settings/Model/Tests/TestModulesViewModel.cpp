@@ -23,14 +23,14 @@ namespace
      */
     struct ModulesViewModelTest
     {
-        string           _folder;
+        AbsolutePath     _folder;
         ModulesViewModel _model;
 
         ModulesViewModelTest()
-            : _folder{ test::makeScratchPath( "Modules" ).str() }
+            : _folder{ test::makeScratchPath( "Modules" ) }
             , _model{}
         {
-            SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _folder ) ) );
+            SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( _folder ) );
             fixed_string<constant::buffer::kMax128> excludeHere;
             formatstring( excludeHere.data(), excludeHere.capacity(), R"(, "_listExcludedPlatform": [ "%#" ])", build::kPlatformName );
             writeManifest( config::kTargetGameModule, "Game", "" );
@@ -54,8 +54,8 @@ namespace
         {
             fixed_string<constant::buffer::kMax256> fileName;
             formatstring( fileName.data(), fileName.capacity(), "%#%#", pName, ModuleCatalog::kManifestExtension );
-            const string path = FileUtil::joinPath( _folder, fileName );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), makeManifestText( pName, pKind, pExtra ) ) );
+            const AbsolutePath path = _folder.join( fileName );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, makeManifestText( pName, pKind, pExtra ) ) );
         }
     };
 } // namespace
@@ -149,7 +149,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ApplyWritesOnlyNonDefaultOverrides )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeManifestText( "Project", "Game", "" ) ) );
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", false ) );
-    _model.applyPendingTo( path.str() );
+    _model.applyPendingTo( path );
     SW_EXPECT_FALSE( _model.hasPending() );
     SW_EXPECT_TRUE( _model.hasChangedSinceStart() );
 
@@ -162,7 +162,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ApplyWritesOnlyNonDefaultOverrides )
     SW_EXPECT_FALSE( manifest._listModuleOverride[0]._bEnabled );
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", true ) ); // 기본과 같아지면 줄을 지운다
-    _model.applyPendingTo( path.str() );
+    _model.applyPendingTo( path );
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_EXPECT_TRUE( manifest._listModuleOverride.empty() );
@@ -173,7 +173,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, ApplyToUnreadableManifestLeavesNoChangeMar
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModulesPanel.ModulesProjectManifestCould" );
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", false ) );
-    _model.applyPendingTo( test::makeScratchPath( "Missing.module.json" ).str() );
+    _model.applyPendingTo( test::makeScratchPath( "Missing.module.json" ) );
     SW_EXPECT_FALSE( _model.hasPending() ); // 성공 여부와 관계없이 미리보기를 닫는다
     SW_EXPECT_FALSE( _model.hasChangedSinceStart() );
 }
@@ -184,7 +184,7 @@ SW_TEST_CASE_F( ModulesViewModelTest, FailedReloadDropsTheOldResolution )
     SW_EXPECT_LOG( "ModulesPanel.ModulesCatalogCouldNot" );
     SW_EXPECT_TRUE( _model.getResolution().isActive( "GF_Base" ) );
 
-    _model.reloadFrom( test::makeScratchPath( "NoSuchFolder" ).str() );
+    _model.reloadFrom( test::makeScratchPath( "NoSuchFolder" ) );
 
     SW_EXPECT_FALSE( _model.getLoadError().empty() );
     SW_EXPECT_FALSE( _model.getResolution().isActive( "GF_Base" ) );
@@ -199,7 +199,7 @@ SW_TEST_CASE( ModulesViewModelLoadTest, EmptyFolderCountsAsRead )
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
     ModulesViewModel model;
     SW_EXPECT_FALSE( model.isReady() );
-    model.reloadFrom( folder.str() );
+    model.reloadFrom( folder );
     SW_EXPECT_TRUE( model.isReady() );
     SW_EXPECT_TRUE( model.getLoadError().empty() );
     SW_EXPECT_EQUAL( size_t{ 0 }, model.getCatalog().getManifestCount() );

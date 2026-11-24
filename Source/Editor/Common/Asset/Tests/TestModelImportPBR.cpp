@@ -25,14 +25,14 @@ namespace
      * @brief 내려받은 스캔 에셋처럼 이미지를 원본 옆이 아닌 `textures_raw/` 에 두고 `../` 로 가리키는 glTF 를 만들어 읽습니다.
      * @param bOcclusionInORM true 면 가림 텍스처가 ORM 과 같은 이미지다(glTF 의 ORM 묶음), false 면 가림이 없다(Poly Haven).
      */
-    bool parseScanLikeGltf( const string& root, bool bOcclusionInORM, ParsedGltf& outParsed, string& outSourcePath )
+    bool parseScanLikeGltf( const AbsolutePath& root, bool bOcclusionInORM, ParsedGltf& outParsed, AbsolutePath& outSourcePath )
     {
-        const string textureFolder = FileUtil::joinPath( root, "textures_raw/scan" );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( textureFolder ) ) == false || FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::joinPath( root, "models_raw" ) ) ) == false )
+        const AbsolutePath textureFolder = root.join( "textures_raw/scan" );
+        if ( FileUtil::ensureDirectoryExists( textureFolder ) == false || FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) == false )
             return false;
         for ( const utf8* pName : { "crate_diff_2k.jpg", "crate_nor_gl_2k.jpg", "crate_arm_2k.jpg" } )
         {
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( textureFolder, pName ) ), pName ) == false )
+            if ( FileUtil::writeTextFile( textureFolder.join( pName ), pName ) == false )
                 return false;
         }
         const string                              occlusion = bOcclusionInORM ? R"(, "occlusionTexture": { "index": 2, "strength": 0.5 })" : "";
@@ -47,7 +47,7 @@ namespace
                              "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicRoughnessTexture": { "index": 2 },
                                                        "baseColorFactor": [ 1, 0.5, 0.25, 1 ], "metallicFactor": 0.2, "roughnessFactor": 0.9 }%# } ] })",
                            occlusion );
-        outSourcePath = FileUtil::joinPath( root, "models_raw/crate.gltf" );
+        outSourcePath = root.join( "models_raw/crate.gltf" );
         cgltf_options options{};
         return cgltf_parse( &options, json.c_str(), json.size(), &outParsed._pData ) == cgltf_result_success;
     }
@@ -61,8 +61,8 @@ SW_TEST_CASE( ModelImportPBRTest, ReadsFirstTexturedMaterialWithResolvedImagePat
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbr" );
     ParsedGltf         parsed;
-    string             sourcePath;
-    SW_REQUIRE_TRUE( parseScanLikeGltf( root.str(), false, parsed, sourcePath ) );
+    AbsolutePath       sourcePath;
+    SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
@@ -93,8 +93,8 @@ SW_TEST_CASE( ModelImportPBRTest, OcclusionPackedInORMKeepsStrength )
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbrAO" );
     ParsedGltf         parsed;
-    string             sourcePath;
-    SW_REQUIRE_TRUE( parseScanLikeGltf( root.str(), true, parsed, sourcePath ) );
+    AbsolutePath       sourcePath;
+    SW_REQUIRE_TRUE( parseScanLikeGltf( root, true, parsed, sourcePath ) );
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
@@ -111,13 +111,13 @@ SW_TEST_CASE( ModelImportPBRTest, ReadsEmbeddedAndPercentEncodedImages )
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbrURI" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models_raw/my tex.png" ), "png" ) );
-    const string_view json       = R"({ "asset": { "version": "2.0" },
+    const string_view  json       = R"({ "asset": { "version": "2.0" },
         "images": [ { "uri": "data:image/jpeg;base64,YWJj" }, { "uri": "my%20tex.png" } ],
         "textures": [ { "source": 0 }, { "source": 1 } ],
         "materials": [ { "name": "Embedded", "normalTexture": { "index": 1 }, "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 } } } ] })";
-    const string      sourcePath = root.join( "models_raw/embedded.gltf" ).str();
-    ParsedGltf        parsed;
-    cgltf_options     options{};
+    const AbsolutePath sourcePath = root.join( "models_raw/embedded.gltf" );
+    ParsedGltf         parsed;
+    cgltf_options      options{};
     SW_REQUIRE_TRUE( cgltf_parse( &options, json.data(), json.size(), &parsed._pData ) == cgltf_result_success );
 
     ModelImportResult result;
@@ -139,7 +139,7 @@ SW_TEST_CASE( ModelImportPBRTest, SourceHashFollowsExternalImages )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "textures_raw/shared.png" ), "one" ) );
     const string_view   json = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "side%20tex.png" }, { "uri": "../textures_raw/shared.png" } ] })";
     const vector<uint8> bytes( json.begin(), json.end() );
-    const string        sourcePath = root.join( "models_raw/side.gltf" ).str();
+    const AbsolutePath  sourcePath = root.join( "models_raw/side.gltf" );
     const uint64        before     = ModelImportUtil::mixExternalFiles( sourcePath, bytes, "rules", 1 );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "textures_raw/shared.png" ), "two" ) );
@@ -153,8 +153,8 @@ SW_TEST_CASE( ModelImportPBRTest, SourceHashFollowsExternalImages )
  */
 SW_TEST_CASE( ModelImportPBRTest, SourceHashFollowsImageRules )
 {
-    const string sourcePath = test::makeScratchPath( "ModelImportPbrRules" ).join( "models_raw/a.gltf" ).str();
-    const auto   mix        = [&sourcePath]( string_view json, string_view ruleText )
+    const AbsolutePath sourcePath = test::makeScratchPath( "ModelImportPbrRules" ).join( "models_raw/a.gltf" );
+    const auto         mix        = [&sourcePath]( string_view json, string_view ruleText )
     { return ModelImportUtil::mixExternalFiles( sourcePath, vector<uint8>( json.begin(), json.end() ), ruleText, 1 ); };
     constexpr string_view kEmbedded = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "data:image/png;base64,AA==" } ] })";
     constexpr string_view kRawOnly  = R"({ "asset": { "version": "2.0" }, "images": [ { "uri": "../textures_raw/shared.png" } ] })";
@@ -171,8 +171,8 @@ SW_TEST_CASE( ModelImportPBRTest, MissingImageFileFails )
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbrMissing" );
     ParsedGltf         parsed;
-    string             sourcePath;
-    SW_REQUIRE_TRUE( parseScanLikeGltf( root.str(), false, parsed, sourcePath ) );
+    AbsolutePath       sourcePath;
+    SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) );
 
     ModelImportResult result;

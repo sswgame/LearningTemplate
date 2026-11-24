@@ -34,24 +34,24 @@ namespace sw::editor
             static bool isSelectorKey( string_view key ) { return key == "name" || key == "filter" || key == "inherits"; }
 
             /** @brief 원본 @p assetID 의 서술 디스크 경로입니다. 리소스 id 가 아니면 빈 글입니다. */
-            static string findMetaPath( string_view assetID )
+            static AbsolutePath findMetaPath( string_view assetID )
             {
                 const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-                return diskPath.has_value() ? AssetMeta::makePath( diskPath->str() ) : string{};
+                return diskPath.has_value() ? AssetMeta::makePath( *diskPath ) : AbsolutePath{};
             }
 
             /** @brief 서술 글을 읽습니다. 없거나 읽지 못하면 false 입니다. */
             static bool readMetaText( string_view assetID, string& outText )
             {
-                const string metaPath = findMetaPath( assetID );
-                return metaPath.empty() == false && FileUtil::isRegularFile( FileUtil::toDiskPath( metaPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( metaPath ), outText );
+                const AbsolutePath metaPath = findMetaPath( assetID );
+                return metaPath.empty() == false && FileUtil::isRegularFile( metaPath ) && FileUtil::readTextFile( metaPath, outText );
             }
 
             /** @brief 서술 글을 쓰고 그 원본을 다시 임포트합니다(원본 해시에 해석한 규칙이 들어 예외가 바뀐 원본만 다시 임포트된다). */
             static bool writeMetaText( string_view assetID, string_view text )
             {
-                const string metaPath = findMetaPath( assetID );
-                if ( metaPath.empty() || FileUtil::writeTextFile( FileUtil::toDiskPath( metaPath ), text ) == false )
+                const AbsolutePath metaPath = findMetaPath( assetID );
+                if ( metaPath.empty() || FileUtil::writeTextFile( metaPath, text ) == false )
                 {
                     SW_LOG_ERROR_ID( "InspectorImportSettings.WriteFailed", "Import settings: could not write the .meta of '%#'", string{ assetID }.c_str() );
                     return false;

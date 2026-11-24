@@ -94,11 +94,11 @@ namespace
     struct ScratchFileFixture
     {
 
-        string _path;
+        AbsolutePath _path;
         ScratchFileFixture()
-            : _path{ test::makeScratchPath( "fixture.txt" ).str() }
+            : _path{ test::makeScratchPath( "fixture.txt" ) }
         {
-            (void)FileUtil::writeTextFile( FileUtil::toDiskPath( _path ), "ready" );
+            (void)FileUtil::writeTextFile( _path, "ready" );
         }
     };
 
@@ -108,7 +108,7 @@ namespace
 SW_TEST_CASE_F( ScratchFileFixture, BodySeesWhatTheConstructorPrepared )
 {
     string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( _path ), text ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( _path, text ) );
     SW_EXPECT_EQUAL( string( "ready" ), text );
 }
 
@@ -193,10 +193,10 @@ SW_TEST_CASE( TestRunnerTest, FailedRunEndsWithTheResultLineAndTheFailureKind, .
     // 진 실행은 쓰기 폴더에 보고를 남긴다(`[  REPORT  ] <경로>`) — 케이스의 실패 종류가 든다(보고 판 4).
     const size_t reportAt = child._output.find( "[  REPORT  ] " );
     SW_REQUIRE_TRUE_MSG( reportAt != string::npos, child.getOutputTail() );
-    const size_t reportEnd  = child._output.find_first_of( "\r\n", reportAt );
-    const string reportPath = child._output.substr( reportAt + 13, reportEnd == string::npos ? string::npos : reportEnd - reportAt - 13 );
-    string       report;
-    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( FileUtil::toDiskPath( reportPath ), report ), reportPath );
+    const size_t       reportEnd  = child._output.find_first_of( "\r\n", reportAt );
+    const AbsolutePath reportPath = FileUtil::toDiskPath( child._output.substr( reportAt + 13, reportEnd == string::npos ? string::npos : reportEnd - reportAt - 13 ) );
+    string             report;
+    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( reportPath, report ), reportPath.str() );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( report, "\"failureKind\": \"UndeclaredLog\"" ), report );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( report, "\"UndeclaredLog\": 1" ), report );
     // 끝 줄 — 실행기가 마지막으로 찍는 줄이다.

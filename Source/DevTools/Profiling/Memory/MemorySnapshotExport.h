@@ -12,6 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/Profiling/Memory/MemorySnapshot.h"
@@ -35,7 +36,7 @@ namespace sw
         /** @brief 이 표의 CSV 글(BOM · 머리말 · 줄)입니다. */
         string writeText() const;
         /** @brief 이 표를 @p path 에 씁니다(원자 쓰기 — `FileUtil::writeTextFile`). 경로는 UTF-8 이다(한글 폴더 · 이름). */
-        [[nodiscard]] bool writeFile( string_view path ) const;
+        [[nodiscard]] bool writeFile( const AbsolutePath& path ) const;
     };
 
     /** @brief `Config/Dev/MemorySnapshot.json` 의 칸입니다. 칸이 하나라도 없거나 범위 밖이면 읽기가 오류다(기본값이 없다). */
@@ -88,15 +89,15 @@ namespace sw
         static string formatSignedMegabytes( int64 bytes );
 
         /** @brief 내보내기 폴더의 뿌리입니다 — 혼자 뜬 실행은 `Saved/<_exportFolder>`, 부모가 실행 뿌리를 준 실행은 `<실행 뿌리>/<_exportFolder>`(BugReport 와 같은 규칙). */
-        [[nodiscard]] static string getDefaultRoot( const MemorySnapshotPolicy& policy );
+        [[nodiscard]] static AbsolutePath getDefaultRoot( const MemorySnapshotPolicy& policy );
         /** @brief @p root 아래 지금 시각의 새 폴더를 잡습니다(같은 초는 `-2` …). 잡지 못하면 빈 글입니다(이유는 로그). */
-        [[nodiscard]] static string reserveFolder( string_view root );
+        [[nodiscard]] static AbsolutePath reserveFolder( const AbsolutePath& root );
         /** @brief @p root 아래 가장 최근(이름 순 마지막) 폴더입니다. 없으면 빈 글입니다. */
-        [[nodiscard]] static string findLatestFolder( string_view root );
+        [[nodiscard]] static AbsolutePath findLatestFolder( const AbsolutePath& root );
 
         /** @brief 스냅숏을 폴더 @p folder(이미 있다)에 Summary + 시트마다 `<시트>.csv` 로 씁니다. 쓴 파일마다 로그 한 줄(`MemoryExport.SheetWritten`). */
-        [[nodiscard]] static expected<MemoryExportResult> writeSnapshot( const MemorySnapshot& snapshot, string_view folder );
+        [[nodiscard]] static expected<MemoryExportResult> writeSnapshot( const MemorySnapshot& snapshot, const AbsolutePath& folder );
         /** @brief 표 하나를 @p path 에 쓰고 로그 한 줄(`MemoryExport.SheetWritten`)을 남깁니다. */
-        [[nodiscard]] static expected<MemoryExportFile> writeTable( const CSVTable& table, string_view path );
+        [[nodiscard]] static expected<MemoryExportFile> writeTable( const CSVTable& table, const AbsolutePath& path );
     };
 } // namespace sw

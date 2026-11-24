@@ -41,10 +41,10 @@ namespace sw
         return finishLoad( assetID.view(), ReflectedXMLFile::loadDesc( assetID, *this ) );
     }
 
-    bool NetEmulationPresetTable::loadFromDiskFile( string_view diskPath )
+    bool NetEmulationPresetTable::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         _listPreset.clear();
-        return finishLoad( diskPath, ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
+        return finishLoad( diskPath.str(), ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
     }
 
     bool NetEmulationPresetTable::finishLoad( string_view path, bool bRead )

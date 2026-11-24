@@ -72,9 +72,12 @@ namespace sw
                 // 빈 항목은 현재 폴더다(POSIX PATH 규칙) — 빈 토큰을 남겨 "." 로 읽는다.
                 for ( const string_view dir : StringUtil::split( pathEnvStr, ":" ) )
                 {
-                    const string candidate = FileUtil::joinPath( dir.empty() ? string_view( "." ) : dir, pName );
-                    if ( isExecutableFile( candidate ) )
-                        return candidate;
+                    const optional<AbsolutePath> folder = AbsolutePath::tryResolve( dir.empty() ? string_view( "." ) : dir, FileUtil::getCurrentPath() );
+                    if ( folder.has_value() == false )
+                        continue;
+                    const AbsolutePath candidate = folder->join( pName );
+                    if ( isExecutableFile( candidate.str() ) )
+                        return candidate.str();
                 }
                 return {};
             }

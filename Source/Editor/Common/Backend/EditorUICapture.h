@@ -23,6 +23,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 
@@ -48,7 +49,7 @@ namespace sw::editor
     /** @struct EditorUICaptureJob @brief UI 스레드가 렌더 스레드로 넘기는 캡처 한 건입니다. 잘림 지표는 UI 스레드가 ImGui 를 닫을 때 측정한 값입니다. */
     struct EditorUICaptureJob
     {
-        string         _path{};                        ///< 쓸 파일(.png)
+        AbsolutePath   _path{};                        ///< 쓸 파일(.png)
         string         _clippedWindowNames{};          ///< 잘린 창 이름들(", " 로 잇는다)
         uint32         _ticket{ 0 };                   ///< `request` 가 돌려준 번호
         uint32         _clippedWindowCount{ 0 };       ///< 내용이 창보다 큰데 그 방향 스크롤바가 없는 창 수입니다(내용이 잘려 보이지 않는다)
@@ -106,7 +107,7 @@ namespace sw::editor
         // UI 스레드
         // ------------------------------------------------------------------------------
         /** @brief 다음 UI 프레임의 에디터 UI 전체를 @p path(.png)에 찍도록 요청하고 번호를 돌려줍니다. */
-        uint32 request( string_view path );
+        uint32 request( const AbsolutePath& path );
         /**
          * @brief ImGui 를 닫은 직후(`ImGui::Render` 뒤) 부릅니다. 이번 프레임에 찍을 요청이 있으면 꺼내 잘림 지표를 재고 true 입니다.
          * @details `-gv_screenshotEditor` 의 대기 프레임도 여기서 센다.

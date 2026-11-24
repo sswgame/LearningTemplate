@@ -26,7 +26,7 @@ namespace sw
          * @param store 기록과 DDC 입니다. (목록, 클립)마다 작업 하나로 베이크하고 — 목록 · 메시 · 스켈레톤 · 클립이 입력이다 — 기록이 새것이면 DDC 의 출력을 다시 씁니다.
          * @return 쓴 `.vat` 수입니다. 읽지 못한 목록 · 베이크하지 못한 클립은 @p outFailedCount 에 셉니다.
          */
-        static uint32 cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store, uint32& outFailedCount );
+        static uint32 cookAll( const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, float32 framesPerSecond, const CookStore& store, uint32& outFailedCount );
         /** @brief 목록의 클립 하나를 @p outputPath 에 베이크합니다. 메시 · 스켈레톤 · 클립을 읽습니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const AbsolutePath& outputPath, float32 framesPerSecond );
         /** @brief VAT 쿠킹 작업의 키 값입니다. 설정 해시는 프레임율입니다. */

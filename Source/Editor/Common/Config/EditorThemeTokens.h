@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -62,7 +63,7 @@ namespace sw::editor
         static constexpr const utf8* kExtension  = ".tokens.json"; ///< 토큰 파일 접미사
 
         /** @brief 토큰 폴더의 절대 경로입니다. 리소스 루트가 없으면 빈 문자열입니다. */
-        static string getFolderPath();
+        static AbsolutePath getFolderPath();
         /** @brief 폴더에 있는 벌의 이름(접미사를 뺀 파일 이름)을 이름순으로 씁니다. */
         static void listThemeNames( vector<string>& outListName );
         /** @brief @p name 벌을 읽고 해석합니다. 실패하면 그 이유입니다(대상은 파일 경로 · 키). */
@@ -70,7 +71,7 @@ namespace sw::editor
         /** @brief 리소스 id(`editor/theme/dark.tokens.json`)의 벌을 읽고 해석합니다(리소스 데이터 종류 `editortheme` 의 로더). */
         [[nodiscard]] static bool loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig );
         /** @brief 파일 하나를 부모(`_base`)까지 합쳐 읽어 해석합니다(테스트 · 핫 리로드). */
-        [[nodiscard]] static expected<EditorThemeConfig> loadThemeFile( string_view absolutePath );
+        [[nodiscard]] static expected<EditorThemeConfig> loadThemeFile( const AbsolutePath& absolutePath );
         /** @brief 읽은 토큰을 실행 값으로 해석합니다. 키가 `Namespace.Key` 모양이 아니거나 색 글자가 형식에 맞지 않거나 필수 수치가 양수가 아니면 그 키가 대상인 오류입니다. */
         [[nodiscard]] static expected<EditorThemeConfig> resolve( const EditorThemeDef& def );
         /** @brief 두 벌의 키 묶음이 다르면 true 와 한쪽에만 있는 키 하나입니다(모든 벌은 같은 키를 가져야 한다). */

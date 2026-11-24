@@ -4,25 +4,27 @@
  * @details 표 한 줄이 읽기와 사용법을 함께 만듭니다 — 사용법 문구를 따로 손으로 적으면 플래그가 빠집니다.
  */
 #pragma once
+#include "Core/Path/AbsolutePath.h"
+
 #include "Engine/EngineMinimal.h"
 
 namespace sw
 {
     struct ParserOptions
     {
-        vector<string> _listInputFile;         ///< --input (여러 번)
-        vector<string> _listIncludePath;       ///< --include (여러 번)
-        vector<string> _listTargetArg;         ///< --target-arg (여러 번): 빌드 대상을 그리는 clang 인자(타깃 매크로 `-D` · `--target=` · `--sysroot=` · `-isystem`). CMake 가 대상 빌드의 값으로 넘긴다 — 파서가 자기(호스트) 빌드로 추측하지 않는다(교차 빌드)
-        string         _outputDir;             ///< --output
-        string         _builtinsPath;          ///< --builtins
-        string         _configPath;            ///< --config: 커밋된 parser_config.defaults.json 의 절대 경로(로컬 · 툴체인 설정은 그 옆)
-        string         _emitTemplatesDir;      ///< --emit-templates
-        string         _moduleName;            ///< --module: 이 대상의 타입이 오르는 런타임 모듈 이름(CMake 가 정한다 - 경로로 추측하지 않는다)
-        string         _emitBuiltinsGenPath;   ///< --emit-builtins-gen: ReflectBuiltins.gen.cpp 만 쓰는 모드
-        string         _depfilePath;           ///< --depfile: 입력들이 include 한 헤더를 Makefile 꼴 의존 파일로 쓴다(빌드 체계의 DEPFILE)
-        bool           _bDump{ false };        ///< --dump: 최신이어도 다시 파싱하고, 헤더마다 뽑은 것을 사람이 읽는 꼴로 찍는다. NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터(`bool ParserOptions::*`)로 쓴다
-        bool           _bHelp{ false };        ///< --help: 사용법만 찍고 끝낸다. NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터로 쓴다
-        bool           _bModuleLocal{ false }; ///< NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터로 쓴다. --module-local: 대상(실행 파일 · 게임 모듈)의 타입이 모듈 경계를 넘지 않는다. 버스 본문 타입에 내보내기 매크로를 요구하지 않는다
+        vector<AbsolutePath> _listInputFile;         ///< --input (여러 번)
+        vector<string>       _listIncludePath;       ///< --include (여러 번)
+        vector<string>       _listTargetArg;         ///< --target-arg (여러 번): 빌드 대상을 그리는 clang 인자(타깃 매크로 `-D` · `--target=` · `--sysroot=` · `-isystem`). CMake 가 대상 빌드의 값으로 넘긴다 — 파서가 자기(호스트) 빌드로 추측하지 않는다(교차 빌드)
+        AbsolutePath         _outputDir;             ///< --output
+        AbsolutePath         _builtinsPath;          ///< --builtins
+        AbsolutePath         _configPath;            ///< --config: 커밋된 parser_config.defaults.json 의 절대 경로(로컬 · 툴체인 설정은 그 옆)
+        AbsolutePath         _emitTemplatesDir;      ///< --emit-templates
+        string               _moduleName;            ///< --module: 이 대상의 타입이 오르는 런타임 모듈 이름(CMake 가 정한다 - 경로로 추측하지 않는다)
+        AbsolutePath         _emitBuiltinsGenPath;   ///< --emit-builtins-gen: ReflectBuiltins.gen.cpp 만 쓰는 모드
+        AbsolutePath         _depfilePath;           ///< --depfile: 입력들이 include 한 헤더를 Makefile 꼴 의존 파일로 쓴다(빌드 체계의 DEPFILE)
+        bool                 _bDump{ false };        ///< --dump: 최신이어도 다시 파싱하고, 헤더마다 뽑은 것을 사람이 읽는 꼴로 찍는다. NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터(`bool ParserOptions::*`)로 쓴다
+        bool                 _bHelp{ false };        ///< --help: 사용법만 찍고 끝낸다. NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터로 쓴다
+        bool                 _bModuleLocal{ false }; ///< NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터로 쓴다. --module-local: 대상(실행 파일 · 게임 모듈)의 타입이 모듈 경계를 넘지 않는다. 버스 본문 타입에 내보내기 매크로를 요구하지 않는다
 
         /**
          * @brief argv 를 읽고 모드별 필수 인자를 확인합니다. `@파일` 은 그 파일의 줄마다 인자 하나로 펼칩니다(응답 파일).

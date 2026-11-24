@@ -11,6 +11,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -96,7 +97,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool pollFileChanged();
         /** @brief @p diskPath 의 내용 해시가 @p inoutHash 와 다르면 true 이고 @p inoutHash 를 새 해시로 바꿉니다. 파일이 없으면 false 입니다(지운 파일은 다시 읽을 것이 없다). */
-        [[nodiscard]] static bool updateContentHash( string_view diskPath, uint64& inoutHash );
+        [[nodiscard]] static bool updateContentHash( const AbsolutePath& diskPath, uint64& inoutHash );
         /**
          * @brief 바뀐 효과 파일 @p assetPath 를 공유 캐시에서 먼저 새 글로 다시 읽습니다(`AssetHotReload::applySavedAsset` — 감시 사건이 뒤늦게 와도 같은 저장을 두 번 읽지 않게 도장을 남긴다).
          * @details 그래야 다시 연 문서와 다시 건 효과가 새 정의다. View 가 작업 공간 헤더를 보지 않게 여기를 지난다.
@@ -175,7 +176,7 @@ namespace sw::editor
         string                           _previewEffectPath; ///< 미리보기 효과에 건 효과 경로(비면 다음 `syncEffect` 가 다시 건다)
         string                           _previewText;       ///< 미리보기에 건 편집 글(저장한 파일을 걸었으면 빈 글)
         string                           _status;
-        string                           _loadedDiskPath;      ///< 읽은 효과의 디스크 경로(자동 갱신이 내용 해시를 본다). 풀지 못했으면 비어 있다
+        AbsolutePath                     _loadedDiskPath;      ///< 읽은 효과의 디스크 경로(자동 갱신이 내용 해시를 본다). 풀지 못했으면 비어 있다
         string                           _targetPrefabPath;    ///< 입력란의 타깃 프리팹 경로(Spawn 을 눌러야 적용한다)
         string                           _activeTargetPath;    ///< Spawn 으로 확정한 타깃 경로(비면 타깃 없음)
         uint64                           _loadedContentHash;   ///< 읽을 때의 내용 해시(0 = 아직 없음)

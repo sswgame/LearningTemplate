@@ -66,11 +66,11 @@ namespace sw
                 const bool           bSecretRead = bNamed && ServerSecret::read( config._signingKeySecretEnvironment, settings._privateKeyPem ) && settings._privateKeyPem.empty() == false;
                 if ( bSecretRead == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the apple signing key environment variable is not set", config._signingKeySecretEnvironment } );
-                const expected<string> rootPath = NetSecurity::resolveProjectPath( config._rootCertificateFile );
+                const expected<AbsolutePath> rootPath = NetSecurity::resolveProjectPath( config._rootCertificateFile );
                 if ( rootPath.has_value() == false )
                     return unexpected( rootPath.error() );
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( *rootPath ), settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
-                    return unexpected( Error{ ErrorKind::NotFound, "cannot read the apple root certificate file", *rootPath } );
+                if ( FileUtil::readTextFile( *rootPath, settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
+                    return unexpected( Error{ ErrorKind::NotFound, "cannot read the apple root certificate file", rootPath->str() } );
                 settings._issuerID  = config._issuerID;
                 settings._keyID     = config._keyID;
                 settings._bundleID  = config._bundleID;

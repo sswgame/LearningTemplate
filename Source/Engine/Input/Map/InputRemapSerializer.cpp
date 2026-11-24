@@ -41,7 +41,7 @@ namespace sw
 
 namespace sw
 {
-    bool InputRemapSerializer::save( const InputMap& map, string_view filePath )
+    bool InputRemapSerializer::save( const InputMap& map, const AbsolutePath& filePath )
     {
         if ( filePath.empty() )
             return false;
@@ -56,7 +56,7 @@ namespace sw
         return bAllWritten && doc.saveCompleteToFile( filePath );
     }
 
-    bool InputRemapSerializer::load( InputMap& map, string_view filePath )
+    bool InputRemapSerializer::load( InputMap& map, const AbsolutePath& filePath )
     {
         if ( filePath.empty() )
             return false;
@@ -71,17 +71,17 @@ namespace sw
             return false;
 
         bool bCursorConflict = false;
-        bool bValid          = XMLNameCheck::reportUnknownChildren( root, InputRemapSerializerInternal::kArrRootChild, filePath ); // 깨진 칸이 있는 바인딩은 넣지 않고 읽기를 실패로 돌린다
+        bool bValid          = XMLNameCheck::reportUnknownChildren( root, InputRemapSerializerInternal::kArrRootChild, filePath.str() ); // 깨진 칸이 있는 바인딩은 넣지 않고 읽기를 실패로 돌린다
         for ( XMLNode actionNode = root.findChild( "action" ); actionNode.isValid(); actionNode = actionNode.findNextSibling( "action" ) )
         {
             const hashed_string actionName( actionNode.getAttributeText( "name" ) );
             const uint32        previousCount = map.getBindingCount( actionName );
-            InputMapXML::readAction( map, actionNode, map.getDefaultLayerName(), filePath, bValid );
+            InputMapXML::readAction( map, actionNode, map.getDefaultLayerName(), filePath.str(), bValid );
             // 맵 읽기와 같은 검사 — 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 다시 묶은 바인딩은 넣지 않고 읽기를 실패로 돌린다.
-            bCursorConflict = map.removeVirtualCursorConflicts( filePath, actionName, previousCount ) > 0 || bCursorConflict;
+            bCursorConflict = map.removeVirtualCursorConflicts( filePath.str(), actionName, previousCount ) > 0 || bCursorConflict;
         }
         if ( bValid == false )
-            SW_LOG_ERROR_ID( "InputRemapSerializer.UserBindingsInvalidAttribute", "user bindings %# have invalid attribute values (listed above)", filePath );
+            SW_LOG_ERROR_ID( "InputRemapSerializer.UserBindingsInvalidAttribute", "user bindings %# have invalid attribute values (listed above)", filePath.str() );
         return bCursorConflict == false && bValid;
     }
 

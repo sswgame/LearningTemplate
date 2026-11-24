@@ -29,9 +29,9 @@ namespace sw::editor
             }
 
             /** @brief 폴더 하나를 하위까지 훑어 목록의 파일을 @p outListFile 에 더합니다. 폴더가 없으면 false 입니다. */
-            [[nodiscard]] static bool collectFolderFiles( string_view folder, vector<EditorContentFile>& outListFile, const StopToken& stopToken )
+            [[nodiscard]] static bool collectFolderFiles( const AbsolutePath& folder, vector<EditorContentFile>& outListFile, const StopToken& stopToken )
             {
-                const AbsolutePath folderPath = FileUtil::toDiskPath( folder );
+                const AbsolutePath folderPath = folder;
                 if ( FileUtil::isDirectory( folderPath ) == false )
                     return false;
                 const size_t                     firstFile = outListFile.size();
@@ -50,7 +50,7 @@ namespace sw::editor
                 };
                 const bool bListed = FileUtil::forEachDirectoryEntry( folderPath, true, collectEntry );
                 if ( bListed == false )
-                    SW_LOG_WARNING_ID( "EditorContentScan.FolderUnreadable", "Content folder '%#' could not be walked - the list is incomplete", folder );
+                    SW_LOG_WARNING_ID( "EditorContentScan.FolderUnreadable", "Content folder '%#' could not be walked - the list is incomplete", folder.str() );
                 for ( size_t index = firstFile; index < outListFile.size(); ++index )
                 {
                     const auto itSidecar = mapSidecarStamp.find( outListFile[index]._path );
@@ -68,34 +68,34 @@ namespace sw::editor
         return StringUtil::endsWith( assetID, AssetMeta::kExtension, true ) == false;
     }
 
-    bool EditorContentScan::collectFiles( string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
+    bool EditorContentScan::collectFiles( const AbsolutePath& folder, string_view extension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken )
     {
-        const bool bListed = FileUtil::collectFiles( FileUtil::toDiskPath( folder ), extension, outListFilePath, bRecursive, stopToken );
-        (void)VectorUtil::removeIf( outListFilePath, []( const string& path )
-        { return EditorContentScanInternal::isLeftoverScratch( path ) || isListedFile( FileUtil::normalizeSeparators( path ) ) == false; } );
+        const bool bListed = FileUtil::collectFiles( folder, extension, outListFilePath, bRecursive, stopToken );
+        (void)VectorUtil::removeIf( outListFilePath, []( const AbsolutePath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ) || isListedFile( path.str() ) == false; } );
         return bListed;
     }
 
-    bool EditorContentScan::collectSidecarFiles( string_view folder, vector<string>& outListFilePath )
+    bool EditorContentScan::collectSidecarFiles( const AbsolutePath& folder, vector<AbsolutePath>& outListFilePath )
     {
-        const bool bListed = FileUtil::collectFiles( FileUtil::toDiskPath( folder ), AssetMeta::kExtension, outListFilePath, true );
-        (void)VectorUtil::removeIf( outListFilePath, []( const string& path )
-        { return EditorContentScanInternal::isLeftoverScratch( path ); } );
+        const bool bListed = FileUtil::collectFiles( folder, AssetMeta::kExtension, outListFilePath, true );
+        (void)VectorUtil::removeIf( outListFilePath, []( const AbsolutePath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ); } );
         return bListed;
     }
 
-    bool EditorContentScan::collectFolders( string_view folder, vector<string>& outListFolder, bool bRecursive )
+    bool EditorContentScan::collectFolders( const AbsolutePath& folder, vector<AbsolutePath>& outListFolder, bool bRecursive )
     {
-        const bool bListed = FileUtil::collectFolders( FileUtil::toDiskPath( folder ), outListFolder, bRecursive );
-        (void)VectorUtil::removeIf( outListFolder, []( const string& path )
-        { return EditorContentScanInternal::isLeftoverScratch( path ); } );
+        const bool bListed = FileUtil::collectFolders( folder, outListFolder, bRecursive );
+        (void)VectorUtil::removeIf( outListFolder, []( const AbsolutePath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ); } );
         return bListed;
     }
 
-    bool EditorContentScan::collectTreeFiles( string_view contentRoot, string_view scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken )
+    bool EditorContentScan::collectTreeFiles( const AbsolutePath& contentRoot, const AbsolutePath& scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken )
     {
         bool bListed = contentRoot.empty() || EditorContentScanInternal::collectFolderFiles( contentRoot, outListFile, stopToken );
-        if ( scratchFolder.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( scratchFolder ) ) )
+        if ( scratchFolder.empty() == false && FileUtil::isDirectory( scratchFolder ) )
             bListed = EditorContentScanInternal::collectFolderFiles( scratchFolder, outListFile, stopToken ) && bListed;
         return bListed;
     }

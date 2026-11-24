@@ -72,12 +72,10 @@ namespace sw
             {
                 static const bool s_bAdded = []()
                 {
-                    const string binaryDir = FileUtil::toNativeSeparators( ProcessRoots::get()._binary.str() );
-                    const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory() );
-                    for ( const string& directory : { binaryDir, moduleDir } )
+                    for ( const AbsolutePath& directory : { ProcessRoots::get()._binary, ModuleLibraryUtil::getModuleDirectory() } )
                     {
-                        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directory ) ) )
-                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( directory.c_str() ).c_str() ); // 실패하면 그 폴더의 의존 DLL 로드가 실패로 알린다
+                        if ( FileUtil::isDirectory( directory ) )
+                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( directory.str() ).c_str() ).c_str() ); // 실패하면 그 폴더의 의존 DLL 로드가 실패로 알린다
                     }
                     return true;
                 }();
@@ -116,40 +114,40 @@ namespace sw
         return string( sb.view() );
     }
 
-    string ModuleLibraryUtil::getDebugSymbolPath( string_view libraryPath )
+    AbsolutePath ModuleLibraryUtil::getDebugSymbolPath( const AbsolutePath& libraryPath )
     {
 #if defined( SW_PLATFORM_WINDOWS )
-        return FileUtil::replaceExtension( libraryPath, ".pdb" );
+        return libraryPath.removeExtension().appendSuffix( ".pdb" );
 #elif defined( SW_PLATFORM_POSIX )
-        return FileUtil::replaceExtension( libraryPath, ".debug" );
+        return libraryPath.removeExtension().appendSuffix( ".debug" );
 #else
     #error "Unsupported platform"
 #endif
     }
 
-    string ModuleLibraryUtil::findBuiltDebugSymbolPath( string_view libraryPath )
+    AbsolutePath ModuleLibraryUtil::findBuiltDebugSymbolPath( const AbsolutePath& libraryPath )
     {
-        const string besideLibrary = getDebugSymbolPath( libraryPath );
-        string_view  fileName;
-        FileUtil::getFileNamePart( besideLibrary, fileName );
-        string symbolDirectory = FileUtil::joinPath( ProcessRoots::get()._binary.str(), kSymbolFolder );
+        const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
+        string_view        fileName;
+        FileUtil::getFileNamePart( besideLibrary.str(), fileName );
+        AbsolutePath symbolDirectory = ProcessRoots::get()._binary.join( kSymbolFolder );
         // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
         const ModuleSubdirectory& moved = s_moduleSubdirectory;
         if ( moved._arrDirectory[0] != '\0' )
         {
             const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( moved._arrDirectory );
-            if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( libraryPath ), movedDirectory.str() ) )
-                symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
+            if ( FileUtil::isSameDiskPath( libraryPath.getParent().str(), movedDirectory.str() ) )
+                symbolDirectory = symbolDirectory.join( moved._arrDirectory );
         }
-        string found = FileUtil::joinPath( symbolDirectory, fileName );
-        if ( FileUtil::exists( FileUtil::toDiskPath( found ) ) == false )
-            found = FileUtil::exists( FileUtil::toDiskPath( besideLibrary ) ) ? besideLibrary : string{};
+        AbsolutePath found = symbolDirectory.join( fileName );
+        if ( FileUtil::exists( found ) == false )
+            found = FileUtil::exists( besideLibrary ) ? besideLibrary : AbsolutePath{};
         return found;
     }
 
-    string ModuleLibraryUtil::getModuleDirectory()
+    AbsolutePath ModuleLibraryUtil::getModuleDirectory()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._binary.str(), kModuleFolder );
+        return ProcessRoots::get()._binary.join( kModuleFolder );
     }
 
     void ModuleLibraryUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
@@ -177,19 +175,19 @@ namespace sw
         return true;
     }
 
-    string ModuleLibraryUtil::findModuleLibraryPath( string_view baseName )
+    AbsolutePath ModuleLibraryUtil::findModuleLibraryPath( string_view baseName )
     {
         const string fileName = formatSharedLibraryName( baseName );
         // 옮긴 모듈은 그 폴더에만 있다 — 없으면 그 경로를 돌려 부르는 쪽이 "없다" 를 알리게 한다(활성 게임의 `Bin/Modules` 사본으로 넘어가지 않는다).
         const string_view movedDirectory = ModuleLibraryUtilInternal::findModuleSubdirectory( baseName );
         if ( movedDirectory.empty() == false )
-            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), fileName );
-        string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
-        if ( FileUtil::exists( FileUtil::toDiskPath( modulePath ) ) == false )
+            return ProcessRoots::get()._binary.join( movedDirectory ).join( fileName );
+        AbsolutePath modulePath = getModuleDirectory().join( fileName );
+        if ( FileUtil::exists( modulePath ) == false )
         {
             const AbsolutePath binaryPath = ProcessRoots::get()._binary.join( fileName );
             if ( FileUtil::exists( binaryPath ) )
-                modulePath = binaryPath.str();
+                modulePath = binaryPath;
         }
         return modulePath;
     }

@@ -26,7 +26,7 @@ namespace
         }
 
         const utf8* getName() const override { return _pName; }
-        bool        refreshAll( const AssetPaths& /*assetPaths*/, string_view /*contentRoot*/, uint32& outWrittenCount ) const override
+        bool        refreshAll( const AssetPaths& /*assetPaths*/, const AbsolutePath& /*contentRoot*/, uint32& outWrittenCount ) const override
         {
             ++_callCount;
             outWrittenCount += _writtenCount;
@@ -47,9 +47,9 @@ SW_TEST_CASE( ShaderSourceGeneratorTest, NoGeneratorFailsTheCook )
     uint32            written    = 0;
     {
         SW_EXPECT_LOG( "ShaderCooker.NoSourceGenerator" );
-        SW_EXPECT_FALSE( IShaderSourceGenerator::refreshGenerators( {}, true, assetPaths, "unused", written ) );
+        SW_EXPECT_FALSE( IShaderSourceGenerator::refreshGenerators( {}, true, assetPaths, AbsolutePath{}, written ) );
     }
-    SW_EXPECT_TRUE( IShaderSourceGenerator::refreshGenerators( {}, false, assetPaths, "unused", written ) );
+    SW_EXPECT_TRUE( IShaderSourceGenerator::refreshGenerators( {}, false, assetPaths, AbsolutePath{}, written ) );
     SW_EXPECT_EQUAL( 0u, written );
 }
 
@@ -62,13 +62,13 @@ SW_TEST_CASE( ShaderSourceGeneratorTest, FailedGeneratorFailsTheCook )
     uint32                    written = 0;
     {
         SW_EXPECT_LOG( "ShaderCooker.SourceGeneratorFailed" );
-        SW_EXPECT_FALSE( IShaderSourceGenerator::refreshGenerators( { &broken, &working }, true, assetPaths, "unused", written ) );
+        SW_EXPECT_FALSE( IShaderSourceGenerator::refreshGenerators( { &broken, &working }, true, assetPaths, AbsolutePath{}, written ) );
     }
     SW_EXPECT_EQUAL( 1u, broken._callCount );
     SW_EXPECT_EQUAL( 1u, working._callCount ); // 실패 뒤에도 나머지는 돈다
     SW_EXPECT_EQUAL( 3u, written );
 
     written = 0;
-    SW_EXPECT_TRUE( IShaderSourceGenerator::refreshGenerators( { &working }, true, assetPaths, "unused", written ) );
+    SW_EXPECT_TRUE( IShaderSourceGenerator::refreshGenerators( { &working }, true, assetPaths, AbsolutePath{}, written ) );
     SW_EXPECT_EQUAL( 3u, written );
 }

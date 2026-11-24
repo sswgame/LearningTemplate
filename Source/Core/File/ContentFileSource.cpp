@@ -51,7 +51,11 @@ namespace sw
 
     bool DiskContentFileSource::collectFiles( string_view folder, vector<string>& outListPath ) const
     {
-        return FileUtil::collectFiles( FileUtil::toDiskPath( folder ), {}, outListPath, false );
+        vector<AbsolutePath> listPath;
+        const bool           bWalked = FileUtil::collectFiles( FileUtil::toDiskPath( folder ), {}, listPath, false );
+        for ( const AbsolutePath& path : listPath )
+            outListPath.push_back( path.str() ); // 소스의 열쇠는 글이다(HTTP · 메모리 소스와 같은 자리)
+        return bWalked;
     }
 
     bool DiskContentFileSource::readFile( string_view path, vector<uint8>& outBytes ) const

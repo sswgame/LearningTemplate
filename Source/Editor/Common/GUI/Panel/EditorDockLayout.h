@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/EditorPanelVisibility.h"
 
@@ -44,12 +45,12 @@ namespace sw::editor
          * @brief 현재 도킹 배치와 패널 가시성을 이름 붙인 레이아웃으로 저장합니다(`EditorLayoutStore`).
          * @param folder 비우면 기본 폴더(`Saved/Editor/Layouts`)를 씁니다.
          */
-        [[nodiscard]] bool saveNamedLayout( string_view name, string_view folder = {} );
+        [[nodiscard]] bool saveNamedLayout( string_view name, const AbsolutePath& folder = {} );
         /**
          * @brief 이름 붙인 레이아웃을 다음 프레임 시작에 적용하도록 요청합니다. 파일이 없으면 false 입니다.
          * @details ImGui 설정은 프레임 밖(`NewFrame` 앞)에서 읽어야 이미 있는 창과 도킹 노드에 적용되므로 `applyPendingNamedLayout` 이 한다.
          */
-        [[nodiscard]] bool requestLoadNamedLayout( string_view name, string_view folder = {} );
+        [[nodiscard]] bool requestLoadNamedLayout( string_view name, const AbsolutePath& folder = {} );
         /** @brief 요청된 레이아웃을 적용합니다. `ImGui::NewFrame` 앞에서 호출합니다. */
         void applyPendingNamedLayout();
 
@@ -70,7 +71,7 @@ namespace sw::editor
 
     private:
         /** @brief 지금 패널 가시성과 ImGui 설정 글 @p imguiINIText 를 이름 붙인 레이아웃으로 씁니다(`saveNamedLayout` 의 파일 절반). */
-        [[nodiscard]] bool storeNamedLayout( string_view name, string_view folder, string_view imguiINIText ) const;
+        [[nodiscard]] bool storeNamedLayout( string_view name, const AbsolutePath& folder, string_view imguiINIText ) const;
         /** @brief 패널 가시성을 windows.json 에 씁니다(`save` 의 절반). 시작 스위치가 정한 가시성은 쓰지 않는다. */
         void savePanelVisibility() const;
         void applyDefaultDockLayout( uint32 dockspaceID );
@@ -83,7 +84,7 @@ namespace sw::editor
 
     private:
         string                 _imguiINIPath;
-        string                 _panelVisibilityPath;
+        AbsolutePath           _panelVisibilityPath;
         string                 _pendingLayoutINI; ///< 다음 프레임 시작에 적용할 레이아웃의 ImGui 설정 문자열
         EditorPanelVisibility  _pendingLayoutVisibility;
         float32                _lastDockspaceWidth;  ///< 마지막으로 비율을 맞춘 도크스페이스 크기다. 0 이면 다음 프레임이 저장된 크기에서 시작한다

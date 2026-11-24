@@ -517,10 +517,10 @@ namespace sw::editor
         return FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( text->data() ), text->size() );
     }
 
-    bool MeshModifierStack::loadFromFile( string_view absolutePath )
+    bool MeshModifierStack::loadFromFile( const AbsolutePath& absolutePath )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::toDiskPath( absolutePath ), text ) == false )
+        if ( FileUtil::readTextFile( absolutePath, text ) == false )
             return false;
         return readJSONText( text );
     }

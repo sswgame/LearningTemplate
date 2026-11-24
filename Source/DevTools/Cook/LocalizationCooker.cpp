@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    uint32 LocalizationCooker::cookAll( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
+    uint32 LocalizationCooker::cookAll( const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -25,49 +25,46 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( AssetPaths::collectContentFiles( sourceRoot, ".xml", listFile ) == false )
         {
-            SW_LOG_ERROR_ID( "LocalizationCooker.CouldNotList", "Localization cook could not list '%#' - nothing is cooked", sourceRoot );
+            SW_LOG_ERROR_ID( "LocalizationCooker.CouldNotList", "Localization cook could not list '%#' - nothing is cooked", sourceRoot.str() );
             ++outFailedCount;
             return 0;
         }
         VectorUtil::sort( listFile ); // 출력 순서가 실행마다 같다
 
-        const string      root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot ) );
-        const string      out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
+        const string      root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot.str() ) );
         const CookJobDesc desc = makeCookJobDesc();
         CookStats         stats;
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            const string normalized = FileUtil::normalizeSeparators( filePath );
-            if ( StringUtil::endsWith( normalized, LocalizationProject::kExtension, true ) == false || normalized.size() <= root.size() + 1 )
+            const AbsolutePath normalized = filePath;
+            if ( StringUtil::endsWith( normalized.str(), LocalizationProject::kExtension, true ) == false || normalized.str().size() <= root.size() + 1 )
                 continue;
-            const string projectID = normalized.substr( root.size() + 1 );
+            const string projectID = normalized.str().substr( root.size() + 1 );
 
             // 어느 문화권을 구울지는 작업 밖에서 정한다(디스크 입구 — 세션이 막는 리소스 읽기가 아니다). 목록이 바뀌면 사라진 문화권의 출력은 쿠킹 끝의 정리가 지운다.
             LocalizationProject project;
             if ( const expected<void> read = project.loadFromFile( normalized ); read.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "LocalizationCooker.ProjectNotRead", "Localization cook could not read project '%#': %# (%#)", normalized, read.error().message(), read.error().detail() );
+                SW_LOG_ERROR_ID( "LocalizationCooker.ProjectNotRead", "Localization cook could not read project '%#': %# (%#)", normalized.str(), read.error().message(), read.error().detail() );
                 ++outFailedCount;
                 continue;
             }
             for ( const string& culture : project.collectCookedCultures() )
             {
-                const string                             outputID = project.makeCookedTablePath( projectID, culture );
-                StringBuilder<constant::buffer::kMax512> outputPathBuilder;
-                outputPathBuilder.appendFormat( "%#/%#", out, outputID );
-                const string_view outputPath = outputPathBuilder.view();
-                const CookResult  result     = store.cookFile( desc, outputID, outputPath, [&]()
-                     {
+                const string       outputID   = project.makeCookedTablePath( projectID, culture );
+                const AbsolutePath outputPath = cookedDir.join( outputID );
+                const CookResult   result     = store.cookFile( desc, outputID, outputPath, [&]()
+                      {
                     vector<uint8> bytes;
                     if ( cookCulture( AssetID{ projectID }, culture, bytes ) == false )
                         return CookStep::Failed;
-                    const bool bWritten = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( outputPath ) ) ) && FileUtil::writeFile( FileUtil::toDiskPath( outputPath ), bytes.data(), bytes.size() );
+                    const bool bWritten = FileUtil::ensureDirectoryExists( outputPath.getParent() ) && FileUtil::writeFile( outputPath, bytes.data(), bytes.size() );
                     if ( bWritten == false )
                     {
-                        SW_LOG_ERROR_ID( "LocalizationCooker.CouldNotWrite", "Localization cook could not write '%#'", outputPath );
+                        SW_LOG_ERROR_ID( "LocalizationCooker.CouldNotWrite", "Localization cook could not write '%#'", outputPath.str() );
                         return CookStep::Failed;
                     }
                     return CookStep::Written;

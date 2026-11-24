@@ -251,14 +251,14 @@ namespace sw::editor
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
         // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
         const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( targetPath->str(), EditorContentWriteKind::Save ) )
+        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( *targetPath, EditorContentWriteKind::Save ) )
             return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
 
     bool EditorSceneFileCommands::saveActiveSceneAs( const AbsolutePath& absPath )
     {
-        if ( EditorContentWrite::warnIfReadOnly( absPath.str(), EditorContentWriteKind::Save ) )
+        if ( EditorContentWrite::warnIfReadOnly( absPath, EditorContentWriteKind::Save ) )
             return false;
         return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
     }
@@ -311,27 +311,26 @@ namespace sw::editor
         {
             static bool runSaveSceneAs( const vector<string>& listArgument, string& outReply )
             {
-                string absolutePath;
+                AbsolutePath absolutePath;
                 if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( absolutePath ) ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-                const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath );                      // readDiskPathArgument 가 절대만 받았다
-                if ( scenePath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *scenePath ) == false )
+                (void)FileUtil::ensureDirectoryExists( absolutePath.getParent() ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+                if ( EditorSceneFileCommands::saveActiveSceneAs( absolutePath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "could not save the active scene to '%#'", absolutePath );
+                    replyBuilder.appendFormat( "could not save the active scene to '%#'", absolutePath.str() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "saved %#", absolutePath );
+                replyBuilder.appendFormat( "saved %#", absolutePath.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
 
             static bool runOpenScene( const vector<string>& listArgument, string& outReply )
             {
-                string absolutePath;
+                AbsolutePath absolutePath;
                 if ( listArgument.size() != 1 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
                 // 씬은 리소스 id 로 연다 - 리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
@@ -339,7 +338,7 @@ namespace sw::editor
                 if ( sceneID.empty() )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "'%#' is outside the content root and every mounted disk domain", absolutePath );
+                    replyBuilder.appendFormat( "'%#' is outside the content root and every mounted disk domain", absolutePath.str() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
@@ -347,12 +346,12 @@ namespace sw::editor
                 if ( EditorSceneFileCommands::loadSceneWithoutPrompt( sceneID ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "could not open '%#'", absolutePath );
+                    replyBuilder.appendFormat( "could not open '%#'", absolutePath.str() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "opening %#", absolutePath );
+                replyBuilder.appendFormat( "opening %#", absolutePath.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }

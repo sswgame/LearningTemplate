@@ -15,6 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -43,7 +44,7 @@ namespace sw
     public:
         virtual ~IPackChunkSource() = default;
         /** @brief 팩 @p packFileName 을 받아 @p localPath 에 쓰고 @p onDone 을 부릅니다(받기 · 쓰기 실패면 이유를 남기고 false). */
-        virtual void fetch( const string& packFileName, const string& localPath, PackChunkFetchDoneDelegate onDone ) = 0;
+        virtual void fetch( const string& packFileName, const AbsolutePath& localPath, PackChunkFetchDoneDelegate onDone ) = 0;
         /** @brief 이 플랫폼의 받기입니다. 받을 곳이 없는 플랫폼(팩이 디스크에 있다)은 nullptr 입니다. */
         static unique_ptr<IPackChunkSource> createPlatformSource();
     };

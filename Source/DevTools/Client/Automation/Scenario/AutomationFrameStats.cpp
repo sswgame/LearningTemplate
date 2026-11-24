@@ -131,11 +131,11 @@ namespace sw
                     context.recordFailure( step, "no <BeginFrameStats/> before this step" );
                     return true;
                 }
-                const string path = context.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( path ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( path ), AutomationFrameStats::toJSON( summary, path ) ) == false )
+                const AbsolutePath path = context.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
+                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, AutomationFrameStats::toJSON( summary, path.str() ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> text;
-                    text.appendFormat( "could not write the frame stats to %#", path );
+                    text.appendFormat( "could not write the frame stats to %#", path.str() );
                     context.recordFailure( step, text.view() );
                     return true;
                 }

@@ -31,9 +31,9 @@ namespace sw
 
     FileWatchService::~FileWatchService() = default; // 감시자의 소멸자가 워커를 멈추고 합류한다
 
-    Subscription FileWatchService::watch( string_view folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
+    Subscription FileWatchService::watch( const AbsolutePath& folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
     {
-        const string normalizedFolder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folder ) );
+        const AbsolutePath normalizedFolder = folder.join( {} );
         if ( normalizedFolder.empty() )
         {
             SW_LOG_WARNING_ID( "FileWatchService.EmptyFolder", "File watch: the folder is empty (no content root folder) - hot reload is off" );
@@ -46,19 +46,19 @@ namespace sw
         entry._id               = _idAllocator.allocate();
         entry._rootID           = *rootID;
         entry._folder           = normalizedFolder;
-        entry._comparableFolder = FileUtil::makeComparableDiskPath( normalizedFolder );
+        entry._comparableFolder = FileUtil::makeComparableDiskPath( normalizedFolder.str() );
         entry._depth            = depth;
         entry._listExtension    = listExtension;
         entry._onMatch          = onMatch;
         const uint64 id         = entry._id;
         _listWatch.push_back( std::move( entry ) );
-        SW_LOG_TRACE_ID( "FileWatchService.RegisteredWatch", "Registered watch %# (ext count %#)", normalizedFolder, static_cast<uint32>( listExtension.size() ) );
+        SW_LOG_TRACE_ID( "FileWatchService.RegisteredWatch", "Registered watch %# (ext count %#)", normalizedFolder.str(), static_cast<uint32>( listExtension.size() ) );
         return _subscriptions.issue( id );
     }
 
-    optional<uint64> FileWatchService::acquireRoot( const string& folder, FileWatchDepth depth )
+    optional<uint64> FileWatchService::acquireRoot( const AbsolutePath& folder, FileWatchDepth depth )
     {
-        const ComparableDiskPath comparableFolder = FileUtil::makeComparableDiskPath( folder );
+        const ComparableDiskPath comparableFolder = FileUtil::makeComparableDiskPath( folder.str() );
         for ( const Root& root : _listRoot )
         {
             const bool bSameFolder = root._comparablePath == comparableFolder && ( root._depth == FileWatchDepth::Tree || depth == FileWatchDepth::Folder );
@@ -70,17 +70,17 @@ namespace sw
         if ( pWatcher == nullptr )
         {
             // 설계상 없는 것이다(웹 — 브라우저 파일 시스템에는 바깥 편집이 없다) — 경고가 아니라 정보 한 줄이다.
-            SW_LOG_INFO_ID( "FileWatchService.NoNativeWatcher", "File watch: this platform has no OS file watcher - '%#' is not watched", folder );
+            SW_LOG_INFO_ID( "FileWatchService.NoNativeWatcher", "File watch: this platform has no OS file watcher - '%#' is not watched", folder.str() );
             return nullopt;
         }
         if ( pWatcher->startWatching( folder, depth == FileWatchDepth::Tree ) == false )
         {
-            SW_LOG_ERROR_ID( "FileWatchService.FailedStartWatching", "File watch: failed to start watching %#", folder );
+            SW_LOG_ERROR_ID( "FileWatchService.FailedStartWatching", "File watch: failed to start watching %#", folder.str() );
             return nullopt;
         }
         Root root{};
         root._id                = _idAllocator.allocate();
-        root._path              = folder;
+        root._path              = folder.str();
         root._comparablePath    = comparableFolder;
         root._depth             = depth;
         root._pWatcher          = std::move( pWatcher );
@@ -135,7 +135,7 @@ namespace sw
         unordered_map<string, FileWatcherAction> mapLastAction;
         for ( FileChangeEvent& changeEvent : listEvent )
         {
-            const string key = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
+            const string key = changeEvent.makePath().str();
             const auto   it  = mapLastAction.find( key );
             if ( it != mapLastAction.end() && it->second == changeEvent._action )
                 continue;
@@ -148,9 +148,9 @@ namespace sw
     {
         for ( const FileChangeEvent& changeEvent : listEvent )
         {
-            const string             fullPath       = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
-            const ComparableDiskPath comparablePath = FileUtil::makeComparableDiskPath( fullPath );
-            const ComparableDiskPath comparableDir  = FileUtil::makeComparableDiskPath( FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( fullPath ) ) );
+            const AbsolutePath       fullPath       = changeEvent.makePath();
+            const ComparableDiskPath comparablePath = FileUtil::makeComparableDiskPath( fullPath.str() );
+            const ComparableDiskPath comparableDir  = FileUtil::makeComparableDiskPath( fullPath.getParent().str() );
             // **콜백이 감시를 등록 · 해제할 수 있다.** 인덱스로 돌면서 델리게이트를 부르기 전에 복사한다(`MulticastDelegate::broadcast` 와 같은 모양). 순회 도중 앞쪽 감시가
             // 빠지면 뒤의 하나가 당겨져 건너뛰어질 수 있는데, 부르는 도중 목록을 바꾼 쪽이 감수한다.
             for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
@@ -200,7 +200,7 @@ namespace sw
         unordered_set<string> uniqueSetEmittedPath;
         for ( const FileChangeEvent& changeEvent : inoutListEvent )
         {
-            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).str() ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
+            uniqueSetEmittedPath.insert( FileUtil::makeComparableDiskPath( changeEvent.makePath().str() ).str() ); // 디스크 경로라 OS 규칙(리눅스는 대소문자를 가른다)
         }
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
@@ -210,26 +210,26 @@ namespace sw
         {
             if ( entry._rootID != root._id )
                 continue;
-            if ( FileUtil::isDirectory( FileUtil::toDiskPath( entry._folder ) ) == false )
+            if ( FileUtil::isDirectory( entry._folder ) == false )
                 continue;
 
-            vector<string> listFile;
-            if ( FileUtil::collectFiles( FileUtil::toDiskPath( entry._folder ), {}, listFile, entry._depth == FileWatchDepth::Tree ) == false )
-                SW_LOG_WARNING_ID( "FileWatchService.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._folder );
-            for ( const string& filePath : listFile )
+            vector<AbsolutePath> listFile;
+            if ( FileUtil::collectFiles( entry._folder, {}, listFile, entry._depth == FileWatchDepth::Tree ) == false )
+                SW_LOG_WARNING_ID( "FileWatchService.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._folder.str() );
+            for ( const AbsolutePath& filePath : listFile )
             {
-                if ( isExtensionAllowed( entry, filePath ) == false )
+                if ( isExtensionAllowed( entry, filePath.str() ) == false )
                     continue;
                 uint64 mtime = 0;
-                if ( FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( filePath ), mtime ) == false || mtime < sinceTimestamp )
+                if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false || mtime < sinceTimestamp )
                     continue; // 그 사이 지워졌거나 그 뒤로 바뀌지 않았다
 
-                const string normalized = FileUtil::makeComparableDiskPath( filePath ).str(); // 집합 키
+                const string normalized = FileUtil::makeComparableDiskPath( filePath.str() ).str(); // 집합 키
                 if ( uniqueSetEmittedPath.insert( normalized ).second == false )
                     continue;
 
                 string relative{};
-                if ( FileUtil::makeRelativePath( root._path, filePath, relative ) == false || relative.empty() )
+                if ( FileUtil::makeRelativePath( root._path, filePath.str(), relative ) == false || relative.empty() )
                     continue;
 
                 FileChangeEvent changeEvent{};

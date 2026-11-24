@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 
@@ -45,7 +46,7 @@ namespace sw::editor
         static void warnMissingAvatarBones( const ModelImportResult& result, string_view sourcePath );
 
         /** @brief 아바타 정보가 있으면 `<옆 폴더>/<stem>.avatar.xml` 에 쓰고, 무시한 키를 경고로 알립니다. */
-        [[nodiscard]] static bool writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem );
+        [[nodiscard]] static bool writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, const AbsolutePath& sideFolder, string_view stem );
 
         /**
          * @brief 구간 프리팹 `<옆 폴더>/<stem>.prefab.xml` 을 씁니다 — 주 메시 컴포넌트(스킨드는 스켈레탈 메시, 아니면 메시 — 첫 구간)와 구간마다 `MeshSectionComponent`,
@@ -53,7 +54,7 @@ namespace sw::editor
          * @details 런타임은 이 프리팹을 스폰하면 구간마다의 머티리얼과 VRM 의 표정 · 스프링 본 · 1인칭 숨김(구간 가시성)을 쓴다. 적은 칸만 쓰고 나머지는 컴포넌트의 기본값이다.
          *          맵은 머티리얼이 여럿인 모델을 이 프리팹으로 놓는다(메시 하나에 머티리얼 하나인 컴포넌트로는 구간 하나만 그린다).
          */
-        [[nodiscard]] static bool writeSectionPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem );
+        [[nodiscard]] static bool writeSectionPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& meshPath, const AbsolutePath& sideFolder, string_view stem );
 
         /** @brief 임포트 구간 표를 메시 구간(`MeshSection`)으로 바꿉니다. */
         static vector<MeshSection> makeMeshSections( const vector<ModelImportSection>& listSection );

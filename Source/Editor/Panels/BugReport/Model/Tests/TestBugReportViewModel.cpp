@@ -21,7 +21,7 @@ namespace
             SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( directory ) );
             BugReport report;
             report._note = string( note );
-            SW_EXPECT_TRUE( report.writeInfo( directory.str() ) );
+            SW_EXPECT_TRUE( report.writeInfo( directory ) );
         }
     };
 } // namespace
@@ -34,7 +34,7 @@ SW_TEST_CASE( BugReportViewModelTest, RowsAreNewestFirst )
     BugReportViewModelTestUtil::writeReport( root, "20260301-090000", "new" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root.join( "20260201-120000" ) ) );
 
-    BugReportViewModel model{ root.str() };
+    BugReportViewModel model{ root };
     BugReportViewState state;
     model.gather( state );
     SW_REQUIRE_EQUAL( size_t{ 3 }, state._listRow.size() );
@@ -58,7 +58,7 @@ SW_TEST_CASE( BugReportViewModelTest, EmptyRootHasNoRows )
 {
     const AbsolutePath root = sw::test::makeScratchPath( "NoBugReports" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
-    BugReportViewModel model{ root.str() };
+    BugReportViewModel model{ root };
     BugReportViewState state;
     state._listRow.emplace_back(); // 지난 값은 비운다
     model.gather( state );

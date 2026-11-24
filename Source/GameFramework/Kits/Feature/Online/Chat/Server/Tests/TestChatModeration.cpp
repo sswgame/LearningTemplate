@@ -19,7 +19,7 @@ namespace
     const ChatTextNormalizer& getNormalizer()
     {
         static ChatTextNormalizer s_normalizer;
-        static const bool         s_bLoaded = s_normalizer.loadFromFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Server/chat_ignored_characters.txt" ) );
+        static const bool         s_bLoaded = s_normalizer.loadFromFile( ProcessRoots::get()._project.join( "Config/Server/chat_ignored_characters.txt" ) );
         SW_EXPECT_TRUE( s_bLoaded );
         return s_normalizer;
     }
@@ -116,13 +116,13 @@ SW_TEST_CASE( ChatModerationTest, IgnoredCharacterFileRejectsBadLines )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "# comment\nU+002E\n.\n" ) );
     ChatTextNormalizer normalizer;
     SW_EXPECT_LOG( "ChatTextNormalizer.BadLine" );
-    SW_EXPECT_FALSE( normalizer.loadFromFile( path.str() ) );
+    SW_EXPECT_FALSE( normalizer.loadFromFile( path ) );
     SW_EXPECT_EQUAL( uint32( '.' ), normalizer.normalize( '.' ) ); // 실패한 읽기는 아무것도 건너뛰지 않는다
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ChatTextNormalizer.CannotRead" );
-    SW_EXPECT_FALSE( normalizer.loadFromFile( FileUtil::joinPath( folder.str(), "missing.txt" ) ) );
+    SW_EXPECT_FALSE( normalizer.loadFromFile( folder.join( "missing.txt" ) ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "U+002E\n" ) );
-    SW_REQUIRE_TRUE( normalizer.loadFromFile( path.str() ) );
+    SW_REQUIRE_TRUE( normalizer.loadFromFile( path ) );
     SW_EXPECT_EQUAL( uint32( 0 ), normalizer.normalize( '.' ) );
     SW_EXPECT_EQUAL( uint32( 'a' ), normalizer.normalize( 'A' ) );
 }

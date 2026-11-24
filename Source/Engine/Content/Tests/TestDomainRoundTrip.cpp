@@ -25,8 +25,8 @@ namespace
         static constexpr const utf8* kRelative = "tests_domain_roundtrip/shared.txt";
         static constexpr const utf8* kGamePack = "game/playground"; ///< 테스트 호스트의 활성 팩(`ResourceEntryRefusesOSPathsInEveryContentSource` 와 같은 팩)
 
-        static string makeDomainFolder( const string& domain ) { return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._content.str(), domain ), kFolder ); }
-        static string makeID( const string& domain )
+        static AbsolutePath makeDomainFolder( const string& domain ) { return ProcessRoots::get()._content.join( domain ).join( kFolder ); }
+        static string       makeID( const string& domain )
         {
             StringBuilder<constant::buffer::kMax128> builder;
             builder.appendFormat( "%#/%#", domain, kRelative );
@@ -36,7 +36,7 @@ namespace
         static string readDisk( const string& domain )
         {
             string text;
-            (void)FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( makeDomainFolder( domain ), "shared.txt" ) ), text );
+            (void)FileUtil::readTextFile( makeDomainFolder( domain ).join( "shared.txt" ), text );
             return text;
         }
     };
@@ -49,11 +49,11 @@ namespace
             removeAll();
             for ( const string& domain : { string( "common" ), string( DomainRoundTripInternal::kGamePack ) } )
             {
-                const string folder = DomainRoundTripInternal::makeDomainFolder( domain );
-                if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( folder ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( FileUtil::joinPath( folder, "shared.txt" ) ), domain ) == false )
+                const AbsolutePath folder = DomainRoundTripInternal::makeDomainFolder( domain );
+                if ( FileUtil::ensureDirectoryExists( folder ) == false || FileUtil::writeTextFile( folder.join( "shared.txt" ), domain ) == false )
                 {
                     fixed_string<constant::buffer::kMax512> text;
-                    formatstring( text.data(), text.capacity(), "could not write the shared file under %#", folder );
+                    formatstring( text.data(), text.capacity(), "could not write the shared file under %#", folder.str() );
                     test::reportFailure( __FILE__, __LINE__, text );
                 }
             }
@@ -66,7 +66,7 @@ namespace
         static void removeAll()
         {
             for ( const string& domain : { string( "common" ), string( DomainRoundTripInternal::kGamePack ) } )
-                (void)FileUtil::removeDirectory( FileUtil::toDiskPath( DomainRoundTripInternal::makeDomainFolder( domain ) ) );
+                (void)FileUtil::removeDirectory( DomainRoundTripInternal::makeDomainFolder( domain ) );
         }
     };
 } // namespace
@@ -103,7 +103,7 @@ SW_TEST_CASE( DomainRoundTripTest, OnlyTheOpenedDomainFileChanges )
     // 도메인을 비운 편집은 읽은 그 파일(승자)에 쓴다 — 다른 도메인 파일은 그대로다.
     const optional<AbsolutePath> relativeTarget = paths.toDiskPath( Internal::kRelative );
     SW_REQUIRE_TRUE( relativeTarget.has_value() );
-    SW_EXPECT_EQUAL( Internal::makeID( winner ), paths.toAssetID( relativeTarget->str() ) );
+    SW_EXPECT_EQUAL( Internal::makeID( winner ), paths.toAssetID( *relativeTarget ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( *relativeTarget, "edited-relative" ) );
     SW_EXPECT_EQUAL( string( "edited-relative" ), Internal::readDisk( winner ) );
     SW_EXPECT_EQUAL( loser, Internal::readDisk( loser ) );

@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -111,9 +112,9 @@ namespace sw::editor
          * @brief 담은 창을 텍스트 파일로 저장합니다(프로파일 캡처 저장). 구간마다 한 줄이며 종류, 이름, 오래된 것부터 창 크기만큼의 값을 씁니다. 호출되지 않은 칸은 -1 입니다.
          * @details 언리얼의 `stat startfile`, 유니티 Profiler 의 Save 에 해당한다. 깊은 분석(시간축, 스레드)은 Tracy 캡처가 맡고, 이 파일은 패널 테이블을 다시 보는 용도다.
          */
-        [[nodiscard]] bool saveToFile( string_view filePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& filePath ) const;
         /** @brief `saveToFile` 이 쓴 파일을 읽어 창을 교체합니다. 형식이 틀리면 현재 값을 그대로 두고 false 를 반환합니다. */
-        [[nodiscard]] bool loadFromFile( string_view filePath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& filePath );
 
         /** @brief 창 크기(프레임)입니다. */
         uint32 getWindowFrame() const { return _windowFrame; }

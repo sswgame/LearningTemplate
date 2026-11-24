@@ -738,7 +738,7 @@ namespace sw::editor
         return pMesh != nullptr ? pMesh->getWorldMatrix() : float4x4{};
     }
 
-    optional<string> MeshModifierSession::findSidecarPath() const
+    optional<AbsolutePath> MeshModifierSession::findSidecarPath() const
     {
         if ( hasTarget() == false )
             return nullopt;
@@ -746,24 +746,22 @@ namespace sw::editor
         const auto meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         if ( meshPath.has_value() == false )
             return nullopt; // 이유는 toDiskPath 가 남겼다
-        return MeshModifierStack::makeSidecarPath( meshPath->str() );
+        return FileUtil::toDiskPath( MeshModifierStack::makeSidecarPath( meshPath->str() ) );
     }
 
     bool MeshModifierSession::saveSidecar()
     {
-        const optional<string> sidecarPath = findSidecarPath();
-        if ( sidecarPath.has_value() == false )
+        const optional<AbsolutePath> path = findSidecarPath();
+        if ( path.has_value() == false )
             return false;
-        const string&                path      = *sidecarPath;
-        const optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
-        if ( stackFile.has_value() == false || _stack.saveToFile( *stackFile ) == false )
+        if ( _stack.saveToFile( *path ) == false )
         {
-            SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path.c_str() );
+            SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path->c_str() );
             return false;
         }
         _savedStackText = _stack.makeJSONText( -1 );
         _bUnsavedStale  = SW_TRUE;
-        SW_LOG_INFO_ID( "MeshModifierSession.MeshModifierStackSaved", "Mesh modifier stack saved to %#", path.c_str() );
+        SW_LOG_INFO_ID( "MeshModifierSession.MeshModifierStackSaved", "Mesh modifier stack saved to %#", path->c_str() );
         return true;
     }
 
@@ -774,7 +772,7 @@ namespace sw::editor
         const auto path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( path.has_value() == false )
             return false;
-        if ( _stack.loadFromFile( path->str() ) == false )
+        if ( _stack.loadFromFile( *path ) == false )
         {
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierStackCould2", "Mesh modifier stack %# could not be read", path->c_str() );
             return false;
@@ -816,7 +814,7 @@ namespace sw::editor
         }
         SW_LOG_INFO_ID( "MeshModifierSession.BakedMeshWritten", "Baked mesh written to %#", path->c_str() );
         if ( pOutPath != nullptr )
-            *pOutPath = editor::getSubsystem<AssetPaths>().toAssetID( path->str() );
+            *pOutPath = editor::getSubsystem<AssetPaths>().toAssetID( *path );
         return true;
     }
 

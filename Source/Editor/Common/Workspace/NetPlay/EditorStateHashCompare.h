@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/EditorExports.h"
 
@@ -100,11 +101,11 @@ namespace sw::editor
         [[nodiscard]] bool setHashChannel( string_view channelName );
         const string&      getHashChannel() const { return _hashChannel; }
         /** @brief 이력 파일을 칸에 담습니다. 형식이 다른 줄이 있으면 false 입니다. */
-        [[nodiscard]] bool loadFromFile( int32 sourceIndex, string_view path );
+        [[nodiscard]] bool loadFromFile( int32 sourceIndex, const AbsolutePath& path );
         /** @brief 이력 글을 칸에 담습니다(`writeReport` 형식). 형식이 다르거나 비어 있으면 false 입니다. */
         [[nodiscard]] bool loadFromReport( int32 sourceIndex, string_view label, string_view reportText );
         /** @brief 칸의 이력을 파일로 씁니다(같은 형식 — `loadFromFile` 이 되읽는다). 비어 있으면 false 입니다. */
-        [[nodiscard]] bool saveToFile( int32 sourceIndex, string_view path ) const;
+        [[nodiscard]] bool saveToFile( int32 sourceIndex, const AbsolutePath& path ) const;
         /** @brief 칸을 비웁니다. */
         void clearSource( int32 sourceIndex );
 

@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"
@@ -114,14 +115,14 @@ namespace sw::editor
          * @brief 등록된 섹션마다 파일의 값을 적용합니다. 없는 값은 그대로 둡니다. 적용한 섹션의 `_pfnOnChanged` 를 호출합니다.
          * @return 파일이 없으면 `Missing`(처음 실행). 깨졌으면 `.corrupt` 로 치우고 오류를 남긴 뒤 새 파일을 쓰고 `Recovered`(`EditorUserFile`).
          */
-        [[nodiscard]] static EditorUserFileResult loadAll( string_view filePath );
+        [[nodiscard]] static EditorUserFileResult loadAll( const AbsolutePath& filePath );
         /** @brief 등록된 섹션을 모두 기본과의 차이만으로 씁니다. 차이가 없는 섹션은 빼고, 모두 없으면 빈 오브젝트를 씁니다. */
-        [[nodiscard]] static bool saveAll( string_view filePath );
+        [[nodiscard]] static bool saveAll( const AbsolutePath& filePath );
         /**
          * @brief 아직 파일 값을 입히지 않은 섹션(`loadAll` 뒤에 올라온 확장 모듈의 섹션)에만 파일 값을 입힙니다. 입힌 섹션 수입니다.
          * @details 이미 입힌 섹션은 다시 읽지 않는다(사용자가 바꾼 값을 덮지 않는다). 에디터가 프레임마다, `saveAll` 이 쓰기 전에 부른다.
          */
-        static uint32 loadNewSections( string_view filePath );
+        static uint32 loadNewSections( const AbsolutePath& filePath );
         /** @brief 파일 값을 아직 입히지 않은 섹션이 있으면 true 입니다. 할당하지 않으므로 프레임마다 물어도 됩니다. */
         [[nodiscard]] static bool hasNewSections();
         /** @brief @p pCurrent 가 @p pDefault 와 다른 프로퍼티만 담은 JSON 오브젝트 문자열을 만듭니다. 글로 못 쓰면(잘못된 UTF-8) 오류입니다. */
@@ -133,9 +134,9 @@ namespace sw::editor
         /** @brief 섹션 하나를 기본값으로 되돌리고 `_pfnOnChanged` 를 부릅니다. */
         static void resetSection( const EditorSettingsRegistration& registration );
         /** @brief 파일에 저장된 프로퍼티 수를 반환합니다. 모든 섹션의 키를 합한 값입니다. 파일이 없거나 형식이 틀리면 0 입니다. */
-        static uint32 countSavedKeys( string_view filePath );
+        static uint32 countSavedKeys( const AbsolutePath& filePath );
         /** @brief 저장 파일 경로를 반환합니다. 에디터 상태 폴더의 `EditorPreferences.json` 입니다. */
-        static string getDefaultFilePath();
+        static AbsolutePath getDefaultFilePath();
         /**
          * @brief 에디터의 환경설정 파일(`getDefaultFilePath`)을 엽니다 — 읽어 입히고(`loadAll`), 닫을 때까지 `saveOpened` 가 그 파일에 씁니다. 에디터 기동이 한 번 부릅니다.
          * @details 열지 않은 실행(헤드리스 도구 · 테스트)은 환경설정을 쓰지 않는다. 예전에는 모듈이 내려갈 때마다 저장해, 도구 실행이 끝날 때 이미 내린 서비스에서

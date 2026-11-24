@@ -17,17 +17,17 @@ SW_TEST_CASE( EditorContentWriteTest, ReadOnlyFileIsRefusedAndKept )
     const AbsolutePath path = test::makeScratchPath( "locked.material" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "kept" ) );
-    SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path.str(), EditorContentWriteKind::Save ) );
+    SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, false ) );
-    SW_EXPECT_TRUE( EditorContentWrite::warnIfReadOnly( path.str(), EditorContentWriteKind::Save ) );
+    SW_EXPECT_TRUE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
     SW_EXPECT_TRUE( FileUtil::isReadOnlyFile( path ) );
     string text;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
     SW_EXPECT_EQUAL( text, string( "kept" ) );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, true ) ); // 케이스 폴더 정리가 Windows 에서 읽기 전용 파일을 지우지 못한다
-    SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path.str(), EditorContentWriteKind::Save ) );
+    SW_EXPECT_FALSE( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) );
 }
 
 /** @brief [EditorContentWriteTest] 폴더는 그 아래 모든 파일을 본다 — 깊은 곳의 읽기 전용 파일 하나가 폴더 전체를 막는다. 없는 자리(새로 만들 파일)는 막지 않는다 */
@@ -40,14 +40,14 @@ SW_TEST_CASE( EditorContentWriteTest, FolderIsRefusedByAReadOnlyFileUnderIt )
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( readOnly ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( writable, "a" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( readOnly, "b" ) );
-    SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( folder.str() ).has_value() );
+    SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( folder ).has_value() );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( readOnly, false ) );
-    const optional<string> found = EditorContentWrite::findReadOnlyAtOrUnder( folder.str() );
+    const optional<string> found = EditorContentWrite::findReadOnlyAtOrUnder( folder );
     SW_REQUIRE_TRUE( found.has_value() );
     SW_EXPECT_EQUAL( *found, FileUtil::normalizeSeparators( readOnly.str() ) );
-    SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( writable.str() ).has_value() );
-    SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( missingNew.str() ).has_value() );
+    SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( writable ).has_value() );
+    SW_EXPECT_FALSE( EditorContentWrite::findReadOnlyAtOrUnder( missingNew ).has_value() );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( readOnly, true ) );
 }
@@ -61,10 +61,10 @@ SW_TEST_CASE( EditorContentWriteTest, DeleteRefusesAReadOnlyFile )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<Scene/>" ) );
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, false ) );
 
-    SW_EXPECT_FALSE( EditorAssetFileCommands::deleteAsset( path.str() ) );
+    SW_EXPECT_FALSE( EditorAssetFileCommands::deleteAsset( path ) );
     SW_EXPECT_TRUE( FileUtil::exists( path ) );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, true ) );
-    SW_EXPECT_TRUE( EditorAssetFileCommands::deleteAsset( path.str() ) );
+    SW_EXPECT_TRUE( EditorAssetFileCommands::deleteAsset( path ) );
     SW_EXPECT_FALSE( FileUtil::exists( path ) );
 }

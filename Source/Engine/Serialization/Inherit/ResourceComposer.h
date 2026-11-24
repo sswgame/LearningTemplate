@@ -21,6 +21,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -153,7 +154,7 @@ namespace sw
          * @param pTagOverride 사본을 바꿔 끼운 태그로 읽었으면 그 축입니다(`ResourceContext::withTagOverride`) — 조건을 되돌릴 때 읽은 태그와 같아야 편집이 맞는 조건에 들어간다. nullptr 이면 엔진 태그입니다.
          * @return 쓰지 못하면 false 입니다(까닭은 로그).
          */
-        [[nodiscard]] static bool saveText( string_view absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride = nullptr );
+        [[nodiscard]] static bool saveText( const AbsolutePath& absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride = nullptr );
 
         /**
          * @brief 부모와의 차이 글 @p deltaText 를 다시 읽어 펼친 글 @p fullText 와 같은지 봅니다. @p reread 가 비었으면 보지 않습니다.
@@ -167,6 +168,6 @@ namespace sw
          * @brief `_base` 문서 저장의 한 벌입니다. 부모와의 차이를 만들고, 다시 읽어 대조하고, 씁니다. 실패는 오류 로그(`ResourceSave.DeltaNotSaved` · `ResourceSave.WriteFailed`)를 남기고 false 입니다.
          * @param reread 다시 읽어 펼친 글을 돌려주는 함수입니다(읽지 못하면 빈 글). 비면 대조하지 않습니다.
          */
-        [[nodiscard]] static bool saveDelta( string_view absPath, string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, const ResourceRereadFunction& reread = nullptr );
+        [[nodiscard]] static bool saveDelta( const AbsolutePath& absPath, string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, const ResourceRereadFunction& reread = nullptr );
     };
 } // namespace sw

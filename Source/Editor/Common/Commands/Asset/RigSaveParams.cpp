@@ -152,13 +152,13 @@ namespace sw::editor
         const optional<AbsolutePath> rigFile = EditorPaths::getAssetPaths().toDiskPath( rigPath );
         if ( rigFile.has_value() == false )
             return string( "The rig file could not be written" );
-        const string& writePath = rigFile->str();
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( writePath ), rewritten ) == false )
+        const AbsolutePath writePath = *rigFile;
+        if ( FileUtil::writeTextFile( writePath, rewritten ) == false )
             return string( "The rig file could not be written" );
         if ( pUndoLabel != nullptr )
         {
-            transaction.push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, text ),
-                              SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath, rewritten ), pUndoLabel );
+            transaction.push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath.str(), text ),
+                              SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath.str(), rewritten ), pUndoLabel );
         }
         SW_LOG_INFO_ID( "RigDebugPanel.RigSettingsSaved", "Rig settings saved to %#", writePath.c_str() );
         return string( kSavedStatus );

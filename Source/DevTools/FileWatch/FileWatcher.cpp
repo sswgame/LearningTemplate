@@ -45,7 +45,7 @@ namespace sw
 
     void FileWatcher::reportWatchLost( string_view reason )
     {
-        SW_LOG_ERROR_ID( "FileWatch.WatchLost", "File watching of %# stopped: %#", _directoryPath, reason );
+        SW_LOG_ERROR_ID( "FileWatch.WatchLost", "File watching of %# stopped: %#", _directoryPath.str(), reason );
         ScopedLock<mutex> lock{ _eventMutex };
         _bWatchLost = true;
     }
@@ -68,7 +68,7 @@ namespace sw
             // 파일 이름이 빈 Modified 가 그 약속이다.
             FileChangeEvent rescanEvent{};
             rescanEvent._action    = FileWatcherAction::Modified;
-            rescanEvent._directory = _directoryPath;
+            rescanEvent._directory = _directoryPath.str();
             outListEvent.push_back( std::move( rescanEvent ) );
             ++result._eventCount;
         }

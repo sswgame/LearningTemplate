@@ -30,7 +30,7 @@ namespace sw
          */
         void appendExecutableFolderToSymbolPath( HANDLE process )
         {
-            const string executablePath = FileUtil::getExecutablePath();
+            const string executablePath = FileUtil::getExecutablePath().str();
             if ( executablePath.empty() )
                 return;
             const wstring executableFolder  = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( FileUtil::getDirectoryPart( executablePath ) ).c_str() );
@@ -58,7 +58,7 @@ namespace sw
             searchPath += pExecutableFolder;
             // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 추가한다.
             const wstring symbolFolder = StringUtil::utf8ToUTF16(
-                FileUtil::toNativeSeparators( FileUtil::joinPath( ProcessRoots::get()._binary.str(), ModuleLibraryUtil::kSymbolFolder ) ).c_str() );
+                FileUtil::toNativeSeparators( ProcessRoots::get()._binary.join( ModuleLibraryUtil::kSymbolFolder ).str() ).c_str() );
             searchPath += L";";
             searchPath += symbolFolder;
             (void)SymSetSearchPathW( process, searchPath.c_str() );

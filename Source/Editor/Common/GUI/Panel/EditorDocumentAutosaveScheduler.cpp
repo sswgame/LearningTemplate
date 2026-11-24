@@ -77,7 +77,7 @@ namespace sw::editor
             return;
         if ( poll == EditorTaskPoll::Running )
             return; // 앞 묶음이 아직 쓰는 중이다 — 다음 프레임에 다시 본다
-        const string sessionFolder = EditorAutosaveCommands::getSessionFolder();
+        const AbsolutePath sessionFolder = EditorAutosaveCommands::getSessionFolder();
         if ( sessionFolder.empty() )
             return; // 씬 자동 저장이 세션을 아직 열지 않았거나 열지 못했다(이유는 거기서 남겼다)
 

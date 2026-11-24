@@ -49,12 +49,12 @@ namespace sw::editor
         return StringUtil::equals( gv_editorOpenPanel.get(), EditorDockLayoutPersistenceInternal::kOpenAllPanels, true );
     }
 
-    bool EditorDockLayout::storeNamedLayout( string_view name, string_view folder, string_view imguiINIText ) const
+    bool EditorDockLayout::storeNamedLayout( string_view name, const AbsolutePath& folder, string_view imguiINIText ) const
     {
         string safeName;
         if ( EditorLayoutStore::sanitizeName( name, safeName ) == false )
             return false;
-        const string targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
+        const AbsolutePath targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : folder;
         if ( targetFolder.empty() )
             return false;
 
@@ -72,12 +72,12 @@ namespace sw::editor
         return bSaved;
     }
 
-    bool EditorDockLayout::requestLoadNamedLayout( string_view name, string_view folder )
+    bool EditorDockLayout::requestLoadNamedLayout( string_view name, const AbsolutePath& folder )
     {
         string safeName;
         if ( EditorLayoutStore::sanitizeName( name, safeName ) == false )
             return false;
-        const string sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
+        const AbsolutePath sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : folder;
         if ( EditorLayoutStore::load( sourceFolder, safeName, _pendingLayoutINI, _pendingLayoutVisibility ) == false )
         {
             SW_LOG_WARNING_ID( "EditorDockLayout.LayoutNotFound", "Layout '%#' was not found in %#", safeName.c_str(), sourceFolder.c_str() );
@@ -90,7 +90,7 @@ namespace sw::editor
     void EditorDockLayout::initializePersistencePaths()
     {
         _imguiINIPath.clear();
-        _panelVisibilityPath.clear();
+        _panelVisibilityPath = {};
 
         const AbsolutePath imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiINIFileName );
         const AbsolutePath windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kPanelVisibilityFileName );
@@ -101,7 +101,7 @@ namespace sw::editor
         }
 
         _imguiINIPath        = imguiPath.str();
-        _panelVisibilityPath = windowsPath.str();
+        _panelVisibilityPath = windowsPath;
         SW_LOG_TRACE_ID( "EditorDockLayout.LayoutPersistenceDir", "Layout persistence dir: %#", imguiPath.getParent().c_str() );
     }
 

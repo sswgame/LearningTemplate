@@ -19,6 +19,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
@@ -102,7 +103,7 @@ namespace sw
         static constexpr const utf8* kGeneratedFile = "Config/Dev/AssetReferenceFields.generated.json";
 
         /** @brief 프로젝트 루트의 칸 목록을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 목록으로 대신하지 않는다). */
-        [[nodiscard]] bool load( string_view projectRoot );
+        [[nodiscard]] bool load( const AbsolutePath& projectRoot );
 
         /** @brief @p name 이 경로 칸이면 true 입니다(대소문자를 가린다 — 리플렉션 이름 · 속성 이름 그대로). */
         bool isField( string_view name ) const;
@@ -136,7 +137,7 @@ namespace sw
 
     private:
         /** @brief 생성 표(`kGeneratedFile`)의 칸 이름을 더합니다. 없거나 꼴이 틀리면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool loadGeneratedProperties( string_view projectRoot );
+        [[nodiscard]] bool loadGeneratedProperties( const AbsolutePath& projectRoot );
         bool               isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const;
         void               appendTokens( string_view text, size_t valueStart, size_t valueEnd, string_view field, const vector<size_t>& listLineStart,
                                          vector<AssetReference>& outListReference ) const;

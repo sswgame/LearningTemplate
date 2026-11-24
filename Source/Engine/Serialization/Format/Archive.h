@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Serialization/Serializer/StringPool.h"
 
@@ -56,7 +57,7 @@ namespace sw
         /** @brief 버퍼 소유권을 넘깁니다. */
         Archive( Archive&& ) = default;
         /** @brief **디스크 파일**에서 읽거나 쓸 아카이브를 엽니다. 리소스 id 는 받지 않습니다 — 리소스는 `AssetIO::readBinaryAsset` 로 읽어 버퍼 생성자로 엽니다. */
-        explicit Archive( string_view fileName, bool bReadMode = true );
+        explicit Archive( const AbsolutePath& fileName, bool bReadMode = true );
         /** @brief 메모리 버퍼를 읽기 전용으로 감쌉니다. */
         Archive( const uint8* pData, uint64 size );
         /** @brief 쓰기 모드면 버퍼를 정리합니다. */
@@ -89,7 +90,7 @@ namespace sw
         void setReadModeAndResetPosition( bool bReadMode );
 
         /** @brief 현재 버퍼 내용을 파일로 저장합니다. */
-        [[nodiscard]] bool saveToFile( string_view fileName ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& fileName ) const;
 
         /** @brief 지정된 크기만큼 바이트를 씁니다. */
         void writeBytes( const void* pBuffer, uint64 byteSize );

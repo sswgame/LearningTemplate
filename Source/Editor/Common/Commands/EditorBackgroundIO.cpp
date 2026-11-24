@@ -18,10 +18,10 @@ namespace sw::editor
     // EditorFileCollectJob
     // ======================================================================
 
-    void EditorFileCollectJob::request( string_view folder, string_view extension, bool recursive )
+    void EditorFileCollectJob::request( const AbsolutePath& folder, string_view extension, bool recursive )
     {
         EditorFileCollectInput input;
-        input._folder     = string{ folder };
+        input._folder     = folder;
         input._extension  = string{ extension };
         input._bRecursive = recursive;
 
@@ -40,10 +40,10 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         // 표시용 목록이다 — 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알린 뒤 모은 데까지 보인다.
         const StopToken stopToken = readStopSignal( pState );
-        (void)FileUtil::collectFiles( FileUtil::toDiskPath( input._folder ), input._extension, listFile, input._bRecursive, stopToken );
+        (void)FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, stopToken );
         if ( stopToken.isStopRequested() )
             return; // 종료가 시작돼 훑기가 멈췄다 — 짧은 목록을 싣지 않는다
 
@@ -100,7 +100,7 @@ namespace sw::editor
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
 
-        string dataFolder;
+        AbsolutePath dataFolder;
         if ( readInput( pState, generation, dataFolder ) == false )
             return;
 
@@ -160,10 +160,10 @@ namespace sw::editor
     // EditorFolderListingJob
     // ======================================================================
 
-    void EditorFolderListingJob::request( string_view folderAbs, bool bRecursive )
+    void EditorFolderListingJob::request( const AbsolutePath& folderAbs, bool bRecursive )
     {
         EditorFolderListingInput input;
-        input._folder     = string{ folderAbs };
+        input._folder     = folderAbs;
         input._bRecursive = bRecursive;
 
         const uint32            generation  = beginRequest( std::move( input ) );

@@ -170,14 +170,14 @@ namespace sw::editor
                 return EditorPanelManager::findPanelInEditorContext<ContentBrowserPanel>();
             }
 
-            /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 문자열입니다. */
-            static string findAssetDiskPath( uint64 assetID )
+            /** @brief 에셋 페이로드 id 의 디스크 자리(절대 경로)입니다. 모르는 id 이거나 디스크에 없으면 빈 경로입니다. */
+            static AbsolutePath findAssetDiskPath( uint64 assetID )
             {
                 string resourceID;
                 if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
-                    return string{};
+                    return {};
                 const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
-                return diskPath.has_value() ? string( diskPath->str() ) : string{};
+                return diskPath.value_or( AbsolutePath{} );
             }
 
             [[nodiscard]] static bool readSavedSearchCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -203,7 +203,7 @@ namespace sw::editor
             static void selectOnlyAsset( uint64 assetID )
             {
                 ContentBrowserPanel* pPanel = findWritablePanel();
-                const string         path   = findAssetDiskPath( assetID );
+                const AbsolutePath   path   = findAssetDiskPath( assetID );
                 if ( pPanel != nullptr && path.empty() == false )
                     pPanel->selectAssetPath( path );
             }
@@ -539,7 +539,7 @@ namespace sw::editor
                     bChanged = _collections.createCollection( _collectionNameBuffer.c_str(), bSharedScope );
                     // 고른 에셋이 있으면 새 컬렉션에 바로 넣는다(언리얼의 "Add to new collection")
                     const string selectedID = EditorPaths::getAssetPaths().toAssetID( _model.getSelectedAssetPath() );
-                    if ( bChanged && selectedID.empty() == false && FileUtil::isDirectory( FileUtil::toDiskPath( _model.getSelectedAssetPath() ) ) == false )
+                    if ( bChanged && selectedID.empty() == false && FileUtil::isDirectory( _model.getSelectedAssetPath() ) == false )
                         (void)_collections.addToCollection( _collectionNameBuffer.c_str(), bSharedScope, selectedID );
                 }
                 if ( bChanged )
@@ -613,7 +613,7 @@ namespace sw::editor
             saveCollections( collection.isShared() );
     }
 
-    void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )
+    void ContentBrowserPanel::requestDeleteAsset( const AbsolutePath& absolutePath )
     {
         _model.requestDeleteAsset( absolutePath );
         _bOpenDeleteConfirm = SW_TRUE;
@@ -629,9 +629,9 @@ namespace sw::editor
         if ( EditorWidgets::beginCenteredModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName ) == false )
             return;
 
-        const string&           pendingDeleteAbs = _model.getPendingDeletePath();
+        const AbsolutePath&     pendingDeleteAbs = _model.getPendingDeletePath();
         const EditorAssetIndex& referenceIndex   = ContentBrowserViewModel::getReferenceIndex();
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveToRecycleBin", TextArgumentList().addText( "file", FileUtil::getFileNamePart( pendingDeleteAbs ) ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveToRecycleBin", TextArgumentList().addText( "file", FileUtil::getFileNamePart( pendingDeleteAbs.str() ) ) ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
         {
@@ -683,7 +683,7 @@ namespace sw::editor
         _bContentVisible = SW_FALSE;
     }
 
-    void ContentBrowserPanel::beginRename( string_view absolutePath )
+    void ContentBrowserPanel::beginRename( const AbsolutePath& absolutePath )
     {
         string stem;
         if ( _model.beginRename( absolutePath, stem ) == false )
@@ -692,7 +692,7 @@ namespace sw::editor
         _bFocusRenameInput = SW_TRUE;
     }
 
-    void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
+    void ContentBrowserPanel::acceptAssetDrop( const AbsolutePath& folderAbs )
     {
         string assetID;
         if ( EditorWidgets::acceptAssetDrop( assetID ) == false )
@@ -708,7 +708,7 @@ namespace sw::editor
         }
         if ( sourcePath.has_value() == false )
             return;
-        _model.requestMoveToFolder( sourcePath->str(), folderAbs );
+        _model.requestMoveToFolder( *sourcePath, folderAbs );
         _bOpenMoveConfirm = SW_TRUE;
     }
 
@@ -821,7 +821,7 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 
-    void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
+    void ContentBrowserPanel::showReferences( const AbsolutePath& absolutePath, bool bDependencies )
     {
         _model.showReferences( absolutePath, bDependencies );
         _bOpenReferenceResults = SW_TRUE;
@@ -1098,10 +1098,8 @@ namespace sw::editor
         const uint32 favoriteCount = static_cast<uint32>( sizeof( kArrFavorites ) / sizeof( kArrFavorites[0] ) );
         for ( uint32 favoriteIndex = 0; favoriteIndex < favoriteCount; ++favoriteIndex )
         {
-            const string favoritePath = kArrFavorites[favoriteIndex]._bEngine
-                                          ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favoriteIndex]._pRelPath ) )
-                                          : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserViewModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
-            const bool   bSelected    = FileUtil::isSameDiskPath( favoritePath, _model.getSelectedFolderPath() );
+            const AbsolutePath favoritePath = kArrFavorites[favoriteIndex]._bEngine ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favoriteIndex]._pRelPath ) ) : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserViewModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
+            const bool         bSelected    = FileUtil::isSameDiskPath( favoritePath.str(), _model.getSelectedFolderPath().str() );
 
             if ( ImGui::Selectable( kArrFavorites[favoriteIndex]._pLabel, bSelected ) )
             {
@@ -1117,7 +1115,7 @@ namespace sw::editor
 
         for ( const ContentBrowserRoot& root : _model.getRoots() )
         {
-            drawFolderTreeNode( root._absolutePath.c_str(), root._displayName, 0 );
+            drawFolderTreeNode( root._absolutePath, root._displayName, 0 );
         }
 
         if ( _model.getRoots().empty() )
@@ -1126,10 +1124,10 @@ namespace sw::editor
         EditorChrome::endSection();
     }
 
-    void ContentBrowserPanel::drawFolderTreeNode( string_view folderPath, string_view label, int32 depth )
+    void ContentBrowserPanel::drawFolderTreeNode( const AbsolutePath& folderPath, string_view label, int32 depth )
     {
-        const string absPath  = FileUtil::normalizeSeparators( folderPath );
-        const bool   selected = FileUtil::isSameDiskPath( absPath, _model.getSelectedFolderPath() );
+        const AbsolutePath absPath  = folderPath;
+        const bool         selected = FileUtil::isSameDiskPath( absPath.str(), _model.getSelectedFolderPath().str() );
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if ( selected )
@@ -1138,8 +1136,8 @@ namespace sw::editor
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
         // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다. Refresh 와 파일 감시가 캐시를 비운다. 참조는 재귀 중에도 유효하다.
-        const vector<string>& listChild    = _model.getOrScanChildFolders( absPath );
-        const bool            hasChildDirs = listChild.empty() == false;
+        const vector<AbsolutePath>& listChild    = _model.getOrScanChildFolders( absPath );
+        const bool                  hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
@@ -1161,9 +1159,9 @@ namespace sw::editor
 
         if ( opened && hasChildDirs )
         {
-            for ( const string& child : listChild )
+            for ( const AbsolutePath& child : listChild )
             {
-                drawFolderTreeNode( child, FileUtil::getFileNamePart( child ), depth + 1 );
+                drawFolderTreeNode( child, FileUtil::getFileNamePart( child.str() ), depth + 1 );
             }
             ImGui::TreePop();
         }
@@ -1245,7 +1243,7 @@ namespace sw::editor
         {
             return point._x >= minPos._x && point._y >= minPos._y && point._x < maxPos._x && point._y < maxPos._y;
         };
-        const auto findFolder = [this, &isInside]( const float2& point ) -> const string&
+        const auto findFolder = [this, &isInside]( const float2& point ) -> const AbsolutePath&
         {
             for ( const ContentBrowserFolderDropRect& rect : _listFolderDropRect )
             {

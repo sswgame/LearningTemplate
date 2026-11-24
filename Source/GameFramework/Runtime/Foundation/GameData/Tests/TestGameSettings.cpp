@@ -62,8 +62,8 @@ SW_TEST_CASE( GameSettingsTest, SkipsTheEngineElement )
  */
 SW_TEST_CASE( GameSettingsTest, CookRequiredDataPathsMatchTheKindRegistry )
 {
-    sw::PackConfig   config;
-    const sw::string path = sw::FileUtil::joinPath( sw::ProcessRoots::get()._project.str(), sw::PackConfig::kConfigPath );
+    sw::PackConfig         config;
+    const sw::AbsolutePath path = sw::ProcessRoots::get()._project.join( sw::PackConfig::kConfigPath );
     SW_REQUIRE_TRUE( sw::ConfigManager::readConfigFile( config, path ) == sw::ConfigReadResult::Loaded );
     SW_REQUIRE_TRUE( config._cookRules._listRequiredData.empty() == false );
     for ( const sw::PackRequiredDataPath& entry : config._cookRules._listRequiredData )

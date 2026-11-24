@@ -98,7 +98,7 @@ SW_TEST_CASE( EditorTexturePipelineTest, BlockCompressedImportAlignsTheTopLevelT
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( outputPath ) );
 
     TextureImportResult result{};
-    SW_REQUIRE_TRUE( TextureImporter::importTexture( sourcePath.str(), outputPath.str(), TextureImportRule{}, &result ) ); // 기본 규칙은 BC7 · 밉
+    SW_REQUIRE_TRUE( TextureImporter::importTexture( sourcePath, outputPath, TextureImportRule{}, &result ) ); // 기본 규칙은 BC7 · 밉
     SW_EXPECT_EQUAL( 8u, result._width );
     SW_EXPECT_EQUAL( 8u, result._height );
 

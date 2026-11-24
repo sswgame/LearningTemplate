@@ -18,18 +18,18 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EveryConfigFileRoundTrips )
 {
-    const AbsolutePath configFolder = ProcessRoots::get()._project.join( ProjectSettingsEntry::kTableFolder );
-    vector<string>     listPath;
+    const AbsolutePath   configFolder = ProcessRoots::get()._project.join( ProjectSettingsEntry::kTableFolder );
+    vector<AbsolutePath> listPath;
     SW_REQUIRE_TRUE( FileUtil::collectFiles( configFolder, ".json", listPath, true ) );
     SW_REQUIRE_TRUE( listPath.size() > 30u );
-    for ( const string& path : listPath )
+    for ( const AbsolutePath& path : listPath )
     {
         string text;
-        SW_REQUIRE_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) );
+        SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
         ProjectSettingsJSONDocument document;
         SW_EXPECT_TRUE_MSG( document.openText( path, text ).has_value(), path.c_str() );
         fixed_string<constant::buffer::kMax512> message;
-        formatstring( message.data(), message.capacity(), "%# does not round-trip", path );
+        formatstring( message.data(), message.capacity(), "%# does not round-trip", path.str() );
         SW_EXPECT_TRUE_MSG( document.getReadOnlyReason() != ProjectSettingsReadOnlyReason::LayoutNotPreserved, message.c_str() );
         SW_EXPECT_TRUE_MSG( document.makeText() == text, message.c_str() );
         SW_EXPECT_FALSE( document.isModified() );
@@ -43,7 +43,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EditsKeepTheFileShape )
 {
     const string                text = "{\n  \"_comment\": \"표\",\n  \"limit\": 0.5,\n  \"on\": true,\n  \"names\": [\n    \"a\"\n  ]\n}\n";
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Rules/Lint/Sample.json", text ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Rules/Lint/Sample.json" ), text ).has_value() );
     SW_EXPECT_EQUAL( document.makeText(), text );
     SW_EXPECT_EQUAL( document.countLeaves(), 4u );
 
@@ -72,7 +72,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, EditsKeepTheFileShape )
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, AddedObjectItemCopiesTheKeys )
 {
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Rules/Test/Q.json", "{\"list\":[{\"name\":\"t\",\"days\":3}]}" ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Rules/Test/Q.json" ), "{\"list\":[{\"name\":\"t\",\"days\":3}]}" ).has_value() );
     const uint32 list = document.getNode( ProjectSettingsJSONDocument::kRootNode )._listChild[0];
     SW_REQUIRE_TRUE( document.addArrayItem( list ).has_value() );
     SW_EXPECT_EQUAL( document.makeText(), string( "{\"list\":[{\"name\":\"t\",\"days\":3},{\"name\":\"\",\"days\":0}]}" ) );
@@ -84,7 +84,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, AddedObjectItemCopiesTheKeys )
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, GeneratedFileIsReadOnly )
 {
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Dev/AssetReferenceFields.generated.json", "{\"a\":1}" ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Dev/AssetReferenceFields.generated.json" ), "{\"a\":1}" ).has_value() );
     SW_EXPECT_TRUE( document.isReadOnly() );
     const uint32 value = document.getNode( ProjectSettingsJSONDocument::kRootNode )._listChild[0];
     SW_EXPECT_FALSE( document.setLeafText( value, "2" ) );
@@ -99,7 +99,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, GeneratedFileIsReadOnly )
 SW_TEST_CASE( ProjectSettingsJSONDocumentTest, HandLayoutIsKeptOnEdit )
 {
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Dev/Rules.json", "{\n    \"_listRule\": [\n        { \"_folder\": \"Logs\", \"_keepCount\": 30 }\n    ]\n}\n" ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Dev/Rules.json" ), "{\n    \"_listRule\": [\n        { \"_folder\": \"Logs\", \"_keepCount\": 30 }\n    ]\n}\n" ).has_value() );
     SW_EXPECT_FALSE( document.isReadOnly() );
     const uint32 listRule = document.getNode( ProjectSettingsJSONDocument::kRootNode )._listChild[0];
     const uint32 rule     = document.getNode( listRule )._listChild[0];
@@ -119,7 +119,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, UndoRestoresEachEdit )
 {
     const string                text = "{ \"name\": \"a\", \"on\": true, \"list\": [ 1 ] }\n";
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Dev/Undo.json", text ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Dev/Undo.json" ), text ).has_value() );
     const ProjectSettingsJSONNode& root  = document.getNode( ProjectSettingsJSONDocument::kRootNode );
     const uint32                   name  = root._listChild[0];
     const uint32                   bOn   = root._listChild[1];
@@ -155,7 +155,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, InvalidJSONDoesNotOpen )
 {
     ProjectSettingsJSONDocument document;
     SW_EXPECT_LOG( "JSON.ParseError" );
-    SW_EXPECT_FALSE( document.openText( "D:/Repo/Config/Broken.json", "{ \"a\": }" ).has_value() );
+    SW_EXPECT_FALSE( document.openText( ProcessRoots::get()._project.join( "Config/Broken.json" ), "{ \"a\": }" ).has_value() );
     SW_EXPECT_FALSE( document.isOpen() );
     SW_EXPECT_LOG( "ProjectSettingsJSON.SaveRefused" );
     SW_EXPECT_FALSE( document.saveDocument() );
@@ -168,10 +168,10 @@ SW_TEST_CASE( ProjectSettingsEntryTest, TablesSkipTypedFiles )
 {
     const AbsolutePath           projectRoot = ProcessRoots::get()._project;
     vector<ProjectSettingsEntry> listTyped( 1 );
-    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), "Config/Engine/EngineConfig.json" ) );
+    listTyped[0]._absolutePath = projectRoot.join( "Config/Engine/EngineConfig.json" );
     listTyped[0]._typeName     = "EngineConfig";
     vector<ProjectSettingsEntry> listTable;
-    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
     bool bNamingWords = false;
     for ( const ProjectSettingsEntry& table : listTable )
     {
@@ -192,8 +192,8 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     listTyped[0]._page         = "GameConfig";
     listTyped[0]._typeName     = "GameConfig";
     listTyped[0]._relativePath = "Config/Game/Playground.json";
-    listTyped[0]._absolutePath = FileUtil::normalizeSeparators( FileUtil::joinPath( projectRoot.str(), listTyped[0]._relativePath ) );
-    ProjectSettingsEntry::addOtherGamePresets( projectRoot.str(), listTyped );
+    listTyped[0]._absolutePath = projectRoot.join( listTyped[0]._relativePath );
+    ProjectSettingsEntry::addOtherGamePresets( projectRoot, listTyped );
     SW_EXPECT_EQUAL( listTyped[0]._gameName, string( "Playground" ) );
     const ProjectSettingsEntry* pOtherGame = nullptr;
     for ( const ProjectSettingsEntry& entry : listTyped )
@@ -204,7 +204,7 @@ SW_TEST_CASE( ProjectSettingsEntryTest, OtherGamePresetsAreTyped )
     SW_EXPECT_EQUAL( pOtherGame->_relativePath, string( "Config/Game/NileCity.json" ) );
 
     vector<ProjectSettingsEntry> listTable;
-    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot.str(), listTyped, listTable ) );
+    SW_REQUIRE_TRUE( ProjectSettingsEntry::collectTables( projectRoot, listTyped, listTable ) );
     for ( const ProjectSettingsEntry& table : listTable )
         SW_EXPECT_FALSE( StringUtil::startsWith( table._relativePath, "Config/Game/" ) );
 }
@@ -215,7 +215,7 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, RestoredCopyIsAnUnsavedEdit )
     const string                text     = "{\n  \"limit\": 0.5,\n  \"names\": [\n    \"a\"\n  ]\n}\n";
     const string                copyText = "{\n  \"limit\": 0.25,\n  \"names\": [\n    \"a\"\n  ]\n}\n";
     ProjectSettingsJSONDocument document;
-    SW_REQUIRE_TRUE( document.openText( "D:/Repo/Config/Rules/Lint/Sample.json", text ).has_value() );
+    SW_REQUIRE_TRUE( document.openText( ProcessRoots::get()._project.join( "Config/Rules/Lint/Sample.json" ), text ).has_value() );
     SW_REQUIRE_TRUE( document.restoreText( copyText ) );
     SW_EXPECT_EQUAL( document.makeText(), copyText );
     SW_EXPECT_TRUE( document.isModified() );

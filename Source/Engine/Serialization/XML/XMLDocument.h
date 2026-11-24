@@ -9,6 +9,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Content/AssetID.h"
@@ -341,9 +342,9 @@ namespace sw
         [[nodiscard]] bool loadResourceAs( const AssetID& assetID, const ResourceContext& context, string* pOutAbsPath = nullptr, string* pOutBaseID = nullptr );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
-        [[nodiscard]] bool loadFromFile( string_view absPath );
+        [[nodiscard]] bool loadFromFile( const AbsolutePath& absPath );
         /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
-        [[nodiscard]] bool loadDataFile( string_view absPath );
+        [[nodiscard]] bool loadDataFile( const AbsolutePath& absPath );
 
         /**
          * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 `parseData` 합니다(낱개 파일 · 팩).
@@ -379,7 +380,7 @@ namespace sw
          * @details 기본값 · 부모와 같은 칸을 뺀 문서(차이 · 기본값 생략)는 이 함수를 쓰지 않고 빼지 않은 짝과 함께 `ResourceComposer::saveText( ResourceSaveText::makeWithComplete )` 로 쓴다 —
          *          이름이 갈라 섞어 쓸 수 없다(빠진 칸을 "그대로" 로 읽어 조건이 정한 칸의 되돌림을 잃는다).
          */
-        [[nodiscard]] bool saveCompleteToFile( string_view absPath ) const;
+        [[nodiscard]] bool saveCompleteToFile( const AbsolutePath& absPath ) const;
 
         // ------------------------------------------------------------------------------
         // 6) 문자열 유틸: escape, unescape

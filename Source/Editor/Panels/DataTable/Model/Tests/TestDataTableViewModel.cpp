@@ -24,23 +24,23 @@ namespace
         DataTableTestFiles()
         {
             _first._fileName      = "SwDataTableFirst.xml";
-            _first._absolutePath  = test::makeScratchPath( _first._fileName ).str();
+            _first._absolutePath  = test::makeScratchPath( _first._fileName );
             _second._fileName     = "SwDataTableSecond.xml";
-            _second._absolutePath = test::makeScratchPath( _second._fileName ).str();
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( _first._absolutePath ), "<First a=\"1\"/>" ) );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( _second._absolutePath ), "<Second b=\"2\"/>" ) );
+            _second._absolutePath = test::makeScratchPath( _second._fileName );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( _first._absolutePath, "<First a=\"1\"/>" ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( _second._absolutePath, "<Second b=\"2\"/>" ) );
         }
 
         ~DataTableTestFiles()
         {
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( _first._absolutePath ) );
-            (void)FileUtil::removeFile( FileUtil::toDiskPath( _second._absolutePath ) );
+            (void)FileUtil::removeFile( _first._absolutePath );
+            (void)FileUtil::removeFile( _second._absolutePath );
         }
 
         static string read( const GameDataFileEntry& entry )
         {
             string text;
-            SW_EXPECT_TRUE( FileUtil::readTextFile( FileUtil::toDiskPath( entry._absolutePath ), text ) );
+            SW_EXPECT_TRUE( FileUtil::readTextFile( entry._absolutePath, text ) );
             return text;
         }
     };
@@ -54,7 +54,7 @@ namespace
             if ( sheet._listCulture.empty() )
             {
                 sheet._listCulture.push_back( "ko" );
-                sheet._listTablePath.push_back( "strings.xml" );
+                sheet._listTablePath.push_back( test::makeScratchPath( "strings.xml" ) );
             }
             SW_EXPECT_TRUE( model.addKey( key ) );
             LocalizationRecord& record = sheet._listRecord.back();
@@ -75,7 +75,7 @@ SW_TEST_CASE( DataTableViewModelTest, OpeningLoadsTheFile )
     DataTableViewModel         model{ recorder };
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_REQUIRE_TRUE( model.openGameDataFile( files._second._absolutePath ) );
-    SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath );
+    SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath.str() );
     SW_EXPECT_TRUE( model.getGameDataRawText() == "<Second b=\"2\"/>" );
     SW_EXPECT_TRUE( model.getGameDataDocument().isParsed() );
     SW_EXPECT_FALSE( model.isGameDataDirty() );
@@ -92,7 +92,7 @@ SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
     model.replaceGameDataRawText( "<Second b=\"9\"/>" );
 
     model.setGameDataFiles( { files._first } ); // 연 파일이 목록에서 빠졌다
-    SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath );
+    SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath.str() );
     SW_EXPECT_TRUE( model.isGameDataDirty() );
     SW_EXPECT_TRUE( model.saveDocument() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._second ) == "<Second b=\"9\"/>" );
@@ -147,7 +147,7 @@ SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
-    SW_EXPECT_FALSE( model.openGameDataFile( missingPath.str() ) );
+    SW_EXPECT_FALSE( model.openGameDataFile( missingPath ) );
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_EXPECT_TRUE( model.getGameDataRawText().empty() );
     SW_EXPECT_FALSE( model.saveGameDataFile() ); // 쓸 곳이 없다
@@ -164,7 +164,7 @@ SW_TEST_CASE( DataTableViewModelTest, KeysAreUniqueAndNeedATable )
     SW_EXPECT_FALSE( model.addKey( "hello" ) ); // 표가 없다
     SW_EXPECT_FALSE( model.isLocalizationDirty() );
 
-    model.editSheet()._listTablePath.push_back( "strings.csv" );
+    model.editSheet()._listTablePath.push_back( test::makeScratchPath( "strings.csv" ) );
     model.editSheet()._listCulture.push_back( "ko" );
     SW_EXPECT_FALSE( model.addKey( "" ) );
     SW_REQUIRE_TRUE( model.addKey( "hello" ) );
@@ -218,7 +218,7 @@ SW_TEST_CASE( DataTableViewModelTest, DeletedKeyIsRememberedForTheSave )
 {
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    model.editSheet()._listTablePath.push_back( "strings.csv" );
+    model.editSheet()._listTablePath.push_back( test::makeScratchPath( "strings.csv" ) );
     SW_REQUIRE_TRUE( model.addKey( "a" ) );
     SW_REQUIRE_TRUE( model.addKey( "b" ) );
     model.deleteRecord( 0 );
@@ -234,7 +234,7 @@ SW_TEST_CASE( DataTableViewModelTest, FilterLooksAtKeySourceAndTranslations )
 {
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    model.editSheet()._listTablePath.push_back( "strings.csv" );
+    model.editSheet()._listTablePath.push_back( test::makeScratchPath( "strings.csv" ) );
     model.editSheet()._listCulture.push_back( "ko" );
     SW_REQUIRE_TRUE( model.addKey( "menu.start" ) );
     SW_REQUIRE_TRUE( model.addKey( "menu.quit" ) );
@@ -405,15 +405,15 @@ SW_TEST_CASE( DataTableViewModelTest, SheetOfAnotherProjectIsDiscarded )
     SW_EXPECT_EQUAL( 1, model.getSelectedProjectIndex() );
 
     LocalizationSheet stale;
-    stale._projectPath = "a.locproject";
+    stale._projectPath = test::makeScratchPath( "a.locproject" );
     SW_EXPECT_FALSE( model.acceptLoadedSheet( 0, std::move( stale ) ) );
     SW_EXPECT_FALSE( model.isLocalizationLoaded() );
 
     LocalizationSheet current;
-    current._projectPath = "b.locproject";
+    current._projectPath = test::makeScratchPath( "b.locproject" );
     SW_EXPECT_TRUE( model.acceptLoadedSheet( 1, std::move( current ) ) );
     SW_EXPECT_TRUE( model.isLocalizationLoaded() );
-    SW_EXPECT_TRUE( model.getSheet()._projectPath == "b.locproject" );
+    SW_EXPECT_TRUE( model.getSheet()._projectPath == test::makeScratchPath( "b.locproject" ) );
 
     model.setLocalizationProjects( { "c.locproject" } ); // 고른 번호가 목록 밖이면 0 번이다
     SW_EXPECT_EQUAL( 0, model.getSelectedProjectIndex() );
@@ -424,7 +424,7 @@ SW_TEST_CASE( DataTableViewModelTest, ReloadEmptiesTheSheetUntilItIsRead )
 {
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
-    model.editSheet()._listTablePath.push_back( "strings.xml" );
+    model.editSheet()._listTablePath.push_back( test::makeScratchPath( "strings.xml" ) );
     SW_REQUIRE_TRUE( model.addKey( "a" ) );
     model.reloadLocalization();
     SW_EXPECT_FALSE( model.isLocalizationDirty() );

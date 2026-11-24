@@ -501,7 +501,7 @@ SW_TEST_CASE( DataInheritanceTest, CollectChildrenFindsDirectChildren )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "leaf.xml" ), body.view() ) );
 
     vector<string> listChild;
-    SW_REQUIRE_TRUE( DataInheritance::collectChildren( domain.getFolder().str(), idBase, { ".xml" }, listChild ) );
+    SW_REQUIRE_TRUE( DataInheritance::collectChildren( domain.getFolder(), idBase, { ".xml" }, listChild ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listChild.size() );
     SW_EXPECT_EQUAL( string( "mid.xml" ), listChild[0] );
 }

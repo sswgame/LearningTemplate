@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Programs/OnlineLoadBot/LoadBotSchedule.h"
 
@@ -105,7 +106,7 @@ namespace sw
         int64           _gracefulStopMs{ 0 };                            ///< 도착률 실행기 — 도착이 끝난 뒤 돌던 봇을 기다리는 시간(`_gracefulStopMs`, k6 `gracefulStop`)
 
         /** @brief 파일을 읽습니다. 실패하면 그 이유(대상은 경로 · 칸 이름)입니다. */
-        [[nodiscard]] static expected<LoadBotScenario> loadFromFile( string_view path );
+        [[nodiscard]] static expected<LoadBotScenario> loadFromFile( const AbsolutePath& path );
         [[nodiscard]] static expected<LoadBotScenario> loadFromXMLText( string_view jsonText );
     };
 } // namespace sw

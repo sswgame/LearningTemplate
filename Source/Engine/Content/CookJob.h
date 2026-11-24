@@ -6,7 +6,7 @@
  *          - 범위는 스레드 지역 값이다. 병렬 쿠킹에서도 읽기가 다른 작업에 섞이지 않는다. 안쪽 범위의 입력은 바깥 범위에도 기록된다.
  *            그래서 쿠킹 중의 에셋 로드는 워커로 넘기지 않고 요청한 스레드에서 읽는다(`requiresCallingThreadRead` — `AssetLoadOperation::startLoad` 가 본다).
  *          - 쿠킹 세션(`CookSession`)이 열려 있는 동안 범위 밖에서 일어난 읽기는 오류다(읽기가 실패한다). 전역 캐시가 미리 읽어 둔 것을 쓰면 기록이 빠지기 때문이다.
- *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
+ *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 출력 이름, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
  *          - 입력은 셋이다(`CookInputKind`) — 리소스(리소스 id 의 내용 해시), 디스크 파일(리소스 루트 밖 절대 경로의 내용 해시), 목록(폴더 아래 확장자가 같은 파일 이름들의 해시 — `collectFiles`).
  *            없는 것을 찾은 것도 해시 0 으로 남는다. 종류는 기록할 때 정하고 다시 풀 때 그 종류의 규칙으로만 푼다 — 예전에는 한 칸(`_source`)에 다섯 종류를 담고 다시 풀 때
  *            `findLooseFile` 이 글 모양으로 추측했다(절대 경로 갈래를 지우면 디스크 · 목록 입력이 조용히 0 이 되어 늘 다시 구웠다).
@@ -22,6 +22,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 
@@ -87,13 +88,27 @@ namespace sw
 
 namespace sw
 {
-    /** @struct CookJobDesc @brief 작업 키에 들어가는 쿠커 쪽 값입니다. 모두 필수입니다. */
+    /**
+     * @struct CookJobDesc
+     * @brief 작업 키에 들어가는 쿠커 쪽 값입니다.
+     * @details `_output` 은 같은 입력에서 만드는 출력을 가른다 — 문화권마다의 번역 표 · 클립마다의 정점 애니메이션은 입력이 똑같아, 이 칸이 없으면 한 DDC 열쇠에 서로 다른 바이트를
+     *          번갈아 썼다. `CookStore` 가 출력마다 채운다(`forOutput`). 요청 하나가 출력 하나이고 설정 해시가 그 요청인 작업(셰이더)은 비운다.
+     */
     struct CookJobDesc
     {
         string _cookerName;           ///< 쿠커 이름(예: "Scene")
         uint64 _codeFingerprint{ 0 }; ///< 쿠커 코드의 지문(`CookCodeFingerprint::find`) — 코드가 바뀌면 그 쿠커의 결과가 모두 다시 베이크된다. 사람이 올리는 번호가 없다
         string _target;               ///< 대상 플랫폼 · 백엔드(예: "Windows")
         uint64 _settingsHash{ 0 };    ///< 쿠킹 설정의 해시(설정이 없으면 0 을 명시한다)
+        string _output{};             ///< 이 작업이 만드는 출력의 이름(`CookStore` 가 채운다)
+
+        /** @brief 출력 @p output 을 만드는 작업의 값입니다. */
+        [[nodiscard]] CookJobDesc forOutput( string_view output ) const
+        {
+            CookJobDesc desc = *this;
+            desc._output     = string( output );
+            return desc;
+        }
     };
 } // namespace sw
 
@@ -140,10 +155,10 @@ namespace sw
          */
         [[nodiscard]] static bool recordReadInput( const AssetID& id, const uint8* pData, size_t size );
         /**
-         * @brief 디스크 경로(절대 또는 작업 폴더 기준) 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `recordReadInput` 와 같고,
+         * @brief 디스크 경로 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `recordReadInput` 와 같고,
          *        절대 경로를 만들지 못하면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool allowDiskRead( string_view diskPath, const uint8* pData, size_t size );
+        [[nodiscard]] static bool allowDiskRead( const AbsolutePath& diskPath, const uint8* pData, size_t size );
         /**
          * @brief 리소스를 요청한 스레드에서 읽어야 하면 true 입니다. 이 스레드에 작업이 있거나 쿠킹 세션이 열려 있을 때입니다.
          * @details 작업 범위는 스레드 지역 값이라 워커에서 읽으면 그 읽기가 입력에서 빠진다. 에셋 로드(`AssetLoadOperation::startLoad`)는 이때 `Async` 요청도
@@ -161,7 +176,7 @@ namespace sw
          */
         static void allowMissingRead( const AssetID& id );
         /** @brief 찾지 못한 디스크 경로 읽기를 받아들입니다(`allowMissingRead` 와 같고, 경로는 `allowDiskRead` 처럼 절대 경로로 기록한다). */
-        static void allowMissingDiskRead( string_view diskPath );
+        static void allowMissingDiskRead( const AbsolutePath& diskPath );
 
         /**
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
@@ -169,12 +184,12 @@ namespace sw
          *          목록 입력의 id 는 폴더의 절대 경로다(리소스 id 로 줄이지 않는다 — 도메인 폴더는 id 로 줄이면 같은 폴더로 돌아오지 않는다).
          * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(부분 목록 — 구울 것을 빠뜨린다) false 입니다.
          */
-        [[nodiscard]] static bool collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile );
+        [[nodiscard]] static bool collectFiles( const AbsolutePath& folderPath, string_view extension, vector<AbsolutePath>& outListFile );
         /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없거나 순회가 도중에 멈췄으면 0 입니다. */
-        static uint64 computeListingHash( string_view folderPath, string_view extension );
+        static uint64 computeListingHash( const AbsolutePath& folderPath, string_view extension );
 
         /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `allowDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
-        [[nodiscard]] bool recordDiskInput( string_view diskPath, uint64 contentHash );
+        [[nodiscard]] bool recordDiskInput( const AbsolutePath& diskPath, uint64 contentHash );
         /** @brief 입력 하나를 기록합니다. 같은 입력이 있으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
         void recordInput( const CookInput& input );
 
@@ -186,7 +201,7 @@ namespace sw
         /** @brief 작업 키입니다. `makeKeyDescription` 의 글을 해시합니다. */
         static uint64 computeKey( const CookJobDesc& desc, const vector<CookInput>& listInput );
         /**
-         * @brief 작업 키의 기준 글(쿠커 이름 · 코드 지문 · 대상 · 설정 해시 · 정렬한 입력 id 와 내용 해시)입니다. 입력은 리소스 id 순서로 정렬하므로 읽은 순서와 관계없습니다.
+         * @brief 작업 키의 기준 글(쿠커 이름 · 코드 지문 · 대상 · 설정 해시 · 출력 이름 · 정렬한 입력 id 와 내용 해시)입니다. 입력은 리소스 id 순서로 정렬하므로 읽은 순서와 관계없습니다.
          * @details DDC 항목 머리에 그대로 적혀 64 비트 키 충돌을 미스로 바꾼다(`DerivedDataCache::find`).
          */
         static string makeKeyDescription( const CookJobDesc& desc, const vector<CookInput>& listInput );

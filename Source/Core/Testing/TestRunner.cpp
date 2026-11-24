@@ -102,7 +102,7 @@ namespace sw::test
                 TestFailureKind             _firstFailureKind{ TestFailureKind::Assertion }; ///< 첫 실패 줄의 종류(`_listFailure` 가 비면 뜻이 없다)
                 vector<string>              _listUpdatedSnapshot;
                 string                      _skipReason; ///< `SW_TEST_SKIP` 의 까닭과 자리(`파일(줄)`) — 비면 건너뛰지 않았다
-                string                      _scratchFolder;
+                AbsolutePath                _scratchFolder;
                 string                      _childArgument;               ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
                 uint32                      _declaredErrorLineCount{ 0 }; ///< 실행 전체에서 선언과 맞은 Error 줄 수(`kDeclaredErrorLinesPrefix` 줄로 알린다)
                 bool                        _bIsolatedRun{ false };       ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -476,20 +476,19 @@ namespace sw::test
     AbsolutePath makeScratchPath( string_view name )
     {
         TestRunnerInternal::CaseState& state = TestRunnerInternal::getState();
-        string                         folder;
+        AbsolutePath                   folder;
         {
             ScopedLock<mutex> lock{ state._mutex };
             folder = state._scratchFolder;
         }
         SW_ASSERT( folder.empty() == false && "makeScratchPath is only valid inside a running test case" );
-        const AbsolutePath folderPath = FileUtil::toDiskPath( folder );
-        if ( FileUtil::ensureDirectoryExists( folderPath ) == false )
+        if ( FileUtil::ensureDirectoryExists( folder ) == false )
         {
             StringBuilder<constant::buffer::kMax1024> message;
-            message.appendFormat( "could not create the scratch folder %#", folder );
+            message.appendFormat( "could not create the scratch folder %#", folder.str() );
             reportFailure( __FILE__, __LINE__, message.view() );
         }
-        return folderPath.join( name );
+        return folder.join( name );
     }
 
     bool checkSnapshot( string_view name, string_view actual, const utf8* pFile, int32 line )
@@ -505,11 +504,11 @@ namespace sw::test
         }
         StringBuilder<constant::buffer::kMax256> snapshotName;
         snapshotName.appendFormat( "%#.%#.txt", TestRunnerInternal::toFileName( caseName ), name );
-        const string path = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getDirectoryPart( pFile ), "Snapshots" ), snapshotName.view() );
-        string       normalized( actual );
+        const AbsolutePath path = FileUtil::toDiskPath( pFile ).getParent().join( "Snapshots" ).join( snapshotName.view() );
+        string             normalized( actual );
         normalized.erase( std::remove( normalized.begin(), normalized.end(), '\r' ), normalized.end() );
         string     expected;
-        const bool bHasSnapshot = FileUtil::readOptionalTextFile( FileUtil::toDiskPath( path ), expected ) == OptionalFileRead::Read;
+        const bool bHasSnapshot = FileUtil::readOptionalTextFile( path, expected ) == OptionalFileRead::Read;
         expected.erase( std::remove( expected.begin(), expected.end(), '\r' ), expected.end() );
         if ( bHasSnapshot && expected == normalized )
             return true;
@@ -517,29 +516,29 @@ namespace sw::test
         const bool bWrite = recording == SnapshotWriteMode::All || ( recording == SnapshotWriteMode::Missing && bHasSnapshot == false );
         if ( bWrite )
         {
-            const bool bWritten = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( path ) ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( path ), normalized );
+            const bool bWritten = FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, normalized );
             if ( bWritten == false )
             {
                 StringBuilder<constant::buffer::kMax1024> message;
-                message.appendFormat( "could not write the snapshot %#", path );
+                message.appendFormat( "could not write the snapshot %#", path.str() );
                 reportFailure( pFile, line, message.view() );
                 return false;
             }
             {
                 ScopedLock<mutex> lock{ state._mutex };
-                state._listUpdatedSnapshot.push_back( path );
+                state._listUpdatedSnapshot.push_back( path.str() );
             }
             if ( recording == SnapshotWriteMode::All )
                 return true;
             // 처음 쓴 스냅숏은 아직 사람이 보지 않았다 — 지고 목록에 남아, 보고 커밋한 뒤 기록 없이 다시 돌려 통과해야 한다.
             StringBuilder<constant::buffer::kMax1024> message;
-            message.appendFormat( "no snapshot yet: recorded %# - review it, commit it and run again without recording", path );
+            message.appendFormat( "no snapshot yet: recorded %# - review it, commit it and run again without recording", path.str() );
             TestRunnerInternal::reportFailureOfKind( pFile, line, message.view(), TestRunnerInternal::TestFailureKind::SnapshotMissing );
             return false;
         }
         StringBuilder<constant::buffer::kMax1024> message;
         message.appendFormat( "%#%# (run App --test --record-missing-snapshots for a new one, --update-snapshots to rewrite, and review the diff)",
-                              bHasSnapshot ? "snapshot differs: " : "no snapshot yet: ", path );
+                              bHasSnapshot ? "snapshot differs: " : "no snapshot yet: ", path.str() );
         TestRunnerInternal::reportFailureOfKind( pFile, line, message.view(),
                                                  bHasSnapshot ? TestRunnerInternal::TestFailureKind::SnapshotDiffers : TestRunnerInternal::TestFailureKind::SnapshotMissing );
         return false;
@@ -610,18 +609,10 @@ namespace sw::test
 
     void TestRunnerInternal::launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult )
     {
-        ChildRunResult&              result     = outResult;
-        const optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-        if ( executable.has_value() == false )
-        {
-            StringBuilder<constant::buffer::kMax1024> message;
-            message.appendFormat( "the test executable path is not absolute: %#", FileUtil::getExecutablePath() );
-            reportFailure( __FILE__, __LINE__, message.view() );
-            return;
-        }
-        const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );
+        ChildRunResult&      result  = outResult;
+        const ProcessCommand command = ProcessCommand::at( FileUtil::getExecutablePath(), std::move( listArgument ) );
         ProcessOptions       options;
-        options._workingDirectory = FileUtil::getCurrentPath();
+        options._workingDirectory = FileUtil::getCurrentPath().str();
         Process process;
         result._bLaunched = process.launch( command, options );
         if ( result._bLaunched == false )
@@ -996,7 +987,7 @@ namespace sw::test
         // 쓰기 폴더는 이 실행만의 이름이다(`<프로세스 id>-<시작 시각 ns>`) — Windows 가 프로세스 id 를 다시 써도 옛 실행의 폴더를 이어 쓰지 않는다.
         // 미리 만들지 않는다: 케이스가 처음 쓸 때 만든다(`makeScratchPath`). 그래서 쓰기 폴더를 안 쓰고 끝나는 실행(일부러 멈추는 자식 프로세스)이 빈 폴더를 남기지 않는다.
         string baseRoot;
-        if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot, baseRoot ) == false )
+        if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? ProcessRoots::get()._saved.join( "Test" ).str() : options._scratchRoot, baseRoot ) == false )
         {
             Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
             Internal::writeResultLine( "FAILED", 0, 0, 0 );
@@ -1004,8 +995,8 @@ namespace sw::test
         }
         StringBuilder<constant::buffer::kMax64> runName;
         runName.appendFormat( "%#-%#", Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
-        const string                       scratchRoot = FileUtil::joinPath( baseRoot, runName.view() );
-        TestRunnerInternal::ActiveRunState runState; // 리스너보다 먼저 서고 늦게 사라진다
+        const AbsolutePath                 scratchRoot = FileUtil::toDiskPath( baseRoot ).join( runName.view() ); // 명령줄 글일 수 있어 위에서 절대로 풀었다
+        TestRunnerInternal::ActiveRunState runState;                                                              // 리스너보다 먼저 서고 늦게 사라진다
         Subscription                       logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )
@@ -1047,7 +1038,7 @@ namespace sw::test
                     state._skipReason.clear();
                     state._assertionCount    = 0;
                     state._snapshotWriteMode = options._snapshotWriteMode;
-                    state._scratchFolder     = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), roundFolder.view() );
+                    state._scratchFolder     = scratchRoot.join( Internal::toFileName( pCase->_pName ) ).join( roundFolder.view() );
                     state._childArgument     = options._childArgument;
                     state._bIsolatedRun      = bIsolatedRun;
                     state._bActive           = SW_TRUE;
@@ -1184,13 +1175,13 @@ namespace sw::test
         // 모두 통과한 실행의 쓰기 폴더는 지운다 — 남기면 실행마다 쌓였다(`Saved/Test` 아래 수백 개). 실패한 실행은 들여다보도록 남기고 보고도 그 안에 쓴다(언리얼 자동화의 실패 산출물).
         // 보고 경로를 준 실행(`--test-report`)은 늘 그 경로에 쓴다.
         const bool bKeepScratch = failedCount > 0 || listUnmatched.empty() == false;
-        if ( bKeepScratch == false && FileUtil::removeDirectory( FileUtil::toDiskPath( scratchRoot ) ) == false )
+        if ( bKeepScratch == false && FileUtil::removeDirectory( scratchRoot ) == false )
         {
-            formatstring( arrBuffer, constant::buffer::kMax1024, "[ WARNING  ] the scratch folder could not be removed: %#", scratchRoot );
+            formatstring( arrBuffer, constant::buffer::kMax1024, "[ WARNING  ] the scratch folder could not be removed: %#", scratchRoot.str() );
             Internal::writeLine( arrBuffer );
         }
-        const string reportPath = options._reportPath.empty() == false ? options._reportPath : bKeepScratch ? FileUtil::joinPath( scratchRoot, "report.json" )
-                                                                                                            : string{};
+        const AbsolutePath reportPath = options._reportPath.empty() == false ? options._reportPath : bKeepScratch ? scratchRoot.join( "report.json" )
+                                                                                                                  : AbsolutePath{};
         if ( reportPath.empty() == false )
         {
             StringBuilder<constant::buffer::kMax4096> report; // 직렬화 글이라 잘리면 안 된다 — 넘치면 힙으로 자란다
@@ -1217,14 +1208,14 @@ namespace sw::test
             report.append( "],\n  \"cases\": [" );
             report.append( caseReport.view() );
             report.append( "\n  ]\n}\n" );
-            if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( reportPath ) ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( reportPath ), report.view() ) == false )
+            if ( FileUtil::ensureDirectoryExists( reportPath.getParent() ) == false || FileUtil::writeTextFile( reportPath, report.view() ) == false )
             {
-                formatstring( arrBuffer, constant::buffer::kMax1024, "[  FAILED  ] could not write the test report %#", reportPath );
+                formatstring( arrBuffer, constant::buffer::kMax1024, "[  FAILED  ] could not write the test report %#", reportPath.str() );
                 Internal::writeLine( arrBuffer );
                 Internal::writeResultLine( "FAILED", ranCount, failedCount, skippedCount );
                 return false;
             }
-            formatstring( arrBuffer, constant::buffer::kMax1024, "[  REPORT  ] %#", reportPath );
+            formatstring( arrBuffer, constant::buffer::kMax1024, "[  REPORT  ] %#", reportPath.str() );
             Internal::writeLine( arrBuffer );
         }
         // 안 맞는 패턴은 돈 케이스가 모두 통과해도 실패다 — 끝 줄에 그 사실을 다시 적는다.
