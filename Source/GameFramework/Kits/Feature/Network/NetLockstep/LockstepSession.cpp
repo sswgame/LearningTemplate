@@ -21,6 +21,7 @@ namespace sw
         , _playerCount{ 0 }
         , _localPlayer{ 0 }
         , _inputDelay{ 0 }
+        , _matchID{ 0 }
         , _stallCount{ 0 }
         , _currentTick{ 0 }
         , _desyncTick{ 0 }
@@ -49,6 +50,7 @@ namespace sw
         _playerCount = playerCount;
         _localPlayer = localPlayer;
         _inputDelay  = settings._inputDelay;
+        _matchID     = settings._matchID;
         _listTickInput.initialize( static_cast<int32>( kInputWindow ) );
         _listTickChecksum.initialize( static_cast<int32>( 2 * kChecksumWindow ) );
         _listNextInputTick.assign( static_cast<size_t>( _playerCount ), 0u );
@@ -113,9 +115,10 @@ namespace sw
         if ( tick > _currentTick + kMaxInputLead || storeInput( _localPlayer, tick, listInput ) == false )
             return false;
         LockstepInputBody body;
-        body._player = _localPlayer;
-        body._tick   = tick;
-        body._input  = listInput;
+        body._matchID = _matchID;
+        body._player  = _localPlayer;
+        body._tick    = tick;
+        body._input   = listInput;
         if ( _pHost != nullptr && _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) )
             (void)_messageWriter.sendMessageToPeers( *_pHost );
         return true;
@@ -196,6 +199,7 @@ namespace sw
     {
         storeChecksum( _localPlayer, tick, checksum );
         LockstepChecksumBody body;
+        body._matchID  = _matchID;
         body._player   = _localPlayer;
         body._tick     = tick;
         body._checksum = checksum;
@@ -228,8 +232,9 @@ namespace sw
         const uint32 tick = MathUtil::max( _listNextInputTick[static_cast<size_t>( player )], _currentTick );
         applyLeave( player, tick );
         LockstepLeaveBody body;
-        body._player = player;
-        body._tick   = tick;
+        body._matchID = _matchID;
+        body._player  = player;
+        body._tick    = tick;
         if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Leave>( body ) )
             (void)_messageWriter.broadcastMessage( *_pHost );
     }
@@ -241,7 +246,7 @@ namespace sw
         const uint32 tick   = body._tick;
         // 이탈은 서버만 정한다.
         const bool bServer     = _pHost != nullptr && _pHost->isServer();
-        const bool bApplyLeave = bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
+        const bool bApplyLeave = body._matchID == _matchID && bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false;
         if ( bApplyLeave )
             applyLeave( player, tick );
         return NetHandleResult::Handled;
@@ -253,8 +258,8 @@ namespace sw
         const uint32 tick   = body._tick;
         // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
         const bool bServer = _pHost != nullptr && _pHost->isServer();
-        if ( bServer && player != context._connectionID + 1 )
-            return NetHandleResult::Handled;
+        if ( body._matchID != _matchID || ( bServer && player != context._connectionID + 1 ) )
+            return NetHandleResult::Handled; // 지난 판의 늦은 입력이거나 남의 번호다
         if ( storeInput( player, tick, body._input ) && _pHost != nullptr )
             (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
         return NetHandleResult::Handled;
@@ -264,7 +269,7 @@ namespace sw
     {
         const int32 player  = body._player;
         const bool  bServer = _pHost != nullptr && _pHost->isServer();
-        if ( bServer && player != context._connectionID + 1 )
+        if ( body._matchID != _matchID || ( bServer && player != context._connectionID + 1 ) )
             return NetHandleResult::Handled;
         storeChecksum( player, body._tick, body._checksum );
         if ( _pHost != nullptr )

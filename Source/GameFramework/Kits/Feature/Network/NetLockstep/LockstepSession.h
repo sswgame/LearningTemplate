@@ -46,6 +46,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Min = 0, Max = LockstepSession::kMaxInputDelay )
         int32 _inputDelay{ 2 }; ///< 내 입력을 이만큼 뒤 틱에 예약한다(0 ~ `LockstepSession::kMaxInputDelay`). 그동안 입력이 망을 건넌다
+        PROPERTY()
+        uint32 _matchID{ 0 }; ///< 판 번호. 방 · 매치가 정해 모두에게 같은 값을 준다 — 같은 연결에서 다음 판을 열면 다른 값이어야 지난 판의 늦은 입력이 새 판의 틱에 닿지 않는다
     };
 } // namespace sw
 
@@ -143,6 +145,7 @@ namespace sw
         int32                         _playerCount;
         int32                         _localPlayer;
         int32                         _inputDelay;
+        uint32                        _matchID; ///< 이 판의 번호. 다른 번호의 메시지는 버린다
         int32                         _stallCount;
         uint32                        _currentTick;
         uint32                        _desyncTick;

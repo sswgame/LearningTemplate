@@ -188,12 +188,14 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     SW_REQUIRE_TRUE( SequenceNetSimGame::activateTrigger( harness.getServer(), SequenceNetSimGame::kPlayerTrigger, 1 ) );
     SW_EXPECT_TRUE( fixture.waitPlaying( fixture._firstClient, SequenceNetSimGame::kPlayerDirector, true, 60 ) );
 
-    // 둘째 클라이언트가 첫 재생(번호 1)의 건너뛰기를 위조한다 — 서버는 버리고 재생을 잇는다.
+    // 둘째 클라이언트가 첫 재생의 건너뛰기를 위조한다 — 서버는 버리고 재생을 잇는다.
     NetSimWorld* pSecond = harness.findClient( fixture._secondClient );
     SW_REQUIRE_NOT_NULL( pSecond );
-    NetMessageWriter           writer;
-    SequenceNetSkipRequestBody request;
-    request._playID = 1;
+    NetMessageWriter                   writer;
+    SequenceNetSkipRequestBody         request;
+    const SequenceNetSessionComponent* pServerNet = SequenceNetSimGame::findNetSession( harness.getServer() );
+    SW_REQUIRE_NOT_NULL( pServerNet );
+    request._playID = pServerNet->getServer().getStats()._lastPlayID;
     SW_REQUIRE_TRUE( ( writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( request ) ) );
     SW_REQUIRE_TRUE( writer.sendMessage( pSecond->getPeers(), 0 ) );
     harness.stepTicks( 5 );

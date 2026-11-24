@@ -72,6 +72,8 @@ namespace sw
         int32 _maxPrediction{ 8 }; ///< 확인된 상대 입력보다 이 프레임 수를 넘겨 앞서지 않는다(1 ~ `RollbackSession::kMaxPrediction`)
         PROPERTY( Min = 0 )
         int32 _maxFrameAdvantage{ 2 }; ///< 상대보다 이 프레임 수를 넘겨 앞서면 한 프레임 쉰다. 0이면 쉬지 않는다
+        PROPERTY()
+        uint32 _matchID{ 0 }; ///< 판 번호. 방 · 매치가 정해 모두에게 같은 값을 준다 — 비신뢰 채널이라 지난 판의 입력이 다음 판에 늦게 올 수 있다(GGPO 의 동기 난수 자리)
     };
 } // namespace sw
 

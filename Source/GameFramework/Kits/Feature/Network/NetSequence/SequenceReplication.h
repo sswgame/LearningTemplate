@@ -47,7 +47,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY()
-        uint32 _playID{ 0 }; ///< 서버가 매긴 재생 번호(1 부터)
+        uint32 _playID{ 0 }; ///< 서버가 매긴 재생 번호. 서버가 씬마다 난수에서 시작해 하나씩 올린다 — 앞 씬의 늦은 건너뛰기 요청이 새 씬의 재생에 닿지 않는다
         PROPERTY()
         NetObjectID _director{ 0 }; ///< 시퀀스 플레이어를 가진 오브젝트
         PROPERTY()
@@ -105,6 +105,7 @@ namespace sw
         uint32 _startRejectedCount{ 0 }; ///< 클라이언트 — 틀지 못한 시작(번호 · 플레이어 없음, 로컬 폰이 아닌 활성자)
         uint32 _endAppliedCount{ 0 };    ///< 클라이언트 — 끝 메시지로 끝낸 재생
         uint32 _skipRequestCount{ 0 };   ///< 클라이언트 — 서버에 보낸 건너뛰기 요청
+        uint32 _lastPlayID{ 0 };         ///< 서버 — 마지막으로 매긴 재생 번호
     };
 } // namespace sw
 

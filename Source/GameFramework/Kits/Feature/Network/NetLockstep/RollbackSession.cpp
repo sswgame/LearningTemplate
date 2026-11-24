@@ -206,6 +206,7 @@ namespace sw
         }
         _sendWindow.acknowledge( static_cast<uint32>( acked + 1 ) );
         BitWriter& writer = _messageWriter.beginMessage<NetLockstepMessage::Table, NetLockstepMessage::RollbackInput>();
+        writer.writeVarUint( _settings._matchID );
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( static_cast<uint64>( _frame ) );
         for ( int32 player = 0; player < _playerCount; ++player )
@@ -261,10 +262,13 @@ namespace sw
 
     NetHandleResult RollbackSession::receive( NetLockstepMessage::RollbackInput, const NetMessageContext& context, BitReader& body )
     {
-        const int32 player      = body.readVarUint31();
-        const int32 remoteFrame = body.readVarUint31();
+        const uint32 matchID     = body.readVarUint32();
+        const int32  player      = body.readVarUint31();
+        const int32  remoteFrame = body.readVarUint31();
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
+        if ( matchID != _settings._matchID )
+            return NetHandleResult::Handled; // 지난 판의 늦은 메시지다 — 프레임 창 밖이라고 상대를 끊지 않는다
         const bool bIgnoreInput = player < 0 || player >= _playerCount || player == _localPlayer;
         if ( bIgnoreInput )
             return NetHandleResult::Handled; // 시작 전이거나 다른 판의 메시지이다

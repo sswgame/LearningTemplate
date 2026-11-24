@@ -27,6 +27,8 @@ namespace sw
     struct LockstepInputBody
     {
         REFLECT_BODY();
+        PROPERTY()
+        uint32 _matchID{ 0 }; ///< 판 번호(`LockstepConfig::_matchID`) — 다르면 지난 판의 늦은 메시지다
         PROPERTY( Min = 0 )
         int32 _player{ 0 };
         PROPERTY()
@@ -40,6 +42,8 @@ namespace sw
     struct LockstepChecksumBody
     {
         REFLECT_BODY();
+        PROPERTY()
+        uint32 _matchID{ 0 }; ///< 판 번호(`LockstepConfig::_matchID`) — 다르면 지난 판의 늦은 메시지다
         PROPERTY( Min = 0 )
         int32 _player{ 0 };
         PROPERTY()
@@ -53,6 +57,8 @@ namespace sw
     struct LockstepLeaveBody
     {
         REFLECT_BODY();
+        PROPERTY()
+        uint32 _matchID{ 0 }; ///< 판 번호(`LockstepConfig::_matchID`) — 다르면 지난 판의 늦은 메시지다
         PROPERTY( Min = 0 )
         int32 _player{ 0 };
         PROPERTY()
@@ -67,7 +73,7 @@ namespace sw
     {
         using Input         = NetMessageBodyDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>;
         using Checksum      = NetMessageBodyDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>;
-        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>;
+        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable, 2>;                              ///< 판 2: 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
         using Leave         = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>; ///< 서버 → 모두
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 

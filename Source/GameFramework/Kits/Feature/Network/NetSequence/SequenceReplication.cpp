@@ -5,6 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Serialization/ByteStream.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -25,6 +27,17 @@ namespace sw
             GameObject* pDirector = manager.resolveGameObject( director );
             return pDirector != nullptr ? pDirector->getComponent<SequencePlayerComponent>() : nullptr;
         }
+
+        struct SequenceReplicationInternal
+        {
+            /** @brief 첫 재생 번호입니다(운영체제 난수). 1 부터 다시 매기면 같은 연결의 앞 씬에서 늦게 온 건너뛰기 요청이 새 씬의 같은 번호 재생을 끝낸다. */
+            static uint32 makeFirstPlayID()
+            {
+                const UUID uuid = UUID::generate();
+                ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
+                return reader.readUint32();
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -50,7 +63,7 @@ namespace sw
         _listSeenTrigger.clear();
         _listJoiningConnection.clear();
         _stats      = SequenceReplicationStats{};
-        _nextPlayID = 1;
+        _nextPlayID = SequenceReplicationInternal::makeFirstPlayID();
         if ( pManager == nullptr )
             return;
         pManager->getSubsystem<NetObjectTable>().captureSceneObjects( SceneIterationKey{} );
@@ -210,7 +223,8 @@ namespace sw
             ++_stats._unreplicableCount;
             return;
         }
-        play._playID = _nextPlayID++;
+        play._playID       = _nextPlayID++;
+        _stats._lastPlayID = play._playID;
         if ( writeStart( play ) == false )
             return; // 같은 프레임에 끝났다(건너뛰기) — 보낼 재생이 없다
         _stats._startSentCount += sendToAudience( play );
