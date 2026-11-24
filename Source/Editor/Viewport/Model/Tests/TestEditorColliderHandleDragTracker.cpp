@@ -22,7 +22,7 @@ SW_TEST_CASE( EditorColliderHandleDragTrackerTest, PressDragReleaseIsCaptureDrag
     sw::vector<EditorColliderHandleCommand>     listCommand;
     sw::editor::ColliderHandle                  handle{};
     handle._shapeIndex = 2;
-    tracker.press( sw::GameObjectHandle::make( 7 ), handle, listCommand );
+    tracker.press( sw::GameObjectHandle::make( 7, 0 ), handle, listCommand );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );
     SW_EXPECT_TRUE( isKind( listCommand, 0, EditorColliderHandleCommandKind::Capture ) );
     SW_EXPECT_TRUE( tracker.isDragging() );
@@ -47,7 +47,7 @@ SW_TEST_CASE( EditorColliderHandleDragTrackerTest, LostTargetEndsWithoutCommit )
 {
     sw::editor::EditorColliderHandleDragTracker tracker;
     sw::vector<EditorColliderHandleCommand>     listCommand;
-    tracker.press( sw::GameObjectHandle::make( 3 ), sw::editor::ColliderHandle{}, listCommand );
+    tracker.press( sw::GameObjectHandle::make( 3, 0 ), sw::editor::ColliderHandle{}, listCommand );
     listCommand.clear();
     SW_EXPECT_FALSE( tracker.step( false, true, nullptr, listCommand ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listCommand.size() );

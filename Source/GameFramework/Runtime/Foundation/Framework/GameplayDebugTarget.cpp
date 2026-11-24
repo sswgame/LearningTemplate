@@ -76,7 +76,7 @@ namespace sw
     const GameObject* GameplayDebugTarget::findTargetObject( const GameObjectManager& manager )
     {
         const GameObjectHandle target = getTarget();
-        return target.isValid() ? manager.findGameObjectByID( target.objectID() ) : nullptr;
+        return target.isValid() ? manager.resolveGameObject( target ) : nullptr;
     }
 
     string GameplayDebugTarget::getTargetName()
@@ -92,8 +92,9 @@ namespace sw
         uint64            objectID{ 0 };
         if ( StringUtil::parseUint64( idText, objectID ) )
         {
-            if ( objectID != 0 && manager.findGameObjectByID( objectID ) != nullptr )
-                return GameObjectHandle::make( objectID );
+            const GameObject* const pObject = objectID != 0 ? manager.findGameObjectByID( objectID ) : nullptr;
+            if ( pObject != nullptr )
+                return pObject->getHandle();
             return unexpected( Error{ ErrorKind::NotFound, "no object with id", idText } );
         }
         // 이름은 고르는 입구다 — 겹치면 아무것도 고르지 않고 id 를 알린다(첫 것을 고르면 다른 오브젝트를 조용히 본다).
@@ -108,7 +109,7 @@ namespace sw
             if ( ( pObject->getName() == name ) == false )
                 continue;
             ++matchCount;
-            found = GameObjectHandle::make( pObject->getObjectID() );
+            found = pObject->getHandle();
             listID.appendFormat( " #%#", pObject->getObjectID() );
         }
         if ( matchCount == 1 )

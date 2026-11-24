@@ -536,7 +536,7 @@ namespace sw
                 /** @brief 기본 바이너리 처리기와 같은 형태(핸들 하나의 바이트)로 저장할 id 를 씁니다. 읽기는 기본 처리기를 그대로 씁니다. */
                 void writeBinary( const void* pValue, vector<uint8>& outListBuffer ) const
                 {
-                    const GameObjectHandle savedHandle = GameObjectHandle::make( computeSavedID( pValue ) );
+                    const GameObjectHandle savedHandle = GameObjectHandle::fromValue( computeSavedID( pValue ) );
                     const uint8*           pByte       = reinterpret_cast<const uint8*>( &savedHandle );
                     outListBuffer.insert( outListBuffer.end(), pByte, pByte + sizeof( GameObjectHandle ) );
                 }
@@ -1074,7 +1074,7 @@ namespace sw
     {
         if ( savedHandle.isValid() == false )
             return GameObjectHandle{};
-        const GameObject* pReferent = findBySavedID( savedHandle.objectID() ^ savedIDScope );
+        const GameObject* pReferent = findBySavedID( savedHandle.value() ^ savedIDScope );
         if ( pReferent != nullptr )
             return pReferent->getHandle();
         // 같은 실행의 상태면 배치 밖의 런타임 id 그대로다. 그 오브젝트가 살아 있으면 그것이고, 사라졌으면 id 가 다시 쓰이지 않으므로 아무것도 아니다.

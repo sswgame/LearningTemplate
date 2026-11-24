@@ -81,7 +81,7 @@ namespace sw::editor
         _followedSelectionRevision        = selection.getRevision();
         const GameObject* const pSelected = selection.getPrimaryObject();
         if ( pSelected != nullptr )
-            editor::getSubsystem<DebugHUDRegistry>().setTarget( GameObjectHandle::make( pSelected->getObjectID() ) );
+            editor::getSubsystem<DebugHUDRegistry>().setTarget( pSelected->getHandle() );
     }
 
     void EditorDebugHUDViewModel::refresh()

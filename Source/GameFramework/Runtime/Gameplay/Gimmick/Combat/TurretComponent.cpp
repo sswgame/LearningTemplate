@@ -140,7 +140,7 @@ namespace sw
         {
             if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
                 continue;
-            const GameObject* pVictim = pManager->resolveGameObject( GameObjectHandle::make( _listShotTarget[static_cast<size_t>( event._hit._other )]._objectID ) );
+            const GameObject* pVictim = pManager->findGameObjectByID( _listShotTarget[static_cast<size_t>( event._hit._other )]._objectID );
             if ( pVictim == nullptr )
                 continue;
             ++_hitCount;
@@ -216,8 +216,9 @@ namespace sw
             listCandidate.push_back( candidate );
         }
         const WorldLineOfSightQuery lineOfSight{ *pManager };
-        const optional<int32>       pick = InteractionView::selectBest( viewer, listCandidate, &lineOfSight );
-        _target                          = pick.has_value() ? GameObjectHandle::make( listCandidate[static_cast<size_t>( *pick )]._objectID ) : GameObjectHandle{};
+        const optional<int32>       pick    = InteractionView::selectBest( viewer, listCandidate, &lineOfSight );
+        const GameObject* const     pTarget = pick.has_value() ? pManager->findGameObjectByID( listCandidate[static_cast<size_t>( *pick )]._objectID ) : nullptr;
+        _target                             = pTarget != nullptr ? pTarget->getHandle() : GameObjectHandle{};
         stepProjectiles( *pOwner ); // 대상을 놓쳐도 이미 쏜 탄은 날아간다
         if ( pick.has_value() == false )
         {
@@ -227,7 +228,6 @@ namespace sw
 
         // 조준: 요를 겨눌 곳 쪽으로 돌린다. 날아가는 탄은 대상이 움직인 만큼 앞을 겨눈다 — 처음 본 스텝은 속도를 모르므로 멈춘 것으로 본다.
         const float3                targetPosition = listCandidate[static_cast<size_t>( *pick )]._position;
-        const GameObject* const     pTarget        = pManager->resolveGameObject( _target );
         const SceneComponent* const pTargetScene   = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
         const bool                  bTeleported    = pTargetScene != nullptr && _targetTeleport.consume( *pTargetScene ).has_value();
         const float3                targetVelocity = _previousTarget == _target && bTeleported == false ? ( targetPosition - _previousTargetPosition ) * ( 1.0f / constant::time::kDefaultFixedStepSeconds ) : float3{};

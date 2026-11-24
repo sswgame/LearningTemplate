@@ -255,7 +255,7 @@ namespace sw::editor
                 vector<uint64>         listSelectedObjectID;
                 for ( const GameObjectHandle& handle : selection.getSelectedHandles() )
                 {
-                    listSelectedObjectID.push_back( handle.objectID() );
+                    listSelectedObjectID.push_back( handle.value() );
                 }
                 // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
                 Archive archive;
@@ -295,7 +295,7 @@ namespace sw::editor
                 vector<GameObject*> listObject;
                 for ( const uint64 objectID : listSelectedObjectID )
                 {
-                    if ( GameObject* pObject = editor::findGameObject( GameObjectHandle::make( objectID ) ) )
+                    if ( GameObject* pObject = editor::findGameObject( GameObjectHandle::fromValue( objectID ) ) )
                         listObject.push_back( pObject );
                 }
                 EditorSelection& selection = editor::getMainSceneSelection();

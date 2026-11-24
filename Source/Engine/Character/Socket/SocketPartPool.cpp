@@ -61,6 +61,7 @@ namespace sw
         if ( pBinding->getState() != SocketBindingState::ReleasedAnimated )
             return false; // 물리로 떨어졌거나 되돌아가는 중이다 — 쉬게 할 수 없다
         object.setActive( false );
+        object.invalidateHandles(); // 앞 주인이 든 핸들은 다음 주인의 부품을 가리키지 않는다
         _mapResting[assetPath].push_back( object.getHandle() );
         _storedCount.add();
         return true;

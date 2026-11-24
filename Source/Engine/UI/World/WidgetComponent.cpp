@@ -589,7 +589,7 @@ namespace sw
             return;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        GameObject*        pQuad    = pManager != nullptr ? pManager->findGameObjectByID( _worldQuad.objectID() ) : nullptr;
+        GameObject*        pQuad    = pManager != nullptr ? pManager->resolveGameObject( _worldQuad ) : nullptr;
         if ( pQuad != nullptr )
             pQuad->destroy();
         _worldQuad = GameObjectHandle{};
