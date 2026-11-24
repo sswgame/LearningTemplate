@@ -231,8 +231,8 @@ namespace sw
             return GameObjectHandle{}; // 다른 그래프를 돌리는 러너다
         _state            = DialogueRunnerState::ShowingDialogue;
         _currentSpeakerID = speakerID;
-        _currentSpeaker   = _graph.resolveSpeakerName( speakerID );
-        _currentText      = DialogueGraphAsset::resolveLocalizedText( text );
+        _currentSpeaker   = _graph.getSpeakerName( speakerID );
+        _currentText      = text;
         _listCurrentChoice.clear();
         notifyLine();
         const GameObject* pSpeaker = findSpeakerObject( speakerID );
@@ -435,25 +435,19 @@ namespace sw
             {
                 _state            = DialogueRunnerState::ShowingDialogue;
                 _currentSpeakerID = node._speaker;
-                _currentSpeaker   = _graph.resolveSpeakerName( node._speaker );
-                _currentText      = DialogueGraphAsset::resolveLocalizedText( node._text );
+                _currentSpeaker   = _graph.getSpeakerName( node._speaker );
+                _currentText      = node._text;
                 _listCurrentChoice.clear();
                 notifyLine();
                 return false;
             }
             case DialogueAssetNodeKind::Choice:
             {
-                _state            = DialogueRunnerState::WaitingForChoice;
-                _currentSpeakerID = node._speaker;
-                _currentSpeaker   = _graph.resolveSpeakerName( node._speaker );
-                _currentText      = DialogueGraphAsset::resolveLocalizedText( node._text );
-                _listCurrentChoice.clear();
-                _listCurrentChoice.reserve( node._listChoice.size() );
-                for ( const string& choice : node._listChoice )
-                {
-                    _listCurrentChoice.push_back( DialogueGraphAsset::resolveLocalizedText( choice ) );
-                }
-
+                _state             = DialogueRunnerState::WaitingForChoice;
+                _currentSpeakerID  = node._speaker;
+                _currentSpeaker    = _graph.getSpeakerName( node._speaker );
+                _currentText       = node._text;
+                _listCurrentChoice = node._listChoice;
                 notifyChoices();
                 return false;
             }

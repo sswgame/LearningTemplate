@@ -90,6 +90,25 @@ namespace sw
             tree._layoutTextScale = context._textScale;
         }
 
+        // 텍스트 버전(언어) · 액션 글리프가 바뀌었으면 이 트리의 위젯에 알린다. 트리가 지난 번호를 들어 화면 스택 · 스택 밖 화면 · World 위젯이 같은 길이다
+        // (스택만 훑으면 World 위젯의 글이 옛 언어로 남는다).
+        if ( tree._layoutTextRevision != context._textRevision || tree._layoutGlyphRevision != context._glyphRevision )
+        {
+            const bool bTextChanged   = tree._layoutTextRevision != context._textRevision;
+            const bool bGlyphChanged  = tree._layoutGlyphRevision != context._glyphRevision;
+            tree._layoutTextRevision  = context._textRevision;
+            tree._layoutGlyphRevision = context._glyphRevision;
+            vector<Widget*> listWidget;
+            tree.collectWidgetsInDocumentOrder( listWidget );
+            for ( Widget* pWidget : listWidget )
+            {
+                if ( bTextChanged )
+                    pWidget->onTextRevisionChanged();
+                if ( bGlyphChanged )
+                    pWidget->onInputGlyphsChanged();
+            }
+        }
+
         Widget* const pRoot = tree.getRoot();
         if ( pRoot == nullptr )
         {

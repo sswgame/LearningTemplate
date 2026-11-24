@@ -366,7 +366,9 @@ namespace sw
         ActionHandle getActionHandle( const hashed_string& action ) const;
 
         bool hasLayer( const hashed_string& layer ) const;
-        bool isLayerEnabled( const hashed_string& layer ) const;
+        /** @brief 바인딩이 바뀔 때마다(묶기 · 재배치 · 되돌리기 · 다시 읽기) 오르는 번호입니다. 글리프를 보이는 화면이 바뀌었는지 봅니다. */
+        uint32 getBindingRevision() const { return _bindingRevision; }
+        bool   isLayerEnabled( const hashed_string& layer ) const;
         /**
          * @brief 레이어 @p listLayer 를 함께 켜도(스택에 쌓아도) 되는지 봅니다 — 그 가운데 하나가 켜는 가상 커서의 스틱 · 버튼을 다른 레이어(늘 켜진 레이어 포함)가 액션에 묶었으면 모두 알리고 false 입니다.
          * @details 맵 읽기는 지금 켜진 레이어만 본다 — 함께 켤 묶음은 그것을 정한 데이터(미니게임 정의)가 읽힐 때 이것으로 본다. 모르는 레이어 이름은 보지 않는다(켤 때 거절된다).
@@ -731,6 +733,7 @@ namespace sw
         vector<hashed_string>                _listLayerName;
         vector<LayerStackEntry>              _listLayerStack;     /**< 막지 않는 칸(push 순서, 아래부터) 다음에 막는 칸입니다. */
         vector<LayerEnableRequest>           _listLayerEnable;    /**< 스택 밖에서 켜 둔 요청입니다(`enableLayer`). */
+        uint32                               _bindingRevision;    ///< 바인딩이 바뀔 때마다 오르는 번호입니다(`getBindingRevision`).
         uint64                               _lastLayerRequestID; /**< 마지막으로 내준 칸 · 요청의 id 입니다(0 은 없음). */
         vector<SourceRecord>                 _listSource;         /**< 읽은 파일(묶음 순서). 맵을 비우면 함께 비운다. */
         InputActionBuffer                    _actionBuffer;

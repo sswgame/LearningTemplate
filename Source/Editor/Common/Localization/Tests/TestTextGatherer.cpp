@@ -60,12 +60,16 @@ SW_TEST_CASE( TextGathererTest, CodeScannerReadsLiteralMacroCalls )
         raw   = SW_LOCTEXT( "Menu", "Raw", R"(Use {count} keys)" );
         line  = SW_LOCFORMAT( "HUD", "Ammo", "{n, plural, one {# round} other {# rounds}}", args );
         bad   = SW_LOCTEXT( "Menu", kKey, "dynamic key" );
+        shown = SW_LOCALIZED_MESSAGE( "Menu", "Bought" ).addInteger( "count", 1 ).str();
     )code";
 
     sw::TextGatherer gatherer;
     gatherer.gatherCodeText( kSource, "Source/Test/Probe.cpp" );
 
-    SW_EXPECT_EQUAL( size_t( 4 ), gatherer.getTexts().size() );
+    SW_EXPECT_EQUAL( size_t( 5 ), gatherer.getTexts().size() );
+    const sw::GatheredText* pBought = TextGathererTestInternal::findText( gatherer, "Menu.Bought" ); // 메시지는 키만 가리킨다 — 표에 없으면 병합이 오류로 멈춘다
+    SW_REQUIRE_NOT_NULL( pBought );
+    SW_EXPECT_TRUE( pBought->_kind == sw::GatheredTextKind::KeyReference );
     const sw::GatheredText* pStart = TextGathererTestInternal::findText( gatherer, "Menu.Start" );
     SW_REQUIRE_NOT_NULL( pStart );
     SW_EXPECT_EQUAL( sw::string( "Start Game" ), pStart->_source );

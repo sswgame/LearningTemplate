@@ -47,8 +47,8 @@ namespace sw
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /**
-         * @brief 텍스트를 바꿉니다. 현지화 키이거나 텍스트 그대로여야 합니다(`Menu.Pause.Title`, `Paused`). 바뀌면 kLayout 입니다.
-         * @details 보이는 텍스트는 `LocalizationManager::findStringByText( 키 )` 로 해석한다. 테이블에 없으면 텍스트 그대로 쓴다. 코드는 키를 넣는다
+         * @brief 텍스트를 바꿉니다. 현지화 키 · 인자가 있는 현지화 메시지(`SW_LOCALIZED_MESSAGE( … ).str()`)이거나 텍스트 그대로여야 합니다(`Menu.Pause.Title`, `Paused`). 바뀌면 kLayout 입니다.
+         * @details 보이는 텍스트는 그릴 때 `LocalizedText::resolve` 로 해석한다. 테이블에 없으면 텍스트 그대로 쓴다. 코드는 키 · 메시지를 넣는다
          *          (`SW_LOCTEXT` 로 미리 해석한 텍스트를 넣으면 언어를 바꿔도 그대로다). 사용자가 입력한 텍스트처럼 해석하면 안 되는 텍스트는 `setLocalized( false )` 를 쓴다.
          */
         void          setText( string_view text );

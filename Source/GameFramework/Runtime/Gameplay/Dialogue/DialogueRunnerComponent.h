@@ -139,7 +139,8 @@ namespace sw
 
         DialogueRunnerState getState() const;
         int32               getCurrentNodeID() const;
-        const string&       getCurrentSpeaker() const;
+        /** @brief 지금 줄의 화자 이름 · 글 · 선택지입니다. 현지화 키이거나 원문이며 보이는 쪽(글 위젯 · 자막)이 그릴 때 풉니다 — 푼 글을 들면 대화 중에 언어를 바꿔도 그대로다. */
+        const string& getCurrentSpeaker() const;
         /** @brief 지금 줄의 화자 id 입니다(없으면 `kDialogueNoSpeaker`). `findSpeakerObject` 로 오브젝트를 얻는다. */
         uint32                getCurrentSpeakerID() const { return _currentSpeakerID; }
         const string&         getCurrentText() const;
