@@ -64,6 +64,8 @@ namespace sw::editor
     private:
         ToolAssetLoadResult loadDocument() override;
         void                populatePreviewScene( Scene& scene ) override;
+        /** @brief 중첩 단계의 저장 자리는 격리 스택에 있다 — 옮긴 프리팹의 단계를 새 자리로 고친다. */
+        void onAssetMoved( string_view oldPath, string_view newPath ) override { _viewModel.remapPath( oldPath, newPath ); }
 
         /** @brief 문서가 바뀌었으면 문서 루트를 다시 세웁니다. */
         void syncDocumentRoot();

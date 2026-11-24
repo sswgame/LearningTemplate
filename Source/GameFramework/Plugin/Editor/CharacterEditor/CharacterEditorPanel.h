@@ -95,7 +95,7 @@ namespace sw::editor
         /** @brief 연 캐릭터가 아니라 미저장인 소켓 · 포즈 파일에 쓴다(`CharacterEditorViewModel::collectFilesToSave`). */
         void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
         /** @brief 다시 읽기는 소켓 경로 칸에서 읽는다 — 연 문서를 가리키던 칸을 새 자리로 고친다. */
-        void onDocumentMoved( string_view oldPath, string_view newPath ) override;
+        void onAssetMoved( string_view oldPath, string_view newPath ) override;
         bool canSaveDocument() const override { return isDocumentLoadFailed() == false && _document.isDirty(); }
         /** @brief 미리보기 몸 오브젝트입니다. 외형 데이터를 읽기 전이거나 씬이 없으면 무효입니다(자동화 · 테스트). */
         GameObjectHandle getPreviewBody() const { return _previewBody; }

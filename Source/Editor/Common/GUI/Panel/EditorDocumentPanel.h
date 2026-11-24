@@ -151,8 +151,11 @@ namespace sw::editor
         string captureUnsavedText() const override { return captureDocumentText(); }
         /** @brief 저장할 문서가 새 자리에서 아직 다시 읽히지 않았으면 먼저 읽습니다(옮긴 뒤 그려지지 않은 창) — 모델이 옛 경로를 든 채 쓰지 않는다. */
         void prepareDocumentForSave() override;
-        /** @brief 열린 문서가 @p oldPath 에서 @p newPath 로 옮겨졌습니다. 다시 읽기(`loadDocument`)가 연 경로(`getLoadedAssetPath`)를 쓰지 않는 패널이 자기 경로 칸을 고친다. */
-        virtual void onDocumentMoved( string_view /*oldPath*/, string_view /*newPath*/ ) {}
+        /**
+         * @brief 에셋 하나가 @p oldPath 에서 @p newPath 로 옮겨졌습니다(옮긴 짝마다, 열린 문서의 다시 읽기보다 먼저).
+         * @details 연 경로(`getLoadedAssetPath`) 말고 저장 · 다시 읽기 자리를 따로 든 패널(타일맵 · 캐릭터의 경로 칸, 프리팹의 격리 단계)이 그것을 고친다.
+         */
+        virtual void onAssetMoved( string_view /*oldPath*/, string_view /*newPath*/ ) {}
         /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
         static void appendFileToSave( string_view path, vector<AbsolutePath>& outListPath ); /**
                                                                                               * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.

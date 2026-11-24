@@ -28,6 +28,8 @@ namespace sw
 namespace sw
 {
     struct AssetIdentityRules; // Engine/Asset/AssetDatabase.h — 엔진 이름 공간이다
+
+    class IModuleStateStore;
 } // namespace sw
 
 namespace sw::editor
@@ -79,8 +81,15 @@ namespace sw::editor
          */
         [[nodiscard]] bool initialize();
 
-        /** @brief 워치를 해제하고 감시 스레드를 멈춥니다. */
+        /** @brief 워치를 해제하고 감시 스레드를 멈춥니다. 끝나지 않은 임포트 · 미룬 파일은 다음 인스턴스에 맡긴다(`storePendingPaths`). */
         void shutdown();
+        /**
+         * @brief 아직 반영하지 못한 바뀐 파일(@p listPath)을 호스트의 맡김 칸에 맡깁니다. 빈 목록이면 맡기지 않습니다.
+         * @details 감시 사건은 한 번만 온다 — 에디터 모듈 리로드 · 백엔드 교체가 줄에 선 원본 임포트를 버리면, 그 원본이 다시 바뀔 때까지 낡은 결과로 돈다.
+         */
+        static void storePendingPaths( IModuleStateStore& store, const vector<string>& listPath );
+        /** @brief 앞선 인스턴스가 맡긴 바뀐 파일을 꺼냅니다(한 번). 맡긴 것이 없거나 읽을 수 없으면 빈 목록입니다. */
+        static void takePendingPaths( IModuleStateStore& store, vector<string>& outListPath );
 
         /**
          * @brief 에디터 프레임마다 호출해 변경 이벤트를 꺼내고, 끝난 임포트 잡의 결과를 가져와 다음 잡을 시작합니다. **에디터 스레드에서만 부릅니다.**
@@ -193,6 +202,8 @@ namespace sw::editor
          *          쓰는 도중의 파일을 읽으면 안 된다. DDS 는 원자적이지 않게 쓰이고, 모델은 옆 폴더를 지우고 다시 쓴다. 동기 임포트에서는 임포트가 끝난 뒤에야 사건이 와서 생기지 않던 일이다.
          */
         void onResourceFileChanged( const FileChangeEvent& changeEvent );
+        /** @brief 트리 표기 @p relativePath 의 바뀐 파일을 처리합니다(`onResourceFileChanged` · 앞선 인스턴스가 맡긴 파일의 공통 입구). */
+        void routeChangedFile( string relativePath );
         /**
          * @brief 파일 @p assetID(리소스 id — 우리 형식 글, 원본, 원본 곁 `.meta`)의 정체성을 읽어 런타임 GUID 색인(`AssetRegistry`)에 적습니다.
          * @details 소스 실행의 색인은 기동 때 한 번 훑은 것이다 — 바깥 편집기 · git 이 만들거나 옮긴 에셋을 다음 기동 전에도 GUID 참조가 풀게 한다(옮긴 에셋은 같은 GUID 의 새 자리로 바뀐다).

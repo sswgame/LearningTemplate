@@ -25,6 +25,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/HotReload/AssetReferenceTracker.h"
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
@@ -42,7 +43,10 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+
+#include "ModuleAPI/Service/IModuleStateStore.h"
 
 namespace sw::editor
 {
@@ -59,6 +63,10 @@ namespace sw::editor
             static constexpr int64 kFenceTimeoutMilliseconds = 5000;
             /** @brief 표지 사건 뒤에 사본이 일으킨 임포트가 끝나기를 기다리는 시한(밀리초)입니다. 텍스처 압축은 큰 이미지 하나에 수십 초 걸릴 수 있다. */
             static constexpr int64 kFenceImportTimeoutMilliseconds = 120000;
+
+            /** @brief 맡김 칸(`IModuleStateStore`)에 둘 바뀐 파일 목록의 키와 형식 판입니다. */
+            static constexpr string_view kPendingStoreKey = "editor.assetHotReload.pending";
+            static constexpr uint32      kPendingVersion  = 1;
 
             /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(감시 값은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
             static AssetHotReload* findHotReload()
@@ -254,11 +262,58 @@ namespace sw::editor
             _scratchResourceWatch = fileWatch.watch( scratchFolder, FileWatchDepth::Tree, listExtension, fileWatchDelegate );
             _scratchContentWatch  = fileWatch.watch( scratchFolder, FileWatchDepth::Tree, {}, treeWatchDelegate );
         }
+        // 선택 조회(②): 맡김 칸이 없는 호스트(테스트 · 도구)는 이어받을 것이 없다.
+        IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
+        if ( pStore != nullptr )
+        {
+            vector<string> listPendingPath;
+            takePendingPaths( *pStore, listPendingPath );
+            for ( string& pendingPath : listPendingPath )
+                routeChangedFile( std::move( pendingPath ) );
+        }
         return _resourceWatch.isActive();
+    }
+
+    void AssetHotReload::storePendingPaths( IModuleStateStore& store, const vector<string>& listPath )
+    {
+        if ( listPath.empty() )
+            return;
+        Archive archive;
+        archive << AssetHotReloadInternal::kPendingVersion;
+        writeUndoArg( archive, listPath );
+        store.store( AssetHotReloadInternal::kPendingStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
+    }
+
+    void AssetHotReload::takePendingPaths( IModuleStateStore& store, vector<string>& outListPath )
+    {
+        outListPath.clear();
+        vector<uint8> bytes;
+        if ( store.take( AssetHotReloadInternal::kPendingStoreKey, bytes ) == false )
+            return;
+        Archive archive( bytes.data(), bytes.size() );
+        uint32  version{ 0 };
+        archive >> version;
+        if ( archive.isOk() == false || version != AssetHotReloadInternal::kPendingVersion || readUndoArg( archive, outListPath ) == false )
+        {
+            outListPath.clear();
+            SW_LOG_WARNING_ID( "AssetHotReload.PendingPathsUnreadable", "The changed files the previous editor instance left could not be read - they are handled when they change again" );
+        }
     }
 
     void AssetHotReload::shutdown()
     {
+        // 끝내지 못한 것을 먼저 적는다 — 아래 취소가 도는 원본의 나머지를 건너뛴다(끝난 원본을 다시 올려도 내용 해시가 같아 할 일이 없다).
+        vector<string> listPendingPath;
+        for ( const ImportRequest& request : _listRunningImport )
+            VectorUtil::addUnique( listPendingPath, request._relativePath );
+        for ( const ImportRequest& request : _listQueuedImport )
+            VectorUtil::addUnique( listPendingPath, request._relativePath );
+        for ( const string& deferredPath : _listDeferredFile )
+            VectorUtil::addUnique( listPendingPath, deferredPath );
+        IModuleStateStore* const pStore = listPendingPath.empty() ? nullptr : editor::findSubsystem<IModuleStateStore>(); // 종료 경로라 이미 없을 수 있다
+        if ( pStore != nullptr )
+            storePendingPaths( *pStore, listPendingPath );
+
         // 도는 임포트 잡은 모듈이 내려가기 전에 끝낸다 — 내려간 모듈의 코드를 도는 워커를 남기지 않는다. 진행 중인 원본 하나만 끝까지 가고 나머지는 건너뛴다.
         if ( _pImportJob != nullptr )
         {
@@ -437,7 +492,11 @@ namespace sw::editor
         string relPath = AssetHotReloadInternal::makeEventPath( changeEvent ); // 트리 밖(옛 작업 도메인 자리)이면 빈 글
         if ( relPath.empty() )
             return;
+        routeChangedFile( std::move( relPath ) );
+    }
 
+    void AssetHotReload::routeChangedFile( string relPath )
+    {
         // 워커 임포터의 원본(모델 · 텍스처 · 높이장 원본)은 임포트 잡이 임포트한다 — 에디터 스레드에서 동기로 돌지 않는다.
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relPath );
         if ( route._pfnImportSource != nullptr && route._importThread != AssetImportThread::Editor )

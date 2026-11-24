@@ -262,7 +262,7 @@ namespace sw::editor
         return StringUtil::endsWith( assetPath, SocketSet::kExtension );
     }
 
-    void CharacterEditorPanel::onDocumentMoved( string_view oldPath, string_view newPath )
+    void CharacterEditorPanel::onAssetMoved( string_view oldPath, string_view newPath )
     {
         if ( string_view( _document.getPaths()._socketPath.c_str() ) == oldPath )
             _document.editPaths()._socketPath = newPath;

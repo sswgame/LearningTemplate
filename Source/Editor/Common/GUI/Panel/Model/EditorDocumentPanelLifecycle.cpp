@@ -81,6 +81,8 @@ namespace sw::editor
             _assetsMovedSubscription = pWorkspace->onAssetsMoved().add(
                 SW_DELEGATE_LAMBDA( EditorAssetsMovedDelegate, [this]( const EditorAssetMoveEvent& event )
             {
+                for ( size_t index = 0; index < event._listOldID.size(); ++index )
+                    onAssetMoved( event._listOldID[index], event._listNewID[index] );
                 const string previousPath       = _loadedAssetPath;
                 const bool   bRewrittenReferrer = EditorDocumentOpenUtil::applyAssetMove( event, _loadedAssetPath, _listRecentPath );
                 if ( previousPath != _loadedAssetPath )
@@ -88,7 +90,6 @@ namespace sw::editor
                     // 자동 저장 사본은 옛 id 로 적혀 있다 — 남기면 비정상 종료 뒤 없는 문서를 복구하라고 묻는다. 미저장이면 다음 주기가 새 id 로 다시 쓴다.
                     EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), previousPath );
                     _lastCopyTextHash = 0;
-                    onDocumentMoved( previousPath, _loadedAssetPath );
                     // 파생의 모델이 든 경로(저장할 자리)도 새 자리여야 한다 — 새 자리에서 다시 읽어 맞추고, 미저장이면 편집한 글을 그 위에 얹는다(`markDocumentLoaded`).
                     // 글이 없는 미저장 문서는 얹을 수 없어 계획이 거절했다(`EditorOpenDocument::_bFollowsMove`).
                     if ( _bLoadFailed == SW_FALSE )
