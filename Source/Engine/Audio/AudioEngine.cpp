@@ -658,6 +658,14 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
+    void AudioEngine::shiftWorldOrigin( const float3& delta )
+    {
+        Command command;
+        command._type     = CommandKind::ShiftWorldOrigin;
+        command._position = delta;
+        pushCommand( std::move( command ) );
+    }
+
     bool AudioEngine::isPlaying( AudioPlayingID playingID ) const
     {
         if ( playingID == 0 )
@@ -964,6 +972,20 @@ namespace sw
                 const auto it = _mapEmitter.find( command._emitterID );
                 if ( it != _mapEmitter.end() )
                     it->second._bRemoved = true;
+                break;
+            }
+            case CommandKind::ShiftWorldOrigin:
+            {
+                // 지운 에미터(한 번짜리 소리)도 끝날 때까지 자리를 든다 — 씬이 다시 넣어 줄 수 없으므로 여기서 함께 옮긴다.
+                for ( auto& entry : _mapEmitter )
+                {
+                    entry.second._state._position += command._position;
+                    entry.second._state._apparentPosition += command._position;
+                }
+                for ( AudioListenerState& listener : _arrListener )
+                {
+                    listener._position += command._position;
+                }
                 break;
             }
             case CommandKind::SetParameter:
