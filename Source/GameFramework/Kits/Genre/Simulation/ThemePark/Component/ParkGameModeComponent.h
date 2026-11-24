@@ -85,7 +85,7 @@ namespace sw
         /** @brief 손님이 @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다)입니다 — 뷰가 그 자리에 길을 깐다. */
         void findGuestRoute( const float3& from, const float3& to, vector<float3>& outListPoint ) const;
         /** @brief 공원과 놀이기구의 지금 상태를 로그로 남깁니다. */
-        void logStatus() const;
+        void logStatus() const override;
 
     protected:
         /** @brief 배치 데이터를 읽고 공원을 열어 처음 두 개(가장 싼 평지 놀이기구와 코스터)를 건설합니다. */
@@ -146,8 +146,6 @@ namespace sw
         ThemeParkSettings                    _settings;
         vector<RidePlacement>                _listPlacement;
         vector<unique_ptr<CoasterRuntime>>   _listCoaster;
-        PROPERTY( RuntimeState )
-        float32 _statusTimer;
         PROPERTY( RuntimeState )
         float32 _autoBuildTimer;
         float32 _parkYaw;      ///< `getParkYaw`

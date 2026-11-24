@@ -17,6 +17,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Object/GameObject/Tick/FixedStepTickList.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
 namespace sw
@@ -41,11 +42,13 @@ namespace sw
         SceneTickScheduler( const SceneTickScheduler& )            = delete;
         SceneTickScheduler& operator=( const SceneTickScheduler& ) = delete;
 
+        /** @brief 씬의 시간을 이번 프레임만큼 흘립니다(프레임마다 첫 틱 단계 앞에 한 번). 두 틱 단계가 이 시간을 봅니다. */
+        void advanceTime( float32 deltaTime );
         /**
          * @brief 컴포넌트 틱 단계 하나입니다 — 플러시 → 쓰기 큐 준비 → 동결 → 그룹 [@p firstGroup, @p endGroup) → 동결 해제.
          * @details 쌓인 구조 변경 · 쓰기는 비우지 않습니다(`StructuralChangeBuffer::drain`).
          */
-        void tickPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
+        void tickPhase( uint32 firstGroup, uint32 endGroup );
 
         /**
          * @brief 두 틱 단계의 그룹 디스패치를 감싸는 프로파일러 구간 이름입니다 — 감시 값 `Scene.ComponentTickMs` · `ComponentTickShare` 가 이 구간의 프레임 시간을 읽는다.
@@ -78,7 +81,7 @@ namespace sw
             const TickObjectEntry*   _pEntry{ nullptr };
             SceneTransformHierarchy* _pHierarchy{ nullptr };
             uint32                   _dispatchOrdinal{ 0 };
-            float32                  _deltaTime{ 0.0f };
+            TickFrameTime            _time{};
             uint8                    _group{ 0 }; ///< 이 태스크의 틱 그룹(`TickThreadState::_parallelTickGroup`)
 
             void run();
@@ -90,7 +93,7 @@ namespace sw
             const TickBatchList*     _pBatchList{ nullptr };
             SceneTransformHierarchy* _pHierarchy{ nullptr };
             uint32                   _dispatchOrdinal{ 0 };
-            float32                  _deltaTime{ 0.0f };
+            TickFrameTime            _time{};
             uint8                    _group{ 0 }; ///< 이 태스크의 틱 그룹(`TickThreadState::_parallelTickGroup`)
 
             void run();
@@ -107,19 +110,19 @@ namespace sw
         };
 
         /** @brief 레지스트리의 오브젝트를 그룹 순으로 틱합니다(그룹마다 모드 → 그 그룹의 선행 조건 스테이지). */
-        void tickGroups( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
+        void tickGroups( uint32 firstGroup, uint32 endGroup );
         /** @brief 한 그룹의 세 모드를 돕니다 — Task 태스크를 띄움 → 파도마다 포크-조인 → Task 를 기다림 → Main 을 게임 스레드에서(일괄 경로를 끄면 칸 한 번의 포크-조인). */
-        void tickGroupModes( float32 deltaTime, uint32 group );
+        void tickGroupModes( uint32 group );
         /**
          * @brief 일괄 목록들(파도 하나 또는 선행 조건 스테이지 하나)을 한 번의 포크-조인으로 돕니다. 목록을 이어 붙인 번호 공간을 나누고, 겹친 목록마다 그 함수를 한 번 부릅니다.
          * @return 돈 원소 수입니다(0 이면 디스패치하지 않았다).
          */
-        uint32 dispatchBatchLists( const vector<TickBatchList>& listBatch, uint32 group, float32 deltaTime );
+        uint32 dispatchBatchLists( const vector<TickBatchList>& listBatch, uint32 group );
         /**
          * @brief 순서만 간선이 있는 스테이지를 항목마다 태스크로 돕니다 — 간선은 `runAfter`, 끝은 자기 태스크 스테이지만 기다린다. 작업 풀이 없으면 위상 순으로 차례로 돈다.
          * @details 디스패치 순번을 항목의 위상 순으로 하나씩 매긴다 — 남의 오브젝트 쓰기 · 미룬 일이 (순번, 쓴 오브젝트, 넣은 순서) 로 합쳐지므로 선행 항목의 쓰기가 늘 먼저다.
          */
-        void dispatchStageGraph( const TickStage& stage, float32 deltaTime );
+        void dispatchStageGraph( const TickStage& stage );
         /** @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다. */
         void applyStageTransforms();
 
@@ -128,6 +131,7 @@ namespace sw
         SceneTransformHierarchy* _pHierarchy;
         PrimitiveRegistry*       _pPrimitiveRegistry;
         StructuralChangeBuffer*  _pStructuralChangeBuffer;
+        TickFrameTime            _frameTime; ///< 이번 프레임의 시간(`advanceTime`) — 주기가 있는 틱의 차례를 여기서 센다
         TickRegistry             _tickRegistry;
         FixedStepTickList        _fixedStepTickList; ///< 고정 스텝 그룹의 구성원 · 구간(`tickFixedStepGroup`)
         vector<uint32>           _listBatchStart;    ///< 한 일괄 디스패치(파도 · 스테이지)에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다

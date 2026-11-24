@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,6 +25,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
 
         PushBlockComponent();
         virtual ~PushBlockComponent() override = default;
@@ -58,7 +60,5 @@ namespace sw
         int32 _stepsLeft;
         PROPERTY( RuntimeState, Category = "Push", DisplayName = "Move Steps", Tooltip = "Runtime" )
         int32 _moveSteps;
-
-        FixedStepTimer _clock;
     };
 } // namespace sw

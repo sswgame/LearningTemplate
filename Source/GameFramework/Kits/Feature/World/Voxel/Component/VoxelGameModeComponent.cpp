@@ -55,7 +55,6 @@ namespace sw
         , _pCatalog{}
         , _world{}
         , _autoPlayController{}
-        , _statusTimer{ 0.0f }
         , _centerChunkX{ 0 }
         , _centerChunkZ{ 0 }
         , _appliedAutoPlay{ -1 }
@@ -74,7 +73,7 @@ namespace sw
         updateResidency();
         SW_PROFILE_COUNT( "GT.VoxelWorld.residentChunks", _world.getResidentChunkCount() ); // 감사 K-12 전후 비교
         SW_PROFILE_COUNT( "GT.VoxelWorld.storedChunks", _world.getStoredChunkCount() );
-        logStatus( deltaTime );
+        (void)deltaTime;
     }
 
     void VoxelGameModeComponent::onViewsDespawned()
@@ -220,6 +219,7 @@ namespace sw
         (void)_world.updateResidency( _centerChunkX, _centerChunkZ, _residentChunkRadius, _world.getChunkCountX() * _world.getChunkCountZ() );
         SW_LOG_INFO_ID( "VoxelGameMode.TerrainXXHeights", "[Voxel] terrain %# x %# x %# - %# chunks resident within %# of chunk (%#, %#)", _world.getSizeX(), _world.getSizeY(),
                         _world.getSizeZ(), _world.getResidentChunkCount(), _residentChunkRadius, _centerChunkX, _centerChunkZ );
+        startStatusLog( _statusLogInterval );
         return true;
     }
 
@@ -246,12 +246,8 @@ namespace sw
         (void)_world.updateResidency( _centerChunkX, _centerChunkZ, _residentChunkRadius, _chunkLoadsPerFrame ); // 바뀐 수는 쓰지 않는다 — 뷰는 올라온 청크를 직접 본다
     }
 
-    void VoxelGameModeComponent::logStatus( float32 deltaTime )
+    void VoxelGameModeComponent::logStatus() const
     {
-        _statusTimer += deltaTime;
-        if ( _statusTimer < _statusLogInterval )
-            return;
-        _statusTimer                        = 0.0f;
         const VoxelPlayerComponent* pPlayer = findOn<VoxelPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;

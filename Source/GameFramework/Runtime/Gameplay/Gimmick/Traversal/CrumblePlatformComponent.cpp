@@ -4,6 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
@@ -15,7 +16,6 @@ namespace sw
         , _respawnDelay{ 3.0f }
         , _stepsInState{ 0 }
         , _state{ CrumbleState::Solid }
-        , _clock{}
     {
     }
 
@@ -28,7 +28,7 @@ namespace sw
     void CrumblePlatformComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -56,7 +56,7 @@ namespace sw
             case CrumbleState::Shaking:
             {
                 // 흔들리기 시작하면 내려와도 무너진다. 되돌리지 않는다.
-                if ( _stepsInState >= _clock.secondsToSteps( _crumbleDelay, 1 ) )
+                if ( _stepsInState >= TickIntervalUtil::secondsToCount( kTickInterval, _crumbleDelay, 1 ) )
                 {
                     _state        = CrumbleState::Fallen;
                     _stepsInState = 0;
@@ -66,7 +66,7 @@ namespace sw
             }
             case CrumbleState::Fallen:
             {
-                if ( _respawnDelay > 0.0f && _stepsInState >= _clock.secondsToSteps( _respawnDelay, 1 ) )
+                if ( _respawnDelay > 0.0f && _stepsInState >= TickIntervalUtil::secondsToCount( kTickInterval, _respawnDelay, 1 ) )
                 {
                     _state        = CrumbleState::Solid;
                     _stepsInState = 0;

@@ -16,7 +16,6 @@ namespace sw
         : _pattern{}
         , _rate{ 10.0f }
         , _step{ 0 }
-        , _clock{}
         , _baseIntensity{ 1.0f }
         , _appliedScale{ -1.0f }
     {
@@ -45,7 +44,7 @@ namespace sw
     void FlickerLightComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        _step += _clock.consume( context.getDeltaTime() );
+        _step += context.getIntervalCount();
         const GameObject*     pOwner               = getOwner();
         const LightComponent* pLight               = pOwner != nullptr ? pOwner->getComponent<LightComponent>() : nullptr;
         const float32         scale                = computeScaleAtStep( _step );

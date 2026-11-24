@@ -78,8 +78,9 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 규칙은 앞 그룹 — 뷰 · 컨트롤러 · 카메라 리그(뒤 그룹)가 같은 프레임에 이 결과를 읽는다.
 
         /** @brief 디렉터의 판 상태는 병렬 틱 중 남이 읽어도 됩니다 — 규칙은 틱 뒤 게임 스레드에서만 돈다(`deferRules`). 틱이 쓰는 것은 자기 시간 누적뿐이다. */
-        static constexpr bool   kTickReadSafe = true;
-        static constexpr uint32 kRuleSubTick  = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
+        static constexpr bool   kTickReadSafe  = true;
+        static constexpr uint32 kRuleSubTick   = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
+        static constexpr uint32 kStatusSubTick = 0x53544154u; ///< 상태 로그를 남기는 서브틱 id(`startStatusLog` 를 불렀을 때만)
         /** @brief 걸음(`updateGame`)을 감싸는 프로파일러 구간 이름입니다 — 감시 값 `GameMode.StepMs` · `GameMode.StepPeakMs` 의 재료(디렉터는 시간 칸 · 읽기 함수를 들지 않는다). */
         static constexpr const utf8* kStepScopeName = "GT.GameMode.updateGame";
 
@@ -96,7 +97,7 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 규칙이 주 틱에서 돌면 `runRules` 를 틱 뒤로 겁니다(`deferRules`). `_tickAfter` 를 걸었으면 서브틱이 겁니다. */
         void onTick( TickContext& context ) override;
-        /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 틱 뒤로 겁니다. */
+        /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를, 상태 로그 서브틱(`kStatusSubTick`)이면 `logStatus` 를 틱 뒤로 겁니다. */
         void onSubTick( uint32 subTickID, TickContext& context ) override;
         /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다. 플레이를 시작하기 전에 불러야 하며, 씬 데이터는 PROPERTY `_tickAfter` 로 적습니다. */
         void setTickAfter( GameObjectHandle gameMode ) { _tickAfter = gameMode; }
@@ -303,6 +304,13 @@ namespace sw
         [[nodiscard]] bool wasActionTriggered( const hashed_string& action ) const;
         /** @brief 입력 맵의 2D 축 동작(`Move`)입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). 입력 서비스가 없으면 0 입니다. */
         [[nodiscard]] float2 getActionVector2D( const hashed_string& action ) const;
+        /**
+         * @brief 판이 도는 동안 @p interval 초마다 `logStatus` 를 부르게 합니다(서브틱 주기). 파생의 `startGame` 이 부릅니다 — 디렉터가 남은 시간을 손으로 세지 않는다.
+         * @details 멈춘 씬(델타 0)에서는 주기가 차지 않는다. 틱 뒤 게임 스레드에서 부르므로 남의 오브젝트를 읽어도 된다(규칙과 같은 자리).
+         */
+        void startStatusLog( float32 interval );
+        /** @brief 판의 지금 상태를 로그로 남깁니다. `startStatusLog` 의 주기마다 불립니다. */
+        virtual void logStatus() const {}
         /** @brief 틱 뒤에 낼 소리를 쌓는 큐입니다. */
         GameSoundQueue& getSoundQueue() { return _soundQueue; }
         /** @brief 지금 상태의 모습이 서 있으면 true 입니다(걷으면 다음 플러시까지 false). */

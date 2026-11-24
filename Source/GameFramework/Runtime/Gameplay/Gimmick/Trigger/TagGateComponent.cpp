@@ -18,7 +18,6 @@ namespace sw
         , _bStaysOpen{ true }
         , _bPlanar{ SW_FALSE }
         , _bOpen{ false }
-        , _clock{}
         , _listTagged{}
     {
     }
@@ -35,7 +34,7 @@ namespace sw
     void TagGateComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

@@ -128,7 +128,6 @@ namespace sw
         , _playerObject{}
         , _autoBattleObject{}
         , _playerRespawnTimer{ -1.0f }
-        , _statusLogTimer{ 0.0f }
         , _wave{ 0 }
         , _killCount{ 0 }
         , _playerShotCount{ 0 }
@@ -160,6 +159,7 @@ namespace sw
         }
         if ( bSetsKnown == false )
             return false;
+        startStatusLog( _statusLogInterval );
         return true;
     }
 
@@ -211,7 +211,6 @@ namespace sw
         {
             updateUnits( deltaTime );
             updatePlayerRespawn( deltaTime );
-            logStatus( deltaTime );
         }
         updateUnitViews();
         if ( deltaTime > 0.0f )
@@ -714,18 +713,14 @@ namespace sw
         }
     }
 
-    void ArenaGameModeComponent::logStatus( float32 deltaTime )
+    void ArenaGameModeComponent::logStatus() const
     {
-        _statusLogTimer += deltaTime;
-        if ( _statusLogTimer < _statusLogInterval )
-            return;
-        _statusLogTimer             = 0.0f;
-        GameObjectManager* pManager = getObjectManager();
+        const GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
             return;
         for ( const ArenaUnit& unit : _listUnit )
         {
-            GameObject*                   pObject        = unit._kind == ArenaUnitKind::Player ? pManager->resolveGameObject( unit._object ) : nullptr;
+            const GameObject*             pObject        = unit._kind == ArenaUnitKind::Player ? pManager->resolveGameObject( unit._object ) : nullptr;
             const AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
             if ( pAbilitySystem == nullptr )
                 continue;

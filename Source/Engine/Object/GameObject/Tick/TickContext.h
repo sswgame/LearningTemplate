@@ -21,6 +21,8 @@
 
 namespace sw
 {
+    struct TickTurn;
+
     class GameObject;
 
     /**
@@ -32,9 +34,13 @@ namespace sw
     public:
         /** @brief @p self 의 매니저와 그 틱 뒤 큐로 컨텍스트를 세웁니다. @p self 는 매니저에 붙은 오브젝트여야 합니다. */
         TickContext( GameObject& self, float32 deltaTime );
+        /** @brief 주기가 있는 틱의 차례 @p turn 으로 세웁니다(디스패치가 부른다). */
+        TickContext( GameObject& self, const TickTurn& turn );
 
         /** @brief 틱하는 오브젝트입니다 — 이 컨텍스트가 쓰기를 여는 유일한 오브젝트입니다. */
         GameObject& getSelf() const { return *_pSelf; }
+        /** @brief 이번 틱에 찬 주기 수입니다(`Component::kTickInterval` · 서브틱 주기). 주기가 없으면 1 이고, 프레임이 주기보다 길면 2 이상입니다 — 고정 걸음을 세는 틱이 그만큼 돈다. */
+        int32 getIntervalCount() const { return static_cast<int32>( _intervalCount ); }
 
         /**
          * @brief 남의 오브젝트 @p object 의 첫 @p T 를 읽기 전용으로 찾습니다 — 병렬 틱 안의 남 읽기 길입니다(몸체는 `GameObjectManager.inl`).
@@ -66,5 +72,6 @@ namespace sw
     private:
         GameObject*        _pSelf;
         GameObjectManager* _pSceneManager; ///< 틱 뒤 작업을 거는 데만 쓴다 — 틱 본문에는 내지 않는다
+        uint32             _intervalCount;
     };
 } // namespace sw

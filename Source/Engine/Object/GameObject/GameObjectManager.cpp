@@ -188,7 +188,14 @@ namespace sw
         : SceneJobContext{ *self._pOwnerManager, self._pOwnerManager->_structuralChangeBuffer, deltaTime } // 디스패치 안이라 getMutableManager(틱 단언)를 지나지 않는다
         , _pSelf{ &self }
         , _pSceneManager{ self._pOwnerManager }
+        , _intervalCount{ 1 }
     {
+    }
+
+    TickContext::TickContext( GameObject& self, const TickTurn& turn )
+        : TickContext{ self, turn._deltaTime }
+    {
+        _intervalCount = turn._intervalCount;
     }
 
     void ISceneParallelFrameSystem::runMain( GameObjectManager& manager, float32 deltaTime )
@@ -978,9 +985,10 @@ namespace sw
 
     void GameObjectManager::runFrameStepTickPrePhysics( float32 deltaTime )
     {
+        _pState->_tickScheduler.advanceTime( deltaTime ); // 두 틱 단계가 같은 프레임 시간을 본다 — 오브젝트가 없어도 흐른다(주기의 위상이 씬의 시간이다)
         // 오브젝트가 없으면 컴포넌트 틱만 건너뛴다(적용 · 병합 · 파괴는 늘 돈다).
         if ( _pState->_store.hasMergedObjects() )
-            _pState->_tickScheduler.tickPhase( deltaTime, 0, static_cast<uint32>( TickGroup::PostPhysics ) );
+            _pState->_tickScheduler.tickPhase( 0, static_cast<uint32>( TickGroup::PostPhysics ) );
     }
 
     void GameObjectManager::runFrameStepApplyPrePhysics( float32 /*deltaTime*/ )
@@ -1050,10 +1058,10 @@ namespace sw
         // 공간 색인(`SceneSpatialGrid`)은 이 단계에 등록된 씬 서비스다. 단계를 따로 둔 것은 같은 단계 안의 서비스 순서(의존)가 아니라 표가 접촉 처리(`ScenePhysicsEvents`) 뒤를 정하게 하려는 것이다.
     }
 
-    void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )
+    void GameObjectManager::runFrameStepTickPostPhysics( float32 /*deltaTime*/ )
     {
         if ( _pState->_store.hasMergedObjects() )
-            _pState->_tickScheduler.tickPhase( deltaTime, static_cast<uint32>( TickGroup::PostPhysics ), TickRegistry::kGroupCount );
+            _pState->_tickScheduler.tickPhase( static_cast<uint32>( TickGroup::PostPhysics ), TickRegistry::kGroupCount );
     }
 
     void GameObjectManager::runFrameStepApplyPostPhysics( float32 /*deltaTime*/ )

@@ -152,7 +152,6 @@ namespace sw
         , _tintCache{}
         , _autoPlayController{}
         , _playerFeet{}
-        , _statusTimer{ 0.0f }
         , _pendingHeal{ 0.0f }
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
@@ -176,7 +175,10 @@ namespace sw
         const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
         _bReplica                 = pLink != nullptr && pLink->_role == NetLinkRole::Client ? SW_TRUE : SW_FALSE;
         if ( _bReplica == SW_FALSE )
+        {
             startPacing();
+            startStatusLog( _statusLogInterval ); // 복제 쪽은 규칙을 돌지 않아 남길 상태가 없다
+        }
         _killCount = 0;
         // 자동 플레이로 시작하면 플레이어 조종자가 폰을 먼저 조종하지 않게 한다(마우스를 잠갔다 풀지 않게 하려는 것이다). 첫 플러시가 자동 조준 AI 에게 넘긴다.
         PawnComponent* pPawn = findOn<PawnComponent>( _player );
@@ -262,7 +264,6 @@ namespace sw
                 _director.update( step );
                 applyDirectorEvents();
             }
-            logStatus( step );
         }
     }
 
@@ -851,12 +852,8 @@ namespace sw
         }
     }
 
-    void ShooterGameModeComponent::logStatus( float32 deltaTime )
+    void ShooterGameModeComponent::logStatus() const
     {
-        _statusTimer += deltaTime;
-        if ( _statusTimer < _statusLogInterval )
-            return;
-        _statusTimer                          = 0.0f;
         const ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;

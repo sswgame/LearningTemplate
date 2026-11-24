@@ -62,7 +62,7 @@ namespace sw
         /** @brief 도시가 쓰는 금고입니다. 없으면 nullptr 입니다. */
         virtual const Wallet* findCityWallet() const = 0;
         /** @brief 도시 현황을 로그로 남깁니다(현황 키). */
-        virtual void logStatus() const;
+        void logStatus() const override;
         /** @brief 도시의 인구입니다. */
         int32             getPopulation() const { return _city.getPopulation(); }
         const DevCounter& getBuildCount() const { return _buildCount; }       ///< 명령으로 깔거나 지은 수(성공만 — 감시 값만 읽는 개발 전용 칸)

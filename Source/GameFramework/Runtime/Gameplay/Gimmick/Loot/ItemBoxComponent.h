@@ -5,9 +5,9 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -55,6 +55,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
+
         ItemBoxComponent();
         virtual ~ItemBoxComponent() override = default;
 
@@ -100,7 +102,5 @@ namespace sw
         int32 _openCount;
         PROPERTY( RuntimeState, Category = "Item Box", DisplayName = "Respawn Steps Left", Tooltip = "Runtime" )
         int32 _respawnStepsLeft;
-
-        FixedStepTimer _clock;
     };
 } // namespace sw

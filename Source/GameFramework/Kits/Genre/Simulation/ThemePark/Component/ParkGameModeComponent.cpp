@@ -65,7 +65,6 @@ namespace sw
         , _settings{}
         , _listPlacement{}
         , _listCoaster{}
-        , _statusTimer{ 0.0f }
         , _autoBuildTimer{ 0.0f }
         , _parkYaw{ 0.0f }
         , _parkRevision{ 0 }
@@ -105,11 +104,6 @@ namespace sw
         {
             pCoaster->_train.step( deltaTime );
         }
-        _statusTimer += deltaTime;
-        if ( _statusTimer < _statusLogInterval )
-            return;
-        _statusTimer = 0.0f;
-        logStatus();
     }
 
     void ParkGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
@@ -305,6 +299,7 @@ namespace sw
         if ( cheapestCoaster >= 0 )
             (void)buildPlacement( cheapestCoaster );
         ++_parkRevision;
+        startStatusLog( _statusLogInterval );
         return true;
     }
 

@@ -162,7 +162,7 @@ namespace sw
     void FarmGameModeComponent::onGameStarted()
     {
         SW_LOG_INFO_ID( "FarmGameMode.FarmReadyWASDMove", "[Farm] farm is ready - WASD move, Space use tool, 1-4 tool (hoe/can/seeds/hand), Q/E seed, B buy, F ship, Z sleep" );
-        logStatus( true );
+        logFarmStatus( true );
     }
 
     void FarmGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
@@ -200,7 +200,7 @@ namespace sw
                 endDay( true );
             }
         }
-        logStatus( false );
+        logFarmStatus( false );
     }
 
     void FarmGameModeComponent::serializeGameState( StateIO& io )
@@ -434,7 +434,7 @@ namespace sw
         if ( wasTriggered( FarmButton::Sleep ) )
             endDay( false );
         if ( wasTriggered( FarmButton::Status ) )
-            logStatus( true );
+            logFarmStatus( true );
     }
 
     void FarmGameModeComponent::movePlayer( const float3& direction, float32 deltaTime )
@@ -627,7 +627,7 @@ namespace sw
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->canGrowIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
     }
 
-    void FarmGameModeComponent::logStatus( bool bForce )
+    void FarmGameModeComponent::logFarmStatus( bool bForce )
     {
         const GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
         const InventoryComponent* pBag    = findOnPlayerState<InventoryComponent>();
