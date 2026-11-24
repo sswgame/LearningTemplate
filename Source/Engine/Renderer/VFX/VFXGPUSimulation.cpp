@@ -817,7 +817,6 @@ namespace sw
         {
             const EmitterState& state = *dispatch._pState;
             // 선언 · 등록이 없으면 그래프가 전이를 내지 않았다 — 디스패치하지 않는다(오류는 문맥이 남겼다). 파이프라인 XML 의 `VFXSimulation` 이 세 이름을 출력으로 적어야 한다.
-            // shortcut: `getBuffer` 는 선언 목록 · 표를 선형으로 찾는다(방출기마다 셋) — 방출기 수백에서 RT.VFX.Simulate 를 재 보고 늘면 표에 이름 · 칸 색인을 둔다.
             const bool bDeclared = context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::state() }, state._frameSlot ) != 0 &&
                                    context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::particles() }, state._frameSlot ) != 0 &&
                                    context.getBuffer( RenderGraphBufferUAV{ VFXFrameResource::args() }, state._frameSlot ) != 0;

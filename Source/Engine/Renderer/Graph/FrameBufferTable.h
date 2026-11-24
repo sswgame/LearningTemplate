@@ -8,6 +8,7 @@
  *          (`FramePassExecutor::registerViewResources` — 칸 0 이 지금 뷰, 이름은 `ViewGraphResource`).
  */
 #pragma once
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -48,7 +49,7 @@ namespace sw
         };
 
         /** @brief 지난 프레임의 등록을 잊습니다(용량은 남긴다). 프레임 그래프를 돌리기 전에 부른다. */
-        void reset() { _listEntry.clear(); }
+        void reset();
 
         /**
          * @brief 구조 버퍼 @p buffer 를 크기(원소 바이트 · 용량)와 함께 이름 @p name 의 칸 @p slot 으로 등록합니다 — 핸들만 받는 판은 없다(버퍼 보기 `RenderBufferInspector` 가 늘 읽을 길이를 안다).
@@ -70,14 +71,20 @@ namespace sw
         RHIBufferHandle findBuffer( hashed_string name, uint32 slot ) const { return RHIBufferHandle{ findHandle( name, slot, RenderGraphViewableKind::Buffer ) }; }
         /** @brief 이름 @p name 칸 @p slot 의 텍스처입니다. 없으면 0 입니다. */
         RHITextureHandle findTexture( hashed_string name, uint32 slot ) const { return RHITextureHandle{ findHandle( name, slot, RenderGraphViewableKind::Texture ) }; }
-        /** @brief 등록 전부입니다(등록 순서). 레벨 콜백이 이름의 모든 칸을 한 묶음으로 옮긴다. */
+        /** @brief 등록 전부입니다(등록 순서). */
         const vector<Entry>& getEntries() const { return _listEntry; }
+        /** @brief 이름마다 처음 등록한 원소의 번호(`getEntries`)입니다. 이름마다 한 번 할 일(그래프에 들이기)이 이것만 돈다. */
+        const vector<uint32>& getFirstEntries() const { return _listFirstEntry; }
+        /** @brief 이름 @p name 의 칸마다 원소 번호입니다(`getEntries`, 등록하지 않은 칸은 `constant::invalid_index::kUint32`). 등록이 없으면 nullptr 입니다. 레벨 콜백이 이름의 모든 칸을 한 묶음으로 옮긴다. */
+        const vector<uint32>* findSlots( hashed_string name ) const;
 
     private:
         void   registerEntry( const Entry& entry );
         uint64 findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const;
 
     private:
-        vector<Entry> _listEntry;
+        vector<Entry>                                _listEntry;
+        vector<uint32>                               _listFirstEntry;
+        unordered_map<hashed_string, vector<uint32>> _mapSlotEntry; ///< 이름 → 칸마다 원소 번호. 방출기 수백이 이름 하나를 나눠 써도 찾기가 칸 수와 무관하다. 프레임마다 칸만 비운다(이름은 남긴다)
     };
 } // namespace sw

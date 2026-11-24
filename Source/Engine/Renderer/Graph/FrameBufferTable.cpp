@@ -43,16 +43,17 @@ namespace sw
             SW_LOG_ERROR_ID( "FrameBufferTable.InvalidHandle", "Frame resource '%#' slot %# was registered without a handle - its passes get no transitions", entry._name.c_str(), entry._slot );
             return;
         }
-        for ( const Entry& existing : _listEntry )
+        vector<uint32>& listSlotEntry = _mapSlotEntry[entry._name];
+        if ( entry._slot < listSlotEntry.size() && listSlotEntry[entry._slot] != constant::invalid_index::kUint32 )
         {
-            if ( existing._name != entry._name )
-                continue;
-            if ( existing._slot == entry._slot )
-            {
-                SW_LOG_ERROR_ID( "FrameBufferTable.DuplicateName", "Frame resource '%#' slot %# is registered twice - the second registration is ignored", entry._name.c_str(), entry._slot );
-                return;
-            }
-            // 그래프는 이름마다 상태 하나를 든다 — 칸마다 다른 처음 상태 · 종류면 한 전이로 모두를 옮길 수 없다.
+            SW_LOG_ERROR_ID( "FrameBufferTable.DuplicateName", "Frame resource '%#' slot %# is registered twice - the second registration is ignored", entry._name.c_str(), entry._slot );
+            return;
+        }
+        // 그래프는 이름마다 상태 하나를 든다 — 칸마다 다른 처음 상태 · 종류면 한 전이로 모두를 옮길 수 없다. 앞 등록끼리는 이미 같으므로 하나(끝 칸은 늘 등록돼 있다)만 본다.
+        const bool bFirst = listSlotEntry.empty();
+        if ( bFirst == false )
+        {
+            const Entry& existing = _listEntry[listSlotEntry.back()];
             if ( existing._initialAccess != entry._initialAccess || existing._viewable != entry._viewable )
             {
                 SW_LOG_ERROR_ID( "FrameBufferTable.SlotMismatch", "Frame resource '%#' slot %# differs from slot %# in kind or initial access - the registration is ignored", entry._name.c_str(),
@@ -60,16 +61,37 @@ namespace sw
                 return;
             }
         }
+        const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
+        if ( bFirst )
+            _listFirstEntry.push_back( entryIndex );
+        if ( entry._slot >= listSlotEntry.size() )
+            listSlotEntry.resize( static_cast<size_t>( entry._slot ) + 1u, constant::invalid_index::kUint32 );
+        listSlotEntry[entry._slot] = entryIndex;
         _listEntry.push_back( entry );
+    }
+
+    void FrameBufferTable::reset()
+    {
+        for ( const uint32 entryIndex : _listFirstEntry )
+        {
+            _mapSlotEntry[_listEntry[entryIndex]._name].clear();
+        }
+        _listEntry.clear();
+        _listFirstEntry.clear();
+    }
+
+    const vector<uint32>* FrameBufferTable::findSlots( hashed_string name ) const
+    {
+        const auto it = _mapSlotEntry.find( name );
+        return it != _mapSlotEntry.end() && it->second.empty() == false ? &it->second : nullptr;
     }
 
     uint64 FrameBufferTable::findHandle( hashed_string name, uint32 slot, RenderGraphViewableKind viewable ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._name == name && entry._slot == slot && entry._viewable == viewable )
-                return entry._handle;
-        }
-        return 0;
+        const vector<uint32>* pSlots = findSlots( name );
+        if ( pSlots == nullptr || slot >= pSlots->size() || ( *pSlots )[slot] == constant::invalid_index::kUint32 )
+            return 0;
+        const Entry& entry = _listEntry[( *pSlots )[slot]];
+        return entry._viewable == viewable ? entry._handle : 0;
     }
 } // namespace sw

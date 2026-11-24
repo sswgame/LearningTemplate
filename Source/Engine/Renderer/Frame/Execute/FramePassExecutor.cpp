@@ -1144,12 +1144,15 @@ namespace sw
         uint32 uavBarrierCount = 0;
         for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
-            bool bRegistered = false;
-            for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+            bool                  bRegistered = false;
+            const vector<uint32>* pSlots      = table.findSlots( barrier._resource );
+            for ( size_t slot = 0; pSlots != nullptr && slot < pSlots->size(); ++slot )
             {
-                if ( entry._name != barrier._resource || entry._viewable != barrier._viewable )
+                const uint32 entryIndex = ( *pSlots )[slot];
+                if ( entryIndex == constant::invalid_index::kUint32 || table.getEntries()[entryIndex]._viewable != barrier._viewable )
                     continue;
-                bRegistered = true;
+                const FrameBufferTable::Entry& entry = table.getEntries()[entryIndex];
+                bRegistered                          = true;
                 if ( barrier._viewable == RenderGraphViewableKind::Buffer )
                 {
                     if ( barrier._bUAVBarrier != 0 )

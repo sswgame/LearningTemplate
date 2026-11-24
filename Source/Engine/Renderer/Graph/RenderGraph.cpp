@@ -504,8 +504,9 @@ namespace sw
     void RenderGraph::importResources( const FrameBufferTable& table )
     {
         _listImportedResource.clear();
-        for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+        for ( const uint32 entryIndex : table.getFirstEntries() )
         {
+            const FrameBufferTable::Entry& entry = table.getEntries()[entryIndex];
             if ( entry._bAttachment == false )
                 importResource( entry._name, entry._viewable, entry._initialAccess );
         }
