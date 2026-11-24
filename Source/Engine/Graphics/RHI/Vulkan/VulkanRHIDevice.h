@@ -1125,6 +1125,8 @@ namespace sw
         VkImage                                                                   _bindlessDummyImage;
         VkImageView                                                               _bindlessDummyView;
         VulkanAllocation                                                          _bindlessDummyMemory;
+        VkBuffer                                                                  _dummyStorage; ///< 걸지 않은 컴퓨트 쓰기 슬롯(u#)이 가리키는 버퍼 — 세트에 남은 옛 디스크립터(놓은 버퍼의 메모리)에 쓰지 않게 한다
+        VulkanAllocation                                                          _dummyStorageMemory;
         VkBuffer                                                                  _dummyUBO; ///< 셰이더가 정적으로 참조하지만 바인딩되지 않은 b# 슬롯이 가리키는 0으로 채운 256바이트
         VulkanAllocation                                                          _dummyUBOMemory;
 
