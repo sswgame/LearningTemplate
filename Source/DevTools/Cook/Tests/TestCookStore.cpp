@@ -91,18 +91,18 @@ SW_TEST_CASE( CookStoreTest, ReusesWhileInputsAreUnchanged )
 SW_TEST_CASE( CookStoreTest, OutputsOfTheSameInputsKeepTheirOwnEntry )
 {
     CookFixture fixture;
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( fixture._inputPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( fixture._inputPath ), "one" ) );
     int32      bakeCount  = 0;
     const auto cookOutput = [&]( const CookStore& store, string_view outputID )
     {
-        const AbsolutePath outputPath = fixture.makeOutputPath( outputID );
+        const string outputPath = fixture.makeOutputPath( outputID );
         return store.cookFile( kDesc, outputID, outputPath, [&]
         {
             ++bakeCount;
             vector<uint8> bytes;
             if ( AssetIO::readBinaryFile( fixture._inputPath, bytes ) == false )
                 return CookStep::Failed;
-            return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, outputID ) ? CookStep::Written : CookStep::Failed;
+            return FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outputPath ) ) && FileUtil::writeTextFile( FileUtil::toDiskPath( outputPath ), outputID ) ? CookStep::Written : CookStep::Failed;
         } );
     };
     for ( const string_view outputID : { string_view( "text.ko.locres" ), string_view( "text.en.locres" ) } )
@@ -112,7 +112,7 @@ SW_TEST_CASE( CookStoreTest, OutputsOfTheSameInputsKeepTheirOwnEntry )
     const CookStore nextRun = fixture.makeNextRun();
     for ( const string_view outputID : { string_view( "text.ko.locres" ), string_view( "text.en.locres" ) } )
     {
-        SW_REQUIRE_TRUE( FileUtil::removeFile( fixture.makeOutputPath( outputID ) ) );
+        SW_REQUIRE_TRUE( FileUtil::removeFile( FileUtil::toDiskPath( fixture.makeOutputPath( outputID ) ) ) );
         SW_EXPECT_EQUAL( CookResult::Reused, cookOutput( nextRun, outputID ) );
         SW_EXPECT_EQUAL( string( outputID ), fixture.readOutput( outputID ) );
     }
