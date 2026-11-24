@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
 
 namespace sw
@@ -28,6 +29,7 @@ namespace sw
         , _restore{}
         , _ownerDiedSubscription{}
         , _interactionCompletedSubscription{}
+        , _cueSubscription{}
         , _bOpenAtBeginPlay{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -54,12 +56,14 @@ namespace sw
                                                                                            SW_DELEGATE_METHOD( Delegate<void( const AbilityOwnerDiedEvent& )>, &QuestLogComponent::handleOwnerDied, this ) );
         _interactionCompletedSubscription = pDispatcher->subscribe<InteractionCompletedEvent>(
             gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const InteractionCompletedEvent& )>, &QuestLogComponent::handleInteractionCompleted, this ) );
+        _cueSubscription = pDispatcher->subscribe<GimmickCueEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const GimmickCueEvent& )>, &QuestLogComponent::handleCue, this ) );
     }
 
     void QuestLogComponent::onUnregister( GameObjectManager& manager )
     {
         _ownerDiedSubscription            = Subscription{};
         _interactionCompletedSubscription = Subscription{};
+        _cueSubscription                  = Subscription{};
         Component::onUnregister( manager );
     }
 
@@ -99,6 +103,14 @@ namespace sw
             return;
         static const hashed_string s_interactKind( kInteractKind );
         (void)_questLog.notify( s_interactKind, event._request._interaction );
+    }
+
+    void QuestLogComponent::handleCue( const GimmickCueEvent& event )
+    {
+        if ( _restore.isOpen() == false || event._cue.empty() || isOwnedPawn( event._target ) == false )
+            return;
+        static const hashed_string s_cueKind( kCueKind );
+        (void)_questLog.notify( s_cueKind, event._cue );
     }
 
     void QuestLogComponent::serializeState( StateIO& io )

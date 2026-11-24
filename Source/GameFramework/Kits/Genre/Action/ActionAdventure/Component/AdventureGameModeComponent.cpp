@@ -28,6 +28,44 @@ namespace sw
             /** @brief 축 입력이 이보다 작으면 바라보는 쪽을 바꾸지 않는다(패드 스틱의 떨림). */
             static constexpr float32 kFacingDeadZone = 0.2f;
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventHurt  = "AdventureHurt";
+            static constexpr const utf8* kEventHeal  = "AdventureHeal";
+            static constexpr const utf8* kEventDied  = "AdventureDied";
+            static constexpr const utf8* kEventCoin  = "AdventureCoin";
+            static constexpr const utf8* kEventQuest = "AdventureQuest";
+
+            /** @brief 체력 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( HealthEventKind kind )
+            {
+                switch ( kind )
+                {
+                    case HealthEventKind::Damaged:
+                    {
+                        return kEventHurt;
+                    }
+                    case HealthEventKind::Healed:
+                    case HealthEventKind::Revived:
+                    {
+                        return kEventHeal;
+                    }
+                    case HealthEventKind::Died:
+                    {
+                        return kEventDied;
+                    }
+                    case HealthEventKind::ShieldBroken: // 모험의 체력은 하트뿐이다 — 실드 · 기절 · 경직이 없다
+                    case HealthEventKind::Downed:
+                    case HealthEventKind::ReviveStarted:
+                    case HealthEventKind::ReviveInterrupted:
+                    case HealthEventKind::PoiseBroken:
+                    case HealthEventKind::PoiseRecovered:
+                    {
+                        break;
+                    }
+                }
+                return nullptr;
+            }
+
             /** @brief 디렉터(씬에 하나)의 지금 지역 이름입니다(감시 값 `Adventure.Region`). */
             [[nodiscard]] static bool readRegion( const AutomationWatchQuery& query, AutomationWatchValue& outValue, bool bRespawn )
             {
@@ -290,12 +328,22 @@ namespace sw
                 interactWithSite( *pRegion, *pState, pQuestLog->getQuestLog() );
         }
 
-        // 알림 그릇은 프레임마다 비운다 — 퀘스트 보상은 여기서 주고, 지갑 · 체력 알림은 읽는 화면이 아직 없어 버린다(쌓이지 않게).
+        // 알림 그릇은 프레임마다 비운다 — 퀘스트 보상은 여기서 주고, 지갑 · 체력 알림은 소리로 알린다.
         applyQuestEvents( pQuestLog->getQuestLog(), pWallet->getWallet() );
         _listWalletEvent.clear();
         pWallet->getWallet().pollEvents( _listWalletEvent );
+        for ( const WalletEvent& event : _listWalletEvent )
+        {
+            if ( event._delta > 0 )
+                getSoundQueue().queueEvent( AdventureGameModeComponentInternal::kEventCoin );
+        }
         _listHealthEvent.clear();
         _campaign.pollHealthEvents( _listHealthEvent );
+        for ( const HealthEvent& event : _listHealthEvent )
+        {
+            if ( const utf8* const pSound = AdventureGameModeComponentInternal::findSound( event._type ) )
+                getSoundQueue().queueEvent( pSound );
+        }
     }
 
     void AdventureGameModeComponent::applyQuestEvents( QuestLog& questLog, Wallet& wallet )
@@ -303,9 +351,11 @@ namespace sw
         _listQuestEvent.clear();
         questLog.pollEvents( _listQuestEvent );
         const int32 completedCount = _campaign.applyQuestEvents( _listQuestEvent, wallet );
-        if ( completedCount > 0 )
-            SW_LOG_INFO_ID( "Adventure.QuestCompleted", "[Adventure] %# quest(s) completed - gold %#, hearts %#", completedCount, wallet.getBalance( Wallet::getDefaultCurrency() ),
-                            _campaign.getVitals().getHeartCount() );
+        if ( completedCount <= 0 )
+            return;
+        getSoundQueue().queueEvent( AdventureGameModeComponentInternal::kEventQuest );
+        SW_LOG_INFO_ID( "Adventure.QuestCompleted", "[Adventure] %# quest(s) completed - gold %#, hearts %#", completedCount, wallet.getBalance( Wallet::getDefaultCurrency() ),
+                        _campaign.getVitals().getHeartCount() );
     }
 
     bool AdventureGameModeComponent::readCameraFocus( GameObjectHandle& outFocusObject, float3& outFocusPosition ) const

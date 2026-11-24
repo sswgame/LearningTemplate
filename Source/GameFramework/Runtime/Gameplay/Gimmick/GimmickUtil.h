@@ -34,9 +34,9 @@ namespace sw
         [[nodiscard]] static bool giveItem( const GameObject& giver, const GameObject& target, const hashed_string& item, int32 count );
         /**
          * @brief @p source 에서 연출 신호 @p cue 를 냅니다. 공포 트리거 · 폭발 · 파괴 단계가 씁니다. @p target 은 신호를 부른 쪽(트리거에 들어온 몸)이고 없으면 빈 핸들입니다.
-         * @details 연출(프리팹 · 소리)은 어빌리티 게임플레이 큐와 같은 표(카탈로그 `<AbilityPresentation tag="<큐 이름>">`)와 클라이언트 창구(`IAbilityCueSink`)로 바로 낸다 —
+         * @details 연출(프리팹 · 소리 · 카메라 흔들림)은 어빌리티 게임플레이 큐와 같은 표(카탈로그 `<AbilityPresentation tag="<큐 이름>">`)와 클라이언트 창구(`IAbilityCueSink`)로 바로 낸다 —
          *          언리얼 GameplayCueManager 가 GAS 밖 큐(`ExecuteGameplayCue_NonReplicated`)도 같은 표로 받는 자리. 표에 없는 큐는 연출 없이 이벤트만 나간다.
-         *          받는 쪽이 여럿일 수 있어(게임 규칙 · 시퀀서 · 퀘스트) `GimmickCueEvent` 도 "game" 채널에 낸다(`AbilitySystemComponent` 의 큐와 같은 두 길).
+         *          받는 쪽이 여럿일 수 있어(게임 규칙 · 시퀀서 · 퀘스트) `GimmickCueEvent` 도 "game" 채널에 낸다(퀘스트 일지 `QuestLogComponent` 가 받는다).
          */
         static void sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude, GameObjectHandle target = GameObjectHandle{} );
     };

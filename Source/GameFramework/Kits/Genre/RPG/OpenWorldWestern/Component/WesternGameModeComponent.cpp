@@ -22,6 +22,55 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct WesternGameModeComponentInternal
+        {
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventWitnessed     = "WesternWitnessed";
+            static constexpr const utf8* kEventReported      = "WesternReported";
+            static constexpr const utf8* kEventWantedRaised  = "WesternWantedRaised";
+            static constexpr const utf8* kEventWantedLowered = "WesternWantedLowered";
+            static constexpr const utf8* kEventBountyPaid    = "WesternBountyPaid";
+            static constexpr const utf8* kEventHonorTier     = "WesternHonorTier";
+
+            /** @brief 법의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( WesternLawEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case WesternLawEvent::Kind::Witnessed:
+                    {
+                        return kEventWitnessed;
+                    }
+                    case WesternLawEvent::Kind::Reported:
+                    {
+                        return kEventReported;
+                    }
+                    case WesternLawEvent::Kind::WantedRaised:
+                    {
+                        return kEventWantedRaised;
+                    }
+                    case WesternLawEvent::Kind::WantedLowered:
+                    case WesternLawEvent::Kind::ReportPrevented:
+                    {
+                        return kEventWantedLowered;
+                    }
+                    case WesternLawEvent::Kind::BountyPaid:
+                    {
+                        return kEventBountyPaid;
+                    }
+                    case WesternLawEvent::Kind::Unwitnessed:    // 아무도 모르는 일이라 들리지 않는다
+                    case WesternLawEvent::Kind::PursuitChanged: // 같은 순간의 수배 단계가 낸다
+                    {
+                        break;
+                    }
+                }
+                return nullptr;
+            }
+        };
+    } // namespace
+
     WesternGameModeComponent::WesternGameModeComponent()
         : _westernDataPath{}
         , _player{}
@@ -35,6 +84,8 @@ namespace sw
         , _startingMoney{ 0 }
         , _outlaw{}
         , _pWesternCatalog{}
+        , _listLawEvent{}
+        , _listHonorEvent{}
         , _listWitness{}
         , _bAutoMountRequested{ SW_FALSE }
         , _reserved{ 0 }
@@ -122,6 +173,7 @@ namespace sw
     void WesternGameModeComponent::updateGame( float32 deltaTime )
     {
         _outlaw.update( deltaTime );
+        reportEvents();
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         GameObjectManager*   pManager    = getObjectManager();
         if ( pPlayerPawn == nullptr || pManager == nullptr )
@@ -200,6 +252,27 @@ namespace sw
         const WesternDeedComponent* pUsed = WesternDeedComponent::useNearest( *pManager, pRoot->getWorldPosition(), _outlaw );
         if ( pUsed != nullptr && pUsed->getOwner() != nullptr )
             SW_LOG_INFO_ID( "WesternGameMode.DeedDone", "[Western] did the deed at '%#'", pUsed->getOwner()->getName().c_str() );
+    }
+
+    void WesternGameModeComponent::reportEvents()
+    {
+        _listLawEvent.clear();
+        _outlaw.pollLawEvents( _listLawEvent );
+        for ( const WesternLawEvent& event : _listLawEvent )
+        {
+            if ( const utf8* const pSound = WesternGameModeComponentInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
+        }
+        ReputationComponent* const pReputation = findOnPlayerState<ReputationComponent>();
+        if ( pReputation == nullptr )
+            return; // 판을 열 때 있었다 — 플레이어 상태가 사라지는 중이다
+        _listHonorEvent.clear();
+        pReputation->getReputation().pollEvents( _listHonorEvent );
+        for ( const ReputationEvent& event : _listHonorEvent )
+        {
+            getSoundQueue().queueEvent( WesternGameModeComponentInternal::kEventHonorTier );
+            SW_LOG_INFO_ID( "WesternGameMode.HonorTier", "[Western] honor is '%#' now (was '%#', %#)", event._newTier.c_str(), event._oldTier.c_str(), event._value );
+        }
     }
 
     void WesternGameModeComponent::updateLawSight()

@@ -42,6 +42,10 @@ namespace sw
             static constexpr const utf8* kEventRefused  = "ScavengerRefused";
             static constexpr const utf8* kEventWon      = "ScavengerWon";
             static constexpr const utf8* kEventLost     = "ScavengerLost";
+            static constexpr const utf8* kEventRouted   = "ScavengerRouted";
+            static constexpr const utf8* kEventBody     = "ScavengerBody";
+            static constexpr const utf8* kEventWiped    = "ScavengerWiped";
+            static constexpr const utf8* kEventFine     = "ScavengerFine";
 
             /** @brief 원정의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(할당량은 결과가 정한다). */
             static const utf8* findSound( ScavengerEvent::Kind kind )
@@ -72,11 +76,29 @@ namespace sw
                     {
                         return kEventSold;
                     }
-                    default:
+                    case ScavengerEvent::Kind::Routed:
                     {
-                        return nullptr;
+                        return kEventRouted;
+                    }
+                    case ScavengerEvent::Kind::BodyRecovered:
+                    {
+                        return kEventBody;
+                    }
+                    case ScavengerEvent::Kind::CrewWiped:
+                    {
+                        return kEventWiped;
+                    }
+                    case ScavengerEvent::Kind::FinePaid:
+                    {
+                        return kEventFine;
+                    }
+                    case ScavengerEvent::Kind::QuotaMet: // 결과가 정한다(`settle`)
+                    case ScavengerEvent::Kind::GameOver:
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
 
             static constexpr const utf8* kWinResult  = "win";

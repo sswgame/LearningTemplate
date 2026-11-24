@@ -21,6 +21,7 @@ namespace sw
     class GameObjectManager;
     class QuestCatalog;
     struct AbilityOwnerDiedEvent;
+    struct GimmickCueEvent;
     struct InteractionCompletedEvent;
 
     /**
@@ -29,7 +30,7 @@ namespace sw
      * @details - **열기**: 퀘스트 카탈로그를 받아 연다(디렉터의 `startGame` — `PlayerComponentUtil::openOnOwner`). 카탈로그는 소유하지 않고 참조만 한다. 카탈로그가 없으면 퀘스트를 시작하지 못한다.
      *          - **찾기 · 세이브**: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
      *          - **자동 세기**: "game" 채널의 쓰러짐(`AbilityOwnerDiedEvent`)과 상호작용 완료(`InteractionCompletedEvent`)를 구독해, 이 일지 주인이 조종하는 폰이 한 것만
-     *            `notify( "Defeat", <쓰러진 대상의 태그> )` · `notify( "Interact", <상호작용 이름> )` 로 센다(Lyra 처럼 대상은 게임플레이 태그로 맞춘다). 게임 고유의 일(보스 종 ·
+     *            `notify( "Defeat", <쓰러진 대상의 태그> )` · `notify( "Interact", <상호작용 이름> )` · `notify( "Cue", <연출 신호 이름> )`(`GimmickCueEvent` — 자기 폰이 트리거에 들어가 부른 것) 로 센다(Lyra 처럼 대상은 게임플레이 태그로 맞춘다). 게임 고유의 일(보스 종 ·
      *            지역 클리어)은 디렉터가 직접 `notify` 한다.
      */
     REFLECT( Category = "Framework", DisplayName = "Quest Log", Tooltip = "One player's quest log, on the controller object (or the director object in a scene without a controller)" )
@@ -44,6 +45,7 @@ namespace sw
         /** @brief 자동으로 세는 목표 종류 — 퀘스트 데이터의 `<Objective kind="…">` 와 같은 글자다. */
         static constexpr const utf8* kDefeatKind   = "Defeat";
         static constexpr const utf8* kInteractKind = "Interact";
+        static constexpr const utf8* kCueKind      = "Cue";
 
         QuestLogComponent();
         ~QuestLogComponent() override;
@@ -54,7 +56,7 @@ namespace sw
          */
         [[nodiscard]] GameStateInitResult initialize( const QuestCatalog& catalog );
 
-        /** @brief 씬의 컴포넌트 레지스트리에 오르고 "game" 채널의 쓰러짐 · 상호작용 완료를 구독합니다(버스가 없는 프로세스는 구독하지 않는다). */
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 "game" 채널의 쓰러짐 · 상호작용 완료 · 연출 신호를 구독합니다(버스가 없는 프로세스는 구독하지 않는다). */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 구독을 풀고 레지스트리에서 내립니다. */
         void onUnregister( GameObjectManager& manager ) override;
@@ -75,6 +77,8 @@ namespace sw
         void handleOwnerDied( const AbilityOwnerDiedEvent& event );
         /** @brief 상호작용 완료를 받습니다. 이 일지 주인이 조종하는 폰이 한 것이면 상호작용 이름으로 `Interact` 를 셉니다. */
         void handleInteractionCompleted( const InteractionCompletedEvent& event );
+        /** @brief 연출 신호를 받습니다. 이 일지 주인이 조종하는 폰이 부른 것(`GimmickCueEvent::_target`)이면 신호 이름으로 `Cue` 를 셉니다. */
+        void handleCue( const GimmickCueEvent& event );
 
     private:
         /** @brief @p actor 가 이 일지 주인(조종자 오브젝트)이 조종하는 폰이면 true 입니다 — 다른 플레이어 · AI 가 한 일은 세지 않는다. */
@@ -84,6 +88,7 @@ namespace sw
         DeferredStateRestore _restore;
         Subscription         _ownerDiedSubscription;            ///< "game" 채널 쓰러짐 구독(`onRegister` 가 걸고 `onUnregister` 가 푼다)
         Subscription         _interactionCompletedSubscription; ///< "game" 채널 상호작용 완료 구독
+        Subscription         _cueSubscription;                  ///< "game" 채널 연출 신호 구독
         PROPERTY( Tooltip = "Open without a quest catalog at begin play - only for scenes without a kit director (the hub); a director opens it with its own catalog" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 7;

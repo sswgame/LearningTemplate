@@ -72,6 +72,8 @@ namespace sw
         void updateLawSight();
         /** @brief 자동 플레이: 기수를 가장 가까운 빈 좌석에 태웁니다. 틱 뒤에 돕니다. */
         void mountNearestHorse();
+        /** @brief 법 · 명예의 알림을 소리와 로그로 알립니다. */
+        void reportEvents();
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Western Data", Tooltip = "WesternCatalog XML (horse breeds, bond levels, survival)" )
@@ -97,6 +99,8 @@ namespace sw
 
         WesternOutlaw                  _outlaw;
         SharedAssetRef<WesternCatalog> _pWesternCatalog;
+        vector<WesternLawEvent>        _listLawEvent;            ///< `reportEvents` 의 임시 목록(용량만 넘긴다)
+        vector<ReputationEvent>        _listHonorEvent;          ///< `reportEvents` 의 임시 목록(용량만 넘긴다)
         vector<WesternWitness>         _listWitness;             ///< `updateLawSight` 가 프레임마다 다시 채우는 목격자 목록(용량을 다시 쓴다 — 상태가 아니다)
         uint8                          _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
         [[maybe_unused]] uint8         _reserved            : 7;

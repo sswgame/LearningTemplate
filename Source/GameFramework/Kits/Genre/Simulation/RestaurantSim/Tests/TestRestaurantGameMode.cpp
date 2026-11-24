@@ -138,8 +138,9 @@ SW_TEST_CASE( RestaurantGameModeTest, TwoDaysOfBusinessReachTheTarget )
     fixture.runUntilClosed( 200 );
     SW_REQUIRE_EQUAL( 2, fixture._pGameMode->getPhase() );
     SW_EXPECT_EQUAL( 5, fixture._pGameMode->getServed() );
-    SW_EXPECT_EQUAL( 155, fixture._pGameMode->getTotalProfit() ); // 5 × 40 - 5 × 5 - 급여 20
-    SW_EXPECT_EQUAL( 255, fixture._pGameMode->getGold() );        // 75 + 200 - 20
+    SW_EXPECT_TRUE( fixture._soundPlayer.countPosted( "RestaurantOrder" ) >= 5 ); // 낸 손님은 모두 시켰다
+    SW_EXPECT_EQUAL( 155, fixture._pGameMode->getTotalProfit() );                 // 5 × 40 - 5 × 5 - 급여 20
+    SW_EXPECT_EQUAL( 255, fixture._pGameMode->getGold() );                        // 75 + 200 - 20
 
     SW_REQUIRE_TRUE( fixture._pGameMode->submitNextDay() );
     SW_EXPECT_EQUAL( 2, fixture._pGameMode->getDay() );

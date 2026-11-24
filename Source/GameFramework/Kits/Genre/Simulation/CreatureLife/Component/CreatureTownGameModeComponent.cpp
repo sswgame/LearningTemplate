@@ -14,6 +14,21 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct CreatureTownGameModeComponentInternal
+        {
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventHabitat     = "CreatureTownHabitat";
+            static constexpr const utf8* kEventHabitatLost = "CreatureTownHabitatLost";
+            static constexpr const utf8* kEventArrived     = "CreatureTownArrived";
+            static constexpr const utf8* kEventFriendship  = "CreatureTownFriendship";
+            static constexpr const utf8* kEventRequest     = "CreatureTownRequest";
+            static constexpr const utf8* kEventAbility     = "CreatureTownAbility";
+            static constexpr const utf8* kEventAppeal      = "CreatureTownAppeal";
+        };
+    } // namespace
+
     CreatureTownGameModeComponent::CreatureTownGameModeComponent()
         : _creatureDataPath{}
         , _questDataPath{}
@@ -28,6 +43,7 @@ namespace sw
         , _pQuestCatalog{}
         , _pFriendshipCatalog{}
         , _town{}
+        , _listTownEvent{}
         , _townRevision{ 0 }
     {
     }
@@ -88,6 +104,7 @@ namespace sw
             return false;
         if ( pState->isFreshGame() && placeObjects( _listStartObject ) == false )
             return false;
+        _town.pollEvents( _listTownEvent ); // 시작 배치가 이룬 서식지는 새 소식이 아니다
         ++_townRevision;
         return true;
     }
@@ -117,10 +134,7 @@ namespace sw
             if ( clockEvent._kind == WorldClockEvent::Kind::HourChanged )
             {
                 if ( 0 < _town.attractVisitorsAt( clock.getDay(), clockEvent._value, clock.getDayPhase(), weather ) )
-                {
-                    SW_LOG_INFO_ID( "CreatureTown.CreatureMovedIn", "[CreatureTown] a creature moved in on day %#", clock.getDay() );
                     ++_townRevision;
-                }
             }
             else if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
             {
@@ -130,6 +144,63 @@ namespace sw
         startOfferedRequests( pQuestLog->getQuestLog() );
         // 앞 디렉터가 이번 틱에 번 돈도 여기서 보인다 — 같은 오브젝트에서 먼저 돈다.
         buyUpgrade( pWallet->getWallet(), clock.getDay() );
+        reportTownEvents( clock.getDay() );
+    }
+
+    void CreatureTownGameModeComponent::reportTownEvents( int32 day )
+    {
+        using Internal = CreatureTownGameModeComponentInternal;
+        using Kind     = CreatureTownEvent::Kind;
+        _listTownEvent.clear();
+        _town.pollEvents( _listTownEvent );
+        for ( const CreatureTownEvent& event : _listTownEvent )
+        {
+            switch ( event._kind )
+            {
+                case Kind::HabitatFormed:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventHabitat );
+                    SW_LOG_INFO_ID( "CreatureTown.HabitatFormed", "[CreatureTown] habitat '%#' stands", event._id.c_str() );
+                    break;
+                }
+                case Kind::HabitatLost:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventHabitatLost );
+                    SW_LOG_INFO_ID( "CreatureTown.HabitatLost", "[CreatureTown] habitat '%#' is gone", event._id.c_str() );
+                    break;
+                }
+                case Kind::CreatureArrived:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventArrived );
+                    SW_LOG_INFO_ID( "CreatureTown.CreatureMovedIn", "[CreatureTown] '%#' moved in on day %#", event._id.c_str(), day );
+                    break;
+                }
+                case Kind::FriendshipTierChanged:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventFriendship );
+                    SW_LOG_INFO_ID( "CreatureTown.FriendshipTier", "[CreatureTown] friendship of '%#' is '%#' now (%#)", event._id.c_str(), event._detail.c_str(), event._value );
+                    break;
+                }
+                case Kind::RequestCompleted:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventRequest );
+                    SW_LOG_INFO_ID( "CreatureTown.RequestCompleted", "[CreatureTown] the request '%#' of '%#' is done", event._detail.c_str(), event._id.c_str() );
+                    break;
+                }
+                case Kind::AbilityUsed:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventAbility );
+                    SW_LOG_INFO_ID( "CreatureTown.AbilityUsed", "[CreatureTown] '%#' worked on cell %#", event._id.c_str(), event._value );
+                    break;
+                }
+                case Kind::AppealTierChanged:
+                {
+                    getSoundQueue().queueEvent( Internal::kEventAppeal );
+                    SW_LOG_INFO_ID( "CreatureTown.AppealTier", "[CreatureTown] the town is '%#' now", event._detail.c_str() );
+                    break;
+                }
+            }
+        }
     }
 
     bool CreatureTownGameModeComponent::placeObjects( const vector<CreatureTownPlacement>& listPlacement )

@@ -593,7 +593,6 @@ SW_TEST_CASE_F( JRPGRulesTest, DefeatWhenEveryMemberFalls )
     _party.getMember( 0 )._hp = 1;
     _battle.resolveRound();
     SW_EXPECT_EQUAL( sw::JRPGBattleResult::Defeat, _battle.getResult() );
-    SW_EXPECT_EQUAL( 1, countBattleEvents( sw::JRPGBattleEvent::Kind::Defeat ) );
     SW_EXPECT_EQUAL( 1, countBattleEvents( sw::JRPGBattleEvent::Kind::Defeated ) );
 }
 

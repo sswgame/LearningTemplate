@@ -167,8 +167,7 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Landed = 0,
-            Bounced,     ///< `_value` 는 콤보, `_grade` 는 판정이다(비어 있으면 창 밖)
+            Bounced = 0, ///< `_value` 는 콤보, `_grade` 는 판정이다(비어 있으면 창 밖)
             ComboBroken, ///< `_value` 는 끊긴 콤보이다
             Attacked,
             Hit,           ///< `_player` 는 맞은 쪽, `_other` 는 때린 쪽이다
@@ -183,7 +182,7 @@ namespace sw
         int32           _player{ constant::invalid_index::kInt32 };
         optional<int32> _other{};
         int32           _value{ 0 };
-        Kind            _kind{ Kind::Landed };
+        Kind            _kind{ Kind::Bounced };
     };
 } // namespace sw
 

@@ -22,6 +22,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
@@ -98,9 +99,12 @@ namespace sw
         , _loadingScreen{ kInvalidUIScreenHandle }
         , _fadeScreen{ kInvalidUIScreenHandle }
         , _loadFailureDialog{ kInvalidUIScreenHandle }
+        , _saveFailureDialog{ kInvalidUIScreenHandle }
         , _shownSeconds{ 0.0f }
         , _spinnerAngle{ 0.0f }
         , _sceneLoadSubscription{}
+        , _saveSavedSubscription{}
+        , _saveLoadedSubscription{}
         , _tipRandom{ GameRandom::kDefaultSeed }
     {
     }
@@ -122,14 +126,19 @@ namespace sw
         bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
         // 버스가 없는 범위(도구 · 테스트)는 받을 이벤트도 없다.
         EventDispatcher* const pDispatcher = game::findSubsystem<EventDispatcher>();
-        if ( pDispatcher != nullptr )
-            _sceneLoadSubscription = pDispatcher->subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const SceneLoadCompletedEvent& )>, &LoadingScreenController::onSceneLoadCompleted, this ) );
+        if ( pDispatcher == nullptr )
+            return SubsystemInitResult::Succeeded;
+        _sceneLoadSubscription  = pDispatcher->subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const SceneLoadCompletedEvent& )>, &LoadingScreenController::onSceneLoadCompleted, this ) );
+        _saveSavedSubscription  = pDispatcher->subscribe<SaveGameSavedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const SaveGameSavedEvent& )>, &LoadingScreenController::onSaveGameSaved, this ) );
+        _saveLoadedSubscription = pDispatcher->subscribe<SaveGameLoadedEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const SaveGameLoadedEvent& )>, &LoadingScreenController::onSaveGameLoaded, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
     void LoadingScreenController::shutdownSubsystem()
     {
         _sceneLoadSubscription.reset();
+        _saveSavedSubscription.reset();
+        _saveLoadedSubscription.reset();
         bindUISystem( nullptr );
     }
 
@@ -165,6 +174,58 @@ namespace sw
     bool LoadingScreenController::isShowingLoadFailure() const
     {
         const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _loadFailureDialog ) : nullptr;
+        return pScreen != nullptr && pScreen->isClosing() == false;
+    }
+
+    void LoadingScreenController::onSaveGameSaved( const SaveGameSavedEvent& event )
+    {
+        closeSaveFailure();
+        if ( event._bSuccess || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
+            return;
+        ConfirmDialogDesc desc{};
+        desc._title        = SW_LOCKEYREF( "SaveGame", "SaveFailedTitle" );
+        desc._message      = SW_LOCKEYREF( "SaveGame", "SaveFailedMessage" );
+        desc._acceptText   = SW_LOCKEYREF( "SceneLoad", "Retry" );
+        desc._cancelText   = SW_LOCKEYREF( "UIMenu", "Cancel" );
+        const string slot  = event._slot;
+        _saveFailureDialog = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
+        {
+            GameSaveSlots* const pSlots = game::findSubsystem<GameSaveSlots>();
+            if ( result == ConfirmDialogResult::Accepted && pSlots != nullptr )
+                (void)pSlots->save( slot ); // 또 지면 그 이벤트가 다시 알린다
+        } ) );
+    }
+
+    void LoadingScreenController::onSaveGameLoaded( const SaveGameLoadedEvent& event )
+    {
+        closeSaveFailure();
+        // 세이브의 씬이 열리지 않아 진 것은 씬 로드 실패 알림이 이미 말한다.
+        if ( event._bSuccess || isShowingLoadFailure() || _pUISystem == nullptr || _pUISystem->isInitialized() == false )
+            return;
+        ConfirmDialogDesc desc{};
+        desc._title        = SW_LOCKEYREF( "SaveGame", "LoadFailedTitle" );
+        desc._message      = SW_LOCKEYREF( "SaveGame", "LoadFailedMessage" );
+        desc._acceptText   = SW_LOCKEYREF( "SceneLoad", "Retry" );
+        desc._cancelText   = SW_LOCKEYREF( "UIMenu", "Cancel" );
+        const string slot  = event._slot;
+        _saveFailureDialog = ConfirmDialogScreen::open( *_pUISystem, desc, SW_DELEGATE_LAMBDA( ConfirmDialogScreen::ResultDelegate, [slot]( ConfirmDialogResult result )
+        {
+            GameSaveSlots* const pSlots = game::findSubsystem<GameSaveSlots>();
+            if ( result == ConfirmDialogResult::Accepted && pSlots != nullptr )
+                (void)pSlots->load( slot );
+        } ) );
+    }
+
+    void LoadingScreenController::closeSaveFailure()
+    {
+        if ( _pUISystem != nullptr && _saveFailureDialog != kInvalidUIScreenHandle )
+            _pUISystem->closeScreen( _saveFailureDialog );
+        _saveFailureDialog = kInvalidUIScreenHandle;
+    }
+
+    bool LoadingScreenController::isShowingSaveFailure() const
+    {
+        const UIScreen* const pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _saveFailureDialog ) : nullptr;
         return pScreen != nullptr && pScreen->isClosing() == false;
     }
 
@@ -296,6 +357,7 @@ namespace sw
     void LoadingScreenController::closeScreens()
     {
         closeLoadFailure();
+        closeSaveFailure();
         if ( _pUISystem != nullptr )
         {
             if ( _loadingScreen != kInvalidUIScreenHandle )

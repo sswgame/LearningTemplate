@@ -39,6 +39,9 @@ namespace sw
             static constexpr const utf8* kEventHurt          = "SurvivalHorrorHurt";
             static constexpr const utf8* kEventWon           = "SurvivalHorrorWon";
             static constexpr const utf8* kEventLost          = "SurvivalHorrorLost";
+            static constexpr const utf8* kEventCalm          = "SurvivalHorrorCalm";
+            static constexpr const utf8* kEventClue          = "SurvivalHorrorClue";
+            static constexpr const utf8* kEventArea          = "SurvivalHorrorArea";
 
             /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( SurvivalHorrorEvent::Kind kind )
@@ -82,11 +85,20 @@ namespace sw
                     {
                         return kEventSaved;
                     }
-                    default:
+                    case SurvivalHorrorEvent::Kind::HallucinationEnded:
                     {
-                        return nullptr;
+                        return kEventCalm;
+                    }
+                    case SurvivalHorrorEvent::Kind::ClueGained:
+                    {
+                        return kEventClue;
+                    }
+                    case SurvivalHorrorEvent::Kind::AreaEntered:
+                    {
+                        return kEventArea;
                     }
                 }
+                return nullptr;
             }
 
             static constexpr const utf8* kWinResult  = "win";

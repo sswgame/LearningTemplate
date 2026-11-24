@@ -1,6 +1,9 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "GimmickDamageEvent": "맞음 길의 사본이라 지웠다 — 피해는 CharacterRayHit::deliverHit, 알림은 DamageAppliedEvent(2026-11-25)",
+    "GimmickNoiseEvent": "연출 신호 \"Noise\"(GimmickUtil::sendCue) — 들리는 소리는 큐 표가 낸다(2026-11-25)",
+    "SceneLoadRequestedEvent": "씬 매니저 알림의 사본이라 지웠다 — SceneManager::onSceneLoadRequested(2026-11-25)",
     "_rotationDegrees": "_rotation — 각 형식(Radians · EulerAngles)이 단위를 말한다(2026-11-24)",
     "_minDegrees": "RigLimitRotationParams::_min(EulerAngles, 2026-11-24)",
     "_maxDegrees": "RigLimitRotationParams::_max(EulerAngles, 2026-11-24)",
@@ -2185,6 +2188,13 @@
     "_allocationCountReserve": "지움 — 할당 수 한도는 VMA 가 지킨다(2026-11-24)",
     "VulkanPipelineCacheFile": "RHIPipelineCacheFile — Vulkan 과 DX12 의 디스크 PSO 캐시가 같은 파일 규칙을 쓴다(2026-11-24)",
     "flat_map": "map — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)",
-    "flat_set": "set — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)"
+    "flat_set": "set — 정렬 컨테이너의 사용자 원래 이름 — 저장은 SW_ENABLE_STL_CONTAINER 로 고른다(2026-11-24)",
+    "PlayersRemaining": "PlayerKilled::_value · countRemainingPlayers — 남은 인원의 사본이었다 (2026-11-25)",
+    "ShrinkFinished": "NextZoneRevealed · FinalZone — 다 줄면 다음 단계 알림이 늘 뒤따른다 (2026-11-25)",
+    "LapStarted": "LapCompleted · RaceStarted — 바퀴 번호는 KartRacer::_lap 이 든다 (2026-11-25)",
+    "CheckpointPassed": "KartRacer::_nextCheckpoint — 지난 수의 사본이었다 (2026-11-25)",
+    "SeriesWon": "PartyRoundSeries::getWinner — 우승의 사본이었다 (2026-11-25)",
+    "EnemiesRespawned": "Rested · Died — 적은 쉬거나 죽을 때 늘 다시 나온다 (2026-11-25)",
+    "GoldGained": "WalletEvent — 골드는 지갑이 알린다 (2026-11-25)"
   }
 }

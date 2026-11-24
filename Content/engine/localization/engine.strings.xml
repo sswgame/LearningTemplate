@@ -2412,6 +2412,26 @@
 				<item>engine/ui/confirm_countdown.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="SaveGame.LoadFailedMessage" source="The saved game could not be loaded. Try again, or stay here.">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
+		<entry key="SaveGame.LoadFailedTitle" source="Load Failed">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
+		<entry key="SaveGame.SaveFailedMessage" source="The game could not be saved. Try again, or keep playing without saving.">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
+		<entry key="SaveGame.SaveFailedTitle" source="Save Failed">
+			<origins>
+				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
+			</origins>
+		</entry>
 		<entry key="SceneLoad.FailedMessage" source="The scene could not be opened. Try again, or stay here.">
 			<origins>
 				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>

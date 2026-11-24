@@ -117,18 +117,15 @@ namespace sw
             WeatherEnded,
             Switched, ///< `_value` 는 파티 인덱스
             Fainted,
-            NeedsSwitch, ///< 쓰러진 쪽에 남은 개체가 있어서 `switchFainted` 를 기다린다
-            ExpGained,   ///< `_value` 는 경험치
-            LevelUp,     ///< `_value` 는 새 레벨
+            ExpGained, ///< `_value` 는 경험치
+            LevelUp,   ///< `_value` 는 새 레벨
             LearnedMove,
             MoveLearnBlocked,
-            CanEvolve,
             CaptureShake, ///< `_value` 는 몇 번째 흔들림인지
             Captured,
             BrokeFree,
             Escaped,
-            EscapeFailed,
-            BattleEnded ///< `_value` 는 MonsterBattleResult
+            EscapeFailed
         };
         hashed_string _id{}; ///< 기술, 종, 날씨의 id
         float32       _multiplier{ 1.0f };
@@ -174,7 +171,7 @@ namespace sw
         [[nodiscard]] bool setAction( int32 side, const MonsterAction& action );
         /** @brief 라운드를 처리합니다. 행동을 정하지 않은 쪽은 아무것도 하지 않습니다. `start` 전이거나 끝난 전투이면 아무 일도 없습니다. */
         void resolveRound();
-        /** @brief 쓰러진 자리를 @p partyIndex 의 개체로 채웁니다(`NeedsSwitch` 다음에 호출합니다). */
+        /** @brief 쓰러진 자리를 @p partyIndex 의 개체로 채웁니다(`needsSwitch` 가 true 일 때 호출합니다). */
         [[nodiscard]] bool switchFainted( int32 side, int32 partyIndex );
         void               pollEvents( vector<MonsterBattleEvent>& outListEvent );
         /**

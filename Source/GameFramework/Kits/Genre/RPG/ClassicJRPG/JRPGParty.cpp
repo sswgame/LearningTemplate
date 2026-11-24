@@ -182,10 +182,7 @@ namespace sw
     int64 JRPGParty::distributeRewards( int64 exp, int64 gold )
     {
         if ( gold > 0 && _pWallet != nullptr ) // 열기 전의 파티는 멤버도 지갑도 없다
-        {
             _pWallet->add( Wallet::getDefaultCurrency(), gold );
-            pushEvent( JRPGPartyEvent::Kind::GoldGained, nullopt, static_cast<int32>( gold ) );
-        }
         const int32 aliveCount = countAlive();
         if ( aliveCount <= 0 || exp <= 0 )
             return 0;

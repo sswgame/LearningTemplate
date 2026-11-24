@@ -43,6 +43,8 @@ namespace sw
             static constexpr const utf8* kEventSkill       = "MechArenaSkill";
             static constexpr const utf8* kEventWon         = "MechArenaWon";
             static constexpr const utf8* kEventLost        = "MechArenaLost";
+            static constexpr const utf8* kEventWokeUp      = "MechArenaWokeUp";
+            static constexpr const utf8* kEventSkillEnded  = "MechArenaSkillEnded";
 
             /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(판 끝은 이긴 팀이 정한다). */
             static const utf8* findSound( MechArenaEvent::Kind kind )
@@ -78,11 +80,22 @@ namespace sw
                     {
                         return kEventSkill;
                     }
-                    default:
+                    case MechArenaEvent::Kind::WokeUp:
                     {
-                        return nullptr;
+                        return kEventWokeUp;
+                    }
+                    case MechArenaEvent::Kind::SkillEnded:
+                    {
+                        return kEventSkillEnded;
+                    }
+                    case MechArenaEvent::Kind::Fired: // 무기 · 기술 표의 소리다(`findEventSound`)
+                    case MechArenaEvent::Kind::ComboAdvanced:
+                    case MechArenaEvent::Kind::MatchEnded: // 이긴 팀이 정한다(`settle`)
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
 
             /** @brief 두 입력의 누름을 합칩니다(@p latest 의 이동 · 사격 · 부유는 그대로 이긴다). */
@@ -340,8 +353,9 @@ namespace sw
 
     hashed_string MechArenaGameModeComponent::findEventSound( const MechArenaEvent& event ) const
     {
-        if ( event._kind == MechArenaEvent::Kind::Overheated && event._pilot != kPlayer )
-            return hashed_string{}; // 남의 과열은 알리지 않는다
+        const bool bOwnOnly = event._kind == MechArenaEvent::Kind::Overheated || event._kind == MechArenaEvent::Kind::WokeUp || event._kind == MechArenaEvent::Kind::SkillEnded;
+        if ( bOwnOnly && event._pilot != kPlayer )
+            return hashed_string{}; // 남의 과열 · 기상 · 스킬 끝은 알리지 않는다
         if ( event._kind == MechArenaEvent::Kind::Fired )
         {
             // 주무기는 무기 표의 소리를 `queueWeaponSound` 가 낸다 — 여기는 특수기뿐이다.

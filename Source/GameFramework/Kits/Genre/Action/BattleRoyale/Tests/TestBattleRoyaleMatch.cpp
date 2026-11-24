@@ -506,9 +506,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, AddPlayerNeedsAValidTeam )
     SW_EXPECT_TRUE( bench._match.findPlayer( 7 ) == nullptr );
     SW_EXPECT_TRUE( bench._match.findPlayer( -1 ) == nullptr );
     bench._match.start();
-    const sw::vector<sw::BattleRoyaleEvent> listRemaining = bench.drainKind( EventKind::PlayersRemaining );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listRemaining.size() );
-    SW_EXPECT_EQUAL( 2, listRemaining[0]._value );
+    SW_EXPECT_EQUAL( 2, bench._match.countRemainingPlayers() );
 }
 
 /**

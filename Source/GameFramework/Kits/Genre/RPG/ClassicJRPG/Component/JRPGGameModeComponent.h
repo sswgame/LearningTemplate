@@ -166,6 +166,8 @@ namespace sw
         void queueBattleSound( const JRPGBattleEvent& event );
         /** @brief 라운드 뒤: 알림을 로그로 내고 승패를 정합니다. */
         void settleBattle();
+        /** @brief 파티가 낸 알림(레벨 · 배움 · 전직 · 휴식)을 소리와 로그로 알립니다. 파티를 바꾼 명령과 전투 뒤에 부릅니다. */
+        void reportPartyEvents();
         /** @brief 승리 · 패배로 판을 끝내고 결과를 보여 주는 시간을 셉니다. */
         void finishGame( JRPGGamePhase phase );
 

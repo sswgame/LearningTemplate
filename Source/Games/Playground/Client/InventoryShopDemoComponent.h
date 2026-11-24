@@ -73,6 +73,7 @@ namespace sw
 
         SharedAssetRef<ShopCatalog>           _pShops;
         ShopManager                           _shop;
+        vector<ShopEvent>                     _listShopEvent; ///< 이번 프레임의 가게 알림(용량만 넘긴다)
         Wallet                                _wallet;
         hashed_string                         _currency;
         unique_ptr<LocalShopPurchaseProvider> _provider;

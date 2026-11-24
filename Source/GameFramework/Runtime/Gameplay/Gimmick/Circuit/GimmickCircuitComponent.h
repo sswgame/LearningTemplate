@@ -8,7 +8,7 @@
  *          Signal 은 신호이고, Laser 는 대상 위치에서 `direction`(대상 회전 적용) × `range` 광선이 막혔는지 여부(`WorldQuery`)이며, Proximity 는 `tag` 를 가진 가장 가까운
  *          오브젝트까지의 거리이다(`planar` 이면 Z 를 뺀 2D 거리). 액추에이터는 다음과 같이 동작한다. Door, Elevator, Rotator 는 플레이 시작 시점의 로컬 자세(`_listRestPose`)에 값을 더한다.
  *          Mover 는 대상(없으면 소유자)의 `SplineComponent` 월드 곡선 위의 위치를 월드 위치로 쓴다. Light 는 `LightComponent` 의 세기를, Enable 은 오브젝트의 켜기와 끄기를 바꾼다.
- *          Spawner 는 프리팹을 스폰하고, Sound 는 `GameSound` 를 재생하며, Hazard 는 켜져 있는 동안 대상 센서에 겹친 것들에게 피해를 준다(`GimmickDamageEvent` 와 그쪽 센서의 Damage).
+ *          Spawner 는 프리팹을 스폰하고, Sound 는 `GameSound` 를 재생하며, Hazard 는 켜져 있는 동안 대상 센서에 겹친 것들에게 피해를 준다(맞음 길과 그쪽 센서의 Damage).
  *          모두 2D(XY 평면)와 3D 에서 같게 동작한다. 위치, 회전, 축은 데이터의 벡터를 그대로 쓴다.
  *
  *          고정 스텝으로 돈다(`_stepTime`). 스텝을 실행한 틱마다 회로 상태를 `_state`(PROPERTY, `GimmickCircuitState`)에 써 두므로, 레벨 세이브와 핫 리로드와 플레이 복원이

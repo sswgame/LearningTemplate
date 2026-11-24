@@ -85,6 +85,27 @@ SW_TEST_CASE( GameFlowTest, FailedSceneLoadWithoutUISystem )
     SW_EXPECT_FALSE( controller.isShowingLoadFailure() );
 }
 
+/** @brief [GameFlowTest] 저장 · 불러오기 실패 이벤트는 UI 가 없는 호스트(전용 서버 · 헤드리스)에서 아무 화면도 열지 않고, 컨트롤러가 내려간 뒤에는 받지 않는다 */
+SW_TEST_CASE( GameFlowTest, FailedSaveWithoutUISystem )
+{
+    EventDispatcher dispatcher;
+    SubsystemScope  scope;
+    SW_REQUIRE_TRUE( scope.bind<EventDispatcher>( &dispatcher ) );
+    game::ScopedGameScope   scopedScope( scope );
+    LoadingScreenController controller;
+    SW_REQUIRE_TRUE( controller.initializeSubsystem() == SubsystemInitResult::Succeeded );
+    const size_t       subscriberCount = dispatcher.getSubscriberCount();
+    SaveGameSavedEvent saved;
+    saved._bSuccess = false;
+    GameEventUtil::send( saved );
+    SaveGameLoadedEvent loaded;
+    loaded._bSuccess = false;
+    GameEventUtil::send( loaded );
+    SW_EXPECT_FALSE( controller.isShowingSaveFailure() );
+    controller.shutdownSubsystem();
+    SW_EXPECT_EQUAL( subscriberCount - 3u, dispatcher.getSubscriberCount() ); // 씬 로드 · 저장 · 불러오기
+}
+
 /** @brief [GameFlowTest] 타이틀 씬이 없는 게임은 타이틀 요청이 false 이고 "타이틀로" 명령을 걸지 않는다("시작" 은 건다) */
 SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
 {

@@ -4,6 +4,7 @@
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
@@ -14,7 +15,9 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 
@@ -28,12 +31,17 @@ namespace
     /** @brief 채보 파일을 가리키는 디렉터 하나입니다. */
     struct RhythmGameModeTest
     {
-        const test::ScopedScratchDomain _domain;
-        GameObjectManager               _manager{};
-        RhythmGameModeComponent*        _pGameMode{ nullptr };
+        const test::ScopedScratchDomain   _domain;
+        RecordingSoundPlayer              _soundPlayer{};
+        SubsystemScope                    _scope{};
+        unique_ptr<game::ScopedGameScope> _pScopeBinding{};
+        GameObjectManager                 _manager{};
+        RhythmGameModeComponent*          _pGameMode{ nullptr };
 
         RhythmGameModeTest()
         {
+            SW_REQUIRE_TRUE( _scope.bind<ISoundPlayer>( &_soundPlayer ) );
+            _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( _domain.makeDiskPath( "song.chart.xml" ), kRhythmChartXML ) );
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<RhythmGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );
@@ -91,6 +99,8 @@ SW_TEST_CASE_F( RhythmGameModeTest, MusicClockAdvancesOnlyByTheSubmittedTime )
     SW_EXPECT_TRUE( _pGameMode->submitMusicTime( 2.5f ) );
     advance( 1 );
     SW_EXPECT_EQUAL( 2, _pGameMode->getMissed() ); // 머리를 놓친 롱노트는 끝도 놓친다
+    SW_EXPECT_EQUAL( 2, _soundPlayer.countPosted( "RhythmMissed" ) );
+    SW_EXPECT_EQUAL( 0, _soundPlayer.countPosted( "RhythmJudged" ) );
     SW_EXPECT_TRUE( _pGameMode->submitMusicTime( 1.0f ) );
     SW_EXPECT_NEAR( 2.5f, _pGameMode->getMusicTime(), 1.0e-6f );
     _manager.endPlay();
@@ -107,6 +117,7 @@ SW_TEST_CASE_F( RhythmGameModeTest, LaneCommandsAreJudgedAndTheStateRoundTrips )
     advance( 1 );
     SW_EXPECT_EQUAL( 1, _pGameMode->getJudged() );
     SW_EXPECT_EQUAL( 0, _pGameMode->getMissed() );
+    SW_EXPECT_EQUAL( 1, _soundPlayer.countPosted( "RhythmJudged" ) );
     SW_EXPECT_TRUE( _pGameMode->getSession().isHolding( 0 ) );
 
     vector<uint8> bytes = saveState();

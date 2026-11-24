@@ -1078,7 +1078,6 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, FaintWaitsForSwitch )
     SW_EXPECT_TRUE( _battle.setAction( foe, sw::MonsterAction::makeMove( 0 ) ) );
     _battle.resolveRound();
     SW_EXPECT_EQUAL( 1, countEvents( sw::MonsterBattleEvent::Kind::Fainted ) );
-    SW_EXPECT_EQUAL( 1, countEvents( sw::MonsterBattleEvent::Kind::NeedsSwitch ) );
     SW_EXPECT_EQUAL( 1, countEvents( sw::MonsterBattleEvent::Kind::MoveUsed ) ); // 쓰러진 쪽의 행동은 버린다
     SW_EXPECT_EQUAL( expBefore + 750, _battle.getActive( player )._exp );
     SW_EXPECT_EQUAL( 2, _battle.getActive( player )._arrEv[static_cast<size_t>( sw::MonsterStat::Attack )] );
@@ -1115,7 +1114,6 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, WinAndLose )
     _battle.resolveRound();
     SW_EXPECT_EQUAL( sw::MonsterBattleResult::Won, _battle.getResult() );
     SW_EXPECT_EQUAL( expBefore + 500, _battle.getActive( player )._exp );
-    SW_EXPECT_TRUE( findFirstValue( sw::MonsterBattleEvent::Kind::BattleEnded ) == static_cast<int32>( sw::MonsterBattleResult::Won ) );
     SW_EXPECT_FALSE( _battle.setAction( player, sw::MonsterAction::makeMove( 0 ) ) );
 
     open( weak, make( "swift", 50, "strike" ) );

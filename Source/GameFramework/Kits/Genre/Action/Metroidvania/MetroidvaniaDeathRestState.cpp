@@ -194,16 +194,12 @@ namespace sw
         healthMachine.respawn();
         _flaskCharges = _flaskMaxCharges;
         // 보스는 남기고 나머지 적은 모두 다시 나온다.
-        int32 respawnedCount = 0;
         for ( size_t index = _listKill.size(); index > 0; --index )
         {
             if ( _listKill[index - 1]._bBoss == SW_TRUE )
                 continue;
             _listKill.erase( _listKill.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-            ++respawnedCount;
         }
-        if ( respawnedCount > 0 )
-            pushEvent( MetroidvaniaDeathRestEventKind::EnemiesRespawned, hashed_string{}, respawnedCount );
     }
 
     void MetroidvaniaDeathRestState::pushEvent( MetroidvaniaDeathRestEventKind type, const hashed_string& id, int32 amount )

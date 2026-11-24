@@ -24,21 +24,31 @@ namespace sw
             static constexpr int32  kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventHit        = "AsymmetricHorrorHit";
-            static constexpr const utf8* kEventDowned     = "AsymmetricHorrorDowned";
-            static constexpr const utf8* kEventHooked     = "AsymmetricHorrorHooked";
-            static constexpr const utf8* kEventSacrificed = "AsymmetricHorrorSacrificed";
-            static constexpr const utf8* kEventRescued    = "AsymmetricHorrorRescued";
-            static constexpr const utf8* kEventGenerator  = "AsymmetricHorrorGenerator";
-            static constexpr const utf8* kEventPowered    = "AsymmetricHorrorPowered";
-            static constexpr const utf8* kEventGateOpened = "AsymmetricHorrorGateOpened";
-            static constexpr const utf8* kEventEscaped    = "AsymmetricHorrorEscaped";
-            static constexpr const utf8* kEventPallet     = "AsymmetricHorrorPallet";
-            static constexpr const utf8* kEventVaulted    = "AsymmetricHorrorVaulted";
-            static constexpr const utf8* kEventAbility    = "AsymmetricHorrorAbility";
-            static constexpr const utf8* kEventSkillCheck = "AsymmetricHorrorSkillCheck";
-            static constexpr const utf8* kEventWon        = "AsymmetricHorrorWon";
-            static constexpr const utf8* kEventLost       = "AsymmetricHorrorLost";
+            static constexpr const utf8* kEventHit           = "AsymmetricHorrorHit";
+            static constexpr const utf8* kEventDowned        = "AsymmetricHorrorDowned";
+            static constexpr const utf8* kEventHooked        = "AsymmetricHorrorHooked";
+            static constexpr const utf8* kEventSacrificed    = "AsymmetricHorrorSacrificed";
+            static constexpr const utf8* kEventRescued       = "AsymmetricHorrorRescued";
+            static constexpr const utf8* kEventGenerator     = "AsymmetricHorrorGenerator";
+            static constexpr const utf8* kEventPowered       = "AsymmetricHorrorPowered";
+            static constexpr const utf8* kEventGateOpened    = "AsymmetricHorrorGateOpened";
+            static constexpr const utf8* kEventEscaped       = "AsymmetricHorrorEscaped";
+            static constexpr const utf8* kEventPallet        = "AsymmetricHorrorPallet";
+            static constexpr const utf8* kEventVaulted       = "AsymmetricHorrorVaulted";
+            static constexpr const utf8* kEventAbility       = "AsymmetricHorrorAbility";
+            static constexpr const utf8* kEventSkillCheck    = "AsymmetricHorrorSkillCheck";
+            static constexpr const utf8* kEventCheckPassed   = "AsymmetricHorrorSkillCheckPassed";
+            static constexpr const utf8* kEventCheckFailed   = "AsymmetricHorrorSkillCheckFailed";
+            static constexpr const utf8* kEventWon           = "AsymmetricHorrorWon";
+            static constexpr const utf8* kEventLost          = "AsymmetricHorrorLost";
+            static constexpr const utf8* kEventMissed        = "AsymmetricHorrorMissed";
+            static constexpr const utf8* kEventPickedUp      = "AsymmetricHorrorPickedUp";
+            static constexpr const utf8* kEventHookStage     = "AsymmetricHorrorHookStage";
+            static constexpr const utf8* kEventHealed        = "AsymmetricHorrorHealed";
+            static constexpr const utf8* kEventKicked        = "AsymmetricHorrorKicked";
+            static constexpr const utf8* kEventHatchClosed   = "AsymmetricHorrorHatchClosed";
+            static constexpr const utf8* kEventCollapse      = "AsymmetricHorrorCollapse";
+            static constexpr const utf8* kEventWindowBlocked = "AsymmetricHorrorWindowBlocked";
 
             /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(판 끝은 결과가 정한다). */
             static const utf8* findSound( AsymmetricHorrorEvent::Kind kind )
@@ -101,11 +111,46 @@ namespace sw
                     {
                         return kEventSkillCheck;
                     }
-                    default:
+                    case AsymmetricHorrorEvent::Kind::Missed:
                     {
-                        return nullptr;
+                        return kEventMissed;
+                    }
+                    case AsymmetricHorrorEvent::Kind::PickedUp:
+                    {
+                        return kEventPickedUp;
+                    }
+                    case AsymmetricHorrorEvent::Kind::HookStageAdvanced:
+                    {
+                        return kEventHookStage;
+                    }
+                    case AsymmetricHorrorEvent::Kind::Healed:
+                    {
+                        return kEventHealed;
+                    }
+                    case AsymmetricHorrorEvent::Kind::GeneratorKicked:
+                    {
+                        return kEventKicked;
+                    }
+                    case AsymmetricHorrorEvent::Kind::HatchClosed:
+                    {
+                        return kEventHatchClosed;
+                    }
+                    case AsymmetricHorrorEvent::Kind::CollapseStarted:
+                    {
+                        return kEventCollapse;
+                    }
+                    case AsymmetricHorrorEvent::Kind::WindowBlocked:
+                    {
+                        return kEventWindowBlocked;
+                    }
+                    case AsymmetricHorrorEvent::Kind::LockerGrab:       // 뒤따르는 `PickedUp` 이 낸다
+                    case AsymmetricHorrorEvent::Kind::SkillCheckResult: // 성공인지가 정한다(`settle`)
+                    case AsymmetricHorrorEvent::Kind::Noise:            // 살인마에게만 들리는 알림이다 — 사람은 생존자다
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
 
             static constexpr const utf8* kWinResult  = "win";
@@ -321,8 +366,13 @@ namespace sw
         _match.pollEvents( _listEvent );
         for ( const AsymmetricHorrorEvent& event : _listEvent )
         {
-            const bool        bOthersOnly = event._kind == AsymmetricHorrorEvent::Kind::SkillCheckStarted && event._actor != AsymmetricHorrorGameModeComponentInternal::kPlayer; // 남의 스킬 체크는 알리지 않는다
-            const utf8* const pSound      = bOthersOnly ? nullptr : AsymmetricHorrorGameModeComponentInternal::findSound( event._kind );
+            using Internal      = AsymmetricHorrorGameModeComponentInternal;
+            const bool  bResult = event._kind == AsymmetricHorrorEvent::Kind::SkillCheckResult;
+            const bool  bCheck  = event._kind == AsymmetricHorrorEvent::Kind::SkillCheckStarted || bResult;
+            const bool  bOthers = bCheck && event._actor != Internal::kPlayer; // 남의 스킬 체크는 알리지 않는다
+            const utf8* pSound  = bOthers ? nullptr : Internal::findSound( event._kind );
+            if ( bResult && bOthers == false )
+                pSound = event._value > 0.0f ? Internal::kEventCheckPassed : Internal::kEventCheckFailed;
             if ( pSound != nullptr )
                 getSoundQueue().queueEvent( pSound );
             if ( event._kind == AsymmetricHorrorEvent::Kind::GeneratorCompleted )

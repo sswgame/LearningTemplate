@@ -150,6 +150,8 @@ SW_TEST_CASE( JRPGGameModeTest, StepEncounterRunsOneRoundPerPartyAndPaysRewards 
     SW_EXPECT_EQUAL( 11, fixture._pGameMode->getGold() );      // 시작 5 + 3 × 2
     SW_EXPECT_EQUAL( 12, fixture._pGameMode->getLeaderXP() );  // 24 를 둘이 나눈다
     SW_EXPECT_EQUAL( 100, fixture._pGameMode->getLeaderHP() ); // 적은 움직이기 전에 쓰러졌다
+    fixture._manager.update( kJRPGFrame );                     // 명령이 쌓은 소리를 낸다
+    SW_EXPECT_EQUAL( 2, fixture._soundPlayer.countPosted( "JRPGDefeated" ) );
     fixture._manager.endPlay();
 }
 
@@ -257,6 +259,7 @@ SW_TEST_CASE( JRPGGameModeTest, GearRaisesAttackAndTheInnChangesClass )
     SW_EXPECT_FALSE( fixture._pGameMode->submitClassChange( 1 ) );                                      // 이미 그 직업이다
     fixture.walkEast( 4 );                                                                              // 2 m — 쉼터 밖
     SW_EXPECT_FALSE( fixture._pGameMode->submitClassChange( 0 ) );
+    SW_EXPECT_EQUAL( 1, fixture._soundPlayer.countPosted( "JRPGClassChange" ) ); // 파티 알림에서 한 번만 난다
     fixture._manager.endPlay();
 }
 

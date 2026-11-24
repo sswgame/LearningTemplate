@@ -43,6 +43,9 @@ namespace sw
             static constexpr const utf8* kEventRoundEnd    = "FightingRoundEnd";
             static constexpr const utf8* kEventWon         = "FightingWon";
             static constexpr const utf8* kEventLost        = "FightingLost";
+            static constexpr const utf8* kEventLaunch      = "FightingLaunch";
+            static constexpr const utf8* kEventThrowGrab   = "FightingThrowGrab";
+            static constexpr const utf8* kEventSidestep    = "FightingSidestep";
 
             /** @brief 대전의 알림 @p kind 가 기술과 상관없이 내는 소리입니다. 없으면 nullptr 입니다(기술의 소리는 기술 표, 대전 끝은 이긴 쪽이 정한다). */
             static const utf8* findSound( FightingEvent::Kind kind )
@@ -68,11 +71,30 @@ namespace sw
                     {
                         return kEventRoundEnd;
                     }
-                    default:
+                    case FightingEvent::Kind::Screw:
+                    case FightingEvent::Kind::Bound:
                     {
-                        return nullptr;
+                        return kEventLaunch;
+                    }
+                    case FightingEvent::Kind::ThrowGrab:
+                    {
+                        return kEventThrowGrab;
+                    }
+                    case FightingEvent::Kind::Sidestep:
+                    {
+                        return kEventSidestep;
+                    }
+                    case FightingEvent::Kind::MoveStarted: // 기술 표의 소리를 `findMoveSound` 가 고른다
+                    case FightingEvent::Kind::Hit:
+                    case FightingEvent::Kind::Blocked:
+                    case FightingEvent::Kind::ThrowLanded:
+                    case FightingEvent::Kind::RoundEnd: // 승부가 정한다(`settle`)
+                    case FightingEvent::Kind::MatchEnd:
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
 
             /** @brief 알림 @p kind 에 기술 @p move 가 내는 소리입니다(기술 표). 없으면 빈 이름입니다. */

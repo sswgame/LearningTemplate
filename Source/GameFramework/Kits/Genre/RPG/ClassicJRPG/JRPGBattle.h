@@ -196,9 +196,7 @@ namespace sw
             ProficiencyGained,
             Defeated,
             FleeFailed,
-            Fled,
-            Victory, ///< `_value` 는 한 멤버의 경험치 몫
-            Defeat
+            Fled ///< 승부(승리 · 패배)는 `getResult` 가 말한다
         };
         hashed_string   _id{};
         optional<int32> _actor{};  ///< 없으면 전투 전체의 일(도주 · 승패 · 콤보 포인트)

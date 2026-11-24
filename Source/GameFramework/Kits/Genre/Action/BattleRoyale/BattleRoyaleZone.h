@@ -54,9 +54,8 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            NextZoneRevealed = 0, ///< _phase 단계의 다음 원이 정해졌다
+            NextZoneRevealed = 0, ///< _phase 단계의 다음 원이 정해졌다(앞 단계가 다 줄었다)
             ShrinkStarted,
-            ShrinkFinished,
             FinalZone ///< 마지막 단계까지 다 줄었다
         };
         float2  _center{};

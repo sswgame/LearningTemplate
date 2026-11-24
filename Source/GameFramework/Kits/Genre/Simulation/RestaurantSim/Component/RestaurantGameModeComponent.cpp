@@ -40,6 +40,8 @@ namespace sw
             static constexpr const utf8* kEventLevelUp = "RestaurantLevelUp";
             static constexpr const utf8* kEventWon     = "RestaurantWon";
             static constexpr const utf8* kEventLost    = "RestaurantLost";
+            static constexpr const utf8* kEventOrder   = "RestaurantOrder";
+            static constexpr const utf8* kEventSpoiled = "RestaurantSpoiled";
 
             /** @brief 씬이 단계를 적지 않은 판은 줄 없는 카탈로그입니다(평판 값만 센다). */
             static const ReputationCatalog& getReputationCatalog( const ReputationCatalog* pScene )
@@ -73,11 +75,16 @@ namespace sw
                     {
                         return kEventLevelUp;
                     }
-                    default:
+                    case RestaurantEvent::Kind::OrderPlaced:
                     {
-                        return nullptr;
+                        return kEventOrder;
+                    }
+                    case RestaurantEvent::Kind::IngredientSpoiled:
+                    {
+                        return kEventSpoiled;
                     }
                 }
+                return nullptr;
             }
         };
     } // namespace

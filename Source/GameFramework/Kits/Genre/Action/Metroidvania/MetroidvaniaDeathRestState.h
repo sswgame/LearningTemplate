@@ -36,15 +36,14 @@ namespace sw
     /** @brief 죽음과 휴식 알림의 종류입니다. */
     enum class MetroidvaniaDeathRestEventKind : uint8
     {
-        Rested = 0,       ///< `_id` 는 지점
-        Died,             ///< `_id` 는 되살아날 지점
-        CorpseDropped,    ///< `_id` 는 방, `_amount` 는 떨어뜨린 통화
-        CorpseRecovered,  ///< `_amount` 는 되찾은 통화
-        CurrencyLost,     ///< 시체를 되찾기 전에 또 죽어서 `_amount` 만큼 영영 사라졌다
-        FlaskUsed,        ///< `_amount` 는 남은 충전 수
-        EnemyKilled,      ///< `_id` 는 적 종류, `_amount` 는 얻은 통화
-        BossDefeated,     ///< `_id` 는 보스 플래그
-        EnemiesRespawned, ///< `_amount` 는 다시 나온 적 수
+        Rested = 0,      ///< `_id` 는 지점
+        Died,            ///< `_id` 는 되살아날 지점
+        CorpseDropped,   ///< `_id` 는 방, `_amount` 는 떨어뜨린 통화
+        CorpseRecovered, ///< `_amount` 는 되찾은 통화
+        CurrencyLost,    ///< 시체를 되찾기 전에 또 죽어서 `_amount` 만큼 영영 사라졌다
+        FlaskUsed,       ///< `_amount` 는 남은 충전 수
+        EnemyKilled,     ///< `_id` 는 적 종류, `_amount` 는 얻은 통화
+        BossDefeated,    ///< `_id` 는 보스 플래그
     };
 
     /** @brief 죽음과 휴식 알림 하나입니다. */

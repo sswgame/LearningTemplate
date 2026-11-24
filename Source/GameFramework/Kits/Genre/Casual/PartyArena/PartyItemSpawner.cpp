@@ -98,9 +98,10 @@ namespace sw
             if ( bExpired )
             {
                 PartyItemEvent event;
-                event._kind   = PartyItemEvent::Kind::Expired;
-                event._itemID = instance._itemID;
-                event._serial = instance._serial;
+                event._kind     = PartyItemEvent::Kind::Expired;
+                event._position = instance._position;
+                event._itemID   = instance._itemID;
+                event._serial   = instance._serial;
                 _eventBuffer.push( event );
                 continue;
             }
@@ -142,13 +143,14 @@ namespace sw
         _listInstance.push_back( instance );
 
         PartyItemEvent event;
-        event._kind   = PartyItemEvent::Kind::Spawned;
-        event._itemID = instance._itemID;
-        event._serial = instance._serial;
+        event._kind     = PartyItemEvent::Kind::Spawned;
+        event._position = instance._position;
+        event._itemID   = instance._itemID;
+        event._serial   = instance._serial;
         _eventBuffer.push( event );
     }
 
-    bool PartyItemSpawner::tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem )
+    bool PartyItemSpawner::tryPickUp( const float3& position, float32 radius, PartyItemInstance& outItem )
     {
         int32   bestIndex  = constant::invalid_index::kInt32;
         float32 bestDistSq = radius * radius;
@@ -165,13 +167,6 @@ namespace sw
             return false;
         outItem = _listInstance[static_cast<size_t>( bestIndex )];
         _listInstance.erase( _listInstance.begin() + bestIndex );
-
-        PartyItemEvent event;
-        event._kind   = PartyItemEvent::Kind::PickedUp;
-        event._itemID = outItem._itemID;
-        event._serial = outItem._serial;
-        event._player = player;
-        _eventBuffer.push( event );
         return true;
     }
 

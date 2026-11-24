@@ -530,7 +530,6 @@ namespace sw
         }
         _arrSide[side]._bNeedsSwitch = true;
         _arrSide[side]._action       = MonsterAction{};
-        pushEvent( MonsterBattleEvent::Kind::NeedsSwitch, side );
     }
 
     void MonsterBattle::awardExp( const MonsterInstance& defeated )
@@ -553,7 +552,7 @@ namespace sw
             else if ( growth._kind == MonsterGrowthEvent::Kind::MoveLearnBlocked )
                 kind = MonsterBattleEvent::Kind::MoveLearnBlocked;
             else if ( growth._kind == MonsterGrowthEvent::Kind::CanEvolve )
-                kind = MonsterBattleEvent::Kind::CanEvolve;
+                continue; // 진화는 전투 뒤에 게임이 조건을 다시 보고 한다(`MonsterInstance::findEvolution`)
             pushEvent( kind, kPlayerSide, growth._level, growth._id );
         }
     }
@@ -761,7 +760,6 @@ namespace sw
     void MonsterBattle::setResult( MonsterBattleResult serviceResult )
     {
         _result = serviceResult;
-        pushEvent( MonsterBattleEvent::Kind::BattleEnded, kPlayerSide, static_cast<int32>( serviceResult ) );
     }
 
     void MonsterBattle::pushEvent( MonsterBattleEvent::Kind kind, int32 side, int32 value, const hashed_string& id, float32 multiplier )

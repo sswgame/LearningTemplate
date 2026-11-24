@@ -123,9 +123,7 @@ namespace sw
         enum class Kind : uint8
         {
             RaceStarted = 0,
-            CheckpointPassed, ///< `_value` 는 지난 체크포인트 수이다
             CheckpointMissed, ///< 결승선을 지났지만 체크포인트가 모자라다. `_value` 는 지난 수이다
-            LapStarted,       ///< `_value` 는 새 바퀴이다
             LapCompleted,     ///< `_value` 는 마친 바퀴이고 `_time` 은 랩 타임이다
             LapRevoked,       ///< 결승선을 뒤로 넘었다. `_value` 는 돌아간 바퀴이다
             FinalLap,
@@ -138,6 +136,9 @@ namespace sw
             Hit,           ///< `_racer` 는 맞은 차이고 `_other` 는 쏜 차이다
             ShieldBlocked, ///< `_racer` 는 막은 차이다
             BoostPad,
+            DriftCharged, ///< 드리프트가 미니터보 단계에 올랐다. `_value` 는 단계이다
+            MiniTurbo,    ///< 드리프트를 풀어 부스트했다. `_value` 는 단계이다
+            Landed,       ///< 뛰었다가 땅에 닿았다
             RaceEnded
         };
         hashed_string   _itemID{};
@@ -240,12 +241,14 @@ namespace sw
         /** @brief 날거나 놓이는 아이템 @p item 의 탄 정의입니다. 탄 카탈로그가 없거나 그 탄이 없거나 탄을 쓰지 않는 종류면 nullptr 입니다. */
         const ProjectileDef*  findItemProjectile( const KartItemDef& item ) const;
         KinematicVehicleInput resolveInput( int32 racer, bool& outUseItem );
-        void                  updateProgress( int32 racer );
-        void                  completeLap( int32 racer );
-        void                  finishRacer( int32 racer );
-        float32               computeProgress( const KartRacer& kart ) const;
-        void                  updateItemBoxes( float32 deltaTime );
-        void                  updateProjectiles( float32 deltaTime );
+        /** @brief 차가 이번 걸음에 낸 일 가운데 경기가 알릴 것을 경기 알림으로 옮깁니다. */
+        void    pushVehicleEvents( int32 racer );
+        void    updateProgress( int32 racer );
+        void    completeLap( int32 racer );
+        void    finishRacer( int32 racer );
+        float32 computeProgress( const KartRacer& kart ) const;
+        void    updateItemBoxes( float32 deltaTime );
+        void    updateProjectiles( float32 deltaTime );
         /** @brief 1등 공격이 터집니다. 범위는 탄의 폭발 반지름(`ProjectileState::_blastRadius`)이고 맞은 차의 반응은 @p def 입니다. */
         void explode( const ProjectileState& projectile, const KartItemDef& def );
         /** @brief 빨간 등껍질이 쫓을 차입니다. 원뿔 안에 없으면 비어 있습니다(곧게 나간다). */
@@ -261,6 +264,7 @@ namespace sw
         vector<KartRacer>                 _listRacer;
         ProjectileSimulation              _projectiles;
         NotificationBuffer<KartRaceEvent> _eventBuffer;
+        vector<KinematicVehicleEvent>     _listVehicleEvent; ///< `pushVehicleEvents` 의 임시 목록(용량만 넘긴다)
         vector<Countdown>                 _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
         vector<int32>                     _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호
         KartRaceSettings                  _settings;

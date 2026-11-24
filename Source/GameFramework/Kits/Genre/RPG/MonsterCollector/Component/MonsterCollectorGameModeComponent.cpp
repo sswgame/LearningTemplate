@@ -40,6 +40,14 @@ namespace sw
             static constexpr const utf8* kEventRest      = "MonsterCollectorRest";
             static constexpr const utf8* kEventWon       = "MonsterCollectorWon";
             static constexpr const utf8* kEventLost      = "MonsterCollectorLost";
+            static constexpr const utf8* kEventRefused   = "MonsterCollectorRefused";
+            static constexpr const utf8* kEventMissed    = "MonsterCollectorMissed";
+            static constexpr const utf8* kEventCritical  = "MonsterCollectorCritical";
+            static constexpr const utf8* kEventStatus    = "MonsterCollectorStatus";
+            static constexpr const utf8* kEventStat      = "MonsterCollectorStat";
+            static constexpr const utf8* kEventRecovered = "MonsterCollectorRecovered";
+            static constexpr const utf8* kEventWeather   = "MonsterCollectorWeather";
+            static constexpr const utf8* kEventLearned   = "MonsterCollectorLearned";
 
             /** @brief 전투 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
             static const utf8* findSound( MonsterBattleEvent::Kind kind )
@@ -80,11 +88,53 @@ namespace sw
                     {
                         return kEventEscaped;
                     }
-                    default:
+                    case MonsterBattleEvent::Kind::NoPp:
+                    case MonsterBattleEvent::Kind::EscapeFailed:
+                    case MonsterBattleEvent::Kind::MoveLearnBlocked:
                     {
-                        return nullptr;
+                        return kEventRefused;
+                    }
+                    case MonsterBattleEvent::Kind::Missed:
+                    case MonsterBattleEvent::Kind::Immune:
+                    {
+                        return kEventMissed;
+                    }
+                    case MonsterBattleEvent::Kind::Critical:
+                    {
+                        return kEventCritical;
+                    }
+                    case MonsterBattleEvent::Kind::StatusApplied:
+                    case MonsterBattleEvent::Kind::FullyParalyzed:
+                    case MonsterBattleEvent::Kind::Asleep:
+                    case MonsterBattleEvent::Kind::Frozen:
+                    {
+                        return kEventStatus;
+                    }
+                    case MonsterBattleEvent::Kind::StatChanged:
+                    {
+                        return kEventStat;
+                    }
+                    case MonsterBattleEvent::Kind::Woke:
+                    case MonsterBattleEvent::Kind::Thawed:
+                    {
+                        return kEventRecovered;
+                    }
+                    case MonsterBattleEvent::Kind::WeatherStarted:
+                    case MonsterBattleEvent::Kind::WeatherEnded:
+                    {
+                        return kEventWeather;
+                    }
+                    case MonsterBattleEvent::Kind::LearnedMove:
+                    {
+                        return kEventLearned;
+                    }
+                    case MonsterBattleEvent::Kind::MoveUsed:  // 기술 표의 소리다(`queueBattleSound`)
+                    case MonsterBattleEvent::Kind::ExpGained: // 오른 레벨이 낸다
+                    {
+                        break;
                     }
                 }
+                return nullptr;
             }
         };
     } // namespace

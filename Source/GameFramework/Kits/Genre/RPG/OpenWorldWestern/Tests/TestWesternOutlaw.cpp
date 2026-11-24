@@ -113,6 +113,22 @@ SW_TEST_CASE( WesternOutlawTest, WitnessedCrimeReportsAfterItsTime )
     rig._outlaw.update( 1.1f );
     SW_EXPECT_EQUAL( 25, rig._outlaw.getBounty() );
     SW_EXPECT_EQUAL( 1, rig._outlaw.getWantedLevel() );
+
+    // 로그를 남긴 알림을 디렉터가 다시 꺼낼 수 있다(소리).
+    vector<WesternLawEvent> listEvent;
+    rig._outlaw.pollLawEvents( listEvent );
+    const auto countKind = [&listEvent]( WesternLawEvent::Kind kind )
+    {
+        int32 count = 0;
+        for ( const WesternLawEvent& event : listEvent )
+        {
+            count += event._kind == kind ? 1 : 0;
+        }
+        return count;
+    };
+    SW_EXPECT_EQUAL( 1, countKind( WesternLawEvent::Kind::Witnessed ) );
+    SW_EXPECT_EQUAL( 1, countKind( WesternLawEvent::Kind::Reported ) );
+    SW_EXPECT_EQUAL( 1, countKind( WesternLawEvent::Kind::WantedRaised ) );
 }
 
 /** @brief [WesternOutlawTest] 아무도 안 본 범죄도 명예는 깎이지만 현상금은 없다, 모르는 범죄는 거절한다 */

@@ -228,7 +228,6 @@ namespace sw
         updateAttacks();
         _itemSpawner.update( deltaTime );
         pickUpItems();
-        _itemSpawner.discardEvents();
 
         _match.update( deltaTime );
         for ( const MatchEvent& event : _match.takeEvents() )
@@ -489,7 +488,6 @@ namespace sw
         body._attackTimer.clear(); // 남겨 두면 튀어 오른 뒤 돌진이 이어져 중력 없이 떠올랐다
         body._landTime = _time;
         body._contactTimer.start( _settings._contactTime );
-        pushEvent( TrampolineEvent::Kind::Landed, player, nullopt, 0 );
         if ( body._bPounding == SW_FALSE )
             return;
 
@@ -636,7 +634,7 @@ namespace sw
             const TrampolinePlayer& body     = _listPlayer[static_cast<size_t>( player )];
             const bool              bOnBoard = body._state == TrampolinePlayerState::Air || body._state == TrampolinePlayerState::Contact;
             PartyItemInstance       item;
-            if ( bOnBoard == false || _itemSpawner.tryPickUp( body._position, _settings._pickupRadius + _settings._bodyRadius, player, item ) == false )
+            if ( bOnBoard == false || _itemSpawner.tryPickUp( body._position, _settings._pickupRadius + _settings._bodyRadius, item ) == false )
                 continue;
             const PartyItemDef* pDef = _itemSpawner.findItem( item._itemID );
             if ( pDef != nullptr )

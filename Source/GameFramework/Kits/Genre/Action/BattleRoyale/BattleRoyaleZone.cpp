@@ -109,7 +109,6 @@ namespace sw
             // 다 줄었으면 다음 단계로 넘어간다.
             _center = _nextCenter;
             _radius = _nextRadius;
-            pushEvent( BattleRoyaleZoneEvent::Kind::ShrinkFinished );
             beginPhase( _phaseIndex + 1 );
         }
     }
