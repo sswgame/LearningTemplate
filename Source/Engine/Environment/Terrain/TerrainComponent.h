@@ -211,7 +211,7 @@ namespace sw
         const string& getCPUSplatPath( uint32 plane ) const { return _arrCPUSplatPath[plane]; }
 
         /**
-         * @brief 상태 스냅샷 계약(`ComponentStateStore`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 구멍 · 스플랫을 씁니다(`writeState`). 쓴 것이 없으면 버전과 빈 표시만 씁니다.
+         * @brief 상태 스냅샷 계약(`ComponentStateCodec`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 구멍 · 스플랫을 씁니다(`writeState`). 쓴 것이 없으면 버전과 빈 표시만 씁니다.
          * @details 모듈 리로드와 백엔드 교체는 씬을 속성으로 복원하고 `onPostLoad` 가 디스크 에셋을 다시 읽으므로, 저장하지 않은 편집은 여기로만 넘어간다.
          *          상태가 아니라 저장하지 않은 편집 버퍼라 사본에 읽지 않는다(`SW_DECLARE_STATE_IO_IN_PLACE`) — 읽기는 다시 읽은 지형에 편집 API(`writeHeights` ·
          *          `replaceHeightfield` · `writeHoles` · `writeLayerWeights`)로 되돌려 쓰고, 맞지 않는 묶음은 알리고 거기서 멈춘다(앞 묶음은 쓴 채, 나머지는 디스크 값).

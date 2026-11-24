@@ -648,6 +648,11 @@ namespace sw::editor
                 const bool     bInvalidArguments = listArgument.size() != 1 || pContext == nullptr || resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false;
                 if ( bInvalidArguments )
                     return false;
+                if ( EditorPlaySession::refuseSceneEdit( "Create prefab" ) ) // 플레이 중인 상태를 프리팹 파일에 쓰지 않는다(Apply to prefab 과 같은 규칙)
+                {
+                    outReply = "scene edits are not allowed now - stop playing first";
+                    return false;
+                }
                 // 놓인 프리팹 테이블(워크스페이스)이 메인 씬의 것이므로 메인 선택을 쓴다.
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pObject == nullptr )

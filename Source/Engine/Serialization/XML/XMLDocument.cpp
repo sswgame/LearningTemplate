@@ -1021,6 +1021,11 @@ namespace sw
 
     bool XMLDocument::loadDataFile( const AbsolutePath& absPath )
     {
+        return loadDataFileAs( absPath, ResourceContext::forDocument(), nullptr );
+    }
+
+    bool XMLDocument::loadDataFileAs( const AbsolutePath& absPath, const ResourceContext& context, string* pOutBaseID )
+    {
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
         {
@@ -1029,7 +1034,9 @@ namespace sw
             _lastError = string( error.view() );
             return false;
         }
-        return parseData( text, absPath.str() );
+        if ( pOutBaseID != nullptr )
+            *pOutBaseID = DataInheritance::findBasePath( text );
+        return parseComposed( text, absPath.str(), context );
     }
 
     bool XMLDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )

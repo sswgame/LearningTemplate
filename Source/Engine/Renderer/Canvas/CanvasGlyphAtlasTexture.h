@@ -46,6 +46,8 @@ namespace sw
         void uploadPages( IRHIDevice& device );
         /** @brief 페이지 @p page 의 SRV 입니다. 첫 업로드가 끝나기 전(SRV 없음)이거나 멈춘 페이지, 없는 페이지면 kInvalidDescriptorIndex 입니다. */
         RHITextureSRVIndex findPageSRV( uint32 page ) const;
+        /** @brief 페이지 @p page 의 내용이 아직 GPU 에 다 가지 않았으면 true 입니다(첫 업로드 전 · 못 낸 구간이 있다). 멈춘 페이지는 기다려도 오지 않으므로 false 입니다. */
+        bool isPagePending( uint32 page ) const;
         /** @brief GPU 자원을 해제합니다(디바이스가 없으면 핸들만 잊습니다). 미러는 남겨 다음 `uploadPages` 가 텍스처를 다시 만들고 전체를 올립니다. */
         void release( IRHIDevice* pDevice );
 

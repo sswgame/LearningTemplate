@@ -63,6 +63,16 @@ namespace sw
         return change;
     }
 
+    bool PhysicsComponent::absorbWorldOriginShift( const float3& delta )
+    {
+        const bool bNotComparable = _syncedTransformVersion == 0 || _bSyncedParented || getParent() != nullptr;
+        if ( bNotComparable || getLocalPosition() != _syncedLocalPosition + delta || getLocalRotation() != _syncedLocalRotation )
+            return false;
+        markTransformSynced();
+        (void)consumeTeleport();
+        return true;
+    }
+
     void PhysicsComponent::markTransformSynced()
     {
         _syncedTransformVersion = getWorldTransformVersion();

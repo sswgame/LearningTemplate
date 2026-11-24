@@ -23,7 +23,7 @@ namespace sw
     public:
         virtual ~IPlayerNotificationSink() = default;
 
-        /** @brief @p text(현지화 키 또는 글 그대로)를 @p durationSeconds 동안 @p kind 모양으로 알립니다. 같은 글이 떠 있으면 센다. */
+        /** @brief @p text(현지화 키 · 메시지 `LocalizedMessage` · 글 그대로 — 그릴 때 풀린다)를 @p durationSeconds 동안 @p kind 모양으로 알립니다. 같은 글이 떠 있으면 센다. */
         virtual void postNotification( const string& text, float32 durationSeconds, PlayerNotificationKind kind ) = 0;
 
         SW_SERVICE_SLOT( IPlayerNotificationSink, Optional );

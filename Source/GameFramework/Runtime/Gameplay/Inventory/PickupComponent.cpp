@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -11,8 +12,23 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct PickupComponentInternal
+        {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "PICK" );
+            static constexpr uint32 kStateVersion = 1;
+        };
+
+        const StatefulComponentRegistrar<PickupComponent> s_stateRegistration{ "PickupComponent" };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -46,8 +62,29 @@ namespace sw
     void PickupComponent::setItem( const InventorySlot& item )
     {
         _item   = item;
-        _itemID = item._itemID; // 씬 저장 · 불러오기는 id · 수를 싣는다(개체 상태는 이 실행 동안만)
+        _itemID = item._itemID; // 씬 데이터는 id · 수를, 개체 상태까지는 상태 코덱이 싣는다(`serializeState`)
         _count  = item._count;
+    }
+
+    void PickupComponent::serializeState( StateIO& io )
+    {
+        if ( io.isWriting() && _item.isEmpty() )
+            return; // 시작 전 — 씬 데이터가 곧 상태다
+        io.header( PickupComponentInternal::kStateTag, PickupComponentInternal::kStateVersion );
+        InventorySlot item = _item;
+        Inventory::serializeSlot( io, item );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() )
+            setItem( item );
+    }
+
+    void PickupComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "Pickup.SavedItemUnreadable", "The saved item of '%#' did not read - it keeps %# x%# from the scene data", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", _itemID.c_str(), _count );
     }
 
     void PickupComponent::onRegister( GameObjectManager& manager )

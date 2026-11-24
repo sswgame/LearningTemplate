@@ -98,6 +98,7 @@ namespace sw
         , _sfxVolume{ 1.0f }
         , _speakerMode{ AudioSpeakerMode::Auto }
         , _bMuted{ SW_FALSE }
+        , _bGamePaused{ SW_FALSE }
         , _bDeviceOpen{ SW_FALSE }
         , _bOutputOpen{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
@@ -325,6 +326,7 @@ namespace sw
         _pEngine->shutdown();
         _musicPath.clear();
         _musicPlayingID = 0;
+        _bGamePaused    = SW_FALSE; // 다시 세운 엔진은 멈추지 않은 채 선다 — 다음 프레임이 지금 값을 넘긴다
         _bInitialized   = SW_FALSE;
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
@@ -407,6 +409,15 @@ namespace sw
         _bOutputOpen = SW_TRUE;
         _reopenBackoff.reset();
         SW_LOG_INFO_ID( "AudioService.OutputReopened", "Audio output reopened (%# channels)", AudioChannelLayoutUtil::getChannelCount( layout ) );
+    }
+
+    void AudioService::setGamePaused( bool bPaused )
+    {
+        const uint8 value = bPaused ? SW_TRUE : SW_FALSE;
+        if ( _bInitialized == false || value == _bGamePaused )
+            return;
+        _bGamePaused = value;
+        _pEngine->setGamePaused( bPaused );
     }
 
     void AudioService::update( float32 deltaSeconds )

@@ -7,7 +7,9 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -62,10 +64,12 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief `_bOpenAtBeginPlay` 면 카탈로그 없이 엽니다. */
         void onBeginPlay() override;
+        /** @brief 다시 읽힌 카탈로그가 있으면 틱 뒤에 다시 묶습니다(배포는 다시 읽지 않아 틱하지 않는다). */
+        void onTick( TickContext& context ) override;
 
-        /** @brief 일지 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 일지 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
-        /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다. `ComponentStateStore::restore` 가 부릅니다. */
+        /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다. `ComponentStateCodec::restoreObject` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
         bool            isOpen() const { return _restore.isOpen(); }
@@ -81,14 +85,18 @@ namespace sw
         void handleCue( const GimmickCueEvent& event );
 
     private:
+        /** @brief 일지를 지금 판의 카탈로그에 다시 묶습니다. */
+        void rebindCatalog();
         /** @brief @p actor 가 이 일지 주인(조종자 오브젝트)이 조종하는 폰이면 true 입니다 — 다른 플레이어 · AI 가 한 일은 세지 않는다. */
         bool isOwnedPawn( GameObjectHandle actor ) const;
 
-        QuestLog             _questLog;
-        DeferredStateRestore _restore;
-        Subscription         _ownerDiedSubscription;            ///< "game" 채널 쓰러짐 구독(`onRegister` 가 걸고 `onUnregister` 가 푼다)
-        Subscription         _interactionCompletedSubscription; ///< "game" 채널 상호작용 완료 구독
-        Subscription         _cueSubscription;                  ///< "game" 채널 연출 신호 구독
+        SharedAssetRef<QuestCatalog>   _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다). 카탈로그 없이 열었으면 비었다
+        shared_ptr<const QuestCatalog> _pBoundCatalog; ///< 일지가 가리키는 판
+        QuestLog                       _questLog;
+        DeferredStateRestore           _restore;
+        Subscription                   _ownerDiedSubscription;            ///< "game" 채널 쓰러짐 구독(`onRegister` 가 걸고 `onUnregister` 가 푼다)
+        Subscription                   _interactionCompletedSubscription; ///< "game" 채널 상호작용 완료 구독
+        Subscription                   _cueSubscription;                  ///< "game" 채널 연출 신호 구독
         PROPERTY( Tooltip = "Open without a quest catalog at begin play - only for scenes without a kit director (the hub); a director opens it with its own catalog" )
         uint8                  _bOpenAtBeginPlay : 1;
         [[maybe_unused]] uint8 _reserved         : 7;

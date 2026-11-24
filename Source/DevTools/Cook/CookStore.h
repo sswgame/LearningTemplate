@@ -90,7 +90,7 @@ namespace sw
         template <typename CookFunction>
         [[nodiscard]] CookResult cookFile( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath, CookFunction&& cook ) const
         {
-            const CookJobDesc jobDesc = desc.forOutput( outputID );
+            const CookJobDesc jobDesc = makeJobDesc( desc, outputID );
             if ( reuseFreshOutput( jobDesc, outputID, outputPath ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
@@ -107,7 +107,7 @@ namespace sw
         template <typename CookFunction>
         [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, string_view outputName, const AbsolutePath& outputPath, CookFunction&& cook ) const
         {
-            const CookJobDesc jobDesc = desc.forOutput( outputName );
+            const CookJobDesc jobDesc = makeJobDesc( desc, outputName );
             if ( reuseFreshOutput( jobDesc, outputID, outputPath ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
@@ -137,6 +137,11 @@ namespace sw
         int64 getOutputHashNanos() const { return _outputHashNanos; }
 
     private:
+        /**
+         * @brief 출력 @p output 을 만드는 작업의 값입니다 — 대상(`_target`)에 지금 켜진 쿠킹 축 태그(`platform.android,target.client`)를 더합니다.
+         * @details 쿠커가 읽는 글의 조건(`_when`)이 그 값으로 풀린다. 키에 없으면 한 DDC 열쇠에 플랫폼마다 다른 바이트를 번갈아 쓴다 — 쿠커마다 적지 않고 모든 작업이 지나는 여기서 더한다.
+         */
+        static CookJobDesc makeJobDesc( const CookJobDesc& desc, string_view output );
         /** @brief 출력 파일의 내용 해시를 `ContentHash::computeFile`(도장이 그대로면 읽지 않는다)로 구하고 든 시간을 `_outputHashNanos` 에 더합니다. */
         uint64 hashOutputFile( const AbsolutePath& outputPath ) const;
 

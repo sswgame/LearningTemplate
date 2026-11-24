@@ -203,10 +203,16 @@ namespace sw
          */
         void releaseRetiredTextures( IRHIDevice* pDevice );
         /**
-         * @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 위쪽 밉을 기다리는 텍스처도 셉니다.
+         * @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 위쪽 밉을 기다리는 텍스처와 아직 굽지 않은 층 굽기도 셉니다.
          * @details 시나리오의 스크린샷이 로드 중 텍스처 · 아직 작은 밉을 찍지 않게 기다릴 때 씁니다(`AutomationRunner`).
          */
         uint32 countLoadsInFlight() const;
+        /**
+         * @brief 지금까지 도착한 텍스처 수입니다(어느 스레드든). 첫 로드가 끝나거나 다시 읽은(핫 리로드) 뒤 오릅니다 — 그때 안정 SRV 번호는 이미 새 텍스처를 가리킵니다.
+         * @details 안정 번호(R-6)라 도착이 머티리얼 · 프리미티브를 더럽히지 않는다. 도착 전 그림을 캐시하는 쪽(그림자 캐시)이 이 수로 다시 그린다.
+         *          밉 올리기 · 내리기는 세지 않는다 — 카메라가 움직일 때마다 바뀌어 캐시가 늘 버려진다(모양은 작은 밉과 같다).
+         */
+        [[nodiscard]] uint64 getArrivalCount() const;
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)이면 true 입니다. */
         static bool isRenderTargetPath( string_view relativePath );
         /** @brief CPU 텍스처 경로(`cpu/...`)이면 true 입니다. */
@@ -276,7 +282,12 @@ namespace sw
         void requestLayerBake( TextureLayerBakeRequest request );
         /** @brief 그리지 못한 굽기를 다음 프레임으로 돌려놓습니다(렌더 스레드). 그 사이 같은 결과의 새 요청이 들어왔으면 버립니다. */
         void deferLayerBake( TextureLayerBakeRequest request );
-        /** @brief 맡겨 둔 굽기를 모두 가져갑니다(렌더 스레드, 프레임 프리패스). @p outListRequest 는 비우고 채운다. */
+        /**
+         * @brief 맡겨 둔 굽기 가운데 텍스처가 모두 와 있는 것을 이번 프레임에 그릴 것으로 옮깁니다(렌더 스레드, 이번 프레임의 로드를 끝내기 **전** — `FrameRenderer::updateTextureUploads`).
+         * @details 예약한 SRV 번호의 다시 묶기는 다음 프레임부터 셰이더에 보인다. 이번 프레임에 끝난 텍스처로 구우면 로드 중 텍스처가 결과에 굳는다 — 굽기는 한 번뿐이다.
+         */
+        void selectReadyLayerBakes();
+        /** @brief `selectReadyLayerBakes` 가 고른 굽기를 모두 가져갑니다(렌더 스레드, 프레임 프리패스). @p outListRequest 는 비우고 채운다. */
         void takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest );
         /** @brief 결과 타깃 @p albedoTarget 의 굽기를 기록했다고 적습니다(렌더 스레드). 머티리얼이 그 프레임 뒤의 그리기에서 읽으면 구운 내용이다(같은 큐의 제출 순서). */
         void recordLayerBaked( const string& albedoTarget );
@@ -368,7 +379,7 @@ namespace sw
         /** @brief 텍스처 객체입니다(`Ready` 가 아니면 쓰지 않는다). 핸들이 살아 있는 동안 유효합니다. */
         Texture2D* getTexture() const { return _pTexture; }
         /**
-         * @brief 올라간 GPU 텍스처의 정체(핸들 값)입니다. 준비 전이거나 올라가 있지 않으면 0 입니다.
+         * @brief 올라간 GPU 텍스처의 정체(`Texture2D::getResidencySerial`)입니다. 준비 전이거나 올라가 있지 않으면 0 입니다.
          * @details 디바이스 교체 · 크기 바꾸기로 값이 바뀐다 — 게임 코드는 같은지만 본다(RHI 형식 · `Texture2D.h` 를 모르고 다시 구울지 정한다).
          */
         uint64 getResidentIdentity() const;

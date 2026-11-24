@@ -417,14 +417,14 @@ namespace sw
         }
         _pAutosave = make_unique<AutosaveManager>();
         if ( _pAutosave->initialize( settings, getSubsystem<GameLocalStore>(), _saveLock,
-                                     SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, [this]( vector<uint8>& outBytes )
-        { return captureSnapshot( SerializePurpose::SaveGame, outBytes ); } ),
-                                     SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+                                     SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, [this]( vector<uint8>& outBytes, float64& outPlayTime )
         {
-            getSubsystem<GameSaveSlots>().applySlot( slot, bytes, onCompleted ); // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
-            return true;
-        } ) ) == false )
-            return false; // 까닭은 관리자가 남겼다
+            outPlayTime = getSubsystem<GameSaveSlots>().getPlayTime();
+            return captureSnapshot( SerializePurpose::SaveGame, outBytes );
+        } ),
+                                     SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( const string& slot, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+        { return getSubsystem<GameSaveSlots>().loadSlot( slot, onCompleted ); } ) ) == false ) // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
+            return false;                                                                      // 까닭은 관리자가 남겼다
         return bindScopedService( _pAutosave.get() );
     }
 
@@ -510,6 +510,7 @@ namespace sw
         getSubsystem<PlayerStatsSubsystem>().update(); // 플랫폼에 모아 둔 업적 · 통계 쓰기를 내보낸다(통계가 없는 게임은 바로 돌아온다)
         if ( _pAppearanceWatcher != nullptr )
             _pAppearanceWatcher->update( *_pAppearanceDatabase, _pItemCatalog.get() );
+        getSubsystem<GameSaveSlots>().updatePlayTime( deltaTime );
         onUpdate( deltaTime );
         if ( _pDevPart != nullptr )
             _pDevPart->update( deltaTime );
@@ -533,7 +534,13 @@ namespace sw
 
     bool GameInstance::deserializeState( const void* pInBuffer, uint32 size )
     {
-        return readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size ).has_value();
+        if ( readStateEnvelope( SerializePurpose::Snapshot, pInBuffer, size ).has_value() == false )
+            return false;
+        // 다시 선 인스턴스(핫 리로드 · 백엔드 교체)는 같은 진행이다 — 플레이 시간을 잇는다. 미니게임에서 돌아오는 복원은 이 길이 아니라 시간을 되감지 않는다.
+        const optional<GameStateSnapshot::SaveInfo> info = GameStateSnapshot::readSaveInfo( pInBuffer, size );
+        if ( info.has_value() )
+            getSubsystem<GameSaveSlots>().setPlayTime( info->_playTime );
+        return true;
     }
 
     bool GameInstance::captureSnapshot( SerializePurpose purpose, vector<uint8>& outBytes )
@@ -557,12 +564,13 @@ namespace sw
             SW_LOG_WARNING_ID( "GameInstance.SaveBlocked", "Saving is blocked ('%#') - nothing is written", _saveLock.findBlockReason()->c_str() );
             return false;
         }
-        // 순서: 올린 타입의 상태를 싣고 걷기 → 파생 훅(그 밖의 상태를 싣는다) → 봉투(파생의 리플렉션 상태 포함).
+        // 순서: 컴포넌트 상태를 뜨고 세운 것을 걷기 → 파생 훅 → 봉투(파생의 리플렉션 상태 포함).
         const auto capture = [this, purpose, &minigameBytes, &outBytes]()
         {
             _stateSnapshot.beginCapture();
             onBeforeStateSerialize();
-            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), minigameBytes, outBytes );
+            return _stateSnapshot.writeEnvelope( purpose, getStateTypeInfo(), static_cast<const GameInstance*>( this )->getStateInstance(), getSubsystem<GameSaveSlots>().getPlayTime(),
+                                                 minigameBytes, outBytes );
         };
         if ( purpose == SerializePurpose::SaveGame )
         {
@@ -575,7 +583,7 @@ namespace sw
 
     expected<void, SnapshotRestoreFailure> GameInstance::readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size )
     {
-        // 순서: 봉투(검증 → 씬 · 리플렉션 상태 · 컴포넌트 상태 교체, 올린 타입에 상태 돌려주기) → 파생 훅(그 밖의 상태를 넘긴다) → 저장소 비우기.
+        // 순서: 봉투(검증 → 씬 · 리플렉션 상태 교체, 컴포넌트 상태 돌려주기) → 파생 훅.
         expected<void, SnapshotRestoreFailure> result = _stateSnapshot.readEnvelope( purpose, getStateTypeInfo(), getStateInstance(), pInBuffer, size );
         if ( result.has_value() == false )
         {
@@ -586,7 +594,6 @@ namespace sw
         }
         getSubsystem<GameSaveSlots>().notifySceneRestored(); // 성공한 복원이 깨진 씬을 덮었다
         onAfterStateDeserialize();
-        _stateSnapshot.endRestore();
         return result;
     }
 

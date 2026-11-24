@@ -18,6 +18,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -54,7 +55,7 @@ namespace sw
      *          (`CameraPresetCatalog::resolveContextPreset`). 상황은 게임 코드가 `setContext` 으로 켜거나, 데이터의 `action` 을 누르고 있는 동안 켜진다.
      *          보일 프리셋이 바뀔 때만 켜므로(블렌드 표를 따른다) 코드가 `activatePreset` 으로 직접 켠 프리셋(킬캠)과 다투지 않는다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
-     *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`serializeState` / `restoreState`)으로 저장한다.
+     *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateCodec` 계약(`serializeState` / `restoreState`)으로 저장한다.
      *          이 타입은 정의한 .cpp 가 `StatefulComponentRegistrar` 로 등록해 모든 게임의 스냅샷에 실린다. 게임 인스턴스가 따로 등록하지 않는다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
@@ -134,13 +135,13 @@ namespace sw
         [[nodiscard]] bool findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const;
 
         /**
-         * @brief `ComponentStateStore` 계약입니다. 켠 프리셋과 블렌드 스택을 디렉터의 본문(`CameraDirector::serializeState`)으로 놓습니다.
+         * @brief `ComponentStateCodec` 계약입니다. 켠 프리셋과 블렌드 스택을 디렉터의 본문(`CameraDirector::serializeState`)으로 놓습니다.
          * @details 읽기는 프리셋을 id 로 다시 찾으므로 카탈로그가 선 뒤(`onBeginPlay`)에만 된다 — 그 전 바이트는 `restoreState` 가 보관했다가 `applyPendingState` 가 이것으로 읽는다.
          */
         void serializeState( StateIO& io );
-        /** @brief `ComponentStateStore` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
+        /** @brief `ComponentStateCodec` 계약입니다. 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
-        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateCodec` 계약 — 있으면 그것이 곧 상태다). */
         const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         /**
@@ -200,6 +201,8 @@ namespace sw
 
     private:
         CameraTarget computeTarget() const;
+        /** @brief 대상이 지난 계산 뒤 순간이동했으면 디렉터에 알립니다(`CameraDirector::onTargetTeleported`). */
+        void consumeTargetTeleport();
         /** @brief 켜진 상황(코드 + 누르고 있는 액션)을 선택 프리셋에 적용하고, 보일 프리셋이 지난번과 다르면 켭니다. */
         void refreshContextPreset();
         /** @brief 상황 액션(`<Context action>`)을 누르고 있는 상황을 `_listHeldContext` 에 모읍니다. 입력을 읽지 않으면 비웁니다. */
@@ -293,6 +296,8 @@ namespace sw
         hashed_string                       _contextPreset;        ///< 상황을 적용해 마지막으로 켠 프리셋. 바뀔 때만 켠다(직접 켠 프리셋과 다투지 않는다)
         vector<hashed_string>               _listContext;          ///< 코드가 켠 상황(`setContext`)
         vector<hashed_string>               _listHeldContext;      ///< 이번 프레임 액션을 누르고 있는 상황
+        GameObjectHandle                    _teleportTarget;       ///< `_targetTeleport` 이 마지막에 본 대상
+        SceneTeleportCursor                 _targetTeleport;       ///< 대상이 순간이동했는지 읽는 자리
         float32                             _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
         bool                                _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };

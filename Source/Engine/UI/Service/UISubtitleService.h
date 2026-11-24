@@ -30,13 +30,14 @@ namespace sw
     /** @brief 자막 한 줄입니다. */
     struct SW_API UISubtitleLine
     {
-        string  _speaker{};                ///< 화자 이름입니다(현지화한 텍스트이며, 비면 이름 줄을 접습니다).
-        string  _text{};                   ///< 현지화한 텍스트입니다.
-        float32 _durationSeconds{ 0.0f };  ///< 보이는 시간
-        float32 _remainingSeconds{ 0.0f }; ///< 남은 시간입니다(보이기 시작한 뒤부터 줄어듭니다).
-        uint64  _voicePlayingID{ 0 };      ///< 이 줄을 낸 음성의 재생 id(`AudioPlayingID`)입니다. 0 이면 음성이 없는 줄입니다.
-        uint32  _id{ 0 };                  ///< `post` 가 돌려준 번호
-        bool    _bVoicePlaying{ false };   ///< 음성이 아직 나는 중입니다(`refreshVoiceState`). 나는 동안은 시간이 다 돼도 내리지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+        string  _speaker{};                 ///< 화자 이름입니다(현지화 키 · 메시지 · 원문 — 그릴 때 풀린다, 비면 이름 줄을 접습니다).
+        string  _text{};                    ///< 줄의 글입니다(현지화 키 · 메시지 · 원문 — 그릴 때 풀린다).
+        float32 _durationSeconds{ 0.0f };   ///< 보이는 시간
+        float32 _remainingSeconds{ 0.0f };  ///< 남은 시간입니다(보이기 시작한 뒤부터 줄어듭니다).
+        uint64  _voicePlayingID{ 0 };       ///< 이 줄을 낸 음성의 재생 id(`AudioPlayingID`)입니다. 0 이면 음성이 없는 줄입니다.
+        uint32  _id{ 0 };                   ///< `post` 가 돌려준 번호
+        bool    _bVoicePlaying{ false };    ///< 음성이 아직 나는 중입니다(`refreshVoiceState`). 나는 동안은 시간이 다 돼도 내리지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+        bool    _bRunsInGamePause{ false }; ///< 게임이 멈춘 동안에도 시간이 흐른다 — 멈추지 않는 버스의 음성이 낸 줄이다. 그 밖의 줄은 소리 · 시퀀스와 같이 선다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
     };
 
     /** @brief 지금 보이는 자막 줄의 배치 결과입니다(감시 값 · 진단). 마지막 UI 배치 기준입니다. */
@@ -59,7 +60,7 @@ namespace sw
      *          (언리얼 Dialogue Wave 자막이 소리 길이를 따르는 것과 같다 — 짧은 음성도 읽을 시간은 준다).
      *          사용자 설정은 매 프레임 읽는다. `gv_subtitles` 를 끄면 화면은 닫지만 줄은 계속 받고 시간도 흐른다(켜면 지금 줄부터 보인다).
      *          `gv_subtitleSize` 는 문서에 적힌 글 크기에 설정의 `_arrSizeScale` 배율을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
-     *          텍스트는 이미 현지화한 것을 받는다(대화 러너와 음성 이벤트가 해석한다). 길이가 늘어나는 언어(의사 문화권 qps-ploc)는 문서의 최대 폭에서 접힌다.
+     *          텍스트는 현지화 키 · 메시지 · 원문이고 글 위젯이 그릴 때 푼다 — 푼 글을 들면 보이는 동안 언어를 바꿔도 그대로다. 길이가 늘어나는 언어(의사 문화권 qps-ploc)는 문서의 최대 폭에서 접힌다.
      *          게임 스레드에서만 쓴다.
      */
     class SW_API UISubtitleService final : public Subsystem
@@ -99,15 +100,17 @@ namespace sw
         /** @brief 자막을 받는 자리(`ISubtitleSink`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
         ISubtitleSink& getSubtitleSink() { return _subtitleSink; }
         /**
-         * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간이며, 음성이 나는 동안은 남습니다.
+         * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키째 들고 표시 시간은 읽기 시간이며, 음성이 나는 동안은 남습니다.
          * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDef::_subtitleSpeakerKey`)다.
          */
         void postAudioCues( const vector<AudioSubtitleCue>& listCue );
         /** @brief 음성이 낸 줄마다 그 음성이 아직 나는지 @p pAudio 에 물어 둡니다. 오디오가 없으면(nullptr) 모두 끝난 것으로 봅니다. 엔진 프레임이 프레임마다 부릅니다. */
         void refreshVoiceState( const AudioEngine* pAudio );
+        /** @brief 게임이 멈췄는지 받습니다. 멈춘 동안 줄의 시간이 선다(멈추지 않는 버스의 음성이 낸 줄은 흐른다) — 시퀀스 · 게임 소리와 같은 시계다. 엔진 프레임이 `update` 앞에 부릅니다. */
+        void setGamePaused( bool bPaused ) { _bGamePaused = bPaused ? SW_TRUE : SW_FALSE; }
         /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 시나리오 단계 되돌리기가 부릅니다). */
         void clear();
-        /** @brief 시간을 흘리고(꺼져 있어도) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. UI 갱신의 화면 틱 앞 칸이 부릅니다. */
+        /** @brief 시간을 흘리고(꺼져 있어도 — 게임이 멈췄으면 선다) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. UI 갱신의 화면 틱 앞 칸이 부릅니다. */
         void update( float32 deltaSeconds );
 
         /** @brief 텍스트 @p text 의 읽기 시간입니다. max( 최소 표시 시간, 글자(코드 포인트) 수 × 글자당 시간 ) 입니다. */
@@ -167,6 +170,7 @@ namespace sw
         float32                _authoredSpeakerFontSize; ///< 문서에 적힌 화자 이름 크기입니다.
         UIScreenHandle         _screen;
         IDAllocator<uint32>    _lineIDAllocator;
+        uint8                  _bGamePaused     : 1; ///< 게임이 멈췄다(`setGamePaused`)
         uint8                  _bDocumentFailed : 1; ///< 문서를 만들지 못했는지 나타냅니다. 같은 오류를 매 프레임 내지 않기 위한 값입니다.
 
         SW_SERVICE_SLOT( UISubtitleService, Required );

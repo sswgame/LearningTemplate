@@ -4,8 +4,8 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -27,8 +27,9 @@ namespace sw
         const uint64 fileID = scene.getOrAssignFileID( objectID );
         if ( fileID == 0 )
             return false;
-        outReference._scenePath = scene.getSourcePath();
-        outReference._fileID    = fileID;
+        if ( outReference._targetScene.assign( scene.getSourcePath() ) == false )
+            return false; // 씬 파일 이름이 아니다 — 이유는 `assign` 이 남겼다
+        outReference._fileID = fileID;
         return true;
     }
 
@@ -133,7 +134,7 @@ namespace sw
         const uint64 fileID = targetScene.findFileID( objectID );
         if ( fileID == 0 || targetScene.getSourcePath().empty() )
             return false;
-        vector<const Scene*> listScene;
+        vector<Scene*> listScene;
         sceneManager.collectAllScenes( listScene );
         vector<const SceneObjectReference*> listReference;
         ReferenceCollector                  collector( typeRegistry, listReference );
@@ -156,7 +157,7 @@ namespace sw
                         collector.collectProperty( static_cast<const void*>( pComponent ), prop );
                         const auto pointsAtTarget = [&]( const SceneObjectReference* pValue )
                         {
-                            return pValue != nullptr && pValue->_fileID == fileID && isSameScenePath( pValue->_scenePath, targetScene.getSourcePath() );
+                            return pValue != nullptr && pValue->_fileID == fileID && pValue->isTargetScene( targetScene );
                         };
                         if ( std::none_of( listReference.begin(), listReference.end(), pointsAtTarget ) )
                             return;
@@ -179,7 +180,7 @@ namespace sw
             return SceneObjectResolveResult::Unset;
         for ( const unique_ptr<Scene>& scene : sceneManager.getLoadedScenes() )
         {
-            if ( scene == nullptr || isSameScenePath( scene->getSourcePath(), reference._scenePath ) == false )
+            if ( scene == nullptr || reference.isTargetScene( *scene ) == false )
                 continue;
             return resolveInScene( *scene, reference, outObjectID );
         }
@@ -191,16 +192,19 @@ namespace sw
         outObjectID = 0;
         if ( reference.isSet() == false )
             return SceneObjectResolveResult::Unset;
-        if ( isSameScenePath( scene.getSourcePath(), reference._scenePath ) == false )
+        if ( reference.isTargetScene( scene ) == false )
             return SceneObjectResolveResult::SceneNotLoaded;
         outObjectID = scene.findObjectIDByFileID( reference._fileID );
         return outObjectID != 0 ? SceneObjectResolveResult::Resolved : SceneObjectResolveResult::ObjectMissing;
     }
 
-    bool SceneObjectReference::isSameScenePath( string_view lhs, string_view rhs )
+    bool SceneObjectReference::isTargetScene( const Scene& scene ) const
     {
-        if ( lhs.empty() || rhs.empty() )
+        const string& path = scene.getSourcePath();
+        if ( path.empty() || _targetScene.empty() )
             return false;
-        return StringUtil::toLower( FileUtil::normalizeSeparators( lhs ).c_str() ) == StringUtil::toLower( FileUtil::normalizeSeparators( rhs ).c_str() );
+        if ( _targetScene.getGUID().has_value() )
+            return AssetRegistry::resolveGUID( path ) == _targetScene.getGUID();
+        return FileUtil::isSameDiskPath( path, _targetScene.path() );
     }
 } // namespace sw

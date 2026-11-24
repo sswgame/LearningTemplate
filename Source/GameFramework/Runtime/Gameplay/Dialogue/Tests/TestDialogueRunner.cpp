@@ -5,6 +5,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/ISubtitleSink.h"
@@ -400,4 +402,29 @@ SW_TEST_CASE( DialogueRunnerTest, SubtitleLineFollowsTheDialogue )
 
     runner.stopDialogue();
     SW_EXPECT_TRUE( sink._listShown.empty() );
+}
+
+/** @brief [DialogueRunnerTest] 지금 줄과 선택지는 키로 남는다 — 대화 중에 언어를 바꿔도 보이는 쪽이 새 언어로 푼다(옛 코드는 노드에 들어설 때의 언어로 굳었다) */
+SW_TEST_CASE( DialogueRunnerTest, CurrentLineStaysAKey )
+{
+    DialogueGraphBuilder builder;
+    (void)builder.add( kStart, DialogueAssetNodeKind::Start );
+    DialogueAssetNode& ask = builder.add( kChoice, DialogueAssetNodeKind::Choice );
+    ask._text              = "Talk.Where";
+    ask._listChoice        = { "Talk.Left" };
+    builder.connect( kStart, kChoice );
+    DialogueRunnerComponent runner;
+    runner.setGraph( builder._asset );
+    SW_REQUIRE_TRUE( runner.startDialogue() );
+
+    LocalizationManager localization;
+    localization.setString( "en", hashed_string( "Talk.Where" ), "Where?" );
+    localization.setString( "ko", hashed_string( "Talk.Where" ), "어디로?" );
+    localization.setString( "ko", hashed_string( "Talk.Left" ), "왼쪽" );
+    SW_REQUIRE_TRUE( localization.setCurrentLanguage( "en" ) );
+    SW_EXPECT_EQUAL( string( "Where?" ), LocalizedText::resolve( &localization, runner.getCurrentText() ) );
+    SW_REQUIRE_TRUE( localization.setCurrentLanguage( "ko" ) );
+    SW_EXPECT_EQUAL( string( "어디로?" ), LocalizedText::resolve( &localization, runner.getCurrentText() ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), runner.getCurrentChoices().size() );
+    SW_EXPECT_EQUAL( string( "왼쪽" ), LocalizedText::resolve( &localization, runner.getCurrentChoices()[0] ) );
 }

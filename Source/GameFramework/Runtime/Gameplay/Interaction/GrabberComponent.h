@@ -2,11 +2,12 @@
  * @file GrabberComponent.h
  * @brief 집기, 던지기, 붙이기입니다. 물리 백엔드를 모르는 인터페이스(`IGrabPhysics`)와 그것을 쓰는 컴포넌트를 담습니다.
  * @details 게임이 `IGrabPhysics` 를 게임 서비스로 등록하면 그것을 쓰고, 없으면 강체 백엔드(`RigidBodyGrabPhysics`)를 쓴다. 이 백엔드는 강체를 키네마틱으로 손에 묶고, 놓을 때
- *          동적으로 되돌리고 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 쥐고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 분리한다.
+ *          집기 전의 종류로 되돌리고 동적이면 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 쥐고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 분리한다.
  *          속도를 받을 몸이 없어 놓은 자리에 남는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -15,12 +16,15 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    struct GameObjectUnloadInfo;
+
     /** @brief 집기 백엔드 인터페이스입니다. 게임 스레드의 틱 밖에서 불리며, 컴포넌트가 호출을 틱 뒤로 미룹니다. */
     class IGrabPhysics
     {
@@ -33,8 +37,8 @@ namespace sw
 
         /** @brief @p target 을 @p holder 의 @p localOffset 위치에 붙입니다. 붙였으면 true 입니다. */
         [[nodiscard]] virtual bool attach( GameObject& holder, GameObject& target, const float3& localOffset ) = 0;
-        /** @brief 붙인 것을 풀고 @p velocity(월드, m/s)로 놓습니다. 0 이면 그냥 떨어뜨립니다. */
-        virtual void release( GameObject& holder, GameObject& target, const float3& velocity ) = 0;
+        /** @brief 붙인 것을 풀고 @p velocity(월드, m/s)로 놓습니다. 0 이면 그냥 떨어뜨립니다. 강체는 집기 전의 종류 @p bodyType 으로 돌아갑니다. */
+        virtual void release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType ) = 0;
     };
 } // namespace sw
 
@@ -45,7 +49,7 @@ namespace sw
     {
     public:
         [[nodiscard]] bool attach( GameObject& holder, GameObject& target, const float3& localOffset ) override;
-        void               release( GameObject& holder, GameObject& target, const float3& velocity ) override;
+        void               release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType ) override;
     };
 } // namespace sw
 
@@ -53,14 +57,14 @@ namespace sw
 {
     /**
      * @class RigidBodyGrabPhysics
-     * @brief 강체를 키네마틱으로 손에 붙이고(트랜스폼을 따르며, 밀린 것이 속도를 받음), 놓을 때 동적으로 되돌려 속도를 줍니다. 3D 강체와 2D 강체를 모두 지원합니다.
+     * @brief 강체를 키네마틱으로 손에 붙이고(트랜스폼을 따르며, 밀린 것이 속도를 받음), 놓을 때 집기 전의 종류로 되돌리며(유니티 XRI `wasKinematic` 자리) 동적이면 속도를 줍니다. 3D 강체와 2D 강체를 모두 지원합니다.
      *        강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)과 같게 동작합니다. 서비스가 없을 때 `GrabberComponent` 가 쓰는 기본 백엔드입니다.
      */
     class SW_GF_API RigidBodyGrabPhysics final : public IGrabPhysics
     {
     public:
         [[nodiscard]] bool attach( GameObject& holder, GameObject& target, const float3& localOffset ) override;
-        void               release( GameObject& holder, GameObject& target, const float3& velocity ) override;
+        void               release( GameObject& holder, GameObject& target, const float3& velocity, PhysicsBodyType bodyType ) override;
 
     private:
         TransformGrabPhysics _transform;
@@ -94,6 +98,8 @@ namespace sw
         /** @brief 쥔 것을 내려놓습니다 — 든 쪽이 사라져도 대상은 남고(물리로 돌아간다) 손과 함께 지워지지 않는다. */
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
+        /** @brief 이 오브젝트가 셀 · 레이어와 함께 내려가는 알림을 구독합니다. */
+        void onRegister( GameObjectManager& manager ) override;
 
         /** @brief 집습니다. 이미 쥐고 있거나, 남이 쥐고 있거나, 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
@@ -118,12 +124,18 @@ namespace sw
         IGrabPhysics& getBackend();
         /** @brief 살아 있는 든 것입니다. 없으면 nullptr 입니다. */
         const GameObject* findHeld() const;
+        /** @brief 쥔 @p held 가 손과 함께 지워지지 않게 하고 그것이 내려가는 알림을 듣습니다. */
+        void watchHeld( GameObject& held );
+        /** @brief 쥔 쪽과 쥔 것 가운데 한쪽만 셀 · 레이어와 함께 내려갑니다 — 상태를 뜨기 전에 놓습니다(`GameObjectEvents::_unloading`). */
+        void handleUnloading( const GameObjectUnloadInfo& info );
 
     private:
         PROPERTY( Category = "Grab", DisplayName = "Hold Offset", Tooltip = "Where the held object sits, in this object's space", Units = m )
         float3 _holdOffset;
         PROPERTY( Category = "Grab", DisplayName = "Held", Tooltip = "Object held now (runtime)" )
         GameObjectHandle _held;
+        PROPERTY( RuntimeState )
+        PhysicsBodyType _heldBodyType; ///< 집기 전의 강체 종류. 쥔 채 저장 · 되살아난 뒤 놓아도 그 종류로 돌아간다
         PROPERTY( Category = "Input", DisplayName = "Grab Button", Tooltip = "Pawn intent button that picks up or puts down (empty: no input, code and dev commands only)" )
         hashed_string _grabButton;
         PROPERTY( Category = "Input", DisplayName = "Grabbable Tags", Tooltip = "Only objects with these tags are picked up by the button" )
@@ -134,7 +146,9 @@ namespace sw
         float32 _throwSpeed;
 
         RigidBodyGrabPhysics _fallback;
-        optional<int32>      _grabIndex;  ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
-        vector<GameObject*>  _listTagged; ///< 후보 버퍼(태그 색인 결과)
+        optional<int32>      _grabIndex;              ///< `_grabButton` 의 폰 버튼 번호(없으면 비어 있다)
+        vector<GameObject*>  _listTagged;             ///< 후보 버퍼(태그 색인 결과)
+        Subscription         _unloadSubscription;     ///< 이 오브젝트가 내려가는 알림(`handleUnloading`)
+        Subscription         _heldUnloadSubscription; ///< 쥔 것이 내려가는 알림(`handleUnloading`)
     };
 } // namespace sw

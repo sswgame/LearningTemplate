@@ -147,8 +147,20 @@ SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
     SW_REQUIRE_TRUE( travel() );
     SW_EXPECT_TRUE( saveLock.isBlocked() ); // 로드는 끝났다 — 타이틀이라 막혀 있다
     SW_REQUIRE_TRUE( flow.requestEntranceScene() );
+    // 플레이어가 고른 이동이 도는 동안 게임 이동(포털)은 받지 않는다.
+    SW_EXPECT_FALSE( flow.requestSceneThen( titlePath, {}, GameSceneFlow::kGameplayTravel ) );
     SW_REQUIRE_TRUE( travel() );
     SW_EXPECT_FALSE( saveLock.isBlocked() );
+    // 마지막에 고른 이동이 이긴다 — 불러오기를 기다리다 타이틀로 나가면 불러오기는 물린다.
+    const uint32 load = flow.beginSessionTravel();
+    SW_EXPECT_TRUE( flow.isSessionTravelCurrent( load ) );
+    SW_REQUIRE_TRUE( flow.requestTitleScene() );
+    SW_EXPECT_FALSE( flow.isSessionTravelCurrent( load ) );
+    flow.endSessionTravel( load ); // 물린 이동을 닫아도 지금 이동은 그대로다
+    SW_EXPECT_FALSE( flow.requestSceneThen( mapPath, {}, GameSceneFlow::kGameplayTravel ) );
+    SW_REQUIRE_TRUE( travel() );
+    SW_EXPECT_TRUE( flow.requestSceneThen( mapPath, {}, GameSceneFlow::kGameplayTravel ) ); // 끝난 이동은 닫혔다
+    SW_REQUIRE_TRUE( travel() );
     flow.shutdownSubsystem();
     sceneManager.shutdownSubsystem();
 }
@@ -199,7 +211,7 @@ SW_TEST_CASE( GameFlowTest, TitleEndsTheGameBeforeItRequestsTheScene )
     EventDispatcher& dispatcher = engine::getSubsystem<EventDispatcher>();
     dispatcher.push( SceneLoadCompletedEvent{} ); // 하던 게임이 남긴 것
     bool               bEndedBeforeRequest = false;
-    const Subscription subscription        = sceneManager.onSceneLoadRequested().add( SW_DELEGATE_LAMBDA( SceneLoadRequestedHandler, [&]( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )
+    const Subscription subscription        = sceneManager.onSceneLoadRequested().add( SW_DELEGATE_LAMBDA( SceneLoadRequestedHandler, [&]( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future )
            {
         (void)scenePath;
         (void)kind;

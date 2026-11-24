@@ -111,6 +111,7 @@ namespace sw
         , _bQuitRequested{ SW_FALSE }
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
+        , _bGamePaused{ SW_FALSE }
         , _frameDeltaSeconds{ 0.0f }
         , _exitCode{ ProcessExitCode::Passed }
         , _pQuitRequest{ nullptr }
@@ -477,6 +478,7 @@ namespace sw
             if ( _pAudioDriver != nullptr )
             {
                 SW_PROFILE_SCOPE( "GT.Audio.update" );
+                _pAudioDriver->setGamePaused( _bGamePaused != SW_FALSE );
                 _pAudioDriver->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
             }
         }
@@ -543,6 +545,7 @@ namespace sw
         const bool bWholeWindow     = pMainWindow != nullptr && pMainWindow->getWidth() == vpWidth && pMainWindow->getHeight() == vpHeight;
         frame._safeInsets           = bWholeWindow ? pMainWindow->getSafeAreaInsets() : float4{};
         frame._unscaledDeltaSeconds = engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        frame._bGamePaused          = _bGamePaused != SW_FALSE;
         _pUIDriver->updateFrame( frame );
     }
 
@@ -558,6 +561,8 @@ namespace sw
         const uint32               vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
         const uint32               vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
         _frameDeltaSeconds                     = deltaTime;
+        // 게임 시간이 선 동안(정지 메뉴 · 포토 모드 — `GameTimeScale`, 함께 쓰는 시간은 서지 않는다) 게임 소리와 자막도 선다. 에디터가 씬을 틱하지 않는 동안은 일시정지가 아니다 — 패널의 소리 미리듣기가 난다.
+        _bGamePaused = sceneTick == SceneTick::Run && engine::getSubsystem<GameTimeScale>().get() <= 0.0f ? SW_TRUE : SW_FALSE;
 
         if ( _headlessState.isHeadless() )
             return;

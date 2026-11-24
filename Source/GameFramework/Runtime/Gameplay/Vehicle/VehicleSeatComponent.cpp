@@ -8,6 +8,7 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
@@ -66,6 +67,8 @@ namespace sw
         , _occupant{}
         , _occupantController{}
         , _previousVehicleController{}
+        , _unloadSubscription{}
+        , _riderUnloadSubscription{}
         , _riderSuspension{}
         , _seatInVehicle{ float4x4::Identity }
         , _lastSeatPosition{}
@@ -91,6 +94,7 @@ namespace sw
     {
         Component::onRegister( manager );
         (void)VehicleSeatSystem::getOrCreate( manager );
+        _unloadSubscription = GameObjectEvents::listen<&VehicleSeatComponent::handleUnloading>( *this, &GameObjectEvents::_unloading );
     }
 
     void VehicleSeatComponent::onBeginPlay()
@@ -108,6 +112,7 @@ namespace sw
         if ( pRider != nullptr )
             (void)releaseRider( *pRider, true ); // 레지스트리에서는 이미 내렸다(`Component::dispatchUnregister`) — 좌석을 찾지 않는다
         _riderSuspension.reset();
+        _riderUnloadSubscription.reset();
         _occupant                  = GameObjectHandle{};
         _occupantController        = TComponentHandle<ControllerComponent>{};
         _previousVehicleController = TComponentHandle<ControllerComponent>{};

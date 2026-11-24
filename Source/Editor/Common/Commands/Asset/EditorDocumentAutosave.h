@@ -26,7 +26,8 @@ namespace sw::editor
     /** @brief 문서 사본 하나(쓸 것 또는 복구 후보)와 그 디스크 규칙입니다. 세션 폴더만 받는다 — 단위 테스트가 스크래치 폴더로 부른다. */
     struct EditorDocumentAutosaveEntry
     {
-        string       _documentPath;           ///< 문서의 리소스 id. 상태 문서(`_panelID` 가 있다)면 그 문서가 저장할 파일(`makeFileID`)이다
+        string       _documentReference;      ///< 메타에 적힌 문서의 참조 글(복구 후보만) — GUID 참조라 훑은 뒤 문서를 옮겨도 복원이 지금 자리를 찾는다
+        string       _documentPath;           ///< 문서의 리소스 id(후보면 훑은 때의 자리). 상태 문서(`_panelID` 가 있다)면 그 문서가 저장할 파일(`makeFileID`)이다
         string       _panelID;                ///< 상태 문서(프로젝트 설정 · 전역 변수 · 메시 모디파이어)의 패널 id. 비면 에셋 문서다 — 복원이 이 패널을 연다
         string       _text;                   ///< 문서 글(쓸 때만 — 복구 후보는 `_textAbs` 에서 읽는다)
         AbsolutePath _textAbs;                ///< 사본 글 파일의 디스크 경로(복구 후보)
@@ -42,6 +43,8 @@ namespace sw::editor
         [[nodiscard]] bool write( const AbsolutePath& sessionFolder ) const;
         /** @brief 이 복구 후보의 사본 글을 읽습니다. 읽지 못하면 false 입니다. */
         [[nodiscard]] bool readText( string& outText ) const;
+        /** @brief 이 복구 후보가 문서 @p documentPath 의 사본인지 봅니다 — 사본 파일 이름이 문서의 정체(GUID)다. */
+        [[nodiscard]] bool isCopyOf( string_view documentPath ) const;
         /** @brief 문서 @p documentPath 의 사본을 지웁니다(정상 저장 · 다시 읽기 · 복원). 없으면 아무것도 하지 않는다. */
         static void remove( const AbsolutePath& sessionFolder, string_view documentPath );
         /**

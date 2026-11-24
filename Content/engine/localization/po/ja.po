@@ -35,6 +35,81 @@ msgctxt "Cancel"
 msgid "Cancel"
 msgstr "キャンセル"
 
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Blocked"
+msgid "Message was blocked by the word filter"
+msgstr "メッセージは単語フィルターでブロックされました"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Failed"
+msgid "Chat failed"
+msgstr "チャットに失敗しました"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.InvalidMessage"
+msgid "Message is empty or not valid"
+msgstr "メッセージが空か正しくありません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Muted"
+msgid "You are muted ({seconds} s left)"
+msgstr "チャットが禁止されています(残り{seconds}秒)"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.NotFound"
+msgid "Message not found"
+msgstr "メッセージが見つかりません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.NotJoinable"
+msgid "This channel cannot be joined"
+msgstr "このチャンネルには参加できません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.NotMember"
+msgid "You have not joined this channel"
+msgstr "このチャンネルに参加していません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Repeated"
+msgid "You already said that"
+msgstr "同じ発言は繰り返せません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.SignIn"
+msgid "Sign in to chat"
+msgstr "チャットするにはサインインしてください"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TargetOffline"
+msgid "That player is offline"
+msgstr "相手はオフラインです"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TooFast"
+msgid "Too fast, try again soon"
+msgstr "速すぎます。少し待ってください"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TooFastWait"
+msgid "Too fast, wait {milliseconds} ms"
+msgstr "速すぎます。{milliseconds}ms待ってください"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.TooManyChannels"
+msgid "Too many channels"
+msgstr "チャンネルが多すぎます"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.Unavailable"
+msgid "Chat is not available right now"
+msgstr "現在チャットは利用できません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
+msgctxt "Chat.UpdateGame"
+msgid "Update the game to chat"
+msgstr "チャットするにはゲームを更新してください"
+
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 #: engine/ui/options.ui.xml
@@ -1976,7 +2051,7 @@ msgstr "送信元"
 #: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
 msgctxt "EdPluginWidget.Game"
 msgid "Game"
-msgstr "게임"
+msgstr "ゲーム"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginWidget.GrantRevoke"
@@ -1997,7 +2072,7 @@ msgstr "ライブイベント"
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.Loop"
 msgid "Loop"
-msgstr "반복"
+msgstr "ループ"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginWidget.MaintenanceAnnouncement"
@@ -2022,7 +2097,7 @@ msgstr "オプション"
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.Play"
 msgid "Play"
-msgstr "재생"
+msgstr "再生"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.Preview"
@@ -2072,7 +2147,7 @@ msgstr "スケルトン"
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.Stop"
 msgid "Stop"
-msgstr "정지"
+msgstr "停止"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginWidget.SubjectPrefix"
@@ -2214,6 +2289,76 @@ msgctxt "EditorTip.ZoneRevertParam"
 msgid "Use the preset's value for this parameter again."
 msgstr "このパラメーターにプリセットの値を再び使います。"
 
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Idle"
+msgid "Press Refresh to list friends"
+msgstr "更新を押すとフレンド一覧を表示します"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.LoadFailed"
+msgid "Could not load the friend list (error {error})"
+msgstr "フレンド一覧を読み込めませんでした(エラー {error})"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Loading"
+msgid "Loading friends..."
+msgstr "フレンドを読み込み中..."
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.None"
+msgid "No friends yet"
+msgstr "フレンドはまだいません"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PendingRequests"
+msgid "{title}  ({count, plural, one {# pending request} other {# pending requests}})"
+msgstr "{title}  (保留中の申請 {count}件)"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceAway"
+msgid "away"
+msgstr "離席中"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceBusy"
+msgid "busy"
+msgstr "取り込み中"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceInGame"
+msgid "in game"
+msgstr "ゲーム中"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceOffline"
+msgid "offline"
+msgstr "オフライン"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceOnline"
+msgid "online"
+msgstr "オンライン"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.PresenceUnknown"
+msgid "unknown"
+msgstr "不明"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Row"
+msgid "#{account}  {presence}"
+msgstr "#{account}  {presence}"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.RowActivity"
+msgid "#{account}  {presence}  {activity}"
+msgstr "#{account}  {presence}  {activity}"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
+msgctxt "FriendList.Title"
+msgid "Friends"
+msgstr "フレンド"
+
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.Done"
 msgid "Done."
@@ -2230,6 +2375,11 @@ msgid "The slot is empty."
 msgstr "空きスロットです。"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.EquipLine"
+msgid "{slot}: {item}"
+msgstr "{slot}: {item}"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.InvalidCount"
 msgid "That amount is not possible."
 msgstr "その数量は指定できません。"
@@ -2238,6 +2388,11 @@ msgstr "その数量は指定できません。"
 msgctxt "Inventory.InvalidSlot"
 msgid "That slot cannot take it."
 msgstr "そのスロットには入れられません。"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.ItemCount"
+msgid "{item} x{count}"
+msgstr "{item} x{count}"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.NoRoom"
@@ -2263,6 +2418,11 @@ msgstr "そこには装備できません。"
 msgctxt "Inventory.SplitTitle"
 msgid "Split how many?"
 msgstr "いくつ分けますか?"
+
+#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
+msgctxt "Inventory.StatLine"
+msgid "{stat} {value}"
+msgstr "{stat} {value}"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
@@ -2348,6 +2508,16 @@ msgctxt "Quit Game"
 msgid "Quit Game"
 msgstr "ゲームを終了"
 
+#: Source/GameFramework/Client/Intent/IntentReplayBar.cpp
+msgctxt "ReplayBar.Pause"
+msgid "Pause"
+msgstr "一時停止"
+
+#: Source/GameFramework/Client/Intent/IntentReplayBar.cpp
+msgctxt "ReplayBar.Play"
+msgid "Play"
+msgstr "再生"
+
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
 msgctxt "Resume"
@@ -2378,6 +2548,66 @@ msgstr "元に戻すまで"
 msgctxt "Sections"
 msgid "Sections"
 msgstr "セクション"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Idle"
+msgid "Press Refresh to list servers"
+msgstr "更新を押すとサーバー一覧を表示します"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.LoadFailed"
+msgid "Could not load the server list (error {error})"
+msgstr "サーバー一覧を読み込めませんでした(エラー {error})"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Loading"
+msgid "Loading servers..."
+msgstr "サーバーを読み込み中..."
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.None"
+msgid "No server is available right now"
+msgstr "現在利用できるサーバーはありません"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Pick"
+msgid "Pick a server"
+msgstr "サーバーを選んでください"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.Row"
+msgid "{region}  {fill}%  {state}"
+msgstr "{region}  {fill}%  {state}"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateDraining"
+msgid "draining"
+msgstr "退出中"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateMaintenance"
+msgid "maintenance"
+msgstr "メンテナンス中"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateOpen"
+msgid "open"
+msgstr "受付中"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateStarting"
+msgid "starting"
+msgstr "起動中"
+
+#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
+msgctxt "ServerPicker.StateUnknown"
+msgid "unknown"
+msgstr "不明"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.BalanceLine"
+msgid "{amount} {currency}"
+msgstr "{amount} {currency}"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.Bought"
@@ -2423,6 +2653,16 @@ msgstr "バッグがいっぱいです。"
 msgctxt "Shop.NotEnoughMoney"
 msgid "Not enough money."
 msgstr "お金が足りません。"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.OfferRow"
+msgid "{item}  {price} {currency}"
+msgstr "{item}  {price} {currency}"
+
+#: Source/GameFramework/Client/Shop/ShopScreen.cpp
+msgctxt "Shop.OfferRowStock"
+msgid "{offer}  ({stock})"
+msgstr "{offer}  ({stock})"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.OutOfStock"
@@ -2492,6 +2732,76 @@ msgstr "ゲームを終了しますか?"
 msgctxt "UIMenu.QuitTitle"
 msgid "Quit Game"
 msgstr "ゲームを終了"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Bounty"
+msgid "Bounty ${amount}"
+msgstr "懸賞金 ${amount}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Carcasses"
+msgid "Carcasses {count}"
+msgstr "獲物 {count}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitCanter"
+msgid "Canter"
+msgstr "キャンター"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitGallop"
+msgid "Gallop"
+msgstr "ギャロップ"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitStanding"
+msgid "Standing"
+msgstr "停止"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitTrot"
+msgid "Trot"
+msgstr "トロット"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.GaitWalk"
+msgid "Walk"
+msgstr "常歩"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Honor"
+msgid "Honor {honor} ({tier})"
+msgstr "名誉 {honor}({tier})"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Hungry"
+msgid "Hungry"
+msgstr "空腹"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Money"
+msgid "${amount}"
+msgstr "${amount}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.OnFoot"
+msgid "On foot - E: mount  F: whistle"
+msgstr "徒歩 - E: 騎乗  F: 口笛"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Pelts"
+msgid "Pelts {count}"
+msgstr "毛皮 {count}"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Riding"
+msgid "Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
+msgstr "{horse}に騎乗 - {gait} {speed} m/s - E: 降りる  Shift: ギャロップ"
+
+#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
+msgctxt "Western.Wanted"
+msgid "Wanted {level}"
+msgstr "手配 {level}"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml

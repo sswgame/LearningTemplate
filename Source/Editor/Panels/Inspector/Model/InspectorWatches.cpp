@@ -234,12 +234,12 @@ namespace sw::editor
             {
                 if ( scene == nullptr || scene->getObjectManager() == nullptr )
                     continue;
-                if ( SceneObjectReference::isSameScenePath( scene->getSourcePath(), pReference->_scenePath ) == false )
+                if ( pReference->isTargetScene( *scene ) == false )
                     continue;
                 const GameObject* pTarget = scene->getObjectManager()->findGameObjectByID( objectID );
                 if ( pTarget == nullptr )
                     break;
-                string text = FileUtil::getFileNamePart( pReference->_scenePath );
+                string text = FileUtil::getFileNamePart( pReference->_targetScene.path() );
                 text += " / ";
                 text += pTarget->getName().c_str();
                 outValue.setText( text );

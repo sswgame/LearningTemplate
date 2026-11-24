@@ -13,6 +13,7 @@
 #include "Engine/Navigation/INavMover.h"
 #include "Engine/Navigation/NavigationTypes.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -199,6 +200,7 @@ namespace sw
         uint32                 _navIndex;                ///< `SceneNavigation` 의 목록 자리
         Subscription           _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         uint32                 _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
+        SceneTeleportCursor    _teleport;                ///< 바깥이 순간이동시켰는지 읽는 자리(`Transform`)
         uint32                 _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
         uint32                 _routeRevision;           ///< 먼 경로를 계획한 때의 내비메시 판 번호(바뀌면 타일이 오르내렸다 — 다시 계획)
         uint32                 _routeReplanCount;        ///< `getRouteReplanCount`

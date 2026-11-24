@@ -41,7 +41,7 @@ namespace sw
      *            그다음 보관하던 복원 바이트를 적용하고 첫 플러시를 예약한다. 시작하지 못하면 틱도 돌지 않는다.
      *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readState` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
-     *            `writeState` 와 `restoreState` 는 `ComponentStateStore` 가 이름으로 부르는 계약이다.
+     *            `writeState` 와 `restoreState` 는 `ComponentStateCodec` 가 이름으로 부르는 계약이다.
      *            게임 인스턴스는 `GameStateSnapshot::registerGameMode<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
      *          - **틱 뒤 플러시**: 틱(워커) 안에서는 구조를 바꾸지 못하므로 `scheduleFlush` 가 `executeOrDeferPostTick` 한 번으로 `onFlush` 를 게임 스레드에서 부른다.
      *            이때 쌓인 소리(`getSoundQueue`)도 낸다.
@@ -125,7 +125,7 @@ namespace sw
             return false;
         }
 
-        /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부릅니다(`serializeState`). */
+        /** @brief 판의 상태를 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다(`serializeState`). */
         void writeState( Archive& outArchive ) const { StateIO::writeObject( *this, outArchive ); }
         /**
          * @brief 디렉터 상태의 입구입니다 — 리플렉션 상태 칸(`PROPERTY( RuntimeState )`, 동적 형식 기준 `StateIO::reflectedAs`)을 먼저 놓고 파생의 `serializeGameState` 를 잇습니다.
@@ -134,11 +134,11 @@ namespace sw
          */
         void serializeState( StateIO& io );
         /**
-         * @brief `writeState` 의 바이트로 판을 복원합니다. `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @brief `writeState` 의 바이트로 판을 복원합니다. `ComponentStateCodec::restoreObject` 가 다시 만든 디렉터에 부릅니다.
          * @details 시작 전이면 보관했다가 `onBeginPlay` 가 판을 시작한 뒤 적용한다. 읽지 못하면 `onStateRestored( false )` 가 알리고 새 판으로 간다.
          */
         void restoreState( vector<uint8>&& bytes );
-        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateCodec` 계약 — 있으면 그것이 곧 상태다). */
         const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
         /** @brief 스폰한 런타임 오브젝트를 모두 지웁니다. 상태를 저장하기 전에 부르며, 판은 그대로이고 다음 틱이 그 상태대로 다시 스폰합니다. */
         void despawnViews();

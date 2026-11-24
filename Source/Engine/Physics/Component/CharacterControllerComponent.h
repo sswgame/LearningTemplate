@@ -283,6 +283,8 @@ namespace sw
         /** @brief 쓰는 고정 스텝 그룹마다 메서드를 등록합니다(`registerFixedStep`). */
         void onRegister( GameObjectManager& manager ) override;
         void onPhysicsFrameBegin( const FixedStepContext& context );
+        /** @brief 보간하는 두 자리와 백엔드 캐릭터를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
         /** @brief 이번 스텝의 속도를 정해 씬에 이동을 넣습니다(`ScenePhysics::queueCharacterMove` — 씬이 모든 캐릭터를 한 번에 옮긴다, 감사 S-8). */
         void onPrePhysicsStep( const FixedStepContext& context );
         /** @brief 옮긴 결과(`getCharacterState`)를 읽어 수직 속도 · 공중 관성 · 이동 방식 · 바닥 회전을 잇습니다. */

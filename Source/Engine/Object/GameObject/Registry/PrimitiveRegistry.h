@@ -137,6 +137,11 @@ namespace sw
         uint64 getMeshChangeGeneration() const { return _meshChangeGeneration; }
         /** @brief 변경 세대 @p sinceGeneration 뒤에 움직였거나 렌더 상태가 바뀐 메시 칸을 @p inoutListSlot 뒤에 덧붙입니다(오름차순). 게임 스레드에서 부릅니다. */
         void appendMeshChanges( uint64 sinceGeneration, vector<uint32>& inoutListSlot ) const;
+        /**
+         * @brief 메시 칸 @p listSlot 에 새 변경 세대를 찍습니다(빈 목록이면 아무 일도 없다). 더티 비트는 세우지 않습니다.
+         * @details 프리미티브는 그대로인데 그것이 쓰는 머티리얼이 늦게 준비된 칸이다 — 머티리얼 초기화는 프리미티브에 신호를 남기지 않는다. GPUScene 빌더가 그 칸을 스스로 다시 보고 여기에 알린다.
+         */
+        void markMeshChanged( const vector<uint32>& listSlot );
         /** @brief 렌더 상태가 바뀐 프리미티브가 하나라도 있으면 true 입니다. */
         bool hasDirty() const;
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */

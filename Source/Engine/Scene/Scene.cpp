@@ -19,6 +19,7 @@
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -405,7 +406,8 @@ namespace sw
     }
 
     Scene::Scene( string_view name, const SceneEngineServices& services )
-        : _name{ name }
+        : _handleSerial{ 0 }
+        , _name{ name }
         , _sourcePath{}
         , _defaultMaterialPath{}
         , _sceneSettings{}
@@ -723,6 +725,25 @@ namespace sw
                 node._instanceAnchorFileID = memberIt->second._anchorFileID; // 앵커에 붙는 자리는 상태의 부착이 이미 들고 있다
             outListNode.push_back( std::move( node ) );
         }
+    }
+
+    void Scene::captureNodesForUnload( const vector<uint64>& listObjectID, vector<SceneDocument::SceneObjectNode>& outListNode )
+    {
+        outListNode.clear();
+        if ( _objectManager == nullptr )
+            return;
+        vector<uint64> listGroup;
+        collectCellGroup( listObjectID, listGroup );
+        const GameObjectUnloadInfo info{
+            vector_reference<const uint64>{ listGroup.data(), listGroup.size() }
+        };
+        for ( const uint64 objectID : listGroup )
+        {
+            const GameObject* const pObject = _objectManager->findGameObjectByID( objectID );
+            if ( pObject != nullptr && pObject->isPendingDestroy() == false )
+                GameObjectEvents::broadcast( *pObject, &GameObjectEvents::_unloading, info );
+        }
+        captureCellNodes( listObjectID, outListNode );
     }
 
     void Scene::holdRegistration()
@@ -1211,7 +1232,7 @@ namespace sw
 
     uint64 Scene::getOrAssignFileID( uint64 objectID ) const
     {
-        const GameObject* pObject = _objectManager != nullptr ? _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) : nullptr;
+        const GameObject* pObject = _objectManager != nullptr ? _objectManager->findGameObjectByID( objectID ) : nullptr;
         if ( pObject == nullptr )
             return 0;
         // 인스턴스가 다시 스폰하는 중첩 부품은 씬이 엔티티로 저장하지 않는다(`classifyNestedParts`) — 파일 id 를 줘도 다음 로드에 대상이 없다.
@@ -1324,7 +1345,7 @@ namespace sw
         if ( fileID == 0 || _objectManager == nullptr )
             return 0;
         const uint64 objectID = _fileIDTable.findObjectID( fileID );
-        return objectID != 0 && _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) != nullptr ? objectID : 0;
+        return objectID != 0 && _objectManager->findGameObjectByID( objectID ) != nullptr ? objectID : 0;
     }
 
     bool Scene::assignFileID( const uint64 objectID, const uint64 fileID )

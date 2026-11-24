@@ -112,8 +112,7 @@ namespace sw
         , _lastCheckpointID{}
         , _restoringCheckpointID{}
         , _restoringSlot{}
-        , _restoringPlayTime{ 0.0 }
-        , _playTime{ 0.0 }
+        , _clock{ 0.0 }
         , _lastSaveTime{ -1.0 }
         , _intervalTimer{ 0.0f }
         , _nextSequence{ 1 }
@@ -125,7 +124,6 @@ namespace sw
         , _listScanRequest{}
         , _saveRequest{}
         , _infoRequest{}
-        , _restoreRequest{}
     {
     }
 
@@ -149,16 +147,15 @@ namespace sw
         _lastCheckpointID      = hashed_string{};
         _restoringCheckpointID = hashed_string{};
         _restoringSlot.clear();
-        _playTime      = 0.0;
+        _clock         = 0.0;
         _lastSaveTime  = -1.0;
         _intervalTimer = 0.0f;
         _saveCount     = 0;
         _bPending      = SW_FALSE;
         _bSaving       = SW_FALSE;
         // 앞 초기화가 맡긴 요청은 잊는다(구독을 놓으면 콜백이 불리지 않는다).
-        _saveRequest    = Subscription{};
-        _infoRequest    = Subscription{};
-        _restoreRequest = Subscription{};
+        _saveRequest = Subscription{};
+        _infoRequest = Subscription{};
         // 슬롯 기록은 첫 프레임이 읽는다(`update`) — 편집 중인 에디터는 게임 프레임이 돌지 않아 여기서 맡기면 완료가 영영 안 넘어오고 시나리오가 자리를 잡지 못했다.
         _listSlot.assign( static_cast<size_t>( _settings._slotCount ), AutosaveSlotInfo{} );
         _listScanRequest.clear();
@@ -172,7 +169,7 @@ namespace sw
             scanSlots();
         if ( deltaTime > 0.0f )
         {
-            _playTime += static_cast<float64>( deltaTime );
+            _clock += static_cast<float64>( deltaTime );
             if ( _settings._interval > 0.0f )
             {
                 _intervalTimer += deltaTime;
@@ -189,7 +186,7 @@ namespace sw
         if ( bNothingToSaveNow )
             return;
         // 최소 간격 — 지역을 빠르게 오가도 저장이 줄지어 서지 않는다. 체크포인트 · 보스 앞은 간격을 지키되 기다렸다 저장한다(버리지 않는다).
-        const bool bTooSoon = _lastSaveTime >= 0.0 && _playTime - _lastSaveTime < static_cast<float64>( _settings._minimumGap );
+        const bool bTooSoon = _lastSaveTime >= 0.0 && _clock - _lastSaveTime < static_cast<float64>( _settings._minimumGap );
         if ( bTooSoon )
             return;
         const AutosaveTrigger trigger = _pendingTrigger;
@@ -261,25 +258,14 @@ namespace sw
     {
         if ( pSlot == nullptr || _onLoad.isBound() == false || isScanning() || isRestoring() )
             return false;
+        // 적용은 게임이 씬을 옮긴 뒤일 수 있다(감사 G-7) — 체크포인트 표시는 완료에서 한다. 완료가 이 안에서 올 수도 있어 먼저 적는다.
         _restoringCheckpointID = bCheckpoint ? pSlot->_label : hashed_string{};
-        _restoringPlayTime     = pSlot->_playTime;
-        _restoreRequest        = _pStore->submitRead( pSlot->_slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &AutosaveManager::onSlotRead, this ) );
-        return true;
-    }
-
-    void AutosaveManager::onSlotRead( const LocalStoreCompletion& completion )
-    {
-        if ( completion._result != LocalStoreResult::Ok || completion._formatVersion != AutosaveInternal::kSlotFormatVersion )
-        {
-            _restoringCheckpointID = hashed_string{};
-            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotCouldNot", "Autosave slot %# could not be restored (local store result %#, format version %#, this build reads %#)", completion._slot.c_str(),
-                               static_cast<int32>( completion._result ), completion._formatVersion, AutosaveInternal::kSlotFormatVersion );
-            return;
-        }
-        // 적용은 게임이 씬을 옮긴 뒤일 수 있다(감사 G-7) — 체크포인트 표시는 완료에서 한다.
-        _restoringSlot = completion._slot;
-        if ( _onLoad( completion._slot, completion._bytes, SW_DELEGATE_METHOD( RestoreCompletedFunction, &AutosaveManager::onRestoreCompleted, this ) ) == false )
-            onRestoreCompleted( false );
+        _restoringSlot         = pSlot->_slotName;
+        if ( _onLoad( pSlot->_slotName, SW_DELEGATE_METHOD( RestoreCompletedFunction, &AutosaveManager::onRestoreCompleted, this ) ) )
+            return true;
+        _restoringCheckpointID = hashed_string{};
+        _restoringSlot.clear();
+        return false;
     }
 
     void AutosaveManager::onRestoreCompleted( bool bRestored )
@@ -292,12 +278,11 @@ namespace sw
         _restoringSlot.clear();
         if ( bRestored == false )
         {
-            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotReadBut", "Autosave slot %# was read but the game could not restore it", slot.c_str() );
+            SW_LOG_WARNING_ID( "Autosave.AutosaveSlotReadBut", "Autosave slot %# could not be restored", slot.c_str() );
             return;
         }
         resetProgress();
-        _playTime         = _restoringPlayTime; // 다른 실행의 슬롯이어도 그 진행의 시간을 이어 센다
-        _lastCheckpointID = checkpointID;       // 되돌린 체크포인트에 다시 서도 저장하지 않는다(체크포인트 되돌리기가 아니면 비었다)
+        _lastCheckpointID = checkpointID; // 되돌린 체크포인트에 다시 서도 저장하지 않는다(체크포인트 되돌리기가 아니면 비었다)
     }
 
     void AutosaveManager::resetProgress()
@@ -306,16 +291,14 @@ namespace sw
         _pendingLabel     = hashed_string{};
         _bPending         = SW_FALSE;
         _intervalTimer    = 0.0f;
-        _lastSaveTime     = -1.0; // 플레이 시간이 뒤로 갈 수 있다 — 앞 진행의 시각으로 최소 간격을 재지 않는다
+        _lastSaveTime     = -1.0; // 최소 간격은 이 진행의 저장끼리 잰다
     }
 
     void AutosaveManager::beginNewGame()
     {
         resetProgress();
-        _playTime              = 0.0;
         _restoringCheckpointID = hashed_string{};
         _restoringSlot.clear();
-        _restoreRequest = Subscription{};
     }
 
     void AutosaveManager::collectSlots( vector<AutosaveSlotInfo>& outListSlot ) const
@@ -403,13 +386,12 @@ namespace sw
         info._slotName = _settings.makeSlotName( slot );
         info._label    = label;
         info._sequence = _nextSequence;
-        info._playTime = _playTime;
         info._slot     = slot;
         info._trigger  = trigger;
 
         vector<uint8> stateBytes;
         _bSaving             = SW_TRUE;
-        const bool bCaptured = _onSave( stateBytes );
+        const bool bCaptured = _onSave( stateBytes, info._playTime );
         _bSaving             = SW_FALSE;
         vector<uint8> infoBytes;
         if ( bCaptured == false || writeSlotInfo( info, infoBytes ) == false )
@@ -442,15 +424,13 @@ namespace sw
         _listSlot[static_cast<size_t>( info._slot )] = info;
         _nextSequence                                = MathUtil::max( _nextSequence, info._sequence + 1 );
         ++_saveCount;
-        _lastSaveTime  = _playTime;
+        _lastSaveTime  = _clock;
         _intervalTimer = 0.0f;
         SW_LOG_INFO_ID( "Autosave.Autosaved", "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
         if ( IPlayerNotificationSink* const pNotifications = game::findSubsystem<IPlayerNotificationSink>() )
         {
-            string text;
-            text = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
-            pNotifications->postNotification( text, 3.0f, PlayerNotificationKind::Info );
+            pNotifications->postNotification( SW_LOCALIZED_MESSAGE( "Notification", "GameSaved" ).str(), 3.0f, PlayerNotificationKind::Info );
         }
     }
 

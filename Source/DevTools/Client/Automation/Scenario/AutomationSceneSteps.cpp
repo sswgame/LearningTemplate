@@ -38,8 +38,8 @@ namespace sw
             struct PendingLoad final : IAutomationStepState
             {
 
-                TaskFuture<Scene*> _future;
-                explicit PendingLoad( TaskFuture<Scene*> future )
+                TaskFuture<SceneHandle> _future;
+                explicit PendingLoad( TaskFuture<SceneHandle> future )
                     : _future{ std::move( future ) }
                 {
                 }
@@ -59,7 +59,7 @@ namespace sw
                 PendingLoad* pPending = static_cast<PendingLoad*>( context.findHeldStepState( step ) );
                 if ( pPending == nullptr )
                 {
-                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( params._path, SceneLoadKind::Travel );
+                    TaskFuture<SceneHandle> future = engine::getSubsystem<SceneManager>().requestLoadFuture( params._path, SceneLoadKind::Travel );
                     if ( future.isValid() == false )
                     {
                         context.recordFailure( step, "the scene load could not be requested" );
@@ -67,8 +67,9 @@ namespace sw
                     }
                     pPending = static_cast<PendingLoad*>( &context.setHeldStepState( step, make_unique<PendingLoad>( std::move( future ) ) ) );
                 }
-                const bool bLoaded = pPending->_future.isReady() && pPending->_future.get() != nullptr &&
-                                     engine::getSubsystem<SceneManager>().getActiveScene() == pPending->_future.get();
+                SceneManager&      sceneManager = engine::getSubsystem<SceneManager>();
+                const Scene* const pLoaded      = pPending->_future.isReady() ? sceneManager.resolveScene( pPending->_future.get() ) : nullptr;
+                const bool         bLoaded      = pLoaded != nullptr && sceneManager.getActiveScene() == pLoaded;
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
                 StringBuilder<constant::buffer::kMax1024> waitingFor;
                 waitingFor.appendFormat( "the scene '%#%#", params._path, pPending->_future.isReady() ? "' to become active" : "' to load" );

@@ -269,6 +269,17 @@ namespace sw
         registerFixedStep<&CharacterControllerComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
     }
 
+    void CharacterControllerComponent::onWorldOriginShifted( const float3& delta )
+    {
+        ScenePhysics* const    pPhysics = getScenePhysics();
+        IPhysicsScene3D* const pScene   = pPhysics != nullptr ? pPhysics->findScene3D() : nullptr;
+        if ( pScene == nullptr || _character.isValid() == false || absorbWorldOriginShift( delta ) == false )
+            return;
+        _state._position += delta;
+        _previousPosition += delta;
+        pScene->setCharacterPosition( _character, _state._position ); // 캐릭터는 바디가 아니라 물리 씬이 옮기지 않는다
+    }
+
     void CharacterControllerComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();

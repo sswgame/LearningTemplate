@@ -34,7 +34,7 @@ namespace sw
         void onTick( TickContext& context ) override;
 
         /** @brief 이미 날렸으면 true 입니다(테스트와 진단). */
-        bool hasLaunched() const { return _bLaunched == SW_TRUE; }
+        bool hasLaunched() const { return _bLaunched; }
 
     private:
         /** @brief 날린 뒤 `_alignGain` 이 0 보다 크면 앞 방향(`_localDirection`)을 속도 쪽으로 돌리는 각속도를 건다. */
@@ -45,9 +45,9 @@ namespace sw
         PROPERTY( Category = "Launch", DisplayName = "Local Direction", Tooltip = "Launch direction in the object's local space (normalized when launching)", Meta = "Shape=Arrow" )
         float3 _localDirection;
         PROPERTY( Category = "Launch", DisplayName = "Align Gain", Tooltip = "After launch, steers the body's local direction toward its velocity (angular velocity = axis x gain; arrows point along their flight). 0 leaves the rotation to the physics", Min = 0.0, Meta = "Units=1/s" )
-        float32                _alignGain;
-        uint8                  _bLaunched : 1;
-        uint8                  _bPending  : 1; ///< 플레이가 시작돼 다음 틱에 날린다
-        [[maybe_unused]] uint8 _reserved  : 6;
+        float32 _alignGain;
+        PROPERTY( RuntimeState, Category = "Launch", DisplayName = "Launched", Tooltip = "Runtime: the initial velocity was already given" )
+        bool  _bLaunched; ///< 불러온 화살을 다시 날리지 않는다(속도는 강체의 상태가 싣는다)
+        uint8 _bPending;  ///< 플레이가 시작돼 다음 틱에 날린다
     };
 } // namespace sw

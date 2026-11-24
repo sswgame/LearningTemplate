@@ -3,6 +3,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -11,6 +12,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -25,6 +27,9 @@ namespace sw
     {
         struct RagdollComponentInternal
         {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "RAGD" );
+            static constexpr uint32 kStateVersion = 1;
+
             static void decompose( const float4x4& matrix, float3& outPosition, quaternion& outRotation )
             {
                 float3 scale{};
@@ -194,6 +199,25 @@ namespace sw
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
         return SpawnStateReset::Reset;
+    }
+
+    void RagdollComponent::serializeState( StateIO& io )
+    {
+        if ( io.isWriting() && _state != RagdollState::Ragdoll )
+            return; // 서 있는 몸은 실을 것이 없다
+        io.header( RagdollComponentInternal::kStateTag, RagdollComponentInternal::kStateVersion );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() )
+            startRagdoll( float3{}, nullopt );
+    }
+
+    void RagdollComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "Ragdoll.SavedStateUnreadable", "'%#': the saved ragdoll state did not read - the body starts animated", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void RagdollComponent::setPhysicsAssetPath( string_view path )
@@ -883,4 +907,6 @@ namespace sw
         _listAppliedDynamic.clear();
         _bHasPhysicsPose = false;
     }
+
+    SW_COMPONENT_STATE_CODEC( RagdollComponent )
 } // namespace sw

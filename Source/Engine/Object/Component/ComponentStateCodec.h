@@ -2,9 +2,14 @@
  * @file ComponentStateCodec.h
  * @brief PROPERTY 밖의 컴포넌트 런타임 상태(`serializeState` · `restoreState`)를 오브젝트 하나씩 뜨고 되돌리는 형식마다의 코덱과 그 등록입니다.
  * @details 리플렉션 PROPERTY 는 오브젝트 상태가 이미 옮긴다. 보통 클래스로 든 시뮬레이션(지형 편집 · 부지 배치 · 디렉터)은 그 밖이라, 오브젝트를 내렸다 다시 짓는 길(스트리밍 셀 ·
- *          데이터 레이어 묶음 · 하위 레벨)과 그 세이브는 이 코덱으로 함께 싣는다(`Scene::captureCellNodes` → `SceneObjectNode::_componentStateBytes`). 언리얼 `UObject::Serialize` 오버라이드가
- *          레벨 스트리밍 · 세이브에 함께 실리는 자리다. 늘 올라 있는 오브젝트의 세이브 · 핫 리로드는 게임 프레임워크의 `ComponentStateStore` 가 같은 함수로 싣는다 — 등록 한 줄이 둘을 정한다
- *          (`StatefulComponentRegistrar` · `GameStateSnapshot::registerStatefulComponent`, 엔진 형식은 `SW_COMPONENT_STATE_CODEC`).
+ *          데이터 레이어 묶음 · 하위 레벨), 씬을 넘는 오브젝트(`SceneManager::markPersistent`), 세이브 · 핫 리로드 봉투(`GameStateSnapshot`)가 **모두 이 코덱 하나로** 싣는다 —
+ *          길마다 다른 목록을 두면 한 길만 빠진 상태가 생긴다. 언리얼 `UObject::Serialize` 재정의가 레벨 스트리밍 · 세이브에 함께 실리는 자리다.
+ *          등록: 게임 형식은 `StatefulComponentRegistrar` · `GameStateSnapshot::registerStatefulComponent`, 엔진 형식은 `SW_COMPONENT_STATE_CODEC`.
+ *
+ *          컴포넌트 쪽 약속(템플릿이 이름으로 부른다):
+ *          - `void serializeState( StateIO& io )`: 지금 상태를 쓴다(`SW_DECLARE_STATE_IO` 가 낸다). 첫 값은 그 컴포넌트의 형식 버전으로 둔다.
+ *          - `void restoreState( vector<uint8>&& bytes )`: 다시 만든 컴포넌트가 받는다. 아직 `onBeginPlay` 전이면 보관했다가 시작할 때 적용한다. 읽지 못하면 알리고 새 판으로 시작한다.
+ *          - `const vector<uint8>& getPendingStateBytes() const`: 시작 전에 보관한 바이트다(보관하는 컴포넌트만 둔다 — `DeferredStateRestore` 를 쓰면 그 틀이 대신한다).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -15,6 +20,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include <type_traits>
 #include <utility>
 
 namespace sw
@@ -23,6 +29,19 @@ namespace sw
 
     class Component;
     class GameObject;
+
+    namespace ComponentStateCodecTraits
+    {
+        /** @brief @p T 가 시작 전에 받은 상태를 보이는 `getPendingStateBytes()` 를 가졌는지 봅니다(C++17 이라 `requires` 를 쓰지 않는다). */
+        template <typename T, typename = void>
+        struct HasPendingState : std::false_type
+        {
+        };
+        template <typename T>
+        struct HasPendingState<T, std::void_t<decltype( std::declval<const T&>().getPendingStateBytes() )>> : std::true_type
+        {
+        };
+    } // namespace ComponentStateCodecTraits
 
     /**
      * @struct ComponentStateCodec
@@ -51,6 +70,8 @@ namespace sw
          * @details 짝짓기는 (코덱 형식 이름, 지역 id 키 — `ComponentStableKey`)다.
          */
         static void captureObject( const GameObject& object, vector<uint8>& outBytes );
+        /** @brief @p type 의 컴포넌트를 뜨는 코덱이 하나라도 있으면 true 입니다 — 큰 씬을 뜨는 쪽이 형식마다 한 번만 묻는다. */
+        [[nodiscard]] static bool hasCodecFor( const TypeInfo& type );
         /**
          * @brief 떠 둔 상태를 다시 지은 @p object 의 컴포넌트에 돌려줍니다(등록을 마친 뒤 — 시작 전이면 컴포넌트가 보관했다가 시작할 때 적용한다).
          * @details 컴포넌트가 없거나(데이터가 바뀌었다) 코덱이 내려갔으면 그 상태를 경고하고 버린다. 바이트가 깨졌으면 오류를 남기고 남은 상태를 버린다.
@@ -61,8 +82,18 @@ namespace sw
         template <typename TComponent>
         static void writeState( Component& component, vector<uint8>& outBytes )
         {
+            TComponent& typed = static_cast<TComponent&>( component );
+            if constexpr ( ComponentStateCodecTraits::HasPendingState<TComponent>::value )
+            {
+                // 보관한 동안은 그 바이트가 곧 상태다 — 지금 값을 쓰면 세이브를 기본값으로 덮는다.
+                if ( typed.getPendingStateBytes().empty() == false )
+                {
+                    outBytes = typed.getPendingStateBytes();
+                    return;
+                }
+            }
             Archive archive;
-            StateIO::writeObject( static_cast<TComponent&>( component ), archive );
+            StateIO::writeObject( typed, archive );
             archive.writeData( outBytes );
         }
         template <typename TComponent>

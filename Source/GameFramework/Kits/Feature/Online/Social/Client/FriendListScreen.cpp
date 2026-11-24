@@ -6,6 +6,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ListViewWidget.h"
@@ -30,43 +31,39 @@ namespace sw
                 {
                     case SocialPresenceStatus::Offline:
                     {
-                        return "offline";
+                        return SW_LOCKEYREF( "FriendList", "PresenceOffline" );
                     }
                     case SocialPresenceStatus::Online:
                     {
-                        return "online";
+                        return SW_LOCKEYREF( "FriendList", "PresenceOnline" );
                     }
                     case SocialPresenceStatus::Away:
                     {
-                        return "away";
+                        return SW_LOCKEYREF( "FriendList", "PresenceAway" );
                     }
                     case SocialPresenceStatus::Busy:
                     {
-                        return "busy";
+                        return SW_LOCKEYREF( "FriendList", "PresenceBusy" );
                     }
                     case SocialPresenceStatus::InGame:
                     {
-                        return "in game";
+                        return SW_LOCKEYREF( "FriendList", "PresenceInGame" );
                     }
                     case SocialPresenceStatus::Count:
                     {
                         break;
                     }
                 }
-                return "unknown";
+                return SW_LOCKEYREF( "FriendList", "PresenceUnknown" );
             }
 
             static string makeRowText( const FriendEntry& entry )
             {
-                if ( entry._activity.empty() )
-                {
-                    StringBuilder<constant::buffer::kMax256> resultBuilder2;
-                    resultBuilder2.appendFormat( "#%#  %#", entry._accountID, getPresenceText( entry._status ) );
-                    return string( resultBuilder2.view() );
-                }
-                StringBuilder<constant::buffer::kMax256> resultBuilder;
-                resultBuilder.appendFormat( "#%#  %#  %#", entry._accountID, getPresenceText( entry._status ), entry._activity );
-                return string( resultBuilder.view() );
+                LocalizedMessage row = entry._activity.empty() ? SW_LOCALIZED_MESSAGE( "FriendList", "Row" ) : SW_LOCALIZED_MESSAGE( "FriendList", "RowActivity" );
+                (void)row.addText( "account", to_string( entry._accountID ) ).addKey( "presence", getPresenceText( entry._status ) );
+                if ( entry._activity.empty() == false )
+                    (void)row.addText( "activity", entry._activity );
+                return row.str();
             }
         };
     } // namespace
@@ -166,28 +163,24 @@ namespace sw
         {
             case FriendListState::Idle:
             {
-                statusText = "Press Refresh to list friends";
+                statusText = SW_LOCKEYREF( "FriendList", "Idle" );
                 break;
             }
             case FriendListState::Loading:
             {
-                statusText = "Loading friends...";
+                statusText = SW_LOCKEYREF( "FriendList", "Loading" );
                 break;
             }
             case FriendListState::Loaded:
             {
-                StringBuilder<constant::buffer::kMax256> statusTextBuilder;
-                statusTextBuilder.append( listEntry.empty() ? "No friends yet" : "Friends" );
+                statusText = listEntry.empty() ? SW_LOCKEYREF( "FriendList", "None" ) : SW_LOCKEYREF( "FriendList", "Title" );
                 if ( pModel->getPendingRequestCount() > 0 )
-                    statusTextBuilder.appendFormat( "  (%# pending requests)", pModel->getPendingRequestCount() );
-                statusText = string( statusTextBuilder.view() );
+                    statusText = SW_LOCALIZED_MESSAGE( "FriendList", "PendingRequests" ).addKey( "title", statusText ).addInteger( "count", static_cast<int64>( pModel->getPendingRequestCount() ) ).str();
                 break;
             }
             case FriendListState::Failed:
             {
-                StringBuilder<constant::buffer::kMax256> statusTextBuilder;
-                statusTextBuilder.appendFormat( "Could not load the friend list (error %#)", static_cast<uint32>( pModel->getErrorCode() ) );
-                statusText = string( statusTextBuilder.view() );
+                statusText = SW_LOCALIZED_MESSAGE( "FriendList", "LoadFailed" ).addInteger( "error", static_cast<int64>( pModel->getErrorCode() ) ).str();
                 break;
             }
         }

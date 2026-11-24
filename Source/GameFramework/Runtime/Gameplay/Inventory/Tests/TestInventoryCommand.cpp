@@ -2,9 +2,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
@@ -236,7 +236,7 @@ SW_TEST_CASE( InventoryCommandTest, StateHeldBeforePlaySurvivesAnotherCapture )
     const sw::vector<uint8>         saved{ 1, 2, 3, 4, 5 }; // 걸지 않은 바이트라 뜻은 상관없다
     character.restoreState( sw::vector<uint8>( saved ) );
     sw::vector<uint8> captured;
-    sw::ComponentStateStore::writeComponent<sw::CharacterEquipmentComponent>( character, captured );
+    sw::ComponentStateCodec::make<sw::CharacterEquipmentComponent>( "CharacterEquipmentComponent" )._pWrite( character, captured );
     SW_EXPECT_TRUE( captured == saved );
 }
 

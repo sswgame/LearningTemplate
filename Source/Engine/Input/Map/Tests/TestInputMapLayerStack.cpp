@@ -119,3 +119,19 @@ SW_TEST_CASE( InputMapLayerStackTest, SharedLayerCoversEveryUser )
     input.closeLocalUsers();
     input.shutdown();
 }
+
+/**
+ * @brief [InputMapBindingRevisionTest] 재배치 · 되돌리기가 번호를 올린다 — 화면의 액션 글리프가 같은 장치에서도 새 키로 바뀐다
+ */
+SW_TEST_CASE( InputMapBindingRevisionTest, RebindAdvancesTheRevision )
+{
+    InputMap            map;
+    const hashed_string jump( "Jump" );
+    map.bind( jump, InputSlot::fromKey( Key::Space ), ActionTrigger::Pressed, hashed_string( "Gameplay" ) );
+    uint32 revision = map.getBindingRevision();
+    SW_REQUIRE_TRUE( map.rebindKey( jump, Key::J, 0 ) );
+    SW_EXPECT_TRUE( map.getBindingRevision() != revision );
+    revision = map.getBindingRevision();
+    SW_REQUIRE_TRUE( map.resetActionToDefault( jump ) );
+    SW_EXPECT_TRUE( map.getBindingRevision() != revision );
+}

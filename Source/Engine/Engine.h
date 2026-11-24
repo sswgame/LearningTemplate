@@ -228,6 +228,7 @@ namespace sw
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;
+        uint8   _bGamePaused; ///< 이번 프레임에 게임 시간이 섰는가(`update` 가 프레임에 한 번 정한다 — 오디오와 자막이 같은 값을 본다)
         /** @brief 이번 프레임 시간(초)입니다(`beginFrame` · `tick` 이 받은 값). 프레임 관찰자 문맥의 `_deltaSeconds` 입니다. */
         float32 _frameDeltaSeconds;
         /** @brief `requestQuit` 이 정한 종료 코드입니다. */

@@ -2,11 +2,13 @@
 
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -15,6 +17,18 @@
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct RigidBodyComponentInternal
+        {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "RBST" );
+            static constexpr uint32 kStateVersion = 1;
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -238,6 +252,34 @@ namespace sw
         return pScene != nullptr && pScene->isBodySleeping( getBodyHandle() );
     }
 
+    void RigidBodyComponent::serializeState( StateIO& io )
+    {
+        float3 linear  = getLinearVelocity();
+        float3 angular = getAngularVelocity();
+        if ( io.isWriting() && ( _bodyType != PhysicsBodyType::Dynamic || ( linear.getLengthSquared() == 0.0f && angular.getLengthSquared() == 0.0f ) ) )
+            return; // 멈춘 바디는 실을 것이 없다 — 큰 씬의 정적 바디마다 칸을 쓰지 않는다
+        io.header( RigidBodyComponentInternal::kStateTag, RigidBodyComponentInternal::kStateVersion );
+        io.value( linear );
+        io.value( angular );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() == false )
+            return;
+        setLinearVelocity( linear );
+        setAngularVelocity( angular );
+        // 바디가 서기 전에 다시 떠도 같은 값이게 지금 값 칸에도 둔다.
+        _pPosePage->_arrLinearVelocity[getPoseIndex()]  = linear;
+        _pPosePage->_arrAngularVelocity[getPoseIndex()] = angular;
+    }
+
+    void RigidBodyComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "RigidBodyComponent.SavedVelocityUnreadable", "'%#': the saved velocity did not read - the body starts at rest", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+    }
+
     void RigidBodyComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
     {
         PhysicsComponent::foldStateHash( inoutBuilder );
@@ -383,6 +425,18 @@ namespace sw
         registerFixedStep<&RigidBodyComponent::onPhysicsFrameBegin>( manager, FixedStepGroup::FrameBegin );
         registerFixedStep<&RigidBodyComponent::onPrePhysicsStep>( manager, FixedStepGroup::PreStep );
         registerFixedStep<&RigidBodyComponent::onPhysicsFrameEnd>( manager, FixedStepGroup::FrameEnd );
+    }
+
+    void RigidBodyComponent::onWorldOriginShifted( const float3& delta )
+    {
+        const uint32       index = getPoseIndex();
+        PhysicsBodyPage3D& page  = *_pPosePage;
+        if ( page._arrBody[index].isValid() == false || absorbWorldOriginShift( delta ) == false )
+            return;
+        page._arrPreviousPosition[index] += delta;
+        page._arrCurrentPosition[index] += delta;
+        _kinematicStartPosition += delta;
+        _kinematicTargetPosition += delta;
     }
 
     void RigidBodyComponent::onPhysicsFrameBegin( const FixedStepContext& context )
@@ -604,4 +658,6 @@ namespace sw
     {
         PhysicsNameValidation::validateMaterial( context, "_material", _material );
     }
+
+    SW_COMPONENT_STATE_CODEC( RigidBodyComponent )
 } // namespace sw

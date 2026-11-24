@@ -118,7 +118,7 @@ namespace sw
 
         SharedAssetRef<SRPGCatalog> _pCatalog;
         SRPGBattlefield             _field;
-        SRPGCommanderAI             _ai;
+        SRPGCommanderAI             _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
         ConsumerLease               _eventLease;
         vector<SRPGEvent>           _listEvent;
         PROPERTY( RuntimeState, Min = -1 )

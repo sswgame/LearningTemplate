@@ -170,6 +170,7 @@ namespace sw
         vector<RegionUpdate>                   _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
         vector<RegionUpdate>                   _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
         mutex                                  _regionMutex;
+        vector<TextureLayerBakeRequest>        _listReadyBake;   ///< 이번 프레임에 그릴 굽기(`selectReadyLayerBakes`, `_bakeMutex`)
         vector<TextureLayerBakeRequest>        _listPendingBake; ///< 게임 스레드가 쌓고 렌더 스레드가 가져간다(`_bakeMutex`) — 결과 타깃마다 하나
         /// @brief 최근에 그린 굽기(결과 타깃, 그린 번호) — 앞이 오래된 것이고 `kBakeHistoryCount` 를 넘으면 앞을 버린다(`_bakeMutex`).
         vector<pair<string, uint32>>            _listBakedTarget;
@@ -192,6 +193,7 @@ namespace sw
         vector<StreamingRead> _listReading              SW_GUARDED_BY( _streamingMutex );         ///< 범위를 읽는 중이거나 읽어 제출을 기다리는 요청
         uint64 _bytesInFlight                           SW_GUARDED_BY( _streamingMutex ) = 0;     ///< `_listReading` 이 쥔(쥘) 바이트 합 — `TextureStreamingBudget::_maxBytesInFlight` 아래로 묶는다
         bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
+        atomic<uint64>                                  _arrivalCount{ 0 };                       ///< 도착한 텍스처 수(`getArrivalCount`)
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         atomic<int32>                                   _qualityMipDrop{ 0 };                     ///< 텍스처 품질이 버리는 위쪽 밉 수 — 게임 스레드가 뜬 사본(`refreshQualitySettings`)이라 워커 · 렌더 스레드는 이것만 읽는다
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
@@ -323,7 +325,7 @@ namespace sw
                 pErased->releaseRHI( pDevice );
             if ( pPinned == nullptr )
                 return;
-            pPinned->releaseRHI( pDevice );
+            pPinned->releaseUnused( pDevice );
             {
                 UniqueLock<shared_mutex> lock{ _mutex };
                 const auto               it = _mapEntry.find( key );
@@ -380,6 +382,7 @@ namespace sw
                     _mapEntry.erase( it );
                 }
             }
+            _arrivalCount.fetch_add( 1, std::memory_order_release ); // 실패도 센다 — 번호가 로드 중 텍스처에서 누락 체커로 바뀌었다
             _cvLoaded.notify_all();
         }
     };
@@ -498,6 +501,19 @@ namespace sw
         if ( start == AssetLoadStart::Async )
             ensureStandInTextures();
         Texture2D* const pLoadingStandIn = _impl->_pLoadingStandIn.load( std::memory_order_acquire );
+        // 번호를 예약해 로드 중 텍스처를 가리키게 한다 — 업로드가 끝나면 같은 번호를 진짜 텍스처로 다시 묶는다(R-6). 잠금 안에서 맡겨, 같은 로드를 받는 다른 요청도
+        // 처음부터 같은 번호를 본다. 동기 요청도 자리 텍스처가 이미 있으면 예약한다 — 그 로드를 기다리던 비동기 요청이 번호 없는 로드를 받지 않게.
+        // 장치가 바뀌면 진행 중이던 로드의 번호는 옛 장치와 함께 갔다 — 새 장치의 요청이 그 로드를 이어받을 때 다시 예약한다.
+        const auto reserveStableSRV = [pDevice, pLoadingStandIn, &key]( Texture2D& texture )
+        {
+            if ( pLoadingStandIn == nullptr || pLoadingStandIn == &texture || pLoadingStandIn->isRHIValid() == false || texture.getStableSRV() != kInvalidDescriptorIndex )
+                return;
+            const RHITextureSRVIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
+            if ( reserved != kInvalidDescriptorIndex )
+                texture.attachReservedSRV( reserved, pDevice );
+            else
+                SW_LOG_ERROR_ID( "TextureCache.ReserveBindlessFailed", "TextureCache: no bindless index could be reserved for '%#' - materials sample the missing-texture checker instead", key.c_str() );
+        };
 
         // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)와 그 로드의 로드 작업만 적고, 같은 키를 동시에
         // 원한 쪽은 같은 로드 작업을 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은
@@ -535,6 +551,7 @@ namespace sw
                 {
                     // 기다린 쪽이 완료를 이 디바이스로 실행한다 — 앞선 요청의 디바이스는 내려갔을 수 있다(펌프 없는 테스트의 디바이스 차례).
                     pInFlight->_pDevice.store( pDevice, std::memory_order_release );
+                    reserveStableSRV( *entry._texture );
                     getTextureCacheStats().recordHit();
                     return TextureHandle{ std::move( pInFlight ) };
                 }
@@ -578,17 +595,7 @@ namespace sw
                 pOperation->_renderTargetHeight = sizeIter->second._height;
             }
         }
-        // 번호를 예약해 로드 중 텍스처를 가리키게 한다 — 업로드가 끝나면 같은 번호를 진짜 텍스처로 다시 묶는다(R-6). 잠금 안에서 맡겨, 같은 로드를 받는 다른 요청도
-        // 처음부터 같은 번호를 본다. 동기 요청도 자리 텍스처가 이미 있으면 예약한다 — 그 로드를 기다리던 비동기 요청이 번호 없는 로드를 받지 않게.
-        const bool bReserve = pLoadingStandIn != nullptr && pLoadingStandIn != pTexture && pLoadingStandIn->isRHIValid() && pTexture->getKeptSRV() == kInvalidDescriptorIndex;
-        if ( bReserve )
-        {
-            const RHITextureSRVIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
-            if ( reserved != kInvalidDescriptorIndex )
-                pTexture->attachReservedSRV( reserved, pDevice );
-            else
-                SW_LOG_ERROR_ID( "TextureCache.ReserveBindlessFailed", "TextureCache: no bindless index could be reserved for '%#' - materials sample the missing-texture checker instead", key.c_str() );
-        }
+        reserveStableSRV( *pTexture );
         _impl->_mapEntry[key]._pLoadOperation = pOperation;
         lock.unlock();
 
@@ -1153,6 +1160,11 @@ namespace sw
             _impl->_retired.releaseForDevice( pDevice );
     }
 
+    uint64 TextureCache::getArrivalCount() const
+    {
+        return _impl->_arrivalCount.load( std::memory_order_acquire );
+    }
+
     uint32 TextureCache::countLoadsInFlight() const
     {
         uint32 count = 0;
@@ -1161,6 +1173,11 @@ namespace sw
             ScopedLock<mutex> lock{ _impl->_streamingMutex };
             if ( _impl->_bStreamingParked == false )
                 count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
+        }
+        {
+            // 맡긴 층 굽기는 머티리얼이 아직 옛 결과를 그린다 — 사진은 구운 뒤다.
+            ScopedLock<mutex> lock{ _impl->_bakeMutex };
+            count += static_cast<uint32>( _impl->_listPendingBake.size() + _impl->_listReadyBake.size() );
         }
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )
@@ -1414,13 +1431,50 @@ namespace sw
         _impl->_listPendingBake.push_back( std::move( request ) );
     }
 
+    void TextureCache::selectReadyLayerBakes()
+    {
+        if ( _impl == nullptr )
+            return;
+        vector<TextureLayerBakeRequest> listRequest;
+        {
+            ScopedLock<mutex> lock{ _impl->_bakeMutex };
+            listRequest.swap( _impl->_listPendingBake );
+        }
+        const auto isPathReady = [this]( const string& path )
+        {
+            const Texture2D* const pTexture = find( path );
+            return pTexture != nullptr && pTexture->isRHIValid();
+        };
+        for ( TextureLayerBakeRequest& request : listRequest )
+        {
+            if ( isCached( request._albedoTarget ) == false )
+                continue; // 요청한 쪽이 결과를 놓았다 — 그릴 곳이 없다
+            bool bReady = isPathReady( request._base ) && isPathReady( request._albedoTarget ) && isPathReady( request._surfaceTarget );
+            bReady      = bReady && ( request.getDrawCount() < 2u || ( isPathReady( request._albedoScratch ) && isPathReady( request._surfaceScratch ) ) );
+            for ( const TextureLayerBakeLayer& layer : request._listLayer )
+            {
+                bReady = bReady && isPathReady( layer._mask ) && ( layer._smear.empty() || isPathReady( layer._smear ) );
+            }
+            if ( bReady == false )
+            {
+                deferLayerBake( std::move( request ) ); // 읽는 중이거나 디바이스 교체로 다시 만드는 중 — 다음 프레임에 다시
+                continue;
+            }
+            ScopedLock<mutex> lock{ _impl->_bakeMutex };
+            // 그리지 않은 프레임이 이어지면 같은 결과의 앞 요청이 남아 있다 — 새 것으로 대체한다.
+            VectorUtil::removeIf( _impl->_listReadyBake, [&request]( const TextureLayerBakeRequest& ready )
+            { return ready._albedoTarget == request._albedoTarget; } );
+            _impl->_listReadyBake.push_back( std::move( request ) );
+        }
+    }
+
     void TextureCache::takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest )
     {
         outListRequest.clear();
         if ( _impl == nullptr )
             return;
         ScopedLock<mutex> lock{ _impl->_bakeMutex };
-        outListRequest.swap( _impl->_listPendingBake );
+        outListRequest.swap( _impl->_listReadyBake );
     }
 
     void TextureCache::recordLayerBaked( const string& albedoTarget )
@@ -1601,7 +1655,7 @@ namespace sw
 
     uint64 TextureLoadOperation::getResidentIdentity() const
     {
-        return getState() == AssetLoadState::Ready && _pTexture != nullptr ? _pTexture->getHandle().getPacked() : 0u;
+        return getState() == AssetLoadState::Ready && _pTexture != nullptr && _pTexture->isRHIValid() ? _pTexture->getResidencySerial() : 0u;
     }
 
     expected<void> TextureLoadOperation::runLoad()
@@ -1833,8 +1887,11 @@ namespace sw
         {
             return unexpected( Error{ ErrorKind::NotFound, "the texture cache was shut down before the upload" } );
         }
-        IRHIDevice* const           pDevice = _pDevice.load( std::memory_order_acquire );
-        const Texture2DUploadStatus status  = _pTexture->finishUpload( pDevice, bBlocking );
+        IRHIDevice* const pDevice = _pDevice.load( std::memory_order_acquire );
+        // 올리는 사이 장치가 바뀌었으면 낸 업로드는 옛 장치와 함께 갔다. 장치 통보(`Texture2D::initRHI`)가 이미 되살렸으면 끝난 것이고, 아니면 이 장치에 다시 낸다.
+        if ( _pTexture->hasUploadInFlight() == false )
+            return _pTexture->isRHIValid() ? concludeCompletion( *pCache, true ) : beginCompletion( bBlocking );
+        const Texture2DUploadStatus status = _pTexture->finishUpload( pDevice, bBlocking );
         if ( status == Texture2DUploadStatus::Pending )
             return AssetCompletionStep::Submitted;
         return concludeCompletion( *pCache, status == Texture2DUploadStatus::Ready );
@@ -1926,6 +1983,7 @@ namespace sw
         lock.unlock();
         if ( pErased != nullptr )
             pErased->releaseRHI( pDevice ); // 지키던 번호도 함께 놓는다
+        _impl->_arrivalCount.fetch_add( 1, std::memory_order_release );
         _impl->_cvLoaded.notify_all();
         return bReloaded ? ReloadResult::Reloaded : ReloadResult::Failed;
     }

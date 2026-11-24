@@ -365,7 +365,7 @@ namespace sw
         void beginFrame()
         {
             assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
-            _beginFrameCount.fetch_add( 1, std::memory_order_acq_rel );
+            _handleReuseCount.fetch_add( 1, std::memory_order_acq_rel );
             _constantBufferWriteLog.beginFrame();
             activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
             reportResourceCounts();
@@ -374,7 +374,7 @@ namespace sw
         /**
          * @brief `beginFrame` 이 이번 프레임의 기록을 실제로 열었는지입니다. 렌더 스레드에서만 부른다.
          * @details 스왑체인 이미지를 얻지 못한 프레임(서피스 손실 · 크기 0 · 다시 만들기 실패)은 기록해도 제출되지 않는다 — 한 번만 기록하는 일(정점 풀 복사)은 이것을 보고 다음 프레임으로 미룬다.
-         *          프레임을 늘 여는 백엔드(DX11 · GL · WebGPU)는 기본값이다.
+         *          프레임을 늘 여는 백엔드(DX11 · GL — 즉시 컨텍스트)는 기본값이다.
          */
         virtual bool isFrameStarted() const { return true; }
         /**
@@ -586,7 +586,11 @@ namespace sw
          *          프레임 중에 부르면 스트림 순서를 건너뛰므로 렌더 결과가 어긋난다.
          *          기본 구현은 executeCommandList 로 넘긴다(DX11/GL 처럼 기록이 곧 실행인 백엔드).
          */
-        void executeCommandListImmediate( RHIClosedCommandList list ) { executeCommandListImmediateInternal( list.get() ); }
+        void executeCommandListImmediate( RHIClosedCommandList list )
+        {
+            executeCommandListImmediateInternal( list.get() );
+            (void)_handleReuseCount.fetch_add( constant::render::kHandleReuseDelayCount, std::memory_order_acq_rel ); // 큐가 빌 때까지 기다렸다 — 기록 중인 프레임이 없다
+        }
 
         /**
          * @brief 비동기 컴퓨트 큐에 낼 커맨드 리스트를 만듭니다. 컴퓨트 명령(디스패치 · 버퍼 배리어 · 복사)만 기록합니다.
@@ -698,8 +702,8 @@ namespace sw
         [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
         /** @brief 같은 전송 시리얼의 쓰기 접근자입니다 — 손실 표시(`reportDeviceLost`)가 이 길로만 쓴다. 읽기 판과 같은 멤버를 돌려준다. */
         [[nodiscard]] virtual RHITransferSerials& getTransferSerials() = 0;
-        /** @brief `beginFrame` 을 부른 수입니다 — 핸들 표(`RHIHandleTable`)가 놓은 칸을 다시 쓸 때를 잰다. 어느 스레드에서나 읽는다. */
-        const atomic<uint64>& getBeginFrameCount() const { return _beginFrameCount; }
+        /** @brief 지난 경계 수입니다(`beginFrame` 은 1, GPU 를 통째로 기다린 지점은 `constant::render::kHandleReuseDelayCount`) — 핸들 표(`RHIHandleTable`)가 놓은 칸을 다시 쓸 때를 잰다. 어느 스레드에서나 읽는다. */
+        const atomic<uint64>& getHandleReuseCount() const { return _handleReuseCount; }
         /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
         virtual void waitIdleInternal() = 0;
         /**
@@ -840,7 +844,7 @@ namespace sw
         RHIDrawDiagnostics _drawDiagnostics;
         /// @brief 이번 프레임의 기록 경로 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
         RHIConstantBufferWriteLog _constantBufferWriteLog;
-        /// @brief `beginFrame` 을 부른 수입니다(`getBeginFrameCount`).
-        atomic<uint64> _beginFrameCount{ 0 };
+        /// @brief 지난 경계 수입니다(`getHandleReuseCount`).
+        atomic<uint64> _handleReuseCount{ 0 };
     };
 } // namespace sw

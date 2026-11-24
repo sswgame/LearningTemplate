@@ -19,7 +19,8 @@ namespace sw
         int2    _pointerOrigin{ 0, 0 };        ///< 주 출력의 창 안 왼쪽 위(백버퍼면 0)
         float32 _contentScale{ 1.0f };         ///< 주 창의 DPI 배율
         float4  _safeInsets{};                 ///< 플랫폼 안전 여백(왼 · 위 · 오른 · 아래 픽셀 — 창 전체에 그릴 때만, 아니면 0)
-        float32 _unscaledDeltaSeconds{ 0.0f }; ///< 실제 경과 — 정지 메뉴 아래서도 애니메이션 · 자막 · 알림이 흐른다
+        float32 _unscaledDeltaSeconds{ 0.0f }; ///< 실제 경과 — 정지 메뉴 아래서도 애니메이션 · 알림이 흐른다
+        bool    _bGamePaused{ false };         ///< 게임 시간이 섰다(`Engine::update`) — 자막은 소리와 같이 선다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
     };
 
     /** @class IEngineUIDriver @brief 런타임 UI 의 프레임 단계입니다. 게임 스레드에서 부릅니다. */

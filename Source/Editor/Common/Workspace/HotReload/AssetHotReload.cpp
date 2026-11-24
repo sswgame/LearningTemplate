@@ -757,15 +757,18 @@ namespace sw::editor
                 (void)notifyAssetUsers( *pObjects, relativePath );
             // 미리보기 씬(프리팹 · 머티리얼 · 캐릭터 창)도 같은 에셋을 쓴다 — 빼면 게임 뷰는 새것, 열린 편집기는 옛것을 보인다.
             SceneManager* const pSceneManager = findSubsystem<SceneManager>();
+            uint32              previewUsers  = 0;
             if ( pSceneManager != nullptr )
             {
                 for ( const PreviewSceneEntry& preview : pSceneManager->getPreviewScenes() )
                 {
                     GameObjectManager* const pPreviewObjects = preview._scene->getObjectManager();
                     if ( pPreviewObjects != nullptr )
-                        (void)notifyAssetUsers( *pPreviewObjects, relativePath );
+                        previewUsers += notifyAssetUsers( *pPreviewObjects, relativePath );
                 }
             }
+            if ( previewUsers > 0 )
+                SW_LOG_INFO_ID( "AssetHotReload.PreviewUsersNotified", "%# preview component(s) use the reloaded '%#'", previewUsers, relativePath );
         }
         // 결과를 적는 한 곳 — 실패(캐시가 파일을 읽지 못해 이전 판으로 돈다)도 여기서 적는다. NotTracked 는 집계가 버린다.
         if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )

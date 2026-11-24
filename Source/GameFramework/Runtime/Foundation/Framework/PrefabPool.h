@@ -40,6 +40,7 @@ namespace sw
      * @brief 프리팹 인스턴스를 만들고 지우는 대신 끄고 켭니다(유니티 `ObjectPool<T>` · 언리얼 액터 풀링의 자리).
      * @details `acquire` 는 꺼 둔 인스턴스가 있으면 켜서, 없으면 `PrefabCache::spawn` 으로 새로 만들어 돌려준다. `release` 는 계층의 컴포넌트를 모두
      *          스폰 상태로 되돌리고(`Component::resetToSpawnState` — 죽음 · 래그돌 · 절단 · 빙의) 끈 뒤 쉬는 목록에 넣으며, 쉬는 수가 `_maxIdleCount` 를 넘으면 지운다.
+     *          돌려받거나 다시 내줄 때 인스턴스의 핸들을 끊는다(`GameObject::invalidateHandles`) — 앞 생을 겨누던 쪽은 파괴된 대상처럼 nullptr 을 받고, 꺼낸 쪽은 꺼낸 뒤 핸들을 받는다.
      *          꺼낸 쪽이 매번 다시 정하는 값(자리 · `launch` 같은 시작 호출)은 꺼낸 뒤 정한다. 쉬는 인스턴스는 핸들로 들고, 지워졌으면 건너뛴다.
      *          **풀 계약**: 처음 만든 인스턴스의 계층 전부에 되돌리기를 불러 보고, 구현하지 않은 컴포넌트(`SpawnStateReset::Unsupported`)가 있으면 오류를 남기고
      *          그 인스턴스를 지운 뒤 이 풀을 막는다 — 다음 꺼내기도 nullptr 이다(매번 스폰으로 물러서지 않는다, 유니티 `IPoolable` · 언리얼 풀 인터페이스의 강제를 형식 대신 등록에서).

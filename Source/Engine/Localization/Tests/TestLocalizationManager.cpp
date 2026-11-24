@@ -445,3 +445,39 @@ SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithIts
     copy.copyStateFrom( copy );
     SW_EXPECT_EQUAL( sw::string( "qps_ploc" ), copy.getCurrentLanguage() );
 }
+
+using namespace sw;
+
+/** @brief [LocalizedMessageTest] 메시지는 키와 인자로 남아 풀 때의 언어로 보인다 — 글 하나를 들고 언어를 바꾸면 패턴도 키 인자(아이템 이름)도 새 언어다. 이은 글 · 겹친 메시지도 같다 */
+SW_TEST_CASE( LocalizedMessageTest, ResolvesInTheLanguageOfTheMoment )
+{
+    LocalizationManager localization;
+    localization.setString( "en", hashed_string( "Shop.Confirm" ), "Buy {item} for {price}?" );
+    localization.setString( "ko", hashed_string( "Shop.Confirm" ), "{item}: {price}에 살까요?" );
+    localization.setString( "en", hashed_string( "Item.Axe" ), "Axe" );
+    localization.setString( "ko", hashed_string( "Item.Axe" ), "도끼" );
+    SW_REQUIRE_TRUE( localization.setCurrentLanguage( "en" ) );
+    const string message = LocalizedMessage( "Shop.Confirm" ).addKey( "item", "Item.Axe" ).addInteger( "price", 30 ).str();
+    const string lines   = LocalizedMessage::join( "\n", { "Item.Axe", string{}, message } );
+    SW_EXPECT_TRUE( LocalizedMessage::isMessage( message ) );
+    SW_EXPECT_EQUAL( string( "Buy Axe for 30?" ), LocalizedText::resolve( &localization, message ) );
+    SW_EXPECT_EQUAL( string( "Axe\nBuy Axe for 30?" ), LocalizedText::resolve( &localization, lines ) );
+    SW_REQUIRE_TRUE( localization.setCurrentLanguage( "ko" ) );
+    SW_EXPECT_EQUAL( string( "도끼: 30에 살까요?" ), LocalizedText::resolve( &localization, message ) );
+    SW_EXPECT_EQUAL( string( "도끼\n도끼: 30에 살까요?" ), LocalizedText::resolve( &localization, lines ) );
+    SW_EXPECT_EQUAL( string( "도끼" ), LocalizedText::resolve( &localization, "Item.Axe" ) ); // 인자 없는 키
+    SW_EXPECT_EQUAL( string( "plain" ), LocalizedText::resolve( &localization, "plain" ) );   // 표에 없는 글은 그대로
+}
+
+/** @brief [LocalizedMessageTest] 글 인자와 글 그대로인 조각은 키로 풀지 않고, 안에 든 구분 문자는 지워져 다른 메시지가 되지 않는다(플레이어가 친 글) */
+SW_TEST_CASE( LocalizedMessageTest, PlayerTextStaysText )
+{
+    LocalizationManager localization;
+    localization.setString( "en", hashed_string( "Chat.Line" ), "[{name}] {text}" );
+    localization.setString( "en", hashed_string( "Item.Axe" ), "Axe" );
+    SW_REQUIRE_TRUE( localization.setCurrentLanguage( "en" ) );
+    const string nested  = LocalizedMessage( "Item.Axe" ).str();
+    const string message = LocalizedMessage( "Chat.Line" ).addText( "name", "Item.Axe" ).addText( "text", nested ).str();
+    SW_EXPECT_EQUAL( string( "[Item.Axe] MItem.Axe" ), LocalizedText::resolve( &localization, message ) );
+    SW_EXPECT_EQUAL( string( "Item.Axe" ), LocalizedText::resolve( &localization, LocalizedMessage::literal( "Item.Axe" ) ) );
+}

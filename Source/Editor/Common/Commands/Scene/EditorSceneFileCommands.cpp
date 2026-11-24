@@ -102,6 +102,9 @@ namespace sw::editor
 {
     bool EditorSceneFileCommands::loadSceneWithoutPrompt( string_view path )
     {
+        // 씬을 여는 모든 입구(메뉴 · 콘솔 `scene.open` · 복원 · 미저장 확인 뒤)가 여기로 온다 — 플레이 중에 열면 Stop 이 연 씬을 스냅샷으로 덮는다.
+        if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
+            return false;
         // 리소스 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
         const string loadPath = AssetPaths::normalizeAssetID( path );
         if ( loadPath.empty() )

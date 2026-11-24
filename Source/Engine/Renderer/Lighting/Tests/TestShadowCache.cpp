@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Renderer/Lighting/ShadowCache.h"
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 // 그림자 캐시의 규칙(타일마다 DrawAll · Rebuild · Reuse)을 GPU 없이 본다. 그림은 시나리오 game.playground.shadow_cache 가 본다.
 
@@ -146,4 +147,28 @@ SW_TEST_CASE( ShadowCacheTest, IncompleteLayerIsRebuiltNextFrame )
     cache.markRebuilt();
     cache.update( listTile, Internal::kAtlasResolution, 7, true );
     SW_EXPECT_TRUE( cache.getAction( 0 ) == Action::Reuse );
+}
+
+/**
+ * @brief [ShadowCacheTest] 텍스처가 그림자의 모양을 정하는 퍼뮤테이션(알파 컷오프 · 변위)이 있는 장면만 텍스처 도착이 정적 세대를 올린다
+ * @details 변이: define 하나를 빼면 그 머티리얼의 그림자가 자리 텍스처의 모양으로 굳고, 모두 참으로 두면 불투명 장면이 도착마다 캐시를 버린다.
+ */
+SW_TEST_CASE( ShadowCacheTest, OnlyTextureShapedMaterialsWaitForTextures )
+{
+    sw::GPUSceneSnapshot snapshot;
+    SW_EXPECT_FALSE( snapshot.hasTextureShapedDepth() );
+    auto                     listOpaque = sw::make_shared<sw::vector<sw::GPUShaderPermutation>>( 1 );
+    sw::GPUShaderPermutation masked{};
+    ( *listOpaque )[0]._listDefine.push_back( sw::kMaterialVertexDeformDefine );
+    snapshot._pListShaderPermutation = listOpaque;
+    SW_EXPECT_FALSE( snapshot.hasTextureShapedDepth() );
+
+    for ( const utf8* pDefine : { sw::kMaterialAlphaCutoffDefine, sw::kMaterialDisplacementDefine } )
+    {
+        auto listShaped = sw::make_shared<sw::vector<sw::GPUShaderPermutation>>( *listOpaque );
+        masked._listDefine.assign( 1, sw::string( pDefine ) );
+        listShaped->push_back( masked );
+        snapshot._pListShaderPermutation = listShaped;
+        SW_EXPECT_TRUE( snapshot.hasTextureShapedDepth() );
+    }
 }

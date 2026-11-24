@@ -3,10 +3,11 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 
 #include "Core/Encoding/FourCCUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -37,16 +38,16 @@ namespace sw
             /**
              * @brief 스냅샷 봉투의 버전입니다. 읽을 때도 이 버전만 받습니다.
              * @details 봉투 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
-             *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`), 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태) 넷이다.
+             *          섹션은 씬 오브젝트(오브젝트마다 정체 · 반사 상태 · 컴포넌트 상태), 파생의 리플렉션 상태, 씬 몫(늘 올라 있는 오브젝트의 파일 id · 스트리밍 셀 상태 · 데이터 레이어 상태) 셋이다.
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              *          머리의 씬 정체는 찍을 때 활성 씬의 GUID 참조(`AssetRegistry::makeReferenceText`)다 — 읽을 때 지금 경로로 풀고, 지금 활성 씬과 다르면 섞지 않고 거절한다.
              *          옛 판은 판 올림 사슬(`upgradeEnvelope`)이 한 번 올린다. 판 11 은 머리 · 하위 레벨 · 미니게임 칸에 경로를 적었고 배치가 같아, 읽기가 옛 경로를 한 번 푼다(`AssetRedirect::readSavedReference`).
              */
-            static constexpr uint32 kVersion = 12; // 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태, 11: 머리에 미니게임 칸 스택, 12: 머리 · 하위 레벨 · 미니게임 칸의 씬이 GUID 참조 글
+            static constexpr uint32 kVersion = 13; // 13: 컴포넌트 상태를 오브젝트마다 싣고(코덱 하나) 머리에 플레이 시간 · 저장 시각이 실린다, 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다, 6: 머리에 씬 정체(활성 씬 리소스 id)가 실린다, 7: 넷째 섹션 씬 몫(파일 id · 스트리밍 셀), 8: 씬 몫에 런타임 하위 레벨, 9: 하위 레벨에 읽음 표시(읽는 중에 저장한 것은 복원이 문서를 다시 읽는다), 10: 씬 몫의 엔티티마다 PROPERTY 밖 컴포넌트 상태, 11: 머리에 미니게임 칸 스택, 12: 머리 · 하위 레벨 · 미니게임 칸의 씬이 GUID 참조 글
 
             static constexpr uint32 kScenePathVersion      = 11; ///< 씬을 경로 글로 적던 마지막 판
-            static constexpr uint32 kSceneReferenceVersion = 12; ///< 씬을 GUID 참조 글로 적는 첫 판
+            static constexpr uint32 kSceneReferenceVersion = 12; ///< 씬을 GUID 참조 글로 적는 첫 판(컴포넌트 상태를 컴포넌트 id 로 한 섹션에 모은 마지막 판)
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
@@ -55,6 +56,8 @@ namespace sw
                 string        _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(읽을 때 GUID 를 푼다 — 씬이 없었으면 빈 글)
                 string        _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
                 vector<uint8> _minigameBytes;     ///< 찍을 때의 미니게임 칸 스택(`MinigameStack::writeSaveState`, 밖이면 빈 바이트)
+                float64       _playTime{ 0.0 };   ///< 찍을 때까지의 플레이 시간(초)
+                uint64        _savedTime{ 0 };    ///< 찍은 벽시계 시각(UTC 유닉스 밀리초)
             };
 
             /**
@@ -88,6 +91,9 @@ namespace sw
                 vector<uint8> minigameBytes;
                 if ( arch.isError() || arch.readSection( minigameBytes ) == false )
                     return false;
+                arch >> outHeader._playTime >> outHeader._savedTime;
+                if ( arch.isError() || MathUtil::isFinite( outHeader._playTime ) == false )
+                    return false;
                 expected<AssetReferenceTarget> scene = AssetRedirect::readSavedReference( sceneReference );
                 if ( scene.has_value() == false )
                 {
@@ -108,6 +114,131 @@ namespace sw
                     return false;
                 Memory::copy( payload._pBytes->data() + kVersionOffset, &kSceneReferenceVersion, sizeof( uint32 ) );
                 return true;
+            }
+
+            /**
+             * @brief 판 12 → 13 — 컴포넌트 id 로 모은 상태 섹션을 오브젝트마다의 코덱 바이트로 옮기고, 머리에 플레이 시간 · 저장 시각(0)을 더합니다.
+             * @details 짝짓기는 오브젝트 정체에 실린 (컴포넌트 id → 지역 id 키)다. 씬 섹션에 없는 컴포넌트의 상태는 예전에도 돌아갈 곳이 없어 버렸다.
+             */
+            static bool upgradeStatesToObjects( FormatUpgradePayload& payload )
+            {
+                if ( payload._pBytes == nullptr )
+                    return false;
+                Archive in( payload._pBytes->data(), payload._pBytes->size() );
+                uint32  magic{ 0 };
+                uint32  version{ 0 };
+                uint64  processToken{ 0 };
+                in >> magic >> version >> processToken;
+                const string  sceneReference = in.readString();
+                const string  contentText    = in.readString();
+                vector<uint8> minigameBytes;
+                vector<uint8> sceneBytes;
+                vector<uint8> stateBytes;
+                vector<uint8> componentBytes;
+                vector<uint8> scenePartBytes;
+                if ( in.readSection( minigameBytes ) == false || in.readSection( sceneBytes ) == false || in.readSection( stateBytes ) == false || in.readSection( componentBytes ) == false ||
+                     in.readSection( scenePartBytes ) == false || in.isError() )
+                    return false;
+
+                unordered_map<uint64, vector<SavedComponentState>> mapState;
+                if ( readComponentStates( componentBytes, mapState ) == false || appendStatesToObjects( sceneBytes, mapState ) == false )
+                    return false;
+                if ( minigameBytes.empty() == false )
+                    minigameBytes.resize( minigameBytes.size() + sizeof( uint32 ), 0 ); // 칸 뒤에 넘기지 못한 결과 수가 생겼다(`MinigameStack::writeSaveState`) — 옛 세이브는 0
+                Archive out;
+                out << kMagic << kVersion << processToken;
+                out.writeString( sceneReference );
+                out.writeString( contentText );
+                out.writeSection( minigameBytes.data(), static_cast<uint32>( minigameBytes.size() ) );
+                out << float64{ 0.0 } << uint64{ 0 };
+                out.writeSection( sceneBytes.data(), static_cast<uint32>( sceneBytes.size() ) );
+                out.writeSection( stateBytes.data(), static_cast<uint32>( stateBytes.size() ) );
+                out.writeSection( scenePartBytes.data(), static_cast<uint32>( scenePartBytes.size() ) );
+                payload._pBytes->assign( out.getData(), out.getData() + out.getSize() );
+                return true;
+            }
+
+            /** @brief 판 12 의 컴포넌트 상태 하나입니다. */
+            struct SavedComponentState
+            {
+                string        _typeName;
+                vector<uint8> _bytes;
+            };
+
+            /** @brief 판 12 의 상태 섹션(판 5 — 수, [타입 이름, 컴포넌트 id, 바이트]…)을 컴포넌트 id 로 나눕니다. 빈 섹션은 상태 없음이다. */
+            static bool readComponentStates( const vector<uint8>& bytes, unordered_map<uint64, vector<SavedComponentState>>& outMapState )
+            {
+                constexpr uint32 kStateVersion  = 5;
+                constexpr uint32 kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
+                if ( bytes.empty() )
+                    return true;
+                Archive arch( bytes.data(), bytes.size() );
+                uint32  version{ 0 };
+                arch >> version;
+                if ( arch.isError() || version != kStateVersion )
+                    return false;
+                const uint32 count = arch.readCount( kMinEntryBytes );
+                for ( uint32 index = 0; index < count && arch.isError() == false; ++index )
+                {
+                    SavedComponentState state;
+                    uint64              componentID{ 0 };
+                    arch >> state._typeName >> componentID >> state._bytes;
+                    outMapState[componentID].push_back( std::move( state ) );
+                }
+                return arch.isError() == false;
+            }
+
+            /** @brief 판 12 의 씬 섹션(수, [정체, 길이 + 상태]…)에서 오브젝트마다 제 컴포넌트의 상태를 뒤에 붙입니다. */
+            static bool appendStatesToObjects( vector<uint8>& inoutSceneBytes, const unordered_map<uint64, vector<SavedComponentState>>& mapState )
+            {
+                if ( inoutSceneBytes.empty() )
+                    return true;
+                uint32 count{ 0 };
+                if ( inoutSceneBytes.size() < sizeof( uint32 ) )
+                    return false;
+                Memory::copy( &count, inoutSceneBytes.data(), sizeof( uint32 ) );
+                vector<uint8> out( inoutSceneBytes.begin(), inoutSceneBytes.begin() + sizeof( uint32 ) );
+                size_t        offset = sizeof( uint32 );
+                for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
+                {
+                    ObjectIdentity identity;
+                    const size_t   identityBytes = ObjectStateSerializer::readIdentity( inoutSceneBytes.data() + offset, inoutSceneBytes.size() - offset, identity );
+                    const size_t   bodyOffset    = offset + identityBytes;
+                    uint32         bodySize{ 0 };
+                    if ( identityBytes == 0 || inoutSceneBytes.size() - bodyOffset < sizeof( uint32 ) )
+                        return false;
+                    Memory::copy( &bodySize, inoutSceneBytes.data() + bodyOffset, sizeof( uint32 ) );
+                    if ( inoutSceneBytes.size() - bodyOffset - sizeof( uint32 ) < bodySize )
+                        return false;
+                    const size_t endOffset = bodyOffset + sizeof( uint32 ) + bodySize;
+                    out.insert( out.end(), inoutSceneBytes.begin() + static_cast<ptrdiff_t>( offset ), inoutSceneBytes.begin() + static_cast<ptrdiff_t>( endOffset ) );
+                    Archive states;
+                    for ( const ObjectIdentity::ComponentEntry& component : identity._listComponent )
+                    {
+                        const auto stateIt = mapState.find( component._componentID );
+                        if ( stateIt == mapState.end() )
+                            continue;
+                        for ( const SavedComponentState& state : stateIt->second )
+                        {
+                            states << string_view( state._typeName ) << string_view( component._stableKey ) << state._bytes;
+                        }
+                    }
+                    appendSection( out, states.getData(), states.getSize() );
+                    offset = endOffset;
+                }
+                inoutSceneBytes = std::move( out );
+                return true;
+            }
+
+            /** @brief 길이 + 바이트 한 덩이를 @p inoutBytes 뒤에 붙입니다(오브젝트 하나의 컴포넌트 상태). */
+            static void appendSection( vector<uint8>& inoutBytes, const uint8* pData, size_t dataSize )
+            {
+                const uint32 size    = static_cast<uint32>( dataSize );
+                const size_t oldSize = inoutBytes.size();
+                inoutBytes.resize( oldSize + sizeof( uint32 ) + size );
+                Memory::copy( inoutBytes.data() + oldSize, &size, sizeof( uint32 ) );
+                if ( size > 0 )
+                    Memory::copy( inoutBytes.data() + oldSize + sizeof( uint32 ), pData, size );
             }
 
             /**
@@ -271,25 +402,19 @@ namespace sw
 {
     SW_SAVE_FORMAT_UPGRADE( gameStateSceneReferences, GameStateSnapshot::kFormatKind, StateEnvelopeInternal::kScenePathVersion, StateEnvelopeInternal::kSceneReferenceVersion,
                             &StateEnvelopeInternal::upgradeScenePathsToReferences );
+    SW_SAVE_FORMAT_UPGRADE( gameStateObjectStates, GameStateSnapshot::kFormatKind, StateEnvelopeInternal::kSceneReferenceVersion, StateEnvelopeInternal::kVersion,
+                            &StateEnvelopeInternal::upgradeStatesToObjects );
 
     GameStateSnapshot::GameStateSnapshot()
-        : _listStatefulType{}
+        : _listDespawn{}
         , _listCodec{}
-        , _pComponentStateStore{ make_unique<ComponentStateStore>() }
+        , _mapCapturedState{}
     {
-        // 엔진 컴포넌트 중 PROPERTY 밖의 편집 상태를 가진 것 — 지형의 저장하지 않은 높이 · 스플랫이 모듈 리로드와 백엔드 교체를 넘어간다(코덱은 지형이 스스로 등록했다).
-        StatefulComponentType terrain;
-        terrain._pCapture = &GameStateSnapshot::captureComponentStates<TerrainComponent>;
-        terrain._pRestore = &GameStateSnapshot::restoreComponentStates<TerrainComponent>;
-        _listStatefulType.push_back( terrain );
-        // 프레임워크 컴포넌트(카메라 디렉터 등)는 정의한 쪽이 정적으로 등록한다 — 게임마다 올리지 않아도 모든 게임의 스냅샷에 실린다.
+        // 프레임워크 컴포넌트(카메라 디렉터 등)는 정의한 쪽이 정적으로 등록한다 — 게임마다 올리지 않아도 모든 게임의 스냅샷에 실린다(상태는 코덱이, 세운 것 걷기는 여기가).
         for ( const StatefulComponentRegistration* pRegistration : StatefulComponentRegistration::getRegistrations() )
         {
-            StatefulComponentType type;
-            type._pCapture = pRegistration->getCapture();
-            type._pRestore = pRegistration->getRestore();
-            type._pDespawn = pRegistration->getDespawn();
-            _listStatefulType.push_back( type );
+            if ( pRegistration->getDespawn() != nullptr )
+                _listDespawn.push_back( pRegistration->getDespawn() );
         }
     }
 
@@ -301,33 +426,44 @@ namespace sw
         }
     }
 
-    void GameStateSnapshot::addCodec( const utf8* pTypeName, const TypeInfo* ( *pGetType )(), void ( *pWrite )( Component& component, vector<uint8>& outBytes ),
-                                      void ( *pRestore )( Component& component, vector<uint8>&& bytes ) )
+    void GameStateSnapshot::addCodec( const ComponentStateCodec& codec )
     {
-        _listCodec.push_back( make_unique<ComponentStateCodec>( ComponentStateCodec{ pTypeName, pGetType, pWrite, pRestore } ) );
+        _listCodec.push_back( make_unique<ComponentStateCodec>( codec ) );
+        _listCodec.back()->_pTypeName = codec._pGetType()->_name.c_str();
         (void)ComponentStateCodec::add( _listCodec.back().get() ); // 거절은 등록부가 알렸다
     }
 
     void GameStateSnapshot::beginCapture()
     {
-        _pComponentStateStore->clear();
+        _mapCapturedState.clear();
         GameObjectManager* pManager = GameStateSnapshotInternal::findActiveObjectManager();
         if ( pManager == nullptr )
             return;
-        // 모두 싣고 나서 걷는다. 걷기가 다른 타입의 상태(플레이어가 읽는 디렉터)를 바꾸지 않게 하려는 순서다.
-        for ( const StatefulComponentType& type : _listStatefulType )
+        // 모두 뜨고 나서 걷는다. 걷기가 다른 타입의 상태(플레이어가 읽는 디렉터)를 바꾸지 않게 하려는 순서다. 코덱이 있는 형식인지는 형식마다 한 번만 묻는다.
+        unordered_map<const TypeInfo*, uint8> mapHasCodec;
+        pManager->forEachGameObject( SceneIterationKey{}, [this, &mapHasCodec]( const GameObject* pObject )
         {
-            if ( type._pCapture != nullptr )
-                type._pCapture( SceneIterationKey{}, *_pComponentStateStore, *pManager );
-        }
-        for ( const StatefulComponentType& type : _listStatefulType )
+            bool bStateful = false;
+            for ( const Component* pComponent : pObject->getComponents() )
+            {
+                const TypeInfo* const pType = pComponent != nullptr ? pComponent->getTypeInfo() : nullptr;
+                if ( pType == nullptr )
+                    continue;
+                const auto inserted = mapHasCodec.try_emplace( pType, uint8{ SW_FALSE } );
+                if ( inserted.second )
+                    inserted.first->second = ComponentStateCodec::hasCodecFor( *pType ) ? SW_TRUE : SW_FALSE;
+                bStateful = bStateful || inserted.first->second == SW_TRUE;
+            }
+            if ( bStateful )
+                ComponentStateCodec::captureObject( *pObject, _mapCapturedState[pObject->getObjectID()] );
+        } );
+        for ( const DespawnFunction pDespawn : _listDespawn )
         {
-            if ( type._pDespawn != nullptr )
-                type._pDespawn( SceneIterationKey{}, *pManager );
+            pDespawn( SceneIterationKey{}, *pManager );
         }
     }
 
-    bool GameStateSnapshot::writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, const vector<uint8>& minigameBytes,
+    bool GameStateSnapshot::writeEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, const void* pStateInstance, float64 playTime, const vector<uint8>& minigameBytes,
                                            vector<uint8>& outBytes )
     {
         Archive arch;
@@ -342,6 +478,8 @@ namespace sw
         arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );
         // 이 세이브를 찍은 미니게임 — 읽는 쪽이 씬을 열기 전에 켠다(미니게임 밖이면 빈 섹션).
         arch.writeSection( minigameBytes.data(), static_cast<uint32>( minigameBytes.size() ) );
+        // 슬롯마다의 플레이 시간 · 저장 시각 — 불러오기 목록이 머리만 읽고, 불러오면 그 시간부터 이어 센다.
+        arch << playTime << static_cast<uint64>( WallClock::nowUnixMilliseconds().count() );
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
@@ -351,7 +489,9 @@ namespace sw
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
         vector<uint8>  bytesScene;
         vector<uint64> listSceneObjectID;
-        if ( serializeSceneObjects( purpose, bytesScene, listSceneObjectID ) == false )
+        const bool     bSceneWritten = serializeSceneObjects( purpose, bytesScene, listSceneObjectID );
+        _mapCapturedState.clear();
+        if ( bSceneWritten == false )
             SW_LOG_INFO_ID( "GameStateSnapshot.SceneObjectSnapshotEmpty", "The scene object snapshot is empty - there is no active scene or the game service is not bound. Only the custom state is saved." );
         arch.writeSection( bytesScene.data(), static_cast<uint32>( bytesScene.size() ) );
 
@@ -361,10 +501,7 @@ namespace sw
             // 값 하나라도 싣지 못하면 세이브 전체를 실패로 돌려준다. 써 두면 로드에서 그 값이 빠진다. 이유는 직렬화기가 알린다.
             vector<uint8> bytesState;
             if ( BinarySerializer::serialize( pStateInstance, *pStateType, bytesState, SerializeContext::getDefault( purpose ) ) == false )
-            {
-                _pComponentStateStore->clear();
                 return false;
-            }
             arch.writeSection( bytesState.data(), static_cast<uint32>( bytesState.size() ) );
         }
         else
@@ -372,13 +509,7 @@ namespace sw
             arch.writeSection( nullptr, 0 );
         }
 
-        // 3) PROPERTY 가 아닌 컴포넌트 상태(디렉터의 시뮬레이션). 훅이 실어 둔 것을 쓴다.
-        Archive componentArch;
-        _pComponentStateStore->write( componentArch );
-        arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
-        _pComponentStateStore->clear();
-
-        // 4) 씬 몫 — 실은 오브젝트의 파일 id(다른 실행에서 새 id 를 받아도 스트리밍 셀이 파일 id 로 찾는다)와 스트리밍 셀 상태(셀에 든 오브젝트는 씬 섹션 대신 여기).
+        // 3) 씬 몫 — 실은 오브젝트의 파일 id(다른 실행에서 새 id 를 받아도 스트리밍 셀이 파일 id 로 찾는다)와 스트리밍 셀 상태(셀에 든 오브젝트는 씬 섹션 대신 여기).
         vector<uint8> bytesScenePart;
         if ( bytesScene.empty() == false )
             ScenePartInternal::write( GameStateSnapshotInternal::findActiveScene(), listSceneObjectID, bytesScenePart );
@@ -393,7 +524,6 @@ namespace sw
                                                                             uint32 size )
     {
         const unexpected<SnapshotRestoreFailure> rejected{ SnapshotRestoreFailure::Rejected };
-        _pComponentStateStore->clear();
 
         // ---- 1 단계: 검증. 봉투를 끝까지 읽고 분리된 사본에 풀어 본다 — 지금 씬과 상태 인스턴스는 건드리지 않는다. ----
         Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
@@ -406,13 +536,11 @@ namespace sw
         const bool              bSameProcess = ( header._processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 
-        // 섹션 넷(씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태 · 씬 몫)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
+        // 섹션 셋(씬 오브젝트 · 파생의 리플렉션 상태 · 씬 몫)을 모두 읽은 뒤에 푼다 — 끝이 잘린 봉투가 씬을 비운 뒤에 지지 않게 한다.
         vector<uint8> bytesScene;
         vector<uint8> bytesState;
-        vector<uint8> bytesComponent;
         vector<uint8> bytesScenePart;
-        if ( arch.readSection( bytesScene ) == false || arch.readSection( bytesState ) == false || arch.readSection( bytesComponent ) == false ||
-             arch.readSection( bytesScenePart ) == false || arch.isError() )
+        if ( arch.readSection( bytesScene ) == false || arch.readSection( bytesState ) == false || arch.readSection( bytesScenePart ) == false || arch.isError() )
             return rejected;
         ScenePart scenePart;
         if ( bytesScenePart.empty() == false && ScenePartInternal::read( bytesScenePart, scenePart ) == false )
@@ -430,10 +558,10 @@ namespace sw
                 return rejected;
             }
             // 분리된 매니저 — 같은 엔진 서비스를 받되 활성 씬과 오브젝트를 나누지 않는다(프리팹 원형이 쓰는 손수 만든 매니저와 같다). 풀어 본 것은 여기서 버린다.
-            GameObjectManager                             probeManager( pLiveManager->getSceneEngineServices() );
-            vector<ComponentStateStore::SavedComponentID> listProbeRemap;
-            unordered_map<uint64, uint64>                 mapProbeObjectID;
-            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeRemap, mapProbeObjectID ) == false )
+            GameObjectManager             probeManager( pLiveManager->getSceneEngineServices() );
+            vector<RestoredState>         listProbeState;
+            unordered_map<uint64, uint64> mapProbeObjectID;
+            if ( deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, probeManager, listProbeState, mapProbeObjectID ) == false )
                 return rejected;
         }
 
@@ -452,21 +580,10 @@ namespace sw
                 return rejected;
         }
 
-        // 컴포넌트 상태는 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 비운다 — 디렉터는 새로 시작한다(씬 · 상태는 그대로 선다).
-        if ( bytesComponent.empty() == false )
-        {
-            Archive componentArch( bytesComponent.data(), bytesComponent.size() );
-            if ( _pComponentStateStore->read( componentArch ) == false )
-            {
-                SW_LOG_WARNING_ID( "GameStateSnapshot.ComponentStateSectionCould", "Component state section could not be read - components start fresh" );
-                _pComponentStateStore->clear();
-            }
-        }
-
         // ---- 2 단계: 교체. 검증을 지난 봉투만 씬을 비우고 채운다. 같은 바이트 · 같은 코드라 여기서 지는 것은 검증이 못 본 결함이다 — 씬이 깨졌다고 알린다. ----
-        const unexpected<SnapshotRestoreFailure>      broken{ SnapshotRestoreFailure::SceneBroken };
-        vector<ComponentStateStore::SavedComponentID> listComponentIDRemap;
-        unordered_map<uint64, uint64>                 mapObjectID;
+        const unexpected<SnapshotRestoreFailure> broken{ SnapshotRestoreFailure::SceneBroken };
+        vector<RestoredState>                    listState;
+        unordered_map<uint64, uint64>            mapObjectID;
         if ( bytesScene.empty() == false )
         {
             // 비우면 스트리밍 셀이 문서 내용으로 돌아간다(월드는 남는다) — 오브젝트를 다시 만든 뒤 씬 몫을 얹으면 다음 갱신이 세이브의 상태로 셀을 짓는다.
@@ -477,26 +594,21 @@ namespace sw
             if ( bActiveScene )
                 pActiveScene->restoreWorldOrigin( scenePart._worldOrigin );
             if ( GameStateSnapshotInternal::shouldBreakReplace() ||
-                 deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listComponentIDRemap, mapObjectID ) == false )
-            {
-                _pComponentStateStore->clear();
+                 deserializeSceneObjects( purpose, bytesScene.data(), bytesScene.size(), format, *pLiveManager, listState, mapObjectID ) == false )
                 return broken;
-            }
             if ( bActiveScene )
                 ScenePartInternal::apply( *pActiveScene, std::move( scenePart ), mapObjectID );
         }
         if ( bHasState && BinarySerializer::deserialize( pStateInstance, *pStateType, bytesState.data(), bytesState.size(), SerializeContext::getDefault( purpose ) ) == false )
-        {
-            _pComponentStateStore->clear();
             return broken;
+        // 모든 오브젝트와 씬 몫이 선 뒤 컴포넌트 상태를 돌려준다 — 코덱이 셀 · 레이어 · 씬 전환과 같은 길로 짝짓는다(지역 id 키라 다른 실행의 세이브도 그대로다).
+        for ( const RestoredState& state : listState )
+        {
+            GameObject* const pObject = pLiveManager->findGameObjectByID( state._objectID );
+            if ( pObject != nullptr )
+                ComponentStateCodec::restoreObject( *pObject, state._bytes );
         }
-        // 다른 실행의 세이브는 컴포넌트 id 가 새로 나갔다. 씬 섹션이 만든 표로 저장된 id 를 이번 id 로 바꿔 id 로만 짝짓는다.
-        if ( format == SceneObjectFormat::WithIdentity )
-            _pComponentStateStore->remapComponentIDs( listComponentIDRemap );
-
-        // 읽기 훅(`onAfterStateDeserialize`)은 부르는 쪽이 이 뒤에 부르고 `endRestore` 로 저장소를 비운다.
-        restoreStatefulComponents();
-        return {};
+        return {}; // 읽기 훅(`onAfterStateDeserialize`)은 부르는 쪽이 이 뒤에 부른다
     }
 
     bool GameStateSnapshot::upgradeEnvelope( vector<uint8>& inoutBytes )
@@ -530,24 +642,16 @@ namespace sw
         return std::move( header._minigameBytes );
     }
 
-    void GameStateSnapshot::endRestore()
+    optional<GameStateSnapshot::SaveInfo> GameStateSnapshot::readSaveInfo( const void* pInBuffer, uint32 size )
     {
-        _pComponentStateStore->clear();
+        Archive                       arch( static_cast<const uint8*>( pInBuffer ), size );
+        StateEnvelopeInternal::Header header;
+        if ( StateEnvelopeInternal::readHeader( pInBuffer, size, arch, header ) == false )
+            return nullopt;
+        return SaveInfo{ std::move( header._sceneID ), header._playTime, UnixMilliseconds{ static_cast<int64>( header._savedTime ) } };
     }
 
-    void GameStateSnapshot::restoreStatefulComponents()
-    {
-        GameObjectManager* pManager = GameStateSnapshotInternal::findActiveObjectManager();
-        if ( pManager == nullptr )
-            return;
-        for ( const StatefulComponentType& type : _listStatefulType )
-        {
-            if ( type._pRestore != nullptr )
-                type._pRestore( SceneIterationKey{}, *_pComponentStateStore, *pManager );
-        }
-    }
-
-    bool GameStateSnapshot::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes, vector<uint64>& outListObjectID )
+    bool GameStateSnapshot::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes, vector<uint64>& outListObjectID ) const
     {
         outListObjectID.clear();
         GameObjectManager* pObjectManager = GameStateSnapshotInternal::findActiveObjectManager();
@@ -590,15 +694,19 @@ namespace sw
                 outBytes.clear();
                 return false;
             }
+            // PROPERTY 밖 상태는 걷기 앞(`beginCapture`)에서 떠 둔 것이다.
+            const auto stateIt = _mapCapturedState.find( pObj->getObjectID() );
+            const bool bState  = stateIt != _mapCapturedState.end() && stateIt->second.empty() == false;
+            StateEnvelopeInternal::appendSection( outBytes, bState ? stateIt->second.data() : nullptr, bState ? stateIt->second.size() : 0 );
         }
 
         return true;
     }
 
     bool GameStateSnapshot::deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format, GameObjectManager& manager,
-                                                     vector<ComponentStateStore::SavedComponentID>& outListRemap, unordered_map<uint64, uint64>& outMapObjectID )
+                                                     vector<RestoredState>& outListState, unordered_map<uint64, uint64>& outMapObjectID )
     {
-        outListRemap.clear();
+        outListState.clear();
         outMapObjectID.clear();
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
@@ -658,8 +766,19 @@ namespace sw
             listRestoredObject.push_back( pObj );
             outMapObjectID[identity._objectID] = pObj->getObjectID();
             offset += readBytes;
-            if ( bRestoreIdentity == false )
-                ComponentStateStore::appendComponentIDRemap( identity, *pObj, outListRemap );
+            uint32 stateSize{ 0 };
+            if ( size - offset >= sizeof( uint32 ) )
+                Memory::copy( &stateSize, pData + offset, sizeof( uint32 ) );
+            if ( size - offset < sizeof( uint32 ) || size - offset - sizeof( uint32 ) < stateSize )
+            {
+                SW_LOG_ERROR_ID( "GameStateSnapshot.FailedReadComponentStates", "Failed to read component states at index %#", objectIndex );
+                bComplete = false;
+                break;
+            }
+            offset += sizeof( uint32 );
+            if ( stateSize > 0 )
+                outListState.push_back( RestoredState{ pObj->getObjectID(), vector<uint8>( pData + offset, pData + offset + stateSize ) } );
+            offset += stateSize;
         }
 
         // 씬 계층 구조(부모와 소켓)를 한 번에 잇는다. 자식이 부모보다 먼저 읽혔어도 부모를 찾을 수 있다.

@@ -419,6 +419,7 @@ namespace sw
             if ( reportVirtualCursorConflict( sourceName, action, pEntry->_definition._listBinding[removeIndex] ) == false )
                 continue;
             pEntry->_definition._listBinding.erase( pEntry->_definition._listBinding.begin() + removeIndex );
+            ++_bindingRevision;
             pEntry->_definition._listDefaultBinding.erase( pEntry->_definition._listDefaultBinding.begin() + removeIndex );
             pEntry->_state._listBindingState.erase( pEntry->_state._listBindingState.begin() + removeIndex );
             ++removedCount;

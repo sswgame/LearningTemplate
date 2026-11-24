@@ -11,6 +11,8 @@
 
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 
+#include "Engine/Content/AssetRegistry.h"
+
 namespace sw::editor
 {
     namespace
@@ -39,7 +41,7 @@ namespace sw::editor
         if ( FileUtil::writeTextFile( textPath, _text ) == false )
             return false;
         StringBuilder<constant::buffer::kMax512> metaBuilder;
-        metaBuilder.appendFormat( "document=%#\npanel=%#\nproject=%#\nsourceHash=%#\nsaved=%#\n", _documentPath, _panelID, _projectRoot, _sourceContentHash,
+        metaBuilder.appendFormat( "document=%#\npanel=%#\nproject=%#\nsourceHash=%#\nsaved=%#\n", AssetRegistry::makeReferenceText( _documentPath, AssetRegistry::resolveGUID( _documentPath ) ), _panelID, _projectRoot, _sourceContentHash,
                                   FileUtil::getCurrentFileWriteTime() );
         if ( FileUtil::writeTextFile( Internal::makePath( sessionFolder, _documentPath, Internal::kMetaSuffix ), metaBuilder.view() ) == false )
         {
@@ -80,9 +82,11 @@ namespace sw::editor
                 if ( FileUtil::readTextFile( file, metaText ) == false )
                     continue;
                 EditorDocumentAutosaveEntry entry{};
-                entry._documentPath = EditorAutosaveCommands::findMetaValue( metaText, "document" );
-                entry._panelID      = EditorAutosaveCommands::findMetaValue( metaText, "panel" );
-                entry._projectRoot  = EditorAutosaveCommands::findMetaValue( metaText, "project" );
+                entry._documentReference                      = EditorAutosaveCommands::findMetaValue( metaText, "document" );
+                const expected<AssetReferenceTarget> document = AssetRegistry::readReferenceText( entry._documentReference );
+                entry._documentPath                           = document.has_value() ? document->_path : entry._documentReference;
+                entry._panelID                                = EditorAutosaveCommands::findMetaValue( metaText, "panel" );
+                entry._projectRoot                            = EditorAutosaveCommands::findMetaValue( metaText, "project" );
                 (void)StringUtil::parseUint64( EditorAutosaveCommands::findMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면 0 — 새 문서로 본다
                 (void)StringUtil::parseInt64( EditorAutosaveCommands::findMetaValue( metaText, "saved" ), entry._savedTicks );              // 없으면 0 — 창이 "-" 로 보인다
                 entry._textAbs = file.removeExtension().appendSuffix( Internal::kTextSuffix );
@@ -91,11 +95,18 @@ namespace sw::editor
                 // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다(씬 자동 저장과 같은 규칙) — 사본이 남의 일을 덮지 않게.
                 if ( FileUtil::isSameDiskPath( entry._projectRoot, projectRoot ) == false )
                     entry._refusal = "it was written for another project";
+                else if ( document.has_value() == false )
+                    entry._refusal = "the original document is gone";
                 else if ( computeSourceHash( entry ) != entry._sourceContentHash )
                     entry._refusal = "the original document changed after this copy";
                 outListEntry.push_back( std::move( entry ) );
             }
         }
+    }
+
+    bool EditorDocumentAutosaveEntry::isCopyOf( string_view documentPath ) const
+    {
+        return _textAbs == EditorDocumentAutosaveInternal::makePath( _textAbs.getParent().getParent(), documentPath, EditorDocumentAutosaveInternal::kTextSuffix );
     }
 
     string EditorDocumentAutosaveEntry::makeFileID( string_view absolutePath )

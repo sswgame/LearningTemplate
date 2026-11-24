@@ -5,6 +5,31 @@
 		<entry key="Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Chat.Blocked"
+		       text="단어 거르기에 걸려 메시지를 보내지 못했습니다"
+		       sourceHash="9f4be67ffd43a11b" />
+		<entry key="Chat.Failed" text="채팅을 보내지 못했습니다" sourceHash="835a9e246c532850" />
+		<entry key="Chat.InvalidMessage"
+		       text="메시지가 비었거나 올바르지 않습니다"
+		       sourceHash="90852f96d275f811" />
+		<entry key="Chat.Muted"
+		       text="채팅이 금지되어 있습니다({seconds}초 남음)"
+		       sourceHash="d44ad231e1dc9e57" />
+		<entry key="Chat.NotFound" text="메시지를 찾을 수 없습니다" sourceHash="9e5e30bbb5ad2ca9" />
+		<entry key="Chat.NotJoinable" text="참여할 수 없는 채널입니다" sourceHash="46a0dd5bcc062ecf" />
+		<entry key="Chat.NotMember" text="참여하지 않은 채널입니다" sourceHash="3e5bfdfd4245bf3b" />
+		<entry key="Chat.Repeated" text="이미 한 말입니다" sourceHash="3aed68501070baae" />
+		<entry key="Chat.SignIn" text="채팅하려면 로그인하세요" sourceHash="3e1a44cdd263dd1e" />
+		<entry key="Chat.TargetOffline" text="상대가 접속해 있지 않습니다" sourceHash="4e2a36c23fcdbdc0" />
+		<entry key="Chat.TooFast"
+		       text="너무 빠릅니다. 잠시 뒤에 다시 시도하세요"
+		       sourceHash="51ec7c4fa8414af5" />
+		<entry key="Chat.TooFastWait"
+		       text="너무 빠릅니다. {milliseconds}ms 기다리세요"
+		       sourceHash="e5b6fe8229c21b06" />
+		<entry key="Chat.TooManyChannels" text="채널이 너무 많습니다" sourceHash="b67867eff6d1139c" />
+		<entry key="Chat.Unavailable" text="지금은 채팅할 수 없습니다" sourceHash="97824550bff00311" />
+		<entry key="Chat.UpdateGame" text="채팅하려면 게임을 업데이트하세요" sourceHash="42ac26bc346890e2" />
 		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
 		<entry key="Corner" text="모서리" sourceHash="d66afae9aedadcf0" />
 		<entry key="Debug HUD" text="디버그 HUD" sourceHash="e7b16707c98cf071" />
@@ -641,16 +666,37 @@
 		<entry key="EditorTip.ZoneRevertParam"
 		       text="이 매개변수에 프리셋 값을 다시 씁니다."
 		       sourceHash="2216bc5d4a3af475" />
+		<entry key="FriendList.Idle"
+		       text="새로 고침을 누르면 친구 목록을 보입니다"
+		       sourceHash="1bf7709ef94325c5" />
+		<entry key="FriendList.LoadFailed"
+		       text="친구 목록을 불러오지 못했습니다(오류 {error})"
+		       sourceHash="126516148f7f55b3" />
+		<entry key="FriendList.Loading" text="친구 목록을 불러오는 중..." sourceHash="fd7afe91ccb1c0b8" />
+		<entry key="FriendList.None" text="아직 친구가 없습니다" sourceHash="2736cb628dbd9e09" />
+		<entry key="FriendList.PendingRequests" text="{title}  (받은 요청 {count}건)" sourceHash="edf972fdfe13cb2e" />
+		<entry key="FriendList.PresenceAway" text="자리 비움" sourceHash="6f3fb3842ffa02bb" />
+		<entry key="FriendList.PresenceBusy" text="바쁨" sourceHash="ff75d19be2aea620" />
+		<entry key="FriendList.PresenceInGame" text="게임 중" sourceHash="751b555ee38fcef8" />
+		<entry key="FriendList.PresenceOffline" text="오프라인" sourceHash="574193ebbf068988" />
+		<entry key="FriendList.PresenceOnline" text="온라인" sourceHash="abf0e099159a8caa" />
+		<entry key="FriendList.PresenceUnknown" text="알 수 없음" sourceHash="498865c7bd1f3959" />
+		<entry key="FriendList.Row" text="#{account}  {presence}" sourceHash="2db55beacdf5ec2a" />
+		<entry key="FriendList.RowActivity" text="#{account}  {presence}  {activity}" sourceHash="b1fda9d92194f095" />
+		<entry key="FriendList.Title" text="친구" sourceHash="4c675180cc54b9ba" />
 		<entry key="Inventory.Done" text="완료했습니다." sourceHash="7301570d0bb8fc6d" />
 		<entry key="Inventory.DropTitle" text="몇 개를 버릴까요?" sourceHash="5851b629b00886c2" />
 		<entry key="Inventory.EmptySlot" text="빈 칸입니다." sourceHash="b56cc9d513099dfd" />
+		<entry key="Inventory.EquipLine" text="{slot}: {item}" sourceHash="49a515e2a7dc7316" />
 		<entry key="Inventory.InvalidCount" text="그 수량은 안 됩니다." sourceHash="e710ff918fd580da" />
 		<entry key="Inventory.InvalidSlot" text="그 칸에는 넣을 수 없습니다." sourceHash="af46c51eb2b0ce83" />
+		<entry key="Inventory.ItemCount" text="{item} x{count}" sourceHash="35b4cb38ae71afeb" />
 		<entry key="Inventory.NoRoom" text="가방이 가득 찼습니다." sourceHash="3034de0a57eb2551" />
 		<entry key="Inventory.NotUsable" text="사용할 수 없습니다." sourceHash="fee7c8ce0b060e74" />
 		<entry key="Inventory.Picked" text="놓을 곳을 고르세요." sourceHash="76033ca89d70f4b0" />
 		<entry key="Inventory.Refused" text="그 자리에는 장착할 수 없습니다." sourceHash="e65da3e12aa85757" />
 		<entry key="Inventory.SplitTitle" text="몇 개를 나눌까요?" sourceHash="009e2ff8de6bc491" />
+		<entry key="Inventory.StatLine" text="{stat} {value}" sourceHash="ed0016c573032a8a" />
 		<entry key="Keep" text="유지" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="이 디스플레이 설정을 유지할까요?"
@@ -673,11 +719,31 @@
 		       text="키를 누르세요. Esc 는 취소, Esc 를 1초 누르고 있으면 Esc 를 지정합니다."
 		       sourceHash="2fe6a469745a3551" />
 		<entry key="Quit Game" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
+		<entry key="ReplayBar.Pause" text="일시정지" sourceHash="061cc20e3432dead" />
+		<entry key="ReplayBar.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="Resume" text="계속하기" sourceHash="89118d3a7be870ca" />
 		<entry key="Return to Title" text="타이틀로 돌아가기" sourceHash="6769de3e1eac7922" />
 		<entry key="Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="되돌리기까지" sourceHash="9cef80c4c43e7e14" />
 		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
+		<entry key="ServerPicker.Idle"
+		       text="새로 고침을 누르면 서버 목록을 보입니다"
+		       sourceHash="90268a2738feb664" />
+		<entry key="ServerPicker.LoadFailed"
+		       text="서버 목록을 불러오지 못했습니다(오류 {error})"
+		       sourceHash="9f1431b46bb9b536" />
+		<entry key="ServerPicker.Loading" text="서버 목록을 불러오는 중..." sourceHash="fc9faff913354a2f" />
+		<entry key="ServerPicker.None"
+		       text="지금 들어갈 수 있는 서버가 없습니다"
+		       sourceHash="5fd07d96180b4276" />
+		<entry key="ServerPicker.Pick" text="서버를 고르세요" sourceHash="6711b33edde339d6" />
+		<entry key="ServerPicker.Row" text="{region}  {fill}%  {state}" sourceHash="e8ee51c94be0f27e" />
+		<entry key="ServerPicker.StateDraining" text="비우는 중" sourceHash="445341bdde0ebac7" />
+		<entry key="ServerPicker.StateMaintenance" text="점검 중" sourceHash="9e7f28b2e900e4a0" />
+		<entry key="ServerPicker.StateOpen" text="열림" sourceHash="f84f97b4633670e9" />
+		<entry key="ServerPicker.StateStarting" text="시작 중" sourceHash="44c11cb1fc7fca39" />
+		<entry key="ServerPicker.StateUnknown" text="알 수 없음" sourceHash="498865c7bd1f3959" />
+		<entry key="Shop.BalanceLine" text="{amount} {currency}" sourceHash="cc7c013f5ab43d0a" />
 		<entry key="Shop.Bought" text="구매했습니다." sourceHash="7eba7cbbd2693250" />
 		<entry key="Shop.Busy" text="구매가 아직 진행 중입니다." sourceHash="839e3be6e938c8ed" />
 		<entry key="Shop.ConfirmAccept" text="구매" sourceHash="166a4319b11387ab" />
@@ -689,6 +755,8 @@
 		<entry key="Shop.LimitReached" text="더 이상 구매할 수 없습니다." sourceHash="90b45ac5c64d58fe" />
 		<entry key="Shop.NoRoom" text="가방이 가득 찼습니다." sourceHash="3034de0a57eb2551" />
 		<entry key="Shop.NotEnoughMoney" text="돈이 부족합니다." sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Shop.OfferRow" text="{item}  {price} {currency}" sourceHash="fb8403757162871e" />
+		<entry key="Shop.OfferRowStock" text="{offer}  ({stock})" sourceHash="97981f7eb4dc983a" />
 		<entry key="Shop.OutOfStock" text="품절입니다." sourceHash="53429c9af9f7338b" />
 		<entry key="Shop.Purchasing" text="구매 중..." sourceHash="4c1549e91d83c479" />
 		<entry key="Shop.Rejected" text="지금은 구매할 수 없습니다." sourceHash="cc4a444b068922aa" />
@@ -708,6 +776,22 @@
 		<entry key="UIMenu.QuitAccept" text="끝내기" sourceHash="45156213b0fb2396" />
 		<entry key="UIMenu.QuitMessage" text="게임을 끝낼까요?" sourceHash="d9be4613bcb7a27a" />
 		<entry key="UIMenu.QuitTitle" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
+		<entry key="Western.Bounty" text="현상금 ${amount}" sourceHash="c58db76a5bd04bb6" />
+		<entry key="Western.Carcasses" text="사체 {count}" sourceHash="ddc82144621ac028" />
+		<entry key="Western.GaitCanter" text="구보" sourceHash="8ddeb8be59f30f00" />
+		<entry key="Western.GaitGallop" text="질주" sourceHash="5080657618a7ac4a" />
+		<entry key="Western.GaitStanding" text="서 있음" sourceHash="989261d5eefc4735" />
+		<entry key="Western.GaitTrot" text="속보" sourceHash="85c8a4fb52a15fd0" />
+		<entry key="Western.GaitWalk" text="평보" sourceHash="8904bd022d8e7e10" />
+		<entry key="Western.Honor" text="명예 {honor}({tier})" sourceHash="993157e899c31860" />
+		<entry key="Western.Hungry" text="배고픔" sourceHash="d5f6173b71caeddc" />
+		<entry key="Western.Money" text="${amount}" sourceHash="99e2e4655d7f5a1b" />
+		<entry key="Western.OnFoot" text="걷는 중 - E: 타기  F: 휘파람" sourceHash="1682216146fa816d" />
+		<entry key="Western.Pelts" text="가죽 {count}" sourceHash="85a0fcd45b363acc" />
+		<entry key="Western.Riding"
+		       text="{horse} 탑승 - {gait} {speed} m/s - E: 내리기  Shift: 질주"
+		       sourceHash="b783302b2e4d4c79" />
+		<entry key="Western.Wanted" text="수배 {level}" sourceHash="d1573e50d443252a" />
 		<entry key="You have changes that are not applied."
 		       text="적용하지 않은 변경이 있습니다."
 		       sourceHash="9ea9ff2b01f83378" />

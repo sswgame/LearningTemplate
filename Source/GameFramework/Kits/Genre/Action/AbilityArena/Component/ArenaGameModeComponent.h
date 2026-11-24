@@ -80,7 +80,7 @@ namespace sw
         ArenaGameModeComponent();
         virtual ~ArenaGameModeComponent() override;
 
-        /** @brief 판의 진행(웨이브, 처치 수)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 유닛과 투사체는 모습이라 정리하고 다시 스폰합니다. */
+        /** @brief 판의 진행(웨이브, 처치 수)을 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. 유닛과 투사체는 모습이라 정리하고 다시 스폰합니다. */
         void serializeGameState( StateIO& io ) override;
 
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
@@ -256,7 +256,7 @@ namespace sw
         vector<ArenaUnit>       _listUnit;
         vector<ArenaUnitView>   _listUnitView;
         ProjectileSimulation    _projectiles;
-        vector<ProjectileCargo> _listProjectileCargo;
+        vector<ProjectileCargo> _listProjectileCargo; ///< 나는 탄(`_projectiles`)과 함께 싣지 않는다 — 불러온 판은 웨이브를 처음부터 다시 세운다
         vector<SpawnRequest>    _listPendingUnit;
         float3                  _playerFocus;
         GameObjectHandle        _playerObject;       ///< 이번 프레임 스냅샷의 플레이어(`getPlayerObject`).

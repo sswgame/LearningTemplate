@@ -68,11 +68,11 @@ namespace sw
         const hashed_string& getPlaceButton() const { return _placeButton; }
         /** @brief 바라보는 블록입니다. 없으면 false 입니다. */
         [[nodiscard]] bool findTarget( VoxelCoord& outBlock ) const;
-        /** @brief 몸의 위치와 핫바를 기록합니다. `ComponentStateStore::capture` 가 부릅니다. 부순 · 놓은 블록 수는 상태 칸이라 씬 스냅숏이 옮긴다(`onBeginPlay` 가 덮지 않는다). */
+        /** @brief 몸의 위치와 핫바를 기록합니다. `ComponentStateCodec::captureObject` 가 부릅니다. 부순 · 놓은 블록 수는 상태 칸이라 씬 스냅숏이 옮긴다(`onBeginPlay` 가 덮지 않는다). */
         SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief `writeState` 가 기록한 바이트로 복원합니다. 플레이 시작 전이면 보관했다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 처음 위치에서 시작합니다. */
         void restoreState( vector<uint8>&& bytes );
-        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateCodec` 계약 — 있으면 그것이 곧 상태다). */
         const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
         float32              getBreakProgress() const { return _breakProgress; }
         uint32               getBrokenCount() const { return _brokenCount; }

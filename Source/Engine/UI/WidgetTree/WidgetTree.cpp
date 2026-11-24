@@ -37,6 +37,8 @@ namespace sw
         , _focusedWidget{ kInvalidWidgetID }
         , _layoutUIScale{ 0.0f }
         , _layoutTextScale{ 0.0f }
+        , _layoutTextRevision{ 0 }
+        , _layoutGlyphRevision{ 0 }
         , _layoutSafeInsets{}
         , _paintUIScale{ 0.0f }
         , _paintAtlasGeneration{ 0 }

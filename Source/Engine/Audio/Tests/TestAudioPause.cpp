@@ -3,6 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Tests/OfflineAudioEngine.h"
 
@@ -116,4 +117,54 @@ SW_TEST_CASE( AudioPauseTest, EventElapsedStandsWhilePaused )
     engine.getInstanceStatuses( listStatus );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStatus.size() );
     SW_EXPECT_NEAR( sw::audio::kBlockSeconds * 8.0f, listStatus[0]._elapsedSeconds, 1e-6f );
+}
+
+/**
+ * @brief [AudioPauseTest] 게임 일시정지는 게임 버스의 소리(이벤트 경과)를 세우고 음악 버스는 계속 낸다 — 풀면 멈춘 자리부터 이어진다
+ * @details 변이: 블록이 버스를 보지 않고 모두 세우면 음악 박이, 아무것도 세우지 않으면 이벤트 경과가 진다.
+ */
+SW_TEST_CASE( AudioPauseTest, GamePauseHoldsGameBusesButNotMusic )
+{
+    sw::test::OfflineAudioEngine        offline;
+    sw::AudioEngine&                    engine = offline.getEngine();
+    sw::vector<sw::AudioInstanceStatus> listStatus;
+    (void)engine.postEvent( sw::hashed_string( sw::test::OfflineAudioEngine::kLoopEvent ) ); // sfx 버스
+    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ) != 0 );
+    offline.renderBlocks( 4 );
+    const float64 beatBefore = engine.getMusicStatus()._beat;
+
+    engine.setGamePaused( true );
+    offline.renderBlocks( 8 );
+    engine.getInstanceStatuses( listStatus );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listStatus.size() );
+    SW_EXPECT_NEAR( sw::audio::kBlockSeconds * 4.0f, listStatus[0]._elapsedSeconds, 1e-6f );
+    SW_EXPECT_NEAR( beatBefore * 3.0, engine.getMusicStatus()._beat, 1e-9 );
+
+    engine.setGamePaused( false );
+    offline.renderBlocks( 4 );
+    engine.getInstanceStatuses( listStatus );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listStatus.size() );
+    SW_EXPECT_NEAR( sw::audio::kBlockSeconds * 8.0f, listStatus[0]._elapsedSeconds, 1e-6f );
+}
+
+/** @brief [AudioPauseTest] 음악 버스가 멈추는 그래프에서는 음악 시계도 게임과 함께 서고 이어진다. 변이: 음악 플레이어가 게임 일시정지를 멈춤 청으로 적으면 이어진 뒤 박이 흐르지 않아 진다. */
+SW_TEST_CASE( AudioPauseTest, MusicFollowsItsBusInGamePause )
+{
+    sw::test::OfflineAudioEngine offline;
+    sw::AudioEngine&             engine = offline.getEngine();
+    sw::AudioMixerDef            mixer  = sw::AudioMixerDef::makeDefault();
+    for ( sw::AudioBusDef& bus : mixer._listBus )
+    {
+        bus._bPlaysInGamePause = false;
+    }
+    SW_REQUIRE_TRUE( engine.loadMixer( mixer ) );
+    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ) != 0 );
+    offline.renderBlocks( 4 );
+    const float64 beatBefore = engine.getMusicStatus()._beat;
+    engine.setGamePaused( true );
+    offline.renderBlocks( 8 );
+    SW_EXPECT_NEAR( beatBefore, engine.getMusicStatus()._beat, 1e-9 );
+    engine.setGamePaused( false );
+    offline.renderBlocks( 4 );
+    SW_EXPECT_NEAR( beatBefore * 2.0, engine.getMusicStatus()._beat, 1e-9 );
 }

@@ -23,6 +23,8 @@ namespace
         sw::SaveLock                                  _saveLock{};
         sw::Subscription                              _brokenRestoreBlock{};
         sw::vector<uint8>                             _deferredBytes{};
+        sw::Subscription                              _readRequest{};
+        float64                                       _playTime{ 0.0 };
         sw::AutosaveManager::RestoreCompletedFunction _deferredCompleted{};
         uint8                                         _bBreakRestore : 1;
         uint8                                         _bDeferRestore : 1;
@@ -35,8 +37,9 @@ namespace
 
         sw::AutosaveManager::SaveDelegate makeSave()
         {
-            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::SaveDelegate, [this]( sw::vector<uint8>& outBytes )
+            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::SaveDelegate, [this]( sw::vector<uint8>& outBytes, float64& outPlayTime )
             {
+                outPlayTime = _playTime;
                 sw::StringBuilder<sw::constant::buffer::kMax256> stateBuilder;
                 stateBuilder.appendFormat( "state%#", _listSavedState.size() );
                 const sw::string state{ stateBuilder.view() };
@@ -45,21 +48,21 @@ namespace
                 return true;
             } );
         }
-        /** @brief 바로 적용하고 완료를 안에서 알린다. `_bDeferRestore` 면 씬을 옮기는 게임처럼 바이트와 완료를 들고 있다가 `finishDeferredRestore` 에서 적용한다. */
-        sw::AutosaveManager::LoadDelegate makeLoad()
+        /** @brief 게임처럼 슬롯을 읽어 적용하고 완료를 알린다. `_bDeferRestore` 면 씬을 옮기는 게임처럼 바이트를 들고 있다가 `finishDeferredRestore` 가 적용하고 알린다. */
+        sw::AutosaveManager::LoadDelegate makeLoad( sw::GameLocalStore& store )
         {
-            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::LoadDelegate, [this]( const sw::string& slot, const sw::vector<uint8>& bytes, const sw::AutosaveManager::RestoreCompletedFunction& onCompleted )
+            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::LoadDelegate, [this, &store]( const sw::string& slot, const sw::AutosaveManager::RestoreCompletedFunction& onCompleted )
             {
-                (void)slot;
-                if ( _bDeferRestore == SW_TRUE )
-                {
-                    _deferredBytes     = bytes;
-                    _deferredCompleted = onCompleted;
-                    return true;
-                }
-                onCompleted( apply( bytes ) );
+                _deferredCompleted = onCompleted;
+                _readRequest       = store.submitRead( slot, SW_DELEGATE_METHOD( sw::GameLocalStore::CompletionFunction, &FakeGame::onSlotRead, this ) );
                 return true;
             } );
+        }
+        void onSlotRead( const sw::LocalStoreCompletion& completion )
+        {
+            _deferredBytes = completion._bytes;
+            if ( _bDeferRestore == SW_FALSE )
+                finishDeferredRestore( completion._result == sw::LocalStoreResult::Ok );
         }
         bool apply( const sw::vector<uint8>& bytes )
         {
@@ -103,39 +106,32 @@ namespace
     }
 } // namespace
 
-/** @brief [AutosaveTest] 되돌린 진행은 그 슬롯의 플레이 시간을 이어 세고, 앞 진행의 체크포인트 · 요청을 잊는다 — 되돌린 뒤 같은 체크포인트에 닿으면 다시 저장한다 */
-SW_TEST_CASE( AutosaveTest, RestoredProgressContinuesItsOwnTimeAndCheckpoints )
+/** @brief [AutosaveTest] 슬롯은 찍을 때의 플레이 시간을 들고, 되돌리면 앞 진행의 체크포인트 · 요청을 잊는다 — 되돌린 뒤 같은 체크포인트에 닿으면 다시 저장한다 */
+SW_TEST_CASE( AutosaveTest, RestoredProgressForgetsThePreviousRun )
 {
     sw::MemoryLocalDatabase                  database;
     FakeGame                                 game;
-    const sw::unique_ptr<sw::GameLocalStore> firstStore = makeStore( database );
-    sw::AutosaveManager                      firstRun;
-    SW_REQUIRE_TRUE( firstRun.initialize( makeSettings(), *firstStore, game._saveLock, game.makeSave(), game.makeLoad() ) );
-    step( firstRun, *firstStore, 0.0f );
-    step( firstRun, *firstStore, 100.0f );
-    SW_REQUIRE_TRUE( firstRun.saveNow( sw::AutosaveTrigger::Manual ) );
-    step( firstRun, *firstStore, 0.0f );
-    SW_REQUIRE_EQUAL( 1u, firstRun.getSaveCount() );
-
-    // 다시 켠 게임 — 잠깐 돌고(체크포인트에도 닿았다) 앞 실행의 슬롯으로 되돌린다.
     const sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                      manager;
-    SW_REQUIRE_TRUE( manager.initialize( makeSettings(), *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( makeSettings(), *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     step( manager, *store, 0.0f );
-    step( manager, *store, 5.0f );
+    game._playTime = 100.0;
+    SW_REQUIRE_TRUE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
+    step( manager, *store, 0.0f );
+    SW_REQUIRE_TRUE( manager.findLatestSlot() != nullptr );
+    SW_EXPECT_NEAR( 100.0, manager.findLatestSlot()->_playTime, 1.0e-9 );
+
     manager.reachCheckpoint( sw::hashed_string( "Gate" ) );
     SW_REQUIRE_TRUE( manager.restoreLatest() );
-    step( manager, *store, 0.0f ); // 쌓인 체크포인트 요청이 먼저 저장을 맡긴다
-    step( manager, *store, 0.0f );
+    manager.update( 60.0f ); // 되돌리는 중에는 쌓인 요청을 저장하지 않는다(버릴 진행이다)
+    SW_EXPECT_EQUAL( size_t{ 1 }, game._listSavedState.size() );
+    store->update();
     SW_REQUIRE_FALSE( manager.isRestoring() );
-    SW_EXPECT_NEAR( 100.0, manager.getPlayTime(), 1.0e-6 );
     SW_EXPECT_TRUE( manager.getLastCheckpointID().empty() );
     SW_EXPECT_FALSE( manager.hasPendingRequest() );
     manager.reachCheckpoint( sw::hashed_string( "Gate" ) );
     SW_EXPECT_TRUE( manager.hasPendingRequest() );
-
     manager.beginNewGame();
-    SW_EXPECT_NEAR( 0.0, manager.getPlayTime(), 1.0e-6 );
     SW_EXPECT_FALSE( manager.hasPendingRequest() );
 }
 
@@ -150,7 +146,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
         sw::AutosaveManager                manager;
-        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
         manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
         SW_EXPECT_TRUE( manager.isScanning() );
         store->update();
@@ -169,7 +165,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
 
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                next;
-    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     next.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
     SW_REQUIRE_TRUE( next.findLatestSlot() != nullptr );
@@ -195,7 +191,7 @@ SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
 
@@ -238,7 +234,7 @@ SW_TEST_CASE( AutosaveTest, RestoresTheLatestCheckpoint )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
 
@@ -274,7 +270,7 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
         sw::AutosaveManager                manager;
-        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+        SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
         manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
         store->update();
         database.failNextWrite(); // 상태 슬롯 쓰기가 도중에 꺼진다
@@ -286,7 +282,7 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
     }
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     sw::AutosaveManager                next;
-    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     next.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
     SW_EXPECT_TRUE( next.findLatestSlot() == nullptr );
@@ -305,7 +301,7 @@ SW_TEST_CASE( AutosaveTest, FailedRestoreBlocksSaving )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
     SW_REQUIRE_TRUE( manager.saveNow( sw::AutosaveTrigger::Manual ) );
@@ -332,6 +328,8 @@ SW_TEST_CASE( AutosaveTest, FailedRestoreBlocksSaving )
     store->update();
     SW_EXPECT_FALSE( manager.isBlocked() );
     step( manager, *store, 0.1f );
+    SW_EXPECT_EQUAL( 1u, manager.getSaveCount() ); // 막힌 동안 쌓인 요청은 버린 진행의 것이다
+    step( manager, *store, 15.0f );
     SW_EXPECT_EQUAL( 2u, manager.getSaveCount() );
 }
 
@@ -347,7 +345,7 @@ SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
     sw::AutosaveManager                manager;
-    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad() ) );
+    SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
     manager.reachCheckpoint( sw::hashed_string( "gate" ) );

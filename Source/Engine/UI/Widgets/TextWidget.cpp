@@ -3,6 +3,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
@@ -155,20 +156,19 @@ namespace sw
     {
         if ( _bDisplayValid && _displayRevision == textRevision )
             return;
-        const bool  bResolve  = _bLocalized && pLocalization != nullptr && _text.empty() == false;
-        const utf8* pFound    = bResolve ? pLocalization->findStringByText( _text ) : nullptr;
-        const utf8* pResolved = pFound != nullptr ? pFound : _text.c_str(); // 표에 없으면 텍스트 그대로다(키가 아닌 글일 수 있다)
+        const bool   bResolve = _bLocalized && pLocalization != nullptr && _text.empty() == false;
+        const string resolved = bResolve ? LocalizedText::resolve( pLocalization, _text ) : ( _bLocalized && LocalizedMessage::isMessage( _text ) ? LocalizedText::resolve( nullptr, _text ) : _text );
         // 액션 태그는 해석된 텍스트(번역)에서 바꾼다. 번역가가 태그 위치를 옮길 수 있기 때문이다.
         string expanded;
         _bHasActionTag = false;
-        if ( pActionGlyphs != nullptr && string_view( pResolved ).find( "[action=" ) != string_view::npos )
+        if ( pActionGlyphs != nullptr && string_view( resolved ).find( "[action=" ) != string_view::npos )
         {
             const RichTextActionGlyphResolver resolver =
                 SW_DELEGATE_LAMBDA( RichTextActionGlyphResolver, [pActionGlyphs]( string_view action )
             { return pActionGlyphs->findGlyph( action ); } );
-            _bHasActionTag = RichTextParser::expandActionTags( pResolved, resolver, expanded ) > 0;
+            _bHasActionTag = RichTextParser::expandActionTags( resolved, resolver, expanded ) > 0;
         }
-        const string_view display = _bHasActionTag ? string_view( expanded ) : string_view( pResolved );
+        const string_view display = _bHasActionTag ? string_view( expanded ) : string_view( resolved );
         if ( _bDisplayValid == false || _displayText != display )
         {
             _displayText  = display;

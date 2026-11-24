@@ -503,6 +503,19 @@ namespace sw
         recordMeshChanges( outListTransformSlot );
     }
 
+    void PrimitiveRegistry::markMeshChanged( const vector<uint32>& listSlot )
+    {
+        if ( listSlot.empty() )
+            return;
+        ScopedLock<mutex> lock{ _mutex };
+        ++_meshChangeGeneration;
+        for ( const uint32 slot : listSlot )
+        {
+            if ( slot < _listMeshChangeGeneration.size() )
+                _listMeshChangeGeneration[slot] = _meshChangeGeneration;
+        }
+    }
+
     void PrimitiveRegistry::recordMeshChanges( const vector<uint32>& listSlot )
     {
         // 목록은 오름차순이고 메시 칸이 인스턴스 항목보다 앞이다.

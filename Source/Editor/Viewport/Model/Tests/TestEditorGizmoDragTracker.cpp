@@ -12,7 +12,7 @@ namespace
 
     sw::editor::EditorGizmoTarget makeTarget( uint64 objectID )
     {
-        return sw::editor::EditorGizmoTarget{ sw::GameObjectHandle::make( objectID ), sw::float4x4{} };
+        return sw::editor::EditorGizmoTarget{ sw::GameObjectHandle::make( objectID, 0 ), sw::float4x4{} };
     }
 
     bool isKind( const sw::vector<EditorGizmoCommand>& listCommand, size_t index, EditorGizmoCommandKind kind )
@@ -53,9 +53,9 @@ SW_TEST_CASE( EditorGizmoDragTrackerTest, TargetChangeWhileDraggingEndsAndRecapt
     SW_REQUIRE_EQUAL( size_t{ 3 }, listCommand.size() );
     SW_EXPECT_TRUE( isKind( listCommand, 0, EditorGizmoCommandKind::End ) );
     SW_EXPECT_TRUE( isKind( listCommand, 1, EditorGizmoCommandKind::Capture ) );
-    SW_EXPECT_TRUE( listCommand[1]._listTarget[0]._object == sw::GameObjectHandle::make( 2 ) );
+    SW_EXPECT_TRUE( listCommand[1]._listTarget[0]._object == sw::GameObjectHandle::make( 2, 0 ) );
     SW_EXPECT_TRUE( isKind( listCommand, 2, EditorGizmoCommandKind::Drag ) );
-    SW_EXPECT_TRUE( tracker.getTrackedObject() == sw::GameObjectHandle::make( 2 ) );
+    SW_EXPECT_TRUE( tracker.getTrackedObject() == sw::GameObjectHandle::make( 2, 0 ) );
 }
 
 SW_TEST_CASE( EditorGizmoDragTrackerTest, PressWithoutGrabCloses )

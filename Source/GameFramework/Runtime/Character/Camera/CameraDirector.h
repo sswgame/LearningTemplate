@@ -22,6 +22,8 @@
 
 namespace sw
 {
+    enum class TeleportType : uint8;
+
     class Archive;
     class ICameraCollisionProbe;
 
@@ -122,6 +124,11 @@ namespace sw
         const CameraModeState& getModeState() const;
         /** @brief 블렌드 스택의 포즈 · 지난 초점 · 진행 중인 충격을 @p delta 만큼 옮깁니다(월드 원점 이동). */
         void applyWorldOffset( const float3& delta );
+        /**
+         * @brief 대상이 순간이동했습니다 — 지난 초점과의 차(앞보기 · 머리 흔들림)를 이동으로 읽지 않습니다. 운동을 지운 순간이동(문 · 리스폰)이면 감쇠 · 블렌드도 끊고 새 자리에서 컷으로 시작합니다.
+         * @details 고정 시점(`CameraPresetMode::Fixed`)은 카메라가 움직이지 않으므로 컷이 아니다(유니티 시네머신 `OnTargetObjectWarped`, 언리얼 스프링 암의 순간이동 자리).
+         */
+        void onTargetTeleported( TeleportType type );
         /** @brief 포즈를 내던 중 컷으로 바꿨으면 true 입니다. 읽으면 지우므로, 카메라에 컷 표시를 넣는 쪽이 한 번만 읽습니다. */
         bool consumeCut();
 

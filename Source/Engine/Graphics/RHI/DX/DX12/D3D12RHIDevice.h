@@ -203,6 +203,7 @@ namespace sw
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
         void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
         uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
+        bool   isFrameStarted() const override { return _frameStreamState._bRecording != SW_FALSE; } // 제거된 장치의 beginFrame 은 리스트를 열지 못한다
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */

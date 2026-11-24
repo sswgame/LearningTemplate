@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/Tests/StateHashTestComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
@@ -395,7 +396,15 @@ SW_TEST_CASE( SceneAssemblyTest, DataLayerKeepsStateWhenTurnedOffAndOn )
     pSnow->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } );
     StateHashTestComponent* pState = pSnow->addComponent<StateHashTestComponent>();
     SW_REQUIRE_NOT_NULL( pState );
-    pState->_steps = 3;
+    pState->_steps = 2;
+    // 내려간다는 알림은 뜨기 앞이다 — 여기서 고친 상태가 실린다(한쪽만 내려가는 관계를 푸는 자리).
+    StateHashTestComponent* const          pUnloaded    = pState;
+    const uint64                           snowID       = pState->getOwner()->getObjectID();
+    const Subscription                     subscription = pState->getOwner()->getOrCreateEvents()._unloading.add( [pUnloaded, snowID]( const GameObjectUnloadInfo& info )
+    { pUnloaded->_steps = info.contains( snowID ) ? 3 : 0; } );
+    vector<SceneDocument::SceneObjectNode> listSaved;
+    scene.captureCellNodes( vector<uint64>{ snowID }, listSaved );
+    SW_EXPECT_EQUAL( 2, pState->_steps ); // 세이브에 싣는 뜨기는 알리지 않는다
 
     SW_REQUIRE_TRUE( layers.setLayerActive( "Winter", false ) );
     layers.update( 0.0f );
@@ -560,4 +569,22 @@ SW_TEST_CASE( ObjectStateBatchTest, ResolverIsAskedOnlyForWhatTheBatchLacks )
     SW_EXPECT_TRUE( batch.findBySavedID( 0 ) == nullptr );
     SW_EXPECT_EQUAL( 3u, askCount ); // id 0 은 "id 없음" 이라 묻지 않는다
     batch.abandon();
+}
+
+/** @brief [SceneAssemblyTest] 디스크 입구(쿠커가 쓴다)도 리소스 id 입구처럼 조건을 푼다 — 날것으로 읽으면 개발 실행에서 빠진 엔티티가 쿠킹본에만 남는다 */
+SW_TEST_CASE( SceneAssemblyTest, DiskReadResolvesConditionsLikeTheResourceRead )
+{
+    const test::ScopedScratchDomain domain;
+    ResourceTags&                   tags     = engine::getSubsystem<ResourceTags>();
+    const ResourceTagSet            previous = tags.exchange( tags.capture() );
+    SW_EXPECT_TRUE( tags.setAxisValue( "platform", "android" ) );
+    Util::write( domain, "conditional.scene.xml",
+                 Util::makeScene( "Conditional", { Util::makeEntity( "1", "Kept", "0,0,0" ), Util::makeEntity( "2", "DesktopOnly", "0,0,0", "", "<_when _if=\"platform.android\" _op=\"Remove\"/>" ) } ) );
+    SceneDocument fromDisk{};
+    SceneDocument fromID{};
+    SW_EXPECT_TRUE( fromDisk.loadXMLFromDiskFile( domain.makeDiskPath( "conditional.scene.xml" ) ) );
+    SW_EXPECT_TRUE( fromID.loadXML( test::ScopedScratchDomain::makeID( "conditional.scene.xml" ) ) );
+    (void)tags.exchange( previous );
+    SW_EXPECT_EQUAL( size_t{ 1 }, fromID._listSceneObjectNode.size() );
+    SW_EXPECT_EQUAL( fromID._listSceneObjectNode.size(), fromDisk._listSceneObjectNode.size() );
 }

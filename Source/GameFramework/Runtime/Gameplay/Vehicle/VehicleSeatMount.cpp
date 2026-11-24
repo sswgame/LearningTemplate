@@ -6,6 +6,7 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -127,7 +128,10 @@ namespace sw
         Subscription suspension = Internal::suspendRider( *pRider );
         if ( pBinding == nullptr || pBinding->bindToSocket( pVehicle, seat.getSocketName(), socketInVehicle ) == false )
             return MountResult::NoSocket;
-        seat._riderSuspension = std::move( suspension );
+        seat._riderSuspension             = std::move( suspension );
+        VehicleSeatComponent* const pSeat = &seat;
+        seat._riderUnloadSubscription     = pRider->getOrCreateEvents()._unloading.add( [pSeat]( const GameObjectUnloadInfo& info )
+        { pSeat->handleUnloading( info ); } );
         Internal::setRiderPose( *pRider, seat.getRiderPoseParameter(), true );
         // 탑승자가 쓰러지면 강제로 하차시킨다. 규칙이므로 타는 순간 붙인다.
         if ( pRider->getComponent<DismountOnDeathComponent>() == nullptr )
@@ -187,6 +191,7 @@ namespace sw
         if ( pDown != nullptr )
             pDown->holdFall( std::move( _riderSuspension ) );
         _riderSuspension.reset();
+        _riderUnloadSubscription.reset();
 
         // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥔다. 탈것 폰은 놓여서 의도가 0 이 되므로 멈춰 선다. 탈 때 탈것을 쥐고 있던 조종자(말 AI)는 탈것을 다시 쥔다.
         ControllerComponent* pController                = _occupantController.isValid() ? pManager->resolveComponent( _occupantController ) : nullptr;
@@ -231,6 +236,23 @@ namespace sw
         Internal::setRiderPose( *pRider, getRiderPoseParameter(), false );
     }
 
+    void VehicleSeatComponent::handleUnloading( const GameObjectUnloadInfo& info )
+    {
+        GameObjectManager* const pManager   = VehicleSeatMountInternal::findManager( *this );
+        GameObject* const        pRider     = pManager != nullptr && _occupant.isValid() ? pManager->resolveGameObject( _occupant ) : nullptr;
+        PawnComponent* const     pRiderPawn = pRider != nullptr ? pRider->getComponent<PawnComponent>() : nullptr;
+        // 둘이 함께 내려가면(또는 둘 다 남으면) 앉은 채다. 한쪽만 내려가면 지금 내린다 — 떠 둔 상태에 내린 것이 실려 다시 오른 좌석이 되잡지 않는다.
+        if ( pRiderPawn == nullptr || info.contains( pRider->getObjectID() ) == info.contains( getOwner()->getObjectID() ) )
+            return;
+        if ( _bRestorePending == SW_FALSE )
+        {
+            (void)releaseRider( *pRiderPawn, false );
+            return;
+        }
+        _occupant        = GameObjectHandle{}; // 되살아났지만 아직 앉지 않았다 — 내려놓을 것 없이 기록만 지운다
+        _bRestorePending = SW_FALSE;
+    }
+
     void VehicleSeatComponent::releaseGoneOccupant( GameObjectManager& manager, const GameObjectHandle& rider )
     {
         for ( VehicleSeatComponent* pSeat : manager.getComponentRegistry().getAll<VehicleSeatComponent>() )
@@ -240,6 +262,7 @@ namespace sw
             ControllerComponent* pController         = pSeat->_occupantController.isValid() ? manager.resolveComponent( pSeat->_occupantController ) : nullptr;
             ControllerComponent* pPreviousController = pSeat->_previousVehicleController.isValid() ? manager.resolveComponent( pSeat->_previousVehicleController ) : nullptr;
             pSeat->_riderSuspension.reset();
+            pSeat->_riderUnloadSubscription.reset();
             pSeat->_occupant                  = GameObjectHandle{};
             pSeat->_occupantController        = TComponentHandle<ControllerComponent>{};
             pSeat->_previousVehicleController = TComponentHandle<ControllerComponent>{};

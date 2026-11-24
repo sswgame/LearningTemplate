@@ -59,6 +59,8 @@ namespace sw
         const hashed_string& getBusName( uint32 busIndex ) const { return _listBusState[busIndex]._name; }
         /** @brief 부모 버스의 번호입니다. master 는 비어 있습니다. */
         optional<uint32> getBusParentIndex( uint32 busIndex ) const { return _listBusState[busIndex]._parentIndex; }
+        /** @brief 게임 일시정지 중에도 이 버스의 소리가 나는가입니다(`AudioBusDef::_bPlaysInGamePause` — 부모가 나면 자식도 난다). */
+        bool shouldPlayInGamePause( uint32 busIndex ) const { return _listBusState[busIndex]._bPlaysInGamePause == SW_TRUE; }
         /** @brief 데이터 볼륨(dB)입니다. 사용자 볼륨 · 스냅샷 오프셋은 들어 있지 않습니다. */
         float32 getBusVolumeDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeDb; }
         /** @brief 버스의 입력 블록(평면, 이번 블록 길이, 채널 수는 `getBusLayout`)을 반환합니다. 보이스가 여기에 더합니다. */
@@ -149,17 +151,19 @@ namespace sw
             float32                         _gain{ 0.0f }; ///< 지난 블록 끝의 페이더 게인(램프 시작점)
             float32                         _peak{ 0.0f };
             AudioChannelLayout              _layout{ AudioChannelLayout::Stereo }; ///< 버스 입력의 채널 구성이다(`initialize` 가 데이터와 출력으로 정한다).
-            uint8                           _bMuted      : 1;
-            uint8                           _bSolo       : 1;
-            uint8                           _bAudible    : 1; ///< 솔로 규칙에 따라 소리를 내도 되는지 나타낸다.
-            uint8                           _bFirstBlock : 1; ///< 처음 처리하는 블록이다. 게인을 램프하지 않고 바로 적용한다.
-            [[maybe_unused]] uint8          _reservedBus : 4;
+            uint8                           _bMuted            : 1;
+            uint8                           _bSolo             : 1;
+            uint8                           _bAudible          : 1; ///< 솔로 규칙에 따라 소리를 내도 되는지 나타낸다.
+            uint8                           _bFirstBlock       : 1; ///< 처음 처리하는 블록이다. 게인을 램프하지 않고 바로 적용한다.
+            uint8                           _bPlaysInGamePause : 1; ///< 게임 일시정지 중에도 난다(부모까지 본 값).
+            [[maybe_unused]] uint8          _reservedBus       : 3;
 
             Bus()
                 : _bMuted{ SW_FALSE }
                 , _bSolo{ SW_FALSE }
                 , _bAudible{ SW_TRUE }
                 , _bFirstBlock{ SW_TRUE }
+                , _bPlaysInGamePause{ SW_FALSE }
                 , _reservedBus{ 0 }
             {
             }
