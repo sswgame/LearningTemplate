@@ -7,6 +7,12 @@
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
+				<item>game/playground/ui/hub_cards.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key=">" source=">" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ui/hub_cards.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Accuracy (%)" source="Accuracy (%)" context="TextWidget._text">
@@ -199,6 +205,11 @@
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Defeated" source="Defeated" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ui/actionroom.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Double K.O. - the bout is a draw" source="Double K.O. - the bout is a draw" context="TextWidget._text">
 			<origins>
 				<item>game/playground/fighting/ui/hud.ui.xml</item>
@@ -301,6 +312,11 @@
 		       context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Gate locked" source="Gate locked" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ui/actionroom.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
@@ -693,6 +709,11 @@
 		<entry key="Ripplet" source="Ripplet" context="Monster name">
 			<origins>
 				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
+		<entry key="Room cleared" source="Room cleared" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ui/actionroom.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Root Grip" source="Root Grip" context="Monster name">
