@@ -27,6 +27,10 @@
                     {
                         "_loginName": "playground_dev",
                         "_password": "playground_dev_pw"
+                    },
+                    {
+                        "_loginName": "playground_dev2",
+                        "_password": "playground_dev2_pw"
                     }
                 ]
             }
@@ -52,6 +56,12 @@
                 "_currencyCatalog": "game/playground/data/playground.currencies.xml",
                 "_offerCatalog": "game/playground/data/playground.offers.xml",
                 "_refundRecovery": "Debt"
+            }
+        },
+        {
+            "_name": "gameConnect",
+            "_settings": {
+                "_serverName": "0000000000000001"
             }
         },
         {
@@ -82,6 +92,22 @@
                 "_reconnectGraceMs": 60000,
                 "_cancelConfirmWaitMs": 3000,
                 "_bGameServer": true
+            }
+        },
+        {
+            "_name": "social",
+            "_settings": {
+                "_expiredInviteTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
+                "_expiredApplicationTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 }
+            }
+        },
+        {
+            "_name": "trade",
+            "_settings": {
+                "_listTradablePrefix": [ "cur.gold" ],
+                "_closedSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
+                "_inviteTimeoutMs": 30000,
+                "_idleTimeoutMs": 120000
             }
         }
     ]

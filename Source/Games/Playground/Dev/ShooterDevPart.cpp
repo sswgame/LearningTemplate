@@ -180,7 +180,7 @@ namespace sw
                     enemy = pUnit->getWorldPosition();
                     break;
                 }
-                const float3                              feet = pPlayer->getFeetPosition();
+                const float3                              feet = pPlayer->getFeetPosition()._value;
                 StringBuilder<constant::buffer::kMax1024> row;
                 row.appendFormat( "%#,%.5f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", _traceFrame, deltaTime, feet._x, feet._z, pPlayer->getLookYaw(), body._x, body._y, body._z, bodyYaw );
                 for ( const float3& bone : arrBone )

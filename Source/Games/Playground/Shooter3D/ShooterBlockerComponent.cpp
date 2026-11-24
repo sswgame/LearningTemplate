@@ -39,14 +39,15 @@ namespace sw
         pBody->setBodyType( PhysicsBodyType::Static );
         pBody->setLayer( _bodyLayer );
         pBody->setShape( shape );
-        pBody->setWorldTransform( float4x4::makeTranslation( ( box._min + box._max ) * 0.5f ) );
+        const GameObjectManager* const pManager = pOwner->getManager();
+        pBody->setWorldTransform( float4x4::makeTranslation( pManager->getWorldOrigin().toLocal( ( box._min + box._max ) * 0.5f ) ) ); // 강체는 씬 자리다
     }
 
     ShooterArenaBox ShooterBlockerComponent::computeBox() const
     {
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
-        const float3          center = pScene != nullptr ? pScene->getWorldPosition() : float3{ 0.0f, 0.0f, 0.0f };
+        const float3          center = pScene != nullptr ? pOwner->getManager()->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) : float3{ 0.0f, 0.0f, 0.0f };
         ShooterArenaBox       box{};
         box._min = center - _halfSize;
         box._max = center + _halfSize;

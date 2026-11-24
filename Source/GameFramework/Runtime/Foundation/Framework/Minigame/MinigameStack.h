@@ -51,7 +51,7 @@ namespace sw
     /** @brief 돌아올 자리입니다. 갈래를 더하면 나가기(`MinigameFlow::leave`)의 `std::visit` 이 빠진 갈래를 컴파일 오류로 알린다. 갈래 번호는 세이브 형식이다 — 새 갈래는 끝에 더한다. */
     using MinigameReturnPoint = std::variant<MinigameSuspendedScene, MinigameSubLevelReturn, MinigameEntranceReturn>;
 
-    struct MinigameResult;
+    struct MinigameResultValue;
 
     /** @brief 스택 칸 하나입니다. */
     struct SW_GF_API MinigameFrame
@@ -68,8 +68,8 @@ namespace sw
         bool canSave() const;
         /** @brief 저장할 수 없는 칸이면 @p saveLock 에 막기를 걸고, 할 수 있으면 풉니다. 칸을 쌓거나 정의를 바꾼 뒤 부른다. */
         void updateSaveBlock( SaveLock& saveLock );
-        /** @brief 매치 칸이면 정의의 점수 값(`_matchScore`)을 @p inoutResult 의 값 목록에서 꺼내 매치 결과 칸에 옮깁니다 — 순위표에 낼 값이 허브 보상 표로 가지 않게. */
-        void takeMatchResult( MinigameResult& inoutResult ) const;
+        /** @brief 매치 칸이면 정의의 점수 값(`_matchScore`)을 결과 값 목록에서 뺍니다 — 점수는 매치 서버가 순위표에 낸다(`MinigameFlow::findMatchScore`). 허브 보상 표로 가지 않게 한다. */
+        void removeMatchScore( vector<MinigameResultValue>& inoutListValue ) const;
     };
 
     /** @brief 세이브에 실린 칸 하나입니다(아래부터 위로) — 정의는 이름으로 다시 읽는다. */
@@ -96,12 +96,9 @@ namespace sw
      */
     struct MinigameResult
     {
-        hashed_string               _minigame;     ///< 끝난 미니게임 이름
-        hashed_string               _resultName;   ///< 결과 이름(미니게임이 정한다 — 예: `win` · `lose`). 비었으면 결과 없이 나왔다
-        vector<MinigameResultValue> _listValue;    ///< 바탕 판에 넘길 값(디렉터의 `collectMinigameResult`). 비었으면 넘길 것이 없다
-        uint64                      _matchID{ 0 }; ///< 매치형이면 배정받은 매치. 매치형이 아니면 0
-        string                      _matchBoard{}; ///< 매치 결과를 낼 순위표(정의의 `_matchBoard`)
-        optional<int64>             _matchScore{}; ///< 매치 점수. 디렉터가 내지 않았으면(중간에 나왔다) nullopt — 순위표에 내지 않는다
+        hashed_string               _minigame;   ///< 끝난 미니게임 이름
+        hashed_string               _resultName; ///< 결과 이름(미니게임이 정한다 — 예: `win` · `lose`). 비었으면 결과 없이 나왔다
+        vector<MinigameResultValue> _listValue;  ///< 바탕 판에 넘길 값(디렉터의 `collectMinigameResult`). 비었으면 넘길 것이 없다
     };
 
     /**

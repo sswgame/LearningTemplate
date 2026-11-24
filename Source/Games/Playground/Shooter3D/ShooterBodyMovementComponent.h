@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "Games/Playground/Shooter3D/ShooterBlockerComponent.h"
@@ -41,7 +42,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Replicated, Min = -100000, Max = 100000 )
-        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 발
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 발(절대 — 월드 원점 0 기준. 서버 · 클라이언트의 원점이 달라도 같은 값이다)
 
         PROPERTY( Replicated, Min = -100000, Max = 100000 )
         float32 _verticalSpeed{ 0.0f };
@@ -92,16 +93,16 @@ namespace sw
         void setNetDriven( bool bNetDriven ) { _bNetDriven = bNetDriven ? SW_TRUE : SW_FALSE; }
         bool isNetDriven() const { return _bNetDriven == SW_TRUE; }
         /** @brief 그릴 자리에 더하는 오프셋입니다(예측 보정을 녹이는 시각 보정 — `PredictionSmoother`). 시뮬레이션 자리는 바뀌지 않는다. */
-        void   setDisplayOffset( const float3& offset ) { _displayOffset = offset; }
-        float3 getDisplayFeetPosition() const { return _position + _displayOffset; }
+        void             setDisplayOffset( const float3& offset ) { _displayOffset = offset; }
+        AbsolutePosition getDisplayFeetPosition() const { return AbsolutePosition{ _position + _displayOffset }; }
         /** @brief 발을 @p feet 로 옮기고 속도를 0 으로 둡니다(스폰 · 판 다시 시작). */
-        void teleport( const float3& feet );
+        void teleport( const AbsolutePosition& feet );
         /** @brief 멈춰 둡니다 — 의도를 버리고 제자리(수평 속도 0). */
         void setSuspended( bool bSuspended ) { _bSuspended = bSuspended ? SW_TRUE : SW_FALSE; }
         bool isSuspended() const { return _bSuspended == SW_TRUE; }
 
         /** @brief 발 자리입니다. */
-        const float3& getFeetPosition() const { return _position; }
+        AbsolutePosition getFeetPosition() const { return AbsolutePosition{ _position }; }
         /** @brief 지난 걸음의 수평 속도(월드, m/s)입니다. */
         const float3& getMoveVelocity() const { return _moveVelocity; }
         bool          isOnGround() const { return _bOnGround == SW_TRUE; }
@@ -128,7 +129,7 @@ namespace sw
         PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Units = m )
         float32 _radius;
 
-        float3                 _position;      ///< 발
+        float3                 _position;      ///< 발(절대)
         float3                 _moveVelocity;  ///< 지난 걸음의 수평 속도
         float3                 _displayOffset; ///< 그릴 때만 더하는 오프셋(예측 보정 녹이기)
         float32                _verticalSpeed;

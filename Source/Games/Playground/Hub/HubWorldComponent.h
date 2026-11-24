@@ -4,8 +4,8 @@
  * @details 역할은 실행 인자 · 서버 설정이 정한다(`GameNetSession`). 전용 서버(`Server -game=Playground -server-config=…`)가 허브를 돌리고,
  *          클라이언트는 로그인 뒤 게임 접속 티켓으로 붙는다(`net.ticketconnect` — 서버는 티켓의 계정으로 진행을 읽는다). 세션이 없으면(혼자 띄운 App) 규칙만 확인하고 쉰다.
  *          허브 맵(`maps/hub`)이 이 오브젝트(HubServer)를 둔다 — 전용 서버가 여는 시작 맵이 허브라 서버를 띄우면 허브가 선다. 티켓을 요구하지 않는 세션(리슨 호스트 ·
- *          티켓 없는 설정 — `NetLinkValue::_bTicketRequired`)에는 계정이 없으므로 허브 서버를 세우지 않고, 접속한 클라이언트는 아바타 없이 같은 씬에 있기만 한다. 접속 중에는 씬을 바꾸는 미니게임에
- *          들어가지 못하므로(`MinigameFlow` — 하위 레벨만) 링크는 세션 동안 이 씬과 함께 산다.
+ *          티켓 없는 설정 — `NetLinkValue::_bTicketRequired`)에는 계정이 없으므로 허브 서버를 세우지 않고, 접속한 클라이언트는 아바타 없이 같은 씬에 있기만 한다. 클라이언트가 매치 서버로 옮기면(온라인 흐름)
+ *          링크가 먼저 떨어져 클라이언트 링크를 내리고, 허브로 돌아와 다시 걸리면 새로 세운다.
  *          서버 링크는 서버 전용 코드라 공장(`IHubServerFactory`)으로 세운다. 진행 저장소는 전용 서버의 온라인 조립 저장소(저장소 계약 `ServiceStore`)다 — 두 프로세스
  *          시나리오는 서버 설정의 메모리 저장소라 실행마다 새로 시작하고, 한 번의 서버 실행 안에서 저장 → 재접속 읽기는 그대로 지난다(`py -3 -m Scripts net-pair mmo`).
  *          개발 명령 `hub.*` 과 감시 값 `Hub.*` 가 시나리오의 손이다(`game/playground/automation/hubserver_* · netpair/`).

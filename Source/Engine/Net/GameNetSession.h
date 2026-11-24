@@ -328,6 +328,8 @@ namespace sw
         const NetAddress& getServerAddress() const { return _serverAddress; }
         /** @brief 클라이언트가 접속 티켓으로 붙은 세션이면 true 입니다 — 돌아올 때 새 티켓이 있어야 한다(티켓은 되쓰지 않는다). */
         bool isTicketBound() const { return _bTicketBound == SW_TRUE; }
+        /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과 — 뒤에서 다시 시도한다 — 또는 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
+        bool hasConnectFailed() const { return _bConnectFailureReported == SW_TRUE; }
         /** @brief 서버면 첫 샤드가 연 UDP 포트를 반환합니다(샤드 `n` 은 이 포트 + n, 한 포트를 나누면 모두 이 포트). 포트로 0 을 줬으면 운영체제가 고른 포트입니다. 클라이언트면 0 입니다. */
         uint16 getListenPort() const { return _listenPort; }
         /** @brief 포트 샤드 수입니다. 클라이언트와 샤딩하지 않는 서버는 1, 세션을 열지 않았으면 0 입니다. */

@@ -118,9 +118,9 @@ namespace sw
         _moveVelocity  = moveVelocity;
     }
 
-    void ShooterBodyMovementComponent::teleport( const float3& feet )
+    void ShooterBodyMovementComponent::teleport( const AbsolutePosition& feet )
     {
-        _position      = feet;
+        _position      = feet._value;
         _moveVelocity  = float3{ 0.0f, 0.0f, 0.0f };
         _verticalSpeed = 0.0f;
         _bOnGround     = SW_TRUE;

@@ -4,6 +4,7 @@
   py -3 -m Scripts net-pair run --preset Ninja-Debug      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
   py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
+  py -3 -m Scripts net-pair match --preset Ninja-Debug    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -18,6 +19,8 @@ import argparse
 import json
 import re
 import shutil
+import socketserver
+import threading
 import time
 from pathlib import Path
 
@@ -48,19 +51,9 @@ def check_logs(server_text: str, client_text: str) -> CheckResult:
     return result
 
 
-def write_configs(out_dir: Path, game_port: int, service_port: int, accounts: tuple[tuple[str, str], ...] = ((_ACCOUNT, _PASSWORD),),
-                 server_name: str = _SERVER_NAME) -> Path:
-    """서버 설정과 온라인 설정을 쓴다(@p accounts 는 시드 계정의 이름 · 비밀번호). 서버 설정 경로를 돌려준다."""
-    server_config = {
-        "_listenAddress": "127.0.0.1",
-        "_gamePort": game_port,
-        "_servicePort": service_port,
-        "_bGameConnectTicket": True,
-        "_bConsoleInput": True,  # 표준 입력 `quit` 로 드레인 없이 정상 종료한다
-        "_listStore": [{"_name": "local", "_driver": "memory"}],  # 드라이버는 필수다 - 메모리도 적는다
-        "_listCache": [{"_name": "local", "_driver": "memory"}],
-    }
-    online_config = {
+def make_online_config(list_kit: list[dict]) -> dict:
+    """온라인 설정의 공통 칸(짧은 짝 실행이라 기반 표를 지우지 않는다)에 키트 목록을 더한다."""
+    return {
         "_storeName": "local",
         "_cacheName": "local",
         # 기반 표 TTL 은 필수다(코드에 기본값이 없다). 짧은 짝 실행이라 지우지 않는다(기간 0).
@@ -71,28 +64,51 @@ def write_configs(out_dir: Path, game_port: int, service_port: int, accounts: tu
         "_maxPendingCallsPerService": 1024,
         "_listTrustedProxy": [],
         "_seatReservationSeconds": 30,
-        "_listKit": [
-            {"_name": "account", "_settings": {
-                "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
-                "_maxConcurrentPasswordHashes": 2,
-                "_maxQueuedPasswordHashes": 64,
-                "_sharedAttemptLimit": 1000,
-                "_sharedAttemptWindowSeconds": 60,
-                "_loginNonceLifetimeSeconds": 300,
-                "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
-                "_bLightPasswordHash": True,
-                "_listSeedTestAccount": [{"_loginName": account, "_password": password} for account, password in accounts],
-            }},
-            {"_name": "gameConnect", "_settings": {
-                "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
-                "_serverName": server_name,
-            }},
-        ],
+        "_listKit": list_kit,
     }
-    server_path = out_dir / "NetPair.json"
+
+
+def make_account_kit(accounts: tuple[tuple[str, str], ...]) -> dict:
+    """계정 키트 설정(@p accounts 는 시드 계정의 이름 · 비밀번호)."""
+    return {"_name": "account", "_settings": {
+        "_expiredSessionTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
+        "_maxConcurrentPasswordHashes": 2,
+        "_maxQueuedPasswordHashes": 64,
+        "_sharedAttemptLimit": 1000,
+        "_sharedAttemptWindowSeconds": 60,
+        "_loginNonceLifetimeSeconds": 300,
+        "_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT,
+        "_bLightPasswordHash": True,
+        "_listSeedTestAccount": [{"_loginName": account, "_password": password} for account, password in accounts],
+    }}
+
+
+def make_game_connect_kit(server_name: str) -> dict:
+    return {"_name": "gameConnect", "_settings": {"_ticketKeySecretEnvironment": _TICKET_KEY_ENVIRONMENT, "_serverName": server_name}}
+
+
+def write_server(out_dir: Path, name: str, game_port: int, service_port: int, online_config: dict, store: dict, cache: dict) -> Path:
+    """서버 설정 `<name>.json` 과 옆 온라인 설정을 쓴다. 서버 설정 경로를 돌려준다."""
+    server_config = {
+        "_listenAddress": "127.0.0.1",
+        "_gamePort": game_port,
+        "_servicePort": service_port,
+        "_bGameConnectTicket": True,
+        "_bConsoleInput": True,  # 표준 입력 `quit` 로 드레인 없이 정상 종료한다
+        "_listStore": [{"_name": "local", **store}],  # 드라이버는 필수다 - 메모리도 적는다
+        "_listCache": [{"_name": "local", **cache}],
+    }
+    server_path = out_dir / f"{name}.json"
     server_path.write_text(json.dumps(server_config, indent=4), encoding="utf-8")
-    (out_dir / "NetPair.online.json").write_text(json.dumps(online_config, indent=4), encoding="utf-8")
+    (out_dir / f"{name}.online.json").write_text(json.dumps(online_config, indent=4), encoding="utf-8")
     return server_path
+
+
+def write_configs(out_dir: Path, game_port: int, service_port: int, accounts: tuple[tuple[str, str], ...] = ((_ACCOUNT, _PASSWORD),),
+                 server_name: str = _SERVER_NAME) -> Path:
+    """메모리 저장소 하나짜리 서버 설정과 온라인 설정을 쓴다(@p accounts 는 시드 계정의 이름 · 비밀번호). 서버 설정 경로를 돌려준다."""
+    online_config = make_online_config([make_account_kit(accounts), make_game_connect_kit(server_name)])
+    return write_server(out_dir, "NetPair", game_port, service_port, online_config, {"_driver": "memory"}, {"_driver": "memory"})
 
 
 def _run(argument: argparse.Namespace) -> int:
@@ -208,6 +224,271 @@ def _run_mmo(argument: argparse.Namespace) -> int:
                   "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress -> two predicted pawns see each other, no errors or warnings")
 
 
+# 접속한 허브 → 매치 서버 → 허브(서버 둘). 두 서버는 저장소(SQLite 파일 하나)와 캐시(아래 RESP 서버)를 나눠 가진다 - 배정 명단 · 서버 디렉터리 · 순위가 캐시를 지난다.
+# 계정 · 포트 · 허브 이름은 클라이언트 시나리오(game/playground/automation/netpair/match_roundtrip) · 온라인 흐름의 개발 계정 · gamesettings onlineHubServerID 와 같아야 한다.
+_MATCH_ACCOUNT = ("playground_dev", "playground_dev_pw")
+_MATCH_HUB_GAME_PORT, _MATCH_HUB_SERVICE_PORT = 17977, 17980
+_MATCH_GAME_PORT, _MATCH_SERVICE_PORT = 17987, 17990
+_MATCH_SERVER_ID = 2
+_MATCH_MINIGAME = "shooter3d_match"
+_MATCH_SCENARIO = "game/playground/automation/netpair/match_roundtrip.scenario.xml"
+_MATCH_HUB_ENTERED = re.compile(r"entered the hub as avatar \d+ on connection \d+")
+_MATCH_SCORE_REPORTED = re.compile(r"match score of account \d+ reported: arena_kills = [1-9]\d*")
+_MATCH_SCORE_STORED = re.compile(r"the game server's score is stored")
+
+
+class _CacheState:
+    """RESP 서버의 값 - 모든 연결이 나눠 가진다(명령 하나가 잠금 하나 안에서 끝난다)."""
+
+    def __init__(self) -> None:
+        self.lock = threading.RLock()
+        self.values: dict[bytes, bytes] = {}
+        self.scores: dict[bytes, dict[bytes, float]] = {}
+        self.expires: dict[bytes, float] = {}
+        self.channels: dict[bytes, set[_CacheHandler]] = {}
+        self.watchers: dict[bytes, set[_CacheHandler]] = {}
+
+    def drop_expired(self, key: bytes) -> None:
+        if key in self.expires and time.monotonic() >= self.expires[key]:
+            self.remove(key)
+
+    def remove(self, key: bytes) -> bool:
+        self.expires.pop(key, None)
+        return (self.values.pop(key, None) is not None) | (self.scores.pop(key, None) is not None)
+
+    def touch(self, key: bytes) -> None:
+        for handler in self.watchers.pop(key, set()):
+            handler.watch_broken = True
+
+
+class _CacheHandler(socketserver.StreamRequestHandler):
+    """RESP2 연결 하나 - `RESPEphemeralStore` 가 보내는 명령만 안다(모르는 명령은 오류로 답해 판정에 드러난다)."""
+
+    state: _CacheState
+
+    def setup(self) -> None:
+        super().setup()
+        self.watch_broken = False
+        self.queue: list[list[bytes]] | None = None
+        self.send_lock = threading.Lock()
+
+    def handle(self) -> None:
+        try:
+            while True:
+                command = self._read_command()
+                if command is None:
+                    return
+                with self.state.lock:
+                    reply = self._answer(command)
+                self.write(reply)
+        except (ConnectionError, OSError, ValueError):
+            return
+        finally:
+            with self.state.lock:
+                for group in (*self.state.channels.values(), *self.state.watchers.values()):
+                    group.discard(self)
+
+    def write(self, data: bytes) -> None:
+        with self.send_lock:
+            self.wfile.write(data)
+
+    def _read_command(self) -> list[bytes] | None:
+        head = self.rfile.readline()
+        if not head:
+            return None
+        list_part = []
+        for _ in range(int(head[1:])):
+            size = int(self.rfile.readline()[1:])
+            list_part.append(self.rfile.read(size + 2)[:size])
+        return list_part
+
+    @staticmethod
+    def _bulk(value: bytes | None) -> bytes:
+        return b"$-1\r\n" if value is None else b"$%d\r\n%s\r\n" % (len(value), value)
+
+    @staticmethod
+    def _array(list_item: list[bytes]) -> bytes:
+        return b"*%d\r\n" % len(list_item) + b"".join(list_item)
+
+    @staticmethod
+    def _number(value: float) -> bytes:
+        return b"%d" % int(value)
+
+    def _answer(self, command: list[bytes]) -> bytes:
+        name = command[0].upper()
+        if self.queue is not None and name not in (b"EXEC", b"MULTI"):
+            self.queue.append(command)
+            return b"+QUEUED\r\n"
+        if name == b"MULTI":
+            self.queue = []
+            return b"+OK\r\n"
+        if name == b"EXEC":
+            list_queued, self.queue = self.queue or [], None
+            broken, self.watch_broken = self.watch_broken, False
+            self._unwatch()
+            return b"*-1\r\n" if broken else self._array([self._run(queued) for queued in list_queued])
+        if name == b"WATCH":
+            self.state.drop_expired(command[1])
+            self.state.watchers.setdefault(command[1], set()).add(self)
+            return b"+OK\r\n"
+        if name == b"UNWATCH":
+            self.watch_broken = False
+            self._unwatch()
+            return b"+OK\r\n"
+        return self._run(command)
+
+    def _unwatch(self) -> None:
+        for group in self.state.watchers.values():
+            group.discard(self)
+
+    def _run(self, command: list[bytes]) -> bytes:
+        state, name = self.state, command[0].upper()
+        if name == b"PING":
+            return self._array([self._bulk(b"pong"), self._bulk(b"")])
+        if name in (b"SUBSCRIBE", b"UNSUBSCRIBE"):
+            group = state.channels.setdefault(command[1], set())
+            group.add(self) if name == b"SUBSCRIBE" else group.discard(self)
+            return self._array([self._bulk(name.lower()), self._bulk(command[1]), b":%d\r\n" % len(group)])
+        if name == b"PUBLISH":
+            list_handler = list(state.channels.get(command[1], set()))
+            for handler in list_handler:
+                try:
+                    handler.write(self._array([self._bulk(b"message"), self._bulk(command[1]), self._bulk(command[2])]))
+                except OSError:
+                    state.channels[command[1]].discard(handler)
+            return b":%d\r\n" % len(list_handler)
+        key = command[1]
+        state.drop_expired(key)
+        if name == b"GET":
+            return self._bulk(state.values.get(key))
+        if name == b"SET":
+            list_option = [option.upper() for option in command[3:]]
+            exists = key in state.values or key in state.scores
+            if (b"NX" in list_option and exists) or (b"XX" in list_option and not exists):
+                return b"$-1\r\n"
+            state.remove(key)
+            state.values[key] = command[2]
+            if b"PX" in list_option:
+                state.expires[key] = time.monotonic() + int(command[3 + list_option.index(b"PX") + 1]) / 1000.0
+            state.touch(key)
+            return b"+OK\r\n"
+        if name == b"DEL":
+            removed = state.remove(key)
+            state.touch(key)
+            return b":%d\r\n" % removed
+        if name == b"PEXPIRE":
+            exists = key in state.values or key in state.scores
+            if exists:
+                state.expires[key] = time.monotonic() + int(command[2]) / 1000.0
+            return b":%d\r\n" % exists
+        if name == b"INCRBY":
+            value = int(state.values.get(key, b"0")) + int(command[2])
+            state.values[key] = b"%d" % value
+            state.touch(key)
+            return b":%d\r\n" % value
+        table = state.scores.get(key, {})
+        order = sorted(table, key=lambda member: (table[member], member), reverse=True)  # Valkey 의 ZREV* 차례(같은 점수는 멤버 역순)
+        if name in (b"ZADD", b"ZINCRBY"):
+            score, member = int(command[2]), command[3]
+            added = member not in table
+            table[member] = score if name == b"ZADD" else table.get(member, 0) + score
+            state.scores[key] = table
+            state.touch(key)
+            return b":%d\r\n" % added if name == b"ZADD" else self._bulk(self._number(table[member]))
+        if name == b"ZREM":
+            removed = table.pop(command[2], None) is not None
+            if not table:
+                state.remove(key)
+            state.touch(key)
+            return b":%d\r\n" % removed
+        if name == b"ZREVRANK":
+            return b":%d\r\n" % order.index(command[2]) if command[2] in table else b"$-1\r\n"
+        if name == b"ZSCORE":
+            return self._bulk(self._number(table[command[2]]) if command[2] in table else None)
+        if name == b"ZREVRANGE":
+            first, last = int(command[2]), int(command[3])
+            list_member = order[first:] if last < 0 else order[first:last + 1]
+            return self._array([part for member in list_member for part in (self._bulk(member), self._bulk(self._number(table[member])))])
+        return b"-ERR unknown command '%s'\r\n" % name
+
+
+class _CacheServer(socketserver.ThreadingTCPServer):
+    """짝 실행의 캐시 서버(RESP) - 서버 프로세스 둘이 `resp` 드라이버로 나눠 가진다. 블록을 나가면 닫는다."""
+
+    daemon_threads = True
+
+    def __init__(self) -> None:
+        super().__init__(("127.0.0.1", 0), type("_BoundCacheHandler", (_CacheHandler,), {"state": _CacheState()}))
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def __exit__(self, *exc: object) -> None:
+        self.shutdown()
+        super().__exit__(*exc)
+
+
+def check_match_logs(hub_text: str, match_text: str, client_text: str) -> CheckResult:
+    """매치 왕복 로그를 판정한다 - 허브가 같은 계정을 두 번 들였고(처음 · 돌아옴), 매치 서버가 처치가 있는 점수를 내 저장했으며, 어느 로그에도 오류 · 경고가 없다."""
+    result = CheckResult()
+    if len(_MATCH_HUB_ENTERED.findall(hub_text)) != 2:
+        result.problems.append(f"the hub admitted {len(_MATCH_HUB_ENTERED.findall(hub_text))} sessions - expected 2 (the first join and the return from the match)")
+    if _CONNECTED.search(match_text) is None:
+        result.problems.append("the match server log has no 'Net session client <n> connected' line - the assigned ticket connection never opened")
+    if _MATCH_SCORE_REPORTED.search(match_text) is None or _MATCH_SCORE_STORED.search(match_text) is None:
+        result.problems.append("the match server log has no reported and stored score with a kill - the server did not submit the player's score")
+    result.problems += problem_lines("hub", hub_text) + problem_lines("match", match_text) + problem_lines("client", client_text)
+    return result
+
+
+def _run_match(argument: argparse.Namespace) -> int:
+    with _CacheServer() as cache_server, ProcessGroup("net-pair", argument.preset, "NetPairRun/match", clean=True) as group:
+        list_exe = group.require("Server", "App")
+        if list_exe is None:
+            return int(ExitCode.CHECK_INVALID)
+        server_exe, client_exe = list_exe
+        store = {"_driver": "sqlite", "_connection": (group.out_dir / "match.sqlite").as_posix()}
+        cache = {"_driver": "resp", "_endpoint": f"127.0.0.1:{cache_server.server_address[1]}?prefix=netpair:"}
+        content = "game/playground/data/playground"
+        directory = {"_name": "directory", "_settings": {"_endedAnnouncementTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500}}}
+        leaderboard = {"_name": "leaderboard", "_settings": {
+            "_pastScoreTTL": {"_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
+            "_seasonResultTTL": {"_expireAfterDays": 365, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500},
+            "_catalog": f"{content}.leaderboards.xml"}}
+
+        def matchmaking(game_server: bool) -> dict:
+            return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server}}
+
+        # 허브는 배정받는 서버가 아니다(`_publicAddress` 없음) - 매치 서버만 디렉터리에 선다.
+        hub_online = make_online_config([make_account_kit((_MATCH_ACCOUNT,)), make_game_connect_kit(_MMO_SERVER_NAME), directory, leaderboard, matchmaking(False)])
+        hub_config = write_server(group.out_dir, "Hub", _MATCH_HUB_GAME_PORT, _MATCH_HUB_SERVICE_PORT, hub_online, store, cache)
+        match_online = make_online_config([make_account_kit(()), make_game_connect_kit(f"{_MATCH_SERVER_ID:016x}"), directory, leaderboard, matchmaking(True)])
+        match_online.update({"_serverID": _MATCH_SERVER_ID, "_publicAddress": "127.0.0.1"})
+        match_config = write_server(group.out_dir, "Match", _MATCH_GAME_PORT, _MATCH_SERVICE_PORT, match_online, store, cache)
+        list_server = []
+        for name, config, list_extra in (("hub", hub_config, []), ("match", match_config, [app_arguments.variable("gv_firstMinigame", _MATCH_MINIGAME)])):
+            user_data = group.out_dir / f"{name}_userdata"
+            user_data.mkdir()
+            server = group.start(name, [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", config), *list_extra],
+                                 environment={_TICKET_KEY_ENVIRONMENT: _TICKET_KEY, USER_DATA_ROOT_ENVIRONMENT: str(user_data)})
+            if not server.wait_for(_LISTENING, _TIMEOUT_SECONDS):
+                return group.fail(f"the {name} server never opened its game port (log: {server.log})")
+            list_server.append(server)
+        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), app_arguments.option("scenario", _MATCH_SCENARIO), app_arguments.flag("unattended"),
+                                        app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")], stdin=False)
+        client.wait(_TIMEOUT_SECONDS * 6)
+        time.sleep(1.0)  # 서버가 나간 연결을 알아채고 저장할 틈
+        for server in list_server:
+            server.stop()
+    if client.return_code != 0:
+        return group.fail(f"the client exited with code {client.return_code} (log: {client.log})")
+    for server in list_server:
+        if server.return_code != 0:
+            return group.fail(f"the {server.name} server exited with code {server.return_code} (log: {server.log})")
+    hub, match = list_server
+    result = check_match_logs(hub.text(), match.text(), client.text())
+    return report("net-pair", result.problems, [hub.log, match.log, client.log],
+                  "hub join -> queue -> match server -> server-submitted score -> back in the hub, no errors or warnings")
+
+
 def _print(result: CheckResult, server_log: Path, client_log: Path) -> int:
     return report("net-pair", result.problems, [server_log, client_log], "login -> game ticket -> encrypted UDP connection opened with no errors or warnings")
 
@@ -219,6 +500,8 @@ def main(list_argument: list[str]) -> int:
     run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트(첫 접속 → 재접속 → 둘 함께)를 띄워 서버 권위 행동 · 저장 후 재접속 · 폰 복제와 예측을 본다")
     mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    match_parser = sub.add_parser("match", help="허브 서버 · 매치 서버 · 클라이언트를 띄워 접속한 허브 → 매치 → 서버 점수 제출 → 허브 재접속을 본다")
+    match_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")
     check_parser.add_argument("client_log")
@@ -228,4 +511,6 @@ def main(list_argument: list[str]) -> int:
         return _print(check_logs(read_log(server_log), read_log(client_log)), server_log, client_log)
     if argument.mode == "mmo":
         return _run_mmo(argument)
+    if argument.mode == "match":
+        return _run_match(argument)
     return _run(argument)
