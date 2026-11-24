@@ -398,7 +398,7 @@ namespace sw
                 return true;
             }
         }
-        SW_LOG_ERROR_ID( "FrameGraphExecutor.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( mode ) );
+        SW_LOG_ERROR_ID( "FrameGraphExecutor.MeshMorphDiagModeInvalid", "The frame settings have no mesh morph diagnostic mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( mode ) );
         return false;
     }
 

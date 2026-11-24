@@ -120,7 +120,7 @@ namespace sw
         if ( FrameGraphExecutor::isMeshMorphDiagValid( _state._settings._meshMorphDebugMode ) == false )
         {
             _status        = FrameRendererStatus::Failed;
-            _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
+            _statusMessage = "the frame settings have no valid mesh morph diagnostic mode";
             SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }
