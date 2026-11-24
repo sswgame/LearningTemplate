@@ -49,7 +49,8 @@ namespace
     class ITestSilent
     {
     public:
-        static constexpr const utf8* kProviderKit = "test.silent";
+        static constexpr const utf8* kProviderKit           = "test.silent";
+        static constexpr bool        kRequiredInMultiServer = true; ///< 서버끼리 나누는 인터페이스의 자리다(`AccountPresence` 와 같은 표식)
 
         ITestSilent()          = default;
         virtual ~ITestSilent() = default;
@@ -181,6 +182,28 @@ namespace
         }
         const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
         void                           stop() override { addKitEvent( kName, "stop" ); }
+    };
+
+    /** @brief 서버끼리 나누는 인터페이스(`ITestSilent`)를 선택으로 받는 키트입니다. 서버 한 대에서는 없어도 서고, 여러 대에서는 서지 않아야 한다. */
+    class OptionalSharedTestKit final : public OnlineServerKit<OnlineKitRequired<>, OnlineKitOptional<ITestSilent, const ILedgerPolicy>>
+    {
+    public:
+        static constexpr const utf8* kName = "test.optionalShared";
+
+        [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const Dependencies& interfaces ) override
+        {
+            (void)context;
+            (void)entry;
+            addKitEvent( kName, interfaces.find<ITestSilent>() != nullptr ? "init" : "init-without-shared" );
+            return {};
+        }
+        expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
+        {
+            (void)context;
+            return {};
+        }
+        const sw::IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; } // 테스트 키트는 표가 없다
+        void                           stop() override {}
     };
 
     /** @brief 디렉터리를 순서 없이 받는 키트입니다. 의존이 아니어도 `start` 는 모든 키트의 `initialize` 뒤라 찾는다. */
@@ -490,6 +513,50 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, EmptyKitListStopsStartup )
     const sw::string error1( error1Builder.view() );
     SW_EXPECT_TRUE( error1.find( "lists no kits" ) != string::npos );
     runtime.shutdown();
+    SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 서버끼리 나누는 인터페이스를 선택으로 받는 키트는 서버 한 대에서는 없이 서고, 여러 대 구성에서는 제공 키트가 설정에 없으면 기동 오류다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, MultiServerNeedsTheKitOfASharedInterface )
+{
+    const OnlineServerKitRegistrar<OptionalSharedTestKit> optionalShared{ OptionalSharedTestKit::kName };
+    OptionalSharedTestKit                                 kit; // 이름 목록만 본다 — 표식 없는 선택 인터페이스는 들지 않는다
+    SW_REQUIRE_EQUAL( kit.getMultiServerKits().size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( string_view( kit.getMultiServerKits()[0] ), string_view( ITestSilent::kProviderKit ) );
+    {
+        OnlineServerRuntime runtime;
+        const auto          started = runtime.initialize( makeSettings( { OptionalSharedTestKit::kName } ), UnixMilliseconds{ 1000 } );
+        SW_REQUIRE_TRUE_MSG( started.has_value(), started.has_value() ? std::string_view{} : started.error().message() );
+        runtime.shutdown();
+    }
+    SW_REQUIRE_EQUAL( getKitEventLog().size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( getKitEventLog()[0], string( "test.optionalShared:init-without-shared" ) );
+    getKitEventLog().clear();
+    {
+        OnlineServerRuntimeConfig settings = makeSettings( { OptionalSharedTestKit::kName } );
+        settings._config._topology         = OnlineServerTopology::MultiServer;
+        OnlineServerRuntime runtime;
+        const auto          failed = runtime.initialize( std::move( settings ), UnixMilliseconds{ 1000 } );
+        SW_REQUIRE_FALSE( failed.has_value() );
+        StringBuilder<constant::buffer::kMax512> error;
+        error.appendFormat( "%# %#", failed.error().message(), failed.error().detail() );
+        SW_EXPECT_TRUE( error.view().find( "multi-server" ) != string_view::npos && error.view().find( "needs test.silent" ) != string_view::npos );
+        runtime.shutdown();
+    }
+    SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 서버 여러 대 구성은 프로세스 안 저장소 · 캐시로 서지 않는다(버스 · 시도 제한 · 세션 끊기가 서버마다 따로 돌지 않게) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, MultiServerRefusesProcessLocalStores )
+{
+    OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName } );
+    settings._config._topology         = OnlineServerTopology::MultiServer;
+    OnlineServerRuntime runtime;
+    const auto          failed = runtime.initialize( std::move( settings ), UnixMilliseconds{ 1000 } );
+    SW_REQUIRE_FALSE( failed.has_value() );
+    StringBuilder<constant::buffer::kMax512> error;
+    error.appendFormat( "%#", failed.error().message() );
+    SW_EXPECT_TRUE( error.view().find( "every server shares" ) != string_view::npos );
     SW_EXPECT_TRUE( getKitEventLog().empty() );
 }
 

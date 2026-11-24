@@ -85,12 +85,27 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 이 온라인 서비스를 서버 몇 대가 함께 도는지입니다. 서버끼리 나눠야 하는 기능(접속 상태 · 다른 서버 세션 끊기 · 버스 · 로그인 시도 제한)을 켜는 유일한 값입니다.
+     * @details `MultiServer` 에서는 서버끼리 나누지 못하는 구성(프로세스 안 저장소 · 캐시, 표식 있는 인터페이스의 빠짐 — `OnlineServerKitInternal::kIsRequiredInMultiServer`)이 기동 오류다.
+     *          포인터가 있는지로 켬을 정하면 설정 실수가 "서버마다 따로 도는 한 대" 로 조용히 선다.
+     */
+    ENUM()
+    enum class OnlineServerTopology : uint8
+    {
+        SingleServer = 0,
+        MultiServer
+    };
+
     /** @brief 온라인 서비스 설정 전체입니다(파일 하나). */
     REFLECT()
     struct SW_GF_API OnlineServerConfig : IConfig
     {
         REFLECT_BODY();
 
+        /** @brief 서버 한 대인지 여러 대인지입니다. 필수다 — 배치를 숨은 기본값으로 정하지 않는다. */
+        PROPERTY( Required )
+        OnlineServerTopology _topology{ OnlineServerTopology::SingleServer };
         /** @brief 띄울 키트입니다. 설정에 적은 순서와 상관없이 키트의 시작 순서로 붙습니다. */
         PROPERTY()
         vector<OnlineServerKitEntry> _listKit{};
@@ -109,8 +124,8 @@ namespace sw
         /** @brief 클라이언트가 이 서버의 게임 포트에 붙을 주소입니다. 비우면 디렉터리에 이 서버를 등록하지 않습니다(서비스 전용 서버). */
         PROPERTY()
         string _publicAddress{};
-        /** @brief 서버 간 버스와 접속 상태의 서버 id 입니다. 서버마다 달라야 합니다(32 비트 안). */
-        PROPERTY( Min = 1, Max = 2000000000 )
+        /** @brief 서버 간 버스와 접속 상태의 서버 id 입니다. 서버마다 달라야 합니다(32 비트 안). 필수다 — 기본값을 두 서버가 나눠 쓰면 버스가 서로의 메시지를 자기 것으로 보고 버린다. */
+        PROPERTY( Required, Min = 1, Max = 2000000000 )
         int32 _serverID{ 1 };
         /** @brief 디렉터리에 알릴 수용 인원입니다. */
         PROPERTY( Min = 0, Max = 1000000 )

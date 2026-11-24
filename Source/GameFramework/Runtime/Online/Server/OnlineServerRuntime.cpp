@@ -423,6 +423,14 @@ namespace sw
             StringUtil::wipeSecret( settings._cache._secret );
             return unexpected( Error{ ErrorKind::InvalidArgument, "the online runtime needs a store and a cache driver (use 'memory' for an in-process one)" } );
         }
+        // 프로세스 안 저장소 · 캐시는 다른 서버가 보지 못한다 — 버스 · 접속 상태 · 로그인 시도 제한 · 일회용 nonce · 세션 끊기가 서버마다 따로 돈다.
+        const bool bProcessLocal = Internal::isMemoryDriver( settings._store._driver ) || Internal::isMemoryDriver( settings._cache._driver );
+        if ( parts._config._topology == OnlineServerTopology::MultiServer && bProcessLocal )
+        {
+            StringUtil::wipeSecret( settings._store._secret );
+            StringUtil::wipeSecret( settings._cache._secret );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the multi-server topology needs a store and a cache every server shares ('memory' is in-process)" } );
+        }
         if ( Internal::isMemoryDriver( settings._store._driver ) )
         {
             parts._store = make_unique<MemoryServiceStore>( &parts._memoryDatabase );
@@ -567,6 +575,17 @@ namespace sw
                     return unexpected( error );
                 }
                 addDependency( pRequired );
+            }
+            // 서버끼리 나누는 인터페이스는 서버 여러 대에서 선택이 아니다 — 빠진 채 서면 서버마다 따로 돈다.
+            for ( const utf8* pShared : kit->getMultiServerKits() )
+            {
+                const bool bMissing = parts._config._topology == OnlineServerTopology::MultiServer && OnlineServerRuntimeInternal::isKitListed( parts._config, pShared ) == false;
+                if ( bMissing )
+                {
+                    Error error{ ErrorKind::NotFound, "the multi-server topology needs a kit the online service config does not list (_topology, _listKit)", pEntry->_name };
+                    error.appendDetail( " needs " ).appendDetail( pShared );
+                    return unexpected( error );
+                }
             }
             for ( const utf8* pOptional : kit->getOptionalKits() )
             {

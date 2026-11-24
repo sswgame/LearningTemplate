@@ -51,9 +51,11 @@ def check_logs(server_text: str, client_text: str) -> CheckResult:
     return result
 
 
-def make_online_config(list_kit: list[dict]) -> dict:
-    """온라인 설정의 공통 칸(짧은 짝 실행이라 기반 표를 지우지 않는다)에 키트 목록을 더한다."""
+def make_online_config(list_kit: list[dict], server_id: int = 1, topology: str = "SingleServer") -> dict:
+    """온라인 설정의 공통 칸(짧은 짝 실행이라 기반 표를 지우지 않는다)에 키트 목록을 더한다. 서버 여럿이 한 저장소 · 캐시를 나누면 `MultiServer` 와 서로 다른 @p server_id 를 준다."""
     return {
+        "_topology": topology,
+        "_serverID": server_id,
         "_storeName": "local",
         "_cacheName": "local",
         # 기반 표 TTL 은 필수다(코드에 기본값이 없다). 짧은 짝 실행이라 지우지 않는다(기간 0).
@@ -458,10 +460,10 @@ def _run_match(argument: argparse.Namespace) -> int:
             return {"_name": "matchmaking", "_settings": {"_catalog": f"{content}.matchmodes.xml", "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000, "_bGameServer": game_server}}
 
         # 허브는 배정받는 서버가 아니다(`_publicAddress` 없음) - 매치 서버만 디렉터리에 선다.
-        hub_online = make_online_config([make_account_kit((_MATCH_ACCOUNT,)), make_game_connect_kit(_MMO_SERVER_NAME), directory, leaderboard, matchmaking(False)])
+        hub_online = make_online_config([make_account_kit((_MATCH_ACCOUNT,)), make_game_connect_kit(_MMO_SERVER_NAME), directory, leaderboard, matchmaking(False)], topology="MultiServer")
         hub_config = write_server(group.out_dir, "Hub", _MATCH_HUB_GAME_PORT, _MATCH_HUB_SERVICE_PORT, hub_online, store, cache)
-        match_online = make_online_config([make_account_kit(()), make_game_connect_kit(f"{_MATCH_SERVER_ID:016x}"), directory, leaderboard, matchmaking(True)])
-        match_online.update({"_serverID": _MATCH_SERVER_ID, "_publicAddress": "127.0.0.1"})
+        match_online = make_online_config([make_account_kit(()), make_game_connect_kit(f"{_MATCH_SERVER_ID:016x}"), directory, leaderboard, matchmaking(True)], _MATCH_SERVER_ID, "MultiServer")
+        match_online.update({"_publicAddress": "127.0.0.1"})
         match_config = write_server(group.out_dir, "Match", _MATCH_GAME_PORT, _MATCH_SERVICE_PORT, match_online, store, cache)
         list_server = []
         for name, config, list_extra in (("hub", hub_config, []), ("match", match_config, [app_arguments.variable("gv_firstMinigame", _MATCH_MINIGAME)])):
