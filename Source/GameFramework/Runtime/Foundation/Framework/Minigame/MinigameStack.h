@@ -103,7 +103,9 @@ namespace sw
 
     /**
      * @class MinigameStack
-     * @brief 미니게임 칸의 스택입니다. 맨 위 칸만 켜져 있고, 아래 칸들은 덮여 꺼져 있다(`MinigameFlow`).
+     * @brief 미니게임 칸의 스택과 아직 넘기지 못한 결과입니다. 맨 위 칸만 켜져 있고, 아래 칸들은 덮여 꺼져 있다(`MinigameFlow`).
+     * @details 결과는 받을 곳(나간 미니게임의 바탕 씬)이 설 때까지 여기 남아 한 번만 꺼내진다 — 돌아가던 로드가 밀려나도 · 칸을 비워도(`clear`) 남고, 스택을 통째로
+     *          바꾸면(세이브의 미니게임) 함께 바뀐다. 진행이 갈리면(`clearResults` — 세이브를 되살림 · 게임이 끝남) 버린다.
      */
     class SW_GF_API MinigameStack
     {
@@ -134,8 +136,16 @@ namespace sw
         bool matches( const vector<MinigameSavedFrame>& listFrame ) const;
         /** @brief 칸의 돌아올 자리를 @p listFrame 의 것으로 바꿉니다(같은 미니게임 안에서 세이브를 되살린 뒤 — `matches` 인 목록만 받는다). */
         void applyReturnPoints( vector<MinigameSavedFrame> listFrame, SaveLock& saveLock );
-        /** @brief 칸을 모두 버립니다(저장 막기도 풀린다). */
+        /** @brief 칸을 모두 버립니다(저장 막기도 풀린다). 넘기지 못한 결과는 남습니다. */
         void clear() { _listFrame.clear(); }
+        /** @brief 바탕 씬 @p scenePath 에서 받을 결과를 남깁니다. */
+        void pushResult( const string& scenePath, MinigameResult result );
+        /** @brief 바탕 씬 @p scenePath 에서 받을 결과를 건 순서대로 꺼냅니다(꺼낸 것은 남지 않는다). 없으면 빈 목록입니다. */
+        [[nodiscard]] vector<MinigameResult> takeResults( const string& scenePath );
+        /** @brief 넘기지 못한 결과를 모두 버립니다 — 그 결과를 번 진행이 끝났다. */
+        void clearResults() { _listResult.clear(); }
+        /** @brief 넘기지 못한 결과 수입니다. */
+        size_t getResultCount() const { return _listResult.size(); }
 
         /** @brief 맨 위 칸입니다. 비었으면 nullptr 입니다. */
         MinigameFrame*       findTop() { return _listFrame.empty() ? nullptr : &_listFrame.back(); }
@@ -148,6 +158,14 @@ namespace sw
         bool hasSuspendedScene() const;
 
     private:
-        vector<MinigameFrame> _listFrame; ///< 아래부터 위로
+        /** @brief 넘기지 못한 결과 하나입니다. */
+        struct PendingResult
+        {
+            string         _scenePath; ///< 받을 바탕 씬
+            MinigameResult _result;
+        };
+
+        vector<MinigameFrame> _listFrame;  ///< 아래부터 위로
+        vector<PendingResult> _listResult; ///< 건 순서대로
     };
 } // namespace sw

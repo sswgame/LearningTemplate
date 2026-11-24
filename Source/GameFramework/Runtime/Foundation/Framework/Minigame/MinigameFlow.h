@@ -148,6 +148,8 @@ namespace sw
          */
         bool enterFirstMinigame();
 
+        /** @brief 넘기지 못한 결과를 버립니다 — 세이브를 되살렸다(그 결과를 번 진행이 아니다). `GameSaveSlots` 가 부릅니다. */
+        void discardPendingResults() { _stack.clearResults(); }
         /** @brief 미니게임이 끝날 때(돌아올 자리를 복원한 뒤) 결과를 받는 함수 목록입니다. 구독은 돌려받은 `Subscription` 이 풉니다. */
         FinishedDelegate& onFinished() { return _onFinished; }
 
@@ -190,8 +192,9 @@ namespace sw
         /** @brief 나가며 돌아갈 씬을 기다리는 동안 쥐는 것입니다 — 나간 칸(찍은 씬 · 저장 막기를 복원까지 쥔다)과 넘길 결과. */
         struct PendingReturn
         {
-            MinigameFrame  _frame;  ///< 나간 칸
-            MinigameResult _result; ///< 복원 뒤에 넘길 결과
+            MinigameFrame  _frame;     ///< 나간 칸
+            MinigameResult _result;    ///< 복원 뒤에 넘길 결과
+            string         _scenePath; ///< 돌아갈 씬
         };
 
         /**
@@ -239,6 +242,10 @@ namespace sw
         void collectDirectorResults( vector<MinigameResultValue>& outListValue ) const;
         /** @brief 결과를 넘깁니다(`onFinished`). */
         void deliverResult( const MinigameResult& result );
+        /** @brief 활성 씬에서 받을 결과가 남았고 씬이 바뀌는 중이 아니면 넘깁니다. 이동 중에 넘기면 곧 버릴 씬이 받는다. */
+        void deliverPendingResults();
+        /** @brief 칸 @p frame 을 나가면 돌아갈 씬입니다. 없으면 빈 글입니다. */
+        static string findReturnScene( const MinigameFrame& frame );
         /** @brief 다른 진입 · 나가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */
         bool rejectIfLoadPending( string_view name ) const;
         /** @brief 입력 맵 레이어를 스택에 넣어 켜고(`InputMap::pushLayer`) 끌 때 빼서 넣기 전의 켬으로 되돌립니다(`popLayer` — 한 쌍). 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */
@@ -247,25 +254,24 @@ namespace sw
         [[nodiscard]] static bool openLocalUsers( GameFeatureScope& scope, const MinigameDefinition& definition );
 
     private:
-        SubsystemScope&              _gameScope;             ///< 기능이 서비스를 거는 게임 범위
-        const GamePackConfig&        _packConfig;            ///< 미니게임 · 카탈로그 경로의 팩 설정
-        GameInstance&                _owner;                 ///< 돌아올 씬을 찍고 복원하는 인스턴스
-        MinigameStack                _stack;                 ///< 칸 스택 — 맨 위만 켜져 있다
-        unique_ptr<GameFeatureScope> _pActive;               ///< 맨 위 칸의 범위(없으면 nullptr)
-        unique_ptr<PendingReturn>    _pReturning;            ///< 나가며 돌아갈 씬을 기다리는 중이면 그 자리와 결과(없으면 nullptr)
-        unique_ptr<MinigameStack>    _pPreviousStack;        ///< 세이브의 미니게임 맵을 기다리는 중이면 바꾸기 전 칸 스택(없으면 nullptr) — 맵이 서지 않으면 되돌린다
-        string                       _pendingEnter;          ///< 틱 뒤 작업에서 맡긴 진입(`requestEnter`) — 비었으면 없음
-        optional<SubLevelPlacement>  _pendingPlacement;      ///< 맡긴 진입의 얹을 자리
-        optional<MinigameResult>     _pendingLeave;          ///< 틱 뒤 작업에서 맡긴 나가기(`requestLeave` — 이름 칸은 비워 두고 `leave` 가 채운다). 없으면 nullopt
-        FinishedDelegate             _onFinished;            ///< 결과를 받는 함수 목록
-        MinigameResult               _lastResult;            ///< 마지막으로 넘긴 결과
-        Subscription                 _sceneLoadRequested;    ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
-        Subscription                 _worldPlayChanged;      ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
-        uint32                       _leakCount;             ///< 끈 범위들이 남긴 것의 합
-        optional<MinigameResult>     _pendingRestoredResult; ///< 찍은 씬을 되살린 프레임의 결과 — 되살린 오브젝트의 상태 적용 · 시작(onBeginPlay) 뒤인 다음 `update` 에 알린다
-        uint32                       _restoreCount;          ///< 돌아올 자리 복원 수
-        uint32                       _lastLoad;              ///< 마지막으로 맡긴 로드의 번호(`requestAwaitedScene`)
-        uint32                       _awaitedLoad;           ///< 끝을 기다리는 로드의 번호(0 이면 없음 — 하나만 기다린다, 겹친 진입은 거절한다)
-        uint8                        _bRequestingScene : 1;  ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
+        SubsystemScope&              _gameScope;            ///< 기능이 서비스를 거는 게임 범위
+        const GamePackConfig&        _packConfig;           ///< 미니게임 · 카탈로그 경로의 팩 설정
+        GameInstance&                _owner;                ///< 돌아올 씬을 찍고 복원하는 인스턴스
+        MinigameStack                _stack;                ///< 칸 스택 — 맨 위만 켜져 있다
+        unique_ptr<GameFeatureScope> _pActive;              ///< 맨 위 칸의 범위(없으면 nullptr)
+        unique_ptr<PendingReturn>    _pReturning;           ///< 나가며 돌아갈 씬을 기다리는 중이면 그 자리와 결과(없으면 nullptr)
+        unique_ptr<MinigameStack>    _pPreviousStack;       ///< 세이브의 미니게임 맵을 기다리는 중이면 바꾸기 전 칸 스택(없으면 nullptr) — 맵이 서지 않으면 되돌린다
+        string                       _pendingEnter;         ///< 틱 뒤 작업에서 맡긴 진입(`requestEnter`) — 비었으면 없음
+        optional<SubLevelPlacement>  _pendingPlacement;     ///< 맡긴 진입의 얹을 자리
+        optional<MinigameResult>     _pendingLeave;         ///< 틱 뒤 작업에서 맡긴 나가기(`requestLeave` — 이름 칸은 비워 두고 `leave` 가 채운다). 없으면 nullopt
+        FinishedDelegate             _onFinished;           ///< 결과를 받는 함수 목록
+        MinigameResult               _lastResult;           ///< 마지막으로 넘긴 결과
+        Subscription                 _sceneLoadRequested;   ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
+        Subscription                 _worldPlayChanged;     ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
+        uint32                       _leakCount;            ///< 끈 범위들이 남긴 것의 합
+        uint32                       _restoreCount;         ///< 돌아올 자리 복원 수
+        uint32                       _lastLoad;             ///< 마지막으로 맡긴 로드의 번호(`requestAwaitedScene`)
+        uint32                       _awaitedLoad;          ///< 끝을 기다리는 로드의 번호(0 이면 없음 — 하나만 기다린다, 겹친 진입은 거절한다)
+        uint8                        _bRequestingScene : 1; ///< 이 흐름이 씬 로드를 요청하는 동안 1(받아들임 알림이 동기로 온다)
     };
 } // namespace sw
