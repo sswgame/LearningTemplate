@@ -38,13 +38,14 @@ namespace sw
 
             static void enterAnimation( const SequenceSpanContext& context )
             {
-                const SkeletalAnimatorComponent* pAnimator = findAnimator( context );
+                SkeletalAnimatorComponent* pAnimator = findAnimator( context );
                 if ( pAnimator == nullptr )
                 {
                     SW_LOG_ERROR_ID( "SequenceSpan.AnimationNoAnimator", "Sequence animation '%#' - the bound object '%#' has no SkeletalAnimatorComponent", context._pItem->_name,
                                      context._pTarget != nullptr ? context._pTarget->getName().c_str() : "?" );
                     return;
                 }
+                context._pState->_animatorOverride = pAnimator->openSequencerOverride( context._pState->_overrideID );
                 // 클립은 대상 애니메이션 셋의 이름(또는 '/' 가 든 클립 파일 경로)이다 — 애니메이터가 상태 노드를 푸는 규칙과 같다.
                 const string clipPath = pAnimator->makeClipPath( hashed_string( context._pItem->_clip.c_str() ) );
                 if ( clipPath.empty() == false )
@@ -63,14 +64,12 @@ namespace sw
                 const float32 time = static_cast<float32>( context._frame - context._pItem->_start ) / fps;
                 // 섞임(Ease In · Out)이 세기를 구간 머리 · 꼬리에서 올리고 내린다 — 프레임의 값이라 역재생도 같다.
                 const float32 easeWeight = context._pItem->computeEaseWeight( static_cast<float32>( context._frame ) );
-                pAnimator->setSequencerOverride( context._pState->_clip, time, MathUtil::saturate( context._pItem->_amplitude ) * easeWeight );
+                pAnimator->setSequencerOverride( context._pState->_overrideID, context._pState->_clip, time, MathUtil::saturate( context._pItem->_amplitude ) * easeWeight );
             }
 
             static void leaveAnimation( const SequenceSpanContext& context )
             {
-                SkeletalAnimatorComponent* pAnimator = findAnimator( context );
-                if ( pAnimator != nullptr )
-                    pAnimator->setSequencerOverride( nullptr, 0.0f, 0.0f );
+                context._pState->_animatorOverride.reset(); // 이 구간이 연 자리만 — 같은 대상의 다른 구간 · 시퀀스는 그대로 섞는다
                 context._pState->_clip.reset();
             }
 

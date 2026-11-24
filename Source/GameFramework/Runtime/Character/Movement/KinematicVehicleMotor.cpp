@@ -74,6 +74,9 @@ namespace sw
         , _nitroCount{ 0 }
         , _driftDirection{ 0 }
         , _bAirborne{ SW_FALSE }
+        , _bBoostQueued{ SW_FALSE }
+        , _bJumpQueued{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -95,6 +98,8 @@ namespace sw
         _nitroCount     = 0;
         _driftDirection = 0;
         _bAirborne      = SW_FALSE;
+        _bBoostQueued   = SW_FALSE;
+        _bJumpQueued    = SW_FALSE;
         _timer.reset();
         _eventBuffer.clear();
     }
@@ -223,6 +228,15 @@ namespace sw
     {
         const int32           stepCount = _timer.consume( frameTime );
         KinematicVehicleInput stepInput = input;
+        // 화면이 고정 걸음보다 빠르면 걸음이 없는 프레임이 있다 — 그 프레임의 눌림을 다음 걸음까지 둔다(캐릭터 컨트롤러의 점프 대기 · `KartRace::setInput` 과 같다).
+        _bBoostQueued = _bBoostQueued == SW_TRUE || input._bBoostPressed != SW_FALSE ? SW_TRUE : SW_FALSE;
+        _bJumpQueued  = _bJumpQueued == SW_TRUE || input._bJumpPressed != SW_FALSE ? SW_TRUE : SW_FALSE;
+        if ( stepCount <= 0 )
+            return stepCount;
+        stepInput._bBoostPressed = _bBoostQueued;
+        stepInput._bJumpPressed  = _bJumpQueued;
+        _bBoostQueued            = SW_FALSE;
+        _bJumpQueued             = SW_FALSE;
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             update( stepInput, _timer.getStep() );
@@ -503,6 +517,8 @@ namespace sw
         if ( io.isReading() )
         {
             _eventBuffer.clear();
+            _bBoostQueued = SW_FALSE; // 앞 시간의 눌림이다
+            _bJumpQueued  = SW_FALSE;
         }
     }
 

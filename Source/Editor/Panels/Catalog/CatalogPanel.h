@@ -68,6 +68,8 @@ namespace sw::editor
         void               drawToolbar();
         void               drawValidation();
         [[nodiscard]] bool writeCurrentFile();
+        /** @brief 이 창은 쓰기 직전의 디스크 글을 세션이 본다(`CatalogFileSession::validateDiskBeforeSave` — 덮기 전 글을 이전 파일로 남긴다). */
+        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
         void               validateCurrentFile();
         /** @brief 툴바 Revert — 마지막으로 저장한 글로 되돌립니다. 되돌리기 기록은 남아 Undo 가 편집을 되살린다(디스크를 다시 읽는 문서 되돌리기와 다르다). */
         void revertToSavedText();

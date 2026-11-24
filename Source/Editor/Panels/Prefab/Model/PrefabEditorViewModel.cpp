@@ -139,6 +139,13 @@ namespace sw::editor
         return true;
     }
 
+    void PrefabEditorViewModel::remapPath( string_view oldPath, string_view newPath )
+    {
+        _pIsolation->remapPath( oldPath, newPath );
+        if ( string_view{ _pendingNestedPath } == oldPath )
+            _pendingNestedPath = string{ newPath };
+    }
+
     void PrefabEditorViewModel::refusePendingNested()
     {
         if ( _pendingNestedPath.empty() )

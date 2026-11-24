@@ -290,6 +290,8 @@ namespace sw
         if ( savedSceneID->empty() || bStaysInScene )
         {
             const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes );
+            if ( bRestored )
+                minigameFlow.discardPendingResults();
             if ( bRestored && bInMinigame )
                 minigameFlow.applySavedMinigame( std::move( listFrame ) );
             publishSlotLoaded( slot, bRestored, onApplied );
@@ -322,6 +324,8 @@ namespace sw
         }
         // 씬을 여는 사이 세션이 열렸을 수 있다.
         const bool bRestored = GameSaveSlotsInternal::isRestoreRefused( pending._slot ) == false && _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes );
+        if ( bRestored )
+            _owner.getSubsystem<MinigameFlow>().discardPendingResults();
         publishSlotLoaded( pending._slot, bRestored, pending._onApplied );
     }
 

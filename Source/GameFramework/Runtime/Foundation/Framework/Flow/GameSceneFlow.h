@@ -99,6 +99,8 @@ namespace sw
         bool hasPendingSceneLoad() const { return _listPendingSceneLoad.empty() == false; }
         /** @brief 타이틀 씬이 있는 게임이면 true 입니다 — 세션 명령(타이틀로)을 걸지 정한다. */
         bool hasTitleScene() const;
+        /** @brief @p scenePath 가 타이틀 씬이면 true 입니다. */
+        bool isTitleScene( const string& scenePath ) const;
         /**
          * @brief 세션 명령(UI 전역 명령 `StartGame` · `ReturnToTitle`)의 등록 구독 하나를 맡깁니다. 여러 번 맡길 수 있고 `unregisterSessionCommands` 가 모두 거둡니다.
          * @details 거는 일은 클라이언트 전용 부분(`IGameInstanceClientHook::bindSessionCommands`)이 한다 — 씬 흐름은 UI 를 모른다. 게임 인스턴스가 종료의 맨 앞에서 거둔다.

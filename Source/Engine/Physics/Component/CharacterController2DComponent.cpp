@@ -113,6 +113,16 @@ namespace sw
         inoutBuilder.addUint8( isGrounded() ? 1 : 0 );
     }
 
+    void CharacterController2DComponent::resetMotion()
+    {
+        editCommand( []( CharacterCommand2D& command )
+        {
+            command._bPendingStop     = true;
+            command._pendingJumpSpeed = 0.0f;
+            command._pendingLaunch    = float2{};
+        } );
+    }
+
     void CharacterController2DComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );
@@ -127,6 +137,14 @@ namespace sw
         if ( isSimulated() == false )
         {
             releasePhysics( physics );
+            // 꺼진 동안의 충격(점프 · 발사 · 오르기)은 버린다 — 켜진 첫 걸음에 몰아 나가지 않는다(3D 와 같다). 시작 전 · 스트리밍이 붙잡은 동안의 것은 첫 걸음의 것이라 남긴다.
+            if ( hasBegunPlay() && isActive() == false )
+                editCommand( []( CharacterCommand2D& command )
+                {
+                    CharacterCommand2D kept{};
+                    kept._moveVelocity = command._moveVelocity;
+                    command            = kept;
+                } );
             return;
         }
         IPhysicsScene2D* pScene = physics.getScene2D();
@@ -199,8 +217,6 @@ namespace sw
         pScene->setCharacterPosition( _character, position );
         _state._position  = position;
         _previousPosition = position;
-        if ( bTeleported )
-            _verticalSpeed = 0.0f;
     }
 
     void CharacterController2DComponent::onPrePhysicsStep( const FixedStepContext& context )
@@ -213,14 +229,22 @@ namespace sw
         float32 moveVelocity = 0.0f;
         float32 jumpSpeed    = 0.0f;
         float2  launch{};
-        editCommand( [&moveVelocity, &jumpSpeed, &launch]( CharacterCommand2D& command )
+        bool    bStop = false;
+        editCommand( [&moveVelocity, &jumpSpeed, &launch, &bStop]( CharacterCommand2D& command )
         {
+            bStop                     = command._bPendingStop;
+            command._bPendingStop     = false;
             moveVelocity              = command._moveVelocity;
             jumpSpeed                 = command._pendingJumpSpeed;
             launch                    = command._pendingLaunch;
             command._pendingJumpSpeed = 0.0f;
             command._pendingLaunch    = float2{};
         } );
+        if ( bStop )
+        {
+            _verticalSpeed = 0.0f;
+            _airVelocity   = 0.0f;
+        }
         const bool bLaunched = launch.getLengthSquared() > 0.0f;
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;

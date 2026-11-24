@@ -337,11 +337,11 @@ namespace sw
             if ( absPath.has_value() && ContentFileSource::getCurrent().isFile( absPath->str() ) )
                 return true;
         }
-        if ( bDiskDomain )
-            return false;
-
-        const string normalizedKey = FileUtil::normalizePath( relativePath ).str();
-        return pPackManager != nullptr && pPackManager->hasFile( normalizedKey );
+        const bool bInPack = bDiskDomain == false && pPackManager != nullptr && pPackManager->hasFile( FileUtil::normalizePath( relativePath ).str() );
+        // "없음" 도 쿠킹의 입력이다(못 찾은 읽기와 같다) — 층 파일처럼 있을 때만 읽는 리소스가 나중에 생기면 다시 구워야 한다. 있으면 뒤따르는 읽기가 내용을 기록한다.
+        if ( bInPack == false )
+            CookJob::allowMissingRead( id );
+        return bInPack;
     }
 
     AssetFolderListing AssetIO::collectAssets( const AssetID& folderID, string_view extension, vector<AssetID>& outListID )

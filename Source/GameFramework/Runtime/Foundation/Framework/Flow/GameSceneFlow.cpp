@@ -149,6 +149,11 @@ namespace sw
         return _settings._titleScene.isSet();
     }
 
+    bool GameSceneFlow::isTitleScene( const string& scenePath ) const
+    {
+        return _settings._titleScene.isSet() && _settings._titleScene.get() == scenePath;
+    }
+
     void GameSceneFlow::holdSessionCommand( Subscription registration )
     {
         _listSessionCommandRegistration.push_back( std::move( registration ) );

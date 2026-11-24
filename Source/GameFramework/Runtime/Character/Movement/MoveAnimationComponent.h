@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -62,8 +63,9 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Teleport Distance", Tooltip = "A step longer than this is a teleport and not counted as speed", Min = 0.0, Units = m )
         float32 _teleportDistance;
 
-        float3  _lastPosition; ///< 지난 틱의 주 메시 월드 위치(저장하지 않는다)
-        float32 _speed;        ///< 고르게 한 수평 속도(저장하지 않는다)
-        uint8   _bHasLast;     ///< `_lastPosition` 이 유효한지(저장하지 않는다)
+        SceneTeleportCursor _teleport;
+        float3              _lastPosition; ///< 지난 틱의 주 메시 월드 위치(저장하지 않는다)
+        float32             _speed;        ///< 고르게 한 수평 속도(저장하지 않는다)
+        uint8               _bHasLast;     ///< `_lastPosition` 이 유효한지(저장하지 않는다)
     };
 } // namespace sw

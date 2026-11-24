@@ -49,6 +49,7 @@ namespace sw
         , _listFootContact{}
         , _pFootContactTable{ nullptr }
         , _animator{}
+        , _teleport{}
         , _pendingDeltaSeconds{ 0.0f }
         , _tableReload{}
         , _boneRequirement{}
@@ -298,6 +299,16 @@ namespace sw
         // 테이블 파일을 고쳤으면 열린 구간을 이전 항목(복사해 둔 것)으로 닫고 새 테이블로 이어 간다.
         if ( _notifyTablePath.empty() == false && _tableReload.isStale() )
             loadNotifyTable();
+
+        // 순간이동했으면 열린 칼 궤적의 지난 자리를 잊는다 — 지나가지 않은 길을 쓸어 사이의 모두를 맞히지 않는다.
+        const SceneComponent* const pRoot = getOwner() != nullptr ? getOwner()->getPrimarySceneComponent() : nullptr;
+        if ( pRoot != nullptr && _teleport.consume( *pRoot ).has_value() )
+        {
+            for ( ActiveState& state : _listActiveState )
+            {
+                state._data._listPreviousPoint.clear();
+            }
+        }
 
         // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로 재생한다). 이전 구간의 열린 알림은 모두 끊긴 것이다.
         if ( frame._bRestarted == SW_TRUE )

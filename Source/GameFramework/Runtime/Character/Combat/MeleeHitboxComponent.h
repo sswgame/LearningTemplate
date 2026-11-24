@@ -4,6 +4,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -65,6 +66,8 @@ namespace sw
          * @details 저장하지 않는다. 다시 연 판정은 지금 칼날부터 다시 쓸고, 이미 맞은 목록이 같은 오브젝트를 다시 맞히지 않게 한다.
          */
         vector<float3> _listPreviousPoint;
+        /** @brief 순간이동하면 지난 칼날을 잊는다 — 지나가지 않은 길을 쓸지 않는다. */
+        SceneTeleportCursor _teleport;
         PROPERTY()
         float3 _bladeStart;
         PROPERTY()

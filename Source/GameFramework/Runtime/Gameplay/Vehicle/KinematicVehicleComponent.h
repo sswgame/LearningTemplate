@@ -15,6 +15,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -103,6 +104,7 @@ namespace sw
 
         KinematicVehicleMotor         _motor;
         PhysicsGround                 _ground;
+        SceneTeleportCursor           _teleport;       ///< 바깥의 순간이동을 모터에 옮긴다(모터가 자리를 쥔다)
         vector<KinematicVehicleEvent> _listFrameEvent; ///< 이번 틱에 모터가 낸 일
         optional<int32>               _driftIndex;
         optional<int32>               _boostIndex;

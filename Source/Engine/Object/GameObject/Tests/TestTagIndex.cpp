@@ -3,6 +3,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -70,4 +71,19 @@ SW_TEST_CASE( TagIndexTest, AncestorBucketsRefreshWithTheChild )
     SW_EXPECT_TRUE( findSorted( manager, "Faction" ) == vector<GameObject*>{ pObject } );
     pObject->removeTag( TagID::request( "Faction.Player" ) );
     SW_EXPECT_TRUE( findSorted( manager, "Faction" ).empty() );
+}
+
+// 풀 반환은 실행 중에 쓴 태그(쓰러짐 · 숨음)를 걷고 저작한 태그는 남긴다 — 실행 중에 붙은 태그 컴포넌트가 풀을 거절하게 하지 않는다.
+SW_TEST_CASE( TagIndexTest, SpawnResetDropsRuntimeTags )
+{
+    GameObjectManager manager;
+    GameObject*       pEnemy = manager.createGameObject( hashed_string( "Enemy" ) );
+    pEnemy->addTag( TagID::request( "State.Test" ) );
+    TagComponent* pTags = pEnemy->getComponent<TagComponent>();
+    SW_REQUIRE_NOT_NULL( pTags );
+    SW_EXPECT_TRUE( pTags->resetToSpawnState() == SpawnStateReset::Reset );
+    SW_EXPECT_FALSE( pEnemy->hasTag( TagID::request( "State.Test" ) ) );
+    SW_EXPECT_TRUE( findSorted( manager, "State.Test" ).empty() ); // 색인도 맞췄다
+    pEnemy->addTag( TagID::request( "State.Test" ) );
+    SW_EXPECT_TRUE( pEnemy->hasTag( TagID::request( "State.Test" ) ) );
 }

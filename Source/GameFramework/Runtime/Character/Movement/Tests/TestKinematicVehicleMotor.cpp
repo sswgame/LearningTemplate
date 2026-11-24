@@ -288,3 +288,29 @@ SW_TEST_CASE( KinematicVehicleMotorTest, ValidateRejectsConflictingModules )
     SW_EXPECT_LOG( "KinematicVehicle.TierTimeOrder" );
     SW_EXPECT_FALSE( tiers.validate( "tiers" ) );
 }
+
+/** @brief [KinematicVehicleMotorTest] 결함: 화면이 고정 걸음보다 빠르면(144 Hz) 걸음이 없는 프레임의 점프 · 부스트 눌림이 사라졌다 — 다음 걸음이 한 번 쓴다 */
+SW_TEST_CASE( KinematicVehicleMotorTest, PressInAFrameWithoutAStepReachesTheNextStep )
+{
+    KinematicVehicleMotor motor;
+    motor.setSettings( KinematicVehicleSettings{} );
+    motor.reset( float3{}, 0.0f );
+    KinematicVehicleInput pressed;
+    pressed._bJumpPressed         = SW_TRUE;
+    constexpr float32 kQuarter    = KinematicVehicleMotorTestUtil::kStep * 0.25f;
+    const int32       pressedStep = motor.advance( pressed, kQuarter );
+    SW_REQUIRE_EQUAL( 0, pressedStep ); // 걸음이 없는 프레임이다
+    int32                         jumpCount = 0;
+    vector<KinematicVehicleEvent> listEvent;
+    for ( int32 frame = 0; frame < 40; ++frame )
+    {
+        (void)motor.advance( KinematicVehicleInput{}, kQuarter );
+        listEvent.clear();
+        motor.pollEvents( listEvent );
+        for ( const KinematicVehicleEvent& event : listEvent )
+        {
+            jumpCount += event._kind == KinematicVehicleEvent::Kind::Jumped ? 1 : 0;
+        }
+    }
+    SW_EXPECT_EQUAL( 1, jumpCount );
+}
