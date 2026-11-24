@@ -52,6 +52,7 @@
 
 namespace sw
 {
+    struct TickBatchCall;
     struct TickThreadState;
     struct TypeInfo;
 
@@ -83,10 +84,10 @@ namespace sw
     };
 
     /**
-     * @brief 같은 타입의 원소 [0, @p count) 를 차례로 틱하는 함수입니다. @p subTickID 가 0 이면 주 틱(`onTick`), 아니면 그 서브틱(`onSubTick`)입니다.
-     * @details 원소마다 @p threadState 의 틱 주인을 그 오브젝트로 둡니다(`TickBatchOf`). 한 목록은 (함수, 서브틱 id) 하나라 id 는 원소가 아니라 목록이 듭니다.
+     * @brief 같은 타입의 원소 [0, @p count) 를 차례로 틱하는 함수입니다.
+     * @details 원소마다 @p threadState 의 틱 주인을 그 오브젝트로 둡니다(`TickBatchOf`). 한 목록은 (함수, 서브틱 id, 주기) 하나라 그 값은 원소가 아니라 목록이 듭니다.
      */
-    using TickBatchFunction = void ( * )( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime );
+    using TickBatchFunction = void ( * )( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call );
 
     /** @struct TickTypeDispatch @brief 컴포넌트 타입 하나의 모드과 일괄 함수입니다(`TickBatchRegistry::findDispatch`). 함수가 비면 그 타입의 등록이 없다(Batch 모드는 가상 호출 함수로 돈다). */
     struct TickTypeDispatch
@@ -111,6 +112,7 @@ namespace sw
         uint8      _bHasPrerequisite{ SW_FALSE };                   ///< 선행 조건을 가진 서브틱이다. 기본 경로가 아니라 스테이지에서 처리한다
         uint8      _waveOrdinal{ 0 };                               ///< 같은 그룹 · 같은 순서 키인 앞 항목의 수(파도 키의 둘째 칸) — Batch 모드에서만 쓴다
         uint32     _batchIndex{ constant::invalid_index::kUint32 }; ///< 파도의 일괄 목록 안 위치다. 파도에 없으면 무효 값이다(레지스트리만 쓴다)
+        float32    _interval{ 0.0f };                               ///< 주기(초). 0 이면 매 프레임(`TickInterval.h`)
     };
 } // namespace sw
 
@@ -147,12 +149,13 @@ namespace sw
 {
     /**
      * @struct TickBatchList
-     * @brief 한 파도에서 같은 (타입 함수, 서브틱 id) 의 일괄 틱 원소 목록입니다(`TickBatchRegistry`). 디스패치는 구간 하나를 그 함수에 넘깁니다.
+     * @brief 한 파도에서 같은 (타입 함수, 서브틱 id, 주기) 의 일괄 틱 원소 목록입니다(`TickBatchRegistry`). 디스패치는 구간 하나를 그 함수에 넘깁니다.
      */
     struct TickBatchList
     {
         TickBatchFunction        _pFunction{ nullptr }; ///< 이 목록 타입의 일괄 틱 함수(목록 키의 첫 칸)
         uint32                   _subTickID{ 0 };       ///< 목록 키의 둘째 칸 — 0 은 주 틱
+        float32                  _interval{ 0.0f };     ///< 목록 키의 셋째 칸 — 주기(초), 0 은 매 프레임
         vector<TickBatchElement> _listElement;          ///< 계층에서 켜진 Batch 모드 오브젝트의 그 항목
     };
 

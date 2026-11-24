@@ -4,10 +4,10 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
-#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -68,6 +68,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
+
         TurretComponent();
         virtual ~TurretComponent() override = default;
 
@@ -124,7 +126,6 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Turret", DisplayName = "Hit Count", Tooltip = "Runtime" )
         int32 _hitCount;
 
-        FixedStepTimer               _clock;
         vector<InteractionCandidate> _listCandidate;          ///< 스텝마다 대상 후보를 모으는 버퍼(용량 재사용)
         vector<GameObject*>          _listTagged;             ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
         vector<TurretShotTarget>     _listShotTarget;         ///< 날아가는 탄이 이번 스텝에 맞힐 대상(용량 재사용)

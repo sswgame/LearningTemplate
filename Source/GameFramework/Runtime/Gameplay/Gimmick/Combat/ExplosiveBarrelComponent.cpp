@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
@@ -29,7 +30,6 @@ namespace sw
         , _damageTaken{ 0.0f }
         , _bExploded{ false }
         , _fuseStepsLeft{ -1 }
-        , _clock{}
         , _blastCenter{}
     {
     }
@@ -37,7 +37,7 @@ namespace sw
     void ExplosiveBarrelComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -53,7 +53,7 @@ namespace sw
         if ( _fuseTime > 0.0f )
         {
             if ( _fuseStepsLeft < 0 )
-                _fuseStepsLeft = _clock.secondsToSteps( _fuseTime, 1 );
+                _fuseStepsLeft = TickIntervalUtil::secondsToCount( kTickInterval, _fuseTime, 1 );
             if ( --_fuseStepsLeft <= 0 )
             {
                 explode( *pOwner );

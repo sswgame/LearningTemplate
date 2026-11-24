@@ -19,14 +19,13 @@ namespace sw
         , _shatterStrain{ 600.0f }
         , _damageTaken{ 0.0f }
         , _stage{ 0 }
-        , _clock{}
     {
     }
 
     void DestructibleComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

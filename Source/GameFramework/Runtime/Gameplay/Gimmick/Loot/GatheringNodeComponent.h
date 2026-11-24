@@ -4,10 +4,10 @@
  */
 #pragma once
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
-#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -27,6 +27,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
 
         GatheringNodeComponent();
         virtual ~GatheringNodeComponent() override = default;
@@ -78,7 +80,5 @@ namespace sw
         float32 _fallYaw;
         PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Standing Rotation", Tooltip = "Local rotation to stand up with again (runtime)", Units = rad )
         float3 _standingRotation;
-
-        FixedStepTimer _clock;
     };
 } // namespace sw

@@ -34,6 +34,7 @@ namespace sw
      *          같으면 행렬을 읽거나 풀지 않는다(매 프레임 폴링 대신). 알림 리스너로 하지 않은 이유: 더티 트랜스폼마다 간접 호출이 붙고 큐브
      *          20,000 개 벤치의 `GT.Frame` 이 그 경로를 지난다(EnginePartition 6.3). 칸을 다시 받아도 번호를 0 으로 되돌리지 않는 것은, 옛 번호를
      *          든 소비자가 같은 칸의 새 주인을 "안 바뀜"으로 보지 않게 하려는 것이다.
+     *          프레임마다 여럿을 물어야 하는 소비자(공간 색인 · 물리의 바닥 묻기)는 번호를 훑지 않고 움직임 줄(`_arrMoveInterest`, `SceneMoveDispatch`)을 듣는다 — 관심 없는 칸에는 비트 검사뿐이다.
      */
     struct alignas( SceneTransformPageInternal::kCacheLineAlignment ) SceneTransformPage
     {
@@ -78,6 +79,8 @@ namespace sw
         uint32          _arrWorldVersion[kSlotCount];     ///< 월드 변경 번호. 월드를 쓰는 `composeWorld` · `initializeSlot` 만 올리고 0 으로 되돌리지 않는다(아래 설명)
         uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 슬롯의 주인 오브젝트를 틱하는 스레드만 쓴다
         uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
+        uint8           _arrMoveInterest[kSlotCount];     ///< 움직임을 듣는 구독자 비트(`SceneMoveConsumer`). 게임 스레드가 플러시 밖에서만 쓴다
+        uint8           _arrMoveQueued[kSlotCount];       ///< 줄에 선 구독자 비트. 그 칸을 합성하는 스레드와, 플러시 밖의 게임 스레드만 쓴다
 
         /** @brief 받은 칸을 기본값(항등 로컬, 항등 월드, 소유자 알림 켬)으로 채웁니다(`ComponentDataStore` 페이지 계약). */
         void initializeSlot( uint32 pageIndex, SceneComponent* pOwner );

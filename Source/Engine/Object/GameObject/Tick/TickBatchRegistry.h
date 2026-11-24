@@ -44,6 +44,7 @@
 #include "Engine/Module/ModuleEntryRegistrar.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -189,7 +190,7 @@ namespace sw
     template <typename TComponent, const utf8* TScopeName>
     struct TickBatchOf
     {
-        static void tickRange( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime )
+        static void tickRange( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call )
         {
             SW_PROFILE_SCOPE( TScopeName );
             for ( uint32 index = 0; index < count; ++index )
@@ -198,13 +199,16 @@ namespace sw
                 TComponent*             pComp   = static_cast<TComponent*>( element._pComponent );
                 threadState._pTickingObject     = element._pObject;
                 threadState._pTickWriter        = element._pObject;
-                if ( shouldRunTickElement( *pComp, subTickID ) == false )
+                if ( shouldRunTickElement( *pComp, call._subTickID ) == false )
                     continue;
-                TickContext context{ *element._pObject, deltaTime };
-                if ( subTickID == 0 )
+                const TickTurn turn = call.computeTurn( pComp->getComponentID() );
+                if ( turn._intervalCount == 0 )
+                    continue;
+                TickContext context{ *element._pObject, turn };
+                if ( call._subTickID == 0 )
                     ReflectAccess<TickAccessTag>::onTick( *pComp, context );
                 else
-                    ReflectAccess<TickAccessTag>::onSubTick( *pComp, subTickID, context );
+                    ReflectAccess<TickAccessTag>::onSubTick( *pComp, call._subTickID, context );
             }
         }
     };
@@ -213,7 +217,7 @@ namespace sw
      * @brief 일괄 함수가 등록되지 않은 타입(생성기가 아직 내지 않은 타입 · 테스트 타입 · 모드만 물려받은 파생)의 Batch 모드 함수입니다 — 원소마다 가상 호출합니다.
      * @details Debug 카운터 `GT.Scene.tick.virtualTicks` 를 센다(5-3 측정 기반 — 생성기가 덮을수록 줄어든다).
      */
-    SW_API void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime );
+    SW_API void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call );
 
     /**
      * @brief `REFLECT( TickMode )` 를 적지 않은 컴포넌트의 등록 줄입니다 — 리플렉션 생성기가 추상이 아닌 컴포넌트마다 냅니다.

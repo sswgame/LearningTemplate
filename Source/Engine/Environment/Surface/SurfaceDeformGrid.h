@@ -68,7 +68,7 @@ namespace sw
          * @param drySpeed 마르는 속도(젖음/초, 0 보다 커야 영영 남지 않는다)
          */
         void applyWetPrint( float32 centerX, float32 centerZ, float32 yaw, const float2& size, float32 wetness, float32 drySpeed );
-        /** @brief 칸마다 0 을 향해 (메워지는 속도 × @p deltaTime) 만큼 메우고, 젖음은 (마르는 속도 × @p deltaTime) 만큼 말립니다. 자국이 남은 칸만 훑는다. */
+        /** @brief 칸마다 0 을 향해 (메워지는 속도 × @p deltaTime) 만큼 메우고, 젖음은 (마르는 속도 × @p deltaTime) 만큼 말립니다. 자국이 남은 칸만 훑고, 행을 작업 풀이 나눠 돈다(결과는 나누는 방법과 무관). */
         void fill( float32 deltaTime );
 
         /** @brief 월드 (@p x, @p z) 가 든 칸의 높이(m, 음수 = 꺼짐)입니다. 창 밖은 0 이다. */
@@ -102,12 +102,13 @@ namespace sw
         float2 getOrigin() const;
 
     private:
+        /** @brief 메우기 한 번의 작업입니다(정의는 .cpp). */
+        struct FillJob;
+
         /** @brief 월드 x(또는 z)를 월드 칸 번호로 바꿉니다(칸 경계는 텍셀 크기의 배수). */
         int32 toWorldCell( float32 world ) const;
         /** @brief 칸 (@p x, @p z) 의 배열 번호입니다. */
         uint32 toIndex( uint32 x, uint32 z ) const { return z * _resolution + x; }
-        /** @brief 칸 @p index 에 아직 자국(높이 · 젖음)이 남았는지입니다. */
-        bool isMarked( uint32 index ) const { return _listHeight[index] != 0.0f || _listWet[index] > 0.0f; }
         /** @brief 월드 (@p x, @p z) 가 든 칸 번호입니다. 창 밖이면 false 입니다. */
         [[nodiscard]] bool findIndexAt( float32 x, float32 z, uint32& outIndex ) const;
 

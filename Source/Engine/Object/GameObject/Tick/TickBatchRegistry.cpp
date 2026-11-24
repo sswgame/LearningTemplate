@@ -62,7 +62,7 @@ namespace sw
         return dispatch;
     }
 
-    void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, uint32 subTickID, float32 deltaTime )
+    void tickBatchVirtual( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, const TickBatchCall& call )
     {
         SW_PROFILE_SCOPE( "GT.Scene.tickBatch.virtual" );
         uint32 tickCount = 0;
@@ -72,13 +72,16 @@ namespace sw
             Component*              pComp   = element._pComponent;
             threadState._pTickingObject     = element._pObject;
             threadState._pTickWriter        = element._pObject;
-            if ( shouldRunTickElement( *pComp, subTickID ) == false )
+            if ( shouldRunTickElement( *pComp, call._subTickID ) == false )
                 continue;
-            TickContext context{ *element._pObject, deltaTime };
-            if ( subTickID == 0 )
+            const TickTurn turn = call.computeTurn( pComp->getComponentID() );
+            if ( turn._intervalCount == 0 )
+                continue;
+            TickContext context{ *element._pObject, turn };
+            if ( call._subTickID == 0 )
                 pComp->onTick( context );
             else
-                pComp->onSubTick( subTickID, context );
+                pComp->onSubTick( call._subTickID, context );
             ++tickCount;
         }
         if constexpr ( build::kDebug )

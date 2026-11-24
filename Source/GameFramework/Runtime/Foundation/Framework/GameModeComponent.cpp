@@ -213,6 +213,19 @@ namespace sw
         Component::onSubTick( subTickID, context );
         if ( subTickID == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
             deferRules( context );
+        if ( subTickID == kStatusSubTick )
+        {
+            context.deferPostTickOnComponent( *this, []( GameModeComponent& gameMode )
+            {
+                if ( gameMode._bStarted == SW_TRUE )
+                    gameMode.logStatus();
+            } );
+        }
+    }
+
+    void GameModeComponent::startStatusLog( float32 interval )
+    {
+        (void)registerSubTick( TickGroup::PrePhysics, kStatusSubTick, TickPhase::Normal, 0, interval ); // 핸들은 쓰지 않는다 — id 로 다룬다
     }
 
     void GameModeComponent::deferRules( TickContext& context )

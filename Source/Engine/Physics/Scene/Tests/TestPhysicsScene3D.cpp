@@ -283,6 +283,53 @@ SW_TEST_CASE( PhysicsCharacterTest, BatchMoveEqualsOneByOne )
 }
 
 /**
+ * @brief [PhysicsCharacterTest] 캐릭터끼리 막기의 격자는 순간이동 · 크기 바꾸기 · 지우기를 따라간다 — 옮긴 자리에서 막고 떠난 자리에서 막지 않는다
+ * @details 상대는 격자에서 먼저 거른다(`JoltCharacterSnapshotCollision`). 격자가 사본을 따라가지 못하면 옛 셀에만 남아 새 자리의 캐릭터를 뚫고 지나간다.
+ */
+SW_TEST_CASE( PhysicsCharacterTest, SnapshotGridFollowsTeleportResizeAndDestroy )
+{
+    const PhysicsSystem&              system = engine::getSubsystem<PhysicsSystem>();
+    const unique_ptr<IPhysicsScene3D> pScene = system.createScene3D();
+    SW_REQUIRE_NOT_NULL( pScene.get() );
+    PhysicsCharacterDesc3D       desc;
+    const PhysicsCharacterHandle walker  = pScene->createCharacter( desc );
+    desc._position                       = float3{ 50.0f, 0.0f, 0.0f };
+    const PhysicsCharacterHandle blocker = pScene->createCharacter( desc );
+    for ( uint32 index = 0; index < 64; ++index ) // 격자에 다른 셀들도 채운다
+    {
+        desc._position = float3{ -10.0f - 2.0f * static_cast<float32>( index % 8 ), 0.0f, 10.0f + 2.0f * static_cast<float32>( index / 8 ) };
+        SW_REQUIRE_TRUE( pScene->createCharacter( desc ).isValid() );
+    }
+
+    const auto walk = [&pScene, walker]()
+    {
+        pScene->setCharacterPosition( walker, float3{} );
+        for ( uint32 step = 0; step < 120; ++step )
+        {
+            (void)pScene->moveCharacter( walker, float3{ 2.0f, 0.0f, 0.0f }, TestPhysicsScene3DInternal::kFrame );
+        }
+        PhysicsCharacterState3D state{};
+        SW_EXPECT_TRUE( pScene->getCharacterState( walker, state ) );
+        return state._position._x;
+    };
+    constexpr float32 kTolerance = 0.1f;
+    SW_EXPECT_TRUE( walk() > 3.5f ); // 상대는 멀다 — 4 m 를 걷는다
+
+    pScene->setCharacterPosition( blocker, float3{ 2.5f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( walk() < 2.5f - 2.0f * desc._radius + kTolerance ); // 옮긴 자리에서 막는다
+
+    SW_REQUIRE_TRUE( pScene->setCharacterSize( blocker, 1.0f, desc._halfHeight ) );
+    SW_EXPECT_TRUE( walk() < 1.5f - desc._radius + kTolerance ); // 커진 몸이 더 앞에서 막는다
+
+    pScene->setCharacterPosition( blocker, float3{ 50.0f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( walk() > 3.5f ); // 떠난 자리에서 막지 않는다
+
+    pScene->setCharacterPosition( blocker, float3{ 2.5f, 0.0f, 0.0f } );
+    pScene->destroyCharacter( blocker );
+    SW_EXPECT_TRUE( walk() > 3.5f ); // 지운 캐릭터는 막지 않는다
+}
+
+/**
  * @brief [PhysicsScene3DTest] 마주 걷는 캐릭터 둘은 서로 막혀 지나치지 않는다(감사 S-7 — 씬의 캐릭터 대 캐릭터 충돌)
  * @details 3 m 떨어진 둘이 2 m/s 로 1.5 초 걸으면 막는 것이 없을 때 자리를 바꾼다(예전: 캐릭터는 이동 질의로만 세계를 보고 다른 캐릭터는 바디가 아니었다).
  */

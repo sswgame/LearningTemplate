@@ -44,6 +44,7 @@ namespace sw
 
             /**
              * @brief 감시 값 `Scene.ComponentTickShare` 입니다. 컴포넌트 틱 시간 / 실제 프레임 시간(백분율)입니다.
+             * @details 주기를 선언할 형식(`Component::kTickInterval`)을 고르고 퇴행을 보는 값이다.
              */
             [[nodiscard]] static bool readComponentTickShare( const GameObjectManager* pManager, float64& outValue )
             {

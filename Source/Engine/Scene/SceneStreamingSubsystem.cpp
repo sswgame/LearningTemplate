@@ -81,6 +81,7 @@ namespace sw
         , _cameraSource{}
         , _bCameraSourceSet{ SW_FALSE }
         , _bExternalSources{ SW_FALSE }
+        , _floorSerial{ 0 }
         , _changeSerial{ 0 }
         , _listScratchCell{}
         , _listScratchLoad{}
@@ -186,6 +187,7 @@ namespace sw
 
     void SceneStreamingSubsystem::clearSlots()
     {
+        ++_floorSerial;
         _listCell.clear();
         _mapCellIndex.clear();
         _mapCoverIndex.clear();
@@ -210,7 +212,10 @@ namespace sw
     void SceneStreamingSubsystem::setSlotState( CellSlot& slot, const CellState state )
     {
         const bool bWasLoaded = slot._state == CellState::Loaded;
+        const bool bWasDone   = bWasLoaded || slot._state == CellState::Failed;
         slot._state           = state;
+        if ( bWasDone != ( state == CellState::Loaded || state == CellState::Failed ) )
+            ++_floorSerial;
         if ( slot._hlodFileID != 0 && bWasLoaded != ( state == CellState::Loaded ) )
             _listHLODDirty.push_back( slot._slotIndex );
         const bool bActive = state != CellState::Unloaded && state != CellState::Failed;
@@ -813,6 +818,11 @@ namespace sw
         {
             listInto.push_back( std::move( node ) );
         }
+    }
+
+    uint64 SceneStreamingSubsystem::getFloorSerial() const
+    {
+        return _pScene != nullptr ? _floorSerial + _pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().getActiveSerial() : _floorSerial;
     }
 
     bool SceneStreamingSubsystem::isFloorMissing( const float3& position ) const

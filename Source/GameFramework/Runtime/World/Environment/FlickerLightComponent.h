@@ -4,8 +4,8 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,6 +25,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        static constexpr float32 kTickInterval = constant::time::kDefaultFixedStepSeconds; ///< 고정 걸음마다 한 번 — 지연 · 간격을 걸음 수로 센다(프레임 시간과 무관하게 같은 걸음)
+
         FlickerLightComponent();
         virtual ~FlickerLightComponent() override = default;
 
@@ -41,8 +43,7 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Flicker", DisplayName = "Step", Tooltip = "Runtime" )
         int32 _step;
 
-        FixedStepTimer _clock;
-        float32        _baseIntensity;
-        float32        _appliedScale;
+        float32 _baseIntensity;
+        float32 _appliedScale;
     };
 } // namespace sw

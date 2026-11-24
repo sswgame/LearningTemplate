@@ -225,6 +225,7 @@ namespace sw
         , _reservedFlags{ 0 }
         , _poolEntrySlot{ kNotInPoolEntry }
         , _listSubTick{}
+        , _tickInterval{ 0.0f }
     {
         // **여기서 기본값을 적용하지 않는다.** 생성 중에는 객체가 아직 Component 라 가상
         // `getTypeInfo()` 가 **파생 타입이 아니라 기반 타입의 TypeInfo** 를 내놓는다 — MeshComponent 를
@@ -309,13 +310,19 @@ namespace sw
         (void)context;
     }
 
-    SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase, uint8 priority )
+    SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase, uint8 priority, float32 interval )
     {
         if ( subTickID == 0 )
             return {};
         if ( isValidTickGroup( group ) == false )
         {
             SW_LOG_WARNING_ID( "Component.SubTickAsksTick", "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickID, static_cast<uint32>( group ) );
+            return {};
+        }
+        const bool bValidInterval = interval >= 0.0f; // NaN 도 여기서 걸러진다
+        if ( bValidInterval == false )
+        {
+            SW_LOG_ERROR_ID( "Component.SubTickInterval", "Sub-tick %# asks for the interval %# s - an interval is 0 (every frame) or longer; not registered", subTickID, interval );
             return {};
         }
         if ( priority > kMaxTickPriority )
@@ -325,12 +332,13 @@ namespace sw
             priority = kMaxTickPriority;
         }
         // 틱 중이면 목록 · 마스크 모두 틱 뒤로 — 핸들은 목록과 상관없이 정해지므로 바로 돌려준다(헤더 머리말).
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickID, phase, priority]( Component& self )
-        { self.registerSubTick( group, subTickID, phase, priority ); } ) ) )
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickID, phase, priority, interval]( Component& self )
+        { self.registerSubTick( group, subTickID, phase, priority, interval ); } ) ) )
             return makeTickHandle( subTickID );
 
         if ( SubTickInfo* pInfo = VectorUtil::findBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID ) )
         {
+            pInfo->_interval = interval;
             pInfo->_group    = group;
             pInfo->_phase    = phase;
             pInfo->_priority = priority;
@@ -343,6 +351,7 @@ namespace sw
 
         SubTickInfo newInfo{};
         newInfo._subTickID = subTickID;
+        newInfo._interval  = interval;
         newInfo._group     = group;
         newInfo._phase     = phase;
         newInfo._priority  = priority;

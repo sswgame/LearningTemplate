@@ -217,14 +217,8 @@ namespace sw
     {
         outListHandle.clear();
 
-        const AABB2D queryBounds = SpatialHashGrid2DInternal::makeBounds( minX, minY, maxX, maxY );
-
-        forEachCandidateHandle( CellRange::fromBounds( minX, minY, maxX, maxY, _cellSize ), [&]( SlotHandle handle )
-        {
-            const auto boundIt = _mapHandleBound.find( handle );
-            if ( boundIt != _mapHandleBound.end() && queryBounds.intersects( boundIt->second ) )
-                outListHandle.push_back( handle );
-        } );
+        visitAABB( SpatialHashGrid2DInternal::makeBounds( minX, minY, maxX, maxY ), [&outListHandle]( SlotHandle handle )
+        { outListHandle.push_back( handle ); } );
 
         VectorUtil::sortUnique( outListHandle );
     }

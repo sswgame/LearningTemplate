@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
@@ -23,7 +24,6 @@ namespace sw
         , _to{}
         , _stepsLeft{ 0 }
         , _moveSteps{ 0 }
-        , _clock{}
     {
     }
 
@@ -53,7 +53,7 @@ namespace sw
             return false;
         _from      = pManager->getWorldOrigin().toAbsolute( from ); // 저장하는 자리라 절대다 — 되돌릴 때의 원점이 다를 수 있다
         _to        = pManager->getWorldOrigin().toAbsolute( from + cellStep );
-        _moveSteps = _clock.secondsToSteps( _moveTime, 1 );
+        _moveSteps = TickIntervalUtil::secondsToCount( kTickInterval, _moveTime, 1 );
         _stepsLeft = _moveSteps;
         return true;
     }
@@ -75,7 +75,7 @@ namespace sw
     void PushBlockComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();

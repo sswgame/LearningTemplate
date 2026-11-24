@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
@@ -23,7 +24,6 @@ namespace sw
         , _steps{ 0 }
         , _lastOccupantCount{ 0 }
         , _emitCount{ 0 }
-        , _clock{}
     {
     }
 
@@ -67,7 +67,7 @@ namespace sw
             if ( pStimulus != nullptr )
                 pStimulus->clearNoise();
         }
-        const int32 stepCount = _clock.consume( context.getDeltaTime() );
+        const int32 stepCount = context.getIntervalCount();
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepOnce();
@@ -77,7 +77,7 @@ namespace sw
     void NoiseEmitterComponent::stepOnce()
     {
         ++_steps;
-        if ( _interval > 0.0f && _steps % _clock.secondsToSteps( _interval, 1 ) == 0 )
+        if ( _interval > 0.0f && _steps % TickIntervalUtil::secondsToCount( kTickInterval, _interval, 1 ) == 0 )
             emit( _radius );
         const GameObject*             pOwner  = getOwner();
         const GimmickSensorComponent* pSensor = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;

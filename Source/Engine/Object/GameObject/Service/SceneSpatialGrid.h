@@ -5,8 +5,8 @@
  *          컴포넌트)이 등록 · 해제할 때만 항목을 올리고 내리며, 읽는 쪽은 질의만 한다(언리얼 Chaos 의 외부 가속 구조 — 물리가 맞춘 구조를 게임 스레드 질의가
  *          읽기만 하는 것, 유니티 `Physics` 의 질의 트리와 같은 자리).
  *
- *          - **증분:** 맞추는 층의 항목마다 월드 변경 번호(`SceneComponent::getWorldTransformVersion`)를 그 버퍼가 마지막에 본 번호와 비교해 다른 것만 격자에 고쳐 넣는다.
- *            씬 트랜스폼 세대로 통째로 건너뛰지 않는 것은 그 세대를 올리지 않는 쓰기 길(물리 일괄 쓰기)이 있어도 틀리지 않게 하려는 것이다 — 비교는 칸마다 정수 하나다.
+ *          - **증분:** 움직인 소스만 받는다(`SceneMoveConsumer` — 유니티 `TransformChangeDispatch`, 언리얼 이동이 물리 구조에 올리는 더티, Godot 의 이동 알림과 같은 자리).
+ *            서 있는 항목은 프레임마다 묻지 않는다. 움직인 항목은 두 버퍼의 줄에 서고, 버퍼마다 자기 차례에 마지막에 본 월드 변경 번호와 달라진 것만 격자에 고쳐 넣는다.
  *          - **이중 버퍼:** 격자는 층마다 둘이다. 읽기는 앞 버퍼만 보고, `SpatialIndex` 단계 끝(`update`, 게임 스레드)이 뒤 버퍼의 바뀐 항목을 모아 워커에 넘긴다.
  *            일은 `TickPostPhysics` 틱과 겹쳐 돌고 `ApplyPostPhysics` 본문 앞(`completeFrameJob`)에서 앞뒤를 바꾼다 — 그 사이 틱의 질의는 지난 프레임의 앞 버퍼를 본다.
  *            버퍼마다 자기가 본 번호를 들므로 두 버퍼에 같은 바뀜을 따로 기록하지 않는다.
@@ -20,12 +20,15 @@
 #pragma once
 #include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Spatial/SpatialHashGrid2D.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Object/Component/SceneMoveDispatch.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw
@@ -116,14 +119,16 @@ namespace sw
         /** @brief 항목 하나입니다. 핸들의 인덱스가 `_listEntry` 의 번호입니다. */
         struct Entry
         {
-            Component*            _pKey{ nullptr }; ///< nullptr 이면 빈 칸이거나 뒤 버퍼에서 빼기를 기다린다
-            const SceneComponent* _pSource{ nullptr };
-            uint64                _sequence{ 0 }; ///< 올린 순서(질의 결과의 순서)
+            Component*            _pKey{ nullptr };    ///< nullptr 이면 빈 칸이거나 뒤 버퍼에서 빼기를 기다린다
+            const SceneComponent* _pSource{ nullptr }; ///< 항목보다 먼저 사라질 수 있다(같은 오브젝트의 해체 차례) — `isSourceAlive` 로 본 뒤에만 읽는다
+            uint64                _sequence{ 0 };      ///< 올린 순서(질의 결과의 순서)
             float32               _extent{ 0.0f };
             uint32                _layerIndex{ 0 };
-            uint32                _positionInLayer{ 0 }; ///< 층의 `_listEntryIndex` 안 자리
-            uint32                _generation{ 1 };      ///< 핸들 세대(0 은 무효)
-            uint32                _arrSeenVersion[2]{};  ///< 버퍼마다 마지막에 넣은 월드 변경 번호. 0 이면 넣지 않았다(번호는 1 부터 오른다)
+            uint32                _sourceSlot{ 0 };                                  ///< 소스의 트랜스폼 칸(살아 있는지 본다)
+            uint32                _positionInLayer{ 0 };                             ///< 층의 `_listEntryIndex` 안 자리
+            uint32                _generation{ 1 };                                  ///< 핸들 세대(0 은 무효)
+            uint32                _nextOfSource{ constant::invalid_index::kUint32 }; ///< 같은 소스의 다음 항목(`_mapSourceEntry` 의 줄)
+            uint32                _arrSeenVersion[2]{};                              ///< 버퍼마다 마지막에 넣은 월드 변경 번호. 0 이면 넣지 않았다(번호는 1 부터 오른다)
         };
         /** @brief 층 하나입니다. */
         struct Layer
@@ -164,20 +169,33 @@ namespace sw
         /** @brief 넘긴 일입니다(워커). 뒤 버퍼에만 쓴다. */
         void rebuildBackBuffer();
         void waitBackBufferRebuild();
+        /** @brief 항목 @p entry 의 소스가 아직 살아 있으면 true 입니다. */
+        static bool isSourceAlive( const Entry& entry ) { return SceneMoveConsumer::isAlive( entry._sourceSlot, entry._pSource ); }
+        /** @brief 움직인 소스의 항목을 두 버퍼의 줄에 세웁니다(`update` 의 첫 일). */
+        void collectMovedEntries();
+        /** @brief 항목 @p entryIndex 를 소스의 줄에 잇습니다 — 소스의 움직임을 듣는다. */
+        void linkSource( uint32 entryIndex );
+        /** @brief 항목 @p entryIndex 를 소스의 줄에서 뗍니다 — 마지막 항목이면 그만 듣는다. */
+        void unlinkSource( uint32 entryIndex );
 
     private:
-        vector<Entry>   _listEntry;
-        vector<uint32>  _listFreeEntry;
-        vector<uint32>  _listRemovedEntry; ///< 앞 버퍼에서 뺐고 뒤 버퍼에서 빼기를 기다리는 칸(넘긴 일이 끝나면 비운다)
-        vector<Layer>   _listLayer;
-        vector<Change>  _listChange;    ///< 이번에 넘긴 일의 몫
-        Layer*          _pJobLayer;     ///< 넘긴 일이 보는 층 배열(일을 띄울 때 잡는다 — 일이 도는 동안 층 벡터는 자라지 않는다)
-        uint32          _jobLayerCount; ///< 위 배열의 수
-        TaskStageHandle _jobStage;
-        uint64          _nextSequence;
-        DevCounter      _appliedChangeCount;
-        uint8           _frontIndex;
-        uint8           _bJobLaunched  : 1;
-        uint8           _bJobOnWorkers : 1;
+        GameObjectManager&                           _manager;
+        SceneMoveConsumer                            _moves;
+        unordered_map<const SceneComponent*, uint32> _mapSourceEntry;     ///< 소스 → 첫 항목 번호(나머지는 `Entry::_nextOfSource`). 열쇠는 견주기만 한다
+        vector<SceneComponent*>                      _listMovedSource;    ///< 이번에 꺼낸 움직인 소스(재사용)
+        vector<uint32>                               _arrPendingEntry[2]; ///< 버퍼마다 고쳐 넣을지 볼 항목 번호(겹쳐 설 수 있다 — 본 번호가 거른다)
+        vector<Entry>                                _listEntry;
+        vector<uint32>                               _listFreeEntry;
+        vector<uint32>                               _listRemovedEntry; ///< 앞 버퍼에서 뺐고 뒤 버퍼에서 빼기를 기다리는 칸(넘긴 일이 끝나면 비운다)
+        vector<Layer>                                _listLayer;
+        vector<Change>                               _listChange;    ///< 이번에 넘긴 일의 몫
+        Layer*                                       _pJobLayer;     ///< 넘긴 일이 보는 층 배열(일을 띄울 때 잡는다 — 일이 도는 동안 층 벡터는 자라지 않는다)
+        uint32                                       _jobLayerCount; ///< 위 배열의 수
+        TaskStageHandle                              _jobStage;
+        uint64                                       _nextSequence;
+        DevCounter                                   _appliedChangeCount;
+        uint8                                        _frontIndex;
+        uint8                                        _bJobLaunched  : 1;
+        uint8                                        _bJobOnWorkers : 1;
     };
 } // namespace sw

@@ -741,7 +741,13 @@ namespace sw
             {
                 const uint8 group = static_cast<uint8>( pComp->getTickGroup() );
                 if ( group < kGroupCount )
-                    listItem.push_back( TickItem{ pComp, 0, group, static_cast<uint8>( TickPhase::Normal ), SW_FALSE } );
+                {
+                    TickItem& item   = listItem.emplace_back();
+                    item._pComponent = pComp;
+                    item._group      = group;
+                    item._orderKey   = static_cast<uint8>( TickPhase::Normal );
+                    item._interval   = pComp->getTickInterval();
+                }
             }
             for ( const SubTickInfo& subTick : pComp->getAllSubTicks() )
             {
@@ -752,8 +758,13 @@ namespace sw
                     continue;
                 const bool bHasPrerequisite = subTick._listPrerequisite.empty() == false;
                 // 우선순위는 등록할 때 `kMaxTickPriority` 로 묶였다 — 단계(64 칸)를 넘지 않는다.
-                listItem.push_back( TickItem{ pComp, subTick._subTickID, group, static_cast<uint8>( static_cast<uint8>( subTick._phase ) + subTick._priority ),
-                                              static_cast<uint8>( bHasPrerequisite ? SW_TRUE : SW_FALSE ) } );
+                TickItem& item         = listItem.emplace_back();
+                item._pComponent       = pComp;
+                item._subTickID        = subTick._subTickID;
+                item._group            = group;
+                item._orderKey         = static_cast<uint8>( static_cast<uint8>( subTick._phase ) + subTick._priority );
+                item._bHasPrerequisite = static_cast<uint8>( bHasPrerequisite ? SW_TRUE : SW_FALSE );
+                item._interval         = subTick._interval;
                 prerequisiteCount += static_cast<uint32>( subTick._listPrerequisite.size() );
                 dependentCount += bHasPrerequisite ? 1u : 0u;
             }
@@ -1059,7 +1070,8 @@ namespace sw
             TickBatchList*          pBatchList = nullptr;
             for ( TickBatchList& batchList : wave._listBatch )
             {
-                if ( batchList._pFunction == pFunction && batchList._subTickID == item._subTickID )
+                const bool bSameKey = batchList._pFunction == pFunction && batchList._subTickID == item._subTickID && batchList._interval == item._interval;
+                if ( bSameKey )
                 {
                     pBatchList = &batchList;
                     break;
@@ -1070,6 +1082,7 @@ namespace sw
                 pBatchList             = &wave._listBatch.emplace_back();
                 pBatchList->_pFunction = pFunction;
                 pBatchList->_subTickID = item._subTickID;
+                pBatchList->_interval  = item._interval;
             }
             item._batchIndex = static_cast<uint32>( pBatchList->_listElement.size() );
             pBatchList->_listElement.push_back( TickBatchElement{ item._pComponent, pObj } );
@@ -1184,12 +1197,13 @@ namespace sw
                 }
                 const TickBatchFunction pFunction   = resolveTypeDispatch( pBatchRegistry, pComp )._pFunction;
                 const bool              bSameAsLast = bPerItem == false && stage._listBatch.empty() == false && stage._listBatch.back()._pFunction == pFunction &&
-                                         stage._listBatch.back()._subTickID == item._subTickID;
+                                         stage._listBatch.back()._subTickID == item._subTickID && stage._listBatch.back()._interval == item._interval;
                 if ( bSameAsLast == false )
                 {
                     TickBatchList& created = stage._listBatch.emplace_back();
                     created._pFunction     = pFunction;
                     created._subTickID     = item._subTickID;
+                    created._interval      = item._interval;
                 }
                 stage._listBatch.back()._listElement.push_back( TickBatchElement{ pComp, pComp->getOwner() } );
             }

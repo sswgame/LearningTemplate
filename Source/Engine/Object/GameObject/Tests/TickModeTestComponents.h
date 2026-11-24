@@ -212,6 +212,48 @@ namespace sw
     };
 
     /**
+     * @brief 주 틱에 주기를 선언하고 서브틱에 다른 주기를 건 컴포넌트입니다(`TestTickInterval.cpp`). 돈 프레임과 받은 시간을 적는다.
+     */
+    REFLECT( HideInMenu )
+    class TickIntervalTestComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr float32 kTickInterval    = 0.125f; ///< 이진수로 딱 맞는 값 — 테스트 프레임(1/64 초) 여덟
+        static constexpr uint32  kSlowSubTick     = 1;
+        static constexpr float32 kSlowTickSeconds = 0.5f;
+
+        vector<uint32> _listTickFrame;      ///< 주 틱이 돈 프레임(주기 수만큼 되풀이해 적는다)
+        uint32*        _pFrame{ nullptr };  ///< 테스트가 세는 프레임
+        float32        _tickSeconds = 0.0f; ///< 주 틱이 받은 시간의 합
+        uint32         _tickCount   = 0;    ///< 주 틱이 불린 수
+        uint32         _slowCount   = 0;
+
+        void onRegister( GameObjectManager& manager ) override
+        {
+            Component::onRegister( manager );
+            (void)registerSubTick( TickGroup::DuringPhysics, kSlowSubTick, TickPhase::Normal, 0, kSlowTickSeconds );
+        }
+
+        void onTick( TickContext& context ) override
+        {
+            ++_tickCount;
+            _tickSeconds += context.getDeltaTime();
+            for ( int32 index = 0; index < context.getIntervalCount(); ++index )
+            {
+                _listTickFrame.push_back( *_pFrame );
+            }
+        }
+
+        void onSubTick( uint32 subTickID, TickContext& /*context*/ ) override
+        {
+            if ( subTickID == kSlowSubTick )
+                ++_slowCount;
+        }
+    };
+
+    /**
      * @brief 해체될 때(`onDestroy`) 같은 매니저에 오브젝트를 하나 만드는 컴포넌트입니다(`TestObjectLifetime.cpp` — 씬을 비우는 중의 생성).
      * @details 게임 코드의 "죽을 때 파편 · 드롭을 남긴다" 와 같은 모양이다. 만든 수를 테스트가 준 칸에 센다.
      */

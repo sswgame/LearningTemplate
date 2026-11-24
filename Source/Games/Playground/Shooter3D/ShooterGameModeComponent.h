@@ -264,7 +264,7 @@ namespace sw
         /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자(자동 조준 AI 또는 플레이어 0)에게 넘깁니다(게임 스레드, 틱 밖). */
         void syncAutoPlayPossession( GameObjectManager& manager );
         void clearEnemies();
-        void logStatus( float32 deltaTime );
+        void logStatus() const override;
 
     private:
         PROPERTY( Category = "Prefabs", Tooltip = "Pooled sphere for hits and muzzle flashes" )
@@ -318,7 +318,6 @@ namespace sw
         MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
         GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
         AbsolutePosition                    _playerFeet;
-        float32                             _statusTimer;
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
         PROPERTY( RuntimeState )

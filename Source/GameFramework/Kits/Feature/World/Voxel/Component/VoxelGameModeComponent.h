@@ -84,7 +84,7 @@ namespace sw
     private:
         /** @brief 몸(놓기 전이면 월드 가운데) 둘레의 청크만 월드에 올립니다. */
         void updateResidency();
-        void logStatus( float32 deltaTime );
+        void logStatus() const override;
         /** @brief 플레이어 폰의 조종자를 자동 플레이 스위치에 맞게 바꿉니다. 틱 밖의 게임 스레드에서 부릅니다. */
         void syncAutoPlayPossession( GameObjectManager& manager );
 
@@ -130,8 +130,7 @@ namespace sw
         SharedAssetRef<VoxelBlockCatalog> _pCatalog; ///< 게임 기능 Voxel 이 건 블록 카탈로그 — 월드가 빌린다
         VoxelWorld                        _world;
         GameObjectHandle                  _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
-        float32                           _statusTimer;
-        int32                             _centerChunkX; ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
+        int32                             _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
         int32                             _centerChunkZ;
         int8                              _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
     };

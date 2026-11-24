@@ -220,6 +220,7 @@ namespace sw
 
         ScenePhysics*         _pScenePhysics;
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
+        uint32                _floorMissingIndex;      ///< 바닥 없는 자리 목록(`ScenePhysics::FloorTracking::_listMissing`)의 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
         float3                _syncedLocalPosition;    ///< 마지막으로 맞춘 때의 로컬 자리(`consumeTransformChange` 가 바깥이 바꾼 몫을 가른다)
         float3                _syncedLocalRotation;    ///< 마지막으로 맞춘 때의 로컬 회전

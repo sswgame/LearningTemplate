@@ -14,6 +14,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneMoveDispatch.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
@@ -294,6 +295,10 @@ namespace sw
         SceneComponent* pOwner = page._arrOwner[pageIndex];
         if ( ( page._arrFlag[pageIndex] & SceneTransformPage::kNotifyOwner ) != 0 && pOwner != nullptr )
             pOwner->onWorldTransformUpdated();
+        // 움직임을 듣는 구독자의 줄(`SceneMoveDispatch`) — 아직 서지 않은 비트가 있을 때만 세운다.
+        const uint8 moveMask = static_cast<uint8>( page._arrMoveInterest[pageIndex] & ~page._arrMoveQueued[pageIndex] );
+        if ( moveMask != 0 && pOwner != nullptr )
+            SceneMoveDispatch::queueMoved( *pOwner, moveMask );
     }
 
     bool SceneTransformHierarchy::applyLocalChange( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry )
