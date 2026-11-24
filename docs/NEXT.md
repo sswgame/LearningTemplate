@@ -20,7 +20,7 @@
 
 ## 2. 통합 빌드에서 볼 것
 
-- **합친 묶음:** `net-pair` 전체(mmo · match), `lockstep-pair`, `online-local run`, `telemetry-local`, Server · Shipping · 웹 · Android 구성이 온라인 키트와 클라이언트 키트를 링크.
+- **합친 묶음:** `net-pair` 전체(mmo · match · respawn), `lockstep-pair`, `online-local run`, `telemetry-local`, Server · Shipping · 웹 · Android 구성이 온라인 키트와 클라이언트 키트를 링크.
 - **RHI 메모리(VMA · D3D12MA):** 네 백엔드 체인 `-rhi-validation`, 장치 소실 · 창 크기 · 되읽기, 종료 로그 `RHI.AllocationLeak` 없음.
 - **셰이더:** `--cook-shaders -webgpu`(Tint 변환 — `vfx_simulate` · `mesh_morph` · `scene_voxelize`).
 - **쿠킹본 실행:** `Test/Pack/RunCookedContent.cmake`(A-13 [36]), 모든 쿠킹에서 `PackCookNoIdentity` 0.
@@ -45,7 +45,6 @@
 
 정한 줄은 지웠다. 남은 줄은 정본과 견줘 고치거나 지운다 — 재서 정하지 않는다.
 
-- `[코드]` **카탈로그 쿠킹 꼴:** 카탈로그를 굽는 쿠커가 없다 — 언리얼 DataTable 처럼 이진 꼴로 구울지 정한다.
 - **RHI 큰 것:** RHI 스레드, 복사 큐, SM6.6 동적 자원, Vulkan 동적 오프셋 · 푸시 디스크립터, RT · 메시 셰이더 — 기능을 쓸 게임 요구가 생길 때.
 
 ## 6. 설계 할 일
@@ -53,7 +52,6 @@
 ### 코어 · 리플렉션
 
 - `[코드]` 멤버 · 지역 · 매개변수 이름 형태(`_camelCase` · `out…` · 단수 컨테이너)를 clang 색인으로 자동 검사(`naming_words.py` 는 정규식이다).
-- `[코드]` 받는 쪽 없는 이벤트(방 클리어 `ActionCombatEvents.h`, 빙의 `ControlEvents.h` 등 — 버스 구독은 둘뿐이다)를 HUD · 카메라에 잇거나 지운다.
 
 ### 에디터 · 도구
 
@@ -62,7 +60,6 @@
 
 ### 게임플레이
 
-- `[코드]` 두 사람이 싸우는 온라인 미니게임의 `netpair/` 리스폰 시나리오(허브 아바타는 죽지 않는다).
 - MMO 키트 부하 목표 · 운영 비용(측정).
 
 ## 7. 허브 흡수
@@ -86,7 +83,6 @@
 
 정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
-- `[코드]` 허브: 카드 탁자의 숨긴 손패를 서버가 나눈다(`HubCardTableComponent.h:7`), 허브 폰 복제를 절대 자리로(`HubPawnReplicationComponent.h:14`).
 
 ## 11. 리소스
 
