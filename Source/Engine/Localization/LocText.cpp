@@ -86,8 +86,12 @@ namespace sw
                     const size_t colon  = body.find( ':' );
                     int32        digits = 0;
                     float64      number = 0.0;
-                    if ( colon != string_view::npos && StringUtil::parseInt( body.substr( 0, colon ), digits ) && StringUtil::parseDouble( body.substr( colon + 1 ), number ) )
+                    if ( colon == string_view::npos || StringUtil::parseDouble( body.substr( colon + 1 ), number ) == false )
+                        return;
+                    if ( colon > 0 && StringUtil::parseInt( body.substr( 0, colon ), digits ) )
                         inoutArguments.addDecimal( name, number, static_cast<uint32>( digits ) );
+                    else
+                        inoutArguments.addDecimal( name, number );
                     return;
                 }
                 inoutArguments.addText( name, kind == kArgumentKey ? LocalizedText::resolve( pLocalization, body ) : string( body ) );
@@ -126,6 +130,8 @@ namespace sw
                 const utf8* pPattern = pLocalization->findStringByText( key );
                 if ( pPattern == nullptr )
                     pLocalization->reportMissingKey( key );
+                if ( listField.size() == 1 )
+                    return pPattern != nullptr ? string( pPattern ) : string( key ); // 인자가 없으면 패턴이 아니라 글이다(중괄호 · 따옴표가 그대로 보인다)
                 return pLocalization->formatText( pPattern != nullptr ? string_view( pPattern ) : key, arguments );
             }
         };
@@ -198,6 +204,13 @@ namespace sw
     {
         StringBuilder<constant::buffer::kMax64> number;
         number.appendFormat( "%#:%#", fractionDigits, Fmt( value, Format().precision( 9 ) ) );
+        return addValue( name, LocTextInternal::kArgumentDecimal, number.view() );
+    }
+
+    LocalizedMessage& LocalizedMessage::addDecimal( string_view name, float64 value )
+    {
+        StringBuilder<constant::buffer::kMax64> number;
+        number.appendFormat( ":%#", Fmt( value, Format().precision( 9 ) ) );
         return addValue( name, LocTextInternal::kArgumentDecimal, number.view() );
     }
 

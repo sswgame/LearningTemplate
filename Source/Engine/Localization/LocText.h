@@ -65,6 +65,8 @@ namespace sw
         LocalizedMessage& addInteger( string_view name, int64 value );
         /** @brief 소수 자리를 고정한 소수 인자입니다(`TextArgumentList::addDecimal`). */
         LocalizedMessage& addDecimal( string_view name, float64 value, uint32 fractionDigits );
+        /** @brief 소수 자리를 값이 정하는 소수 인자입니다(끝의 0 은 보이지 않는다). */
+        LocalizedMessage& addDecimal( string_view name, float64 value );
         /** @brief 화면 글 칸에 넣을 글입니다. */
         string str() const;
 

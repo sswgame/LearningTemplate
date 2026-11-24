@@ -9,7 +9,6 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
@@ -281,10 +280,10 @@ namespace sw
         return VectorUtil::findBy<&DialogueSpeaker::_id>( _listSpeaker, speakerID );
     }
 
-    string DialogueGraphAsset::resolveSpeakerName( uint32 speakerID ) const
+    string DialogueGraphAsset::getSpeakerName( uint32 speakerID ) const
     {
         const DialogueSpeaker* pSpeaker = findSpeaker( speakerID );
-        return pSpeaker != nullptr ? resolveLocalizedText( pSpeaker->_name ) : string{};
+        return pSpeaker != nullptr ? pSpeaker->_name : string{};
     }
 
     uint32 DialogueGraphAsset::makeNextSpeakerID() const
@@ -392,22 +391,6 @@ namespace sw
     const DialogueNodeInfo* DialogueGraphAsset::findNodeInfo( DialogueAssetNodeKind type )
     {
         return type < DialogueAssetNodeKind::Count ? &kArrDialogueNodeInfo[type] : nullptr;
-    }
-
-    string DialogueGraphAsset::resolveLocalizedText( string_view textOrKey )
-    {
-        if ( textOrKey.empty() )
-            return {};
-        if ( engine::areEngineServicesBound() == false )
-            return string{ textOrKey };
-
-        // **키가 아닐 수도 있는 텍스트로 조회한다.** `hashed_string` 을 만들어 조회하면 그 대사 원문이
-        // intern 아레나에 영구히 남아, 대화가 늘수록 메모리가 누수된다. 테이블은 해시로만
-        // 조회되므로 intern 없이 조회할 수 있다.
-        const utf8* pResolved = engine::getSubsystem<LocalizationManager>().findStringByText( textOrKey );
-        if ( StringUtil::isNullOrEmpty( pResolved ) )
-            return string{ textOrKey };
-        return string{ pResolved };
     }
 } // namespace sw
 

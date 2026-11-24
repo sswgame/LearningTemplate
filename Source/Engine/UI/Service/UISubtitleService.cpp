@@ -106,7 +106,7 @@ namespace sw
         UISubtitleLine line{};
         line._speaker          = string{ speaker };
         line._text             = string{ text };
-        line._durationSeconds  = durationSeconds > 0.0f ? durationSeconds : computeReadingSeconds( text );
+        line._durationSeconds  = durationSeconds > 0.0f ? durationSeconds : computeReadingSeconds( LocalizedText::resolveNow( text ) ); // 읽는 시간은 보이는 글의 길이다
         line._remainingSeconds = line._durationSeconds;
         line._id               = _lineIDAllocator.allocate();
         _listQueued.push_back( std::move( line ) );
@@ -125,9 +125,8 @@ namespace sw
     {
         for ( const AudioSubtitleCue& cue : listCue )
         {
-            // 키는 `Namespace.Key` 이다. 표에 없으면 `SW_LOCKEY` 처럼 키 자체가 보인다(빠진 키는 조회가 알린다).
-            const utf8* pSpeaker = cue._speakerKey.empty() ? "" : LocalizedText::find( cue._speakerKey.c_str(), cue._speakerKey.c_str() );
-            (void)post( pSpeaker, LocalizedText::find( cue._textKey.c_str(), cue._textKey.c_str() ) );
+            // 키는 `Namespace.Key` 이다 — 메시지로 들어 그릴 때 풀리고, 표에 없으면 빠진 키로 알리며 키가 보인다.
+            (void)post( cue._speakerKey.empty() ? string{} : LocalizedMessage( cue._speakerKey.c_str() ).str(), LocalizedMessage( cue._textKey.c_str() ).str() );
             // 신호는 보이스를 얻은 클립만 낸다 — 다음 `refreshVoiceState` 까지는 나는 중으로 둔다.
             _listQueued.back()._voicePlayingID = cue._playingID;
             _listQueued.back()._bVoicePlaying  = cue._playingID != 0;

@@ -256,7 +256,7 @@ namespace sw
         if ( result._bNeedsRestart && pUI != nullptr )
         {
             UINotificationDef notification{};
-            notification._text            = SW_LOCTEXT( "Notification", "RestartRequired", "Some changes take effect after a restart." );
+            notification._text            = SW_LOCALIZED_MESSAGE( "Notification", "RestartRequired" ).str();
             notification._durationSeconds = 6.0f;
             notification._kind            = UINotificationKind::Warning;
             engine::getSubsystem<UINotificationService>().post( notification );

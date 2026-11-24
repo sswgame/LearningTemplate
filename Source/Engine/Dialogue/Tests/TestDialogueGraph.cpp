@@ -6,6 +6,7 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Localization/LocText.h"
 
 using namespace sw;
 
@@ -255,8 +256,8 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
 SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )
 {
     const string plainText = "이건 로컬라이즈 키가 아니라 그냥 대사다.";
-    SW_EXPECT_EQUAL( plainText, DialogueGraphAsset::resolveLocalizedText( plainText ) );
-    SW_EXPECT_TRUE( DialogueGraphAsset::resolveLocalizedText( "" ).empty() );
+    SW_EXPECT_EQUAL( plainText, LocalizedText::resolveNow( plainText ) );
+    SW_EXPECT_TRUE( LocalizedText::resolveNow( "" ).empty() );
 }
 
 // ------------------------------------------------------------------------------
@@ -349,8 +350,8 @@ SW_TEST_CASE( DialogueGraphTest, SpeakerIsAnIDOfTheSpeakerList )
     const DialogueAssetNode* pLine = asset.findNode( 2 );
     SW_REQUIRE_NOT_NULL( pLine );
     SW_EXPECT_EQUAL( 3u, pLine->_speaker );
-    SW_EXPECT_EQUAL( string( "Elder" ), asset.resolveSpeakerName( pLine->_speaker ) );
-    SW_EXPECT_TRUE( asset.resolveSpeakerName( kDialogueNoSpeaker ).empty() );
+    SW_EXPECT_EQUAL( string( "Elder" ), asset.getSpeakerName( pLine->_speaker ) );
+    SW_EXPECT_TRUE( asset.getSpeakerName( kDialogueNoSpeaker ).empty() );
     SW_EXPECT_EQUAL( 4u, asset.makeNextSpeakerID() );
 
     SW_EXPECT_LOG( "Dialogue.SpeakerMissing" );   // 목록에 없는 화자

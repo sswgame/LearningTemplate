@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
@@ -267,6 +268,6 @@ namespace sw
         outInfo._role = AccessibleRole::ComboBox;
         outInfo._name = getAccessibleName(); // 안의 글은 고른 항목이라 이름이 아니라 값이다
         if ( _selectedIndex < _listOption.size() )
-            outInfo._value = _listOption[_selectedIndex];
+            outInfo._value = LocalizedText::resolveNow( _listOption[_selectedIndex] ); // 선택지는 키이거나 원문이다
     }
 } // namespace sw

@@ -7,6 +7,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/UI/Service/UISubtitleService.h"
 #include "Engine/UI/UISystem.h"
@@ -113,7 +114,7 @@ namespace sw
                 return false;
             }
             const uint32 count = pSubtitles->getActiveLineCount();
-            outValue.setText( count > 0 ? string_view{ pSubtitles->getActiveLine( count - 1 )._speaker } : string_view{ "none" } );
+            outValue.setText( count > 0 ? LocalizedText::resolveNow( pSubtitles->getActiveLine( count - 1 )._speaker ) : string( "none" ) );
             return true;
         }
 
