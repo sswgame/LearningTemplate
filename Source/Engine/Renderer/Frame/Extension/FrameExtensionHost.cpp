@@ -338,7 +338,7 @@ namespace sw
 
     void FrameExtensionHost::allocateTextures( FrameViewTarget& view ) const
     {
-        if ( _pDevice == nullptr || view._transientPool.isEmpty() )
+        if ( _pDevice == nullptr || view._transientPool.hasSize() == false )
             return;
         // 모듈 구간 밖(`releaseFrame` 뒤)이면 요청이 비어 있고 열쇠는 다음 `refreshPassChecks` 가 맞춘다.
         SW_ASSERT( _listTexture.empty() || _listTextureName.size() == _listTexture.size() );

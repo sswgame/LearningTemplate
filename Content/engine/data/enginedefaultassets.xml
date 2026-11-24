@@ -98,6 +98,7 @@
                      _shaderTonemap="engine/shaders/tonemap.hlsl"
                      _shaderDepthOfField="engine/shaders/depth_of_field.hlsl"
                      _shaderSky="engine/shaders/sky.hlsl"
+                     _shaderVolumetricClouds="engine/shaders/volumetric_clouds.hlsl"
                      _shaderFog="engine/shaders/fog.hlsl"
                      _shaderDistortion="engine/shaders/distortion.hlsl"
                      _shaderDistortionApply="engine/shaders/distortion_apply.hlsl"

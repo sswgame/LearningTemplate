@@ -10,6 +10,7 @@
  *
  * 젖음 · 웅덩이 · 눈의 세기는 전역 값 `g_MaterialGlobalWeather`(x 젖음, y 웅덩이, z 눈, w 설선 높이 m — 파라미터 묶음 `engine/materials/weather.matparams.xml` 의 `Weather`)다 —
  * 날씨가 값을 바꾸면 모든 셰이더가 함께 따른다(언리얼 MPC 로 날씨를 돌리는 방식).
+ * 지붕 아래는 젖지 않는다 — 표면은 날씨 값에 비 가림 맵의 노출(`computeRainExposure`, 씬에 `RainOcclusionComponent` 가 있을 때)을 곱한다.
  * 비 세기는 `g_MaterialGlobalRain`(x 0..1 — 같은 묶음의 `Rain`)이다 — 웅덩이 위 빗방울 물결(`applyRainRipples`)이 그 세기에 비례하고 머티리얼 시계(`g_SwMaterialTime`)로 돈다.
  *
  * 클리어 코트 · 비등방 하이라이트는 함수 묶음이 아니라 셰이딩 모델(shading_model.hlsli 의 코트 · 비등방 엽, G버퍼 번호 CLEAR_COAT · ANISOTROPIC)이 낸다 —
@@ -127,6 +128,7 @@ struct SurfaceFunction
 
     // 날씨
     static void applyWetness( inout float3 inoutAlbedo, inout float inoutRoughness, float porosity, float wetness );
+    static float computeRainExposure( float3 position, float3 normal );
     static float computePuddleMask( float3 position, float3 normal, float amount, float scale );
     static void applyPuddle( inout float3 inoutAlbedo, inout float inoutRoughness, inout float inoutMetallic, inout float3 inoutNormal, float puddle );
     static float2 computeRainRippleSlope( float2 place, float time, float rain );
@@ -540,6 +542,33 @@ static void SurfaceFunction::applyWetness( inout float3 inoutAlbedo, inout float
     const float wet = saturate( wetness );
     inoutAlbedo *= lerp( 1.0f, kWetAlbedoScale, wet * saturate( porosity ) );
     inoutRoughness = lerp( inoutRoughness, min( inoutRoughness, kWetRoughness ), wet );
+}
+
+/**
+ * @brief 이 자리가 비를 맞는 정도(1 = 트인 하늘, 0 = 지붕 아래)입니다 — 비 가림 맵(위에서 내려다본 깊이)과 견준다. 맵이 없거나 맵 밖이면 1 입니다.
+ * @details 노멀 쪽으로 조금 띄운 점을 읽어 벽이 제 윗면에 가려지지 않는다. 텍셀 둘레 넷을 견줘 처마 선을 흐린다.
+ *          웹은 단계 텍스처 한도가 16 이라 읽지 않는다(품질도 맵을 끈다 — Config/Platform/Web).
+ */
+static float SurfaceFunction::computeRainExposure( float3 position, float3 normal )
+{
+    float exposure = 1.0f;
+#if !defined( WEBGPU )
+    SW_BRANCH if ( g_RainOcclusionParams.w > 0.0f && g_RainOcclusionIndex != kInvalidIndex )
+    {
+        const float3 ndc     = mul( float4( position + normal * g_RainOcclusionParams.y, 1.0f ), g_RainOcclusionViewProj ).xyz; // 정사영이라 w 가 1 이다
+        const float2 uv      = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
+        const float  depth   = ndc.z - g_RainOcclusionParams.x;
+        const bool   bInside = all( uv >= 0.0f ) && all( uv <= 1.0f ) && ndc.z >= 0.0f && ndc.z <= 1.0f;
+        float        open    = 0.0f;
+        SW_UNROLL for ( int tap = 0; tap < 4; ++tap )
+        {
+            const float2 offset = float2( ( tap % 2 ) - 0.5f, ( tap / 2 ) - 0.5f ) * ( 1.5f * g_RainOcclusionParams.z );
+            open += ( depth <= Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( RainOcclusion ), uv + offset ).r ) ? 0.25f : 0.0f;
+        }
+        exposure = bInside ? open : 1.0f;
+    }
+#endif
+    return exposure;
 }
 
 /** @brief 웅덩이 마스크(0..1) — 평평하고 위를 보는 면의 낮은 노이즈 자리부터 찬다. @p amount 가 클수록 넓다. */

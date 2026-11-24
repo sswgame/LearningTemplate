@@ -233,6 +233,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderSky; ///< 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형
         PROPERTY( Required )
+        DataPath _shaderVolumetricClouds; ///< 볼륨 구름 — 저해상도 레이마치 + 시간 누적(스카이 패스가 얹는다)
+        PROPERTY( Required )
         DataPath _shaderFog; ///< 높이 · 거리 지수 안개(안개 패스) — 장면 깊이로 광학 두께를 구해 장면 색 위에 블렌드한다
         PROPERTY( Required )
         DataPath _shaderDistortion; ///< 화면 왜곡 머티리얼 셰이더 — 왜곡 누적 패스의 기본 셰이더이기도 하다(배치는 자기 머티리얼 셰이더로 그린다)

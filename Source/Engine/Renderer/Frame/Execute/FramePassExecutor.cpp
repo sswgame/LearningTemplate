@@ -244,6 +244,7 @@ namespace sw
         // 순서는 XML 의 자원 읽기 · 쓰기가 정한다. 앞 프레임들의 셰이더 assert · NaN 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
         _nanCheck.poll();
         recordFrameGraph( pDevice );
+        drawRainOcclusion(); // 컬링 뒤 · 모든 뷰 앞 — 이번 프레임의 뷰가 같은 맵을 읽는다
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -752,6 +753,7 @@ namespace sw
             ViewGraphResource::autoExposureHistory(),
             ViewGraphResource::autoExposureTarget(),
             ViewGraphResource::taaHistory(),
+            ViewGraphResource::skyCloudHistory(),
             ViewGraphResource::upscaleIntermediate(),
             ViewGraphResource::shadowCacheLayer(),
             ViewGraphResource::postProcessChainBeforeTonemap(),
@@ -886,6 +888,10 @@ namespace sw
         else if ( pass._type == RenderPassKind::TAA )
         {
             inoutListAccess.push_back( ViewGraphResource::taaHistory() ); // 지난 기록을 읽고 같은 패스가 이번 출력을 복사한다
+        }
+        else if ( pass._type == RenderPassKind::VolumetricClouds )
+        {
+            inoutListAccess.push_back( ViewGraphResource::skyCloudHistory() ); // TAA 와 같다
         }
         else if ( pass._type == RenderPassKind::Lighting )
         {
@@ -1306,6 +1312,9 @@ namespace sw
         // TAA 기록 — TAA 가 도는 뷰만(`applyViewPassSelection`). 지난 프레임의 복사 끝에 셰이더 읽기로 남았다.
         if ( view._bTAAHistoryWritten == SW_TRUE && view._taaHistory.isValid() )
             _viewResourceTable.registerTexture( ViewGraphResource::taaHistory()._name, 0, view._taaHistory._texture, RenderGraphAccess::ShaderRead );
+        // 볼륨 구름 기록 — 구름이 도는 뷰만(`applyViewPassSelection`). TAA 기록과 같은 상태로 남는다.
+        if ( view._bSkyCloudHistoryWritten == SW_TRUE && view._skyCloudHistory.isValid() )
+            _viewResourceTable.registerTexture( ViewGraphResource::skyCloudHistory()._name, 0, view._skyCloudHistory._texture, RenderGraphAccess::ShaderRead );
         // FSR 1 — 이번 프레임에 키우는 뷰만(`prepareUpscale`).
         if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate.isValid() )
             _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate._texture, RenderGraphAccess::ShaderRead );
@@ -1413,6 +1422,8 @@ namespace sw
                 return names._dbufferB;
             case RenderPassInputRole::DBufferC:
                 return names._dbufferC;
+            case RenderPassInputRole::SkyClouds:
+                return names._skyClouds;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -1426,9 +1437,7 @@ namespace sw
             const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
             if ( ( _disabledInputRoleMask & ( 1u << input._role ) ) != 0 )
                 continue;
-            // 이 뷰에서 빠진 패스의 출력(`TransientAttachmentPool::markAbsent`, 꺼진 SSAO)은 걸지 않는다 — 셰이더는 그 역할의 기본값(AO = 1)을 쓴다. 로드 검증 3-7 이 선택 입력만 그렇게 읽게 한다.
-            if ( activePool().resolveName( input._attachment ).empty() )
-                continue;
+            // 이 뷰에서 빠진 패스의 출력은 걸리지 않는다(`registerPassTexture`) — 로드 검증 3-7 이 선택 입력만 그렇게 읽게 한다.
             registerPassTexture( context, inputRoleName( role ), input._attachment );
         }
     }

@@ -36,6 +36,7 @@ namespace sw
     struct FrameRenderState;
     struct FrameViewTarget;
     struct RenderView;
+    struct RHITextureSlot;
 
     /**
      * @class FrameGraphExecutor
@@ -191,6 +192,10 @@ namespace sw
          *        부르는 쪽이 장면 깊이를 셰이더 읽기, 히스토리를 렌더 타깃으로 두고, 끝나면 히스토리를 읽는 쪽 상태(RW 텍스처)로 넘긴다.
          */
         void drawSceneDepthCopy( IRHIPassCommandList& cmd, const FrameViewTarget& target ) const;
+        /** @brief 깊이 @p sourceSRV 를 같은 크기의 R32 실수 텍스처 @p target 에 옮기는 풀스크린 렌더 패스를 기록합니다(장면 깊이 · 비 가림 맵이 함께 쓴다). 전이는 하지 않습니다. */
+        void drawDepthCopy( IRHIPassCommandList& cmd, RHITextureSRVIndex sourceSRV, const RHITextureSlot& target ) const;
+        /** @brief 이번 프레임에 지난 비 가림 맵을 강수의 사본으로 옮길 수 있는지입니다 — 등록 · 복사 · 강수 입력이 같은 판정을 본다. */
+        [[nodiscard]] bool canCopyRainOcclusion() const;
         /**
          * @brief 뷰마다 깊이 히스토리(지난 장면 깊이)에서 HZB 를 짓고 주 시점 가림 타일 되읽기를 요청합니다(hzb_build.hlsl). 프레임 패스 `HZBBuild` 의 일입니다.
          * @details 가림 판정을 켠 프레임에 컬링이 있는 백엔드에서만 짓는다(화면 공간 반사는 이번 프레임 깊이로 따로 짓는다 — `recordSceneDepthHZB`). 기록을 버리는 프레임(처음 · 컷)은

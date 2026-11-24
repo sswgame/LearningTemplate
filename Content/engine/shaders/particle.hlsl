@@ -1,5 +1,5 @@
 // particle.hlsl — 파티클 빌보드 · 띠(VFX). 인스턴스 하나 = 사각형 하나이고, 모서리 여섯을 SV_VertexID 로 만든다(동적 정점 버퍼가 없다 — canvas.hlsl 과 같은 방식).
-// 방출기 하나가 그리기 하나다. 입자 원소는 C++ GPUParticle(Engine/VFX/VFXParticle.h)과 같은 배치이고, 좌표는 방출기 로컬이라 루트 상수의 방출기 행렬로 옮긴다.
+// 방출기 하나가 그리기 하나다. 입자 원소는 C++ GPUParticle(Engine/VFX/VFXParticle.h)과 같은 배치이고, 좌표는 시뮬레이션 공간이라 루트 상수의 방출기 행렬로 옮긴다.
 // 빌보드: 인스턴스 = 입자. 사각형은 카메라를 본다 — 화면 x · y 축의 월드 방향을 g_InvViewProj 로 입자 깊이에서 되돌려 구한다(원근 · 직교 모두 — PassCB 를 늘리지 않는다).
 // 띠: 인스턴스 = 이웃 입자 둘(태어난 순서로 놓여 있다 — VFXCPUSimulation::writeParticles)을 잇는 마디. 폭은 입자 크기이고, 마디 방향과 시선의 외적으로 편다.
 // 출력은 프리멀티플라이 알파다(PSO _bPremultipliedAlpha — One/InvSrcAlpha). 더하기 블렌드는 알파를 0 으로 내서 같은 PSO 로 그린다.
@@ -99,7 +99,7 @@ float3 unprojectNdc( float2 ndc, float deviceDepth )
     return world.xyz / world.w;
 }
 
-// 방출기 로컬 점을 월드로 옮긴다(루트 상수의 열 셋).
+// 시뮬레이션 공간 점을 월드로 옮긴다(루트 상수의 열 셋).
 float3 toWorld( float3 localPosition )
 {
     const float4 local = float4( localPosition, 1.0f );

@@ -123,7 +123,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     surface._albedo = float4( context._user._waterColor.rgb, 1.0f );
     surface._normal = normalize( lerp( context._user._waveNormal, normalize( context._user._waveNormal + rippleNormal - float3( 0.0f, 1.0f, 0.0f ) ), context._user._shading.z ) );
     // 비가 오면 물 표면에도 빗방울 링이 돈다(지형 · 환경 표면 웅덩이와 같은 함수 — 물 위는 웅덩이 정도 1). 굴절 오프셋이 노멀을 따라 물 밑이 일렁인다.
-    SurfaceFunction::applyRainRipples( surface._normal, context._worldPosition.xz, 1.0f, g_SwMaterialTime, g_MaterialGlobalRain.x );
+    SurfaceFunction::applyRainRipples( surface._normal, context._worldPosition.xz, 1.0f, g_SwMaterialTime, g_MaterialGlobalRain.x * SurfaceFunction::computeRainExposure( context._worldPosition, surface._normal ) );
     surface._roughness = kSurfaceRoughness;
     surface._metallic  = kSurfaceMetallic;
     return surface;

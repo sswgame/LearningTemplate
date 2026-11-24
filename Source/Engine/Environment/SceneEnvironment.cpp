@@ -8,6 +8,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Fog/FogComponent.h"
+#include "Engine/Environment/Rain/RainOcclusionComponent.h"
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -66,6 +67,11 @@ namespace sw
     bool SceneEnvironment::findFog( const float3& viewPosition, FogSettings& outSettings ) const
     {
         return FogComponent::findFog( _manager, viewPosition, outSettings );
+    }
+
+    bool SceneEnvironment::findRainOcclusion( RainOcclusionSettings& outSettings ) const
+    {
+        return RainOcclusionComponent::findRainOcclusion( _manager, outSettings );
     }
 
     bool SceneEnvironment::findSurfaceDeform( SurfaceDeformBinding& outBinding ) const

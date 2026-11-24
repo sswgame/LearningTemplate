@@ -39,7 +39,7 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t56 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t58 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
  *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 16..49(결합)        │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
@@ -184,6 +184,7 @@ struct PassTexture
     static float2 sampleVelocityPoint( float2 uv );   // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
     static float2 sampleDistortionPoint( float2 uv ); // 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스의 출력(SceneDistortion)
     static float4 sampleLight2dCookieAtlas( float2 uv );
+    static float4 sampleSkyClouds( float2 uv );         // 볼륨 구름(산란 rgb — 불투명도 곱함, 불투명도 a). 패스가 걸지 않았으면 0(구름 없음)
     static float4 sampleContactShadow( float2 uv );     // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
     static float4 loadDBufferA( float2 pixelPosition ); // DBuffer 데칼 색(rgb 덮인 색, a 남은 비율) — SV_POSITION.xy 의 텍셀. 걸지 않았으면 (0, 0, 0, 1) = 덮지 않음
     static float4 loadDBufferB( float2 pixelPosition ); // DBuffer 데칼 노멀(rgb 덮인 노멀 × 0.5 + 0.5, a 남은 비율)
@@ -315,10 +316,16 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_SkyAtmosphereRayleigh;
     float4 g_SkyAtmosphereMie;
     float4 g_SkyAtmosphereGeometry;
-    // 구름 층(sky.hlsl, C++ SkyClouds) — (덮는 비율, 층 고도 km, 노이즈 배율 1/km, 최대 불투명도) · (바람 방향 xz 단위 벡터, 바람 속도 km/s, 경계 부드러움) · (구름 색 rgb, 그리면 1).
+    // 구름 층(sky.hlsl, C++ SkyClouds) — (덮는 비율, 층 고도 km, 노이즈 배율 1/km, 최대 불투명도) · (바람 방향 xz 단위 벡터, 바람 속도 km/s, 경계 부드러움) · (구름 색 rgb, 종류 — 0 없음 · 1 평면 · 2 볼륨).
     float4 g_SkyCloudShape;
     float4 g_SkyCloudWind;
     float4 g_SkyCloudColor;
+    // 볼륨 구름(volumetric_clouds.hlsl, C++ SkyClouds) — (층 두께 km, 소멸 계수 1/km, 기록 비율 — 기록이 없으면 0, 걸음 수) · (해 복사휘도에 곱할 배율 rgb — 투과율 · 대기 모드의 해 배율, 0) ·
+    // (구름이 받는 하늘 앰비언트 rgb, 0) · (텍셀 안 자리 xy — 텍셀 단위 ±0.5, 걸음 시작 0..1, 첨부 나눗수). 마지막은 뷰마다 패스가 쓴다.
+    float4 g_SkyCloudVolume;
+    float4 g_SkyCloudSun;
+    float4 g_SkyCloudAmbient;
+    float4 g_SkyCloudSample;
     // 스카이 라이트(lighting.hlsli SkyLight, C++ SkyLightData) — 하늘을 거칠기 단계마다 거른 환경광이 g_SwLightProbes(t13)에서 차지한 자리:
     // (옥타헤드럴 한 변 텍셀 수, 거칠기 단계 수, 첫 원소 번호, 0). 씬에 하늘이 없으면 모두 0 이고 환경광은 앰비언트 색이다. 배치는 binding_slots.hlsli 8 절.
     float4 g_SkyLight;
@@ -341,11 +348,14 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_MaterialGlobalWeather;     // x 젖음(0..1), y 웅덩이(0..1), z 눈(0..1), w 설선 높이(m) — 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather
     float4 g_MaterialGlobalRain;        // x 비 세기(0..1 — 웅덩이 빗방울 링), yzw 0(예비) — 같은 묶음의 Rain
     float4 g_MaterialGlobalEnvironment; // xyz 환경의 기준 시점(게임 카메라 위치 — 식생 거리 페이드), w 환경 시간(초 — 바람, 결정적 사진은 멈춘다)
+    // 비 가림 맵(C++ FrameRainOcclusion) — 위에서 내려다본 정사영 뷰-투영과 (깊이 바이어스 NDC, 노멀 오프셋 m, 1 / 한 변, 켬 1). 맵이 없는 프레임은 w 가 0 이다. 텍스처는 엔진 칸 RainOcclusion
+    float4x4 g_RainOcclusionViewProj;
+    float4   g_RainOcclusionParams;
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 25 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_24 ) || defined( SW_ENGINE_TEXTURE_INDEX_25 ) || SW_ENGINE_TEXTURE_COUNT != 25
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 25 fields below"
+    // 아래 27 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_26 ) || defined( SW_ENGINE_TEXTURE_INDEX_27 ) || SW_ENGINE_TEXTURE_COUNT != 27
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 27 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -372,6 +382,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_22;
     uint  SW_ENGINE_TEXTURE_INDEX_23;
     uint  SW_ENGINE_TEXTURE_INDEX_24;
+    uint  SW_ENGINE_TEXTURE_INDEX_25;
+    uint  SW_ENGINE_TEXTURE_INDEX_26;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

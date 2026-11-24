@@ -70,17 +70,6 @@ namespace sw
             static VFXSimulationTargetSet collisionTargets( const VFXEmitterDef& def ) { return def._collision.getSupportedTargets(); }
             static VFXSimulationTargetSet lightTargets( const VFXEmitterDef& def ) { return def._light.getSupportedTargets(); }
 
-            /** @brief 상자 생성은 CPU 전용이다 — GPU 시뮬레이션(vfx_simulate.hlsl)은 방출기 점에서만 낸다. */
-            static VFXSimulationTargetSet spawnBoxTargets( const VFXEmitterDef& def )
-            {
-                return def._spawnHalfExtents == float3::Zero ? VFXSimulationTargetSet::makeAll() : VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::CPU );
-            }
-            /** @brief 월드 공간은 CPU 전용이다 — GPU 입자는 방출기 로컬 버퍼에만 산다. */
-            static VFXSimulationTargetSet spaceTargets( const VFXEmitterDef& def )
-            {
-                return def._space == VFXSimulationSpace::Local ? VFXSimulationTargetSet::makeAll() : VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::CPU );
-            }
-
             /** @brief 방출기의 모든 칸입니다. 칸을 더하면 여기에 줄을 더한다(`VFXEffectDefTest.EveryEmitterFieldDeclaresItsTargets`). */
             static constexpr ModuleRow kArrModuleRow[] = {
                 {            "_name",      &everyTarget, false},
@@ -96,8 +85,8 @@ namespace sw
                 {       "_listBurst",      &everyTarget, false},
                 {     "_lifetimeMin",      &everyTarget, false},
                 {     "_lifetimeMax",      &everyTarget, false},
-                {"_spawnHalfExtents",  &spawnBoxTargets, false},
-                {           "_space",     &spaceTargets, false},
+                {"_spawnHalfExtents",      &everyTarget, false},
+                {           "_space",      &everyTarget, false},
                 {     "_velocityMin",      &everyTarget, false},
                 {     "_velocityMax",      &everyTarget, false},
                 {         "_gravity",      &everyTarget, false},
@@ -141,6 +130,7 @@ namespace sw
             case VFXCollisionMethod::PhysicsRaycast:
                 return VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::CPU );
             case VFXCollisionMethod::SceneDepth:
+            case VFXCollisionMethod::RainOcclusion:
                 return VFXSimulationTargetSet::makeOnly( VFXSimulationTarget::GPU );
         }
         return VFXSimulationTargetSet{}; // 읽기가 모르는 값을 거절한다 — 여기 오면 빈 집합이라 검증이 막는다
@@ -250,6 +240,9 @@ namespace sw
         const bool bSceneDepth = _collision._mode != VFXCollisionMode::None && _collision._method == VFXCollisionMethod::SceneDepth;
         if ( bSceneDepth )
             bValid = Check::expect( _collision._depthThickness > 0.0f, sourceLabel, _name, "_collision._depthThickness must be above 0 for the SceneDepth method" ) && bValid;
+        const bool bRainOcclusion = _collision._mode != VFXCollisionMode::None && _collision._method == VFXCollisionMethod::RainOcclusion;
+        if ( bRainOcclusion )
+            bValid = Check::expect( _collision._mode == VFXCollisionMode::Kill, sourceLabel, _name, "the RainOcclusion method needs _collision._mode Kill (the map knows only that a point is covered)" ) && bValid;
         if ( _collision._openSkyDistance > 0.0f )
         {
             const bool bRaycast = _collision._mode != VFXCollisionMode::None && _collision._method == VFXCollisionMethod::PhysicsRaycast;

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="cd1f1552bd7d439580b5295871581f51"?>
+<!--
+  비 가림 맵(maps/rainocclusion) — 카메라를 따르는 위에서 내려다본 깊이 한 장을 젖는 표면과 GPU 비가 읽는다(FrameRainOcclusion).
+  ① 젖음: 날씨 묶음(weather.matparams)을 적시면 트인 앞마당은 젖고 지붕 아래 바닥은 마른 그대로다. 골든으로도 견준다.
+  ② 비: 지붕 안에 선 시점에서 뒷벽을 보면 비를 켜도 그림이 같다(한 방울도 들지 않는다). 트인 앞마당에서 보면 다르다(비가 실제로 내린다).
+  시간은 흐른다 — 젖음은 시각과 무관하고(빗방울 링은 Rain 0 이라 없다) 비는 있고 없음만 본다.
+  실행: ctest -R Scenario.game.playground (체인). Shipping 은 개발 명령이 없어 건너뛴다.
+-->
+<Scenario name="game.playground.rainocclusion" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/playground/maps/rainocclusion.scene.xml"/>
+	<Launch variable="gv_renderQuality" value="high"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="object.active Rain 0"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
+	<AdvanceSimulation frames="1"/> <!-- 개발 명령은 다음 프레임 시작에 든다 -->
+	<Screenshot file="rainocclusion_dry.ppm"/>
+	<!-- ① 젖음 -->
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 1 0.6 0 0"/>
+	<AdvanceSimulation frames="1"/>
+	<Screenshot file="rainocclusion_wet.ppm"/>
+	<ExpectImagesDiffer first="rainocclusion_dry.ppm" second="rainocclusion_wet.ppm" region="0.1,0.8,0.9,1" minDiffering="0.3"/>
+	<ExpectImagesDiffer first="rainocclusion_dry.ppm" second="rainocclusion_wet.ppm" region="0.42,0.6,0.58,0.63" minDiffering="0" maxDiffering="0.02"/>
+	<ExpectImage file="rainocclusion_wet.ppm" golden="rainocclusion_wet"/>
+	<!-- ② 비 — 지붕 안 -->
+	<DevCommand line="object.place GameCamera 0 1.6 -0.5"/>
+	<AdvanceSimulation frames="1"/>
+	<Screenshot file="rainocclusion_inside_dry.ppm"/>
+	<DevCommand line="object.active Rain 1"/>
+	<AdvanceSimulation frames="120"/> <!-- 비가 상자에 다 차는 2 초(일어나지 않음을 본다 — 시간이 내용) -->
+	<Screenshot file="rainocclusion_inside_rain.ppm" stability="Assets"/>
+	<ExpectImagesDiffer first="rainocclusion_inside_dry.ppm" second="rainocclusion_inside_rain.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.005"/>
+	<!-- 트인 앞마당 -->
+	<DevCommand line="object.place GameCamera 0 2.2 -14"/>
+	<AdvanceSimulation frames="30"/>
+	<Screenshot file="rainocclusion_outside_rain.ppm" stability="Assets"/>
+	<ExpectImagesDiffer first="rainocclusion_wet.ppm" second="rainocclusion_outside_rain.ppm" region="0,0,1,0.6" minDiffering="0.01"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
+	<Pass/>
+</Scenario>

@@ -43,7 +43,7 @@
 /** @brief 입자 하나의 시뮬레이션 상태입니다(float4 SW_VFX_STATE_FLOAT4_COUNT 개 — C++ 는 크기만 안다). */
 struct VFXParticleState
 {
-    float4 _positionAge;      // xyz 방출기 로컬 위치, w 나이(초)
+    float4 _positionAge;      // xyz 시뮬레이션 공간 위치, w 나이(초)
     float4 _velocityLifetime; // xyz 속도, w 수명(초)
     uint4  _particleIndex;    // xy 입자 번호(64 비트, x 가 아래), z 다중 그룹의 생존 표시, w 인스턴스 칸(빈 칸 스택에서 꺼냈다)
 };
@@ -232,7 +232,7 @@ float evaluateCurve( uint firstRow, uint keyCount, float time )
     return value;
 }
 
-/** @brief 입자 번호 @p particleIndex 의 처음 상태입니다 — 수명 → 속도 x → y → z 순으로 난수를 하나씩 쓴다(CPU 와 같은 순서). */
+/** @brief 입자 번호 @p particleIndex 의 처음 상태입니다 — 수명 → 속도 x → y → z → 상자 x → y → z 순으로 난수를 하나씩 쓴다(CPU 와 같은 순서. 상자는 뒤라 점 생성의 수열이 그대로다). */
 VFXParticleState makeParticle( uint2 particleIndex )
 {
     const uint4  seedRow     = loadParamRow( SW_VFX_PARAM_ROW_SEED );
@@ -245,8 +245,15 @@ VFXParticleState makeParticle( uint2 particleIndex )
     particle._velocityLifetime.x = lerpFloat( velocityMin.x, velocityMax.x, nextUnitFloat( state, seedRow.zw ) );
     particle._velocityLifetime.y = lerpFloat( velocityMin.y, velocityMax.y, nextUnitFloat( state, seedRow.zw ) );
     particle._velocityLifetime.z = lerpFloat( velocityMin.z, velocityMax.z, nextUnitFloat( state, seedRow.zw ) );
+    const float4 spawnBox        = asfloat( loadParamRow( SW_VFX_PARAM_ROW_SPAWN_BOX ) );
     particle._positionAge        = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    particle._positionAge.x      = lerpFloat( -spawnBox.x, spawnBox.x, nextUnitFloat( state, seedRow.zw ) );
+    particle._positionAge.y      = lerpFloat( -spawnBox.y, spawnBox.y, nextUnitFloat( state, seedRow.zw ) );
+    particle._positionAge.z      = lerpFloat( -spawnBox.z, spawnBox.z, nextUnitFloat( state, seedRow.zw ) );
     particle._particleIndex      = uint4( particleIndex, 0u, 0u );
+    // 시뮬레이션 공간으로 — 로컬 공간은 단위 행렬이라 값이 그대로다.
+    particle._positionAge.xyz      = transformPoint4( SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION, particle._positionAge.xyz ).xyz;
+    particle._velocityLifetime.xyz = transformVector( SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION, particle._velocityLifetime.xyz );
     return particle;
 }
 
@@ -264,7 +271,7 @@ float3 computeDepthWorldPoint( int2 texel, float2 size, uint historyIndex )
 }
 
 /**
- * @brief 입자 하나의 깊이 충돌입니다. 닿지 않았으면 그대로 두고, 없애기면 @p outKilled 를 켜고, 튀기면 위치 · 속도를 고칩니다(방출기 로컬).
+ * @brief 입자 하나의 깊이 충돌입니다. 닿지 않았으면 그대로 두고, 없애기면 @p outKilled 를 켜고, 튀기면 위치 · 속도를 고칩니다(시뮬레이션 공간).
  * @details 튀기는 CPU 와 같은 식이다 — 법선 성분을 반발 계수만큼 뒤집고 접선 성분을 마찰만큼 줄인다. 면에서 멀어지는 중이면 튀기지 않는다(같은 면에 다시 걸린다).
  */
 void resolveDepthCollision( inout VFXParticleState inoutParticle, uint flags, out bool outKilled )
@@ -425,7 +432,7 @@ void simulateSingleGroup( uint thread )
     uint droppedCount = bReset ? 0u : loadArgsWord( SW_VFX_ARGS_WORD_DROPPED );
     if ( bReset )
         resetDeadSlots( thread, SW_VFX_SIMULATE_THREAD_COUNT, poolSize );
-    DeviceMemoryBarrierWithGroupSync();
+    SW_STORAGE_BARRIER_WITH_GROUP_SYNC();
 
     for ( uint stepIndex = 0u; stepIndex < stepCount; ++stepIndex )
     {
@@ -441,15 +448,15 @@ void simulateSingleGroup( uint thread )
             g_VFXStateRW[sourceBase + aliveCount + spawnIndex] = created;
         }
         // 꺼낸 칸을 다 읽은 뒤에 아래 죽은 입자가 같은 스택 자리에 돌려준다.
-        DeviceMemoryBarrierWithGroupSync();
+        SW_STORAGE_BARRIER_WITH_GROUP_SYNC();
 
         // 2) 적분 · 충돌 · 수명 제거 - 다른 반쪽에 태어난 순서 그대로 압축한다.
         const uint totalCount = aliveCount + createdCount;
         const uint targetBase = ( 1u - currentHalf ) * poolSize;
         const uint deadBase   = poolSize - totalCount; // 생성이 꺼낸 뒤의 스택 깊이 — 죽은 입자는 그 위에 죽은 차례로 돌려준다
         uint       written    = 0u;
-#if defined( DX11 )
-        // FXC(cs_5_0)는 UAV 에서 읽은 수(살아 있는 수)로 끝나는 반복 안의 동기화를 받지 않는다(X3663) - 풀 전체(매개변수 SRV 의 값)를 돌고
+#if defined( DX11 ) || defined( WEBGPU )
+        // FXC(cs_5_0, X3663)와 WGSL(균일 제어 흐름 규칙)은 UAV 에서 읽은 수(살아 있는 수)로 끝나는 반복 안의 동기화를 받지 않는다 - 풀 전체(매개변수 SRV 의 값)를 돌고
         // 수 밖의 칸은 죽은 입자로 센다(위 slot < totalCount). 결과는 같고 덩어리 수만 풀 크기를 따른다.
         const uint chunkLimit = poolSize;
 #else
@@ -479,7 +486,7 @@ void simulateSingleGroup( uint thread )
             written += s_arrScan[SW_VFX_SIMULATE_THREAD_COUNT - 1u];
             GroupMemoryBarrierWithGroupSync();
         }
-        DeviceMemoryBarrierWithGroupSync();
+        SW_STORAGE_BARRIER_WITH_GROUP_SYNC();
         aliveCount  = written;
         currentHalf = 1u - currentHalf;
     }

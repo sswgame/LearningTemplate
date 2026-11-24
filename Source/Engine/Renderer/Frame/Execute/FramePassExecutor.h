@@ -299,6 +299,8 @@ namespace sw
         void executeHighlightPass( const PassExecuteInput& input );
         /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
         void executeSkyPass( const PassExecuteInput& input );
+        /** @brief 볼륨 구름입니다 — 뷰의 기록을 걸고 저해상도 출력에 걸은 뒤 출력을 기록에 복사합니다. 일반 풀스크린 패스의 실행(`executeGenericFullscreenPass`)이 부릅니다. */
+        void executeVolumetricCloudsPass( const PassExecuteInput& input );
         /** @brief 안개 패스(`RenderPassKind::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /** @brief 화면 왜곡 누적 — 왜곡 머티리얼의 반투명 배치가 오프셋을 선언한 출력에 더한다. 왜곡이 없는 뷰는 기록하지 않는다. */
@@ -471,6 +473,10 @@ namespace sw
         bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position );
         /** @brief 새로 칸을 받은 쿠키를 아틀라스 칸에 그립니다(프레임 프리패스 리스트, `submitGraph`). 그릴 칸이 없으면 아무것도 하지 않습니다. */
         void drawLight2DCookieAtlas();
+        /** @brief 비 가림 맵(위에서 내려다본 깊이)을 그림자 PSO 와 맵의 컬링 슬롯으로 그립니다(`FrameRainOcclusion` 이 켠 프레임만). 끝에 셰이더 읽기로 둡니다. */
+        void drawRainOcclusion();
+        /** @brief 이번 프레임의 비 가림 맵을 "RainOcclusion" 이름으로 겁니다. 그리지 않은 프레임은 걸지 않습니다(셰이더는 트인 하늘로 본다). */
+        void registerRainOcclusion( FramePassContext& context );
         /**
          * @brief 텍스처 캐시에 맡겨 둔 UV 공간 층 굽기(`TextureLayerBakeRequest`)를 그립니다(프레임 프리패스 리스트 — 장면 뷰가 구운 텍스처를 읽기 전에 끝난다).
          * @details 층마다 전체 화면 한 번 — 아래 결과를 읽어 섞고 결과 · 작업 타깃 두 벌을 번갈아 쓴다. 짚는 텍스처가 아직 준비되지 않았으면 그 굽기는 다음 프레임으로 미루고

@@ -1,0 +1,88 @@
+<?asset guid="1142251ebaa74cbaace20bb1a3412e62"?>
+<Scene formatVersion="3" name="SkyClouds">
+	<!-- 볼륨 구름 시나리오(automation/skyclouds)의 무대 — skyshowcase 와 같은 해 · 대기에 볼륨 구름을 켜고, 위로 솟은 기둥(Tower)이 하늘 가장자리를 가른다(저해상도 구름이 물체 위로 번지지 않는다).
+	     바람은 0 이다 — 기록이 쌓인 뒤의 사진이 프레임 번호에 기대지 않는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,1.6,0"
+					                 _localRotation="-0.45,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="51.5662"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0"
+					                           _localRotation="0.803281,-2.084012,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1"
+					                           _ambient="0.2"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Sky">
+			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
+				<_listComponent>
+					<SkyComponent _localID="14376368575749838118" _intensity="1"
+					              _groundColor="0.3,0.27,0.24"
+					              _mode="Atmosphere"
+					              _rayleighScale="1"
+					              _mieScale="1"
+					              _mieAnisotropy="0.76"
+					              _sunIntensity="20"
+					              _observerAltitudeKm="0"
+					              _sunDiscAngle="1.71887335"
+					              _planetRadiusKm="6360"
+					              _atmosphereHeightKm="60"
+					              _cloudMode="Volumetric"
+					              _cloudCoverage="0.5"
+					              _cloudAltitudeKm="2"
+					              _cloudScale="0.4"
+					              _cloudOpacity="0.9"
+					              _cloudWindDirection="0"
+					              _cloudWindSpeedKmPerSecond="0"
+					              _cloudSoftness="0.15"
+					              _cloudColor="1,1,1"
+					              _cloudThicknessKm="1.5"
+					              _cloudExtinctionPerKm="18" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Tower">
+			<GameObject _schemaVersion="0" _name="Tower" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304"
+					               _localPosition="2,5,12"
+					               _localRotation="0,0.4,0"
+					               _localScale="1.5,10,1.5"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

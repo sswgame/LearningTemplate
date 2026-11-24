@@ -251,6 +251,22 @@ SW_TEST_CASE( VFXEffectDefTest, CollisionMethodChoosesTheTarget )
     collision._method = VFXCollisionMethod::SceneDepth;
     SW_EXPECT_FALSE( collision.getSupportedTargets().has( VFXSimulationTarget::CPU ) );
     SW_EXPECT_TRUE( collision.getSupportedTargets().has( VFXSimulationTarget::GPU ) );
+
+    collision._method = VFXCollisionMethod::RainOcclusion;
+    SW_EXPECT_FALSE( collision.getSupportedTargets().has( VFXSimulationTarget::CPU ) );
+    SW_EXPECT_TRUE( collision.getSupportedTargets().has( VFXSimulationTarget::GPU ) );
+}
+
+/** @brief [VFXEffectDefTest] 비 가림 맵 방법은 없애기만 받는다 — 맵은 덮였는지만 알고 튈 면을 모른다 */
+SW_TEST_CASE( VFXEffectDefTest, RainOcclusionNeedsKill )
+{
+    VFXEmitterDef emitter      = Util::makeEmitter();
+    emitter._collision._mode   = VFXCollisionMode::Kill;
+    emitter._collision._method = VFXCollisionMethod::RainOcclusion;
+    SW_EXPECT_TRUE( emitter.validate( "test" ) );
+    SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
+    emitter._collision._mode = VFXCollisionMode::Bounce;
+    SW_EXPECT_FALSE( emitter.validate( "test" ) );
 }
 
 /** @brief [VFXEffectDefTest] 방출기의 대상은 모듈의 교집합이고, 빠진 대상의 까닭은 그 모듈 칸 이름이다 */

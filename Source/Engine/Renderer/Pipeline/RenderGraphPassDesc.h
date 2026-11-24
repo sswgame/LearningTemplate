@@ -175,6 +175,12 @@ namespace sw
          */
         LateOcclusion,
         /**
+         * @brief 볼륨 구름입니다(volumetric_clouds.hlsl — 언리얼 Volumetric Cloud · 유니티 HDRP Volumetric Clouds 자리). 씬의 하늘이 볼륨 구름(`SkyCloudMode::Volumetric`)이면 저해상도 첨부(SkyCloudColor)에
+         *        층을 걷고 뷰의 구름 기록(`ViewGraphResource::skyCloudHistory`)과 섞는다. 스카이 패스(`Sky`)가 그 출력을 하늘 위에 얹으므로 장면 깊이를 쓴 뒤 · 하늘 앞에 둔다.
+         *        구름이 없거나 품질이 껐거나(`SkyCloudConfig::_bVolumetric`) 표면 값 보기면 기록하지 않고 출력도 기록 텍스처도 없다(`kCullWhenUnconsumed` 고르기 — 스카이 패스는 걸지 않는다).
+         */
+        VolumetricClouds,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 디스패치는 출력 크기만큼의 스레드다(그룹 크기는 셰이더 리플렉션).
          */

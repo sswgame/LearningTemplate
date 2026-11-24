@@ -47,7 +47,7 @@ namespace sw
      *          살아 있는 칸만 보이고 죽은 칸은 숨긴다(`VFXMeshSlotVisibility`) — 그리는 수가 살아 있는 수이고, 토글은 그 칸 하나라 빌더가 부분 수집으로 그 칸만 고친다.
      *          GPU 메시 방출기는 같은 모양을 GPU 가 한다 — 입자가 빈 칸 스택(dead list)에서 칸을 꺼내고 죽으면 돌려주며, 빈 칸은 컬링이 빼는 플래그를 켜(vfx_mesh_instance.hlsl)
      *          간접 인자의 인스턴스 수가 살아 있는 수다. CPU 는 그 수를 모른다.
-     *          충돌은 물리 씬(3D)을 방출기 로컬로 감싼 질의(`IVFXCollisionScene`)로 묻는다. 파티클 라이트는 `appendGPULights` 가 씬 라이트 목록에 붙인다.
+     *          충돌은 물리 씬(3D)을 시뮬레이션 공간으로 감싼 질의(`IVFXCollisionScene`)로 묻는다. 파티클 라이트는 `appendGPULights` 가 씬 라이트 목록에 붙인다.
      *
      *          효과는 `_effectPath` 를 읽을 때(상태 로드 · 프로퍼티 변경 · `setEffectPath`) 다시 만든다. 읽지 못하면 방출기가 없고 아무것도 그리지 않는다(효과 데이터가 오류를 남긴다).
      *          방출기 씨앗은 `_seed` 와 방출기 번호로 정해진다(같은 씨앗이면 같은 입자 — `VFXCPUSimulation`). 플레이를 시작하면 `_bPlayOnBegin` 일 때 재생하고,
@@ -66,7 +66,7 @@ namespace sw
         /** @brief 씬의 효과 목록(`ComponentRegistry`)에 등록합니다. 렌더러가 씬 전체를 훑지 않고 이 목록을 봅니다. */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
-        /** @brief 지난 틱의 방출기 자리를 옮깁니다 — 원점 이동을 방출기의 움직임으로 읽어 월드 공간 입자를 밀지 않게. */
+        /** @brief 월드 공간 입자의 기준 틀을 옮깁니다 — 원점 이동을 방출기의 움직임으로 읽어 입자를 밀지 않게. */
         void onWorldOriginShifted( const float3& delta ) override;
         /** @brief `_bPlayOnBegin` 이면 재생을 시작합니다. */
         void onBeginPlay() override;
@@ -121,6 +121,8 @@ namespace sw
          * @brief CPU 방출기 @p emitterIndex 가 마지막 틱에 낸 입자입니다. 입자가 없거나 GPU 방출기면 nullptr 입니다. 번호는 `getEmitterCount` 보다 작아야 합니다.
          */
         const shared_ptr<const vector<GPUParticle>>& getEmitterParticles( uint32 emitterIndex ) const;
+        /** @brief 방출기 @p emitterIndex 의 입자(시뮬레이션 공간)를 월드로 옮기는 행렬입니다 — 로컬 공간은 컴포넌트의 행렬, 월드 공간은 재생 시작에 정한 기준 틀이다. 번호는 `getEmitterCount` 보다 작아야 합니다. */
+        float4x4 getEmitterWorldMatrix( uint32 emitterIndex ) const;
         /** @brief GPU 방출기 @p emitterIndex 의 이번 요청입니다. 재생 중이 아니거나 CPU 방출기면 nullptr 입니다. 번호는 `getEmitterCount` 보다 작아야 합니다. */
         const VFXGPUEmitterRequest* findEmitterGPURequest( uint32 emitterIndex ) const;
         /** @brief CPU 방출기들의 살아 있는 입자 수입니다. GPU 방출기의 입자는 GPU 버퍼에만 있어 세지 않습니다. */
@@ -198,7 +200,7 @@ namespace sw
         shared_ptr<const VFXEffectDef>                _pEffect;                ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;
-        float3                      _lastOrigin;         ///< 지난 틱(또는 재생 시작)의 월드 자리 — 월드 공간 입자를 이동만큼 되돌린다
+        float4x4                    _worldSpaceFrame;    ///< 월드 공간 입자의 기준 틀(재생 시작의 배율 · 자리) — 원점 이동을 따라간다
         PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
         uint32 _seed;

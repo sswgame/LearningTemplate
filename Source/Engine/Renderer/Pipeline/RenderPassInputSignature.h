@@ -54,8 +54,9 @@ namespace sw
          * 언리얼 DBufferA 와 같은 자리다. 데칼이 없는 뷰는 출력이 없어 걸지 않는다 — 셰이더의 기본값 (0, 0, 0, 1)이 곧 "덮지 않음" 이다.
          */
         DBufferA,
-        DBufferB, ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5 의 합, a 남은 비율 — 언리얼 DBufferB). `g_DBufferBIndex`
-        DBufferC, ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값의 합, a 남은 비율 — 언리얼 DBufferC). `g_DBufferCIndex`
+        DBufferB,  ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5 의 합, a 남은 비율 — 언리얼 DBufferB). `g_DBufferBIndex`
+        DBufferC,  ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값의 합, a 남은 비율 — 언리얼 DBufferC). `g_DBufferCIndex`
+        SkyClouds, ///< 볼륨 구름(VolumetricClouds 패스의 저해상도 출력 — 산란 rgb, 불투명도 a). 스카이 패스가 하늘 위에 얹는다(`g_SkyCloudsIndex`) — 없으면 구름이 없다
         Count,
     };
 

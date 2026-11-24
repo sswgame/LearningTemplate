@@ -5,7 +5,9 @@
 
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
+#include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Renderer/Scene/GPUSceneSlotBuffer.h"
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 using namespace sw;
 
@@ -55,6 +57,28 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, FirstFrameHasNoHistoryThenFollows )
     // 멈췄다 — 지난 것(3)이 이번 것과 같아 움직임이 없다. 게임 스레드가 다시 싣지 않은 같은 배열이어도 기록은 나아간다.
     SW_EXPECT_FALSE( Util::update( history, slots, listInstance ) );
     SW_EXPECT_NEAR( 3.0f, listPrev[0]._41, 1.0e-6f );
+}
+
+/**
+ * @brief [GPUInstanceMotionHistoryTest] 물체가 움직였는지는 스냅샷을 받은 자리에서 그 프레임 값으로 정해진다 — 패스 고르기(모션 블러)가 업로드 앞에서 읽는다
+ * @details 변이: 업로드에서 정하면 움직이기 시작한 프레임의 고르기가 지난 프레임 값(멈춤)을 읽는다.
+ */
+SW_TEST_CASE( GPUInstanceMotionHistoryTest, SceneKnowsMotionWhenSnapshotIsApplied )
+{
+    using Util = MotionHistoryTestUtil;
+    GPUScene   scene;
+    uint64     exportSerial{ 0 };
+    const auto applyAt = [&]( float32 x )
+    {
+        GPUSceneSnapshot snapshot{};
+        snapshot._pListInstance = make_shared<const vector<GPUInstance>>( vector<GPUInstance>{ Util::makeInstance( 7u << 16, x ) } );
+        snapshot._exportSerial  = ++exportSerial;
+        scene.applyCPUSnapshot( snapshot );
+        return scene.hasObjectMotion();
+    };
+    SW_EXPECT_FALSE( applyAt( 1.0f ) ); // 처음 — 비교할 것이 없다
+    SW_EXPECT_TRUE( applyAt( 3.0f ) );  // 움직이기 시작한 그 프레임
+    SW_EXPECT_FALSE( applyAt( 3.0f ) ); // 멈춘 그 프레임
 }
 
 /** @brief [GPUInstanceMotionHistoryTest] 순간이동은 열쇠의 차례를 바꾼다 — 바뀐 열쇠는 기록이 없어 긴 속도가 생기지 않는다 */

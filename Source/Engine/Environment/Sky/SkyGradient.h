@@ -2,7 +2,7 @@
  * @file SkyGradient.h
  * @brief 하늘 한 벌(그러데이션 또는 대기 산란, 구름 층)과 방향마다의 하늘빛 식입니다.
  * @details 값은 씬의 `SkyComponent` 가 정하고, 렌더 패킷(`RenderFramePacket::_sky`)이 렌더 스레드로 나른다. 렌더러가 컴포넌트 헤더를 보지 않도록 값 타입만 따로 둔다.
- *          모드가 둘이다 — `Gradient`(천정 · 지평선 · 땅 3색)와 `Atmosphere`(레일리 · 미 단일 산란, `SkyAtmosphere`). 구름(`SkyClouds`)은 모드와 무관하게 하늘 위에 얹는다(평면 노이즈 층 — 셰이더만 그리고
+ *          모드가 둘이다 — `Gradient`(천정 · 지평선 · 땅 3색)와 `Atmosphere`(레일리 · 미 단일 산란, `SkyAtmosphere`). 구름(`SkyClouds`)은 모드와 무관하게 하늘 위에 얹는다(평면 노이즈 층 또는 볼륨 — 셰이더만 그리고
  *          프로브 베이크는 구름을 보지 않는다).
  */
 #pragma once
@@ -16,6 +16,11 @@
 
 namespace sw
 {
+    struct SkyCloudConfig;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 하늘을 어떻게 그리는가입니다. */
     ENUM()
     enum class SkyMode : uint8
@@ -23,6 +28,18 @@ namespace sw
         Gradient = 0, ///< 천정 · 지평선 · 땅 3색 그러데이션(`sky.hlsl` 의 evaluateSky)
         Atmosphere,   ///< 레일리 · 미 단일 산란(`SkyAtmosphere::evaluateScattering`) — 시간대는 방향광 방향이 정한다
         Hdri,         ///< 등장방형 HDR 텍스처(`sky.hlsl` 의 evaluateHdri, 언리얼 HDRI Backdrop · 유니티 Skybox/Panoramic). 간접 조명은 원본을 투영한 SH9 계수다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 구름을 어떻게 그리는가입니다. 값은 셰이더 상수 `g_SkyCloudColor.w` 다. */
+    ENUM()
+    enum class SkyCloudMode : uint8
+    {
+        None = 0,   ///< 구름이 없다
+        Layer,      ///< 평면 노이즈 층(sky.hlsl — 유니티 HDRP Cloud Layer 자리). 레이마치가 없다
+        Volumetric, ///< 두께 있는 층의 레이마치(volumetric_clouds.hlsl — 언리얼 Volumetric Cloud · 유니티 HDRP Volumetric Clouds 자리). 품질(`SkyCloudConfig`)이 끄면 Layer 로 그린다
     };
 } // namespace sw
 
@@ -61,6 +78,8 @@ namespace sw
         [[nodiscard]] float3 computeRayleighBeta() const;
         /** @brief 미 산란 계수(1/km)입니다 — 기본 계수 × `_mieScale`. */
         [[nodiscard]] float32 computeMieBeta() const;
+        /** @brief 눈에서 해까지의 투과율(rgb)입니다. 행성이 해를 가리면 0 입니다. sky.hlsl 이 평면 구름의 해 빛에 곱하는 값과 같다. */
+        [[nodiscard]] float3 computeSunTransmittance( const float3& toSun ) const;
         /**
          * @brief 방향 @p direction(단위 벡터)에서 오는 단일 산란 복사휘도입니다. 해 복사휘도 1 당이다.
          * @param toSun 해 쪽 단위 방향(눈 기준 월드)
@@ -73,8 +92,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 구름 층입니다 — 눈 위 고정 고도의 평면에 노이즈를 놓고 바람으로 흘립니다(레이마치 없음). 셰이더(sky.hlsl)가 하늘 위에 얹는다.
-     * @details 구름 밀도 = 값 노이즈 fbm 을 `_coverage` 로 문턱 처리한 것이다. 시선이 평면에 닿는 점(`_altitudeKm` / 시선 y)의 xz 를 `_scale`(1/km)로 곱해 노이즈를 읽고, 시간은
+     * @brief 구름 층입니다 — 눈 위 고정 고도에 노이즈를 놓고 바람으로 흘립니다. 평면이면 sky.hlsl 이, 볼륨이면 volumetric_clouds.hlsl 이 그린다.
+     * @details 볼륨은 `_altitudeKm` 부터 `_thicknessKm` 만큼 두께 있는 층을 걷고 소멸 계수 `_extinctionPerKm` 로 빛을 줄인다. 나머지 값은 두 종류가 함께 쓴다.
+     *          평면의 구름 밀도 = 값 노이즈 fbm 을 `_coverage` 로 문턱 처리한 것이다. 시선이 평면에 닿는 점(`_altitudeKm` / 시선 y)의 xz 를 `_scale`(1/km)로 곱해 노이즈를 읽고, 시간은
      *          패스 상수의 머티리얼 시계(`g_SwMaterialTime`)에 `_windSpeedKmPerSecond` 를 곱해 흘린다. 지평선 근처는 평면이 너무 멀어 서서히 지운다.
      */
     struct SW_API SkyClouds
@@ -87,7 +107,15 @@ namespace sw
         float32 _windSpeedKmPerSecond{ 0.01f }; ///< 바람 속도(km/s)
         float32 _softness{ 0.15f };             ///< 문턱 경계의 부드러움(0..0.5)
         float3  _color{ 1.0f, 1.0f, 1.0f };     ///< 구름 색(선형 RGB) — 빛을 받은 흰색에 곱한다
-        uint8   _bEnabled{ SW_FALSE };          ///< 구름을 그린다
+        float32 _thicknessKm{ 1.5f };           ///< 볼륨 층의 두께(km)
+        float32 _extinctionPerKm{ 18.0f };      ///< 볼륨 층의 소멸 계수(1/km, 밀도 1 일 때)
+        // 품질 값 — 렌더 패킷이 `applyQuality` 로 채운다(저장하지 않는다). 볼륨이 아니면 쓰지 않는다.
+        uint32       _viewStepCount{ 0 };         ///< 시선마다 걷는 걸음 수
+        float32      _historyWeight{ 0.0f };      ///< 시간 누적의 기록 비율
+        SkyCloudMode _mode{ SkyCloudMode::None }; ///< 구름의 종류
+
+        /** @brief 품질 값 @p config 를 싣습니다 — 볼륨을 끈 품질이면 볼륨 구름을 평면 구름으로 바꿉니다. 볼륨인데 걸음 수가 없으면 멈춥니다(폴백 없음). */
+        void applyQuality( const SkyCloudConfig& config );
     };
 } // namespace sw
 

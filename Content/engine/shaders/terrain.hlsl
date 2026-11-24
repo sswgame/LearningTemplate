@@ -190,7 +190,8 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     albedo *= lerp( 0.85f, 1.12f, macro );
 
     // 5. 날씨 — 젖음(날씨 · 레이어의 늘 젖음 · 젖은 발자국) → 웅덩이(노이즈 · 꺼진 자리) → 빗방울 링 → 눈 → 반짝이.
-    const float4 weather       = g_MaterialGlobalWeather;
+    const float  rainExposure  = SurfaceFunction::computeRainExposure( position, normal );
+    const float4 weather       = float4( g_MaterialGlobalWeather.xyz * rainExposure, g_MaterialGlobalWeather.w );
     const float  groundWet     = max( weather.x, layerWet );
     float3       surfaceNormal = SurfaceDeformLayer::tiltNormal( normal, position.xz );
     float        metallic      = kSurfaceMetallic;
@@ -198,7 +199,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     const float puddleNoise = SurfaceFunction::computePuddleMask( position, normal, max( weather.y, layerWet * kLayerWetnessToPuddle ), material._terrainSurface.x );
     const float puddle      = max( puddleNoise, SurfaceDeformLayer::computePuddleFill( position.xz, groundWet ) );
     SurfaceFunction::applyPuddle( albedo, roughness, metallic, surfaceNormal, puddle );
-    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, g_MaterialGlobalRain.x );
+    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, g_MaterialGlobalRain.x * rainExposure );
     const float snow = SurfaceFunction::computeSnowMask( position, normal, weather.z, weather.w );
     SurfaceFunction::applySnow( albedo, roughness, metallic, surfaceNormal, snow );
     SurfaceFunction::applySparkle( roughness, surfaceNormal, position, material._terrainSurface.y, max( layerSparkle * ( 1.0f - puddle ), snow * material._terrainSurface.z ) );

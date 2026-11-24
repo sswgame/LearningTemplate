@@ -1,0 +1,80 @@
+<?asset guid="53488a7b689d478885432cd0806ad03c"?>
+<Scene formatVersion="3" name="RainOcclusion">
+	<!-- 비 가림 맵 시나리오(automation/rainocclusion)의 무대 — 젖는 땅(날씨 묶음) 위에 세 벽과 지붕(8 x 8 m, 높이 3 m, 앞이 트였다). 카메라는 앞에서 지붕 안까지 바라본다.
+	     RainMap: 비 가림 맵. Rain: 맵으로 가려지는 굵은 GPU 비(engine/vfx/precipitation_rain_heavy) — 시나리오가 켜고 끈다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _localPosition="0,2.2,-14" _localRotation="0.05,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="57.29578" _nearZ="0.1" _farZ="200" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _localPosition="0,0,0" _localRotation="0.75,-0.6,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.96,0.9" _intensity="1.2" _ambient="0.35" _shadowExtent="24" _shadowDistance="60" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Sky">
+			<GameObject _schemaVersion="0" _name="Sky" _bActive="true">
+				<_listComponent>
+					<SkyComponent _localID="14376368575749838118" _zenithColor="0.3,0.45,0.75" _horizonColor="0.75,0.8,0.85" _groundColor="0.18,0.16,0.14" _intensity="1" _horizonExponent="3" _mode="Gradient" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="60,1,60" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/playground/materials/weathergarden_ground.material" _boundsRadius="45" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Roof">
+			<GameObject _schemaVersion="0" _name="Roof" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,3.1,0" _localRotation="0,0,0" _localScale="8,0.2,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="WallBack">
+			<GameObject _schemaVersion="0" _name="WallBack" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="0,1.5,4" _localRotation="0,0,0" _localScale="8,3,0.2" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="WallLeft">
+			<GameObject _schemaVersion="0" _name="WallLeft" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="-4,1.5,0" _localRotation="0,0,0" _localScale="0.2,3,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="WallRight">
+			<GameObject _schemaVersion="0" _name="WallRight" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _localPosition="4,1.5,0" _localRotation="0,0,0" _localScale="0.2,3,8" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="4.5" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="RainMap">
+			<GameObject _schemaVersion="0" _name="RainMap" _bActive="true">
+				<_listComponent>
+					<RainOcclusionComponent _localID="11290374655018273645" _extent="48" _heightAbove="40" _depthBelow="20" _depthBias="0.15" _normalOffset="0.25" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Rain">
+			<GameObject _schemaVersion="0" _name="Rain" _bActive="true">
+				<_listComponent>
+					<VFXComponent _localID="7647927963071728401" _localPosition="0,12,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _effectPath="engine/vfx/precipitation_rain_heavy.vfx.xml" _seed="21" _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

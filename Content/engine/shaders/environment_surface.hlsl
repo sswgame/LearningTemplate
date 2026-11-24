@@ -280,15 +280,16 @@ static EnvironmentSurface EnvironmentSurface::make( PixelContext context )
     roughness = SurfaceFunction::computeBrushedRoughness( roughness, uv, material._anisotropy, kBrushedFrequency );
 
     // 날씨 — 머티리얼 값 + 전역 값.
-    const float4 weather    = g_MaterialGlobalWeather;
-    const float  wetness    = saturate( material._wetness + weather.x );
-    const float  puddleRate = saturate( material._puddle + weather.y );
-    const float  snowRate   = saturate( material._snow + weather.z );
-    const float  snowLine   = weather.z > 0.0f ? weather.w : kNoSnowLine;
+    const float  rainExposure = SurfaceFunction::computeRainExposure( position, normal );
+    const float4 weather      = float4( g_MaterialGlobalWeather.xyz * rainExposure, g_MaterialGlobalWeather.w );
+    const float  wetness      = saturate( material._wetness + weather.x );
+    const float  puddleRate   = saturate( material._puddle + weather.y );
+    const float  snowRate     = saturate( material._snow + weather.z );
+    const float  snowLine     = weather.z > 0.0f ? weather.w : kNoSnowLine;
     SurfaceFunction::applyWetness( albedo, roughness, material._porosity, wetness );
     const float puddle = SurfaceFunction::computePuddleMask( position, normal, puddleRate, kPuddleNoiseScale );
     SurfaceFunction::applyPuddle( albedo, roughness, metallic, surfaceNormal, puddle );
-    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, g_MaterialGlobalRain.x );
+    SurfaceFunction::applyRainRipples( surfaceNormal, position.xz, puddle, g_SwMaterialTime, g_MaterialGlobalRain.x * rainExposure );
     const float snow = SurfaceFunction::computeSnowMask( position, normal, snowRate, snowLine );
     SurfaceFunction::applySnow( albedo, roughness, metallic, surfaceNormal, snow );
     SurfaceFunction::applySparkle( roughness, surfaceNormal, position, kSparkleDensity, max( material._sparkle, snow * kSnowSparkle ) );

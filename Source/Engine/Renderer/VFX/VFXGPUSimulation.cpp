@@ -145,11 +145,20 @@ namespace sw
                 inoutListWord[sectionFirstWord + static_cast<size_t>( row ) * kWordsPerRow + word] = value;
             }
 
+            /** @brief 비 가림 맵의 두께(m) — 맵 아래 어디에 있든 덮였다(장면 깊이처럼 "다른 물체 뒤" 를 가리지 않는다). */
+            static constexpr float32 kRainOcclusionThickness = 1.0e6f;
+
+            /** @brief 충돌을 켜고 비 가림 맵을 읽는 방법이면 true 입니다. */
+            static bool usesRainOcclusionDepth( const VFXCollisionDef& collision )
+            {
+                return collision._mode != VFXCollisionMode::None && collision._method == VFXCollisionMethod::RainOcclusion;
+            }
+
             /** @brief 깊이 충돌의 플래그입니다. 깊이 방법이 아니면 0 이다(물리 레이캐스트는 GPU 에 오지 않는다 — 모듈 표가 막는다). */
             static uint32 computeCollisionFlags( const VFXCollisionDef& collision )
             {
                 const bool bSceneDepth = collision._mode != VFXCollisionMode::None && collision._method == VFXCollisionMethod::SceneDepth;
-                if ( bSceneDepth == false )
+                if ( bSceneDepth == false && usesRainOcclusionDepth( collision ) == false )
                     return 0u;
                 return collision._mode == VFXCollisionMode::Kill ? SW_VFX_FLAG_COLLIDE_KILL : SW_VFX_FLAG_COLLIDE_BOUNCE;
             }
@@ -225,6 +234,28 @@ namespace sw
             assignment._slotCount += maxLights;
         }
         return assignment;
+    }
+
+    bool VFXGPUSimulation::usesRainOcclusion( const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter )
+    {
+        const auto reads = []( const VFXGPUEmitterRequest* pRequest )
+        { return pRequest != nullptr && pRequest->_pDef != nullptr && VFXGPUSimulationInternal::usesRainOcclusionDepth( pRequest->_pDef->_collision ); };
+        for ( const GPUParticleBatch& batch : listBatch )
+        {
+            if ( reads( batch.findGPURequest() ) )
+                return true;
+        }
+        for ( const GPUVFXMeshEmitter& emitter : listMeshEmitter )
+        {
+            if ( reads( &emitter._request ) )
+                return true;
+        }
+        return false;
+    }
+
+    const VFXDepthHistoryInput& VFXGPUSimulation::getCollisionDepth( const VFXCollisionDef& collision ) const
+    {
+        return VFXGPUSimulationInternal::usesRainOcclusionDepth( collision ) ? _frameInput._rainOcclusion : _frameInput._depth;
     }
 
     void VFXGPUSimulation::prepareFrame( IRHIDevice& device, const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter,
@@ -516,7 +547,7 @@ namespace sw
     {
         using Internal                       = VFXGPUSimulationInternal;
         const VFXEmitterDef&        def      = state._clock.getDef();
-        const VFXDepthHistoryInput& depth    = _frameInput._depth;
+        const VFXDepthHistoryInput& depth    = getCollisionDepth( def._collision );
         const size_t                first    = _listParamWord.size();
         const float32               stepTime = constant::time::kDefaultFixedStepSeconds;
         // 수명 창보다 오래 밀린 단계(오래 숨었다 다시 실린 재생)는 일정만 옮긴다 — 그 입자는 이미 죽었다. 처음부터 디스패치당 상한씩 빨리감지 않는다.
@@ -546,7 +577,8 @@ namespace sw
         Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
         Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._collision._restitution ), BitUtil::floatToBits( def._collision._friction ),
-                             BitUtil::floatToBits( VFXCollisionDef::kSurfaceSkin ), BitUtil::floatToBits( def._collision._depthThickness ) );
+                             BitUtil::floatToBits( VFXCollisionDef::kSurfaceSkin ),
+                             BitUtil::floatToBits( Internal::usesRainOcclusionDepth( def._collision ) ? Internal::kRainOcclusionThickness : def._collision._depthThickness ) );
         Internal::appendRow( _listParamWord, depth._width, depth._height, historyIndex, 0u );
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( depth._eye._x ), BitUtil::floatToBits( depth._eye._y ), BitUtil::floatToBits( depth._eye._z ), 0u );
         Internal::appendMatrixRows( _listParamWord, world );
@@ -568,7 +600,9 @@ namespace sw
         const VFXEmitterUserValues& userValues = request._userValues;
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( userValues._tint._x ), BitUtil::floatToBits( userValues._tint._y ), BitUtil::floatToBits( userValues._tint._z ), BitUtil::floatToBits( userValues._tint._w ) );
         Internal::appendRow( _listParamWord, BitUtil::floatToBits( userValues._sizeScale ), 0u, 0u, 0u );
-        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 31u && SW_VFX_PARAM_ROW_USER_SIZE == 30u && SW_VFX_PARAM_ROW_USER_TINT == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._spawnHalfExtents._x ), BitUtil::floatToBits( def._spawnHalfExtents._y ), BitUtil::floatToBits( def._spawnHalfExtents._z ), 0u );
+        Internal::appendMatrixRows( _listParamWord, request._emitterToSimulation ); // 새 입자를 시뮬레이션 공간으로(`VFXCPUSimulation::spawnParticles` 와 같은 식)
+        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP - SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION == SW_VFX_PARAM_ROW_INVERSE_WORLD - SW_VFX_PARAM_ROW_WORLD && SW_VFX_PARAM_ROW_EMITTER_TO_SIMULATION == SW_VFX_PARAM_ROW_SPAWN_BOX + 1u && SW_VFX_PARAM_ROW_SPAWN_BOX == SW_VFX_PARAM_ROW_USER_SIZE + 1u && SW_VFX_PARAM_ROW_USER_SIZE == 30u && SW_VFX_PARAM_ROW_USER_TINT == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
 
         // 일정 — 게임 스레드와 같은 시계를 같은 단계 수만큼 돌린다.
         for ( uint32 stepIndex = 0; stepIndex < steps; ++stepIndex )
@@ -772,12 +806,11 @@ namespace sw
         if ( bNothingToDispatch )
             return;
         SW_PROFILE_SCOPE( "RT.VFX.Simulate" );
-        IRHIPassCommandList&        cmd   = *context.getCommandList();
-        const VFXDepthHistoryInput& depth = _frameInput._depth;
+        IRHIPassCommandList& cmd = *context.getCommandList();
         cmd.setComputePipelineState( pso );
         // 깊이 히스토리 — 지난 프레임 그 뷰가 남긴 깊이를 옮긴 R32 실수 텍스처. RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다).
         // 생산자(`FrameGraphExecutor::recordDepthHistory` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
-        const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
+        // 비 가림 맵을 읽는 방출기는 그 맵의 사본을 같은 자리에 건다(`getCollisionDepth`).
         // 전이는 그래프 레벨 콜백이 냈다(`registerFrameResources` 가 등록한 칸). 라이트 버퍼는 쓰는 프레임에만 등록했다(`writesParticleLights` — 등록 조건이 곧 실행 조건).
         const bool bLightBufferReady = context.isRegistered( getLightBufferUAV() );
         for ( const Dispatch& dispatch : _listDispatch )
@@ -800,7 +833,8 @@ namespace sw
             const bool bWritesLights = dispatch._bLights && bLightBufferReady;
             if ( bWritesLights )
                 cmd.bindComputeUAV( _frameInput._lightUAV, 3 );
-            if ( bBindDepth )
+            const VFXDepthHistoryInput& depth = getCollisionDepth( state._clock.getDef()._collision );
+            if ( depth._texture != 0 && depth._uav != kInvalidDescriptorIndex )
                 cmd.bindComputeUAV( depth._uav, shaderslot::kComputeTextureUAV0 );
             recordEmitterPasses( context, dispatch );
             if ( bWritesLights )

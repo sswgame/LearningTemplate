@@ -1,4 +1,4 @@
-// VFXSimulationSpaceTest — 생성 상자(입자가 상자 안에서 고르게 태어난다)와 월드 공간(방출기가 옮겨도 입자가 월드 자리를 지킨다). 둘 다 CPU 전용이다. 디바이스 없음(nogpu).
+// VFXSimulationSpaceTest — 생성 상자(입자가 상자 안에서 고르게 태어난다)와 월드 공간(방출기가 옮겨도 입자가 월드 자리를 지킨다). CPU · GPU 방출기가 같은 뜻이다. 디바이스 없음(nogpu).
 #include "pch.h"
 
 #include "Core/Container/vector.h"
@@ -8,6 +8,7 @@
 
 #include "Engine/VFX/VFXCPUSimulation.h"
 #include "Engine/VFX/VFXEffectDef.h"
+#include "Engine/VFX/VFXGPUEmitter.h"
 #include "Engine/VFX/VFXParticle.h"
 
 using namespace sw;
@@ -49,13 +50,6 @@ namespace
             return emitter;
         }
 
-        static float32 readFirstX( const VFXCPUSimulation& simulation )
-        {
-            vector<GPUParticle> listParticle;
-            simulation.writeParticles( listParticle );
-            return listParticle.empty() ? MathUtil::kMaxFloat : listParticle.front()._positionSize._x;
-        }
-
         /** @brief x 가 음수인 쪽의 위에만 지붕이 있는 장면입니다 — 위로 쏜 선분만 막힌다. */
         class HalfRoofScene final : public IVFXCollisionScene
         {
@@ -71,13 +65,14 @@ namespace
     using Util = VFXSimulationSpaceTestUtil;
 } // namespace
 
-/** @brief [VFXSimulationSpaceTest] 생성 상자의 입자는 모두 상자 안이고 한 점에 모이지 않는다 — 상자와 월드 공간은 CPU 에서만 돈다 */
+/** @brief [VFXSimulationSpaceTest] 생성 상자의 입자는 모두 상자 안이고 한 점에 모이지 않는다 — 두 공간 모두 CPU · GPU 에서 돈다 */
 SW_TEST_CASE( VFXSimulationSpaceTest, ParticlesSpawnInsideTheBox )
 {
     const VFXEmitterDef emitter = Util::makeEmitter( VFXSimulationSpace::World );
     SW_EXPECT_TRUE( emitter.validate( "test" ) );
     SW_EXPECT_TRUE( emitter.computeSupportedTargets().has( VFXSimulationTarget::CPU ) );
-    SW_EXPECT_FALSE( emitter.computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
+    SW_EXPECT_TRUE( emitter.computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
+    SW_EXPECT_TRUE( Util::makeEmitter( VFXSimulationSpace::Local ).computeSupportedTargets().has( VFXSimulationTarget::GPU ) );
     VFXCPUSimulation simulation{ make_shared<const VFXEmitterDef>( emitter ), 7u, 1.0f };
     for ( uint32 step = 0; step < 10; ++step )
         simulation.step( Util::kStep, nullptr );
@@ -97,22 +92,54 @@ SW_TEST_CASE( VFXSimulationSpaceTest, ParticlesSpawnInsideTheBox )
     SW_EXPECT_TRUE( maximumX - minimumX > 1.0f );
 }
 
-/** @brief [VFXSimulationSpaceTest] 방출기가 옮기면 월드 공간 입자는 로컬 자리가 반대로 밀리고(월드 제자리), 로컬 공간 입자는 그대로다 */
+/** @brief [VFXSimulationSpaceTest] 방출기가 옮기고 돌면 이미 태어난 입자는 제자리이고, 새 입자만 옮긴 자리 · 돌린 속도로 태어난다 — GPU 방출기의 요청도 같은 행렬을 싣는다 */
 SW_TEST_CASE( VFXSimulationSpaceTest, WorldSpaceParticlesStayWhereTheyWereBorn )
 {
-    VFXCPUSimulation world{ make_shared<const VFXEmitterDef>( Util::makeEmitter( VFXSimulationSpace::World ) ), 7u, 1.0f };
-    VFXCPUSimulation local{ make_shared<const VFXEmitterDef>( Util::makeEmitter( VFXSimulationSpace::Local ) ), 7u, 1.0f };
+    VFXEmitterDef emitter                      = Util::makeEmitter( VFXSimulationSpace::World );
+    emitter._velocityMin                       = float3{ 1.0f, 0.0f, 0.0f };
+    emitter._velocityMax                       = float3{ 1.0f, 0.0f, 0.0f };
+    const shared_ptr<const VFXEmitterDef> pDef = make_shared<const VFXEmitterDef>( emitter );
+    VFXCPUSimulation                      moved{ pDef, 7u, 1.0f };
+    VFXCPUSimulation                      still{ pDef, 7u, 1.0f };
     for ( uint32 step = 0; step < 5; ++step )
     {
-        world.step( Util::kStep, nullptr );
-        local.step( Util::kStep, nullptr );
+        moved.step( Util::kStep, nullptr );
+        still.step( Util::kStep, nullptr );
     }
-    const float32 before = Util::readFirstX( world );
-    SW_EXPECT_NEAR( before, Util::readFirstX( local ), 1.0e-6f );
-    world.moveEmitter( float3{ 4.0f, 0.0f, 0.0f } );
-    local.moveEmitter( float3{ 4.0f, 0.0f, 0.0f } );
-    SW_EXPECT_NEAR( before - 4.0f, Util::readFirstX( world ), 1.0e-5f );
-    SW_EXPECT_NEAR( before, Util::readFirstX( local ), 1.0e-6f );
+    const size_t bornCount = moved.getAliveCount();
+    // x 축이 z 축으로 가는 회전과 x 4 이동(행벡터 규약).
+    float4x4 emitterToSimulation{};
+    emitterToSimulation._11 = 0.0f;
+    emitterToSimulation._13 = 1.0f;
+    emitterToSimulation._31 = -1.0f;
+    emitterToSimulation._33 = 0.0f;
+    emitterToSimulation._41 = 4.0f;
+    moved.setEmitterTransform( emitterToSimulation );
+    moved.step( Util::kStep, nullptr );
+    still.step( Util::kStep, nullptr );
+    vector<GPUParticle> listMoved;
+    vector<GPUParticle> listStill;
+    moved.writeParticles( listMoved );
+    still.writeParticles( listStill );
+    SW_REQUIRE_TRUE( listMoved.size() == listStill.size() && listMoved.size() > bornCount );
+    for ( size_t index = 0; index < listMoved.size(); ++index )
+    {
+        const float4& movedPosition = listMoved[index]._positionSize;
+        const float4& stillPosition = listStill[index]._positionSize;
+        if ( index < bornCount )
+        {
+            SW_EXPECT_NEAR( stillPosition._x, movedPosition._x, 1.0e-6f );
+            SW_EXPECT_NEAR( stillPosition._z, movedPosition._z, 1.0e-6f );
+            continue;
+        }
+        // 로컬 (x, z) 가 (4 - z, x) 로 간다 — 한 단계 움직인 x 속도도 함께 돈다.
+        SW_EXPECT_NEAR( 4.0f - stillPosition._z, movedPosition._x, 1.0e-5f );
+        SW_EXPECT_NEAR( stillPosition._x, movedPosition._z, 1.0e-5f );
+    }
+
+    VFXGPUEmitter gpuEmitter{ pDef, 7u, 1.0f };
+    gpuEmitter.setEmitterTransform( emitterToSimulation );
+    SW_EXPECT_EQUAL( 0, Memory::compare( &emitterToSimulation, &gpuEmitter.makeRequest()._emitterToSimulation, sizeof( float4x4 ) ) );
 }
 
 /** @brief [VFXSimulationSpaceTest] 하늘을 보는 방출기는 지붕 아래에서 입자를 내지 않는다 — 물리 광선 충돌이 없으면 검증이 거절한다 */

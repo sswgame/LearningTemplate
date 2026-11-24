@@ -4,6 +4,10 @@
         "_shadowLocalMinTileResolution": 64,
         "_shadowLocalCullSlotLimit": 4,
         "_maxExtraViewCount": 4,
+        "_rainOcclusionResolution": 256,
+        "_skyClouds": {
+            "_bVolumetric": false
+        },
         "_textureStreaming": {
             "_poolMegabytes": 256,
             "_maxMegabytesInFlight": 32
@@ -13,6 +17,9 @@
         "_temporalUpscaleRenderScale": 0.75,
         "_shadowLocalCullSlotLimit": 8,
         "_maxExtraViewCount": 6,
+        "_skyClouds": {
+            "_viewStepCount": 32
+        },
         "_textureStreaming": {
             "_poolMegabytes": 512
         }
@@ -22,6 +29,10 @@
         "_shadowLocalMinTileResolution": 256,
         "_shadowLocalCullSlotLimit": 32,
         "_maxExtraViewCount": 16,
+        "_rainOcclusionResolution": 1024,
+        "_skyClouds": {
+            "_viewStepCount": 80
+        },
         "_textureStreaming": {
             "_uploadsPerFrame": 16,
             "_upgradesPerFrame": 4,

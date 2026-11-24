@@ -676,6 +676,10 @@ namespace sw
             bAllViewsCulled = enqueueCullView( _state._localShadowCullSlotBase + lightIndex, _state._listLocalShadowCullInput[lightIndex], nullptr ) && bAllViewsCulled;
         }
 
+        // 비 가림 맵도 자기 정사영 상자로 거른다.
+        if ( _state._rainOcclusion.isActive() )
+            bAllViewsCulled = enqueueCullView( _state._rainOcclusion.getCullSlot(), _state._rainOcclusion.getCullInput(), nullptr ) && bAllViewsCulled;
+
         // 2 단계 가림의 차례 표시 — 주 시점 앞 단계가 쓰고 프리패스 뒤 뒤 단계가 읽는다. 차례 수만큼(만들지 못하면 한 단계로 돈다 — dispatchCullView 가 본다).
         _lateInstanceCount = instanceCount;
         const bool bOrdersReady =
@@ -763,6 +767,18 @@ namespace sw
         {
             recordDepthHistory( graphContext, *_state._listView[viewIndex], viewIndex );
         }
+        // 비 가림 맵 — 지난 프레임에 그린 맵을 GPU 강수가 읽는 R32 로 옮긴다(뷰 다음 칸). 상태 규칙은 장면 깊이와 같다.
+        const uint32 rainSlot = static_cast<uint32>( _state._listView.size() );
+        if ( canCopyRainOcclusion() && graphContext.isRegistered( FrameResource::depthHistory(), rainSlot ) )
+        {
+            drawDepthCopy( *_pCmd, _state._rainOcclusion.getDepth()._srv, _state._rainOcclusion.getParticleDepth() );
+            graphContext.transition( FrameResource::depthHistory(), RenderGraphAccess::UnorderedAccessRead, rainSlot );
+        }
+    }
+
+    bool FrameGraphExecutor::canCopyRainOcclusion() const
+    {
+        return _state._rainOcclusion.hasParticleDepth() && _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) != 0;
     }
 
     void FrameGraphExecutor::registerDepthHistoryResources( FrameBufferTable& table ) const
@@ -776,6 +792,13 @@ namespace sw
                 continue;
             table.registerTexture( FrameResource::previousSceneDepth()._name, viewIndex, view._transientPool.find( attachmentNames()._sceneDepth )._texture, RenderGraphAccess::DepthWrite );
             table.registerTexture( FrameResource::depthHistory()._name, viewIndex, view._depthHistory._texture, RenderGraphAccess::UnorderedAccessRead );
+        }
+        // 비 가림 맵 — 깊이는 지난 프레임의 그리기가 셰이더 읽기로 남겼다(뷰 다음 칸).
+        if ( canCopyRainOcclusion() )
+        {
+            const uint32 rainSlot = static_cast<uint32>( _state._listView.size() );
+            table.registerTexture( FrameResource::previousSceneDepth()._name, rainSlot, _state._rainOcclusion.getDepth()._texture, RenderGraphAccess::ShaderRead );
+            table.registerTexture( FrameResource::depthHistory()._name, rainSlot, _state._rainOcclusion.getParticleDepth()._texture, RenderGraphAccess::UnorderedAccessRead );
         }
     }
 
@@ -826,26 +849,29 @@ namespace sw
 
     void FrameGraphExecutor::drawSceneDepthCopy( IRHIPassCommandList& cmd, const FrameViewTarget& target ) const
     {
-        const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth );
+        drawDepthCopy( cmd, target._transientPool.find( attachmentNames()._sceneDepth )._srv, target._depthHistory );
+    }
 
+    void FrameGraphExecutor::drawDepthCopy( IRHIPassCommandList& cmd, RHITextureSRVIndex sourceSRV, const RHITextureSlot& target ) const
+    {
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = target._depthHistory._texture;
+        beginInfo._arrColorTarget[0] = target._texture;
         beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         beginInfo._arrClearColor[0]  = float4{ 1.0f, 0.0f, 0.0f, 0.0f };
         beginInfo._depthTarget       = 0;
-        beginInfo._width             = depth._width;
-        beginInfo._height            = depth._height;
+        beginInfo._width             = target._width;
+        beginInfo._height            = target._height;
         cmd.beginRenderPass( beginInfo );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) );
         // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depth_history.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( depth._srv ) : 0u;
+        const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( sourceSRV ) : 0u;
         if ( bNativeBindless == false )
         {
             constexpr uint32 kDepthSlot = shaderslot::emulated::getSlot( "SceneDepth" );
-            cmd.bindShaderResource( depth._srv, kDepthSlot );
+            cmd.bindShaderResource( sourceSRV, kDepthSlot );
         }
         cmd.setGraphicsRootConstants( 0, 1, &sourceIndex );
         cmd.draw( 3, 0 );
@@ -891,6 +917,9 @@ namespace sw
             input._depth._viewProj = _state.getMainView()._depthHistoryViewProj;
             input._depth._eye      = _state.getMainView()._depthHistoryEye;
         }
+        // 비 가림 맵을 읽는 강수는 지난 프레임의 맵이다(없는 프레임은 가려지지 않는다 — 장면 깊이와 같은 규칙).
+        if ( canCopyRainOcclusion() )
+            input._rainOcclusion = _state._rainOcclusion.makeParticleInput();
         return input;
     }
 

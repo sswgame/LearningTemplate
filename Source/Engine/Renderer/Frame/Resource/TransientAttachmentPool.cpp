@@ -151,7 +151,7 @@ namespace sw
     bool TransientAttachmentPool::releaseIfIdle( IRHIDevice* pDevice, const hashed_string& name, bool bUsedThisFrame )
     {
         const auto it = _mapAttachment.find( name );
-        if ( it == _mapAttachment.end() || advanceIdleFrames( it->second._idleFrames, bUsedThisFrame ) == false )
+        if ( it == _mapAttachment.end() || it->second._ops._loadOp == RHIRenderPassLoadOp::Load || advanceIdleFrames( it->second._idleFrames, bUsedThisFrame ) == false )
             return false;
         // 별칭은 텍스처를 빌렸을 뿐이다 — 이름만 지운다. 주인은 빌린 별칭이 남아 있으면 놓지 않는다(별칭이 아직 그 텍스처를 쓴다).
         if ( it->second._aliasOwner.empty() == false )

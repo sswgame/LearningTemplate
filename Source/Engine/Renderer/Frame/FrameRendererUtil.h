@@ -356,6 +356,8 @@ namespace sw
         hashed_string _dbufferA{ "DBufferA" };
         hashed_string _dbufferB{ "DBufferB" };
         hashed_string _dbufferC{ "DBufferC" };
+        /// 볼륨 구름(VolumetricClouds 패스의 저해상도 출력) — 스카이 패스가 선언한 입력을 역할로 건다(`g_SkyCloudsIndex`).
+        hashed_string _skyClouds{ "SkyClouds" };
         /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
         hashed_string _distortion{ "Distortion" };
         /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
@@ -372,6 +374,8 @@ namespace sw
         hashed_string _bloomDirtMask{ "BloomDirtMask" };
         /// 표면 변형 층의 높이 텍스처(패킷의 `SurfaceDeformBinding`) — 씬 지오메트리 패스의 정점 셰이더가 `g_SurfaceDeformIndex` 로 읽는다. 텍스처 캐시가 소유한 CPU 텍스처다.
         hashed_string _surfaceDeform{ "SurfaceDeform" };
+        /// 비 가림 맵의 깊이(`FrameRainOcclusion`) — 표면 셰이더가 `g_RainOcclusionIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
+        hashed_string _rainOcclusion{ "RainOcclusion" };
     };
 } // namespace sw
 
@@ -416,6 +420,10 @@ namespace sw
         hashed_string _skyCloudShape{ "g_SkyCloudShape" };
         hashed_string _skyCloudWind{ "g_SkyCloudWind" };
         hashed_string _skyCloudColor{ "g_SkyCloudColor" };
+        hashed_string _skyCloudVolume{ "g_SkyCloudVolume" };
+        hashed_string _skyCloudSun{ "g_SkyCloudSun" };
+        hashed_string _skyCloudAmbient{ "g_SkyCloudAmbient" };
+        hashed_string _skyCloudSample{ "g_SkyCloudSample" }; ///< 뷰마다 볼륨 구름 패스가 쓴다(`FramePassExecutor::executeVolumetricCloudsPass`)
         /// @brief 스카이 라이트의 프로브 버퍼 자리입니다(lighting.hlsli `SkyLight`). 배치는 `LightProbeElementBuilder::getSkyLight`.
         hashed_string _skyLight{ "g_SkyLight" };
         /// @brief 높이 · 거리 지수 안개입니다(안개 패스). 배치는 `FogSettings` 머리 주석 — 색 · 밀도 / 높이 감쇠 · 기준 높이 · 시작 거리 · 최대 불투명도 / 방향광 산란 / 볼륨 안개.
@@ -429,6 +437,9 @@ namespace sw
         hashed_string _materialGlobalWeather{ "g_MaterialGlobalWeather" };
         hashed_string _materialGlobalRain{ "g_MaterialGlobalRain" };
         hashed_string _materialGlobalEnvironment{ "g_MaterialGlobalEnvironment" };
+        /// @brief 비 가림 맵의 뷰-투영과 (깊이 바이어스 NDC, 노멀 오프셋 m, 1 / 한 변, 켬)입니다(`FrameRainOcclusion`).
+        hashed_string _rainOcclusionViewProj{ "g_RainOcclusionViewProj" };
+        hashed_string _rainOcclusionParams{ "g_RainOcclusionParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _postProcessMaterial{ "g_PostProcessMaterial" };   ///< 후처리 머티리얼 그리기마다의 무게(x)

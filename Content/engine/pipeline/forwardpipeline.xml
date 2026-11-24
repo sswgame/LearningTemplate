@@ -112,6 +112,22 @@
 				<item>SW_HIGHLIGHT_WIDTH=0.004</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
+		<!-- 볼륨 구름(SkyComponent 의 Cloud Mode 가 Volumetric) — 장면 깊이로 하늘이 보이는 텍셀만 저해상도로 걷는다. 하늘 패스가 읽는다. 씬에 볼륨 구름이 없거나 품질이 끄면 돌지 않는다. -->
+		<RenderGraphPassDesc _name="VolumetricClouds"
+		                     _type="VolumetricClouds"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SkyCloudColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<!-- 하늘(SkyComponent) — 불투명 · 외곽선 뒤, 반투명 앞. 깊이 1 의 풀스크린 삼각형을 깊이 테스트로 그려 빈 곳만 칠한다(쓰기 없음). 씬에 하늘이 없으면 돌지 않는다. -->
 		<RenderGraphPassDesc _name="Sky"
 		                     _type="Sky"
@@ -124,6 +140,7 @@
 			<_listInput>
 				<item>SceneColor</item>
 				<item>SceneDepth</item>
+				<item>SkyCloudColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>SceneColor</item>

@@ -33,6 +33,7 @@ namespace sw
             "DBufferA",
             "DBufferB",
             "DBufferC",
+            "SkyClouds",
         } );
 
         /// 이름이 곧 역할인 첨부입니다. 파이프라인이 이 이름을 쓰면 그 역할로 걸립니다.
@@ -59,6 +60,7 @@ namespace sw
             {           "DBufferA",            RenderPassInputRole::DBufferA},
             {           "DBufferB",            RenderPassInputRole::DBufferB},
             {           "DBufferC",            RenderPassInputRole::DBufferC},
+            {      "SkyCloudColor",           RenderPassInputRole::SkyClouds},
         };
     } // namespace
 

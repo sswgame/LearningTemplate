@@ -26,6 +26,7 @@ namespace sw
     class GameObjectManager;
     class MaterialParameterCollection;
     struct FogSettings;
+    struct RainOcclusionSettings;
     struct SkyGradient;
 
     /** @class SceneEnvironment @brief 씬의 하늘 · 안개 · 표면 변형 · 전역 머티리얼 값 칸입니다(파일 머리말 참고). 게임 스레드에서만 씁니다. */
@@ -53,6 +54,8 @@ namespace sw
         [[nodiscard]] bool findSky( SkyGradient& outGradient ) const;
         /** @brief @p viewPosition 에서 보는 안개입니다 — 물속이면 물의 안개가 컴포넌트의 값을 덮는다(`FogComponent::findFog`). 안개가 없으면 false 입니다. */
         [[nodiscard]] bool findFog( const float3& viewPosition, FogSettings& outSettings ) const;
+        /** @brief 이 씬의 비 가림 맵 값입니다(`RainOcclusionComponent::findRainOcclusion`). 없으면 false 입니다. */
+        [[nodiscard]] bool findRainOcclusion( RainOcclusionSettings& outSettings ) const;
         /** @brief 표면 변형 층입니다. 값이 없으면 빈 값(핸들 없음)을 쓰고 false 입니다. */
         [[nodiscard]] bool findSurfaceDeform( SurfaceDeformBinding& outBinding ) const;
         /**

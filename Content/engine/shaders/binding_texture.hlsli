@@ -272,7 +272,9 @@ SW_DECLARE_ENGINE_TEXTURE( 21 );
 SW_DECLARE_ENGINE_TEXTURE( 22 );
 SW_DECLARE_ENGINE_TEXTURE( 23 );
 SW_DECLARE_ENGINE_TEXTURE( 24 );
-        #if SW_ENGINE_TEXTURE_COUNT != 25
+SW_DECLARE_ENGINE_TEXTURE( 25 );
+SW_DECLARE_ENGINE_TEXTURE( 26 );
+        #if SW_ENGINE_TEXTURE_COUNT != 27
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -444,6 +446,12 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                     break;                                                 \
                 case 24u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 24 ), SW_ENGINE_SAMPLER( 24 ) ) \
+                    break;                                                 \
+                case 25u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 25 ), SW_ENGINE_SAMPLER( 25 ) ) \
+                    break;                                                 \
+                case 26u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 26 ), SW_ENGINE_SAMPLER( 26 ) ) \
                     break;                                                 \
                 default:                                                   \
                     break;                                                 \
@@ -1523,6 +1531,12 @@ static void PassTexture::sampleDepthCross( float2 uv, float2 texel, out float ou
     outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
 }
 /** @brief 접촉 그림자 마스크(채널 넷 = 접촉 그림자 빛 넷). 패스가 걸지 않았으면(파이프라인에 없음 · 켠 빛 없음 · 반투명) 가림 없음(1)이다. */
+static float4 PassTexture::sampleSkyClouds( float2 uv )
+{
+    if ( g_SkyCloudsIndex == kInvalidIndex )
+        return float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    return Bindless::sampleIndexLevelZero( SW_ENGINE_ROLE( SkyClouds ), PassTexture::toViewRectUV( uv ) );
+}
 static float4 PassTexture::sampleContactShadow( float2 uv )
 {
     if ( g_ContactShadowIndex == kInvalidIndex )

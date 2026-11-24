@@ -33,7 +33,7 @@ namespace sw
         , _sunDiscAngle{ Radians::fromRadians( 0.03f ) }
         , _planetRadiusKm{ 6360.0f }
         , _atmosphereHeightKm{ 60.0f }
-        , _bClouds{ false }
+        , _cloudMode{ SkyCloudMode::None }
         , _cloudCoverage{ 0.5f }
         , _cloudAltitudeKm{ 2.0f }
         , _cloudScale{ 0.4f }
@@ -42,6 +42,8 @@ namespace sw
         , _cloudWindSpeedKmPerSecond{ 0.01f }
         , _cloudSoftness{ 0.15f }
         , _cloudColor{ 1.0f, 1.0f, 1.0f }
+        , _cloudThicknessKm{ 1.5f }
+        , _cloudExtinctionPerKm{ 18.0f }
         , _intensityScale{ 1.0f }
     {
     }
@@ -83,7 +85,7 @@ namespace sw
         atmosphere._sunDiscAngle       = _sunDiscAngle.radians();
 
         SkyClouds& clouds            = gradient._clouds;
-        clouds._bEnabled             = _bClouds ? SW_TRUE : SW_FALSE;
+        clouds._mode                 = _cloudMode;
         clouds._coverage             = _cloudCoverage;
         clouds._altitudeKm           = _cloudAltitudeKm;
         clouds._scale                = _cloudScale;
@@ -92,6 +94,8 @@ namespace sw
         clouds._windSpeedKmPerSecond = _cloudWindSpeedKmPerSecond;
         clouds._softness             = _cloudSoftness;
         clouds._color                = _cloudColor;
+        clouds._thicknessKm          = _cloudThicknessKm;
+        clouds._extinctionPerKm      = _cloudExtinctionPerKm;
         return gradient;
     }
 

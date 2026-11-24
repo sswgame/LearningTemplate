@@ -9,7 +9,8 @@
 //     눈은 행성 중심 위 (행성 반지름 + 눈 고도) 에 있고 시선을 대기 끝(또는 행성 표면)까지 걸으며 레일리 · 미 단일 산란을 센다. 해 방향은 키 라이트 상수의 반대(-g_KeyLightDirIntensity.xyz),
 //     해 복사휘도는 키 라이트 색 × 해 배율(g_SkyAtmosphereMie.w) × 세기(g_SkyGround.w)다. 땅(시선이 행성에 닿는 방향)의 반사율은 g_SkyGround.rgb 다.
 //     해 원반(g_SkyAtmosphereGeometry.w 가 0 보다 크면)은 셰이더만 그린다 — 프로브 베이크는 원반을 넣지 않는다(방향광이 따로 비춘다).
-// 구름(g_SkyCloudColor.w = 1): 눈 위 고정 고도의 평면(g_SkyCloudShape.y km)에 값 노이즈 fbm 을 놓고 바람으로 흘린다(시간 = g_SwMaterialTime). 레이마치 없음. 평면 위 점 = 눈 xz 를 원점으로 한 시선의 평면 교점이라
+// 볼륨 구름(g_SkyCloudColor.w = 2): 저해상도 패스(volumetric_clouds.hlsl)가 먼저 걸어 둔 결과(역할 SkyClouds)를 하늘 위에 얹는다. 패스가 돌지 않은 뷰는 구름이 없다.
+// 평면 구름(g_SkyCloudColor.w = 1): 눈 위 고정 고도의 평면(g_SkyCloudShape.y km)에 값 노이즈 fbm 을 놓고 바람으로 흘린다(시간 = g_SwMaterialTime). 레이마치 없음. 평면 위 점 = 눈 xz 를 원점으로 한 시선의 평면 교점이라
 //     구름은 카메라를 따라온다(하늘 상자와 같다). 해 쪽으로 한 걸음 옮긴 밀도로 그늘을 어림하고, 지평선 근처는 평면이 너무 멀어 지운다. 구름은 프로브 베이크에 보이지 않는다.
 #include "binding.hlsli"
 
@@ -290,8 +291,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
         sky = evaluateSky( direction );
     }
 
-    const bool bClouds = g_SkyCloudColor.w > 0.5f;
-    SW_BRANCH if ( bClouds )
+    const bool bCloudLayer = g_SkyCloudColor.w > 0.5f && g_SkyCloudColor.w < 1.5f;
+    SW_BRANCH if ( bCloudLayer )
     {
         // 구름이 받는 해 빛은 눈에서 해까지의 투과율로 어림한다(대기 모드만 — 그러데이션은 1).
         float3 sunTransmit = float3( 1.0f, 1.0f, 1.0f );
@@ -306,6 +307,13 @@ float4 PSMain( PSInput input ) : SV_TARGET
         }
         const float4 cloud = evaluateClouds( direction, toSun, sun * sunTransmit, sky );
         sky                = lerp( sky, cloud.rgb, cloud.a );
+    }
+    const bool bCloudVolume = g_SkyCloudColor.w > 1.5f;
+    SW_BRANCH if ( bCloudVolume )
+    {
+        // 산란은 불투명도를 이미 곱했다. 걷지 않은 텍셀의 작은 음수는 0 으로 자른다.
+        const float4 cloud = PassTexture::sampleSkyClouds( input._clipXy * float2( 0.5f, -0.5f ) + 0.5f );
+        sky                = sky * ( 1.0f - saturate( cloud.a ) ) + cloud.rgb;
     }
     return float4( sky, 1.0f );
 }

@@ -73,7 +73,7 @@ namespace sw
         const TransientAttachmentPool& pool             = view._transientPool;
         const bool                     bSpatial         = _frameSettings._upscaler == Internal::kUpscalerSpatial;
         const bool                     bSmaller         = view._outputRect._width < viewportWidth || view._outputRect._height < viewportHeight; // Present 원본(출력 공간)의 사각형이 화면보다 작다(풀 배율 · 자동 렌더 배율)
-        const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
+        const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.hasSize();
         const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
         const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_type == RenderPassKind::Present;
         const bool                     bReportPostChain = bCandidate && bPostChain && _bUpscalePostChainLogged == SW_FALSE;

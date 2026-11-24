@@ -2,7 +2,10 @@
 
 #include "Engine/Environment/Sky/SkyGradient.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+
+#include "Engine/Config/EngineConfig.h"
 
 namespace sw
 {
@@ -70,6 +73,19 @@ namespace sw
     float32 SkyAtmosphere::computeMieBeta() const
     {
         return kMieBetaPerKm * _mieScale;
+    }
+
+    float3 SkyAtmosphere::computeSunTransmittance( const float3& toSun ) const
+    {
+        const float3 observer{ 0.0f, _planetRadiusKm + _observerAltitudeKm, 0.0f };
+        float32      rayleigh{ 0.0f };
+        float32      mie{ 0.0f };
+        if ( SkyGradientInternal::computeSunOpticalDepth( *this, observer, toSun, rayleigh, mie ) == false )
+            return float3{};
+        const float3  betaRayleigh = computeRayleighBeta();
+        const float32 mieDepth     = computeMieBeta() * kMieExtinctionRatio * mie;
+        return float3{ MathUtil::exp( -( betaRayleigh._x * rayleigh + mieDepth ) ), MathUtil::exp( -( betaRayleigh._y * rayleigh + mieDepth ) ),
+                       MathUtil::exp( -( betaRayleigh._z * rayleigh + mieDepth ) ) };
     }
 
     float3 SkyAtmosphere::evaluateScattering( const float3& direction, const float3& toSun, const float3& groundAlbedo ) const
@@ -150,6 +166,21 @@ namespace sw
             }
         }
         return radiance;
+    }
+
+    void SkyClouds::applyQuality( const SkyCloudConfig& config )
+    {
+        if ( _mode != SkyCloudMode::Volumetric )
+            return;
+        if ( config._bVolumetric == false )
+        {
+            _mode = SkyCloudMode::Layer;
+            return;
+        }
+        if ( config._viewStepCount == 0 )
+            reportFatalError( "EngineConfig _render._skyClouds._viewStepCount is missing - volumetric clouds need a step count" );
+        _viewStepCount = config._viewStepCount;
+        _historyWeight = config._historyWeight;
     }
 
     void SkyGradient::setSun( const float3& lightTravelDirection, const float3& color )

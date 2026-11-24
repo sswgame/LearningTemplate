@@ -151,6 +151,16 @@ namespace
             return bAllRead;
         }
 
+        /** @brief 플랫폼 덮어쓰기를 실제 로드 길로 읽습니다 — 커밋된 엔진 설정 위에 덮은 글(`ConfigSource::disk` 의 덮어쓰기)을 엄격하게 읽는다(바뀌는 키만 적으므로 혼자서는 형식이 서지 않는다). */
+        [[nodiscard]] static bool loadPlatformOverride( const sw::string& absolutePath )
+        {
+            // Config/Platform/<플랫폼>/EngineConfig.json → Config/Engine/EngineConfig.json
+            const sw::string  platformRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::getDirectoryPart( absolutePath ) );
+            const sw::string  enginePath   = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( platformRoot ), "Engine/EngineConfig.json" );
+            sw::ConfigManager manager;
+            return manager.loadHostConfig<sw::EngineConfig>( sw::ConfigSource::disk( enginePath, absolutePath ) ) != nullptr;
+        }
+
         /** @brief 앞의 줄이 먼저 맞습니다. */
         static constexpr ConfigKind kArrKind[] = {
             {                     "Config/Engine/EngineConfig.json",                                                                                     "",              &loadBaseLayer<sw::EngineConfig>},
@@ -162,6 +172,7 @@ namespace
             {                    "Config/Engine/RenderQuality.json",                                                                                     "",                            &loadRenderQuality},
             {                     "Config/Engine/CookContract.json",                                      "Scripts/generate/configure_files.py (configure)",                                       nullptr},
             {                 "Config/Engine/ProcessExitCodes.json",                                   "Scripts/generate/process_exit_codes.py (configure)",                                       nullptr},
+            {                                    "Config/Platform/",                                                                                     "",                         &loadPlatformOverride},
             {                                        "Config/Game/",                                                                                     "",                   &loadStrict<sw::GameConfig>},
             {                 "Config/Server/chat_banned_words.txt",                                               "chat word filter (word list, not keys)",                                       nullptr},
             {           "Config/Server/chat_ignored_characters.txt",           "chat text normalizer (U+XXXX list, not keys - ChatModerationTest reads it)",                                       nullptr},

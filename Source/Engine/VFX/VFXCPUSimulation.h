@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    /** @brief 입자 충돌 질의가 처음 닿은 곳입니다(방출기 로컬). */
+    /** @brief 입자 충돌 질의가 처음 닿은 곳입니다(시뮬레이션 공간). */
     struct VFXCollisionHit
     {
         float3 _point{};  ///< 닿은 점
@@ -26,7 +26,7 @@ namespace sw
 {
     /**
      * @class IVFXCollisionScene
-     * @brief 입자 시뮬레이션이 충돌을 묻는 창구입니다. 좌표는 **방출기 로컬**이고, 월드 변환과 물리 씬 질의는 구현이 한다(`VFXComponent`).
+     * @brief 입자 시뮬레이션이 충돌을 묻는 창구입니다. 좌표는 **시뮬레이션 공간**이고, 월드 변환과 물리 씬 질의는 구현이 한다(`VFXComponent`).
      * @details 시뮬레이션이 물리 · 씬을 모르게 하는 경계다(테스트는 평면 하나로 구현한다). 물리 씬이 없으면 부르는 쪽이 nullptr 를 넘긴다.
      */
     class IVFXCollisionScene
@@ -50,7 +50,7 @@ namespace sw
      *          난수는 **방출기 씨앗과 입자 번호**로만 정해집니다(`HashUtil::mix64` · `splitMix64Next`). 풀 안의 자리나 프레임 시간과 무관해서,
      *          같은 씨앗 · 같은 단계 수면 입자가 같습니다(GPU 시뮬레이션이 같은 해시로 같은 초기값을 냅니다 — `VFXGPUSimulation` 이 해시 상수를 올린다).
      *          입자 번호는 만든 순서이고, 한 입자는 수명 → 속도 x → y → z 순으로(생성 상자가 있으면 이어서 자리 x → y → z) 난수를 하나씩 씁니다.
-     *          좌표는 방출기 로컬입니다. 회전은 지금 0 입니다(회전 모듈은 데이터 형식에 없다).
+     *          좌표는 시뮬레이션 공간입니다. 회전은 지금 0 입니다(회전 모듈은 데이터 형식에 없다).
      *
      *          충돌(`VFXCollisionDef`)은 적분 뒤 그 단계에 움직인 선분을 `IVFXCollisionScene` 에 묻는다. 튀기는 법선 성분을 `_restitution` 만큼 뒤집고
      *          접선 성분을 `_friction` 만큼 줄이며, 닿은 점에서 법선 쪽으로 `VFXCollisionDef::kSurfaceSkin` 만큼 띄운다(GPU 깊이 충돌과 같은 값).
@@ -74,8 +74,11 @@ namespace sw
         void update( float32 deltaSeconds, const IVFXCollisionScene* pCollision );
         /** @brief 단계 하나: 생성, 적분(충돌), 수명 제거. @p stepSeconds 는 0 보다 커야 합니다. */
         void step( float32 stepSeconds, const IVFXCollisionScene* pCollision );
-        /** @brief 방출기가 로컬로 @p localOffset 만큼 옮겨 갔습니다 — 월드 공간(`VFXSimulationSpace::World`) 입자는 그만큼 되돌려 월드 자리를 지킵니다. 로컬 공간이면 아무것도 하지 않습니다. */
-        void moveEmitter( const float3& localOffset );
+        /**
+         * @brief 앞으로 태어나는 입자의 위치 · 속도를 시뮬레이션 공간으로 옮기는 행렬입니다(처음은 단위). 살아 있는 입자는 그대로다.
+         * @details 로컬 공간은 단위 그대로이고, 월드 공간(`VFXSimulationSpace::World`)은 방출기 행렬 × 기준 틀의 역이다(`VFXComponent`) — 방출기가 옮겨도 태어난 입자는 제자리다.
+         */
+        void setEmitterTransform( const float4x4& emitterToSimulation ) { _emitterToSimulation = emitterToSimulation; }
         /** @brief 사용자 값을 정합니다. 다음 `writeParticles` 부터 색 · 크기에 곱합니다(시뮬레이션 상태는 그대로다). */
         void setUserValues( const VFXEmitterUserValues& values ) { _userValues = values; }
         /** @brief 입자를 모두 지우고 방출기 시간을 0 으로 되돌려 처음부터 다시 방출합니다(같은 씨앗이라 같은 입자가 나옵니다). */
@@ -129,6 +132,7 @@ namespace sw
         vector<Particle>     _listParticle;
         vector<uint32>       _listFreeSlot; ///< 빈 인스턴스 칸(스택) — 살아 있는 입자의 칸과 합쳐 `0 ~ _maxParticles - 1` 이다
         VFXEmitterUserValues _userValues;
+        float4x4             _emitterToSimulation; ///< 새 입자를 시뮬레이션 공간으로 옮긴다(`setEmitterTransform`)
         uint8                _bWarnedPoolFull : 1;
     };
 } // namespace sw
