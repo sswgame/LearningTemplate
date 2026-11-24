@@ -181,7 +181,7 @@ namespace sw
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
         /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
-        void updateFrameServices( SceneTick sceneTick );
+        void updateFrameServices();
         /**
          * @brief 활성 씬을 틱합니다. 게임 카메라와 입력이 쓰는 게임 화면 크기를 틱 전에 적고(@p vpWidth · @p vpHeight), 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 돌립니다.
          * @details 미리보기 씬은 @p views 가 이번 프레임에 그려 달라고 한 씬만 틱합니다(`ScenePreviewTick::WhenDrawn`).
@@ -228,6 +228,7 @@ namespace sw
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;
+        uint8   _bGamePaused; ///< 이번 프레임에 게임 시간이 섰는가(`update` 가 프레임에 한 번 정한다 — 오디오와 자막이 같은 값을 본다)
         /** @brief 이번 프레임 시간(초)입니다(`beginFrame` · `tick` 이 받은 값). 프레임 관찰자 문맥의 `_deltaSeconds` 입니다. */
         float32 _frameDeltaSeconds;
         /** @brief `requestQuit` 이 정한 종료 코드입니다. */

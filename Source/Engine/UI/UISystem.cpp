@@ -1040,7 +1040,8 @@ namespace sw
         }
         // 음성이 낸 줄은 그 음성이 끝날 때까지 남는다 — 오디오가 내려갔으면 모두 끝난 것으로 본다(줄이 영원히 남지 않는다).
         subtitles.refreshVoiceState( bAudioReady ? &pAudio->getEngine() : nullptr );
-        update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+        subtitles.setGamePaused( frame._bGamePaused );
+        update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 알림은 정지 메뉴 아래서도 흐른다. 자막은 게임 소리와 같이 선다
     }
 
     Subscription UISystem::addLayerHideRequest( UILayerMask layers )

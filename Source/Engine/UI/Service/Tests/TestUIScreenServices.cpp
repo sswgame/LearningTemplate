@@ -5,6 +5,7 @@
 #include "Core/Testing/ScopedGlobalVariableValue.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -220,6 +221,38 @@ SW_TEST_CASE( UIScreenServicesTest, SubtitleQueueOrder )
         SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
         SW_EXPECT_EQUAL( uint32( 0 ), service.getQueuedLineCount() );
     }
+}
+
+/**
+ * @brief [UIScreenServicesTest] 게임이 멈춘 동안 자막 시간이 서고, 멈추지 않는 버스의 음성이 낸 줄만 흐른다 — 다시 시작하면 남은 시간부터 잇는다
+ * @details 변이: 멈춤을 보지 않으면 첫 줄이 멈춘 동안 사라지고, 모든 줄을 세우면 UI 음성의 줄이 남아 진다.
+ */
+SW_TEST_CASE( UIScreenServicesTest, SubtitlesStandWhileTheGameIsPaused )
+{
+    GlobalVariableInfo* pSubtitles = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_subtitles" );
+    SW_REQUIRE_NOT_NULL( pSubtitles );
+    const test::ScopedGlobalVariableValue subtitlesValue{ *pSubtitles, "false" }; // 화면을 열지 않고 시간만 본다
+    SW_REQUIRE_TRUE( subtitlesValue.isApplied() );
+    UISubtitleService service;
+    SW_REQUIRE_TRUE( service.configure( makeSubtitleTestConfig() ) );
+    const uint32 sequenceLine = service.post( "", "sequence", 3.0f );
+    service.update( 0.1f ); // 보이기 시작한다
+    AudioSubtitleCue uiVoice{};
+    uiVoice._bPlaysInGamePause = true;
+    service.postAudioCues( vector<AudioSubtitleCue>{ uiVoice } ); // 재생 id 가 없어 시간만 따른다
+    service.update( 0.1f );
+    SW_REQUIRE_EQUAL( uint32( 2 ), service.getActiveLineCount() );
+
+    service.setGamePaused( true );
+    service.update( 100.0f );
+    SW_REQUIRE_EQUAL( uint32( 1 ), service.getActiveLineCount() );
+    SW_EXPECT_EQUAL( sequenceLine, service.getActiveLine( 0 )._id );
+
+    service.setGamePaused( false );
+    service.update( 2.0f );
+    SW_EXPECT_EQUAL( uint32( 1 ), service.getActiveLineCount() ); // 2.9 초 가운데 2 초를 썼다
+    service.update( 1.0f );
+    SW_EXPECT_EQUAL( uint32( 0 ), service.getActiveLineCount() );
 }
 
 /** @brief [UIScreenServicesTest] HUD 와 오버레이는 설정과 상관없이 포커스를 받지 않고, 시스템에 붙지 않은 화면을 닫으면 닫는 중이 된다 */

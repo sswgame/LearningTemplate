@@ -1840,7 +1840,7 @@ namespace sw
             startWaitingVoice( *pSlot );
             // 자막은 버려지지 않고 보이스를 얻은 클립만 낸다 — 쿨다운 · 상한으로 버린 재생은 위에서 이미 돌아갔다.
             if ( clip._subtitleKey.empty() == false )
-                _published.addSubtitleCue( AudioSubtitleCue{ event._subtitleSpeakerKey, clip._subtitleKey, command._playingID } );
+                _published.addSubtitleCue( AudioSubtitleCue{ event._subtitleSpeakerKey, clip._subtitleKey, command._playingID, _pMixer->shouldPlayInGamePause( pSlot->_busIndex ) } );
         }
     }
 
