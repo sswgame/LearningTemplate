@@ -5,7 +5,7 @@
   py -3 -m Scripts header-fanin --top 40 --json build/header_fanin.json
 
 점수는 "이 헤더를 고치면 다시 컴파일되는 TU 수 × 그 TU 마다 이 헤더 때문에 더 읽는 헤더 수" 다. pch(`Engine/pch.h` · `Core/pch.h`)가 끄는 헤더는
-TU 마다 이미 읽히므로 점수에서 뺀다. 헤더 다이어트(docs/agents/CppStyle.md Includes and layers · docs/NEXT.md 헤더 팬인)의 전후 비교 숫자다 — 커밋 전후에 같은 명령으로 잰다.
+TU 마다 이미 읽히므로 점수에서 뺀다. 헤더 다이어트(docs/agents/CppStyle.md Includes and layers)의 전후 비교 숫자다 — 커밋 전후에 같은 명령으로 잰다.
 include 는 `#include "..."` 만 본다(조건부 포함 · 매크로 경로는 모두 포함한 것으로 센다 — 위로 어림한 값이다).
 """
 
