@@ -121,7 +121,6 @@ namespace sw
     void JRPGAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         const bool bMoveNamed   = _moveAction.empty() == false && _restAction.empty() == false && _equipAction.empty() == false && _classChangeAction.empty() == false;
         const bool bBattleNamed = _attackAction.empty() == false && _spellAction.empty() == false && _defendAction.empty() == false && _fleeAction.empty() == false;
         _bActionsValid          = bMoveNamed && bBattleNamed ? SW_TRUE : SW_FALSE;

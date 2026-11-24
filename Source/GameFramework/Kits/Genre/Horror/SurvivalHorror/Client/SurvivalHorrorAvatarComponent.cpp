@@ -109,7 +109,6 @@ namespace sw
     void SurvivalHorrorAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false && _lightAction.empty() == false && _healAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "SurvivalHorror.AvatarActionMissing", "Survival Horror avatar: the actions must all be named (move '%#', use '%#', light '%#', heal '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str(), _lightAction.c_str(), _healAction.c_str() );

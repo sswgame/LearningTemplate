@@ -92,7 +92,6 @@ namespace sw
     void MonsterCollectorAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         const bool bMoveNamed   = _moveAction.empty() == false && _restAction.empty() == false;
         const bool bBattleNamed = _attackAction.empty() == false && _ballAction.empty() == false && _switchAction.empty() == false && _runAction.empty() == false;
         _bActionsValid          = bMoveNamed && bBattleNamed ? SW_TRUE : SW_FALSE;

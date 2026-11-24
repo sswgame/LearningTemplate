@@ -93,7 +93,6 @@ namespace sw
     void RestaurantCounterComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         const bool bMarketNamed = _moveAction.empty() == false && _buyAction.empty() == false && _stationAction.empty() == false && _openAction.empty() == false;
         const bool bPriceNamed  = _priceUpAction.empty() == false && _priceDownAction.empty() == false;
         _bActionsValid          = bMarketNamed && bPriceNamed ? SW_TRUE : SW_FALSE;

@@ -73,7 +73,6 @@ namespace sw
     void PartyArenaViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _jumpAction.empty() == false && _attackAction.empty() == false && _poundAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "PartyArena.ViewActionMissing", "Party arena view: move '%#', jump '%#', attack '%#' and pound '%#' actions must all be named - the view reads no input", _moveAction.c_str(),

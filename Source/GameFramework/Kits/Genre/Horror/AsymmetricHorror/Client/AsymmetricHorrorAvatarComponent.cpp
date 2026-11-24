@@ -86,7 +86,6 @@ namespace sw
     void AsymmetricHorrorAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "AsymmetricHorror.AvatarActionMissing", "Asymmetric Horror avatar: the actions must all be named (move '%#', use '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str() );

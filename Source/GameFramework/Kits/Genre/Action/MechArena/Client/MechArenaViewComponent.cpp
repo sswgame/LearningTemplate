@@ -82,7 +82,6 @@ namespace sw
     void MechArenaViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _projectilePool    = PrefabPool( _projectilePrefab.path(), _projectilePoolSize );
         bool bActionsValid = true;
         for ( const hashed_string* pAction : { &_moveAction, &_fireAction, &_meleeAction, &_specialAction, &_dashAction, &_jumpAction, &_lockAction } )

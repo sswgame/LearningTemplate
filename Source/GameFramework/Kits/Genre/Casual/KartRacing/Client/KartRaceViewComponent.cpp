@@ -79,7 +79,6 @@ namespace sw
     void KartRaceViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _driftAction.empty() == false && _boostAction.empty() == false && _itemAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "KartRacing.ViewActionMissing", "Kart race view: move '%#', drift '%#', boost '%#' and item '%#' actions must all be named - the view reads no input", _moveAction.c_str(),

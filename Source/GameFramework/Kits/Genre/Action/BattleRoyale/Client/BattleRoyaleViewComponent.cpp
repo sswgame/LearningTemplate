@@ -89,7 +89,6 @@ namespace sw
     void BattleRoyaleViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _itemPool      = PrefabPool( _itemPrefab.path(), _itemPoolSize );
         _bActionsValid = _moveAction.empty() == false && _fireAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )

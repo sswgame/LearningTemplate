@@ -80,7 +80,6 @@ namespace sw
     void ConquestViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         const bool bOrders = _followAction.empty() == false && _holdAction.empty() == false && _chargeAction.empty() == false;
         _bActionsValid     = bOrders && _moveAction.empty() == false && _trainAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )

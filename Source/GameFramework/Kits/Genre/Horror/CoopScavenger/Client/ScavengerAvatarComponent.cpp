@@ -87,7 +87,6 @@ namespace sw
     void ScavengerAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false && _leverAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "Scavenger.AvatarActionMissing", "Scavenger avatar: the actions must all be named (move '%#', use '%#', lever '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str(), _leverAction.c_str() );

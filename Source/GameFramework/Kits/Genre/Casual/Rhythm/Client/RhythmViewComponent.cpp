@@ -78,7 +78,6 @@ namespace sw
     void RhythmViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _listLaneAction.empty() ? SW_FALSE : SW_TRUE;
         for ( const hashed_string& action : _listLaneAction )
         {

@@ -106,7 +106,6 @@ namespace sw
     void GhostHuntAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _lightAction.empty() == false && _strobeAction.empty() == false && _vacuumAction.empty() == false && _useAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "GhostHunt.AvatarActionMissing", "Ghost Hunt avatar: the actions must all be named (move '%#', light '%#', strobe '%#', vacuum '%#', use '%#') - the avatar reads no input", _moveAction.c_str(), _lightAction.c_str(), _strobeAction.c_str(), _vacuumAction.c_str(), _useAction.c_str() );

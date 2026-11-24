@@ -74,7 +74,6 @@ namespace sw
     void MetroidvaniaViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         bool bActionsValid = true;
         for ( const hashed_string* pAction : { &_moveAction, &_jumpAction, &_dashAction, &_attackAction, &_guardAction, &_useAction, &_flaskAction } )
         {

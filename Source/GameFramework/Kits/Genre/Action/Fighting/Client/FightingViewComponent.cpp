@@ -87,7 +87,6 @@ namespace sw
     void FightingViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         bool bActionsValid = _moveAction.empty() == false && _listButtonAction.empty() == false;
         for ( const hashed_string& action : _listButtonAction )
         {

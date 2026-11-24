@@ -82,7 +82,6 @@ namespace sw
     void MonsterHuntAvatarComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = SW_TRUE;
         for ( const hashed_string* pAction : { &_moveAction, &_fastAction, &_strongAction, &_dodgeAction, &_signAction, &_oilAction, &_potionAction, &_investigateAction, &_alternateSignAction, &_learnAction, &_brewAction, &_mutagenAction } )
         {

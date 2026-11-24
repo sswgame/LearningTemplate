@@ -91,7 +91,6 @@ namespace sw
     void CardBattleViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = _moveAction.empty() == false && _confirmAction.empty() == false && _endTurnAction.empty() == false ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "CardBattle.ViewActionMissing", "Card battle view: move '%#', confirm '%#' and end turn '%#' actions must all be named - the view reads no input", _moveAction.c_str(),
