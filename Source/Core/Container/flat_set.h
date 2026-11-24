@@ -1,22 +1,20 @@
 /**
  * @file flat_set.h
- * @brief 정렬 집합(flat_set)입니다. 정렬된 벡터와 이진 검색입니다 — 이름이 `std::set`(노드 트리 · 주소 안정)이 아님을 알린다(C++23 `std::flat_set` 과 같은 보장). 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 기본 할당자(`ContainerAllocator`)만 다릅니다.
- * @details 키 순서로 돕니다. 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있습니다.
- *          저장소 · 조회 · 삽입 · 삭제는 `flat_map` 과 함께 쓰는 몸통(`internal::SortedVectorBase`)에 있습니다 — 원소 자신이 키라 비교자를 그대로 넘깁니다.
+ * @brief 키 순서로 도는 집합 sw::flat_set 입니다(std::set 과 인터페이스 호환). 기본은 정렬 벡터이고 `SW_ENABLE_STL_CONTAINER` 면 std::set 을 멤버로 듭니다.
+ * @details 공통 계약은 두 저장 가운데 약한 쪽이다 — 원소 주소 · 반복자는 삽입 · 삭제마다 무효가 될 수 있고, 삽입은 O(n) 으로 본다.
+ *          조회 · 삽입 · 삭제 · 무효화 검사 · 저장 고르기는 `flat_map` 과 함께 쓰는 몸통(`internal::SortedContainerBase`)에 있습니다.
  */
 #pragma once
-#include "Core/Container/SortedVectorBase.h"
-#include "Core/Container/pair.h"
-#include "Core/Container/vector.h"
+#include "Core/Container/SortedContainerBase.h"
 #include "Core/Foundation/StdHeaders.h"
 
 namespace sw
 {
-    /** @brief 정렬된 벡터로 구현한 집합입니다. 조회는 이진 검색이고, 삽입할 때 정렬을 유지합니다. */
+    /** @brief 키 순서로 도는 집합입니다. 조회는 O(log n) 이고, 삽입 · 삭제 뒤에는 원소 주소가 무효다. */
     template <typename Key, typename Compare = std::less<void>, typename Allocator = ContainerAllocator<Key>>
-    class flat_set : public internal::SortedVectorBase<Key, Compare, Compare, Allocator>
+    class flat_set : public internal::SortedContainerBase<Key, void, Compare, Allocator>
     {
-        using Base = internal::SortedVectorBase<Key, Compare, Compare, Allocator>;
+        using Base = internal::SortedContainerBase<Key, void, Compare, Allocator>;
 
     public:
         using key_type      = Key;
@@ -33,9 +31,8 @@ namespace sw
         }
     };
 
-    /** @brief 저장소(`vector`)와 비교자뿐이다. */
     template <typename Key, typename Compare, typename Allocator>
-    struct is_bitwise_relocatable<flat_set<Key, Compare, Allocator>> : std::bool_constant<is_bitwise_relocatable_v<vector<Key, Allocator>> && std::is_empty_v<Compare>>
+    struct is_bitwise_relocatable<flat_set<Key, Compare, Allocator>> : std::bool_constant<internal::SortedStorage<Key, void, Compare, Allocator>::kBitwiseRelocatable>
     {
     };
 } // namespace sw

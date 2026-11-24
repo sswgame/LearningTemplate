@@ -204,7 +204,7 @@ namespace sw
 #if defined( SW_DO_CHECKS )
     #define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceContext{};
 
-    // 가드는 `this->` 로 멤버를 짚는다 — 멤버가 템플릿 기반 형식(`internal::SortedVectorBase` · `internal::DenseHashTable`)에 있어도
+    // 가드는 `this->` 로 멤버를 짚는다 — 멤버가 템플릿 기반 형식(`internal::SortedContainerBase` · `internal::DenseHashTable`)에 있어도
     // 파생 템플릿의 멤버 함수에서 찾힌다(템플릿의 2 단계 이름 찾기는 의존 기반 형식의 멤버를 한정 없이는 보지 않는다).
     #define SW_SCOPED_RACE_READ()                                      \
         const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) \
