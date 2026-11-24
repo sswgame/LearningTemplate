@@ -133,9 +133,10 @@ static const uint kInvalidIndex = 0xFFFFFFFFu;
 #define SW_NUMTHREADS( x, y, z ) [numthreads( x, y, z )]
 
 // 반복 · 분기 힌트 — 맨 `[unroll]` 은 clang-format 이 다음 문장과 붙이므로 속성 매크로로 쓴다(Content/.clang-format 의 AttributeMacros).
-#define SW_UNROLL [unroll]
-#define SW_LOOP   [loop]
-#define SW_BRANCH [branch]
+#define SW_UNROLL    [unroll]
+#define SW_LOOP      [loop]
+#define SW_BRANCH    [branch]
+#define SW_FORCECASE [forcecase] // switch 를 하드웨어 switch 로 낸다 — switch 에 SW_BRANCH 를 달면 FXC · DXC 가 if 사슬로 바꿔 case 가 많으면 컴파일 시간 · 중첩이 는다
 // 펼치는 반복 — FXC(DX11)만 반복으로 둔다. FXC 는 라이트 루프 · 캐스케이드 안에 펼친 탭 · 프로브를 한 덩어리로 최적화해 컴파일 시간이 펼친 크기보다 빠르게 는다
 // (forward_lit PSMain: 펼치면 10 s · 명령 3900, 반복으로 두면 2.5 s · 1870 — DXC 는 펼쳐도 0.6 s). 그림자 · 프로브 본문은 화면 미분을 쓰지 않아 반복으로 둬도 된다.
 // SW_LOOP_ON_FXC 는 힌트 없는 반복에 같은 일을 한다 — FXC 는 횟수가 정해진 반복을 힌트 없이도 다 펼친다(노이즈 옥타브 · 보로노이 이웃), 다른 컴파일러는 저마다 정하게 그대로 둔다.
