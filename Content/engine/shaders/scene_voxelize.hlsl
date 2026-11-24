@@ -3,10 +3,12 @@
 /**
  * scene_voxelize.hlsl — 실시간 프로브가 광선을 쏠 점유 복셀을 메시의 GPU 원본 정점에서 칠하는 컴퓨트(RenderPassKind::SceneVoxelize).
  *
- * 한 패스가 두 번 디스패치한다(같은 PSO, 입력 행만 다르다 — 사이에 UAV 배리어).
+ * 한 패스가 네 번까지 디스패치한다(같은 PSO, 입력 행만 다르다 — 사이에 UAV 배리어). 움직이는 층이 없는 장면은 앞의 둘뿐이다.
  *   (1) 지우기: 스레드 하나가 칸 하나다. 다시 칠할 구간의 점유 비트 · 발광 순위를 0 으로 되돌린다.
  *   (2) 칠하기: 스레드 하나가 삼각형 하나다. 노멀의 가장 큰 축으로 투영한 칸(3 축 투영 — 기하 셰이더 없음)을 돌며, 칸 기둥에서 삼각형 평면이 지나는 층만 삼각형-상자 분리축
  *       판정(Akenine-Möller 2001)으로 켠다 — 얇은 면도 빠짐없이 켜는 보수적 복셀화다. 겹치는 칸은 원자 OR, 발광은 순위의 원자 최댓값(더 밝은 쪽이 남는다).
+ *   (3) 되돌리기: 스레드 하나가 칸 하나다. 바뀐 구간의 정적 사본(같은 버퍼의 다른 자리 — (1) · (2) 가 쓴 곳)을 읽을 자리로 옮긴다.
+ *   (4) 움직이는 것 칠하기: (2) 와 같은 식으로 움직이는 메시만 읽을 자리 위에 칠한다.
  *
  * 바인딩 계약: 읽기 t0 입력 행(g_VoxelJobs) · t1 위치(float 셋씩 — 렌더 프록시 정점 버퍼의 위치 흐름을 GPU 복사한 것) · t2 인덱스(LOD 0), 쓰기 u0 복셀 단어.
  * 입력 행 배치는 아래 kRow* · kJob*(C++ SceneVoxelizer::planPaint 가 같은 순서로 짠다), 디스패치는 C++ RealtimeProbeUpdater::dispatchVoxelJobs — 스레드가 한 줄 상한을 넘으면 y 축으로 접는다.
@@ -18,7 +20,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float, g_VoxelPositions, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_VoxelIndices, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VoxelRW, 0 );
 
-static const uint kRowHeader      = 0u; // asuint( 일 수, 스레드 수, 지우기면 1, 디스패치 한 줄의 스레드 수 )
+static const uint kRowHeader      = 0u; // asuint( 일 수, 스레드 수, 일 종류 kMode*, 디스패치 한 줄의 스레드 수 )
 static const uint kRowFirstJob    = 1u;
 static const uint kJobRowCount    = 9u;          // SceneVoxelizer::kJobRowCount
 static const uint kJobThreads     = 0u;          // asuint( 첫 스레드, 스레드 수, 점유 단어의 첫 단어, 발광 단어의 첫 단어(없으면 kNoEmission) )
@@ -26,7 +28,9 @@ static const uint kJobDimension   = 1u;          // asuint( 격자 칸 수 X, Y,
 static const uint kJobClipFirst   = 2u;          // asuint( 구간 처음 칸 X, Y, Z, 인덱스 버퍼 안의 첫 인덱스 )
 static const uint kJobClipLast    = 3u;          // asuint( 구간 끝 칸(포함) X, Y, Z, 위치 버퍼 안의 첫 정점 )
 static const uint kJobOrigin      = 4u;          // 격자 시작점 xyz, 칸 크기
-static const uint kJobWorld       = 5u;          // 월드 행렬 네 행(행 벡터)
+static const uint kJobWorld       = 5u;          // 월드 행렬 네 행(행 벡터). 되돌리기는 첫 행에 asuint( 정적 사본의 점유 첫 단어, 발광 첫 단어 )
+static const uint kModeClear      = 1u;          // SceneVoxelizer::kJobModeClear
+static const uint kModeRestore    = 2u;          // SceneVoxelizer::kJobModeRestore
 static const uint kNoEmission     = 0xFFFFFFFFu; // SceneVoxelizer::kNoEmission
 static const uint kMaxSearchSteps = 32u;
 
@@ -94,12 +98,35 @@ uint computeCellIndex( VoxelJob job, uint3 cell )
     return ( cell.z * job._dimension.y + cell.y ) * job._dimension.x + cell.x;
 }
 
+/** @brief 구간 안의 @p local 번째 칸의 번호입니다(지우기 · 되돌리기). */
+uint computeClipCellIndex( VoxelJob job, uint local )
+{
+    const uint3 size = job._clipLast - job._clipFirst + uint3( 1u, 1u, 1u );
+    return computeCellIndex( job, job._clipFirst + uint3( local % size.x, ( local / size.x ) % size.y, local / ( size.x * size.y ) ) );
+}
+
+/** @brief 되돌리기 — 구간 안의 칸 하나(@p local 번째)를 정적 사본(@p staticOffset.x 점유 · @p staticOffset.y 발광 첫 단어)의 값으로 둡니다. 읽기도 원자 연산이다(한 버퍼의 단어는 모두 원자 형식 — WGSL). */
+void restoreCell( VoxelJob job, uint2 staticOffset, uint local )
+{
+    const uint cellIndex = computeClipCellIndex( job, local );
+    const uint bit       = 1u << ( cellIndex & 31u );
+    uint       occupancy = 0u;
+    InterlockedOr( g_VoxelRW[staticOffset.x + ( cellIndex >> 5u )], 0u, occupancy );
+    InterlockedAnd( g_VoxelRW[job._wordOffset + ( cellIndex >> 5u )], ~bit );
+    InterlockedOr( g_VoxelRW[job._wordOffset + ( cellIndex >> 5u )], occupancy & bit );
+    if ( job._emissionOffset != kNoEmission && staticOffset.y != kNoEmission )
+    {
+        uint rank = 0u;
+        InterlockedOr( g_VoxelRW[staticOffset.y + cellIndex], 0u, rank );
+        InterlockedAnd( g_VoxelRW[job._emissionOffset + cellIndex], 0u );
+        InterlockedOr( g_VoxelRW[job._emissionOffset + cellIndex], rank );
+    }
+}
+
 /** @brief 지우기 — 구간 안의 칸 하나(@p local 번째)를 끄고 발광 순위를 0 으로 되돌립니다. */
 void clearCell( VoxelJob job, uint local )
 {
-    const uint3 size      = job._clipLast - job._clipFirst + uint3( 1u, 1u, 1u );
-    const uint3 cell      = job._clipFirst + uint3( local % size.x, ( local / size.x ) % size.y, local / ( size.x * size.y ) );
-    const uint  cellIndex = computeCellIndex( job, cell );
+    const uint cellIndex = computeClipCellIndex( job, local );
     InterlockedAnd( g_VoxelRW[job._wordOffset + ( cellIndex >> 5u )], ~( 1u << ( cellIndex & 31u ) ) );
     if ( job._emissionOffset != kNoEmission )
         InterlockedAnd( g_VoxelRW[job._emissionOffset + cellIndex], 0u );
@@ -234,9 +261,13 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
     {
         const uint     row = findJobRow( thread, header.x );
         const VoxelJob job = loadJob( row );
-        if ( header.z != 0u )
+        if ( header.z == kModeClear )
         {
             clearCell( job, thread - job._firstThread );
+        }
+        else if ( header.z == kModeRestore )
+        {
+            restoreCell( job, asuint( g_VoxelJobs[row + kJobWorld].xy ), thread - job._firstThread );
         }
         else
         {

@@ -36,11 +36,24 @@ namespace sw
         bool isSamePaint( const SceneVoxelSource& other ) const;
     };
 
-    /** @brief 격자의 모양과 칠할 메시들입니다. */
+    /** @brief 움직이는 원천 하나 — 메시 칸과 지금 칠할 값입니다(격자 밖이면 칠하지 않는 원천). */
+    struct SceneVoxelMovingSource
+    {
+        uint32           _slot{ 0 };
+        SceneVoxelSource _source{};
+    };
+
+    /**
+     * @brief 격자의 모양과 칠할 메시들입니다 — 정적 층(한 번도 바뀌지 않은 메시)과 움직이는 층(모은 뒤 움직였거나 모습이 바뀐 메시).
+     * @details 정적 층은 버전끼리 나눠 든다(공유 값) — 물체 하나가 움직이는 프레임은 움직이는 목록만 새로 짓고, GPU 도 정적 사본에서 낡은 자리를 되돌린 뒤 움직이는 메시만 다시 칠한다
+     *          (언리얼 Lumen 의 카드 캐시 · 가상 그림자 맵의 정적 · 동적 층과 같은 가름). 처음 바뀐 메시가 정적 층에서 빠질 때 한 번만 정적 구간을 다시 칠한다.
+     */
     struct SW_API SceneVoxelScene
     {
-        SceneVoxelGrid           _grid{};
-        vector<SceneVoxelSource> _listSource{}; ///< 레지스트리 메시 칸 번호마다(칸이 그 뒤로 늘었으면 짧다)
+        SceneVoxelGrid                             _grid{};
+        shared_ptr<const vector<SceneVoxelSource>> _pListStaticSource{};      ///< 레지스트리 메시 칸 번호마다(칸이 그 뒤로 늘었으면 짧다). 없으면 nullptr — `getStaticSources` 로 읽는다
+        vector<SceneVoxelMovingSource>             _listMovingSource{};       ///< 움직이는 원천들(칸 번호 오름차순)
+        uint8                                      _bMovingLayer{ SW_FALSE }; ///< 움직이는 원천이 있었다 — 정적 사본 자리를 잡는다(다시 모을 때까지 켜져 있어 자리가 오가지 않는다)
         /**
          * @brief 이 장면의 서로 다른 발광(RGB9E5)을 어두운 것부터 세운 목록입니다. 발광 칸에는 색이 아니라 **순위**(목록 번호 + 1, 0 은 발광 없음)를 쓴다.
          * @details 여러 면이 한 칸을 덮으면 더 밝은 쪽이 남는다 — RGB9E5 비트는 밝기 차례가 아니라 원자 최댓값으로 고를 수 없으므로 순위를 쓴다(`InterlockedMax`, scene_voxelize.hlsl).
@@ -50,6 +63,10 @@ namespace sw
 
         /** @brief 발광 @p packedEmission 의 순위입니다. 0 이거나 목록에 없으면 0 입니다. */
         uint32 findEmissionRank( uint32 packedEmission ) const;
+        /** @brief 정적 층의 원천들입니다(메시 칸 번호마다). */
+        const vector<SceneVoxelSource>& getStaticSources() const;
+        /** @brief 정적 층을 바꿉니다. */
+        void setStaticSources( vector<SceneVoxelSource>&& listSource );
         /** @brief 칠할 메시들의 발광에서 `_listEmissionPalette` 를 다시 만듭니다. */
         void rebuildEmissionPalette();
     };

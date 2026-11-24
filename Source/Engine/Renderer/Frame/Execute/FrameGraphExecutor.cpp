@@ -280,9 +280,15 @@ namespace sw
                 {
                     SW_PROFILE_SCOPE( "RT.Probe.Voxelize" );
                     const RHIPipelineStateHandle voxelizePSO = _psoManager.getEnginePSO( RenderPassKind::SceneVoxelize );
-                    _state._probeUpdater.dispatchVoxelClear( *_pCmd, voxelizePSO );
-                    graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::sceneVoxelBuffer() } ); // 지운 칸 위에 칠한다
-                    _state._probeUpdater.dispatchVoxelPaint( *_pCmd, voxelizePSO );
+                    for ( uint32 dispatchIndex = 0; dispatchIndex < RealtimeProbeUpdater::kVoxelDispatchCount; ++dispatchIndex )
+                    {
+                        if ( _state._probeUpdater.hasVoxelDispatch( dispatchIndex ) == false )
+                            continue;
+                        if ( dispatchIndex > 0 )
+                            graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::sceneVoxelBuffer() } ); // 앞 디스패치가 쓴 칸 위에 칠한다
+                        _state._probeUpdater.dispatchVoxelPass( *_pCmd, voxelizePSO, dispatchIndex );
+                    }
+                    _state._probeUpdater.finishVoxelPaint();
                 }
                 break;
             }
