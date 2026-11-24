@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<?asset guid="951ae9b7375d44fd88139a11c62067a1"?>
-<!--
-  장르 키트 시연 미니게임 — SideScrollConquest 키트. 맵의 디렉터(GameModeComponent 파생)가 읽는 규칙 · 병종 · 거점(data/conquest.xml)을 게임 기능 SideScrollConquest 가 미니게임 범위에 건다.
-  시나리오 automation/kit_sidescrollconquest.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
--->
-<Minigame name="kit_sidescrollconquest" map="game/playground/maps/kit_sidescrollconquest.scene.xml" entry="SceneSwitch" features="SideScrollConquest" catalogs="ConquestCatalog"/>
