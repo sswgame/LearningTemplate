@@ -149,9 +149,9 @@ SW_TEST_CASE( RemoteCallTest, ArgumentsTravelAsTypedBinary )
     SW_EXPECT_TRUE( rig._serverAvatar._bLastFlag );
 
     // 등록되지 않은 열거자 · 유한하지 않은 실수는 몸에 닿지 않는다(거절 · 깨진 호출).
-    const auto writeAll = [bigID]( int64 mode, float64 value )
+    const auto writeAll = []( int64 mode, float64 value )
     {
-        return [bigID, mode, value]( BitWriter& writer )
+        return [mode, value]( BitWriter& writer )
         {
             uint64 bits = 0;
             Memory::copy( &bits, &value, sizeof( bits ) );

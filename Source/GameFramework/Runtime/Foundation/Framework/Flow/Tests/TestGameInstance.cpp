@@ -4,6 +4,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
@@ -293,8 +294,11 @@ SW_TEST_CASE( GameInstanceTest, UpdateOrder )
 {
     vector<string>          order;
     RecordingDevPartFactory devFactory{ order };
-    SubsystemScope          testScope;
+    GameTimeScale           timeScale; // 프레임의 실제 경과는 엔진이 적는다 — 프레임 없이 부르는 테스트는 제 것을 적는다
+    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    SubsystemScope testScope;
     SW_REQUIRE_TRUE( testScope.bind<IGameDevPartFactory>( &devFactory ) );
+    SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );
     const game::ScopedGameScope scoped{ testScope };
     MemoryLocalDatabase         database;
     LifecycleTestGame           game{ database, LifecycleTestStep::Succeed };

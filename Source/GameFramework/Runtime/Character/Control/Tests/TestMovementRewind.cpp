@@ -47,7 +47,7 @@ namespace
         {
             (void)addBox( "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 20.0f, 0.5f, 20.0f }, PhysicsBodyType::Static );
             (void)addBox( "Platform", float3{ 0.0f, 0.5f, 0.0f }, float3{ 1.5f, 0.5f, 1.5f }, PhysicsBodyType::Static );
-            (void)addBox( "Wall", float3{ 0.0f, 1.0f, 6.0f }, float3{ 4.0f, 1.0f, 0.25f }, PhysicsBodyType::Static );
+            (void)addBox( "Wall", float3{ 0.0f, 1.0f, 6.0f }, float3{ 12.0f, 1.0f, 0.25f }, PhysicsBodyType::Static );
             GameObject* pWalker = _manager.createGameObject( hashed_string( "Walker" ) );
             _pController        = pWalker->addComponent<CharacterControllerComponent>();
             _pController->setLocalPosition( float3{ 0.0f, 1.05f, 0.0f } );

@@ -5,9 +5,11 @@
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
@@ -340,6 +342,8 @@ SW_TEST_CASE( WeatherSystemTest, SceneWriterScalesAndRestoresTheScene )
     WeatherSceneWriter writer;
     writer.open( &catalog );
     SW_EXPECT_TRUE( writer.isOpen() );
+    if ( game::findSubsystem<ISoundPlayer>() != nullptr )
+        SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 소리를 내려 한다 — 이벤트 라이브러리는 게임이 설 때 싣는다
     writer.apply( manager, weather );
     SW_EXPECT_NEAR( 0.5f, pSun->getIntensity(), 1.0e-6f );
     SW_EXPECT_NEAR( 12.0f, pWind->makeSettings()._speed, 1.0e-5f );

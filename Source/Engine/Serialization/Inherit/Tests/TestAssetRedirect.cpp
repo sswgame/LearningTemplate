@@ -75,8 +75,8 @@ SW_TEST_CASE( AssetRedirectTest, IdentityRowsAreParsedApartFromSavedPaths )
     const utf8* const arrBad[] = {
         "<Redirects><IdentityRedirect from=\"common/a.xml\" to=\"0000000000000000000000000000000b\"/></Redirects>",
         "<Redirects><IdentityRedirect from=\"0000000000000000000000000000000a\" to=\"0000000000000000000000000000000a\"/></Redirects>",
-        "<Redirects><IdentityRedirect from=\"0000000000000000000000000000000a\" to=\"0000000000000000000000000000000b\"/>"
-        "<IdentityRedirect from=\"0000000000000000000000000000000a\" to=\"0000000000000000000000000000000c\"/></Redirects>",
+        ( "<Redirects><IdentityRedirect from=\"0000000000000000000000000000000a\" to=\"0000000000000000000000000000000b\"/>"
+          "<IdentityRedirect from=\"0000000000000000000000000000000a\" to=\"0000000000000000000000000000000c\"/></Redirects>" ),
     };
     for ( const utf8* pBad : arrBad )
     {
