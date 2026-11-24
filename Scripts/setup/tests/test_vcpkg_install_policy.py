@@ -55,6 +55,50 @@ def parse_install_plan(output: str) -> tuple[str, str]:
     return remove[len("REMOVE=[") : -1], build[len("BUILD=[") : -1]
 
 
+def overlay_hash(source_dir: Path) -> str:
+    with tempfile.TemporaryDirectory() as folder:
+        script = Path(folder) / "Probe.cmake"
+        script.write_text(
+            f'include("{POLICY_FILE.as_posix()}")\n'
+            f'sw_vcpkg_hash_overlay_ports("{source_dir.as_posix()}" hash)\n'
+            'message(NOTICE "HASH=[${hash}]")\n',
+            encoding="utf-8",
+        )
+        result = subprocess.run([CMAKE, "-P", str(script)], capture_output=True, text=True, check=True)
+    line = next(text for text in result.stderr.splitlines() if text.startswith("HASH=["))
+    return line[len("HASH=[") : -1]
+
+
+class VcpkgOverlayHashTest(unittest.TestCase):
+    def test_every_port_file_changes_the_hash(self) -> None:
+        # 예전에는 portfile · vcpkg.json · *.patch 만 세어, 래퍼 · *.diff 를 고쳐도 설치를 건너뛰었다.
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder)
+            port = source / "ThirdParty/zlib/vcpkg-port/zlib"
+            (port / "windows").mkdir(parents=True)
+            list_file = [port / name for name in ("portfile.cmake", "vcpkg.json", "a.patch", "a.diff", "vcpkg-cmake-wrapper.cmake", "usage", "windows/b.diff")]
+            for path in list_file:
+                path.write_bytes(b"one\n")
+            last = overlay_hash(source)
+            for path in list_file:
+                with self.subTest(file=path.name):
+                    path.write_bytes(b"two\n")
+                    changed = overlay_hash(source)
+                    self.assertNotEqual(last, changed)
+                    last = changed
+            (port / "usage").rename(port / "usage.txt")
+            self.assertNotEqual(last, overlay_hash(source))
+
+    def test_line_endings_do_not_change_the_hash(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            portfile = Path(folder) / "ThirdParty/zlib/vcpkg-port/zlib/portfile.cmake"
+            portfile.parent.mkdir(parents=True)
+            portfile.write_bytes(b"one\ntwo\n")
+            lf_hash = overlay_hash(Path(folder))
+            portfile.write_bytes(b"one\r\ntwo\r\n")
+            self.assertEqual(lf_hash, overlay_hash(Path(folder)))
+
+
 class VcpkgEmptyCacheTest(unittest.TestCase):
     def test_empty_cache_decides_every_input(self) -> None:
         # 게이트의 값(트리플릿 · 오버레이)을 정하는 절이 통째로 지워져도 캐시가 찬 빌드 폴더는 옛 값으로 구성된다 — 빈 캐시에서만 드러난다.
