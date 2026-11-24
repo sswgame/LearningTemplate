@@ -1,7 +1,7 @@
 /**
  * batch_data.hlsli — 씬 배치 표 원소 하나(BatchData)의 정의. 그래픽스(binding.hlsli 의 g_SwBatches)와 컴퓨트(gpu_cull · instance_sort 의 g_BatchInfo)가 이 파일 하나를 쓴다.
  *
- * C++ `GPUBatchInfo`(Engine/Renderer/Scene/GPUScene.h)와 바이트 배치가 같아야 한다(4 바이트 아홉 칸, 36 바이트). 구조체를 셰이더마다 베끼면 칸을 더할 때 한 곳만 고쳐
+ * C++ `GPUBatchInfo`(Engine/Renderer/Scene/GPUScene.h)와 바이트 배치가 같아야 한다(4 바이트 스무 칸, 80 바이트). 구조체를 셰이더마다 베끼면 칸을 더할 때 한 곳만 고쳐
  * 원소 1 부터 어긋난다(라이트 원소 light_data.hlsli 와 같은 이유).
  */
 
@@ -24,6 +24,11 @@ struct BatchData
 
     uint  _lodLevelCount; // LOD 그룹의 머리 배치(단계 0)의 단계 수. 0 = 그룹이 아니다 — 컬링이 인스턴스의 머리 배치 행에서 읽는다
     float _lodScreenSize; // LOD 그룹의 낮은 단계 배치 행: 이 단계로 넘어가는 화면 크기 임계값 — 컬링이 머리 + 단계 번호 행에서 읽는다
+
+    float _uvDensity;      // UV 한 단위가 덮는 메시 공간 길이(0 이면 UV 가 없다) — 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고른다(material_displacement.hlsli)
+    float _meanEdgeLength; // 메시 공간 평균 변 길이(같은 쓰임)
+    uint  _padding0;       // 16 바이트 배수로 맞춘다(GL std430)
+    uint  _padding1;
 
     static BatchData load( uint batchIndex ); // 정의는 binding.hlsli(배치 표 g_SwBatches 를 읽는다)
 };

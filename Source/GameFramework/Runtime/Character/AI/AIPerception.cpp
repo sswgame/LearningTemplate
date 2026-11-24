@@ -33,7 +33,7 @@ namespace sw
         }
         _worldOrigin        = origin;
         const float32 range = MathUtil::max( _settings._sightRange, _settings._loseSightRange );
-        AIStimulusSourceComponent::gatherStimuli( manager, ownTeam, eyePosition, range, _listCandidate, _listQueryKey );
+        AIStimulusSourceComponent::gatherStimuli( manager, ownTeam, eyePosition, range, _settings._hearingScale, _listCandidate, _listQueryKey );
         sense( eyePosition, forward, _listCandidate, pGrid, deltaTime );
     }
 

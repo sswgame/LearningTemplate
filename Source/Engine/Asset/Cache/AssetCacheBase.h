@@ -69,8 +69,8 @@ namespace sw
     /**
      * @struct AssetMemoryEntry
      * @brief 캐시가 쥔 에셋 한 줄의 메모리입니다(`AssetCacheBase::collectMemoryEntries`). 메모리 스냅숏의 에셋 표가 읽는다(언리얼 `obj list` · `ListTextures` 의 줄).
-     * @details 바이트는 캐시가 아는 만큼의 추정이다 — 텍스처 · 메시는 픽셀 · 정점 버퍼까지, 나머지는 객체 크기(`sizeof`)다. 에셋 안 컨테이너의 정확한 합은
-     *          메모리 태그 표(`MemoryProfiler`)가 종류별 줄로 센다. 종류 이름은 캐시의 것(`getAssetKindName`)이라 줄에 두지 않는다.
+     * @details 바이트는 캐시가 아는 만큼의 추정이다 — 텍스처 · 메시는 픽셀 · 정점 버퍼까지, 공유 에셋(`SharedAssetCache`)은 읽으며 남긴 바이트(안쪽 컨테이너까지 — 배포본은 객체 크기),
+     *          나머지는 객체 크기(`sizeof`)다. 용도별 합은 메모리 태그 표(`MemoryProfiler`)가 센다. 종류 이름은 캐시의 것(`getAssetKindName`)이라 줄에 두지 않는다.
      */
     struct AssetMemoryEntry
     {

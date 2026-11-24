@@ -1,61 +1,49 @@
 /**
  * @file CueTriggerComponent.h
- * @brief 태그를 가진 것이 들어오면 연출 신호와 소리를 내는 트리거입니다.
+ * @brief 활성자가 들어오면 연출 신호와 소리를 내는 볼륨입니다.
  */
 #pragma once
-#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/TriggerComponent.h"
 
 namespace sw
 {
     struct AudioPlayableAsset;
 
-    class GameObjectManager;
-
     /**
      * @class CueTriggerComponent
-     * @brief 태그(보통 `Player`)를 가진 것이 처음 들어오면 연출 신호(`GimmickUtil::sendCue`, `_cue` — 큐 표의 연출과 `GimmickCueEvent`)와 소리를 냅니다. `_bOnce` 가 꺼져 있으면 `_cooldown` 뒤에 다시 작동합니다.
+     * @brief 활성자(보통 태그 `Player`)가 들어오면(`TriggerComponent` — 겹침 또는 거리) 연출 신호(`GimmickUtil::sendCue`, `_cue` — 큐 표의 연출과 `GimmickCueEvent`)와 소리를 냅니다.
+     * @details 한 번만 하지 않는 볼륨(`_bOnce` 꺼짐)은 `_cooldown` 뒤에 다시 작동합니다. 연출은 보이는 일이라 월드마다 판정합니다(`TriggerAuthority::Local`).
      */
-    REFLECT( Category = "Gimmick", DisplayName = "Scare Trigger", Tooltip = "Fires a scripted scare cue and sound when a tagged object enters" )
-    class SW_GF_API CueTriggerComponent : public Component
+    REFLECT( Category = "Gimmick", DisplayName = "Cue Trigger", Tooltip = "Fires a presentation cue and a sound when the activator enters" )
+    class SW_GF_API CueTriggerComponent : public TriggerComponent
     {
     public:
         REFLECT_BODY();
 
         CueTriggerComponent();
-        virtual ~CueTriggerComponent() override = default;
+        ~CueTriggerComponent() override = default;
 
-        /** @brief 겹침 진입 사건을 구독합니다. */
-        void  onRegister( GameObjectManager& manager ) override;
-        void  onTick( TickContext& context ) override;
-        int32 getFireCount() const { return _fireCount; }
+        /** @brief 거리 판정 뒤에 다시 작동하기까지의 시간을 줄입니다. */
+        void onTick( TickContext& context ) override;
+
+    protected:
+        [[nodiscard]] bool onVolumeActivated( const GameObject& activator ) override;
 
     private:
-        /** @brief 태그가 맞는 것이 들어오면(`GameObjectEvents::_overlapBegin`) 연출 신호와 소리를 냅니다. */
-        void handleOverlapBegin( const OverlapInfo& overlap );
-
-        Subscription _overlapSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
-        PROPERTY( Required, Category = "Scare", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
+        PROPERTY( Required, Category = "Cue", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
         hashed_string _cue;
-        PROPERTY( Category = "Scare", DisplayName = "Sound" )
+        PROPERTY( Category = "Cue", DisplayName = "Sound" )
         AssetRef<AudioPlayableAsset> _sound;
-        PROPERTY( Category = "Scare", DisplayName = "Required Tags" )
-        TagContainer _requiredTags;
-        PROPERTY( Category = "Scare", DisplayName = "Once" )
-        bool _bOnce;
-        PROPERTY( Category = "Scare", DisplayName = "Cooldown", Min = 0.0, Units = s )
+        PROPERTY( Category = "Cue", DisplayName = "Cooldown", Tooltip = "Time before a volume that is not Once fires again", Min = 0.0, Units = s )
         float32 _cooldown;
-        PROPERTY( RuntimeState, Category = "Scare", DisplayName = "Cooldown Left", Tooltip = "Runtime", Units = s )
+        PROPERTY( RuntimeState, Category = "Cue", DisplayName = "Cooldown Left", Tooltip = "Runtime", Units = s )
         float32 _cooldownLeft;
-        PROPERTY( RuntimeState, Category = "Scare", DisplayName = "Fire Count", Tooltip = "Runtime" )
-        int32 _fireCount;
     };
 } // namespace sw

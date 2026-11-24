@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
@@ -45,13 +46,27 @@ namespace sw
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 스테이지를 그립니다. */
         void updateAvatar( GameObjectManager& manager );
         /** @brief 스테이지를 그립니다. 타일 · 플레이어 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
-        static void drawStage( const ActionPlatformerGameModeComponent& director, const GameObjectManager& manager );
+        void drawStage( const ActionPlatformerGameModeComponent& director, const GameObjectManager& manager ) const;
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action whose X runs the body (required)" )
         hashed_string _moveAction;
         PROPERTY( Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action held to jump (required, trigger Down - the game mode finds the press edge)" )
         hashed_string _jumpAction;
+        PROPERTY( Category = "View", DisplayName = "Tile Color" )
+        float4 _tileColor;
+        PROPERTY( Category = "View", DisplayName = "Secret Radius", Min = 0.01, Units = m )
+        float32 _secretRadius;
+        PROPERTY( Category = "View", DisplayName = "Secret Color" )
+        float4 _secretColor;
+        PROPERTY( Category = "View", DisplayName = "Player Half Extent", Units = m )
+        float3 _playerHalfExtent;
+        PROPERTY( Category = "View", DisplayName = "Player Color" )
+        float4 _playerColor;
+        PROPERTY( Category = "View", DisplayName = "Goal Height", Min = 0.01, Units = m )
+        float32 _goalHeight;
+        PROPERTY( Category = "View", DisplayName = "Goal Color" )
+        float4 _goalColor;
 
         TComponentHandle<ActionPlatformerGameModeComponent> _director;
         uint8                                               _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)

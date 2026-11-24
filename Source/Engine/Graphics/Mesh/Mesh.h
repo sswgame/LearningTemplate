@@ -494,6 +494,13 @@ namespace sw
         float32 getUVDensity() const { return _uvDensity; }
         /** @brief 삼각형 @p listIndex 의 메시 공간 면적 합과 UV 면적 합으로 UV 밀도를 구합니다(`getUVDensity`). UV 면적이 0 이면 0 입니다. */
         [[nodiscard]] static float32 computeUVDensity( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex );
+        /**
+         * @brief 평균 변 길이(메시 공간) — 평균 넓이 정삼각형의 변입니다. `setVertices` 가 UV 밀도와 함께 구합니다. 삼각형이 없으면 0 입니다.
+         * @details 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고를 때 쓴다 — 꼭짓점을 나누는 패치마다 변이 달라, 메시 하나에 같은 값이어야 틈이 없다(`MaterialDisplacement::computeVertexHeightMipLevel`).
+         */
+        float32 getMeanEdgeLength() const { return _meanEdgeLength; }
+        /** @brief 삼각형 @p listIndex 의 메시 공간 면적 합과 수로 평균 변 길이를 구합니다(`getMeanEdgeLength`). */
+        [[nodiscard]] static float32 computeMeanEdgeLength( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex );
         /** @brief 메시 공간 경계 상자의 중심입니다(경계 구의 중심). 정점이 없으면 원점입니다. */
         const float3& getLocalBoundsCenter() const { return _localBoundsCenter; }
         /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
@@ -559,6 +566,8 @@ namespace sw
         float32 _boundingRadius{ 0.0f };
         /// @brief getUVDensity 를 참고하세요. setVertices 가 경계와 함께 구합니다.
         float32 _uvDensity{ 0.0f };
+        /// @brief getMeanEdgeLength 를 참고하세요. setVertices 가 함께 구합니다.
+        float32 _meanEdgeLength{ 0.0f };
         float3  _localBoundsCenter{};
         float3  _localBoundsMin{};
         float3  _localBoundsMax{};

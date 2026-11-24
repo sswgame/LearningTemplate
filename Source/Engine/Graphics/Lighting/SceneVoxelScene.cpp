@@ -25,13 +25,32 @@ namespace sw
         return 0;
     }
 
+    const vector<SceneVoxelSource>& SceneVoxelScene::getStaticSources() const
+    {
+        static const vector<SceneVoxelSource> s_listEmpty;
+        return _pListStaticSource != nullptr ? *_pListStaticSource : s_listEmpty;
+    }
+
+    void SceneVoxelScene::setStaticSources( vector<SceneVoxelSource>&& listSource )
+    {
+        _pListStaticSource = make_shared<const vector<SceneVoxelSource>>( std::move( listSource ) );
+    }
+
     void SceneVoxelScene::rebuildEmissionPalette()
     {
         _listEmissionPalette.clear();
-        for ( const SceneVoxelSource& source : _listSource )
+        const auto addEmission = [this]( const SceneVoxelSource& source )
         {
             if ( source.isPainted() && source._packedEmission != 0 )
                 _listEmissionPalette.push_back( source._packedEmission );
+        };
+        for ( const SceneVoxelSource& source : getStaticSources() )
+        {
+            addEmission( source );
+        }
+        for ( const SceneVoxelMovingSource& moving : _listMovingSource )
+        {
+            addEmission( moving._source );
         }
         // 밝기(푼 세 채널의 합) 차례, 같은 밝기는 비트 차례 — 실행마다 같다. 중복은 하나로 합친다.
         const auto computeBrightness = []( uint32 packed )

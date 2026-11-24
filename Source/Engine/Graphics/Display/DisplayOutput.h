@@ -39,7 +39,7 @@ namespace sw
 
         PROPERTY( Tooltip = "Output device: SDR, HDR10 (PQ) or scRGB" )
         DisplayOutputKind _kind{ DisplayOutputKind::SDR };
-        PROPERTY( Min = 80.0, Max = 500.0, Tooltip = "Luminance (nits) of scene white and of the UI in HDR" ) // shortcut: 단위 표(ReflectionUnits.h)에 휘도가 없다 — 휘도 차원을 더할 때 Units = nits 로
+        PROPERTY( Min = 80.0, Max = 500.0, Units = nits, Tooltip = "Luminance of scene white and of the UI in HDR" )
         float32 _paperWhiteNits{ 200.0f };
         PROPERTY( Min = 100.0, Max = 10000.0, Tooltip = "Peak luminance (nits) the tone curve maps to in HDR" )
         float32 _maxLuminanceNits{ 1000.0f };

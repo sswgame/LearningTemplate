@@ -296,6 +296,36 @@ namespace sw
         _bRequestedVSync        = bVSync;
     }
 
+    bool VulkanRHISwapChain::readSurfaceFormats( VkPhysicalDevice physicalDevice, vector<VkSurfaceFormatKHR>& outListFormat )
+    {
+        const bool bFormatsRead = enumerateVk( outListFormat, "vkGetPhysicalDeviceSurfaceFormatsKHR", [physicalDevice, this]( uint32* pCount, VkSurfaceFormatKHR* pData )
+        { return vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, pCount, pData ); } );
+        if ( bFormatsRead == false || outListFormat.empty() )
+            return false;
+
+        // 출력 능력 — HDR 색 공간은 엔진 포맷과 짝인 표면 포맷이 있을 때만 받는다(HDR10 = A2B10G10R10 + ST2084, scRGB = R16G16B16A16_SFLOAT + 확장 선형 sRGB).
+        // `VK_EXT_swapchain_colorspace` 를 켜지 않은 인스턴스는 그 색 공간을 쓸 수 없어 SDR 만이다. 언리얼 `FVulkanSwapChain` 의 HDR 표면 포맷 고르기와 같은 짝이다.
+        _displayOutputSupport = makeColorSpaceBit( RHIColorSpace::SRGBNonLinear );
+        for ( const VkSurfaceFormatKHR& availableFormat : outListFormat )
+        {
+            if ( _bColorSpaceExtension == SW_FALSE )
+                break;
+            if ( availableFormat.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT && availableFormat.format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 )
+                _displayOutputSupport = static_cast<uint8>( _displayOutputSupport | makeColorSpaceBit( RHIColorSpace::HDR10ST2084 ) );
+            if ( availableFormat.colorSpace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT && availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT )
+                _displayOutputSupport = static_cast<uint8>( _displayOutputSupport | makeColorSpaceBit( RHIColorSpace::ExtendedSRGBLinear ) );
+        }
+        return true;
+    }
+
+    void VulkanRHISwapChain::refreshDisplayOutputSupport( VkPhysicalDevice physicalDevice )
+    {
+        if ( _surface == nullptr )
+            return;
+        vector<VkSurfaceFormatKHR> listFormat;
+        (void)readSurfaceFormats( physicalDevice, listFormat ); // 못 읽으면 앞 값을 둔다(isVkSuccess 가 까닭을 남긴다)
+    }
+
     // 길이 유지(긴 함수 정리 기준): 표면 능력 조회 · 형식 고르기 · 스왑체인 · 이미지 뷰 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHISwapChain::create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height )
     {
@@ -306,23 +336,8 @@ namespace sw
             return false;
 
         vector<VkSurfaceFormatKHR> listFormat;
-        const bool                 bFormatsRead = enumerateVk( listFormat, "vkGetPhysicalDeviceSurfaceFormatsKHR", [physicalDevice, this]( uint32* pCount, VkSurfaceFormatKHR* pData )
-                        { return vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, pCount, pData ); } );
-        if ( bFormatsRead == false || listFormat.empty() )
+        if ( readSurfaceFormats( physicalDevice, listFormat ) == false )
             return false;
-
-        // 출력 능력 — HDR 색 공간은 엔진 포맷과 짝인 표면 포맷이 있을 때만 받는다(HDR10 = A2B10G10R10 + ST2084, scRGB = R16G16B16A16_SFLOAT + 확장 선형 sRGB).
-        // `VK_EXT_swapchain_colorspace` 를 켜지 않은 인스턴스는 그 색 공간을 쓸 수 없어 SDR 만이다. 언리얼 `FVulkanSwapChain` 의 HDR 표면 포맷 고르기와 같은 짝이다.
-        _displayOutputSupport = makeColorSpaceBit( RHIColorSpace::SRGBNonLinear );
-        for ( const VkSurfaceFormatKHR& availableFormat : listFormat )
-        {
-            if ( _bColorSpaceExtension == SW_FALSE )
-                break;
-            if ( availableFormat.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT && availableFormat.format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 )
-                _displayOutputSupport = static_cast<uint8>( _displayOutputSupport | makeColorSpaceBit( RHIColorSpace::HDR10ST2084 ) );
-            if ( availableFormat.colorSpace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT && availableFormat.format == VK_FORMAT_R16G16B16A16_SFLOAT )
-                _displayOutputSupport = static_cast<uint8>( _displayOutputSupport | makeColorSpaceBit( RHIColorSpace::ExtendedSRGBLinear ) );
-        }
         if ( _requestedColorSpace != RHIColorSpace::SRGBNonLinear && ( _displayOutputSupport & makeColorSpaceBit( _requestedColorSpace ) ) == 0 )
         {
             // 능력은 장치가 색 공간을 고를 때 이미 맞췄다 — 그 뒤 창이 HDR 이 아닌 모니터로 옮겨 표면이 바뀐 것이다(능력 표가 정한 길: SDR 로 만들고 렌더러는 채택값을 본다).

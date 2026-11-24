@@ -278,6 +278,12 @@ namespace sw
         }
     }
 
+    float32 SceneSpatialGrid::getMaxExtent( const SpatialGridLayerDesc& layer ) const
+    {
+        const Layer* pLayer = findLayer( layer );
+        return pLayer != nullptr ? pLayer->_cellSize * 0.5f : 0.0f; // 셀은 항목 반 크기 두 배보다 작아지지 않는다
+    }
+
     void SceneSpatialGrid::update( float32 deltaTime )
     {
         (void)deltaTime;

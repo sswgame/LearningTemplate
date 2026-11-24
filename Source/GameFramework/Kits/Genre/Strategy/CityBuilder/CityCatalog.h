@@ -101,6 +101,8 @@ namespace sw
         vector<hashed_string> _listGood{}; ///< 생산자는 만드는 물자(첫 항목), 창고는 받는 물자, 시장은 파는 물자
         PROPERTY( Min = 0.5 )
         float32 _productionTime{ 20.0f }; ///< 생산자가 쓴다. 일꾼이 다 찼을 때 물자 하나를 만드는 데 걸리는 시간(초)
+        PROPERTY( Min = 0.01, Units = m )
+        float32 _blockHeight{ 1.0f }; ///< 모델이 없는 건물을 그리는 색 상자의 높이(집은 빈 땅의 높이 — 사는 집은 단계가 정한다)
         PROPERTY( Min = 0.5 )
         float32 _walkerInterval{ 6.0f }; ///< 일꾼을 내보내는 간격(초)
         PROPERTY( Min = 1, Max = 6 )
@@ -142,6 +144,8 @@ namespace sw
         string _name{};
         PROPERTY( Name = "goods" )
         vector<hashed_string> _listRequiredGood{};
+        PROPERTY( Min = 0.01, Units = m )
+        float32 _blockHeight{ 0.5f }; ///< 모델이 없는 사는 집을 그리는 색 상자의 높이
         PROPERTY( Min = 1 )
         int32 _population{ 5 }; ///< 수용 인구
         PROPERTY( Name = "tax", Min = 0 )

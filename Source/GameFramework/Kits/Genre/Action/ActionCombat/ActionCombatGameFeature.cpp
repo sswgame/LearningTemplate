@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 

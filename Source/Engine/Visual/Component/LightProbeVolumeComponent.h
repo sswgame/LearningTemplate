@@ -85,13 +85,13 @@ namespace sw
          */
         AABB computeRealtimeVoxelBounds() const;
         /**
-         * @brief 지금 상자 · 칸 크기에 맞는 복셀 격자 캐시와 그것을 만들 때의 프리미티브 집합 세대(@p outPrimitiveSetGeneration)를 돌려줍니다. 없거나 상자 · 칸 크기가 바뀌었으면 nullptr 입니다.
-         * @details 세대가 지금과 다르면 부르는 쪽이 그 사이 바뀐 메시 칸만 다시 모으거나(`SceneVoxelizer::updateScene`) 다시 만들어 `setRealtimeVoxelScene` 로 넣는다.
+         * @brief 지금 상자 · 칸 크기에 맞는 복셀 격자 캐시와 그것을 만들 때의 프리미티브 집합 세대 · 메시 변경 세대를 돌려줍니다. 없거나 상자 · 칸 크기가 바뀌었으면 nullptr 입니다.
+         * @details 세대가 지금과 다르면 부르는 쪽이 그 사이 드나들거나 움직인 메시 칸만 다시 모으거나(`SceneVoxelizer::updateScene`) 다시 만들어 `setRealtimeVoxelScene` 로 넣는다.
          *          수집 경로(`collectSceneLights`, 게임 스레드)에서만 부른다 — 캐시는 const 수집 길에서 채우므로 mutable 이다.
          */
-        shared_ptr<const SceneVoxelScene> findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration ) const;
-        /** @brief `findRealtimeVoxelScene` 의 캐시를 채웁니다. @p primitiveSetGeneration 은 만들 때의 프리미티브 집합 세대입니다. */
-        void setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration ) const;
+        shared_ptr<const SceneVoxelScene> findRealtimeVoxelScene( uint64& outPrimitiveSetGeneration, uint64& outMeshChangeGeneration ) const;
+        /** @brief `findRealtimeVoxelScene` 의 캐시를 채웁니다. 세대 둘은 만들 때의 프리미티브 집합 세대 · 메시 변경 세대(`PrimitiveRegistry::getMeshChangeGeneration`)입니다. */
+        void setRealtimeVoxelScene( shared_ptr<const SceneVoxelScene> scene, uint64 primitiveSetGeneration, uint64 meshChangeGeneration ) const;
 
         /**
          * @brief 지금 트랜스폼과 칸으로 격자의 모양을 구합니다. 축마다 프로브 수는 floor(크기 / 간격) + 1 이고, 상자의 양 끝에 프로브가 놓입니다.
@@ -154,8 +154,9 @@ namespace sw
         uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
         /// @brief 실시간 갱신의 복셀 장면 캐시입니다(`findRealtimeVoxelScene`). 게임 스레드의 수집 경로만 만진다.
         mutable shared_ptr<const SceneVoxelScene> _pRealtimeVoxelScene;
-        mutable uint64                            _realtimeVoxelSetGeneration; ///< 캐시를 만들 때의 프리미티브 집합 세대
-        mutable AABB                              _realtimeVoxelBounds;        ///< 캐시를 만들 때의 상자
-        mutable float32                           _realtimeVoxelCellSize;      ///< 캐시를 만들 때의 목표 칸 크기
+        mutable uint64                            _realtimeVoxelSetGeneration;    ///< 캐시를 만들 때의 프리미티브 집합 세대
+        mutable uint64                            _realtimeVoxelChangeGeneration; ///< 캐시를 만들 때의 메시 변경 세대
+        mutable AABB                              _realtimeVoxelBounds;           ///< 캐시를 만들 때의 상자
+        mutable float32                           _realtimeVoxelCellSize;         ///< 캐시를 만들 때의 목표 칸 크기
     };
 } // namespace sw

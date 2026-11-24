@@ -43,12 +43,11 @@ namespace sw
             pController->launch( _launchVelocity );
             return;
         }
-        // shortcut: 2D 컨트롤러는 수평 발사 입력이 없어 수직만 준다, 2D 발사대가 옆으로 쏘는 게임이 생기면 컨트롤러에 launch 를 더한다.
         CharacterController2DComponent* pController2D = target.getComponent<CharacterController2DComponent>();
         if ( pController2D != nullptr )
         {
             ++_launchCount;
-            pController2D->jump( _launchVelocity._y );
+            pController2D->launch( float2{ _launchVelocity._x, _launchVelocity._y } );
             return;
         }
         // 동적 강체는 질량과 상관없이 같은 속도로 쏜다(속도 변경 — 언리얼 AddImpulse 의 bVelChange). 정적 · 키네마틱은 움직이지 않는다.

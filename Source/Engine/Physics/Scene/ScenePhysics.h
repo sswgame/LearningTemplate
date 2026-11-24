@@ -316,8 +316,8 @@ namespace sw
          *          몇이 끼어도 표시가 남는다. 다시 켜짐 · 다시 짓기 · 스트리밍 쥠 풀림은 첫 바디가 아니라 적지 않는다.
          */
         void markObjectSpawned( uint64 objectID );
-        /** @brief 오브젝트 @p objectID 의 첫 바디가 이번 프레임의 스텝에서 처음 시뮬레이션에 들었으면 true 입니다(나눠 주는 동안 — `dispatchEvents`). */
-        bool isSpawnedThisFrame( uint64 objectID ) const;
+        /** @brief 오브젝트 @p objectID 의 첫 바디가 처음 시뮬레이션에 든 스텝이 @p step 이면 true 입니다(나눠 주는 동안 — `dispatchEvents`). 같은 프레임의 뒤 스텝에 걸어 든 것은 아니다. */
+        bool isSpawnedInStep( uint64 objectID, uint64 step ) const;
         /** @brief 열린 읽기 구간이 없음을 확인하고(검사 구성 단언) 씬을 고쳐도 된다는 증표를 만듭니다 — 스텝이 이것을 받는다. */
         WorkerReadFence<ScenePhysics> makeWriteFence() const;
         /** @brief 3D · 2D 월드를 고정 스텝 하나만큼 돌립니다. 읽는 워커가 없다는 증표가 있어야 부를 수 있다. */
@@ -398,6 +398,8 @@ namespace sw
         vector<uint32>                                          _listBodyPoseSlot2D;  ///< 2D 바디 핸들의 칸 번호 → 강체 칸 번호
         vector<PhysicsContactEvent3D>                           _listFrameEvent3D;
         vector<PhysicsContactEvent2D>                           _listFrameEvent2D;
+        vector<size_t>                                          _listStepEventEnd3D;                 ///< 이번 프레임의 스텝마다 그 스텝까지 `_listFrameEvent3D` 에 쌓인 수 — 알림이 온 스텝을 가른다
+        vector<size_t>                                          _listStepEventEnd2D;                 ///< 위와 같다(2D)
         PoseReadBuffer<PhysicsDimension3D>                      _poseRead3D;                         ///< 스텝마다 움직인 3D 바디의 자세 읽기
         PoseReadBuffer<PhysicsDimension2D>                      _poseRead2D;                         ///< 위와 같다(2D)
         vector<PoseWrite>                                       _listPoseWrite;                      ///< 이번 프레임 끝 자세 쓰기(`queuePoseWrite`)

@@ -89,6 +89,7 @@ namespace sw
 {
     Win32Window::Win32Window()
         : _hWnd{ nullptr }
+        , _hMonitor{ nullptr }
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
@@ -380,6 +381,16 @@ namespace sw
             setFocusState( wParam != FALSE );
         else if ( msg == WM_DISPLAYCHANGE || msg == WM_DPICHANGED || ( msg == WM_SETTINGCHANGE && wParam == SPI_SETWORKAREA ) )
             notifyMonitorsChanged();
+        else if ( msg == WM_MOVE )
+        {
+            // 창이 다른 모니터로 옮겨졌다(최소화한 창은 화면 밖이라 모니터가 없다 — 그때는 그대로 둔다). 화면 출력 능력(HDR)이 모니터마다 다르다.
+            const HMONITOR hMonitor = MonitorFromWindow( _hWnd, MONITOR_DEFAULTTONULL );
+            if ( hMonitor != nullptr && hMonitor != _hMonitor )
+            {
+                _hMonitor = hMonitor;
+                notifyMonitorsChanged();
+            }
+        }
     }
 
     void Win32Window::onSizeMessage( WPARAM wParam, LPARAM lParam )

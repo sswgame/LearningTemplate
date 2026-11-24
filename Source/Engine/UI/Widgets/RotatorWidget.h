@@ -77,5 +77,7 @@ namespace sw
         vector<string> _listOption;
         PROPERTY( DisplayName = "Selected Index" )
         uint32 _selectedIndex;
+        PROPERTY( DisplayName = "Arrow Color" )
+        float4 _arrowColor;
     };
 } // namespace sw

@@ -11,9 +11,30 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct CheckBoxWidgetInternal
+        {
+            static constexpr float32 kBoxBorderWidth   = 2.0f;
+            static constexpr float32 kBoxCornerRadius  = 4.0f;
+            static constexpr float32 kMarkInset        = 5.0f;
+            static constexpr float32 kMarkCornerRadius = 2.0f;
+            /** @brief 꺼진 위젯의 색이 넘지 않는 불투명도입니다. */
+            static constexpr float32 kDisabledAlpha = 0.4f;
+
+            static float4 makeStateColor( const float4& color, bool bEnabled )
+            {
+                return float4{ color._x, color._y, color._z, bEnabled ? color._w : MathUtil::min( color._w, kDisabledAlpha ) };
+            }
+        };
+    } // namespace
+
     CheckBoxWidget::CheckBoxWidget()
         : ButtonWidget{}
         , _onCheckedChanged{}
+        , _boxColor{ 0.08f, 0.09f, 0.12f, 0.9f }
+        , _boxBorderColor{ 0.85f, 0.88f, 0.95f, 1.0f }
+        , _markColor{ 0.95f, 0.75f, 0.2f, 1.0f }
         , _bChecked{ false }
     {
         // 상자가 겉모습이다. 바탕은 투명하고 호버와 누름에서만 옅게 칠한다.
@@ -82,23 +103,24 @@ namespace sw
 
     void CheckBoxWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
+        using Internal = CheckBoxWidgetInternal;
         ButtonWidget::paint( painter, context ); // 호버와 누름 바탕
         const float2& size = getGeometry()._size;
         const float2  boxPosition{ isRightToLeft() ? size._x - kBoxSize : 0.0f, ( size._y - kBoxSize ) * 0.5f };
         const bool    bEnabled = isEnabledInHierarchy();
         CanvasBrush   box{};
-        box._color        = float4{ 0.08f, 0.09f, 0.12f, bEnabled ? 0.9f : 0.4f };
-        box._borderColor  = float4{ 0.85f, 0.88f, 0.95f, bEnabled ? 1.0f : 0.4f };
-        box._borderWidth  = 2.0f;
-        box._cornerRadius = float4{ 4.0f, 4.0f, 4.0f, 4.0f };
+        box._color        = Internal::makeStateColor( _boxColor, bEnabled );
+        box._borderColor  = Internal::makeStateColor( _boxBorderColor, bEnabled );
+        box._borderWidth  = Internal::kBoxBorderWidth;
+        box._cornerRadius = float4{ Internal::kBoxCornerRadius, Internal::kBoxCornerRadius, Internal::kBoxCornerRadius, Internal::kBoxCornerRadius };
         painter.fillRect( boxPosition, float2{ kBoxSize, kBoxSize }, box );
         if ( _bChecked == false )
             return;
-        constexpr float32 kMarkInset = 5.0f;
-        CanvasBrush       mark{};
-        mark._color        = float4{ 0.95f, 0.75f, 0.2f, bEnabled ? 1.0f : 0.4f };
-        mark._cornerRadius = float4{ 2.0f, 2.0f, 2.0f, 2.0f };
-        painter.fillRect( float2{ boxPosition._x + kMarkInset, boxPosition._y + kMarkInset }, float2{ kBoxSize - 2.0f * kMarkInset, kBoxSize - 2.0f * kMarkInset },
+        const float32 markSize = kBoxSize - 2.0f * Internal::kMarkInset;
+        CanvasBrush   mark{};
+        mark._color        = Internal::makeStateColor( _markColor, bEnabled );
+        mark._cornerRadius = float4{ Internal::kMarkCornerRadius, Internal::kMarkCornerRadius, Internal::kMarkCornerRadius, Internal::kMarkCornerRadius };
+        painter.fillRect( float2{ boxPosition._x + Internal::kMarkInset, boxPosition._y + Internal::kMarkInset }, float2{ markSize, markSize },
                           mark );
     }
 } // namespace sw

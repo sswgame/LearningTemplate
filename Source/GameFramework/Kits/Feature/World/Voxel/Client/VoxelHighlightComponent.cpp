@@ -20,6 +20,10 @@ namespace sw
 {
     VoxelHighlightComponent::VoxelHighlightComponent()
         : _player{}
+        , _color{ 1.0f, 1.0f, 1.0f, 0.18f }
+        , _colorPerLevel{ 0.0f, -0.2f, -0.2f, 0.15f }
+        , _outlineColor{ 0.05f, 0.05f, 0.05f, 1.0f }
+        , _outlineHalfExtent{ 0.505f }
         , _arrLevelLook{}
         , _level{ -1 }
     {
@@ -43,7 +47,7 @@ namespace sw
             const float32 step   = static_cast<float32>( level );
             _arrLevelLook[level] = MaterialInstance::create( pMesh->getMaterial() );
             if ( _arrLevelLook[level] != nullptr )
-                _arrLevelLook[level]->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ 1.0f, 1.0f - 0.2f * step, 1.0f - 0.2f * step, 0.18f + 0.15f * step } );
+                _arrLevelLook[level]->setVectorParameter( hashed_string( kMaterialColorParameter ), _color + _colorPerLevel * step );
         }
         _level = -1;
         pMesh->setVisible( false );
@@ -65,31 +69,31 @@ namespace sw
         if ( bHasTarget == false )
             return;
         const float3 center{ static_cast<float32>( block._x ) + 0.5f, static_cast<float32>( block._y ) + 0.5f, static_cast<float32>( block._z ) + 0.5f };
-        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( center ) );
+        const float3 localCenter = context.getManager().getWorldOrigin().toLocal( center ); // 블록은 절대 자리다 — 메시도 테두리도 원점으로 옮긴다
+        pMesh->setLocalPosition( localCenter );
         const int32 level = static_cast<int32>( MathUtil::clamp( pPlayer->getBreakProgress(), 0.0f, 0.99f ) * static_cast<float32>( kLevelCount ) );
         if ( level != _level && _arrLevelLook[level] != nullptr )
         {
             _level = level;
             pMesh->setMaterialInstance( _arrLevelLook[level] );
         }
-        scheduleOutline( center );
+        scheduleOutline( localCenter );
     }
 
-    void VoxelHighlightComponent::scheduleOutline( const float3& center ) const
+    void VoxelHighlightComponent::scheduleOutline( const float3& localCenter ) const
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 디버그 선 큐는 게임 스레드에서만 쓸 수 있습니다. 이 선은 에디터 게임 뷰에서만 보입니다.
-        pManager->executeOrDeferPostTickOnScene( [center]( GameObjectManager& /*sceneManager*/ )
+        pManager->executeOrDeferPostTickOnScene( [localCenter, halfExtent = _outlineHalfExtent, color = _outlineColor]( GameObjectManager& /*sceneManager*/ )
         {
             DebugDrawQueue* pDebugDraw = game::findSubsystem<DebugDrawQueue>();
             if ( pDebugDraw == nullptr )
                 return;
-            const float3 minCorner = center - float3{ 0.505f };
-            const float3 maxCorner = center + float3{ 0.505f };
-            const float4 color{ 0.05f, 0.05f, 0.05f, 1.0f };
+            const float3 minCorner = localCenter - float3{ halfExtent };
+            const float3 maxCorner = localCenter + float3{ halfExtent };
             for ( int32 edge = 0; edge < 4; ++edge )
             {
                 const float32 x = ( edge & 1 ) != 0 ? maxCorner._x : minCorner._x;

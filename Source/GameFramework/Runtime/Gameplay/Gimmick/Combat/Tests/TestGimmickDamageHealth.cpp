@@ -1,5 +1,5 @@
 // GimmickDamageHealthTest — 기믹 피해가 무기 · 근접과 같은 맞음 길(`CharacterRayHit::deliverHit` → `UnitStatsComponent::receiveHit`)로 체력을 깎는다.
-// 결함: 기믹 피해가 센서와 "game" 채널 이벤트에만 들어 가시 · 불 · 폭발 통이 캐릭터 체력에 닿지 않았다. 키트 GF_ActionCombat(nogpu).
+// 결함: 기믹 피해가 센서와 "game" 채널 이벤트에만 들어 가시 · 불 · 폭발 통이 캐릭터 체력에 닿지 않았다. (nogpu).
 #include "pch.h"
 
 #include "Core/Name/hashed_string.h"
@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"

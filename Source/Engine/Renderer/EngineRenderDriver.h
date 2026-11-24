@@ -98,7 +98,7 @@ namespace sw
         /**
          * @brief 화면 출력 요청 @p requested(패킷이 뜬 `-gv_displayOutput` · 사용자 설정)를 능력에 맞춰 적용하고 그 값을 돌려줍니다(게임 스레드, 패킷을 짓는 중).
          * @details 바뀐 요청만 스왑체인을 다시 만든다 — 렌더 스레드를 세운 뒤 `IRHIDevice::setBackBufferColorSpace`(창 크기 바뀜과 같은 길). 장치를 다시 만들면(백엔드 교체 · 분실) 새 장치는 SDR 이라 다시 적용한다.
-         * @note shortcut: 창을 다른 모니터로 옮겨 능력이 바뀌어도 요청이 그대로면 다시 맞추지 않는다 — 모니터마다 HDR 이 다른 기계가 보이면 창 이동 통보에서 다시 맞춘다.
+         *          요청이 그대로여도 주 창의 모니터 세대(`GenericWindow::getMonitorGeneration` — 다른 모니터로 옮김 · OS 의 HDR 켜고 끔)가 바뀌면 능력을 다시 묻고 맞춘다.
          */
         DisplayOutputDesc applyDisplayOutput( const DisplayOutputDesc& requested );
 
@@ -122,6 +122,7 @@ namespace sw
         DevCounter              _failedBackendChangeCount;  ///< 요청한 백엔드로 장치를 세우지 못한 교체 횟수(`applyPendingBackendChange` 가 `Applied` 가 아니었다)
         uint8                   _bDeviceLostHandled    : 1; ///< 분실을 한 번 처리했다(로그 · 종료 요청을 프레임마다 되풀이하지 않는다)
         uint8                   _bDisplayOutputApplied : 1; ///< 지금 장치에 화면 출력 요청을 적용했다(장치를 다시 만들면 내린다)
+        uint32                  _displayMonitorGeneration;  ///< 마지막으로 적용한 때의 주 창 모니터 세대
         DisplayOutputDesc       _displayRequest;            ///< 마지막으로 적용한 요청(능력에 맞추기 전)
         DisplayOutputDesc       _appliedDisplayOutput;      ///< 마지막으로 적용한 값(능력에 맞춘 뒤)
     };

@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/ThreadTestAccess.h"
 
@@ -27,6 +28,29 @@ namespace
             return false;
         outAsset._generation = ++s_loadCount;
         return true;
+    }
+
+    struct FakeListAsset
+    {
+        sw::vector<uint8>                   _listByte;
+        sw::shared_ptr<const FakeListAsset> _child;
+    };
+
+    constexpr size_t kFakeListBytes = 64u * 1024u;
+
+    bool loadFakeList( const sw::AssetID&, FakeListAsset& outAsset )
+    {
+        const sw::vector<uint8> temporary( kFakeListBytes * 4u ); // 읽고 놓는 임시 버퍼는 세지 않는다
+        outAsset._listByte.resize( kFakeListBytes );
+        return temporary.empty() == false;
+    }
+
+    /** @brief 안에서 다른 에셋(같은 표의 "child")을 읽는 로더입니다. */
+    sw::SharedAssetTable<FakeListAsset>* s_pListTable = nullptr;
+
+    bool loadFakeParent( const sw::AssetID& assetID, FakeListAsset& outAsset )
+    {
+        return s_pListTable->loadAndIntern( "game/x/child.skeleton.xml", &loadFakeList, outAsset._child ) && loadFakeList( assetID, outAsset );
     }
 
     void resetFakeLoader()
@@ -55,6 +79,28 @@ SW_TEST_CASE( SharedAssetTableTest, SharesWhileHeld )
     sw::shared_ptr<const FakeAsset> again;
     SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/a.skeleton.xml", &loadFake, again ) );
     SW_EXPECT_EQUAL( 2, again->_generation );
+}
+
+/**
+ * @brief [SharedAssetTableTest] 에셋마다 읽으며 남긴 바이트를 든다 — 안쪽 컨테이너는 세고, 놓은 임시 버퍼와 안에서 읽은 다른 에셋은 세지 않는다
+ * @details 변이: 재는 구간이 안쪽 구간을 빼지 않으면 부모의 값이 두 벌이 되어 진다.
+ */
+SW_TEST_CASE( SharedAssetTableTest, LoadedBytesCountOwnContainersOnce )
+{
+    sw::SharedAssetTable<FakeListAsset> table;
+    s_pListTable = &table;
+    sw::shared_ptr<const FakeListAsset> parent;
+    SW_REQUIRE_TRUE( table.loadAndIntern( "game/x/parent.skeleton.xml", &loadFakeParent, parent ) );
+    s_pListTable = nullptr;
+    if ( sw::kMemoryTagScopesEnabled == false )
+        return;
+    for ( const utf8* pKey : { "game/x/parent.skeleton.xml", "game/x/child.skeleton.xml" } )
+    {
+        const uint64 bytes = table.findLoadedBytes( pKey );
+        SW_EXPECT_TRUE( bytes >= kFakeListBytes );
+        SW_EXPECT_TRUE( bytes < kFakeListBytes * 2u );
+    }
+    SW_EXPECT_EQUAL( uint64{ 0 }, table.findLoadedBytes( "game/x/unknown.skeleton.xml" ) );
 }
 
 /**

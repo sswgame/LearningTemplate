@@ -1083,8 +1083,7 @@ namespace sw
                 context._passValues.setUint( passConstantNames()._decalFirst, first );
                 commitBindlessTextureBindings( context );
                 context._pCmd->setPipelineState( pso );
-                // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain), 인스턴스 하나 = 데칼 하나. 앞면은 XML 의 컬(Front)이 버린다.
-                // shortcut: 거울 상자(월드 행렬식 < 0)는 감김이 뒤집혀 앞면이 남는다 — 그런 데칼이 생기면 FramePSOManager::reverseCullMode 처럼 컬을 뒤집은 PSO 를 고른다.
+                // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain), 인스턴스 하나 = 데칼 하나. 앞면은 XML 의 컬(Front)이 버린다(거울 상자는 VSMain 이 감김을 되돌린다).
                 if ( bindForDraw( context, pso, kInvalidDescriptorIndex, listDecal[first]._arrTextureSRV ) )
                 {
                     context._pCmd->drawInstanced( kDecalBoxVertexCount, end - first, 0, 0 );

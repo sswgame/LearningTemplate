@@ -27,12 +27,6 @@ namespace sw
     {
         struct TextInputWidgetInternal
         {
-            /** @brief 텍스트 색과 힌트 색입니다. */
-            static float4 makeTextColor( bool bHint ) { return bHint ? float4{ 1.0f, 1.0f, 1.0f, 0.4f } : float4{ 1.0f, 1.0f, 1.0f, 1.0f }; }
-
-            /** @brief 선택 영역 색, 커서(조합 밑줄 포함) 색입니다. */
-            static float4            makeSelectionColor() { return float4{ 0.30f, 0.50f, 1.00f, 0.40f }; }
-            static float4            makeCaretColor() { return float4{ 1.0f, 1.0f, 1.0f, 0.9f }; }
             static constexpr float32 kCaretWidth         = 2.0f;
             static constexpr float32 kUnderlineThickness = 1.0f;
             /** @brief 포인터로 가장 가까운 글자 사이를 찾을 때 살피는 최대 코드 포인트 수입니다(그보다 길면 끝으로 갑니다). */
@@ -129,6 +123,10 @@ namespace sw
         , _text{}
         , _hintText{}
         , _maxLength{ 0 }
+        , _textColor{ 1.0f, 1.0f, 1.0f, 1.0f }
+        , _hintColor{ 1.0f, 1.0f, 1.0f, 0.4f }
+        , _selectionColor{ 0.30f, 0.50f, 1.00f, 0.40f }
+        , _caretColor{ 1.0f, 1.0f, 1.0f, 0.9f }
     {
         UIBrush background      = UIBrush::makeSolid( float4{ 0.06f, 0.07f, 0.09f, 0.95f }, 4.0f );
         background._borderColor = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
@@ -209,7 +207,8 @@ namespace sw
             refreshDisplay();
             return;
         }
-        if ( property._name == hashed_string( "_hintText" ) )
+        const bool bDisplayProperty = property._name == hashed_string( "_hintText" ) || property._name == hashed_string( "_textColor" ) || property._name == hashed_string( "_hintColor" );
+        if ( bDisplayProperty )
         {
             refreshDisplay();
             return;
@@ -238,7 +237,7 @@ namespace sw
             display.append( _text.data() + _caretByte, _text.size() - _caretByte );
             _pDisplay->setText( display );
         }
-        _pDisplay->setColor( TextInputWidgetInternal::makeTextColor( bHint ) );
+        _pDisplay->setColor( bHint ? _hintColor : _textColor );
         invalidate( WidgetDirty::kPaint ); // 커서 위치가 바뀐다
     }
 
@@ -557,7 +556,7 @@ namespace sw
             const float32 first = computeEdgeX( MathUtil::min( _caretByte, _anchorByte ) );
             const float32 last  = computeEdgeX( MathUtil::max( _caretByte, _anchorByte ) );
             CanvasBrush   selection{};
-            selection._color = Internal::makeSelectionColor();
+            selection._color = _selectionColor;
             painter.fillRect( float2{ MathUtil::min( first, last ), top }, float2{ MathUtil::abs( last - first ), display._size._y }, selection );
         }
         if ( _composition.empty() == false )
@@ -565,14 +564,14 @@ namespace sw
             const float32 first = computeEdgeX( _caretByte );
             const float32 last  = computeEdgeX( _caretByte + static_cast<uint32>( _composition.size() ) );
             CanvasBrush   underline{};
-            underline._color = Internal::makeCaretColor();
+            underline._color = _caretColor;
             painter.fillRect( float2{ MathUtil::min( first, last ), top + display._size._y - Internal::kUnderlineThickness },
                               float2{ MathUtil::abs( last - first ), Internal::kUnderlineThickness }, underline );
         }
         // 커서는 조합 중이면 조합 글 끝에 둔다.
         const uint32 caretDisplayByte = _caretByte + static_cast<uint32>( _composition.size() );
         CanvasBrush  caret{};
-        caret._color = Internal::makeCaretColor();
+        caret._color = _caretColor;
         painter.fillRect( float2{ computeEdgeX( caretDisplayByte ), top }, float2{ Internal::kCaretWidth, display._size._y }, caret );
     }
 } // namespace sw

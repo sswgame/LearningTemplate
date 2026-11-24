@@ -20,7 +20,7 @@ namespace sw
         static constexpr float32 kMinViewDepth = 0.05f;
         /** @brief UV 넓이 · 행렬식의 바닥입니다. 이보다 작으면 퇴화로 보고 노멀을 다시 구하지 않습니다. */
         static constexpr float32 kMinUVArea = 1.0e-12f;
-        /** @brief 높이 밉 무게 합의 바닥입니다. 이보다 작으면 원래 꼭짓점으로 보고 가장 고운 밉(0)으로 읽습니다. */
+        /** @brief 높이 밉 무게 합의 바닥입니다. 이보다 작으면 원래 꼭짓점으로 보고 그 꼭짓점의 밉으로 읽습니다. */
         static constexpr float32 kMinBarycentricWeight = 1.0e-8f;
 
         /**
@@ -61,15 +61,28 @@ namespace sw
         }
 
         /**
+         * @brief 원래 꼭짓점의 높이 밉입니다 — 그 꼭짓점의 뷰 깊이에서 메시의 평균 변을 나눈 정점 간격이 걸치는 텍셀 수의 log2 이고 0 이상입니다(변의 밉과 같은 식).
+         * @details 꼭짓점은 여러 패치가 나누는데 패치마다 변이 다르다 — 꼭짓점의 뷰 깊이와 배치 하나에 같은 값(`Mesh::getMeanEdgeLength` · `getUVDensity` 를 배치 표로)만 읽어
+         *          어느 패치에서나 같은 밉이라 틈이 없다. 정점에 칸을 더하지 않는다. 변이 고르지 않은 메시는 평균만큼 어긋난다(같은 어긋남이라 갈라지지 않는다).
+         * @param meanWorldEdge 평균 변의 월드 길이(인스턴스 배율 포함). @param meanUVEdge 평균 변의 UV 길이(UV 가 없으면 0 — 밉 0).
+         */
+        [[nodiscard]] static float32 computeVertexHeightMipLevel( float32 viewDepth, float32 meanWorldEdge, float32 meanUVEdge, float32 density, float32 maxFactor, const float2& textureSize ) noexcept
+        {
+            const float32 upper     = MathUtil::clamp( maxFactor, 1.0f, kMaxTessFactor );
+            const float32 factor    = MathUtil::clamp( meanWorldEdge / MathUtil::max( viewDepth, kMinViewDepth ) * density, 1.0f, upper );
+            const float32 texelSpan = meanUVEdge * MathUtil::max( textureSize._x, textureSize._y ) / factor;
+            return MathUtil::log2( MathUtil::max( texelSpan, 1.0f ) );
+        }
+
+        /**
          * @brief 패치 안 한 점의 높이 밉입니다 — 세 변의 밉을 무게 b1·b2 · b2·b0 · b0·b1 로 섞는다(변 i 는 꼭짓점 i 의 맞은편).
-         * @details 변 i 위(b_i = 0)에서는 그 변의 밉 하나만 남아 이웃 패치와 같은 값이다. 원래 꼭짓점(무게가 모두 0)은 0 이다 — 꼭짓점은 여러 패치가 나누는데
-         *          꼭짓점만으로 정할 정점 간격이 없어, 어느 패치에서나 같은 단계(가장 고운 밉)로 읽어야 틈이 없다.
-         *          shortcut: 꼭짓점 하나는 거르지 않은 높이를 읽는다(주변 점과 튈 수 있다). 거리에서 꼭짓점이 튀어 보이면 메시 빌드가 꼭짓점마다 UV 밀도를 실어 거기서 고른다.
+         * @details 변 i 위(b_i = 0)에서는 그 변의 밉 하나만 남아 이웃 패치와 같은 값이다. 원래 꼭짓점(무게가 모두 0)은 그 꼭짓점의 밉 @p vertexMip 이다(`computeVertexHeightMipLevel`).
          * @param barycentric 무게 중심 좌표(SV_DomainLocation).
          */
-        [[nodiscard]] static float32 blendEdgeHeightMipLevels( const float3& barycentric, float32 edgeMip0, float32 edgeMip1, float32 edgeMip2 ) noexcept
+        [[nodiscard]] static float32 blendEdgeHeightMipLevels( const float3& barycentric, float32 edgeMip0, float32 edgeMip1, float32 edgeMip2, const float3& vertexMip ) noexcept
         {
-            return blendEdges( barycentric, edgeMip0, edgeMip1, edgeMip2 );
+            const float32 weightSum = barycentric._y * barycentric._z + barycentric._z * barycentric._x + barycentric._x * barycentric._y;
+            return weightSum > kMinBarycentricWeight ? blendEdges( barycentric, edgeMip0, edgeMip1, edgeMip2 ) : barycentric.dot( vertexMip );
         }
 
         /** @brief 세 변의 값을 무게 b1·b2 · b2·b0 · b0·b1 로 섞습니다 — 변 위에서는 그 변의 값 하나, 원래 꼭짓점은 0 입니다. */

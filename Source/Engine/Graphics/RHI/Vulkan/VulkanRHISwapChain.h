@@ -180,6 +180,9 @@ namespace sw
         /** @brief 표면이 받는 출력의 비트입니다(`makeColorSpaceBit` 들의 합 — 마지막 `create` 가 표면 포맷 목록에서 정한다). */
         uint8 getDisplayOutputSupport() const { return _displayOutputSupport; }
 
+        /** @brief 표면 포맷을 다시 읽어 출력 능력을 고칩니다(창이 다른 모니터로 옮겨졌을 때). 읽지 못하면 앞 값을 둔다 — 잃은 표면은 다음 `create` 가 다룬다. */
+        void refreshDisplayOutputSupport( VkPhysicalDevice physicalDevice );
+
         VkSurfaceKHR getSurface() const { return _surface; }
         /** @brief 스왑체인 핸들입니다(HDR 마스터링 값 알리기 — `vkSetHdrMetadataEXT`). 없으면 VK_NULL_HANDLE 입니다. */
         VkSwapchainKHR getSwapChain() const { return _swapChain; }
@@ -202,6 +205,8 @@ namespace sw
     private:
         /** @brief 지금 이미지 포맷의 렌더 패스 둘(CLEAR · LOAD)을 확보합니다. `createFramebuffers` 안에서만 부릅니다. */
         [[nodiscard]] bool ensureRenderPasses( VkDevice device );
+        /** @brief 표면 포맷을 @p outListFormat 에 읽고 거기서 출력 능력(`_displayOutputSupport`)을 정합니다. 표면 질의가 실패하거나 포맷이 없으면 false(능력은 그대로)입니다. */
+        [[nodiscard]] bool readSurfaceFormats( VkPhysicalDevice physicalDevice, vector<VkSurfaceFormatKHR>& outListFormat );
         /** @brief 이미지마다 뷰를 만듭니다. `create` 안에서만 부릅니다. */
         [[nodiscard]] bool createImageViews( VkDevice device );
         /** @brief 프레임버퍼 · 이미지 뷰와 지금 스왑체인을 놓습니다(물려줄 옛 스왑체인은 남긴다). `destroy` · `retireForRecreate` 가 함께 쓴다. */

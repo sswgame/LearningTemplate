@@ -101,3 +101,21 @@ SW_TEST_CASE( VFXEmitterClockTest, DueStepsDoNotDriftOverLongRuns )
         stepCount += clock.takeDueSteps( 1.0f / 144.0f );
     SW_EXPECT_TRUE( stepCount >= 3599u && stepCount <= 3600u );
 }
+
+/** @brief [VFXEmitterClockTest] 단계보다 짧은 반복은 한 단계에 지난 바퀴 수만큼 버스트 · 생성률을 냅니다(넘는 몫을 버리지 않는다) */
+SW_TEST_CASE( VFXEmitterClockTest, LoopShorterThanTheStepCountsEveryLap )
+{
+    auto pDef       = make_shared<VFXEmitterDef>();
+    pDef->_name     = "Sparks";
+    pDef->_duration = 0.25f;
+    pDef->_bLooping = true;
+    VFXBurstDef burst;
+    burst._time  = 0.0f;
+    burst._count = 3;
+    pDef->_listBurst.push_back( burst );
+    VFXEmitterClock clock{ pDef, 1.0f };
+    uint32          total = 0;
+    for ( uint32 stepIndex = 0; stepIndex < 4; ++stepIndex )
+        total += clock.spawnStep( 1.0f )._count; // 한 단계에 네 바퀴
+    SW_EXPECT_EQUAL( 3u * 17u, total );          // 4 초 = 16 바퀴 + 열여섯째 경계에서 막 시작한 바퀴
+}

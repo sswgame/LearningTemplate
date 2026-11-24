@@ -39,6 +39,7 @@ namespace sw
             : _table{}
             , _loadingMutex{}
             , _mapKeyToLoading{}
+            , _mapKeyToLoadedBytes{}
             , _reloadCount{ 0 }
         {
         }
@@ -89,14 +90,21 @@ namespace sw
          */
         [[nodiscard]] bool loadAndIntern( string_view path, LoadFunction load, shared_ptr<const AssetType>& outAsset )
         {
-            const string          key     = makeKey( path );
-            shared_ptr<AssetType> loaded  = sw::make_shared<AssetType>();
-            const bool            bLoaded = load != nullptr && load( toAssetID( path ), *loaded );
+            const string                key = makeKey( path );
+            const ScopedAllocationMeter meter; // 객체와 읽으며 남긴 컨테이너까지가 이 에셋의 크기다(안쪽에서 읽은 다른 에셋은 그 에셋의 줄이 센다)
+            shared_ptr<AssetType>       loaded  = sw::make_shared<AssetType>();
+            const bool                  bLoaded = load != nullptr && load( toAssetID( path ), *loaded );
+            const uint64                bytes   = meter.getRetainedBytes();
             if ( bLoaded )
                 outAsset = _table.insertOrGetLive( key, std::move( loaded ) );
             // 결과가 표에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 표 둘 중 하나를 반드시 본다.
             ScopedLock<mutex> lock{ _loadingMutex };
             _mapKeyToLoading.erase( key );
+            if constexpr ( kMemoryTagScopesEnabled )
+            {
+                if ( bLoaded )
+                    _mapKeyToLoadedBytes[key] = bytes;
+            }
             return bLoaded;
         }
 
@@ -122,17 +130,36 @@ namespace sw
         {
             if ( findLive( path ) == nullptr || load == nullptr )
                 return false;
-            shared_ptr<AssetType> fresh = sw::make_shared<AssetType>();
+            const string                key = makeKey( path );
+            const ScopedAllocationMeter meter;
+            shared_ptr<AssetType>       fresh = sw::make_shared<AssetType>();
             if ( load( toAssetID( path ), *fresh ) == false )
                 return false;
-            if ( _table.replaceLive( makeKey( path ), std::move( fresh ) ) == false )
+            const uint64 bytes = meter.getRetainedBytes();
+            if ( _table.replaceLive( key, std::move( fresh ) ) == false )
                 return false; // 읽는 사이 마지막 사용자가 놓았다 — 다음 `acquire` 가 새로 읽는다
+            if constexpr ( kMemoryTagScopesEnabled )
+            {
+                ScopedLock<mutex> lock{ _loadingMutex };
+                _mapKeyToLoadedBytes[key] = bytes;
+            }
             _reloadCount.fetch_add( 1, std::memory_order_release );
             return true;
         }
 
         /** @brief 이 표에서 다시 읽은 횟수입니다. 쓰는 쪽은 값이 바뀌면 지은 것을 다시 짓습니다. */
         uint32 getReloadCount() const { return _reloadCount.load( std::memory_order_acquire ); }
+
+        /**
+         * @brief 키(표가 든 그대로 — `forEachLive` 가 넘긴 것)의 에셋을 읽으며 남긴 바이트입니다(객체 · 안쪽 컨테이너). 재지 않는 구성(배포본)이면 0 입니다.
+         * @details 나눠 준 객체는 바뀌지 않으므로(`const`) 읽을 때 잰 값이 사는 동안 그대로다.
+         */
+        uint64 findLoadedBytes( const string& key ) const
+        {
+            ScopedLock<mutex> lock{ _loadingMutex };
+            const auto        it = _mapKeyToLoadedBytes.find( key );
+            return it != _mapKeyToLoadedBytes.end() ? it->second : 0u;
+        }
 
         /** @brief 살아 있는 항목 수입니다. */
         size_t countLive() const { return _table.countLive(); }
@@ -156,8 +183,9 @@ namespace sw
         static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
 
         WeakInternTable<string, const AssetType>                                              _table; ///< `const` 값만 — 나눠 준 객체는 바뀌지 않는다
-        mutex                                                                                 _loadingMutex;
+        mutable mutex                                                                         _loadingMutex;
         unordered_map<string, weak_ptr<SharedAssetLoadOperation<AssetType>>> _mapKeyToLoading SW_GUARDED_BY( _loadingMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 로드 작업, 이중 읽기 없음)
+        unordered_map<string, uint64> _mapKeyToLoadedBytes                                    SW_GUARDED_BY( _loadingMutex ); ///< 키마다 마지막으로 읽으며 남긴 바이트(`findLoadedBytes` — 배포본은 비어 있다)
         atomic<uint32>                                                                        _reloadCount;
     };
 } // namespace sw

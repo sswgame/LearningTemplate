@@ -84,6 +84,8 @@ namespace sw
         _listPrimitive.resize( newCount, nullptr );
         _listPrimitiveTransformSlot.resize( newCount, SceneTransformStorage::kInvalidSlot );
         _listPrimitiveSerial.resize( newCount, 0u );
+        // 아래에서 더티 비트를 버린다 — 버린 표시를 잃지 않게 모든 칸이 바뀐 것으로 친다(늘리기는 두 배씩이라 드물다).
+        _listMeshChangeGeneration.assign( newCount, ++_meshChangeGeneration );
         // 스택이라 끝에서 꺼낸다 — 작은 번호부터 쓰이게 큰 번호를 먼저 넣는다.
         _listFreePrimitiveSlot.reserve( _listFreePrimitiveSlot.size() + ( newCount - oldCount ) );
         for ( uint32 slot = newCount; slot > oldCount; --slot )
@@ -495,6 +497,31 @@ namespace sw
                 if ( slot < count )
                     outListTransformSlot.push_back( slot );
             }
+        }
+        ++_meshChangeGeneration;
+        recordMeshChanges( outListStateSlot );
+        recordMeshChanges( outListTransformSlot );
+    }
+
+    void PrimitiveRegistry::recordMeshChanges( const vector<uint32>& listSlot )
+    {
+        // 목록은 오름차순이고 메시 칸이 인스턴스 항목보다 앞이다.
+        for ( const uint32 slot : listSlot )
+        {
+            if ( slot >= _listMeshChangeGeneration.size() )
+                break;
+            _listMeshChangeGeneration[slot] = _meshChangeGeneration;
+        }
+    }
+
+    void PrimitiveRegistry::appendMeshChanges( uint64 sinceGeneration, vector<uint32>& inoutListSlot ) const
+    {
+        if ( sinceGeneration == _meshChangeGeneration )
+            return;
+        for ( uint32 slot = 0; slot < static_cast<uint32>( _listMeshChangeGeneration.size() ); ++slot )
+        {
+            if ( _listMeshChangeGeneration[slot] > sinceGeneration )
+                inoutListSlot.push_back( slot );
         }
     }
 

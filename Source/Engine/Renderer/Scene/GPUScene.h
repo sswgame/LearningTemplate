@@ -110,12 +110,16 @@ namespace sw
         uint32 _lodLevelCount{ 0 };
         /// @brief LOD 그룹의 낮은 단계 배치 행에서 이 단계로 넘어가는 화면 크기 임계값입니다(`GPUMeshBatch::_lodScreenSize`). 컬링이 머리 + 단계 번호 행에서 읽는다.
         float32 _lodScreenSize{ 0.0f };
+        /// @brief 배치 메시의 UV 밀도(`Mesh::getUVDensity`)와 평균 변 길이(`Mesh::getMeanEdgeLength`)입니다. 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고른다(material_displacement.hlsli).
+        float32 _uvDensity{ 0.0f };
+        float32 _meanEdgeLength{ 0.0f };
+        uint32  _arrPadding[2]{};
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 16 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열여섯 칸(64바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 20 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 스무 칸(80바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer
