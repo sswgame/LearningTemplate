@@ -525,7 +525,7 @@ namespace sw
             _verticalSpeed = 0.0f;
             _airVelocity   = float3{}; // 발사가 끝났다 — 다시 디뎠다
         }
-        else if ( _verticalSpeed > 0.0f && _state._velocity._y < _verticalSpeed )
+        else if ( _state.isRiseBlocked( _verticalSpeed ) )
             _verticalSpeed = _state._velocity._y;
         // 결정: 바닥을 떠나는 스텝(점프 · 걸어 내려섬)에 바닥이 실어 나르던 속도를 관성으로 잇는다 — 수평은 `_airVelocity` 로, 오르는 바닥이면 수직 속도에도.
         // 바닥 속도는 딛고 있는 스텝에만 얹히므로(`moveCharacter`), 이을 곳은 떠나는 순간을 아는 여기뿐이다. 위의 천장 판정 뒤에 둔다
