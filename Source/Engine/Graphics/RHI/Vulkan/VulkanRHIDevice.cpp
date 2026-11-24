@@ -134,14 +134,14 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _gpuBuffers{ getBeginFrameCount() }
+        , _gpuBuffers{ getHandleReuseCount() }
         , _constantBufferMirror{}
         , _bufferRegistry{ kBindlessBufferCapacity }
         , _uavRegistry{ kBindlessBufferCapacity }
         , _arrBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
-        , _gpuTextures{ getBeginFrameCount() }
+        , _gpuTextures{ getHandleReuseCount() }
         , _releaseQueue{}
         , _renderPassCache{}
         , _textureRegistry{ kBindlessTextureCount }
@@ -155,7 +155,7 @@ namespace sw
         , _bindlessDummyMemory{}
         , _dummyUBO{ nullptr }
         , _dummyUBOMemory{}
-        , _pipelineStates{ getBeginFrameCount() }
+        , _pipelineStates{ getHandleReuseCount() }
         , _pipelineCache{ nullptr }
         , _transferSerials{ deviceGeneration }
         , _readbackTable{}
