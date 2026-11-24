@@ -133,6 +133,18 @@
 	<WaitUntil watch="Minigame.RestoreCount" equals="9" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<Expect watch="Minigame.Active" is="none"/>
+	<!-- monstercollector — 자리 25 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_monstercollector" near="-17" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_monstercollector" near="53" tolerance="0.01"/>
+	<DevCommand line="teleport Player -17 0.05 53"/>
+	<WaitUntil watch="Minigame.Active" is="monstercollector" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/monstercollector/maps/glade.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="10" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

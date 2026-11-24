@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="6054e9c4b6b6448da5cae6f059681a04"?>
+<!--
+  몬스터 수집 미니게임(풀밭 — 걸어서 야생 몬스터를 만나 싸우거나 볼로 잡아 정한 수를 모은다) — MonsterCollector 키트. 기술 · 종 · 조우 표(data/monstercollector.xml)를 게임 기능 MonsterCollector 가 미니게임 범위에 건다.
+  맵의 Director 오브젝트에 MonsterCollectorGameModeComponent → MonsterCollectorAvatarComponent(GF_Client_MonsterCollector) → HUD 컨트롤러가 그 순서로 붙는다. 다 모으면 잡은 수만큼의 보상을 결과 값 money 로 내고 나온다.
+  입력은 걷기 공통 레이어와 MonsterCollector 레이어(monstercollector/data/collector.input.xml)만 켠다. 안에서 저장한다(전투 중에도 파티 · 전투가 실린다).
+  시나리오 automation/monstercollector_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
+-->
+<Minigame name="monstercollector" map="game/playground/monstercollector/maps/glade.scene.xml" entry="SceneSwitch" portalSlot="25" save="Allowed" features="MonsterCollector" inputContexts="Movement,MonsterCollector" catalogs="MonsterCollectorCatalog"/>

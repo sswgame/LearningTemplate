@@ -4,6 +4,7 @@
 		<entry key="/" source="/" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
@@ -32,6 +33,11 @@
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Balls" source="Balls" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Balm" source="Balm" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
@@ -50,6 +56,16 @@
 		<entry key="Bramble Sprite" source="Bramble Sprite" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Caught" source="Caught" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Choose who steps in (L)" source="Choose who steps in (L)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
@@ -72,6 +88,16 @@
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
+		<entry key="Fernling" source="Fernling" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
+		<entry key="Fernwarden" source="Fernwarden" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
 		<entry key="Follow the lantern trail to its end" source="Follow the lantern trail to its end" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
@@ -87,6 +113,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Glintbug" source="Glintbug" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
 		<entry key="Gloom" source="Gloom" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
@@ -100,6 +131,7 @@
 		<entry key="HP" source="HP" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
@@ -137,9 +169,19 @@
 				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
+		<entry key="Leaf Slap" source="Leaf Slap" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Lv" source="Lv" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="MP" source="MP" context="TextWidget._text">
@@ -152,9 +194,19 @@
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
+		<entry key="Move" source="Move" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Notched Blade" source="Notched Blade" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Nudge" source="Nudge" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pistol" source="Pistol" context="Weapon name">
@@ -174,9 +226,24 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Rest at the camp (E)" source="Rest at the camp (E)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Rest at the inn (E)" source="Rest at the inn (E)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Ripplet" source="Ripplet" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
+		<entry key="Root Grip" source="Root Grip" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
 			</origins>
 		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">
@@ -197,6 +264,11 @@
 		<entry key="Spark" source="Spark" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Splash Jab" source="Splash Jab" context="Monster name">
+			<origins>
+				<item>game/playground/data/monstercollector.xml</item>
 			</origins>
 		</entry>
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
@@ -241,6 +313,16 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="The collection is complete" source="The collection is complete" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="The party has fainted" source="The party has fainted" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="The party has fallen" source="The party has fallen" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
@@ -261,6 +343,16 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Use move (J)   Ball (K)   Switch (L)   Run (R)" source="Use move (J)   Ball (K)   Switch (L)   Run (R)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Walk the glade to meet wild monsters" source="Walk the glade to meet wild monsters" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
@@ -274,6 +366,11 @@
 		<entry key="Wick Mage" source="Wick Mage" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wild" source="Wild" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 	</entries>

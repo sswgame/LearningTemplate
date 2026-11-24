@@ -35,5 +35,11 @@
 				<item>Enemy</item>
 			</elements>
 		</rule>
+		<rule files="monstercollector.xml" attribute="name" kind="text" context="Monster name">
+			<elements>
+				<item>Move</item>
+				<item>Species</item>
+			</elements>
+		</rule>
 	</assetRules>
 </LocalizationProject>

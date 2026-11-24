@@ -5,15 +5,21 @@
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Attack (J)   Spell (K)   Defend (L)   Flee (R)" text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" sourceHash="a5fc363affec7aa6" />
+		<entry key="Balls" text="볼" sourceHash="e1c84ee360ef7935" />
 		<entry key="Balm" text="연고" sourceHash="c13bdaa7a88916b7" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
 		<entry key="Bramble Sprite" text="가시덤불 정령" sourceHash="820f516764689b41" />
+		<entry key="Caught" text="포획" sourceHash="124f7a6bf27434e5" />
+		<entry key="Choose who steps in (L)" text="나설 몬스터를 고르세요 (L)" sourceHash="cdeab7fb476b6aa1" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
 		<entry key="Dusk Moth" text="땅거미 나방" sourceHash="6a5fe98cf648b21c" />
+		<entry key="Fernling" text="고사리돌이" sourceHash="431067eaf36b2340" />
+		<entry key="Fernwarden" text="고사리지기" sourceHash="d2277637def3ba7d" />
 		<entry key="Follow the lantern trail to its end" text="등불 길의 끝까지 가세요" sourceHash="0929e78693e66e6f" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
+		<entry key="Glintbug" text="반짝벌레" sourceHash="e0094e14afa8ed53" />
 		<entry key="Gloom" text="어스름" sourceHash="38abc03c467d546b" />
 		<entry key="Gold" text="골드" sourceHash="c416c97e0d3218b3" />
 		<entry key="HP" text="체력" sourceHash="09276807b5bba505" />
@@ -24,16 +30,24 @@
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
 		<entry key="Lantern Guard" text="등불지기" sourceHash="3a83771027d72ef6" />
+		<entry key="Leaf Slap" text="잎 치기" sourceHash="8dbfd28a806dd0e1" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
+		<entry key="Lv" text="레벨" sourceHash="09195207b5af4247" />
 		<entry key="MP" text="마력" sourceHash="09166a07b5ad3538" />
+		<entry key="Move" text="기술" sourceHash="379c18aec5654894" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
+		<entry key="Nudge" text="툭 치기" sourceHash="2fb30900ca892138" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
+		<entry key="Rest at the camp (E)" text="야영지에서 쉬기 (E)" sourceHash="21be64b41ec275ea" />
 		<entry key="Rest at the inn (E)" text="여관에서 쉬기 (E)" sourceHash="a3813c63a2a7f79e" />
+		<entry key="Ripplet" text="물결이" sourceHash="f309afbd4e7031f9" />
+		<entry key="Root Grip" text="뿌리 잡기" sourceHash="8b4d68f973cc9f2f" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
 		<entry key="Round Shield (Merged)" text="둥근 방패(병합)" sourceHash="42c4611c12baf19f" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
 		<entry key="Spark" text="불씨" sourceHash="02f9e3f12431edaa" />
+		<entry key="Splash Jab" text="물보라 찌르기" sourceHash="3e3d6e1bc6b99c8b" />
 		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
 		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
 		<entry key="Subtitle.LongLine"
@@ -43,10 +57,15 @@
 		<entry key="Subtitle.ScoutLine" text="능선에 움직임이 있다. 몸을 낮춰." sourceHash="f5effb26f2446842" />
 		<entry key="Target" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
+		<entry key="The collection is complete" text="수집을 마쳤습니다" sourceHash="dd09684b4a27f797" />
+		<entry key="The party has fainted" text="파티가 모두 쓰러졌습니다" sourceHash="6f1d260f83a6a84b" />
 		<entry key="The party has fallen" text="일행이 쓰러졌습니다" sourceHash="b9e9faeca81d229e" />
 		<entry key="The trail is safe again" text="길이 다시 안전해졌습니다" sourceHash="ecbbdec92e6e0755" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
+		<entry key="Use move (J)   Ball (K)   Switch (L)   Run (R)" text="기술 (J)   볼 (K)   교체 (L)   도망 (R)" sourceHash="318701a944661fe0" />
+		<entry key="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" sourceHash="a70f2a9658f6b001" />
 		<entry key="Wick Mage" text="심지술사" sourceHash="e463ec8fd5641a0f" />
+		<entry key="Wild" text="야생" sourceHash="cd41040253e7fcd5" />
 	</entries>
 </TranslationTable>

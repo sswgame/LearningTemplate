@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5bfe2f55557d33d4fdb5d045bfdbf6c3"?>
+<!--
+  풀밭 수집 미니게임(minigames/monstercollector)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 걷기 · 기술 고르기는 공통 `Move` 축이다.
+  레이어 MonsterCollector 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="MonsterCollector" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="MonsterCollector.Attack" layer="MonsterCollector" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="MonsterCollector.Ball" layer="MonsterCollector" trigger="Pressed">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="MonsterCollector.Switch" layer="MonsterCollector" trigger="Pressed">
+		<bind source="Key" code="L"/>
+		<bind source="Gamepad" code="LeftShoulder"/>
+	</action>
+	<action name="MonsterCollector.Run" layer="MonsterCollector" trigger="Pressed">
+		<bind source="Key" code="R"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<action name="MonsterCollector.Rest" layer="MonsterCollector" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

@@ -5,19 +5,25 @@
 		<entry source="Actor" text="배우" />
 		<entry source="Assault Rifle" text="돌격 소총" />
 		<entry source="Attack (J)   Spell (K)   Defend (L)   Flee (R)" text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" />
+		<entry source="Balls" text="볼" />
 		<entry source="Balm" text="연고" />
 		<entry source="Bone Axe" text="뼈 도끼" />
 		<entry source="Bone Shield" text="뼈 방패" />
 		<entry source="Bramble Sprite" text="가시덤불 정령" />
+		<entry source="Caught" text="포획" />
+		<entry source="Choose who steps in (L)" text="나설 몬스터를 고르세요 (L)" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
 		<entry source="Dusk Moth" text="땅거미 나방" />
 		<entry source="Fatigues" text="전투복" />
+		<entry source="Fernling" text="고사리돌이" />
+		<entry source="Fernwarden" text="고사리지기" />
 		<entry source="Field Pack" text="야전 배낭" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
 		<entry source="Follow the lantern trail to its end" text="등불 길의 끝까지 가세요" />
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
+		<entry source="Glintbug" text="반짝벌레" />
 		<entry source="Gloom" text="어스름" />
 		<entry source="Gold" text="골드" />
 		<entry source="Guide" text="안내인" />
@@ -29,32 +35,45 @@
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
 		<entry source="Knight Sword (Merged)" text="기사 검(병합)" />
 		<entry source="Lantern Guard" text="등불지기" />
+		<entry source="Leaf Slap" text="잎 치기" />
 		<entry source="Longbow" text="장궁" />
+		<entry source="Lv" text="레벨" />
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
 		<entry source="MP" text="마력" />
+		<entry source="Move" text="기술" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
 		<entry source="Notched Blade" text="이 빠진 칼" />
+		<entry source="Nudge" text="툭 치기" />
 		<entry source="Pistol" text="권총" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
 		<entry source="Recon Boots" text="정찰 부츠" />
 		<entry source="Recon Helmet" text="정찰 헬멧" />
 		<entry source="Recon Patch" text="정찰 패치" />
 		<entry source="Recon Vest" text="정찰 조끼" />
+		<entry source="Rest at the camp (E)" text="야영지에서 쉬기 (E)" />
 		<entry source="Rest at the inn (E)" text="여관에서 쉬기 (E)" />
+		<entry source="Ripplet" text="물결이" />
+		<entry source="Root Grip" text="뿌리 잡기" />
 		<entry source="Round Shield" text="둥근 방패" />
 		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
 		<entry source="Scout" text="정찰병" />
 		<entry source="Spark" text="불씨" />
+		<entry source="Splash Jab" text="물보라 찌르기" />
 		<entry source="Target" text="대상" />
 		<entry source="Tattered Cape" text="해진 망토" />
+		<entry source="The collection is complete" text="수집을 마쳤습니다" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
+		<entry source="The party has fainted" text="파티가 모두 쓰러졌습니다" />
 		<entry source="The party has fallen" text="일행이 쓰러졌습니다" />
 		<entry source="The trail is safe again" text="길이 다시 안전해졌습니다" />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
 		<entry source="Travel Cape" text="여행 망토" />
+		<entry source="Use move (J)   Ball (K)   Switch (L)   Run (R)" text="기술 (J)   볼 (K)   교체 (L)   도망 (R)" />
+		<entry source="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" />
 		<entry source="Wick Mage" text="심지술사" />
+		<entry source="Wild" text="야생" />
 	</entries>
 </TranslationMemory>

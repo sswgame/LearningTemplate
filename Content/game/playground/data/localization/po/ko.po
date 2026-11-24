@@ -10,6 +10,7 @@ msgstr ""
 
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
+#: game/playground/monstercollector/ui/hud.ui.xml
 #: game/playground/shooter3d/ui/hud.ui.xml
 msgctxt "/"
 msgid "/"
@@ -32,6 +33,12 @@ msgstr "돌격 소총"
 msgctxt "Attack (J)   Spell (K)   Defend (L)   Flee (R)"
 msgid "Attack (J)   Spell (K)   Defend (L)   Flee (R)"
 msgstr "공격 (J)   주문 (K)   방어 (L)   도망 (R)"
+
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Balls"
+msgid "Balls"
+msgstr "볼"
 
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
@@ -57,6 +64,18 @@ msgctxt "Bramble Sprite"
 msgid "Bramble Sprite"
 msgstr "가시덤불 정령"
 
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Caught"
+msgid "Caught"
+msgstr "포획"
+
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Choose who steps in (L)"
+msgid "Choose who steps in (L)"
+msgstr "나설 몬스터를 고르세요 (L)"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "CutA"
@@ -74,6 +93,18 @@ msgstr "컷 B"
 msgctxt "Dusk Moth"
 msgid "Dusk Moth"
 msgstr "땅거미 나방"
+
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Fernling"
+msgid "Fernling"
+msgstr "고사리돌이"
+
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Fernwarden"
+msgid "Fernwarden"
+msgstr "고사리지기"
 
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
@@ -93,6 +124,12 @@ msgctxt "Gilded Knight Helmet"
 msgid "Gilded Knight Helmet"
 msgstr "금박 기사 투구"
 
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Glintbug"
+msgid "Glintbug"
+msgstr "반짝벌레"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Gloom"
@@ -107,6 +144,7 @@ msgstr "골드"
 
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
+#: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "HP"
 msgid "HP"
 msgstr "체력"
@@ -153,6 +191,12 @@ msgctxt "Lantern Guard"
 msgid "Lantern Guard"
 msgstr "등불지기"
 
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Leaf Slap"
+msgid "Leaf Slap"
+msgstr "잎 치기"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Longbow"
@@ -160,16 +204,34 @@ msgid "Longbow"
 msgstr "장궁"
 
 #. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Lv"
+msgid "Lv"
+msgstr "레벨"
+
+#. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 msgctxt "MP"
 msgid "MP"
 msgstr "마력"
+
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Move"
+msgid "Move"
+msgstr "기술"
 
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Notched Blade"
 msgid "Notched Blade"
 msgstr "이 빠진 칼"
+
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Nudge"
+msgid "Nudge"
+msgstr "툭 치기"
 
 #. Context: Weapon name
 #: common/data/items.xml
@@ -184,10 +246,28 @@ msgid "Pump Shotgun"
 msgstr "펌프 산탄총"
 
 #. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Rest at the camp (E)"
+msgid "Rest at the camp (E)"
+msgstr "야영지에서 쉬기 (E)"
+
+#. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 msgctxt "Rest at the inn (E)"
 msgid "Rest at the inn (E)"
 msgstr "여관에서 쉬기 (E)"
+
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Ripplet"
+msgid "Ripplet"
+msgstr "물결이"
+
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Root Grip"
+msgid "Root Grip"
+msgstr "뿌리 잡기"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -212,6 +292,12 @@ msgstr "녹슨 투구"
 msgctxt "Spark"
 msgid "Spark"
 msgstr "불씨"
+
+#. Context: Monster name
+#: game/playground/data/monstercollector.xml
+msgctxt "Splash Jab"
+msgid "Splash Jab"
+msgstr "물보라 찌르기"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml
@@ -256,6 +342,18 @@ msgid "Tattered Cape"
 msgstr "해진 망토"
 
 #. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "The collection is complete"
+msgid "The collection is complete"
+msgstr "수집을 마쳤습니다"
+
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "The party has fainted"
+msgid "The party has fainted"
+msgstr "파티가 모두 쓰러졌습니다"
+
+#. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 msgctxt "The party has fallen"
 msgid "The party has fallen"
@@ -279,8 +377,26 @@ msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
 
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Use move (J)   Ball (K)   Switch (L)   Run (R)"
+msgid "Use move (J)   Ball (K)   Switch (L)   Run (R)"
+msgstr "기술 (J)   볼 (K)   교체 (L)   도망 (R)"
+
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Walk the glade to meet wild monsters"
+msgid "Walk the glade to meet wild monsters"
+msgstr "풀밭을 걸어 야생 몬스터를 만나세요"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Wick Mage"
 msgid "Wick Mage"
 msgstr "심지술사"
+
+#. Context: TextWidget._text
+#: game/playground/monstercollector/ui/hud.ui.xml
+msgctxt "Wild"
+msgid "Wild"
+msgstr "야생"

@@ -250,4 +250,6 @@
 	<Field owner="JRPGGameModeComponent" field="_listHero" tag="JRPGClassDef"/>
 	<Field owner="JRPGGameModeComponent" field="_area" tag="JRPGAreaDef"/>
 	<Field owner="JRPGGameModeComponent" field="_listBoss" tag="JRPGEnemyDef"/>
+	<CatalogKey tag="MonsterSpeciesDef" catalog="MonsterCollectorCatalog" entry="Species"/>
+	<Field owner="MonsterCollectorGameModeComponent" field="_listStarter" tag="MonsterSpeciesDef"/>
 </DataCatalogReferenceTable>
