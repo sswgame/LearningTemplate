@@ -297,11 +297,14 @@ namespace sw
          */
         bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
 
-        void setMouseLockMode( MouseLockMode mode );
-        void setCursorVisible( bool bVisible );
+        /**
+         * @brief 마우스를 @p mode 로 잠그고 커서를 숨깁니다. 돌려준 구독이 풀리면 놓습니다 — 여럿이 쥐면 나중에 쥔 쪽의 방식이고, 하나라도 쥐고 있으면 풀리지 않습니다.
+         * @details 칸 하나를 함께 쓰면 떠나는 조종자(이전 씬 · 하위 레벨 · 분할 화면의 다른 사람)의 놓기가 새로 빙의한 조종자의 잠금을 푼다.
+         */
+        [[nodiscard]] Subscription claimMouseLock( MouseLockMode mode );
         /**
          * @brief OS 커서 모양을 바꿉니다(런타임 UI 가 호버한 위젯의 `UICursorShape` 로 프레임마다 부른다). 같은 모양이면 아무것도 하지 않습니다.
-         * @details 숨긴 커서(잠금 · `setCursorVisible( false )`)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 OS 커서를 쥐므로 이 모양은 창에 보이지 않고, 게임 뷰 패널이 `getCursorShape` 를 읽어 ImGui 커서로 낸다.
+         * @details 숨긴 커서(잠금)에는 적용하지 않고 기억했다가 다시 보일 때 적용한다. 에디터에서는 ImGui 가 OS 커서를 쥐므로 이 모양은 창에 보이지 않고, 게임 뷰 패널이 `getCursorShape` 를 읽어 ImGui 커서로 낸다.
          */
         void        setCursorShape( CursorShape shape );
         CursorShape getCursorShape() const { return _cursorShape; }
@@ -428,6 +431,18 @@ namespace sw
             VirtualInputMode     _mode{ VirtualInputMode::Exclusive }; ///< 이 붙임의 모드
             bool                 _bOSDeviceInputBlocked{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다). 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버린다(`setOSDeviceInputBlocked`)
         };
+
+        /** @brief 마우스 잠금을 쥔 것 하나입니다(`claimMouseLock`). */
+        struct MouseLockClaim
+        {
+            uint64        _id{ 0 };
+            MouseLockMode _mode{ MouseLockMode::None };
+        };
+
+        /** @brief 마우스 잠금 @p id 의 구독이 풀렸습니다. */
+        void releaseMouseLock( uint64 id );
+        /** @brief 쥔 것들에서 잠금 방식 · 커서 표시를 다시 정해 장치와 OS 에 맞춥니다. */
+        void syncMouseLockClaims();
 
         /** @brief 모든 사용자의 맵에 건 레이어 하나입니다(`pushSharedLayer` · `enableSharedLayer`). */
         struct SharedLayer
@@ -563,6 +578,8 @@ namespace sw
         unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<unique_ptr<InputMap>>              _listUserMap;             /**< 로컬 멀티의 사용자 1 부터의 입력 맵입니다(`openLocalUsers`). 닫혔으면 비었습니다. */
         vector<InputUserDevices>                  _listUserDevices;         /**< 로컬 멀티의 사용자마다 짝지은 장치입니다(사용자 0 포함). 닫혔으면 비었습니다. */
+        vector<MouseLockClaim>                    _listMouseLockClaim;      /**< 마우스 잠금을 쥔 것들입니다(뒤가 이긴다). */
+        uint64                                    _lastMouseLockID;         /**< 마지막으로 내준 잠금의 id 입니다. */
         vector<SharedLayer>                       _listSharedLayer;         /**< 모든 사용자의 맵에 건 레이어입니다. */
         uint64                                    _lastSharedLayerID;       /**< 마지막으로 내준 공유 레이어의 id 입니다. */
         vector<RawInputEvent>                     _listPolledEvent;         /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
@@ -605,6 +622,7 @@ namespace sw
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`recordNativeEvent`) */
         DevCounter                                _rawMouseEventCount;                  /**< OS 에서 받은 원시 마우스 이동 보고 수(`getRawMouseEventCount`) */
         Subscription                              _sessionPlayback;                     /**< 세션 입력 기록 재생의 붙임입니다(`playSessionRecording`). */
+        SubscriptionList                          _mouseLockSubscriptions;              /**< 마우스 잠금의 구독입니다(`claimMouseLock`). */
         SubscriptionList                          _sharedLayerSubscriptions;            /**< 공유 레이어의 구독입니다. */
         SubscriptionList                          _keyboardFocusSubscriptions;          /**< 키보드를 쥔 구독입니다(`claimKeyboardFocus`). */
         SubscriptionList                          _virtualInputSubscriptions;           /**< 가상 입력 붙임의 구독입니다. 다른 멤버보다 먼저 닫히게 맨 끝에 둔다. */

@@ -85,6 +85,8 @@ namespace sw
         , _pInputMap{ nullptr }
         , _listUserMap{}
         , _listUserDevices{}
+        , _listMouseLockClaim{}
+        , _lastMouseLockID{ 0 }
         , _listSharedLayer{}
         , _lastSharedLayerID{ 0 }
         , _listPolledEvent{}
@@ -122,6 +124,7 @@ namespace sw
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
         , _bBackgroundGamepadInput{ SW_TRUE }
+        , _mouseLockSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseMouseLock, this ) }
         , _sharedLayerSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseSharedLayer, this ) }
         , _keyboardFocusSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseKeyboardFocus, this ) }
         , _virtualInputSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseVirtualInput, this ) }
@@ -180,6 +183,8 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
+        _mouseLockSubscriptions.detachAll();
+        _listMouseLockClaim.clear();
         _sharedLayerSubscriptions.detachAll();
         _listSharedLayer.clear();
         _keyboardFocusSubscriptions.detachAll();
@@ -1297,12 +1302,28 @@ namespace sw
         syncMouseLock();
     }
 
-    void InputManager::setMouseLockMode( MouseLockMode mode )
+    Subscription InputManager::claimMouseLock( MouseLockMode mode )
+    {
+        _listMouseLockClaim.push_back( MouseLockClaim{ ++_lastMouseLockID, mode } );
+        syncMouseLockClaims();
+        return _mouseLockSubscriptions.issue( _lastMouseLockID );
+    }
+
+    void InputManager::releaseMouseLock( uint64 id )
+    {
+        (void)VectorUtil::removeIf( _listMouseLockClaim, [id]( const MouseLockClaim& claim )
+        { return claim._id == id; } );
+        syncMouseLockClaims();
+    }
+
+    void InputManager::syncMouseLockClaims()
     {
         if ( _pMouse == nullptr )
             return;
-        const bool bWasLocked = _pMouse->getLockMode() != MouseLockMode::None;
+        const MouseLockMode mode       = _listMouseLockClaim.empty() ? MouseLockMode::None : _listMouseLockClaim.back()._mode;
+        const bool          bWasLocked = _pMouse->getLockMode() != MouseLockMode::None;
         _pMouse->setLockMode( mode );
+        _pMouse->setCursorVisible( mode == MouseLockMode::None );
         // 잠금을 새로 켤 때 창이 지금 전경이면 바로 잡는다(시작 직후나 Esc 로 다시 잠글 때). 아니면 클라이언트를 눌러야 잡는다.
         if ( mode != MouseLockMode::None && bWasLocked == false )
         {
@@ -1310,13 +1331,6 @@ namespace sw
             _bWindowFocused     = bFocused ? SW_TRUE : SW_FALSE;
             _bMouseLockEngaged  = bFocused ? SW_TRUE : SW_FALSE;
         }
-        syncMouseLock();
-    }
-
-    void InputManager::setCursorVisible( bool bVisible )
-    {
-        if ( _pMouse != nullptr )
-            _pMouse->setCursorVisible( bVisible );
         syncMouseLock();
     }
 

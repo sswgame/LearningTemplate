@@ -113,3 +113,19 @@ SW_TEST_CASE( InputKeyboardFocusTest, HighestClaimReceives )
     SW_EXPECT_TRUE( input.getKeyboardFocus() == InputKeyboardFocus::Game );
     input.shutdown();
 }
+
+/** @brief [InputMouseLockTest] 새 조종자가 쥔 뒤 떠나는 조종자가 놓아도 잠금이 풀리지 않고, 마지막 쥔 것이 풀리면 커서가 돌아옵니다. */
+SW_TEST_CASE( InputMouseLockTest, LeavingOwnerKeepsTheNewLock )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    Subscription leaving = input.claimMouseLock( MouseLockMode::LockedInCenter );
+    Subscription entered = input.claimMouseLock( MouseLockMode::LockedInCenter );
+    leaving.reset(); // 이전 씬의 조종자가 새 조종자의 빙의 뒤에 사라진다
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::LockedInCenter );
+    SW_EXPECT_FALSE( input.getMouse()->isCursorVisible() );
+    entered.reset();
+    SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::None );
+    SW_EXPECT_TRUE( input.getMouse()->isCursorVisible() );
+    input.shutdown();
+}
