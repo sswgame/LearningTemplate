@@ -223,17 +223,22 @@ namespace sw
     }
 
     /**
-     * @brief 컨테이너의 기본 할당자입니다. `SW_ENABLE_STL_CONTAINER` 가 구성마다 바꾸는 것은 **이 할당자 하나뿐**입니다.
-     * @details 기본 구성은 엔진 할당자(`Allocator`, 메모리 태그 · 추적)이고, STL 구성은 `std::allocator` 입니다. 컨테이너 형식(`vector` · `array` · `map` · `set` · `pair` ·
-     *          해시 컨테이너 · `string` · `deque`)은 두 구성에서 같은 구현이라, 같은 이름이 구성마다 다른 형식이 되는 일이 없다.
-     *          컨테이너 헤더의 기본 템플릿 인자는 `Allocator<T>` 가 아니라 이 별칭을 쓴다.
+     * @brief 컨테이너의 기본 할당자와 구성입니다. `SW_ENABLE_STL_CONTAINER` 를 켜면 std 짝이 있는 컨테이너(`string` · `vector` · `deque` · `array` · 정렬 맵 · 집합 · 해시 맵 · 집합)의 저장을 std 구현에 맡기고 할당자도 std 다.
+     * @details 같은 이름이 구성마다 다른 형식(별칭)이 되지 않는다 — 공개 API · 레이스 검사 · 범위 밖 계약을 가진 sw 클래스는 두 구성에 있고, 안에 든 저장만 컨테이너 헤더 한 자리에서 바뀐다
+     *          (자체 구현은 `Core/Container/Native`, std 를 멤버로 든 것은 `Core/Container/Std`). 컨테이너 헤더의 기본 템플릿 인자는 `Allocator<T>` 가 아니라 이 별칭을 쓴다.
      */
 #if defined( SW_ENABLE_STL_CONTAINER )
     template <typename T>
     using ContainerAllocator = std::allocator<T>;
+
+    /** @brief 컨테이너 저장을 std 구현에 맡기는 구성이면 참입니다. 배치(짧은 글 길이 · 할당 수)를 재는 테스트만 이것으로 가른다 — 쓰는 쪽 코드는 구성을 보지 않는다. */
+    inline constexpr bool kUsesStdContainers = true;
 #else
     template <typename T>
     using ContainerAllocator = Allocator<T>;
+
+    /** @brief 컨테이너 저장을 std 구현에 맡기는 구성이면 참입니다. 배치(짧은 글 길이 · 할당 수)를 재는 테스트만 이것으로 가른다 — 쓰는 쪽 코드는 구성을 보지 않는다. */
+    inline constexpr bool kUsesStdContainers = false;
 #endif
 } // namespace sw
 

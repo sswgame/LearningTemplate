@@ -896,13 +896,13 @@ SW_TEST_CASE( VectorTest, BitwiseRelocatableTraitFollowsTheMembers )
     static_assert( sw::is_bitwise_relocatable_v<PaddedPod>, "바이트 복사 형식" );
     static_assert( sw::is_bitwise_relocatable_v<sw::unique_ptr<int32>>, "포인터 한 칸" );
     static_assert( sw::is_bitwise_relocatable_v<sw::shared_ptr<int32>>, "포인터 두 칸" );
-    static_assert( sw::is_bitwise_relocatable_v<sw::vector<TrackedValue>>, "버퍼 포인터와 두 수" );
+    static_assert( sw::is_bitwise_relocatable_v<sw::vector<TrackedValue>> || sw::kUsesStdContainers, "버퍼 포인터와 두 수" );
     static_assert( sw::is_bitwise_relocatable_v<sw::small_vector<int32, 4>> == false, "인라인 버퍼를 가리킨다" );
     static_assert( sw::is_bitwise_relocatable_v<TrackedValue> == false, "올리지 않은 사용자 형식은 이동 생성 · 소멸" );
     static_assert( sw::is_bitwise_relocatable_v<sw::pair<uint32, sw::unique_ptr<int32>>>, "쌍은 두 칸을 따른다" );
     static_assert( sw::is_bitwise_relocatable_v<sw::pair<uint32, TrackedValue>> == false, "쌍은 두 칸을 따른다" );
-    static_assert( sw::is_bitwise_relocatable_v<sw::unordered_map<uint32, sw::unique_ptr<int32>>>, "맵 자신은 버퍼 둘" );
-    SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> );
+    static_assert( sw::is_bitwise_relocatable_v<sw::unordered_map<uint32, sw::unique_ptr<int32>>> || sw::kUsesStdContainers, "맵 자신은 버퍼 둘" );
+    SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> || sw::kUsesStdContainers ); // std 저장의 배치는 표준 라이브러리마다 다르다
 }
 
 /**

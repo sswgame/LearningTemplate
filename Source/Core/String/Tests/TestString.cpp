@@ -2046,9 +2046,12 @@ SW_TEST_CASE( StringTest, AppendFormatGrowsAcrossUTF8Boundary )
 SW_TEST_CASE( StringTest, SmallBufferBoundary )
 {
     const size_t smallCapacity = sw::string{}.capacity();
-    SW_EXPECT_EQUAL( sizeof( void* ) * 3 - 1, smallCapacity );
-    SW_EXPECT_EQUAL( sizeof( void* ) * 3 / sizeof( utf16 ) - 1, sw::wstring{}.capacity() );
-    static_assert( sw::is_bitwise_relocatable_v<sw::string> );
+    if constexpr ( sw::kUsesStdContainers == false )
+    {
+        SW_EXPECT_EQUAL( sizeof( void* ) * 3 - 1, smallCapacity );
+        SW_EXPECT_EQUAL( sizeof( void* ) * 3 / sizeof( utf16 ) - 1, sw::wstring{}.capacity() );
+        SW_EXPECT_TRUE( sw::is_bitwise_relocatable_v<sw::string> );
+    }
 
     sw::string grown;
     for ( size_t length = 0; length < smallCapacity * 3; ++length )

@@ -1,14 +1,9 @@
 /**
  * @file string.h
- * @brief 자체 구현한 sw::basic_string 입니다(std::basic_string 과 인터페이스 호환). 검사 구성에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
- * @details 배치는 EASTL `basic_string` · folly `fbstring` 과 같은 세 칸(64 비트 24 바이트)이다: 긴 글은 { 포인터, 글자 수, 용량 | 힙 표식 }, 짧은 글(utf8 23 자)은 그 세 칸을 통째로
- *          글자로 쓰고 마지막 칸에 "남은 칸 수" 를 둔다 — 꽉 찬 짧은 글은 남은 칸 수 0 이 곧 널 문자다. 언리얼 `FString`(TArray) · Godot `String`(CowData)은 짧은 글 버퍼가 없어
- *          이름 하나도 할당한다.
- *          std 를 상속하지 않는 까닭: 짧은 글 길이(MSVC · libstdc++ 15 · libc++ 22)와 크기(32 · 32 · 24)가 표준 라이브러리마다 갈려 같은 코드의 할당 수가 플랫폼마다 다르고,
- *          libstdc++ 의 짧은 글은 자기 버퍼를 가리켜 `vector<string>` 을 바이트로 옮길 수 없고(BitwiseRelocatable.h), 다시 선언하지 않은 함수(`assign` · `resize` · `rfind` …)는
- *          레이스 · 범위 검사 없이 기반 클래스로 샌다. 할당자 교체(`SW_ENABLE_STL_CONTAINER`)는 다른 컨테이너처럼 `ContainerAllocator` 하나만 바꾼다.
- *          자기 주소를 담은 칸이 없다(포인터는 힙 버퍼만 가리킨다).
- * @note 마지막 칸은 짧은 글의 남은 칸 수다 — `data()` 로 `[0, size()]` 밖(용량 안쪽)을 쓰지 않는다. 글자 수를 늘려 쓰려면 먼저 `resize` 한다(std 와 같은 계약).
+ * @brief 글자 수를 아는 널 종료 문자열 sw::basic_string 입니다(std::basic_string(C++17)과 인터페이스 호환). 검사 구성에서는 RaceDetectContext 로 동시 접근을 잡아냅니다.
+ * @details 공개 API · 레이스 검사 · 범위 밖 계약은 이 클래스 한 벌이고, 글자를 담는 일만 `internal::StringStorage` 가 한다. 저장 형식은 **여기 한 자리** 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다:
+ *          기본은 자체 구현(`Native/NativeStringStorage.h` — 세 칸 배치), 켜면 std::basic_string 을 멤버로 든 것(`Std/StdStringStorage.h`)이다. 쓰는 쪽 코드는 구성을 모른다.
+ *          std 를 상속하지 않는 까닭: 다시 선언하지 않은 함수(`assign` · `resize` · `rfind` …)가 레이스 · 범위 검사 없이 기반 클래스로 샌다. 변경은 모두 저장 형식의 `openGap` 한 길을 지난다.
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -18,6 +13,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
+
+#if defined( SW_ENABLE_STL_CONTAINER )
+    #include "Core/Container/Std/StdStringStorage.h"
+#else
+    #include "Core/Container/Native/NativeStringStorage.h"
+#endif
 
 namespace sw
 {
@@ -60,12 +61,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 생성 · 소멸 · 대입 — 레이스 컨텍스트는 인스턴스마다 따로 둔다
         // ------------------------------------------------------------------------------
-        basic_string() noexcept { setEmpty(); }
-        explicit basic_string( [[maybe_unused]] const Allocator& alloc ) noexcept { setEmpty(); }
+        basic_string() noexcept = default;
+        explicit basic_string( [[maybe_unused]] const Allocator& alloc ) noexcept {}
 
         basic_string( size_type count, CharT ch, [[maybe_unused]] const Allocator& alloc = Allocator() )
         {
-            setEmpty();
             fillGap( 0, 0, count, ch );
         }
 
@@ -73,18 +73,18 @@ namespace sw
         {
             SW_SCOPED_RACE_READ_OTHER( other );
             const View source = slice( other.viewInternal(), pos, npos );
-            initialize( source.data(), source.size() );
+            _storage.initialize( source.data(), source.size() );
         }
 
         basic_string( const basic_string& other, size_type pos, size_type count, [[maybe_unused]] const Allocator& alloc = Allocator() )
         {
             SW_SCOPED_RACE_READ_OTHER( other );
             const View source = slice( other.viewInternal(), pos, count );
-            initialize( source.data(), source.size() );
+            _storage.initialize( source.data(), source.size() );
         }
 
-        basic_string( const CharT* pS, size_type count, [[maybe_unused]] const Allocator& alloc = Allocator() ) { initialize( pS, count ); }
-        basic_string( const CharT* pS, [[maybe_unused]] const Allocator& alloc = Allocator() ) { initialize( pS, Traits::length( pS ) ); }
+        basic_string( const CharT* pS, size_type count, [[maybe_unused]] const Allocator& alloc = Allocator() ) { _storage.initialize( pS, count ); }
+        basic_string( const CharT* pS, [[maybe_unused]] const Allocator& alloc = Allocator() ) { _storage.initialize( pS, Traits::length( pS ) ); }
 
         /**
          * @brief 뷰의 문자를 복사해 소유합니다.
@@ -94,50 +94,49 @@ namespace sw
         explicit basic_string( const T& text, [[maybe_unused]] const Allocator& alloc = Allocator() )
         {
             const View source = text;
-            initialize( source.data(), source.size() );
+            _storage.initialize( source.data(), source.size() );
         }
 
         template <typename T, EnableIfViewLike<T> = 0>
         basic_string( const T& text, size_type pos, size_type count, [[maybe_unused]] const Allocator& alloc = Allocator() )
         {
             const View source = slice( View( text ), pos, count );
-            initialize( source.data(), source.size() );
+            _storage.initialize( source.data(), source.size() );
         }
 
         template <typename InputIt, EnableIfIterator<InputIt> = 0>
         basic_string( InputIt first, InputIt last, [[maybe_unused]] const Allocator& alloc = Allocator() )
         {
-            setEmpty();
             appendRange( first, last );
         }
 
-        basic_string( std::initializer_list<CharT> ilist, [[maybe_unused]] const Allocator& alloc = Allocator() ) { initialize( ilist.begin(), ilist.size() ); }
+        basic_string( std::initializer_list<CharT> ilist, [[maybe_unused]] const Allocator& alloc = Allocator() ) { _storage.initialize( ilist.begin(), ilist.size() ); }
 
         basic_string( const basic_string& other )
         {
             SW_SCOPED_RACE_READ_OTHER( other );
-            initialize( other.dataInternal(), other.sizeInternal() );
+            _storage.initialize( other.dataInternal(), other.sizeInternal() );
         }
 
         basic_string( const basic_string& other, [[maybe_unused]] const Allocator& alloc )
         {
             SW_SCOPED_RACE_READ_OTHER( other );
-            initialize( other.dataInternal(), other.sizeInternal() );
+            _storage.initialize( other.dataInternal(), other.sizeInternal() );
         }
 
         basic_string( basic_string&& other ) noexcept
         {
             SW_SCOPED_RACE_WRITE_OTHER( other );
-            take( other );
+            _storage = std::move( other._storage );
         }
 
         basic_string( basic_string&& other, [[maybe_unused]] const Allocator& alloc ) noexcept
         {
             SW_SCOPED_RACE_WRITE_OTHER( other );
-            take( other );
+            _storage = std::move( other._storage );
         }
 
-        ~basic_string() { release(); }
+        ~basic_string() = default;
 
         basic_string& operator=( const basic_string& other )
         {
@@ -156,8 +155,7 @@ namespace sw
             {
                 SW_SCOPED_RACE_WRITE();
                 SW_SCOPED_RACE_WRITE_OTHER( other );
-                release();
-                take( other );
+                _storage = std::move( other._storage );
             }
             return *this;
         }
@@ -372,43 +370,28 @@ namespace sw
             return sizeInternal();
         }
 
-        /** @brief 담을 수 있는 가장 긴 글자 수입니다(널 문자 한 칸 · 힙 표식 한 비트를 뺀다). */
-        size_type max_size() const noexcept { return ( kHeapFlag - 1 ) / sizeof( CharT ) - 1; }
+        /** @brief 담을 수 있는 가장 긴 글자 수입니다. */
+        size_type max_size() const noexcept { return _storage.max_size(); }
 
         size_type capacity() const noexcept
         {
             SW_SCOPED_RACE_READ();
-            return capacityInternal();
+            return _storage.capacity();
         }
 
         /** @brief 글자 @p newCapacity 개를 더 할당하지 않고 담게 합니다. 줄이지 않습니다. */
         void reserve( size_type newCapacity )
         {
             SW_SCOPED_RACE_WRITE();
-            if ( newCapacity > capacityInternal() )
-                reallocate( newCapacity );
+            if ( newCapacity > _storage.capacity() )
+                _storage.reserve( newCapacity );
         }
 
         /** @brief 남는 용량을 놓습니다. 짧은 글 버퍼에 들면 힙 버퍼를 놓습니다. */
         void shrink_to_fit()
         {
             SW_SCOPED_RACE_WRITE();
-            if ( isHeap() == false )
-                return;
-            const size_type size = _heap._size;
-            if ( size <= kSmallCapacity )
-            {
-                CharT* const    pOld        = _heap._pData;
-                const size_type oldCapacity = capacityInternal();
-                setEmpty();
-                copyChars( _arrSmall, pOld, size );
-                setSize( size );
-                deallocate( pOld, oldCapacity );
-            }
-            else if ( roundCapacity( size ) < capacityInternal() )
-            {
-                reallocate( size );
-            }
+            _storage.shrink_to_fit();
         }
 
         // ------------------------------------------------------------------------------
@@ -418,7 +401,7 @@ namespace sw
         void clear() noexcept
         {
             SW_SCOPED_RACE_WRITE();
-            setSize( 0 );
+            _storage.truncate( 0 );
         }
 
         void resize( size_type count ) { resize( count, CharT() ); }
@@ -428,7 +411,7 @@ namespace sw
             SW_SCOPED_RACE_WRITE();
             const size_type size = sizeInternal();
             if ( count <= size )
-                setSize( count );
+                _storage.truncate( count );
             else
                 fillGap( size, 0, count - size, ch );
         }
@@ -439,10 +422,7 @@ namespace sw
                 return;
             SW_SCOPED_RACE_WRITE();
             SW_SCOPED_RACE_WRITE_OTHER( other );
-            CharT arrTemp[kSmallCount];
-            std::memcpy( arrTemp, _arrSmall, sizeof( Heap ) );
-            std::memcpy( _arrSmall, other._arrSmall, sizeof( Heap ) );
-            std::memcpy( other._arrSmall, arrTemp, sizeof( Heap ) );
+            _storage.swap( other._storage );
         }
 
         basic_string& insert( size_type index, size_type count, CharT ch )
@@ -516,7 +496,7 @@ namespace sw
         {
             SW_SCOPED_RACE_WRITE();
             const size_type pos = clampPosition( index );
-            (void)openGap( pos, clampCount( pos, count ), 0 );
+            (void)_storage.openGap( pos, clampCount( pos, count ), 0 );
             return *this;
         }
 
@@ -525,7 +505,7 @@ namespace sw
         {
             SW_SCOPED_RACE_WRITE();
             SW_CHECK_INDEX( pos - dataInternal(), sizeInternal() );
-            return openGap( static_cast<size_type>( pos - dataInternal() ), 1, 0 );
+            return _storage.openGap( static_cast<size_type>( pos - dataInternal() ), 1, 0 );
         }
 
         template <typename ItFirst, typename ItLast, EnableIfOwnIterator<ItFirst> = 0, EnableIfOwnIterator<ItLast> = 0>
@@ -534,24 +514,20 @@ namespace sw
             SW_SCOPED_RACE_WRITE();
             SW_CHECK_INDEX_OR_END( last - dataInternal(), sizeInternal() );
             SW_CHECK_INDEX_OR_END( first - dataInternal(), last - dataInternal() );
-            return openGap( static_cast<size_type>( first - dataInternal() ), static_cast<size_type>( last - first ), 0 );
+            return _storage.openGap( static_cast<size_type>( first - dataInternal() ), static_cast<size_type>( last - first ), 0 );
         }
 
         void push_back( CharT ch )
         {
             SW_SCOPED_RACE_WRITE();
-            const size_type size = sizeInternal();
-            if ( size == capacityInternal() )
-                reallocate( computeGrowth( size + 1 ) );
-            dataInternal()[size] = ch;
-            setSize( size + 1 );
+            _storage.push_back( ch );
         }
 
         void pop_back()
         {
             SW_SCOPED_RACE_WRITE();
             SW_CHECK_INDEX( 0, sizeInternal() );
-            setSize( sizeInternal() - 1 );
+            _storage.truncate( sizeInternal() - 1 );
         }
 
         basic_string& append( size_type count, CharT ch )
@@ -742,128 +718,16 @@ namespace sw
         basic_string substr( size_type pos = 0, size_type count = npos ) const { return basic_string( *this, pos, count ); }
 
     private:
-        /** @brief 긴 글의 세 칸입니다. 짧은 글은 같은 자리를 글자로 쓴다. */
-        struct Heap
-        {
-            CharT*    _pData;
-            size_type _size;
-            size_type _capacityAndFlag; ///< 용량(널 문자 칸을 뺀 글자 수) | `kHeapFlag`
-        };
-        static_assert( sizeof( Heap ) % sizeof( CharT ) == 0, "the three heap words must hold whole characters" );
+        const CharT* dataInternal() const noexcept { return _storage.data(); }
+        CharT*       dataInternal() noexcept { return _storage.data(); }
+        size_type    sizeInternal() const noexcept { return _storage.size(); }
+        View         viewInternal() const noexcept { return View( _storage.data(), _storage.size() ); }
 
-        static constexpr size_type kSmallCount    = sizeof( Heap ) / sizeof( CharT );
-        static constexpr size_type kSmallCapacity = kSmallCount - 1;
-        static constexpr size_type kHeapFlag      = static_cast<size_type>( 1 ) << ( sizeof( size_type ) * 8 - 1 ); ///< 리틀 엔디언이라 객체 마지막 바이트의 맨 위 비트다(지원 대상이 모두 리틀 엔디언이다)
-        static constexpr size_type kRoundMask     = sizeof( CharT ) < 16 ? 16 / sizeof( CharT ) - 1 : 0;            ///< 널 문자까지 16 바이트 단위로 잡는다(할당자 최소 정렬)
-
-        // 짧은 글이면 남은 칸 수가 마지막 글자 칸(최대 23)이라 맨 위 비트가 늘 0 이다. 객체의 바이트를 보는 것이라 어느 칸이 살아 있어도 된다.
-        bool isHeap() const noexcept { return static_cast<int8>( reinterpret_cast<const uint8*>( &_arrSmall )[sizeof( Heap ) - 1] ) < 0; }
-
-        CharT*       dataInternal() noexcept { return isHeap() ? _heap._pData : _arrSmall; }
-        const CharT* dataInternal() const noexcept { return isHeap() ? _heap._pData : _arrSmall; }
-        size_type    sizeInternal() const noexcept { return isHeap() ? _heap._size : kSmallCapacity - static_cast<size_type>( _arrSmall[kSmallCapacity] ); }
-        size_type    capacityInternal() const noexcept { return isHeap() ? ( _heap._capacityAndFlag & ~kHeapFlag ) : kSmallCapacity; }
-        View         viewInternal() const noexcept { return View( dataInternal(), sizeInternal() ); }
-
-        /** @brief 빈 짧은 글로 둡니다(버퍼를 놓지 않는다). */
-        void setEmpty() noexcept
-        {
-            _heap                     = Heap{ nullptr, 0, 0 }; // 칸을 통째로 옮기므로(take · swap) 안 쓰는 글자도 정해 둔다
-            _arrSmall[0]              = CharT();
-            _arrSmall[kSmallCapacity] = static_cast<CharT>( kSmallCapacity );
-        }
-
-        /** @brief 글자 수를 적고 널 문자를 둡니다. @p size 는 용량 이하다. */
-        void setSize( size_type size ) noexcept
-        {
-            if ( isHeap() )
-            {
-                _heap._size        = size;
-                _heap._pData[size] = CharT();
-                return;
-            }
-            _arrSmall[kSmallCapacity] = static_cast<CharT>( kSmallCapacity - size );
-            _arrSmall[size]           = CharT(); // 꽉 찼으면 남은 칸 수(0)와 같은 칸이다
-        }
-
-        void setHeap( CharT* pData, size_type size, size_type capacity ) noexcept
-        {
-            _heap._pData           = pData;
-            _heap._size            = size;
-            _heap._capacityAndFlag = capacity | kHeapFlag;
-            pData[size]            = CharT();
-        }
-
-        /** @brief 원소 수가 0 이면 널 포인터를 넘겨도 되는 복사입니다(겹치지 않는 구간). */
+        /** @brief 글자 수가 0 이면 널 포인터를 넘겨도 되는 복사입니다(겹치지 않는 구간). */
         static void copyChars( CharT* pDest, const CharT* pSource, size_type count )
         {
             if ( count > 0 )
                 Traits::copy( pDest, pSource, count );
-        }
-
-        static CharT* allocate( size_type capacity )
-        {
-            Allocator alloc{};
-            return std::allocator_traits<Allocator>::allocate( alloc, capacity + 1 );
-        }
-
-        static void deallocate( CharT* pData, size_type capacity ) noexcept
-        {
-            Allocator alloc{};
-            std::allocator_traits<Allocator>::deallocate( alloc, pData, capacity + 1 );
-        }
-
-        static constexpr size_type roundCapacity( size_type capacity ) noexcept { return capacity | kRoundMask; }
-
-        /** @brief @p required 글자를 담게 키울 때의 용량 — 지금의 1.5 배와 큰 쪽입니다(한 글자씩 붙여도 전체가 O(n)이다). */
-        size_type computeGrowth( size_type required ) const
-        {
-            if ( required > max_size() )
-                throw std::bad_alloc(); // 할당자와 같은 실패다
-            const size_type capacity = capacityInternal();
-            const size_type grown    = capacity + capacity / 2;
-            return required > grown ? required : grown;
-        }
-
-        void release() noexcept
-        {
-            if ( isHeap() )
-                deallocate( _heap._pData, capacityInternal() );
-        }
-
-        /** @brief @p other 의 칸을 통째로 가져오고 빈 글로 둡니다. 이 객체의 버퍼는 미리 놓았거나 없다. */
-        void take( basic_string& other ) noexcept
-        {
-            std::memcpy( _arrSmall, other._arrSmall, sizeof( Heap ) );
-            other.setEmpty();
-        }
-
-        /** @brief 아무것도 없는 객체를 @p count 글자로 채웁니다(생성자가 쓴다). 꼭 맞는 용량만 잡는다. */
-        void initialize( const CharT* pSource, size_type count )
-        {
-            setEmpty();
-            if ( count > kSmallCapacity )
-            {
-                if ( count > max_size() )
-                    throw std::bad_alloc();
-                const size_type capacity = roundCapacity( count );
-                setHeap( allocate( capacity ), 0, capacity );
-            }
-            copyChars( dataInternal(), pSource, count );
-            setSize( count );
-        }
-
-        /** @brief 용량을 @p capacity(지금 글자 수 이상) 이상의 힙 버퍼로 바꿉니다. */
-        void reallocate( size_type capacity )
-        {
-            if ( capacity > max_size() )
-                throw std::bad_alloc();
-            const size_type rounded = roundCapacity( capacity );
-            CharT* const    pNew    = allocate( rounded );
-            const size_type size    = sizeInternal();
-            copyChars( pNew, dataInternal(), size );
-            release();
-            setHeap( pNew, size, rounded );
         }
 
         size_type clampPosition( size_type pos ) const noexcept
@@ -894,50 +758,20 @@ namespace sw
             return std::less_equal<const CharT*>{}( pData, pChars ) && std::less_equal<const CharT*>{}( pChars, pData + sizeInternal() );
         }
 
-        /**
-         * @brief [pos, pos + removeCount) 를 @p insertCount 칸의 빈자리로 바꾸고 그 자리를 돌려줍니다 — 모든 변경이 지나는 한 길이다(뒤쪽은 많아야 한 번 옮긴다).
-         * @details 자리의 글자는 정해지지 않았다(부르는 쪽이 채운다). 글자 수 · 널 문자는 맞춰 둔다.
-         */
-        CharT* openGap( size_type pos, size_type removeCount, size_type insertCount )
-        {
-            const size_type size      = sizeInternal();
-            const size_type kept      = size - removeCount;
-            const size_type tailCount = kept - pos;
-            if ( insertCount > max_size() - kept )
-                throw std::bad_alloc();
-            const size_type newSize = kept + insertCount;
-            if ( newSize > capacityInternal() )
-            {
-                const size_type capacity = roundCapacity( computeGrowth( newSize ) );
-                CharT* const    pNew     = allocate( capacity );
-                const CharT*    pOld     = dataInternal();
-                copyChars( pNew, pOld, pos );
-                copyChars( pNew + pos + insertCount, pOld + pos + removeCount, tailCount );
-                release();
-                setHeap( pNew, newSize, capacity );
-                return pNew + pos;
-            }
-            CharT* const pGap = dataInternal() + pos;
-            if ( tailCount > 0 && removeCount != insertCount )
-                Traits::move( pGap + insertCount, pGap + removeCount, tailCount );
-            setSize( newSize );
-            return pGap;
-        }
-
         void replaceGap( size_type pos, size_type removeCount, const CharT* pSource, size_type sourceCount )
         {
             if ( sourceCount > 0 && isOwnText( pSource ) )
             {
                 const basic_string copied( pSource, sourceCount );
-                copyChars( openGap( pos, removeCount, sourceCount ), copied.dataInternal(), sourceCount );
+                copyChars( _storage.openGap( pos, removeCount, sourceCount ), copied.dataInternal(), sourceCount );
                 return;
             }
-            copyChars( openGap( pos, removeCount, sourceCount ), pSource, sourceCount );
+            copyChars( _storage.openGap( pos, removeCount, sourceCount ), pSource, sourceCount );
         }
 
         void fillGap( size_type pos, size_type removeCount, size_type fillCount, CharT ch )
         {
-            CharT* const pGap = openGap( pos, removeCount, fillCount );
+            CharT* const pGap = _storage.openGap( pos, removeCount, fillCount );
             if ( fillCount > 0 )
                 Traits::assign( pGap, fillCount, ch );
         }
@@ -971,8 +805,10 @@ namespace sw
                 if constexpr ( std::is_convertible_v<typename std::iterator_traits<InputIt>::iterator_category, std::forward_iterator_tag> )
                 {
                     const size_type required = sizeInternal() + static_cast<size_type>( std::distance( first, last ) );
-                    if ( required > capacityInternal() )
-                        reallocate( computeGrowth( required ) );
+                    const size_type capacity = _storage.capacity();
+                    const size_type grown    = capacity + capacity / 2; // 작은 구간을 거듭 붙여도 전체가 O(n) 이게 1.5 배보다 작게 키우지 않는다
+                    if ( required > capacity )
+                        _storage.reserve( required > grown ? required : grown );
                 }
                 for ( ; first != last; ++first )
                     push_back( static_cast<CharT>( *first ) );
@@ -980,17 +816,13 @@ namespace sw
         }
 
     private:
-        union
-        {
-            Heap  _heap;
-            CharT _arrSmall[kSmallCount]; ///< 마지막 칸은 남은 칸 수(꽉 차면 널 문자)
-        };
+        internal::StringStorage<CharT, Traits, Allocator> _storage; ///< 글자 — 자체 구현 또는 std::basic_string(파일 머리말)
         SW_RACE_CTX_MEMBER
     };
 
-    /** @brief 포인터는 힙 버퍼만 가리키고 자기 주소를 담은 칸이 없다(파일 머리말). */
+    /** @brief 저장 형식이 바이트로 옮겨도 되면 문자열도 그렇다(나머지 칸은 검사 구성의 레이스 컨텍스트뿐이다). */
     template <typename CharT, typename Traits, typename Allocator>
-    struct is_bitwise_relocatable<basic_string<CharT, Traits, Allocator>> : std::true_type
+    struct is_bitwise_relocatable<basic_string<CharT, Traits, Allocator>> : std::bool_constant<internal::StringStorage<CharT, Traits, Allocator>::kBitwiseRelocatable>
     {
     };
 
