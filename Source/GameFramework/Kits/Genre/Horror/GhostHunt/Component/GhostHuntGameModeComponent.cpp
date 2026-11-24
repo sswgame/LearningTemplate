@@ -112,11 +112,8 @@ namespace sw
                     {
                         return kEventCoins;
                     }
-                    default:
-                    {
-                        return nullptr;
-                    }
                 }
+                return nullptr;
             }
 
             static constexpr const utf8* kWinResult  = "win";
