@@ -258,7 +258,12 @@ namespace sw
         const utf8*                  findGameInstanceState() const override;
         /** @brief 엔진 기동 때는 열지 않습니다 — 전용 서버의 서버 문맥은 게임 인스턴스 앞에 걸리므로 `openFromLaunch` 가 엽니다. */
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        /** @brief 세션을 닫습니다(엔진 종료). */
+        /**
+         * @brief 세션을 닫습니다(엔진 종료의 앞 단계).
+         * @details 연결의 봉인기(`INetAEAD`)는 암호 제공자의 모듈(GameFramework)이 만든 객체다 — 모듈 라이브러리가 내려간 뒤(`ModuleUnloadStage` 의 종료)에 닫으면 끊김 통지를 봉인하며 사라진 코드를 부른다.
+         *          모든 서브시스템이 살아 있는 앞 단계에서 닫는다. 공용 모듈은 실행 중에 다시 읽히지 않으므로(`LiveReloadManager` 가 거절한다) 종료만 본다.
+         */
+        void                       stopSubsystem() override { shutdown(); }
         void                       shutdownSubsystem() override { shutdown(); }
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
         /**
