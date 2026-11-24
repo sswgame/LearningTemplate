@@ -364,7 +364,7 @@ namespace sw
         hashed_string _contactShadow{ "ContactShadow" };
         /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
-        /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
+        /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_autoExposureHistory`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
         hashed_string _autoExposure{ "AutoExposure" };
         /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `PathTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
         hashed_string _colorGradingLUT{ "ColorGradingLUT" };

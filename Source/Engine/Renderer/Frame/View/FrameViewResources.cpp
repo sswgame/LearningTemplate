@@ -325,11 +325,11 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FrameViewResources.FailedCreateDepthHistory", "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
-    void FrameViewResources::updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, bool bWritten, const utf8* pDebugName, RHITextureSlot& history )
+    void FrameViewResources::updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, const utf8* pDebugName, FrameViewHistory& history )
     {
-        if ( bWritten == false )
+        if ( history.isWritten() == false )
         {
-            // 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 다시 도는 첫 프레임은 기록을 버리므로(`_bTAAHistoryReset` · `_bSkyCloudHistoryReset`) 내용은 잃어도 된다.
+            // 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 다시 도는 첫 프레임은 기록을 버리므로(`FrameViewHistoryIdleRule::Discard`) 내용은 잃어도 된다.
             if ( history.isValid() && pool.contains( outputName ) == false )
                 history.release( _pDevice );
             return;
@@ -541,8 +541,6 @@ namespace sw
         _listScratchWrittenAttachment.clear();
         bool bForwardSet = false;
         // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과 — 출력이 이어졌는지 — 를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
-        view._bTAAHistoryWritten      = SW_FALSE;
-        view._bSkyCloudHistoryWritten = SW_FALSE;
         hashed_string cloudOutput;
         hashed_string taaOutput;
         // 모듈 확장 패스는 늘 돈다 — 읽는 첨부의 쓰는 쪽이 빠지지 않고, 쓰는 첨부 · 깊이 첨부가 있다. 선언에 없는 이름(모듈 임시 텍스처)은 `FrameExtensionHost::allocateTextures` 가 만든다.
@@ -578,7 +576,7 @@ namespace sw
                     continue;
                 }
                 if ( pass._type == RenderPassKind::TAA )
-                    view._bTAAHistoryWritten = SW_TRUE;
+                    view._taaHistory.markWritten();
                 const bool bSkipSceneCopyInputs = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && sceneState._bRefractionBatches == SW_FALSE;
                 Internal::markReads( listAttachment, pass, true, listNeeded, bSkipSceneCopyInputs );
                 Internal::addWrites( pass, _listScratchWrittenAttachment );
@@ -610,9 +608,9 @@ namespace sw
                 continue;
             }
             if ( pass._type == RenderPassKind::TAA )
-                view._bTAAHistoryWritten = SW_TRUE;
+                view._taaHistory.markWritten();
             if ( pass._type == RenderPassKind::VolumetricClouds )
-                view._bSkyCloudHistoryWritten = SW_TRUE;
+                view._skyCloudHistory.markWritten();
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
                 bForwardSet = pool.stopForward( output._attachment ) || bForwardSet;
@@ -626,16 +624,16 @@ namespace sw
         const bool bReleased  = ageAttachments( pool );
         // 시간 누적 기록 — 도는 뷰만 있고, 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 구름의 표본 번호는 기록을 버린 프레임에 처음부터 센다.
         // 셋업에서 만든다 — 패스 콜백(병렬 기록)이 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
-        updateOutputHistory( pool, taaOutput, view._bTAAHistoryWritten == SW_TRUE, "TAAHistory", view._taaHistory );
-        updateOutputHistory( pool, cloudOutput, view._bSkyCloudHistoryWritten == SW_TRUE, "SkyCloudHistory", view._skyCloudHistory );
-        if ( view._bSkyCloudHistoryWritten == SW_TRUE )
-            view._skyCloudSample = view._bSkyCloudHistoryReset == SW_TRUE ? 0u : view._skyCloudSample + 1u;
-        // 사진 앞 정착(조건 `RenderTemporalAccumulation`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_bTAAHistoryWritten`) —
+        updateOutputHistory( pool, taaOutput, "TAAHistory", view._taaHistory );
+        updateOutputHistory( pool, cloudOutput, "SkyCloudHistory", view._skyCloudHistory );
+        if ( view._skyCloudHistory.isWritten() )
+            view._skyCloudSample = view._skyCloudHistory.isReset() ? 0u : view._skyCloudSample + 1u;
+        // 사진 앞 정착(조건 `RenderTemporalAccumulation`) — 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_taaHistory`) —
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         // 볼륨 구름의 기록도 같은 규칙이다(Forward 뷰는 TAA 없이 구름만 쌓는다).
         const bool bHistoryReset      = view._bHistoryReset == SW_TRUE;
-        const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._bTAAHistoryWritten == SW_TRUE, view._bTAAHistoryReset == SW_TRUE ) ||
-                                        RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._bSkyCloudHistoryWritten == SW_TRUE, view._bSkyCloudHistoryReset == SW_TRUE );
+        const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._taaHistory.isWritten(), view._taaHistory.isReset() ) ||
+                                        RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._skyCloudHistory.isWritten(), view._skyCloudHistory.isReset() );
         view._stillFrameCount       = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
         view._cameraStillFrameCount = RenderStabilityUtil::advanceStillFrames( view._cameraStillFrameCount, bAccumulationReset, bCameraStill, false );
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).

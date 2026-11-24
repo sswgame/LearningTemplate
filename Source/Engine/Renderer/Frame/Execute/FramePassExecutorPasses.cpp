@@ -876,11 +876,11 @@ namespace sw
         registerDeclaredInputs( context, input._passDesc );
         // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다 — 읽기 앞에 셰이더 읽기로 옮긴다. 버리는 프레임(처음 · 컷 · 지난 프레임에 구름이 없음)은 읽지 않고 새로 채우기만 한다.
         const bool bHistory  = context._pGraphPass->isRegistered( ViewGraphResource::skyCloudHistory() );
-        const bool bReadable = bHistory && view._bSkyCloudHistoryReset == SW_FALSE;
+        const bool bReadable = bHistory && view._skyCloudHistory.isReset() == false;
         if ( bReadable )
         {
             context._pGraphPass->transition( ViewGraphResource::skyCloudHistory(), RenderGraphAccess::ShaderRead );
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, view._skyCloudHistory._texture, view._skyCloudHistory._srv );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, view._skyCloudHistory.getPrevious()._texture, view._skyCloudHistory.getPrevious()._srv );
         }
         float4 volume = _state._frameSky._cloudVolume;
         volume._z     = bReadable ? volume._z : 0.0f;
@@ -895,7 +895,7 @@ namespace sw
         executeFullscreenInto( context, _psoManager.getEnginePSO( RenderPassKind::VolumetricClouds ), target, getTargetClearColor( target ) );
         if ( output._texture == 0 || bHistory == false )
             return;
-        context._pCmd->blitTexture( output._texture, view._skyCloudHistory._texture );
+        context._pCmd->blitTexture( output._texture, view._skyCloudHistory.getCurrent()._texture );
         context._pGraphPass->transition( ViewGraphResource::skyCloudHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다(TAA 와 같다)
     }
 
@@ -1195,7 +1195,7 @@ namespace sw
         const hashed_string&   taaTarget = input._declaredColor[0]._attachment;
         const hashed_string*   pSrcName{ nullptr };
         // 후처리를 끈 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`, kBypassesToSource). 기록하지 않고 히스토리도 건드리지 않는다
-        // — 원본을 TAAColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 `_bTAAHistoryReset` 이 기록을 버린다.
+        // — 원본을 TAAColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 기록을 버린다(`FrameViewHistoryIdleRule::Discard`).
         if ( activePool().isForwarded( taaTarget ) )
             return;
         registerDeclaredInputs( context, input._passDesc );
@@ -1207,10 +1207,10 @@ namespace sw
         // 히스토리 생성과 bindless 등록은 updateOutputHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
         const FrameViewTarget& activeView = *_pActiveView;
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewTarget::_bTAAHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewHistory::isReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const bool bCut = activeView._bTAAHistoryReset == SW_TRUE && pSrcName != nullptr;
+        const bool bCut = activeView._taaHistory.isReset() && pSrcName != nullptr;
         // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(`ViewGraphResource::taaHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
         const bool bHistory = context._pGraphPass->isRegistered( ViewGraphResource::taaHistory() );
         if ( bCut )
@@ -1220,7 +1220,7 @@ namespace sw
         else if ( bHistory )
         {
             context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead );
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory._texture, activeView._taaHistory._srv );
+            context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory.getPrevious()._texture, activeView._taaHistory.getPrevious()._srv );
         }
         if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
@@ -1232,7 +1232,7 @@ namespace sw
         const RHITextureHandle taaOut = findTransient( taaTarget );
         if ( taaOut == 0 || bHistory == false )
             return;
-        context._pCmd->blitTexture( taaOut, activeView._taaHistory._texture );
+        context._pCmd->blitTexture( taaOut, activeView._taaHistory.getCurrent()._texture );
         context._pGraphPass->transition( ViewGraphResource::taaHistory(), RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다 — 다음 프레임이 그대로 샘플하지 않게
     }
 

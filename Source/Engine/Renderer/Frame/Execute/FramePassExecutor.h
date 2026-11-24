@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -30,7 +31,6 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Scene/GPUMeshBatchBinding.h"
-#include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 
 namespace sw
 {

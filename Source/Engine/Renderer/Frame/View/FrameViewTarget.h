@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
+#include "Engine/Renderer/Frame/View/FrameViewHistory.h"
 #include "Engine/Renderer/Frame/View/HZBPyramid.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/TemporalJitterSequence.h"
@@ -61,8 +62,8 @@ namespace sw
         Texture2D*                  _pOutputTexture{ nullptr }; ///< 준비된 렌더 텍스처(`_outputLoad` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 뷰는 그리지 않는다
         RHITextureHandle            _viewportTarget{ 0 };       ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
         uint64                      _viewID{ 0 };
-        RHITextureSlot              _taaHistory;      ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
-        RHITextureSlot              _skyCloudHistory; ///< 볼륨 구름 기록(지난 SkyCloudColor 의 복사본) — 볼륨 구름을 그리는 뷰만 있다
+        FrameViewHistory            _taaHistory{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard };      ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
+        FrameViewHistory            _skyCloudHistory{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard }; ///< 볼륨 구름 기록(지난 SkyCloudColor 의 복사본) — 볼륨 구름을 그리는 뷰만 있다
         /**
          * @brief 깊이 히스토리 — 지난 프레임에 이 뷰가 남긴 장면 깊이의 R32 실수 사본(RT · RW 텍스처)입니다. GPU 입자의 깊이 충돌이 읽는다(`recordDepthHistories`).
          * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
@@ -120,14 +121,14 @@ namespace sw
         uint32     _lightGridIndex{ constant::invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 지터 없는 것이다. 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
         float4x4 _prevViewProj{};
-        /// @brief TAA 서브픽셀 지터 순서입니다. TAA 가 도는 프레임(`_bTAAHistoryWritten`)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
+        /// @brief TAA 서브픽셀 지터 순서입니다. TAA 가 도는 프레임(`_taaHistory` 를 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
         /// 순번은 뷰 대상과 함께 처음부터 시작한다 — 자동화 단계마다 뷰 대상을 새로 만든다(`FrameRenderer::discardViewTargets`).
         TemporalJitterSequence _temporalJitter{};
         /**
-         * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT — 히스토그램 컴퓨트가 도는 백엔드는 RW 도)입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽(`_autoExposureWrite`)에 씁니다.
+         * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT — 히스토그램 컴퓨트가 도는 백엔드는 RW 도)입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽에 씁니다.
          * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
          */
-        RHITextureSlot _arrAutoExposure[2];
+        FrameViewHistory _autoExposureHistory{ FrameViewHistoryLayout::PingPong, FrameViewHistoryIdleRule::Keep };
         /// @brief 볼륨 구름의 시간 표본 번호입니다 — 구름 기록을 버린 프레임에 0 부터 다시 센다(텍셀 안 자리 · 걸음 시작, `FramePassExecutor::executeVolumetricCloudsPass`).
         uint32 _skyCloudSample{ 0 };
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
@@ -171,23 +172,11 @@ namespace sw
         /**
          * @brief 이번 프레임은 시간 누적 기록을 버린다 — 처음 그리는 프레임이거나 컷(`RenderViewSettings::_bCut`)이다(언리얼 `bCameraCut`).
          * @details `applyViewProjection` 이 프레임마다 한 번 정하고 TAA(이번 원본만) · 모션 블러(지난 뷰-투영 = 이번 것) · 자동 노출(측정값을 그대로)이 모두 이것 하나를 본다.
-         *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. TAA 는 이것을 포함한 `_bTAAHistoryReset` 을 본다.
+         *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. 기록마다의 버림(`FrameViewHistory::isReset`)도 이것을 포함한다.
          */
         uint8 _bHistoryReset{ SW_TRUE };
-        /**
-         * @brief 이번 프레임은 TAA 기록만 더 버린다 — `_bHistoryReset` 이거나 지난 프레임이 TAA 기록을 쓰지 않았다(TAA 가 빠진 프레임, `_bTAAHistoryWritten`).
-         * @details 빠진 TAA(후처리를 끈 뷰 · 품질 · 읽는 쪽 없음)는 출력이 원본을 가리키거나 없고 기록을 쓰지 않는다. 다시 도는 첫 프레임의 기록은 그 앞 화면이라 섞으면 그동안 움직인 것의 가장자리에 옛 그림이 남는다.
-         *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
-         */
-        uint8 _bTAAHistoryReset{ SW_TRUE };
-        uint8 _bFrameSkipped{ SW_FALSE };           ///< 지난번 그린 뒤 그리지 않은 프레임이 있었다(`markFrameSkipped`) — 다음 `beginViewHistory` 가 기록을 버린다
-        uint8 _bTAAHistoryWritten{ SW_FALSE };      ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
-        uint8 _bSkyCloudHistoryWritten{ SW_FALSE }; ///< 이번 프레임의 볼륨 구름 패스가 돌아 기록을 쓴다 — 패스 고르기의 결과다(TAA 와 같은 규칙)
-        uint8 _bSkyCloudHistoryReset{ SW_TRUE };    ///< 이번 프레임은 구름 기록을 버린다 — `_bHistoryReset` 이거나 지난 프레임이 구름 기록을 쓰지 않았다
-        uint8 _autoExposureWrite{ 0 };              ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
-        uint8 _bAutoExposureThisFrame{ SW_FALSE };  ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
-        uint8 _bAutoExposureMeasured{ SW_FALSE };   ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
-        uint8 _bUpscaleThisFrame{ SW_FALSE };       ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
+        uint8 _bFrameSkipped{ SW_FALSE };     ///< 지난번 그린 뒤 그리지 않은 프레임이 있었다(`markFrameSkipped`) — 다음 `beginViewHistory` 가 기록을 버린다
+        uint8 _bUpscaleThisFrame{ SW_FALSE }; ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
         /// @brief 사각형 배율의 하한입니다(풀 배율 `_resolutionScale` 의 하한과 같다).
         static constexpr float32 kMinRectScale = 0.1f;
         /// @brief 이번 프레임 그리는 사각형입니다(`updateViewRect`) — 렌더 공간(장면 패스). 풀이 없으면 0 이다.
@@ -204,15 +193,17 @@ namespace sw
          * @details 버리는 때: 이 풀로 처음 그린다 · 컷 · 지난번 그린 뒤 건너뛴 프레임이 있다(갱신 주기를 낮춘 CCTV — 뷰의 지난 뷰-투영은 몇 프레임 전인데 물체의 지난 행렬은
          *          한 프레임 전이라 속도가 어긋난다. 언리얼 SceneCapture 처럼 매 프레임 그리지 않는 뷰는 시간 누적을 쓰지 않는다). 셋업에서 그리는 뷰마다 프레임에 한 번 부른다
          *          (주 시점은 `FrameRenderer::updatePassConstants`, 추가 뷰는 `prepareExtraView`). 컬링(가림)이 기록 전에 돌므로 그리기 때(`applyViewProjection`)가 아니라 여기서 정한다.
-         *          TAA 기록은 지난 프레임이 TAA 를 돌지 않았어도 버린다(`_bTAAHistoryWritten` 은 지난 프레임의 패스 고르기 결과다) — 그 기록은 그 앞 화면이다.
+         *          기록마다 쉬던 프레임 뒤의 버림도 여기서 정한다(`FrameViewHistory::beginFrame` — 지난 프레임의 쓰기 표시는 그 프레임의 패스 고르기 결과다).
          */
         void beginViewHistory()
         {
-            _bHistoryReset         = ( _bHasHistory == SW_FALSE || _settings._bCut == SW_TRUE || _bFrameSkipped == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-            _bHasHistory           = SW_TRUE;
-            _bFrameSkipped         = SW_FALSE;
-            _bTAAHistoryReset      = ( _bHistoryReset == SW_TRUE || _bTAAHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
-            _bSkyCloudHistoryReset = ( _bHistoryReset == SW_TRUE || _bSkyCloudHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
+            _bHistoryReset = ( _bHasHistory == SW_FALSE || _settings._bCut == SW_TRUE || _bFrameSkipped == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+            _bHasHistory   = SW_TRUE;
+            _bFrameSkipped = SW_FALSE;
+            for ( FrameViewHistory* pHistory : { &_taaHistory, &_skyCloudHistory, &_autoExposureHistory } )
+            {
+                pHistory->beginFrame( _bHistoryReset == SW_TRUE );
+            }
         }
         /** @brief 이번 프레임에 이 뷰를 그리지 않습니다 — 다음에 그리는 프레임은 시간 누적 기록을 버립니다. */
         void markFrameSkipped() { _bFrameSkipped = SW_TRUE; }
