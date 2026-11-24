@@ -347,7 +347,7 @@ namespace sw::editor
                 /** @brief 원본 하나를 대조하고, 어긋났고 ImportStale 이면 임포트합니다. 결과는 @p outResult 에만 씁니다. */
                 void importFile( const SourceFile& file, FileResult& outResult ) const
                 {
-                    const utf8* const pUnsupportedReason = _pImporter->findUnsupportedReason( file._sourcePath.str() );
+                    const utf8* const pUnsupportedReason = _pImporter->findUnsupportedReason( file._sourcePath );
                     if ( pUnsupportedReason != nullptr )
                     {
                         StringBuilder<constant::buffer::kMax512> problemBuilder;
@@ -550,7 +550,7 @@ namespace sw::editor
 
                     file._relativePath = file._sourcePath.str().substr( rawFolder.str().size() + 1 );
                     file._assetPath    = file._sourcePath.str().substr( rootDir.size() + 1 );
-                    file._importedPath = importer.makeImportedPath( file._sourcePath.str() );
+                    file._importedPath = importer.makeImportedPath( file._sourcePath );
                     // 두 원본이 한 결과에 쓰면(`a.jpg` · `a.png` → `a.dds`) 돌 때마다 서로 덮어 둘 다 영원히 어긋난다 — 뒤의 것을 문제로 알리고 임포트하지 않는다.
                     const auto owner       = mapImportedOwner.emplace( makeImportedKey( file._importedPath.str() ), file._assetPath );
                     const bool bOutOfScope = pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end();
@@ -577,7 +577,7 @@ namespace sw::editor
                     bool bOrderDependent = false;
                     for ( const uint32 fileIndex : listChain[chainIndex] )
                     {
-                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._sourcePath.str(), listFile[fileIndex]._assetPath ) );
+                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._sourcePath, listFile[fileIndex]._assetPath ) );
                     }
                     if ( bOrderDependent )
                         listSerialChain.push_back( chainIndex );
@@ -646,7 +646,7 @@ namespace sw::editor
                         inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                         continue;
                     }
-                    const AbsolutePath importedPath = importer.makeImportedPath( sourcePath.str() );
+                    const AbsolutePath importedPath = importer.makeImportedPath( sourcePath );
                     if ( mapImportedOwner.contains( makeImportedKey( importedPath.str() ) ) )
                         continue; // 남은 원본이 그 결과의 주인이다(`a.png` 를 지우고 `a.jpg` 를 두었다)
                     if ( bLiveAncestorBuilt == false )
@@ -819,7 +819,7 @@ namespace sw::editor
         return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager, &derivedDataCache );
     }
 
-    AbsolutePath AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
+    string AssetImportStampUtil::makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
     {
         string rawFolder;
         string relativePath;
@@ -828,7 +828,12 @@ namespace sw::editor
 
         const string domainFolder   = FileUtil::getDirectoryPart( rawFolder );
         const string importedFolder = domainFolder.empty() ? string( importedFolderName ) : FileUtil::joinPath( domainFolder, importedFolderName );
-        return FileUtil::toDiskPath( FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), importedExtension ) );
+        return FileUtil::replaceExtension( FileUtil::joinPath( importedFolder, relativePath ), importedExtension );
+    }
+
+    AbsolutePath AssetImportStampUtil::makeImportedPath( const AbsolutePath& rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension )
+    {
+        return FileUtil::toDiskPath( makeImportedPath( string_view{ rawPath.str() }, rawFolderName, importedFolderName, importedExtension ) );
     }
 
     uint64 AssetImportStampUtil::computeFileHash( const AbsolutePath& path )

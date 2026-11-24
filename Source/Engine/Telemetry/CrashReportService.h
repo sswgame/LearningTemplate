@@ -119,10 +119,10 @@ namespace sw
          * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것 — App). 비면(기본) 띄우지 않습니다 — 테스트 실행 파일 같은
          *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(Engine)이 정합니다.
          */
-        void setReporterExecutable( string_view executablePath ) { _reporterExecutable = string( executablePath ); }
+        void setReporterExecutable( const AbsolutePath& executablePath ) { _reporterExecutable = executablePath; }
         /** @brief 보낼 것이 있고 보고 실행 파일이 정해져 있으면 보고 프로세스(`<실행 파일> -crash-reporter="<묶음 폴더>"`)를 기다리지 않고 띄웁니다. 띄웠으면 true 입니다. */
-        bool          launchReporterProcess() const;
-        const string& getReportsFolder() const { return _reportsFolder.str(); }
+        bool                launchReporterProcess() const;
+        const AbsolutePath& getReportsFolder() const { return _reportsFolder; }
 
         /**
          * @brief 보고 프로세스의 일 — 보낼 줄의 묶음을 업로더로 올립니다. `Sent` 면 상태를 바꾸고 덤프를 지우며(매니페스트 · 작은 파일은 남긴다),
@@ -142,7 +142,7 @@ namespace sw
         AbsolutePath         _crashFolder;
         AbsolutePath         _reportsFolder;
         string               _currentSessionID;
-        string               _reporterExecutable;
+        AbsolutePath         _reporterExecutable;
         Subscription         _settingSubscription; ///< 동의 설정의 변경 통보 구독(`bindConsentSetting` ~ `shutdown`)
         UserSettingsManager* _pSettings;
         CrashReportConsent   _consent;

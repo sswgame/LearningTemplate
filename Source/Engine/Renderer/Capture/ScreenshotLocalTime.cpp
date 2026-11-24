@@ -11,19 +11,19 @@
 
 namespace sw
 {
-    string ScreenshotLocalTime::makeDefaultPath( const ScreenshotLocalTime& localTime )
+    AbsolutePath ScreenshotLocalTime::makeDefaultPath( const ScreenshotLocalTime& localTime )
     {
         StringBuilder<constant::buffer::kMax32> fileName;
         fileName.appendFormat( "%04d%02d%02d-%02d%02d%02d.png", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
-        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), kScreenshotFolderName ), fileName.c_str() );
+        return ProcessRoots::get()._saved.join( kScreenshotFolderName ).join( fileName.view() );
     }
 
     AbsolutePath ScreenshotLocalTime::makeDefaultPathNow()
     {
         // 같은 초의 두 번째 사진(같은 프로세스든 다른 프로세스든)이 앞 사진을 덮지 않게 이름을 먼저 잡는다(`-2` …).
-        const string path = makeDefaultPath( getLocalTimeNow() );
-        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( path ) ), FileUtil::getExtension( path ), false );
+        const AbsolutePath path = makeDefaultPath( getLocalTimeNow() );
+        return FileUtil::reserveUniquePath( path.removeExtension(), FileUtil::getExtension( path.str() ), false );
     }
 
     ScreenshotLocalTime ScreenshotLocalTime::getLocalTimeNow()

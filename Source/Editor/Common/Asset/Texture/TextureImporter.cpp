@@ -437,15 +437,15 @@ namespace sw::editor
             string_view  getImportedLabel() const override { return "DDS"; }
             uint64       findCodeFingerprint() const override { return CookCodeFingerprint::find( "TextureImport" ); }
             bool         isSourceFile( string_view path ) const override { return TextureImporterInternal::isSourceImage( path ); }
-            AbsolutePath makeImportedPath( string_view sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
+            AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const override { return TextureImporter::makeImportedTexturePath( sourcePath ); }
             uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( sourcePath.str(), assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return 0; // 규칙이 겹치는 원본은 해시를 만들지 않는다(0 = 읽지 못함). 어긋남으로 잡히고 임포트도 같은 오류로 멈춘다
                 return TextureImporter::computeSourceHash( sourcePath, rule );
             }
-            const utf8* findUnsupportedReason( string_view sourcePath ) const override
+            const utf8* findUnsupportedReason( const AbsolutePath& sourcePath ) const override
             {
                 (void)sourcePath;
                 return nullptr;
@@ -453,7 +453,7 @@ namespace sw::editor
             [[nodiscard]] bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( sourcePath.str(), assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return false;
                 return TextureImporter::importTexture( sourcePath, importedPath, rule, nullptr, _pTaskManager );
             }
@@ -463,7 +463,7 @@ namespace sw::editor
              * @brief 리소스 루트 기준 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
              * @return 규칙이 겹치거나 서술 · 예외를 읽지 못하면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] bool findRule( string_view sourcePath, string_view assetPath, TextureImportRule& outRule ) const
+            [[nodiscard]] bool findRule( const AbsolutePath& sourcePath, string_view assetPath, TextureImportRule& outRule ) const
             {
                 vector<AssetImportOverride> listOverride;
                 if ( AssetImportRuleUtil::readMetaOverrides( sourcePath, listOverride ) == false )
@@ -507,7 +507,7 @@ namespace sw::editor
             string_view  getStampHeader() const override { return "SWTEXVARIANT 1"; }
             string_view  getStampFileName() const override { return _stampFileName; }
             string_view  getImportedLabel() const override { return "variant DDS"; }
-            AbsolutePath makeImportedPath( string_view sourcePath ) const override { return FileUtil::toDiskPath( TextureFormatFamily::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ).str(), _family._suffix ) ); }
+            AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const override { return FileUtil::toDiskPath( TextureFormatFamily::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ).str(), _family._suffix ) ); }
             uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const override
             {
                 const uint64 sourceHash = TextureRawImporter::computeSourceHash( sourcePath, assetPath );
@@ -524,7 +524,7 @@ namespace sw::editor
             [[nodiscard]] bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
             {
                 TextureImportRule rule;
-                if ( findRule( sourcePath.str(), assetPath, rule ) == false )
+                if ( findRule( sourcePath, assetPath, rule ) == false )
                     return false;
                 return TextureImporter::cookTextureVariant( sourcePath, importedPath, rule, _family, _pTaskManager );
             }
@@ -712,7 +712,7 @@ namespace sw::editor
             return false;
 
         const AbsolutePath& resourceRoot = assetPaths.getRootFolderPathFor( relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
-        const string        normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot.str(), relativePath ) );
+        const AbsolutePath  normalized   = resourceRoot.join( relativePath );
         if ( makeImportedTexturePath( normalized ).empty() )
         {
             SW_LOG_WARNING_ID( "TextureImporter.SourceImagesMustUnder", "Source images must be under `%#` to be imported: %#", TextureImporterInternal::kRawTextureFolder, relativePath );
@@ -780,7 +780,13 @@ namespace sw::editor
         return summary;
     }
 
-    AbsolutePath TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
+    string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
+    {
+        return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
+                                                       ".dds" );
+    }
+
+    AbsolutePath TextureImporter::makeImportedTexturePath( const AbsolutePath& rawTexturePath )
     {
         return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporterInternal::kRawTextureFolder, TextureImporterInternal::kImportedTextureFolder,
                                                        ".dds" );

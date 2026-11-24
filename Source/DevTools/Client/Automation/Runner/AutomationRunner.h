@@ -227,7 +227,7 @@ namespace sw
         }
         void                        storeText( string_view name, string text ) override;
         [[nodiscard]] const string* findStoredText( string_view name ) const override;
-        void                        restoreFileAtEnd( string absolutePath, string originalText ) override;
+        void                        restoreFileAtEnd( const AbsolutePath& absolutePath, string originalText ) override;
         [[nodiscard]] bool          restoreFilesNow() override;
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const AbsolutePath& getOutputDirectory() const override { return _outputDirectory; }
@@ -409,6 +409,6 @@ namespace sw
         optional<AutomationRunPolicy> _runPolicy{};
         AutomationTextStore           _storedText{}; ///< 이 실행 안에서 이름 붙여 기억한 글(`storeText`)
         /// 단계가 덮어쓰기 전에 맡긴 (절대 경로, 원본 글) — 끝(`endRun` · 소멸자)이나 `<RestoreOverwrites/>` 가 되돌린다(`restoreFileAtEnd`)
-        vector<std::pair<string, string>> _listFileRestore{};
+        vector<std::pair<AbsolutePath, string>> _listFileRestore{};
     };
 } // namespace sw

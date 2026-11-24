@@ -197,7 +197,7 @@ namespace sw::editor
          * @brief 원본 @p sourcePath(디스크 경로) 곁 `.meta` 의 임포트 예외를 읽습니다. 서술이 없으면 예외 없음이고 true 입니다(테스트 · 아직 GUID 없는 원본).
          * @return 서술이 있는데 읽지 못하면 오류를 남기고 false 입니다 — 예외를 버리고 규칙만으로 임포트하지 않는다(폴백 없음).
          */
-        [[nodiscard]] static bool readMetaOverrides( string_view sourcePath, vector<AssetImportOverride>& outListOverride );
+        [[nodiscard]] static bool readMetaOverrides( const AbsolutePath& sourcePath, vector<AssetImportOverride>& outListOverride );
 
         /**
          * @brief 서술의 예외 @p listOverride 를 규칙 파일과 같은 꼴의 JSON 객체(`{"키": 값, …}`)로 @p outDoc 에 짓습니다 — 규칙과 같은 파서로 마지막 층을 읽게 한다.

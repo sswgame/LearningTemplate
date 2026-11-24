@@ -127,7 +127,7 @@ namespace sw
             class PackDiskReachSource final : public IPackReachSource
             {
             public:
-                unordered_map<string, string> _mapAbsolutePath; ///< 리소스 id → 디스크 절대 경로(리눅스는 대소문자를 가린다 — 정규화한 id 로 열지 않는다)
+                unordered_map<string, AbsolutePath> _mapAbsolutePath; ///< 리소스 id → 디스크 절대 경로(리눅스는 대소문자를 가린다 — 정규화한 id 로 열지 않는다)
 
                 bool readText( const string& assetID, string& outText ) const override
                 {
@@ -135,7 +135,7 @@ namespace sw
                     if ( itPath == _mapAbsolutePath.end() )
                         return false;
                     vector<uint8> bytes;
-                    if ( AssetIO::readBinaryFile( FileUtil::toDiskPath( itPath->second ), bytes ) == false )
+                    if ( AssetIO::readBinaryFile( itPath->second, bytes ) == false )
                         return false;
                     outText = string( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ) );
                     return true;
@@ -286,7 +286,7 @@ namespace sw
                         if ( isPackableSource( relativePath, config, params ) == false )
                             continue;
                         files._setPackable.insert( assetID );
-                        source._mapAbsolutePath.try_emplace( assetID, absPath.str() );
+                        source._mapAbsolutePath.try_emplace( assetID, absPath );
                         candidates._listFile.push_back( PackCandidateFile{ std::move( assetID ), absPath } );
                     }
                     if ( StringUtil::startsWith( domain, gamePrefix ) )
@@ -511,12 +511,12 @@ namespace sw
              */
             [[nodiscard]] static bool mergeGameCookRules( const PackCookParams& params, const vector<string>& listDomain, PackCookRules& inoutRules )
             {
-                const AbsolutePath folder = params._projectRoot.join( GameConfig::kConfigFolder );
-                vector<string>     listConfigPath;
-                const bool         bListed = FileUtil::forEachDirectoryEntry( folder, false, [&listConfigPath]( const DirectoryEntry& entry )
-                        {
+                const AbsolutePath   folder = params._projectRoot.join( GameConfig::kConfigFolder );
+                vector<AbsolutePath> listConfigPath;
+                const bool           bListed = FileUtil::forEachDirectoryEntry( folder, false, [&listConfigPath]( const DirectoryEntry& entry )
+                          {
                     if ( entry._bDirectory == false && StringUtil::endsWith( entry._path, ".json" ) )
-                        listConfigPath.emplace_back( entry._path );
+                        listConfigPath.push_back( entry.makePath() );
                     return true;
                 } );
                 if ( bListed == false )
@@ -525,12 +525,12 @@ namespace sw
                     return false;
                 }
                 VectorUtil::sort( listConfigPath );
-                for ( const string& configPath : listConfigPath )
+                for ( const AbsolutePath& configPath : listConfigPath )
                 {
                     GameConfig gameConfig;
                     if ( ConfigManager::readConfigFile( gameConfig, configPath ) != ConfigReadResult::Loaded )
                     {
-                        SW_LOG_ERROR_ID( "PackCooker.GameConfigUnreadable", "Pack cook: the game preset %# could not be read (reasons above)", configPath );
+                        SW_LOG_ERROR_ID( "PackCooker.GameConfigUnreadable", "Pack cook: the game preset %# could not be read (reasons above)", configPath.str() );
                         return false;
                     }
                     const PathKey packRoot = FileUtil::normalizePath( gameConfig._packRoot.get() );
@@ -765,8 +765,8 @@ namespace sw
             {
                 const AbsolutePath domainDir = params._resourceRoot.join( domain );
                 const AbsolutePath stagedDir = params._cookedDir.join( domain );
-                const auto         addItem   = [&outListing]( const string& relativePath, const string& absPath, PackItemSource source )
-                { outListing._listItem.push_back( PackItem{ PackStreamWriter::makePathHash( relativePath ), relativePath, FileUtil::toDiskPath( absPath ), source, {} } ); };
+                const auto         addItem   = [&outListing]( const string& relativePath, const AbsolutePath& absPath, PackItemSource source )
+                { outListing._listItem.push_back( PackItem{ PackStreamWriter::makePathHash( relativePath ), relativePath, absPath, source, {} } ); };
 
                 vector<AbsolutePath> listSourceFile;
                 if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
@@ -788,7 +788,7 @@ namespace sw
                     }
                     if ( selection._setIncluded.contains( makeAssetID( domain, relativePath ) ) == false )
                         continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachResult`)
-                    addItem( relativePath, absPath.str(), PackItemSource::Source );
+                    addItem( relativePath, absPath, PackItemSource::Source );
                 }
 
                 vector<AbsolutePath> listStagedFile;
@@ -810,7 +810,7 @@ namespace sw
                                 .add( relativePath );
                         continue;
                     }
-                    addItem( relativePath, absPath.str(), PackItemSource::Staged );
+                    addItem( relativePath, absPath, PackItemSource::Staged );
                 }
                 return true;
             }
@@ -1427,7 +1427,7 @@ namespace sw
                 const string outputID   = makeRecordID( desc._target, params._cookedDir.str(), packName );
                 CookJobDesc  partDesc   = desc;
                 partDesc._settingsHash  = PackCookerInternal::computePartHash( PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection ), part );
-                const CookResult result = store.cookStreamedFile( partDesc, outputID, outputPath.str(), [&]()
+                const CookResult result = store.cookStreamedFile( partDesc, outputID, outputPath, [&]()
                 { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, listing, part, timing ); } );
                 if ( result == CookResult::Failed )
                     ++failedCount;

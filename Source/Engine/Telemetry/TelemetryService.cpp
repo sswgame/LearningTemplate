@@ -331,7 +331,7 @@ namespace sw
         bindConsentSetting( userSettings );
 
         // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
-        const AbsolutePath crashFolder = FileUtil::toDiskPath( engine::getSubsystem<CrashHandler>().getReportFolder() );
+        const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() == false )
         {
             CrashReportService& crashReports = engine::getSubsystem<CrashReportService>();
@@ -339,8 +339,8 @@ namespace sw
                 crashFolder.getParent().join( CrashReportService::kReportsFolderName );
             crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
             crashReports.bindConsentSetting( userSettings );
-            crashReports.setReporterExecutable( FileUtil::getExecutablePath().str() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
-            (void)crashReports.collectNewCrashes();                                    // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다
+            crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
+            (void)crashReports.collectNewCrashes();                              // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다
             (void)crashReports.launchReporterProcess();
         }
         return SubsystemInitResult::Succeeded;

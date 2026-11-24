@@ -113,7 +113,7 @@ namespace sw
          * @details 시간이 다 된 것은 `updateRecording` 이 알아챕니다(`Engine::endFrame` 이 프레임마다 부른다). 이미 진행 중이면 거절합니다.
          * @return 시작했으면 true
          */
-        [[nodiscard]] static bool startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
+        [[nodiscard]] static bool startRecording( FrameProfiler& profiler, float64 seconds, const AbsolutePath& path, string_view processName, uint32 budget,
                                                   string& outReply );
         /** @brief @p profiler 의 긴 캡처가 진행 중이면 true 입니다(상태는 프로파일러의 `ProfilerTraceSession` — 아무 스레드나 읽어도 된다). */
         static bool isRecording( const FrameProfiler& profiler );
@@ -174,8 +174,8 @@ namespace sw
          * @param outReply 실패 이유 또는 사건 · 스레드 수 요약
          * @return 쓰기에 성공하면 true. 기록된 프레임이 둘 미만이면 false(타임라인 기록이 꺼져 있었다).
          */
-        [[nodiscard]] static bool saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, string_view path, string_view processName,
-                                                    string& outSavedPath, string& outReply );
+        [[nodiscard]] static bool saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, const AbsolutePath& path, string_view processName,
+                                                    AbsolutePath& outSavedPath, string& outReply );
 
         /**
          * @brief 종료 때 트레이스 저장을 준비합니다 — 타임라인 링 버퍼 기록을 켜고 기동을 첫 프레임 구간으로 엽니다. @p path 는 로그에 알릴 저장 경로입니다.

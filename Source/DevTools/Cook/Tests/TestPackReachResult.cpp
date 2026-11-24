@@ -638,7 +638,7 @@ SW_TEST_CASE( PackReachabilityTest, ExcludedRedirectTableIsACookError )
 SW_TEST_CASE( PackReachabilityTest, RealPackRulesKeepRedirectTables )
 {
     PackConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, ProcessRoots::get()._project.join( PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
     for ( const utf8* pBuildTarget : { "Game", "Client", "Server" } )
     {
         fixed_string<constant::buffer::kMax64> label;

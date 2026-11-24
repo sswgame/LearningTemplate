@@ -484,10 +484,9 @@ namespace sw
     {
         if ( _reporterExecutable.empty() || countPendingUploads() == 0 )
             return false;
-        const optional<AbsolutePath>             executable = AbsolutePath::tryMake( _reporterExecutable );
         StringBuilder<constant::buffer::kMax512> reporterArgument;
         reporterArgument.appendFormat( "%#=%#", kReporterArgument, _reportsFolder.str() );
-        const ProcessCommand command   = executable.has_value() ? ProcessCommand::at( *executable, { string( reporterArgument.view() ) } ) : ProcessCommand{};
+        const ProcessCommand command   = ProcessCommand::at( _reporterExecutable, { string( reporterArgument.view() ) } );
         const bool           bLaunched = Process::launchDetached( command ).has_value();
         SW_LOG_INFO_ID( "CrashReport.CrashReportReporterProcess", "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
         return bLaunched;

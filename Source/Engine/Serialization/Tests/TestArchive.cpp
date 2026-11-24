@@ -254,7 +254,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveFileIORoundTrip )
     SW_REQUIRE_TRUE( writeArch.saveToFile( tempFilePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( tempFilePath ) );
 
-    sw::Archive readArch( tempFilePath.str(), true );
+    sw::Archive readArch( tempFilePath, true );
     SW_EXPECT_TRUE( readArch.isReadMode() );
     SW_EXPECT_TRUE( readArch.getSize() > 0 );
 

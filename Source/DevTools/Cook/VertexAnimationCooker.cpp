@@ -106,12 +106,12 @@ namespace sw
             }
             for ( const hashed_string& clipName : list._listClip )
             {
-                const string     outputID = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-                const CookResult result   = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir.str(), outputID ), [&]()
-                  {
-                    VertexAnimationCookList      jobList;
-                    const optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir.str(), outputID ) );
-                    const bool                   bCooked    = outputPath.has_value() && jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, *outputPath, framesPerSecond );
+                const string       outputID   = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
+                const AbsolutePath outputPath = cookedDir.join( outputID );
+                const CookResult   result     = store.cookFile( desc, outputID, outputPath, [&]()
+                      {
+                    VertexAnimationCookList jobList;
+                    const bool              bCooked = jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, outputPath, framesPerSecond );
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );
                 outFailedCount += result == CookResult::Failed ? 1u : 0u;

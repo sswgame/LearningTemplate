@@ -49,6 +49,9 @@ namespace sw
         string_view _path;                ///< 순회 루트로 시작하는 `/` 구분 UTF-8 경로(대소문자는 디스크 그대로)
         FileStamp   _fileStamp{};         ///< 파일의 크기 · 쓰기 시각 — 나열이 함께 준 값이라 파일마다 `getFileStamp` 를 묻지 않아도 된다. 폴더 · 파일이 아닌 것은 0 이다
         bool        _bDirectory{ false }; ///< 디렉터리면 true(링크는 가리키는 쪽 기준) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+
+        /** @brief 항목의 디스크 경로입니다(순회가 끝난 뒤에도 들 사본). 순회 루트가 절대 경로라 늘 절대 경로다. */
+        [[nodiscard]] AbsolutePath makePath() const { return AbsolutePath::tryMake( _path ).value_or( AbsolutePath{} ); }
     };
 
     /**

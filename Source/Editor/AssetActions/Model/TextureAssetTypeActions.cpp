@@ -23,7 +23,7 @@ namespace sw::editor
             /** @brief 원본 이미지는 임포트한 DDS 를, 엔진 텍스처는 그 자신을 미리 본다. 산출물 자리가 없는 원본(`textures_raw/` 밖)은 미리보기가 없다. */
             virtual string findImagePreviewPath( string_view path ) const override
             {
-                return FileUtil::getExtension( path ) == ".dds" ? string( path ) : TextureImporter::makeImportedTexturePath( path ).str();
+                return FileUtil::getExtension( path ) == ".dds" ? string( path ) : TextureImporter::makeImportedTexturePath( path );
             }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override

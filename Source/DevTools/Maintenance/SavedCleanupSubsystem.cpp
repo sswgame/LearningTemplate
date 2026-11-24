@@ -39,7 +39,7 @@ namespace sw
                 (void)FileUtil::forEachDirectoryEntry( folder, false, [&listEntry]( const DirectoryEntry& entry )
                 {
                     Entry item;
-                    item._path       = FileUtil::toDiskPath( entry._path );
+                    item._path       = entry.makePath();
                     item._bDirectory = entry._bDirectory;
                     (void)FileUtil::getFileWriteTime( item._path, item._writeTicks );
                     listEntry.push_back( std::move( item ) );

@@ -33,29 +33,27 @@ namespace sw
                 return false;
             }
 
-            /** @brief 디스크 경로의 절대 경로(구분자 `/`)입니다. 만들지 못하면 오류를 남기고 false 입니다(상대 글을 기록하면 리소스 id 로 다시 풀린다 — 파일 머리말). */
-            [[nodiscard]] static bool makeAbsoluteDiskPath( string_view diskPath, string& outAbsPath )
+            /** @brief 디스크 경로의 `..` 를 접고 끝 구분자를 뗀 경로입니다 — 같은 파일의 입력이 한 글로 적힌다. 만들지 못하면 오류를 남기고 빈 값입니다(파일 머리말). */
+            [[nodiscard]] static optional<AbsolutePath> collapseDiskPath( const AbsolutePath& diskPath )
             {
-                if ( FileUtil::makeAbsolutePath( diskPath, outAbsPath ) == false )
-                {
-                    SW_LOG_ERROR_ID( "CookJob.CookInputCannotMade", "Cook input '%#' cannot be made absolute - it is not recorded, so the read fails", diskPath );
-                    return false;
-                }
-                outAbsPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( outAbsPath ) );
-                return true;
+                const optional<AbsolutePath> collapsed = AbsolutePath::tryResolve( diskPath.str(), diskPath );
+                if ( collapsed.has_value() )
+                    return collapsed->join( {} );
+                SW_LOG_ERROR_ID( "CookJob.CookInputCannotMade", "Cook input '%#' cannot be made absolute - it is not recorded, so the read fails", diskPath.str() );
+                return nullopt;
             }
 
             /** @brief 디스크 읽기 입력의 종류와 출처입니다. 붙인 도메인 · 리소스 루트 아래면 리소스(id), 밖이면 디스크 파일(절대 경로)입니다. */
-            [[nodiscard]] static bool makeDiskInput( string_view diskPath, CookInputKind& outKind, string& outSource )
+            [[nodiscard]] static bool makeDiskInput( const AbsolutePath& diskPath, CookInputKind& outKind, string& outSource )
             {
-                string absPath;
-                if ( makeAbsoluteDiskPath( diskPath, absPath ) == false )
+                const optional<AbsolutePath> absPath = collapseDiskPath( diskPath );
+                if ( absPath.has_value() == false )
                     return false;
-                outSource = engine::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( absPath ) );
+                outSource = engine::getSubsystem<AssetPaths>().toAssetID( *absPath );
                 outKind   = CookInputKind::Resource;
                 if ( outSource.empty() )
                 {
-                    outSource = std::move( absPath );
+                    outSource = absPath->str();
                     outKind   = CookInputKind::DiskFile;
                 }
                 return true;
@@ -126,7 +124,10 @@ namespace sw
                 return absPath.has_value() ? ContentHash::computeFile( *absPath ) : 0;
             }
             case CookInputKind::DiskFile:
-                return FileUtil::isRegularFile( FileUtil::toDiskPath( _source ) ) ? ContentHash::computeFile( FileUtil::toDiskPath( _source ) ) : 0;
+            {
+                const AbsolutePath diskFile = FileUtil::toDiskPath( _source );
+                return FileUtil::isRegularFile( diskFile ) ? ContentHash::computeFile( diskFile ) : 0;
+            }
             case CookInputKind::Listing:
                 return CookJob::computeListingHash( FileUtil::toDiskPath( _source ), _extension );
         }
@@ -145,11 +146,11 @@ namespace sw
         return true;
     }
 
-    bool CookJob::allowDiskRead( string_view diskPath, const uint8* pData, size_t size )
+    bool CookJob::allowDiskRead( const AbsolutePath& diskPath, const uint8* pData, size_t size )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )
-            return CookJobInternal::allowReadOutsideJob( diskPath );
+            return CookJobInternal::allowReadOutsideJob( diskPath.str() );
         return pJob->recordDiskInput( diskPath, ContentHash::computeBytes( pData, size ) );
     }
 
@@ -175,7 +176,7 @@ namespace sw
             CookJobInternal::recordContentInput( *pJob, CookInputKind::Resource, std::move( inputID ), 0 );
     }
 
-    void CookJob::allowMissingDiskRead( string_view diskPath )
+    void CookJob::allowMissingDiskRead( const AbsolutePath& diskPath )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob != nullptr )
@@ -195,8 +196,10 @@ namespace sw
         CookInput input;
         input._kind = CookInputKind::Listing;
         // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
-        if ( CookJobInternal::makeAbsoluteDiskPath( folderPath.str(), input._source ) == false )
+        const optional<AbsolutePath> folder = CookJobInternal::collapseDiskPath( folderPath );
+        if ( folder.has_value() == false )
             return false;
+        input._source      = folder->str();
         input._extension   = string( extension );
         input._contentHash = computeListingHash( folderPath, extension );
         pJob->recordInput( input );
@@ -230,7 +233,7 @@ namespace sw
         return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
     }
 
-    bool CookJob::recordDiskInput( string_view diskPath, uint64 contentHash )
+    bool CookJob::recordDiskInput( const AbsolutePath& diskPath, uint64 contentHash )
     {
         CookInputKind kind = CookInputKind::DiskFile;
         string        source;

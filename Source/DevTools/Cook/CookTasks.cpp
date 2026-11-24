@@ -164,7 +164,7 @@ namespace sw
 
                 PackConfig         packConfig;
                 const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath.str() ) != ConfigReadResult::Loaded )
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
                     return false;
@@ -232,7 +232,7 @@ namespace sw
                 }
                 PackConfig         packConfig;
                 const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath.str() ) != ConfigReadResult::Loaded )
+                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
                     return false;

@@ -73,16 +73,15 @@ namespace sw::editor
     {
         unordered_set<string> uniqueListed;
         for ( const AbsolutePath& path : inoutListSourcePath )
-            uniqueListed.insert( FileUtil::normalizeSeparators( path.str() ) );
+            uniqueListed.insert( path.str() );
         vector<AbsolutePath> listMetaPath;
         (void)EditorContentScan::collectSidecarFiles( folder, listMetaPath ); // 폴더를 훑지 못한 까닭은 FileUtil 이 남긴다
         for ( const AbsolutePath& metaPath : listMetaPath )
         {
-            const AbsolutePath sourcePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( string_view( metaPath.str() ).substr( 0, metaPath.str().size() - AssetMeta::kExtension.size() ) ) );
-            const AbsolutePath diskPath   = sourcePath;
-            if ( uniqueListed.find( sourcePath.str() ) != uniqueListed.end() || FileUtil::isRegularFile( diskPath ) )
+            const AbsolutePath sourcePath = metaPath.removeExtension(); // `.meta` 를 뗀 원본
+            if ( uniqueListed.find( sourcePath.str() ) != uniqueListed.end() || FileUtil::isRegularFile( sourcePath ) )
                 continue; // 파일이 있다(거의 모든 원본 — 서술을 열지 않는다)
-            if ( AssetSourceLocatorInternal::findStoredAddress( diskPath ).has_value() )
+            if ( AssetSourceLocatorInternal::findStoredAddress( sourcePath ).has_value() )
                 inoutListSourcePath.push_back( sourcePath );
         }
     }

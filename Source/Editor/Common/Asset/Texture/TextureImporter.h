@@ -121,7 +121,9 @@ namespace sw::editor
         /**
          * @brief 원본 경로에 해당하는 DDS 경로를 만듭니다(`<x>/textures_raw/<y>.png` → `<x>/textures/<y>.dds`). `textures_raw/` 구간이 없으면 빈 문자열입니다.
          */
-        static AbsolutePath makeImportedTexturePath( string_view rawTexturePath );
+        static string makeImportedTexturePath( string_view rawTexturePath );
+        /** @brief `makeImportedTexturePath` 의 디스크 경로 판입니다. */
+        static AbsolutePath makeImportedTexturePath( const AbsolutePath& rawTexturePath );
 
         /**
          * @brief 원본 바이트, 규칙(해석한 DXGI 포맷, 스위즐, 밉, sRGB, 그린 반전), 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. 읽지 못하면 0 입니다.

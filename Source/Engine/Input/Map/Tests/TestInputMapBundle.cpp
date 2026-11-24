@@ -316,7 +316,7 @@ SW_TEST_CASE( InputMapBundleTest, EveryGamePackBundleLoads )
     for ( const AbsolutePath& presetPath : listPreset )
     {
         GameConfig preset;
-        SW_REQUIRE_TRUE_MSG( ConfigManager::readConfigFile( preset, presetPath.str() ) == ConfigReadResult::Loaded, presetPath.c_str() );
+        SW_REQUIRE_TRUE_MSG( ConfigManager::readConfigFile( preset, presetPath ) == ConfigReadResult::Loaded, presetPath.c_str() );
         SW_EXPECT_TRUE_MSG( InputMapBundle::validatePack( preset._packRoot.get() ), presetPath.c_str() );
     }
 }

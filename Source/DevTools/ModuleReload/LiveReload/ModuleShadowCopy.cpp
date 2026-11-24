@@ -25,7 +25,7 @@ namespace sw
                 (void)FileUtil::tryRemoveFile( path );
             }
 
-            static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
+            static void copyDebugSymbolsIfPresent( const AbsolutePath& originalModulePath, const AbsolutePath& shadowModulePath )
             {
                 // 원본 심볼은 Bin/Symbols 에, 섀도 복사본의 심볼은 그 복사본 옆에 둔다.
                 const AbsolutePath originalDebugPath = ModuleLibraryUtil::findBuiltDebugSymbolPath( originalModulePath );
@@ -212,7 +212,7 @@ namespace sw
             return false;
         }
 
-        ModuleShadowCopyInternal::copyDebugSymbolsIfPresent( params._originalModulePath.str(), shadowPath.str() );
+        ModuleShadowCopyInternal::copyDebugSymbolsIfPresent( params._originalModulePath, shadowPath );
         outShadowPath = shadowPath;
         return true;
     }
@@ -222,14 +222,13 @@ namespace sw
         if ( shadowPath.empty() )
             return;
         ModuleShadowCopyInternal::tryDeleteFile( shadowPath );
-        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath.str() ) );
+        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ) );
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
-        string_view directoryPath;
-        FileUtil::getDirectoryPart( shadowPath.str(), directoryPath );
+        const AbsolutePath   directoryPath = shadowPath.getParent();
         vector<AbsolutePath> listLeftFile;
-        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory().str(), directoryPath ) && FileUtil::collectFiles( FileUtil::toDiskPath( directoryPath ), "", listLeftFile, false ) && listLeftFile.empty() )
-            (void)FileUtil::removeDirectory( FileUtil::toDiskPath( directoryPath ) );
+        if ( FileUtil::isPathUnderRoot( ShadowCopyName::getDirectory().str(), directoryPath.str() ) && FileUtil::collectFiles( directoryPath, "", listLeftFile, false ) && listLeftFile.empty() )
+            (void)FileUtil::removeDirectory( directoryPath );
 #endif
     }
 } // namespace sw

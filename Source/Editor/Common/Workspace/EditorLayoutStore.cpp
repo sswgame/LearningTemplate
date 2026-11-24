@@ -92,7 +92,7 @@ namespace sw::editor
         const AbsolutePath imguiPath = makeImguiINIPath( folder, name );
         if ( FileUtil::readOptionalTextFile( imguiPath, outImguiINIText ) != OptionalFileRead::Read )
             return false;
-        const string visibilityPath = makeVisibilityPath( folder, name ).str();
+        const AbsolutePath visibilityPath = makeVisibilityPath( folder, name );
         if ( outPanelVisibility.loadFromFile( visibilityPath ) == ConfigReadResult::Invalid )
         {
             outPanelVisibility._mapOpen.clear();

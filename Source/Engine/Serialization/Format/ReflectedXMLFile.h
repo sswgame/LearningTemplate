@@ -49,9 +49,9 @@ namespace sw
          *          게임 런타임 코드는 쓰지 않습니다.
          */
         template <typename DescType>
-        [[nodiscard]] static bool loadDescFromDiskFile( string_view diskPath, DescType& outDesc )
+        [[nodiscard]] static bool loadDescFromDiskFile( const AbsolutePath& diskPath, DescType& outDesc )
         {
-            return loadDescFromDiskFileInternal( FileUtil::toDiskPath( diskPath ), &outDesc, DescType::StaticType() );
+            return loadDescFromDiskFileInternal( diskPath, &outDesc, DescType::StaticType() );
         }
 
         /** @brief 리플렉션 desc 를 XML 글에서 읽습니다(에디터가 저장하지 않은 편집을 미리 본다). 규칙 · 부모 펼치기는 파일 읽기와 같고 @p sourceName 은 로그에 찍는 이름입니다. */

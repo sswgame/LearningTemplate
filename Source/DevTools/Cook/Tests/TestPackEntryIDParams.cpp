@@ -124,7 +124,7 @@ namespace
 SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
 {
     PackConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, ProcessRoots::get()._project.join( PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
     // 쿠커와 같이 모든 게임 프리셋의 규칙을 엔진 규칙 뒤에 합친다 — 게임만 쓰는 칸(`_listVillagerPreset`)은 그 게임 설정에 있다.
     const AbsolutePath   gameConfigFolder = ProcessRoots::get()._project.join( GameConfig::kConfigFolder );
     vector<AbsolutePath> listGameConfig;
@@ -132,7 +132,7 @@ SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
     for ( const AbsolutePath& gameConfigPath : listGameConfig )
     {
         GameConfig gameConfig;
-        SW_REQUIRE_TRUE( ConfigManager::readConfigFile( gameConfig, gameConfigPath.str() ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( ConfigManager::readConfigFile( gameConfig, gameConfigPath ) == ConfigReadResult::Loaded );
         config._cookRules.mergeGameRules( gameConfig._packRoot.get(), gameConfig._cookRules );
     }
     const PackCookRules& rules = config._cookRules;

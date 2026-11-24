@@ -153,7 +153,7 @@ namespace sw::editor
 
         // 처음 실행이면 파일이 없다(등록한 기본 가시성 그대로). 깨진 파일은 키와 함께 오류를 남기고 지금 상태로 둔다.
         EditorPanelVisibility  visibility;
-        const ConfigReadResult visibilityResult = visibility.loadFromFile( _panelVisibilityPath.str() );
+        const ConfigReadResult visibilityResult = visibility.loadFromFile( _panelVisibilityPath );
         if ( visibilityResult != ConfigReadResult::Loaded )
         {
             if ( visibilityResult == ConfigReadResult::Invalid )

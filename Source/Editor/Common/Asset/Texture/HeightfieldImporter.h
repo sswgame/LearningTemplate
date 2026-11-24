@@ -42,7 +42,7 @@ namespace sw::editor
         /** @brief 리소스 트리의 모든 `heightfields_raw/` 를 스탬프와 대조하고, @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다. */
         [[nodiscard]] static AssetImportSummary importAllHeightfields( const AbsolutePath& resourceRoot, AssetImportMode mode );
         /** @brief 원본 경로의 결과 경로입니다(`…/heightfields_raw/x.png` → `…/heightfields/x.heightfield`). */
-        static AbsolutePath makeImportedHeightfieldPath( string_view rawPath );
+        static AbsolutePath makeImportedHeightfieldPath( const AbsolutePath& rawPath );
         /** @brief 원본 바이트 + 곁 구멍 마스크 + 임포터 버전의 해시입니다. */
         static uint64 computeSourceHash( const AbsolutePath& sourcePath );
         /** @brief 원본 파일이면 true 입니다(곁 파일 `_holes` 와 스플랫 원본 `_splat` 은 아닙니다). */
@@ -52,7 +52,7 @@ namespace sw::editor
         /** @brief 스플랫 원본(RGBA PNG)을 읽어 레이어 가중치로 만듭니다. 알파가 없거나 크기가 범위 밖이면 이유를 남기고 false 를 반환합니다. */
         [[nodiscard]] static bool readLayerWeights( const AbsolutePath& sourcePath, LayerWeightsAsset& outData );
         /** @brief 스플랫 원본의 결과 경로입니다(`…/heightfields_raw/x_splat.png` → `…/heightfields/x.layerweights`). */
-        static AbsolutePath makeImportedLayerWeightsPath( string_view rawPath );
+        static AbsolutePath makeImportedLayerWeightsPath( const AbsolutePath& rawPath );
         /** @brief `heightfields_raw/` 아래의 원본, 구멍 마스크, 스플랫 원본(`.png`, `.r16`)이면 true 입니다. 에디터 핫 리로드는 이 경로를 텍스처가 아니라 높이장 임포트로 보냅니다. */
         static bool isRawHeightfieldPath( string_view path );
         /**

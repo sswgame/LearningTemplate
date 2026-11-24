@@ -224,13 +224,12 @@ namespace sw
         const UserSettingsFileReadResult result = FileUtil::readTextFile( filePath, text ) ? loadUserJSON( text, filePath.str() ) : UserSettingsFileReadResult::Unreadable;
         if ( result == UserSettingsFileReadResult::Read )
             return true;
-        const bool                               bNewer = result == UserSettingsFileReadResult::NewerThanBuild;
-        StringBuilder<constant::buffer::kMax512> asidePath;
-        asidePath.appendFormat( "%#%#", filePath.str(), bNewer ? ".newer" : ".corrupt" );
-        const bool                               bMovedAside = FileUtil::copyFile( filePath, FileUtil::toDiskPath( asidePath.view() ) ) && FileUtil::removeFile( filePath );
+        const bool                               bNewer      = result == UserSettingsFileReadResult::NewerThanBuild;
+        const AbsolutePath                       asidePath   = filePath.appendSuffix( bNewer ? ".newer" : ".corrupt" );
+        const bool                               bMovedAside = FileUtil::copyFile( filePath, asidePath ) && FileUtil::removeFile( filePath );
         StringBuilder<constant::buffer::kMax512> movedText;
         if ( bMovedAside )
-            movedText.appendFormat( "moved to '%#'", asidePath.view() );
+            movedText.appendFormat( "moved to '%#'", asidePath.str() );
         else
             movedText.append( "could not be moved aside" );
         if ( bNewer )
@@ -1238,9 +1237,8 @@ namespace sw
             // 실행마다 새 폴더의 빈 자리다(`reserveUniquePath`) - 프로세스 id 파일을 그대로 쓰면 Windows 가 다시 쓴 id 의 옛 실행 설정을 읽었다.
             if ( bAutomatedRun )
             {
-                StringBuilder<constant::buffer::kMax256> basePath;
-                basePath.appendFormat( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() );
-                setUserFilePath( FileUtil::reserveUniquePath( FileUtil::toDiskPath( basePath.view() ), {}, true ).join( UserSettingsFileEntry::kFileName ) );
+                const AbsolutePath basePath = ProcessRoots::get()._saved.join( "Automation/UserSettings" ).join( to_string( Process::getCurrentProcessID() ) );
+                setUserFilePath( FileUtil::reserveUniquePath( basePath, {}, true ).join( UserSettingsFileEntry::kFileName ) );
             }
             else
                 setUserFilePath( makeDefaultUserFilePath( gameName ) );

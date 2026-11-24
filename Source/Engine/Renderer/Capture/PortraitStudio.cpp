@@ -96,7 +96,7 @@ namespace sw
             struct WriteJob
             {
                 const PortraitCapture* _pCapture{ nullptr };
-                const string*          _pBase{ nullptr }; ///< 확장자 앞까지의 쓸 경로
+                const AbsolutePath*    _pBase{ nullptr }; ///< 확장자 앞까지의 쓸 경로
 
                 /** @brief 장 @p index 를 DDS · PNG 로 쓰고, 둘 다 썼으면 제 칸 @p outWritten 에 1 을 씁니다(`runParallelInto` 본문). */
                 void operator()( uint32 index, uint8& outWritten ) const
@@ -113,12 +113,8 @@ namespace sw
                         outWritten = 0;
                         return;
                     }
-                    StringBuilder<constant::buffer::kMax512> path;
-                    path.appendFormat( "%#.dds", _pBase[index] );
-                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( FileUtil::toDiskPath( path.view() ), rgbaBytes, capture._width, capture._height );
-                    path.clear();
-                    path.appendFormat( "%#.png", _pBase[index] );
-                    const bool bPNG = ImageFileWriter::writePNGRGBA8( FileUtil::toDiskPath( path.view() ), rgbaBytes, capture._width, capture._height );
+                    const bool bDDS = ImageFileWriter::writeDDSRGBA8( _pBase[index].appendSuffix( ".dds" ), rgbaBytes, capture._width, capture._height );
+                    const bool bPNG = ImageFileWriter::writePNGRGBA8( _pBase[index].appendSuffix( ".png" ), rgbaBytes, capture._width, capture._height );
                     outWritten      = bDDS && bPNG ? 1 : 0;
                 }
             };
@@ -262,13 +258,11 @@ namespace sw
         size_t                  heldBytes   = 0;
         const auto              flushWrites = [&]()
         {
-            vector<string> listBase;
+            vector<AbsolutePath> listBase;
             listBase.reserve( listPath.size() );
             for ( const string& path : listPath )
             {
-                StringBuilder<constant::buffer::kMax512> base;
-                base.appendFormat( "%#/%#.portrait", directory.str(), makeFileStem( path ) );
-                listBase.emplace_back( base.view() );
+                listBase.push_back( directory.join( makeFileStem( path ) ).appendSuffix( ".portrait" ) );
             }
             vector<uint8>                          listWritten( listCapture.size(), 0 ); // 장마다 제 칸(워커가 쓴다) - 아래 직렬 단계가 정해진 차례로 모은다
             const PortraitStudioInternal::WriteJob job{ listCapture.data(), listBase.data() };

@@ -95,7 +95,7 @@ namespace sw
          * @brief 디스크 파일에서 파이프라인 XML 을 로드합니다. 팩을 보지 않습니다(`ReflectedXMLFile::loadDescFromDiskFile`).
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
-        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 파이프라인 디스크립터를 반환합니다. */
         const RenderPipelineDesc& getDesc() const { return _desc; }
         RenderPipelineDesc&       getDesc() { return _desc; }

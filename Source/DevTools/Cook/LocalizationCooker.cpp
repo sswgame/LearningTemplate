@@ -35,7 +35,6 @@ namespace sw
         VectorUtil::sort( listFile ); // 출력 순서가 실행마다 같다
 
         const string      root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot.str() ) );
-        const string      out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir.str() ) );
         const CookJobDesc desc = makeCookJobDesc();
         CookStats         stats;
         for ( const AbsolutePath& filePath : listFile )
@@ -55,11 +54,9 @@ namespace sw
             }
             for ( const string& culture : project.collectCookedCultures() )
             {
-                const string                             outputID = project.makeCookedTablePath( projectID, culture );
-                StringBuilder<constant::buffer::kMax512> outputPathBuilder;
-                outputPathBuilder.appendFormat( "%#/%#", out, outputID );
-                const AbsolutePath outputPath = FileUtil::toDiskPath( outputPathBuilder.view() );
-                const CookResult   result     = store.cookFile( desc, outputID, outputPath.str(), [&]()
+                const string       outputID   = project.makeCookedTablePath( projectID, culture );
+                const AbsolutePath outputPath = cookedDir.join( outputID );
+                const CookResult   result     = store.cookFile( desc, outputID, outputPath, [&]()
                       {
                     vector<uint8> bytes;
                     if ( cookCulture( AssetID{ projectID }, culture, bytes ) == false )

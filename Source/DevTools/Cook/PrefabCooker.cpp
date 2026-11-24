@@ -38,8 +38,6 @@ namespace sw
         VectorUtil::sort( listFile );
 
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot.str() ) );
-        string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir.str() ) );
-        out += '/';
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
         CookStats             stats;
@@ -53,14 +51,12 @@ namespace sw
                 continue;
 
             // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
-            const string                             outputID = AssetCookPath::toCookedPath( normalized.str().substr( root.size() + 1 ) );
-            StringBuilder<constant::buffer::kMax512> outputPathBuilder;
-            outputPathBuilder.appendFormat( "%#%#", out, outputID );
-            const string outputPath = string( outputPathBuilder.view() );
-            const string outputKey  = StringUtil::toLower( outputPath.c_str() );
+            const string       outputID   = AssetCookPath::toCookedPath( normalized.str().substr( root.size() + 1 ) );
+            const AbsolutePath outputPath = cookedDir.join( outputID );
+            const string       outputKey  = StringUtil::toLower( outputPath.c_str() );
             if ( uniqueSetWrittenKey.contains( outputKey ) )
             {
-                SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookWouldOverwrite", "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized.str(), outputPath );
+                SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookWouldOverwrite", "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized.str(), outputPath.str() );
                 ++outFailedCount;
                 continue;
             }
@@ -71,10 +67,9 @@ namespace sw
                 PrefabCache nestedPrefabs;
                 PrefabAsset asset;
                 // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
-                const bool                   bLoaded    = asset.loadFromDiskFile( normalized );
-                const bool                   bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
-                const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
-                if ( outputFile.has_value() == false || bFlattened == false || asset.saveToBinaryFile( *outputFile ) == false )
+                const bool bLoaded    = asset.loadFromDiskFile( normalized );
+                const bool bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
+                if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )
                 {
                     SW_LOG_WARNING_ID( "PrefabCooker.PrefabCookFailed", "Prefab cook failed for '%#'", normalized.str() );
                     return CookStep::Failed;

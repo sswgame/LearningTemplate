@@ -194,7 +194,7 @@ namespace sw
             {
                 if ( listArgument.size() > 1 || engine::areEngineServicesBound() == false )
                     return false;
-                const AbsolutePath folder = FileUtil::toDiskPath( listArgument.empty() ? BugReport::findLatestDirectory( BugReport::getRoot() ) : listArgument[0] );
+                const AbsolutePath folder = listArgument.empty() ? BugReport::findLatestDirectory( BugReport::getRoot() ) : FileUtil::toDiskPath( listArgument[0] );
                 if ( BugReport::goTo( engine::getSubsystem<SceneManager>(), folder.str(), outReply ) == false )
                     return false;
                 BugReport recorded;
@@ -316,19 +316,13 @@ namespace sw
         return FileUtil::reserveUniquePath( root.join( baseName.c_str() ), {}, true, BugReportInternal::kMaxSameSecondSuffix );
     }
 
-    string BugReport::findLatestDirectory( const AbsolutePath& root )
+    AbsolutePath BugReport::findLatestDirectory( const AbsolutePath& root )
     {
         vector<AbsolutePath> listFolder;
         if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
-            return string{};
+            return {};
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 순이 시간 순이다. 같은 초의 -2 · -3 은 뒤에 온다(-10 이 -9 앞에 오지만 같은 초에 열 번은 드물다).
-        const string* pLatest = &listFolder[0].str();
-        for ( const AbsolutePath& folder : listFolder )
-        {
-            if ( *pLatest < folder.str() )
-                pLatest = &folder.str();
-        }
-        return *pLatest;
+        return *std::max_element( listFolder.begin(), listFolder.end() );
     }
 
     float3 BugReport::computeRotationDegrees( const float3& forward )
@@ -475,10 +469,10 @@ namespace sw
         if ( inputs._pFrameProfiler != nullptr )
         {
             // 타임라인 기록이 켜져 있었으면 최근 프레임의 시간축을 같이 담는다(꺼져 있으면 조용히 건너뛴다).
-            string tracePath;
-            string traceReply;
+            AbsolutePath tracePath;
+            string       traceReply;
             if ( ProfilerTraceExport::saveRecentFrames( *inputs._pFrameProfiler, ProfilerTimeline::kFrameCapacity - 1,
-                                                        FileUtil::joinPath( directory.str(), kTraceFileName ), "Game", tracePath, traceReply ) )
+                                                        directory.join( kTraceFileName ), "Game", tracePath, traceReply ) )
                 SW_LOG_INFO_ID( "BugReport.BugreportTimelineTraceSaved", "bugreport: timeline trace saved (%#)", traceReply );
         }
 #endif
@@ -518,7 +512,7 @@ namespace sw
 
     bool BugReport::goTo( SceneManager& sceneManager, string_view directory, string& outReply )
     {
-        const AbsolutePath folder = FileUtil::toDiskPath( directory.empty() ? findLatestDirectory( BugReport::getRoot() ) : string( directory ) );
+        const AbsolutePath folder = directory.empty() ? findLatestDirectory( BugReport::getRoot() ) : FileUtil::toDiskPath( directory );
         BugReport          report;
         if ( folder.empty() || readInfo( folder, report ) == false )
         {

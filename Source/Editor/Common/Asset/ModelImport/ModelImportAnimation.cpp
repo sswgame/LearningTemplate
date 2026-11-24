@@ -262,7 +262,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportAnimation::readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
+    bool ModelImportAnimation::readClipData( const AbsolutePath& sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
     {
         outMapExtra.clear();
         const AbsolutePath clipDataPath = ModelImporter::makeClipDataPath( sourcePath );

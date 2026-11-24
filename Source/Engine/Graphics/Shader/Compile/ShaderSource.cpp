@@ -186,11 +186,11 @@ namespace sw
             return nullopt;
         if ( FileUtil::isRegularFile( *candidate ) == false )
         {
-            CookJob::allowMissingDiskRead( candidate->str() ); // 작업이 없으면 적지 않는다
+            CookJob::allowMissingDiskRead( *candidate ); // 작업이 없으면 적지 않는다
             return nullopt;
         }
         // 실패 로그는 readFile 이, 입력으로 적지 못한 까닭은 작업이 남긴다.
-        if ( FileUtil::readFile( *candidate, outBytes ) == false || CookJob::allowDiskRead( candidate->str(), outBytes.data(), outBytes.size() ) == false )
+        if ( FileUtil::readFile( *candidate, outBytes ) == false || CookJob::allowDiskRead( *candidate, outBytes.data(), outBytes.size() ) == false )
             return nullopt;
         return candidate;
     }

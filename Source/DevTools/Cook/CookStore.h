@@ -84,18 +84,18 @@ namespace sw
          * @brief 출력 파일 하나를 만듭니다.
          * @param desc 작업 키의 쿠커 쪽 값입니다.
          * @param outputID 쿠킹 폴더 기준 출력 경로입니다(예: `game/playground/maps/x.scene.bin`). 기록 파일 이름이 됩니다.
-         * @param outputPath 출력 파일의 절대 경로입니다.
+         * @param outputPath 출력 파일의 경로입니다.
          * @param cook 출력 파일을 @p outputPath 에 쓰고 `CookStep` 을 돌려주는 함수입니다. 빈 에셋 캐시와 작업 범위 안에서 부릅니다.
          */
         template <typename CookFunction>
-        [[nodiscard]] CookResult cookFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
+        [[nodiscard]] CookResult cookFile( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath, CookFunction&& cook ) const
         {
-            if ( reuseFreshOutput( desc, outputID, FileUtil::toDiskPath( outputPath ) ) )
+            if ( reuseFreshOutput( desc, outputID, outputPath ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
             CookJob        job( desc );
             const CookStep step = cook();
-            return record( outputID, finishCook( job, step, outputID, FileUtil::toDiskPath( outputPath ) ) );
+            return record( outputID, finishCook( job, step, outputID, outputPath ) );
         }
 
         /**
@@ -103,14 +103,14 @@ namespace sw
          *        DDC 는 파일 복사로 남긴다(큰 팩, 감사 A-10).
          */
         template <typename CookFunction>
-        [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, string_view outputPath, CookFunction&& cook ) const
+        [[nodiscard]] CookResult cookStreamedFile( const CookJobDesc& desc, string_view outputID, const AbsolutePath& outputPath, CookFunction&& cook ) const
         {
-            if ( reuseFreshOutput( desc, outputID, FileUtil::toDiskPath( outputPath ) ) )
+            if ( reuseFreshOutput( desc, outputID, outputPath ) )
                 return record( outputID, CookResult::Reused );
             clearAssetCachesForJob();
             CookJob                job( desc );
             const CookStreamedStep step = cook();
-            return record( outputID, finishStreamedCook( job, step, outputID, FileUtil::toDiskPath( outputPath ) ) );
+            return record( outputID, finishStreamedCook( job, step, outputID, outputPath ) );
         }
 
         /**

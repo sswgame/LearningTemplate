@@ -22,10 +22,10 @@ namespace sw
         return finishLoad( assetID.view(), ReflectedXMLFile::loadDesc( assetID, *this ) );
     }
 
-    bool SurfaceKindTable::loadFromDiskFile( string_view diskPath )
+    bool SurfaceKindTable::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         *this = SurfaceKindTable{};
-        return finishLoad( diskPath, ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
+        return finishLoad( diskPath.str(), ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
     }
 
     bool SurfaceKindTable::finishLoad( string_view path, bool bRead )

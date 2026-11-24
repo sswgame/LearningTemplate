@@ -138,7 +138,7 @@ namespace sw
             if ( gv_profileTracePath.get().empty() == false )
             {
                 string reply;
-                if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath.get(), "Game", 0, reply ) == false )
+                if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath.getPath(), "Game", 0, reply ) == false )
                     SW_LOG_WARNING_ID( "FrameProfileSession.TraceCaptureNotStarted", "[Profile] trace capture not started: %#", reply );
             }
             // 할당 횟수도 같은 측정 구간에서 센다. 시간 표에는 보이지 않는 비용이다. 프로파일러가 없는 구성도 있다.

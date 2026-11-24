@@ -153,7 +153,7 @@ SW_TEST_CASE( VFXEffectDefTest, VariantMergesEmittersByName )
     SW_REQUIRE_TRUE( Util::writeScratchFile( path, flat ) );
 
     VFXEffectDef effect;
-    SW_REQUIRE_TRUE( effect.loadFromDiskFile( path.str() ) );
+    SW_REQUIRE_TRUE( effect.loadFromDiskFile( path ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );
     SW_EXPECT_EQUAL( 8u, effect._listEmitter[0]._maxParticles );
     SW_EXPECT_NEAR( 0.8f, effect._listEmitter[0]._lifetimeMax, 0.0001f );
@@ -505,7 +505,7 @@ SW_TEST_CASE( VFXEffectDefTest, LoadReadsTheDocumentAndSortsCurves )
     SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXML( Util::kValidAttributes ) ) );
 
     VFXEffectDef effect;
-    SW_REQUIRE_TRUE( effect.loadFromDiskFile( path.str() ) );
+    SW_REQUIRE_TRUE( effect.loadFromDiskFile( path ) );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );
     const VFXEmitterDef& emitter = effect._listEmitter[0];
     SW_EXPECT_TRUE( emitter._name == "Sparks" );
@@ -531,8 +531,8 @@ SW_TEST_CASE( VFXEffectDefTest, UnknownAttributeLeavesAnEmptyEffect )
     SW_REQUIRE_TRUE( Util::writeScratchFile( badPath, Util::makeEffectXML( badAttributes.view() ) ) );
 
     VFXEffectDef effect;
-    SW_REQUIRE_TRUE( effect.loadFromDiskFile( goodPath.str() ) );
-    SW_EXPECT_FALSE( effect.loadFromDiskFile( badPath.str() ) );
+    SW_REQUIRE_TRUE( effect.loadFromDiskFile( goodPath ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( badPath ) );
     SW_EXPECT_TRUE( effect._listEmitter.empty() );
 }
 
@@ -543,7 +543,7 @@ SW_TEST_CASE( VFXEffectDefTest, MissingRequiredFieldLeavesAnEmptyEffect )
     const AbsolutePath path = test::makeScratchPath( "partial.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXML( "_name=\"Sparks\" _duration=\"1\" _spawnRate=\"40\"" ) ) );
     VFXEffectDef effect;
-    SW_EXPECT_FALSE( effect.loadFromDiskFile( path.str() ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( path ) );
     SW_EXPECT_TRUE( effect._listEmitter.empty() );
 }
 
@@ -558,19 +558,19 @@ SW_TEST_CASE( VFXEffectDefTest, MissingOrEmptyFilesFail )
     SW_EXPECT_LOG( "VFXEffectDef.VFXNoEmittersListEmitter" );
 
     VFXEffectDef effect;
-    SW_EXPECT_FALSE( effect.loadFromDiskFile( test::makeScratchPath( "missing.vfx.xml" ).str() ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( test::makeScratchPath( "missing.vfx.xml" ) ) );
 
     const AbsolutePath brokenPath = test::makeScratchPath( "broken.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( brokenPath, "<VFXEffectDef" ) );
-    SW_EXPECT_FALSE( effect.loadFromDiskFile( brokenPath.str() ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( brokenPath ) );
 
     const AbsolutePath otherKindPath = test::makeScratchPath( "otherkind.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( otherKindPath, "<RenderPipelineDesc></RenderPipelineDesc>" ) );
-    SW_EXPECT_FALSE( effect.loadFromDiskFile( otherKindPath.str() ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( otherKindPath ) );
 
     const AbsolutePath noEmitterPath = test::makeScratchPath( "noemitter.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( noEmitterPath, "<VFXEffectDef></VFXEffectDef>" ) );
-    SW_EXPECT_FALSE( effect.loadFromDiskFile( noEmitterPath.str() ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( noEmitterPath ) );
 }
 
 /** @brief [VFXEffectDefTest] 풀이 찰 수 있는 일정은 경고하지만 로드는 된다(차면 새 입자를 만들지 않는 것이 규칙이다) */
@@ -581,7 +581,7 @@ SW_TEST_CASE( VFXEffectDefTest, PoolTooSmallWarnsButLoads )
     SW_REQUIRE_TRUE( Util::writeScratchFile(
         path, Util::makeEffectXML( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
     VFXEffectDef effect;
-    SW_EXPECT_TRUE( effect.loadFromDiskFile( path.str() ) );
+    SW_EXPECT_TRUE( effect.loadFromDiskFile( path ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );
 }
 

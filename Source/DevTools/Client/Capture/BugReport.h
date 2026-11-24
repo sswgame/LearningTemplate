@@ -80,7 +80,7 @@ namespace sw
          */
         static AbsolutePath makeUniqueDirectory( const AbsolutePath& root, const ScreenshotLocalTime& localTime );
         /** @brief @p root 아래 BugReport 폴더 가운데 가장 최근(이름 순으로 마지막)의 경로입니다. 없으면 빈 문자열입니다. */
-        static string findLatestDirectory( const AbsolutePath& root );
+        static AbsolutePath findLatestDirectory( const AbsolutePath& root );
         /** @brief 시선 벡터를 pitch 와 yaw(도, roll 0)로 바꿉니다. */
         static float3 computeRotationDegrees( const float3& forward );
         /** @brief pitch 와 yaw(도)를 시선 벡터로 바꿉니다. */

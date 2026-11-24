@@ -46,33 +46,29 @@ namespace sw::editor
             }
 
             /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 그 파일이 대상인 오류입니다. */
-            [[nodiscard]] static expected<EditorThemeDef> readThemeChain( string_view absolutePath )
+            [[nodiscard]] static expected<EditorThemeDef> readThemeChain( const AbsolutePath& absolutePath )
             {
                 // 깊이 상한은 데이터 상속과 같은 사본이다(`ResourceComposition::findInheritanceMaxDepth`) — 없으면 대신 설정을 읽지 않고 진다.
                 const optional<uint32> maxDepth = editor::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
                 if ( maxDepth.has_value() == false )
-                    return unexpected( Error{ ErrorKind::Unsupported, "the inheritance depth limit is not set yet", absolutePath } );
-                vector<string>         listPath;
+                    return unexpected( Error{ ErrorKind::Unsupported, "the inheritance depth limit is not set yet", absolutePath.str() } );
+                vector<AbsolutePath>   listPath;
                 vector<EditorThemeDef> listLayer; // 자식부터
-                string                 path{ absolutePath };
+                AbsolutePath           path = absolutePath;
                 while ( path.empty() == false )
                 {
                     if ( VectorUtil::contains( listPath, path ) || listPath.size() >= *maxDepth )
-                        return unexpected( Error{ ErrorKind::Cycle, "the _base chain is a cycle or too deep", path } );
+                        return unexpected( Error{ ErrorKind::Cycle, "the _base chain is a cycle or too deep", path.str() } );
                     listPath.push_back( path );
                     EditorThemeDef&        layer  = listLayer.emplace_back();
                     const ConfigReadResult result = ConfigManager::readConfigFile( layer, path );
                     if ( result == ConfigReadResult::Missing )
-                        return unexpected( Error{ ErrorKind::NotFound, "theme token file not found", path } );
+                        return unexpected( Error{ ErrorKind::NotFound, "theme token file not found", path.str() } );
                     if ( result != ConfigReadResult::Loaded )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "not a valid theme token file", path } );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "not a valid theme token file", path.str() } );
                     if ( layer._base.empty() )
                         break;
-                    string_view folder;
-                    FileUtil::getDirectoryPart( path, folder );
-                    string fileName = layer._base;
-                    fileName.append( EditorThemeTokens::kExtension );
-                    path = FileUtil::joinPath( folder, fileName );
+                    path = path.getParent().join( layer._base ).appendSuffix( EditorThemeTokens::kExtension );
                 }
                 EditorThemeDef merged = std::move( listLayer.back() );
                 listLayer.pop_back();
@@ -117,12 +113,10 @@ namespace sw::editor
 
     expected<EditorThemeConfig> EditorThemeTokens::loadTheme( string_view name )
     {
-        const string folder = getFolderPath().str();
+        const AbsolutePath folder = getFolderPath();
         if ( folder.empty() )
             return unexpected( Error{ ErrorKind::NotFound, "the content root is not mounted" } );
-        string fileName{ name };
-        fileName.append( kExtension );
-        return loadThemeFile( FileUtil::joinPath( folder, fileName ) );
+        return loadThemeFile( folder.join( name ).appendSuffix( kExtension ) );
     }
 
     bool EditorThemeTokens::loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig )
@@ -134,7 +128,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %# is not a loose file", assetID.c_str() );
             return false;
         }
-        expected<EditorThemeConfig> config = loadThemeFile( themeFile->str() );
+        expected<EditorThemeConfig> config = loadThemeFile( *themeFile );
         if ( config.has_value() == false )
         {
             SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %# (%#)", config.error().message(), config.error().detail() );
@@ -144,7 +138,7 @@ namespace sw::editor
         return true;
     }
 
-    expected<EditorThemeConfig> EditorThemeTokens::loadThemeFile( string_view absolutePath )
+    expected<EditorThemeConfig> EditorThemeTokens::loadThemeFile( const AbsolutePath& absolutePath )
     {
         const expected<EditorThemeDef> def = EditorThemeTokensInternal::readThemeChain( absolutePath );
         if ( def.has_value() == false )
@@ -153,7 +147,7 @@ namespace sw::editor
         if ( config.has_value() == false )
         {
             Error error = config.error();
-            error.prependDetail( ": " ).prependDetail( absolutePath ); // 어느 파일인지
+            error.prependDetail( ": " ).prependDetail( absolutePath.str() ); // 어느 파일인지
             return unexpected( error );
         }
         return config;

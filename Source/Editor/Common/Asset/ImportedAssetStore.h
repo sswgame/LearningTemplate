@@ -35,7 +35,7 @@ namespace sw::editor
         [[nodiscard]] static string makeKey( const void* pBytes, size_t byteCount, string_view settingsText );
 
         /** @brief @p sourcePath 의 도메인 폴더입니다(`<x>/models_raw/<y>` → `<x>`). `models_raw/` 구간이 없으면 빈 글입니다. */
-        [[nodiscard]] static string findDomainFolder( string_view sourcePath );
+        [[nodiscard]] static AbsolutePath findDomainFolder( const AbsolutePath& sourcePath );
 
         /**
          * @brief 임포트 결과 글 @p text 를 @p diskPath 에 씁니다(부모 폴더를 만든다). 실패하면 false 입니다 — 쓰기 실패 오류는 부르는 쪽이 자기 결과 이름으로 남긴다.
@@ -45,7 +45,7 @@ namespace sw::editor
         [[nodiscard]] static bool writeResultText( const AbsolutePath& diskPath, string_view text );
 
         /** @brief 저장소 파일 경로입니다(`<x>/models/_shared/<kind>/<key><extension>`). */
-        [[nodiscard]] static AbsolutePath makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension );
+        [[nodiscard]] static AbsolutePath makeStorePath( const AbsolutePath& domainFolder, string_view kind, string_view key, string_view extension );
 
         /**
          * @brief 저장소 파일을 씁니다. 이미 있으면 바이트가 같은지만 봅니다(병렬 임포트가 같은 키를 동시에 써도 한 벌이다).
@@ -70,9 +70,9 @@ namespace sw::editor
          * @brief @p importedPath(리소스 루트 아래 디스크 경로)가 가리키는 저장소 파일들의 바이트 해시를 @p hash 에 섞습니다(`ModelImporter::computeImportedHash`).
          * @details 공유 파일은 옆 폴더 밖이라 옆 폴더 해시에 들지 않는다. 지우거나 손대면 어긋남으로 잡히게 참조를 따라가 섞는다.
          */
-        [[nodiscard]] static uint64 mixReferencedFiles( string_view importedPath, string_view text, uint64 hash );
+        [[nodiscard]] static uint64 mixReferencedFiles( const AbsolutePath& importedPath, string_view text, uint64 hash );
         /** @brief @p importedPath 의 글 @p text 가 가리키는 저장소 파일의 디스크 경로를 정렬해 @p outListPath 에 더합니다(`mixReferencedFiles` 와 같은 풀이 — 풀지 못한 참조는 뺀다). */
-        static void collectReferencedFiles( string_view importedPath, string_view text, vector<AbsolutePath>& outListPath );
+        static void collectReferencedFiles( const AbsolutePath& importedPath, string_view text, vector<AbsolutePath>& outListPath );
 
         /**
          * @brief @p resourceRoot 아래 모든 저장소에서 같은 도메인의 임포트 결과가 가리키지 않는 파일을 지웁니다(원본을 고치면 옛 키의 파일이 남는다).

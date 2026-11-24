@@ -93,7 +93,7 @@ namespace sw::editor
         /** @brief 임포트하는 원본 확장자인지 확인합니다. `import.stamp` 같은 파일은 원본이 아닙니다. */
         virtual bool isSourceFile( string_view path ) const = 0;
         /** @brief 원본 경로에 해당하는 결과 경로를 반환합니다. 원본 폴더 구간이 없으면 빈 문자열입니다. */
-        virtual AbsolutePath makeImportedPath( string_view sourcePath ) const = 0;
+        virtual AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const = 0;
         /** @brief 원본 바이트, 적용한 규칙, 임포터 버전을 섞은 해시입니다. 읽지 못하면 0 입니다. */
         virtual uint64 computeSourceHash( const AbsolutePath& sourcePath, string_view assetPath ) const = 0;
         /**
@@ -116,12 +116,12 @@ namespace sw::editor
          */
         virtual bool isImportedPathEmbedded() const { return false; }
         /** @brief 임포트하지 않는 원본이면 그 이유를 반환하고, 아니면 nullptr 입니다. */
-        virtual const utf8* findUnsupportedReason( string_view sourcePath ) const = 0;
+        virtual const utf8* findUnsupportedReason( const AbsolutePath& sourcePath ) const = 0;
         /**
          * @brief 이 원본의 임포트가 다른 원본의 임포트 결과를 읽으면 true 입니다(기본은 false). 클래스 설명의 임포터 규칙을 보십시오.
          * @details 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
          */
-        virtual bool hasOrderDependency( [[maybe_unused]] string_view sourcePath, [[maybe_unused]] string_view assetPath ) const { return false; }
+        virtual bool hasOrderDependency( [[maybe_unused]] const AbsolutePath& sourcePath, [[maybe_unused]] string_view assetPath ) const { return false; }
         /**
          * @brief 원본 하나를 결과 경로로 임포트합니다.
          * @details 스레드 계약: 워커에서 서로 다른 원본에 대해 동시에 불린다(같은 결과 경로를 쓰는 원본은 한 스레드가 순서대로). 이 임포터의 공유 상태, `AssetPaths` 의 전역 쓰기,
@@ -179,7 +179,9 @@ namespace sw::editor
          * @brief 원본 경로를 결과 경로로 바꿉니다(`<x>/<rawFolder>/<y>.<ext>` → `<x>/<importedFolder>/<y><importedExtension>`).
          * @details 원본 폴더 이름은 경로 구간 경계에서만 찾는다. `my_textures_raw_backup` 은 해당하지 않는다. 없으면 빈 문자열을 반환한다.
          */
-        static AbsolutePath makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension );
+        static string makeImportedPath( string_view rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension );
+        /** @brief `makeImportedPath` 의 디스크 경로 판입니다 — 원본이 @p rawFolderName 아래가 아니면 빈 경로다. */
+        static AbsolutePath makeImportedPath( const AbsolutePath& rawPath, string_view rawFolderName, string_view importedFolderName, string_view importedExtension );
 
         /** @brief 파일 바이트 그대로 계산한 FNV-1a 64 해시입니다. 파일이 없거나 비어 있으면 0 입니다. */
         static uint64 computeFileHash( const AbsolutePath& path );

@@ -95,6 +95,6 @@ namespace sw::editor
          * @brief @p absPath 에서 엄격하게 읽습니다. 아직 등록하지 않은 바도 받아 두고(등록할 때 그 값을 쓴다), 비율은 0..1 로 묶습니다.
          * @return 없으면 `Missing`(지금 상태 그대로), 틀리면 `Invalid`(키와 함께 오류를 남겼고 지금 상태 그대로)입니다.
          */
-        [[nodiscard]] ConfigReadResult loadFromFile( string_view absPath );
+        [[nodiscard]] ConfigReadResult loadFromFile( const AbsolutePath& absPath );
     };
 } // namespace sw::editor

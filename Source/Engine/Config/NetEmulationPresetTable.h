@@ -71,7 +71,7 @@ namespace sw
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 표를 **디스크 파일**에서 읽습니다(테스트의 임시 파일 · 도구). 검사는 `loadFromAsset` 과 같습니다(`ReflectedXMLFile::loadDescFromDiskFile`). */
-        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 이름(대소문자 무시)으로 프리셋을 찾습니다. 없으면 nullptr 입니다. */
         const NetEmulationPresetDef* findPreset( string_view name ) const;
         /** @brief 이름으로 조건을 만듭니다. 없는 이름이면 false 이고 @p outConditions 는 그대로입니다. */

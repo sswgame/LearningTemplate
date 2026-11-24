@@ -71,17 +71,17 @@ namespace sw::editor
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
         rawMarker.appendFormat( "/%#/", kRawTextureFolder );
-        const auto mixFile = [&hash]( const string& path )
+        const auto mixFile = [&hash]( const AbsolutePath& path )
         {
             vector<uint8> fileBytes;
-            const bool    bRead = FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::readFile( FileUtil::toDiskPath( path ), fileBytes );
+            const bool    bRead = FileUtil::exists( path ) && FileUtil::readFile( path, fileBytes );
             if ( bRead && fileBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( fileBytes.data() ), fileBytes.size(), false, hash );
         };
         for ( cgltf_size bufferIndex = 0; bufferIndex < pData->buffers_count; ++bufferIndex )
         {
             if ( isExternalURI( pData->buffers[bufferIndex].uri ) )
-                mixFile( resolveURI( sourcePath, pData->buffers[bufferIndex].uri ).str() );
+                mixFile( resolveURI( sourcePath, pData->buffers[bufferIndex].uri ) );
         }
         bool bHasEmbeddedImage = false; // 텍스처 원본 폴더 밖의 이미지는 공유 원본으로 꺼낸다 — 어느 폴더인지는 텍스처 규칙이 정한다
         for ( cgltf_size imageIndex = 0; imageIndex < pData->images_count; ++imageIndex )
@@ -91,8 +91,8 @@ namespace sw::editor
                 bHasEmbeddedImage = true;
                 continue;
             }
-            const string imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri ).str();
-            if ( imagePath.find( rawMarker.view() ) != string::npos )
+            const AbsolutePath imagePath = resolveURI( sourcePath, pData->images[imageIndex].uri );
+            if ( imagePath.str().find( rawMarker.view() ) != string::npos )
                 continue;
             bHasEmbeddedImage = true;
             mixFile( imagePath );

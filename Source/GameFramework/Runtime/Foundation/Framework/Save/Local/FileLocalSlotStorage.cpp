@@ -27,7 +27,7 @@ namespace sw
         {
             // 쓴 프로세스가 살아 있는 임시 파일은 다른 인스턴스가 쓰는 중이다 — 지우지 않는다
             if ( entry._bDirectory == false && entry._path.find( kLocalSlotTempMarker ) != string_view::npos && FileUtil::isAbandonedWriteTemp( entry._path ) )
-                listTempPath.push_back( FileUtil::toDiskPath( entry._path ) );
+                listTempPath.push_back( entry.makePath() );
             return true;
         } );
         for ( const AbsolutePath& tempPath : listTempPath )
@@ -95,10 +95,10 @@ namespace sw
             LocalSlotInfo& slotInfo = listSlotInfo.emplace_back();
             slotInfo._slot          = string( slot );
             uint64 byteCount        = 0;
-            if ( FileUtil::tryGetFileSize( FileUtil::toDiskPath( entry._path ), byteCount ) )
+            if ( FileUtil::tryGetFileSize( entry.makePath(), byteCount ) )
                 slotInfo._byteCount = static_cast<int64>( byteCount );
             int64 ticks = 0;
-            if ( FileUtil::getFileWriteTime( FileUtil::toDiskPath( entry._path ), ticks ) )
+            if ( FileUtil::getFileWriteTime( entry.makePath(), ticks ) )
                 slotInfo._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / constant::time::kMillisecondsPerSecond );
             return true;
         } );

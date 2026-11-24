@@ -709,7 +709,7 @@ namespace sw
                     outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
                 }
-                return ProfilerTraceExport::startRecording( engine::getSubsystem<FrameProfiler>(), seconds, recordPath.str(), "Game", budget, outReply );
+                return ProfilerTraceExport::startRecording( engine::getSubsystem<FrameProfiler>(), seconds, recordPath, "Game", budget, outReply );
             }
             AbsolutePath path;
             uint32       frameCount = ProfilerTimeline::kFrameCapacity - 1;
@@ -722,8 +722,8 @@ namespace sw
                 else if ( DevCommandRegistry::readDiskPathArgument( argument, path, outReply ) == false )
                     return false;
             }
-            string savedPath;
-            return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path.str(), "Game", savedPath, outReply );
+            AbsolutePath savedPath;
+            return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path, "Game", savedPath, outReply );
         }
     } // namespace
 
@@ -894,7 +894,7 @@ namespace sw
         }
     } // namespace
 
-    bool ProfilerTraceExport::startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
+    bool ProfilerTraceExport::startRecording( FrameProfiler& profiler, float64 seconds, const AbsolutePath& path, string_view processName, uint32 budget,
                                               string& outReply )
     {
         ProfilerTraceSession& session = profiler.getTraceSession();
@@ -906,7 +906,7 @@ namespace sw
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
         session._longRecordingEndNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( seconds ) : 0;
-        session._longRecordingPath        = FileUtil::toDiskPath( path );
+        session._longRecordingPath        = path;
         session._longRecordingProcessName = string( processName );
         session._bLongRecordingActive.store( true, std::memory_order_release );
         StringBuilder<constant::buffer::kMax128> reply;
@@ -1024,12 +1024,12 @@ namespace sw
         capture._slowFramesUntilSave = kSlowFrameFramesAfter;
     }
 
-    bool ProfilerTraceExport::saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, string_view path, string_view processName,
-                                                string& outSavedPath, string& outReply )
+    bool ProfilerTraceExport::saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, const AbsolutePath& path, string_view processName,
+                                                AbsolutePath& outSavedPath, string& outReply )
     {
         const ProfilerTraceMeta meta = makeCurrentMeta( processName );
-        outSavedPath                 = path.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ).str() : string( path );
-        return saveRecentFramesWithMeta( profiler, frameCount, FileUtil::toDiskPath( outSavedPath ), meta, outReply );
+        outSavedPath                 = path.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : path;
+        return saveRecentFramesWithMeta( profiler, frameCount, outSavedPath, meta, outReply );
     }
 
     void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler, const AbsolutePath& path )
@@ -1046,12 +1046,12 @@ namespace sw
         // 마지막 프레임부터 종료까지를 닫는다 — 구간의 끝은 마지막 프레임 시작이라, 닫지 않으면 마지막 프레임과 종료 사건이 빠지고
         // 접속 직후 멈춘 프로세스(멀티 프로세스 재생의 클라이언트)는 프레임 표시가 둘이 안 돼 저장하지 못했다
         profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
-        string savedPath;
-        string reply;
-        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path.str(), processName, savedPath, reply ) )
-            SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath, reply );
+        AbsolutePath savedPath;
+        string       reply;
+        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path, processName, savedPath, reply ) )
+            SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath.str(), reply );
         else
-            SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath, reply );
+            SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath.str(), reply );
     }
 
     bool ProfilerTraceExport::mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport )

@@ -52,7 +52,7 @@ namespace sw
                 string             original;
                 if ( FileUtil::isRegularFile( headerPath ) == false || FileUtil::readTextFile( headerPath, original ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "the variant header is not in the build tree (does CMake generate it for this module?)", headerPath.str() } );
-                context.restoreFileAtEnd( headerPath.str(), std::move( original ) );
+                context.restoreFileAtEnd( headerPath, std::move( original ) );
                 if ( FileUtil::writeTextFile( headerPath, variant->_text ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the variant header", headerPath.str() } );
                 return {};

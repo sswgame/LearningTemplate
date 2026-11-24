@@ -170,7 +170,7 @@ SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
 
     const AbsolutePath   heroMesh = root.join( "models/hero.mesh" );
     vector<AbsolutePath> listSide;
-    ModelImporter::collectSideFiles( heroMesh.str(), listSide );
+    ModelImporter::collectSideFiles( heroMesh, listSide );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listSide.size() );
     SW_EXPECT_TRUE( listSide[0].str().find( "hero/hero.animset.xml" ) != string::npos );
     SW_EXPECT_TRUE( listSide[1].str().find( "hero/parts/cape.mesh" ) != string::npos );
@@ -179,7 +179,7 @@ SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( root.join( "models/hero/sword.mesh" ), "again" ) );
     SW_EXPECT_EQUAL( before, ModelImporter::computeImportedHash( heroMesh ) );
 
-    SW_EXPECT_TRUE( ModelImporter::clearSideFiles( heroMesh.str() ) );
+    SW_EXPECT_TRUE( ModelImporter::clearSideFiles( heroMesh ) );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/hero.animset.xml" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( root.join( "models/hero/parts/cape.mesh" ) ) );
     SW_EXPECT_TRUE( FileUtil::exists( root.join( "models/hero/sword.mesh" ) ) );

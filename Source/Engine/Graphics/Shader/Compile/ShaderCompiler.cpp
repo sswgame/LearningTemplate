@@ -400,19 +400,13 @@ namespace sw
             /** @brief DXC 라이브러리의 `DxcCreateInstance` 주소를 찾습니다(`ShaderCompiler::findDXCCreateInstance` 가 한 번 부른다). 빌드가 DXC 를 실행 파일 옆에 둔다(배포 구성의 테스트는 TestBin) - 다른 곳을 찾아다니지 않는다. */
             static void* loadDXCCreateInstance()
             {
-                const string                 libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath().str() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
-                const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
-                if ( libraryPath.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "ShaderCompiler.DXCPathNotAbsolute", "DXC path is not absolute: %#", libraryText.c_str() );
-                    return nullptr;
-                }
-                void* const pLibrary = ModuleLibraryUtil::loadLibraryAt( *libraryPath );
+                const AbsolutePath libraryPath = FileUtil::getExecutablePath().getParent().join( ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
+                void* const        pLibrary    = ModuleLibraryUtil::loadLibraryAt( libraryPath );
                 if ( pLibrary == nullptr )
                     return nullptr;
                 void* const pCreateInstance = ModuleLibraryUtil::getDynamicSymbol( pLibrary, "DxcCreateInstance" );
                 if ( pCreateInstance == nullptr )
-                    SW_LOG_WARNING_ID( "ShaderCompiler.LoadedButDxcCreateInstanceNot", "%# loaded but DxcCreateInstance not found", libraryText.c_str() );
+                    SW_LOG_WARNING_ID( "ShaderCompiler.LoadedButDxcCreateInstanceNot", "%# loaded but DxcCreateInstance not found", libraryPath.c_str() );
                 return pCreateInstance;
             }
 
@@ -532,9 +526,7 @@ namespace sw
                 const AbsolutePath spirvPath = FileUtil::reserveUniquePath( FileUtil::getTempDirectory().join( tintStem ), ".spv", false );
                 if ( spirvPath.empty() )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory().str() } );
-                StringBuilder<constant::buffer::kMax512> wgslBuilder;
-                wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath.str() ) );
-                const AbsolutePath wgslPath( FileUtil::toDiskPath( wgslBuilder.view() ) ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
+                const AbsolutePath wgslPath = spirvPath.removeExtension().appendSuffix( ".wgsl" ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
                 if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath.str() } );
                 string                toolOutput;
@@ -934,7 +926,7 @@ namespace sw
 
         // 이 컴파일의 작업 — 주 소스와 include 규칙이 읽은 것(없던 후보 포함)이 입력으로 적힌다. 컴파일러의 include 처리기는 이 스레드에서 불린다.
         CookJob job{ action._jobDesc };
-        if ( job.recordDiskInput( input->_source.str(), sourceHash ) == false )
+        if ( job.recordDiskInput( input->_source, sourceHash ) == false )
         {
             result._errorMessage = "The shader source could not be recorded as a cook input (see the error above).";
             return result;

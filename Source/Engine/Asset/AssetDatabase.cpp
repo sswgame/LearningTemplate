@@ -360,9 +360,7 @@ namespace sw
             return false;
         }
         // 원본 · 정체성이 없는 파일은 바이트만 바꾼다(곁의 .meta 는 그대로). 지면 옛 바이트로 되돌린다.
-        StringBuilder<constant::buffer::kMax512> backupBuilder;
-        backupBuilder.appendFormat( "%#.replacing", targetAbs.str() );
-        const AbsolutePath backupAbs( FileUtil::toDiskPath( backupBuilder.view() ) );
+        const AbsolutePath backupAbs = targetAbs.appendSuffix( ".replacing" );
         if ( FileUtil::copyFile( targetAbs, backupAbs ) == false )
         {
             SW_LOG_ERROR_ID( "AssetIdentity.ReplaceWriteFailed", "Could not write '%#' - nothing was replaced", targetID );

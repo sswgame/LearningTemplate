@@ -540,7 +540,7 @@ namespace sw
 
     bool ServerApp::collectPreviousCrashes()
     {
-        const AbsolutePath crashFolder = FileUtil::toDiskPath( engine::getSubsystem<CrashHandler>().getReportFolder() );
+        const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() || engine::areEngineServicesBound() == false )
             return true;
         CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();

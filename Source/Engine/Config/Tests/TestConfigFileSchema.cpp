@@ -30,24 +30,24 @@ namespace
         {
             const utf8* _pPathPrefix;
             const utf8* _pCheckedBy;
-            bool ( *_pLoad )( const sw::string& absolutePath );
+            bool ( *_pLoad )( const sw::AbsolutePath& absolutePath );
         };
 
         /** @brief 엄격하게 읽고, 기본값과 같은 값을 다시 적은 키가 없는지도 봅니다(설정 파일에는 기본값과 다른 값만 적는다). */
         template <typename T>
-        [[nodiscard]] static bool loadStrict( const sw::string& absolutePath )
+        [[nodiscard]] static bool loadStrict( const sw::AbsolutePath& absolutePath )
         {
             T config{};
             if ( sw::ConfigManager::readConfigFile( config, absolutePath ) != sw::ConfigReadResult::Loaded )
                 return false;
             sw::string             text;
             sw::vector<sw::string> listEchoKey;
-            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false || sw::ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || sw::ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
                 return false;
             for ( const sw::string& key : listEchoKey )
             {
                 sw::fixed_string<sw::constant::buffer::kMax512> message;
-                sw::formatstring( message.data(), message.capacity(), "%#: '%#' restates the default - write only values that differ", absolutePath, key );
+                sw::formatstring( message.data(), message.capacity(), "%#: '%#' restates the default - write only values that differ", absolutePath.str(), key );
                 SW_EXPECT_TRUE_MSG( false, message );
             }
             return true;
@@ -91,13 +91,13 @@ namespace
          * @details 언리얼 `BaseEngine.ini` 와 같은 층이라 "기본값과 다른 값만" 규칙 대신 "빠짐없이" 규칙이다. 빠진 키는 헤더의 빈 형식(0)이 되어 버린다.
          */
         template <typename T>
-        [[nodiscard]] static bool loadBaseLayer( const sw::string& absolutePath )
+        [[nodiscard]] static bool loadBaseLayer( const sw::AbsolutePath& absolutePath )
         {
             T config{};
             if ( sw::ConfigManager::readConfigFile( config, absolutePath ) != sw::ConfigReadResult::Loaded )
                 return false;
             sw::string text;
-            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false )
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )
                 return false;
             sw::JSONDocument fileDocument;
             sw::JSONDocument shapeDocument;
@@ -109,21 +109,21 @@ namespace
             for ( const sw::string& key : listMissingKey )
             {
                 sw::fixed_string<sw::constant::buffer::kMax512> message;
-                sw::formatstring( message.data(), message.capacity(), "%#: '%#' is missing - this file is the base layer, the header has only the shape", absolutePath, key );
+                sw::formatstring( message.data(), message.capacity(), "%#: '%#' is missing - this file is the base layer, the header has only the shape", absolutePath.str(), key );
                 SW_EXPECT_TRUE_MSG( false, message );
             }
             return listMissingKey.empty();
         }
 
         /** @brief 예산 파일을 실제 적용 함수로 읽습니다. 프로파일러는 켜지 않는다 — 켜면 전역 활성 프로파일러가 바뀐다(예산 칸만 쓴다). */
-        [[nodiscard]] static bool loadMemoryBudget( const sw::string& absolutePath )
+        [[nodiscard]] static bool loadMemoryBudget( const sw::AbsolutePath& absolutePath )
         {
             sw::string text;
-            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false )
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )
                 return false;
             sw::MemoryProfiler profiler;
             const bool         bApplied = sw::MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value();
-            SW_EXPECT_TRUE_MSG( bApplied, absolutePath );
+            SW_EXPECT_TRUE_MSG( bApplied, absolutePath.c_str() );
             return bApplied;
         }
 
@@ -131,20 +131,20 @@ namespace
          * @brief 렌더 품질 단계 표를 실제 로드 길로 읽습니다 — 단계마다 커밋된 엔진 설정(같은 폴더의 `EngineConfig.json`) 위에 덮어(`ConfigSource::withRenderQuality`) 엄격하게 읽는다.
          * @details 단계는 `_render` 안쪽만 적으므로 단계 하나만으로는 형식이 서지 않는다 — 바탕 위에 덮은 글이 읽히는지가 이 파일의 검사다.
          */
-        [[nodiscard]] static bool loadRenderQuality( const sw::string& absolutePath )
+        [[nodiscard]] static bool loadRenderQuality( const sw::AbsolutePath& absolutePath )
         {
             sw::string       text;
             sw::JSONDocument tiers;
-            if ( sw::FileUtil::readTextFile( sw::FileUtil::toDiskPath( absolutePath ), text ) == false || tiers.parse( text ) == false || tiers.getRoot().isObject() == false )
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || tiers.parse( text ) == false || tiers.getRoot().isObject() == false )
                 return false;
-            const sw::string enginePath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( absolutePath ), "EngineConfig.json" );
+            const sw::string enginePath = absolutePath.getParent().join( "EngineConfig.json" ).str();
             bool             bAllRead   = tiers.getRoot().getMemberNames().empty() == false;
             for ( const sw::string& tier : tiers.getRoot().getMemberNames() )
             {
                 sw::ConfigManager                               manager;
-                const bool                                      bRead = manager.loadHostConfig<sw::EngineConfig>( sw::ConfigSource::disk( enginePath ).withRenderQuality( absolutePath, tier ) ) != nullptr;
+                const bool                                      bRead = manager.loadHostConfig<sw::EngineConfig>( sw::ConfigSource::disk( enginePath ).withRenderQuality( absolutePath.str(), tier ) ) != nullptr;
                 sw::fixed_string<sw::constant::buffer::kMax512> message;
-                sw::formatstring( message.data(), message.capacity(), "%#: tier '%#' does not load over the engine config", absolutePath, tier );
+                sw::formatstring( message.data(), message.capacity(), "%#: tier '%#' does not load over the engine config", absolutePath.str(), tier );
                 SW_EXPECT_TRUE_MSG( bRead, message );
                 bAllRead = bAllRead && bRead;
             }
@@ -220,7 +220,7 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
 
         sw::fixed_string<sw::constant::buffer::kMax512> loadMessage;
         sw::formatstring( loadMessage.data(), loadMessage.capacity(), "%# could not be read strictly (the reason is in the log above)", relative );
-        SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath.str() ), loadMessage );
+        SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), loadMessage );
         ++loadedCount;
     }
     // 엔진 설정 + 메모리 예산 + 팩 설정 + 게임 프리셋 — 경로를 못 찾아 0 이면 이 테스트는 아무것도 보지 않은 것이다.

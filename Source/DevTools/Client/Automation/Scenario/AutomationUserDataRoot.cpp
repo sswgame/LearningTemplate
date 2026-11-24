@@ -205,7 +205,7 @@ namespace sw
         {
             ++stamp._entryCount;
             int64 ticks = 0;
-            if ( FileUtil::getFileWriteTime( FileUtil::toDiskPath( entry._path ), ticks ) && ticks > stamp._latestWriteTicks )
+            if ( FileUtil::getFileWriteTime( entry.makePath(), ticks ) && ticks > stamp._latestWriteTicks )
                 stamp._latestWriteTicks = ticks;
             return true;
         } ); // 훑다 멈추면 그때까지의 수 — 다음에 찍을 때 달라져 바뀐 것으로 보인다(거짓 통과가 아니다)

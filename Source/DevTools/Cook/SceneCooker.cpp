@@ -177,7 +177,7 @@ namespace sw
 
             /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */
             static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const AbsolutePath& scenePath, string_view relativeScene,
-                                       string_view activePackRoot, const string& outputPath )
+                                       string_view activePackRoot, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
                 // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
@@ -228,13 +228,12 @@ namespace sw
                     return CookStep::Failed;
                 // 쿠킹본은 펼친 결과만 싣는다 — 런타임의 짓는 길이 하나다.
                 doc.stripAuthoringInstanceData();
-                const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
-                if ( outputFile.has_value() == false || doc.saveBinary( *outputFile ) == false )
+                if ( doc.saveBinary( outputPath ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedWrite", "Scene cook failed to write '%#'.", outputPath );
+                    SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedWrite", "Scene cook failed to write '%#'.", outputPath.str() );
                     return CookStep::Failed;
                 }
-                SW_LOG_INFO_ID( "SceneCooker.CookedEntitiesBinaryState", "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath.str(), outputPath, static_cast<uint32>( doc.computeTotalEntityCount() ),
+                SW_LOG_INFO_ID( "SceneCooker.CookedEntitiesBinaryState", "Cooked '%#' -> '%#' (%# entities, %# as binary state)", scenePath.str(), outputPath.str(), static_cast<uint32>( doc.computeTotalEntityCount() ),
                                 cookedCount );
                 return CookStep::Written;
             }
@@ -417,7 +416,6 @@ namespace sw
         VectorUtil::sort( listSceneFile );
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
-        const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir.str() );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );
@@ -436,11 +434,8 @@ namespace sw
                 continue;
 
             // 출력은 `<cookedDir>/<Resource 기준 상대 경로>` 에 같은 이름으로, 확장자만 .bin 이다.
-            const string outputID   = AssetCookPath::toCookedPath( relativeScene );
-            string       outputPath = normalizedOut;
-            if ( outputPath.empty() == false && outputPath.back() != '/' )
-                outputPath += '/';
-            outputPath += outputID;
+            const string       outputID   = AssetCookPath::toCookedPath( relativeScene );
+            const AbsolutePath outputPath = cookedDir.join( outputID );
 
             const Stopwatch  sceneStopwatch;
             const CookResult result = store.cookFile( desc, outputID, outputPath, [&]()
@@ -461,8 +456,8 @@ namespace sw
             if ( bSceneWritten == false )
                 continue;
             const string       preloadID     = ScenePreloadList::makeListPath( outputID );
-            const AbsolutePath preloadPath   = FileUtil::toDiskPath( ScenePreloadList::makeListPath( outputPath ) );
-            const CookResult   preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath.str(), [&]()
+            const AbsolutePath preloadPath   = cookedDir.join( preloadID );
+            const CookResult   preloadResult = store.cookFile( preloadDesc, preloadID, preloadPath, [&]()
               { return SceneCookerInternal::cookPreloadList( SceneIterationKey{}, services, scenePath, preloadPath ); } );
             outFailedCount += preloadResult == CookResult::Failed ? 1u : 0u;
         }

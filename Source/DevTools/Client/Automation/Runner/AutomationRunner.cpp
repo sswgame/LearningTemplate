@@ -369,14 +369,14 @@ namespace sw
         return _storedText.find( name );
     }
 
-    void AutomationRunner::restoreFileAtEnd( string absolutePath, string originalText )
+    void AutomationRunner::restoreFileAtEnd( const AbsolutePath& absolutePath, string originalText )
     {
-        for ( const std::pair<string, string>& entry : _listFileRestore )
+        for ( const std::pair<AbsolutePath, string>& entry : _listFileRestore )
         {
-            if ( FileUtil::isSameDiskPath( entry.first, absolutePath ) )
+            if ( FileUtil::isSameDiskPath( entry.first.str(), absolutePath.str() ) )
                 return; // 처음 맡긴 글이 원본이다 — 두 번째 덮어쓰기 전의 글은 이미 바뀐 글이다
         }
-        _listFileRestore.emplace_back( std::move( absolutePath ), std::move( originalText ) );
+        _listFileRestore.emplace_back( absolutePath, std::move( originalText ) );
     }
 
     bool AutomationRunner::restoreFilesNow()
@@ -384,7 +384,7 @@ namespace sw
         bool bAllWritten = true;
         for ( auto it = _listFileRestore.rbegin(); it != _listFileRestore.rend(); ++it )
         {
-            if ( FileUtil::writeTextFile( FileUtil::toDiskPath( it->first ), it->second ) == false )
+            if ( FileUtil::writeTextFile( it->first, it->second ) == false )
             {
                 SW_LOG_ERROR_ID( "Automation.RestoreFileFailed", "[Scenario] could not restore %# - restore it by hand (git checkout or rebuild)", it->first.c_str() );
                 bAllWritten = false;

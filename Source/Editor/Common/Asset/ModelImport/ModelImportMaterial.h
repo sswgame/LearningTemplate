@@ -73,7 +73,7 @@ namespace sw::editor
          *          PBR 구간의 텍스처는 `writePBRMaterial` 과 같은 규칙이다. 내장 이미지는 공유 원본으로 꺼낸다(`writeEmbeddedImage`).
          *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 DDS 를 가리킨다. 원본은 텍스처 임포트의 스탬프가 지킨다.
          */
-        [[nodiscard]] static bool writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, const AbsolutePath& sideFolder );
+        [[nodiscard]] static bool writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder );
 
         /**
          * @brief 일반 glTF 의 첫 금속도 · 거칠기 머티리얼(기본색 텍스처가 있는 것)을 읽어 @p inoutResult 의 `_pbrMaterial` 에 담습니다. 없으면 아무것도 하지 않습니다.
@@ -87,11 +87,11 @@ namespace sw::editor
          * @brief 읽은 PBR 머티리얼의 내장 텍스처 원본(`writeEmbeddedImage`)과 머티리얼(`writeSharedMaterial`)을 씁니다.
          * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)을 부모로 다른 칸만 적는다.
          */
-        [[nodiscard]] static bool writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, const AbsolutePath& sideFolder );
+        [[nodiscard]] static bool writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder );
         /** @brief glTF 머티리얼 하나를 PBR 머티리얼 값으로 읽습니다(@p rawName 이 머티리얼 · 텍스처 파일 이름의 바탕이다). 바깥 이미지 파일을 못 읽으면 false 입니다. */
         [[nodiscard]] static bool readPBRMaterialValues( const cgltf_material& material, const string& rawName, const AbsolutePath& sourcePath, ModelImportPBRMaterial& outPBR );
         /** @brief PBR 머티리얼 하나의 텍스처 원본과 머티리얼(슬롯 `<옆 폴더>/materials/<@p fileStem>.material` + 공유 값)을 씁니다(`writePBRMaterial` 의 몸). */
-        [[nodiscard]] static bool writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, string_view sourcePath, const AbsolutePath& sideFolder );
+        [[nodiscard]] static bool writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder );
         /** @brief glTF 이미지 하나의 원본 바이트를 읽습니다(내장은 그대로, 바깥 파일은 원본 옆에서). 바깥 파일을 못 읽으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool readImageBytes( const cgltf_image& image, const AbsolutePath& sourcePath, ModelImportTexture& outTexture );
 
@@ -114,7 +114,7 @@ namespace sw::editor
         /** @brief 공유 머티리얼을 가리키는 슬롯 파일 한 줄(`<MaterialDef formatVersion name parent/>`)입니다. */
         [[nodiscard]] static string makeSlotMaterialText( string_view fileStem, string_view sharedAssetID );
         /** @brief 공유 머티리얼(`<x>/models/_shared/materials/<키>.material`)과 슬롯 파일을 씁니다. 원본이 `models_raw/` 아래가 아니거나 쓰지 못하면 false 입니다. */
-        [[nodiscard]] static bool writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, string_view sourcePath, const AbsolutePath& sideFolder );
+        [[nodiscard]] static bool writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder );
         /** @brief 슬롯 파일이 가리키는 공유 머티리얼의 리소스 경로입니다(임포트가 쓰는 프리팹은 공유 파일을 바로 가리킨다). 읽지 못하면 빈 글입니다. */
         [[nodiscard]] static string findSharedMaterial( const AbsolutePath& sideFolder, string_view fileStem );
         /**
@@ -127,6 +127,6 @@ namespace sw::editor
         /**
          * @brief 원본 경로에서 원본 텍스처 폴더를 구합니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 문자열입니다.
          */
-        static AbsolutePath makeRawTextureFolder( string_view sourcePath );
+        static AbsolutePath makeRawTextureFolder( const AbsolutePath& sourcePath );
     };
 } // namespace sw::editor

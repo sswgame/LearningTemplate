@@ -120,7 +120,7 @@ namespace sw::editor
         return JSONSerializer::saveToFile( absPath, &file, *EditorViewportOverlayFile::StaticType() );
     }
 
-    ConfigReadResult EditorViewportOverlayLayout::loadFromFile( string_view absPath )
+    ConfigReadResult EditorViewportOverlayLayout::loadFromFile( const AbsolutePath& absPath )
     {
         EditorViewportOverlayFile file;
         const ConfigReadResult    result = ConfigManager::readConfigFile( file, absPath );

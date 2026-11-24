@@ -68,7 +68,7 @@ SW_TEST_CASE( PackEngineSettingsTest, EveryGamePackHasReadableEngineSettings )
     for ( const sw::AbsolutePath& presetPath : listPreset )
     {
         sw::GameConfig preset;
-        SW_REQUIRE_TRUE_MSG( sw::ConfigManager::readConfigFile( preset, presetPath.str() ) == sw::ConfigReadResult::Loaded, presetPath.c_str() );
+        SW_REQUIRE_TRUE_MSG( sw::ConfigManager::readConfigFile( preset, presetPath ) == sw::ConfigReadResult::Loaded, presetPath.c_str() );
         sw::PackEngineSettings settings;
         SW_EXPECT_TRUE_MSG( settings.loadFromPack( preset._packRoot ), presetPath.c_str() );
         SW_EXPECT_TRUE_MSG( settings._windowTitle.empty() == false, presetPath.c_str() );

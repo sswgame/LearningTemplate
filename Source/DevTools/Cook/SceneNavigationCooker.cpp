@@ -114,10 +114,10 @@ namespace sw
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
-            const string     outputID   = NavMeshAsset::makeCookedPath( relativePath );
-            const string     cookedPath = FileUtil::joinPath( cookedDir.str(), outputID );
-            const CookResult result     = store.cookFile( desc, outputID, cookedPath, [&]()
-                {
+            const string       outputID   = NavMeshAsset::makeCookedPath( relativePath );
+            const AbsolutePath cookedPath = cookedDir.join( outputID );
+            const CookResult   result     = store.cookFile( desc, outputID, cookedPath, [&]()
+                  {
                 // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
                 string text;
                 if ( AssetIO::readTextFile( filePath, text ) == false || text.find( Internal::kSurfaceMarker.data() ) == string::npos )
@@ -127,8 +127,7 @@ namespace sw
                     return CookStep::Failed;
                 if ( asset.getEntries().empty() )
                     return CookStep::Skipped;
-                const optional<AbsolutePath> cookedFile = FileUtil::requireAbsolutePath( cookedPath );
-                if ( cookedFile.has_value() == false || asset.saveToFile( *cookedFile ) == false )
+                if ( asset.saveToFile( cookedPath ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneNavigationCooker.NavmeshCookCouldNot4", "Navmesh cook could not write '%#'", cookedPath.c_str() );
                     return CookStep::Failed;

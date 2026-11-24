@@ -183,20 +183,20 @@ namespace sw
     {
         if ( FileUtil::readTextFile( filePath, outText ) == false )
         {
-            CookJob::allowMissingDiskRead( filePath.str() );
+            CookJob::allowMissingDiskRead( filePath );
             return false;
         }
-        return CookJob::allowDiskRead( filePath.str(), reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
+        return CookJob::allowDiskRead( filePath, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
     bool AssetIO::readBinaryFile( const AbsolutePath& filePath, vector<uint8>& outBytes )
     {
         if ( FileUtil::readFile( filePath, outBytes ) == false )
         {
-            CookJob::allowMissingDiskRead( filePath.str() );
+            CookJob::allowMissingDiskRead( filePath );
             return false;
         }
-        return CookJob::allowDiskRead( filePath.str(), outBytes.data(), outBytes.size() );
+        return CookJob::allowDiskRead( filePath, outBytes.data(), outBytes.size() );
     }
 
     bool AssetIO::readBinaryAsset( const AssetID& id, vector<uint8>& outBytes )

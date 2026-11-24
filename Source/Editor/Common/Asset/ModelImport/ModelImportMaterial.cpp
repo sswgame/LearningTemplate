@@ -310,7 +310,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportMaterial::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, const AbsolutePath& sideFolder )
+    bool ModelImportMaterial::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         if ( result._listSection.empty() )
             return true;
@@ -324,7 +324,7 @@ namespace sw::editor
                 if ( writePBRMaterialFile( assetPaths, result._listPBRMaterial[section._materialIndex], section._fileStem, sourcePath, sideFolder ) == false )
                     return false;
             }
-            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath, result._listSection.size(), uniqueWrittenStem.size() );
+            SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath.str(), result._listSection.size(), uniqueWrittenStem.size() );
             return true;
         }
         const AbsolutePath rawTextureFolder = makeRawTextureFolder( sourcePath );
@@ -342,13 +342,13 @@ namespace sw::editor
         const unique_ptr<EngineDefaultAssets> pDefaultAssets = EngineDefaultAssets::load();
         if ( pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFEngineDefaultAssets", "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFEngineDefaultAssets", "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath.str() );
             return false;
         }
         string toonTemplateText;
         if ( AssetIO::readTextAsset( AssetID{ pDefaultAssets->_toonMaterialTemplate.get() }, toonTemplateText ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.ToonTemplateUnreadable", "glTF '%#': the toon material template could not be read", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.ToonTemplateUnreadable", "glTF '%#': the toon material template could not be read", sourcePath.str() );
             return false;
         }
 
@@ -361,7 +361,7 @@ namespace sw::editor
             const string materialText = ToonMaterialDef::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
             if ( materialText.empty() || writeSharedMaterial( assetPaths, materialText, toonTemplateText, pDefaultAssets->_toonMaterialTemplate.get(), section._fileStem, sourcePath, sideFolder ) == false )
             {
-                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material '%#' of %#", section._fileStem.c_str(), sourcePath );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material '%#' of %#", section._fileStem.c_str(), sourcePath.str() );
                 return false;
             }
         }
@@ -372,9 +372,9 @@ namespace sw::editor
             {
                 joined.appendFormat( "%#%#", joined.size() == 0 ? "" : ", ", key );
             }
-            SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
+            SW_LOG_WARNING_ID( "ModelImporter.VRMMaterialKeysToon", "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath.str(), joined.c_str() );
         }
-        SW_LOG_INFO_ID( "ModelImporter.VRMMaterialSectionsTexture", "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
+        SW_LOG_INFO_ID( "ModelImporter.VRMMaterialSectionsTexture", "VRM '%#': %# material sections, %# texture sources", sourcePath.str(), result._listSection.size(), result._listTexture.size() );
         return true;
     }
 
@@ -474,7 +474,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportMaterial::writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, const AbsolutePath& sideFolder )
+    bool ModelImportMaterial::writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         const ModelImportPBRMaterial& pbr = result._pbrMaterial;
         if ( pbr._bPresent == SW_FALSE )
@@ -482,12 +482,12 @@ namespace sw::editor
         return writePBRMaterialFile( assetPaths, pbr, pbr._name, sourcePath, sideFolder );
     }
 
-    bool ModelImportMaterial::writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, string_view sourcePath, const AbsolutePath& sideFolder )
+    bool ModelImportMaterial::writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         const AbsolutePath rawTextureFolder = makeRawTextureFolder( sourcePath );
         if ( rawTextureFolder.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFNotUnderNo", "glTF '%#' is not under %#/ - there is no texture source folder for its material", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
         // 텍스처 원본을 꺼내 두고(바이트가 같으면 건드리지 않는다) 텍스처 임포트가 만들 DDS 경로를 머티리얼에 적는다.
@@ -500,7 +500,7 @@ namespace sw::editor
             rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
             if ( texture._sourcePath.find( rawMarker.view() ) != string::npos )
             {
-                outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( texture._sourcePath ) );
+                outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( FileUtil::toDiskPath( texture._sourcePath ) ) );
                 return true;
             }
             return writeEmbeddedImage( assetPaths, texture, rawTextureFolder, outAssetPath );
@@ -515,7 +515,7 @@ namespace sw::editor
         string                                templateText;
         if ( pDefaultAssets == nullptr || AssetIO::readTextAsset( AssetID{ pDefaultAssets->_pbrMaterialTemplate.get() }, templateText ) == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate", "glTF '%#': the PBR material template could not be read", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate", "glTF '%#': the PBR material template could not be read", sourcePath.str() );
             return false;
         }
         XMLDocument   document;
@@ -524,7 +524,7 @@ namespace sw::editor
         const XMLNode properties = root.isValid() ? root.findChild( "_properties" ) : XMLNode{};
         if ( properties.isValid() == false )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate2", "glTF '%#': the PBR material template is not a material", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate2", "glTF '%#': the PBR material template is not a material", sourcePath.str() );
             return false;
         }
         root.setAttribute( "name", fileStem );
@@ -559,7 +559,7 @@ namespace sw::editor
         setAttribute( "_ormMap", "assetPath", ormPath );
         if ( bMissingProperty )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath.str() );
             return false;
         }
         StringBuilder<constant::buffer::kMax256> fileNameBuilder;
@@ -570,7 +570,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "ModelImporter.GlTFPBRMaterialAlbedo", "glTF '%#': PBR material %# (albedo%#%#)", sourcePath, materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
+        SW_LOG_INFO_ID( "ModelImporter.GlTFPBRMaterialAlbedo", "glTF '%#': PBR material %# (albedo%#%#)", sourcePath.str(), materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
         return true;
     }
 
@@ -591,12 +591,12 @@ namespace sw::editor
         }
         StringBuilder<constant::buffer::kMax64> rawMarker;
         rawMarker.appendFormat( "/%#/", ModelImportUtil::kRawTextureFolder );
-        const string       domain  = logicalPath.str().substr( 0, logicalPath.str().find( rawMarker.view() ) );
+        const AbsolutePath domain  = FileUtil::toDiskPath( string_view( logicalPath.str() ).substr( 0, logicalPath.str().find( rawMarker.view() ) ) );
         const string       key     = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
         const AbsolutePath rawPath = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
         if ( ImportedAssetStore::writeSourceIfAbsent( assetPaths, rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
             return false;
-        outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath.str() ) );
+        outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
         return true;
     }
 
@@ -634,15 +634,15 @@ namespace sw::editor
         return document.saveToString();
     }
 
-    bool ModelImportMaterial::writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, string_view sourcePath, const AbsolutePath& sideFolder )
+    bool ModelImportMaterial::writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder )
     {
         SharedMaterialText shared;
         if ( makeSharedMaterialText( fullText, templateText, templatePath, shared ) == false )
             return false;
-        const string domain = ImportedAssetStore::findDomainFolder( sourcePath );
+        const AbsolutePath domain = ImportedAssetStore::findDomainFolder( sourcePath );
         if ( domain.empty() )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath.str(), ModelImportUtil::kRawModelFolder.data() );
             return false;
         }
         const AbsolutePath sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
@@ -667,18 +667,15 @@ namespace sw::editor
         return string( document.getRoot( "MaterialDef" ).getAttributeText( "_base" ) );
     }
 
-    AbsolutePath ModelImportMaterial::makeRawTextureFolder( string_view sourcePath )
+    AbsolutePath ModelImportMaterial::makeRawTextureFolder( const AbsolutePath& sourcePath )
     {
-        const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
+        const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> marker;
         marker.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
         const size_t at = normalized.find( marker.view() );
         if ( at == string::npos )
             return {};
-        const string                             domain   = normalized.substr( 0, at );
-        const string                             relative = FileUtil::removeExtension( normalized.substr( at + marker.size() ) );
-        StringBuilder<constant::buffer::kMax256> folderBuilder;
-        folderBuilder.appendFormat( "%#/%#/%#", domain, ModelImportUtil::kRawTextureFolder, relative );
-        return FileUtil::toDiskPath( folderBuilder.view() );
+        const AbsolutePath domain = FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
+        return domain.join( ModelImportUtil::kRawTextureFolder ).join( FileUtil::removeExtension( string_view( normalized ).substr( at + marker.size() ) ) );
     }
 } // namespace sw::editor

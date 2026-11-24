@@ -331,10 +331,12 @@ namespace sw
                 unordered_map<string, uint32> mapChainIndexByOutPath;
                 vector<vector<uint32>>        listChain;
                 unordered_set<string>         uniqueBinFolder;
+                vector<AbsolutePath>          listBinFolder;
                 for ( uint32 taskIndex = 0; taskIndex < static_cast<uint32>( listTask.size() ); ++taskIndex )
                 {
                     const FormatTask& task = listTask[taskIndex];
-                    uniqueBinFolder.insert( task._outDir.str() );
+                    if ( uniqueBinFolder.insert( task._outDir.str() ).second )
+                        listBinFolder.push_back( task._outDir );
                     const string chainKey = StringUtil::toLower( task._outPath.c_str() );
                     const auto   chainIt  = mapChainIndexByOutPath.find( chainKey );
                     if ( chainIt == mapChainIndexByOutPath.end() )
@@ -347,10 +349,10 @@ namespace sw
                         listChain[chainIt->second].push_back( taskIndex );
                     }
                 }
-                for ( const string& outDir : uniqueBinFolder )
+                for ( const AbsolutePath& outDir : listBinFolder )
                 {
                     // 못 만들면 ensure 가 폴더와 이유를 남기고, 그 폴더의 작업은 쓰기 실패로 결과(`outListResult`)에 남는다.
-                    (void)FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( outDir ) );
+                    (void)FileUtil::ensureDirectoryExists( outDir );
                 }
 
                 CookJob job{};
@@ -408,15 +410,16 @@ namespace sw
              */
             static void writeManifests( CookState& ioState )
             {
-                for ( const auto& [outputFolder, manifest] : ioState._mapManifest )
+                for ( const auto& [folderText, manifest] : ioState._mapManifest )
                 {
-                    if ( ShaderReflectionLibrary::save( manifest, FileUtil::toDiskPath( outputFolder ) ) == false )
+                    const AbsolutePath manifestFolder = FileUtil::toDiskPath( folderText ); // 맵 열쇠 글이다(`_outDir`)
+                    if ( ShaderReflectionLibrary::save( manifest, manifestFolder ) == false )
                     {
-                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderReflectionManifestCould", "Shader reflection manifest could not be written: %#", outputFolder );
+                        SW_LOG_ERROR_ID( "ShaderCooker.ShaderReflectionManifestCould", "Shader reflection manifest could not be written: %#", folderText );
                         ++ioState._summary._failedCount;
                         continue;
                     }
-                    if ( removeUnlistedFiles( FileUtil::toDiskPath( outputFolder ), manifest, ioState._summary._removedCount ) == false )
+                    if ( removeUnlistedFiles( manifestFolder, manifest, ioState._summary._removedCount ) == false )
                         ++ioState._summary._failedCount;
                 }
                 ShaderReflectionLibrary::clearCache();

@@ -995,8 +995,8 @@ namespace sw::test
         }
         StringBuilder<constant::buffer::kMax64> runName;
         runName.appendFormat( "%#-%#", Process::getCurrentProcessID(), MonotonicClock::nowNanoseconds() );
-        const AbsolutePath                 scratchRoot = FileUtil::toDiskPath( FileUtil::joinPath( baseRoot, runName.view() ) );
-        TestRunnerInternal::ActiveRunState runState; // 리스너보다 먼저 서고 늦게 사라진다
+        const AbsolutePath                 scratchRoot = FileUtil::toDiskPath( baseRoot ).join( runName.view() ); // 명령줄 글일 수 있어 위에서 절대로 풀었다
+        TestRunnerInternal::ActiveRunState runState;                                                              // 리스너보다 먼저 서고 늦게 사라진다
         Subscription                       logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
         thread                             watchThread;
         if ( Process::isDebuggerPresent() == false )

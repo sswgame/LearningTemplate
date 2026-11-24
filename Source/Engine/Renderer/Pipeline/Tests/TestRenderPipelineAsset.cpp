@@ -47,7 +47,7 @@ namespace
         {
             const AbsolutePath path = test::makeScratchPath( "pipeline.xml" );
             SW_EXPECT_TRUE( FileUtil::writeTextFile( path, xml ) );
-            return asset.loadFromDiskFile( path.str() );
+            return asset.loadFromDiskFile( path );
         }
 
         /** @brief 메시 패스의 렌더 상태 표기 @p state 로 읽습니다. */
@@ -357,7 +357,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
         RenderPipelineAsset merged;
         const AbsolutePath  flatPath = test::makeScratchPath( "flat.xml" );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( flatPath, flatText ) );
-        SW_REQUIRE_TRUE( cooked.loadFromDiskFile( flatPath.str() ) );
+        SW_REQUIRE_TRUE( cooked.loadFromDiskFile( flatPath ) );
         SW_REQUIRE_TRUE( merged.loadFromXMLFile( AssetID{ pID } ) );
         SW_EXPECT_EQUAL( XMLSerializer::serialize( &merged.getDesc(), typeInfo ), XMLSerializer::serialize( &cooked.getDesc(), typeInfo ) );
     }
@@ -381,7 +381,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     SW_EXPECT_TRUE( childText.find( "Canvas" ) == string::npos ); // 같은 패스는 적지 않는다
 
     RenderPipelineDesc rereadChild;
-    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( childPath.str(), rereadChild ) );
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( childPath, rereadChild ) );
     SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadChild, typeInfo ) );
 
     const AbsolutePath           fullPath = test::makeScratchPath( "full.xml" );
@@ -389,7 +389,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     SW_REQUIRE_TRUE( fullFile.has_value() );
     SW_REQUIRE_TRUE( ReflectedXMLFile::saveDesc( *fullFile, source ) );
     RenderPipelineDesc rereadFull;
-    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( fullPath.str(), rereadFull ) );
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( fullPath, rereadFull ) );
     SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadFull, typeInfo ) );
 }
 

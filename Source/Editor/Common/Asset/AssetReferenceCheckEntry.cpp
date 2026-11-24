@@ -84,8 +84,8 @@ namespace sw::editor
                     return -1;
                 }
                 AssetSourceLocator::collectStoredSources( contentRoot, listFile ); // 저장소 밖 원본의 산출물도 있는 것이다
-                AssetIDSet                   assets;
-                vector<pair<string, string>> listReferrer; // (디스크 경로, 리소스 id)
+                AssetIDSet                         assets;
+                vector<pair<AbsolutePath, string>> listReferrer; // (디스크 경로, 리소스 id)
                 for ( const AbsolutePath& filePath : listFile )
                 {
                     string assetID;
@@ -94,14 +94,14 @@ namespace sw::editor
                     assetID = FileUtil::normalizeSeparators( assetID );
                     assets.addFile( assetID );
                     if ( params.isReferrer( assetID ) )
-                        listReferrer.emplace_back( filePath.str(), assetID );
+                        listReferrer.emplace_back( filePath, assetID );
                 }
 
                 uint32 scannedCount{ 0 };
                 for ( const auto& [filePath, assetID] : listReferrer )
                 {
                     string text;
-                    if ( FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
+                    if ( FileUtil::readTextFile( filePath, text ) == false )
                         return -1; // 이유는 FileUtil 이 남겼다
                     StringBuilder<constant::buffer::kMax256> labelBuilder;
                     labelBuilder.appendFormat( "Content/%#", assetID );

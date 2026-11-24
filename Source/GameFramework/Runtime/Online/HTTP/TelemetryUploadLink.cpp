@@ -105,7 +105,7 @@ namespace sw
     expected<void> TelemetryUploadLink::linkCrashReports( const string& endpoint )
     {
         const CrashReportService* const pCrashReports = game::findSubsystem<CrashReportService>();
-        const AbsolutePath              reportsFolder = pCrashReports != nullptr ? FileUtil::toDiskPath( pCrashReports->getReportsFolder() ) : AbsolutePath{};
+        const AbsolutePath              reportsFolder = pCrashReports != nullptr ? pCrashReports->getReportsFolder() : AbsolutePath{};
         if ( reportsFolder.empty() )
         {
             // 묶음 폴더는 텔레메트리 기동이 정한다(크래시 처리기가 있는 클라이언트). 없으면 보낼 묶음도 없다.

@@ -40,7 +40,7 @@ namespace
         CookResult cook( const CookStore& store, const CookJobDesc& desc, string_view outputID )
         {
             const AbsolutePath outputPath = makeOutputPath( outputID );
-            return store.cookFile( desc, outputID, outputPath.str(), [&]
+            return store.cookFile( desc, outputID, outputPath, [&]
             {
                 ++_bakeCount;
                 vector<uint8> bytes;
@@ -112,12 +112,12 @@ SW_TEST_CASE( CookStoreTest, RejectsJobsWithoutInputs )
     CookFixture        fixture;
     const AbsolutePath outputPath = fixture.makeOutputPath( "none.bin" );
     SW_EXPECT_LOG( "Cook.NoInputRecorded" );
-    const CookResult result = fixture._store.cookFile( kDesc, "none.bin", outputPath.str(), [&]
+    const CookResult result = fixture._store.cookFile( kDesc, "none.bin", outputPath, [&]
     { return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, "x" ) ? CookStep::Written : CookStep::Failed; } );
     SW_EXPECT_EQUAL( CookResult::Failed, result );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._store.makeRecordPath( "none.bin" ) ) );
 
-    SW_EXPECT_EQUAL( CookResult::Skipped, fixture._store.cookFile( kDesc, "skip.bin", fixture.makeOutputPath( "skip.bin" ).str(), []
+    SW_EXPECT_EQUAL( CookResult::Skipped, fixture._store.cookFile( kDesc, "skip.bin", fixture.makeOutputPath( "skip.bin" ), []
     { return CookStep::Skipped; } ) );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._store.makeRecordPath( "skip.bin" ) ) );
     SW_EXPECT_EQUAL( 1u, fixture._store.getStats()._failedCount );
@@ -139,7 +139,7 @@ SW_TEST_CASE( CookStoreTest, RemovesOnlyUnrequestedRecordedOutputs )
     SW_EXPECT_EQUAL( CookResult::Reused, fixture.cook( nextRun, kDesc, "keep.bin" ) );
     CookJobDesc noLongerCooked   = kDesc; // 설정이 바뀌어 기록이 낡아야 쿠커가 건너뛸 기회를 얻는다 — 입력 · 설정이 그대로면 기록이 이긴다
     noLongerCooked._settingsHash = 1;
-    SW_EXPECT_EQUAL( CookResult::Skipped, nextRun.cookFile( noLongerCooked, "skipped.bin", fixture.makeOutputPath( "skipped.bin" ).str(), []
+    SW_EXPECT_EQUAL( CookResult::Skipped, nextRun.cookFile( noLongerCooked, "skipped.bin", fixture.makeOutputPath( "skipped.bin" ), []
     { return CookStep::Skipped; } ) );
 
     uint32 failedCount = 0;

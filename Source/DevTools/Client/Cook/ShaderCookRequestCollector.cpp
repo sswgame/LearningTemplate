@@ -279,7 +279,7 @@ namespace sw
                     const vector<string> pipelineOrigin{ makeOriginID( xmlPath.str() ) };
                     RenderPipelineAsset  pipelineResource;
                     // 디스크로 훑은 소스 파일이다 — 디스크 입구로 읽는다(리소스 입구는 OS 경로를 받지 않는다).
-                    if ( pipelineResource.loadFromDiskFile( xmlPath.str() ) == false )
+                    if ( pipelineResource.loadFromDiskFile( xmlPath ) == false )
                         continue;
 
                     for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )

@@ -153,9 +153,9 @@ namespace sw::editor
 #if !defined( SW_SHIPPING )
     void ProfilerTimelineViewModel::saveTrace( const FrameProfiler& profiler ) const
     {
-        string     savedPath;
-        string     reply;
-        const bool bSaved = ProfilerTraceExport::saveRecentFrames( profiler, _frameCount, {}, "Editor", savedPath, reply );
+        AbsolutePath savedPath;
+        string       reply;
+        const bool   bSaved = ProfilerTraceExport::saveRecentFrames( profiler, _frameCount, {}, "Editor", savedPath, reply );
         if ( bSaved )
             SW_LOG_INFO_ID( "Profiler.TimelineTrace", "Timeline trace: %#", reply );
         else

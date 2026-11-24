@@ -182,7 +182,7 @@ namespace sw
     {
         if ( _frameHistory == nullptr || _frameHistory->getCount() == 0 )
             return;
-        const AbsolutePath crashFolder = FileUtil::toDiskPath( engine::getSubsystem<CrashHandler>().getReportFolder() );
+        const AbsolutePath crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() )
             return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
         const AbsolutePath reportsFolder = crashFolder.getParent().join( ServerObservabilityInternal::kServerReportsFolderName );

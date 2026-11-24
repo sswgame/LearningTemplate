@@ -99,7 +99,7 @@ namespace sw
          * @details 실행 밖 파일(설정 · 빌드 트리의 판 머리)을 바꾸는 단계(`OverwriteConfig` · `RebuildModule`)의 짝이다. 되돌리기는 단계가 아니라 실행기의 끝 한 곳이라
          *          단계가 지거나 시나리오가 시한에 걸려도 빠지지 않는다(언리얼 자동화의 `AddCleanup` 자리).
          */
-        virtual void restoreFileAtEnd( string absolutePath, string originalText ) = 0;
+        virtual void restoreFileAtEnd( const AbsolutePath& absolutePath, string originalText ) = 0;
         /** @brief 맡긴 파일을 지금 모두 되돌리고 맡김을 비웁니다(`<RestoreOverwrites/>`). 하나라도 쓰지 못하면 false 입니다(오류는 쓰기가 남겼다). */
         [[nodiscard]] virtual bool restoreFilesNow() = 0;
 

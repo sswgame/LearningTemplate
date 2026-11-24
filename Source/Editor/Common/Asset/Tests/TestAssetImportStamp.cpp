@@ -36,7 +36,7 @@ namespace
         string_view  getStampHeader() const override { return "fake-things 1"; }
         string_view  getImportedLabel() const override { return "thing"; }
         bool         isSourceFile( string_view path ) const override { return FileUtil::hasAnyExtension( path, { ".src", ".alt" } ); }
-        AbsolutePath makeImportedPath( string_view sourcePath ) const override { return AssetImportStampUtil::makeImportedPath( sourcePath, "things_raw", "things", ".out" ); }
+        AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const override { return AssetImportStampUtil::makeImportedPath( sourcePath, "things_raw", "things", ".out" ); }
         uint64       computeSourceHash( const AbsolutePath& sourcePath, string_view /*assetPath*/ ) const override
         {
             return HashUtil::combine( AssetImportStampUtil::computeFileHash( sourcePath ), HashUtil::computeStringHash64( _settings.c_str(), _settings.size(), false ) );
@@ -51,7 +51,7 @@ namespace
             }
         }
         uint32      getImportCount() const { return _importCount.load(); }
-        const utf8* findUnsupportedReason( string_view /*sourcePath*/ ) const override { return nullptr; }
+        const utf8* findUnsupportedReason( const AbsolutePath& /*sourcePath*/ ) const override { return nullptr; }
         bool        importSource( const AbsolutePath& /*sourcePath*/, const AbsolutePath& importedPath, string_view /*assetPath*/ ) const override
         {
             _importCount.fetch_add( 1 );

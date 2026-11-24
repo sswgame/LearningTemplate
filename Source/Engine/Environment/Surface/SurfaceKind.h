@@ -144,7 +144,7 @@ namespace sw
         vector<SurfaceKindDef> _listKind;
 
         /** @brief 표를 **디스크 파일**에서 읽습니다(테스트의 임시 파일). 검사는 리소스 읽기와 같습니다. */
-        [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
+        [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 이름의 종류입니다. 없으면 nullptr 입니다. */
         const SurfaceKindDef* findKind( const hashed_string& name ) const;
         /** @brief 물 종류입니다(읽기가 표에 있는지 검사했다). */

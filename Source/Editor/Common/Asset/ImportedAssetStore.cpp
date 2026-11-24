@@ -51,20 +51,18 @@ namespace sw::editor
         return FileUtil::ensureParentDirectoryExists( diskPath ) && FileUtil::writeTextFile( diskPath, text );
     }
 
-    string ImportedAssetStore::findDomainFolder( string_view sourcePath )
+    AbsolutePath ImportedAssetStore::findDomainFolder( const AbsolutePath& sourcePath )
     {
-        const string                            normalized = FileUtil::normalizeSeparators( sourcePath );
+        const string&                           normalized = sourcePath.str();
         StringBuilder<constant::buffer::kMax64> segmentBuilder;
         segmentBuilder.appendFormat( "/%#/", ModelImportUtil::kRawModelFolder );
         const size_t at = normalized.find( segmentBuilder.view() );
-        return at == string::npos ? string{} : normalized.substr( 0, at );
+        return at == string::npos ? AbsolutePath{} : FileUtil::toDiskPath( string_view( normalized ).substr( 0, at ) );
     }
 
-    AbsolutePath ImportedAssetStore::makeStorePath( string_view domainFolder, string_view kind, string_view key, string_view extension )
+    AbsolutePath ImportedAssetStore::makeStorePath( const AbsolutePath& domainFolder, string_view kind, string_view key, string_view extension )
     {
-        StringBuilder<constant::buffer::kMax256> pathBuilder;
-        pathBuilder.appendFormat( "%#/%#/%#/%#/%#%#", domainFolder, kModelFolderName, kStoreFolderName, kind, key, extension );
-        return FileUtil::toDiskPath( pathBuilder.view() );
+        return domainFolder.join( kModelFolderName ).join( kStoreFolderName ).join( kind ).join( key ).appendSuffix( extension );
     }
 
     bool ImportedAssetStore::writeIfAbsent( const AbsolutePath& storePath, const void* pBytes, size_t byteCount )
@@ -120,13 +118,13 @@ namespace sw::editor
         return StringUtil::endsWith( path, ".material" ) || StringUtil::endsWith( path, ".animset.xml" ) || StringUtil::endsWith( path, ".prefab.xml" );
     }
 
-    uint64 ImportedAssetStore::mixReferencedFiles( string_view importedPath, string_view text, uint64 hash )
+    uint64 ImportedAssetStore::mixReferencedFiles( const AbsolutePath& importedPath, string_view text, uint64 hash )
     {
         vector<string> listReference;
         collectReferences( text, listReference );
         VectorUtil::sort( listReference );
-        const string normalized = FileUtil::normalizeSeparators( importedPath );
-        const string marker     = ImportedAssetStoreInternal::makeMarker();
+        const string& normalized = importedPath.str();
+        const string  marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
             // 리소스 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 리소스 루트를 얻는다.
@@ -137,22 +135,21 @@ namespace sw::editor
             uint64       fileHash = 0;
             if ( rootEnd != string::npos )
             {
-                StringBuilder<constant::buffer::kMax512> fileBuilder;
-                fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
-                fileHash = AssetImportStampUtil::computeFileHash( FileUtil::toDiskPath( fileBuilder.view() ) );
+                const AbsolutePath resourceRoot = FileUtil::toDiskPath( string_view( normalized ).substr( 0, rootEnd ) );
+                fileHash                        = AssetImportStampUtil::computeFileHash( resourceRoot.join( reference ) );
             }
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }
         return hash;
     }
 
-    void ImportedAssetStore::collectReferencedFiles( string_view importedPath, string_view text, vector<AbsolutePath>& outListPath )
+    void ImportedAssetStore::collectReferencedFiles( const AbsolutePath& importedPath, string_view text, vector<AbsolutePath>& outListPath )
     {
         vector<string> listReference;
         collectReferences( text, listReference );
         VectorUtil::sort( listReference );
-        const string normalized = FileUtil::normalizeSeparators( importedPath );
-        const string marker     = ImportedAssetStoreInternal::makeMarker();
+        const string& normalized = importedPath.str();
+        const string  marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
             const string                             domain = reference.substr( 0, reference.find( marker ) );
@@ -161,9 +158,8 @@ namespace sw::editor
             const size_t rootEnd = normalized.find( rootBuilder.view() );
             if ( rootEnd != string::npos )
             {
-                StringBuilder<constant::buffer::kMax512> fileBuilder;
-                fileBuilder.appendFormat( "%#%#", string_view( normalized ).substr( 0, rootEnd + 1 ), reference );
-                outListPath.push_back( FileUtil::toDiskPath( fileBuilder.view() ) );
+                const AbsolutePath resourceRoot = FileUtil::toDiskPath( string_view( normalized ).substr( 0, rootEnd ) );
+                outListPath.push_back( resourceRoot.join( reference ) );
             }
         }
     }

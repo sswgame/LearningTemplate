@@ -104,10 +104,10 @@ namespace sw
         return finishLoad( assetID.view(), ReflectedXMLFile::loadDesc( assetID, *this ) );
     }
 
-    bool ZoneProfile::loadFromDiskFile( string_view diskPath )
+    bool ZoneProfile::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         *this = ZoneProfile{};
-        return finishLoad( diskPath, ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
+        return finishLoad( diskPath.str(), ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
     }
 
     bool ZoneProfile::finishLoad( string_view path, bool bRead )

@@ -42,7 +42,7 @@ namespace sw
          * @param mountRoot 엔진이 묻는 폴더 경로(`ProcessRoots::_packs`)입니다.
          * @param mirrorRoot 받은 파일을 둘 쓰기 가능한 폴더(앱 전용 폴더 아래)입니다.
          */
-        FileServeContentSource( IHTTPClient& client, string_view baseURL, string_view mountRoot, string_view mirrorRoot );
+        FileServeContentSource( IHTTPClient& client, string_view baseURL, string_view mountRoot, const AbsolutePath& mirrorRoot );
 
         /** @brief 질의 값 글자를 퍼센트 인코딩합니다(RFC 3986 의 예약하지 않은 글자와 `/` 는 그대로). */
         static string encodeQueryValue( string_view text );
@@ -82,7 +82,7 @@ namespace sw
         /** @brief 상대 경로의 서버 상태입니다(이 실행에서 한 번만 묻는다). */
         RemoteStat findRemoteStat( const string& relative ) const;
         /** @brief 경로 @p path 를 거울에 받아 둔 경로를 @p outMirrorPath 에 담습니다. 없는 파일 · 받지 못함이면 false 입니다. */
-        [[nodiscard]] bool ensureMirrored( string_view path, string& outMirrorPath ) const;
+        [[nodiscard]] bool ensureMirrored( string_view path, AbsolutePath& outMirrorPath ) const;
         /** @brief 파일 하나를 구간으로 받아 @p mirrorPath 에 원자적으로 씁니다. */
         [[nodiscard]] bool downloadFile( const string& relative, uint64 sizeBytes, const AbsolutePath& mirrorPath ) const;
         /** @brief GET 하나를 보내고 성공 본문을 담습니다. 404 는 @p outbMissing 을 켜고 false 입니다. */
@@ -92,11 +92,11 @@ namespace sw
         IHTTPClient&                                             _client;
         string                                                   _baseURL;
         string                                                   _mountRoot;  ///< 구분자를 `/` 로 맞추고 끝 구분자를 뗀 경로
-        string                                                   _mirrorRoot; ///< 구분자를 `/` 로 맞추고 끝 구분자를 뗀 경로
+        AbsolutePath                                             _mirrorRoot; ///< 구분자를 `/` 로 맞추고 끝 구분자를 뗀 경로
         DiskContentFileSource                                    _disk;
         mutable mutex                                            _mutex;
         mutable unordered_map<string, RemoteStat> _mapRemoteStat SW_GUARDED_BY( _mutex ); ///< shortcut: 실행 동안 PC 쪽 변경을 다시 묻지 않는다 — 실행 중 다시 굽기를 받으려면 핫 리로드 신호로 지운다
-        mutable unordered_map<string, string> _mapMirrored       SW_GUARDED_BY( _mutex ); ///< 상대 경로 → 받아 둔 거울 경로
+        mutable unordered_map<string, AbsolutePath> _mapMirrored SW_GUARDED_BY( _mutex ); ///< 상대 경로 → 받아 둔 거울 경로
         mutable DevCounter                                       _receivedChunkCount;
     };
 } // namespace sw

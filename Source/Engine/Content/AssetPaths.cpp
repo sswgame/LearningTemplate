@@ -676,10 +676,10 @@ namespace sw
     {
         if ( diskPath.empty() )
             return {};
-        string absoluteText;
-        if ( FileUtil::makeAbsolutePath( diskPath.str(), absoluteText ) == false ) // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
+        const optional<AbsolutePath> collapsed = AbsolutePath::tryResolve( diskPath.str(), diskPath ); // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
+        if ( collapsed.has_value() == false )
             return {};
-        const AbsolutePath absolutePath = FileUtil::toDiskPath( absoluteText );
+        const AbsolutePath& absolutePath = *collapsed;
         // 작업 도메인이 먼저다 — 그 폴더는 실행 산출물 폴더 아래라 시나리오가 붙인 `saved` 도메인(`Saved/`)도 품는다.
         string underScratch;
         if ( FileUtil::tryMakePathUnderRoot( getScratchFolderPath().str(), absolutePath.str(), underScratch ) )

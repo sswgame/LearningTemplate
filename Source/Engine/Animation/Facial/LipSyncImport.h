@@ -29,6 +29,6 @@ namespace sw
          *                   언리얼 커맨들릿이 출력 경로를 인자로 받는 것과 같다).
          * @return 쓴 트랙 수입니다. 읽거나 쓰지 못한 음성은 @p outFailedCount 에 셉니다.
          */
-        static uint32 importAll( const AbsolutePath& resourceRoot, const string& outputRoot, const LipSyncSettings& settings, uint32& outFailedCount );
+        static uint32 importAll( const AbsolutePath& resourceRoot, const AbsolutePath& outputRoot, const LipSyncSettings& settings, uint32& outFailedCount );
     };
 } // namespace sw

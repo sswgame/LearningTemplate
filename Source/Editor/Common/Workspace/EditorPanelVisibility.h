@@ -31,7 +31,7 @@ namespace sw::editor
         /** @brief @p absPath 에 JSON 으로 씁니다(원자적). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief @p absPath 에서 엄격하게 읽습니다. 없으면 `Missing`(로그 없음), 틀리면 `Invalid`(키와 함께 오류를 남겼다)입니다. */
-        [[nodiscard]] ConfigReadResult loadFromFile( string_view absPath );
+        [[nodiscard]] ConfigReadResult loadFromFile( const AbsolutePath& absPath );
         /** @brief @p panelID 를 적었으면 @p outOpen 에 담고 true 입니다. 적지 않았으면 false 이고 @p outOpen 은 그대로입니다. */
         [[nodiscard]] bool findOpen( string_view panelID, bool& outOpen ) const;
     };

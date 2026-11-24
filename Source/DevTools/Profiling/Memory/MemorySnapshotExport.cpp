@@ -273,13 +273,7 @@ namespace sw
         if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
             return {};
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 순이 시간 순이다.
-        const string* pLatest = &listFolder[0].str();
-        for ( const AbsolutePath& folder : listFolder )
-        {
-            if ( *pLatest < folder.str() )
-                pLatest = &folder.str();
-        }
-        return FileUtil::toDiskPath( *pLatest );
+        return *std::max_element( listFolder.begin(), listFolder.end() );
     }
 
     expected<MemoryExportFile> MemorySnapshotExport::writeTable( const CSVTable& table, const AbsolutePath& path )

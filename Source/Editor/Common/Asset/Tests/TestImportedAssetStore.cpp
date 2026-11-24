@@ -95,7 +95,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, ClipSettingsTextIgnoresOtherRuleProperties
 SW_TEST_CASE( ImportedAssetStoreTest, WriteIfAbsentSharesAndRefusesOtherBytes )
 {
     const AbsolutePath root = test::makeScratchPath( "ImportedAssetStore" );
-    const AbsolutePath path = ImportedAssetStore::makeStorePath( root.str(), "clips", "aaaa", ".animclip" );
+    const AbsolutePath path = ImportedAssetStore::makeStorePath( root, "clips", "aaaa", ".animclip" );
     SW_EXPECT_TRUE( StringUtil::endsWith( path.str(), "/models/_shared/clips/aaaa.animclip" ) );
     const string bytes = "first";
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( path, bytes.data(), bytes.size() ) );
@@ -114,8 +114,9 @@ SW_TEST_CASE( ImportedAssetStoreTest, WriteIfAbsentSharesAndRefusesOtherBytes )
  */
 SW_TEST_CASE( ImportedAssetStoreTest, DomainFolderIsBeforeRawFolder )
 {
-    SW_EXPECT_EQUAL( string( "D:/c/Content/game/playground" ), ImportedAssetStore::findDomainFolder( "D:/c/Content/game/playground/models_raw/a/b.glb" ) );
-    SW_EXPECT_TRUE( ImportedAssetStore::findDomainFolder( "D:/c/Content/game/playground/other/b.glb" ).empty() );
+    const AbsolutePath domain = test::makeScratchPath( "Content" ).join( "game/playground" );
+    SW_EXPECT_TRUE( ImportedAssetStore::findDomainFolder( domain.join( "models_raw/a/b.glb" ) ) == domain );
+    SW_EXPECT_TRUE( ImportedAssetStore::findDomainFolder( domain.join( "other/b.glb" ) ).empty() );
 }
 
 /**
@@ -206,10 +207,10 @@ SW_TEST_CASE( ImportedAssetStoreTest, ReferencesAreFoundAndMixedIntoTheHash )
     const string       content = "bytes";
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( one, content.data(), content.size() ) );
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( two, content.data(), content.size() ) );
-    const uint64 before = ImportedAssetStore::mixReferencedFiles( mesh.str(), text, 1 );
-    SW_EXPECT_EQUAL( before, ImportedAssetStore::mixReferencedFiles( mesh.str(), text, 1 ) );
+    const uint64 before = ImportedAssetStore::mixReferencedFiles( mesh, text, 1 );
+    SW_EXPECT_EQUAL( before, ImportedAssetStore::mixReferencedFiles( mesh, text, 1 ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( two ) );
-    SW_EXPECT_TRUE( before != ImportedAssetStore::mixReferencedFiles( mesh.str(), text, 1 ) );
+    SW_EXPECT_TRUE( before != ImportedAssetStore::mixReferencedFiles( mesh, text, 1 ) );
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
 
@@ -246,9 +247,9 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedTextureSourceUsesRuleInItsFolder )
         "rules": [ { "name": "Normal_Maps", "format": "BC5", "sRGB": false, "filter": { "includePatterns": ["*_normal.*"] } },
                    { "name": "Vrm_Character", "format": "BC3", "filter": { "includePatterns": ["**/textures_raw/avatar/**"] } } ]
     })" ) );
-    const string normalPath = TextureImportConfig::makeSharedSourcePath( "game/x", "Normal_Maps", "aaaa", ".png" ).str();
-    const string colorPath  = TextureImportConfig::makeSharedSourcePath( "game/x", "Vrm_Character", "aaaa", ".png" ).str();
-    SW_EXPECT_EQUAL( string( "game/x/textures_raw/_shared/normal_maps/aaaa.png" ), normalPath );
+    const string normalPath = TextureImportConfig::makeSharedSourcePath( test::makeScratchPath( "game/x" ), "Normal_Maps", "aaaa", ".png" ).str();
+    const string colorPath  = TextureImportConfig::makeSharedSourcePath( test::makeScratchPath( "game/x" ), "Vrm_Character", "aaaa", ".png" ).str();
+    SW_EXPECT_TRUE( StringUtil::endsWith( normalPath, "game/x/textures_raw/_shared/normal_maps/aaaa.png" ) );
     SW_EXPECT_TRUE( normalPath != colorPath );
     SW_EXPECT_EQUAL( string( "normal_maps" ), TextureImportConfig::findSharedRuleName( normalPath ) );
     SW_EXPECT_TRUE( TextureImportConfig::findSharedRuleName( "game/x/textures_raw/avatar/a.png" ).empty() );
@@ -258,10 +259,10 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedTextureSourceUsesRuleInItsFolder )
     SW_EXPECT_TRUE( normal._rule._format == TextureImportFormat::BC5 );
     const TextureImportRuleMatch color = config.findMatchingRule( colorPath );
     SW_EXPECT_TRUE( color._rule._format == TextureImportFormat::BC3 );
-    const TextureImportRuleMatch none = config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", {}, "aaaa", ".png" ).str() );
+    const TextureImportRuleMatch none = config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( test::makeScratchPath( "game/x" ), {}, "aaaa", ".png" ).str() );
     SW_EXPECT_FALSE( none._bMatched ); // 설정 파일이 없을 때 고른 기본 규칙
     SW_EXPECT_FALSE( none.hasError() );
-    SW_EXPECT_TRUE( config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( "game/x", "gone", "aaaa", ".png" ).str() ).hasError() );
+    SW_EXPECT_TRUE( config.findMatchingRule( TextureImportConfig::makeSharedSourcePath( test::makeScratchPath( "game/x" ), "gone", "aaaa", ".png" ).str() ).hasError() );
 }
 
 /**

@@ -461,11 +461,11 @@ namespace sw
         return string( textBuilder.view() );
     }
 
-    AbsolutePath AutomationPerBackend::insertBackendSuffix( string_view path, string_view backend )
+    AbsolutePath AutomationPerBackend::insertBackendSuffix( const AbsolutePath& path, string_view backend )
     {
-        StringBuilder<constant::buffer::kMax1024> pathBuilder;
-        pathBuilder.appendFormat( "%#.%#%#", FileUtil::removeExtension( path ), backend, FileUtil::getExtension( path ) );
-        return FileUtil::toDiskPath( pathBuilder.view() );
+        StringBuilder<constant::buffer::kMax128> suffixBuilder;
+        suffixBuilder.appendFormat( ".%#%#", backend, FileUtil::getExtension( path.str() ) );
+        return path.removeExtension().appendSuffix( suffixBuilder.view() );
     }
 
     vector<string> AutomationPerBackend::findRecordMismatches( const vector<AutomationBackendRecords>& listRecords )
@@ -521,9 +521,9 @@ namespace sw
         using Internal            = AutomationPerBackendInternal;
         const string scenarioStem = getAutomationScenarioStem( options._scenarioPath ); // x.scenario.xml → x(스크립트의 `ScenarioDeclaration.stem` 과 같은 규칙)
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
-        StringBuilder<constant::buffer::kMax256> textBuilder3;
-        textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath().str(), scenarioStem, Process::getCurrentProcessID() );
-        const string defaultFolder = FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder3.view() ), {}, true ).str();
+        StringBuilder<constant::buffer::kMax64> folderName;
+        folderName.appendFormat( "per-backend-%#", Process::getCurrentProcessID() );
+        const AbsolutePath defaultFolder = FileUtil::reserveUniquePath( makeAutomationOutputFolderPath().join( scenarioStem ).join( folderName.view() ), {}, true );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`GenericWindow::createMainWindow`).
         const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
@@ -553,23 +553,15 @@ namespace sw
                 listChild.push_back( std::move( pChild ) );
                 continue;
             }
-            StringBuilder<constant::buffer::kMax1024> defaultPath;
             if ( options._logFilePath.empty() )
-            {
-                defaultPath.appendFormat( "%#/%#.log", defaultFolder, backend );
-                pChild->_logPath = FileUtil::toDiskPath( defaultPath.view() );
-            }
+                pChild->_logPath = defaultFolder.join( backend ).appendSuffix( ".log" );
             else
                 pChild->_logPath = insertBackendSuffix( options._logFilePath, backend );
             // 보고는 늘 받는다 — 부모가 단계 보고의 `records[]` 를 백엔드 사이에 견준다(`compareChildRecords`).
             if ( options._reportPath.empty() )
-            {
-                defaultPath.clear();
-                defaultPath.appendFormat( "%#/%#.json", defaultFolder, backend );
-                pChild->_reportPath = FileUtil::toDiskPath( defaultPath.view() );
-            }
+                pChild->_reportPath = defaultFolder.join( backend ).appendSuffix( ".json" );
             else
-                pChild->_reportPath = insertBackendSuffix( options._reportPath.str(), backend );
+                pChild->_reportPath = insertBackendSuffix( options._reportPath, backend );
             // 앞 실행이 같은 경로에 남긴 단계 보고를 지운다 — 이번에 돌지 않은 단계의 낡은 기록을 견주지 않게. 없으면 지울 것이 없다(결과는 보지 않는다).
             const size_t stageCountOfChild = AutomationScenarioChain::splitList( scenarioList ).size();
             for ( size_t stage = 0; stage < stageCountOfChild; ++stage )

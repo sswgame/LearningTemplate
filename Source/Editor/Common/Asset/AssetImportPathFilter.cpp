@@ -97,10 +97,10 @@ namespace sw::editor
                          configName, ruleName.c_str(), pattern );
     }
 
-    bool AssetImportRuleUtil::readMetaOverrides( string_view sourcePath, vector<AssetImportOverride>& outListOverride )
+    bool AssetImportRuleUtil::readMetaOverrides( const AbsolutePath& sourcePath, vector<AssetImportOverride>& outListOverride )
     {
         outListOverride.clear();
-        const AbsolutePath     metaPath = FileUtil::toDiskPath( AssetMeta::makePath( sourcePath ) );
+        const AbsolutePath     metaPath = AssetMeta::makePath( sourcePath );
         string                 text;
         const OptionalFileRead read = FileUtil::readOptionalTextFile( metaPath, text );
         if ( read == OptionalFileRead::Missing )

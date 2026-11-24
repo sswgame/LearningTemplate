@@ -72,12 +72,10 @@ namespace sw
             {
                 static const bool s_bAdded = []()
                 {
-                    const string binaryDir = FileUtil::toNativeSeparators( ProcessRoots::get()._binary.str() );
-                    const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory().str() );
-                    for ( const string& directory : { binaryDir, moduleDir } )
+                    for ( const AbsolutePath& directory : { ProcessRoots::get()._binary, ModuleLibraryUtil::getModuleDirectory() } )
                     {
-                        if ( FileUtil::isDirectory( FileUtil::toDiskPath( directory ) ) )
-                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( directory.c_str() ).c_str() ); // 실패하면 그 폴더의 의존 DLL 로드가 실패로 알린다
+                        if ( FileUtil::isDirectory( directory ) )
+                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( directory.str() ).c_str() ).c_str() ); // 실패하면 그 폴더의 의존 DLL 로드가 실패로 알린다
                     }
                     return true;
                 }();
@@ -116,18 +114,18 @@ namespace sw
         return string( sb.view() );
     }
 
-    AbsolutePath ModuleLibraryUtil::getDebugSymbolPath( string_view libraryPath )
+    AbsolutePath ModuleLibraryUtil::getDebugSymbolPath( const AbsolutePath& libraryPath )
     {
 #if defined( SW_PLATFORM_WINDOWS )
-        return FileUtil::toDiskPath( FileUtil::replaceExtension( libraryPath, ".pdb" ) );
+        return libraryPath.removeExtension().appendSuffix( ".pdb" );
 #elif defined( SW_PLATFORM_POSIX )
-        return FileUtil::toDiskPath( FileUtil::replaceExtension( libraryPath, ".debug" ) );
+        return libraryPath.removeExtension().appendSuffix( ".debug" );
 #else
     #error "Unsupported platform"
 #endif
     }
 
-    AbsolutePath ModuleLibraryUtil::findBuiltDebugSymbolPath( string_view libraryPath )
+    AbsolutePath ModuleLibraryUtil::findBuiltDebugSymbolPath( const AbsolutePath& libraryPath )
     {
         const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
         string_view        fileName;
@@ -138,7 +136,7 @@ namespace sw
         if ( moved._arrDirectory[0] != '\0' )
         {
             const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( moved._arrDirectory );
-            if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( libraryPath ), movedDirectory.str() ) )
+            if ( FileUtil::isSameDiskPath( libraryPath.getParent().str(), movedDirectory.str() ) )
                 symbolDirectory = symbolDirectory.join( moved._arrDirectory );
         }
         AbsolutePath found = symbolDirectory.join( fileName );

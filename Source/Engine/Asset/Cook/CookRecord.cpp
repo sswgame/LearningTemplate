@@ -74,7 +74,7 @@ namespace sw
                     for ( uint32 index = 0; index < static_cast<uint32>( DerivedDataBucket::Count ); ++index )
                         bBucket = bBucket || name == getBucketName( static_cast<DerivedDataBucket>( index ) );
                     if ( entry._bDirectory && bBucket == false )
-                        listForeign.push_back( FileUtil::toDiskPath( entry._path ) );
+                        listForeign.push_back( entry.makePath() );
                     return true;
                 } ); // 도중에 멈추면 남은 폴더는 다음 정리가 지운다
                 uint32 removed = 0;
@@ -438,9 +438,9 @@ namespace sw
             const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
                  {
                 FileStamp stamp;
-                if ( entry._bDirectory == false && FileUtil::getFileStamp( FileUtil::toDiskPath( entry._path ), stamp ) )
+                if ( entry._bDirectory == false && FileUtil::getFileStamp( entry.makePath(), stamp ) )
                 {
-                    listEntry.push_back( Entry{ FileUtil::toDiskPath( entry._path ), stamp._sizeBytes, stamp._writeTime } );
+                    listEntry.push_back( Entry{ entry.makePath(), stamp._sizeBytes, stamp._writeTime } );
                     totalBytes += stamp._sizeBytes;
                 }
                 return true;

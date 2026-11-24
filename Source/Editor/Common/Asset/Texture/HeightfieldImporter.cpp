@@ -41,19 +41,15 @@ namespace sw::editor
             static constexpr uint32 kSplatImporterVersion = 2;
 
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
-            static AbsolutePath makeHolePath( string_view sourcePath )
+            static AbsolutePath makeHolePath( const AbsolutePath& sourcePath )
             {
-                StringBuilder<constant::buffer::kMax256> pathBuilder;
-                pathBuilder.appendFormat( "%#%#.png", FileUtil::removeExtension( sourcePath ), kHoleSuffix );
-                return FileUtil::toDiskPath( pathBuilder.view() );
+                return sourcePath.removeExtension().appendSuffix( kHoleSuffix ).appendSuffix( ".png" );
             }
 
             /** @brief 스플랫 원본 옆의 레이어 4..7 파일 경로(`x_splat.png` → `x_splat1.png`)입니다. */
-            static AbsolutePath makeHighSplatPath( string_view sourcePath )
+            static AbsolutePath makeHighSplatPath( const AbsolutePath& sourcePath )
             {
-                StringBuilder<constant::buffer::kMax256> pathBuilder;
-                pathBuilder.appendFormat( "%#1.png", FileUtil::removeExtension( sourcePath ) );
-                return FileUtil::toDiskPath( pathBuilder.view() );
+                return sourcePath.removeExtension().appendSuffix( "1.png" );
             }
 
             /**
@@ -127,7 +123,7 @@ namespace sw::editor
             }
 
             /** @brief 옆에 둔 구멍 마스크 파일을 읽어 셀 마스크로 씁니다. 없으면 구멍이 없습니다. */
-            [[nodiscard]] static bool readHoles( string_view sourcePath, HeightfieldAsset& inoutData )
+            [[nodiscard]] static bool readHoles( const AbsolutePath& sourcePath, HeightfieldAsset& inoutData )
             {
                 const AbsolutePath holePath = makeHolePath( sourcePath );
                 if ( FileUtil::exists( holePath ) == false )
@@ -188,9 +184,9 @@ namespace sw::editor
             {
                 return HeightfieldImporter::isSourceHeightfield( path ) || HeightfieldImporter::isSourceLayerWeights( path );
             }
-            AbsolutePath makeImportedPath( string_view sourcePath ) const override
+            AbsolutePath makeImportedPath( const AbsolutePath& sourcePath ) const override
             {
-                if ( HeightfieldImporter::isSourceLayerWeights( sourcePath ) )
+                if ( HeightfieldImporter::isSourceLayerWeights( sourcePath.str() ) )
                     return HeightfieldImporter::makeImportedLayerWeightsPath( sourcePath );
                 return HeightfieldImporter::makeImportedHeightfieldPath( sourcePath );
             }
@@ -199,7 +195,7 @@ namespace sw::editor
                 (void)assetPath;
                 return HeightfieldImporter::computeSourceHash( sourcePath );
             }
-            const utf8* findUnsupportedReason( string_view sourcePath ) const override
+            const utf8* findUnsupportedReason( const AbsolutePath& sourcePath ) const override
             {
                 (void)sourcePath;
                 return nullptr;
@@ -238,16 +234,16 @@ namespace sw::editor
         return FileUtil::hasExtension( path, ".png" ) && StringUtil::endsWith( FileUtil::removeExtension( path ), Internal::kSplatSuffix, true );
     }
 
-    AbsolutePath HeightfieldImporter::makeImportedLayerWeightsPath( string_view rawPath )
+    AbsolutePath HeightfieldImporter::makeImportedLayerWeightsPath( const AbsolutePath& rawPath )
     {
         using Internal = HeightfieldImporterInternal;
-        if ( isSourceLayerWeights( rawPath ) == false )
+        if ( isSourceLayerWeights( rawPath.str() ) == false )
             return {};
         // `x_splat.png` 의 결과는 높이장과 같은 이름 `x.layerweights` 다. 접미사를 제거하고 같은 경로로 바꾼다.
-        const string                             stem = FileUtil::removeExtension( rawPath );
+        const string                             stem = FileUtil::removeExtension( FileUtil::getFileNamePart( rawPath.str() ) );
         StringBuilder<constant::buffer::kMax256> nameBuilder;
         nameBuilder.appendFormat( "%#.png", string_view( stem ).substr( 0, stem.size() - Internal::kSplatSuffix.size() ) );
-        return AssetImportStampUtil::makeImportedPath( nameBuilder.view(), Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
+        return AssetImportStampUtil::makeImportedPath( rawPath.getParent().join( nameBuilder.view() ), Internal::kRawFolder, Internal::kImportedFolder, LayerWeightsAsset::kExtension );
     }
 
     bool HeightfieldImporter::readLayerWeights( const AbsolutePath& sourcePath, LayerWeightsAsset& outData )
@@ -259,7 +255,7 @@ namespace sw::editor
         if ( Internal::readSplatImage( sourcePath, lowImage ) == false )
             return false;
         RawImageData       highImage;
-        const AbsolutePath highPath = Internal::makeHighSplatPath( sourcePath.str() );
+        const AbsolutePath highPath = Internal::makeHighSplatPath( sourcePath );
         const bool         bHasHigh = FileUtil::exists( highPath );
         if ( bHasHigh )
         {
@@ -301,7 +297,8 @@ namespace sw::editor
     {
         if ( FileUtil::hasAnyExtension( path, { ".png", ".r16" } ) == false )
             return false;
-        return makeImportedHeightfieldPath( path ).empty() == false;
+        using Internal = HeightfieldImporterInternal;
+        return AssetImportStampUtil::makeImportedPath( path, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension ).empty() == false;
     }
 
     bool HeightfieldImporter::importChangedSourceHeightfield( const AssetPaths& assetPaths, string_view relativePath )
@@ -327,7 +324,7 @@ namespace sw::editor
         return true;
     }
 
-    AbsolutePath HeightfieldImporter::makeImportedHeightfieldPath( string_view rawPath )
+    AbsolutePath HeightfieldImporter::makeImportedHeightfieldPath( const AbsolutePath& rawPath )
     {
         using Internal = HeightfieldImporterInternal;
         return AssetImportStampUtil::makeImportedPath( rawPath, Internal::kRawFolder, Internal::kImportedFolder, HeightfieldAsset::kExtension );
@@ -347,7 +344,7 @@ namespace sw::editor
             hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
             // 옆에 둔 레이어 4..7 파일(`x_splat1.png`)도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
             vector<uint8>      highBytes;
-            const AbsolutePath highPath  = Internal::makeHighSplatPath( sourcePath.str() );
+            const AbsolutePath highPath  = Internal::makeHighSplatPath( sourcePath );
             const bool         bHighRead = FileUtil::exists( highPath ) && FileUtil::readFile( highPath, highBytes ); // 곁 파일은 선택이라 없는 것이 정상이다 - 읽기 오류로 알리지 않는다
             if ( bHighRead && highBytes.empty() == false )
                 hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( highBytes.data() ), highBytes.size(), false, hash );
@@ -357,7 +354,7 @@ namespace sw::editor
         hash = HashUtil::computeStringHash64( versionText.c_str(), versionText.size(), false, hash );
         // 옆에 둔 구멍 마스크도 원본이다. 그것만 고쳐도 어긋난 것으로 판정해야 한다.
         vector<uint8>      holeBytes;
-        const AbsolutePath holePath  = Internal::makeHolePath( sourcePath.str() );
+        const AbsolutePath holePath  = Internal::makeHolePath( sourcePath );
         const bool         bHoleRead = FileUtil::exists( holePath ) && FileUtil::readFile( holePath, holeBytes ); // 구멍 마스크도 선택이라 없는 것이 정상이다
         if ( bHoleRead && holeBytes.empty() == false )
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( holeBytes.data() ), holeBytes.size(), false, hash );
@@ -398,7 +395,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldResolutionMost", "Heightfield '%#' has resolution %# - at most %#", sourcePath.str(), outData._resolution, HeightfieldAsset::kMaxResolution );
             return false;
         }
-        return Internal::readHoles( sourcePath.str(), outData );
+        return Internal::readHoles( sourcePath, outData );
     }
 
     bool HeightfieldImporter::importHeightfield( const AbsolutePath& sourcePath, const AbsolutePath& outputPath )
