@@ -331,6 +331,8 @@ SOURCE_PATH = re.compile(r"(?:^|/)(Source/.+)$")
 # 시한은 ctest 항목의 TIMEOUT 속성이다(없으면 ctest 의 기본 1500 초). 단계가 여럿인 체인에서 꺼낸 시나리오 하나만 체인 시한(단계 초 × 단계 수 × 물결)을 나눠 쓸 수 없어
 # — 단계 몫에는 기동 · 종료가 없다 — App 의 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )` 545 초) 위에 기동 · 셰이더 여유를 둔 값을 쓴다.
 CTEST_DEFAULT_TIMEOUT_SECONDS = 1500
+# 새 시나리오의 결정성 검사를 도는 백엔드 — 앞 단계에 달린 값은 게임 쪽에서 생겨 하나면 드러난다.
+DETERMINISM_BACKEND = "dx12"
 SINGLE_SCENARIO_TIMEOUT_SECONDS = 900
 # 단위 실행의 기준 파일 없음(`SnapshotMissing`)은 시나리오와 같은 이름으로 적는다 — 표의 한 칸이 "기록했으니 보고 커밋할 것" 을 뜻한다.
 UNIT_KIND_ALIAS = {"SnapshotMissing": "MissingBaseline"}
@@ -741,6 +743,32 @@ def decide_changed(list_row: Sequence[ChangedRow], list_recorded: Sequence[str],
     return "CHANGED_FAILED" if list_recorded or any(row.kind for row in list_row) else f"CHANGED_OK={sha}"
 
 
+def run_new_scenario_determinism(list_item: Sequence[CtestItem], map_scenario: dict[str, list[ChangedFile]], content_root: Path, build_dir: Path,
+                                 find_branch: Callable[[str], str], map_quarantine: dict[str, QuarantineEntry]) -> list[ChangedRow]:
+    """새 시나리오마다 혼자 · 앞 단계 하나 · 두 번 이어 돌려 사진을 바이트로 견준 줄(사진을 찍지 않는 시나리오는 통과 줄).
+
+    바뀐 시나리오는 빼고 **새것만**, 백엔드 하나에서 돈다 — 앞 단계에 달린 값은 게임 쪽에서 생겨 백엔드와 무관하고, 시나리오 하나에 기동 셋 · 단계 다섯이 든다.
+    나머지 시나리오는 체인이 위치를 섞어 돌므로 골든이 본다."""
+    from dev.scenario_determinism import check_determinism, make_runner
+    from dev.scenario_bisect import read_scenario_name
+    list_row: list[ChangedRow] = []
+    for scenario, list_changed in sorted(map_scenario.items()):
+        is_new = any(changed.status == "A" and changed.path == f"Content/{scenario}" for changed in list_changed)
+        item = next((item for item in list_item if scenario in (get_argument(item.command, "scenario") or "").split(",")), None)
+        has_photo = "<Screenshot" in (content_root / scenario).read_text(encoding="utf-8") or "<ExpectImage" in (content_root / scenario).read_text(encoding="utf-8")
+        if not is_new or item is None or not has_photo or item.name in map_quarantine:
+            continue
+        list_path = (get_argument(item.command, "scenario") or "").split(",")
+        name = read_scenario_name(scenario)
+        working = Path(item.working_directory) if item.working_directory else build_dir
+        runner = make_runner(item.command, name, content_root, DETERMINISM_BACKEND, build_dir, working)
+        print(f"[Changed] run {scenario}: determinism ({DETERMINISM_BACKEND})", flush=True)
+        list_problem = check_determinism(list_path, list_path.index(scenario), name, working / "Saved" / "Automation", runner)
+        list_row.append(ChangedRow(f"{scenario} (결정성)", describe_change(list_changed), "Determinism" if list_problem else "",
+                                   "; ".join(list_problem) or "통과", find_branch(list_changed[0].path)))
+    return list_row
+
+
 def run_changed(project_root: Path, preset: str, base: str) -> int:
     build_dir = get_build_dir(preset, project_root)
     if not build_dir.is_dir():
@@ -798,6 +826,7 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
         list(pool.map(execute, list_unit_run))
     for run in list_scenario_run:
         execute(run)
+    list_row += run_new_scenario_determinism(list_item, map_scenario, project_root / "Content", build_dir, find_branch, map_quarantine)
     map_changed = {changed.path: changed for changed in list_changed}
     for run in list_unit_run:
         list_row += read_unit_rows(run, map_changed, find_branch)
