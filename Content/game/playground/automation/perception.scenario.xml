@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="2eb0a7eade6433ec2da8d5e76c7bfe57"?>
 <!--
-  AI 인지(AIPerception · AIStimulusSourceComponent) — 무대 maps/guarddemo. 값으로 판정한다(골든 없음).
+  AI 인지(AIPerception · AIStimulusSourceComponent) — 무대 maps/guarddemo. 값으로 판정한다(골든 없음). 대상 이름 칸은 없으면 빈 이름이다.
   ① 등 뒤 9 m 의 Runner 는 보이지 않고 같은 팀 Friend 는 앞에 있어도 기억에 들지 않는다 ② 앞 6 m 로 옮기면 보인다 ③ 벽 뒤(10 m, 시야각 안)로 옮기면 안 보이지만 기억에 남고,
   기억 시간(2 s)이 지나면 잊는다 ④ 벽 뒤에서 소리(반경 15 m)를 내면 들리지만 보이지는 않고, 거두면 들리지 않는다 ⑤ 사라진 대상은 보이지 않고 잊는다.
   실행: App -scenario=game/playground/automation/perception.scenario.xml -unattended (체인: ctest -R Scenario.playground)
@@ -12,18 +12,18 @@
 
 	<!-- ① 등 뒤 · 같은 팀 -->
 	<AdvanceSimulation frames="10"/> <!-- 감각이 여러 번 돌아도 보지 못한다(일어나지 않음 — 시간이 내용) -->
-	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="none"/>
+	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is=""/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._rememberedCount" equals="0"/>
 
 	<!-- ② 앞 -->
 	<DevCommand line="object.place Runner 0.5 0 6.5"/>
 	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="Runner" timeoutFrames="10"/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._rememberedCount" equals="1"/> <!-- Friend 는 세지 않는다 -->
-	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._heardTarget" is="none"/>
+	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._heardTarget" is=""/>
 
 	<!-- ③ 벽 뒤 → 기억 → 잊기 -->
 	<DevCommand line="object.place Runner 6.5 0 8.5"/>
-	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="none" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="" timeoutFrames="10"/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._rememberedCount" equals="1"/>
 	<AdvanceSimulation frames="60"/> <!-- 1 초 — 기억 시간(2 초) 안이라 아직 남는다 -->
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._rememberedCount" equals="1"/>
@@ -32,17 +32,17 @@
 	<!-- ④ 소리는 벽을 넘는다 -->
 	<DevCommand line="noise.report Runner 15"/>
 	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._heardTarget" is="Runner" timeoutFrames="10"/>
-	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="none"/>
+	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is=""/>
 	<Expect watch="Object.Property" target="Guard" key="GuardDemoComponent._rememberedCount" equals="1"/>
 	<DevCommand line="noise.report Runner 5"/> <!-- 거리 10 m 보다 작은 소리 -->
-	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._heardTarget" is="none" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._heardTarget" is="" timeoutFrames="10"/>
 
 	<!-- ⑤ 사라진 대상 -->
 	<DevCommand line="noise.report Runner 0"/>
 	<DevCommand line="object.place Runner 0.5 0 6.5"/>
 	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="Runner" timeoutFrames="10"/>
 	<DevCommand line="object.destroy Runner"/>
-	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="none" timeoutFrames="10"/>
+	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._seenTarget" is="" timeoutFrames="10"/>
 	<WaitUntil watch="Object.Property" target="Guard" key="GuardDemoComponent._rememberedCount" equals="0" timeoutSeconds="4"/>
 	<Pass/>
 </Scenario>

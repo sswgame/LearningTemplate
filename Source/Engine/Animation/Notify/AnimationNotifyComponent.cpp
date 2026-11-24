@@ -2,6 +2,8 @@
 
 #include "Engine/Animation/Notify/AnimationNotifyComponent.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
@@ -423,8 +425,17 @@ namespace sw
     float3 AnimationNotifyComponent::findSocketWorldPosition( const hashed_string& socketName ) const
     {
         float4x4 world;
-        (void)findSocketWorldTransform( socketName, world ); // 빈 이름은 오브젝트 루트 변환을 준다(위 설명)
+        if ( findSocketWorldTransform( socketName, world ) == false )
+            reportMissingSocket( socketName );
         return world.getTranslation();
+    }
+
+    void AnimationNotifyComponent::reportMissingSocket( const hashed_string& socketName ) const
+    {
+        if ( socketName.empty() )
+            return;
+        SW_LOG_ERROR_ONCE_FOR_ID( "AnimationNotify.SocketNotFound", socketName.view(), "'%#': notify table '%#' names socket '%#' that neither the object's socket set nor its skeleton has",
+                                  getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str(), socketName.c_str() );
     }
 
     bool AnimationNotifyComponent::castFromTo( const float3& from, const float3& to, float32 radius, uint32 layerMask, CharacterRayHit& outHit ) const

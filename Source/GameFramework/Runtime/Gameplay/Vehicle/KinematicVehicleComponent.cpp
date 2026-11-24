@@ -52,7 +52,9 @@ namespace sw
             return _fallbackHeight;
         IPhysicsQueryScene3D::CastHit hit;
         const float3                  origin{ x, _probeTop, z };
-        if ( pScene->raycast( origin, float3{ 0.0f, -1.0f, 0.0f }, Internal::kProbeLength, PhysicsQueryFilter{}, hit ) == false )
+        PhysicsQueryFilter            filter;
+        filter._ignoreUserData = _ownerID; // 제 몸은 땅이 아니다 — 겹침용 키네마틱 바디를 단 차가 제 지붕을 딛고 틱마다 떠올랐다
+        if ( pScene->raycast( origin, float3{ 0.0f, -1.0f, 0.0f }, Internal::kProbeLength, filter, hit ) == false )
             return _fallbackHeight;
         return _probeTop - hit._distance;
     }

@@ -10,6 +10,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 
@@ -83,8 +84,11 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".dds", AssetSuffixRole::Plain },
         };
-        /** @brief 텍스처 에셋 종류입니다(등록은 `Texture2D.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `Texture` 다. */
-        static constexpr AssetTypeDef kAssetType{ "Texture", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Texture" };
+        /**
+         * @brief 텍스처 에셋 종류입니다(등록은 `Texture2D.cpp` 의 `SW_ASSET_TYPE`). 전용 서버 패키지가 빼는 묶음 `Texture` 다.
+         * @details 텍스처 칸(`AssetRef<Texture2D>`)은 파일이나 렌더 텍스처를 가리킨다 — 유니티 `Texture` 칸의 `RenderTexture`, 언리얼 `UTexture` 칸의 `UTextureRenderTarget2D` 와 같다.
+         */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef{ "Texture", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Texture" }.withRuntimePath( AssetPathRule{ IRenderTargetDeclarationSink::kPathPrefix, {}, {} } );
 
         /** @brief 빈 텍스처로 만듭니다. */
         Texture2D();

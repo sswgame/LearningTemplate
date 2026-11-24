@@ -102,7 +102,6 @@
 			               _moveAction="None"
 			               _lookAction="None"
 			               _upAction="None"
-			               _inputLayer="None"
 			               _aiControllerPrefab="game/playground/shooter3d/prefabs/enemy_ai.prefab.xml"
 			               _maxPitch="80.21409"
 			               _autoPossess="AI"
