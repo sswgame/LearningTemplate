@@ -136,18 +136,24 @@ float LightData::computeFreeformLight2dAttenuation( uint lightIndex, uint lightC
  */
 static float Lighting2d::computeShadow( float2 pixel, float2 lightPosition, float softness, uint lightCount )
 {
+    float lit = 0.0f; // 출구가 하나다 — 이른 반환이면 FXC 가 초기화되지 않은 값으로 본다(X4000)
     if ( softness <= 1e-4f )
-        return Lighting2d::isShadowed( pixel, lightPosition, lightCount ) ? 0.0f : 1.0f;
-    const float2 toLight = lightPosition - pixel;
-    const float  len     = length( toLight );
-    const float2 across  = ( len > 1e-6f ) ? float2( -toLight.y, toLight.x ) / len : float2( 1.0f, 0.0f );
-    float        lit     = 0.0f;
-    SW_UNROLL for ( uint sampleIndex = 0u; sampleIndex < SW_LIGHT2D_SOFT_SHADOW_SAMPLES; ++sampleIndex )
     {
-        const float offset = ( (float)sampleIndex / (float)( SW_LIGHT2D_SOFT_SHADOW_SAMPLES - 1u ) ) * 2.0f - 1.0f;
-        lit += Lighting2d::isShadowed( pixel, lightPosition + across * ( offset * softness ), lightCount ) ? 0.0f : 1.0f;
+        lit = Lighting2d::isShadowed( pixel, lightPosition, lightCount ) ? 0.0f : 1.0f;
     }
-    return lit / (float)SW_LIGHT2D_SOFT_SHADOW_SAMPLES;
+    else
+    {
+        const float2 toLight = lightPosition - pixel;
+        const float  len     = length( toLight );
+        const float2 across  = ( len > 1e-6f ) ? float2( -toLight.y, toLight.x ) / len : float2( 1.0f, 0.0f );
+        SW_UNROLL for ( uint sampleIndex = 0u; sampleIndex < SW_LIGHT2D_SOFT_SHADOW_SAMPLES; ++sampleIndex )
+        {
+            const float offset = ( (float)sampleIndex / (float)( SW_LIGHT2D_SOFT_SHADOW_SAMPLES - 1u ) ) * 2.0f - 1.0f;
+            lit += Lighting2d::isShadowed( pixel, lightPosition + across * ( offset * softness ), lightCount ) ? 0.0f : 1.0f;
+        }
+        lit /= (float)SW_LIGHT2D_SOFT_SHADOW_SAMPLES;
+    }
+    return lit;
 }
 
 /**
