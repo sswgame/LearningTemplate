@@ -278,6 +278,8 @@ namespace sw
         SW_ASSERT( desc._codeFingerprint != 0 && "CookJobDesc needs the cooker's code fingerprint - is it listed in Config/Dev/CookCodeInputs.json?" );
         canonical.append( "cooker=" ).append( desc._cookerName ).append( "\ncode=" ).append( sw::to_string( desc._codeFingerprint ) );
         canonical.append( "\ntarget=" ).append( desc._target ).append( "\nsettings=" ).append( sw::to_string( desc._settingsHash ) ).append( "\n" );
+        if ( desc._output.empty() == false )
+            canonical.append( "output=" ).append( desc._output ).append( "\n" );
         for ( const CookInput* pInput : listSorted )
         {
             canonical.append( CookInput::getKindName( pInput->_kind ) ).append( "\t" ).append( pInput->_source ).append( "\t" );
