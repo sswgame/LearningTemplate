@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.paths import get_project_root  # noqa: E402
+from dev.tests.kit_skeleton_checks import find_problems  # noqa: E402
 from dev.new_kit import KIT_ROOT, REFERENCE_TABLE, add_reference_rows, describe_invalid_request, make_files  # noqa: E402
 
 GROUP = "Feature/World"
@@ -39,6 +40,10 @@ class NewKitTest(unittest.TestCase):
             for line in text.splitlines():
                 if line.startswith(prefix):
                     self.assertIn(line[len(prefix):].rstrip('"'), self._files, relative)
+
+    def test_code_uses_only_names_the_repository_has(self) -> None:
+        set_own = {"getEntry", "getEntries", "hasEntry", "validateEntries", "ReadsEntriesAndRejectsDuplicates"}
+        self.assertEqual(find_problems(self._files, f"GameFramework/Kits/{GROUP}/ZzFishing", "ZzFishing", set_own), [])
 
     def test_no_placeholder_is_left(self) -> None:
         for relative, text in self._files.items():
