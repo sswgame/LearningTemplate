@@ -319,6 +319,51 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
         return;
     g_IndirectArgs[batchIndex]._instanceCount = 0u;
 }
+#elif defined( SW_CULL_COMPACT_ARGS )
+/**
+ * 인자 압축 커널 — 배치마다 스레드 하나. 이어 그리는 배치 묶음(구간, C++ GPUScene::uploadBatchTable)마다 살아남은(인스턴스가 있는) 인자를 **차례를 지켜** 앞으로 모으고 그 수를 적는다.
+ * 그리기는 개수 버퍼 간접 그리기(ExecuteIndirect · vkCmdDrawIndexedIndirectCount · glMultiDrawElementsIndirectCount)라 빈 배치를 GPU 앞단이 훑지 않는다.
+ * 한 버퍼가 세 구간이다(배치 수 N): [0, N) 컬링이 쓴 인자, [N, 2N) 모은 인자(구간 머리의 자리부터), [2N, 3N) 구간 머리의 자리에 개수(첫 칸). 상태 · 배리어가 하나로 끝난다.
+ * 남는 자리는 빈 인자로 채운다 — 개수 버퍼를 못 쓰는 드라이버가 상한만큼 그려도 그림이 같다. 구간은 짧다(C++ kMaxCompactSegment)라 스레드가 구간을 다 훑는다.
+ */
+SW_NUMTHREADS( 64, 1, 1 )
+void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
+{
+    const uint batchIndex = dispatchThreadID.x;
+    if ( batchIndex >= g_BatchCount )
+        return;
+    const uint head = g_BatchInfo[batchIndex]._compactHead;
+    if ( head == kInvalidIndex )
+        return;
+    const uint segmentCount = g_BatchInfo[head]._compactCount;
+    uint       rank         = 0u;
+    uint       total        = 0u;
+    SW_LOOP for ( uint segmentIndex = 0u; segmentIndex < segmentCount; ++segmentIndex )
+    {
+        if ( g_IndirectArgs[head + segmentIndex]._instanceCount != 0u )
+        {
+            ++total;
+            rank += ( head + segmentIndex < batchIndex ) ? 1u : 0u;
+        }
+    }
+    const uint          compactBase = g_BatchCount + head;
+    const uint          position    = batchIndex - head;
+    const SceneDrawArgs ownArgs     = g_IndirectArgs[batchIndex];
+    if ( ownArgs._instanceCount != 0u )
+        g_IndirectArgs[compactBase + rank] = ownArgs;
+    if ( position >= total )
+    {
+        SceneDrawArgs emptyArgs;
+        emptyArgs._indexCountPerInstance       = 0u;
+        emptyArgs._instanceCount               = 0u;
+        emptyArgs._startIndexLocation          = 0u;
+        emptyArgs._baseVertexLocation          = 0;
+        emptyArgs._startInstanceLocation       = 0u;
+        g_IndirectArgs[compactBase + position] = emptyArgs;
+    }
+    if ( position == 0u )
+        g_IndirectArgs[2u * g_BatchCount + head]._indexCountPerInstance = total;
+}
 #else
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )

@@ -262,6 +262,10 @@ namespace sw
          */
         IndirectArgsReset,
         /**
+         * @brief 컬링 뒤 살아남은 간접 인자만 구간마다 앞으로 모으고 개수를 적는 컴퓨트(gpu_cull.hlsl 의 `SW_CULL_COMPACT_ARGS`)입니다. 컬링 · 2 단계 가림의 뒤 단계 다음 디스패치다.
+         */
+        IndirectArgsCompact,
+        /**
          * @brief 화면 회전 출력입니다(screen_rotation.hlsl). 회전한 휴대 기기 화면(`IRHIDevice::getSurfaceTransform` 이 Identity 가 아니다)에서 엔진이 논리 크기로 그린
          *        대기 텍스처(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · UI 가 모두 그곳에 쓴다)를 프레임 끝에 스왑체인 이미지로 돌려 옮긴다(`FrameScreenRotation`).
          *        스왑체인이 그 회전으로 만들어져 합성기가 돌리지 않는다. 백버퍼 포맷 하나에만 그리는 출력 패스이고, 회전할 수 있는 장치(`RHICapabilities::_bSurfacePreRotation`)에서만

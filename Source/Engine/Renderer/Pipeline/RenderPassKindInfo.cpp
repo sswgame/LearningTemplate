@@ -535,6 +535,14 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
+                    case RenderPassKind::IndirectArgsCompact:
+                    {
+                        // 컬링 셰이더의 다른 커널이다(되돌리기와 같은 바인딩).
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
+                        info._pPassDefine    = kPassIndirectArgsCompactDefine;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        break;
+                    }
                     case RenderPassKind::NanCheck:
                     {
                         // 부동소수 출력 텍스처를 엔진 텍스처(bindless)로 읽는 컴퓨트 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드(DX11 · GL)에는 만들지 않는다.

@@ -67,6 +67,9 @@ namespace sw
 
     /// @brief 워크그룹 하나가 정렬할 수 있는 인스턴스 수이자 다단 정렬의 블록 크기입니다(instance_sort.hlsl 의 SW_SORT_MAX_ELEMENTS).
     inline constexpr uint32 kGPUSortMaxElements = 512;
+    /// @brief 간접 인자 압축 구간의 배치 수 상한 · 하한입니다(`GPUScene::collectCompactSegments`).
+    inline constexpr uint32 kMaxCompactSegment = 64;
+    inline constexpr uint32 kMinCompactSegment = 4;
 
     /** @brief 다단 정렬(instance_sort.hlsl 의 `SW_SORT_MULTI_PASS`)의 단계 종류입니다. 셰이더의 kSortStage* 와 같은 값이다. */
     enum class GPUSortStageKind : uint32
@@ -130,7 +133,10 @@ namespace sw
         /// @brief 배치 메시의 UV 밀도(`Mesh::getUVDensity`)와 평균 변 길이(`Mesh::getMeanEdgeLength`)입니다. 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고른다(material_displacement.hlsli).
         float32 _uvDensity{ 0.0f };
         float32 _meanEdgeLength{ 0.0f };
-        uint32  _arrPadding[2]{};
+        /// @brief 간접 인자 압축 구간의 머리 배치입니다(0xFFFFFFFF 이면 압축하지 않는다, `GPUScene::collectCompactSegments`).
+        uint32 _compactHead{ 0xFFFFFFFFu };
+        /// @brief 머리 배치 행에서 구간의 배치 수입니다(그 밖의 행은 0).
+        uint32 _compactCount{ 0 };
     };
 } // namespace sw
 
@@ -308,6 +314,27 @@ namespace sw
         RHIBufferSRVIndex getBatchInfoSRV() const { return _batchInfo._srv; }
         /** @brief 배치 테이블 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getBatchInfoBuffer() const { return _batchInfo._buffer; }
+        /**
+         * @brief 이어 그리는 배치를 간접 인자 압축 구간으로 나눕니다 — 구간마다 컬링 뒤 살아남은 인자만 앞으로 모아 개수 버퍼로 그린다(gpu_cull.hlsl `SW_CULL_COMPACT_ARGS`).
+         * @details 구간은 어느 패스에서도 함께 그리거나 함께 거르는 배치만 잇는다(같은 정점 버퍼 · 머티리얼 묶음 · 셰이더 변형 · 그림자 정적 여부, 불투명과 투명은 가른다). 패스가 더 잘게 나누면
+         *          (머티리얼 상수 버퍼를 거는 셰이더 · 입자가 끼는 자리) 그 묶음은 원래 인자로 그린다(`isCompactSegmentSpan`) — 그림은 늘 같다.
+         *          `kMaxCompactSegment` 에서 끊는다(커널이 구간을 다 훑는다). `kMinCompactSegment` 보다 짧으면 모아도 얻을 것이 없어 구간이 아니다.
+         *          언리얼 `FInstanceCullingContext` 의 간접 인자 압축, Adria · Niagara 의 compact draw 자리다.
+         * @param opaqueCount 앞쪽 불투명 배치 수입니다(뒤는 투명).
+         * @param outListSegmentCount 배치마다 구간 머리면 배치 수, 아니면 0 입니다.
+         */
+        static void collectCompactSegments( vector_reference<const GPUMeshBatch> listBatch, vector_reference<const GPUMeshBatchBinding> listBinding, uint32 opaqueCount,
+                                            vector<uint32>& outListSegmentCount );
+        /** @brief 배치 [@p first, +@p count) 를 압축 구간 여럿으로 빈틈없이 나눌 수 있으면 true 입니다 — 아니면 원래 인자로 그린다. */
+        static bool isCompactSegmentSpan( const vector<uint32>& listSegmentCount, uint32 first, uint32 count );
+        /** @brief 이번 프레임의 간접 인자가 압축 구간을 가지면(컬링이 개수를 만들고 구간이 하나라도 있다) true 입니다. */
+        bool hasCompactSegments() const { return _bGPUFillsIndirectCounts != SW_FALSE && _bHasCompactSegments != SW_FALSE; }
+        /** @brief 배치마다의 압축 구간 배치 수입니다(`collectCompactSegments`). */
+        const vector<uint32>& getCompactSegmentCounts() const { return _listCompactSegmentCount; }
+        /** @brief 구간 머리 @p head 의 모은 인자가 시작하는 원소 번호입니다(간접 인자 버퍼). */
+        uint32 getCompactArgsElement( uint32 head ) const { return _indirectCommandCount + head; }
+        /** @brief 구간 머리 @p head 의 개수가 적힌 원소 번호입니다(원소의 첫 칸). */
+        uint32 getCompactCountElement( uint32 head ) const { return 2u * _indirectCommandCount + head; }
         /** @brief 다단 정렬이 필요한 투명 배치(`GPUBatchSortMode::MultiPass`)의 번호입니다(배치 번호 오름차순, 보통 비어 있다). */
         const vector<uint32>& getMultiPassSortBatches() const { return _listMultiPassSortBatch; }
         /**
@@ -440,7 +467,8 @@ namespace sw
         shared_ptr<const vector<GPUMaterialGroup>> _pUploadedMaterialGroups;
         vector<RHIDrawIndexedIndirectCommand>      _listScratchIndirectCmd;
         vector<GPUBatchInfo>                       _listScratchBatchInfo;
-        vector<uint32>                             _listMultiPassSortBatch; ///< `GPUBatchSortMode::MultiPass` 배치의 번호(배치 표와 함께 정한다)
+        vector<uint32>                             _listCompactSegmentCount; ///< 배치마다 압축 구간 머리면 배치 수, 아니면 0(배치 표와 함께 정한다)
+        vector<uint32>                             _listMultiPassSortBatch;  ///< `GPUBatchSortMode::MultiPass` 배치의 번호(배치 표와 함께 정한다)
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
         /// @brief 바뀐 칸을 모은 구간입니다(스크래치).
@@ -505,6 +533,7 @@ namespace sw
         uint8 _bGPUIndirectCountsRequested{ SW_FALSE };
         /// @brief 마지막 upload 가 실제로 그렇게 했는지 나타냅니다. 버퍼가 모두 있을 때만 1입니다.
         uint8 _bGPUFillsIndirectCounts{ SW_FALSE };
+        uint8 _bHasCompactSegments{ SW_FALSE }; ///< 압축 구간이 하나라도 있다 — 간접 인자 버퍼가 세 구간(원래 · 모은 인자 · 개수)이다
         /// @brief 마지막 upload() 가 올린 간접 인자 개수입니다. 스냅샷에 없으므로 GT 가 덮어쓸 수 없습니다.
         uint32 _indirectCommandCount{ 0 };
         /// @brief 열쇠 → 지난번 그린 월드 행렬의 기록입니다(RT 소유 — 패킷이 버려져도 실제로 그린 프레임 기준이다).

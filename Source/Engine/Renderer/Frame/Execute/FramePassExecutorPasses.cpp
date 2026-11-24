@@ -380,6 +380,7 @@ namespace sw
                 case RenderPassKind::ShadowCacheRestore:
                 case RenderPassKind::NanCheck:
                 case RenderPassKind::IndirectArgsReset:
+                case RenderPassKind::IndirectArgsCompact:
                 case RenderPassKind::ScreenRotation:
                 case RenderPassKind::SceneVoxelize:
                 case RenderPassKind::ProbeUpdate:

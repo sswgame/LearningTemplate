@@ -504,6 +504,8 @@ static BatchData BatchData::load( uint batchIndex )
     batch._lodScreenSize       = 0.0f;
     batch._uvDensity           = 0.0f;
     batch._meanEdgeLength      = 0.0f;
+    batch._compactHead         = kInvalidIndex;
+    batch._compactCount        = 0u;
     const bool bValid          = ( g_SwBatchesIndex != kInvalidIndex ) && ( batchIndex < g_SwBatchCount );
     if ( bValid )
         batch = g_SwBatches[batchIndex];

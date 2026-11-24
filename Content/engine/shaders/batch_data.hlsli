@@ -27,8 +27,8 @@ struct BatchData
 
     float _uvDensity;      // UV 한 단위가 덮는 메시 공간 길이(0 이면 UV 가 없다) — 머티리얼 변위가 원래 꼭짓점의 높이 밉을 고른다(material_displacement.hlsli)
     float _meanEdgeLength; // 메시 공간 평균 변 길이(같은 쓰임)
-    uint  _padding0;       // 16 바이트 배수로 맞춘다(GL std430)
-    uint  _padding1;
+    uint  _compactHead;    // 간접 인자 압축 구간의 머리 배치(kInvalidIndex = 압축하지 않는다) — gpu_cull.hlsl SW_CULL_COMPACT_ARGS
+    uint  _compactCount;   // 머리 배치 행: 구간의 배치 수
 
     static BatchData load( uint batchIndex ); // 정의는 binding.hlsli(배치 표 g_SwBatches 를 읽는다)
 };

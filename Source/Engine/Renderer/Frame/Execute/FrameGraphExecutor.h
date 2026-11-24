@@ -164,6 +164,8 @@ namespace sw
          */
         void dispatchCullView( const RenderGraphPassContext& graphContext, uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount,
                                const FrameViewTarget* pView );
+        /** @brief 컬링 슬롯 @p cullViewIndex 의 간접 인자를 구간마다 모읍니다(`GPUScene::collectCompactSegments`). 구간이 없으면 아무것도 하지 않습니다. @p cullConstants 는 그 컬링의 상수 버퍼입니다. */
+        void dispatchArgsCompact( IRHIPassCommandList& cmd, uint32 cullViewIndex, const RHIConstantBuffer& cullConstants, uint32 batchCount ) const;
         /** @brief 투명 정렬(instance_sort.hlsl)의 자원을 겁니다. 워크그룹 하나짜리와 다단 커널이 같은 자리다. */
         void bindSortResources( uint32 cullViewIndex, const RenderView& renderView, RHIBufferSRVIndex rankSRV );
         /** @brief 워크그룹 하나에 담기지 않는 투명 배치(`GPUScene::getMultiPassSortBatches`)를 배치마다 여러 디스패치로 정렬합니다. 보통 할 일이 없다. */

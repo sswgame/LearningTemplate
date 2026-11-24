@@ -453,6 +453,8 @@ namespace sw
          * @return 그렸으면 true 입니다. 그 보기 모드의 머티리얼 변형이 없으면(만들 때 오류를 남겼다) 그리지 않고 false 입니다.
          */
         bool drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, uint32 headIndex, uint32 groupCount );
+        /** @brief 배치 인자 [@p firstArg, +@p groupCount) 를 그립니다 — 압축 구간으로 나뉘면 개수 버퍼 간접 그리기(`GPUScene::collectCompactSegments`), 아니면 멀티 드로우 한 번입니다. */
+        void drawGroupArgs( FramePassContext& context, RHIBufferHandle argsBuffer, uint32 firstArg, uint32 groupCount ) const;
         /** @brief 투명 큐(메시 투명 배치와 입자 그리기를 한 순서로)를 지금 열린 투명 패스에 그립니다. */
         void drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso );
         /** @brief 지금 그리는 뷰의 입자 자리입니다. 추가 뷰는 자기 순서가 있으면 그것, 없으면 주 시점의 것(그 뷰도 주 배치 순서로 그린다)입니다. */

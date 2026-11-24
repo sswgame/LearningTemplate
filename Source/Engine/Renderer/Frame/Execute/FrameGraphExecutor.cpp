@@ -338,8 +338,9 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) — 둘이 다 있어야 GPU 가 개수를 맡는다.
-        return _state._settings._bGPUCulling != SW_FALSE && _psoManager.getEnginePSO( RenderPassKind::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) != 0;
+        // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) · 압축 커널이 없으면 모은 인자가 빈 채로 그려진다 — 셋이 다 있어야 GPU 가 개수를 맡는다.
+        return _state._settings._bGPUCulling != SW_FALSE && _psoManager.getEnginePSO( RenderPassKind::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassKind::IndirectArgsReset ) != 0 &&
+               _psoManager.getEnginePSO( RenderPassKind::IndirectArgsCompact ) != 0;
     }
 
     bool FrameGraphExecutor::shouldAnimateInstances() const
@@ -1033,6 +1034,19 @@ namespace sw
             _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
             dispatchMultiPassSort( graphContext, cullViewIndex, renderView, rankSRV );
         }
+        dispatchArgsCompact( *_pCmd, cullViewIndex, renderView._cullCb, cullParams._batchCount );
+    }
+
+    void FrameGraphExecutor::dispatchArgsCompact( IRHIPassCommandList& cmd, uint32 cullViewIndex, const RHIConstantBuffer& cullConstants, uint32 batchCount ) const
+    {
+        if ( _state._gpuScene.hasCompactSegments() == false )
+            return;
+        // 컬링이 쓴 개수를 읽는다 — 컬링 뒤의 UAV 배리어는 부르는 쪽이 냈다. 쓰는 구간은 읽는 구간과 겹치지 않는다(gpu_cull.hlsl SW_CULL_COMPACT_ARGS).
+        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::IndirectArgsCompact ) );
+        cmd.bindComputeConstantBuffer( cullConstants._index, 0 );
+        cmd.bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
+        cmd.bindComputeUAV( _state._gpuScene.getCullView( cullViewIndex )._indirectArgs._uav, 0 );
+        cmd.dispatchThreads( batchCount, 1, 1 );
     }
 
     void FrameGraphExecutor::bindSortResources( uint32 cullViewIndex, const RenderView& renderView, RHIBufferSRVIndex rankSRV )
@@ -1217,6 +1231,9 @@ namespace sw
         cmd.bindComputeUAV( _occludedOrders._uav, 3 );
         _state._gpuMessages.bindCompute( cmd );
         cmd.dispatchThreads( _lateInstanceCount, 1, 1 );
+        // 더한 개수로 다시 모은다 — 앞 단계가 모은 인자는 깊이 프리패스가 이미 그렸다.
+        graphContext.uavBarrier( ViewGraphResource::cullArgs() );
+        dispatchArgsCompact( cmd, cullViewIndex, _lateCullCb, params._batchCount );
 
         // 3) 그리는 쪽이 읽는 상태(등록 접근)로 — 뒤 패스(G버퍼 · 포워드 불투명)가 더한 개수로 그린다. LOD 상태 · 차례 표시는 등록 접근이 UAV 라 그대로 둔다.
         graphContext.transition( ViewGraphResource::cullArgs(), RenderGraphAccess::IndirectArgs );

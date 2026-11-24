@@ -494,6 +494,22 @@ namespace sw
         // 배치 표: 컬링 컴퓨트는 "이 배치의 인스턴스는 어디서 시작하나" 를, 정점 셰이더는 모프 · 정점 풀 오프셋을 읽는다.
         _listScratchBatchInfo.resize( argsCount );
         _listMultiPassSortBatch.clear();
+        // 멀티 드로우가 없는 백엔드(WebGPU · DX11)는 배치마다 따로 그려 모을 것이 없다.
+        if ( pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE )
+        {
+            collectCompactSegments( vector_reference<const GPUMeshBatch>( _snapshot.getAllBatches() ), vector_reference<const GPUMeshBatchBinding>( std::as_const( _listBatchBinding ) ),
+                                    static_cast<uint32>( _snapshot.getOpaqueBatches().size() ), _listCompactSegmentCount );
+        }
+        else
+        {
+            _listCompactSegmentCount.assign( argsCount, 0u );
+        }
+        _bHasCompactSegments = VectorUtil::allOf( _listCompactSegmentCount, []( uint32 count )
+        { return count == 0; } )
+                                 ? SW_FALSE
+                                 : SW_TRUE;
+        uint32 compactHead   = constant::invalid_index::kUint32;
+        uint32 compactEnd    = 0;
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             const GPUMeshBatch&        infoBatch                 = _snapshot.getAllBatches()[argIndex];
@@ -520,10 +536,63 @@ namespace sw
             if ( sortMode == GPUBatchSortMode::MultiPass )
                 _listMultiPassSortBatch.push_back( argIndex );
             _listScratchBatchInfo[argIndex]._sortMode = static_cast<uint32>( sortMode );
+            if ( _listCompactSegmentCount[argIndex] != 0 )
+            {
+                compactHead = argIndex;
+                compactEnd  = argIndex + _listCompactSegmentCount[argIndex];
+            }
+            _listScratchBatchInfo[argIndex]._compactHead  = argIndex < compactEnd ? compactHead : constant::invalid_index::kUint32;
+            _listScratchBatchInfo[argIndex]._compactCount = _listCompactSegmentCount[argIndex];
         }
         constexpr RHIBufferUsage kBatchInfoUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         if ( _batchInfo.ensureCapacity( pDevice, static_cast<uint32>( sizeof( GPUBatchInfo ) ), argsCount, kBatchInfoUsage, true, false, nullptr ) )
             _batchInfo.upload( pDevice, _listScratchBatchInfo.data(), argsCount * static_cast<uint32>( sizeof( GPUBatchInfo ) ) );
+    }
+
+    void GPUScene::collectCompactSegments( vector_reference<const GPUMeshBatch> listBatch, vector_reference<const GPUMeshBatchBinding> listBinding, uint32 opaqueCount,
+                                           vector<uint32>& outListSegmentCount )
+    {
+        const uint32 batchCount = static_cast<uint32>( listBatch.size() );
+        outListSegmentCount.assign( batchCount, 0u );
+        // 그릴 수 있는 배치만 잇는다 — 그리지 않는 배치(변형 풀이 거절 · 기하 없음)의 인자가 구간에 들면 패스가 거른 것을 그린다.
+        const auto isDrawable = [&listBatch, &listBinding]( uint32 index )
+        { return listBinding[index].hasGeometry() && listBatch[index].hasDrawSlots() && listBinding[index]._bDeformRefused == SW_FALSE; };
+        const auto isSameSegment = [&listBatch, &listBinding]( uint32 head, uint32 other )
+        {
+            const GPUMeshBatch&       headBatch   = listBatch[head];
+            const GPUMeshBatch&       otherBatch  = listBatch[other];
+            const RHIMeshVertexFormat headFormat  = headBatch._mesh != nullptr ? headBatch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            const RHIMeshVertexFormat otherFormat = otherBatch._mesh != nullptr ? otherBatch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            return headBatch._shaderPermutation == otherBatch._shaderPermutation && headBatch._bReverseCulling == otherBatch._bReverseCulling && headFormat == otherFormat &&
+                   headBatch._bStaticShadowCaster == otherBatch._bStaticShadowCaster && listBinding[head]._vertexBuffer == listBinding[other]._vertexBuffer &&
+                   GPUMeshBatchBinding::canShareMaterialBinding( listBinding[head], listBinding[other], false );
+        };
+        uint32 head = 0;
+        while ( head < batchCount )
+        {
+            uint32 end = head + 1u;
+            if ( isDrawable( head ) )
+            {
+                const uint32 limit = MathUtil::min( head < opaqueCount ? opaqueCount : batchCount, head + kMaxCompactSegment );
+                while ( end < limit && isDrawable( end ) && isSameSegment( head, end ) )
+                {
+                    ++end;
+                }
+                if ( end - head >= kMinCompactSegment )
+                    outListSegmentCount[head] = end - head;
+            }
+            head = end;
+        }
+    }
+
+    bool GPUScene::isCompactSegmentSpan( const vector<uint32>& listSegmentCount, uint32 first, uint32 count )
+    {
+        const uint32 end = first + count;
+        while ( first < end && first < listSegmentCount.size() && listSegmentCount[first] != 0 )
+        {
+            first += listSegmentCount[first];
+        }
+        return count > 0 && first == end;
     }
 
     void GPUScene::collectSortStages( uint32 count, vector<GPUSortStage>& outListStage )
@@ -556,7 +625,8 @@ namespace sw
 
     void GPUScene::populateIndirectCommands( uint32 argsCount )
     {
-        _listScratchIndirectCmd.resize( argsCount );
+        // 압축 구간이 있으면 [배치 수, 3 × 배치 수)에 모은 인자 · 개수 자리가 이어진다 — 0 으로 올려 컬링이 돌지 않은 슬롯이 앞 표의 인자를 그리지 않게 한다.
+        _listScratchIndirectCmd.assign( _bHasCompactSegments != SW_FALSE ? 3u * argsCount : argsCount, RHIDrawIndexedIndirectCommand{} );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
             RHIDrawIndexedIndirectCommand& cmd = _listScratchIndirectCmd[argIndex];
@@ -597,13 +667,15 @@ namespace sw
         // 간접 인자도 **뷰마다** 하나다. 뷰별로 개수가 다르게 나오기 때문이다.
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
+        SW_ASSERT( _listScratchIndirectCmd.size() >= argsCount );
+        const uint32 elementCount = static_cast<uint32>( _listScratchIndirectCmd.size() );
         for ( GPUCullViewResources& view : _listCullView )
         {
-            if ( view._indirectArgs.ensureCapacity( pDevice, static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), argsCount,
+            if ( view._indirectArgs.ensureCapacity( pDevice, static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ), elementCount,
                                                     kArgsUsage, false, true, _listScratchIndirectCmd.data() ) )
             {
                 view._indirectArgs.upload( pDevice, _listScratchIndirectCmd.data(),
-                                           argsCount * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
+                                           elementCount * static_cast<uint32>( sizeof( RHIDrawIndexedIndirectCommand ) ) );
             }
         }
     }
