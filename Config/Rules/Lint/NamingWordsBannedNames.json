@@ -2149,6 +2149,7 @@
     "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
     "HostSubsystemNames": "ModuleLoaderSubsystem::kSubsystemName — 쓰는 곳이 주인 하나뿐이라 헤더째 접었다(2026-11-24)",
     "ClassicJRPGDemoComponent": "JRPGGameModeComponent — 클래식 JRPG 시연을 허브 미니게임 classicjrpg 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_ClassicJRPG(2026-11-24)",
-    "MonsterCollectorDemoComponent": "MonsterCollectorGameModeComponent — 몬스터 수집 시연을 허브 미니게임 monstercollector 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_MonsterCollector(2026-11-24)"
+    "MonsterCollectorDemoComponent": "MonsterCollectorGameModeComponent — 몬스터 수집 시연을 허브 미니게임 monstercollector 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_MonsterCollector(2026-11-24)",
+    "MonsterHuntRPGDemoComponent": "MonsterHuntGameModeComponent — 몬스터 사냥 시연을 허브 미니게임 monsterhuntrpg 로 — 디렉터는 키트 Component/, 입력 · HUD 는 GF_Client_MonsterHuntRPG(2026-11-24)"
   }
 }

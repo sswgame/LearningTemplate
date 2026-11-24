@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="c21f2c53456fa858465fd54daa39e5e2"?>
+<!--
+  늪지 사냥 미니게임(minigames/monsterhuntrpg)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 걷기는 공통 `Move` 축이다.
+  레이어 MonsterHunt 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="MonsterHunt" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="MonsterHunt.Fast" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="MonsterHunt.Strong" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="MonsterHunt.Dodge" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+	<action name="MonsterHunt.Sign" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<action name="MonsterHunt.Oil" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="Digit1"/>
+		<bind source="Gamepad" code="LeftShoulder"/>
+	</action>
+	<action name="MonsterHunt.Potion" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="Digit2"/>
+		<bind source="Gamepad" code="DPadUp"/>
+	</action>
+	<action name="MonsterHunt.Investigate" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

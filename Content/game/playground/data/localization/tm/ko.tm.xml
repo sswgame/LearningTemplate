@@ -12,10 +12,12 @@
 		<entry source="Bramble Sprite" text="가시덤불 정령" />
 		<entry source="Caught" text="포획" />
 		<entry source="Choose who steps in (L)" text="나설 몬스터를 고르세요 (L)" />
+		<entry source="Clues" text="단서" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
 		<entry source="Dusk Moth" text="땅거미 나방" />
+		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   오일 (1)   물약 (2)" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Fernling" text="고사리돌이" />
 		<entry source="Fernwarden" text="고사리지기" />
@@ -41,10 +43,12 @@
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
 		<entry source="MP" text="마력" />
+		<entry source="Monster" text="괴물" />
 		<entry source="Move" text="기술" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
 		<entry source="Notched Blade" text="이 빠진 칼" />
 		<entry source="Nudge" text="툭 치기" />
+		<entry source="Oil" text="오일" />
 		<entry source="Pistol" text="권총" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
 		<entry source="Recon Boots" text="정찰 부츠" />
@@ -53,23 +57,32 @@
 		<entry source="Recon Vest" text="정찰 조끼" />
 		<entry source="Rest at the camp (E)" text="야영지에서 쉬기 (E)" />
 		<entry source="Rest at the inn (E)" text="여관에서 쉬기 (E)" />
+		<entry source="Reward" text="보상" />
 		<entry source="Ripplet" text="물결이" />
 		<entry source="Root Grip" text="뿌리 잡기" />
 		<entry source="Round Shield" text="둥근 방패" />
 		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
 		<entry source="Scout" text="정찰병" />
+		<entry source="Search the marsh for clues" text="늪지에서 단서를 찾으세요" />
+		<entry source="Something is here (E)" text="무언가 있습니다 (E)" />
 		<entry source="Spark" text="불씨" />
 		<entry source="Splash Jab" text="물보라 찌르기" />
+		<entry source="Stamina" text="기력" />
+		<entry source="Take the offer (J)   Ask for more (K)" text="제안 받기 (J)   더 부르기 (K)" />
 		<entry source="Target" text="대상" />
 		<entry source="Tattered Cape" text="해진 망토" />
+		<entry source="The beast fears the right oil" text="괴물은 맞는 오일을 두려워합니다" />
 		<entry source="The collection is complete" text="수집을 마쳤습니다" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
+		<entry source="The hunter has fallen" text="사냥꾼이 쓰러졌습니다" />
+		<entry source="The marsh is quiet again" text="늪지가 다시 조용해졌습니다" />
 		<entry source="The party has fainted" text="파티가 모두 쓰러졌습니다" />
 		<entry source="The party has fallen" text="일행이 쓰러졌습니다" />
 		<entry source="The trail is safe again" text="길이 다시 안전해졌습니다" />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
+		<entry source="Toxicity" text="독성" />
 		<entry source="Travel Cape" text="여행 망토" />
 		<entry source="Use move (J)   Ball (K)   Switch (L)   Run (R)" text="기술 (J)   볼 (K)   교체 (L)   도망 (R)" />
 		<entry source="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" />

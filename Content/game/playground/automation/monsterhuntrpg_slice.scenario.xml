@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="af4c23a2723342afa64e08d6ea6a3d49"?>
+<!--
+  장르 완결 루프 — 몬스터 사냥 미니게임(monsterhuntrpg)의 한 판: 보상 흥정 → 단서 셋 → 괴물 사냥(표식 · 오일 · 물약 · 공격) → 승리 → 결과를 들고 허브로.
+  플레이어와 같은 입력 맵 액션(Move · MonsterHunt.*)만 쓴다.
+  디렉터는 키트 MonsterHuntGameModeComponent, 입력 · 그리기 · HUD 는 클라이언트 모듈 GF_Client_MonsterHuntRPG 의 MonsterHuntAvatarComponent.
+  자리: (0,0)에서 시작, 4 m/s — 단서 x 4 · 8 · 12, 소굴 (16,0). 수치의 근거는 data/monsterhunt.xml 머리말.
+  감시 값: MonsterHunt.Phase(0 흥정, 1 조사, 2 사냥, 3 승리, 4 패배) · Reward · FoundClues · Knowledge · MonsterHP · PlayerHP · OilHits · Toxicity · AttackReady · MonsterInReach · PlayerX · Minigame.LastResult.
+  실행: ctest -R Scenario.playground
+-->
+<Scenario name="game.playground.monsterhuntrpg_slice" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="monsterhuntrpg"/>
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<!-- 흥정 — 100 에서 30 을 더 부르면 한도(150) 안이라 받아들여진다 -->
+	<WaitUntil watch="MonsterHunt.Reward" equals="100" timeoutFrames="120"/>
+	<Expect watch="MonsterHunt.Phase" equals="0"/>
+	<Action name="MonsterHunt.Strong"/>
+	<WaitUntil watch="MonsterHunt.Phase" equals="1" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.Reward" equals="130"/>
+	<!-- 단서 셋 — 자리에 서서 조사한다 -->
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="4" tolerance="0.1" timeoutFrames="90"/>
+	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterHunt.Investigate"/>
+	<WaitUntil watch="MonsterHunt.FoundClues" equals="1" timeoutFrames="30"/>
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="8" tolerance="0.1" timeoutFrames="90"/>
+	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterHunt.Investigate"/>
+	<WaitUntil watch="MonsterHunt.FoundClues" equals="2" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.Knowledge" equals="0"/>
+	<ActionAxis name="Move" x="1" seconds="1"/>
+	<WaitUntil watch="MonsterHunt.PlayerX" near="12" tolerance="0.1" timeoutFrames="90"/>
+	<AdvanceSimulation frames="6"/> <!-- 누른 이동이 끝나는 시간(시간이 내용) -->
+	<Action name="MonsterHunt.Investigate"/>
+	<WaitUntil watch="MonsterHunt.Phase" equals="2" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.FoundClues" equals="3"/>
+	<Expect watch="MonsterHunt.Knowledge" equals="1"/>
+	<ExpectLog id="MonsterHunt.WeaknessRevealed" contains="howler_oil" atLeast="1"/>
+	<!-- 사냥 — 다가오는 괴물에게 표식, 칼에 오일, 물약 한 모금 -->
+	<Action name="MonsterHunt.Sign"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="105" timeoutFrames="30"/>
+	<Action name="MonsterHunt.Oil"/>
+	<WaitUntil watch="MonsterHunt.OilHits" equals="6" timeoutFrames="30"/>
+	<Action name="MonsterHunt.Potion"/>
+	<WaitUntil watch="MonsterHunt.Toxicity" atLeast="1" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterHunt.MonsterInReach" equals="1" timeoutFrames="180"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="75" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterHunt.AttackReady" equals="1" timeoutFrames="60"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="45" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterHunt.AttackReady" equals="1" timeoutFrames="60"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.MonsterHP" equals="15" timeoutFrames="30"/>
+	<WaitUntil watch="MonsterHunt.AttackReady" equals="1" timeoutFrames="60"/>
+	<Action name="MonsterHunt.Fast"/>
+	<WaitUntil watch="MonsterHunt.Phase" equals="3" timeoutFrames="30"/>
+	<Expect watch="MonsterHunt.MonsterHP" equals="0"/>
+	<Expect watch="MonsterHunt.PlayerHP" atLeast="50"/>
+	<ExpectLog id="MonsterHunt.Victory" count="1"/>
+	<!-- 결과를 보여 준 뒤 스스로 끝난다 — 돌아올 씬이 없으니(첫 진입) 입구 씬(허브)으로 간다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<Expect watch="Minigame.Active" is="none"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

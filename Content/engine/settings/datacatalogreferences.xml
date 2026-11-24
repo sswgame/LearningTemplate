@@ -252,4 +252,13 @@
 	<Field owner="JRPGGameModeComponent" field="_listBoss" tag="JRPGEnemyDef"/>
 	<CatalogKey tag="MonsterSpeciesDef" catalog="MonsterCollectorCatalog" entry="Species"/>
 	<Field owner="MonsterCollectorGameModeComponent" field="_listStarter" tag="MonsterSpeciesDef"/>
+	<CatalogKey tag="MonsterHuntContractDef" catalog="MonsterHuntCatalog" entry="Contract"/>
+	<CatalogKey tag="MonsterHuntMonsterDef" catalog="MonsterHuntCatalog" entry="Monster"/>
+	<CatalogKey tag="MonsterHuntAlchemyDef" catalog="MonsterHuntCatalog" entry="Item"/>
+	<CatalogKey tag="MonsterHuntSignDef" catalog="MonsterHuntCatalog" entry="Sign"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_contract" tag="MonsterHuntContractDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_monster" tag="MonsterHuntMonsterDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_oil" tag="MonsterHuntAlchemyDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_potion" tag="MonsterHuntAlchemyDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_sign" tag="MonsterHuntSignDef"/>
 </DataCatalogReferenceTable>

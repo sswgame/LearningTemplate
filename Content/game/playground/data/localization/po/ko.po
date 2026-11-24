@@ -76,6 +76,12 @@ msgctxt "Choose who steps in (L)"
 msgid "Choose who steps in (L)"
 msgstr "나설 몬스터를 고르세요 (L)"
 
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Clues"
+msgid "Clues"
+msgstr "단서"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cinematic.seq.xml
 msgctxt "CutA"
@@ -93,6 +99,12 @@ msgstr "컷 B"
 msgctxt "Dusk Moth"
 msgid "Dusk Moth"
 msgstr "땅거미 나방"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)"
+msgid "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)"
+msgstr "빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   오일 (1)   물약 (2)"
 
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
@@ -145,6 +157,7 @@ msgstr "골드"
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 #: game/playground/monstercollector/ui/hud.ui.xml
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
 msgctxt "HP"
 msgid "HP"
 msgstr "체력"
@@ -216,6 +229,12 @@ msgid "MP"
 msgstr "마력"
 
 #. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Monster"
+msgid "Monster"
+msgstr "괴물"
+
+#. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "Move"
 msgid "Move"
@@ -232,6 +251,12 @@ msgstr "이 빠진 칼"
 msgctxt "Nudge"
 msgid "Nudge"
 msgstr "툭 치기"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Oil"
+msgid "Oil"
+msgstr "오일"
 
 #. Context: Weapon name
 #: common/data/items.xml
@@ -256,6 +281,12 @@ msgstr "야영지에서 쉬기 (E)"
 msgctxt "Rest at the inn (E)"
 msgid "Rest at the inn (E)"
 msgstr "여관에서 쉬기 (E)"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Reward"
+msgid "Reward"
+msgstr "보상"
 
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
@@ -287,6 +318,18 @@ msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
 
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Search the marsh for clues"
+msgid "Search the marsh for clues"
+msgstr "늪지에서 단서를 찾으세요"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Something is here (E)"
+msgid "Something is here (E)"
+msgstr "무언가 있습니다 (E)"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Spark"
@@ -298,6 +341,13 @@ msgstr "불씨"
 msgctxt "Splash Jab"
 msgid "Splash Jab"
 msgstr "물보라 찌르기"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+#: game/playground/wildwest/ui/hud.ui.xml
+msgctxt "Stamina"
+msgid "Stamina"
+msgstr "기력"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml
@@ -330,6 +380,12 @@ msgid "Movement on the ridge. Stay low."
 msgstr "능선에 움직임이 있다. 몸을 낮춰."
 
 #. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Take the offer (J)   Ask for more (K)"
+msgid "Take the offer (J)   Ask for more (K)"
+msgstr "제안 받기 (J)   더 부르기 (K)"
+
+#. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
 msgctxt "Target"
 msgid "Target"
@@ -342,10 +398,28 @@ msgid "Tattered Cape"
 msgstr "해진 망토"
 
 #. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "The beast fears the right oil"
+msgid "The beast fears the right oil"
+msgstr "괴물은 맞는 오일을 두려워합니다"
+
+#. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "The collection is complete"
 msgid "The collection is complete"
 msgstr "수집을 마쳤습니다"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "The hunter has fallen"
+msgid "The hunter has fallen"
+msgstr "사냥꾼이 쓰러졌습니다"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "The marsh is quiet again"
+msgid "The marsh is quiet again"
+msgstr "늪지가 다시 조용해졌습니다"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
@@ -370,6 +444,12 @@ msgstr "길이 다시 안전해졌습니다"
 msgctxt "The warrior wakes."
 msgid "The warrior wakes."
 msgstr "전사가 깨어난다."
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Toxicity"
+msgid "Toxicity"
+msgstr "독성"
 
 #. Context: Item name
 #: common/data/items.xml
