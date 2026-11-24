@@ -11,6 +11,7 @@
  *            다른 알림도 창이 차면 연결마다 큐에 쌓였다가 순서대로 나간다.
  *            행동은 `NetTurnRelayMessage::kMaxActionBytes`(8 KB)까지 보낼 수 있다. 1 KB를 넘는 행동은 조각마다 창 슬롯을 하나씩 쓰므로, 큐가 기다리는 것은 크기가 아니라 창이다.
  *          - **자리 토큰**: 운영체제 난수 비밀에서 섞어 만든다. 실행마다, 서버마다 다르고 받은 토큰으로 다른 토큰을 계산할 수 없다.
+ *            토큰은 64 비트이고 접속 주체(티켓으로 확인한 계정, `INetPeers::getConnectionPrincipal`)에 묶인다 — 토큰과 주체가 모두 같아야 자리를 돌려준다. 새어 나간 토큰으로 남이 앉지 못한다.
  *            토큰이 맞아도 그 자리의 연결이 살아 있으면 거절한다(`SeatInUse`).
  *            한 연결은 자리를 하나만 가진다. 같은 방에 다시 들어오면 같은 자리를 주고, 다른 방에 들어오면 `AlreadySeated` 로 거절한다.
  *          - **방 되돌리기**: 아무도 잇지 않고 돌아올 판이 없으면(끝났다 · 시작하지 않았다 · 모두 스스로 떠났다), 또는 시간이 지나면(`TurnRelayConfig` 의 초) 방을 없애 번호를 다시 쓴다.
@@ -73,7 +74,7 @@ namespace sw
         PROPERTY( Min = -1 )
         int32 _seat{ constant::invalid_index::kInt32 }; ///< 바라는 자리. -1 이면 빈 자리 어디든
         PROPERTY()
-        uint32 _token{ 0 }; ///< 전에 받은 자리 토큰. 0 이면 처음이다
+        uint64 _token{ 0 }; ///< 전에 받은 자리 토큰. 0 이면 처음이다
         PROPERTY()
         uint32 _generation{ 0 }; ///< 토큰을 받은 방의 세대. 0 이면 처음이다
         PROPERTY()
@@ -103,7 +104,7 @@ namespace sw
         PROPERTY( Min = 0 )
         int32 _seat{ 0 };
         PROPERTY()
-        uint32 _token{ 0 };
+        uint64 _token{ 0 };
     };
 
     /** @brief 행동 제출(클라이언트 → 서버) 본문입니다. */
@@ -234,7 +235,8 @@ namespace sw
     /** @brief 방의 자리 하나입니다. */
     struct TurnSeat
     {
-        uint32 _token{ 0 };                                             ///< 다시 들어올 때 내는 값. 서버가 정한다. 0 이면 아무도 돌아올 수 없다(비었거나 스스로 떠났다)
+        uint64 _token{ 0 };                                             ///< 다시 들어올 때 내는 값. 서버가 정한다. 0 이면 아무도 돌아올 수 없다(비었거나 스스로 떠났다)
+        uint64 _principalID{ 0 };                                       ///< 앉은 연결의 주체(0 은 계정 없는 세션). 같은 주체만 돌아온다
         int32  _connectionID{ constant::invalid_index::kInt32 };        ///< -1이면 끊긴 상태이다. 자리는 남는다
         int32  _sentActionCount{ 0 };                                   ///< 서버가 이 자리의 연결에 보낸 행동 수. 그다음 행동부터 이어서 보낸다
         int32  _sentViewActionCount{ constant::invalid_index::kInt32 }; ///< 이 자리의 연결에 마지막으로 보낸 모습이 담은 행동 수. -1 이면 아직 보내지 않았다
@@ -429,7 +431,7 @@ namespace sw
         void   flushView( const TurnRoom& room, TurnSeat& seat );
         void   flushPending();
         int32  countPending( int32 connectionID ) const;
-        uint32 nextToken();
+        uint64 nextToken();
 
     private:
         vector<TurnRoom>            _listRoom;
@@ -477,7 +479,7 @@ namespace sw
         void            pollEvents( vector<TurnRelayEvent>& outListEvent );
 
         int32                     getSeat() const { return _seat; }
-        uint32                    getToken() const { return _token; }
+        uint64                    getToken() const { return _token; }
         bool                      isStarted() const { return _bStarted != SW_FALSE; }
         const vector<TurnAction>& getActions() const { return _listAction; }
         /** @brief 서버가 마지막으로 보낸 내 자리의 모습입니다(정책이 쓴 바이트). 받지 않았으면 비어 있습니다. */
@@ -496,7 +498,7 @@ namespace sw
         INetPeers*                  _pHost;
         uint32                      _roomID;
         uint32                      _generation; ///< 앉은 방의 세대. 0 이면 앉지 않았다
-        uint32                      _token;
+        uint64                      _token;
         int32                       _seat;
         int32                       _nextSubmitID;
         uint8                       _bStarted;

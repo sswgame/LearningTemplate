@@ -141,7 +141,7 @@ SW_TEST_CASE_F( TurnRelayTest, RoomStartsWhenFull )
     SW_EXPECT_TRUE( relay( 0 ).isStarted() );
     SW_EXPECT_TRUE( relay( 1 ).isStarted() );
     SW_EXPECT_NOT_EQUAL( relay( 0 ).getToken(), relay( 1 ).getToken() );
-    SW_EXPECT_NOT_EQUAL( relay( 0 ).getToken(), 0u );
+    SW_EXPECT_NOT_EQUAL( relay( 0 ).getToken(), uint64{ 0 } );
 
     const vector<TurnRelayEvent> listEvent = pollAll( relay( 0 ) );
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 2 } );
@@ -173,7 +173,7 @@ SW_TEST_CASE_F( TurnRelayTest, SeatChoiceAndFullRoom )
 SW_TEST_CASE_F( TurnRelayTest, ConnectionHoldsOneSeat )
 {
     startRoom();
-    const uint32 token = relay( 0 ).getToken();
+    const uint64 token = relay( 0 ).getToken();
     relay( 0 ).join( 7 );
     poll();
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), 0 );
@@ -196,7 +196,7 @@ SW_TEST_CASE_F( TurnRelayTest, JoiningAnotherRoomForgetsTheOldRoomsState )
     relay( 0 ).join( 99 );
     SW_EXPECT_FALSE( relay( 0 ).isStarted() );
     SW_EXPECT_EQUAL( relay( 0 ).getSeat(), -1 );
-    SW_EXPECT_EQUAL( relay( 0 ).getToken(), 0u );
+    SW_EXPECT_EQUAL( relay( 0 ).getToken(), uint64{ 0 } );
     SW_EXPECT_TRUE( relay( 0 ).getActions().empty() );
 }
 
@@ -349,6 +349,34 @@ SW_TEST_CASE_F( TurnRelayTest, SeatsCannotBeStolen )
     SW_REQUIRE_EQUAL( listEvent.size(), size_t{ 1 } );
     SW_EXPECT_TRUE( listEvent[0]._reason == TurnRejectReason::SeatInUse );
     SW_EXPECT_EQUAL( _server.findRoom( 7 )->_listSeat[0]._connectionID, 0 );
+}
+
+// 토큰은 계정에 묶인다 — 새어 나간 토큰을 다른 계정이 내면 비어 있는 그 자리에 앉지 못하고, 같은 계정은 새 연결로 돌아온다.
+SW_TEST_CASE_F( TurnRelayTest, TokenReturnsTheSeatOnlyToItsPrincipal )
+{
+    addClient()._relay.join( 7 );
+    addClient()._relay.join( 7 );
+    _serverPeers.connect( 0, 11 );
+    _serverPeers.connect( 1, 22 );
+    poll();
+    SW_REQUIRE_TRUE( relay( 0 ).isStarted() );
+    SW_EXPECT_TRUE( ( relay( 0 ).getToken() >> 32 ) != 0 || ( relay( 1 ).getToken() >> 32 ) != 0 ); // 64 비트를 다 쓴다
+    TurnJoinBody join;
+    join._roomID     = 7;
+    join._token      = relay( 0 ).getToken();
+    join._generation = _server.findRoom( 7 )->_generation;
+    _serverPeers.drop( 0 );
+    _server.onConnectionClosed( 0, NetDisconnectReason::Remote );
+    SW_REQUIRE_EQUAL( -1, _server.findRoom( 7 )->_listSeat[0]._connectionID );
+
+    NetMessageWriter writer;
+    SW_REQUIRE_TRUE( ( writer.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Join>( join ) ) );
+    _serverPeers.connect( 5, 33 ); // 다른 계정
+    SW_EXPECT_TRUE( _server.handleMessage( 5, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_EQUAL( -1, _server.findRoom( 7 )->_listSeat[0]._connectionID );
+    _serverPeers.connect( 6, 11 ); // 같은 계정의 새 연결
+    SW_EXPECT_TRUE( _server.handleMessage( 6, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
+    SW_EXPECT_EQUAL( 6, _server.findRoom( 7 )->_listSeat[0]._connectionID );
 }
 
 // 창이 차면 행동은 멈췄다 update 에서 빠짐없이 이어 간다.
@@ -736,7 +764,7 @@ SW_TEST_CASE_F( TurnRelayReleaseTest, LateMessagesOfThePreviousRoomAreIgnored )
     poll();
     SW_EXPECT_TRUE( takeLastReason( relay( 1 ) ) == TurnRejectReason::RoomClosed );
     SW_EXPECT_EQUAL( relay( 1 ).getSeat(), -1 );
-    SW_EXPECT_EQUAL( relay( 1 ).getToken(), 0u );
+    SW_EXPECT_EQUAL( relay( 1 ).getToken(), uint64{ 0 } );
     relay( 1 ).join( 7 );
     poll();
     SW_EXPECT_TRUE( takeLastReason( relay( 1 ) ) == TurnRejectReason::RoomFull );

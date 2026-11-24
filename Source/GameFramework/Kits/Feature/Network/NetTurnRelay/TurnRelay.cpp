@@ -33,13 +33,13 @@ namespace sw
                 return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
             }
 
-            /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 비어 있습니다. */
-            static optional<int32> findReturningSeat( const TurnRoom& room, uint32 token )
+            /** @brief @p token 과 주체 @p principalID 가 모두 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 비어 있습니다. */
+            static optional<int32> findReturningSeat( const TurnRoom& room, uint64 token, uint64 principalID )
             {
                 optional<int32> seatIndex;
                 for ( size_t index = 0; index < room._listSeat.size() && token != 0; ++index )
                 {
-                    if ( room._listSeat[index]._bTaken && room._listSeat[index]._token == token )
+                    if ( room._listSeat[index]._bTaken && room._listSeat[index]._token == token && room._listSeat[index]._principalID == principalID )
                         seatIndex = static_cast<int32>( index );
                 }
                 return seatIndex;
@@ -115,13 +115,13 @@ namespace sw
         return true;
     }
 
-    uint32 TurnRelayServer::nextToken()
+    uint64 TurnRelayServer::nextToken()
     {
         // 키 있는 PRF(SipHash-2-4)에 카운터를 넣는다. 옛 식(비밀 + n × 황금비 의 mix64)은 splitmix 수열이라 받은 토큰에서 키를 되찾아 남의 자리 토큰을 맞힐 수 있었다.
         ++_tokenCount;
         uint8 arrCounter[8];
         LittleEndianUtil::writeUint64( arrCounter, _tokenCount );
-        const uint32 token = static_cast<uint32>( SecureUtil::sipHash24( _tokenKey, arrCounter, sizeof( arrCounter ) ) );
+        const uint64 token = SecureUtil::sipHash24( _tokenKey, arrCounter, sizeof( arrCounter ) );
         return token != 0 ? token : 1u;
     }
 
@@ -327,10 +327,11 @@ namespace sw
 
     void TurnRelayServer::handleJoin( int32 connectionID, const TurnJoinBody& body )
     {
-        const uint32 roomID     = body._roomID;
-        const int64  wantedSeat = body._seat;
-        const uint32 token      = body._token;
-        const uint64 knownCount = body._knownActionCount;
+        const uint32 roomID      = body._roomID;
+        const int64  wantedSeat  = body._seat;
+        const uint64 token       = body._token;
+        const uint64 principalID = _pHost->getConnectionPrincipal( connectionID ); // 클라이언트가 보낸 값이 아니다
+        const uint64 knownCount  = body._knownActionCount;
         // 한 연결은 자리를 하나만 가진다. 같은 방이면 가진 자리를 다시 알리고, 다른 방이면 거절한다.
         const TurnRoom* pHeldRoom = findRoomOfConnection( connectionID );
         if ( pHeldRoom != nullptr )
@@ -369,7 +370,7 @@ namespace sw
             pRoom = &_listRoom.back();
         }
         // 토큰이 맞는 자리는 돌아온 것으로 본다. 그 자리의 연결이 아직 살아 있으면 빼앗지 않는다. 토큰이 없으면 빈 자리를 준다.
-        optional<int32> seatIndex  = TurnRelayInternal::findReturningSeat( *pRoom, token );
+        optional<int32> seatIndex  = TurnRelayInternal::findReturningSeat( *pRoom, token, principalID );
         const bool      bReturning = seatIndex.has_value();
         if ( bReturning && pRoom->_listSeat[static_cast<size_t>( *seatIndex )]._connectionID >= 0 )
         {
@@ -389,7 +390,10 @@ namespace sw
         seat._sentActionCount     = bReturning ? static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) ) : 0;
         seat._sentViewActionCount = constant::invalid_index::kInt32; // 돌아온 연결도 지금 모습을 받는다
         if ( bReturning == false )
-            seat._token = nextToken();
+        {
+            seat._token       = nextToken();
+            seat._principalID = principalID;
+        }
         sendJoined( connectionID, *pRoom, *seatIndex );
 
         TurnRelayEvent event;
