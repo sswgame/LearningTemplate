@@ -319,7 +319,7 @@ namespace sw
 
         /** @brief 한 걸음 나아갑니다. */
         void update( const KinematicVehicleInput& input, float32 deltaTime );
-        /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 첫 걸음에만 주며, 진행한 걸음 수를 반환합니다. */
+        /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 다음 걸음 하나에 주며(걸음이 없는 프레임의 눌림은 다음 걸음까지 남는다), 진행한 걸음 수를 반환합니다. */
         int32 advance( const KinematicVehicleInput& input, float32 frameTime );
         void  pollEvents( vector<KinematicVehicleEvent>& outListEvent );
 
@@ -390,6 +390,9 @@ namespace sw
         PROPERTY( RuntimeState, Min = -1, Max = 1 )
         int32 _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
-        uint8 _bAirborne;
+        uint8                  _bAirborne;
+        uint8                  _bBoostQueued : 1; ///< `advance` 가 걸음 없는 프레임에 받은 부스트 눌림
+        uint8                  _bJumpQueued  : 1; ///< `advance` 가 걸음 없는 프레임에 받은 점프 눌림
+        [[maybe_unused]] uint8 _reserved     : 6;
     };
 } // namespace sw
