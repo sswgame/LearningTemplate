@@ -340,6 +340,11 @@ namespace sw
         return pallet >= 0 && pallet < static_cast<int32>( _listPalletState.size() ) ? _listPalletState[static_cast<size_t>( pallet )] : PalletState::Broken;
     }
 
+    float32 AsymmetricHorrorMatch::getInteractRange() const
+    {
+        return _pCatalog != nullptr ? _pCatalog->getRules()._interactRange : 0.0f;
+    }
+
     int32 AsymmetricHorrorMatch::countStandingSurvivors() const
     {
         int32 count = 0;

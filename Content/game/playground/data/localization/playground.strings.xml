@@ -51,9 +51,19 @@
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
+		<entry key="Escaped" source="Escaped" context="TextWidget._text">
+			<origins>
+				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cutscenegate.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="Generators left" source="Generators left" context="TextWidget._text">
+			<origins>
+				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Gilded Knight Helmet" source="Gilded Knight Helmet" context="Item name">
@@ -96,6 +106,11 @@
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
+		<entry key="No one wins" source="No one wins" context="TextWidget._text">
+			<origins>
+				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Notched Blade" source="Notched Blade" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -131,6 +146,16 @@
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Sacrificed" source="Sacrificed" context="TextWidget._text">
+			<origins>
+				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Skill check - press Use" source="Skill check - press Use" context="TextWidget._text">
+			<origins>
+				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
@@ -178,6 +203,11 @@
 		<entry key="Travel Cape" source="Travel Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Use: repair, open, rescue, heal - hold to struggle" source="Use: repair, open, rescue, heal - hold to struggle" context="TextWidget._text">
+			<origins>
+				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">

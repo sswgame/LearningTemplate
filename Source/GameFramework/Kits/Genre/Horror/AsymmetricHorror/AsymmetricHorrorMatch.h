@@ -336,15 +336,21 @@ namespace sw
         const AsymmetricHorrorGate*      findGate( int32 gate ) const;
         const AsymmetricHorrorWindow*    findWindow( int32 window ) const;
         PalletState                      getPalletState( int32 pallet ) const;
-        int32                            getCompletedGeneratorCount() const { return _completedGeneratorCount; }
-        bool                             areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
-        bool                             isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
-        bool                             isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
-        float32                          getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
-        const MatchState&                getMatch() const { return _match; }
-        bool                             isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
-        int32                            countStandingSurvivors() const;
-        uint32                           getTick() const { return _tick; }
+        int32                            getGeneratorCount() const { return static_cast<int32>( _listGenerator.size() ); }
+        int32                            getGateCount() const { return static_cast<int32>( _listGate.size() ); }
+        /** @brief 상호작용 거리(카탈로그 규칙)를 반환합니다. `initialize` 전이면 0 입니다. */
+        float32 getInteractRange() const;
+        /** @brief 생존자 팀 번호(`getMatch().getWinningTeam()` 과 견준다)를 반환합니다. `start` 전이면 -1 입니다. */
+        int32             getSurvivorTeam() const { return _survivorTeam; }
+        int32             getCompletedGeneratorCount() const { return _completedGeneratorCount; }
+        bool              areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
+        bool              isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
+        bool              isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
+        float32           getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
+        const MatchState& getMatch() const { return _match; }
+        bool              isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
+        int32             countStandingSurvivors() const;
+        uint32            getTick() const { return _tick; }
 
     private:
         bool isValidSurvivor( int32 survivor ) const { return survivor >= 0 && survivor < static_cast<int32>( _listSurvivor.size() ); }

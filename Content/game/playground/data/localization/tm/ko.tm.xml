@@ -9,9 +9,11 @@
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
+		<entry source="Escaped" text="탈출했습니다" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
+		<entry source="Generators left" text="남은 발전기" />
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
@@ -23,6 +25,7 @@
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
+		<entry source="No one wins" text="비겼습니다" />
 		<entry source="Notched Blade" text="이 빠진 칼" />
 		<entry source="Pistol" text="권총" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
@@ -33,11 +36,14 @@
 		<entry source="Round Shield" text="둥근 방패" />
 		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
+		<entry source="Sacrificed" text="희생되었습니다" />
 		<entry source="Scout" text="정찰병" />
+		<entry source="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
 		<entry source="Travel Cape" text="여행 망토" />
+		<entry source="Use: repair, open, rescue, heal - hold to struggle" text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
 	</entries>
 </TranslationMemory>

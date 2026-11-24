@@ -6,7 +6,7 @@
   돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
   실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
-<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.playground.hub_portals" fixedDelta="0.0166667" timeoutFrames="14400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/hub.scene.xml"/>
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
@@ -119,6 +119,19 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="8" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- asymmetrichorror — 자리 20(셋째 줄 다섯째 칸). 복원 수는 앞 묶음 수와 무관하게 "늘었다" 로 본다 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_asymmetrichorror" near="4" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_asymmetrichorror" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restored_asymmetrichorror"/>
+	<DevCommand line="teleport Player 4 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="asymmetrichorror" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/asymmetrichorror/maps/estate.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_asymmetrichorror" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
 	<Expect watch="Minigame.Active" is="none"/>

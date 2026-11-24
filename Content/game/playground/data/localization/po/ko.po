@@ -50,11 +50,23 @@ msgctxt "CutB"
 msgid "CutB"
 msgstr "컷 B"
 
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Escaped"
+msgid "Escaped"
+msgstr "탈출했습니다"
+
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
 msgctxt "GateCut"
 msgid "GateCut"
 msgstr ""
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Generators left"
+msgid "Generators left"
+msgstr "남은 발전기"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -98,6 +110,12 @@ msgctxt "Longbow"
 msgid "Longbow"
 msgstr "장궁"
 
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "No one wins"
+msgid "No one wins"
+msgstr "비겼습니다"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Notched Blade"
@@ -133,6 +151,18 @@ msgstr "둥근 방패(병합)"
 msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Sacrificed"
+msgid "Sacrificed"
+msgstr "희생되었습니다"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Skill check - press Use"
+msgid "Skill check - press Use"
+msgstr "스킬 체크 - 쓰기를 누르세요"
 
 #. Context: Subtitle speaker (audio event SubtitleGuideLine)
 #: game/playground/audio/playground.audioevents.xml
@@ -181,3 +211,9 @@ msgstr "전사가 깨어난다."
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
+
+#. Context: TextWidget._text
+#: game/playground/asymmetrichorror/ui/hud.ui.xml
+msgctxt "Use: repair, open, rescue, heal - hold to struggle"
+msgid "Use: repair, open, rescue, heal - hold to struggle"
+msgstr "쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림"

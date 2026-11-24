@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="8b1179647f9f4f86b7276529aee4c9a5"?>
+<!--
+  비대칭 공포 미니게임(minigames/asymmetrichorror)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 걷기는 공통 `Move` 축이다.
+  레이어 AsymmetricHorror 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다. 로컬 사용자마다 같은 맵을 자기 장치로 읽는다(사용자 0 키보드, 1 패드).
+-->
+<InputMap>
+	<layers>
+		<layer name="AsymmetricHorror" enabled="0" blockLower="0"/>
+	</layers>
+	<!-- 누름: 스킬 체크 응답 · 구출 · 문 · 치료 · 수리 · 판자 · 창틀 · 사물함. 누르고 있기: 몸부림 -->
+	<action name="AsymmetricHorror.Use" layer="AsymmetricHorror" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

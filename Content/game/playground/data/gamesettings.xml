@@ -58,6 +58,8 @@
   <!-- 사격장 미니게임(minigames/shooter3d)의 사격 · 재장전 · 무기 고르기 · 시점 — 꺼진 레이어 Shooter(미니게임이 켠다). 시점 확대 · 궤도는 공통. -->
   <inputMap path="common/input/cameraorbit.input.xml"/>
   <inputMap path="game/playground/shooter3d/data/shooter.input.xml"/>
+  <!-- 비대칭 공포 미니게임(minigames/asymmetrichorror)의 쓰기 — 꺼진 레이어 AsymmetricHorror(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
+  <inputMap path="game/playground/asymmetrichorror/data/asymmetrichorror.input.xml"/>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다(접속하지 않으면 혼자 하는 허브다). 서버 설정은 Config/Server/Online/Playground.json.
        onlineHubServerID 는 매치(minigames/shooter3d_match)를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름이다 -->
   <onlineServerAddress>127.0.0.1:17793</onlineServerAddress>
