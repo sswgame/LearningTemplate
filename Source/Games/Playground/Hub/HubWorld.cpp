@@ -28,9 +28,12 @@ namespace sw
         return ReplicatedLayout::readFull( reader, *this, nullptr ) == FixedReadResult::Ok; // `Ok` 일 때만 값을 바꾼다
     }
 
-    float3 HubRules::clampInside( const float3& position ) const
+    AbsolutePosition HubRules::clampInside( const AbsolutePosition& position ) const
     {
-        return float3{ MathUtil::clamp( position._x, -_worldHalfExtent, _worldHalfExtent ), position._y, MathUtil::clamp( position._z, -_worldHalfExtent, _worldHalfExtent ) };
+        const float3& value = position._value;
+        return AbsolutePosition{
+            float3{ MathUtil::clamp( value._x, -_worldHalfExtent, _worldHalfExtent ), value._y, MathUtil::clamp( value._z, -_worldHalfExtent, _worldHalfExtent ) }
+        };
     }
 
     // ------------------------------------------------------------------------------
@@ -194,21 +197,22 @@ namespace sw
         return HubActionResult::Ok;
     }
 
-    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const float3& position, bool bRiding )
+    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const AbsolutePosition& position, bool bRiding )
     {
-        HubAvatar* pAvatar = findAvatarMutable( avatarID );
+        const float3& target  = position._value; // 규칙의 계산은 모두 절대 자리다
+        HubAvatar*    pAvatar = findAvatarMutable( avatarID );
         if ( pAvatar == nullptr )
             return HubActionResult::UnknownTarget;
         pAvatar->_bRiding = bRiding ? SW_TRUE : SW_FALSE;
-        if ( isInsideHub( position._x, position._z ) == false || MathUtil::isFinite( position._y ) == false )
+        if ( isInsideHub( target._x, target._z ) == false || MathUtil::isFinite( target._y ) == false )
             return HubActionResult::StepTooLong;
         // 걸음 길이만 보면 몰아서 아무 속도로나 갈 수 있었다(감사 K-1 — 공격에는 서버 쿨다운이 있는데 이동에는 없었다). 간 거리를
         // 시간이 채우는 예산으로 막는다(언리얼 UCharacterMovementComponent 의 시간 불일치 감지 자리).
-        const float32 distance = float3::getHorizontalDistance( pAvatar->_profile._position, position );
+        const float32 distance = float3::getHorizontalDistance( pAvatar->_profile._position, target );
         if ( distance > _rules._maxMoveStep || distance > pAvatar->_moveBudget )
             return HubActionResult::StepTooLong;
         pAvatar->_moveBudget -= distance;
-        pAvatar->_profile._position = position;
+        pAvatar->_profile._position = target;
         return HubActionResult::Ok;
     }
 

@@ -69,19 +69,19 @@ namespace sw
                 return neutral;
             }
 
-            static const float3& getPosition( const HubPawnState& state ) { return state._mountNumber != 0 ? state._ride._position : state._walk._motion._position; }
+            static AbsolutePosition getPosition( const HubPawnState& state ) { return AbsolutePosition{ state._mountNumber != 0 ? state._ride._position : state._walk._motion._position }; }
 
             /** @brief 자리를 @p position 에 두고 이어 가던 운동을 지웁니다(규칙이 받지 않은 걸음을 되돌린다). */
-            static void placeAtRest( HubPawnState& inoutState, const float3& position )
+            static void placeAtRest( HubPawnState& inoutState, const AbsolutePosition& position )
             {
                 if ( inoutState._mountNumber != 0 )
                 {
-                    inoutState._ride._position     = position;
+                    inoutState._ride._position     = position._value;
                     inoutState._ride._forwardSpeed = 0.0f;
                     return;
                 }
                 CharacterMotionState rest;
-                rest._position             = position;
+                rest._position             = position._value;
                 rest._movementMode         = inoutState._walk._motion._movementMode;
                 rest._bGrounded            = inoutState._walk._motion._bGrounded;
                 inoutState._walk._motion   = rest;
@@ -384,9 +384,9 @@ namespace sw
             pRemote->getOwner()->setAlwaysLoaded( true );
             // 저장된 자리 · 시작 자리에 다른 몸이 서 있으면 곁의 빈 자리에 세운다(언리얼 `FindTeleportSpot`). 빈 자리가 없거나 규칙이 받지 않으면 그 자리 그대로다(서로 밀려난다).
             const optional<float3> spot = pObject->getComponent<CharacterControllerComponent>()->findFreeSpot( origin.toLocal( session._position ), _spawnSearchRadius );
-            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, origin.toAbsolute( *spot ), false ) == HubActionResult::Ok )
+            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, AbsolutePosition{ origin.toAbsolute( *spot ) }, false ) == HubActionResult::Ok )
             {
-                pawn._acceptedPosition = origin.toAbsolute( *spot );
+                pawn._acceptedPosition = AbsolutePosition{ origin.toAbsolute( *spot ) };
                 pObject->getPrimarySceneComponent()->teleportTo( *spot );
             }
         }
@@ -470,7 +470,7 @@ namespace sw
             (void)_server.setOwnerState( pawn._connectionID, *lastTick, _bytesScratch ); // 상태는 상한(작은 고정 크기) 안이다
         else
             SW_LOG_ERROR_ID( "Hub.PawnStateOutOfRange", "[Hub] the pawn of avatar %# is outside the replicated range (%#, %#, %#) - not sent this tick", pawn._avatarID,
-                             Internal::getPosition( state )._x, Internal::getPosition( state )._y, Internal::getPosition( state )._z );
+                             Internal::getPosition( state )._value._x, Internal::getPosition( state )._value._y, Internal::getPosition( state )._value._z );
     }
 
     void HubPawnReplicationComponent::publishPoses( GameObjectManager& manager )
@@ -586,7 +586,7 @@ namespace sw
                 pExit->setActive( false );
         }
         _prediction       = ClientPrediction<HubPawnState, HubPawnInput>{};
-        _previousPosition = manager.getWorldOrigin().toAbsolute( pController->getMotionState()._position );
+        _previousPosition = AbsolutePosition{ manager.getWorldOrigin().toAbsolute( pController->getMotionState()._position ) };
         _localAvatarID    = avatarID; // 입력 틱은 이어 센다 — 줄이면 서버의 입력 창이 낡은 틱으로 본다
         SW_LOG_INFO_ID( "Hub.PawnPredicted", "[Hub] this client predicts the pawn of avatar %# (%# Hz)", avatarID, static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
         return true;
@@ -625,7 +625,7 @@ namespace sw
             _reconciledTick                        = pOwner->_inputTick;
             _floorTickOffset                       = serverState._floorTickOffset;
             _bFloorTickKnown                       = serverState._bFloorTickKnown;
-            const float3                    shown  = Internal::getPosition( current );
+            const float3                    shown  = Internal::getPosition( current )._value;
             const PredictionReconcileResult result = _prediction.reconcile(
                 pOwner->_inputTick, serverState, current,
                 [this, &manager, &hub, &pawnObject]( const HubPawnState& state, const HubPawnInput& tickInput )
@@ -637,8 +637,8 @@ namespace sw
             const bool bCorrected = result == PredictionReconcileResult::Corrected || result == PredictionReconcileResult::TickOverwritten;
             if ( bCorrected )
             {
-                _smoother.addCorrection( shown, Internal::getPosition( current ) ); // 보정한 만큼 화면에서 녹인다
-                _previousPosition += Internal::getPosition( current ) - shown;
+                _smoother.addCorrection( shown, Internal::getPosition( current )._value ); // 보정한 만큼 화면에서 녹인다
+                _previousPosition = _previousPosition + ( Internal::getPosition( current )._value - shown );
             }
         }
         syncLocalMount( manager, pawnObject, current._mountNumber );
@@ -842,7 +842,7 @@ namespace sw
             if ( pMount != nullptr )
                 next._ride = pMount->simulate( local._ride, intent, _tickInterval );
             next                 = toAbsoluteState( origin, next );
-            next._ride._position = hub.getRules().clampInside( next._ride._position );
+            next._ride._position = hub.getRules().clampInside( AbsolutePosition{ next._ride._position } )._value;
             if ( floorTick.has_value() && _pFloorStep != nullptr )
                 _pFloorStep->endTick( *floorTick );
             return next;
@@ -851,7 +851,7 @@ namespace sw
         if ( pMovement != nullptr )
             next._walk = pMovement->simulate( local._walk, intent, _tickInterval, pass );
         next                         = toAbsoluteState( origin, next );
-        next._walk._motion._position = hub.getRules().clampInside( next._walk._motion._position );
+        next._walk._motion._position = hub.getRules().clampInside( AbsolutePosition{ next._walk._motion._position } )._value;
         if ( floorTick.has_value() && _pFloorStep != nullptr )
             _pFloorStep->endTick( *floorTick );
         return next;
@@ -1061,7 +1061,7 @@ namespace sw
     {
         if ( left._mountNumber != right._mountNumber )
             return false;
-        const float3 delta = HubPawnReplicationComponentInternal::getPosition( left ) - HubPawnReplicationComponentInternal::getPosition( right );
+        const float3 delta = HubPawnReplicationComponentInternal::getPosition( left )._value - HubPawnReplicationComponentInternal::getPosition( right )._value;
         if ( delta.getLength() > tolerance )
             return false;
         if ( left._mountNumber != 0 )

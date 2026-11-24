@@ -17,6 +17,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
@@ -123,7 +124,7 @@ namespace sw
         vector<HubPlacement> _listPlacement{};
 
         /** @brief 점을 허브 경계(XZ) 안으로 자릅니다. 폰의 걸음이 서버 · 예측에서 같은 이 함수로 경계를 지킨다. */
-        float3 clampInside( const float3& position ) const;
+        AbsolutePosition clampInside( const AbsolutePosition& position ) const;
     };
 
     /**
@@ -220,7 +221,7 @@ namespace sw
         HubActionResult attackCreature( uint32 avatarID, uint32 placementID );
         HubActionResult gatherHerb( uint32 avatarID, uint32 placementID );
         /** @brief 서버가 움직인 폰의 자리를 아바타에 옮깁니다. 경계 밖이거나 속도 한도의 예산을 넘으면 StepTooLong 이고 자리는 그대로입니다(부르는 쪽이 폰을 되돌린다). */
-        HubActionResult moveAvatar( uint32 avatarID, const float3& position, bool bRiding );
+        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, bool bRiding );
         HubActionResult inviteToParty( uint32 avatarID, uint32 targetAvatarID );
         HubActionResult acceptPartyInvite( uint32 avatarID, uint32 leaderAvatarID );
         HubActionResult leaveParty( uint32 avatarID );

@@ -24,10 +24,12 @@ namespace sw
         constexpr float32 kAvatarInterestStep   = 1.0f;
         constexpr float64 kReplacedFlushSeconds = 2.0; ///< 같은 계정이 다시 붙어 닫는 앞 연결에 남은 신뢰 메시지(행동 결과)를 비울 시간
 
-        float3 makeInterestPosition( const float3& position )
+        AbsolutePosition makeInterestPosition( const float3& position )
         {
-            return float3{ MathUtil::floor( position._x / kAvatarInterestStep ) * kAvatarInterestStep, position._y,
-                           MathUtil::floor( position._z / kAvatarInterestStep ) * kAvatarInterestStep };
+            return AbsolutePosition{
+                float3{ MathUtil::floor( position._x / kAvatarInterestStep ) * kAvatarInterestStep, position._y,
+                       MathUtil::floor( position._z / kAvatarInterestStep ) * kAvatarInterestStep }
+            };
         }
     } // namespace
 
@@ -153,7 +155,7 @@ namespace sw
         {
             const HubAvatar* pAvatar = _world.findAvatar( entry.second->_avatarID );
             if ( pAvatar != nullptr )
-                outListSession.push_back( HubAvatarSession{ pAvatar->_profile._position, pAvatar->_avatarID, entry.first } );
+                outListSession.push_back( HubAvatarSession{ AbsolutePosition{ pAvatar->_profile._position }, pAvatar->_avatarID, entry.first } );
         }
         VectorUtil::sort( outListSession, Ascending<&HubAvatarSession::_avatarID>{} );
     }
@@ -322,7 +324,7 @@ namespace sw
                 continue;
             }
             const uint32 typeID = spawn._def._kind == HubPlacementKind::Creature ? HubEntityType::kCreature : HubEntityType::kHerb;
-            publishEntity( spawn._placementID, HubPublishedEntity{ spawn._def._position, spawn._health, typeID }, 1.0f );
+            publishEntity( spawn._placementID, HubPublishedEntity{ AbsolutePosition{ spawn._def._position }, spawn._health, typeID }, 1.0f );
         }
     }
 
@@ -346,7 +348,7 @@ namespace sw
         }
         MMOEntity entity;
         entity._listState  = _listStateScratch;
-        entity._position   = AbsolutePosition{ value._position }; // 허브 규칙의 자리는 절대다
+        entity._position   = value._position;
         entity._entityID   = entityID;
         entity._typeID     = value._typeID;
         entity._importance = importance;

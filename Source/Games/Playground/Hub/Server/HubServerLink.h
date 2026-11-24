@@ -36,11 +36,11 @@ namespace sw
     /** @brief 복제기에 마지막으로 올린 엔티티 값입니다. 같으면 다시 올리지 않습니다(언리얼 Push Model · Iris 의 더티 표시 자리). */
     struct HubPublishedEntity
     {
-        float3 _position{};
-        int32  _stateValue{ 0 };
-        uint32 _typeID{ 0 };
+        AbsolutePosition _position{};
+        int32            _stateValue{ 0 };
+        uint32           _typeID{ 0 };
 
-        bool operator==( const HubPublishedEntity& other ) const { return _position == other._position && _stateValue == other._stateValue && _typeID == other._typeID; }
+        bool operator==( const HubPublishedEntity& other ) const { return _position._value == other._position._value && _stateValue == other._stateValue && _typeID == other._typeID; }
         bool operator!=( const HubPublishedEntity& other ) const { return ( *this == other ) == false; }
     };
 
@@ -67,7 +67,7 @@ namespace sw
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
         void            update( float32 deltaSeconds ) override;
         void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override;
-        HubActionResult moveAvatar( uint32 avatarID, const float3& position, bool bRiding ) override { return _world.moveAvatar( avatarID, position, bRiding ); }
+        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, bool bRiding ) override { return _world.moveAvatar( avatarID, position, bRiding ); }
 
         /**
          * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 받지 않고 끊습니다.

@@ -21,6 +21,13 @@ namespace sw
     {
         float3 _value{};
 
+        AbsolutePosition() = default;
+        /** @brief @p value 가 절대 자리라고 적습니다. 명시 생성자라 형식 이름을 적지 않은 `float3` · 중괄호(집합체 초기화의 중괄호 생략 포함)는 들어오지 못한다. */
+        explicit AbsolutePosition( const float3& value )
+            : _value{ value }
+        {
+        }
+
         AbsolutePosition operator+( const float3& offset ) const { return AbsolutePosition{ _value + offset }; }
     };
 

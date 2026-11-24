@@ -26,6 +26,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/Hit/MeleeSweepHistory.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -43,7 +44,6 @@
 namespace sw
 {
     struct NetLinkValue;
-    struct WorldOrigin;
 
     class ControlSystem;
     class GameObject;
@@ -180,7 +180,7 @@ namespace sw
         {
             GameObjectHandle _object{};
             GameObjectHandle _controller{};       ///< 원격 조종자 오브젝트
-            float3           _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리(절대) — 받지 않은 걸음은 여기로 되돌린다
+            AbsolutePosition _acceptedPosition{}; ///< 허브 규칙이 받은 마지막 자리(절대) — 받지 않은 걸음은 여기로 되돌린다
             uint32           _avatarID{ 0 };
             int32            _connectionID{ constant::invalid_index::kInt32 };
             uint8            _bSeen{ SW_FALSE };  ///< 이번 프레임의 접속 목록에 있다
@@ -301,7 +301,7 @@ namespace sw
         float3                                       _floorLocalPosition;   ///< 클라이언트 — 디딘 바닥 기준의 자리(밀림 감시)
         float32                                      _floorSlip;            ///< 클라이언트 — 디딘 바닥에서 밀린 거리
         int32                                        _floorTickOffset;      ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
-        float3                                       _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
+        AbsolutePosition                             _previousPosition;     ///< 클라이언트 — 자기 폰의 지난 틱 자리(절대, 그리기 보간)
         int64                                        _lastFrameNanoseconds; ///< 지난 넷 걸음 프레임의 실제 시각(0 이면 아직 없다)
         float32                                      _accumulator;
         vector<ControlTrigger>                       _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건

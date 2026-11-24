@@ -19,6 +19,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/StreamingCellGrid.h"
 
@@ -130,9 +131,9 @@ namespace sw
     /** @brief 들인 접속 하나의 아바타입니다(`IHubServer::collectAvatars`) — 서버의 폰이 접속마다 서고 거두어지는 기준이다. */
     struct HubAvatarSession
     {
-        float3 _position{};                                      ///< 아바타의 지금 자리(들일 때는 저장된 자리)
-        uint32 _avatarID{ 0 };                                   ///< 복제 엔티티 id 로도 쓴다
-        int32  _connectionID{ constant::invalid_index::kInt32 }; ///< 그 아바타를 조종하는 연결
+        AbsolutePosition _position{};                                      ///< 아바타의 지금 자리(들일 때는 저장된 자리)
+        uint32           _avatarID{ 0 };                                   ///< 복제 엔티티 id 로도 쓴다
+        int32            _connectionID{ constant::invalid_index::kInt32 }; ///< 그 아바타를 조종하는 연결
     };
 
     /**
@@ -151,7 +152,7 @@ namespace sw
         /** @brief 들인 접속의 아바타를 아바타 번호 차례로 채웁니다(먼저 비운다). */
         virtual void collectAvatars( vector<HubAvatarSession>& outListSession ) const = 0;
         /** @brief 서버가 움직인 폰의 자리를 아바타에 옮깁니다(`HubWorld::moveAvatar`). 규칙이 받지 않으면 부르는 쪽이 폰을 되돌린다. */
-        virtual HubActionResult moveAvatar( uint32 avatarID, const float3& position, bool bRiding ) = 0;
+        virtual HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, bool bRiding ) = 0;
     };
 
     /** @class IHubServerFactory @brief 서버 링크를 만드는 쪽입니다(서버 코드의 모듈 부분 — 클라이언트 구성에는 없다). */
