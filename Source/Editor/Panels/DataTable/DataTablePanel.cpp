@@ -127,7 +127,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing; // 아직 연 표가 없다 — 저장은 현지화 표만 본다
         const optional<AbsolutePath> diskPath = getDocumentDiskPath();
         // 읽지 못하면 모델이 아무 표도 열지 않고 저장을 막는다 — 앞 표의 글을 이 파일에 쓰지 않는다.
-        if ( diskPath.has_value() == false || _model.openGameDataFile( diskPath->str() ) == false )
+        if ( diskPath.has_value() == false || _model.openGameDataFile( *diskPath ) == false )
             return ToolAssetLoadResult::Malformed;
         return ToolAssetLoadResult::Loaded;
     }

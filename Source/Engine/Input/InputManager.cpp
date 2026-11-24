@@ -616,7 +616,7 @@ namespace sw
         }
     }
 
-    bool InputManager::playSessionRecording( string_view filePath )
+    bool InputManager::playSessionRecording( const AbsolutePath& filePath )
     {
         if ( _sessionRecording.loadFromFile( filePath ) == false )
             return false;

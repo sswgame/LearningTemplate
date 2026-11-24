@@ -204,7 +204,7 @@ namespace sw
                 for ( const string& line : BugReport::findEnvironmentMismatches( recorded, current._report ) )
                     SW_LOG_WARNING_ID( "BugReport.ReplayEnvironmentDiffers", "bugreport.replay: environment differs - %#", line );
                 InputManager& input = engine::getSubsystem<InputManager>();
-                if ( input.playSessionRecording( folder.join( BugReport::kInputFileName ).str() ) == false )
+                if ( input.playSessionRecording( folder.join( BugReport::kInputFileName ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reply;
                     reply.appendFormat( "bugreport.replay: no input recording in '%#'", folder.str() );
