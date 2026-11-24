@@ -28,6 +28,8 @@
 	<WaitUntil watch="Editor.NetPlayConnectedClients" equals="0" timeoutWallSeconds="30"/>
 	<ExpectLog id="Net.ResourceDigestMismatch" contains="composed" atLeast="1"/>
 	<ExpectLog id="GameNetSession.NetSessionLostServer" atLeast="1"/>
+	<!-- 끊긴 클라이언트의 게임(Playground 허브 흐름)이 서버를 잃었다고 남긴다 - 서버가 내보낸 것(Remote)이라 다시 붙지 않는다 -->
+	<ExpectLog id="Playground.HubLost" atLeast="1"/>
 	<DevCommand line="netplay.stop"/>
 	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutWallSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
