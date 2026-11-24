@@ -177,6 +177,30 @@ SW_TEST_CASE( NetSendThrottleTest, QueueingDelayCountsAsCongestion )
     SW_EXPECT_NEAR( 50000.0, throttle.getBytesPerSecond( Internal::kMaxBytesPerSecond ), 1.0e-6 );
 }
 
+/** @brief [NetSendThrottleTest] 경로가 길어진 연결(50 → 250 ms)은 최솟값 창이 지나면 다시 상한까지 오른다 — 연결 처음의 최솟값을 끝까지 들면 하한에 묶인다 */
+SW_TEST_CASE( NetSendThrottleTest, LongerPathStopsCountingAsCongestionAfterTheWindow )
+{
+    using Internal                     = NetSendThrottleTestInternal;
+    const NetSendThrottleConfig config = Internal::makeConfig();
+    NetSendThrottle             throttle;
+    float64                     time = 0.0;
+    for ( ; time < 1.0; time += 0.25 )
+    {
+        throttle.update( time, config, Internal::kMaxBytesPerSecond, Internal::makeStats( 0.05f, 0.0f ) );
+    }
+    const float64 changeTime = time;
+    for ( ; time < changeTime + 5.0; time += 0.25 )
+    {
+        throttle.update( time, config, Internal::kMaxBytesPerSecond, Internal::makeStats( 0.25f, 0.0f ) );
+    }
+    SW_EXPECT_NEAR( 20000.0, throttle.getBytesPerSecond( Internal::kMaxBytesPerSecond ), 1.0e-6 ); // 창 안에서는 줄 지연과 구별하지 못해 줄인다
+    for ( ; time < changeTime + 2.0 * NetSendThrottle::kMinRttWindowSeconds + 5.0; time += 0.25 )
+    {
+        throttle.update( time, config, Internal::kMaxBytesPerSecond, Internal::makeStats( 0.25f, 0.0f ) );
+    }
+    SW_EXPECT_NEAR( 100000.0, throttle.getBytesPerSecond( Internal::kMaxBytesPerSecond ), 1.0e-6 );
+}
+
 /**
  * @brief [NetSendThrottleTest] 손실 20 % 회선(같은 흉내 씨앗)에서 조절하는 연결은 고정 버킷보다 신뢰 메시지를 적게 다시 보내고, 송신 속도 · 처리량은 하한 밑으로 내려가지 않는다.
  *        손실이 0 으로 돌아오면 속도가 상한까지 회복된다
