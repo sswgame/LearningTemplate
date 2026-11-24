@@ -152,10 +152,10 @@ namespace sw
          */
         [[nodiscard]] static uint64 getThreadAllocationCount();
         /**
-         * @brief 이 스레드가 잡은 바이트에서 놓은 바이트를 뺀 값입니다(다른 스레드가 잡은 블록을 놓으면 줄어 음수일 수 있다). 배포본은 블록 헤더가 없어 늘 0 입니다.
+         * @brief 이 스레드가 태그 @p tag 로 잡은 바이트에서 그 태그의 블록을 놓은 바이트를 뺀 값입니다(다른 스레드가 잡은 블록을 놓으면 줄어 음수일 수 있다). 배포본은 블록 헤더가 없어 늘 0 입니다.
          * @details 앞뒤 차이가 그 사이에 남긴 바이트다 — `ScopedAllocationMeter` 가 읽는다.
          */
-        [[nodiscard]] static int64 getThreadLiveBytes();
+        [[nodiscard]] static int64 getThreadLiveBytes( MemoryTag tag );
 
         /** @brief 현재 스레드의 할당 태그를 설정합니다. 보통은 구조 자리(서브시스템 생성 · 초기화, 에셋 로더, 모듈 경계, 스레드 · 태스크 상속)가 `ScopedMemoryTag` 로 겁니다. */
         static void setCurrentMemoryTag( MemoryTag tag );
@@ -480,8 +480,9 @@ namespace sw
     };
 
     /**
-     * @brief 스코프 동안 이 스레드가 잡아 **남긴** 바이트를 잽니다(잡았다 놓은 임시 버퍼는 빠진다). 안쪽에 또 잰 것은 빼므로 겹쳐 세지 않습니다.
-     * @details 태그 표는 "무엇에 쓰나"(Animation · Game …)로 나눈 합이라 에셋 하나의 몫을 모른다. 읽는 동안 남긴 바이트를 에셋마다 적으면 종류마다 크기 함수를 적지 않아도 안쪽 컨테이너까지 정확하다
+     * @brief 스코프 동안 이 스레드가 **들어올 때의 태그로** 잡아 남긴 바이트를 잽니다(잡았다 놓은 임시 버퍼는 빠진다). 같은 태그로 안쪽에 또 잰 것은 빼므로 겹쳐 세지 않습니다.
+     * @details 태그가 다른 할당은 남의 것이다 — 머티리얼을 짓다 텍스처 캐시가 잡은 몫은 텍스처 태그라 섞이지 않는다(캐시 · 로더마다 제 태그를 건다).
+     *          태그 표는 "무엇에 쓰나"(Animation · Game …)로 나눈 합이라 에셋 하나의 몫을 모른다. 읽는 동안 남긴 바이트를 에셋마다 적으면 종류마다 크기 함수를 적지 않아도 안쪽 컨테이너까지 정확하다
      *          (유니티 네이티브 메모리의 할당 주인 · 언리얼 LLM 의 에셋 태그와 같은 자리). 배포본은 늘 0 입니다(`kMemoryTagScopesEnabled`).
      */
     struct SW_API ScopedAllocationMeter
@@ -495,7 +496,8 @@ namespace sw
         [[nodiscard]] uint64 getRetainedBytes() const;
 
     private:
-        int64 _startBytes;
-        int64 _outerNestedBytes; ///< 들어오기 전까지 바깥이 뺄 몫
+        MemoryTag _tag;
+        int64     _startBytes;
+        int64     _outerNestedBytes; ///< 들어오기 전까지 바깥이 뺄 몫
     };
 } // namespace sw

@@ -597,3 +597,36 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
     SW_EXPECT_EQUAL( 1u, Record::s_allocateCount.load() );
 #endif
 }
+
+/** @brief [MemoryTest] 재는 구간은 들어올 때의 태그로 남긴 것만 센다 — 놓은 것 · 다른 태그 · 안쪽에서 잰 것은 세지 않는다 */
+SW_TEST_CASE( MemoryTest, AllocationMeterCountsRetainedBytesOfItsTag )
+{
+    if ( sw::kMemoryTagScopesEnabled == false )
+        return;
+    const sw::ScopedMemoryTag outerScope{ sw::MemoryTag::Material };
+    void*                     pKept      = nullptr;
+    void*                     pNested    = nullptr;
+    void*                     pOther     = nullptr;
+    uint64                    innerBytes = 0;
+    uint64                    outerBytes = 0;
+    {
+        const sw::ScopedAllocationMeter outer;
+        pKept = sw::Memory::allocate( 100 );
+        sw::Memory::free( sw::Memory::allocate( 5000 ) );
+        {
+            const sw::ScopedMemoryTag textureScope{ sw::MemoryTag::Texture };
+            pOther = sw::Memory::allocate( 700 );
+        }
+        {
+            const sw::ScopedAllocationMeter inner;
+            pNested    = sw::Memory::allocate( 30 );
+            innerBytes = inner.getRetainedBytes();
+        }
+        outerBytes = outer.getRetainedBytes();
+    }
+    sw::Memory::free( pKept );
+    sw::Memory::free( pNested );
+    sw::Memory::free( pOther );
+    SW_EXPECT_EQUAL( uint64{ 30 }, innerBytes );
+    SW_EXPECT_EQUAL( uint64{ 100 }, outerBytes );
+}

@@ -43,16 +43,16 @@ namespace sw
         atomic<uint64> s_nextTrackerID{ 0 };
         /** @brief 이 스레드의 현재 할당 태그입니다(`Memory::setCurrentMemoryTag`). */
         thread_local MemoryTag t_currentMemoryTag{ MemoryTag::Unknown };
-        /** @brief 지금 재는 구간(`ScopedAllocationMeter`)의 안쪽에서 이미 잰 바이트입니다 — 바깥이 뺀다. */
-        thread_local int64 t_nestedMeterBytes{ 0 };
+        /** @brief 지금 재는 구간(`ScopedAllocationMeter`)의 안쪽에서 이미 잰 바이트입니다(태그마다) — 바깥이 뺀다. */
+        thread_local int64 t_arrNestedMeterBytes[kMemoryTagCount]{};
 
 #if !defined( SW_SHIPPING )
         /** @brief 걸린 할당 관찰자입니다. 할당마다 acquire 읽기 하나입니다. */
         ObserverSlot<const MemoryAllocationObserver> s_allocationObserverSlot{};
         /** @brief 이 스레드의 sw 할당 횟수입니다(`Memory::getThreadAllocationCount`). 헤더를 쓰는 길에서 스레드 지역 증가 하나입니다. */
         thread_local uint64 t_allocationCount{ 0 };
-        /** @brief 이 스레드가 잡은 바이트 − 놓은 바이트입니다(`Memory::getThreadLiveBytes`). */
-        thread_local int64 t_liveBytes{ 0 };
+        /** @brief 이 스레드가 태그마다 잡은 바이트 − 놓은 바이트입니다(`Memory::getThreadLiveBytes`). */
+        thread_local int64 t_arrLiveBytes[kMemoryTagCount]{};
 
         struct MemoryInternal
         {
@@ -73,7 +73,7 @@ namespace sw
                 pHeader->_bObserved   = SW_FALSE;
                 RealtimeSection::recordAllocation(); // 실시간 구간(오디오 장치 콜백)의 할당을 센다 — 검사 구성의 할당은 모두 여기를 지난다
                 ++t_allocationCount;
-                t_liveBytes += static_cast<int64>( size );
+                t_arrLiveBytes[static_cast<size_t>( tag )] += static_cast<int64>( size );
 
                 AllocationTracker* pTracker = s_allocationTrackerSlot.get();
                 if ( pTracker != nullptr )
@@ -116,7 +116,7 @@ namespace sw
                 if ( pHeader->_magic != kAllocMagic )
                     return nullptr;
                 RealtimeSection::recordFree();
-                t_liveBytes -= static_cast<int64>( pHeader->_size );
+                t_arrLiveBytes[static_cast<size_t>( pHeader->_tag )] -= static_cast<int64>( pHeader->_size );
 
                 // 센 블록을 센 기록기에만 알린다. 기록기가 떨어졌거나 다른 기록기로 바뀌었으면 알릴 곳이 없다.
                 if ( pHeader->_trackerID != 0 )
@@ -253,12 +253,12 @@ namespace sw
 #endif
     }
 
-    int64 Memory::getThreadLiveBytes()
+    int64 Memory::getThreadLiveBytes( [[maybe_unused]] MemoryTag tag )
     {
 #if defined( SW_SHIPPING )
         return 0;
 #else
-        return t_liveBytes;
+        return t_arrLiveBytes[static_cast<size_t>( tag )];
 #endif
     }
 
@@ -320,20 +320,21 @@ namespace sw
     }
 
     ScopedAllocationMeter::ScopedAllocationMeter()
-        : _startBytes{ Memory::getThreadLiveBytes() }
-        , _outerNestedBytes{ t_nestedMeterBytes }
+        : _tag{ Memory::getCurrentMemoryTag() }
+        , _startBytes{ Memory::getThreadLiveBytes( _tag ) }
+        , _outerNestedBytes{ t_arrNestedMeterBytes[static_cast<size_t>( _tag )] }
     {
-        t_nestedMeterBytes = 0;
+        t_arrNestedMeterBytes[static_cast<size_t>( _tag )] = 0;
     }
 
     ScopedAllocationMeter::~ScopedAllocationMeter()
     {
-        t_nestedMeterBytes = _outerNestedBytes + ( Memory::getThreadLiveBytes() - _startBytes );
+        t_arrNestedMeterBytes[static_cast<size_t>( _tag )] = _outerNestedBytes + ( Memory::getThreadLiveBytes( _tag ) - _startBytes );
     }
 
     uint64 ScopedAllocationMeter::getRetainedBytes() const
     {
-        const int64 retained = Memory::getThreadLiveBytes() - _startBytes - t_nestedMeterBytes;
+        const int64 retained = Memory::getThreadLiveBytes( _tag ) - _startBytes - t_arrNestedMeterBytes[static_cast<size_t>( _tag )];
         return retained > 0 ? static_cast<uint64>( retained ) : 0u;
     }
 

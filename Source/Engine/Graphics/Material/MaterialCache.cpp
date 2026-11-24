@@ -35,7 +35,11 @@ namespace sw
         {
             shared_ptr<Material> _material; ///< shared 인 이유는 Material.h 머리 주석에 있습니다(렌더 패킷이 소유를 빌립니다)
             string               _path;
+            uint64               _loadedBytes{ 0 }; ///< 초기화하며 남긴 바이트(프로퍼티 표 · 변형 · 글 — `ScopedAllocationMeter`, 배포본은 0)
             uint32               _refCount{ 0 };
+
+            /** @brief CPU 쪽 크기입니다. 상수 버퍼 · 텍스처는 그것을 쥔 GPU 자원 표와 텍스처 캐시 줄에 있다(언리얼 `EResourceSizeMode::Exclusive`). */
+            uint64 computeCPUBytes() const { return sizeof( Material ) + _loadedBytes; }
         };
 
         unordered_map<string, Entry> _mapEntry;
@@ -50,6 +54,22 @@ namespace sw
         /// @brief 디바이스로 머티리얼을 초기화하는 구간(`DeviceInitScope`)을 지금 쥔 스레드입니다. 비어 있으면 아무도 안 쥐었습니다.
         atomic<std::thread::id> _initOwner;
         uint32                  _initDepth; ///< 쥔 스레드의 중첩 깊이입니다. 쥔 스레드만 읽고 씁니다
+
+        /** @brief @p material 을 초기화하고 남긴 바이트를 칸에 적습니다(그 사이 칸이 지워졌으면 적지 않는다). `_mutex` 를 쥐지 않고 부릅니다. */
+        [[nodiscard]] bool initializeMaterial( Material& material, const string& key, IRHIDevice* pDevice )
+        {
+            const ScopedAllocationMeter meter;
+            const bool                  bInitialized = material.initialize( pDevice, AssetID{ key } );
+            const uint64                bytes        = meter.getRetainedBytes();
+            if constexpr ( kMemoryTagScopesEnabled )
+            {
+                UniqueLock<shared_mutex> lock{ _mutex };
+                const auto               it = _mapEntry.find( key );
+                if ( it != _mapEntry.end() && it->second._material.get() == &material )
+                    it->second._loadedBytes = bytes;
+            }
+            return bInitialized;
+        }
 
         Impl()
             : _mapEntry{}
@@ -211,11 +231,10 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
-        // 자기 몫만 센다 — 상수 버퍼 · 텍스처는 그것을 쥔 GPU 자원 표와 텍스처 캐시 줄에 있다(언리얼 `EResourceSizeMode::Exclusive`).
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )
         {
-            outListEntry.push_back( AssetMemoryEntry{ key, sizeof( Material ), 0, entry._refCount } );
+            outListEntry.push_back( AssetMemoryEntry{ key, entry.computeCPUBytes(), 0, entry._refCount } );
         }
     }
 
@@ -274,7 +293,7 @@ namespace sw
             if ( material->getInitState() == MaterialInitState::Ready )
                 continue;
             // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
-            if ( material->initialize( pDevice, AssetID{ key } ) == false )
+            if ( _impl->initializeMaterial( *material, key, pDevice ) == false )
             {
                 SW_LOG_ERROR_ID( "MaterialCache.FailedInitializeMaterial", "Failed to initialize Material %#", key.c_str() );
                 continue;
@@ -458,7 +477,7 @@ namespace sw
             material->releaseRHI( pDevice );
         }
 
-        if ( material->initialize( pDevice, AssetID{ key } ) == false )
+        if ( _impl->initializeMaterial( *material, key, pDevice ) == false )
         {
             SW_LOG_ERROR_ID( "MaterialCache.HotReloadFailedMaterial", "Hot-Reload failed for Material %#", key.c_str() );
             return ReloadResult::Failed;

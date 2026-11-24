@@ -216,12 +216,14 @@ namespace sw
 
     void PrefabCache::collectMemoryEntries( vector<AssetMemoryEntry>& outListEntry ) const
     {
-        // 객체 크기만 센다 — 프리팹 안 노드 표는 메모리 태그(Scene) 줄에 있다(`AssetMemoryEntry`).
+        // 읽으며 남긴 바이트(노드 표 · 스폰 원형까지)다. 재지 않는 구성(배포본)은 객체 크기만 안다.
         ScopedSharedLock<shared_mutex> readLock{ _mapCacheMutex };
         for ( const auto& [key, pAsset] : _mapCache )
         {
-            const auto useCount = pAsset.use_count(); // 표가 쥔 하나를 뺀다
-            outListEntry.push_back( AssetMemoryEntry{ key, sizeof( PrefabAsset ), 0, static_cast<uint32>( useCount > 1 ? useCount - 1 : 0 ) } );
+            const auto   useCount = pAsset.use_count(); // 표가 쥔 하나를 뺀다
+            const auto   bytesIt  = _mapLoadedBytes.find( key );
+            const uint64 cpuBytes = MathUtil::max<uint64>( sizeof( PrefabAsset ), bytesIt != _mapLoadedBytes.end() ? bytesIt->second : 0u );
+            outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, 0, static_cast<uint32>( useCount > 1 ? useCount - 1 : 0 ) } );
         }
     }
 
@@ -231,6 +233,7 @@ namespace sw
         _cacheGeneration.fetch_add( 1, std::memory_order_acq_rel );
         _mapLoading.clear();
         _mapCache.clear();
+        _mapLoadedBytes.clear();
         PrefabCacheInternal::getCacheStats().recordClear();
     }
 
@@ -238,6 +241,7 @@ namespace sw
         : AssetCacheBase{ CacheTracking::counted( kAssetKindName ) }
         , _mapCacheMutex{}
         , _mapCache{}
+        , _mapLoadedBytes{}
         , _mapLoading{}
         , _cacheGeneration{ 0 }
     {
@@ -355,7 +359,8 @@ namespace sw
                 return cacheIt->second;
         }
 
-        shared_ptr<PrefabAsset> asset = sw::make_shared<PrefabAsset>();
+        const ScopedAllocationMeter meter; // 중첩 프리팹은 이 함수를 다시 지나 그 프리팹의 줄이 센다
+        shared_ptr<PrefabAsset>     asset = sw::make_shared<PrefabAsset>();
 
         // 쿠킹본 이름은 쿠커(`PrefabCooker::cookAll`)와 같은 규칙 하나다(`AssetCookPath`).
         string binPath = AssetCookPath::toCookedPath( resolvedPath );
@@ -389,6 +394,7 @@ namespace sw
         // 스폰 원형은 const 로 내주기 전에 여기서 한 번 짓는다 — 스폰은 상태 글을 다시 파싱하지 않는다(감사 A-15).
         if ( asset->createSpawnTemplate() == false )
             return nullptr;
+        const uint64 loadedBytes = meter.getRetainedBytes();
 
         UniqueLock<shared_mutex> writeLock{ _mapCacheMutex };
         const auto               cacheIt = _mapCache.find( cacheKey );
@@ -399,6 +405,8 @@ namespace sw
             return asset;
 
         _mapCache.emplace( cacheKey, asset );
+        if constexpr ( kMemoryTagScopesEnabled )
+            _mapLoadedBytes[cacheKey] = loadedBytes;
         return asset;
     }
 

@@ -102,6 +102,7 @@ namespace sw
     template <typename AssetType>
     bool SharedAssetCache<AssetType>::reloadIn( SharedAssetTable<AssetType>& table, string_view path )
     {
+        const ScopedMemoryTag memoryScope{ SharedAssetCacheType<AssetType>::kMemoryTag }; // 처음 읽을 때와 같은 태그 — 같은 줄에서 센다
         if ( table.reloadShared( path, &SharedAssetCacheType<AssetType>::load ) == false )
             return false;
         (void)table.followRefs(); // 사슬 정리 한 입구 — 다시 읽은 직후(게임 스레드, 틱 밖) 참조를 최신 판으로 옮긴다
