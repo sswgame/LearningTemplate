@@ -36,7 +36,7 @@ namespace sw
         AssetPathValueKind  _kind{ AssetPathValueKind::String }; ///< 값의 형식
         const PropertyInfo* _pTopProperty{ nullptr };            ///< 이 값을 품은 컴포넌트의 맨 위 칸 — 바꾼 뒤 `onPropertyChanged` 에 넘길 이름
 
-        /** @brief 경로 글입니다. 내장 에셋(`AssetRefBase::isBuiltin` — `Cube`)은 파일이 아니라 빈 값입니다. */
+        /** @brief 경로 글입니다. 내장 에셋 · 렌더 텍스처(`AssetRefBase::isBuiltin`)는 파일이 아니라 빈 값입니다. */
         [[nodiscard]] string_view getPath() const;
         /**
          * @brief 경로를 @p path 로 바꿉니다 — 에셋 리다이렉트를 런타임 메모리에 반영하는 일이라 에디터 옮김과 런타임 핫 리로드가 같이 쓴다(언리얼 CoreRedirects 가 로드된 객체에 적용되는 자리).

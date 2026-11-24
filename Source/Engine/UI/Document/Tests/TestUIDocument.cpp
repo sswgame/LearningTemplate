@@ -14,6 +14,7 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 using namespace sw;
@@ -133,6 +134,20 @@ SW_TEST_CASE( UIDocumentTest, InstantiatesWidgets )
     SW_REQUIRE_TRUE( second != nullptr );
     SW_EXPECT_EQUAL( size_t( 2 ), listBinding.size() );
     SW_EXPECT_FALSE( listBinding[0]._widget == listBinding[1]._widget );
+}
+
+/** @brief [UIDocumentTest] 이미지 위젯은 렌더 텍스처(`rendertarget/…` — 캡처 카메라의 그림)를 가리킬 수 있다. 예전에는 텍스처 종류가 파일 접미사만 받아 문서가 서지 않았다 */
+SW_TEST_CASE( UIDocumentTest, ImageTakesARenderTexture )
+{
+    UIDocumentAsset asset;
+    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<ImageWidget _name=\"Picture\" _imagePath=\"rendertarget/minimap\"/>" ), "engine/ui/picture.ui.xml", ResourceContext::forDocument(), asset ).has_value() );
+    UIDocumentCache          cache;
+    vector<UIBindingDef>     listBinding;
+    const unique_ptr<Widget> root = UIDocumentLoader::instantiate( asset, cache, ResourceTagSet{}, listBinding ).value_or( nullptr );
+    SW_REQUIRE_TRUE( root != nullptr );
+    const ImageWidget* pImage = castTo<const ImageWidget>( root.get() );
+    SW_REQUIRE_TRUE( pImage != nullptr );
+    SW_EXPECT_EQUAL( string( "rendertarget/minimap" ), pImage->getImagePath() );
 }
 
 /** @brief [UIDocumentTest] 값을 읽지 못하면 위젯을 만들지 않고 줄을 알린다. 그때 앞서 모은 바인딩은 되돌린다 */
