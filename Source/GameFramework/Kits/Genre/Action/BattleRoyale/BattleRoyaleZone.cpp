@@ -54,7 +54,7 @@ namespace sw
     {
     }
 
-    bool BattleRoyaleZone::initialize( const BattleRoyaleZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain )
+    bool BattleRoyaleZone::initialize( const BattleRoyaleZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain& terrain )
     {
         // 맵 크기가 1 미만이면 맞추지 않고 거절한다(카탈로그의 `_mapSize` 는 `Min = 1` 이다).
         if ( mapSize < 1.0f )
@@ -63,7 +63,7 @@ namespace sw
             return false;
         }
         _settings = settings;
-        _pTerrain = pTerrain;
+        _pTerrain = &terrain;
         _mapSize  = mapSize;
         _random.setSeed( seed );
         _eventBuffer.clear();
@@ -254,7 +254,7 @@ namespace sw
         const bool    bCenterOutsideMap = center._x < margin || center._y < margin || center._x > _mapSize - margin || center._y > _mapSize - margin;
         if ( bCenterOutsideMap )
             return false;
-        return _pTerrain == nullptr || _pTerrain->isZoneCenterAllowed( center );
+        return _pTerrain->isZoneCenterAllowed( center );
     }
 
     void BattleRoyaleZone::beginPhase( int32 phaseIndex )

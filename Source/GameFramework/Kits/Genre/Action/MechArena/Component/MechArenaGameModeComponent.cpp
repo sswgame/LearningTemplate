@@ -162,7 +162,7 @@ namespace sw
                              _listPlayerMech.size(), _listAllyMech.size(), _listAllySpawn.size(), _listEnemyMech.size(), _listEnemySpawn.size() );
             return false;
         }
-        if ( outWorld.initialize( _rules, _pMechs.get(), _pWeapons.get(), _pProjectiles.get(), _pMoves.get() ) == false )
+        if ( outWorld.initialize( _rules, *_pMechs, *_pWeapons, *_pProjectiles, *_pMoves ) == false )
             return false;                                    // 규칙이 범위 밖이면 판이 오류를 남긴다
         (void)outWorld.addTeam( hashed_string( "Player" ) ); // 팀 번호는 더한 순서다(kPlayerTeam · kEnemyTeam)
         (void)outWorld.addTeam( hashed_string( "Enemy" ) );
@@ -336,13 +336,25 @@ namespace sw
         return input;
     }
 
-    void MechArenaGameModeComponent::queueSpecialSound( const MechArenaEvent& event )
+    hashed_string MechArenaGameModeComponent::findEventSound( const MechArenaEvent& event ) const
     {
-        const MechPilot* const         pPilot = event._kind == MechArenaEvent::Kind::Fired && event._pilot.has_value() ? _world.findPilot( *event._pilot ) : nullptr;
-        const MechModeDef* const       pMode  = pPilot != nullptr && pPilot->getMech() != nullptr ? pPilot->getMode() : nullptr;
-        const MechWeaponSlotDef* const pSlot  = pMode != nullptr ? VectorUtil::findBy<&MechWeaponSlotDef::_id>( pMode->_listWeapon, event._id ) : nullptr;
-        if ( pSlot != nullptr && pSlot->_kind == MechWeaponKind::Special && pSlot->_fireSound.empty() == false )
-            getSoundQueue().queueEvent( pSlot->_fireSound.c_str() ); // 이름 표의 글은 사라지지 않는다
+        if ( event._kind == MechArenaEvent::Kind::Overheated && event._pilot != kPlayer )
+            return hashed_string{}; // 남의 과열은 알리지 않는다
+        if ( event._kind == MechArenaEvent::Kind::Fired )
+        {
+            // 주무기는 무기 표의 소리를 `queueWeaponSound` 가 낸다 — 여기는 특수기뿐이다.
+            const MechPilot* const         pPilot = event._pilot.has_value() ? _world.findPilot( *event._pilot ) : nullptr;
+            const MechModeDef* const       pMode  = pPilot != nullptr && pPilot->getMech() != nullptr ? pPilot->getMode() : nullptr;
+            const MechWeaponSlotDef* const pSlot  = pMode != nullptr ? VectorUtil::findBy<&MechWeaponSlotDef::_id>( pMode->_listWeapon, event._id ) : nullptr;
+            return pSlot != nullptr && pSlot->_kind == MechWeaponKind::Special ? pSlot->_fireSound : hashed_string{};
+        }
+        // 근접의 시작 · 맞음은 기술 표의 소리다.
+        const bool                 bMelee = event._kind == MechArenaEvent::Kind::ComboAdvanced || ( event._kind == MechArenaEvent::Kind::Hit && event._id.empty() == false );
+        const MoveFrameData* const pMove  = bMelee ? _pMoves->find( event._id ) : nullptr;
+        if ( pMove != nullptr )
+            return event._kind == MechArenaEvent::Kind::ComboAdvanced ? pMove->_startSound : pMove->_hitSound;
+        const utf8* const pSound = MechArenaGameModeComponentInternal::findSound( event._kind );
+        return pSound != nullptr ? hashed_string( pSound ) : hashed_string{};
     }
 
     void MechArenaGameModeComponent::settle()
@@ -352,11 +364,9 @@ namespace sw
         _world.pollEvents( _listEvent );
         for ( const MechArenaEvent& event : _listEvent )
         {
-            const bool        bOthersOnly = event._kind == MechArenaEvent::Kind::Overheated && event._pilot != kPlayer; // 남의 과열은 알리지 않는다
-            const utf8* const pSound      = bOthersOnly ? nullptr : MechArenaGameModeComponentInternal::findSound( event._kind );
-            if ( pSound != nullptr )
-                getSoundQueue().queueEvent( pSound );
-            queueSpecialSound( event );
+            const hashed_string sound = findEventSound( event );
+            if ( sound.empty() == false )
+                getSoundQueue().queueEvent( sound.c_str() ); // 이름 표의 글은 사라지지 않는다
             if ( event._kind == MechArenaEvent::Kind::Destroyed )
                 SW_LOG_INFO_ID( "MechArena.Destroyed", "[MechArena] pilot %# destroyed, gauge %# against %#", event._pilot.value(), getPlayerGauge(), getEnemyGauge() );
             else if ( event._kind == MechArenaEvent::Kind::Respawned )

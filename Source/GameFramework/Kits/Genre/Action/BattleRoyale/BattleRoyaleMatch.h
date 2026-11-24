@@ -119,8 +119,12 @@ namespace sw
 
         BattleRoyaleMatch();
 
-        /** @brief 카탈로그, 아이템, 전리품(빌려 옴), 시드, 지형(빌려 옴, nullptr 가능)을 설정하고 상태를 비웁니다. 자기장이 맵 크기를 거절하면 false 입니다. */
-        [[nodiscard]] bool initialize( const BattleRoyaleCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed, const IBrZoneTerrain* pTerrain );
+        /**
+         * @brief 카탈로그, 아이템, 전리품, 시드, 지형을 설정하고 상태를 비웁니다. 카탈로그와 지형은 빌려 쓰며 판보다 오래 살아야 합니다.
+         * @details 전리품(@p pLootCatalog)은 보급 상자가 있는 판(`<SupplyDrop times>` 를 적은 카탈로그)의 것이다 — 시각을 적지 않은 판만 nullptr 을 줄 수 있다.
+         *          시각을 적었는데 전리품 카탈로그나 그 표가 없거나 자기장이 맵 크기를 거절하면 오류를 남기고 false 이며 상태는 그대로다.
+         */
+        [[nodiscard]] bool initialize( const BattleRoyaleCatalog& catalog, const ItemCatalog& itemCatalog, const LootCatalog* pLootCatalog, uint32 seed, const IBrZoneTerrain& terrain );
         int32              addTeam( const hashed_string& name );
         /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 이유를 돌려줍니다. */
         [[nodiscard]] expected<int32> addPlayer( int32 team );

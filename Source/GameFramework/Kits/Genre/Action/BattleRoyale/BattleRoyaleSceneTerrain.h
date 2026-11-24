@@ -38,7 +38,8 @@ namespace sw
     public:
         BattleRoyaleSceneTerrain();
 
-        void initialize( const GameObjectManager* pManager, const BattleRoyaleBodySettings& settings );
+        /** @brief 씬(매니저 — 지형보다 오래 산다)과 몸 크기를 받습니다. 묻는 함수는 이 뒤에만 부릅니다. */
+        void initialize( const GameObjectManager& manager, const BattleRoyaleBodySettings& settings );
 
         /** @brief 원 중심 · 보급 상자를 건물 위에 두지 않습니다. 바디가 서기 전(판을 여는 순간)에 뽑는 첫 원은 모두 허락된다 — 다음 원의 반지름이 커서 중심 자리가 판을 막지 않는다. */
         bool isZoneCenterAllowed( const float2& position ) const override { return isClear( position ); }

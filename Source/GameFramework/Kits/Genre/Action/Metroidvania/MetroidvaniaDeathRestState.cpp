@@ -26,6 +26,7 @@ namespace sw
         , _corpse{}
         , _checkpoints{}
         , _pWallet{ nullptr }
+        , _pLoot{ nullptr }
         , _lostCurrency{ 0 }
         , _flaskCharges{ 0 }
         , _flaskMaxCharges{ 0 }
@@ -33,18 +34,29 @@ namespace sw
     {
     }
 
-    void MetroidvaniaDeathRestState::initialize( const MetroidvaniaCatalog* pCatalog, Wallet* pWallet )
+    bool MetroidvaniaDeathRestState::initialize( const MetroidvaniaCatalog& catalog, Wallet& wallet, const LootCatalog* pLoot )
     {
-        _pCatalog = pCatalog;
-        _pWallet  = pWallet;
+        for ( const MetroidvaniaEnemyDef& enemy : catalog.getEnemies() )
+        {
+            const bool bHasTable = enemy._lootTable.empty() || ( pLoot != nullptr && pLoot->find( enemy._lootTable ) != nullptr );
+            if ( bHasTable )
+                continue;
+            SW_LOG_ERROR_ID( "MetroidvaniaDeathRest.EnemyNoLootTable", "MetroidvaniaDeathRestState: refused - enemy '%#' drops loot table '%#', which is %#", enemy._id.c_str(), enemy._lootTable.c_str(),
+                             pLoot == nullptr ? "not given (no loot catalog)" : "not in the loot catalog" );
+            return false;
+        }
+        _pCatalog = &catalog;
+        _pWallet  = &wallet;
+        _pLoot    = pLoot;
         _listKill.clear();
         _eventBuffer.clear();
         _corpse = MetroidvaniaCorpse{};
         _checkpoints.reset();
         _lostCurrency      = 0;
-        _flaskMaxCharges   = pCatalog != nullptr ? pCatalog->getRules()._flaskCharges : 0;
+        _flaskMaxCharges   = catalog.getRules()._flaskCharges;
         _flaskCharges      = _flaskMaxCharges;
         _flaskPotencyLevel = 0;
+        return true;
     }
 
     bool MetroidvaniaDeathRestState::rest( const hashed_string& siteID, HealthStateMachine& healthMachine )
@@ -66,6 +78,8 @@ namespace sw
 
     hashed_string MetroidvaniaDeathRestState::die( const hashed_string& areaID, const float2& position, HealthStateMachine& healthMachine )
     {
+        if ( _pCatalog == nullptr )
+            return hashed_string{}; // 열기 전이다
         // 되찾지 못한 시체가 있으면 그 통화는 영영 사라진다. 두 번째 죽음의 대가다.
         if ( _corpse._bActive == SW_TRUE )
         {
@@ -74,7 +88,7 @@ namespace sw
             _corpse = MetroidvaniaCorpse{};
         }
         const hashed_string currency = getCurrencyName();
-        const int64         carried  = _pWallet != nullptr ? _pWallet->getBalance( currency ) : 0;
+        const int64         carried  = _pWallet->getBalance( currency );
         if ( carried > 0 )
         {
             _corpse._area     = areaID;
@@ -104,8 +118,7 @@ namespace sw
         const float32 radius = _pCatalog->getRules()._corpseRecoverRadius;
         if ( float2::getDistanceSquared( _corpse._position, position ) > radius * radius )
             return false;
-        if ( _pWallet != nullptr )
-            _pWallet->add( getCurrencyName(), _corpse._currency );
+        _pWallet->add( getCurrencyName(), _corpse._currency );
         pushEvent( MetroidvaniaDeathRestEventKind::CorpseRecovered, areaID, _corpse._currency );
         _corpse = MetroidvaniaCorpse{};
         return true;
@@ -138,8 +151,7 @@ namespace sw
         return rules._flaskHeal + rules._flaskHealPerUpgrade * static_cast<float32>( _flaskPotencyLevel );
     }
 
-    int32 MetroidvaniaDeathRestState::registerKill( const hashed_string& spawnID, const hashed_string& enemyID, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random,
-                                                    ItemStackList& outDrops )
+    int32 MetroidvaniaDeathRestState::registerKill( const hashed_string& spawnID, const hashed_string& enemyID, GameFlags& flags, GameRandom& random, ItemStackList& outDrops )
     {
         if ( _pCatalog == nullptr || isSpawnAlive( spawnID ) == false )
             return constant::invalid_index::kInt32;
@@ -150,10 +162,9 @@ namespace sw
         record._spawnID = spawnID;
         record._bBoss   = pEnemy->_bBoss ? SW_TRUE : SW_FALSE;
         _listKill.push_back( record );
-        if ( _pWallet != nullptr )
-            _pWallet->add( getCurrencyName(), pEnemy->_currency );
-        if ( pLoot != nullptr && pEnemy->_lootTable.empty() == false )
-            (void)pLoot->roll( pEnemy->_lootTable, random, outDrops );
+        _pWallet->add( getCurrencyName(), pEnemy->_currency );
+        if ( pEnemy->_lootTable.empty() == false )
+            (void)_pLoot->roll( pEnemy->_lootTable, random, outDrops );
         pushEvent( MetroidvaniaDeathRestEventKind::EnemyKilled, pEnemy->_id, pEnemy->_currency );
         if ( pEnemy->_bBoss )
         {

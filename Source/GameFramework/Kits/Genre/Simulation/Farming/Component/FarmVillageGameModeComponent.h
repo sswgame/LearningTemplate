@@ -40,7 +40,6 @@ namespace sw
     struct CharacterAppearanceDef;
     class Archive;
     class GameObjectManager;
-    class RigidBodyComponent;
     class WorldClock;
 
     /**
@@ -74,8 +73,6 @@ namespace sw
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
-        /** @brief 바디 @p body 의 셰이프 경계에서 `_navObstacleClearance` 안의 칸을 막고 그 수를 반환합니다. */
-        uint32 blockCells( const RigidBodyComponent& body );
         /** @brief 내비 격자를 세우고 장애물 이름 목록의 씬 오브젝트(정적 바디) 자리를 막습니다. 격자 크기가 없거나 장애물에 정적 바디가 없으면 false 입니다. */
         [[nodiscard]] bool rebuildNavGrid();
         /** @brief 지금 일정표로 일정을 세우고 자리 · 속도 목록을 NPC 수에 맞춥니다(시작 · 다시 읽힌 일정표). 범위 밖 설정이면 일정 시스템이 오류를 남기고 false 입니다. */

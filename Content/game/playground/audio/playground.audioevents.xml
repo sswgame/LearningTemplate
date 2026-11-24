@@ -8,9 +8,9 @@
 	RTS* 는 RTS 매치 미니게임(starskirmish)의 명령 입력이 낸다 — 선택 · 완성 · 막힘은 ui 버스의 2D 이고, 유닛이 부서진 소리만 자리에서 낸다(위에서 보는 직교 카메라라 리스너가 화면 평면 — 화면 좌우로 팬된다).
 	Arena* 는 아레나 미니게임(abilityarena)의 디렉터와 피격 연출(data/abilities.xml 의 AbilityPresentation)이 낸다 — 3D 아레나지만 모두 2D 다. 피격은 투사체가 한꺼번에 닿을 수 있어 쿨다운과 동시 재생 상한으로 겹침을 줄인다.
 	Shooter* 는 사격장 미니게임(shooter3d)이다 — 플레이어 자신의 소리(착지 · 명중 확인음)는 2D, 적 처치는 그 자리에서 3D(Default 감쇠 · 벽 뒤 가림), ShooterHum 은 환경음.
-	Fighting* 은 격투 미니게임(fighting)의 디렉터가 대전의 알림마다 낸다 — 옆에서 보는 대전이라 모두 2D 다.
+	Fighting* 은 격투 미니게임(fighting)의 디렉터가 대전의 알림마다 낸다(기술의 시작 · 맞음 · 막힘은 fighting/data/ring.moves.xml 이 고른다) — 옆에서 보는 대전이라 모두 2D 다.
 	BattleRoyale* 은 배틀로얄 미니게임(battleroyale)의 디렉터가 낸다 — 플레이어 자신의 소리 · 구역 · 결과는 2D, 사격 · 기절 · 보급 상자는 그 자리에서 3D(FarCamera 감쇠 — 카메라가 플레이어에서 23 m 떨어져 있다).
-	MechArena* 는 기체 대전 미니게임(mecharena)의 디렉터가 판의 알림마다 낸다 — 모두 2D 다. 탄이 한꺼번에 맞을 수 있어 쿨다운과 동시 재생 상한을 둔다.
+	MechArena* 는 기체 대전 미니게임(mecharena)의 디렉터가 판의 알림마다 낸다(근접 기술은 mecharena/data/mecharena.moves.xml 이 고른다) — 모두 2D 다. 탄이 한꺼번에 맞을 수 있어 쿨다운과 동시 재생 상한을 둔다.
 	Metroidvania* 는 메트로배니아 미니게임(metroidvania)의 디렉터가 낸다 — 옆에서 보는 탐험이라 모두 2D 다.
 	Weapon* 은 무기 표(data/weapons.xml)의 발사 · 재장전 · 빈 탄창 소리다 — 사격장은 자기 총이라 2D, 배틀로얄은 쏜 자리에서 3D(FarCamera), 기체 대전은 2D 로 낸다.
 	JRPG* · MonsterCollector* · MonsterHunt* · Restaurant* 는 등불 길 · 풀밭 수집 · 늪지 사냥 · 항구 식당 미니게임의 디렉터가 규칙 알림에서 낸다 — 모두 2D 다.
@@ -319,24 +319,32 @@
 				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_001.ogg" _volumeDb="-8" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="FightingMove" _bus="sfx" _container="Random" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+		<AudioEventDef _name="FightingStraight" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="0" _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingHook" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
+			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth2.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingUppercut" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingLow" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth4.ogg" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="FightingHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+		<AudioEventDef _name="FightingClinch" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/drop_leather.ogg" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="FightingBlocked" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+		<AudioEventDef _name="FightingStraightHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="0" _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
 				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_001.ogg" />
@@ -345,9 +353,48 @@
 				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_004.ogg" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="FightingThrow" _bus="sfx" _priority="60" _maxInstances="2" _steal="Oldest">
+		<AudioEventDef _name="FightingHookHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingUppercutHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_punch3.ogg" />
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_punch4.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingLowHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingClinchHit" _bus="sfx" _priority="60" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingLightBlocked" _bus="sfx" _priority="50" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="0" _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingHeavyBlocked" _bus="sfx" _priority="50" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_000.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="FightingWallSplat" _bus="sfx" _priority="60" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_heavy_000.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingThrowBroken" _bus="sfx" _priority="50" _maxInstances="2" _steal="Oldest">
@@ -433,6 +480,35 @@
 		<AudioEventDef _name="BattleRoyaleLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
 				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="MechArenaSlash" _bus="sfx" _priority="45" _cooldownSeconds="0.05" _maxInstances="4" _steal="Oldest" _pitchMin="0" _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword1.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="MechArenaCleave" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="4" _steal="Oldest" _pitchMin="-3" _pitchMax="-1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword2.ogg" />
+				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword3.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="MechArenaSlashHit" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_004.ogg" />
+			</_listClip>
+		</AudioEventDef>
+		<AudioEventDef _name="MechArenaCleaveHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
+			<_listClip>
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_001.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_002.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_003.ogg" />
+				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_004.ogg" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaHit" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="6" _steal="Oldest" _pitchMin="-1" _pitchMax="1">

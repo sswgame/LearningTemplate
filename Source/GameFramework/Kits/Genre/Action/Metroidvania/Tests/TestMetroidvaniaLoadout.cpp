@@ -356,7 +356,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, EquipReportsWhyItFails )
     SW_EXPECT_TRUE( loadout.equip( kLight ) == sw::MetroidvaniaTrinketResult::UnknownCharm ); // 카탈로그 없음
     SW_EXPECT_FALSE( loadout.grantCharm( kLight ) );
     SW_EXPECT_NEAR( 1.0f, loadout.computeDamageTakenScale(), kLoadoutTolerance );
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_EQUAL( 3, loadout.getNotchCount() );
 
     SW_EXPECT_TRUE( loadout.equip( sw::hashed_string( "ghost" ) ) == sw::MetroidvaniaTrinketResult::UnknownCharm );
@@ -388,7 +388,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, OvercharmNeedsAFreeNotch )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaTrinketLoadoutTest" ) );
     sw::MetroidvaniaTrinketLoadout loadout;
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     for ( const sw::hashed_string& charm : { kLight, kMid, kHeavy, kFree } )
     {
         SW_REQUIRE_TRUE( loadout.grantCharm( charm ) );
@@ -422,7 +422,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StatsMergeFromEquippedCharms )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaTrinketLoadoutTest" ) );
     sw::MetroidvaniaTrinketLoadout loadout;
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_REQUIRE_TRUE( loadout.grantCharm( kLight ) );
     SW_REQUIRE_TRUE( loadout.grantCharm( kMid ) );
     SW_REQUIRE_TRUE( loadout.equip( kLight ) == sw::MetroidvaniaTrinketResult::Equipped );
@@ -450,7 +450,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StateRoundTripAndRejection )
     sw::MetroidvaniaCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kLoadoutXML, "MetroidvaniaTrinketLoadoutTest" ) );
     sw::MetroidvaniaTrinketLoadout original;
-    original.initialize( &catalog );
+    original.initialize( catalog );
     SW_REQUIRE_TRUE( original.grantCharm( kLight ) );
     SW_REQUIRE_TRUE( original.grantCharm( kMid ) );
     SW_REQUIRE_TRUE( original.equip( kMid ) == sw::MetroidvaniaTrinketResult::Equipped );
@@ -464,7 +464,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StateRoundTripAndRejection )
     SW_EXPECT_FALSE( noCatalog.readState( forNoCatalog ) );
 
     sw::MetroidvaniaTrinketLoadout restored;
-    restored.initialize( &catalog );
+    restored.initialize( catalog );
     SW_REQUIRE_TRUE( restored.grantCharm( kHeavy ) );
     const auto expectRejected = [&restored]( const sw::vector<sw::hashed_string>& listOwned, const sw::vector<sw::hashed_string>& listEquipped, int32 notchCount )
     {
@@ -482,7 +482,7 @@ SW_TEST_CASE( MetroidvaniaTrinketLoadoutTest, StateRoundTripAndRejection )
     expectRejected( { kLight }, {}, -1 );
     // 대조: 같은 도우미로 짠 맞는 판은 읽힌다.
     sw::MetroidvaniaTrinketLoadout control;
-    control.initialize( &catalog );
+    control.initialize( catalog );
     sw::Archive controlBytes;
     MetroidvaniaLoadoutTestUtil::writeLoadoutBytes( controlBytes, { kLight, kMid }, { kMid }, 3 );
     sw::Archive controlReading( controlBytes.getData(), controlBytes.getSize() );

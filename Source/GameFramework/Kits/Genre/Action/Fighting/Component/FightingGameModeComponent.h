@@ -95,6 +95,8 @@ namespace sw
         /** @brief 컴퓨터가 쥔 @p player 의 한 걸음 입력입니다 — 멀면 다가가고, 닿으면 때리거나 물러선다. */
         InputFrame makeCPUInput( int32 player );
         /** @brief 알림을 로그로 내고 대전이 끝났으면 결과를 보여 주는 시간을 겁니다. */
+        /** @brief 대전의 알림 하나의 소리를 쌓습니다 — 기술의 소리(시작 · 맞음 · 막힘)는 기술 표, 나머지는 알림마다 하나다. */
+        void queueEventSound( const FightingEvent& event );
         void settle();
 
     private:

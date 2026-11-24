@@ -80,6 +80,7 @@ namespace
                 written << guest._position;
                 written << guest._walkFrom;
                 written << guest._walkTo;
+                written << static_cast<uint32>( guest._listWalkPoint.size() ); // 남은 길의 점 — 여기 손님은 없다
                 written << guest._id;
                 written << guest._cash;
                 written << guest._targetRideIndex;

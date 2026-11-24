@@ -99,7 +99,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ArmorAbsorbsByZoneAndBreaks )
     sw::BattleRoyaleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kGearXML, "BattleRoyaleLoadoutTest" ) );
     sw::BattleRoyaleLoadout loadout;
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_NEAR( 20.0f, loadout.absorbDamage( 20.0f, sw::BattleRoyaleHitZone::Head )._damage, kGearTolerance ); // 입기 전
 
     SW_REQUIRE_TRUE( loadout.tryEquipArmor( kHelmet ) );
@@ -142,7 +142,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, EquipRejectsBrokenArmor )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kGearXML, "BattleRoyaleLoadoutTest" ) );
     sw::BattleRoyaleLoadout loadout;
     SW_EXPECT_FALSE( loadout.tryEquipArmor( kHelmet ) ); // 카탈로그 없음
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_FALSE( loadout.tryEquipArmor( sw::hashed_string( "hat" ) ) );
 
     SW_EXPECT_FALSE( loadout.tryEquipArmor( kHelmet, 0.0f ) );
@@ -168,7 +168,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, BackpackControlsCarryLimit )
     SW_REQUIRE_TRUE( items.loadFromXMLText( kGearItemXML, "items" ) );
     sw::BattleRoyaleLoadout loadout;
     SW_EXPECT_NEAR( 0.0f, loadout.computeCarryLimit(), kGearTolerance );
-    loadout.initialize( &catalog );
+    loadout.initialize( catalog );
     SW_EXPECT_NEAR( 20.0f, loadout.computeCarryLimit(), kGearTolerance );
     SW_EXPECT_NEAR( 50.0f, loadout.computeCarryLimit( kBag ), kGearTolerance );
 
@@ -247,7 +247,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, StateRoundTripAndRejection )
     SW_REQUIRE_TRUE( inventory.initialize( &items, 4, 100.0f ) );
 
     sw::BattleRoyaleLoadout original;
-    original.initialize( &catalog );
+    original.initialize( catalog );
     SW_REQUIRE_TRUE( original.tryEquipArmor( kHelmet, 12.0f ) );
     SW_REQUIRE_TRUE( original.tryEquipBackpack( kBag, inventory ) );
     sw::Archive written;
@@ -258,7 +258,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, StateRoundTripAndRejection )
     SW_EXPECT_FALSE( noCatalog.readState( withoutCatalog ) );
 
     sw::BattleRoyaleLoadout restored;
-    restored.initialize( &catalog );
+    restored.initialize( catalog );
     SW_REQUIRE_TRUE( restored.tryEquipArmor( kVest ) );
     const auto expectRejected = [&restored]( const sw::Archive& bytes )
     {

@@ -37,37 +37,21 @@ namespace sw
             static uint8 findBackward( int32 side ) { return side > 0 ? kLeft : kRight; }
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventMove        = "FightingMove";
-            static constexpr const utf8* kEventHit         = "FightingHit";
-            static constexpr const utf8* kEventBlocked     = "FightingBlocked";
-            static constexpr const utf8* kEventThrow       = "FightingThrow";
+            static constexpr const utf8* kEventWallSplat   = "FightingWallSplat";
             static constexpr const utf8* kEventThrowBroken = "FightingThrowBroken";
             static constexpr const utf8* kEventSpecial     = "FightingSpecial";
             static constexpr const utf8* kEventRoundEnd    = "FightingRoundEnd";
             static constexpr const utf8* kEventWon         = "FightingWon";
             static constexpr const utf8* kEventLost        = "FightingLost";
 
-            /** @brief 대전의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(대전 끝은 이긴 쪽이 정한다). */
+            /** @brief 대전의 알림 @p kind 가 기술과 상관없이 내는 소리입니다. 없으면 nullptr 입니다(기술의 소리는 기술 표, 대전 끝은 이긴 쪽이 정한다). */
             static const utf8* findSound( FightingEvent::Kind kind )
             {
                 switch ( kind )
                 {
-                    case FightingEvent::Kind::MoveStarted:
-                    {
-                        return kEventMove;
-                    }
-                    case FightingEvent::Kind::Hit:
                     case FightingEvent::Kind::WallSplat:
                     {
-                        return kEventHit;
-                    }
-                    case FightingEvent::Kind::Blocked:
-                    {
-                        return kEventBlocked;
-                    }
-                    case FightingEvent::Kind::ThrowLanded:
-                    {
-                        return kEventThrow;
+                        return kEventWallSplat;
                     }
                     case FightingEvent::Kind::ThrowBroken:
                     {
@@ -87,6 +71,31 @@ namespace sw
                     default:
                     {
                         return nullptr;
+                    }
+                }
+            }
+
+            /** @brief 알림 @p kind 에 기술 @p move 가 내는 소리입니다(기술 표). 없으면 빈 이름입니다. */
+            static hashed_string findMoveSound( FightingEvent::Kind kind, const MoveFrameData& move )
+            {
+                switch ( kind )
+                {
+                    case FightingEvent::Kind::MoveStarted:
+                    {
+                        return move._startSound;
+                    }
+                    case FightingEvent::Kind::Hit:
+                    case FightingEvent::Kind::ThrowLanded:
+                    {
+                        return move._hitSound;
+                    }
+                    case FightingEvent::Kind::Blocked:
+                    {
+                        return move._blockSound;
+                    }
+                    default:
+                    {
+                        return hashed_string{};
                     }
                 }
             }
@@ -232,14 +241,29 @@ namespace sw
         return frame;
     }
 
+    void FightingGameModeComponent::queueEventSound( const FightingEvent& event )
+    {
+        using Internal = FightingGameModeComponentInternal;
+        if ( const utf8* const pSound = Internal::findSound( event._kind ) )
+            getSoundQueue().queueEvent( pSound );
+        // 기술 id 는 알림의 사람(공격한 쪽)이 쓴 것이라 그 캐릭터의 기술이다.
+        const bool              bFromFighter = event._moveID.empty() == false && event._player.has_value() && 0 <= *event._player && *event._player < FightingMatch::kPlayerCount;
+        const FighterDef* const pDef         = bFromFighter ? _match.getFighter( *event._player )._pDef : nullptr;
+        const optional<int32>   moveIndex    = pDef != nullptr ? pDef->findMoveIndex( event._moveID ) : nullopt;
+        if ( moveIndex.has_value() == false )
+            return;
+        const hashed_string sound = Internal::findMoveSound( event._kind, pDef->_listMove[static_cast<size_t>( *moveIndex )]._frame );
+        if ( sound.empty() == false )
+            getSoundQueue().queueEvent( sound.c_str() ); // 이름 표의 글은 사라지지 않는다
+    }
+
     void FightingGameModeComponent::settle()
     {
         _listEvent.clear();
         _match.pollEvents( _listEvent );
         for ( const FightingEvent& event : _listEvent )
         {
-            if ( const utf8* const pSound = FightingGameModeComponentInternal::findSound( event._kind ) )
-                getSoundQueue().queueEvent( pSound );
+            queueEventSound( event );
             if ( event._kind == FightingEvent::Kind::RoundEnd )
                 SW_LOG_INFO_ID( "Fighting.RoundEnd", "[Fighting] round %# ends - winner %# (2 = draw)", _match.getRound(), event._value );
             if ( event._kind != FightingEvent::Kind::MatchEnd )

@@ -1,7 +1,7 @@
 /**
  * @file FrameData.h
  * @brief 기술 하나의 프레임 데이터와 그 진행을 정의합니다.
- * @details 기술 하나의 발생, 지속, 후딜, 피해와 경직, 공격 높이, 판정 플래그, 캔슬 창, 프레임별 히트박스를 표로 적고, 그 표를 타임라인으로 진행한다.
+ * @details 기술 하나의 발생, 지속, 후딜, 피해와 경직, 공격 높이, 판정 플래그, 캔슬 창, 프레임별 히트박스, 소리(시작, 맞음, 막힘)를 표로 적고, 그 표를 타임라인으로 진행한다.
  *          철권, 캡슐파이터, 소울라이크, 위쳐, 젤다의 근접 공격이 같은 표를 쓴다.
  *          시간 단위가 정수 프레임이라 결정적이며, 게임은 `FixedStepTimer` 로 고정 걸음마다 `advanceFrame` 을 부른다.
  *
@@ -126,6 +126,12 @@ namespace sw
         vector<MoveHitbox>       _listHitbox;
         vector<MoveCancelWindow> _listCancel;
         PROPERTY()
+        hashed_string _startSound; ///< 기술을 낼 때의 사운드 이벤트(`*.audioevents.xml`). 비면 소리가 없다(아래도). 판의 알림을 받는 디렉터가 낸다 — 진행(`MoveTimeline`)은 롤백이 다시 돌려 소리를 쌓지 않는다
+        PROPERTY()
+        hashed_string _hitSound; ///< 맞혔을 때(잡기면 던졌을 때)
+        PROPERTY()
+        hashed_string _blockSound; ///< 가드에 막혔을 때
+        PROPERTY()
         float32 _damage;
         PROPERTY( Name = "chip", Min = 0.0 )
         float32 _chipDamage; ///< 가드 피해(막혀도 깎이는 양)
@@ -167,7 +173,7 @@ namespace sw
      * @class MoveCatalog
      * @brief 기술의 프레임 데이터 표(`<MoveCatalog>`)를 읽습니다.
      * @code
-     *     <MoveCatalog><Move id=".." startup="10" active="2" recovery="15" damage="12" chip="2" hitstun="20" blockstun="12" hitstop="8"
+     *     <MoveCatalog><Move id=".." startSound=".." hitSound=".." blockSound=".." startup="10" active="2" recovery="15" damage="12" chip="2" hitstun="20" blockstun="12" hitstop="8"
      *         height="Mid" launcher="false" knockdown="false" wallSplat="false" unblockable="false">
      *         <Hitbox from="10" to="11" x=".." y=".." w=".." h=".." shape="Box"/><Cancel from="12" to="20" moves="a,b" onHit="true"/></Move></MoveCatalog>
      * @endcode

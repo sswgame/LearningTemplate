@@ -292,8 +292,8 @@ namespace sw
     {
     }
 
-    bool MechArenaWorld::initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
-                                     const ProjectileCatalog* pProjectileCatalog, const MoveCatalog* pMoveCatalog )
+    bool MechArenaWorld::initialize( const MechArenaSettings& settings, const MechCatalog& mechCatalog, const WeaponCatalog& weaponCatalog, const ProjectileCatalog& projectileCatalog,
+                                     const MoveCatalog& moveCatalog )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
@@ -302,13 +302,13 @@ namespace sw
             return false;
         }
         // 무기 → 탄은 다른 파일의 연결이라 참조 표가 보지 못한다 — 둘을 함께 쥐는 이 월드가 시작할 때 본다(게임 기능 Shooter3D 와 같은 정책, 깨지면 서지 않는다).
-        if ( pWeaponCatalog != nullptr && pProjectileCatalog != nullptr && pWeaponCatalog->validateProjectiles( *pProjectileCatalog ) == false )
+        if ( weaponCatalog.validateProjectiles( projectileCatalog ) == false )
             return false; // 오류는 validateProjectiles 가 남겼다
         _settings           = settings;
-        _pMechCatalog       = pMechCatalog;
-        _pWeaponCatalog     = pWeaponCatalog;
-        _pProjectileCatalog = pProjectileCatalog;
-        _pMoveCatalog       = pMoveCatalog;
+        _pMechCatalog       = &mechCatalog;
+        _pWeaponCatalog     = &weaponCatalog;
+        _pProjectileCatalog = &projectileCatalog;
+        _pMoveCatalog       = &moveCatalog;
         _listPilot.clear();
         _projectiles = ProjectileSimulation{};
         _listTeamName.clear();
@@ -332,7 +332,7 @@ namespace sw
         const bool bPilotRejected = _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechID.empty() || config._team < 0 ||
                                     config._team >= static_cast<int32>( _listTeamName.size() );
         if ( bPilotRejected )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the match has started, or the catalog, deck or team is missing" } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the match is not initialized or has started, or the deck or team is missing" } );
         MechPilot pilot;
         int32     deckCost = 0;
         for ( const hashed_string& mechID : config._listMechID )
@@ -446,7 +446,7 @@ namespace sw
 
     void MechArenaWorld::applyDamage( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 staggerTime )
     {
-        resolveHit( attacker, victim, damage, downValue, 0.0f, staggerTime, false, MechWeaponKind::Shot );
+        resolveHit( attacker, victim, damage, downValue, 0.0f, staggerTime, false, MechWeaponKind::Shot, hashed_string{} );
     }
 
     void MechArenaWorld::teleport( int32 pilot, const float3& position )
@@ -576,19 +576,19 @@ namespace sw
                 if ( slot._kind == MechWeaponKind::Shot )
                 {
                     // 주무기는 무기와 그 기본 탄이 둘 다 있고, 무기가 그 탄을 받아야 쏠 수 있다.
-                    const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
-                    const ProjectileDef* pProjectile = pWeapon != nullptr && _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
+                    const WeaponDef*     pWeapon     = _pWeaponCatalog->find( slot._weaponID );
+                    const ProjectileDef* pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
                     bComplete                        = pProjectile != nullptr && pWeapon->canAccept( *pProjectile );
                 }
                 if ( slot._kind == MechWeaponKind::Special )
                 {
                     // 특수기의 탄은 사거리가 있어야 한다 — 광선은 사거리 안을 맞히고, 날아가는 탄은 판 밖에 닿기 전에 끝난다(상태 읽기도 사거리 없는 탄을 받지 않는다).
-                    const ProjectileDef* pProjectile = _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( slot._projectileID ) : nullptr;
+                    const ProjectileDef* pProjectile = _pProjectileCatalog->find( slot._projectileID );
                     bComplete                        = pProjectile != nullptr && pProjectile->_range > 0.0f;
                 }
                 if ( slot._kind == MechWeaponKind::Melee )
                 {
-                    bComplete = _pMoveCatalog != nullptr && slot._listMoveID.empty() == false;
+                    bComplete = slot._listMoveID.empty() == false;
                     for ( size_t stage = 0; bComplete && stage < slot._listMoveID.size(); ++stage )
                     {
                         bComplete = _pMoveCatalog->find( slot._listMoveID[stage] ) != nullptr;
@@ -634,7 +634,7 @@ namespace sw
             for ( const MechWeaponSlotDef& slot : mode._listWeapon )
             {
                 // 탄과 받음은 `isMechDataComplete` 가 위에서 봤다.
-                const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
+                const WeaponDef*     pWeapon     = slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
                 const ProjectileDef* pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID.key() ) : nullptr;
                 const bool           bEquipped   = pProjectile == nullptr || pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip(
                                                                      *pWeapon, *pProjectile, pWeapon->_maxReserveAmmo, mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) );
@@ -847,7 +847,7 @@ namespace sw
                 }
             }
             if ( hitPilot >= 0 )
-                resolveHit( pilotIndex, hitPilot, projectile._damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind );
+                resolveHit( pilotIndex, hitPilot, projectile._damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind, hashed_string{} );
             return;
         }
         // 맞은 뒤의 반응(다운치 · 경직 · 넉백 · 종류)은 탄에 베끼지 않고 슬롯을 가리킨다(`findProjectileSlot`).
@@ -859,8 +859,6 @@ namespace sw
 
     const MechWeaponSlotDef* MechArenaWorld::findProjectileSlot( uint32 payload ) const
     {
-        if ( _pMechCatalog == nullptr )
-            return nullptr;
         const vector<MechDef>& listMech  = _pMechCatalog->getMechs();
         const uint32           mechIndex = payload / kSlotStride;
         if ( mechIndex >= static_cast<uint32>( listMech.size() ) )
@@ -870,10 +868,10 @@ namespace sw
     }
 
     void MechArenaWorld::resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
-                                     MechWeaponKind kind )
+                                     MechWeaponKind kind, const hashed_string& moveID )
     {
         using Internal = MechArenaWorldInternal;
-        if ( isTargetable( victim ) == false || _pMechCatalog == nullptr )
+        if ( isTargetable( victim ) == false )
             return;
         MechPilot&     target      = _listPilot[static_cast<size_t>( victim )];
         const MechDef* pVictimMech = target.getMech();
@@ -902,7 +900,7 @@ namespace sw
                                                       ? optional<int32>( _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )] )
                                                       : nullopt;
         _match.reportDamage( attackerParticipant, victimParticipant, result._healthDamage );
-        pushEvent( MechArenaEvent::Kind::Hit, victim, instigator, result._healthDamage, hashed_string{} );
+        pushEvent( MechArenaEvent::Kind::Hit, victim, instigator, result._healthDamage, moveID );
 
         if ( result._bDied == SW_TRUE )
         {
@@ -1022,7 +1020,7 @@ namespace sw
             entry._boostHeat           = pilot._boost.getRatio();
             entry._downRatio           = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._healthMachine.getPoise() / pMech->_downMax ) : 0.0f;
             entry._team                = pilot._team;
-            entry._mechIndex           = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ).value() : constant::invalid_index::kInt32; // 조종사의 기체는 카탈로그에서 왔다
+            entry._mechIndex           = _pMechCatalog->findMechIndex( pMech->_id ).value(); // 조종사의 기체는 카탈로그에서 왔다
             entry._mode                = pilot._mode;
             entry._lockTarget          = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : constant::invalid_index::kInt32;
             entry._comboStage          = pilot._comboStage;
@@ -1065,7 +1063,7 @@ namespace sw
 
     void MechArenaWorld::serializeState( StateIO& io )
     {
-        if ( io.check( _pMechCatalog != nullptr && _pMoveCatalog != nullptr ) == false )
+        if ( io.check( _pMechCatalog != nullptr ) == false )
             return;
         io.reflected( *this ); // 팀 이름 · 걸음 수 · 시작 · 끝 알림
         io.value( _timer );    // 리플렉션 밖 값 — 고정 걸음 타이머는 설정된 걸음으로 읽는다
@@ -1384,8 +1382,6 @@ namespace sw
     void MechArenaWorld::stepMelee( int32 pilotIndex, bool bPressedMelee )
     {
         MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
-        if ( _pMoveCatalog == nullptr )
-            return;
         if ( pilot._comboStage < 0 )
         {
             const optional<int32> foundSlot = findSlot( pilot, MechWeaponKind::Melee );
@@ -1466,7 +1462,7 @@ namespace sw
         pilot._melee.registerContact( false );
         pilot._bMeleeHit = SW_TRUE;
         resolveHit( pilotIndex, target, move._damage, slot._downValue, slot._knockback, static_cast<float32>( move._hitstun ) * _settings._fixedStep,
-                    move._bKnockdown == SW_TRUE, MechWeaponKind::Melee );
+                    move._bKnockdown == SW_TRUE, MechWeaponKind::Melee, move._id );
     }
 
     void MechArenaWorld::stepSkills( int32 pilotIndex, float32 deltaTime )
@@ -1498,7 +1494,7 @@ namespace sw
             const MechWeaponSlotDef* pSlot = findProjectileSlot( event._projectile._payload );
             if ( pSlot == nullptr )
                 continue; // 쏠 때와 상태 읽기가 번호를 봤으므로 닿지 않는다
-            resolveHit( event._projectile._owner, event._hit._other, event._projectile._damage, pSlot->_downValue, pSlot->_knockback, pSlot->_staggerTime, false, pSlot->_kind );
+            resolveHit( event._projectile._owner, event._hit._other, event._projectile._damage, pSlot->_downValue, pSlot->_knockback, pSlot->_staggerTime, false, pSlot->_kind, hashed_string{} );
         }
     }
 } // namespace sw
