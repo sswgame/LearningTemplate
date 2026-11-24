@@ -165,7 +165,7 @@ namespace sw
         }
 
         const uint64 platformBytes = MemoryProfiler::getPlatformHeapBytes();
-        const uint64 swBlockBytes  = liveBytes + liveCount * Memory::getAllocationHeaderSize();
+        const uint64 swBlockBytes  = Memory::isInCRTHeap() ? liveBytes + liveCount * Memory::getAllocationHeaderSize() : 0;
         if ( platformBytes > swBlockBytes )
         {
             const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
@@ -176,9 +176,9 @@ namespace sw
         uint64 platformRequestCount{ 0 };
         if ( MemoryProfiler::getPlatformHeapTotals( platformTotalBytes, platformRequestCount ) )
         {
-            // sw 블록도 CRT 에서 온다(헤더 포함). 추적을 켜기 전(기동 맨 앞)의 sw 할당은 밖 몫으로 세인다 — 근사다.
-            const uint64 swCount      = profiler.getTotalAllocationCount();
-            const uint64 swBytes      = profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize();
+            // 힙 백엔드가 crt 면 sw 블록도 CRT 에서 온다(헤더 포함). 그때 추적을 켜기 전(기동 맨 앞)의 sw 할당은 밖 몫으로 세인다 — 근사다.
+            const uint64 swCount      = Memory::isInCRTHeap() ? profiler.getTotalAllocationCount() : 0;
+            const uint64 swBytes      = Memory::isInCRTHeap() ? profiler.getTotalAllocatedBytes() + swCount * Memory::getAllocationHeaderSize() : 0;
             const uint64 outsideCount = platformRequestCount > swCount ? platformRequestCount - swCount : 0;
             const uint64 outsideX10   = toKilobytesX10( platformTotalBytes > swBytes ? platformTotalBytes - swBytes : 0 );
             SW_LOG_INFO_ID( "MemoryBudget.OutsideSwAllocatorCumulative", "[Memory]   (outside the sw allocator, cumulative since start)  %#.%# KB in %# allocations", outsideX10 / 10, outsideX10 % 10, outsideCount );

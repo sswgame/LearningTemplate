@@ -3,6 +3,7 @@ CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부
 
 - `sw_is_platform_folder_built`(cmake/Modules/Build/PlatformFolders.cmake): 플랫폼 폴더 규칙 — 플랫폼 폴더 거르기와 구성 끝 훑기가 같은 판정을 쓴다.
 - `sw_link_job_count`(cmake/Modules/Config/LinkJobPool.cmake): Ninja 링크 풀 크기 — ThinLTO 구성만 좁게 묶는다.
+- `sw_resolve_memory_backend`(cmake/Modules/Config/MemoryBackend.cmake): 힙 백엔드 auto 풀기 — 새니타이저 · 웹만 crt, 명시한 mimalloc 이 걸리면 구성 실패.
 - `sw_decide_module_activation`(cmake/Modules/Build/ModuleManifest.cmake): 정적 모듈 구성은 고른 RHI 백엔드 하나만 켠다. 키트의 클라이언트 모듈(`GF_Client_<X>`)은
   전용 서버 구성에서 꺼지고 공유 키트(`GF_<X>`)는 켜진다 — 실제 매니페스트의 `_listTarget` 으로 본다(키트 셋 가르기: 규칙 · 디렉터 · 클라이언트).
 - `sw_collect_unused_kits`(같은 파일): 게임이 공유 키트 `GF_<X>` 만 의존해도 짝(`GF_Client_<X>` · `GF_Server_<X>`)은 쓰는 키트다 — 정적 구성(Shipping)이 짝을 빼던 회귀.
@@ -104,6 +105,30 @@ class LinkJobPoolTest(unittest.TestCase):
     def test_without_lto_is_half_with_wider_cap(self) -> None:
         jobs = link_job_counts([(2, False), (12, False), (32, False)])
         self.assertEqual((jobs["2-False"], jobs["12-False"], jobs["32-False"]), ("2", "6", "8"))
+
+
+def memory_backend(requested: str, system_name: str = "Windows", sanitizer: str = "OFF") -> str:
+    return run_cmake_script(
+        f'include("{(PROJECT_ROOT / "cmake/Modules/Config/MemoryBackend.cmake").as_posix()}")\n'
+        f'sw_resolve_memory_backend("{requested}" "{system_name}" "{sanitizer}" backend)\n'
+        'message(NOTICE "backend=[${backend}]")\n')["backend"]
+
+
+class MemoryBackendTest(unittest.TestCase):
+    def test_auto_is_mimalloc_except_sanitizer_and_web(self) -> None:
+        for system_name in ("Windows", "Linux", "Android"):
+            self.assertEqual("mimalloc", memory_backend("auto", system_name))
+        self.assertEqual("crt", memory_backend("auto", "Linux", "ON"))
+        self.assertEqual("crt", memory_backend("auto", "Emscripten"))
+
+    def test_explicit_value_wins_where_it_can(self) -> None:
+        self.assertEqual("crt", memory_backend("crt"))
+        self.assertEqual("mimalloc", memory_backend("mimalloc", "Linux"))
+
+    def test_unavailable_or_unknown_value_fails_configure(self) -> None:
+        for arguments in (("mimalloc", "Windows", "ON"), ("mimalloc", "Emscripten", "OFF"), ("tcmalloc", "Windows", "OFF")):
+            with self.assertRaises(AssertionError):
+                memory_backend(*arguments)
 
 
 def module_activation(static_modules: bool, platform: str = "Windows") -> dict[str, str]:

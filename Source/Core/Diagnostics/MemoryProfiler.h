@@ -338,15 +338,15 @@ namespace sw
         /** @brief 표시 이름(대소문자 무시)으로 태그를 찾습니다. 데이터(예산 표)가 태그를 이름으로 적습니다. 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool findMemoryTagByName( string_view name, MemoryTag& outTag );
         /**
-         * @brief 플랫폼 힙(CRT)이 지금 들고 있는 바이트입니다. sw 할당자를 거치지 않은 할당(외부 라이브러리 · `std::allocator`)까지 포함합니다.
-         * @details 태그 합과 비교하면 태그가 볼 수 없는 양이 나옵니다. sw 블록도 CRT 에서 오므로 그 헤더(블록당 48 바이트)까지 이 값에 들어 있습니다.
+         * @brief 플랫폼 힙(CRT)이 지금 들고 있는 바이트입니다. sw 할당자를 거치지 않은 할당(외부 라이브러리 · `std::allocator`)입니다.
+         * @details 힙 백엔드가 crt 인 구성(`Memory::isInCRTHeap`)에서는 sw 블록도 그 헤더(블록당 48 바이트)까지 이 값에 들어 있습니다.
          *          Windows Debug CRT 에서만 측정할 수 있고, 그 밖에서는 0 입니다.
          */
         static uint64 getPlatformHeapBytes();
         /**
          * @brief 프로세스가 시작한 뒤 플랫폼 힙(CRT)이 받은 할당의 **누계**입니다(바이트 · 횟수). 해제해도 줄지 않습니다.
-         * @details sw 할당자의 누계(`getTotalAllocatedBytes` · `getTotalAllocationCount`)와 비교하면 sw 할당자 밖(`std::allocator` · 외부 라이브러리 ·
-         *          CRT 직접 호출)의 churn 이 나옵니다. 횟수는 CRT 의 할당 요청 번호입니다(블록 하나를 잡아 그 번호를 읽고 바로 놓는다).
+         * @details 힙 백엔드가 crt 면 이 값에서 sw 할당자의 누계(`getTotalAllocatedBytes` · `getTotalAllocationCount`)를 뺀 것이, 아니면 이 값이 그대로 sw 할당자 밖
+         *          (`std::allocator` · 외부 라이브러리 · CRT 직접 호출)의 churn 입니다. 횟수는 CRT 의 할당 요청 번호입니다(블록 하나를 잡아 그 번호를 읽고 바로 놓는다).
          *          Windows Debug CRT 에서만 측정할 수 있습니다.
          * @return 측정할 수 없는 구성이면 false 이고 두 값은 0 입니다.
          */

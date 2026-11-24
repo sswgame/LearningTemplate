@@ -89,4 +89,9 @@ namespace sw
     #error "Unsupported platform"
 #endif
     }
+
+    bool MemoryBackend::isInCRTHeap() noexcept
+    {
+        return true;
+    }
 } // namespace sw

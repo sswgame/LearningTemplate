@@ -130,7 +130,7 @@ set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
 	set(third_party_notices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
 	file(GLOB vendored_licenses CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/ThirdParty/*/LICENSE.md")
-	# 켠 매니페스트 기능(mimalloc 힙 백엔드 · 복합 문자)의 포트도 배포물에 들어간다 — 고지에 넣게 넘긴다.
+	# 켠 매니페스트 기능(복합 문자)의 포트도 배포물에 들어간다 — 고지에 넣게 넘긴다.
 	string(JOIN "," manifest_features ${VCPKG_MANIFEST_FEATURES})
 	add_custom_command(
 		OUTPUT "${third_party_notices}"

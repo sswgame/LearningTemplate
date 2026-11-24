@@ -297,7 +297,7 @@ endfunction()
 
 # 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만.
 #   DXC        : 개발 구성만 — 런타임 HLSL 컴파일 · DXIL 리플렉션 · 셰이더 쿠킹(배포 팩도 호스트 개발 빌드가 굽는다). 배포 구성은 컴파일러를 쓰지 않는다(언리얼도 셰이더 컴파일러는 쿠커 쪽에만 둔다).
-#   검증 레이어 : SW_VULKAN_VALIDATION 인 Windows 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다. 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
+#   검증 레이어 : SW_VULKAN_VALIDATION 인 Windows 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다)
 #   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
 #   Tint       : WebGPU 셰이더 대상(SPIR-V → WGSL)의 쿠킹 도구 — DXC 와 같은 이유로 개발 구성의 실행 파일 옆에 둔다(ThirdParty/dawn, 웹 · Android · 서버는 함수 안에서 거른다)
 function(sw_deploy_runtime_dependencies TARGET_NAME)
