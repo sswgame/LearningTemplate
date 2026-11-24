@@ -11,6 +11,7 @@ namespace sw
         , _bWaitForAnimationClips{ SW_FALSE }
         , _bFreezeEnvironmentTime{ SW_FALSE }
         , _bSkipLoadingScreenMinimum{ SW_FALSE }
+        , _realTimeFrameRate{ 0 }
         , _fixedFrameDelta{ 0.0f }
     {
     }

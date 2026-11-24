@@ -204,8 +204,13 @@ namespace sw
         const string& getName() const { return _name; }
         const string& getSourcePath() const { return _sourcePath; }
         float32       getFixedDelta() const { return _fixedDelta; }
-        uint32        getTimeoutFrames() const { return _timeoutFrames; }
-        uint32        getStartTimeoutFrames() const { return _startTimeoutFrames; }
+        /**
+         * @brief 벽시계로 도는 시나리오(`realTime="true"`)이면 true 입니다 — 프레임 시간은 실제 경과이고 초당 프레임은 1 / `fixedDelta` 를 넘지 않는다.
+         * @details 다른 프로세스(전용 서버)와 함께 도는 시나리오다. 고정 시간으로 전속이면 이쪽 시뮬레이션이 상대보다 몇 배 빨라 명령이 쌓이고, 예측 · 반동 · 바닥의 틱이 서버와 어긋난다.
+         */
+        bool   isRealTime() const { return _bRealTime == SW_TRUE; }
+        uint32 getTimeoutFrames() const { return _timeoutFrames; }
+        uint32 getStartTimeoutFrames() const { return _startTimeoutFrames; }
         /** @brief 시나리오 시작(읽기)부터 끝까지 지나도 되는 벽시계 시간(초)입니다. 넘으면 실행기가 시간 초과(12)로 끝내고 보고를 씁니다. 부하 시나리오(`<Load>`)는 자기 그물이 있어 보지 않는다. */
         float32                       getWallTimeoutSeconds() const { return _wallTimeoutSeconds; }
         AutomationStartCondition      getStartCondition() const { return _startCondition; }
@@ -259,6 +264,7 @@ namespace sw
         AutomationStartCondition _startCondition;
         VirtualInputMode         _inputMode;
         uint8                    _bFixedDeltaDeclared : 1; ///< 루트에 `fixedDelta` 를 적었다(`<AdvanceSimulation>` 은 이것이 있어야 받는다)
-        [[maybe_unused]] uint8   _reservedScenario    : 7;
+        uint8                    _bRealTime           : 1; ///< 벽시계로 돈다(`isRealTime`)
+        [[maybe_unused]] uint8   _reservedScenario    : 6;
     };
 } // namespace sw

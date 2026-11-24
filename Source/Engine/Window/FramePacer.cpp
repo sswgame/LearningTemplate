@@ -57,6 +57,11 @@ namespace sw
     {
         _editorQuietFrames = inputs._bEditorQuiet ? MathUtil::min( _editorQuietFrames + 1, kEditorIdleStabilityFrames ) : 0;
         _state             = resolve( inputs, gv_framePacing, _editorQuietFrames );
+        _frameRateLimit    = 0;
+        if ( _state == FramePacingState::Background )
+            _frameRateLimit = gv_backgroundFrameRate;
+        else if ( _state == FramePacingState::Automation )
+            _frameRateLimit = inputs._automationFrameRate;
     }
 
     void FramePacer::endFrame( GenericWindow& window ) const
@@ -66,6 +71,6 @@ namespace sw
         else if ( _state == FramePacingState::EditorIdle )
             window.waitForMessages( kEditorIdleWakeMilliseconds );
         else // 기다리는 방법은 창이 정한다 — 전속 상태도 마감(= 시작)을 알려 웹이 미뤄 둔 프레임 콜백을 되돌린다
-            window.waitForNextFrame( _frameStartNanoseconds, _state == FramePacingState::Background ? computeBackgroundDeadlineNanoseconds( _frameStartNanoseconds, gv_backgroundFrameRate ) : _frameStartNanoseconds );
+            window.waitForNextFrame( _frameStartNanoseconds, computeBackgroundDeadlineNanoseconds( _frameStartNanoseconds, _frameRateLimit ) );
     }
 } // namespace sw

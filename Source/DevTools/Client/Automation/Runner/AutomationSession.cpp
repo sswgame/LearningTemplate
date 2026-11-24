@@ -8,6 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -364,11 +365,13 @@ namespace sw
             }
             // 결정적 실행 정책 — 애니메이터가 시작 클립을 기다리고(첫 포즈가 디스크 지연에 달리지 않게), 에셋 도착을 프레임에 묶는다(끄면 셰이더 캐시가 빈 첫 실행 —
             // 느린 프레임 — 이 다른 그림을 낸다). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다). 환경 시간 멈춤은 시나리오가 고른다.
-            DeterministicRunPolicy policy     = engine::getSubsystem<DeterministicRun>().getPolicy();
-            policy._bWaitForAnimationClips    = SW_TRUE;
-            policy._bFinishAssetJobsEachFrame = SW_TRUE;
-            policy._bSkipLoadingScreenMinimum = SW_TRUE;                                 // 로딩 화면 최소 0.5 초는 사람에게 보이는 몫이다 — 시나리오 시작 시간의 15 % 였다(2026-11-17 측정)
-            policy._fixedFrameDelta           = _pRunner->getScenario().getFixedDelta(); // 시나리오 프레임 시간 — App 이 벽시계 대신 흘린다
+            DeterministicRunPolicy policy      = engine::getSubsystem<DeterministicRun>().getPolicy();
+            policy._bWaitForAnimationClips     = SW_TRUE;
+            policy._bFinishAssetJobsEachFrame  = SW_TRUE;
+            policy._bSkipLoadingScreenMinimum  = SW_TRUE; // 로딩 화면 최소 0.5 초는 사람에게 보이는 몫이다 — 시나리오 시작 시간의 15 % 였다(2026-11-17 측정)
+            const AutomationScenario& scenario = _pRunner->getScenario();
+            policy._fixedFrameDelta            = scenario.isRealTime() ? 0.0f : scenario.getFixedDelta(); // 시나리오 프레임 시간 — App 이 벽시계 대신 흘린다
+            policy._realTimeFrameRate          = scenario.isRealTime() ? static_cast<int32>( MathUtil::round( 1.0f / scenario.getFixedDelta() ) ) : 0;
             engine::getSubsystem<DeterministicRun>().setPolicy( policy );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.
             // 그래서 단계는 첫 단계와 같은 길로 선다(첫 씬을 선언하지 않은 단계도 체인에 든다). 재시작할 호스트가 없으면 앞 단계의 상태로 돌지 않고 멈춘다.

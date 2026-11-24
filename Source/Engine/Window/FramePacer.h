@@ -24,7 +24,7 @@ namespace sw
         Foreground = 0, ///< 포커스를 가진 창 — 따로 묶지 않는다(VSync 설정만).
         Background,     ///< 보이지만 포커스가 없는 창 — `gv_backgroundFrameRate` 로 묶는다.
         Minimized,      ///< 최소화된 창 — 창 메시지가 올 때까지(최대 `FramePacer::kMinimizedWakeMilliseconds`) 잔다.
-        Automation,     ///< 시나리오 실행(실행 인자) — 포커스 · 최소화와 상관없이 전속이다.
+        Automation,     ///< 시나리오 실행(실행 인자) — 포커스 · 최소화와 상관없이 전속이다. 벽시계로 도는 시나리오는 그 프레임 상한까지다.
         Server,         ///< 리슨 호스트(`-gv_netListenPort`) — 클라이언트가 이 프레임으로 상태를 받으므로 전속이다.
         FullSpeed,      ///< `-gv_framePacing=FullSpeed` 가 고정한 전속 — 에디터 멀티플레이가 띄운 클라이언트처럼 포커스 없이 정속이어야 하는 실행.
         EditorIdle,     ///< 에디터가 조용하다(다시 그릴 까닭 없는 프레임이 이어졌다) — 창 메시지가 올 때까지(최대 `kEditorIdleWakeMilliseconds`) 잔다.
@@ -45,11 +45,12 @@ namespace sw
     /** @brief 상태를 정하는 프레임 입력입니다. 앱 루프가 프레임마다 채운다. */
     struct FramePacingInputs
     {
-        bool _bAutomationRun{ false }; ///< `-scenario`(녹화 포함) 실행이다(프로파일 실행 `-gv_profileFrames` 는 개발 도구가 `gv_framePacing=FullSpeed` 로 고른다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bListenHost{ false };    ///< 이 프로세스의 넷 세션이 서버다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bMinimized{ false };     ///< `GenericWindow::isMinimized` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bFocused{ false };       ///< `GenericWindow::hasFocus` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bEditorQuiet{ false };   ///< 에디터가 이번 프레임에 다시 그릴 까닭이 없다(`ModuleFrameState::_bEditorQuiet`). 에디터가 없으면 false. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool  _bAutomationRun{ false };  ///< `-scenario`(녹화 포함) 실행이다(프로파일 실행 `-gv_profileFrames` 는 개발 도구가 `gv_framePacing=FullSpeed` 로 고른다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool  _bListenHost{ false };     ///< 이 프로세스의 넷 세션이 서버다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool  _bMinimized{ false };      ///< `GenericWindow::isMinimized` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool  _bFocused{ false };        ///< `GenericWindow::hasFocus` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        int32 _automationFrameRate{ 0 }; ///< 벽시계로 도는 시나리오의 프레임 상한(`DeterministicRunPolicy::_realTimeFrameRate`). 0 이면 상한이 없다
+        bool  _bEditorQuiet{ false };    ///< 에디터가 이번 프레임에 다시 그릴 까닭이 없다(`ModuleFrameState::_bEditorQuiet`). 에디터가 없으면 false. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -85,7 +86,7 @@ namespace sw
         void markFrameStart();
         /** @brief 프레임 입력(에디터 UI 갱신 뒤)이 모이면 부릅니다. 조용한 프레임 수를 세고 `gv_framePacing` 과 함께 상태를 정합니다. */
         void beginFrame( const FramePacingInputs& inputs );
-        /** @brief 프레임 끝에 부릅니다. 최소화 · 에디터 유휴면 @p window 의 메시지를 기다리고, 그 밖은 @p window 가 다음 프레임을 미룬다(`GenericWindow::waitForNextFrame` — 배경이면 상한 주기, 전속이면 미루지 않는다). */
+        /** @brief 프레임 끝에 부릅니다. 최소화 · 에디터 유휴면 @p window 의 메시지를 기다리고, 그 밖은 @p window 가 다음 프레임을 미룬다(`GenericWindow::waitForNextFrame` — 배경 · 벽시계 시나리오면 상한 주기, 전속이면 미루지 않는다). */
         void endFrame( GenericWindow& window ) const;
 
         /** @brief 이번 프레임의 상태입니다(`beginFrame` 이 정했다). */
@@ -93,6 +94,7 @@ namespace sw
 
     private:
         int64            _frameStartNanoseconds{ 0 };
+        int32            _frameRateLimit{ 0 };    ///< 이번 프레임의 초당 프레임 상한(0 이면 전속)
         uint32           _editorQuietFrames{ 0 }; ///< 에디터가 조용했던 프레임이 몇 번 이어졌는지(`kEditorIdleStabilityFrames` 에서 멈춘다)
         FramePacingState _state{ FramePacingState::Foreground };
     };
