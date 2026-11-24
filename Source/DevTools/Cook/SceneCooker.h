@@ -84,15 +84,15 @@ namespace sw
                                      uint32& outFailedCount );
 
         /**
-         * @brief 씬 쿠킹 작업의 키 값입니다. 설정 해시는 @p registry 의 타입 · 프로퍼티 · 열거자 지문입니다(쿠킹된 상태의 바이트가 그 표로 정해진다).
+         * @brief 씬 쿠킹 작업의 키 값입니다. 설정 해시는 @p registry 의 지문(`CookReflectionFingerprint`)입니다(쿠킹된 상태의 바이트가 그 표로 정해진다).
          */
         static CookJobDesc makeCookJobDesc( const TypeRegistry& registry );
 
         /**
          * @brief 씬 프리로드 목록 쿠킹 작업의 키 값입니다(`ScenePreloadList`). 씬 쿠킹과 따로 도는 작업이라 키가 따로다.
-         * @details 설정 해시는 0 이다 — 목록은 씬이 지어질 때 읽은 입력(씬 · 프리팹 · 컴포넌트 경로)으로만 정해진다. 형식 버전은 `ScenePreloadList::kVersion`.
+         * @details 설정 해시는 @p registry 의 지문이다 — 씬이 지어질 때 읽은 입력(씬 · 프리팹) 말고도 어느 칸이 경로인지와 기본값을 타입 표가 정한다. 형식 버전은 `ScenePreloadList::kVersion`.
          */
-        static CookJobDesc makePreloadCookJobDesc();
+        static CookJobDesc makePreloadCookJobDesc( const TypeRegistry& registry );
     };
 
 } // namespace sw

@@ -8,13 +8,16 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Cook/CookReflectionFingerprint.h"
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
@@ -99,7 +102,7 @@ namespace sw
         desc._cookerName      = "Prefab";
         desc._codeFingerprint = CookCodeFingerprint::find( "Prefab" );
         desc._target          = "Any";
-        desc._settingsHash    = 0; // 프리팹 쿠킹에는 설정이 없다
+        desc._settingsHash    = CookReflectionFingerprint::compute( engine::getSubsystem<TypeRegistry>() ); // 덮어쓰기 · 변형 합치기가 타입 표(필수 · 열쇠 칸)를 본다
         return desc;
     }
 } // namespace sw

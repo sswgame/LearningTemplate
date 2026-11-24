@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Cook/CookReflectionFingerprint.h"
 #include "DevTools/Cook/CookStore.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -19,6 +20,7 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -148,7 +150,7 @@ namespace sw
         desc._cookerName      = "NavMesh";
         desc._codeFingerprint = CookCodeFingerprint::find( "NavMesh" );
         desc._target          = "Any";
-        desc._settingsHash    = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
+        desc._settingsHash    = CookReflectionFingerprint::compute( engine::getSubsystem<TypeRegistry>() ); // 베이크 설정(내비 설정 표)은 읽기로 입력에 들고, 씬을 짓는 타입 표는 여기다
         return desc;
     }
 } // namespace sw
