@@ -211,7 +211,7 @@ namespace sw
         , _bindSerial{ 0 }
         , _sentClock{ 0 }
         , _worldSceneID{ 0 }
-        , _localSceneID{ 0 }
+        , _localSceneID{}
         , _announcedGeneration{ 0 }
         , _worldGeneration{ 0 }
         , _bWireVersionsChanged{ SW_FALSE }
@@ -287,7 +287,7 @@ namespace sw
         _listHeld.clear();
         ++_sessionSerial;
         _worldSceneID         = 0;
-        _localSceneID         = 0;
+        _localSceneID         = nullopt;
         _announcedGeneration  = 0;
         _worldGeneration      = 0;
         _sentClock            = 0;
@@ -426,7 +426,7 @@ namespace sw
 
     void NetMessageRouter::updateClientWorld( INetPeers& peers )
     {
-        const uint8 generation = _localSceneID == _worldSceneID ? _announcedGeneration : uint8{ 0 };
+        const uint8 generation = _localSceneID == _worldSceneID ? _announcedGeneration : uint8{ 0 }; // 아직 씬을 세우지 않았으면(빈 값) 어느 월드에도 들지 않는다
         if ( generation == _worldGeneration )
             return;
         setWorldGeneration( peers, generation );
@@ -706,7 +706,7 @@ namespace sw
         }
         const int32  headSize         = pHandler->isWorldScoped() ? 2 : 1;
         const uint32 holdMilliseconds = bReliable ? pHandler->getHoldLimit( pData[0] ) : 0u;
-        const uint64 key              = holdMilliseconds != 0u && message._size >= headSize ? pHandler->readHoldKey( pData[0], BitReader( pData + headSize, message._size - headSize ) ) : 0u;
+        const uint64 key              = holdMilliseconds != 0u && message._size >= headSize ? pHandler->readMessageHoldKey( pData[0], BitReader( pData + headSize, message._size - headSize ) ) : 0u;
         if ( holdMilliseconds != 0u && isBlockedByHeld( message._connectionID, rangeBase, key ) )
         {
             holdMessage( peers, message, pData, key, static_cast<int64>( holdMilliseconds ), false ); // 같은 대상의 앞 메시지가 기다린다 — 앞지르지 않는다
@@ -755,7 +755,7 @@ namespace sw
                     if ( bEarlierWaits == false )
                         held._bMissingHandler = SW_FALSE;
                     if ( bEarlierWaits == false && size >= headSize && pHandler->getHoldLimit( held._buffer[0] ) != 0u )
-                        held._key = pHandler->readHoldKey( held._buffer[0], BitReader( held._buffer.data() + headSize, size - headSize ) );
+                        held._key = pHandler->readMessageHoldKey( held._buffer[0], BitReader( held._buffer.data() + headSize, size - headSize ) );
                 }
                 const bool bBlocked = held._bMissingHandler == SW_TRUE || VectorUtil::contains( _listRefusedConnection, held._connectionID ) ||
                                       ( pHandler->getHoldLimit( held._buffer[0] ) != 0u && isBlockedByHeld( held._connectionID, held._rangeBase, held._key ) );

@@ -92,7 +92,7 @@ namespace sw
             [[nodiscard]] static expected<AdvanceRead> readAdvanceSimulation( const XMLNode& node, bool bFixedDeltaDeclared )
             {
                 if ( bFixedDeltaDeclared == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs a fixed frame time - set fixedDelta on <Scenario> (frames on the wall clock have no fixed length)" } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AdvanceSimulation> needs a fixed frame time - set fixedDelta on <Scenario> without realTime (frames on the wall clock have no fixed length)" } );
                 AdvanceRead read{};
                 bool        bFramesGiven = false;
                 for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -266,6 +266,7 @@ namespace sw
         , _startCondition{ AutomationStartCondition::ScenePlaying }
         , _inputMode{ VirtualInputMode::Exclusive }
         , _bFixedDeltaDeclared{ SW_FALSE }
+        , _bRealTime{ SW_FALSE }
         , _reservedScenario{ 0 }
     {
     }
@@ -352,6 +353,14 @@ namespace sw
             if ( bOk == false )
                 return unexpected( Internal::makeValueError( "must be a positive number", name, pText ) );
             _bFixedDeltaDeclared = SW_TRUE;
+            return {};
+        }
+        if ( name == "realTime" )
+        {
+            const expected<bool> read = Internal::readBool( "realTime", pText );
+            if ( read.has_value() == false )
+                return unexpected( read.error() );
+            _bRealTime = *read ? SW_TRUE : SW_FALSE;
             return {};
         }
         if ( name == "timeoutFrames" || name == "startTimeoutFrames" )
@@ -505,7 +514,7 @@ namespace sw
                                           _sourcePath } );
             if ( elementName == "AdvanceSimulation" )
             {
-                const expected<Internal::AdvanceRead> advance = Internal::readAdvanceSimulation( atNode, _bFixedDeltaDeclared == SW_TRUE );
+                const expected<Internal::AdvanceRead> advance = Internal::readAdvanceSimulation( atNode, _bFixedDeltaDeclared == SW_TRUE && _bRealTime == SW_FALSE );
                 if ( advance.has_value() == false )
                     return unexpected( advance.error() );
                 // 진행 구간은 앞 단계가 돈 프레임 뒤부터 다음 단계가 도는 프레임 앞까지다 — 단계가 도는 프레임(판정 · 사진)은 늘 보통 프레임이다.

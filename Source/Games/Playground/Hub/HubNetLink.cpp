@@ -4,7 +4,6 @@
 
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -72,9 +71,10 @@ namespace sw
                         herbCount, defeatCount, partySize, inviteFromID );
     }
 
-    void HubAvatarAgent::receiveActionResult( HubActionResult result )
+    void HubAvatarAgent::receiveActionResult( HubActionResult result, uint32 attackReadyTick )
     {
-        _lastResult = result;
+        _lastResult      = result;
+        _attackReadyTick = attackReadyTick;
         ++_resultCount;
     }
 
@@ -87,8 +87,6 @@ namespace sw
         , _view{}
         , _listRejectScratch{}
         , _listSubscription{}
-        , _lastResultNanoseconds{ 0 }
-        , _seenResultCount{ 0 }
         , _bActive{ SW_FALSE }
     {
     }
@@ -123,11 +121,6 @@ namespace sw
     {
         if ( _bActive == SW_FALSE )
             return;
-        if ( _agent._resultCount != _seenResultCount )
-        {
-            _seenResultCount       = _agent._resultCount;
-            _lastResultNanoseconds = MonotonicClock::nowNanoseconds();
-        }
         _listRejectScratch.clear();
         _remoteCalls.pollRejections( _listRejectScratch );
         for ( const RemoteCallRejectNotification& notification : _listRejectScratch )

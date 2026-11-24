@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
@@ -44,8 +45,8 @@ namespace sw
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
+        if ( pManager == nullptr || pManager->getSubsystem<SceneNetLink>().hasAuthority() == false )
+            return; // 접속한 클라이언트에서는 서버의 탈것이 내린다
         // 이 탈것의 운전석을 좌석 레지스트리에서 찾는다. 씬 전체를 순회하지 않는다.
         for ( VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {

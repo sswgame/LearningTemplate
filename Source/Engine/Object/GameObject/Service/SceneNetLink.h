@@ -92,18 +92,29 @@ namespace sw
         /** @brief 지금 서버 틱입니다 — 사건을 보내는 쪽이 메시지에 싣는 값이다. 링크가 비었으면 0 입니다. */
         [[nodiscard]] uint32 getServerTick() const;
         /**
-         * @brief 서버 틱 @p serverTick 에서 지금까지 흐른 시간(초)입니다. 지금은 서버의 지금이다 — 클라이언트는 받은 시각의 추정에 회선 왕복의 절반을 더한다.
+         * @brief 서버 틱 @p serverTick 에서 지금까지 흐른 시간(초)입니다. 지금은 서버의 지금이다 — 클라이언트는 받은 시각(`NetClock::getReceivedTick`)에 회선 왕복의 절반을 더한다.
          * @details 시각을 실은 사건(컷씬 시작)을 받은 쪽이 지연 · 재전송만큼 늦게 시작하지 않고 흐른 만큼 따라잡는다. 추정만 쓰면 한쪽 지연만큼 늦은 시각이라 지연이 다른 클라이언트끼리
          *          어긋난다(언리얼 `ULevelSequencePlayer` 복제가 서버 시각 + 왕복 지연으로 자리를 맞추는 것). 시각을 모르거나 링크가 비었으면 0 입니다.
          */
         [[nodiscard]] float32 computeSecondsSince( uint32 serverTick ) const;
         /** @brief 이 월드의 세대입니다(서버가 정한다). 월드 범위 메시지에 저절로 실리고 라우터가 가른다(`NetWorldMessageTable`). 링크가 비었으면 0 입니다. */
         [[nodiscard]] uint8 getWorldGeneration() const;
+        /** @brief 이 월드가 게임 상태를 정하는 쪽이면 true 입니다 — 혼자 하는 월드나 서버다. 클라이언트 월드는 서버가 정한 결과를 복제로 받는다(언리얼 `HasAuthority`). */
+        [[nodiscard]] bool hasAuthority() const { return isBound() == false || _value._role != NetLinkRole::Client; }
+        /**
+         * @brief 이 월드의 상태가 서버의 것이면 true 입니다 — 클라이언트 링크가 한 번이라도 올랐다. 세션이 닫혀 링크가 비어도(`isBound` 거짓) 남는다.
+         * @details 서버를 잃은 클라이언트의 씬은 남의 세계를 비춘 사본이다 — 혼자 하는 월드로 돌아간 것이 아니다. 저장을 막고, 세이브 · 이어 하기는 씬을 새로 연다(`GameInstance::leaveServerWorld`).
+         *          벗어나는 길은 다른 씬(새 월드)뿐이다(언리얼은 연결을 잃으면 그 월드를 버리고 기본 맵을 연다).
+         */
+        [[nodiscard]] bool isServerWorld() const { return _bServerWorld == SW_TRUE; }
+        /** @brief 서버의 월드에서 찍은 상태를 이 월드에 되살렸습니다(미니게임에서 돌아온 씬) — 새 월드도 서버의 것이다. */
+        void markServerWorld() { _bServerWorld = SW_TRUE; }
         /** @brief 올라 있는 값입니다(`isBound` 일 때만 씁니다). */
         [[nodiscard]] const NetLinkValue& get() const { return _value; }
 
     private:
         NetLinkValue _value;
-        uint32       _bindSerial; ///< 올린 때의 라우터 번호(`NetMessageRouter::getBindSerial`). 달라졌으면 같은 라우터에 다른 씬이 나중에 올랐다
+        uint32       _bindSerial;   ///< 올린 때의 라우터 번호(`NetMessageRouter::getBindSerial`). 달라졌으면 같은 라우터에 다른 씬이 나중에 올랐다
+        uint8        _bServerWorld; ///< 클라이언트 링크가 오른 적이 있다(`isServerWorld`)
     };
 } // namespace sw

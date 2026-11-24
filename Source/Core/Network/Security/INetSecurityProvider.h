@@ -7,6 +7,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -93,18 +95,27 @@ namespace sw
 {
     /**
      * @class INetSecurityProvider
-     * @brief 암호 원시 연산의 API 입니다. 모든 함수는 아무 스레드에서나 부른다(구현이 스레드 안전).
+     * @brief 암호 원시 연산의 API 입니다. 모든 함수는 아무 스레드에서나 부른다(구현이 스레드 안전). `subscribeRetiring` · `retire` 만 게임 스레드다.
+     * @details **구현은 모듈의 것이다.** 제공자와 제공자가 만든 객체(`INetAEAD` · `ITLSContext` · `ITLSSession`)는 구현 모듈의 코드라 그 라이브러리가 내려가면 쓸 수 없다 —
+     *          모듈보다 오래 사는 쪽(엔진 서비스)이 쥐려면 `subscribeRetiring` 으로 놓을 일을 건다. 구현을 든 모듈 서브시스템이 내려가기 전에 `retire` 를 부르므로,
+     *          서브시스템의 종료 순서가 어떻든 쥔 쪽은 코드가 살아 있을 때 놓는다.
      */
     class SW_API INetSecurityProvider
     {
     public:
-        INetSecurityProvider()          = default;
-        virtual ~INetSecurityProvider() = default;
+        INetSecurityProvider() = default;
+        /** @brief `retire` 를 잊은 구현도 쥔 쪽을 남기지 않습니다(이때 제공자의 가상 함수는 이미 부를 수 없다 — 쥔 쪽이 만든 객체만 놓는다). */
+        virtual ~INetSecurityProvider() { retire(); }
 
         INetSecurityProvider( const INetSecurityProvider& )            = delete;
         INetSecurityProvider& operator=( const INetSecurityProvider& ) = delete;
 
         virtual const utf8* getName() const = 0;
+
+        /** @brief 이 제공자가 내려가기 전에 부를 함수를 겁니다 — 제공자의 포인터와 제공자가 만든 객체를 모두 놓아야 합니다. 구독이 사라지면 풀립니다. */
+        [[nodiscard]] Subscription subscribeRetiring( const Delegate<void()>& onRetiring ) { return _onRetiring.add( onRetiring ); }
+        /** @brief 쥔 쪽이 모두 놓게 합니다. 구현을 든 쪽이 구현을 지우기 전에 부릅니다. 두 번 불러도 됩니다. */
+        void retire() { _onRetiring.broadcast(); }
 
         /** @brief 암호용 난수(CSPRNG)로 채웁니다. */
         [[nodiscard]] virtual bool fillRandomBytes( uint8* pOut, int32 size )        = 0;
@@ -169,5 +180,8 @@ namespace sw
             outLeafPrivateKeyPem.clear();
             return false;
         }
+
+    private:
+        MulticastDelegate<void()> _onRetiring; ///< 쥔 쪽이 놓을 일(`subscribeRetiring`)
     };
 } // namespace sw

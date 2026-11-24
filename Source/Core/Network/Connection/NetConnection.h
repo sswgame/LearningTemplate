@@ -91,7 +91,8 @@ namespace sw
         static constexpr int32   kMaxSpareBuffers           = 64;   ///< 다시 쓸 메시지 버퍼를 이만큼까지 둔다(조각 하나 크기라 연결 하나에 64KB 안쪽).
         /**
          * @brief 채널 하나의 받은 큐가 게임이 꺼내기를 기다리며 쌓아 둘 수 있는 바이트(메시지마다 `kIncomingMessageOverheadBytes` 를 더해 센다).
-         * @details 넘기면 `hasReceiveOverflowed` 가 참이 되고 엔드포인트가 연결을 끊는다(`NetDisconnectReason::ReceiveOverflow`).
+         * @details 비신뢰 채널은 넘기면 가장 오래된 메시지부터 버린다. 신뢰 채널은 버리면 흐름이 끊기므로 `hasReceiveOverflowed` 가 참이 되고 엔드포인트가 연결을 끊는다(`NetDisconnectReason::ReceiveOverflow`).
+         *          앱이 멈춘(백그라운드) 동안에도 네트워크 스레드는 연결을 지킨다 — 그동안 쌓이는 것이 이 상한이고, 신뢰 메시지까지 넘치면 돌아온 뒤 다시 접속한다(Photon 의 백그라운드 연결 유지와 같다).
          *          스트림의 `StreamLimit::kDefaultMaxPendingReceiveBytes`(4 MiB, 읽기를 멈춘다)와 같은 역할이다. UDP 는 상대를 멈출 수 없어 끊는다.
          *          신뢰 순서 메시지 하나의 상한(64 KB)의 16 배다. 연결 1024 개 × 채널 넷이어도 4 GiB 안쪽이다.
          */
@@ -148,7 +149,7 @@ namespace sw
         bool hasDataToSend( float64 time ) const;
         /** @brief 받은 패킷을 확인해 줘야 하는지 반환합니다. 대역폭 토큰을 다 쓴 엔드포인트가 메시지 없이 확인만 보낼지 정할 때 씁니다. */
         bool isAckPending() const { return _bAckPending != SW_FALSE; }
-        /** @brief 어느 채널의 받은 큐가 `kMaxPendingReceiveBytes` 를 넘었다(넘친 메시지는 버렸다). 참이면 엔드포인트가 끊는다. `reset` 이 지운다. */
+        /** @brief 어느 신뢰 채널의 받은 큐가 `kMaxPendingReceiveBytes` 를 넘었다(넘친 메시지는 버렸다). 참이면 엔드포인트가 끊는다. `reset` 이 지운다. */
         bool hasReceiveOverflowed() const { return _bReceiveOverflowed != SW_FALSE; }
 
         const NetConnectionStats& getStats() const { return _stats; }
@@ -318,7 +319,7 @@ namespace sw
         bool queueReliable( NetChannelKind channel, const uint8* pData, int32 size );
         /** @brief 순서가 온 신뢰 조각 하나를 넘기거나(조각이 하나뿐인 경우) 모읍니다(마지막 조각에서 한 메시지로 넘깁니다). */
         void deliverReliable( IncomingReliable& incoming );
-        /** @brief 받은 메시지를 채널 큐에 넣습니다. 큐가 `kMaxPendingReceiveBytes` 를 넘게 되면 넣지 않고 `_bReceiveOverflowed` 를 세운다. @p buffer 는 빈다. */
+        /** @brief 받은 메시지를 채널 큐에 넣습니다. 큐가 `kMaxPendingReceiveBytes` 를 넘게 되면 비신뢰는 오래된 것을 버리고, 신뢰는 넣지 않고 `_bReceiveOverflowed` 를 세운다. @p buffer 는 빈다. */
         void pushIncoming( NetChannelKind channel, vector<uint8>& buffer );
         /** @brief 채널 큐의 맨 앞 메시지를 빼고 바이트 수를 줄입니다. 큐가 비어 있지 않아야 한다. */
         void popIncoming( IncomingQueue& queue );

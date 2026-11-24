@@ -171,6 +171,70 @@ SW_TEST_CASE( CharacterCommandStoreTest, ResetPhysicsTeleportDropsInheritedMotio
 }
 
 /**
+ * @brief [CharacterCommandStoreTest] 결함: 손으로 돌리는 캐릭터의 루트 모션이 걸음 없는 프레임마다 쌓여 다음 걸음에 한꺼번에 나갔다 — 면 속도처럼 그 프레임의 속도만 든다
+ * @details 입력이 끊긴 동안의 서버 폰 자리다. 프레임마다 0.1 m(6 m/s)를 30 프레임 주고 1/30 초 걸음 하나를 돌리면 0.2 m 다(예전에는 3 m). 다시 돌리는 걸음은 루트 모션을 보지 않고, 그 프레임의 다음 실제 걸음은 다시 든다.
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, ManualRootMotionDoesNotPileUpBetweenSteps )
+{
+    GameObjectManager             manager;
+    CharacterControllerComponent* pCharacter = TestCharacterCommandStoreInternal::addCharacter( manager, "NetPawn", float3{ 0.0f, 50.0f, 0.0f } );
+    SW_REQUIRE_NOT_NULL( pCharacter );
+    manager.beginPlay();
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    pCharacter->setManualSimulation( true );
+    for ( uint32 frame = 0; frame < 30; ++frame )
+    {
+        pCharacter->addRootMotionDisplacement( float3{ 0.1f, 0.0f, 0.0f } );
+        manager.update( TestCharacterCommandStoreInternal::kFrame );
+    }
+    constexpr float32          kStep    = 1.0f / 30.0f;
+    const CharacterMotionState start    = pCharacter->getMotionState();
+    const CharacterMotionState replayed = pCharacter->simulateMotion( start, CharacterMotionInput{}, kStep, CharacterMotionPass::Replay );
+    SW_EXPECT_NEAR( 0.0f, replayed._position._x - start._position._x, 1.0e-3f );
+    const CharacterMotionState first = pCharacter->simulateMotion( start, CharacterMotionInput{}, kStep, CharacterMotionPass::Live );
+    SW_EXPECT_NEAR( 0.2f, first._position._x - start._position._x, 1.0e-3f );
+    // 루트 모션이 없는 프레임의 걸음은 더 가지 않는다.
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    const CharacterMotionState second = pCharacter->simulateMotion( first, CharacterMotionInput{}, kStep, CharacterMotionPass::Live );
+    SW_EXPECT_NEAR( 0.0f, second._position._x - first._position._x, 1.0e-3f );
+}
+
+/**
+ * @brief [CharacterCommandStoreTest] 결함: 걸음의 주인(물리 스텝 ↔ 손 걸음)이 바뀌어도 앞 주인이 쓰지 않은 발사 · 점프 · 루트 모션이 남아 다음 주인의 첫 걸음에 나갔다 — 이동 요청만 남는다
+ * @details 걸음이 돌지 않는 남의 모습(보간 몸)이 발사대 · 루트 모션을 받은 뒤 세션이 끝나 물리 스텝으로 돌아오는 자리다.
+ */
+SW_TEST_CASE( CharacterCommandStoreTest, ManualSimulationSwitchDropsUnconsumedOneShots )
+{
+    GameObjectManager             manager;
+    CharacterControllerComponent* pIdle   = TestCharacterCommandStoreInternal::addCharacter( manager, "Idle", float3{ 0.0f, 50.0f, 0.0f } );
+    CharacterControllerComponent* pRemote = TestCharacterCommandStoreInternal::addCharacter( manager, "Remote", float3{ 0.0f, 50.0f, 10.0f } );
+    SW_REQUIRE_NOT_NULL( pIdle );
+    SW_REQUIRE_NOT_NULL( pRemote );
+    manager.beginPlay();
+    manager.update( TestCharacterCommandStoreInternal::kFrame );
+    pIdle->setManualSimulation( true );
+    pRemote->setManualSimulation( true );
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        pRemote->addRootMotionDisplacement( float3{ 0.1f, 0.0f, 0.0f } );
+        manager.update( TestCharacterCommandStoreInternal::kFrame );
+    }
+    pRemote->launch( float3{ 6.0f, 8.0f, 0.0f } );
+    pRemote->jump( 9.0f );
+    pRemote->addRootMotionDisplacement( float3{ 1.0f, 0.0f, 0.0f } );
+    pRemote->setMoveVelocity( float3{ 0.0f, 0.0f, 1.0f } );
+    pIdle->setManualSimulation( false );
+    pRemote->setManualSimulation( false );
+    SW_EXPECT_EQUAL( 1.0f, pRemote->getRequestedMoveVelocity()._z );
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        manager.update( TestCharacterCommandStoreInternal::kFrame );
+    }
+    SW_EXPECT_NEAR( pIdle->getSimulatedPosition()._x, pRemote->getSimulatedPosition()._x, 1.0e-3f );
+    SW_EXPECT_NEAR( pIdle->getSimulatedPosition()._y, pRemote->getSimulatedPosition()._y, 1.0e-3f );
+}
+
+/**
  * @brief [CharacterCommandStoreTest] 결함: 속도를 잇는 순간이동(`TeleportPhysics`) · 월드 원점 이동이 떨어지던 속도를 지웠다 — 떨어지던 몸은 계속 떨어진다
  */
 SW_TEST_CASE( CharacterCommandStoreTest, TeleportPhysicsKeepsTheFall )

@@ -206,6 +206,8 @@ namespace sw
 
         PROPERTY( Min = 1 )
         uint32 _stackDepthLimit{}; ///< 쌓을 수 있는 미니게임 칸 수. 0 이면(키가 없다) 진입이 오류로 진다 — 기본값으로 메우지 않는다
+        PROPERTY( Min = 0.1, Units = s )
+        float32 _subLevelReadySeconds{}; ///< 넷 세션의 서버가 하위 레벨 미니게임을 짓기 전에 클라이언트가 맵을 다 읽기를 기다리는 한도(초) — 답하지 않는 연결 하나가 서버를 붙잡지 못한다. 0 이면(키가 없다) 세션 중 진입이 오류로 진다
 
         SW_SERVICE_SLOT_CONST( MinigameConfig, Required );
     };

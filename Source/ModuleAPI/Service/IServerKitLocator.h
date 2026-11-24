@@ -11,6 +11,8 @@
  */
 #pragma once
 #include "Core/Container/span.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -28,6 +30,12 @@ namespace sw
     {
     public:
         virtual ~IServerKitLocator() = default;
+
+        /**
+         * @brief 서버 키트 조립이 내려가기(리로드 · 종료) 직전의 알림입니다. 그 안에서는 묶음을 아직 받을 수 있습니다 — 저장할 것을 여기서 맡기고 끝까지 기다립니다.
+         * @details 조립이 내려간 뒤의 저장은 갈 곳이 없다(게임 서버의 종료는 조립보다 늦다). 구독이 사라지면 풀린다.
+         */
+        [[nodiscard]] virtual Subscription subscribeBeforeWithdraw( const Delegate<void()>& onBeforeWithdraw ) = 0;
 
     private:
         /** @brief 지금 서 있는 서버 키트 조립의 인터페이스 범위입니다. 조립이 서 있지 않으면(리로드 · 종료 중, 온라인 설정 없음) nullptr 입니다. */

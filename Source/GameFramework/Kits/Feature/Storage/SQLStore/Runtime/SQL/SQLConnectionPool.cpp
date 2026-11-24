@@ -11,6 +11,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 
 #include <algorithm>
+#include <chrono>
 
 namespace sw
 {
@@ -63,6 +64,7 @@ namespace sw
         , _settings{}
         , _mutex{}
         , _jobReady{}
+        , _jobDone{}
         , _pDriver{}
         , _pendingCount{ 0 }
         , _bStopping{ SW_FALSE }
@@ -176,6 +178,16 @@ namespace sw
         return static_cast<int32>( listReady.size() );
     }
 
+    int32 SQLConnectionPool::waitCompletions( const Deadline& deadline )
+    {
+        {
+            UniqueLock<mutex> lock{ _mutex };
+            (void)_jobDone.wait_for( lock, std::chrono::milliseconds( deadline.getRemainingMilliseconds() ), [this]() SW_REQUIRES_LOCK( _mutex )
+            { return _listCompleted.empty() == false || _pendingCount == 0; } );
+        }
+        return pollCompletions();
+    }
+
     int32 SQLConnectionPool::getPendingCount() const
     {
         ScopedLock<mutex> lock{ _mutex };
@@ -236,8 +248,11 @@ namespace sw
                     job->cancel(); // 종료 중이라 닫힌 연결로 끝내는 일은 취소다(재연결 중인 일은 연결 고장으로 남는다)
                 job->run( closed );
             }
-            ScopedLock<mutex> lock{ _mutex };
-            _listCompleted.push_back( std::move( job ) );
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                _listCompleted.push_back( std::move( job ) );
+            }
+            _jobDone.notify_all();
         }
     }
 } // namespace sw

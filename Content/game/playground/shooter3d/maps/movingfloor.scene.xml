@@ -237,6 +237,7 @@
 					                          _matchDownLimit="3"
 					                          _bAutoPlay="false"
 					                          _bSpawnEnemies="false">
+						<_enemyGrowth _baseHealth="30" _healthPerWave="10" _minHealthScale="0.1" _baseSpeed="2.2" _speedPerWave="0.3" _maxSpeed="5.5" />
 					</ShooterGameModeComponent>
 				</_listComponent>
 			</GameObject>

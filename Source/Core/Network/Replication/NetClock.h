@@ -51,6 +51,12 @@ namespace sw
 
         /** @brief 지금 서버 틱(소수)입니다. 클라이언트가 틱을 받기 전에는 0 입니다. */
         float64 getServerTick() const { return _serverTick; }
+        /**
+         * @brief 받은 가장 새 틱에 그 뒤 흐른 시간을 더한 값입니다 — 지금 회선의 한쪽 지연만큼 서버보다 뒤다. 서버의 시계에서는 지금 틱이다.
+         * @details `getServerTick` 은 되돌아가지 않으려고 지연이 가장 짧았던 때의 추정을 이어 가, 지연이 늘어난 뒤에는 한쪽 지연보다 앞선다 — 거기에 왕복의 절반을 더하면 지연을 두 번 센다.
+         *          서버의 지금을 어림하는 쪽(`SceneNetLink::computeSecondsSince`)은 이 값에 왕복의 절반을 더한다.
+         */
+        float64 getReceivedTick() const;
         /** @brief 이미 지난 서버 틱입니다. */
         uint32 getWholeTick() const;
         /** @brief 간격이 @p stride 틱인 기능의 지난 틱 번호입니다. */
@@ -61,6 +67,7 @@ namespace sw
 
     private:
         float64      _serverTick; ///< float64 — float32 틱은 60 Hz 로 약 19 시간(2^22 틱)에서 한 프레임 걸음을 잃어 보간이 멈춘다
+        float64      _newestAge;  ///< 클라이언트 — 받은 가장 새 틱 뒤 흐른 시간(틱)
         uint32       _newestTick; ///< 클라이언트 — 받은 가장 새 틱
         NetClockSide _side;
         uint8        _bObserved;

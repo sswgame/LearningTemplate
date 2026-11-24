@@ -46,6 +46,7 @@ namespace sw
         void  submit( unique_ptr<ServiceStoreJob> job ) override;
         int32 pollCompletions() override { return _pool.pollCompletions(); }
         int32 getPendingCount() const override { return _pool.getPendingCount(); }
+        int32 waitCompletions( const Deadline& deadline ) override { return _pool.waitCompletions( deadline ); }
         void  shutdown() override { _pool.shutdown(); }
 
     private:

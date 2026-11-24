@@ -4,6 +4,7 @@
 
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -25,6 +26,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialClient.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
@@ -335,6 +337,7 @@ namespace sw
         , _pendingTicket{}
         , _matchMinigame{}
         , _hubAddress{}
+        , _reconnectDeadline{ 0 }
         , _shownFriendRevision{ 0 }
         , _submittedScoreCount{ 0 }
         , _refusedScoreCount{ 0 }
@@ -419,9 +422,11 @@ namespace sw
         return _shopProvider.get();
     }
 
-    void PlaygroundOnlineFlow::update( OnlineSession& session )
+    void PlaygroundOnlineFlow::update( GameInstance& instance )
     {
+        OnlineSession&       session  = instance.getSubsystem<OnlineSession>();
         AccountClient* const pAccount = session.find<AccountClient>();
+        updateHubLoss( session, instance ); // 계정 없이 붙은 허브(실행 인자 · 개발 명령)도 잃는다
         if ( pAccount == nullptr )
             return;
         openTicketSession( session ); // 앞 프레임에 받은 티켓
@@ -444,7 +449,6 @@ namespace sw
         pollMatches( session );
         updateMatchConnect( session );
         updateMatchExit( session );
-        updateHubLoss( session );
     }
 
     void PlaygroundOnlineFlow::pollMatches( OnlineSession& session )
@@ -539,9 +543,13 @@ namespace sw
                 reconnectHub( session );
             return;
         }
-        if ( bOpened )
-            sceneManager.setNetLink( netSession.makeNetLink() );
-        clearMatch(); // 허브로 돌아왔다(열지 못했으면 혼자 하는 허브로 남는다 — 위에서 알렸다)
+        if ( bOpened == false )
+        {
+            leaveHub();
+            return;
+        }
+        sceneManager.setNetLink( netSession.makeNetLink() );
+        clearMatch(); // 허브로 돌아왔다
     }
 
     void PlaygroundOnlineFlow::onGameTicketRefused()
@@ -550,8 +558,8 @@ namespace sw
             clearMatch(); // 아직 허브를 떠나지 않았다
         else if ( _matchState == PlaygroundMatchState::HubTicket )
         {
-            SW_LOG_ERROR_ID( "Playground.HubTicketRefused", "[Playground] the hub server ticket was refused - the player stays in an offline hub" );
-            clearMatch();
+            SW_LOG_ERROR_ID( "Playground.HubTicketRefused", "[Playground] the hub server ticket was refused - the player leaves the server's hub" );
+            leaveHub();
         }
     }
 
@@ -599,10 +607,25 @@ namespace sw
     {
         if ( notification.has_value() )
             return notification->_reason == GameShutdownReason::ServerRestart;
-        return reason == NetDisconnectReason::Timeout;
+        return reason == NetDisconnectReason::Timeout || reason == NetDisconnectReason::ReceiveOverflow || reason == NetDisconnectReason::ReliableOverflow;
     }
 
-    void PlaygroundOnlineFlow::updateHubLoss( OnlineSession& session )
+    bool PlaygroundOnlineFlow::canReturnToHub( OnlineSession& session ) const
+    {
+        const AccountClient* const pAccount = session.find<AccountClient>();
+        return session.getHubReconnectSeconds() > 0.0f &&
+               ( _bHubTicket == SW_FALSE || ( pAccount != nullptr && pAccount->isLoggedIn() && session.getHubServerID().empty() == false ) );
+    }
+
+    void PlaygroundOnlineFlow::leaveHub()
+    {
+        game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} );
+        _bReconnectHub     = SW_FALSE;
+        _reconnectDeadline = 0;
+        _matchState        = PlaygroundMatchState::HubLost;
+    }
+
+    void PlaygroundOnlineFlow::updateHubLoss( OnlineSession& session, GameInstance& instance )
     {
         GameNetSession& netSession = game::getSubsystem<GameNetSession>();
         if ( _matchState == PlaygroundMatchState::HubLost )
@@ -614,22 +637,35 @@ namespace sw
             }
             netSession.shutdown();
             clearMatch();
+            instance.leaveServerWorld(); // 서버의 사본에 남지 않는다 — 혼자 하던 자리(없으면 입구)로
             return;
         }
         // 미니게임 안이면 허브 씬으로 돌아온 뒤에 본다 — 다시 건 링크가 혼자 하는 미니게임 씬에 닿지 않게.
         const MinigameFlow& minigames = game::getSubsystem<MinigameFlow>();
         const bool          bInHub    = _matchState == PlaygroundMatchState::None && minigames.getStack().isEmpty() && minigames.isEntering() == false && minigames.isLeaving() == false;
-        if ( bInHub == false || netSession.getRole() != GameNetRole::Client || netSession.getLostReason().has_value() == false )
+        if ( netSession.getConnectedCount() > 0 || ( netSession.getRole() == GameNetRole::None && _matchState == PlaygroundMatchState::None ) )
+            _reconnectDeadline = 0; // 다시 붙었거나 세션을 떠났다
+        if ( bInHub == false || netSession.getRole() != GameNetRole::Client )
             return;
+        // 시간 초과는 세션이 되풀이해 시도한다 — 다시 붙는 길에는 한도가 있다(서버의 사본에 끝없이 세워 두지 않는다).
+        const bool bReconnectExpired = _reconnectDeadline != 0 && MonotonicClock::nowNanoseconds() >= _reconnectDeadline;
+        if ( netSession.getLostReason().has_value() == false && bReconnectExpired == false )
+            return;
+        const NetDisconnectReason    reason = netSession.getLostReason().value_or( NetDisconnectReason::Timeout );
         GameShutdownNotice           received;
         optional<GameShutdownNotice> notification;
         if ( netSession.tryGetShutdownNotice( received ) )
             notification = received;
-        _bReconnectHub = shouldReconnectHub( *netSession.getLostReason(), notification ) ? SW_TRUE : SW_FALSE;
-        SW_LOG_WARNING_ID( "Playground.HubLost", "[Playground] lost the hub server (%#) - %#", toString( *netSession.getLostReason() ),
-                           _bReconnectHub == SW_TRUE ? "joining it again" : "the player stays in an offline hub" );
-        _hubAddress = netSession.getServerAddress();
-        _bHubTicket = netSession.isTicketBound() ? SW_TRUE : SW_FALSE;
+        _hubAddress    = netSession.getServerAddress();
+        _bHubTicket    = netSession.isTicketBound() ? SW_TRUE : SW_FALSE;
+        _bReconnectHub = bReconnectExpired == false && shouldReconnectHub( reason, notification ) && canReturnToHub( session ) ? SW_TRUE : SW_FALSE;
+        SW_LOG_WARNING_ID( "Playground.HubLost", "[Playground] lost the hub server (%#) - %#", toString( reason ),
+                           _bReconnectHub == SW_TRUE ? "joining it again" : "the player leaves the server's hub" );
+        if ( _bReconnectHub == SW_FALSE )
+        {
+            leaveHub();
+            return;
+        }
         _matchState = PlaygroundMatchState::HubLost;
         game::getSubsystem<SceneManager>().setNetLink( NetLinkValue{} ); // 씬의 처리기가 내려간 뒤(다음 프레임)에 세션을 닫는다
     }
@@ -644,6 +680,14 @@ namespace sw
             clearMatch(); // 혼자 하는 허브다
             return;
         }
+        if ( canReturnToHub( session ) == false )
+        {
+            SW_LOG_WARNING_ID( "Playground.HubNoAccount", "[Playground] the hub server is not joined again (no login for its ticket, or GameSettings onlineHubServerID / onlineHubReconnectSeconds is not set) - the player leaves the server's hub" );
+            leaveHub();
+            return;
+        }
+        if ( _reconnectDeadline == 0 )
+            _reconnectDeadline = MonotonicClock::nowNanoseconds() + static_cast<int64>( static_cast<float64>( session.getHubReconnectSeconds() ) * static_cast<float64>( constant::time::kNanosecondsPerSecond ) );
         if ( _bHubTicket == SW_TRUE )
         {
             _matchState = PlaygroundMatchState::HubTicket;
@@ -653,10 +697,13 @@ namespace sw
         GameNetSessionParams params;
         params._role          = GameNetRole::Client;
         params._serverAddress = _hubAddress;
-        if ( netSession.initialize( params ) )
-            game::getSubsystem<SceneManager>().setNetLink( netSession.makeNetLink() );
-        else
+        if ( netSession.initialize( params ) == false )
+        {
             SW_LOG_ERROR_ID( "Playground.SessionNotOpened", "[Playground] the session with %# could not be opened (see the messages above)", _hubAddress.toString() );
+            leaveHub();
+            return;
+        }
+        game::getSubsystem<SceneManager>().setNetLink( netSession.makeNetLink() );
         clearMatch();
     }
 

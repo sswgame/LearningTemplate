@@ -9,6 +9,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Network/GameNetSession.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -62,6 +63,20 @@ namespace sw
                 const SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
                 return pScene != nullptr ? pScene->getSourcePath() : string{};
+            }
+
+            /**
+             * @brief 넷 세션이 열려 있어 세이브를 이 씬에 풀 수 없으면 알리고 true 입니다.
+             * @details 씬의 상태는 서버의 것이고 피어가 함께 본다 — 한 피어가 로컬 세이브로 씬을 비우고 다시 세우면 복제 대상(폰 · 오브젝트 번호)이 그 피어에서만 갈린다.
+             *          씬을 바꾸는 미니게임을 거절하는 것과 같은 규칙이다(`MinigameFlow::validateEntry`). 불러온 뒤 세션을 여는 것은 된다.
+             */
+            static bool isRestoreRefused( string_view slot )
+            {
+                const GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
+                if ( pNetSession == nullptr || pNetSession->isActive() == false )
+                    return false;
+                SW_LOG_WARNING_ID( "GameSaveSlots.LoadInNetSession", "Save slot '%#' is not loaded - a net session is open and a local restore would split this peer from the session", slot );
+                return true;
             }
 
             /** @brief 감시 값 `Save.Blocked` 입니다 — 세이브 막기 문이 들렸으면 1(씬 로드 · 깨진 복원 · 연출). */
@@ -228,6 +243,8 @@ namespace sw
 
     bool GameSaveSlots::loadSlot( const string& slot, const AppliedFunction& onApplied )
     {
+        if ( GameSaveSlotsInternal::isRestoreRefused( slot ) )
+            return false;
         const uint32 sessionTravel = _owner.getSubsystem<GameSceneFlow>().beginSessionTravel();
         holdSlotRequest( _owner.getSubsystem<GameLocalStore>().submitRead( slot, SW_DELEGATE_LAMBDA( GameLocalStore::CompletionFunction, [this, onApplied, sessionTravel]( const LocalStoreCompletion& completion )
         { onSlotRead( completion, onApplied, sessionTravel ); } ) ) );
@@ -262,9 +279,9 @@ namespace sw
             publishSlotLoaded( slot, false, onApplied, sessionTravel );
             return;
         }
-        if ( GameStateSnapshot::upgradeEnvelope( bytes ) == false )
+        if ( GameSaveSlotsInternal::isRestoreRefused( slot ) || GameStateSnapshot::upgradeEnvelope( bytes ) == false )
         {
-            publishSlotLoaded( slot, false, onApplied, sessionTravel ); // 까닭은 판 올림이 남겼다
+            publishSlotLoaded( slot, false, onApplied, sessionTravel ); // 까닭은 검사 · 판 올림이 남겼다
             return;
         }
         // 머리만 읽어 찍은 씬과 미니게임을 본다. 같은 씬 · 같은 미니게임(또는 씬 없이 찍은 세이브)이면 바로 적용하고, 아니면 그 미니게임을 켜고 그 씬을 연 뒤 적용한다 —
@@ -282,10 +299,11 @@ namespace sw
         MinigameFlow&               minigameFlow = _owner.getSubsystem<MinigameFlow>();
         const bool                  bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
         // 맡긴 이동이 남았으면 활성 씬은 곧 내려간다 — 거기 풀면 성공을 알린 뒤 씬과 함께 사라진다. 세이브의 씬을 다시 요청해 그 이동을 대신한다.
-        const bool bStaysInScene = bInMinigame && sceneFlow.hasPendingSceneLoad() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
+        // 서버의 월드(잃은 서버의 사본)에도 풀지 않는다 — 복제된 오브젝트가 남고 저장이 막힌 채다. 같은 씬이어도 새로 연다.
+        const bool bStaysInScene = bInMinigame && sceneFlow.hasPendingSceneLoad() == false && _owner.isInServerWorld() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
         if ( savedSceneID->empty() || bStaysInScene )
         {
-            const bool bRestored = restoreSlot( bytes );
+            const bool bRestored = restoreSlot( slot, bytes );
             if ( bRestored && bInMinigame )
                 minigameFlow.applySavedMinigame( std::move( listFrame ) );
             publishSlotLoaded( slot, bRestored, onApplied, sessionTravel );
@@ -321,12 +339,13 @@ namespace sw
         const bool bCurrent              = _owner.getSubsystem<GameSceneFlow>().isSessionTravelCurrent( sessionTravel );
         if ( pScene == nullptr && bCurrent )
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSceneNotOpened", "The scene of save slot '%#' did not open (failed or replaced by a later request) - nothing is loaded", pending._slot.c_str() );
-        publishSlotLoaded( pending._slot, pScene != nullptr && bCurrent && restoreSlot( pending._bytes ), pending._onApplied, sessionTravel );
+        publishSlotLoaded( pending._slot, pScene != nullptr && bCurrent && restoreSlot( pending._slot, pending._bytes ), pending._onApplied, sessionTravel );
     }
 
-    bool GameSaveSlots::restoreSlot( const vector<uint8>& bytes )
+    bool GameSaveSlots::restoreSlot( const string& slot, const vector<uint8>& bytes )
     {
-        if ( _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes ) == false )
+        // 씬을 여는 사이 세션이 열렸을 수 있다.
+        if ( GameSaveSlotsInternal::isRestoreRefused( slot ) || _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes ) == false )
             return false;
         const optional<GameStateSnapshot::SaveInfo> info = GameStateSnapshot::readSaveInfo( bytes.data(), static_cast<uint32>( bytes.size() ) );
         if ( info.has_value() )

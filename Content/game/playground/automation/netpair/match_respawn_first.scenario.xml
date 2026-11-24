@@ -6,7 +6,7 @@
   ② 둘째가 쏜다(서버 판정) — 쓰러졌다가 같은 매치에서 가득 찬 체력으로 다시 태어난다. 허브로 돌아가지 않는다(RestoreCount 0).
   ③ 이번에는 이 사람이 쏜다 — 서버가 센 처치 수(Shooter.ServerKillCount)가 오른다. 스스로 나가 허브로 돌아온다.
 -->
-<Scenario name="game.playground.netpair.match_respawn_first" fixedDelta="0.0166667" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+<Scenario name="game.playground.netpair.match_respawn_first" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<!-- ① -->
 	<DevCommand line="online.connect"/>

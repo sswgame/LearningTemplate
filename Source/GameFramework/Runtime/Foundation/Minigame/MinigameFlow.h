@@ -14,6 +14,7 @@
  *          넷 세션이 열린 인스턴스에서 씬 전환 진입은 오류로 거절한다(세션의 모든 피어가 같은 씬을 돌아야 한다 — 세션 이동 갈래는 돌아올 자리 형식에 더할 자리만 둔다).
  *          `SubLevel` 은 들어갈 때의 활성 씬에 맵을 하위 레벨(이름 = 미니게임 이름)로 더하고 나올 때 뺀다. 자리는 진입을 건 사물(트리거)의 변환이다 — 언리얼 레벨 인스턴스 액터 자리,
  *          얹을 자리 없이는 들어가지 않는다(원점에 엉뚱하게 얹히지 않게). 바탕 틱은 멈추지 않는다 — 미니게임 입력은 `inputContexts` 레이어가 위에서 가린다.
+ *          넷 세션에서 `SubLevel` 은 서버가 들어가고 클라이언트는 **본다** — 서버의 목록(`MinigameReplication.h`)을 받아 기능 · 카탈로그를 켜고 같은 하위 레벨을 세우되 입력 문맥 · UI 는 열지 않으며, 칸 스택에 들지 않는다.
  *          장치 밖 씬 이동(세이브 불러오기 · 타이틀로 · 시나리오의 씬 열기)이 오면 칸 스택과 미니게임 범위를 비운다 — 씬 매니저의 받아들임 알림으로 이 흐름이 요청하지 않은 게임 이동을 듣는다.
  *          월드가 플레이를 시작할 때 활성 씬이 씬 전환 미니게임의 맵이면(에디터가 미니게임 맵을 편집하다 플레이 · 모듈 리로드 뒤 다시 시작) 그 미니게임 안으로 시작하고, 멈추면 비운다 —
  *          언리얼 Lyra 가 월드 설정의 기본 경험으로 에디터 플레이를 여는 자리다. 실행 전역 변수로 들어간 것과 같은 칸(돌아올 씬 없음)이다.
@@ -30,10 +31,12 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskFuture.h"
 
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/SceneSubLevelTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameReplication.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 #include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
 
@@ -155,7 +158,14 @@ namespace sw
         /** @brief 미니게임이 끝날 때(돌아올 자리를 복원한 뒤) 결과를 받는 함수 목록입니다. 구독은 돌려받은 `Subscription` 이 풉니다. */
         FinishedDelegate& onFinished() { return _onFinished; }
 
-        /** @brief 켜진(맨 위) 미니게임입니다. 없거나 덮인 것을 다시 켜지 못했으면 nullptr 입니다. */
+        /**
+         * @brief 이 피어의 월드에 서버가 들어간 하위 레벨이 모두 섰으면 true 입니다 — 서버 · 혼자 하는 게임은 늘 true 다.
+         * @details 늦게 들어온 클라이언트가 바닥이 없는 곳에서 예측을 시작하지 않게, 자기 폰의 예측을 시작하는 쪽이 본다(언리얼은 보임을 알린 뒤에 그 레벨을 쓴다). 서버가 아직 짓지 않은 것은 기다리지 않는다.
+         */
+        [[nodiscard]] bool isServerWorldReady() const;
+        /** @brief 서버의 하위 레벨 미니게임을 보고 있으면 true 입니다(클라이언트) — 그 안의 디렉터는 이 피어의 판을 끝내지 않는다. */
+        bool isObserving() const { return _listObserved.empty() == false; }
+        /** @brief 켜진(맨 위) 미니게임입니다. 없거나, 덮인 것을 다시 켜지 못했거나, 서버의 것을 보고 있으면 nullptr 입니다. */
         const MinigameDefinition* findActiveDefinition() const;
         /**
          * @brief 켜진 매치형 미니게임의 지금 점수입니다(정의의 `_matchScore` — 열린 디렉터들이 모은 값). 매치형이 아니거나 디렉터가 내지 않으면 nullopt 입니다.
@@ -199,6 +209,39 @@ namespace sw
             string         _scenePath; ///< 돌아갈 씬
         };
 
+        /** @brief 미니게임을 켜는 피어의 몫입니다. */
+        enum class ActivationRole : uint8
+        {
+            Player,  ///< 이 피어의 플레이어가 들었다 — 기능 · 카탈로그 · 입력 문맥 · UI
+            Observer ///< 서버의 것을 본다 — 기능 · 카탈로그만
+        };
+
+        /** @brief 클라이언트 — 서버가 들어간 하위 레벨 하나를 이 피어에 세운 것입니다(아래부터 위로, 맨 위만 켜져 있다). */
+        struct ObservedMinigame
+        {
+            MinigameDefinition _definition;
+            string             _scenePath;             ///< 얹은 바탕 씬(리소스 id)
+            uint32             _entryID{ 0 };          ///< 서버의 항목 번호
+            uint8              _bAnswered{ SW_FALSE }; ///< 서버에 준비를 알렸다
+            uint8              _bFailed{ SW_FALSE };   ///< 세우지 못했다 — 서버의 목록에서 빠질 때까지 다시 시도하지 않는다
+        };
+
+        /** @brief 활성 씬의 넷 링크에 맞춰 복제 처리기를 세우고 돌립니다. 링크가 없으면 거둡니다. */
+        void updateReplication();
+        /** @brief 처리기를 떼고 보던 것을 거둡니다. 두 번 불러도 됩니다. */
+        void stopReplication();
+        /** @brief 복제할 세션이 없다 — 준비를 기다리던 칸의 하위 레벨을 바로 짓게 합니다. */
+        void releaseHeldBuilds( Scene* pScene );
+        /** @brief 서버 — 칸 스택의 하위 레벨을 목록에 맞추고, 모두 준비된 것의 짓기를 시작합니다. */
+        void updateServerEntries( Scene& scene );
+        /** @brief 클라이언트 — 받은 목록에 맞춰 세우고 거두며, 준비를 알립니다. */
+        void updateObserved( Scene& scene );
+        void enterObserved( Scene& scene, const MinigameNetEntry& entry );
+        /** @brief 보던 것을 @p count 개만 남기고 위에서부터 거둡니다. 다 거두면 자기 칸을 다시 켭니다. */
+        void leaveObserved( size_t count );
+        /** @brief 보는 것 가운데 맨 위를 켭니다(켤 수 없으면 켜지 않은 채 둔다 — 까닭은 남겼다). */
+        void activateObservedTop();
+
         /**
          * @brief @p scenePath 를 이 흐름의 요청으로 맡기고, 그 로드를 아직 기다리고 있을 때 끝나면 @p pHandler 를 부릅니다. @p onLoaded 는 그 로드가 끝나면 늘 부릅니다(졌거나 밀려났으면 nullptr).
          * @return 요청이 지면 false 입니다.
@@ -227,7 +270,7 @@ namespace sw
         /** @brief 검사를 마친 정의로 들어갑니다(`enter` · `enterMatch` 의 공통 몸) — 켜고, 돌아올 자리를 만들고, 맵을 요청한다. 지면 덮었던 미니게임을 다시 켠다(원자적). */
         [[nodiscard]] bool enterDefinition( MinigameDefinition definition, const optional<SubLevelPlacement>& placement );
         /** @brief @p definition 을 켭니다 — 게임 기능(적은 순서) → 카탈로그 맞춤 → 입력 문맥 → UI. 하나라도 지면 그때까지 건 것을 거두고(해제 검사 포함) nullptr 입니다. */
-        [[nodiscard]] unique_ptr<GameFeatureScope> activate( const MinigameDefinition& definition );
+        [[nodiscard]] unique_ptr<GameFeatureScope> activate( const MinigameDefinition& definition, ActivationRole role );
         /** @brief 씬 전환 칸의 돌아올 자리를 만듭니다 — 활성 씬이 있으면 자동 저장을 한 번 맡기고 찍는다(저장을 허락하는 미니게임이면 세이브 봉투도), 없으면 입구 씬. 찍지 못하면 알리고 false 입니다. */
         [[nodiscard]] bool makeSceneReturn( const MinigameDefinition& definition, MinigameReturnPoint& outReturnPoint );
         /** @brief 맨 위 칸의 미니게임을 켭니다(덮였다 돌아올 때 · 진입이 져 되돌릴 때). 칸이 없으면 할 일이 없다. 켜지 못하면 알리고 켜진 미니게임 없이 둔다. */
@@ -270,6 +313,11 @@ namespace sw
         MinigameResult               _lastResult;           ///< 마지막으로 넘긴 결과
         Subscription                 _sceneLoadRequested;   ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
         Subscription                 _worldPlayChanged;     ///< 월드 플레이 알림의 구독(초기화가 걸고 종료가 푼다)
+        MinigameReplicationServer    _replicationServer;    ///< 서버 역할의 처리기
+        MinigameReplicationClient    _replicationClient;    ///< 클라이언트 역할의 처리기
+        Subscription                 _replicationHandler;   ///< 라우터에 단 처리기의 등록(처리기보다 뒤에 선언 — 먼저 풀린다). 세션이 닫히면 꺼진다
+        vector<ObservedMinigame>     _listObserved;         ///< 클라이언트 — 보고 있는 하위 레벨(아래부터 위로)
+        NetLinkRole                  _replicationRole;      ///< `_replicationHandler` 의 역할
         uint32                       _leakCount;            ///< 끈 범위들이 남긴 것의 합
         uint32                       _restoreCount;         ///< 돌아올 자리 복원 수
         uint32                       _lastLoad;             ///< 마지막으로 맡긴 로드의 번호(`requestAwaitedScene`)

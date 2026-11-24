@@ -45,6 +45,8 @@ namespace sw
             } );
             if ( pServer->initialize( peers, router, rules, gridDef, source ) == false )
                 return {};
+            if ( IServerKitLocator* const pLocator = game::findSubsystem<IServerKitLocator>() )
+                pServer->holdBeforeWithdraw( pLocator->subscribeBeforeWithdraw( SW_DELEGATE_METHOD( Delegate<void()>, &HubServerLink::flushProfiles, pServer.get() ) ) );
             return pServer;
         }
     };

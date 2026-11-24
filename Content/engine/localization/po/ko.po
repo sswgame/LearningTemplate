@@ -1978,6 +1978,16 @@ msgctxt "EdPluginVisualizer.ParkLayoutTip"
 msgid "Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
 msgstr "ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp
+msgctxt "EdPluginVisualizer.SplinesLabel"
+msgid "Splines"
+msgstr "스플라인"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp
+msgctxt "EdPluginVisualizer.SplinesTip"
+msgid "Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
+msgstr "씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginWidget.Account"
 msgid "Account"
@@ -2543,6 +2553,41 @@ msgctxt "Reverting in"
 msgid "Reverting in"
 msgstr "되돌리기까지"
 
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.LoadFailedMessage"
+msgid "The saved game could not be loaded. Try again, or stay here."
+msgstr "저장한 게임을 불러오지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요."
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.LoadFailedTitle"
+msgid "Load Failed"
+msgstr "불러오기 실패"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.SaveFailedMessage"
+msgid "The game could not be saved. Try again, or keep playing without saving."
+msgstr "게임을 저장하지 못했습니다. 다시 시도하거나 저장하지 않고 계속하세요."
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.SaveFailedTitle"
+msgid "Save Failed"
+msgstr "저장 실패"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SceneLoad.FailedMessage"
+msgid "The scene could not be opened. Try again, or stay here."
+msgstr "장면을 열지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요."
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SceneLoad.FailedTitle"
+msgid "Loading Failed"
+msgstr "불러오기 실패"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SceneLoad.Retry"
+msgid "Try Again"
+msgstr "다시 시도"
+
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Sections"
@@ -2714,6 +2759,7 @@ msgid "Swap"
 msgstr "맞바꾸기"
 
 #: Source/Engine/UI/Menu/MainMenuScreen.cpp
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
 msgctxt "UIMenu.Cancel"
 msgid "Cancel"
 msgstr "취소"

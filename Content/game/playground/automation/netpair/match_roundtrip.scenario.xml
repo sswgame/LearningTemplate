@@ -7,7 +7,7 @@
   ③ 그만두면 매치 서버가 점수를 순위표에 내고, 클라이언트는 새 티켓으로 허브에 다시 붙는다(RestoreCount · Hub.NetRole 2 · AvatarID).
   ④ 순위표의 값은 서버가 낸 것이다 — 클라이언트가 낸 999 는 거절되고 순위표는 그대로다.
 -->
-<Scenario name="game.playground.netpair.match_roundtrip" fixedDelta="0.0166667" timeoutFrames="60000" startAfter="ScenePlaying" startTimeoutFrames="900">
+<Scenario name="game.playground.netpair.match_roundtrip" fixedDelta="0.0166667" realTime="true" timeoutFrames="60000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<!-- ① 허브 접속 -->

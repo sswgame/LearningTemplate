@@ -725,6 +725,19 @@
 		<entry key="Return to Title" text="타이틀로 돌아가기" sourceHash="6769de3e1eac7922" />
 		<entry key="Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="되돌리기까지" sourceHash="9cef80c4c43e7e14" />
+		<entry key="SaveGame.LoadFailedMessage"
+		       text="저장한 게임을 불러오지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요."
+		       sourceHash="1fb3e376c989cf8a" />
+		<entry key="SaveGame.LoadFailedTitle" text="불러오기 실패" sourceHash="6b42d98464d12106" />
+		<entry key="SaveGame.SaveFailedMessage"
+		       text="게임을 저장하지 못했습니다. 다시 시도하거나 저장하지 않고 계속하세요."
+		       sourceHash="f0f3bf3daa3561bd" />
+		<entry key="SaveGame.SaveFailedTitle" text="저장 실패" sourceHash="9d65377afdfb1d2d" />
+		<entry key="SceneLoad.FailedMessage"
+		       text="장면을 열지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요."
+		       sourceHash="2422111a96377ee9" />
+		<entry key="SceneLoad.FailedTitle" text="불러오기 실패" sourceHash="3b0d43abf06f4ac4" />
+		<entry key="SceneLoad.Retry" text="다시 시도" sourceHash="8cdcbe65c5e46f7a" />
 		<entry key="Sections" text="섹션" sourceHash="0337d90cf703df0d" />
 		<entry key="ServerPicker.Idle"
 		       text="새로 고침을 누르면 서버 목록을 보입니다"

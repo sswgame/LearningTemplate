@@ -665,9 +665,11 @@ namespace sw
                 continue;
             }
 
-            const int64 tickStart = MonotonicClock::nowNanoseconds();
+            const Scene* const pSceneBefore = engine::getSubsystem<SceneManager>().getActiveScene();
+            const int64        tickStart    = MonotonicClock::nowNanoseconds();
             updateOnce( deltaSeconds );
-            const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
+            const int64 tickTime     = MonotonicClock::nowNanoseconds() - tickStart;
+            const bool  bSceneOpened = engine::getSubsystem<SceneManager>().getActiveScene() != pSceneBefore;
             _statusTickSumNanoseconds += tickTime;
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;
             ++_statusTickSampleCount;
@@ -690,7 +692,13 @@ namespace sw
 
             deadline += _tickNanoseconds;
             const int64 now = MonotonicClock::nowNanoseconds();
-            if ( now - deadline > maxBehind )
+            if ( bSceneOpened )
+            {
+                // 씬을 연 틱은 월드를 세운 시간(오브젝트 시작 · 내비메시)을 안는다 — 게임이 밀린 것이 아니라 그 월드의 시계가 지금 시작한 것이다(언리얼은 `LoadMap` 뒤 첫 델타를 버린다). 첫 씬과 씬 이동이 같은 길이다.
+                SW_LOG_INFO_ID( "Server.SceneOpened", "Scene opened in %# us - ticks count from here", tickTime / constant::time::kNanosecondsPerMicrosecond );
+                deadline = now;
+            }
+            else if ( now - deadline > maxBehind )
             {
                 // 따라잡을 수 없을 만큼 밀렸다. 밀린 시간을 버리고 지금부터 다시 센다(몰아서 돌다가 다음 틱을 또 밀지 않게 한다).
                 const uint32 dropped = static_cast<uint32>( ( now - deadline ) / _tickNanoseconds );

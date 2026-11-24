@@ -171,6 +171,8 @@ namespace sw
     bool GameModeComponent::finishMinigame( const hashed_string& resultName )
     {
         MinigameFlow* const pFlow = game::findSubsystem<MinigameFlow>();
+        if ( pFlow != nullptr && pFlow->isObserving() )
+            return false; // 서버의 판을 보는 클라이언트다 — 끝내는 것은 서버가 정한다
         if ( pFlow == nullptr || pFlow->findActiveDefinition() == nullptr )
         {
             SW_LOG_ERROR_ID( "GameMode.FinishWithoutMinigame", "GameMode '%#' finishes with result '%#' but no minigame is active - only a minigame director ends a minigame",

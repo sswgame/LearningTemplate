@@ -288,9 +288,39 @@ SW_TEST_CASE( NetConnectionTest, ReceivedMessageBuffersAreReusedThroughTheCaller
     SW_EXPECT_TRUE( received.data() == pFirstStorage );
 }
 
-SW_TEST_CASE( NetConnectionTest, ReceiveQueueOverflowIsFlaggedAndDrainingFreesRoom )
+/** @brief [NetConnectionTest] 결함: 앱이 멈춘 동안 쌓인 비신뢰 스냅숏이 받은 큐를 넘기면 연결이 끊겼다 — 비신뢰는 오래된 것부터 버리고 연결을 지킨다 */
+SW_TEST_CASE( NetConnectionTest, UnreliableReceiveOverflowDropsTheOldest )
 {
-    // 게임이 꺼내지 않는 동안 상대가 계속 넣으면 받은 큐가 상한에서 멈추고 표시가 선다(호스트는 이 표시로 끊는다). 꺼낸 만큼은 다시 들어간다.
+    NetConnection sender;
+    NetConnection receiver;
+    const int32   perMessage = 1000 + NetConnection::kIncomingMessageOverheadBytes;
+    const int32   fitCount   = NetConnection::kMaxPendingReceiveBytes / perMessage;
+    const int32   extraCount = 3;
+    vector<uint8> message( 1000, 0x30 );
+    for ( int32 round = 0; round < fitCount + extraCount; ++round )
+    {
+        message[0] = static_cast<uint8>( round );
+        message[1] = static_cast<uint8>( round >> 8 );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
+        BitWriter packet;
+        sender.writePacket( 0.001 * round, packet, 1200 );
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_REQUIRE_TRUE( receiver.readPacket( 0.001 * round, reader ) );
+    }
+    SW_EXPECT_FALSE( receiver.hasReceiveOverflowed() );
+    vector<uint8> received;
+    int32         expected = extraCount; // 앞의 셋을 버렸다
+    while ( receiver.receiveMessage( NetChannelKind::Unreliable, received ) )
+    {
+        SW_EXPECT_EQUAL( expected, static_cast<int32>( received[0] ) | ( static_cast<int32>( received[1] ) << 8 ) );
+        ++expected;
+    }
+    SW_EXPECT_EQUAL( fitCount + extraCount, expected );
+}
+
+SW_TEST_CASE( NetConnectionTest, ReliableReceiveOverflowIsFlaggedAndDrainingFreesRoom )
+{
+    // 게임이 꺼내지 않는 동안 상대가 신뢰 메시지를 계속 넣으면 받은 큐가 상한에서 멈추고 표시가 선다(호스트는 이 표시로 끊는다).
     NetConnection       sender;
     NetConnection       receiver;
     const vector<uint8> message( 1000, 0x30 );
@@ -300,17 +330,21 @@ SW_TEST_CASE( NetConnectionTest, ReceiveQueueOverflowIsFlaggedAndDrainingFreesRo
     SW_EXPECT_LOG( "Net.ReceiveOverflow" ); // 받은 큐 넘침은 경고로 알린다
     for ( int32 round = 0; round <= fitCount; ++round )
     {
-        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
+        SW_REQUIRE_TRUE( sender.sendMessage( NetChannelKind::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
         BitWriter packet;
         sender.writePacket( 0.001 * round, packet, 1200 );
         BitReader reader( packet.getBytes().data(), packet.getByteCount() );
         SW_REQUIRE_TRUE( receiver.readPacket( 0.001 * round, reader ) );
         if ( round < fitCount )
             SW_REQUIRE_FALSE( receiver.hasReceiveOverflowed() );
+        BitWriter acknowledgement; // 확인을 돌려줘 보내는 쪽의 신뢰 창을 비운다
+        receiver.writePacket( 0.001 * round, acknowledgement, 1200 );
+        BitReader acknowledgementReader( acknowledgement.getBytes().data(), acknowledgement.getByteCount() );
+        SW_REQUIRE_TRUE( sender.readPacket( 0.001 * round, acknowledgementReader ) );
     }
     SW_EXPECT_TRUE( receiver.hasReceiveOverflowed() );
     vector<uint8> received;
-    while ( receiver.receiveMessage( NetChannelKind::Unreliable, received ) )
+    while ( receiver.receiveMessage( NetChannelKind::ReliableOrdered, received ) )
     {
         ++deliveredSeen;
     }

@@ -24,7 +24,8 @@ namespace sw
     {
         static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수.
         static constexpr uint8 kEngine    = 0x00; ///< 엔진의 게임 세션(`GameNetSession`)이 쓰는 0x00..0x0F. 종류는 Engine 의 `GameNetSessionMessage` 에 있다.
-        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0xBF(11 영역). 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
+        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0xAF(10 영역). 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
+        static constexpr uint8 kRuntime   = 0xB0; ///< 키트가 아닌 게임 프레임워크 바탕(`GameFramework/Runtime`)이 쓰는 0xB0..0xBF — 하위 레벨 미니게임의 복제
         static constexpr uint8 kGame      = 0xC0; ///< 게임이 쓰는 메시지 0xC0..0xFF(4 영역). 키트 영역이 0x7F 에서 찼다(하우징이 여덟째) — 게임은 영역 하나 · 둘을 쓰고 키트는 계속 늘어 키트 쪽을 넓혔다.
         /**
          * @brief 라우터(`NetMessageRouter`)가 쓰는 종류 하나(엔진 영역의 마지막 0x0F) — 처리기는 맡지 못한다.
@@ -190,7 +191,7 @@ namespace sw
         VersionMismatch,      ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
         SecurityMismatch,     ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
         AuthenticationFailed, ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
-        ReceiveOverflow,      ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
+        ReceiveOverflow,      ///< 신뢰 채널의 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
         ReliableOverflow,     ///< 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).
         Count                 ///< 사유가 아니라 개수다 — 서버 지표가 사유마다 시리즈를 이 값까지 만든다(`GameNetSession`). 사유를 더하면 `toString` 의 switch 가 빠진 줄을 컴파일에서 알린다.
     };

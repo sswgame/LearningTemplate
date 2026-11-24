@@ -2,6 +2,7 @@
 
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 
+#include "Core/Delegate/Delegate.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -28,10 +29,24 @@ namespace sw
         , _verticalSpeed{ 0.0f }
         , _teleportCount{ 0 }
         , _bOnGround{ SW_TRUE }
-        , _bSuspended{ SW_FALSE }
         , _bNetDriven{ SW_FALSE }
         , _reserved{ 0 }
+        , _suspendCount{ 0 }
+        , _nextSuspensionID{ 1 }
+        , _suspensionSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &ShooterBodyMovementComponent::releaseSuspension, this ) }
     {
+    }
+
+    Subscription ShooterBodyMovementComponent::suspend()
+    {
+        _suspendCount.fetch_add( 1, std::memory_order_relaxed );
+        return _suspensionSubscriptions.issue( _nextSuspensionID++ );
+    }
+
+    void ShooterBodyMovementComponent::releaseSuspension( uint64 suspensionID )
+    {
+        (void)suspensionID;
+        _suspendCount.fetch_sub( 1, std::memory_order_relaxed );
     }
 
     SpawnStateReset ShooterBodyMovementComponent::resetToSpawnState()
@@ -40,7 +55,6 @@ namespace sw
         _displayOffset = float3{ 0.0f, 0.0f, 0.0f };
         _verticalSpeed = 0.0f;
         _bOnGround     = SW_TRUE;
-        _bSuspended    = SW_FALSE;
         return SpawnStateReset::Reset;
     }
 
@@ -61,7 +75,7 @@ namespace sw
             return false;
         const GameObject*      pOwner  = getOwner();
         const PawnComponent*   pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const ShooterMoveInput input   = pPawn != nullptr && _bSuspended == SW_FALSE ? makeInput( pPawn->getIntent() ) : ShooterMoveInput{};
+        const ShooterMoveInput input   = pPawn != nullptr && isSuspended() == false ? makeInput( pPawn->getIntent() ) : ShooterMoveInput{};
         const float3           before  = _position;
         bool                   bLanded = false;
         const ShooterMoveState next    = simulate( listBox, listFloor, getState(), input, deltaTime, bLanded );

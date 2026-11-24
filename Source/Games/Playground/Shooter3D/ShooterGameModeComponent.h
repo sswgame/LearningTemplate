@@ -198,6 +198,8 @@ namespace sw
         /** @brief 바닥 @p floorNumber(1 부터)의 그 시각 자세(절대)입니다. 없거나 사라졌으면 false 입니다. */
         [[nodiscard]] bool              computeFloorPose( uint8 floorNumber, float64 seconds, float3& outPosition, float32& outYaw ) const;
         const vector<ShooterEnemyView>& getEnemyViews() const { return _listEnemyView; }
+        /** @brief 복제 엔티티 번호 @p netEntityID 의 적 오브젝트입니다 — 쓰러졌지만 아직 거두지 않은 적도 든다(`getEnemyViews` 는 산 적만). 없으면 빈 핸들입니다. */
+        [[nodiscard]] GameObjectHandle findEnemyObject( uint32 netEntityID ) const;
         /** @brief @p from 에서 가장 가까운 산 플레이어입니다(적이 이쪽으로 온다). 산 사람이 없으면 가장 가까운 쓰러진 사람이고, 판을 두는 사람이 없으면 nullptr 입니다. */
         const ShooterPlayerView* findNearestPlayer( const AbsolutePosition& from ) const;
         /** @brief 이번 프레임에 판을 두는 플레이어들입니다(혼자 · 클라이언트는 씬의 플레이어 하나, 서버는 접속한 몸마다 하나). */

@@ -96,6 +96,8 @@ namespace sw
 
         /** @brief gamesettings 의 허브 서버 접속 티켓 이름(`_onlineHubServerID`)입니다. 적지 않았으면 빈 글입니다. */
         const string& getHubServerID() const;
+        /** @brief gamesettings 의 허브에 다시 붙기 한도(초, `_onlineHubReconnectSeconds`)입니다. 0 이면 다시 붙지 않습니다. */
+        float32 getHubReconnectSeconds() const;
 
         OnlineServiceClient& getServiceClient() { return _client; }
         OnlineClientState    getState() const { return _client.getState(); }

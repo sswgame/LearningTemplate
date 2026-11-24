@@ -51,16 +51,18 @@ namespace sw
     class ServerKitLocator final : public IServerKitLocator
     {
     public:
-        explicit ServerKitLocator( const ServerKitDirectory& directory )
+        explicit ServerKitLocator( ServerKitDirectory& directory )
             : _directory{ directory }
         {
         }
+
+        [[nodiscard]] Subscription subscribeBeforeWithdraw( const Delegate<void()>& onBeforeWithdraw ) override { return _directory.subscribeBeforeWithdraw( onBeforeWithdraw ); }
 
     private:
         const ISubsystemLocator* findKitScope() const override { return _directory.findKitScope(); }
 
     private:
-        const ServerKitDirectory& _directory;
+        ServerKitDirectory& _directory;
     };
 
     /**

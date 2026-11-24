@@ -153,6 +153,8 @@ namespace sw
         , _bindlessDummyImage{ nullptr }
         , _bindlessDummyView{ nullptr }
         , _bindlessDummyMemory{}
+        , _dummyStorage{ nullptr }
+        , _dummyStorageMemory{}
         , _dummyUBO{ nullptr }
         , _dummyUBOMemory{}
         , _pipelineStates{ getHandleReuseCount() }
@@ -513,6 +515,9 @@ namespace sw
             _memoryAllocator.destroyBuffer( _dummyUBO, _dummyUBOMemory );
             _dummyUBO       = nullptr;
             _dummyUBOMemory = VulkanAllocation{};
+            _memoryAllocator.destroyBuffer( _dummyStorage, _dummyStorageMemory );
+            _dummyStorage       = nullptr;
+            _dummyStorageMemory = VulkanAllocation{};
             if ( _bindlessDummyView )
             {
                 vkDestroyImageView( _device, _bindlessDummyView, nullptr );
@@ -612,6 +617,13 @@ namespace sw
     {
         const VulkanTextureRecord* pTex = resolveTexture( texture );
         return ( pTex != nullptr && pTex->_imageView != VK_NULL_HANDLE ) ? reinterpret_cast<void*>( pTex->_imageView ) : nullptr;
+    }
+
+    void VulkanRHIDevice::reportBufferPlacement( RHIBufferHandle buffer ) const
+    {
+        const VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( buffer );
+        if ( pRecord != nullptr )
+            _memoryAllocator.reportPlacement( pRecord->_memory );
     }
 
     VulkanRHIDevice::VulkanBufferRecord* VulkanRHIDevice::resolveAllocatedBuffer( RHIBufferHandle handle )
@@ -3534,6 +3546,18 @@ namespace sw
                 return false;
             Memory::set( _dummyUBOMemory._pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
             _memoryAllocator.flush( _dummyUBOMemory, 0, kDummyUboSize );
+        }
+
+        // 7) 걸지 않은 컴퓨트 쓰기 슬롯이 가리킬 버퍼. 풀을 비우고 다시 받은 세트에는 앞 프레임의 디스크립터가 남아 있다 — 걸지 않은 채 쓰면 놓은 버퍼의 메모리(다시 쓰인 다른 버퍼)를 덮는다.
+        //    DX12 는 같은 자리에 널 UAV 를 채운다. 내용은 아무도 읽지 않는다.
+        {
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size        = kDummyUboSize;
+            bufferInfo.usage       = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            if ( _memoryAllocator.createBuffer( bufferInfo, VulkanBufferMemory::DeviceLocal, "DummyStorageBuffer", _dummyStorage, _dummyStorageMemory ) == false )
+                return false;
         }
 
         return true;

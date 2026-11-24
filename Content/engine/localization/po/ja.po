@@ -1978,6 +1978,16 @@ msgctxt "EdPluginVisualizer.ParkLayoutTip"
 msgid "Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
 msgstr "ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp
+msgctxt "EdPluginVisualizer.SplinesLabel"
+msgid "Splines"
+msgstr "スプライン"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp
+msgctxt "EdPluginVisualizer.SplinesTip"
+msgid "Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
+msgstr "シーンの各スプラインの曲線 - 選択中のスプラインは制御点のハンドルをドラッグ（Shapes）"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPluginWidget.Account"
 msgid "Account"
@@ -2543,6 +2553,41 @@ msgctxt "Reverting in"
 msgid "Reverting in"
 msgstr "元に戻すまで"
 
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.LoadFailedMessage"
+msgid "The saved game could not be loaded. Try again, or stay here."
+msgstr "セーブデータを読み込めませんでした。もう一度試すか、このまま続けてください。"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.LoadFailedTitle"
+msgid "Load Failed"
+msgstr "ロード失敗"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.SaveFailedMessage"
+msgid "The game could not be saved. Try again, or keep playing without saving."
+msgstr "ゲームをセーブできませんでした。もう一度試すか、セーブせずに続けてください。"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SaveGame.SaveFailedTitle"
+msgid "Save Failed"
+msgstr "セーブ失敗"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SceneLoad.FailedMessage"
+msgid "The scene could not be opened. Try again, or stay here."
+msgstr "シーンを開けませんでした。もう一度試すか、このまま続けてください。"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SceneLoad.FailedTitle"
+msgid "Loading Failed"
+msgstr "読み込み失敗"
+
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
+msgctxt "SceneLoad.Retry"
+msgid "Try Again"
+msgstr "もう一度試す"
+
 #. Context: TextWidget._text
 #: engine/ui/debughud.ui.xml
 msgctxt "Sections"
@@ -2714,6 +2759,7 @@ msgid "Swap"
 msgstr "入れ替え"
 
 #: Source/Engine/UI/Menu/MainMenuScreen.cpp
+#: Source/GameFramework/Client/Flow/LoadingScreenController.cpp
 msgctxt "UIMenu.Cancel"
 msgid "Cancel"
 msgstr "キャンセル"

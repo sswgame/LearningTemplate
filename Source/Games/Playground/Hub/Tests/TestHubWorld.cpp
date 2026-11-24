@@ -106,11 +106,11 @@ SW_TEST_CASE( HubWorldTest, GatherAndMoveFollowTheServerLimits )
     SW_EXPECT_TRUE( world.moveAvatar( avatarID, AbsolutePosition{
                                                     float3{ 30.0f, 0.0f, 0.0f }
     },
-                                      false ) == HubActionResult::StepTooLong );
+                                      0.0f, false ) == HubActionResult::StepTooLong );
     SW_EXPECT_TRUE( world.moveAvatar( avatarID, AbsolutePosition{
                                                     float3{ 8.0f, 0.0f, 6.0f }
     },
-                                      false ) == HubActionResult::Ok );
+                                      0.0f, false ) == HubActionResult::Ok );
     SW_EXPECT_NEAR( 8.0, world.findAvatar( avatarID )->_profile._position._x, 1e-4 );
     SW_EXPECT_TRUE( world.gatherHerb( avatarID, kNearHerbID ) == HubActionResult::TargetGone );
     world.update( 5.1f );
@@ -131,25 +131,24 @@ SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
     SW_EXPECT_TRUE( world.moveAvatar( riderID, AbsolutePosition{
                                                    float3{ 0.0f, 0.0f, 2.0f }
     },
-                                      true ) == HubActionResult::Ok );
+                                      0.0f, true ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.moveAvatar( walkerID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 2.0f }
     },
-                                      false ) == HubActionResult::Ok );
+                                      0.0f, false ) == HubActionResult::Ok );
     constexpr float32 kStep   = 0.1f;
     int32             refused = 0;
     for ( int32 step = 1; step <= 20; ++step )
     {
-        world.update( kStep );
         const float32 z = 2.0f + 10.0f * kStep * static_cast<float32>( step );
         SW_EXPECT_TRUE( world.moveAvatar( riderID, AbsolutePosition{
                                                        float3{ 0.0f, 0.0f, z }
         },
-                                          true ) == HubActionResult::Ok );
+                                          kStep, true ) == HubActionResult::Ok );
         refused += world.moveAvatar( walkerID, AbsolutePosition{
                                                    float3{ 0.0f, 0.0f, z }
         },
-                                     false ) == HubActionResult::Ok
+                                     kStep, false ) == HubActionResult::Ok
                      ? 0
                      : 1;
     }
@@ -159,7 +158,44 @@ SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
     SW_EXPECT_TRUE( world.moveAvatar( riderID, AbsolutePosition{
                                                    float3{ 0.0f, std::numeric_limits<float32>::quiet_NaN(), 22.0f }
     },
-                                      true ) == HubActionResult::StepTooLong );
+                                      0.0f, true ) == HubActionResult::StepTooLong );
+}
+
+/**
+ * @brief [HubWorldTest] 결함: 이동 예산을 게임 시간이 채워, 실제 시간으로 걷는 클라이언트가 서버의 놓친 프레임만큼 예산을 잃고 정직한 걸음을 되돌려받았다 — 예산은 걸음의 시간이 채운다
+ * @details 서버의 게임 시간이 걸음 시간의 반만 흐르는(밀려 프레임을 버리는) 동안 한도 속도로 걷는다. 한도를 넘는 걸음은 모아 둔 몫을 쓴 뒤 거절된다.
+ */
+SW_TEST_CASE( HubWorldTest, MoveBudgetFollowsTheStepTimeNotTheServerFrames )
+{
+    HubRules rules     = makeHubTestRules();
+    rules._maxMoveStep = 2.0f;
+    HubWorld world;
+    SW_REQUIRE_TRUE( world.initialize( rules ) );
+    const uint32      avatarID = world.addAvatar( 1, HubProfile{} );
+    constexpr float32 kStep    = 0.1f;
+    float32           z        = 0.0f;
+    for ( int32 step = 0; step < 60; ++step )
+    {
+        world.update( kStep * 0.5f );
+        z += 6.0f * kStep;
+        SW_REQUIRE_TRUE( world.moveAvatar( avatarID, AbsolutePosition{
+                                                         float3{ 0.0f, 0.0f, z }
+        },
+                                           kStep, false ) == HubActionResult::Ok );
+    }
+    int32 refused = 0;
+    for ( int32 step = 0; step < 20; ++step )
+    {
+        const float32 next = z + 9.0f * kStep;
+        if ( world.moveAvatar( avatarID, AbsolutePosition{
+                                             float3{ 0.0f, 0.0f, next }
+        },
+                               kStep, false ) == HubActionResult::Ok )
+            z = next;
+        else
+            ++refused;
+    }
+    SW_EXPECT_TRUE( refused > 0 );
 }
 
 /** @brief [HubWorldTest] 새 아바타는 앞선 시작 자리 가운데 빈 곳에 서고, 다 찼으면 아바타에서 가장 먼 곳에 선다. 저장된 자리가 밖이면 시작 자리로 온다. */
@@ -179,7 +215,7 @@ SW_TEST_CASE( HubWorldTest, NewAvatarsTakeFreeStartPoints )
     SW_EXPECT_TRUE( world.moveAvatar( firstID, AbsolutePosition{
                                                    float3{ 0.0f, 0.0f, 0.5f }
     },
-                                      false ) == HubActionResult::Ok );
+                                      0.0f, false ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.chooseAvatarStart() == ( float3{ 0.0f, 0.0f, 0.0f } ) );
 
     world.removeAvatar( secondID );
@@ -252,25 +288,24 @@ SW_TEST_CASE( HubWorldTest, PartySharesExperience )
     SW_EXPECT_EQUAL( 5, world.findAvatar( leaderID )->_profile._coins );
     SW_EXPECT_EQUAL( 0, world.findAvatar( memberID )->_profile._coins );
 
-    // 나눔 거리 밖으로 간 파티원은 받지 않는다(한 걸음 12 m 씩 걸어 40 m 밖으로). 걸음 사이에는 시간이 흘러야 한다 — 틱 없이 몰아 보낸 걸음은 거절된다(감사 K-1).
+    // 나눔 거리 밖으로 간 파티원은 받지 않는다(한 걸음 12 m 씩 걸어 40 m 밖으로). 걸음은 제 시간만큼만 간다 — 시간 없이 몰아 보낸 걸음은 거절된다(감사 K-1).
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 12.0f }
     },
-                                      false ) == HubActionResult::Ok );
+                                      0.0f, false ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 24.0f }
     },
-                                      false ) == HubActionResult::StepTooLong );
-    world.update( 12.0f / 6.0f ); // 걷는 속도 6 m/s 로 12 m
+                                      0.0f, false ) == HubActionResult::StepTooLong );
+    constexpr float32 kStepSeconds = 12.0f / 6.0f; // 걷는 속도 6 m/s 로 12 m
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 24.0f }
     },
-                                      false ) == HubActionResult::Ok );
-    world.update( 12.0f / 6.0f );
+                                      kStepSeconds, false ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 36.0f }
     },
-                                      false ) == HubActionResult::Ok );
+                                      kStepSeconds, false ) == HubActionResult::Ok );
     attackUntilDefeated( world, leaderID, kSideCreatureID );
     SW_EXPECT_EQUAL( 90, world.findAvatar( leaderID )->_profile._experience );
     SW_EXPECT_EQUAL( 30, world.findAvatar( memberID )->_profile._experience );

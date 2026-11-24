@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 
@@ -28,7 +29,7 @@ namespace sw
     public:
         GameConnectSecurity();
 
-        /** @brief 암호 제공자를 넣습니다(GameFramework 의 게임 인스턴스가 서며 넣고, 내려갈 때 nullptr 로 뺍니다). 소유하지 않으며 사용하는 동안 살아 있어야 합니다. */
+        /** @brief 암호 제공자를 넣습니다(GameFramework 의 게임 인스턴스가 서며 넣고, 내려갈 때 nullptr 로 뺍니다). 소유하지 않으며, 제공자가 내려가기 전에 저절로 빠집니다(`INetSecurityProvider::subscribeRetiring`). */
         void setProvider( INetSecurityProvider* pProvider );
         /** @brief 암호 제공자입니다. 넣지 않았으면 nullptr 입니다. */
         INetSecurityProvider* findProvider() const;
@@ -47,6 +48,7 @@ namespace sw
         mutable mutex                             _mutex;
         INetSecurityProvider* _pProvider          SW_GUARDED_BY( _mutex );
         INetConnectAuthenticator* _pAuthenticator SW_GUARDED_BY( _mutex );
+        Subscription                              _providerRetiring; ///< 제공자가 내려가기 전에 칸을 비운다
         atomic<uint64>                            _refusedWhileUnbound;
     };
 } // namespace sw

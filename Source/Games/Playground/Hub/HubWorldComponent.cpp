@@ -5,7 +5,6 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -198,17 +197,19 @@ namespace sw
             }
 
             /**
-             * @brief 마지막 행동 결과를 받은 뒤 공격 재사용 대기(씬 규칙)가 실제 시간으로 지났으면 1 입니다.
-             * @details 서버는 결과를 보내기 전에 대기를 시작하므로, 받은 때부터 잰 대기가 지나면 서버의 대기도 지났다. 시나리오가 다음 공격을 이 값으로 기다린다
-             *          (고정 프레임 시간은 서버 시계와 다르다).
+             * @brief 서버가 알린 공격 재사용 대기의 끝 틱을 월드의 서버 시계가 지났으면 1 입니다. 시나리오가 다음 공격을 이 값으로 기다린다.
+             * @details 대기는 서버의 게임 시간이라 실제 시간으로 재면 서버가 밀리거나 멈춘 만큼 어긋난다. 클라이언트의 시계 추정은 받은 틱보다 `NetClock::kMaxLeadSeconds` 까지 앞설 수 있어 그만큼을 뺀다 —
+             *          그 틱은 서버가 이미 지난 틱이다.
              */
             [[nodiscard]] static bool readAttackReady( const HubWorldComponent& hub, float64& outValue )
             {
-                if ( hub.getClient().isActive() == false )
+                const NetLinkValue* const pLink = SceneNetLink::findBoundFor( hub );
+                if ( hub.getClient().isActive() == false || pLink == nullptr )
                     return false;
-                const int64 lastNanoseconds     = hub.getClient().getLastResultNanoseconds();
-                const int64 cooldownNanoseconds = MonotonicClock::secondsToNanoseconds( static_cast<float64>( hub.getRules()._attackCooldownSeconds ) );
-                const bool  bReady              = lastNanoseconds == 0 || MonotonicClock::nowNanoseconds() >= lastNanoseconds + cooldownNanoseconds;
+                const HubAvatarAgent& agent     = hub.getClient().getAgent();
+                const NetClock&       clock     = pLink->_pRouter->getWorldClock();
+                const float64         leadTicks = static_cast<float64>( NetClock::kMaxLeadSeconds / NetClock::kTickSeconds );
+                const bool            bReady    = agent._resultCount == 0 || clock.getServerTick() - leadTicks >= static_cast<float64>( agent._attackReadyTick );
                 outValue                        = bReady ? 1.0 : 0.0;
                 return true;
             }
@@ -339,6 +340,6 @@ namespace sw
                                    &HubWorldComponentDevInternal::readVisibleEntities );
     SW_AUTOMATION_COMPONENT_WATCH( hubFirstCreatureHealth, "Hub.FirstCreatureHealth", "Replicated health of creature 100000 (no value while felled or unseen)", HubWorldComponent,
                                    &HubWorldComponentDevInternal::readFirstCreatureHealth );
-    SW_AUTOMATION_COMPONENT_WATCH( hubAttackReady, "Hub.AttackReady", "1 once the attack cooldown has passed in real time since the last action result", HubWorldComponent,
+    SW_AUTOMATION_COMPONENT_WATCH( hubAttackReady, "Hub.AttackReady", "1 once the world's server clock is past the attack cooldown the server last sent", HubWorldComponent,
                                    &HubWorldComponentDevInternal::readAttackReady );
 } // namespace sw

@@ -743,6 +743,19 @@
 		<entry key="Return to Title" text="タイトルに戻る" sourceHash="6769de3e1eac7922" />
 		<entry key="Revert" text="元に戻す" sourceHash="d89a2e529b31ef43" />
 		<entry key="Reverting in" text="元に戻すまで" sourceHash="9cef80c4c43e7e14" />
+		<entry key="SaveGame.LoadFailedMessage"
+		       text="セーブデータを読み込めませんでした。もう一度試すか、このまま続けてください。"
+		       sourceHash="1fb3e376c989cf8a" />
+		<entry key="SaveGame.LoadFailedTitle" text="ロード失敗" sourceHash="6b42d98464d12106" />
+		<entry key="SaveGame.SaveFailedMessage"
+		       text="ゲームをセーブできませんでした。もう一度試すか、セーブせずに続けてください。"
+		       sourceHash="f0f3bf3daa3561bd" />
+		<entry key="SaveGame.SaveFailedTitle" text="セーブ失敗" sourceHash="9d65377afdfb1d2d" />
+		<entry key="SceneLoad.FailedMessage"
+		       text="シーンを開けませんでした。もう一度試すか、このまま続けてください。"
+		       sourceHash="2422111a96377ee9" />
+		<entry key="SceneLoad.FailedTitle" text="読み込み失敗" sourceHash="3b0d43abf06f4ac4" />
+		<entry key="SceneLoad.Retry" text="もう一度試す" sourceHash="8cdcbe65c5e46f7a" />
 		<entry key="Sections" text="セクション" sourceHash="0337d90cf703df0d" />
 		<entry key="ServerPicker.Idle"
 		       text="更新を押すとサーバー一覧を表示します"

@@ -1091,7 +1091,7 @@ namespace sw
 {
     /**
      * @class OpenSSLNetSecuritySubsystem
-     * @brief OpenSSL 제공자를 멤버로 들고 `INetSecurityProvider` 로 공개하는 모듈 서브시스템입니다. 제공자는 상태가 없어 초기화 · 종료가 할 일이 없다.
+     * @brief OpenSSL 제공자를 멤버로 들고 `INetSecurityProvider` 로 공개하는 모듈 서브시스템입니다. 초기화는 할 일이 없고, 종료는 모듈이 내려가기 전에 쥔 쪽(엔진의 세션 · 팩)이 놓게 한다(`retire`).
      * @details 제공자가 `Subsystem` 을 함께 상속하지 않게 수명 짝만 여기 둔다 — 제공자는 서브시스템 없이도 쓰인다(테스트). 이름 해시가 함수 서명 글이라
      *          익명 이름공간이 아닌 `sw` 에 둔다(`RESPEphemeralStoreDriver` 와 같다).
      */
@@ -1102,7 +1102,7 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "NetSecurity";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
+        void                shutdownSubsystem() override { _provider.retire(); }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 공개할 제공자입니다(`ModuleSubsystemRegistration` 이 `INetSecurityProvider` 로 공개한다). 이 서브시스템과 수명이 같습니다. */

@@ -813,14 +813,14 @@ namespace sw
 
         // 고정 스텝 훅은 틱 시스템의 고정 스텝 그룹이 부른다(`SceneTickScheduler::tickFixedStepGroup` — 컴포넌트가 onRegister 에서 등록한 메서드만 메서드별 일괄 함수, 차례는 단계 바디 → 관절 → 캐릭터).
         // 콜백이 컴포넌트를 더하거나 뺄 수는 없다(구조 변경은 이 밖에서 난다). 그룹마다 구간이 낡았는지 본다.
-        (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameBegin, FixedStepContext{ *this, 0.0f, 0, 0, 0.0f } );
+        (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameBegin, FixedStepContext{ *this, deltaTime, 0.0f, 0, 0, 0.0f } );
         sweepContinuousColliders2D();
 
         const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( deltaTime ) );
         const float32 fixedStep = _stepTimer.getStep();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            const FixedStepContext stepContext{ *this, fixedStep, stepIndex, stepCount, 0.0f };
+            const FixedStepContext stepContext{ *this, deltaTime, fixedStep, stepIndex, stepCount, 0.0f };
             (void)_manager.tickFixedStepGroup( FixedStepGroup::PreStep, stepContext );
             flushCharacterMoves( fixedStep ); // 캐릭터는 바디 · 관절이 이번 스텝 목표를 정한 뒤, 월드 스텝 앞에 움직인다(예전 차례 그대로)
             stepWorlds( makeWriteFence(), fixedStep );
@@ -836,7 +836,7 @@ namespace sw
         // 파편 예산은 씬 전체에서 한 번 고른다 — 프레임 끝 훅에서 주인마다 자기 몫만 지운다(먼저 틱한 오브젝트가 값을 치르지 않는다, 감사 S-11).
         if ( const PhysicsSettings* pSettings = findSettings(); pSettings != nullptr )
             _debrisBudget.planRemovals( pSettings->_maxDebrisBodyCount );
-        (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameEnd, FixedStepContext{ *this, fixedStep, 0, stepCount, _stepTimer.getAlpha() } );
+        (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameEnd, FixedStepContext{ *this, deltaTime, fixedStep, 0, stepCount, _stepTimer.getAlpha() } );
         applyPoseWrites();
         // 이벤트는 여기서 나눠 주지 않는다 — `FlushPostPhysics` 단계의 `ScenePhysicsEvents` 가 부른다(파일 머리말).
         _bFrameEventsPending = SW_TRUE;

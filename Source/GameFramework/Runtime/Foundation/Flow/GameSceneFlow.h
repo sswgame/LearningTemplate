@@ -107,6 +107,8 @@ namespace sw
         [[nodiscard]] uint32 beginSessionTravel();
         /** @brief 이동 @p serial 이 아직 열려 있으면 true 입니다(뒤의 것에 물리거나 끝났으면 false). */
         bool isSessionTravelCurrent( uint32 serial ) const { return serial != kGameplayTravel && serial == _openSessionTravel; }
+        /** @brief 플레이어가 고른 이동이 하나라도 열려 있으면 true 입니다. */
+        bool hasSessionTravel() const { return _openSessionTravel != kGameplayTravel; }
         /** @brief 이동 @p serial 을 닫습니다. 이미 물렸으면 아무것도 하지 않습니다. */
         void endSessionTravel( uint32 serial );
         /** @brief 타이틀 씬이 활성이면 true 입니다 — 게임 진행이 아니다(세이브 막기 · 플레이 시간). */

@@ -3,7 +3,10 @@
  * @brief 슈터 아레나의 몸 이동 — 폰의 의도를 읽어 걷기 · 달리기 · 점프 · 중력으로 움직이고 막는 상자에 미끄러집니다. 플레이어와 스켈레톤이 같이 씁니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -61,7 +64,7 @@ namespace sw
      *        충돌합니다(`ShooterArenaMath::resolveCircle`, 바닥 y = 0 과 움직이는 바닥 `ShooterFloorStep`). 플레이어 · 적이 같은 이 코드로 걷는다 — 누가 조종하는지(사람 · 자동 플레이 AI · 적 AI)는 모른다.
      * @details 스스로 틱하지 않습니다 — 같은 오브젝트의 규칙 컴포넌트(`ShooterPlayerComponent` · `ShooterEnemyComponent`)가 자기 틱에서 `stepMovement` 를 불러
      *          한 프레임 안의 순서(이동 → 사격 · 휘두르기 판정)를 정합니다. 자리는 이 컴포넌트가 듭니다(발). 오브젝트 변환에 쓰는 것은 부른 쪽입니다.
-     *          멈춤(`setSuspended`)이면 의도를 버리고 제자리입니다(적이 일어나는 중 · 휘두르는 중 · 움찔).
+     *          멈춤(`suspend` 구독이 하나라도 살아 있음)이면 의도를 버리고 제자리입니다(적이 일어나는 중 · 휘두르는 중 · 움찔).
      */
     REFLECT( Category = "Shooter", DisplayName = "Shooter Body Movement", Tooltip = "Kinematic walk, sprint, jump and gravity from the pawn intent, sliding on the arena boxes" )
     class ShooterBodyMovementComponent : public Component
@@ -102,9 +105,12 @@ namespace sw
         void teleport( const AbsolutePosition& feet );
         /** @brief 순간 이동마다 하나씩 오르는 번호입니다(8 비트로 감는다). */
         uint8 getTeleportCount() const { return _teleportCount; }
-        /** @brief 멈춰 둡니다 — 의도를 버리고 제자리(수평 속도 0). */
-        void setSuspended( bool bSuspended ) { _bSuspended = bSuspended ? SW_TRUE : SW_FALSE; }
-        bool isSuspended() const { return _bSuspended == SW_TRUE; }
+        /**
+         * @brief 멈춰 둡니다 — 구독이 하나라도 살아 있는 동안 의도를 버리고 제자리(수평 속도 0)입니다. 자기 오브젝트의 틱이나 틱 밖 게임 스레드에서 부릅니다.
+         * @details 멈추는 까닭(적의 단계 · 입력 초점 …)이 여럿이어도 저마다 자기 구독만 풀어, 남이 멈춘 것을 풀지 않는다(`CharacterControllerComponent::suspend` 와 같은 모양).
+         */
+        [[nodiscard]] Subscription suspend();
+        bool                       isSuspended() const { return _suspendCount.load( std::memory_order_relaxed ) > 0; }
 
         /** @brief 발 자리입니다. */
         AbsolutePosition getFeetPosition() const { return AbsolutePosition{ _position }; }
@@ -115,8 +121,12 @@ namespace sw
         float32       getWalkSpeed() const { return _walkSpeed; }
         /** @brief 걷기 빠르기를 바꿉니다(웨이브마다 빨라지는 적). */
         void setWalkSpeed( float32 speed ) { _walkSpeed = speed; }
-        /** @brief 풀 반환: 속도 · 낙하 · 그리기 오프셋을 비우고 땅에 선 채 멈춘 몸으로 돌립니다. 자리 · 걷기 빠르기는 꺼낸 쪽(`teleport` · `setWalkSpeed`)이 정합니다. */
+        /** @brief 풀 반환: 속도 · 낙하 · 그리기 오프셋을 비우고 땅에 선 채 멈춘 몸으로 돌립니다. 멈춤(`suspend`)은 건 쪽이 푼다. 자리 · 걷기 빠르기는 꺼낸 쪽(`teleport` · `setWalkSpeed`)이 정합니다. */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
+
+    private:
+        /** @brief `suspend` 구독이 풀렸습니다. */
+        void releaseSuspension( uint64 suspensionID );
 
     private:
         PROPERTY( Category = "Movement", DisplayName = "Sprint Button", Tooltip = "Intent button that sprints while held (empty: no sprint)" )
@@ -140,8 +150,10 @@ namespace sw
         float32                _verticalSpeed;
         uint8                  _teleportCount; ///< 순간 이동마다 오른다
         uint8                  _bOnGround  : 1;
-        uint8                  _bSuspended : 1;
         uint8                  _bNetDriven : 1;
-        [[maybe_unused]] uint8 _reserved   : 5;
+        [[maybe_unused]] uint8 _reserved   : 6;
+        atomic<uint32>         _suspendCount; ///< 살아 있는 `suspend` 구독 수
+        uint64                 _nextSuspensionID;
+        SubscriptionList       _suspensionSubscriptions; ///< `suspend` 가 낸 구독 — 맨 끝이라 먼저 닫힌다
     };
 } // namespace sw

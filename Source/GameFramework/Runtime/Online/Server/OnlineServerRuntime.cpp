@@ -285,6 +285,10 @@ namespace sw
             parts._scheduler.shutdown();
             if ( parts._store != nullptr )
             {
+                // 맡은 쓰기(접속자의 마지막 저장 포함)가 저장소에 닿은 뒤 멈춘다 — `shutdown` 은 돌지 못한 일을 닫힌 연결로 끝내 쓰기를 잃는다.
+                if ( parts._store->drain( Deadline::afterMilliseconds( ServiceStore::kStopDrainMilliseconds ) ) == false )
+                    SW_LOG_ERROR_ID( "OnlineServerRuntime.StoreDrainTimedOut", "Online services are stopping with %# store job(s) unfinished after %# ms - their writes are lost", parts._store->getPendingCount(),
+                                     ServiceStore::kStopDrainMilliseconds );
                 parts._store->shutdown();
                 (void)parts._store->pollCompletions(); // 남은 완료가 로그인 서비스 같은 로직을 부른다 — 키트 shutdown 전에
             }

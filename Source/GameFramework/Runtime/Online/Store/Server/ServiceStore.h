@@ -25,6 +25,7 @@
 #include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
@@ -313,8 +314,27 @@ namespace sw
         virtual int32 pollCompletions() = 0;
         /** @brief 받았지만 아직 회수하지 않은 작업의 수를 반환합니다. */
         virtual int32 getPendingCount() const = 0;
-        /** @brief 새 일을 받지 않고, 돌지 못한 일은 닫힌 연결로 돌려 완료 큐에 넣습니다. 그 뒤 `pollCompletions` 한 번으로 모두 거둘 수 있습니다. */
+        /** @brief 끝난 일이 생기거나(또는 남은 일이 없거나) @p deadline 이 지날 때까지 기다린 뒤 `pollCompletions` 합니다. `submit` 안에서 바로 실행하는 구현은 기다릴 것이 없다. */
+        virtual int32 waitCompletions( const Deadline& deadline )
+        {
+            (void)deadline;
+            return pollCompletions();
+        }
+        /** @brief 받은 일(완료가 맡긴 새 일까지)을 모두 실행하고 거둡니다 — 멈추기 전에 부른다. @p deadline 까지 남은 일이 있으면 false 입니다. */
+        [[nodiscard]] bool drain( const Deadline& deadline )
+        {
+            while ( getPendingCount() > 0 )
+            {
+                if ( deadline.isExpired() )
+                    return false;
+                (void)waitCompletions( deadline );
+            }
+            return true;
+        }
+        /** @brief 새 일을 받지 않고, 돌지 못한 일은 닫힌 연결로 돌려 완료 큐에 넣습니다(그 쓰기는 사라진다 — 먼저 `drain` 한다). 그 뒤 `pollCompletions` 한 번으로 모두 거둘 수 있습니다. */
         virtual void shutdown() = 0;
+        /** @brief 멈추기 전에 남은 일을 기다리는 최대 시간(밀리초)입니다 — 저장소에 닿지 못하는 종료가 끝없이 서지 않게 한다. */
+        static constexpr int64 kStopDrainMilliseconds = 10000;
 
         /** @brief 이 앞이 받은 일들의 커밋 · 충돌 수입니다(아무 스레드에서 읽는다). */
         const ServiceStoreCommitStats& getCommitStats() const { return _commitStats; }

@@ -7,8 +7,9 @@
 해시 로그 한 줄은 `DestructionNetSession::formatHashLine` 의 모양이다:
   `[DestructionHash] side=<server|client> id=<번호> events=<사건 수> hash=<16 자리> name=<이름>`
 같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시이므로, 서버와 클라이언트가 같은 (번호, 사건 수) 에서 같은 해시를 남겨야 한다.
-클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다 — 서버에만 있는 (번호, 사건 수) 는 틀린 것이 아니다.
-틀린 것: (1) 같은 (번호, 사건 수) 의 해시가 다름, (2) 클라이언트에만 있는 (번호, 사건 수), (3) 맞댄 쌍이 하나도 없음.
+줄은 갱신마다 하나다 — 서버는 한 틱에 난 사건 여럿을 모두 적용한 뒤 한 줄을 남기고, 클라이언트는 그 사건들을 패킷 · 프레임이 가른 만큼 나눠 적용한다. 그래서 한쪽에만 있는 중간 사건 수는 틀린 것이 아니다.
+틀린 것: (1) 같은 (번호, 사건 수) 의 해시가 다름, (2) 클라이언트가 서버가 낸 적 없는 사건을 적용함(그 번호의 서버 마지막 사건 수를 넘거나 서버에 없는 번호), (3) 클라이언트가 아는 번호의 마지막 상태가 서버와 다름
+(서버의 마지막 사건 수에 닿지 않았다), (4) 맞댄 쌍이 하나도 없음.
 """
 
 from __future__ import annotations
@@ -56,6 +57,14 @@ def parse_hash_log(text: str, side: str) -> HashRecords:
     return records
 
 
+def last_event_counts(records: HashRecords) -> dict[int, int]:
+    """번호마다 마지막(가장 큰) 사건 수."""
+    last: dict[int, int] = {}
+    for net_id, events in records.by_key:
+        last[net_id] = max(last.get(net_id, -1), events)
+    return last
+
+
 @dataclass
 class CompareResult:
     matched: int = 0
@@ -75,15 +84,21 @@ def compare_logs(server_text: str, client_text: str) -> CompareResult:
         result.problems.append(f"server log repeats id={key[0]} events={key[1]} with different hashes")
     for key in client.conflicting_keys:
         result.problems.append(f"client log repeats id={key[0]} events={key[1]} with different hashes")
+    server_last = last_event_counts(server)
+    client_last = last_event_counts(client)
     for key in sorted(client.by_key):
         client_hash, name = client.by_key[key]
         server_entry = server.by_key.get(key)
         if server_entry is None:
-            result.problems.append(f"client has id={key[0]} events={key[1]} ({name}) that the server never logged")
+            if key[1] > server_last.get(key[0], -1):
+                result.problems.append(f"client has id={key[0]} events={key[1]} ({name}) that the server never reached (last {server_last.get(key[0], 'none')})")
         elif server_entry[0] != client_hash:
             result.problems.append(f"hash mismatch id={key[0]} events={key[1]} ({name}): server {server_entry[0]} client {client_hash}")
         else:
             result.matched += 1
+    for net_id, events in sorted(client_last.items()):
+        if net_id in server_last and events < server_last[net_id]:
+            result.problems.append(f"client stopped at events={events} of id={net_id} but the server reached {server_last[net_id]}")
     if result.matched == 0:
         result.problems.append("no (id, events) pair was logged by both sides - nothing was compared")
     return result
@@ -103,11 +118,12 @@ def _run_pair(argument: argparse.Namespace) -> int:
         server = group.start("server", [server_exe, app_arguments.option("game", _GAME), scene, app_arguments.variable("gv_netListenPort", _PORT),
                                         app_arguments.variable("gv_serverExitAfterTicks", _SERVER_TICKS)], stdin=False)
         time.sleep(_CLIENT_DELAY_SECONDS)  # 서버가 먼저 서야 한다(클라이언트는 시간 초과면 다시 시도하지만, 첫 연결을 빨리 잡는다)
-        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), scene, app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{_PORT}")],
-                             stdin=False)
+        # 정상 종료(`quit`)로 닫는다 - 프로세스를 끊으면 아직 파일에 내리지 않은 로그 끝(마지막 사건들)이 사라진다.
+        client = group.start("client", [client_exe, app_arguments.option("game", _GAME), scene, app_arguments.variable("gv_standardInputCommands", "1"),
+                                        app_arguments.variable("gv_netConnectAddress", f"127.0.0.1:{_PORT}")])
         if not server.wait(_TIMEOUT_SECONDS):  # 서버는 틱 상한에 스스로 끝난다
             return group.fail(f"the server did not finish within {_TIMEOUT_SECONDS} s")
-        client.stop(quit_line=False, timeout_seconds=10)  # 클라이언트는 자동 종료 인자가 없어 서버가 끝난 뒤 닫는다
+        client.stop()  # 클라이언트는 자동 종료 인자가 없어 서버가 끝난 뒤 닫는다
     if server.return_code != 0:
         return group.fail(f"the server exited with code {server.return_code} (log: {server.log})")
     return _print_result(compare_logs(server.text(), client.text()), [server.log, client.log])

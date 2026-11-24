@@ -34,6 +34,7 @@
 namespace sw
 {
     class EconomyShopPurchaseProvider;
+    class GameInstance;
     class OfferCatalog;
     class OnlineSession;
 
@@ -46,7 +47,7 @@ namespace sw
         MatchConnect, ///< 허브 세션을 떠났다 — 매치 서버에 붙기를 기다린다
         Playing,      ///< 매치 미니게임 안이다
         Leaving,      ///< 판이 끝났다 — 허브 씬이 서기를 기다린다
-        HubLost,      ///< 허브 서버를 잃었다 — 씬의 처리기가 내려간 다음 프레임에 다시 붙는다
+        HubLost,      ///< 허브 서버를 잃었다 — 씬의 처리기가 내려간 다음 프레임에 다시 붙거나 세션 전 자리로 돌아간다
         HubTicket,    ///< 허브 씬이 섰다 — 허브 서버의 접속 티켓을 기다린다
     };
 
@@ -69,7 +70,7 @@ namespace sw
         ~PlaygroundOnlineFlow() override;
 
         /** @brief 계정 응답을 꺼내 실패를 알리고, 매칭 배정과 매치 세션의 걸음을 돌립니다. 게임이 프레임마다(틱 밖) 부릅니다. */
-        void update( OnlineSession& session );
+        void update( GameInstance& instance );
 
         // IMinigameMatchmaking
         [[nodiscard]] bool requestMatch( const MinigameDefinition& definition ) override;
@@ -120,7 +121,7 @@ namespace sw
         int32 getRefusedScoreCount() const { return _refusedScoreCount; }
 
         /**
-         * @brief 잃은 허브에 다시 붙을지입니다 — 시간 초과(회선 · 서버가 죽음)와 서버 재시작이면 붙고, 점검 · 운영자 종료 · 추방이면 붙지 않습니다.
+         * @brief 잃은 허브에 다시 붙을지입니다 — 시간 초과 · 줄 넘침(회선 · 서버가 죽음, 앱이 멈춘 동안 밀림)과 서버 재시작이면 붙고, 점검 · 운영자 종료 · 추방이면 붙지 않습니다.
          * @details 까닭 없이 서버가 닫은 것(`Remote`)은 추방이나 같은 계정의 다른 접속일 수 있다 — 저절로 다시 붙으면 두 쪽이 서로 밀어낸다.
          */
         static bool shouldReconnectHub( NetDisconnectReason reason, const optional<GameShutdownNotice>& notification );
@@ -145,12 +146,16 @@ namespace sw
         void onGameTicket( OnlineSession& session, const NetGameTicket& ticket );
         /** @brief 맡겨 둔 티켓으로 기다리던 세션(매치 · 허브)을 엽니다. */
         void openTicketSession( OnlineSession& session );
-        /** @brief 티켓을 받지 못했습니다 — 매치 전이면 허브에 남고, 돌아오는 길이면 혼자 하는 허브로 남습니다. */
+        /** @brief 티켓을 받지 못했습니다 — 매치 전이면 허브에 남고, 돌아오는 길이면 서버의 허브를 떠납니다. */
         void onGameTicketRefused();
         /** @brief 매치 미니게임에서 나왔는지 보고(판 도중 서버를 잃으면 나오게 하고) 허브 세션으로 돌아갑니다. */
         void updateMatchExit( OnlineSession& session );
-        /** @brief 허브 서버를 잃었는지 봅니다 — 다시 붙거나(`shouldReconnectHub`) 혼자 하는 허브로 남습니다. */
-        void updateHubLoss( OnlineSession& session );
+        /** @brief 허브 서버를 잃었는지(거절당했는지) 봅니다 — 다시 붙거나(`shouldReconnectHub`) 세션 전 자리로 돌아갑니다(`GameInstance::leaveServerWorld`). */
+        void updateHubLoss( OnlineSession& session, GameInstance& instance );
+        /** @brief 떠나온 허브에 다시 붙을 수 있는지입니다 — 한도(`onlineHubReconnectSeconds`)가 있고, 티켓으로 붙었던 허브는 로그인과 허브 서버 이름이 있어야 새 티켓을 청한다. */
+        [[nodiscard]] bool canReturnToHub( OnlineSession& session ) const;
+        /** @brief 서버의 허브를 떠나기 시작합니다 — 링크를 먼저 떼고, 씬의 처리기가 내려간 다음 `update` 가 세션을 닫고 세션 전 자리로 보낸다. */
+        void leaveHub();
         /** @brief 떠나온 허브에 다시 붙습니다(티켓으로 붙었던 허브면 새 티켓을 청한다). 떠나온 허브가 없으면 매치를 끝낸다. */
         void reconnectHub( OnlineSession& session );
         /** @brief 매치를 잊습니다(줄 · 배정 · 떠나온 허브). */
@@ -170,6 +175,7 @@ namespace sw
         optional<NetGameTicket>                 _pendingTicket;       ///< 받은 접속 티켓 — 앞 세션의 처리기가 내려간 다음 프레임에 연다
         hashed_string                           _matchMinigame;       ///< 줄에 선 매치형 미니게임
         NetAddress                              _hubAddress;          ///< 매치로 옮기며 떠나온 허브 서버(혼자 하는 허브면 빈 주소)
+        int64                                   _reconnectDeadline;   ///< 허브에 다시 붙기를 그만둘 시각(단조 시계 ns). 다시 붙는 중이 아니면 0
         uint64                                  _shownFriendRevision; ///< 로그에 남긴 친구 목록의 판
         int32                                   _submittedScoreCount;
         int32                                   _refusedScoreCount;

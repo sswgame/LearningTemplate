@@ -107,6 +107,15 @@ namespace sw
          */
         [[nodiscard]] bool restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes );
 
+        /** @brief 활성 씬이 서버의 월드이면(클라이언트로 붙어 있거나 붙어 있던 씬) true 입니다. */
+        [[nodiscard]] bool isInServerWorld() const;
+        /**
+         * @brief 서버의 월드를 떠나 세션을 열기 전 자리로 돌아갑니다 — 서버를 잃었고 다시 붙지 않는 게임이 세션을 닫은 뒤 부릅니다. 서버의 월드가 아니거나 다른 이동을 기다리면 아무 일도 없습니다.
+         * @details 세션을 열 때 찍어 둔 자리가 있으면 그 씬을 새로 열어 되살리고(`GameSaveSlots::applySlot` — 세이브 불러오기와 같은 길), 없으면(실행 인자로 바로 붙었다 · 타이틀에서 붙었다) 또는
+         *          되살리지 못하면 타이틀, 타이틀이 없는 게임은 입구 씬이다. 언리얼 `UEngine::HandleDisconnect` 는 기본 맵으로 보낸다 — 혼자 하던 진행이 있는 게임은 그 진행으로 돌려보낸다.
+         */
+        void leaveServerWorld();
+
         /** @brief 세이브 막기 문입니다 — 씬 전환 · 연출 · 깨진 복원이 범위형 막기를 들고, 들린 동안 세이브 목적 캡처가 거절된다. 게임 범위에도 걸려 있다. */
         SaveLock& getSaveLock() { return _saveLock; }
         /**
@@ -335,6 +344,15 @@ namespace sw
         [[nodiscard]] bool makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
         /** @brief 필수 데이터 @p path 를 읽지 못했음을 파일과 이유로 알립니다. */
         void reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const;
+        /**
+         * @brief 서버에 붙은 클라이언트이거나 활성 씬이 서버의 월드인 동안 세이브를 막습니다.
+         * @details 클라이언트의 씬은 서버의 상태를 비춘 것이라 찍으면 남의 세계가 자기 진행이 된다(언리얼은 서버만 세이브한다). 세션이 닫혀도 그 씬을 떠날 때까지다. 호스트 · 혼자 하는 게임은 막지 않는다.
+         */
+        void updateNetSaveBlock();
+        /** @brief 클라이언트 세션을 열기 직전입니다 — 혼자 하던 자리를 찍어 두고 자동 저장을 한 번 맡깁니다. 이미 서버의 월드에 있으면(다시 붙기 · 매치로 옮기기) 앞에 찍은 것을 둔다. */
+        void onClientSessionOpening();
+        /** @brief 타이틀(없으면 입구) 씬을 요청합니다. 둘 다 열지 못하면 알립니다(서버의 월드라 저장은 막힌 채다). */
+        void requestHomeScene();
         /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 테스트 범위(`ScopedGameScope`)가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
         void detachGameScope();
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
@@ -345,21 +363,24 @@ namespace sw
         GenericWindow* _pWindow;    ///< 호스트 윈도우 (App 이 소유)
 
     private:
-        GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
-        SaveLock                          _saveLock;            ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
-        SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        SharedAssetRef<ItemCatalog>       _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
-        unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
-        unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;  ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
-        unique_ptr<AutosaveManager>       _pAutosave;           ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
-        unique_ptr<GameFeatureScope>      _pGameFeatureScope;   ///< gamesettings `gameFeatures` 의 게임 범위 기능(`activateGameFeatures` 가 켜고 서브시스템 종료 뒤에 끈다)
-        unique_ptr<IGameDevPart>          _pDevPart;            ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
-        string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
-        vector<shared_ptr<const void>>    _listBoundCatalog;    ///< 범위의 칸에 건 카탈로그의 판들(`followScopedService` — 인스턴스와 함께 놓는다. 다시 읽기는 개발 구성에만 있다)
-        vector<Delegate<void()>>          _listFollowedService; ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedService`)
-        uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
-        uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
-        uint8                             _bInputMapLoaded : 1; ///< 엔진의 통합 입력 맵에 이 인스턴스의 묶음을 실었다 — 종료가 비운다(다음 게임 · 하네스가 앞 게임의 바인딩을 들고 돌지 않는다)
-        uint8                             _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
+        GameStateSnapshot                 _stateSnapshot;        ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
+        SaveLock                          _saveLock;             ///< 세이브 막기 문 — 게임 범위(씬 흐름이 빌린다)보다 먼저 서고 늦게 진다
+        Subscription                      _netClientSaveBlock;   ///< 서버의 월드에 있는 동안의 세이브 막기(`updateNetSaveBlock`)
+        Subscription                      _clientSessionOpening; ///< 클라이언트 세션 열기 알림의 구독(`onClientSessionOpening`)
+        vector<uint8>                     _preSessionSave;       ///< 세션을 열기 전 자리(`SerializePurpose::SaveGame` 봉투). 비면 돌아갈 혼자 하던 자리가 없다
+        SubsystemScope                    _gameScope;            ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        SharedAssetRef<ItemCatalog>       _pItemCatalog;         ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
+        unique_ptr<AppearanceDatabase>    _pAppearanceDatabase;  ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
+        unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;   ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
+        unique_ptr<AutosaveManager>       _pAutosave;            ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
+        unique_ptr<GameFeatureScope>      _pGameFeatureScope;    ///< gamesettings `gameFeatures` 의 게임 범위 기능(`activateGameFeatures` 가 켜고 서브시스템 종료 뒤에 끈다)
+        unique_ptr<IGameDevPart>          _pDevPart;             ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
+        string                            _loadedAudioEvents;    ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        vector<shared_ptr<const void>>    _listBoundCatalog;     ///< 범위의 칸에 건 카탈로그의 판들(`followScopedService` — 인스턴스와 함께 놓는다. 다시 읽기는 개발 구성에만 있다)
+        vector<Delegate<void()>>          _listFollowedService;  ///< 다시 읽힌 카탈로그를 범위의 칸에 다시 거는 일(`followScopedService`)
+        uint8                             _bStarted        : 1;  ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
+        uint8                             _bDerivedEntered : 1;  ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
+        uint8                             _bInputMapLoaded : 1;  ///< 엔진의 통합 입력 맵에 이 인스턴스의 묶음을 실었다 — 종료가 비운다(다음 게임 · 하네스가 앞 게임의 바인딩을 들고 돌지 않는다)
+        uint8                             _bSecuritySet    : 1;  ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
     };
 } // namespace sw

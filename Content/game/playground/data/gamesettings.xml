@@ -89,9 +89,11 @@
   <!-- 항구 식당 미니게임(minigames/restaurantsim)의 사기 · 가격 · 열기 — 꺼진 레이어 Restaurant(미니게임이 켠다). -->
   <inputMap path="game/playground/restaurantsim/data/restaurant.input.xml"/>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다(접속하지 않으면 혼자 하는 허브다). 서버 설정은 Config/Server/Online/Playground.json.
-       onlineHubServerID 는 매치(minigames/shooter3d_match)를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름이다 -->
+       onlineHubServerID 는 매치(minigames/shooter3d_match)를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름이다.
+       onlineHubReconnectSeconds 는 잃은 허브(서버 재시작)에 다시 붙기를 기다리는 최대 초다 — 넘으면 접속 전 자리로 돌아간다 -->
   <onlineServerAddress>127.0.0.1:17793</onlineServerAddress>
   <onlineHubServerID>playground_hub</onlineHubServerID>
+  <onlineHubReconnectSeconds>30</onlineHubReconnectSeconds>
   <onlineGameBuild>1.0.0</onlineGameBuild>
   <onlineRequestRetryLimit>3</onlineRequestRetryLimit>
   <!-- 플레이어 통계 · 업적(PlayerStatsSubsystem) — 업적은 로컬 플랫폼 서비스(SDK 없음)까지 간다 -->

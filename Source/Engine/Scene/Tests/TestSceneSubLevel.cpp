@@ -361,3 +361,36 @@ SW_TEST_CASE( SceneSubLevelTest, RemoveWhileReadingLeavesNothing )
     SW_EXPECT_EQUAL( 0u, Util::countNamed( objects, "Shop" ) );
     SW_EXPECT_EQUAL( 1u, Util::countNamed( objects, "Ground" ) );
 }
+
+/** @brief [SceneSubLevelTest] 짓기 허락을 기다리는 하위 레벨은 다 읽어도(`Queued`) 짓지 않고, 허락한 갱신에 짓는다 — 넷 세션이 모두의 준비를 기다리는 자리다 */
+SW_TEST_CASE( SceneSubLevelTest, HeldSubLevelBuildsOnlyAfterRelease )
+{
+    const test::ScopedScratchDomain domain;
+    const ScopedFinishJobsPolicy    finishJobs{ SW_TRUE };
+    const string                    shopPath = Util::writeShop( domain );
+    Scene                           scene{ "Hub" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeHostDocument() ) );
+    GameObjectManager&                objects   = *scene.getObjectManager();
+    SceneSubLevelSubsystem&           subLevels = objects.getSubsystem<SceneSubLevelSubsystem>();
+    SceneSubLevelSubsystem::Placement placement;
+    placement._position = float3{ 3.0f, 0.0f, 0.0f };
+    SW_REQUIRE_TRUE( subLevels.addSubLevel( scene, "Shop", shopPath, placement, SubLevelBuildStart::OnRelease ) );
+    SW_EXPECT_TRUE( subLevels.isBuildHeld( "Shop" ) );
+    for ( int32 frame = 0; frame < 3; ++frame )
+    {
+        subLevels.update( 0.0f );
+    }
+    SubLevelState state{ SubLevelState::Loading };
+    SW_REQUIRE_TRUE( subLevels.findSubLevelState( "Shop", state ) );
+    SW_EXPECT_TRUE( state == SubLevelState::Queued );
+    SW_EXPECT_TRUE( objects.findGameObjectByName( hashed_string( "Shop" ) ) == nullptr );
+    SW_REQUIRE_TRUE( subLevels.findPlacement( "Shop" ).has_value() );
+    SW_EXPECT_TRUE( subLevels.findPlacement( "Shop" )->_position == placement._position );
+    SW_EXPECT_FALSE( subLevels.findPlacement( "Other" ).has_value() );
+
+    subLevels.releaseBuild( "Shop" );
+    SW_EXPECT_FALSE( subLevels.isBuildHeld( "Shop" ) );
+    subLevels.update( 0.0f );
+    SW_REQUIRE_TRUE( subLevels.findSubLevelState( "Shop", state ) );
+    SW_EXPECT_TRUE( state == SubLevelState::Loaded );
+}

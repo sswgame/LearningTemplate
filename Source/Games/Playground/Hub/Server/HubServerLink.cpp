@@ -50,7 +50,9 @@ namespace sw
         , _mapPublished{}
         , _listSubscription{}
         , _stats{}
+        , _beforeWithdraw{}
         , _pPeers{ nullptr }
+        , _pRouter{ nullptr }
         , _autosaveTimer{ 0.0f }
     {
     }
@@ -87,6 +89,7 @@ namespace sw
         }
         _profiles.bindSource( std::move( storeSource ) );
         _pPeers        = &peers;
+        _pRouter       = &router;
         _autosaveTimer = rules._autosaveSeconds;
         // 핫 리로드로 다시 선 링크는 이미 붙은 연결의 열림 사건을 받지 못한다(`GameNetSession` 경고) — 붙어 있는 연결을 들인다.
         vector<int32> listConnection;
@@ -103,7 +106,8 @@ namespace sw
     {
         if ( _pPeers == nullptr )
             return;
-        saveAll();
+        _beforeWithdraw.reset();
+        saveAll(); // 저장소가 먼저 내려갔으면 `flushProfiles` 가 이미 맡겼다 — 바뀐 것이 없어 다시 맡기지 않는다
         vector<int32> listConnection;
         for ( const auto& entry : _mapAgent )
         {
@@ -119,7 +123,34 @@ namespace sw
         _listSubscription.clear();
         // 맡긴 쓰기는 저장소가 끝내고 그 일이 결과를 로그로 남긴다 — 저장소는 온라인 조립의 것이라 여기서 닫지 않는다.
         _profiles.bindSource( HubServiceStoreSource{} );
-        _pPeers = nullptr;
+        _pPeers  = nullptr;
+        _pRouter = nullptr;
+    }
+
+    void HubServerLink::pollProfiles()
+    {
+        _listLoadScratch.clear();
+        _profiles.poll( _listLoadScratch );
+        for ( const HubProfileLoad& load : _listLoadScratch )
+        {
+            completeAdmission( load );
+        }
+    }
+
+    void HubServerLink::flushProfiles()
+    {
+        if ( _pPeers == nullptr )
+            return;
+        saveAll();
+        const Deadline deadline = Deadline::afterMilliseconds( ServiceStore::kStopDrainMilliseconds );
+        while ( _profiles.getPendingCount() > 0 && deadline.isExpired() == false )
+        {
+            if ( _profiles.waitCompletions( deadline ) == false )
+                break;
+            pollProfiles(); // 쓰는 중에 들어온 바이트(쓰기 합치기)를 이어 맡긴다
+        }
+        if ( _profiles.getPendingCount() > 0 )
+            SW_LOG_ERROR_ID( "Hub.ProfileFlushTimedOut", "[Hub] %# profile job(s) did not finish before the store stopped - the last progress may be lost", _profiles.getPendingCount() );
     }
 
     void HubServerLink::update( float32 deltaSeconds )
@@ -127,12 +158,7 @@ namespace sw
         if ( _pPeers == nullptr )
             return;
         _world.update( deltaSeconds );
-        _listLoadScratch.clear();
-        _profiles.poll( _listLoadScratch );
-        for ( const HubProfileLoad& load : _listLoadScratch )
-        {
-            completeAdmission( load );
-        }
+        pollProfiles();
         for ( const auto& entry : _mapAgent )
         {
             if ( _world.consumeDirtyFlag( entry.second->_avatarID ) )
@@ -202,10 +228,19 @@ namespace sw
         _profiles.requestLoad( accountID );
     }
 
+    uint32 HubServerLink::computeAttackReadyTick( uint32 avatarID ) const
+    {
+        // 대기와 월드 시계는 같은 게임 시간으로 흐른다. 올린 뒤 한 틱을 더해 실수 반올림으로 이른 쪽에 서지 않게 한다.
+        const HubAvatar* const pAvatar      = _world.findAvatar( avatarID );
+        const float32          cooldown     = pAvatar != nullptr ? pAvatar->_attackCooldown : 0.0f;
+        const uint32           cooldownTick = cooldown > 0.0f ? static_cast<uint32>( MathUtil::ceil( cooldown / NetClock::kTickSeconds ) ) + 1 : 0;
+        return _pRouter->getWorldClock().getWholeTick() + cooldownTick;
+    }
+
     void HubServerLink::reportAction( HubAvatarAgent& agent, HubActionResult result )
     {
         ++_stats._actionCount;
-        (void)_remoteCalls.callSession( agent._connectionID, "receiveActionResult", { ReflectedValue::make( result ) } );
+        (void)_remoteCalls.callSession( agent._connectionID, "receiveActionResult", { ReflectedValue::make( result ), ReflectedValue::make( computeAttackReadyTick( agent._avatarID ) ) } );
         if ( _world.consumeDirtyFlag( agent._avatarID ) )
             sendProgress( agent );
     }

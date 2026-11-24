@@ -90,6 +90,9 @@ namespace sw
         string _onlineHubServerID; ///< 매치를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름(서버 조립 `gameConnect` 의 `_serverName`). 접속한 허브가 없는 게임은 적지 않는다
 
         PROPERTY()
+        float32 _onlineHubReconnectSeconds{ 0.0f }; ///< 허브 서버에 다시 붙기를 기다리는 최대 초(잃은 허브 · 매치에서 돌아오는 길). 넘으면 서버의 월드를 떠난다. 0 이면 다시 붙지 않는다
+
+        PROPERTY()
         string _onlineTrustFile; ///< 온라인 서버 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). 비면 개발 구성만 개발 인증서를 못 박아 믿고 배포 구성은 연결 오류다
 
         PROPERTY()

@@ -75,7 +75,7 @@ namespace sw
          *          (`SceneLoadCompletedEvent` 바로 뒤) 복원한다(감사 G-7 — 언리얼 게임은 세이브의 맵으로 `OpenLevel` 한 뒤 적용한다). 어느 쪽이든 끝에 성공 · 실패와 함께
          *          `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
          *          플레이어가 고른 이동 하나다(`GameSceneFlow::beginSessionTravel`) — 앞의 불러오기를 물리고, 끝나기 전에 타이틀로 나가거나 다른 슬롯을 고르면 물린다(`_bSuperseded`).
-         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false 입니다.
+         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리거나 넷 세션이 열려 있으면 알리고 이벤트 없이 false 입니다.
          */
         [[nodiscard]] bool load( string_view slot = {} );
         /** @brief 슬롯 @p slot(이름 그대로)을 `load` 와 같은 길로 불러오고 끝을 @p onApplied 로 알립니다 — 자동 저장 되돌리기가 쓴다. 읽기를 맡겼으면 true 입니다. */
@@ -89,8 +89,8 @@ namespace sw
         const SaveSlotCounts& getCounts() const { return _counts; }
         /**
          * @brief 읽은 세이브 바이트를 적용합니다 — 슬롯 불러오기와 자동 저장 되돌리기가 함께 지나는 한 길(감사 G-7).
-         * @details 옛 판 봉투는 먼저 이 빌드의 판으로 올린다(`GameStateSnapshot::upgradeEnvelope`). 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
-         *          @p sessionTravel 이 물렸으면 적용하지 않고 물렸다고 알린다.
+         * @details 옛 판 봉투는 먼저 이 빌드의 판으로 올린다(`GameStateSnapshot::upgradeEnvelope`). 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이거나 활성 씬이 서버의 월드이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
+         *          @p sessionTravel 이 물렸으면 적용하지 않고 물렸다고 알린다. 넷 세션이 열려 있으면 실패로 끝낸다.
          */
         void applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied, uint32 sessionTravel );
         /** @brief 복원이 씬을 비운 뒤 졌습니다(`GameInstance::readStateEnvelope`) — 세이브 막기를 걸고, 세이브 목적이면 씬을 디스크에서 다시 엽니다. */
@@ -110,7 +110,7 @@ namespace sw
         /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 낸 뒤 @p onApplied 가 묶였으면 부릅니다. */
         void publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied, uint32 sessionTravel );
         /** @brief 봉투를 지금 활성 씬에 풀고, 성공하면 그 세이브의 플레이 시간부터 이어 셉니다. */
-        [[nodiscard]] bool restoreSlot( const vector<uint8>& bytes );
+        [[nodiscard]] bool restoreSlot( const string& slot, const vector<uint8>& bytes );
         /** @brief 교체에서 진 복원 뒤 활성 씬을 그 리소스에서 다시 엽니다. 리소스가 없거나 요청이 실패하면 알리고 막기는 남는다. */
         void reopenBrokenScene();
         /** @brief 깨진 씬이 다시 열린 뒤입니다 — 섰으면 깨진 복원의 세이브 막기를 풉니다. */

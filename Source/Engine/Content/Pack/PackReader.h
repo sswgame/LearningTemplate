@@ -18,7 +18,7 @@ namespace sw
     /**
      * @struct PackIndexTrust
      * @brief 서명 채널의 팩을 열 때 믿을 색인 요약입니다 — 서명을 확인한 패치 목록의 `indexSHA256` 과 SHA-256 제공자(`PackManager` 가 채운다).
-     * @details 리더는 여는 핸들로 읽은 색인 구역의 요약이 이것과 같을 때만 열고, 읽을 때마다 블록 요약을 견준다. 제공자는 리더보다 오래 산다(프로세스 범위 서브시스템).
+     * @details 리더는 여는 핸들로 읽은 색인 구역의 요약이 이것과 같을 때만 열고, 읽을 때마다 블록 요약을 견준다. 제공자가 내려가기 전에 `PackManager` 가 리더의 칸을 비운다(`releaseDigestProvider`).
      */
     struct PackIndexTrust
     {
@@ -59,6 +59,8 @@ namespace sw
          * @brief 열려 있는 팩 파일을 닫고 인덱스 메모리를 해제합니다. 진행 중인 읽기는 제 파일 핸들 사본으로 끝까지 읽습니다.
          */
         void close();
+        /** @brief 블록 요약을 셀 제공자를 놓습니다(제공자가 내려간다). 신뢰를 받아 연 팩이면 그 뒤의 읽기는 오류로 집니다 — 요약을 견주지 않고 읽지 않는다. 도는 읽기가 없을 때 부릅니다. */
+        void releaseDigestProvider();
 
         /** @brief 팩 파일이 열려 있는지 반환합니다. */
         bool isOpen() const;
@@ -164,7 +166,7 @@ namespace sw
             bool                         _bVerifyCRC{ false };
             vector<PackBlockEntryOnDisk> _listBlock;                  ///< 걸친 블록 줄
             vector<PackDigest>           _listBlockDigest;            ///< 걸친 블록의 요약 — 신뢰를 받아 연 팩만(아니면 비어 있다)
-            INetSecurityProvider*        _pDigestProvider{ nullptr }; ///< 블록 요약을 셀 제공자 — 신뢰를 받아 연 팩만
+            INetSecurityProvider*        _pDigestProvider{ nullptr }; ///< 블록 요약을 셀 제공자 — 신뢰를 받아 연 팩만(요약은 있는데 이것이 없으면 제공자가 내려갔다)
 
             /** @brief 디스크에서 읽을 바이트 수입니다. */
             uint32 getStoredSize() const { return _listBlock.empty() ? 0 : _listBlock.back()._compressedEnd - _storedBegin; }
@@ -232,7 +234,8 @@ namespace sw
         string _mountDomain                     SW_GUARDED_BY( _fileMutex ); ///< 스트링 풀 맨 앞의 마운트 도메인
         vector<utf8> _stringPoolBytes           SW_GUARDED_BY( _fileMutex );
         vector<PackDigest> _listBlockDigest     SW_GUARDED_BY( _fileMutex ); ///< 블록 해시 표(`PackFlag::HasBlockHash` 일 때)
-        INetSecurityProvider* _pDigestProvider  SW_GUARDED_BY( _fileMutex ); ///< 신뢰를 받아 열었으면 블록 요약을 셀 제공자, 아니면 nullptr
+        INetSecurityProvider* _pDigestProvider  SW_GUARDED_BY( _fileMutex ); ///< 신뢰를 받아 열었으면 블록 요약을 셀 제공자, 아니거나 놓았으면 nullptr
+        uint8 _bDigestRequired                  SW_GUARDED_BY( _fileMutex ); ///< 신뢰를 받아 열었다 — 요약 없이는 읽지 않는다
     };
 
 } // namespace sw

@@ -1,11 +1,11 @@
 """
 두 프로세스 온라인 접속 시나리오 — 전용 서버와 클라이언트를 띄워 로그인 → 게임 접속 티켓 → 암호화 UDP 게임 접속을 끝까지 돌린다(OnlineKits F5).
 
-  py -3 -m Scripts net-pair run --preset Ninja-Debug      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
+  py -3 -m Scripts net-pair run --preset Ninja-Release      # 서버 · 클라이언트를 띄워 접속이 열리는지 본다
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
-  py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
-  py -3 -m Scripts net-pair match --preset Ninja-Debug    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
-  py -3 -m Scripts net-pair respawn --preset Ninja-Debug  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
+  py -3 -m Scripts net-pair mmo --preset Ninja-Release      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
+  py -3 -m Scripts net-pair match --preset Ninja-Release    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
+  py -3 -m Scripts net-pair respawn --preset Ninja-Release  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -156,6 +156,8 @@ _MMO_PAWN_EMULATION = {"gv_netEmulationLatencyMs": "60", "gv_netEmulationJitterM
 _MMO_ACCEPTED = re.compile(r"entered the hub as avatar \d+ on connection \d+ \(level (\d+), (new account|stored progress)\)")
 _MMO_FLOOR = re.compile(r"\[Hub\] floor self=(\d+) x=(-?[\d.]+) z=(-?[\d.]+) seen=(\d+) x=(-?[\d.]+) z=(-?[\d.]+)")
 _MMO_FLOOR_TOLERANCE = 0.3  # 바닥 위에 선 자리(m) - 절대 자리로 보내면 보간 지연만큼 어긋난다
+_MMO_STATUS = r"-> hub: avatar \d+ level"  # 시나리오의 `hub.status` 답 — 첫 줄은 서버가 하위 레벨에 들어갈 차례, 둘째 줄은 나올 차례다
+_MMO_SUBLEVEL_ENTER, _MMO_SUBLEVEL_LEAVE = "minigame.enter cardtable CardTableGate", "minigame.leave"  # 들어가는 것은 서버뿐이다(클라이언트 월드의 진입은 거절된다)
 _MMO_SAVED = re.compile(r"\[Hub\] profile of account \d+ saved")
 
 
@@ -210,19 +212,21 @@ def _run_mmo(argument: argparse.Namespace) -> int:
             client = group.start(f"client{index + 1}", [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario),
                                                         app_arguments.flag("unattended")], stdin=False)
             list_client.append(client)
+            if index == 0:
+                # 하위 레벨은 서버가 들어가고, 클라이언트가 같은 것을 세웠다고 답한 뒤 나온다. 줄이 나오지 않으면 시나리오가 져서 아래 종료 코드가 알린다.
+                for pattern, line in ((_MMO_STATUS, _MMO_SUBLEVEL_ENTER), (f"{_MMO_STATUS}.*{_MMO_STATUS}", _MMO_SUBLEVEL_LEAVE)):
+                    if client.wait_for(re.compile(pattern, re.DOTALL), _TIMEOUT_SECONDS * 4):
+                        server.send(line)
             client.wait(_TIMEOUT_SECONDS * 4)
             if client.return_code != 0:
                 server.stop()
                 return group.fail(f"client {index + 1} ({scenario}) exited with code {client.return_code} (log: {client.log})")
             time.sleep(1.0)  # 서버가 나간 연결을 알아채고 진행을 저장할 틈
-        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다. 같은 파일을 쓰지 않게 사용자 데이터 폴더를 가른다.
+        # 두 클라이언트를 함께 — 서로의 폰이 걷는 것을 보고, 회선 흉내 아래에서 어긋난 예측이 되돌아온다. 무인 실행의 사용자 데이터는 프로세스마다 제 폴더다(`AutomationUserDataRoot`).
         list_walker = []
         for scenario, account in _MMO_PAWN_SCENARIOS:
-            user_data = group.out_dir / f"{account}_userdata"
-            user_data.mkdir(parents=True, exist_ok=True)
             list_walker.append(group.start(account, [client_exe, app_arguments.option("game", _MMO_GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
-                                                     *app_arguments.variables(_MMO_PAWN_EMULATION)],
-                                           environment={USER_DATA_ROOT_ENVIRONMENT: str(user_data)}, stdin=False))
+                                                     *app_arguments.variables(_MMO_PAWN_EMULATION)], stdin=False))
         for walker in list_walker:
             walker.wait(_TIMEOUT_SECONDS * 4)
             if walker.return_code != 0:
@@ -519,12 +523,10 @@ def _run_two_players(group: ProcessGroup, argument_name: str, entered: re.Patter
             return None
 
         def start_client(name: str) -> ChildProcess:
-            user_data = group.out_dir / f"{name}_userdata"
-            user_data.mkdir()  # 두 클라이언트가 같은 파일을 쓰지 않게 가른다
+            # 무인 실행의 사용자 데이터는 프로세스마다 Saved/Automation 아래 제 폴더다 — 밖을 가리키면 App 이 시작을 거절한다(`AutomationUserDataRoot`).
             scenario = f"game/playground/automation/netpair/match_{argument_name}_{name}.scenario.xml"
             return group.start(name, [client_exe, app_arguments.option("game", _GAME), app_arguments.option("scenario", scenario), app_arguments.flag("unattended"),
-                                      app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")],
-                               environment={USER_DATA_ROOT_ENVIRONMENT: str(user_data)}, stdin=False)
+                                      app_arguments.variable("gv_onlineServerAddress", f"127.0.0.1:{_MATCH_HUB_SERVICE_PORT}")], stdin=False)
 
         first = start_client("first")
         steps_done = first.wait_for(entered, _TIMEOUT_SECONDS * 3)
@@ -619,13 +621,13 @@ def main(list_argument: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="py -3 -m Scripts net-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="mode", required=True)
     run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 로그인 → 티켓 → 게임 접속을 돈다")
-    run_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    run_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     mmo_parser = sub.add_parser("mmo", help="허브 서버(Playground)와 클라이언트(첫 접속 → 재접속 → 둘 함께)를 띄워 서버 권위 행동 · 저장 후 재접속 · 폰 복제와 예측을 본다")
-    mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    mmo_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     match_parser = sub.add_parser("match", help="허브 서버 · 매치 서버 · 클라이언트를 띄워 접속한 허브 → 매치 → 서버 점수 제출 → 허브 재접속, 이어 두 사람이 움직이는 바닥 맵의 매치에서 서로 보고 쏘는 것을 본다")
-    match_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    match_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     respawn_parser = sub.add_parser("respawn", help="허브 서버 · 매치 서버 · 클라이언트 둘을 띄워 동시 대전의 쓰러짐 → 다시 태어남을 본다")
-    respawn_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+    respawn_parser.add_argument("--preset", default="Ninja-Release", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")
     check_parser.add_argument("client_log")

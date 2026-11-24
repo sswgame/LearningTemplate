@@ -56,6 +56,7 @@ namespace sw
             uint32              _expectedOffset{ 0 }; ///< `_listExpected` 안 시작 — 되읽는 버퍼의 시작은 그 두 배다
             uint32              _byteCount{ 0 };      ///< 사본 하나의 바이트
             uint32              _batchIndex{ 0 };     ///< 이 메시의 배치 번호(복사를 기록하는 프레임 안에서만 쓴다)
+            RHIBufferHandle     _proxyBuffer{ 0 };    ///< 렌더 프록시의 정점 버퍼(놓였으면 장치가 모르는 핸들이다)
         };
 
         /** @brief 지금 장면에서 견줄 메시와 기대값(CPU 정점의 GPU 모양)을 모읍니다. */
@@ -63,7 +64,7 @@ namespace sw
         /** @brief 모은 메시의 되읽기 복사를 기록합니다. 버퍼를 만들지 못하면 아무것도 기록하지 않고 끝납니다(이유는 만드는 쪽이 남긴다). */
         void recordCopies( IRHICommandList& cmd, IRHIDevice& device, const GPUScene& scene );
         /** @brief 도착한 사본 @p listByte 를 기대값과 견주어 로그로 남깁니다. */
-        void report( const vector<uint8>& listByte ) const;
+        void report( const IRHIDevice& device, const vector<uint8>& listByte ) const;
 
     private:
         RHIStructuredBuffer _probeBuffer{};

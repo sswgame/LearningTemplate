@@ -869,6 +869,12 @@ namespace sw
         }
     }
 
+    GameObjectHandle ShooterGameModeComponent::findEnemyObject( uint32 netEntityID ) const
+    {
+        const EnemyRecord* const pRecord = VectorUtil::findBy<&EnemyRecord::_netEntityID>( _listEnemy, netEntityID );
+        return pRecord != nullptr ? pRecord->_object : GameObjectHandle{};
+    }
+
     void ShooterGameModeComponent::updateEnemies()
     {
         GameObjectManager* pManager = getObjectManager();

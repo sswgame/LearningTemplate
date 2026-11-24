@@ -204,7 +204,7 @@ namespace sw
          */
         [[nodiscard]] bool popIntent( int32 connectionID, uint32 tick, ControlIntent& outIntent, bool& outbExact, vector<MeleeHitClaim>& outListClaim, uint32* pOutPawnEntityID = nullptr );
         /**
-         * @brief 흐른 실제 시간 @p elapsedSeconds 만큼 연결마다 꺼낼 수 있는 입력 몫을 채웁니다(`_maxInputCatchUpTicks` 까지). `popNextIntent` 를 쓰는 게임이 프레임마다 한 번 부릅니다.
+         * @brief 흐른 시간 @p elapsedSeconds(클라이언트의 입력 틱이 도는 시계) 만큼 연결마다 꺼낼 수 있는 입력 몫을 채웁니다(`_maxInputCatchUpTicks` 까지). `popNextIntent` 를 쓰는 게임이 프레임마다 한 번 부릅니다.
          */
         void accumulateInputBudget( float32 elapsedSeconds );
         /**
