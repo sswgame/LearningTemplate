@@ -17,7 +17,6 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -396,29 +395,6 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
     SW_EXPECT_EQUAL( 2u, kVulkanRequiredMinor );
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 5u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( kVulkanRequiredMinor ) ); // vulkan1.2 → SPIR-V 1.5
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 6u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( 3u ) );                   // vulkan1.3 → SPIR-V 1.6
-}
-
-/**
- * @brief [VulkanMemoryAccountTest] 장치 메모리 할당 수가 한도에서 남길 칸에 닿으면 더 받지 않고, 해제하면 다시 받는다(R-4)
- * @details 자원마다 `VkDeviceMemory` 하나라 한도(`maxMemoryAllocationCount`, 데스크톱도 흔히 4096)를 넘기면 드라이버가 실패하거나 정의되지 않은 동작이다 — 예전엔 아무도 세지 않았다.
- */
-SW_TEST_CASE( VulkanMemoryAccountTest, RefusesPastTheReserve )
-{
-    VulkanMemoryAccount account;
-    account.setLimit( 10u, 2u );
-    SW_EXPECT_EQUAL( 8u, account.getUsableCount() );
-    for ( uint32 index = 0; index < 8u; ++index )
-    {
-        SW_EXPECT_TRUE( account.tryAcquire() );
-    }
-    SW_EXPECT_FALSE( account.tryAcquire() );
-    SW_EXPECT_EQUAL( 8u, account.getLiveCount() );
-    account.release();
-    SW_EXPECT_TRUE( account.tryAcquire() );
-
-    VulkanMemoryAccount reserveOverLimit;
-    reserveOverLimit.setLimit( 4u, 4u );
-    SW_EXPECT_FALSE( reserveOverLimit.tryAcquire() );
 }
 
 /**

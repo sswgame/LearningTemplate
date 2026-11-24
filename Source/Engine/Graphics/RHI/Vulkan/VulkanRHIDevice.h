@@ -25,7 +25,6 @@
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAccount.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAllocator.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
@@ -160,16 +159,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief Vulkan 버퍼의 메모리 자리입니다(`VulkanRHIDevice::createVulkanBuffer`). 기본값이 없다 — 만드는 쪽이 CPU 가 쓰는지로 고른다. */
-    enum class VulkanBufferMemory : uint8
-    {
-        HostVisible, ///< HOST_VISIBLE | HOST_COHERENT — CPU 가 매핑해 쓴다(상수 링 · 읽기 버퍼)
-        DeviceLocal  ///< DEVICE_LOCAL — GPU 가 그리며 읽는다(정점 · 인덱스 · 구조 버퍼). 내용은 스테이징 복사로 들어온다
-    };
-} // namespace sw
-
-namespace sw
-{
     class VulkanRHICommandList;
 
     /**
@@ -180,7 +169,6 @@ namespace sw
      */
     class VulkanRHIDevice : public IRHIDevice
     {
-        friend class VulkanMemoryAllocator;
         friend class VulkanRHICommandContext;
         friend class VulkanRHICommandList;
 
@@ -385,7 +373,7 @@ namespace sw
         struct VulkanBufferRecord
         {
             VkBuffer                        _buffer{ nullptr };
-            VulkanMemoryRange               _memory{};
+            VulkanAllocation                _memory{};
             uint64                          _sizeBytes{ 0 };  ///< VkDeviceSize — 만들 때의 요청 크기(`createVulkanBuffer`)
             uint32                          _usage{ 0 };      ///< VkBufferUsageFlags
             uint32                          _cbSlotSize{ 0 }; ///< 링 상수 버퍼(`createConstantBuffer`)의 프레임 칸 크기, 아니면 0. 표에 넣기 전에 정하고 바뀌지 않아 기록 경로가 락 없이 읽는다
@@ -399,10 +387,8 @@ namespace sw
          */
         struct VulkanHeapMemory
         {
-            VulkanRHIDevice* _pOwner{ nullptr }; ///< 메모리를 놓을 장치(`freeDeviceMemory` — 할당 계수가 함께 준다)
-            VkDeviceMemory   _memory{ nullptr }; // 헤더는 vulkan.h 를 보지 않는다(VulkanRHIHandle.h) — VK_NULL_HANDLE 대신 nullptr
-            uint64           _sizeBytes{ 0 };
-            uint32           _memoryTypeIndex{ 0 };
+            VulkanMemoryAllocator* _pOwner{ nullptr }; ///< 메모리를 놓을 할당기
+            VulkanAllocation       _memory{};
 
             VulkanHeapMemory()                                     = default;
             VulkanHeapMemory( const VulkanHeapMemory& )            = delete;
@@ -413,10 +399,10 @@ namespace sw
         /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
         struct VulkanTextureRecord
         {
-            VkImage           _image{ nullptr };
-            VkImageView       _imageView{ nullptr };
-            VkImageView       _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
-            VulkanMemoryRange _memory{};              ///< 자기 메모리 구간입니다. placed 텍스처는 비어 있고 `_heapMemory` 가 메모리를 붙든다.
+            VkImage          _image{ nullptr };
+            VkImageView      _imageView{ nullptr };
+            VkImageView      _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
+            VulkanAllocation _memory{};              ///< 자기 메모리 할당입니다. placed 텍스처는 비어 있고 `_heapMemory` 가 메모리를 붙든다.
             /// @brief placed 텍스처(`createPlacedTexture2D`)가 놓인 힙입니다. 파괴의 해제 대리자가 이 참조를 펜스 뒤까지 들고 간다.
             shared_ptr<VulkanHeapMemory> _heapMemory;
             VkFramebuffer                _framebuffer{ nullptr };
@@ -491,12 +477,11 @@ namespace sw
          */
         struct StructuredUploadSlot
         {
-            VkBuffer       _buffer{ nullptr };
-            VkDeviceMemory _memory{ nullptr };
-            void*          _pMapped{ nullptr };
-            uint64         _capacity{ 0 };
-            uint64         _uploadOffset{ 0 };
-            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 프레임 시리얼(`_frameFenceRing.getRecordingSerial()`)
+            VkBuffer         _buffer{ nullptr };
+            VulkanAllocation _memory{};
+            uint64           _capacity{ 0 };
+            uint64           _uploadOffset{ 0 };
+            uint64           _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 프레임 시리얼(`_frameFenceRing.getRecordingSerial()`)
         };
 
         /**
@@ -522,17 +507,15 @@ namespace sw
         {
             RHIStagingAllocator _allocator;
             VkBuffer            _buffer{ nullptr };
-            VkDeviceMemory      _memory{ nullptr };
-            uint8*              _pMapped{ nullptr };
-            mutex               _soloMutex; ///< 단독 버퍼 칸(아래 셋)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
+            VulkanAllocation    _memory{};
+            mutex               _soloMutex; ///< 단독 버퍼 칸(아래 둘)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
             VkBuffer            _soloBuffer{ nullptr };
-            VkDeviceMemory      _soloMemory{ nullptr };
-            uint8*              _pSoloMapped{ nullptr };
+            VulkanAllocation    _soloMemory{};
 
             /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span.getOffsetBytes()` 에서 센다. */
             [[nodiscard]] VkBuffer getSpanBuffer( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloBuffer : _buffer; }
-            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span.getOffsetBytes()` 이상의 오프셋을 더해 읽고 쓴다. */
-            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span.isSolo() ? _pSoloMapped : _pMapped; }
+            /** @brief @p span 을 담은 버퍼의 할당입니다. 구간의 바이트는 `_pMapped` 에 `span.getOffsetBytes()` 이상의 오프셋을 더해 읽고 쓴다(쓴 뒤 flush, 읽기 전 invalidate). */
+            [[nodiscard]] const VulkanAllocation& getSpanMemory( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloMemory : _memory; }
         };
 
         /** @brief 가져가지 않은 텍스처 읽기 하나입니다. 결과 바이트는 되읽기 링에 그대로 있고 `takeTextureReadback` 이 그때 복사해 간다. */
@@ -698,17 +681,6 @@ namespace sw
          */
         void savePipelineCacheIfDue();
 
-        /**
-         * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
-         */
-        [[nodiscard]] bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
-        /**
-         * @brief 장치 메모리를 할당합니다. 모든 `vkAllocateMemory` 가 여기를 지난다 — 할당 수가 `한도 - 남길 칸` 에 닿았으면 오류를 남기고 false 입니다(`VulkanMemoryAccount`, R-4).
-         * @details 여러 스레드가 부른다(계수는 원자값이다).
-         */
-        [[nodiscard]] bool allocateDeviceMemory( const VkMemoryAllocateInfo& allocInfo, VkDeviceMemory& outMemory );
-        /** @brief 장치 메모리를 놓습니다. 모든 `vkFreeMemory` 가 여기를 지난다. 빈 핸들은 아무것도 하지 않는다. */
-        void freeDeviceMemory( VkDeviceMemory memory );
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
@@ -847,16 +819,16 @@ namespace sw
         /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 빼서 GPU 펜스 뒤에 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
         /**
-         * @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다.
-         * @param placement 메모리 자리 — CPU 가 매핑해 쓰는 버퍼(상수 링 · 읽기 · 스테이징)만 `HostVisible`, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
-         *        디스크리트 GPU 가 PCIe 로 읽는다). `DeviceLocal` 은 초기 데이터를 받지 않는다 — 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
+         * @brief usageFlags 로 VkBuffer 를 만듭니다. @p cbSlotSize 는 링 상수 버퍼의 프레임 칸 크기(아니면 0)로, 레코드를 표에 넣기 전에 적는다.
+         * @param placement 메모리 자리 — CPU 가 매핑하는 버퍼(상수 링 · 스테이징 · 읽기)만 호스트 자리, GPU 가 그리며 읽는 정적 자원은 `DeviceLocal` 이다(호스트 메모리에서 그리면
+         *        디스크리트 GPU 가 PCIe 로 읽는다). 내용은 부르는 쪽이 스테이징 복사로 올린다(`VulkanRHIResourceFactory::uploadDeviceLocal`).
+         * @param pName 할당의 진단 이름입니다(종료 때 남은 할당 보고가 이 이름을 보인다).
          */
-        RHIBufferHandle createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, const void* pInitialData, uint32 cbSlotSize, VulkanBufferMemory placement );
+        RHIBufferHandle createVulkanBuffer( uint64 sizeBytes, uint32 usageFlags, uint32 cbSlotSize, VulkanBufferMemory placement, const utf8* pName );
         /// @brief 업로드 스테이징 블록입니다 — 호스트 보임 버퍼 하나를 매핑해 두고 앞에서부터 나눠 쓴다(전용이면 그 업로드 하나 몫).
         struct UploadStagingBlock
         {
             RHIBufferHandle _buffer{ 0 };
-            uint8*          _pMapped{ nullptr };
             uint64          _capacity{ 0 };
             uint64          _offset{ 0 };
             uint64          _retiredSerial{ 0 }; ///< 자유 목록에 돌아온 때의 프레임 기록 시리얼(놓을 때를 잰다)
@@ -908,18 +880,17 @@ namespace sw
         [[nodiscard]] bool initializeTransfers( const RHIDeviceDesc& desc );
         /** @brief 남은 전송 작업, 전송을 기다리던 해제, 링, 풀을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
         void shutdownTransfers();
-        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
+        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
         [[nodiscard]] bool createStagingRing( VulkanStagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes, uint32 usageFlags, const utf8* pName );
         /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( VulkanStagingRing& ring );
         /**
-         * @brief @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
-         * @return 만들었으면 true. 실패하면 이유를 로그로 남기고 만든 것을 놓은 뒤 false 이며 세 출력은 비어 있다.
+         * @brief @p capacityBytes 의 호스트 가시 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
+         * @return 만들었으면 true. 실패하면 이유를 로그로 남기고 만든 것을 놓은 뒤 false 이며 두 출력은 비어 있다.
          */
-        [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
-                                                      uint8*& outMapped );
-        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 세 칸을 비웁니다. */
-        void destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped );
+        [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outMemory );
+        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 두 칸을 비웁니다. */
+        void destroyMappedStagingBuffer( VkBuffer& rBuffer, VulkanAllocation& rMemory );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
          * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::completeAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
@@ -1088,7 +1059,7 @@ namespace sw
         void*                  _pCmdDrawIndirectCount;
         void*                  _pCmdDrawIndexedIndirectCount;
         VkBuffer               _breadcrumbBuffer; ///< AMD 표지 버퍼 — uint32 두 칸([0] 시작 · [1] 끝), 호스트 보임 · 일관 메모리를 영속 매핑해 소실 뒤 CPU 가 읽는다
-        VkDeviceMemory         _breadcrumbMemory;
+        VulkanAllocation       _breadcrumbMemory;
         const volatile uint32* _pBreadcrumbMapped; ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
         atomic<uint8>          _bTimestampEnabled; ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
         RHITimestampRing       _timestampRing;     ///< 링 칸마다 적은 슬롯 — 빈 칸은 "리셋 + 제출" 을 거치지 않았으니 읽지 않는다
@@ -1157,9 +1128,9 @@ namespace sw
         vector<unique_ptr<VulkanDescriptorPoolSet>> _listCmdListDescriptorPoolSet SW_GUARDED_BY( _cmdListPoolMutex );
         VkImage                                                                   _bindlessDummyImage;
         VkImageView                                                               _bindlessDummyView;
-        VkDeviceMemory                                                            _bindlessDummyMemory;
+        VulkanAllocation                                                          _bindlessDummyMemory;
         VkBuffer                                                                  _dummyUBO; ///< 셰이더가 정적으로 참조하지만 바인딩되지 않은 b# 슬롯이 가리키는 0으로 채운 256바이트
-        VkDeviceMemory                                                            _dummyUBOMemory;
+        VulkanAllocation                                                          _dummyUBOMemory;
 
         RHIHandleTable<RHIPipelineStateHandle, VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                                                   _pipelineCache;
@@ -1168,12 +1139,8 @@ namespace sw
         uint64                                                            _pipelineCacheLastSavedBytes{ 0 };          ///< 지난 저장(또는 읽기) 때의 캐시 크기
         TaskStageHandle                                                   _pipelineCacheSaveStage;                    ///< 주기 저장 태스크(캐시를 지우기 전에 기다린다 — 렌더 스레드 · 해제 길에서만 쓴다)
 
-        /// @brief 살아 있는 장치 메모리 할당 수입니다(`allocateDeviceMemory` · `freeDeviceMemory`). 한도는 물리 장치를 고른 뒤 정한다.
-        VulkanMemoryAccount _memoryAccount;
-        /// @brief 버퍼 · 텍스처의 메모리를 블록에서 나눠 준다(스테이징 링 · 힙 · 되읽기 링은 자기 할당이다).
-        VulkanMemoryAllocator _memoryAllocator{ *this };
-        /// @brief 할당 수 한도에서 남길 칸입니다(`RHIDeviceDesc::_allocationCountReserve`).
-        uint32 _allocationCountReserve{ 0 };
+        /// @brief 이 장치의 모든 버퍼 · 이미지 메모리를 준다(VMA). 논리 장치 바로 뒤에 서고 논리 장치 바로 앞에 부순다.
+        VulkanMemoryAllocator _memoryAllocator;
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.
         RHITransferSerials _transferSerials;

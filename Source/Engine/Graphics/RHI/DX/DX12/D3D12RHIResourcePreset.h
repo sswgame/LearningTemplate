@@ -9,7 +9,7 @@
  * 업로드 스테이징, 리드백, 정점 버퍼, 전체 화면 정점 버퍼가 모두 이 프리셋을 씁니다.
  *
  * 이것은 `VulkanRHISamplerPreset` 와 같은 생각입니다. 객체를 공유하는 것이 아니라 **값을 만드는
- * 방법에 이름을 붙입니다.** 힙 종류(업로드/기본/리드백)와 초기 상태는 부르는 쪽이 정합니다. 그것이
+ * 방법에 이름을 붙입니다.** 힙 종류(업로드/기본/리드백)와 초기 상태는 부르는 쪽이 정합니다(`D3D12RHIDevice::createResource`). 그것이
  * 호출하는 곳마다 정말로 다른 결정이기 때문입니다.
  *
  * @note 크기를 `uint64` 로 받습니다. `elementSize * elementCount` 를 **32비트로 곱해** `Width`(UINT64)에 넣으면
@@ -46,14 +46,6 @@ namespace sw
             resourceDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
             resourceDesc.Flags            = flags;
             return resourceDesc;
-        }
-
-        /** @brief 힙 속성입니다. 버퍼를 만들 때 호출하는 곳마다 다른 것은 이 종류와 초기 상태뿐입니다. */
-        static D3D12_HEAP_PROPERTIES heapProperties( D3D12_HEAP_TYPE type )
-        {
-            D3D12_HEAP_PROPERTIES heapProps{};
-            heapProps.Type = type;
-            return heapProps;
         }
     };
 } // namespace sw

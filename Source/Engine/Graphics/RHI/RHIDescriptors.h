@@ -230,8 +230,6 @@ namespace sw
         /// @brief 링보다 큰 전송 한 장을 링 밖의 일회성 버퍼로 받는 상한(바이트)입니다(`_rhi._stagingSingleMaxMegabytes`). 링을 쓰는 백엔드(GL · Vulkan)가 업로드 · 되읽기 링에 같이 쓰고,
         ///        0 이면 링보다 큰 한 장은 `Rejected` 입니다. 리플렉션하지 않는다.
         uint64 _stagingSoloMaxBytes{ 0 };
-        /// @brief 장치 메모리 할당 수 한도에서 남겨 둘 칸입니다(`EngineConfig::_rhi._allocationCountReserve`). 할당을 세는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.
-        uint32 _allocationCountReserve{ 0 };
         /// @brief 업로드 스테이징 블록 크기(바이트)입니다(`EngineConfig::_rhi._uploadStagingMegabytes`). 블록을 나눠 쓰는 백엔드(Vulkan)는 0 이면 초기화를 거절한다. 리플렉션하지 않는다.
         uint64 _uploadStagingBytes{ 0 };
         /// @brief 쓰지 않은 업로드 스테이징 블록을 놓기까지의 프레임 수입니다(`EngineConfig::_rhi._uploadStagingIdleFrames`). 블록을 나눠 쓰는 백엔드(Vulkan)는 0 이면 초기화를 거절한다.

@@ -612,7 +612,6 @@ namespace sw
         deviceDesc._readbackRingBytes                = static_cast<uint64>( rhiConfig._readbackRingMegabytes ) * constant::memory::kBytesPerMegabyte;
         deviceDesc._directUploadMaxBytes             = static_cast<uint64>( rhiConfig._directUploadMaxKilobytes ) * constant::memory::kBytesPerKilobyte;
         deviceDesc._stagingSoloMaxBytes              = static_cast<uint64>( rhiConfig._stagingSingleMaxMegabytes ) * constant::memory::kBytesPerMegabyte;
-        deviceDesc._allocationCountReserve           = rhiConfig._allocationCountReserve;
         deviceDesc._uploadStagingBytes               = static_cast<uint64>( rhiConfig._uploadStagingMegabytes ) * constant::memory::kBytesPerMegabyte;
         deviceDesc._uploadStagingIdleFrames          = rhiConfig._uploadStagingIdleFrames;
         deviceDesc._pipelineCacheSaveIntervalSeconds = rhiConfig._pipelineCacheSaveIntervalSeconds;

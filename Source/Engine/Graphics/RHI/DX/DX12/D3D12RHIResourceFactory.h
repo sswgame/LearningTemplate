@@ -10,6 +10,8 @@
 #include <shared_mutex>
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include <D3D12MemAlloc.h> // Windows SDK 의 d3d12.h 뒤다(ThirdParty/d3d12-memory-allocator — HEADERS_ALREADY_INCLUDED)
+
 namespace sw
 {
     class D3D12RHIDevice;
@@ -63,12 +65,15 @@ namespace sw
         RHIUnorderedAccessIndex         registerBindlessTextureUAV( RHITextureHandle texture ) override;
         void                            unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
 
+        /** @brief 남은 트랜지언트 힙 핸들을 모두 놓습니다(장치 종료 — 할당기보다 먼저). */
+        void releaseTransientHeaps() { _mapTransientHeap.clear(); }
+
     private:
         /**
-         * @brief 텍스처 리소스와 뷰 · 레코드를 만듭니다. @p pHeap 이 있으면 그 힙의 @p offsetBytes 에 놓고(placed — 리소스가 힙을 붙든다), 없으면 커밋 리소스다.
+         * @brief 텍스처 리소스와 뷰 · 레코드를 만듭니다. @p pHeap 이 있으면 그 힙의 @p offsetBytes 에 놓고(placed — 리소스가 힙을 붙든다), 없으면 자기 메모리를 잡는다(`D3D12RHIDevice::createResource`).
          * @details `createTexture2D` 와 `createPlacedTexture2D` 가 같은 몸을 쓴다 — 서술 · 뷰 · 상태 규칙이 두 벌로 갈리지 않게.
          */
-        RHITextureHandle createTextureResource( const RHITextureDesc& desc, ID3D12Heap* pHeap, uint64 offsetBytes );
+        RHITextureHandle createTextureResource( const RHITextureDesc& desc, D3D12MA::Allocation* pHeap, uint64 offsetBytes );
         /** @brief default 힙 버퍼를 만들고 @p pData 를 스테이징 복사로 올립니다. 올린 뒤 @p readState 에 둔다(정점 · 인덱스 — 정적 자원을 시스템 메모리에서 그리지 않는다). */
         RHIBufferHandle createDefaultBufferWithData( const void* pData, uint32 sizeBytes, D3D12_RESOURCE_STATES readState );
         /**
@@ -143,8 +148,8 @@ namespace sw
     private:
         D3D12RHIDevice* _pDevice;
         /// @brief 트랜지언트 힙(`createTransientHeap`)입니다. 핸들을 놓아도 그 위의 placed 텍스처가 각자 힙을 붙든다(`SetPrivateDataInterface`). 생성 · 파괴는 셋업 스레드다.
-        unordered_map<RHITransientHeapHandle, Microsoft::WRL::ComPtr<ID3D12Heap>> _mapTransientHeap;
-        uint64                                                                    _nextTransientHeap{ 1 }; ///< 다음에 낼 힙 핸들의 packed 값
+        unordered_map<RHITransientHeapHandle, Microsoft::WRL::ComPtr<D3D12MA::Allocation>> _mapTransientHeap;
+        uint64                                                                             _nextTransientHeap{ 1 }; ///< 다음에 낼 힙 핸들의 packed 값
     };
 } // namespace sw
 #endif

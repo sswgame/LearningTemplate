@@ -41,6 +41,12 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 
+namespace D3D12MA
+{
+    class Allocation;
+    class Allocator;
+} // namespace D3D12MA
+
 namespace sw
 {
     class D3D12RHICommandContext;
@@ -189,7 +195,7 @@ namespace sw
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
         void waitIdleInternal() override;
 
-        /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
+        /** @brief D3D12MA 가 DXGI `QueryVideoMemoryInfo` 로 읽은 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 할당기가 없으면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)을 기준으로 해제 큐에 넣습니다. */
@@ -656,13 +662,30 @@ namespace sw
         void releaseOffscreenViews( const OffscreenTextureRecord& offscreen ) SW_REQUIRES_LOCK( _offscreenViewMutex );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 할당 크기를 올리는 유일한 지점입니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
+        /** @brief D3D12MA 할당기를 만듭니다(디바이스 바로 뒤). @p pAdapter 는 디바이스를 만든 어댑터입니다. */
+        [[nodiscard]] bool createAllocator( IDXGIAdapter* pAdapter );
+        /** @brief 할당기를 놓습니다(자원이 모두 사라진 뒤, 디바이스 바로 앞). 남은 할당은 이름과 함께 오류로 남긴다. */
+        void releaseAllocator();
+        /**
+         * @brief 자원 하나를 D3D12MA 로 만듭니다(모든 버퍼 · 텍스처가 여기를 지난다). 실패하면 이유를 로그로 남기고 @p outResource 는 비어 있습니다.
+         * @details 할당은 **자원이 든다**(사적 데이터) — 자원의 마지막 ComPtr 가 놓일 때 구간도 돌아가므로 해제 큐 · 등록표 · 전송이 할당을 따로 놓지 않는다.
+         *          언리얼 `FD3D12ResourceLocation` · Godot 은 할당을 자원 옆 칸에 두고 놓는 쪽이 함께 놓는다 — 여기는 자원 ComPtr 가 여러 표에 나뉘어 있어 한 참조로 묶는다.
+         * @param pName 할당의 진단 이름입니다(종료 때 남은 할당 보고가 이 이름을 보인다).
+         */
+        [[nodiscard]] bool createResource( D3D12_HEAP_TYPE heapType, const D3D12_RESOURCE_DESC& desc, D3D12_RESOURCE_STATES initialState, const D3D12_CLEAR_VALUE* pClearValue, const utf16* pName,
+                                           Microsoft::WRL::ComPtr<ID3D12Resource>& outResource );
+        /** @brief 트랜지언트 힙 @p pHeap 의 @p offsetBytes 에 텍스처를 놓습니다(D3D12MA 앨리어싱 자원). 자원이 힙 할당을 붙든다. */
+        [[nodiscard]] bool createAliasingResource( D3D12MA::Allocation* pHeap, uint64 offsetBytes, const D3D12_RESOURCE_DESC& desc, const D3D12_CLEAR_VALUE* pClearValue,
+                                                   Microsoft::WRL::ComPtr<ID3D12Resource>& outResource );
+        /** @brief 리소스와 그 할당에 같은 진단 이름을 붙입니다. */
+        static void setResourceName( ID3D12Resource* pResource, const utf16* pName );
         /**
          * @brief 업로드 힙(GENERIC_READ)에 버퍼를 만들고 CPU 주소로 매핑합니다. 실패하면 false 이고 `outBuffer` 는 비웁니다. 로그는 호출하는 쪽이 남깁니다.
          * @details 상수 버퍼 링, 정점/인덱스 업로드 버퍼, 전체 화면 삼각형, 업로드 스테이징 네 곳이 "만들기, 매핑" 을 이 함수로 처리한다.
          */
-        [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
+        [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, const utf16* pName, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief READBACK 힙 버퍼를 만들어 영속 매핑합니다(복사 도착지 상태로 만든다). */
-        [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
+        [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, const utf16* pName, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 서술 @p desc 의 항목 · 모양과 할당 크기를 올리는 유일한 지점입니다. */
         RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, const RHITextureDesc& desc );
     #if defined( SW_DO_CHECKS )
@@ -825,7 +848,7 @@ namespace sw
         mutex _uploadSlotMutex;
 
         Microsoft::WRL::ComPtr<ID3D12Device>       _device;
-        Microsoft::WRL::ComPtr<IDXGIAdapter3>      _memoryAdapter; ///< 디바이스가 쓰는 어댑터(LUID 로 찾는다). GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
+        Microsoft::WRL::ComPtr<D3D12MA::Allocator> _allocator; ///< 이 디바이스의 모든 버퍼 · 텍스처 메모리를 준다. 자원이 모두 사라진 뒤 놓는다(`releaseAllocator`).
         Microsoft::WRL::ComPtr<ID3D12CommandQueue> _commandQueue;
         /// @brief 비동기 컴퓨트 큐(COMPUTE)입니다. 만들지 못하면 비어 있고 능력 `_bAsyncCompute` 가 거짓이다(그래픽스 큐로 대신 내지 않는다 — 부르는 쪽이 능력을 본다).
         Microsoft::WRL::ComPtr<ID3D12CommandQueue> _computeQueue;

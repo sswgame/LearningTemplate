@@ -555,13 +555,6 @@ namespace sw
         REFLECT_BODY();
 
         /**
-         * @brief 장치 메모리 할당 수 한도(Vulkan `maxMemoryAllocationCount`)에서 남겨 둘 칸입니다. 살아 있는 할당이 `한도 - 이 값` 에 닿으면 새 할당을 오류로 거절한다(R-4).
-         * @details 남긴 칸은 드라이버 · 레이어 · 오버레이가 같은 장치에서 쓰는 몫이다. 언리얼 Vulkan 의 `r.Vulkan.MaxAllocations` 경고 자리다.
-         */
-        PROPERTY( Min = 1 )
-        uint32 _allocationCountReserve{};
-
-        /**
          * @brief 다른 스레드 · 프레임 밖 버퍼 업로드가 쓰는 스테이징 블록 하나의 크기(MB)입니다(Vulkan 업로드 커맨드버퍼 — 블록을 나눠 쓰고 프레임 펜스 뒤에 돌려받는다).
          * @details 한 업로드가 블록보다 크면 그 업로드만 전용 스테이징을 쓴다. DX12 의 구조 버퍼 스테이징 슬롯 자리다.
          */

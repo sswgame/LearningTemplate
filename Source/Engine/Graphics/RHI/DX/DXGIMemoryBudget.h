@@ -1,6 +1,6 @@
 /**
  * @file RHIDxgiMemoryBudget.h
- * @brief DXGI 어댑터의 GPU 메모리 사용량과 예산 질의입니다(DX11, DX12 공유).
+ * @brief DXGI 어댑터의 GPU 메모리 사용량과 예산 질의입니다(DX11 — DX12 는 할당기 D3D12MA 가 같은 값을 준다).
  * @details `IDXGIAdapter3::QueryVideoMemoryInfo` 는 **이 프로세스**의 사용량과 OS 가 준 예산을 답합니다(Windows 10 이상). 로컬 세그먼트는 비디오 메모리,
  *          비로컬은 GPU 가 보는 시스템 메모리(업로드 힙)입니다. 사용량은 둘의 합이고 예산은 로컬 예산입니다. 엔진 추적기가 업로드 힙 버퍼도 세기 때문입니다.
  */
