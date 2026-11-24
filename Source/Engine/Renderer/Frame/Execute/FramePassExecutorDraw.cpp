@@ -216,16 +216,22 @@ namespace sw
             beginInfo._width            = layer._width;
             beginInfo._height           = layer._height;
             context._pCmd->beginRenderPass( beginInfo );
-            const PassConstantNames&     names     = passConstantNames();
-            const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassKind::Shadow );
-            const uint32                 viewCull  = context._cullViewIndex;
-            const uint32                 pending   = _pendingPSOBatchCount.load( std::memory_order_relaxed );
-            context._shadowCasterFilter            = ShadowCasterFilter::StaticOnly;
-            const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
+            const PassConstantNames&     names           = passConstantNames();
+            const RHIPipelineStateHandle pso             = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+            const uint32                 viewCull        = context._cullViewIndex;
+            const uint32                 pending         = _pendingPSOBatchCount.load( std::memory_order_relaxed ) + _fallbackPSOBatchCount.load( std::memory_order_relaxed );
+            context._shadowCasterFilter                  = ShadowCasterFilter::StaticOnly;
+            const vector<ShadowTileDraw>& listTile       = _state._frameShadow._listLocalTile;
+            bool                          bAllTilesDrawn = true;
             for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
             {
-                if ( cache.getAction( tileIndex ) == ShadowCacheTileAction::DrawAll || acquirePassCb( context ) == false )
+                if ( cache.getAction( tileIndex ) == ShadowCacheTileAction::DrawAll )
                     continue;
+                if ( acquirePassCb( context ) == false )
+                {
+                    bAllTilesDrawn = false;
+                    continue;
+                }
                 const ShadowTileDraw& tile = listTile[tileIndex];
                 RHIViewport           viewport{};
                 viewport._x      = static_cast<float32>( tile._cell._x );
@@ -242,8 +248,8 @@ namespace sw
             context._passValues.setMatrix( names._lightViewProj, _pActiveView->_shadow._lightViewProj );
             context._pCmd->endRenderPass();
             cache.markRebuilt();
-            // PSO 를 만드는 중인 배치는 이 층에서 빠졌다(병렬 기록 중인 다른 패스의 몫이 섞일 수 있다 — 한 번 더 다시 그릴 뿐이다).
-            if ( _pendingPSOBatchCount.load( std::memory_order_relaxed ) != pending )
+            // PSO 를 만드는 중인 배치는 이 층에서 빠졌거나 직전 변형으로 그려졌고, 패스 상수를 받지 못한 타일은 통째로 빠졌다(병렬 기록 중인 다른 패스의 몫이 섞일 수 있다 — 한 번 더 다시 그릴 뿐이다).
+            if ( bAllTilesDrawn == false || _pendingPSOBatchCount.load( std::memory_order_relaxed ) + _fallbackPSOBatchCount.load( std::memory_order_relaxed ) != pending )
                 cache.markIncomplete();
             // 층은 이 패스가 깊이 쓰기로 선언했고 다시 그리는 프레임에만 등록했다(`registerViewResources`) — 복원이 읽도록 셰이더 읽기로 옮긴다.
             // 다시 그리지 않는 프레임은 지난번 다시 그린 뒤의 셰이더 읽기 그대로다(전이 없음).
@@ -910,8 +916,10 @@ namespace sw
         if ( bOtherBatchNotDrawable )
             return false;
         // 정점 · 인덱스 버퍼는 짝이다(풀의 둘, 아니면 메시의 둘) — 정점 버퍼가 같으면 인덱스 버퍼도 같다.
-        const GPUMeshBatchPSO& headPSO = state.getBatchPSO( headIndex );
-        if ( otherBinding._vertexBuffer != headBinding._vertexBuffer || state.getBatchPSO( otherIndex )._pso != headPSO._pso )
+        const GPUMeshBatchPSO& headPSO  = state.getBatchPSO( headIndex );
+        const GPUMeshBatchPSO& otherPSO = state.getBatchPSO( otherIndex );
+        // 상태도 같아야 한다 — 직전 변형으로 그리는 묶음이 다 된 묶음에 섞이면 기다리는 수에서 빠진다.
+        if ( otherBinding._vertexBuffer != headBinding._vertexBuffer || otherPSO._pso != headPSO._pso || otherPSO._state != headPSO._state )
             return false;
         // 머티리얼을 읽지 않는 셰이더(깊이 · 그림자의 불투명 변형)는 머티리얼이 병합 키가 아니다.
         if ( headPSO._pLayout != nullptr && headPSO._pLayout->usesMaterialData() == false )
@@ -931,16 +939,17 @@ namespace sw
         const uint32                 argIndex    = inoutState._batchOffset + headIndex;
         const GPUMeshBatchPSO&       headPSO     = inoutState.getBatchPSO( headIndex );
         const RHIPipelineStateHandle batchPSO    = headPSO._pso;
-        // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
-        if ( batchPSO == 0 )
+        // 변형을 만드는 중이면 이번 프레임은 빠지거나(PSO 0) 직전 변형으로 그려진다.
+        if ( headPSO._state == RenderPSOCache::MaterialPSOState::Building && batchPSO == 0 )
         {
-            if ( headPSO._state == RenderPSOCache::MaterialPSOState::Building )
-            {
-                SW_PROFILE_COUNT( "RT.PSO.pendingBatches", 1 );
-                _pendingPSOBatchCount.fetch_add( 1, std::memory_order_relaxed );
-            }
-            return false;
+            SW_PROFILE_COUNT( "RT.PSO.pendingBatches", 1 );
+            _pendingPSOBatchCount.fetch_add( 1, std::memory_order_relaxed );
         }
+        else if ( headPSO._state == RenderPSOCache::MaterialPSOState::Building )
+            _fallbackPSOBatchCount.fetch_add( 1, std::memory_order_relaxed );
+        // 변형이 없는 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼다.
+        if ( batchPSO == 0 )
+            return false;
         context._pLastLayout   = headPSO._pLayout; // 바인더 · 머티리얼 폴백이 저장소(뮤텍스)를 묻지 않는다
         context._lastLayoutPSO = batchPSO;
         if ( batchPSO != inoutState._boundPSO )

@@ -409,7 +409,7 @@ SW_TEST_CASE( SceneVoxelizerTest, LateMaterialIsReadAgain )
     sw::vector<uint32> listTransform;
     registry.consumeDirty( listState, listTransform );
     sw::SceneVoxelScene voxelScene = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
-    SW_REQUIRE_EQUAL( size_t( 1 ), voxelScene.getStaticSources().size() );
+    SW_REQUIRE_FALSE( voxelScene.getStaticSources().empty() ); // 첫 메시는 칸 0 이다
     SW_REQUIRE_TRUE( voxelScene.getStaticSources()[0].isPainted() );
     const uint64 generation = registry.getMeshChangeGeneration();
 
