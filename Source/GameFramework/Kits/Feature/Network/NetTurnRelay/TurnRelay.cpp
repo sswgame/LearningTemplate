@@ -213,6 +213,27 @@ namespace sw
                 return; // 창이 찼으므로 `update` 가 이어서 보낸다
             ++seat._sentActionCount;
         }
+        flushView( room, seat );
+    }
+
+    void TurnRelayServer::flushView( const TurnRoom& room, TurnSeat& seat )
+    {
+        const int32 actionCount = static_cast<int32>( room._listAction.size() );
+        if ( room._bStarted == SW_FALSE || seat._sentViewActionCount == actionCount )
+            return;
+        TurnViewBody body;
+        const int32  seatIndex = static_cast<int32>( &seat - room._listSeat.data() );
+        if ( _pPolicy->writeSeatView( room, seatIndex, body._view ) == false )
+        {
+            seat._sentViewActionCount = actionCount; // 모습이 없는 게임이다
+            return;
+        }
+        body._roomID      = room._roomID;
+        body._actionCount = actionCount;
+        if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::View>( body ) == false )
+            return; // 정책이 상한을 넘겼다 — 오류 로그가 남았다
+        if ( _messageWriter.sendMessage( *_pHost, seat._connectionID ) )
+            seat._sentViewActionCount = actionCount; // 창이 찼으면 `update` 가 그때의 가장 새 모습을 보낸다
     }
 
     void TurnRelayServer::update()
@@ -299,10 +320,11 @@ namespace sw
             sendDenied( connectionID, roomID, TurnRejectReason::RoomFull );
             return;
         }
-        TurnSeat& seat        = pRoom->_listSeat[static_cast<size_t>( *seatIndex )];
-        seat._bTaken          = SW_TRUE;
-        seat._connectionID    = connectionID;
-        seat._sentActionCount = static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) );
+        TurnSeat& seat            = pRoom->_listSeat[static_cast<size_t>( *seatIndex )];
+        seat._bTaken              = SW_TRUE;
+        seat._connectionID        = connectionID;
+        seat._sentActionCount     = static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) );
+        seat._sentViewActionCount = constant::invalid_index::kInt32; // 돌아온 연결도 지금 모습을 받는다
         if ( bReturning == false )
             seat._token = nextToken();
         sendJoined( connectionID, roomID, *seatIndex, seat._token );
@@ -337,7 +359,11 @@ namespace sw
             if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Started>( body ) )
                 sendOrQueue( other._connectionID );
         }
-        flushSeat( room, seat );
+        for ( TurnSeat& other : room._listSeat )
+        {
+            if ( bStartsNow || &other == &seat )
+                flushSeat( room, other );
+        }
         if ( bStartsNow )
         {
             TurnRelayEvent startEvent;
@@ -452,6 +478,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     TurnRelayClient::TurnRelayClient()
         : _listAction{}
+        , _viewBuffer{}
         , _eventBuffer{}
         , _pHost{ nullptr }
         , _roomID{ 0 }
@@ -473,6 +500,7 @@ namespace sw
         if ( _roomID != roomID )
         {
             _listAction.clear();
+            _viewBuffer.clear();
             _token    = 0;
             _seat     = constant::invalid_index::kInt32;
             _bStarted = SW_FALSE;
@@ -574,6 +602,22 @@ namespace sw
         event._kind   = TurnRelayEvent::Kind::Denied;
         event._roomID = body._roomID;
         event._reason = body._reason;
+        _eventBuffer.push( event );
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::View, const NetMessageContext& context, const TurnViewBody& body )
+    {
+        (void)context;
+        if ( isCurrentRoom( body._roomID ) == false )
+            return NetHandleResult::Handled;
+        _viewBuffer = body._view;
+        TurnRelayEvent event;
+        event._kind   = TurnRelayEvent::Kind::ViewChanged;
+        event._roomID = body._roomID;
+        event._index  = body._actionCount;
+        event._seat   = _seat;
+        event._buffer = body._view;
         _eventBuffer.push( event );
         return NetHandleResult::Handled;
     }

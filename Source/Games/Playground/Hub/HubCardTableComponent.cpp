@@ -4,17 +4,25 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/ByteStream.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
+
+#include "Games/Playground/Hub/HubCardHUDViewModel.h"
 
 namespace sw
 {
@@ -28,9 +36,15 @@ namespace sw
                 const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
                 GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                return pManager != nullptr ? pManager->getComponentRegistry().findUnique<HubCardTableComponent>( []( const HubCardTableComponent& table )
-                { return table.isClient(); } )
-                                           : nullptr;
+                return pManager != nullptr ? HubCardTableComponent::findClientTable( *pManager ) : nullptr;
+            }
+
+            /** @brief 섞기의 비밀 키입니다(운영체제 난수 16 바이트). */
+            static SipHashKey makeShuffleKey()
+            {
+                const UUID uuid = UUID::generate();
+                ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
+                return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
             }
 
             static bool runCards( const vector<string>& listArgument, string& outReply )
@@ -53,11 +67,16 @@ namespace sw
 
 namespace sw
 {
-    bool HubCardTurnPolicy::replay( uint32 roomID, const vector<TurnAction>& listAction, SheddingCardGame& outGame )
+    HubCardTurnPolicy::HubCardTurnPolicy()
+        : _shuffleKey{}
+    {
+    }
+
+    bool HubCardTurnPolicy::replay( uint32 roomID, const vector<TurnAction>& listAction, SheddingCardGame& outGame ) const
     {
         SheddingCardSettings settings;
         settings._playerCount = kSeatCount;
-        if ( outGame.initialize( settings, roomID ) == false )
+        if ( outGame.initializeSecret( settings, _shuffleKey, roomID ) == false )
             return false;
         for ( const TurnAction& turn : listAction )
         {
@@ -89,6 +108,50 @@ namespace sw
         if ( replay( room._roomID, room._listAction, game ) ) // 받은 행동은 이미 목록에 있다
             room._currentSeat = game.getCurrentPlayer();
     }
+
+    bool HubCardTurnPolicy::writeSeatView( const TurnRoom& room, int32 seat, vector<uint8>& outView ) const
+    {
+        SheddingCardGame game;
+        if ( replay( room._roomID, room._listAction, game ) == false )
+            return false;
+        HubCardSeatView view;
+        for ( const Card& card : game.getHand( seat ).getCards() )
+        {
+            view._listHandCardID.push_back( card._id );
+            CardAction play;
+            play._kind             = static_cast<uint8>( SheddingCardActionKind::Play );
+            play._cardID           = card._id;
+            play._targetID         = static_cast<uint16>( SheddingCardColor::Red );
+            SheddingCardGame trial = game; // 낼 수 있는지는 규칙 하나(`applyAction`)가 정한다
+            if ( trial.applyAction( seat, play ) )
+                view._listPlayableCardID.push_back( card._id );
+        }
+        view._topCardID         = game.getTopCard()._id;
+        view._opponentCardCount = game.getHand( kSeatCount - 1 - seat ).getCount();
+        view._currentSeat       = game.getCurrentPlayer();
+        view._winner            = game.getWinner();
+        view._color             = game.getCurrentColor();
+        BitWriter writer;
+        if ( FixedLayout::write( view, writer ) == false )
+            return false; // 칸 범위 밖 — 오류 로그가 남았다
+        outView = writer.getBytes();
+        return true;
+    }
+
+    bool HubCardTurnPolicy::readSeatView( const vector<uint8>& bytes, HubCardSeatView& outView )
+    {
+        HubCardSeatView view;
+        if ( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), view ) != FixedReadResult::Ok )
+            return false;
+        bool bInDeck = view._topCardID < SheddingCardGame::kDeckCardCount;
+        for ( const uint16 cardID : view._listHandCardID )
+            bInDeck = bInDeck && cardID < SheddingCardGame::kDeckCardCount;
+        for ( const uint16 cardID : view._listPlayableCardID )
+            bInDeck = bInDeck && cardID < SheddingCardGame::kDeckCardCount;
+        if ( bInDeck )
+            outView = std::move( view );
+        return bInDeck;
+    }
 } // namespace sw
 
 namespace sw
@@ -99,12 +162,23 @@ namespace sw
         , _policy{}
         , _routerSubscription{}
         , _listEventScratch{}
+        , _view{}
+        , _hudViewModel{}
         , _roomID{ kFirstRoomID }
         , _rejectedCount{ 0 }
         , _role{ Role::None }
         , _bStartTried{ SW_FALSE }
+        , _bHUDShown{ SW_FALSE }
     {
         setCanEverTick( true );
+    }
+
+    HubCardTableComponent::~HubCardTableComponent() = default;
+
+    HubCardTableComponent* HubCardTableComponent::findClientTable( GameObjectManager& manager )
+    {
+        return manager.getComponentRegistry().findUnique<HubCardTableComponent>( []( const HubCardTableComponent& table )
+        { return table.isClient(); } );
     }
 
     void HubCardTableComponent::onRegister( GameObjectManager& manager )
@@ -119,9 +193,19 @@ namespace sw
         Component::onUnregister( manager );
     }
 
+    void HubCardTableComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        updateHUD(); // HUD 문서는 첫 프레임부터 접힌 채여야 한다 — 앉기 전에도 건다
+    }
+
     void HubCardTableComponent::onEndPlay()
     {
         stopRole();
+        IHUDViewModelBinder* const pBinder = game::findSubsystem<IHUDViewModelBinder>();
+        if ( pBinder != nullptr && _hudViewModel != nullptr && getOwner() != nullptr )
+            (void)pBinder->bindHUDViewModel( *getOwner(), nullptr ); // 뷰모델은 이 컴포넌트와 함께 사라진다 — HUD 에서 먼저 뗀다
+        _hudViewModel.reset();
         Component::onEndPlay();
     }
 
@@ -135,6 +219,7 @@ namespace sw
             if ( pLink == nullptr )
             {
                 table.stopRole();
+                table.updateHUD();
                 return;
             }
             if ( table._role != Role::None && table._routerSubscription.isActive() == false )
@@ -144,6 +229,7 @@ namespace sw
                 table._server.update();
             else if ( table._role == Role::Client )
                 table.pollClientEvents();
+            table.updateHUD();
         } );
     }
 
@@ -160,6 +246,7 @@ namespace sw
             config._seatCount         = HubCardTurnPolicy::kSeatCount;
             config._maxRoomCount      = static_cast<int32>( kMaxRoomID );
             config._maxActionsPerRoom = kMaxActionsPerRoom;
+            _policy.setShuffleKey( HubCardTableInternal::makeShuffleKey() );
             if ( _server.initialize( link._pPeers, config, &_policy ) )
                 _routerSubscription = link._pRouter->registerHandler( &_server );
         }
@@ -203,7 +290,21 @@ namespace sw
             }
             else if ( event._kind == TurnRelayEvent::Kind::Denied )
                 SW_LOG_WARNING_ID( "Hub.CardsNoSeat", "[Hub] no seat at the card tables (reason %#)", static_cast<int32>( event._reason ) );
+            else if ( event._kind == TurnRelayEvent::Kind::ViewChanged && HubCardTurnPolicy::readSeatView( event._buffer, _view ) == false )
+                SW_LOG_ERROR_ID( "Hub.CardsViewUnreadable", "[Hub] the card table view from the server is unreadable (%# bytes) - the hand keeps its last state", static_cast<uint32>( event._buffer.size() ) );
         }
+    }
+
+    void HubCardTableComponent::updateHUD()
+    {
+        IHUDViewModelBinder* const pBinder = game::findSubsystem<IHUDViewModelBinder>();
+        if ( pBinder == nullptr )
+            return;
+        const bool bSeated = _role == Role::Client && _client.getSeat() >= 0 && _client.isStarted() && _client.getView().empty() == false;
+        if ( _hudViewModel == nullptr )
+            _hudViewModel = make_unique<HubCardHUDViewModel>();
+        _bHUDShown = pBinder->bindHUDViewModel( *getOwner(), _hudViewModel.get() ) && bSeated ? SW_TRUE : SW_FALSE; // 같은 뷰모델이면 아무 일도 하지 않는다
+        _hudViewModel->setTable( bSeated, _view, bSeated && getMyTurnValue() != 0 );
     }
 
     bool HubCardTableComponent::requestSeat()
@@ -216,27 +317,16 @@ namespace sw
 
     bool HubCardTableComponent::requestPlay( bool bDrawOnly )
     {
-        SheddingCardGame game;
-        const int32      seat = _client.getSeat();
-        if ( _role != Role::Client || _client.isStarted() == false || seat < 0 || HubCardTurnPolicy::replay( _roomID, _client.getActions(), game ) == false )
+        if ( _role != Role::Client || _client.isStarted() == false || _client.getSeat() < 0 || _client.getView().empty() )
             return false;
         CardAction chosen;
-        chosen._kind          = static_cast<uint8>( SheddingCardActionKind::Draw );
-        const CardPile& hand  = game.getHand( seat );
-        const bool      bMine = game.getCurrentPlayer() == seat;
-        for ( const Card& card : hand.getCards() )
+        chosen._kind = static_cast<uint8>( SheddingCardActionKind::Draw );
+        if ( bDrawOnly == false && _view._listPlayableCardID.empty() == false )
         {
-            CardAction play;
-            play._kind     = static_cast<uint8>( SheddingCardActionKind::Play );
-            play._cardID   = card._id;
-            play._targetID = static_cast<uint16>( SheddingCardColor::Red );
-            play._amount   = hand.getCount() == 2 ? 1 : 0; // 한 장을 남기면 선언한다
-            SheddingCardGame trial;
-            if ( bMine && bDrawOnly == false && HubCardTurnPolicy::replay( _roomID, _client.getActions(), trial ) && trial.applyAction( seat, play ) )
-            {
-                chosen = play;
-                break;
-            }
+            chosen._kind     = static_cast<uint8>( SheddingCardActionKind::Play );
+            chosen._cardID   = _view._listPlayableCardID.front();
+            chosen._targetID = static_cast<uint16>( SheddingCardColor::Red );
+            chosen._amount   = getHandCount() == 2 ? 1 : 0; // 한 장을 남기면 선언한다
         }
         vector<uint8> buffer;
         CardAction::encodeAction( chosen, buffer );
@@ -245,9 +335,8 @@ namespace sw
 
     int32 HubCardTableComponent::getMyTurnValue() const
     {
-        SheddingCardGame game;
-        const bool       bPlaying = _role == Role::Client && _client.isStarted() && HubCardTurnPolicy::replay( _roomID, _client.getActions(), game );
-        return bPlaying && game.getWinner() < 0 && game.getCurrentPlayer() == _client.getSeat() ? 1 : 0;
+        const bool bPlaying = _role == Role::Client && _client.isStarted() && _client.getView().empty() == false;
+        return bPlaying && _view._winner < 0 && _view._currentSeat == _client.getSeat() ? 1 : 0;
     }
 } // namespace sw
 
@@ -257,6 +346,9 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( hubCardsSeat, "Hub.CardsSeat", "Seat at the card table (-1 without one)", HubCardTableComponent, &HubCardTableComponent::getSeat );
     SW_AUTOMATION_GETTER_WATCH( hubCardsStarted, "Hub.CardsStarted", "1 once both seats of the card table are taken", HubCardTableComponent, &HubCardTableComponent::getStartedValue );
     SW_AUTOMATION_GETTER_WATCH( hubCardsMyTurn, "Hub.CardsMyTurn", "1 while it is this client's turn at the card table", HubCardTableComponent, &HubCardTableComponent::getMyTurnValue );
+    SW_AUTOMATION_GETTER_WATCH( hubCardsHand, "Hub.CardsHand", "Cards in this client's hand as dealt by the server", HubCardTableComponent, &HubCardTableComponent::getHandCount );
+    SW_AUTOMATION_GETTER_WATCH( hubCardsOpponentHand, "Hub.CardsOpponentHand", "Number of cards the other seat holds (the cards themselves never reach this client)", HubCardTableComponent, &HubCardTableComponent::getOpponentCardCount );
+    SW_AUTOMATION_GETTER_WATCH( hubCardsHUDShown, "Hub.CardsHUDShown", "1 while the HUD shows the hand dealt by the server", HubCardTableComponent, &HubCardTableComponent::getHUDShownValue );
     SW_AUTOMATION_GETTER_WATCH( hubCardsActions, "Hub.CardsActions", "Actions the server applied at this client's card table", HubCardTableComponent, &HubCardTableComponent::getActionCount );
     SW_AUTOMATION_GETTER_WATCH( hubCardsRejected, "Hub.CardsRejected", "Actions of this client the card table refused", HubCardTableComponent, &HubCardTableComponent::getRejectedCount );
 } // namespace sw

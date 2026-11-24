@@ -4,7 +4,8 @@
  * @details 정책이 허락한 행동에만 번호를 붙여 방의 모든 클라이언트에 보내고, 끊겼다 돌아온 클라이언트에는 놓친 행동을 다시 보낸다.
  *          고스톱, 포커, 셰딩 카드 게임, SRPG처럼 "누가 무엇을 했는가" 의 순서만 맞으면 되는 게임에 쓴다.
  *          서버는 게임 규칙을 몰라도 되며, 차례와 행동의 허용 여부는 게임이 `ITurnPolicy` 로 정한다.
- *          숨겨진 패가 있는 게임은 서버 정책이 행동을 검증하고, 패를 나눠 주는 것은 서버가 자리별 메시지로 처리한다.
+ *          숨겨진 패가 있는 게임은 정책이 자리마다 보일 것만 담은 모습을 낸다(`ITurnPolicy::writeSeatView` — boardgame.io `playerView`, 하스스톤처럼 서버가 자리별 상태를 보낸다).
+ *          클라이언트는 씨앗도 남의 패도 받지 않으므로 판을 다시 돌려 남의 패를 알아낼 수 없다. 정책이 모습을 내지 않는 게임(패가 없는 게임)은 행동만 오간다.
  *          - **전송 대기열**: 서버는 자리마다 "보낸 행동 수" 만 보관하고 방의 행동 기록에서 이어서 보낸다.
  *            연결의 신뢰 창이 차면 멈췄다가 `update` 에서 이어서 보낸다. 그래서 돌아온 클라이언트가 놓친 행동이 창(255)보다 많아도 빠지지 않는다.
  *            다른 알림도 창이 차면 연결마다 큐에 쌓였다가 순서대로 나간다.
@@ -138,6 +139,19 @@ namespace sw
         int32 _currentSeat{ 0 };
     };
 
+    /** @brief 자리 하나가 볼 판의 모습(서버 → 그 자리의 클라이언트) 본문입니다. */
+    REFLECT()
+    struct TurnViewBody
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint32 _roomID{ 0 };
+        PROPERTY( Min = 0 )
+        int32 _actionCount{ 0 }; ///< 이 모습이 담은 행동 수(여기까지 적용한 판이다)
+        PROPERTY( MaxCount = TurnRelayLimit::kMaxActionBytes, Min = 0, Max = 255 )
+        vector<uint8> _view{};
+    };
+
     /** @brief 입장 거부(서버 → 클라이언트) 본문입니다. */
     REFLECT()
     struct TurnDeniedBody
@@ -162,7 +176,8 @@ namespace sw
         using Rejected = NetMessageBodyDef<4, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnRejectedBody>;
         using Started  = NetMessageBodyDef<5, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnStartedBody>;
         using Denied   = NetMessageBodyDef<6, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnDeniedBody>;
-        using Table    = NetMessageTable<NetKitMessageRange::kTurnRelay, Join, Joined, Action, Applied, Rejected, Started, Denied>;
+        using View     = NetMessageBodyDef<7, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnViewBody>;
+        using Table    = NetMessageTable<NetKitMessageRange::kTurnRelay, Join, Joined, Action, Applied, Rejected, Started, Denied, View>;
 
         static constexpr uint8 kJoin     = Table::getKindOf<Join>();
         static constexpr uint8 kJoined   = Table::getKindOf<Joined>();
@@ -171,6 +186,7 @@ namespace sw
         static constexpr uint8 kRejected = Table::getKindOf<Rejected>();
         static constexpr uint8 kStarted  = Table::getKindOf<Started>();
         static constexpr uint8 kDenied   = Table::getKindOf<Denied>();
+        static constexpr uint8 kView     = Table::getKindOf<View>();
         /**
          * @brief 행동 하나의 바이트 상한입니다. 클라이언트는 넘는 행동을 보내지 않고, 서버와 클라이언트는 넘는 길이를 손상된 메시지로 봅니다.
          * @details 큰 행동은 신뢰 순서 채널이 1 KB 조각으로 나눠 전송한다. 조각마다 신뢰 창 슬롯을 하나씩 쓰므로, 창이 차면 대기 큐와 `flushSeat` 가 기다린다.
@@ -185,9 +201,10 @@ namespace sw
     /** @brief 방의 자리 하나입니다. */
     struct TurnSeat
     {
-        uint32 _token{ 0 };                                      ///< 다시 들어올 때 내는 값. 서버가 정한다
-        int32  _connectionID{ constant::invalid_index::kInt32 }; ///< -1이면 끊긴 상태이다. 자리는 남는다
-        int32  _sentActionCount{ 0 };                            ///< 서버가 이 자리의 연결에 보낸 행동 수. 그다음 행동부터 이어서 보낸다
+        uint32 _token{ 0 };                                             ///< 다시 들어올 때 내는 값. 서버가 정한다
+        int32  _connectionID{ constant::invalid_index::kInt32 };        ///< -1이면 끊긴 상태이다. 자리는 남는다
+        int32  _sentActionCount{ 0 };                                   ///< 서버가 이 자리의 연결에 보낸 행동 수. 그다음 행동부터 이어서 보낸다
+        int32  _sentViewActionCount{ constant::invalid_index::kInt32 }; ///< 이 자리의 연결에 마지막으로 보낸 모습이 담은 행동 수. -1 이면 아직 보내지 않았다
         uint8  _bTaken{ SW_FALSE };
     };
 } // namespace sw
@@ -244,6 +261,17 @@ namespace sw
             const int32 count = static_cast<int32>( room._listSeat.size() );
             room._currentSeat = ( ( room._currentSeat + room._direction ) % count + count ) % count;
         }
+        /**
+         * @brief 자리 @p seat 가 볼 판의 모습을 @p outView 에 씁니다. 행동이 적용될 때마다, 그리고 시작 · 다시 들어옴 때 그 자리에만 보냅니다(가장 새 것 하나).
+         * @return 모습이 없는 게임이면 false 입니다(기본 — 행동만 보낸다). 모습은 `NetTurnRelayMessage::kMaxActionBytes` 를 넘지 않아야 합니다.
+         */
+        [[nodiscard]] virtual bool writeSeatView( const TurnRoom& room, int32 seat, vector<uint8>& outView ) const
+        {
+            (void)room;
+            (void)seat;
+            (void)outView;
+            return false;
+        }
     };
 } // namespace sw
 
@@ -259,6 +287,7 @@ namespace sw
             ActionApplied,  ///< _index · _seat · _buffer
             ActionRejected, ///< _index 는 내 행동 번호이고 _reason 이 거절 이유이다
             Denied,         ///< _reason
+            ViewChanged,    ///< 클라이언트 쪽 이벤트. 내 자리의 모습(_buffer)이 왔다. _index 는 그 모습이 담은 행동 수
             SeatLeft,       ///< 서버 쪽 이벤트. 연결이 끊겼다
             SeatReturned    ///< 서버 쪽 이벤트. 끊겼던 연결이 돌아왔다
         };
@@ -343,7 +372,9 @@ namespace sw
         /** @brief 그 연결에 큐에 쌓인 것이 없으면 바로 보내고, 있거나 창이 찼으면 큐 끝에 넣습니다. */
         void sendOrQueue( int32 connectionID );
         /** @brief 자리의 연결에 아직 보내지 않은 행동을 신뢰 창이 허락하는 만큼 보냅니다. 그 연결에 줄 선 알림이 있으면 알림이 먼저입니다(입장 · 시작이 행동보다 늦게 닿지 않게). */
-        void   flushSeat( const TurnRoom& room, TurnSeat& seat );
+        void flushSeat( const TurnRoom& room, TurnSeat& seat );
+        /** @brief 시작한 방의 자리에 아직 보내지 않은 가장 새 모습을 보냅니다(행동을 다 보낸 뒤). */
+        void   flushView( const TurnRoom& room, TurnSeat& seat );
         void   flushPending();
         int32  countPending( int32 connectionID ) const;
         uint32 nextToken();
@@ -368,28 +399,31 @@ namespace sw
 namespace sw
 {
     /** @brief 클라이언트 쪽 중계기입니다. 받은 행동을 번호 순서로 보관하고, 다시 들어올 때 놓친 행동을 받습니다. */
-    class SW_KIT_API TurnRelayClient : public NetTableHandler<TurnRelayClient, NetTurnRelayMessage::Table, NetTurnRelayMessage::Joined, NetTurnRelayMessage::Applied, NetTurnRelayMessage::Rejected, NetTurnRelayMessage::Started, NetTurnRelayMessage::Denied>
+    class SW_KIT_API TurnRelayClient : public NetTableHandler<TurnRelayClient, NetTurnRelayMessage::Table, NetTurnRelayMessage::Joined, NetTurnRelayMessage::Applied, NetTurnRelayMessage::Rejected, NetTurnRelayMessage::Started, NetTurnRelayMessage::Denied, NetTurnRelayMessage::View>
     {
     public:
         TurnRelayClient();
 
         void initialize( INetPeers* pHost );
-        /** @brief 방에 들어갑니다. 자리가 -1이면 빈 자리 어디든 받습니다. 전에 받은 토큰이 있으면 그 자리로 돌아갑니다. 다른 방이면 지난 방의 행동 · 토큰 · 자리 · 시작 표시를 잊습니다. */
+        /** @brief 방에 들어갑니다. 자리가 -1이면 빈 자리 어디든 받습니다. 전에 받은 토큰이 있으면 그 자리로 돌아갑니다. 다른 방이면 지난 방의 행동 · 모습 · 토큰 · 자리 · 시작 표시를 버립니다. */
         void join( uint32 roomID, int32 seat = constant::invalid_index::kInt32 );
         /** @brief 행동을 보내고 행동 번호를 반환합니다. 거절 알림에 이 번호가 붙습니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 -1 을 반환합니다. */
         int32 submitAction( const vector<uint8>& buffer );
-        // 표의 메시지 — 클라이언트가 받는 메시지는 입장, 적용, 거절, 시작, 거부이다. 모두 방 id 로 시작한다
+        // 표의 메시지 — 클라이언트가 받는 메시지는 입장, 적용, 거절, 시작, 거부, 모습이다. 모두 방 id 로 시작한다
         NetHandleResult receive( NetTurnRelayMessage::Joined, const NetMessageContext& context, const TurnJoinedBody& body );
         NetHandleResult receive( NetTurnRelayMessage::Applied, const NetMessageContext& context, const TurnAppliedBody& body );
         NetHandleResult receive( NetTurnRelayMessage::Rejected, const NetMessageContext& context, const TurnRejectedBody& body );
         NetHandleResult receive( NetTurnRelayMessage::Started, const NetMessageContext& context, const TurnStartedBody& body );
         NetHandleResult receive( NetTurnRelayMessage::Denied, const NetMessageContext& context, const TurnDeniedBody& body );
+        NetHandleResult receive( NetTurnRelayMessage::View, const NetMessageContext& context, const TurnViewBody& body );
         void            pollEvents( vector<TurnRelayEvent>& outListEvent );
 
         int32                     getSeat() const { return _seat; }
         uint32                    getToken() const { return _token; }
         bool                      isStarted() const { return _bStarted != SW_FALSE; }
         const vector<TurnAction>& getActions() const { return _listAction; }
+        /** @brief 서버가 마지막으로 보낸 내 자리의 모습입니다(정책이 쓴 바이트). 받지 않았으면 비어 있습니다. */
+        const vector<uint8>& getView() const { return _viewBuffer; }
 
     private:
         /** @brief 지금 방(@p roomID)의 알림이면 true 입니다. 다른 방의 알림은 버린다(형식은 맞았다). */
@@ -397,6 +431,7 @@ namespace sw
 
     private:
         vector<TurnAction>          _listAction;
+        vector<uint8>               _viewBuffer; ///< 마지막으로 받은 내 자리의 모습
         EventBuffer<TurnRelayEvent> _eventBuffer;
         INetPeers*                  _pHost;
         uint32                      _roomID;

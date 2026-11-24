@@ -30,6 +30,10 @@
 	<DevCommand line="hub.cards join"/>
 	<WaitUntil watch="Hub.CardsStarted" equals="1" timeoutWallSeconds="60"/>
 	<Expect watch="Hub.CardsSeat" atLeast="0"/>
+	<!-- 서버가 나눈 패 — 내 손패는 일곱 장이 다 오고 상대는 장수만 온다. HUD 가 그 패를 보인다 -->
+	<WaitUntil watch="Hub.CardsHand" atLeast="7" timeoutWallSeconds="20"/>
+	<Expect watch="Hub.CardsOpponentHand" atLeast="7"/>
+	<WaitUntil watch="Hub.CardsHUDShown" equals="1" timeoutWallSeconds="10"/>
 	<WaitUntil watch="Hub.CardsMyTurn" equals="1" timeoutWallSeconds="30"/>
 	<DevCommand line="hub.cards draw"/>
 	<WaitUntil watch="Hub.CardsMyTurn" equals="0" timeoutWallSeconds="20"/>

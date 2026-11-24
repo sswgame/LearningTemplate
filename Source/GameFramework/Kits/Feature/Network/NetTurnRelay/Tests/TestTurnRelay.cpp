@@ -599,3 +599,51 @@ SW_TEST_CASE( TurnRelayWireTest, TypedMessagesCannotTakeACallerChosenChannel )
     SW_EXPECT_TRUE( writer.sendMessage( peers, 0 ) );
     SW_EXPECT_EQUAL( peers._listSent.size(), size_t{ 1 } );
 }
+
+namespace
+{
+    /** @brief 자리마다 자기 번호와 행동 수만 보이는 정책입니다. */
+    class SeatViewTestPolicy final : public ITurnPolicy
+    {
+    public:
+        bool writeSeatView( const TurnRoom& room, int32 seat, vector<uint8>& outView ) const override
+        {
+            outView = { static_cast<uint8>( seat ), static_cast<uint8>( room._listAction.size() ) };
+            return true;
+        }
+    };
+} // namespace
+
+/** @brief [TurnRelayViewTest] 자리의 모습은 그 자리에만 간다 — 시작 때, 행동마다, 돌아왔을 때 가장 새 것 하나. 창이 차면 `update` 가 그때의 모습을 보낸다 */
+SW_TEST_CASE( TurnRelayViewTest, EachSeatReceivesOnlyItsOwnView )
+{
+    SeatViewTestPolicy policy;
+    TurnRelayTest      rig;
+    TurnRelayConfig    config;
+    config._seatCount = 2;
+    SW_REQUIRE_TRUE( rig._server.initialize( &rig._serverPeers, config, &policy, TurnRelayTest::kTokenSeed ) );
+    rig.startRoom();
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        SW_REQUIRE_EQUAL( size_t( 2 ), rig.relay( index ).getView().size() );
+        SW_EXPECT_EQUAL( rig.relay( index ).getSeat(), static_cast<int32>( rig.relay( index ).getView()[0] ) );
+        SW_EXPECT_EQUAL( uint8( 0 ), rig.relay( index ).getView()[1] );
+    }
+
+    const int32 firstSeat = rig._server.findRoom( 7 )->_currentSeat;
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        if ( rig.relay( index ).getSeat() == firstSeat )
+            (void)rig.relay( index ).submitAction( vector<uint8>{ 1 } );
+    }
+    rig.poll();
+    for ( int32 index = 0; index < 2; ++index )
+    {
+        SW_EXPECT_EQUAL( rig.relay( index ).getSeat(), static_cast<int32>( rig.relay( index ).getView()[0] ) );
+        SW_EXPECT_EQUAL( uint8( 1 ), rig.relay( index ).getView()[1] );
+    }
+
+    // 다른 방으로 가면 지난 방의 모습을 버린다.
+    rig.relay( 0 ).join( 8 );
+    SW_EXPECT_TRUE( rig.relay( 0 ).getView().empty() );
+}

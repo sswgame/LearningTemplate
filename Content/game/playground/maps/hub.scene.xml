@@ -188,8 +188,9 @@
 							<item>6</item>
 						</_listMount>
 					</HubPawnReplicationComponent>
-					<!-- 접속한 두 사람의 카드 탁자(턴 중계) — 개발 명령 hub.cards. -->
+					<!-- 접속한 두 사람의 카드 탁자(턴 중계) — 개발 명령 hub.cards. 손패는 서버가 나눈 것만 HUD 에 보인다. -->
 					<HubCardTableComponent _localID="11840276335901482617" _componentName="HubCardTableComponent" _bActive="true" />
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/playground/ui/hub_cards.ui.xml" />
 				</_listComponent>
 			</GameObject>
 		</entity>

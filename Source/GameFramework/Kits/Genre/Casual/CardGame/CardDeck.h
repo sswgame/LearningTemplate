@@ -10,6 +10,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/SecureUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -129,6 +130,11 @@ namespace sw
 
         /** @brief Fisher-Yates 셔플을 합니다. 같은 시드의 @p random 이면 플랫폼과 무관하게 같은 순서가 나옵니다. */
         void shuffle( GameRandom& random );
+        /**
+         * @brief 키를 모르면 순서를 알 수 없는 Fisher-Yates 셔플입니다(키 있는 PRF — SipHash-2-4). 패를 숨기는 온라인 판의 서버가 씁니다.
+         * @details `GameRandom` 은 32 비트 시드라, 자기 패를 본 클라이언트가 시드를 모두 돌려 남의 패를 알아낼 수 있다. 같은 키 · 판 번호(@p dealID) · 섞은 차례(@p shuffleIndex)면 같은 순서다(다시 돌리기).
+         */
+        void shuffleSecret( const SipHashKey& key, uint64 dealID, uint32 shuffleIndex );
         /**
          * @brief 맨 위부터 한 장씩 돌아가며 @p inoutListHand 의 손패마다 @p cardsEach 장을 나눕니다(0번 손패가 먼저).
          * @return 덱이 모자라 덜 나눴으면 false 를 반환한다.
