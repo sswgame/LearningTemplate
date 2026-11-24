@@ -96,9 +96,9 @@ namespace sw
         ConsumerLease                   _eventLease;
         vector<ConquestEvent>           _listEvent;
         Countdown                       _resultHold;
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8 _bResultShown : 1; ///< 결과 보이기를 시작했다
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
         [[maybe_unused]] uint8 _reserved         : 6;
     };

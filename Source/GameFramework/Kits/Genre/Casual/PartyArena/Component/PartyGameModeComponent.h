@@ -128,7 +128,7 @@ namespace sw
         int32 _winner;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _playerRingOutCount; ///< 사람이 떨어진 수(모든 라운드)
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
         [[maybe_unused]] uint8 _reserved         : 7;
     };

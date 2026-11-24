@@ -875,7 +875,7 @@ namespace sw
         if ( sizeBytes == 0 || _pDevice->_allocator == nullptr )
             return 0;
         D3D12MA::ALLOCATION_DESC allocationDesc{};
-        allocationDesc.Flags          = D3D12MA::ALLOCATION_FLAG_COMMITTED | D3D12MA::ALLOCATION_FLAG_CAN_ALIAS; // 자기 힙 하나(오프셋 0) — 풀이 크기가 바뀔 때 통째로 다시 만든다
+        allocationDesc.Flags          = static_cast<D3D12MA::ALLOCATION_FLAGS>( D3D12MA::ALLOCATION_FLAG_COMMITTED | D3D12MA::ALLOCATION_FLAG_CAN_ALIAS ); // 자기 힙 하나(오프셋 0) — 풀이 크기가 바뀔 때 통째로 다시 만든다
         allocationDesc.HeapType       = D3D12_HEAP_TYPE_DEFAULT;
         allocationDesc.ExtraHeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES; // 리소스 힙 등급 1 도 받는 범주(렌더 타깃 · 깊이 텍스처만)
         D3D12_RESOURCE_ALLOCATION_INFO allocationInfo{};

@@ -99,9 +99,9 @@ namespace sw
         SharedAssetRef<CardBattleCatalog> _pCatalog;
         CardBattle                        _battle;
         Countdown                         _timer; ///< 자동 플레이의 다음 수 · 결과를 보이는 시간
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8 _bResultShown : 1; ///< 결과 보이기를 시작했다
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
         [[maybe_unused]] uint8 _reserved         : 6;
     };

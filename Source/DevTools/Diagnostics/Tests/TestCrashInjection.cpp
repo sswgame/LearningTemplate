@@ -32,13 +32,13 @@ namespace
     /** @brief @p folder 에서 이름이 @p suffix 로 끝나는 첫 파일입니다. 없으면 빈 글입니다. */
     string findReportFile( const string& folder, string_view suffix )
     {
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         if ( FileUtil::collectFiles( FileUtil::toDiskPath( folder ), "", listFile, false ) == false )
             return {};
-        for ( const string& filePath : listFile )
+        for ( const AbsolutePath& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, suffix ) )
-                return filePath;
+            if ( StringUtil::endsWith( filePath.str(), suffix ) )
+                return filePath.str();
         }
         return {};
     }

@@ -130,9 +130,9 @@ namespace sw
         Countdown                   _resultHold;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _musicTime; ///< 지금 곡 시각(초)
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8 _bResultShown : 1; ///< 결과 보이기를 시작했다
-        PROPERTY( RuntimeState, Min = 0, Max = 1 )
+        PROPERTY( RuntimeState )
         uint8                  _bFinishRequested : 1; ///< 미니게임 끝내기를 맡겼다
         [[maybe_unused]] uint8 _reserved         : 6;
     };

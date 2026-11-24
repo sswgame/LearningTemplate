@@ -433,7 +433,7 @@ namespace sw
     bool D3D12RHIDevice::createAllocator( IDXGIAdapter* pAdapter )
     {
         D3D12MA::ALLOCATOR_DESC allocatorDesc{};
-        allocatorDesc.Flags    = D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS; // 새 블록을 0 으로 채우지 않는다 — 나눠 준 구간은 어차피 앞 자원의 바이트다(만든 쪽이 첫 쓰기를 한다, Vulkan 과 같다)
+        allocatorDesc.Flags    = static_cast<D3D12MA::ALLOCATOR_FLAGS>( D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS ); // 새 블록을 0 으로 채우지 않는다 — 나눠 준 구간은 어차피 앞 자원의 바이트다(만든 쪽이 첫 쓰기를 한다, Vulkan 과 같다)
         allocatorDesc.pDevice  = _device.Get();
         allocatorDesc.pAdapter = pAdapter;
         return isHrSuccess( D3D12MA::CreateAllocator( &allocatorDesc, _allocator.ReleaseAndGetAddressOf() ), "D3D12MA::CreateAllocator" );
