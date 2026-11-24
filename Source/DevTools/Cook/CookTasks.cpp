@@ -37,6 +37,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderRequestLog.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
