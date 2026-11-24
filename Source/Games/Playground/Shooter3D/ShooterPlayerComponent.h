@@ -81,6 +81,11 @@ namespace sw
          * @return 발동한 것이 없거나 방향이 0 이면 @p currentSlot 그대로입니다. 둘 다 발동하면 SwitchWeapon 이 이긴다.
          */
         [[nodiscard]] static int32 chooseWeaponSlot( const PawnComponent& pawn, const ControlIntent& intent, int32 currentSlot );
+        /**
+         * @brief 발에서 눈까지의 높이를 고릅니다. 네트가 움직이는 몸은 설정값 하나다 — 서버의 몸에는 보이는 몸이 없어 소켓 높이를 쓰면 발사 자리가 갈린다.
+         * @details 혼자 하는 몸은 보이는 몸의 눈 소켓(@p bodyEyeHeight — 조립 전이면 0)에 다리 올림을 더한 값입니다.
+         */
+        [[nodiscard]] static float32 chooseEyeHeight( float32 settingHeight, float32 bodyEyeHeight, float32 bodyLegLift, bool bNetDriven );
 
         ShooterPlayerComponent();
         virtual ~ShooterPlayerComponent() override;
@@ -251,7 +256,7 @@ namespace sw
         void runIntent( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const PawnComponent& pawn, const ControlIntent& intent, float32 step, uint32 commandTick );
         /** @brief 무기의 연사 · 재장전 시간을 흘립니다. */
         void advanceWeapons( float32 step );
-        /** @brief 발에서 눈까지의 높이입니다. 네트가 움직이는 몸은 설정값 하나다 — 서버의 몸에는 보이는 몸이 없어 소켓 높이를 쓰면 발사 자리가 갈린다. */
+        /** @brief 발에서 눈까지의 높이입니다(`chooseEyeHeight`). */
         float32 computeEyeHeight() const;
         /** @brief 발사 · 근접의 눈 자리입니다(씬) — 예측 보정 오프셋이 없는 시뮬레이션 자리다. */
         float3 computeAimOrigin() const;

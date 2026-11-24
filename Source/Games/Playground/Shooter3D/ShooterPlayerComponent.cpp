@@ -709,11 +709,15 @@ namespace sw
         return MathUtil::clamp( 1.0f - carrying / wanted, 0.0f, 1.0f );
     }
 
+    float32 ShooterPlayerComponent::chooseEyeHeight( float32 settingHeight, float32 bodyEyeHeight, float32 bodyLegLift, bool bNetDriven )
+    {
+        return bNetDriven || bodyEyeHeight <= 0.0f ? settingHeight : bodyEyeHeight + bodyLegLift;
+    }
+
     float32 ShooterPlayerComponent::computeEyeHeight() const
     {
-        const ShooterBodyMovementComponent* pMovement   = findMovement();
-        const bool                          bSettingEye = _bodyEyeHeight <= 0.0f || ( pMovement != nullptr && pMovement->isNetDriven() );
-        return bSettingEye ? _eyeHeight : _bodyEyeHeight + _bodyLegLift;
+        const ShooterBodyMovementComponent* pMovement = findMovement();
+        return chooseEyeHeight( _eyeHeight, _bodyEyeHeight, _bodyLegLift, pMovement != nullptr && pMovement->isNetDriven() );
     }
 
     float3 ShooterPlayerComponent::computeAimOrigin() const
