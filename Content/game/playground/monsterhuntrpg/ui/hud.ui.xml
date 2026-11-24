@@ -24,6 +24,15 @@
 				<TextWidget _name="FoundClues" _text="{bind:_foundClueCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,80" _offsetMax="268,116" />
 				</TextWidget>
+				<TextWidget _text="Skill points" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="288,80" _offsetMax="488,116" />
+				</TextWidget>
+				<TextWidget _name="SkillPoints" _text="{bind:_skillPoints}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="496,80" _offsetMax="576,116" />
+				</TextWidget>
+				<TextWidget _text="Learn (3)   Mutagen (4)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-124" _offsetMax="648,-88" />
+				</TextWidget>
 				<TextWidget _text="Search the marsh for clues" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
 				</TextWidget>
@@ -48,6 +57,12 @@
 				<TextWidget _name="Stamina" _text="{bind:_stamina}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="368,80" _offsetMax="448,116" />
 				</TextWidget>
+				<TextWidget _text="Sign power" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="468,80" _offsetMax="608,116" />
+				</TextWidget>
+				<TextWidget _name="SignIntensity" _text="{bind:_signIntensity}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="608,80" _offsetMax="688,116" />
+				</TextWidget>
 				<TextWidget _text="Monster" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="188,156" />
 				</TextWidget>
@@ -66,7 +81,7 @@
 				<TextWidget _name="Toxicity" _text="{bind:_toxicity}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="608,120" _offsetMax="688,156" />
 				</TextWidget>
-				<TextWidget _text="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" _styleClass="hud" _visibility="HitTestInvisible">
+				<TextWidget _text="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
 				</TextWidget>
 			</CanvasPanel>

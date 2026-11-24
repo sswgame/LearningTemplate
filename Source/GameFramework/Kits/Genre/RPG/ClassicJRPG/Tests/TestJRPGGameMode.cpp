@@ -1,4 +1,4 @@
-// JRPGGameModeTest — 클래식 JRPG 디렉터: 명령은 판이 열린 동안만 받고, 씬 데이터가 비었으면 판을 열지 않으며, 걸음 조우 → 멤버마다 명령 → 승리 → 보스 → 승리와 상태 왕복(nogpu, 에셋 없음).
+// JRPGGameModeTest — 클래식 JRPG 디렉터(타이밍 · 장비 · 전직 · 자동 플레이 포함): 명령은 판이 열린 동안만 받고, 씬 데이터가 비었으면 판을 열지 않으며, 걸음 조우 → 멤버마다 명령 → 승리 → 보스 → 승리와 상태 왕복(nogpu, 에셋 없음).
 #include "pch.h"
 
 #include "Core/Subsystem/SubsystemScope.h"
@@ -21,6 +21,7 @@ namespace
   <ExperienceCurve base="1000" exponent="0" maxLevel="10"/>
   <Class id="guard" name="Guard" hp="100" mp="0" str="80" agi="50" vit="20"/>
   <Class id="lamp" name="Lamp" hp="80" mp="10" str="60" agi="40" vit="20"/>
+  <Class id="sage" name="Sage" hp="70" mp="20" str="30" agi="36" vit="10" requires="tome"/>
   <Enemy id="bramble" name="Bramble" hp="10" str="4" agi="1" vit="0" exp="12" gold="3"/>
   <Enemy id="hollow" name="Hollow" hp="100" str="10" agi="1" vit="0" exp="50" gold="20" boss="true"/>
   <Area id="trail" rate="1" grace="3"><Group enemies="bramble,bramble" weight="1"/></Area>
@@ -31,22 +32,39 @@ namespace
   <_listBoss><item>hollow</item></_listBoss>
 </JRPGGameModeComponent>)";
 
+    constexpr const utf8* kJRPGItemXML = R"(<ItemCatalog>
+  <Item id="blade" slot="Weapon"><Stats attack="20"/></Item>
+  <Item id="tome"/>
+</ItemCatalog>)";
+
+    // 타이밍 · 장비 · 전직을 쓰는 판 — 쉼터는 시작 자리다.
+    constexpr const utf8* kJRPGFullSceneXML = R"(<JRPGGameModeComponent _area="trail" _startPosition="0,0" _goalPosition="8,0" _restPosition="0,0.5" _trailMin="0,-1" _trailMax="10,1" _moveSpeed="4" _stepLength="1" _startGold="5"
+  _timingTarget="0.25" _timingDuration="0.5" _restClass="sage" _classChangeLevel="1">
+  <_listHero><item>guard</item><item>lamp</item></_listHero>
+  <_listBoss><item>hollow</item></_listBoss>
+  <_listTimingWindow><TimingWindow _grade="Hit" early="0.1" late="0.1"/></_listTimingWindow>
+  <_listStartItem><item>blade</item><item>tome</item></_listStartItem>
+</JRPGGameModeComponent>)";
+
     constexpr float32 kJRPGFrame = 0.125f; ///< 한 프레임에 0.5 m — 걸음(1 m) 하나가 두 프레임이고 float 오차가 없다
 
     /** @brief 카탈로그를 건 게임 범위와 씬 데이터를 읽은 디렉터입니다. 테스트 본문이 범위를 `ScopedGameScope` 로 겁니다. */
     struct JRPGGameModeFixture
     {
         JRPGCatalog            _catalog;
+        ItemCatalog            _itemCatalog;
         SubsystemScope         _scope;
         GameObjectManager      _manager;
         JRPGGameModeComponent* _pGameMode{ nullptr };
 
-        [[nodiscard]] bool initialize()
+        [[nodiscard]] bool initialize( const utf8* pSceneXML = kJRPGSceneXML )
         {
             if ( _catalog.loadFromXMLText( kJRPGGameModeXML, "JRPGGameModeTest" ) == false || _scope.bind<const JRPGCatalog>( &_catalog ) == false )
                 return false;
+            if ( _itemCatalog.loadFromXMLText( kJRPGItemXML, "JRPGGameModeTest" ) == false || _scope.bind<const ItemCatalog>( &_itemCatalog ) == false )
+                return false;
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<JRPGGameModeComponent>();
-            return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *JRPGGameModeComponent::StaticType(), kJRPGSceneXML );
+            return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *JRPGGameModeComponent::StaticType(), pSceneXML );
         }
 
         /** @brief 판을 열고 빈 프레임 하나를 돌립니다(첫 프레임은 틱 그룹을 옮기는 일이 든다). */
@@ -81,6 +99,9 @@ SW_TEST_CASE( JRPGGameModeTest, CommandsBeforeTheTrailOpensAreRefused )
     SW_EXPECT_FALSE( pGameMode->submitCommand( JRPGCommand::makeDefend() ) );
     SW_EXPECT_FALSE( pGameMode->submitFlee() );
     SW_EXPECT_FALSE( pGameMode->submitRest() );
+    SW_EXPECT_FALSE( pGameMode->submitTiming() );
+    SW_EXPECT_FALSE( pGameMode->submitEquip() );
+    SW_EXPECT_FALSE( pGameMode->submitClassChange( 0 ) );
     SW_EXPECT_EQUAL( 0, pGameMode->getGold() );
     SW_EXPECT_EQUAL( -1, pGameMode->getCommandMember() );
 }
@@ -179,4 +200,105 @@ SW_TEST_CASE( JRPGGameModeTest, BattleStateSurvivesARoundTrip )
     SW_EXPECT_EQUAL( 11, restored._pGameMode->getGold() );
     restored._manager.endPlay();
     source._manager.endPlay();
+}
+
+/** @brief [JRPGGameModeTest] 창이 있는 판은 공격마다 · 막기에 한 번 누를 때를 기다리고, 누를 때에 누른 공격은 한 번 더 친다 — 놓친 누름은 세지 않는다 */
+SW_TEST_CASE( JRPGGameModeTest, TimedPressStrikesTwiceAndAMissedPressDoesNot )
+{
+    JRPGGameModeFixture fixture;
+    SW_REQUIRE_TRUE( fixture.initialize( kJRPGFullSceneXML ) );
+    game::ScopedGameScope scopedScope( fixture._scope );
+    fixture.beginPlay();
+    fixture.walkEast( 8 );
+    SW_REQUIRE_TRUE( fixture.attackWithAll() );
+    SW_REQUIRE_EQUAL( 4, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( 0, fixture._pGameMode->getTimingStep() );
+    SW_EXPECT_FALSE( fixture._pGameMode->submitCommand( JRPGCommand::makeDefend() ) ); // 타이밍 단계에는 명령이 없다
+    for ( int32 frame = 0; frame < 12; ++frame )                                       // 누르지 않으면 0.5 초(네 프레임)씩 세 차례가 지난다
+    {
+        fixture._manager.update( kJRPGFrame );
+    }
+    SW_REQUIRE_EQUAL( 0, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( 0, fixture._pGameMode->getTimedCount() );
+
+    fixture.walkEast( 6 ); // 보스
+    SW_REQUIRE_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitCommand( JRPGCommand::makeAttack( 0 ) ) );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitCommand( JRPGCommand::makeDefend() ) );
+    fixture._manager.update( kJRPGFrame );
+    fixture._manager.update( kJRPGFrame ); // 0.25 초 — 누를 때
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitTiming() );
+    SW_EXPECT_EQUAL( 2, fixture._pGameMode->getTimingStep() ); // 방어한 멤버는 건너뛰고 막기
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitTiming() );     // 너무 이르다 — 막지 못한다
+    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getBattleRound() );
+    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getTimedCount() );
+    fixture._manager.endPlay();
+}
+
+/** @brief [JRPGGameModeTest] 가방의 검은 첫 멤버의 빈 무기 칸으로 가 공격력을 올리고, 쉼터에서는 책을 가진 멤버가 전직한다 — 낄 것이 없거나 쉼터 밖이면 거절한다 */
+SW_TEST_CASE( JRPGGameModeTest, GearRaisesAttackAndTheInnChangesClass )
+{
+    JRPGGameModeFixture fixture;
+    SW_REQUIRE_TRUE( fixture.initialize( kJRPGFullSceneXML ) );
+    game::ScopedGameScope scopedScope( fixture._scope );
+    fixture.beginPlay();
+    SW_REQUIRE_TRUE( fixture._pGameMode->isStarted() );
+    SW_EXPECT_EQUAL( 80, fixture._pGameMode->getLeaderAttack() );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitEquip() );
+    SW_EXPECT_EQUAL( 100, fixture._pGameMode->getLeaderAttack() );
+    SW_EXPECT_FALSE( fixture._pGameMode->submitEquip() ); // 남은 것은 책뿐이다
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitClassChange( 1 ) );
+    SW_EXPECT_EQUAL( 1, fixture._pGameMode->getClassChangeCount() );
+    SW_EXPECT_EQUAL( 30, fixture._pGameMode->getParty().getMember( 1 ).getStat( JRPGStat::Strength ) ); // 60 의 절반
+    SW_EXPECT_FALSE( fixture._pGameMode->submitClassChange( 1 ) );                                      // 이미 그 직업이다
+    fixture.walkEast( 4 );                                                                              // 2 m — 쉼터 밖
+    SW_EXPECT_FALSE( fixture._pGameMode->submitClassChange( 0 ) );
+    fixture._manager.endPlay();
+}
+
+/** @brief [JRPGGameModeTest] 낀 장비 · 타이밍 단계의 누름이 저장을 거쳐 이어진다 */
+SW_TEST_CASE( JRPGGameModeTest, GearAndTimingSurviveARoundTrip )
+{
+    JRPGGameModeFixture source;
+    SW_REQUIRE_TRUE( source.initialize( kJRPGFullSceneXML ) );
+    game::ScopedGameScope scopedScope( source._scope );
+    source.beginPlay();
+    SW_REQUIRE_TRUE( source._pGameMode->submitEquip() );
+    source.walkEast( 8 );
+    SW_REQUIRE_TRUE( source.attackWithAll() );
+    source._manager.update( kJRPGFrame );
+    source._manager.update( kJRPGFrame );
+    SW_REQUIRE_TRUE( source._pGameMode->submitTiming() );
+    Archive state;
+    source._pGameMode->writeState( state );
+
+    JRPGGameModeFixture restored;
+    SW_REQUIRE_TRUE( restored.initialize( kJRPGFullSceneXML ) );
+    restored.beginPlay();
+    restored._pGameMode->restoreState( vector<uint8>( state.getData(), state.getData() + state.getSize() ) );
+    SW_REQUIRE_EQUAL( 4, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( 1, restored._pGameMode->getTimingStep() );
+    SW_EXPECT_EQUAL( 100, restored._pGameMode->getLeaderAttack() );
+    restored._manager.endPlay();
+    source._manager.endPlay();
+}
+
+/** @brief [JRPGGameModeTest] 자동 플레이는 장비를 끼고 조우 · 타이밍 · 보스를 플레이어와 같은 명령으로 넘어 이긴다 */
+SW_TEST_CASE( JRPGGameModeTest, AutoPlayWinsTheTrail )
+{
+    JRPGGameModeFixture fixture;
+    SW_REQUIRE_TRUE( fixture.initialize( kJRPGFullSceneXML ) );
+    game::ScopedGameScope scopedScope( fixture._scope );
+    SW_REQUIRE_TRUE( XMLSerializer::deserialize( fixture._pGameMode, *JRPGGameModeComponent::StaticType(), R"(<JRPGGameModeComponent _bAutoPlay="true"/>)" ) );
+    fixture.beginPlay();
+    for ( int32 frame = 0; frame < 200 && fixture._pGameMode->getPhase() != 2; ++frame )
+    {
+        fixture._manager.update( kJRPGFrame );
+    }
+    SW_EXPECT_EQUAL( 2, fixture._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( 100, fixture._pGameMode->getLeaderAttack() );
+    SW_EXPECT_TRUE( fixture._pGameMode->getTimedCount() > 0 );
+    SW_EXPECT_FALSE( fixture._pGameMode->isAcceptingInput() );
+    fixture._manager.endPlay();
 }

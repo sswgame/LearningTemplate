@@ -81,7 +81,9 @@
 					                                 _ballAction="MonsterCollector.Ball"
 					                                 _switchAction="MonsterCollector.Switch"
 					                                 _runAction="MonsterCollector.Run"
-					                                 _restAction="MonsterCollector.Rest" />
+					                                 _restAction="MonsterCollector.Rest"
+					                                 _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
+					                                 _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
 					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/monstercollector/ui/hud.ui.xml" />
 				</_listComponent>
 			</GameObject>

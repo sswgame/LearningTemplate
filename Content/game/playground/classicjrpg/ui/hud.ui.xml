@@ -31,15 +31,36 @@
 			<TextWidget _name="Gold" _text="{bind:_gold}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="188,80" _offsetMax="328,116" />
 			</TextWidget>
+			<TextWidget _text="Attack power" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="348,80" _offsetMax="548,116" />
+			</TextWidget>
+			<TextWidget _name="LeaderAttack" _text="{bind:_leaderAttack}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="556,80" _offsetMax="636,116" />
+			</TextWidget>
+			<CanvasPanel _visibility="{bind:_timingVisibility}">
+				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
+				<ProgressBarWidget _name="Timing" _percent="{bind:_timingRatio}" _visibility="HitTestInvisible" _fillColor="1,0.85,0.2,1" _backgroundColor="0,0,0,0.55">
+					<_slot _anchorMin="0.5,1" _anchorMax="0.5,1" _offsetMin="-200,-132" _offsetMax="200,-108" />
+				</ProgressBarWidget>
+				<TextWidget _name="Swing" _text="Press J as the bar fills to strike twice" _styleClass="hud" _visibility="{bind:_swingVisibility}">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+				<TextWidget _name="Block" _text="Press J as the bar fills to block" _styleClass="hud" _visibility="{bind:_blockVisibility}">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
+				</TextWidget>
+			</CanvasPanel>
 			<CanvasPanel _visibility="{bind:_exploreVisibility}">
 				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
 				<TextWidget _text="Follow the lantern trail to its end" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-84" _offsetMax="1048,-48" />
 				</TextWidget>
+				<TextWidget _text="Wear gear (Q)" _styleClass="hud" _visibility="HitTestInvisible">
+					<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-124" _offsetMax="528,-88" />
+				</TextWidget>
 			</CanvasPanel>
 			<CanvasPanel _visibility="{bind:_restVisibility}">
 				<_slot _anchorMin="0,0" _anchorMax="1,1" _offsetMin="0,0" _offsetMax="0,0" />
-				<TextWidget _text="Rest at the inn (E)" _styleClass="hud" _visibility="HitTestInvisible">
+				<TextWidget _text="Rest at the inn (E)   Change class (F)" _styleClass="hud" _visibility="HitTestInvisible">
 					<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="528,156" />
 				</TextWidget>
 			</CanvasPanel>

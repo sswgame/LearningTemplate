@@ -1,6 +1,6 @@
 /**
  * @file MonsterHuntAvatarComponent.h
- * @brief 몬스터 사냥 RPG 키트의 클라이언트 쪽 — 입력 맵 액션을 디렉터(`MonsterHuntGameModeComponent`)의 명령으로 넘기고, 단서 · 사냥꾼 · 괴물을 디버그 그리기로 그리며 HUD 뷰모델을 채웁니다.
+ * @brief 몬스터 사냥 RPG 키트의 클라이언트 쪽 — 입력 맵 액션을 디렉터(`MonsterHuntGameModeComponent`)의 명령으로 넘기고, 단서 · 사냥꾼 · 괴물을 프리팹 인스턴스(`PrefabViewBatch`)로 그리며 HUD 뷰모델을 채웁니다.
  * @details 키트 세 갈래의 클라이언트 몫이다(`GF_Client_MonsterHuntRPG`, 전용 서버는 짓지 않는다). 디렉터의 명령과 읽기 API 만 쓰고 규칙을 직접 고치지 않는다.
  *          디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다. HUD 는 같은 오브젝트의 HUD 컨트롤러(`HUDControllerComponent`)다.
  *          흥정 중에는 빠른 공격 액션이 제안을 받고 강한 공격 액션이 보상을 올린다. 명령 · 그리기 · HUD 는 틱 뒤 게임 스레드에서 한다.
@@ -11,10 +11,13 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -44,6 +47,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
         void onBeginPlay() override;
+        /** @brief 세운 모습을 지웁니다. */
+        void onEndPlay() override;
         /** @brief 입력 · 명령 · 그리기를 틱 뒤 게임 스레드로 미룹니다. */
         void onTick( TickContext& context ) override;
 
@@ -52,8 +57,8 @@ namespace sw
         void updateAvatar( GameObjectManager& manager );
         void submitInput( MonsterHuntGameModeComponent& director, const GameInputView& input ) const;
         void updateHUD( const MonsterHuntGameModeComponent& director, bool bClueNearby );
-        /** @brief 감각 안의 단서(@p listClue) · 사냥꾼 · 괴물을 그립니다. 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
-        static void draw( const MonsterHuntGameModeComponent& director, const vector<const MonsterHuntClueDef*>& listClue, const GameObjectManager& manager );
+        /** @brief 감각 안의 단서(@p listClue) · 사냥꾼 · 괴물을 그립니다. */
+        void draw( const MonsterHuntGameModeComponent& director, const vector<const MonsterHuntClueDef*>& listClue, GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the hunter (required)" )
@@ -72,8 +77,21 @@ namespace sw
         hashed_string _potionAction;
         PROPERTY( Category = "Input", DisplayName = "Investigate Action", Tooltip = "InputMap action that investigates the nearest open clue (required)" )
         hashed_string _investigateAction;
+        PROPERTY( Category = "Input", DisplayName = "Alternate Sign Action", Tooltip = "InputMap action that casts the alternate sign (required)" )
+        hashed_string _alternateSignAction;
+        PROPERTY( Category = "Input", DisplayName = "Learn Action", Tooltip = "InputMap action that learns the next skill (required)" )
+        hashed_string _learnAction;
+        PROPERTY( Category = "Input", DisplayName = "Mutagen Action", Tooltip = "InputMap action that slots the next mutagen (required)" )
+        hashed_string _mutagenAction;
+
+        PROPERTY( Required, Category = "View", DisplayName = "Body Prefab", Tooltip = "Prefab with one mesh, feet at its origin and one metre tall, spawned for every body the view shows" )
+        AssetRef<PrefabAsset> _bodyPrefab;
+        PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
+        AssetRef<PrefabAsset> _markerPrefab;
 
         TComponentHandle<MonsterHuntGameModeComponent> _director;
+        PrefabViewBatch                                _bodies;
+        PrefabViewBatch                                _markers;
         unique_ptr<MonsterHuntHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
         uint8                                          _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않고 그리기만 한다)
         uint8                                          _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)

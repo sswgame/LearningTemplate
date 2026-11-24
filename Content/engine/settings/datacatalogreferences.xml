@@ -269,13 +269,21 @@
 	<Field owner="JRPGGameModeComponent" field="_listHero" tag="JRPGClassDef"/>
 	<Field owner="JRPGGameModeComponent" field="_area" tag="JRPGAreaDef"/>
 	<Field owner="JRPGGameModeComponent" field="_listBoss" tag="JRPGEnemyDef"/>
+	<Field owner="JRPGGameModeComponent" field="_restClass" tag="JRPGClassDef"/>
+	<Field owner="JRPGGameModeComponent" field="_listStartItem" tag="ItemDef"/>
+	<Element type="JRPGClassDef" catalog="JRPGCatalog" path="Class"/>
+	<Field owner="JRPGClassDef" field="requires" tag="ItemDef"/>
 	<CatalogKey tag="MonsterSpeciesDef" catalog="MonsterCollectorCatalog" entry="Species"/>
 	<Field owner="MonsterCollectorGameModeComponent" field="_listStarter" tag="MonsterSpeciesDef"/>
 	<CatalogKey tag="MonsterHuntContractDef" catalog="MonsterHuntCatalog" entry="Contract"/>
 	<CatalogKey tag="MonsterHuntMonsterDef" catalog="MonsterHuntCatalog" entry="Monster"/>
 	<CatalogKey tag="MonsterHuntAlchemyDef" catalog="MonsterHuntCatalog" entry="Item"/>
 	<CatalogKey tag="MonsterHuntSignDef" catalog="MonsterHuntCatalog" entry="Sign"/>
+	<CatalogKey tag="MonsterHuntMutagenDef" catalog="MonsterHuntCatalog" entry="Mutagen"/>
+	<CatalogKey tag="SkillTreeDef" catalog="SkillTreeCatalog" entry="Tree"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_contract" tag="MonsterHuntContractDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_skillTree" tag="SkillTreeDef"/>
+	<Field owner="MonsterHuntGameModeComponent" field="_listMutagen" tag="MonsterHuntMutagenDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_monster" tag="MonsterHuntMonsterDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_oil" tag="MonsterHuntAlchemyDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_potion" tag="MonsterHuntAlchemyDef"/>

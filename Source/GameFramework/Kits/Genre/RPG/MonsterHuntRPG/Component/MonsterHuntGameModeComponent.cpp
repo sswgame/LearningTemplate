@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Component/MonsterHuntGameModeComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -22,10 +23,27 @@ namespace sw
         struct MonsterHuntGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCCUtil::make( "MHGM" );
-            static constexpr uint32 kStateVersion = 1;
+            static constexpr uint32 kStateVersion = 2; ///< 2: 변이원 · 스킬
 
             static constexpr const utf8* kWinResult  = "win";
             static constexpr const utf8* kLoseResult = "lose";
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventContract = "MonsterHuntContract";
+            static constexpr const utf8* kEventClue     = "MonsterHuntClue";
+            static constexpr const utf8* kEventLearn    = "MonsterHuntLearn";
+            static constexpr const utf8* kEventMutagen  = "MonsterHuntMutagen";
+            static constexpr const utf8* kEventMonster  = "MonsterHuntMonster";
+            static constexpr const utf8* kEventSwing    = "MonsterHuntSwing";
+            static constexpr const utf8* kEventHit      = "MonsterHuntHit";
+            static constexpr const utf8* kEventHurt     = "MonsterHuntHurt";
+            static constexpr const utf8* kEventDodge    = "MonsterHuntDodge";
+            static constexpr const utf8* kEventSign     = "MonsterHuntSign";
+            static constexpr const utf8* kEventPotion   = "MonsterHuntPotion";
+            static constexpr const utf8* kEventWon      = "MonsterHuntWon";
+            static constexpr const utf8* kEventLost     = "MonsterHuntLost";
+
+            static constexpr float32 kPercent = 100.0f;
         };
     } // namespace
 
@@ -41,6 +59,9 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( monsterHuntAttackReady, "MonsterHunt.AttackReady", "1 when the attack cooldown is over", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getAttackReady );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntInReach, "MonsterHunt.MonsterInReach", "1 when the monster is within the attack reach", MonsterHuntGameModeComponent,
                                 &MonsterHuntGameModeComponent::getMonsterInReach );
+    SW_AUTOMATION_GETTER_WATCH( monsterHuntSkills, "MonsterHunt.LearnedSkills", "Skill ranks learned in this hunt", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getLearnedSkillCount );
+    SW_AUTOMATION_GETTER_WATCH( monsterHuntIntensity, "MonsterHunt.SignIntensity", "Sign intensity (percent) from skills and mutagens", MonsterHuntGameModeComponent,
+                                &MonsterHuntGameModeComponent::getSignIntensity );
     SW_AUTOMATION_GETTER_WATCH( monsterHuntPlayerX, "MonsterHunt.PlayerX", "Absolute ground-plane X (m) of the hunter", MonsterHuntGameModeComponent, &MonsterHuntGameModeComponent::getPlayerX );
 
     MonsterHuntGameModeComponent::MonsterHuntGameModeComponent()
@@ -51,6 +72,12 @@ namespace sw
         , _oil{}
         , _potion{}
         , _sign{}
+        , _skillTreeCatalog{}
+        , _skillTree{}
+        , _skillPoints{ 0 }
+        , _hunterLevel{ 1 }
+        , _listMutagen{}
+        , _attackStat{}
         , _bagSlotCount{ 8 }
         , _startPosition{ 0.0f, 0.0f }
         , _spawnPosition{ 16.0f, 0.0f }
@@ -75,6 +102,9 @@ namespace sw
         , _resultHoldSeconds{ 3.0f }
         , _pCatalog{}
         , _pChart{}
+        , _pSkillTreeCatalog{}
+        , _mutagens{}
+        , _skills{}
         , _haggle{}
         , _investigation{}
         , _bestiary{}
@@ -90,6 +120,7 @@ namespace sw
         , _playerPosition{ 0.0f, 0.0f }
         , _monsterPosition{ 0.0f, 0.0f }
         , _commandMove{ 0.0f, 0.0f }
+        , _listLearnedSkill{}
         , _healProgress{ 0.0f }
         , _foundClueCount{ 0 }
         , _playerHP{ 0 }
@@ -124,12 +155,105 @@ namespace sw
         return bPacked;
     }
 
+    bool MonsterHuntGameModeComponent::openSkills()
+    {
+        _listLearnedSkill.clear();
+        _mutagens.initialize( _pCatalog.get(), _hunterLevel );
+        for ( const CatalogKey<MonsterHuntMutagenDef>& mutagen : _listMutagen )
+        {
+            if ( _pCatalog->findMutagen( mutagen.key() ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "MonsterHunt.UnknownMutagen", "Monster hunt game mode: the catalog has no mutagen '%#' - the contract does not open", mutagen.c_str() );
+            return false;
+        }
+        _skills.initialize( nullptr );
+        if ( _skillTreeCatalog.empty() )
+            return true;
+        if ( acquireRequired( _skillTreeCatalog.path(), _pSkillTreeCatalog ) == false )
+            return false;
+        const SkillTreeDef* const pTree = _pSkillTreeCatalog->find( _skillTree.key() );
+        if ( pTree == nullptr )
+        {
+            SW_LOG_ERROR_ID( "MonsterHunt.UnknownSkillTree", "Monster hunt game mode: '%#' has no skill tree '%#' - the contract does not open", _skillTreeCatalog.c_str(), _skillTree.c_str() );
+            return false;
+        }
+        _skills.initialize( pTree );
+        _skills.addPoints( _skillPoints );
+        return true;
+    }
+
+    void MonsterHuntGameModeComponent::computeStats( StatBlock& outStats ) const
+    {
+        _mutagens.computeStats( outStats );
+        _skills.computeStats( outStats );
+    }
+
+    int32 MonsterHuntGameModeComponent::getSignIntensity() const
+    {
+        if ( _pCatalog == nullptr )
+            return 0;
+        StatBlock stats;
+        computeStats( stats );
+        return static_cast<int32>( stats.getValue( _pCatalog->getCombat()._intensityStat ) );
+    }
+
+    bool MonsterHuntGameModeComponent::submitLearnSkill()
+    {
+        const SkillTreeDef* const pTree = _skills.getTree();
+        if ( isStarted() == false || isAlive() == false || pTree == nullptr )
+            return false;
+        for ( const SkillDef& skill : pTree->_listSkill )
+        {
+            if ( _skills.rankUp( skill._id, _hunterLevel ) != SkillResult::Ok )
+                continue;
+            _listLearnedSkill.push_back( skill._id );
+            bool bEquipped = false;
+            for ( int32 group = 0; group < _mutagens.getGroupCount() && bEquipped == false; ++group )
+            {
+                const int32 slotCount = _pCatalog->getSlotGroups()[static_cast<size_t>( group )]._slotCount;
+                for ( int32 slot = 0; slot < slotCount && bEquipped == false; ++slot )
+                {
+                    bEquipped = _mutagens.getSkill( group, slot ).empty() && _mutagens.equipSkill( group, slot, skill._id ) == MonsterHuntSlotResult::Ok; // 이미 끼운 스킬 · 닫힌 그룹이면 그대로다
+                }
+            }
+            getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventLearn );
+            SW_LOG_INFO_ID( "MonsterHunt.SkillLearned", "[MonsterHunt] learned '%#' (%# points left)", skill._id.c_str(), _skills.getPoints() );
+            return true;
+        }
+        return false;
+    }
+
+    bool MonsterHuntGameModeComponent::submitMutagen()
+    {
+        if ( isStarted() == false || isAlive() == false )
+            return false;
+        vector<hashed_string> listUsed;
+        for ( int32 group = 0; group < _mutagens.getGroupCount(); ++group )
+        {
+            listUsed.push_back( _mutagens.getMutagen( group ) );
+        }
+        for ( int32 group = 0; group < _mutagens.getGroupCount(); ++group )
+        {
+            if ( _mutagens.getMutagen( group ).empty() == false )
+                continue;
+            for ( const CatalogKey<MonsterHuntMutagenDef>& mutagen : _listMutagen )
+            {
+                if ( VectorUtil::contains( listUsed, mutagen.key() ) || _mutagens.equipMutagen( group, mutagen.key() ) != MonsterHuntSlotResult::Ok )
+                    continue;
+                getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventMutagen );
+                SW_LOG_INFO_ID( "MonsterHunt.MutagenEquipped", "[MonsterHunt] mutagen '%#' in group %# matches %# skills", mutagen.c_str(), group, _mutagens.countMatches( group ) );
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool MonsterHuntGameModeComponent::startGame()
     {
         if ( acquireBoundCatalog( _pCatalog ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false )
             return false;
         const bool bOpened = _haggle.initialize( _pCatalog.get(), _contract.key() ) && _investigation.initialize( _pCatalog.get(), _contract.key(), nullptr ) &&
-                             _combat.initialize( _pCatalog.get(), _seed ) && openBag();
+                             _combat.initialize( _pCatalog.get(), _seed ) && openBag() && openSkills();
         if ( bOpened == false )
             return false;
         _bestiary.initialize( _pCatalog.get(), _pChart.get() );
@@ -202,6 +326,7 @@ namespace sw
         if ( _haggle.isClosed() == false )
             return;
         _phase = MonsterHuntPhase::Investigate;
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventContract );
         if ( _alchemy.meditate( _bag ) == false )
             SW_LOG_WARNING_ID( "MonsterHunt.NoAlcohol", "[MonsterHunt] no alcohol in the bag - oil and potion stay empty" );
         SW_LOG_INFO_ID( "MonsterHunt.ContractTaken", "[MonsterHunt] contract taken for %#", _haggle.getFinalReward() );
@@ -242,6 +367,7 @@ namespace sw
         _monsterHP       = _monsterMaxHP;
         _monsterPosition = _spawnPosition;
         _monsterAttack.start( _monsterAttackSeconds );
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventMonster );
         (void)_bestiary.investigate( _monster.key() ); // 이미 아는 단계면 그대로다
         reportEvents();
         SW_LOG_INFO_ID( "MonsterHunt.HuntStarted", "[MonsterHunt] '%#' comes out of its lair", _monster.c_str() );
@@ -254,10 +380,14 @@ namespace sw
         if ( _combat.performAction( bStrong ? MonsterHuntAction::StrongAttack : MonsterHuntAction::FastAttack ) != MonsterHuntCombatResult::Ok )
             return false;
         _attackCooldown.start( _attackCooldownSeconds );
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventSwing );
         if ( computeMonsterDistance() > _attackReach )
             return true; // 빗나갔다 — 오일 횟수는 쓰지 않는다
-        const float32       baseDamage = ( bStrong ? _strongDamage : _fastDamage ) * _combat.computeDamageScale();
-        const hashed_string element    = _alchemy.consumeOilHit();
+        StatBlock stats;
+        computeStats( stats );
+        const float32       attackScale = 1.0f + stats.getValue( _attackStat ) / MonsterHuntGameModeComponentInternal::kPercent;
+        const float32       baseDamage  = ( bStrong ? _strongDamage : _fastDamage ) * attackScale * _combat.computeDamageScale();
+        const hashed_string element     = _alchemy.consumeOilHit();
         _combat.registerHitLanded();
         damageMonster( baseDamage, element );
         return true;
@@ -268,16 +398,20 @@ namespace sw
         if ( isStarted() == false || _phase != MonsterHuntPhase::Hunt || _combat.performAction( MonsterHuntAction::Dodge ) != MonsterHuntCombatResult::Ok )
             return false;
         _dodge.start( _dodgeSeconds );
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventDodge );
         return true;
     }
 
-    bool MonsterHuntGameModeComponent::submitSign()
+    bool MonsterHuntGameModeComponent::submitSign( bool bAlternate )
     {
         if ( isStarted() == false || _phase != MonsterHuntPhase::Hunt || computeMonsterDistance() > _signReach )
             return false;
-        const MonsterHuntSignCast cast = _combat.castSign( _sign.key(), false, nullptr, StatBlock{}, _pChart.get() );
+        StatBlock stats;
+        computeStats( stats );
+        const MonsterHuntSignCast cast = _combat.castSign( _sign.key(), bAlternate, &_skills, stats, _pChart.get() );
         if ( cast._result != MonsterHuntCombatResult::Ok )
             return false;
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventSign );
         damageMonster( cast._power, cast._element );
         return true;
     }
@@ -289,12 +423,16 @@ namespace sw
 
     bool MonsterHuntGameModeComponent::submitPotion()
     {
-        return isStarted() && isAlive() && _alchemy.drink( _potion.key(), _bag ) == MonsterHuntUseResult::Ok;
+        if ( isStarted() == false || isAlive() == false || _alchemy.drink( _potion.key(), _bag ) != MonsterHuntUseResult::Ok )
+            return false;
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventPotion );
+        return true;
     }
 
     void MonsterHuntGameModeComponent::damageMonster( float32 baseDamage, const hashed_string& element )
     {
         const int32 damage = static_cast<int32>( MathUtil::floor( baseDamage * _bestiary.computeMultiplier( _monster.key(), element ) ) );
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventHit );
         if ( DepletingValue::take( _monsterHP, damage )._bDepleted == SW_FALSE )
             return;
         (void)_bestiary.recordKill( _monster.key() ); // 지식이 오르지 않아도 처치다
@@ -308,8 +446,10 @@ namespace sw
         _investigation.pollEvents( _listInvestigationEvent );
         for ( const MonsterHuntInvestigationEvent& event : _listInvestigationEvent )
         {
-            if ( event._kind == MonsterHuntInvestigationEvent::Kind::ClueFound )
-                SW_LOG_INFO_ID( "MonsterHunt.ClueFound", "[MonsterHunt] clue '%#' of step '%#'", event._clueID.c_str(), event._stepID.c_str() );
+            if ( event._kind != MonsterHuntInvestigationEvent::Kind::ClueFound )
+                continue;
+            getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventClue );
+            SW_LOG_INFO_ID( "MonsterHunt.ClueFound", "[MonsterHunt] clue '%#' of step '%#'", event._clueID.c_str(), event._stepID.c_str() );
         }
         _listBestiaryEvent.clear();
         _bestiary.pollEvents( _listBestiaryEvent );
@@ -344,6 +484,7 @@ namespace sw
         if ( _monsterAttack.updateRepeat( deltaTime, _monsterAttackSeconds, bInReach ) == false || _dodge.isActive() )
             return;
         _combat.registerHitTaken();
+        getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventHurt );
         if ( DepletingValue::take( _playerHP, _monsterDamage )._bDepleted == SW_TRUE )
             finishGame( MonsterHuntPhase::Defeat );
     }
@@ -352,6 +493,7 @@ namespace sw
     {
         _phase = phase;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( phase == MonsterHuntPhase::Victory ? MonsterHuntGameModeComponentInternal::kEventWon : MonsterHuntGameModeComponentInternal::kEventLost );
         if ( phase == MonsterHuntPhase::Victory )
             SW_LOG_INFO_ID( "MonsterHunt.Victory", "[MonsterHunt] '%#' is slain - the reward is %#", _monster.c_str(), _haggle.getFinalReward() );
         else
@@ -402,6 +544,8 @@ namespace sw
         MonsterHuntCombat        restoredCombat;
         MonsterHuntAlchemy       restoredAlchemy;
         Inventory                restoredBag;
+        MonsterHuntMutagens      restoredMutagens;
+        SkillTreeState           restoredSkills;
         Countdown                attackCooldown = _attackCooldown;
         Countdown                dodge          = _dodge;
         Countdown                monsterAttack  = _monsterAttack;
@@ -419,6 +563,9 @@ namespace sw
             }
             restoredBestiary.initialize( _pCatalog.get(), _pChart.get() );
             restoredAlchemy.initialize( _pCatalog.get(), nullptr );
+            restoredMutagens.initialize( _pCatalog.get(), _hunterLevel );
+            restoredSkills.initialize( _skills.getTree() );
+            restoredSkills.addPoints( _skillPoints );
         }
         io.value( io.isWriting() ? _haggle : restoredHaggle );
         io.value( io.isWriting() ? _investigation : restoredInvestigation );
@@ -426,6 +573,7 @@ namespace sw
         io.value( io.isWriting() ? _combat : restoredCombat );
         io.value( io.isWriting() ? _alchemy : restoredAlchemy );
         io.value( io.isWriting() ? _bag : restoredBag );
+        io.value( io.isWriting() ? _mutagens : restoredMutagens );
         io.value( attackCooldown );
         io.value( dodge );
         io.value( monsterAttack );
@@ -437,6 +585,13 @@ namespace sw
         const bool bPhaseValid  = ( _phase == MonsterHuntPhase::Haggle ) != restoredHaggle.isClosed();
         if ( io.check( bHealthValid && bPhaseValid ) == false )
             return;
+        for ( const hashed_string& skillID : _listLearnedSkill )
+        {
+            if ( io.check( restoredSkills.rankUp( skillID, _hunterLevel ) == SkillResult::Ok ) == false ) // 트리가 바뀌어 배울 수 없는 저장은 거절한다
+                return;
+        }
+        _mutagens       = std::move( restoredMutagens );
+        _skills         = std::move( restoredSkills );
         _haggle         = restoredHaggle;
         _investigation  = std::move( restoredInvestigation );
         _bestiary       = std::move( restoredBestiary );

@@ -39,6 +39,10 @@ namespace sw
         /** @brief 고른 적의 이름(현지화 키)과 HP 입니다. */
         void setTarget( string_view name, int32 hp );
         void setGold( int32 gold );
+        /** @brief 누를 때까지의 비율과 지금 차례가 막기인지입니다. */
+        void setTiming( float32 ratio, bool bBlock );
+        /** @brief 맨 앞 멤버의 공격력입니다. */
+        void setLeaderAttack( int32 attack );
         /** @brief 쉼터 안내를 보이거나 숨깁니다. */
         void setRestShown( bool bShown );
 
@@ -66,6 +70,16 @@ namespace sw
         int32 _targetHP;
         PROPERTY( DisplayName = "Gold" )
         int32 _gold;
+        PROPERTY( DisplayName = "Leader Attack" )
+        int32 _leaderAttack;
+        PROPERTY( DisplayName = "Timing Ratio" )
+        float32 _timingRatio;
+        PROPERTY( DisplayName = "Timing Visibility" )
+        WidgetVisibility _timingVisibility;
+        PROPERTY( DisplayName = "Swing Visibility" )
+        WidgetVisibility _swingVisibility;
+        PROPERTY( DisplayName = "Block Visibility" )
+        WidgetVisibility _blockVisibility;
         PROPERTY( DisplayName = "Explore Visibility" )
         WidgetVisibility _exploreVisibility;
         PROPERTY( DisplayName = "Rest Visibility" )

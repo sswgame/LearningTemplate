@@ -28,4 +28,12 @@
 		<bind source="Key" code="E"/>
 		<bind source="Gamepad" code="A"/>
 	</action>
+	<action name="JRPG.Equip" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="Q"/>
+		<bind source="Gamepad" code="DPadUp"/>
+	</action>
+	<action name="JRPG.ClassChange" layer="JRPG" trigger="Pressed">
+		<bind source="Key" code="F"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
 </InputMap>

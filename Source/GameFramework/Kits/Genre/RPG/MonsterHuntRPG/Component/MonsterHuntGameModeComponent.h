@@ -4,6 +4,7 @@
  *        키트의 흥정(`MonsterHuntHaggle`) · 조사(`MonsterHuntInvestigation`) · 도감(`MonsterHuntBestiary`) · 전투 자원(`MonsterHuntCombat`) · 연금술(`MonsterHuntAlchemy`)을 씬 데이터로 열고 명령으로 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트, 엔진 시계 · 렌더를 모른다)을 들고 씬과 잇는다. 입력 · 모습 · HUD 는 클라이언트 모듈
  *          (`GF_Client_MonsterHuntRPG` 의 `MonsterHuntAvatarComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
+ *          의뢰를 받은 뒤 스킬(`submitLearnSkill`)을 배워 슬롯에 끼우고 변이원(`submitMutagen`)을 끼운다 — 색이 맞는 스킬마다 변이원이 세지고, 배운 스킬이 대체 표식을 연다.
  *          단서를 모두 찾으면 도감 지식이 오르고 소굴의 괴물이 나온다. 괴물의 체력 · 공격은 씬 데이터, 오일 · 표식의 배율은 상성표다.
  *          괴물을 쓰러뜨리면 승리, 플레이어가 쓰러지면 패배다. 판이 끝나면 `_resultHoldSeconds` 뒤 미니게임을 끝내고(디렉터 계약 ③) 흥정한 보상을 결과 값으로 낸다.
  *          장르 완결 루프 시나리오: `game/playground/automation/monsterhuntrpg_slice.scenario.xml`.
@@ -26,9 +27,11 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntCombat.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntContract.h"
+#include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Progression/SkillTree.h"
 
 namespace sw
 {
@@ -77,8 +80,12 @@ namespace sw
         [[nodiscard]] bool submitAttack( bool bStrong );
         /** @brief 회피합니다. `_dodgeSeconds` 동안 맞지 않습니다. 스태미나가 모자라면 false 입니다. */
         [[nodiscard]] bool submitDodge();
-        /** @brief 표식을 겁니다. 닿으면 위력(상성 반영)만큼 피해를 줍니다. 스태미나가 모자라거나 닿지 않으면 false 입니다. */
-        [[nodiscard]] bool submitSign();
+        /** @brief 표식을 겁니다(@p bAlternate 면 대체 시전). 닿으면 위력(변이원 · 스킬 능력치와 상성 반영)만큼 피해를 줍니다. 스태미나 · 스킬이 모자라거나 닿지 않으면 false 입니다. */
+        [[nodiscard]] bool submitSign( bool bAlternate );
+        /** @brief 스킬 트리에서 지금 배울 수 있는 첫 스킬을 배우고 첫 빈 슬롯에 끼웁니다. 배울 것이 없거나 의뢰 중이 아니면 false 입니다. */
+        [[nodiscard]] bool submitLearnSkill();
+        /** @brief 가진 변이원 하나를 변이원이 없는 첫 열린 슬롯 그룹에 끼웁니다. 남은 것이 없거나 열린 그룹이 없으면 false 입니다. */
+        [[nodiscard]] bool submitMutagen();
         /** @brief 칼에 오일을 바릅니다. 남은 사용 횟수가 없으면 false 입니다. */
         [[nodiscard]] bool submitOil();
         /** @brief 물약을 마십니다. 효과 동안 `_potionHealPerSecond` 로 회복합니다. 횟수가 없거나 독성이 넘치면 false 입니다. */
@@ -97,7 +104,13 @@ namespace sw
         /** @brief 사냥하는 괴물의 도감 지식 단계입니다. */
         int32 getKnowledge() const { return _bestiary.getKnowledge( _monster.key() ); }
         /** @brief 조사한 단서 수입니다. */
-        int32   getFoundClueCount() const { return _foundClueCount; }
+        int32                      getFoundClueCount() const { return _foundClueCount; }
+        const MonsterHuntMutagens& getMutagens() const { return _mutagens; }
+        const SkillTreeState&      getSkills() const { return _skills; }
+        /** @brief 배운 스킬 랭크 수입니다(감시 값). */
+        int32 getLearnedSkillCount() const { return static_cast<int32>( _listLearnedSkill.size() ); }
+        /** @brief 변이원과 스킬이 더한 표식 위력(%)입니다. */
+        int32   getSignIntensity() const;
         int32   getPlayerHP() const { return _playerHP; }
         int32   getPlayerMaxHP() const { return _playerMaxHP; }
         int32   getMonsterHP() const { return _monsterHP; }
@@ -134,8 +147,12 @@ namespace sw
         [[nodiscard]] bool validateSetup() const;
         /** @brief 사냥꾼의 짐(오일 · 물약 · 명상할 술)으로 가방을 엽니다. */
         [[nodiscard]] bool openBag();
-        bool               isAlive() const { return _phase == MonsterHuntPhase::Investigate || _phase == MonsterHuntPhase::Hunt; }
-        float32            computeMonsterDistance() const;
+        /** @brief 씬의 스킬 트리를 열고 점수를 줍니다. 트리를 적지 않은 판은 스킬이 없다. */
+        [[nodiscard]] bool openSkills();
+        /** @brief 배운 스킬과 열린 그룹의 변이원이 더한 능력치입니다. */
+        void    computeStats( StatBlock& outStats ) const;
+        bool    isAlive() const { return _phase == MonsterHuntPhase::Investigate || _phase == MonsterHuntPhase::Hunt; }
+        float32 computeMonsterDistance() const;
         /** @brief 흥정이 끝났으면 명상으로 횟수를 채우고 조사로 넘어갑니다. */
         void beginInvestigation();
         void beginHunt();
@@ -162,6 +179,18 @@ namespace sw
         CatalogKey<MonsterHuntAlchemyDef> _potion;
         PROPERTY( Category = "Gear", DisplayName = "Sign", Tooltip = "Sign id (catalog) the hunter casts" )
         CatalogKey<MonsterHuntSignDef> _sign;
+        PROPERTY( Category = "Skills", DisplayName = "Skill Trees", Tooltip = "Skill tree catalog; empty = a hunter without skills" )
+        AssetRef<SkillTreeCatalog> _skillTreeCatalog;
+        PROPERTY( Category = "Skills", DisplayName = "Skill Tree", Tooltip = "Tree id in the skill tree catalog" )
+        CatalogKey<SkillTreeDef> _skillTree;
+        PROPERTY( Category = "Skills", DisplayName = "Skill Points", Min = 0 )
+        int32 _skillPoints;
+        PROPERTY( Category = "Skills", DisplayName = "Hunter Level", Tooltip = "Level that opens skills and slot groups", Min = 1 )
+        int32 _hunterLevel;
+        PROPERTY( Category = "Skills", DisplayName = "Mutagens", Tooltip = "Mutagen ids (catalog) the hunter carries" )
+        vector<CatalogKey<MonsterHuntMutagenDef>> _listMutagen;
+        PROPERTY( Category = "Skills", DisplayName = "Attack Stat", Tooltip = "Stat (percent) from skills and mutagens that scales weapon damage" )
+        hashed_string _attackStat;
         PROPERTY( Category = "Gear", DisplayName = "Bag Slots", Min = 3 )
         int32 _bagSlotCount;
         PROPERTY( Category = "Field", DisplayName = "Start", Tooltip = "Absolute ground-plane position (X, Z) the hunter starts at" )
@@ -209,6 +238,9 @@ namespace sw
 
         SharedAssetRef<MonsterHuntCatalog>    _pCatalog;
         SharedAssetRef<ElementChart>          _pChart;
+        SharedAssetRef<SkillTreeCatalog>      _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
+        MonsterHuntMutagens                   _mutagens;
+        SkillTreeState                        _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다
         MonsterHuntHaggle                     _haggle;
         MonsterHuntInvestigation              _investigation;
         MonsterHuntBestiary                   _bestiary;
@@ -226,6 +258,8 @@ namespace sw
         PROPERTY( RuntimeState )
         float2 _monsterPosition;
         float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        PROPERTY( RuntimeState )
+        vector<hashed_string> _listLearnedSkill; ///< 랭크를 올린 스킬(차례대로)
         PROPERTY( RuntimeState, Min = 0 )
         float32 _healProgress; ///< 물약이 채운 1 HP 에 못 미친 몫
         PROPERTY( RuntimeState, Min = 0 )

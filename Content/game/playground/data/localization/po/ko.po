@@ -54,6 +54,12 @@ msgid "Attack (J)   Spell (K)   Defend (L)   Flee (R)"
 msgstr "공격 (J)   주문 (K)   방어 (L)   도망 (R)"
 
 #. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Attack power"
+msgid "Attack power"
+msgstr "공격력"
+
+#. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
 msgctxt "Balls"
 msgid "Balls"
@@ -124,6 +130,12 @@ msgstr "구운 생선"
 msgctxt "Choose who steps in (L)"
 msgid "Choose who steps in (L)"
 msgstr "나설 몬스터를 고르세요 (L)"
+
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Cinder Wave"
+msgid "Cinder Wave"
+msgstr "재의 물결"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -198,6 +210,18 @@ msgctxt "Dusk Moth"
 msgid "Dusk Moth"
 msgstr "땅거미 나방"
 
+#. Context: JRPG name
+#: game/playground/data/jrpg.xml
+msgctxt "Ember Sage"
+msgid "Ember Sage"
+msgstr "잉걸현자"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Ember Tome"
+msgid "Ember Tome"
+msgstr "잉걸의 책"
+
 #. Context: TextWidget._text
 #: game/playground/cardgame/ui/hud.ui.xml
 msgctxt "Enemy health"
@@ -230,9 +254,9 @@ msgstr "모든 방에 불을 켰습니다"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
-msgctxt "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)"
-msgid "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)"
-msgstr "빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   오일 (1)   물약 (2)"
+msgctxt "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)"
+msgid "Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)"
+msgstr "빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)"
 
 #. Context: Monster name
 #: game/playground/data/monstercollector.xml
@@ -388,6 +412,12 @@ msgctxt "Knight Sword (Merged)"
 msgid "Knight Sword (Merged)"
 msgstr "기사 검(병합)"
 
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Lantern Blade"
+msgid "Lantern Blade"
+msgstr "등불의 검"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Lantern Guard"
@@ -411,6 +441,12 @@ msgstr "모두 몇 바퀴"
 msgctxt "Leaf Slap"
 msgid "Leaf Slap"
 msgstr "잎 치기"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Learn (3)   Mutagen (4)"
+msgid "Learn (3)   Mutagen (4)"
+msgstr "배우기 (3)   변이원 (4)"
 
 #. Context: TextWidget._text
 #: game/playground/rhythm/ui/hud.ui.xml
@@ -521,6 +557,18 @@ msgid "Population cap"
 msgstr "인구 한도"
 
 #. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Press J as the bar fills to block"
+msgid "Press J as the bar fills to block"
+msgstr "막대가 찰 때 J 를 눌러 막으세요"
+
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Press J as the bar fills to strike twice"
+msgid "Press J as the bar fills to strike twice"
+msgstr "막대가 찰 때 J 를 눌러 두 번 치세요"
+
+#. Context: TextWidget._text
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Price"
 msgid "Price"
@@ -564,9 +612,9 @@ msgstr "야영지에서 쉬기 (E)"
 
 #. Context: TextWidget._text
 #: game/playground/classicjrpg/ui/hud.ui.xml
-msgctxt "Rest at the inn (E)"
-msgid "Rest at the inn (E)"
-msgstr "여관에서 쉬기 (E)"
+msgctxt "Rest at the inn (E)   Change class (F)"
+msgid "Rest at the inn (E)   Change class (F)"
+msgstr "여관에서 쉬기 (E)   전직 (F)"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -659,6 +707,12 @@ msgid "Served"
 msgstr "계산"
 
 #. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Sign power"
+msgid "Sign power"
+msgstr "표식 위력"
+
+#. Context: TextWidget._text
 #: game/playground/sidescrollconquest/ui/hud.ui.xml
 msgctxt "Sites held"
 msgid "Sites held"
@@ -669,6 +723,12 @@ msgstr "내 거점"
 msgctxt "Skill check - press Use"
 msgid "Skill check - press Use"
 msgstr "스킬 체크 - 쓰기를 누르세요"
+
+#. Context: TextWidget._text
+#: game/playground/monsterhuntrpg/ui/hud.ui.xml
+msgctxt "Skill points"
+msgid "Skill points"
+msgstr "스킬 점수"
 
 #. Context: TextWidget._text
 #: game/playground/survivalhorror/ui/hud.ui.xml
@@ -917,11 +977,23 @@ msgctxt "Walk the glade to meet wild monsters"
 msgid "Walk the glade to meet wild monsters"
 msgstr "풀밭을 걸어 야생 몬스터를 만나세요"
 
+#. Context: TextWidget._text
+#: game/playground/classicjrpg/ui/hud.ui.xml
+msgctxt "Wear gear (Q)"
+msgid "Wear gear (Q)"
+msgstr "장비 끼기 (Q)"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Wick Mage"
 msgid "Wick Mage"
 msgstr "심지술사"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Wick Robe"
+msgid "Wick Robe"
+msgstr "심지 옷"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml

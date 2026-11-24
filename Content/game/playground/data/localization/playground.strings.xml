@@ -49,6 +49,11 @@
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Attack power" source="Attack power" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Balls" source="Balls" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
@@ -107,6 +112,11 @@
 		<entry key="Choose who steps in (L)" source="Choose who steps in (L)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Cinder Wave" source="Cinder Wave" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
 			</origins>
 		</entry>
 		<entry key="Clues" source="Clues" context="TextWidget._text">
@@ -175,6 +185,16 @@
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
 			</origins>
 		</entry>
+		<entry key="Ember Sage" source="Ember Sage" context="JRPG name">
+			<origins>
+				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Ember Tome" source="Ember Tome" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Enemy health" source="Enemy health" context="TextWidget._text">
 			<origins>
 				<item>game/playground/cardgame/ui/hud.ui.xml</item>
@@ -200,7 +220,7 @@
 				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" context="TextWidget._text">
+		<entry key="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -334,6 +354,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Lantern Blade" source="Lantern Blade" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
 		<entry key="Lantern Guard" source="Lantern Guard" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
@@ -352,6 +377,11 @@
 		<entry key="Leaf Slap" source="Leaf Slap" context="Monster name">
 			<origins>
 				<item>game/playground/data/monstercollector.xml</item>
+			</origins>
+		</entry>
+		<entry key="Learn (3)   Mutagen (4)" source="Learn (3)   Mutagen (4)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Life" source="Life" context="TextWidget._text">
@@ -449,6 +479,16 @@
 				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Press J as the bar fills to block" source="Press J as the bar fills to block" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Press J as the bar fills to strike twice" source="Press J as the bar fills to strike twice" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Press [action=Farm.Use] to work the soil with your tool"
 		       source="Press [action=Farm.Use] to work the soil with your tool"
 		       context="TutorialHintTriggerComponent._text">
@@ -491,7 +531,7 @@
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Rest at the inn (E)" source="Rest at the inn (E)" context="TextWidget._text">
+		<entry key="Rest at the inn (E)   Change class (F)" source="Rest at the inn (E)   Change class (F)" context="TextWidget._text">
 			<origins>
 				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
 			</origins>
@@ -571,6 +611,11 @@
 				<item>game/playground/restaurantsim/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Sign power" source="Sign power" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Sites held" source="Sites held" context="TextWidget._text">
 			<origins>
 				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
@@ -579,6 +624,11 @@
 		<entry key="Skill check - press Use" source="Skill check - press Use" context="TextWidget._text">
 			<origins>
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Skill points" source="Skill points" context="TextWidget._text">
+			<origins>
+				<item>game/playground/monsterhuntrpg/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Something fights back" source="Something fights back" context="TextWidget._text">
@@ -789,6 +839,11 @@
 				<item>game/playground/monstercollector/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Wear gear (Q)" source="Wear gear (Q)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/classicjrpg/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/wildwest/data/arrival.seq.xml</item>
@@ -802,6 +857,11 @@
 		<entry key="Wick Mage" source="Wick Mage" context="JRPG name">
 			<origins>
 				<item>game/playground/data/jrpg.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wick Robe" source="Wick Robe" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Wild" source="Wild" context="TextWidget._text">

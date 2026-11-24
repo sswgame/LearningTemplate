@@ -8,6 +8,7 @@
 		<entry source="Another player wins" text="다른 사람이 우승했다" />
 		<entry source="Assault Rifle" text="돌격 소총" />
 		<entry source="Attack (J)   Spell (K)   Defend (L)   Flee (R)" text="공격 (J)   주문 (K)   방어 (L)   도망 (R)" />
+		<entry source="Attack power" text="공격력" />
 		<entry source="Balls" text="볼" />
 		<entry source="Balm" text="연고" />
 		<entry source="Bone Axe" text="뼈 도끼" />
@@ -20,6 +21,7 @@
 		<entry source="Caught" text="포획" />
 		<entry source="Charred Fish" text="구운 생선" />
 		<entry source="Choose who steps in (L)" text="나설 몬스터를 고르세요 (L)" />
+		<entry source="Cinder Wave" text="재의 물결" />
 		<entry source="Clues" text="단서" />
 		<entry source="Coins" text="동전" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
@@ -33,12 +35,15 @@
 		<entry source="Days left" text="남은 날" />
 		<entry source="Draw pile" text="뽑을 더미" />
 		<entry source="Dusk Moth" text="땅거미 나방" />
+		<entry source="Ember Sage" text="잉걸현자" />
+		<entry source="Ember Tome" text="잉걸의 책" />
 		<entry source="Enemy health" text="상대 체력" />
 		<entry source="Enemy intent" text="상대가 할 일" />
 		<entry source="Energy" text="에너지" />
 		<entry source="Escaped" text="탈출했습니다" />
 		<entry source="Every room is lit" text="모든 방에 불을 켰습니다" />
 		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   오일 (1)   물약 (2)" />
+		<entry source="Fast (J)   Strong (K)   Dodge (Shift)   Sign (Q)   Twin sign (R)   Oil (1)   Potion (2)" text="빠르게 (J)   강하게 (K)   회피 (Shift)   표식 (Q)   쌍표식 (R)   오일 (1)   물약 (2)" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Fernling" text="고사리돌이" />
 		<entry source="Fernwarden" text="고사리지기" />
@@ -67,10 +72,12 @@
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
 		<entry source="Knight Sword (Merged)" text="기사 검(병합)" />
+		<entry source="Lantern Blade" text="등불의 검" />
 		<entry source="Lantern Guard" text="등불지기" />
 		<entry source="Lap" text="바퀴" />
 		<entry source="Laps to race" text="모두 몇 바퀴" />
 		<entry source="Leaf Slap" text="잎 치기" />
+		<entry source="Learn (3)   Mutagen (4)" text="배우기 (3)   변이원 (4)" />
 		<entry source="Life" text="라이프" />
 		<entry source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" />
 		<entry source="Longbow" text="장궁" />
@@ -92,6 +99,8 @@
 		<entry source="Points to win" text="우승 점수" />
 		<entry source="Population" text="인구" />
 		<entry source="Population cap" text="인구 한도" />
+		<entry source="Press J as the bar fills to block" text="막대가 찰 때 J 를 눌러 막으세요" />
+		<entry source="Press J as the bar fills to strike twice" text="막대가 찰 때 J 를 눌러 두 번 치세요" />
 		<entry source="Price" text="가격" />
 		<entry source="Profit" text="이익" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
@@ -104,6 +113,7 @@
 		<entry source="Recon Vest" text="정찰 조끼" />
 		<entry source="Rest at the camp (E)" text="야영지에서 쉬기 (E)" />
 		<entry source="Rest at the inn (E)" text="여관에서 쉬기 (E)" />
+		<entry source="Rest at the inn (E)   Change class (F)" text="여관에서 쉬기 (E)   전직 (F)" />
 		<entry source="Reward" text="보상" />
 		<entry source="Ripplet" text="물결이" />
 		<entry source="Root Grip" text="뿌리 잡기" />
@@ -120,8 +130,10 @@
 		<entry source="Seated" text="착석" />
 		<entry source="Seconds to start" text="출발까지(초)" />
 		<entry source="Served" text="계산" />
+		<entry source="Sign power" text="표식 위력" />
 		<entry source="Sites held" text="내 거점" />
 		<entry source="Skill check - press Use" text="스킬 체크 - 쓰기를 누르세요" />
+		<entry source="Skill points" text="스킬 점수" />
 		<entry source="Something fights back" text="무언가가 맞서 싸웁니다" />
 		<entry source="Something is here (E)" text="무언가 있습니다 (E)" />
 		<entry source="Something is not real" text="무언가가 진짜가 아닙니다" />
@@ -160,7 +172,9 @@
 		<entry source="Use: repair, open, rescue, heal - hold to struggle" text="쓰기: 수리 · 문 열기 · 구출 · 치료 - 누르고 있으면 몸부림" />
 		<entry source="Use: take, read, unlock, fight - Light: flashlight - Heal: use or mix" text="쓰기: 줍기 · 읽기 · 풀기 · 싸우기 - 손전등 - 회복: 쓰거나 섞기" />
 		<entry source="Walk the glade to meet wild monsters" text="풀밭을 걸어 야생 몬스터를 만나세요" />
+		<entry source="Wear gear (Q)" text="장비 끼기 (Q)" />
 		<entry source="Wick Mage" text="심지술사" />
+		<entry source="Wick Robe" text="심지 옷" />
 		<entry source="Wild" text="야생" />
 		<entry source="Wrong way!" text="역주행!" />
 		<entry source="You died" text="죽었습니다" />

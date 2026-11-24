@@ -40,6 +40,8 @@ namespace sw
         void setMonster( int32 hp, bool bWeaknessKnown );
         /** @brief 바른 오일의 남은 적중 수와 독성(보이는 정수)입니다. */
         void setAlchemy( int32 oilHits, int32 toxicity );
+        /** @brief 남은 스킬 점수와 표식 위력(%)입니다. */
+        void setSkills( int32 skillPoints, int32 signIntensity );
         /** @brief 찾은 단서 수와 지금 감각 안의 단서가 있는지입니다. */
         void setClues( int32 foundCount, bool bNearby );
 
@@ -60,6 +62,10 @@ namespace sw
         int32 _oilHits;
         PROPERTY( DisplayName = "Toxicity" )
         int32 _toxicity;
+        PROPERTY( DisplayName = "Skill Points" )
+        int32 _skillPoints;
+        PROPERTY( DisplayName = "Sign Intensity" )
+        int32 _signIntensity;
         PROPERTY( DisplayName = "Found Clues" )
         int32 _foundClueCount;
         PROPERTY( DisplayName = "Haggle Visibility" )

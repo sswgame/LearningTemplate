@@ -3,7 +3,7 @@
 <!--
   등불 길 미니게임(classicjrpg/maps/trail)의 직업 · 주문 · 적 · 조우 지역. 물리 피해는 (공격 / 2 - 방어 / 4) × 0.875..1.125 다.
   수치가 시나리오(automation/classicjrpg_slice)의 바탕이다: 두 사람은 늘 먼저 움직이고(민첩) 풀숲의 적은 한 번에, 보스(HP 100)는 두 라운드째에 쓰러진다
-  (등불지기 35..45, 심지술사의 불씨 37..46, 심지술사의 공격 26..33). 조우는 세 걸음 쉬고 네 걸음째마다다(rate 1 · grace 3).
+  (등불의 검을 낀 등불지기 43..56 — 타이밍 공격이면 64..84, 심지술사의 불씨 37..46 · 공격 26..33, 쉼터에서 잉걸현자로 전직하면 능력치가 절반이다). 조우는 세 걸음 쉬고 네 걸음째마다다(rate 1 · grace 3).
 -->
 <JRPGCatalog>
 	<ExperienceCurve base="60" exponent="1.5" maxLevel="20"/>
@@ -12,7 +12,12 @@
 		<Learn level="1" spell="spark"/>
 		<Learn level="3" spell="balm"/>
 	</Class>
+	<!-- 쉼터가 가르치는 직업 — 잉걸의 책(common/data/items.xml)이 있어야 한다. 전직하면 능력치가 절반에서 다시 자란다. -->
+	<Class id="ember_sage" name="Ember Sage" hp="70" mp="30" str="30" agi="36" vit="10" intellect="50" luck="5" growHP="6" growMP="6" growStr="1" growAgi="2" growVit="2" growIntellect="7" growLuck="1" attackType="Blunt" requires="tome_ember">
+		<Learn level="1" spell="cinder_wave"/>
+	</Class>
 	<Spell id="spark" name="Spark" mp="4" power="30" type="Fire"/>
+	<Spell id="cinder_wave" name="Cinder Wave" mp="6" power="24" type="Fire" target="All"/>
 	<Spell id="balm" name="Balm" kind="Heal" mp="3" power="30"/>
 	<Spell id="gloom" name="Gloom" power="24" type="Dark" target="All"/>
 	<Enemy id="bramble_sprite" name="Bramble Sprite" hp="10" str="10" agi="4" vit="0" exp="10" gold="3"/>

@@ -72,7 +72,20 @@
 					                       _startGold="10"
 					                       _innPrice="4"
 					                       _revivePrice="10"
+					                       _timingTarget="0.4"
+					                       _timingDuration="0.7"
+					                       _bagSlotCount="8"
+					                       _restClass="ember_sage"
+					                       _classChangeLevel="1"
 					                       _resultHoldSeconds="3">
+						<_listTimingWindow>
+							<TimingWindow _grade="Hit" early="0.2" late="0.2" />
+						</_listTimingWindow>
+						<_listStartItem>
+							<item>blade_lantern</item>
+							<item>robe_wick</item>
+							<item>tome_ember</item>
+						</_listStartItem>
 						<_listHero>
 							<item>lantern_guard</item>
 							<item>wick_mage</item>
@@ -87,7 +100,12 @@
 					                     _spellAction="JRPG.Spell"
 					                     _defendAction="JRPG.Defend"
 					                     _fleeAction="JRPG.Flee"
-					                     _restAction="JRPG.Rest" />
+					                     _restAction="JRPG.Rest"
+					                     _equipAction="JRPG.Equip"
+					                     _classChangeAction="JRPG.ClassChange"
+					                     _classChangeMember="1"
+					                     _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
+					                     _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
 					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/classicjrpg/ui/hud.ui.xml" />
 				</_listComponent>
 			</GameObject>

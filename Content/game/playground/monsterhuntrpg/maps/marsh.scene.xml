@@ -58,6 +58,11 @@
 					                              _oil="howler_oil"
 					                              _potion="amber_tonic"
 					                              _sign="gust"
+					                              _skillTreeCatalog="game/playground/monsterhuntrpg/data/hunter.skilltrees.xml"
+					                              _skillTree="marsh_hunter"
+					                              _skillPoints="2"
+					                              _hunterLevel="1"
+					                              _attackStat="attackPower"
 					                              _bagSlotCount="8"
 					                              _startPosition="0,0"
 					                              _spawnPosition="16,0"
@@ -79,7 +84,11 @@
 					                              _monsterSpeed="3"
 					                              _monsterAttackSeconds="2"
 					                              _seed="7"
-					                              _resultHoldSeconds="3" />
+					                              _resultHoldSeconds="3">
+						<_listMutagen>
+							<item>gale_gland</item>
+						</_listMutagen>
+					</MonsterHuntGameModeComponent>
 					<MonsterHuntAvatarComponent _localID="12961992670128255580"
 					                            _moveAction="Move"
 					                            _fastAction="MonsterHunt.Fast"
@@ -88,7 +97,12 @@
 					                            _signAction="MonsterHunt.Sign"
 					                            _oilAction="MonsterHunt.Oil"
 					                            _potionAction="MonsterHunt.Potion"
-					                            _investigateAction="MonsterHunt.Investigate" />
+					                            _investigateAction="MonsterHunt.Investigate"
+					                            _alternateSignAction="MonsterHunt.AlternateSign"
+					                            _learnAction="MonsterHunt.Learn"
+					                            _mutagenAction="MonsterHunt.Mutagen"
+					                            _bodyPrefab="game/playground/prefabs/ruleviews/person.prefab.xml"
+					                            _markerPrefab="game/playground/prefabs/ruleviews/cube.prefab.xml" />
 					<HUDControllerComponent _localID="17122754535480611078" _documentPath="game/playground/monsterhuntrpg/ui/hud.ui.xml" />
 				</_listComponent>
 			</GameObject>

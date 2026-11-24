@@ -28,7 +28,11 @@ namespace
   <Monster id="howler" category="Beast" elements="Beast" maxKnowledge="3" readLevel="3" killsPerLevel="1" killCap="2" investigateLevel="1"><Weakness kind="Oil" id="beast_oil" knowledge="1"/></Monster>
   <Item id="beast_oil" kind="Oil" element="BeastOil" hits="6" charges="1"/>
   <Item id="tonic" kind="Potion" toxicity="20" duration="10" charges="1"/>
-  <Sign id="gust" element="Gust" cost="30" power="15"/>
+  <Sign id="gust" element="Gust" cost="30" power="15" altSkill="twin" altCost="40" altPowerScale="2"/>
+  <SlotGroup level="1" slots="1"/>
+  <SlotGroup level="5" slots="1"/>
+  <SkillColor skill="twin" color="Blue"/>
+  <Mutagen id="gland" color="Blue" stat="signIntensity" value="20" matchValue="10"/>
   <Contract id="ferry" reward="100" limit="1.5" angerMax="1" angerScale="1" angerPerRound="0.1">
     <Step id="tracks"><Clue id="net" position="1,0,0" radius="2" order="0"/></Step>
     <Step id="lair"><Clue id="bones" position="1,0,0" radius="2" order="0"/></Step>
@@ -37,6 +41,11 @@ namespace
 
     constexpr const utf8* kHuntChartXML =
         R"(<ElementChart><Element id="Beast"/><Element id="BeastOil"/><Element id="Gust"/><Rule attack="BeastOil" defend="Beast" multiplier="1.5"/></ElementChart>)";
+
+    constexpr const utf8* kHuntSkillTreeXML = R"(<SkillTreeCatalog><Tree id="hunter">
+  <Skill id="twin"/>
+  <Skill id="edge" requires="twin"><Stats attackPower="50"/></Skill>
+</Tree></SkillTreeCatalog>)";
 
     constexpr float32 kHuntFrame = 0.125f;
 
@@ -53,13 +62,16 @@ namespace
             (void)domain.makeDiskFolder( "marsh" ); // 폴더만 만든다
             if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/oils.elementchart.xml" ), kHuntChartXML ) == false )
                 return false;
+            if ( FileUtil::writeTextFile( domain.makeDiskPath( "marsh/hunter.skilltrees.xml" ), kHuntSkillTreeXML ) == false )
+                return false;
             if ( _catalog.loadFromXMLText( kHuntCatalogXML, "MonsterHuntGameModeTest" ) == false || _scope.bind<const MonsterHuntCatalog>( &_catalog ) == false )
                 return false;
-            StringBuilder<constant::buffer::kMax1024> sceneText;
+            StringBuilder<constant::buffer::kMax2048> sceneText;
             sceneText.appendFormat( "<MonsterHuntGameModeComponent _contract=\"ferry\" _monster=\"howler\" _askStep=\"30\" _elementChart=\"%#\" _oil=\"beast_oil\" _potion=\"tonic\" _sign=\"gust\" "
                                     "_startPosition=\"0,0\" _spawnPosition=\"1,0\" _playerMaxHP=\"40\" _fastDamage=\"20\" _attackReach=\"2\" _signReach=\"5\" _attackCooldownSeconds=\"0.25\" "
-                                    "_dodgeSeconds=\"0.5\" _monsterMaxHP=\"90\" _monsterDamage=\"15\" _monsterReach=\"1.5\" _monsterSpeed=\"0\" _monsterAttackSeconds=\"2\"/>",
-                                    test::ScopedScratchDomain::makeID( "marsh/oils.elementchart.xml" ).str() );
+                                    "_dodgeSeconds=\"0.5\" _monsterMaxHP=\"90\" _monsterDamage=\"15\" _monsterReach=\"1.5\" _monsterSpeed=\"0\" _monsterAttackSeconds=\"2\" "
+                                    "_skillTreeCatalog=\"%#\" _skillTree=\"hunter\" _skillPoints=\"2\" _attackStat=\"attackPower\"><_listMutagen><item>gland</item></_listMutagen></MonsterHuntGameModeComponent>",
+                                    test::ScopedScratchDomain::makeID( "marsh/oils.elementchart.xml" ).str(), test::ScopedScratchDomain::makeID( "marsh/hunter.skilltrees.xml" ).str() );
             _pGameMode = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<MonsterHuntGameModeComponent>();
             return _pGameMode != nullptr && XMLSerializer::deserialize( _pGameMode, *MonsterHuntGameModeComponent::StaticType(), sceneText.view() );
         }
@@ -96,9 +108,11 @@ SW_TEST_CASE( MonsterHuntGameModeTest, CommandsBeforeTheContractOpensAreRefused 
     SW_EXPECT_FALSE( pGameMode->submitInvestigate() );
     SW_EXPECT_FALSE( pGameMode->submitAttack( false ) );
     SW_EXPECT_FALSE( pGameMode->submitDodge() );
-    SW_EXPECT_FALSE( pGameMode->submitSign() );
+    SW_EXPECT_FALSE( pGameMode->submitSign( false ) );
     SW_EXPECT_FALSE( pGameMode->submitOil() );
     SW_EXPECT_FALSE( pGameMode->submitPotion() );
+    SW_EXPECT_FALSE( pGameMode->submitLearnSkill() );
+    SW_EXPECT_FALSE( pGameMode->submitMutagen() );
 }
 
 /** @brief [MonsterHuntGameModeTest] 씬이 상성표를 적지 않았으면 오류를 남기고 판을 열지 않는다 — C++ 기본값으로 열지 않는다 */
@@ -140,7 +154,7 @@ SW_TEST_CASE( MonsterHuntGameModeTest, HaggleInvestigateAndHuntToVictory )
     SW_EXPECT_EQUAL( 1, fixture._pGameMode->getKnowledge() );
     SW_EXPECT_TRUE( fixture._pGameMode->isWeaknessKnown() );
 
-    SW_REQUIRE_TRUE( fixture._pGameMode->submitSign() );
+    SW_REQUIRE_TRUE( fixture._pGameMode->submitSign( false ) );
     SW_EXPECT_EQUAL( 75, fixture._pGameMode->getMonsterHP() );
     SW_REQUIRE_TRUE( fixture._pGameMode->submitOil() );
     SW_EXPECT_FALSE( fixture._pGameMode->submitOil() ); // 한 번뿐이다
@@ -211,6 +225,43 @@ SW_TEST_CASE( MonsterHuntGameModeTest, HuntStateSurvivesARoundTrip )
     SW_EXPECT_EQUAL( 20.0f, restored._pGameMode->getToxicity() );
     SW_EXPECT_FALSE( restored._pGameMode->submitPotion() );        // 쓴 횟수가 이어진다
     SW_EXPECT_FALSE( restored._pGameMode->submitAttack( false ) ); // 쿨다운이 이어진다
+    restored._manager.endPlay();
+    source._manager.endPlay();
+}
+
+/** @brief [MonsterHuntGameModeTest] 배운 스킬이 대체 표식을 열고 무기 피해를 올리며, 색이 맞는 변이원이 표식을 세게 한다 — 배운 것은 저장을 거쳐 이어진다 */
+SW_TEST_CASE( MonsterHuntGameModeTest, SkillsAndMutagensStrengthenTheHunterAndSurviveARoundTrip )
+{
+    const test::ScopedScratchDomain domain;
+    MonsterHuntGameModeFixture      source;
+    SW_REQUIRE_TRUE( source.initialize( domain ) );
+    game::ScopedGameScope scopedScope( source._scope );
+    source.beginPlay();
+    SW_EXPECT_FALSE( source._pGameMode->submitLearnSkill() ); // 의뢰를 받은 뒤다
+    SW_REQUIRE_TRUE( source.beginHunt() );
+    SW_EXPECT_FALSE( source._pGameMode->submitSign( true ) ); // 아직 배우지 않았다
+    SW_REQUIRE_TRUE( source._pGameMode->submitMutagen() );
+    SW_EXPECT_EQUAL( 20, source._pGameMode->getSignIntensity() ); // 색이 맞는 스킬이 없다
+    SW_EXPECT_FALSE( source._pGameMode->submitMutagen() );        // 하나뿐이고 둘째 그룹은 레벨 5 다
+    SW_REQUIRE_TRUE( source._pGameMode->submitLearnSkill() );
+    SW_EXPECT_EQUAL( 30, source._pGameMode->getSignIntensity() );
+    SW_REQUIRE_TRUE( source._pGameMode->submitSign( true ) ); // 15 × 1.3 × 2
+    SW_EXPECT_EQUAL( 51, source._pGameMode->getMonsterHP() );
+    SW_REQUIRE_TRUE( source._pGameMode->submitLearnSkill() );
+    SW_EXPECT_FALSE( source._pGameMode->submitLearnSkill() );    // 점수가 다했다
+    SW_REQUIRE_TRUE( source._pGameMode->submitAttack( false ) ); // 20 × 1.5
+    SW_EXPECT_EQUAL( 21, source._pGameMode->getMonsterHP() );
+    Archive state;
+    source._pGameMode->writeState( state );
+
+    MonsterHuntGameModeFixture restored;
+    SW_REQUIRE_TRUE( restored.initialize( domain ) );
+    restored.beginPlay();
+    restored._pGameMode->restoreState( vector<uint8>( state.getData(), state.getData() + state.getSize() ) );
+    SW_REQUIRE_EQUAL( 2, restored._pGameMode->getPhase() );
+    SW_EXPECT_EQUAL( 2, restored._pGameMode->getLearnedSkillCount() );
+    SW_EXPECT_EQUAL( 30, restored._pGameMode->getSignIntensity() );
+    SW_EXPECT_FALSE( restored._pGameMode->submitLearnSkill() );
     restored._manager.endPlay();
     source._manager.endPlay();
 }

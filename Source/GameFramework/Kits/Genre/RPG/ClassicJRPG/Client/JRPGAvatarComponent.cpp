@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Client/JRPGAvatarComponent.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -11,7 +10,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Client/JRPGBattleHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/Component/JRPGGameModeComponent.h"
@@ -22,7 +20,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 디버그 그리기의 색 · 크기(m)와 입력 문턱입니다. */
+        /** @brief 모습의 색 · 크기(m)와 입력 문턱입니다. */
         struct JRPGAvatarComponentInternal
         {
             static constexpr float4  kPartyColor      = float4( 0.2f, 0.6f, 1.0f, 1.0f );
@@ -31,10 +29,9 @@ namespace sw
             static constexpr float4  kTargetColor     = float4( 1.0f, 0.85f, 0.2f, 1.0f );
             static constexpr float4  kGoalColor       = float4( 0.75f, 0.2f, 0.75f, 1.0f );
             static constexpr float4  kRestColor       = float4( 0.95f, 0.6f, 0.15f, 1.0f );
-            static constexpr float3  kGoalHalfExtent  = float3( 0.5f, 0.8f, 0.5f );
-            static constexpr float3  kRestHalfExtent  = float3( 0.6f, 0.15f, 0.6f );
-            static constexpr float32 kBodyRadius      = 0.35f;
-            static constexpr float32 kBodyHeight      = 0.4f; ///< 몸을 땅에서 띄우는 높이
+            static constexpr float3  kGoalSize        = float3( 1.0f, 1.6f, 1.0f );
+            static constexpr float3  kRestSize        = float3( 1.2f, 0.3f, 1.2f );
+            static constexpr float3  kBodyScale       = float3( 1.2f, 1.2f, 1.2f );
             static constexpr float32 kRowSpacing      = 1.0f; ///< 한 줄에 선 몸 사이
             static constexpr float32 kBattleDistance  = 3.0f; ///< 전투 중 파티와 적 줄 사이
             static constexpr float32 kTargetThreshold = 0.5f; ///< 축이 이보다 기울어야 고른 적을 옮긴다(스틱 떨림을 고르기로 읽지 않게)
@@ -87,7 +84,14 @@ namespace sw
         , _defendAction{}
         , _fleeAction{}
         , _restAction{}
+        , _equipAction{}
+        , _classChangeAction{}
+        , _classChangeMember{ 0 }
+        , _bodyPrefab{}
+        , _markerPrefab{}
         , _director{}
+        , _bodies{}
+        , _markers{}
         , _hudViewModel{}
         , _target{ 0 }
         , _lastStep{ 0 }
@@ -118,14 +122,26 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
-        const bool bMoveNamed   = _moveAction.empty() == false && _restAction.empty() == false;
+        const bool bMoveNamed   = _moveAction.empty() == false && _restAction.empty() == false && _equipAction.empty() == false && _classChangeAction.empty() == false;
         const bool bBattleNamed = _attackAction.empty() == false && _spellAction.empty() == false && _defendAction.empty() == false && _fleeAction.empty() == false;
         _bActionsValid          = bMoveNamed && bBattleNamed ? SW_TRUE : SW_FALSE;
         if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "JRPG.AvatarActionMissing", "JRPG avatar: move '%#', rest '%#', attack '%#', spell '%#', defend '%#' and flee '%#' actions must all be named - the avatar reads no input",
-                             _moveAction.c_str(), _restAction.c_str(), _attackAction.c_str(), _spellAction.c_str(), _defendAction.c_str(), _fleeAction.c_str() );
+            SW_LOG_ERROR_ID( "JRPG.AvatarActionMissing", "JRPG avatar: move '%#', rest '%#', equip '%#', class change '%#', attack '%#', spell '%#', defend '%#' and flee '%#' actions must all be named - the avatar reads no input",
+                             _moveAction.c_str(), _restAction.c_str(), _equipAction.c_str(), _classChangeAction.c_str(), _attackAction.c_str(), _spellAction.c_str(), _defendAction.c_str(), _fleeAction.c_str() );
         _target   = 0;
         _lastStep = 0;
+    }
+
+    void JRPGAvatarComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _bodies.destroyAll( *pManager );
+            _markers.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
     }
 
     void JRPGAvatarComponent::onTick( TickContext& context )
@@ -141,7 +157,7 @@ namespace sw
         JRPGGameModeComponent* const pDirector = manager.resolveComponent( _director );
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
+        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput();
         const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
         if ( pInput != nullptr )
         {
@@ -150,19 +166,29 @@ namespace sw
                 submitExploreInput( *pDirector, input );
             else if ( pDirector->getGamePhase() == JRPGGamePhase::Battle )
                 submitBattleInput( *pDirector, input );
+            else if ( pDirector->getGamePhase() == JRPGGamePhase::Timing && input.wasActionTriggered( _attackAction ) )
+                (void)pDirector->submitTiming(); // 타이밍 단계인 것은 위에서 보았다
         }
         updateHUD( *pDirector );
+        _bodies.begin();
+        _markers.begin();
         draw( *pDirector, manager );
+        _bodies.end( manager );
+        _markers.end( manager );
     }
 
     void JRPGAvatarComponent::submitExploreInput( JRPGGameModeComponent& director, const GameInputView& input )
     {
-        // 쉼터 밖 · 모자란 돈은 디렉터가 거절한다 — 거절은 할 일이 없다는 뜻이라 버린다.
+        // 쉼터 밖 · 모자란 돈 · 낄 것 없음 · 전직 조건은 디렉터가 거절한다 — 거절은 할 일이 없다는 뜻이라 버린다.
         const float2 move = input.getVector2D( _moveAction );
         _lastStep         = JRPGAvatarComponentInternal::computeStep( move._x ); // 걷던 축을 누른 채 전투가 열려도 적을 고른 것으로 읽지 않는다
         (void)director.submitMove( move );
         if ( input.wasActionTriggered( _restAction ) )
             (void)director.submitRest();
+        if ( input.wasActionTriggered( _equipAction ) )
+            (void)director.submitEquip();
+        if ( input.wasActionTriggered( _classChangeAction ) )
+            (void)director.submitClassChange( _classChangeMember );
     }
 
     void JRPGAvatarComponent::updateTarget( const JRPGGameModeComponent& director, float32 axis )
@@ -235,6 +261,8 @@ namespace sw
         const JRPGParty& party = director.getParty();
         _hudViewModel->setPhase( director.getGamePhase() );
         _hudViewModel->setGold( director.getGold() );
+        _hudViewModel->setTiming( director.computeTimingRatio(), director.getTimingStep() == party.getMemberCount() );
+        _hudViewModel->setLeaderAttack( director.getLeaderAttack() );
         _hudViewModel->setRestShown( director.getGamePhase() == JRPGGamePhase::Explore && director.isNearRest() );
         const JRPGMember&   member = party.getMember( director.findCommandMember().value_or( 0 ) ); // 열린 판의 파티는 비지 않는다 — 걷는 동안은 맨 앞 멤버를 보인다
         const JRPGClassDef* pClass = pCatalog->findClass( member._classID );
@@ -248,25 +276,21 @@ namespace sw
         }
     }
 
-    void JRPGAvatarComponent::draw( const JRPGGameModeComponent& director, const GameObjectManager& manager ) const
+    void JRPGAvatarComponent::draw( const JRPGGameModeComponent& director, GameObjectManager& manager )
     {
-        using Internal              = JRPGAvatarComponentInternal;
-        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        const WorldOrigin& origin = manager.getWorldOrigin();
-        pDraw->drawBox( origin.toLocal( director.getGoalPosition() + float3( 0.0f, Internal::kGoalHalfExtent._y, 0.0f ) ), Internal::kGoalHalfExtent, Internal::kGoalColor );
-        pDraw->drawBox( origin.toLocal( director.getRestPosition() + float3( 0.0f, Internal::kRestHalfExtent._y, 0.0f ) ), Internal::kRestHalfExtent, Internal::kRestColor );
-        const AbsolutePosition player      = director.getPlayerPosition() + float3( 0.0f, Internal::kBodyHeight, 0.0f );
+        using Internal = JRPGAvatarComponentInternal;
+        _markers.showStanding( manager, _markerPrefab, director.getGoalPosition(), Internal::kGoalSize, Internal::kGoalColor );
+        _markers.showStanding( manager, _markerPrefab, director.getRestPosition(), Internal::kRestSize, Internal::kRestColor );
+        const AbsolutePosition player      = director.getPlayerPosition();
         const JRPGParty&       party       = director.getParty();
         const size_t           memberCount = static_cast<size_t>( party.getMemberCount() );
         for ( size_t memberIndex = 0; memberIndex < memberCount; ++memberIndex )
         {
             const bool   bAlive = party.getMember( static_cast<int32>( memberIndex ) ).isAlive();
             const float3 offset( 0.0f, 0.0f, Internal::computeRowOffset( memberIndex, memberCount ) );
-            pDraw->drawSphere( origin.toLocal( player + offset ), Internal::kBodyRadius, bAlive ? Internal::kPartyColor : Internal::kFallenColor );
+            (void)_bodies.show( manager, _bodyPrefab, player + offset, Internal::kBodyScale, 0.0f, bAlive ? Internal::kPartyColor : Internal::kFallenColor ); // 실패는 배치가 한 번 알린다
         }
-        if ( director.getGamePhase() != JRPGGamePhase::Battle )
+        if ( director.isInBattle() == false )
             return;
         const vector<JRPGEnemyState>& listEnemy = director.getBattle().getEnemies();
         for ( size_t enemyIndex = 0; enemyIndex < listEnemy.size(); ++enemyIndex )
@@ -274,7 +298,7 @@ namespace sw
             if ( listEnemy[enemyIndex].isAlive() == false )
                 continue;
             const float3 offset( Internal::kBattleDistance, 0.0f, Internal::computeRowOffset( enemyIndex, listEnemy.size() ) );
-            pDraw->drawSphere( origin.toLocal( player + offset ), Internal::kBodyRadius, static_cast<int32>( enemyIndex ) == _target ? Internal::kTargetColor : Internal::kEnemyColor );
+            (void)_bodies.show( manager, _bodyPrefab, player + offset, Internal::kBodyScale, 0.0f, static_cast<int32>( enemyIndex ) == _target ? Internal::kTargetColor : Internal::kEnemyColor );
         }
     }
 } // namespace sw

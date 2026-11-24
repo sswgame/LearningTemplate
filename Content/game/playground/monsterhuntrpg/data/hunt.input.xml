@@ -36,4 +36,16 @@
 		<bind source="Key" code="E"/>
 		<bind source="Gamepad" code="A"/>
 	</action>
+	<action name="MonsterHunt.AlternateSign" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="R"/>
+		<bind source="Gamepad" code="DPadRight"/>
+	</action>
+	<action name="MonsterHunt.Learn" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="Digit3"/>
+		<bind source="Gamepad" code="DPadLeft"/>
+	</action>
+	<action name="MonsterHunt.Mutagen" layer="MonsterHunt" trigger="Pressed">
+		<bind source="Key" code="Digit4"/>
+		<bind source="Gamepad" code="DPadDown"/>
+	</action>
 </InputMap>

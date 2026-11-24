@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -13,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Client/RestaurantHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Component/RestaurantGameModeComponent.h"
@@ -24,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 디버그 그리기의 색 · 크기(m)와 입력 문턱입니다. */
+        /** @brief 모습의 색 · 크기(m)와 입력 문턱입니다. */
         struct RestaurantCounterComponentInternal
         {
             static constexpr float4  kSeatColor      = float4( 0.5f, 0.35f, 0.2f, 1.0f );
@@ -32,10 +30,10 @@ namespace sw
             static constexpr float4  kEatingColor    = float4( 0.35f, 0.85f, 0.4f, 1.0f );
             static constexpr float4  kQueueColor     = float4( 0.6f, 0.6f, 0.65f, 1.0f );
             static constexpr float4  kOrderColor     = float4( 0.9f, 0.4f, 0.2f, 1.0f );
-            static constexpr float3  kSeatHalfExtent = float3( 0.35f, 0.2f, 0.35f );
-            static constexpr float32 kBodyRadius     = 0.3f;
-            static constexpr float32 kBodyHeight     = 0.8f;
-            static constexpr float32 kOrderRadius    = 0.2f;
+            static constexpr float3  kSeatSize       = float3( 0.7f, 0.4f, 0.7f );
+            static constexpr float3  kBodyScale      = float3( 1.0f, 1.0f, 1.0f );
+            static constexpr float3  kOrderSize      = float3( 0.3f, 1.1f, 0.3f ); ///< 주방 선반 위로 솟는 높이
+            static constexpr float3  kReadySize      = float3( 0.6f, 1.3f, 0.6f );
             static constexpr float32 kRowOffset      = 2.0f; ///< 줄(문 앞) · 주방을 자리 줄에서 띄우는 거리
             static constexpr float32 kRowThreshold   = 0.5f; ///< 축이 이보다 기울어야 고른 줄을 옮긴다(스틱 떨림을 고르기로 읽지 않게)
             static constexpr float32 kMinutesPerHour = 60.0f;
@@ -59,7 +57,11 @@ namespace sw
         , _openAction{}
         , _seatOrigin{ 0.0f, 0.0f }
         , _seatSpacing{ 1.5f }
+        , _bodyPrefab{}
+        , _markerPrefab{}
         , _director{}
+        , _bodies{}
+        , _markers{}
         , _hudViewModel{}
         , _row{ 0 }
         , _lastStep{ 0 }
@@ -100,6 +102,18 @@ namespace sw
         _lastStep = 0;
     }
 
+    void RestaurantCounterComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _bodies.destroyAll( *pManager );
+            _markers.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
+    }
+
     void RestaurantCounterComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -118,7 +132,11 @@ namespace sw
         if ( pInput != nullptr )
             submitInput( *pDirector, GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ) );
         updateHUD( *pDirector );
+        _bodies.begin();
+        _markers.begin();
         draw( *pDirector, manager );
+        _bodies.end( manager );
+        _markers.end( manager );
     }
 
     void RestaurantCounterComponent::submitInput( RestaurantGameModeComponent& director, const GameInputView& input )
@@ -163,40 +181,35 @@ namespace sw
         _hudViewModel->setSelection( bDishRow ? string_view{ listDish[row]._name } : string_view{}, bDishRow ? static_cast<int32>( simulation.getMenuPrice( listDish[row]._id ) ) : 0, ingredientCount );
     }
 
-    void RestaurantCounterComponent::draw( const RestaurantGameModeComponent& director, const GameObjectManager& manager ) const
+    void RestaurantCounterComponent::draw( const RestaurantGameModeComponent& director, GameObjectManager& manager )
     {
-        using Internal              = RestaurantCounterComponentInternal;
-        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        const WorldOrigin&     origin = manager.getWorldOrigin();
+        using Internal = RestaurantCounterComponentInternal;
         const AbsolutePosition first{
             float3{ _seatOrigin._x, 0.0f, _seatOrigin._y }
         };
         for ( int32 seat = 0; seat < director.getSettings()._seatCount; ++seat )
         {
-            const float3 offset( static_cast<float32>( seat ) * _seatSpacing, Internal::kSeatHalfExtent._y, 0.0f );
-            pDraw->drawBox( origin.toLocal( first + offset ), Internal::kSeatHalfExtent, Internal::kSeatColor );
+            _markers.showStanding( manager, _markerPrefab, first + float3( static_cast<float32>( seat ) * _seatSpacing, 0.0f, 0.0f ), Internal::kSeatSize, Internal::kSeatColor );
         }
         float32 queueX = 0.0f;
         for ( const RestaurantCustomer& customer : director.getSimulation().getCustomers() )
         {
             if ( customer._seat >= 0 )
             {
-                const float3 offset( static_cast<float32>( customer._seat ) * _seatSpacing, Internal::kBodyHeight, 0.0f );
-                pDraw->drawSphere( origin.toLocal( first + offset ), Internal::kBodyRadius, customer._state == CustomerState::Eating ? Internal::kEatingColor : Internal::kWaitingColor );
+                const float3 offset( static_cast<float32>( customer._seat ) * _seatSpacing, Internal::kSeatSize._y, 0.0f ); // 의자에 앉는다
+                (void)_bodies.show( manager, _bodyPrefab, first + offset, Internal::kBodyScale, 0.0f, customer._state == CustomerState::Eating ? Internal::kEatingColor : Internal::kWaitingColor );
             }
             else if ( customer._state == CustomerState::Queued )
             {
-                pDraw->drawSphere( origin.toLocal( first + float3( queueX, Internal::kBodyHeight, -Internal::kRowOffset ) ), Internal::kBodyRadius, Internal::kQueueColor );
+                (void)_bodies.show( manager, _bodyPrefab, first + float3( queueX, 0.0f, -Internal::kRowOffset ), Internal::kBodyScale, 0.0f, Internal::kQueueColor ); // 실패는 배치가 한 번 알린다
                 queueX += _seatSpacing;
             }
         }
         float32 orderX = 0.0f;
         for ( const KitchenOrder& order : director.getSimulation().getOrders() )
         {
-            const float32 radius = order._bReady == SW_TRUE ? Internal::kBodyRadius : Internal::kOrderRadius; // 다 된 요리는 크게
-            pDraw->drawSphere( origin.toLocal( first + float3( orderX, Internal::kBodyHeight, Internal::kRowOffset ) ), radius, Internal::kOrderColor );
+            const float3 size = order._bReady == SW_TRUE ? Internal::kReadySize : Internal::kOrderSize; // 다 된 요리는 크게
+            _markers.showStanding( manager, _markerPrefab, first + float3( orderX, 0.0f, Internal::kRowOffset ), size, Internal::kOrderColor );
             orderX += _seatSpacing;
         }
     }

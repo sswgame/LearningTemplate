@@ -262,10 +262,12 @@ namespace sw
 
         JRPGBattleResult              getResult() const { return _result; }
         const vector<JRPGEnemyState>& getEnemies() const { return _listEnemy; }
-        int32                         getComboPoints() const { return _comboPoints; }
-        int32                         getRound() const { return _round; }
-        int64                         getRewardExp() const { return _rewardExp; }
-        int64                         getRewardGold() const { return _rewardGold; }
+        /** @brief 멤버 인덱스마다의 이번 라운드 명령입니다. */
+        const vector<JRPGCommand>& getCommands() const { return _listCommand; }
+        int32                      getComboPoints() const { return _comboPoints; }
+        int32                      getRound() const { return _round; }
+        int64                      getRewardExp() const { return _rewardExp; }
+        int64                      getRewardGold() const { return _rewardGold; }
 
     private:
         void pushEvent( JRPGBattleEvent::Kind kind, bool bEnemyActor, optional<int32> actor, optional<int32> target, int32 value = 0, const hashed_string& id = hashed_string{} );

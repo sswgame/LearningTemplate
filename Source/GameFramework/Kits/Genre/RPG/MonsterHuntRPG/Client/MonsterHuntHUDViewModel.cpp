@@ -12,6 +12,8 @@ namespace sw
         , _monsterHP{ 0 }
         , _oilHits{ 0 }
         , _toxicity{ 0 }
+        , _skillPoints{ 0 }
+        , _signIntensity{ 0 }
         , _foundClueCount{ 0 }
         , _haggleVisibility{ WidgetVisibility::Collapsed }
         , _investigateVisibility{ WidgetVisibility::Collapsed }
@@ -65,6 +67,12 @@ namespace sw
     {
         (void)setField( _oilHits, oilHits, "_oilHits" );
         (void)setField( _toxicity, toxicity, "_toxicity" );
+    }
+
+    void MonsterHuntHUDViewModel::setSkills( int32 skillPoints, int32 signIntensity )
+    {
+        (void)setField( _skillPoints, skillPoints, "_skillPoints" );
+        (void)setField( _signIntensity, signIntensity, "_signIntensity" );
     }
 
     void MonsterHuntHUDViewModel::setClues( int32 foundCount, bool bNearby )

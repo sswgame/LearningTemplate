@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -13,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Client/MonsterHuntHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Component/MonsterHuntGameModeComponent.h"
@@ -24,15 +22,15 @@ namespace sw
 {
     namespace
     {
-        /** @brief 디버그 그리기의 색 · 크기(m)입니다. */
+        /** @brief 모습의 색 · 크기(m)입니다. */
         struct MonsterHuntAvatarComponentInternal
         {
-            static constexpr float4  kHunterColor   = float4( 0.2f, 0.6f, 1.0f, 1.0f );
-            static constexpr float4  kMonsterColor  = float4( 0.85f, 0.15f, 0.2f, 1.0f );
-            static constexpr float4  kClueColor     = float4( 1.0f, 0.85f, 0.2f, 1.0f );
-            static constexpr float32 kHunterRadius  = 0.3f;
-            static constexpr float32 kMonsterRadius = 0.7f;
-            static constexpr float32 kClueRadius    = 0.2f;
+            static constexpr float4 kHunterColor  = float4( 0.2f, 0.6f, 1.0f, 1.0f );
+            static constexpr float4 kMonsterColor = float4( 0.85f, 0.15f, 0.2f, 1.0f );
+            static constexpr float4 kClueColor    = float4( 1.0f, 0.85f, 0.2f, 1.0f );
+            static constexpr float3 kHunterScale  = float3( 1.2f, 1.2f, 1.2f );
+            static constexpr float3 kMonsterScale = float3( 2.4f, 2.0f, 2.4f );
+            static constexpr float3 kClueSize     = float3( 0.4f, 0.3f, 0.4f );
 
             /** @brief 보이는 정수(소수는 올림)입니다. */
             static int32 toShown( float32 value ) { return static_cast<int32>( MathUtil::ceil( value ) ); }
@@ -48,7 +46,14 @@ namespace sw
         , _oilAction{}
         , _potionAction{}
         , _investigateAction{}
+        , _alternateSignAction{}
+        , _learnAction{}
+        , _mutagenAction{}
+        , _bodyPrefab{}
+        , _markerPrefab{}
         , _director{}
+        , _bodies{}
+        , _markers{}
         , _hudViewModel{}
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
@@ -78,15 +83,28 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
         _bActionsValid = SW_TRUE;
-        for ( const hashed_string* pAction : { &_moveAction, &_fastAction, &_strongAction, &_dodgeAction, &_signAction, &_oilAction, &_potionAction, &_investigateAction } )
+        for ( const hashed_string* pAction : { &_moveAction, &_fastAction, &_strongAction, &_dodgeAction, &_signAction, &_oilAction, &_potionAction, &_investigateAction, &_alternateSignAction, &_learnAction, &_mutagenAction } )
         {
             if ( pAction->empty() )
                 _bActionsValid = SW_FALSE;
         }
         if ( _bActionsValid == SW_FALSE )
             SW_LOG_ERROR_ID( "MonsterHunt.AvatarActionMissing",
-                             "Monster hunt avatar: move '%#', fast '%#', strong '%#', dodge '%#', sign '%#', oil '%#', potion '%#' and investigate '%#' actions must all be named - the avatar reads no input",
-                             _moveAction.c_str(), _fastAction.c_str(), _strongAction.c_str(), _dodgeAction.c_str(), _signAction.c_str(), _oilAction.c_str(), _potionAction.c_str(), _investigateAction.c_str() );
+                             "Monster hunt avatar: move '%#', fast '%#', strong '%#', dodge '%#', sign '%#', alternate sign '%#', oil '%#', potion '%#', learn '%#', mutagen '%#' and investigate '%#' actions must all be named - the avatar reads no input",
+                             _moveAction.c_str(), _fastAction.c_str(), _strongAction.c_str(), _dodgeAction.c_str(), _signAction.c_str(), _alternateSignAction.c_str(), _oilAction.c_str(), _potionAction.c_str(),
+                             _learnAction.c_str(), _mutagenAction.c_str(), _investigateAction.c_str() );
+    }
+
+    void MonsterHuntAvatarComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _bodies.destroyAll( *pManager );
+            _markers.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
     }
 
     void MonsterHuntAvatarComponent::onTick( TickContext& context )
@@ -110,7 +128,11 @@ namespace sw
         if ( pDirector->getGamePhase() == MonsterHuntPhase::Investigate )
             pDirector->collectNearbyClues( listClue );
         updateHUD( *pDirector, listClue.empty() == false );
+        _bodies.begin();
+        _markers.begin();
         draw( *pDirector, listClue, manager );
+        _bodies.end( manager );
+        _markers.end( manager );
     }
 
     void MonsterHuntAvatarComponent::submitInput( MonsterHuntGameModeComponent& director, const GameInputView& input ) const
@@ -125,7 +147,13 @@ namespace sw
         if ( input.wasActionTriggered( _dodgeAction ) )
             (void)director.submitDodge();
         if ( input.wasActionTriggered( _signAction ) )
-            (void)director.submitSign();
+            (void)director.submitSign( false );
+        if ( input.wasActionTriggered( _alternateSignAction ) )
+            (void)director.submitSign( true );
+        if ( input.wasActionTriggered( _learnAction ) )
+            (void)director.submitLearnSkill();
+        if ( input.wasActionTriggered( _mutagenAction ) )
+            (void)director.submitMutagen();
         if ( input.wasActionTriggered( _oilAction ) )
             (void)director.submitOil();
         if ( input.wasActionTriggered( _potionAction ) )
@@ -150,22 +178,19 @@ namespace sw
         _hudViewModel->setHunter( director.getPlayerHP(), Internal::toShown( director.getCombat().getStamina().getValue() ) );
         _hudViewModel->setMonster( director.getMonsterHP(), director.isWeaknessKnown() );
         _hudViewModel->setAlchemy( director.getOilHits(), Internal::toShown( director.getToxicity() ) );
+        _hudViewModel->setSkills( director.getSkills().getPoints(), director.getSignIntensity() );
         _hudViewModel->setClues( director.getFoundClueCount(), bClueNearby );
     }
 
-    void MonsterHuntAvatarComponent::draw( const MonsterHuntGameModeComponent& director, const vector<const MonsterHuntClueDef*>& listClue, const GameObjectManager& manager )
+    void MonsterHuntAvatarComponent::draw( const MonsterHuntGameModeComponent& director, const vector<const MonsterHuntClueDef*>& listClue, GameObjectManager& manager )
     {
-        using Internal              = MonsterHuntAvatarComponentInternal;
-        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        const WorldOrigin& origin = manager.getWorldOrigin();
+        using Internal = MonsterHuntAvatarComponentInternal;
         for ( const MonsterHuntClueDef* pClue : listClue )
         {
-            pDraw->drawSphere( origin.toLocal( AbsolutePosition{ pClue->_position } ), Internal::kClueRadius, Internal::kClueColor );
+            _markers.showStanding( manager, _markerPrefab, AbsolutePosition{ pClue->_position }, Internal::kClueSize, Internal::kClueColor );
         }
-        pDraw->drawSphere( origin.toLocal( director.getPlayerPosition() + float3( 0.0f, Internal::kHunterRadius, 0.0f ) ), Internal::kHunterRadius, Internal::kHunterColor );
+        (void)_bodies.show( manager, _bodyPrefab, director.getPlayerPosition(), Internal::kHunterScale, 0.0f, Internal::kHunterColor ); // 실패는 배치가 한 번 알린다
         if ( director.getGamePhase() == MonsterHuntPhase::Hunt )
-            pDraw->drawSphere( origin.toLocal( director.getMonsterPosition() + float3( 0.0f, Internal::kMonsterRadius, 0.0f ) ), Internal::kMonsterRadius, Internal::kMonsterColor );
+            (void)_bodies.show( manager, _bodyPrefab, director.getMonsterPosition(), Internal::kMonsterScale, 0.0f, Internal::kMonsterColor );
     }
 } // namespace sw

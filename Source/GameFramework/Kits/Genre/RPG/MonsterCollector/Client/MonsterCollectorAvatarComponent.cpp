@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Client/MonsterCollectorAvatarComponent.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -11,7 +10,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Client/MonsterCollectorHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Component/MonsterCollectorGameModeComponent.h"
@@ -22,19 +20,19 @@ namespace sw
 {
     namespace
     {
-        /** @brief 디버그 그리기의 색 · 크기(m)와 입력 문턱입니다. */
+        /** @brief 모습의 색 · 크기(m)와 입력 문턱입니다. */
         struct MonsterCollectorAvatarComponentInternal
         {
-            static constexpr float4  kPlayerColor    = float4( 0.2f, 0.6f, 1.0f, 1.0f );
-            static constexpr float4  kLeadColor      = float4( 0.35f, 0.85f, 0.4f, 1.0f );
-            static constexpr float4  kFoeColor       = float4( 1.0f, 0.5f, 0.2f, 1.0f );
-            static constexpr float4  kRestColor      = float4( 0.95f, 0.6f, 0.15f, 1.0f );
-            static constexpr float3  kRestHalfExtent = float3( 0.6f, 0.15f, 0.6f );
-            static constexpr float3  kLeadOffset     = float3( 1.0f, 0.0f, 0.6f );
-            static constexpr float3  kFoeOffset      = float3( 3.0f, 0.0f, 0.0f );
-            static constexpr float32 kBodyRadius     = 0.35f;
-            static constexpr float32 kBodyHeight     = 0.4f; ///< 몸을 땅에서 띄우는 높이
-            static constexpr float32 kMoveThreshold  = 0.5f; ///< 축이 이보다 기울어야 고른 기술을 옮긴다(스틱 떨림을 고르기로 읽지 않게)
+            static constexpr float4  kPlayerColor   = float4( 0.2f, 0.6f, 1.0f, 1.0f );
+            static constexpr float4  kLeadColor     = float4( 0.35f, 0.85f, 0.4f, 1.0f );
+            static constexpr float4  kFoeColor      = float4( 1.0f, 0.5f, 0.2f, 1.0f );
+            static constexpr float4  kRestColor     = float4( 0.95f, 0.6f, 0.15f, 1.0f );
+            static constexpr float3  kRestSize      = float3( 1.2f, 0.3f, 1.2f );
+            static constexpr float3  kLeadOffset    = float3( 1.0f, 0.0f, 0.6f );
+            static constexpr float3  kFoeOffset     = float3( 3.0f, 0.0f, 0.0f );
+            static constexpr float3  kPlayerScale   = float3( 1.2f, 1.2f, 1.2f );
+            static constexpr float3  kMonsterScale  = float3( 1.4f, 0.8f, 1.4f );
+            static constexpr float32 kMoveThreshold = 0.5f; ///< 축이 이보다 기울어야 고른 기술을 옮긴다(스틱 떨림을 고르기로 읽지 않게)
 
             /** @brief 축 값의 방향(-1 · 0 · 1)입니다. */
             static int32 computeStep( float32 axis )
@@ -60,7 +58,11 @@ namespace sw
         , _switchAction{}
         , _runAction{}
         , _restAction{}
+        , _bodyPrefab{}
+        , _markerPrefab{}
         , _director{}
+        , _bodies{}
+        , _markers{}
         , _hudViewModel{}
         , _moveSlot{ 0 }
         , _lastStep{ 0 }
@@ -102,6 +104,18 @@ namespace sw
         _lastStep = 0;
     }
 
+    void MonsterCollectorAvatarComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _bodies.destroyAll( *pManager );
+            _markers.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
+    }
+
     void MonsterCollectorAvatarComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -126,7 +140,11 @@ namespace sw
                 submitBattleInput( *pDirector, input );
         }
         updateHUD( *pDirector );
+        _bodies.begin();
+        _markers.begin();
         draw( *pDirector, manager );
+        _bodies.end( manager );
+        _markers.end( manager );
     }
 
     void MonsterCollectorAvatarComponent::submitExploreInput( MonsterCollectorGameModeComponent& director, const GameInputView& input )
@@ -199,19 +217,15 @@ namespace sw
         _hudViewModel->setMoveName( pMove != nullptr ? string_view{ pMove->_name } : string_view{} );
     }
 
-    void MonsterCollectorAvatarComponent::draw( const MonsterCollectorGameModeComponent& director, const GameObjectManager& manager )
+    void MonsterCollectorAvatarComponent::draw( const MonsterCollectorGameModeComponent& director, GameObjectManager& manager )
     {
-        using Internal              = MonsterCollectorAvatarComponentInternal;
-        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        const WorldOrigin& origin = manager.getWorldOrigin();
-        pDraw->drawBox( origin.toLocal( director.getRestPosition() + float3( 0.0f, Internal::kRestHalfExtent._y, 0.0f ) ), Internal::kRestHalfExtent, Internal::kRestColor );
-        const AbsolutePosition player = director.getPlayerPosition() + float3( 0.0f, Internal::kBodyHeight, 0.0f );
-        pDraw->drawSphere( origin.toLocal( player ), Internal::kBodyRadius, Internal::kPlayerColor );
+        using Internal = MonsterCollectorAvatarComponentInternal;
+        _markers.showStanding( manager, _markerPrefab, director.getRestPosition(), Internal::kRestSize, Internal::kRestColor );
+        const AbsolutePosition player = director.getPlayerPosition();
+        (void)_bodies.show( manager, _bodyPrefab, player, Internal::kPlayerScale, 0.0f, Internal::kPlayerColor ); // 실패는 배치가 한 번 알린다
         if ( director.getGamePhase() != MonsterCollectorPhase::Battle )
             return;
-        pDraw->drawSphere( origin.toLocal( player + Internal::kLeadOffset ), Internal::kBodyRadius, Internal::kLeadColor );
-        pDraw->drawSphere( origin.toLocal( player + Internal::kFoeOffset ), Internal::kBodyRadius, Internal::kFoeColor );
+        (void)_bodies.show( manager, _bodyPrefab, player + Internal::kLeadOffset, Internal::kMonsterScale, 0.0f, Internal::kLeadColor );
+        (void)_bodies.show( manager, _bodyPrefab, player + Internal::kFoeOffset, Internal::kMonsterScale, 0.0f, Internal::kFoeColor );
     }
 } // namespace sw

@@ -13,6 +13,11 @@ namespace sw
         , _memberMP{ 0 }
         , _targetHP{ 0 }
         , _gold{ 0 }
+        , _leaderAttack{ 0 }
+        , _timingRatio{ 0.0f }
+        , _timingVisibility{ WidgetVisibility::Collapsed }
+        , _swingVisibility{ WidgetVisibility::Collapsed }
+        , _blockVisibility{ WidgetVisibility::Collapsed }
         , _exploreVisibility{ WidgetVisibility::Collapsed }
         , _restVisibility{ WidgetVisibility::Collapsed }
         , _battleVisibility{ WidgetVisibility::Collapsed }
@@ -37,6 +42,7 @@ namespace sw
     {
         (void)setField( _exploreVisibility, toVisibility( phase == JRPGGamePhase::Explore ), "_exploreVisibility" );
         (void)setField( _battleVisibility, toVisibility( phase == JRPGGamePhase::Battle ), "_battleVisibility" );
+        (void)setField( _timingVisibility, toVisibility( phase == JRPGGamePhase::Timing ), "_timingVisibility" );
         (void)setField( _victoryVisibility, toVisibility( phase == JRPGGamePhase::Victory ), "_victoryVisibility" );
         (void)setField( _defeatVisibility, toVisibility( phase == JRPGGamePhase::Defeat ), "_defeatVisibility" );
     }
@@ -58,6 +64,18 @@ namespace sw
     void JRPGBattleHUDViewModel::setGold( int32 gold )
     {
         (void)setField( _gold, gold, "_gold" );
+    }
+
+    void JRPGBattleHUDViewModel::setTiming( float32 ratio, bool bBlock )
+    {
+        (void)setField( _timingRatio, ratio, "_timingRatio" );
+        (void)setField( _swingVisibility, toVisibility( bBlock == false ), "_swingVisibility" );
+        (void)setField( _blockVisibility, toVisibility( bBlock ), "_blockVisibility" );
+    }
+
+    void JRPGBattleHUDViewModel::setLeaderAttack( int32 attack )
+    {
+        (void)setField( _leaderAttack, attack, "_leaderAttack" );
     }
 
     void JRPGBattleHUDViewModel::setRestShown( bool bShown )
