@@ -23,7 +23,7 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 
 namespace sw
 {

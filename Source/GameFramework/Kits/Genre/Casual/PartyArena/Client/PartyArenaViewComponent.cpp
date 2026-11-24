@@ -17,7 +17,7 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Client/PartyHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 
 namespace sw
 {

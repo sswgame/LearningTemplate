@@ -15,7 +15,7 @@
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Client/ArenaProjectileComponent.h"
 #include "GameFramework/Kits/Genre/Action/AbilityArena/Component/ArenaGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

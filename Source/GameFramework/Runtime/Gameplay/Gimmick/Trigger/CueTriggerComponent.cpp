@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
 namespace sw

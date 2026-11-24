@@ -6,7 +6,7 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
+#include "GameFramework/Runtime/Foundation/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include "Games/Playground/Client/Dev/PlaygroundRenderDemo.h"

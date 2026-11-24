@@ -21,7 +21,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSupportSettings.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
+#include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 
 namespace sw
 {

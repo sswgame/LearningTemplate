@@ -18,7 +18,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"

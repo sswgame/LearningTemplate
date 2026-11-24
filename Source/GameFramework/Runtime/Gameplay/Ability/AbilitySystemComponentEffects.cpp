@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IAbilityCueSink.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"

@@ -11,7 +11,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 
 #include "Games/NileCity/NileGameModeComponent.h"
 

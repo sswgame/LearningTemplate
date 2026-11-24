@@ -8,12 +8,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/AutosaveTriggerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
+#include "GameFramework/Runtime/Foundation/Save/Autosave.h"
+#include "GameFramework/Runtime/Foundation/Save/AutosaveTriggerComponent.h"
+#include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
 
 // TriggerComponentTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기, 판정 자리)을 자동 저장 볼륨으로 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
 

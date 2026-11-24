@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

@@ -4,8 +4,8 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
+#include "GameFramework/Runtime/Foundation/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"

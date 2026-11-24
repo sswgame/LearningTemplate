@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStore.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
 

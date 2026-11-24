@@ -12,12 +12,12 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameDefinition.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 
 namespace sw
 {

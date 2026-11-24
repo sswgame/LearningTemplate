@@ -2348,7 +2348,7 @@
 		</entry>
 		<entry key="Notification.GameSaved" source="Game saved">
 			<origins>
-				<item>Source/GameFramework/Runtime/Foundation/Framework/Save/Autosave.cpp</item>
+				<item>Source/GameFramework/Runtime/Foundation/Save/Autosave.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Notification.RestartRequired" source="Some changes take effect after a restart.">

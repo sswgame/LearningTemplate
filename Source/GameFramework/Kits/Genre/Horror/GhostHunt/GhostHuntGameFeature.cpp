@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 
 namespace sw
 {

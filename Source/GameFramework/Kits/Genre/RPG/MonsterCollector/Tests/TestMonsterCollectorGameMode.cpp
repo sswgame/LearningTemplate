@@ -16,7 +16,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Component/MonsterCollectorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
+#include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 
 using namespace sw;
 

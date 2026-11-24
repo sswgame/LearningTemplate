@@ -13,7 +13,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IDamageNumberSink.h"
 #include "GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h"
 
 namespace sw

@@ -16,8 +16,8 @@
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Client/RhythmHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 
 namespace sw
 {

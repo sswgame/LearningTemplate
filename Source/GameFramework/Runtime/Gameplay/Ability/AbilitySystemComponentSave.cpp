@@ -8,7 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySaveState.h"

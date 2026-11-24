@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IAbilityCueSink.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 using namespace sw;

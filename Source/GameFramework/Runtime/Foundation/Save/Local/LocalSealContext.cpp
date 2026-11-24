@@ -1,0 +1,279 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalSealContext.h"
+
+#include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Compression/ICompressionCodec.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/ByteStream.h"
+#include "Core/String/StringUtil.h"
+
+#include <cstring>
+
+namespace sw
+{
+    namespace
+    {
+        struct LocalSlotEnvelopeInternal
+        {
+            static constexpr uint8  kArrMagic[4] = { 'S', 'W', 'L', 'S' };
+            static constexpr size_t kCRCSize     = 4;
+            static constexpr size_t kKeyIDSize   = 8;
+            static constexpr utf8   kSealInfo[]  = "swls-seal-v1";
+            static constexpr utf8   kKeyIDInfo[] = "swls-key-id-v1";
+
+            struct Header
+            {
+                uint64         _originalSize{ 0 };
+                uint64         _bodySize{ 0 };
+                uint64         _keyID{ 0 };
+                uint32         _formatVersion{ 0 };
+                uint8          _codec{ 0 };
+                LocalStoreSeal _seal{ LocalStoreSeal::None };
+            };
+
+            static void writeHeader( const Header& header, uint8* pOut )
+            {
+                std::memcpy( pOut, kArrMagic, 4 );
+                pOut[4] = LocalSealContext::kEnvelopeVersion;
+                pOut[5] = static_cast<uint8>( header._seal );
+                pOut[6] = header._codec;
+                pOut[7] = 0;
+                LittleEndianUtil::writeUint32( pOut + 8, header._formatVersion );
+                LittleEndianUtil::writeUint64( pOut + 12, header._originalSize );
+                LittleEndianUtil::writeUint64( pOut + 20, header._bodySize );
+                LittleEndianUtil::writeUint64( pOut + 28, header._keyID );
+            }
+
+            static CompressionCodecRegistry* findRegistry( const LocalSealContext& context )
+            {
+                return context._pCodecRegistry != nullptr ? context._pCodecRegistry : CompressionCodecRegistry::getActive();
+            }
+
+            /** @brief 장치 키에서 봉인 키 · 키 표시를 가릅니다. 보안 제공자나 키 제공자가 없으면 Invalid. */
+            static LocalStoreResult deriveKeys( const LocalSealContext& context, uint8 ( &outSealKey )[NetSecurityConstant::kAEADKeySize], uint64& outKeyID )
+            {
+                if ( context._pSecurityProvider == nullptr || context._pKeyProvider == nullptr )
+                    return LocalStoreResult::Invalid;
+                uint8 arrDeviceKey[ILocalStoreKeyProvider::kKeySize] = {};
+                if ( context._pKeyProvider->getSealKey( arrDeviceKey ) == false )
+                    return LocalStoreResult::IOError;
+                uint8      arrKeyID[kKeyIDSize] = {};
+                const bool bDerived             = context._pSecurityProvider->computeHKDFSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
+                                                                                                 reinterpret_cast<const uint8*>( kSealInfo ), sizeof( kSealInfo ) - 1, outSealKey,
+                                                                                                 NetSecurityConstant::kAEADKeySize ) &&
+                                      context._pSecurityProvider->computeHKDFSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
+                                                                                     reinterpret_cast<const uint8*>( kKeyIDInfo ), sizeof( kKeyIDInfo ) - 1, arrKeyID,
+                                                                                     static_cast<int32>( kKeyIDSize ) );
+                Memory::wipe( arrDeviceKey, sizeof( arrDeviceKey ) );
+                if ( bDerived == false )
+                {
+                    Memory::wipe( outSealKey, sizeof( outSealKey ) ); // 첫 유도만 된 봉인 키를 남기지 않는다
+                    return LocalStoreResult::IOError;
+                }
+                outKeyID = ByteReader( arrKeyID, sizeof( arrKeyID ) ).readUint64();
+                return LocalStoreResult::Ok;
+            }
+
+            /** @brief 압축합니다. 코덱이 없거나 줄지 않으면 원문(코덱 0)입니다. */
+            static LocalStoreResult compressBody( const LocalSealContext& context, const uint8* pBody, size_t bodySize, uint8 codec, vector<uint8>& outBytes,
+                                                  uint8& outCodec )
+            {
+                outCodec = 0;
+                outBytes.assign( pBody, pBody + bodySize );
+                if ( codec == 0 || bodySize == 0 )
+                    return LocalStoreResult::Ok;
+                CompressionCodecRegistry* pRegistry = findRegistry( context );
+                ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecKind>( codec ) ) : nullptr;
+                if ( pCodec == nullptr )
+                    return LocalStoreResult::Invalid; // 등록되지 않은 코덱으로 쓰지 않는다(읽을 수 없는 슬롯이 된다)
+                vector<uint8> compressed( pCodec->compressBound( bodySize ) );
+                size_t        compressedSize = 0;
+                if ( pCodec->compress( pBody, bodySize, compressed.data(), compressed.size(), compressedSize ) == false || compressedSize >= bodySize )
+                    return LocalStoreResult::Ok;
+                compressed.resize( compressedSize );
+                outBytes = std::move( compressed );
+                outCodec = codec;
+                return LocalStoreResult::Ok;
+            }
+
+            static LocalStoreResult decompressBody( const LocalSealContext& context, const uint8* pBody, size_t bodySize, const Header& header, vector<uint8>& outBodyBytes )
+            {
+                if ( header._codec == 0 )
+                {
+                    if ( header._originalSize != bodySize )
+                        return LocalStoreResult::Corrupt;
+                    outBodyBytes.assign( pBody, pBody + bodySize );
+                    return LocalStoreResult::Ok;
+                }
+                CompressionCodecRegistry* pRegistry = findRegistry( context );
+                ICompressionCodec*        pCodec    = pRegistry != nullptr ? pRegistry->getCodec( static_cast<CompressionCodecKind>( header._codec ) ) : nullptr;
+                if ( pCodec == nullptr )
+                    return LocalStoreResult::Corrupt; // 이 구성에 없는 코덱 — 다른 코덱으로 바꾸지 않는다
+                if ( header._originalSize > pCodec->decompressBound( bodySize ) )
+                    return LocalStoreResult::Corrupt; // 본문 크기로는 나올 수 없는 원본 크기 — resize 전에 끊는다(B-5)
+                outBodyBytes.resize( static_cast<size_t>( header._originalSize ) );
+                size_t     decompressedSize = 0;
+                const bool bDecompressed    = pCodec->decompress( pBody, bodySize, outBodyBytes.data(), outBodyBytes.size(), decompressedSize );
+                if ( bDecompressed == false || decompressedSize != header._originalSize )
+                    return LocalStoreResult::Corrupt;
+                return LocalStoreResult::Ok;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    LocalStoreResult LocalSealContext::seal( const LocalSealContext& context, const uint8* pBody, size_t bodySize, const LocalStoreWriteOptions& options,
+                                             vector<uint8>& outEnvelopeBytes )
+    {
+        using Internal = LocalSlotEnvelopeInternal;
+        outEnvelopeBytes.clear();
+        if ( static_cast<int64>( bodySize ) > ILocalStore::kMaxSlotSize )
+            return LocalStoreResult::Invalid;
+        const bool bKnownSeal = options._seal == LocalStoreSeal::None || options._seal == LocalStoreSeal::Authenticated || options._seal == LocalStoreSeal::Encrypted;
+        if ( bKnownSeal == false )
+            return LocalStoreResult::Invalid;
+
+        Internal::Header header;
+        header._formatVersion                               = options._formatVersion;
+        header._originalSize                                = bodySize;
+        header._seal                                        = options._seal;
+        uint8 arrSealKey[NetSecurityConstant::kAEADKeySize] = {};
+        if ( options._seal != LocalStoreSeal::None )
+        {
+            const LocalStoreResult keyResult = Internal::deriveKeys( context, arrSealKey, header._keyID );
+            if ( keyResult != LocalStoreResult::Ok )
+                return keyResult;
+        }
+        vector<uint8>          storedBody;
+        const LocalStoreResult compressResult = Internal::compressBody( context, pBody, bodySize, options._compressionCodec, storedBody, header._codec );
+        if ( compressResult != LocalStoreResult::Ok )
+        {
+            Memory::wipe( arrSealKey, sizeof( arrSealKey ) ); // 위에서 유도한 봉인 키 — 여기서 수명이 끝난다
+            return compressResult;
+        }
+        header._bodySize = storedBody.size();
+
+        outEnvelopeBytes.resize( kHeaderSize );
+        Internal::writeHeader( header, outEnvelopeBytes.data() );
+        if ( options._seal == LocalStoreSeal::None )
+        {
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
+            uint8 arrCRC[Internal::kCRCSize] = {};
+            LittleEndianUtil::writeUint32( arrCRC, HashUtil::computeCRC32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrCRC, arrCRC + Internal::kCRCSize );
+            return LocalStoreResult::Ok;
+        }
+
+        unique_ptr<INetAEAD> aead = context._pSecurityProvider->createAEAD( NetAEADAlgorithm::AES256Gcm, arrSealKey );
+        Memory::wipe( arrSealKey, sizeof( arrSealKey ) );
+        uint8 arrNonce[NetSecurityConstant::kAEADNonceSize] = {};
+        if ( aead == nullptr || context._pSecurityProvider->fillRandomBytes( arrNonce, NetSecurityConstant::kAEADNonceSize ) == false )
+            return LocalStoreResult::IOError;
+        if ( options._seal == LocalStoreSeal::Authenticated )
+        {
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
+            const size_t authenticatedSize = outEnvelopeBytes.size();
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAEADNonceSize );
+            uint8 arrTag[NetSecurityConstant::kAEADTagSize] = {};
+            if ( aead->seal( arrNonce, outEnvelopeBytes.data(), static_cast<int32>( authenticatedSize ), nullptr, 0, arrTag ) == false )
+                return LocalStoreResult::IOError;
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrTag, arrTag + NetSecurityConstant::kAEADTagSize );
+            return LocalStoreResult::Ok;
+        }
+        outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAEADNonceSize );
+        const size_t cipherOffset = outEnvelopeBytes.size();
+        outEnvelopeBytes.resize( cipherOffset + storedBody.size() + NetSecurityConstant::kAEADTagSize );
+        if ( aead->seal( arrNonce, outEnvelopeBytes.data(), static_cast<int32>( kHeaderSize ), storedBody.data(), static_cast<int32>( storedBody.size() ),
+                         outEnvelopeBytes.data() + cipherOffset ) == false )
+            return LocalStoreResult::IOError;
+        return LocalStoreResult::Ok;
+    }
+
+    LocalStoreResult LocalSealContext::open( const LocalSealContext& context, const uint8* pEnvelopeBytes, size_t envelopeByteCount, vector<uint8>& outBodyBytes,
+                                             uint32& outFormatVersion )
+    {
+        using Internal = LocalSlotEnvelopeInternal;
+        outBodyBytes.clear();
+        const bool bBadEnvelopeHeader = envelopeByteCount < kHeaderSize || std::memcmp( pEnvelopeBytes, Internal::kArrMagic, 4 ) != 0 || pEnvelopeBytes[4] != kEnvelopeVersion;
+        if ( bBadEnvelopeHeader )
+            return LocalStoreResult::Corrupt;
+        if ( pEnvelopeBytes[5] > static_cast<uint8>( LocalStoreSeal::Encrypted ) )
+            return LocalStoreResult::Corrupt; // 모르는 봉인
+        Internal::Header header;
+        header._seal  = static_cast<LocalStoreSeal>( pEnvelopeBytes[5] );
+        header._codec = pEnvelopeBytes[6];
+        // 머리 8 바이트(마법 수 · 판 · 봉인 · 코덱 · 예비) 뒤 형식 판 · 원래 크기 · 본문 크기 · 키 id 다. 길이는 위에서 kHeaderSize 로 맞췄다.
+        ByteReader headerReader( pEnvelopeBytes + 8, kHeaderSize - 8 );
+        header._formatVersion = headerReader.readUint32();
+        header._originalSize  = headerReader.readUint64();
+        header._bodySize      = headerReader.readUint64();
+        header._keyID         = headerReader.readUint64();
+        const bool bSizesSane = header._originalSize <= static_cast<uint64>( ILocalStore::kMaxSlotSize ) && header._bodySize <= envelopeByteCount;
+        if ( bSizesSane == false )
+            return LocalStoreResult::Corrupt;
+        const size_t  bodySize = static_cast<size_t>( header._bodySize );
+        const uint8*  pBody    = nullptr;
+        vector<uint8> plainBody;
+        switch ( header._seal )
+        {
+            case LocalStoreSeal::None:
+            {
+                if ( envelopeByteCount != kHeaderSize + bodySize + Internal::kCRCSize )
+                    return LocalStoreResult::Corrupt;
+                const uint32 storedCRC = ByteReader( pEnvelopeBytes + kHeaderSize + bodySize, Internal::kCRCSize ).readUint32();
+                if ( HashUtil::computeCRC32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCRC )
+                    return LocalStoreResult::Corrupt;
+                pBody = pEnvelopeBytes + kHeaderSize;
+                break;
+            }
+            case LocalStoreSeal::Authenticated:
+            case LocalStoreSeal::Encrypted:
+            {
+                const size_t expectedSize = kHeaderSize + bodySize + NetSecurityConstant::kAEADNonceSize + NetSecurityConstant::kAEADTagSize;
+                if ( envelopeByteCount != expectedSize )
+                    return LocalStoreResult::Corrupt;
+                uint8                  arrSealKey[NetSecurityConstant::kAEADKeySize] = {};
+                uint64                 keyID                                         = 0;
+                const LocalStoreResult keyResult                                     = Internal::deriveKeys( context, arrSealKey, keyID );
+                if ( keyResult != LocalStoreResult::Ok )
+                    return keyResult;
+                if ( keyID != header._keyID )
+                {
+                    Memory::wipe( arrSealKey, sizeof( arrSealKey ) );
+                    return LocalStoreResult::WrongKey;
+                }
+                unique_ptr<INetAEAD> aead = context._pSecurityProvider->createAEAD( NetAEADAlgorithm::AES256Gcm, arrSealKey );
+                Memory::wipe( arrSealKey, sizeof( arrSealKey ) );
+                if ( aead == nullptr )
+                    return LocalStoreResult::IOError;
+                if ( header._seal == LocalStoreSeal::Authenticated )
+                {
+                    const uint8* pNonce      = pEnvelopeBytes + kHeaderSize + bodySize;
+                    const uint8* pTag        = pNonce + NetSecurityConstant::kAEADNonceSize;
+                    uint8        arrEmpty[1] = {};
+                    if ( aead->open( pNonce, pEnvelopeBytes, static_cast<int32>( kHeaderSize + bodySize ), pTag, NetSecurityConstant::kAEADTagSize, arrEmpty ) == false )
+                        return LocalStoreResult::Corrupt;
+                    pBody = pEnvelopeBytes + kHeaderSize;
+                    break;
+                }
+                const uint8* pNonce  = pEnvelopeBytes + kHeaderSize;
+                const uint8* pCipher = pNonce + NetSecurityConstant::kAEADNonceSize;
+                plainBody.resize( bodySize );
+                if ( aead->open( pNonce, pEnvelopeBytes, static_cast<int32>( kHeaderSize ), pCipher, static_cast<int32>( bodySize + NetSecurityConstant::kAEADTagSize ),
+                                 plainBody.data() ) == false )
+                    return LocalStoreResult::Corrupt;
+                pBody = plainBody.data();
+                break;
+            }
+        }
+        const LocalStoreResult result = Internal::decompressBody( context, pBody, bodySize, header, outBodyBytes );
+        if ( result == LocalStoreResult::Ok )
+            outFormatVersion = header._formatVersion;
+        return result;
+    }
+} // namespace sw

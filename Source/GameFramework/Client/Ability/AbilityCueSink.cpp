@@ -12,8 +12,8 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IAbilityCueSink.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 namespace sw

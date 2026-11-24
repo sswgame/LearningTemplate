@@ -5,7 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IDamageNumberSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"

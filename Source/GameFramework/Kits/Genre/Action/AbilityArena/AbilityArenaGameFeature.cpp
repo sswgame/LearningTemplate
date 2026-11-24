@@ -5,9 +5,9 @@
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/ArenaAbilities.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 namespace sw

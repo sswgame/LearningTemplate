@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Visual/Component/LightComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/World/Environment/WeatherShelter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 

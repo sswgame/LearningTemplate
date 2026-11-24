@@ -17,8 +17,8 @@
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Component/ScavengerGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/Tests/RecordingSoundPlayer.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Presentation/Tests/RecordingSoundPlayer.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 

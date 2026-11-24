@@ -19,7 +19,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmPlotGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

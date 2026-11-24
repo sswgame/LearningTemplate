@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Client/HUD/HUDControllerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 
 namespace sw
 {

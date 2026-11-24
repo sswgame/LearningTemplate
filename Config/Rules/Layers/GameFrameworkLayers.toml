@@ -10,7 +10,7 @@
 [tier]
 # 0 — 바닥: 게임 서비스 · 저장 · 게임 데이터 · 격자 · 난수 · 조건 · 깃발 어휘
 Foundation = 0
-"Foundation/Framework/Save/Local/Tests" = 1      # 로컬 저장 계약 테스트의 봉인 케이스는 실제 암호 제공자(Online/Security/OpenSSL)를 픽스처가 든다 — 통합 테스트라 그 위에 둔다
+"Foundation/Save/Local/Tests" = 1      # 로컬 저장 계약 테스트의 봉인 케이스는 실제 암호 제공자(Online/Security/OpenSSL)를 픽스처가 든다 — 통합 테스트라 그 위에 둔다
 # 1 — 온라인: 세션 · HTTP · 보안 제공자(Foundation 만 본다)
 Online = 1
 # 2 — 월드: 땅 · 환경(시계 · 날씨 값) · 월드 질의
@@ -22,4 +22,4 @@ Character = 3
 "Gameplay/Gimmick/Traversal/ClimbZoneComponent.h" = 3 # 오르기 구역의 선언도 이동기가 읽는다 — 겹침(기믹 센서)을 보는 구현(.cpp)은 Gameplay 다
 # 4 — 게임플레이: 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 날씨 연출 · 기믹 · 존
 Gameplay = 4
-"Foundation/Framework/Flow/GameInstance.cpp" = 4 # 게임 인스턴스 조립(서브시스템 · 카탈로그를 만든다)은 맨 위 층이다 — 선언(.h)은 아래 층이 쓴다(엔진 표의 Module/ModuleTypeRegistry.h 와 같은 나눔)
+"Foundation/Flow/GameInstance.cpp" = 4 # 게임 인스턴스 조립(서브시스템 · 카탈로그를 만든다)은 맨 위 층이다 — 선언(.h)은 아래 층이 쓴다(엔진 표의 Module/ModuleTypeRegistry.h 와 같은 나눔)

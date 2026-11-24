@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 
 namespace sw

@@ -84,7 +84,7 @@ sw_mark_deterministic_sources(GameFramework
 	Runtime/Character/Navigation/GridReachability.cpp
 	Runtime/Character/Navigation/NavGrid.cpp
 )
-# 로컬 저장의 장치 키(Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
+# 로컬 저장의 장치 키(Runtime/Foundation/Save/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
 if(WIN32)
 	target_link_libraries(GameFramework PRIVATE crypt32)
 endif()

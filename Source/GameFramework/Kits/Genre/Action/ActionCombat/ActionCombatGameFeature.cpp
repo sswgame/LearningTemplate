@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 
 namespace sw
 {

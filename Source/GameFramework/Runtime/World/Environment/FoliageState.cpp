@@ -2,7 +2,7 @@
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

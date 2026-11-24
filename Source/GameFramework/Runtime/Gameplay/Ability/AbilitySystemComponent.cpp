@@ -14,7 +14,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IDamageNumberSink.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"

@@ -23,7 +23,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRayHit.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameFrameworkComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 
 namespace sw
 {

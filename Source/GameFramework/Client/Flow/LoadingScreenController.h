@@ -18,7 +18,7 @@
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 

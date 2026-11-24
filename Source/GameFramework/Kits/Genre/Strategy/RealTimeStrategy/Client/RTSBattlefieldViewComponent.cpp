@@ -21,7 +21,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSUnitViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/RTSGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

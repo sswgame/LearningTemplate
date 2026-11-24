@@ -226,8 +226,8 @@ namespace sw
 
 #include "{include}/Component/{name}Component.h"
 #include "{include}/{name}Catalog.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameFeature/GameFeatureScope.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
+#include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 
 namespace sw
 {{

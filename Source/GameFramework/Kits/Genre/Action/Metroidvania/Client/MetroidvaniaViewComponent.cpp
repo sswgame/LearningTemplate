@@ -18,7 +18,7 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Client/MetroidvaniaHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Component/MetroidvaniaGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 
 namespace sw
 {

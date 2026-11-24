@@ -20,8 +20,8 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/Client/MechArenaHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/Component/MechArenaGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

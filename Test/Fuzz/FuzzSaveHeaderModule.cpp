@@ -6,8 +6,8 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/ByteStream.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSealContext.h"
+#include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalSealContext.h"
 
 extern "C" SW_MODULE_API void swFuzzSaveHeader( const uint8_t* pData, size_t size )
 {

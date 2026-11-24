@@ -28,13 +28,13 @@
 #include "Engine/Network/NetMessageChannel.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
+#include "GameFramework/Runtime/Foundation/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/IMinigameMatchmaking.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
+#include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
+#include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Games/Playground/Hub/HubNetLink.h"

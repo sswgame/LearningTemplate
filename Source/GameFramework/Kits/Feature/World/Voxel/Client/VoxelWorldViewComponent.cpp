@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Client/VoxelChunkComponent.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
+#include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 
 namespace sw
 {

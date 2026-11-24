@@ -28,7 +28,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendList.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/IMinigameMatchmaking.h"
+#include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw

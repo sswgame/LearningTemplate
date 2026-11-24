@@ -34,7 +34,7 @@
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraSystem.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {

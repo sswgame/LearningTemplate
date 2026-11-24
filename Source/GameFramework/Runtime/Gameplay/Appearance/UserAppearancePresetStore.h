@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/SaveGame.h"
+#include "GameFramework/Runtime/Foundation/Save/SaveGame.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 
 namespace sw

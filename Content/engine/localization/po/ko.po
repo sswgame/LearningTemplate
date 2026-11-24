@@ -2299,7 +2299,7 @@ msgctxt "Notification.ClipboardWriteFailed"
 msgid "Could not copy to the clipboard."
 msgstr "클립보드에 복사하지 못했습니다."
 
-#: Source/GameFramework/Runtime/Foundation/Framework/Save/Autosave.cpp
+#: Source/GameFramework/Runtime/Foundation/Save/Autosave.cpp
 msgctxt "Notification.GameSaved"
 msgid "Game saved"
 msgstr "게임을 저장했습니다"

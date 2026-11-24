@@ -22,8 +22,8 @@
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/InputActionCheckUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 namespace sw

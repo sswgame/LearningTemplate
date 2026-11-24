@@ -7,7 +7,7 @@
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentPlayback.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 
 namespace sw
 {

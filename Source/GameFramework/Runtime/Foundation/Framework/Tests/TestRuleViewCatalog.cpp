@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/RuleViewCatalog.h"
+#include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 
 // RuleViewCatalogTest — 규칙 id → 뷰 표: 메시는 타입 있는 참조로 읽고(코드가 경로를 조립하지 않는다, 감사 K-7), 빠진 칸은 그 줄을 넣지 않는다(nogpu).
 

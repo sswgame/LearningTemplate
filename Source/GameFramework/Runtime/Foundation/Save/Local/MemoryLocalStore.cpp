@@ -1,0 +1,162 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Foundation/Save/Local/MemoryLocalStore.h"
+
+#include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
+
+namespace sw
+{
+    MemoryLocalDatabase::MemoryLocalDatabase()
+        : _mutex{}
+        , _mapSlot{}
+        , _bFailNextWrite{ SW_FALSE }
+    {
+    }
+
+    LocalStoreResult MemoryLocalDatabase::readPreviousSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
+    {
+        (void)slot;
+        (void)outEnvelopeBytes;
+        return LocalStoreResult::NotFound;
+    }
+
+    LocalStoreResult MemoryLocalDatabase::readSlot( const string& slot, vector<uint8>& outEnvelopeBytes )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        slotIt = _mapSlot.find( slot );
+        if ( slotIt == _mapSlot.end() )
+            return LocalStoreResult::NotFound;
+        outEnvelopeBytes = slotIt->second._envelope;
+        return LocalStoreResult::Ok;
+    }
+
+    LocalStoreResult MemoryLocalDatabase::writeSlot( const string& slot, const vector<uint8>& envelopeBytes )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _bFailNextWrite == SW_TRUE )
+        {
+            _bFailNextWrite = SW_FALSE;
+            return LocalStoreResult::IOError;
+        }
+        SlotEntry& entry   = _mapSlot[slot];
+        entry._envelope    = envelopeBytes;
+        entry._writtenAtMs = FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / constant::time::kMillisecondsPerSecond );
+        return LocalStoreResult::Ok;
+    }
+
+    LocalStoreResult MemoryLocalDatabase::eraseSlot( const string& slot )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _mapSlot.erase( slot ) > 0 ? LocalStoreResult::Ok : LocalStoreResult::NotFound;
+    }
+
+    LocalStoreResult MemoryLocalDatabase::listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        for ( const auto& [slot, entry] : _mapSlot )
+        {
+            if ( StringUtil::startsWith( slot, groupPrefix ) == false )
+                continue;
+            LocalSlotInfo& slotInfo = outListSlotInfo.emplace_back();
+            slotInfo._slot          = slot;
+            slotInfo._byteCount     = static_cast<int64>( entry._envelope.size() );
+            slotInfo._writtenAtMs   = entry._writtenAtMs;
+        }
+        return LocalStoreResult::Ok;
+    }
+
+    void MemoryLocalDatabase::failNextWrite()
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _bFailNextWrite = SW_TRUE;
+    }
+
+    bool MemoryLocalDatabase::modifyEnvelopeByte( const string& slot, size_t offset, uint8 xorMask )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        slotIt = _mapSlot.find( slot );
+        if ( slotIt == _mapSlot.end() || offset >= slotIt->second._envelope.size() )
+            return false;
+        slotIt->second._envelope[offset] ^= xorMask;
+        return true;
+    }
+
+    bool MemoryLocalDatabase::findEnvelope( const string& slot, vector<uint8>& outEnvelopeBytes ) const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        slotIt = _mapSlot.find( slot );
+        if ( slotIt == _mapSlot.end() )
+            return false;
+        outEnvelopeBytes = slotIt->second._envelope;
+        return true;
+    }
+} // namespace sw
+
+namespace sw
+{
+    MemoryLocalStore::MemoryLocalStore( MemoryLocalDatabase* pDatabase, const LocalSealContext& sealContext )
+        : _completionBuffer{}
+        , _sealContext{ sealContext }
+        , _pDatabase{ pDatabase }
+        , _requestIDAllocator{}
+        , _bShutdown{ SW_FALSE }
+    {
+    }
+
+    uint64 MemoryLocalStore::submitRead( string_view slot )
+    {
+        LocalStoreRequest request;
+        request._slot      = string( slot );
+        request._operation = LocalStoreOperation::Read;
+        return executeRequest( request );
+    }
+
+    uint64 MemoryLocalStore::submitWrite( string_view slot, vector<uint8> bytes, const LocalStoreWriteOptions& options )
+    {
+        LocalStoreRequest request;
+        request._bytes     = std::move( bytes );
+        request._slot      = string( slot );
+        request._options   = options;
+        request._operation = LocalStoreOperation::Write;
+        return executeRequest( request );
+    }
+
+    uint64 MemoryLocalStore::submitErase( string_view slot )
+    {
+        LocalStoreRequest request;
+        request._slot      = string( slot );
+        request._operation = LocalStoreOperation::Erase;
+        return executeRequest( request );
+    }
+
+    uint64 MemoryLocalStore::submitList( string_view groupPrefix )
+    {
+        LocalStoreRequest request;
+        request._slot      = string( groupPrefix );
+        request._operation = LocalStoreOperation::List;
+        return executeRequest( request );
+    }
+
+    int32 MemoryLocalStore::pollCompletions( vector<LocalStoreCompletion>& outListCompletion )
+    {
+        const int32 completionCount = static_cast<int32>( _completionBuffer.getCount() );
+        _completionBuffer.moveAllTo( outListCompletion );
+        return completionCount;
+    }
+
+    void MemoryLocalStore::shutdown()
+    {
+        _bShutdown = SW_TRUE;
+    }
+
+    uint64 MemoryLocalStore::executeRequest( LocalStoreRequest& request )
+    {
+        request._requestID = _requestIDAllocator.allocate();
+        if ( _bShutdown == SW_TRUE )
+            _completionBuffer.push( LocalStoreRequest::makeCompletion( request, LocalStoreResult::IOError ) );
+        else
+            _completionBuffer.push( LocalStoreRequest::execute( request, *_pDatabase, _sealContext ) );
+        return request._requestID;
+    }
+} // namespace sw

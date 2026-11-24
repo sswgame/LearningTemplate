@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameStack.h"
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
 
 namespace sw
 {

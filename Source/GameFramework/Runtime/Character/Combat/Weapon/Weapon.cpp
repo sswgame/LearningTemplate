@@ -15,9 +15,9 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+#include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 
 namespace sw
 {
