@@ -43,6 +43,7 @@ namespace sw
     class GameInstance;
     class GameObject;
     class Scene;
+    struct SceneHandle;
     class SubsystemScope;
     struct GamePackConfig;
     enum class SceneLoadKind : uint8; // Engine/Scene/SceneManager.h
@@ -116,9 +117,10 @@ namespace sw
          * @brief 세이브의 칸 스택(@p listFrame, 비지 않는다)으로 바꾸고 맨 위 미니게임을 켠 뒤 세이브의 씬 @p scenePath 를 엽니다. 씬이 선 뒤(졌으면 nullptr) @p onLoaded 를 부릅니다.
          * @return 정의를 읽지 못하거나 검사 · 깊이 한도 · 넷 세션에 걸리거나, 다른 진입 · 나가기가 맵을 기다리거나, 켜기 · 씬 요청이 지면 알리고 false 입니다 — 지금 칸은 그대로다.
          */
-        [[nodiscard]] bool travelToSavedMinigame( vector<MinigameSavedFrame> listFrame, const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded );
+        [[nodiscard]] bool travelToSavedMinigame( vector<MinigameSavedFrame> listFrame, const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded,
+                                                  uint32 sessionTravel );
         /** @brief @p scenePath 를 이 흐름의 요청으로 맡깁니다 — 칸 스택을 둔 채 씬을 다시 연다(받아들임 알림이 장치 밖 이동으로 보지 않게). */
-        [[nodiscard]] bool requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded );
+        [[nodiscard]] bool requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded, uint32 sessionTravel );
         /**
          * @brief 틱 뒤 작업(디렉터의 `finishMinigame`)에서 나가기를 맡깁니다 — 다음 `update`(틱 밖)가 `leave` 합니다. 맡긴 나가기가 이미 있으면 경고하고 이것을 버립니다.
          * @details 하위 레벨 나가기는 그 자리에서 하위 레벨을 빼므로 그 안 디렉터의 규칙 중에 부르면 자기를 지운다 — 진입(`requestEnter`)과 같은 줄로 미룬다.
@@ -198,7 +200,7 @@ namespace sw
          * @brief @p scenePath 를 이 흐름의 요청으로 맡기고, 그 로드를 아직 기다리고 있을 때 끝나면 @p pHandler 를 부릅니다. @p onLoaded 는 그 로드가 끝나면 늘 부릅니다(졌거나 밀려났으면 nullptr).
          * @return 요청이 지면 false 입니다.
          */
-        [[nodiscard]] bool requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded = {} );
+        [[nodiscard]] bool requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded = {}, uint32 sessionTravel = 0 );
         /** @brief 진입한 미니게임 맵이 섰습니다(`requestAwaitedScene`). @p pScene 이 nullptr 이면 실패로 알리고 그 칸을 꺼낸다. */
         void onMapLoaded( Scene* pScene );
         /** @brief 세이브의 미니게임 맵이 섰습니다(`travelToSavedMinigame`). 졌으면 바꾸기 전 칸 스택을 되돌립니다. */
@@ -206,7 +208,7 @@ namespace sw
         /** @brief 나가며 돌아갈 씬(찍은 씬 또는 입구)이 섰습니다. 찍어 둔 씬이 있으면 복원하고 결과를 넘깁니다. */
         void onReturnLoaded( Scene* pScene );
         /** @brief 씬 로드 받아들임 알림입니다. 이 흐름이 요청하지 않은 게임 이동이면 칸 스택과 미니게임을 비웁니다(`clearForOutsideTravel`). */
-        void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
+        void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future );
         /** @brief 월드의 플레이가 시작(활성 씬의 `beginPlay` 앞) · 끝(`endPlay` 뒤)났습니다. 시작이면 활성 씬의 맵을 가진 미니게임을 켜고, 끝이면 모두 비웁니다. */
         void onWorldPlayChanged( bool bPlaying );
         /** @brief 활성 씬이 씬 전환 미니게임 하나의 맵이면 그 미니게임을 칸(돌아올 씬 없음)으로 켭니다. 여러 미니게임의 맵이면 경고하고 켜지 않습니다. */

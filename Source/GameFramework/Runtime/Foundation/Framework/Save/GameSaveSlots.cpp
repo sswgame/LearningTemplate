@@ -96,6 +96,7 @@ namespace sw
         , _listSlotRequest{}
         , _pendingSlotRestore{}
         , _brokenRestoreBlock{}
+        , _playTime{ 0.0 }
         , _counts{}
     {
     }
@@ -136,7 +137,9 @@ namespace sw
             return;
         }
         // 미니게임 안이면 칸 스택을 둔 채 다시 연다 — 같은 미니게임의 맵이다.
-        if ( _owner.getSubsystem<MinigameFlow>().requestScene( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onBrokenSceneReopened, this ) ) == false )
+        // 이 불러오기를 잇는 이동이다 — 게임 이동으로 맡기면 열려 있는 그 이동이 막는다.
+        if ( _owner.getSubsystem<MinigameFlow>().requestScene( scenePath, SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onBrokenSceneReopened, this ),
+                                                               _owner.getSubsystem<GameSceneFlow>().beginSessionTravel() ) == false )
             SW_LOG_ERROR_ID( "GameSaveSlots.BrokenSceneNotRequested", "The broken scene '%#' could not be requested again - saving stays blocked until a restore succeeds", scenePath.c_str() );
     }
 
@@ -210,26 +213,33 @@ namespace sw
         GameEventUtil::send( event );
     }
 
+    void GameSaveSlots::updatePlayTime( float32 deltaTime )
+    {
+        const GameSceneFlow& sceneFlow = _owner.getSubsystem<GameSceneFlow>();
+        if ( sceneFlow.isOnTitleScene() == false && sceneFlow.hasPendingSceneLoad() == false )
+            _playTime += static_cast<float64>( deltaTime );
+    }
+
     bool GameSaveSlots::load( string_view slot )
     {
-        if ( _pendingSlotRestore.has_value() )
-        {
-            SW_LOG_WARNING_ID( "GameSaveSlots.LoadWhileTravelling", "A save is already waiting for its scene - this load is refused (slot '%#')", _pendingSlotRestore->_slot.c_str() );
-            return false;
-        }
         string slotName;
-        if ( resolveSlot( slot, slotName ) == false )
-            return false;
-        holdSlotRequest( _owner.getSubsystem<GameLocalStore>().submitRead( slotName, SW_DELEGATE_METHOD( GameLocalStore::CompletionFunction, &GameSaveSlots::onSlotRead, this ) ) );
+        return resolveSlot( slot, slotName ) && loadSlot( slotName, {} );
+    }
+
+    bool GameSaveSlots::loadSlot( const string& slot, const AppliedFunction& onApplied )
+    {
+        const uint32 sessionTravel = _owner.getSubsystem<GameSceneFlow>().beginSessionTravel();
+        holdSlotRequest( _owner.getSubsystem<GameLocalStore>().submitRead( slot, SW_DELEGATE_LAMBDA( GameLocalStore::CompletionFunction, [this, onApplied, sessionTravel]( const LocalStoreCompletion& completion )
+        { onSlotRead( completion, onApplied, sessionTravel ); } ) ) );
         return true;
     }
 
-    void GameSaveSlots::onSlotRead( const LocalStoreCompletion& completion )
+    void GameSaveSlots::onSlotRead( const LocalStoreCompletion& completion, const AppliedFunction& onApplied, uint32 sessionTravel )
     {
         if ( completion._result != LocalStoreResult::Ok )
         {
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSlotCouldNot2", "Save slot '%#' could not be read (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
-            publishSlotLoaded( completion._slot, false, {} );
+            publishSlotLoaded( completion._slot, false, onApplied, sessionTravel );
             return;
         }
         if ( completion._formatVersion != GameSaveSlotsInternal::kSaveSlotFormatVersion )
@@ -237,24 +247,24 @@ namespace sw
             // 옛 형식 리더는 두지 않는다 - 다른 판의 세이브는 거절한다.
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSlotFormatVersion", "Save slot '%#' has format version %#, this build reads %#", completion._slot.c_str(), completion._formatVersion,
                              GameSaveSlotsInternal::kSaveSlotFormatVersion );
-            publishSlotLoaded( completion._slot, false, {} );
+            publishSlotLoaded( completion._slot, false, onApplied, sessionTravel );
             return;
         }
-        applySlot( completion._slot, completion._bytes, {} );
+        applySlot( completion._slot, completion._bytes, onApplied, sessionTravel );
     }
 
-    void GameSaveSlots::applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied )
+    void GameSaveSlots::applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied, uint32 sessionTravel )
     {
-        if ( GameStateSnapshot::upgradeEnvelope( bytes ) == false )
+        GameSceneFlow& sceneFlow = _owner.getSubsystem<GameSceneFlow>();
+        if ( sceneFlow.isSessionTravelCurrent( sessionTravel ) == false )
         {
-            publishSlotLoaded( slot, false, onApplied ); // 까닭은 판 올림이 남겼다
+            SW_LOG_INFO_ID( "GameSaveSlots.LoadSuperseded", "Save slot '%#' is not applied - the player chose to go somewhere else after it", slot.c_str() );
+            publishSlotLoaded( slot, false, onApplied, sessionTravel );
             return;
         }
-        if ( _pendingSlotRestore.has_value() )
+        if ( GameStateSnapshot::upgradeEnvelope( bytes ) == false )
         {
-            // 읽기 둘이 겹쳤다 — 앞의 것이 씬을 옮기는 중이라 이 세이브를 곧 내려갈 씬에 풀지 않는다.
-            SW_LOG_WARNING_ID( "GameSaveSlots.SlotReadWhileTravelling", "Save slot '%#' was read while another save waits for its scene - it is not applied", slot.c_str() );
-            publishSlotLoaded( slot, false, onApplied );
+            publishSlotLoaded( slot, false, onApplied, sessionTravel ); // 까닭은 판 올림이 남겼다
             return;
         }
         // 머리만 읽어 찍은 씬과 미니게임을 본다. 같은 씬 · 같은 미니게임(또는 씬 없이 찍은 세이브)이면 바로 적용하고, 아니면 그 미니게임을 켜고 그 씬을 연 뒤 적용한다 —
@@ -265,50 +275,65 @@ namespace sw
         const bool                    bHeaderRead = savedSceneID.has_value() && minigameBytes.has_value() && MinigameStack::readSaveState( *minigameBytes, listFrame );
         if ( bHeaderRead == false )
         {
-            publishSlotLoaded( slot, false, onApplied ); // 머리가 틀린 까닭은 읽기가 남겼다
+            publishSlotLoaded( slot, false, onApplied, sessionTravel ); // 머리가 틀린 까닭은 읽기가 남겼다
             return;
         }
         MinigameFlow& minigameFlow = _owner.getSubsystem<MinigameFlow>();
         const bool    bInMinigame  = minigameFlow.isInSavedMinigame( listFrame );
         // 맡긴 이동이 남았으면 활성 씬은 곧 내려간다 — 거기 풀면 성공을 알린 뒤 씬과 함께 사라진다. 세이브의 씬을 다시 요청해 그 이동을 대신한다.
-        const bool bStaysInScene = bInMinigame && _owner.getSubsystem<GameSceneFlow>().hasPendingSceneLoad() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
+        const bool bStaysInScene = bInMinigame && sceneFlow.hasPendingSceneLoad() == false && *savedSceneID == GameSaveSlotsInternal::findActiveSceneID();
         if ( savedSceneID->empty() || bStaysInScene )
         {
-            const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes );
+            const bool bRestored = restoreSlot( bytes );
             if ( bRestored && bInMinigame )
                 minigameFlow.applySavedMinigame( std::move( listFrame ) );
-            publishSlotLoaded( slot, bRestored, onApplied );
+            publishSlotLoaded( slot, bRestored, onApplied, sessionTravel );
             return;
         }
-        _pendingSlotRestore = PendingSlotRestore{ slot, std::move( bytes ), onApplied };
+        if ( _pendingSlotRestore.has_value() )
+        {
+            // 앞 불러오기는 이 불러오기에 물렸다 — 그 씬이 서도 적용하지 않는다.
+            const PendingSlotRestore previous = std::move( *_pendingSlotRestore );
+            _pendingSlotRestore               = nullopt;
+            publishSlotLoaded( previous._slot, false, previous._onApplied, previous._sessionTravel );
+        }
+        _pendingSlotRestore = PendingSlotRestore{ slot, std::move( bytes ), sessionTravel, onApplied };
         // 미니게임 밖의 세이브는 장치 밖 이동이다 — 켜진 미니게임이 있으면 흐름이 비운다.
-        const GameSceneFlow::SceneLoadedFunction onLoaded   = SW_DELEGATE_METHOD( GameSceneFlow::SceneLoadedFunction, &GameSaveSlots::onSaveSceneLoaded, this );
-        const bool                               bRequested = listFrame.empty() ? _owner.getSubsystem<GameSceneFlow>().requestSceneThen( *savedSceneID, onLoaded )
-                                                                                : minigameFlow.travelToSavedMinigame( std::move( listFrame ), *savedSceneID, onLoaded );
+        const GameSceneFlow::SceneLoadedFunction onLoaded   = SW_DELEGATE_LAMBDA( GameSceneFlow::SceneLoadedFunction, [this, sessionTravel]( Scene* pScene )
+          { onSaveSceneLoaded( pScene, sessionTravel ); } );
+        const bool                               bRequested = listFrame.empty() ? sceneFlow.requestSceneThen( *savedSceneID, onLoaded, sessionTravel )
+                                                                                : minigameFlow.travelToSavedMinigame( std::move( listFrame ), *savedSceneID, onLoaded, sessionTravel );
         if ( bRequested == false )
         {
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSceneNotRequested", "Save slot '%#' was made in scene '%#', which could not be requested - nothing is loaded", slot.c_str(), savedSceneID->c_str() );
             _pendingSlotRestore = nullopt;
-            publishSlotLoaded( slot, false, onApplied );
+            publishSlotLoaded( slot, false, onApplied, sessionTravel );
         }
     }
 
-    void GameSaveSlots::onSaveSceneLoaded( Scene* pScene )
+    void GameSaveSlots::onSaveSceneLoaded( Scene* pScene, uint32 sessionTravel )
     {
-        if ( _pendingSlotRestore.has_value() == false )
-            return; // 종료가 거뒀다
+        if ( _pendingSlotRestore.has_value() == false || _pendingSlotRestore->_sessionTravel != sessionTravel )
+            return; // 종료가 거뒀거나 뒤 불러오기가 물렸다(물릴 때 알렸다)
         const PendingSlotRestore pending = std::move( *_pendingSlotRestore );
         _pendingSlotRestore              = nullopt;
-        if ( pScene == nullptr )
-        {
+        const bool bCurrent              = _owner.getSubsystem<GameSceneFlow>().isSessionTravelCurrent( sessionTravel );
+        if ( pScene == nullptr && bCurrent )
             SW_LOG_ERROR_ID( "GameSaveSlots.SaveSceneNotOpened", "The scene of save slot '%#' did not open (failed or replaced by a later request) - nothing is loaded", pending._slot.c_str() );
-            publishSlotLoaded( pending._slot, false, pending._onApplied );
-            return;
-        }
-        publishSlotLoaded( pending._slot, _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes ), pending._onApplied );
+        publishSlotLoaded( pending._slot, pScene != nullptr && bCurrent && restoreSlot( pending._bytes ), pending._onApplied, sessionTravel );
     }
 
-    void GameSaveSlots::publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied )
+    bool GameSaveSlots::restoreSlot( const vector<uint8>& bytes )
+    {
+        if ( _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes ) == false )
+            return false;
+        const optional<GameStateSnapshot::SaveInfo> info = GameStateSnapshot::readSaveInfo( bytes.data(), static_cast<uint32>( bytes.size() ) );
+        if ( info.has_value() )
+            _playTime = info->_playTime;
+        return true;
+    }
+
+    void GameSaveSlots::publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied, uint32 sessionTravel )
     {
         if ( bLoaded )
         {
@@ -316,9 +341,12 @@ namespace sw
             if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
                 pAutosave->resetProgress(); // 앞 진행의 체크포인트 · 요청으로 되돌린 진행을 저장하지 않는다(자동 저장 되돌리기는 아래 완료가 제 슬롯의 것으로 잇는다)
         }
+        GameSceneFlow&      sceneFlow = _owner.getSubsystem<GameSceneFlow>();
         SaveGameLoadedEvent event{};
-        event._slot     = slot;
-        event._bSuccess = bLoaded;
+        event._slot        = slot;
+        event._bSuccess    = bLoaded;
+        event._bSuperseded = bLoaded == false && sceneFlow.isSessionTravelCurrent( sessionTravel ) == false;
+        sceneFlow.endSessionTravel( sessionTravel );
         GameEventUtil::send( event );
         if ( onApplied.isBound() )
             onApplied( bLoaded );

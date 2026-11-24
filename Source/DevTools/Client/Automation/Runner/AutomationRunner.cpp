@@ -281,7 +281,7 @@ namespace sw
         }
         if ( _startSceneLoad.isReady() == false )
             return true;
-        const Scene* const pLoaded = _startSceneLoad.get();
+        const Scene* const pLoaded = sceneManager.resolveScene( _startSceneLoad.get() );
         if ( pLoaded == nullptr )
         {
             StringBuilder<constant::buffer::kMax256> reason;

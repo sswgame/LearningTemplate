@@ -1,6 +1,10 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "ComponentStateStore": "ComponentStateCodec — 네 길(세이브 · 셀 · 씬 전환 · 핫 리로드)이 한 코덱으로 싣는다(2026-11-25)",
+    "getComponentStateStore": "지움 — ComponentStateCodec::captureObject · restoreObject(2026-11-25)",
+    "remapComponentIDs": "지움 — 상태는 (정체, 지역 id)로 짝짓는다(GameStateSnapshot 봉투 판 13)(2026-11-25)",
+    "appendComponentIDRemap": "지움 — 상태는 (정체, 지역 id)로 짝짓는다(GameStateSnapshot 봉투 판 13)(2026-11-25)",
     "GimmickDamageEvent": "맞음 길의 사본이라 지웠다 — 피해는 CharacterRayHit::deliverHit, 알림은 DamageAppliedEvent(2026-11-25)",
     "GimmickNoiseEvent": "연출 신호 \"Noise\"(GimmickUtil::sendCue) — 들리는 소리는 큐 표가 낸다(2026-11-25)",
     "SceneLoadRequestedEvent": "씬 매니저 알림의 사본이라 지웠다 — SceneManager::onSceneLoadRequested(2026-11-25)",

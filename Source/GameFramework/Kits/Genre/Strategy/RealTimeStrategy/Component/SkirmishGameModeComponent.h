@@ -51,7 +51,7 @@ namespace sw
         /** @brief @p manager 의 스커미시 디렉터(씬에 하나)입니다. 없으면 nullptr, 둘 이상이면 오류를 남기고 nullptr 입니다(감시 값 · 개발 명령이 등록 순서로 고르지 않는다). */
         static SkirmishGameModeComponent* findInScene( const GameObjectManager& manager );
 
-        /** @brief 판(월드, AI 진행, 속도, 일시정지)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 판(월드, AI 진행, 속도, 일시정지)을 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
 
         // ---- 읽기(클라이언트 모듈) ----

@@ -405,7 +405,8 @@ namespace sw
     }
 
     Scene::Scene( string_view name, const SceneEngineServices& services )
-        : _name{ name }
+        : _handleSerial{ 0 }
+        , _name{ name }
         , _sourcePath{}
         , _defaultMaterialPath{}
         , _sceneSettings{}

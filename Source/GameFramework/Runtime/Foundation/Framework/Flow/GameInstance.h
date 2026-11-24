@@ -187,21 +187,18 @@ namespace sw
 
         /**
          * @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다.
-         * @details 부르기 전에 봉투의 컴포넌트 상태 저장소(`getStateSnapshot().getComponentStateStore()`)를 비우고, `register*` 로 올린 타입의 상태를 싣고 세운 것을 걷는다.
-         *          그 밖의 상태는 여기서 `getStateSnapshot().getComponentStateStore().capture<T>( key, manager )`(열쇠는 저장 틀이 넘긴다 — `StatefulComponentRegistrar` 로 등록하는 길이 먼저다) 로 싣는다.
-         *          한 번의 캡처에 두 번 불릴 수 있다(크기 묻기와 채우기).
+         * @details 컴포넌트 상태를 뜨고 세운 것을 걷은 뒤다. PROPERTY 밖의 상태는 컴포넌트가 코덱으로 싣는다(`registerStatefulComponent` · `StatefulComponentRegistrar`) — 여기서 싣지 않는다.
+         *          파생이 세운 것 가운데 걷기에 걸리지 않는 것만 걷는다.
          */
         virtual void onBeforeStateSerialize() {}
         /**
          * @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다.
          * @details 씬 오브젝트가 다시 서고 `register*` 로 올린 타입이 상태를 돌려받은 뒤에 불린다.
-         *          그 밖에 실어 둔 상태는 `getStateSnapshot().getComponentStateStore().restore<T>( key, manager )` 로 넘긴다. 이 훅이 끝나면 저장소를 비운다.
          */
         virtual void onAfterStateDeserialize() {}
 
         /**
          * @brief 상태 스냅샷 봉투입니다 — 파생 생성자가 PROPERTY 밖의 상태를 가진 컴포넌트 타입을 올린다(`registerStatefulComponent` · `registerGameMode` — 세운 것만 가진 타입은 정의한 .cpp 의 `StatefulComponentRegistrar`).
-         * @details 훅(`onBeforeStateSerialize` · `onAfterStateDeserialize`)은 그 봉투의 컴포넌트 상태 저장소(`getComponentStateStore`)로 그 밖의 상태를 싣고 넘긴다.
          */
         GameStateSnapshot& getStateSnapshot() { return _stateSnapshot; }
         /**

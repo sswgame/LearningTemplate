@@ -57,7 +57,7 @@ namespace sw
         /** @brief 알림 · 입력 처리를 틱 뒤 게임 스레드로 미룹니다. */
         void onTick( TickContext& context ) override;
 
-        /** @brief 고른 도구를 씁니다(`ComponentStateStore::capture`). */
+        /** @brief 고른 도구를 씁니다(`ComponentStateCodec::captureObject`). */
         SW_DECLARE_STATE_IO_IN_PLACE();
         /** @brief `writeState` 가 쓴 바이트로 고른 도구를 되돌립니다. 읽지 못하면 알리고 그대로 둡니다. */
         void restoreState( vector<uint8>&& bytes );

@@ -120,7 +120,7 @@ namespace sw
      *          `_bShowDamageNumbers` 가 켜져 있으면 체력이 깎일 때 피해 숫자 창구(`IDamageNumberSink`, 클라이언트 전용 구현)로 숫자를 띄운다.
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
-     *          **저장**: 설정은 PROPERTY 로, 런타임 상태(어트리뷰트 base, 걸린 이펙트, 이펙트 밖 태그)는 `ComponentStateStore` 계약
+     *          **저장**: 설정은 PROPERTY 로, 런타임 상태(어트리뷰트 base, 걸린 이펙트, 이펙트 밖 태그)는 `ComponentStateCodec` 계약
      *          (`serializeState` / `restoreState`, `AbilitySaveState`)으로 모든 게임의 상태 스냅샷에 실린다(정적 등록 — 게임이 적지 않는다).
      *          부여한 어빌리티는 싣지 않고 플레이를 시작할 때 세트가 다시 준다. 실행 중이던 어빌리티는 이어 가지 않는다(언리얼 GAS 와 같다).
      */
@@ -169,13 +169,13 @@ namespace sw
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
         void                          onTick( TickContext& context ) override;
         /**
-         * @brief `ComponentStateStore` 계약입니다. 어트리뷰트 base, 걸린 이펙트(정의 id · 남은 시간 · 스택 · 계산해 둔 모디파이어), 이펙트 밖 태그를 놓습니다.
+         * @brief `ComponentStateCodec` 계약입니다. 어트리뷰트 base, 걸린 이펙트(정의 id · 남은 시간 · 스택 · 계산해 둔 모디파이어), 이펙트 밖 태그를 놓습니다.
          * @details 읽기는 끝까지 맞고 세트 · 카탈로그와도 맞을 때만 한 번에 적용한다(`applySaveState`). 맞지 않으면 아무것도 바꾸지 않고 거절한다.
          */
         void serializeState( StateIO& io );
         /** @brief 다시 만든 컴포넌트가 상태를 받습니다. 플레이 시작 전이면 보관했다가 세트를 준 뒤(`onBeginPlay`) 적용합니다 — 세트가 어트리뷰트를 만든 뒤라야 읽힌다. */
         void restoreState( vector<uint8>&& bytes );
-        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateStore` 계약 — 있으면 그것이 곧 상태다). */
+        /** @brief 시작 전에 받아 보관한 상태입니다(`ComponentStateCodec` 계약 — 있으면 그것이 곧 상태다). */
         const vector<uint8>& getPendingStateBytes() const { return _pendingStateBytes; }
 
         // --------------------------------------------------------------------------

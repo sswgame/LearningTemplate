@@ -84,7 +84,7 @@ namespace sw
         FarmGameModeComponent();
         virtual ~FarmGameModeComponent() override;
 
-        /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력은 월드 상태(`GameStateComponent`), 가방 · 돈은 플레이어 상태(`InventoryComponent` · `WalletComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력은 월드 상태(`GameStateComponent`), 가방 · 돈은 플레이어 상태(`InventoryComponent` · `WalletComponent`)가 싣습니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----

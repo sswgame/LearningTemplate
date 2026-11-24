@@ -52,7 +52,7 @@ namespace sw
         VoxelGameModeComponent();
         virtual ~VoxelGameModeComponent() override;
 
-        /** @brief 블록(부수거나 놓은 것 포함)을 기록합니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 블록(부수거나 놓은 것 포함)을 기록합니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
         /**
          * @brief 블록 하나를 바꿉니다. 플레이어와 청크가 월드를 읽는 동안에는 쓰면 안 되므로, 틱이 끝난 뒤 게임 스레드에서만 부릅니다.

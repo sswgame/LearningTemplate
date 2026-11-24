@@ -94,7 +94,7 @@ namespace sw
                 // 요청한 로드가 끝나고 활성 씬으로 바뀐 뒤에 빈 씬으로 교체한다(로드한 씬이 언로드된다).
                 if ( _loadFuture.isReady() == false || manager.isTransitioning() )
                     break;
-                if ( _loadFuture.get() == nullptr )
+                if ( _loadFuture.get().isValid() == false )
                 {
                     SW_LOG_ERROR_ID( "SceneLoadLeakCheck.SceneLeakCheckLoading", "Scene leak probe: loading '%#' failed in round %# - stopping", _scenePath, _round );
                     finish();

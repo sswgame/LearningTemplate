@@ -115,6 +115,7 @@ namespace sw
     class GameObjectManager;
     class InputManager;
     class Scene;
+    struct SceneHandle;
 
     /**
      * @class AutomationRunner
@@ -404,7 +405,7 @@ namespace sw
         int64                             _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
         float32                           _wallLimitSeconds;       ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산 + 조건 대기의 제 시한(`computeWallLimitSeconds`)
         string                            _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
-        TaskFuture<Scene*>                _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
+        TaskFuture<SceneHandle>           _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         optional<AutomationRunResult>     _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
         AutomationFrameStats              _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
         /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽는다(`loadRunPolicy`) — 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다

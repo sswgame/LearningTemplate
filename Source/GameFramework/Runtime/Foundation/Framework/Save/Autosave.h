@@ -125,15 +125,15 @@ namespace sw
     class SW_GF_API AutosaveManager
     {
     public:
-        /** @brief 지금 상태를 바이트로 만듭니다. 성공하면 true 입니다. */
-        using SaveDelegate = Delegate<bool( vector<uint8>& outBytes )>;
+        /** @brief 지금 상태를 바이트로 만들고 그 진행의 플레이 시간(초)을 @p outPlayTime 에 적습니다. 성공하면 true 입니다. */
+        using SaveDelegate = Delegate<bool( vector<uint8>& outBytes, float64& outPlayTime )>;
         /** @brief 되살리기의 끝을 알립니다(성공이면 true). 불러오기 델리게이트가 받은 되살리기마다 한 번 부른다. */
         using RestoreCompletedFunction = Delegate<void( bool bRestored )>;
         /**
-         * @brief 슬롯 @p slot 의 바이트로 되살리기를 맡습니다(언리얼 `AsyncLoadGameFromSlot` 의 완료 델리게이트 · 유니티 `AsyncOperation.completed` 자리).
+         * @brief 슬롯 @p slot 을 읽어 되살리기를 맡습니다 — 수동 불러오기와 같은 길이다(언리얼 `AsyncLoadGameFromSlot` 의 완료 델리게이트 · 유니티 `AsyncOperation.completed` 자리).
          * @details 받았으면 true 이고 끝은 @p onCompleted 로 알린다 — 바로 적용했으면 안에서, 씬을 옮겨 적용하면 그 뒤에. 받지 않았으면 false 이고 @p onCompleted 를 부르지 않는다(실패로 친다).
          */
-        using LoadDelegate = Delegate<bool( const string& slot, const vector<uint8>& bytes, const RestoreCompletedFunction& onCompleted )>;
+        using LoadDelegate = Delegate<bool( const string& slot, const RestoreCompletedFunction& onCompleted )>;
 
         AutosaveManager();
 
@@ -178,19 +178,18 @@ namespace sw
          * @details 잊지 않으면 되돌린 진행에서 같은 체크포인트에 다시 닿아도 저장하지 않고, 앞 진행의 요청이 새 진행을 그 까닭 · 이름으로 저장한다.
          */
         void resetProgress();
-        /** @brief 게임을 처음부터 시작합니다(타이틀로 · 시작) — 진행을 잊고 플레이 시간을 0 으로 두며, 끝나지 않은 되돌리기를 잊습니다. */
+        /** @brief 게임을 처음부터 시작합니다(타이틀로 · 시작) — 진행을 잊고, 끝나지 않은 되돌리기를 잊습니다. */
         void beginNewGame();
 
         bool hasPendingRequest() const { return _bPending == SW_TRUE; }
         /** @brief 맡긴 되돌리기(슬롯 읽기 또는 게임의 적용)가 아직 끝나지 않았으면 true 입니다. */
-        bool isRestoring() const { return _restoreRequest.isActive() || _restoringSlot.empty() == false; }
+        bool isRestoring() const { return _restoringSlot.empty() == false; }
         /** @brief 시작 때 맡긴 슬롯 기록 읽기가 아직 남았으면 true 입니다. */
         bool isScanning() const { return _scanPendingCount > 0; }
         /** @brief 맡긴 저장(상태 슬롯 쓰기)이 아직 끝나지 않았으면 true 입니다. */
         bool                    isSaving() const { return _saveRequest.isActive(); }
         AutosaveTrigger         getPendingTrigger() const { return _pendingTrigger; }
         const hashed_string&    getLastCheckpointID() const { return _lastCheckpointID; }
-        float64                 getPlayTime() const { return _playTime; }
         uint32                  getSaveCount() const { return _saveCount; }
         const AutosaveSettings& getSettings() const { return _settings; }
 
@@ -205,7 +204,6 @@ namespace sw
         void               onSlotWritten( const LocalStoreCompletion& completion );
         void               onInfoWritten( const LocalStoreCompletion& completion );
         void               onInfoRead( const LocalStoreCompletion& completion );
-        void               onSlotRead( const LocalStoreCompletion& completion );
         /** @brief 게임이 되살리기를 끝냈습니다(`RestoreCompletedFunction`). 성공한 체크포인트 되돌리기면 그 체크포인트를 지난 것으로 둡니다. */
         void                      onRestoreCompleted( bool bRestored );
         [[nodiscard]] static bool writeSlotInfo( const AutosaveSlotInfo& info, vector<uint8>& outBytes );
@@ -224,9 +222,8 @@ namespace sw
         hashed_string            _lastCheckpointID;
         hashed_string            _restoringCheckpointID; ///< 읽기를 맡긴 체크포인트 되돌리기(비면 가장 새 슬롯 되돌리기)
         string                   _restoringSlot;         ///< 게임이 적용 중인 되돌리기의 슬롯(비면 없음) — 완료가 비운다
-        float64                  _restoringPlayTime;     ///< 되돌리는 슬롯의 플레이 시간 — 성공한 되돌리기가 이어 센다
-        float64                  _playTime;
-        float64                  _lastSaveTime; ///< 마지막 자동 저장의 플레이 시간(음수면 아직 없음)
+        float64                  _clock;                 ///< 최소 간격을 재는 시계(게임 시간을 쌓는다 — 진행을 바꿔도 뒤로 가지 않는다)
+        float64                  _lastSaveTime;          ///< 마지막 자동 저장의 시계(음수면 아직 없음)
         float32                  _intervalTimer;
         uint64                   _nextSequence;
         uint32                   _saveCount;
@@ -237,6 +234,5 @@ namespace sw
         vector<Subscription>     _listScanRequest; ///< 슬롯 기록 읽기 구독
         Subscription             _saveRequest;     ///< 상태 슬롯 쓰기 구독(끝나면 꺼진다)
         Subscription             _infoRequest;     ///< 슬롯 기록 쓰기 구독
-        Subscription             _restoreRequest;  ///< 되돌리기 읽기 구독
     };
 } // namespace sw

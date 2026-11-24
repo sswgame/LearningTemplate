@@ -244,6 +244,9 @@ namespace sw
         /** @brief 씬 파일에서 읽은 월드 설정입니다. */
         const SceneSettings& getSceneSettings() const { return _sceneSettings; }
 
+        /** @brief 씬 매니저가 매긴 핸들 번호입니다(`SceneHandle::_serial` — 매니저 밖의 씬은 0). */
+        uint64 getHandleSerial() const { return _handleSerial; }
+        void   setHandleSerial( uint64 serial ) { _handleSerial = serial; }
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }
         /** @brief 마지막 로드/저장 경로(리소스 상대 또는 절대)를 반환합니다. */
@@ -364,6 +367,7 @@ namespace sw
         void storeCameraHandle( CameraComponent* pCamera, TComponentHandle<CameraComponent>& outHandle );
 
     private:
+        uint64                        _handleSerial; ///< 씬 매니저가 씬을 받을 때 매긴다(`SceneManager::applyScene`)
         string                        _name;
         string                        _sourcePath;
         string                        _defaultMaterialPath;

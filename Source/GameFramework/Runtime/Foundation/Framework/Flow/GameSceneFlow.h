@@ -21,6 +21,7 @@ namespace sw
     class ILoadingScreen;
     class SaveLock;
     class Scene;
+    struct SceneHandle;
     class ScreenTransitionManager;
     class Widget;
     enum class SceneLoadKind : uint8; // Engine/Scene/SceneManager.h
@@ -36,6 +37,8 @@ namespace sw
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameSceneFlow";
+        /** @brief 게임 이동(포털 · 미니게임)의 번호입니다 — 플레이어가 고른 이동이 아니다. */
+        static constexpr uint32 kGameplayTravel = 0;
 
         /** @brief 맡긴 씬 로드의 끝을 받는 함수입니다 — 활성이 된 씬, 실패 · 뒤 요청에 밀렸으면 nullptr. */
         using SceneLoadedFunction = Delegate<void( Scene* pScene )>;
@@ -93,7 +96,21 @@ namespace sw
          * @details 세이브 불러오기(찍은 씬으로 옮긴 뒤 적용)와 깨진 복원 뒤 씬 다시 열기가 쓴다. 이벤트 버스가 없는 범위(도구 · 테스트)에서도 끝을 잃지 않게 이벤트 구독이 아니라
          *          그 로드에 묶인 함수로 받는다(유니티 `LoadSceneAsync(...).completed`, 언리얼은 `OpenLevel` 뒤 `PostLoadMapWithWorld` 구독).
          */
-        [[nodiscard]] bool requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded );
+        [[nodiscard]] bool requestSceneThen( const string& scenePath, const SceneLoadedFunction& onLoaded, uint32 sessionTravel );
+
+        /**
+         * @brief 플레이어가 고른 이동(타이틀로 · 시작 · 세이브 불러오기)을 하나 시작하고 그 번호를 돌려줍니다 — 앞의 것은 물립니다(마지막에 고른 것이 이긴다).
+         * @details 어느 이동이 이기는지는 여기 한 곳이 정한다. 열려 있는 동안 게임 이동(포털 · 미니게임 — 번호 0)은 받지 않는다: 하던 게임이 곧 끝나는데 씬만 먼저 바뀌지 않게.
+         *          맡은 쪽은 걸음마다 `isSessionTravelCurrent` 로 아직 제 차례인지 보고(물렸으면 실패로 끝낸다), 끝나면 `endSessionTravel` 을 부른다. 씬을 맡긴 이동은 그 로드의 끝이 닫는다.
+         *          언리얼 `UEngine::SetClientTravel` 이 나중 이동으로 앞 이동을 덮고, Lyra 가 메뉴로 나가는 동안 매치 이동을 받지 않는 자리다.
+         */
+        [[nodiscard]] uint32 beginSessionTravel();
+        /** @brief 이동 @p serial 이 아직 열려 있으면 true 입니다(뒤의 것에 물리거나 끝났으면 false). */
+        bool isSessionTravelCurrent( uint32 serial ) const { return serial != kGameplayTravel && serial == _openSessionTravel; }
+        /** @brief 이동 @p serial 을 닫습니다. 이미 물렸으면 아무것도 하지 않습니다. */
+        void endSessionTravel( uint32 serial );
+        /** @brief 타이틀 씬이 활성이면 true 입니다 — 게임 진행이 아니다(세이브 막기 · 플레이 시간). */
+        bool isOnTitleScene() const { return _titleSaveBlock.isActive(); }
 
         /** @brief 맡긴 게임 이동이 아직 끝나지 않았으면 true 입니다 — 활성 씬은 곧 내려간다. */
         bool hasPendingSceneLoad() const { return _listPendingSceneLoad.empty() == false; }
@@ -114,19 +131,20 @@ namespace sw
         /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
         struct PendingSceneLoad
         {
-            string              _scenePath;
-            TaskFuture<Scene*>  _future;
-            Subscription        _saveBlock; ///< 로드가 끝날 때까지 세이브를 막는다 — 반쯤 선 씬 · 옛 씬을 새 씬 이름으로 쓰지 않게 한다(목록에서 빠지면 풀린다)
-            SceneLoadedFunction _onLoaded;  ///< 끝을 받을 함수(`requestSceneThen`) — 묶이지 않았으면 이벤트만 낸다
+            string                  _scenePath;
+            TaskFuture<SceneHandle> _future;
+            Subscription            _saveBlock;     ///< 로드가 끝날 때까지 세이브를 막는다 — 반쯤 선 씬 · 옛 씬을 새 씬 이름으로 쓰지 않게 한다(목록에서 빠지면 풀린다)
+            uint32                  _sessionTravel; ///< 이 로드가 닫을 플레이어의 이동(`kGameplayTravel` 이면 없음)
+            SceneLoadedFunction     _onLoaded;      ///< 끝을 받을 함수(`requestSceneThen`) — 묶이지 않았으면 이벤트만 낸다
         };
 
         /**
          * @brief @p scenePath 의 로드를 `SceneManager` 에 게임 이동으로 맡깁니다. 로딩 화면은 `onSceneLoadRequested` 가 붙인다.
          * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
          */
-        [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
+        [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich, uint32 sessionTravel );
         /** @brief 씬 로드 받아들임 알림입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄웁니다. */
-        void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
+        void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future );
         /** @brief 활성 씬 @p scenePath 가 타이틀 씬이면 세이브를 막고, 아니면 풉니다 — 타이틀은 게임 진행이 아니라 저장하면 이어 하기가 타이틀을 연다. */
         void updateTitleSaveBlock( const string& scenePath );
         /** @brief 하던 진행을 잊게 합니다 — 타이틀로 · 시작이 부른다(`AutosaveManager::beginNewGame`). */
@@ -143,6 +161,8 @@ namespace sw
         Subscription             _titleSaveBlock;                 ///< 활성 씬이 타이틀인 동안 세이브를 막는다(`updateTitleSaveBlock`)
         Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
         vector<Subscription>     _listSessionCommandRegistration; ///< UI 전역 명령(StartGame · ReturnToTitle)의 등록 구독(`holdSessionCommand` 가 받는다)
+        uint32                   _openSessionTravel;              ///< 열려 있는 플레이어의 이동(`kGameplayTravel` 이면 없음)
+        uint32                   _lastSessionTravel;              ///< 마지막으로 매긴 번호
         uint8                    _bResumingWorld;                 ///< 초기화 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw
