@@ -40,8 +40,7 @@ function(sw_check_rhi_backend_name TEXT)
 	if(NOT TEXT IN_LIST SW_RHI_BACKEND_NAMES)
 		string(REPLACE ";" ", " list_name "${SW_RHI_BACKEND_NAMES}")
 		message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' for SW_SHIPPING_RHI_BACKEND — valid names: ${list_name} "
-			"(Config/Engine/CookContract.json rhi_backends). An existing build folder keeps the old cache value: "
-			"re-configure with -DSW_SHIPPING_RHI_BACKEND=<name> or edit it in CMakeCache.txt")
+			"(Config/Engine/CookContract.json rhi_backends) - use auto or one of them (-DSW_SHIPPING_RHI_BACKEND=<name>)")
 	endif()
 endfunction()
 

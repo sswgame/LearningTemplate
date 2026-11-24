@@ -10,7 +10,10 @@
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "SW_ENABLE_TRACY": "auto",
         "SW_MEMORY_BACKEND": "auto",
+        "SW_SHIPPING_RHI_BACKEND": "auto",
+        "SW_TARGET_TYPE": "auto",
         "SW_UNIT_TEST_SHARDS": "4"
       },
       "environment": {
@@ -96,6 +99,7 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "SW_HOST_BUILD_DIR": "auto",
         "SW_SHIPPING_BUILD": "ON"
       }
     },
@@ -188,8 +192,7 @@
       "cacheVariables": {
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/Tools/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
         "VCPKG_TARGET_TRIPLET": "wasm32-emscripten-pthread",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}",
-        "SW_SHIPPING_RHI_BACKEND": "WebGPU"
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}"
       },
       "environment": {
         "EMSDK": "${sourceDir}/Tools/emsdk",
@@ -213,8 +216,7 @@
         "VCPKG_TARGET_TRIPLET": "arm64-android",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_${presetName}",
         "ANDROID_ABI": "arm64-v8a",
-        "ANDROID_PLATFORM": "android-29",
-        "SW_SHIPPING_RHI_BACKEND": "Vulkan"
+        "ANDROID_PLATFORM": "android-29"
       }
     },
     {
@@ -225,7 +227,6 @@
       "cacheVariables": {
         "SW_SHIPPING_BUILD": "OFF",
         "SW_STATIC_MODULES": "ON",
-        "SW_ENABLE_TRACY": "OFF",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_Web-Shipping"
       }
     },
@@ -237,7 +238,6 @@
       "cacheVariables": {
         "SW_SHIPPING_BUILD": "OFF",
         "SW_STATIC_MODULES": "ON",
-        "SW_ENABLE_TRACY": "OFF",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed_Android-Shipping"
       }
     }

@@ -15,7 +15,8 @@ elseif(CMAKE_HOST_WIN32)
 else()
 	set(default_host_preset "Linux-Release")
 endif()
-set(SW_HOST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/${default_host_preset}" CACHE PATH "Host development build folder that cooks shipping packs (and whose ReflectionParser and vcpkg record cross builds use)")
+sw_resolve_auto_option(SW_HOST_BUILD_DIR "${CMAKE_SOURCE_DIR}/build/${default_host_preset}"
+	"Host development build folder (absolute path) that cooks shipping packs (and whose ReflectionParser and vcpkg record cross builds use): auto | path")
 
 if(CMAKE_HOST_WIN32)
 	set(host_exe_suffix ".exe")

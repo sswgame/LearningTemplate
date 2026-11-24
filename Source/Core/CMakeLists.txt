@@ -9,7 +9,7 @@
 # ------------------------------------------------------------------------------
 sw_glob_source_tree(list_core_source RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 sw_filter_platform_sources(list_core_source)
-# 힙 백엔드 — `SW_MEMORY_BACKEND`(MemoryBackend.cmake 가 푼 값)가 고른 `Memory/MemoryBackend<이름>.cpp` 하나만 짓고 나머지는 "이 구성이 짓지 않는다" 로 적는다.
+# 힙 백엔드 — `SW_MEMORY_BACKEND`(DerivedOptions.cmake 가 푼 값)가 고른 `Memory/MemoryBackend<이름>.cpp` 하나만 짓고 나머지는 "이 구성이 짓지 않는다" 로 적는다.
 # 링크 시점 선택이라 할당마다 가상 호출이 없다(언리얼은 `FMalloc*` 가상 호출 — 실행 중에 바꿀 일이 없어 링크로 고정한다).
 if(SW_MEMORY_BACKEND STREQUAL "crt")
 	set(memory_backend_file "CRT")

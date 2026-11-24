@@ -40,9 +40,7 @@ sw_vcpkg_write_manifest_stamp()
 # BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(ExcludedSources · ModuleTargets)보다 먼저다.
 # RuntimeDependencies 는 BuildLayout 의 sw_queue_runtime_copy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
 include(cmake/Modules/Build/NinjaBuildLogs.cmake) # 구성 끝의 ninja 재압축보다 앞 — 지다 만 것을 먼저 끝낸다
-include(cmake/Modules/Config/MemoryBackend.cmake)
-sw_resolve_memory_backend("${SW_MEMORY_BACKEND}" "${CMAKE_SYSTEM_NAME}" "${SW_ENABLE_SANITIZER}" SW_MEMORY_BACKEND) # 캐시 값(auto)을 같은 이름의 보통 변수로 가린다(SW_TARGET_TYPE 과 같은 방식)
-message(STATUS "[Memory] heap backend: ${SW_MEMORY_BACKEND}")
+include(cmake/Modules/Config/DerivedOptions.cmake) # 대상 · 다른 옵션에서 유도하는 옵션 — 아래 모든 파일이 푼 값을 본다
 include(cmake/Modules/Build/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
 include(cmake/Toolchain/LoadCompileFlags.cmake)
 include(cmake/Modules/Build/BuildLayout.cmake)
