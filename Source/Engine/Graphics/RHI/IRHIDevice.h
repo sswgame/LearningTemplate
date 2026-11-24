@@ -365,6 +365,7 @@ namespace sw
         void beginFrame()
         {
             assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
+            _beginFrameCount.fetch_add( 1, std::memory_order_acq_rel );
             _constantBufferWriteLog.beginFrame();
             activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
             reportResourceCounts();
@@ -697,6 +698,8 @@ namespace sw
         [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
         /** @brief 같은 전송 시리얼의 쓰기 접근자입니다 — 손실 표시(`reportDeviceLost`)가 이 길로만 쓴다. 읽기 판과 같은 멤버를 돌려준다. */
         [[nodiscard]] virtual RHITransferSerials& getTransferSerials() = 0;
+        /** @brief `beginFrame` 을 부른 수입니다 — 핸들 표(`RHIHandleTable`)가 놓은 칸을 다시 쓸 때를 잰다. 어느 스레드에서나 읽는다. */
+        const atomic<uint64>& getBeginFrameCount() const { return _beginFrameCount; }
         /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
         virtual void waitIdleInternal() = 0;
         /**
@@ -837,5 +840,7 @@ namespace sw
         RHIDrawDiagnostics _drawDiagnostics;
         /// @brief 이번 프레임의 기록 경로 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
         RHIConstantBufferWriteLog _constantBufferWriteLog;
+        /// @brief `beginFrame` 을 부른 수입니다(`getBeginFrameCount`).
+        atomic<uint64> _beginFrameCount{ 0 };
     };
 } // namespace sw
