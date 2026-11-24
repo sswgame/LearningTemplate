@@ -51,8 +51,8 @@ namespace sw
         if ( XMLReadUtil::hasOnlyKnownNames( root, { "culture" }, { "entries" }, sourceName ) == false || entries.isValid() == false || root.findAttribute( "culture" ) == nullptr )
             return unexpected( Error{ ErrorKind::InvalidArgument, "needs <TranslationMemory culture=\"…\"><entries>…</entries></TranslationMemory> and nothing else", sourceName } );
 
-        flat_map<string, string> mapPair;
-        size_t                   index{ 0 };
+        map<string, string> mapPair;
+        size_t              index{ 0 };
         for ( XMLNode entry = entries.findChild(); entry.isValid(); entry = entry.findNextSibling(), ++index )
         {
             const bool bMalformedEntry = string_view{ entry.getName() } != "entry" || XMLReadUtil::hasOnlyKnownNames( entry, { "source", "text" }, {}, sourceName ) == false ||

@@ -8,7 +8,7 @@
  *          언리얼 `OnlineSubsystemNull`, 유니티 Game Services 의 로컬 에뮬레이션 자리다(기억에 의존).
  */
 #pragma once
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -54,22 +54,22 @@ namespace sw
         [[nodiscard]] static bool isPlainFileName( string_view fileName );
         /** @brief 한 줄에 하나인 글 파일의 이름 칸으로 쓸 수 있는지 봅니다 — 비지 않고, 줄바꿈 · `=` · 앞뒤 공백이 없다(있으면 다음 실행이 다른 이름으로 읽는다). */
         [[nodiscard]] static bool isPlainKey( string_view key );
-        [[nodiscard]] bool        writeKeyValueFile( const utf8* pFileName, const flat_map<string, string>& mapValue ) const;
+        [[nodiscard]] bool        writeKeyValueFile( const utf8* pFileName, const map<string, string>& mapValue ) const;
         /** @brief `키=값` 파일을 읽습니다. 있는데 읽지 못했으면 false 입니다(없는 것은 처음 실행이라 true). */
-        [[nodiscard]] bool readKeyValueFile( const utf8* pFileName, flat_map<string, string>& outMapValue ) const;
+        [[nodiscard]] bool readKeyValueFile( const utf8* pFileName, map<string, string>& outMapValue ) const;
         /** @brief 있는데 읽지 못한 파일을 알립니다. 이번 실행은 그 파일을 쓰지 않는다 — 쓰면 지난 실행의 기록을 빈 것으로 덮는다. */
         void reportUnreadable( const utf8* pFileName ) const;
 
     private:
-        AbsolutePath             _folder;
-        vector<string>           _listUnlocked;
-        flat_map<string, string> _mapStat;
-        flat_map<string, string> _mapPresence;
-        uint8                    _bAchievementsDirty : 1;
-        uint8                    _bStatsDirty        : 1;
-        uint8                    _bPresenceDirty     : 1;
-        uint8                    _bAchievementsKept  : 1; ///< 업적 파일을 읽었거나 없었다(0 이면 있는데 읽지 못해 쓰지 않는다)
-        uint8                    _bStatsKept         : 1; ///< 통계 파일을 읽었거나 없었다(0 이면 있는데 읽지 못해 쓰지 않는다)
-        [[maybe_unused]] uint8   _reserved           : 3;
+        AbsolutePath           _folder;
+        vector<string>         _listUnlocked;
+        map<string, string>    _mapStat;
+        map<string, string>    _mapPresence;
+        uint8                  _bAchievementsDirty : 1;
+        uint8                  _bStatsDirty        : 1;
+        uint8                  _bPresenceDirty     : 1;
+        uint8                  _bAchievementsKept  : 1; ///< 업적 파일을 읽었거나 없었다(0 이면 있는데 읽지 못해 쓰지 않는다)
+        uint8                  _bStatsKept         : 1; ///< 통계 파일을 읽었거나 없었다(0 이면 있는데 읽지 못해 쓰지 않는다)
+        [[maybe_unused]] uint8 _reserved           : 3;
     };
 } // namespace sw

@@ -7,8 +7,8 @@
 #pragma once
 #include "Core/Container/EnumArray.h"
 #include "Core/Container/array.h"
-#include "Core/Container/flat_map.h"
-#include "Core/Container/flat_set.h"
+#include "Core/Container/map.h"
+#include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -500,7 +500,7 @@ namespace sw
         vector<int32> _listScore;
 
         PROPERTY()
-        flat_map<string, int32> _mapStat;
+        map<string, int32> _mapStat;
     };
 } // namespace sw
 
@@ -587,11 +587,11 @@ namespace sw
         vector<vector<int32>> _grid;
 
         PROPERTY()
-        flat_map<string, vector<float32>> _namedRows;
+        map<string, vector<float32>> _namedRows;
 
-        /** @brief 중첩 맵: flat_map<K, flat_map<K, V>>. */
+        /** @brief 중첩 맵: map<K, map<K, V>>. */
         PROPERTY()
-        flat_map<string, flat_map<string, int32>> _nestedMap;
+        map<string, map<string, int32>> _nestedMap;
 
         /** @brief 구조체 원소 시퀀스. */
         PROPERTY()
@@ -599,7 +599,7 @@ namespace sw
 
         /** @brief 맵 값이 구조체인 경우. */
         PROPERTY()
-        flat_map<string, NestedInner> _mapInner;
+        map<string, NestedInner> _mapInner;
 
         PROPERTY()
         NestedInner _inner;
@@ -949,7 +949,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        flat_set<string> _uniqueTag;
+        set<string> _uniqueTag;
 
         PROPERTY()
         unordered_set<int32> _uniqueID;
@@ -958,13 +958,13 @@ namespace sw
         unordered_map<int32, string> _mapIDToName;
 
         PROPERTY()
-        flat_map<SampleStatus, int32> _mapStatusToCount;
+        map<SampleStatus, int32> _mapStatusToCount;
 
         PROPERTY()
-        flat_map<string, flat_set<int32>> _mapGroupToID;
+        map<string, set<int32>> _mapGroupToID;
 
         PROPERTY()
-        vector<flat_map<string, int32>> _listScoreTable;
+        vector<map<string, int32>> _listScoreTable;
 
         PROPERTY()
         unordered_map<string, vector<vector<int32>>> _mapNameToGrid;

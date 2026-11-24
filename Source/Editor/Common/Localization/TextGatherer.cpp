@@ -3,7 +3,7 @@
 #include "Editor/Common/Localization/TextGatherer.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Container/flat_set.h"
+#include "Core/Container/set.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -624,7 +624,7 @@ namespace sw
     {
         TextGatherReport report;
         report._listIssue = _listIssue;
-        flat_set<string> uniqueSeen;
+        set<string> uniqueSeen;
 
         for ( const GatheredText& text : _listText )
         {

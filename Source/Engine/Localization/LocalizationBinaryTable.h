@@ -13,7 +13,7 @@
  *          읽기는 길이 · 범위 · 검사합을 모두 확인하고, 하나라도 틀리면 거절한다(깨진 파일이 일부만 적용되지 않는다).
  */
 #pragma once
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
@@ -54,13 +54,13 @@ namespace sw
         /** @brief 바이트를 읽습니다. 머리 · 범위 · 검사합이 틀리면 그 까닭이고, 이 객체는 비워집니다. */
         [[nodiscard]] expected<void> parse( const uint8* pData, size_t size );
 
-        const string&                   getCulture() const { return _culture; }
-        void                            setCulture( string_view culture );
-        const flat_map<uint64, string>& getTexts() const { return _mapText; }
+        const string&              getCulture() const { return _culture; }
+        void                       setCulture( string_view culture );
+        const map<uint64, string>& getTexts() const { return _mapText; }
 
     private:
-        string                   _culture;
-        flat_map<uint64, string> _mapText;
-        LocalizationKeyIndex     _keyIndex; ///< 쿠킹 쪽에서 넣은 키(`parse` 로 읽은 표는 키 글이 없어 비어 있다)
+        string               _culture;
+        map<uint64, string>  _mapText;
+        LocalizationKeyIndex _keyIndex; ///< 쿠킹 쪽에서 넣은 키(`parse` 로 읽은 표는 키 글이 없어 비어 있다)
     };
 } // namespace sw

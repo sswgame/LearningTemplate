@@ -3,7 +3,7 @@
  * @brief 게임플레이 씬 흐름, 다국어, 입력, 세이브 팩 설정과 커스텀 게임 데이터를 정의합니다.
  */
 #pragma once
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -128,7 +128,7 @@ namespace sw
          * 자리는 어느 팩이든 등록 줄의 팩 안 규칙 하나(`GamePackDataUtil::tryMakeKindPath`)로 만든다. 적지 않은 종류는 이 게임 팩이다.
          * 여러 게임이 함께 쓰는 캐릭터 키트 데이터(아이템 · 외형)가 공용 팩에 있어서다.
          */
-        flat_map<string, string> _mapRequiredDataPack{};
+        map<string, string> _mapRequiredDataPack{};
 
         /** @brief 리소스 경로(XML)에서 팩 설정 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );

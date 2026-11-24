@@ -7,7 +7,7 @@
  *          상용 엔진: 언리얼 Shader Pipeline Cache(실행이 PSO 를 기록하고 다음 실행 · 쿠킹이 미리 컴파일), 유니티 ShaderVariantCollection(쓴 변형을 모아 미리 워밍).
  */
 #pragma once
-#include "Core/Container/flat_set.h"
+#include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
@@ -87,6 +87,6 @@ namespace sw
         [[nodiscard]] static expected<ShaderCompileDesc> parseLine( string_view line );
 
     private:
-        flat_set<string> _setLine; ///< 요청 줄(정렬 — 파일 글이 결정적이다)
+        set<string> _setLine; ///< 요청 줄(정렬 — 파일 글이 결정적이다)
     };
 } // namespace sw

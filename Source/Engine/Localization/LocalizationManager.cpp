@@ -359,12 +359,12 @@ namespace sw
     {
         if ( &source == this )
             return;
-        CultureTable                       cultureTable;
-        TimeZoneTable                      timeZoneTable;
-        vector<MountedProject>             listProject;
-        flat_map<string, TranslationTable> mapLooseTable;
-        string                             currentLanguage;
-        string                             fallbackLanguage;
+        CultureTable                  cultureTable;
+        TimeZoneTable                 timeZoneTable;
+        vector<MountedProject>        listProject;
+        map<string, TranslationTable> mapLooseTable;
+        string                        currentLanguage;
+        string                        fallbackLanguage;
         {
             ScopedSharedLock<shared_mutex> lock{ source._mutex };
             cultureTable     = source._cultureTable;

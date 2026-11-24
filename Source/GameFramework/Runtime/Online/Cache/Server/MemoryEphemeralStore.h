@@ -9,7 +9,7 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
-#include "Core/Container/flat_map.h"
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -60,8 +60,8 @@ namespace sw
 
         struct ScoreSetEntry
         {
-            flat_map<string, int64> _mapMemberToScore{};
-            int64                   _expiresAtMs{ 0 };
+            map<string, int64> _mapMemberToScore{};
+            int64              _expiresAtMs{ 0 };
         };
 
         struct Inbox
