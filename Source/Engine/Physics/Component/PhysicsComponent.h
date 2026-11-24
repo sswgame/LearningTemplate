@@ -170,6 +170,12 @@ namespace sw
          *          부모가 있으면(붙거나 떨어졌어도) 월드가 바뀐 까닭을 로컬 값으로 가를 수 없어 모두 바깥의 것이다.
          */
         [[nodiscard]] PhysicsTransformChange consumeTransformChange();
+        /**
+         * @brief 월드 원점 이동이 자리를 @p delta 만큼 옮긴 것 말고는 바깥이 트랜스폼을 바꾸지 않았으면, 지금 값으로 맞추고 순간이동 표시를 지운 뒤 true 입니다.
+         * @details 그린 자리는 두 스텝 사이라, 원점 이동을 순간이동처럼 트랜스폼에서 다시 맞추면 움직이던 몸이 한 스텝치까지 뒤로 간다. true 면 부르는 쪽이 시뮬레이션의 자리를
+         *          그대로 @p delta 만큼 옮긴다(언리얼 `ApplyWorldOffset` 이 바디를 자기 자리에서 옮기는 것과 같다). 부모가 있으면 까닭을 가를 수 없어 false 다.
+         */
+        [[nodiscard]] bool absorbWorldOriginShift( const float3& delta );
         /** @brief 이 컴포넌트가 트랜스폼에 쓴 뒤 부릅니다 — 자기 쓰기를 다음 프레임에 바깥 이동으로 보지 않게. */
         void markTransformSynced();
         /**
