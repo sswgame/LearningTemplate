@@ -97,6 +97,7 @@ SW_TEST_CASE( TextureLayerBakeTest, OnlySelectedBakesAreTaken )
     request._albedoTarget  = "rendertarget/test_bake_albedo";
     request._surfaceTarget = "rendertarget/test_bake_surface";
     cache.requestLayerBake( request );
+    SW_EXPECT_EQUAL( 1u, cache.countLoadsInFlight() ); // 사진은 굽기를 기다린다
     sw::vector<sw::TextureLayerBakeRequest> listTaken;
     cache.takeLayerBakes( listTaken );
     SW_EXPECT_TRUE( listTaken.empty() ); // 아직 고르지 않았다

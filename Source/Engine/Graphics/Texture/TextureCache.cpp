@@ -1174,6 +1174,11 @@ namespace sw
             if ( _impl->_bStreamingParked == false )
                 count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
         }
+        {
+            // 맡긴 층 굽기는 머티리얼이 아직 옛 결과를 그린다 — 사진은 구운 뒤다.
+            ScopedLock<mutex> lock{ _impl->_bakeMutex };
+            count += static_cast<uint32>( _impl->_listPendingBake.size() + _impl->_listReadyBake.size() );
+        }
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )
         {

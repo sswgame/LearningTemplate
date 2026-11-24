@@ -203,7 +203,7 @@ namespace sw
          */
         void releaseRetiredTextures( IRHIDevice* pDevice );
         /**
-         * @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 위쪽 밉을 기다리는 텍스처도 셉니다.
+         * @brief 읽거나 올리는 중인 텍스처 수입니다(어느 스레드든). 위쪽 밉을 기다리는 텍스처와 아직 굽지 않은 층 굽기도 셉니다.
          * @details 시나리오의 스크린샷이 로드 중 텍스처 · 아직 작은 밉을 찍지 않게 기다릴 때 씁니다(`AutomationRunner`).
          */
         uint32 countLoadsInFlight() const;
