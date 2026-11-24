@@ -37,6 +37,7 @@ namespace sw
             static constexpr float4 kInjuredColor       = float4( 1.0f, 0.6f, 0.2f, 1.0f );
             static constexpr float4 kDownColor          = float4( 0.9f, 0.15f, 0.15f, 1.0f ); ///< 빈사 · 들림 · 걸림
             static constexpr float4 kKillerColor        = float4( 0.1f, 0.05f, 0.08f, 1.0f );
+            static constexpr float4 kAbilityColor       = float4( 0.8f, 0.05f, 0.4f, 1.0f ); ///< 능력을 쓰는 살인마
             static constexpr float3 kGeneratorSize      = float3( 1.2f, 1.0f, 0.8f );
             static constexpr float3 kGateSize           = float3( 2.4f, 2.4f, 0.3f );
             static constexpr float3 kHookSize           = float3( 0.2f, 2.2f, 0.2f );
@@ -195,7 +196,8 @@ namespace sw
             const float4& upright  = survivor._state == SurvivorState::Healthy ? Internal::kHealthyColor : Internal::kInjuredColor;
             _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( survivor._position ), bUpright ? Internal::kBodySize : Internal::kDownSize, bUpright ? upright : Internal::kDownColor );
         }
-        _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( match.getKiller()._position ), Internal::kKillerSize, Internal::kKillerColor );
+        _markers.showStanding( manager, _markerPrefab, Director::toAbsolute( match.getKiller()._position ), Internal::kKillerSize,
+                               match.getKiller()._abilityRemaining.isActive() ? Internal::kAbilityColor : Internal::kKillerColor );
     }
 
     void AsymmetricHorrorAvatarComponent::fillHUD( AsymmetricHorrorHUDViewModel& outViewModel, const AsymmetricHorrorGameModeComponent& director )

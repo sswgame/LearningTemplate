@@ -269,8 +269,11 @@ namespace sw
         const bool bNoHeartbeat = isValidSurvivor( survivor ) == false || _killer._pDef == nullptr || _killer._pDef->_terrorRadius <= 0.0f;
         if ( bNoHeartbeat )
             return 0.0f;
+        const float32 radius = _killer._pDef->_terrorRadius * ( _killer._abilityRemaining.isActive() ? _killer._pDef->_abilityTerrorScale : 1.0f );
+        if ( radius <= 0.0f )
+            return 0.0f; // 능력이 심장 소리를 끈다
         const float32 distance = float3::getHorizontalDistance( _killer._position, _listSurvivor[static_cast<size_t>( survivor )]._position );
-        return MathUtil::saturate( 1.0f - distance / _killer._pDef->_terrorRadius );
+        return MathUtil::saturate( 1.0f - distance / radius );
     }
 
     float32 AsymmetricHorrorMatch::computeSurvivorSpeed( int32 survivor ) const
@@ -296,6 +299,8 @@ namespace sw
             speed *= _killer._pDef->_cooldownSpeedScale;
         if ( _killer._carrying >= 0 )
             speed *= _killer._pDef->_carrySpeedScale;
+        if ( _killer._abilityRemaining.isActive() )
+            speed *= _killer._pDef->_abilitySpeedScale;
         return speed;
     }
 
@@ -862,10 +867,12 @@ namespace sw
 
     bool AsymmetricHorrorMatch::useKillerAbility()
     {
-        const bool bAbilityUnavailable = _killer._pDef == nullptr || _killer.canAct() == false || _killer._abilityCooldown.isActive() || isEnded();
+        const bool bAbilityUnavailable = _killer._pDef == nullptr || _killer._pDef->_abilityDuration <= 0.0f || _killer.canAct() == false || _killer._abilityCooldown.isActive() || isEnded();
         if ( bAbilityUnavailable )
             return false;
         _killer._abilityCooldown.start( _killer._pDef->_abilityCooldown );
+        _killer._abilityRemaining.start( _killer._pDef->_abilityDuration );
+        pushEvent( AsymmetricHorrorEvent::Kind::KillerAbilityUsed, nullopt, nullopt, _killer._pDef->_abilityDuration, _killer._position );
         return true;
     }
 
@@ -1560,6 +1567,7 @@ namespace sw
         io.value( killer._stunRemaining );
         io.value( killer._busyRemaining );
         io.value( killer._abilityCooldown );
+        io.value( killer._abilityRemaining );
         io.value( killer._carrying );
         io.value( killer._breakingPallet );
         io.value( killer._participant );
@@ -1590,6 +1598,7 @@ namespace sw
     {
         _killer._attackCooldown.update( deltaTime );
         _killer._abilityCooldown.update( deltaTime );
+        _killer._abilityRemaining.update( deltaTime );
         _killer._stunRemaining.update( deltaTime );
         if ( _killer._busyRemaining.isActive() == false )
             return;

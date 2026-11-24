@@ -23,7 +23,7 @@ namespace
   <Generator time="1" scales="1" skillCheckInterval="0" maxRepairers="2"/>
   <Hook stageTime="5" stages="1" wiggleTime="30"/>
   <Endgame gateTime="1" collapseTime="60" hatchRemaining="0"/>
-  <Killer id="trapper" speedRatio="1.25" lungeRange="2" hitCooldown="0.5" missCooldown="0.5" carrySpeedScale="1"/>
+  <Killer id="trapper" speedRatio="1.25" lungeRange="2" hitCooldown="0.5" missCooldown="0.5" abilityDuration="1" carrySpeedScale="1"/>
 </AsymmetricHorrorRules>)";
 
     constexpr float32 kAsymmetricGameModeStep = 1.0f / 60.0f;
@@ -191,5 +191,22 @@ SW_TEST_CASE( AsymmetricHorrorGameModeTest, StateRoundTrips )
     SW_EXPECT_EQUAL( static_cast<int32>( SurvivorActivity::Repairing ), pRestored->getPlayerActivity() );
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( *pDirector, *pRestored ) );
     restoredManager.endPlay();
+    manager.endPlay();
+}
+
+/** @brief [AsymmetricHorrorGameModeTest] 살인마 봇은 보이는데 닿지 않는 생존자를 쫓으면서 능력을 쓴다 */
+SW_TEST_CASE( AsymmetricHorrorGameModeTest, KillerBotUsesItsAbilityInAChase )
+{
+    AsymmetricGameModeBench bench;
+    SW_REQUIRE_TRUE( bench.setUp() );
+    game::ScopedGameScope              scopedScope( bench._scope );
+    GameObjectManager                  manager;
+    AsymmetricHorrorGameModeComponent* pDirector = AsymmetricGameModeBench::addDirector( manager, AsymmetricGameModeBench::makeStage( float3{ 0.0f, 0.0f, -10.0f } ), 0.0f );
+    SW_REQUIRE_NOT_NULL( pDirector );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pDirector->isStarted() );
+    SW_EXPECT_FALSE( pDirector->getMatch().getKiller()._abilityCooldown.isActive() );
+    AsymmetricGameModeBench::advance( manager, 0.5f );
+    SW_EXPECT_TRUE( pDirector->getMatch().getKiller()._abilityRemaining.isActive() );
     manager.endPlay();
 }

@@ -241,7 +241,10 @@ namespace sw
                 return true;
             }
         }
-        const bool bInReach = pNearest->_bSeen == SW_TRUE && best <= killer._pDef->_lungeRange;
+        const bool bSeen    = pNearest->_bSeen == SW_TRUE;
+        const bool bInReach = bSeen && best <= killer._pDef->_lungeRange;
+        if ( bSeen && bInReach == false )
+            (void)inoutMatch.useKillerAbility(); // 보이는데 닿지 않으면 쓴다 — 쿨다운 중이거나 능력이 없으면 거절한다
         Internal::moveKillerTo( inoutMatch, stage, pNearest->_lastKnownPosition, deltaTime );
         if ( bInReach )
             (void)inoutMatch.killerAttack(); // 쿨다운 중이면 거절한다

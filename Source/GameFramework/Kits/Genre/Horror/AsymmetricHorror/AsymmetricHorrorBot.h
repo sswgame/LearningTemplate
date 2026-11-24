@@ -81,7 +81,7 @@ namespace sw
     private:
         /** @brief 빈사 생존자 줍기, 갈고리 걸기, 해치 닫기입니다. 이번 걸음을 썼으면 true 입니다. */
         bool handleDowned( AsymmetricHorrorMatch& inoutMatch, const AsymmetricHorrorStage& stage, float32 deltaTime ) const;
-        /** @brief 감지한 생존자를 쫓고 닿으면 공격합니다. 쫓을 것이 없으면 false 입니다. */
+        /** @brief 감지한 생존자를 쫓고 닿으면 공격합니다. 보이는데 닿지 않으면 능력을 씁니다. 쫓을 것이 없으면 false 입니다. */
         bool chase( AsymmetricHorrorMatch& inoutMatch, const AsymmetricHorrorStage& stage, float32 deltaTime ) const;
         /** @brief 발전기를 순서대로 돌며 걷어차고, 곁의 판자를 부숩니다. */
         void patrol( AsymmetricHorrorMatch& inoutMatch, const AsymmetricHorrorStage& stage, float32 deltaTime ) const;

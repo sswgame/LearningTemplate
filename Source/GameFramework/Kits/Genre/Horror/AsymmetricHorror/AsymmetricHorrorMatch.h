@@ -128,6 +128,7 @@ namespace sw
         Countdown                        _stunRemaining{};
         Countdown                        _busyRemaining{}; ///< 판자 부수기, 넘기, 사물함 뒤지기 중이다
         Countdown                        _abilityCooldown{};
+        Countdown                        _abilityRemaining{}; ///< 능력의 효과가 남은 시간이다
         int32                            _carrying{ constant::invalid_index::kInt32 };
         int32                            _breakingPallet{ constant::invalid_index::kInt32 };
         int32                            _participant{ constant::invalid_index::kInt32 };
@@ -204,7 +205,8 @@ namespace sw
             Vaulted, ///< `_actor` 가 -1 이면 살인마이고, `_target` 은 창틀이며, `_value` 가 1 이면 빠른 넘기이다
             WindowBlocked,
             LockerGrab,
-            MatchEnded ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
+            KillerAbilityUsed, ///< `_value` 는 능력이 이어지는 시간이다
+            MatchEnded         ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
         };
         float3          _position{};
         float32         _value{ 0.0f };
@@ -248,7 +250,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr uint32 kStateTag     = FourCCUtil::make( "HMAT" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2; ///< 2: 살인마 능력의 남은 시간
 
         AsymmetricHorrorMatch();
 
@@ -300,7 +302,11 @@ namespace sw
         /** @brief 사물함을 엽니다. 안에 생존자가 있으면 바로 들고(true), 비었으면 뒤지는 시간만 듭니다. */
         [[nodiscard]] bool searchLocker( int32 locker );
         [[nodiscard]] bool closeHatch();
-        /** @brief 능력을 씁니다. 쿨다운이 남았으면 false 를 반환하며, 효과는 게임이 처리합니다. */
+        /**
+         * @brief 능력을 씁니다. `_abilityDuration` 동안 속도와 심장 소리 거리가 살인마 정의의 배율로 바뀝니다. 능력이 없는 살인마이거나 쿨다운이 남았으면 false 입니다.
+         * @details 어빌리티 시스템(`AbilitySystemComponent`)을 쓰지 않는다 — 살인마는 오브젝트가 아니라 판의 값이고, 효과도 맞은 생존자의 가속(`_hasteRemaining`)처럼
+         *          고정 걸음 · 세이브 하나 안에서 돌아야 같은 입력이 같은 판을 낸다(컴포넌트의 시계와 저장이 따로 돌면 어긋난다).
+         */
         [[nodiscard]] bool useKillerAbility();
 
         // --- 읽기 ---

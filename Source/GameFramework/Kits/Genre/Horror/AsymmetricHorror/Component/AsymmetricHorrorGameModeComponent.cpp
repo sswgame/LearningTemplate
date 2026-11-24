@@ -240,6 +240,8 @@ namespace sw
                 SW_LOG_INFO_ID( "AsymmetricHorror.GeneratorCompleted", "[AsymmetricHorror] a generator runs (%# done)", _match.getCompletedGeneratorCount() );
             else if ( event._kind == AsymmetricHorrorEvent::Kind::Hooked )
                 SW_LOG_INFO_ID( "AsymmetricHorror.Hooked", "[AsymmetricHorror] a survivor is on a hook (stage %#)", event._value );
+            else if ( event._kind == AsymmetricHorrorEvent::Kind::KillerAbilityUsed )
+                SW_LOG_INFO_ID( "AsymmetricHorror.KillerAbility", "[AsymmetricHorror] '%#' uses its ability for %# s", _killer.c_str(), event._value );
             else if ( event._kind == AsymmetricHorrorEvent::Kind::Escaped )
                 SW_LOG_INFO_ID( "AsymmetricHorror.Escaped", "[AsymmetricHorror] a survivor escaped through the %#", event._value > 0.0f ? "hatch" : "gate" );
         }
