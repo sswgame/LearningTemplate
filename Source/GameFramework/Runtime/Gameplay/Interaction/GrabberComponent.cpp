@@ -12,11 +12,13 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -102,6 +104,9 @@ namespace sw
         const GameObject*    pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr && _grabButton.empty() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
         _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : nullopt;
+        GameObjectManager* pManager = pOwner != nullptr ? getOwner()->getMutableManager() : nullptr;
+        if ( GameObject* const pHeld = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr )
+            pHeld->setKeptWhenParentDestroyed( true ); // 쥔 채 되살아났다
         if ( _grabButton.empty() == false && _grabIndex.has_value() == false )
             SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
@@ -135,7 +140,7 @@ namespace sw
         for ( GameObject* pObject : _listTagged )
         {
             const SceneComponent* pOther = pObject != pOwner && pObject->isActiveInHierarchy() ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pOther == nullptr )
+            if ( pOther == nullptr || findHolderOf( *pObject ) != nullptr )
                 continue;
             const float32 distance = float3::getDistance( pSelf->getWorldPosition(), pOther->getWorldPosition() );
             if ( distance <= bestDistance )
@@ -171,13 +176,35 @@ namespace sw
     bool GrabberComponent::grab( GameObject& target )
     {
         GameObject* pOwner      = getOwner();
-        const bool  bCannotGrab = pOwner == nullptr || &target == pOwner || isHolding();
+        const bool  bCannotGrab = pOwner == nullptr || &target == pOwner || isHolding() || findHolderOf( target ) != nullptr; // 남의 손에서 빼앗으면 두 쪽이 같은 것을 쥔 줄 안다
         if ( bCannotGrab )
             return false;
         if ( getBackend().attach( *pOwner, target, _holdOffset ) == false )
             return false;
         _held = target.getHandle();
+        target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
         return true;
+    }
+
+    const GrabberComponent* GrabberComponent::findHolderOf( const GameObject& object )
+    {
+        const GameObjectManager* pManager = object.getManager();
+        if ( pManager == nullptr )
+            return nullptr;
+        for ( const GrabberComponent* pGrabber : pManager->getComponentRegistry().getAll<GrabberComponent>() )
+        {
+            if ( pGrabber->_held == object.getHandle() )
+                return pGrabber;
+        }
+        return nullptr;
+    }
+
+    void GrabberComponent::onUnregister( GameObjectManager& manager )
+    {
+        // 조종 시스템이 없으면 씬을 비우는 중이다(좌석과 같은 판정) — 든 것도 곧 사라진다.
+        if ( isHolding() && ControlSystem::find( manager ) != nullptr )
+            (void)dropHeld();
+        Component::onUnregister( manager );
     }
 
     bool GrabberComponent::throwHeld( const float3& velocity )
@@ -188,6 +215,7 @@ namespace sw
         _held                       = GameObjectHandle{};
         if ( pHeld == nullptr )
             return false;
+        pHeld->setKeptWhenParentDestroyed( false );
         getBackend().release( *pOwner, *pHeld, velocity );
         return true;
     }

@@ -82,6 +82,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( GrabberComponent );
 
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
 
@@ -92,7 +93,9 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 집습니다. 이미 쥐고 있거나 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
+        /** @brief 손을 놓습니다 — 쥔 채 사라지면 든 것이 함께 지워지지 않고 그 자리에 떨어집니다. */
+        void onUnregister( GameObjectManager& manager ) override;
+        /** @brief 집습니다. 이미 쥐고 있거나, 남이 쥐고 있거나, 자기 자신이면 false 입니다. 게임 스레드에서 부릅니다. */
         [[nodiscard]] bool grab( GameObject& target );
         /** @brief 든 것을 @p velocity 로 던집니다. 든 것이 없으면 false 입니다. */
         FUNCTION( Category = "Grab", Exec )
@@ -107,6 +110,8 @@ namespace sw
         GameObjectHandle getHeld() const { return _held; }
         bool             isHolding() const { return _held.isValid(); }
         void             setHoldOffset( const float3& offset ) { _holdOffset = offset; }
+        /** @brief @p object 를 쥔 집는 쪽입니다. 아무도 쥐지 않았으면 nullptr 입니다(집는 쪽 목록 — 씬을 훑지 않는다). */
+        [[nodiscard]] static const GrabberComponent* findHolderOf( const GameObject& object );
 
     private:
         IGrabPhysics& getBackend();

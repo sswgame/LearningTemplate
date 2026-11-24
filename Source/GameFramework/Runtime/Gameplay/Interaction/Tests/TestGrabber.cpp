@@ -113,6 +113,32 @@ SW_TEST_CASE( GrabberTest, PlainObjectFollowsTheHandAndStaysWhereDropped )
     SW_EXPECT_FALSE( pGrabber->dropHeld() );
 }
 
+/** @brief [GrabberTest] 남이 쥔 것은 집지 못하고(빼앗으면 앞 손이 놓을 때 남의 손에서 떨어진다), 쥔 쪽이 사라지면 든 것은 함께 지워지지 않고 그 자리에 남는다 */
+SW_TEST_CASE( GrabberTest, HeldObjectHasOneHolderAndOutlivesIt )
+{
+    GameObjectManager manager;
+    GameObject*       pHolder = Util::spawnAt( manager, "Holder", float3{ 0.0f, 0.0f, 0.0f } );
+    (void)pHolder->addComponent<PawnComponent>(); // 조종 시스템이 선다 — 씬을 비우는 중이 아님을 이것으로 안다
+    GrabberComponent* pGrabber = pHolder->addComponent<GrabberComponent>();
+    GrabberComponent* pSecond  = Util::spawnAt( manager, "Second", float3{ 1.0f, 0.0f, 0.0f } )->addComponent<GrabberComponent>();
+    GameObject*       pCrate   = Util::spawnAt( manager, "Crate", float3{ 0.5f, 0.0f, 0.0f } );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pGrabber->grab( *pCrate ) );
+    SW_EXPECT_TRUE( GrabberComponent::findHolderOf( *pCrate ) == pGrabber );
+    SW_EXPECT_FALSE( pSecond->grab( *pCrate ) );
+    SW_EXPECT_FALSE( pSecond->isHolding() );
+
+    const GameObjectHandle crate = pCrate->getHandle();
+    pHolder->getPrimarySceneComponent()->setWorldPosition( float3{ 5.0f, 0.0f, 0.0f } );
+    manager.destroyGameObject( pHolder );
+    manager.update( Util::kFrame );
+    manager.update( Util::kFrame );
+    SW_REQUIRE_TRUE( manager.resolveGameObject( crate ) == pCrate );
+    SW_EXPECT_TRUE( pCrate->getPrimarySceneComponent()->getParent() == nullptr );
+    SW_EXPECT_FALSE( pCrate->isKeptWhenParentDestroyed() );
+    SW_EXPECT_TRUE( pSecond->grab( *pCrate ) );
+}
+
 /** @brief [GrabberTest] 강체는 손에 든 동안 키네마틱이고, 던지면 동적으로 돌아와 그 속도로 난다 */
 SW_TEST_CASE( GrabberTest, RigidBodyIsKinematicInTheHandAndThrown )
 {
