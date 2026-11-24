@@ -16,6 +16,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
