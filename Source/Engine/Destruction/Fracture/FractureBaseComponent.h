@@ -44,7 +44,7 @@
 #include "Engine/Destruction/Fracture/FractureNetworkSync.h"
 #include "Engine/Destruction/Fracture/FractureRenderUnits.h"
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Physics/Scene/DebrisBudget.h"

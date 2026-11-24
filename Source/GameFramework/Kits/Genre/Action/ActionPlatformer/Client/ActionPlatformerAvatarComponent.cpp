@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Client/ActionPlatformerAvatarComponent.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -11,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Component/ActionPlatformerGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -21,6 +21,13 @@ namespace sw
     ActionPlatformerAvatarComponent::ActionPlatformerAvatarComponent()
         : _moveAction{ CommonInputActions::kMove }
         , _jumpAction{}
+        , _tileColor{ 0.45f, 0.4f, 0.35f, 1.0f }
+        , _secretRadius{ 0.25f }
+        , _secretColor{ 1.0f, 0.85f, 0.2f, 1.0f }
+        , _playerHalfExtent{ 0.35f, 0.45f, 0.35f }
+        , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
+        , _goalHeight{ 4.0f }
+        , _goalColor{ 0.3f, 1.0f, 0.4f, 1.0f }
         , _director{}
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
@@ -80,7 +87,7 @@ namespace sw
         drawStage( *pDirector, manager );
     }
 
-    void ActionPlatformerAvatarComponent::drawStage( const ActionPlatformerGameModeComponent& director, const GameObjectManager& manager )
+    void ActionPlatformerAvatarComponent::drawStage( const ActionPlatformerGameModeComponent& director, const GameObjectManager& manager ) const
     {
         DebugDrawQueue* pDraw = game::findSubsystem<DebugDrawQueue>();
         if ( pDraw == nullptr )
@@ -95,7 +102,7 @@ namespace sw
             {
                 if ( map.getTile( x, y ) != PlatformTile::Solid )
                     continue;
-                pDraw->drawBox( origin.toLocal( float3( map.getTileLeft( x ) + half, map.getTileBottom( y ) + half, 0.0f ) ), float3( half, half, half ), float4( 0.45f, 0.4f, 0.35f, 1.0f ) );
+                pDraw->drawBox( origin, AbsolutePosition{ float3( map.getTileLeft( x ) + half, map.getTileBottom( y ) + half, 0.0f ) }, float3( half, half, half ), _tileColor );
             }
         }
         const ActionStageRun& run            = director.getRun();
@@ -105,11 +112,11 @@ namespace sw
         {
             if ( run.isSecretFound( pStage->_listSecret[secretIndex] ) )
                 continue;
-            pDraw->drawSphere( origin.toLocal( float3( listSecretSpot[secretIndex]._x, listSecretSpot[secretIndex]._y, 0.0f ) ), 0.25f, float4( 1.0f, 0.85f, 0.2f, 1.0f ) );
+            pDraw->drawSphere( origin, AbsolutePosition{ float3( listSecretSpot[secretIndex]._x, listSecretSpot[secretIndex]._y, 0.0f ) }, _secretRadius, _secretColor );
         }
         const float2  position = director.getPlayerPosition();
         const float32 goalX    = director.getGoalX();
-        pDraw->drawBox( origin.toLocal( float3( position._x, position._y, 0.0f ) ), float3( 0.35f, 0.45f, 0.35f ), float4( 0.2f, 0.6f, 1.0f, 1.0f ) );
-        pDraw->drawLine( origin.toLocal( float3( goalX, 0.0f, 0.0f ) ), origin.toLocal( float3( goalX, 4.0f, 0.0f ) ), float4( 0.3f, 1.0f, 0.4f, 1.0f ) );
+        pDraw->drawBox( origin, AbsolutePosition{ float3( position._x, position._y, 0.0f ) }, _playerHalfExtent, _playerColor );
+        pDraw->drawLine( origin, AbsolutePosition{ float3( goalX, 0.0f, 0.0f ) }, AbsolutePosition{ float3( goalX, _goalHeight, 0.0f ) }, _goalColor );
     }
 } // namespace sw

@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    struct AbsolutePosition;
     class MaterialInstance;
 
     /**
@@ -40,11 +41,19 @@ namespace sw
 
     private:
         /** @brief 겨눈 블록의 테두리(디버그 선)를 틱이 끝난 뒤 게임 스레드에서 그립니다. */
-        void scheduleOutline( const float3& center ) const;
+        void scheduleOutline( const AbsolutePosition& center ) const;
 
     private:
         PROPERTY( Category = "Highlight", DisplayName = "Player", Tooltip = "Object with the VoxelPlayerComponent" )
         GameObjectHandle _player;
+        PROPERTY( Category = "Highlight", DisplayName = "Color", Tooltip = "Box color before the block starts to break" )
+        float4 _color;
+        PROPERTY( Category = "Highlight", DisplayName = "Color Per Level", Tooltip = "Added to the color each break level" )
+        float4 _colorPerLevel;
+        PROPERTY( Category = "Highlight", DisplayName = "Outline Color" )
+        float4 _outlineColor;
+        PROPERTY( Category = "Highlight", DisplayName = "Outline Half Extent", Tooltip = "Half size of the outline box; above 0.5 keeps it outside the block", Min = 0.01, Units = m )
+        float32 _outlineHalfExtent;
 
         shared_ptr<MaterialInstance> _arrLevelLook[kLevelCount];
         int32                        _level; ///< 지금 적용한 단계입니다(−1 이면 아직 적용하지 않았습니다).

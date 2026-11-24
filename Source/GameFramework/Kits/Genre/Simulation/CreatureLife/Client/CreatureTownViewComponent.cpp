@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/Client/CreatureTownViewComponent.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
@@ -11,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/Component/CreatureTownGameModeComponent.h"

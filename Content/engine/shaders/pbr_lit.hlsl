@@ -54,13 +54,9 @@ SW_MATERIAL_END
  */
 void computeWorldAlignedUV( float3 worldPosition, float3 normal, float tileSize, out float2 outUV, out float4 outTangent )
 {
-    const uint   axis     = SurfaceFunction::findDominantAxis( normal );
-    const float3 faceSign = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
-    // computeTriplanarFaceUV 의 dP/du(탄젠트) · dP/dv(아래)
-    const float3 tangent = ( axis == 0u ) ? float3( 0.0f, 0.0f, faceSign.x ) : ( ( axis == 1u ) ? float3( faceSign.y, 0.0f, 0.0f ) : float3( -faceSign.z, 0.0f, 0.0f ) );
-    const float3 downV   = ( axis == 1u ) ? float3( 0.0f, 0.0f, -1.0f ) : float3( 0.0f, -1.0f, 0.0f );
-    outUV                = SurfaceFunction::computeTriplanarFaceUV( worldPosition, normal, axis ) / tileSize;
-    outTangent           = float4( tangent, dot( cross( normal, tangent ), downV ) > 0.0f ? -1.0f : 1.0f );
+    const uint axis = SurfaceFunction::findDominantAxis( normal );
+    outUV           = SurfaceFunction::computeTriplanarFaceUV( worldPosition, normal, axis ) / tileSize;
+    outTangent      = SurfaceFunction::computeTriplanarFaceTangent( normal, axis );
 }
 
 MaterialSurface computeMaterialSurface( PixelContext context )

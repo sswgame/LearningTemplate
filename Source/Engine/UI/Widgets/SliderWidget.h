@@ -76,7 +76,13 @@ namespace sw
         float32 _maxValue;
         PROPERTY( DisplayName = "Step", Tooltip = "Change per left/right action; 0 = 5% of the range", Min = 0.0 )
         float32 _step;
-        bool    _bDragging; ///< 트랙을 눌러 드래그하는 중인지 나타냅니다(포인터를 잡은 상태).
+        PROPERTY( DisplayName = "Track Color" )
+        float4 _trackColor;
+        PROPERTY( DisplayName = "Fill Color" )
+        float4 _fillColor;
+        PROPERTY( DisplayName = "Thumb Color" )
+        float4 _thumbColor;
+        bool   _bDragging; ///< 트랙을 눌러 드래그하는 중인지 나타냅니다(포인터를 잡은 상태).
     };
 } // namespace sw
 

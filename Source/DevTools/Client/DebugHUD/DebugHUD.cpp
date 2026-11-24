@@ -993,7 +993,7 @@ namespace sw
             if ( pSection->_pDrawFunc != nullptr && ( bShown || pSection->hasFlag( DebugHUDSectionFlag::kDrawsWhileHidden ) ) )
                 pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, *pQueue, bShown } );
             if ( bShown && visualLogger.isEnabled() )
-                (void)visualLogger.replayFrame( *pQueue, visualLogger.getFrame(), 0, hashed_string( pSection->_pName ) );
+                (void)visualLogger.replayFrame( *pQueue, pScene->getObjectManager()->getWorldOrigin(), visualLogger.getFrame(), 0, hashed_string( pSection->_pName ) );
         }
         for ( const DebugHUDSectionRegistration* pSection : _listHiddenSection )
         {

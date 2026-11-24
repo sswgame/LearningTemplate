@@ -383,7 +383,7 @@ def find_feature_folder(path: str, list_test_file: Sequence[str]) -> str | None:
     """바뀐 파일의 기능 폴더(`/` 로 끝남) — `…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더. 그 아래 테스트가 없으면 한 단계 위, 그래도 없으면 없음."""
     parts = path.split("/")
     parts = parts[:parts.index("Tests")] if "Tests" in parts else parts[:-1]
-    # shortcut: 한 단계 위까지만, `Source/<층>/<기능>/` 보다 넓게는 올라가지 않는다(층 전체는 전체 실행과 같다) — 먼 테스트는 cpu · gpu-release 에서 처음 돈다(D4 남는 위험).
+    # 한 단계 위까지만, `Source/<층>/<기능>/` 보다 넓게는 올라가지 않는다(층 전체는 전체 실행과 같다) — 먼 테스트는 cpu · gpu-release 에서 처음 돈다(D4 남는 위험).
     for depth in (len(parts), len(parts) - 1):
         if depth < 3:
             break

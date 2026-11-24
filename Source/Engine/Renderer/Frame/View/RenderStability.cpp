@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/View/RenderStability.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ServiceSlot.h"
@@ -36,7 +37,7 @@ namespace sw
             , _flags{ 0 }
             , _minStillFrames{}
             , _maxExposureErrorEv{}
-            , _maxGIError{}
+            , _maxGIErrorBits{ 0 }
         {
         }
 
@@ -88,10 +89,11 @@ namespace sw
         // 게임 스레드만 쓰고 읽는다(시나리오 시작 때 `ScenarioRun.json` 에서).
         void                     setMinStillFrames( uint32 minStillFrames ) { _minStillFrames = minStillFrames; }
         void                     setMaxExposureErrorEv( float32 maxErrorEv ) { _maxExposureErrorEv = maxErrorEv; }
-        void                     setMaxGIError( float32 maxError ) { _maxGIError = maxError; }
+        void                     setMaxGIError( float32 maxError ) { _maxGIErrorBits.store( BitUtil::floatToBits( maxError ), std::memory_order_relaxed ); }
         const optional<uint32>&  getMinStillFrames() const { return _minStillFrames; }
         const optional<float32>& getMaxExposureErrorEv() const { return _maxExposureErrorEv; }
-        const optional<float32>& getMaxGIError() const { return _maxGIError; }
+        /** @brief 렌더 스레드도 읽는다(갱신기의 정착 판정). 싣지 않았으면 0 이다 — 실을 수 있는 값은 0 보다 크다(`configureRealtimeGI`). */
+        float32 getMaxGIError() const { return BitUtil::bitsToFloat( _maxGIErrorBits.load( std::memory_order_relaxed ) ); }
 
     private:
         static constexpr uint32 kTemporalAccumulationFlag = 1u << 0;
@@ -108,7 +110,7 @@ namespace sw
         atomic<uint32>    _flags;              ///< `kTemporalAccumulationFlag` · `kAutoExposureFlag` · `kRealtimeGIFlag`
         optional<uint32>  _minStillFrames;     ///< TAA 조건의 문턱(`_conditions.RenderTemporalAccumulation._minStillFrames`)
         optional<float32> _maxExposureErrorEv; ///< 노출 조건의 문턱(`_conditions.RenderAutoExposure._maxExposureErrorEv`)
-        optional<float32> _maxGIError;         ///< 실시간 GI 조건의 문턱(`_conditions.RenderRealtimeGI._maxGIError`)
+        atomic<uint32>    _maxGIErrorBits;     ///< 실시간 GI 조건의 문턱(`_conditions.RenderRealtimeGI._maxGIError`)의 `float32` 비트. 싣지 않았으면 0
 
         SW_SERVICE_SLOT( RenderStabilityStatusHolder, Required );
     };
@@ -172,6 +174,11 @@ namespace sw
         return engine::getSubsystem<RenderStabilityStatusHolder>().load();
     }
 
+    float32 RenderStabilitySample::readMaxGIError()
+    {
+        return engine::getSubsystem<RenderStabilityStatusHolder>().getMaxGIError();
+    }
+
     void RenderPresentCounter::addOne()
     {
         engine::getSubsystem<RenderStabilityStatusHolder>().addPresentedFrame();
@@ -216,10 +223,10 @@ namespace sw
         AutomationReadiness readRealtimeGI()
         {
             const RenderStabilityStatusHolder& holder   = engine::getSubsystem<RenderStabilityStatusHolder>();
-            const optional<float32>&           maxError = holder.getMaxGIError();
-            if ( maxError.has_value() == false )
+            const float32                      maxError = holder.getMaxGIError();
+            if ( maxError <= 0.0f )
                 return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return holder.load().evaluateRealtimeGI( *maxError );
+            return holder.load().evaluateRealtimeGI( maxError );
         }
 
         /** @brief `_conditions.RenderTemporalAccumulation` 의 `_minStillFrames`(1 이상) — TAA 기록 섞는 비율의 역수 몇 배다. */

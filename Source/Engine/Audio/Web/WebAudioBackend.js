@@ -20,6 +20,7 @@ class SwRingOutputProcessor extends AudioWorkletProcessor {
         this.readSlot = o.readIndexAddress >> 2;
         this.writeSlot = o.writeIndexAddress >> 2;
         this.sampleSlot = o.sampleAddress >> 2;
+        this.underrunSlot = o.underrunAddress >> 2;
         this.mask = o.capacity - 1;
         this.channelCount = o.channelCount;
         this.bStarted = false;
@@ -39,6 +40,7 @@ class SwRingOutputProcessor extends AudioWorkletProcessor {
                 output[channel][frame] = this.samples[this.sampleSlot + ((base + channel) & this.mask)];
             }
         }
+        if (this.bStarted && frames < frameCount) Atomics.add(this.words, this.underrunSlot, 1);
         if (frames > 0) {
             Atomics.store(this.words, this.readSlot, (read + frames * channelCount) | 0);
             Atomics.notify(this.words, this.readSlot); // 자리를 기다리는 믹서 스레드를 깨운다
@@ -60,7 +62,7 @@ registerProcessor('sw-ring-output', SwRingOutputProcessor);
 
     swWebAudioStart__proxy: 'sync',
     swWebAudioStart__deps: ['$swWebAudio', '$wasmMemory'],
-    swWebAudioStart: (pReadIndex, pWriteIndex, pSample, capacity, channelCount, sampleRate, pStatus, pState) => {
+    swWebAudioStart: (pReadIndex, pWriteIndex, pSample, capacity, channelCount, sampleRate, pStatus, pUnderrunCount, pState) => {
         let context;
         try {
             context = new AudioContext({ sampleRate: sampleRate, latencyHint: 'interactive' });
@@ -103,6 +105,7 @@ registerProcessor('sw-ring-output', SwRingOutputProcessor);
                         readIndexAddress: pReadIndex,
                         writeIndexAddress: pWriteIndex,
                         sampleAddress: pSample,
+                        underrunAddress: pUnderrunCount,
                         capacity: capacity,
                         channelCount: channelCount,
                     },

@@ -172,6 +172,7 @@ namespace sw
     struct CharacterCommand2D
     {
         float2  _pendingClimbVelocity{};   ///< 이번 게임 프레임의 오르기 속도(`_bPendingClimb` 일 때)
+        float2  _pendingLaunch{};          ///< 0 이 아니면 다음 스텝에 쏜다(`launch`)
         float32 _moveVelocity{ 0.0f };     ///< 요청된 수평 속도 — 다시 부를 때까지 유지한다
         float32 _pendingJumpSpeed{ 0.0f }; ///< 0 이 아니면 다음 스텝에 준다
         bool    _bPendingClimb{ false };   ///< NOLINT(sw-bool-flag): 집합체다 — 이번 게임 프레임에 오르기 요청이 왔다

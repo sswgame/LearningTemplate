@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"

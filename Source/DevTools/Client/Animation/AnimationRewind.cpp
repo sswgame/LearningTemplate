@@ -432,10 +432,11 @@ namespace sw
         AnimationRewindTrack& track = acquireTrack( skeletalMesh, AnimationRewindKind::Skeletal );
         if ( track._listParentIndex.size() != skeletalMesh.getSkeleton().getBoneCount() )
             track._listParentIndex = skeletalMesh.getSkeleton().getParentIndices();
-        AnimationRewindFrame& frame = appendFrame( track );
-        frame._time                 = _clock;
-        frame._frameIndex           = frameIndex;
-        frame._worldMatrix          = skeletalMesh.getWorldMatrix();
+        AnimationRewindFrame& frame    = appendFrame( track );
+        frame._time                    = _clock;
+        frame._frameIndex              = frameIndex;
+        const GameObject* const pOwner = skeletalMesh.getOwner();
+        frame._absoluteMatrix          = pOwner != nullptr && pOwner->getManager() != nullptr ? pOwner->getManager()->getWorldOrigin().toAbsolute( skeletalMesh.getWorldMatrix() ) : skeletalMesh.getWorldMatrix();
         encodePose( skeletalMesh.getLocalPose(), frame );
         frame._state.reset();
         skeletalMesh.collectDebugState( frame._state );
@@ -449,7 +450,7 @@ namespace sw
         AnimationRewindFrame& frame = appendFrame( track );
         frame._time                 = _clock;
         frame._frameIndex           = frameIndex;
-        frame._worldMatrix          = float4x4::Identity;
+        frame._absoluteMatrix       = float4x4::Identity;
         frame._poseByte.clear();
         frame._boneCount = 0;
         frame._state     = state;
@@ -598,7 +599,7 @@ namespace sw
         }
     }
 
-    void AnimationRewindRecorder::computeWorldBonePositions( const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<float3>& outListPosition )
+    void AnimationRewindRecorder::computeAbsoluteBonePositions( const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<AbsolutePosition>& outListPosition )
     {
         outListPosition.clear();
         if ( frame._boneCount == 0 || track._listParentIndex.size() != frame._boneCount )
@@ -609,7 +610,7 @@ namespace sw
         pose.computeModelSpace( track._listParentIndex, listModel );
         for ( const float4x4& model : listModel )
         {
-            outListPosition.push_back( float3::transform( model.getTranslation(), frame._worldMatrix ) );
+            outListPosition.push_back( AbsolutePosition{ float3::transform( model.getTranslation(), frame._absoluteMatrix ) } );
         }
     }
 

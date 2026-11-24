@@ -48,6 +48,8 @@ namespace sw
         void setMoveVelocity( float32 velocity );
         /** @brief 위로 @p speed(미터/초)를 줍니다. 다음 스텝에 듭니다. */
         void jump( float32 speed );
+        /** @brief 발사대 · 스프링이 쏩니다 — 수직은 그 속도로 덮고, 수평은 땅에 다시 닿을 때까지 이동 속도에 더합니다(3D `CharacterControllerComponent::launch` 와 같은 계약). 다음 스텝에 듭니다. */
+        void launch( const float2& velocity );
         /** @brief 이번 물리 프레임은 사다리를 이 속도(미터/초)로 오릅니다. 중력을 쓰지 않고 이동 방식이 `Climbing` 이 됩니다(3D `CharacterControllerComponent::applyClimbVelocity` 와 같은 계약 — 프레임마다 다시 부르고 점프가 이긴다). */
         void applyClimbVelocity( const float2& velocity );
         /** @brief 지난 스텝의 이동 방식입니다(걷기 · 낙하 · 오르기). */
@@ -110,7 +112,7 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: vertical speed" )
         float32 _verticalSpeed;
         PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: horizontal velocity kept in the air" )
-        float32 _airVelocity; ///< 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
+        float32 _airVelocity; ///< 발사 · 떠난 바닥이 실어 나르던 수평 속도 — 땅에 다시 닿으면 0
         PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: movement mode of the last step" )
         CharacterMovementMode _movementMode;
         PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: stood on a floor after the last step" )

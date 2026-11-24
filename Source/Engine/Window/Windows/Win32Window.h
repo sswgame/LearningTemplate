@@ -139,6 +139,7 @@ namespace sw
 
     private:
         HWND                    _hWnd;
+        HMONITOR                _hMonitor; ///< 창이 놓인 모니터(`WM_MOVE`) — 바뀌면 모니터 세대를 올린다
         [[maybe_unused]] uint8  _reservedWin32;
         [[maybe_unused]] uint16 _padding;
     };

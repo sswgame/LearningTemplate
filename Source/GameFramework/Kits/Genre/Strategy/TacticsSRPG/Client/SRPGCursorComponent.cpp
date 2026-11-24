@@ -9,6 +9,7 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -18,7 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Component/SRPGGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -52,6 +52,16 @@ namespace sw
         : _moveAction{ CommonInputActions::kMove }
         , _confirmAction{}
         , _endTurnAction{}
+        , _tileHalfExtent{ 0.48f, 0.05f, 0.48f }
+        , _tileColor{ 0.3f, 0.35f, 0.3f, 1.0f }
+        , _unitRadius{ 0.35f }
+        , _unitHeight{ 0.4f }
+        , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
+        , _selectedColor{ 0.6f, 0.9f, 1.0f, 1.0f }
+        , _enemyColor{ 1.0f, 0.3f, 0.2f, 1.0f }
+        , _cursorHalfExtent{ 0.5f, 0.02f, 0.5f }
+        , _cursorHeight{ 0.05f }
+        , _cursorColor{ 1.0f, 0.95f, 0.3f, 1.0f }
         , _director{}
         , _cursor{}
         , _lastStep{}
@@ -161,7 +171,7 @@ namespace sw
         {
             for ( int32 x = 0; x < field.getWidth(); ++x )
             {
-                pDraw->drawBox( origin.toLocal( float3( static_cast<float32>( x ), -0.05f, static_cast<float32>( y ) ) ), float3( 0.48f, 0.05f, 0.48f ), float4( 0.3f, 0.35f, 0.3f, 1.0f ) );
+                pDraw->drawBox( origin, AbsolutePosition{ float3( static_cast<float32>( x ), -_tileHalfExtent._y, static_cast<float32>( y ) ) }, _tileHalfExtent, _tileColor );
             }
         }
         for ( size_t index = 0; index < field.getUnits().size(); ++index )
@@ -170,10 +180,10 @@ namespace sw
             if ( unit._bAlive == SW_FALSE )
                 continue;
             const bool   bSelected = static_cast<int32>( index ) == director.getSelectedUnit();
-            const float4 color     = unit._team == SRPGTeam::Player ? ( bSelected ? float4( 0.6f, 0.9f, 1.0f, 1.0f ) : float4( 0.2f, 0.6f, 1.0f, 1.0f ) ) : float4( 1.0f, 0.3f, 0.2f, 1.0f );
-            pDraw->drawSphere( origin.toLocal( float3( static_cast<float32>( unit._cell._x ), 0.4f, static_cast<float32>( unit._cell._y ) ) ), 0.35f, color );
+            const float4 color     = unit._team == SRPGTeam::Player ? ( bSelected ? _selectedColor : _playerColor ) : _enemyColor;
+            pDraw->drawSphere( origin, AbsolutePosition{ float3( static_cast<float32>( unit._cell._x ), _unitHeight, static_cast<float32>( unit._cell._y ) ) }, _unitRadius, color );
         }
-        pDraw->drawBox( origin.toLocal( float3( static_cast<float32>( _cursor._x ), 0.05f, static_cast<float32>( _cursor._y ) ) ), float3( 0.5f, 0.02f, 0.5f ), float4( 1.0f, 0.95f, 0.3f, 1.0f ) );
+        pDraw->drawBox( origin, AbsolutePosition{ float3( static_cast<float32>( _cursor._x ), _cursorHeight, static_cast<float32>( _cursor._y ) ) }, _cursorHalfExtent, _cursorColor );
     }
 
     void SRPGCursorComponent::writeGrowthDebugLines( DebugHUDSectionWriter& writer, const GameObjectManager& manager ) const

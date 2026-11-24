@@ -9,6 +9,8 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -143,7 +145,13 @@ namespace sw
                     outReply = "vlog: no debug draw queue";
                     return true;
                 }
-                const uint32                             count = pLogger->replayFrame( *pQueue, static_cast<uint64>( frame ), 0, hashed_string{} );
+                const GameObjectManager* const pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "vlog: no active scene";
+                    return true;
+                }
+                const uint32                             count = pLogger->replayFrame( *pQueue, pManager->getWorldOrigin(), static_cast<uint64>( frame ), 0, hashed_string{} );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "vlog: replayed %# entries of frame %#", count, static_cast<uint64>( frame ) );
                 outReply = string( replyBuilder.view() );

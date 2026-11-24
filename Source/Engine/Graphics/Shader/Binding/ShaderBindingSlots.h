@@ -120,6 +120,8 @@ namespace sw
         /// @brief 프로브 가시성(거리 모먼트) 옥타헤드럴 한 변 텍셀 수와 프로브 하나의 모먼트 원소 수(float4 하나에 텍셀 둘)입니다 — binding_slots.hlsli 8 절.
         inline constexpr uint32 kProbeVisibilityResolution  = SW_PROBE_VISIBILITY_RESOLUTION;
         inline constexpr uint32 kProbeVisibilityFloat4Count = SW_PROBE_VISIBILITY_FLOAT4_COUNT;
+        /// @brief 실시간 프로브 갱신이 읽는 라이트의 상한(목록 앞에서부터)입니다 — probe_update.hlsl.
+        inline constexpr uint32 kProbeMaxDirectLights = SW_PROBE_MAX_DIRECT_LIGHTS;
         static_assert( kProbeVisibilityResolution * kProbeVisibilityResolution == kProbeVisibilityFloat4Count * 2u, "모먼트 텍셀 둘이 float4 하나다" );
         /**
          * @brief 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, `uint` 배열)입니다. 칸마다 모프 풀 안 그 스킨 결과의 첫 원소(못 든 칸은 무효)입니다.

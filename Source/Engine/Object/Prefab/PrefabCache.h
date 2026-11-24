@@ -196,6 +196,7 @@ namespace sw
     private:
         mutable shared_mutex                                             _mapCacheMutex;
         unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache   SW_GUARDED_BY( _mapCacheMutex );
+        unordered_map<string, uint64> _mapLoadedBytes                    SW_GUARDED_BY( _mapCacheMutex ); ///< 키마다 읽으며 남긴 바이트(객체 · 노드 표 · 스폰 원형 — `ScopedAllocationMeter`, 배포본은 비어 있다)
         unordered_map<string, weak_ptr<PrefabLoadOperation>> _mapLoading SW_GUARDED_BY( _mapCacheMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 로드 작업). `_mapCacheMutex` 로 지킨다
         atomic<uint32>                                                   _cacheGeneration;                ///< `reload` · `clear` 가 올린다. 읽는 사이 바뀌면 결과를 캐시에 넣지 않는다
     };

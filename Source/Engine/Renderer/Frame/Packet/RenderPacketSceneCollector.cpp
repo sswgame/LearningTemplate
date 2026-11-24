@@ -281,11 +281,24 @@ namespace sw
             const shared_ptr<const SceneVoxelScene>& pVoxelScene = packet._listRealtimeProbe[index]._pVoxelScene;
             if ( pVoxelScene == _listVoxelUploadScene[index] )
                 continue;
-            _listVoxelUploadScene[index] = pVoxelScene;
-            for ( const SceneVoxelSource& source : pVoxelScene->_listSource )
+            const auto requestSource = [&queue]( const SceneVoxelSource& source )
             {
                 if ( source.isPainted() && source._mesh->isDynamic() == false )
                     queue.requestMesh( source._mesh );
+            };
+            // 정적 층을 나눠 든 장면(움직이는 것만 바뀐 프레임)은 움직이는 목록만 본다.
+            const bool bStaticSame       = _listVoxelUploadScene[index] != nullptr && _listVoxelUploadScene[index]->_pListStaticSource == pVoxelScene->_pListStaticSource;
+            _listVoxelUploadScene[index] = pVoxelScene;
+            if ( bStaticSame == false )
+            {
+                for ( const SceneVoxelSource& source : pVoxelScene->getStaticSources() )
+                {
+                    requestSource( source );
+                }
+            }
+            for ( const SceneVoxelMovingSource& moving : pVoxelScene->_listMovingSource )
+            {
+                requestSource( moving._source );
             }
         }
     }

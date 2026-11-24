@@ -5,8 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
@@ -33,7 +33,7 @@ namespace sw
         }
         _worldOrigin        = origin;
         const float32 range = MathUtil::max( _settings._sightRange, _settings._loseSightRange );
-        AIStimulusSourceComponent::gatherStimuli( manager, ownTeam, eyePosition, range, _listCandidate, _listQueryKey );
+        AIStimulusSourceComponent::gatherStimuli( manager, ownTeam, eyePosition, range, _settings._hearingScale, _listCandidate, _listQueryKey );
         sense( eyePosition, forward, _listCandidate, pGrid, deltaTime );
     }
 

@@ -67,8 +67,16 @@ namespace sw
             if ( def._bLooping )
             {
                 // 끝을 넘은 몫은 다음 바퀴의 시간이다 — 그 몫의 버스트 · 생성률을 이 단계에 센다(바퀴 경계에서 0 번 · 한 단계 늦음이 없다).
-                // shortcut: 바퀴가 단계보다 짧으면 몫이 바퀴를 넘는다 — 한 단계에 한 바퀴만 세고 넘는 몫은 버린다. 단계보다 짧은 반복이 데이터에 나오면 바퀴 수만큼 센다.
-                _emitterSeconds = MathUtil::min( _emitterSeconds - duration, duration );
+                // 바퀴가 단계보다 짧으면 한 단계에 여러 바퀴가 돈다 — 통째로 지난 바퀴의 버스트 · 생성률을 바퀴 수만큼 센다.
+                const uint64 loopCount      = duration > 0.0 ? static_cast<uint64>( _emitterSeconds / duration ) : 1u;
+                const uint64 extraLoopCount = loopCount > 0u ? loopCount - 1u : 0u;
+                for ( const VFXBurstDef& burst : def._listBurst )
+                {
+                    if ( extraLoopCount > 0u && static_cast<float64>( burst._time ) <= duration )
+                        _spawnCarry += static_cast<float32>( burst._count ) * _spawnScale * static_cast<float32>( extraLoopCount );
+                }
+                accumulateEmission( duration * static_cast<float64>( extraLoopCount ) );
+                _emitterSeconds = MathUtil::max( 0.0, _emitterSeconds - duration * static_cast<float64>( extraLoopCount + 1u ) );
                 _listBurstFired.assign( def._listBurst.size(), 0 );
                 accumulateDueBurst();
                 accumulateEmission( _emitterSeconds );

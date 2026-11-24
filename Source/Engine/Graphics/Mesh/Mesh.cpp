@@ -388,7 +388,8 @@ namespace sw
             _listIndex.clear();
             _vertexCount = 0;
             refreshBoundingRadius();
-            _uvDensity = 0.0f;
+            _uvDensity      = 0.0f;
+            _meanEdgeLength = 0.0f;
             return false;
         }
         _listVertex  = std::move( listVertex );
@@ -396,7 +397,8 @@ namespace sw
         _vertexCount = vertexCount;
         _bHoldsCPUVertices.store( SW_TRUE, std::memory_order_release ); // 새 내용이다 — 올린 뒤 다시 놓는다
         refreshBoundingRadius();
-        _uvDensity = computeUVDensity( _listVertex, _listIndex );
+        _uvDensity      = computeUVDensity( _listVertex, _listIndex );
+        _meanEdgeLength = computeMeanEdgeLength( _listVertex, _listIndex );
         return true;
     }
 
@@ -1003,6 +1005,27 @@ namespace sw
         if ( uvAreaSum <= 0.0 )
             return 0.0f;
         return static_cast<float32>( MathUtil::sqrt( areaSum / uvAreaSum ) );
+    }
+
+    float32 Mesh::computeMeanEdgeLength( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex )
+    {
+        const size_t triangleCount = listIndex.size() / 3;
+        if ( triangleCount == 0 )
+            return 0.0f;
+        float64 doubleAreaSum = 0.0;
+        for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
+        {
+            const RHIVertex& v0 = listVertex[listIndex[index]];
+            const RHIVertex& v1 = listVertex[listIndex[index + 1]];
+            const RHIVertex& v2 = listVertex[listIndex[index + 2]];
+            const float3     p0{ v0._arrPosition[0], v0._arrPosition[1], v0._arrPosition[2] };
+            const float3     edge1 = float3{ v1._arrPosition[0], v1._arrPosition[1], v1._arrPosition[2] } - p0;
+            const float3     edge2 = float3{ v2._arrPosition[0], v2._arrPosition[1], v2._arrPosition[2] } - p0;
+            doubleAreaSum += static_cast<float64>( edge1.cross( edge2 ).getLength() );
+        }
+        // 정삼각형의 넓이 = √3 / 4 × 변² — 넓이의 두 배로 풀면 변² = 두 배 넓이 × 2 / √3 이다.
+        constexpr float64 kEdgeSquaredPerDoubleArea = 1.1547005383792515;
+        return static_cast<float32>( MathUtil::sqrt( doubleAreaSum / static_cast<float64>( triangleCount ) * kEdgeSquaredPerDoubleArea ) );
     }
 
     void Mesh::refreshBoundingRadius()

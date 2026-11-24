@@ -64,6 +64,26 @@ namespace sw
         hashed_string _confirmAction;
         PROPERTY( Category = "Input", DisplayName = "End Turn Action", Tooltip = "InputMap action that ends the player phase (required)" )
         hashed_string _endTurnAction;
+        PROPERTY( Category = "View", DisplayName = "Tile Half Extent", Tooltip = "Half size of one drawn cell; its top is the floor", Units = m )
+        float3 _tileHalfExtent;
+        PROPERTY( Category = "View", DisplayName = "Tile Color" )
+        float4 _tileColor;
+        PROPERTY( Category = "View", DisplayName = "Unit Radius", Min = 0.01, Units = m )
+        float32 _unitRadius;
+        PROPERTY( Category = "View", DisplayName = "Unit Height", Tooltip = "Height of a unit's center above the floor", Units = m )
+        float32 _unitHeight;
+        PROPERTY( Category = "View", DisplayName = "Player Color" )
+        float4 _playerColor;
+        PROPERTY( Category = "View", DisplayName = "Selected Color" )
+        float4 _selectedColor;
+        PROPERTY( Category = "View", DisplayName = "Enemy Color" )
+        float4 _enemyColor;
+        PROPERTY( Category = "View", DisplayName = "Cursor Half Extent", Units = m )
+        float3 _cursorHalfExtent;
+        PROPERTY( Category = "View", DisplayName = "Cursor Height", Units = m )
+        float32 _cursorHeight;
+        PROPERTY( Category = "View", DisplayName = "Cursor Color" )
+        float4 _cursorColor;
 
         TComponentHandle<SRPGGameModeComponent> _director;
         int2                                    _cursor;

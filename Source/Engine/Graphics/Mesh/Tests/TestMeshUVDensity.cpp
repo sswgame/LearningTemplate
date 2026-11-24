@@ -61,3 +61,13 @@ SW_TEST_CASE( MeshUVDensityTest, MeshWithoutUVsHasZeroDensity )
     SW_REQUIRE_TRUE( mesh->setGeometryWithTangents( vector<RHIVertex>( listVertex ), vector<uint32>( listIndex ) ) );
     SW_EXPECT_NEAR( 3.0, mesh->getUVDensity(), 1e-5 );
 }
+
+/** @brief [MeshUVDensityTest] 평균 변 길이는 평균 넓이 정삼각형의 변이다 — 2 m 사각형(넓이 2 인 삼각형 둘)이면 √(4 × 2 / √3), 삼각형이 없으면 0 */
+SW_TEST_CASE( MeshUVDensityTest, MeanEdgeLengthFollowsTriangleArea )
+{
+    vector<RHIVertex> listVertex;
+    vector<uint32>    listIndex;
+    MeshUVDensityTestUtil::makeQuad( 2.0f, 1.0f, listVertex, listIndex );
+    SW_EXPECT_NEAR( 2.149140, Mesh::computeMeanEdgeLength( listVertex, listIndex ), 1e-4 );
+    SW_EXPECT_NEAR( 0.0, Mesh::computeMeanEdgeLength( listVertex, vector<uint32>{} ), 1e-9 );
+}

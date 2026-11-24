@@ -6,10 +6,10 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw

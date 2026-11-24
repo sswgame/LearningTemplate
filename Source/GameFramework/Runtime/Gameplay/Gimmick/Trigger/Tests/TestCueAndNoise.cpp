@@ -95,12 +95,12 @@ SW_TEST_CASE( GimmickSignalTest, NoiseReachesTheAIStimulusIndex )
     vector<AIStimulus> listStimulus;
     vector<Component*> listKey;
     pEmitter->emit( 8.0f ); // 틱 밖이라 색인을 바로 고친다
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
     SW_EXPECT_EQUAL( pFloor->getObjectID(), listStimulus[0].getID() );
     SW_EXPECT_NEAR( 8.0f, listStimulus[0].getNoiseRadius(), 1e-5f );
 
     manager.update( 1.0f / 60.0f ); // 다음 프레임 — 지난 소리를 거둔다
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() );
 }

@@ -94,6 +94,7 @@ struct SurfaceFunction
     // 투영
     static float3 computeTriplanarWeights( float3 normal, float sharpness );
     static float2 computeTriplanarFaceUV( float3 position, float3 normal, uint axis );
+    static float4 computeTriplanarFaceTangent( float3 normal, uint axis );
     static uint findDominantAxis( float3 normal );
     static float4 sampleTriplanar( uint textureIndex, float3 position, float3 normal, float3 weights, float tiling );
     static float2 projectDominantAxis( float3 position, float3 normal );
@@ -267,6 +268,15 @@ static float2 SurfaceFunction::computeTriplanarFaceUV( float3 position, float3 n
     const float2 onY      = float2( position.x * faceSign.y, -position.z );
     const float2 onZ      = float2( -position.x * faceSign.z, -position.y );
     return ( axis == 0u ) ? onX : ( ( axis == 1u ) ? onY : onZ );
+}
+
+/** @brief computeTriplanarFaceUV 의 탄젠트(xyz = dP/du, w = 바이노멀 부호 — 메시 탄젠트와 같은 배치)입니다. 투영 UV 로 읽는 노멀 맵 · 비등방이 쓴다. */
+static float4 SurfaceFunction::computeTriplanarFaceTangent( float3 normal, uint axis )
+{
+    const float3 faceSign = float3( normal.x >= 0.0f ? 1.0f : -1.0f, normal.y >= 0.0f ? 1.0f : -1.0f, normal.z >= 0.0f ? 1.0f : -1.0f );
+    const float3 tangent  = ( axis == 0u ) ? float3( 0.0f, 0.0f, faceSign.x ) : ( ( axis == 1u ) ? float3( faceSign.y, 0.0f, 0.0f ) : float3( -faceSign.z, 0.0f, 0.0f ) );
+    const float3 downV    = ( axis == 1u ) ? float3( 0.0f, 0.0f, -1.0f ) : float3( 0.0f, -1.0f, 0.0f );
+    return float4( tangent, dot( cross( normal, tangent ), downV ) > 0.0f ? -1.0f : 1.0f );
 }
 
 /** @brief 노멀이 가장 큰 축(0 x · 1 y · 2 z — 같으면 y, 그다음 x 를 먼저)입니다. */

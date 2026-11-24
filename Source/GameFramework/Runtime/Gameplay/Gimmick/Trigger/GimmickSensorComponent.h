@@ -115,7 +115,7 @@ namespace sw
     private:
         /** @brief 겹치기 시작한 것(`GameObjectEvents::_overlapBegin`)을 거름에 맞으면 겹친 것 목록에 넣습니다. */
         void handleOverlapBegin( const OverlapInfo& overlap );
-        /** @brief 겹침이 끝난 것(`GameObjectEvents::_overlapEnd`)을 목록에서 뺍니다. 상대가 사라졌으면 살아 있지 않은 핸들을 모두 뺍니다. */
+        /** @brief 겹침이 끝난 것(`GameObjectEvents::_overlapEnd`)을 목록에서 뺍니다. 몸과 트리거를 함께 세면 둘 다 나가야 뺍니다. 상대가 사라졌으면 살아 있지 않은 핸들을 모두 뺍니다. */
         void handleOverlapEnd( const OverlapInfo& overlap );
 
         Subscription _overlapBeginSubscription; ///< 겹침 진입 구독(`handleOverlapBegin`)
@@ -124,6 +124,10 @@ namespace sw
         TagContainer _requiredTags;
         PROPERTY( Category = "Sensor", DisplayName = "Occupants", Tooltip = "Objects overlapping now (runtime)" )
         vector<GameObjectHandle> _listOccupant;
+        PROPERTY( Category = "Sensor", DisplayName = "Body Occupants", Tooltip = "Objects whose body overlaps now (runtime)" )
+        vector<GameObjectHandle> _listBodyOccupant;
+        PROPERTY( Category = "Sensor", DisplayName = "Trigger Occupants", Tooltip = "Objects whose trigger overlaps now, counted with Count Triggers (runtime)" )
+        vector<GameObjectHandle> _listTriggerOccupant;
         PROPERTY( Category = "Sensor", DisplayName = "Default Weight", Min = 0.0, Tooltip = "Weight of an occupant without a SensorWeightOverrideComponent", Units = kg )
         float32 _defaultWeight;
         PROPERTY( Category = "Sensor", DisplayName = "Count Triggers", Tooltip = "Also count the other object's trigger colliders" )

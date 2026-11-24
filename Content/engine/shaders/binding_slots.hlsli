@@ -346,6 +346,8 @@
 // 볼륨의 모먼트 묶음은 g_SwLightProbes 안 SH9 원소 뒤에 붙고 그 첫 원소가 볼륨 원소의 extra.x 다(C++ LightProbeElementBuilder::appendRealtimeVolume).
 #define SW_PROBE_VISIBILITY_RESOLUTION   8u
 #define SW_PROBE_VISIBILITY_FLOAT4_COUNT 32u
+// 실시간 프로브 갱신에서 광선이 닿은 면을 비추는 라이트의 상한(라이트 목록 앞에서부터 — probe_update.hlsl computeDirectLight, C++ RealtimeProbeUpdater::makeInputRows).
+#define SW_PROBE_MAX_DIRECT_LIGHTS 8u
 // 빛이 아니라 반사 프로브 하나(IndirectLighting.md P4). 프로브 볼륨처럼 경계 구로 그리드에 들고, 옥타헤드럴 텍셀(선형 RGB, 텍셀 하나가 float4 하나)은
 // g_SwLightProbes(t13)에 SH9 원소와 함께 이어 붙는다 — 텍스처 슬롯을 쓰지 않아 네 백엔드가 같은 길로 읽는다. 읽는 함수는 lighting.hlsli LightData::sampleReflectionProbe 하나다.
 // 원소: positionRadius = (상자 중심 xyz, 상자 대각선 반) · colorIntensity = (상자 반 크기 xyz, 경계에서 섞는 폭 m) · directionType = (찍은 위치 xyz, 이 타입) ·

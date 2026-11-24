@@ -86,9 +86,12 @@ DecalVSOutput VSMain( uint vertexID : SV_VertexID, uint instanceID : SV_Instance
 {
     const uint      decalIndex = g_DecalFirst + instanceID;
     const DecalData decal      = loadDecal( decalIndex );
-    const uint      corner     = kDecalBoxCorner[vertexID];
-    const float3    local      = float3( ( corner & 1u ) != 0u ? 0.5f : -0.5f, ( corner & 2u ) != 0u ? 0.5f : -0.5f, ( corner & 4u ) != 0u ? 0.5f : -0.5f );
-    DecalVSOutput   output;
+    // 거울 상자(월드 행렬식 < 0)는 감김이 뒤집히므로 삼각형의 둘째 · 셋째 정점을 맞바꿔 뒷면을 남긴다(인스턴스마다라 컬을 뒤집은 PSO 로 묶음을 가르지 않는다).
+    const bool    bMirrored  = dot( cross( decal._world[0].xyz, decal._world[1].xyz ), decal._world[2].xyz ) < 0.0f;
+    const uint    inTriangle = vertexID % 3u;
+    const uint    corner     = kDecalBoxCorner[bMirrored ? vertexID - inTriangle + ( 3u - inTriangle ) % 3u : vertexID];
+    const float3  local      = float3( ( corner & 1u ) != 0u ? 0.5f : -0.5f, ( corner & 2u ) != 0u ? 0.5f : -0.5f, ( corner & 4u ) != 0u ? 0.5f : -0.5f );
+    DecalVSOutput output;
     output._position   = Transform::computeClipPosition( mul( float4( local, 1.0f ), decal._world ), View::getViewProjection() );
     output._decalIndex = decalIndex;
     return output;

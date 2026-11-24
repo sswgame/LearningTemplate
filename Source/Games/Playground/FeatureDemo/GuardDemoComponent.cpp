@@ -7,10 +7,10 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"

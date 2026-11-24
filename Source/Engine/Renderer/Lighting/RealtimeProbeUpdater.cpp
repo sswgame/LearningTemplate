@@ -123,6 +123,33 @@ namespace sw
         _bGrowPending = SW_FALSE;
     }
 
+    void RealtimeProbeAccumulation::advance( bool bReset, bool bChanged, bool bStable )
+    {
+        if ( bReset )
+            _framesSinceReset = 0;
+        if ( bChanged )
+        {
+            if ( bStable || _framesSinceChange > _longestGap )
+            {
+                _longestGap       = bStable ? 1u : _framesSinceChange; // 정착했으면 앞 틈을 잊고, 아니면 이 틈을 배운다
+                _longestInnerGap  = 1;
+                _framesSinceStart = 0;
+            }
+            else
+                _longestInnerGap = MathUtil::max( _longestInnerGap, _framesSinceChange );
+            _framesSinceChange = 0;
+        }
+        ++_framesSinceReset;
+        ++_framesSinceStart;
+        if ( _framesSinceChange != constant::invalid_index::kUint32 )
+            ++_framesSinceChange;
+    }
+
+    uint32 RealtimeProbeAccumulation::getAccumulatedFrames() const
+    {
+        return MathUtil::min( _framesSinceReset, _framesSinceChange <= _longestInnerGap ? _framesSinceStart : _framesSinceChange );
+    }
+
     RealtimeProbeLayout RealtimeProbeUpdater::planLayout( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeHistoryAllocator& history )
     {
         using Internal = RealtimeProbeUpdaterInternal;
@@ -141,9 +168,24 @@ namespace sw
             const bool bHasEmission = scene._listEmissionPalette.empty() == false;
             layout._listEmissionWordOffset.push_back( bHasEmission ? layout._totalVoxelWords : SceneVoxelizer::kNoEmission );
             layout._totalVoxelWords += bHasEmission ? scene._grid.getCellCount() : 0u;
+            layout._listStaticWordOffset.push_back( SceneVoxelizer::kNoStaticCopy );
+            layout._listStaticEmissionOffset.push_back( SceneVoxelizer::kNoEmission );
             layout._listPaletteRow.push_back( paletteRow );
             paletteRow += ( static_cast<uint32>( scene._listEmissionPalette.size() ) + Internal::kPaletteEntriesPerRow - 1u ) / Internal::kPaletteEntriesPerRow;
             layout._totalProbes += request._probeCount;
+        }
+        // 정적 사본은 읽는 자리들 뒤에 놓는다 — 움직이는 층이 생겨도 다른 볼륨이 읽는 자리는 그대로다.
+        for ( size_t requestIndex = 0; requestIndex < listRequest.size(); ++requestIndex )
+        {
+            const SceneVoxelScene& scene = *listRequest[requestIndex]._pVoxelScene;
+            if ( scene._bMovingLayer == SW_FALSE )
+                continue;
+            layout._listStaticWordOffset[requestIndex] = layout._totalVoxelWords;
+            layout._totalVoxelWords += scene._grid.getWordCount();
+            if ( scene._listEmissionPalette.empty() )
+                continue;
+            layout._listStaticEmissionOffset[requestIndex] = layout._totalVoxelWords;
+            layout._totalVoxelWords += scene._grid.getCellCount();
         }
         return layout;
     }
@@ -231,8 +273,37 @@ namespace sw
         return rows;
     }
 
+    vector<float4> RealtimeProbeUpdater::makeInputRows( const vector<RealtimeProbeRequest>& listRequest, const SH9Color& sky, vector_reference<const GPULight> lights )
+    {
+        vector<float4> rows;
+        for ( uint32 coefficientIndex = 0; coefficientIndex < SH9Color::kCoefficientCount; coefficientIndex += 3u ) // 계수 아홉 × RGB
+        {
+            rows.push_back( float4{ sky._arrCoefficient[coefficientIndex], sky._arrCoefficient[coefficientIndex + 1u], sky._arrCoefficient[coefficientIndex + 2u], 0.0f } );
+        }
+        for ( const RealtimeProbeRequest& request : listRequest )
+        {
+            const GPULight& element = request._volumeElement;
+            rows.push_back( float4{ element._colorIntensity._x, element._colorIntensity._y, element._colorIntensity._z, request._bounceAlbedo } );
+            rows.push_back( float4{ element._directionType._x, element._directionType._y, element._directionType._z, request._emissiveIntensity } );
+            rows.push_back( float4{ element._params._x, element._params._y, element._params._z, 0.0f } );
+        }
+        const size_t lightCount = MathUtil::min( static_cast<size_t>( lights.size() ), static_cast<size_t>( shaderslot::kProbeMaxDirectLights ) );
+        for ( size_t lightIndex = 0; lightIndex < lightCount; ++lightIndex )
+        {
+            const GPULight& light     = lights[lightIndex];
+            const uint32    lightType = RealtimeProbeUpdaterInternal::toCount( light._directionType._w );
+            if ( lightType != shaderslot::kLightTypeDirectional && lightType != shaderslot::kLightTypePoint && lightType != shaderslot::kLightTypeSpot )
+                continue; // 광선이 닿은 면을 비추지 않는다(probe_update.hlsl computeIncidence)
+            rows.push_back( light._positionRadius );
+            rows.push_back( light._colorIntensity );
+            rows.push_back( light._directionType );
+            rows.push_back( float4{ light._params._y, light._params._z, 0.0f, 0.0f } );
+        }
+        return rows;
+    }
+
     void RealtimeProbeUpdater::prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky,
-                                        bool bPipelineReady, bool bCreateMissingMeshes )
+                                        bool bPipelineReady, bool bCreateMissingMeshes, float32 stableError )
     {
         _bActive = SW_FALSE;
         if ( pDevice == nullptr || listRequest.empty() )
@@ -255,11 +326,10 @@ namespace sw
         const uint32              float4Stride = static_cast<uint32>( sizeof( float4 ) );
 
         // 복셀 - 장면 포인터가 달라진 볼륨의 바뀐 구간만 다시 칠한다(컴포넌트가 같은 장면을 캐시로 돌려준다).
-        bool bVoxelChanged = false;
-        if ( prepareVoxelPaint( pDevice, listRequest, layout, bCreateMissingMeshes, bVoxelChanged ) == false )
+        bool bReset   = false; // 기록을 0 에서 시작한다 — 정착을 처음부터 센다
+        bool bChanged = false; // 기록이 향하는 입력이 앞 프레임과 다르다
+        if ( prepareVoxelPaint( pDevice, listRequest, layout, bCreateMissingMeshes, bChanged ) == false )
             return;
-        if ( bVoxelChanged )
-            _framesSinceInputChange = 0;
 
         // 기록 - 볼륨 정체마다 구간이다. 용량이 늘었거나 버퍼가 없으면 통째로 0 에서, 아니면 새로 든 볼륨의 구간만 0 으로 채운다(서 있는 볼륨은 누적을 잇는다).
         if ( bHistoryGrew || _historyBuffer.isValid() == false )
@@ -272,7 +342,7 @@ namespace sw
                 return;
             }
             _historyBuffer.upload( pDevice, zeros.data(), layout._totalHistoryElements * float4Stride );
-            _framesSinceInputChange = 0;
+            bReset = true;
         }
         else
         {
@@ -283,7 +353,7 @@ namespace sw
                 const uint32         elementCount = listRequest[requestIndex]._probeCount * RealtimeProbeHistoryAllocator::kFloat4PerProbe;
                 const vector<float4> zeros( elementCount, float4{} );
                 _historyBuffer.upload( pDevice, zeros.data(), elementCount * float4Stride, layout._listHistoryOffset[requestIndex] * float4Stride );
-                _framesSinceInputChange = 0;
+                bReset = true;
             }
         }
 
@@ -293,8 +363,9 @@ namespace sw
         {
             listWarmup.push_back( _historyAllocator.getFramesSinceReset( requestIndex ) / MathUtil::max( listRequest[requestIndex]._updatePeriod, 1u ) );
         }
-        _listRowScratch       = makeParamRows( listRequest, layout, listWarmup, projectSky( sky, bHasSky ), _frameCounter, lightBuffer.getGPULightBase() );
-        const uint32 rowCount = static_cast<uint32>( _listRowScratch.size() );
+        const SH9Color skyColor = projectSky( sky, bHasSky );
+        _listRowScratch         = makeParamRows( listRequest, layout, listWarmup, skyColor, _frameCounter, lightBuffer.getGPULightBase() );
+        const uint32 rowCount   = static_cast<uint32>( _listRowScratch.size() );
         if ( _paramBuffer.ensureCapacity( pDevice, float4Stride, rowCount, Internal::kReadUsage, true, false, nullptr ) == false )
         {
             SW_LOG_ERROR_ID( "RealtimeProbeUpdater.FailedCreateProbeUpdate", "Failed to create the probe update parameter buffer - realtime light probes do not update" );
@@ -305,8 +376,12 @@ namespace sw
         _totalProbes = layout._totalProbes;
         ++_frameCounter;
         _historyAllocator.advanceFrame();
-        ++_framesSinceInputChange;
-        _error   = computeError( listRequest, _framesSinceInputChange );
+        vector<float4> listInputRow = makeInputRows( listRequest, skyColor, lightBuffer.getUploadedLights() );
+        bChanged                    = bChanged || listInputRow.size() != _listInputRow.size() ||
+                   Memory::compare( listInputRow.data(), _listInputRow.data(), listInputRow.size() * sizeof( float4 ) ) != 0;
+        _listInputRow = std::move( listInputRow );
+        _accumulation.advance( bReset, bChanged, computeError( listRequest, _accumulation._framesSinceChange ) <= stableError );
+        _error   = computeError( listRequest, _accumulation.getAccumulatedFrames() );
         _bActive = SW_TRUE;
     }
 
@@ -337,12 +412,14 @@ namespace sw
         vector<SceneVoxelPaintTarget> listTarget;
         for ( size_t index = 0; index < listRequest.size(); ++index )
         {
-            PaintedVolume current{ listRequest[index]._volumeID, layout._listVoxelWordOffset[index], layout._listEmissionWordOffset[index], listRequest[index]._pVoxelScene };
+            PaintedVolume current{ listRequest[index]._volumeID, layout._listVoxelWordOffset[index], layout._listEmissionWordOffset[index], layout._listStaticWordOffset[index],
+                                   layout._listStaticEmissionOffset[index], listRequest[index]._pVoxelScene };
             const bool    bSamePlace = index < _listPainted.size() && _listPainted[index]._volumeID == current._volumeID && _listPainted[index]._wordOffset == current._wordOffset &&
-                                    _listPainted[index]._emissionOffset == current._emissionOffset;
+                                    _listPainted[index]._emissionOffset == current._emissionOffset && _listPainted[index]._staticWordOffset == current._staticWordOffset &&
+                                    _listPainted[index]._staticEmissionOffset == current._staticEmissionOffset;
             const SceneVoxelScene* const pPainted = bSamePlace ? _listPainted[index]._pScene.get() : nullptr;
             if ( pPainted != current._pScene.get() )
-                listTarget.push_back( SceneVoxelPaintTarget{ current._pScene.get(), pPainted, current._wordOffset, current._emissionOffset } );
+                listTarget.push_back( SceneVoxelPaintTarget{ current._pScene.get(), pPainted, current._wordOffset, current._emissionOffset, current._staticWordOffset, current._staticEmissionOffset } );
             listPainted.push_back( std::move( current ) );
         }
         const SceneVoxelPaintPlan plan = SceneVoxelizer::planPaint( listTarget ); // 지난 장면(`_listPainted`)을 읽는다 — 아래에서 바꾼다
@@ -354,22 +431,26 @@ namespace sw
             _listPendingCopy.clear();
             return false;
         }
-        _listPainted      = std::move( listPainted );
-        _clearThreadCount = plan._clearThreadCount;
-        _paintThreadCount = plan._paintThreadCount;
-        outChanged        = plan.isEmpty() == false;
-        _bPaintPending    = outChanged ? SW_TRUE : SW_FALSE;
+        _listPainted            = std::move( listPainted );
+        _arrVoxelThreadCount[0] = plan._clearThreadCount;
+        _arrVoxelThreadCount[1] = plan._paintThreadCount;
+        _arrVoxelThreadCount[2] = plan._restoreThreadCount;
+        _arrVoxelThreadCount[3] = plan._movingThreadCount;
+        outChanged              = plan.isEmpty() == false;
+        _bPaintPending          = plan.isEmpty() ? SW_FALSE : SW_TRUE;
         return true;
     }
 
     bool RealtimeProbeUpdater::uploadPaint( IRHIDevice* pDevice, const SceneVoxelPaintPlan& plan, bool bCreateMissingMeshes )
     {
-        using Internal            = RealtimeProbeUpdaterInternal;
-        const uint32 float4Stride = static_cast<uint32>( sizeof( float4 ) );
-        const uint32 clearRows    = static_cast<uint32>( plan._listClearRow.size() );
-        const uint32 paintRows    = static_cast<uint32>( plan._listPaintRow.size() );
-        const bool   bJobsReady   = _voxelClearJobBuffer.ensureCapacity( pDevice, float4Stride, clearRows, Internal::kReadUsage, true, false, nullptr ) &&
-                                _voxelPaintJobBuffer.ensureCapacity( pDevice, float4Stride, paintRows, Internal::kReadUsage, true, false, nullptr );
+        using Internal                                          = RealtimeProbeUpdaterInternal;
+        const uint32                float4Stride                = static_cast<uint32>( sizeof( float4 ) );
+        const vector<float4>* const arrRow[kVoxelDispatchCount] = { &plan._listClearRow, &plan._listPaintRow, &plan._listRestoreRow, &plan._listMovingRow };
+        bool                        bJobsReady                  = true;
+        for ( uint32 dispatchIndex = 0; dispatchIndex < kVoxelDispatchCount; ++dispatchIndex )
+        {
+            bJobsReady = bJobsReady && _arrVoxelJobBuffer[dispatchIndex].ensureCapacity( pDevice, float4Stride, static_cast<uint32>( arrRow[dispatchIndex]->size() ), Internal::kReadUsage, true, false, nullptr );
+        }
         // 칠할 메시가 없어도 셰이더의 t1 · t2 는 빈 슬롯으로 두지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
         const uint32 positionCount = MathUtil::max( plan._vertexCount, 1u ) * Internal::kFloatsPerPosition;
         const uint32 indexCount    = MathUtil::max( plan._indexCount, 1u );
@@ -378,8 +459,10 @@ namespace sw
                                 _voxelIndexBuffer.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), indexCount, Internal::kReadUsage, true, false, nullptr );
         if ( bMeshReady == false )
             return false;
-        _voxelClearJobBuffer.upload( pDevice, plan._listClearRow.data(), clearRows * float4Stride );
-        _voxelPaintJobBuffer.upload( pDevice, plan._listPaintRow.data(), paintRows * float4Stride );
+        for ( uint32 dispatchIndex = 0; dispatchIndex < kVoxelDispatchCount; ++dispatchIndex )
+        {
+            _arrVoxelJobBuffer[dispatchIndex].upload( pDevice, arrRow[dispatchIndex]->data(), static_cast<uint32>( arrRow[dispatchIndex]->size() ) * float4Stride );
+        }
 
         _listIndexScratch.clear();
         _listIndexScratch.reserve( plan._indexCount );
@@ -456,15 +539,9 @@ namespace sw
         cmd.dispatchThreads( MathUtil::min( threadCount, SceneVoxelizer::kThreadsPerRow ), rowCount, 1 );
     }
 
-    void RealtimeProbeUpdater::dispatchVoxelClear( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso ) const
+    void RealtimeProbeUpdater::dispatchVoxelPass( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, uint32 dispatchIndex ) const
     {
-        dispatchVoxelJobs( cmd, pso, _voxelClearJobBuffer, _clearThreadCount );
-    }
-
-    void RealtimeProbeUpdater::dispatchVoxelPaint( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso )
-    {
-        dispatchVoxelJobs( cmd, pso, _voxelPaintJobBuffer, _paintThreadCount );
-        _bPaintPending = SW_FALSE;
+        dispatchVoxelJobs( cmd, pso, _arrVoxelJobBuffer[dispatchIndex], _arrVoxelThreadCount[dispatchIndex] );
     }
 
     void RealtimeProbeUpdater::dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV )
@@ -491,8 +568,10 @@ namespace sw
     void RealtimeProbeUpdater::release( IRHIDevice* pDevice )
     {
         _voxelBuffer.release( pDevice );
-        _voxelClearJobBuffer.release( pDevice );
-        _voxelPaintJobBuffer.release( pDevice );
+        for ( RHIStructuredBuffer& jobBuffer : _arrVoxelJobBuffer )
+        {
+            jobBuffer.release( pDevice );
+        }
         _voxelPositionBuffer.release( pDevice );
         _voxelIndexBuffer.release( pDevice );
         _historyBuffer.release( pDevice );
@@ -500,8 +579,9 @@ namespace sw
         _listPainted.clear();
         _listPendingCopy.clear();
         _historyAllocator.clear();
-        _framesSinceInputChange = 0;
-        _bActive                = SW_FALSE;
-        _bPaintPending          = SW_FALSE;
+        _accumulation = RealtimeProbeAccumulation{};
+        _listInputRow.clear();
+        _bActive       = SW_FALSE;
+        _bPaintPending = SW_FALSE;
     }
 } // namespace sw

@@ -3,6 +3,7 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/PackUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -328,6 +329,64 @@ SW_TEST_CASE( SceneVoxelizerTest, RepaintsOnlyChangedOccluders )
 }
 
 /**
+ * @brief [SceneVoxelizerTest] 움직인 가리개는 낡은 자리가 정적 사본으로 돌아가고 새 자리에 칠해져, 처음부터 칠한 격자와 같다. 두 번째 움직임부터는 정적 층을 다시 칠하지 않고, 움직인 것이 없으면 할 일이 없다
+ * @details 변이: 되돌리기 일을 빼면 낡은 자리가 켜진 채 남고, 승격(정적 층에서 빼기)을 빼면 정적 사본이 낡은 자리를 되살린다.
+ */
+SW_TEST_CASE( SceneVoxelizerTest, MovedOccluderRepaintsOnlyItsLayer )
+{
+    using sw::test::SceneVoxelReference;
+    const sw::shared_ptr<sw::Material> sceneOpaque = makeOpaqueMaterial();
+    sw::Scene                          scene( "SceneVoxelizerMove" );
+    sw::GameObjectManager*             pObjects = scene.getObjectManager();
+    SW_REQUIRE_NOT_NULL( pObjects );
+    sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    const sw::AABB         bounds{
+        sw::float3{-2.0f, -2.0f, -2.0f},
+        sw::float3{ 2.0f,  2.0f,  2.0f}
+    };
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.75f, 0.0f, 0.0f }, nullptr, true ) );
+    sw::MeshComponent* pDoor = addCube( pObjects, "Door", sw::float3{ -1.0f, 0.0f, 0.0f }, nullptr, true );
+    SW_REQUIRE_NOT_NULL( pDoor );
+    pObjects->flushSceneTransforms();
+    sw::vector<uint32> listState;
+    sw::vector<uint32> listTransform;
+    registry.consumeDirty( listState, listTransform );
+    sw::SceneVoxelScene painted    = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
+    uint64              generation = registry.getMeshChangeGeneration();
+    const uint32        wordCount  = painted._grid.getWordCount();
+    sw::vector<uint32>  words      = paintWhole( painted )._listWord;
+    words.resize( wordCount * 2u, 0u );            // 뒤 절반은 정적 사본 자리
+    const sw::SceneVoxelScene* pPainted = nullptr; // 정적 사본이 처음 생기는 프레임은 자리가 바뀌어 전체를 칠한다
+    sw::SceneVoxelScene        current  = painted;
+
+    for ( const float32 x : { -0.5f, 0.0f, 0.5f } )
+    {
+        pDoor->setLocalPosition( sw::float3{ x, 0.25f, 0.0f } );
+        pObjects->flushSceneTransforms();
+        registry.consumeDirty( listState, listTransform );
+        sw::vector<uint32> listChanged;
+        registry.appendMeshChanges( generation, listChanged );
+        generation = registry.getMeshChangeGeneration();
+        SW_REQUIRE_EQUAL( size_t( 1 ), listChanged.size() );
+        painted = current;
+        SW_REQUIRE_TRUE( sw::SceneVoxelizer::updateScene( current, registry, sceneOpaque.get(), listChanged ) );
+        SW_REQUIRE_EQUAL( size_t( 1 ), current._listMovingSource.size() );
+        const sw::SceneVoxelPaintPlan plan = sw::SceneVoxelizer::planPaint( {
+            sw::SceneVoxelPaintTarget{ &current, pPainted, 0u, sw::SceneVoxelizer::kNoEmission, wordCount, sw::SceneVoxelizer::kNoEmission }
+        } );
+        SW_EXPECT_EQUAL( pPainted == nullptr, plan._clearThreadCount != 0 );
+        SceneVoxelReference::executePlan( plan, words );
+        const SceneVoxelReference fresh = paintWhole( sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f ) );
+        SW_EXPECT_TRUE( sw::vector<uint32>( words.begin(), words.begin() + static_cast<ptrdiff_t>( wordCount ) ) == fresh._listWord );
+        pPainted = &painted;
+        painted  = current;
+    }
+    sw::vector<uint32> listChanged;
+    registry.appendMeshChanges( generation, listChanged );
+    SW_EXPECT_TRUE( listChanged.empty() );
+}
+
+/**
  * @brief [SceneVoxelizerTest] 노멀의 가장 큰 축으로 투영해 칠한 칸(셰이더의 식)이 상자 안 모든 칸을 분리축으로 본 칸(보수적 복셀화의 기준)과 같다 — 축 정렬 · 비스듬한 · 가는 삼각형
  * @details 변이: 투영 축을 하나로 고정하거나 층 범위에서 기울기 몫(spread)을 빼면 비스듬한 삼각형에서 빠지는 칸이 생겨 진다.
  */
@@ -368,7 +427,7 @@ SW_TEST_CASE( SceneVoxelizerTest, DominantAxisPaintMatchesSeparatingAxis )
         SW_REQUIRE_TRUE( source._mesh->setGeometry( std::move( listVertex ), sw::vector<uint32>{ 0, 1, 2 } ) );
         source._box        = grid.getBounds();
         source._indexCount = 3u;
-        scene._listSource.push_back( source );
+        scene.setStaticSources( sw::vector<sw::SceneVoxelSource>{ source } );
         sw::test::SceneVoxelReference expected( grid );
         expected.voxelizeTriangle( arrCorner[0], arrCorner[1], arrCorner[2] );
         SW_EXPECT_TRUE( paintWhole( scene )._listWord == expected._listWord );
@@ -384,6 +443,7 @@ SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
     const uint32        bright = sw::PackUtil::packRGB9E5( sw::float3{ 4.0f, 2.0f, 1.0f } );
     sw::SceneVoxelScene scene;
     scene._grid = makeFourMeterGrid(); // 64 칸 → 점유 단어 2 + 발광 단어 64
+    sw::vector<sw::SceneVoxelSource> listSource;
     // 밝은 면을 먼저 · 어두운 면을 나중에 칠해도(원천 차례) 밝은 순위가 남는다. 셋째는 밝은 것과 같은 발광이다.
     for ( const uint32 packed : { bright, dim, bright } )
     {
@@ -403,8 +463,9 @@ SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
         source._box            = scene._grid.getBounds();
         source._indexCount     = 3u;
         source._packedEmission = packed;
-        scene._listSource.push_back( source );
+        listSource.push_back( source );
     }
+    scene.setStaticSources( std::move( listSource ) );
     scene.rebuildEmissionPalette();
     SW_REQUIRE_EQUAL( size_t( 2 ), scene._listEmissionPalette.size() );
     SW_EXPECT_EQUAL( dim, scene._listEmissionPalette[0] );
@@ -428,8 +489,9 @@ SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
 SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange )
 {
     sw::SceneVoxelScene scene;
-    scene._grid                         = makeFourMeterGrid();
-    const sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    scene._grid                           = makeFourMeterGrid();
+    const sw::shared_ptr<sw::Mesh>   cube = sw::MeshUtil::createUnitCube();
+    sw::vector<sw::SceneVoxelSource> listSource;
     for ( uint32 index = 0; index < 2u; ++index )
     {
         sw::SceneVoxelSource source{};
@@ -437,8 +499,9 @@ SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange 
         source._world      = sw::float4x4::makeTranslation( sw::float3{ 1.0f + static_cast<float32>( index ), 1.0f, 1.0f } );
         source._box        = scene._grid.getBounds();
         source._indexCount = cube->getIndexCount();
-        scene._listSource.push_back( source );
+        listSource.push_back( source );
     }
+    scene.setStaticSources( std::move( listSource ) );
     const sw::SceneVoxelPaintPlan plan = sw::SceneVoxelizer::planPaint( {
         sw::SceneVoxelPaintTarget{ &scene, nullptr, 0u, sw::SceneVoxelizer::kNoEmission }
     } );
@@ -714,6 +777,158 @@ SW_TEST_CASE( RealtimeProbeTest, ErrorDecaysPerUpdate )
     listRequest[1]._updatePeriod = 8;
     SW_EXPECT_NEAR( 0.75f, sw::RealtimeProbeUpdater::computeError( listRequest, 8u ), 1.0e-6f ); // 느린 볼륨이 정한다
     SW_EXPECT_NEAR( 0.0f, sw::RealtimeProbeUpdater::computeError( {}, 8u ), 0.0f );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 정착 진척은 되돌림부터 세고, 변화가 이어지는 동안은 시작한 뒤, 멈추면 마지막 변화 뒤부터 센다
+ * @details 변이: 변화마다 처음부터 세면 도는 물체 · 깜빡이는 등이 있는 장면이 끝내 정착하지 않고, 변화를 세지 않으면 막 멈춘 문의 옛 그늘이 남은 채 사진을 찍는다.
+ */
+SW_TEST_CASE( RealtimeProbeTest, AccumulationCountsFromChange )
+{
+    sw::RealtimeProbeAccumulation accumulation;
+    accumulation.advance( true, true, true );
+    for ( uint32 frame = 0; frame < 9u; ++frame )
+    {
+        accumulation.advance( false, false, false );
+    }
+    SW_EXPECT_EQUAL( 10u, accumulation.getAccumulatedFrames() );
+
+    // 정착한 뒤의 변화는 1 부터, 이어지는 동안 는다.
+    accumulation.advance( false, true, true );
+    SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+    for ( uint32 frame = 0; frame < 20u; ++frame )
+    {
+        accumulation.advance( false, true, false );
+    }
+    SW_EXPECT_EQUAL( 21u, accumulation.getAccumulatedFrames() );
+
+    // 멈추면 바로 마지막 변화 뒤부터 센다.
+    accumulation.advance( false, false, false );
+    SW_EXPECT_EQUAL( 2u, accumulation.getAccumulatedFrames() );
+    for ( uint32 frame = 0; frame < 10u; ++frame )
+    {
+        accumulation.advance( false, false, false );
+    }
+    SW_EXPECT_EQUAL( 12u, accumulation.getAccumulatedFrames() );
+
+    // 정착하기 전의 다음 사건(문이 닫힌다)은 처음부터고, 멈춘 뒤에는 앞 사건과의 틈에 기대지 않는다.
+    for ( uint32 frame = 0; frame < 3u; ++frame )
+    {
+        accumulation.advance( false, true, false );
+        SW_EXPECT_EQUAL( frame + 1u, accumulation.getAccumulatedFrames() );
+    }
+    accumulation.advance( false, false, false );
+    SW_EXPECT_EQUAL( 2u, accumulation.getAccumulatedFrames() );
+
+    // 되돌림은 언제나 처음부터다.
+    accumulation.advance( true, true, false );
+    SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 드물게 되풀이하는 변화(틈이 정착 프레임보다 짧다)도 이어진 변화다 — 주기와 무관하게 정착하고 틈에서도 정착해 있다. 되풀이가 끝나면 다시 마지막 변화 뒤부터 센다
+ * @details 변이: 정한 틈(갱신 주기)만 이어진 것으로 치면 10 프레임마다 움직이는 물체가 있는 장면이 영영 정착하지 않는다.
+ */
+SW_TEST_CASE( RealtimeProbeTest, AccumulationKeepsRareRepeatedChange )
+{
+    constexpr uint32 kStabilityFrames = 120u;
+    for ( const uint32 period : { 2u, 10u, 60u, 119u } )
+    {
+        sw::RealtimeProbeAccumulation accumulation;
+        uint32                        frame      = 0;
+        const auto                    advanceOne = [&accumulation, &frame]( bool bChanged )
+        {
+            accumulation.advance( frame == 0u, bChanged, accumulation._framesSinceChange >= kStabilityFrames );
+            ++frame;
+        };
+        // 틈을 배우고(주기 하나) 이어진 변화가 시작한 뒤 정착 프레임이 지나고 다음 주기까지면 언제나 정착해 있다.
+        while ( frame < kStabilityFrames + period * 3u )
+        {
+            advanceOne( frame % period == 0u );
+        }
+        for ( uint32 step = 0; step < period * 2u; ++step )
+        {
+            advanceOne( frame % period == 0u );
+            SW_EXPECT_TRUE( accumulation.getAccumulatedFrames() >= kStabilityFrames );
+        }
+        // 멈추면 배운 틈을 넘는 프레임부터 마지막 변화 뒤를 센다.
+        while ( frame % period != 1u )
+        {
+            advanceOne( frame % period == 0u );
+        }
+        for ( uint32 still = 0; still < period; ++still )
+        {
+            advanceOne( false );
+        }
+        SW_EXPECT_EQUAL( period + 1u, accumulation.getAccumulatedFrames() );
+    }
+
+    // 틈이 들쭉날쭉해도 끝내 정착한다 — 바뀐 프레임은 이어진 변화다.
+    sw::RealtimeProbeAccumulation mixed;
+    uint32                        changeCount = 0;
+    for ( uint32 frame = 0; frame < kStabilityFrames * 4u; ++frame )
+    {
+        const bool bChanged = frame % 7u == 0u || frame % 11u == 0u;
+        mixed.advance( frame == 0u, bChanged, mixed._framesSinceChange >= kStabilityFrames );
+        if ( bChanged && frame >= kStabilityFrames * 2u )
+        {
+            ++changeCount;
+            SW_EXPECT_TRUE( mixed.getAccumulatedFrames() >= kStabilityFrames );
+        }
+    }
+    SW_EXPECT_TRUE( changeCount > 0u );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 입력 행은 빛(자리 · 세기 · 색 · 원뿔 · 켜짐) · 하늘 · 볼륨 배율이 바뀌면 달라지고, 광선이 읽지 않는 값(그림자 칸 · 2D 빛 · 상한 너머의 빛)에는 그대로다
+ */
+SW_TEST_CASE( RealtimeProbeTest, InputRowsFollowLightsAndSky )
+{
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 1 );
+    sw::vector<sw::GPULight>             listLight( sw::shaderslot::kProbeMaxDirectLights + 1u );
+    for ( sw::GPULight& light : listLight )
+    {
+        light._positionRadius = sw::float4{ 1.0f, 2.0f, 3.0f, 8.0f };
+        light._colorIntensity = sw::float4{ 1.0f, 1.0f, 1.0f, 2.0f };
+        light._directionType  = sw::float4{ 0.0f, -1.0f, 0.0f, static_cast<float32>( sw::shaderslot::kLightTypePoint ) };
+    }
+    listLight[1]._directionType._w = static_cast<float32>( sw::shaderslot::kLightTypePoint2D );
+    sw::float3 skyColor{ 0.1f, 0.2f, 0.3f };
+    const auto makeRows = [&listRequest, &skyColor]( const sw::vector<sw::GPULight>& lights )
+    { return sw::RealtimeProbeUpdater::makeInputRows( listRequest, sw::SH9Color::makeConstant( skyColor ), sw::vector_reference<const sw::GPULight>( lights.data(), lights.size() ) ); };
+    const sw::vector<sw::float4> rows   = makeRows( listLight );
+    const auto                   isSame = [&rows]( const sw::vector<sw::float4>& other )
+    { return rows.size() == other.size() && sw::Memory::compare( rows.data(), other.data(), rows.size() * sizeof( sw::float4 ) ) == 0; };
+
+    sw::vector<sw::GPULight> listChanged  = listLight;
+    listChanged[0]._params._x             = 1.0f; // 그림자 칸
+    listChanged[0]._params._w             = 5.0f;
+    listChanged[0]._extra                 = sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f };
+    listChanged[1]._positionRadius._x     = 9.0f; // 2D 빛
+    listChanged.back()._colorIntensity._w = 9.0f; // 상한 너머
+    SW_EXPECT_TRUE( isSame( makeRows( listChanged ) ) );
+
+    listChanged                       = listLight;
+    listChanged[0]._positionRadius._y = 2.5f;
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged                       = listLight;
+    listChanged[0]._colorIntensity._w = 1.0f;
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged                       = listLight;
+    listChanged[0]._colorIntensity._x = 0.5f;
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged               = listLight;
+    listChanged[0]._params._y = 0.5f; // 스폿 원뿔
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+    listChanged = listLight;
+    listChanged.resize( 3 ); // 꺼진 빛은 목록에서 빠진다
+    SW_EXPECT_FALSE( isSame( makeRows( listChanged ) ) );
+
+    skyColor._z = 0.4f;
+    SW_EXPECT_FALSE( isSame( makeRows( listLight ) ) );
+    skyColor._z                       = 0.3f;
+    listRequest[0]._emissiveIntensity = 1.0f;
+    SW_EXPECT_FALSE( isSame( makeRows( listLight ) ) );
 }
 
 /**

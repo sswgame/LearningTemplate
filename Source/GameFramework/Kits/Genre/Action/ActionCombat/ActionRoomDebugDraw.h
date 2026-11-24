@@ -7,8 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
 
@@ -23,8 +23,8 @@ namespace sw
         static constexpr float32 kActorHeight      = 0.5f; ///< 적 공을 띄우는 높이(m)
         static constexpr float32 kProjectileHeight = 0.4f; ///< 탄 공을 띄우는 높이(m)
 
-        /** @brief 룸 평면 (x, y) 의 절대 자리를 땅 위 @p height 의 씬 자리로 옮깁니다. */
-        static float3 toScene( const WorldOrigin& origin, const float2& position, float32 height ) { return origin.toLocal( float3( position._x, height, position._y ) ); }
+        /** @brief 룸 평면 (x, y) 의 땅 위 @p height 인 절대 자리입니다. */
+        static AbsolutePosition makePosition( const float2& position, float32 height ) { return AbsolutePosition{ float3( position._x, height, position._y ) }; }
 
         /** @brief 룸의 적과 탄을 그립니다. 싸움이 없는 룸(`ActionRoom::isActive`)은 그리지 않습니다. */
         static void draw( DebugDrawQueue& queue, const WorldOrigin& origin, const ActionRoom& room )
@@ -33,10 +33,10 @@ namespace sw
                 return;
             const float4 actorColor = room.getKind() == ActionRoomKind::Boss ? kBossActorColor : kHallActorColor;
             room.forEachLiveActor( [&queue, &origin, &actorColor]( const float2& position, float32 radius )
-            { queue.drawSphere( toScene( origin, position, kActorHeight ), radius, actorColor ); } );
+            { queue.drawSphere( origin, makePosition( position, kActorHeight ), radius, actorColor ); } );
             for ( const ProjectileState& projectile : room.getProjectiles() )
             {
-                queue.drawSphere( toScene( origin, float2{ projectile._position._x, projectile._position._y }, kProjectileHeight ), projectile._radius, kProjectileColor );
+                queue.drawSphere( origin, makePosition( float2{ projectile._position._x, projectile._position._y }, kProjectileHeight ), projectile._radius, kProjectileColor );
             }
         }
     };

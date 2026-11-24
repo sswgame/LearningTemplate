@@ -32,6 +32,7 @@ namespace sw
         bool                _bTriggerA{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                _bTriggerB{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool                _bIs2D{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint64              _step{ 0 };          ///< 알림이 온 물리 스텝 번호(길 위에서 쓸어 낸 겹침은 0). 진입 결과는 그 쌍이 이번 프레임에 처음 시작한 스텝이다
     };
 
     /** @class PhysicsOverlapTracker @brief 파일 머리말 참고. */
@@ -71,6 +72,8 @@ namespace sw
             if ( ordered._phase == PhysicsContactPhase::Begin )
             {
                 ++state._count;
+                if ( state._bBegunThisFrame == false )
+                    state._beginStep = ordered._step;
                 state._bBegunThisFrame = true;
             }
             else if ( state._count > 0 )
@@ -94,7 +97,8 @@ namespace sw
                 PairMap::iterator iter = _mapPair.find( key );
                 if ( iter == _mapPair.end() )
                     continue;
-                PairState& state = iter->second;
+                PairState& state  = iter->second;
+                state._last._step = state._beginStep;
                 if ( state._countAtFrameStart > 0 && state._count == 0 )
                     outListTransition.push_back( withPhase( state._last, PhysicsContactPhase::End ) );
                 else if ( state._countAtFrameStart == 0 && state._count > 0 )
@@ -179,6 +183,7 @@ namespace sw
         struct PairState
         {
             PhysicsOverlapEvent _last{};
+            uint64              _beginStep{ 0 }; ///< 마지막으로 시작이 온 프레임의 첫 시작 스텝
             int32               _count{ 0 };
             int32               _countAtFrameStart{ 0 };
             bool                _bTouched{ false };        ///< 이번 프레임에 알림이 왔다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

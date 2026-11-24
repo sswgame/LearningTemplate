@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/UnitStatsComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -12,8 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/MonsterCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -105,11 +104,6 @@ namespace sw
         _moveSpeed            = moveSpeed;
         _maxInvincibilityTime = maxInvincibilityTime;
         IHealthSource::notifyHealthChanged( _healthSourcePort, getOwner(), true );
-    }
-
-    void UnitStatsComponent::setStats( const MonsterStatsDef& monsterStats )
-    {
-        setStats( monsterStats._hp, monsterStats._maxHP, monsterStats._atk, monsterStats._def, monsterStats._speed, monsterStats._invincibility );
     }
 
     void UnitStatsComponent::onBeginPlay()

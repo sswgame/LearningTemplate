@@ -16,6 +16,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
@@ -23,7 +24,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
@@ -380,8 +380,12 @@ namespace sw
         const SceneComponent* const pRoot = anchor.getPrimarySceneComponent();
         if ( pRoot == nullptr )
             return nullopt;
-        // shortcut: 회전은 주 장면 컴포넌트의 로컬 오일러다 — 부모 아래에 놓인 입구가 생기면 월드 회전(쿼터니언 → 오일러)으로 바꾼다.
-        return SubLevelPlacement{ anchor.getManager()->getWorldOrigin().toAbsolute( pRoot->getWorldPosition() ), pRoot->getLocalRotation() };
+        // 부모 아래에 놓인 입구도 있으므로 월드 회전이다.
+        float3     scale{};
+        quaternion rotation{};
+        float3     translation{};
+        pRoot->getWorldMatrix().decompose( scale, rotation, translation );
+        return SubLevelPlacement{ anchor.getManager()->getWorldOrigin().toAbsolute( pRoot->getWorldPosition() ), rotation.getEulerAngles() };
     }
 
     bool MinigameFlow::validateEntry( const MinigameDefinition& definition, bool bNetSessionActive )

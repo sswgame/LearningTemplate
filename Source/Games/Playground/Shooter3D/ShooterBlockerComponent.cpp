@@ -4,11 +4,11 @@
 
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 namespace sw

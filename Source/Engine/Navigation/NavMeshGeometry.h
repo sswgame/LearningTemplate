@@ -12,8 +12,8 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Navigation/NavigationTypes.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 namespace sw
 {

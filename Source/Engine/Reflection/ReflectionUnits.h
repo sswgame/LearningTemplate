@@ -28,6 +28,7 @@ namespace sw
         Torque,
         Impulse,
         Temperature, ///< 색온도 · 온도(K) — 화이트 밸런스(`PostProcessValues::_whiteTemperature`)
+        Luminance,   ///< 휘도(nits = cd/m²) — 화면 출력(`DisplayOutputDesc`)
     };
 
     /**
@@ -62,6 +63,7 @@ namespace sw
         NewtonMeter,
         NewtonSecond,
         Kelvin,
+        Nits,
     };
 
     /** @brief 단위 하나 — 종류 · 철자 · 차원 · 기준 단위로의 배율(값 × 배율 = 기준 단위 값). */
@@ -103,7 +105,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N · N*m · N*s · K 입니다. */
+    /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N · N*m · N*s · K · nits 입니다. */
     inline constexpr ReflectUnit kArrReflectUnit[] = {
         {           ReflectUnitKind::Millimeter,      "mm",       ReflectUnitDimension::Length,                   0.001},
         {           ReflectUnitKind::Centimeter,      "cm",       ReflectUnitDimension::Length,                    0.01},
@@ -130,6 +132,7 @@ namespace sw
         {          ReflectUnitKind::NewtonMeter,     "N*m",       ReflectUnitDimension::Torque,                     1.0},
         {         ReflectUnitKind::NewtonSecond,     "N*s",      ReflectUnitDimension::Impulse,                     1.0},
         {               ReflectUnitKind::Kelvin,       "K",  ReflectUnitDimension::Temperature,                     1.0},
+        {                 ReflectUnitKind::Nits,    "nits",    ReflectUnitDimension::Luminance,                     1.0},
     };
 
     constexpr bool isReflectUnitTableOrdered() noexcept

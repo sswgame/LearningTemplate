@@ -59,10 +59,10 @@ namespace sw
             if ( shape.has_value() == false )
                 return false;
             entry._shape = *shape;
-            float32    arrA[3]{};
-            float32    arrB[3]{};
+            float32    arrPosition[3]{};
+            float32    arrExtent[3]{};
             float32    arrColor[4]{};
-            const bool bFloatsBroken = readFloats( node, "a", arrA, 3 ) == false || readFloats( node, "b", arrB, 3 ) == false || readFloats( node, "color", arrColor, 4 ) == false;
+            const bool bFloatsBroken = readFloats( node, "position", arrPosition, 3 ) == false || readFloats( node, "extent", arrExtent, 3 ) == false || readFloats( node, "color", arrColor, 4 ) == false;
             if ( bFloatsBroken )
                 return false;
             entry._frame    = *frame;
@@ -70,10 +70,12 @@ namespace sw
             entry._category = hashed_string( category->c_str() );
             entry._text     = *text;
             entry._radius   = *radius;
-            entry._a        = float3{ arrA[0], arrA[1], arrA[2] };
-            entry._b        = float3{ arrB[0], arrB[1], arrB[2] };
-            entry._color    = float4{ arrColor[0], arrColor[1], arrColor[2], arrColor[3] };
-            outEntry        = std::move( entry );
+            entry._position = AbsolutePosition{
+                float3{ arrPosition[0], arrPosition[1], arrPosition[2] }
+            };
+            entry._extent = float3{ arrExtent[0], arrExtent[1], arrExtent[2] };
+            entry._color  = float4{ arrColor[0], arrColor[1], arrColor[2], arrColor[3] };
+            outEntry      = std::move( entry );
             return true;
         }
 
@@ -156,7 +158,7 @@ namespace sw
         trimLocked();
     }
 
-    void VisualLogger::logText( uint64 objectID, const hashed_string& category, const float3& position, string_view text, const float4& color )
+    void VisualLogger::logText( uint64 objectID, const hashed_string& category, const AbsolutePosition& position, string_view text, const float4& color )
     {
         if ( isEnabled() == false )
             return;
@@ -164,13 +166,13 @@ namespace sw
         entry._objectID = objectID;
         entry._category = category;
         entry._shape    = VisualLogShape::Text;
-        entry._a        = position;
+        entry._position = position;
         entry._color    = color;
         entry._text     = string( text );
         append( std::move( entry ) );
     }
 
-    void VisualLogger::logLine( uint64 objectID, const hashed_string& category, const float3& from, const float3& to, const float4& color, string_view note )
+    void VisualLogger::logLine( uint64 objectID, const hashed_string& category, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, string_view note )
     {
         if ( isEnabled() == false )
             return;
@@ -178,14 +180,14 @@ namespace sw
         entry._objectID = objectID;
         entry._category = category;
         entry._shape    = VisualLogShape::Line;
-        entry._a        = from;
-        entry._b        = to;
+        entry._position = from;
+        entry._extent   = to._value - from._value;
         entry._color    = color;
         entry._text     = string( note );
         append( std::move( entry ) );
     }
 
-    void VisualLogger::logSphere( uint64 objectID, const hashed_string& category, const float3& center, float32 radius, const float4& color, string_view note )
+    void VisualLogger::logSphere( uint64 objectID, const hashed_string& category, const AbsolutePosition& center, float32 radius, const float4& color, string_view note )
     {
         if ( isEnabled() == false )
             return;
@@ -193,14 +195,14 @@ namespace sw
         entry._objectID = objectID;
         entry._category = category;
         entry._shape    = VisualLogShape::Sphere;
-        entry._a        = center;
+        entry._position = center;
         entry._radius   = radius;
         entry._color    = color;
         entry._text     = string( note );
         append( std::move( entry ) );
     }
 
-    void VisualLogger::logBox( uint64 objectID, const hashed_string& category, const float3& center, const float3& halfExtent, const float4& color, string_view note )
+    void VisualLogger::logBox( uint64 objectID, const hashed_string& category, const AbsolutePosition& center, const float3& halfExtent, const float4& color, string_view note )
     {
         if ( isEnabled() == false )
             return;
@@ -208,14 +210,14 @@ namespace sw
         entry._objectID = objectID;
         entry._category = category;
         entry._shape    = VisualLogShape::Box;
-        entry._a        = center;
-        entry._b        = halfExtent;
+        entry._position = center;
+        entry._extent   = halfExtent;
         entry._color    = color;
         entry._text     = string( note );
         append( std::move( entry ) );
     }
 
-    void VisualLogger::logArrow( uint64 objectID, const hashed_string& category, const float3& from, const float3& to, const float4& color, string_view note )
+    void VisualLogger::logArrow( uint64 objectID, const hashed_string& category, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, string_view note )
     {
         if ( isEnabled() == false )
             return;
@@ -223,8 +225,8 @@ namespace sw
         entry._objectID = objectID;
         entry._category = category;
         entry._shape    = VisualLogShape::Arrow;
-        entry._a        = from;
-        entry._b        = to;
+        entry._position = from;
+        entry._extent   = to._value - from._value;
         entry._color    = color;
         entry._text     = string( note );
         append( std::move( entry ) );
@@ -254,7 +256,7 @@ namespace sw
         return true;
     }
 
-    uint32 VisualLogger::replayFrame( DebugDrawQueue& queue, uint64 frame, uint64 objectID, const hashed_string& category ) const
+    uint32 VisualLogger::replayFrame( DebugDrawQueue& queue, const WorldOrigin& origin, uint64 frame, uint64 objectID, const hashed_string& category ) const
     {
         vector<VisualLogEntry> listEntry;
         collect( frame, frame, objectID, category, listEntry );
@@ -264,33 +266,33 @@ namespace sw
             {
                 case VisualLogShape::Text:
                 {
-                    queue.drawText( entry._a, entry._text, entry._color, 0.0f, entry._category );
+                    queue.drawText( origin, entry._position, entry._text, entry._color, 0.0f, entry._category );
                     break;
                 }
                 case VisualLogShape::Line:
                 {
-                    queue.drawLine( entry._a, entry._b, entry._color, 0.0f, entry._category );
+                    queue.drawLine( origin, entry._position, entry._position + entry._extent, entry._color, 0.0f, entry._category );
                     break;
                 }
                 case VisualLogShape::Sphere:
                 {
-                    queue.drawSphere( entry._a, entry._radius, entry._color, 0.0f, entry._category );
+                    queue.drawSphere( origin, entry._position, entry._radius, entry._color, 0.0f, entry._category );
                     break;
                 }
                 case VisualLogShape::Box:
                 {
-                    queue.drawBox( entry._a, entry._b, entry._color, 0.0f, entry._category );
+                    queue.drawBox( origin, entry._position, entry._extent, entry._color, 0.0f, entry._category );
                     break;
                 }
                 case VisualLogShape::Arrow:
                 {
-                    queue.drawArrow( entry._a, entry._b, entry._color, 0.0f, entry._category );
+                    queue.drawArrow( origin, entry._position, entry._position + entry._extent, entry._color, 0.0f, entry._category );
                     break;
                 }
             }
             // 도형에 붙은 설명은 시작점에 글로 그린다(글 기록은 위에서 이미 그렸다).
             if ( entry._shape != VisualLogShape::Text && entry._text.empty() == false )
-                queue.drawText( entry._a, entry._text, entry._color, 0.0f, entry._category );
+                queue.drawText( origin, entry._position, entry._text, entry._color, 0.0f, entry._category );
         }
         return static_cast<uint32>( listEntry.size() );
     }
@@ -321,11 +323,11 @@ namespace sw
             node.set( "shape" ).setString( getEnumName( entry._shape ) );
             node.set( "text" ).setString( entry._text );
             node.set( "radius" ).setFloat( static_cast<float64>( entry._radius ) );
-            const float32 arrA[3]     = { entry._a._x, entry._a._y, entry._a._z };
-            const float32 arrB[3]     = { entry._b._x, entry._b._y, entry._b._z };
-            const float32 arrColor[4] = { entry._color._x, entry._color._y, entry._color._z, entry._color._w };
-            writeFloats( node, "a", arrA, 3 );
-            writeFloats( node, "b", arrB, 3 );
+            const float32 arrPosition[3] = { entry._position._value._x, entry._position._value._y, entry._position._value._z };
+            const float32 arrExtent[3]   = { entry._extent._x, entry._extent._y, entry._extent._z };
+            const float32 arrColor[4]    = { entry._color._x, entry._color._y, entry._color._z, entry._color._w };
+            writeFloats( node, "position", arrPosition, 3 );
+            writeFloats( node, "extent", arrExtent, 3 );
             writeFloats( node, "color", arrColor, 4 );
         }
         return document.saveToFile( absPath.str(), 1 );

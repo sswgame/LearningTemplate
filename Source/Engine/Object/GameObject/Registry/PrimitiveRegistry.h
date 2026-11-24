@@ -130,6 +130,13 @@ namespace sw
          *          인스턴스 배치 · 정적 여부 바꾸기는 세대만 올리고 기록하지 않는다 — 메시 칸이 아니다(이 기록의 소비자는 메시 칸만 본다).
          */
         [[nodiscard]] bool collectMeshSetChanges( uint64 sinceGeneration, vector<uint32>& outListSlot ) const;
+        /**
+         * @brief 메시 칸의 변경 세대입니다. 움직였거나 렌더 상태가 바뀐 메시 칸이 하나라도 있던 프레임(`consumeDirty`)에 오릅니다 — 값이 같으면 그 사이 아무것도 바뀌지 않았다.
+         * @details 더티 비트는 GPUScene 빌더가 가져가며 지운다. 이 세대는 그 뒤에도 남아 다른 소비자(실시간 프로브의 복셀 격자)가 제 세대 뒤에 바뀐 칸만 다시 본다.
+         */
+        uint64 getMeshChangeGeneration() const { return _meshChangeGeneration; }
+        /** @brief 변경 세대 @p sinceGeneration 뒤에 움직였거나 렌더 상태가 바뀐 메시 칸을 @p inoutListSlot 뒤에 덧붙입니다(오름차순). 게임 스레드에서 부릅니다. */
+        void appendMeshChanges( uint64 sinceGeneration, vector<uint32>& inoutListSlot ) const;
         /** @brief 렌더 상태가 바뀐 프리미티브가 하나라도 있으면 true 입니다. */
         bool hasDirty() const;
         /** @brief 더티 표시를 모두 지웁니다. 렌더 스냅샷이 반영을 마친 뒤 부릅니다. */
@@ -264,18 +271,22 @@ namespace sw
          *          언리얼은 월드마다 FScene 과 GPUScene 을 새로 만들어 캐시가 넘어가지 않는다 — 여기서는 세대 값 자체가 레지스트리를 가린다.
          */
         static uint64 issueGenerationBase();
+        /** @brief 이번에 가져간 더티 목록(@p listSlot)의 메시 칸에 새 변경 세대를 찍습니다(`_mutex` 를 쥔 채). 세대는 부르는 쪽이 올렸다. */
+        void recordMeshChanges( const vector<uint32>& listSlot ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         /** @brief 등록된 메시 컴포넌트입니다. 소유하지 않습니다(수명은 GameObject 가 관리합니다). */
         vector<PrimitiveComponent*> _listPrimitive;
         /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). 빈 칸은 무효 번호입니다. */
         vector<uint32>                             _listPrimitiveTransformSlot;
-        vector<uint32>                             _listPrimitiveSerial;    ///< 메시 칸마다 들어온 차례(`getPrimitiveSerials`)
-        vector<uint32> _listFreePrimitiveSlot      SW_GUARDED_BY( _mutex ); ///< 메시 칸 프리리스트(스택 — 끝에서 꺼낸다). 늘릴 때 작은 번호가 끝에 오게 넣는다
-        vector<EntrySpan> _listFreeEntrySpan       SW_GUARDED_BY( _mutex ); ///< 빈 인스턴스 항목 구간(자리 순, 이웃끼리 합쳐 둔다)
-        vector<PrimitiveInstanceEntry>             _listInstanceEntry;      ///< 배치 순서대로 이어 붙은 항목들
-        vector<PrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex ); ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
-        vector<AssetWaiter>                        _listAssetWaiter;        ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
+        vector<uint32>                             _listPrimitiveSerial;                           ///< 메시 칸마다 들어온 차례(`getPrimitiveSerials`)
+        vector<uint64>                             _listMeshChangeGeneration;                      ///< 메시 칸마다 마지막으로 움직였거나 렌더 상태가 바뀐 변경 세대(`appendMeshChanges`). 게임 스레드만 씁니다
+        uint64                                     _meshChangeGeneration{ issueGenerationBase() }; ///< `getMeshChangeGeneration`
+        vector<uint32> _listFreePrimitiveSlot      SW_GUARDED_BY( _mutex );                        ///< 메시 칸 프리리스트(스택 — 끝에서 꺼낸다). 늘릴 때 작은 번호가 끝에 오게 넣는다
+        vector<EntrySpan> _listFreeEntrySpan       SW_GUARDED_BY( _mutex );                        ///< 빈 인스턴스 항목 구간(자리 순, 이웃끼리 합쳐 둔다)
+        vector<PrimitiveInstanceEntry>             _listInstanceEntry;                             ///< 배치 순서대로 이어 붙은 항목들
+        vector<PrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex );                        ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
+        vector<AssetWaiter>                        _listAssetWaiter;                               ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
         /// @brief 컴포넌트 → `_listAssetWaiter` 자리. 씬을 올리는 동안 걸기 · 풀기가 대기자 수만큼 훑지 않는다.
         unordered_map<const Component*, uint32> _mapAssetWaiterToIndex SW_GUARDED_BY( _mutex );
         uint8 _bWalkingAssetWaiters                                    SW_GUARDED_BY( _mutex ){ SW_FALSE }; ///< `updateAssetWaiters` 가 도는 중 — 빼기는 자리를 비우기만 한다

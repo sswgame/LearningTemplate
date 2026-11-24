@@ -7,6 +7,7 @@
  *          - 적기는 어느 스레드에서 해도 된다(병렬 틱). 질의 · 다시 보기 · 저장은 게임 스레드에서 부른다.
  *          - **범주**: 분류 이름이 디버그 HUD 섹션 이름과 같으면 그 섹션을 켠 동안 이번 프레임의 기록을 바로 그린다(`DebugHUD::drawSections`).
  *          - **다시 보기**(`replayFrame`)는 그 프레임의 기록을 한 프레임짜리 디버그 드로우로 넣는다 — 에디터가 슬라이더로 프레임을 옮기며 부르면 도형이 따라 움직인다.
+ *          - 자리는 **절대 자리**로 적는다(`AbsolutePosition`) — 적은 뒤 월드 원점이 옮겨져도, 다른 사람이 연 파일에서도 같은 곳이다. 다시 볼 때 지금 원점으로 옮긴다.
  *          - 파일(`*.vlog.json`)로 저장해 다른 사람에게 보낼 수 있다(버그 재현 첨부).
  *          개발 명령은 `visuallog.on` · `visuallog.off` · `visuallog.status` · `visuallog.clear` · `visuallog.save <파일>` · `visuallog.replay <프레임>` 이다.
  */
@@ -23,6 +24,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -33,25 +35,25 @@ namespace sw
     ENUM()
     enum class VisualLogShape : uint8
     {
-        Text = 0, ///< `_a` 위치의 글(`_text`)
-        Line,     ///< `_a` → `_b` 선
-        Sphere,   ///< 중심 `_a`, 반지름 `_radius`
-        Box,      ///< 중심 `_a`, 반 크기 `_b`
-        Arrow,    ///< `_a` → `_b` 화살표
+        Text = 0, ///< `_position` 의 글(`_text`)
+        Line,     ///< `_position` 에서 `_extent` 만큼 간 선
+        Sphere,   ///< 중심 `_position`, 반지름 `_radius`
+        Box,      ///< 중심 `_position`, 반 크기 `_extent`
+        Arrow,    ///< `_position` 에서 `_extent` 만큼 간 화살표
     };
 
     /** @brief 비주얼 로거의 기록 하나입니다. */
     struct VisualLogEntry
     {
-        uint64         _frame{ 0 };    ///< 적은 프레임 번호(`VisualLogger::getFrame`)
-        uint64         _objectID{ 0 }; ///< 적은 오브젝트 id. 0 이면 오브젝트와 무관한 기록
-        hashed_string  _category{};    ///< 분류 이름(AI, 이동, 감지 …). 비면 `Default`
-        string         _text{};        ///< 글(`Text`)이거나 도형에 붙은 설명. 비어도 된다
-        float3         _a{};
-        float3         _b{};
-        float4         _color{ 1.0f, 1.0f, 1.0f, 1.0f };
-        float32        _radius{ 0.0f };
-        VisualLogShape _shape{ VisualLogShape::Text };
+        uint64           _frame{ 0 };    ///< 적은 프레임 번호(`VisualLogger::getFrame`)
+        uint64           _objectID{ 0 }; ///< 적은 오브젝트 id. 0 이면 오브젝트와 무관한 기록
+        hashed_string    _category{};    ///< 분류 이름(AI, 이동, 감지 …). 비면 `Default`
+        string           _text{};        ///< 글(`Text`)이거나 도형에 붙은 설명. 비어도 된다
+        AbsolutePosition _position{};    ///< 시작점 · 중심(절대 자리)
+        float3           _extent{};      ///< 선 · 화살표는 끝까지의 벡터, 상자는 반 크기
+        float4           _color{ 1.0f, 1.0f, 1.0f, 1.0f };
+        float32          _radius{ 0.0f };
+        VisualLogShape   _shape{ VisualLogShape::Text };
     };
 } // namespace sw
 
@@ -68,7 +70,7 @@ namespace sw
         /** @brief 기본 용량(기록 수)입니다. 프레임마다 수십 개를 적는 AI 몇 마리를 몇 분 동안 담는 크기다. */
         static constexpr uint32 kDefaultCapacity = 20000;
         /** @brief 파일 형식 버전입니다. */
-        static constexpr uint32 kFileVersion = 1;
+        static constexpr uint32 kFileVersion = 2;
         /** @brief 분류를 주지 않은 기록의 분류 이름입니다. */
         static constexpr const utf8* kDefaultCategoryName = "Default";
         static constexpr MemoryTag   kSubsystemMemoryTag  = MemoryTag::RenderCPU;
@@ -93,11 +95,11 @@ namespace sw
         size_t getEntryCount() const;
 
         // --- 적기 (꺼져 있으면 아무것도 하지 않는다) ---------------------------------------
-        void logText( uint64 objectID, const hashed_string& category, const float3& position, string_view text, const float4& color );
-        void logLine( uint64 objectID, const hashed_string& category, const float3& from, const float3& to, const float4& color, string_view note = {} );
-        void logSphere( uint64 objectID, const hashed_string& category, const float3& center, float32 radius, const float4& color, string_view note = {} );
-        void logBox( uint64 objectID, const hashed_string& category, const float3& center, const float3& halfExtent, const float4& color, string_view note = {} );
-        void logArrow( uint64 objectID, const hashed_string& category, const float3& from, const float3& to, const float4& color, string_view note = {} );
+        void logText( uint64 objectID, const hashed_string& category, const AbsolutePosition& position, string_view text, const float4& color );
+        void logLine( uint64 objectID, const hashed_string& category, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, string_view note = {} );
+        void logSphere( uint64 objectID, const hashed_string& category, const AbsolutePosition& center, float32 radius, const float4& color, string_view note = {} );
+        void logBox( uint64 objectID, const hashed_string& category, const AbsolutePosition& center, const float3& halfExtent, const float4& color, string_view note = {} );
+        void logArrow( uint64 objectID, const hashed_string& category, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, string_view note = {} );
 
         // --- 질의 ---------------------------------------------------------------------------
         /**
@@ -110,10 +112,10 @@ namespace sw
         [[nodiscard]] bool findFrameRange( uint64& outFirstFrame, uint64& outLastFrame ) const;
 
         /**
-         * @brief 프레임 @p frame 의 기록(필터 같음)을 한 프레임짜리 디버그 드로우로 넣습니다. 넣은 수를 반환합니다.
+         * @brief 프레임 @p frame 의 기록(필터 같음)을 지금 원점 @p origin 으로 옮겨 한 프레임짜리 디버그 드로우로 넣습니다. 넣은 수를 반환합니다.
          * @details 도형의 분류는 기록의 분류를 따라 에디터의 디버그 드로우 분류 토글이 그대로 먹는다. 글(`Text`)과 도형에 붙은 설명은 글로 그린다.
          */
-        uint32 replayFrame( DebugDrawQueue& queue, uint64 frame, uint64 objectID, const hashed_string& category ) const;
+        uint32 replayFrame( DebugDrawQueue& queue, const WorldOrigin& origin, uint64 frame, uint64 objectID, const hashed_string& category ) const;
 
         // --- 파일 ---------------------------------------------------------------------------
         /** @brief 쌓인 기록을 `*.vlog.json` 으로 디스크 경로에 씁니다. */

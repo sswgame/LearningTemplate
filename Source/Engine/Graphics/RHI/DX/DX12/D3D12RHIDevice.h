@@ -250,6 +250,7 @@ namespace sw
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷이 여기서 나옵니다. */
         RHIFormat     getBackBufferFormat() const override { return _swapChain.getFormat(); }
         RHIColorSpace getBackBufferColorSpace() const override { return _swapChain.getColorSpace(); }
+        void          refreshDisplayOutputSupport() override { _swapChain.refreshDisplayOutputSupport(); }
 
         /** @brief 루트 시그니처의 무제한 텍스처 배열 테이블(t0 space1)로 g_SwBindlessTex2D[] 를 샘플링합니다. SM6.6 힙 인덱싱이 아닙니다. */
         bool supportsNativeBindlessSampling() const override { return _bBindlessRootSignature != SW_FALSE; }

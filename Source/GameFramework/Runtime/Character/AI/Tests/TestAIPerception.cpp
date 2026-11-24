@@ -76,12 +76,12 @@ SW_TEST_CASE( AIPerceptionTest, SharedQueryFindsRegisteredSources )
 
     vector<AIStimulus> listStimulus;
     vector<Component*> listKey;
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
     SW_EXPECT_EQUAL( pNear->getOwner()->getObjectID(), listStimulus[0].getID() );
     SW_EXPECT_NEAR( 3.0f, listStimulus[0].getPosition()._x, 1e-5f );
 
-    AIStimulusSourceComponent::gatherStimuli( manager, 0, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 0, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() ); // 자기 팀은 묻지 않는다
 
     AIPerception perception;
@@ -92,7 +92,7 @@ SW_TEST_CASE( AIPerceptionTest, SharedQueryFindsRegisteredSources )
 
     const uint64 nearID = pNear->getOwner()->getObjectID();
     SW_REQUIRE_TRUE( pNear->getOwner()->removeComponent( pNear ) );
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() );
     perception.sense( manager, 1, float3{}, float3{ 1.0f, 0.0f, 0.0f }, nullptr, 0.1f );
     pTarget = perception.findTarget( nearID );
@@ -153,16 +153,22 @@ SW_TEST_CASE( AIPerceptionTest, NoiseWidensTheHearingEntry )
     AIStimulusSourceComponent* pLoud = Util::makeSource( manager, "Loud", float3{ 15.0f, 0.0f, 0.0f } );
     vector<AIStimulus>         listStimulus;
     vector<Component*>         listKey;
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() );
 
     pLoud->reportNoise( 8.0f ); // 틱 밖이라 바로 고친다
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listStimulus.size() );
     SW_EXPECT_NEAR( 8.0f, listStimulus[0].getNoiseRadius(), 1e-5f );
 
+    pLoud->reportNoise( 4.0f ); // 보통 귀의 상자(10 + 4 m)에는 들지 않는 소리(15 m) — 밝은 귀는 반경 × 배율까지 후보를 넓힌다
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
+    SW_EXPECT_TRUE( listStimulus.empty() );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 3.0f, listStimulus, listKey );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listStimulus.size() );
+
     pLoud->clearNoise();
-    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, listStimulus, listKey );
+    AIStimulusSourceComponent::gatherStimuli( manager, 1, float3{}, 10.0f, 1.0f, listStimulus, listKey );
     SW_EXPECT_TRUE( listStimulus.empty() );
 }
 

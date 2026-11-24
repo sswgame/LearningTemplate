@@ -12,7 +12,7 @@
 
 #include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"

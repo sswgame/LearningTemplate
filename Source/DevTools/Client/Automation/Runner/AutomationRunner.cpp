@@ -238,7 +238,7 @@ namespace sw
             return;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
-        _wallLimitSeconds = computeWallLimitSeconds();
+        _wallLimitSeconds = computeWallLimitSeconds( _scenario );
         if ( skipIfThisBuildCannotRun() || prepareScratchFolders() == false )
             return;
         SW_LOG_INFO_ID( "Automation.LoadedStepFixedDelta", "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
@@ -308,7 +308,7 @@ namespace sw
             return false;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
-        _wallLimitSeconds = computeWallLimitSeconds();
+        _wallLimitSeconds = computeWallLimitSeconds( _scenario );
         const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
         if ( bReady )
         {
@@ -463,7 +463,7 @@ namespace sw
             releaseStartPause(); // 시작 프레임부터 게임 시간이 흐른다
             // 상한을 다시 구한다 — 에디터 단계(CaptureEditorUI …)는 에디터 모듈이 실리며 등록돼, 시나리오를 읽던 때의 계산에는 그 단계 예산이 빠져 150 초로 남았다.
             // 행 감시도 같은 상한을 본다 — 바꿨으면 새 상한으로 다시 건다(옛 상한의 감시가 실행기보다 먼저 프로세스를 끝냈다).
-            const float32 limitAtStart = computeWallLimitSeconds();
+            const float32 limitAtStart = computeWallLimitSeconds( _scenario );
             if ( limitAtStart != _wallLimitSeconds )
             {
                 _wallLimitSeconds = limitAtStart;
@@ -716,18 +716,18 @@ namespace sw
                             _run._currentStepKind.c_str(), waitedSeconds, _run._holdFrameCount, _run._waitingFor.c_str(), AutomationStepRegistry::describeActiveBlockers().c_str() );
     }
 
-    float32 AutomationRunner::computeWallLimitSeconds() const
+    float32 AutomationRunner::computeWallLimitSeconds( const AutomationScenario& scenario )
     {
         // 단계 하나가 몇 초씩 드는 종류(백엔드 교체 — 디바이스 · 모듈 · 씬을 다시 세운다)는 그 수만큼 상한을 늘린다. 고정 상한이면 교체가 많은 시나리오만
         // 부하가 걸린 기계에서 넘었고, 숫자를 올리면 교체가 없는 시나리오의 행 감지까지 늦어진다(언리얼 Gauntlet 도 테스트마다 MaxDuration 을 따로 둔다).
         // 조건 대기(`timeoutFrames` · `timeoutSeconds`)는 제 시한이 판정한다 — 그 시한만큼(시뮬레이션 초, 실시간 이상으로 도는 기준)을 더해 바깥 그물이 먼저 끝내지 않게 한다.
         // 더하지 않으면 정당하게 긴 대기(게임 상태를 기다리는 시나리오)가 부하 걸린 기계에서 "wall-clock limit" 으로만 졌다(프레임 시한의 "바깥 < 안쪽 대기 합" 과 같은 모양).
-        float32 limitSeconds = _scenario.getWallTimeoutSeconds();
+        float32 limitSeconds = scenario.getWallTimeoutSeconds();
         // 부하 시나리오의 측정 창(워밍업 포함)도 같은 상한에 든다 — 예전에는 따로 둔 배율 없는 그물이 프레임 끝에서만 봐서, 게임 스레드가 측정 뒤 대기에서 멈추면 행 감시 없이 ctest 시한까지 갔다.
-        const AutomationLoad& load = _scenario.getTestOptions()._load;
+        const AutomationLoad& load = scenario.getTestOptions()._load;
         if ( load._bDeclared )
             limitSeconds += static_cast<float32>( 2.0 * static_cast<float64>( MathUtil::ceil( load._durationSeconds ) ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds );
-        for ( const AutomationStep& step : _scenario.getSteps() )
+        for ( const AutomationStep& step : scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration != nullptr )
@@ -744,7 +744,7 @@ namespace sw
             if ( timeout.has_value() ) // 틀린 시한은 시작 때 검사가 읽기 오류로 멈춘다 — 여기서는 더하지 않는다
                 limitSeconds += timeout->_bWallSeconds ? timeout->_timeoutWallSeconds
                               : timeout->_bSeconds     ? timeout->_timeoutSeconds
-                                                       : static_cast<float32>( timeout->_timeoutFrames ) * _scenario.getFixedDelta();
+                                                       : static_cast<float32>( timeout->_timeoutFrames ) * scenario.getFixedDelta();
         }
         return static_cast<float32>( scaleWallSeconds( limitSeconds ) ); // 기계가 느린 만큼(소프트웨어 렌더러) 데이터로 늘린다 — 시나리오마다 시한을 고치지 않는다
     }

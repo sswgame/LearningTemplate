@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -13,7 +14,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
@@ -42,14 +42,14 @@ namespace sw
 
             static void drawBorder( DebugDrawQueue& draw, const WorldOrigin& origin, const AdventureRegionDef& region )
             {
-                const float3 corner00 = origin.toLocal( float3( region._min._x, kBorderHeight, region._min._y ) );
-                const float3 corner10 = origin.toLocal( float3( region._max._x, kBorderHeight, region._min._y ) );
-                const float3 corner11 = origin.toLocal( float3( region._max._x, kBorderHeight, region._max._y ) );
-                const float3 corner01 = origin.toLocal( float3( region._min._x, kBorderHeight, region._max._y ) );
-                draw.drawLine( corner00, corner10, kBorderColor );
-                draw.drawLine( corner10, corner11, kBorderColor );
-                draw.drawLine( corner11, corner01, kBorderColor );
-                draw.drawLine( corner01, corner00, kBorderColor );
+                const AbsolutePosition corner00{ float3( region._min._x, kBorderHeight, region._min._y ) };
+                const AbsolutePosition corner10{ float3( region._max._x, kBorderHeight, region._min._y ) };
+                const AbsolutePosition corner11{ float3( region._max._x, kBorderHeight, region._max._y ) };
+                const AbsolutePosition corner01{ float3( region._min._x, kBorderHeight, region._max._y ) };
+                draw.drawLine( origin, corner00, corner10, kBorderColor );
+                draw.drawLine( origin, corner10, corner11, kBorderColor );
+                draw.drawLine( origin, corner11, corner01, kBorderColor );
+                draw.drawLine( origin, corner01, corner00, kBorderColor );
             }
         };
     } // namespace
@@ -127,15 +127,15 @@ namespace sw
             Internal::drawBorder( *pDraw, origin, region ); // 씬에 땅 메시가 없는 지역(확장 팩)도 어디까지 걸을 수 있는지 보인다
             if ( region._beacon.isSet() )
             {
-                const bool   bLit   = director.getCampaign().isBeaconLit( region, pState->getFlags() );
-                const float3 center = origin.toLocal( float3( region._beacon._position._x, Internal::kBeaconHalfHeight, region._beacon._position._y ) );
-                const float3 halfExtent( Internal::kBeaconHalfWidth, Internal::kBeaconHalfHeight, Internal::kBeaconHalfWidth );
-                pDraw->drawBox( center, halfExtent, bLit ? Internal::kLitBeaconColor : Internal::kUnlitBeaconColor );
+                const bool             bLit = director.getCampaign().isBeaconLit( region, pState->getFlags() );
+                const AbsolutePosition center{ float3( region._beacon._position._x, Internal::kBeaconHalfHeight, region._beacon._position._y ) };
+                const float3           halfExtent( Internal::kBeaconHalfWidth, Internal::kBeaconHalfHeight, Internal::kBeaconHalfWidth );
+                pDraw->drawBox( origin, center, halfExtent, bLit ? Internal::kLitBeaconColor : Internal::kUnlitBeaconColor );
             }
             if ( region._camp.isSet() )
-                pDraw->drawSphere( origin.toLocal( float3( region._camp._position._x, Internal::kCampHeight, region._camp._position._y ) ), Internal::kCampRadius, Internal::kCampColor );
+                pDraw->drawSphere( origin, AbsolutePosition{ float3( region._camp._position._x, Internal::kCampHeight, region._camp._position._y ) }, Internal::kCampRadius, Internal::kCampColor );
         }
         const float2& position = director.getPlayerPosition();
-        pDraw->drawSphere( origin.toLocal( float3( position._x, Internal::kPlayerHeight, position._y ) ), Internal::kPlayerRadius, Internal::kPlayerColor );
+        pDraw->drawSphere( origin, AbsolutePosition{ float3( position._x, Internal::kPlayerHeight, position._y ) }, Internal::kPlayerRadius, Internal::kPlayerColor );
     }
 } // namespace sw

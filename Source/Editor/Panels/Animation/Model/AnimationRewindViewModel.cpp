@@ -13,6 +13,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -52,10 +53,10 @@ namespace sw::editor
             static float64 getViewTime( const AnimationRewindRecorder& rewind ) { return rewind.isScrubbing() ? rewind.getScrubTime() : rewind.getLatestTime(); }
 
             /** @brief 기록된 뼈대(부모 → 자식 선)와 상태 이름을 그립니다(이번 프레임만). */
-            static void drawSkeleton( DebugDrawQueue& queue, const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<float3>& inoutListPosition,
+            static void drawSkeleton( DebugDrawQueue& queue, const WorldOrigin& origin, const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<AbsolutePosition>& inoutListPosition,
                                       const float4& color, bool bLabel )
             {
-                AnimationRewindRecorder::computeWorldBonePositions( track, frame, inoutListPosition );
+                AnimationRewindRecorder::computeAbsoluteBonePositions( track, frame, inoutListPosition );
                 if ( inoutListPosition.empty() )
                     return;
                 const hashed_string category( kDrawCategory );
@@ -63,10 +64,10 @@ namespace sw::editor
                 {
                     const int32 parentIndex = track._listParentIndex[boneIndex];
                     if ( parentIndex >= 0 )
-                        queue.drawLine( inoutListPosition[static_cast<size_t>( parentIndex )], inoutListPosition[boneIndex], color, 0.0f, category );
+                        queue.drawLine( origin, inoutListPosition[static_cast<size_t>( parentIndex )], inoutListPosition[boneIndex], color, 0.0f, category );
                 }
                 if ( bLabel && frame._state._stateName.empty() == false )
-                    queue.drawText( inoutListPosition[0] + float3{ 0.0f, kLabelLift, 0.0f }, frame._state._stateName.c_str(), color, 0.0f, category );
+                    queue.drawText( origin, inoutListPosition[0] + float3{ 0.0f, kLabelLift, 0.0f }, frame._state._stateName.c_str(), color, 0.0f, category );
             }
 
             [[nodiscard]] static bool readTrackCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -195,6 +196,7 @@ namespace sw::editor
         const float64               viewTime  = Internal::getViewTime( *pRewind );
         const AnimationRewindTrack* pSelected = Internal::findSelectedTrack( *pRewind );
         DebugDrawQueue&             queue     = editor::getSubsystem<DebugDrawQueue>();
+        const WorldOrigin&          origin    = editor::getActiveScene()->getObjectManager()->getWorldOrigin(); // 되감기가 있으면 활성 씬이 있다(`findActiveRewind`)
         for ( const AnimationRewindTrack& track : pRewind->getTracks() )
         {
             const bool bSelected = &track == pSelected;
@@ -202,7 +204,7 @@ namespace sw::editor
                 continue;
             const AnimationRewindFrame* pFrame = track.findFrame( viewTime );
             if ( pFrame != nullptr )
-                Internal::drawSkeleton( queue, track, *pFrame, _listScratchPosition, bSelected ? selectedColor : otherColor, bSelected );
+                Internal::drawSkeleton( queue, origin, track, *pFrame, _listScratchPosition, bSelected ? selectedColor : otherColor, bSelected );
         }
     }
 } // namespace sw::editor

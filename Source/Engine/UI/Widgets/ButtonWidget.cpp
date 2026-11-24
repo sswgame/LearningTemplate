@@ -16,11 +16,20 @@ namespace sw
         struct ButtonWidgetInternal
         {
             /** @brief 기본 겉모습입니다(스타일 시트 5-2 가 생기기 전의 어두운 반투명 바탕과 둥근 모서리입니다). */
-            static constexpr float32 kCornerRadius = 6.0f;
+            static constexpr float32 kCornerRadius    = 6.0f;
+            static constexpr float32 kNormalShade     = 0.16f; ///< 바탕 · 꺼짐의 밝기
+            static constexpr float32 kHoveredShade    = 0.24f;
+            static constexpr float32 kPressedShade    = 0.10f;
+            static constexpr float32 kGreenTint       = 1.1f; ///< 살짝 푸른 바탕 — 밝기에 곱한다
+            static constexpr float32 kBlueTint        = 1.35f;
+            static constexpr float32 kAlpha           = 0.95f;
+            static constexpr float32 kDisabledAlpha   = 0.4f;
+            static constexpr float32 kContentPaddingX = 16.0f;
+            static constexpr float32 kContentPaddingY = 8.0f;
 
             static UIBrush makeBrush( float32 shade, float32 alpha )
             {
-                return UIBrush::makeSolid( float4{ shade, shade * 1.1f, shade * 1.35f, alpha }, kCornerRadius );
+                return UIBrush::makeSolid( float4{ shade, shade * kGreenTint, shade * kBlueTint, alpha }, kCornerRadius );
             }
         };
     } // namespace
@@ -31,14 +40,15 @@ namespace sw
     ButtonWidget::ButtonWidget()
         : BorderPanel{}
         , _onClicked{}
-        , _hoveredBrush{ ButtonWidgetInternal::makeBrush( 0.24f, 0.95f ) }
-        , _pressedBrush{ ButtonWidgetInternal::makeBrush( 0.10f, 0.95f ) }
-        , _disabledBrush{ ButtonWidgetInternal::makeBrush( 0.16f, 0.4f ) }
+        , _hoveredBrush{ ButtonWidgetInternal::makeBrush( ButtonWidgetInternal::kHoveredShade, ButtonWidgetInternal::kAlpha ) }
+        , _pressedBrush{ ButtonWidgetInternal::makeBrush( ButtonWidgetInternal::kPressedShade, ButtonWidgetInternal::kAlpha ) }
+        , _disabledBrush{ ButtonWidgetInternal::makeBrush( ButtonWidgetInternal::kNormalShade, ButtonWidgetInternal::kDisabledAlpha ) }
         , _command{}
         , _bPressed{ false }
     {
-        setBackground( ButtonWidgetInternal::makeBrush( 0.16f, 0.95f ) );
-        setContentPadding( float4{ 16.0f, 8.0f, 16.0f, 8.0f } );
+        using Internal = ButtonWidgetInternal;
+        setBackground( Internal::makeBrush( Internal::kNormalShade, Internal::kAlpha ) );
+        setContentPadding( float4{ Internal::kContentPaddingX, Internal::kContentPaddingY, Internal::kContentPaddingX, Internal::kContentPaddingY } );
     }
 
     ButtonWidget::~ButtonWidget() = default;

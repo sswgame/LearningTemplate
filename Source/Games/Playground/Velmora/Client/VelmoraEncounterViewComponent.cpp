@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -12,7 +13,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomDebugDraw.h"
@@ -97,6 +97,6 @@ namespace sw
         ActionRoomDebugDraw::draw( *pDraw, origin, pEncounter->getRoom() );
         const AdventureGameModeComponent* const pDirector = pEncounter->getRoom().isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
         if ( pDirector != nullptr )
-            pDraw->drawSphere( ActionRoomDebugDraw::toScene( origin, pDirector->getPlayerPosition(), Internal::kInvulnerableHeight ), Internal::kInvulnerableRadius, Internal::kInvulnerableColor );
+            pDraw->drawSphere( origin, ActionRoomDebugDraw::makePosition( pDirector->getPlayerPosition(), Internal::kInvulnerableHeight ), Internal::kInvulnerableRadius, Internal::kInvulnerableColor );
     }
 } // namespace sw

@@ -16,6 +16,7 @@
  * 캐스케이드 상수를, 점광과 스폿은 **빛 뒤에 붙은 타일 원소**(`_params.w` 가 첫 타일의 상대 번호)를 읽습니다.
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -243,6 +244,8 @@ namespace sw
         [[nodiscard]] uint32 findUploadedLightIndex( uint32 sourceIndex ) const;
         /** @brief GPU 구간의 첫 라이트 번호입니다(= 올라간 CPU 라이트 수). 방출기의 슬롯 구간은 여기서부터 이어집니다. */
         uint32 getGPULightBase() const { return _cpuCount; }
+        /** @brief 이번 프레임에 올린 CPU 라이트 `getGPULightBase` 개입니다(상한에 맞춰 고른 뒤의 목록 — 셰이더가 앞에서부터 읽는 것과 같다). */
+        [[nodiscard]] vector_reference<const GPULight> getUploadedLights() const { return vector_reference<const GPULight>( _listUploadedLight.data(), _cpuCount ); }
         /** @brief 이번 프레임에 받은 GPU 구간의 슬롯 수입니다. 0 이면 GPU 라이트를 쓰지 않는 프레임(또는 생산자가 GPU 가 아니라 거절한 프레임)입니다. */
         uint32 getGPULightCount() const { return _gpuLightCount; }
         /** @brief GPU 구간을 쓰는 컴퓨트의 UAV 입니다. 구간이 없거나 UAV 를 만들지 못했으면 `kInvalidDescriptorIndex` 입니다. */

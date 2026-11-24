@@ -9,6 +9,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/WorldOrigin.h"
 
 namespace sw
 {
@@ -40,6 +41,31 @@ namespace sw
                     ++keepCount;
                 }
                 inoutList.resize( keepCount );
+            }
+
+            static void shiftLines( vector<DebugLine>& inoutList, const float3& delta )
+            {
+                for ( DebugLine& line : inoutList )
+                {
+                    line._from = line._from + delta;
+                    line._to   = line._to + delta;
+                }
+            }
+
+            static void shiftSpheres( vector<DebugSphere>& inoutList, const float3& delta )
+            {
+                for ( DebugSphere& sphere : inoutList )
+                {
+                    sphere._center = sphere._center + delta;
+                }
+            }
+
+            static void shiftTexts( vector<DebugText>& inoutList, const float3& delta )
+            {
+                for ( DebugText& text : inoutList )
+                {
+                    text._position = text._position + delta;
+                }
             }
         };
     } // namespace
@@ -96,6 +122,49 @@ namespace sw
         DebugDrawQueueInternal::age( _listLine, deltaSeconds );
         DebugDrawQueueInternal::age( _listSphere, deltaSeconds );
         DebugDrawQueueInternal::age( _listText, deltaSeconds );
+    }
+
+    void DebugDrawQueue::drawLine( const WorldOrigin& origin, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, float32 durationSeconds, const hashed_string& category )
+    {
+        drawLine( origin.toLocal( from ), origin.toLocal( to ), color, durationSeconds, category );
+    }
+
+    void DebugDrawQueue::drawSphere( const WorldOrigin& origin, const AbsolutePosition& center, float32 radius, const float4& color, float32 durationSeconds, const hashed_string& category )
+    {
+        drawSphere( origin.toLocal( center ), radius, color, durationSeconds, category );
+    }
+
+    void DebugDrawQueue::drawBox( const WorldOrigin& origin, const AbsolutePosition& center, const float3& halfExtent, const float4& color, float32 durationSeconds, const hashed_string& category )
+    {
+        drawBox( origin.toLocal( center ), halfExtent, color, durationSeconds, category );
+    }
+
+    void DebugDrawQueue::drawOrientedBox( const WorldOrigin& origin, const AbsolutePosition& center, const float3& halfExtent, const quaternion& rotation, const float4& color, float32 durationSeconds,
+                                          const hashed_string& category )
+    {
+        drawOrientedBox( origin.toLocal( center ), halfExtent, rotation, color, durationSeconds, category );
+    }
+
+    void DebugDrawQueue::drawArrow( const WorldOrigin& origin, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, float32 durationSeconds, const hashed_string& category )
+    {
+        drawArrow( origin.toLocal( from ), origin.toLocal( to ), color, durationSeconds, category );
+    }
+
+    void DebugDrawQueue::drawText( const WorldOrigin& origin, const AbsolutePosition& position, string_view text, const float4& color, float32 durationSeconds, const hashed_string& category )
+    {
+        drawText( origin.toLocal( position ), text, color, durationSeconds, category );
+    }
+
+    void DebugDrawQueue::shiftOrigin( const float3& delta )
+    {
+        using Internal = DebugDrawQueueInternal;
+        ScopedLock<mutex> lock{ _mutex };
+        Internal::shiftLines( _listLine, delta );
+        Internal::shiftLines( _listVisibleLine, delta );
+        Internal::shiftSpheres( _listSphere, delta );
+        Internal::shiftSpheres( _listVisibleSphere, delta );
+        Internal::shiftTexts( _listText, delta );
+        Internal::shiftTexts( _listVisibleText, delta );
     }
 
     void DebugDrawQueue::drawLine( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category )

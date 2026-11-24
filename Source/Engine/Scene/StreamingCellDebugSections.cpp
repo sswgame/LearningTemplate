@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -39,11 +40,13 @@ namespace sw
                 const CameraComponent* pCamera = scene.getActiveGameCamera();
                 if ( pCamera == nullptr )
                     return;
-                const float3                   origin    = pCamera->getWorldPosition();
-                const SceneStreamingSubsystem& streaming = scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
-                const float32                  cellSize  = grid.getCellSize();
-                const int32                    reach     = static_cast<int32>( grid.getLoadingRadius() / cellSize ) + kExtraCellCount;
-                const StreamingCellCoord       center    = grid.computeCell( origin );
+                // 격자 · 스트리밍 원점은 절대 자리다 — 카메라를 절대로 옮겨 묻고, 선은 큐가 다시 옮긴다.
+                const WorldOrigin&             worldOrigin = scene.getObjectManager()->getWorldOrigin();
+                const float3                   origin      = worldOrigin.toAbsolute( pCamera->getWorldPosition() );
+                const SceneStreamingSubsystem& streaming   = scene.getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
+                const float32                  cellSize    = grid.getCellSize();
+                const int32                    reach       = static_cast<int32>( grid.getLoadingRadius() / cellSize ) + kExtraCellCount;
+                const StreamingCellCoord       center      = grid.computeCell( origin );
                 // 스트리밍 중이면 실제 원점(원점마다 반경)으로, 셀을 받지 않은 씬(에디터 XML)은 카메라 원점(격자 로딩 반경)으로 범위를 칠한다 — 카메라 원점의 정의가 그 반경이다.
                 const StreamingSource             cameraSource{ origin, grid.getLoadingRadius(), StreamingSourcePriority::Normal };
                 const span<const StreamingSource> listSource = streaming.isStreaming() ? streaming.getActiveSources() : span<const StreamingSource>( &cameraSource, 1 );
@@ -71,10 +74,10 @@ namespace sw
                         const float32            maxX     = minX + cellSize;
                         const float32            maxZ     = minZ + cellSize;
                         // 바닥(높이 0)에 셀 테두리를 그린다. 이웃 셀과 겹치는 변은 두 번 그려지지만 색이 같은 경우가 많고 디버그 선이라 둔다.
-                        draw._queue.drawLine( float3( minX, 0.0f, minZ ), float3( maxX, 0.0f, minZ ), color, 0.0f, category );
-                        draw._queue.drawLine( float3( maxX, 0.0f, minZ ), float3( maxX, 0.0f, maxZ ), color, 0.0f, category );
-                        draw._queue.drawLine( float3( maxX, 0.0f, maxZ ), float3( minX, 0.0f, maxZ ), color, 0.0f, category );
-                        draw._queue.drawLine( float3( minX, 0.0f, maxZ ), float3( minX, 0.0f, minZ ), color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( minX, 0.0f, minZ ) }, AbsolutePosition{ float3( maxX, 0.0f, minZ ) }, color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( maxX, 0.0f, minZ ) }, AbsolutePosition{ float3( maxX, 0.0f, maxZ ) }, color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( maxX, 0.0f, maxZ ) }, AbsolutePosition{ float3( minX, 0.0f, maxZ ) }, color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( minX, 0.0f, maxZ ) }, AbsolutePosition{ float3( minX, 0.0f, minZ ) }, color, 0.0f, category );
                     }
                 }
             }

@@ -26,6 +26,7 @@
 #include "DevTools/DevToolsAPI.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 
 namespace sw
 {
@@ -35,7 +36,7 @@ namespace sw
     class Scene;
 
     /**
-     * @brief 이름 있는 오브젝트의 월드 위치 · 회전 · 히트박스입니다.
+     * @brief 이름 있는 오브젝트의 절대 자리 · 회전 · 히트박스입니다.
      * @details 회전과 히트박스는 없을 수 있다(`_bHasRotation` · `_bHasBox`) — 옛 형식의 글이나 크기 없는 컴포넌트다.
      *          히트박스는 `SceneComponent::getWorldBox` 의 월드 축 정렬 상자(중심 · 반 크기)다. 엔진은 키트의 랙 보상 몸(`LagRecord`)을 알지 못하므로
      *          판정이 쓰는 몸 대신 오브젝트가 선언한 상자를 보인다.
@@ -43,9 +44,9 @@ namespace sw
     struct AuthorityPose
     {
         string           _name;
-        float3           _position{};
+        AbsolutePosition _position{};                         ///< 절대 자리(서버는 원점을 옮기지 않고, 클라이언트는 제 원점을 더해 모은다)
         float4           _rotation{ 0.0f, 0.0f, 0.0f, 1.0f }; ///< 월드 회전 쿼터니언(x y z w)
-        float3           _boxCenter{};
+        AbsolutePosition _boxCenter{};                        ///< 절대 자리
         float3           _boxHalfExtent{};
         GameObjectHandle _object{};              ///< 로컬 포즈의 오브젝트다(`collectPoses`). 서버 글에서 읽은 포즈는 비어 있다
         bool             _bHasRotation{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -58,18 +59,18 @@ namespace sw
     /** @brief 같은 이름의 오브젝트에서 로컬과 서버 위치 · 회전 · 히트박스의 차이입니다. */
     struct AuthorityDelta
     {
-        string  _name;
-        float3  _local{};
-        float3  _server{};
-        float32 _distance{ 0.0f };          ///< 월드 위치의 거리(m)
-        float32 _angleDegrees{ 0.0f };      ///< 회전의 각도 차(도). 한쪽에 회전이 없으면 0
-        float32 _boxCenterDistance{ 0.0f }; ///< 히트박스 중심의 거리(m). 한쪽에 상자가 없으면 0
-        float4  _serverRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-        float3  _serverBoxCenter{};
-        float3  _serverBoxHalfExtent{};
-        bool    _bHasServerRotation{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bHasServerBox{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bHasBoxPair{ false };        ///< 두 쪽 모두 상자가 있다(`_boxCenterDistance` 가 뜻을 가진다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string           _name;
+        AbsolutePosition _local{};
+        AbsolutePosition _server{};
+        float32          _distance{ 0.0f };          ///< 월드 위치의 거리(m)
+        float32          _angleDegrees{ 0.0f };      ///< 회전의 각도 차(도). 한쪽에 회전이 없으면 0
+        float32          _boxCenterDistance{ 0.0f }; ///< 히트박스 중심의 거리(m). 한쪽에 상자가 없으면 0
+        float4           _serverRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+        AbsolutePosition _serverBoxCenter{};
+        float3           _serverBoxHalfExtent{};
+        bool             _bHasServerRotation{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bHasServerBox{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bHasBoxPair{ false };        ///< 두 쪽 모두 상자가 있다(`_boxCenterDistance` 가 뜻을 가진다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -99,7 +100,7 @@ namespace sw
         static void parsePoses( string_view text, vector<AuthorityPose>& outListPose );
         /** @brief `parsePoses` 가 읽는 형식으로 포즈를 한 줄씩 씁니다(`scene.poses` 의 답). 회전 · 상자가 있는 포즈만 그 묶음을 붙입니다. */
         static void writePoses( const vector<AuthorityPose>& listPose, string& outText );
-        /** @brief 매니저의 이름 있는 오브젝트 중 트랜스폼이 있는 것의 월드 위치 · 회전 · 히트박스(있으면)를 이름 순으로 채웁니다. */
+        /** @brief 매니저의 이름 있는 오브젝트 중 트랜스폼이 있는 것의 절대 자리 · 회전 · 히트박스(있으면)를 이름 순으로 채웁니다. */
         static void collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose );
         /** @brief 이름이 같은 쌍의 차이를 거리가 큰 순서로 채웁니다. 한쪽에만 있는 오브젝트는 건너뜁니다. */
         static void computeDeltas( const vector<AuthorityPose>& listLocal, const vector<AuthorityPose>& listServer, vector<AuthorityDelta>& outListDelta );
