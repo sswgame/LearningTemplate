@@ -119,6 +119,9 @@ if [ -n "$TREE_CHANGES" ]; then
   fi
 fi
 
+# 강제로 끝난 git 의 찌꺼기 잠금을 먼저 알린다 — 검증이 끝난 뒤의 커밋 · 병합이 거기서 멈춘다. 검증 자체는 막지 않는다.
+py -3 -m Scripts git-locks || echo "git 잠금 파일이 남아 있다(위 줄) - 도는 git 이 없으면 py -3 -m Scripts git-locks --remove"
+
 # 단계 시간(test_history.py stage) — begin_stage 가 시작 시각을 잡고, 통과 · 건너뜀 · 실패 때 한 줄씩 쌓는다. 갈래(서브셸)에서는 쌓지 않는다(부모가 쌓는다).
 CURRENT_STAGE=""
 STAGE_STARTED=$SECONDS
