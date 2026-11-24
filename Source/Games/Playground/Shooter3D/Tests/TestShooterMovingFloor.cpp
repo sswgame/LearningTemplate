@@ -267,11 +267,12 @@ namespace
     private:
         void build( Side& side )
         {
-            GameObject* pGameMode = side._manager.createGameObject( hashed_string( "GameMode" ) );
-            (void)pGameMode->addComponent<ShooterGameModeComponent>();
+            GameObject*               pGameMode   = side._manager.createGameObject( hashed_string( "GameMode" ) );
+            ShooterGameModeComponent* pArenaRules = pGameMode->addComponent<ShooterGameModeComponent>();
             addFloor( side._manager, "FloorA", float3{}, _halfSize, float3{ 6.0f, 0.0f, 0.0f } );
             addFloor( side._manager, "FloorB", float3{ 0.0f, 0.0f, _halfSize._z * 2.0f }, _halfSize, float3{ 6.0f, 0.0f, 0.0f } );
-            side._pPlayer        = side._manager.createGameObject( hashed_string( "Player" ) );
+            side._pPlayer = side._manager.createGameObject( hashed_string( "Player" ) );
+            ShooterServerTestWorld::bindScenePlayer( *pArenaRules, *side._pPlayer );
             PawnComponent* pPawn = side._pPlayer->addComponent<PawnComponent>();
             pPawn->setButtonNames( { hashed_string( "Jump" ), hashed_string( "Fire" ) } );
             pPawn->setAutoPossess( PawnAutoPossess::None );
