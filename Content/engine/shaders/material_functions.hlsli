@@ -83,6 +83,7 @@ struct SurfaceFunction
 {
     // 해시 · 노이즈
     static uint mixHash( uint value );
+    static uint4 mixHash( uint4 value );
     static float hashToUnit( uint hash );
     static uint hashTile( int2 tile, uint seed );
     static uint hashCell( int3 cell );
@@ -155,6 +156,14 @@ static uint SurfaceFunction::mixHash( uint value )
     return value ^ ( value >> 16 );
 }
 
+/** @brief `mixHash` 의 네 값 판. */
+static uint4 SurfaceFunction::mixHash( uint4 value )
+{
+    value = ( value ^ ( value >> 16 ) ) * 0x7feb352du;
+    value = ( value ^ ( value >> 15 ) ) * 0x846ca68bu;
+    return value ^ ( value >> 16 );
+}
+
 /** @brief 해시의 상위 24 비트를 [0, 1) 로. */
 static float SurfaceFunction::hashToUnit( uint hash )
 {
@@ -193,16 +202,17 @@ static float SurfaceFunction::computeValueNoise( float3 position )
     const float3 local     = position - cellFloor;
     const float3 fade      = local * local * ( 3.0f - 2.0f * local );
     const int3   cell      = int3( cellFloor );
-    const float  n000      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 0, 0, 0 ) ) );
-    const float  n100      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 1, 0, 0 ) ) );
-    const float  n010      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 0, 1, 0 ) ) );
-    const float  n110      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 1, 1, 0 ) ) );
-    const float  n001      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 0, 0, 1 ) ) );
-    const float  n101      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 1, 0, 1 ) ) );
-    const float  n011      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 0, 1, 1 ) ) );
-    const float  n111      = SurfaceFunction::hashToUnit( SurfaceFunction::hashCell( cell + int3( 1, 1, 1 ) ) );
-    const float  nearPlane = lerp( lerp( n000, n100, fade.x ), lerp( n010, n110, fade.x ), fade.y );
-    const float  farPlane  = lerp( lerp( n001, n101, fade.x ), lerp( n011, n111, fade.x ), fade.y );
+    // 모서리 여덟을 z 면 둘로 묶어 한 면 넷을 벡터로 센다(x 는 0 1 0 1, y 는 0 0 1 1) — 모서리마다의 값은 hashCell 과 같다. 낱개로 여덟 번 세면 FXC 의 명령 수가 세 배다.
+    const uint4  hashX     = asuint( cell.x + int4( 0, 1, 0, 1 ) ) * kTileHashX;
+    const uint4  hashY     = asuint( cell.y + int4( 0, 0, 1, 1 ) ) * kTileHashY;
+    const uint4  nearHash  = SurfaceFunction::mixHash( hashX ^ SurfaceFunction::mixHash( hashY ^ SurfaceFunction::mixHash( asuint( cell.z ) * kTileHashZ + kTileHashSalt ) ) );
+    const uint4  farHash   = SurfaceFunction::mixHash( hashX ^ SurfaceFunction::mixHash( hashY ^ SurfaceFunction::mixHash( asuint( cell.z + 1 ) * kTileHashZ + kTileHashSalt ) ) );
+    const float4 nearUnit  = float4( nearHash >> 8 ) * kHashToUnit;
+    const float4 farUnit   = float4( farHash >> 8 ) * kHashToUnit;
+    const float2 nearRow   = lerp( nearUnit.xz, nearUnit.yw, fade.x );
+    const float2 farRow    = lerp( farUnit.xz, farUnit.yw, fade.x );
+    const float  nearPlane = lerp( nearRow.x, nearRow.y, fade.y );
+    const float  farPlane  = lerp( farRow.x, farRow.y, fade.y );
     return lerp( nearPlane, farPlane, fade.z );
 }
 
@@ -212,7 +222,7 @@ static float SurfaceFunction::computeFbm( float3 position, uint octaveCount )
     float sum       = 0.0f;
     float amplitude = 0.5f;
     float total     = 0.0f;
-    for ( uint octave = 0; octave < octaveCount; ++octave )
+    SW_LOOP_ON_FXC for ( uint octave = 0; octave < octaveCount; ++octave )
     {
         sum += amplitude * SurfaceFunction::computeValueNoise( position );
         total += amplitude;
@@ -229,9 +239,9 @@ static float2 SurfaceFunction::computeCellDistance( float2 position, uint seed )
     const float2 local     = position - cellFloor;
     float        nearest   = 8.0f;
     float        second    = 8.0f;
-    for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+    SW_LOOP_ON_FXC for ( int offsetY = -1; offsetY <= 1; ++offsetY )
     {
-        for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+        SW_LOOP_ON_FXC for ( int offsetX = -1; offsetX <= 1; ++offsetX )
         {
             const int2   neighbor        = int2( offsetX, offsetY );
             const uint   hash            = SurfaceFunction::hashTile( int2( cellFloor ) + neighbor, seed );

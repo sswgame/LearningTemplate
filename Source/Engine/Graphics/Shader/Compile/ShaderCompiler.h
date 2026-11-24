@@ -279,6 +279,14 @@ namespace sw
          *          서로 다른 @p desc 만 동시에 넣는다 — 같은 셰이더 변형을 두 스레드가 동시에 컴파일하면 같은 캐시 파일을 함께 쓴다.
          */
         static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
+        /**
+         * @brief @p listDesc 중 아직 DDC 에 없는 요청을 병렬로 전처리해, 글이 서로 다른 것만 하나씩 병렬로 컴파일합니다 — 뒤이은 `compileHLSL` 이 나머지 변형을 글로 맞힌다.
+         * @details 묶음(데우기 · 쿠킹)이 먼저 부른다. 부르지 않아도 결과는 같다 — 같은 글의 변형이 동시에 돌면 서로의 결과를 보지 못해 같은 컴파일을 되풀이할 뿐이다.
+         *          실패는 여기서 세지 않는다(같은 요청을 컴파일하는 쪽이 세고 오류를 다시 남긴다). 게임 · 기동 스레드에서 부른다.
+         */
+        static void compileDistinct( const vector<ShaderCompileDesc>& listDesc );
+        /** @brief 전처리한 글에서 바이트코드에 들지 않는 것(`#line` 줄 · 빈칸 · 빈 줄)을 걷어 낸 글입니다 — 글 키(DDC)가 이것을 해시한다. 입력만으로 정해진다. */
+        [[nodiscard]] static string normalizePreprocessedText( string_view text );
 
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.

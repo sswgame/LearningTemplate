@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/EnumArray.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
@@ -20,6 +21,7 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Content/CookJob.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -162,7 +164,43 @@ namespace sw
             {
                 CookJobDesc _jobDesc;            ///< 요청 · 도구가 정하는 값(소스 내용은 작업의 입력이라 들지 않는다)
                 uint64      _actionKey{ 0 };     ///< 기록을 찾는 키 — 주 소스의 내용까지 든다(가지를 오가도 판마다 기록이 남는다)
+                uint64      _fxcHash{ 0 };       ///< DXBC 요청이면 실린 FXC 의 내용 해시(`getFxcLibraryHash`), 아니면 0
                 bool        _bUseCache{ false }; ///< 거짓이면 DDC 를 쓰지 않는다(실린 FXC 의 판을 모른다) NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+            };
+
+            /** @brief 컴파일러를 부르는 단계입니다. 앞 둘이 보통 컴파일이고, 디버그 코드젠만 소스를 바로 컴파일한다(디버그 정보가 원본 소스를 가리켜야 한다). */
+            enum class CompileStep : uint8
+            {
+                Preprocess,          ///< 소스를 전처리만 한다 — include · define 을 다 펼친 글 하나가 나온다
+                CompilePreprocessed, ///< 전처리한 글을 컴파일한다 — define · include 를 더 넣지 않는다
+                CompileSource,       ///< 소스를 define · include 와 함께 컴파일한다(디버그 코드젠)
+            };
+
+            /** @brief 컴파일러 호출 한 번의 결과입니다. */
+            enum class CompilerRunResult : uint8
+            {
+                Succeeded, ///< 글(전처리) 또는 바이트코드를 얻었다
+                Rejected,  ///< 셰이더 오류로 실패했다(오류 글을 담았다)
+                NoOutput,  ///< 컴파일러를 못 쓰거나 출력이 없었다
+            };
+
+            /** @brief 전처리한 글의 DDC 키와 그 서술입니다(`makeSourceKey`). */
+            struct SourceKey
+            {
+                uint64 _key{ 0 };
+                string _description;
+            };
+
+            /** @brief 컴파일 한 건의 앞부분 — 요청을 풀어 DDC 에서 찾을 값까지 만든 것입니다. */
+            struct CompileSetup
+            {
+                ShaderCompileDesc       _desc; ///< 엔진 define · 단계 매크로를 더한 요청(`makeFullDesc`)
+                ShaderSourceResolver    _resolver;
+                ShaderCompileInput      _input;
+                const DerivedDataCache* _pCache;
+                uint64                  _sourceHash; ///< 주 소스의 내용 해시 — 못 읽으면 0(컴파일도 같은 파일을 읽다 실패한다)
+                CompileAction           _action;
+                string                  _profile;
             };
 
             /** @brief `compileHLSL` 이 실제로 컴파일하는 요청입니다 — 엔진 define 과 단계 매크로를 더한다. */
@@ -226,9 +264,9 @@ namespace sw
                 const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
                 if ( pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc )
                 {
-                    const uint64 fxcHash = getFxcLibraryHash();
-                    action._bUseCache    = fxcHash != 0;
-                    text.append( "fxc=" ).append( to_string( fxcHash ) ).append( "\n" );
+                    action._fxcHash   = getFxcLibraryHash();
+                    action._bUseCache = action._fxcHash != 0;
+                    text.append( "fxc=" ).append( to_string( action._fxcHash ) ).append( "\n" );
                 }
 #endif
                 action._jobDesc._cookerName      = "Shader";
@@ -240,6 +278,65 @@ namespace sw
                 text.append( "\nsourceHash=" ).append( to_string( sourceHash ) );
                 action._actionKey = HashUtil::computeStringHash64( string_view{ text }, false );
                 return action;
+            }
+
+            /** @brief 요청 @p requestDesc 를 풉니다. 풀지 못하면 로그를 남기고 까닭이 오류입니다. */
+            [[nodiscard]] static expected<CompileSetup> setUp( const ShaderCompileDesc& requestDesc )
+            {
+                // 엔진 설정 값은 요청이 실어 온 사본만 쓴다 — 컴파일 워커에서 불려 설정을 직접 읽으면 제자리 덮기와 겹친다.
+                if ( requestDesc._enginePolicy.has_value() == false )
+                {
+                    const Error error{ ErrorKind::InvalidArgument, "The shader compile request carries no engine policy (ShaderCompileDesc::_enginePolicy) - the requester captures it",
+                                       requestDesc._source.str() };
+                    SW_LOG_ERROR_ID( "ShaderCompiler.EnginePolicyMissing", "%# ('%#')", error.message(), error.detail() );
+                    return unexpected( error );
+                }
+                // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
+                const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
+                if ( resolver.has_value() == false )
+                    return unexpected( Error{ ErrorKind::NotFound, "Shader include domains cannot be found (see the _listResourcePriority error above)" } );
+                ShaderCompileDesc                  desc  = makeFullDesc( requestDesc );
+                const expected<ShaderCompileInput> input = resolver->resolve( desc._source );
+                if ( input.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "ShaderCompiler.SourceUnresolved", "%#: %#", input.error().message(), input.error().detail() );
+                    return unexpected( input.error() );
+                }
+                const expected<DerivedDataCache>& cache = getDerivedDataCache();
+                if ( cache.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "ShaderCompiler.DerivedDataUnavailable", "The shader DDC could not be opened (Config/Dev/DerivedData.json): %# (%#)", cache.error().message(), cache.error().detail() );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "The shader DDC could not be opened (Config/Dev/DerivedData.json)", cache.error().detail() } );
+                }
+                const uint64  sourceHash = ContentHash::computeFile( input->_source.str() );
+                CompileAction action     = makeCompileAction( desc, sourceHash );
+                string        profile    = getTargetProfile( desc._stage, desc._targetFormat );
+                return CompileSetup{ std::move( desc ), *resolver, *input, &*cache, sourceHash, std::move( action ), std::move( profile ) };
+            }
+
+            /** @brief 컴파일러가 낸 글을 @p outText 에 담습니다 — 글 끝의 0(두 컴파일러 모두 크기에 넣는다)은 글이 아니다. */
+            static void assignText( vector<uint8>& outText, const uint8* pData, size_t size )
+            {
+                outText.assign( pData, pData + size );
+                while ( outText.empty() == false && outText.back() == 0 )
+                    outText.pop_back();
+            }
+
+            /**
+             * @brief 전처리한 글 @p text 를 컴파일한 바이트코드의 DDC 키입니다. 글이 같으면 바이트코드도 같다 — 어느 변형(define 조합)이 그 글을 냈는지는 들지 않는다.
+             * @details 셰이더는 define 의 일부만 읽어 변형 둘 중 하나는 다른 변형과 같은 글이 된다. 변형마다 컴파일하지 않고 글마다 컴파일한다 —
+             *          언리얼이 셰이더 작업을 전처리한 소스의 해시로 겹쳐 합치는 것(`r.ShaderCompiler.PreprocessedCache`)과 같다.
+             */
+            static SourceKey makeSourceKey( const CompileSetup& setup, const vector<uint8>& text )
+            {
+                const string normalized = ShaderCompiler::normalizePreprocessedText( string_view( reinterpret_cast<const utf8*>( text.data() ), text.size() ) );
+                SourceKey    sourceKey;
+                sourceKey._description.append( "Shader preprocessed text\ntarget=" ).append( setup._action._jobDesc._target ).append( "\nprofile=" ).append( setup._profile );
+                sourceKey._description.append( "\nentry=" ).append( setup._desc._entryPoint ).append( "\ntoolchain=" ).append( to_string( setup._action._jobDesc._codeFingerprint ) );
+                sourceKey._description.append( "\nfxc=" ).append( to_string( setup._action._fxcHash ) ).append( "\nlength=" ).append( to_string( normalized.size() ) );
+                sourceKey._description.append( "\ntext=" ).append( to_string( HashUtil::computeStringHash64( normalized, false ) ) );
+                sourceKey._key = HashUtil::computeStringHash64( sourceKey._description, false );
+                return sourceKey;
             }
 
             /** @brief DDC 에서 동작의 기록을 찾아 새것이면 바이트코드까지 읽습니다. 둘 다 맞을 때만 true 입니다. */
@@ -264,17 +361,21 @@ namespace sw
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief FXC 로 DXBC(D3D11, 행 우선)를 컴파일합니다. 실패하면 오류 글을 담고 false 입니다. */
-            [[nodiscard]] static bool compileDxbc( const ShaderCompileDesc& desc, const ShaderIncludeResolver& resolver, const ShaderCompileInput& input, const string& profile,
-                                                   ShaderCompileResult& outResult )
+            /**
+             * @brief FXC 로 @p step 을 합니다(DXBC — D3D11, 행 우선). 전처리면 @p inoutText 에 글을, 컴파일이면 @p outResult 에 바이트코드를 담습니다.
+             * @param inoutText 전처리한 글 — `Preprocess` 가 쓰고 `CompilePreprocessed` 가 읽는다
+             */
+            [[nodiscard]] static CompilerRunResult runFxc( const CompileSetup& setup, CompileStep step, vector<uint8>& inoutText, ShaderCompileResult& outResult )
             {
-                UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
+                const ShaderCompileDesc& desc         = setup._desc;
+                UINT                     compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
                 if ( desc._bDebugCodegen != SW_FALSE )
                     compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 
-                Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
-                Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-                const wstring                    wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
+                // 소스는 엔진 파일 입구로 읽는다(`D3DCompileFromFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
+                const bool bPreprocessed = step == CompileStep::CompilePreprocessed;
+                if ( bPreprocessed == false && FileUtil::readFile( FileUtil::toDiskPath( setup._input._source.str() ), inoutText ) == false )
+                    return CompilerRunResult::NoOutput;
 
                 vector<D3D_SHADER_MACRO> listMacro;
                 listMacro.reserve( desc._listDefine.size() + 3 );
@@ -289,19 +390,16 @@ namespace sw
                 }
                 listMacro.push_back( { nullptr, nullptr } );
 
-                ResolverD3DInclude includeHandler( resolver, input );
-
-                HRESULT hr = D3DCompileFromFile(
-                    wPath.c_str(),
-                    listMacro.data(),
-                    &includeHandler,
-                    desc._entryPoint.c_str(),
-                    profile.c_str(),
-                    compileFlags,
-                    0,
-                    codeBlob.GetAddressOf(),
-                    errorBlob.GetAddressOf() );
-
+                ResolverD3DInclude               includeHandler( setup._resolver.getIncludeResolver(), setup._input );
+                Microsoft::WRL::ComPtr<ID3DBlob> outputBlob;
+                Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+                const utf8* const                pSourceName = setup._input._source.c_str();
+                HRESULT                          hr          = S_OK;
+                if ( step == CompileStep::Preprocess )
+                    hr = D3DPreprocess( inoutText.data(), inoutText.size(), pSourceName, listMacro.data(), &includeHandler, outputBlob.GetAddressOf(), errorBlob.GetAddressOf() );
+                else // 전처리한 글에는 펼칠 매크로 · include 가 없다
+                    hr = D3DCompile( inoutText.data(), inoutText.size(), pSourceName, bPreprocessed ? nullptr : listMacro.data(), bPreprocessed ? nullptr : &includeHandler,
+                                     desc._entryPoint.c_str(), setup._profile.c_str(), compileFlags, 0, outputBlob.GetAddressOf(), errorBlob.GetAddressOf() );
                 if ( FAILED( hr ) )
                 {
                     if ( errorBlob != nullptr )
@@ -309,26 +407,25 @@ namespace sw
                     else
                         outResult._errorMessage = "Unknown DXBC compilation error.";
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXBCFailed", "%#", outResult._errorMessage.c_str() );
-                    return false;
+                    return CompilerRunResult::Rejected;
                 }
+                if ( outputBlob == nullptr || outputBlob->GetBufferSize() == 0 )
+                    return CompilerRunResult::NoOutput;
 
-                const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
-                outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
+                const uint8* pData = static_cast<const uint8*>( outputBlob->GetBufferPointer() );
+                if ( step == CompileStep::Preprocess )
+                {
+                    assignText( inoutText, pData, outputBlob->GetBufferSize() );
+                    return CompilerRunResult::Succeeded;
+                }
+                outResult._bytecode.assign( pData, pData + outputBlob->GetBufferSize() );
                 outResult._bSuccess = true;
                 SW_LOG_TRACE_ID( "ShaderCompiler.TargetD3D11DXBCRow", "Target: D3D11 (DXBC Row-Major), Size: %# bytes", static_cast<uint32>( outResult._bytecode.size() ) );
-                return true;
+                return CompilerRunResult::Succeeded;
             }
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
-            /** @brief DXC 컴파일 한 번의 결과입니다. */
-            enum class DxcResult : uint8
-            {
-                Compiled, ///< 바이트코드를 얻었다
-                Rejected, ///< 셰이더 오류로 실패했다(오류 글을 담았다) — 다른 컴파일러로 넘기지 않는다
-                NoOutput, ///< DXC 를 못 쓰거나 출력이 없었다
-            };
-
             /**
              * @brief DXC 가 고른 include 후보를 include 규칙(`ShaderIncludeResolver::readInclude`)으로 읽어 넘기고 `LoadSource` 가 연 파일을 적는 `IDxcIncludeHandler` 입니다.
              * @details DXC 기본 처리기(`CreateDefaultIncludeHandler`)는 자기 파일 API 로 디스크를 읽는다 - 엔진 파일 입구(경로 · 진단 · 디스크 흉내)를 건너뛰므로 쓰지 않는다.
@@ -611,17 +708,20 @@ namespace sw
             }
 
             /**
-             * @brief DXC 로 DXIL · SPIR-V 를 컴파일합니다. 성공하면 바이트코드(OpenGL 이면 내장 변수를 바꾼 것)를 담습니다.
+             * @brief DXC 로 @p step 을 합니다(DXIL · SPIR-V). 전처리면 @p inoutText 에 글을, 컴파일이면 @p outResult 에 바이트코드(OpenGL 이면 내장 변수를 바꾼 것)를 담습니다.
              * @details 생성 · 소스 읽기 · 인자 · 컴파일 · 결과 읽기의 순서가 곧 의미이고 인자 글의 수명이 이 함수 안이라 더 나누지 않는다.
+             * @param inoutText 전처리한 글 — `Preprocess` 가 쓰고 `CompilePreprocessed` 가 읽는다
              */
-            static DxcResult compileDXC( const ShaderCompileDesc& desc, const ShaderIncludeResolver& resolver, const ShaderCompileInput& input, const string& profile,
-                                         ShaderCompileResult& outResult )
+            [[nodiscard]] static CompilerRunResult runDXC( const CompileSetup& setup, CompileStep step, vector<uint8>& inoutText, ShaderCompileResult& outResult )
             {
-                DxcCreateInstanceProc fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
+                const ShaderCompileDesc&  desc                = setup._desc;
+                const ShaderCompileInput& input               = setup._input;
+                const string&             profile             = setup._profile;
+                DxcCreateInstanceProc     fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( fnDXCCreateInstance == nullptr )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceUnavailableLibdxcompilerNot", "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
-                    return DxcResult::NoOutput;
+                    return CompilerRunResult::NoOutput;
                 }
 
     #if defined( SW_SANITIZER_THREAD )
@@ -643,16 +743,16 @@ namespace sw
                 else
                     SW_LOG_ERROR_ID( "ShaderCompiler.DxcCreateInstanceCLSIDDxcUtilsFailed", "DxcCreateInstance(CLSID_DxcUtils) failed: 0x%#", hrInit );
                 if ( utils == nullptr || compiler == nullptr )
-                    return DxcResult::NoOutput;
+                    return CompilerRunResult::NoOutput;
 
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
-                includeHandler.Attach( make_unique<ResolverDXCInclude>( utils, resolver ).release() );
+                includeHandler.Attach( make_unique<ResolverDXCInclude>( utils, setup._resolver.getIncludeResolver() ).release() );
 
                 // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
-                const wstring wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
-                vector<uint8> sourceBytes;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), sourceBytes ) == false )
-                    return DxcResult::NoOutput;
+                const wstring wPath         = StringUtil::utf8ToUTF16( input._source.c_str() );
+                const bool    bPreprocessed = step == CompileStep::CompilePreprocessed;
+                if ( bPreprocessed == false && FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), inoutText ) == false )
+                    return CompilerRunResult::NoOutput;
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );
                 wstring wProfile    = StringUtil::utf8ToUTF16( profile.c_str() );
@@ -682,7 +782,7 @@ namespace sw
 
                 for ( const ShaderMacroDefine& def : desc._listDefine )
                 {
-                    if ( def._name.empty() )
+                    if ( def._name.empty() || bPreprocessed ) // 전처리한 글에는 펼칠 매크로가 없다
                         continue;
                     StringBuilder<constant::buffer::kMax256> defineBuilder;
                     defineBuilder.appendFormat( "%#=%#", def._name, def._value );
@@ -698,9 +798,12 @@ namespace sw
                     listArgument.push_back( L"-Od" );
                 }
 
+                if ( step == CompileStep::Preprocess )
+                    listArgument.push_back( L"-P" );
+
                 DxcBuffer sourceBuffer{};
-                sourceBuffer.Ptr      = sourceBytes.data();
-                sourceBuffer.Size     = sourceBytes.size();
+                sourceBuffer.Ptr      = inoutText.data();
+                sourceBuffer.Size     = inoutText.size();
                 sourceBuffer.Encoding = DXC_CP_UTF8;
 
                 DxcComPtr<IDxcResult> compileResult;
@@ -713,7 +816,7 @@ namespace sw
                 if ( FAILED( hrCompile ) )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCCompilerCompileFailed", "DXC compiler->Compile failed with HRESULT: 0x%#", hrCompile );
-                    return DxcResult::NoOutput;
+                    return CompilerRunResult::NoOutput;
                 }
 
                 HRESULT status = S_OK;
@@ -726,15 +829,20 @@ namespace sw
                 if ( FAILED( status ) )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCFailed", "%#", outResult._errorMessage.c_str() );
-                    return DxcResult::Rejected;
+                    return CompilerRunResult::Rejected;
                 }
 
                 DxcComPtr<IDxcBlob> shaderBlob;
-                compileResult->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( getDxcAddressOf( shaderBlob ) ), nullptr );
+                compileResult->GetOutput( step == CompileStep::Preprocess ? DXC_OUT_HLSL : DXC_OUT_OBJECT, IID_PPV_ARGS( getDxcAddressOf( shaderBlob ) ), nullptr );
                 if ( shaderBlob == nullptr || shaderBlob->GetBufferSize() == 0 )
-                    return DxcResult::NoOutput;
+                    return CompilerRunResult::NoOutput;
 
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
+                if ( step == CompileStep::Preprocess )
+                {
+                    assignText( inoutText, pData, shaderBlob->GetBufferSize() );
+                    return CompilerRunResult::Succeeded;
+                }
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
                 const auto           pfnPostProcess = getDxcTargetRow( desc._targetFormat )._pfnPostProcess;
                 const expected<void> postProcessed  = pfnPostProcess != nullptr ? pfnPostProcess( outResult._bytecode ) : expected<void>{};
@@ -745,14 +853,72 @@ namespace sw
                     outResult._errorMessage = string( errorBuilder.view() );
                     SW_LOG_ERROR_ID( "ShaderCompiler.PostProcessFailed", "%# (%#)", outResult._errorMessage.c_str(), desc._source.c_str() );
                     outResult._bytecode.clear();
-                    return DxcResult::Rejected;
+                    return CompilerRunResult::Rejected;
                 }
                 outResult._bSuccess = true;
                 SW_LOG_TRACE_ID( "ShaderCompiler.Target", "Target: %#", getDxcTargetRow( desc._targetFormat )._pLogName ); // Trace 를 컴파일하지 않는 구성은 인자를 평가하지 않는다(SW_LOG_DISCARDED)
-                return DxcResult::Compiled;
+                return CompilerRunResult::Succeeded;
             }
 
 #endif // SW_HAS_DXC_API
+
+            /** @brief 요청 형식의 컴파일러(FXC · DXC)로 @p step 을 합니다. */
+            [[nodiscard]] static CompilerRunResult runCompiler( const CompileSetup& setup, CompileStep step, vector<uint8>& inoutText, ShaderCompileResult& outResult )
+            {
+                const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( setup._desc._targetFormat );
+                if ( pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc )
+                {
+#if defined( SW_PLATFORM_WINDOWS )
+                    return runFxc( setup, step, inoutText, outResult );
+#elif defined( SW_PLATFORM_POSIX )
+                    // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 이 타깃이 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
+                    // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
+                    // 진짜 이유가 드러나지 않아 부르는 쪽이 환경 문제와 셰이더 문제를 구분하지 못한다.
+                    outResult._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";
+                    return CompilerRunResult::Rejected;
+#else
+    #error "Unsupported platform"
+#endif
+                }
+#if defined( SW_HAS_DXC_API )
+                return runDXC( setup, step, inoutText, outResult );
+#else
+                return CompilerRunResult::NoOutput;
+#endif
+            }
+
+            /** @brief 요청 @p requestDesc 를 전처리한 글의 키입니다. DDC 의 기록이 이미 새것이거나, 글로 겹치지 않는 요청(디버그 코드젠 · 캐시하지 않는 것)이거나, 전처리하지 못하면 0 입니다. */
+            static uint64 computeMissingSourceKey( const ShaderCompileDesc& requestDesc )
+            {
+                const expected<CompileSetup> setup = setUp( requestDesc );
+                if ( setup.has_value() == false || setup->_action._bUseCache == false || setup->_desc._bDebugCodegen != SW_FALSE )
+                    return 0;
+                CookRecord record;
+                if ( setup->_pCache->readRecord( setup->_action._actionKey, record ) && record.isFresh( setup->_action._jobDesc ) )
+                    return 0;
+                const CookJob       job{ setup->_action._jobDesc }; // 쿠킹 세션은 작업 밖의 읽기(include)를 거절한다
+                vector<uint8>       text;
+                ShaderCompileResult result{};
+                return runCompiler( *setup, CompileStep::Preprocess, text, result ) == CompilerRunResult::Succeeded ? makeSourceKey( *setup, text )._key : 0;
+            }
+
+            /** @brief 병렬로 전처리해 글 키를 구하는 일의 입력입니다(`compileDistinct`) — 워커는 제 칸에만 쓴다. */
+            struct SourceKeyJob
+            {
+                const vector<ShaderCompileDesc>* _pListDesc{ nullptr };
+
+                /** @brief 요청 @p index 의 글 키를 제 칸 @p outKey 에 씁니다(`runParallelInto` 본문). 컴파일할 것이 없으면 0 입니다. */
+                void operator()( uint32 index, uint64& outKey ) const { outKey = computeMissingSourceKey( ( *_pListDesc )[index] ); }
+            };
+
+            /** @brief 글이 서로 다른 요청을 병렬로 컴파일하는 일의 입력입니다(`compileDistinct`). 결과는 DDC 에 남고, 실패는 같은 요청을 다시 컴파일하는 쪽이 센다. */
+            struct DistinctCompileJob
+            {
+                const vector<const ShaderCompileDesc*>* _pListDesc{ nullptr };
+
+                /** @brief 요청 @p index 를 컴파일하고 성공했는지를 제 칸 @p outDone 에 씁니다(`runParallelInto` 본문). */
+                void operator()( uint32 index, uint8& outDone ) const { outDone = ShaderCompiler::compileHLSL( *( *_pListDesc )[index] )._bSuccess ? 1 : 0; }
+            };
         };
     } // namespace
 } // namespace sw
@@ -889,44 +1055,18 @@ namespace sw
     {
         using Internal = ShaderCompilerInternal;
         ShaderCompileResult result{};
-        result._bSuccess = false;
-        // 엔진 설정 값은 요청이 실어 온 사본만 쓴다 — 이 함수는 컴파일 워커에서 불려 설정을 직접 읽으면 제자리 덮기와 겹친다.
-        if ( requestDesc._enginePolicy.has_value() == false )
-        {
-            result._errorMessage = "The shader compile request carries no engine policy (ShaderCompileDesc::_enginePolicy) - the requester captures it";
-            SW_LOG_ERROR_ID( "ShaderCompiler.EnginePolicyMissing", "%# ('%#')", result._errorMessage, requestDesc._source.c_str() );
-            return result;
-        }
-        const ShaderCompileDesc desc = Internal::makeFullDesc( requestDesc );
-        result._bytecode.reserve( 4096 );
-
-        // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
-        const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
-        if ( resolver.has_value() == false )
-        {
-            result._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
-            return result;
-        }
-        const expected<ShaderCompileInput> input = resolver->resolve( desc._source );
-        if ( input.has_value() == false )
+        result._bSuccess                              = false;
+        const expected<Internal::CompileSetup> opened = Internal::setUp( requestDesc );
+        if ( opened.has_value() == false )
         {
             StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "%#: %#", input.error().message(), input.error().detail() );
+            errorBuilder.appendFormat( "%#: %#", opened.error().message(), opened.error().detail() );
             result._errorMessage = string( errorBuilder.view() );
-            SW_LOG_ERROR_ID( "ShaderCompiler.SourceUnresolved", "%#", result._errorMessage );
             return result;
         }
-
-        const expected<DerivedDataCache>& derivedDataCache = Internal::getDerivedDataCache();
-        if ( derivedDataCache.has_value() == false )
-        {
-            result._errorMessage = "The shader DDC could not be opened (Config/Dev/DerivedData.json)";
-            SW_LOG_ERROR_ID( "ShaderCompiler.DerivedDataUnavailable", "%#: %# (%#)", result._errorMessage, derivedDataCache.error().message(), derivedDataCache.error().detail() );
-            return result;
-        }
-        const uint64                  sourceHash = ContentHash::computeFile( input->_source.str() ); // 못 읽으면 0 — 컴파일도 같은 파일을 읽다 실패한다
-        const Internal::CompileAction action     = Internal::makeCompileAction( desc, sourceHash );
-        if ( action._bUseCache && Internal::findCached( *derivedDataCache, action, result._record, result._bytecode ) )
+        const Internal::CompileSetup& setup = *opened;
+        result._bytecode.reserve( 4096 );
+        if ( setup._action._bUseCache && Internal::findCached( *setup._pCache, setup._action, result._record, result._bytecode ) )
         {
             result._bSuccess = true;
             return result;
@@ -935,8 +1075,8 @@ namespace sw
         result._bytecode.clear();
 
         // 이 컴파일의 작업 — 주 소스와 include 규칙이 읽은 것(없던 후보 포함)이 입력으로 적힌다. 컴파일러의 include 처리기는 이 스레드에서 불린다.
-        CookJob job{ action._jobDesc };
-        if ( job.recordDiskInput( input->_source.str(), sourceHash ) == false )
+        CookJob job{ setup._action._jobDesc };
+        if ( job.recordDiskInput( setup._input._source.str(), setup._sourceHash ) == false )
         {
             result._errorMessage = "The shader source could not be recorded as a cook input (see the error above).";
             return result;
@@ -946,7 +1086,7 @@ namespace sw
         // 요청마다 하면 적중도 느려지고, 맞은 항목의 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`CookRecord::isFresh`).
         // 언리얼도 셰이더 맵 DDC 조회가 컴파일 준비(include 검사)보다 먼저다.
         vector<string> listShadowed;
-        if ( resolver->getIncludeResolver().findShadowedHeaders( input->_shadersFolder, listShadowed ) == false )
+        if ( setup._resolver.getIncludeResolver().findShadowedHeaders( setup._input._shadersFolder, listShadowed ) == false )
         {
             for ( const string& problem : listShadowed )
             {
@@ -959,63 +1099,113 @@ namespace sw
             return result;
         }
 
-        const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
-        // 캐시에 없어 실제로 컴파일하는 것만 알린다 — 빈 캐시의 첫 실행은 수 분 동안 이 줄만 나온다. 이 줄이 "멈춘 것이 아니라 일하는 중" 의 증거다
-        // (백엔드마다 실행의 정지 감시가 자식 로그가 자라는지로 본다 — AutomationPerBackend). 캐시가 찬 실행은 한 줄도 내지 않는다(언리얼 셰이더 컴파일 진행 줄과 같은 자리).
-        const int64 compileStartNanos = MonotonicClock::nowNanoseconds();
-        // 기본 캡처: Shipping 은 로그 줄이 빠져 이름을 적은 캡처가 쓰이지 않는다는 경고(-Wunused-lambda-capture)가 난다
-        [[maybe_unused]] const auto reportCompiled = [&]( const ShaderCompileResult& compiled )
+        // 전처리한 글로 한 번 더 찾는다 — 이 글을 낸 다른 변형이 이미 컴파일했으면 그 바이트코드다(`makeSourceKey`). include 처리기가 이 스레드의 작업에 입력을 적으므로
+        // 적중이어도 이 변형의 기록이 온전하다. 디버그 코드젠은 원본 소스를 바로 컴파일한다.
+        const bool                  bDebugCodegen = setup._desc._bDebugCodegen != SW_FALSE;
+        vector<uint8>               text;
+        Internal::SourceKey         sourceKey;
+        Internal::CompilerRunResult runResult = Internal::CompilerRunResult::Succeeded;
+        if ( bDebugCodegen == false )
         {
-            if ( compiled._bSuccess )
-                SW_LOG_INFO_ID( "ShaderCompiler.CompiledOnCacheMiss", "Compiled %# %# (%#) in %# ms", desc._source.c_str(), desc._entryPoint.c_str(), profile.c_str(),
+            runResult = Internal::runCompiler( setup, Internal::CompileStep::Preprocess, text, result );
+            if ( runResult == Internal::CompilerRunResult::Succeeded )
+            {
+                sourceKey = Internal::makeSourceKey( setup, text );
+                if ( setup._action._bUseCache && setup._pCache->find( sourceKey._key, sourceKey._description, result._bytecode ) && result._bytecode.empty() == false )
+                {
+                    result._bSuccess = true;
+                    Internal::finishCompile( *setup._pCache, setup._action, job, result );
+                    return result;
+                }
+                result._bytecode.clear();
+            }
+        }
+        if ( runResult == Internal::CompilerRunResult::Succeeded )
+        {
+            // 캐시에 없어 실제로 컴파일하는 것만 알린다 — 빈 캐시의 첫 실행은 수 분 동안 이 줄만 나온다. 이 줄이 "멈춘 것이 아니라 일하는 중" 의 증거다
+            // (백엔드마다 실행의 정지 감시가 자식 로그가 자라는지로 본다 — AutomationPerBackend). 캐시가 찬 실행은 한 줄도 내지 않는다(언리얼 셰이더 컴파일 진행 줄과 같은 자리).
+            [[maybe_unused]] const int64 compileStartNanos = MonotonicClock::nowNanoseconds();
+            // 위 줄은 컴파일이 끝나야 찍힌다 — 한 번이 정지 시한보다 긴 컴파일(fxc 의 큰 셰이더)도 일하는 중임을 간격마다 알린다.
+            StringBuilder<constant::buffer::kMax256> progressBuilder;
+            progressBuilder.appendFormat( "%# %# (%#) compile", setup._desc._source.c_str(), setup._desc._entryPoint, setup._profile );
+            const ScopedProgressReport progress{ string( progressBuilder.view() ) };
+            runResult = Internal::runCompiler( setup, bDebugCodegen ? Internal::CompileStep::CompileSource : Internal::CompileStep::CompilePreprocessed, text, result );
+            if ( runResult == Internal::CompilerRunResult::Succeeded )
+            {
+                Internal::finishCompile( *setup._pCache, setup._action, job, result );
+                if ( setup._action._bUseCache && bDebugCodegen == false && setup._pCache->store( sourceKey._key, sourceKey._description, result._bytecode ) == false )
+                    SW_LOG_WARNING_ID( "ShaderCompiler.CouldNotWriteShader", "Could not write the shader DDC entry or record of key %#", sourceKey._key );
+                SW_LOG_INFO_ID( "ShaderCompiler.CompiledOnCacheMiss", "Compiled %# %# (%#) in %# ms", setup._desc._source.c_str(), setup._desc._entryPoint.c_str(), setup._profile.c_str(),
                                 ( MonotonicClock::nowNanoseconds() - compileStartNanos ) / constant::time::kNanosecondsPerMillisecond );
-        };
-        // 위 줄은 컴파일이 끝나야 찍힌다 — 한 번이 정지 시한보다 긴 컴파일(fxc 의 mesh_morph)도 일하는 중임을 간격마다 알린다.
-        StringBuilder<constant::buffer::kMax256> progressBuilder;
-        progressBuilder.appendFormat( "%# %# (%#) compile", desc._source.c_str(), desc._entryPoint, profile );
-        const ScopedProgressReport progress{ string( progressBuilder.view() ) };
-
-        const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
-        const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( bFxcTarget )
-        {
-            if ( Internal::compileDxbc( desc, resolver->getIncludeResolver(), *input, profile, result ) )
-                Internal::finishCompile( *derivedDataCache, action, job, result );
-            reportCompiled( result );
-            return result;
+                return result;
+            }
         }
-#elif defined( SW_PLATFORM_POSIX )
-        // DXBC 를 낼 수 있는 건 FXC(d3dcompiler) 뿐이고 그건 Windows 전용이다. 위 블록이 통째로
-        // 빠지는 플랫폼에서 이 타깃이 그대로 아래 DXC 로 흘러가면 vs_5_0 같은 SM5 프로파일을
-        // 모른다며 "invalid profile vs_5_0" 로 죽는다. 그 메시지로는 "이 플랫폼엔 D3D11 이 없다" 는
-        // 진짜 이유가 드러나지 않아 부르는 쪽이 환경 문제와 셰이더 문제를 구분하지 못한다.
-        if ( bFxcTarget )
-        {
-            result._bSuccess     = false;
-            result._errorMessage = "DXBC (D3D11) target is unavailable on this platform (requires Windows D3DCompiler).";
+        if ( runResult == Internal::CompilerRunResult::Rejected )
             return result;
-        }
-#else
-    #error "Unsupported platform"
-#endif // SW_PLATFORM_WINDOWS
-
-#if defined( SW_HAS_DXC_API )
-        const Internal::DxcResult serviceResult = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
-        if ( serviceResult == Internal::DxcResult::Compiled )
-        {
-            Internal::finishCompile( *derivedDataCache, action, job, result );
-            reportCompiled( result );
-            return result;
-        }
-        if ( serviceResult == Internal::DxcResult::Rejected )
-            return result;
-        // DXC 가 출력을 못 냈으면 실패다 - 예전에는 DX12 타깃을 FXC 로 다시 컴파일했지만 FXC 는 SM6 을 못 해 늘 실패했고, DXC 의 진짜 까닭을 FXC 의 글로 덮었다.
-#endif // SW_HAS_DXC_API
-
+        // 컴파일러가 출력을 못 냈으면 실패다 - 예전에는 DX12 타깃을 FXC 로 다시 컴파일했지만 FXC 는 SM6 을 못 해 늘 실패했고, DXC 의 진짜 까닭을 FXC 의 글로 덮었다.
         if ( result._errorMessage.empty() )
-            result._errorMessage = "DXC produced no shader output (see the DXC error above)";
-        SW_LOG_ERROR_ID( "ShaderCompiler.Path", "%# (Path: %#)", result._errorMessage.c_str(), desc._source.c_str() );
+            result._errorMessage = "The shader compiler produced no output (see the error above)";
+        SW_LOG_ERROR_ID( "ShaderCompiler.Path", "%# (Path: %#)", result._errorMessage.c_str(), setup._desc._source.c_str() );
         return result;
+    }
+
+    void ShaderCompiler::compileDistinct( const vector<ShaderCompileDesc>& listDesc )
+    {
+        using Internal = ShaderCompilerInternal;
+        vector<uint64>               listKey( listDesc.size(), 0 );
+        const Internal::SourceKeyJob keyJob{ &listDesc };
+        engine::runParallelInto<uint64>( listKey, 1, keyJob );
+
+        vector<const ShaderCompileDesc*> listDistinct;
+        unordered_set<uint64>            uniqueKey;
+        for ( size_t index = 0; index < listDesc.size(); ++index )
+        {
+            if ( listKey[index] != 0 && uniqueKey.insert( listKey[index] ).second )
+                listDistinct.push_back( &listDesc[index] );
+        }
+        vector<uint8>                      listDone( listDistinct.size(), 0 );
+        const Internal::DistinctCompileJob compileJob{ &listDistinct };
+        engine::runParallelInto<uint8>( listDone, 1, compileJob );
+    }
+
+    string ShaderCompiler::normalizePreprocessedText( string_view text )
+    {
+        constexpr string_view kLineDirective = "#line";
+        string                normalized;
+        normalized.reserve( text.size() );
+        utf8   pendingSeparator = 0; // 다음 글자 앞에 쓸 빈칸 하나 또는 줄바꿈 하나
+        bool   bLineStart       = true;
+        size_t index            = 0;
+        while ( index < text.size() )
+        {
+            const utf8 character = text[index];
+            if ( character == '\n' )
+            {
+                pendingSeparator = '\n';
+                bLineStart       = true;
+                ++index;
+                continue;
+            }
+            if ( character == ' ' || character == '\t' || character == '\r' )
+            {
+                if ( pendingSeparator == 0 )
+                    pendingSeparator = ' ';
+                ++index;
+                continue;
+            }
+            if ( bLineStart && text.substr( index, kLineDirective.size() ) == kLineDirective )
+            {
+                while ( index < text.size() && text[index] != '\n' )
+                    ++index;
+                continue;
+            }
+            bLineStart = false;
+            if ( pendingSeparator != 0 && normalized.empty() == false )
+                normalized.push_back( pendingSeparator );
+            pendingSeparator = 0;
+            normalized.push_back( character );
+            ++index;
+        }
+        return normalized;
     }
 } // namespace sw
