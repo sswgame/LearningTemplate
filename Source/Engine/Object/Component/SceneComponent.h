@@ -72,6 +72,8 @@ namespace sw
         friend class SceneTransformHierarchy;
         friend class GameObject;      ///< 붙일 때 `bindToManager`
         friend class GameObjectStore; ///< 해체할 때 `unbindFromManager`
+        friend class SceneMoveConsumer;
+        friend class SceneMoveDispatch; ///< 움직임 줄 — 칸의 관심 · 줄 비트
 
     public:
         REFLECT_BODY();

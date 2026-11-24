@@ -82,6 +82,7 @@ namespace sw
     class ObjectIDAllocator;
     class PrimitiveRegistry;
     class SceneComponent;
+    class SceneMoveDispatch;
     class SceneTickScheduler;
     class SceneTransformHierarchy;
     class TagIndex;
@@ -444,6 +445,8 @@ namespace sw
          *          합니다. 컴포넌트는 등록 시점에 이것을 받아 들고 있으므로, 매니저 전체를 알 필요가 없습니다.
          */
         PrimitiveRegistry& getPrimitiveRegistry();
+        /** @brief 움직인 씬 컴포넌트를 구독자마다 모으는 곳입니다. 구독은 `SceneMoveConsumer` 로 합니다. */
+        SceneMoveDispatch& getMoveDispatch();
         /** @brief 그릴 수 있는 컴포넌트의 레지스트리입니다. */
         const PrimitiveRegistry& getPrimitiveRegistry() const;
 

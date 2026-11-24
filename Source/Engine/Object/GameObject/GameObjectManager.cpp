@@ -16,6 +16,7 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneMoveDispatch.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ObjectIDAllocator.h"
@@ -220,6 +221,7 @@ namespace sw
     {
         WorldOrigin             _worldOrigin; ///< 오브젝트 자리가 기준한 월드 원점(`getWorldOrigin`)
         SceneTransformHierarchy _transformHierarchy;
+        SceneMoveDispatch       _moveDispatch; ///< 구독자(씬 서비스)보다 먼저 서고 나중에 내려간다
         PrimitiveRegistry       _primitiveRegistry;
         CameraRegistry          _cameraRegistry;
         TagIndex                _tagIndex;
@@ -236,6 +238,7 @@ namespace sw
         State( GameObjectManager& manager, StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& objectIDAllocator, const SceneEngineServices& services )
             : _worldOrigin{}
             , _transformHierarchy{}
+            , _moveDispatch{}
             , _primitiveRegistry{}
             , _cameraRegistry{}
             , _tagIndex{}
@@ -587,6 +590,11 @@ namespace sw
     bool GameObjectManager::hasDirtySceneTransforms() const
     {
         return _pState->_transformHierarchy.hasDirty();
+    }
+
+    SceneMoveDispatch& GameObjectManager::getMoveDispatch()
+    {
+        return _pState->_moveDispatch;
     }
 
     PrimitiveRegistry& GameObjectManager::getPrimitiveRegistry()

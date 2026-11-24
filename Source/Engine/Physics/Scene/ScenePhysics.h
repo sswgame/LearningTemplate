@@ -52,6 +52,7 @@ namespace sw
     class PhysicsSystem;
     class RigidBody2DComponent;
     class RigidBodyComponent;
+    class SceneStreamingSubsystem;
 
     /**
      * @struct ContactStayListener
@@ -257,10 +258,6 @@ namespace sw
         void registerComponent( PhysicsComponent* pComponent );
         /** @brief 물리 컴포넌트를 뺍니다. */
         void unregisterComponent( PhysicsComponent* pComponent );
-        /** @brief 바닥을 묻는 중(스트리밍하는 씬)이면 true 입니다 — 움직인 컴포넌트가 줄을 설지 본다. 게임 스레드가 물리 단계에서만 바꾼다(플러시 워커와 겹치지 않는다). */
-        bool isFloorTracked() const { return _bStreamingHolds == SW_TRUE; }
-        /** @brief @p component 의 바닥을 다음 물리 프레임에 다시 묻게 줄을 세웁니다(바디 · 캐릭터 단계만, 한 번만). 플러시 워커 여럿이 함께 부릅니다. */
-        void queueFloorCheck( PhysicsComponent& component );
         /** @brief 지금까지 바닥을 물은 수입니다(움직인 것만 묻는지 보는 테스트 · 진단). */
         const DevCounter& getFloorCheckCount() const;
         /** @brief 등록된 물리 컴포넌트 수입니다(진단 · 테스트). */
@@ -366,7 +363,7 @@ namespace sw
          * @brief 바닥(스트리밍 셀)이 없는 자리의 동적 바디 · 캐릭터를 쥐고, 셀이 오른 자리의 것을 풉니다(`PhysicsComponent::isStreamingHeld`, `SceneStreamingSubsystem::isFloorMissing`).
          *        셀이 내려간 후보만 몸 모양을 아래로 쓸어(`PhysicsSettings::_streamingFloorProbeDistance`, 땅 질의 층) 받쳐 줄 충돌(위를 보는 면)이 있으면 쥐지 않는다.
          * @details 스트리밍은 물리보다 아래 층이라 물리가 묻는다. 셀을 스트리밍하지 않는 씬은 쥔 것이 없으면 아무것도 하지 않는다.
-         *          자리마다의 답은 움직인 것(`queueFloorCheck`)만, 셀이 오르내린 프레임(`SceneStreamingSubsystem::getFloorSerial`)에는 모두 다시 묻는다 — 선 바디는 프레임마다 묻지 않는다.
+         *          자리마다의 답은 움직인 것(`SceneMoveConsumer`)만, 셀이 오르내린 프레임(`SceneStreamingSubsystem::getFloorSerial`)에는 모두 다시 묻는다 — 선 바디는 프레임마다 묻지 않는다.
          *          바닥 없는 자리의 것만 프레임마다 받침을 쓸어 본다(둘레의 충돌이 바뀔 수 있다).
          */
         void updateStreamingHolds();
@@ -377,7 +374,9 @@ namespace sw
         /** @brief `queueCharacterMove` 로 모은 이동을 3D 씬에 한 번에 넘기고 비웁니다(스텝마다 `onPrePhysicsStep` 뒤). */
         void flushCharacterMoves( float32 fixedDeltaTime );
 
-        /** @brief 스트리밍 바닥 묻기의 상태입니다 — 줄 선 것 · 바닥 없는 자리의 것 · 마지막으로 본 번호(정의는 .cpp). */
+        /** @brief 스트리밍을 시작하고 끝낼 때 올라 있는 바디 · 캐릭터의 움직임을 듣거나(@p bTrack) 그만 듣습니다. */
+        void trackFloorMoves( bool bTrack );
+        /** @brief 스트리밍 바닥 묻기의 상태입니다 — 움직임 구독 · 바닥 없는 자리의 것 · 마지막으로 본 번호(정의는 .cpp). */
         struct FloorTracking;
 
         /** @brief 유지 듣는 쪽 하나입니다(`registerContactStayListener`) — 켜짐 · 파괴 대기는 컴포넌트로 본다. */
@@ -439,7 +438,7 @@ namespace sw
         float32                                                 _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
         uint8                                                   _bConfigured         : 1;
         uint8                                                   _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
-        uint8                                                   _bStreamingHolds     : 1; ///< 스트리밍하는 씬이라 바닥을 묻는 중이다(`isFloorTracked` — 스트리밍이 끝나면 한 번 모두 푼다)
+        uint8                                                   _bStreamingHolds     : 1; ///< 스트리밍하는 씬이라 바닥을 묻는 중이다(`updateStreamingHolds` — 스트리밍이 끝나면 한 번 모두 푼다)
     };
 
     /**

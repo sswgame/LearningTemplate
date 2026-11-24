@@ -2,10 +2,7 @@
 
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
-#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/DevCounter.h"
-#include "Core/Concurrency/ScopedLock.h"
-#include "Core/Concurrency/SpinLock.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -17,6 +14,7 @@
 #include "Engine/Foundation/WorkerReadFence.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneMoveDispatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -137,12 +135,16 @@ namespace sw
 
     struct ScenePhysics::FloorTracking
     {
-        SpinLock                             _lock;                    ///< `_listCheck` 를 지킨다(플러시 워커가 함께 붙인다)
-        vector<PhysicsComponent*> _listCheck SW_GUARDED_BY( _lock ){}; ///< 움직였거나 새로 올라 바닥을 다시 물을 것(`queueFloorCheck`)
-        vector<PhysicsComponent*>            _listCheckScratch{};      ///< 이번 프레임에 물을 사본(재사용)
-        vector<PhysicsComponent*>            _listMissing{};           ///< 바닥 없는 자리에 있는 것 — 컴포넌트가 자기 자리(`_floorMissingIndex`)를 든다
-        uint64                               _serial{ 0 };             ///< 마지막으로 본 바닥 번호(`SceneStreamingSubsystem::getFloorSerial`)
-        DevCounter                           _checkCount;              ///< `getFloorCheckCount`
+        SceneMoveConsumer         _moves;         ///< 바닥을 물을 바디 · 캐릭터의 움직임(스트리밍하는 동안만 듣는다)
+        vector<SceneComponent*>   _listMoved{};   ///< 이번 프레임에 움직인 것(재사용)
+        vector<PhysicsComponent*> _listMissing{}; ///< 바닥 없는 자리에 있는 것 — 컴포넌트가 자기 자리(`_floorMissingIndex`)를 든다
+        uint64                    _serial{ 0 };   ///< 마지막으로 본 바닥 번호(`SceneStreamingSubsystem::getFloorSerial`)
+        DevCounter                _checkCount;    ///< `getFloorCheckCount`
+
+        explicit FloorTracking( GameObjectManager& manager )
+            : _moves{ manager }
+        {
+        }
     };
 
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
@@ -178,7 +180,7 @@ namespace sw
         , _arrContactLog{}
         , _contactLogCount{ 0 }
         , _stepCount{ 0 }
-        , _pFloor{ make_unique<FloorTracking>() }
+        , _pFloor{ make_unique<FloorTracking>( manager ) }
         , _openReadScopeCount{ 0 }
         , _debrisBudget{}
         , _fixedStepOverride{ 0.0f }
@@ -212,26 +214,24 @@ namespace sw
         {
             if ( _bStreamingHolds == SW_FALSE )
                 return;
-            // 스트리밍이 끝났다 — 쥔 것을 모두 푼다. 줄에 남은 것은 다시 스트리밍할 때 모두 묻는다.
+            // 스트리밍이 끝났다 — 쥔 것을 모두 푼다.
             _bStreamingHolds = SW_FALSE;
+            trackFloorMoves( false );
             while ( floor._listMissing.empty() == false )
             {
                 removeFloorMissing( *floor._listMissing.back() );
             }
             return;
         }
-        // 1. 자리마다의 답을 맞춘다 — 움직인 것만, 셀이 오르내렸으면(또는 처음이면) 모두.
-        {
-            ScopedLock<SpinLock> lock{ floor._lock };
-            floor._listCheckScratch.swap( floor._listCheck ); // 묻는 동안 더티 월드를 합성하면 줄이 다시 자랄 수 있다 — 사본을 돈다
-            floor._listCheck.clear();
-        }
-        for ( PhysicsComponent* pComponent : floor._listCheckScratch )
-        {
-            pComponent->_bFloorCheckQueued.store( false, std::memory_order_relaxed );
-        }
+        // 1. 자리마다의 답을 맞춘다 — 움직인 것만, 셀이 오르내렸으면 모두(처음 듣기 시작한 것은 움직인 것에 든다).
         const uint64 floorSerial = streaming.getFloorSerial();
-        if ( _bStreamingHolds == SW_FALSE || floorSerial != floor._serial )
+        const bool   bAll        = _bStreamingHolds == SW_TRUE && floorSerial != floor._serial;
+        if ( _bStreamingHolds == SW_FALSE )
+            trackFloorMoves( true );
+        _bStreamingHolds = SW_TRUE;
+        floor._serial    = floorSerial;
+        floor._moves.takeMoved( floor._listMoved );
+        if ( bAll )
         {
             for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
             {
@@ -243,14 +243,11 @@ namespace sw
         }
         else
         {
-            for ( PhysicsComponent* pComponent : floor._listCheckScratch )
+            for ( SceneComponent* pComponent : floor._listMoved )
             {
-                refreshFloorMissing( *pComponent, streaming );
+                refreshFloorMissing( static_cast<PhysicsComponent&>( *pComponent ), streaming ); // 듣는 것은 물리 컴포넌트뿐이다
             }
         }
-        floor._listCheckScratch.clear();
-        floor._serial    = floorSerial;
-        _bStreamingHolds = SW_TRUE;
         if ( floor._listMissing.empty() )
             return;
         // 2. 바닥 없는 자리의 것만 받침을 본다.
@@ -307,13 +304,18 @@ namespace sw
         _pFloor->_listMissing.pop_back();
     }
 
-    void ScenePhysics::queueFloorCheck( PhysicsComponent& component )
+    void ScenePhysics::trackFloorMoves( bool bTrack )
     {
-        const bool bHasFloorPhase = component._phase == PhysicsComponentPhase::Body || component._phase == PhysicsComponentPhase::Character;
-        if ( bHasFloorPhase == false || component._bFloorCheckQueued.exchange( true, std::memory_order_relaxed ) )
-            return;
-        ScopedLock<SpinLock> lock{ _pFloor->_lock };
-        _pFloor->_listCheck.push_back( &component );
+        for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
+        {
+            for ( const PhysicsComponent* pComponent : _arrListComponent[static_cast<uint32>( phase )] )
+            {
+                if ( bTrack )
+                    _pFloor->_moves.track( *pComponent );
+                else
+                    _pFloor->_moves.untrack( pComponent->getTransformSlot(), pComponent );
+            }
+        }
     }
 
     const DevCounter& ScenePhysics::getFloorCheckCount() const
@@ -571,8 +573,8 @@ namespace sw
         vector<PhysicsComponent*>& listComponent = _arrListComponent[static_cast<uint32>( pComponent->_phase )];
         pComponent->_physicsIndex                = static_cast<uint32>( listComponent.size() );
         listComponent.push_back( pComponent );
-        if ( isFloorTracked() )
-            queueFloorCheck( *pComponent );
+        if ( _bStreamingHolds == SW_TRUE && pComponent->_phase != PhysicsComponentPhase::Joint )
+            _pFloor->_moves.track( *pComponent );
     }
 
     void ScenePhysics::unregisterComponent( PhysicsComponent* pComponent )
@@ -589,11 +591,7 @@ namespace sw
         listComponent.pop_back();
         pComponent->_physicsIndex = PhysicsComponent::kNotRegistered;
         removeFloorMissing( *pComponent );
-        if ( pComponent->_bFloorCheckQueued.exchange( false, std::memory_order_relaxed ) )
-        {
-            ScopedLock<SpinLock> lock{ _pFloor->_lock };
-            (void)VectorUtil::removeSingleSwap( _pFloor->_listCheck, pComponent ); // 묻는 동안에는 구조가 바뀌지 않아 사본에는 없다
-        }
+        _pFloor->_moves.untrack( pComponent->getTransformSlot(), pComponent );
     }
 
     void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )

@@ -16,8 +16,13 @@ namespace sw
     // 일은 `SpatialIndex` 단계 끝에 넘겨 `ApplyPostPhysics` 본문 앞에서 마친다 — 그 사이 `TickPostPhysics` 틱이 앞 버퍼를 읽는다. 일은 자기 뒤 버퍼만 쓴다.
     SW_SCENE_SERVICE_WITH_FRAME_JOB( SceneSpatialGrid, SpatialIndex, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::SpatialIndex }, SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{} ), ApplyPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::SpatialIndex }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
-    SceneSpatialGrid::SceneSpatialGrid( GameObjectManager& /*manager*/ ) // 서비스 생성 계약의 인자 — 색인은 서비스 훅으로만 오브젝트를 받는다
-        : _listEntry{}
+    SceneSpatialGrid::SceneSpatialGrid( GameObjectManager& manager )
+        : _manager{ manager }
+        , _moves{ manager }
+        , _mapSourceEntry{}
+        , _listMovedSource{}
+        , _arrPendingEntry{}
+        , _listEntry{}
         , _listFreeEntry{}
         , _listRemovedEntry{}
         , _listLayer{}
@@ -36,6 +41,10 @@ namespace sw
     SceneSpatialGrid::~SceneSpatialGrid()
     {
         waitBackBufferRebuild();
+        for ( const auto& pair : _mapSourceEntry )
+        {
+            _moves.untrack( _listEntry[pair.second]._sourceSlot, pair.first );
+        }
     }
 
     void SceneSpatialGrid::projectToPlane( const SpatialGridLayerDesc& layer, const float3& position, float32& outPlaneX, float32& outPlaneY )
@@ -115,6 +124,7 @@ namespace sw
         Entry& entry             = _listEntry[entryIndex];
         entry._pKey              = &key;
         entry._pSource           = &source;
+        entry._sourceSlot        = source.getTransformSlot();
         entry._sequence          = _nextSequence++;
         entry._extent            = extent;
         entry._layerIndex        = layerIndex;
@@ -122,6 +132,9 @@ namespace sw
         entry._arrSeenVersion[0] = 0;
         entry._arrSeenVersion[1] = 0;
         addedLayer._listEntryIndex.push_back( entryIndex );
+        linkSource( entryIndex );
+        _arrPendingEntry[0].push_back( entryIndex ); // 같은 소스의 둘째 항목은 움직임 줄에 새로 서지 않는다
+        _arrPendingEntry[1].push_back( entryIndex );
 
         const float32 neededCell = extent * 2.0f;
         if ( neededCell > addedLayer._cellSize )
@@ -155,6 +168,7 @@ namespace sw
         layer._listEntryIndex.pop_back();
         // 앞 버퍼는 지금 뺀다 — 같은 프레임의 질의가 지울 컴포넌트를 받지 않는다. 뒤 버퍼는 다음 일이 빼고, 칸은 그 뒤에 다시 쓴다.
         layer._arrGrid[_frontIndex].remove( SlotHandle::make( entryIndex, pEntry->_generation ) );
+        unlinkSource( entryIndex );
         pEntry->_pKey    = nullptr;
         pEntry->_pSource = nullptr;
         _listRemovedEntry.push_back( entryIndex );
@@ -172,15 +186,17 @@ namespace sw
         // 두 버퍼 모두 다시 넣는다 — 앞은 지금, 뒤는 다음 일이(본 번호를 지운다).
         pEntry->_arrSeenVersion[0] = 0;
         pEntry->_arrSeenVersion[1] = 0;
-        Layer&        layer        = _listLayer[pEntry->_layerIndex];
-        const float32 neededCell   = extent * 2.0f;
+        _arrPendingEntry[0].push_back( entry.index() );
+        _arrPendingEntry[1].push_back( entry.index() );
+        Layer&        layer      = _listLayer[pEntry->_layerIndex];
+        const float32 neededCell = extent * 2.0f;
         if ( neededCell > layer._cellSize )
         {
             layer._cellSize = neededCell;
             refreshLayer( pEntry->_layerIndex );
             return;
         }
-        if ( layer._arrBuiltCell[_frontIndex] > 0.0f )
+        if ( layer._arrBuiltCell[_frontIndex] > 0.0f && isSourceAlive( *pEntry ) )
         {
             uint32       version{ 0 };
             const Change change = makeInsertChange( entry.index(), version );
@@ -241,6 +257,8 @@ namespace sw
         layer._arrBuiltCell[back]  = 0.0f;
         for ( const uint32 entryIndex : layer._listEntryIndex )
         {
+            if ( isSourceAlive( _listEntry[entryIndex] ) == false )
+                continue;
             uint32       version{ 0 };
             const Change change = makeInsertChange( entryIndex, version );
             layer._arrGrid[front].insert( change._handle, change._minX, change._minY, change._maxX, change._maxY );
@@ -288,6 +306,7 @@ namespace sw
     {
         (void)deltaTime;
         waitBackBufferRebuild();
+        collectMovedEntries();
         const uint8 back = static_cast<uint8>( 1u - _frontIndex );
         _listChange.clear();
         for ( const uint32 entryIndex : _listRemovedEntry )
@@ -305,20 +324,33 @@ namespace sw
             if ( layer.needsGrid() == false )
                 continue;
             // 셀이 바뀐 뒤 버퍼는 처음부터 다시 짓는다 — 모든 항목을 넣는다.
-            const bool bRebuild = layer._arrBuiltCell[back] != layer._cellSize;
-            layer._bRebuildBack = bRebuild ? SW_TRUE : SW_FALSE;
+            if ( layer._arrBuiltCell[back] == layer._cellSize )
+                continue;
+            layer._bRebuildBack = SW_TRUE;
             for ( const uint32 entryIndex : layer._listEntryIndex )
             {
-                Entry&       entry   = _listEntry[entryIndex];
-                const uint32 version = entry._pSource->getWorldTransformVersion();
-                if ( bRebuild == false && entry._arrSeenVersion[back] == version )
+                if ( isSourceAlive( _listEntry[entryIndex] ) == false )
                     continue;
                 uint32 seenVersion{ 0 };
                 _listChange.push_back( makeInsertChange( entryIndex, seenVersion ) );
-                entry._arrSeenVersion[back] = seenVersion;
+                _listEntry[entryIndex]._arrSeenVersion[back] = seenVersion;
             }
             layer._arrBuiltCell[back] = layer._cellSize;
         }
+        // 움직였거나(`collectMovedEntries`) 반 크기가 바뀐 항목만 고쳐 넣는다 — 다시 짓는 층의 것은 위에서 이미 넣어 본 번호가 같다.
+        for ( const uint32 entryIndex : _arrPendingEntry[back] )
+        {
+            Entry&     entry = _listEntry[entryIndex];
+            const bool bSkip = entry._pKey == nullptr || _listLayer[entry._layerIndex].needsGrid() == false || isSourceAlive( entry ) == false;
+            if ( bSkip )
+                continue; // 뺀 칸이거나 소스가 사라졌거나 맞추지 않는 층이다 — 다시 맞출 때 처음부터 짓는다
+            if ( entry._arrSeenVersion[back] == entry._pSource->getWorldTransformVersion() )
+                continue;
+            uint32 seenVersion{ 0 };
+            _listChange.push_back( makeInsertChange( entryIndex, seenVersion ) );
+            entry._arrSeenVersion[back] = seenVersion;
+        }
+        _arrPendingEntry[back].clear();
         _bJobLaunched = SW_TRUE;
         // 넘긴 일은 이 배열만 본다 — 일이 도는 동안 층 벡터의 구조는 바뀌지 않고(새 층은 `getOrCreateLayer` 가 일을 기다린 뒤 더한다), 일은 층마다 뒤 버퍼 칸만 쓴다.
         _pJobLayer     = _listLayer.data();
@@ -333,6 +365,55 @@ namespace sw
         taskManager.addToStage( _jobStage, task, "SceneSpatialGrid" );
         task.submit();
         _bJobOnWorkers = SW_TRUE;
+    }
+
+    void SceneSpatialGrid::collectMovedEntries()
+    {
+        // 프레임 단계에서는 이미 펼쳐져 있다. 그 밖에서 부르면(도구 · 테스트) 쓴 자리를 먼저 펼쳐야 움직임이 줄에 선다.
+        if ( _manager.hasDirtySceneTransforms() )
+            _manager.flushSceneTransforms();
+        _moves.takeMoved( _listMovedSource );
+        for ( const SceneComponent* pSource : _listMovedSource )
+        {
+            const auto it = _mapSourceEntry.find( pSource );
+            if ( it == _mapSourceEntry.end() )
+                continue;
+            for ( uint32 entryIndex = it->second; entryIndex != constant::invalid_index::kUint32; entryIndex = _listEntry[entryIndex]._nextOfSource )
+            {
+                _arrPendingEntry[0].push_back( entryIndex );
+                _arrPendingEntry[1].push_back( entryIndex );
+            }
+        }
+    }
+
+    void SceneSpatialGrid::linkSource( uint32 entryIndex )
+    {
+        Entry&     entry = _listEntry[entryIndex];
+        const auto it    = _mapSourceEntry.find( entry._pSource );
+        _moves.track( *entry._pSource ); // 이미 듣고 있으면 그대로다 — 옛 소스가 사라진 주소를 새 소스가 받았어도 듣는다
+        entry._nextOfSource = it != _mapSourceEntry.end() ? it->second : constant::invalid_index::kUint32;
+        if ( it != _mapSourceEntry.end() )
+            it->second = entryIndex;
+        else
+            _mapSourceEntry[entry._pSource] = entryIndex;
+    }
+
+    void SceneSpatialGrid::unlinkSource( uint32 entryIndex )
+    {
+        Entry&     entry = _listEntry[entryIndex];
+        const auto it    = _mapSourceEntry.find( entry._pSource );
+        SW_ASSERT( it != _mapSourceEntry.end() );
+        uint32* pLink = &it->second;
+        while ( *pLink != entryIndex )
+        {
+            pLink = &_listEntry[*pLink]._nextOfSource;
+        }
+        *pLink              = entry._nextOfSource;
+        entry._nextOfSource = constant::invalid_index::kUint32;
+        if ( it->second != constant::invalid_index::kUint32 )
+            return;
+        _moves.untrack( entry._sourceSlot, entry._pSource );
+        _mapSourceEntry.erase( it );
     }
 
     void SceneSpatialGrid::rebuildBackBuffer()
@@ -394,6 +475,8 @@ namespace sw
                 continue;
             for ( const uint32 entryIndex : layer._listEntryIndex )
             {
+                if ( isSourceAlive( _listEntry[entryIndex] ) == false )
+                    continue;
                 uint32       version{ 0 };
                 const Change change = makeInsertChange( entryIndex, version );
                 layer._arrGrid[_frontIndex].update( change._handle, change._minX, change._minY, change._maxX, change._maxY );
