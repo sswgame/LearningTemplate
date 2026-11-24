@@ -192,6 +192,8 @@ SW_TEST_CASE( HubNetLinkTest, ServerAuthorityLoopReachesTheClient )
     SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
     rig.run( rig._server, 0.2f );
     SW_EXPECT_TRUE( agent._lastResult == HubActionResult::CoolingDown );
+    // 결과에는 대기가 끝나는 월드 서버 틱이 실린다 — 이 묶음의 서버 시계는 0 에 서 있어 대기 0.5 초(30 틱)가 곧 그 틱이다.
+    SW_EXPECT_TRUE( agent._attackReadyTick >= 30u && agent._attackReadyTick <= 32u );
     SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
 }
 

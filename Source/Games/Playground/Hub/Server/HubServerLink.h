@@ -76,6 +76,8 @@ namespace sw
         void acceptConnection( int32 connectionID, uint64 accountID );
         /** @brief 아바타 행동 하나의 판정을 알립니다(`HubAvatarAgent` 의 `Server` 함수 몸이 부른다). */
         void reportAction( HubAvatarAgent& agent, HubActionResult result );
+        /** @brief 아바타의 공격 재사용 대기가 끝나는 월드 서버 틱입니다(대기가 없으면 지금 틱). */
+        uint32 computeAttackReadyTick( uint32 avatarID ) const;
 
         /** @brief 연결이 열렸습니다 — 주체(계정)로 들입니다(라우터 사건 · 핫 리로드 뒤 붙어 있는 연결). */
         void onConnectionOpened( int32 connectionID );
@@ -139,6 +141,7 @@ namespace sw
         vector<Subscription>                             _listSubscription; ///< 라우터 등록. 처리기들보다 뒤에 선언한다 — 먼저 풀린다
         HubServerStats                                   _stats;
         INetPeers*                                       _pPeers;
+        const NetMessageRouter*                          _pRouter; ///< 월드의 서버 시계(`getWorldClock`)를 읽는다. 서 있는 동안만 있다
         float32                                          _autosaveTimer;
     };
 } // namespace sw

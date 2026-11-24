@@ -60,6 +60,8 @@ namespace sw
         HubActionResult _lastResult{ HubActionResult::Ok };
         PROPERTY()
         int32 _resultCount{ 0 };
+        PROPERTY()
+        uint32 _attackReadyTick{ 0 }; ///< 다음 공격을 받아 주는 월드 서버 틱(`SceneNetLink::getServerClock`)
 
         HubWorld*                                          _pWorld{ nullptr };  ///< 서버 — 판정하는 허브. 클라이언트는 비어 있다
         Delegate<void( HubAvatarAgent&, HubActionResult )> _onAction{};         ///< 서버 — 판정을 알릴 곳(서버 링크)
@@ -95,9 +97,9 @@ namespace sw
         /** @brief 서버가 알린 진행과 파티입니다. */
         FUNCTION( Client, Reliable )
         void receiveProgress( uint32 avatarID, int32 level, int32 experience, int32 coins, int32 herbCount, int32 defeatCount, int32 partySize, uint32 inviteFromID );
-        /** @brief 서버가 판정한 행동 결과입니다. */
+        /** @brief 서버가 판정한 행동 결과와, 공격 재사용 대기가 끝나는 월드 서버 틱입니다(대기가 없으면 지금 틱). */
         FUNCTION( Client, Reliable )
-        void receiveActionResult( HubActionResult result );
+        void receiveActionResult( HubActionResult result, uint32 attackReadyTick );
     };
 } // namespace sw
 
@@ -190,8 +192,6 @@ namespace sw
         bool                  isActive() const { return _bActive != SW_FALSE; }
         const HubAvatarAgent& getAgent() const { return _agent; }
         const MMOClientView&  getView() const { return _view; }
-        /** @brief 공격 결과를 받은 실제 시각(나노초)입니다. 재사용 대기가 지났는지 클라이언트가 어림할 때 씁니다. 없으면 0 입니다. */
-        int64 getLastResultNanoseconds() const { return _lastResultNanoseconds; }
 
     private:
         HubAvatarAgent                       _agent;
@@ -199,8 +199,6 @@ namespace sw
         MMOClientView                        _view;
         vector<RemoteCallRejectNotification> _listRejectScratch;
         vector<Subscription>                 _listSubscription;
-        int64                                _lastResultNanoseconds;
-        int32                                _seenResultCount;
         uint8                                _bActive;
     };
 } // namespace sw
