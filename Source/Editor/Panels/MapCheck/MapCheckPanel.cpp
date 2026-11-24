@@ -169,7 +169,7 @@ namespace sw::editor
         ImGui::TextWrapped( "%s", _viewState._fixableRowCount > 0 ? SW_LOCKEY( "EditorMapCheck", "NextActionFix" ) : SW_LOCKEY( "EditorMapCheck", "NextActionInspect" ) );
 
         constexpr ImGuiTableFlags kTableFlags =
-            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+            ImGuiTableFlags_Borders | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp; // 줄 전체가 고르기다 — 몸의 칸 경계가 누름을 먹지 않게 칸 폭은 머리에서만 끈다
         if ( ImGui::BeginTable( "##mapcheck_rows", 6, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
             return;
         const float32 dpiScale = EditorThemeUtil::getDPIScale();

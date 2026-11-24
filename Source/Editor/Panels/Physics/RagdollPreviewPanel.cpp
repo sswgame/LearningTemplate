@@ -370,8 +370,9 @@ namespace sw::editor
         if ( listBodyRow.empty() )
             return;
         const float32 height = RagdollPreviewPanelInternal::kTableHeight * EditorThemeUtil::getDPIScale();
-        if ( ImGui::BeginTable( "##ragdollPreview.bodies", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp,
-                                ImVec2( 0.0f, height ) ) )
+        // 줄 전체가 고르기다 — 몸의 칸 경계(양쪽 4 px × 모니터 DPI)가 누름을 먹지 않게 칸 폭은 머리에서만 끈다.
+        constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp;
+        if ( ImGui::BeginTable( "##ragdollPreview.bodies", 6, kTableFlags, ImVec2( 0.0f, height ) ) )
         {
             ImGui::TableSetupScrollFreeze( 0, 1 );
             ImGui::TableSetupColumn( "Bone" );
