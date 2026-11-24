@@ -45,21 +45,13 @@
 
 정한 줄은 지웠다. 남은 줄은 정본과 견줘 고치거나 지운다 — 재서 정하지 않는다.
 
-- `[코드]` **DX12 PSO 캐시:** 디스크 PSO 캐시(`ID3D12PipelineLibrary` — 언리얼 D3D12 드라이버 캐시 자리)가 없다.
-- `[코드]` **개수 버퍼 압축:** 컬링 뒤 살아남은 인자만 앞으로 모아 개수 버퍼 간접 그리기(언리얼 인스턴스 컬링). 투명 정렬의 다단 bitonic(큰 배치).
 - `[코드]` **카탈로그 쿠킹 꼴:** 카탈로그를 굽는 쿠커가 없다 — 언리얼 DataTable 처럼 이진 꼴로 구울지 정한다.
 - **RHI 큰 것:** RHI 스레드, 복사 큐, SM6.6 동적 자원, Vulkan 동적 오프셋 · 푸시 디스크립터, RT · 메시 셰이더 — 기능을 쓸 게임 요구가 생길 때.
 
 ## 6. 설계 할 일
 
-### 렌더링
-
-- `[코드]` **렌더러 규격:** 그래프 일시 버퍼(`graph.createBuffer`), 손으로 든 뷰 히스토리(TAA · GI · 자동 노출)를 한 형식으로, 되읽기 버퍼의 펜스 재사용 풀.
-- `[코드]` 렌더 스레드의 디스크 IO 를 단언으로 막는다(`FileUtil` 읽기 · 쓰기 입구).
-
 ### 코어 · 리플렉션
 
-- `[코드]` `sw::string` 자체 구현(지금 `std::basic_string` 상속 — 교체 빌드는 컴파일되게). AC-1: `set` · `unordered_set` · `string` 범위 연산의 복잡도.
 - `[코드]` 멤버 · 지역 · 매개변수 이름 형태(`_camelCase` · `out…` · 단수 컨테이너)를 clang 색인으로 자동 검사(`naming_words.py` 는 정규식이다).
 - `[코드]` 받는 쪽 없는 이벤트(방 클리어 `ActionCombatEvents.h`, 빙의 `ControlEvents.h` 등 — 버스 구독은 둘뿐이다)를 HUD · 카메라에 잇거나 지운다.
 
@@ -94,7 +86,6 @@
 
 정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
-- `[코드]` 렌더: 방출기 버퍼 선형 찾기(`VFXGPUSimulation.cpp:820`), HLOD 대리 합치기를 쿠킹 산출물로(`HLODMeshComponent.h:8`).
 - `[코드]` 허브: 카드 탁자의 숨긴 손패를 서버가 나눈다(`HubCardTableComponent.h:7`), 허브 폰 복제를 절대 자리로(`HubPawnReplicationComponent.h:14`).
 
 ## 11. 리소스
