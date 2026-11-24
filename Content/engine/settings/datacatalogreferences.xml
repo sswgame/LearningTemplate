@@ -135,6 +135,9 @@
 	<Field owner="SRPGGameModeComponent" field="_listPlayerUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_listEnemyUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_pilot" tag="SRPGPilotDef"/>
+	<CatalogKey tag="FighterDef" catalog="FighterCatalog" entry="Fighter"/>
+	<Field owner="FightingGameModeComponent" field="_playerFighter" tag="FighterDef"/>
+	<Field owner="FightingGameModeComponent" field="_opponentFighter" tag="FighterDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>
