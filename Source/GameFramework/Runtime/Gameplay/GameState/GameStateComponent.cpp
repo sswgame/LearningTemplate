@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -158,6 +159,8 @@ namespace sw
     GameStateComponent::GameStateComponent()
         : _flags{}
         , _clock{}
+        , _weatherCatalog{}
+        , _weatherSeed{ DeterministicRandom32::kDefaultSeed }
         , _pWeatherCatalog{}
         , _weather{}
         , _weatherMaterial{}
@@ -191,6 +194,8 @@ namespace sw
         if ( _clock.initialize( settings._clock ) == false )
             return GameStateInitResult::Refused;
         _flags.clear();
+        _weatherCatalog  = SharedAssetRef<WeatherCatalog>( settings._pWeatherCatalog );
+        _weatherSeed     = settings._weatherSeed;
         _pWeatherCatalog = settings._pWeatherCatalog;
         _weather.initialize( _pWeatherCatalog.get(), settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
@@ -244,6 +249,9 @@ namespace sw
         _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 평판 컴포넌트가 이 알림을 읽고 평판을 식힌다(`ReputationComponent::onTick`)
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
             (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
+        if ( _weatherCatalog.get() != _pWeatherCatalog.get() )
+            context.deferPostTickOnComponent( *this, []( GameStateComponent& state )
+            { state.rebindWeatherCatalog(); } );
         // 묶음 · 다른 컴포넌트의 배율 · 소리는 게임 스레드만 고친다 — 쓰기는 틱 뒤에 한다(씬에 하나인 컴포넌트라 큐에 일 하나다).
         if ( _weatherMaterial.isOpen() || _weatherScene.isOpen() )
             context.deferPostTickOnComponent( *this, []( GameStateComponent& state, GameObjectManager& manager )
@@ -251,6 +259,21 @@ namespace sw
                 state._weatherMaterial.apply( state._weather );
                 state._weatherScene.apply( manager, state._weather );
             } );
+    }
+
+    void GameStateComponent::rebindWeatherCatalog()
+    {
+        shared_ptr<const WeatherCatalog> pLatest = _weatherCatalog.snapshot();
+        if ( pLatest == nullptr || pLatest == _pWeatherCatalog )
+            return;
+        const shared_ptr<const WeatherCatalog> pPrevious = std::move( _pWeatherCatalog ); // 다시 묶을 때까지 앞 판을 쥔다 — 날씨가 그 정의를 가리킨다
+        _pWeatherCatalog                                 = std::move( pLatest );
+        _weatherMaterial.close();
+        _weatherScene.close( getOwner() != nullptr ? getOwner()->getMutableManager() : nullptr );
+        _restore.rebind( *this, [this]()
+        { _weather.initialize( _pWeatherCatalog.get(), _weatherSeed, _clock.getSeasonName() ); } );
+        _weatherMaterial.open( _pWeatherCatalog.get() );
+        _weatherScene.open( _pWeatherCatalog.get() );
     }
 
     void GameStateComponent::onEndPlay()

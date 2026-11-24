@@ -38,9 +38,9 @@ namespace sw
         WalletComponent();
         ~WalletComponent() override;
 
-        /** @brief 지갑 구간 하나를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 지갑 구간 하나를 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
-        /** @brief 바로 적용합니다(늘 열려 있다). `ComponentStateStore::restore` 가 부릅니다. */
+        /** @brief 바로 적용합니다(늘 열려 있다). `ComponentStateCodec::restoreObject` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
         /** @brief 늘 true 입니다 — `PlayerComponentUtil::findOpen` 의 약속을 다른 플레이어 상태 컴포넌트와 같게 둔다. */

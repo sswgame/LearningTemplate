@@ -56,7 +56,7 @@ namespace sw
         ParkGameModeComponent();
         virtual ~ParkGameModeComponent() override;
 
-        /** @brief 공원 상태(시뮬레이션, 건설한 배치, 열차 위치, 금고)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 공원 상태(시뮬레이션, 건설한 배치, 열차 위치, 금고)를 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
 
         // ---- 명령(판이 열린 동안만 받는다, 게임 스레드) ----

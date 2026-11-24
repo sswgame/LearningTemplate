@@ -348,10 +348,19 @@ SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
     stack.push( MinigameFrame{ makeMinigame( "farm", MinigameEntry::SceneSwitch ), makeSuspendedScene( "game/test/maps/town.scene.xml", true ) } );
     stack.push( MinigameFrame{ makeMinigame( "cardtable", MinigameEntry::SubLevel ), MinigameReturnPoint{ MinigameSubLevelReturn{ "game/test/maps/farm.scene.xml", hashed_string( "cardtable" ) } } } );
     stack.push( MinigameFrame{ makeMinigame( "pond", MinigameEntry::SceneSwitch ), MinigameReturnPoint{ MinigameEntranceReturn{} } } );
+    stack.pushResult( "game/test/maps/town.scene.xml", MinigameResult{ hashed_string( "fishing" ), hashed_string( "win" ), { MinigameResultValue{ hashed_string( MinigameResultValue::kMoneyName ), 30 } } } );
     stack.writeSaveState( bytes );
 
-    vector<MinigameSavedFrame> listFrame;
-    SW_REQUIRE_TRUE( MinigameStack::readSaveState( bytes, listFrame ) );
+    MinigameSavedState                state;
+    const vector<MinigameSavedFrame>& listFrame = state._listFrame;
+    SW_REQUIRE_TRUE( MinigameStack::readSaveState( bytes, state ) );
+    // 넘기지 못한 결과는 진행이다 — 받을 씬 · 값까지 세이브에 실린다.
+    SW_REQUIRE_EQUAL( size_t{ 1 }, state._listResult.size() );
+    SW_EXPECT_EQUAL( string( "game/test/maps/town.scene.xml" ), state._listResult[0]._scenePath );
+    SW_EXPECT_TRUE( state._listResult[0]._result._minigame == hashed_string( "fishing" ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, state._listResult[0]._result._listValue.size() );
+    SW_EXPECT_TRUE( state._listResult[0]._result._listValue[0]._amount == 30 );
+    stack.clearResults();
     SW_REQUIRE_TRUE( listFrame.size() == 3 );
     SW_EXPECT_TRUE( listFrame[0]._minigame == hashed_string( "farm" ) );
     const MinigameSuspendedScene* const pSuspended = std::get_if<MinigameSuspendedScene>( &listFrame[0]._returnPoint );
@@ -380,10 +389,13 @@ SW_TEST_CASE( MinigameTest, SaveStateRoundTripsTheFrames )
     SW_EXPECT_LOG( "MinigameStack.SaveStateNotRead" );
     vector<uint8> truncated = bytes;
     truncated.pop_back();
-    SW_EXPECT_FALSE( MinigameStack::readSaveState( truncated, listFrame ) );
-    vector<uint8> unknownKind = bytes;
-    unknownKind.back()        = 0xFFu; // 마지막 칸(입구)의 갈래 번호
-    SW_EXPECT_FALSE( MinigameStack::readSaveState( unknownKind, listFrame ) );
+    SW_EXPECT_FALSE( MinigameStack::readSaveState( truncated, state ) );
+    SW_REQUIRE_TRUE( stack.isEmpty() == false );
+    vector<uint8> noResult;
+    stack.writeSaveState( noResult );
+    vector<uint8> unknownKind                              = noResult;
+    unknownKind[unknownKind.size() - sizeof( uint32 ) - 1] = 0xFFu; // 마지막 칸의 갈래 번호(뒤는 결과 수) 자리
+    SW_EXPECT_FALSE( MinigameStack::readSaveState( unknownKind, state ) );
     SW_EXPECT_TRUE( listFrame.size() == 3 );
 }
 

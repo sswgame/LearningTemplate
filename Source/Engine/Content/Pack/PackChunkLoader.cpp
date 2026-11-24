@@ -73,8 +73,12 @@ namespace sw
                     state = FileState::MountQueued;
                     outListToMount.push_back( packName );
                 }
-                bFailed     = bFailed || state == FileState::Failed;
                 bAllMounted = bAllMounted && state == FileState::Mounted;
+                if ( state == FileState::Failed )
+                {
+                    bFailed = true;
+                    state   = FileState::Unknown; // 이번 요청에 진 것을 알렸다 — 다음 요청이 다시 받는다(끊긴 망이 돌아오면 그 씬을 열 수 있다)
+                }
             }
         }
         // 받기는 잠금 밖에서 건다 — 받기가 콜백을 바로 부를 수 있다.

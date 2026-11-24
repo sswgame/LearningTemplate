@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
@@ -607,4 +608,26 @@ SW_TEST_CASE( IntentPlaybackTest, MissingFileReportsAnError )
     const expected<uint32> started = IntentPlayback::startFromFile( rig._manager, test::makeScratchPath( "SwNoSuchIntentFile.swintent" ), false );
     SW_REQUIRE_FALSE( started.has_value() );
     SW_EXPECT_FALSE( started.error().message().empty() );
+}
+
+/** @brief [ControlSystemTest] 바라보던 쪽은 상태에 실리고 다시 빙의한 조종자가 잇는다 — 불러온 플레이어가 늘 같은 쪽을 보지 않는다 */
+SW_TEST_CASE( ControlSystemTest, RestoredPawnKeepsTheControlRotation )
+{
+    ControlRig rig;
+    Archive    forward;
+    rig._pPawn->writeState( forward );
+    SW_EXPECT_EQUAL( uint64{ 0 }, static_cast<uint64>( forward.getSize() ) );
+    rig._pPawn->requestControlRotation( 1.25f, -0.5f );
+    rig.update();
+    Archive written;
+    rig._pPawn->writeState( written );
+    vector<uint8> bytes;
+    written.writeData( bytes );
+
+    PawnComponent* pRebuilt = rig._manager.createGameObject( hashed_string( "Rebuilt" ) )->addComponent<PawnComponent>();
+    SW_REQUIRE_NOT_NULL( pRebuilt );
+    pRebuilt->restoreState( std::move( bytes ) );
+    rig._pFirst->possess( *pRebuilt );
+    SW_EXPECT_NEAR( 1.25f, rig._pFirst->getControlYaw(), 1.0e-3f );
+    SW_EXPECT_NEAR( -0.5f, rig._pFirst->getControlPitch(), 1.0e-3f );
 }

@@ -6,7 +6,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -61,10 +63,12 @@ namespace sw
 
         /** @brief `_openSlotCount` 가 있으면 게임의 아이템 카탈로그로 그 슬롯 수의 가방을 엽니다. */
         void onBeginPlay() override;
+        /** @brief 다시 읽힌 카탈로그가 있으면 틱 뒤에 다시 묶습니다(배포는 다시 읽지 않아 틱하지 않는다). */
+        void onTick( TickContext& context ) override;
 
-        /** @brief 가방 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 가방 구간 하나를 씁니다. 열리기 전이면 들고 있던 바이트를 그대로 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
-        /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다. `ComponentStateStore::restore` 가 부릅니다. */
+        /** @brief 열리기 전이면 들고 있다가 `initialize` 에서, 열린 뒤면 바로 적용합니다. `ComponentStateCodec::restoreObject` 가 부릅니다. */
         void restoreState( vector<uint8>&& bytes );
 
         bool isOpen() const { return _restore.isOpen(); }
@@ -74,8 +78,14 @@ namespace sw
         const Inventory& getInventory() const { return _inventory; }
 
     private:
-        Inventory            _inventory;
-        DeferredStateRestore _restore;
+        /** @brief 가방을 지금 판의 카탈로그에 다시 묶습니다. */
+        void rebindCatalog();
+
+    private:
+        SharedAssetRef<ItemCatalog>   _catalog;       ///< 연 카탈로그(다시 읽히면 새 판을 가리킨다)
+        shared_ptr<const ItemCatalog> _pBoundCatalog; ///< 가방이 가리키는 판
+        Inventory                     _inventory;
+        DeferredStateRestore          _restore;
 
         /** @brief 아이템 받기 계약을 가방으로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
         struct ItemReceiverPort final : IItemReceiver
@@ -87,5 +97,6 @@ namespace sw
 
         PROPERTY( Min = 0, Tooltip = "Slots of the bag opened at begin play with the game's item catalog - only for scenes without a kit director; 0 = a director opens it" )
         int32 _openSlotCount;
+        int32 _slotCount; ///< 연 슬롯 수(다시 묶을 때 같은 수로 연다)
     };
 } // namespace sw

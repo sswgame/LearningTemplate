@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
@@ -15,6 +16,7 @@
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 
 namespace sw
 {
@@ -22,6 +24,9 @@ namespace sw
     {
         struct PawnComponentInternal
         {
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "PAWN" );
+            static constexpr uint32 kStateVersion = 1;
+
             /** @brief 조종 회전 오프셋 고정소수점의 한 라디안입니다(0.00001 rad 간격 — 프레임 사이에 쌓이는 반동은 수 라디안을 넘지 않는다). */
             static constexpr float32 kRotationOffsetUnitsPerRadian = 100000.0f;
 
@@ -30,6 +35,8 @@ namespace sw
                 return VectorUtil::findIndex<int32>( listName, name );
             }
         };
+
+        const StatefulComponentRegistrar<PawnComponent> s_stateRegistration{ "PawnComponent" };
     } // namespace
 } // namespace sw
 
@@ -125,6 +132,33 @@ namespace sw
         const float32 scale = PawnComponentInternal::kRotationOffsetUnitsPerRadian;
         _yawOffsetUnits.fetch_add( static_cast<int32>( deltaYaw * scale ), std::memory_order_relaxed );
         _pitchOffsetUnits.fetch_add( static_cast<int32>( deltaPitch * scale ), std::memory_order_relaxed );
+    }
+
+    void PawnComponent::serializeState( StateIO& io )
+    {
+        float32 yaw   = _intent._controlYaw;
+        float32 pitch = _intent._controlPitch;
+        if ( io.isWriting() && yaw == 0.0f && pitch == 0.0f )
+            return;
+        io.header( PawnComponentInternal::kStateTag, PawnComponentInternal::kStateVersion );
+        io.value( yaw );
+        io.value( pitch );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.check( MathUtil::isFinite( yaw ) && MathUtil::isFinite( pitch ) ) == false )
+            return;
+        _intent._controlYaw   = yaw;
+        _intent._controlPitch = pitch;
+        if ( isPossessed() )
+            requestControlRotation( yaw, pitch );
+    }
+
+    void PawnComponent::restoreState( vector<uint8>&& bytes )
+    {
+        Archive archive( bytes.data(), bytes.size() );
+        if ( readState( archive ) == false )
+            SW_LOG_WARNING_ID( "Pawn.SavedControlRotationUnreadable", "The saved control rotation of '%#' did not read - it looks forward", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void PawnComponent::requestControlRotation( float32 yaw, float32 pitch )

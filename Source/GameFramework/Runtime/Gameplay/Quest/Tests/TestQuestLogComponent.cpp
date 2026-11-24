@@ -2,10 +2,14 @@
 #include "pch.h"
 
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Name/TagID.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -95,4 +99,38 @@ SW_TEST_CASE( QuestLogComponentTest, CountsOnlyWhatItsOwnPawnDid )
     cue._target = pPawnObject->getHandle();
     GameEventUtil::send( cue );
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "scare" ) ) == QuestStatus::Completed );
+}
+
+/** @brief [QuestLogComponentTest] 카탈로그가 다시 읽히면 일지가 진행을 지킨 채 새 판에 묶인다 — 더한 퀘스트를 바로 받을 수 있다 */
+SW_TEST_CASE( QuestLogComponentTest, ReloadedCatalogKeepsTheProgress )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    id           = test::ScopedScratchDomain::makeID( "reload.quest.xml" ).str();
+    const auto                      writeCatalog = [&domain]( string_view xml )
+    { return FileUtil::writeTextFile( domain.makeDiskPath( "reload.quest.xml" ), xml ); };
+    SW_REQUIRE_TRUE( writeCatalog( kQuestXML ) );
+    const SharedAssetRef<QuestCatalog> catalog = SharedAssetCache<QuestCatalog>::acquire( id );
+    SW_REQUIRE_TRUE( catalog != nullptr );
+
+    EventDispatcher dispatcher;
+    SubsystemScope  scope;
+    SW_REQUIRE_TRUE( scope.bind<EventDispatcher>( &dispatcher ) );
+    game::ScopedGameScope scopedScope( scope );
+    GameObjectManager     manager;
+    QuestLogComponent*    pQuests = manager.createGameObject( hashed_string( "Controller" ) )->addComponent<QuestLogComponent>();
+    SW_REQUIRE_NOT_NULL( pQuests );
+    SW_REQUIRE_TRUE( pQuests->initialize( *catalog ) == GameStateInitResult::Fresh );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pQuests->getQuestLog().start( hashed_string( "hunt" ), 1 ) == QuestStartResult::Ok );
+    SW_EXPECT_FALSE( pQuests->getQuestLog().start( hashed_string( "extra" ), 1 ) == QuestStartResult::Ok );
+
+    SW_REQUIRE_TRUE( writeCatalog( R"(<QuestCatalog>
+  <Quest id="hunt"><Stage id="kill" next="end"><Objective kind="Defeat" target="Enemy.Wolf" count="3"/></Stage><Stage id="end" complete="true"/></Quest>
+  <Quest id="extra"><Stage id="enter" next="end"><Objective kind="Cue" target="Cue.Scare"/></Stage><Stage id="end" complete="true"/></Quest>
+</QuestCatalog>)" ) );
+    SW_REQUIRE_TRUE( SharedAssetCache<QuestCatalog>::reloadShared( id ) );
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( pQuests->getQuestLog().getStatus( hashed_string( "hunt" ) ) == QuestStatus::Active );
+    SW_EXPECT_TRUE( pQuests->getQuestLog().start( hashed_string( "extra" ), 1 ) == QuestStartResult::Ok );
+    manager.endPlay();
 }

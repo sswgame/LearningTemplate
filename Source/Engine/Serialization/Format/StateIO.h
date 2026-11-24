@@ -479,7 +479,7 @@ namespace sw
 /**
  * @def SW_DECLARE_STATE_IO
  * @brief 클래스 안에 `serializeState` 선언과 호출부가 부르는 `writeState` · `readState` 를 둡니다. `readState` 는 사본에 읽고 끝까지 맞으면 옮깁니다(복사 · 이동 대입이 되어야 합니다).
- * @details 호출부(`ComponentStateStore`, 테스트, 다른 형식)는 이름을 그대로 부르고, 본문은 `serializeState` 하나뿐이다.
+ * @details 호출부(`ComponentStateCodec`, 테스트, 다른 형식)는 이름을 그대로 부르고, 본문은 `serializeState` 하나뿐이다.
  */
 #define SW_DECLARE_STATE_IO()                               \
     void writeState( ::sw::Archive& outArchive ) const      \

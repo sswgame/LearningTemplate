@@ -15,7 +15,6 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/Component/CreatureTownGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 

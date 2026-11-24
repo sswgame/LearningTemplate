@@ -36,7 +36,7 @@ namespace sw
         NileGameModeComponent();
         virtual ~NileGameModeComponent() override;
 
-        /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 금고, 달력, 배속)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 도시 상태(시뮬레이션, 자동 계획 진행, 금고, 달력, 배속)를 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
         /** @brief 자동 계획을 켜고 끕니다(설정 PROPERTY 와 전역 변수와는 별개인 실행 상태다). 판이 열리기 전이면 false 입니다. */
         [[nodiscard]] bool submitAutoPlanToggle() override;

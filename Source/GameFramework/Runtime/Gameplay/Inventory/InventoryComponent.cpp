@@ -2,10 +2,14 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
 
+#include "Core/Foundation/BuildInfo.h"
+
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
@@ -31,11 +35,15 @@ namespace sw
     } // namespace
 
     InventoryComponent::InventoryComponent()
-        : _inventory{}
+        : _catalog{}
+        , _pBoundCatalog{}
+        , _inventory{}
         , _restore{}
         , _itemReceiverPort{}
         , _openSlotCount{ 0 }
+        , _slotCount{ 0 }
     {
+        setCanEverTick( build::kShipping == false );
     }
 
     InventoryComponent::~InventoryComponent() = default;
@@ -52,7 +60,32 @@ namespace sw
         }
         if ( _inventory.initialize( itemCatalog, settings._slotCount ) == false )
             return GameStateInitResult::Refused;
+        _catalog       = SharedAssetRef<ItemCatalog>::shareLive( &itemCatalog );
+        _pBoundCatalog = _catalog.snapshot();
+        _slotCount     = settings._slotCount;
         return _restore.open( *this );
+    }
+
+    void InventoryComponent::onTick( TickContext& context )
+    {
+        Component::onTick( context );
+        if ( _catalog.get() != _pBoundCatalog.get() )
+            context.deferPostTickOnComponent( *this, []( InventoryComponent& bag )
+            { bag.rebindCatalog(); } );
+    }
+
+    void InventoryComponent::rebindCatalog()
+    {
+        shared_ptr<const ItemCatalog> pLatest = _catalog.snapshot();
+        if ( pLatest == nullptr || pLatest == _pBoundCatalog )
+            return;
+        const shared_ptr<const ItemCatalog> pPrevious = std::move( _pBoundCatalog ); // 다시 묶을 때까지 앞 판을 쥔다 — 가방이 그 정의를 가리킨다
+        _pBoundCatalog                                = std::move( pLatest );
+        _restore.rebind( *this, [this]()
+        {
+            const bool bOpened = _inventory.initialize( *_pBoundCatalog, _slotCount );
+            SW_ASSERT( bOpened ); // 처음 열 때 받아들인 슬롯 수다
+        } );
     }
 
     void InventoryComponent::onBeginPlay()

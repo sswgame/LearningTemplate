@@ -49,7 +49,7 @@ namespace sw
         OverworldGameModeComponent();
         virtual ~OverworldGameModeComponent() override;
 
-        /** @brief 걸음 상태(키트 이동기의 바이트)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 걸음 상태(키트 이동기의 바이트)를 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. */
         void serializeGameState( StateIO& io ) override;
 
         /** @brief 맵의 모서리와 주인공 자리를 옮깁니다. */

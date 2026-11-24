@@ -44,6 +44,16 @@ namespace sw
         (void)ComponentStateCodecInternal::getCodecs().remove( pCodec );
     }
 
+    bool ComponentStateCodec::hasCodecFor( const TypeInfo& type )
+    {
+        for ( const ComponentStateCodec* pCodec : ComponentStateCodecInternal::getCodecs().getItems() )
+        {
+            if ( type.isDerivedFrom( pCodec->_pGetType() ) )
+                return true;
+        }
+        return false;
+    }
+
     void ComponentStateCodec::captureObject( const GameObject& object, vector<uint8>& outBytes )
     {
         outBytes.clear();
@@ -63,6 +73,8 @@ namespace sw
                 listTakenType.push_back( typeName );
                 stateBytes.clear();
                 pCodec->_pWrite( *pComponent, stateBytes );
+                if ( stateBytes.empty() )
+                    continue; // 지금 실을 상태가 없다고 답한 컴포넌트 — 되돌린 쪽은 데이터의 처음 상태로 시작한다
                 arch << typeName << string_view( ComponentStableKey::formatKey( ComponentStableKey::getLocalID( pComponent ) ) ) << stateBytes;
                 ++count;
             }

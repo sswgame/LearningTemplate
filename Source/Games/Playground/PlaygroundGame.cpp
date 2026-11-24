@@ -26,6 +26,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Network/NetMessageChannel.h"
+#include "Engine/Object/Component/ComponentStateCodec.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"

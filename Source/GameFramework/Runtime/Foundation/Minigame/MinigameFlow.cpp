@@ -440,16 +440,16 @@ namespace sw
         return true;
     }
 
-    bool MinigameFlow::requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded )
+    bool MinigameFlow::requestScene( const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded, uint32 sessionTravel )
     {
         // 받아들임 알림은 요청 안에서 동기로 온다 — 그동안만 이 흐름의 요청으로 표시해 장치 밖 이동으로 보지 않게 한다.
         _bRequestingScene   = SW_TRUE;
-        const bool bRequest = game::getSubsystem<GameSceneFlow>().requestSceneThen( scenePath, onLoaded );
+        const bool bRequest = game::getSubsystem<GameSceneFlow>().requestSceneThen( scenePath, onLoaded, sessionTravel );
         _bRequestingScene   = SW_FALSE;
         return bRequest;
     }
 
-    bool MinigameFlow::requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded )
+    bool MinigameFlow::requestAwaitedScene( const string& scenePath, void ( MinigameFlow::*pHandler )( Scene* pScene ), const Delegate<void( Scene* pScene )>& onLoaded, uint32 sessionTravel )
     {
         // 로드마다 번호가 다르다 — 장치 밖 이동에 밀려난 로드의 끝(nullptr)이 그 뒤에 맡긴 로드의 것으로 오인되지 않게 한다.
         const uint32 load       = ++_lastLoad;
@@ -462,7 +462,8 @@ namespace sw
             }
             if ( onLoaded.isBound() )
                 onLoaded( pScene );
-        } ) );
+        } ),
+                                                sessionTravel );
         if ( bRequested )
             _awaitedLoad = load;
         return bRequested;
@@ -728,7 +729,7 @@ namespace sw
         _stack.applyReturnPoints( std::move( listFrame ), _owner.getSaveLock() );
     }
 
-    bool MinigameFlow::travelToSavedMinigame( vector<MinigameSavedFrame> listFrame, const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded )
+    bool MinigameFlow::travelToSavedMinigame( vector<MinigameSavedFrame> listFrame, const string& scenePath, const Delegate<void( Scene* pScene )>& onLoaded, uint32 sessionTravel )
     {
         SW_ASSERT( listFrame.empty() == false );
         if ( rejectIfLoadPending( "load" ) )
@@ -768,7 +769,7 @@ namespace sw
         _pPreviousStack = make_unique<MinigameStack>( std::move( _stack ) );
         _stack          = std::move( saved );
         _pActive        = std::move( pScope );
-        if ( requestAwaitedScene( scenePath, &MinigameFlow::onSavedMapLoaded, onLoaded ) == false )
+        if ( requestAwaitedScene( scenePath, &MinigameFlow::onSavedMapLoaded, onLoaded, sessionTravel ) == false )
         {
             SW_LOG_ERROR_ID( "MinigameFlow.MapRequestRefused", "Minigame '%#': the saved scene '%#' could not be requested", _stack.findTop()->_definition._name.c_str(), scenePath.c_str() );
             deactivateScope();
@@ -980,7 +981,7 @@ namespace sw
         }
     }
 
-    void MinigameFlow::onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )
+    void MinigameFlow::onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future )
     {
         (void)future;
         if ( kind != SceneLoadKind::Travel || _bRequestingScene == SW_TRUE )

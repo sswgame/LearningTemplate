@@ -39,15 +39,15 @@ namespace
         {
             AutosaveSettings settings;
             settings._interval = 0.0f;
-            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveLock, SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, []( vector<uint8>& outBytes )
+            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveLock, SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, []( vector<uint8>& outBytes, float64& outPlayTime )
             {
                 outBytes.push_back( 1 );
+                outPlayTime = 0.0;
                 return true;
             } ),
-                                                   SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, []( const string& slot, const vector<uint8>& bytes, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+                                                   SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, []( const string& slot, const AutosaveManager::RestoreCompletedFunction& onCompleted )
             {
                 (void)slot;
-                (void)bytes;
                 onCompleted( true );
                 return true;
             } ) ) );

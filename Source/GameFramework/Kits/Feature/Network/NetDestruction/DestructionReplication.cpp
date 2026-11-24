@@ -157,7 +157,7 @@ namespace sw
         *pEntry                 = Entry{};
         pEntry->_netID          = netID;
         pEntry->_component      = TComponentHandle<FractureBaseComponent>{ &component };
-        pEntry->_sentEventCount = static_cast<uint32>( component.getEventLog()._listEvent.size() );
+        pEntry->_sentEventCount = component.getEventLog()._firstEvent + static_cast<uint32>( component.getEventLog()._listEvent.size() );
     }
 
     DestructionReplicationServer::Entry* DestructionReplicationServer::findEntry( NetObjectID netID )
@@ -271,15 +271,18 @@ namespace sw
 
     void DestructionReplicationServer::sendEvents( Entry& entry, FractureBaseComponent& component, uint32 serverTick )
     {
-        // 서버는 스냅숏을 받지 않으므로 기록의 인덱스가 곧 상태의 이벤트 번호이다.
+        // 이벤트 번호는 상태의 번호다 — 기록은 되돌린 상태(세이브 · 셀) 뒤부터라 첫 번호를 더한다. 그 앞 이벤트를 못 받은 쪽은 해시 대조에서 어긋나 스냅숏으로 바로잡는다.
+        const uint32                               firstEvent    = component.getEventLog()._firstEvent;
         const vector<DestructionDamageEvent>&      listEvent     = component.getEventLog()._listEvent;
         const vector<optional<FractureGroupPose>>& listGroupPose = component.getEventGroupPoses();
-        for ( uint32 index = entry._sentEventCount; index < static_cast<uint32>( listEvent.size() ); ++index )
+        const uint32                               eventCount    = firstEvent + static_cast<uint32>( listEvent.size() );
+        for ( uint32 eventIndex = MathUtil::max( entry._sentEventCount, firstEvent ); eventIndex < eventCount; ++eventIndex )
         {
-            BitWriter& writer = _writer.beginMessage<NetDestructionMessage::Table, NetDestructionMessage::Event>();
+            const uint32 index  = eventIndex - firstEvent;
+            BitWriter&   writer = _writer.beginMessage<NetDestructionMessage::Table, NetDestructionMessage::Event>();
             writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
-            writer.writeVarUint( index );
+            writer.writeVarUint( eventIndex );
             bool bWritten = DestructionReplicationInternal::writeEvent( writer, listEvent[index] );
             // 떨어진 덩어리를 맞힌 이벤트이면 맞기 직전의 그 덩어리 자세를 비트 그대로 싣는다. 신뢰 채널이 밀려 자세가 늦어도 받는 쪽이 그 위치에서 덩어리를 가를 수 있다.
             const bool bHasPose = index < listGroupPose.size() && listGroupPose[index].has_value();
@@ -289,13 +292,13 @@ namespace sw
             if ( bWritten == false )
             {
                 // 유한하지 않은 이벤트 — 보내지 않는다. 받는 쪽은 번호가 비어 해시 대조에서 어긋나고 스냅숏으로 바로잡는다.
-                SW_LOG_ERROR_ID( "DestructionReplication.EventOutOfRange", "DestructionReplication: event %# of object %# has a value outside the replicated range - not sent", index, entry._netID );
+                SW_LOG_ERROR_ID( "DestructionReplication.EventOutOfRange", "DestructionReplication: event %# of object %# has a value outside the replicated range - not sent", eventIndex, entry._netID );
                 continue;
             }
             (void)broadcastMessage(); // 서술자 채널(신뢰 순서 없음) — 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
-        entry._sentEventCount = static_cast<uint32>( listEvent.size() );
+        entry._sentEventCount = eventCount;
     }
 
     bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureBaseComponent& component, int32 connectionID )

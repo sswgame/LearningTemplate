@@ -47,12 +47,12 @@ namespace sw
         , _lifetime{ 0.0f }
         , _growthRate{ 0.0f }
         , _maxGrowth{ 0.0f }
+        , _age{ 0.0f }
+        , _growth{ 0.0f }
         , _compiled{}
         , _tracker{}
         , _listCandidateScratch{}
         , _listKeyScratch{}
-        , _age{ 0.0f }
-        , _growth{ 0.0f }
         , _bReady{ SW_FALSE }
         , _bOpened{ SW_FALSE }
         , _reserved{ 0 }

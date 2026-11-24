@@ -173,7 +173,7 @@ namespace sw
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
 
-        /** @brief 판의 진행(처치 수, 페이싱 감독 상태)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 적과 효과는 모습이라 정리합니다. */
+        /** @brief 판의 진행(처치 수, 페이싱 감독 상태)을 씁니다. `ComponentStateCodec::captureObject` 가 부릅니다. 적과 효과는 모습이라 정리합니다. */
         void serializeGameState( StateIO& io ) override;
         /** @brief 플레이어가 쓰러졌습니다. 적을 정리하고 감독을 처음부터 다시 돌립니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restartRound();

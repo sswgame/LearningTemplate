@@ -143,7 +143,7 @@ namespace sw
         hashed_string       _currentRegion;     ///< 지금 서 있는 지역(비면 다음 틱이 진입을 처리한다)
         hashed_string       _pendingEncounter;  ///< 지금 지역에 들어서며 기다리게 된 전투(열리면 비운다)
         hashed_string       _encounterRegion;   ///< 전투가 열린 지역(탐험 중이면 비었다)
-        hashed_string       _pendingArea;       ///< 게임 스레드에서 자동 저장에 알릴 지역 이동
+        hashed_string       _pendingArea;       ///< 게임 스레드에서 자동 저장에 알릴 지역 이동 — 아래 둘과 함께 같은 프레임의 `onFlush` 가 비우는 알림이라 싣지 않는다
         hashed_string       _pendingBoss;       ///< 보스 앞
         hashed_string       _pendingCheckpoint; ///< 체크포인트(야영지)
         vector<QuestEvent>  _listQuestEvent;    ///< 프레임마다 비워 다시 쓰는 알림 그릇(할당을 되풀이하지 않는다)

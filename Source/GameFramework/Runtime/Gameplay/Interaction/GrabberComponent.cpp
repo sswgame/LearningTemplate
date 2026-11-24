@@ -11,6 +11,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
@@ -101,6 +102,8 @@ namespace sw
         , _fallback{}
         , _grabIndex{}
         , _listTagged{}
+        , _unloadSubscription{}
+        , _heldUnloadSubscription{}
     {
         setCanEverTick( true );
     }
@@ -113,7 +116,7 @@ namespace sw
         _grabIndex                  = pPawn != nullptr ? pPawn->findButton( _grabButton ) : nullopt;
         GameObjectManager* pManager = pOwner != nullptr ? getOwner()->getMutableManager() : nullptr;
         if ( GameObject* const pHeld = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr )
-            pHeld->setKeptWhenParentDestroyed( true ); // 쥔 채 되살아났다
+            watchHeld( *pHeld ); // 쥔 채 되살아났다
         if ( _grabButton.empty() == false && _grabIndex.has_value() == false )
             SW_LOG_ERROR_ID( "GrabberComponent.GrabButtonNotOnPawn", "Grabber on '%#' listens to button '%#' but its object has no pawn with that button - the button does nothing",
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
@@ -208,8 +211,29 @@ namespace sw
             return false;
         _heldBodyType = bodyType;
         _held         = target.getHandle();
-        target.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
+        watchHeld( target );
         return true;
+    }
+
+    void GrabberComponent::watchHeld( GameObject& held )
+    {
+        held.setKeptWhenParentDestroyed( true ); // 손에 붙어도 집은 쪽의 일부가 아니다
+        _heldUnloadSubscription = held.getOrCreateEvents()._unloading.add( [this]( const GameObjectUnloadInfo& info )
+        { handleUnloading( info ); } );
+    }
+
+    void GrabberComponent::handleUnloading( const GameObjectUnloadInfo& info )
+    {
+        const GameObject* const pHeld = findHeld();
+        // 한쪽만 내려가면 지금 놓는다 — 떠 둔 상태가 "쥐고 있다" 로 남으면 다시 오를 때 그 사이 다른 곳에 있는 것을 쥔 줄 안다.
+        if ( pHeld != nullptr && info.contains( pHeld->getObjectID() ) != info.contains( getOwner()->getObjectID() ) )
+            (void)dropHeld();
+    }
+
+    void GrabberComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _unloadSubscription = GameObjectEvents::listen<&GrabberComponent::handleUnloading>( *this, &GameObjectEvents::_unloading );
     }
 
     const GrabberComponent* GrabberComponent::findHolderOf( const GameObject& object )
@@ -230,6 +254,7 @@ namespace sw
         GameObject* const pOwner = getOwner();
         GameObject* const pHeld  = isHolding() ? pOwner->getMutableManager()->resolveGameObject( _held ) : nullptr;
         _held                    = GameObjectHandle{};
+        _heldUnloadSubscription.reset();
         if ( pHeld == nullptr )
             return false;
         pHeld->setKeptWhenParentDestroyed( false );

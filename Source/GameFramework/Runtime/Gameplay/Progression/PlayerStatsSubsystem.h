@@ -69,12 +69,15 @@ namespace sw
         const StatCatalog* findCatalog() const { return _pCatalog.get(); }
 
     private:
-        void loadFromPlatform();
-        void onAchievementUnlocked( const AchievementDef& achievement );
+        /** @brief 통계 · 업적을 지금 판의 카탈로그에 엽니다. 업적 정의가 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool openCatalog();
+        void               loadFromPlatform();
+        void               onAchievementUnlocked( const AchievementDef& achievement );
 
     private:
         const GameSettings&           _settings;
         SharedAssetRef<StatCatalog>   _pCatalog;
+        shared_ptr<const StatCatalog> _pBoundCatalog; ///< 통계 · 업적이 가리키는 판 — 다시 읽히면 `update` 가 새 판에 다시 묶는다
         unique_ptr<IPlatformServices> _pPlatform;
         PlayerStats                   _stats;
         AchievementTracker            _achievements; ///< `_stats` 를 듣는다 - 뒤에 선언해 먼저 사라진다

@@ -16,6 +16,7 @@
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -106,6 +107,10 @@ namespace sw
         bool isSleeping() const;
         /** @brief 상태 해시에 트랜스폼과 선속도 · 각속도를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
+        /** @brief 움직이는 동적 바디의 선속도 · 각속도입니다(언리얼 `FRepMovement` 자리 — 자세는 트랜스폼이 싣는다). 멈춘 바디 · 정적 · 키네마틱은 쓰는 것이 없다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. 바디가 서는 물리 프레임에 듭니다. */
+        void restoreState( vector<uint8>&& bytes );
 
     protected:
         /** @brief 동적 바디면 선속도 · 각속도를 0 으로 줍니다(3D `RigidBodyComponent::resetMotion` 과 같다). */

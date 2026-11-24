@@ -126,7 +126,7 @@ namespace sw
 
         SharedAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
         AsymmetricHorrorMatch                        _match;
-        AsymmetricHorrorBot                          _bot;
+        AsymmetricHorrorBot                          _bot;         ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
         vector<AsymmetricHorrorCommand>              _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
         vector<AsymmetricHorrorEvent>                _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
         Countdown                                    _killerRelease;

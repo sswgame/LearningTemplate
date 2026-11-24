@@ -36,7 +36,7 @@ Scripts/lint/common_shapes.py
 
 9. 손으로 짝지은 상태 읽기 · 쓰기(옛 `state-shape`): `writeState( Archive& …` · `readState( Archive& …` 의 선언과 .cpp 정의는 `SW_DECLARE_STATE_IO()` 와
    `serializeState( StateIO& io )` 하나가 맡는다(2026-11-07 — 125 형식이 두 함수의 칸 순서를 사람이 맞췄다). 머리의 인라인 정의는 `StateIO` 입구로 넘길 때만 된다.
-   형식으로 못 막는 까닭: 스냅샷(`ComponentStateStore`)은 `serializeState` 만 받지만, `Archive` 는 엔진 곳곳의 바이트 그릇이라 그것을 받는 멤버 짝을 새로 짓는 것은 막지 못한다.
+   형식으로 못 막는 까닭: 상태 코덱(`ComponentStateCodec`)은 `serializeState` 만 받지만, `Archive` 는 엔진 곳곳의 바이트 그릇이라 그것을 받는 멤버 짝을 새로 짓는 것은 막지 못한다.
 10. 프레임 함수 안의 리터럴 이름(옛 `frame-intern`): 틱 · 갱신 · 칠하기 함수(`onTick` · `tick…` · `update…` · `paint…`) 안의 `hashed_string( "글자" )` 는 프레임마다
    글자 → FNV → 샤드 뮤텍스를 지난다 — 함수 안 `static const hashed_string` 이나 데이터 칸으로 옮긴다(`.cpp` 만 본다). 예외 열쇠는 `경로|함수`.
    형식으로 못 막는 까닭: 리터럴 암시적 생성은 정상 코드이고, 자리마다 한 번 만드는 형식(C++20 고정 문자열 템플릿 인자)은 표준이 C++17 이라 미뤘다(2026-11-12).

@@ -74,17 +74,25 @@ namespace sw
          * @details 읽기가 끝나면 봉투 머리의 씬 정체를 본다. 지금 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤
          *          (`SceneLoadCompletedEvent` 바로 뒤) 복원한다(감사 G-7 — 언리얼 게임은 세이브의 맵으로 `OpenLevel` 한 뒤 적용한다). 어느 쪽이든 끝에 성공 · 실패와 함께
          *          `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
-         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리거나, 앞의 세이브가 아직 씬을 옮기는 중이면 알리고 이벤트 없이 false 입니다.
+         *          플레이어가 고른 이동 하나다(`GameSceneFlow::beginSessionTravel`) — 앞의 불러오기를 물리고, 끝나기 전에 타이틀로 나가거나 다른 슬롯을 고르면 물린다(`_bSuperseded`).
+         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false 입니다.
          */
         [[nodiscard]] bool load( string_view slot = {} );
+        /** @brief 슬롯 @p slot(이름 그대로)을 `load` 와 같은 길로 불러오고 끝을 @p onApplied 로 알립니다 — 자동 저장 되돌리기가 쓴다. 읽기를 맡겼으면 true 입니다. */
+        [[nodiscard]] bool loadSlot( const string& slot, const AppliedFunction& onApplied );
+        /** @brief 이 진행의 플레이 시간(초)입니다 — 세이브마다 봉투 머리에 실리고(`GameStateSnapshot::readSaveInfo`) 불러오면 그 시간부터 이어 센다. */
+        float64 getPlayTime() const { return _playTime; }
+        void    setPlayTime( float64 playTime ) { _playTime = playTime; }
+        /** @brief 플레이 시간을 @p deltaTime 만큼 셉니다. 타이틀과 씬을 여는 동안은 세지 않습니다(게임 인스턴스가 프레임마다 부른다). */
+        void updatePlayTime( float32 deltaTime );
         /** @brief 성공한 세이브 슬롯 쓰기 · 읽기 수입니다. */
         const SaveSlotCounts& getCounts() const { return _counts; }
         /**
          * @brief 읽은 세이브 바이트를 적용합니다 — 슬롯 불러오기와 자동 저장 되돌리기가 함께 지나는 한 길(감사 G-7).
          * @details 옛 판 봉투는 먼저 이 빌드의 판으로 올린다(`GameStateSnapshot::upgradeEnvelope`). 봉투 머리의 씬 정체가 활성 씬이면 바로 복원하고, 다른 씬이면 `GameSceneFlow::requestSceneThen` 으로 그 씬을 연 뒤 복원한다. 끝에 `SaveGameLoadedEvent` 를 내고 @p onApplied 를 부른다.
-         *          앞의 세이브가 씬을 옮기는 중이면 적용하지 않고 실패로 끝낸다.
+         *          @p sessionTravel 이 물렸으면 적용하지 않고 물렸다고 알린다.
          */
-        void applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied );
+        void applySlot( const string& slot, vector<uint8> bytes, const AppliedFunction& onApplied, uint32 sessionTravel );
         /** @brief 복원이 씬을 비운 뒤 졌습니다(`GameInstance::readStateEnvelope`) — 세이브 막기를 걸고, 세이브 목적이면 씬을 디스크에서 다시 엽니다. */
         void notifySceneBroken( SerializePurpose purpose );
         /** @brief 복원이 성공했습니다 — 깨진 씬이 덮였으니 막기를 풉니다. */
@@ -96,11 +104,13 @@ namespace sw
         /** @brief 세이브 쓰기 완료입니다 - `SaveGameSavedEvent` 를 냅니다. */
         void onSlotWritten( const LocalStoreCompletion& completion );
         /** @brief 세이브 읽기 완료입니다 - 형식을 확인하고 `applySlot` 에 넘깁니다. */
-        void onSlotRead( const LocalStoreCompletion& completion );
+        void onSlotRead( const LocalStoreCompletion& completion, const AppliedFunction& onApplied, uint32 sessionTravel );
         /** @brief 찍은 씬이 열린 뒤입니다(`GameSceneFlow::requestSceneThen`) — 기다리던 세이브를 적용하고 `SaveGameLoadedEvent` 를 냅니다. @p pScene 이 nullptr 이면 실패로 알린다. */
-        void onSaveSceneLoaded( Scene* pScene );
+        void onSaveSceneLoaded( Scene* pScene, uint32 sessionTravel );
         /** @brief 성공한 읽기 수를 세고 `SaveGameLoadedEvent` 를 낸 뒤 @p onApplied 가 묶였으면 부릅니다. */
-        void publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied );
+        void publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied, uint32 sessionTravel );
+        /** @brief 봉투를 지금 활성 씬에 풀고, 성공하면 그 세이브의 플레이 시간부터 이어 셉니다. */
+        [[nodiscard]] bool restoreSlot( const vector<uint8>& bytes );
         /** @brief 교체에서 진 복원 뒤 활성 씬을 그 리소스에서 다시 엽니다. 리소스가 없거나 요청이 실패하면 알리고 막기는 남는다. */
         void reopenBrokenScene();
         /** @brief 깨진 씬이 다시 열린 뒤입니다 — 섰으면 깨진 복원의 세이브 막기를 풉니다. */
@@ -116,9 +126,10 @@ namespace sw
         /** @brief 찍은 씬이 열리기를 기다리는 세이브 하나입니다(`onSlotRead` → `onSaveSceneLoaded`). */
         struct PendingSlotRestore
         {
-            string          _slot;      ///< 읽은 슬롯 이름
-            vector<uint8>   _bytes;     ///< 읽은 봉투 바이트
-            AppliedFunction _onApplied; ///< 적용의 끝을 받을 함수(자동 저장 되돌리기 — 슬롯 불러오기는 묶지 않는다)
+            string          _slot;          ///< 읽은 슬롯 이름
+            vector<uint8>   _bytes;         ///< 읽은 봉투 바이트
+            uint32          _sessionTravel; ///< 이 불러오기의 이동 번호(`GameSceneFlow::beginSessionTravel`)
+            AppliedFunction _onApplied;     ///< 적용의 끝을 받을 함수(자동 저장 되돌리기 — 슬롯 불러오기는 묶지 않는다)
         };
         optional<PendingSlotRestore> _pendingSlotRestore; ///< 씬을 옮기는 중인 세이브(없으면 없음) — 하나만 둔다, 겹친 불러오기는 거절한다
         /**
@@ -127,6 +138,7 @@ namespace sw
          *          `captureSnapshot( SaveGame )` 한 곳을 지나므로 거기서 문(`_saveLock`)을 본다.
          */
         Subscription   _brokenRestoreBlock;
-        SaveSlotCounts _counts; ///< 성공한 세이브 슬롯 쓰기 · 읽기 수
+        float64        _playTime; ///< 이 진행의 플레이 시간(초)
+        SaveSlotCounts _counts;   ///< 성공한 세이브 슬롯 쓰기 · 읽기 수
     };
 } // namespace sw

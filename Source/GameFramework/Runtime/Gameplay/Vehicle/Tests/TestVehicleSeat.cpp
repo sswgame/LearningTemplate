@@ -6,6 +6,7 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 
@@ -225,11 +226,10 @@ SW_TEST_CASE( VehicleSeatTest, RestoredRiderSitsAgain )
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( ObjectStateSerializer::saveToBinaryBuffer( rig._pVehicle, bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) );
-    SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
-    rig._manager.destroyGameObject( rig._pVehicle );
+    rig._manager.destroyGameObject( rig._pVehicle ); // 되감기 · 불러오기가 씬을 비운다 — 뜬 상태에는 앉아 있다(내린 것은 좌석의 사실이라 뜨기 전에만 실린다)
     rig.update();
 
-    // 탑승자는 그대로 있고 탈것이 되살아난다 — 되살아난 씬에서는 조종자가 자기 폰을 다시 쥐고 있다.
+    // 되살아난 씬에서는 조종자가 자기 폰을 다시 쥐고 있다 — 좌석에 적힌 탑승자를 다시 앉힌다.
     GameObject*       pRestored = rig._manager.createGameObject( hashed_string( "Car" ) );
     ObjectLoadContext context{ SerializePurpose::Snapshot };
     SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), context ) != 0 );
@@ -243,6 +243,55 @@ SW_TEST_CASE( VehicleSeatTest, RestoredRiderSitsAgain )
     SW_EXPECT_TRUE( rig._pRiderRoot->getParent() == pRestored->getPrimarySceneComponent() );
     SW_REQUIRE_TRUE( VehicleSeatComponent::dismount( *rig._pRiderPawn, false ) );
     SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
+}
+
+/** @brief [VehicleSeatTest] 탈것만 셀과 함께 내려가면 뜨기 전에 내린다 — 떠 둔 좌석은 비어 있어, 다시 오를 때 곁에 선 사람을 되앉히지 않는다. 둘이 함께 내려가면 앉은 채 실린다 */
+SW_TEST_CASE( VehicleSeatTest, UnloadedVehicleLetsTheStayingRiderOff )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    const uint64               arrBoth[2] = { rig._pVehicle->getObjectID(), rig._pRider->getObjectID() };
+    const GameObjectUnloadInfo both{
+        vector_reference<const uint64>{ arrBoth, 2 }
+    };
+    GameObjectEvents::broadcast( *rig._pVehicle, &GameObjectEvents::_unloading, both );
+    GameObjectEvents::broadcast( *rig._pRider, &GameObjectEvents::_unloading, both );
+    SW_EXPECT_TRUE( rig._pSeat->getOccupant() == rig._pRider->getHandle() );
+
+    const GameObjectUnloadInfo vehicleOnly{
+        vector_reference<const uint64>{ arrBoth, 1 }
+    };
+    GameObjectEvents::broadcast( *rig._pVehicle, &GameObjectEvents::_unloading, vehicleOnly );
+    SW_EXPECT_TRUE( rig._pSeat->isFree() );
+    SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( ObjectStateSerializer::saveToBinaryBuffer( rig._pVehicle, bytes, ObjectSaveOptions{ SerializePurpose::Snapshot } ) );
+    rig._manager.destroyGameObject( rig._pVehicle );
+    rig.update();
+
+    GameObject*       pRestored = rig._manager.createGameObject( hashed_string( "Car" ) );
+    ObjectLoadContext context{ SerializePurpose::Snapshot };
+    SW_REQUIRE_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), context ) != 0 );
+    const VehicleSeatComponent* pSeat = pRestored->getComponent<VehicleSeatComponent>();
+    SW_REQUIRE_NOT_NULL( pSeat );
+    rig.update();
+    rig.update();
+    SW_EXPECT_TRUE( pSeat->isFree() ); // 탑승자는 탈것 곁(하차 자리)에 서 있다
+    SW_EXPECT_TRUE( rig._pRiderPawn->getController() == rig._pController->getHandle() );
+}
+
+/** @brief [VehicleSeatTest] 탑승자만 내려가도 뜨기 전에 내린다 — 다시 오른 탑승자가 좌석 없이 매달려 있지 않는다 */
+SW_TEST_CASE( VehicleSeatTest, UnloadedRiderLeavesTheSeat )
+{
+    VehicleFixture rig;
+    SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
+    const uint64               riderID = rig._pRider->getObjectID();
+    const GameObjectUnloadInfo riderOnly{
+        vector_reference<const uint64>{ &riderID, 1 }
+    };
+    GameObjectEvents::broadcast( *rig._pRider, &GameObjectEvents::_unloading, riderOnly );
+    SW_EXPECT_TRUE( rig._pSeat->isFree() );
+    SW_EXPECT_TRUE( rig._pRiderRoot->getParent() == nullptr );
 }
 
 // 내린 탑승자는 다시 평범한 자식이다. 표시가 남으면 다음에 붙은 부모가 사라져도 살아남는다.

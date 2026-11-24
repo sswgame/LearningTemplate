@@ -30,7 +30,7 @@ namespace sw
              * @brief 잎 칸의 종류입니다. 칸마다 한 번 가른다.
              * @details 내장 타입은 `ReflectBuiltins.xxx` 의 State 역할 · Layout 이 정한다 — num 은 그 타입 그대로(`StateIO::value`), f32 · i32 는 성분마다,
              *          none 은 아래 손 처리기(bool · string · hashed_string)다. 바이트는 옛 이름 표 때와 같다(float 벡터 · int2 는 성분 순서 그대로).
-             *          오브젝트 핸들은 싣지 않는다 — 이 바이트는 세이브에도 실리는데(`ComponentStateStore`) 핸들은 런타임 id 라 다른 실행에서 남의 오브젝트를 가리킨다. 컴포넌트의
+             *          오브젝트 핸들은 싣지 않는다 — 이 바이트는 세이브에도 실리는데(`ComponentStateCodec`) 핸들은 런타임 id 라 다른 실행에서 남의 오브젝트를 가리킨다. 컴포넌트의
              *          핸들 PROPERTY 는 씬 오브젝트 스냅샷이 파일 id 로 옮기고(`ObjectStateBatch`), 상태 바이트에 들 참조는 `SceneObjectReference`(씬 GUID + 파일 id)로 적는다.
              */
             enum class LeafKind : uint8
