@@ -295,7 +295,7 @@ namespace sw
 
             /**
              * @brief 배치 스트림(개수, 배치 해시, [크기, 페이로드]…)을 프로퍼티 차례로 읽습니다. 이름을 맞추지 않는다 — 배치 해시가 같으면 쓴 차례가 곧 이 타입의 차례다.
-             * @details 배치가 다르면 어느 값이 어느 칸인지 모르므로 하나도 읽지 않고 `FieldFailed` 다(쿠킹본이 낡았다). 싣지 않은 칸(목적 밖)은 지금 값 그대로다.
+             * @details 배치가 다르면 어느 값이 어느 칸인지 모르므로 하나도 읽지 않고 `ObjectRejected` 다(쿠킹본이 낡았다) — 안쪽 구조체의 어긋남이 칸 하나의 실패로 낮춰져 기본값으로 넘어가지 않는다. 싣지 않은 칸(목적 밖)은 지금 값 그대로다.
              */
             [[nodiscard]] static FieldReadResult readSchemaLayout( TaggedReadState& state, ByteReader& reader, const uint32 propCount )
             {
@@ -306,7 +306,7 @@ namespace sw
                 {
                     SW_LOG_ERROR_ID( "BinarySerializer.SchemaLayoutMismatch", "%#: the cooked state was written for another layout of this type - not read, cook it again",
                                      state._typeInfo._name.c_str() );
-                    return FieldReadResult::FieldFailed;
+                    return FieldReadResult::ObjectRejected;
                 }
                 FieldReadResult result    = FieldReadResult::Read;
                 uint32          readCount = 0;

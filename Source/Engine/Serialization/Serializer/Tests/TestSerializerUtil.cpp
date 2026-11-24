@@ -565,6 +565,8 @@ SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
     otherLayout[sizeof( uint32 )] ^= 1;
     SW_EXPECT_LOG( "BinarySerializer.SchemaLayoutMismatch" );
     SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, otherLayout.data(), otherLayout.size(), cookContext ) );
+    listOrphan.clear();
+    SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &untouched, type, otherLayout.data(), otherLayout.size(), &listOrphan, cookContext ) == SoftReadResult::Rejected );
     // 잘린 스트림은 읽지 않는다.
     SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), 2, cookContext ) );
     SW_EXPECT_EQUAL( 0, untouched._count );
