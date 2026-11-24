@@ -7,6 +7,10 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/OcclusionCullingConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -20,6 +24,7 @@
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
@@ -31,11 +36,11 @@ namespace sw
 {
     namespace
     {
-        // 렌더러를 세우고 고르는 변수 — 이 파일(게임 스레드)만 읽고 렌더러에는 사본(`RenderPipelineRequest` · 보기 모드)을 넘긴다. 익명 이름공간이라 렌더 쪽 코드는 이름을 볼 수 없다.
+        // 렌더러를 세우고 고르는 변수 — 이 파일(게임 스레드)만 읽고 렌더러에는 읽은 파이프라인(`RenderPipelineRequest`) · 보기 모드를 넘긴다. 익명 이름공간이라 렌더 쪽 코드는 이름을 볼 수 없다.
 
         /**
          * @brief `-gv_deferredShading=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
-         * @details `initialize` 에 파이프라인 경로를 주지 않을 때 디퍼드를 고르는 방법이다. 디퍼드는 레벨이 나뉘어(레벨 0은 Shadow 와 GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 하다.
+         * @details 디퍼드는 레벨이 나뉘어(레벨 0은 Shadow 와 GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 하다.
          */
         SW_GLOBAL_VARIABLE( bool, gv_deferredShading, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
         /**
@@ -53,13 +58,19 @@ namespace sw
 
         struct FrameRendererSubsystemInternal
         {
-            /** @brief 파이프라인 변수의 지금 값입니다(게임 스레드). 렌더 스레드의 고르기는 이 사본을 받는다. */
-            static RenderPipelineRequest makePipelineRequest()
+            /** @brief 파이프라인을 골라 읽습니다(게임 스레드). 렌더러는 읽은 것을 받는다. 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다. */
+            static RenderPipelineRequest loadChosenPipeline()
             {
-                RenderPipelineRequest request;
-                request._commandLinePath = gv_renderPipeline.get();
-                request._bDeferred       = gv_deferredShading ? SW_TRUE : SW_FALSE;
-                return request;
+                const EngineDefaultAssets&        engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
+                const DataPath&                   packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
+                const string                      commandLinePath     = gv_renderPipeline.get();
+                FrameRendererUtil::PipelineChoice choice{};
+                choice._commandLinePath = commandLinePath;
+                choice._deferredPath    = engineDefaultAssets._defaultDeferredPipeline.get();
+                choice._gamePath        = packPipeline.isSet() ? string_view( packPipeline.get() ) : string_view{};
+                choice._forwardPath     = engineDefaultAssets._defaultForwardPipeline.get();
+                choice._bDeferred       = gv_deferredShading;
+                return RenderPipelineRequest::load( FrameRendererUtil::computePipelinePath( choice ) );
             }
         };
     } // namespace
@@ -102,7 +113,19 @@ namespace sw
             SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: -gv_viewMode=%# is not a view mode (0 .. %#)", static_cast<int64>( viewMode ), static_cast<int64>( RenderViewMode::Count ) - 1 );
             return SubsystemInitResult::Failed;
         }
-        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), FrameRendererSubsystemInternal::makePipelineRequest() ) == false )
+        // 가림 판정 설정은 필수다 — 없거나 틀리면 기본값으로 대신하지 않고 기동을 멈춘다(설정 칸이 문턱의 정본이다).
+        OcclusionCullingConfig occlusionConfig{};
+        if ( ConfigManager::readConfigFileInto( OcclusionCullingConfig::kConfigFile, occlusionConfig ) != ConfigReadResult::Loaded )
+        {
+            SW_LOG_ERROR_ID( "FrameRenderer.OcclusionConfigMissing", "%# is missing or unreadable - the occlusion culling settings have no default (the log above names the key)", OcclusionCullingConfig::kConfigFile );
+            return SubsystemInitResult::Failed;
+        }
+        if ( const string reason = occlusionConfig.validate(); reason.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "FrameRenderer.OcclusionConfigInvalid", "%# is invalid: %#", OcclusionCullingConfig::kConfigFile, reason );
+            return SubsystemInitResult::Failed;
+        }
+        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), FrameRendererSubsystemInternal::loadChosenPipeline(), occlusionConfig ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.FailedInitializeFrameRenderer", "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;
@@ -132,23 +155,23 @@ namespace sw
         StringBuilder<constant::buffer::kMax256> changeBuilder;
         changeBuilder.appendFormat( "%#=%#", pVariable->_name, pVariable->getValueAsString() );
         const string                change         = string( changeBuilder.view() );
-        const RenderPipelineRequest request        = FrameRendererSubsystemInternal::makePipelineRequest(); // 렌더 스레드는 변수를 읽지 않는다 — 여기(게임 스레드)서 뜬 사본을 넘긴다
+        const RenderPipelineRequest pipeline       = FrameRendererSubsystemInternal::loadChosenPipeline(); // 렌더 스레드는 변수도 파일도 읽지 않는다 — 여기(게임 스레드)서 읽어 넘긴다
         RenderThreadSubsystem*      pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
         RenderThread* const         pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
         if ( pRenderThread == nullptr )
         {
-            applyPipelineChange( change, request ); // 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다
+            applyPipelineChange( change, pipeline ); // 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다
             return;
         }
-        pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [this, change, request]( IRHIDevice& )
-        { applyPipelineChange( change, request ); } ) );
+        pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [this, change, pipeline]( IRHIDevice& )
+        { applyPipelineChange( change, pipeline ); } ) );
     }
 
-    void FrameRendererSubsystem::applyPipelineChange( const string& change, const RenderPipelineRequest& request )
+    void FrameRendererSubsystem::applyPipelineChange( const string& change, const RenderPipelineRequest& pipeline )
     {
         // 화면 밖 렌더러는 옛 파이프라인으로 지었고 PSO 캐시를 함께 쓴다 — 내리고 다음 그리기가 새 파이프라인으로 다시 짓는다.
         _offscreenRenderers->shutdown();
-        if ( _frameRenderer->selectPipeline( request ) == false )
+        if ( _frameRenderer->selectPipeline( pipeline ) == false )
             SW_LOG_ERROR_ID( "FrameRenderer.ChangedButPipelineCould", "%# but the pipeline could not be selected - %#", change.c_str(), _frameRenderer->getStatusMessage().c_str() );
         else
             SW_LOG_INFO_ID( "FrameRenderer.ChangedDrawing", "%# - drawing with %#", change.c_str(), _frameRenderer->getPipelinePath().c_str() );

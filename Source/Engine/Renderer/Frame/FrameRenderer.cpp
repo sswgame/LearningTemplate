@@ -11,8 +11,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -60,9 +59,7 @@ namespace sw
         , _postProcessMaterials{ _pDevice, _pipelineResource, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _viewResources{ _pDevice, _pipelineResource, _state._settings, _autoExposure, _upscale }
-        , _pipelinePath{}
-        , _argumentPipelinePath{}
-        , _pipelineRequest{}
+        , _pipeline{}
         , _lastPendingPSOBatchCount{ 0 }
         , _bOffscreenRenderer{ SW_FALSE }
         , _capture{ _pDevice, _state.getMainView()._transientPool, _pipelineResource }
@@ -93,12 +90,23 @@ namespace sw
         shutdown();
     }
 
-    bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipelineRequest,
-                                    string_view pipelineXMLPath )
+    RenderPipelineRequest RenderPipelineRequest::load( string_view path )
+    {
+        RenderPipelineRequest request{};
+        request._path                         = string( path );
+        shared_ptr<RenderPipelineAsset> asset = make_shared<RenderPipelineAsset>();
+        if ( asset->loadFromXMLFile( AssetID{ path } ) )
+            request._asset = std::move( asset );
+        return request;
+    }
+
+    bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipeline,
+                                    const OcclusionCullingConfig& occlusionConfig )
     {
         _pDevice = pDevice;
         // 첫 패킷 전에 파이프라인을 묶는 일(트랜지언트 나눔 · 비동기 큐 계획)이 읽을 설정 — 게임 스레드가 뜬 사본이다(화면 밖 렌더러는 주 렌더러의 사본).
-        _state._settings = settings;
+        _state._settings        = settings;
+        _state._occlusionConfig = occlusionConfig;
         // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
         _state._deform._animationTimer.resetTimer();
         _state._deform._animationTimer.startTimer();
@@ -131,45 +139,24 @@ namespace sw
 
         // 2D 정렬 레이어 표는 엔진 필수 데이터다. 서브시스템 Render2DSettings 가 기동 때 읽고(못 읽으면 기동이 멈춘다) 렌더러 서브시스템이 그 뒤에 선다 -
         // 주 렌더러와 미리보기 렌더러는 서비스 표의 같은 표를 읽는다. 주 출력의 보기 모드(`-gv_viewMode`)는 게임 스레드의 `FrameRendererSubsystem` 이 정한다.
-        _argumentPipelinePath = pipelineXMLPath;
-        return selectPipeline( pipelineRequest );
+        return selectPipeline( pipeline );
     }
 
-    bool FrameRenderer::selectPipeline( const RenderPipelineRequest& request )
+    bool FrameRenderer::selectPipeline( const RenderPipelineRequest& pipeline )
     {
-        // 인자, `-gv_renderPipeline`, `-gv_deferredShading`, 팩 설정(`PackEngineSettings::_renderPipeline`), EngineDefaultAssets 의 포워드 순서로 고른다.
-        // 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다.
-        const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
-        const DataPath&            packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
-        // 변수 값은 게임 스레드가 뜬 사본(@p request)이다 — 렌더 스레드는 변수를 읽지 않는다. 고른 뒤 화면 밖 렌더러가 같은 요청으로 선다.
-        _pipelineRequest = request;
-        FrameRendererUtil::PipelineChoice choice{};
-        choice._argumentPath               = _argumentPipelinePath;
-        choice._commandLinePath            = _pipelineRequest._commandLinePath;
-        choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline.get();
-        choice._gamePath                   = packPipeline.isSet() ? string_view( packPipeline.get() ) : string_view{};
-        choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline.get();
-        choice._bDeferred                  = _pipelineRequest._bDeferred != SW_FALSE;
-        const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
-        if ( _status == FrameRendererStatus::Ready && resolvedPipeline == _pipelinePath )
+        if ( _status == FrameRendererStatus::Ready && pipeline._path == _pipeline._path )
             return true; // 고른 결과가 같다(디퍼드를 켰지만 명령줄 파이프라인이 이긴다 등)
 
-        if ( loadPipeline( AssetID{ resolvedPipeline } ) == false )
+        if ( rebuildPipeline( pipeline ) == false )
         {
             _status = FrameRendererStatus::Failed;
-            if ( _statusMessage.empty() )
-            {
-                StringBuilder<constant::buffer::kMax256> message;
-                message.appendFormat( "pipeline load failed: %#", resolvedPipeline );
-                _statusMessage = message.view();
-            }
             SW_LOG_ERROR_ID( "FrameRenderer.NotReady", "Not ready — %#", _statusMessage );
             return false;
         }
 
         _status = FrameRendererStatus::Ready;
         _statusMessage.clear();
-        SW_LOG_INFO_ID( "FrameRenderer.ReadyPipeline", "Ready with pipeline '%#'", _pipelinePath );
+        SW_LOG_INFO_ID( "FrameRenderer.ReadyPipeline", "Ready with pipeline '%#'", _pipeline._path );
         return true;
     }
 
@@ -180,7 +167,7 @@ namespace sw
 
     void FrameRenderer::shutdown()
     {
-        const bool bAlreadyShutDown = _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipelinePath.empty();
+        const bool bAlreadyShutDown = _status == FrameRendererStatus::Uninitialized && _pDevice == nullptr && _pipeline._path.empty();
         if ( bAlreadyShutDown )
             return;
 
@@ -211,15 +198,14 @@ namespace sw
         _status              = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
         _bCallbacksBound = SW_FALSE;
-        _pipelinePath.clear();
+        _pipeline        = RenderPipelineRequest{};
         SW_LOG_INFO_ID( "FrameRenderer.ShutDown", "Shut down." );
     }
 
-    bool FrameRenderer::loadPipeline( const AssetID& assetID )
+    bool FrameRenderer::rebuildPipeline( const RenderPipelineRequest& pipeline )
     {
-        const string_view pipelineXMLPath = assetID.view();
-        _pipelinePath                     = pipelineXMLPath;
-        _bCallbacksBound                  = SW_FALSE;
+        _pipeline        = pipeline;
+        _bCallbacksBound = SW_FALSE;
         _state._graph.clear();
         _state._frameGraph.clear();
         // 새 파이프라인의 첨부 이름은 옛 계획과 짝이 맞지 않는다 — 비우고 세대를 올려 뷰 풀이 다시 만든다(묶을 때 새 계획이 선다).
@@ -227,19 +213,21 @@ namespace sw
         ++_state._transientAliasGeneration;
         releaseTransientResources();
 
-        if ( _pipelineResource.loadFromXMLFile( assetID ) == false )
+        if ( _pipeline._asset == nullptr )
         {
             StringBuilder<constant::buffer::kMax256> message;
-            message.appendFormat( "failed to load pipeline XML: %#", pipelineXMLPath );
+            message.appendFormat( "failed to load pipeline XML: %#", _pipeline._path );
             _statusMessage = message.view();
             return false;
         }
+        // 협력 객체들이 참조로 읽는 자기 사본이다 — 읽은 파이프라인은 화면 밖 렌더러와 함께 쓴다.
+        _pipelineResource.getDesc() = _pipeline._asset->getDesc();
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         if ( listPass.empty() )
         {
             StringBuilder<constant::buffer::kMax256> message;
-            message.appendFormat( "no graph passes in pipeline: %#", pipelineXMLPath );
+            message.appendFormat( "no graph passes in pipeline: %#", _pipeline._path );
             _statusMessage = message.view();
             SW_LOG_ERROR_ID( "FrameRenderer.PipelineLoadFailed", "%#", _statusMessage );
             return false;
@@ -497,7 +485,7 @@ namespace sw
         { return pass._type == RenderPassKind::Decal; } ) == false )
         {
             SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - DBuffer decals need a depth prepass (deferred or forward prepass pipeline) and are not drawn",
-                                    static_cast<uint32>( _state._listFrameDecal.size() ), _pipelinePath );
+                                    static_cast<uint32>( _state._listFrameDecal.size() ), _pipeline._path );
             return;
         }
         const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
@@ -1630,14 +1618,15 @@ namespace sw
         return static_cast<RenderViewMode>( _sceneViewMode.load( std::memory_order_relaxed ) );
     }
 
-    bool FrameRenderer::initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath )
+    bool FrameRenderer::initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, const RenderPipelineRequest& pipeline )
     {
         // 호스트는 걸지 않는다(주 렌더러의 일). PSO 저장소는 initialize 앞에 둔다 — 같은 파이프라인일 때만 함께 쓴다.
-        _bOffscreenRenderer = SW_TRUE;
-        if ( pipelinePath.empty() )
+        _bOffscreenRenderer       = SW_TRUE;
+        const bool bSharePipeline = pipeline._path.empty();
+        if ( bSharePipeline )
             _psoManager.shareCache( mainRenderer._psoManager );
-        // 설정 · 파이프라인 요청은 주 렌더러가 든 사본이다 — 이 렌더러는 렌더 스레드에서 서므로 변수를 읽지 않는다.
-        return initialize( pDevice, mainRenderer._state._pTaskManager, mainRenderer._state._settings, mainRenderer._pipelineRequest,
-                           pipelinePath.empty() ? string_view{ mainRenderer._pipelinePath } : pipelinePath );
+        // 설정은 주 렌더러가 든 사본이다 — 이 렌더러는 렌더 스레드에서 서므로 변수를 읽지 않는다.
+        return initialize( pDevice, mainRenderer._state._pTaskManager, mainRenderer._state._settings, bSharePipeline ? mainRenderer._pipeline : pipeline,
+                           mainRenderer._state._occlusionConfig );
     }
 } // namespace sw

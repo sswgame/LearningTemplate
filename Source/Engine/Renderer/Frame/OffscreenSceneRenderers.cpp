@@ -26,7 +26,7 @@ namespace sw
         shutdown();
     }
 
-    FrameRenderer* OffscreenSceneRenderers::execute( FrameRenderer& mainRenderer, IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath )
+    FrameRenderer* OffscreenSceneRenderers::execute( FrameRenderer& mainRenderer, IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, const RenderPipelineRequest* pPipeline )
     {
         const bool          bCanRender       = mainRenderer.isReady() && pDevice != nullptr && packet._bValid == SW_TRUE;
         const bool          bIsOffscreenView = packet._sceneKey != 0 && packet._outputRenderTarget != 0;
@@ -43,16 +43,16 @@ namespace sw
         outputPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         outputPass._arrClearColor[0]  = clearColor;
         pFrameStream->clearRenderTargets( outputPass );
-        FrameRenderer* const pRenderer = getOrCreate( mainRenderer, pDevice, packet._sceneKey, pipelinePath );
+        FrameRenderer* const pRenderer = getOrCreate( mainRenderer, pDevice, packet._sceneKey, pPipeline );
         const bool           bDrew     = pRenderer != nullptr && pRenderer->executePacket( pDevice, packet ); // 보기 모드는 패킷의 뷰 설정이 정한다
         pFrameStream->prepareTextureForShaderRead( outputTarget );
         return bDrew ? pRenderer : nullptr;
     }
 
-    FrameRenderer* OffscreenSceneRenderers::getOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath )
+    FrameRenderer* OffscreenSceneRenderers::getOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, const RenderPipelineRequest* pPipeline )
     {
-        const bool        bMainPipeline = pipelinePath.empty() || pipelinePath == mainRenderer.getPipelinePath();
-        const string_view keyPath       = bMainPipeline ? string_view{} : pipelinePath;
+        const bool        bMainPipeline = pPipeline == nullptr || pPipeline->_path.empty() || pPipeline->_path == mainRenderer.getPipelinePath();
+        const string_view keyPath       = bMainPipeline ? string_view{} : string_view{ pPipeline->_path };
         for ( Entry& entry : _listEntry )
         {
             if ( entry._sceneKey == sceneKey && entry._pipelinePath == keyPath )
@@ -62,7 +62,7 @@ namespace sw
         created._renderer     = make_unique<FrameRenderer>();
         created._sceneKey     = sceneKey;
         created._pipelinePath = string( keyPath );
-        if ( created._renderer->initializeOffscreen( pDevice, mainRenderer, keyPath ) == false )
+        if ( created._renderer->initializeOffscreen( pDevice, mainRenderer, bMainPipeline ? RenderPipelineRequest{} : *pPipeline ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.OffscreenRendererSceneKey", "Offscreen renderer for scene key %# ('%#') could not start: %#", sceneKey,
                              created._renderer->getPipelinePath().c_str(), created._renderer->getStatusMessage() );

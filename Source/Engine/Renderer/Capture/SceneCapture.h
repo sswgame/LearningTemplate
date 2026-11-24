@@ -17,6 +17,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
 
@@ -57,7 +58,7 @@ namespace sw
         SceneCapture& operator=( const SceneCapture& ) = delete;
 
         /**
-         * @brief @p renderThread 의 주 렌더러로 @p pipelinePath 파이프라인을 쓰도록 정합니다. 렌더 스레드에 디바이스 · 렌더러가 없으면 false 입니다.
+         * @brief @p renderThread 의 주 렌더러로 @p pipelinePath 파이프라인을 읽어 쓰도록 정합니다(비면 주 렌더러의 것). 렌더 스레드에 디바이스 · 렌더러가 없거나 파이프라인을 읽지 못하면 false 입니다.
          * @details 이 캡처의 씬 렌더러는 첫 `capture` 에서 렌더 스레드가 만들고(`OffscreenSceneRenderers`), `shutdown` 이 내린다.
          */
         [[nodiscard]] bool initialize( RenderThread& renderThread, string_view pipelinePath );
@@ -96,7 +97,7 @@ namespace sw
 
     private:
         RenderThread*              _pRenderThread;
-        string                     _pipelinePath;
+        RenderPipelineRequest      _pipeline;     ///< 캡처할 파이프라인(경로가 비면 주 렌더러의 것)
         unique_ptr<Texture2D>      _outputTarget; ///< 렌더 스레드 객체 — 출력(Present 결과)이 그려지는 곳
         RenderPacketSceneCollector _scene;        ///< 씬 → 패킷(게임 스레드). 캡처마다 스냅샷을 놓는다(`capture` 끝)
         RenderJob                  _job;

@@ -20,6 +20,7 @@ namespace sw
     class FrameRenderer;
     class IRHIDevice;
     struct RenderFramePacket;
+    struct RenderPipelineRequest;
 
     /**
      * @class OffscreenSceneRenderers
@@ -40,10 +41,10 @@ namespace sw
         /**
          * @brief 화면 밖 패킷을 그 (씬 키, 파이프라인)의 렌더러로 패킷의 출력 타깃(`_outputRenderTarget`)에 그립니다(렌더 스레드).
          * @details 출력 타깃을 열고(@p clearColor 로 지운다) 그린 뒤 셰이더 읽기 상태로 둔다 — 미리보기와 캡처가 이 한 길을 쓴다. 렌더러가 없으면 @p mainRenderer 를 본떠 만든다
-         *          (@p pipelinePath 가 비면 주 렌더러의 파이프라인이고 PSO 저장소를 함께 쓴다).
+         *          (@p pPipeline 이 nullptr 이거나 경로가 비면 주 렌더러의 파이프라인이고 PSO 저장소를 함께 쓴다).
          * @return 그린 렌더러입니다(캡처가 그 첨부를 읽는다). 그리지 못하면 nullptr 입니다(이유는 로그에 남는다).
          */
-        FrameRenderer* execute( FrameRenderer& mainRenderer, IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, string_view pipelinePath = {} );
+        FrameRenderer* execute( FrameRenderer& mainRenderer, IRHIDevice* pDevice, RenderFramePacket& packet, const float4& clearColor, const RenderPipelineRequest* pPipeline = nullptr );
         /**
          * @brief 씬 캡처 하나에 새 씬 키를 냅니다(하위 렌더러를 캡처끼리 나누지 않는다 — 씬이 다르다). 어느 스레드에서 불러도 된다.
          * @details 씬 키의 주인은 키로 렌더러를 드는 이 표다(프로세스 전역 발급기를 두지 않는다 — 사용자 지적 2026-11-08). 언리얼 씬 캡처도 자기 `FScene` 을 렌더러 모듈이 든다.
@@ -69,7 +70,7 @@ namespace sw
             string                    _pipelinePath; ///< 비면 주 렌더러의 파이프라인(PSO 저장소를 함께 쓴다)
         };
         /** @brief (씬 키, 파이프라인)의 렌더러를 찾고 없으면 만듭니다. 만들지 못하면 nullptr 입니다. */
-        FrameRenderer* getOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, string_view pipelinePath );
+        FrameRenderer* getOrCreate( FrameRenderer& mainRenderer, IRHIDevice* pDevice, uint32 sceneKey, const RenderPipelineRequest* pPipeline );
 
     private:
         vector<Entry>  _listEntry;

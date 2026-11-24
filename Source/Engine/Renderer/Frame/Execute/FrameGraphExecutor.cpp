@@ -15,7 +15,6 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
-#include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
@@ -138,12 +137,6 @@ namespace sw
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
             SW_LOG_ERROR_ID( "FrameGraphExecutor.FailedCreateTransparentRank", "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
         _occlusion.ensurePlaceholder( _pDevice );
-        // 가림 판정 설정은 필수다 — 없거나 틀리면 기본값으로 대신하지 않고 멈춘다(설정 칸이 문턱의 정본이다).
-        if ( ConfigManager::readConfigFileInto( OcclusionCullingConfig::kConfigFile, _occlusionConfig ) != ConfigReadResult::Loaded )
-            reportFatalError( "%# is missing or unreadable - the occlusion culling settings have no default (the log above names the key)", OcclusionCullingConfig::kConfigFile );
-        const string reason = _occlusionConfig.validate();
-        if ( reason.empty() == false )
-            reportFatalError( "%# is invalid: %#", OcclusionCullingConfig::kConfigFile, reason );
         if ( _lateCullCb.isValid() == false && _lateCullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) == false )
             SW_LOG_ERROR_ID( "FrameGraphExecutor.FailedCreateLateCullCb", "Failed to create the late occlusion cull constant buffer - two-phase occlusion runs only its first phase" );
     }
@@ -1080,21 +1073,21 @@ namespace sw
             uint32 _span{ 0 };
         };
         static_assert( sizeof( RootConstants ) / sizeof( uint32 ) <= shaderslot::kRootConstantDwords, "multi pass sort root constants exceed the root block" );
-        const vector<uint32>&        listBatch = _state._gpuScene.getMultiPassSortBatches();
-        const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassKind::InstanceSortMultiPass );
+        const vector<GPUScene::MultiPassSortBatch>& listBatch = _state._gpuScene.getMultiPassSortBatches();
+        const RHIPipelineStateHandle                pso       = _psoManager.getEnginePSO( RenderPassKind::InstanceSortMultiPass );
         if ( listBatch.empty() || pso == 0 )
             return;
         _pCmd->setComputePipelineState( pso );
         bindSortResources( cullViewIndex, renderView, rankSRV );
         vector<GPUSortStage> listStage;
-        for ( const uint32 batchIndex : listBatch )
+        for ( const GPUScene::MultiPassSortBatch& batch : listBatch )
         {
-            GPUScene::collectSortStages( _state._gpuScene.getAllBatches()[batchIndex]._instanceCount, listStage );
+            GPUScene::collectSortStages( batch._instanceCount, listStage );
             for ( const GPUSortStage& stage : listStage )
             {
                 // 앞 단계가 쓴 목록을 다음 단계가 읽는다(상태는 그대로 UAV).
                 graphContext.uavBarrier( RenderGraphBufferUAV{ FrameResource::cullVisibleInstances() }, cullViewIndex );
-                const RootConstants constants{ batchIndex, static_cast<uint32>( stage._kind ), stage._span };
+                const RootConstants constants{ batch._batchIndex, static_cast<uint32>( stage._kind ), stage._span };
                 _pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
                 _pCmd->dispatchThreads( stage._threadCount, 1, 1 );
             }
@@ -1124,14 +1117,14 @@ namespace sw
         outParams._arrLODControl[2] = _state._gpuScene.hasLODState( cullViewIndex ) ? _lodFadeStep : 0u;
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
         if ( pView != nullptr )
-            HZBOcclusion::fillCullParams( *pView, _occlusionConfig, outParams );
+            HZBOcclusion::fillCullParams( *pView, _state._occlusionConfig, outParams );
     }
 
     bool FrameGraphExecutor::isTwoPhaseOcclusionEnabled() const
     {
         // 간접 멀티 드로우가 없는 백엔드(WebGPU)는 끈다 — 배치마다 따로 내는 간접 드로우에 뒤 단계의 컬링 · 피라미드 재짓기를 더하면 웹의 한 스레드 기록이 이득보다 비싸다(웹 깃발).
         // DX11 은 컬링 자체가 없다(`_bGPUCulling`).
-        if ( _pDevice == nullptr || _state._settings._bOcclusionCulling == SW_FALSE || _occlusionConfig._bTwoPhase == false )
+        if ( _pDevice == nullptr || _state._settings._bOcclusionCulling == SW_FALSE || _state._occlusionConfig._bTwoPhase == false )
             return false;
         const RHICapabilities& caps = _pDevice->getCapabilities();
         return caps._bGPUCulling != SW_FALSE && caps._bMultiDrawIndirect != SW_FALSE;
