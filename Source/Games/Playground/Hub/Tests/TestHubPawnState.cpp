@@ -101,3 +101,17 @@ SW_TEST_CASE( HubPawnStateTest, StatesSurviveAnOriginShift )
     SW_EXPECT_TRUE( HubPawnReplicationComponent::isClose( walking, HubPawnReplicationComponent::toAbsoluteState( origin, walkingLocal ), 0.001f ) );
     SW_EXPECT_TRUE( HubPawnReplicationComponent::toLocalState( WorldOrigin{}, absolute )._ride._position == absolute._ride._position );
 }
+
+/** @brief [HubPawnStateTest] 바닥 틱 차이는 서버가 정한다 — 몰려 온 입력에는 그대로라 명령마다 한 틱씩 가고, 시계가 벌어졌을 때만 다시 맞춘다 */
+SW_TEST_CASE( HubPawnStateTest, FloorTickOffsetStaysUntilTheClocksDrift )
+{
+    HubPawnState state;
+    HubPawnReplicationComponent::updateFloorTickOffset( 500, 20, state );
+    SW_EXPECT_EQUAL( 480, state._floorTickOffset );
+    HubPawnReplicationComponent::updateFloorTickOffset( 503, 21, state ); // 세 틱치를 한 서버 틱에 몰아 푼다
+    HubPawnReplicationComponent::updateFloorTickOffset( 503, 22, state );
+    HubPawnReplicationComponent::updateFloorTickOffset( 503, 23, state );
+    SW_EXPECT_EQUAL( 480, state._floorTickOffset );
+    HubPawnReplicationComponent::updateFloorTickOffset( 600, 24, state ); // 클라이언트가 오래 멈췄다
+    SW_EXPECT_EQUAL( 576, state._floorTickOffset );
+}

@@ -1,11 +1,12 @@
 /**
  * @file InterpToMovementComponent.h
- * @brief 틱 번호의 함수로 움직이는 바닥(엘리베이터 · 왕복 발판)입니다. 서버와 클라이언트가 같은 틱에 같은 자리를 냅니다.
+ * @brief 틱 번호의 함수로 움직이는 바닥(엘리베이터 · 왕복 발판 · 회전판)입니다. 서버와 클라이언트가 같은 틱에 같은 자리를 냅니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Radians.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -32,6 +33,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+
         InterpToMovementComponent();
         virtual ~InterpToMovementComponent() override = default;
 
@@ -50,10 +54,19 @@ namespace sw
          *        @p bPingPong 이면 끝에서 되돌아갑니다. 경유점이 없거나 구간 시간이 0 이하이면 0 입니다.
          */
         static float3 computeOffset( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong, float64 seconds );
+        /** @brief @p seconds 동안 돈 요(라디안, 한 바퀴 안)입니다. */
+        static float32 computeTurn( Radians turnRate, float64 seconds );
         /** @brief 경로를 정합니다 — 코드로 바닥을 세우는 쪽(테스트 · 키트)이 플레이 시작 전에 부릅니다. 데이터로 세우는 씬은 속성을 씁니다. */
         void setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong );
-        /** @brief 틱 @p tick 의 자리로 옮깁니다. */
-        void applyTick( uint32 tick );
+        /** @brief 틱 @p tick 의 자세로 트랜스폼을 옮깁니다. */
+        void applyTick( uint32 tick ) { applySeconds( static_cast<float64>( tick ) * static_cast<float64>( _tickSeconds ) ); }
+        /** @brief 바닥 시각 @p seconds(틱 × 틱 길이, 두 틱 사이면 그리기)의 자세로 트랜스폼을 옮깁니다. 네트 걸음의 간격이 이 바닥의 틱 길이와 달라도 같은 시각이면 같은 자세다. */
+        void applySeconds( float64 seconds );
+        /** @brief 바닥 시각 @p seconds 의 자세입니다(씬 자리) — 시각의 순수 함수라 서버 · 예측 · 다시 돌리기 · 원격 표시가 같은 값을 얻습니다. 시작하지 않았으면 false 입니다. */
+        [[nodiscard]] bool computePose( float64 seconds, float3& outPosition, quaternion& outRotation ) const;
+        /** @brief 회전 빠르기(요, 라디안/초)를 정합니다 — 코드로 세우는 쪽이 플레이 시작 전에 부릅니다. */
+        void    setTurnRate( Radians turnRate ) { _turnRate = turnRate; }
+        Radians getTurnRate() const { return _turnRate; }
 
     private:
         PROPERTY( Category = "Path", DisplayName = "Waypoints", Tooltip = "Offsets from the start position, visited in order", Units = m, Meta = "Shape=Points,ShapeAxes=World" )
@@ -64,9 +77,13 @@ namespace sw
         float32 _tickSeconds;
         PROPERTY( Category = "Path", DisplayName = "Ping Pong", Tooltip = "Go back along the path instead of looping to the start" )
         bool _bPingPong;
+        PROPERTY( Category = "Path", DisplayName = "Turn Rate", Tooltip = "Yaw speed of a turntable (per second), a function of the tick like the path" )
+        Radians _turnRate;
 
         PROPERTY( RuntimeState, Category = "Path", DisplayName = "Start Position", Tooltip = "Runtime: absolute position the path starts from", Units = m )
         float3 _startPosition; ///< 절대 자리 — 지나던 중에 내렸다 올린 바닥(스트리밍 셀 · 세이브)도 처음 자리에서 잰다
+        PROPERTY( RuntimeState, Category = "Path", DisplayName = "Start Rotation", Tooltip = "Runtime: local rotation the turn starts from", Units = rad )
+        float3 _startRotation;
         PROPERTY( RuntimeState, Category = "Path", DisplayName = "Started", Tooltip = "Runtime" )
         bool _bStarted;
 
