@@ -1,6 +1,7 @@
 // SkirmishLockstepLinkTest — 락스텝 연결이 넷 세션의 수명을 따른다(nogpu, 루프백 포트 0).
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 세션을 직접 세우느라 엔진 서비스(`ResourceComposition`)를 찾는다
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
