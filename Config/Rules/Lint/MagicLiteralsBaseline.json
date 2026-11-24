@@ -733,7 +733,6 @@
     "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.cpp": {"integer": 5, "hex": 1},
     "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h": {"integer": 2},
     "Source/GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.cpp": {"minus-one": 1},
-    "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.cpp": {"float": 6, "integer": 23, "hex": 2},
     "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.cpp": {"integer": 4},
     "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h": {"integer": 6},
     "Source/GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.cpp": {"integer": 4},

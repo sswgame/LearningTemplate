@@ -219,15 +219,91 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Name = "boost" )
-        hashed_string _boostedType{}; ///< 이 타입 기술은 ×1.5
+        hashed_string _boostedType{}; ///< 이 타입 기술은 `MonsterBattleRules::_weatherBoostScale` 배
         PROPERTY( Name = "weaken" )
-        hashed_string _weakenedType{}; ///< 이 타입 기술은 ×0.5
+        hashed_string _weakenedType{}; ///< 이 타입 기술은 `MonsterBattleRules::_weatherPenaltyScale` 배
         PROPERTY( Name = "immune" )
         vector<hashed_string> _listChipImmuneType{}; ///< 턴 끝 피해를 받지 않는 타입
         PROPERTY( Name = "chip", Min = 0 )
         int32 _chipDivisor{ 0 }; ///< 턴 끝에 최대 HP 를 이 값으로 나눈 만큼 잃는다(0이면 없음)
         PROPERTY( Min = 1 )
         int32 _turns{ 5 }; ///< 기술로 부를 때의 지속 턴
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 전투 규칙의 수치(`<Rules>`)입니다. 적지 않은 칸은 초기값이다 — 초기값은 5 세대 피해 · 급소, 3 · 4 세대 포획 · 도망 공식이다.
+     * @details 정수 나눗셈의 단계마다 내림하므로 배율은 백분율 · 나누는 수로 적는다.
+     */
+    REFLECT()
+    struct SW_KIT_API MonsterBattleRules
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "critDivisor", Min = 1 )
+        vector<int32> _listCritDivisor{ 24, 8, 2 }; ///< 급소 단계마다의 확률 분모(단계가 넘치면 반드시 급소)
+        PROPERTY( Min = 0 )
+        int32 _levelFactor{ 2 }; ///< 피해 = (레벨 × 이 값 / `_levelDivisor` + `_levelBase`) × 위력 × 공격 / 방어 / `_powerDivisor` + `_damageBase`
+        PROPERTY( Min = 1 )
+        int32 _levelDivisor{ 5 };
+        PROPERTY( Min = 0 )
+        int32 _levelBase{ 2 };
+        PROPERTY( Min = 1 )
+        int32 _powerDivisor{ 50 };
+        PROPERTY( Min = 0 )
+        int32 _damageBase{ 2 };
+        PROPERTY( Min = 0 )
+        int32 _critPercent{ 150 };
+        PROPERTY( Min = 0 )
+        int32 _stabPercent{ 150 }; ///< 기술과 타입이 같은 개체의 피해
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _rollMinPercent{ 85 }; ///< 피해 난수의 하한(상한은 100)
+        PROPERTY( Min = 1 )
+        int32 _burnAttackDivisor{ 2 }; ///< 화상 개체의 물리 피해를 나누는 수
+        PROPERTY( Min = 1 )
+        int32 _stageBase{ 2 }; ///< 능력 변화 +n 은 (이 값 + n) / 이 값, −n 은 이 값 / (이 값 + n)
+        PROPERTY( Min = 0.0 )
+        float32 _weatherBoostScale{ 1.5f };
+        PROPERTY( Min = 0.0 )
+        float32 _weatherPenaltyScale{ 0.5f };
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _paralysisChance{ 25 }; ///< 마비 개체가 움직이지 못할 확률
+        PROPERTY( Min = 0.0 )
+        float32 _paralysisSpeedScale{ 0.5f };
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _thawChance{ 20 };
+        PROPERTY( Min = 1 )
+        int32 _maxSleepTurns{ 3 };
+        PROPERTY( Min = 1 )
+        int32 _poisonDivisor{ 8 }; ///< 턴 끝에 최대 HP 를 이 값으로 나눈 만큼 잃는다
+        PROPERTY( Min = 1 )
+        int32 _burnDivisor{ 16 };
+        PROPERTY( Min = 1 )
+        int32 _toxicDivisor{ 16 }; ///< 맹독은 최대 HP × n / 이 값
+        PROPERTY( Min = 1 )
+        int32 _toxicMaxTurns{ 15 };
+        PROPERTY( Min = 0 )
+        int32 _escapeSpeedFactor{ 128 }; ///< 도망 값 = 내 스피드 × 이 값 / 상대 스피드 + `_escapePerAttempt` × 지난 시도 수
+        PROPERTY( Min = 0 )
+        int32 _escapePerAttempt{ 30 };
+        PROPERTY( Min = 1 )
+        int32 _escapeRollRange{ 256 }; ///< 0 부터 이 값 미만을 굴려 도망 값 미만이면 도망친다
+        PROPERTY( Min = 1 )
+        int32 _captureMaxHPFactor{ 3 }; ///< 포획 값 = (최대 HP × 이 값 − HP × `_captureHPFactor`) × 포획률 × 볼 / (최대 HP × 이 값)
+        PROPERTY( Min = 0 )
+        int32 _captureHPFactor{ 2 };
+        PROPERTY( Min = 1 )
+        int32 _captureMaxRate{ 255 }; ///< 포획률의 상한이자 반드시 잡히는 포획 값
+        PROPERTY( Min = 0.0 )
+        float32 _captureHelplessScale{ 2.0f }; ///< 수면 · 얼음
+        PROPERTY( Min = 0.0 )
+        float32 _captureStatusScale{ 1.5f }; ///< 그 밖의 상태이상
+        PROPERTY( Min = 2 )
+        int32 _captureRollRange{ 65536 }; ///< 흔들림마다 0 부터 이 값 미만을 굴린다
+        PROPERTY( Min = 1 )
+        int32 _captureShakeCount{ 4 }; ///< 모두 넘어야 잡힌다(화면에는 하나 적게 흔들린다)
     };
 } // namespace sw
 
@@ -287,7 +363,7 @@ namespace sw
 {
     /**
      * @class MonsterCollectorCatalog
-     * @brief `<MonsterCollectorCatalog>` 아래의 `<Move>`, `<Nature>`, `<Weather>`, `<StatusImmunity>`, `<Species>`(`<Learn>`, `<Evolve>`), `<Encounter>`(`<Slot>`)를 읽는 카탈로그입니다.
+     * @brief `<MonsterCollectorCatalog>` 아래의 `<Rules>`, `<Move>`, `<Nature>`, `<Weather>`, `<StatusImmunity>`, `<Species>`(`<Learn>`, `<Evolve>`), `<Encounter>`(`<Slot>`)를 읽는 카탈로그입니다.
      * @details 칸은 각 Def 의 `PROPERTY` 가 스키마다(기본값 = 초기값, 범위 = Min · Max). 예시는 다음과 같다.
      *          `<Move id="ember" name="Ember" type="Fire" category="Special" power="40" accuracy="100" pp="25" status="Burn" statusChance="10"/>`
      *          `<Move id="growl" name="Growl" type="Normal" category="Status" pp="40" stat="Attack" stages="-1" target="Foe"/>`
@@ -333,10 +409,12 @@ namespace sw
         /** @brief @p type 이 @p status 에 면역인지 반환합니다(불꽃은 화상, 전기는 마비 등). */
         bool isStatusImmune( MonsterStatus status, const vector<hashed_string>& listType ) const;
 
-        const MonsterSpeciesDef*         findSpecies( const hashed_string& id ) const { return _speciesCatalog.find( id ); }
-        const MonsterMoveDef*            findMove( const hashed_string& id ) const { return _moveCatalog.find( id ); }
-        const MonsterNatureDef*          findNature( const hashed_string& id ) const { return _natureCatalog.find( id ); }
-        const MonsterWeatherDef*         findWeather( const hashed_string& id ) const { return _weatherCatalog.find( id ); }
+        const MonsterSpeciesDef* findSpecies( const hashed_string& id ) const { return _speciesCatalog.find( id ); }
+        const MonsterMoveDef*    findMove( const hashed_string& id ) const { return _moveCatalog.find( id ); }
+        const MonsterNatureDef*  findNature( const hashed_string& id ) const { return _natureCatalog.find( id ); }
+        const MonsterWeatherDef* findWeather( const hashed_string& id ) const { return _weatherCatalog.find( id ); }
+        /** @brief 전투 규칙의 수치입니다(`<Rules>` 가 없으면 초기값). */
+        const MonsterBattleRules&        getBattleRules() const { return _battleRules; }
         const vector<MonsterNatureDef>&  getNatures() const { return _natureCatalog.getAll(); }
         const vector<MonsterSpeciesDef>& getSpecies() const { return _speciesCatalog.getAll(); }
 
@@ -358,6 +436,7 @@ namespace sw
         GameCatalog<MonsterWeatherDef>   _weatherCatalog;
         GameCatalog<MonsterEncounterDef> _encounterCatalog;
         vector<MonsterStatusImmunityDef> _listStatusImmunity;
+        MonsterBattleRules               _battleRules;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MonsterCollectorCatalog>::acquire` 로 한 벌을 받습니다. */

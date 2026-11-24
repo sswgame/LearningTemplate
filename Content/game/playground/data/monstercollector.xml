@@ -6,6 +6,8 @@
   야생의 포획률 255 에 볼 배율 3 이면 반드시 잡힌다.
 -->
 <MonsterCollectorCatalog>
+	<!-- 전투 규칙의 수치(MonsterBattleRules) — 적지 않은 칸은 초기값이다. 야생 만남이 짧은 판이라 급소는 1.5 배, 도망은 시도마다 30 씩 쉬워진다. -->
+	<Rules critDivisor="24,8,2" critPercent="150" stabPercent="150" rollMinPercent="85" escapePerAttempt="30" captureShakeCount="4"/>
 	<Move id="leafslap" name="Leaf Slap" type="Moss" power="40" accuracy="0" pp="30"/>
 	<Move id="rootgrip" name="Root Grip" type="Moss" category="Status" pp="20" stat="Speed" stages="-1" target="Foe"/>
 	<Move id="nudge" name="Nudge" type="Spark" power="10" accuracy="0" pp="30"/>

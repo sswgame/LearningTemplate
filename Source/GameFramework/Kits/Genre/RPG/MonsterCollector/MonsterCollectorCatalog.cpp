@@ -114,6 +114,7 @@ namespace sw
         , _weatherCatalog{}
         , _encounterCatalog{}
         , _listStatusImmunity{}
+        , _battleRules{}
     {
     }
 
@@ -125,6 +126,7 @@ namespace sw
         _weatherCatalog.clear();
         _encounterCatalog.clear();
         _listStatusImmunity.clear();
+        _battleRules = MonsterBattleRules{};
     }
 
     bool MonsterCollectorCatalog::parseStat( string_view text, MonsterStat& outStat )
@@ -223,6 +225,7 @@ namespace sw
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readProperties 가 남긴다).
         using Element                          = XMLCatalogElement<MonsterCollectorCatalog>;
         static constexpr Element kArrElement[] = {
+            Element::of<&MonsterCollectorCatalog::_battleRules>( "Rules" ),
             Element::of<&MonsterCollectorCatalog::loadStatusImmunity>( "StatusImmunity" ),
             Element::of<&MonsterCollectorCatalog::loadMove>( "Move" ),
             Element::of<&MonsterCollectorCatalog::loadSpecies>( "Species" ),

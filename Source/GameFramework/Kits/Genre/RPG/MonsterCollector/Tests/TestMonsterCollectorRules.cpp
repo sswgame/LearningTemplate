@@ -660,13 +660,13 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, DamageFormula )
     input._power   = 40;
     input._attack  = 55;
     input._defense = 55;
-    SW_EXPECT_EQUAL( 19, sw::MonsterBattle::computeDamage( input ) ); // (22 × 40 × 55 / 55) / 50 + 2
+    SW_EXPECT_EQUAL( 19, sw::MonsterBattle::computeDamage( sw::MonsterBattleRules{}, input ) ); // (22 × 40 × 55 / 55) / 50 + 2
 
     const auto with = [input]( auto mutate )
     {
         sw::MonsterDamageInput changed = input;
         mutate( changed );
-        return sw::MonsterBattle::computeDamage( changed );
+        return sw::MonsterBattle::computeDamage( sw::MonsterBattleRules{}, changed );
     };
     SW_EXPECT_EQUAL( 28, with( []( sw::MonsterDamageInput& value )
     { value._bCritical = true; } ) );
@@ -694,6 +694,14 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, DamageFormula )
         value._defense        = 9999;
         value._typeMultiplier = 0.25f;
     } ) );
+
+    // 카탈로그의 <Rules> 가 수치를 바꾼다 — 급소 두 배 · 기본 피해 10
+    sw::MonsterCollectorCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCollectorCatalog><Rules critPercent="200" damageBase="10" critDivisor="4"/></MonsterCollectorCatalog>)", "MonsterCollectorRulesTest" ) );
+    input._bCritical = true;
+    SW_EXPECT_EQUAL( 54, sw::MonsterBattle::computeDamage( catalog.getBattleRules(), input ) ); // (17 + 10) × 2
+    SW_EXPECT_EQUAL( 4, sw::MonsterBattle::computeCriticalDivisor( catalog.getBattleRules(), 0 ) );
+    SW_EXPECT_EQUAL( 1, sw::MonsterBattle::computeCriticalDivisor( catalog.getBattleRules(), 1 ) );
 }
 
 /**
@@ -701,15 +709,15 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, DamageFormula )
  */
 SW_TEST_CASE_F( MonsterCollectorRulesTest, StagesAndTypes )
 {
-    SW_EXPECT_NEAR( 1.0, sw::MonsterBattle::computeStageMultiplier( 0 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 2.0, sw::MonsterBattle::computeStageMultiplier( 2 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 0.5, sw::MonsterBattle::computeStageMultiplier( -2 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 4.0, sw::MonsterBattle::computeStageMultiplier( 99 ), 1.0e-5 );
-    SW_EXPECT_NEAR( 0.25, sw::MonsterBattle::computeStageMultiplier( -99 ), 1.0e-5 );
-    SW_EXPECT_EQUAL( 24, sw::MonsterBattle::computeCriticalDivisor( 0 ) );
-    SW_EXPECT_EQUAL( 8, sw::MonsterBattle::computeCriticalDivisor( 1 ) );
-    SW_EXPECT_EQUAL( 2, sw::MonsterBattle::computeCriticalDivisor( 2 ) );
-    SW_EXPECT_EQUAL( 1, sw::MonsterBattle::computeCriticalDivisor( 9 ) );
+    SW_EXPECT_NEAR( 1.0, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, 0 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 2.0, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, 2 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 0.5, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, -2 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 4.0, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, 99 ), 1.0e-5 );
+    SW_EXPECT_NEAR( 0.25, sw::MonsterBattle::computeStageMultiplier( sw::MonsterBattleRules{}, -99 ), 1.0e-5 );
+    SW_EXPECT_EQUAL( 24, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 0 ) );
+    SW_EXPECT_EQUAL( 8, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 1 ) );
+    SW_EXPECT_EQUAL( 2, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 2 ) );
+    SW_EXPECT_EQUAL( 1, sw::MonsterBattle::computeCriticalDivisor( sw::MonsterBattleRules{}, 9 ) );
 
     const sw::MonsterInstance fire = make( "flamo", 50 );
     SW_EXPECT_NEAR( 2.0, _battle.computeTypeMultiplier( "Water", fire ), 1.0e-5 );
@@ -755,7 +763,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, CaptureFormula )
     sw::GameRandom random;
     random.setSeed( 3 );
     const auto capture = [&random]( int32 hp, int32 catchRate, float32 ball, sw::MonsterStatus status )
-    { return sw::MonsterBattle::computeCapture( 30, hp, catchRate, ball, status, random ); };
+    { return sw::MonsterBattle::computeCapture( sw::MonsterBattleRules{}, 30, hp, catchRate, ball, status, random ); };
 
     const sw::MonsterCaptureResult normal = capture( 30, 255, 1.0f, sw::MonsterStatus::None ); // (90 - 60) × 255 / 90 = 85
     SW_EXPECT_EQUAL( 85, normal._catchValue );

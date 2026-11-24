@@ -35,6 +35,10 @@ namespace sw
                 return pSpecies != nullptr ? pSpecies->_listType : s_listEmpty;
             }
 
+            static constexpr uint32 kTurnOrderStream = 0x5bd1e995u; ///< 턴 순서 난수를 전투 난수와 가른다
+            static constexpr int32  kPercent         = 100;
+            static constexpr int32  kHalf            = 2;
+
             static const hashed_string& getPoisonName()
             {
                 static const hashed_string name( "Poison" );
@@ -77,7 +81,7 @@ namespace sw
         _pCatalog = pCatalog;
         _pChart   = pChart;
         _random.setSeed( seed );
-        _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, 0x5bd1e995u ) );
+        _turnOrder.initialize( TurnOrderMode::Rounds, GameRandom::deriveSeed( seed, MonsterBattleInternal::kTurnOrderStream ) );
     }
 
     void MonsterBattle::start( const vector<MonsterInstance>& listPlayer, const vector<MonsterInstance>& listFoe, bool bWild )
@@ -137,6 +141,12 @@ namespace sw
         if ( entry._activeIndex < 0 || entry._activeIndex >= static_cast<int32>( entry._listMonster.size() ) )
             return s_empty;
         return entry._listMonster[static_cast<size_t>( entry._activeIndex )];
+    }
+
+    const MonsterBattleRules& MonsterBattle::getRules() const
+    {
+        static const MonsterBattleRules s_default{};
+        return _pCatalog != nullptr ? _pCatalog->getBattleRules() : s_default;
     }
 
     bool MonsterBattle::isInProgress() const
@@ -297,7 +307,7 @@ namespace sw
             }
             case MonsterStatus::Freeze:
             {
-                if ( _random.nextInt( 1, 100 ) <= kThawChance )
+                if ( _random.nextInt( 1, MonsterBattleInternal::kPercent ) <= getRules()._thawChance )
                 {
                     monster._status = MonsterStatus::None;
                     pushEvent( MonsterBattleEvent::Kind::Thawed, side );
@@ -308,7 +318,7 @@ namespace sw
             }
             case MonsterStatus::Paralysis:
             {
-                if ( _random.nextInt( 1, 100 ) <= kParalysisChance )
+                if ( _random.nextInt( 1, MonsterBattleInternal::kPercent ) <= getRules()._paralysisChance )
                 {
                     pushEvent( MonsterBattleEvent::Kind::FullyParalyzed, side );
                     return false;
@@ -346,7 +356,7 @@ namespace sw
                                  ( pMove->_statStages != 0 && pMove->_statTarget == MonsterEffectTarget::Foe );
         if ( bTargetsFoe && getActive( foeSide ).isFainted() )
             return;
-        const bool bMissedByAccuracy = bTargetsFoe && pMove->_accuracy > 0 && _random.nextInt( 1, 100 ) > pMove->_accuracy;
+        const bool bMissedByAccuracy = bTargetsFoe && pMove->_accuracy > 0 && _random.nextInt( 1, MonsterBattleInternal::kPercent ) > pMove->_accuracy;
         if ( bMissedByAccuracy )
         {
             pushEvent( MonsterBattleEvent::Kind::Missed, side, 0, pMove->_id );
@@ -364,8 +374,8 @@ namespace sw
             }
             const bool         bPhysical = pMove->_category == MonsterMoveCategory::Physical;
             MonsterDamageInput input;
-            input._bCritical         = _random.nextInt( 1, computeCriticalDivisor( pMove->_critStage ) ) == 1;
-            input._randomPercent     = _random.nextInt( 85, 100 );
+            input._bCritical         = _random.nextInt( 1, computeCriticalDivisor( getRules(), pMove->_critStage ) ) == 1;
+            input._randomPercent     = _random.nextInt( getRules()._rollMinPercent, MonsterBattleInternal::kPercent );
             input._level             = attacker._level;
             input._power             = pMove->_power;
             input._attack            = computeStatWithStage( side, attacker, bPhysical ? MonsterStat::Attack : MonsterStat::SpecialAttack, input._bCritical, true );
@@ -376,7 +386,7 @@ namespace sw
             input._bBurned           = bPhysical && attacker._status == MonsterStatus::Burn;
             if ( input._bCritical )
                 pushEvent( MonsterBattleEvent::Kind::Critical, side, 0, pMove->_id );
-            applyDamage( foeSide, computeDamage( input ), MonsterBattleEvent::Kind::Damage, pMove->_id );
+            applyDamage( foeSide, computeDamage( getRules(), input ), MonsterBattleEvent::Kind::Damage, pMove->_id );
             _eventBuffer.getLast()._multiplier = typeMultiplier;
             if ( getActive( foeSide ).isFainted() )
             {
@@ -385,10 +395,10 @@ namespace sw
             }
         }
 
-        const bool bStatusProcs = pMove->_status != MonsterStatus::None && pMove->_statusChance > 0 && _random.nextInt( 1, 100 ) <= pMove->_statusChance;
+        const bool bStatusProcs = pMove->_status != MonsterStatus::None && pMove->_statusChance > 0 && _random.nextInt( 1, MonsterBattleInternal::kPercent ) <= pMove->_statusChance;
         if ( bStatusProcs )
             applyStatus( foeSide, pMove->_status );
-        if ( pMove->_statStages != 0 && _random.nextInt( 1, 100 ) <= pMove->_statChance )
+        if ( pMove->_statStages != 0 && _random.nextInt( 1, MonsterBattleInternal::kPercent ) <= pMove->_statChance )
             applyStatChange( pMove->_statTarget == MonsterEffectTarget::Self ? side : foeSide, pMove->_changedStat, pMove->_statStages );
     }
 
@@ -397,7 +407,7 @@ namespace sw
         MonsterInstance&           target   = getActiveMutable( kFoeSide );
         const MonsterSpeciesDef*   pSpecies = _pCatalog->findSpecies( target._speciesID );
         const int32                rate     = pSpecies != nullptr ? pSpecies->_catchRate : 1;
-        const MonsterCaptureResult result   = computeCapture( target.getMaxHP(), target._hp, rate, ballMultiplier, target._status, _random );
+        const MonsterCaptureResult result   = computeCapture( getRules(), target.getMaxHP(), target._hp, rate, ballMultiplier, target._status, _random );
         for ( int32 shake = 1; shake <= result._shakes; ++shake )
         {
             pushEvent( MonsterBattleEvent::Kind::CaptureShake, kFoeSide, shake, target._speciesID );
@@ -414,15 +424,16 @@ namespace sw
 
     void MonsterBattle::executeRun()
     {
-        // 3세대 도망 공식이다. 내 스피드가 상대 이상이면 반드시 도망치고, 아니면 F = ⌊A × 128 / B⌋ + 30 × 시도 횟수 를 0..255 와 비교한다.
-        const int32 playerSpeed = MathUtil::max( 1, getActive( kPlayerSide ).getStat( MonsterStat::Speed ) );
-        const int32 foeSpeed    = MathUtil::max( 1, getActive( kFoeSide ).getStat( MonsterStat::Speed ) );
+        // 3세대 도망 공식이다. 내 스피드가 상대 이상이면 반드시 도망치고, 아니면 F = ⌊A × 128 / B⌋ + 30 × 시도 횟수 를 0..255 와 비교한다(수치는 `<Rules>`).
+        const MonsterBattleRules& rules       = getRules();
+        const int32               playerSpeed = MathUtil::max( 1, getActive( kPlayerSide ).getStat( MonsterStat::Speed ) );
+        const int32               foeSpeed    = MathUtil::max( 1, getActive( kFoeSide ).getStat( MonsterStat::Speed ) );
         ++_escapeAttempts;
         bool bEscaped = playerSpeed >= foeSpeed;
         if ( bEscaped == false )
         {
-            const int32 odds = playerSpeed * 128 / foeSpeed + 30 * ( _escapeAttempts - 1 );
-            bEscaped         = odds > 255 || _random.nextInt( 0, 255 ) < odds;
+            const int32 odds = playerSpeed * rules._escapeSpeedFactor / foeSpeed + rules._escapePerAttempt * ( _escapeAttempts - 1 );
+            bEscaped         = odds >= rules._escapeRollRange || _random.nextInt( 0, rules._escapeRollRange - 1 ) < odds;
         }
         if ( bEscaped == false )
         {
@@ -476,7 +487,7 @@ namespace sw
         target._status      = status;
         target._statusTurns = 0;
         if ( status == MonsterStatus::Sleep )
-            target._statusTurns = _random.nextInt( 1, kMaxSleepTurns );
+            target._statusTurns = _random.nextInt( 1, getRules()._maxSleepTurns );
         else if ( status == MonsterStatus::Toxic )
             target._statusTurns = 1;
         pushEvent( MonsterBattleEvent::Kind::StatusApplied, targetSide, static_cast<int32>( status ), hashed_string( getEnumName( status ) ) );
@@ -549,7 +560,8 @@ namespace sw
 
     void MonsterBattle::applyEndOfRound()
     {
-        const MonsterWeatherDef* pWeather = _weatherID.empty() ? nullptr : _pCatalog->findWeather( _weatherID );
+        const MonsterBattleRules& rules    = getRules();
+        const MonsterWeatherDef*  pWeather = _weatherID.empty() ? nullptr : _pCatalog->findWeather( _weatherID );
         for ( int32 side = 0; side < kSideCount && _result == MonsterBattleResult::Ongoing; ++side )
         {
             if ( _arrSide[side]._bNeedsSwitch || getActive( side ).isFainted() )
@@ -575,17 +587,17 @@ namespace sw
             {
                 if ( monster._status == MonsterStatus::Poison )
                 {
-                    applyDamage( side, MathUtil::max( 1, maxHP / 8 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getPoisonName() );
+                    applyDamage( side, MathUtil::max( 1, maxHP / rules._poisonDivisor ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getPoisonName() );
                 }
                 else if ( monster._status == MonsterStatus::Burn )
                 {
-                    applyDamage( side, MathUtil::max( 1, maxHP / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getBurnName() );
+                    applyDamage( side, MathUtil::max( 1, maxHP / rules._burnDivisor ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getBurnName() );
                 }
                 else if ( monster._status == MonsterStatus::Toxic )
                 {
-                    const int32 counter  = MathUtil::clamp( monster._statusTurns, 1, 15 );
+                    const int32 counter  = MathUtil::clamp( monster._statusTurns, 1, rules._toxicMaxTurns );
                     monster._statusTurns = counter + 1;
-                    applyDamage( side, MathUtil::max( 1, maxHP * counter / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getToxicName() );
+                    applyDamage( side, MathUtil::max( 1, maxHP * counter / rules._toxicDivisor ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getToxicName() );
                 }
             }
             if ( getActive( side ).isFainted() )
@@ -599,75 +611,76 @@ namespace sw
         }
     }
 
-    int32 MonsterBattle::computeDamage( const MonsterDamageInput& input )
+    int32 MonsterBattle::computeDamage( const MonsterBattleRules& rules, const MonsterDamageInput& input )
     {
         if ( input._power <= 0 || input._typeMultiplier <= 0.0f )
             return 0;
         const int64 attack  = MathUtil::max( 1, input._attack );
         const int64 defense = MathUtil::max( 1, input._defense );
-        int64       damage  = ( ( 2 * static_cast<int64>( input._level ) / 5 + 2 ) * input._power * attack / defense ) / 50 + 2;
+        int64       damage  = ( ( rules._levelFactor * static_cast<int64>( input._level ) / rules._levelDivisor + rules._levelBase ) * input._power * attack / defense ) / rules._powerDivisor + rules._damageBase;
         damage              = static_cast<int64>( static_cast<float64>( damage ) * static_cast<float64>( input._weatherMultiplier ) );
         if ( input._bCritical )
-            damage = damage * 3 / 2;
-        damage = damage * MathUtil::clamp( input._randomPercent, 85, 100 ) / 100;
+            damage = damage * rules._critPercent / MonsterBattleInternal::kPercent;
+        damage = damage * MathUtil::clamp( input._randomPercent, rules._rollMinPercent, MonsterBattleInternal::kPercent ) / MonsterBattleInternal::kPercent;
         if ( input._bStab )
-            damage = damage * 3 / 2;
+            damage = damage * rules._stabPercent / MonsterBattleInternal::kPercent;
         damage = static_cast<int64>( static_cast<float64>( damage ) * static_cast<float64>( input._typeMultiplier ) );
         if ( input._bBurned )
-            damage /= 2;
-        return static_cast<int32>( MathUtil::clamp<int64>( damage, 1, 0x7fffffff ) );
+            damage /= rules._burnAttackDivisor;
+        return static_cast<int32>( MathUtil::clamp<int64>( damage, 1, MathUtil::kMaxInt32 ) );
     }
 
-    MonsterCaptureResult MonsterBattle::computeCapture( int32 maxHP, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random )
+    MonsterCaptureResult MonsterBattle::computeCapture( const MonsterBattleRules& rules, int32 maxHP, int32 hp, int32 catchRate, float32 ballMultiplier, MonsterStatus status, GameRandom& random )
     {
         MonsterCaptureResult result;
-        const int64          safeMaxHP = MathUtil::max( 1, maxHP );
-        const int64          safeHP    = MathUtil::clamp<int64>( hp, 1, safeMaxHP );
-        float64              catchValue =
-            MathUtil::floor( static_cast<float64>( ( 3 * safeMaxHP - 2 * safeHP ) * MathUtil::clamp( catchRate, 1, 255 ) ) * static_cast<float64>( ballMultiplier ) / static_cast<float64>( 3 * safeMaxHP ) );
+        const int64          safeMaxHP   = MathUtil::max( 1, maxHP );
+        const int64          safeHP      = MathUtil::clamp<int64>( hp, 1, safeMaxHP );
+        const int64          scaledMaxHP = rules._captureMaxHPFactor * safeMaxHP;
+        const int64          rate        = ( scaledMaxHP - rules._captureHPFactor * safeHP ) * MathUtil::clamp( catchRate, 1, rules._captureMaxRate );
+        float64              catchValue  = MathUtil::floor( static_cast<float64>( rate ) * static_cast<float64>( ballMultiplier ) / static_cast<float64>( scaledMaxHP ) );
         if ( status == MonsterStatus::Sleep || status == MonsterStatus::Freeze )
-            catchValue *= 2.0;
+            catchValue *= static_cast<float64>( rules._captureHelplessScale );
         else if ( status != MonsterStatus::None )
-            catchValue *= 1.5;
-        result._catchValue = static_cast<int32>( MathUtil::max( 1.0, MathUtil::floor( catchValue ) ) );
-        if ( result._catchValue >= 255 )
+            catchValue *= static_cast<float64>( rules._captureStatusScale );
+        result._catchValue      = static_cast<int32>( MathUtil::max( 1.0, MathUtil::floor( catchValue ) ) );
+        const int32 shownShakes = rules._captureShakeCount - 1;
+        if ( result._catchValue >= rules._captureMaxRate )
         {
-            result._shakeChance = 65536;
-            result._shakes      = 3;
+            result._shakeChance = rules._captureRollRange;
+            result._shakes      = shownShakes;
             result._bCaught     = true;
             return result;
         }
-        const float64 inner = MathUtil::floor( MathUtil::sqrt( MathUtil::floor( MathUtil::sqrt( MathUtil::floor( 16711680.0 / result._catchValue ) ) ) ) );
-        result._shakeChance = static_cast<int32>( MathUtil::floor( 1048560.0 / MathUtil::max( 1.0, inner ) ) );
+        const float64 range = static_cast<float64>( rules._captureRollRange );
+        const float64 ratio = range * static_cast<float64>( rules._captureMaxRate ) / static_cast<float64>( result._catchValue );
+        const float64 inner = MathUtil::floor( MathUtil::sqrt( MathUtil::floor( MathUtil::sqrt( MathUtil::floor( ratio ) ) ) ) );
+        const float64 outer = ( range - 1.0 ) * MathUtil::sqrt( MathUtil::sqrt( range ) );
+        result._shakeChance = static_cast<int32>( MathUtil::floor( outer / MathUtil::max( 1.0, inner ) ) );
         int32 passed        = 0;
-        for ( int32 check = 0; check < 4; ++check )
+        for ( int32 check = 0; check < rules._captureShakeCount; ++check )
         {
-            if ( random.nextInt( 0, 65535 ) >= result._shakeChance )
+            if ( random.nextInt( 0, rules._captureRollRange - 1 ) >= result._shakeChance )
                 break;
             ++passed;
         }
-        result._bCaught = passed == 4;
-        result._shakes  = MathUtil::min( passed, 3 );
+        result._bCaught = passed == rules._captureShakeCount;
+        result._shakes  = MathUtil::min( passed, shownShakes );
         return result;
     }
 
-    float32 MonsterBattle::computeStageMultiplier( int32 stage )
+    float32 MonsterBattle::computeStageMultiplier( const MonsterBattleRules& rules, int32 stage )
     {
-        const int32 clamped = MathUtil::clamp( stage, kMinStage, kMaxStage );
+        const int32   clamped = MathUtil::clamp( stage, kMinStage, kMaxStage );
+        const float32 base    = static_cast<float32>( rules._stageBase );
         if ( clamped >= 0 )
-            return static_cast<float32>( 2 + clamped ) / 2.0f;
-        return 2.0f / static_cast<float32>( 2 - clamped );
+            return ( base + static_cast<float32>( clamped ) ) / base;
+        return base / ( base - static_cast<float32>( clamped ) );
     }
 
-    int32 MonsterBattle::computeCriticalDivisor( int32 critStage )
+    int32 MonsterBattle::computeCriticalDivisor( const MonsterBattleRules& rules, int32 critStage )
     {
-        if ( critStage <= 0 )
-            return 24;
-        if ( critStage == 1 )
-            return 8;
-        if ( critStage == 2 )
-            return 2;
-        return 1;
+        const size_t stage = static_cast<size_t>( MathUtil::max( 0, critStage ) );
+        return stage < rules._listCritDivisor.size() ? rules._listCritDivisor[stage] : 1;
     }
 
     float32 MonsterBattle::computeTypeMultiplier( const hashed_string& moveType, const MonsterInstance& defender ) const
@@ -686,25 +699,27 @@ namespace sw
             return 0.0f;
         const bool         bPhysical = pMove->_category == MonsterMoveCategory::Physical;
         MonsterDamageInput input;
-        input._level             = attacker._level;
-        input._power             = pMove->_power;
-        input._attack            = computeStatWithStage( attackerSide, attacker, bPhysical ? MonsterStat::Attack : MonsterStat::SpecialAttack, false, true );
-        input._defense           = computeStatWithStage( defenderSide, defender, bPhysical ? MonsterStat::Defense : MonsterStat::SpecialDefense, false, false );
-        input._typeMultiplier    = computeTypeMultiplier( pMove->_type, defender );
-        input._weatherMultiplier = computeWeatherMultiplier( pMove->_type );
-        input._bStab             = MonsterBattleInternal::isSpeciesStab( *_pCatalog, attacker, pMove->_type );
-        input._bBurned           = bPhysical && attacker._status == MonsterStatus::Burn;
-        const float32 average    = static_cast<float32>( computeDamage( input ) ) * 0.925f;
-        const float32 accuracy   = pMove->_accuracy > 0 ? static_cast<float32>( pMove->_accuracy ) / 100.0f : 1.0f;
+        input._level                          = attacker._level;
+        input._power                          = pMove->_power;
+        input._attack                         = computeStatWithStage( attackerSide, attacker, bPhysical ? MonsterStat::Attack : MonsterStat::SpecialAttack, false, true );
+        input._defense                        = computeStatWithStage( defenderSide, defender, bPhysical ? MonsterStat::Defense : MonsterStat::SpecialDefense, false, false );
+        input._typeMultiplier                 = computeTypeMultiplier( pMove->_type, defender );
+        input._weatherMultiplier              = computeWeatherMultiplier( pMove->_type );
+        input._bStab                          = MonsterBattleInternal::isSpeciesStab( *_pCatalog, attacker, pMove->_type );
+        input._bBurned                        = bPhysical && attacker._status == MonsterStatus::Burn;
+        const MonsterBattleRules& rules       = getRules();
+        const float32             averageRoll = static_cast<float32>( rules._rollMinPercent + MonsterBattleInternal::kPercent ) / static_cast<float32>( MonsterBattleInternal::kHalf * MonsterBattleInternal::kPercent );
+        const float32             average     = static_cast<float32>( computeDamage( rules, input ) ) * averageRoll;
+        const float32             accuracy    = pMove->_accuracy > 0 ? static_cast<float32>( pMove->_accuracy ) / static_cast<float32>( MonsterBattleInternal::kPercent ) : 1.0f;
         return average * accuracy;
     }
 
     float32 MonsterBattle::computeEffectiveSpeed( int32 side ) const
     {
         const MonsterInstance& monster = getActive( side );
-        float32                speed   = static_cast<float32>( monster.getStat( MonsterStat::Speed ) ) * computeStageMultiplier( getStage( side, MonsterStat::Speed ) );
+        float32                speed   = static_cast<float32>( monster.getStat( MonsterStat::Speed ) ) * computeStageMultiplier( getRules(), getStage( side, MonsterStat::Speed ) );
         if ( monster._status == MonsterStatus::Paralysis )
-            speed *= 0.5f;
+            speed *= getRules()._paralysisSpeedScale;
         return speed;
     }
 
@@ -714,7 +729,7 @@ namespace sw
         // 급소는 쓰는 쪽의 떨어진 공격과 받는 쪽의 오른 방어를 무시한다.
         if ( bCritical && ( ( bAttacker && stage < 0 ) || ( bAttacker == false && stage > 0 ) ) )
             stage = 0;
-        return MathUtil::max( 1, static_cast<int32>( static_cast<float32>( monster.getStat( stat ) ) * computeStageMultiplier( stage ) ) );
+        return MathUtil::max( 1, static_cast<int32>( static_cast<float32>( monster.getStat( stat ) ) * computeStageMultiplier( getRules(), stage ) ) );
     }
 
     float32 MonsterBattle::computeWeatherMultiplier( const hashed_string& moveType ) const
@@ -726,9 +741,9 @@ namespace sw
         if ( pWeather == nullptr )
             return 1.0f;
         if ( pWeather->_boostedType == moveType )
-            return 1.5f;
+            return getRules()._weatherBoostScale;
         if ( pWeather->_weakenedType == moveType )
-            return 0.5f;
+            return getRules()._weatherPenaltyScale;
         return 1.0f;
     }
 
