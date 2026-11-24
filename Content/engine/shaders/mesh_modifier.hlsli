@@ -130,8 +130,8 @@ struct MeshDeform
     static float3 set( float3 value, uint axis, float component );
     static float3 normalizeOr( float3 value, float3 fallback );
     static float axisFraction( float3 position, ModifierContext context );
-    static uint hashLattice( int cellX, int cellY, int cellZ, uint seed );
-    static float latticeValue( int cellX, int cellY, int cellZ, uint seed );
+    static uint4 hashLattice( int4 cellX, int4 cellY, int cellZ, uint seed );
+    static float4 latticeValues( int4 cellX, int4 cellY, int cellZ, uint seed );
     static float smooth( float ratio );
     static float valueNoise3D( float3 position, uint seed );
     static float3 bendLike( float3 location, ModifierContext context, float angle, float direction, float lowerParam, float upperParam );
@@ -140,7 +140,8 @@ struct MeshDeform
     static float3 taper( float3 location, ModifierContext context );
     static float3 stretch( float3 location, ModifierContext context );
     static float3 wave( float3 location, ModifierContext context, bool bRadial );
-    static float3 noise( float3 location, ModifierContext context );
+    static float3 sampleNoise( uint kind, float3 location, ModifierContext context );
+    static float3 noise( float3 location, float3 noiseVector, ModifierContext context );
     static float3 melt( float3 location, ModifierContext context );
     static float3 poke( float3 location, ModifierContext context );
     static float3 displace( float3 location, float3 surfaceNormal, ModifierContext context );
@@ -155,12 +156,12 @@ struct MeshDeform
     static float3 squeeze( float3 location, ModifierContext context );
     static float3 sinusCurve( float3 location, ModifierContext context );
     static float3 rolled( float3 location, ModifierContext context );
-    static float3 crumple( float3 location, float3 surfaceNormal, ModifierContext context );
+    static float3 crumple( float3 location, float3 surfaceNormal, float3 noiseVector, ModifierContext context );
     static float3 dynamicRipple( float3 location, ModifierContext context );
     static float3 pageFlip( float3 location, ModifierContext context );
     static float3 treeBend( float3 location, ModifierContext context );
-    static float3 vertNoise( float3 location, float3 surfaceNormal, ModifierContext context );
-    static float3 zstretchNoise( float3 location, ModifierContext context );
+    static float3 vertNoise( float3 location, float3 surfaceNormal, float noiseValue, ModifierContext context );
+    static float3 zstretchNoise( float3 location, float wobble, ModifierContext context );
     static float3 waving( float3 location, ModifierContext context );
     static float3 displaceLimits( float3 location, ModifierContext context );
     static float3 bezierAttractor( float3 location, ModifierContext context );
@@ -172,7 +173,7 @@ struct MeshDeform
     static float3 ropeDeform( float3 location, ModifierContext context );
     static float3 pathDeform( float3 location, ModifierContext context, bool bWorld );
     static float3 displaceByGrid( float3 location, float3 surfaceNormal, ModifierContext context, float amount, float midLevel, float2 uv, uint headerParam );
-    static void bernstein( uint degree, float t, out float outWeight[8] );
+    static void bernstein( uint3 degree, float3 t, out float3 outWeight[8] );
     static float3 lattice( float3 location, ModifierContext context );
     static float3 ffd2D( float3 location, ModifierContext context );
     static float3 pushOutOfSphere( float3 pos, float3 center, float radius );
@@ -190,6 +191,7 @@ struct MeshDeform
     static bool rayHitsBox( float3 origin, float3 direction, float3 boxMin, float3 boxMax, float maxDistance );
     static float3 conform( float3 location, float3 surfaceNormal, ModifierContext context );
     static uint countProgramElements();
+    static uint findCaseKind( uint kind );
     static float3 deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 transformPoint( float3 location, uint row );
     static float3 transformVector( float3 direction, uint row );
@@ -325,9 +327,9 @@ static float MeshDeform::axisFraction( float3 position, ModifierContext context 
 // ------------------------------------------------------------------------------
 // 값 노이즈 — Stack/MeshModifierNoise.h 와 비트 단위로 같은 정수 해시
 // ------------------------------------------------------------------------------
-static uint MeshDeform::hashLattice( int cellX, int cellY, int cellZ, uint seed )
+static uint4 MeshDeform::hashLattice( int4 cellX, int4 cellY, int cellZ, uint seed )
 {
-    uint hash = seed * 0x9E3779B1u;
+    uint4 hash = seed * 0x9E3779B1u;
     hash ^= asuint( cellX ) * 0x85EBCA6Bu;
     hash = ( hash << 13 ) | ( hash >> 19 );
     hash ^= asuint( cellY ) * 0xC2B2AE35u;
@@ -341,9 +343,9 @@ static uint MeshDeform::hashLattice( int cellX, int cellY, int cellZ, uint seed 
     return hash;
 }
 
-static float MeshDeform::latticeValue( int cellX, int cellY, int cellZ, uint seed )
+static float4 MeshDeform::latticeValues( int4 cellX, int4 cellY, int cellZ, uint seed )
 {
-    return (float)( MeshDeform::hashLattice( cellX, cellY, cellZ, seed ) & 0xFFFFu ) / 32767.5f - 1.0f;
+    return (float4)( MeshDeform::hashLattice( cellX, cellY, cellZ, seed ) & 0xFFFFu ) / 32767.5f - 1.0f;
 }
 
 static float MeshDeform::smooth( float ratio )
@@ -351,29 +353,23 @@ static float MeshDeform::smooth( float ratio )
     return ratio * ratio * ( 3.0f - 2.0f * ratio );
 }
 
+/** 모서리 여덟을 z 면 둘로 묶어 한 면 넷(x 는 0 1 0 1, y 는 0 0 1 1)을 벡터로 센다 — 모서리마다의 값은 `MeshModifierNoise` 의 정수 해시 그대로다 */
 static float MeshDeform::valueNoise3D( float3 position, uint seed )
 {
-    const float3 cell    = floor( position );
-    const int    cellX   = (int)cell.x;
-    const int    cellY   = (int)cell.y;
-    const int    cellZ   = (int)cell.z;
-    const float  tx      = MeshDeform::smooth( position.x - cell.x );
-    const float  ty      = MeshDeform::smooth( position.y - cell.y );
-    const float  tz      = MeshDeform::smooth( position.z - cell.z );
-    const float  v000    = MeshDeform::latticeValue( cellX, cellY, cellZ, seed );
-    const float  v100    = MeshDeform::latticeValue( cellX + 1, cellY, cellZ, seed );
-    const float  v010    = MeshDeform::latticeValue( cellX, cellY + 1, cellZ, seed );
-    const float  v110    = MeshDeform::latticeValue( cellX + 1, cellY + 1, cellZ, seed );
-    const float  v001    = MeshDeform::latticeValue( cellX, cellY, cellZ + 1, seed );
-    const float  v101    = MeshDeform::latticeValue( cellX + 1, cellY, cellZ + 1, seed );
-    const float  v011    = MeshDeform::latticeValue( cellX, cellY + 1, cellZ + 1, seed );
-    const float  v111    = MeshDeform::latticeValue( cellX + 1, cellY + 1, cellZ + 1, seed );
-    const float  value00 = v000 + ( v100 - v000 ) * tx;
-    const float  value10 = v010 + ( v110 - v010 ) * tx;
-    const float  value01 = v001 + ( v101 - v001 ) * tx;
-    const float  value11 = v011 + ( v111 - v011 ) * tx;
-    const float  lower   = value00 + ( value10 - value00 ) * ty;
-    const float  upper   = value01 + ( value11 - value01 ) * ty;
+    const float3 cell      = floor( position );
+    const int    cellX     = (int)cell.x;
+    const int    cellY     = (int)cell.y;
+    const int    cellZ     = (int)cell.z;
+    const float  tx        = MeshDeform::smooth( position.x - cell.x );
+    const float  ty        = MeshDeform::smooth( position.y - cell.y );
+    const float  tz        = MeshDeform::smooth( position.z - cell.z );
+    const int4   cornerX   = int4( cellX, cellX + 1, cellX, cellX + 1 );
+    const int4   cornerY   = int4( cellY, cellY, cellY + 1, cellY + 1 );
+    const float4 nearPlane = MeshDeform::latticeValues( cornerX, cornerY, cellZ, seed );
+    const float4 farPlane  = MeshDeform::latticeValues( cornerX, cornerY, cellZ + 1, seed );
+    const float4 rows      = float4( nearPlane.xz, farPlane.xz ) + ( float4( nearPlane.yw, farPlane.yw ) - float4( nearPlane.xz, farPlane.xz ) ) * tx;
+    const float  lower     = rows.x + ( rows.y - rows.x ) * ty;
+    const float  upper     = rows.z + ( rows.w - rows.z ) * ty;
     return lower + ( upper - lower ) * tz;
 }
 
@@ -482,20 +478,38 @@ static float3 MeshDeform::wave( float3 location, ModifierContext context, bool b
     return result;
 }
 
-static float3 MeshDeform::noise( float3 location, ModifierContext context )
+/**
+ * 노이즈를 쓰는 종류 넷(NOISE · CRUMPLE 은 세 축, VERTNOISE · ZSTRETCHNOISE 는 x 하나)의 값 노이즈 — 나머지 종류는 0.
+ * 종류마다 재면 값 노이즈가 여덟 벌 펼쳐진다. 종류마다 다른 것(주파수 · 씨앗 · 흐름)만 고르고 노이즈는 여기 한 벌이다.
+ */
+static float3 MeshDeform::sampleNoise( uint kind, float3 location, ModifierContext context )
+{
+    const bool bVector = kind == SW_MODIFIER_NOISE || kind == SW_MODIFIER_CRUMPLE;
+    float3     result  = float3( 0.0f, 0.0f, 0.0f );
+    SW_BRANCH if ( bVector || kind == SW_MODIFIER_VERTNOISE || kind == SW_MODIFIER_ZSTRETCHNOISE )
+    {
+        const uint   seed        = (uint)context.paramInt( kind == SW_MODIFIER_ZSTRETCHNOISE ? 3u : 2u );
+        const float  frequency   = context.param( kind == SW_MODIFIER_ZSTRETCHNOISE ? 2u : 1u );
+        const float  drift       = context.param( kind == SW_MODIFIER_NOISE ? 4u : 3u ) * context._time;
+        const float3 flow        = kind == SW_MODIFIER_NOISE     ? float3( drift, drift, drift )
+                                 : kind == SW_MODIFIER_VERTNOISE ? float3( drift, drift * 0.5f, drift * 0.25f )
+                                                                 : float3( 0.0f, 0.0f, 0.0f );
+        const float3 samplePoint = location * frequency + flow;
+        SW_LOOP for ( uint axis = 0u; axis < ( bVector ? 3u : 1u ); ++axis )
+        {
+            const float3 axisOffset = axis == 1u ? float3( 31.416f, 0.0f, 0.0f ) : ( axis == 2u ? float3( 0.0f, 0.0f, 67.123f ) : float3( 0.0f, 0.0f, 0.0f ) );
+            result                  = MeshDeform::set( result, axis, MeshDeform::valueNoise3D( samplePoint + axisOffset, seed ) );
+        }
+    }
+    return result;
+}
+
+static float3 MeshDeform::noise( float3 location, float3 noiseVector, ModifierContext context )
 {
     const float amplitude = context.param( 0u );
     float3      result    = location;
     if ( amplitude >= kModifierEpsilon )
-    {
-        const uint   seed        = (uint)context.paramInt( 2u );
-        const float  drift       = context.param( 4u ) * context._time;
-        const float3 samplePoint = location * context.param( 1u ) + float3( drift, drift, drift );
-        const float3 strength    = context.param3( 3u );
-        const float3 offset      = float3( MeshDeform::valueNoise3D( samplePoint, seed ) * strength.x, MeshDeform::valueNoise3D( samplePoint + float3( 31.416f, 0.0f, 0.0f ), seed ) * strength.y,
-                                           MeshDeform::valueNoise3D( samplePoint + float3( 0.0f, 0.0f, 67.123f ), seed ) * strength.z );
-        result                   = location + offset * amplitude;
-    }
+        result = location + noiseVector * context.param3( 3u ) * amplitude;
     return result;
 }
 
@@ -729,20 +743,16 @@ static float3 MeshDeform::rolled( float3 location, ModifierContext context )
     return result;
 }
 
-static float3 MeshDeform::crumple( float3 location, float3 surfaceNormal, ModifierContext context )
+static float3 MeshDeform::crumple( float3 location, float3 surfaceNormal, float3 noiseVector, ModifierContext context )
 {
     const float amplitude = context.param( 0u );
     float3      result    = location;
     if ( amplitude >= kModifierEpsilon )
     {
-        const uint   seed        = (uint)context.paramInt( 2u );
-        const float3 samplePoint = location * context.param( 1u );
-        const float3 noiseVector = float3( MeshDeform::valueNoise3D( samplePoint, seed ), MeshDeform::valueNoise3D( samplePoint + float3( 31.416f, 0.0f, 0.0f ), seed ),
-                                           MeshDeform::valueNoise3D( samplePoint + float3( 0.0f, 0.0f, 67.123f ), seed ) );
-        const float3 along       = surfaceNormal * noiseVector.x;
-        const float  blend       = saturate( context.param( 3u ) );
-        const float3 offset      = noiseVector * ( 1.0f - blend ) + along * blend;
-        result                   = location + offset * amplitude;
+        const float3 along  = surfaceNormal * noiseVector.x;
+        const float  blend  = saturate( context.param( 3u ) );
+        const float3 offset = noiseVector * ( 1.0f - blend ) + along * blend;
+        result              = location + offset * amplitude;
     }
     return result;
 }
@@ -815,31 +825,24 @@ static float3 MeshDeform::treeBend( float3 location, ModifierContext context )
     return result;
 }
 
-static float3 MeshDeform::vertNoise( float3 location, float3 surfaceNormal, ModifierContext context )
+static float3 MeshDeform::vertNoise( float3 location, float3 surfaceNormal, float noiseValue, ModifierContext context )
 {
     const float amplitude = context.param( 0u );
     float3      result    = location;
     if ( abs( amplitude ) >= kModifierEpsilon )
-    {
-        const uint   seed        = (uint)context.paramInt( 2u );
-        const float  drift       = context.param( 3u ) * context._time;
-        const float3 samplePoint = location * context.param( 1u ) + float3( drift, drift * 0.5f, drift * 0.25f );
-        result                   = location + surfaceNormal * ( MeshDeform::valueNoise3D( samplePoint, seed ) * amplitude );
-    }
+        result = location + surfaceNormal * ( noiseValue * amplitude );
     return result;
 }
 
-static float3 MeshDeform::zstretchNoise( float3 location, ModifierContext context )
+static float3 MeshDeform::zstretchNoise( float3 location, float wobble, ModifierContext context )
 {
     const float amount = context.param( 0u );
     const float noise  = context.param( 1u );
     float3      result = location;
     if ( abs( amount ) >= kModifierEpsilon || abs( noise ) >= kModifierEpsilon )
     {
-        const uint  axis   = context.paramAxis( 4u );
-        const uint  seed   = (uint)context.paramInt( 3u );
-        const float wobble = MeshDeform::valueNoise3D( location * context.param( 2u ), seed );
-        result             = MeshDeform::set( location, axis, MeshDeform::get( location, axis ) * ( 1.0f + amount ) + noise * wobble );
+        const uint axis = context.paramAxis( 4u );
+        result          = MeshDeform::set( location, axis, MeshDeform::get( location, axis ) * ( 1.0f + amount ) + noise * wobble );
     }
     return result;
 }
@@ -918,11 +921,30 @@ static float3 MeshDeform::displaceLimits( float3 location, ModifierContext conte
     return mode == 1 ? boxed : ( mode == 2 ? sphered : location );
 }
 
-/** 모디파이어 하나의 점 변형(모디파이어 공간). 모르는 종류는 그대로 둔다 */
+/** `deformPoint` 가 종류 @p kind 를 처리하는 자리의 종류 — 같은 함수를 쓰는 종류는 하나로 모은다(함수가 종류 수만큼 펼쳐지지 않고, 라벨을 쌓은 case 가 없어 WGSL 로도 옮겨진다) */
+static uint MeshDeform::findCaseKind( uint kind )
+{
+    const bool bLattice = kind == SW_MODIFIER_FFD2 || kind == SW_MODIFIER_FFD3 || kind == SW_MODIFIER_FFD4;
+    uint       result   = kind;
+    result              = kind == SW_MODIFIER_RIPPLE ? SW_MODIFIER_WAVE : result;
+    result              = kind == SW_MODIFIER_GLOBE ? SW_MODIFIER_CYLINDRIFY : result;
+    result              = kind == SW_MODIFIER_WORLDPATHDEFORM ? SW_MODIFIER_PATHDEFORM : result;
+    result              = kind == SW_MODIFIER_DISPLACEWEBCAM ? SW_MODIFIER_DISPLACERENDERTARGET : result;
+    result              = bLattice ? SW_MODIFIER_LATTICE : result;
+    result              = kind == SW_MODIFIER_CONFORMMULTI ? SW_MODIFIER_CONFORM : result;
+    return result;
+}
+
+/**
+ * 모디파이어 하나의 점 변형(모디파이어 공간). 모르는 종류는 그대로 둔다
+ * @note 분기는 SW_FORCECASE 다 — [branch] 를 단 switch 는 FXC · DXC(SPIR-V) 가 if 사슬로 바꾼다. 종류 55 개가 55 겹으로 중첩돼 FXC 가 몇 분(mesh_morph 하나 4 분 넘게)을 쓰고
+ *       Tint 는 중첩 한도(127)를 넘었다. 라벨을 쌓지 않는다(case A: case B:) — SPIR-V 의 떨어지기(fallthrough)를 Tint 가 읽지 못한다(findCaseKind 로 모은다).
+ */
 static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context )
 {
-    float3 result = location;
-    SW_BRANCH switch ( kind )
+    const float3 noiseVector = MeshDeform::sampleNoise( kind, location, context );
+    float3       result      = location;
+    SW_FORCECASE switch ( MeshDeform::findCaseKind( kind ) )
     {
         case SW_MODIFIER_BEND:
             result = MeshDeform::bend( location, context );
@@ -937,13 +959,10 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = MeshDeform::stretch( location, context );
             break;
         case SW_MODIFIER_WAVE:
-            result = MeshDeform::wave( location, context, false );
-            break;
-        case SW_MODIFIER_RIPPLE:
-            result = MeshDeform::wave( location, context, true );
+            result = MeshDeform::wave( location, context, kind == SW_MODIFIER_RIPPLE );
             break;
         case SW_MODIFIER_NOISE:
-            result = MeshDeform::noise( location, context );
+            result = MeshDeform::noise( location, noiseVector, context );
             break;
         case SW_MODIFIER_MELT:
             result = MeshDeform::melt( location, context );
@@ -964,10 +983,7 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = MeshDeform::bulge( location, context );
             break;
         case SW_MODIFIER_CYLINDRIFY:
-            result = MeshDeform::toRadius( location, context, true );
-            break;
-        case SW_MODIFIER_GLOBE:
-            result = MeshDeform::toRadius( location, context, false );
+            result = MeshDeform::toRadius( location, context, kind == SW_MODIFIER_CYLINDRIFY );
             break;
         case SW_MODIFIER_HUMP:
             result = MeshDeform::hump( location, context );
@@ -997,7 +1013,7 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = location + context.param3( 0u ) + context.param3( 1u ) * location + context.param3( 2u ) * location * location;
             break;
         case SW_MODIFIER_CRUMPLE:
-            result = MeshDeform::crumple( location, surfaceNormal, context );
+            result = MeshDeform::crumple( location, surfaceNormal, noiseVector, context );
             break;
         case SW_MODIFIER_DYNAMICRIPPLE:
             result = MeshDeform::dynamicRipple( location, context );
@@ -1009,10 +1025,10 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = MeshDeform::treeBend( location, context );
             break;
         case SW_MODIFIER_VERTNOISE:
-            result = MeshDeform::vertNoise( location, surfaceNormal, context );
+            result = MeshDeform::vertNoise( location, surfaceNormal, noiseVector.x, context );
             break;
         case SW_MODIFIER_ZSTRETCHNOISE:
-            result = MeshDeform::zstretchNoise( location, context );
+            result = MeshDeform::zstretchNoise( location, noiseVector.x, context );
             break;
         case SW_MODIFIER_WAVING:
             result = MeshDeform::waving( location, context );
@@ -1042,25 +1058,20 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = MeshDeform::ropeDeform( location, context );
             break;
         case SW_MODIFIER_PATHDEFORM:
-            result = MeshDeform::pathDeform( location, context, false );
-            break;
-        case SW_MODIFIER_WORLDPATHDEFORM:
-            result = MeshDeform::pathDeform( location, context, true );
+            result = MeshDeform::pathDeform( location, context, kind == SW_MODIFIER_WORLDPATHDEFORM );
             break;
         case SW_MODIFIER_DISPLACERENDERTARGET:
-            // 매개변수 0 양 · 1 중간값 · 2 채널(격자가 이미 한 채널이라 안 쓴다) · 3 타일링 · 4 오프셋, 격자 머리는 5
-            result = MeshDeform::displaceByGrid( location, surfaceNormal, context, context.param( 0u ), context.param( 1u ),
-                                                 context._uv * context.param3( 3u ).xy + context.param3( 4u ).xy, 5u );
+        {
+            // DISPLACERENDERTARGET: 매개변수 0 양 · 1 중간값 · 2 채널(격자가 이미 한 채널이라 안 쓴다) · 3 타일링 · 4 오프셋, 격자 머리는 5
+            // DISPLACEWEBCAM: 매개변수 0 양 · 1 중간값 · 2 채널 · 3 좌우 뒤집기, 격자 머리는 4
+            const bool   bWebcam   = kind == SW_MODIFIER_DISPLACEWEBCAM;
+            const float3 third     = context.param3( 3u );
+            const float2 webcamUv  = float2( third.x > 0.5f ? 1.0f - context._uv.x : context._uv.x, context._uv.y );
+            const float2 textureUv = bWebcam ? webcamUv : context._uv * third.xy + context.param3( 4u ).xy;
+            result                 = MeshDeform::displaceByGrid( location, surfaceNormal, context, context.param( 0u ), context.param( 1u ), textureUv, bWebcam ? 4u : 5u );
             break;
-        case SW_MODIFIER_DISPLACEWEBCAM:
-            // 매개변수 0 양 · 1 중간값 · 2 채널 · 3 좌우 뒤집기, 격자 머리는 4
-            result = MeshDeform::displaceByGrid( location, surfaceNormal, context, context.param( 0u ), context.param( 1u ),
-                                                 float2( context.param( 3u ) > 0.5f ? 1.0f - context._uv.x : context._uv.x, context._uv.y ), 4u );
-            break;
+        }
         case SW_MODIFIER_LATTICE:
-        case SW_MODIFIER_FFD2:
-        case SW_MODIFIER_FFD3:
-        case SW_MODIFIER_FFD4:
             result = MeshDeform::lattice( location, context );
             break;
         case SW_MODIFIER_FFD2D:
@@ -1073,7 +1084,6 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
             result = MeshDeform::hitDeform( location, context );
             break;
         case SW_MODIFIER_CONFORM:
-        case SW_MODIFIER_CONFORMMULTI:
             result = MeshDeform::conform( location, surfaceNormal, context );
             break;
         case SW_MODIFIER_POINTCACHE:
@@ -1082,10 +1092,8 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
         case SW_MODIFIER_VERTEXANIM:
             result = MeshDeform::vertexAnim( location, context );
             break;
-        case SW_MODIFIER_PAINT:
-            // 위치 · 법선을 안 바꾼다 - 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다(MeshModifier::isVertexColorModifier)
-            break;
         default:
+            // PAINT 는 위치 · 법선을 안 바꾼다 - 색은 세션이 GPU 메시의 정점 스트림에 CPU 결과로 덮는다(MeshModifier::isVertexColorModifier)
             break;
     }
     return result;
@@ -1255,28 +1263,32 @@ static float3 MeshDeform::displaceByGrid( float3 location, float3 surfaceNormal,
     return result;
 }
 
-/** 베른슈타인 기저(드 카스텔조) — degree + 1 개를 채운다(나머지는 0). Lattice · FFD2D 의 `computeBernstein` */
-static void MeshDeform::bernstein( uint degree, float t, out float outWeight[8] )
+/** 베른슈타인 기저(드 카스텔조) — 축마다 degree + 1 개를 채운다(나머지는 0). Lattice · FFD2D 의 `computeBernstein` 을 세 축 함께 세는 것이다(축마다 부르면 배열이 축 수만큼 펼쳐진다) */
+static void MeshDeform::bernstein( uint3 degree, float3 t, out float3 outWeight[8] )
 {
-    outWeight[0]          = 1.0f;
-    outWeight[1]          = 0.0f;
-    outWeight[2]          = 0.0f;
-    outWeight[3]          = 0.0f;
-    outWeight[4]          = 0.0f;
-    outWeight[5]          = 0.0f;
-    outWeight[6]          = 0.0f;
-    outWeight[7]          = 0.0f;
-    const float oneMinusT = 1.0f - t;
-    for ( uint order = 1u; order <= degree; ++order )
+    outWeight[0]           = float3( 1.0f, 1.0f, 1.0f );
+    outWeight[1]           = float3( 0.0f, 0.0f, 0.0f );
+    outWeight[2]           = float3( 0.0f, 0.0f, 0.0f );
+    outWeight[3]           = float3( 0.0f, 0.0f, 0.0f );
+    outWeight[4]           = float3( 0.0f, 0.0f, 0.0f );
+    outWeight[5]           = float3( 0.0f, 0.0f, 0.0f );
+    outWeight[6]           = float3( 0.0f, 0.0f, 0.0f );
+    outWeight[7]           = float3( 0.0f, 0.0f, 0.0f );
+    const float3 oneMinusT = 1.0f - t;
+    const uint   maxDegree = max( degree.x, max( degree.y, degree.z ) );
+    SW_LOOP for ( uint order = 1u; order <= maxDegree; ++order )
     {
-        float carry = 0.0f;
-        for ( uint index = 0u; index < order; ++index )
+        // 제 차수를 다 센 축은 그대로 둔다.
+        const bool3 bActive = order <= degree;
+        float3      carry   = float3( 0.0f, 0.0f, 0.0f );
+        SW_LOOP for ( uint index = 0u; index < order; ++index )
         {
-            const float value = outWeight[index];
-            outWeight[index]  = carry + oneMinusT * value;
-            carry             = t * value;
+            const float3 value = outWeight[index];
+            const float3 next  = carry + oneMinusT * value;
+            outWeight[index]   = float3( bActive.x ? next.x : value.x, bActive.y ? next.y : value.y, bActive.z ? next.z : value.z );
+            carry              = t * value;
         }
-        outWeight[order] = carry;
+        outWeight[order] = float3( bActive.x ? carry.x : 0.0f, bActive.y ? carry.y : 0.0f, bActive.z ? carry.z : 0.0f ); // 이 자리는 아직 0 이다
     }
 }
 
@@ -1294,20 +1306,16 @@ static float3 MeshDeform::lattice( float3 location, ModifierContext context )
     const float3 size       = context.raw( 5u ).xyz - boxMin;
     const float3 normalized = float3( size.x > kModifierEpsilon ? ( location.x - boxMin.x ) / size.x : 0.0f, size.y > kModifierEpsilon ? ( location.y - boxMin.y ) / size.y : 0.0f,
                                       size.z > kModifierEpsilon ? ( location.z - boxMin.z ) / size.z : 0.0f );
-    float weightX[8];
-    float weightY[8];
-    float weightZ[8];
-    MeshDeform::bernstein( countX - 1u, normalized.x, weightX );
-    MeshDeform::bernstein( countY - 1u, normalized.y, weightY );
-    MeshDeform::bernstein( countZ - 1u, normalized.z, weightZ );
+    float3 axisWeight[8];
+    MeshDeform::bernstein( uint3( countX, countY, countZ ) - 1u, normalized, axisWeight );
     float3 moved = float3( 0.0f, 0.0f, 0.0f );
     for ( uint indexZ = 0u; indexZ < countZ; ++indexZ )
     {
         for ( uint indexY = 0u; indexY < countY; ++indexY )
         {
-            const float weightYZ = weightY[indexY] * weightZ[indexZ];
+            const float weightYZ = axisWeight[indexY].y * axisWeight[indexZ].z;
             for ( uint indexX = 0u; indexX < countX; ++indexX )
-                moved += context.raw( 6u + indexX + countX * ( indexY + countY * indexZ ) ).xyz * ( weightX[indexX] * weightYZ );
+                moved += context.raw( 6u + indexX + countX * ( indexY + countY * indexZ ) ).xyz * ( axisWeight[indexX].x * weightYZ );
         }
     }
     return float3( size.x > kModifierEpsilon ? boxMin.x + moved.x * size.x : location.x, size.y > kModifierEpsilon ? boxMin.y + moved.y * size.y : location.y,
@@ -1329,10 +1337,8 @@ static float3 MeshDeform::ffd2D( float3 location, ModifierContext context )
         const uint  countY = clamp( (uint)max( context.paramInt( 1u ), 0 ), 2u, 8u );
         const float coordS = bUseX ? ( location.x - context._boundsMin.x ) / size.x : 0.0f;
         const float coordT = bUseY ? ( location.y - context._boundsMin.y ) / size.y : 0.0f;
-        float       weightX[8];
-        float       weightY[8];
-        MeshDeform::bernstein( countX - 1u, coordS, weightX );
-        MeshDeform::bernstein( countY - 1u, coordT, weightY );
+        float3      axisWeight[8];
+        MeshDeform::bernstein( uint3( countX - 1u, countY - 1u, 0u ), float3( coordS, coordT, 0.0f ), axisWeight );
         float deltaS = 0.0f;
         float deltaT = 0.0f;
         for ( uint indexY = 0u; indexY < countY; ++indexY )
@@ -1342,7 +1348,7 @@ static float3 MeshDeform::ffd2D( float3 location, ModifierContext context )
                 const uint controlIndex = indexX + countX * indexY;
                 if ( controlIndex < pointCount )
                 {
-                    const float weight = weightX[indexX] * weightY[indexY];
+                    const float weight = axisWeight[indexX].x * axisWeight[indexY].y;
                     deltaS += context.listValue( 2u, controlIndex * 2u ) * weight;
                     deltaT += context.listValue( 2u, controlIndex * 2u + 1u ) * weight;
                 }

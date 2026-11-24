@@ -86,6 +86,13 @@ namespace sw
                 ShaderTargetFormat       _format{ ShaderTargetFormat::DXBC_D3D11 };
             };
 
+            /** @brief 작업 @p task 의 컴파일 요청입니다. */
+            static ShaderCompileDesc makeCompileDesc( const FormatTask& task, const ShaderEnginePolicy& enginePolicy )
+            {
+                const ShaderCookRequest& request = *task._pRequest;
+                return ShaderCooker::makeCompileDesc( task._source, request._entryPoint, request._stage, task._format, enginePolicy, request._listPermutation );
+            }
+
             /** @brief 작업 하나의 결과 칸입니다. 작업마다 자기 칸에만 쓰고(공유 상태를 건드리지 않는다), 합치는 일은 요청 순서대로 직렬로 합니다. */
             struct FormatResult
             {
@@ -132,16 +139,13 @@ namespace sw
                  */
                 void cookTask( const FormatTask& task, bool bSkipReflection, FormatResult& outResult ) const
                 {
-                    const ShaderCookRequest& request = *task._pRequest;
-                    const Stopwatch          compileWatch;
+                    const Stopwatch compileWatch;
 
                     // 최신 판정은 컴파일의 쿠킹 기록 하나다 — 기록의 입력(소스 · 연 헤더 · 없던 앞자리 후보)과 도구가 그대로면 DDC 적중이라 컴파일러를 타지 않고, 파일은 내용이 다를 때만 쓴다.
                     ShaderCookResult cookResult{};
-                    outResult._bCompileFailed =
-                        ShaderCooker::cookShader( ShaderCooker::makeCompileDesc( task._source, request._entryPoint, request._stage, task._format, _pState->_enginePolicy, request._listPermutation ),
-                                                  task._outPath, cookResult ) == false;
-                    outResult._bCooked      = cookResult._bWritten == SW_TRUE;
-                    outResult._compileNanos = compileWatch.getElapsedNanoseconds();
+                    outResult._bCompileFailed = ShaderCooker::cookShader( makeCompileDesc( task, _pState->_enginePolicy ), task._outPath, cookResult ) == false;
+                    outResult._bCooked        = cookResult._bWritten == SW_TRUE;
+                    outResult._compileNanos   = compileWatch.getElapsedNanoseconds();
                     if ( bSkipReflection || outResult._bCompileFailed )
                         return;
 
@@ -354,6 +358,13 @@ namespace sw
                     // 못 만들면 ensure 가 폴더와 이유를 남기고, 그 폴더의 작업은 쓰기 실패로 결과(`outListResult`)에 남는다.
                     (void)FileUtil::ensureDirectoryExists( outDir );
                 }
+
+                // 글이 같은 변형은 하나만 컴파일한다(`ShaderCompiler::compileDistinct`) — 아래 작업은 나머지를 글로 맞힌다.
+                vector<ShaderCompileDesc> listDesc;
+                listDesc.reserve( listTask.size() );
+                for ( const FormatTask& task : listTask )
+                    listDesc.push_back( makeCompileDesc( task, state._enginePolicy ) );
+                ShaderCompiler::compileDistinct( listDesc );
 
                 CookJob job{};
                 job._pState      = &state;

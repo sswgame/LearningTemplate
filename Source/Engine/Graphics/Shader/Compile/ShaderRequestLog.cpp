@@ -232,6 +232,7 @@ namespace sw
             desc._enginePolicy = enginePolicy;
         }
 
+        ShaderCompiler::compileDistinct( listDesc ); // 글이 같은 변형은 하나만 컴파일한다 — 아래 컴파일은 나머지를 글로 맞힌다
         vector<uint8>              listFailed( listDesc.size(), 0 );
         const Internal::CompileJob job{ &listDesc };
         engine::runParallelInto<uint8>( listFailed, 1, job );
