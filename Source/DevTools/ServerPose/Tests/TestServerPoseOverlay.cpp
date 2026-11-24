@@ -20,7 +20,7 @@ namespace
         {
             AuthorityPose pose;
             pose._name     = string( name );
-            pose._position = position;
+            pose._position = AbsolutePosition{ position };
             return pose;
         }
     };
@@ -31,11 +31,13 @@ SW_TEST_CASE( ServerPoseOverlayTest, WrittenPosesReadBack )
 {
     vector<AuthorityPose> listPose;
     listPose.push_back( ServerPoseOverlayTestUtil::makePose( "Plain", float3{ 1.0f, -2.0f, 3.5f } ) );
-    AuthorityPose full  = ServerPoseOverlayTestUtil::makePose( "Guard Tower 2", float3{ 4.0f, 5.0f, 6.0f } );
-    full._bHasRotation  = true;
-    full._rotation      = float4{ 0.0f, 0.5f, 0.0f, 0.25f };
-    full._bHasBox       = true;
-    full._boxCenter     = float3{ 4.0f, 6.0f, 6.0f };
+    AuthorityPose full = ServerPoseOverlayTestUtil::makePose( "Guard Tower 2", float3{ 4.0f, 5.0f, 6.0f } );
+    full._bHasRotation = true;
+    full._rotation     = float4{ 0.0f, 0.5f, 0.0f, 0.25f };
+    full._bHasBox      = true;
+    full._boxCenter    = AbsolutePosition{
+        float3{ 4.0f, 6.0f, 6.0f }
+    };
     full._boxHalfExtent = float3{ 0.5f, 1.0f, 0.5f };
     listPose.push_back( full );
 
@@ -45,16 +47,16 @@ SW_TEST_CASE( ServerPoseOverlayTest, WrittenPosesReadBack )
     ServerPoseOverlay::parsePoses( text, listRead );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listRead.size() );
     SW_EXPECT_EQUAL( string( "Plain" ), listRead[0]._name );
-    SW_EXPECT_NEAR( 3.5f, listRead[0]._position._z, 1.0e-4f );
+    SW_EXPECT_NEAR( 3.5f, listRead[0]._position._value._z, 1.0e-4f );
     SW_EXPECT_FALSE( listRead[0]._bHasRotation );
     SW_EXPECT_FALSE( listRead[0]._bHasBox );
     SW_EXPECT_EQUAL( string( "Guard Tower 2" ), listRead[1]._name );
-    SW_EXPECT_NEAR( 5.0f, listRead[1]._position._y, 1.0e-4f );
+    SW_EXPECT_NEAR( 5.0f, listRead[1]._position._value._y, 1.0e-4f );
     SW_REQUIRE_TRUE( listRead[1]._bHasRotation );
     SW_EXPECT_NEAR( 0.5f, listRead[1]._rotation._y, 1.0e-4f );
     SW_EXPECT_NEAR( 0.25f, listRead[1]._rotation._w, 1.0e-4f );
     SW_REQUIRE_TRUE( listRead[1]._bHasBox );
-    SW_EXPECT_NEAR( 6.0f, listRead[1]._boxCenter._y, 1.0e-4f );
+    SW_EXPECT_NEAR( 6.0f, listRead[1]._boxCenter._value._y, 1.0e-4f );
     SW_EXPECT_NEAR( 1.0f, listRead[1]._boxHalfExtent._y, 1.0e-4f );
 }
 
@@ -66,7 +68,7 @@ SW_TEST_CASE( ServerPoseOverlayTest, BrokenLinesAreSkipped )
     ServerPoseOverlay::parsePoses( "Crate 1 2\n\n1 2 3\nBarrel 7 8 9\r\nDoor x 2 3\n", listRead );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listRead.size() );
     SW_EXPECT_EQUAL( string( "Barrel" ), listRead[0]._name );
-    SW_EXPECT_NEAR( 9.0f, listRead[0]._position._z, 1.0e-4f );
+    SW_EXPECT_NEAR( 9.0f, listRead[0]._position._value._z, 1.0e-4f );
 }
 
 /** @brief [ServerPoseOverlayTest] 차이는 이름이 같은 쌍만, 거리가 큰 순서이고, 회전 · 상자 차이는 두 쪽에 다 있을 때만 잰다 */
@@ -120,7 +122,7 @@ SW_TEST_CASE( ServerPoseOverlayTest, CollectsNamedTransformsInNameOrder )
     SW_REQUIRE_EQUAL( size_t{ 2 }, listPose.size() );
     SW_EXPECT_EQUAL( string( "Alpha" ), listPose[0]._name );
     SW_EXPECT_EQUAL( string( "Zed" ), listPose[1]._name );
-    SW_EXPECT_NEAR( 2.0f, listPose[1]._position._x, 1.0e-4f );
+    SW_EXPECT_NEAR( 2.0f, listPose[1]._position._value._x, 1.0e-4f );
     SW_EXPECT_TRUE( listPose[1]._bHasRotation );
 
     const ServerPoseOverlay overlay;
