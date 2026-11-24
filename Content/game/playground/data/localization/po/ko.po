@@ -39,6 +39,12 @@ msgid "Bone Shield"
 msgstr "뼈 방패"
 
 #. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Coins"
+msgid "Coins"
+msgstr "동전"
+
+#. Context: TextWidget._text
 #: game/playground/coopscavenger/ui/hud.ui.xml
 msgctxt "Credits"
 msgid "Credits"
@@ -57,6 +63,12 @@ msgid "CutB"
 msgstr "컷 B"
 
 #. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Dark rooms"
+msgid "Dark rooms"
+msgstr "어두운 방"
+
+#. Context: TextWidget._text
 #: game/playground/coopscavenger/ui/hud.ui.xml
 msgctxt "Days left"
 msgid "Days left"
@@ -67,6 +79,12 @@ msgstr "남은 날"
 msgctxt "Escaped"
 msgid "Escaped"
 msgstr "탈출했습니다"
+
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Every room is lit"
+msgid "Every room is lit"
+msgstr "모든 방에 불을 켰습니다"
 
 #. Context: SequenceBinding._name
 #: game/playground/data/cutscenegate.seq.xml
@@ -98,6 +116,12 @@ msgctxt "In orbit - pull the lever to land"
 msgid "In orbit - pull the lever to land"
 msgstr "궤도 - 레버를 당겨 착륙하세요"
 
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Keys"
+msgid "Keys"
+msgstr "열쇠"
+
 #. Context: Item name
 #: common/data/items.xml
 msgctxt "Knight Helmet"
@@ -121,6 +145,12 @@ msgstr "기사 투구(병합)"
 msgctxt "Knight Sword (Merged)"
 msgid "Knight Sword (Merged)"
 msgstr "기사 검(병합)"
+
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+msgid "Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search"
+msgstr "손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -241,6 +271,12 @@ msgstr "능선에 움직임이 있다. 몸을 낮춰."
 msgctxt "Tattered Cape"
 msgid "Tattered Cape"
 msgstr "해진 망토"
+
+#. Context: TextWidget._text
+#: game/playground/ghosthunt/ui/hud.ui.xml
+msgctxt "The ghosts won"
+msgid "The ghosts won"
+msgstr "유령에게 졌습니다"
 
 #. Context: SequenceTrackItem._text
 #: game/playground/data/cinematic.seq.xml

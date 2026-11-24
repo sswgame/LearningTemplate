@@ -18,6 +18,20 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct AreaGraphInternal
+        {
+            static constexpr float32 kWallGap = 0.01f; ///< 막힌 걸음이 서는 자리와 벽 사이(m) — 오른쪽 · 위 변 위는 이웃 방이라 안쪽에 세운다
+        };
+    } // namespace
+
+    float2 AreaDef::clamp( const float2& position, float32 margin ) const
+    {
+        return float2{ MathUtil::clamp( position._x, _x + margin, MathUtil::max( _x + margin, _x + _width - margin ) ),
+                       MathUtil::clamp( position._y, _y + margin, MathUtil::max( _y + margin, _y + _height - margin ) ) };
+    }
+
     AreaGraph::AreaGraph()
         : _catalog{}
         , _listLink{}
@@ -204,6 +218,51 @@ namespace sw
             }
         }
         return discoveredCount;
+    }
+
+    const AreaDef* AreaGraph::findAreaAt( const float2& position ) const
+    {
+        for ( const AreaDef& area : _catalog.getAll() )
+        {
+            if ( area.contains( position ) )
+                return &area;
+        }
+        return nullptr;
+    }
+
+    const AreaLink* AreaGraph::findLinkBetween( const hashed_string& firstID, const hashed_string& secondID ) const
+    {
+        for ( const AreaLink& link : _listLink )
+        {
+            if ( ( link._from == firstID && link._to == secondID ) || ( link._from == secondID && link._to == firstID ) )
+                return &link;
+        }
+        return nullptr;
+    }
+
+    AreaWalk AreaGraph::walk( const hashed_string& areaID, const float2& from, const float2& delta, const GameFlags& flags ) const
+    {
+        AreaWalk             result;
+        const AreaDef* const pArea = findArea( areaID );
+        result._position           = from;
+        if ( pArea == nullptr )
+            return result;
+        const float2 target = from + delta;
+        if ( pArea->contains( target ) )
+        {
+            result._position = target;
+            return result;
+        }
+        const AreaDef* const pNext = findAreaAt( target );
+        if ( pNext != nullptr && canTraverse( areaID, pNext->_id, flags ) )
+        {
+            result._position = target;
+            result._pEntered = pNext;
+            return result;
+        }
+        result._position = pArea->clamp( target, AreaGraphInternal::kWallGap );
+        result._pBlocked = pNext != nullptr ? findLinkBetween( areaID, pNext->_id ) : nullptr;
+        return result;
     }
 
     bool AreaGraph::canTraverse( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags ) const

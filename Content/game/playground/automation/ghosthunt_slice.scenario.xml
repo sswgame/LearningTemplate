@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="d89eb03e2c7e48c988fd97219a58b4d2"?>
+<!--
+  유령 사냥 미니게임 한 판 — 현관의 유령을 기절 → 흡입 → 잡음 → 불 · 열쇠 → 응접실 문 → 응접실의 유령 → 모든 방의 불 → 결과 `win`. 플레이어와 같은 입력(Move · GhostHunt.Light · GhostHunt.Vacuum)으로만 움직인다.
+  방: 현관 x -5..5 · z 0..8(시작 0,4), 응접실 z 8..16. 유령은 방 가운데에서 북쪽 2 m 에 숨었다가 1 초 뒤 나타나 다가오고 1 초 뒤 공격 동작(손전등에 기절)이다. 흡입 2 초 동안 플레이어는 많아야 0.6 m 끌린다.
+  감시 값: GhostHunt.Result(0 진행, 1 이김, 2 짐) · .LitRooms · .Remaining · .Coins · .Keys · .Health · .PlayerX · .PlayerZ · .Sucking.
+  실행: App -scenario=game/playground/automation/ghosthunt_slice.scenario.xml -unattended (체인: ctest -R Scenario.playground)
+-->
+<Scenario name="game.playground.ghosthunt_slice" fixedDelta="0.0166667" timeoutFrames="4800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstMinigame" value="ghosthunt"/>
+	<Launch variable="gv_playgroundAutoPlay" value="0"/>
+	<WaitUntil watch="GhostHunt.PlayerZ" near="4" tolerance="0.01" timeoutFrames="120"/>
+	<Expect watch="GhostHunt.PlayerX" near="0" tolerance="0.01"/>
+	<Expect watch="GhostHunt.Remaining" equals="1"/>
+	<Expect watch="GhostHunt.LitRooms" equals="0"/>
+	<!-- 현관 — 손전등을 비춘 채 청소기를 켜 둔다(시작할 때 북쪽을 본다) -->
+	<ActionPress name="GhostHunt.Light"/>
+	<ActionPress name="GhostHunt.Vacuum"/>
+	<WaitUntil watch="GhostHunt.Sucking" equals="1" timeoutSeconds="8"/>
+	<WaitUntil watch="GhostHunt.LitRooms" equals="1" timeoutSeconds="8"/>
+	<Expect watch="GhostHunt.Coins" equals="10"/>
+	<Expect watch="GhostHunt.Keys" equals="1"/>
+	<!-- 북쪽 문을 민다 — 열쇠로 열리고 응접실로 넘어간다 -->
+	<ActionAxis name="Move" y="1" seconds="1.5"/>
+	<WaitUntil watch="GhostHunt.PlayerZ" atLeast="8.5" timeoutSeconds="4"/>
+	<Expect watch="GhostHunt.Keys" equals="0"/>
+	<ExpectLog id="GhostHunt.DoorOpened" count="1"/>
+	<!-- 응접실의 유령 -->
+	<WaitUntil watch="GhostHunt.LitRooms" equals="2" timeoutSeconds="20"/>
+	<ActionRelease name="GhostHunt.Vacuum"/>
+	<ActionRelease name="GhostHunt.Light"/>
+	<Expect watch="GhostHunt.Result" equals="1"/>
+	<Expect watch="GhostHunt.Coins" equals="20"/>
+	<Expect watch="GhostHunt.Health" equals="100"/>
+	<ExpectLog id="GhostHunt.Ended" contains="every room is lit" count="1"/>
+	<!-- 결과를 보인 뒤 미니게임이 스스로 끝난다 -->
+	<WaitUntil watch="Minigame.LastResult" is="win" timeoutWallSeconds="60"/>
+	<Expect watch="Minigame.LeakCount" equals="0"/>
+	<Pass/>
+</Scenario>

@@ -62,6 +62,8 @@
   <inputMap path="game/playground/asymmetrichorror/data/asymmetrichorror.input.xml"/>
   <!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 쓰기 · 레버 — 꺼진 레이어 CoopScavenger(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
   <inputMap path="game/playground/coopscavenger/data/coopscavenger.input.xml"/>
+  <!-- 유령 사냥 미니게임(minigames/ghosthunt)의 손전등 · 스트로브 · 청소기 · 쓰기 — 꺼진 레이어 GhostHunt(미니게임이 켠다). -->
+  <inputMap path="game/playground/ghosthunt/data/ghosthunt.input.xml"/>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다(접속하지 않으면 혼자 하는 허브다). 서버 설정은 Config/Server/Online/Playground.json.
        onlineHubServerID 는 매치(minigames/shooter3d_match)를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름이다 -->
   <onlineServerAddress>127.0.0.1:17793</onlineServerAddress>

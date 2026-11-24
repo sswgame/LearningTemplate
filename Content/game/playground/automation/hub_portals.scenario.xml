@@ -146,6 +146,19 @@
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_coopscavenger" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- ghosthunt — 자리 22(셋째 줄 일곱째 칸). 복원 수는 앞 묶음 수와 무관하게 "늘었다" 로 본다 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_ghosthunt" near="18" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_ghosthunt" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="restored_ghosthunt"/>
+	<DevCommand line="teleport Player 18 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="ghosthunt" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/ghosthunt/maps/mansion.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" differsFrom="restored_ghosthunt" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>

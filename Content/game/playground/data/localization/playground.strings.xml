@@ -36,6 +36,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Coins" source="Coins" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Credits" source="Credits" context="TextWidget._text">
 			<origins>
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
@@ -51,6 +56,11 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Dark rooms" source="Dark rooms" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Days left" source="Days left" context="TextWidget._text">
 			<origins>
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
@@ -64,6 +74,11 @@
 		<entry key="Escaped" source="Escaped" context="TextWidget._text">
 			<origins>
 				<item>game/playground/asymmetrichorror/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Every room is lit" source="Every room is lit" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
@@ -91,6 +106,11 @@
 				<item>game/playground/coopscavenger/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Keys" source="Keys" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -109,6 +129,11 @@
 		<entry key="Knight Sword (Merged)" source="Knight Sword (Merged)" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" source="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
@@ -228,6 +253,11 @@
 		<entry key="Tattered Cape" source="Tattered Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="The ghosts won" source="The ghosts won" context="TextWidget._text">
+			<origins>
+				<item>game/playground/ghosthunt/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="4c6a99ae12634acab278511a6f4b1ced"?>
+<!--
+  유령 사냥 미니게임(minigames/ghosthunt)의 입력 차이 — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 걷기 · 당기기는 공통 `Move` 축이다.
+  레이어 GhostHunt 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다.
+-->
+<InputMap>
+	<layers>
+		<layer name="GhostHunt" enabled="0" blockLower="0"/>
+	</layers>
+	<!-- 손전등 · 스트로브 · 청소기는 누르는 동안이다(스트로브는 떼면 터진다) -->
+	<action name="GhostHunt.Light" layer="GhostHunt" trigger="Down">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="GhostHunt.Strobe" layer="GhostHunt" trigger="Down">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="GhostHunt.Vacuum" layer="GhostHunt" trigger="Down">
+		<bind source="Key" code="L"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+	<!-- 서지 · 가구 뒤지기 -->
+	<action name="GhostHunt.Use" layer="GhostHunt" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

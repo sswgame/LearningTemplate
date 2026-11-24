@@ -6,19 +6,24 @@
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
+		<entry key="Coins" text="동전" sourceHash="50972cf4a4489a2d" />
 		<entry key="Credits" text="크레딧" sourceHash="7a391ae3182a86b5" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
+		<entry key="Dark rooms" text="어두운 방" sourceHash="26d45aeeea26be71" />
 		<entry key="Days left" text="남은 날" sourceHash="7be26c4efaf887eb" />
 		<entry key="Escaped" text="탈출했습니다" sourceHash="c586f95cd0c57d26" />
+		<entry key="Every room is lit" text="모든 방에 불을 켰습니다" sourceHash="ebb0223331e334bc" />
 		<entry key="Generators left" text="남은 발전기" sourceHash="91d6d40e5ad59434" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
 		<entry key="In orbit - pull the lever to land" text="궤도 - 레버를 당겨 착륙하세요" sourceHash="ce7df723d869830d" />
+		<entry key="Keys" text="열쇠" sourceHash="d5c688de734bde0d" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
+		<entry key="Light: stun an attacking ghost - Vacuum: pull it in - Use: surge or search" text="손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 쓰기: 서지 · 뒤지기" sourceHash="97bb2ad103e4ee65" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
 		<entry key="No one wins" text="비겼습니다" sourceHash="acbcc8dd9be68815" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
@@ -41,6 +46,7 @@
 		<entry key="Subtitle.Scout" text="정찰병" sourceHash="7d573c625719c1a5" />
 		<entry key="Subtitle.ScoutLine" text="능선에 움직임이 있다. 몸을 낮춰." sourceHash="f5effb26f2446842" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
+		<entry key="The ghosts won" text="유령에게 졌습니다" sourceHash="ea74586e5481b4f0" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
 		<entry key="Use: pick up, load, sell - Lever: land or take off" text="쓰기: 줍기 · 싣기 · 팔기 - 레버: 착륙 · 이륙" sourceHash="c5294d467edea709" />

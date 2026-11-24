@@ -2149,6 +2149,7 @@
     "NileCursorComponent": "CityBuildCursorComponent — 도시 짓기 뷰는 키트 클라이언트(GF_Client_CityBuilder)의 것이다 — 게임 접두를 뗀다(2026-11-24)",
     "HostSubsystemNames": "ModuleLoaderSubsystem::kSubsystemName — 쓰는 곳이 주인 하나뿐이라 헤더째 접었다(2026-11-24)",
     "AsymmetricHorrorDemoComponent": "AsymmetricHorrorGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)",
-    "CoopScavengerDemoComponent": "ScavengerGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)"
+    "CoopScavengerDemoComponent": "ScavengerGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)",
+    "GhostHuntDemoComponent": "GhostHuntGameModeComponent — 규칙만 돌리던 시연을 키트 디렉터 · 클라이언트와 허브 미니게임으로 갈랐다(2026-11-24)"
   }
 }
