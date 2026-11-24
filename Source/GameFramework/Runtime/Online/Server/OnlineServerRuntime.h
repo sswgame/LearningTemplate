@@ -97,6 +97,12 @@ namespace sw
         [[nodiscard]] expected<void> initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs );
         /** @brief 만든 역순으로 종료합니다. 두 번 불러도 됩니다. */
         void shutdown();
+        /**
+         * @brief 게임 포트에 붙은 접속 수를 받습니다. 게임 포트를 연 전용 서버가 갱신마다 부릅니다.
+         * @details 디렉터리의 정원은 게임 포트의 자리 수이므로 부하도 이 수로 알린다(Agones · GameLift 의 플레이어 세션 수). 서비스 연결을 세던 때는 서비스에 붙지 않고 티켓으로만
+         *          들어온 매치 서버의 부하가 늘 0 이라, 예약 창이 끝나면 매칭이 찬 서버에 다음 사람을 또 배정했다. 부르지 않는 서버(게임 포트 없음)는 서비스 연결 수다.
+         */
+        void setGameConnectionCount( int32 connectionCount );
         /** @brief 호스트, 예약 작업, 키트, 서버 등록 하트비트를 돌립니다. */
         void update( UnixMilliseconds nowMs );
 

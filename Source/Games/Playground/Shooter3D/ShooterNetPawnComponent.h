@@ -197,10 +197,14 @@ namespace sw
         ShooterBodyMovementComponent*   findMovement() const;
         const PawnComponent*            findPawn() const;
         const ShooterGameModeComponent* findGameMode() const;
+        /** @brief 역할을 놓고 몸을 혼자 하는 길로 되돌립니다(게임 스레드) — 플레이를 마칠 때, 또는 세션이 닫혀 처리기 등록이 풀렸을 때. */
+        void stopRole();
         /** @brief 이번 서버 틱의 산 적을 랙 보정 기록과 복제 엔티티에 적습니다. */
         void recordEnemies();
         /** @brief 기다린 맞음 주장 가운데 그 프레임의 스윕이 기록된 것을 확인합니다(틱 뒤 · 게임 스레드). */
         void resolveClaims();
+        /** @brief 매칭에 이 맵의 몸 수(하나)를 알립니다(서버, 틱 뒤 · 게임 스레드) — 둘째 사람을 같은 서버에 배정하지 않는다. */
+        void reportSeatCapacity();
         /** @brief 나간 조종 계정의 판을 끝냅니다(서버, 틱 뒤 · 게임 스레드) — 점수를 내고, 빈 자리를 맡기고, 매치 서버면 판을 처음부터 다시 엽니다. */
         void finishLeftPlayer();
         /** @brief 계정 @p accountID 의 매치 점수를 정의의 순위표에 냅니다(서버 권위 제출 — `ILeaderboardScoreSender`). 매치가 아니거나 이미 냈으면 아무 일도 없다. */
@@ -267,7 +271,8 @@ namespace sw
         uint8                                             _bRemoteRequested    : 1; ///< 서버 — 원격 조종자 빙의를 틱 뒤로 예약했다
         uint8                                             _bClaimsScheduled    : 1; ///< 서버 — 주장 확인을 틱 뒤로 예약했다
         uint8                                             _bLeaveScheduled     : 1; ///< 서버 — 나감 처리를 틱 뒤로 예약했다
+        uint8                                             _bSeatsReported      : 1; ///< 서버 — 몸 수를 매칭에 알렸다
         uint8                                             _bScoreReported      : 1; ///< 서버 — 지금 조종 계정의 매치 점수를 냈다(한 사람에 한 번)
-        [[maybe_unused]] uint8                            _reserved            : 5;
+        [[maybe_unused]] uint8                            _reserved            : 2;
     };
 } // namespace sw

@@ -156,6 +156,8 @@ namespace sw
             stopRole( manager );
             return;
         }
+        if ( _role != Role::None && _routerSubscription.isActive() == false )
+            stopRole( manager ); // 틱 사이에 세션이 닫히고 새로 열렸다 — 새 세션에 다시 건다
         if ( _role == Role::None )
             startRole( *pLink, *pHub );
         if ( _role == Role::Server )

@@ -1,13 +1,19 @@
 // ShooterNetStateTest — 슈터의 복제 상태(적 엔티티 · 소유자 상태)는 칸 선언(`PROPERTY( Replicated, … )`)이 바이트를 정한다.
 // 쓰고 읽으면 양자화 간격 안에서 같은 값이고, 선언 범위 밖 · 깨진 바이트는 읽기가 거절한다(nogpu, 에셋 없음).
+// ShooterNetPawnTest — 네트워크 몸이 세션의 수명을 따른다(연결 없음).
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Tests/SceneNetLinkTestBinding.h"
+
+#include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/ShooterNetPawnComponent.h"
 
 using namespace sw;
@@ -64,4 +70,23 @@ SW_TEST_CASE( ShooterNetStateTest, OwnerStateRoundTripsAsOneDeclaration )
 
     const vector<uint8> truncated( bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>( bytes.size() / 2 ) );
     SW_EXPECT_FALSE( ShooterNetPawnComponent::readOwnerState( truncated, readMove, hitCount, killCount, health ) );
+}
+
+/** @brief [ShooterNetPawnTest] 플레이 중에 세션이 닫히면 역할을 놓고 몸이 혼자 하는 길로 돌아온다 — 아무도 옮기지 않는 몸(netDriven)이 남지 않는다. */
+SW_TEST_CASE( ShooterNetPawnTest, ClosedSessionReturnsTheBodyToLocalMovement )
+{
+    GameObjectManager                   manager;
+    SceneNetLinkTestBinding             link( manager, NetLinkRole::Client );
+    GameObject* const                   pPlayer   = manager.createGameObject( hashed_string( "Player" ) );
+    ShooterBodyMovementComponent* const pMovement = pPlayer->addComponent<ShooterBodyMovementComponent>();
+    ShooterNetPawnComponent* const      pNetPawn  = pPlayer->addComponent<ShooterNetPawnComponent>();
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pNetPawn->isClient() );
+    SW_EXPECT_TRUE( pMovement->isNetDriven() );
+
+    link.closeSession();
+    manager.update( 1.0f / 60.0f );
+    SW_EXPECT_FALSE( pNetPawn->isActive() );
+    SW_EXPECT_FALSE( pMovement->isNetDriven() );
+    manager.endPlay();
 }

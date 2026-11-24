@@ -57,7 +57,9 @@ namespace sw
 
     private:
         /** @brief 씬의 넷 링크가 걸려 있으면 역할에 맞는 링크를 한 번 세웁니다. */
-        void               tryStartLink();
+        void tryStartLink();
+        /** @brief 서버 · 클라이언트 링크를 모두 내립니다(세션이 닫혔거나 플레이를 마쳤다). */
+        void               stopLink();
         [[nodiscard]] bool startServer( INetPeers& peers, NetMessageRouter& router );
 
         PROPERTY( Category = "Hub", DisplayName = "Rules", Tooltip = "Combat, gathering, growth and party numbers of the hub" )
@@ -66,6 +68,7 @@ namespace sw
         StreamingCellGridDef   _interestGrid;
         unique_ptr<IHubServer> _pServer; ///< 서버 역할일 때 세운 서버 링크(공장 `IHubServerFactory` — 서버 구성에만 있다)
         HubClientLink          _client;
+        uint32                 _linkSessionSerial; ///< 링크를 세운 세션의 번호(`NetLinkValue::_sessionSerial`). 달라졌으면 그 세션은 닫혔다
         uint8                  _bRulesValid;
         uint8                  _bLinkTried; ///< 걸린 넷 링크로 링크를 세워 봤다(실패해도 다시 하지 않는다 — 오류는 한 번 알린다)
     };

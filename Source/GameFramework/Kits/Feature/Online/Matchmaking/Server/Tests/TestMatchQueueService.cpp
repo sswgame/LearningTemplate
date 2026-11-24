@@ -213,14 +213,14 @@ namespace
     {
         ServerRegistration _registration;
 
-        void start( EphemeralStoreRouter& router, int64 nowMs, string_view region = "kr", uint64 serverID = kGameID )
+        void start( EphemeralStoreRouter& router, int64 nowMs, string_view region = "kr", uint64 serverID = kGameID, int32 capacity = 100 )
         {
             ServerDescriptor descriptor;
             descriptor._serverID  = serverID;
             descriptor._kind      = "game";
             descriptor._region    = string( region );
             descriptor._address   = "10.0.0.9";
-            descriptor._capacity  = 100;
+            descriptor._capacity  = capacity;
             descriptor._port      = 7000;
             descriptor._portCount = 1;
             SW_REQUIRE_TRUE( _registration.initialize( &router, descriptor ) );
@@ -581,7 +581,7 @@ SW_TEST_CASE( MatchQueueServiceTest, GameServerAcceptsFromMatchRecordWithoutBus 
     SoloWorld world; // 버스가 없다 — 배정 버스 메시지가 하나도 닿지 않는 경우(잃은 것과 같다)
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._server._router );
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
@@ -653,7 +653,7 @@ SW_TEST_CASE( MatchQueueServiceTest, MatchRecordWriteFailureEndsAsNoServer )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._server._router );
     world._server._faultCache._bFailMatchRecord = SW_TRUE;
 
@@ -690,7 +690,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RefusedConnectReadsMatchListAtOnce )
     SoloWorld world; // 버스가 없다 — 배정 버스 메시지를 잃은 것과 같다
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._server._router );
     agent.update( UnixMilliseconds{ kNowMs } ); // 첫 읽기 — 목록이 아직 없다. 다음 주기는 1 초 뒤이다
     world._server.poll( kNowMs );
@@ -724,7 +724,7 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillSenderFillsServerFromDescriptor )
     descriptor._portCount = 1;
     MatchServerAgent    agent; // 이 테스트는 자리를 꺼내지 않는다(빈 슬롯을 직접 적는다)
     MatchBackfillSender sender;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     sender.initialize( &world._serverB._queue, &agent, descriptor );
 
     MatchBackfillSlots slots;
@@ -798,7 +798,7 @@ SW_TEST_CASE( MatchQueueServiceTest, MatchesOfDifferentModesKeepTheirOwnRecords 
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel" ), MatchQueueTestUtil::makeMode( "arena" ) } );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._server._router );
 
     SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel" )._result == MatchmakingResult::Ok );
@@ -1227,7 +1227,7 @@ SW_TEST_CASE( MatchQueueServiceTest, SeatTakenFromTheBusStaysTakenAfterTheRecord
     LocalServerBus gameBus( &world._hub, kGameID );
     gameBus.subscribe( MatchQueueService::makeAssignTopic( kGameID ) );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._serverA._router );
     ServerDescriptor descriptor;
     descriptor._serverID  = kGameID;
@@ -1259,7 +1259,7 @@ SW_TEST_CASE( MatchQueueServiceTest, OlderRosterDoesNotReplaceTheNewerSeat )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._server._router );
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
@@ -1290,7 +1290,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID );
+    agent.initialize( kGameID, 100 );
     agent.startReading( &world._server._router );
     ServerDescriptor descriptor;
     descriptor._serverID  = kGameID;
@@ -1324,5 +1324,90 @@ SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
     SW_EXPECT_TRUE( listFilled[0]._assignment._result == MatchQueueResult::Found );
     SW_EXPECT_EQUAL( aliceFound._matchID, listFilled[0]._assignment._matchID );
     SW_EXPECT_EQUAL( aliceFound._team, listFilled[0]._assignment._team );
+    agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 자리가 하나인 서버에는 한 사람만 배정한다 — 앞사람이 예약 · 접속해 있는 동안 다음 경기는 기다리고, 나가 자리가 비면 간다(결함: 둘째 사람이 몸 없이 같은 서버에 배정됐다) */
+SW_TEST_CASE( MatchQueueServiceTest, SingleSeatServerTakesOneMatchAtATime )
+{
+    SoloWorld    world;
+    MatchModeDef solo = MatchQueueTestUtil::makeMode( "solo" );
+    solo._teamCount   = 1;
+    world._server.start( vector<MatchModeDef>{ solo } );
+    world._game.start( world._server._router, kNowMs, "kr", kGameID, 1 );
+    world._server.poll( kNowMs );
+    world._server.update( kNowMs );
+    world._server.update( kNowMs );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "solo" )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 1 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), world._server.takeNotifications().size() );
+
+    // 앞사람이 들어왔다 — 부하가 자리를 채운다(예약은 확정되어 빠진다).
+    world._game._registration.setLoad( 1 );
+    world._game._registration.confirmSeats( 1, 30000 );
+    world._game._registration.update( UnixMilliseconds{ kNowMs + 2 } );
+    SW_EXPECT_TRUE( world._server.join( kBob, kNowMs + 3, "solo" )._result == MatchmakingResult::Ok );
+    for ( int64 nowMs = kNowMs + 3000; nowMs <= kNowMs + 9000; nowMs += 3000 )
+    {
+        world._game._registration.update( UnixMilliseconds{ nowMs } );
+        world._server.update( nowMs );
+        SW_EXPECT_TRUE( world._server.takeNotifications().empty() );
+    }
+
+    // 앞사람이 나갔다 — 기다리던 사람이 그 서버로 간다.
+    world._game._registration.setLoad( 0 );
+    world._game._registration.update( UnixMilliseconds{ kNowMs + 9001 } );
+    world._server.poll( kNowMs + 9001 );
+    world._server.update( kNowMs + 12000 ); // 새 목록을 읽는다
+    world._server.update( kNowMs + 12001 );
+    const vector<MatchQueueNotification> listFound = world._server.takeNotifications();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
+    SW_EXPECT_EQUAL( kBob, listFound[0]._recipientID );
+    SW_EXPECT_TRUE( listFound[0]._assignment._result == MatchQueueResult::Found );
+    SW_EXPECT_EQUAL( kGameID, listFound[0]._assignment._serverID );
+}
+
+/** @brief [MatchQueueServiceTest] 나간 사람은 다시 받지 않고, 마지막 사람이 나간 경기는 백필하지 않는다. 명단이 정원을 넘으면 오래된 경기부터 받지 않는다 */
+SW_TEST_CASE( MatchQueueServiceTest, AcceptedPlayersNeverExceedTheSeats )
+{
+    SoloWorld world;
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
+    MatchServerAgent agent;
+    agent.initialize( kGameID, 100 );
+    agent.startReading( &world._server._router );
+    ServerDescriptor descriptor;
+    descriptor._serverID  = kGameID;
+    descriptor._kind      = "game";
+    descriptor._region    = "kr";
+    descriptor._address   = "10.0.0.9";
+    descriptor._port      = 7000;
+    descriptor._portCount = 1;
+    MatchBackfillSender sender;
+    sender.initialize( &world._server._queue, &agent, descriptor );
+
+    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 1 );
+    SW_EXPECT_TRUE( world._server.join( kCarol, kNowMs + 2 )._result == MatchmakingResult::Ok );
+    SW_EXPECT_TRUE( world._server.join( kDave, kNowMs + 2 )._result == MatchmakingResult::Ok );
+    world._server.update( kNowMs + 2 );
+    agent.update( UnixMilliseconds{ kNowMs + 3 } );
+    world._server.poll( kNowMs + 3 );
+    SW_EXPECT_EQUAL( 4, agent.getExpectedCount() );
+
+    // 맵이 두 사람만 받는다 — 앞 경기는 자리를 새 경기에 넘겼다. 정원은 디렉터리에 올릴 설명에도 실린다.
+    sender.setSeatCapacity( 2 );
+    SW_EXPECT_EQUAL( 2, descriptor._capacity );
+    SW_EXPECT_EQUAL( 2, agent.getExpectedCount() );
+    SW_EXPECT_FALSE( agent.isAccepted( kAlice ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kCarol ) );
+    SW_EXPECT_TRUE( agent.isAccepted( kDave ) );
+
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kCarol, UnixMilliseconds{ kNowMs + 4 } ) == MatchmakingResult::Ok ); // 남은 사람이 있다 — 채운다
+    SW_EXPECT_FALSE( agent.isAccepted( kCarol ) );                                                                // 자리를 맡긴 사람은 되돌아오지 않는다
+    SW_EXPECT_TRUE( agent.isAccepted( kDave ) );
+    SW_EXPECT_TRUE( sender.submitPlayerLeft( kDave, UnixMilliseconds{ kNowMs + 5 } ) == MatchmakingResult::NotQueued ); // 경기가 비었다
+    SW_EXPECT_EQUAL( 0, agent.getExpectedCount() );
     agent.shutdown();
 }

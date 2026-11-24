@@ -31,8 +31,8 @@ namespace sw
         /** @brief 락스텝을 닫고 판을 끝냅니다. */
         void onEndPlay() override;
 
-        /** @brief 이 화면이 맡은 플레이어입니다. 혼자 하면 0 번, 2 인 대전이면 서버 0 번 · 클라이언트 1 번입니다. */
-        int32 getLocalPlayer() const override { return _lockstep.isActive() ? _lockstep.getLocalPlayer() : 0; }
+        /** @brief 이 화면이 맡은 플레이어입니다. 혼자 하면 0 번, 2 인 대전이면 서버 0 번 · 클라이언트 1 번입니다(세션이 닫혀도 그 판에서는 그대로다). */
+        int32 getLocalPlayer() const override { return _lockstep.getLocalPlayer(); }
         /** @brief 2 인 대전이면 다음 락스텝 입력에 싣고 -1(아직 적용 전), 아니면 바탕 그대로입니다. */
         int32 submitCommand( RTSCommand&& command ) override;
         /** @brief 2 인 대전이면 거절하고 알립니다 — 두 프로세스가 같은 걸음이어야 한다. */

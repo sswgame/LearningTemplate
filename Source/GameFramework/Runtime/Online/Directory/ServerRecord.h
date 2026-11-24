@@ -74,7 +74,7 @@ namespace sw
     {
         ServerDescriptor _descriptor{};
         int64            _heartbeatMs{ 0 }; ///< 마지막으로 기록을 쓴 UTC 밀리초
-        int32            _load{ 0 };        ///< 지금 손님 수(정원과 같은 단위)
+        int32            _load{ 0 };        ///< 지금 손님 수(정원과 같은 단위 — 게임 포트를 연 서버는 게임 접속 수)
         ServerState      _state{ ServerState::Starting };
     };
 } // namespace sw

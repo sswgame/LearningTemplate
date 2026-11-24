@@ -749,6 +749,12 @@ namespace sw
         _pendingRequestCount = _pendingRequestCount > 0 ? _pendingRequestCount - 1 : 0;
     }
 
+    void HousingPlotComponent::abandonNetRequests()
+    {
+        _outgoingEditBuffer.clear();
+        _pendingRequestCount = 0;
+    }
+
     // ------------------------------------------------------------------------------
     // 뷰(틱 뒤 게임 스레드)
     // ------------------------------------------------------------------------------

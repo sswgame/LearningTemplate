@@ -79,6 +79,14 @@ namespace sw
         _bDirty       = SW_TRUE; // 바뀌는 대로 쓴다 — 쓰기 빈도가 문제면(부하 봇 숫자) 하트비트에만 싣는다
     }
 
+    void ServerRegistration::setCapacity( int32 capacity )
+    {
+        if ( _status._descriptor._capacity == capacity )
+            return;
+        _status._descriptor._capacity = capacity;
+        _bDirty                       = SW_TRUE;
+    }
+
     void ServerRegistration::writeRecord( UnixMilliseconds nowMs )
     {
         _status._heartbeatMs               = nowMs.count();

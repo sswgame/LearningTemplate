@@ -284,7 +284,7 @@ namespace sw
      *          같은 `poll` 안의 그 연결 메시지는 처리기에 넘기지 않는다. 상대가 아직 등록하지 않은 영역은 견주지 않는다(뒤에 등록하면 그때 알려 온다).
      *          게임이 표 판을 손으로 섞던 방식(`NetWireVersion::combine`)은 빠뜨릴 수 있었다 — 섞는 게임이 하나도 없었다.
      * @details - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
-     *            구독이 사라지면 처리기가 빠진다. 라우터가 먼저 사라지면 구독은 무효가 된다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(빈 구독).
+     *            구독이 사라지면 처리기가 빠진다. 라우터가 먼저 사라지거나 세션이 닫히면(`closeSession`) 구독은 무효가 된다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(빈 구독).
      *          - `poll` 는 엔드포인트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::pollInbound` — 엔드포인트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed 를 반환)는 세고(`getMalformedCount`) 버린다.
      *          - 등록과 구독의 해제는 `poll` 를 부르는 스레드에서 한다(구독 목록에 잠금이 없다).
@@ -311,6 +311,14 @@ namespace sw
          *          키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          */
         [[nodiscard]] Subscription registerHandler( INetMessageHandler* pHandler );
+        /**
+         * @brief 이 라우터를 쓰던 세션이 닫혔습니다 — 등록을 모두 풀고(들고 있던 구독은 무효가 된다) 상대마다 들던 판을 잊으며, 세션 번호를 올립니다.
+         * @details 라우터를 여러 세션에 다시 쓰는 주인(`GameNetSession`)이 닫을 때 부른다 — 처리기를 쥔 쪽이 푸는 것을 잊어도 다음 세션의 메시지 · 사건을 받지 않고,
+         *          다음 세션의 처리기가 "이미 맡은 종류" 로 거절되지 않는다. 링크(`NetLinkValue`)는 세션 번호로 닫힌 세션을 가려낸다.
+         */
+        void closeSession();
+        /** @brief 지금 세션의 번호입니다(`closeSession` 마다 는다). 번호가 다르면 닫힌 세션의 것이다. */
+        uint32 getSessionSerial() const { return _sessionSerial; }
         /**
          * @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다.
          * @details 받는 쪽 역할 @p role 로 갈 수 없는 종류(서버가 받은 `ToClient` 종류)는 처리기에 넘기지 않고 세고 Malformed 를 반환합니다.
@@ -376,6 +384,7 @@ namespace sw
         uint64                                        _unclaimedNotificationCount;
         unordered_map<int32, vector<PeerWireVersion>> _mapPeerWireVersion;    ///< 연결마다 상대가 알린 표 판. 연결이 닫히면 지운다
         vector<int32>                                 _listRefusedConnection; ///< 이번 `poll` 에서 판이 달라 끊은 연결 — 남은 메시지를 넘기지 않는다
+        uint32                                        _sessionSerial;         ///< 지금 세션의 번호(`closeSession` 이 올린다)
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<INetMessageHandler> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<INetMessageHandler>::ReleaseFunction, &NetMessageRouter::releaseHandler, this ) };

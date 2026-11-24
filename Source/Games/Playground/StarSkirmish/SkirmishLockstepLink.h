@@ -46,8 +46,14 @@ namespace sw
         [[nodiscard]] bool open();
         void               close();
 
-        bool  isActive() const { return _pNetSession != nullptr; }
-        int32 getLocalPlayer() const { return _session.getLocalPlayer(); }
+        bool isActive() const { return _handlerSubscription.isActive(); }
+        /** @brief 이 화면이 맡은 플레이어입니다(혼자 하면 0). 세션이 닫힌 뒤에도 그 판이 끝날 때까지 같다. */
+        int32 getLocalPlayer() const { return _localPlayer; }
+        /**
+         * @brief 판 도중에 넷 세션이 닫혔으면 락스텝을 놓고 true 입니다(한 번). 맡은 플레이어는 그대로다.
+         * @details 멈춘 채 기다리지 않는다 — 남은 사람이 이 프로세스의 판을 이어 한다(나간 상대의 유닛은 명령을 받지 않는다).
+         */
+        [[nodiscard]] bool releaseLostSession();
         /** @brief 명령을 다음 내 입력에 싣습니다. 열려 있지 않으면 false 입니다. */
         bool queueCommand( RTSCommand&& command );
         /**
@@ -71,6 +77,7 @@ namespace sw
         vector<vector<uint8>>  _listTickInput;
         vector<RTSCommand>     _listDecoded;
         GameNetSession*        _pNetSession;
+        int32                  _localPlayer;
         float32                _accumulator;
         int32                  _arrAppliedCount[kPlayerCount];
         uint8                  _bPendingInput   : 1;

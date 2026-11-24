@@ -169,6 +169,7 @@ namespace sw
         , _bRemoteRequested{ SW_FALSE }
         , _bClaimsScheduled{ SW_FALSE }
         , _bLeaveScheduled{ SW_FALSE }
+        , _bSeatsReported{ SW_FALSE }
         , _bScoreReported{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -234,6 +235,7 @@ namespace sw
         _controllerAccountID = 0;
         _leftAccountID       = 0;
         _controllerID        = -1;
+        _bSeatsReported      = SW_FALSE;
         _bScoreReported      = SW_FALSE;
         pMovement->setNetDriven( true );
         // 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
@@ -243,6 +245,12 @@ namespace sw
     }
 
     void ShooterNetPawnComponent::onEndPlay()
+    {
+        stopRole();
+        Component::onEndPlay();
+    }
+
+    void ShooterNetPawnComponent::stopRole()
     {
         _routerSubscription.reset();
         if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getMutableManager() != nullptr )
@@ -256,13 +264,21 @@ namespace sw
             pMovement->setNetDriven( false );
             pMovement->setDisplayOffset( float3{ 0.0f, 0.0f, 0.0f } );
         }
+        _listClaim.clear();
+        _listPendingClaim.clear();
         _role = Role::None;
-        Component::onEndPlay();
     }
 
     void ShooterNetPawnComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
+        if ( _role != Role::None && _routerSubscription.isActive() == false )
+        {
+            // 플레이 중에 세션이 닫혔다 — 닫힌 창구로 입력을 보내지 않고, 아무도 옮기지 않는 몸(netDriven)도 남기지 않는다. 조종 시스템을 쓰므로 틱 뒤에 놓는다.
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            { netPawn.stopRole(); } );
+            return;
+        }
         ShooterBodyMovementComponent*  pMovement = findMovement();
         const vector<ShooterArenaBox>* pListBox  = findArenaBoxes();
         const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || context.getDeltaTime() <= 0.0f;
@@ -277,6 +293,12 @@ namespace sw
             _bRemoteRequested = SW_TRUE;
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
             { netPawn.possessRemote(); } );
+        }
+        if ( _role == Role::Server && _bSeatsReported == SW_FALSE )
+        {
+            _bSeatsReported = SW_TRUE;
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn )
+            { netPawn.reportSeatCapacity(); } );
         }
         // 입력 몫도 틱과 같은 시계(게임 시간)로 채운다 — 클라이언트의 입력 틱이 이 시계로 돌고, 고정 간격으로 되풀이하는 넷 재생에서도 같은 몫이 된다.
         if ( _role == Role::Server )
@@ -653,6 +675,13 @@ namespace sw
     {
         if ( _role == Role::Server )
             reportMatchScore( _controllerAccountID );
+    }
+
+    void ShooterNetPawnComponent::reportSeatCapacity()
+    {
+        IMatchBackfillSender* const pSender = ShooterNetPawnComponentInternal::findBackfillSender();
+        if ( pSender != nullptr )
+            pSender->setSeatCapacity( 1 ); // 이 맵의 서버 폰은 하나다 — 관전 · 공동 조종이 없다
     }
 
     void ShooterNetPawnComponent::finishLeftPlayer()

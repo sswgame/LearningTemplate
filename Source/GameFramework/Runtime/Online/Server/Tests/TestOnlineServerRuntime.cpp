@@ -241,6 +241,18 @@ namespace
         }
     };
 
+    /** @brief 서버 기록 읽기의 답을 받아 둡니다. */
+    struct DirectoryRecordProbe
+    {
+        int32        _replyCount{ 0 };
+        ServerStatus _status{};
+        void         onReply( const EphemeralReply& reply )
+        {
+            ++_replyCount;
+            SW_EXPECT_TRUE( ServerRecord::decode( reply._value, _status ) );
+        }
+    };
+
     /** @brief 케이스마다 두 테스트 키트를 레지스트리에 올리고 사건 줄을 비웁니다. 소멸자가 둘 다 되돌립니다. */
     struct OnlineServerRuntimeTest
     {
@@ -567,5 +579,28 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, GameServerIsInTheDirectoryBeforeTheFirs
     }
     SW_REQUIRE_EQUAL( probe._replyCount, int32( 1 ) );
     SW_EXPECT_EQUAL( probe._memberCount, int32( 1 ) );
+    runtime.shutdown();
+}
+
+/** @brief [OnlineServerRuntimeTest] 게임 포트를 연 서버의 디렉터리 부하는 게임 접속 수다(결함: 서비스 연결을 세어, 티켓으로만 들어온 매치 서버의 부하가 늘 0 이었다) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, DirectoryLoadIsTheGameConnectionCount )
+{
+    OnlineServerRuntimeConfig settings = makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
+    settings._config._publicAddress    = "127.0.0.1";
+    OnlineServerRuntime runtime;
+    SW_REQUIRE_TRUE( runtime.initialize( settings, UnixMilliseconds{ 1000 } ).has_value() );
+    runtime.setGameConnectionCount( 3 );
+    runtime.update( UnixMilliseconds{ 1001 } );
+    EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
+    const Subscription    owner  = router.openReplyOwner();
+    DirectoryRecordProbe  probe;
+    (void)router.submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( runtime.getContext()._serverID ) ),
+                         SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &DirectoryRecordProbe::onReply, &probe ), owner );
+    for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
+    {
+        runtime.update( UnixMilliseconds{ 1002 + tick } );
+    }
+    SW_REQUIRE_EQUAL( probe._replyCount, int32( 1 ) );
+    SW_EXPECT_EQUAL( probe._status._load, int32( 3 ) );
     runtime.shutdown();
 }
