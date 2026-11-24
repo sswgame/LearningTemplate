@@ -11,7 +11,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -33,7 +32,7 @@ namespace sw
         };
     } // namespace
 
-    AutomationStageFingerprint AutomationStageFingerprint::capture( bool bCountObjects )
+    AutomationStageFingerprint AutomationStageFingerprint::capture( bool bCountOwned )
     {
         using Internal = AutomationStageFingerprintInternal;
         AutomationStageFingerprint fingerprint;
@@ -59,10 +58,12 @@ namespace sw
         const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
         if ( pInspector != nullptr && pInspector->findVisualizedAttachment( attachment ) )
             Internal::addState( fingerprint, "GPUPixelInspector", "a visualized attachment" );
-        if ( bCountObjects )
+        if ( bCountOwned )
         {
             Internal::addCount( fingerprint, "EventDispatcher subscribers", engine::getSubsystem<EventDispatcher>().getSubscriberCount() );
-            Internal::addCount( fingerprint, "SceneTransformStorage live objects", engine::getSubsystem<SceneTransformStorage>().getLiveSlotCount() );
+            // 플레이 오브젝트의 주인은 씬이다 — 연 씬은 위에서 세었고, 씬 밖의 씬은 미리보기뿐이며 만든 컴포넌트가 내린다. 트랜스폼 칸 수는 세지 않는다(리플렉션 기본 개체 같은
+            // 프로세스 수명 캐시가 주인인 칸이 섞인다).
+            Internal::addCount( fingerprint, "SceneManager preview scenes", engine::getSubsystem<SceneManager>().getPreviewScenes().size() );
         }
         return fingerprint;
     }

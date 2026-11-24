@@ -30,9 +30,9 @@ namespace sw
 
         /**
          * @brief 지금 프로세스 상태를 찍습니다. 게임 스레드에서, 게임 인스턴스가 없을 때 부릅니다.
-         * @param bCountObjects 구독 · 오브젝트 수를 함께 센다 — 에디터가 뜬 실행은 에디터의 것이 섞이고, 첫 단계 앞은 처음 돌 때 서는 엔진 쪽 구독이 아직 없어 세지 않는다.
+         * @param bCountOwned 구독 · 미리보기 씬 수를 함께 센다 — 에디터가 뜬 실행은 에디터의 것이 섞이고, 첫 단계 앞은 처음 돌 때 서는 엔진 쪽 구독이 아직 없어 세지 않는다.
          */
-        [[nodiscard]] static AutomationStageFingerprint capture( bool bCountObjects );
+        [[nodiscard]] static AutomationStageFingerprint capture( bool bCountOwned );
         /** @brief 앞 지문 @p baseline 뒤로 @p current 에 샌 것을 한 줄에 하나씩(`UISubtitles: subtitles`, `EventDispatcher subscribers: 12 -> 13`) 채웁니다. 줄어든 것은 새지 않은 것이다. */
         [[nodiscard]] static vector<string> describeLeaks( const AutomationStageFingerprint& baseline, const AutomationStageFingerprint& current );
         /** @brief 이름 @p name 의 칸입니다. 없으면 nullptr 입니다. */

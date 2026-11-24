@@ -23,7 +23,7 @@ SW_TEST_CASE( AutomationStageFingerprintTest, NamesNewStatesAndGrownCounts )
     current._listEntry.push_back( AutomationStageFingerprintEntry{ "Localization", "missing localization keys", nullopt } );
     current._listEntry.push_back( AutomationStageFingerprintEntry{ "EventDispatcher subscribers", {}, uint64{ 13 } } );
     current._listEntry.push_back( AutomationStageFingerprintEntry{ "SceneManager loaded scenes", {}, uint64{ 0 } } );
-    current._listEntry.push_back( AutomationStageFingerprintEntry{ "SceneTransformStorage live objects", {}, uint64{ 40 } } ); // 처음 센 값이다
+    current._listEntry.push_back( AutomationStageFingerprintEntry{ "SceneManager preview scenes", {}, uint64{ 4 } } ); // 처음 센 값이다
     const vector<string> listLeak = AutomationStageFingerprint::describeLeaks( baseline, current );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listLeak.size() );
     SW_EXPECT_EQUAL( string( "UISubtitles: subtitles" ), listLeak[0] );

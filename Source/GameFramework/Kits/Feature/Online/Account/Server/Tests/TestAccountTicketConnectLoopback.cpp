@@ -5,7 +5,10 @@
 #include "pch.h"
 
 #include "Core/Network/Connection/NetEndpointSecurity.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "Engine/Foundation/EngineScope.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTicketConnect.h"
@@ -160,6 +163,25 @@ SW_TEST_CASE( AccountTicketConnectLoopbackTest, TicketArrivesFromLoopbackServer 
     SW_EXPECT_EQUAL( 1, rig._service._ticketCount );
     SW_EXPECT_EQUAL( NetGameTicket::kTokenSize, rig._credentials._tokenSize );
     SW_EXPECT_EQUAL( kTicketMarker, rig._credentials._arrToken[0] );
+}
+
+/**
+ * @brief [AccountTicketConnectLoopbackTest] 게임이 끝나도(타이틀 복귀 · 게임 다시 시작) 로그인 연결은 남는다 — 끝나는 것은 월드 연결(`GameNetSession`)까지다
+ * @details 결함이면 타이틀로 나올 때마다 로그인 · 파티 · 채팅이 끊긴다(온라인 프로토콜 클라이언트가 이 연결 하나를 나눠 쓴다). 언리얼이 온라인 세션과 NetDriver 의 수명을 가르는 자리다.
+ */
+SW_TEST_CASE( AccountTicketConnectLoopbackTest, LoginSurvivesTheEndOfTheGame )
+{
+    TicketConnectRig rig;
+    rig.startServer();
+    SW_REQUIRE_TRUE( rig.begin( 5000 ).has_value() );
+    const expected<AccountTicketStep> result = rig.runUntilSettled( 5000 );
+    SW_REQUIRE_TRUE( result.has_value() && *result == AccountTicketStep::Received );
+    SW_REQUIRE_EQUAL( 1, rig._rig._server._host.getConnectionCount() );
+
+    engine::notifyGameInstanceBoundary( GameInstanceBoundary::Ended );
+    rig._connector.resetGameInstanceState( GameInstanceBoundary::Ended ); // 이 도우미는 테스트 것이라 엔진 범위에 없다 — 범위가 부르는 함수를 직접 부른다
+    (void)rig.step();
+    SW_EXPECT_EQUAL( 1, rig._rig._server._host.getConnectionCount() );
 }
 
 /** @brief [AccountTicketConnectLoopbackTest] 세션이 만료돼 서버가 티켓을 거절하면 그 결과를 이유에 싣고, 자격을 채우지 않고, 연결을 닫는다 */
