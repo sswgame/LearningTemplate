@@ -70,6 +70,7 @@ from common.exit_code import ExitCode  # noqa: E402
 from common.git import run_git, run_git_or_raise  # noqa: E402
 from common.paths import get_build_dir, get_project_root  # noqa: E402
 from common.run_process import ProcessResult, build_preset_or_exit, run_process  # noqa: E402
+from dev.scenario_reach import read_reach, select_reached  # noqa: E402
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
 QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
@@ -778,11 +779,20 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     sha = run_git_or_raise(["rev-parse", "HEAD"], cwd=project_root).strip()
     list_changed = parse_name_status(run_git_or_raise(["diff", "--name-status", "--no-renames", f"{base}...HEAD"], cwd=project_root))
     list_test_file = [path for path in run_git_or_raise(["ls-files", "--", "Source"], cwd=project_root).splitlines() if "/Tests/" in path and path.endswith(".cpp")]
-    list_scenario_file = [path for path in run_git_or_raise(["ls-files", "--", "Content"], cwd=project_root).splitlines() if path.endswith(SCENARIO_SUFFIX)]
+    list_content_file = run_git_or_raise(["ls-files", "--", "Content"], cwd=project_root).splitlines()
+    list_scenario_file = [path for path in list_content_file if path.endswith(SCENARIO_SUFFIX)]
     map_folder = select_unit_folders(list_changed, list_test_file)
     map_scenario = select_scenarios(list_changed, list_scenario_file)
+    # 시나리오 · 골든이 그대로여도 그 시나리오가 여는 에셋 · 쓰는 감시 값이 바뀌었으면 돈다(scenario_reach).
+    map_reached, list_reach_line = select_reached(read_reach(project_root, [changed.path for changed in list_changed], list_content_file), set(map_scenario),
+                                                  int(read_verify_config(project_root, "_changedReachPerFile")), int(read_verify_config(project_root, "_changedReachTotal")))
+    for line in list_reach_line:
+        print(f"[Changed] {line}")
+    map_changed_file = {changed.path: changed for changed in list_changed}
+    for scenario, list_path in map_reached.items():
+        map_scenario[scenario] = [map_changed_file.get(path) or map_changed_file[f"Content/{path}"] for path in list_path]
     list_editor_file = select_editor_files(list_changed, lambda path: (project_root / path).read_text(encoding="utf-8", errors="replace"))
-    print(f"[Changed] {base}...HEAD: 바뀐 파일 {len(list_changed)} · 기능 폴더 {len(map_folder)} · 시나리오 {len(map_scenario)} · 에디터 파일 {len(list_editor_file)}")
+    print(f"[Changed] {base}...HEAD: 바뀐 파일 {len(list_changed)} · 기능 폴더 {len(map_folder)} · 시나리오 {len(map_scenario)}(닿음 {len(map_reached)}) · 에디터 파일 {len(list_editor_file)}")
     if not map_folder and not map_scenario and not list_editor_file:
         print(f"CHANGED_OK={sha}")
         return ExitCode.PASSED

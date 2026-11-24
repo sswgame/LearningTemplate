@@ -18,7 +18,7 @@
 #               Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 #               Release 빌드 뒤 std 컨테이너 구성(SW_ENABLE_STL_CONTAINER)의 구문을 뒤에서 본다(syntax --direct) — 컨테이너 · 문자열 테스트와 이 묶음이 바꾼 .cpp. 교체 구성이 썩지 않게 하는 검사이고,
 #               실제로 지어 도는 것은 프리셋 Ninja-Release-STL(컨테이너를 고친 묶음에서 손으로 — `ctest -L nogpu`)이다.
-#   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오만 Release 로 먼저(test_history.py changed). 돈 적 없는 테스트 · 기준 파일의 실패를
+#   changed     origin/main 뒤에 들어온 · 바뀐 테스트 · 시나리오와 바뀐 에셋 · 감시 값이 닿는 시나리오 표본(scenario_reach.py)만 Release 로 먼저(test_history.py changed). 돈 적 없는 테스트 · 기준 파일의 실패를
 #               전체 실행 중간이 아니라 빌드 직후에 갈래 이름과 함께 낸다. 없는 골든 · 스냅숏만 쓰고(MissingBaseline) 쓴 것이 있으면 멈춘다 — 보고 커밋한 뒤 --from changed.
 #               지면 cpu · gpu-release 를 시작하지 않는다. 끝 줄 CHANGED_OK=<sha> · CHANGED_FAILED.
 #   cpu         ASan ctest -L nogpu(단위 · 셰이더 다시 굽기 · 파서 …) ‖ 서버(Release) 단위 → launch-args(--from 으로 build 를 건너뛰었으면 → shipping-check 빌드 · 기동) ‖ shader warm.
