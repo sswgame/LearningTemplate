@@ -139,7 +139,8 @@ SW_TEST_CASE( VFXSimulationSpaceTest, WorldSpaceParticlesStayWhereTheyWereBorn )
 
     VFXGPUEmitter gpuEmitter{ pDef, 7u, 1.0f };
     gpuEmitter.setEmitterTransform( emitterToSimulation );
-    SW_EXPECT_EQUAL( 0, Memory::compare( &emitterToSimulation, &gpuEmitter.makeRequest()._emitterToSimulation, sizeof( float4x4 ) ) );
+    const VFXGPUEmitterRequest request = gpuEmitter.makeRequest();
+    SW_EXPECT_EQUAL( 0, Memory::compare( &emitterToSimulation, &request._emitterToSimulation, sizeof( float4x4 ) ) );
 }
 
 /** @brief [VFXSimulationSpaceTest] 하늘을 보는 방출기는 지붕 아래에서 입자를 내지 않는다 — 물리 광선 충돌이 없으면 검증이 거절한다 */
