@@ -2,6 +2,7 @@
 
 #include "Games/Playground/Shooter3D/ShooterPlayerComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 #include "Core/Math/Ray.h"
@@ -184,6 +185,13 @@ namespace sw
                 {
                     listPlayer.push_back( pPlayer );
                 }
+                // 서버에서 아무도 조종하지 않는 씬의 몸은 판을 두는 사람이 아니다.
+                VectorUtil::removeIf( listPlayer, [pManager]( const ShooterPlayerComponent* pPlayer )
+                {
+                    const ShooterGameModeComponent* const pGameMode = GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() );
+                    return pGameMode != nullptr && pGameMode->getPlayerViews().empty() == false &&
+                           VectorUtil::findBy<&ShooterPlayerView::_object>( pGameMode->getPlayerViews(), pPlayer->getOwner()->getHandle() ) == nullptr;
+                } );
                 if ( listPlayer.empty() )
                     return unexpected( Error{ ErrorKind::NotFound, "cheat: no ShooterPlayerComponent in the active scene" } );
                 return listPlayer;
@@ -288,6 +296,37 @@ namespace sw
                 return true;
             }
 
+            /** @brief `cheat.shooter.face` — 가장 가까운 남의 몸 가운데를 바라봅니다(접속한 클라이언트). 두 사람이 서로 쏘는 시나리오의 손입니다. */
+            static bool runFace( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
+                    return true;
+                }
+                for ( ShooterPlayerComponent* pPlayer : *collected )
+                {
+                    GameObject*                      pOwner   = pPlayer->getOwner();
+                    const ShooterNetPawnComponent*   pNetPawn = pOwner->getComponent<ShooterNetPawnComponent>();
+                    FirstPersonCameraComponent*      pCamera  = pOwner->getComponent<FirstPersonCameraComponent>();
+                    const optional<AbsolutePosition> target   = pNetPawn != nullptr ? pNetPawn->findNearestRemotePawn( pPlayer->getFeetPosition() ) : nullopt;
+                    if ( pCamera == nullptr || target.has_value() == false )
+                        continue;
+                    const float3 eye    = pOwner->getManager()->getWorldOrigin().toAbsolute( pPlayer->getEyePosition() );
+                    const float3 toBody = target->_value + float3{ 0.0f, kFaceHeight, 0.0f } - eye;
+                    pCamera->setAngles( MathUtil::atan2( toBody._x, toBody._z ), MathUtil::atan2( toBody._y, float3{ toBody._x, 0.0f, toBody._z }.getLength() ) );
+                    outReply = "cheat.shooter.face turned to the nearest player";
+                    return true;
+                }
+                outReply = "cheat.shooter.face: no other player in sight";
+                return true;
+            }
+
+            static constexpr float32 kFaceHeight = 0.9f; ///< 겨누는 높이(몸 가운데, m) — 반동이 위로 튀어도 몸 안에 남는다
+
             /** @brief `cheat.shooter.projectile [id]` — 슈터 플레이어의 지금 무기에 탄을 장전합니다. id 를 빼면 그 무기의 기본 탄입니다(무기 · 탄 조합 시나리오). */
             static bool runProjectile( const vector<string>& listArgument, string& outReply )
             {
@@ -363,6 +402,8 @@ namespace sw
         , _shotCount{ 0 }
         , _hitCount{ 0 }
         , _hitReactionCount{ 0 }
+        , _killCount{ 0 }
+        , _downCount{ 0 }
         , _serverKillCount{ 0 }
         , _bWeaponModelDirty{ SW_FALSE }
         , _bViewWeaponSynced{ SW_FALSE }
@@ -374,12 +415,42 @@ namespace sw
         , _bServerHealth{ SW_FALSE }
         , _bMeleeActive{ SW_FALSE }
         , _bBodyMuzzleFound{ SW_FALSE }
+        , _bServerOut{ SW_FALSE }
+        , _bOut{ SW_FALSE }
+        , _bRemoteBody{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     ShooterPlayerComponent::~ShooterPlayerComponent() = default;
+
+    void ShooterPlayerComponent::copySetup( const ShooterPlayerComponent& source, const float3& spawnPosition )
+    {
+        bindGameMode( source.getGameMode() );
+        _spawnPosition     = spawnPosition;
+        _bodyPrefab        = source._bodyPrefab;
+        _listWeaponID      = source._listWeaponID;
+        _eyeHeight         = source._eyeHeight;
+        _maxHealth         = source._maxHealth;
+        _regenDelay        = source._regenDelay;
+        _regenPerSecond    = source._regenPerSecond;
+        _downTime          = source._downTime;
+        _hitboxLayer       = source._hitboxLayer;
+        _shotImpulse       = source._shotImpulse;
+        _meleeDamage       = source._meleeDamage;
+        _meleeImpulse      = source._meleeImpulse;
+        _meleeReach        = source._meleeReach;
+        _meleeRadius       = source._meleeRadius;
+        _meleeArc          = source._meleeArc;
+        _meleeDuration     = source._meleeDuration;
+        _hitEffectLifetime = source._hitEffectLifetime;
+        _tracerLifetime    = source._tracerLifetime;
+        _muzzleFlashColor  = source._muzzleFlashColor;
+        _bRemoteBody       = SW_TRUE;
+        _bFirstPerson      = SW_FALSE;
+        _bViewWeaponSynced = SW_TRUE; // 손에 든 1인칭 총이 없다
+    }
 
     void ShooterPlayerComponent::onBeginPlay()
     {
@@ -433,15 +504,8 @@ namespace sw
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        GameObject*        pBody    = pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
-        if ( pBody != nullptr )
-        {
-            // 부품(투구, 무기)은 몸의 자식으로 붙어 있지만, 외형이 스폰한 것이라 외형이 정리한다.
-            CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
-            if ( pAppearance != nullptr )
-                pAppearance->despawnParts();
-            pManager->destroyGameObject( pBody );
-        }
+        if ( pManager != nullptr )
+            destroyBodyObject( *pManager, _body );
         _body             = GameObjectHandle{};
         _bodyEyeHeight    = 0.0f;
         _bodyLegLift      = 0.0f;
@@ -492,7 +556,8 @@ namespace sw
         using Internal = ShooterPlayerComponentInternal;
         // 멈춘 몸(입력 초점이 없는 네트 월드)은 의도를 쓰지 않는다 — 이동처럼 무기도 같다.
         ShooterBodyMovementComponent* pMovement = findMovement();
-        const PawnComponent*          pPawn     = pMovement == nullptr || pMovement->isSuspended() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
+        const bool                    bStill    = ( pMovement != nullptr && pMovement->isSuspended() ) || isServerDown();
+        const PawnComponent*          pPawn     = bStill ? nullptr : pOwner->getComponent<PawnComponent>();
         if ( pPawn != nullptr )
             applyWeaponIntent( *pPawn );
         if ( pMovement != nullptr && pMovement->stepMovement( pGameMode->getBoxes(), step ) )
@@ -559,11 +624,12 @@ namespace sw
         }
     }
 
-    void ShooterPlayerComponent::applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health )
+    void ShooterPlayerComponent::applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health, bool bOut )
     {
         _serverHealth    = health;
         _serverKillCount = killCount;
         _bServerHealth   = SW_TRUE;
+        _bServerOut      = bOut ? SW_TRUE : SW_FALSE;
         if ( confirmedHitCount <= _hitCount )
             return;
         _hitCount       = confirmedHitCount;
@@ -751,7 +817,7 @@ namespace sw
         ++_shotCount;
         _timeSinceShot = 0.0f;
         float3     muzzle;
-        const bool bHasMuzzle = findMuzzlePosition( muzzle );
+        const bool bHasMuzzle = _bRemoteBody == SW_FALSE && findMuzzlePosition( muzzle ); // 서버가 세운 몸은 보는 화면이 없다
         // 총구 섬광은 총구에 잠깐 빛나는 구다. 총구가 없으면(오류를 남겼다) 섬광 · 탄도선 없이 판정만 한다.
         if ( bHasMuzzle )
         {
@@ -815,7 +881,7 @@ namespace sw
         const uint64             ownerID      = pOwner != nullptr ? pOwner->getObjectID() : 0;
         const ProjectileCatalog* pProjectiles = game::findSubsystem<const ProjectileCatalog>();
         // 네트: 서버는 쏜 클라이언트가 보던 시각으로 되감아 정하고(랙 보정), 클라이언트는 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않는다.
-        ShooterNetPawnComponent* pNetPawn   = pOwner != nullptr ? pOwner->getComponent<ShooterNetPawnComponent>() : nullptr;
+        ShooterNetPawnComponent* pNetPawn   = findNetPawn( manager );
         const bool               bRewound   = pNetPawn != nullptr && pNetPawn->isServer();
         const bool               bPredicted = pNetPawn != nullptr && pNetPawn->isClient();
         KillcamComponent*        pKillcam   = KillcamComponent::findInScene( manager ); // 씬에 킬캠이 없으면 기록하지 않는다
@@ -846,10 +912,11 @@ namespace sw
                     CharacterRayHit rayHit;
                     const float32   maxDistance = shot._coverDistance - travelled;
                     const bool      bRayHit     = bHasMask && maxDistance > 0.0f &&
-                                         ( bRewound ? pNetPawn->raycastRewound( manager, segment, maxDistance, hitboxMask, ignoreID, rayHit )
+                                         ( bRewound ? pNetPawn->raycastRewound( manager, *pOwner, segment, maxDistance, hitboxMask, ignoreID, rayHit )
                                                     : CharacterRayHit::raycast3D( manager, segment._origin, segment._direction, maxDistance, hitboxMask, ignoreID, rayHit ) );
-                    ShooterEnemyComponent* pEnemy = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
-                    if ( pEnemy == nullptr )
+                    ShooterEnemyComponent*  pEnemy  = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
+                    ShooterPlayerComponent* pVictim = bRewound && bRayHit && pEnemy == nullptr ? rayHit.findMutableObject( manager )->getComponent<ShooterPlayerComponent>() : nullptr; // 다른 플레이어는 되감은 캡슐로만 맞는다
+                    if ( pEnemy == nullptr && pVictim == nullptr )
                     {
                         if ( bPierced )
                         {
@@ -866,7 +933,16 @@ namespace sw
                     killcamHit._position = rayHit._point;
                     killcamHit._target   = rayHit._pObject->getHandle();
                     killcamHit._distance = hitDistance;
-                    if ( bPredicted == false )
+                    if ( pVictim != nullptr )
+                    {
+                        const bool bAlive = pVictim->isAlive();
+                        pVictim->takeDamage( shot._damage );
+                        bAnyHit             = bAnyHit || bAlive;
+                        killcamHit._bKilled = bAlive && pVictim->isAlive() == false ? SW_TRUE : SW_FALSE;
+                        if ( killcamHit._bKilled == SW_TRUE )
+                            recordKill();
+                    }
+                    else if ( bPredicted == false )
                     {
                         // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
                         const bool    bAlive = pEnemy->isAlive();
@@ -962,7 +1038,7 @@ namespace sw
         params._damage                      = _meleeDamage;
         params._impulse                     = _meleeImpulse;
         params._layerMask                   = hitboxMask;
-        ShooterNetPawnComponent* pNetPawn   = pOwner->getComponent<ShooterNetPawnComponent>();
+        ShooterNetPawnComponent* pNetPawn   = findNetPawn( manager );
         const bool               bPredicted = pNetPawn != nullptr && pNetPawn->isClient();
         vector<MeleeHit>         listHit;
         const uint32             hitCount = MeleeHit::sweep( *pOwner, _listMeleePrevious, _listMeleeCurrent, params, bPredicted ? MeleeHitAuthority::Predicted : MeleeHitAuthority::Authority, _listMeleeHitTarget, listHit );
@@ -1049,6 +1125,8 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return true;
+        if ( _bRemoteBody == SW_TRUE )
+            return false;
         // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드를 구한다.
         // 틱마다 묻는다. 씬 전체를 훑지 않고 등록된 디렉터만 본다. 이 오브젝트를 따라가는 디렉터는 하나다 — 둘이면 오류로 기본(1인칭)이다(등록 순서로 고르지 않는다).
         const GameObjectHandle         self            = pOwner->getHandle();
@@ -1061,7 +1139,7 @@ namespace sw
     void ShooterPlayerComponent::updateHUD()
     {
         GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr )
+        if ( pOwner == nullptr || _bRemoteBody == SW_TRUE )
             return;
         // 값만 넣는다. 위젯은 HUD 문서의 바인딩이 연결한다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만 보이고(다른 시점에서는 몸이 보인다),
         // 맞음 표시는 맞힌 직후 1인칭에서만 보인다. 무기 이름은 무기 테이블의 이름(원문)이 현지화 키이며, 글 위젯이 문화권에 맞게 해석한다.
@@ -1071,7 +1149,7 @@ namespace sw
         // HUD 는 클라이언트 전용이다 — 창구가 없으면(전용 서버) 값만 들고 보일 곳이 없다. 같은 뷰모델이면 거는 일은 아무것도 하지 않는다.
         if ( IHUDViewModelBinder* pBinder = game::findSubsystem<IHUDViewModelBinder>() )
             (void)pBinder->bindHUDViewModel( *pOwner, pViewModel );
-        const bool bCrosshair = _bFirstPerson == SW_TRUE && _healthMachine.isAlive();
+        const bool bCrosshair = _bFirstPerson == SW_TRUE && _healthMachine.isAlive() && isServerDown() == false;
         pViewModel->setCrosshairShown( bCrosshair );
         pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
         if ( _bServerHealth == SW_TRUE )
@@ -1107,7 +1185,54 @@ namespace sw
         ShooterGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( pGameMode != nullptr )
             pGameMode->restartRound();
+        resetMatch();
+    }
+
+    void ShooterPlayerComponent::resetMatch()
+    {
+        _killCount = 0;
+        _downCount = 0;
+        _bOut      = SW_FALSE;
         resetRound();
+    }
+
+    void ShooterPlayerComponent::finishDown( GameObjectManager& manager, ShooterGameModeComponent* pGameMode )
+    {
+        ShooterNetPawnComponent* const pNetPawn = findNetPawn( manager );
+        if ( pNetPawn == nullptr || pNetPawn->isServer() == false )
+        {
+            if ( pGameMode == nullptr || pGameMode->endMatch( pGameMode->getKillCount() ) == false ) // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
+                restartRound();
+            return;
+        }
+        const bool bMatch = pGameMode != nullptr && pNetPawn->isMatchServer() && pNetPawn->hasController( *getOwner() );
+        if ( bMatch )
+        {
+            ++_downCount;
+            if ( _downCount >= pGameMode->getMatchDownLimit() )
+            {
+                _bOut = SW_TRUE; // 클라이언트가 이 표시를 보고 매치를 끝낸다 — 나갈 때까지 쓰러진 채다
+                pNetPawn->reportMatchScore( *getOwner() );
+                SW_LOG_INFO_ID( "ShooterPlayer.MatchOver", "[Shooter] the match of one player is over after %# downs and %# kills", _downCount, _killCount );
+                return;
+            }
+        }
+        // 매치 · 여럿이 두는 서버는 그 사람만 다시 태어난다 — 남은 사람의 적 · 처치 수는 그대로다. 혼자면 예전처럼 판을 다시 연다.
+        if ( bMatch == false && ( pGameMode == nullptr || pGameMode->getPlayerViews().size() <= 1u ) )
+        {
+            restartRound();
+            return;
+        }
+        resetRound();
+        SW_LOG_INFO_ID( "ShooterPlayer.BornAgain", "[Shooter] a player is born again with %# health (down %#)", getHealth(), _downCount );
+    }
+
+    ShooterNetPawnComponent* ShooterPlayerComponent::findNetPawn( GameObjectManager& manager ) const
+    {
+        const GameObject*               pGameModeObject = manager.resolveGameObject( getGameMode() );
+        const ShooterGameModeComponent* pGameMode       = pGameModeObject != nullptr ? pGameModeObject->getComponent<ShooterGameModeComponent>() : nullptr;
+        GameObject*                     pSession        = pGameMode != nullptr ? manager.resolveGameObject( pGameMode->getPlayer() ) : nullptr;
+        return pSession != nullptr ? pSession->getComponent<ShooterNetPawnComponent>() : nullptr;
     }
 
     void ShooterPlayerComponent::resetRound()
@@ -1194,18 +1319,10 @@ namespace sw
         if ( _bViewModeDirty == SW_TRUE )
             applyViewMode();
         updateHUD();
-        // 쓰러짐 클립이 끝났다. 디렉터가 적을 정리하고 감독을 처음부터 다시 돌리며, 플레이어는 처음 위치에서 다시 시작한다.
-        if ( _healthMachine.isAlive() == false && _downTimer >= _downTime )
-        {
-            const bool                     bMatchEnded = pGameMode != nullptr && pGameMode->endMatch( pGameMode->getKillCount() ); // 매치는 쓰러지면 끝난다 — 결과를 내고 돌아간다
-            ShooterNetPawnComponent* const pNetPawn    = getOwner()->getComponent<ShooterNetPawnComponent>();
-            if ( pNetPawn != nullptr )
-                pNetPawn->reportMatchScore(); // 매치 서버는 판을 다시 열기 전에 점수를 낸다
-            if ( bMatchEnded == false )
-                restartRound();
-        }
-        // 접속한 매치의 쓰러짐은 서버가 정한다 — 서버가 센 처치 수로 끝내고 돌아간다(매치가 아니면 서버가 판을 다시 연다).
-        if ( _bServerHealth == SW_TRUE && _serverHealth <= 0.0f && pGameMode != nullptr )
+        if ( _healthMachine.isAlive() == false && _downTimer >= _downTime && _bOut == SW_FALSE )
+            finishDown( *pManager, pGameMode );
+        // 접속한 매치의 끝은 서버가 정한다 — 서버가 센 처치 수로 끝내고 돌아간다.
+        if ( _bServerOut == SW_TRUE && pGameMode != nullptr )
             (void)pGameMode->endMatch( _serverKillCount );
     }
 
@@ -1214,25 +1331,46 @@ namespace sw
         _bBodyRequested                     = SW_FALSE;
         GameObject*        pOwner           = getOwner();
         GameObjectManager* pManager         = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        AssetManager*      pAssets          = game::findSubsystem<AssetManager>();
-        const bool         bCannotSpawnBody = pManager == nullptr || pAssets == nullptr || _bodyPrefab.empty() || pManager->resolveGameObject( _body ) != nullptr;
+        const bool         bCannotSpawnBody = pManager == nullptr || pManager->resolveGameObject( _body ) != nullptr;
         if ( bCannotSpawnBody )
             return;
-        GameObject*             pBody   = pAssets->getAssetCache<PrefabCache>().spawn( pManager, _bodyPrefab, "PlayerBody" );
+        const GameObjectHandle  body    = spawnBodyObject( *pManager, "PlayerBody" );
+        GameObject*             pBody   = pManager->resolveGameObject( body );
         ShooterAvatarComponent* pAvatar = pBody != nullptr ? pBody->getComponent<ShooterAvatarComponent>() : nullptr;
         if ( pAvatar == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ShooterPlayer.BodyPrefabNoShooterAvatarComponent", "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );
-            if ( pBody != nullptr )
-                pManager->destroyGameObject( pBody );
-            return;
-        }
+            return; // 이유는 spawnBodyObject 가 남겼다(프리팹을 적지 않은 플레이어는 몸이 없다)
         pAvatar->setPlayer( pOwner );
         CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
         if ( pAppearance != nullptr )
             pAppearance->setSlotItem( hashed_string( "MainHand" ), getWeaponItem( _weaponIndex ) );
         pAvatar->setFirstPerson( _bFirstPerson == SW_TRUE );
-        _body = pBody->getHandle();
+        _body = body;
+    }
+
+    GameObjectHandle ShooterPlayerComponent::spawnBodyObject( GameObjectManager& manager, const utf8* pName ) const
+    {
+        AssetManager* const pAssets = game::findSubsystem<AssetManager>();
+        if ( pAssets == nullptr || _bodyPrefab.empty() )
+            return GameObjectHandle{};
+        GameObject* const pBody = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _bodyPrefab, pName );
+        if ( pBody != nullptr && pBody->getComponent<ShooterAvatarComponent>() != nullptr )
+            return pBody->getHandle();
+        SW_LOG_ERROR_ID( "ShooterPlayer.BodyPrefabNoShooterAvatarComponent", "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );
+        if ( pBody != nullptr )
+            manager.destroyGameObject( pBody );
+        return GameObjectHandle{};
+    }
+
+    void ShooterPlayerComponent::destroyBodyObject( GameObjectManager& manager, GameObjectHandle body )
+    {
+        GameObject* const pBody = manager.resolveGameObject( body );
+        if ( pBody == nullptr )
+            return;
+        // 부품(투구, 무기)은 몸의 자식으로 붙어 있지만, 외형이 스폰한 것이라 외형이 정리한다.
+        CharacterAppearanceComponent* const pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
+        if ( pAppearance != nullptr )
+            pAppearance->despawnParts();
+        manager.destroyGameObject( pBody );
     }
 
     void ShooterPlayerComponent::syncViewWeapon()
@@ -1309,6 +1447,7 @@ namespace sw
     SW_DEV_COMMAND( CheatShooterHeal, "cheat.shooter.heal", "cheat.shooter.heal", "Fill the health of every living shooter player", &ShooterDevCommandsInternal::runHeal );
     SW_DEV_COMMAND( CheatShooterGod, "cheat.shooter.god", "cheat.shooter.god", "Toggle damage immunity of every shooter player", &ShooterDevCommandsInternal::runGod );
     SW_DEV_COMMAND( CheatShooterDown, "cheat.shooter.down", "cheat.shooter.down", "Down every living shooter player at once (clears damage immunity)", &ShooterDevCommandsInternal::runDown );
+    SW_DEV_COMMAND( CheatShooterFace, "cheat.shooter.face", "cheat.shooter.face", "Turn the connected player toward the nearest other player", &ShooterDevCommandsInternal::runFace );
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );

@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -75,6 +76,14 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 이번 프레임에 판을 두는 플레이어 하나입니다. 디렉터가 `PrePhysics` 에서 기록하고 적이 읽습니다. */
+    struct ShooterPlayerView
+    {
+        GameObjectHandle _object{};
+        AbsolutePosition _feet{};
+        uint8            _bAlive{ SW_TRUE };
+    };
+
     /**
      * @brief 적 한 종류입니다 — 생물마다 스켈레톤 · 애니메이션 그래프 · 물리(맞음 상자) · 알림 표가 달라 프리팹이 종류의 정본이고, 외형 프리셋이 그 몸의 모습이다.
      * @details 언리얼 스폰 표의 행이 클래스(Blueprint)를 가리키는 것과 같다 — 프리팹 하나에 프리셋만 바꾸던 예전 모양은 사람형 해골 한 종류만 받았다.
@@ -178,10 +187,16 @@ namespace sw
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
         const vector<ShooterArenaBox>&  getBoxes() const { return _listBox; }
         const vector<ShooterEnemyView>& getEnemyViews() const { return _listEnemyView; }
-        /** @brief 이번 프레임의 플레이어 발 위치입니다. 적이 이쪽으로 옵니다. */
-        const AbsolutePosition& getPlayerFeet() const { return _playerFeet; }
-        bool                    isPlayerAlive() const { return _bPlayerAlive == SW_TRUE; }
-        GameObjectHandle        getPlayer() const { return _player; }
+        /** @brief @p from 에서 가장 가까운 산 플레이어입니다(적이 이쪽으로 온다). 산 사람이 없으면 가장 가까운 쓰러진 사람이고, 판을 두는 사람이 없으면 nullptr 입니다. */
+        const ShooterPlayerView* findNearestPlayer( const AbsolutePosition& from ) const;
+        /** @brief 이번 프레임에 판을 두는 플레이어들입니다(혼자 · 클라이언트는 씬의 플레이어 하나, 서버는 접속한 몸마다 하나). */
+        const vector<ShooterPlayerView>& getPlayerViews() const { return _listPlayerView; }
+        /** @brief 씬의 플레이어입니다. 네트 세션(`ShooterNetPawnComponent`)도 이 오브젝트에 있다. */
+        GameObjectHandle getPlayer() const { return _player; }
+        /** @brief 매치가 한 사람의 판을 끝내는 쓰러짐 횟수입니다. 그 전에는 자리에서 다시 태어난다. */
+        int32 getMatchDownLimit() const { return _matchDownLimit; }
+        /** @brief 다음에 모을 결과(`collectMinigameResult`)의 처치 수를 정합니다 — 매치 서버는 사람마다 결과를 낸다. */
+        void setResultKillCount( uint32 killCount ) { _resultKillCount = killCount; }
         /** @brief 스폰한 적 수입니다(쓰러져 정리를 기다리는 것 포함 — 진단 · 개발 기록이 읽는다). */
         uint32 getEnemyCount() const { return static_cast<uint32>( _listEnemy.size() ); }
         /** @brief 스폰한 적 @p index 의 오브젝트입니다(스폰 순서). */
@@ -301,6 +316,8 @@ namespace sw
         float32 _nearEnemyDistance;
         PROPERTY( Category = "Pacing", DisplayName = "Repair Health Per Scale", Tooltip = "Health one unit of a repair reward restores", Min = 0.0 )
         float32 _repairHealthPerScale;
+        PROPERTY( Category = "Match", DisplayName = "Match Down Limit", Tooltip = "Times one player may fall in an online match before that player's match ends; before that the player is born again", Min = 1 )
+        int32 _matchDownLimit;
 
         vector<ShooterArenaBox>             _listBox;
         vector<ShooterEnemyView>            _listEnemyView;
@@ -317,7 +334,9 @@ namespace sw
         vector<ShooterReplicatedEnemy>      _listPendingReplica; ///< 틱 뒤에 세울 복제 모습
         MaterialTintCache                   _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
         GameObjectHandle                    _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
-        AbsolutePosition                    _playerFeet;
+        vector<ShooterPlayerView>           _listPlayerView;
+        vector<GameObjectHandle>            _listPlayerScratch;
+        optional<uint32>                    _resultKillCount; ///< 결과로 낼 처치 수(비었으면 이 판의 처치 수)
         float32                             _statusTimer;
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
@@ -328,9 +347,8 @@ namespace sw
         int8                                _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
         uint8                               _bAmmoPending : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
         uint8                               _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
-        uint8                               _bPlayerAlive : 1;
         uint8                               _bReplica     : 1; ///< 네트 클라이언트의 월드다(판을 돌리지 않고 스냅샷의 적을 그린다)
         uint8                               _bMatchEnded  : 1; ///< 매치를 끝내고 돌아갈 맵을 기다린다(`endMatch`)
-        [[maybe_unused]] uint8              _reserved     : 3;
+        [[maybe_unused]] uint8              _reserved     : 4;
     };
 } // namespace sw

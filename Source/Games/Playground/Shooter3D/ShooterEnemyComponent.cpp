@@ -239,6 +239,9 @@ namespace sw
             return; // 쓰러질 때 다시 보낸 치명 사본이다(`deliverFatalHit`)
         if ( applyDamage( hit._damage * hit._damageMultiplier ) == false )
             return;
+        ShooterPlayerComponent* const pKiller = hit._pInstigator != nullptr ? hit._pInstigator->getComponent<ShooterPlayerComponent>() : nullptr;
+        if ( pKiller != nullptr )
+            pKiller->recordKill();
         // 쓰러졌다 — 치명 신호를 같은 오브젝트에 다시 보낸다. 래그돌(`_bRagdollOnFatalHit`)이 맞은 바디에 맞은 방향의 충격량을 주며 넘어가고,
         // 절단이 있는 적(해골)은 맞은 영역을 잘라 낸다. 래그돌이 없는 프리팹은 데이터 오류다(쓰러짐 클립만 돈다).
         const GameObject*       pOwner   = getOwner();
@@ -296,12 +299,13 @@ namespace sw
         _phaseTime += step;
 
         // 판단은 AI 조종자가 했다 — 여기는 폰의 의도(이동 축 · 조종 요 · Attack)만 읽는다.
-        const PawnComponent* pPawn       = pOwner->getComponent<PawnComponent>();
-        const bool           bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
-        const float32        controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
-        const float3         target      = pGameMode->getPlayerFeet()._value;
-        const float3         toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
-        const float32        distance    = toTarget.getLength();
+        const PawnComponent*     pPawn       = pOwner->getComponent<PawnComponent>();
+        const bool               bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
+        const float32            controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
+        const ShooterPlayerView* pTarget     = pGameMode->findNearestPlayer( AbsolutePosition{ _position } );
+        const float3             target      = pTarget != nullptr ? pTarget->_feet._value : _position;
+        const float3             toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
+        const float32            distance    = toTarget.getLength();
         // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::updateRepeat`). 쿨다운은 어느 단계에서도 흐른다.
         const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && bAttackHeld;
         const bool bSwing     = _attackCooldown.updateRepeat( step, _attackInterval, bWantSwing );
@@ -325,8 +329,8 @@ namespace sw
                 if ( _bAttackLanded == SW_FALSE && _bAttackHitEvent == SW_TRUE )
                 {
                     _bAttackLanded = SW_TRUE;
-                    if ( distance < _reach * 1.25f )
-                        requestPlayerDamage( pGameMode->getPlayer() );
+                    if ( pTarget != nullptr && distance < _reach * 1.25f )
+                        requestPlayerDamage( pTarget->_object );
                 }
                 if ( _phaseTime >= _attackLength )
                 {

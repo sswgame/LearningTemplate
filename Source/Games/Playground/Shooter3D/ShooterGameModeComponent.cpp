@@ -136,6 +136,7 @@ namespace sw
         , _statusLogInterval{ 5.0f }
         , _nearEnemyDistance{ 7.0f }
         , _repairHealthPerScale{ 10.0f }
+        , _matchDownLimit{ 1 }
         , _listBox{}
         , _listEnemyView{}
         , _pProfile{}
@@ -151,17 +152,18 @@ namespace sw
         , _listPendingReplica{}
         , _tintCache{}
         , _autoPlayController{}
-        , _playerFeet{}
+        , _listPlayerView{}
+        , _listPlayerScratch{}
+        , _resultKillCount{}
         , _statusTimer{ 0.0f }
         , _pendingHeal{ 0.0f }
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
         , _profileReload{}
-        , _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u }
+        , _nextEnemyNetID{ ShooterNetPawnComponent::kEnemyEntityIDBase }
         , _appliedAutoPlay{ -1 }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
-        , _bPlayerAlive{ SW_TRUE }
         , _bReplica{ SW_FALSE }
         , _bMatchEnded{ SW_FALSE }
         , _reserved{ 0 }
@@ -304,6 +306,7 @@ namespace sw
         clearEnemies();
         _killCount   = 0;
         _pendingHeal = 0.0f;
+        _resultKillCount.reset();
         if ( _bPacingReady == SW_TRUE )
             _director.restart();
         _listDirectorEvent.clear();
@@ -319,14 +322,14 @@ namespace sw
         const bool                      bServer = pLink != nullptr && pLink->_role == NetLinkRole::Server; // 매치 서버의 판은 다음에 배정받은 사람이 잇는다
         if ( bServer || pActive == nullptr || pActive->isMatch() == false )
             return false;
-        _killCount   = killCount;
+        setResultKillCount( killCount );
         _bMatchEnded = finishMinigame( hashed_string( ShooterGameModeComponentInternal::kResultDown ) ) ? SW_TRUE : SW_FALSE;
         return _bMatchEnded == SW_TRUE;
     }
 
     void ShooterGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
-        outListValue.push_back( MinigameResultValue{ hashed_string( ShooterGameModeComponentInternal::kValueKills ), static_cast<int64>( _killCount ) } );
+        outListValue.push_back( MinigameResultValue{ hashed_string( ShooterGameModeComponentInternal::kValueKills ), static_cast<int64>( _resultKillCount.has_value() ? *_resultKillCount : _killCount ) } );
     }
 
     void ShooterGameModeComponent::clearEnemies()
@@ -404,8 +407,11 @@ namespace sw
         using Internal = ShooterGameModeComponentInternal;
         _bPacingReady  = SW_FALSE;
         // 적 종류(프리팹 + 프리셋)는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 외형 표에 없는 프리셋이면 이유를 남기고 적을 내지 않는다.
-        const AppearanceDatabase* pAppearance = game::findSubsystem<AppearanceDatabase>();
-        const bool                bEnemiesSet = _listEnemyKind.empty() == false && _eliteEnemyKind._prefab.empty() == false;
+        const AppearanceDatabase*           pAppearance = game::findSubsystem<AppearanceDatabase>();
+        const bool                          bEnemiesSet = _listEnemyKind.empty() == false && _eliteEnemyKind._prefab.empty() == false;
+        const ShooterAutoPlayOptions* const pOptions    = game::findSubsystem<ShooterAutoPlayOptions>();
+        if ( pOptions != nullptr && pOptions->isEnemiesOff() )
+            return; // 개발 스위치 — 적 없는 판(두 사람 대전 시나리오)
         if ( pAppearance == nullptr || bEnemiesSet == false )
         {
             SW_LOG_ERROR_ID( "ShooterGameMode.EnemyPresetsNotSet", "[Shooter] enemy kinds are not set (or no appearance database) - no enemies will come" );
@@ -548,11 +554,14 @@ namespace sw
         const bool bPlayerPending = _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
         if ( bPlayerPending )
         {
-            ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
-            if ( pPlayer != nullptr && _bAmmoPending == SW_TRUE )
-                pPlayer->addWaveAmmo();
-            if ( pPlayer != nullptr && _pendingHeal > 0.0f )
-                pPlayer->restoreHealth( _pendingHeal );
+            for ( const ShooterPlayerView& view : _listPlayerView )
+            {
+                ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( view._object );
+                if ( pPlayer != nullptr && _bAmmoPending == SW_TRUE )
+                    pPlayer->addWaveAmmo();
+                if ( pPlayer != nullptr && _pendingHeal > 0.0f )
+                    pPlayer->restoreHealth( _pendingHeal );
+            }
             _bAmmoPending = SW_FALSE;
             _pendingHeal  = 0.0f;
         }
@@ -830,8 +839,8 @@ namespace sw
             view._phase          = pEnemy->getPhase();
             view._kindIndex      = record._kindIndex;
             _listEnemyView.push_back( view );
-            const float3 toPlayer = view._position._value - _playerFeet._value;
-            nearCount += toPlayer.getLength() < _nearEnemyDistance ? 1 : 0;
+            const ShooterPlayerView* const pNearest = findNearestPlayer( view._position );
+            nearCount += pNearest != nullptr && ( view._position._value - pNearest->_feet._value ).getLength() < _nearEnemyDistance ? 1 : 0;
         }
         if ( _bPacingReady == SW_TRUE )
             (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "enemiesNear" ), static_cast<float32>( nearCount ) );
@@ -839,16 +848,42 @@ namespace sw
 
     void ShooterGameModeComponent::updatePlayerView()
     {
-        const ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
-        if ( pPlayer == nullptr )
-            return;
-        _playerFeet   = pPlayer->getFeetPosition();
-        _bPlayerAlive = pPlayer->isAlive() ? SW_TRUE : SW_FALSE;
-        if ( _bPacingReady == SW_TRUE )
+        _listPlayerView.clear();
+        _listPlayerScratch.clear();
+        const ShooterNetPawnComponent* pNetPawn = findOn<ShooterNetPawnComponent>( _player );
+        if ( pNetPawn != nullptr )
+            pNetPawn->collectPlayerObjects( _listPlayerScratch );
+        else
+            _listPlayerScratch.push_back( _player );
+        float32 ammoShortage = 0.0f;
+        for ( const GameObjectHandle object : _listPlayerScratch )
+        {
+            const ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( object );
+            if ( pPlayer == nullptr )
+                continue;
+            ShooterPlayerView& view = _listPlayerView.emplace_back();
+            view._object            = object;
+            view._feet              = pPlayer->getFeetPosition();
+            view._bAlive            = pPlayer->isAlive() ? SW_TRUE : SW_FALSE;
+            ammoShortage            = MathUtil::max( ammoShortage, pPlayer->computeAmmoShortage() );
+        }
+        if ( _bPacingReady == SW_TRUE && _listPlayerView.empty() == false )
         {
             static const hashed_string s_lowAmmoSignal( "lowAmmo" );
-            (void)_director.getBuiltinIntensityModel().setSignal( s_lowAmmoSignal, pPlayer->computeAmmoShortage() );
+            (void)_director.getBuiltinIntensityModel().setSignal( s_lowAmmoSignal, ammoShortage );
         }
+    }
+
+    const ShooterPlayerView* ShooterGameModeComponent::findNearestPlayer( const AbsolutePosition& from ) const
+    {
+        const ShooterPlayerView* pNearest = nullptr;
+        for ( const ShooterPlayerView& view : _listPlayerView )
+        {
+            const bool bCloser = pNearest != nullptr && float3::getDistance( view._feet._value, from._value ) < float3::getDistance( pNearest->_feet._value, from._value );
+            if ( pNearest == nullptr || view._bAlive > pNearest->_bAlive || ( view._bAlive == pNearest->_bAlive && bCloser ) )
+                pNearest = &view;
+        }
+        return pNearest;
     }
 
     void ShooterGameModeComponent::logStatus( float32 deltaTime )

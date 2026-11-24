@@ -95,6 +95,8 @@ namespace sw
         /** @brief 그릴 자리에 더하는 오프셋입니다(예측 보정을 녹이는 시각 보정 — `PredictionSmoother`). 시뮬레이션 자리는 바뀌지 않는다. */
         void             setDisplayOffset( const float3& offset ) { _displayOffset = offset; }
         AbsolutePosition getDisplayFeetPosition() const { return AbsolutePosition{ _position + _displayOffset }; }
+        /** @brief 빠르기 · 중력 · 반경 · 버튼을 @p source 에서 옮깁니다 — 서버가 세운 몸이 클라이언트가 예측하는 몸과 같은 걸음을 걷는다. */
+        void copyTuning( const ShooterBodyMovementComponent& source );
         /** @brief 발을 @p feet 로 옮기고 속도를 0 으로 둡니다(스폰 · 판 다시 시작). */
         void teleport( const AbsolutePosition& feet );
         /** @brief 멈춰 둡니다 — 의도를 버리고 제자리(수평 속도 0). */

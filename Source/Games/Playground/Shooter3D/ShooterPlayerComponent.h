@@ -35,6 +35,7 @@ namespace sw
     class PawnComponent;
     class ShooterBodyMovementComponent;
     class ShooterGameModeComponent;
+    class ShooterNetPawnComponent;
 
     /**
      * @class ShooterPlayerComponent
@@ -90,15 +91,25 @@ namespace sw
         void onTick( TickContext& context ) override;
         void onWorldOriginShifted( const float3& delta ) override;
 
-        /** @brief 적에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 판을 처음부터 다시 시작합니다. */
+        /** @brief 적 · 다른 플레이어에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 다시 시작합니다(`finishDown`). */
         void takeDamage( float32 amount );
+        /** @brief 규칙 설정(체력 · 무기 · 근접 · 몸 · 게임 모드)을 @p source 에서 옮기고 처음 자리를 @p spawnPosition 으로 둡니다 — 서버가 접속에 세운 몸이며 화면 · HUD 가 없습니다. 플레이를 시작하기 전에 부릅니다. */
+        void copySetup( const ShooterPlayerComponent& source, const float3& spawnPosition );
+        /** @brief 이 사람이 쓰러뜨린 수를 하나 셉니다(서버 · 혼자, 틱이 끝난 뒤 게임 스레드). */
+        void recordKill() { ++_killCount; }
+        /** @brief 매치의 기록(처치 · 쓰러짐)을 지우고 처음 자리에서 다시 시작합니다(틱 뒤 · 게임 스레드) — 앞사람이 나간 자리를 다음 사람이 이어받지 않게. */
+        void resetMatch();
         /** @brief 판을 처음부터 다시 엽니다(틱 뒤 · 게임 스레드) — 디렉터가 적을 걷고 감독을 다시 돌리며, 플레이어는 처음 자리에서 다시 시작합니다. */
         void restartRound();
         /**
          * @brief 서버 판정 결과를 받습니다(클라이언트의 넷 폰이 소유자 상태에서 부른다). 맞힌 발 수가 오르면 맞음 표시 · 소리를 내고, HUD 체력은 이 값을 보입니다.
          * @details 클라이언트의 사격은 탄도선 · 탄착만 예측한다 — 맞음을 전달하지 않고 표시도 서버가 인정한 뒤에 낸다(언리얼 Lyra 의 서버 확인 맞음 표시와 같은 자리, 기억에 의존).
          */
-        void applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health );
+        void applyServerReport( uint32 confirmedHitCount, uint32 killCount, float32 health, bool bOut );
+        /** @brief 이 플레이어의 몸 프리팹을 하나 세웁니다(게임 스레드, 틱 밖) — 자기 몸과 남의 모습이 같은 몸이다. 프리팹에 `ShooterAvatarComponent` 가 없으면 오류를 남기고 빈 핸들입니다. */
+        GameObjectHandle spawnBodyObject( GameObjectManager& manager, const utf8* pName ) const;
+        /** @brief `spawnBodyObject` 로 세운 몸을 외형 부품까지 지웁니다. 이미 없으면 아무 일도 없습니다. */
+        static void destroyBodyObject( GameObjectManager& manager, GameObjectHandle body );
         /** @brief 지금 근접 창에서 이미 맞힌 오브젝트입니다. 서버가 주장을 인정할 때 스윕과 같은 목록을 써 창 하나에 한 번만 맞게 합니다. */
         vector<GameObjectHandle>& getMeleeHitTargets() { return _listMeleeHitTarget; }
         /** @brief 근접이 닿는 거리입니다(자동 플레이 AI 가 휘두를지 정한다). */
@@ -165,6 +176,12 @@ namespace sw
         uint32 getServerKillCount() const { return _serverKillCount; }
         /** @brief 매치 서버가 알려 준 체력입니다(아직 받지 않았으면 -1). */
         float32 getServerHealth() const { return _bServerHealth == SW_TRUE ? _serverHealth : -1.0f; }
+        /** @brief 매치 서버가 이 사람을 쓰러뜨려 다시 태어나기를 기다리면 true 입니다(클라이언트). 걷지도 쏘지도 않는다. */
+        bool isServerDown() const { return _bServerHealth == SW_TRUE && _serverHealth <= 0.0f; }
+        /** @brief 이 사람의 처치 수입니다(서버 · 혼자). */
+        uint32 getKillCount() const { return _killCount; }
+        /** @brief 매치에서 정해진 횟수만큼 쓰러져 이 사람의 판이 끝났으면 true 입니다(서버). */
+        bool isOut() const { return _bOut == SW_TRUE; }
 
     private:
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -241,9 +258,13 @@ namespace sw
         /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선과 맞음 표시의 가시성, 체력, 탄약, 무기 이름을 넣습니다(틱이 끝난 뒤 게임 스레드에서). HUD 가 없으면 아무것도 하지 않습니다. */
         void updateHUD();
         void resetRound();
-        void scheduleFlush();
-        void flushPending();
-        bool hasPending() const;
+        /** @brief 쓰러짐 클립이 끝났습니다(틱 뒤 · 게임 스레드) — 혼자면 판을 끝내거나 다시 열고, 서버면 다시 태어나게 하거나 매치의 판을 끝냅니다. */
+        void finishDown( GameObjectManager& manager, ShooterGameModeComponent* pGameMode );
+        /** @brief 이 씬의 네트 세션입니다(씬의 플레이어 오브젝트에 있다 — 서버가 세운 몸도 같은 것을 쓴다). 없으면 nullptr 입니다. */
+        ShooterNetPawnComponent* findNetPawn( GameObjectManager& manager ) const;
+        void                     scheduleFlush();
+        void                     flushPending();
+        bool                     hasPending() const;
         /** @brief 몸을 스폰합니다(게임 스레드, 틱 밖). */
         void spawnBody();
         /** @brief 1인칭인지 아닌지에 따라 손에 든 총과 몸의 가시성을 맞춥니다(게임 스레드). 조준선은 `updateHUD` 가 맞춥니다. */
@@ -318,6 +339,8 @@ namespace sw
         uint32                          _shotCount;
         uint32                          _hitCount;
         uint32                          _hitReactionCount;
+        uint32                          _killCount;               ///< 이 사람의 처치 수
+        int32                           _downCount;               ///< 매치에서 쓰러진 횟수(서버)
         uint32                          _serverKillCount;         ///< 서버가 알려 준 이 판의 처치 수(`_bServerHealth` 일 때만 뜻이 있다 — 접속한 매치의 결과)
         uint8                           _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
         uint8                           _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
@@ -329,6 +352,9 @@ namespace sw
         uint8                           _bServerHealth       : 1; ///< 네트 클라이언트 — 체력은 서버의 값이다
         uint8                           _bMeleeActive        : 1; ///< 근접 창이 열려 있다
         uint8                           _bBodyMuzzleFound    : 1; ///< 지난 틱 뒤에 몸 외형의 총구 소켓을 찾았다(`refreshBodySnapshot`)
-        [[maybe_unused]] uint8          _reserved            : 5;
+        uint8                           _bServerOut          : 1; ///< 네트 클라이언트 — 매치 서버가 이 사람의 판을 끝냈다
+        uint8                           _bOut                : 1; ///< 서버 — 매치에서 정해진 횟수만큼 쓰러졌다
+        uint8                           _bRemoteBody         : 1; ///< 서버가 접속에 세운 몸이다 — 이 화면의 플레이어가 아니다(1인칭 · HUD · 총구 연출이 없다)
+        [[maybe_unused]] uint8          _reserved            : 2;
     };
 } // namespace sw

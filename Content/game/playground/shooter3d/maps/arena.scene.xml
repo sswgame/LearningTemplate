@@ -555,7 +555,13 @@
 					                         _reconcileTolerance="0.01"
 					                         _interestCellSize="16"
 					                         _interestEnterRadius="60"
-					                         _interestLeaveRadius="70" />
+					                         _interestLeaveRadius="70"
+					                         _pawnHitHeight="1.8">
+						<!-- 매치 서버의 둘째 자리 — 첫 자리(씬의 몸)는 ShooterPlayerComponent._spawnPosition 이다. 둘 사이에 막는 상자가 없다(net-pair respawn 이 여기서 서로 쏜다). -->
+						<_listGuestSpawn>
+							<item>4,0,-16</item>
+						</_listGuestSpawn>
+					</ShooterNetPawnComponent>
 					<FirstPersonCameraComponent _localID="17347683538408078309" _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="0"
@@ -609,6 +615,7 @@
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _tracerPoolSize="24"
+					                          _matchDownLimit="3"
 					                          _bAutoPlay="false">
 						<_listEnemyKind>
 							<ShooterEnemyKind _prefab="game/playground/shooter3d/prefabs/quadshell.prefab.xml" _preset="QuadShell">

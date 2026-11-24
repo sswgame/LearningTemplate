@@ -2,7 +2,7 @@
 <?asset guid="23a23ebe5c6c4538977eda7abb71111e"?>
 <!--
   사격장 온라인 매치 — 같은 아레나의 매치형 미니게임이다. 들어가면 매칭 모드(data/playground.matchmodes.xml)에 줄을 서고, 배정되면 허브 세션을 떠나 매치로 들어간다(PlaygroundOnlineFlow).
-  플레이어가 쓰러지면 판이 끝나 처치 수(결과 값 kills)를 순위표(data/playground.leaderboards.xml)에 내고 허브로 돌아온다. 로그인 전이면 들어가지 않는다.
+  따로 줄 선 두 사람이 같은 서버에서 함께 두고 서로도 맞는다. 쓰러지면 다시 태어나고, 정해진 횟수(게임 모드 _matchDownLimit)만큼 쓰러지면 그 사람의 판이 끝나 처치 수(결과 값 kills)를 순위표(data/playground.leaderboards.xml)에 내고 허브로 돌아온다. 로그인 전이면 들어가지 않는다.
   시나리오 automation/shooter3d_onlinematch 와 online-local run 이 본다.
 -->
 <Minigame name="shooter3d_match" map="game/playground/shooter3d/maps/arena.scene.xml" entry="SceneSwitch" portalSlot="10" save="Blocked" matchMode="arena_solo" matchBoard="arena_kills" matchScore="kills" inputContexts="Movement,Traversal,Look,Camera,CameraOrbit,Shooter"/>

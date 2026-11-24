@@ -43,6 +43,17 @@ namespace sw
         return SpawnStateReset::Reset;
     }
 
+    void ShooterBodyMovementComponent::copyTuning( const ShooterBodyMovementComponent& source )
+    {
+        _sprintButton = source._sprintButton;
+        _jumpButton   = source._jumpButton;
+        _walkSpeed    = source._walkSpeed;
+        _sprintSpeed  = source._sprintSpeed;
+        _jumpSpeed    = source._jumpSpeed;
+        _gravity      = source._gravity;
+        _radius       = source._radius;
+    }
+
     bool ShooterBodyMovementComponent::stepMovement( const vector<ShooterArenaBox>& listBox, float32 deltaTime )
     {
         if ( deltaTime <= 0.0f || _bNetDriven == SW_TRUE )

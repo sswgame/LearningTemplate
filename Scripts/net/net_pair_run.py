@@ -5,7 +5,7 @@
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
   py -3 -m Scripts net-pair mmo --preset Ninja-Debug      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
   py -3 -m Scripts net-pair match --preset Ninja-Debug    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
-  py -3 -m Scripts net-pair respawn --preset Ninja-Debug  # 두 사람이 몸 하나의 매치 서버를 번갈아 쓴다: 쓰러짐(서버가 정함) → 허브 → 다시 줄 → 가득 찬 체력으로 태어남(서버 둘 · 클라이언트 둘)
+  py -3 -m Scripts net-pair respawn --preset Ninja-Debug  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
 계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
@@ -240,9 +240,8 @@ _MATCH_SCORE_REPORTED = re.compile(r"match score of account \d+ reported: arena_
 _MATCH_SCORE_STORED = re.compile(r"the game server's score is stored")
 _MATCH_RESPAWN_ACCOUNTS = (_MATCH_ACCOUNT, ("playground_dev2", "playground_dev2_pw"))  # 온라인 흐름의 개발 계정 둘
 _MATCH_ENTERED = re.compile(r"Minigame 'shooter3d_match' is entered")
-_MATCH_QUEUED = re.compile(r"online queue joined")
-_MATCH_QUEUED_TWICE = re.compile(r"online queue joined.*online queue joined", re.DOTALL)
 _MATCH_DOWNED = re.compile(r"\[Shooter\] you were overrun")
+_MATCH_BORN_AGAIN = re.compile(r"\[Shooter\] a player is born again")
 
 
 class _CacheState:
@@ -447,7 +446,8 @@ def check_match_logs(hub_text: str, match_text: str, client_text: str) -> CheckR
     return result
 
 
-def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _CacheServer, accounts: tuple[tuple[str, str], ...]) -> list[ChildProcess] | None:
+def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _CacheServer, accounts: tuple[tuple[str, str], ...],
+                         match_arguments: tuple[str, ...] = ()) -> list[ChildProcess] | None:
     """허브 서버와 매치 서버를 띄운다(저장소 SQLite 파일 하나 · 캐시 하나를 나눠 가진다). 게임 포트를 열지 못하면 까닭을 찍고 None."""
     store = {"_driver": "sqlite", "_connection": (group.out_dir / "match.sqlite").as_posix()}
     cache = {"_driver": "resp", "_endpoint": f"127.0.0.1:{cache_server.server_address[1]}?prefix=netpair:"}
@@ -468,7 +468,7 @@ def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _C
     match_online.update({"_publicAddress": "127.0.0.1"})
     match_config = write_server(group.out_dir, "Match", _MATCH_GAME_PORT, _MATCH_SERVICE_PORT, match_online, store, cache)
     list_server = []
-    for name, config, list_extra in (("hub", hub_config, []), ("match", match_config, [app_arguments.variable("gv_firstMinigame", _MATCH_MINIGAME)])):
+    for name, config, list_extra in (("hub", hub_config, []), ("match", match_config, [app_arguments.variable("gv_firstMinigame", _MATCH_MINIGAME), *match_arguments])):
         user_data = group.out_dir / f"{name}_userdata"
         user_data.mkdir()
         server = group.start(name, [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", config), *list_extra],
@@ -481,10 +481,10 @@ def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _C
 
 
 def check_respawn_logs(hub_text: str, match_text: str, list_client_text: list[str]) -> CheckResult:
-    """쓰러짐 · 다시 태어남 로그를 판정한다 - 몸 하나의 매치 서버에 셋이 차례로 붙었고(첫 사람 · 둘째 · 다시 첫 사람) 쓰러짐이 둘, 허브가 다섯 번 들였으며, 어느 로그에도 오류 · 경고가 없다."""
+    """두 사람 대전 로그를 판정한다 - 매치 서버에 둘이 붙어 한 번씩 쓰러지고 한 번씩 다시 태어났고, 허브가 네 번(들어옴 · 돌아옴) 들였으며, 어느 로그에도 오류 · 경고가 없다."""
     result = CheckResult()
-    counts = (("match server connections", len(_CONNECTED.findall(match_text)), 3), ("downed players", len(_MATCH_DOWNED.findall(match_text)), 2),
-              ("hub admissions", len(_MATCH_HUB_ENTERED.findall(hub_text)), 5))
+    counts = (("match server connections", len(_CONNECTED.findall(match_text)), 2), ("downed players", len(_MATCH_DOWNED.findall(match_text)), 2),
+              ("players born again", len(_MATCH_BORN_AGAIN.findall(match_text)), 2), ("hub admissions", len(_MATCH_HUB_ENTERED.findall(hub_text)), 4))
     result.problems += [f"{name}: {count} - expected {expected}" for name, count, expected in counts if count != expected]
     result.problems += problem_lines("hub", hub_text) + problem_lines("match", match_text)
     for index, text in enumerate(list_client_text):
@@ -498,7 +498,7 @@ def _run_respawn(argument: argparse.Namespace) -> int:
         if list_exe is None:
             return int(ExitCode.CHECK_INVALID)
         server_exe, client_exe = list_exe
-        list_server = _start_match_servers(group, server_exe, cache_server, _MATCH_RESPAWN_ACCOUNTS)
+        list_server = _start_match_servers(group, server_exe, cache_server, _MATCH_RESPAWN_ACCOUNTS, (app_arguments.variable("gv_shooterNoEnemies", "1"),))
         if list_server is None:
             return int(ExitCode.VIOLATION)
         hub, match = list_server
@@ -514,30 +514,20 @@ def _run_respawn(argument: argparse.Namespace) -> int:
         first = start_client("first")
         steps_done = first.wait_for(_MATCH_ENTERED, _TIMEOUT_SECONDS * 3)
         if steps_done:
-            match.send("cheat.shooter.god")  # 적이 먼저 쓰러뜨리지 않게 - 쓰러뜨리는 때는 아래가 정한다
-            second = start_client("second")
-            steps_done = second.wait_for(_MATCH_QUEUED, _TIMEOUT_SECONDS * 3)
-        if steps_done:
-            match.send("cheat.shooter.down")  # 첫 사람이 쓰러지고, 줄 서 있던 둘째가 그 자리를 얻는다
-            steps_done = second.wait_for(_MATCH_ENTERED, _TIMEOUT_SECONDS * 2)
-        if steps_done:
-            match.send("cheat.shooter.god")
-            steps_done = first.wait_for(_MATCH_QUEUED_TWICE, _TIMEOUT_SECONDS * 2)
-        if steps_done:
-            match.send("cheat.shooter.down")  # 둘째가 쓰러지고, 다시 줄 선 첫 사람이 태어난다
+            second = start_client("second")  # 첫 사람이 자리를 쥔 채 둘째가 같은 서버의 빈 자리로 들어간다
             first.wait(_TIMEOUT_SECONDS * 4)
             second.wait(_TIMEOUT_SECONDS * 4)
             time.sleep(1.0)  # 서버가 나간 연결을 알아챌 틈
         for server in list_server:
             server.stop()
     if not steps_done:
-        return group.fail(f"the two players did not take turns in the match server (logs: {group.out_dir})")
+        return group.fail(f"the first player did not enter the match server (logs: {group.out_dir})")
     for process in (first, second, *list_server):
         if process.return_code != 0:
             return group.fail(f"{process.name} exited with code {process.return_code} (log: {process.log})")
     result = check_respawn_logs(hub.text(), match.text(), [first.text(), second.text()])
     return report("net-pair", result.problems, [hub.log, match.log, first.log, second.log],
-                  "two players take turns in a one-body match server: downed -> hub -> queue -> born again with full health, no errors or warnings")
+                  "two players in one match server shoot each other down -> born again in the same match -> hub, no errors or warnings")
 
 
 def _run_match(argument: argparse.Namespace) -> int:
@@ -579,7 +569,7 @@ def main(list_argument: list[str]) -> int:
     mmo_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     match_parser = sub.add_parser("match", help="허브 서버 · 매치 서버 · 클라이언트를 띄워 접속한 허브 → 매치 → 서버 점수 제출 → 허브 재접속을 본다")
     match_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    respawn_parser = sub.add_parser("respawn", help="허브 서버 · 매치 서버 · 클라이언트 둘을 띄워 쓰러짐 → 허브 → 다시 줄 → 다시 태어남을 본다")
+    respawn_parser = sub.add_parser("respawn", help="허브 서버 · 매치 서버 · 클라이언트 둘을 띄워 동시 대전의 쓰러짐 → 다시 태어남을 본다")
     respawn_parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
     check_parser = sub.add_parser("check", help="이미 있는 서버 · 클라이언트 로그를 판정한다")
     check_parser.add_argument("server_log")

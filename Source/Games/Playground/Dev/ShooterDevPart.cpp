@@ -1,6 +1,6 @@
 /**
  * @file Games/Playground/Dev/ShooterDevPart.cpp
- * @brief 사격장 의 개발 전용 부분입니다 — 자동 플레이 근접 강제(`-gv_shooterAutoMelee`)와 움직임 기록(`-gv_shooterMotionTrace`)을 든다.
+ * @brief 사격장 의 개발 전용 부분입니다 — 자동 플레이 근접 강제(`-gv_shooterAutoMelee`) · 적 없는 판(`-gv_shooterNoEnemies`)과 움직임 기록(`-gv_shooterMotionTrace`)을 든다.
  * @details 개발 전용 소스다(Dev/ — 배포 구성이 짓지 않는다). 바탕 `GameInstance` 가 공장(`IGameDevPartFactory`)으로 하나 만들어 게임 갱신마다 부른다.
  *          게임 모드 · 자동 조준 조종자는 이 파일을 모른다 — 조종자의 근접 칸(`ShooterAutoAimControllerComponent::setMelee`)과 게임 모드의 읽기 창구만 쓴다.
  */
@@ -42,6 +42,8 @@ namespace sw
 {
     /** @brief `-gv_shooterAutoMelee=1`: 자동 플레이 AI 가 닿는 거리의 적을 근접으로도 칩니다(네트 근접 시나리오 — 기본 꺼짐이라 자동 플레이 골든은 그대로다). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_shooterAutoMelee, 0, "Playground shooter3d: 자동 플레이 AI 가 가까운 적을 근접으로도 (1=켜기)" );
+    /** @brief `-gv_shooterNoEnemies=1`: 감독이 적을 내지 않습니다(두 사람이 서로 쓰러뜨리는 `net-pair respawn` 의 매치 서버). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_shooterNoEnemies, 0, "Playground shooter3d: 적 없는 판 (1=켜기)" );
     /** @brief `-gv_shooterMotionTrace=<경로>`: 프레임마다 플레이어 몸, 본, 카메라, 적의 그려진 위치를 CSV 로 남깁니다(튐 진단용이며 게임이 내려갈 때 씁니다). */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_shooterMotionTrace, "", "Playground shooter3d: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );
 
@@ -61,13 +63,19 @@ namespace sw
             {
                 // 근접 스위치는 주소로 건다 — 이 부분의 갱신은 게임 플레이 중에만 돌지만 조종자는 에디터의 넷 시뮬 월드에서도 돈다(`ShooterAutoPlayOptions`).
                 if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
+                {
                     pOptions->_pForceMelee = &gv_shooterAutoMelee;
+                    pOptions->_pEnemiesOff = &gv_shooterNoEnemies;
+                }
             }
 
             ~ShooterDevPart() override
             {
                 if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
+                {
                     pOptions->_pForceMelee = nullptr;
+                    pOptions->_pEnemiesOff = nullptr;
+                }
                 if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace.getPath(), _motionTrace ) == false )
                     SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.get().c_str() );
             }
