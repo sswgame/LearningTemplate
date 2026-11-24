@@ -28,6 +28,7 @@ namespace sw
     PhysicsComponent::PhysicsComponent( PhysicsComponentPhase phase )
         : _pScenePhysics{ nullptr }
         , _physicsIndex{ kNotRegistered }
+        , _floorMissingIndex{ kNotRegistered }
         , _syncedTransformVersion{ 0 }
         , _syncedLocalPosition{}
         , _syncedLocalRotation{}
@@ -38,8 +39,16 @@ namespace sw
         , _bSyncedParented{ false }
         , _bBodyCreated{ false }
         , _bTeleportPending{ false }
+        , _bFloorCheckQueued{ false }
         , _spatialEntry{}
     {
+    }
+
+    void PhysicsComponent::onWorldTransformUpdated()
+    {
+        SceneComponent::onWorldTransformUpdated();
+        if ( _pScenePhysics != nullptr && _pScenePhysics->isFloorTracked() )
+            _pScenePhysics->queueFloorCheck( *this );
     }
 
     PhysicsTransformChange PhysicsComponent::consumeTransformChange()

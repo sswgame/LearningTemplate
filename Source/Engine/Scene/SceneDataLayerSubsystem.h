@@ -88,6 +88,8 @@ namespace sw
         [[nodiscard]] bool isLayerActive( string_view name ) const;
         /** @brief @p listLayer 가 모두 켜져 있으면 true 입니다. 빈 목록은 true 입니다. */
         [[nodiscard]] bool areLayersActive( const vector<string>& listLayer ) const;
+        /** @brief 켜진 레이어 집합이 바뀔 때마다 오르는 번호입니다. 레이어에 기댄 판정을 들고 있는 쪽이 다시 볼 때를 안다. */
+        uint64 getActiveSerial() const { return _activeSerial; }
         /** @brief 켜진 레이어 이름을 정렬해 채웁니다(비우고 채웁니다). */
         void collectActiveLayers( vector<string>& outListLayer ) const;
         /** @brief 묶음 목록입니다(레이어 수 · 이름 순서). */
@@ -127,8 +129,8 @@ namespace sw
         void applyGroups();
         /** @brief 묶음 오브젝트 표(`_mapObjectGroup`)를 묶음의 id 목록으로 다시 만듭니다. */
         void rebuildObjectGroupMap();
-        /** @brief 켜진 레이어를 리소스 태그 `layer` 축으로 넣습니다 — 리소스의 `<_when _if="layer.Winter">` 가 읽고, 그 태그에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
-        void publishLayerTags() const;
+        /** @brief 켜진 레이어 집합을 바꾼 뒤 부릅니다 — 번호(`getActiveSerial`)를 올리고 리소스 태그 `layer` 축으로 넣습니다 — 리소스의 `<_when _if="layer.Winter">` 가 읽고, 그 태그에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
+        void publishActiveLayers();
 
     private:
         Scene*                        _pScene; ///< 받은 씬(빌림)
@@ -136,6 +138,7 @@ namespace sw
         vector<Group>                 _listGroup;
         unordered_set<string>         _uniqueActiveLayer;
         unordered_map<uint64, uint32> _mapObjectGroup; ///< 지은 묶음 오브젝트 id → 묶음 번호(`isGroupObject`)
+        uint64                        _activeSerial;   ///< `getActiveSerial`
         uint8                         _bDirty : 1;     ///< 켜고 끄기가 있었다 — 다음 갱신이 처리한다
     };
 } // namespace sw

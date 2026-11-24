@@ -2,6 +2,10 @@
 
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Concurrency/DevCounter.h"
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/SpinLock.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -131,6 +135,16 @@ namespace sw
     SW_SCENE_SERVICE( ScenePhysics, Physics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
     SW_SCENE_SERVICE( ScenePhysicsEvents, FlushPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform, SceneDataKind::AnimatorState, SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
+    struct ScenePhysics::FloorTracking
+    {
+        SpinLock                             _lock;                    ///< `_listCheck` 를 지킨다(플러시 워커가 함께 붙인다)
+        vector<PhysicsComponent*> _listCheck SW_GUARDED_BY( _lock ){}; ///< 움직였거나 새로 올라 바닥을 다시 물을 것(`queueFloorCheck`)
+        vector<PhysicsComponent*>            _listCheckScratch{};      ///< 이번 프레임에 물을 사본(재사용)
+        vector<PhysicsComponent*>            _listMissing{};           ///< 바닥 없는 자리에 있는 것 — 컴포넌트가 자기 자리(`_floorMissingIndex`)를 든다
+        uint64                               _serial{ 0 };             ///< 마지막으로 본 바닥 번호(`SceneStreamingSubsystem::getFloorSerial`)
+        DevCounter                           _checkCount;              ///< `getFloorCheckCount`
+    };
+
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
         , _pPhysicsSystem{ locateSubsystem<PhysicsSystem>( manager.getSceneEngineServices()._pEngineSubsystems ) }
@@ -164,6 +178,7 @@ namespace sw
         , _arrContactLog{}
         , _contactLogCount{ 0 }
         , _stepCount{ 0 }
+        , _pFloor{ make_unique<FloorTracking>() }
         , _openReadScopeCount{ 0 }
         , _debrisBudget{}
         , _fixedStepOverride{ 0.0f }
@@ -192,38 +207,118 @@ namespace sw
     {
         const SceneStreamingSubsystem& streaming  = _manager.getSubsystem<SceneStreamingSubsystem>();
         const bool                     bStreaming = streaming.isStreaming();
-        if ( bStreaming == false && _bStreamingHolds == false )
+        FloorTracking&                 floor      = *_pFloor;
+        if ( bStreaming == false )
+        {
+            if ( _bStreamingHolds == SW_FALSE )
+                return;
+            // 스트리밍이 끝났다 — 쥔 것을 모두 푼다. 줄에 남은 것은 다시 스트리밍할 때 모두 묻는다.
+            _bStreamingHolds = SW_FALSE;
+            while ( floor._listMissing.empty() == false )
+            {
+                removeFloorMissing( *floor._listMissing.back() );
+            }
             return;
+        }
+        // 1. 자리마다의 답을 맞춘다 — 움직인 것만, 셀이 오르내렸으면(또는 처음이면) 모두.
+        {
+            ScopedLock<SpinLock> lock{ floor._lock };
+            floor._listCheckScratch.swap( floor._listCheck ); // 묻는 동안 더티 월드를 합성하면 줄이 다시 자랄 수 있다 — 사본을 돈다
+            floor._listCheck.clear();
+        }
+        for ( PhysicsComponent* pComponent : floor._listCheckScratch )
+        {
+            pComponent->_bFloorCheckQueued.store( false, std::memory_order_relaxed );
+        }
+        const uint64 floorSerial = streaming.getFloorSerial();
+        if ( _bStreamingHolds == SW_FALSE || floorSerial != floor._serial )
+        {
+            for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
+            {
+                for ( PhysicsComponent* pComponent : _arrListComponent[static_cast<uint32>( phase )] )
+                {
+                    refreshFloorMissing( *pComponent, streaming );
+                }
+            }
+        }
+        else
+        {
+            for ( PhysicsComponent* pComponent : floor._listCheckScratch )
+            {
+                refreshFloorMissing( *pComponent, streaming );
+            }
+        }
+        floor._listCheckScratch.clear();
+        floor._serial    = floorSerial;
+        _bStreamingHolds = SW_TRUE;
+        if ( floor._listMissing.empty() )
+            return;
+        // 2. 바닥 없는 자리의 것만 받침을 본다.
         // 바닥 셀이 내려간 후보만 몸 모양을 아래로 쓴다(비탈 · 가장자리에 걸친 큰 바디도 자기 몸으로 본다) — 받쳐 줄 충돌(늘 올라 있는 지형 · 정적 바디)이 몸 아래 가까이 있으면 쥐지 않는다(순간이동으로 남겨진 캐릭터가 땅 위에서 서지 않게).
         // 설정이나 3D 씬이 없으면 받쳐 줄 것을 알 수 없다 — 쥔다(떨어지는 것보다 안전하다).
         const PhysicsSettings* const      pSettings = findSettings();
         const IPhysicsQueryScene3D* const pQuery    = findScene3D();
         vector<PhysicsShapeDesc3D>        listShape;
-        // shortcut: 바디 · 캐릭터 단계를 프레임마다 모두 본다(셀 표 찾기 하나씩) — 수만 개가 되면 씬 공간 색인(`PhysicsComponent::getBodySpatialLayer`)으로 내려간 셀의 칸만 본다.
-        for ( const PhysicsComponentPhase phase : { PhysicsComponentPhase::Body, PhysicsComponentPhase::Character } )
+        for ( PhysicsComponent* pComponent : floor._listMissing )
         {
-            for ( PhysicsComponent* pComponent : _arrListComponent[static_cast<uint32>( phase )] )
+            const bool bCandidate = pComponent->needsStreamingFloor(); // 강체의 종류는 실행 중에 바뀐다 — 목록은 자리만 본다
+            bool       bSupported = false;
+            if ( bCandidate && pSettings != nullptr && pQuery != nullptr )
             {
-                const float3 position   = pComponent->getWorldPosition();
-                const bool   bCandidate = bStreaming && pComponent->needsStreamingFloor() && streaming.isFloorMissing( position );
-                bool         bSupported = false;
-                if ( bCandidate && pSettings != nullptr && pQuery != nullptr )
+                float3     bodyPosition{};
+                quaternion bodyRotation{};
+                float3     bodyScale{};
+                if ( PhysicsComponent::readWorldPose( *pComponent, bodyPosition, bodyRotation, bodyScale ) )
                 {
-                    float3     bodyPosition{};
-                    quaternion bodyRotation{};
-                    float3     bodyScale{};
-                    if ( PhysicsComponent::readWorldPose( *pComponent, bodyPosition, bodyRotation, bodyScale ) )
-                    {
-                        listShape.clear();
-                        pComponent->collectStreamingFloorShapes( bodyScale, listShape );
-                        bSupported = ScenePhysicsInternal::hasFloorBelow( *pComponent, listShape, bodyPosition, bodyRotation, *pQuery, pSettings->makeGroundQueryLayerMask(),
-                                                                          pSettings->_streamingFloorProbeDistance );
-                    }
+                    listShape.clear();
+                    pComponent->collectStreamingFloorShapes( bodyScale, listShape );
+                    bSupported = ScenePhysicsInternal::hasFloorBelow( *pComponent, listShape, bodyPosition, bodyRotation, *pQuery, pSettings->makeGroundQueryLayerMask(),
+                                                                      pSettings->_streamingFloorProbeDistance );
                 }
-                pComponent->_bStreamingHeld = bCandidate && bSupported == false;
             }
+            pComponent->_bStreamingHeld = bCandidate && bSupported == false;
         }
-        _bStreamingHolds = bStreaming ? SW_TRUE : SW_FALSE;
+    }
+
+    void ScenePhysics::refreshFloorMissing( PhysicsComponent& component, const SceneStreamingSubsystem& streaming )
+    {
+        _pFloor->_checkCount.add();
+        if ( streaming.isFloorMissing( component.getWorldPosition() ) == false )
+        {
+            removeFloorMissing( component );
+            return;
+        }
+        if ( component._floorMissingIndex != PhysicsComponent::kNotRegistered )
+            return;
+        component._floorMissingIndex = static_cast<uint32>( _pFloor->_listMissing.size() );
+        _pFloor->_listMissing.push_back( &component );
+    }
+
+    void ScenePhysics::removeFloorMissing( PhysicsComponent& component )
+    {
+        component._bStreamingHeld = false;
+        const uint32 index        = component._floorMissingIndex;
+        if ( index == PhysicsComponent::kNotRegistered )
+            return;
+        PhysicsComponent* pMoved     = _pFloor->_listMissing.back();
+        _pFloor->_listMissing[index] = pMoved;
+        pMoved->_floorMissingIndex   = index;
+        component._floorMissingIndex = PhysicsComponent::kNotRegistered;
+        _pFloor->_listMissing.pop_back();
+    }
+
+    void ScenePhysics::queueFloorCheck( PhysicsComponent& component )
+    {
+        const bool bHasFloorPhase = component._phase == PhysicsComponentPhase::Body || component._phase == PhysicsComponentPhase::Character;
+        if ( bHasFloorPhase == false || component._bFloorCheckQueued.exchange( true, std::memory_order_relaxed ) )
+            return;
+        ScopedLock<SpinLock> lock{ _pFloor->_lock };
+        _pFloor->_listCheck.push_back( &component );
+    }
+
+    const DevCounter& ScenePhysics::getFloorCheckCount() const
+    {
+        return _pFloor->_checkCount;
     }
 
     void ScenePhysics::onWorldOriginShifted( const float3& delta )
@@ -476,6 +571,8 @@ namespace sw
         vector<PhysicsComponent*>& listComponent = _arrListComponent[static_cast<uint32>( pComponent->_phase )];
         pComponent->_physicsIndex                = static_cast<uint32>( listComponent.size() );
         listComponent.push_back( pComponent );
+        if ( isFloorTracked() )
+            queueFloorCheck( *pComponent );
     }
 
     void ScenePhysics::unregisterComponent( PhysicsComponent* pComponent )
@@ -491,6 +588,12 @@ namespace sw
         pMoved->_physicsIndex    = index;
         listComponent.pop_back();
         pComponent->_physicsIndex = PhysicsComponent::kNotRegistered;
+        removeFloorMissing( *pComponent );
+        if ( pComponent->_bFloorCheckQueued.exchange( false, std::memory_order_relaxed ) )
+        {
+            ScopedLock<SpinLock> lock{ _pFloor->_lock };
+            (void)VectorUtil::removeSingleSwap( _pFloor->_listCheck, pComponent ); // 묻는 동안에는 구조가 바뀌지 않아 사본에는 없다
+        }
     }
 
     void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )

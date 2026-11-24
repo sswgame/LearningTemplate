@@ -2,6 +2,7 @@
 // 떨어지지 않고(늘 올라 있는 땅 위 바디는 그대로 시뮬레이션), 셀이 오르면 풀린다.
 #include "pch.h"
 
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Container/span.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
@@ -11,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
@@ -144,6 +146,59 @@ SW_TEST_CASE( StreamingFloorHoldTest, BodyOverUnloadedCellIsHeldUntilTheCellLoad
     SW_EXPECT_FALSE( streaming.isFloorMissing( pOverCell->getWorldPosition() ) );
     SW_EXPECT_FALSE( pOverCell->isStreamingHeld() );
     SW_EXPECT_TRUE( pOverCell->getWorldPosition()._y < 4.0f ); // 풀려 다시 시뮬레이션된다(셀에는 바닥 바디가 없어 늘 올라 있는 땅으로 떨어진다)
+}
+
+/**
+ * @brief [StreamingFloorHoldTest] 바닥은 움직인 것과 셀이 오르내린 프레임에만 다시 묻는다 — 선 바디는 묻지 않고, 옮긴 바디는 새 자리에서 쥐이고 되돌리면 풀린다
+ * @details 예전에는 바디 · 캐릭터 단계를 프레임마다 모두 물었다(묻는 수가 바디 수 × 프레임).
+ */
+SW_TEST_CASE( StreamingFloorHoldTest, FloorIsAskedOnlyForMovedBodies )
+{
+    Scene scene{ "FloorHold" };
+    SW_REQUIRE_TRUE( scene.instantiate( Util::makeDocument() ) );
+    GameObjectManager&       objects   = *scene.getObjectManager();
+    SceneStreamingSubsystem& streaming = objects.getSubsystem<SceneStreamingSubsystem>();
+    const ScenePhysics&      physics   = objects.getSubsystem<ScenePhysics>();
+    Util::setSource( streaming, float3{ 500.0f, 0.0f, 500.0f } ); // 셀 (0,0) 은 반경 밖이다
+
+    constexpr uint32 kStaticCount = 32;
+    for ( uint32 index = 0; index < kStaticCount; ++index )
+    {
+        SW_REQUIRE_NOT_NULL( Util::spawnStatic( objects, "Static", float3{ 200.0f + static_cast<float32>( index ) * 2.0f, 0.0f, 200.0f }, float3{ 0.5f, 0.5f, 0.5f } ) );
+    }
+    RigidBodyComponent* pCrate = Util::spawnCrate( objects, "Crate", float3{ 5.0f, 5.0f, 105.0f } ); // 셀 (0,10) — 문서의 조각이 없다
+    SW_REQUIRE_NOT_NULL( pCrate );
+    objects.beginPlay();
+    Util::advance( objects, 4 );
+
+    // 움직이는 것은 떨어지는 상자 하나다 — 선 바디는 묻지 않는다.
+    constexpr uint32 kFrameCount = 8;
+    const uint64     askedBefore = physics.getFloorCheckCount().get();
+    Util::advance( objects, kFrameCount );
+    SW_EXPECT_TRUE( physics.getFloorCheckCount().get() - askedBefore <= kFrameCount );
+    SW_EXPECT_FALSE( pCrate->isStreamingHeld() );
+
+    pCrate->teleportTo( float3{ 5.0f, 5.0f, 5.0f }, TeleportType::ResetPhysics ); // 내려간 셀 위
+    Util::advance( objects, 2 );
+    SW_EXPECT_TRUE( pCrate->isStreamingHeld() );
+    // 쥔 동안에는 움직이지 않는다 — 셀이 오르내리지 않으면 자리를 다시 묻지 않는다.
+    const uint64 heldBefore = physics.getFloorCheckCount().get();
+    Util::advance( objects, kFrameCount );
+    SW_EXPECT_EQUAL( heldBefore, physics.getFloorCheckCount().get() );
+    SW_EXPECT_TRUE( pCrate->isStreamingHeld() );
+
+    pCrate->teleportTo( float3{ 5.0f, 5.0f, 105.0f }, TeleportType::ResetPhysics );
+    Util::advance( objects, 2 );
+    SW_EXPECT_FALSE( pCrate->isStreamingHeld() );
+
+    // 다시 내려간 셀 위에서 쥐인 뒤, 움직이지 않아도 셀이 오르면 풀린다.
+    pCrate->teleportTo( float3{ 5.0f, 5.0f, 5.0f }, TeleportType::ResetPhysics );
+    Util::advance( objects, 2 );
+    SW_REQUIRE_TRUE( pCrate->isStreamingHeld() );
+    Util::setSource( streaming, float3{ 5.0f, 0.0f, 5.0f } );
+    Util::advance( objects, 10 );
+    SW_EXPECT_TRUE( streaming.isCellLoaded( StreamingCellCoord{ 0, 0 } ) );
+    SW_EXPECT_FALSE( pCrate->isStreamingHeld() );
 }
 
 /**

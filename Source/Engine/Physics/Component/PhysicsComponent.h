@@ -136,6 +136,8 @@ namespace sw
          *          다음 물리 프레임에 바디를 놓고, 풀면 지금 트랜스폼에서 다시 만든다 — 운동은 0 에서 다시 시작한다.
          */
         bool isStreamingHeld() const { return _bStreamingHeld; }
+        /** @brief 움직였다 — 스트리밍하는 씬이면 바닥을 다시 묻게 물리 서비스에 알립니다(`ScenePhysics::queueFloorCheck`, 플러시 워커에서도 불린다). */
+        void onWorldTransformUpdated() override;
         /**
          * @brief 시뮬레이션에 들 상태인지입니다 — 시작했고, 켜졌고, 지워지는 중이 아니고, 바닥 없는 스트리밍 셀 위라 쥐지 않았다(`isStreamingHeld`).
          * @details 물리 아닌 공간 판정(지역 볼륨 후보 `ZoneOccupantIndex`)도 이것으로 고른다 — 바디를 놓은 물체는 물리 트리거에서 나가므로 지역에서도 같이 나간다(트리거 계약 한 규칙).
@@ -220,16 +222,18 @@ namespace sw
 
         ScenePhysics*         _pScenePhysics;
         uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
+        uint32                _floorMissingIndex;      ///< 바닥 없는 자리 목록(`ScenePhysics::FloorTracking::_listMissing`)의 자리. 없으면 `kNotRegistered`
         uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
         float3                _syncedLocalPosition;    ///< 마지막으로 맞춘 때의 로컬 자리(`consumeTransformChange` 가 바깥이 바꾼 몫을 가른다)
         float3                _syncedLocalRotation;    ///< 마지막으로 맞춘 때의 로컬 회전
         float3                _shapeScale;             ///< 백엔드 셰이프를 지은 월드 배율(`isShapeScaleStale`). 바디 · 캐릭터가 없으면 뜻이 없다
         PhysicsComponentPhase _phase;
-        bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
-        bool                  _bStreamingHeld;   ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
-        bool                  _bSyncedParented;  ///< 마지막으로 맞춘 때 부모가 있었다
-        bool                  _bBodyCreated;     ///< 등록 뒤 백엔드 객체를 한 번이라도 만들었다(`markBodyCreated` — 첫 바디만 나타남이다)
-        atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
-        SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
+        bool                  _bRebuildPending;   ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
+        bool                  _bStreamingHeld;    ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
+        bool                  _bSyncedParented;   ///< 마지막으로 맞춘 때 부모가 있었다
+        bool                  _bBodyCreated;      ///< 등록 뒤 백엔드 객체를 한 번이라도 만들었다(`markBodyCreated` — 첫 바디만 나타남이다)
+        atomic<bool>          _bTeleportPending;  ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
+        atomic<bool>          _bFloorCheckQueued; ///< 바닥 확인 줄(`ScenePhysics::FloorTracking::_listCheck`)에 있다 — 플러시 워커가 세울 수 있어 원자값이다
+        SlotHandle            _spatialEntry;      ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
     };
 } // namespace sw
