@@ -120,7 +120,7 @@ namespace sw
             }
 
             /** @brief 이름 붙은 오브젝트의 주 씬 컴포넌트를 로컬 위치 (x, y, z) 에 둡니다(시나리오가 카메라를 멀리 두어 LOD 를 바꾸는 단계). */
-            static bool runObjectPlace( const vector<string>& listArgument, string& outReply )
+            static bool setObjectPosition( const vector<string>& listArgument, bool bTeleport, string& outReply )
             {
                 float3     position{};
                 const bool bParsed = listArgument.size() == 4 && StringUtil::parseFloat( listArgument[1], position._x ) && StringUtil::parseFloat( listArgument[2], position._y ) &&
@@ -139,10 +139,24 @@ namespace sw
                 // 결정: "그 자리에 멈춰 놓기" 다(언리얼 `SetActorLocation( …, ETeleportType::ResetPhysics )` · 고도 `teleport`) — 순간이동으로 경로를 쓸지 않고,
                 // 옮기기 전 운동(내려앉던 캐릭터 · 떨어지던 강체의 속도)을 잇지 않는다. 인자는 로컬 위치라 부모가 있으면 월드로 바꿔 넘긴다.
                 const SceneComponent* pParent = pScene->getParent();
-                pScene->teleportTo( pParent != nullptr ? float3::transform( position, pParent->getWorldMatrix() ) : position, TeleportType::ResetPhysics );
-                reply.appendFormat( "placed %#", listArgument[0] );
+                if ( bTeleport )
+                    pScene->teleportTo( pParent != nullptr ? float3::transform( position, pParent->getWorldMatrix() ) : position, TeleportType::ResetPhysics );
+                else
+                    pScene->setLocalPosition( position );
+                reply.appendFormat( "%# %#", bTeleport ? "placed" : "moved", listArgument[0] );
                 outReply = string( reply.view() );
                 return true;
+            }
+
+            static bool runObjectPlace( const vector<string>& listArgument, string& outReply )
+            {
+                return setObjectPosition( listArgument, true, outReply );
+            }
+
+            /** @brief 순간이동이 아니라 움직인 것으로 옮깁니다 — 지난 자리를 든 것(끌린 자국 · 궤적)이 두 자리 사이를 잇는다. */
+            static bool runObjectMove( const vector<string>& listArgument, string& outReply )
+            {
+                return setObjectPosition( listArgument, false, outReply );
             }
 
             /** @brief 이름 붙은 오브젝트의 주 씬 컴포넌트를 로컬 요 @p 도만큼 한 프레임에 돌립니다(시나리오가 빠른 회전 뒤 스프링 머리카락 · 망토를 본다). */
@@ -215,6 +229,8 @@ namespace sw
                     &SceneInspectCommandsInternal::runObjectDump );
     SW_DEV_COMMAND( ObjectPlace, "object.place", "object.place <name> <x> <y> <z>", "Teleport a named object of the active scene to a local position and stop its motion (scenarios move the camera to change LOD)",
                     &SceneInspectCommandsInternal::runObjectPlace );
+    SW_DEV_COMMAND( ObjectMove, "object.move", "object.move <name> <x> <y> <z>", "Move a named object of the active scene to a local position as ordinary motion, not a teleport (trail and drag checks)",
+                    &SceneInspectCommandsInternal::runObjectMove );
     SW_DEV_COMMAND( ObjectTurn, "object.turn", "object.turn <name> <yaw degrees>", "Turn a named object of the active scene about its local up axis in one frame (spring hair and cloth checks)",
                     &SceneInspectCommandsInternal::runObjectTurn );
     SW_DEV_COMMAND( ObjectActive, "object.active", "object.active <name> <0|1>", "Deactivate or activate a named object of the active scene (trigger and zone exit and enter checks)",

@@ -207,12 +207,12 @@ namespace sw
         // 워커(스프라이트 틱)에서는 복사해 두고 틱 뒤 게임 스레드에서 처리한다. 같은 오브젝트의 틱은 한 워커가 돌므로 이 슬롯을 다른 워커가 만지지 않는다.
         _listPendingFired.assign( frame._listFired.begin(), frame._listFired.end() );
         _listPendingActive.assign( frame._listActivePlayable.begin(), frame._listActivePlayable.end() );
-        _pendingDeltaSeconds        = frame._deltaSeconds;
-        _bPendingRestarted          = ( _bPendingRestarted == SW_TRUE || frame._bRestarted == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-        const bool bScheduled       = _bPendingFrame == SW_TRUE;
-        _bPendingFrame              = SW_TRUE;
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        _pendingDeltaSeconds              = frame._deltaSeconds;
+        _bPendingRestarted                = ( _bPendingRestarted == SW_TRUE || frame._bRestarted == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+        const bool bScheduled             = _bPendingFrame == SW_TRUE;
+        _bPendingFrame                    = SW_TRUE;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || bScheduled )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( AnimationNotifyComponent& component )

@@ -22,8 +22,8 @@ namespace sw
 
     void DismountOnDeathComponent::onHealthChanged( const HealthChangedEvent& event )
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && event._kind == HealthChangeKind::Reset && _bFallen == SW_TRUE )
             pManager->executeOrDeferPostTickOnComponent( *this, []( DismountOnDeathComponent& component )
             { component.resumeAfterFall(); } );

@@ -117,10 +117,12 @@ SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
     SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "title.scene.xml" ) ) );
     SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "map.scene.xml" ) ) );
 
+    GameTimeScale timeScale; // 프레임의 실제 경과는 엔진이 적는다 — 프레임 없이 부르는 테스트는 제 것을 적는다
+    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
     SubsystemScope              scope;
     const game::ScopedGameScope scopedGame{ scope };
     SW_REQUIRE_TRUE( scope.bind( &sceneManager ) );
-    SW_REQUIRE_TRUE( scope.bind( &engine::getSubsystem<GameTimeScale>() ) );
+    SW_REQUIRE_TRUE( scope.bind( &timeScale ) );
     SW_REQUIRE_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
     const string                             titlePath = test::ScopedScratchDomain::makeID( "title.scene.xml" ).str();
     const string                             mapPath   = test::ScopedScratchDomain::makeID( "map.scene.xml" ).str();
