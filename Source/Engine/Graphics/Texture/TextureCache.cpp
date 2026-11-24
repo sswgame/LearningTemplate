@@ -501,6 +501,19 @@ namespace sw
         if ( start == AssetLoadStart::Async )
             ensureStandInTextures();
         Texture2D* const pLoadingStandIn = _impl->_pLoadingStandIn.load( std::memory_order_acquire );
+        // 번호를 예약해 로드 중 텍스처를 가리키게 한다 — 업로드가 끝나면 같은 번호를 진짜 텍스처로 다시 묶는다(R-6). 잠금 안에서 맡겨, 같은 로드를 받는 다른 요청도
+        // 처음부터 같은 번호를 본다. 동기 요청도 자리 텍스처가 이미 있으면 예약한다 — 그 로드를 기다리던 비동기 요청이 번호 없는 로드를 받지 않게.
+        // 장치가 바뀌면 진행 중이던 로드의 번호는 옛 장치와 함께 갔다 — 새 장치의 요청이 그 로드를 이어받을 때 다시 예약한다.
+        const auto reserveStableSRV = [pDevice, pLoadingStandIn, &key]( Texture2D& texture )
+        {
+            if ( pLoadingStandIn == nullptr || pLoadingStandIn == &texture || pLoadingStandIn->isRHIValid() == false || texture.getStableSRV() != kInvalidDescriptorIndex )
+                return;
+            const RHITextureSRVIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
+            if ( reserved != kInvalidDescriptorIndex )
+                texture.attachReservedSRV( reserved, pDevice );
+            else
+                SW_LOG_ERROR_ID( "TextureCache.ReserveBindlessFailed", "TextureCache: no bindless index could be reserved for '%#' - materials sample the missing-texture checker instead", key.c_str() );
+        };
 
         // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)와 그 로드의 로드 작업만 적고, 같은 키를 동시에
         // 원한 쪽은 같은 로드 작업을 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은
@@ -538,6 +551,7 @@ namespace sw
                 {
                     // 기다린 쪽이 완료를 이 디바이스로 실행한다 — 앞선 요청의 디바이스는 내려갔을 수 있다(펌프 없는 테스트의 디바이스 차례).
                     pInFlight->_pDevice.store( pDevice, std::memory_order_release );
+                    reserveStableSRV( *entry._texture );
                     getTextureCacheStats().recordHit();
                     return TextureHandle{ std::move( pInFlight ) };
                 }
@@ -581,17 +595,7 @@ namespace sw
                 pOperation->_renderTargetHeight = sizeIter->second._height;
             }
         }
-        // 번호를 예약해 로드 중 텍스처를 가리키게 한다 — 업로드가 끝나면 같은 번호를 진짜 텍스처로 다시 묶는다(R-6). 잠금 안에서 맡겨, 같은 로드를 받는 다른 요청도
-        // 처음부터 같은 번호를 본다. 동기 요청도 자리 텍스처가 이미 있으면 예약한다 — 그 로드를 기다리던 비동기 요청이 번호 없는 로드를 받지 않게.
-        const bool bReserve = pLoadingStandIn != nullptr && pLoadingStandIn != pTexture && pLoadingStandIn->isRHIValid() && pTexture->getKeptSRV() == kInvalidDescriptorIndex;
-        if ( bReserve )
-        {
-            const RHITextureSRVIndex reserved = pDevice->reserveBindlessTexture( pLoadingStandIn->getHandle() );
-            if ( reserved != kInvalidDescriptorIndex )
-                pTexture->attachReservedSRV( reserved, pDevice );
-            else
-                SW_LOG_ERROR_ID( "TextureCache.ReserveBindlessFailed", "TextureCache: no bindless index could be reserved for '%#' - materials sample the missing-texture checker instead", key.c_str() );
-        }
+        reserveStableSRV( *pTexture );
         _impl->_mapEntry[key]._pLoadOperation = pOperation;
         lock.unlock();
 
@@ -1878,8 +1882,11 @@ namespace sw
         {
             return unexpected( Error{ ErrorKind::NotFound, "the texture cache was shut down before the upload" } );
         }
-        IRHIDevice* const           pDevice = _pDevice.load( std::memory_order_acquire );
-        const Texture2DUploadStatus status  = _pTexture->finishUpload( pDevice, bBlocking );
+        IRHIDevice* const pDevice = _pDevice.load( std::memory_order_acquire );
+        // 올리는 사이 장치가 바뀌었으면 낸 업로드는 옛 장치와 함께 갔다. 장치 통보(`Texture2D::initRHI`)가 이미 되살렸으면 끝난 것이고, 아니면 이 장치에 다시 낸다.
+        if ( _pTexture->hasUploadInFlight() == false )
+            return _pTexture->isRHIValid() ? concludeCompletion( *pCache, true ) : beginCompletion( bBlocking );
+        const Texture2DUploadStatus status = _pTexture->finishUpload( pDevice, bBlocking );
         if ( status == Texture2DUploadStatus::Pending )
             return AssetCompletionStep::Submitted;
         return concludeCompletion( *pCache, status == Texture2DUploadStatus::Ready );

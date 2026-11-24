@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 using namespace sw;
 
@@ -276,6 +277,40 @@ SW_TEST_CASE( Texture2DStableSRVTest, DeviceChangeRestoresCPUTexture )
     texture.releaseUnused( &newDevice );
     SW_REQUIRE_TRUE( texture.initRHI( &device ) );
     SW_EXPECT_FALSE( texture.isRHIValid() );
+}
+
+/**
+ * @brief [Texture2DStableSRVTest] 올리는 사이 장치가 바뀌면 진행 중이던 로드는 실패하지 않고 새 장치에 다시 낸다
+ * @details 변이: 낸 업로드가 없는 것을 실패로 치면(예전 길) 로딩 중 백엔드를 바꾼 장면의 텍스처가 누락 체커로 굳는다.
+ */
+SW_TEST_CASE( Texture2DStableSRVTest, DeviceChangeResubmitsLoadInFlight )
+{
+    FakeBindlessFactory factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    factory._finalStatus     = RHITransferStatus::Pending; // 옛 장치는 끝내지 못했다
+    FakeBindlessFactory newFactory;
+    test::FakeRHIDevice newDevice;
+    newDevice._pResourceFactory = &newFactory;
+    constexpr string_view kPath = "rendertarget/test_device_change";
+    TextureCache          cache;
+    cache.bindDevice( &device );
+    cache.declareRenderTarget( kPath, kRenderTargetExtent, kRenderTargetExtent );
+    TextureHandle load = cache.request( kPath, AssetLoadStart::OnCallingThread, TextureStreamingGroup::NeverStream );
+    (void)cache.completePendingLoads( &device, 1u );
+    SW_REQUIRE_FALSE( load.isReady() );
+    Texture2D* const pTexture = load.getOperation()->getTexture();
+    SW_REQUIRE_NOT_NULL( pTexture );
+    SW_REQUIRE_TRUE( pTexture->hasUploadInFlight() );
+
+    pTexture->releaseRHI( &device ); // 장치가 내려간다
+    cache.bindDevice( &newDevice );
+    (void)cache.completePendingLoads( &newDevice, 1u ); // 다시 낸다
+    (void)cache.completePendingLoads( &newDevice, 1u );
+    SW_EXPECT_FALSE( load.hasFailed() );
+    SW_EXPECT_TRUE( load.isReady() );
+    SW_EXPECT_TRUE( pTexture->isRHIValid() );
+    load.reset(); // 새 장치가 살아 있을 때 놓는다
 }
 
 /**

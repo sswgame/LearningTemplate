@@ -236,7 +236,10 @@ namespace sw
         RHITextureSRVIndex getStableSRV() const
         {
             const RHITextureSRVIndex srv = getSRV();
-            return srv != kInvalidDescriptorIndex ? srv : _keptSRV.load( std::memory_order_acquire );
+            if ( srv != kInvalidDescriptorIndex )
+                return srv;
+            const RHITextureSRVIndex kept = _keptSRV.load( std::memory_order_acquire );
+            return kept != kInvalidDescriptorIndex ? kept : getSRV(); // 둘을 읽는 사이 업로드가 끝났으면(산 번호를 먼저 적고 지키던 번호를 지운다) 산 번호가 있다
         }
         /** @brief @p pDevice 에서 로드를 시작할 때 예약한 번호 @p index 를 맡습니다(`IRHIDevice::reserveBindlessTexture` — 로드 중 텍스처를 가리킨다). 업로드가 끝나면 이 번호로 다시 묶는다. */
         void attachReservedSRV( RHITextureSRVIndex index, IRHIDevice* pDevice )
