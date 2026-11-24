@@ -19,6 +19,7 @@ namespace sw
         , _listTickInput{}
         , _listDecoded{}
         , _pNetSession{ nullptr }
+        , _localPlayer{ 0 }
         , _accumulator{ 0.0f }
         , _arrAppliedCount{ 0, 0 }
         , _bPendingInput{ SW_FALSE }
@@ -52,6 +53,7 @@ namespace sw
             return false; // 까닭은 세션이 남겼다
         }
         _pNetSession = pNetSession;
+        _localPlayer = localPlayer;
         SW_LOG_INFO_ID( "SkirmishLockstep.Opened", "[Skirmish] lockstep match - you are player %# (%#)", localPlayer, localPlayer == 0 ? "host, blue" : "client, red" );
         return true;
     }
@@ -60,6 +62,7 @@ namespace sw
     {
         _handlerSubscription.reset(); // 세션 상태는 다음 `open` 의 `initialize` 가 비운다
         _pNetSession        = nullptr;
+        _localPlayer        = 0;
         _accumulator        = 0.0f;
         _arrAppliedCount[0] = 0;
         _arrAppliedCount[1] = 0;
@@ -67,6 +70,16 @@ namespace sw
         _bReportedDesync    = SW_FALSE;
         _listLocalCommand.clear();
         _listPendingInput.clear();
+    }
+
+    bool SkirmishLockstepLink::releaseLostSession()
+    {
+        if ( _pNetSession == nullptr || isActive() )
+            return false;
+        const int32 localPlayer = _localPlayer;
+        close();
+        _localPlayer = localPlayer;
+        return true;
     }
 
     bool SkirmishLockstepLink::queueCommand( RTSCommand&& command )
