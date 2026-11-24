@@ -183,8 +183,8 @@ namespace sw
         /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
         void restoreStatefulComponents();
         /** @brief 올린 타입의 코덱을 이 스냅샷이 사는 동안 엔진에 등록합니다 — 스트리밍 셀 · 레이어 묶음 · 하위 레벨에 든 오브젝트의 상태도 실린다. */
-        void addCodec( const utf8* pTypeName, StatefulComponentRegistration::TypeFn pGetType, StatefulComponentRegistration::WriteFn pWrite,
-                       StatefulComponentRegistration::RestoreObjectFn pRestore );
+        void addCodec( const utf8* pTypeName, const TypeInfo* ( *pGetType )(), void ( *pWrite )( Component& component, vector<uint8>& outBytes ),
+                       void ( *pRestore )( Component& component, vector<uint8>&& bytes ) );
 
     private:
         vector<StatefulComponentType>           _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)

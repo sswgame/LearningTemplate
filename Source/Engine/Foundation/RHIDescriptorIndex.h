@@ -52,7 +52,12 @@ namespace sw
     {
     public:
         constexpr RHITypedDescriptorIndex() noexcept = default;
-        using RHIDescriptorIndex::RHIDescriptorIndex;
+        /** @brief 정수 값에서 만듭니다. 상속 생성자는 아래 명시 생성자와 모양이 같아 가려지므로 다시 적는다. */
+        template <typename Int, std::enable_if_t<std::is_integral_v<Int> && std::is_same_v<Int, bool> == false, bool> = true>
+        constexpr explicit RHITypedDescriptorIndex( Int value ) noexcept
+            : RHIDescriptorIndex{ value }
+        {
+        }
         /** @brief 공간을 모르는 번호에서 만듭니다. 다른 공간의 번호는 들어오지 못한다(바탕 형식 그대로만). */
         template <typename Index, std::enable_if_t<std::is_same_v<Index, RHIDescriptorIndex>, int> = 0>
         constexpr explicit RHITypedDescriptorIndex( Index index ) noexcept

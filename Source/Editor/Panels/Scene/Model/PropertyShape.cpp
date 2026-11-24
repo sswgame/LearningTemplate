@@ -130,6 +130,7 @@ namespace sw::editor
             case PropertyShapeHandleKind::BoxExtent:
             case PropertyShapeHandleKind::ArrowTip:
             case PropertyShapeHandleKind::CylinderRadius:
+            case PropertyShapeHandleKind::Point:
                 break;
         }
         return MathUtil::max( distance, PropertyShapeValue::kMinExtent ) / _numberScale;

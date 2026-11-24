@@ -7,6 +7,7 @@
 #include "Engine/Renderer/Frame/View/FrameViewResources.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/EngineConfig.h"

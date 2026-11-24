@@ -8,7 +8,6 @@
 #include "Core/Math/OrientationUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -16,6 +15,7 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
             /** @brief 방금 한 판단(상태 이름 · 행동 트리의 머문 잎)을 비주얼 로거에 적습니다. 로거가 꺼져 있으면 하는 일이 없다. */
             static void logDecision( const AIControllerComponent& controller, const PawnComponent& pawn )
             {
-                VisualLogger* const         pLogger    = engine::findSubsystem<VisualLogger>();
+                VisualLogger* const         pLogger    = game::findSubsystem<VisualLogger>();
                 const GameObject* const     pPawnOwner = pawn.getOwner();
                 const SceneComponent* const pScene     = pPawnOwner != nullptr ? pPawnOwner->getPrimarySceneComponent() : nullptr;
                 if ( pLogger == nullptr || pLogger->isEnabled() == false || pScene == nullptr )

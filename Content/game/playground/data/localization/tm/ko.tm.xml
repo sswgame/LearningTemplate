@@ -3,28 +3,40 @@
 	<entries>
 		<entry source="/" text="/" />
 		<entry source="Actor" text="배우" />
+		<entry source="ArrivalCutA" text="도착 컷 A" />
+		<entry source="ArrivalCutB" text="도착 컷 B" />
 		<entry source="Assault Rifle" text="돌격 소총" />
 		<entry source="Bone Axe" text="뼈 도끼" />
 		<entry source="Bone Shield" text="뼈 방패" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
+		<entry source="Elder" text="장로" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
+		<entry source="GateCut" text="문 컷" />
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
 		<entry source="Guide" text="안내인" />
+		<entry source="Health Potion" text="체력 물약" />
 		<entry source="Heraldic Cape" text="문장 망토" />
+		<entry source="High Heels" text="하이힐" />
 		<entry source="Knight Helmet" text="기사 투구" />
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
+		<entry source="Knight Helmet (Tintable)" text="기사 투구(착색 가능)" />
 		<entry source="Knight Sword (Merged)" text="기사 검(병합)" />
 		<entry source="Longbow" text="장궁" />
+		<entry source="Low Boots" text="낮은 장화" />
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
+		<entry source="Mind the pond - nobody swims in it."
+		       text="연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네." />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
 		<entry source="Notched Blade" text="이 빠진 칼" />
 		<entry source="Pistol" text="권총" />
+		<entry source="Press [action=Farm.Use] to work the soil with your tool"
+		       text="[action=Farm.Use] 을(를) 눌러 도구로 흙을 일구세요" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
 		<entry source="Recon Boots" text="정찰 부츠" />
 		<entry source="Recon Helmet" text="정찰 헬멧" />
@@ -34,10 +46,16 @@
 		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
 		<entry source="Scout" text="정찰병" />
+		<entry source="Stamina" text="기력" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
 		<entry source="Travel Cape" text="여행 망토" />
+		<entry source="Trout" text="송어" />
+		<entry source="Welcome to Dry Gulch." text="드라이 걸치에 온 것을 환영하네." />
+		<entry source="Welcome to Pixel Town, traveller." text="픽셀 마을에 온 것을 환영하네, 여행자여." />
+		<entry source="Wild Herb" text="들풀" />
+		<entry source="Wood Log" text="통나무" />
 	</entries>
 </TranslationMemory>

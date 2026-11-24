@@ -45,7 +45,7 @@ namespace
             _charged  = _table.findStatus( "Charged" ).value_or( -1 );
         }
 
-        int32 material( const utf8* pName ) const { return _table.findMaterial( pName ).value_or( -1 ); }
+        int32 material( const utf8* pName ) const { return _table.findMaterial( hashed_string( pName ) ).value_or( -1 ); }
 
         /** @brief 모든 칸이 @p pName 재질인 격자를 세웁니다. */
         [[nodiscard]] bool makeGrid( int32 width, int32 height, const utf8* pName, ElementGrid& outGrid ) const

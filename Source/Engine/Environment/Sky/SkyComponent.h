@@ -14,7 +14,6 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Sky/SkyGradient.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -51,7 +50,7 @@ namespace sw
         /** @brief 적은 세기에 곱할 배율입니다(날씨 — 흐린 하늘). 저장하지 않습니다. 음수는 0 으로 자릅니다. */
         void setIntensityScale( float32 scale ) { _intensityScale = scale > 0.0f ? scale : 0.0f; }
         void setMode( SkyMode mode ) { _mode = mode; }
-        void setHdriTexture( string_view path ) { _hdriTexture = path; }
+        void setHdriTexture( string_view path );
         void setHdriRadianceMap( string_view path ) { _hdriRadianceMap = string( path ); }
         void setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
 

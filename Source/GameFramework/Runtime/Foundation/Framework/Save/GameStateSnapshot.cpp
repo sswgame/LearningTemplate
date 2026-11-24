@@ -303,8 +303,8 @@ namespace sw
         }
     }
 
-    void GameStateSnapshot::addCodec( const utf8* pTypeName, StatefulComponentRegistration::TypeFn pGetType, StatefulComponentRegistration::WriteFn pWrite,
-                                      StatefulComponentRegistration::RestoreObjectFn pRestore )
+    void GameStateSnapshot::addCodec( const utf8* pTypeName, const TypeInfo* ( *pGetType )(), void ( *pWrite )( Component& component, vector<uint8>& outBytes ),
+                                      void ( *pRestore )( Component& component, vector<uint8>&& bytes ) )
     {
         _listCodec.push_back( make_unique<ComponentStateCodec>( ComponentStateCodec{ pTypeName, pGetType, pWrite, pRestore } ) );
         (void)ComponentStateCodec::add( _listCodec.back().get() ); // 거절은 등록부가 알렸다
