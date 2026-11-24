@@ -215,6 +215,11 @@ namespace sw
             pAnimator->getParameters().setFloat( _turnParameter, turn );
     }
 
+    void MountMovementComponent::onWorldOriginShifted( const float3& delta )
+    {
+        _netPosition += delta;
+    }
+
     bool MountMovementComponent::setNetDriven( bool bNetDriven )
     {
         const GameObject*     pOwner = getOwner();
