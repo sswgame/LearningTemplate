@@ -87,6 +87,8 @@ namespace sw
         void onPrePhysicsStep( const FixedStepContext& context );
         void onPhysicsFrameEnd( const FixedStepContext& context );
         void releasePhysics( ScenePhysics& physics ) override;
+        /** @brief 이어받은 운동(떨어지던 속도 · 공중 관성)과 대기 중인 점프 · 발사를 다음 스텝에 지웁니다(3D `stopMovementImmediately` 와 같은 계약). */
+        void resetMotion() override;
 
     private:
         /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */

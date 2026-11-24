@@ -4,6 +4,7 @@
  *        좌석은 탈것 가속도(앞뒤 · 옆 G · 수직 충격)를 재어 탑승 가속감(탑승자 기울임 · 카메라 · 소리)을 냅니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -13,6 +14,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -102,8 +104,6 @@ namespace sw
         static bool dismount( PawnComponent& riderPawn, bool bForced );
         /** @brief 탑승자 오브젝트가 사라지는 중입니다. 앉았던 좌석을 비우고 탈것의 빙의를 정리합니다(`DismountOnDeathComponent` 가 부릅니다). */
         static void releaseGoneOccupant( GameObjectManager& manager, const GameObjectHandle& rider );
-        /** @brief 물리로 떨어뜨린(쓰러진 채 내린) 탑승자를 다시 걷게 합니다 — 부활했을 때 `DismountOnDeathComponent` 가 부릅니다. */
-        static void resumeFallenRider( GameObject& rider );
         /** @brief 탑승자가 앉은 좌석입니다. 없으면 nullptr 입니다. */
         static VehicleSeatComponent* findSeatOf( const PawnComponent& riderPawn );
         /** @brief @p riderPawn 이 타는 거리 안에 있는 빈 좌석입니다. 운전석을 먼저 보고, 그다음은 가까운 순입니다. 없으면 nullptr 입니다. */
@@ -170,6 +170,7 @@ namespace sw
         GameObjectHandle                      _occupant;                  ///< 앉은 탑승자의 오브젝트. 저장 · 스냅샷(미니게임에서 돌아오기 · 되감기 · 핫 리로드)에 실리고 되살아난 뒤 다시 앉힌다(`restoreRider`)
         TComponentHandle<ControllerComponent> _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
         TComponentHandle<ControllerComponent> _previousVehicleController; ///< 탈 때 탈것에 빙의해 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 빙의한다
+        Subscription                          _riderSuspension;           ///< 앉은 동안 탑승자의 걷기를 멈춘다
         float4x4                              _seatInVehicle;             ///< 탈 때 붙인 소켓 변환(탈것 기준). 기울임은 이 위에 얹는다
         float3                                _lastSeatPosition;          ///< 지난 틱의 좌석 월드 위치
         float3                                _lastSeatVelocity;          ///< 지난 틱의 좌석 월드 속도
@@ -179,6 +180,7 @@ namespace sw
         float32                               _pendingBumpShake;          ///< 틱 뒤 카메라에 걸 충격 크기(0 이면 없음)
         float32                               _pendingFeedbackSpeed;      ///< 틱 뒤 소리에 넘길 탈것 속력(m/s)
         float32                               _pendingFeedbackSlip;       ///< 틱 뒤 소리에 넘길 옆 미끄럼 가속(m/s²)
+        SceneTeleportCursor                   _teleport;                  ///< 탈것이 순간이동하면 잰 걸음을 버린다(가속이 아니다)
         int32                                 _rideSampleCount;           ///< 잰 걸음 수(0..2). 위치 · 속도가 모두 있어야 가속도를 낸다
         uint8                                 _bFieldOfViewKickArmed : 1; ///< 앞 가속이 문턱 아래로 내려가야 다음 킥을 건다
         uint8                                 _bBumpArmed            : 1; ///< 수직 가속이 문턱 아래로 내려가야 다음 충격을 건다

@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -131,6 +132,7 @@ namespace sw
         vector<TurretShotTarget>     _listShotTarget;         ///< 날아가는 탄이 이번 스텝에 맞힐 대상(용량 재사용)
         ProjectileSimulation         _projectiles;            ///< 날아가는 탄
         GameObjectHandle             _previousTarget;         ///< 지난 스텝의 대상(속도를 잴 때 같은 대상인지 본다)
+        SceneTeleportCursor          _targetTeleport;         ///< 대상이 순간이동하면 그 스텝의 속도를 세지 않는다
         float3                       _previousTargetPosition; ///< 지난 스텝의 대상 자리
     };
 } // namespace sw

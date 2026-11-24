@@ -18,7 +18,6 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -112,6 +111,12 @@ namespace sw
                              pOwner != nullptr ? pOwner->getName().c_str() : "?", _grabButton.c_str() );
     }
 
+    void GrabberComponent::onEndPlay()
+    {
+        (void)dropHeld(); // 든 것이 없으면 할 일이 없다
+        Component::onEndPlay();
+    }
+
     void GrabberComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -173,6 +178,14 @@ namespace sw
         return *pService;
     }
 
+    const GameObject* GrabberComponent::findHeld() const
+    {
+        const GameObject*              pOwner   = getOwner();
+        const GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject* const        pHeld    = pManager != nullptr && _held.isValid() ? pManager->resolveGameObject( _held ) : nullptr;
+        return pHeld != nullptr && pHeld->isPendingDestroy() == false ? pHeld : nullptr;
+    }
+
     bool GrabberComponent::grab( GameObject& target )
     {
         GameObject* pOwner      = getOwner();
@@ -199,20 +212,11 @@ namespace sw
         return nullptr;
     }
 
-    void GrabberComponent::onUnregister( GameObjectManager& manager )
-    {
-        // 조종 시스템이 없으면 씬을 비우는 중이다(좌석과 같은 판정) — 든 것도 곧 사라진다.
-        if ( isHolding() && ControlSystem::find( manager ) != nullptr )
-            (void)dropHeld();
-        Component::onUnregister( manager );
-    }
-
     bool GrabberComponent::throwHeld( const float3& velocity )
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        GameObject*        pHeld    = pManager != nullptr ? pManager->resolveGameObject( _held ) : nullptr;
-        _held                       = GameObjectHandle{};
+        GameObject* const pOwner = getOwner();
+        GameObject* const pHeld  = isHolding() ? pOwner->getMutableManager()->resolveGameObject( _held ) : nullptr;
+        _held                    = GameObjectHandle{};
         if ( pHeld == nullptr )
             return false;
         pHeld->setKeptWhenParentDestroyed( false );

@@ -89,5 +89,6 @@ namespace sw
 
         SubTickHandle _boundTickSource; ///< 지금 선행 조건으로 건 서버 틱 알림 틱(없으면 빈 핸들)
         bool          _bWarnedNoTick;
+        bool          _bPlaced; ///< 이번 플레이에서 시각의 자리에 한 번 섰다 — 첫 자리(이어 하기 · 늦게 든 월드)는 순간이동이다
     };
 } // namespace sw

@@ -117,12 +117,14 @@ SW_TEST_CASE( GrabberTest, PlainObjectFollowsTheHandAndStaysWhereDropped )
 SW_TEST_CASE( GrabberTest, HeldObjectHasOneHolderAndOutlivesIt )
 {
     GameObjectManager manager;
-    GameObject*       pHolder = Util::spawnAt( manager, "Holder", float3{ 0.0f, 0.0f, 0.0f } );
-    (void)pHolder->addComponent<PawnComponent>(); // 조종 시스템이 선다 — 씬을 비우는 중이 아님을 이것으로 안다
+    GameObject*       pHolder  = Util::spawnAt( manager, "Holder", float3{ 0.0f, 0.0f, 0.0f } );
     GrabberComponent* pGrabber = pHolder->addComponent<GrabberComponent>();
     GrabberComponent* pSecond  = Util::spawnAt( manager, "Second", float3{ 1.0f, 0.0f, 0.0f } )->addComponent<GrabberComponent>();
-    GameObject*       pCrate   = Util::spawnAt( manager, "Crate", float3{ 0.5f, 0.0f, 0.0f } );
+    GameObject*       pCrate   = manager.createGameObject( hashed_string( "Crate" ) );
+    auto*             pBody    = pCrate->addComponent<RigidBodyComponent>();
+    pBody->setWorldPosition( float3{ 0.5f, 0.0f, 0.0f } );
     manager.beginPlay();
+    manager.update( Util::kFrame );
     SW_REQUIRE_TRUE( pGrabber->grab( *pCrate ) );
     SW_EXPECT_TRUE( GrabberComponent::findHolderOf( *pCrate ) == pGrabber );
     SW_EXPECT_FALSE( pSecond->grab( *pCrate ) );
@@ -136,6 +138,7 @@ SW_TEST_CASE( GrabberTest, HeldObjectHasOneHolderAndOutlivesIt )
     SW_REQUIRE_TRUE( manager.resolveGameObject( crate ) == pCrate );
     SW_EXPECT_TRUE( pCrate->getPrimarySceneComponent()->getParent() == nullptr );
     SW_EXPECT_FALSE( pCrate->isKeptWhenParentDestroyed() );
+    SW_EXPECT_TRUE( pBody->getBodyType() == PhysicsBodyType::Dynamic ); // 물리로 돌아갔다
     SW_EXPECT_TRUE( pSecond->grab( *pCrate ) );
 }
 

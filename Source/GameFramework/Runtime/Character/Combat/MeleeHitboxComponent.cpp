@@ -24,6 +24,7 @@ namespace sw
     MeleeHitboxComponent::MeleeHitboxComponent()
         : _listHitTarget{}
         , _listPreviousPoint{}
+        , _teleport{}
         , _bladeStart{}
         , _bladeEnd{}
         , _bladeRadius{ 0.0f }
@@ -124,6 +125,8 @@ namespace sw
         GameObject* pAttacker = findAttackerRoot();
         if ( pAttacker == nullptr )
             return;
+        if ( _teleport.consume( *this ).has_value() )
+            _listPreviousPoint.clear();
         vector<float3> listCurrent;
         collectBlade( listCurrent );
         MeleeHitParams params;

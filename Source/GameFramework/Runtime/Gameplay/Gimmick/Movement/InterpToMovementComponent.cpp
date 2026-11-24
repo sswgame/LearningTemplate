@@ -26,6 +26,7 @@ namespace sw
         , _bStarted{ false }
         , _boundTickSource{}
         , _bWarnedNoTick{ false }
+        , _bPlaced{ false }
     {
     }
 
@@ -46,6 +47,7 @@ namespace sw
     void InterpToMovementComponent::onEndPlay()
     {
         _bStarted = false;
+        _bPlaced  = false;
         Component::onEndPlay();
     }
 
@@ -119,7 +121,13 @@ namespace sw
         SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr || _bStarted == false )
             return;
-        pScene->setWorldPosition( pOwner->getManager()->getWorldOrigin().toLocal( _startPosition ) + computeOffset( _listWaypoint, _segmentSeconds, _bPingPong, seconds ) );
+        const float3 position = pOwner->getManager()->getWorldOrigin().toLocal( _startPosition ) + computeOffset( _listWaypoint, _segmentSeconds, _bPingPong, seconds );
+        // 첫 자리는 시각이 정한 곳이다(이어 하기 · 늦게 든 서버 · 다시 오른 셀) — 시작 자리에서 걸어간 것으로 두면 키네마틱 바디가 한 프레임에 그 거리를 쓸어 위에 선 것을 날린다.
+        if ( _bPlaced == false )
+            pScene->teleportTo( position );
+        else
+            pScene->setWorldPosition( position );
+        _bPlaced = true;
         if ( _turnRate.radians() != 0.0f )
             pScene->setLocalRotation( float3{ _startRotation._x, _startRotation._y + computeTurn( _turnRate, seconds ), _startRotation._z } );
     }

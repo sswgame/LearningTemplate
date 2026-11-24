@@ -85,9 +85,9 @@ namespace sw
         {
             crowd.teleportAgent( agent._crowdAgentID, origin.toAbsolute( agent._pendingWarp ) );
             if ( pController == nullptr && pScene != nullptr )
-                pScene->setWorldPosition( agent._pendingWarp );
+                pScene->teleportTo( agent._pendingWarp ); // 걸어간 길이 아니다 — 몸 · 칼 궤적 · 화면 속도가 사이를 쓸지 않는다
             else if ( pController != nullptr )
-                pController->setWorldPosition( agent._pendingWarp );
+                pController->teleportTo( agent._pendingWarp );
             agent._writtenPosition   = agent._pendingWarp;
             agent._bDestinationDirty = agent._bHasDestination;
             NavStreamRoute::clearAgentRoute( agent ); // 새 자리에서 다시 계획한다(가상 이동도 끝난다)

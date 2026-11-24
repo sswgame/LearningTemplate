@@ -9,6 +9,7 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
+#include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -49,6 +50,9 @@ namespace sw
         , _bIsTransformDirty{ SW_TRUE }
         , _bHasDirtyDescendant{ SW_FALSE }
         , _bQueuedDirtyRoot{ SW_FALSE }
+        , _teleportSerial{ 0 }
+        , _motionResetSerial{ 0 }
+        , _originShiftSerial{ 0 }
     {
         // 값(로컬 TRS · 월드 행렬 · LWC)은 저장소의 칸에 있다. 칸은 항등 로컬 · 항등 월드로 채워져 나온다.
         _transformSlot     = engine::getSubsystem<SceneTransformStorage>().allocateSlot( this, _pTransformPage );
@@ -264,6 +268,9 @@ namespace sw
         {
             SceneComponent* pNode = listPending.back();
             listPending.pop_back();
+            ( type == TeleportType::WorldOriginShift ? pNode->_originShiftSerial : pNode->_teleportSerial ).fetch_add( 1, std::memory_order_relaxed );
+            if ( type == TeleportType::ResetPhysics )
+                pNode->_motionResetSerial.fetch_add( 1, std::memory_order_relaxed );
             pNode->onTeleported( type );
             for ( SceneComponent* pChild : pNode->_listChild )
             {
@@ -271,6 +278,25 @@ namespace sw
                     listPending.push_back( pChild );
             }
         }
+    }
+
+    SceneTeleportCursor::SceneTeleportCursor()
+        : _teleportSerial{ 0 }
+        , _motionResetSerial{ 0 }
+    {
+    }
+
+    optional<TeleportType> SceneTeleportCursor::consume( const SceneComponent& component )
+    {
+        const uint16 teleportSerial    = component.getTeleportSerial();
+        const uint16 motionResetSerial = component.getMotionResetSerial();
+        const bool   bTeleported       = teleportSerial != _teleportSerial;
+        const bool   bMotionReset      = motionResetSerial != _motionResetSerial;
+        _teleportSerial                = teleportSerial;
+        _motionResetSerial             = motionResetSerial;
+        if ( bTeleported == false && bMotionReset == false )
+            return nullopt;
+        return bMotionReset ? TeleportType::ResetPhysics : TeleportType::TeleportPhysics;
     }
 
     void SceneComponent::setWorldTransform( const float4x4& worldMatrix )

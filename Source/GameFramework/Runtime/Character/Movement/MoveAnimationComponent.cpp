@@ -17,6 +17,7 @@ namespace sw
         , _faceMinSpeed{ 0.2f }
         , _turnRate{ Radians::fromDegrees( 540.0f ) }
         , _teleportDistance{ 2.0f }
+        , _teleport{}
         , _lastPosition{ 0.0f, 0.0f, 0.0f }
         , _speed{ 0.0f }
         , _bHasLast{ SW_FALSE }
@@ -41,7 +42,8 @@ namespace sw
         const float3  position = pBody->getWorldPosition();
         const float3  step{ position._x - _lastPosition._x, 0.0f, position._z - _lastPosition._z };
         const float32 stepDistance = step.getLength();
-        const bool    bCounts      = _bHasLast == SW_TRUE && stepDistance <= _teleportDistance;
+        const bool    bTeleported  = _teleport.consume( *pBody ).has_value();
+        const bool    bCounts      = _bHasLast == SW_TRUE && bTeleported == false && stepDistance <= _teleportDistance; // 거리는 알리지 않고 옮긴 것(네트 보정)의 몫이다
         _lastPosition              = position;
         _bHasLast                  = SW_TRUE;
         if ( bCounts == false )

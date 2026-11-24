@@ -290,10 +290,15 @@ namespace sw
         uint32 getGraphLayerCount() const { return static_cast<uint32>( _listGraphLayer.size() ); }
 
         /**
-         * @brief 시퀀서 덮어쓰기 슬롯입니다. 시퀀서가 클립과 시간을 정해 그래프 결과 위에 @p weight 만큼 섞습니다. 시간은 시퀀서가 진행시킵니다.
-         * @param clip nullptr 이거나 weight 가 0 이면 덮어쓰기가 꺼집니다.
+         * @brief 시퀀서 덮어쓰기 자리를 하나 엽니다. 돌려준 구독을 쥔 동안 산다 — 놓으면 그 자리만 사라지고 다른 시퀀스 · 겹친 구간의 자리는 그대로다.
+         * @details 자리가 하나뿐이면 먼저 끝난 구간이 뒤 구간의 덮어쓰기를 지워 한 프레임 그래프 자세가 비친다. 언리얼 시퀀서는 구간마다 평가 항목을 따로 두고 가중치로 섞는다.
          */
-        void setSequencerOverride( const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight );
+        [[nodiscard]] Subscription openSequencerOverride( uint64& outOverrideID );
+        /**
+         * @brief 자리 @p overrideID 의 클립과 시간을 정합니다. 그래프 결과 위에 연 순서대로 @p weight 만큼 섞습니다. 시간은 시퀀서가 진행시킵니다.
+         * @param clip nullptr 이거나 weight 가 0 이면 그 자리는 섞지 않습니다.
+         */
+        void setSequencerOverride( uint64 overrideID, const SharedAssetRef<AnimationClip>& clip, float32 time, float32 weight );
         /**
          * @brief 클립 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다.
          * @details 시퀀서 애니메이션 구간도 이 규칙으로 클립을 푼다 — 가져온 클립 파일은 내용 해시 이름이라 손으로 적는 시퀀스는 셋의 클립 이름을 쓴다.
@@ -345,6 +350,10 @@ namespace sw
     private:
         /** @brief 루트 모션 수정자 등록의 구독이 풀렸습니다. 그 수정자를 뺍니다(주소로만 찾는다). */
         void releaseRootMotionModifier( IRootMotionModifier* pModifier ) { VectorUtil::removeFirst( _listRootMotionModifier, pModifier ); }
+        /** @brief 시퀀서 덮어쓰기 자리의 구독이 풀렸습니다. 그 자리만 뺍니다. */
+        void closeSequencerOverride( uint64 overrideID );
+        /** @brief 지금 섞는 시퀀서 덮어쓰기가 있으면 true 입니다. */
+        bool hasSequencerOverride() const;
 
         /**
          * @brief 화면에 보인 지난 두 포즈입니다. inertialization · 이어 섞기의 출발 포즈와 출발 속도가 여기서 나옵니다.
@@ -447,6 +456,15 @@ namespace sw
 
         private:
             SkeletalAnimatorComponent* _pOwner;
+        };
+
+        /** @brief 열린 시퀀서 덮어쓰기 하나입니다(`openSequencerOverride`). */
+        struct SequencerOverride
+        {
+            SharedAssetRef<AnimationClip> _clip{};
+            uint64                        _overrideID{ 0 };
+            float32                       _time{ 0.0f };
+            float32                       _weight{ 0.0f };
         };
 
         /** @brief 레이어 하나의 실행 상태입니다. */
@@ -638,18 +656,18 @@ namespace sw
         vector<float4x4>                                              _listBaseModelScratch;  ///< 메시 공간 덮기의 기준 포즈 모델 공간(프레임마다 다시 쓴다)
         vector<float4x4>                                              _listLayerModelScratch; ///< 메시 공간 덮기의 레이어 포즈 모델 공간
         Pose                                                          _scratchLinkedPose;
-        vector<uint8>                                                 _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
-        PoseHistory                                                   _baseHistory;          ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
-        Pose                                                          _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
-        PoseInertializer                                              _inertializer;         ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
-        SharedAssetRef<AnimationClip>                                 _sequencerClip;
+        vector<uint8>                                                 _listScratchTrackMask;           ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
+        PoseHistory                                                   _baseHistory;                    ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
+        Pose                                                          _carryOverPose;                  ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
+        PoseInertializer                                              _inertializer;                   ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
+        vector<SequencerOverride>                                     _listSequencerOverride;          ///< 열린 시퀀서 덮어쓰기(연 순서)
+        SubscriptionList                                              _sequencerOverrideSubscriptions; ///< `openSequencerOverride` 가 낸 구독
+        uint64                                                        _nextSequencerOverrideID;
         BoneTransform                                                 _rootMotionDelta;
         SkeletalMeshComponent*                                        _pSkeletalMesh;
         IAnimationNotifyListener*                                     _pNotifyListener;
         float32                                                       _lastDeltaSeconds; ///< 마지막 시간 단계의 델타 시간(배율 적용)
-        float32                                                       _sequencerTime;
-        float32                                                       _sequencerWeight;
-        float32                                                       _initialTime; ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
+        float32                                                       _initialTime;      ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
         float32                                                       _carryOverElapsed;
         float32                                                       _carryOverDuration;
         uint32                                                        _seenInterruptCount;       ///< 플레이어의 중단 횟수를 마지막으로 확인한 값

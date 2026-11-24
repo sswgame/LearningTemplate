@@ -64,6 +64,9 @@ namespace sw
         , _bStepClimb{ SW_FALSE }
         , _bManualSimulation{ SW_FALSE }
         , _reserved{ 0 }
+        , _suspendCount{ 0 }
+        , _nextSuspensionID{ 1 }
+        , _suspensionSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &CharacterControllerComponent::releaseSuspension, this ) }
     {
         _commandSlot = engine::getSubsystem<PhysicsPoseStore>().getCommandStore<CharacterCommand3D>().allocateSlot( this, _pCommandPage );
     }
@@ -186,6 +189,28 @@ namespace sw
         } );
     }
 
+    Subscription CharacterControllerComponent::suspend()
+    {
+        _suspendCount.fetch_add( 1, std::memory_order_relaxed );
+        return _suspensionSubscriptions.issue( _nextSuspensionID++ );
+    }
+
+    void CharacterControllerComponent::releaseSuspension( uint64 /*suspensionID*/ )
+    {
+        _suspendCount.fetch_sub( 1, std::memory_order_relaxed );
+    }
+
+    void CharacterControllerComponent::discardPendingCommands()
+    {
+        editCommand( []( CharacterCommand3D& command )
+        {
+            CharacterCommand3D kept{};
+            kept._moveVelocity      = command._moveVelocity;
+            kept._verticalMoveSpeed = command._verticalMoveSpeed;
+            command                 = kept;
+        } );
+    }
+
     void CharacterControllerComponent::addSurfaceVelocity( const float3& velocity )
     {
         editCommand( [&velocity]( CharacterCommand3D& command )
@@ -247,9 +272,11 @@ namespace sw
     void CharacterControllerComponent::onPhysicsFrameBegin( const FixedStepContext& context )
     {
         ScenePhysics& physics = context.getPhysics();
-        if ( isSimulated() == false )
+        if ( isSimulated() == false || isSuspended() )
         {
             releasePhysics( physics );
+            if ( hasBegunPlay() && ( isActive() == false || isSuspended() ) )
+                discardPendingCommands(); // 시작 전 · 스트리밍이 붙잡은 동안의 요청은 첫 걸음의 것이라 남긴다
             return;
         }
         IPhysicsScene3D* pScene = physics.getScene3D();
@@ -350,8 +377,6 @@ namespace sw
         _state._position     = position;
         _previousPosition    = position;
         _motionDisplayOffset = float3{};
-        if ( bTeleported )
-            _verticalSpeed = 0.0f;
     }
 
     void CharacterControllerComponent::onPrePhysicsStep( const FixedStepContext& context )

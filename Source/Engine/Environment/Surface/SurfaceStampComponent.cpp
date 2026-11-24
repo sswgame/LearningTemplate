@@ -20,6 +20,7 @@ namespace sw
         , _trailBreak{ 2.0f }
         , _held{}
         , _lastPoint{}
+        , _teleport{}
         , _bHasLastPoint{ SW_FALSE }
         , _bStampChecked{ SW_FALSE }
         , _bValidStamp{ SW_FALSE }
@@ -81,6 +82,8 @@ namespace sw
                 _held = deform.addPersistentStamp( _stamp, point, yaw );
             return;
         }
+        if ( _teleport.consume( *pScene ).has_value() )
+            _bHasLastPoint = SW_FALSE; // 순간이동한 길은 긋지 않는다
         if ( _bHasLastPoint == SW_FALSE )
         {
             _lastPoint     = point;

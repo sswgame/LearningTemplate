@@ -60,10 +60,10 @@ namespace sw
         , _velocity{}
         , _climbReleaseLeft{ 0.0f }
         , _bClimbing{ false }
+        , _teleport{}
         , _facingYaw{ 0.0f }
         , _sprintIndex{}
         , _jumpIndex{}
-        , _bSuspended{ SW_FALSE }
         , _bNetDriven{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -90,13 +90,29 @@ namespace sw
     void CharacterMovementComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        if ( _bSuspended == SW_TRUE || _bNetDriven == SW_TRUE )
+        if ( _bNetDriven == SW_TRUE )
             return;
         GameObject*                   pOwner      = getOwner();
         const PawnComponent*          pPawn       = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         CharacterControllerComponent* pController = pOwner != nullptr ? pOwner->getComponent<CharacterControllerComponent>() : nullptr;
         if ( pPawn == nullptr || pController == nullptr )
             return;
+        // 멈춰 둔 몸(탑승 · 래그돌)은 걷지 않는다 — 다시 걸을 때 옛 속도로 나가지 않게 이어 오던 것을 지운다.
+        if ( pController->isSuspended() )
+        {
+            _velocity  = float3{};
+            _bClimbing = false;
+            pController->setMoveVelocity( float3{} );
+            pController->setVerticalMoveSpeed( 0.0f );
+            return;
+        }
+        // 운동을 지우는 순간이동(리스폰 · 문)은 컨트롤러의 것만이 아니라 여기서 잇는 걷는 속도 · 매달림도 지운다 — 남기면 옛 걸음으로 미끄러져 나간다.
+        if ( _teleport.consume( *pController ) == TeleportType::ResetPhysics )
+        {
+            _velocity         = float3{};
+            _climbReleaseLeft = 0.0f;
+            _bClimbing        = false;
+        }
         // 이펙트의 이동 제약(둔화 배율 · 속박/기절 · 점프 차단) — 이동기는 이 한 곳에서 읽는다(`MovementConstraint`).
         CharacterMoveState state         = getState();
         state._facingYaw                 = _facingYaw; // 트랜스폼에 쓴 값 그대로 — 감은 값과 견주면 저작한 각이 ±π 밖일 때 다시 쓴다
@@ -277,24 +293,5 @@ namespace sw
         _turnRate            = source._turnRate;
         _facingMode          = source._facingMode;
         resolveButtons();
-    }
-
-    void CharacterMovementComponent::setSuspended( bool bSuspended )
-    {
-        const uint8 bNewSuspended = bSuspended ? SW_TRUE : SW_FALSE;
-        if ( _bSuspended == bNewSuspended )
-            return;
-        _bSuspended = bNewSuspended;
-        if ( bSuspended == false )
-            return;
-        _velocity                                 = float3{};
-        _bClimbing                                = false;
-        GameObject*                   pOwner      = getOwner();
-        CharacterControllerComponent* pController = pOwner != nullptr ? pOwner->getComponent<CharacterControllerComponent>() : nullptr;
-        if ( pController != nullptr )
-        {
-            pController->setMoveVelocity( float3{} );
-            pController->setVerticalMoveSpeed( 0.0f );
-        }
     }
 } // namespace sw
