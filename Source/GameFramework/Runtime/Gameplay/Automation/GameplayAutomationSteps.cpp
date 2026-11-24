@@ -4,8 +4,8 @@
  * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`GameStateComponent`) 시계를 감는다.
  *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`VehicleSeatComponent`). 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
  *          - 오브젝트 대상(`rider` · `vehicle`)은 `AutomationTarget` 규칙으로 고른다 — 같은 이름이 여럿이면 `Name[N]`.
- *          감시 값은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money`(`SessionStateProbes.cpp`), `Quest.Status`(`QuestProbes.cpp`), `Schedule.*`(`ScheduleProbes.cpp`),
- *          `AI.*`(`AIControllerProbes.cpp`), `Pawn.Controller`(`PawnProbes.cpp`), `Pawn.Seat`(`VehicleProbes.cpp`). 이 파일에는 영역을 넘는 단계만 둔다.
+ *          감시 값은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money` · `Quest.Status`(`GameStateWatches.cpp`), `Schedule.*`(`ScheduleWatches.cpp`),
+ *          `AI.*`(`AIControllerWatches.cpp`), `Pawn.Controller`(`PawnWatches.cpp`), `Pawn.Seat`(`VehicleWatches.cpp`). 이 파일에는 영역을 넘는 단계만 둔다.
  */
 #include "pch.h"
 

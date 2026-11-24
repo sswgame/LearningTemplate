@@ -282,7 +282,7 @@ namespace sw
 
 #else
 
-// 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
+// 자동화를 뺀 배포본(`SW_SHIPPING`): 등록하지 않고 본문 함수만 붙잡는다.
     #define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, options )                                                   \
         [[maybe_unused]] static constexpr auto                        sw_automationStepRunUnused_##id      = pRun;      \
         [[maybe_unused]] static constexpr auto                        sw_automationStepValidateUnused_##id = pValidate; \

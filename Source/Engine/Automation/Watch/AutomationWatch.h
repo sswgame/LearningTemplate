@@ -234,7 +234,7 @@ namespace sw
 
 #else
 
-// 자동화를 뺀 배포본: 등록하지 않고 본문 함수만 붙잡는다(`Engine/Automation/Watch/AutomationHooksEnabled.h`).
+// 자동화를 뺀 배포본(`SW_SHIPPING`): 등록하지 않고 본문 함수만 붙잡는다.
     #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
     #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity )                 \
         [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id         = pFunction; \

@@ -1,6 +1,6 @@
 /**
  * @file AutomationScenario.h
- * @brief 자동화 시나리오 한 편을 정의합니다. 시작 조건, 시간, 프레임별 단계 목록(읽은 값)을 가지며 형식은 `Engine/Automation/README.md` 에 있습니다.
+ * @brief 자동화 시나리오 한 편을 정의합니다. 시작 조건, 시간, 프레임별 단계 목록(읽은 값)을 가집니다.
  */
 #pragma once
 #include "Core/Container/string.h"
