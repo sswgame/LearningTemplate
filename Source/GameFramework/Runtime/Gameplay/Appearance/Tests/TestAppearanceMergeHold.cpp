@@ -31,6 +31,15 @@ namespace
     constexpr float32 kAppearanceMergeHoldFrameSeconds = 1.0f / 60.0f;
 } // namespace
 
+/** @brief [AppearanceMergeHoldTest] 피팅하는 부품은 조립이 도는 동안 베이크를 받기 전까지만 숨는다 — 끝났거나(베이크하지 못해도) 피팅이 없으면 그린다 */
+SW_TEST_CASE( AppearanceMergeHoldTest, FittedPartHidesOnlyWhileItsBakeIsAwaited )
+{
+    SW_EXPECT_TRUE( CharacterAppearanceComponent::isFitAwaited( true, false, true ) );
+    SW_EXPECT_FALSE( CharacterAppearanceComponent::isFitAwaited( true, true, true ) );
+    SW_EXPECT_FALSE( CharacterAppearanceComponent::isFitAwaited( true, false, false ) );
+    SW_EXPECT_FALSE( CharacterAppearanceComponent::isFitAwaited( false, false, true ) );
+}
+
 /** @brief [AppearanceMergeHoldTest] 몸은 합칠 부품이 있고, 아직 합친 메시를 그리지 않으며, 조립이 도는 중일 때만 기다린다 — 다시 조립하는 합친 몸 · 합치지 못하고 끝난 조립은 기다리지 않는다 */
 SW_TEST_CASE( AppearanceMergeHoldTest, AwaitsOnlyTheFirstMerge )
 {
