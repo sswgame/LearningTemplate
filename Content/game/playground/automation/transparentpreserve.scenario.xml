@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="426cb550750e4fa3a97f6878fe32f8b7"?>
 <!--
-  압축을 포기한 투명 배치(Preserve, RN-1) — 같은 유리 상자 600 개가 투명 배치 하나(GPU 정렬 한계 512 초과)로 묶이고, 그중 300 개는 카메라 뒤(절두체 밖)다.
-  컬링이 밖의 인스턴스 칸을 비워 두면 그 칸의 쓰레기 번호로 엉뚱한 상자를 그린다. 앞 300 개만 바르게 보여야 한다.
+  큰 투명 배치의 다단 정렬(GPUBatchSortMode::MultiPass, RN-1) — 같은 유리 상자 600 개가 투명 배치 하나(워크그룹 하나의 정렬 한계 512 초과)로 묶이고, 그중 300 개는 카메라 뒤(절두체 밖)다.
+  컬링이 뒤 300 개를 빼고 남은 것을 CPU 가 정한 순서로 되돌려야 한다 — 순서가 틀리거나 밖의 칸이 섞이면 엉뚱한 상자를 그린다. 앞 300 개만 바르게 보여야 한다.
   실행: ctest -R Scenario.game.playground.transparentpreserve
 -->
 <Scenario name="game.playground.transparentpreserve" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
