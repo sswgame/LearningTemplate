@@ -14,6 +14,11 @@ namespace sw
         , _credits{ 0 }
         , _healthRatio{ 0.0f }
         , _dayRatio{ 0.0f }
+        , _terminalName{}
+        , _terminalPrice{ 0 }
+        , _hour{ 0 }
+        , _scrapPercent{ 0 }
+        , _threatPercent{ 0 }
         , _orbitVisibility{ WidgetVisibility::Collapsed }
         , _winVisibility{ WidgetVisibility::Collapsed }
         , _loseVisibility{ WidgetVisibility::Collapsed }
@@ -55,6 +60,27 @@ namespace sw
     void ScavengerHUDViewModel::setDayRatio( float32 ratio )
     {
         (void)setField( _dayRatio, MathUtil::saturate( ratio ), "_dayRatio" );
+    }
+
+    void ScavengerHUDViewModel::setHour( int32 value )
+    {
+        (void)setField( _hour, value, "_hour" );
+    }
+
+    void ScavengerHUDViewModel::setScrapPercent( int32 value )
+    {
+        (void)setField( _scrapPercent, value, "_scrapPercent" );
+    }
+
+    void ScavengerHUDViewModel::setThreatPercent( int32 value )
+    {
+        (void)setField( _threatPercent, value, "_threatPercent" );
+    }
+
+    void ScavengerHUDViewModel::setTerminalItem( string_view name, int32 price )
+    {
+        (void)setField( _terminalName, string( name ), "_terminalName" );
+        (void)setField( _terminalPrice, price, "_terminalPrice" );
     }
 
     void ScavengerHUDViewModel::setOrbitShown( bool bShown )

@@ -1,4 +1,6 @@
 {
+    "_topology": "SingleServer",
+    "_serverID": 1,
     "_storeName": "main",
     "_cacheName": "main",
     "_serverKind": "game",

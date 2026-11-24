@@ -8,7 +8,7 @@
  *            → 키트 `start`(초기화 순서) → 서버 등록입니다. 종료: 서버 등록 → 컬렉션 `shutdownAll` 이 키트 `stop`(역순) → 기반 stop(호스트 → 예약 작업 → 저장소와
  *            남은 완료) → 키트 `shutdown`(역순) → 기반 shutdown(캐시)을 돕니다. 온라인 기반의 종료 계약과 같습니다.
  *          - `start` 는 컬렉션의 단계가 아니라 런타임이 초기화 순서(`getInitializedIndices`)로 부릅니다 — 호스트 기동이 모든 키트의 `initialize` 와 `start` 사이에 있어서다.
- *          - 버스는 캐시 위 버스(`EphemeralServerBus`)이고 캐시 앞은 호스트의 라우터로 서비스와 나눠 씁니다. 메모리 캐시이면 이 프로세스 안에서만 돕니다(서버 한 대).
+ *          - 버스는 캐시 위 버스(`EphemeralServerBus`)이고 캐시 앞은 호스트의 라우터로 서비스와 나눠 씁니다. 메모리 캐시이면 이 프로세스 안에서만 돌므로 서버 여러 대 구성(`OnlineServerTopology::MultiServer`)은 거절합니다.
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 씁니다.
  */
 #pragma once

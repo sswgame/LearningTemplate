@@ -94,7 +94,7 @@ SW_TEST_CASE( AdventureDungeonTest, SmallKeysOpenDoorsAndBelongToOneDungeon )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags flags;
 
     SW_EXPECT_TRUE( state.openDoor( kForest, kDoor1, flags ) == sw::AdventureDoorResult::NeedSmallKey );
@@ -132,7 +132,7 @@ SW_TEST_CASE( AdventureDungeonTest, BossAndConditionDoors )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags     flags;
     sw::ItemStackList reward;
 
@@ -156,7 +156,7 @@ SW_TEST_CASE( AdventureDungeonTest, TreasuresGoToTheDungeonOrTheReward )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags     flags;
     sw::ItemStackList reward;
 
@@ -188,7 +188,7 @@ SW_TEST_CASE( AdventureDungeonTest, MapRevealsAndCompassMarks )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags     flags;
     sw::ItemStackList reward;
 
@@ -232,7 +232,7 @@ SW_TEST_CASE( AdventureDungeonTest, SwitchesStayOn )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags flags;
 
     SW_EXPECT_TRUE( state.hitSwitch( kForest, kEye, flags ) );
@@ -262,7 +262,7 @@ SW_TEST_CASE( AdventureDungeonTest, TimedSwitchExpiresAndRestarts )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags flags;
 
     SW_REQUIRE_TRUE( state.hitSwitch( kForest, kClock, flags ) );
@@ -292,7 +292,7 @@ SW_TEST_CASE( AdventureDungeonTest, PressurePlatesAndLatches )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags flags;
 
     state.setPlatePressed( kForest, kPlate, true, flags );
@@ -322,7 +322,7 @@ SW_TEST_CASE( AdventureDungeonTest, TorchGroupsNeedAllTorchesInTime )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags flags;
 
     SW_EXPECT_FALSE( state.lightTorch( kForest, kEye, flags ) );
@@ -378,10 +378,10 @@ SW_TEST_CASE( AdventureDungeonTest, UninitializedStateIsSafe )
 
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
-    state.initialize( &catalog );
+    state.initialize( catalog );
     SW_REQUIRE_TRUE( state.addSmallKey( kForest ) );
     SW_REQUIRE_TRUE( state.hitSwitch( kForest, kEye, flags ) );
-    state.initialize( &catalog );
+    state.initialize( catalog );
     SW_EXPECT_EQUAL( 0, state.findProgress( kForest )->_smallKeyCount );
     SW_EXPECT_FALSE( state.isDeviceActive( kForest, kEye ) );
     sw::vector<sw::AdventureDungeonEvent> listEvent;
@@ -397,7 +397,7 @@ SW_TEST_CASE( AdventureDungeonTest, StateRoundTripResumes )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState original;
-    original.initialize( &catalog );
+    original.initialize( catalog );
     sw::GameFlags flags;
     SW_REQUIRE_TRUE( original.addSmallKey( kCave, 3 ) );
     SW_REQUIRE_TRUE( original.hitSwitch( kForest, kClock, flags ) );
@@ -407,7 +407,7 @@ SW_TEST_CASE( AdventureDungeonTest, StateRoundTripResumes )
     sw::Archive written;
     original.writeState( written );
     sw::AdventureDungeonState restored;
-    restored.initialize( &catalog );
+    restored.initialize( catalog );
     SW_REQUIRE_TRUE( restored.addSmallKey( kForest ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
@@ -436,7 +436,7 @@ SW_TEST_CASE( AdventureDungeonTest, DungeonsMissingFromTheSaveStartFresh )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     sw::GameFlags flags;
     SW_REQUIRE_TRUE( state.addSmallKey( kForest, 5 ) );
     SW_REQUIRE_TRUE( state.hitSwitch( kForest, kEye, flags ) );
@@ -458,7 +458,7 @@ SW_TEST_CASE( AdventureDungeonTest, ReadRejectsBrokenBytes )
     sw::AdventureDungeonCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDungeonXML, "AdventureDungeonTest" ) );
     sw::AdventureDungeonState state;
-    state.initialize( &catalog );
+    state.initialize( catalog );
     SW_REQUIRE_TRUE( state.addSmallKey( kForest, 5 ) );
 
     const auto expectRejected = [&state]( const sw::Archive& written )
@@ -493,7 +493,7 @@ SW_TEST_CASE( AdventureDungeonTest, ReadRejectsBrokenBytes )
     expectRejected( negativeLit );
 
     sw::AdventureDungeonState source;
-    source.initialize( &catalog );
+    source.initialize( catalog );
     sw::Archive written;
     source.writeState( written );
     sw::Archive truncated( written.getData(), written.getSize() - 1 );

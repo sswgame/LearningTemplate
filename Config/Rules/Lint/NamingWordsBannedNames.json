@@ -2166,6 +2166,9 @@
     "PrimitiveMarkerBatch": "PrefabViewBatch — 원시 도형 프리팹 묶음은 하나만 둔다. 바닥에 세우기는 showStanding(2026-11-24)",
     "drawStanding": "PrefabViewBatch::showStanding(2026-11-24)",
     "spawnMarker": "PrefabViewBatch::show 가 모자란 인스턴스를 스폰한다(2026-11-24)",
-    "KitDemoComponent": "GameModeComponent — 규칙만 돌리던 키트 시연이 모두 디렉터 · 클라이언트로 옮겨가 시연 베이스가 남지 않았다(2026-11-24)"
+    "KitDemoComponent": "GameModeComponent — 규칙만 돌리던 키트 시연이 모두 디렉터 · 클라이언트로 옮겨가 시연 베이스가 남지 않았다(2026-11-24)",
+    "tintNewUnits": "ArenaViewComponent::tintUnits — 처음 본 유닛을 따로 적지 않고 프레임마다 다시 건다(2026-11-24)",
+    "_pShownLook": "MeshComponent::setMaterialInstance — 같은 인스턴스는 메시가 거른다(2026-11-24)",
+    "pYieldInventory": "yieldInventory — CreatureTown::useAbility 는 가방을 참조로 받는다(2026-11-24)"
   }
 }

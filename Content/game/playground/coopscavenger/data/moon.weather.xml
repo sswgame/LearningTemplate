@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5b0c9e7a4f3d4d1f8a6e2c71b9d40f36"?>
+<!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 날씨 — 계절 이름이 위성 id 이고, 내릴 때 그날의 시드가 고른다(ScavengerExpedition::land). 계절을 적지 않은 맑음은 회사에도 온다.
+     scrapValue 는 고철 값 배율, threat 는 위협 예산이 쌓이는 빠르기 배율, skyLight 는 해 · 하늘의 밝기다. 하루 동안 이어진다(하루는 86400 게임 초). -->
+<WeatherCatalog transition="1">
+	<SceneBinding target="SunIntensity" value="skyLight" atZero="0.2" atOne="1"/>
+	<SceneBinding target="SkyIntensity" value="skyLight" atZero="0.3" atOne="1"/>
+	<Weather id="clear" weight="2" minDuration="86400" maxDuration="86400">
+		<Values skyLight="1" scrapValue="1" threat="1"/>
+	</Weather>
+	<Weather id="fog" seasons="rust:1" minDuration="86400" maxDuration="86400">
+		<Values skyLight="0.5" scrapValue="1.2" threat="1"/>
+	</Weather>
+	<Weather id="eclipse" seasons="rust:1" minDuration="86400" maxDuration="86400">
+		<Values skyLight="0" scrapValue="1.5" threat="1.2"/>
+	</Weather>
+</WeatherCatalog>

@@ -45,6 +45,8 @@ namespace sw
             static constexpr float32 kScrapSpacing    = 0.6f; ///< 한 곳에 놓인 고철 사이
             static constexpr int32   kScrapColumns    = 4;
             static constexpr float32 kScrapRow        = -1.5f; ///< 고철 줄이 시작하는 깊이
+            static constexpr float32 kTerminalAxis    = 0.5f;  ///< 걷기 축이 이만큼 기울면 터미널의 물건을 한 칸 옮긴다
+            static constexpr uint32  kTerminalUser    = 0;     ///< 터미널을 쓰는 로컬 사용자(이 화면의 HUD 가 보이는 승무원)
         };
     } // namespace
 
@@ -56,8 +58,10 @@ namespace sw
         , _director{}
         , _markers{}
         , _hudViewModel{}
+        , _terminalIndex{ 0 }
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
+        , _bTerminalAxis{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -125,7 +129,21 @@ namespace sw
         fillHUD( *_hudViewModel, *pDirector );
     }
 
-    void ScavengerAvatarComponent::submitInput( ScavengerGameModeComponent& director ) const
+    void ScavengerAvatarComponent::updateTerminal( const ScavengerGameModeComponent& director, float32 axis, bool bBuy, ScavengerCommand& outCommand )
+    {
+        const ShopDef* const pTerminal = director.findTerminal();
+        if ( pTerminal == nullptr || pTerminal->_listStock.empty() )
+            return;
+        const uint32 stockCount = static_cast<uint32>( pTerminal->_listStock.size() );
+        const bool   bAxis      = MathUtil::abs( axis ) >= ScavengerAvatarComponentInternal::kTerminalAxis;
+        if ( bAxis && _bTerminalAxis == SW_FALSE )
+            _terminalIndex = ( _terminalIndex + ( axis > 0.0f ? 1u : stockCount - 1u ) ) % stockCount;
+        _bTerminalAxis = bAxis ? SW_TRUE : SW_FALSE;
+        if ( bBuy )
+            outCommand._buyItemID = pTerminal->_listStock[_terminalIndex % stockCount]._itemID;
+    }
+
+    void ScavengerAvatarComponent::submitInput( ScavengerGameModeComponent& director )
     {
         InputManager* const pInput = game::findSubsystem<InputManager>();
         if ( pInput == nullptr )
@@ -142,6 +160,8 @@ namespace sw
             command._moveTo          = director.findNeighborToward( player, input.getVector2D( _moveAction ) );
             command._bUseTriggered   = input.wasActionTriggered( _useAction ) ? SW_TRUE : SW_FALSE;
             command._bLeverTriggered = input.wasActionTriggered( _leverAction ) ? SW_TRUE : SW_FALSE;
+            if ( user == ScavengerAvatarComponentInternal::kTerminalUser && director.getExpedition().getPhase() == ScavengerPhase::InOrbit )
+                updateTerminal( director, input.getVector2D( _moveAction )._x, command._bUseTriggered == SW_TRUE, command );
             (void)director.submitCrewCommand( player, command ); // 승무원보다 많은 사용자의 입력은 쓸 곳이 없다
         }
     }
@@ -195,7 +215,7 @@ namespace sw
         }
     }
 
-    void ScavengerAvatarComponent::fillHUD( ScavengerHUDViewModel& outViewModel, const ScavengerGameModeComponent& director )
+    void ScavengerAvatarComponent::fillHUD( ScavengerHUDViewModel& outViewModel, const ScavengerGameModeComponent& director ) const
     {
         constexpr int32                  kPlayer  = 0; // 이 화면의 HUD 는 승무원 0 을 보인다
         const ScavengerCrewMember* const pPlayer  = director.getExpedition().findCrewMember( kPlayer );
@@ -207,6 +227,14 @@ namespace sw
         outViewModel.setCredits( director.getCredits() );
         outViewModel.setHealthRatio( bHealth ? pPlayer->_healthMachine.getHealth() / pCatalog->getCrewHealth() : 0.0f );
         outViewModel.setDayRatio( director.computeDayRatio() );
+        outViewModel.setHour( director.getHour() );
+        outViewModel.setScrapPercent( director.computeWeatherPercent( "scrapValue" ) );
+        outViewModel.setThreatPercent( director.computeWeatherPercent( "threat" ) );
+        const ShopDef* const pTerminal = director.findTerminal();
+        const bool           bStock    = pTerminal != nullptr && pTerminal->_listStock.empty() == false;
+        const hashed_string  itemID    = bStock ? pTerminal->_listStock[_terminalIndex % pTerminal->_listStock.size()]._itemID : hashed_string{};
+        const ItemDef* const pItem     = director.findItem( itemID );
+        outViewModel.setTerminalItem( pItem != nullptr ? string_view( pItem->_name ) : string_view{}, director.computeTerminalPrice( itemID ) );
         outViewModel.setOrbitShown( director.isAcceptingInput() && director.getExpedition().getPhase() == ScavengerPhase::InOrbit );
         outViewModel.setWinShown( director.getExpeditionResult() == ScavengerResult::Win );
         outViewModel.setLoseShown( director.getExpeditionResult() == ScavengerResult::Lose );

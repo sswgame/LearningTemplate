@@ -132,7 +132,7 @@ namespace sw
 
         WesternLawState();
 
-        void initialize( const WesternCatalog* pCatalog );
+        void initialize( const WesternCatalog& catalog );
         /**
          * @brief 범죄를 저지릅니다. 후보 중 @p sight 가 보았다고 한 사람만 목격자입니다.
          * @return 사건 번호(1부터 시작)입니다. 범죄나 지역이 없으면 0 입니다. 목격자가 없어도 번호는 붙습니다(명예는 게임이 바꿉니다).

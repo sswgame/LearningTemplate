@@ -94,8 +94,8 @@ namespace sw
             wallet.clear();
             wallet.add( settings._mineralCurrency, _settings._startMinerals );
         }
-        (void)_world.addPlayer( 0, &_arrWallet[0], float3{ 10.0f, 0.0f, 10.0f } );
-        (void)_world.addPlayer( 1, &_arrWallet[1], float3{ farCenter, 0.0f, farCenter } );
+        (void)_world.addPlayer( 0, _arrWallet[0], float3{ 10.0f, 0.0f, 10.0f } );
+        (void)_world.addPlayer( 1, _arrWallet[1], float3{ farCenter, 0.0f, farCenter } );
         spawnBase( 0, false );
         spawnBase( 1, true );
         // 가운데 길목의 확장 광물(누구 것도 아니다).

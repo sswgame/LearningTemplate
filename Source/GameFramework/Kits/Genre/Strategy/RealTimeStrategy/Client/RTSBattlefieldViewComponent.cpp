@@ -272,7 +272,7 @@ namespace sw
         if ( pMesh != nullptr )
         {
             // 모델은 유닛 종류마다 정해져 바뀌지 않는다. 그래서 여기(게임 스레드)에서 지정한다. 색, 위치, 크기, 방향은 유닛 뷰가 맞춘다.
-            if ( _listUnitLook.empty() )
+            if ( _listUnitLook.empty() && pMesh->getMaterial() != nullptr ) // 머티리얼 없이 만들면 빈 모습이 남아 다시 만들지 않는다
                 prepareUnitLooks( pMesh->getMaterial() );
             pMesh->setMeshID( pModel->_mesh.path() );
         }

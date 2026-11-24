@@ -109,7 +109,7 @@ namespace sw
     {
     }
 
-    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, Wallet* pWallet )
+    bool ThemeParkSimulation::initialize( const ThemeParkSettings& settings, Wallet& wallet )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         const bool   bPairsOk   = settings._guestCashMin <= settings._guestCashMax && settings._guestMaxIntensityMin <= settings._guestMaxIntensityMax &&
@@ -120,7 +120,7 @@ namespace sw
             return false;
         }
         _settings = settings;
-        _pWallet  = pWallet;
+        _pWallet  = &wallet;
         _listRide.clear();
         _listGuest.clear();
         _arrival.reset();
@@ -163,7 +163,7 @@ namespace sw
         const bool bClaimLand = _pLand != nullptr && _landOwner != LandRegistry::kNoOwner && ride._footprintSize._x > 0.0f && ride._footprintSize._z > 0.0f;
         if ( bClaimLand && _pLand->claimWorldRect( _landOwner, AbsolutePosition{ ride._footprintCenter }, ride._footprintSize, true ) == false )
             return constant::invalid_index::kInt32;
-        if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
+        if ( _pWallet->trySpend( _settings._currency, MathUtil::max( 0, buildCost ) ) == false )
         {
             if ( bClaimLand )
                 _pLand->releaseWorldRect( _landOwner, AbsolutePosition{ ride._footprintCenter }, ride._footprintSize );
@@ -227,8 +227,7 @@ namespace sw
         guest._nauseaTolerance = nauseaTolerance;
         guest._state           = ParkGuestState::Walking;
         guest._walkTimer       = 0.0f; // 다음 갱신에 바로 고른다
-        if ( _pWallet != nullptr )
-            _pWallet->add( _settings._currency, _settings._entryFee );
+        _pWallet->add( _settings._currency, _settings._entryFee );
         ++_totalVisitorCount;
         _listGuest.push_back( guest );
         return true;
@@ -309,8 +308,7 @@ namespace sw
         }
         _runningCost.add( costPerSecond * deltaTime );
         const int32 runningCost = _runningCost.takeWhole();
-        if ( _pWallet != nullptr )
-            _pWallet->charge( _settings._currency, runningCost );
+        _pWallet->charge( _settings._currency, runningCost );
 
         // 떠난 손님을 지운다(놀이기구의 줄과 탑승자에는 남아 있지 않다. 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다.
         // 손님마다 `erase` 하면 뒤를 매번 옮기게 된다.
@@ -397,8 +395,7 @@ namespace sw
                     continue;
                 }
                 pGuest->_cash -= ride._price;
-                if ( _pWallet != nullptr )
-                    _pWallet->add( _settings._currency, ride._price );
+                _pWallet->add( _settings._currency, ride._price );
                 ride._totalIncome += ride._price;
                 pGuest->_state    = ParkGuestState::Riding;
                 pGuest->_position = ride._entrance;

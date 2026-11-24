@@ -18,6 +18,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
@@ -174,7 +175,7 @@ namespace sw
         PROPERTY( Category = "Fight", DisplayName = "Investigator", Tooltip = "Dice and points the player fights with" )
         SurvivalHorrorInvestigator _investigator;
         PROPERTY( Category = "Fight", DisplayName = "Ammo Item", Tooltip = "Item one shot of which a fight spends (empty: no gun)" )
-        hashed_string _ammoItem;
+        CatalogKey<SurvivalHorrorItemDef> _ammoItem;
         PROPERTY( Category = "Fight", DisplayName = "Ammo Strength", Tooltip = "Combat dice one shot adds", Min = 0 )
         int32 _ammoStrength;
         PROPERTY( Category = "Fight", DisplayName = "Damage Per Point", Tooltip = "Health or sanity one lost point of the fight costs", Min = 0.0 )

@@ -98,7 +98,7 @@ namespace sw
     {
         ServiceStore*            _pStore{ nullptr };     ///< 필수이다. 기록과 제재에 쓴다
         ServerBus*               _pBus{ nullptr };       ///< 서버가 하나면 null 이다
-        AccountPresence*         _pPresence{ nullptr };  ///< 서버가 하나면 null 이며 다른 서버로 가는 귓속말이 없다
+        AccountPresence*         _pPresence{ nullptr };  ///< 서버 한 대 구성(`OnlineServerTopology`)에서만 null 이며 다른 서버로 가는 귓속말이 없다
         const IAccountDirectory* _pDirectory{ nullptr }; ///< 필수이다. 표시 이름과 이 서버에 있는지를 조회한다
         const IChatPolicy*       _pPolicy{ nullptr };    ///< null 이면 차단을 쓰지 않는다
         uint64                   _serverID{ 1 };

@@ -12,14 +12,19 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerExpedition.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerQuota.h"
+#include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include <limits>
 
 // 협동 수집 공포 키트의 규칙: 할당량 주기, 운반 슬롯, 시설 생성과 잠긴 문, 한 판(위성 이동 · 하루 · 죽음과 시신 · 벌금 · 전멸 손실 · 매입 · 마감), 카탈로그 오류, 상태 바이트의 범위 검사.
-// 상태 바이트는 형식을 맞춰 손으로 쓴 뒤(정상 값이 읽히는 것을 함께 본다) 범위 밖 값만 바꿔 넣는다. 위협 감독과 터미널 상점은 기반 쪽이라 여기서 보지 않는다. 키트 GF_CoopScavenger(nogpu).
+// 상태 바이트는 형식을 맞춰 손으로 쓴 뒤(정상 값이 읽히는 것을 함께 본다) 범위 밖 값만 바꿔 넣는다. 위협 감독과 터미널 상점은 기반 쪽이라 여기서 보지 않는다(줄이 없는 데이터를 준다). 키트 GF_CoopScavenger(nogpu).
 
 namespace
 {
@@ -116,11 +121,25 @@ namespace
         }
     };
 
-    /** @brief 두 사람의 한 판입니다. 지갑과 플래그는 빌려 줍니다. 시계와 날씨 없이 돕니다. */
+    /** @brief 날씨 · 위협 · 상점 줄이 없는 데이터입니다(기능을 데이터로 끈다). */
+    struct ScavengerBareData
+    {
+        sw::WeatherCatalog _weather{};
+        sw::SpawnTable     _threats{};
+        sw::ShopCatalog    _shops{};
+        sw::ItemCatalog    _items{};
+
+        sw::ScavengerExpeditionData make( const sw::ScavengerCatalog& catalog ) const { return sw::ScavengerExpeditionData{ catalog, _weather, _threats, _shops, _items }; }
+    };
+
+    /** @brief 두 사람의 한 판입니다. 지갑 · 플래그 · 시계 · 날씨는 빌려 줍니다. */
     struct ScavengerExpeditionTest
     {
+        ScavengerBareData              _bare{};
         sw::ScavengerCatalog           _catalog{};
         sw::Wallet                     _wallet{};
+        sw::WorldClock                 _clock{};
+        sw::WeatherSystem              _weather{};
         sw::GameFlags                  _flags{};
         sw::Inventory                  _storage{};
         sw::ScavengerExpedition        _expedition{};
@@ -134,9 +153,7 @@ namespace
 
         bool open( sw::ScavengerExpedition& expedition, const sw::ScavengerCatalog& catalog, uint32 seed )
         {
-            sw::ScavengerExpeditionData data;
-            data._pCatalog = &catalog;
-            return expedition.initialize( data, &_wallet, nullptr, nullptr, &_flags, _storage, seed, 2 );
+            return _clock.initialize( sw::WorldClockSettings{} ) && expedition.initialize( _bare.make( catalog ), _wallet, _clock, _weather, _flags, _storage, seed, 2 );
         }
 
         /** @brief 쌓인 알림을 `_listEvent` 뒤로 모으고 @p kind 의 수를 셉니다. */
@@ -537,7 +554,7 @@ SW_TEST_CASE_F( ScavengerFacilityTest, LockedDoorsUseBorrowedFlags )
     SW_REQUIRE_TRUE( locked.loadFromXMLText( kScavengerLockedXML, "ScavengerTest" ) );
     sw::GameFlags flags;
     flags.setFlag( "story.beat" );
-    _facility.setFlags( &flags );
+    _facility.bindFlags( flags );
     SW_REQUIRE_TRUE( _facility.createLayout( locked, *locked.findMoon( "rust" ), 7u, 1.0f ) );
     SW_EXPECT_EQUAL( 2, _facility.getLockedDoorCount() );
 
@@ -630,18 +647,14 @@ SW_TEST_CASE_F( ScavengerFacilityTest, ReadStateRefusesBrokenScrap )
 }
 
 /**
- * @brief [ScavengerExpeditionTest] 시작 거절: 사람 0 명, 카탈로그 없음. 대신 시작하지 않는다
+ * @brief [ScavengerExpeditionTest] 시작 거절: 사람 0 명. 대신 시작하지 않는다
  */
 SW_TEST_CASE_F( ScavengerExpeditionTest, InitializeRefusesBadInput )
 {
     SW_EXPECT_LOG( "ScavengerExpedition.ScavengerExpeditionRefusedCrewCountNeeds" );
-    sw::ScavengerExpeditionData data;
-    data._pCatalog = &_catalog;
     sw::ScavengerExpedition expedition;
-    SW_EXPECT_FALSE( expedition.initialize( data, nullptr, nullptr, nullptr, nullptr, _storage, 1, 0 ) );
-    SW_EXPECT_FALSE( expedition.initialize( data, nullptr, nullptr, nullptr, nullptr, _storage, 1, -3 ) );
-    data._pCatalog = nullptr;
-    SW_EXPECT_FALSE( expedition.initialize( data, nullptr, nullptr, nullptr, nullptr, _storage, 1, 2 ) );
+    SW_EXPECT_FALSE( expedition.initialize( _bare.make( _catalog ), _wallet, _clock, _weather, _flags, _storage, 1, 0 ) );
+    SW_EXPECT_FALSE( expedition.initialize( _bare.make( _catalog ), _wallet, _clock, _weather, _flags, _storage, 1, -3 ) );
 }
 
 /**
@@ -956,10 +969,8 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, StateRoundTripsWhileLanded )
     restored.update( 10.0f ); // 18 시간 — 6 시에 내렸으니 자정이다
     SW_EXPECT_EQUAL( sw::ScavengerPhase::InOrbit, restored.getPhase() );
 
-    sw::ScavengerExpeditionData data;
-    data._pCatalog = &_catalog;
     sw::ScavengerExpedition solo;
-    SW_REQUIRE_TRUE( solo.initialize( data, nullptr, nullptr, nullptr, nullptr, _storage, 1, 1 ) );
+    SW_REQUIRE_TRUE( solo.initialize( _bare.make( _catalog ), _wallet, _clock, _weather, _flags, _storage, 1, 1 ) );
     sw::Archive readingAgain( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( solo.readState( readingAgain ) );
 }
@@ -1028,10 +1039,12 @@ SW_TEST_CASE( ScavengerCatalogTest, ReportsBrokenElements )
 
 namespace
 {
-    /** @brief 원정과 빌려 준 지갑 · 플래그 · 창고를 한 판으로 묶습니다. 지갑은 원정 밖(주인이 저장한다)이라 결정성 테스트가 함께 싣습니다. */
+    /** @brief 원정과 빌려 준 지갑 · 시계 · 날씨 · 플래그 · 창고를 한 판으로 묶습니다. 지갑 · 시계는 원정 밖(주인이 저장한다)이라 결정성 테스트가 함께 싣습니다. */
     struct ScavengerDeterminismRun
     {
         sw::Wallet              _wallet{};
+        sw::WorldClock          _clock{};
+        sw::WeatherSystem       _weather{};
         sw::GameFlags           _flags{};
         sw::Inventory           _storage{};
         sw::ScavengerExpedition _expedition{};
@@ -1040,6 +1053,7 @@ namespace
         SW_DECLARE_STATE_IO_IN_PLACE()
         {
             io.value( _wallet );
+            io.value( _clock );
             io.value( _expedition );
         }
     };
@@ -1052,9 +1066,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, ExpeditionDeterminism )
 {
     const auto setup = [this]( ScavengerDeterminismRun& run ) -> bool
     {
-        sw::ScavengerExpeditionData data;
-        data._pCatalog = &_catalog;
-        return run._expedition.initialize( data, &run._wallet, nullptr, nullptr, &run._flags, run._storage, 11, 2 );
+        return run._clock.initialize( sw::WorldClockSettings{} ) && run._expedition.initialize( _bare.make( _catalog ), run._wallet, run._clock, run._weather, run._flags, run._storage, 11, 2 );
     };
     const auto step = []( ScavengerDeterminismRun& run, int32 stepIndex )
     {

@@ -212,7 +212,9 @@ namespace sw
         FarmShippingBin restoredShipment;
         if ( io.isReading() )
         {
-            restoredField.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
+            if ( io.check( _pCropCatalog != nullptr ) == false )
+                return;
+            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         }
         FarmField&       field    = io.isWriting() ? _field : restoredField;
         FarmShippingBin& shipment = io.isWriting() ? _shipment : restoredShipment;
@@ -308,7 +310,7 @@ namespace sw
         WalletComponent*    pWallet = PlayerComponentUtil::requireOn<WalletComponent>( *pPlayerState );
         if ( pBag == nullptr || pWallet == nullptr )
             return false;
-        _field.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
+        _field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         _shipment = FarmShippingBin{};
         // 시작 돈과 씨앗은 새 판에만 준다. 복원한 판에 덧쌓이지 않게 하기 위해서다.
         if ( pWallet->isFreshGame() )

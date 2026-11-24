@@ -32,10 +32,12 @@ namespace sw
         return entry._instance;
     }
 
-    void MaterialTintCache::apply( MeshComponent& mesh, const float4& color )
+    bool MaterialTintCache::apply( MeshComponent& mesh, const float4& color )
     {
         shared_ptr<MaterialInstance> instance = acquire( mesh.getMaterial(), color );
-        if ( instance != nullptr )
-            mesh.setMaterialInstance( std::move( instance ) );
+        if ( instance == nullptr )
+            return false;
+        mesh.setMaterialInstance( std::move( instance ) );
+        return true;
     }
 } // namespace sw

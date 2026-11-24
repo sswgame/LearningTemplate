@@ -71,14 +71,20 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<!-- 디렉터 → 입력 · 그리기(클라이언트) → HUD 순서로 붙인다. -->
+		<!-- 월드 상태(시계 · 날씨) → 디렉터 → 입력 · 그리기(클라이언트) → HUD 순서로 붙인다. -->
 		<entity id="10" name="Expedition">
 			<GameObject _schemaVersion="0" _name="Expedition" _bActive="true">
 				<_listComponent>
+					<GameStateComponent _localID="4471093286650125837" _componentName="GameStateComponent" _bActive="true" />
 					<ScavengerGameModeComponent _localID="6120447738510926413" _componentName="ScavengerGameModeComponent"
 					                            _bActive="true"
 					                            _companyMoon="company"
 					                            _threatTable="game/playground/coopscavenger/data/threats.spawns.xml"
+					                            _weatherCatalog="game/playground/coopscavenger/data/moon.weather.xml"
+					                            _shopCatalog="game/playground/coopscavenger/data/terminal.shops.xml"
+					                            _unlockItem="lockpick"
+					                            _speedItem="boots_low"
+					                            _speedItemStepScale="0.7"
 					                            _seed="11"
 					                            _crewCount="2"
 					                            _cyclesToWin="1"

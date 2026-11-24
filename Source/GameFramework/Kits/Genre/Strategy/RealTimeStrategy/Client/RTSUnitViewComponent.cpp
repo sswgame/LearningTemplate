@@ -55,7 +55,6 @@ namespace sw
         , _unitFill{ 1.6f }
         , _lastPosition{ 0.0f, 0.0f, 0.0f }
         , _unitID{}
-        , _pShownLook{ nullptr }
         , _modelWidth{ 1.0f }
         , _yaw{ MathUtil::kPi }
         , _bPlaced{ SW_FALSE }
@@ -82,7 +81,6 @@ namespace sw
         }
         _lastPosition = float3{ 0.0f, 0.0f, 0.0f };
         _unitID       = SlotHandle{};
-        _pShownLook   = nullptr;
         _modelWidth   = 1.0f;
         _yaw          = MathUtil::kPi;
         _bPlaced      = SW_FALSE;
@@ -94,7 +92,6 @@ namespace sw
         bindGameMode( gameMode );
         _unitID     = unitID;
         _modelWidth = modelWidth > 0.0f ? modelWidth : 1.0f;
-        _pShownLook = nullptr;
         _yaw        = MathUtil::kPi; // 처음엔 카메라(남쪽) 쪽을 본다
         _bPlaced    = SW_FALSE;
     }
@@ -164,11 +161,8 @@ namespace sw
         pMesh->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         const RTSCommandInputComponent* const pCommandInput = pDirectorObject->getTickSafeComponent<RTSCommandInputComponent>(); // 사람 명령이 없는 디렉터에는 없다
         const shared_ptr<MaterialInstance>&   look          = pBattlefield->findUnitLook( *pUnit, pCommandInput != nullptr && pCommandInput->isSelected( _unitID ) );
-        if ( look != nullptr && look.get() != _pShownLook )
-        {
-            pMesh->setMaterialInstance( look );
-            _pShownLook = look.get();
-        }
+        if ( look != nullptr )
+            pMesh->setMaterialInstance( look ); // 같은 모습이면 메시가 거른다
         if ( _bPlaced == SW_FALSE )
         {
             pMesh->setVisible( true );

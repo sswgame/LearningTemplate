@@ -8,6 +8,9 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 // CreatureTownReadStateTest — 생물 마을 상태 바이트의 신뢰 경계: 없는 종 · 서식지 · 집, 겹친 항목, 서로 맞지 않는 입주, 범위 밖 값을 거절하고 마을을 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다.
@@ -124,12 +127,15 @@ namespace
     struct CreatureTownReadStateTest
     {
         sw::CreatureLifeCatalog _catalog{};
+        sw::ReputationState     _reputation{};
+        sw::QuestLog            _questLog{};
+        sw::WorldClock          _clock{};
         sw::CreatureTown        _town{};
 
         CreatureTownReadStateTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kCatalogXML, "CreatureTownReadStateTest" ) );
-            SW_REQUIRE_TRUE( _town.initialize( &_catalog, nullptr, nullptr, nullptr, kTownSize, kTownSize ) );
+            SW_REQUIRE_TRUE( _town.initialize( &_catalog, _reputation, _questLog, _clock, kTownSize, kTownSize ) );
         }
     };
 } // namespace
@@ -328,6 +334,9 @@ SW_TEST_CASE( CreatureTownReadStateTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CreatureLifeCatalog><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
     sw::CreatureLifeCatalog partial;
     SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<CreatureLifeCatalog><Rules talkPoints="5"/><Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal></CreatureLifeCatalog>)", "CreatureTownReadStateTest" ) );
-    sw::CreatureTown town;
-    SW_EXPECT_FALSE( town.initialize( nullptr, nullptr, nullptr, nullptr, kTownSize, kTownSize ) );
+    sw::ReputationState reputation;
+    sw::QuestLog        questLog;
+    sw::WorldClock      clock;
+    sw::CreatureTown    town;
+    SW_EXPECT_FALSE( town.initialize( nullptr, reputation, questLog, clock, kTownSize, kTownSize ) );
 }

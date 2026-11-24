@@ -58,7 +58,6 @@ namespace sw
             GameObjectHandle _object{};
             float3           _prefabOffset{};                  ///< 프리팹이 적은 메시 자리(바닥에 앉히는 높이 따위 — 보일 자리에 더한다)
             float3           _prefabScale{ 1.0f, 1.0f, 1.0f }; ///< 프리팹이 적은 메시 크기
-            float4           _tint{};                          ///< 지금 입힌 색(같으면 다시 입히지 않는다)
         };
 
         vector<Slot>      _listSlot;

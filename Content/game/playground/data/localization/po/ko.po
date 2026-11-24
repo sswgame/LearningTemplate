@@ -53,6 +53,18 @@ msgctxt "Another player wins"
 msgid "Another player wins"
 msgstr "다른 사람이 우승했다"
 
+#. Context: SequenceBinding._name
+#: game/playground/wildwest/data/arrival.seq.xml
+msgctxt "ArrivalCutA"
+msgid "ArrivalCutA"
+msgstr "도착 컷 A"
+
+#. Context: SequenceBinding._name
+#: game/playground/wildwest/data/arrival.seq.xml
+msgctxt "ArrivalCutB"
+msgid "ArrivalCutB"
+msgstr "도착 컷 B"
+
 #. Context: Weapon name
 #: common/data/items.xml
 msgctxt "Assault Rifle"
@@ -246,6 +258,12 @@ msgctxt "Dusk Moth"
 msgid "Dusk Moth"
 msgstr "땅거미 나방"
 
+#. Context: Dialogue speaker name
+#: game/playground/pixeltown/dialogue/elder.dialogue.xml
+msgctxt "Elder"
+msgid "Elder"
+msgstr "장로"
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Ember Sage"
@@ -408,9 +426,21 @@ msgstr "항구 생선"
 
 #. Context: Item name
 #: common/data/items.xml
+msgctxt "Health Potion"
+msgid "Health Potion"
+msgstr "체력 물약"
+
+#. Context: Item name
+#: common/data/items.xml
 msgctxt "Heraldic Cape"
 msgid "Heraldic Cape"
 msgstr "문장 망토"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "High Heels"
+msgid "High Heels"
+msgstr "하이힐"
 
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
@@ -419,6 +449,7 @@ msgid "Hollow Stag"
 msgstr "텅 빈 수사슴"
 
 #. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
 #: game/playground/restaurantsim/ui/hud.ui.xml
 msgctxt "Hour"
 msgid "Hour"
@@ -426,9 +457,9 @@ msgstr "시각"
 
 #. Context: TextWidget._text
 #: game/playground/coopscavenger/ui/hud.ui.xml
-msgctxt "In orbit - pull the lever to land"
-msgid "In orbit - pull the lever to land"
-msgstr "궤도 - 레버를 당겨 착륙하세요"
+msgctxt "In orbit - Move and Use buy from the terminal, the lever lands"
+msgid "In orbit - Move and Use buy from the terminal, the lever lands"
+msgstr "궤도 - 이동으로 고르고 사용으로 구매, 레버로 착륙"
 
 #. Context: TextWidget._text
 #: game/playground/survivalhorror/ui/hud.ui.xml
@@ -489,6 +520,12 @@ msgstr "기사 투구(염색 가능)"
 msgctxt "Knight Helmet (Merged)"
 msgid "Knight Helmet (Merged)"
 msgstr "기사 투구(병합)"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Knight Helmet (Tintable)"
+msgid "Knight Helmet (Tintable)"
+msgstr "기사 투구(착색 가능)"
 
 #. Context: Item name
 #: common/data/items.xml
@@ -558,9 +595,21 @@ msgstr "손전등: 공격하는 유령을 기절 - 청소기: 빨아들이기 - 
 
 #. Context: Item name
 #: common/data/items.xml
+msgctxt "Lockpick"
+msgid "Lockpick"
+msgstr "자물쇠 따개"
+
+#. Context: Item name
+#: common/data/items.xml
 msgctxt "Longbow"
 msgid "Longbow"
 msgstr "장궁"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Low Boots"
+msgid "Low Boots"
+msgstr "낮은 장화"
 
 #. Context: TextWidget._text
 #: game/playground/monstercollector/ui/hud.ui.xml
@@ -579,6 +628,12 @@ msgstr "마력"
 msgctxt "Mech destroyed - special picks the next mech"
 msgid "Mech destroyed - special picks the next mech"
 msgstr "기체 격추 - 특수기로 다음 기체를 고릅니다"
+
+#. Context: Dialogue line
+#: game/playground/pixeltown/dialogue/elder.dialogue.xml
+msgctxt "Mind the pond - nobody swims in it."
+msgid "Mind the pond - nobody swims in it."
+msgstr "연못을 조심하게 - 아무도 거기서 헤엄치지 않는다네."
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -801,6 +856,12 @@ msgstr "점수"
 msgctxt "Scrap on the ship"
 msgid "Scrap on the ship"
 msgstr "실은 고철"
+
+#. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Scrap value in this weather (%)"
+msgid "Scrap value in this weather (%)"
+msgstr "이 날씨의 고철 값(%)"
 
 #. Context: TextWidget._text
 #: game/playground/monsterhuntrpg/ui/hud.ui.xml
@@ -1056,6 +1117,12 @@ msgid "The warrior wakes."
 msgstr "전사가 깨어난다."
 
 #. Context: TextWidget._text
+#: game/playground/coopscavenger/ui/hud.ui.xml
+msgctxt "Threat in this weather (%)"
+msgid "Threat in this weather (%)"
+msgstr "이 날씨의 위협(%)"
+
+#. Context: TextWidget._text
 #: game/playground/partyarena/ui/hud.ui.xml
 msgctxt "Time left"
 msgid "Time left"
@@ -1072,6 +1139,12 @@ msgstr "독성"
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Trout"
+msgid "Trout"
+msgstr "송어"
 
 #. Context: TextWidget._text
 #: game/playground/cardgame/ui/hud.ui.xml
@@ -1121,6 +1194,18 @@ msgctxt "Wear gear (Q)"
 msgid "Wear gear (Q)"
 msgstr "장비 끼기 (Q)"
 
+#. Context: SequenceTrackItem._text
+#: game/playground/wildwest/data/arrival.seq.xml
+msgctxt "Welcome to Dry Gulch."
+msgid "Welcome to Dry Gulch."
+msgstr "드라이 걸치에 온 것을 환영하네."
+
+#. Context: Dialogue line
+#: game/playground/pixeltown/dialogue/elder.dialogue.xml
+msgctxt "Welcome to Pixel Town, traveller."
+msgid "Welcome to Pixel Town, traveller."
+msgstr "픽셀 마을에 온 것을 환영하네, 여행자여."
+
 #. Context: JRPG name
 #: game/playground/data/jrpg.xml
 msgctxt "Wick Mage"
@@ -1138,6 +1223,18 @@ msgstr "심지 옷"
 msgctxt "Wild"
 msgid "Wild"
 msgstr "야생"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Wild Herb"
+msgid "Wild Herb"
+msgstr "들풀"
+
+#. Context: Item name
+#: common/data/items.xml
+msgctxt "Wood Log"
+msgid "Wood Log"
+msgstr "통나무"
 
 #. Context: TextWidget._text
 #: game/playground/kartracing/ui/hud.ui.xml

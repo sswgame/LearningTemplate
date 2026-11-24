@@ -40,7 +40,7 @@ namespace sw
         void onBeginPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 풀 반환: 자리를 맞추기 전(숨은 채)으로 돌리고 따라가던 유닛 · 입은 모습을 잊습니다. 모델은 전장 뷰가 꺼낸 뒤 다시 겁니다. */
+        /** @brief 풀 반환: 자리를 맞추기 전(숨은 채)으로 돌리고 따라가던 유닛을 잊습니다. 모델은 전장 뷰가 꺼낸 뒤 다시 겁니다. */
         [[nodiscard]] SpawnStateReset resetToSpawnState() override;
         /** @brief 따라갈 디렉터 · 유닛 · 모델 폭을 정합니다(전장 뷰가 꺼낸 뒤 부른다). */
         void assignUnit( GameObjectHandle gameMode, SlotHandle unitID, float32 modelWidth );
@@ -65,7 +65,6 @@ namespace sw
 
         float3                 _lastPosition; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)
         SlotHandle             _unitID;
-        const void*            _pShownLook; ///< 지금 입은 모습(인스턴스 주소 — 비교만 한다)
         float32                _modelWidth;
         float32                _yaw;
         uint8                  _bPlaced  : 1; ///< 한 번이라도 자리를 맞췄다(그 전에는 숨어 있다)

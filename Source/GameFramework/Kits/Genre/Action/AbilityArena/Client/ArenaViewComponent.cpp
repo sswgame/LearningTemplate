@@ -34,7 +34,6 @@ namespace sw
         , _director{}
         , _tintCache{}
         , _projectilePool{ string{}, 0 }
-        , _nextUnitID{ 0 }
         , _nextProjectileID{ 0 }
     {
         setCanEverTick( true );
@@ -83,7 +82,6 @@ namespace sw
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             _projectilePool.destroyAll( *pManager );
-        _nextUnitID       = 0;
         _nextProjectileID = 0;
     }
 
@@ -92,24 +90,19 @@ namespace sw
         const ArenaGameModeComponent* const pDirector = manager.resolveComponent( _director );
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
-        tintNewUnits( manager, *pDirector );
+        tintUnits( manager, *pDirector );
         syncProjectiles( manager, *pDirector );
     }
 
-    void ArenaViewComponent::tintNewUnits( GameObjectManager& manager, const ArenaGameModeComponent& director )
+    void ArenaViewComponent::tintUnits( GameObjectManager& manager, const ArenaGameModeComponent& director )
     {
-        int32 nextUnitID = _nextUnitID;
         for ( const ArenaUnit& unit : director.getUnits() )
         {
-            if ( unit._unitID < _nextUnitID )
-                continue;
-            nextUnitID                 = MathUtil::max( nextUnitID, unit._unitID + 1 );
             GameObject* const    pBody = manager.resolveGameObject( unit._object );
             MeshComponent* const pMesh = pBody != nullptr ? pBody->getComponent<MeshComponent>() : nullptr;
             if ( pMesh != nullptr )
-                _tintCache.apply( *pMesh, findTint( unit._kind ) );
+                (void)_tintCache.apply( *pMesh, findTint( unit._kind ) ); // 아직 머티리얼이 없으면 다음 프레임에 다시 건다
         }
-        _nextUnitID = nextUnitID;
     }
 
     void ArenaViewComponent::syncProjectiles( GameObjectManager& manager, const ArenaGameModeComponent& director )
@@ -146,7 +139,8 @@ namespace sw
         }
         MeshComponent* const pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
-            _tintCache.apply( *pMesh, _projectileTint );
+            if ( _tintCache.apply( *pMesh, _projectileTint ) == false )
+                SW_LOG_ERROR_ONCE_ID( "ArenaView.ProjectileWithoutMaterial", "[Arena]: prefab '%#' has a mesh without a material - it keeps the prefab colour", _projectilePrefab.c_str() );
         pView->bind( director.getOwner()->getHandle(), projectile._id, projectile._position );
     }
 

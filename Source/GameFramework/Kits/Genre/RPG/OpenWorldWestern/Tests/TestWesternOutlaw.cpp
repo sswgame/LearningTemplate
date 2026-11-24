@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 // WesternOutlawTest — 행동 하나가 명예 · 법 · 생존 · 사냥으로 나뉘는 길, 시계로 흐르는 코어 · 현상금, 상태 왕복. 씬 없이 돈다. 키트 GF_OpenWorldWestern(nogpu).
@@ -51,6 +52,7 @@ namespace
         ReputationState _reputation{};
         GameFlags       _flags{};
         WorldClock      _clock{};
+        WeatherSystem   _weather{}; ///< 날씨 줄이 없다 — 기온은 지역 값 그대로다
         LootCatalog     _loot{};
         Inventory       _bag{};
         WesternOutlaw   _outlaw{};
@@ -62,7 +64,7 @@ namespace
             SW_REQUIRE_TRUE( _clock.initialize( WorldClockSettings{} ) );
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kOutlawLootXML, "WesternOutlawTestLoot" ) );
             SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) );
-            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, _wallet, _reputation, _clock, &_flags, nullptr, &_bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, _wallet, _reputation, _clock, _flags, _weather, &_bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
         }
 
         /** @brief 빌려 준 판 상태(시계 · 지갑 · 평판 · 플래그 · 가방)와 무법자를 함께 싣습니다 — 결정성 테스트가 판 전체로 쓴다. */
@@ -313,4 +315,14 @@ SW_TEST_CASE( WesternOutlawTest, OutlawDeterminism )
         rig._outlaw.update( 0.5f );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<OutlawRig>( setup, step, 120 ) );
+}
+
+/** @brief [WesternOutlawTest] 전리품을 적은 동물이 있는데 전리품 카탈로그나 가방이 없으면 오류를 남기고 시작하지 않는다 */
+SW_TEST_CASE( WesternOutlawTest, LootAnimalsNeedALootCatalogAndABag )
+{
+    SW_EXPECT_LOG( "WesternOutlaw.LootWithoutCatalogOrBag" );
+    OutlawRig     rig;
+    WesternOutlaw outlaw;
+    SW_EXPECT_FALSE( outlaw.initialize( &rig._catalog, nullptr, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, &rig._bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+    SW_EXPECT_FALSE( outlaw.initialize( &rig._catalog, &rig._loot, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, nullptr, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
 }

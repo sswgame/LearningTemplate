@@ -180,7 +180,7 @@ namespace
 
         bool open( GhostMansion& outMansion, uint32 seed )
         {
-            return outMansion.initialize( &_catalog, &_loot, &_graph, &_flags, &_bag, &_wallet, seed );
+            return outMansion.initialize( _catalog, _loot, _graph, _flags, _bag, _wallet, seed );
         }
 
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
@@ -759,13 +759,13 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterReadRefusesCraftedBytes )
 // ── 저택 ──────────────────────────────────────────────────────────────
 
 /**
- * @brief [GhostHuntRulesTest] 시작 거절: 카탈로그 없음
+ * @brief [GhostHuntRulesTest] 시작 거절: 시드 0
  */
-SW_TEST_CASE( GhostHuntRulesTest, MansionRefusesNoCatalog )
+SW_TEST_CASE_F( GhostHuntRulesTest, MansionRefusesZeroSeed )
 {
     SW_EXPECT_LOG( "GhostEncounter.RefusedInitialize" );
     GhostMansion mansion;
-    SW_EXPECT_FALSE( mansion.initialize( nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, 1u ) );
+    SW_EXPECT_FALSE( open( mansion, 0u ) );
     SW_EXPECT_EQUAL( -1, mansion.enterRoom( "foyer" ) );
 }
 

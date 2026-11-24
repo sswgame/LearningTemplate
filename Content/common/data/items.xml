@@ -33,6 +33,8 @@
   <Item id="ammo_light" name="Light Ammo" category="Ammo" maxStack="60" weight="0.1"/>
   <Item id="ammo_shell" name="Shotgun Shells" category="Ammo" maxStack="30" weight="0.2"/>
   <Item id="ammo_rifle" name="Rifle Ammo" category="Ammo" maxStack="90" weight="0.1"/>
+  <!-- 잠긴 문을 여는 도구(game/playground minigames/coopscavenger 의 터미널). 외형이 없다. -->
+  <Item id="lockpick" name="Lockpick" category="Tool" weight="0.2" value="10"/>
   <!-- 채집 · 낚시가 주는 재료(game/playground maps/outdoors). 외형이 없다. -->
   <Item id="wood_log" name="Wood Log" category="Material" maxStack="20" weight="2"/>
   <Item id="herb_wild" name="Wild Herb" category="Material" maxStack="20" weight="0.1"/>

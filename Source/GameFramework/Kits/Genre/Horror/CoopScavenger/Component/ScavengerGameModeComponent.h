@@ -1,10 +1,12 @@
 /**
  * @file ScavengerGameModeComponent.h
  * @brief 협동 수집 공포 키트(`GF_CoopScavenger`)의 디렉터 — 할당량 한 주기(또는 여러 주기)의 원정을 진행합니다. 규칙은 키트의 원정(`ScavengerExpedition`)이고, 디렉터는 승무원의 걸음 ·
- *        위협의 움직임 · 우주선 레버를 씬 데이터의 시간으로 돌립니다.
+ *        위협의 움직임 · 우주선 레버 · 터미널 구매를 씬 데이터의 시간으로 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트)을 들고 씬과 잇는다. 입력 읽기 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_CoopScavenger`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다.
  *          걸음은 이어진 곳(방 · 바깥 · 우주선) 한 칸이고, 든 무게가 걸음 시간을 늘린다. 승무원 0 은 늘 사람이고, 나머지는 그 승무원의 입력이 처음 온 때부터 사람이 잡는다(그 전에는 봇).
  *          한 판의 지갑 · 깃발 · 우주선 창고는 디렉터가 가지며 바탕 판에는 번 돈만 결과로 나간다. 자리는 모두 절대 자리다.
+ *          시계 · 날씨는 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞)의 것이다 — 하루 길이는 카탈로그를 따르고 내려 있는 동안만 흐르며, 날씨는 해 · 하늘(`<SceneBinding>`)과 고철 값 · 위협에 걸린다.
+ *          터미널에서 산 물건은 우주선 창고에 들어 판이 끝날 때까지 승무원 모두가 쓴다: 자물쇠 따개(`_unlockItem`)는 잠긴 문을 열게 하고, 장화(`_speedItem`)는 걸음을 줄인다.
  *          시나리오: `game/playground/automation/coopscavenger_slice.scenario.xml`.
  */
 #pragma once
@@ -27,7 +29,10 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
 {
@@ -47,19 +52,21 @@ namespace sw
     struct ScavengerCommand
     {
         hashed_string          _moveTo;              ///< 걸어갈 이웃(비면 서 있는다)
+        hashed_string          _buyItemID;           ///< 궤도의 터미널에서 하나 살 아이템(비면 사지 않는다)
         uint8                  _bUseTriggered   : 1; ///< 줍기 · 싣기 · 팔기 · 잠긴 문 열기
         uint8                  _bLeverTriggered : 1; ///< 착륙 · 이륙
         [[maybe_unused]] uint8 _reserved        : 6;
 
         ScavengerCommand()
             : _moveTo{}
+            , _buyItemID{}
             , _bUseTriggered{ SW_FALSE }
             , _bLeverTriggered{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
 
-        bool isIdle() const { return _moveTo.empty() && _bUseTriggered == SW_FALSE && _bLeverTriggered == SW_FALSE; }
+        bool isIdle() const { return _moveTo.empty() && _buyItemID.empty() && _bUseTriggered == SW_FALSE && _bLeverTriggered == SW_FALSE; }
     };
 } // namespace sw
 
@@ -140,6 +147,18 @@ namespace sw
         int32 countCarried() const;
         /** @brief 지금 위성에 내려 흐른 하루의 비율(0 도착, 1 자동 이륙)입니다. */
         float32 computeDayRatio() const;
+        /** @brief 우주선에 자물쇠 따개가 있으면 true 입니다(잠긴 문을 열 수 있다). */
+        bool canUnlockDoor() const { return _storage.hasItem( _unlockItem.key() ); }
+        /** @brief 이 판의 터미널 가게입니다. 열기 전이면 nullptr 입니다. */
+        const ShopDef* findTerminal() const;
+        /** @brief 아이템 카탈로그의 정의입니다(HUD 가 이름을 읽는다). 열기 전이거나 없으면 nullptr 입니다. */
+        const ItemDef* findItem( const hashed_string& itemID ) const { return _pItemCatalog != nullptr ? _pItemCatalog->find( itemID ) : nullptr; }
+        /** @brief 터미널에서 사는 값입니다. 팔지 않으면 0 입니다. */
+        int32 computeTerminalPrice( const hashed_string& itemID ) const;
+        /** @brief 월드 상태 시계의 시(0..23)입니다. 열기 전이면 0 입니다. */
+        int32 getHour() const;
+        /** @brief 지금 날씨의 값 @p pValueName(`scrapValue` · `threat`)의 배율(%)입니다. 날씨가 정하지 않으면 100 입니다. */
+        int32 computeWeatherPercent( const utf8* pValueName ) const;
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -149,11 +168,15 @@ namespace sw
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
-        /** @brief 지갑 · 깃발 · 창고를 비우고 원정을 새로 엽니다(판을 열 때 · 상태를 읽기 전). 원정이 거절하면 이유를 남기고 false 입니다. */
+        /** @brief 씬 데이터가 가리키는 위성 · 가게 · 아이템이 카탈로그에 있는지 봅니다. 없으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool validateKeys() const;
+        /** @brief 지갑 · 깃발 · 창고를 비우고 월드 상태의 시계 · 날씨로 원정을 새로 엽니다(판을 열 때 · 상태를 읽기 전). 원정이 거절하면 이유를 남기고 false 입니다. */
         [[nodiscard]] bool openExpedition();
+        /** @brief 내려 있는 동안만 월드 상태의 시계(와 날씨)를 흘립니다. */
+        void updateClock();
         /** @brief 승무원 하나의 명령을 적용합니다. */
         void applyCommand( int32 player, const ScavengerCommand& command, float32 deltaTime );
-        /** @brief 쓰기 — 회사의 우주선 안이면 팔고, 우주선 안이면 싣고, 바닥 고철이 있으면 줍고, 아니면 곁의 잠긴 문을 엽니다. */
+        /** @brief 쓰기 — 회사의 우주선 안이면 팔고, 우주선 안이면 싣고, 바닥 고철이 있으면 줍고, 아니면 자물쇠 따개로 곁의 잠긴 문을 엽니다. */
         void use( int32 player );
         /** @brief 레버 — 궤도면 (마감 날이면 회사로 잡고) 내리고, 우주선 안이면 이륙합니다. */
         void pullLever( int32 player );
@@ -170,6 +193,16 @@ namespace sw
         CatalogKey<ScavengerMoonDef> _companyMoon;
         PROPERTY( Required, Category = "Expedition", DisplayName = "Threat Table", Tooltip = "Budget and entries of the threats; tag entries Indoor or Outdoor" )
         AssetRef<SpawnTable> _threatTable;
+        PROPERTY( Required, Category = "Expedition", DisplayName = "Weather", Tooltip = "Weather catalog of the moons: season names are moon ids, values scrapValue and threat scale the scrap and the threats" )
+        AssetRef<WeatherCatalog> _weatherCatalog;
+        PROPERTY( Required, Category = "Terminal", DisplayName = "Terminal Shops", Tooltip = "Shop catalog that holds the terminal shop of the scavenger catalog" )
+        AssetRef<ShopCatalog> _shopCatalog;
+        PROPERTY( Category = "Terminal", DisplayName = "Unlock Item", Tooltip = "Item that lets the crew open locked doors while it is on the ship" )
+        CatalogKey<ItemDef> _unlockItem;
+        PROPERTY( Category = "Terminal", DisplayName = "Speed Item", Tooltip = "Item that shortens every step of the crew while it is on the ship" )
+        CatalogKey<ItemDef> _speedItem;
+        PROPERTY( Category = "Terminal", DisplayName = "Speed Item Step Scale", Tooltip = "Step time scale with the speed item on the ship", Min = 0.01, Max = 1.0 )
+        float32 _speedItemStepScale;
         PROPERTY( Category = "Expedition", DisplayName = "Seed", Min = 1 )
         uint32 _seed;
         PROPERTY( Category = "Expedition", DisplayName = "Crew", Min = 1, Max = 8 )
@@ -193,9 +226,12 @@ namespace sw
 
         SharedAssetRef<ScavengerCatalog> _pCatalog;
         SharedAssetRef<SpawnTable>       _pThreatTable;
-        Wallet                           _wallet;  ///< 한 판의 회사 돈(원정이 빌린다)
-        GameFlags                        _flags;   ///< 한 판의 문 잠금(원정이 빌린다)
-        Inventory                        _storage; ///< 우주선 창고(원정이 빌린다)
+        SharedAssetRef<ShopCatalog>      _pShopCatalog;
+        SharedAssetRef<ItemCatalog>      _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
+        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 월드 상태가 쥔 것과 같은 판(스냅숏 — 날씨 상태가 그 판의 항목을 가리킨다)
+        Wallet                           _wallet;          ///< 한 판의 회사 돈(원정이 빌린다)
+        GameFlags                        _flags;           ///< 한 판의 문 잠금(원정이 빌린다)
+        Inventory                        _storage;         ///< 우주선 창고(원정이 빌린다)
         ScavengerExpedition              _expedition;
         vector<ScavengerCommand>         _listCommand; ///< 승무원마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
         vector<Countdown>                _listStep;    ///< 승무원마다 다음 걸음까지

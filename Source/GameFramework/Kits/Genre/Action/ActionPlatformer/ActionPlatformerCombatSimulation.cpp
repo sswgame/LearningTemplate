@@ -21,8 +21,8 @@ namespace sw
         class ActionRigProjectileQuery : public IProjectileWorld
         {
         public:
-            explicit ActionRigProjectileQuery( const PlatformTileMap* pMap )
-                : _pMap{ pMap }
+            explicit ActionRigProjectileQuery( const PlatformTileMap& map )
+                : _map{ map }
             {
             }
 
@@ -30,7 +30,7 @@ namespace sw
 
             bool sweep( const ProjectileState& /*projectile*/, const float3& /*from*/, const float3& to, ProjectileHit& outHit ) const override
             {
-                if ( _pMap == nullptr || _pMap->getTile( _pMap->computeTileX( to._x ), _pMap->computeTileY( to._y ) ) != PlatformTile::Solid )
+                if ( _map.getTile( _map.computeTileX( to._x ), _map.computeTileY( to._y ) ) != PlatformTile::Solid )
                     return false;
                 outHit._position = to;
                 outHit._kind     = ProjectileHitKind::Surface;
@@ -38,7 +38,7 @@ namespace sw
             }
 
         private:
-            const PlatformTileMap* _pMap;
+            const PlatformTileMap& _map;
         };
     } // namespace
 } // namespace sw
@@ -170,7 +170,7 @@ namespace sw
         startHitstop( _timeline.getMove()._hitstop );
     }
 
-    void ActionPlatformerCombatSimulation::advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition )
+    void ActionPlatformerCombatSimulation::advanceFrame( const PlatformTileMap& map, const float2& playerPosition )
     {
         // 히트스톱은 세상을 멈춘다. 기술은 자기 히트스톱만 같이 줄인다(남은 수가 같으면 함께 풀린다).
         if ( _hitstopFrames > 0 )
@@ -230,7 +230,7 @@ namespace sw
         }
 
         // 투사체는 움직이다가, 시간 · 사거리가 다 되거나 벽에 닿으면 없앤다(공통 발사체 시뮬레이션).
-        const ActionRigProjectileQuery query( pMap );
+        const ActionRigProjectileQuery query( map );
         (void)_projectiles.step( kFrameTime, query ); // 사건은 쓰지 않는다
     }
 

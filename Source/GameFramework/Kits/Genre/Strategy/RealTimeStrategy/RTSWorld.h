@@ -150,7 +150,7 @@ namespace sw
     struct RTSPlayer
     {
         float3  _startPosition{};
-        Wallet* _pWallet{ nullptr }; ///< 빌린 지갑이다. `RTSSettings` 의 통화(광물, 가스)를 담는다. 지역 플레이어는 공유 지갑을 쓰고, AI 의 지갑은 게임이 가지고 있다
+        Wallet* _pWallet{ nullptr }; ///< 빌린 지갑이다(`addPlayer` 뒤 늘 있다). `RTSSettings` 의 통화(광물, 가스)를 담는다. 지역 플레이어는 공유 지갑을 쓰고, AI 의 지갑은 게임이 가지고 있다
         int32   _supplyUsed{ 0 };
         int32   _supplyCap{ 0 };
         int32   _team{ 0 };
@@ -229,7 +229,7 @@ namespace sw
          */
         void bindLand( LandRegistry* pLand, const int2& origin );
         /** @brief 플레이어를 추가하고 플레이어 번호를 반환합니다. 자원은 빌린 지갑 @p pWallet 에서 쓰며, 지갑은 월드보다 오래 살아야 합니다. nullptr 이면 아무것도 살 수 없습니다. */
-        int32 addPlayer( int32 team, Wallet* pWallet, const float3& startPosition );
+        int32 addPlayer( int32 team, Wallet& wallet, const float3& startPosition );
         /** @brief 유닛, 건물(건설이 끝난 상태), 자원을 놓습니다. 건물과 자원은 @p position 이 속한 셀이 왼쪽 아래가 됩니다. 놓을 수 없으면 무효 id 를 반환합니다. */
         RTSUnitID spawnUnit( const hashed_string& defID, int32 owner, const float3& position );
 

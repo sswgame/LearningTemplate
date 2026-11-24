@@ -52,7 +52,7 @@ namespace sw
         int32                    _sweepBatchCount{ 256 };
         int64                    _notificationIntervalMs{ 1000 };  ///< 새 우편 알림을 가져가는 주기이다. 0 이면 알림을 보내지 않는다(다른 서버가 맡는다)
         int32                    _notificationBatchCount{ 32 };    ///< 한 번에 가져가는 알림 수이다(트랜잭션 상한 64 안)
-        AccountPresence*         _pPresence{ nullptr };            ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버가 하나면 null 이다
+        AccountPresence*         _pPresence{ nullptr };            ///< 다른 서버에 붙은 계정을 찾고 알림을 넘긴다. 서버 한 대 구성(`OnlineServerTopology`)에서만 null 이다
         IBalanceChangedListener* _pBalanceNotification{ nullptr }; ///< 수령 · 만료 반환으로 바뀐 잔액을 그 계정에 알린다. 경제 키트가 없으면 null 이다
         IOfflinePushSender*      _pOfflinePush{ nullptr };         ///< 접속하지 않은 계정의 기기 푸시이다(라이브 운영 키트). 없으면 오프라인 계정에는 알리지 않는다
     };

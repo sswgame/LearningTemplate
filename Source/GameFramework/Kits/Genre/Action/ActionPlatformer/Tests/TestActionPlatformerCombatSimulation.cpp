@@ -68,6 +68,18 @@ namespace
             return weapon;
         }
 
+        /** @brief 벽이 시험 자리에서 멀리 떨어진 지형입니다(한 칸 1000 m, 벽은 오른쪽 위 끝 칸 하나). */
+        static const sw::PlatformTileMap& getOpenMap()
+        {
+            static const sw::PlatformTileMap s_map = []()
+            {
+                sw::PlatformTileMap map;
+                SW_EXPECT_TRUE( map.loadFromXMLText( "   #\n    \n    \n", 1000.0f, sw::float2{ -1500.0f, -1500.0f } ) );
+                return map;
+            }();
+            return s_map;
+        }
+
         /** @brief 탄속 30, 피해 7, 사거리 60 인 알입니다. */
         static sw::ProjectileDef makePellet()
         {
@@ -94,21 +106,21 @@ SW_TEST_CASE( ActionCombatSimulationTest, ComboChainsThroughTheCancelWindow )
     SW_REQUIRE_TRUE( rig.initialize( &catalog, &moves, kSword ) );
 
     rig.pressAttack();
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_EQUAL( 0, rig.getComboIndex() );
     SW_EXPECT_EQUAL( 1, rig.getTimeline().getFrame() );
 
     rig.pressAttack();
-    rig.advanceFrame( nullptr, kRigPlayer ); // 1 프레임은 창 밖 — 기억만 줄고 기술은 2 프레임으로
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer ); // 1 프레임은 창 밖 — 기억만 줄고 기술은 2 프레임으로
     SW_EXPECT_EQUAL( 0, rig.getComboIndex() );
     SW_EXPECT_EQUAL( 2, rig.getTimeline().getFrame() );
-    rig.advanceFrame( nullptr, kRigPlayer ); // 2 프레임은 창 안
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer ); // 2 프레임은 창 안
     SW_EXPECT_EQUAL( 1, rig.getComboIndex() );
     SW_EXPECT_EQUAL( kSlash2, rig.getTimeline().getMove()._id );
     SW_EXPECT_EQUAL( 1, rig.getTimeline().getFrame() );
 
-    rig.advanceFrame( nullptr, kRigPlayer );
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_FALSE( rig.getTimeline().isPlaying() );
     SW_EXPECT_EQUAL( -1, rig.getComboIndex() );
 
@@ -137,30 +149,30 @@ SW_TEST_CASE( ActionCombatSimulationTest, AttackBufferExpires )
     sw::ActionPlatformerCombatSimulation late; // 8 프레임에서 누르면 기억 3 안에 기술이 끝난다
     SW_REQUIRE_TRUE( late.initialize( &catalog, &moves, kLong ) );
     late.pressAttack();
-    late.advanceFrame( nullptr, kRigPlayer );
+    late.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     while ( late.getTimeline().getFrame() < 8 )
     {
-        late.advanceFrame( nullptr, kRigPlayer );
+        late.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     }
     late.pressAttack();
-    late.advanceFrame( nullptr, kRigPlayer ); // 9 프레임, 기억 2
-    late.advanceFrame( nullptr, kRigPlayer ); // 끝남, 기억 1
+    late.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer ); // 9 프레임, 기억 2
+    late.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer ); // 끝남, 기억 1
     SW_EXPECT_FALSE( late.getTimeline().isPlaying() );
-    late.advanceFrame( nullptr, kRigPlayer ); // 다시 시작
+    late.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer ); // 다시 시작
     SW_EXPECT_TRUE( late.getTimeline().isPlaying() );
     SW_EXPECT_EQUAL( 1, late.getTimeline().getFrame() );
 
     sw::ActionPlatformerCombatSimulation early; // 2 프레임에서 누르면 기억이 끝날 때까지 기술이 안 끝난다
     SW_REQUIRE_TRUE( early.initialize( &catalog, &moves, kLong ) );
     early.pressAttack();
-    early.advanceFrame( nullptr, kRigPlayer );
-    early.advanceFrame( nullptr, kRigPlayer );
+    early.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
+    early.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     early.pressAttack();
     while ( early.getTimeline().isPlaying() )
     {
-        early.advanceFrame( nullptr, kRigPlayer );
+        early.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     }
-    early.advanceFrame( nullptr, kRigPlayer );
+    early.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_FALSE( early.getTimeline().isPlaying() );
 }
 
@@ -182,7 +194,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ComboWithUnknownMoveIsRejected )
     SW_EXPECT_FALSE( rig.initialize( &catalog, &moves, sw::hashed_string( "ghost" ) ) );
 
     rig.pressAttack();
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_FALSE( rig.getTimeline().isPlaying() );
     rig.pressParry();
     SW_EXPECT_TRUE( rig.isParryActive() );
@@ -204,7 +216,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, HitstopFreezesTheWorld )
     SW_EXPECT_FALSE( rig.isFrozen() );
 
     rig.pressAttack();
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     (void)rig.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 50.0f, 0.0f }, sw::float2{ 60.0f, 0.0f } ) );
     rig.pressParry();
     rig.registerMeleeContact( false );
@@ -213,22 +225,22 @@ SW_TEST_CASE( ActionCombatSimulationTest, HitstopFreezesTheWorld )
 
     for ( int32 frame = 0; frame < 3; ++frame )
     {
-        rig.advanceFrame( nullptr, kRigPlayer );
+        rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
         SW_EXPECT_NEAR( 50.0f, rig.getProjectiles()[0]._position._x, kRigTolerance );
         SW_EXPECT_EQUAL( 1, rig.getTimeline().getFrame() );
         SW_EXPECT_TRUE( rig.isParryActive() );
     }
     SW_EXPECT_FALSE( rig.isFrozen() );
 
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_EQUAL( 2, rig.getTimeline().getFrame() );
     SW_EXPECT_NEAR( 51.0f, rig.getProjectiles()[0]._position._x, kRigTolerance );
 
     // 패리 창 4 프레임 중 하나를 썼다 — 멈춘 프레임은 세지 않았다
-    rig.advanceFrame( nullptr, kRigPlayer );
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_TRUE( rig.isParryActive() );
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_FALSE( rig.isParryActive() );
 }
 
@@ -250,7 +262,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ParryReflectsOnlyEnemyShotsInRadius )
 
     rig.pressAttack();
     rig.pressParry();
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
 
     const sw::vector<sw::ProjectileState>& listShot = rig.getProjectiles();
     SW_REQUIRE_EQUAL( size_t( 3 ), listShot.size() );
@@ -281,7 +293,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ParryReflectsOnlyEnemyShotsInRadius )
     // 다 풀어도 기술은 자기 히트스톱만큼 줄었고 프레임은 그대로다
     for ( int32 frame = 0; frame < 5; ++frame )
     {
-        rig.advanceFrame( nullptr, kRigPlayer );
+        rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     }
     SW_EXPECT_FALSE( rig.isFrozen() );
     SW_EXPECT_FALSE( rig.getTimeline().isInHitstop() );
@@ -301,24 +313,24 @@ SW_TEST_CASE( ActionCombatSimulationTest, ParryWindowCloses )
     for ( int32 frame = 0; frame < 4; ++frame )
     {
         SW_EXPECT_TRUE( rig.isParryActive() );
-        rig.advanceFrame( nullptr, kRigPlayer );
+        rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     }
     SW_EXPECT_FALSE( rig.isParryActive() );
     (void)rig.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 0.5f, 0.0f }, sw::float2{ 0.0f, 0.0f } ) );
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_TRUE( ActionCombatSimulationTestUtil::isTeam( rig.getProjectiles()[0], sw::ActionTeam::Enemy ) );
 }
 
 /**
- * @brief [ActionCombatSimulationTest] 탄은 수명이 다하면 사라지고, 벽 칸에 들어서면 사라진다(지형을 주지 않으면 벽을 보지 않는다)
+ * @brief [ActionCombatSimulationTest] 탄은 수명이 다하면 사라지고, 벽 칸에 들어서면 사라진다(벽이 먼 지형에서는 계속 난다)
  */
 SW_TEST_CASE( ActionCombatSimulationTest, ProjectilesExpireAndHitWalls )
 {
     sw::ActionPlatformerCombatSimulation rig;
     (void)rig.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 0.0f, 0.0f }, sw::float2{ 0.0f, 0.0f }, sw::ActionTeam::Enemy, 1.0f, 1.5f * sw::ActionPlatformerCombatSimulation::kFrameTime ) );
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.getProjectiles().size() );
-    rig.advanceFrame( nullptr, kRigPlayer );
+    rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_TRUE( rig.getProjectiles().empty() );
 
     sw::PlatformTileMap map;
@@ -327,12 +339,12 @@ SW_TEST_CASE( ActionCombatSimulationTest, ProjectilesExpireAndHitWalls )
     const sw::float2                     fast{ 60.0f, 0.0f }; // 한 프레임에 한 칸
     sw::ActionPlatformerCombatSimulation walled;
     (void)walled.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( start, fast ) );
-    walled.advanceFrame( &map, kRigPlayer );
+    walled.advanceFrame( map, kRigPlayer );
     SW_EXPECT_TRUE( walled.getProjectiles().empty() );
 
     sw::ActionPlatformerCombatSimulation open;
     (void)open.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( start, fast ) );
-    open.advanceFrame( nullptr, kRigPlayer );
+    open.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     SW_EXPECT_EQUAL( size_t( 1 ), open.getProjectiles().size() );
 }
 
@@ -392,7 +404,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, GunSpawnsPelletsAndReportsWhyItCannot 
 
     for ( int32 frame = 0; frame < 7; ++frame ) // 간격 0.1 초 = 6 프레임 + 여유
     {
-        rig.advanceFrame( nullptr, kRigPlayer );
+        rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     }
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{}, sw::float2{ 0.0f, 0.0f }, true ) == sw::WeaponFireResult::Fired );
     SW_REQUIRE_EQUAL( size_t( 6 ), listShot.size() );
@@ -400,7 +412,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, GunSpawnsPelletsAndReportsWhyItCannot 
 
     for ( int32 frame = 0; frame < 7; ++frame )
     {
-        rig.advanceFrame( nullptr, kRigPlayer );
+        rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     }
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{}, sw::float2{ 1.0f, 0.0f }, true ) == sw::WeaponFireResult::OutOfAmmo ); // 탄창 2 를 다 썼고 예비가 없다
 
@@ -425,7 +437,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     const sw::ProjectileDef pellet = ActionCombatSimulationTestUtil::makePellet();
     SW_REQUIRE_TRUE( original.equipGun( gun, pellet, 0 ) );
     original.pressAttack();
-    original.advanceFrame( nullptr, kRigPlayer );
+    original.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     original.pressParry();
     SW_REQUIRE_TRUE( original.fireGun( sw::float2{}, sw::float2{ 1.0f, 0.0f }, true ) == sw::WeaponFireResult::Fired );
 
@@ -459,8 +471,8 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     SW_EXPECT_EQUAL( original.getGun().getMagazineAmmo(), restored.getGun().getMagazineAmmo() );
     for ( int32 frame = 0; frame < 4; ++frame )
     {
-        original.advanceFrame( nullptr, kRigPlayer );
-        restored.advanceFrame( nullptr, kRigPlayer );
+        original.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
+        restored.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
         SW_EXPECT_EQUAL( original.getTimeline().getFrame(), restored.getTimeline().getFrame() );
         SW_EXPECT_TRUE( original.isParryActive() == restored.isParryActive() );
         SW_REQUIRE_EQUAL( original.getProjectiles().size(), restored.getProjectiles().size() );
@@ -561,7 +573,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, CombatDeterminism )
             sw::vector<sw::ProjectileState> listHit;
             (void)rig.takeProjectileHits( sw::ActionTeam::Enemy, kRigPlayer, 0.5f, listHit );
         }
-        rig.advanceFrame( nullptr, kRigPlayer );
+        rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ActionPlatformerCombatSimulation>( setup, step, 180 ) );
 }

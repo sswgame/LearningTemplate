@@ -56,10 +56,10 @@ namespace sw
         void despawnViews();
 
     private:
-        /** @brief 틱 뒤 게임 스레드: 새 유닛에 색을 입히고 투사체 모습을 맞춥니다. */
+        /** @brief 틱 뒤 게임 스레드: 유닛에 색을 입히고 투사체 모습을 맞춥니다. */
         void updateViews( GameObjectManager& manager );
-        /** @brief 처음 보는 유닛에 종류의 색을 입힙니다. */
-        void tintNewUnits( GameObjectManager& manager, const ArenaGameModeComponent& director );
+        /** @brief 유닛마다 종류의 색을 입힙니다(입은 색은 메시가 거른다). */
+        void tintUnits( GameObjectManager& manager, const ArenaGameModeComponent& director );
         /** @brief 탄이 끝나 스스로 숨은 모습을 풀에 돌려주고, 처음 보는 탄에 모습을 세웁니다. */
         void syncProjectiles( GameObjectManager& manager, const ArenaGameModeComponent& director );
         /** @brief 탄 하나의 모습을 풀에서 꺼냅니다. 모습이 없어도 탄은 난다. */
@@ -84,7 +84,6 @@ namespace sw
         TComponentHandle<ArenaGameModeComponent> _director;
         MaterialTintCache                        _tintCache;
         PrefabPool                               _projectilePool;   ///< 투사체의 모습. 탄 자체는 디렉터의 시뮬레이션이다
-        int32                                    _nextUnitID;       ///< 이 번호부터는 처음 보는 유닛이다
         uint32                                   _nextProjectileID; ///< 이 id 부터는 처음 보는 탄이다
     };
 } // namespace sw

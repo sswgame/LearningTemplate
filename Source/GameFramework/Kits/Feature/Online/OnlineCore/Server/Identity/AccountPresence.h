@@ -6,7 +6,7 @@
  *            (키트끼리 include 하지 못하며, 기록 형식은 구현 하나가 갖는다).
  *          - 찾기 결과는 등록한 델리게이트로 정확히 한 번 온다(`cancel` 한 것은 제외). 호스트 `tick` 안에서 오며, 요청 함수 안에서 바로 부르지 않는다.
  *            여러 서비스가 같이 찾아도 서로의 결과를 가져가지 않는다.
- *          - 서버 한 대면 없어도 된다(nullptr). 이 프로세스의 `IAccountDirectory` 로 충분하다. 알림은 버스로 최대 한 번이고, 원본은 저장소다.
+ *          - 서버 한 대 구성(`OnlineServerTopology::SingleServer`)이면 없어도 된다(nullptr) — 이 프로세스의 `IAccountDirectory` 로 충분하다. 여러 대 구성은 없으면 기동 오류다. 알림은 버스로 최대 한 번이고, 원본은 저장소다.
  *          언리얼 `IOnlinePresence::QueryPresence`(사용자 id 에서 상태, 완료 델리게이트)와 Nakama status registry 에 해당한다.
  */
 #pragma once
@@ -50,7 +50,8 @@ namespace sw
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
 
     public:
-        static constexpr const utf8* kProviderKit = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+        static constexpr const utf8* kProviderKit           = OnlineServerKitName::kAccount; ///< 이 인터페이스를 내는 키트다. 받는 키트의 의존 이름이 여기서 나온다(`OnlineServerKit`)
+        static constexpr bool        kRequiredInMultiServer = true;                          ///< 다른 서버의 계정을 찾는 유일한 길이다 — 서버 여러 대에서 없으면 알림 · 귓속말 · 거래가 조용히 이 서버에만 간다
 
         AccountPresence()          = default;
         virtual ~AccountPresence() = default;

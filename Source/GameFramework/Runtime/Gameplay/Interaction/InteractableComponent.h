@@ -169,7 +169,7 @@ namespace sw
         shared_ptr<const InteractionCatalog>         _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
         const InteractionDef*                        _pDef;
         AssetReloadWatch<InteractionCatalog>         _catalogReload;    ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        InstanceHighlight                            _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(같으면 다시 옮기지 않는다)
+        InstanceHighlight                            _appliedHighlight; ///< 메시에 마지막으로 옮긴 강조(강조가 있는 동안은 나중에 붙은 메시에도 다시 옮긴다)
         MulticastDelegate<void( const GameObject& )> _completed;        ///< 끝남 알림(`listenCompleted`)
         atomic<uint32>                               _completedCount;   ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
         atomic<uint8>                                _bHighlightRequested;

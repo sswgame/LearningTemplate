@@ -105,9 +105,9 @@ namespace sw
         void registerMeleeContact( bool bBlocked );
         /**
          * @brief 한 프레임 진행합니다.
-         * @param pMap 투사체가 벽에 닿으면 없앤다(nullptr 이면 확인하지 않는다)
+         * @param map 투사체가 이 지형의 벽 칸에 닿으면 없앤다
          */
-        void advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition );
+        void advanceFrame( const PlatformTileMap& map, const float2& playerPosition );
         /** @brief @p team 편의 투사체 중 @p center 를 중심으로 반경 @p radius 안에 있는 것을 꺼내고(맞은 것), 꺼낸 수를 반환합니다. */
         int32 takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit );
         void  pollEvents( vector<ActionPlatformerCombatEvent>& outListEvent );

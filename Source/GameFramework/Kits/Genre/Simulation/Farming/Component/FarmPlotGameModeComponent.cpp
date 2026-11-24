@@ -40,7 +40,9 @@ namespace sw
         FarmField restoredField;
         if ( io.isReading() )
         {
-            restoredField.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
+            if ( io.check( _pCropCatalog != nullptr ) == false )
+                return;
+            restoredField.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         }
         FarmField& field = io.isWriting() ? _field : restoredField;
         io.section( FarmField::kStateTag, FarmField::kStateVersion, [&field]( StateIO& bodyIO )
@@ -77,7 +79,7 @@ namespace sw
             return false; // 까닭은 찾기가 남겼다
         if ( pWallet->isFreshGame() )
             pWallet->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
-        _field.initialize( _fieldWidth, _fieldHeight, _pCropCatalog.get() );
+        _field.initialize( _fieldWidth, _fieldHeight, *_pCropCatalog );
         const hashed_string season = pState->getClock().getSeasonName();
         for ( int32 y = 0; y < _fieldHeight; ++y )
         {

@@ -37,7 +37,5 @@ namespace sw
     private:
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the game mode's field" )
         int32 _tileIndex;
-
-        int32 _soilState; ///< 지금 입은 흙 상태(−1 이면 아직 없다)
     };
 } // namespace sw

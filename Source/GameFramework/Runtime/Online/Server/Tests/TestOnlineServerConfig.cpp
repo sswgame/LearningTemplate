@@ -13,6 +13,7 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineConfigTestTypes.h"
+#include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
 
 // OnlineServerConfigTest — 온라인 서버 설정의 키트 설정 읽기(`_settings` 객체 · 모르는 키 거절 · 형식 오류 · 없는 칸은 초기값), 설정 파일 경로,
 // 키트 팩토리 레지스트리(이름으로 찾기 · 내리기 · 만들기 함수 없는 팩토리 거절). 파일 · 네트워크 없음(nogpu).
@@ -39,7 +40,7 @@ namespace
 SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 {
     sw::ConfigManager manager;
-    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 24, "_maxPendingCallsPerService": 1024, "_listTrustedProxy": [], "_seatReservationSeconds": 30,
+    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_topology": "MultiServer", "_serverID": 7, "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 24, "_maxPendingCallsPerService": 1024, "_listTrustedProxy": [], "_seatReservationSeconds": 30,
 "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
@@ -61,6 +62,28 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
     SW_EXPECT_EQUAL( 42, kitConfig._untouched );
     SW_EXPECT_EQUAL( 365, pConfig->_auditRetention._expireAfterDays ); // 기반 표 TTL 은 구조체 칸으로 읽는다
     SW_EXPECT_EQUAL( 5000, pConfig->_auditRetention._maxDeletePerSweep );
+    SW_EXPECT_TRUE( pConfig->_topology == sw::OnlineServerTopology::MultiServer );
+    SW_EXPECT_EQUAL( 7, pConfig->_serverID );
+}
+
+/**
+ * @brief [OnlineServerConfigTest] 서버 구성(`_topology`)과 서버 id 를 적지 않은 설정은 읽지 못한다 — 여러 대 배포가 "한 대" 기본값으로 조용히 서지 않는다
+ */
+SW_TEST_CASE( OnlineServerConfigTest, TopologyAndServerIDAreRequired )
+{
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    const auto loadsWithout = []( sw::string_view fieldText )
+    {
+        sw::string   text     = sw::test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [] })" );
+        const size_t position = text.find( fieldText );
+        SW_EXPECT_TRUE( position != sw::string::npos );
+        text.erase( position, fieldText.size() );
+        sw::ConfigManager manager;
+        return manager.loadConfigFromJSON<sw::OnlineServerConfig>( text, "inline" );
+    };
+    SW_EXPECT_TRUE( loadsWithout( "" ) );
+    SW_EXPECT_FALSE( loadsWithout( R"("_topology": "SingleServer", )" ) );
+    SW_EXPECT_FALSE( loadsWithout( R"("_serverID": 1, )" ) );
 }
 
 /**

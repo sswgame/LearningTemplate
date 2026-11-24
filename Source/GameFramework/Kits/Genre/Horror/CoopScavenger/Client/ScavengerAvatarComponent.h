@@ -23,6 +23,7 @@ namespace sw
 {
     class ScavengerGameModeComponent;
     class ScavengerHUDViewModel;
+    struct ScavengerCommand;
     class GameObjectManager;
 
     /**
@@ -52,11 +53,13 @@ namespace sw
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 판을 그리며 HUD 를 채웁니다. */
         void updateAvatar( GameObjectManager& manager );
         /** @brief 입력 맵을 읽어 디렉터 명령으로 넘깁니다. */
-        void submitInput( ScavengerGameModeComponent& director ) const;
+        void submitInput( ScavengerGameModeComponent& director );
+        /** @brief 궤도의 터미널 — 걷기 축의 좌우로 물건을 고르고 쓰기로 고른 물건의 id 를 @p outCommand 에 적습니다. 사용자 0 만 쓴다. */
+        void updateTerminal( const ScavengerGameModeComponent& director, float32 axis, bool bBuy, ScavengerCommand& outCommand );
         /** @brief 판을 표식으로 그립니다. */
         void drawGame( GameObjectManager& manager, const ScavengerGameModeComponent& director );
         /** @brief HUD 값을 채웁니다. */
-        static void fillHUD( ScavengerHUDViewModel& outViewModel, const ScavengerGameModeComponent& director );
+        void fillHUD( ScavengerHUDViewModel& outViewModel, const ScavengerGameModeComponent& director ) const;
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that steps to the neighbouring area (required)" )
@@ -71,8 +74,10 @@ namespace sw
         TComponentHandle<ScavengerGameModeComponent> _director;
         PrefabViewBatch                              _markers;
         unique_ptr<ScavengerHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        uint32                                       _terminalIndex;     ///< 터미널에서 고른 진열 칸(화면의 상태라 싣지 않는다)
         uint8                                        _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
         uint8                                        _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                       _reserved      : 6;
+        uint8                                        _bTerminalAxis : 1; ///< 고르는 축이 눌려 있다(눌린 동안 한 칸만 옮긴다)
+        [[maybe_unused]] uint8                       _reserved      : 5;
     };
 } // namespace sw

@@ -41,16 +41,16 @@ namespace sw
     {
     }
 
-    bool GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, GameFlags* pFlags, Inventory* pInventory, Wallet* pWallet, uint32 seed )
+    bool GhostMansion::initialize( const GhostCatalog& catalog, const LootCatalog& loot, AreaGraph& areaGraph, GameFlags& flags, Inventory& inventory, Wallet& wallet, uint32 seed )
     {
-        if ( _encounter.initialize( pCatalog, seed ) == false )
+        if ( _encounter.initialize( &catalog, seed ) == false )
             return false;
-        _pCatalog   = pCatalog;
-        _pLoot      = pLoot;
-        _pAreaGraph = pAreaGraph;
-        _pFlags     = pFlags;
-        _pInventory = pInventory;
-        _pWallet    = pWallet;
+        _pCatalog   = &catalog;
+        _pLoot      = &loot;
+        _pAreaGraph = &areaGraph;
+        _pFlags     = &flags;
+        _pInventory = &inventory;
+        _pWallet    = &wallet;
         _seed       = seed;
         _random.setSeed( GameRandom::deriveSeed( seed, 0xB00B00u ) );
         _eventBuffer.clear();
@@ -60,7 +60,7 @@ namespace sw
         _listSearched.clear();
         _listPendingKeyRoom.clear();
         _listRewardedGhost.clear();
-        for ( const HidingGhostDef& boo : pCatalog->getBoos() )
+        for ( const HidingGhostDef& boo : catalog.getBoos() )
         {
             HidingGhostRuntime runtime;
             runtime._room      = boo._room;
@@ -68,7 +68,7 @@ namespace sw
             runtime._hp        = boo._hp;
             _listBoo.push_back( runtime );
         }
-        _listSearched.assign( pCatalog->getFurniture().size(), SW_FALSE );
+        _listSearched.assign( catalog.getFurniture().size(), SW_FALSE );
         return true;
     }
 
@@ -78,7 +78,7 @@ namespace sw
             return constant::invalid_index::kInt32;
         grantPendingKeys(); // 방을 옮기는 사이 가방을 비웠을 수 있다
         const GhostRoomDef* pRoom    = _pCatalog->findRoom( roomID );
-        const bool          bOnGraph = _pAreaGraph != nullptr && _pAreaGraph->findArea( roomID ) != nullptr;
+        const bool          bOnGraph = _pAreaGraph->findArea( roomID ) != nullptr;
         if ( pRoom == nullptr && bOnGraph == false )
             return -1;
         if ( bOnGraph )
@@ -138,8 +138,7 @@ namespace sw
                 continue;
             bCaughtAny = true;
             _listRewardedGhost.push_back( ghost._id );
-            if ( _pWallet != nullptr && _pCatalog != nullptr )
-                _pWallet->add( _pCatalog->getCurrency(), ghost._pDef->_coins );
+            _pWallet->add( _pCatalog->getCurrency(), ghost._pDef->_coins );
             pushEvent( GhostMansionEventKind::CoinsCollected, hashed_string{}, _currentRoom, ghost._pDef->_coins );
         }
         const bool bCleared = bCaughtAny && _encounter.getGhosts().empty() == false && _encounter.countRemaining() == 0;
@@ -150,11 +149,11 @@ namespace sw
     GhostDoorResult GhostMansion::unlockDoor( const hashed_string& doorID )
     {
         const GhostDoorDef* pDoor = _pCatalog != nullptr ? _pCatalog->findDoor( doorID ) : nullptr;
-        if ( pDoor == nullptr || _pFlags == nullptr )
+        if ( pDoor == nullptr )
             return GhostDoorResult::UnknownDoor;
         if ( _pFlags->hasFlag( pDoor->_flag ) )
             return GhostDoorResult::AlreadyOpen;
-        if ( pDoor->_key.empty() == false && ( _pInventory == nullptr || _pInventory->consumeItem( pDoor->_key, 1 ) == false ) )
+        if ( pDoor->_key.empty() == false && _pInventory->consumeItem( pDoor->_key, 1 ) == false )
             return GhostDoorResult::NeedKey;
         _pFlags->setFlag( pDoor->_flag, 1 );
         pushEvent( GhostMansionEventKind::DoorOpened, doorID );
@@ -185,7 +184,7 @@ namespace sw
         if ( _listSearched[static_cast<size_t>( furnitureIndex )] == SW_TRUE )
             return GhostSearchResult::AlreadySearched;
         _listSearched[static_cast<size_t>( furnitureIndex )] = SW_TRUE;
-        if ( _pLoot != nullptr && furniture._lootTable.empty() == false )
+        if ( furniture._lootTable.empty() == false )
         {
             // 가구마다 따로 시드를 내므로, 어느 가구부터 뒤져도 같은 것이 나온다.
             GameRandom random( GameRandom::deriveSeed( _seed, static_cast<uint32>( furnitureID.getHash() ) ) );
@@ -225,7 +224,7 @@ namespace sw
         const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomID ) : nullptr;
         if ( pRoom == nullptr )
             return true; // 유령이 정해지지 않은 방(복도)은 항상 밝다
-        return _pFlags != nullptr && _pFlags->hasFlag( pRoom->_lightFlag );
+        return _pFlags->hasFlag( pRoom->_lightFlag );
     }
 
     const HidingGhostRuntime* GhostMansion::findBoo( const hashed_string& booID ) const
@@ -261,13 +260,13 @@ namespace sw
 
     bool GhostMansion::isKnownRoom( const hashed_string& roomID ) const
     {
-        return roomID.empty() || _pCatalog->findRoom( roomID ) != nullptr || ( _pAreaGraph != nullptr && _pAreaGraph->findArea( roomID ) != nullptr );
+        return roomID.empty() || _pCatalog->findRoom( roomID ) != nullptr || _pAreaGraph->findArea( roomID ) != nullptr;
     }
 
     void GhostMansion::lightRoom( const hashed_string& roomID )
     {
         const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomID ) : nullptr;
-        if ( pRoom == nullptr || _pFlags == nullptr )
+        if ( pRoom == nullptr )
             return;
         _pFlags->setFlag( pRoom->_lightFlag, 1 );
         pushEvent( GhostMansionEventKind::RoomLit, roomID, roomID );
@@ -280,7 +279,7 @@ namespace sw
     void GhostMansion::grantPendingKeys()
     {
         // 열쇠를 잃으면 그 문을 영영 열 수 없어 진행이 막힌다 - 가방이 차면 맡아 두었다가 자리가 나면 준다.
-        for ( size_t index = 0; _pInventory != nullptr && index < _listPendingKeyRoom.size(); )
+        for ( size_t index = 0; index < _listPendingKeyRoom.size(); )
         {
             const hashed_string roomID = _listPendingKeyRoom[index];
             const GhostRoomDef* pRoom  = _pCatalog->findRoom( roomID );
@@ -307,25 +306,22 @@ namespace sw
         HidingGhostRuntime& boo = _listBoo[booIndex];
         // 이웃 방을 찾는다. 유령은 벽을 지나므로 잠긴 문과 일방통행을 가리지 않는다. 연결을 읽은 순서대로이므로 항상 같은 목록이다.
         vector<hashed_string> listNeighbor;
-        if ( _pAreaGraph != nullptr )
+        for ( const AreaLink& link : _pAreaGraph->getLinks() )
         {
-            for ( const AreaLink& link : _pAreaGraph->getLinks() )
+            hashed_string other{};
+            if ( link._from == boo._room )
+                other = link._to;
+            else if ( link._to == boo._room )
+                other = link._from;
+            if ( other.empty() )
+                continue;
+            bool bListed = false;
+            for ( const hashed_string& neighbor : listNeighbor )
             {
-                hashed_string other{};
-                if ( link._from == boo._room )
-                    other = link._to;
-                else if ( link._to == boo._room )
-                    other = link._from;
-                if ( other.empty() )
-                    continue;
-                bool bListed = false;
-                for ( const hashed_string& neighbor : listNeighbor )
-                {
-                    bListed = bListed || neighbor == other;
-                }
-                if ( bListed == false )
-                    listNeighbor.push_back( other );
+                bListed = bListed || neighbor == other;
             }
+            if ( bListed == false )
+                listNeighbor.push_back( other );
         }
         if ( listNeighbor.empty() == false )
             boo._room = listNeighbor[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listNeighbor.size() ) - 1 ) )];
