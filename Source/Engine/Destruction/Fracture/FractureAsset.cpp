@@ -154,7 +154,7 @@ namespace sw
             if ( bInvalidPieceVertexRange )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "piece vertex ranges must be contiguous triangle lists" } );
             expectedVertex += piece._vertexCount;
-            if ( static_cast<size_t>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 3 )
+            if ( static_cast<uint64>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 3 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "piece hull out of range or too small" } );
         }
         if ( expectedVertex != _listVertex.size() )

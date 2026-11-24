@@ -59,7 +59,7 @@ namespace sw
             template <typename T>
             [[nodiscard]] static bool readBuiltinBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
-                if ( offset + sizeof( T ) > size )
+                if ( offset > size || sizeof( T ) > size - offset )
                     return false;
                 // bool 은 바이트를 그대로 옮기지 않는다. 0 · 1 이 아닌 바이트(망가진 파일)를 memcpy 하면 값이 정의되지 않는 bool 이 되고,
                 // 컴파일러는 그것을 2 로 쓰거나 `b` 와 `b == true` 를 다르게 본다.
@@ -131,7 +131,7 @@ namespace sw
 
             [[nodiscard]] static bool readAtomicBoolBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
-                if ( offset + sizeof( uint8 ) > size )
+                if ( offset >= size )
                     return false;
                 static_cast<reflected_atomic<bool>*>( pPtr )->store( pData[offset] != 0 );
                 offset += sizeof( uint8 );

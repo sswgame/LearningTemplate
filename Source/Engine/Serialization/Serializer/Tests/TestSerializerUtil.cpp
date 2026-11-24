@@ -563,6 +563,51 @@ SW_TEST_CASE( BinarySerializerTest, SchemaLayoutStreamMatchesTheTaggedValues )
     SW_EXPECT_FALSE( BinarySerializer::deserialize( &untouched, type, layoutBytes.data(), layoutBytes.size() - 1 ) );
 }
 
+/** @brief [BinarySerializerTest] 위조된 값 크기(32 비트 size_t 에서 자리와 더하면 넘치는 크기 포함)와 머리 개수가 틀린 배치 스트림은 읽지 않는다 — 값은 그대로다 */
+SW_TEST_CASE( BinarySerializerTest, CorruptPayloadSizeAndCountAreRejected )
+{
+    SerializerSampleGroup source;
+    source._listText = { "alpha" };
+    source._count    = 42;
+
+    const TypeInfo&  type        = *SerializerSampleGroup::StaticType();
+    SerializeContext cookContext = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    cookContext.setSchemaLayout( true );
+    vector<uint8> taggedBytes;
+    vector<uint8> layoutBytes;
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, taggedBytes ) );
+    SW_REQUIRE_TRUE( BinarySerializer::serialize( &source, type, layoutBytes, cookContext ) );
+
+    const auto writeWordAt = []( vector<uint8>& inoutBytes, const size_t offset, const uint32 value )
+    { Memory::copy( inoutBytes.data() + offset, &value, sizeof( value ) ); };
+    const auto expectRejected = [&type]( const vector<uint8>& bytes, const SerializeContext& context )
+    {
+        SerializerSampleGroup     read;
+        vector<SchemaOrphanValue> listOrphan;
+        SW_EXPECT_FALSE( BinarySerializer::deserialize( &read, type, bytes.data(), bytes.size(), context ) );
+        SW_EXPECT_TRUE( BinarySerializer::deserializeSoft( &read, type, bytes.data(), bytes.size(), &listOrphan, context ) == SoftReadResult::NotParsed );
+        SW_EXPECT_TRUE( read._listText.empty() );
+        SW_EXPECT_EQUAL( 0, read._count );
+    };
+    // 첫 값의 크기 칸 — 태그 스트림은 머리 · 이름 해시 · 형식 해시 뒤, 배치 스트림은 머리 · 배치 해시 뒤다.
+    for ( const uint32 corruptSize : { 0xFFFFFFFFu, 0xFFFFFFFFu - 15u, static_cast<uint32>( taggedBytes.size() ) } )
+    {
+        vector<uint8> corruptTagged = taggedBytes;
+        writeWordAt( corruptTagged, sizeof( uint32 ) * 3, corruptSize );
+        expectRejected( corruptTagged, getContext() );
+        vector<uint8> corruptLayout = layoutBytes;
+        writeWordAt( corruptLayout, sizeof( uint32 ) * 2, corruptSize );
+        expectRejected( corruptLayout, cookContext );
+    }
+
+    uint32 header = 0;
+    Memory::copy( &header, layoutBytes.data(), sizeof( header ) );
+    vector<uint8> corruptCount = layoutBytes;
+    writeWordAt( corruptCount, 0, header + 1 );
+    SerializerSampleGroup read;
+    SW_EXPECT_FALSE( BinarySerializer::deserialize( &read, type, corruptCount.data(), corruptCount.size(), cookContext ) );
+}
+
 /** @brief [XMLSerializerPropertyTest] 되풀이된 원소와 자리가 틀린 칸(속성 값을 원소로, 원소 칸을 속성으로)은 모르는 칸으로 알린다 — 알림 없이 초기값이 되지 않는다 */
 SW_TEST_CASE( XMLSerializerPropertyTest, RepeatedAndMisplacedPropertiesAreReported )
 {

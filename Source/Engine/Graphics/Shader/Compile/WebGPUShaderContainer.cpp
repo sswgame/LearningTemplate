@@ -20,7 +20,7 @@ namespace sw
 
             [[nodiscard]] static bool readWord( vector_reference<const uint8> bytes, size_t& ioOffset, uint32& outValue )
             {
-                if ( ioOffset + sizeof( outValue ) > bytes.size() )
+                if ( sizeof( outValue ) > bytes.size() - ioOffset ) // 자리는 늘 안쪽이다 — 크기를 더하지 않고 뺀다(웹의 32 비트 size_t)
                     return false;
                 Memory::copy( &outValue, bytes.data() + ioOffset, sizeof( outValue ) );
                 ioOffset += sizeof( outValue );
@@ -35,11 +35,11 @@ namespace sw
                 uint32 version = 0;
                 uint32 size    = 0;
                 if ( readWord( bytes, offset, magic ) == false || magic != WebGPUShaderContainer::kMagic || readWord( bytes, offset, version ) == false ||
-                     version != WebGPUShaderContainer::kVersion || readWord( bytes, offset, size ) == false || offset + size > bytes.size() )
+                     version != WebGPUShaderContainer::kVersion || readWord( bytes, offset, size ) == false || size > bytes.size() - offset )
                     return false;
                 outSpirv = bytes.subspan( offset, size );
                 offset += size;
-                if ( readWord( bytes, offset, size ) == false || offset + size > bytes.size() )
+                if ( readWord( bytes, offset, size ) == false || size > bytes.size() - offset )
                     return false;
                 outWgsl = bytes.subspan( offset, size );
                 return true;

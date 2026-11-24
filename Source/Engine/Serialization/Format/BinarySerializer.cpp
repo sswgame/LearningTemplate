@@ -84,7 +84,25 @@ namespace sw
                                    prop._name.c_str(), prop._typeName.c_str() );
             }
 
-            static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const uint8* pPayload, uint32 payloadSize,
+            /** @brief 필드 하나의 값 바이트입니다(스트림을 빌려 본다). */
+            struct FieldPayload
+            {
+                const uint8* _pBytes{ nullptr };
+                uint32       _byteCount{ 0 };
+            };
+
+            /**
+             * @brief 크기 머리와 그만큼의 값 바이트를 읽고 다음 필드 자리로 옮깁니다. 신뢰할 수 없는 크기를 남은 바이트와 견주는 곳은 여기 하나다(태그 스트림 · 배치 스트림).
+             * @details 남은 바이트는 `ByteReader` 가 뺄셈으로 견준다 — 자리에 크기를 더해 견주면 32 비트 `size_t`(웹)에서 넘쳐 지나간다.
+             */
+            [[nodiscard]] static bool readFieldPayload( ByteReader& reader, FieldPayload& outPayload )
+            {
+                outPayload._byteCount = reader.readPod<uint32>();
+                outPayload._pBytes    = reader.readView( outPayload._byteCount );
+                return reader.hasOverflowed() == false;
+            }
+
+            static void pushOrphanVal( vector<SchemaOrphanValue>* pOutListOrphan, hashed_string name, uint32 nameHash, uint32 wireTypeHash, const FieldPayload& payload,
                                        BinaryWireVersion wireVersion )
             {
                 if ( pOutListOrphan == nullptr )
@@ -94,7 +112,7 @@ namespace sw
                 orphan._nameHash     = nameHash != 0 ? nameHash : name.getHash();
                 orphan._wireTypeHash = wireTypeHash;
                 orphan._wireVersion  = wireVersion;
-                orphan._listBinary.assign( pPayload, pPayload + payloadSize );
+                orphan._listBinary.assign( payload._pBytes, payload._pBytes + payload._byteCount );
                 pOutListOrphan->push_back( std::move( orphan ) );
             }
 
@@ -168,8 +186,6 @@ namespace sw
             {
                 void*                      _pInstance;
                 const TypeInfo&            _typeInfo;
-                const uint8*               _pData;
-                size_t                     _dataSize;
                 const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
                 bool                       _bStrict; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -189,19 +205,11 @@ namespace sw
              */
             static FieldReadResult readTaggedField( TaggedReadState& state, ByteReader& reader, bool& outStop )
             {
-                outStop = true;
-                uint32 tagHash{ 0 };
-                uint32 wireTypeHash{ 0 };
-                uint32 payloadSize{ 0 };
-                tagHash                  = reader.readPod<uint32>();
-                wireTypeHash             = reader.readPod<uint32>();
-                payloadSize              = reader.readPod<uint32>();
-                const bool bTruncatedTag = reader.hasOverflowed();
-                if ( bTruncatedTag )
-                    return FieldReadResult::FieldFailed;
-
-                const size_t payloadStart = reader.getOffset();
-                if ( payloadStart + payloadSize > state._dataSize )
+                outStop                   = true;
+                const uint32 tagHash      = reader.readPod<uint32>();
+                const uint32 wireTypeHash = reader.readPod<uint32>();
+                FieldPayload payload{};
+                if ( readFieldPayload( reader, payload ) == false )
                     return FieldReadResult::FieldFailed;
 
                 // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
@@ -218,10 +226,9 @@ namespace sw
                     if ( state._bStrict && state._context.shouldSkipUnknownProperties() == false )
                         return FieldReadResult::FieldFailed;
                     if ( state._bStrict == false )
-                        pushOrphanVal( state._pOutListOrphan, {}, tagHash, wireTypeHash, state._pData + payloadStart, payloadSize, state._wireVersion );
+                        pushOrphanVal( state._pOutListOrphan, {}, tagHash, wireTypeHash, payload, state._wireVersion );
                     else
                         warnSkippedFieldOnce( state._typeInfo, tagHash );
-                    (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                     outStop = false;
                     return FieldReadResult::Read;
                 }
@@ -232,12 +239,12 @@ namespace sw
                 else
                     state._uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
-                return readMatchedField( state, reader, prop, tagHash, wireTypeHash, payloadStart, payloadSize, outStop );
+                return readMatchedField( state, prop, tagHash, wireTypeHash, payload, outStop );
             }
 
-            /** @brief 프로퍼티가 정해진 필드 하나의 페이로드를 읽고 다음 필드 자리로 옮깁니다(태그 스트림 · 배치 스트림 공통). @p outStop 은 `readTaggedField` 와 같다. */
-            static FieldReadResult readMatchedField( TaggedReadState& state, ByteReader& reader, const PropertyInfo& prop, const uint32 tagHash, const uint32 wireTypeHash,
-                                                     const size_t payloadStart, const uint32 payloadSize, bool& outStop )
+            /** @brief 프로퍼티가 정해진 필드 하나의 페이로드를 프로퍼티에 읽습니다(태그 스트림 · 배치 스트림 공통). @p outStop 은 `readTaggedField` 와 같다. */
+            static FieldReadResult readMatchedField( TaggedReadState& state, const PropertyInfo& prop, const uint32 tagHash, const uint32 wireTypeHash, const FieldPayload& payload,
+                                                     bool& outStop )
             {
                 outStop = true;
                 // 저작 파일의 런타임 상태는 로드 오류다(XML · JSON 과 같다).
@@ -249,7 +256,6 @@ namespace sw
                 // 이 목적이 다루지 않는 필드(옵트인 세이브의 나머지)는 읽지 않는다. 현재 값을 덮지 않는다(쓰기도 적지 않는다).
                 if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
                 {
-                    (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                     outStop = false;
                     return FieldReadResult::Read;
                 }
@@ -259,7 +265,7 @@ namespace sw
                     return FieldReadResult::ObjectRejected;
 
                 const FieldReadResult fieldResult =
-                    readTaggedPayload( prop, state._pInstance, state._pData + payloadStart, payloadSize, wireTypeHash, state._context, state._wireVersion );
+                    readTaggedPayload( prop, state._pInstance, payload._pBytes, payload._byteCount, wireTypeHash, state._context, state._wireVersion );
                 switch ( fieldResult )
                 {
                     case FieldReadResult::Read:
@@ -278,7 +284,7 @@ namespace sw
                         if ( state._bStrict )
                             warnUnreadableFieldOnce( state._typeInfo, prop );
                         else
-                            pushOrphanVal( state._pOutListOrphan, prop._name, tagHash, wireTypeHash, state._pData + payloadStart, payloadSize, state._wireVersion );
+                            pushOrphanVal( state._pOutListOrphan, prop._name, tagHash, wireTypeHash, payload, state._wireVersion );
                         break;
                     }
                     case FieldReadResult::ObjectRejected:
@@ -288,7 +294,6 @@ namespace sw
                     }
                 }
 
-                (void)reader.skipBytes( payloadSize ); // 길이는 머리를 읽을 때 남은 바이트와 견줬다
                 outStop = false;
                 return FieldReadResult::Read;
             }
@@ -317,15 +322,14 @@ namespace sw
                     const PropertyInfo& prop = field._property;
                     if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
                         return ReflectVisitFlow::Continue;
-                    const uint32 payloadSize  = reader.readPod<uint32>();
-                    const size_t payloadStart = reader.getOffset();
-                    if ( reader.hasOverflowed() || payloadStart + payloadSize > state._dataSize )
+                    FieldPayload payload{};
+                    if ( readFieldPayload( reader, payload ) == false )
                     {
                         result = FieldReadResult::FieldFailed;
                         return ReflectVisitFlow::Stop;
                     }
                     bool bStop = false;
-                    result     = readMatchedField( state, reader, prop, prop.getNameHash(), prop._typeName.getHash(), payloadStart, payloadSize, bStop );
+                    result     = readMatchedField( state, prop, prop.getNameHash(), prop._typeName.getHash(), payload, bStop );
                     ++readCount;
                     return bStop ? ReflectVisitFlow::Stop : ReflectVisitFlow::Continue;
                 } );
@@ -361,7 +365,7 @@ namespace sw
                 if ( readTaggedHeader( reader, typeInfo, wireVersion, propCount, bSchemaLayout ) == false )
                     return FieldReadResult::FieldFailed;
 
-                TaggedReadState state{ pInstance, typeInfo, pData, dataSize, context, pOutListOrphan, bStrict, bStrict == false || context.shouldSkipUnreadableProperties(), wireVersion };
+                TaggedReadState state{ pInstance, typeInfo, context, pOutListOrphan, bStrict, bStrict == false || context.shouldSkipUnreadableProperties(), wireVersion };
                 if ( bSchemaLayout )
                 {
                     const FieldReadResult result = readSchemaLayout( state, reader, propCount );

@@ -747,22 +747,18 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return 0;
 
-        ByteReader reader( pData, size );
-        uint32     bodySize{ 0 };
-        bodySize = reader.readPod<uint32>();
+        ByteReader         reader( pData, size );
+        const uint32       bodySize = reader.readPod<uint32>();
+        const uint8* const pBody    = reader.readView( bodySize ); // 크기는 뺄셈으로 견준다 — 더해 견주면 32 비트 size_t(웹)에서 넘친다
         if ( reader.hasOverflowed() )
-            return 0;
-
-        const size_t bodyStart = reader.getOffset();
-        if ( bodyStart + bodySize > size )
             return 0;
 
         const bool bLoaded = loadStateInPlace( pGameObject, context, [&]( const SerializeContext& serializeContext )
         {
-            return BinarySerializer::deserializeVersioned( pGameObject, *pTypeInfo, pData + bodyStart, bodySize,
+            return BinarySerializer::deserializeVersioned( pGameObject, *pTypeInfo, pBody, bodySize,
                                                            kObjectReflectedSchemaVersion, serializeContext );
         } );
-        return bLoaded ? bodyStart + bodySize : 0;
+        return bLoaded ? reader.getOffset() : 0;
     }
 
     bool ObjectStateSerializer::loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
