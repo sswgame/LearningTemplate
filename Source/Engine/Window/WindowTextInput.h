@@ -30,7 +30,7 @@ namespace sw
     /** @brief 입력기를 원하는 쪽입니다(`GenericWindow::requestTextInput`). 둘이 따로 켜고 끄므로 한쪽이 끄는 일이 다른 쪽을 끄지 않는다. */
     enum class WindowTextInputClient : uint8
     {
-        Engine = 0, ///< 런타임 UI 글자 입력 · 개발 콘솔(`InputManager::setKeyboardFocus`)
+        Engine = 0, ///< 런타임 UI 글자 입력 · 개발 콘솔(`InputManager::claimKeyboardFocus`)
         Editor,     ///< 에디터 ImGui 글 칸(`Platform_SetImeDataFn`)
         Count,
     };

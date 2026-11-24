@@ -31,5 +31,12 @@
 	<Tap slot="Mouse.Right" hold="1"/>
 	<WaitUntil watch="City.DemolishCount" differsFrom="demolishes" timeoutFrames="10"/> <!-- 메뉴를 닫은 뒤의 오른쪽 버튼으로 허물었다 -->
 	<ExpectLog id="City.Demolished" count="1"/>
+	<!-- 게임 시간이 멈춰도 입력은 실제 시간으로 흐른다 — 메뉴 위에서도 패드 가상 커서가 움직인다 -->
+	<Tap slot="Key.Escape" hold="6"/>
+	<WaitUntil watch="UI.ActiveScreen" is="engine/ui/pause.ui.xml" timeoutFrames="30"/>
+	<WaitUntil watch="Time.Paused" equals="1" timeoutFrames="10"/>
+	<Store watch="Input.MouseX" as="pausedX"/>
+	<GamepadAxis axis="0" value="1"/>
+	<WaitUntil watch="Input.MouseX" differsFrom="pausedX" timeoutFrames="30"/>
 	<Pass/>
 </Scenario>

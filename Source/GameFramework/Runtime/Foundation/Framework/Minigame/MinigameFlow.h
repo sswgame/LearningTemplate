@@ -241,7 +241,7 @@ namespace sw
         void deliverResult( const MinigameResult& result );
         /** @brief 다른 진입 · 나가기가 맵을 기다리는 중이면 @p name 의 요청을 거절한다고 알리고 true 입니다. */
         bool rejectIfLoadPending( string_view name ) const;
-        /** @brief 입력 맵 레이어를 스택에 넣어 켜고(`InputMap::pushLayer`) 끌 때 빼서 넣기 전의 켬으로 되돌립니다(`popLayer` — 한 쌍). 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */
+        /** @brief 입력 맵 레이어를 모든 사용자의 스택에 넣어 켜고(`InputManager::pushSharedLayer`) 범위가 그 구독을 들어 끌 때 뺍니다. 없는 레이어 · 입력 서비스가 없는 호스트에 적은 레이어는 오류입니다. */
         [[nodiscard]] static bool pushInputLayers( GameFeatureScope& scope, const MinigameDefinition& definition );
         /** @brief 로컬 멀티 미니게임이면 입력 사용자를 열고 끌 때 닫습니다(레이어를 넣은 뒤 — 사용자마다의 맵이 그 레이어를 베낀다). 입력 서비스가 없는 호스트(전용 서버)는 할 일이 없다. */
         [[nodiscard]] static bool openLocalUsers( GameFeatureScope& scope, const MinigameDefinition& definition );

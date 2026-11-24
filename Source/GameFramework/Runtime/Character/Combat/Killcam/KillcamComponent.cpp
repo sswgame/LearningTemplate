@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/SceneManager.h"
@@ -67,6 +68,7 @@ namespace sw
         , _playing{}
         , _pose{}
         , _elapsed{ 0.0f }
+        , _cameraCut{}
         , _bPlaying{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -136,7 +138,7 @@ namespace sw
         _bPlaying = SW_TRUE;
         _pose     = KillcamShot::sample( _playing, _settings, 0.0f );
         applyPose();
-        pManager->getCameraRegistry().setCutCamera( pCamera );
+        pManager->getCameraRegistry().setCutCamera( _cameraCut, pCamera );
         SW_LOG_INFO_ID( "Killcam.Play", "Killcam replays a shot with %# hit(s) for %# s", _playing.getHits().size(), KillcamShot::computeDuration( _playing, _settings ) );
         return true;
     }
@@ -145,14 +147,14 @@ namespace sw
     {
         if ( _bPlaying == SW_FALSE )
             return;
-        _bPlaying                         = SW_FALSE;
-        _pose._phase                      = KillcamPhase::Done;
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        // 틱(재생 끝)에서도 부른다 — 씬의 컷 카메라는 명령 버퍼로 틱 뒤에 비운다.
+        _bPlaying                   = SW_FALSE;
+        _pose._phase                = KillcamPhase::Done;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        // 틱(재생 끝)에서도 부른다 — 씬의 컷 자리는 명령 버퍼로 틱 뒤에 놓는다.
         if ( pManager != nullptr )
-            pManager->executeOrDeferPostTickOnScene( []( GameObjectManager& sceneManager )
-            { sceneManager.getCameraRegistry().setCutCamera( nullptr ); } );
+            pManager->executeOrDeferPostTickOnComponent( *this, []( KillcamComponent& self )
+            { self._cameraCut.reset(); } );
     }
 
     uint32 KillcamComponent::getLastHitCount() const

@@ -78,6 +78,7 @@ namespace sw
         , _shakeFrequency{ CinematicCameraComponentInternal::kDefaultShakeFrequency }
         , _currentCutCamera{}
         , _signalSubscription{}
+        , _pendingView{}
         , _saveBlock{}
     {
     }
@@ -101,6 +102,7 @@ namespace sw
     {
         _signalSubscription.reset();
         _saveBlock.reset();
+        _pendingView.reset();
         _currentCutCamera = GameObjectHandle{};
         Component::onEndPlay();
     }
@@ -127,6 +129,11 @@ namespace sw
             case SequenceCameraSignalKind::CutPrewarm:
             {
                 forwardPendingView( signal );
+                break;
+            }
+            case SequenceCameraSignalKind::PlaybackEnd:
+            {
+                _pendingView.reset(); // 컷이 오기 전에 멈췄다 — 예고한 시점의 LOD 를 쥔 채 두지 않는다
                 break;
             }
             case SequenceCameraSignalKind::Shake:
@@ -201,7 +208,7 @@ namespace sw
         // 대기 뷰로 올려 둔 카메라가 이제 화면에 왔다 — 대기 뷰를 푼다.
         CameraManagerComponent* pCameraManager = pManager != nullptr ? CameraManagerComponent::findForPlayer( *pManager, _localPlayerIndex ) : nullptr;
         if ( pCameraManager != nullptr && pCameraManager->getPendingView()._camera == _currentCutCamera )
-            pCameraManager->clearPendingView();
+            _pendingView.reset();
     }
 
     void CinematicCameraComponent::beginCinematic( const SequenceCameraSignal& signal )
@@ -264,7 +271,7 @@ namespace sw
         CameraPendingView view;
         view._camera       = pTarget->getHandle();
         view._secondsUntil = signal._secondsUntil;
-        pCameraManager->setPendingView( view );
+        _pendingView       = pCameraManager->setPendingView( view );
     }
 
     void CinematicCameraComponent::applyShake( const SequenceCameraSignal& signal )

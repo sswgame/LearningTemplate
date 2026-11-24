@@ -79,7 +79,7 @@ namespace sw::editor
         SequenceBindingView makeBindingView( const SequenceAsset& asset, const SequencePlayerComponent* pContext ) const;
 
     private:
-        vector<SequenceSpanState>     _listPreviewSpan;  ///< 미리보기가 들어간 구간 동작(소리 · 애니메이션)
+        SequencePlaybackState         _preview;          ///< 미리보기가 쥔 구간 동작(소리 · 애니메이션) · 카메라 컷 자리
         vector<SequenceSpawnedObject> _listPreviewSpawn; ///< 미리보기는 스폰하지 않는다 — 바인딩 창이 비어 있는 목록을 가리킨다
         vector<SequenceBindingSlot>   _listNoSlot;       ///< 문맥이 없을 때 바인딩 창이 가리키는 빈 표(읽기만 한다)
         GameObjectHandle              _contextPlayer;    ///< 바인딩 문맥으로 고른 플레이어의 오브젝트

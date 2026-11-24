@@ -47,8 +47,7 @@ namespace sw
      * @class ReflectionProbeBaker
      * @brief 프로브 위치에 90° 정사각 카메라를 두고 면마다 디퍼드 파이프라인으로 그려 조명 결과(`LitColor`, 후처리 앞의 HDR)를 읽고, CPU 로 접고 거릅니다(`ReflectionProbeAsset`).
      * @details 렌더러는 자기 것(`SceneCapture`)이라 주 렌더러의 상태를 건드리지 않는다(`PortraitStudio` 와 같은 격리). 씬은 찍을 씬 그대로다 — 찍는 동안만
-     *          카메라 오브젝트 하나를 씬에 두고 활성 게임 카메라로 고른 뒤 지운다(지우면 직접 고른 카메라가 풀려 씬이 레지스트리 규칙으로 다시 고른다 — 찍기 전에
-     *          `setActiveGameCamera` 로 직접 고른 카메라가 있었으면 그 선택은 풀린다).
+     *          카메라 오브젝트 하나를 씬에 두고 컷 자리(`CameraRegistry::setCutCamera`)를 쥔 뒤 지운다(놓으면 앞의 컷 · 직접 고른 카메라가 그대로 이어진다).
      *          포워드가 아니라 디퍼드인 까닭: 포워드 파이프라인의 SceneColor 는 RGBA8 이라 1 을 넘는 빛이 잘린다. 디퍼드의 LitColor 는 RGBA16F 이고 하늘 · 반투명까지 들어간 뒤다.
      *
      *          찍기(`captureProbe`)와 접기(`makeProbeData`)를 나눈다 - 찍기는 GPU 를 기다리는 디바이스 스레드 일이고, 풀기 · 접기 · 거르기는 CPU 일이라 에디터가 워커에 맡긴다.

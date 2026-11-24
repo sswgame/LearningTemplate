@@ -53,6 +53,7 @@ namespace sw
         , _pWindow{ nullptr }
         , _pInput{ nullptr }
         , _textInputSubscription{}
+        , _keyboardFocus{}
         , _bOpen{ SW_FALSE }
         , _bShellMapChecked{ SW_FALSE }
         , _bShellMapComplete{ SW_FALSE }
@@ -81,8 +82,7 @@ namespace sw
         if ( _pInput != nullptr )
         {
             _textInputSubscription.reset(); // 이 콘솔이 건 칸만 놓는다
-            if ( _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole )
-                _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
+            _keyboardFocus.reset();
             _pInput = nullptr;
         }
         _pWindow.reset();
@@ -141,7 +141,7 @@ namespace sw
         _pendingText.clear();
         _console.resetHistoryCursor();
         if ( _pInput != nullptr )
-            _pInput->setKeyboardFocus( bOpen ? InputKeyboardFocus::DevConsole : InputKeyboardFocus::Game );
+            _keyboardFocus = bOpen ? _pInput->claimKeyboardFocus( InputKeyboardFocus::DevConsole ) : Subscription{};
         if ( _pWindow != nullptr )
             _pWindow->setVisible( bOpen );
     }

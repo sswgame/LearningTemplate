@@ -28,21 +28,20 @@ namespace sw
         , _lookSensitivity{ 0.0022f }
         , _bManageViewTarget{ true }
         , _mouseLockAction{ CommonInputActions::kToggleMouseLock } // 엔진 공용 액션 이름 — ControlSystem 이 코드로 붙이는 컨트롤러도 같은 값이다
-        , _listPushedLayer{}
+        , _listPawnLayer{}
+        , _mouseLock{}
         , _previousPawn{}
         , _warnedPawn{}
         , _bMouseLockRequested{ SW_FALSE }
-        , _bMouseLockApplied{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
     void PlayerControllerComponent::onUnregister( GameObjectManager& manager )
     {
-        // 씬을 비우는 중이면 조종 시스템이 먼저 떨어져 놓기(onUnpossessed)가 오지 않는다 — 건 잠금은 여기서 푼다.
-        InputManager* pInput = _bMouseLockApplied == SW_TRUE ? findInputManager( manager ) : nullptr;
-        if ( pInput != nullptr )
-            applyMouseLock( *pInput, false );
+        // 씬을 비우는 중이면 조종 시스템이 먼저 떨어져 놓기(onUnpossessed)가 오지 않는다 — 건 잠금 · 폰 레이어는 여기서 놓는다.
+        _mouseLock.reset();
+        _listPawnLayer.clear();
         _bMouseLockRequested = SW_FALSE;
         ControllerComponent::onUnregister( manager );
     }
@@ -149,6 +148,7 @@ namespace sw
         if ( pInput != nullptr && pUserMap == nullptr )
             SW_LOG_WARNING_ID( "Control.NoLocalUser", "Player %# possessed '%#' but only %# local users are open (InputManager::openLocalUsers) - it has no input", _playerIndex, pPawnOwner->getName().c_str(),
                                pInput->getLocalUserCount() );
+        _listPawnLayer.clear();
         if ( pUserMap != nullptr )
         {
             for ( const hashed_string& layer : pawn.getInputLayers() )
@@ -156,9 +156,8 @@ namespace sw
                 // pushLayer 는 없는 레이어를 빈 레이어로 만들어 넣는다 — 이름이 틀리면 그 레이어의 액션이 켜지지 않는 것을 알 길이 없어 미는 쪽에서 알린다.
                 if ( _warnedPawn != pawn.getHandle() && pUserMap->hasLayer( layer ) == false )
                     SW_LOG_WARNING_ID( "Control.InputLayerNotInInputMap", "Pawn '%#' input layer '%#' is not in the InputMap - pushing it enables no action", pPawnOwner->getName().c_str(), layer.c_str() );
-                pUserMap->pushLayer( layer );
+                _listPawnLayer.push_back( pUserMap->pushLayer( layer ) );
             }
-            _listPushedLayer = pawn.getInputLayers();
             if ( _warnedPawn != pawn.getHandle() )
             {
                 _warnedPawn = TComponentHandle<PawnComponent>{ &pawn };
@@ -178,20 +177,9 @@ namespace sw
 
     void PlayerControllerComponent::onUnpossessed( PawnComponent& pawn )
     {
-        GameObject*          pOwner   = getOwner();
-        GameObjectManager*   pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        const ControlSystem* pSystem  = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
-        InputManager*        pInput   = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
-        InputMap* const      pUserMap = pInput != nullptr ? pInput->findUserMap( _playerIndex ) : nullptr;
-        for ( size_t index = _listPushedLayer.size(); index > 0; --index )
-        {
-            if ( pUserMap != nullptr )
-                pUserMap->popLayer( _listPushedLayer[index - 1] );
-        }
         _bMouseLockRequested = SW_FALSE;
-        if ( pInput != nullptr )
-            applyMouseLock( *pInput, false );
-        _listPushedLayer.clear();
+        _mouseLock.reset();
+        _listPawnLayer.clear();
         _previousPawn = pawn.getOwner() != nullptr ? pawn.getOwner()->getHandle() : GameObjectHandle{};
         if ( isSwitchingPawn() == false )
             sendPossessionChanged( GameObjectHandle{} );
@@ -236,17 +224,10 @@ namespace sw
 
     void PlayerControllerComponent::applyMouseLock( InputManager& input, bool bLocked )
     {
-        if ( bLocked == ( _bMouseLockApplied == SW_TRUE ) )
-            return;
-        input.setMouseLockMode( bLocked ? MouseLockMode::LockedInCenter : MouseLockMode::None );
-        input.setCursorVisible( bLocked == false );
-        _bMouseLockApplied = bLocked ? SW_TRUE : SW_FALSE;
-    }
-
-    InputManager* PlayerControllerComponent::findInputManager( const GameObjectManager& manager )
-    {
-        const ControlSystem* pSystem = ControlSystem::find( manager );
-        return pSystem != nullptr ? pSystem->findInputManager() : game::findSubsystem<InputManager>();
+        if ( bLocked == false )
+            _mouseLock.reset();
+        else if ( _mouseLock.isActive() == false )
+            _mouseLock = input.claimMouseLock( MouseLockMode::LockedInCenter );
     }
 
     void PlayerControllerComponent::sendPossessionChanged( const GameObjectHandle& pawnObject )
