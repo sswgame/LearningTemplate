@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/EditorExports.h"
@@ -81,8 +82,8 @@ namespace sw::editor
     /** @brief 컴포넌트 프리셋 파일 한 줄입니다. */
     struct InspectorPresetRow
     {
-        string _file;        ///< 프리셋 파일 경로
-        string _displayName; ///< 메뉴에 보일 이름
+        AbsolutePath _file;        ///< 프리셋 파일 경로
+        string       _displayName; ///< 메뉴에 보일 이름
     };
 
     /** @brief 인스펙터 창이 한 프레임 그릴 값입니다. 포인터 · 참조를 두지 않는다(MVVM 계약). */
@@ -186,7 +187,7 @@ namespace sw::editor
         /** @brief 대상 컴포넌트를 이름 붙인 프리셋으로 저장합니다. 성공하면 true 이고 목록을 다시 모읍니다. */
         bool saveComponentPreset( const EditorCommandTarget& target, string_view presetName );
         /** @brief 프리셋 파일을 대상 컴포넌트에 입힙니다. */
-        void loadComponentPreset( const EditorCommandTarget& target, string_view presetFile );
+        void loadComponentPreset( const EditorCommandTarget& target, const AbsolutePath& presetFile );
         /** @brief 맥락 명령 대상이 컴포넌트를 가리키면 true 입니다. */
         static bool hasTargetComponent( const EditorCommandTarget& target );
 
@@ -206,7 +207,7 @@ namespace sw::editor
         InspectorImportSettings _importSettings;  ///< 오브젝트를 고르지 않았을 때 고른 임포트 원본의 설정
         unique_ptr<MultiEdit>   _pMultiEdit;      ///< 다중 선택의 공통 컴포넌트(선택 · 씬 구조가 바뀌면 다시 모은다)
         EditorFileCollectJob    _presetJob;
-        vector<string>          _listPresetFile;
+        vector<AbsolutePath>    _listPresetFile;
         uint64                  _lockedObjectID;        ///< 자물쇠로 잠근 오브젝트. 0 이면 선택을 따라간다
         uint64                  _shownObjectID;         ///< 이번 gather 가 보인 오브젝트
         uint32                  _currentMultiComponent; ///< 그리드가 지금 그리는 공통 컴포넌트 번호

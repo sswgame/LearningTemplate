@@ -142,7 +142,7 @@ namespace sw
                 const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
                 if ( listArgument.size() != 1 || pGameConfig == nullptr )
                     return false;
-                string folder;
+                AbsolutePath folder;
                 if ( ModSession::exportPackedMod( listArgument[0], pGameConfig->_packRoot.get(), folder ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -151,7 +151,7 @@ namespace sw
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "mod.pack %#: %#", listArgument[0], folder );
+                replyBuilder.appendFormat( "mod.pack %#: %#", listArgument[0], folder.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -204,9 +204,9 @@ namespace sw
         return ProcessRoots::get()._saved.join( ModSessionInternal::kExportFolderName );
     }
 
-    bool ModSession::exportPackedMod( string_view id, string_view packRoot, string& outFolder )
+    bool ModSession::exportPackedMod( string_view id, string_view packRoot, AbsolutePath& outFolder )
     {
-        outFolder.clear();
+        outFolder = {};
         // id 는 바깥 입력이다 — 형식이 맞아야 경로로 쓴다(`..` · 구분자 · 대문자가 없다).
         if ( ModManifest::isValidID( id ) == false )
         {
@@ -247,7 +247,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ModSession.ExportFailed", "mod.pack: '%#' could not be packed into %#", string( id ), exportFolder.str() );
             return false;
         }
-        outFolder = exportFolder.str();
+        outFolder = exportFolder;
         SW_LOG_INFO_ID( "ModSession.Exported", "Mod '%#' packed for shipping: %#", string( id ), exportFolder.str() );
         return true;
     }
@@ -295,9 +295,9 @@ namespace sw
         for ( const size_t manifestIndex : listOrder )
         {
             const ModManifest& manifest = listManifest[manifestIndex];
-            string             packPath;
+            AbsolutePath       packPath;
             ModDigestEntry     entry;
-            if ( preparePack( request, manifest, settings, packPath ) == false || validatePack( FileUtil::toDiskPath( packPath ), manifest, settings, entry._contentHash ) == false )
+            if ( preparePack( request, manifest, settings, packPath ) == false || validatePack( packPath, manifest, settings, entry._contentHash ) == false )
             {
                 release();
                 return false;
@@ -305,7 +305,7 @@ namespace sw
             entry._id      = manifest._id;
             entry._version = manifest._version;
             listEntry.push_back( std::move( entry ) );
-            listPackPath.push_back( std::move( packPath ) );
+            listPackPath.push_back( packPath.str() );
         }
         const ModSetDigest digest = ModSetDigest::make( std::move( listEntry ) );
         if ( request._pAllowList != nullptr && request._pAllowList->validateDigest( digest ) == false )
@@ -486,7 +486,7 @@ namespace sw
         return true;
     }
 
-    bool ModSession::preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, string& outPackPath )
+    bool ModSession::preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, AbsolutePath& outPackPath )
     {
         const AbsolutePath modFolder    = request._installFolder.join( manifest._id );
         const AbsolutePath packPath     = modFolder.join( ModPackBuilder::kPackFileName );
@@ -502,7 +502,7 @@ namespace sw
         }
         if ( bPacked )
         {
-            outPackPath = packPath.str();
+            outPackPath = packPath;
             return true;
         }
         // 소스 모드는 개발 구성의 제작 반복용이다 — 배포 구성은 묶은 팩만 받는다(낱개 파일을 읽지 않는 규칙과 같다).
@@ -523,7 +523,7 @@ namespace sw
         if ( ModPackBuilder::buildFromFolder( sourceFolder, builtPath, settings ) == false )
             return false;
         _listBuiltPackPath.push_back( builtPath );
-        outPackPath = builtPath.str();
+        outPackPath = builtPath;
         return true;
     }
 

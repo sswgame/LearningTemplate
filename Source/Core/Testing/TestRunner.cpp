@@ -1180,8 +1180,8 @@ namespace sw::test
             formatstring( arrBuffer, constant::buffer::kMax1024, "[ WARNING  ] the scratch folder could not be removed: %#", scratchRoot.str() );
             Internal::writeLine( arrBuffer );
         }
-        const AbsolutePath reportPath = options._reportPath.empty() == false ? FileUtil::toDiskPath( options._reportPath ) : bKeepScratch ? scratchRoot.join( "report.json" )
-                                                                                                                                          : AbsolutePath{};
+        const AbsolutePath reportPath = options._reportPath.empty() == false ? options._reportPath : bKeepScratch ? scratchRoot.join( "report.json" )
+                                                                                                                  : AbsolutePath{};
         if ( reportPath.empty() == false )
         {
             StringBuilder<constant::buffer::kMax4096> report; // 직렬화 글이라 잘리면 안 된다 — 넘치면 힙으로 자란다

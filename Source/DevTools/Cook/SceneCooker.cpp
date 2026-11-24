@@ -373,7 +373,7 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store,
+    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
                                        const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
@@ -417,7 +417,7 @@ namespace sw
         VectorUtil::sort( listSceneFile );
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
-        const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
+        const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir.str() );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
         const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );

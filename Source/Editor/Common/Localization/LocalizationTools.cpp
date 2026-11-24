@@ -279,9 +279,8 @@ namespace sw
                     inoutResult._bOutOfDate = true;
                     return;
                 }
-                const bool                   bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
-                const optional<AbsolutePath> translationFile  = FileUtil::requireAbsolutePath( path.str() );
-                if ( bHasTranslations && ( translationFile.has_value() == false || translation.saveToFile( *translationFile ) == false ) )
+                const bool bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
+                if ( bHasTranslations && ( translation.saveToFile( path ) == false ) )
                     inoutResult._report._listIssue.push_back( { path.str(), "translation table could not be written", true } );
                 if ( bMemoryChanged && memory.saveToFile( memoryPath ) == false )
                     inoutResult._report._listIssue.push_back( { memoryPath.str(), "translation memory could not be written", true } );
@@ -435,23 +434,23 @@ namespace sw
             {
                 for ( const string& assetRoot : project._listAssetRoot )
                 {
-                    const AbsolutePath assetFolder = resolveAbsolutePath( assetRoot );
-                    vector<string>     listFile;
+                    const AbsolutePath   assetFolder = resolveAbsolutePath( assetRoot );
+                    vector<AbsolutePath> listFile;
                     // 에셋 루트가 리소스 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다
-                    const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( assetFolder.str(), "", listFile, true );
+                    const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( assetFolder, "", listFile, true );
                     if ( bListed == false )
                     {
                         gatherer.addIssue( assetRoot, "asset root does not exist", true );
                         continue;
                     }
                     VectorUtil::sort( listFile );
-                    for ( const string& filePath : listFile )
+                    for ( const AbsolutePath& filePath : listFile )
                     {
-                        const bool bCandidate = FileUtil::hasExtension( filePath, ".xml" ); // 대화 그래프(`.dialogue.xml`)도 XML 이다
+                        const bool bCandidate = FileUtil::hasExtension( filePath.str(), ".xml" ); // 대화 그래프(`.dialogue.xml`)도 XML 이다
                         string     text;
-                        if ( bCandidate == false || FileUtil::readTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
+                        if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
                             continue;
-                        LocalizationTools::gatherAssetFile( project, gatherer, FileUtil::skipUTF8Bom( text ), editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( filePath ) ) );
+                        LocalizationTools::gatherAssetFile( project, gatherer, FileUtil::skipUTF8Bom( text ), editor::getSubsystem<AssetPaths>().toAssetID( filePath ) );
                         gatherer.countFile();
                     }
                 }
@@ -588,8 +587,7 @@ namespace sw
         {
             if ( bWrite )
             {
-                const optional<AbsolutePath> gatherFile = FileUtil::requireAbsolutePath( outResult._gatherTablePath.str() );
-                outResult._bWritten                     = gatherFile.has_value() && gatherTable.saveToFile( *gatherFile );
+                outResult._bWritten = gatherTable.saveToFile( outResult._gatherTablePath );
             }
             else
                 outResult._bOutOfDate = true;
@@ -834,8 +832,7 @@ namespace sw
             if ( bStale == false && poEntry._bFuzzy == false )
                 (void)memory.addPair( poEntry._source, poEntry._translation );
         }
-        const optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( translationPath.str() );
-        if ( translationFile.has_value() == false || translation.saveToFile( *translationFile ) == false || memory.saveToFile( memoryPath ) == false )
+        if ( translation.saveToFile( translationPath ) == false || memory.saveToFile( memoryPath ) == false )
         {
             SW_LOG_ERROR_ID( "LocalizationTools.TranslationTableCouldNot", "[ImportPo] translation table '%#' could not be written", translationPath.c_str() );
             return false;

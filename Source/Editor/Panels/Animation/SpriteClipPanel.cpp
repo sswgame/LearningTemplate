@@ -528,7 +528,7 @@ namespace sw::editor
         return true;
     }
 
-    void SpriteClipPanel::collectFilesToSave( vector<string>& outListPath ) const
+    void SpriteClipPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         appendFileToSave( SpriteClipViewModel::computeClipPath( getLoadedAssetPath() ), outListPath );
     }

@@ -72,16 +72,16 @@ namespace sw::editor
         // 1) 한 번에 끝나는 작업. 성공하면 결과 경로를 돌려준다. 실패는 `EditorAssetFileCommands` 가 알린다
         // ------------------------------------------------------------------------------
         /** @brief @p parentAbs 에 새 폴더를 만듭니다. @p parentAbs 가 비어 있으면 false 입니다. */
-        [[nodiscard]] static bool createFolder( const AbsolutePath& parentAbs, string& outFolderAbs );
+        [[nodiscard]] static bool createFolder( const AbsolutePath& parentAbs, AbsolutePath& outFolderAbs );
         /** @brief @p folderAbs 에 새 에셋을 만듭니다. @p folderAbs 가 비어 있으면 false 입니다. */
-        [[nodiscard]] static bool createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
+        [[nodiscard]] static bool createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, AbsolutePath& outAssetAbs );
         /** @brief 에셋을 같은 폴더에 복제합니다. @p sourceAbs 가 비어 있으면 false 입니다. */
-        static bool duplicateAsset( const AbsolutePath& sourceAbs, string& outAssetAbs );
+        static bool duplicateAsset( const AbsolutePath& sourceAbs, AbsolutePath& outAssetAbs );
         /**
          * @brief 에셋(폴더면 그 안 전부)을 @p folderAbs 로 옮기고 참조를 고칩니다 — 트랜잭션이다(`EditorAssetFileCommands::applyAssetMoves`). 폴더는 다 옮긴 뒤 빈 원본을 지운다.
          * @return 이미 그 폴더에 있거나, 자기 안으로 옮기거나, 고칠 수 없는 참조가 있거나, 쓰기가 졌으면(되돌린다) false 입니다.
          */
-        [[nodiscard]] static bool moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs );
+        [[nodiscard]] static bool moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, EditorAssetIndex& inoutIndex, AbsolutePath& outDestinationAbs );
         /** @brief `moveAssetToFolder` 가 할 일을 디스크를 건드리지 않고 계획합니다(확인 대화상자의 미리보기). 옮길 수 없으면 false 이고 `_failure` 에 이유입니다. */
         [[nodiscard]] static bool planMoveToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
 

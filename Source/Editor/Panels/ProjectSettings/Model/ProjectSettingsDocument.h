@@ -42,7 +42,7 @@ namespace sw::editor
          * @return `Loaded` 면 파일 값을 입혔고, `Missing` 이면 파일(요소 모드는 요소)이 없어 기본값입니다. `Invalid` 면 파일이 틀렸거나 타입에 기본 생성자가 없어 열지 못했습니다.
          *         `Invalid` 일 때도 가능하면 기본값 인스턴스를 보관하고 있어, 창이 오류를 보이며 Reset 으로 고칠 수 있습니다.
          */
-        [[nodiscard]] ConfigReadResult open( const TypeInfo& type, string_view absolutePath, string_view elementName = {} );
+        [[nodiscard]] ConfigReadResult open( const TypeInfo& type, const AbsolutePath& absolutePath, string_view elementName = {} );
         /** @brief 인스턴스를 해제합니다. */
         void shutdown();
 

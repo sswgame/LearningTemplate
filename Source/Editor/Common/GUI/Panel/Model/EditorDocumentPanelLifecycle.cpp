@@ -88,23 +88,23 @@ namespace sw::editor
         }
     }
 
-    void EditorDocumentPanel::collectFilesToSave( vector<string>& outListPath ) const
+    void EditorDocumentPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         appendFileToSave( _loadedAssetPath, outListPath );
     }
 
-    void EditorDocumentPanel::appendFileToSave( string_view path, vector<string>& outListPath )
+    void EditorDocumentPanel::appendFileToSave( string_view path, vector<AbsolutePath>& outListPath )
     {
         if ( path.empty() )
             return;
         if ( AbsolutePath::isStrictAbsolute( path ) )
         {
-            outListPath.push_back( FileUtil::normalizeSeparators( path ) );
+            outListPath.push_back( FileUtil::toDiskPath( path ) );
             return;
         }
         const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
         if ( diskPath.has_value() )
-            outListPath.push_back( diskPath->str() );
+            outListPath.push_back( *diskPath );
     }
 
     void EditorDocumentPanel::onDocumentSaved()

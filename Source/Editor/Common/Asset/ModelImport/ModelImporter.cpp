@@ -622,9 +622,8 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %# (%#)", sourcePath, fractured.error().message(), fractured.error().detail() );
                     return false;
                 }
-                const FractureAsset&         fracture     = *fractured;
-                const optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath.str() );
-                if ( fractureFile.has_value() == false || fracture.saveToFile( *fractureFile ) == false )
+                const FractureAsset& fracture = *fractured;
+                if ( fracture.saveToFile( fracturePath ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFractureAsset", "Failed to write fracture asset %#", fracturePath.c_str() );
                     return false;
@@ -651,12 +650,12 @@ namespace sw::editor
                 rawFolder.appendFormat( "%#/%#/%#", string_view( sideFolder ).substr( 0, folderAt ), ModelImportUtil::kRawModelFolder, string_view( sideFolder ).substr( folderAt + marker.size() ) );
                 if ( FileUtil::isDirectory( FileUtil::toDiskPath( rawFolder.view() ) ) == false )
                     return uniqueFootprint;
-                vector<string> listSource;
-                (void)EditorContentScan::collectFiles( rawFolder.view(), "", listSource, true ); // 도중에 멈춘 목록은 훑기가 알린다
-                for ( const string& source : listSource )
+                vector<AbsolutePath> listSource;
+                (void)EditorContentScan::collectFiles( FileUtil::toDiskPath( rawFolder.view() ), "", listSource, true ); // 도중에 멈춘 목록은 훑기가 알린다
+                for ( const AbsolutePath& source : listSource )
                 {
-                    if ( ModelImportUtil::isSourceModel( source ) )
-                        uniqueFootprint.insert( makeFootprint( ModelImporter::makeImportedModelPath( FileUtil::normalizeSeparators( source ) ).str() ) );
+                    if ( ModelImportUtil::isSourceModel( source.str() ) )
+                        uniqueFootprint.insert( makeFootprint( ModelImporter::makeImportedModelPath( FileUtil::normalizeSeparators( source.str() ) ).str() ) );
                 }
                 return uniqueFootprint;
             }
@@ -683,9 +682,8 @@ namespace sw::editor
                 {
                     StringBuilder<constant::buffer::kMax256> partNameBuilder;
                     partNameBuilder.appendFormat( "%#%#", attachment._fileStem, MeshAssetFormat::kExtension );
-                    const AbsolutePath           partPath = sideFolder.join( ModelImportUtil::kPartFolder ).join( partNameBuilder.view() );
-                    const optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath.str() );
-                    if ( partFile.has_value() == false || MeshAssetFormat::saveToFile( *partFile, attachment._mesh ) == false )
+                    const AbsolutePath partPath = sideFolder.join( ModelImportUtil::kPartFolder ).join( partNameBuilder.view() );
+                    if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAttachmentMesh", "Failed to write attachment mesh %#", partPath.c_str() );
                         return false;
@@ -705,7 +703,7 @@ namespace sw::editor
              * @details 언리얼이 임포트 때 기존 USkeleton 을 고르는 일을 내용 대조로 저절로 한다. 공용 폴더는 옆 폴더 밖이라 다시 임포트해도 지워지지 않는다.
              *          원본이 사라져 아무도 가리키지 않는 파일은 남는다(스켈레톤 하나는 작다).
              */
-            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
+            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, string_view outputPath, AbsolutePath& outSharedPath )
             {
                 const string                            normalized = FileUtil::normalizeSeparators( outputPath );
                 StringBuilder<constant::buffer::kMax64> marker;
@@ -720,13 +718,13 @@ namespace sw::editor
                 const uint64                             hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, body.data(), body.size() );
                 StringBuilder<constant::buffer::kMax256> sharedPathBuilder;
                 sharedPathBuilder.appendFormat( "%#%#/skeleton_%#%#", string_view( normalized ).substr( 0, folderEnd + marker.size() ), ModelImportUtil::kSharedSkeletonFolder, hash, Skeleton::kExtension );
-                outSharedPath = string( sharedPathBuilder.view() );
+                outSharedPath = FileUtil::toDiskPath( sharedPathBuilder.view() );
 
                 // 잠그지 않는다: 이름이 내용 지문이라 워커 둘이 같은 파일을 써도 같은 글이고, `writeTextFile` 은 저마다의 임시 파일에 쓴 뒤 바꿔 끼운다.
                 string existing;
-                if ( FileUtil::exists( FileUtil::toDiskPath( outSharedPath ) ) && FileUtil::readTextFile( FileUtil::toDiskPath( outSharedPath ), existing ) && existing == body )
+                if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == body )
                     return true;
-                if ( FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( outSharedPath ) ) == false || FileUtil::writeTextFile( FileUtil::toDiskPath( outSharedPath ), body ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, body ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
                     return false;
@@ -950,8 +948,7 @@ namespace sw::editor
         const AbsolutePath sideFolder = makeImportedSideFolder( outputPath.str() );
         if ( clearSideFiles( outputPath.str() ) == false )
             return false;
-        const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath.str() );
-        if ( outputFile.has_value() == false || MeshAssetFormat::saveToFile( *outputFile, result._mesh ) == false )
+        if ( MeshAssetFormat::saveToFile( outputPath, result._mesh ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeshAsset", "Failed to write mesh asset %#", outputPath.str() );
             return false;
@@ -975,10 +972,10 @@ namespace sw::editor
         if ( Internal::writeAttachments( assetPaths, result, sideFolder, skeletonFileData._listAttachment ) == false )
             return false;
         // 스켈레톤은 내용당 한 벌이고, 모델 옆 파일은 그것을 가리키는 차이 없는 변형이다 — 데이터가 적은 경로(프리팹 · 본 LOD · 리타깃 프로필)는 그대로다.
-        string sharedSkeletonPath;
+        AbsolutePath sharedSkeletonPath;
         if ( Internal::writeSharedSkeleton( result._skeleton, outputPath.str(), sharedSkeletonPath ) == false )
             return false;
-        skeletonFileData._base = assetPaths.toAssetID( FileUtil::toDiskPath( sharedSkeletonPath ) );
+        skeletonFileData._base = assetPaths.toAssetID( sharedSkeletonPath );
         StringBuilder<constant::buffer::kMax256> skeletonNameBuilder;
         skeletonNameBuilder.appendFormat( "%#%#", stem, Skeleton::kExtension );
         const AbsolutePath skeletonPath = sideFolder.join( skeletonNameBuilder.view() );
@@ -1063,26 +1060,26 @@ namespace sw::editor
             problemBuilder.appendFormat( "ModelImportConfig: rule %# matches no model source - its patterns are dead (a moved folder?)", rule );
             summary._listProblem.push_back( string( problemBuilder.view() ) );
         }
-        bakeRetargetedClips( assetPaths, resourceRoot.str(), mode, summary ); // 구울 원본 클립이 위에서 막 가져온 공유 파일이다
+        bakeRetargetedClips( assetPaths, resourceRoot, mode, summary ); // 구울 원본 클립이 위에서 막 가져온 공유 파일이다
         return summary;
     }
 
-    void ModelImporter::bakeRetargetedClips( const AssetPaths& assetPaths, string_view resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary )
+    void ModelImporter::bakeRetargetedClips( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, AssetImportMode mode, AssetImportSummary& inoutSummary )
     {
         // 손으로 쓴 셋(가져오기 산출물 `models/` 밖)의 `<clip … retarget="…"/>` 줄이 대상이다. 굽기는 클립 몇 개라 가볍다 — 가져올 때마다 다시 구워 원본 · 프로필이 바뀐 것을 놓치지 않는다.
-        vector<string> listSetFile;
+        vector<AbsolutePath> listSetFile;
         // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 굽지 않는다(EditorContentScan 이 뺀다)
         if ( EditorContentScan::collectFiles( resourceRoot, AnimationSet::kExtension, listSetFile, true ) == false )
         {
             inoutSummary._listProblem.push_back( "retarget bake: the animation sets under the content root could not be listed" );
             return;
         }
-        for ( const string& setFile : listSetFile )
+        for ( const AbsolutePath& setFile : listSetFile )
         {
-            if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile ), "/models/" ) )
+            if ( StringUtil::contains( FileUtil::normalizeSeparators( setFile.str() ), "/models/" ) )
                 continue;
             AnimationSet set;
-            if ( set.loadCopyFromAsset( AssetID{ assetPaths.toAssetID( FileUtil::toDiskPath( setFile ) ) } ) == false )
+            if ( set.loadCopyFromAsset( AssetID{ assetPaths.toAssetID( setFile ) } ) == false )
                 continue; // 셋 읽기가 이유를 남겼다 — 셋을 쓰는 쪽이 같은 오류로 멈춘다
             for ( const AnimationSetEntry& entry : set.getEntries() )
             {
@@ -1129,33 +1126,29 @@ namespace sw::editor
         return FileUtil::toDiskPath( FileUtil::removeExtension( importedMeshPath ) );
     }
 
-    void ModelImporter::collectSideFiles( string_view importedMeshPath, vector<string>& outListPath )
+    void ModelImporter::collectSideFiles( string_view importedMeshPath, vector<AbsolutePath>& outListPath )
     {
         outListPath.clear();
         const AbsolutePath sideFolder = makeImportedSideFolder( importedMeshPath );
         if ( FileUtil::isDirectory( sideFolder ) == false )
             return;
         (void)FileUtil::collectFiles( sideFolder, "", outListPath, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다음 대조가 다시 임포트한다
-        for ( string& path : outListPath )
-        {
-            path = FileUtil::normalizeSeparators( path );
-        }
         const unordered_set<string> uniqueNested = ModelImporterInternal::collectNestedFootprints( importedMeshPath );
         if ( uniqueNested.empty() == false )
         {
-            VectorUtil::removeIf( outListPath, [&uniqueNested]( const string& path )
-            { return ModelImporterInternal::isInFootprint( path, uniqueNested ); } );
+            VectorUtil::removeIf( outListPath, [&uniqueNested]( const AbsolutePath& path )
+            { return ModelImporterInternal::isInFootprint( path.str(), uniqueNested ); } );
         }
         VectorUtil::sort( outListPath );
     }
 
     bool ModelImporter::clearSideFiles( string_view importedMeshPath )
     {
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         collectSideFiles( importedMeshPath, listFile );
-        for ( const string& path : listFile )
+        for ( const AbsolutePath& path : listFile )
         {
-            if ( FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
+            if ( FileUtil::removeFile( path ) )
                 continue;
             SW_LOG_ERROR_ID( "ModelImporter.FailedClearImportedModel", "Failed to clear the imported model file %#", path.c_str() );
             return false;
@@ -1246,14 +1239,14 @@ namespace sw::editor
         const AbsolutePath fracturePath = FileUtil::toDiskPath( FractureAsset::makePathForMesh( importedMeshPath.str() ) );
         if ( FileUtil::isRegularFile( fracturePath ) )
             outListPath.push_back( fracturePath );
-        vector<string> listFile;
+        vector<AbsolutePath> listFile;
         collectSideFiles( importedMeshPath.str(), listFile );
         unordered_set<string> uniqueShared;
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
-            outListPath.push_back( FileUtil::toDiskPath( file ) );
+            outListPath.push_back( file );
             string text;
-            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
+            if ( ImportedAssetStore::isReferrer( file.str() ) && FileUtil::readTextFile( file, text ) )
             {
                 vector<AbsolutePath> listShared;
                 ImportedAssetStore::collectReferencedFiles( importedMeshPath.str(), text, listShared );
@@ -1279,20 +1272,20 @@ namespace sw::editor
             hash                      = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
         // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
-        const string   sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath.str() ).str() );
-        vector<string> listFile;
+        const string         sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath.str() ).str() );
+        vector<AbsolutePath> listFile;
         collectSideFiles( importedMeshPath.str(), listFile );
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
-            string relative = file;
+            string relative = file.str();
             if ( relative.size() > sideFolder.size() )
                 relative = relative.substr( sideFolder.size() );
             hash                  = HashUtil::computeStringHash64( relative.c_str(), relative.size(), false, hash );
-            const uint64 fileHash = AssetImportStampUtil::computeFileHash( FileUtil::toDiskPath( file ) );
+            const uint64 fileHash = AssetImportStampUtil::computeFileHash( file );
             hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
             // 옆 폴더 파일이 가리키는 공유 파일도 결과다 — 지우거나 손대면 어긋남이다.
             string text;
-            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( FileUtil::toDiskPath( file ), text ) )
+            if ( ImportedAssetStore::isReferrer( file.str() ) && FileUtil::readTextFile( file, text ) )
                 hash = ImportedAssetStore::mixReferencedFiles( importedMeshPath.str(), text, hash );
         }
         return hash;

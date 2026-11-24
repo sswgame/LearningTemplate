@@ -497,11 +497,11 @@ namespace sw::editor
             if ( FileUtil::isDirectory( absPath ) )
             {
                 // 폴더가 생겼다(옮겨 왔다) — 그 아래 파일을 하나씩 넣는다. `.meta` 는 전체 훑기와 같은 규칙으로 빠진다(EditorContentScan).
-                vector<string> listFile;
-                (void)EditorContentScan::collectFiles( absPath.str(), "", listFile, true );
-                for ( const string& filePath : listFile )
+                vector<AbsolutePath> listFile;
+                (void)EditorContentScan::collectFiles( absPath, "", listFile, true );
+                for ( const AbsolutePath& filePath : listFile )
                 {
-                    const string fileDisplayPath = EditorAssetIndexInternal::makeDisplayPath( resourceRoot.str(), filePath );
+                    const string fileDisplayPath = EditorAssetIndexInternal::makeDisplayPath( resourceRoot.str(), filePath.str() );
                     if ( fileDisplayPath.empty() == false )
                         refreshFromDisk( _data, resourceRoot, fileDisplayPath, false );
                 }

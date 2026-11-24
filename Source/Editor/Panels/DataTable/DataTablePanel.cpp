@@ -111,7 +111,7 @@ namespace sw::editor
         return bSaved;
     }
 
-    void DataTablePanel::collectFilesToSave( vector<string>& outListPath ) const
+    void DataTablePanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         _model.collectFilesToSave( outListPath );
     }

@@ -69,21 +69,21 @@ namespace sw::editor
         return FileUtil::readFile( *contentPath, outBytes ) && outBytes.empty() == false;
     }
 
-    void AssetSourceLocator::collectStoredSources( const AbsolutePath& folder, vector<string>& inoutListSourcePath )
+    void AssetSourceLocator::collectStoredSources( const AbsolutePath& folder, vector<AbsolutePath>& inoutListSourcePath )
     {
         unordered_set<string> uniqueListed;
-        for ( const string& path : inoutListSourcePath )
-            uniqueListed.insert( FileUtil::normalizeSeparators( path ) );
-        vector<string> listMetaPath;
+        for ( const AbsolutePath& path : inoutListSourcePath )
+            uniqueListed.insert( FileUtil::normalizeSeparators( path.str() ) );
+        vector<AbsolutePath> listMetaPath;
         (void)EditorContentScan::collectSidecarFiles( folder, listMetaPath ); // 폴더를 훑지 못한 까닭은 FileUtil 이 남긴다
-        for ( const string& metaPath : listMetaPath )
+        for ( const AbsolutePath& metaPath : listMetaPath )
         {
-            const AbsolutePath sourcePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( string_view( metaPath ).substr( 0, metaPath.size() - AssetMeta::kExtension.size() ) ) );
+            const AbsolutePath sourcePath = FileUtil::toDiskPath( FileUtil::normalizeSeparators( string_view( metaPath.str() ).substr( 0, metaPath.str().size() - AssetMeta::kExtension.size() ) ) );
             const AbsolutePath diskPath   = sourcePath;
             if ( uniqueListed.find( sourcePath.str() ) != uniqueListed.end() || FileUtil::isRegularFile( diskPath ) )
                 continue; // 파일이 있다(거의 모든 원본 — 서술을 열지 않는다)
             if ( AssetSourceLocatorInternal::findStoredAddress( diskPath ).has_value() )
-                inoutListSourcePath.push_back( sourcePath.str() );
+                inoutListSourcePath.push_back( sourcePath );
         }
     }
 

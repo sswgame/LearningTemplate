@@ -660,17 +660,17 @@ namespace sw
                 }
                 // 파일 인자는 모두 절대 경로다(`DevCommandRegistry::readDiskPathArgument` - 작업 폴더 상대 경로를 받지 않는다).
                 vector<AbsolutePath> listInputPath;
-                string               outputPath;
+                AbsolutePath         outputPath;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], outputPath, outReply ) == false )
                     return false;
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
-                    string inputPath;
+                    AbsolutePath inputPath;
                     if ( DevCommandRegistry::readDiskPathArgument( listArgument[index], inputPath, outReply ) == false )
                         return false;
-                    listInputPath.push_back( FileUtil::toDiskPath( std::move( inputPath ) ) );
+                    listInputPath.push_back( std::move( inputPath ) );
                 }
-                return ProfilerTraceExport::mergeTraceFiles( listInputPath, FileUtil::toDiskPath( outputPath ), outReply );
+                return ProfilerTraceExport::mergeTraceFiles( listInputPath, outputPath, outReply );
             }
             if ( word == ProfilerTraceExport::CommandWord::Switch )
             {
@@ -692,8 +692,8 @@ namespace sw
                     outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
                 }
-                string recordPath;
-                uint32 budget = 0;
+                AbsolutePath recordPath;
+                uint32       budget = 0;
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
                     const string& argument = listArgument[index];
@@ -709,10 +709,10 @@ namespace sw
                     outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
                 }
-                return ProfilerTraceExport::startRecording( engine::getSubsystem<FrameProfiler>(), seconds, recordPath, "Game", budget, outReply );
+                return ProfilerTraceExport::startRecording( engine::getSubsystem<FrameProfiler>(), seconds, recordPath.str(), "Game", budget, outReply );
             }
-            string path;
-            uint32 frameCount = ProfilerTimeline::kFrameCapacity - 1;
+            AbsolutePath path;
+            uint32       frameCount = ProfilerTimeline::kFrameCapacity - 1;
             for ( size_t index = 1; index < listArgument.size(); ++index )
             {
                 const string& argument = listArgument[index];
@@ -723,7 +723,7 @@ namespace sw
                     return false;
             }
             string savedPath;
-            return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path, "Game", savedPath, outReply );
+            return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path.str(), "Game", savedPath, outReply );
         }
     } // namespace
 
@@ -906,7 +906,7 @@ namespace sw
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
         session._longRecordingEndNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( seconds ) : 0;
-        session._longRecordingPath        = string( path );
+        session._longRecordingPath        = FileUtil::toDiskPath( path );
         session._longRecordingProcessName = string( processName );
         session._bLongRecordingActive.store( true, std::memory_order_release );
         StringBuilder<constant::buffer::kMax128> reply;
@@ -953,7 +953,7 @@ namespace sw
         ProfilerTraceMeta meta = makeCurrentMeta( session._longRecordingProcessName );
         meta._bTruncated       = bTruncated;
 
-        const AbsolutePath savedPath = session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : FileUtil::toDiskPath( session._longRecordingPath );
+        const AbsolutePath savedPath = session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : session._longRecordingPath;
         string             reply;
         if ( writeTraceFile( savedPath, listThread, listFrameBegin, collectSlotNames( profiler ), meta, reply ) == false )
         {
@@ -1032,23 +1032,23 @@ namespace sw
         return saveRecentFramesWithMeta( profiler, frameCount, FileUtil::toDiskPath( outSavedPath ), meta, outReply );
     }
 
-    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler, string_view path )
+    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler, const AbsolutePath& path )
     {
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().setRecording( true );
         // 기동 자체를 첫 구간으로 연다 — 프레임을 몇 번 돌았는지와 상관없이 종료 저장에 구간이 생긴다(finishExitCapture 가 닫는다)
         profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
-        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", path );
+        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", path.str() );
     }
 
-    void ProfilerTraceExport::finishExitCapture( FrameProfiler& profiler, string_view path, string_view processName )
+    void ProfilerTraceExport::finishExitCapture( FrameProfiler& profiler, const AbsolutePath& path, string_view processName )
     {
         // 마지막 프레임부터 종료까지를 닫는다 — 구간의 끝은 마지막 프레임 시작이라, 닫지 않으면 마지막 프레임과 종료 사건이 빠지고
         // 접속 직후 멈춘 프로세스(멀티 프로세스 재생의 클라이언트)는 프레임 표시가 둘이 안 돼 저장하지 못했다
         profiler.getTimeline().recordFrameBegin( static_cast<uint64>( MonotonicClock::nowNanoseconds() ) );
         string savedPath;
         string reply;
-        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path, processName, savedPath, reply ) )
+        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path.str(), processName, savedPath, reply ) )
             SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath, reply );
         else
             SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath, reply );

@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    uint32 PrefabCooker::cookAll( const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store, const uint64 reflectionFingerprint, uint32& outFailedCount )
+    uint32 PrefabCooker::cookAll( const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -38,7 +38,7 @@ namespace sw
         VectorUtil::sort( listFile );
 
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot.str() ) );
-        string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
+        string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir.str() ) );
         out += '/';
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다

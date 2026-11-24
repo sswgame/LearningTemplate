@@ -203,7 +203,7 @@ namespace sw::editor
                 const bool bCompare = listArgument.size() == 2 && listArgument[0] == "compare";
                 if ( bSave == false && bCompare == false )
                     return false;
-                string filePath;
+                AbsolutePath filePath;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], filePath, outReply ) == false )
                     return true;
                 EditorStateHashCompare& compare = getCompare();
@@ -214,16 +214,16 @@ namespace sw::editor
                 }
                 if ( bSave )
                 {
-                    const bool                               bSaved = compare.saveToFile( 0, FileUtil::toDiskPath( filePath ) );
+                    const bool                               bSaved = compare.saveToFile( 0, filePath );
                     StringBuilder<constant::buffer::kMax512> replyBuilder;
                     if ( bSaved )
-                        replyBuilder.appendFormat( "netplay sync saved %# tick(s) to %#", compare.getSource( 0 )._listSample.size(), filePath );
+                        replyBuilder.appendFormat( "netplay sync saved %# tick(s) to %#", compare.getSource( 0 )._listSample.size(), filePath.str() );
                     else
-                        replyBuilder.appendFormat( "netplay sync could not write %#", filePath );
+                        replyBuilder.appendFormat( "netplay sync could not write %#", filePath.str() );
                     outReply = string( replyBuilder.view() );
                     return true;
                 }
-                if ( compare.loadFromFile( 1, FileUtil::toDiskPath( filePath ) ) == false || compare.compare() == false )
+                if ( compare.loadFromFile( 1, filePath ) == false || compare.compare() == false )
                 {
                     outReply = compare.getLastError();
                     return true;

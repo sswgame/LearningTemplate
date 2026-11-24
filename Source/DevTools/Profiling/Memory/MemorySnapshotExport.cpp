@@ -258,7 +258,7 @@ namespace sw
     AbsolutePath MemorySnapshotExport::getDefaultRoot( const MemorySnapshotPolicy& policy )
     {
         const ProcessRoots& roots = ProcessRoots::get();
-        return FileUtil::toDiskPath( FileUtil::joinPath( roots._bRunFromParent == 1 ? roots._run.str() : roots._saved.str(), policy._exportFolder ) );
+        return ( roots._bRunFromParent == 1 ? roots._run : roots._saved ).join( policy._exportFolder );
     }
 
     AbsolutePath MemorySnapshotExport::reserveFolder( const AbsolutePath& root )

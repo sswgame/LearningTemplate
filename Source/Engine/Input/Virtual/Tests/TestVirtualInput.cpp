@@ -196,7 +196,7 @@ SW_TEST_CASE( InputReplayTest, FileRoundTrips )
     replay.recordFrame( 0.25f, { RawInputEvent::makeKeyDown( Key::A ), RawInputEvent::makeMouseMove( 3, 4 ) } );
     replay.recordFrame( 0.5f, {} );
     replay.stopRecording();
-    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path.str() ) ) );
+    SW_REQUIRE_TRUE( replay.saveToFile( path ) );
 
     InputReplay loaded;
     SW_REQUIRE_TRUE( loaded.loadFromFile( path ) );
@@ -222,11 +222,11 @@ SW_TEST_CASE( InputReplayTest, SaveLoadSaveKeepsBytes )
     replay.recordFrame( 0.033f, {} );
     replay.recordFrame( 0.5f, { RawInputEvent::makeKeyDown( Key::A ) } );
     replay.stopRecording();
-    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( firstPath.str() ) ) );
+    SW_REQUIRE_TRUE( replay.saveToFile( firstPath ) );
 
     InputReplay loaded;
     SW_REQUIRE_TRUE( loaded.loadFromFile( firstPath ) );
-    SW_REQUIRE_TRUE( loaded.saveToFile( *AbsolutePath::tryMake( secondPath.str() ) ) );
+    SW_REQUIRE_TRUE( loaded.saveToFile( secondPath ) );
 
     vector<uint8> firstBytes;
     vector<uint8> secondBytes;
@@ -248,7 +248,7 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     replay.startRecording( "kept" );
     replay.recordFrame( 0.25f, { RawInputEvent::makeKeyDown( Key::A ) } );
     replay.stopRecording();
-    SW_REQUIRE_TRUE( replay.saveToFile( *AbsolutePath::tryMake( path.str() ) ) );
+    SW_REQUIRE_TRUE( replay.saveToFile( path ) );
     vector<uint8> good;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, good ) );
 

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -147,37 +149,39 @@ SW_TEST_CASE( EditorTestSelectionTest, ChecksOfRemovedCasesLeaveNothingToRun )
 
 SW_TEST_CASE( EditorScenarioListTest, KeepsOnlyScenariosUnderAutomationSorted )
 {
+    const AbsolutePath content = ProcessRoots::get()._saved.join( "Content" );
     EditorScenarioList list;
-    list.setFromFiles( { "C:/Content/game/a/automation/z.scenario.xml", "C:/Content/engine/automation/editor/b.scenario.xml", "C:/Content/engine/automation/plain.xml",
-                         "C:/Content/engine/other/c.scenario.xml", "C:/Content/automation/rootless.scenario.xml" },
-                       "C:/Content" );
+    list.setFromFiles( { content.join( "game/a/automation/z.scenario.xml" ), content.join( "engine/automation/editor/b.scenario.xml" ), content.join( "engine/automation/plain.xml" ),
+                         content.join( "engine/other/c.scenario.xml" ), content.join( "automation/rootless.scenario.xml" ) },
+                       content );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( list.getPaths().size() ) );
     SW_EXPECT_TRUE( list.getPaths()[0] == "engine/automation/editor/b.scenario.xml" );
     SW_EXPECT_TRUE( list.getPaths()[1] == "game/a/automation/z.scenario.xml" );
 }
 
-// 결함: 뿌리를 글자 그대로 앞에서 잘라, 구분자나 끝 빗금이 파일 경로와 다르면 절대 경로가 리소스 id 로 나갔다.
+// 결함: 뿌리를 글자 그대로 앞에서 잘라, 끝 빗금이 있으면 절대 경로가 리소스 id 로 나갔다(구분자 표기는 형식이 맞춘다).
 SW_TEST_CASE( EditorScenarioListTest, RootSpellingDoesNotChangeTheID )
 {
-    for ( const string_view root : { string_view( "C:\\Content" ), string_view( "C:/Content/" ), string_view( "C:\\Content\\" ) } )
-    {
-        EditorScenarioList list;
-        list.setFromFiles( { "C:/Content/engine/automation/a.scenario.xml" }, root );
-        SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( list.getPaths().size() ) );
-        SW_EXPECT_TRUE( list.getPaths()[0] == "engine/automation/a.scenario.xml" );
-    }
+    const AbsolutePath                       content = ProcessRoots::get()._saved.join( "Content" );
+    StringBuilder<constant::buffer::kMax512> rootText;
+    rootText.appendFormat( "%#/", content.str() );
+    EditorScenarioList list;
+    list.setFromFiles( { content.join( "engine/automation/a.scenario.xml" ) }, FileUtil::toDiskPath( rootText.view() ) );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( list.getPaths().size() ) );
+    SW_EXPECT_TRUE( list.getPaths()[0] == "engine/automation/a.scenario.xml" );
 }
 
 // 결함: 번호로 들어 Refresh 뒤 번호가 다른 시나리오를 가리켰다 — 고르지 않은 시나리오가 돈다.
 SW_TEST_CASE( EditorScenarioListTest, ChoiceFollowsThePathAcrossRefresh )
 {
+    const AbsolutePath root = ProcessRoots::get()._saved.join( "C" );
     EditorScenarioList list;
-    list.setFromFiles( { "C:/C/x/automation/b.scenario.xml" }, "C:/C" );
+    list.setFromFiles( { root.join( "x/automation/b.scenario.xml" ) }, root );
     list.choose( "x/automation/b.scenario.xml" );
 
-    list.setFromFiles( { "C:/C/x/automation/a.scenario.xml", "C:/C/x/automation/b.scenario.xml" }, "C:/C" );
+    list.setFromFiles( { root.join( "x/automation/a.scenario.xml" ), root.join( "x/automation/b.scenario.xml" ) }, root );
     SW_EXPECT_TRUE( list.getChosen() == "x/automation/b.scenario.xml" );
 
-    list.setFromFiles( { "C:/C/x/automation/a.scenario.xml" }, "C:/C" );
+    list.setFromFiles( { root.join( "x/automation/a.scenario.xml" ) }, root );
     SW_EXPECT_TRUE( list.getChosen().empty() );
 }

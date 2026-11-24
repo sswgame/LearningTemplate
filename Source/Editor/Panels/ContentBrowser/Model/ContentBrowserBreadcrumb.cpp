@@ -71,18 +71,18 @@ namespace sw::editor
     {
     }
 
-    const vector<string>& ContentBrowserFolderCache::getOrScanChildFolders( const AbsolutePath& folderAbs )
+    const vector<AbsolutePath>& ContentBrowserFolderCache::getOrScanChildFolders( const AbsolutePath& folderAbs )
     {
         const string key = FileUtil::normalizePath( FileUtil::trimTrailingSlashes( folderAbs.str() ) ).str();
         const auto   it  = _mapChildFolder.find( key );
         if ( it != _mapChildFolder.end() )
             return *it->second;
 
-        unique_ptr<vector<string>> pListChild = make_unique<vector<string>>();
+        unique_ptr<vector<AbsolutePath>> pListChild = make_unique<vector<AbsolutePath>>();
         if ( _pfnScan != nullptr )
             _pfnScan( folderAbs, *pListChild );
         VectorUtil::sort( *pListChild );
-        const vector<string>& listChild = *pListChild;
+        const vector<AbsolutePath>& listChild = *pListChild;
         _mapChildFolder.emplace( key, std::move( pListChild ) );
         return listChild;
     }

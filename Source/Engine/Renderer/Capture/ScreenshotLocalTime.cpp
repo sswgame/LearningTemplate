@@ -19,11 +19,11 @@ namespace sw
         return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), kScreenshotFolderName ), fileName.c_str() );
     }
 
-    string ScreenshotLocalTime::makeDefaultPathNow()
+    AbsolutePath ScreenshotLocalTime::makeDefaultPathNow()
     {
         // 같은 초의 두 번째 사진(같은 프로세스든 다른 프로세스든)이 앞 사진을 덮지 않게 이름을 먼저 잡는다(`-2` …).
         const string path = makeDefaultPath( getLocalTimeNow() );
-        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( path ) ), FileUtil::getExtension( path ), false ).str();
+        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( path ) ), FileUtil::getExtension( path ), false );
     }
 
     ScreenshotLocalTime ScreenshotLocalTime::getLocalTimeNow()

@@ -64,14 +64,14 @@ namespace sw
                 MemorySnapshot       snapshot;
                 if ( captureLocal( policy, snapshot, outReply ) == false )
                     return true;
-                string root = MemorySnapshotExport::getDefaultRoot( policy ).str();
+                AbsolutePath root = MemorySnapshotExport::getDefaultRoot( policy );
                 if ( listArgument.size() == 1 && DevCommandRegistry::readDiskPathArgument( listArgument[0], root, outReply ) == false )
                     return true; // 답이 이유다(절대 경로만 받는다)
-                const AbsolutePath folder = MemorySnapshotExport::reserveFolder( FileUtil::toDiskPath( root ) );
+                const AbsolutePath folder = MemorySnapshotExport::reserveFolder( root );
                 if ( folder.empty() )
                 {
                     StringBuilder<constant::buffer::kMax1024> reply;
-                    reply.appendFormat( "memory.export: could not create a folder under '%#'", root );
+                    reply.appendFormat( "memory.export: could not create a folder under '%#'", root.str() );
                     outReply = string( reply.view() );
                     return true;
                 }

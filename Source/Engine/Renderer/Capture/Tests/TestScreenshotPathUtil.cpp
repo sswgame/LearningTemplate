@@ -26,7 +26,7 @@ SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPNGUnderSaved )
  */
 SW_TEST_CASE( ScreenshotPathUtilTest, NowPathHasTheSameShape )
 {
-    const sw::string path     = sw::ScreenshotLocalTime::makeDefaultPathNow();
+    const sw::string path     = sw::ScreenshotLocalTime::makeDefaultPathNow().str();
     const sw::string expected = sw::FileUtil::joinPath( sw::ProcessRoots::get()._saved.str(), "Screenshots/20260307-090501.png" );
     SW_EXPECT_EQUAL( path.size(), expected.size() );
     SW_EXPECT_TRUE( sw::StringUtil::endsWith( path, ".png", false ) );

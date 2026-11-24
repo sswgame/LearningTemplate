@@ -39,12 +39,12 @@ namespace sw::editor
 
     bool BugReportViewModel::captureNow( const string& note )
     {
-        string     directory;
-        const bool bCaptured         = BugReport::capture( BugReport::makeInputs( note ), directory );
+        AbsolutePath directory;
+        const bool   bCaptured       = BugReport::capture( BugReport::makeInputs( note ), directory );
         _bRowsDirty                  = SW_TRUE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationKind::Success );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory.str(), NotificationKind::Success );
         else
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationKind::Error );
         return bCaptured;

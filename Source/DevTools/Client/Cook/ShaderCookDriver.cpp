@@ -425,7 +425,7 @@ namespace sw
     } // namespace
 
     ShaderCookSummary ShaderCookDriver::cookAllShaders( const AbsolutePath& cookedDir,
-                                                        string_view         resourceRoot,
+                                                        const AbsolutePath& resourceRoot,
                                                         ShaderTargetFormat  targetFormat,
                                                         ShaderCookScope     scope )
     {
@@ -454,7 +454,7 @@ namespace sw
         }
 
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
-        const AbsolutePath rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : FileUtil::toDiskPath( resourceRoot );
+        const AbsolutePath rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : resourceRoot;
         if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.ContentRootDirectoryDoes", "Content root directory does not exist: '%#'", rootDir.c_str() );

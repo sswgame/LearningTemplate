@@ -192,9 +192,9 @@ namespace sw::editor
     {
         if ( _bScenarioListDirty == SW_TRUE )
         {
-            _bScenarioListDirty = SW_FALSE;
-            const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath().str();
-            vector<string> listFilePath;
+            _bScenarioListDirty       = SW_FALSE;
+            const AbsolutePath   root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
+            vector<AbsolutePath> listFilePath;
             // 옛 작업 도메인 자리의 찌꺼기는 고를 시나리오가 아니다(EditorContentScan 이 뺀다)
             if ( EditorContentScan::collectFiles( root, ".xml", listFilePath, true ) == false )
                 listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다

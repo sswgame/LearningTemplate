@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -82,7 +83,7 @@ namespace sw
          * @details 스튜디오 하나를 세워 장마다 `renderPrefab` 으로 그리고 읽으며(@p renderThread 의 명령), 옮기기 · 인코딩 · 쓰기는 워커가 한다. 게임 스레드에서, 모듈(게임 컴포넌트 타입)이 로드된 뒤에 부릅니다.
          *          @p size 는 16 ~ 4096 으로 제한합니다. @p services 는 스튜디오 씬을 지을 묶음입니다.
          */
-        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, string_view outputDirectory,
+        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, const AbsolutePath& outputDirectory,
                                                     uint32 size );
 
     private:

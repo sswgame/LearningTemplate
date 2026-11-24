@@ -51,7 +51,7 @@ namespace sw::editor
         };
     } // namespace
 
-    expected<void> EditorSaveFileLock::lock( const vector<string>& listPath )
+    expected<void> EditorSaveFileLock::lock( const vector<AbsolutePath>& listPath )
     {
         using Internal = EditorSaveFileLockInternal;
         releaseStaleLocks();
@@ -59,25 +59,25 @@ namespace sw::editor
         Internal::releaseAll( state );
         // 장부를 먼저 적는다 — 잠근 뒤 프로세스가 죽어도 다음 실행이 무엇을 풀지 안다.
         StringBuilder<constant::buffer::kMax1024> ledger;
-        for ( const string& path : listPath )
-            ledger.appendFormat( "%#\n", path );
+        for ( const AbsolutePath& path : listPath )
+            ledger.appendFormat( "%#\n", path.str() );
         const AbsolutePath ledgerPath = Internal::getLedgerPath();
         if ( FileUtil::ensureParentDirectoryExists( ledgerPath ) == false || FileUtil::writeTextFile( ledgerPath, ledger.view() ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the lock ledger", ledgerPath.str() } );
-        for ( const string& path : listPath )
+        for ( const AbsolutePath& path : listPath )
         {
             string     text;
-            const bool bExists = FileUtil::isRegularFile( FileUtil::toDiskPath( path ) );
-            if ( bExists && FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
+            const bool bExists = FileUtil::isRegularFile( path );
+            if ( bExists && FileUtil::readTextFile( path, text ) == false )
             {
                 Internal::releaseAll( state );
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a file to lock", path } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a file to lock", path.str() } );
             }
-            state._mapTextByPath.insert_or_assign( path, bExists ? optional<string>{ std::move( text ) } : nullopt );
-            if ( bExists && FileUtil::setWritable( FileUtil::toDiskPath( path ), false ) == false )
+            state._mapTextByPath.insert_or_assign( path.str(), bExists ? optional<string>{ std::move( text ) } : nullopt );
+            if ( bExists && FileUtil::setWritable( path, false ) == false )
             {
                 Internal::releaseAll( state );
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not make a file read-only", path } );
+                return unexpected( Error{ ErrorKind::ExternalFailure, "could not make a file read-only", path.str() } );
             }
         }
         return {};

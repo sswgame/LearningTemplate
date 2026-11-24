@@ -160,7 +160,7 @@ namespace sw
 #endif
     }
 
-    bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath )
+    bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, AbsolutePath& outShadowPath )
     {
         ++inoutSerials._reloadCount;
         const string       tempName  = ShadowCopyName::make( params._moduleName, inoutSerials._reloadCount );
@@ -213,7 +213,7 @@ namespace sw
         }
 
         ModuleShadowCopyInternal::copyDebugSymbolsIfPresent( params._originalModulePath.str(), shadowPath.str() );
-        outShadowPath = shadowPath.str();
+        outShadowPath = shadowPath;
         return true;
     }
 

@@ -280,12 +280,12 @@ namespace sw::editor
         return bGameDataSaved && isAnyDirty() == false;
     }
 
-    void DataTableViewModel::collectFilesToSave( vector<string>& outListPath ) const
+    void DataTableViewModel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
     {
         if ( _bLocalizationDirty )
             EditorDataTableCommands::collectLocalizationFiles( _localizationSheet, outListPath );
         if ( _gameDataPath.empty() == false )
-            outListPath.push_back( _gameDataPath.str() );
+            outListPath.push_back( _gameDataPath );
     }
 
     void DataTableViewModel::revertLocalization()

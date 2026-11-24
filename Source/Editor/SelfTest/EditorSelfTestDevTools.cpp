@@ -296,14 +296,14 @@ namespace sw::editor
                 }
                 if ( stepIndex == 1 )
                 {
-                    if ( context.expect( pDock->saveNamedLayout( kLayoutName, folder.str() ), "could not save the named layout" ) == false )
+                    if ( context.expect( pDock->saveNamedLayout( kLayoutName, folder ), "could not save the named layout" ) == false )
                         return EditorSelfTestStep::Done;
                     string iniText;
                     (void)FileUtil::readTextFile( EditorLayoutStore::makeImguiINIPath( folder, kLayoutName ), iniText ); // 없으면 아래 단언이 알린다
                     (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
                                           "the saved layout has no docking section or no hierarchy window" );
                     (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
-                    (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder.str() ), "could not load the named layout" );
+                    (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
                     return EditorSelfTestStep::WaitStable; // 다음 프레임 시작에 적용되고 그 프레임에 창이 다시 만들어진다 — 정지(도크 적용 끝)까지
                 }
 

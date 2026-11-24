@@ -29,7 +29,7 @@ namespace sw::editor
         static void collectFolderListing( const AssetPaths& assetPaths, const AbsolutePath& folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false,
                                           const StopToken& stopToken = {} );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
-        static void collectChildFolders( const AbsolutePath& folderAbs, vector<string>& outList );
+        static void collectChildFolders( const AbsolutePath& folderAbs, vector<AbsolutePath>& outList );
         /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. 에디터 범위의 누계이며, 자체 테스트가 "그릴 때마다 디스크를 읽지 않는다" 를 확인할 때 씁니다. */
         static uint64 getChildFolderScanCount();
     };

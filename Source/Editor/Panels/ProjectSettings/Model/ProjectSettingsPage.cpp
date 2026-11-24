@@ -39,7 +39,7 @@ namespace sw::editor
             _bTypeFound = false;
             return;
         }
-        if ( _document.open( *pType, _absolutePath.str(), _entry._elementName ) == ConfigReadResult::Invalid )
+        if ( _document.open( *pType, _absolutePath, _entry._elementName ) == ConfigReadResult::Invalid )
             SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsCouldNot", "Project settings: %# could not be opened - see the errors above", _absolutePath.c_str() );
         _bDirty = false;
     }

@@ -123,7 +123,7 @@ namespace sw::editor
     {
     }
 
-    bool EditorDockLayout::saveNamedLayout( string_view name, string_view folder )
+    bool EditorDockLayout::saveNamedLayout( string_view name, const AbsolutePath& folder )
     {
         if ( ImGui::GetCurrentContext() == nullptr )
             return false;

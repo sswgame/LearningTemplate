@@ -68,27 +68,27 @@ namespace sw::editor
         return StringUtil::endsWith( assetID, AssetMeta::kExtension, true ) == false;
     }
 
-    bool EditorContentScan::collectFiles( string_view folder, string_view extension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
+    bool EditorContentScan::collectFiles( const AbsolutePath& folder, string_view extension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken )
     {
-        const bool bListed = FileUtil::collectFiles( FileUtil::toDiskPath( folder ), extension, outListFilePath, bRecursive, stopToken );
-        (void)VectorUtil::removeIf( outListFilePath, []( const string& path )
-        { return EditorContentScanInternal::isLeftoverScratch( path ) || isListedFile( FileUtil::normalizeSeparators( path ) ) == false; } );
+        const bool bListed = FileUtil::collectFiles( folder, extension, outListFilePath, bRecursive, stopToken );
+        (void)VectorUtil::removeIf( outListFilePath, []( const AbsolutePath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ) || isListedFile( path.str() ) == false; } );
         return bListed;
     }
 
-    bool EditorContentScan::collectSidecarFiles( const AbsolutePath& folder, vector<string>& outListFilePath )
+    bool EditorContentScan::collectSidecarFiles( const AbsolutePath& folder, vector<AbsolutePath>& outListFilePath )
     {
         const bool bListed = FileUtil::collectFiles( folder, AssetMeta::kExtension, outListFilePath, true );
-        (void)VectorUtil::removeIf( outListFilePath, []( const string& path )
-        { return EditorContentScanInternal::isLeftoverScratch( path ); } );
+        (void)VectorUtil::removeIf( outListFilePath, []( const AbsolutePath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ); } );
         return bListed;
     }
 
-    bool EditorContentScan::collectFolders( const AbsolutePath& folder, vector<string>& outListFolder, bool bRecursive )
+    bool EditorContentScan::collectFolders( const AbsolutePath& folder, vector<AbsolutePath>& outListFolder, bool bRecursive )
     {
         const bool bListed = FileUtil::collectFolders( folder, outListFolder, bRecursive );
-        (void)VectorUtil::removeIf( outListFolder, []( const string& path )
-        { return EditorContentScanInternal::isLeftoverScratch( path ); } );
+        (void)VectorUtil::removeIf( outListFolder, []( const AbsolutePath& path )
+        { return EditorContentScanInternal::isLeftoverScratch( path.str() ); } );
         return bListed;
     }
 

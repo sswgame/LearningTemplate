@@ -36,7 +36,7 @@ namespace sw::editor
         [[nodiscard]] static bool readBytes( const AbsolutePath& sourcePath, vector<uint8>& outBytes );
 
         /** @brief @p folder(하위까지)에서 파일은 없고 서술이 저장소 주소를 적은 원본의 디스크 경로를 @p inoutListSourcePath(그 폴더에서 찾은 파일들) 끝에 더합니다 — 원본을 훑는 쪽이 파일 목록에 더한다. */
-        static void collectStoredSources( const AbsolutePath& folder, vector<string>& inoutListSourcePath );
+        static void collectStoredSources( const AbsolutePath& folder, vector<AbsolutePath>& inoutListSourcePath );
 
         /** @brief 저장소 안의 파일 자리입니다(`<뿌리>/<앞 두 자>/<다음 두 자>/<SHA-256>`). */
         [[nodiscard]] static AbsolutePath makeStorePath( const AbsolutePath& storeRoot, const AssetSourceAddress& address );

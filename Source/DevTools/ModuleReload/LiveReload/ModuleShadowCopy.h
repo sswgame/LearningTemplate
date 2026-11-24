@@ -92,7 +92,7 @@ namespace sw
          *         실패하면 쓰다 만 복사본을 지웁니다.
          * @details 로드하기 **전에** 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
          */
-        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath );
+        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, AbsolutePath& outShadowPath );
 
         /**
          * @brief 섀도 복사본과 그 디버그 심볼을 지웁니다(Windows 는 비었으면 복사본 폴더까지). 경로가 비면 아무것도 하지 않습니다.

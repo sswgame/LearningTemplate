@@ -212,8 +212,7 @@ namespace sw::editor
                     LayerWeightsAsset data;
                     if ( HeightfieldImporter::readLayerWeights( sourcePath, data ) == false )
                         return false;
-                    const optional<AbsolutePath> importedFile = FileUtil::requireAbsolutePath( importedPath.str() );
-                    return importedFile.has_value() && FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( *importedFile );
+                    return FileUtil::ensureParentDirectoryExists( importedPath ) && data.saveToFile( importedPath );
                 }
                 return HeightfieldImporter::importHeightfield( sourcePath, importedPath );
             }
@@ -412,8 +411,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "HeightfieldImporter.CannotCreateFolder", "Cannot create the folder for '%#'", outputPath.str() );
             return false;
         }
-        const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath.str() );
-        return outputFile.has_value() && data.saveToFile( *outputFile );
+        return data.saveToFile( outputPath );
     }
 
     AssetImportSummary HeightfieldImporter::importAllHeightfields( const AbsolutePath& resourceRoot, AssetImportMode mode )

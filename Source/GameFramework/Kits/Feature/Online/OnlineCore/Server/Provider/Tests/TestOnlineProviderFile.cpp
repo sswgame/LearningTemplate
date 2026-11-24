@@ -39,7 +39,7 @@ namespace
     {
         const sw::AbsolutePath path = sw::test::makeScratchPath( fileName );
         SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( path, text ) );
-        return sw::AbsolutePath::tryMake( path.str() );
+        return path;
     }
 
     sw::expected<void> readProviders( const sw::optional<sw::AbsolutePath>& providersFile, const sw::optional<sw::AbsolutePath>& trustFile,

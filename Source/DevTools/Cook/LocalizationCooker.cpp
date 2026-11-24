@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    uint32 LocalizationCooker::cookAll( const AbsolutePath& sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount )
+    uint32 LocalizationCooker::cookAll( const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )
@@ -35,7 +35,7 @@ namespace sw
         VectorUtil::sort( listFile ); // 출력 순서가 실행마다 같다
 
         const string      root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot.str() ) );
-        const string      out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
+        const string      out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir.str() ) );
         const CookJobDesc desc = makeCookJobDesc();
         CookStats         stats;
         for ( const AbsolutePath& filePath : listFile )

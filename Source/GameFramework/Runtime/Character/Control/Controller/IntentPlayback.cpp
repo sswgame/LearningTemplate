@@ -131,12 +131,11 @@ namespace sw
                     outReply = "intent: no control system in the active scene (nothing recorded)";
                     return true;
                 }
-                string path;
+                AbsolutePath path;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
                 pControl->setRecording( false );
-                const optional<AbsolutePath> historyFile = FileUtil::requireAbsolutePath( path ); // readDiskPathArgument 가 절대만 받았다
-                if ( historyFile.has_value() == false || pControl->getHistory().saveToFile( *historyFile ) == false )
+                if ( pControl->getHistory().saveToFile( path ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "intent: could not write '%#'", path.c_str() );
@@ -159,10 +158,10 @@ namespace sw
                     outReply = "intent: no active scene";
                     return true;
                 }
-                string path;
+                AbsolutePath path;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
-                const expected<uint32> startedCount = IntentPlayback::startFromFile( *pManager, FileUtil::toDiskPath( string_view( path.c_str(), path.size() ) ), true );
+                const expected<uint32> startedCount = IntentPlayback::startFromFile( *pManager, path, true );
                 if ( startedCount.has_value() == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;

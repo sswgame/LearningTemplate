@@ -42,7 +42,7 @@ namespace sw::editor
         /** @brief `findReadyIndex` 가 있으면 그것으로, 없으면 트리를 걸어 채웁니다. UI 스레드에서만 부른다(선택 팝업 · Open). */
         static void collectEntriesOnUIThread( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList );
         /** @brief 파일 목록을 종류별로 셉니다. 등록된 모든 종류가 한 줄씩 나옵니다(0 개 포함). */
-        static void countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts );
+        static void countFiles( const vector<AbsolutePath>& listFilePath, EditorResourceCatalogCounts& outCounts );
         /** @brief Resource 트리 전체를 종류별로 셉니다. */
         static void collectCatalogCounts( const AssetPaths& assetPaths, EditorResourceCatalogCounts& outCounts, const StopToken& stopToken = {} );
         /** @brief 에디터의 에셋 색인이 아는 파일을 종류별로 셉니다(디스크를 걷지 않는다). */

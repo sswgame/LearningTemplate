@@ -203,7 +203,7 @@ namespace sw::editor
                 const EditorDocumentPanelBase* pDocument = findDocumentPanel( listArgument, outReply );
                 if ( pDocument == nullptr )
                     return false;
-                vector<string> listPath;
+                vector<AbsolutePath> listPath;
                 pDocument->collectFilesToSave( listPath );
                 if ( listPath.empty() )
                 {

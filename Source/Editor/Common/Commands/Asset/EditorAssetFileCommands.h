@@ -37,7 +37,7 @@ namespace sw::editor
         /** @brief 파일 이름을 줄기와 붙은 확장자로 나눕니다. 확장자는 첫 `.` 부터입니다(`a.scene.xml` → `a`, `.scene.xml`). */
         static void splitAssetName( string_view fileName, string& outStem, string& outSuffix );
         /** @brief @p folderAbs 안에 `<stem><suffix>`(있으면 `<stem>_2<suffix>` 부터)를 만들어 자리를 잡고 그 경로를 돌려줍니다(`FileUtil::reserveUniquePath`, 접미사가 비면 폴더). 못 잡으면 빈 글입니다. */
-        static string makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix );
+        static AbsolutePath makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix );
         /**
          * @brief 글 안의 @p oldID 를 @p newID 로 바꿉니다. 경로 글자(`[a-z0-9_./-]`)가 바로 앞뒤에 붙은 곳은 바꾸지 않습니다(`a.material` 이 `aa.material` 안에서 바뀌지 않게).
          * @return 바꾼 수입니다. 대소문자는 가리지 않고 찾는다.
@@ -45,11 +45,11 @@ namespace sw::editor
         static uint32 replaceReference( string& inoutText, string_view oldID, string_view newID );
 
         /** @brief @p parentAbs 안에 `new_folder` 폴더를 만듭니다. */
-        [[nodiscard]] static bool createFolder( const AbsolutePath& parentAbs, string& outFolderAbs );
+        [[nodiscard]] static bool createFolder( const AbsolutePath& parentAbs, AbsolutePath& outFolderAbs );
         /** @brief @p folderAbs 안에 @p assetTemplate(종류 등록의 틀, `EditorAssetTypeRegistry::collectNewAssetTemplates`)의 새 에셋(`<줄기><확장자>`, 겹치면 `_2` 부터)을 씁니다. */
-        [[nodiscard]] static bool createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
+        [[nodiscard]] static bool createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, AbsolutePath& outAssetAbs );
         /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다. 복제본은 새 GUID 를 받는다(원본의 `.meta` 는 베끼지 않는다). */
-        [[nodiscard]] static bool duplicateAsset( const AbsolutePath& sourceAbs, string& outAssetAbs );
+        [[nodiscard]] static bool duplicateAsset( const AbsolutePath& sourceAbs, AbsolutePath& outAssetAbs );
         /**
          * @brief 에셋을 @p destinationAbs 로 옮기고(이름 바꾸기 포함) 그 에셋을 적은 텍스트 에셋의 경로 칸을 고칩니다(칸 목록을 읽지 못하면 옮기지 않는다).
          * @param inoutIndex 다 만들어진 역색인. 옮긴 파일과 고친 파일의 줄을 다시 훑는다.
@@ -100,12 +100,12 @@ namespace sw::editor
          * @brief 파일을 Content Browser 폴더로 복사하고 새 GUID 를 줍니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.
          * @return 복사한 파일 수입니다. 이미 그 폴더에 있는 파일과 없는 파일은 건너뜁니다.
          */
-        static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
+        static uint32 importFiles( const AbsolutePath& destFolderAbs, const vector<AbsolutePath>& listSourcePath );
         /**
          * @brief 콘솔 명령의 원본 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 리소스 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
          * @details 예전에는 리소스로 찾아보고 없으면 작업 폴더 상대 경로로 다시 풀었다(같은 글이 작업 폴더에 따라 다른 파일). `scene.open` · `asset.import` 가 같은 입구로 읽는다.
          */
-        [[nodiscard]] static bool readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply );
+        [[nodiscard]] static bool readSourceFileArgument( const string& argument, AbsolutePath& outAbsolutePath, string& outReply );
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.

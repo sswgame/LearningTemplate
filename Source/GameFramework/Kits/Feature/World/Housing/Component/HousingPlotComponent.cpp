@@ -222,7 +222,7 @@ namespace sw
             /** @brief `housing.save <plot> <file>` — 부지 상태를 절대 경로(시나리오의 `{out}/…`)에 쓴다. */
             static bool runSave( const vector<string>& listArgument, string& outReply )
             {
-                string path;
+                AbsolutePath path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 HousingPlotComponent* pPlot = findPlot( listArgument[0] );
@@ -231,13 +231,13 @@ namespace sw
                     outReply = makeNoPlotReply( listArgument[0] );
                     return true;
                 }
-                if ( pPlot->saveToFile( FileUtil::toDiskPath( path ) ) == false )
+                if ( pPlot->saveToFile( path ) == false )
                 {
                     outReply = "housing: save failed (see the log)";
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax512> replyBuilder;
-                replyBuilder.appendFormat( "housing: saved %#", path );
+                replyBuilder.appendFormat( "housing: saved %#", path.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -245,7 +245,7 @@ namespace sw
             /** @brief `housing.load <plot> <file>` — 부지 상태를 바꾸고 뷰를 다시 세운다. */
             static bool runLoad( const vector<string>& listArgument, string& outReply )
             {
-                string path;
+                AbsolutePath path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 HousingPlotComponent* pPlot = findPlot( listArgument[0] );
@@ -254,13 +254,13 @@ namespace sw
                     outReply = makeNoPlotReply( listArgument[0] );
                     return true;
                 }
-                if ( pPlot->loadFromFile( FileUtil::toDiskPath( path ) ) == false )
+                if ( pPlot->loadFromFile( path ) == false )
                 {
                     outReply = "housing: load failed (see the log)";
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax512> replyBuilder;
-                replyBuilder.appendFormat( "housing: loaded %#", path );
+                replyBuilder.appendFormat( "housing: loaded %#", path.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }

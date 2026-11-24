@@ -116,14 +116,13 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                string filePath;
+                AbsolutePath filePath;
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], filePath, outReply ) == false )
                     return true;
                 VisualLogger* pLogger = findLogger( outReply );
                 if ( pLogger == nullptr )
                     return true;
-                const optional<AbsolutePath> logFile = FileUtil::requireAbsolutePath( filePath ); // readDiskPathArgument 가 절대만 받았다
-                outReply                             = logFile.has_value() && pLogger->saveToFile( *logFile ) ? "vlog: saved" : "vlog: could not write the file";
+                outReply = pLogger->saveToFile( filePath ) ? "vlog: saved" : "vlog: could not write the file";
                 return true;
             }
 

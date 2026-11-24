@@ -219,11 +219,11 @@ namespace sw::editor
         shutdown();
     }
 
-    ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, string_view absolutePath, string_view elementName )
+    ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, const AbsolutePath& absolutePath, string_view elementName )
     {
         shutdown();
         _pType       = &type;
-        _path        = FileUtil::toDiskPath( absolutePath );
+        _path        = absolutePath;
         _elementName = string( elementName );
         _current     = ReflectedInstance::create( type );
         _default     = ReflectedInstance::create( type );

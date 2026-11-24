@@ -222,10 +222,11 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     ShadowLibraryNameState name{};
     name._current = "current";
     name._loaded  = "loaded";
-    ShadowCopySerials serials{};
-    string            shadowPath{ "untouched" };
+    ShadowCopySerials  serials{};
+    const AbsolutePath untouched = original.appendSuffix( ".untouched" );
+    AbsolutePath       shadowPath{ untouched };
     SW_EXPECT_FALSE( ModuleShadowCopy::writeShadowCopy( params, serials, name, shadowPath ) );
-    SW_EXPECT_EQUAL( string( "untouched" ), shadowPath );
+    SW_EXPECT_TRUE( shadowPath == untouched );
     SW_EXPECT_EQUAL( string( "current" ), name._current );
 
     vector<uint8> bytes;

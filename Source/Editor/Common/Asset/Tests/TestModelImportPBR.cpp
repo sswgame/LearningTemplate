@@ -25,7 +25,7 @@ namespace
      * @brief 내려받은 스캔 에셋처럼 이미지를 원본 옆이 아닌 `textures_raw/` 에 두고 `../` 로 가리키는 glTF 를 만들어 읽습니다.
      * @param bOcclusionInORM true 면 가림 텍스처가 ORM 과 같은 이미지다(glTF 의 ORM 묶음), false 면 가림이 없다(Poly Haven).
      */
-    bool parseScanLikeGltf( const AbsolutePath& root, bool bOcclusionInORM, ParsedGltf& outParsed, string& outSourcePath )
+    bool parseScanLikeGltf( const AbsolutePath& root, bool bOcclusionInORM, ParsedGltf& outParsed, AbsolutePath& outSourcePath )
     {
         const AbsolutePath textureFolder = root.join( "textures_raw/scan" );
         if ( FileUtil::ensureDirectoryExists( textureFolder ) == false || FileUtil::ensureDirectoryExists( root.join( "models_raw" ) ) == false )
@@ -47,7 +47,7 @@ namespace
                              "pbrMetallicRoughness": { "baseColorTexture": { "index": 0 }, "metallicRoughnessTexture": { "index": 2 },
                                                        "baseColorFactor": [ 1, 0.5, 0.25, 1 ], "metallicFactor": 0.2, "roughnessFactor": 0.9 }%# } ] })",
                            occlusion );
-        outSourcePath = FileUtil::joinPath( root.str(), "models_raw/crate.gltf" );
+        outSourcePath = root.join( "models_raw/crate.gltf" );
         cgltf_options options{};
         return cgltf_parse( &options, json.c_str(), json.size(), &outParsed._pData ) == cgltf_result_success;
     }
@@ -61,11 +61,11 @@ SW_TEST_CASE( ModelImportPBRTest, ReadsFirstTexturedMaterialWithResolvedImagePat
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbr" );
     ParsedGltf         parsed;
-    string             sourcePath;
+    AbsolutePath       sourcePath;
     SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
 
     ModelImportResult result;
-    SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, FileUtil::toDiskPath( sourcePath ), result ) );
+    SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
     const ModelImportPBRMaterial& pbr = result._pbrMaterial;
     SW_REQUIRE_TRUE( pbr._bPresent == SW_TRUE );
     SW_EXPECT_EQUAL( string( "wooden_crate" ), pbr._name );
@@ -93,11 +93,11 @@ SW_TEST_CASE( ModelImportPBRTest, OcclusionPackedInORMKeepsStrength )
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbrAO" );
     ParsedGltf         parsed;
-    string             sourcePath;
+    AbsolutePath       sourcePath;
     SW_REQUIRE_TRUE( parseScanLikeGltf( root, true, parsed, sourcePath ) );
 
     ModelImportResult result;
-    SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, FileUtil::toDiskPath( sourcePath ), result ) );
+    SW_REQUIRE_TRUE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
     SW_EXPECT_NEAR( 0.5f, result._pbrMaterial._occlusionStrength, 1e-6f );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
@@ -171,14 +171,14 @@ SW_TEST_CASE( ModelImportPBRTest, MissingImageFileFails )
 {
     const AbsolutePath root = test::makeScratchPath( "ModelImportPbrMissing" );
     ParsedGltf         parsed;
-    string             sourcePath;
+    AbsolutePath       sourcePath;
     SW_REQUIRE_TRUE( parseScanLikeGltf( root, false, parsed, sourcePath ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( root.join( "textures_raw/scan/crate_nor_gl_2k.jpg" ) ) );
 
     ModelImportResult result;
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "ModelImport.ImageFileMissing" );
-    SW_EXPECT_FALSE( ModelImportMaterial::readPBRMaterial( *parsed._pData, FileUtil::toDiskPath( sourcePath ), result ) );
+    SW_EXPECT_FALSE( ModelImportMaterial::readPBRMaterial( *parsed._pData, sourcePath, result ) );
 
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

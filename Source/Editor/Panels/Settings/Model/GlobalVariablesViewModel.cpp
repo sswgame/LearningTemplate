@@ -140,12 +140,12 @@ namespace sw::editor
 
     bool GlobalVariablesViewModel::pollPresetFiles()
     {
-        return pollPresetFilesIn( EditorGlobalVariableCommands::getPresetFolderPath().str() );
+        return pollPresetFilesIn( EditorGlobalVariableCommands::getPresetFolderPath() );
     }
 
-    bool GlobalVariablesViewModel::pollPresetFilesIn( string_view presetFolder )
+    bool GlobalVariablesViewModel::pollPresetFilesIn( const AbsolutePath& presetFolder )
     {
-        vector<string>       listNewPresetFile;
+        vector<AbsolutePath> listNewPresetFile;
         const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
         if ( presetPoll == EditorTaskPoll::Ready )
             _listPresetFile = std::move( listNewPresetFile );
@@ -268,14 +268,14 @@ namespace sw::editor
         return EditorGlobalVariableCommands::saveSessionPreset();
     }
 
-    void GlobalVariablesViewModel::collectFilesToSave( vector<string>& outListPath )
+    void GlobalVariablesViewModel::collectFilesToSave( vector<AbsolutePath>& outListPath )
     {
-        outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath().str() );
+        outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath() );
     }
 
-    bool GlobalVariablesViewModel::isSessionFile( string_view absolutePath )
+    bool GlobalVariablesViewModel::isSessionFile( const AbsolutePath& absolutePath )
     {
-        return FileUtil::isSameDiskPath( EditorGlobalVariableCommands::getSessionPresetPath().str(), absolutePath );
+        return FileUtil::isSameDiskPath( EditorGlobalVariableCommands::getSessionPresetPath().str(), absolutePath.str() );
     }
 
     string GlobalVariablesViewModel::makeSessionText()

@@ -85,7 +85,7 @@ namespace sw
         return bAll;
     }
 
-    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const string& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
+    uint32 SceneNavigationCooker::cookAll( const SceneEngineServices& services, const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, const CookStore& store, const uint64 reflectionFingerprint,
                                            uint32& outFailedCount )
     {
         using Internal = SceneNavigationCookerInternal;
@@ -115,7 +115,7 @@ namespace sw
             if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             const string     outputID   = NavMeshAsset::makeCookedPath( relativePath );
-            const string     cookedPath = FileUtil::joinPath( cookedDir, outputID );
+            const string     cookedPath = FileUtil::joinPath( cookedDir.str(), outputID );
             const CookResult result     = store.cookFile( desc, outputID, cookedPath, [&]()
                 {
                 // 표면이 없는 씬은 세우지 않는다 — 글에 컴포넌트 이름이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.

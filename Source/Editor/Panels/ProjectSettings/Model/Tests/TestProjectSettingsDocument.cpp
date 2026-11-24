@@ -72,7 +72,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
         SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( copyPath ) && FileUtil::writeTextFile( copyPath, text ) );
 
         ProjectSettingsDocument document;
-        SW_REQUIRE_TRUE( document.open( *GameConfig::StaticType(), copyPath.str() ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( document.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );
         SW_EXPECT_FALSE( document.isModified() );
         GameConfig* const pConfig    = static_cast<GameConfig*>( document.getInstance() );
         const DataPath    packRoot   = pConfig->_packRoot;
@@ -83,7 +83,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
         SW_EXPECT_FALSE( document.isModified() );
 
         ProjectSettingsDocument reopened;
-        SW_REQUIRE_TRUE( reopened.open( *GameConfig::StaticType(), copyPath.str() ) == ConfigReadResult::Loaded );
+        SW_REQUIRE_TRUE( reopened.open( *GameConfig::StaticType(), copyPath ) == ConfigReadResult::Loaded );
         GameConfig* const pSaved = static_cast<GameConfig*>( reopened.getInstance() );
         SW_EXPECT_EQUAL( string{ "game/savedpack" }, pSaved->_packRoot.get() );
         SW_EXPECT_EQUAL( fieldCount, pSaved->_cookRules._listEntryIDField.size() );
@@ -98,7 +98,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, UndoTextRestoresTheEditedInstance )
 {
     const ProjectSettingsDocumentTestUtil::OverriddenProject project = ProjectSettingsDocumentTestUtil::makeProject( "ProjectSettingsUndoText" );
     ProjectSettingsDocument                                  document;
-    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath.str() ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath ) == ConfigReadResult::Loaded );
     const string before = document.captureText();
     SW_EXPECT_FALSE( before.empty() );
 
@@ -127,7 +127,7 @@ SW_TEST_CASE( ProjectSettingsDocumentTest, SavingTheBaseDoesNotLeakThePlatformOv
     SW_REQUIRE_TRUE( baseStep != 2u ); // 덮어쓰기와 같으면 샜는지 가릴 수 없다
 
     ProjectSettingsDocument document;
-    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath.str() ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( document.open( *EngineConfig::StaticType(), project._basePath ) == ConfigReadResult::Loaded );
     EngineConfig* const pConfig = static_cast<EngineConfig*>( document.getInstance() );
     SW_REQUIRE_TRUE( pConfig != nullptr );
     SW_EXPECT_EQUAL( baseStep, pConfig->_maxFixedStepPerFrame ); // 합친 값이 아니라 바탕 파일 값

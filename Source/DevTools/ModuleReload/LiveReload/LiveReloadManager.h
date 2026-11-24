@@ -218,7 +218,7 @@ namespace sw
         struct PreparedShadow
         {
             void*                        _pHandle{ nullptr };
-            string                       _tempPath;
+            AbsolutePath                 _tempPath;
             FileStamp                    _sourceStamp{}; ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
             engine::ModuleRegistrarHeads _heads;         ///< 로드한 라이브러리의 정적 등록자 머리(커밋 때 올린다)
             engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)

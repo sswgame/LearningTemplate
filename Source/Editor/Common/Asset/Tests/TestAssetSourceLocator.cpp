@@ -76,10 +76,10 @@ SW_TEST_CASE( AssetSourceLocatorTest, OnlyStoredSourcesWithoutAFileAreListed )
     Util::write( AssetMeta::makePath( root.join( "sub/stored.glb" ) ), Util::makeStoredMeta( "stored.glb" ) );
     Util::write( AssetMeta::makePath( root.join( "lost.glb" ) ), AssetMeta::makeText( "lost.glb", AssetGUID::create() ) );
 
-    vector<string> listSourcePath;
+    vector<AbsolutePath> listSourcePath;
     AssetSourceLocator::collectStoredSources( root, listSourcePath );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listSourcePath.size() );
-    SW_EXPECT_TRUE( StringUtil::endsWith( listSourcePath[0], "/sub/stored.glb" ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( listSourcePath[0].str(), "/sub/stored.glb" ) );
 }
 
 /** @brief [AssetSourceLocatorTest] 저장소 설정이 읽힌다 — 저장소의 설정 파일이 정한 한 자리다 */

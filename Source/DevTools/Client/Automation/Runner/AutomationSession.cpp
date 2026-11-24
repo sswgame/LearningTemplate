@@ -225,14 +225,14 @@ namespace sw
             pWindow->showWindow( bPresentSkipped == false );
     }
 
-    bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
+    bool AutomationSession::begin( string_view scenarioArgument, const AbsolutePath& reportPath, bool bKeepGoing )
     {
         if ( gv_scenarioPresentInterval < 1 )
         {
             SW_LOG_ERROR_ID( "AutomationSession.PresentIntervalInvalid", "[Scenario] gv_scenarioPresentInterval=%# must be 1 or more (1 = present every frame)", gv_scenarioPresentInterval );
             return false;
         }
-        _reportPath    = FileUtil::toDiskPath( reportPath );
+        _reportPath    = reportPath;
         _workingFolder = FileUtil::getCurrentPath().str();
         if ( const GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
         {
@@ -596,8 +596,8 @@ namespace sw
             (void)_owner.beginRecording( recordPath, recordProbes );                                    // 거절하면 이유를 로그로 남기고 녹화 없이 돈다
         }
 
-        string scenarioPath;
-        string reportPath;
+        string       scenarioPath;
+        AbsolutePath reportPath;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
         IEngineRenderDriver* const pRenderDriver = engine.getRenderDriver();
         const bool                 bKeepGoing    = commandLine.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );

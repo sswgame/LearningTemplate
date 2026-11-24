@@ -234,8 +234,7 @@ namespace sw
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
-        const optional<AbsolutePath> sharedPath    = AbsolutePath::tryMake( modulePath.str() );
-        void* const                  pSharedHandle = sharedPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *sharedPath ) : nullptr;
+        void* const pSharedHandle = modulePath.empty() ? nullptr : ModuleLibraryUtil::loadLibraryAt( modulePath );
         if ( pSharedHandle == nullptr )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadSharedModule", "Failed to load the shared module %#", modulePath.str() );
@@ -698,25 +697,24 @@ namespace sw
 
             // 교체 라이브러리의 정적 등록자는 옛 라이브러리가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
             // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
-            const optional<AbsolutePath> shadowPath = AbsolutePath::tryMake( outShadow._tempPath );
-            if ( shadowPath.has_value() == false )
+            if ( outShadow._tempPath.empty() )
             {
                 outShadow._pHandle = nullptr;
             }
             else if ( context._pLibraryModule != nullptr )
             {
                 RegistrationReloadScope reloadScope;
-                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( *shadowPath );
+                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( outShadow._tempPath );
             }
             else
             {
-                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( *shadowPath );
+                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( outShadow._tempPath );
             }
             if ( outShadow._pHandle == nullptr )
             {
                 context._libraryName._current = context._libraryName._loaded;
                 SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadDynamicLibrary", "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
-                ModuleShadowCopy::removeArtifacts( FileUtil::toDiskPath( outShadow._tempPath ) );
+                ModuleShadowCopy::removeArtifacts( outShadow._tempPath );
                 outShadow = {};
                 return false;
             }
@@ -794,11 +792,11 @@ namespace sw
             }
 
             context._pLibraryModule      = prepared._pHandle;
-            context._tempModulePath      = FileUtil::toDiskPath( prepared._tempPath );
+            context._tempModulePath      = prepared._tempPath;
             context._loadedSourceStamp   = prepared._sourceStamp;
             context._libraryName._loaded = context._libraryName._current;
             prepared._pHandle            = nullptr;
-            prepared._tempPath.clear();
+            prepared._tempPath           = {};
 
             engine::registerModuleTypes( context._moduleName, prepared._heads );
             prepared._heads = engine::ModuleRegistrarHeads{};
@@ -867,8 +865,8 @@ namespace sw
 
         prepared._heads         = engine::ModuleRegistrarHeads{};
         prepared._previousHeads = engine::ModuleRegistrarHeads{};
-        ModuleShadowCopy::removeArtifacts( FileUtil::toDiskPath( prepared._tempPath ) );
-        prepared._tempPath.clear();
+        ModuleShadowCopy::removeArtifacts( prepared._tempPath );
+        prepared._tempPath    = {};
         prepared._sourceStamp = FileStamp{};
     }
 

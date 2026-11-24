@@ -41,7 +41,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 폴더의 직속 하위 폴더 절대 경로를 디스크에서 읽어 채우는 함수 타입입니다(`EditorFolderListing::collectChildFolders`). */
-    using ContentBrowserFolderScanFunc = void ( * )( const AbsolutePath& folderAbs, vector<string>& outListChild );
+    using ContentBrowserFolderScanFunc = void ( * )( const AbsolutePath& folderAbs, vector<AbsolutePath>& outListChild );
 
     /**
      * @class ContentBrowserFolderCache
@@ -59,15 +59,15 @@ namespace sw::editor
          * @brief 폴더의 하위 폴더를 절대 경로로 정렬해 반환합니다. 처음 묻는 폴더만 디스크를 읽습니다. 경로의 대소문자와 구분자가 달라도 같은 폴더로 봅니다.
          * @warning 반환한 참조는 `clear` 전까지 유효합니다. 다른 폴더를 물어 테이블이 커져도 옮겨지지 않습니다. 트리를 그릴 때 재귀 중에 이 참조를 보관하기 때문입니다.
          */
-        const vector<string>& getOrScanChildFolders( const AbsolutePath& folderAbs );
+        const vector<AbsolutePath>& getOrScanChildFolders( const AbsolutePath& folderAbs );
         /** @brief 읽어 둔 것을 모두 버립니다. 다음에 물으면 다시 읽습니다. */
         void clear() { _mapChildFolder.clear(); }
         /** @brief 읽어 둔 폴더 수를 반환합니다. */
         uint32 getCachedFolderCount() const { return static_cast<uint32>( _mapChildFolder.size() ); }
 
     private:
-        unordered_map<string, unique_ptr<vector<string>>> _mapChildFolder; ///< 정규화한 폴더 경로에서 하위 폴더로의 대응이다. 값을 힙에 두므로 테이블이 커져도 참조가 유효하다
-        ContentBrowserFolderScanFunc                      _pfnScan;
+        unordered_map<string, unique_ptr<vector<AbsolutePath>>> _mapChildFolder; ///< 정규화한 폴더 경로에서 하위 폴더로의 대응이다. 값을 힙에 두므로 테이블이 커져도 참조가 유효하다
+        ContentBrowserFolderScanFunc                            _pfnScan;
     };
 } // namespace sw::editor
 

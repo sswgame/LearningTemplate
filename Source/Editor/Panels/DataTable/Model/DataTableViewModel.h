@@ -64,7 +64,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool saveDocument();
         /** @brief `saveDocument` 가 쓸 파일입니다 — 고친 현지화 프로젝트의 표들과 열린 게임 데이터 파일(디스크 경로). */
-        void collectFilesToSave( vector<string>& outListPath ) const;
+        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const;
         /** @brief 고친 현지화 표를 디스크의 내용으로 되돌립니다. 게임 데이터 파일은 패널이 다시 엽니다(`openGameDataFile`). */
         void revertLocalization();
         bool isLocalizationDirty() const { return _bLocalizationDirty; }

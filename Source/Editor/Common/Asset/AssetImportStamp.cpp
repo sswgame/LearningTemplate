@@ -533,17 +533,17 @@ namespace sw::editor
                 flat_map<string, StampEntry> mapStamped;
                 readStamp( stampPath, importer.getStampHeader(), mapStamped );
 
-                vector<string> listPath;
-                (void)EditorContentScan::collectFiles( rawFolder.str(), "", listPath, true ); // 폴더는 방금 훑어서 찾았다
+                vector<AbsolutePath> listPath;
+                (void)EditorContentScan::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
                 AssetSourceLocator::collectStoredSources( rawFolder, listPath );
                 VectorUtil::sort( listPath );
 
                 vector<SourceFile>            listFile;
                 unordered_map<string, string> mapImportedOwner; // 결과 경로(소문자) → 먼저 나온 원본
-                for ( const string& path : listPath )
+                for ( const AbsolutePath& path : listPath )
                 {
                     SourceFile file;
-                    file._sourcePath           = FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
+                    file._sourcePath           = path;
                     const bool bSkipSourceFile = importer.isSourceFile( file._sourcePath.str() ) == false || file._sourcePath.str().size() <= rawFolder.str().size() + 1 || file._sourcePath.str().size() <= rootDir.size() + 1;
                     if ( bSkipSourceFile )
                         continue;
@@ -700,9 +700,9 @@ namespace sw::editor
                     inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
                 }
 
-                vector<string> listRemaining;
-                const bool     bSideFolder = FileUtil::isDirectory( sideFolder );
-                const bool     bSideEmpty  = bSideFolder && EditorContentScan::collectFiles( sideFolder.str(), "", listRemaining, true ) && listRemaining.empty();
+                vector<AbsolutePath> listRemaining;
+                const bool           bSideFolder = FileUtil::isDirectory( sideFolder );
+                const bool           bSideEmpty  = bSideFolder && EditorContentScan::collectFiles( sideFolder, "", listRemaining, true ) && listRemaining.empty();
                 if ( bSideEmpty && FileUtil::removeDirectory( sideFolder ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
@@ -732,7 +732,7 @@ namespace sw::editor
                 AssetImportSummary summary;
                 const AbsolutePath rootDir = resourceRoot.join( {} );
 
-                vector<string> listFolder;
+                vector<AbsolutePath> listFolder;
                 // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 임포트하지 않는다(EditorContentScan 이 뺀다)
                 if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
                 {
@@ -747,9 +747,9 @@ namespace sw::editor
                 unordered_set<string> uniqueScopeFolder;
                 if ( pScope != nullptr )
                     collectScopeFolders( *pScope, uniqueScopeFolder );
-                for ( const string& folder : listFolder )
+                for ( const AbsolutePath& folder : listFolder )
                 {
-                    const AbsolutePath normalizedFolder = FileUtil::toDiskPath( FileUtil::normalizeSeparators( folder ) );
+                    const AbsolutePath normalizedFolder = folder;
                     if ( FileUtil::getFileNamePart( normalizedFolder.str() ) != importer.getRawFolderName() )
                         continue;
                     const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.str().size() <= rootDir.str().size() + 1 || uniqueScopeFolder.contains( makeScopeKey( string_view( normalizedFolder.str() ).substr( rootDir.str().size() + 1 ) ) ) == false );
@@ -784,22 +784,22 @@ namespace sw::editor
 
     vector<string> AssetImportStampUtil::collectSourceAssetPaths( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer )
     {
-        const AbsolutePath rootDir = resourceRoot.join( {} );
-        vector<string>     listFolder;
-        vector<string>     listAssetPath;
+        const AbsolutePath   rootDir = resourceRoot.join( {} );
+        vector<AbsolutePath> listFolder;
+        vector<string>       listAssetPath;
         if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
             return listAssetPath;
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
-            const AbsolutePath normalizedFolder = FileUtil::toDiskPath( FileUtil::normalizeSeparators( folder ) );
+            const AbsolutePath normalizedFolder = folder;
             if ( FileUtil::getFileNamePart( normalizedFolder.str() ) != importer.getRawFolderName() )
                 continue;
-            vector<string> listPath;
-            (void)EditorContentScan::collectFiles( normalizedFolder.str(), "", listPath, true );
+            vector<AbsolutePath> listPath;
+            (void)EditorContentScan::collectFiles( normalizedFolder, "", listPath, true );
             AssetSourceLocator::collectStoredSources( normalizedFolder, listPath );
-            for ( const string& path : listPath )
+            for ( const AbsolutePath& path : listPath )
             {
-                const string sourcePath = FileUtil::normalizeSeparators( path );
+                const string sourcePath = FileUtil::normalizeSeparators( path.str() );
                 if ( importer.isSourceFile( sourcePath ) && sourcePath.size() > rootDir.str().size() + 1 )
                     listAssetPath.push_back( sourcePath.substr( rootDir.str().size() + 1 ) );
             }

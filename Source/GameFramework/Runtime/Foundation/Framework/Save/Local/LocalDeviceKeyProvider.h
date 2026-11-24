@@ -42,7 +42,7 @@ namespace sw
          * @brief 키를 읽거나 만들어 둡니다. 실패하면 그 이유입니다 — 로그는 부르는 쪽이 잠금을 놓은 뒤 남긴다.
          * @param outSetAsidePath 풀리지 않는 키 파일을 옆으로 옮기고 새 키를 만들었으면 옮긴 경로(부르는 쪽이 경고한다)
          */
-        [[nodiscard]] expected<void> loadOrCreateKeyLocked( string& outSetAsidePath ) SW_REQUIRES_LOCK( _mutex );
+        [[nodiscard]] expected<void> loadOrCreateKeyLocked( AbsolutePath& outSetAsidePath ) SW_REQUIRES_LOCK( _mutex );
 
     private:
         AbsolutePath          _keyFilePath;

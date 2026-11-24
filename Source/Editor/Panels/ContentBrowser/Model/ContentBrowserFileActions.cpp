@@ -66,21 +66,21 @@ namespace sw::editor
     {
     }
 
-    bool ContentBrowserFileActions::createFolder( const AbsolutePath& parentAbs, string& outFolderAbs )
+    bool ContentBrowserFileActions::createFolder( const AbsolutePath& parentAbs, AbsolutePath& outFolderAbs )
     {
         if ( parentAbs.empty() )
             return false;
         return EditorAssetFileCommands::createFolder( parentAbs, outFolderAbs );
     }
 
-    bool ContentBrowserFileActions::createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
+    bool ContentBrowserFileActions::createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, AbsolutePath& outAssetAbs )
     {
         if ( folderAbs.empty() )
             return false;
         return EditorAssetFileCommands::createAsset( folderAbs, assetTemplate, outAssetAbs );
     }
 
-    bool ContentBrowserFileActions::duplicateAsset( const AbsolutePath& sourceAbs, string& outAssetAbs )
+    bool ContentBrowserFileActions::duplicateAsset( const AbsolutePath& sourceAbs, AbsolutePath& outAssetAbs )
     {
         if ( sourceAbs.empty() )
             return false;
@@ -113,7 +113,7 @@ namespace sw::editor
         return EditorAssetFileCommands::planAssetMoves( *listMove, index, outPlan );
     }
 
-    bool ContentBrowserFileActions::moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, EditorAssetIndex& inoutIndex, string& outDestinationAbs )
+    bool ContentBrowserFileActions::moveAssetToFolder( const AbsolutePath& sourceAbs, const AbsolutePath& folderAbs, EditorAssetIndex& inoutIndex, AbsolutePath& outDestinationAbs )
     {
         const expected<vector<EditorAssetMove>> collected = collectMovesToFolder( sourceAbs, folderAbs );
         if ( collected.has_value() == false )
@@ -126,7 +126,7 @@ namespace sw::editor
         EditorAssetMovePlan            plan;
         if ( EditorAssetFileCommands::applyAssetMoves( listMove, inoutIndex, plan ) == false )
             return false; // 이유와 되돌림은 applyAssetMoves 가 알렸다
-        outDestinationAbs = bFolder ? FileUtil::joinPath( folderAbs.str(), FileUtil::getFileNamePart( sourceAbs.str() ) ) : listMove.front()._destinationAbs.str();
+        outDestinationAbs = bFolder ? folderAbs.join( FileUtil::getFileNamePart( sourceAbs.str() ) ) : listMove.front()._destinationAbs;
         if ( bFolder )
         {
             // 파일은 모두 옮겼다 — 빈 폴더 나무만 남았을 때만 지운다(`removeDirectory` 는 재귀라, 그 사이 누가 넣은 파일이 있으면 지우지 않고 둔다)

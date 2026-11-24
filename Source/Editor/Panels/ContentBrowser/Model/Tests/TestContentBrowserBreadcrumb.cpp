@@ -28,11 +28,11 @@ namespace
             return FileUtil::toDiskPath( text.view() );
         }
 
-        static void scanFolders( const AbsolutePath& folderAbs, vector<string>& outListChild )
+        static void scanFolders( const AbsolutePath& folderAbs, vector<AbsolutePath>& outListChild )
         {
             (void)folderAbs;
             ++s_scanCount;
-            outListChild = { "zeta", "alpha" };
+            outListChild = { makePath( "zeta" ), makePath( "alpha" ) };
         }
     };
     using Util = ContentBrowserLogicTestUtil;
@@ -153,17 +153,17 @@ SW_TEST_CASE( ContentBrowserLogicTest, FavoriteTrailStartsWithAnInertGroup )
 SW_TEST_CASE( ContentBrowserFolderCacheTest, ScansOncePerFolderAndSortsChildren )
 {
     Util::s_scanCount = 0;
-    ContentBrowserFolderCache cache{ &Util::scanFolders };
-    const vector<string>&     listChild = cache.getOrScanChildFolders( Util::makePath( "a" ) );
+    ContentBrowserFolderCache   cache{ &Util::scanFolders };
+    const vector<AbsolutePath>& listChild = cache.getOrScanChildFolders( Util::makePath( "a" ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listChild.size() );
-    SW_EXPECT_TRUE( listChild[0] == "alpha" );
+    SW_EXPECT_TRUE( listChild[0] == Util::makePath( "alpha" ) );
     SW_EXPECT_EQUAL( 1u, Util::s_scanCount );
 
     (void)cache.getOrScanChildFolders( Util::withTrailingSlash( Util::makePath( "a" ) ) ); // 같은 폴더다
     SW_EXPECT_EQUAL( 1u, Util::s_scanCount );
     SW_EXPECT_EQUAL( 1u, cache.getCachedFolderCount() );
 
-    const vector<string>& listOther = cache.getOrScanChildFolders( Util::makePath( "b" ) );
+    const vector<AbsolutePath>& listOther = cache.getOrScanChildFolders( Util::makePath( "b" ) );
     SW_EXPECT_EQUAL( 2u, Util::s_scanCount );
     SW_EXPECT_EQUAL( size_t{ 2 }, listChild.size() ); // 표가 늘어도 앞서 받은 참조가 유효하다
     SW_EXPECT_EQUAL( size_t{ 2 }, listOther.size() );

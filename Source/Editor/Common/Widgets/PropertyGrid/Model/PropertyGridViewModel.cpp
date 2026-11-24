@@ -1410,13 +1410,13 @@ namespace sw::editor
         }
         // 실행의 작업 도메인(`scratch/` — 리소스 트리 밖이라 색인에 없다)도 마운트된 리소스다: 시나리오가 사본 폴더로 내보낸 프리셋을 고를 수 있어야 한다
         // (언리얼 임시 마운트 지점의 패키지도 에셋 레지스트리에 오른다). 폴더가 없으면 고를 것이 없다.
-        vector<string>      listScratchFile;
-        const AbsolutePath& scratchFolder = AssetPaths::getScratchFolderPath();
-        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder.str(), ".xml", listScratchFile, true ) )
+        vector<AbsolutePath> listScratchFile;
+        const AbsolutePath&  scratchFolder = AssetPaths::getScratchFolderPath();
+        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, ".xml", listScratchFile, true ) )
         {
-            for ( const string& filePath : listScratchFile )
+            for ( const AbsolutePath& filePath : listScratchFile )
             {
-                listAssetID.push_back( EditorPaths::getAssetPaths().toAssetID( FileUtil::toDiskPath( filePath ) ) );
+                listAssetID.push_back( EditorPaths::getAssetPaths().toAssetID( filePath ) );
             }
         }
         fixed_string<constant::buffer::kMax128> opening;

@@ -138,8 +138,8 @@ namespace sw
                 string portraitList;
                 if ( commandLine.getArgument( CommandLineArgument::RENDER_PORTRAITS, portraitList ) == false || portraitList.empty() )
                     return TaskResult::NotRequested;
-                int32  portraitSize = 256;
-                string portraitDir;
+                int32        portraitSize = 256;
+                AbsolutePath portraitDir;
                 commandLine.getArgument( CommandLineArgument::PORTRAIT_SIZE, portraitSize );
                 commandLine.getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
                 // 굽는 동안 스플래시를 남기지 않는다. 렌더러 없는 구성은 스플래시 단계가 없다.

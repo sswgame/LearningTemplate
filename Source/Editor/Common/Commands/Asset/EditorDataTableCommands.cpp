@@ -127,8 +127,7 @@ namespace sw::editor
                     const AbsolutePath path = FileUtil::toDiskPath( LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] ) );
                     if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
                         continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
-                    const optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( path.str() );
-                    if ( translationFile.has_value() == false || listTranslation[cultureIndex].saveToFile( *translationFile ) == false )
+                    if ( listTranslation[cultureIndex].saveToFile( path ) == false )
                     {
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot", "Translation table '%#' could not be written", path.c_str() );
                         bAllWritten = false;
@@ -223,23 +222,23 @@ namespace sw::editor
         return bAllRead;
     }
 
-    void EditorDataTableCommands::collectLocalizationFiles( const LocalizationSheet& sheet, vector<string>& outListPath )
+    void EditorDataTableCommands::collectLocalizationFiles( const LocalizationSheet& sheet, vector<AbsolutePath>& outListPath )
     {
         for ( const string& tablePath : sheet._listTablePath )
-            outListPath.push_back( tablePath );
+            outListPath.push_back( FileUtil::toDiskPath( tablePath ) );
         for ( const string& culture : sheet._listCulture )
-            outListPath.push_back( LocalizationProject::makeTranslationPath( sheet._projectPath, culture ) );
+            outListPath.push_back( FileUtil::toDiskPath( LocalizationProject::makeTranslationPath( sheet._projectPath, culture ) ) );
     }
 
     bool EditorDataTableCommands::saveLocalizationProject( LocalizationSheet& inoutSheet )
     {
         using Internal = EditorDataTableCommandsInternal;
         // 표 하나라도 잠그지 않았으면(읽기 전용) 아무것도 쓰지 않는다 — 반만 쓴 프로젝트를 남기지 않고, 패널 저장 · 표 단추가 같은 확인을 지난다.
-        vector<string> listPath;
+        vector<AbsolutePath> listPath;
         collectLocalizationFiles( inoutSheet, listPath );
-        for ( const string& filePath : listPath )
+        for ( const AbsolutePath& filePath : listPath )
         {
-            if ( EditorContentWrite::warnIfReadOnly( FileUtil::toDiskPath( filePath ), EditorContentWriteKind::Save ) )
+            if ( EditorContentWrite::warnIfReadOnly( filePath, EditorContentWriteKind::Save ) )
                 return false;
         }
         // 디스크의 지금 내용 위에 고친 줄만 적용한다. 그래야 수집기가 적은 출처, 번역가 메모, 검토 표시가 유지된다.

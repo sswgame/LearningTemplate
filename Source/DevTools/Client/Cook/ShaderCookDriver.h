@@ -84,7 +84,7 @@ namespace sw
          * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
         static ShaderCookSummary cookAllShaders( const AbsolutePath& cookedDir,
-                                                 string_view         resourceRoot = {},
+                                                 const AbsolutePath& resourceRoot = {},
                                                  ShaderTargetFormat  targetFormat = ShaderTargetFormat::Count,
                                                  ShaderCookScope     scope        = ShaderCookScope::All );
 

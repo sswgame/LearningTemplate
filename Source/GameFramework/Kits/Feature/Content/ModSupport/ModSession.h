@@ -90,7 +90,7 @@ namespace sw
          * @details @p id 는 바깥 입력이라 형식(`ModManifest::isValidID`)부터 본다(경로를 id 로만 만든다). 매니페스트를 읽어 id 가 폴더와 같은지 보고, 팩은 같은 한계 · 경로 검사
          *          (`ModPackBuilder` · 마운트 전 검사와 같은 정책 데이터 @p packRoot 의 `modsupport`)를 지난다. 실패하면 이유를 오류로 남기고 false 이며, 쓴 것은 지운다.
          */
-        [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, string& outFolder );
+        [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, AbsolutePath& outFolder );
 
     private:
         /** @brief 이 세션이 바꾼 기본 리소스 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
@@ -98,7 +98,7 @@ namespace sw
         /** @brief 켤 모드의 매니페스트를 읽습니다(id 형식 · 파일 크기 · id 와 폴더 이름의 일치). */
         [[nodiscard]] static bool loadManifests( const ModSessionRequest& request, const ModSupportSettings& settings, vector<ModManifest>& outListManifest );
         /** @brief 모드 하나의 팩 경로를 정합니다 — 묶은 팩이면 그것, 소스 폴더면(개발 구성만) 묶어서 그 경로. 둘 다 있거나 없으면 오류입니다. */
-        [[nodiscard]] bool preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, string& outPackPath );
+        [[nodiscard]] bool preparePack( const ModSessionRequest& request, const ModManifest& manifest, const ModSupportSettings& settings, AbsolutePath& outPackPath );
         /**
          * @brief 팩을 검사하고 내용 해시를 구합니다(크기 · 도메인 없음 · 항목 수 · 항목 크기 · 경로 꼴 · 모드 접두 또는 밝힌 덮어쓰기 · 밝힌 덮어쓰기와 층이 모두 들었고 기본 리소스가 있음).
          * @details 층 폴더(`mods/<id>/layer/`)의 항목은 밝힌 층이어야 한다 — 엔진 층은 그 뿌리 아래 파일이면 무엇이든 얹으므로, 밝히지 않은 층 파일은 정책(`<Overridable>`)을 지나지 않고 기본 리소스를 바꾼다.

@@ -376,10 +376,10 @@ namespace sw::editor
         outSuffix = string{ fileName.substr( dot ) };
     }
 
-    string EditorAssetFileCommands::makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix )
+    AbsolutePath EditorAssetFileCommands::makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix )
     {
         // 만들기가 곧 자리 잡기다(`reserveUniquePath`) — "있나 보고 고르기" 는 번호를 다 쓰면 있는 파일을 돌려줘 덮어썼다. 접미사가 빈 글이면 폴더다.
-        return FileUtil::reserveUniquePath( folderAbs.join( stem ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" ).str();
+        return FileUtil::reserveUniquePath( folderAbs.join( stem ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
     }
 
     uint32 EditorAssetFileCommands::replaceReference( string& inoutText, string_view oldID, string_view newID )
@@ -408,16 +408,16 @@ namespace sw::editor
         return replaceCount;
     }
 
-    bool EditorAssetFileCommands::createFolder( const AbsolutePath& parentAbs, string& outFolderAbs )
+    bool EditorAssetFileCommands::createFolder( const AbsolutePath& parentAbs, AbsolutePath& outFolderAbs )
     {
         outFolderAbs = makeUniquePath( parentAbs, "new_folder", "" );
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( outFolderAbs ) ) )
+        if ( FileUtil::ensureDirectoryExists( outFolderAbs ) )
             return true;
-        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotCreateFolder", "Could not create the folder '%#'", outFolderAbs );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotCreateFolder", "Could not create the folder '%#'", outFolderAbs.str() );
         return false;
     }
 
-    bool EditorAssetFileCommands::createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
+    bool EditorAssetFileCommands::createAsset( const AbsolutePath& folderAbs, const EditorNewAssetTemplate& assetTemplate, AbsolutePath& outAssetAbs )
     {
         string text;
         if ( assetTemplate._pfnSourcePath == nullptr )
@@ -446,22 +446,22 @@ namespace sw::editor
         {
             string uniqueStem;
             string uniqueSuffix;
-            splitAssetName( FileUtil::getFileNamePart( outAssetAbs ), uniqueStem, uniqueSuffix );
+            splitAssetName( FileUtil::getFileNamePart( outAssetAbs.str() ), uniqueStem, uniqueSuffix );
             fixed_string<constant::buffer::kMax256> nameAttribute;
             formatstring( nameAttribute.data(), nameAttribute.capacity(), "name=\"%#\"", uniqueStem );
             (void)replaceReference( text, assetTemplate._pNameAttribute, nameAttribute ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
-        if ( FileUtil::writeTextFile( FileUtil::toDiskPath( outAssetAbs ), text ) && EditorAssetFileCommandsInternal::assignNewIdentity( FileUtil::toDiskPath( outAssetAbs ) ) )
+        if ( FileUtil::writeTextFile( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
         {
-            SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( outAssetAbs ) ) );
+            SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
-        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs );
+        SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs.str() );
         return false;
     }
 
-    bool EditorAssetFileCommands::duplicateAsset( const AbsolutePath& sourceAbs, string& outAssetAbs )
+    bool EditorAssetFileCommands::duplicateAsset( const AbsolutePath& sourceAbs, AbsolutePath& outAssetAbs )
     {
         string stem;
         string suffix;
@@ -470,7 +470,7 @@ namespace sw::editor
             return false;
         outAssetAbs = makeUniquePath( sourceAbs.getParent(), stem, suffix );
         // 복제는 새 에셋이다 — 베낀 머리 GUID 는 새 것으로 바꾸고, 원본이면 곁의 .meta 를 베끼지 않고 새로 쓴다(겹친 GUID 는 참조를 엉뚱한 쪽으로 푼다).
-        return FileUtil::copyFile( sourceAbs, FileUtil::toDiskPath( outAssetAbs ) ) && EditorAssetFileCommandsInternal::assignNewIdentity( FileUtil::toDiskPath( outAssetAbs ) );
+        return FileUtil::copyFile( sourceAbs, outAssetAbs ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs );
     }
 
     bool EditorAssetFileCommands::planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan )
@@ -845,7 +845,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorAssetFileCommands::readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply )
+    bool EditorAssetFileCommands::readSourceFileArgument( const string& argument, AbsolutePath& outAbsolutePath, string& outReply )
     {
         if ( AbsolutePath::isStrictAbsolute( argument ) )
             return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
@@ -857,11 +857,11 @@ namespace sw::editor
             outReply = string( replyBuilder.view() );
             return false;
         }
-        outAbsolutePath = diskPath->str();
+        outAbsolutePath = *diskPath;
         return true;
     }
 
-    uint32 EditorAssetFileCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
+    uint32 EditorAssetFileCommands::importFiles( const AbsolutePath& destFolderAbs, const vector<AbsolutePath>& listSourcePath )
     {
         if ( destFolderAbs.empty() )
         {
@@ -870,18 +870,18 @@ namespace sw::editor
         }
 
         uint32 copied{ 0 };
-        for ( const string& sourcePath : listSourcePath )
+        for ( const AbsolutePath& sourcePath : listSourcePath )
         {
-            if ( FileUtil::exists( FileUtil::toDiskPath( sourcePath ) ) == false )
+            if ( FileUtil::exists( sourcePath ) == false )
             {
                 SW_LOG_WARNING_ID( "EditorAssetFileCommands.ImportSkippedMissing", "Import skipped (missing): %#", sourcePath.c_str() );
                 continue;
             }
 
             // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
-            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) ).str();
-            const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
-            if ( FileUtil::isSameDiskPath( sourcePath, plainPath ) )
+            const string       fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath.str() ) ).str();
+            const AbsolutePath plainPath = destFolderAbs.join( fileName );
+            if ( FileUtil::isSameDiskPath( sourcePath.str(), plainPath.str() ) )
             {
                 SW_LOG_TRACE_ID( "EditorAssetFileCommands.AlreadyFolder", "Already in folder: %#", fileName.c_str() );
                 continue;
@@ -889,8 +889,8 @@ namespace sw::editor
 
             // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 빈 이름은 원자적으로 잡는다(`reserveUniquePath` - 고유 이름의 입구 하나).
-            const AbsolutePath destPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( plainPath ) ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
-            if ( destPath.empty() || FileUtil::copyFile( FileUtil::toDiskPath( sourcePath ), destPath ) == false )
+            const AbsolutePath destPath = FileUtil::reserveUniquePath( plainPath.removeExtension(), FileUtil::getExtension( fileName ), false, 10000, "_" );
+            if ( destPath.empty() || FileUtil::copyFile( sourcePath, destPath ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorAssetFileCommands.FailedImport", "Failed to import: %#", sourcePath.c_str() );
                 continue;

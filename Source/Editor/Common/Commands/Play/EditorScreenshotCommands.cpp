@@ -46,7 +46,7 @@ namespace sw::editor
 {
     void EditorScreenshotCommands::captureGameView()
     {
-        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow(), 0 );
+        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow().str(), 0 );
     }
 
     void EditorScreenshotCommands::captureSceneView()
@@ -59,7 +59,7 @@ namespace sw::editor
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationKind::Warning );
             return;
         }
-        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow(), renderTarget );
+        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow().str(), renderTarget );
     }
 
     void EditorScreenshotCommands::captureFocusedView()

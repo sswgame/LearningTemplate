@@ -107,7 +107,7 @@ namespace sw
          * @param outDirectory 만든 폴더(작업 폴더 기준 상대 경로)입니다.
          * @return 폴더와 info.txt 를 썼으면 true 입니다. 나머지(스크린샷, 로그, 씬)는 할 수 있는 만큼 남기고 실패는 경고로 알립니다.
          */
-        [[nodiscard]] static bool capture( const BugReportInputs& inputs, string& outDirectory );
+        [[nodiscard]] static bool capture( const BugReportInputs& inputs, AbsolutePath& outDirectory );
         /**
          * @brief @p directory(비면 `Saved/BugReports` 아래 가장 최근 폴더)의 info.txt 를 읽어 그 씬을 @p sceneManager 로 열고(활성 씬과 다를 때) 보이는 카메라를 그 위치와 각도로 옮깁니다.
          * @details 뷰포트 카메라를 옮기면 그 뷰포트를 그리는 도구가 옮긴 위치를 이어받습니다.

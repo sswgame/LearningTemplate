@@ -69,7 +69,7 @@ namespace sw
         return desc;
     }
 
-    uint32 VertexAnimationCooker::cookAll( const AbsolutePath& resourceRoot, const string& cookedDir, float32 framesPerSecond, const CookStore& store,
+    uint32 VertexAnimationCooker::cookAll( const AbsolutePath& resourceRoot, const AbsolutePath& cookedDir, float32 framesPerSecond, const CookStore& store,
                                            uint32& outFailedCount )
     {
         vector<AbsolutePath> listFile;
@@ -107,10 +107,10 @@ namespace sw
             for ( const hashed_string& clipName : list._listClip )
             {
                 const string     outputID = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-                const CookResult result   = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir, outputID ), [&]()
+                const CookResult result   = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir.str(), outputID ), [&]()
                   {
                     VertexAnimationCookList      jobList;
-                    const optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, outputID ) );
+                    const optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir.str(), outputID ) );
                     const bool                   bCooked    = outputPath.has_value() && jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, *outputPath, framesPerSecond );
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );

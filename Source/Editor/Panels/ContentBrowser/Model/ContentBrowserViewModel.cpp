@@ -349,7 +349,7 @@ namespace sw::editor
 
     void ContentBrowserViewModel::refreshCurrentFolder()
     {
-        _folderJob.request( _selectedFolderAbs.str(), _bListingRecursive );
+        _folderJob.request( _selectedFolderAbs, _bListingRecursive );
         _bFolderDirty = SW_FALSE;
     }
 
@@ -514,28 +514,28 @@ namespace sw::editor
 
     bool ContentBrowserViewModel::createNewFolder()
     {
-        string folderAbs;
+        AbsolutePath folderAbs;
         if ( ContentBrowserFileActions::createFolder( _selectedFolderAbs, folderAbs ) == false )
             return false;
-        selectAfterFileChange( FileUtil::toDiskPath( folderAbs ) );
+        selectAfterFileChange( folderAbs );
         return true;
     }
 
     bool ContentBrowserViewModel::createNewAsset( const EditorNewAssetTemplate& assetTemplate )
     {
-        string assetAbs;
+        AbsolutePath assetAbs;
         if ( ContentBrowserFileActions::createAsset( _selectedFolderAbs, assetTemplate, assetAbs ) == false )
             return false;
-        selectAfterFileChange( FileUtil::toDiskPath( assetAbs ) );
+        selectAfterFileChange( assetAbs );
         return true;
     }
 
     bool ContentBrowserViewModel::duplicateAsset( const AbsolutePath& absolutePath )
     {
-        string assetAbs;
+        AbsolutePath assetAbs;
         if ( ContentBrowserFileActions::duplicateAsset( absolutePath, assetAbs ) == false )
             return false;
-        selectAfterFileChange( FileUtil::toDiskPath( assetAbs ) );
+        selectAfterFileChange( assetAbs );
         return true;
     }
 
@@ -601,10 +601,10 @@ namespace sw::editor
             SW_LOG_INFO_ID( "ContentBrowserViewModel.MoveWaitsForReferenceIndex", "Move waits for the reference index to catch up with the last file change" );
             return true;
         }
-        string destinationAbs;
+        AbsolutePath destinationAbs;
         if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, *pIndex, destinationAbs ) == false )
             return false;
-        selectAfterFileChange( FileUtil::toDiskPath( destinationAbs ) );
+        selectAfterFileChange( destinationAbs );
         return true;
     }
 
@@ -666,11 +666,11 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ContentBrowserViewModel.SelectDestinationFolderBefore", "Select a destination folder before importing." );
             return;
         }
-        _importFolderAbs = _selectedFolderAbs.str();
-        _importQueue.openDialog( _importFolderAbs );
+        _importFolderAbs = _selectedFolderAbs;
+        _importQueue.openDialog( _importFolderAbs.str() );
     }
 
-    uint32 ContentBrowserViewModel::importDroppedFiles( const vector<string>& listPath, string_view destFolderAbs )
+    uint32 ContentBrowserViewModel::importDroppedFiles( const vector<string>& listPath, const AbsolutePath& destFolderAbs )
     {
         if ( destFolderAbs.empty() )
         {
@@ -694,7 +694,7 @@ namespace sw::editor
         const uint32 imported = plan._listImport.empty() ? 0u : EditorAssetFileCommands::importFiles( destFolderAbs, plan._listImport );
         if ( imported > 0 )
             _bFolderDirty = SW_TRUE;
-        SW_LOG_INFO_ID( "ContentBrowser.FileDropImported", "Imported %# of %# dropped file(s) into %#", imported, static_cast<uint64>( listPath.size() ), string( destFolderAbs ).c_str() );
+        SW_LOG_INFO_ID( "ContentBrowser.FileDropImported", "Imported %# of %# dropped file(s) into %#", imported, static_cast<uint64>( listPath.size() ), destFolderAbs.str() );
         return imported;
     }
 
@@ -708,7 +708,12 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ContentBrowserViewModel.ImportCancelledNoDestination", "Import cancelled — no destination folder." );
             return;
         }
-        if ( EditorAssetFileCommands::importFiles( _importFolderAbs, listPath ) > 0 )
+        vector<AbsolutePath> listSourcePath;
+        for ( const string& path : listPath )
+        {
+            listSourcePath.push_back( FileUtil::toDiskPath( path ) ); // 파일 대화상자가 고른 글이다
+        }
+        if ( EditorAssetFileCommands::importFiles( _importFolderAbs, listSourcePath ) > 0 )
             _bFolderDirty = SW_TRUE;
     }
 

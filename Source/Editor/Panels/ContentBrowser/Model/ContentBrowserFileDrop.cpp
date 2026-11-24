@@ -42,17 +42,18 @@ namespace sw::editor
         outPlan._listRejected.clear();
         for ( const ContentBrowserDroppedFile& file : listFile )
         {
-            if ( VectorUtil::contains( outPlan._listImport, file._path.str() ) )
+            if ( VectorUtil::containsIf( outPlan._listImport, [&file]( const AbsolutePath& path )
+            { return path.str() == file._path; } ) )
                 continue; // 같은 파일을 두 번 놓았다 — 한 번만 받는다
             ContentBrowserFileDropRejection reason{ ContentBrowserFileDropRejection::NotRegularFile };
             bool                            bRejected = true;
-            if ( FileUtil::isAbsolutePath( file._path.str() ) == false )
+            if ( FileUtil::isAbsolutePath( file._path ) == false )
                 reason = ContentBrowserFileDropRejection::NotAbsolute;
-            else if ( Internal::hasParentReference( file._path.str() ) )
+            else if ( Internal::hasParentReference( file._path ) )
                 reason = ContentBrowserFileDropRejection::ParentReference;
             else if ( file._bRegularFile == false )
                 reason = ContentBrowserFileDropRejection::NotRegularFile;
-            else if ( Internal::hasAcceptedExtension( file._path.str(), rules._listExtension ) == false )
+            else if ( Internal::hasAcceptedExtension( file._path, rules._listExtension ) == false )
                 reason = ContentBrowserFileDropRejection::UnknownExtension;
             else if ( file._byteSize > rules._maxBytes )
                 reason = ContentBrowserFileDropRejection::TooLarge;
@@ -61,9 +62,9 @@ namespace sw::editor
             else
                 bRejected = false;
             if ( bRejected )
-                outPlan._listRejected.push_back( ContentBrowserRejectedFile{ file._path.str(), reason } );
+                outPlan._listRejected.push_back( ContentBrowserRejectedFile{ file._path, reason } );
             else
-                outPlan._listImport.push_back( file._path.str() );
+                outPlan._listImport.push_back( FileUtil::toDiskPath( file._path ) );
         }
     }
 
@@ -74,8 +75,8 @@ namespace sw::editor
         for ( const string& path : listPath )
         {
             ContentBrowserDroppedFile file{};
-            file._path         = FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
-            file._bRegularFile = FileUtil::isAbsolutePath( file._path.str() ) && FileUtil::isRegularFile( file._path ) && FileUtil::tryGetFileSize( file._path, file._byteSize );
+            file._path         = FileUtil::normalizeSeparators( path );
+            file._bRegularFile = FileUtil::isAbsolutePath( file._path ) && FileUtil::isRegularFile( FileUtil::toDiskPath( file._path ) ) && FileUtil::tryGetFileSize( FileUtil::toDiskPath( file._path ), file._byteSize );
             outListFile.push_back( std::move( file ) );
         }
     }

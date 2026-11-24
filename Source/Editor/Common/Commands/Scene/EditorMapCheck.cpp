@@ -32,11 +32,11 @@ namespace sw::editor
                 const AbsolutePath folder   = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : AbsolutePath{};
                 if ( folder.empty() )
                     return;
-                vector<string> listFile;
-                (void)EditorContentScan::collectFiles( folder.join( "data" ).str(), ".xml", listFile, true ); // 데이터 폴더가 없는 팩이면 검사할 것도 없다
-                for ( const string& file : listFile )
+                vector<AbsolutePath> listFile;
+                (void)EditorContentScan::collectFiles( folder.join( "data" ), ".xml", listFile, true ); // 데이터 폴더가 없는 팩이면 검사할 것도 없다
+                for ( const AbsolutePath& file : listFile )
                 {
-                    string assetID = editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::toDiskPath( file ) );
+                    string assetID = editor::getSubsystem<AssetPaths>().toAssetID( file );
                     if ( assetID.empty() == false )
                         outListAsset.push_back( std::move( assetID ) );
                 }

@@ -108,8 +108,8 @@ SW_TEST_CASE( DevConsoleRegistryTest, CountArgument )
 /** @brief [DevConsoleRegistryTest] 경로 인자는 절대 경로만 받고 거절하면 이유를 답한다. 불리언 인자는 없으면 기본값을 둔다 */
 SW_TEST_CASE( DevConsoleRegistryTest, PathAndBoolArguments )
 {
-    string absolutePath;
-    string reply;
+    AbsolutePath absolutePath;
+    string       reply;
     SW_EXPECT_TRUE( DevCommandRegistry::readDiskPathArgument( test::makeScratchPath( "a.txt" ).str(), absolutePath, reply ) );
     SW_EXPECT_FALSE( absolutePath.empty() );
     SW_EXPECT_FALSE( DevCommandRegistry::readDiskPathArgument( "relative/a.txt", absolutePath, reply ) );

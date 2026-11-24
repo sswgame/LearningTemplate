@@ -27,9 +27,9 @@ namespace sw::editor
     /** @brief 놓은 파일 하나의 디스크 정보입니다(`collectDroppedFiles` 가 채운다 — 테스트는 손으로 채운다). */
     struct ContentBrowserDroppedFile
     {
-        AbsolutePath _path{};                ///< 구분자를 `/` 로 맞춘 경로
-        uint64       _byteSize{ 0 };         ///< 일반 파일의 크기
-        bool         _bRegularFile{ false }; ///< 있는 일반 파일이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string _path{};                ///< 구분자를 `/` 로 맞춘 경로
+        uint64 _byteSize{ 0 };         ///< 일반 파일의 크기
+        bool   _bRegularFile{ false }; ///< 있는 일반 파일이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 받는 규칙입니다. 값은 설정(`EditorToolDefaults`)과 임포트 종류 표에서 온다 — 대신 쓰는 기본값은 없다. */
@@ -53,7 +53,7 @@ namespace sw::editor
      */
     struct ContentBrowserFileDropPlan
     {
-        vector<string>                     _listImport{};
+        vector<AbsolutePath>               _listImport{};
         vector<ContentBrowserRejectedFile> _listRejected{};
 
         /**

@@ -1099,7 +1099,7 @@ namespace sw::editor
         for ( uint32 favoriteIndex = 0; favoriteIndex < favoriteCount; ++favoriteIndex )
         {
             const AbsolutePath favoritePath = kArrFavorites[favoriteIndex]._bEngine ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favoriteIndex]._pRelPath ) ) : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserViewModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
-            const bool         bSelected    = FileUtil::isSameDiskPath( favoritePath.str(), _model.getSelectedFolderPath() );
+            const bool         bSelected    = FileUtil::isSameDiskPath( favoritePath.str(), _model.getSelectedFolderPath().str() );
 
             if ( ImGui::Selectable( kArrFavorites[favoriteIndex]._pLabel, bSelected ) )
             {
@@ -1115,7 +1115,7 @@ namespace sw::editor
 
         for ( const ContentBrowserRoot& root : _model.getRoots() )
         {
-            drawFolderTreeNode( FileUtil::toDiskPath( root._absolutePath.c_str() ), root._displayName, 0 );
+            drawFolderTreeNode( root._absolutePath, root._displayName, 0 );
         }
 
         if ( _model.getRoots().empty() )
@@ -1127,7 +1127,7 @@ namespace sw::editor
     void ContentBrowserPanel::drawFolderTreeNode( const AbsolutePath& folderPath, string_view label, int32 depth )
     {
         const AbsolutePath absPath  = folderPath;
-        const bool         selected = FileUtil::isSameDiskPath( absPath.str(), _model.getSelectedFolderPath() );
+        const bool         selected = FileUtil::isSameDiskPath( absPath.str(), _model.getSelectedFolderPath().str() );
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if ( selected )
@@ -1136,8 +1136,8 @@ namespace sw::editor
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
         // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다. Refresh 와 파일 감시가 캐시를 비운다. 참조는 재귀 중에도 유효하다.
-        const vector<string>& listChild    = _model.getOrScanChildFolders( absPath );
-        const bool            hasChildDirs = listChild.empty() == false;
+        const vector<AbsolutePath>& listChild    = _model.getOrScanChildFolders( absPath );
+        const bool                  hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
@@ -1159,9 +1159,9 @@ namespace sw::editor
 
         if ( opened && hasChildDirs )
         {
-            for ( const string& child : listChild )
+            for ( const AbsolutePath& child : listChild )
             {
-                drawFolderTreeNode( FileUtil::toDiskPath( child ), FileUtil::getFileNamePart( child ), depth + 1 );
+                drawFolderTreeNode( child, FileUtil::getFileNamePart( child.str() ), depth + 1 );
             }
             ImGui::TreePop();
         }
@@ -1233,7 +1233,7 @@ namespace sw::editor
         _listFolderDropRect.push_back( ContentBrowserFolderDropRect{
             float2{itemMin.x, itemMin.y},
             float2{itemMax.x, itemMax.y},
-            entry._absolutePath.str()
+            entry._absolutePath
         } );
     }
 
@@ -1243,7 +1243,7 @@ namespace sw::editor
         {
             return point._x >= minPos._x && point._y >= minPos._y && point._x < maxPos._x && point._y < maxPos._y;
         };
-        const auto findFolder = [this, &isInside]( const float2& point ) -> const string&
+        const auto findFolder = [this, &isInside]( const float2& point ) -> const AbsolutePath&
         {
             for ( const ContentBrowserFolderDropRect& rect : _listFolderDropRect )
             {

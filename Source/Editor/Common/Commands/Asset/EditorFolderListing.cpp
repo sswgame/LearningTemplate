@@ -60,21 +60,21 @@ namespace sw::editor
             return;
 
         // 워커(`EditorFolderListingJob`)에서 돈다 — 경로 상태는 부른 쪽이 넘긴 @p assetPaths 다(읽기만 한다).
-        vector<string> listFolder;
-        vector<string> listFile;
+        vector<AbsolutePath> listFolder;
+        vector<AbsolutePath> listFile;
         // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다.
         (void)EditorContentScan::collectFolders( folderAbs, listFolder, false );
-        (void)EditorContentScan::collectFiles( folderAbs.str(), {}, listFile, bRecursive, stopToken );
+        (void)EditorContentScan::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken );
 
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
-            EditorFolderListingInternal::appendFolderListingEntry( outList, FileUtil::toDiskPath( folder ), true, assetPaths );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, folder, true, assetPaths );
         }
-        for ( const string& file : listFile )
+        for ( const AbsolutePath& file : listFile )
         {
             if ( stopToken.isStopRequested() )
                 return;
-            EditorFolderListingInternal::appendFolderListingEntry( outList, FileUtil::toDiskPath( file ), false, assetPaths );
+            EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, assetPaths );
         }
         // 곁 파일(텍스처 형식 변형 · 파생 데이터 — `SW_ASSET_COMPANION`)은 원본 에셋의 일부다 — 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
         // 형식(ASTC · ETC2 를 데스크톱 D3D12)을 텍스처로 만들다 실패했다(언리얼 콘텐츠 브라우저도 플랫폼 파생 데이터를 에셋으로 보이지 않는다).
@@ -93,7 +93,7 @@ namespace sw::editor
         { return entry._bIsDirectory == false && uniqueCompanion.contains( FileUtil::normalizePath( entry._relativePath ).str() ); } );
     }
 
-    void EditorFolderListing::collectChildFolders( const AbsolutePath& folderAbs, vector<string>& outList )
+    void EditorFolderListing::collectChildFolders( const AbsolutePath& folderAbs, vector<AbsolutePath>& outList )
     {
         outList.clear();
         ++getEditorState<EditorFolderListingInternal::ScanStats>()._scanCount;
@@ -102,10 +102,6 @@ namespace sw::editor
 
         // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다.
         (void)EditorContentScan::collectFolders( folderAbs, outList, false );
-        for ( string& child : outList )
-        {
-            child = FileUtil::normalizeSeparators( child );
-        }
     }
 
     uint64 EditorFolderListing::getChildFolderScanCount()

@@ -70,7 +70,7 @@ namespace sw
          * @param completedScreenshotCount 지금까지 렌더 스레드가 쓴 시나리오 스크린샷 수
          * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않고 체인도 남기지 않는다).
          */
-        [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing );
+        [[nodiscard]] bool begin( string_view scenarioArgument, const AbsolutePath& reportPath, bool bKeepGoing );
         /** @brief 지금 시나리오가 그린 프레임을 화면에 내보낼지 정합니다 — 무인 실행은 시나리오가 `present="true"` 일 때만 내보낸다. 렌더 스레드가 없으면(헤드리스) 할 일이 없다. */
         void applyPresentPolicy();
         /**

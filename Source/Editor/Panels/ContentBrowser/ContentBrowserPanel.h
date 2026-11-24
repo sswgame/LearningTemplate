@@ -22,9 +22,9 @@ namespace sw::editor
     /** @brief 이번 프레임에 그린 폴더 타일 · 줄 하나의 화면 사각형입니다 — OS 에서 놓은 파일이 그 위에 떨어지면 그 폴더로 임포트한다. */
     struct ContentBrowserFolderDropRect
     {
-        float2 _min{};
-        float2 _max{};
-        string _folderAbs{};
+        float2       _min{};
+        float2       _max{};
+        AbsolutePath _folderAbs{};
     };
 
     /**

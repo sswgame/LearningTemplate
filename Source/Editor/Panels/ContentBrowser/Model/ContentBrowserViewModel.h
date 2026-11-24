@@ -169,10 +169,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         const vector<ContentBrowserRoot>&       getRoots() const { return _listRoot; }
         const vector<AssetEntry>&               getEntries() const { return _listEntry; }
-        const string&                           getSelectedFolderPath() const { return _selectedFolderAbs.str(); }
+        const AbsolutePath&                     getSelectedFolderPath() const { return _selectedFolderAbs; }
         const vector<ContentBrowserBreadcrumb>& getBreadcrumbs() const { return _listBreadcrumb; }
         /** @brief 폴더 트리의 하위 폴더입니다. 처음 볼 때 한 번 디스크에서 읽는다. 참조는 재귀 중에도 유효하다. */
-        const vector<string>& getOrScanChildFolders( const AbsolutePath& folderAbs ) { return _folderCache.getOrScanChildFolders( folderAbs ); }
+        const vector<AbsolutePath>& getOrScanChildFolders( const AbsolutePath& folderAbs ) { return _folderCache.getOrScanChildFolders( folderAbs ); }
         /** @brief 폴더 트리 캐시를 비웁니다. 다음 그리기에서 디스크를 다시 읽는다. */
         void clearFolderTreeCache() { _folderCache.clear(); }
         /** @brief 폴더 목록을 다시 읽도록 예약했거나 읽는 중이면 true 입니다. */
@@ -275,7 +275,7 @@ namespace sw::editor
          * @details 규칙의 한도는 설정(`EditorToolDefaults::_fileDropMaxMegabytes` · `_fileDropMaxCount`), 확장자는 임포트 종류 표다. 거른 파일은 사유와 함께 경고(`ContentBrowser.FileDropRejected`)로,
          *          받은 수는 `ContentBrowser.FileDropImported` 로 남긴다. 임포트한 파일 수를 돌려준다.
          */
-        uint32 importDroppedFiles( const vector<string>& listPath, string_view destFolderAbs );
+        uint32 importDroppedFiles( const vector<string>& listPath, const AbsolutePath& destFolderAbs );
 
         // ------------------------------------------------------------------------------
         // 5) 참조 찾기
@@ -319,7 +319,7 @@ namespace sw::editor
         AbsolutePath                     _selectedFolderAbs;
         vector<ContentBrowserBreadcrumb> _listBreadcrumb; /**< 지금 폴더의 브레드크럼 경로. 예: "Favorites / Shaders / bin" */
         AbsolutePath                     _selectedAssetAbs;
-        string                           _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
+        AbsolutePath                     _importFolderAbs;      /**< 임포트 대화상자를 연 때의 폴더 */
         ContentBrowserHistory            _history;              /**< 뒤로 가기 · 앞으로 가기 이력 */
         ContentBrowserFileActions        _fileActions;          /**< 이름 바꾸기와 삭제 확인을 기다리는 상태, 디스크를 바꾸는 작업 */
         ContentBrowserMoveQueue          _pendingMoves;         /**< 역색인이 따라오기를 기다리는 옮기기(`commitRename` · `moveAssetToFolder`) */

@@ -170,39 +170,39 @@ namespace sw::editor
 
     uint32 ImportedAssetStore::removeUnreferenced( const AbsolutePath& resourceRoot, vector<string>& inoutListProblem )
     {
-        const AbsolutePath root = resourceRoot.join( {} );
-        vector<string>     listFolder;
+        const AbsolutePath   root = resourceRoot.join( {} );
+        vector<AbsolutePath> listFolder;
         // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 보지 않는다(EditorContentScan 이 뺀다)
         if ( root.empty() || EditorContentScan::collectFolders( root, listFolder, true ) == false )
             return 0;
         uint32 removedCount = 0;
-        for ( const string& folder : listFolder )
+        for ( const AbsolutePath& folder : listFolder )
         {
-            const string store = FileUtil::normalizeSeparators( folder );
-            if ( FileUtil::getFileNamePart( store ) != kStoreFolderName || FileUtil::getFileNamePart( FileUtil::getDirectoryPart( store ) ) != kModelFolderName )
+            const AbsolutePath store = folder;
+            if ( FileUtil::getFileNamePart( store.str() ) != kStoreFolderName || FileUtil::getFileNamePart( FileUtil::getDirectoryPart( store.str() ) ) != kModelFolderName )
                 continue;
             // 같은 도메인의 임포트 결과(`<x>/models/**`)가 가리키는 파일만 남긴다. 손 데이터는 저장소를 직접 가리키지 않는다(키가 내용과 함께 바뀐다) — 셋의 이름으로 찾는다.
-            vector<string> listResult;
-            vector<string> listStored;
-            const bool     bListed = EditorContentScan::collectFiles( FileUtil::getDirectoryPart( store ), "", listResult, true ) && EditorContentScan::collectFiles( store, "", listStored, true );
+            vector<AbsolutePath> listResult;
+            vector<AbsolutePath> listStored;
+            const bool           bListed = EditorContentScan::collectFiles( store.getParent(), "", listResult, true ) && EditorContentScan::collectFiles( store, "", listStored, true );
             if ( bListed == false )
             {
                 // 다 훑지 못한 목록으로 "가리키지 않는다" 를 판정하면 쓰는 파일을 지운다.
                 StringBuilder<constant::buffer::kMax512> problemBuilder;
-                problemBuilder.appendFormat( "%#: could not list the imported results - nothing is removed from it", store );
+                problemBuilder.appendFormat( "%#: could not list the imported results - nothing is removed from it", store.str() );
                 inoutListProblem.push_back( string( problemBuilder.view() ) );
                 continue;
             }
             unordered_set<string> setReferenced;
-            for ( const string& result : listResult )
+            for ( const AbsolutePath& result : listResult )
             {
-                if ( isReferrer( result ) == false )
+                if ( isReferrer( result.str() ) == false )
                     continue;
                 string text;
-                if ( FileUtil::readTextFile( FileUtil::toDiskPath( result ), text ) == false )
+                if ( FileUtil::readTextFile( result, text ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: could not read it to find its shared results - nothing is removed from %#", result, store );
+                    problemBuilder.appendFormat( "%#: could not read it to find its shared results - nothing is removed from %#", result.str(), store.str() );
                     inoutListProblem.push_back( string( problemBuilder.view() ) );
                     return removedCount;
                 }
@@ -213,18 +213,18 @@ namespace sw::editor
                     setReferenced.insert( FileUtil::getFileNamePart( reference ) );
                 }
             }
-            for ( const string& stored : listStored )
+            for ( const AbsolutePath& stored : listStored )
             {
-                const string fileName = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( stored ) );
+                const string fileName = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( stored.str() ) );
                 if ( setReferenced.find( fileName ) != setReferenced.end() )
                     continue;
                 // 키가 내용 해시라 파일 이름만으로 가른다. 저장소 안 파일끼리는 가리키지 않는다.
-                if ( FileUtil::removeFile( FileUtil::toDiskPath( stored ) ) )
+                if ( FileUtil::removeFile( stored ) )
                     ++removedCount;
                 else
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "%#: could not remove the unreferenced shared result", stored );
+                    problemBuilder.appendFormat( "%#: could not remove the unreferenced shared result", stored.str() );
                     inoutListProblem.push_back( string( problemBuilder.view() ) );
                 }
             }

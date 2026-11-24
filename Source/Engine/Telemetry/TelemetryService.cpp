@@ -50,13 +50,13 @@ namespace sw
             /** @brief 지난 실행이 남긴 파일의 순서 — 시각(초), 같으면 이름. */
             struct SpoolFileLess
             {
-                bool operator()( const string& lhs, const string& rhs ) const
+                bool operator()( const AbsolutePath& lhs, const AbsolutePath& rhs ) const
                 {
                     // 그 사이 지워진 파일은 시각 0 으로 맨 앞에 선다 - 다음 정리가 목록에서 뺀다.
                     uint64 lhsTime = 0;
                     uint64 rhsTime = 0;
-                    (void)FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( lhs ), lhsTime );
-                    (void)FileUtil::tryGetFileTimestamp( FileUtil::toDiskPath( rhs ), rhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( lhs, lhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( rhs, rhsTime );
                     if ( lhsTime != rhsTime )
                         return lhsTime < rhsTime;
                     return lhs < rhs;
@@ -223,20 +223,20 @@ namespace sw
         const AbsolutePath folderPath = spoolFolder.join( {} );
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다. 폴더 읽기는 잠금 밖이다.
-        vector<string>       listLeftover;
+        vector<AbsolutePath> listLeftover;
         vector<AbsolutePath> listFile;
         if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, "", listFile, false ) )
         {
             for ( const AbsolutePath& path : listFile )
             {
                 if ( Internal::isSpoolFile( path.str() ) )
-                    listLeftover.push_back( path.str() );
+                    listLeftover.push_back( path );
             }
             VectorUtil::sort( listLeftover, Internal::SpoolFileLess{} );
         }
 
         ScopedLock<mutex> lock{ _mutex };
-        _spoolFolder.set( folderPath.str() );
+        _spoolFolder.set( folderPath );
         _context.set( context );
         _stats = TelemetryStats{};
         _listPendingLine.clear();
@@ -578,12 +578,12 @@ namespace sw
         }
     }
 
-    void TelemetryService::collectSpoolFiles( vector<string>& outListFilePath ) const
+    void TelemetryService::collectSpoolFiles( vector<AbsolutePath>& outListFilePath ) const
     {
         ScopedLock<mutex> spoolLock{ _spoolMutex };
         outListFilePath = _listClosedFile;
         if ( _currentFile.empty() == false )
-            outListFilePath.push_back( _currentFile.str() );
+            outListFilePath.push_back( _currentFile );
     }
 
     bool TelemetryService::isInitialized() const
@@ -747,14 +747,14 @@ namespace sw
     {
         StringBuilder<constant::buffer::kMax256> name;
         name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context->_sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
-        return FileUtil::toDiskPath( FileUtil::joinPath( _spoolFolder.get(), name.c_str() ) );
+        return _spoolFolder.get().join( name.view() );
     }
 
     void TelemetryService::writeLinesSpoolLocked( const TelemetrySpoolJob& job )
     {
         if ( job._listLine.empty() )
             return;
-        if ( FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( _spoolFolder.get() ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )
         {
             SW_LOG_WARNING_ID( "Telemetry.TelemetrySpoolFolderCannot", "Telemetry spool folder '%#' cannot be created - %# events dropped", _spoolFolder.get().c_str(), static_cast<uint32>( job._listLine.size() ) );
             return;
@@ -800,7 +800,7 @@ namespace sw
     {
         if ( _currentFile.empty() )
             return;
-        _listClosedFile.push_back( _currentFile.str() );
+        _listClosedFile.push_back( _currentFile );
         _currentFile       = {};
         _currentFileBytes  = 0;
         _currentFileEvents = 0;
@@ -810,10 +810,10 @@ namespace sw
     void TelemetryService::enforceLimitsSpoolLocked( const TelemetryPipelineConfig& settings )
     {
         uint64 totalBytes = _currentFileBytes;
-        for ( const string& path : _listClosedFile )
+        for ( const AbsolutePath& path : _listClosedFile )
         {
             uint64 byteCount = 0;
-            (void)FileUtil::tryGetFileSize( FileUtil::toDiskPath( path ), byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
+            (void)FileUtil::tryGetFileSize( path, byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
             totalBytes += byteCount;
         }
         // 지금 파일은 지우지 않는다 — 상한을 넘는 만큼 가장 오래된 닫힌 파일부터(보내지 못한 채) 버린다.
@@ -823,7 +823,7 @@ namespace sw
             const bool   bOver     = fileCount > settings._maxFiles || totalBytes > settings._maxTotalBytes;
             if ( bOver == false )
                 break;
-            const AbsolutePath oldest      = FileUtil::toDiskPath( _listClosedFile.front() );
+            const AbsolutePath oldest      = _listClosedFile.front();
             uint64             oldestBytes = 0;
             (void)FileUtil::tryGetFileSize( oldest, oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
             totalBytes -= MathUtil::min( totalBytes, oldestBytes );
@@ -843,7 +843,7 @@ namespace sw
                 ScopedLock<mutex> spoolLock{ _spoolMutex };
                 if ( _listClosedFile.empty() || job._nowSeconds < _uploadRetryAtSeconds )
                     return; // 보낼 것이 없거나 물러서는 중이다
-                batch._filePath = FileUtil::toDiskPath( _listClosedFile.front() );
+                batch._filePath = _listClosedFile.front();
                 pUploader       = _pUploader;
                 _pUploadingWith = pUploader; // `releaseUploader` 가 이 보내기가 끝나길 기다린다
             }
@@ -893,12 +893,12 @@ namespace sw
 
     void TelemetryService::purgeSpoolLocked()
     {
-        vector<string> listFile = _listClosedFile;
+        vector<AbsolutePath> listFile = _listClosedFile;
         if ( _currentFile.empty() == false )
-            listFile.push_back( _currentFile.str() );
-        for ( const string& path : listFile )
+            listFile.push_back( _currentFile );
+        for ( const AbsolutePath& path : listFile )
         {
-            if ( FileUtil::exists( FileUtil::toDiskPath( path ) ) && FileUtil::removeFile( FileUtil::toDiskPath( path ) ) )
+            if ( FileUtil::exists( path ) && FileUtil::removeFile( path ) )
                 ++_spoolStats._purgedFiles;
         }
         _listClosedFile.clear();

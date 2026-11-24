@@ -521,9 +521,8 @@ namespace sw
     #else
         #error "Unsupported platform"
     #endif
-                const AbsolutePath           tintText = FileUtil::getExecutablePath().getParent().join( kTintName );
-                const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText.str() );
-                if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
+                const AbsolutePath tintText = FileUtil::getExecutablePath().getParent().join( kTintName );
+                if ( FileUtil::isRegularFile( tintText ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/agents/Platform.md)", tintText.str() } );
                 // 이름은 부를 때마다 새로 잡는다 — 같은 바이트(같은 해시)를 병렬 작업 둘이 같은 이름으로 쓰면 먼저 끝난 쪽이 지운 파일을 다른 쪽이 못 열었다
                 // ("Failed to open sw_tint_<해시>.spv"). 만들기가 곧 자리 잡기(`reserveUniquePath`)라 두 작업이 같은 이름을 갖지 않는다.
@@ -544,7 +543,7 @@ namespace sw
                     toolOutput += line;
                     toolOutput += ' ';
                 } );
-                const expected<int32> exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath.str(), spirvPath.str() } ), {}, onOutput );
+                const expected<int32> exitCode = Process::execute( ProcessCommand::at( tintText, { "--format", "wgsl", "--allow-non-uniform-derivatives", "true", "-o", wgslPath.str(), spirvPath.str() } ), {}, onOutput );
                 vector<uint8>         wgslBytes;
                 const bool            bRead = exitCode.has_value() && *exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
                 (void)FileUtil::removeFile( spirvPath );

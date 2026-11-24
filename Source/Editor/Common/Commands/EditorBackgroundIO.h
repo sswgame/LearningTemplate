@@ -52,11 +52,11 @@ namespace sw::editor
      * @class EditorFileCollectJob
      * @brief 폴더의 파일 목록을 워커에서 모으고 게임 스레드에서 꺼냅니다.
      */
-    class EditorFileCollectJob final : public EditorBackgroundTask<EditorFileCollectInput, vector<string>>
+    class EditorFileCollectJob final : public EditorBackgroundTask<EditorFileCollectInput, vector<AbsolutePath>>
     {
     public:
         /** @brief 워커에 폴더 스캔을 요청합니다. 이미 대기 중이면 세대를 올립니다. */
-        void request( string_view folder, string_view extension, bool recursive );
+        void request( const AbsolutePath& folder, string_view extension, bool recursive );
 
     private:
         static void runJob( const TaskArgs& args );
@@ -124,7 +124,7 @@ namespace sw::editor
     {
     public:
         /** @brief 워커에 폴더 목록 스캔을 요청합니다. @p bRecursive 이면 하위 폴더의 파일까지 모읍니다. */
-        void request( string_view folderAbs, bool bRecursive = false );
+        void request( const AbsolutePath& folderAbs, bool bRecursive = false );
 
     private:
         static void runJob( const TaskArgs& args );

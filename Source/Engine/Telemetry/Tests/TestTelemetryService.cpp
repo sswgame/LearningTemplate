@@ -154,7 +154,7 @@ SW_TEST_CASE( TelemetryServiceTest, UploadDoesNotBlockRecordOrFrame )
     SW_EXPECT_EQUAL( uint32{ 2 }, uploader.getBatch( 1 )._eventCount );
     SW_EXPECT_EQUAL( uint32{ 2 }, fixture._service.getStats()._uploadedFiles );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._leftoverFile ) );
-    vector<string> listSpool;
+    vector<AbsolutePath> listSpool;
     fixture._service.collectSpoolFiles( listSpool );
     SW_EXPECT_TRUE( listSpool.empty() );
 
@@ -209,7 +209,7 @@ SW_TEST_CASE( TelemetryServiceTest, WithdrawnConsentPurgesAfterQueuedWrites )
     fixture._service.flush();
     fixture._service.setConsent( false );
     fixture._service.flush(); // 동의가 없어 넘기지 않고 지우기까지 기다린다
-    vector<string> listSpool;
+    vector<AbsolutePath> listSpool;
     fixture._service.collectSpoolFiles( listSpool );
     SW_EXPECT_TRUE( listSpool.empty() );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._leftoverFile ) );

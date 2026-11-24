@@ -19,20 +19,19 @@ namespace sw
             {
                 if ( listArgument.size() > 1 )
                     return false;
-                string path;
+                AbsolutePath path;
                 if ( listArgument.empty() )
                     path = ScreenshotLocalTime::makeDefaultPathNow();
                 else if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
-                const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( path );
-                if ( absolutePath.has_value() == false )
+                if ( path.empty() )
                 {
                     outReply = "screenshot: could not reserve a file name (see the log)";
                     return true;
                 }
-                RenderThread::requestScreenshot( *absolutePath );
+                RenderThread::requestScreenshot( path );
                 StringBuilder<constant::buffer::kMax512> reply;
-                reply.appendFormat( "screenshot requested: %#", path );
+                reply.appendFormat( "screenshot requested: %#", path.str() );
                 outReply = reply.view();
                 return true;
             }

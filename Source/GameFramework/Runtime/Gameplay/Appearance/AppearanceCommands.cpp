@@ -44,7 +44,7 @@ namespace sw
             /** @brief `appearance.save <object> <file>` — 지금 모습을 공유 코드(플레이어 프리셋 저장소의 형식)로 절대 경로(시나리오의 `{out}/…`)에 쓴다. */
             static bool runSave( const vector<string>& listArgument, string& outReply )
             {
-                string path;
+                AbsolutePath path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 CharacterAppearanceComponent* pAppearance = findAppearance( listArgument[0], outReply );
@@ -63,15 +63,15 @@ namespace sw
                     outReply = "no AppearanceDatabase game service";
                     return false;
                 }
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( path ), AppearanceSelection::encode( selection, *pDatabase ) ) == false )
+                if ( FileUtil::writeTextFile( path, AppearanceSelection::encode( selection, *pDatabase ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "could not write %#", path );
+                    replyBuilder.appendFormat( "could not write %#", path.str() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "saved %#", path );
+                replyBuilder.appendFormat( "saved %#", path.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
@@ -79,7 +79,7 @@ namespace sw
             /** @brief `appearance.load <object> <file>` — 공유 코드를 읽어 게임 선택으로 입힌다(저장한 프리셋 불러오기). */
             static bool runLoad( const vector<string>& listArgument, string& outReply )
             {
-                string path;
+                AbsolutePath path;
                 if ( listArgument.size() != 2 || DevCommandRegistry::readDiskPathArgument( listArgument[1], path, outReply ) == false )
                     return false;
                 CharacterAppearanceComponent* pAppearance = findAppearance( listArgument[0], outReply );
@@ -87,13 +87,13 @@ namespace sw
                 string                        code;
                 if ( pAppearance == nullptr )
                     return false;
-                if ( pDatabase == nullptr || FileUtil::readTextFile( FileUtil::toDiskPath( path ), code ) == false )
+                if ( pDatabase == nullptr || FileUtil::readTextFile( path, code ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     if ( pDatabase == nullptr )
                         replyBuilder.append( "no AppearanceDatabase game service" );
                     else
-                        replyBuilder.appendFormat( "could not read %#", path );
+                        replyBuilder.appendFormat( "could not read %#", path.str() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
@@ -102,13 +102,13 @@ namespace sw
                 if ( decoded.has_value() == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "bad appearance code in %#: %#", path, decoded.error().message() );
+                    replyBuilder.appendFormat( "bad appearance code in %#: %#", path.str(), decoded.error().message() );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
                 pAppearance->applySelection( selection );
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "loaded %#", path );
+                replyBuilder.appendFormat( "loaded %#", path.str() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }
