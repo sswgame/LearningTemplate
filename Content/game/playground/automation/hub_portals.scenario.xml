@@ -2,7 +2,7 @@
 <?asset guid="01285eea14034d928deb4273e19b0345"?>
 <!--
   허브의 미니게임 입구 — 정의(minigames/*.minigame.xml)의 portalSlot 하나가 입구 하나다(maps/hub 의 MinigamePortals 가 prefabs/minigameportal 를 세운다).
-  흡수한 미니게임 아홉(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena · velmora · starskirmish)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
+  미니게임(pixeltown · harvestvalley · voxelcraft · frontiertown · meadowvillage · themepark · abilityarena · velmora · starskirmish · kartracing · partyarena · rhythm · cardgame · sidescrollconquest)의 입구에 플레이어를 세워 들어가고, minigame.leave 로 나와 마을이 복원되는지 본다.
   돌아온 자리는 입구 안이다 — 다시 세운 입구가 나타난 플레이어를 세지 않는다(_spawnInside Ignore). 입구를 더하면 여기에 한 묶음을 더한다.
   실행: App -scenario=game/playground/automation/hub_portals.scenario.xml -unattended (체인: ctest -R Scenario.playground)
 -->
@@ -121,6 +121,70 @@
 	<WaitUntil watch="Minigame.RestoreCount" equals="8" timeoutWallSeconds="60"/>
 	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="0" timeoutFrames="60"/>
+	<!-- kartracing — 자리 15 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_kartracing" near="25" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_kartracing" near="39" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="before_kartracing"/>
+	<DevCommand line="teleport Player 25 0.05 39"/>
+	<WaitUntil watch="Minigame.Active" is="kartracing" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/kartracing/maps/circuit.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" increaseFrom="before_kartracing" increaseBy="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- partyarena — 자리 16 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_partyarena" near="-24" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_partyarena" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="before_partyarena"/>
+	<DevCommand line="teleport Player -24 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="partyarena" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/partyarena/maps/trampoline.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" increaseFrom="before_partyarena" increaseBy="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- rhythm — 자리 17 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_rhythm" near="-17" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_rhythm" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="before_rhythm"/>
+	<DevCommand line="teleport Player -17 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="rhythm" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/rhythm/maps/stage.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" increaseFrom="before_rhythm" increaseBy="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- cardgame — 자리 18 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_cardgame" near="-10" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_cardgame" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="before_cardgame"/>
+	<DevCommand line="teleport Player -10 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="cardgame" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/cardgame/maps/table.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" increaseFrom="before_cardgame" increaseBy="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+
+	<!-- sidescrollconquest — 자리 19 -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Expect watch="Object.X" target="MinigamePortal_sidescrollconquest" near="-3" tolerance="0.01"/>
+	<Expect watch="Object.Z" target="MinigamePortal_sidescrollconquest" near="46" tolerance="0.01"/>
+	<Store watch="Minigame.RestoreCount" as="before_sidescrollconquest"/>
+	<DevCommand line="teleport Player -3 0.05 46"/>
+	<WaitUntil watch="Minigame.Active" is="sidescrollconquest" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/sidescrollconquest/maps/front.scene.xml"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.leave"/>
+	<WaitUntil watch="Minigame.RestoreCount" increaseFrom="before_sidescrollconquest" increaseBy="1" timeoutWallSeconds="60"/>
+	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

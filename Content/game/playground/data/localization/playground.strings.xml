@@ -6,9 +6,24 @@
 				<item>game/playground/shooter3d/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Accuracy (%)" source="Accuracy (%)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/rhythm/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Actor" source="Actor" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="All sites" source="All sites" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Another player wins" source="Another player wins" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="ArrivalCutA" source="ArrivalCutA" context="SequenceBinding._name">
@@ -36,6 +51,22 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Card cost" source="Card cost" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Combo" source="Combo" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+				<item>game/playground/rhythm/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Commander" source="Commander" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="CutA" source="CutA" context="SequenceBinding._name">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
@@ -46,9 +77,34 @@
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Draw pile" source="Draw pile" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Elder" source="Elder" context="Dialogue speaker name">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Enemy health" source="Enemy health" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Enemy intent" source="Enemy intent" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Energy" source="Energy" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Finish!" source="Finish!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="GateCut" source="GateCut" context="SequenceBinding._name">
@@ -56,14 +112,34 @@
 				<item>game/playground/data/cutscenegate.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Get ready!" source="Get ready!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Gilded Knight Helmet" source="Gilded Knight Helmet" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Gold" source="Gold" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Heraldic Cape" source="Heraldic Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Item ready" source="Item ready" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Karts" source="Karts" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
@@ -86,6 +162,21 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Lap" source="Lap" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Laps to race" source="Laps to race" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Life" source="Life" context="TextWidget._text">
+			<origins>
+				<item>game/playground/rhythm/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -106,6 +197,31 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Place" source="Place" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Points" source="Points" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Points to win" source="Points to win" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Population" source="Population" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Population cap" source="Population cap" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Press [action=Farm.Use] to work the soil with your tool"
 		       source="Press [action=Farm.Use] to work the soil with your tool"
 		       context="TutorialHintTriggerComponent._text">
@@ -118,6 +234,11 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Round" source="Round" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
@@ -128,9 +249,49 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="Round score" source="Round score" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Score" source="Score" context="TextWidget._text">
+			<origins>
+				<item>game/playground/rhythm/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Seconds to start" source="Seconds to start" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Sites held" source="Sites held" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Song clear!" source="Song clear!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/rhythm/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Song failed" source="Song failed" context="TextWidget._text">
+			<origins>
+				<item>game/playground/rhythm/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Speed (km/h)" source="Speed (km/h)" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Squad" source="Squad" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Stamina" source="Stamina" context="TextWidget._text">
@@ -170,14 +331,29 @@
 				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
+		<entry key="The land is yours!" source="The land is yours!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
 			<origins>
 				<item>game/playground/data/cinematic.seq.xml</item>
 			</origins>
 		</entry>
+		<entry key="Time left" source="Time left" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
 		<entry key="Travel Cape" source="Travel Cape" context="Item name">
 			<origins>
 				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Turn" source="Turn" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 		<entry key="Welcome to Dry Gulch." source="Welcome to Dry Gulch." context="SequenceTrackItem._text">
@@ -188,6 +364,41 @@
 		<entry key="Welcome to Pixel Town, traveller." source="Welcome to Pixel Town, traveller." context="Dialogue line">
 			<origins>
 				<item>game/playground/pixeltown/dialogue/elder.dialogue.xml</item>
+			</origins>
+		</entry>
+		<entry key="Wrong way!" source="Wrong way!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/kartracing/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="You were defeated" source="You were defeated" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="You win the battle!" source="You win the battle!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="You win the party!" source="You win the party!" context="TextWidget._text">
+			<origins>
+				<item>game/playground/partyarena/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Your block" source="Your block" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Your health" source="Your health" context="TextWidget._text">
+			<origins>
+				<item>game/playground/cardgame/ui/hud.ui.xml</item>
+			</origins>
+		</entry>
+		<entry key="Your home is lost" source="Your home is lost" context="TextWidget._text">
+			<origins>
+				<item>game/playground/sidescrollconquest/ui/hud.ui.xml</item>
 			</origins>
 		</entry>
 	</entries>

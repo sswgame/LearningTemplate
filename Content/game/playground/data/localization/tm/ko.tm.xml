@@ -2,42 +2,84 @@
 <TranslationMemory culture="ko">
 	<entries>
 		<entry source="/" text="/" />
+		<entry source="Accuracy (%)" text="정확도(%)" />
 		<entry source="Actor" text="배우" />
+		<entry source="All sites" text="모든 거점" />
+		<entry source="Another player wins" text="다른 사람이 우승했다" />
 		<entry source="Assault Rifle" text="돌격 소총" />
 		<entry source="Bone Axe" text="뼈 도끼" />
 		<entry source="Bone Shield" text="뼈 방패" />
+		<entry source="Card cost" text="카드 비용" />
 		<entry source="Combat Helmet" text="전투 헬멧" />
+		<entry source="Combo" text="콤보" />
+		<entry source="Commander" text="지휘관" />
 		<entry source="CutA" text="컷 A" />
 		<entry source="CutB" text="컷 B" />
+		<entry source="Draw pile" text="뽑을 더미" />
+		<entry source="Enemy health" text="상대 체력" />
+		<entry source="Enemy intent" text="상대가 할 일" />
+		<entry source="Energy" text="에너지" />
 		<entry source="Fatigues" text="전투복" />
 		<entry source="Field Pack" text="야전 배낭" />
+		<entry source="Finish!" text="결승!" />
 		<entry source="Follow the lantern path to the old bridge." text="등불 길을 따라 옛 다리로 가세요." />
+		<entry source="Get ready!" text="준비!" />
 		<entry source="Gilded Knight Helmet" text="금박 기사 투구" />
+		<entry source="Gold" text="금" />
 		<entry source="Guide" text="안내인" />
 		<entry source="Heraldic Cape" text="문장 망토" />
+		<entry source="Item ready" text="아이템 있음" />
+		<entry source="Karts" text="달리는 차" />
 		<entry source="Knight Helmet" text="기사 투구" />
 		<entry source="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" />
 		<entry source="Knight Helmet (Merged)" text="기사 투구(병합)" />
 		<entry source="Knight Sword (Merged)" text="기사 검(병합)" />
+		<entry source="Lap" text="바퀴" />
+		<entry source="Laps to race" text="모두 몇 바퀴" />
+		<entry source="Life" text="라이프" />
 		<entry source="Longbow" text="장궁" />
 		<entry source="M4 Rifle" text="M4 소총" />
 		<entry source="M9 Pistol" text="M9 권총" />
 		<entry source="Movement on the ridge. Stay low." text="능선에 움직임이 있다. 몸을 낮춰." />
 		<entry source="Notched Blade" text="이 빠진 칼" />
 		<entry source="Pistol" text="권총" />
+		<entry source="Place" text="순위" />
+		<entry source="Points" text="순위 점수" />
+		<entry source="Points to win" text="우승 점수" />
+		<entry source="Population" text="인구" />
+		<entry source="Population cap" text="인구 한도" />
 		<entry source="Pump Shotgun" text="펌프 산탄총" />
 		<entry source="Recon Boots" text="정찰 부츠" />
 		<entry source="Recon Helmet" text="정찰 헬멧" />
 		<entry source="Recon Patch" text="정찰 패치" />
 		<entry source="Recon Vest" text="정찰 조끼" />
+		<entry source="Round" text="라운드" />
 		<entry source="Round Shield" text="둥근 방패" />
 		<entry source="Round Shield (Merged)" text="둥근 방패(병합)" />
+		<entry source="Round score" text="라운드 점수" />
 		<entry source="Rusted Helm" text="녹슨 투구" />
+		<entry source="Score" text="점수" />
 		<entry source="Scout" text="정찰병" />
+		<entry source="Seconds to start" text="출발까지(초)" />
+		<entry source="Sites held" text="내 거점" />
+		<entry source="Song clear!" text="곡을 깼다!" />
+		<entry source="Song failed" text="곡을 깨지 못했다" />
+		<entry source="Speed (km/h)" text="속도(km/h)" />
+		<entry source="Squad" text="부대" />
 		<entry source="Tattered Cape" text="해진 망토" />
 		<entry source="The ford is gone after the storm; take the long road past the mill and wait for the bell."
 		       text="폭풍 뒤로 여울이 사라졌습니다. 방앗간을 지나는 먼 길로 가서 종소리를 기다리세요." />
+		<entry source="The land is yours!" text="모든 거점을 얻었다!" />
 		<entry source="The warrior wakes." text="전사가 깨어난다." />
+		<entry source="Time left" text="남은 시간" />
 		<entry source="Travel Cape" text="여행 망토" />
+		<entry source="Turn" text="턴" />
+		<entry source="Wrong way!" text="역주행!" />
+		<entry source="You were defeated" text="쓰러졌다" />
+		<entry source="You win the battle!" text="전투에서 이겼다!" />
+		<entry source="You win the party!" text="우승했다!" />
+		<entry source="Your block" text="내 방어" />
+		<entry source="Your health" text="내 체력" />
+		<entry source="Your home is lost" text="본진을 잃었다" />
 	</entries>
 </TranslationMemory>

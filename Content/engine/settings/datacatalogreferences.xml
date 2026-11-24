@@ -97,6 +97,9 @@
 		<Reference owner="Building" attribute="trains" target="Unit"/>
 		<Reference owner="Site" attribute="garrison" target="Unit" named="true"/>
 	</Catalog>
+	<Catalog root="CardBattleCatalog">
+		<Reference owner="Deck" attribute="cards" target="Card"/>
+	</Catalog>
 	<!-- 적 패턴의 시작 · 이어지는 상태는 같은 패턴 안의 상태다. 한 패턴 안의 같은 상태 id 는 읽는 코드(ActionPlatformerCatalog::loadPattern)가 본다 — 패턴마다 이름 공간이 따로라 <Unique> 로 적을 수 없다. -->
 	<Catalog root="ActionPlatformer">
 		<Reference owner="Pattern" attribute="start" target="State" inEntry="true"/>
@@ -135,6 +138,18 @@
 	<Field owner="SRPGGameModeComponent" field="_listPlayerUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_listEnemyUnit" tag="SRPGUnitDef"/>
 	<Field owner="SRPGGameModeComponent" field="_pilot" tag="SRPGPilotDef"/>
+	<CatalogKey tag="KartTrackDef" catalog="KartTrackCatalog" entry="Track"/>
+	<Field owner="KartGameModeComponent" field="_trackID" tag="KartTrackDef"/>
+	<CatalogKey tag="CardBattleDeckDef" catalog="CardBattleCatalog" entry="Deck"/>
+	<CatalogKey tag="CardBattleEnemyDef" catalog="CardBattleCatalog" entry="Enemy"/>
+	<Field owner="CardBattleGameModeComponent" field="_deckID" tag="CardBattleDeckDef"/>
+	<Field owner="CardBattleGameModeComponent" field="_enemyID" tag="CardBattleEnemyDef"/>
+	<CatalogKey tag="ConquestBuildingDef" catalog="ConquestCatalog" entry="Building"/>
+	<CatalogKey tag="ConquestSiteDef" catalog="ConquestCatalog" entry="Site"/>
+	<CatalogKey tag="ConquestUnitDef" catalog="ConquestCatalog" entry="Unit"/>
+	<Field owner="ConquestGameModeComponent" field="_startBuilding" tag="ConquestBuildingDef"/>
+	<Field owner="ConquestGameModeComponent" field="_startSite" tag="ConquestSiteDef"/>
+	<Field owner="ConquestGameModeComponent" field="_trainUnit" tag="ConquestUnitDef"/>
 	<CatalogKey tag="WeaponDef" catalog="WeaponCatalog" entry="Weapon"/>
 	<Field owner="ShooterPlayerComponent" field="_listWeaponID" tag="WeaponDef"/>
 	<CatalogKey tag="RTSUnitDef" catalog="RTSCatalog" entry="Unit"/>

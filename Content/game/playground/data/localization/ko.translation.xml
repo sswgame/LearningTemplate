@@ -2,25 +2,57 @@
 <TranslationTable culture="ko">
 	<entries>
 		<entry key="/" text="/" sourceHash="af63a24c860189fe" />
+		<entry key="Accuracy (%)" text="정확도(%)" sourceHash="67e78eeed325a546" />
 		<entry key="Actor" text="배우" sourceHash="f865a44470a1eb3a" />
+		<entry key="All sites" text="모든 거점" sourceHash="2942d2349667a12c" />
+		<entry key="Another player wins" text="다른 사람이 우승했다" sourceHash="cdb3fdf6a7c0f200" />
 		<entry key="Assault Rifle" text="돌격 소총" sourceHash="67220abc0f738d9a" />
 		<entry key="Bone Axe" text="뼈 도끼" sourceHash="9e2cdbf7cb3d6953" />
 		<entry key="Bone Shield" text="뼈 방패" sourceHash="0201be6b95ece038" />
+		<entry key="Card cost" text="카드 비용" sourceHash="41a0e7d730a44d50" />
+		<entry key="Combo" text="콤보" sourceHash="2d258cf48ffbba41" />
+		<entry key="Commander" text="지휘관" sourceHash="86f5c914f970d605" />
 		<entry key="CutA" text="컷 A" sourceHash="770f429cae410066" />
 		<entry key="CutB" text="컷 B" sourceHash="770f419cae40feb3" />
+		<entry key="Draw pile" text="뽑을 더미" sourceHash="73e96b4125f82831" />
+		<entry key="Enemy health" text="상대 체력" sourceHash="0d8b794c5bf4bf63" />
+		<entry key="Enemy intent" text="상대가 할 일" sourceHash="edcc8c6379d35fef" />
+		<entry key="Energy" text="에너지" sourceHash="db6622a51b2a94f5" />
+		<entry key="Finish!" text="결승!" sourceHash="24650730cce4bae9" />
+		<entry key="Get ready!" text="준비!" sourceHash="c8e029afe946a77f" />
 		<entry key="Gilded Knight Helmet" text="금박 기사 투구" sourceHash="78c4a96597a1f01e" />
+		<entry key="Gold" text="금" sourceHash="c416c97e0d3218b3" />
 		<entry key="Heraldic Cape" text="문장 망토" sourceHash="6f86256a16ab8f26" />
+		<entry key="Item ready" text="아이템 있음" sourceHash="c21723a998b01759" />
+		<entry key="Karts" text="달리는 차" sourceHash="bfe9eadf3ab05f4c" />
 		<entry key="Knight Helmet" text="기사 투구" sourceHash="4733227ae193d121" />
 		<entry key="Knight Helmet (Dyeable)" text="기사 투구(염색 가능)" sourceHash="ff08b0d01b60fde4" />
 		<entry key="Knight Helmet (Merged)" text="기사 투구(병합)" sourceHash="bd029e7ca9b9d6ac" />
 		<entry key="Knight Sword (Merged)" text="기사 검(병합)" sourceHash="3c4283c2efbf5e38" />
+		<entry key="Lap" text="바퀴" sourceHash="2507a819b896044a" />
+		<entry key="Laps to race" text="모두 몇 바퀴" sourceHash="afba7a5bea202185" />
+		<entry key="Life" text="라이프" sourceHash="3cdd76b47fc6df9f" />
 		<entry key="Longbow" text="장궁" sourceHash="1ca5e729801861e9" />
 		<entry key="Notched Blade" text="이 빠진 칼" sourceHash="0bda544f4c061f1a" />
 		<entry key="Pistol" text="권총" sourceHash="9fbfefa835da8476" />
+		<entry key="Place" text="순위" sourceHash="13b3f5afa0862d1c" />
+		<entry key="Points" text="순위 점수" sourceHash="cabf78417c4e5d86" />
+		<entry key="Points to win" text="우승 점수" sourceHash="49459ddfc4bf5a79" />
+		<entry key="Population" text="인구" sourceHash="6144a4a2c984c772" />
+		<entry key="Population cap" text="인구 한도" sourceHash="3fbe2133d5b90dae" />
 		<entry key="Pump Shotgun" text="펌프 산탄총" sourceHash="91f761c37c27a1e1" />
+		<entry key="Round" text="라운드" sourceHash="43f1ffa8263b3f7b" />
 		<entry key="Round Shield" text="둥근 방패" sourceHash="b63752b781a90fd4" />
 		<entry key="Round Shield (Merged)" text="둥근 방패(병합)" sourceHash="42c4611c12baf19f" />
+		<entry key="Round score" text="라운드 점수" sourceHash="2165bf46a71a4229" />
 		<entry key="Rusted Helm" text="녹슨 투구" sourceHash="e74fbfb19151f99e" />
+		<entry key="Score" text="점수" sourceHash="7d684b6257284e55" />
+		<entry key="Seconds to start" text="출발까지(초)" sourceHash="ed5e407701501a9b" />
+		<entry key="Sites held" text="내 거점" sourceHash="a17607d12fde5a3e" />
+		<entry key="Song clear!" text="곡을 깼다!" sourceHash="0373ea58721a6970" />
+		<entry key="Song failed" text="곡을 깨지 못했다" sourceHash="1810b9f0512f2f11" />
+		<entry key="Speed (km/h)" text="속도(km/h)" sourceHash="79ceb8ade5d6db5e" />
+		<entry key="Squad" text="부대" sourceHash="ec07a2f760550a91" />
 		<entry key="Subtitle.Guide" text="안내인" sourceHash="7bf3b283b3f22c4b" />
 		<entry key="Subtitle.GuideLine" text="등불 길을 따라 옛 다리로 가세요." sourceHash="330029ad4a1d3f28" />
 		<entry key="Subtitle.LongLine"
@@ -29,7 +61,17 @@
 		<entry key="Subtitle.Scout" text="정찰병" sourceHash="7d573c625719c1a5" />
 		<entry key="Subtitle.ScoutLine" text="능선에 움직임이 있다. 몸을 낮춰." sourceHash="f5effb26f2446842" />
 		<entry key="Tattered Cape" text="해진 망토" sourceHash="add8e4bee185648f" />
+		<entry key="The land is yours!" text="모든 거점을 얻었다!" sourceHash="8a38e00889460fce" />
 		<entry key="The warrior wakes." text="전사가 깨어난다." sourceHash="2cbe2d95a0824eaf" />
+		<entry key="Time left" text="남은 시간" sourceHash="ab77d17fb8dfa0bd" />
 		<entry key="Travel Cape" text="여행 망토" sourceHash="9b537522d0556b6c" />
+		<entry key="Turn" text="턴" sourceHash="b1288bfb6b36f2da" />
+		<entry key="Wrong way!" text="역주행!" sourceHash="623106a22d3ea698" />
+		<entry key="You were defeated" text="쓰러졌다" sourceHash="f5c64297b464777d" />
+		<entry key="You win the battle!" text="전투에서 이겼다!" sourceHash="f2e59839f909bdf4" />
+		<entry key="You win the party!" text="우승했다!" sourceHash="7eae36bd9a6c9f20" />
+		<entry key="Your block" text="내 방어" sourceHash="9221517fcf7ae61b" />
+		<entry key="Your health" text="내 체력" sourceHash="8ea172c6c43fca5c" />
+		<entry key="Your home is lost" text="본진을 잃었다" sourceHash="72e7c7228a2ce48b" />
 	</entries>
 </TranslationTable>
