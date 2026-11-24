@@ -10,6 +10,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/XML/XMLBinary.h"
 
 #include <pugixml.hpp>
 
@@ -332,14 +333,52 @@ namespace sw
                 return true;
             }
 
+            /** @brief 쿠킹본 레코드의 핸들은 주소의 가장 낮은 비트를 세운다 — 두 레코드 · pugixml 노드 모두 4 바이트 정렬이라 그 비트는 늘 비어 있다. */
+            static constexpr uintptr_t kCookedBit = 1;
+
+            template <typename TRecord>
+            static void* makeCooked( const TRecord* pRecord )
+            {
+                return pRecord != nullptr ? reinterpret_cast<void*>( reinterpret_cast<uintptr_t>( pRecord ) | kCookedBit ) : nullptr;
+            }
+
+            /** @brief 쿠킹본 레코드의 핸들이면 그 레코드, 아니면 nullptr 입니다. */
+            template <typename TRecord>
+            static const TRecord* findCooked( void* pPtr )
+            {
+                const uintptr_t value = reinterpret_cast<uintptr_t>( pPtr );
+                return ( value & kCookedBit ) != 0 ? reinterpret_cast<const TRecord*>( value & ~kCookedBit ) : nullptr;
+            }
+
+            /** @brief 글 문서의 노드입니다. 쿠킹본의 핸들이면 빈 노드라 쓰기 함수가 아무것도 하지 않는다. */
             static pugi::xml_node asNode( void* pPtr )
             {
-                return pugi::xml_node{ static_cast<pugi::xml_node_struct*>( pPtr ) };
+                return findCooked<XMLBinaryNode>( pPtr ) != nullptr ? pugi::xml_node{} : pugi::xml_node{ static_cast<pugi::xml_node_struct*>( pPtr ) };
             }
 
             static pugi::xml_attribute asAttribute( void* pPtr )
             {
-                return pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
+                return findCooked<XMLBinaryAttribute>( pPtr ) != nullptr ? pugi::xml_attribute{} : pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
+            }
+
+            /** @brief 쿠킹본의 원소 @p pNode 부터 이름 @p pName 인 첫 형제입니다(nullptr 이름이면 그대로). 없으면 nullptr 입니다. */
+            static const XMLBinaryNode* findCookedSibling( const XMLBinaryNode* pNode, const utf8* pName )
+            {
+                while ( pNode != nullptr && pName != nullptr && StringUtil::equals( XMLBinary::getText( *pNode, pNode->_name ), pName ) == false )
+                    pNode = XMLBinary::findNode( *pNode, pNode->_nextSibling );
+                return pNode;
+            }
+
+            /** @brief 쿠킹본의 원소를 글 노드 @p target 으로 옮깁니다(다른 문서에 붙이기 · 글로 쓰기). */
+            static void copyCooked( const XMLBinaryNode& source, pugi::xml_node target )
+            {
+                for ( const XMLBinaryAttribute* pAttribute = XMLBinary::findAttribute( source ); pAttribute != nullptr; pAttribute = XMLBinary::findNextAttribute( *pAttribute ) )
+                    target.append_attribute( XMLBinary::getText( *pAttribute, pAttribute->_name ) ).set_value( XMLBinary::getText( *pAttribute, pAttribute->_value ) );
+                const utf8* pText = XMLBinary::getText( source, source._text );
+                if ( pText[0] != 0 )
+                    setElementText( target, pText );
+                for ( const XMLBinaryNode* pChild = XMLBinary::findNode( source, source._firstChild ); pChild != nullptr; pChild = XMLBinary::findNode( *pChild, pChild->_nextSibling ) )
+                    copyCooked( *pChild, target.append_child( XMLBinary::getText( *pChild, pChild->_name ) ) );
             }
 
             /**
@@ -445,22 +484,29 @@ namespace sw
     {
         bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         pugi::xml_document doc;
+        vector<uint8>      _listCookedByte{}; ///< 이진 쿠킹본이면 그 바이트(글 나무는 비었다)
     };
 
     const utf8* XMLAttribute::getName() const
     {
+        if ( const XMLBinaryAttribute* pCooked = XMLDocumentInternal::findCooked<XMLBinaryAttribute>( _pAttr ) )
+            return XMLBinary::getText( *pCooked, pCooked->_name );
         const pugi::xml_attribute attr = XMLDocumentInternal::asAttribute( _pAttr );
         return attr.name();
     }
 
     const utf8* XMLAttribute::getValue() const
     {
+        if ( const XMLBinaryAttribute* pCooked = XMLDocumentInternal::findCooked<XMLBinaryAttribute>( _pAttr ) )
+            return XMLBinary::getText( *pCooked, pCooked->_value );
         const pugi::xml_attribute attr = XMLDocumentInternal::asAttribute( _pAttr );
         return attr.value();
     }
 
     XMLAttribute XMLAttribute::getNext() const
     {
+        if ( const XMLBinaryAttribute* pCooked = XMLDocumentInternal::findCooked<XMLBinaryAttribute>( _pAttr ) )
+            return XMLAttribute{ XMLDocumentInternal::makeCooked( XMLBinary::findNextAttribute( *pCooked ) ) };
         const pugi::xml_attribute attr = XMLDocumentInternal::asAttribute( _pAttr );
         if ( attr.empty() )
             return {};
@@ -469,6 +515,8 @@ namespace sw
 
     const utf8* XMLNode::getName() const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+            return XMLBinary::getText( *pCooked, pCooked->_name );
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         return pNode.name();
     }
@@ -480,6 +528,8 @@ namespace sw
 
     const utf8* XMLNode::getText() const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+            return XMLBinary::getText( *pCooked, pCooked->_text );
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         return pNode.child_value();
     }
@@ -497,6 +547,13 @@ namespace sw
 
     const utf8* XMLNode::findAttribute( const utf8* pName ) const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+        {
+            const XMLBinaryAttribute* pAttribute = pName != nullptr ? XMLBinary::findAttribute( *pCooked ) : nullptr;
+            while ( pAttribute != nullptr && StringUtil::equals( XMLBinary::getText( *pAttribute, pAttribute->_name ), pName ) == false )
+                pAttribute = XMLBinary::findNextAttribute( *pAttribute );
+            return pAttribute != nullptr ? XMLBinary::getText( *pAttribute, pAttribute->_value ) : nullptr;
+        }
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return nullptr;
@@ -574,6 +631,8 @@ namespace sw
 
     XMLNode XMLNode::findChild( const utf8* pName ) const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+            return XMLNode{ XMLDocumentInternal::makeCooked( XMLDocumentInternal::findCookedSibling( XMLBinary::findNode( *pCooked, pCooked->_firstChild ), pName ) ) };
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
@@ -584,6 +643,8 @@ namespace sw
 
     XMLNode XMLNode::findNextSibling( const utf8* pName ) const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+            return XMLNode{ XMLDocumentInternal::makeCooked( XMLDocumentInternal::findCookedSibling( XMLBinary::findNode( *pCooked, pCooked->_nextSibling ), pName ) ) };
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
@@ -612,6 +673,8 @@ namespace sw
 
     XMLAttribute XMLNode::getFirstAttribute() const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+            return XMLAttribute{ XMLDocumentInternal::makeCooked( XMLBinary::findAttribute( *pCooked ) ) };
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
@@ -735,6 +798,12 @@ namespace sw
 
     string XMLNode::toString() const
     {
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( _pNode ) )
+        {
+            XMLDocument document;
+            XMLDocumentInternal::copyCooked( *pCooked, XMLDocumentInternal::asNode( document.appendRoot( getName() )._pNode ) );
+            return document.getRoot().toString();
+        }
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
@@ -747,6 +816,14 @@ namespace sw
     {
         pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         pugi::xml_node pSrc  = XMLDocumentInternal::asNode( src._pNode );
+        if ( const XMLBinaryNode* pCooked = XMLDocumentInternal::findCooked<XMLBinaryNode>( src._pNode ) )
+        {
+            if ( pNode.empty() )
+                return {};
+            pugi::xml_node copied = pNode.append_child( src.getName() );
+            XMLDocumentInternal::copyCooked( *pCooked, copied );
+            return XMLNode{ copied.internal_object() };
+        }
         if ( pNode.empty() || pSrc.empty() )
             return {};
         pugi::xml_node cloned = pNode.append_copy( pSrc );
@@ -794,6 +871,27 @@ namespace sw
             _impl = make_unique<Impl>();
         else
             _impl->doc.reset();
+        _impl->_listCookedByte.clear();
+    }
+
+    bool XMLDocument::isCooked() const
+    {
+        return _impl != nullptr && _impl->_listCookedByte.empty() == false;
+    }
+
+    bool XMLDocument::attachCooked( string_view bytes, string_view sourceName )
+    {
+        // 바이트를 복사해 든다 — 부른 쪽의 글은 곧 사라지고, 글 버퍼의 시작은 레코드 정렬을 약속하지 않는다.
+        const uint8* pBytes = reinterpret_cast<const uint8*>( bytes.data() );
+        _impl->_listCookedByte.assign( pBytes, pBytes + bytes.size() );
+        if ( XMLBinary::validate( string_view( reinterpret_cast<const utf8*>( _impl->_listCookedByte.data() ), _impl->_listCookedByte.size() ) ) )
+            return true;
+        _impl->_listCookedByte.clear();
+        StringBuilder<constant::buffer::kMax256> error;
+        error.appendFormat( "%#: the cooked document is broken or of another version - cook the pack again", sourceName );
+        _lastError = string( error.view() );
+        SW_LOG_ERROR_ID( "Xml.CookedBroken", "%#", _lastError );
+        return false;
     }
 
     bool XMLDocument::parse( string_view xmlText, string_view sourceName )
@@ -811,6 +909,7 @@ namespace sw
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         _impl->doc.reset();
+        _impl->_listCookedByte.clear();
         _lastError.clear();
         _bLastErrorNotFound      = SW_FALSE;
         const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
@@ -821,6 +920,8 @@ namespace sw
             _lastError = string( error.view() );
             return false;
         }
+        if ( XMLBinary::isBinary( xmlText ) )
+            return attachCooked( xmlText, source );
 
         const bool                   bNumericReference = xmlText.find( kNumericReference ) != string_view::npos; // 참조로 저장한 `\r` 이 있을 수 있다 — 다듬기를 직접 한다
         const pugi::xml_parse_result result            = _impl->doc.load_buffer(
@@ -985,6 +1086,12 @@ namespace sw
     {
         if ( _impl == nullptr )
             return {};
+        if ( isCooked() )
+        {
+            const XMLBinaryNode* const pRoot  = XMLBinary::getRoot( _impl->_listCookedByte.data() );
+            const bool                 bNamed = pName == nullptr || StringUtil::equals( XMLBinary::getText( *pRoot, pRoot->_name ), pName );
+            return bNamed ? XMLNode{ XMLDocumentInternal::makeCooked( pRoot ) } : XMLNode{};
+        }
         if ( pName == nullptr )
         {
             // 첫 엘리먼트다 — 주석을 남긴 문서(`parseKeepingComments`)는 루트 앞에 주석 노드가 온다.
@@ -1008,6 +1115,8 @@ namespace sw
     {
         if ( _impl == nullptr )
             return "";
+        if ( isCooked() )
+            return getRoot().toString();
         XMLStringWriter writer;
         _impl->doc.save( writer, "\t", kXMLSaveFormat );
         return wrapLongElementLines( escapeCarriageReturns( writer._result ) );

@@ -140,6 +140,9 @@ SW_TEST_CASE( DataCatalogReferencesTest, ShippedTableLoads )
     SW_REQUIRE_TRUE( rules.loadFromAsset() );
     SW_EXPECT_TRUE( rules.hasRulesFor( "JRPGCatalog" ) );
     SW_EXPECT_TRUE( rules.hasRulesFor( "ConquestCatalog" ) );
+    SW_EXPECT_TRUE( rules.isCookedRoot( "QuestCatalog" ) );
+    SW_EXPECT_TRUE( rules.isCookedRootMentioned( "<?xml version=\"1.0\"?><QuestCatalog/>" ) );
+    SW_EXPECT_FALSE( rules.isCookedRoot( "Minigame" ) ); // 카탈로그 프레임의 루트가 아니다
 }
 
 /** @brief [DataCatalogReferencesTest] 겹침 줄(`<Unique>`)은 한 파일 안의 같은 값을 하나마다 알리고 false 다. 다른 원소 종류의 같은 값은 겹침이 아니다 */

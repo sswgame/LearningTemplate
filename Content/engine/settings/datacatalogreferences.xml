@@ -311,4 +311,64 @@
 	<Field owner="MonsterHuntGameModeComponent" field="_oil" tag="MonsterHuntAlchemyDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_potion" tag="MonsterHuntAlchemyDef"/>
 	<Field owner="MonsterHuntGameModeComponent" field="_sign" tag="MonsterHuntSignDef"/>
+	<!-- 팩에 이진 쿠킹본(XMLBinary)으로 담는 카탈로그 루트입니다. 카탈로그 프레임(XMLCatalog)의 새 루트는 줄을 더합니다 — 없으면 개발 실행의 첫 읽기가 XMLCatalog.RootNotCooked 로 알립니다. -->
+	<Cooked root="AbilityCatalog"/>
+	<Cooked root="ActionPlatformer"/>
+	<Cooked root="AdventureCooking"/>
+	<Cooked root="AdventureDungeons"/>
+	<Cooked root="AdventureRegionCatalog"/>
+	<Cooked root="AreaGraph"/>
+	<Cooked root="AsymmetricHorrorRules"/>
+	<Cooked root="BattleRoyaleCatalog"/>
+	<Cooked root="BehaviorTree"/>
+	<Cooked root="CameraPresetCatalog"/>
+	<Cooked root="CardBattleCatalog"/>
+	<Cooked root="Chart"/>
+	<Cooked root="CityCatalog"/>
+	<Cooked root="CoasterLayoutCatalog"/>
+	<Cooked root="ConquestCatalog"/>
+	<Cooked root="CreatureLifeCatalog"/>
+	<Cooked root="CropCatalog"/>
+	<Cooked root="CurrencyCatalog"/>
+	<Cooked root="ElementChart"/>
+	<Cooked root="FighterCatalog"/>
+	<Cooked root="GhostHunt"/>
+	<Cooked root="HousingPartCatalog"/>
+	<Cooked root="Interactions"/>
+	<Cooked root="ItemCatalog"/>
+	<Cooked root="JRPGCatalog"/>
+	<Cooked root="KartItemCatalog"/>
+	<Cooked root="KartTrackCatalog"/>
+	<Cooked root="LeaderboardCatalog"/>
+	<Cooked root="LootCatalog"/>
+	<Cooked root="MatchModeCatalog"/>
+	<Cooked root="MechCatalog"/>
+	<Cooked root="Metroidvania"/>
+	<Cooked root="MonsterCatalog"/>
+	<Cooked root="MonsterCollectorCatalog"/>
+	<Cooked root="MonsterHuntCatalog"/>
+	<Cooked root="MoveCatalog"/>
+	<Cooked root="OfferCatalog"/>
+	<Cooked root="ParkLayout"/>
+	<Cooked root="PartyItems"/>
+	<Cooked root="PartySeries"/>
+	<Cooked root="ProjectileCatalog"/>
+	<Cooked root="QuestCatalog"/>
+	<Cooked root="RTSCatalog"/>
+	<Cooked root="RecipeCatalog"/>
+	<Cooked root="ReputationCatalog"/>
+	<Cooked root="RestaurantCatalog"/>
+	<Cooked root="RuleViewCatalog"/>
+	<Cooked root="SRPGCatalog"/>
+	<Cooked root="ScavengerCatalog"/>
+	<Cooked root="Schedules"/>
+	<Cooked root="ShopCatalog"/>
+	<Cooked root="SkillTreeCatalog"/>
+	<Cooked root="SpawnTable"/>
+	<Cooked root="StatCatalog"/>
+	<Cooked root="SurvivalHorrorCatalog"/>
+	<Cooked root="VoxelBlockCatalog"/>
+	<Cooked root="WeaponCatalog"/>
+	<Cooked root="WeatherCatalog"/>
+	<Cooked root="WesternCatalog"/>
 </DataCatalogReferenceTable>

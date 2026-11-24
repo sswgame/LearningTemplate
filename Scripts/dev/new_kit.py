@@ -9,7 +9,7 @@
   `<이름>GameFeature`          게임 기능 — 켜면 카탈로그가 걸리고 받는 이름 `<이름>` 의 오브젝트에 컴포넌트가 붙는다
   Editor/                      에디터 확장 `GF_EditorPlugin_<이름>`(Dev) — 씬이 쓰는 항목이 팩에 있는지 보는 맵 검사
   Tests/                       카탈로그 읽기 테스트
-중앙 표 한 곳에 두 줄을 더한다: 카탈로그 키(`engine/settings/datacatalogreferences.xml` 의 `<CatalogKey>` · `<Field>`) — 쿠커와 인스펙터 콤보가 같은 줄을 본다.
+중앙 표 한 곳에 세 줄을 더한다: 카탈로그 키(`engine/settings/datacatalogreferences.xml` 의 `<CatalogKey>` · `<Field>`)와 이진 쿠킹 줄(`<Cooked>`) — 쿠커와 인스펙터 콤보가 같은 줄을 본다.
 온라인 키트는 `new-online-kit` 이다(Runtime · Server 로 나뉜다).
 """
 
@@ -342,14 +342,15 @@ namespace sw::editor
 
 
 def add_reference_rows(text: str, name: str) -> str:
-    """카탈로그 키 표 글에 이 키트의 두 줄을 더한다. 이미 있으면 그대로 돌려준다."""
+    """카탈로그 키 표 글에 이 키트의 세 줄을 더한다. 이미 있으면 그대로 돌려준다."""
     if f'tag="{name}Def"' in text:
         return text
     if text.count(REFERENCE_TABLE_END) != 1:
         raise RuntimeError(f"{REFERENCE_TABLE_END} anchor not found in {REFERENCE_TABLE}")
     newline = "\r\n" if "\r\n" in text else "\n"
     rows = (f'\t<CatalogKey tag="{name}Def" catalog="{name}Catalog" entry="Entry"/>{newline}'
-            f'\t<Field owner="{name}Component" field="_entry" tag="{name}Def"/>{newline}')
+            f'\t<Field owner="{name}Component" field="_entry" tag="{name}Def"/>{newline}'
+            f'\t<Cooked root="{name}Catalog"/>{newline}')
     return text.replace(REFERENCE_TABLE_END, rows + REFERENCE_TABLE_END)
 
 

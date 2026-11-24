@@ -24,6 +24,7 @@
  *       <CatalogKey tag="AbilitySetDef" catalog="AbilityCatalog" entry="AbilitySet"/> <!-- 항목 종류 → 카탈로그 루트 · 원소 -->
  *       <Field owner="AbilitySystemComponent" field="_abilitySetID" tag="AbilitySetDef"/>  <!-- `CatalogKey<AbilitySetDef>` 칸 -->
  *       <Derived type="BossAbilityComponent" base="AbilitySystemComponent"/>               <!-- 칸을 물려받은 형식 -->
+ *       <Cooked root="QuestCatalog"/>                                                       <!-- 팩에 이진 쿠킹본(`XMLBinary`)으로 담는 카탈로그 루트 -->
  *     </DataCatalogReferenceTable>
  * @endcode
  *          `<CatalogKey>` · `<Field>` 는 카탈로그 밖(씬 · 프리팹의 컴포넌트 · 구조체 칸 `CatalogKey<Tag>`)에서 항목을 가리키는 칸이다. 쿠커는 쿠킹하는 팩들의
@@ -136,6 +137,10 @@ namespace sw
         /** @brief 표 글을 읽습니다(테스트). 줄마다 `owner` · `attribute` · `target` 이 필수이고, 모르는 속성 · 원소는 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view tableText, string_view sourceName );
 
+        /** @brief 루트 @p rootName 을 팩에 이진 쿠킹본으로 담으면 true 입니다(`<Cooked root>`). 카탈로그 프레임(`XMLCatalog`)의 루트는 모두 이 줄이 있어야 한다. */
+        [[nodiscard]] bool isCookedRoot( string_view rootName ) const;
+        /** @brief 글 @p text 의 어딘가에 쿠킹하는 루트가 적혔으면 true 입니다(`isRootMentioned` 처럼 값싼 앞검사). */
+        [[nodiscard]] bool isCookedRootMentioned( string_view text ) const;
         /** @brief 루트 @p rootName 의 규칙이 있으면 true 입니다. */
         [[nodiscard]] bool hasRulesFor( string_view rootName ) const;
         /**
@@ -189,6 +194,7 @@ namespace sw
         vector<DataCatalogKeyStruct>     _listKeyStruct;  ///< 구조체 칸 줄
         vector<DataCatalogKeyElement>    _listKeyElement; ///< 정의 형식 ↔ 카탈로그 원소 줄
         vector<DataCatalogKeyDerived>    _listKeyDerived; ///< 물려받은 형식 줄
+        vector<string>                   _listCookedRoot; ///< 팩에 이진 쿠킹본으로 담는 카탈로그 루트
     };
 
     /**

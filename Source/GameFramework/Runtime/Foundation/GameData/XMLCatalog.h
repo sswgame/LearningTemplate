@@ -19,7 +19,7 @@ namespace sw
      * @brief `XMLCatalog` 가 부르는 문서 열기와 루트 찾기의 몸통입니다. 템플릿 밖에 두어서 카탈로그 헤더가 XML 헤더를 끌어오지 않게 합니다.
      * @details 실패 경고는 `XMLReadUtil::loadRootOrWarn` · `parseRootOrWarn` 이 낸다. 루트 읽기가 0 개이거나 false 이면 실패이다.
      *          루트 읽기 뒤에 카탈로그 참조 규칙(데이터 표 `engine/settings/datacatalogreferences.xml` — `DataCatalogReferenceRules`)을 보고 필수 참조가 깨졌으면 실패다.
-     *          쿠커가 팩에 담기 전에 같은 표로 같은 검사를 한다 — 에디터 · 쿠커 · 런타임이 같은 답을 낸다.
+     *          쿠커가 팩에 담기 전에 같은 표로 같은 검사를 한다 — 에디터 · 쿠커 · 런타임이 같은 답을 낸다. 팩의 카탈로그는 이진 쿠킹본(`XMLBinary`)이라 배포 읽기는 글자 해석도 이 검사도 하지 않는다.
      *          `GameDataXML::loadFromAsset` · `loadFromXMLText`(다른 카탈로그를 함께 받는 문맥 버전 포함)도 이 몸통을 쓴다 — 문서 열기 · 루트 찾기는 여기 하나다.
      */
     struct SW_GF_API XMLCatalogLoader
@@ -28,6 +28,8 @@ namespace sw
 
         /** @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
         [[nodiscard]] static bool loadFromAsset( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
+        /** @brief `loadFromAsset` 과 같되 카탈로그 프레임(`XMLCatalog`)의 루트가 쿠킹 표(`<Cooked root>`)에 있는지 봅니다 — 글로 읽은 루트에 줄이 없으면 오류입니다(배포본만 글 해석으로 남는 카탈로그가 없게). */
+        [[nodiscard]] static bool loadCatalog( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
         /** @brief XML 문자열 버전입니다. 테스트와 에디터 미리보기가 씁니다. */
         [[nodiscard]] static bool loadFromXMLText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
 
@@ -84,7 +86,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽습니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다. 종류의 로더(공유 캐시 · 스키마 검사)와 자기 읽기를 감싸는 파생만 부른다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID )
         {
-            return XMLCatalogLoader::loadFromAsset( this, &XMLCatalog::readRoot, assetID, TCatalog::kXMLRootName );
+            return XMLCatalogLoader::loadCatalog( this, &XMLCatalog::readRoot, assetID, TCatalog::kXMLRootName );
         }
 
     private:

@@ -18,6 +18,7 @@
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -42,7 +43,13 @@ namespace sw
                     outText = _baseText;
                     return true;
                 }
-                return AssetIO::readTextAsset( AssetID{ assetID }, outText );
+                if ( AssetIO::readTextAsset( AssetID{ assetID }, outText ) == false )
+                    return false;
+                // 팩의 카탈로그는 이진 쿠킹본이다 — 부모로 합칠 때는 글로 되살린다.
+                if ( XMLBinary::isBinary( outText ) == false )
+                    return true;
+                const string cookedBytes = std::move( outText );
+                return XMLBinary::decodeText( cookedBytes, outText );
             }
 
         private:
@@ -638,6 +645,19 @@ namespace sw
                 return false;
             }
 
+            /** @brief 리소스 id 로 읽는 문맥에 얹을 층 파일이 하나라도 있으면 true 입니다. */
+            [[nodiscard]] static bool hasLayer( const ResourceContext& context )
+            {
+                if ( context._assetID.isEmpty() )
+                    return false;
+                for ( const string& root : engine::getSubsystem<ResourceComposition>().getLayers() )
+                {
+                    if ( AssetIO::hasAsset( AssetID{ ResourceLayers::makeLayerAssetID( root, context._assetID.view() ) } ) )
+                        return true;
+                }
+                return false;
+            }
+
             /**
              * @brief 덮어쓰기 층 단계입니다. 층마다 `<뿌리>/<id>` 가 있으면 그 파일의 조건을 풀고 지금까지 합친 글을 암묵적 부모로 얹습니다.
              * @return 층 파일이 부모(`_base`)를 적었거나 · 합치지 못하면 오류를 남기고 false 입니다.
@@ -735,6 +755,28 @@ namespace sw
     bool ResourceComposer::compose( string_view text, string_view id, const ResourceContext& context, string& outText, bool& outbComposed )
     {
         outbComposed = false;
+        if ( XMLBinary::isBinary( text ) )
+        {
+            // 이진 쿠킹본이다 — 부모 · 조건은 쿠커가 이미 풀었다. 얹을 층이 있을 때만 글로 되살려 같은 길을 지난다.
+            if ( ResourceComposerInternal::hasLayer( context ) == false )
+            {
+                if ( context._assetID.isEmpty() == false && context._pTagOverride == nullptr )
+                    engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), {}, false, text );
+                return true;
+            }
+            string decodedText;
+            if ( XMLBinary::decodeText( text, decodedText ) == false )
+            {
+                SW_LOG_ERROR_ID( "ResourceLayer.CookedBroken", "'%#': the cooked document is broken - its layers cannot be laid over it", id );
+                return false;
+            }
+            if ( compose( decodedText, id, context, outText, outbComposed ) == false )
+                return false;
+            if ( outbComposed == false )
+                outText = std::move( decodedText ); // 층의 조건이 모두 거짓이다 — 되살린 글이 결과다
+            outbComposed = true;
+            return true;
+        }
         // 1. 부모
         string parentText;
         bool   bParents = false;
