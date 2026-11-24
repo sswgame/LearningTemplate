@@ -82,6 +82,19 @@ SW_TEST_CASE( ScenarioFilesTest, AdvanceSimulationNeedsAFixedFrameTime )
     SW_EXPECT_FALSE( scenario.isAdvanceSimulationFrame( 3 ) );
 }
 
+// 벽시계로 도는 시나리오(`realTime`)는 다른 프로세스의 서버와 같은 빠르기로 돈다 - 프레임의 길이가 정해지지 않아 `<AdvanceSimulation>` 을 받지 않는다.
+SW_TEST_CASE( ScenarioFilesTest, RealTimeScenarioHasNoFixedFrames )
+{
+    AutomationScenario scenario;
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.realtime\" fixedDelta=\"0.0166667\" realTime=\"true\"><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_EXPECT_TRUE( scenario.isRealTime() );
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.realtime\" fixedDelta=\"0.0166667\" realTime=\"true\"><AdvanceSimulation frames=\"3\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"test.realtime\" realTime=\"maybe\"><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    AutomationScenario fixedScenario;
+    SW_REQUIRE_TRUE( fixedScenario.parse( "<Scenario name=\"test.fixed\" fixedDelta=\"0.0166667\"><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
+    SW_EXPECT_FALSE( fixedScenario.isRealTime() );
+}
+
 // `render="true"` 는 모든 프레임을 그리는 진행이다 - 프레임 수는 같고 그리지 않는 구간을 두지 않는다. 옛 `<Wait>` 는 읽기 오류다(대신 쓸 요소를 알린다).
 SW_TEST_CASE( ScenarioFilesTest, RenderedAdvanceKeepsEveryFrameAndWaitIsGone )
 {

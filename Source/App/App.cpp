@@ -568,10 +568,12 @@ namespace sw
         const GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         FramePacingInputs     inputs;
         inputs._bAutomationRun = _pAutomation != nullptr && _pAutomation->isBusy();
-        inputs._bListenHost    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server;
-        inputs._bMinimized     = _pWindow->isMinimized();
-        inputs._bFocused       = _pWindow->hasFocus();
-        inputs._bEditorQuiet   = getModuleManager()->getFrameState()._bEditorQuiet == SW_TRUE;
+        if ( inputs._bAutomationRun )
+            inputs._automationFrameRate = engine::getSubsystem<DeterministicRun>().getPolicy()._realTimeFrameRate;
+        inputs._bListenHost  = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server;
+        inputs._bMinimized   = _pWindow->isMinimized();
+        inputs._bFocused     = _pWindow->hasFocus();
+        inputs._bEditorQuiet = getModuleManager()->getFrameState()._bEditorQuiet == SW_TRUE;
         return inputs;
     }
 

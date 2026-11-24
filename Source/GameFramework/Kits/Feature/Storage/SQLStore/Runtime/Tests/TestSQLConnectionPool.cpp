@@ -133,6 +133,35 @@ namespace
     };
 } // namespace
 
+/** @brief [SQLConnectionPoolTest] 끝난 작업을 기다려 거두고, 남은 작업이 없으면 기다리지 않고 돌아온다 — 멈추기 전에 맡은 쓰기를 끝내는 길이다 */
+SW_TEST_CASE( SQLConnectionPoolTest, WaitingCollectsEveryJobBeforeTheStop )
+{
+    SQLConnectionPool   pool;
+    test::FakeSQLDriver driver;
+    SW_REQUIRE_TRUE( pool.initialize( &driver, SQLConnectionPoolTestUtil::makeSettings( 1 ) ).has_value() );
+    PoolJobResult  arrResult[3];
+    PoolJobResult  chained;
+    const Deadline deadline = Deadline::afterSeconds( 20 );
+    for ( PoolJobResult& jobResult : arrResult )
+    {
+        pool.submit( sw::make_unique<PoolTestJob>( jobResult ) );
+    }
+    pool.submit( sw::make_unique<PoolChainJob>( pool, chained ) ); // 완료가 맡긴 일도 끝난다
+    while ( pool.getPendingCount() > 0 && deadline.isExpired() == false )
+    {
+        (void)pool.waitCompletions( deadline );
+    }
+    SW_EXPECT_EQUAL( 0, pool.getPendingCount() );
+    for ( const PoolJobResult& jobResult : arrResult )
+    {
+        SW_EXPECT_EQUAL( 1, jobResult._completeCount );
+        SW_EXPECT_EQUAL( 0, jobResult._cancelCount );
+    }
+    SW_EXPECT_EQUAL( 1, chained._completeCount );
+    SW_EXPECT_EQUAL( 0, pool.waitCompletions( deadline ) );
+    pool.shutdown();
+}
+
 SW_TEST_CASE( SQLConnectionPoolTest, InitializeRefusesWhatCannotRun )
 {
     SQLConnectionPool   pool;

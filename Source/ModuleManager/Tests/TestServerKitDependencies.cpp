@@ -38,8 +38,13 @@ namespace
     public:
         const ISubsystemLocator* _pScope{ nullptr };
 
+        [[nodiscard]] Subscription subscribeBeforeWithdraw( const Delegate<void()>& onBeforeWithdraw ) override { return _onBeforeWithdraw.add( onBeforeWithdraw ); }
+
     private:
         const ISubsystemLocator* findKitScope() const override { return _pScope; }
+
+    private:
+        MulticastDelegate<void()> _onBeforeWithdraw{};
     };
 
     using TestServerKits = ServerKitDependencies<ServerKitRequired<ITestStore>, ServerKitOptional<ITestBackfill>>;

@@ -64,6 +64,8 @@ namespace sw
         /** @brief 끝난 일을 거둬 끝난 읽기를 @p outListLoad 뒤에 붙입니다. 기다리던 쓰기 · 읽기를 이어 맡깁니다. 쓰기 결과는 일이 로그로 남겼다. */
         void poll( vector<HubProfileLoad>& outListLoad );
 
+        /** @brief 저장소의 끝난 일이 생길 때까지(또는 @p deadline 까지) 기다립니다 — 그 뒤 `poll` 이 거둡니다. 저장소가 없으면 false 입니다. */
+        [[nodiscard]] bool waitCompletions( const Deadline& deadline ) const;
         /** @brief 맡긴 뒤 아직 거두지 않은 일 수입니다. */
         int32  getPendingCount() const { return _pendingJobCount; }
         uint64 getSavedCount() const { return _savedCount; }

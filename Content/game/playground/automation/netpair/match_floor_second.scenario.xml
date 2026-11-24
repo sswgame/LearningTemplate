@@ -4,7 +4,7 @@
   움직이는 바닥 위의 두 사람(둘째 사람) — match_floor_first 의 짝. 첫 사람이 두고 있는 매치 서버의 빈 자리로 들어간다.
   ① 바닥에 올라 실려 가고, 첫 사람도 바닥 위로 보인다(Shooter.RemoteFloorNumber). ② 본 자리를 남긴다. ③ 실려 가며 쏴 쓰러뜨린다 — 서버는 쏜 사람이 본 바닥 위의 자리로 판정한다.
 -->
-<Scenario name="game.playground.netpair.match_floor_second" fixedDelta="0.0166667" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+<Scenario name="game.playground.netpair.match_floor_second" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Variable name="gv_playgroundAutoPlay" value="0"/>
 	<DevCommand line="online.connect"/>
 	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>

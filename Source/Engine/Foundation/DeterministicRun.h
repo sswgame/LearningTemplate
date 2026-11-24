@@ -28,6 +28,7 @@ namespace sw
         uint8   _bWaitForAnimationClips    : 1; ///< 애니메이터가 시작 때 비동기로 읽는 클립을 `onBeginPlay` 에서 기다린다(첫 포즈가 디스크 지연에 달리지 않게)
         uint8   _bFreezeEnvironmentTime    : 1; ///< 바람 · 파도 시간을 0 에 멈춘다(백엔드끼리 사진 비교 · 결정적 측정)
         uint8   _bSkipLoadingScreenMinimum : 1; ///< 로딩 화면의 최소 표시 시간을 건너뛴다(로드가 끝나면 바로 닫는다 — 그동안 게임 시간은 멈춰 있어 결과가 같다, 시나리오 시간만 준다)
+        int32   _realTimeFrameRate;             ///< 0 보다 크면 벽시계로 흐르되 초당 이 프레임을 넘지 않는다(`realTime` 시나리오 — 시한의 프레임 환산이 초와 맞는다). 이때 `_fixedFrameDelta` 는 0 이다
         float32 _fixedFrameDelta;               ///< 0 보다 크면 프레임마다 벽시계 대신 이 시간(초)을 흘린다(시나리오 · 픽셀 비교 · 재현). 0 이면 벽시계 — 배포본은 늘 0
 
         DeterministicRunPolicy();
