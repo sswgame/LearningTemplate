@@ -129,10 +129,10 @@ namespace sw
     {
     }
 
-    bool CardBattle::initialize( const CardBattleCatalog* pCatalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
+    bool CardBattle::initialize( const CardBattleCatalog& catalog, const CardBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
                                  const CardBattleEnemy& enemy, uint32 seed )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _settings = settings;
         _enemy    = enemy;
         _random   = GameRandom( seed );
@@ -144,11 +144,9 @@ namespace sw
         _playerHP    = settings._playerHP;
         _playerBlock = 0;
         _turn        = 0;
-        if ( pCatalog == nullptr )
-            return false;
         for ( const hashed_string& cardID : listDeckCardID )
         {
-            const optional<int32> defIndex = pCatalog->findIndex( cardID );
+            const optional<int32> defIndex = catalog.findIndex( cardID );
             if ( defIndex.has_value() == false )
                 continue;
             _drawPile.push( Card{ static_cast<uint16>( _listDefIndex.size() ), 0, 0 } );

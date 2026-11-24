@@ -52,7 +52,6 @@ namespace sw
         , _kartViews{}
         , _itemViews{}
         , _hudViewModel{ nullptr }
-        , _bTrackShown{ SW_FALSE }
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
         , _reserved{ 0 }
@@ -112,7 +111,6 @@ namespace sw
             _kartViews.destroyAll( *pManager );
             _itemViews.destroyAll( *pManager );
         }
-        _bTrackShown = SW_FALSE;
     }
 
     void KartRaceViewComponent::updateView( GameObjectManager& manager )
@@ -122,8 +120,7 @@ namespace sw
             return;
         if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput() )
             submitInput( *pDirector );
-        if ( _bTrackShown == SW_FALSE )
-            showTrack( manager, *pDirector );
+        showTrack( manager, *pDirector );
         showRace( manager, *pDirector );
         updateHUD( *pDirector );
     }
@@ -149,7 +146,6 @@ namespace sw
         using Internal                            = KartRaceViewComponentInternal;
         const KartTrack&                 track    = director.getTrack();
         const vector<KartTrack::Sample>& listNode = track.getSamples();
-        _bTrackShown                              = SW_TRUE;
         _trackViews.begin();
         for ( size_t nodeIndex = 0; nodeIndex < listNode.size(); ++nodeIndex )
         {

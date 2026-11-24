@@ -77,7 +77,7 @@ namespace sw
         CardBattleEnemy enemy;
         enemy._listIntent = pEnemy->_listIntent;
         enemy._hp         = pEnemy->_hp;
-        if ( outBattle.initialize( _pCatalog.get(), settings, pDeck->_listCard, enemy, _seed ) )
+        if ( outBattle.initialize( *_pCatalog, settings, pDeck->_listCard, enemy, _seed ) )
             return true;
         SW_LOG_ERROR_ID( "CardBattle.DeckEmpty", "Card battle game mode: deck '%#' has no card - the battle does not open", _deckID.c_str() );
         return false;

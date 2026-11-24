@@ -57,6 +57,7 @@
 				<_listComponent>
 					<KartGameModeComponent _localID="489024443286610025" _componentName="KartGameModeComponent" _bActive="true"
 					                       _trackID="sunny_oval"
+					                       _bItems="true"
 					                       _itemCatalog="game/playground/kartracing/data/circuit.kartitems.xml"
 					                       _vehicle="common/data/vehicles/kart.vehicle.xml"
 					                       _botCount="3"

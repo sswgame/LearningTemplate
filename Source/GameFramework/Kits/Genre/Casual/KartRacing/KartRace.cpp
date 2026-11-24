@@ -149,10 +149,16 @@ namespace sw
     {
     }
 
-    bool KartRace::initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog )
+    bool KartRace::initialize( const KartRaceSettings& settings, const KartTrack& track, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog )
     {
+        if ( settings._bItems == SW_TRUE && ( pItemCatalog == nullptr || pProjectileCatalog == nullptr ) )
+        {
+            SW_LOG_ERROR_ID( "KartRace.ItemCatalogMissing", "KartRace: refused - items are on but the item catalog (%#) or the projectile catalog (%#) is missing", pItemCatalog != nullptr ? "given" : "missing",
+                             pProjectileCatalog != nullptr ? "given" : "missing" );
+            return false;
+        }
         _settings           = settings;
-        _pTrack             = pTrack;
+        _pTrack             = &track;
         _pItemCatalog       = pItemCatalog;
         _pProjectileCatalog = pProjectileCatalog;
         _random.setSeed( settings._seed );
@@ -163,8 +169,7 @@ namespace sw
         _eventBuffer.clear();
         _listPlaceOrder.clear();
         _listItemBoxTimer.clear();
-        if ( pTrack != nullptr )
-            _listItemBoxTimer.resize( pTrack->getItemBoxPositions().size() );
+        _listItemBoxTimer.resize( track.getItemBoxPositions().size() );
         _pGhost     = nullptr;
         _ghostRacer = constant::invalid_index::kInt32;
         _raceTime   = 0.0f;
@@ -238,7 +243,7 @@ namespace sw
         }
         // 격자에 서기 전에 기록을 걸었으면 출발 위치가 틀려 재생이 다른 길로 간다 — 선 자리로 다시 시작한다.
         if ( _pGhost != nullptr )
-            startGhostRecording( _ghostRacer, _pGhost );
+            startGhostRecording( _ghostRacer, *_pGhost );
         _phase = MatchPhase::Warmup;
         _countdown.start( _settings._countdownTime );
         _raceTime = 0.0f;
@@ -514,7 +519,7 @@ namespace sw
                 _listItemBoxTimer[boxIndex].update( deltaTime );
                 continue;
             }
-            if ( _settings._bItems == SW_FALSE || _pItemCatalog == nullptr )
+            if ( _settings._bItems == SW_FALSE )
                 continue;
             const float32 reach = _settings._itemBoxRadius + _settings._kartRadius;
             for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
@@ -860,14 +865,14 @@ namespace sw
         kart._progress         = computeProgress( kart );
     }
 
-    void KartRace::startGhostRecording( int32 racer, KartGhost* pGhost )
+    void KartRace::startGhostRecording( int32 racer, KartGhost& ghost )
     {
-        if ( isValidRacer( racer ) == false || pGhost == nullptr )
+        if ( isValidRacer( racer ) == false )
             return;
         const KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
-        _pGhost               = pGhost;
+        _pGhost               = &ghost;
         _ghostRacer           = racer;
-        pGhost->begin( kart._motor.getPosition(), kart._motor.getYaw(), _settings._step );
+        ghost.begin( kart._motor.getPosition(), kart._motor.getYaw(), _settings._step );
     }
 
     void KartRace::pollEvents( vector<KartRaceEvent>& outListEvent )

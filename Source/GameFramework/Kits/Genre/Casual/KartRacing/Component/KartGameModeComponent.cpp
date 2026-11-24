@@ -87,6 +87,7 @@ namespace sw
 
     KartGameModeComponent::KartGameModeComponent()
         : _trackID{}
+        , _bItems{ true }
         , _itemCatalog{}
         , _vehicle{}
         , _botCount{ 3 }
@@ -124,8 +125,8 @@ namespace sw
         settings._countdownTime = _countdownSeconds;
         settings._finishTimeout = _finishTimeoutSeconds;
         settings._seed          = _seed;
-        settings._bItems        = _pItemCatalog != nullptr ? SW_TRUE : SW_FALSE;
-        if ( outRace.initialize( settings, &_track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
+        settings._bItems        = _bItems ? SW_TRUE : SW_FALSE;
+        if ( outRace.initialize( settings, _track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
             return false; // 까닭은 경기가 남겼다
         const bool bAutoPlay = isAutoPlayOn();
         for ( int32 racer = 0; racer <= _botCount; ++racer )
@@ -144,8 +145,7 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pTrackCatalog ) == false || acquireRequired( _vehicle, _pVehicle ) == false )
             return false;
-        const bool bItems = _itemCatalog.empty() == false;
-        if ( bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
+        if ( _bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
             return false;
         if ( openRace( _race ) == false )
             return false;

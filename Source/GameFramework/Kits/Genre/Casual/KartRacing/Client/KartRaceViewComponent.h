@@ -54,7 +54,7 @@ namespace sw
         void updateView( GameObjectManager& manager );
         /** @brief 이번 프레임의 운전 입력을 디렉터에 냅니다. */
         void submitInput( KartGameModeComponent& director ) const;
-        /** @brief 트랙 조각 · 결승선을 한 번 세웁니다(트랙은 판 동안 바뀌지 않는다). */
+        /** @brief 트랙 조각 · 결승선을 보입니다. */
         void showTrack( GameObjectManager& manager, const KartGameModeComponent& director );
         /** @brief 차 · 아이템 상자 · 날아가는 아이템을 지금 자리에 보입니다. */
         void showRace( GameObjectManager& manager, const KartGameModeComponent& director );
@@ -94,9 +94,8 @@ namespace sw
         PrefabViewBatch                         _kartViews;
         PrefabViewBatch                         _itemViews;
         unique_ptr<KartHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        uint8                                   _bTrackShown   : 1; ///< 트랙 조각을 세웠다
         uint8                                   _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
         uint8                                   _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved      : 5;
+        [[maybe_unused]] uint8                  _reserved      : 6;
     };
 } // namespace sw

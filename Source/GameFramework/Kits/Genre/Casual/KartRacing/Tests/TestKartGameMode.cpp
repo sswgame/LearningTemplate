@@ -49,6 +49,7 @@ namespace
             SW_REQUIRE_NOT_NULL( _pGameMode );
             set( "_trackID", "ring" );
             set( "_vehicle", test::ScopedScratchDomain::makeID( "kart.vehicle.xml" ).str() );
+            set( "_bItems", "false" );
             set( "_countdownSeconds", "0" );
             set( "_finishTimeoutSeconds", "5" );
             set( "_resultHoldSeconds", "0.5" );
@@ -88,6 +89,16 @@ SW_TEST_CASE_F( KartGameModeTest, UnknownTrackDoesNotOpen )
 {
     SW_EXPECT_LOG( "KartRacing.TrackUnusable" );
     set( "_trackID", "nowhere" );
+    _manager.beginPlay();
+    SW_EXPECT_FALSE( _pGameMode->isStarted() );
+    _manager.endPlay();
+}
+
+/** @brief [KartGameModeTest] 아이템을 켠 채 아이템 파일을 적지 않으면 오류를 남기고 경기를 열지 않는다 — 빈 칸이 아이템 없는 경기를 뜻하지 않는다 */
+SW_TEST_CASE_F( KartGameModeTest, ItemsOnWithoutAFileDoesNotOpen )
+{
+    SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
+    set( "_bItems", "true" );
     _manager.beginPlay();
     SW_EXPECT_FALSE( _pGameMode->isStarted() );
     _manager.endPlay();

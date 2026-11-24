@@ -135,7 +135,8 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pCatalog ) == false || validateLayout() == false )
             return false;
-        _world.initialize( _pCatalog.get() );
+        if ( _world.initialize( *_pCatalog ) == false )
+            return false; // 까닭은 판이 남겼다
         const ConquestResult placed = _world.placeBuilding( _startBuilding.key(), _startSite.key() );
         if ( placed != ConquestResult::Ok )
         {
@@ -276,12 +277,8 @@ namespace sw
         // 판은 같은 카탈로그로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
         ConquestWorld restoredWorld;
         Countdown     resultHold = _resultHold;
-        if ( io.isReading() )
-        {
-            if ( io.check( _pCatalog != nullptr ) == false )
-                return;
-            restoredWorld.initialize( _pCatalog.get() );
-        }
+        if ( io.isReading() && io.check( _pCatalog != nullptr && restoredWorld.initialize( *_pCatalog ) ) == false )
+            return;
         io.value( io.isWriting() ? _world : restoredWorld );
         io.value( resultHold );
         io.end();

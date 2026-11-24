@@ -645,13 +645,13 @@ SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
     enemy._hp = 10;
     enemy._listIntent.push_back( sw::CardBattleEffect{ 3, sw::CardBattleEffectKind::Damage } );
     sw::CardBattle battle;
-    SW_REQUIRE_TRUE( battle.initialize( &catalog, settings, { "strike", "strike", "strike" }, enemy, 51u ) );
+    SW_REQUIRE_TRUE( battle.initialize( catalog, settings, { "strike", "strike", "strike" }, enemy, 51u ) );
     SW_REQUIRE_TRUE( battle.playCard( 0 ) );
 
     sw::Archive written;
     battle.writeState( written );
     sw::CardBattle restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, settings, { "strike" }, enemy, 52u ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, settings, { "strike" }, enemy, 52u ) );
     SW_REQUIRE_TRUE( CardGameReadStateTestUtil::readInto( restored, written ) );
     SW_EXPECT_EQUAL( 4, restored.getEnemy()._hp );
 

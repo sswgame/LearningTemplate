@@ -85,7 +85,9 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Track", Required, Tooltip = "Track id in the catalog" )
         CatalogKey<KartTrackDef> _trackID;
-        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file; empty races without items" )
+        PROPERTY( Category = "Data", DisplayName = "Items On", Tooltip = "Races with item boxes; off is the only way to race without items" )
+        bool _bItems;
+        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_bItems" )
         AssetRef<KartItemCatalog> _itemCatalog;
         PROPERTY( Category = "Data", DisplayName = "Vehicle", Required, Tooltip = "Vehicle tuning every kart drives (*.vehicle.xml)" )
         AssetRef<KinematicVehicleSettings> _vehicle;
@@ -105,8 +107,8 @@ namespace sw
         int32 _rewardStep;
 
         SharedAssetRef<KartTrackCatalog>         _pTrackCatalog;
-        SharedAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템 없는 경기면 비었다
-        SharedAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템 없는 경기면 비었다)
+        SharedAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템을 끈 경기면 비었다
+        SharedAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템을 끈 경기면 비었다)
         SharedAssetRef<KinematicVehicleSettings> _pVehicle;
         KartTrack                                _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
         KartRace                                 _race;
