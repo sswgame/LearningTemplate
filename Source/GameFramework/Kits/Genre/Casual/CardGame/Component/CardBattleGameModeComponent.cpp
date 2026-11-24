@@ -79,7 +79,7 @@ namespace sw
         enemy._hp         = pEnemy->_hp;
         if ( outBattle.initialize( *_pCatalog, settings, pDeck->_listCard, enemy, _seed ) )
             return true;
-        SW_LOG_ERROR_ID( "CardBattle.DeckEmpty", "Card battle game mode: deck '%#' has no card - the battle does not open", _deckID.c_str() );
+        SW_LOG_ERROR_ID( "CardBattle.DeckNotOpened", "Card battle game mode: deck '%#' has no card or an unknown one - the battle does not open", _deckID.c_str() );
         return false;
     }
 

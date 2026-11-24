@@ -103,7 +103,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ComboChainsThroughTheCancelWindow )
     sw::MoveCatalog moves;
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
     sw::ActionPlatformerCombatSimulation rig;
-    SW_REQUIRE_TRUE( rig.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( rig.initialize( catalog, moves, kSword ) );
 
     rig.pressAttack();
     rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
@@ -147,7 +147,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, AttackBufferExpires )
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
 
     sw::ActionPlatformerCombatSimulation late; // 8 프레임에서 누르면 기억 3 안에 기술이 끝난다
-    SW_REQUIRE_TRUE( late.initialize( &catalog, &moves, kLong ) );
+    SW_REQUIRE_TRUE( late.initialize( catalog, moves, kLong ) );
     late.pressAttack();
     late.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     while ( late.getTimeline().getFrame() < 8 )
@@ -163,7 +163,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, AttackBufferExpires )
     SW_EXPECT_EQUAL( 1, late.getTimeline().getFrame() );
 
     sw::ActionPlatformerCombatSimulation early; // 2 프레임에서 누르면 기억이 끝날 때까지 기술이 안 끝난다
-    SW_REQUIRE_TRUE( early.initialize( &catalog, &moves, kLong ) );
+    SW_REQUIRE_TRUE( early.initialize( catalog, moves, kLong ) );
     early.pressAttack();
     early.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
     early.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
@@ -188,10 +188,8 @@ SW_TEST_CASE( ActionCombatSimulationTest, ComboWithUnknownMoveIsRejected )
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
 
     sw::ActionPlatformerCombatSimulation rig;
-    SW_EXPECT_FALSE( rig.initialize( &catalog, nullptr, kSword ) );
-    SW_EXPECT_FALSE( rig.initialize( nullptr, &moves, kSword ) );
-    SW_EXPECT_FALSE( rig.initialize( &catalog, &moves, sw::hashed_string( "nothing" ) ) );
-    SW_EXPECT_FALSE( rig.initialize( &catalog, &moves, sw::hashed_string( "ghost" ) ) );
+    SW_EXPECT_FALSE( rig.initialize( catalog, moves, sw::hashed_string( "nothing" ) ) );
+    SW_EXPECT_FALSE( rig.initialize( catalog, moves, sw::hashed_string( "ghost" ) ) );
 
     rig.pressAttack();
     rig.advanceFrame( ActionCombatSimulationTestUtil::getOpenMap(), kRigPlayer );
@@ -210,7 +208,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, HitstopFreezesTheWorld )
     sw::MoveCatalog moves;
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
     sw::ActionPlatformerCombatSimulation rig;
-    SW_REQUIRE_TRUE( rig.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( rig.initialize( catalog, moves, kSword ) );
 
     rig.registerMeleeContact( false ); // 기술이 없다
     SW_EXPECT_FALSE( rig.isFrozen() );
@@ -254,7 +252,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ParryReflectsOnlyEnemyShotsInRadius )
     sw::MoveCatalog moves;
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
     sw::ActionPlatformerCombatSimulation rig;
-    SW_REQUIRE_TRUE( rig.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( rig.initialize( catalog, moves, kSword ) );
 
     const uint32 edgeID = rig.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 2.0f, 0.0f }, sw::float2{ -6.0f, 0.0f } ) );
     (void)rig.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 2.01f, 0.0f }, sw::float2{ 0.0f, 0.0f } ) );
@@ -308,7 +306,8 @@ SW_TEST_CASE( ActionCombatSimulationTest, ParryWindowCloses )
     sw::ActionPlatformerCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kRigCatalogXML, "ActionCombatSimulationTest" ) );
     sw::ActionPlatformerCombatSimulation rig;
-    SW_EXPECT_FALSE( rig.initialize( &catalog, nullptr, sw::hashed_string{} ) );
+    const sw::MoveCatalog                noMove{};
+    SW_EXPECT_FALSE( rig.initialize( catalog, noMove, sw::hashed_string{} ) );
     rig.pressParry();
     for ( int32 frame = 0; frame < 4; ++frame )
     {
@@ -432,7 +431,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
 
     sw::ActionPlatformerCombatSimulation original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, moves, kSword ) );
     const sw::WeaponDef     gun    = ActionCombatSimulationTestUtil::makeShotgun();
     const sw::ProjectileDef pellet = ActionCombatSimulationTestUtil::makePellet();
     SW_REQUIRE_TRUE( original.equipGun( gun, pellet, 0 ) );
@@ -449,20 +448,20 @@ SW_TEST_CASE( ActionCombatSimulationTest, StateRoundTripResumesIdentically )
     SW_EXPECT_FALSE( uninitialized.readState( forUninitialized ) );
 
     sw::ActionPlatformerCombatSimulation noGun;
-    SW_REQUIRE_TRUE( noGun.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( noGun.initialize( catalog, moves, kSword ) );
     sw::Archive forNoGun( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( noGun.readState( forNoGun ) );
 
     sw::ActionPlatformerCatalog otherCatalog;
     SW_REQUIRE_TRUE( otherCatalog.loadFromXMLText( R"(<ActionPlatformer><Motor halfExtents="0.35,0.45" runSpeed="7" groundAcceleration="70" airAcceleration="40" jumpHeight="3.2" timeToApex="0.38" fallGravityScale="1.6" jumpCutRatio="0.45" maxFallSpeed="18" coyoteTime="0.1" jumpBufferTime="0.12" wallSlideSpeed="2.5" wallJumpSpeedX="7.5" wallJumpSpeedY="12" wallJumpLockTime="0.15" dashSpeed="18" dashDuration="0.15" dashCooldown="0.3" climbSpeed="4" dropThroughTime="0.25" dashEndSpeedScale="0.4" climbJumpScale="0.8" climbSideScale="0.5" moveDeadzone="0.1" extraJumpCount="0" airDashCount="1" wallJump="true"/><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "other" ) );
     sw::ActionPlatformerCombatSimulation otherCombo;
-    SW_EXPECT_FALSE( otherCombo.initialize( &otherCatalog, &moves, kSword ) );
+    SW_EXPECT_FALSE( otherCombo.initialize( otherCatalog, moves, kSword ) );
     SW_REQUIRE_TRUE( otherCombo.equipGun( gun, pellet, 0 ) );
     sw::Archive forOther( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( otherCombo.readState( forOther ) );
 
     sw::ActionPlatformerCombatSimulation restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, &moves, kLong ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, moves, kLong ) );
     SW_REQUIRE_TRUE( restored.equipGun( gun, pellet, 0 ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
@@ -496,7 +495,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ReadRejectsBrokenProjectiles )
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kRigMoveXML, "ActionCombatSimulationTest" ) );
 
     sw::ActionPlatformerCombatSimulation source;
-    SW_REQUIRE_TRUE( source.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( source.initialize( catalog, moves, kSword ) );
     (void)source.spawnProjectile( ActionCombatSimulationTestUtil::makeShot( sw::float2{ 1.0f, 1.0f }, sw::float2{ 1.0f, 0.0f } ) );
     sw::Archive written;
     source.writeState( written );
@@ -507,7 +506,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, ReadRejectsBrokenProjectiles )
     SW_REQUIRE_TRUE( size > ProjectileAt::kNameLength );
 
     sw::ActionPlatformerCombatSimulation target;
-    SW_REQUIRE_TRUE( target.initialize( &catalog, &moves, kSword ) );
+    SW_REQUIRE_TRUE( target.initialize( catalog, moves, kSword ) );
     const auto expectRejected = [&]( size_t offsetFromEnd, const void* pValue, size_t valueSize )
     {
         sw::vector<uint8> listByte( written.getData(), written.getData() + size );
@@ -557,7 +556,7 @@ SW_TEST_CASE( ActionCombatSimulationTest, CombatDeterminism )
     const sw::ProjectileDef pellet = ActionCombatSimulationTestUtil::makePellet();
 
     const auto setup = [&]( sw::ActionPlatformerCombatSimulation& rig )
-    { return rig.initialize( &catalog, &moves, kSword ) && rig.equipGun( gun, pellet, 40, 7u ); };
+    { return rig.initialize( catalog, moves, kSword ) && rig.equipGun( gun, pellet, 40, 7u ); };
     const auto step = []( sw::ActionPlatformerCombatSimulation& rig, int32 stepIndex )
     {
         if ( stepIndex % 5 == 0 )

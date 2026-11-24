@@ -20,10 +20,10 @@ namespace sw
     {
     }
 
-    bool ActionEnemyBrain::initialize( const ActionPatternDef* pPattern, int32 facing )
+    bool ActionEnemyBrain::initialize( const ActionPatternDef& pattern, int32 facing )
     {
         setFacing( facing );
-        const optional<int32> startIndex = pPattern != nullptr ? pPattern->findStateIndex( pPattern->_start ) : optional<int32>{};
+        const optional<int32> startIndex = pattern.findStateIndex( pattern._start );
         if ( startIndex.has_value() == false )
         {
             // 첫 상태로 대신 시작하지 않는다. 실패하면 앞 패턴의 진행도 남기지 않는다.
@@ -33,7 +33,7 @@ namespace sw
             _bEntered   = SW_FALSE;
             return false;
         }
-        _pPattern = pPattern;
+        _pPattern = &pattern;
         enterState( *startIndex );
         return true;
     }

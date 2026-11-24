@@ -645,6 +645,8 @@ SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
     enemy._hp = 10;
     enemy._listIntent.push_back( sw::CardBattleEffect{ 3, sw::CardBattleEffectKind::Damage } );
     sw::CardBattle battle;
+    SW_EXPECT_LOG( "CardBattle.UnknownCard" );
+    SW_EXPECT_FALSE( battle.initialize( catalog, settings, { "strike", "nope" }, enemy, 51u ) ); // 모르는 카드를 빼고 열지 않는다
     SW_REQUIRE_TRUE( battle.initialize( catalog, settings, { "strike", "strike", "strike" }, enemy, 51u ) );
     SW_REQUIRE_TRUE( battle.playCard( 0 ) );
 

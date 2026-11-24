@@ -74,17 +74,17 @@ namespace sw
         return projectile;
     }
 
-    bool ActionPlatformerCombatSimulation::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID )
+    bool ActionPlatformerCombatSimulation::initialize( const ActionPlatformerCatalog& catalog, const MoveCatalog& moves, const hashed_string& comboID )
     {
-        _pCatalog = pCatalog;
-        _pMoves   = pMoves;
-        _pCombo   = pCatalog != nullptr ? pCatalog->findCombo( comboID ) : nullptr;
+        _pCatalog = &catalog;
+        _pMoves   = &moves;
+        _pCombo   = catalog.findCombo( comboID );
         // 기술 표에 없는 기술을 든 콤보는 받지 않는다. 받으면 그 차례의 공격이 말없이 사라진다.
-        if ( _pCombo != nullptr && _pMoves != nullptr )
+        if ( _pCombo != nullptr )
         {
             for ( const hashed_string& moveID : _pCombo->_listMove )
             {
-                if ( _pMoves->find( moveID ) != nullptr )
+                if ( moves.find( moveID ) != nullptr )
                     continue;
                 SW_LOG_ERROR_ID( "ActionPlatformerCombatSimulation.ComboMoveUnknown", "ActionPlatformerCombatSimulation: combo '%#' names an unknown move '%#'", comboID.c_str(), moveID.c_str() );
                 _pCombo = nullptr;
@@ -98,7 +98,7 @@ namespace sw
         _attackBufferFrames = 0;
         _parryFrames        = 0;
         _hitstopFrames      = 0;
-        return _pCombo != nullptr && _pMoves != nullptr;
+        return _pCombo != nullptr;
     }
 
     bool ActionPlatformerCombatSimulation::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed )
@@ -183,7 +183,7 @@ namespace sw
 
         // 근접 공격이다. 쉬고 있으면 첫 기술을 내고, 기술 중이면 다음 기술의 캔슬 창이 열렸을 때 이어서 낸다.
         bool       bStarted        = false;
-        const bool bCanStartAttack = _attackBufferFrames > 0 && _pCombo != nullptr && _pMoves != nullptr;
+        const bool bCanStartAttack = _attackBufferFrames > 0 && _pCombo != nullptr;
         if ( bCanStartAttack )
         {
             const int32 nextIndex = _comboIndex + 1;

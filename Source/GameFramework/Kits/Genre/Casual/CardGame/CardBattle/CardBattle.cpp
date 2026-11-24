@@ -148,7 +148,12 @@ namespace sw
         {
             const optional<int32> defIndex = catalog.findIndex( cardID );
             if ( defIndex.has_value() == false )
-                continue;
+            {
+                SW_LOG_ERROR_ID( "CardBattle.UnknownCard", "CardBattle: refused to open - the deck names card '%#' which is not in the catalog", cardID.c_str() );
+                _listDefIndex.clear();
+                _drawPile.clear();
+                return false;
+            }
             _drawPile.push( Card{ static_cast<uint16>( _listDefIndex.size() ), 0, 0 } );
             _listDefIndex.push_back( *defIndex );
         }

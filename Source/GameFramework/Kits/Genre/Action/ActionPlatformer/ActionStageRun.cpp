@@ -29,12 +29,12 @@ namespace sw
         _checkpoints.setForwardOnly( true ); // 지난 체크포인트로 되돌아가지 않는다(건너뛴 것은 인정한다)
     }
 
-    bool ActionStageRun::start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageID )
+    bool ActionStageRun::start( const ActionPlatformerCatalog& catalog, const hashed_string& stageID )
     {
-        const ActionStageDef* pStage = pCatalog != nullptr ? pCatalog->findStage( stageID ) : nullptr;
+        const ActionStageDef* pStage = catalog.findStage( stageID );
         if ( pStage == nullptr )
             return false;
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _pStage   = pStage;
         restartStage();
         return true;
