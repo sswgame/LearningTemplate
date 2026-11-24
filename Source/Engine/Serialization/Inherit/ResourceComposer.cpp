@@ -13,6 +13,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectedValue.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"

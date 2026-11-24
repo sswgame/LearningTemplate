@@ -4,16 +4,24 @@
  * @details 언리얼 UHT 의 `FClassParams` · `FPropertyParams` · `FMetaDataPairParam`(정적 서술자 + 엔진의 공용 생성 함수 하나)과 같은 자리다. 형식마다 등록 **코드**를 펼치면
  *          생성 단위 수백 개가 같은 대입 · 소멸 사슬을 다시 최적화한다 — 생성 단위에는 상수와, 형식이 있어야 하는 호출(값 접근 · 호출 · 생성)만 남긴다.
  *          칸 차례가 곧 생성기(`CodeGenerator`)가 내는 차례다. 뒤쪽 칸은 기본값이 있어 적지 않은 만큼 글이 짧다 — 칸을 더하면 생성기와 함께 고친다.
- *          생성 코드와 리플렉션 구현만 include 한다(형식 정보 헤더 `TypeInfo.h` 를 읽는 단위는 표를 모른다).
+ *          생성 코드와 리플렉션 구현만 include 한다(형식 정보 헤더 `TypeInfo.h` 를 읽는 단위는 표를 모른다). 거꾸로 이 헤더도 형식 정보(`TypeInfo` · `PropertyInfo` · `EnumInfo` ·
+ *          `FunctionInfo`)를 모른다 — 형식 정보를 고쳐도 생성 단위가 다시 컴파일되지 않는다.
  */
 #pragma once
-#include "Engine/Reflection/EnumInfo.h"
-#include "Engine/Reflection/FunctionInfo.h"
-#include "Engine/Reflection/PropertyInfo.h"
+#include "Core/Container/span.h"
+#include "Core/String/NamedValue.h"
+#include "Core/Task/TaskTypes.h"
+
+#include "Engine/Reflection/ContainerKind.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 
 namespace sw
 {
+    struct FixedCodec;
+    struct IContainerWrapper;
+    struct ReflectEventOps;
+    struct ReflectTypeOps;
+
     // ------------------------------------------------------------------------------
     // 1) 프로퍼티
     // ------------------------------------------------------------------------------
@@ -97,14 +105,14 @@ namespace sw
     /** @brief 값 주소 · 알림 · 검증 · 비트필드 · 옛 이름처럼 드문 칸입니다. 하나도 없으면 표가 없다. */
     struct PropertyBindingDesc
     {
-        const utf8*                     _pHandleTargetTypeName{ nullptr };
-        const utf8* const*              _ppAlias{ nullptr }; ///< `_aliasCount` 개의 옛 이름
-        uint32                          _aliasCount{ 0 };
-        PropertyInfo::ValueAccessor     _pValueAccessor{ nullptr };
-        PropertyInfo::RepNotifyFunction _pRepNotify{ nullptr };
-        ReflectValidateFunction         _pValidate{ nullptr };
-        PropertyInfo::SetBitFunction    _pSetBit{ nullptr }; ///< 비트필드면 그 비트만 세우는 함수
-        size_t                          _ownerSize{ 0 };     ///< 비트필드의 주인 타입 크기(`resolveBitField`)
+        const utf8*        _pHandleTargetTypeName{ nullptr };
+        const utf8* const* _ppAlias{ nullptr }; ///< `_aliasCount` 개의 옛 이름
+        uint32             _aliasCount{ 0 };
+        void* ( *_pValueAccessor )(void* pInstance){ nullptr };                     ///< `PropertyInfo::ValueAccessor`
+        void ( *_pRepNotify )( void* pInstance, const void* pOldValue ){ nullptr }; ///< `PropertyInfo::RepNotifyFunction`
+        ReflectValidateFunction _pValidate{ nullptr };
+        void ( *_pSetBit )( void* pInstance ){ nullptr }; ///< 비트필드면 그 비트만 세우는 함수(`PropertyInfo::SetBitFunction`)
+        size_t _ownerSize{ 0 };                           ///< 비트필드의 주인 타입 크기(`resolveBitField`)
     };
 
     /**
@@ -382,5 +390,33 @@ namespace sw
         {
             std::destroy_at( static_cast<T*>( pInstance ) );
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 4) 열거형
+    // ------------------------------------------------------------------------------
+    /**
+     * @struct EnumInfoDesc
+     * @brief 생성기가 열거형마다 내는 등록 설명자입니다 — 항목 표(이름 · 값 배열) 하나와 표식 이름만 담고, 이름 표 · 값 표 · 인덱스 목록은 `EnumInfo::createFromDesc` 가 짓는다.
+     * @details 열거형마다 같은 맵 초기화 코드를 펼치지 않는다(magic_enum 이 이름 · 값 배열 하나에서 모든 조회를 푸는 것과 같은 모양). 값은 생성 코드에서
+     *          `static_cast<int64>( E::X )` 라 컴파일러가 계산한다 — libclang 의 값을 숫자로 박지 않는다.
+     */
+    struct EnumInfoDesc
+    {
+        const utf8*                   _pName;
+        const utf8*                   _pFullyQualifiedName;
+        const utf8*                   _pModuleName;
+        span<const NamedValue<int64>> _listEntry;          ///< 선언 순서의 열거자 전부(표식 열거자 포함)
+        span<const NamedValue<int64>> _listRedirect;       ///< 옛 열거자 이름 → 지금 값(`ValueAlias` · `Removed`)
+        const utf8*                   _pInvalidName;       ///< `Invalid` 표식 열거자 이름. 없으면 nullptr
+        const utf8*                   _pCountName;         ///< `Count` 표식 열거자 이름(끝 열거자 `Count` 는 생성기가 자동으로 넣는다). 없으면 nullptr
+        bool                          _bIsBitFlag;         // NOLINT(sw-bool-flag): 생성 코드가 집합체 초기화로 한 번 채우는 일회용 설명자다(기본값 없는 비트필드는 순서 초기화를 깨뜨린다)
+        uint8                         _size;               ///< 열거형의 바이트 크기
+        bool                          _bSigned;            ///< 밑바탕 타입이 부호 있는 정수다 NOLINT(sw-bool-flag): `_bIsBitFlag` 와 같다
+        const utf8* const*            _ppAlias{ nullptr }; ///< `ENUM( Alias = … )` 의 옛 이름 `_aliasCount` 개
+        uint32                        _aliasCount{ 0 };
     };
 } // namespace sw

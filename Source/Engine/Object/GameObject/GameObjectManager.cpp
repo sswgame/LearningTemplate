@@ -29,6 +29,7 @@
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 // FrameSystemParallelPlan

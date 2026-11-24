@@ -1,29 +1,29 @@
 /**
  * @file TypeRegistry.h
- * @brief TypeRegistry 와 정적 Type/Enum 등록기 연결입니다.
+ * @brief 리플렉션 형식 정보를 등록하고 찾는 TypeRegistry 입니다.
+ * @details 형식 정보는 포인터로만 다룬다 — `TypeInfo` · `EnumInfo` 의 멤버를 읽는 파일이 그 헤더를 직접 include 한다. 생성 코드의 등록자는 `TypeRegistrar.h` 다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/EnumUtil.h"
-#include "Core/Foundation/StdHeaders.h"
-#include "Core/Memory/Memory.h"
 #include "Core/Name/NameHashIndex.h"
-#include "Core/Registry/RegistrationChain.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionFwd.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Reflection/TypeLookupCache.h"
 
 namespace sw
 {
     struct EnumEditorMetadata;
+    struct EnumInfoDesc;
+    struct EnumRegistrar;
     struct TypeDesc;
     struct TypeEditorMetadataSet;
+    struct TypeRegistrar;
 
     /**
      * @class TypeRegistry
@@ -52,7 +52,7 @@ namespace sw
         // 2) 모듈 일괄 등록: registrar 체인을 맵에 넣고, 핫 리로드 때 모듈 단위로 해제한다
         // ------------------------------------------------------------------------------
         /** @brief 모듈의 대기 중인 Type/Enum 등록기 체인을 등록합니다. */
-        void registerPendingTypes( struct TypeRegistrar* pClassHead, struct EnumRegistrar* pEnumHead );
+        void registerPendingTypes( TypeRegistrar* pClassHead, EnumRegistrar* pEnumHead );
         /**
          * @brief 해당 모듈이 등록한 타입을 모두 해제합니다.
          * @details 엔진에서는 핫 리로드(개발 빌드)만 부르지만 **모든 구성에서 컴파일한다**. 구성마다 있고 없는 API 는 부르는 쪽(테스트)마다
@@ -147,10 +147,7 @@ namespace sw
         template <typename T>
         const TypeInfo* findType() const
         {
-            if constexpr ( HasStaticType_v<T> )
-                return T::StaticType();
-            else
-                return findType( typeFqn<T>() );
+            return findType( typeFqn<T>() );
         }
 
         /** @brief 컴파일러가 만든 enum FQN(`typeFqn<E>()`)으로 찾고, 없으면 마지막 이름(leaf)으로 찾습니다. 없으면 nullptr 입니다. */
@@ -160,7 +157,7 @@ namespace sw
         template <typename E>
         const EnumInfo* findEnum() const
         {
-            return findEnumOf<E>();
+            return findEnumByTypeFqn( typeFqn<E>() );
         }
 
         /**
@@ -179,12 +176,9 @@ namespace sw
         template <typename Func>
         void forEachType( Func&& func ) const
         {
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
+            for ( const TypeInfo* pTypeInfo : collectAliveTypes() )
             {
-                (void)fqn;
-                if ( pTypeInfo->isAlive() )
-                    func( *pTypeInfo );
+                func( *pTypeInfo );
             }
         }
 
@@ -192,11 +186,9 @@ namespace sw
         template <typename Func>
         void forEachEnum( Func&& func ) const
         {
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            for ( const auto& [key, pEnumInfo] : _mapNameToEnum )
+            for ( const EnumInfo* pEnumInfo : collectEnums() )
             {
-                if ( key == pEnumInfo->_fullyQualifiedName )
-                    func( *pEnumInfo );
+                func( *pEnumInfo );
             }
         }
 
@@ -204,31 +196,7 @@ namespace sw
         template <typename BaseType>
         vector<const TypeInfo*> getDerivedTypes() const
         {
-            const TypeInfo* pBaseType = findType<BaseType>();
-            if ( pBaseType == nullptr )
-                return {};
-
-            const hashed_string&    baseFqn = pBaseType->_fullyQualifiedName;
-            vector<const TypeInfo*> listCandidate;
-            {
-                // 잠금 안에서는 포인터만 모은다. `isDerivedFrom` 은 부모를 찾느라 같은 `_mutex` 를 다시 잡는다(`getParentType` → `findType`) —
-                // 공유 잠금을 겹쳐 잡으면 그 사이 기다리는 쓰기 잠금과 맞물려 멈춘다. 타입 객체는 지우지 않으므로(묘비) 잠금 밖에서도 주소가 맞다.
-                ScopedSharedLock<shared_mutex> lock{ _mutex };
-                listCandidate.reserve( _mapFqnToClassType.size() );
-                for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
-                {
-                    (void)fqn;
-                    if ( pTypeInfo->isAlive() && pTypeInfo.get() != pBaseType )
-                        listCandidate.push_back( pTypeInfo.get() );
-                }
-            }
-            vector<const TypeInfo*> listResult;
-            for ( const TypeInfo* pCandidate : listCandidate )
-            {
-                if ( pCandidate->isDerivedFrom( baseFqn ) )
-                    listResult.push_back( pCandidate );
-            }
-            return listResult;
+            return collectDerivedTypes( findType<BaseType>() );
         }
 
         /** @brief 별칭까지 따라가 canonical `_name` 을 반환합니다. 미등록이면 입력을 그대로 반환합니다. */
@@ -257,8 +225,7 @@ namespace sw
         const utf8* enumToString( E value ) const
         {
             static_assert( std::is_enum_v<E>, "enumToString requires an enum type" );
-            const EnumInfo* pInfo = findEnumOf<E>();
-            return pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( value ) ) : nullptr;
+            return enumToStringByTypeFqn( typeFqn<E>(), static_cast<int64>( value ) );
         }
 
         /**
@@ -272,10 +239,7 @@ namespace sw
         bool hasFlag( E flags, E contains ) const
         {
             static_assert( std::is_enum_v<E>, "hasFlag requires an enum type" );
-            const EnumInfo* pInfo = findEnumOf<E>();
-            if ( pInfo == nullptr || pInfo->_bIsBitFlag == SW_FALSE )
-                return false;
-            return EnumUtil::hasFlag( flags, contains );
+            return isBitFlagByTypeFqn( typeFqn<E>() ) && EnumUtil::hasFlag( flags, contains );
         }
 
     private:
@@ -337,12 +301,16 @@ namespace sw
          */
         static void reportInterfaceProblems( const vector<TypeInfo*>& listType );
 
-        /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
-        template <typename E>
-        const EnumInfo* findEnumOf() const
-        {
-            return findEnumByTypeFqn( typeFqn<E>() );
-        }
+        /** @brief 살아 있는 타입입니다(`forEachType`). 부르는 쪽이 잠금 밖에서 돈다 — 방문 안에서 레지스트리를 다시 찾아도 잠금이 겹치지 않고, 포인터는 레지스트리 수명 동안 산다(묘비). */
+        vector<const TypeInfo*> collectAliveTypes() const;
+        /** @brief 등록된 열거형입니다(`forEachEnum`, `collectAliveTypes` 와 같은 규칙). */
+        vector<const EnumInfo*> collectEnums() const;
+        /** @brief @p pBaseType 의 살아 있는 파생 타입입니다(자신은 뺀다). nullptr 이면 비었습니다. */
+        vector<const TypeInfo*> collectDerivedTypes( const TypeInfo* pBaseType ) const;
+        /** @brief 열거형 @p fqn(`typeFqn<E>()`)의 @p value 이름입니다. 찾는 규칙은 `findEnumByTypeFqn` 이고 없으면 nullptr 입니다. */
+        const utf8* enumToStringByTypeFqn( const hashed_string& fqn, int64 value ) const;
+        /** @brief 열거형 @p fqn(`typeFqn<E>()`)이 등록된 비트플래그면 true 입니다. */
+        bool isBitFlagByTypeFqn( const hashed_string& fqn ) const;
 
     private:
         mutable shared_mutex _mutex;
@@ -401,69 +369,4 @@ namespace sw
 
         SW_SERVICE_SLOT( TypeRegistry, Required );
     };
-} // namespace sw
-
-namespace sw
-{
-    // ------------------------------------------------------------------------------
-    // 7) TypeRegistrar: 정적 초기화로 Type 서술자를 사슬(`getChain`)에 단다. 올리는 쪽(`engine::registerModuleTypes`)이 이미지마다 걷어 간다.
-    // ------------------------------------------------------------------------------
-    struct SW_API TypeRegistrar
-    {
-        const TypeDesc& ( *_pGetDesc )(); ///< 타입 서술자(상수 표)를 돌려주는 생성 함수
-        TypeRegistrar* _pNext;            ///< 같은 사슬의 다음(먼저 만든) registrar
-
-        /** @brief 아직 걷히지 않은 registrar 사슬입니다(Engine 이미지가 가진다). */
-        static RegistrationChain<TypeRegistrar>& getChain();
-
-        explicit TypeRegistrar( const TypeDesc& ( *pGetDesc )() );
-    };
-} // namespace sw
-
-namespace sw
-{
-    // ------------------------------------------------------------------------------
-    // 8) EnumRegistrar: 정적 초기화로 Enum 서술자를 사슬(`getChain`)에 단다(TypeRegistrar 와 같다).
-    // ------------------------------------------------------------------------------
-    struct SW_API EnumRegistrar
-    {
-        const EnumInfoDesc& ( *_pGetDesc )(); ///< 열거형 서술자(상수 표)를 돌려주는 생성 함수
-        EnumRegistrar* _pNext;                ///< 같은 사슬의 다음(먼저 만든) registrar
-
-        /** @brief 아직 걷히지 않은 enum registrar 사슬입니다(Engine 이미지가 가진다). */
-        static RegistrationChain<EnumRegistrar>& getChain();
-
-        explicit EnumRegistrar( const EnumInfoDesc& ( *pGetDesc )() );
-    };
-
-    // ------------------------------------------------------------------------------
-    // 9) 인라인 구현: 조회와 검사
-    // ------------------------------------------------------------------------------
-    inline hashed_string TypeRegistry::canonicalTypeName( const hashed_string& nameOrFqn ) const
-    {
-        const TypeInfo* pInfo = findType( nameOrFqn );
-        if ( pInfo != nullptr )
-        {
-            if ( pInfo->_name.empty() == false )
-                return pInfo->_name;
-            return pInfo->_fullyQualifiedName;
-        }
-        return nameOrFqn;
-    }
-
-    /** @brief nameOrFqn 이 canonicalName 과 같은 등록 타입인지 검사합니다(별칭 포함). */
-    inline bool TypeRegistry::isType( const hashed_string& nameOrFqn, const hashed_string& canonicalName ) const
-    {
-        const TypeInfo* pLhs = findType( nameOrFqn );
-        const TypeInfo* pRhs = findType( canonicalName );
-        if ( pLhs != nullptr && pRhs != nullptr )
-            return pLhs->_typeID == pRhs->_typeID;
-        return canonicalTypeName( nameOrFqn ) == canonicalTypeName( canonicalName );
-    }
-
-    /** @brief C 문자열 canonical 이름으로 타입 일치 여부를 검사합니다. */
-    inline bool TypeRegistry::isType( const hashed_string& nameOrFqn, const utf8* pCanonicalName ) const
-    {
-        return pCanonicalName != nullptr && isType( nameOrFqn, hashed_string( pCanonicalName ) );
-    }
 } // namespace sw

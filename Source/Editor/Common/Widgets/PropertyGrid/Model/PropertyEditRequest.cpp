@@ -9,7 +9,6 @@
 
 #include "Engine/Reflection/EnumInfo.h"
 #include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

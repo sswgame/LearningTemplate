@@ -6,7 +6,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Curve/FloatCurve.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"

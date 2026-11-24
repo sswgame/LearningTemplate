@@ -8,9 +8,9 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

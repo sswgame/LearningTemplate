@@ -16,6 +16,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::editor

@@ -23,6 +23,9 @@
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeLookupCache.h"
+#include "Engine/Reflection/TypeRegistrar.h"
 
 /**
  * @file TypeRegistry.cpp
@@ -1080,6 +1083,80 @@ namespace sw
         if ( pInfo == nullptr || pInfo->_bIsBitFlag == SW_FALSE )
             return false;
         return ( flags & contains ) == contains;
+    }
+
+    vector<const TypeInfo*> TypeRegistry::collectAliveTypes() const
+    {
+        vector<const TypeInfo*>        listType;
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        listType.reserve( _mapFqnToClassType.size() );
+        for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
+        {
+            (void)fqn;
+            if ( pTypeInfo->isAlive() )
+                listType.push_back( pTypeInfo.get() );
+        }
+        return listType;
+    }
+
+    vector<const EnumInfo*> TypeRegistry::collectEnums() const
+    {
+        vector<const EnumInfo*>        listEnum;
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        listEnum.reserve( _mapFqnToEnum.size() );
+        for ( const auto& [key, pEnumInfo] : _mapNameToEnum )
+        {
+            if ( key == pEnumInfo->_fullyQualifiedName )
+                listEnum.push_back( pEnumInfo );
+        }
+        return listEnum;
+    }
+
+    vector<const TypeInfo*> TypeRegistry::collectDerivedTypes( const TypeInfo* pBaseType ) const
+    {
+        vector<const TypeInfo*> listResult;
+        if ( pBaseType == nullptr )
+            return listResult;
+        for ( const TypeInfo* pCandidate : collectAliveTypes() )
+        {
+            if ( pCandidate != pBaseType && pCandidate->isDerivedFrom( pBaseType->_fullyQualifiedName ) )
+                listResult.push_back( pCandidate );
+        }
+        return listResult;
+    }
+
+    const utf8* TypeRegistry::enumToStringByTypeFqn( const hashed_string& fqn, const int64 value ) const
+    {
+        const EnumInfo* pInfo = findEnumByTypeFqn( fqn );
+        return pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
+    }
+
+    bool TypeRegistry::isBitFlagByTypeFqn( const hashed_string& fqn ) const
+    {
+        const EnumInfo* pInfo = findEnumByTypeFqn( fqn );
+        return pInfo != nullptr && pInfo->_bIsBitFlag == SW_TRUE;
+    }
+
+    hashed_string TypeRegistry::canonicalTypeName( const hashed_string& nameOrFqn ) const
+    {
+        const TypeInfo* pInfo = findType( nameOrFqn );
+        if ( pInfo == nullptr )
+            return nameOrFqn;
+        return pInfo->_name.empty() == false ? pInfo->_name : pInfo->_fullyQualifiedName;
+    }
+
+    bool TypeRegistry::isType( const hashed_string& nameOrFqn, const hashed_string& canonicalName ) const
+    {
+        const TypeInfo* pLhs = findType( nameOrFqn );
+        const TypeInfo* pRhs = findType( canonicalName );
+        if ( pLhs != nullptr && pRhs != nullptr )
+            return pLhs->_typeID == pRhs->_typeID;
+        return canonicalTypeName( nameOrFqn ) == canonicalTypeName( canonicalName );
+    }
+
+    bool TypeRegistry::isType( const hashed_string& nameOrFqn, const utf8* pCanonicalName ) const
+    {
+        return pCanonicalName != nullptr && isType( nameOrFqn, hashed_string( pCanonicalName ) );
     }
 
     SW_DEFINE_REGISTRATION_CHAIN( TypeRegistrar::getChain, TypeRegistrar )

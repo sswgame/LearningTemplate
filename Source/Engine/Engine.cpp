@@ -79,6 +79,7 @@
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

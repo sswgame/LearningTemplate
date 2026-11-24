@@ -22,6 +22,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Reflection/TypeRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
