@@ -52,9 +52,9 @@ namespace sw
         {
             uint32  _timeoutFrames{ AutomationTimeLimits::kDefaultWaitTimeoutFrames };
             float32 _timeoutSeconds{ 0.0f };
-            bool    _bSeconds{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bSeconds{ false };
             float32 _timeoutWallSeconds{ 0.0f };
-            bool    _bWallSeconds{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bWallSeconds{ false };
         };
 
         /** @brief `ExpectImage` 의 인자입니다(`file` · `golden` · `region` · 상한 덮기 `tolerance` · `maxMeanDistance` · `maxRegionPixels`). */

@@ -297,7 +297,7 @@ namespace sw
             uint64                    _typeHash;                                                 ///< 걸린 타입의 해시
             void*                     _pObject;                                                  ///< 걸린 객체(그 타입으로 바꾼 주소)
             Subsystem*                _pOwner;                                                   ///< 이 칸을 가진, 이 범위의 컬렉션이 소유한 서브시스템(빌려 건 칸은 nullptr). 초기화 중 조회의 의존 검사가 쓴다
-            bool                      _bPublished{ false };                                      ///< 매단 부모 범위의 조회에도 보이면 true(`publish`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                      _bPublished{ false };                                      ///< 매단 부모 범위의 조회에도 보이면 true(`publish`)
             SubsystemModuleVisibility _moduleVisibility{ SubsystemModuleVisibility::ScopeOnly }; ///< 모듈 서비스 범위에도 보이는지(소유한 서브시스템의 `kModuleVisibility`)
         };
 

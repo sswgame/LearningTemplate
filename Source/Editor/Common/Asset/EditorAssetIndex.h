@@ -33,8 +33,8 @@ namespace sw::editor
         string _referrerPath;      ///< 리소스 id(`game/playground/maps/destructionshowcase.scene.xml`, 소문자)
         string _targetPath;        ///< 리소스 id(소문자). GUID 참조는 지금 경로로 푼 것
         uint32 _line{ 0 };         ///< 1 부터 시작하는 줄 번호
-        bool   _bInlined{ false }; ///< `_base="…"` 칸이다 — 참조자가 로드할 때 대상을 펼쳐 넣으므로 대상이 바뀌면 다시 읽는다(`AssetReloadCascade`). 경로만 적은 칸은 아니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool   _bByGUID{ false };  ///< GUID 참조(`guid:<32자>`)로 적었다 — 대상을 옮겨도 글을 고칠 것이 없다(옮기기의 다시 쓰기가 건너뛴다). NOLINT(sw-bool-flag): 위 칸과 같은 집합체
+        bool   _bInlined{ false }; ///< `_base="…"` 칸이다 — 참조자가 로드할 때 대상을 펼쳐 넣으므로 대상이 바뀌면 다시 읽는다(`AssetReloadCascade`). 경로만 적은 칸은 아니다.
+        bool   _bByGUID{ false };  ///< GUID 참조(`guid:<32자>`)로 적었다 — 대상을 옮겨도 글을 고칠 것이 없다(옮기기의 다시 쓰기가 건너뛴다).
     };
 
     /**
@@ -45,7 +45,7 @@ namespace sw::editor
     {
         string _target;            ///< 소문자 리소스 id 또는 `guid:<32자>`
         uint32 _line{ 0 };         ///< 1 부터 시작하는 줄 번호
-        bool   _bInlined{ false }; ///< `_base="…"` 칸이다(`EditorAssetReference::_bInlined`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bInlined{ false }; ///< `_base="…"` 칸이다(`EditorAssetReference::_bInlined`).
     };
 
     /** @brief 파일 하나에서 뽑은 것입니다 — 정체성과 나가는 참조. 훑기 캐시에 두는 값도 이것이다. */

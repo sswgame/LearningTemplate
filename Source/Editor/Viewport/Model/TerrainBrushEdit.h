@@ -21,17 +21,17 @@ namespace sw::editor
     /** @brief 도구가 이번 프레임에 그릴 값입니다(`TerrainBrushEdit::gather`). */
     struct TerrainBrushViewState
     {
-        float3         _hit{};                       ///< 커서 레이가 지형에 닿은 점
-        vector<float3> _listCircle;                  ///< 브러시 반경 원(지형 높이를 따라 띄운 꺾은선, 월드)
-        vector<float3> _listInnerCircle;             ///< 감쇠가 시작되는 안쪽 원(없으면 비었다)
-        uint32         _currentResolution{ 0 };      ///< 크기 바꾸기 대상 지형의 해상도(대상이 없으면 0)
-        uint32         _resizeResolution{ 0 };       ///< 설정 창이 고른 새 해상도
-        bool           _bHit{ false };               ///< NOLINT(sw-bool-flag): 값 집합체 — 커서 레이가 지형에 닿았다
-        bool           _bEditable{ false };          ///< NOLINT(sw-bool-flag): 값 집합체 — 씬 편집이 허용된다(플레이 중이면 막힌다)
-        bool           _bStroking{ false };          ///< NOLINT(sw-bool-flag): 값 집합체 — 붓질 중이다
-        bool           _bStrokeTargetAlive{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 붓질 중인 지형이 아직 있다
-        bool           _bCanSave{ false };           ///< NOLINT(sw-bool-flag): 값 집합체 — 마지막으로 고친 지형이 있다
-        bool           _bUnsaved{ false };           ///< NOLINT(sw-bool-flag): 값 집합체 — 저장하지 않은 편집이 있다
+        float3         _hit{};                  ///< 커서 레이가 지형에 닿은 점
+        vector<float3> _listCircle;             ///< 브러시 반경 원(지형 높이를 따라 띄운 꺾은선, 월드)
+        vector<float3> _listInnerCircle;        ///< 감쇠가 시작되는 안쪽 원(없으면 비었다)
+        uint32         _currentResolution{ 0 }; ///< 크기 바꾸기 대상 지형의 해상도(대상이 없으면 0)
+        uint32         _resizeResolution{ 0 };  ///< 설정 창이 고른 새 해상도
+        bool           _bHit{ false };
+        bool           _bEditable{ false };
+        bool           _bStroking{ false };
+        bool           _bStrokeTargetAlive{ false };
+        bool           _bCanSave{ false };
+        bool           _bUnsaved{ false };
     };
 
     /** @brief 씬의 폴리지 레이어 하나입니다(`TerrainBrushEdit::collectFoliageLayers`) — 밀도 레이어를 칠하면 그 자리에 심기고 지우면 사라진다. */
@@ -63,11 +63,11 @@ namespace sw::editor
     struct TerrainBrushStrokeInput
     {
         float3 _hit{};
-        bool   _bUsable{ false };    ///< NOLINT(sw-bool-flag): 값 집합체 — 씬 뷰가 도구를 쓸 수 있다(3D 뷰 · 씬이 있다)
-        bool   _bStroking{ false };  ///< NOLINT(sw-bool-flag): 값 집합체 — 붓질 중이다
-        bool   _bStillDown{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 단추를 누르고 있고 편집이 허용되며 붓질 중인 지형이 있다
-        bool   _bHit{ false };       ///< NOLINT(sw-bool-flag): 값 집합체 — 커서 레이가 지형에 닿았다
-        bool   _bPressed{ false };   ///< NOLINT(sw-bool-flag): 값 집합체 — 도구가 마우스를 가진 채 이번 프레임에 왼쪽 단추를 눌렀다
+        bool   _bUsable{ false };
+        bool   _bStroking{ false };
+        bool   _bStillDown{ false };
+        bool   _bHit{ false };
+        bool   _bPressed{ false };
     };
 
     /**

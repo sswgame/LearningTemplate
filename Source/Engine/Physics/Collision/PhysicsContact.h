@@ -70,8 +70,8 @@ namespace sw
     {
         PhysicsBodyHandle _body{};
         uint64            _userData{ 0 };
-        bool              _bTrigger{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bOverlapOnly{ false }; ///< 막지 않는 겹침 전용 바디다(트리거가 아닌 센서, `PhysicsBodyDesc::_bOverlapOnly`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bTrigger{ false };
+        bool              _bOverlapOnly{ false }; ///< 막지 않는 겹침 전용 바디다(트리거가 아닌 센서, `PhysicsBodyDesc::_bOverlapOnly`).
     };
 } // namespace sw
 
@@ -328,11 +328,11 @@ namespace sw
             float32            _impulse{ 0.0f };
             int32              _subContactCount{ 0 };
             int32              _suspendedCount{ 0 };       ///< 잠들어 백엔드가 알림을 멈춘 셰이프 쌍 수(`suspendSubContact`) — 닿아 있는 것으로 센다
-            bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool               _bRestarted{ false };       ///< 지운 바디가 같은 간격 안에서 다시 닿았다 — 끝과 시작을 함께 낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool               _bReportStay{ false };      ///< 어느 쪽 사용자 값이 유지를 듣는다(`setStayListener`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool               _bBodyRemoved{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다.
+            bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다.
+            bool               _bRestarted{ false };       ///< 지운 바디가 같은 간격 안에서 다시 닿았다 — 끝과 시작을 함께 낸다.
+            bool               _bReportStay{ false };      ///< 어느 쪽 사용자 값이 유지를 듣는다(`setStayListener`).
+            bool               _bBodyRemoved{ false };
         };
 
         using PairMap = unordered_map<PairKey, PairState, PairKeyHash>;

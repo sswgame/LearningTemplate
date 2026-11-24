@@ -83,17 +83,17 @@ namespace sw
     /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. 표의 한 줄입니다(`SequenceAsset::findItemKindInfo`). */
     struct SequenceItemKindInfo
     {
-        SequenceItemKind           _kind;                                                                                                                                /**< 종류입니다. 표의 순번과 같아야 합니다. */
-        uint32                     _defaultColor;                                                                                                                        /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
-        uint16                     _requiredProperties;                                                                                                                  /**< 비어 있으면 읽기 오류인 칸(`makeSequenceFieldBit`)입니다. */
-        uint16                     _allowedProperties;                                                                                                                   /**< 적을 수 있는 칸입니다(필수 칸 포함). 그 밖의 칸이 차 있으면 읽기 오류입니다. */
-        const SequenceSpanHandler* _pSpanHandler;                                                                                                                        /**< 구간에 들어갈 때 · 머무는 동안 · 나갈 때의 동작(애니메이션 · 소리 · 자막)입니다. 없으면 nullptr 입니다. */
-        bool                       _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 상태를 정하는지 나타냅니다. */                                                    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */                                                                ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bCutsCamera; /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */                                                         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bShakesCamera; /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */                                               ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bSpawns; /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 스폰한 오브젝트가 바인딩의 대상입니다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bPlaysScenario; /**< 시작 프레임을 지날 때 `_scenario` 를 재생하는지입니다(`SequencePlayerComponent`). */                            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        SequenceItemKind           _kind;               /**< 종류입니다. 표의 순번과 같아야 합니다. */
+        uint32                     _defaultColor;       /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
+        uint16                     _requiredProperties; /**< 비어 있으면 읽기 오류인 칸(`makeSequenceFieldBit`)입니다. */
+        uint16                     _allowedProperties;  /**< 적을 수 있는 칸입니다(필수 칸 포함). 그 밖의 칸이 차 있으면 읽기 오류입니다. */
+        const SequenceSpanHandler* _pSpanHandler;       /**< 구간에 들어갈 때 · 머무는 동안 · 나갈 때의 동작(애니메이션 · 소리 · 자막)입니다. 없으면 nullptr 입니다. */
+        bool                       _bDrivesTarget;      /**< 구간 동안 대상 오브젝트의 활성 상태를 정하는지 나타냅니다. */
+        bool                       _bFiresOnCross;      /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
+        bool                       _bCutsCamera;        /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
+        bool                       _bShakesCamera;      /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
+        bool                       _bSpawns;            /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 스폰한 오브젝트가 바인딩의 대상입니다. */
+        bool                       _bPlaysScenario;     /**< 시작 프레임을 지날 때 `_scenario` 를 재생하는지입니다(`SequencePlayerComponent`). */
 
         /** @brief @p field 가 필수인지입니다. */
         bool requiresField( SequenceItemField field ) const { return ( _requiredProperties & makeSequenceFieldBit( field ) ) != 0; }
@@ -123,10 +123,10 @@ namespace sw
      */
     struct SequenceTrackKindInfo
     {
-        SequenceTrackKind _kind;                                                                                                                                   /**< 종류입니다. 표의 순번과 같아야 합니다. */
-        uint32            _channelCount;                                                                                                                           /**< 채널 수입니다(`SequenceKeyTrack::getChannelCount`). */
-        const utf8*       _pNamePrefix;                                                                                                                            /**< 새 트랙 이름의 머리입니다(에디터가 `Transform 1` 처럼 번호를 붙인다). */
-        bool              _bUsesPropertyPath; /**< `_propertyPath` 로 대상 값을 고르는지입니다(프로퍼티 · 리그 슬롯) — 비어 있으면 재생이 아무것도 몰지 않는다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화 표)
+        SequenceTrackKind _kind;              /**< 종류입니다. 표의 순번과 같아야 합니다. */
+        uint32            _channelCount;      /**< 채널 수입니다(`SequenceKeyTrack::getChannelCount`). */
+        const utf8*       _pNamePrefix;       /**< 새 트랙 이름의 머리입니다(에디터가 `Transform 1` 처럼 번호를 붙인다). */
+        bool              _bUsesPropertyPath; /**< `_propertyPath` 로 대상 값을 고르는지입니다(프로퍼티 · 리그 슬롯) — 비어 있으면 재생이 아무것도 몰지 않는다. */
     };
 
     /** @brief 트랜스폼 트랙의 채널 수입니다(이동 xyz, 회전 xyz, 크기 xyz). */

@@ -33,9 +33,9 @@ namespace sw::editor
         ProjectSettingsDocument     _document;      ///< 반사 형식 페이지의 문서
         ProjectSettingsJSONDocument _tableDocument; ///< 표 페이지(`ProjectSettingsEntry::isTable`)의 문서
         AbsolutePath                _absolutePath;
-        bool                        _bOpened{ false };    ///< NOLINT(sw-bool-flag): 집합체다
-        bool                        _bTypeFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다
-        bool                        _bDirty{ false };     ///< NOLINT(sw-bool-flag): 집합체다
+        bool                        _bOpened{ false };
+        bool                        _bTypeFound{ false };
+        bool                        _bDirty{ false };
 
         /** @brief 파일을 엽니다. 형식을 찾지 못하면(표는 읽지 못하거나 JSON 이 틀리면) `_bTypeFound` 를 내립니다. */
         void open();

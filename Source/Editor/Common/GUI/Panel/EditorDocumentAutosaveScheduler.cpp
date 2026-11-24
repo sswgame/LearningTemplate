@@ -32,7 +32,7 @@ namespace sw::editor
                 EditorDocumentAutosaveWriteJob _writeJob{};
                 vector<const EditorPanel*>     _listDeferred{};      ///< 지난 판에 미룬 패널 — 비어 있지 않으면 이 패널만 다시 묻는다(다른 문서의 글을 끄는 동안 프레임마다 만들지 않게). 지금 목록에 있는 것만 쓴다(비교만 한다)
                 uint32                         _writtenCount{ 0 };   ///< 워커가 쓴 사본 수(끝난 잡의 결과를 더한다)
-                bool                           _bForceNext{ false }; ///< 다음 판은 주기를 보지 않는다(`autosave.documentsNow`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                           _bForceNext{ false }; ///< 다음 판은 주기를 보지 않는다(`autosave.documentsNow`).
             };
 
             /** @brief 설정의 초를 시계의 밀리초로 바꾸는 배수입니다. */

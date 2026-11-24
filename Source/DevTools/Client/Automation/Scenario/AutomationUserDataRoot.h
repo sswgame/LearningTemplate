@@ -61,7 +61,7 @@ namespace sw
     {
         uint64 _entryCount{ 0 };
         int64  _latestWriteTicks{ 0 };
-        bool   _bExists{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bExists{ false };
 
         [[nodiscard]] bool operator==( const UserDataFolderStamp& other ) const
         {

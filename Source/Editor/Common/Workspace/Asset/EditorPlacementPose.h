@@ -14,8 +14,8 @@ namespace sw::editor
     struct EditorPlacementPose
     {
         float3  _position{};
-        float32 _yaw{ 0.0f };      ///< 위 축(3D 는 Y, 2D 는 Z) 둘레 회전(라디안, 0 ~ 2π)
-        bool    _b2DMode{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        float32 _yaw{ 0.0f }; ///< 위 축(3D 는 Y, 2D 는 Z) 둘레 회전(라디안, 0 ~ 2π)
+        bool    _b2DMode{ false };
 
         /** @brief 놓은 오브젝트의 로컬 오일러 회전(피치, 요, 롤)에 더할 값입니다 — 3D 는 요, 2D 는 롤(화면 평면)입니다. 프리팹이 가진 회전은 그대로 두고 더한다. */
         float3 makeRotationOffset() const { return _b2DMode ? float3{ 0.0f, 0.0f, _yaw } : float3{ 0.0f, _yaw, 0.0f }; }

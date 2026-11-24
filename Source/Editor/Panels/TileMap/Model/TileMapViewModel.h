@@ -27,9 +27,9 @@ namespace sw::editor
     struct TileMapToolInput
     {
         int2 _hoverCell{};          ///< 커서 아래 셀(맵 밖일 수 있다)
-        bool _bClicked{ false };    ///< 캔버스 위에서 이번 프레임에 눌렀다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bPainting{ false };   ///< 캔버스를 누른 채 끌고 있다(Brush 도구) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bButtonDown{ false }; ///< 왼쪽 버튼이 눌려 있다(Rect 도구가 놓은 때를 본다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bClicked{ false };    ///< 캔버스 위에서 이번 프레임에 눌렀다
+        bool _bPainting{ false };   ///< 캔버스를 누른 채 끌고 있다(Brush 도구)
+        bool _bButtonDown{ false }; ///< 왼쪽 버튼이 눌려 있다(Rect 도구가 놓은 때를 본다)
     };
 
     /**

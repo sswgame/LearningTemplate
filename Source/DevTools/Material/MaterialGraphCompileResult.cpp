@@ -253,11 +253,11 @@ namespace sw
                 string                     _parameterPrefix; ///< 층 안 파라미터 칸 이름의 머리(`_<층 노드>`) — 같은 층 파일을 두 번 써도 칸이 갈린다
                 LayerLimits                _layerLimits;
                 uint32                     _nextVariable{ 1 };
-                bool                       _bEmissive{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
-                bool                       _bHair{ false };             ///< NOLINT(sw-bool-flag): 집합체다. 출력의 셰이딩 모델이 Hair 다
-                bool                       _bPostProcess{ false };      ///< NOLINT(sw-bool-flag): 집합체다. 출력이 PostProcessOutput 이다 — "Post Process" 묶음 노드는 이때만 받는다
-                bool                       _bLayerPhase{ false };       ///< NOLINT(sw-bool-flag): 집합체다. 출력 노드를 펼친 뒤다 — 조각을 `_outputLines` 에 쓴다
-                bool                       _bLayerMaskSampled{ false }; ///< NOLINT(sw-bool-flag): 집합체다. `_layerMask` 를 이미 읽었다(층마다 다시 읽지 않는다)
+                bool                       _bEmissive{ false };
+                bool                       _bHair{ false };
+                bool                       _bPostProcess{ false };
+                bool                       _bLayerPhase{ false };
+                bool                       _bLayerMaskSampled{ false };
 
                 /** @brief 조각 줄을 쓸 곳입니다. 층의 조각은 출력 대입 뒤에 와야 아래 칸을 읽는다. */
                 [[nodiscard]] string& emitTarget() { return _bLayerPhase ? _outputLines : _body; }

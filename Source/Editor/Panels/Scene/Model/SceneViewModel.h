@@ -19,7 +19,7 @@ namespace sw::editor
     struct SceneViewDebugCategoryRow
     {
         hashed_string _name;
-        bool          _bEnabled{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
+        bool          _bEnabled{ false };
     };
 
     /** @brief 개발 명령이 씬 뷰 창에 넣는 요청의 종류입니다. 카메라는 뷰포트 클라이언트(View)가 들어 창이 그릴 때 꺼내 적용한다(오버레이 배치는 `SceneViewOverlayLayoutStore` 를 바로 고친다). */

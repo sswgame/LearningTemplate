@@ -17,7 +17,7 @@ namespace sw
         uint64               _id{ 0 };
         vector<Subscription> _listMatch{};
         ChangedDelegate      _onChanged{};
-        bool                 _bChanged{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bChanged{ SW_FALSE };
 
         void onFileChanged( const FileChangeEvent& /*changeEvent*/ ) { _bChanged = SW_TRUE; } // 확장자는 감시 창구가 거른다 — 바뀌었다는 사실만 쓴다
     };

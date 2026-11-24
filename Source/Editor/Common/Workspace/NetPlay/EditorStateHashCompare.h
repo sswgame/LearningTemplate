@@ -34,7 +34,7 @@ namespace sw::editor
     {
         uint64 _firstDivergentTick{ 0 }; ///< `_bDiverged` 일 때 처음 어긋난 틱
         uint32 _commonTickCount{ 0 };    ///< 두 이력에 모두 있는 틱 수 — 0 이면 비교할 것이 없었다
-        bool   _bDiverged{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bDiverged{ false };
     };
 } // namespace sw::editor
 
@@ -127,7 +127,7 @@ namespace sw::editor
         {
             NetAddress _remote{};
             string     _token{};
-            bool       _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool       _bValid{ false };
         };
         [[nodiscard]] bool isSourceIndexValid( int32 sourceIndex );
 

@@ -136,7 +136,7 @@ namespace sw
         {
             uint64                          _requestID{ 0 };
             string                          _path;
-            bool                            _bSuccess; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+            bool                            _bSuccess;
             vector<uint8>                   _bytes;
             OnStreamingCompleteDelegate     _callback;
             OnStreamingDataCompleteDelegate _dataCallback;

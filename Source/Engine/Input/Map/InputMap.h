@@ -592,11 +592,11 @@ namespace sw
         /** @brief 한 프레임 동안 액션 하나의 바인딩들을 합산한 값입니다. */
         struct ActionFrameAccum
         {
-            bool    _bAnyDown{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool    _bAnyPressed{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool    _bAnyReleased{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool    _bAnyTriggered{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool    _bAnyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bAnyDown{ false };
+            bool    _bAnyPressed{ false };
+            bool    _bAnyReleased{ false };
+            bool    _bAnyTriggered{ false };
+            bool    _bAnyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다.
             float32 _maxHold{ 0.0f };
             float2  _totalValue{ 0.0f, 0.0f };
             float2  _relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량입니다. 묶지 않습니다.

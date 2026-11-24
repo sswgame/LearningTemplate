@@ -25,7 +25,7 @@ namespace sw
                 size_t _insertAt{ 0 };
                 size_t _headerBegin{ string_view::npos };
                 size_t _headerEnd{ string_view::npos };
-                bool   _bBrokenDeclaration{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화로 만든다)
+                bool   _bBrokenDeclaration{ false };
             };
 
             static bool isSpace( utf8 ch ) { return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n'; }

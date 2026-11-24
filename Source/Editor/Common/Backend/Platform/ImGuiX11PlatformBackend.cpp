@@ -291,8 +291,8 @@ namespace sw::editor
         struct ViewportData
         {
             Window             _windowHandle{ 0 };
-            bool               _bOwned{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            ImGuiViewportFlags _hintFlags{ 0 };     ///< 마지막으로 창 관리자 힌트로 적은 깃발(`kHintFlags` 만)
+            bool               _bOwned{ SW_FALSE };
+            ImGuiViewportFlags _hintFlags{ 0 }; ///< 마지막으로 창 관리자 힌트로 적은 깃발(`kHintFlags` 만)
         };
 
         /** @brief 32 비트 칸 속성 · 클라이언트 메시지의 형식 값입니다(X 프로토콜 — 원자 · long 배열). */

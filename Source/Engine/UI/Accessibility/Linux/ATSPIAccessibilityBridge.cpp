@@ -77,8 +77,8 @@ namespace sw
             /** @brief 객체 경로 → 대상. 루트는 `bRoot`, 그 밖은 접근성 트리 노드입니다. */
             struct Target
             {
-                bool   _bRoot{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                uint32 _node{ 0 };         ///< `_bRoot` 가 아닐 때만 뜻이 있다
+                bool   _bRoot{ SW_FALSE };
+                uint32 _node{ 0 }; ///< `_bRoot` 가 아닐 때만 뜻이 있다
             };
 
             string makeNodePath( const AccessibleNode& node )

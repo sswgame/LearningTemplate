@@ -61,7 +61,7 @@ namespace sw
         float32          _fadeInSeconds{ 0.0f };  ///< 0 에서 오르는 시간(초)
         int32            _priority{ 50 };         ///< 보이스가 모자랄 때 우선순위가 높은 쪽이 남는다.
         AudioVirtualMode _virtual{ AudioVirtualMode::Virtualize };
-        bool             _bLoop{ SW_FALSE }; ///< 끝에서 처음으로 돌아간다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bLoop{ SW_FALSE }; ///< 끝에서 처음으로 돌아간다.
     };
 } // namespace sw
 
@@ -312,7 +312,7 @@ namespace sw
             float32                             _value{ 0.0f }; ///< 볼륨, 페이드, 파라미터, 세기 값이다.
             uint32                              _index{ 0 };    ///< 리스너 번호다.
             CommandKind                         _type{ CommandKind::PlayClip };
-            bool                                _bFlag{ false }; ///< 음소거, 솔로, 일시정지 플래그다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                _bFlag{ false }; ///< 음소거, 솔로, 일시정지 플래그다.
         };
 
         /** @brief 오디오 스레드가 놓지 않고 게임 스레드로 돌려보내는 객체입니다(마지막 참조면 해제가 힙 · 소멸자를 돈다). */
@@ -335,7 +335,7 @@ namespace sw
         {
             AudioEmitterState        _state{};
             vector<EmitterParameter> _listParameter{};
-            bool                     _bRemoved{ false }; ///< 지워 달라고 요청했다. 이 에미터의 보이스가 끝나면 지운다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                     _bRemoved{ false }; ///< 지워 달라고 요청했다. 이 에미터의 보이스가 끝나면 지운다.
         };
 
         /** @brief 파라미터 하나의 실행 상태입니다. */
@@ -355,8 +355,8 @@ namespace sw
             const AudioEventDef*                _pDesc{ nullptr };
             uint64                              _lastPostFrame{ 0 };
             uint32                              _sequenceCursor{ 0 };
-            optional<uint32>                    _lastRandomIndex;      ///< 바로 앞에 낸 무작위 클립(아직 없으면 비어 있다)
-            bool                                _bPostedOnce{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            optional<uint32>                    _lastRandomIndex; ///< 바로 앞에 낸 무작위 클립(아직 없으면 비어 있다)
+            bool                                _bPostedOnce{ false };
         };
 
         /** @brief 이벤트 인스턴스 하나(재생 id 하나)입니다. */
@@ -370,9 +370,9 @@ namespace sw
             uint64                              _elapsedFrameCount{ 0 }; ///< 멈춰 있지 않던 블록만 센 렌더 프레임이다(음악 시계와 같은 규칙).
             float32                             _audibility{ 0.0f };     ///< 지난 블록 보이스 목표 게인의 최댓값이다.
             float32                             _distance{ 0.0f };       ///< 지난 블록의 리스너 거리다.
-            bool                                _bInUse{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                _bPaused{ false };       ///< 재생이 멈춰 있다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                _bStopping{ false };     ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                _bInUse{ false };
+            bool                                _bPaused{ false };   ///< 재생이 멈춰 있다.
+            bool                                _bStopping{ false }; ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다.
         };
 
         // AudioEngine.cpp: 명령, 보이스, 렌더

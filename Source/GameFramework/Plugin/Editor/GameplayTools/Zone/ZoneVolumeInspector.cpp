@@ -68,7 +68,7 @@ namespace sw::editor
                 hashed_string _module{};
                 hashed_string _param{};
                 string        _value{};
-                bool          _bRevert{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool          _bRevert{ false };
             };
 
             /** @brief 매개변수 덮어쓰기 · 되돌리기를 요청합니다(게임 단계가 되돌리기 기록과 함께 적용한다). @p edit 는 값으로 붙잡는다. */

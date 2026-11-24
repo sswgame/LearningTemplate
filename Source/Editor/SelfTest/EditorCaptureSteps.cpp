@@ -48,12 +48,12 @@ namespace sw::editor
             struct PendingCapture
             {
                 const AutomationStep* _pStep{ nullptr };
-                EditorStabilityWait   _stability{};            ///< 먼저 에디터가 멈추기를 기다린다(패널이 "Loading..." 을 그리는 동안 찍지 않는다)
-                bool                  _bStable{ false };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                EditorStabilityWait   _stability{}; ///< 먼저 에디터가 멈추기를 기다린다(패널이 "Loading..." 을 그리는 동안 찍지 않는다)
+                bool                  _bStable{ false };
                 uint32                _phaseFrameCount{ 0 };   ///< 정지 뒤 지금 단계(내용 자리 잡기 · 결과 기다리기)에서 붙잡은 프레임 — 정지 대기는 시한이 없어 실행기의 붙잡기 수와 따로 센다
                 uint64                _layoutHash{ 0 };        ///< 지난 프레임의 레이아웃 지문
                 uint32                _stableFrameCount{ 0 };  ///< 지문이 그대로인 연속 프레임 수
-                bool                  _bRequested{ SW_FALSE }; ///< 캡처를 요청했다(그 뒤로는 결과만 기다린다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                  _bRequested{ SW_FALSE }; ///< 캡처를 요청했다(그 뒤로는 결과만 기다린다)
                 uint32                _ticket{ 0 };
             };
 

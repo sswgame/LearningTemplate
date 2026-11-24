@@ -246,8 +246,8 @@ namespace sw
         IRHICommandList*                         _pPassCmdList{ nullptr };
         const vector<RenderGraphResourceAccess>* _pListAccess{ nullptr }; ///< 이번 계획의 접근
         /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 나타냅니다(레벨의 첫 엔트리입니다).
-        bool                 _bAlreadyBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        RHIClosedCommandList _closed{};               ///< 기록을 닫은 값(기록하지 못했으면 빈 값)
+        bool                 _bAlreadyBegun{ false };
+        RHIClosedCommandList _closed{}; ///< 기록을 닫은 값(기록하지 못했으면 빈 값)
 
         void record() { _closed = recordRenderPass( _pNode, *_pListAccess, _pPassCmdList, _bAlreadyBegun ); }
     };

@@ -29,8 +29,8 @@ namespace sw
         string _watch{};
         string _target{};
         string _key{};
-        string _value{};        ///< 읽은 값(수는 끝의 0 을 정리한 글)
-        bool   _bText{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string _value{}; ///< 읽은 값(수는 끝의 0 을 정리한 글)
+        bool   _bText{ false };
     };
 } // namespace sw
 
@@ -51,8 +51,8 @@ namespace sw
         uint32                           _clientWidth{ 0 };               ///< 마우스 위치를 비율로 바꿀 창 클라이언트 크기입니다. 0 이면 `MousePosition` 을 쓰지 않습니다.
         uint32                           _clientHeight{ 0 };
         uint32                           _firstFrame{ 1 };                 ///< 녹화 프레임 0 이 놓일 시나리오 프레임입니다.
-        bool                             _bIncludeSynthetic{ false };      ///< 가상 입력(시나리오 재생이 낸 것)도 씁니다. 시나리오로 돌린 플레이를 다시 녹화해 왕복을 확인할 때 켭니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                             _bStartWhenScenePlaying{ false }; ///< 루트를 `startAfter="ScenePlaying"` 로 씁니다(녹화를 씬 플레이 첫 프레임에 시작했을 때). 거짓이면 `Immediately` 입니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                             _bIncludeSynthetic{ false };      ///< 가상 입력(시나리오 재생이 낸 것)도 씁니다. 시나리오로 돌린 플레이를 다시 녹화해 왕복을 확인할 때 켭니다.
+        bool                             _bStartWhenScenePlaying{ false }; ///< 루트를 `startAfter="ScenePlaying"` 로 씁니다(녹화를 씬 플레이 첫 프레임에 시작했을 때). 거짓이면 `Immediately` 입니다.
     };
 } // namespace sw
 

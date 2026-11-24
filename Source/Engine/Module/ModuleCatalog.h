@@ -171,10 +171,10 @@ namespace sw
         vector<ModuleOverride>   _listModuleOverride; ///< 프로젝트(게임 모듈)만 쓴다. 다른 모듈의 켜짐을 바꾼다
         ModuleVersion            _version;
         ModuleKind               _kind{ ModuleKind::Kit };
-        uint8                    _platformMask{ 0 };         ///< `ModulePlatform` 비트
-        uint8                    _configurationMask{ 0 };    ///< `ModuleConfiguration` 비트
-        uint8                    _targetMask{ 0 };           ///< `ModuleTarget` 비트
-        bool                     _bEnabledByDefault{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint8                    _platformMask{ 0 };      ///< `ModulePlatform` 비트
+        uint8                    _configurationMask{ 0 }; ///< `ModuleConfiguration` 비트
+        uint8                    _targetMask{ 0 };        ///< `ModuleTarget` 비트
+        bool                     _bEnabledByDefault{ true };
 
         /** @brief 의존 모듈의 이름만 적힌 순서대로 모은 목록입니다(리로드 관리자에 넘기는 의존 — 버전 조건은 해석이 이미 봤다). */
         [[nodiscard]] vector<string> collectDependencyNames() const

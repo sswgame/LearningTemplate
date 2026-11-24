@@ -48,9 +48,9 @@ namespace sw
         float4           _rotation{ 0.0f, 0.0f, 0.0f, 1.0f }; ///< 월드 회전 쿼터니언(x y z w)
         AbsolutePosition _boxCenter{};                        ///< 절대 자리
         float3           _boxHalfExtent{};
-        GameObjectHandle _object{};              ///< 로컬 포즈의 오브젝트다(`collectPoses`). 서버 글에서 읽은 포즈는 비어 있다
-        bool             _bHasRotation{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bHasBox{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        GameObjectHandle _object{}; ///< 로컬 포즈의 오브젝트다(`collectPoses`). 서버 글에서 읽은 포즈는 비어 있다
+        bool             _bHasRotation{ false };
+        bool             _bHasBox{ false };
     };
 } // namespace sw
 
@@ -68,9 +68,9 @@ namespace sw
         float4           _serverRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
         AbsolutePosition _serverBoxCenter{};
         float3           _serverBoxHalfExtent{};
-        bool             _bHasServerRotation{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bHasServerBox{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bHasBoxPair{ false };        ///< 두 쪽 모두 상자가 있다(`_boxCenterDistance` 가 뜻을 가진다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bHasServerRotation{ false };
+        bool             _bHasServerBox{ false };
+        bool             _bHasBoxPair{ false }; ///< 두 쪽 모두 상자가 있다(`_boxCenterDistance` 가 뜻을 가진다)
     };
 } // namespace sw
 

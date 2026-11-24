@@ -40,7 +40,7 @@ namespace sw
         WindowMonitorRect _area;                 ///< 모니터 전체
         WindowMonitorRect _workArea;             ///< 작업 표시줄 · 패널을 뺀 영역
         float32           _contentScale{ 1.0f }; ///< 이 모니터의 권장 배율(96 DPI = 1). 물리 크기로 재지 않는다(`GenericWindow::getContentScale` 과 같은 출처)
-        bool              _bPrimary{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bPrimary{ false };
 
         /** @brief 해상도 목록에 넣는 가장 작은 변(픽셀)입니다. 옛 모드(640x480 등)는 옵션 메뉴에 필요 없다. */
         static constexpr int32 kMinResolutionSide = 640;

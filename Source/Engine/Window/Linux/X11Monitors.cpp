@@ -21,7 +21,7 @@ namespace sw
         /** @brief 올려 쓰는 libXrandr 함수들입니다. `decltype` 은 호출하지 않으므로 링크가 필요 없다. */
         struct X11RandrAPI
         {
-            bool                                      _bLoaded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                      _bLoaded{ false };
             decltype( &XRRQueryExtension )            _pfnQueryExtension{ nullptr };
             decltype( &XRRQueryVersion )              _pfnQueryVersion{ nullptr };
             decltype( &XRRSelectInput )               _pfnSelectInput{ nullptr };

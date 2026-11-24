@@ -850,7 +850,7 @@ namespace sw::editor
         private:
             vector<string> _listID{};                                      ///< 연 콤보의 항목 id(이름순)
             uint32         _openRowID{ constant::invalid_index::kUint32 }; ///< 콤보가 열린 행 — 바뀌면 다시 모은다
-            bool           _bListed{ false };                              ///< 표에 그 종류의 줄이 있었다 NOLINT(sw-bool-flag): 그리기 상태 하나다
+            bool           _bListed{ false };                              ///< 표에 그 종류의 줄이 있었다
         };
 
         class Float3Property : public BuiltinPropertyBase

@@ -36,9 +36,9 @@ namespace sw
         Angular _torque{};
         Vector  _linearVelocity{};
         Angular _angularVelocity{};
-        bool    _bSetLinearVelocity{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bSetAngularVelocity{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bWake{ false };               ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bSetLinearVelocity{ false };
+        bool    _bSetAngularVelocity{ false };
+        bool    _bWake{ false };
     };
 
     /**
@@ -164,8 +164,8 @@ namespace sw
         float32            _pendingJumpSpeed{ 0.0f };  ///< 0 이 아니면 다음 스텝에 준다
         float3             _pendingClimbVelocity{};    ///< 이번 게임 프레임의 오르기 속도(`_bPendingClimb` 일 때)
         float32            _verticalMoveSpeed{ 0.0f }; ///< 헤엄칠 때 위아래로 가려는 속도 — 다시 부를 때까지 유지한다
-        bool               _bPendingClimb{ false };    ///< NOLINT(sw-bool-flag): 집합체다 — 이번 게임 프레임에 오르기 요청이 왔다
-        bool               _bPendingStop{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — 참이면 다음 스텝이 이어받은 운동을 지운다(`stopMovementImmediately`)
+        bool               _bPendingClimb{ false };
+        bool               _bPendingStop{ false };
     };
 
     /** @struct CharacterCommand2D @brief 2D 캐릭터 컨트롤러가 다음 물리 프레임에 받을 입력입니다(이동 요청 · 점프 · 오르기 대기 — `CharacterCommand3D` 와 같은 계약). */
@@ -175,7 +175,7 @@ namespace sw
         float2  _pendingLaunch{};          ///< 0 이 아니면 다음 스텝에 쏜다(`launch`)
         float32 _moveVelocity{ 0.0f };     ///< 요청된 수평 속도 — 다시 부를 때까지 유지한다
         float32 _pendingJumpSpeed{ 0.0f }; ///< 0 이 아니면 다음 스텝에 준다
-        bool    _bPendingClimb{ false };   ///< NOLINT(sw-bool-flag): 집합체다 — 이번 게임 프레임에 오르기 요청이 왔다
+        bool    _bPendingClimb{ false };
     };
 
     /** @struct VehicleDriverInput @brief 바퀴 차(`WheeledVehicleComponent`)가 물리 프레임 시작에 백엔드로 넘길 운전 입력입니다 — 다시 부를 때까지 유지한다. */

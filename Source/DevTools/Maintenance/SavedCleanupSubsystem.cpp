@@ -29,7 +29,7 @@ namespace sw
             {
                 AbsolutePath _path;
                 int64        _writeTicks{ 0 };
-                bool         _bDirectory{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool         _bDirectory{ false };
             };
 
             /** @brief @p folder 바로 아래 항목을 새것부터 줄 세웁니다. */

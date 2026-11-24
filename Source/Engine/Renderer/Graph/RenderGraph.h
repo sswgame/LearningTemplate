@@ -428,10 +428,10 @@ namespace sw
         hashed_string _name;
         size_t        _firstPassIndex{ 0 };
         size_t        _lastPassIndex{ 0 };
-        uint32        _firstLevel{ 0 };   ///< 처음 쓰는 패스의 레벨 — 같은 레벨은 GPU 에서 겹칠 수 있어 메모리를 나누는 구간은 레벨로 잰다
-        uint32        _lastLevel{ 0 };    ///< 마지막으로 쓰는 패스의 레벨
-        bool          _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool          _bRead{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint32        _firstLevel{ 0 }; ///< 처음 쓰는 패스의 레벨 — 같은 레벨은 GPU 에서 겹칠 수 있어 메모리를 나누는 구간은 레벨로 잰다
+        uint32        _lastLevel{ 0 };  ///< 마지막으로 쓰는 패스의 레벨
+        bool          _bWritten{ false };
+        bool          _bRead{ false };
         /// @brief 수명 종류입니다. Transient 가 아니면 구간이 그래프 전체(첫 패스 ~ 마지막 패스)라 다른 자원과 메모리를 나눌 수 없습니다.
         RenderGraphResourceKind _kind{ RenderGraphResourceKind::Transient };
     };

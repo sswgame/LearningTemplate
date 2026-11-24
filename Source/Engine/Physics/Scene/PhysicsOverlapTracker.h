@@ -29,10 +29,10 @@ namespace sw
         PhysicsBodyHandle   _bodyB{};
         float32             _hitFraction{ 1.0f }; ///< 쓸어 낸 겹침의 닿은 시점(0..1), 나머지는 1
         PhysicsContactPhase _phase{ PhysicsContactPhase::Begin };
-        bool                _bTriggerA{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                _bTriggerB{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                _bIs2D{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        uint64              _step{ 0 };          ///< 알림이 온 물리 스텝 번호(길 위에서 쓸어 낸 겹침은 0). 진입 결과는 그 쌍이 이번 프레임에 처음 시작한 스텝이다
+        bool                _bTriggerA{ false };
+        bool                _bTriggerB{ false };
+        bool                _bIs2D{ false };
+        uint64              _step{ 0 }; ///< 알림이 온 물리 스텝 번호(길 위에서 쓸어 낸 겹침은 0). 진입 결과는 그 쌍이 이번 프레임에 처음 시작한 스텝이다
     };
 
     /** @class PhysicsOverlapTracker @brief 파일 머리말 참고. */
@@ -186,8 +186,8 @@ namespace sw
             uint64              _beginStep{ 0 }; ///< 마지막으로 시작이 온 프레임의 첫 시작 스텝
             int32               _count{ 0 };
             int32               _countAtFrameStart{ 0 };
-            bool                _bTouched{ false };        ///< 이번 프레임에 알림이 왔다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                _bBegunThisFrame{ false }; ///< 이번 프레임에 시작이 왔다(들고 남을 가린다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                _bTouched{ false };        ///< 이번 프레임에 알림이 왔다.
+            bool                _bBegunThisFrame{ false }; ///< 이번 프레임에 시작이 왔다(들고 남을 가린다).
         };
 
         using PairMap = unordered_map<PairKey, PairState, PairKeyHash>;

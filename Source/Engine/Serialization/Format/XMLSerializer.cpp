@@ -417,12 +417,12 @@ namespace sw
                 IXMLBackend&                   _backend;
                 const SerializeContext&        _context;
                 vector<SchemaOrphanValue>*     _pOutListOrphan;
-                vector<RestoredPropertyValue>* _pOutListRestored;          ///< 되돌린 칸을 모을 곳(모든 깊이가 같은 목록) — 엄격 읽기는 nullptr
-                bool                           _bContinuesAfterUnreadable; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                vector<RestoredPropertyValue>* _pOutListRestored; ///< 되돌린 칸을 모을 곳(모든 깊이가 같은 목록) — 엄격 읽기는 nullptr
+                bool                           _bContinuesAfterUnreadable;
                 PropertyReadRollback           _rollback{};
-                bool                           _bFieldError{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                           _bForbiddenField{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                           _bObjectFailed{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                           _bFieldError{ false };
+                bool                           _bForbiddenField{ false };
+                bool                           _bObjectFailed{ false };
 
                 /** @brief 프로퍼티 이름 요소 안에 든 컨테이너 필드를 읽습니다. 요소가 없으면 기본값을 채웁니다. */
                 void readContainerProperty( const PropertyInfo& prop )

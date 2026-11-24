@@ -44,8 +44,8 @@ namespace sw
         struct ConsumerQueue
         {
             vector<vector<uint32>> _listScratch{};
-            vector<uint32>         _listShared{};   ///< `_sharedLock` 아래에서만
-            bool                   _bUsed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<uint32>         _listShared{}; ///< `_sharedLock` 아래에서만
+            bool                   _bUsed{ false };
         };
 
         uint32 addConsumer();

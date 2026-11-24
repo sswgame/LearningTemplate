@@ -40,7 +40,7 @@ namespace sw::editor
         float2                                         _canvasSize{};
         uint64                                         _skipObjectID{ 0 };               ///< 화면을 그리는 에디터 카메라의 오브젝트(상자 선택이 고르지 않는다)
         const vector<EditorVisualizerScreenBillboard>* _pListScreenBillboard{ nullptr }; ///< 이번 프레임에 그은 아이콘 배지(빌보드 시각화를 끄면 비었다)
-        bool                                           _b2DMode{ false };                ///< NOLINT(sw-bool-flag): 값 집합체 — 같은 거리에서 스프라이트 · 콜라이더가 메시보다 우선한다
+        bool                                           _b2DMode{ false };
     };
 
     /**

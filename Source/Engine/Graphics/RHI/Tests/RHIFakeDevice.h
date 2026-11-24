@@ -343,18 +343,18 @@ namespace sw::test
         unordered_set<RHIBufferHandle> _setLiveBuffer;       /**< 만들고 아직 놓지 않은 버퍼 — 놓기가 산 핸들이었는지 답한다(장치의 두 번 해제 단언) */
         vector<RHIBufferHandle>        _listDestroyedBuffer; /**< 백엔드 파괴(`destroyBufferNative`)에 닿은 버퍼(닿은 순서) */
         uint32                         _gpuVertexBufferCount{ 0 };
-        uint32                         _structuredUpdateCount{ 0 };                                                                  /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
-        uint32                         _structuredCreateCount{ 0 };                                                                  /**< `createStructuredBuffer` 호출 수 */
-        uint32                         _lastStructuredElementCount{ 0 };                                                             /**< 마지막으로 만든 구조 버퍼의 원소 수 */
-        uint32                         _readbackReadCount{ 0 };                                                                      /**< `readReadbackBuffer` 호출 수 */
-        bool                           _bReadbackReadable{ true }; /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
-        RHIBufferSRVIndex              _bufferSRV{ kInvalidDescriptorIndex };                                                        /**< `registerBindlessBufferSRV` 가 낼 번호 */
-        vector<RHIPipelineStateHandle> _listDestroyedPipelineState;                                                                  /**< `destroyPipelineStateNative` 로 받은 PSO(받은 순서) */
+        uint32                         _structuredUpdateCount{ 0 };           /**< `updateStructuredBufferRegions` 호출 수(한 조각 갱신 · 만들 때의 초기 내용도 이 길이다) */
+        uint32                         _structuredCreateCount{ 0 };           /**< `createStructuredBuffer` 호출 수 */
+        uint32                         _lastStructuredElementCount{ 0 };      /**< 마지막으로 만든 구조 버퍼의 원소 수 */
+        uint32                         _readbackReadCount{ 0 };               /**< `readReadbackBuffer` 호출 수 */
+        bool                           _bReadbackReadable{ true };            /**< `readReadbackBuffer` 가 돌려줄 값(내용은 건드리지 않는다) */
+        RHIBufferSRVIndex              _bufferSRV{ kInvalidDescriptorIndex }; /**< `registerBindlessBufferSRV` 가 낼 번호 */
+        vector<RHIPipelineStateHandle> _listDestroyedPipelineState;           /**< `destroyPipelineStateNative` 로 받은 PSO(받은 순서) */
 
-        uint64              _nextTexture{ 0 };                                            /**< 다음에 낼 텍스처 핸들의 packed 값 — 0 이면 텍스처를 만들지 못한다 */
-        uint32              _nextTextureView{ 1 };                                        /**< 다음에 낼 텍스처 뷰 번호 */
-        bool                _bFailTextureUAV{ false }; /**< 텍스처 UAV 등록이 실패한다 */ ///< NOLINT(sw-bool-flag): 테스트가 바꾸는 답
-        vector<const utf8*> _listReleaseStep;                                             /**< 텍스처 뷰 해제("srv" · "uav")와 텍스처 파괴("texture")의 차례 */
+        uint64              _nextTexture{ 0 };         /**< 다음에 낼 텍스처 핸들의 packed 값 — 0 이면 텍스처를 만들지 못한다 */
+        uint32              _nextTextureView{ 1 };     /**< 다음에 낼 텍스처 뷰 번호 */
+        bool                _bFailTextureUAV{ false }; /**< 텍스처 UAV 등록이 실패한다 */
+        vector<const utf8*> _listReleaseStep;          /**< 텍스처 뷰 해제("srv" · "uav")와 텍스처 파괴("texture")의 차례 */
 
         /** @brief 새 텍스처 뷰 번호를 냅니다(@p bUAV 이고 실패로 두었으면 무효). */
         RHIDescriptorIndex makeTextureView( bool bUAV ) { return bUAV && _bFailTextureUAV ? kInvalidDescriptorIndex : RHIDescriptorIndex{ _nextTextureView++ }; }

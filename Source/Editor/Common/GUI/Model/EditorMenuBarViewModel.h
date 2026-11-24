@@ -24,7 +24,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax64> _layoutName{};                               ///< 이름 붙인 레이아웃 저장 칸의 글
         BuildState                             _lastObservedBuildState{ BuildState::Idle }; ///< 지난 프레임에 본 빌드 상태(컴파일이 끝나는 순간을 잡는다)
         float32                                _statusAreaWidth{ 0.0f };                    ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
-        bool                                   _bShowThemeSettings{ false };                ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool                                   _bShowThemeSettings{ false };
     };
 
     /**

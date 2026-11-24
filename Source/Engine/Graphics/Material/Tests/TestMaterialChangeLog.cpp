@@ -68,7 +68,7 @@ namespace
     /** @brief 지켜보기 테스트의 가짜 주인입니다 — 늦은 일이 끝났는지만 든다(덮어쓴 텍스처 로드 자리). */
     struct CompletionTestOwner
     {
-        bool _bDone{ false }; ///< NOLINT(sw-bool-flag): 테스트 집합체다
+        bool _bDone{ false };
 
         static MaterialCompletionWatch::PollResult poll( void* pOwner )
         {

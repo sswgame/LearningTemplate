@@ -40,7 +40,7 @@ namespace sw
     {
         GimmickStateMatch _match{ GimmickStateMatch::Mismatch };
         optional<int32>   _changedNode{};     ///< `Mismatch` 일 때 종류나 상태 뜻이 바뀐 이 회로의 노드 번호. 저장 상태 자체가 깨졌으면(같은 id 둘) 비어 있다
-        bool              _bApplied{ false }; ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bApplied{ false }; ///< 상태를 옮겼는지. 받아들이는 한계보다 약하게 맞으면 false 이고 회로는 그대로다
     };
 } // namespace sw
 

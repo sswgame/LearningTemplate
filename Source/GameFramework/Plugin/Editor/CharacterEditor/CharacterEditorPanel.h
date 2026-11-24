@@ -76,13 +76,13 @@ namespace sw::editor
          */
         struct PreviewViewState
         {
-            vector<EditorVisualizerLine> _listSocketAxisLine;    ///< 소켓 파일의 소켓 축(고른 소켓은 길고 밝다)
-            vector<EditorVisualizerLine> _listPenetrationLine;   ///< 피팅 관통 점의 십자(점마다 셋)
-            vector<EditorVisualizerLine> _listPickLine;          ///< 몸 집기 — 강조 구간 윤곽과 집은 자리 십자
-            uint32                       _assembleCount{ 0 };    ///< 미리보기 몸이 외형을 조립한 수
-            bool                         _bHasBody{ false };     ///< NOLINT(sw-bool-flag): 값 집합체 — 미리보기 몸이 있다
-            bool                         _bHasAnimator{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 몸에 애니메이터가 있다(애니메이션 줄을 그린다)
-            bool                         _bClipPlaying{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 고른 클립을 재생 중이다
+            vector<EditorVisualizerLine> _listSocketAxisLine;  ///< 소켓 파일의 소켓 축(고른 소켓은 길고 밝다)
+            vector<EditorVisualizerLine> _listPenetrationLine; ///< 피팅 관통 점의 십자(점마다 셋)
+            vector<EditorVisualizerLine> _listPickLine;        ///< 몸 집기 — 강조 구간 윤곽과 집은 자리 십자
+            uint32                       _assembleCount{ 0 };  ///< 미리보기 몸이 외형을 조립한 수
+            bool                         _bHasBody{ false };
+            bool                         _bHasAnimator{ false };
+            bool                         _bClipPlaying{ false };
         };
 
         CharacterEditorPanel();

@@ -88,7 +88,7 @@ namespace sw
                 b2Vec2                    _point{};
                 b2Vec2                    _normal{};
                 float32                   _fraction{ 1.0f };
-                bool                      _bHit{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                      _bHit{ false };
             };
 
             /** @brief 닿는 것을 모두 모으는 질의의 콜백 컨텍스트입니다. 결과를 출력 끝에 바로 붙입니다. */

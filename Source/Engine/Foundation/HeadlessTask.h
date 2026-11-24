@@ -84,7 +84,7 @@ namespace sw
     {
         CommandLineManager& _commandLine;
         HeadlessTaskState&  _state;            ///< 본문이 실패 종료 코드(`_failureExitCode`)를 정할 때 쓴다. `_bFailed` 는 본문의 반환값이 정한다
-        bool                _bDedicatedServer; ///< 전용 서버가 굽는 팩은 서버가 읽지 않는 종류를 뺀다. NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+        bool                _bDedicatedServer; ///< 전용 서버가 굽는 팩은 서버가 읽지 않는 종류를 뺀다.
     };
 
     /** @brief 이 명령줄이 작업을 청했으면 true 입니다. 읽기만 합니다. */

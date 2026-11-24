@@ -41,7 +41,7 @@ namespace sw::editor
         EditorPanelCategory            _category{ EditorPanelCategory::Core };
         unique_ptr<EditorPanel>        _pInstance;
         const EditorPanelRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 항목. 직접 registerPanel 한 것은 nullptr 이다
-        bool                           _bOpenByDefault{ false };  ///< 만든 직후의 가시성(`windows.json` 복원 전) — 기본 배치로 되돌릴 때 핵심 패널을 이 값으로 둔다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                           _bOpenByDefault{ false };  ///< 만든 직후의 가시성(`windows.json` 복원 전) — 기본 배치로 되돌릴 때 핵심 패널을 이 값으로 둔다
         uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간의 합(ns)
         uint64                         _drawNanosMax{ 0 };        ///< 그중 가장 긴 한 프레임의 시간(ns)
         uint64                         _gatherNanosSum{ 0 };      ///< 같은 프레임들의 `gather` 시간 합(ns — 그리기 합에 들어 있다, `EditorPanel::gatherViewState`)

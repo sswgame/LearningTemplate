@@ -104,7 +104,7 @@ namespace sw
     {
         Scene&          _scene; ///< 활성 씬(오브젝트 매니저가 있다)
         DebugDrawQueue& _queue;
-        const bool      _bShown; ///< 섹션이 켜져 있다. `kDrawsWhileHidden` 이 아닌 섹션은 늘 true 다. NOLINT(sw-bool-flag): 부르는 쪽이 만드는 집합체다
+        const bool      _bShown; ///< 섹션이 켜져 있다. `kDrawsWhileHidden` 이 아닌 섹션은 늘 true 다.
     };
 
     /** @brief 섹션이 도형을 그리는 본문입니다(씬 틱 뒤 프레임마다, 게임 스레드). 씬 뷰와 `-gv_debugDrawGameView` 의 게임 화면에 보입니다. */

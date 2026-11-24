@@ -102,9 +102,9 @@ namespace sw::editor
                 uint32               _heldMouseViewportID{ 0 };
                 float2               _hoverPoint{}; ///< 마지막으로 `Reachable` 로 판정한 점(`moveByOffset` 의 기준)
                 uint32               _hoverViewportID{ 0 };
-                bool                 _bHovered{ false };    ///< `_hoverPoint` 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                 _bEnabled{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                 _bHovered{ false };   ///< `_hoverPoint` 가 있다
+                bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
+                bool                 _bEnabled{ SW_FALSE };
 
                 /** @brief 닿는다고 판정한 점을 끌기 기준(`EditorSelfTestInput::moveByOffset`)으로 남깁니다. */
                 void rememberHover( const float2& point, uint32 viewportID )

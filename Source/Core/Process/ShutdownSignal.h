@@ -42,8 +42,8 @@ namespace sw
     struct ShutdownSignalAction
     {
         ShutdownCause _cause{ ShutdownCause::None }; ///< 세울 까닭. None 이면 세우지 않는다
-        bool          _bPassToDefault{ false };      ///< NOLINT(sw-bool-flag): 집합체다. 다음 처리기(기본 = 즉시 종료)로 넘긴다 — 두 번째 인터럽트 · 서비스의 로그오프
-        bool          _bWaitForCompletion{ false };  ///< NOLINT(sw-bool-flag): 집합체다. 정리 완료 알림(`notifyShutdownComplete`)을 기다린 뒤 돌아간다 — 돌아가는 순간 OS 가 프로세스를 끝낸다
+        bool          _bPassToDefault{ false };
+        bool          _bWaitForCompletion{ false };
     };
 
     /**

@@ -16,9 +16,9 @@ namespace sw::editor
     {
         vector<string> _listLabel{};         ///< 명령 이름(1 번 단계부터). 이름이 없는 명령은 "Command"
         size_t         _currentIndex{ 0 };   ///< 지금 위치(0 은 처음 상태, n 은 n 번 단계까지 실행)
-        bool           _bAvailable{ false }; ///< 되돌리기 스택이 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool           _bCanUndo{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool           _bCanRedo{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bAvailable{ false }; ///< 되돌리기 스택이 있다
+        bool           _bCanUndo{ false };
+        bool           _bCanRedo{ false };
     };
 
     /** @brief 히스토리 창의 ViewModel 입니다. 파일 머리말 참고. 상태가 없어 패널이 값으로 든다. */

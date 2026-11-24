@@ -63,7 +63,7 @@ namespace sw
                 string_view        _path;
                 vector<Variable>   _listVariable;
                 UIStyleSheetAsset* _pSheet;
-                bool               _bFlattened; ///< 부모를 합친 글을 읽었다 — 노드의 위치가 @p _text 의 위치가 아니라 줄 번호를 적지 않는다 NOLINT(sw-bool-flag): 집합체 초기화로 만드는 지역 문맥이다
+                bool               _bFlattened; ///< 부모를 합친 글을 읽었다 — 노드의 위치가 @p _text 의 위치가 아니라 줄 번호를 적지 않는다
 
                 uint32 findLine( const XMLNode& node ) const
                 {

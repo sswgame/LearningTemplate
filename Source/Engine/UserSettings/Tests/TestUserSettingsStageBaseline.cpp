@@ -15,7 +15,7 @@ namespace
     {
         string _lastValue{};
         uint32 _callCount{ 0 };
-        bool   _bLastStartup{ true }; ///< NOLINT(sw-bool-flag): 테스트 집합체다 — C++17 비트필드는 기본값을 둘 수 없다
+        bool   _bLastStartup{ true };
 
         bool apply( const UserSettingApplyParams& context )
         {

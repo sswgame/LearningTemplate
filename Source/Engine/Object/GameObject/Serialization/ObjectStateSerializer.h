@@ -289,9 +289,9 @@ namespace sw
             GameObject*                _pObject{ nullptr };
             uint64                     _savedID{ 0 };
             hashed_string              _savedName{};
-            bool                       _bExternalParentAllowed{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            optional<SerializePurpose> _loadedPurpose{};                ///< 상태를 읽었으면 그 읽기의 목적이다. `finish` 가 `onPostLoad` 를 부르고 이 목적이 다룬 필드의 핸들을 옮긴다
-            uint64                     _savedIDScope{ 0 };              ///< 상태 안의 참조 id 에 XOR 해 이 배치의 id 로 옮긴다(`ObjectLoadContext::_savedIDScope`)
+            bool                       _bExternalParentAllowed{ true };
+            optional<SerializePurpose> _loadedPurpose{};   ///< 상태를 읽었으면 그 읽기의 목적이다. `finish` 가 `onPostLoad` 를 부르고 이 목적이 다룬 필드의 핸들을 옮긴다
+            uint64                     _savedIDScope{ 0 }; ///< 상태 안의 참조 id 에 XOR 해 이 배치의 id 로 옮긴다(`ObjectLoadContext::_savedIDScope`)
         };
 
         /** @brief `add` 와 `addLoadedState` 의 본체입니다. */

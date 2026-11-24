@@ -203,7 +203,7 @@ namespace sw
         optional<int32> _target{}; ///< 없으면 대상이 없는 일
         int32           _value{ 0 };
         Kind            _kind{ Kind::Attack };
-        bool            _bEnemyActor{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool            _bEnemyActor{ false };
     };
 } // namespace sw
 

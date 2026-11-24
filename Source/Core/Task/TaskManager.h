@@ -598,7 +598,7 @@ namespace sw
         {
             uint32 _spinCount{ 0 };         ///< 이번 스핀 예산에서 쓴 `cpuPause` 수
             uint32 _observedJobEpoch{ 0 };  ///< 마지막으로 큐를 볼 때 읽은 `_jobEpoch`
-            bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤)
         };
         /**
          * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 세대가 바뀌었으면 준비된 일을 하나 돕고, 아니면 잠깐 스핀합니다.

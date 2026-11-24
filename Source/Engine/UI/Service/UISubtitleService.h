@@ -36,7 +36,7 @@ namespace sw
         float32 _remainingSeconds{ 0.0f }; ///< 남은 시간입니다(보이기 시작한 뒤부터 줄어듭니다).
         uint64  _voicePlayingID{ 0 };      ///< 이 줄을 낸 음성의 재생 id(`AudioPlayingID`)입니다. 0 이면 음성이 없는 줄입니다.
         uint32  _id{ 0 };                  ///< `post` 가 돌려준 번호
-        bool    _bVoicePlaying{ false };   ///< 음성이 아직 나는 중입니다(`refreshVoiceState`). 나는 동안은 시간이 다 돼도 내리지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+        bool    _bVoicePlaying{ false };   ///< 음성이 아직 나는 중입니다(`refreshVoiceState`). 나는 동안은 시간이 다 돼도 내리지 않는다
     };
 
     /** @brief 지금 보이는 자막 줄의 배치 결과입니다(감시 값 · 진단). 마지막 UI 배치 기준입니다. */
@@ -44,7 +44,7 @@ namespace sw
     {
         float32 _newestTextFontSize{ 0.0f }; ///< 가장 최근 줄의 본문 글 크기(크기 설정을 곱한 값). 화면이 없으면 0
         uint32  _maxWrappedLineCount{ 0 };   ///< 보이는 줄 가운데 가장 많이 접힌 본문의 줄 수
-        bool    _bOverflow{ false };         ///< 본문이 잘렸거나(`TextLayoutResult::_bTruncated`) 자기 칸 · 화면 폭을 넘었다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+        bool    _bOverflow{ false };         ///< 본문이 잘렸거나(`TextLayoutResult::_bTruncated`) 자기 칸 · 화면 폭을 넘었다
     };
 } // namespace sw
 

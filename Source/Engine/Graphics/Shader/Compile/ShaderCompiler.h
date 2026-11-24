@@ -258,7 +258,7 @@ namespace sw
          *          다음 컴파일은 그것을 연다(가림). 쿠킹본에서 온 결과와 실패한 결과에는 입력이 없다.
          */
         CookRecord _record;
-        bool       _bSuccess{ false }; ///< 컴파일 성공 여부 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool       _bSuccess{ false }; ///< 컴파일 성공 여부
     };
 } // namespace sw
 

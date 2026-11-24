@@ -69,7 +69,7 @@ namespace sw
         LogContext       _context{};     ///< 남긴 스레드의 로그 문맥(요청 추적 id · 주체)
         uint32           _threadID{ 0 }; ///< 남긴 스레드의 번호(이 프로세스에서 처음 로그를 남긴 순서, 1 부터)
         LogClock         _clock{ LogClock::Tick };
-        bool             _bHasClock{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bHasClock{ false };
 
         /** @brief 다음에 남길 줄이 받을 순번입니다. 이 순간을 경계로 앞뒤 줄을 가를 때 쓴다(자동화의 프레임 시작). */
         static uint64 getNextSequence();

@@ -34,8 +34,8 @@ namespace
         vector<FactoryEvent> _listEvent;
         uint64               _nextBuffer{ 100 }; ///< 다음에 낼 버퍼 핸들의 packed 값
         uint32               _nextIndex{ 1 };
-        bool                 _bFailPage{ false };     ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
-        bool                 _bFailRegister{ false }; ///< NOLINT(sw-bool-flag): 테스트의 실패 주입 스위치
+        bool                 _bFailPage{ false };
+        bool                 _bFailRegister{ false };
         RHIBufferSlice       _lastRegistered;
         vector<uint32>       _listUpdateSize; ///< 구간 갱신으로 받은 크기(받은 순서)
 

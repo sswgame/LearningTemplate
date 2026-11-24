@@ -24,7 +24,7 @@ namespace sw
     {
         uint64 _tickCount{ 0 };
         int32  _connectionCount{ 0 }; ///< 서버 서비스가 받고 있는 연결 수
-        bool   _bDraining{ false };   ///< 종료 요청을 받아 드레인 중이다 — 점검 모드를 바꿀 수 없다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bDraining{ false };   ///< 종료 요청을 받아 드레인 중이다 — 점검 모드를 바꿀 수 없다
     };
     using ServerAdminStatusDelegate = Delegate<ServerAdminStatus()>;
 

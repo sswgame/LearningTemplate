@@ -362,7 +362,7 @@ namespace sw
         /** @brief 인자의 C++ 타입 전체 이름(클랭 정규 철자, `sw::TComponentHandle<sw::LightComponent>`)이며 const · 참조는 뗐다. 타입 핸들 인자의 호출 썽크가 이 타입의 지역 변수를 만든다. */
         string _canonicalTypeName;
         /** @brief 인자 형식이 어디든(템플릿 인자 안 포함) 타입 핸들을 든다 — clang 형식의 정체로 읽었다(`CursorReader::containsTypeIdentity`). */
-        bool _bHoldsTypedHandle{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bHoldsTypedHandle{ false };
     };
 } // namespace sw
 

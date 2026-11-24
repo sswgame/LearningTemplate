@@ -30,9 +30,9 @@ namespace sw::editor
     {
         string _column{};
         string _value{};             ///< 적었으면 적은 값, 아니면 물려받은 값
-        bool   _bWritten{ false };   ///< 이 항목이 적었다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool   _bInherited{ false }; ///< 적지 않았고 부모에 있다. NOLINT(sw-bool-flag): 집합체다
-        bool   _bKey{ false };       ///< 열쇠 칸이다 — 물려받은 원소의 열쇠는 고칠 수 없다. NOLINT(sw-bool-flag): 집합체다
+        bool   _bWritten{ false };   ///< 이 항목이 적었다.
+        bool   _bInherited{ false }; ///< 적지 않았고 부모에 있다.
+        bool   _bKey{ false };       ///< 열쇠 칸이다 — 물려받은 원소의 열쇠는 고칠 수 없다.
     };
 } // namespace sw::editor
 
@@ -43,9 +43,9 @@ namespace sw::editor
     {
         CatalogChildPath         _path{};
         vector<CatalogChildCell> _listCell{};          ///< 구역의 `_listColumn` 순서
-        bool                     _bInherited{ false }; ///< 부모에 같은 원소가 있다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                     _bRemoved{ false };   ///< `_op="Remove"` 로 뺐다. 합친 결과에는 없고 되돌릴 수 있게 보인다. NOLINT(sw-bool-flag): 집합체다
-        bool                     _bMoved{ false };     ///< `_before` · `_after` 를 적었다. NOLINT(sw-bool-flag): 집합체다
+        bool                     _bInherited{ false }; ///< 부모에 같은 원소가 있다.
+        bool                     _bRemoved{ false };   ///< `_op="Remove"` 로 뺐다. 합친 결과에는 없고 되돌릴 수 있게 보인다.
+        bool                     _bMoved{ false };     ///< `_before` · `_after` 를 적었다.
     };
 } // namespace sw::editor
 
@@ -69,8 +69,8 @@ namespace sw::editor
         vector<string>           _listColumn{};
         vector<CatalogChildNode> _listNode{};
         CatalogChildSectionKind  _kind{ CatalogChildSectionKind::List };
-        bool                     _bHasParent{ false };  ///< 담는 원소에 부모가 있다 — 순서 · 비우기는 물려받을 때만 뜻이 있다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                     _bCleared{ false };    ///< `Whole`: `_op="Clear"` 로 비웠다. NOLINT(sw-bool-flag): 집합체다
-        bool                     _bOverridden{ false }; ///< `Whole`: 이 항목이 원소를 적어 부모 것을 바꿨다. NOLINT(sw-bool-flag): 집합체다
+        bool                     _bHasParent{ false };  ///< 담는 원소에 부모가 있다 — 순서 · 비우기는 물려받을 때만 뜻이 있다.
+        bool                     _bCleared{ false };    ///< `Whole`: `_op="Clear"` 로 비웠다.
+        bool                     _bOverridden{ false }; ///< `Whole`: 이 항목이 원소를 적어 부모 것을 바꿨다.
     };
 } // namespace sw::editor

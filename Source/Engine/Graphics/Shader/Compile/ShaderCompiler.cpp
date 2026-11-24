@@ -165,7 +165,7 @@ namespace sw
                 CookJobDesc _jobDesc;            ///< 요청 · 도구가 정하는 값(소스 내용은 작업의 입력이라 들지 않는다)
                 uint64      _actionKey{ 0 };     ///< 기록을 찾는 키 — 주 소스의 내용까지 든다(가지를 오가도 판마다 기록이 남는다)
                 uint64      _fxcHash{ 0 };       ///< DXBC 요청이면 실린 FXC 의 내용 해시(`getFxcLibraryHash`), 아니면 0
-                bool        _bUseCache{ false }; ///< 거짓이면 DDC 를 쓰지 않는다(실린 FXC 의 판을 모른다) NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+                bool        _bUseCache{ false }; ///< 거짓이면 DDC 를 쓰지 않는다(실린 FXC 의 판을 모른다)
             };
 
             /** @brief 컴파일러를 부르는 단계입니다. 앞 둘이 보통 컴파일이고, 디버그 코드젠만 소스를 바로 컴파일한다(디버그 정보가 원본 소스를 가리켜야 한다). */

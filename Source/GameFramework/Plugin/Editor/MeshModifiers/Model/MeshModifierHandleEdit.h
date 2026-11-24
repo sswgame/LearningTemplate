@@ -82,9 +82,9 @@ namespace sw::editor
         int32                          _modifierIndex{ MeshModifierHandleViewState::kNoIndex };     ///< 고른 모디파이어
         int32                          _dragModifierIndex{ MeshModifierHandleViewState::kNoIndex }; ///< 끄는 손잡이의 모디파이어(`_bDragging` 일 때만)
         int32                          _selectedPoint{ MeshModifierHandleViewState::kNoIndex };     ///< 고른 제어점(없으면 음수)
-        bool                           _bAvailable{ false };                                        ///< NOLINT(sw-bool-flag): 값 집합체 — 대상과 고른 모디파이어가 있고 공간 정보를 풀었다
-        bool                           _bDragging{ false };                                         ///< NOLINT(sw-bool-flag): 값 집합체 — 손잡이를 끄는 중이다
-        bool                           _bPointSet{ false };                                         ///< NOLINT(sw-bool-flag): 값 집합체 — 고른 모디파이어가 제어점을 가진다(격자 · ffd2d)
+        bool                           _bAvailable{ false };
+        bool                           _bDragging{ false };
+        bool                           _bPointSet{ false };
 
         /**
          * @brief 레이 아래의 손잡이(가장 가까운 것, 손잡이 길이 대비 두께 안)를 @p outHandle 에, 손잡이가 없으면 제어점을 @p outPoint 에 냅니다. 둘 다 없으면 비운다.
@@ -114,8 +114,8 @@ namespace sw::editor
         Ray                           _ray{};
         int32                         _modifierIndex{ MeshModifierHandleViewState::kNoIndex };
         int32                         _pointIndex{ MeshModifierHandleViewState::kNoIndex };
-        bool                          _bHasRay{ false };      ///< NOLINT(sw-bool-flag): 값 집합체 — 이번 프레임에 마우스 레이를 만들었다
-        bool                          _bSelectPoint{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 잡기 전에 제어점을 고른다(점을 눌렀다)
+        bool                          _bHasRay{ false };
+        bool                          _bSelectPoint{ false };
 
         /**
          * @brief 끄는 중의 한 프레임입니다. 대상이 없어졌거나 다른 모디파이어로 바뀌었거나 단추를 놓았으면 놓기를, 아니면 끌기를 냅니다.

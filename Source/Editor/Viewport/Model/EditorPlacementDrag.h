@@ -45,9 +45,9 @@ namespace sw::editor
     struct EditorPlacementGhost
     {
         EditorPlacementHit _hit{};
-        const utf8*        _pSurfaceName{ "" };  ///< 표면 종류의 영어 이름(고스트 글 — `EditorAssetPlacement::getSurfaceName`)
-        bool               _bPlaceable{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 씬에 놓을 수 있는 종류다(아니면 놓을 때 연다)
-        bool               _bFound{ false };     ///< NOLINT(sw-bool-flag): 값 집합체 — 커서 아래 표면을 찾았다
+        const utf8*        _pSurfaceName{ "" }; ///< 표면 종류의 영어 이름(고스트 글 — `EditorAssetPlacement::getSurfaceName`)
+        bool               _bPlaceable{ false };
+        bool               _bFound{ false };
     };
 
     /** @brief 놓기가 한 일입니다. */

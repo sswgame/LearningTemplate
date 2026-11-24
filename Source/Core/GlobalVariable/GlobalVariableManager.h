@@ -213,7 +213,7 @@ namespace sw
          * @brief 테스트용(`SW_TEST_GLOBAL_VARIABLE`)이면 true 입니다.
          * @details 에디터 목록과 프리셋에서 빠집니다. 실행 인자(`-gv_*`)와 `findVariable` 은 그대로 됩니다.
          */
-        bool _bTestOnly{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bTestOnly{ false };
 
         /**
          * @brief enum 변수의 글 값(열거자 이름)을 읽는 파서입니다. 이 변수를 등록한 `GlobalVariableManager` 의 것을 가리킵니다(매니저가 소유하고, 변수보다 오래 삽니다).

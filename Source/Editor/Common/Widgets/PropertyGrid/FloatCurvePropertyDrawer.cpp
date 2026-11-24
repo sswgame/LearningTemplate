@@ -93,7 +93,7 @@ namespace sw::editor
             FloatCurve             _curve{};     ///< 값 행 글을 읽은 곡선(미리보기 · 편집기의 바탕)
             string                 _curveText{}; ///< `_curve` 를 읽은 값 글
             ImGuiID                _openPopupID{ 0 };
-            bool                   _bCurveRead{ false }; ///< `_curve` 가 `_curveText` 를 읽은 값이다 NOLINT(sw-bool-flag): 클래스 안 기본값 초기화(비트필드는 기본값을 둘 수 없다)
+            bool                   _bCurveRead{ false }; ///< `_curve` 가 `_curveText` 를 읽은 값이다
         };
     } // namespace
 

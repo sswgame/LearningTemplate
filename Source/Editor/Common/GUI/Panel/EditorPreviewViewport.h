@@ -35,11 +35,11 @@ namespace sw::editor
         float3  _lightColor{ 1.0f, 0.97f, 0.92f };
         float32 _lightIntensity{ 2.0f };
         float32 _ambient{ 0.35f };
-        float32 _floorSize{ 6.0f };         ///< 바닥 평면 한 변(미터)
-        float32 _floorHeight{ -0.5f };      ///< 바닥 높이. 지름 1 의 내장 도형을 원점에 두면 바닥에 닿는다
-        bool    _bDirectionalLight{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bFloor{ true };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bSky{ true };              ///< 하늘(`SkyComponent`) — 빈 곳을 그러데이션으로 칠한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        float32 _floorSize{ 6.0f };    ///< 바닥 평면 한 변(미터)
+        float32 _floorHeight{ -0.5f }; ///< 바닥 높이. 지름 1 의 내장 도형을 원점에 두면 바닥에 닿는다
+        bool    _bDirectionalLight{ true };
+        bool    _bFloor{ true };
+        bool    _bSky{ true }; ///< 하늘(`SkyComponent`) — 빈 곳을 그러데이션으로 칠한다
     };
 } // namespace sw::editor
 

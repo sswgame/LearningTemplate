@@ -76,7 +76,7 @@ namespace sw
             RHIPipelineStateDesc _desc{};
             RHIPipelineState     _pso{};
             uint64               _generation{ 0 };
-            bool                 _bDiscarded{ false }; ///< NOLINT(sw-bool-flag): 집합체 칸. 버린 세대의 결과 — 캐시에 넣지 않고 PSO 만 놓는다(`discardPending`)
+            bool                 _bDiscarded{ false };
         };
 
         MaterialPSOBuilder() = default;

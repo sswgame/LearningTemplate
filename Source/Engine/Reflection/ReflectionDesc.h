@@ -414,9 +414,9 @@ namespace sw
         span<const NamedValue<int64>> _listRedirect;       ///< 옛 열거자 이름 → 지금 값(`ValueAlias` · `Removed`)
         const utf8*                   _pInvalidName;       ///< `Invalid` 표식 열거자 이름. 없으면 nullptr
         const utf8*                   _pCountName;         ///< `Count` 표식 열거자 이름(끝 열거자 `Count` 는 생성기가 자동으로 넣는다). 없으면 nullptr
-        bool                          _bIsBitFlag;         // NOLINT(sw-bool-flag): 생성 코드가 집합체 초기화로 한 번 채우는 일회용 설명자다(기본값 없는 비트필드는 순서 초기화를 깨뜨린다)
+        bool                          _bIsBitFlag;         //
         uint8                         _size;               ///< 열거형의 바이트 크기
-        bool                          _bSigned;            ///< 밑바탕 타입이 부호 있는 정수다 NOLINT(sw-bool-flag): `_bIsBitFlag` 와 같다
+        bool                          _bSigned;            ///< 밑바탕 타입이 부호 있는 정수다
         const utf8* const*            _ppAlias{ nullptr }; ///< `ENUM( Alias = … )` 의 옛 이름 `_aliasCount` 개
         uint32                        _aliasCount{ 0 };
     };

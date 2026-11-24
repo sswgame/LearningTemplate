@@ -82,7 +82,7 @@ namespace sw
         Kind            _kind{ Kind::None };
         FixedNumberType _fieldType{ FixedNumberType::Int32 };
         /// @brief `Min = -_halfSize` 처럼 부호를 바꿉니다(그 필드 타입의 C++ 단항 `-` 규칙 그대로).
-        bool _bNegate{ false }; // NOLINT(sw-bool-flag): 상수 초기화 표의 집합체 칸이다 — C++17 비트필드는 기본값을 둘 수 없다
+        bool _bNegate{ false }; //
 
         static constexpr FixedBound none() noexcept { return FixedBound{}; }
 

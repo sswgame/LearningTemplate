@@ -36,7 +36,7 @@ namespace sw::editor
         Key   _chordKey{ Key::Unknown };      ///< 이번 프레임에 새로 눌린 수식 키가 아닌 키
         uint8 _modifierMask{ 0 };             ///< 그때 누른 수식 키(`ModifierKey`)
         Key   _pressedKey{ Key::Unknown };    ///< 이번 프레임에 새로 눌린 아무 키(`_chordKey` 가 없으면 수식 키다)
-        bool  _bPendingModifierDown{ false }; ///< `getPendingCaptureModifier` 의 키가 아직 눌려 있다. NOLINT(sw-bool-flag): 집합체다
+        bool  _bPendingModifierDown{ false }; ///< `getPendingCaptureModifier` 의 키가 아직 눌려 있다.
     };
 
     /**
@@ -45,21 +45,21 @@ namespace sw::editor
      */
     struct InputMapDeviceState
     {
-        const utf8* _pActiveDeviceName{ "" };    ///< 활성 입력 장치 종류의 표시 이름(`InputGlyphStyle`)
-        vector<Key> _listHeldKey{};              ///< 게임에 보이는 눌린 키(`InputManager::isKeyDown`), 키 번호 순
-        int2        _mousePosition{};            ///< 마우스 위치(창 픽셀)
-        int2        _mouseDelta{};               ///< 이번 프레임 마우스 변화량
-        float2      _mouseSmoothDelta{};         ///< 부드럽게 한 변화량
-        float32     _mouseWheel{ 0.0f };         ///< 휠
-        const utf8* _pBatteryName{ "" };         ///< 0 번 패드 배터리 잔량의 표시 이름. 패드가 없으면 빈 글
-        float2      _leftStick{};                ///< 0 번 패드 왼쪽 스틱
-        float2      _rightStick{};               ///< 0 번 패드 오른쪽 스틱
-        float32     _leftTrigger{ 0.0f };        ///< 0 번 패드 왼쪽 트리거
-        float32     _rightTrigger{ 0.0f };       ///< 0 번 패드 오른쪽 트리거
-        bool        _bMouseLeftDown{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool        _bMouseRightDown{ false };   ///< NOLINT(sw-bool-flag): 위와 같다
-        bool        _bMouseMiddleDown{ false };  ///< NOLINT(sw-bool-flag): 위와 같다
-        bool        _bGamepadConnected{ false }; ///< 0 번 패드가 연결됐다. NOLINT(sw-bool-flag): 위와 같다
+        const utf8* _pActiveDeviceName{ "" }; ///< 활성 입력 장치 종류의 표시 이름(`InputGlyphStyle`)
+        vector<Key> _listHeldKey{};           ///< 게임에 보이는 눌린 키(`InputManager::isKeyDown`), 키 번호 순
+        int2        _mousePosition{};         ///< 마우스 위치(창 픽셀)
+        int2        _mouseDelta{};            ///< 이번 프레임 마우스 변화량
+        float2      _mouseSmoothDelta{};      ///< 부드럽게 한 변화량
+        float32     _mouseWheel{ 0.0f };      ///< 휠
+        const utf8* _pBatteryName{ "" };      ///< 0 번 패드 배터리 잔량의 표시 이름. 패드가 없으면 빈 글
+        float2      _leftStick{};             ///< 0 번 패드 왼쪽 스틱
+        float2      _rightStick{};            ///< 0 번 패드 오른쪽 스틱
+        float32     _leftTrigger{ 0.0f };     ///< 0 번 패드 왼쪽 트리거
+        float32     _rightTrigger{ 0.0f };    ///< 0 번 패드 오른쪽 트리거
+        bool        _bMouseLeftDown{ false };
+        bool        _bMouseRightDown{ false };
+        bool        _bMouseMiddleDown{ false };
+        bool        _bGamepadConnected{ false }; ///< 0 번 패드가 연결됐다.
     };
 
     /**

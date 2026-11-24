@@ -38,7 +38,7 @@ namespace sw::editor
         string                  _path;
         string                  _originalPath; ///< 이름 바꾸기의 옛 경로. 나머지는 비어 있다
         SourceControlChangeKind _kind{ SourceControlChangeKind::Modified };
-        bool                    _bStaged{ false }; ///< 색인에 올렸다(커밋 대기) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bStaged{ false }; ///< 색인에 올렸다(커밋 대기)
     };
 
     /**

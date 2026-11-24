@@ -26,7 +26,7 @@ namespace sw::editor
         float4x4 _projection{};
         float4x4 _viewProj{};
         uint64   _cameraObjectID{ 0 }; ///< 에디터 카메라 오브젝트(상자 선택이 고르지 않는다)
-        bool     _bFlat2D{ false };    ///< NOLINT(sw-bool-flag): 값 집합체 — 직교 카메라가 월드 Z 축을 본다(`EditorVisualizerGeometryUtil::isFlat2DView`)
+        bool     _bFlat2D{ false };
     };
 
     /**

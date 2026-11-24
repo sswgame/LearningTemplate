@@ -105,9 +105,9 @@ namespace sw::editor
     /** @brief 손잡이 도구가 이번 프레임에 그릴 값입니다(`PropertyShapeHandleEdit::gather`). */
     struct PropertyShapeHandleViewState
     {
-        GameObjectHandle            _object{};            ///< 손잡이의 오브젝트
-        vector<PropertyShapeHandle> _listHandle;          ///< 선언마다의 손잡이(월드)
-        bool                        _bAvailable{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 대상이 하나이고 편집이 허용된다
+        GameObjectHandle            _object{};   ///< 손잡이의 오브젝트
+        vector<PropertyShapeHandle> _listHandle; ///< 선언마다의 손잡이(월드)
+        bool                        _bAvailable{ false };
     };
 
     /** @brief 모양 손잡이 명령 · 순서 — 콜라이더 손잡이와 같은 공통 틀(`EditorHandleDrag.h`)에 손잡이 값 `PropertyShapeHandle` 을 넣은 것이다. */

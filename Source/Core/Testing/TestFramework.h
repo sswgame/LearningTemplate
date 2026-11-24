@@ -57,7 +57,7 @@ namespace sw::test
         const utf8* _tags{ "" };                ///< 공백으로 가른 태그 — 거르개의 `[태그]` 가 고른다(`--test-filter=[slow]`, 빼기는 `-[slow]`)
         const utf8* _disabledReason{ nullptr }; ///< 주면 돌리지 않는다. 까닭은 보고에 남는다(`--test-run-disabled` 면 돈다) — 지우지 않고 끄는 자리
         float32     _timeoutSeconds{ 0.0f };    ///< 0 이면 `kDefaultCaseTimeoutSeconds`
-        bool        _bIsolated{ false };        ///< 자식 프로세스에서 돈다 — 크래시 · 교착 · 강제 종료가 이 케이스의 실패로 남고 나머지 케이스와 보고는 이어진다(엔진 기동 비용이 붙어 필요한 케이스만) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool        _bIsolated{ false };        ///< 자식 프로세스에서 돈다 — 크래시 · 교착 · 강제 종료가 이 케이스의 실패로 남고 나머지 케이스와 보고는 이어진다(엔진 기동 비용이 붙어 필요한 케이스만)
     };
 
     /** @struct TestCaseRegistration @brief 케이스 하나의 등록 줄입니다. 글자는 등록한 이미지(모듈)의 정적 저장소(매개변수 케이스는 그 등록자)에 있습니다. */
@@ -70,7 +70,7 @@ namespace sw::test
         TestCaseOptions     _options{};
         TestIndexedFunction _pfnRunIndexed{ nullptr }; ///< 매개변수 케이스면 `_pfnRun` 대신 이것을 `_index` 로 부른다
         size_t              _index{ 0 };
-        bool                _bChildRole{ false }; ///< 자식 역할(`SW_TEST_CHILD_ROLE`) — 평소 실행 · 목록 · 케이스 수에서 빠지고 `--test-child-role` 로만 돈다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                _bChildRole{ false }; ///< 자식 역할(`SW_TEST_CHILD_ROLE`) — 평소 실행 · 목록 · 케이스 수에서 빠지고 `--test-child-role` 로만 돈다
     };
 
     /** @brief `SW_TEST_CASE` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
@@ -260,8 +260,8 @@ namespace sw::test
     struct SW_API ChildRunResult
     {
         optional<int32> _exitCode{};         ///< 자식의 종료 코드. 띄우지 못했거나 기다리지 못했으면 없다(-1 로 끝난 자식과 갈린다 — 기다리지 못한 까닭은 `_output` 끝 줄). 자식 역할이 통과하면 0 이다
-        bool            _bLaunched{ false }; ///< 프로세스를 만들었는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool            _bTimedOut{ false }; ///< 시한을 넘겨 죽였는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool            _bLaunched{ false }; ///< 프로세스를 만들었는가
+        bool            _bTimedOut{ false }; ///< 시한을 넘겨 죽였는가
         string          _output;             ///< 표준 출력과 표준 에러(합쳐서, 줄마다 `\n`)
 
         /** @brief 실패 글에 붙일 마지막 몇 줄입니다 — 자식이 어디서 멈췄는지가 대개 거기 있다. */

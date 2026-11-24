@@ -24,8 +24,8 @@ namespace sw::editor
         vector<string>           _listTranslation; ///< `LocalizationSheet::_listCulture` 와 같은 순서
         vector<TranslationState> _listState;       ///< 문화권마다의 지금 상태. 읽은 값에 이번 편집을 더한 것이다(`DataTableViewModel` 이 고친다). 저장은 `Current` 인 줄의 번역을 지금 원문의 것으로 적는다
         uint32                   _maxLength{ 0 };
-        uint32                   _tableIndex{ 0 };    ///< 이 키가 있는 원문 테이블(`LocalizationSheet::_listTablePath`)
-        bool                     _bModified{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint32                   _tableIndex{ 0 }; ///< 이 키가 있는 원문 테이블(`LocalizationSheet::_listTablePath`)
+        bool                     _bModified{ false };
 
         /** @brief 문화권 @p cultureIndex 번역의 글자 수(바이트가 아니라 UTF-8 코드 포인트)입니다. */
         uint32 measureTranslation( size_t cultureIndex ) const;

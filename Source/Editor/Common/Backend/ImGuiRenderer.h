@@ -122,8 +122,8 @@ namespace sw::editor
             RHITextureSlot     _ownedTexture{}; ///< `_bOwned` 일 때 이 렌더러가 만든 텍스처(`_texture` · `_srv` 가 이것을 가리킨다)
             RHITextureHandle   _texture{ 0 };
             RHITextureSRVIndex _srv{ kInvalidDescriptorIndex }; ///< 렌더 스레드가 등록한 bindless 번호(아직이면 무효)
-            bool               _bInUse{ false };                ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool               _bOwned{ SW_FALSE };             ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bInUse{ false };
+            bool               _bOwned{ SW_FALSE }; ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다
         };
         /** @brief UI 스레드가 낸 ImGui 동적 텍스처 연산 하나입니다(`queueTextureUpdates`). 픽셀은 RGBA8 로 넓혀 복사해 두었다. */
         struct TextureOp

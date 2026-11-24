@@ -25,8 +25,8 @@ namespace sw::editor
         /** @brief 다중 선택의 Active 칸에 보일 값입니다. */
         struct ActiveState
         {
-            bool _bActive{ false }; ///< NOLINT(sw-bool-flag): 집합체다. 체크 표시 — 주 선택의 값이다
-            bool _bMixed{ false };  ///< NOLINT(sw-bool-flag): 집합체다. 오브젝트마다 값이 달라 혼합으로 보인다
+            bool _bActive{ false };
+            bool _bMixed{ false };
         };
 
         /** @brief 활성 칸의 값을 읽습니다. 자기 비트(`GameObject::isActive`)를 봅니다 — 꺼진 부모 아래의 자식은 켜져 있습니다(단일 선택의 칸과 같다). */

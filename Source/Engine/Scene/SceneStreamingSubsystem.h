@@ -159,9 +159,9 @@ namespace sw
         {
             StreamingCellCoord                     _cell{};
             vector<string>                         _listDataLayer;
-            vector<SceneDocument::SceneObjectNode> _listNode;              ///< 떠 둔 상태(`_bContentHeld` 일 때만 뜻이 있다)
-            vector<SceneDocument::SceneObjectNode> _listArrivedNode;       ///< 다른 셀에서 들어와 아직 짓지 않은 엔티티
-            bool                                   _bContentHeld{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            vector<SceneDocument::SceneObjectNode> _listNode;        ///< 떠 둔 상태(`_bContentHeld` 일 때만 뜻이 있다)
+            vector<SceneDocument::SceneObjectNode> _listArrivedNode; ///< 다른 셀에서 들어와 아직 짓지 않은 엔티티
+            bool                                   _bContentHeld{ false };
         };
         /** @brief 세이브의 스트리밍 몫입니다. */
         struct SaveState
@@ -255,8 +255,8 @@ namespace sw
             uint32                                 _slotIndex{ 0 };                                  ///< 자기 번호(`_listCell`)
             uint32                                 _activeIndex{ constant::invalid_index::kUint32 }; ///< `_listActive` 안 자리(없으면 무효 — `setSlotState` 만 쓴다)
             uint64                                 _changeSerial{ 0 };                               ///< 마지막으로 오르거나 내려간 때의 `SceneStreamingSubsystem::_changeSerial`
-            bool                                   _bContentHeld{ SW_FALSE };                        ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                                   _bFromDocument{ SW_FALSE };                       ///< 문서(쿠킹본)의 조각이다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각은 아니다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                   _bContentHeld{ SW_FALSE };                        ///< `_listNode` 를 짓고 나서도 든다(메모리 문서의 셀 · 떠 둔 상태) — 아니면 지은 뒤 버리고 다시 올릴 때 다시 읽는다
+            bool                                   _bFromDocument{ SW_FALSE };                       ///< 문서(쿠킹본)의 조각이다 — 바닥이 될 정적 바디가 있을 수 있다. 옮겨 온 오브젝트를 받으려 만든 조각은 아니다
         };
 
         /** @brief 번호의 조각입니다(`_listCell` 은 조각을 따로 들어, 조각을 더해도 짓는 중인 조각의 주소가 흔들리지 않는다 — `Scene::CellBuild` 가 `_listNode` 를 가리킨다). */

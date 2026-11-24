@@ -47,7 +47,7 @@ namespace sw
             {
                 XMLNode _node;
                 string  _key;
-                bool    _bUsed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bUsed{ false };
 
                 /** @brief 덮어쓰기 글의 키 @p key 가 이 컴포넌트를 가리키면 true 입니다. */
                 bool isKey( string_view key ) const { return key.empty() == false && _key == key; }

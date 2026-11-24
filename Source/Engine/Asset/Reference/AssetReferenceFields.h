@@ -55,7 +55,7 @@ namespace sw
     {
         string _oldPath;
         string _newPath;
-        bool   _bPrefix{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bPrefix{ false };
     };
 
     /** @brief 있는 리소스 id(소문자)와 그 폴더들입니다 — 파일 또는 폴더를 가리키는 참조가 있는지 봅니다. */

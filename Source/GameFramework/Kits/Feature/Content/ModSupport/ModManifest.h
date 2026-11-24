@@ -57,7 +57,7 @@ namespace sw
     {
         string     _id;                 ///< 의존하는 모드 id
         ModVersion _minVersion;         ///< 그 모드의 가장 낮은 판
-        bool       _bOptional{ false }; ///< 선택 의존 — 없으면 무시하고, 있으면 순서 · 판을 지킨다 NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+        bool       _bOptional{ false }; ///< 선택 의존 — 없으면 무시하고, 있으면 순서 · 판을 지킨다
     };
 } // namespace sw
 

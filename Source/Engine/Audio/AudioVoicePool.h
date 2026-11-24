@@ -43,14 +43,14 @@ namespace sw
         float32          _musicGain{ 1.0f };                               ///< 파라미터로 페이드하는 레이어 게인이다.
         uint64           _startFrame{ 0 };                                 ///< 음악에서 소리가 시작할 음악 시계의 프레임이다. 클립이 늦게 와도 박을 지킨다.
         AudioVirtualMode _virtualMode{ AudioVirtualMode::Virtualize };
-        bool             _bLoop{ SW_FALSE };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bInUse{ false };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bWaitingForClip{ false };   ///< 클립 디코드를 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bPausedRequest{ false };    ///< 클립을 기다리는 동안 들어온 일시정지 요청이다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bStolen{ false };           ///< 새 보이스에 자리를 내주고 페이드아웃 중이다(다시 뺏지 않고, 끝나면 놓인다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bMixedLastBlock{ false };   ///< 지난 블록에 들리게 섞었다(예산에서 밀리면 한 블록 줄인 뒤 가상이 된다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bSilenceThisBlock{ false }; ///< 이번 블록은 목표 게인 0 으로 섞어 줄인다(가상이 되기 직전 — 클릭 없음) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool             _bVirtual{ false };          ///< 이번 블록에 섞지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bLoop{ SW_FALSE };
+        bool             _bInUse{ false };
+        bool             _bWaitingForClip{ false };   ///< 클립 디코드를 기다린다
+        bool             _bPausedRequest{ false };    ///< 클립을 기다리는 동안 들어온 일시정지 요청이다.
+        bool             _bStolen{ false };           ///< 새 보이스에 자리를 내주고 페이드아웃 중이다(다시 뺏지 않고, 끝나면 놓인다)
+        bool             _bMixedLastBlock{ false };   ///< 지난 블록에 들리게 섞었다(예산에서 밀리면 한 블록 줄인 뒤 가상이 된다)
+        bool             _bSilenceThisBlock{ false }; ///< 이번 블록은 목표 게인 0 으로 섞어 줄인다(가상이 되기 직전 — 클릭 없음)
+        bool             _bVirtual{ false };          ///< 이번 블록에 섞지 않는다
     };
 
     /**

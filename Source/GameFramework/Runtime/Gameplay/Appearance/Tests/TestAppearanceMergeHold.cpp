@@ -19,7 +19,7 @@ namespace
     class AppearanceMergeHoldTestTask final : public IAnimationPhaseTask
     {
     public:
-        bool _bMerged{ false }; ///< NOLINT(sw-bool-flag): 테스트 작업의 스위치 하나다
+        bool _bMerged{ false };
 
         bool                isAnimationActive() const override { return false; }
         AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::ReadsOnly; }

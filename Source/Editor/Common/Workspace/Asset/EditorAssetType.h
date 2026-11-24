@@ -219,7 +219,7 @@ namespace sw::editor
          */
         const utf8*     _pLabel;
         EditorAssetType _kind;
-        bool            _bOther; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool            _bOther;
     };
 } // namespace sw::editor
 

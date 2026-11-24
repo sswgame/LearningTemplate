@@ -508,7 +508,7 @@ namespace sw
 {
     struct XMLDocument::Impl
     {
-        bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다)
         pugi::xml_document doc;
         vector<uint8>      _listCookedByte{}; ///< 이진 쿠킹본이면 그 바이트(글 나무는 비었다)
     };

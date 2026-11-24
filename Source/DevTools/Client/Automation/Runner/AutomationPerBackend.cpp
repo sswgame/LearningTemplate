@@ -101,8 +101,8 @@ namespace sw
                 Deadline        _stallDeadline = Deadline::afterMilliseconds( 0 ); ///< 로그가 마지막으로 자란 때부터 센 정지 시한(로그가 자랄 때마다 다시 정한다)
                 uint64          _observedLogBytes{ 0 };                            ///< 정지 감시가 마지막으로 본 자식 로그 크기
                 optional<int32> _exitCode{};                                       ///< 자식의 결과 — 끝났거나 · 띄우지 못했거나(Failed) · 맡은 시나리오가 없을 때(Skipped) 적는다. 아직 돌면 없다
-                bool            _bLaunched{ false };                               ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool            _bPending{ false };                                ///< 아직 띄우지 않았다(맡은 시나리오가 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool            _bLaunched{ false };
+                bool            _bPending{ false }; ///< 아직 띄우지 않았다(맡은 시나리오가 있다)
             };
 
             /** @brief 자식 로그가 자랐으면 정지 시한을 다시 정합니다 — 일하는 자식(빈 셰이더 캐시의 컴파일)은 죽이지 않고, 아무것도 남기지 않는 자식만 멈춘 것으로 본다. */

@@ -17,7 +17,7 @@
 - 초기값은 한 곳에: with a constructor, initialize every field there in declaration order, braces, one per line, leading `,`. An iterator pair takes parentheses.
 - Header defaults only for a `= default` / inline default constructor, a delegating constructor, or a type with no constructor.
 - A field default-initialization leaves indeterminate gets a value in every constructor (copy · move included) or a header default; byte buffers are exempt.
-- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-shape` 강제). `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken, it is atomic, or the type is an aggregate.
+- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-shape` 강제). A type with no constructor (an aggregate) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; the lint skips such types. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
 - An aggregate (built by braces, no constructor) keeps `bool _bX{ false }`; any other type with a flag writes the constructor.
 - Declaration order: public fields; constructors; `initialize`/`shutdown`; `process`; getters/setters; private functions; private fields last (린트 `cpp-shape` 강제).
 

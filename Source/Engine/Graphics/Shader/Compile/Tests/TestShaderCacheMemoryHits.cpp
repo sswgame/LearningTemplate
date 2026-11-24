@@ -217,7 +217,7 @@ namespace
     public:
         ShaderCache*   _pCache{ nullptr };
         mutable size_t _collectedWhileLoading{ 0 };
-        mutable bool   _bReplaced{ false }; ///< NOLINT(sw-bool-flag): 테스트가 보는 답
+        mutable bool   _bReplaced{ false };
 
         [[nodiscard]] ShaderCompileResult load( const ShaderCompileDesc& desc ) const override
         {

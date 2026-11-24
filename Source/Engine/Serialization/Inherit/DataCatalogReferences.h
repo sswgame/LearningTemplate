@@ -56,11 +56,11 @@ namespace sw
         string         _targetKey;          ///< 가리키는 원소의 id 속성(기본 `id`)
         string         _defaultAttribute;   ///< `_attribute` 를 적지 않았으면 이 속성의 값을 id 로 본다(기술의 `frames` 가 없으면 자기 `id`). 비면 없음
         string         _fileAttribute;      ///< 가리키는 원소를 이 파일이 아니라 루트의 이 속성이 적은 리소스(루트의 자식)에서 찾는다. 루트가 적지 않았으면 보지 않는다(필수는 읽는 코드가 본다)
-        bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool           _bOptional{ false }; ///< 깨져도 경고만 한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool           _bAbsent{ false };   ///< 값이 가리키는 원소가 **없어야** 한다(`absent="true"` — 지운 항목의 id 를 이어받는 칸, 부품의 `replaces`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bNamed{ false };    ///< 값이 `id:수` 꼴이다(콜론 앞이 id)
+        bool           _bOptional{ false }; ///< 깨져도 경고만 한다
+        bool           _bInEntry{ false };  ///< 가리키는 원소를 루트가 아니라 같은 항목(owner 경로의 첫 원소)의 자식에서 찾는다(퀘스트 안의 단계 · 트리 안의 스킬)
+        bool           _bAbsent{ false };   ///< 값이 가리키는 원소가 **없어야** 한다(`absent="true"` — 지운 항목의 id 를 이어받는 칸, 부품의 `replaces`)
+        bool           _bUnique{ false };   ///< 겹침 규칙(`<Unique owner attribute>`) — owner 원소의 attribute 값이 한 파일 안에서 겹치면 오류다
     };
 
     /**

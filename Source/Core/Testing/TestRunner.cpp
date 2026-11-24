@@ -105,10 +105,10 @@ namespace sw::test
                 AbsolutePath                _scratchFolder;
                 string                      _childArgument;               ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
                 uint32                      _declaredErrorLineCount{ 0 }; ///< 실행 전체에서 선언과 맞은 Error 줄 수(`kDeclaredErrorLinesPrefix` 줄로 알린다)
-                bool                        _bIsolatedRun{ false };       ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                        _bIsolatedRun{ false };       ///< 격리 케이스의 자식 프로세스로 띄워졌다(`--test-isolated-case`)
                 uint32                      _assertionCount{ 0 };
                 SnapshotWriteMode           _snapshotWriteMode{ SnapshotWriteMode::Off };
-                bool                        _bActive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                        _bActive{ SW_FALSE };
             };
 
             /** @brief 케이스 등록표입니다. 정적 초기화(모듈 이미지 로드)에서 채우고 내릴 때 뺀다 — 함수 안 정적이다(초기화 순서). */

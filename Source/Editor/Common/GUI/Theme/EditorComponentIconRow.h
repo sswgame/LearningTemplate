@@ -23,7 +23,7 @@ namespace sw::editor
     {
         const utf8* _pGlyph{ nullptr };   ///< 아이콘 글리프(`EditorIconGlyphTable`)
         Color       _color{};             ///< 뷰포트 빌보드 · 카드 아이콘 색(테마 키 `Component.<이름>`)
-        bool        _bBillboard{ false }; ///< 메시가 없어 뷰포트에 빌보드로 보이는 종류(빛 · 카메라 · 오디오 …) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool        _bBillboard{ false }; ///< 메시가 없어 뷰포트에 빌보드로 보이는 종류(빛 · 카메라 · 오디오 …)
 
         // 언리얼 Outliner · Details 의 클래스 아이콘(`ClassIcon.<Class>` 스타일), 유니티 Inspector 머리 아이콘, Godot 씬 트리 노드 아이콘에 해당합니다.
         // 아이콘은 컴포넌트 선언이 정합니다 — `REFLECT( ..., Meta = "Icon=LightPoint, IconColor=Light, Billboard" )`.

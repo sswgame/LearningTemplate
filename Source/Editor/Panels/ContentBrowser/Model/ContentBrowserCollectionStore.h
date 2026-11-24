@@ -22,7 +22,7 @@ namespace sw::editor
         string _name;
         string _typeFilterLabel; ///< 종류 필터 라벨(`EditorAssetBrowserFilter::_pLabel`). 비면 All
         string _searchText;
-        bool   _bShared{ false }; ///< 프로젝트와 함께 커밋하는 공유 목록이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bShared{ false }; ///< 프로젝트와 함께 커밋하는 공유 목록이다
     };
 
     /** @brief 에셋 컬렉션 하나 — 폴더와 상관없이 모은 에셋 id 목록입니다(파일을 옮기지 않는다). 목록과 색인은 `add` · `remove` 로만 함께 바뀐다. */

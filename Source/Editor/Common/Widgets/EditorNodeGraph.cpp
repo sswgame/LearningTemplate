@@ -35,10 +35,10 @@ namespace sw::editor
         struct EditorNodeGraphDrawnState
         {
             uint32 _nodeCount{ 0 };
-            uint32 _autoLinkCount{ 0 };     ///< 핀을 끌어 만든 노드에 이은 링크 수(누적)
-            uint32 _alignedNodeCount{ 0 };  ///< 마지막 정렬이 옮긴 노드 수
-            bool   _bMinimapShown{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            uint32 _commentCount{ 0 };      ///< 가장 최근에 그린 캔버스의 주석 상자 수
+            uint32 _autoLinkCount{ 0 };    ///< 핀을 끌어 만든 노드에 이은 링크 수(누적)
+            uint32 _alignedNodeCount{ 0 }; ///< 마지막 정렬이 옮긴 노드 수
+            bool   _bMinimapShown{ false };
+            uint32 _commentCount{ 0 }; ///< 가장 최근에 그린 캔버스의 주석 상자 수
         };
 
         /** @brief 그래프 복사 버퍼 — 마지막으로 복사한 노드 조각과 그 애셋 종류입니다(유니티처럼 편집기 프로세스 안에 둔다). */

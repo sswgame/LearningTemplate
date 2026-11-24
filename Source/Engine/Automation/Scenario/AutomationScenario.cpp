@@ -77,7 +77,7 @@ namespace sw
             struct AdvanceRead
             {
                 uint32 _frames{ 0 };
-                bool   _bRender{ false }; ///< `render="true"` — 모든 프레임을 그린다. NOLINT(sw-bool-flag): 읽기 결과 집합체다
+                bool   _bRender{ false }; ///< `render="true"` — 모든 프레임을 그린다.
             };
 
             /**

@@ -30,7 +30,7 @@ namespace sw
         float3            _normal{};
         hashed_string     _material{}; ///< 맞은 셰이프의 물리 재질 이름이다.
         float32           _distance{ 0.0f };
-        bool              _bIs2D{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bIs2D{ false };
 
         /** @brief 맞은 오브젝트를 쓰기 가능한 매니저에서 다시 찾습니다(맞음 전달 · 틱 밖). 없으면 nullptr 입니다. */
         GameObject* findMutableObject( GameObjectManager& manager ) const;

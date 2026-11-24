@@ -132,7 +132,7 @@ namespace sw
             const EnumInfo*     _pEnum{ nullptr }; ///< 묶음의 사실(이름으로 찾는 길이면 `findEnum` 이 그때 찾는다)
             const TypeInfo*     _pType{ nullptr }; ///< 묶음의 사실(이름으로 찾는 길이면 `findStructType` 이 그때 찾는다)
             ReflectBuiltinIndex _builtinIndex;     ///< 내장형이면 처리기는 문맥의 색인 배열에서 고른다(아니면 kNone)
-            bool                _bByName{ false }; ///< 묶음 없이 이름으로 찾는 길. NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+            bool                _bByName{ false }; ///< 묶음 없이 이름으로 찾는 길.
 
             const SerializeContext::BinaryWriteFn* findBinaryWriter( const SerializeContext& context ) const;
             const SerializeContext::BinaryReadFn*  findBinaryReader( const SerializeContext& context ) const;

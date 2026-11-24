@@ -84,7 +84,7 @@ namespace sw::editor
         int32                 _capacity{ 0 };
         int32                 _price{ 0 };          ///< 탑승료(평지 놀이기구만 — 코스터는 테스트 운행이 정한다)
         float32               _timeSeconds{ 0.0f }; ///< 평지 놀이기구는 한 번 도는 시간, 코스터는 태우는 시간이다
-        bool                  _bCoaster{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                  _bCoaster{ false };
 
         /** @brief 에디터 카메라가 담을 가운데입니다(트랙까지 담는 범위의 가운데 — 코스터 전체가 화면에 든다). */
         float3 computeFocusCenter() const;

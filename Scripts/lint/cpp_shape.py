@@ -8,8 +8,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서
 
 1. 선언 순서(`docs/agents/CppStyle.md` "Constructors and fields"): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
    - public 멤버 변수가 함수 뒤에 온다 · private/protected 멤버 변수 뒤에 함수가 온다 · private/protected 함수와 변수가 한 구역에 섞였다.
-2. 깃발 칸(`docs/agents/CppStyle.md` "bit packing"): `bool _bX` 멤버 대신 `uint8 _bX : 1`. 주소를 쓰는 칸(ImGui `&b` · 출력 인자) · 여러 스레드가 따로 쓰는
-   이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다.
+2. 깃발 칸(`docs/agents/CppStyle.md` "bit packing"): 생성자가 있는 형식의 `bool _bX` 멤버 대신 `uint8 _bX : 1`. 주소를 쓰는 칸(ImGui `&b` · 출력 인자) · 여러 스레드가 따로 쓰는
+   이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다. 생성자가 없는 형식(집합체 — 중괄호 · 지정 초기화로 만든다)은 보지 않는다:
+   C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않으므로 `bool _bX{ false }` 가 맞다(같은 까닭을 줄마다 적던 예외 주석 550 여 곳을 규칙이 대신 안다).
 3. 익명 네임스페이스(`docs/agents/CppStyle.md Helpers`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
 4. 주인 우선(`docs/agents/CppStyle.md Helpers`): 헤더의 static 함수만 든 타입(이름은 보지 않는다 — Util · Scanner · Rules …)이 같은 헤더의 타입 하나(열거 · 템플릿 · I 인터페이스 제외)를
    함수 서명 절반 이상에서 받으면, 그 함수는 그 타입의 (static) 멤버다. 주인이 정말 없는 것은 `Config/Rules/Lint/CppShape.json` 의 `_staticOwner` 에 까닭을 적는다.
@@ -422,8 +423,15 @@ def check_declaration_order(info: ClassInfo) -> list[tuple[int, str]]:
 BOOL_MEMBER = re.compile(r"^\s*(?:mutable\s+)?(?:std::)?bool\s+(_b\w+)\s*(?:\{[^{};]*\}|=\s*[^;]+)?\s*;")
 
 
+def has_constructor(info: ClassInfo) -> bool:
+    """형식이 생성자를 선언했는가(소멸자는 세지 않는다). 없으면 칸의 기본값은 선언 자리의 초기화뿐이다."""
+    return any(kind == "ctor" and "~" not in statement.split("(", 1)[0] for kind, _, _, statement in info.items)
+
+
 def check_bool_flags(info: ClassInfo, raw_lines: list[str]) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
+    if not has_constructor(info):
+        return problems   # 생성자가 없으면 비트필드에 기본값을 줄 자리가 없다(C++17) — `bool _bX{ false }` 가 맞다
     for kind, _, line, statement in info.items:
         if kind != "var":
             continue

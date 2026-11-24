@@ -40,7 +40,7 @@ namespace sw
             uint32                  _elementCount{ 0 };                              ///< 원소 수(버퍼 용량, 텍스처는 0)
             RHIBufferSRVIndex       _srv{ kInvalidDescriptorIndex };                 ///< 버퍼의 SRV 번호(버퍼 보기가 읽는 셰이더를 찾는다)
             RHIUnorderedAccessIndex _uav{ kInvalidDescriptorIndex };                 ///< 버퍼의 UAV 번호
-            bool                    _bGraphOwned{ false };                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화) — 그래프의 첨부 · 일시 버퍼의 핸들만 알린다(`registerAttachment` · `registerGraphBuffer`)
+            bool                    _bGraphOwned{ false };
 
             /** @brief 버퍼 등록이면 그 버퍼, 아니면 0 입니다. */
             RHIBufferHandle getBuffer() const { return _viewable == RenderGraphViewableKind::Buffer ? RHIBufferHandle{ _handle } : RHIBufferHandle{}; }

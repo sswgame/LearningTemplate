@@ -204,7 +204,7 @@ namespace sw
          *          메모리에 든 셀(쿠커가 나눈 문서 · 테스트)은 0 이어도 된다 — 스트리밍이 내용에서 다시 센다(`SceneStreamingSubsystem::beginWorld`).
          */
         uint64 _maxCellFileID{ 0 };
-        bool   _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bValid{ false };
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );

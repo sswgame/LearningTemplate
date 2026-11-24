@@ -44,7 +44,7 @@ namespace sw
         string_view            _name;
         string_view            _default; ///< 잇지 않았을 때의 값. 비면 없다
         MaterialGraphValueKind _type{ MaterialGraphValueKind::Invalid };
-        bool                   _bRequired{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
+        bool                   _bRequired{ false };
     };
 
     /** @brief 출력 핀 선언 하나입니다. `Name:type=HLSL 식`. 식의 `$Name` 은 입력 핀 또는 앞선 출력 핀, `%Name` 은 설정입니다. */

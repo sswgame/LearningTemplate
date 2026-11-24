@@ -43,10 +43,10 @@ namespace sw
         uint32            _width{ 1280 };
         uint32            _height{ 720 };
         WindowDisplayMode _mode{ WindowDisplayMode::Windowed };
-        bool              _bVSync{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bHasResolution{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bHasMode{ false };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bHasVSync{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bVSync{ false };
+        bool              _bHasResolution{ false };
+        bool              _bHasMode{ false };
+        bool              _bHasVSync{ false };
     };
 } // namespace sw
 

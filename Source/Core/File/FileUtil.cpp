@@ -267,11 +267,11 @@ namespace sw
             /** @brief 재귀 순회가 폴더마다 쓰는 상태입니다. */
             struct WalkContext
             {
-                string                _directory;              ///< `/` 구분, 끝에 구분자 없음
-                bool                  _bRecursive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                string                _directory; ///< `/` 구분, 끝에 구분자 없음
+                bool                  _bRecursive{ SW_FALSE };
                 DirectoryEntryVisitFn _visit{ nullptr };
                 void*                 _pContext{ nullptr };
-                bool                  _bStopped{ SW_FALSE }; ///< 콜백이 멈췄다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                  _bStopped{ SW_FALSE }; ///< 콜백이 멈췄다
             };
 
             /** @brief 폴더 안 이름들을 모으는 상태입니다. */

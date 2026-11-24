@@ -61,7 +61,7 @@ namespace sw
         TaskHandle                                _task; ///< 비어 있으면 인라인으로 이미 돌았다(`isCompleted()` 가 true). 기다림은 줄의 `_bakeStage` 로 한다.
         int32                                     _tileX{ 0 };
         int32                                     _tileZ{ 0 };
-        bool                                      _bSucceeded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                                      _bSucceeded{ false };
 
         void run()
         {

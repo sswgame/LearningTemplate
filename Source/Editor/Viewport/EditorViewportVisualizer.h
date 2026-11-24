@@ -48,9 +48,9 @@ namespace sw::editor
         /** @brief 이 프레임의 씬 오브젝트 매니저입니다. 씬 서비스(내비게이션)를 읽는 시각화가 씁니다. 활성 씬이 없으면 nullptr 입니다. */
         GameObjectManager* _pObjectManager{ nullptr };
         /** @brief 변환 기즈모를 끌고 있으면 true 입니다. 콜라이더 손잡이는 이때 끌기를 시작하지 않는다. */
-        bool _bGizmoDragging{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bGizmoDragging{ false };
         /** @brief 2D 뷰(직교 카메라가 월드 Z 축을 본다)이면 true 입니다(`EditorVisualizerGeometryUtil::isFlat2DView`). */
-        bool _bFlat2D{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bFlat2D{ false };
         /** @brief 이 뷰포트가 든 시각화 통계입니다. 그린 양을 적는 시각화가 쓰며, 인자를 만드는 뷰포트가 항상 채웁니다(없는 경우가 없으니 널 검사를 하지 않는다). */
         EditorVisualizerStats* _pStats{ nullptr };
     };

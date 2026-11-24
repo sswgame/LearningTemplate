@@ -116,7 +116,7 @@ namespace sw
             string                                 _scenePath;
             Placement                              _placement{};
             vector<SceneDocument::SceneObjectNode> _listNode;       ///< 지을 엔티티 — 다 지었으면 떠 둔 상태(앵커 포함, `Snapshot`), 아니면 멤버 내용(앵커는 세울 때 만든다)
-            bool                                   _bRead{ false }; ///< 지을 엔티티가 있다 — 읽는 중에 저장했으면 false 이고 복원이 문서를 다시 읽는다 NOLINT(sw-bool-flag): 집합체다(중괄호 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+            bool                                   _bRead{ false }; ///< 지을 엔티티가 있다 — 읽는 중에 저장했으면 false 이고 복원이 문서를 다시 읽는다
         };
         /** @brief 세이브의 하위 레벨 몫입니다. */
         struct SaveState

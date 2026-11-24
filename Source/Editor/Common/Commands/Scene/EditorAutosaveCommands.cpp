@@ -69,8 +69,8 @@ namespace sw::editor
                 uint32                              _snapshotEditSerial{ 0 }; ///< 지난 사본 때의 편집 번호(`EditorWorkspace::getSceneEditSerial`)
                 uint32                              _writtenCount{ 0 };
                 uint32                              _restoredCount{ 0 };
-                bool                                _bSessionBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                                _bMounted{ false };      ///< NOLINT(sw-bool-flag): 위와 같다
+                bool                                _bSessionBegun{ false };
+                bool                                _bMounted{ false };
             };
 
             static State& getState() { return getEditorState<State>(); }

@@ -17,7 +17,7 @@ namespace sw::editor
      */
     struct ConsoleLogEntry : LogEntry
     {
-        bool _bExpected{ false }; ///< NOLINT(sw-bool-flag): 집합체다(C++17 비트필드는 기본값을 둘 수 없다). 선언된 Error · Warning 이면 true — 흐리게 그리고 오류 수에서 뺀다
+        bool _bExpected{ false };
     };
 
     /** @brief Output Log 가 그리는 행 하나입니다. 접기를 켜면 같은 행 여럿이 처음 나온 위치의 한 행이 됩니다. */

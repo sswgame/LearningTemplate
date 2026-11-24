@@ -492,7 +492,7 @@ namespace sw
         unordered_map<string, string>                 _mapPrefabBaseState;    ///< 프리팹마다 원형 상태를 한 번만 만든다(같은 프리팹을 여럿 놓은 씬)
         vector<GameObject*>                           _listPrefabObject;      ///< 프리팹 엔티티의 오브젝트 — 다 지은 뒤 중첩 부품을 스폰한다
         vector<const SceneDocument::SceneObjectNode*> _listPrefabNode;        ///< 그 엔티티(`_listPrefabObject` 와 같은 순서)
-        bool                                          _bStateFailed{ false }; ///< 상태를 읽지 못한 엔티티가 있다 — 빈 오브젝트로 이어 가지 않고 끝에서 로드가 실패한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                                          _bStateFailed{ false }; ///< 상태를 읽지 못한 엔티티가 있다 — 빈 오브젝트로 이어 가지 않고 끝에서 로드가 실패한다.
     };
 
     /** @brief 여러 프레임에 나눠 짓는 셀 하나의 진행입니다. 버리면(다 짓지 않고) 배치를 잇지 않고 놓는다. */

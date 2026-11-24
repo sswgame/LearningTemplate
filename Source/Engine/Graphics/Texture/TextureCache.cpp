@@ -116,10 +116,10 @@ namespace sw
             unique_ptr<Texture2D>           _texture;
             weak_ptr<TextureLoadOperation>  _pLoadOperation; ///< 진행 중인 로드(`request`) — 같은 경로의 요청은 이 로드 작업을 받는다
             uint32                          _refCount{ 0 };
-            bool                            _bLoading{ false };                                    ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                            _bPublished{ false };                                  ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                            _bPinned{ false };                                     ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                            _bUpgrading{ false };                                  ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bLoading{ false };                                    ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다
+            bool                            _bPublished{ false };                                  ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다
+            bool                            _bPinned{ false };                                     ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다
+            bool                            _bUpgrading{ false };                                  ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다
             TextureStreamingReservationSlot _streamingReservation;                                 ///< 밉 스트리밍이 풀(`_streamingPool`)에서 쥔 바이트 — 항목이 사라지면 돌려준다(지우는 자리마다 빼지 않는다). 바꾸다 실패하면 옛 크기 그대로다
             TextureMipLayout                _mipLayout;                                            ///< 위쪽 밉을 다시 읽을 파일 구간(로드가 끝날 때 적는다 — 픽셀은 쥐지 않는다, MR-2)
             string                          _mipReadPath;                                          ///< 그 구간을 읽을 경로(형식 변형이 있으면 변형 파일 — 첫 로드가 읽은 파일과 같다)
@@ -127,7 +127,7 @@ namespace sw
             uint32                          _wantedFirstMip{ 0 };                                  ///< 마지막으로 알린 화면 크기가 요구한 가장 큰 밉(R6-6)
             uint32                          _framesSinceChange{ 0 };                               ///< 밉을 마지막으로 바꾼 뒤 지난 `updateStreaming` 수(R6-6 — 경계 흔들림 막기)
             TextureStreamingGroup           _streamingGroup{ TextureStreamingGroup::NeverStream }; ///< 요청한 쪽이 정한다(`request` 가 새 항목에 적는다) — 하나라도 `NeverStream` 이면 그것이다
-            bool                            _bDemoted{ false };                                    ///< 예산 때문에 내렸다 — 다시 보이면 정책이 다시 올린다(처음 올리기는 로드가 줄에 넣는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bDemoted{ false };                                    ///< 예산 때문에 내렸다 — 다시 보이면 정책이 다시 올린다(처음 올리기는 로드가 줄에 넣는다)
         };
         /** @brief 범위 읽기 하나의 결과입니다 — IO 완료(다른 스레드)가 바이트를 넣고 상태를 올린다. 렌더 스레드는 상태가 `Reading` 이 아닐 때만 바이트를 만진다. */
         struct StreamingReadResult
@@ -163,7 +163,7 @@ namespace sw
             uint32        _width{ 0 };
             uint32        _height{ 0 };
             vector<uint8> _rgbaBytes;
-            bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게)
         };
         TextureStreamingPool                   _streamingPool; ///< 항목의 예약보다 먼저 만들고 뒤에 없앤다(멤버 순서) — 예약이 사라질 때 여기서 뺀다
         unordered_map<string, Entry> _mapEntry SW_GUARDED_BY( _mutex );
@@ -191,7 +191,7 @@ namespace sw
         vector<TextureMipRequest> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉을 기다리는 밉 요청(먼저 들어온 것부터, `updateStreaming` 이 비운다) — 바이트를 쥐지 않는다(MR-2)
         vector<StreamingRead> _listReading              SW_GUARDED_BY( _streamingMutex );         ///< 범위를 읽는 중이거나 읽어 제출을 기다리는 요청
         uint64 _bytesInFlight                           SW_GUARDED_BY( _streamingMutex ) = 0;     ///< `_listReading` 이 쥔(쥘) 바이트 합 — `TextureStreamingBudget::_maxBytesInFlight` 아래로 묶는다
-        bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다) NOLINT(sw-bool-flag): 잠금이 지키는 칸 하나다
+        bool _bStreamingParked                          SW_GUARDED_BY( _streamingMutex ) = false; ///< 지난 `updateStreaming` 이 풀 예산에 막혔다 — 줄은 예산이 날 때까지 쉰다(`countLoadsInFlight` 가 세지 않는다)
         TextureStreamingRetireList                      _retired;                                 ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         atomic<int32>                                   _qualityMipDrop{ 0 };                     ///< 텍스처 품질이 버리는 위쪽 밉 수 — 게임 스레드가 뜬 사본(`refreshQualitySettings`)이라 워커 · 렌더 스레드는 이것만 읽는다
         vector<string> _listUpgrading                   SW_GUARDED_BY( _streamingMutex );         ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)

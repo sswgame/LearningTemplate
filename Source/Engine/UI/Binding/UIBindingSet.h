@@ -33,7 +33,7 @@ namespace sw
         const LocalizationManager*        _pLocalization{ nullptr };      ///< 형식 바인딩의 메시지 패턴입니다(없으면 값 텍스트를 그대로 씁니다).
         const UIBindingConverterRegistry* _pConverters{ nullptr };        ///< 변환기 레지스트리입니다(없으면 변환기를 쓴 바인딩은 오류입니다).
         UserSettingsManager*              _pSettings{ nullptr };          ///< 설정 바인딩의 소스입니다(없으면 설정 바인딩은 오류입니다).
-        bool                              _bTextRevisionChanged{ false }; ///< 이번 프레임에 텍스트 버전이 바뀌었는지 나타냅니다. 바뀌었으면 형식 바인딩을 다시 씁니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                              _bTextRevisionChanged{ false }; ///< 이번 프레임에 텍스트 버전이 바뀌었는지 나타냅니다. 바뀌었으면 형식 바인딩을 다시 씁니다.
     };
 } // namespace sw
 
@@ -105,8 +105,8 @@ namespace sw
             hashed_string       _sourceField;   ///< 뷰모델의 맨 위 필드 이름입니다(알림 단위). 설정 바인딩이면 설정 id 입니다.
             uint64              _skipSerial;    ///< 양방향에서 이 바인딩이 되쓰며 낸 알림 번호입니다. 그 알림으로는 위젯에 다시 쓰지 않습니다.
             WidgetID            _widget;
-            bool                _bPollKnown; ///< 폴링에서 `_lastPollValue` 가 유효한지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                _bDirty;     ///< 설정에서 되쓴 뒤 다시 읽어야 하는지 나타냅니다(보정되거나 거절된 경우). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                _bPollKnown; ///< 폴링에서 `_lastPollValue` 가 유효한지 나타냅니다.
+            bool                _bDirty;     ///< 설정에서 되쓴 뒤 다시 읽어야 하는지 나타냅니다(보정되거나 거절된 경우).
         };
 
         /** @brief 식을 모두 해석해 연결합니다. 오류는 `_listError` 와 로그에 남깁니다. */

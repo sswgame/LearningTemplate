@@ -29,7 +29,7 @@ namespace sw::editor
         Ray                         _ray{};
         GameObjectHandle            _object{};
         EditorHandleDragCommandKind _kind{ EditorHandleDragCommandKind::End };
-        bool                        _bCommit{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 놓기(End)가 되돌리기를 남긴다(끊긴 끌기는 버린다)
+        bool                        _bCommit{ false };
     };
 
     /**

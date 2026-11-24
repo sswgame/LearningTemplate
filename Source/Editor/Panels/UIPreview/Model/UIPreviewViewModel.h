@@ -48,14 +48,14 @@ namespace sw::editor
      */
     struct UIPreviewWatchValues
     {
-        bool    _bValid{ false };             ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bDirty{ SW_FALSE };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bRightToLeft{ SW_FALSE };    ///< 루트 위젯이 오른쪽에서 왼쪽 흐름으로 배치됐는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bHoveredFocusable{ false };  ///< 포인터 아래 위젯이 포커스를 받는 종류(버튼 …)인지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bSelectedValid{ false };     ///< 고른 위젯이 있는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bAnimationPlaying{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bTextureReady{ false };      ///< 렌더 텍스처가 ImGui 에 등록돼 이미지가 보이는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _bReloadedAfterSave{ false }; ///< 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었는지(저장이 파일까지 갔다는 증거) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bValid{ false };
+        bool    _bDirty{ SW_FALSE };
+        bool    _bRightToLeft{ SW_FALSE };   ///< 루트 위젯이 오른쪽에서 왼쪽 흐름으로 배치됐는지
+        bool    _bHoveredFocusable{ false }; ///< 포인터 아래 위젯이 포커스를 받는 종류(버튼 …)인지
+        bool    _bSelectedValid{ false };    ///< 고른 위젯이 있는지
+        bool    _bAnimationPlaying{ false };
+        bool    _bTextureReady{ false };      ///< 렌더 텍스처가 ImGui 에 등록돼 이미지가 보이는지
+        bool    _bReloadedAfterSave{ false }; ///< 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었는지(저장이 파일까지 갔다는 증거)
         uint32  _widgetCount{ 0 };
         uint32  _firstTextBytes{ 0 };        ///< 문서 순서로 첫 글 위젯의 화면 글자 UTF-8 바이트 수(언어를 바꾸면 길이가 달라진다)
         int32   _hoveredOrdinal{ -1 };       ///< 포인터 아래 위젯의 문서 순서 번호, 없으면 -1
@@ -63,7 +63,7 @@ namespace sw::editor
         float32 _selectedOpacity{ 0.0f };    ///< 고른 위젯의 불투명도
         float32 _animationTime{ 0.0f };      ///< 고른 애니메이션의 지금 시각(재생 중이 아니면 0)
         uint32  _languageIndex{ 0 };         ///< 언어 콤보에서 고른 줄(0 = 게임 언어)
-        bool    _bSlotEditable{ false };     ///< 고른 위젯의 슬롯을 손잡이로 고칠 수 있는지(부모가 캔버스 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bSlotEditable{ false };     ///< 고른 위젯의 슬롯을 손잡이로 고칠 수 있는지(부모가 캔버스 패널)
         float32 _selectedOffsetMinX{ 0.0f }; ///< 고른 위젯의 슬롯 `_offsetMin._x`(손잡이로 옮기면 바뀐다)
         uint32  _paletteCount{ 0 };          ///< 팔레트가 보이는 위젯 타입 수
         uint32  _slotEditCount{ 0 };         ///< 적용된 슬롯 편집 수(캔버스 손잡이 · Slot 필드 · 상자 순서 · 격자 셀 손잡이, 되돌리기 항목 하나가 하나)

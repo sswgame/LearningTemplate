@@ -69,8 +69,8 @@ namespace sw::editor
         string                    _text;
         EditorVisualizerStatSlot  _statSlot{ EditorVisualizerStatSlot::None };
         EditorVisualizerColorRole _colorRole{ EditorVisualizerColorRole::Explicit };
-        EditorThemeColorKey       _themeKey{};      ///< `ThemeToken` 역할의 테마 토큰 이름(`SW_THEME_COLOR_KEY`)
-        bool                      _bShadow{ true }; ///< NOLINT(sw-bool-flag): 값 집합체 — 그림자를 깔아 밝은 배경에서도 읽히게 한다(디버그 글자). 라벨은 끈다
+        EditorThemeColorKey       _themeKey{}; ///< `ThemeToken` 역할의 테마 토큰 이름(`SW_THEME_COLOR_KEY`)
+        bool                      _bShadow{ true };
     };
 
     /**
@@ -111,7 +111,7 @@ namespace sw::editor
         vector<EditorVisualizerLine>      _listLine;
         vector<EditorVisualizerText>      _listText;
         vector<EditorVisualizerBillboard> _listBillboard;
-        bool                              _bDebugDrawGathered{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 디버그 드로우 시각화가 이번 프레임에 돌았다(그리는 쪽이 프레임 번호를 적는다)
+        bool                              _bDebugDrawGathered{ false };
 
         /** @brief 목록을 비웁니다(용량은 남긴다). */
         void clear();

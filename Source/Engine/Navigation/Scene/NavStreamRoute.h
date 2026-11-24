@@ -30,9 +30,9 @@ namespace sw
     /** @brief 계획 하나 — 지나갈 클러스터 열과 앞선 자리입니다. */
     struct NavRoutePlan
     {
-        vector<uint32> _listCluster;           ///< 시작 클러스터 … 목적지 클러스터
-        uint32         _frontier{ 0 };         ///< 시작부터 타일이 이어 오른 마지막 자리(`_listCluster` 안). `_bStartLoaded` 가 false 면 뜻이 없다
-        bool           _bStartLoaded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없다
+        vector<uint32> _listCluster;   ///< 시작 클러스터 … 목적지 클러스터
+        uint32         _frontier{ 0 }; ///< 시작부터 타일이 이어 오른 마지막 자리(`_listCluster` 안). `_bStartLoaded` 가 false 면 뜻이 없다
+        bool           _bStartLoaded{ false };
 
         /** @brief 목적지 클러스터까지 이어 올라 있으면 true 입니다(세밀 경로 하나로 간다). */
         bool isLoadedToGoal() const { return _bStartLoaded && _listCluster.empty() == false && _frontier + 1 == _listCluster.size(); }

@@ -45,9 +45,9 @@ namespace sw
         {
             DebrisOwnerID _owner{ DebrisOwnerID::None };
             uint32        _groupID{ 0 };
-            uint64        _age{ 0 };                 ///< 올린 차례(씬 전체에서 하나 — 주인이 달라도 견줄 수 있다)
-            bool          _bLarge{ false };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool          _bRemovalPending{ false }; ///< 주인에게 넘겼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint64        _age{ 0 }; ///< 올린 차례(씬 전체에서 하나 — 주인이 달라도 견줄 수 있다)
+            bool          _bLarge{ false };
+            bool          _bRemovalPending{ false }; ///< 주인에게 넘겼다
         };
 
     private:

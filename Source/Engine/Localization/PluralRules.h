@@ -61,9 +61,9 @@ namespace sw
             };
 
             vector<Range> _listRange{};
-            float64       _modulus{ 0.0 };    ///< 0 이면 나머지를 내지 않는다
-            utf8          _operand{ 'n' };    ///< n · i · v · f · t
-            bool          _bNegated{ false }; ///< NOLINT(sw-bool-flag): 집합체다 — `!=`
+            float64       _modulus{ 0.0 }; ///< 0 이면 나머지를 내지 않는다
+            utf8          _operand{ 'n' }; ///< n · i · v · f · t
+            bool          _bNegated{ false };
         };
 
         /** @brief `and` 로 이은 관계들입니다. */

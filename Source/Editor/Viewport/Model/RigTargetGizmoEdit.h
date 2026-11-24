@@ -29,12 +29,12 @@ namespace sw::editor
     /** @brief 기즈모가 이번 프레임에 그릴 값입니다(`RigTargetEdit::gather`). */
     struct RigTargetGizmoViewState
     {
-        float4x4 _view{};              ///< 활성 카메라의 뷰 행렬
-        float4x4 _projection{};        ///< 캔버스 비율로 본 투영 행렬
-        float4x4 _world{};             ///< 기즈모를 놓을 대상의 월드 행렬(남겨 둔 값이 있으면 그 값)
-        bool     _bAvailable{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 고른 대상이 있고 그 부모 공간을 풀었다
-        bool     _bRotate{ false };    ///< NOLINT(sw-bool-flag): 값 집합체 — 워크스페이스 기즈모 조작이 회전이다(아니면 이동)
-        bool     _bDragging{ false };  ///< NOLINT(sw-bool-flag): 값 집합체 — 앞 프레임까지 끌기를 받았고 아직 놓지 않았다
+        float4x4 _view{};       ///< 활성 카메라의 뷰 행렬
+        float4x4 _projection{}; ///< 캔버스 비율로 본 투영 행렬
+        float4x4 _world{};      ///< 기즈모를 놓을 대상의 월드 행렬(남겨 둔 값이 있으면 그 값)
+        bool     _bAvailable{ false };
+        bool     _bRotate{ false };
+        bool     _bDragging{ false };
     };
 
     /** @brief 기즈모가 보내는 명령의 종류입니다. */

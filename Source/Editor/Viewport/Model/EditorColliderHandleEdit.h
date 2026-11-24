@@ -25,9 +25,9 @@ namespace sw::editor
     /** @brief 손잡이 도구가 이번 프레임에 그릴 값입니다(`EditorColliderHandleEdit::gather`). */
     struct EditorColliderHandleViewState
     {
-        GameObjectHandle       _object{};            ///< 손잡이의 강체 오브젝트
-        vector<ColliderHandle> _listHandle;          ///< 셰이프마다의 손잡이(월드)
-        bool                   _bAvailable{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 강체가 있고 편집이 허용되며 배율이 0 이 아니다
+        GameObjectHandle       _object{};   ///< 손잡이의 강체 오브젝트
+        vector<ColliderHandle> _listHandle; ///< 셰이프마다의 손잡이(월드)
+        bool                   _bAvailable{ false };
     };
 
     /** @brief 콜라이더 손잡이 명령 · 순서 — 공통 틀(`EditorHandleDrag.h`)에 손잡이 값 `ColliderHandle` 을 넣은 것이다. */
@@ -81,7 +81,7 @@ namespace sw::editor
         vector<EditorColliderHandleCommand> _listCommand;           ///< 이번 프레임에 낸 명령(재사용 버퍼)
         int32                               _frame{ 0 };            ///< 지난 `process` 의 ImGui 프레임(`_bCapturing` 이 거짓이면 보지 않는다)
         uint32                              _drawnHandleCount{ 0 }; ///< 그 프레임에 그린 손잡이 수(감시 값 `Editor.ColliderHandleCount`)
-        bool                                _bCapturing{ false };   ///< NOLINT(sw-bool-flag): 그 프레임에 손잡이가 마우스를 가져갔다
+        bool                                _bCapturing{ false };
 
         /** @brief 지금 에디터 범위의 손잡이 도구입니다. */
         static EditorColliderHandleSession& get();

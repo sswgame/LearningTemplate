@@ -93,9 +93,9 @@ namespace sw
     {
         uint32 _appliedCount{ 0 };         ///< 대상에 넣은 개수입니다.
         uint32 _failedCount{ 0 };          ///< 핸들러가 거절한 개수입니다.
-        bool   _bNeedsRestart{ false };    ///< 다음 실행에 반영되는 값이 있는지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool   _bAwaitingConfirm{ false }; ///< 확인 대기(카운트다운)가 시작됐는지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool   _bSaved{ false };           ///< 사용자 파일에 썼는지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bNeedsRestart{ false };    ///< 다음 실행에 반영되는 값이 있는지 나타냅니다.
+        bool   _bAwaitingConfirm{ false }; ///< 확인 대기(카운트다운)가 시작됐는지 나타냅니다.
+        bool   _bSaved{ false };           ///< 사용자 파일에 썼는지 나타냅니다.
     };
 } // namespace sw
 
@@ -360,13 +360,13 @@ namespace sw
         /** @brief 설정 하나의 값 상태입니다. `UserSettingsSchema::getSettings` 와 같은 순번입니다. */
         struct SettingState
         {
-            string _defaultValue{};     ///< 기본값입니다(게임 프리셋 덮어쓰기 포함).
-            string _committedValue{};   ///< 확정 값입니다.
-            string _pendingValue{};     ///< 보류 값(`_bPending` 일 때)
-            string _rollbackValue{};    ///< 확인 대기 중 되돌릴 값(`_bRollback` 일 때)
-            string _startupValue{};     ///< 기동 적용 때 넣은 값(`NeedsRestart` 판정)
-            bool   _bPending{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool   _bRollback{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            string _defaultValue{};   ///< 기본값입니다(게임 프리셋 덮어쓰기 포함).
+            string _committedValue{}; ///< 확정 값입니다.
+            string _pendingValue{};   ///< 보류 값(`_bPending` 일 때)
+            string _rollbackValue{};  ///< 확인 대기 중 되돌릴 값(`_bRollback` 일 때)
+            string _startupValue{};   ///< 기동 적용 때 넣은 값(`NeedsRestart` 판정)
+            bool   _bPending{ false };
+            bool   _bRollback{ false };
         };
 
         bool appendSchema( bool bLoaded );

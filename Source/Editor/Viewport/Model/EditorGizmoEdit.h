@@ -30,11 +30,11 @@ namespace sw::editor
     /** @brief 기즈모가 이번 프레임에 그릴 값입니다(`EditorGizmoEdit::gather`). */
     struct EditorGizmoViewState
     {
-        vector<EditorGizmoTarget> _listTarget;             ///< 선택의 최상위 집합 가운데 씬 컴포넌트가 있는 것(자식은 부모를 따라 움직인다 — 유니티 `SelectionMode.TopLevel`)
-        int32                     _operation{ 0 };         ///< 워크스페이스 조작 번호(0 이동 · 1 회전 · 2 크기)
-        bool                      _bLocalSpace{ false };   ///< NOLINT(sw-bool-flag): 값 집합체 — 로컬 좌표계
-        bool                      _bEditsAllowed{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 씬 편집이 허용된다(플레이 중이면 막힌다)
-        bool                      _bPreviewScope{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 미리보기 창의 선택이다(표면 붙이기를 하지 않는다)
+        vector<EditorGizmoTarget> _listTarget;     ///< 선택의 최상위 집합 가운데 씬 컴포넌트가 있는 것(자식은 부모를 따라 움직인다 — 유니티 `SelectionMode.TopLevel`)
+        int32                     _operation{ 0 }; ///< 워크스페이스 조작 번호(0 이동 · 1 회전 · 2 크기)
+        bool                      _bLocalSpace{ false };
+        bool                      _bEditsAllowed{ false };
+        bool                      _bPreviewScope{ false };
     };
 
     /** @brief 기즈모가 보내는 명령의 종류입니다. */
@@ -50,7 +50,7 @@ namespace sw::editor
     {
         EditorGizmoCommandKind    _kind{ EditorGizmoCommandKind::End };
         vector<EditorGizmoTarget> _listTarget;
-        bool                      _bSurfaceSnap{ false }; ///< NOLINT(sw-bool-flag): 값 집합체 — 대상 하나의 이동을 아래 표면에 붙인다
+        bool                      _bSurfaceSnap{ false };
     };
 
     /**
@@ -79,9 +79,9 @@ namespace sw::editor
         void use( bool bUsing, vector<EditorGizmoTarget>&& listMovedWorld, bool bSurfaceSnap, vector<EditorGizmoCommand>& outListCommand );
 
     private:
-        GameObjectHandle _tracked{};          ///< 잡은 대상 하나(그룹이면 무효)
-        bool             _bTracking{ false }; ///< NOLINT(sw-bool-flag): 끄는 중이다
-        bool             _bCaptured{ false }; ///< NOLINT(sw-bool-flag): 잡기 명령을 냈고 아직 닫지 않았다
+        GameObjectHandle _tracked{}; ///< 잡은 대상 하나(그룹이면 무효)
+        bool             _bTracking{ false };
+        bool             _bCaptured{ false };
     };
 
     /**

@@ -28,7 +28,7 @@ namespace
         float3             _lastVelocity{};
         const GameObject*  _pAttached{ nullptr };
         uint32             _releaseCount{ 0 };
-        bool               _bRefuses{ false }; ///< NOLINT(sw-bool-flag): 테스트 집합체다 — C++17 비트필드는 기본값을 둘 수 없다
+        bool               _bRefuses{ false };
         [[nodiscard]] bool attach( GameObject& holder, GameObject& target, const float3& localOffset ) override
         {
             (void)holder;

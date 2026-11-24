@@ -32,7 +32,7 @@ namespace sw::editor
         /** @brief 기다리는 옮기기 하나입니다. 이름 바꾸기면 `_newName`, 폴더로 옮기기면 `_sourceAbs` · `_folderAbs` 입니다. */
         struct Move
         {
-            bool         _bRename{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool         _bRename{ false };
             string       _newName{};
             AbsolutePath _sourceAbs{};
             AbsolutePath _folderAbs{};

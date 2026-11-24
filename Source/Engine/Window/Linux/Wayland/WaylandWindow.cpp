@@ -55,7 +55,7 @@ namespace sw
         int2         _position{};        ///< 컴포지터 공간의 자리
         int2         _size{};            ///< 지금 모드의 픽셀 크기
         int32        _scale{ 1 };
-        bool         _bEntered{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool         _bEntered{ SW_FALSE };
     };
 } // namespace sw
 
@@ -67,7 +67,7 @@ namespace sw
         WaylandInputEvent   _input;
         string              _text;
         WindowTextInputKind _textKind{ WindowTextInputKind::Commit };
-        bool                _bText{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                _bText{ false };
     };
 } // namespace sw
 
@@ -104,8 +104,8 @@ namespace sw
         vector<WindowFileDropEvent> _listPendingFileDrop;            ///< 리스너가 쌓고 `processMessages` 가 넘기는 끌어 놓기 사건
         int32                       _dragX{ 0 };                     ///< 마지막 끌기 위치(표면 좌표)
         int32                       _dragY{ 0 };                     ///< 위와 같다
-        bool                        _bIntroducedHasURIList{ false }; ///< `_pIntroducedOffer` 가 text/uri-list 를 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                        _bDropPending{ false };          ///< `drop` 이 왔다 — 목록 읽기는 `processMessages` 가 한다(리스너 안에서 파이프를 기다리지 않는다) NOLINT(sw-bool-flag): 위와 같다
+        bool                        _bIntroducedHasURIList{ false }; ///< `_pIntroducedOffer` 가 text/uri-list 를 내놓는지
+        bool                        _bDropPending{ false };          ///< `drop` 이 왔다 — 목록 읽기는 `processMessages` 가 한다(리스너 안에서 파이프를 기다리지 않는다)
 
         // 선택 확장(컴포지터에 없으면 nullptr — 없는 것이 정상인 길과 있어야 하는 길은 호출 쪽이 가른다: 소수 배율은 정수 배율로, 포인터 잠금은 호출 쪽이 오류로 알린다).
         wp_fractional_scale_manager_v1*  _pFractionalScaleManager{ nullptr };
@@ -121,29 +121,29 @@ namespace sw
         zwp_text_input_v3*               _pTextInput{ nullptr };                      ///< 자리(seat)마다 하나다
         WindowTextInputFrame             _textInputFrame;                             ///< `done` 까지 모으는 조합 · 확정 글
         WindowTextInputArea              _textInputArea;                              ///< 입력기에 알릴 글 커서(`applyTextInputArea`)
-        bool                             _bTextInputWanted{ false };                  ///< 받는 쪽이 원한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                             _bTextInputEntered{ false };                 ///< 컴포지터가 이 표면에 키보드 포커스를 주었다(`enter`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                             _bTextInputEnabled{ false };                 ///< `enable` 을 보낸 상태다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                             _bTextInputWanted{ false };                  ///< 받는 쪽이 원한다
+        bool                             _bTextInputEntered{ false };                 ///< 컴포지터가 이 표면에 키보드 포커스를 주었다(`enter`)
+        bool                             _bTextInputEnabled{ false };                 ///< `enable` 을 보낸 상태다
         wp_cursor_shape_device_v1*       _pCursorShapeDevice{ nullptr };              ///< 포인터 장치가 생길 때 만든다
         CursorShape                      _cursorShape{ CursorShape::Arrow };          ///< 기억해 둔 모양(들어올 때 · 보일 때 적용한다)
         WindowPointerLock                _pointerLock{ WindowPointerLock::Released }; ///< 걸어 둔 방식
-        bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다
 
         vector<WaylandOutput>      _listOutput;                   ///< 바인드한 출력과 그 값
-        bool                       _bOutputsChanged{ false };     ///< 출력 값이 바뀌었다 - `processMessages` 가 세대를 올린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bOutputsChanged{ false };     ///< 출력 값이 바뀌었다 - `processMessages` 가 세대를 올린다
         vector<WaylandQueuedInput> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
         vector<uint32>             _listPressedButton;            ///< 누름을 넘기고 뗌을 아직 넘기지 않은 버튼(리눅스 이벤트 버튼 번호)
         uint32                     _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
-        bool                       _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bSelectionHasPlain{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        uint32                     _pointerSerial{ 0 };           ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
-        int32                      _configuredWidth{ 0 };         ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
+        bool                       _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지
+        bool                       _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain
+        bool                       _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다)
+        bool                       _bSelectionHasPlain{ false };
+        uint32                     _pointerSerial{ 0 };   ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
+        int32                      _configuredWidth{ 0 }; ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
         int32                      _configuredHeight{ 0 };
-        bool                       _bConfigured{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bCloseRequested{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                       _bCursorVisible{ true };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bConfigured{ SW_FALSE };
+        bool                       _bCloseRequested{ false };
+        bool                       _bCursorVisible{ true };
 
         void pushInput( const WaylandInputEvent& event )
         {

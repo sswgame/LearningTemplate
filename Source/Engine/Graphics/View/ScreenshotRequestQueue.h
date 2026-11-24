@@ -122,9 +122,9 @@ namespace sw
         /** @brief 처리한 표 하나의 결과입니다. */
         struct TicketResult
         {
-            uint32        _ticket{ 0 };       ///< 0 이면 빈 칸(아직 처리하지 않았다)
-            bool          _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            vector<uint8> _pngBytes;          ///< 바이트 요청의 PNG(`takePNGBytes` 가 옮겨 간다)
+            uint32        _ticket{ 0 }; ///< 0 이면 빈 칸(아직 처리하지 않았다)
+            bool          _bWritten{ false };
+            vector<uint8> _pngBytes; ///< 바이트 요청의 PNG(`takePNGBytes` 가 옮겨 간다)
         };
 
         mutable mutex                                       _mutex;

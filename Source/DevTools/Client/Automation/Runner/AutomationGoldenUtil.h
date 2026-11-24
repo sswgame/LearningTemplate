@@ -75,7 +75,7 @@ namespace sw
         string                    _commit{};     ///< 기록한 작업 트리의 커밋(`git describe --always --dirty`, 고친 채면 `-dirty`)
         int64                     _recordedUnixMs{ 0 };
         string                    _reason{};           ///< `missing` · `size-changed` · `near-limit` · `failed`
-        bool                      _bMeasured{ false }; ///< 앞 골든과 견줬다(`_difference` 가 뜻이 있다) NOLINT(sw-bool-flag): 집합체다
+        bool                      _bMeasured{ false }; ///< 앞 골든과 견줬다(`_difference` 가 뜻이 있다)
         AutomationImageDifference _difference{};       ///< 쓰기 전 골든과 지금 그림의 차이
         AutomationGoldenLimits    _limits{};           ///< 그때의 상한(덮은 값 포함)
         uint32                    _width{ 0 };

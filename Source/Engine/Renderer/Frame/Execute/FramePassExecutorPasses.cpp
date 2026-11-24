@@ -156,7 +156,7 @@ namespace sw
             {
                 hashed_string _name{};
                 float4        _value{};
-                bool          _bExisted{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool          _bExisted{ false };
             };
             TContext&           _context;
             frame_vector<Saved> _listSaved; ///< 프레임 아레나(요소마다 만들고 버린다 — 힙을 건드리지 않는다)

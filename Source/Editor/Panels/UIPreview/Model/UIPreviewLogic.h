@@ -81,11 +81,11 @@ namespace sw::editor
      */
     struct UIPreviewSlotParams
     {
-        bool _bPaddingAlignment{ false }; ///< 여백 · 가로/세로 정렬(캔버스 밖의 모든 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bBoxSize{ false };          ///< 크기 규칙 · 채우기 비율(상자 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bGrid{ false };             ///< 행 · 열 · 넓이(격자 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bCanvas{ false };           ///< 앵커 · 오프셋 · 자동 크기 · 커지는 쪽 · z 순서(캔버스 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool _bSizeOverride{ false };     ///< 크기 덮어쓰기 · 최소 · 최대(부모가 있으면 모두) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bPaddingAlignment{ false }; ///< 여백 · 가로/세로 정렬(캔버스 밖의 모든 패널)
+        bool _bBoxSize{ false };          ///< 크기 규칙 · 채우기 비율(상자 패널)
+        bool _bGrid{ false };             ///< 행 · 열 · 넓이(격자 패널)
+        bool _bCanvas{ false };           ///< 앵커 · 오프셋 · 자동 크기 · 커지는 쪽 · z 순서(캔버스 패널)
+        bool _bSizeOverride{ false };     ///< 크기 덮어쓰기 · 최소 · 최대(부모가 있으면 모두)
     };
 } // namespace sw::editor
 
@@ -114,7 +114,7 @@ namespace sw::editor
 
         float2  _position{};                  ///< UI 단위 포인터 위치
         float32 _wheel{ 0.0f };               ///< 이번 프레임의 휠
-        bool    _bHovered{ false };           ///< 포인터가 이미지 위에 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bHovered{ false };           ///< 포인터가 이미지 위에 있다
         bool    _arrPressed[kButtonCount]{};  ///< 이번 프레임에 누른 버튼
         bool    _arrReleased[kButtonCount]{}; ///< 이번 프레임에 뗀 버튼
     };
@@ -123,9 +123,9 @@ namespace sw::editor
     struct UIPreviewPointerPlan
     {
         vector<UIPointerEvent> _listEvent{};          ///< 차례대로 보낼 이벤트
-        bool                   _bMoved{ false };      ///< 포인터가 움직였다(탐색 방식을 끈다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                   _bClearHover{ false }; ///< 이벤트를 보낸 뒤 호버를 비운다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                   _bMutates{ false };    ///< 위젯 값을 바꿀 수 있는 입력이다(누름 · 뗌 · 휠 — 저장을 막는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                   _bMoved{ false };      ///< 포인터가 움직였다(탐색 방식을 끈다)
+        bool                   _bClearHover{ false }; ///< 이벤트를 보낸 뒤 호버를 비운다
+        bool                   _bMutates{ false };    ///< 위젯 값을 바꿀 수 있는 입력이다(누름 · 뗌 · 휠 — 저장을 막는다)
     };
 
     /**

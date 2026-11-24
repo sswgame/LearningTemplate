@@ -20,10 +20,10 @@ namespace sw::editor
     struct EditorOverlayBarRuntime
     {
         string _id;
-        float2 _lastPosition{};        ///< 지난 프레임에 그린 왼쪽 위(뷰포트 기준 픽셀)
-        float2 _lastSize{};            ///< 지난 프레임의 바 크기(픽셀)
-        float2 _dragPosition{};        ///< 끄는 중의 왼쪽 위
-        bool   _bDragging{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        float2 _lastPosition{}; ///< 지난 프레임에 그린 왼쪽 위(뷰포트 기준 픽셀)
+        float2 _lastSize{};     ///< 지난 프레임의 바 크기(픽셀)
+        float2 _dragPosition{}; ///< 끄는 중의 왼쪽 위
+        bool   _bDragging{ SW_FALSE };
     };
 } // namespace sw::editor
 

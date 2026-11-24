@@ -13,7 +13,7 @@ namespace
     struct RequestResult
     {
         uint32 _callCount{ 0 };
-        bool   _bSuccess{ false }; ///< NOLINT(sw-bool-flag): 테스트 지역 기록이다
+        bool   _bSuccess{ false };
         size_t _byteCount{ 0 };
     };
 

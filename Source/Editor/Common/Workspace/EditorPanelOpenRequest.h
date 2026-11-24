@@ -15,6 +15,6 @@ namespace sw::editor
     {
         string          _panelID;            ///< 등록 id(`T::kPanelID`) 또는 실행 중에 들어온 id
         EditorAssetType _documentKind{};     ///< 이 종류의 문서를 여는 도구 패널. 비면 id 로 연다
-        bool            _bFloat{ SW_FALSE }; ///< 도킹을 풀고 메인 창 밖으로 옮긴다 — ImGui 가 그 패널을 제 OS 창(보조 뷰포트)으로 띄운다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool            _bFloat{ SW_FALSE }; ///< 도킹을 풀고 메인 창 밖으로 옮긴다 — ImGui 가 그 패널을 제 OS 창(보조 뷰포트)으로 띄운다
     };
 } // namespace sw::editor

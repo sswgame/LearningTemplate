@@ -13,8 +13,8 @@ namespace
     /** @brief 답을 정해 둔 입력 포획 질의입니다. */
     struct GameInputViewTestUtil final : public IInputCaptureQuery
     {
-        bool _bGameInputCaptured{ false }; // NOLINT(sw-bool-flag): 테스트 대역의 집합체다
-        bool _bActionCaptured{ false };    // NOLINT(sw-bool-flag): 테스트 대역의 집합체다
+        bool _bGameInputCaptured{ false }; //
+        bool _bActionCaptured{ false };    //
 
         bool isGameInputCaptured() const override { return _bGameInputCaptured; }
         bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const override

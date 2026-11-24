@@ -84,14 +84,14 @@ namespace sw
     struct ProcessOptions
     {
         string _workingDirectory{};
-        bool   _bCreateWindow{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bCreateWindow{ false };
         /** @brief 자식의 표준 입력을 파이프로 연결합니다 — `writeInput` · `closeInput` 으로 씁니다. 끄면 자식의 표준 입력은 비어 있다(NUL · /dev/null). */
-        bool _bPipeStandardInput{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bPipeStandardInput{ false };
         /**
          * @brief Windows 에서 자식을 새 프로세스 그룹으로 띄웁니다(`CREATE_NEW_PROCESS_GROUP`) — `requestStop` 이 그 그룹에 Ctrl+Break 를 보낼 수 있게.
          * @details 모든 자식에 걸면 터미널의 Ctrl+C 가 자식(빌드 중인 컴파일러)에 닿지 않으므로 옵션이다. POSIX 는 늘 자기 그룹이라 무시합니다.
          */
-        bool _bNewProcessGroup{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bNewProcessGroup{ false };
         /**
          * @brief 자식 트리가 이 프로세스(부모)와 함께 끝나게 합니다 — 부모가 비정상 종료해도 자식이 고아로 남지 않는다(감사 E-15: 에디터가 죽으면 넷 플레이 서버 · 클라이언트가 남았다).
          * @details Windows 는 자식을 묶는 Job 에 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` 를 걸어 마지막 핸들이 닫힐 때(이 `Process` 를 놓거나 부모가 죽을 때) 트리째 끝낸다.
@@ -99,7 +99,7 @@ namespace sw
          *          (그 밖의 POSIX 는 놓을 때만 끝낸다 — 부모 사망 신호가 없다). `launch` 만 받는다 — `launchDetached` 는 켜면 거절한다(분리한 자식은 부모와 묶지 않는다).
          *          언리얼 `FPlatformProcess::CreateProc` 의 `bLaunchDetached=false` 자식이 에디터 Job 에 묶이는 것과 같은 자리다.
          */
-        bool _bEndWithParent{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bEndWithParent{ false };
         /**
          * @brief 이 프로세스의 환경에 덮어써서 자식에게 줄 환경 변수들입니다. 비면 환경을 그대로 물려줍니다.
          * @details `launch` 만 받는다 — `launchDetached` 는 비어 있지 않으면 거절한다(조용히 무시하지 않는다). 이름이 비었거나 `=` 를 품으면 launch 가 실패합니다.

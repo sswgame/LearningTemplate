@@ -49,8 +49,8 @@ namespace sw::test
         uint32            _shardIndex{ 0 };  ///< 이 프로세스가 도는 몫(0 부터)
         uint32            _shardCount{ 1 };  ///< 몫 수 — 케이스는 이름 해시로 나뉜다(섞기 · 거르개와 무관하게 늘 같은 몫)
         SnapshotWriteMode _snapshotWriteMode{ SnapshotWriteMode::Off };
-        bool              _bListOnly{ false };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool              _bRunDisabled{ false };    ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인) NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool              _bListOnly{ false };
+        bool              _bRunDisabled{ false };    ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인)
         CrashHandler*     _pCrashHandler{ nullptr }; ///< 도는 케이스 이름을 문맥(`TestCase`)에 적을 크래시 처리기 — 크래시 보고에 어느 케이스였는지 남는다. nullptr 이면 적지 않는다
     };
 

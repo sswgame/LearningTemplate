@@ -59,10 +59,10 @@ namespace sw::editor
         uint64                  _objectHashMinTick{ 0 };    ///< `requestObjectHashes` 가 바란 가장 이른 틱 — 이보다 이른 답은 받지 않고 다시 묻는다
         uint32                  _objectHashRetryCount{ 0 }; ///< 그 요청에서 다시 물은 수(`kMaxObjectHashRetry` 에서 멈춘다)
         atomic<int32>           _exitCode{ 0 };
-        atomic<uint32>          _exited{ 0 };            ///< 읽기 스레드가 파이프 끝을 봤다 — 1 이면 종료 코드를 거뒀고(`_exitCode`), 2 면 기다리지 못했다(까닭은 마지막 출력 줄)
-        int32                   _processID{ 0 };         ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
-        bool                    _bExitReported{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                    _bConnected{ false };    ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        atomic<uint32>          _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 봤다 — 1 이면 종료 코드를 거뒀고(`_exitCode`), 2 면 기다리지 못했다(까닭은 마지막 출력 줄)
+        int32                   _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
+        bool                    _bExitReported{ false };
+        bool                    _bConnected{ false }; ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다
     };
 } // namespace sw::editor
 

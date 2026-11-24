@@ -32,7 +32,7 @@ namespace sw::editor
     {
         AbsolutePath _folder;
         string       _extension;
-        bool         _bRecursive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool         _bRecursive{ SW_FALSE };
     };
 } // namespace sw::editor
 
@@ -42,7 +42,7 @@ namespace sw::editor
     struct EditorFolderListingInput
     {
         AbsolutePath _folder;
-        bool         _bRecursive{ SW_FALSE }; ///< 하위 폴더의 파일까지 모은다(검색 중) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool         _bRecursive{ SW_FALSE }; ///< 하위 폴더의 파일까지 모은다(검색 중)
     };
 } // namespace sw::editor
 
