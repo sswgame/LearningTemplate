@@ -275,6 +275,8 @@ namespace sw
         if ( savedSceneID->empty() || bStaysInScene )
         {
             const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, bytes );
+            if ( bRestored )
+                minigameFlow.discardPendingResults();
             if ( bRestored && bInMinigame )
                 minigameFlow.applySavedMinigame( std::move( listFrame ) );
             publishSlotLoaded( slot, bRestored, onApplied );
@@ -305,7 +307,10 @@ namespace sw
             publishSlotLoaded( pending._slot, false, pending._onApplied );
             return;
         }
-        publishSlotLoaded( pending._slot, _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes ), pending._onApplied );
+        const bool bRestored = _owner.restoreSnapshot( SerializePurpose::SaveGame, pending._bytes );
+        if ( bRestored )
+            _owner.getSubsystem<MinigameFlow>().discardPendingResults();
+        publishSlotLoaded( pending._slot, bRestored, pending._onApplied );
     }
 
     void GameSaveSlots::publishSlotLoaded( const string& slot, bool bLoaded, const AppliedFunction& onApplied )

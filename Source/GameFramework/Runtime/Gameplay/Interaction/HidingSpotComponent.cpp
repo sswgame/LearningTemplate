@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 
-#include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
@@ -22,7 +22,7 @@ namespace sw
         struct HidingSpotComponentInternal
         {
             // 리터럴 태그다 — 스텝마다 부르는 곳에서 문자열을 intern 하지 않는다.
-            static TagID           getHiddenTag() { return AIStimulusSourceComponent::getHiddenTag(); }
+            static TagID           getHiddenTag() { return TargetFilter::getHiddenTag(); }
             static constexpr TagID getHideActivityTag() { return "Activity.Hide"_tag; }
             /** @brief 상호작용이 닿는 거리의 이 배율 밖이면 걸어 나간 것이다(진행 중 상호작용의 유지 배율과 같은 값 — `InteractorComponent`). */
             static constexpr float32 kKeepDistanceScale = 1.25f;

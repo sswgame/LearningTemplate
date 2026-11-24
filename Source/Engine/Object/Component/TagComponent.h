@@ -3,6 +3,8 @@
  * @brief GameObject 에 태그 집합을 붙이는 컴포넌트입니다.
  */
 #pragma once
+#include "Core/Foundation/StdHeaders.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -49,15 +51,20 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 상태 읽기가 `_tags` 를 채웠으면 색인을 맞춥니다. */
         void onPostLoad() override;
+        /** @brief 실행 중에 쓴 태그(쓰러짐 · 숨음)를 걷고 처음 쓰기 전의 태그로 되돌립니다(풀 반환). 쓴 적이 없으면 그대로입니다. */
+        [[nodiscard]] SpawnStateReset resetToSpawnState() override;
 
     private:
+        /** @brief 실행 중의 첫 쓰기 앞에서 지금 태그를 스폰 태그로 적습니다. 저작 값은 직렬화기가 `_tags` 를 직접 채우므로 이 길을 지나지 않습니다. */
+        void captureSpawnTags();
         /** @brief 소유 매니저가 구조 변경을 얼려 두었으면(컴포넌트 틱 중) true 입니다. */
         bool isStructureFrozen() const;
         /** @brief 색인의 칸을 지금 태그에 맞춥니다. 등록 전(색인이 없음)이면 할 일이 없습니다. `_tags` 를 바꾸는 곳은 모두 이 함수를 부릅니다. */
         void syncTagIndex();
 
         PROPERTY()
-        TagContainer _tags;
-        TagIndex*    _pTagIndex; ///< 등록한 매니저의 태그 색인이다. 등록 전과 해제 뒤에는 nullptr 이다
+        TagContainer           _tags;
+        optional<TagContainer> _spawnTags; ///< 처음 쓰기 전의 태그(쓴 적이 없으면 비었다)
+        TagIndex*              _pTagIndex; ///< 등록한 매니저의 태그 색인이다. 등록 전과 해제 뒤에는 nullptr 이다
     };
 } // namespace sw

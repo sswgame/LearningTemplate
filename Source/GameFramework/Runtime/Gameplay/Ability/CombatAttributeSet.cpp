@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
@@ -107,7 +108,7 @@ namespace sw
 
     TagID CombatAttributeSet::getDeadTag()
     {
-        return "State.Dead"_tag;
+        return TargetFilter::getDeadTag();
     }
 
     TagID CombatAttributeSet::getDeathEventTag()

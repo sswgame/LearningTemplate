@@ -170,6 +170,24 @@ namespace sw
         { return value._name == _definition._matchScore; } );
     }
 
+    void MinigameStack::pushResult( const string& scenePath, MinigameResult result )
+    {
+        _listResult.push_back( PendingResult{ scenePath, std::move( result ) } );
+    }
+
+    vector<MinigameResult> MinigameStack::takeResults( const string& scenePath )
+    {
+        vector<MinigameResult> listTaken;
+        for ( PendingResult& pending : _listResult )
+        {
+            if ( pending._scenePath == scenePath )
+                listTaken.push_back( std::move( pending._result ) );
+        }
+        VectorUtil::removeIf( _listResult, [&scenePath]( const PendingResult& pending )
+        { return pending._scenePath == scenePath; } );
+        return listTaken;
+    }
+
     void MinigameStack::push( MinigameFrame frame )
     {
         _listFrame.push_back( std::move( frame ) );
