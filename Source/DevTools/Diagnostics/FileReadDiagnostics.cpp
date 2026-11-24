@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/File/FileReadDiagnostics.h"
+#include "DevTools/Diagnostics/FileReadDiagnostics.h"
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Foundation/Constants.h"
