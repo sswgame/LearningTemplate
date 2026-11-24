@@ -131,8 +131,6 @@ namespace sw
         static constexpr uint32 kMountTypeID        = 6;  ///< 말 엔티티(`HubPawnPose`)
         static constexpr uint32 kMaxMount           = 8;  ///< 씬에 둘 수 있는 말 수(`_mountNumber` 의 Max)
         static constexpr uint32 kMaxFloor           = 16; ///< 씬에 둘 수 있는 움직이는 바닥 수(`_floorNumber` 의 Max)
-        /** @brief 서버가 정한 바닥 틱 차이를 다시 맞추는 어긋남(틱)입니다 — 흔들림에 몰려 온 입력은 이 안이라 차이를 그대로 두고, 시계가 벌어졌을 때만 옮긴다. */
-        static constexpr int64 kMaxFloorTickDrift = 8;
         /** @brief 말 n 의 엔티티 id 는 이 수 + n 입니다. 아바타 번호(`HubWorld::kPlacementIDBase` 아래) 위다. */
         static constexpr uint32 kMountEntityIDBase = 200000;
 
@@ -158,12 +156,16 @@ namespace sw
         [[nodiscard]] static HubPawnState toAbsoluteState( const WorldOrigin& origin, const HubPawnState& state );
         /** @brief 두 상태가 같다고 볼 만큼 가까운가입니다 — 같은 몸(탈것 번호)이고 자리가 @p tolerance 안이며 이동 방식 · 걸음새가 같다. */
         static bool isClose( const HubPawnState& left, const HubPawnState& right, float32 tolerance );
-        /** @brief 서버가 이 입력 틱에 쓸 바닥 틱 차이입니다 — 지금 차이가 @p serverTick 과 `kMaxFloorTickDrift` 안이면 그대로, 아니면 새로 맞춥니다. 클라이언트가 고르지 못한다. */
-        static void updateFloorTickOffset( uint32 serverTick, uint32 inputTick, HubPawnState& inoutState );
         /** @brief 지금 디딘 바닥에서 자기 폰이 밀린 거리(m)입니다 — 바닥 위에서 걷지 않는데 이 값이 자라면 실려 가지 못한 것이다(감시 값). 바닥 위가 아니면 0 입니다. */
         float32 getFloorSlip() const { return _floorSlip; }
         /** @brief 자기 폰이 디딘 움직이는 바닥의 번호입니다(0 이면 없다). */
         int32 getFloorNumber() const { return static_cast<int32>( _floorNumber ); }
+        /** @brief 그 바닥 기준의 자기 폰 자리입니다(`getFloorNumber` 가 0 이면 뜻이 없다). */
+        const float3& getFloorLocalPosition() const { return _floorLocalPosition; }
+        /** @brief 움직이는 바닥 위에 보이는 첫 남의 폰이 디딘 바닥의 번호입니다(0 이면 없다). */
+        int32 getRemoteFloorNumber() const;
+        /** @brief 그 남의 폰을 그린 자리입니다(바닥 기준). */
+        float3 getRemoteFloorLocalPosition() const;
 
     private:
         enum class Role : uint8
@@ -193,10 +195,14 @@ namespace sw
         struct RemotePawn
         {
             GameObjectHandle _object{};
+            float3           _floorLocalPosition{}; ///< 그린 바닥 기준의 자리(`_floorNumber` 일 때)
             uint32           _entityID{ 0 };
+            uint8            _floorNumber{ 0 };  ///< 디딘 바닥의 번호(0 이면 없다)
             uint8            _bSeen{ SW_FALSE }; ///< 이번 프레임의 보이는 목록에 있다
         };
 
+        /** @brief 바닥 위에 보이는 첫 남의 폰입니다. 없으면 nullptr 입니다. */
+        const RemotePawn* findRemoteRider() const;
         /** @brief 넷 걸음 한 프레임입니다(틱 뒤 · 게임 스레드). */
         void runNetFrame( GameObjectManager& manager );
         /** @brief 허브 링크가 섰으면 역할에 맞는 복제기를 한 번 세웁니다. */
@@ -246,8 +252,6 @@ namespace sw
         uint8 findFloorNumber( const GameObjectManager& manager, const GameObject& pawnObject ) const;
         /** @brief 바닥 @p floorNumber 의 틱 @p tick 자세입니다. 없는 바닥이면 false 입니다. */
         [[nodiscard]] bool computeFloorPose( const GameObjectManager& manager, uint8 floorNumber, float64 tick, float3& outPosition, quaternion& outRotation ) const;
-        /** @brief 이 걸음의 바닥 틱입니다. 서버가 아직 정하지 않았으면 비어 있습니다. */
-        static optional<int64> findFloorTick( const HubPawnState& state, uint32 inputTick );
         /** @brief 네트 틱 @p netTick 을 씬의 바닥이 읽는 조종 틱으로 알립니다. */
         void publishFloorTick( ControlSystem& control, int64 netTick ) const;
         /** @brief 클라이언트가 지금 그리는 바닥 틱(소수)입니다. */

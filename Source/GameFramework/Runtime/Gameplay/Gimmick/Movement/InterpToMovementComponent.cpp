@@ -63,12 +63,6 @@ namespace sw
             _bWarnedNoTick = true;
             return;
         }
-        const SceneNetLink& link = context.getManager().getSubsystem<SceneNetLink>();
-        if ( link.isBound() && link.get()._role == NetLinkRole::Server )
-        {
-            applySeconds( static_cast<float64>( link.getServerClock().getWholeTick() ) * static_cast<float64>( NetClock::kTickSeconds ) ); // 서버의 바닥은 월드의 서버 시계다
-            return;
-        }
         // 서버 틱을 알리는 틱 뒤에 돈다(같은 프레임의 값). 바뀐 걸기는 틱 뒤에 들어 다음 프레임부터 순서가 맞는다.
         const SubTickHandle& source = pControl->getServerTickSource();
         if ( source != _boundTickSource )
@@ -79,7 +73,20 @@ namespace sw
                 (void)addSubTickPrerequisite( kApplySubTickID, source, TickPrerequisiteKind::ReadsWrites );
             _boundTickSource = source;
         }
-        applyTick( pControl->getServerTick() );
+        const optional<float64> seconds = findCurrentSeconds( context.getManager() );
+        if ( seconds.has_value() )
+            applySeconds( *seconds );
+    }
+
+    optional<float64> InterpToMovementComponent::findCurrentSeconds( const GameObjectManager& manager ) const
+    {
+        const SceneNetLink& link = manager.getSubsystem<SceneNetLink>();
+        if ( link.isBound() && link.get()._role == NetLinkRole::Server )
+            return static_cast<float64>( link.getServerClock().getWholeTick() ) * static_cast<float64>( NetClock::kTickSeconds ); // 서버의 바닥은 월드의 서버 시계다
+        const ControlSystem* pControl = ControlSystem::find( manager );
+        if ( pControl == nullptr )
+            return nullopt;
+        return static_cast<float64>( pControl->getServerTick() ) * static_cast<float64>( _tickSeconds );
     }
 
     void InterpToMovementComponent::setPath( const vector<float3>& listWaypoint, float32 segmentSeconds, bool bPingPong )

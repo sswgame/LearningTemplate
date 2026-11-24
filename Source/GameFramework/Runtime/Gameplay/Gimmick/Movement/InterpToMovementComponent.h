@@ -62,6 +62,8 @@ namespace sw
         void applySeconds( float64 seconds );
         /** @brief 바닥 시각 @p seconds 의 자세입니다(씬 자리) — 시각의 순수 함수라 서버 · 예측 · 다시 돌리기 · 원격 표시가 같은 값을 얻습니다. 시작하지 않았으면 false 입니다. */
         [[nodiscard]] bool computePose( float64 seconds, float3& outPosition, quaternion& outRotation ) const;
+        /** @brief 이번 프레임의 바닥 시각(초)입니다 — 서버는 월드의 서버 시계, 그 밖은 조종 틱(예측하는 쪽이 알린 차이 포함). 조종 시스템이 없는 씬이면 없음입니다. */
+        [[nodiscard]] optional<float64> findCurrentSeconds( const GameObjectManager& manager ) const;
         /** @brief 회전 빠르기(요, 라디안/초)를 정합니다 — 코드로 세우는 쪽이 플레이 시작 전에 부릅니다. */
         void    setTurnRate( Radians turnRate ) { _turnRate = turnRate; }
         Radians getTurnRate() const { return _turnRate; }

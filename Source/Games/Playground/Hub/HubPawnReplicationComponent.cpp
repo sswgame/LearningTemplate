@@ -8,11 +8,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -25,6 +27,8 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -442,10 +446,10 @@ namespace sw
         {
             lastTick         = inputTick;
             input._inputTick = *inputTick;
-            updateFloorTickOffset( _tick, *inputTick, state );
+            TickedFloorOffset::update( _tick, *inputTick, state._floorTickOffset, state._bFloorTickKnown );
             pawn._floorTickOffset = state._floorTickOffset;
             pawn._bFloorTickKnown = state._bFloorTickKnown;
-            pawn._floorTick       = findFloorTick( state, *inputTick ).value_or( 0 );
+            pawn._floorTick       = TickedFloorOffset::findTick( state._floorTickOffset, state._bFloorTickKnown, *inputTick ).value_or( 0 );
             const bool bOwnPawn   = input._pawnEntityID == makePawnEntityID( pawn._avatarID, state._mountNumber );
             if ( pRemote != nullptr )
                 pRemote->receiveIntent( *inputTick, bOwnPawn ? input._intent : Internal::makeNeutralIntent( input._intent ) ); // 상호작용(타기 · 내리기)은 이 의도로 서버의 폰이 한다
@@ -794,6 +798,8 @@ namespace sw
                 if ( pInteraction != nullptr )
                     pInteraction->setActive( false );
             }
+            pRemote->_floorNumber                     = floorNumber;
+            pRemote->_floorLocalPosition              = floorNumber != 0 ? float3::transform( position - floorPosition, std::as_const( floorRotation ).inverse() ) : float3{};
             pRemote->_bSeen                           = SW_TRUE;
             GameObject*                   pObject     = manager.resolveGameObject( pRemote->_object );
             SceneComponent*               pRoot       = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
@@ -823,7 +829,7 @@ namespace sw
                                                             uint32 avatarID, CharacterMotionPass pass ) const
     {
         const WorldOrigin&    origin    = manager.getWorldOrigin();
-        const optional<int64> floorTick = findFloorTick( state, input._inputTick );
+        const optional<int64> floorTick = TickedFloorOffset::findTick( state._floorTickOffset, state._bFloorTickKnown, input._inputTick );
         if ( floorTick.has_value() && _pFloorStep != nullptr )
             _pFloorStep->beginTick( *floorTick );
         const HubPawnState  local    = toLocalState( origin, state );
@@ -849,23 +855,6 @@ namespace sw
         if ( floorTick.has_value() && _pFloorStep != nullptr )
             _pFloorStep->endTick( *floorTick );
         return next;
-    }
-
-    void HubPawnReplicationComponent::updateFloorTickOffset( uint32 serverTick, uint32 inputTick, HubPawnState& inoutState )
-    {
-        const int64 wanted = static_cast<int64>( serverTick ) - static_cast<int64>( inputTick );
-        const int64 drift  = wanted - static_cast<int64>( inoutState._floorTickOffset );
-        if ( inoutState._bFloorTickKnown == SW_TRUE && -kMaxFloorTickDrift <= drift && drift <= kMaxFloorTickDrift )
-            return; // 몰려 온 입력은 저마다 한 틱씩 간다 — 바닥이 명령 사이에서 멈추거나 뛰지 않는다
-        inoutState._floorTickOffset = static_cast<int32>( wanted );
-        inoutState._bFloorTickKnown = SW_TRUE;
-    }
-
-    optional<int64> HubPawnReplicationComponent::findFloorTick( const HubPawnState& state, uint32 inputTick )
-    {
-        if ( state._bFloorTickKnown == SW_FALSE )
-            return nullopt;
-        return static_cast<int64>( inputTick ) + static_cast<int64>( state._floorTickOffset );
     }
 
     void HubPawnReplicationComponent::publishFloorTick( ControlSystem& control, int64 netTick ) const
@@ -918,6 +907,28 @@ namespace sw
             _floorSlip += float3::getDistance( local, _floorLocalPosition );
         _floorNumber        = bOnFloor ? floorNumber : uint8{ 0 };
         _floorLocalPosition = local;
+    }
+
+    const HubPawnReplicationComponent::RemotePawn* HubPawnReplicationComponent::findRemoteRider() const
+    {
+        for ( const RemotePawn& remote : _listRemotePawn )
+        {
+            if ( remote._floorNumber != 0 )
+                return &remote;
+        }
+        return nullptr;
+    }
+
+    int32 HubPawnReplicationComponent::getRemoteFloorNumber() const
+    {
+        const RemotePawn* pRemote = findRemoteRider();
+        return pRemote != nullptr ? static_cast<int32>( pRemote->_floorNumber ) : 0;
+    }
+
+    float3 HubPawnReplicationComponent::getRemoteFloorLocalPosition() const
+    {
+        const RemotePawn* pRemote = findRemoteRider();
+        return pRemote != nullptr ? pRemote->_floorLocalPosition : float3{};
     }
 
     HubPawnState HubPawnReplicationComponent::captureState( GameObjectManager& manager, const GameObject& pawnObject ) const
@@ -1061,8 +1072,43 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        struct HubPawnReplicationDevInternal
+        {
+            /** @brief 바닥 위의 자리를 로그에 남깁니다 — 두 클라이언트의 줄을 `Scripts net-pair mmo` 가 견줍니다(한쪽의 자기 자리와 다른 쪽이 본 자리). */
+            static bool runFloorStatus( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
+                const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
+                GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+                // 예측하는 클라이언트는 씬에 하나다 — 둘이면 오류로 명령을 보내지 않는다.
+                const HubPawnReplicationComponent* pComponent = pManager != nullptr ? pManager->getComponentRegistry().findUnique<HubPawnReplicationComponent>( []( const HubPawnReplicationComponent& component )
+                { return component.getPredictedValue() != 0; } )
+                                                                                    : nullptr;
+                if ( pComponent == nullptr )
+                {
+                    outReply = "no hub pawn replication in the scene";
+                    return true;
+                }
+                const float3                             own  = pComponent->getFloorLocalPosition();
+                const float3                             seen = pComponent->getRemoteFloorLocalPosition();
+                StringBuilder<constant::buffer::kMax256> reply;
+                reply.appendFormat( "floor self=%# x=%# z=%# seen=%# x=%# z=%#", pComponent->getFloorNumber(), own._x, own._z, pComponent->getRemoteFloorNumber(), seen._x, seen._z );
+                outReply = string( reply.view() );
+                SW_LOG_INFO_ID( "Hub.FloorStatus", "[Hub] %#", outReply.c_str() );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( HubFloor, "hub.floor", "hub.floor", "Log where this pawn and the pawn it sees stand on the moving floor", &HubPawnReplicationDevInternal::runFloorStatus );
+
     SW_AUTOMATION_GETTER_WATCH( hubPawnFloorSlip, "Hub.PawnFloorSlip", "Distance the own pawn slid on the moving floor it stands on (metres)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getFloorSlip );
     SW_AUTOMATION_GETTER_WATCH( hubPawnFloor, "Hub.PawnFloor", "Number of the moving floor the own pawn stands on (0 none)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getFloorNumber );
+    SW_AUTOMATION_GETTER_WATCH( hubRemotePawnFloor, "Hub.RemotePawnFloor", "Number of the moving floor another player's pawn is shown standing on (0 none)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getRemoteFloorNumber );
     SW_AUTOMATION_GETTER_WATCH( hubPawnPredicted, "Hub.PawnPredicted", "1 while this client predicts its own pawn", HubPawnReplicationComponent, &HubPawnReplicationComponent::getPredictedValue );
     SW_AUTOMATION_GETTER_WATCH( hubPawnCorrections, "Hub.PawnCorrections", "Times the server state rewound the predicted pawn", HubPawnReplicationComponent,
                                 &HubPawnReplicationComponent::getCorrectionCount );

@@ -9,6 +9,8 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
@@ -21,6 +23,20 @@ namespace sw
 {
     class GameObjectManager;
     class InterpToMovementComponent;
+
+    /**
+     * @brief 입력 틱에서 그 명령을 풀 바닥(서버) 틱을 내는 차이입니다 — 서버가 정해 소유자 상태로 보내고 예측이 그대로 씁니다. 클라이언트가 고르지 못한다.
+     */
+    struct SW_GF_API TickedFloorOffset
+    {
+        /** @brief 다시 맞추는 어긋남(틱)입니다 — 흔들림에 몰려 온 입력은 이 안이라 차이를 그대로 두고, 시계가 벌어졌을 때만 옮긴다. */
+        static constexpr int64 kMaxDrift = 8;
+
+        /** @brief 서버가 이 입력 틱에 쓸 차이로 고칩니다 — 지금 차이가 @p serverTick 과 `kMaxDrift` 안이면 그대로입니다(명령마다 바닥이 한 틱씩 간다). */
+        static void update( uint32 serverTick, uint32 inputTick, int32& inoutOffset, uint8& inoutbKnown );
+        /** @brief 입력 틱 @p inputTick 의 바닥 틱입니다. 아직 모르면 없음입니다. */
+        [[nodiscard]] static optional<int64> findTick( int32 offset, uint8 bKnown, uint32 inputTick );
+    };
 
     /**
      * @class TickedFloorStep

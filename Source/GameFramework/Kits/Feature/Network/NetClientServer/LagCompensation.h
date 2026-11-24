@@ -34,10 +34,11 @@ namespace sw
     /** @brief 한 틱의 몸 하나입니다. */
     struct LagRecord
     {
-        float3              _position{}; ///< 구의 중심(`_height` 가 0), 캡슐의 발(`_height` 가 있으면)
+        float3              _position{}; ///< `_frameNumber` 기준 — 구의 중심(`_height` 가 0), 캡슐의 발(`_height` 가 있으면)
         float32             _radius{ 0.5f };
         float32             _height{ 0.0f }; ///< 발에서 캡슐 꼭대기까지. 반지름의 두 배보다 작으면 발 위의 구 하나다. 0 이면 `_position` 이 중심인 구다
         uint32              _entityID{ 0 };
+        uint32              _frameNumber{ 0 };   ///< 자리의 기준 — 0 이면 절대, 아니면 게임이 매긴 움직이는 바닥의 번호다(다른 두 틱 사이는 잇지 않는다). 판정 앞에 게임이 절대 자리로 바꾼다
         uint32              _teleportCount{ 0 }; ///< 순간 이동 · 다시 태어남마다 바뀌는 번호. 다른 두 틱 사이는 잇지 않는다
         vector<LagBodyPose> _listBody{};         ///< 히트박스 바디의 자세(에셋 바디 순서). 비었으면 캡슐이 곧 맞음 상자다
 
@@ -70,8 +71,10 @@ namespace sw
          * @brief 그 시각에 두께 @p radius 의 선분(@p start ~ @p end — 근접 칼날)이 닿은 몸의 id 를 모두 @p outListEntityID 뒤에 붙입니다(가까운 차례가 아니다). 선분이 몸 안에서 시작해도 닿은 것입니다.
          * @details 몸은 `raycastAt` 과 같은 되감은 캡슐이다. 선분 · 캡슐 축의 최단 거리로 본다.
          */
-        void   collectTouchedAt( float64 tick, const float3& start, const float3& end, float32 radius, uint32 ignoreEntityID, vector<uint32>& outListEntityID ) const;
-        uint32 getNewestTick() const { return _listFrame.getNewestTick(); }
+        void collectTouchedAt( float64 tick, const float3& start, const float3& end, float32 radius, uint32 ignoreEntityID, vector<uint32>& outListEntityID ) const;
+        /** @brief 모은 표본(`collectAt`)에서 선분이 닿은 몸을 모읍니다 — 움직이는 바닥 기준의 표본을 절대 자리로 바꾼 뒤 쓴다. */
+        static void collectTouched( const vector<LagRecord>& listRecord, const float3& start, const float3& end, float32 radius, vector<uint32>& outListEntityID );
+        uint32      getNewestTick() const { return _listFrame.getNewestTick(); }
 
     private:
         static const LagRecord* findRecord( const vector<LagRecord>& listRecord, uint32 entityID );

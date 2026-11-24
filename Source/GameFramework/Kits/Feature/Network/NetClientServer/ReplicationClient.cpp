@@ -84,14 +84,6 @@ namespace sw
         return pLatest != nullptr && pLatest->_ownerState._bPresent == SW_TRUE ? &pLatest->_ownerState : nullptr;
     }
 
-    optional<int64> ReplicationClient::findServerTickOffset() const
-    {
-        const NetOwnerState* pOwner = findOwnerState();
-        if ( pOwner == nullptr )
-            return nullopt;
-        return static_cast<int64>( getLatest()->_tick ) - static_cast<int64>( pOwner->_inputTick );
-    }
-
     NetHandleResult ReplicationClient::receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body )
     {
         (void)context; // 클라이언트가 받는 쪽이므로 상대는 서버 하나뿐이다

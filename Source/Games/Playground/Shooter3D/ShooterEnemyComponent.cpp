@@ -362,7 +362,7 @@ namespace sw
         if ( pMovement != nullptr )
         {
             pMovement->setSuspended( _phase != ShooterEnemyPhase::Chasing );
-            (void)pMovement->stepMovement( pGameMode->getBoxes(), step );
+            (void)pMovement->stepMovement( pGameMode->getBoxes(), pGameMode->getFloorSteps(), step );
             _position              = pMovement->getFeetPosition()._value;
             const float3& velocity = pMovement->getMoveVelocity();
             const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );

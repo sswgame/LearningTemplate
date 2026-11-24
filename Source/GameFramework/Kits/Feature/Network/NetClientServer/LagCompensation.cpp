@@ -117,8 +117,10 @@ namespace sw
             return true;
         }
         ratio.breakAt( pLowRecord->_teleportCount, pHighRecord->_teleportCount );
-        outRecord           = *pLowRecord;
-        outRecord._position = ratio.interpolate( pLowRecord->_position, pHighRecord->_position );
+        ratio.breakAt( pLowRecord->_frameNumber, pHighRecord->_frameNumber ); // 바닥을 옮겨 탄 두 자리는 기준이 다르다
+        outRecord              = *pLowRecord;
+        outRecord._frameNumber = ratio.choose( pLowRecord->_frameNumber, pHighRecord->_frameNumber );
+        outRecord._position    = ratio.interpolate( pLowRecord->_position, pHighRecord->_position );
         if ( pLowRecord->_listBody.size() != pHighRecord->_listBody.size() )
         {
             outRecord._listBody = ratio.choose( pLowRecord->_listBody, pHighRecord->_listBody ); // 바디가 다시 만들어졌다 — 이을 짝이 없다
@@ -214,7 +216,12 @@ namespace sw
     {
         vector<LagRecord> listPast;
         collectAt( tick, ignoreEntityID, listPast );
-        for ( const LagRecord& past : listPast )
+        collectTouched( listPast, start, end, radius, outListEntityID );
+    }
+
+    void LagCompensationHistory::collectTouched( const vector<LagRecord>& listRecord, const float3& start, const float3& end, float32 radius, vector<uint32>& outListEntityID )
+    {
+        for ( const LagRecord& past : listRecord )
         {
             const float3  bottom     = past._height > 0.0f ? past._position + float3{ 0.0f, past._radius, 0.0f } : past._position;
             const float32 axisLength = MathUtil::max( 0.0f, past._height - past._radius * 2.0f );

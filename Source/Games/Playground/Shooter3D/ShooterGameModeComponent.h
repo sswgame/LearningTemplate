@@ -35,6 +35,7 @@
 
 #include "Games/Playground/Shooter3D/ShooterBlockerComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
+#include "Games/Playground/Shooter3D/ShooterFloor.h"
 
 namespace sw
 {
@@ -166,7 +167,8 @@ namespace sw
         SW_REGISTERED_COMPONENT( ShooterGameModeComponent );
 
         /** @brief `ShooterEnemyView::_kindIndex` 의 정예 표시입니다. */
-        static constexpr uint8 kEliteKindIndex = 255;
+        static constexpr uint32 kMaxFloor       = 8; ///< 씬에 둘 수 있는 움직이는 바닥 수(`ShooterPawnNetState::_floorNumber` 의 Max)
+        static constexpr uint8  kEliteKindIndex = 255;
 
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
@@ -188,7 +190,13 @@ namespace sw
         void spawnTracer( const float3& from, const float3& to, float32 width, const float4& color, float32 lifetime );
 
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
-        const vector<ShooterArenaBox>&  getBoxes() const { return _listBox; }
+        const vector<ShooterArenaBox>& getBoxes() const { return _listBox; }
+        /** @brief 이번 프레임의 움직이는 바닥입니다(네트가 움직이지 않는 몸 — 적 · 혼자 하는 플레이어). */
+        const vector<ShooterFloorStep>& getFloorSteps() const { return _listFloorStep; }
+        /** @brief 바닥 시각 @p fromSeconds 에서 @p toSeconds 까지의 걸음을 냅니다. 차례가 곧 바닥 번호다(서버 · 클라이언트가 같다). */
+        void computeFloorSteps( float64 fromSeconds, float64 toSeconds, vector<ShooterFloorStep>& outListFloor ) const;
+        /** @brief 바닥 @p floorNumber(1 부터)의 그 시각 자세(절대)입니다. 없거나 사라졌으면 false 입니다. */
+        [[nodiscard]] bool              computeFloorPose( uint8 floorNumber, float64 seconds, float3& outPosition, float32& outYaw ) const;
         const vector<ShooterEnemyView>& getEnemyViews() const { return _listEnemyView; }
         /** @brief @p from 에서 가장 가까운 산 플레이어입니다(적이 이쪽으로 온다). 산 사람이 없으면 가장 가까운 쓰러진 사람이고, 판을 두는 사람이 없으면 nullptr 입니다. */
         const ShooterPlayerView* findNearestPlayer( const AbsolutePosition& from ) const;
@@ -257,7 +265,18 @@ namespace sw
         };
 
     private:
+        /** @brief 움직이는 바닥 하나입니다. */
+        struct ArenaFloor
+        {
+            GameObjectHandle _object{};
+            float3           _halfSize{};
+        };
+
         void collectBoxes();
+        /** @brief 씬의 움직이는 바닥(`InterpToMovementComponent` 를 가진 상자 강체)을 이름 차례로 모읍니다 — 차례가 곧 복제하는 바닥 번호라 서버 · 클라이언트가 같아야 한다. */
+        void collectFloors();
+        /** @brief 이번 프레임의 바닥 걸음을 냅니다(`getFloorSteps`). */
+        void updateFloorSteps();
         void startPacing();
         void applyDirectorEvents();
         /** @brief 페이싱 프로필이 다시 읽혔으면(핫 리로드) 판을 이어 새 프로필로 옮깁니다(`AIDirector::rebindProfile`). 구조가 바뀌었으면 이 판은 옛 프로필로 돈다. */
@@ -321,6 +340,9 @@ namespace sw
         int32 _matchDownLimit;
 
         vector<ShooterArenaBox>             _listBox;
+        vector<ArenaFloor>                  _listFloor;     ///< 움직이는 바닥(번호 차례)
+        vector<ShooterFloorStep>            _listFloorStep; ///< 이번 프레임의 바닥 걸음
+        float64                             _floorSeconds;  ///< 지난 프레임의 바닥 시각
         vector<ShooterEnemyView>            _listEnemyView;
         shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
         SharedAssetRef<SpawnTable>          _pTable;

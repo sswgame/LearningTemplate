@@ -33,6 +33,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
 
 #include "Games/Playground/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"
@@ -78,11 +79,11 @@ namespace sw
             static constexpr int32 kMaxTicksPerFrame = 4;
 
             /** @brief 같은 오브젝트 몸 이동 하나의 한 틱입니다 — 서버 시뮬레이션과 클라이언트 재시뮬레이션이 같은 이 함수를 쓴다. */
-            static ShooterMoveState simulateTick( const ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ShooterMoveState& state,
+            static ShooterMoveState simulateTick( const ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const vector<ShooterFloorStep>& listFloor, const ShooterMoveState& state,
                                                   const ControlIntent& intent, float32 tickInterval )
             {
                 bool bLanded = false;
-                return movement.simulate( listBox, state, movement.makeInput( intent ), tickInterval, bLanded );
+                return movement.simulate( listBox, listFloor, state, movement.makeInput( intent ), tickInterval, bLanded );
             }
 
             /** @brief 움직임 없이 시선만 남긴 의도입니다 — 쓰러진 몸 · 멈춘 몸이 쓴다. */
@@ -169,6 +170,7 @@ namespace sw
         , _listRemotePawn{}
         , _listConnectionScratch{}
         , _listLagScratch{}
+        , _listFloorScratch{}
         , _listEnemyEntityID{}
         , _listEntityScratch{}
         , _lagHistory{ ReplicationServerConfig{}._maxViewLagTicks + 1 } // 보던 시각의 되감기 한도(서버 클램프)까지 기억한다
@@ -184,8 +186,10 @@ namespace sw
         , _sentClaimCount{ 0 }
         , _confirmedClaimCount{ 0 }
         , _rejectedClaimCount{ 0 }
+        , _floorTickOffset{ 0 }
         , _pendingStepCount{ 0 }
         , _role{ Role::None }
+        , _bFloorTickKnown{ SW_FALSE }
         , _bSeatsReported{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -267,6 +271,7 @@ namespace sw
         _pawnEntityID     = 0;
         _reconciledTick   = 0;
         _pendingStepCount = 0;
+        _bFloorTickKnown  = SW_FALSE;
         _bSeatsReported   = SW_FALSE;
         pMovement->setNetDriven( true );
         // 클라이언트가 알리는 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
@@ -328,9 +333,8 @@ namespace sw
             { netPawn.stopRole(); } );
             return;
         }
-        ShooterBodyMovementComponent*  pMovement = findMovement();
-        const vector<ShooterArenaBox>* pListBox  = findArenaBoxes();
-        const bool                     bIdle     = _role == Role::None || pMovement == nullptr || pListBox == nullptr || context.getDeltaTime() <= 0.0f;
+        ShooterBodyMovementComponent* pMovement = findMovement();
+        const bool                    bIdle     = _role == Role::None || pMovement == nullptr || findGameMode() == nullptr || context.getDeltaTime() <= 0.0f;
         if ( bIdle )
             return;
         // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
@@ -365,9 +369,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ShooterNetPawnComponent::runServerFrame( GameObjectManager& manager )
     {
-        const NetLinkValue*            pLink    = SceneNetLink::findBoundFor( *this );
-        const vector<ShooterArenaBox>* pListBox = findArenaBoxes();
-        if ( _role != Role::Server || pListBox == nullptr || pLink == nullptr )
+        const NetLinkValue*             pLink     = SceneNetLink::findBoundFor( *this );
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        if ( _role != Role::Server || pGameMode == nullptr || pLink == nullptr )
             return;
         if ( _bSeatsReported == SW_FALSE )
         {
@@ -379,7 +383,7 @@ namespace sw
         while ( _tick < presentTick )
         {
             ++_tick;
-            stepServer( manager, *pLink->_pPeers, *pListBox );
+            stepServer( manager, *pLink->_pPeers, *pGameMode );
         }
         syncServerPawnList( manager );
         for ( ServerPawn& pawn : _listServerPawn )
@@ -388,13 +392,13 @@ namespace sw
         }
     }
 
-    void ShooterNetPawnComponent::stepServer( GameObjectManager& manager, INetPeers& peers, const vector<ShooterArenaBox>& listBox )
+    void ShooterNetPawnComponent::stepServer( GameObjectManager& manager, INetPeers& peers, const ShooterGameModeComponent& gameMode )
     {
         _server.beginTick( _tick ); // 입력을 꺼내기 전에 — 보던 틱은 서버의 지금 틱으로 자른다(`getClientViewTick`)
         assignSeats( peers );
         for ( ServerPawn& pawn : _listServerPawn )
         {
-            stepServerPawn( manager, pawn, listBox );
+            stepServerPawn( manager, pawn, gameMode );
         }
         recordBodies( manager );
         publishPawnStates( manager );
@@ -461,7 +465,7 @@ namespace sw
         }
     }
 
-    void ShooterNetPawnComponent::stepServerPawn( GameObjectManager& manager, ServerPawn& pawn, const vector<ShooterArenaBox>& listBox )
+    void ShooterNetPawnComponent::stepServerPawn( GameObjectManager& manager, ServerPawn& pawn, const ShooterGameModeComponent& gameMode )
     {
         using Internal                          = ShooterNetPawnComponentInternal;
         pawn._lastInputTick                     = nullopt;
@@ -493,15 +497,20 @@ namespace sw
                 else
                     ++_rejectedClaimCount; // 아직 오지 않은 걸음을 지어냈거나 줄이 찼다
             }
-            const bool bDown = pPlayer != nullptr && pPlayer->isAlive() == false; // 쓰러진 몸은 걷지 않는다 — 같은 프레임의 앞 걸음에서 쓰러졌을 수 있다
-            stepMovement( *pMovement, listBox, bDown ? Internal::makeStillIntent( intent ) : intent );
+            const bool bDown = pPlayer != nullptr && pPlayer->isAlive() == false;                         // 쓰러진 몸은 걷지 않는다 — 같은 프레임의 앞 걸음에서 쓰러졌을 수 있다
+            TickedFloorOffset::update( _tick, *inputTick, pawn._floorTickOffset, pawn._bFloorTickKnown ); // 명령마다 바닥은 그 명령의 틱이다
+            pawn._floorTick = TickedFloorOffset::findTick( pawn._floorTickOffset, pawn._bFloorTickKnown, *inputTick ).value_or( static_cast<int64>( _tick ) );
+            stepMovement( *pMovement, gameMode, pawn._floorTick, bDown ? Internal::makeStillIntent( intent ) : intent );
             if ( pPlayer != nullptr )
                 pPlayer->stepNetCommand( manager, intent, _tickInterval, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
             inputTick = _server.popNextIntent( pawn._connectionID, intent, pawnEntityID, _listClaim );
         }
         // 조종자가 있는데 입력이 오지 않았으면 그 자리다(언리얼 서버의 원격 폰 — 온 입력은 다음 틱에 몰아서 걷는다). 조종자가 없는 몸은 빈 의도로 계속 돈다(떨어지던 몸이 공중에 남지 않게).
         if ( pawn._connectionID < 0 )
-            stepMovement( *pMovement, listBox, ControlIntent{} );
+        {
+            pawn._floorTick = static_cast<int64>( _tick );
+            stepMovement( *pMovement, gameMode, pawn._floorTick, ControlIntent{} );
+        }
     }
 
     void ShooterNetPawnComponent::publishPawnStates( const GameObjectManager& manager )
@@ -528,6 +537,19 @@ namespace sw
                 state._weaponIndex = static_cast<uint8>( pPlayer->getWeaponIndex() );
                 state._bAlive      = pPlayer->isAlive() ? SW_TRUE : SW_FALSE;
             }
+            // 바닥 위의 몸은 바닥 기준으로 보낸다 — 받는 쪽은 자기가 그리는 시각의 바닥에 얹는다(절대 자리면 지연만큼 바닥에서 미끄러져 보인다).
+            const ShooterGameModeComponent* pGameMode = findGameMode();
+            float3                          floorPosition;
+            float32                         floorYaw = 0.0f;
+            if ( pGameMode != nullptr )
+                computeFloorSteps( *pGameMode, pawn._floorTick, _listFloorScratch );
+            const uint8 floorNumber = pGameMode != nullptr && state._bOnGround == SW_TRUE ? ShooterFloorStep::findNumber( _listFloorScratch, move._position ) : uint8{ 0 };
+            if ( floorNumber != 0 && pGameMode->computeFloorPose( floorNumber, static_cast<float64>( pawn._floorTick ) * static_cast<float64>( _tickInterval ), floorPosition, floorYaw ) )
+            {
+                state._position    = ShooterFloorStep::toLocal( floorPosition, floorYaw, move._position );
+                state._yaw         = MathUtil::wrapAngle( state._yaw - floorYaw );
+                state._floorNumber = floorNumber;
+            }
             if ( ShooterNetPawnComponentInternal::writeState( state, _bytesScratch ) )
                 _server.setEntity( entityID, kPawnTypeID, _bytesScratch );
             else
@@ -548,8 +570,10 @@ namespace sw
             if ( pMovement == nullptr || pawn._lastInputTick.has_value() == false )
                 continue;
             ShooterOwnerNetState state;
-            state._move         = pMovement->getState();
-            state._pawnEntityID = makePawnEntityID( pawn );
+            state._move            = pMovement->getState();
+            state._pawnEntityID    = makePawnEntityID( pawn );
+            state._floorTickOffset = pawn._floorTickOffset;
+            state._bFloorTickKnown = pawn._bFloorTickKnown;
             if ( pPlayer != nullptr )
             {
                 state._confirmedHitCount = pPlayer->getHitCount();
@@ -702,10 +726,25 @@ namespace sw
             outListObject.push_back( getOwner()->getHandle() );
     }
 
-    void ShooterNetPawnComponent::stepMovement( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ControlIntent& intent ) const
+    void ShooterNetPawnComponent::computeFloorSteps( const ShooterGameModeComponent& gameMode, optional<int64> floorTick, vector<ShooterFloorStep>& outListFloor ) const
     {
+        outListFloor.clear();
+        if ( floorTick.has_value() == false )
+            return; // 서버가 아직 바닥 틱을 알려 주지 않았다
+        const float64 interval = static_cast<float64>( _tickInterval );
+        gameMode.computeFloorSteps( static_cast<float64>( *floorTick - 1 ) * interval, static_cast<float64>( *floorTick ) * interval, outListFloor );
+    }
+
+    optional<int64> ShooterNetPawnComponent::findDisplayFloorTick() const
+    {
+        return TickedFloorOffset::findTick( _floorTickOffset, _bFloorTickKnown, _tick );
+    }
+
+    void ShooterNetPawnComponent::stepMovement( ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode, int64 floorTick, const ControlIntent& intent )
+    {
+        computeFloorSteps( gameMode, floorTick, _listFloorScratch );
         const ShooterMoveState before = movement.getState();
-        const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, intent, _tickInterval );
+        const ShooterMoveState next   = ShooterNetPawnComponentInternal::simulateTick( movement, gameMode.getBoxes(), _listFloorScratch, before, intent, _tickInterval );
         movement.setState( next, float3{ next._position._x - before._position._x, 0.0f, next._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
     }
 
@@ -714,15 +753,15 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ShooterNetPawnComponent::runClientFrame( GameObjectManager& manager )
     {
-        const int32 stepCount                    = _pendingStepCount;
-        _pendingStepCount                        = 0;
-        ShooterBodyMovementComponent*  pMovement = findMovement();
-        const vector<ShooterArenaBox>* pListBox  = findArenaBoxes();
-        if ( _role != Role::Client || pMovement == nullptr || pListBox == nullptr )
+        const int32 stepCount                     = _pendingStepCount;
+        _pendingStepCount                         = 0;
+        ShooterBodyMovementComponent*   pMovement = findMovement();
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        if ( _role != Role::Client || pMovement == nullptr || pGameMode == nullptr )
             return;
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            stepClient( manager, *pMovement, *pListBox );
+            stepClient( manager, *pMovement, *pGameMode );
         }
         pMovement->setDisplayOffset( _smoother.getOffset() );
         syncRemotePawnList( manager );
@@ -732,13 +771,14 @@ namespace sw
             pControl->publishViewTick( _client.getViewTick() );
     }
 
-    void ShooterNetPawnComponent::stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox )
+    void ShooterNetPawnComponent::stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode )
     {
         ++_tick;
-        // 예측하는 이 입력 틱은 서버에서 (입력 틱 + 서버 차이) 틱에 시뮬레이션된다 — 바닥을 그 자리에 둬야 바닥 위 예측이 서버와 맞는다.
-        const optional<int64> serverTickOffset = _client.findServerTickOffset();
-        if ( serverTickOffset.has_value() )
-            ShooterNetPawnComponentInternal::publishServerTick( getOwner(), ( static_cast<int64>( _tick ) + *serverTickOffset ) * static_cast<int64>( _stride ) );
+        // 예측하는 이 입력 틱의 바닥은 서버가 정해 준 차이만큼 앞의 틱이다(소유자 상태) — 서버가 그 명령을 푸는 바닥과 같고, 보이는 바닥도 그 틱을 따른다.
+        const optional<int64> floorTick = findDisplayFloorTick();
+        if ( floorTick.has_value() )
+            ShooterNetPawnComponentInternal::publishServerTick( getOwner(), *floorTick * static_cast<int64>( _stride ) );
+        computeFloorSteps( gameMode, floorTick, _listFloorScratch );
         const ControlIntent intent = takeNetIntent( movement );
         // 입력 하나의 상한을 넘는 주장은 다음 입력 틱에 싣는다. 주장의 걸음은 휘두른 입력 틱이다.
         const size_t claimCount = MathUtil::min( _listClaim.size(), static_cast<size_t>( NetClientServerMessage::kMaxClaimsPerIntent ) );
@@ -747,7 +787,7 @@ namespace sw
         _sentClaimCount += static_cast<uint32>( claimCount );
         _listClaim.erase( _listClaim.begin(), _listClaim.begin() + static_cast<std::ptrdiff_t>( claimCount ) );
         const ShooterMoveState before  = movement.getState();
-        ShooterMoveState       current = ShooterNetPawnComponentInternal::simulateTick( movement, listBox, before, intent, _tickInterval );
+        ShooterMoveState       current = ShooterNetPawnComponentInternal::simulateTick( movement, gameMode.getBoxes(), _listFloorScratch, before, intent, _tickInterval );
         if ( _prediction.record( _tick, intent, current ) == false )
             SW_LOG_WARNING_ID( "ShooterNetPawn.ShooterNetPawnPrediction", "Shooter net pawn: prediction tick %# does not follow %# - not recorded", _tick, _prediction.getLatestTick() );
 
@@ -759,15 +799,22 @@ namespace sw
         {
             _reconciledTick                     = pOwner->_inputTick;
             _pawnEntityID                       = serverOwner._pawnEntityID;
+            _floorTickOffset                    = serverOwner._floorTickOffset;
+            _bFloorTickKnown                    = serverOwner._bFloorTickKnown;
             const ShooterMoveState& serverState = serverOwner._move;
             ShooterPlayerComponent* pPlayer     = getOwner()->getComponent<ShooterPlayerComponent>();
             if ( pPlayer != nullptr )
                 pPlayer->applyServerReport( serverOwner._confirmedHitCount, serverOwner._killCount, serverOwner._health, serverOwner._bOut == SW_TRUE );
-            const float3                    shown  = current._position;
-            const PredictionReconcileResult result = _prediction.reconcile(
+            const float3                    shown      = current._position;
+            uint32                          replayTick = pOwner->_inputTick; // 다시 돌리는 명령은 서버 틱 다음부터 하나씩 차례다
+            const PredictionReconcileResult result     = _prediction.reconcile(
                 pOwner->_inputTick, serverState, current,
-                [&movement, &listBox, this]( const ShooterMoveState& state, const ControlIntent& tickIntent )
-            { return ShooterNetPawnComponentInternal::simulateTick( movement, listBox, state, tickIntent, _tickInterval ); },
+                [&movement, &gameMode, &replayTick, this]( const ShooterMoveState& state, const ControlIntent& tickIntent )
+            {
+                ++replayTick;
+                computeFloorSteps( gameMode, TickedFloorOffset::findTick( _floorTickOffset, _bFloorTickKnown, replayTick ), _listFloorScratch );
+                return ShooterNetPawnComponentInternal::simulateTick( movement, gameMode.getBoxes(), _listFloorScratch, state, tickIntent, _tickInterval );
+            },
                 [this]( const ShooterMoveState& left, const ShooterMoveState& right )
             { return isClose( left, right ); } );
             switch ( result )
@@ -862,12 +909,6 @@ namespace sw
         return pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
     }
 
-    const vector<ShooterArenaBox>* ShooterNetPawnComponent::findArenaBoxes() const
-    {
-        const ShooterGameModeComponent* pGameMode = findGameMode();
-        return pGameMode != nullptr ? &pGameMode->getBoxes() : nullptr;
-    }
-
     void ShooterNetPawnComponent::recordBodies( const GameObjectManager& manager )
     {
         _listLagScratch.clear();
@@ -879,11 +920,23 @@ namespace sw
             const ShooterPlayerComponent*       pPlayer   = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
             if ( pMovement == nullptr || pPlayer == nullptr || pawn._connectionID < 0 || pPlayer->isAlive() == false )
                 continue;
-            LagRecord& record     = _listLagScratch.emplace_back();
-            record._position      = pMovement->getFeetPosition()._value;
-            record._radius        = pMovement->getRadius();
-            record._height        = _pawnHitHeight;
-            record._entityID      = makePawnEntityID( pawn );
+            LagRecord& record = _listLagScratch.emplace_back();
+            record._position  = pMovement->getFeetPosition()._value;
+            record._radius    = pMovement->getRadius();
+            record._height    = _pawnHitHeight;
+            record._entityID  = makePawnEntityID( pawn );
+            // 바닥 위의 몸은 바닥 기준으로 기억한다 — 쏜 사람은 그 몸을 자기 시각의 바닥 위에서 봤다.
+            const ShooterGameModeComponent* pArena = findGameMode();
+            float3                          floorPosition;
+            float32                         floorYaw = 0.0f;
+            if ( pArena != nullptr )
+                computeFloorSteps( *pArena, pawn._floorTick, _listFloorScratch );
+            const uint8 floorNumber = pArena != nullptr && pMovement->isOnGround() ? ShooterFloorStep::findNumber( _listFloorScratch, record._position ) : uint8{ 0 };
+            if ( floorNumber != 0 && pArena->computeFloorPose( floorNumber, static_cast<float64>( pawn._floorTick ) * static_cast<float64>( _tickInterval ), floorPosition, floorYaw ) )
+            {
+                record._position    = ShooterFloorStep::toLocal( floorPosition, floorYaw, record._position );
+                record._frameNumber = floorNumber;
+            }
             record._teleportCount = pMovement->getTeleportCount();
         }
         const ShooterGameModeComponent* pGameMode = findGameMode();
@@ -1088,15 +1141,31 @@ namespace sw
                 pRemote->_object   = pSelf->spawnBodyObject( manager, "RemotePlayerBody" );
                 pRemote->_bArmed   = SW_FALSE;
             }
+            NetSampleRatio ratio = sample->_ratio;
+            ratio.breakAt( from._floorNumber, to._floorNumber ); // 바닥을 옮겨 탄 두 자리는 기준이 다르다
             ShooterAvatarPose pose;
-            pose._feet            = AbsolutePosition{ sample->_ratio.interpolate( from._position, to._position ) };
-            pose._yaw             = sample->_ratio.interpolateAngle( from._yaw, to._yaw );
-            pose._bAlive          = sample->_ratio.choose( from._bAlive, to._bAlive );
-            pose._bOnGround       = sample->_ratio.choose( from._bOnGround, to._bOnGround );
+            pose._feet            = AbsolutePosition{ ratio.interpolate( from._position, to._position ) };
+            pose._yaw             = ratio.interpolateAngle( from._yaw, to._yaw );
+            pose._bAlive          = ratio.choose( from._bAlive, to._bAlive );
+            pose._bOnGround       = ratio.choose( from._bOnGround, to._bOnGround );
             pose._bTwoHanded      = pSelf->getWeapon( weaponIndex ).getDef()._bTwoHanded;
-            const float3 velocity = sample->_ratio.computeVelocity( from._position, to._position, _tickInterval );
-            pose._velocity        = float3{ velocity._x, 0.0f, velocity._z };
-            pRemote->_position    = pose._feet;
+            const float3 velocity = ratio.computeVelocity( from._position, to._position, _tickInterval );
+            // 바닥 위의 남은 이 화면의 바닥에 얹는다 — 바닥은 예측 시각에 그려진다.
+            const uint8                     floorNumber = ratio.choose( from._floorNumber, to._floorNumber );
+            const optional<int64>           floorTick   = findDisplayFloorTick();
+            const ShooterGameModeComponent* pArena      = findGameMode();
+            float3                          floorPosition;
+            float32                         floorYaw = 0.0f;
+            if ( floorNumber != 0 )
+            {
+                const bool bPosed = pArena != nullptr && floorTick.has_value() && pArena->computeFloorPose( floorNumber, static_cast<float64>( *floorTick ) * static_cast<float64>( _tickInterval ), floorPosition, floorYaw );
+                if ( bPosed == false )
+                    continue; // 이 씬에 없는 바닥이거나 아직 바닥 틱을 모른다
+                pose._feet = AbsolutePosition{ ShooterFloorStep::toAbsolute( floorPosition, floorYaw, pose._feet._value ) };
+                pose._yaw  = MathUtil::wrapAngle( pose._yaw + floorYaw );
+            }
+            pose._velocity     = float3{ velocity._x, 0.0f, velocity._z };
+            pRemote->_position = pose._feet;
 
             GameObject*             pObject = manager.resolveGameObject( pRemote->_object );
             ShooterAvatarComponent* pAvatar = pObject != nullptr ? pObject->getComponent<ShooterAvatarComponent>() : nullptr;
@@ -1212,7 +1281,7 @@ namespace sw
         Ray absoluteRay           = ray;
         absoluteRay._origin       = manager.getWorldOrigin().toAbsolute( ray._origin );
         vector<LagRecord> listPast;
-        _lagHistory.collectAt( seenTick, makePawnEntityID( *pShooter ), listPast );
+        collectRewoundBodies( *pShooter, seenTick, listPast );
         bool bHit = false;
         for ( const LagRecord& past : listPast )
         {
@@ -1246,24 +1315,43 @@ namespace sw
         return bHit;
     }
 
+    void ShooterNetPawnComponent::collectRewoundBodies( const ServerPawn& shooter, float64 seenTick, vector<LagRecord>& outListRecord ) const
+    {
+        _lagHistory.collectAt( seenTick, makePawnEntityID( shooter ), outListRecord );
+        const ShooterGameModeComponent* pGameMode = findGameMode();
+        const float64                   seconds   = static_cast<float64>( shooter._floorTick ) * static_cast<float64>( _tickInterval );
+        VectorUtil::removeIf( outListRecord, [pGameMode, seconds]( LagRecord& record )
+        {
+            if ( record._frameNumber == 0 )
+                return false;
+            float3  floorPosition;
+            float32 floorYaw = 0.0f;
+            if ( pGameMode == nullptr || pGameMode->computeFloorPose( static_cast<uint8>( record._frameNumber ), seconds, floorPosition, floorYaw ) == false )
+                return true; // 그 바닥은 사라졌다 — 쏜 사람의 화면에도 없다
+            record._position    = ShooterFloorStep::toAbsolute( floorPosition, floorYaw, record._position );
+            record._frameNumber = 0;
+            return false;
+        } );
+    }
+
     void ShooterNetPawnComponent::collectRewoundMelee( const GameObjectManager& manager, const GameObject& shooter, const vector<float3>& listPrevious, const vector<float3>& listCurrent, float32 radius,
                                                        ControlViewTick viewTick, vector<GameObjectHandle>& outListTarget ) const
     {
         const ServerPawn* const pShooter = findServerPawn( shooter.getHandle() );
         if ( pShooter == nullptr || listCurrent.empty() )
             return;
-        const float64      seenTick  = viewTick.getServerTick( static_cast<float64>( _tick ) );
-        const uint32       shooterID = makePawnEntityID( *pShooter );
-        const WorldOrigin& origin    = manager.getWorldOrigin(); // 기록은 절대, 칼날은 씬 자리다
+        const WorldOrigin& origin = manager.getWorldOrigin(); // 기록은 절대, 칼날은 씬 자리다
         vector<uint32>     listTouched;
+        vector<LagRecord>  listPast;
+        collectRewoundBodies( *pShooter, viewTick.getServerTick( static_cast<float64>( _tick ) ), listPast );
         if ( listPrevious.size() == listCurrent.size() )
         {
             for ( size_t pointIndex = 0; pointIndex < listCurrent.size(); ++pointIndex )
             {
-                _lagHistory.collectTouchedAt( seenTick, origin.toAbsolute( listPrevious[pointIndex] ), origin.toAbsolute( listCurrent[pointIndex] ), radius, shooterID, listTouched );
+                LagCompensationHistory::collectTouched( listPast, origin.toAbsolute( listPrevious[pointIndex] ), origin.toAbsolute( listCurrent[pointIndex] ), radius, listTouched );
             }
         }
-        _lagHistory.collectTouchedAt( seenTick, origin.toAbsolute( listCurrent.front() ), origin.toAbsolute( listCurrent.back() ), radius, shooterID, listTouched );
+        LagCompensationHistory::collectTouched( listPast, origin.toAbsolute( listCurrent.front() ), origin.toAbsolute( listCurrent.back() ), radius, listTouched );
         for ( const uint32 entityID : listTouched )
         {
             if ( entityID < kEnemyEntityIDBase )

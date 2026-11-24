@@ -5,6 +5,8 @@
 
 #include "Engine/Foundation/WorldOrigin.h"
 
+#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
+
 #include "Games/Playground/Hub/HubPawnReplicationComponent.h"
 
 #include <limits>
@@ -106,12 +108,12 @@ SW_TEST_CASE( HubPawnStateTest, StatesSurviveAnOriginShift )
 SW_TEST_CASE( HubPawnStateTest, FloorTickOffsetStaysUntilTheClocksDrift )
 {
     HubPawnState state;
-    HubPawnReplicationComponent::updateFloorTickOffset( 500, 20, state );
+    TickedFloorOffset::update( 500, 20, state._floorTickOffset, state._bFloorTickKnown );
     SW_EXPECT_EQUAL( 480, state._floorTickOffset );
-    HubPawnReplicationComponent::updateFloorTickOffset( 503, 21, state ); // 세 틱치를 한 서버 틱에 몰아 푼다
-    HubPawnReplicationComponent::updateFloorTickOffset( 503, 22, state );
-    HubPawnReplicationComponent::updateFloorTickOffset( 503, 23, state );
+    TickedFloorOffset::update( 503, 21, state._floorTickOffset, state._bFloorTickKnown ); // 세 틱치를 한 서버 틱에 몰아 푼다
+    TickedFloorOffset::update( 503, 22, state._floorTickOffset, state._bFloorTickKnown );
+    TickedFloorOffset::update( 503, 23, state._floorTickOffset, state._bFloorTickKnown );
     SW_EXPECT_EQUAL( 480, state._floorTickOffset );
-    HubPawnReplicationComponent::updateFloorTickOffset( 600, 24, state ); // 클라이언트가 오래 멈췄다
+    TickedFloorOffset::update( 600, 24, state._floorTickOffset, state._bFloorTickKnown ); // 클라이언트가 오래 멈췄다
     SW_EXPECT_EQUAL( 576, state._floorTickOffset );
 }

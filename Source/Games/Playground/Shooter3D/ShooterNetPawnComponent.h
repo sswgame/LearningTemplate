@@ -97,10 +97,10 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Replicated, Min = -4096, Max = 4096, Step = 0.01 )
-        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 발(절대, m, 1 cm 간격)
+        float3 _position{ 0.0f, 0.0f, 0.0f }; ///< 발(m, 1 cm 간격) — `_floorNumber` 가 0 이면 절대, 아니면 그 바닥 기준이다
 
         PROPERTY( Replicated, Min = -3.2, Max = 3.2, Step = 0.001 )
-        float32 _yaw{ 0.0f }; ///< 보는 요(라디안). 쓰는 쪽이 [-π, π] 로 감는다
+        float32 _yaw{ 0.0f }; ///< 보는 요(라디안, 바닥 위면 바닥 기준). 쓰는 쪽이 [-π, π] 로 감는다
 
         PROPERTY( Replicated, Min = 0, Max = 2 )
         uint8 _weaponIndex{ 0 }; ///< 무기 슬롯. 범위는 cpp 의 static_assert 가 `ShooterPlayerComponent::kWeaponCount` 와 맞춘다
@@ -113,6 +113,9 @@ namespace sw
 
         PROPERTY( Replicated )
         uint8 _teleportCount{ 0 }; ///< 순간 이동 · 다시 태어남 번호 — 다른 두 표본은 잇지 않는다(`NetSampleRatio`)
+
+        PROPERTY( Replicated, Min = 0, Max = 8 )
+        uint8 _floorNumber{ 0 }; ///< 디딘 움직이는 바닥의 번호(`ShooterGameModeComponent::computeFloorPose`, 0 이면 없다). 받는 쪽은 자기 화면의 바닥에 얹는다
     };
 
     /**
@@ -138,6 +141,12 @@ namespace sw
 
         PROPERTY( Replicated, Min = 0, Max = 1 )
         uint8 _bOut{ SW_FALSE }; ///< 매치에서 정해진 횟수만큼 쓰러졌다 — 이 사람의 판이 끝났다
+
+        PROPERTY( Replicated )
+        int32 _floorTickOffset{ 0 }; ///< 입력 틱에 더하면 그 명령을 푸는 바닥 틱이다(`TickedFloorOffset` — 서버가 정한다)
+
+        PROPERTY( Replicated, Min = 0, Max = 1 )
+        uint8 _bFloorTickKnown{ SW_FALSE };
 
         PROPERTY( Replicated, Min = -100000, Max = 100000 )
         float32 _health{ 0.0f }; ///< 범위는 NaN · 무한대를 읽기에서 거절하는 경계다
@@ -256,6 +265,9 @@ namespace sw
             uint64                  _leftAccountID{ 0 }; ///< 나간 계정 — `finishLeftPlayer` 가 점수 · 빈 자리를 처리한다
             uint32                  _nextInputTick{ 0 }; ///< 마지막으로 꺼낸 입력 틱의 다음(`kInputTickUnknown` 이면 아직)
             int32                   _connectionID{ constant::invalid_index::kInt32 };
+            int32                   _floorTickOffset{ 0 }; ///< 입력 틱 → 바닥 틱 차이
+            int64                   _floorTick{ 0 };       ///< 마지막 걸음의 바닥 틱
+            uint8                   _bFloorTickKnown{ SW_FALSE };
             uint8                   _bLeft{ SW_FALSE };          ///< 연결이 떠났고 나감 처리를 기다린다(그 사이 새 연결을 앉히지 않는다)
             uint8                   _bBodyRequested{ SW_FALSE }; ///< 이 연결의 몸 · 원격 조종자를 세워 봤다(실패해도 되풀이하지 않는다)
             uint8                   _bScoreReported{ SW_FALSE }; ///< 이 계정의 매치 점수를 냈다(한 사람에 한 번)
@@ -273,16 +285,16 @@ namespace sw
         };
 
         /** @brief 의도 하나로 몸을 한 걸음 옮깁니다(서버). */
-        void stepMovement( ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox, const ControlIntent& intent ) const;
+        void stepMovement( ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode, int64 floorTick, const ControlIntent& intent );
         /** @brief 클라이언트의 이번 프레임 걸음들과 남의 몸 · 화면 시각입니다(틱 뒤 · 게임 스레드) — 서버와 같은 자리에서 같은 순서로 돈다. */
         void runClientFrame( GameObjectManager& manager );
-        void stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
+        void stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const ShooterGameModeComponent& gameMode );
         // 서버(틱 뒤 · 게임 스레드 — 여러 몸을 옮기고 세우고 거둔다)
         void runServerFrame( GameObjectManager& manager );
-        void stepServer( GameObjectManager& manager, INetPeers& peers, const vector<ShooterArenaBox>& listBox );
+        void stepServer( GameObjectManager& manager, INetPeers& peers, const ShooterGameModeComponent& gameMode );
         /** @brief 끊긴 연결의 자리를 비우고 새 연결을 빈 자리에 앉힙니다. */
         void assignSeats( INetPeers& peers );
-        void stepServerPawn( GameObjectManager& manager, ServerPawn& pawn, const vector<ShooterArenaBox>& listBox );
+        void stepServerPawn( GameObjectManager& manager, ServerPawn& pawn, const ShooterGameModeComponent& gameMode );
         /** @brief 몸의 엔티티 · 관심 자리를 싣습니다(`endTick` 앞). 판을 두지 않는 몸은 싣지 않습니다. */
         void publishPawnStates( const GameObjectManager& manager );
         /** @brief 이번 틱에 입력이 온 자리에 소유자 상태를 보냅니다(`endTick` 뒤). */
@@ -326,8 +338,13 @@ namespace sw
         /** @brief 입력 틱이 없는 프레임의 발동까지 놓치지 않게 이번 프레임 폰 의도의 발동을 모읍니다(클라이언트, 프레임마다). */
         void collectPendingTriggers( const ShooterBodyMovementComponent& movement );
         /** @brief 이 입력 틱에 보낼 의도를 만들고 모은 발동을 비웁니다. 멈춘 몸(입력 초점이 없는 월드)은 시선만 남긴 빈 의도입니다. */
-        ControlIntent                  takeNetIntent( const ShooterBodyMovementComponent& movement );
-        const vector<ShooterArenaBox>* findArenaBoxes() const;
+        ControlIntent takeNetIntent( const ShooterBodyMovementComponent& movement );
+        /** @brief 바닥 틱 @p floorTick 의 걸음을 냅니다. 모르면(없음) 비웁니다. */
+        void computeFloorSteps( const ShooterGameModeComponent& gameMode, optional<int64> floorTick, vector<ShooterFloorStep>& outListFloor ) const;
+        /** @brief 쏜 몸 @p shooter 가 보던 시각의 다른 몸들입니다(절대 자리). 바닥 위의 몸은 쏜 사람의 화면처럼 그 명령의 바닥에 얹는다. */
+        void collectRewoundBodies( const ServerPawn& shooter, float64 seenTick, vector<LagRecord>& outListRecord ) const;
+        /** @brief 클라이언트가 지금 그리는 바닥 틱입니다(예측 시각). 모르면 없음입니다. */
+        optional<int64> findDisplayFloorTick() const;
 
         PROPERTY( Category = "Network", DisplayName = "Tick Interval", Min = 0.001, Units = s, Tooltip = "Fixed step of the networked movement; server simulation and client prediction use the same step" )
         float32 _tickInterval;
@@ -360,6 +377,7 @@ namespace sw
         vector<RemotePawn>                                _listRemotePawn; ///< 클라이언트 — 보이는 남의 몸
         vector<int32>                                     _listConnectionScratch;
         vector<LagRecord>                                 _listLagScratch;
+        vector<ShooterFloorStep>                          _listFloorScratch;
         vector<uint32>                                    _listEnemyEntityID; ///< 서버 — 지난 틱에 복제한 적(사라지면 관심 영역에서도 뺀다)
         vector<uint32>                                    _listEntityScratch;
         LagCompensationHistory                            _lagHistory; ///< 서버 — 틱마다 산 적 · 산 플레이어의 자리
@@ -375,8 +393,10 @@ namespace sw
         uint32                                            _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
         uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
         uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
+        int32                                             _floorTickOffset;     ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
         int32                                             _pendingStepCount;    ///< 클라이언트 — 이번 프레임 틱 뒤에 돌 입력 틱 수
         Role                                              _role;
+        uint8                                             _bFloorTickKnown;
         uint8                                             _bSeatsReported : 1; ///< 서버 — 자리 수를 매칭에 알렸다
         [[maybe_unused]] uint8                            _reserved       : 7;
     };

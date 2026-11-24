@@ -109,6 +109,14 @@ namespace sw
         ShooterNetPawnComponent* _pNetPawn;
         int32                    _enemiesOff;
 
+        /** @brief 퍼짐 없는 한 방 무기(피해 200) 하나의 표를 읽습니다. */
+        [[nodiscard]] static bool loadWeapons( WeaponCatalog& outWeapons, ProjectileCatalog& outProjectiles )
+        {
+            constexpr const utf8* kProjectileXML = R"(<ProjectileCatalog><Projectile id="round" tags="Ammo.Rifle" damage="200" speed="0" range="60"/></ProjectileCatalog>)";
+            constexpr const utf8* kWeaponXML     = R"(<WeaponCatalog><Weapon id="rifle" item="scifi_rifle" projectile="round" accepts="Ammo.Rifle" fireInterval="0.01" minSpread="0" maxSpread="0" spreadPerShot="0" recoilPitch="0"/></WeaponCatalog>)";
+            return outProjectiles.loadFromXMLText( kProjectileXML, "ShooterServerTest" ) && outWeapons.loadFromXMLText( kWeaponXML, "ShooterServerTest" );
+        }
+
         /** @brief @p eyeHeight 는 플레이어의 눈 높이입니다. @p weaponTable 이 Present 면 무기 표를 올려 두 자리 모두 한 방 무기를 쥡니다. */
         explicit ShooterServerTestWorld( WeaponTable weaponTable, float32 eyeHeight = 1.5f )
             : _peers{}
@@ -126,10 +134,7 @@ namespace sw
             SW_REQUIRE_TRUE( _scope.bind<ShooterAutoPlayOptions>( &_options ) );
             if ( weaponTable == WeaponTable::Present )
             {
-                constexpr const utf8* kProjectileXML = R"(<ProjectileCatalog><Projectile id="round" tags="Ammo.Rifle" damage="200" speed="0" range="60"/></ProjectileCatalog>)";
-                constexpr const utf8* kWeaponXML     = R"(<WeaponCatalog><Weapon id="rifle" item="scifi_rifle" projectile="round" accepts="Ammo.Rifle" fireInterval="0.01" minSpread="0" maxSpread="0" spreadPerShot="0" recoilPitch="0"/></WeaponCatalog>)";
-                SW_REQUIRE_TRUE( _projectiles.loadFromXMLText( kProjectileXML, "ShooterServerTest" ) );
-                SW_REQUIRE_TRUE( _weapons.loadFromXMLText( kWeaponXML, "ShooterServerTest" ) );
+                SW_REQUIRE_TRUE( loadWeapons( _weapons, _projectiles ) );
                 SW_REQUIRE_TRUE( _scope.bind<const WeaponCatalog>( &_weapons ) && _scope.bind<const ProjectileCatalog>( &_projectiles ) );
             }
             NetLinkValue link;

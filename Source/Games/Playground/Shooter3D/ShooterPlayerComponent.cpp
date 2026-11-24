@@ -557,7 +557,7 @@ namespace sw
         using Internal              = ShooterPlayerComponentInternal;
         const bool           bStill = bNetDriven || ( pMovement != nullptr && pMovement->isSuspended() );
         const PawnComponent* pPawn  = bStill ? nullptr : pOwner->getComponent<PawnComponent>();
-        if ( pMovement != nullptr && pMovement->stepMovement( pGameMode->getBoxes(), step ) )
+        if ( pMovement != nullptr && pMovement->stepMovement( pGameMode->getBoxes(), pGameMode->getFloorSteps(), step ) )
             _soundQueue.queueEvent( Internal::kSoundLand );
         if ( pPawn != nullptr )
             runIntent( *pGameMode, *pCamera, *pPawn, pPawn->getIntent(), step, 0u );
