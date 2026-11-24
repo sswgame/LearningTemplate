@@ -17,6 +17,8 @@
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
 {
@@ -24,17 +26,33 @@ namespace sw
     {
         struct HitDecalComponentInternal
         {
-            static constexpr uint32 kAllLayers = 0xFFFFFFFFu;
-
-            /** @brief 광선이 움직이지 않는 면에 맞았는지입니다(강체가 없는 지형 · 타일은 움직이지 않는다). */
+            /** @brief 움직이는 것(캐릭터 · 손에 든 무기 · 키네마틱)을 뚫고 처음 닿는 움직이지 않는 면입니다(언리얼 WorldStatic 광선). 강체가 없는 지형 · 타일은 움직이지 않는다. */
             static bool castToStatic( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 reach, uint64 ignoreObjectID, CharacterRayHit& outSurface )
             {
-                if ( CharacterRayHit::raycast3D( manager, origin, direction, reach, kAllLayers, ignoreObjectID, outSurface ) == false )
+                const IPhysicsQueryScene3D* pScene = manager.getSubsystem<ScenePhysics>().findScene3D();
+                if ( pScene == nullptr )
                     return false;
-                if ( outSurface._pObject == nullptr )
+                PhysicsQueryFilter filter;
+                filter._ignoreUserData = ignoreObjectID;
+                vector<PhysicsCastHit3D> listHit;
+                (void)pScene->raycastAll( origin, float3{ direction }.normalize(), reach, filter, listHit ); // 가까운 순서다
+                for ( const PhysicsCastHit3D& hit : listHit )
+                {
+                    const GameObject*         pObject = hit._userData != 0 ? manager.findGameObjectByID( hit._userData ) : nullptr;
+                    const RigidBodyComponent* pBody   = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
+                    const bool                bMoving = ( pBody != nullptr && pBody->getBodyType() != PhysicsBodyType::Static ) || ( pObject != nullptr && pObject->getComponent<CharacterControllerComponent>() != nullptr );
+                    if ( bMoving )
+                        continue;
+                    outSurface._pObject  = pObject;
+                    outSurface._body     = hit._body;
+                    outSurface._point    = hit._point;
+                    outSurface._normal   = hit._normal;
+                    outSurface._material = hit._material;
+                    outSurface._distance = hit._distance;
+                    outSurface._bIs2D    = false;
                     return true;
-                const RigidBodyComponent* pBody = outSurface._pObject->getComponent<RigidBodyComponent>();
-                return ( pBody == nullptr || pBody->getBodyType() == PhysicsBodyType::Static ) && outSurface._pObject->getComponent<CharacterControllerComponent>() == nullptr;
+                }
+                return false;
             }
 
             /** @brief 감시 값 `Hit.DecalCount` 입니다. 대상이 지금까지 세운 맞음 데칼 수입니다. */

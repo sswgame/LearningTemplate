@@ -57,7 +57,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ProjectSettingsDocumentTest] 저장소의 게임 설정(`Config/Game/*.json`)마다 열어 고치고 저장하면 엄격한 읽기로 고친 값이 돌아오고, 고치지 않은 칸은 그대로다(손 확인 "게임 설정 열어 저장" 을 대신한다 — 파일은 사본)
+ * @brief [ProjectSettingsDocumentTest] 저장소의 게임 설정(`Config/Game` 의 JSON)마다 열어 고치고 저장하면 엄격한 읽기로 고친 값이 돌아오고, 고치지 않은 칸은 그대로다(손 확인 "게임 설정 열어 저장" 을 대신한다 — 파일은 사본)
  */
 SW_TEST_CASE( ProjectSettingsDocumentTest, EveryGamePresetOpensEditsAndSaves )
 {
