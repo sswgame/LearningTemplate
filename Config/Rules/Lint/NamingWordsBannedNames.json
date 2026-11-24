@@ -2054,6 +2054,7 @@
     "EditorMultiEditComponent": "EditorMultiEditGroup — 다중 편집의 같은 형식 컴포넌트 묶음 — 컴포넌트가 아니다(2026-11-21)",
     "markFailedUnless": "recordReadResult — 무엇을 하는지 이름에 없다 — 읽기 결과를 받아 실패면 스트림 오류 표시(언리얼 FArchive::SetError · std::ios setstate(failbit))를 남기고 그대로 돌려준다(2026-11-21)",
     "includeRow": "includeItemByIndex — 무엇에 넣는지 이름에 없다 — 화면 밖이어도 그릴 줄로 넣는 ImGui ImGuiListClipper::IncludeItemByIndex 와 같은 이름(2026-11-21)",
+    "ActionRoomDebugDraw": "ActionRoomLook — 룸을 디버그 선 대신 프리팹으로 보여, 무엇을 어디에 보일지(모습 값)만 남았다(2026-11-24)",
     "ActionCombatDemoComponent": "ActionCombatGameModeComponent — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionCombatDemoComponentInternal": "ActionCombatGameModeComponentInternal — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",
     "ActionCombatDemoPhase": "ActionCombatPhase — 키트 셋 가르기: 시연 컴포넌트가 키트 디렉터(Component/*GameModeComponent)가 됐다(2026-11-21)",

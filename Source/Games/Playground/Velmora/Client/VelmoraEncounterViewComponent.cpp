@@ -4,7 +4,6 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
@@ -15,7 +14,6 @@
 #include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomDebugDraw.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 
@@ -23,20 +21,16 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct VelmoraEncounterViewComponentInternal
-        {
-            static constexpr float4  kInvulnerableColor  = float4( 0.6f, 0.9f, 1.0f, 1.0f ); ///< 무적인 플레이어를 감싸는 공
-            static constexpr float32 kInvulnerableHeight = 0.5f;
-            static constexpr float32 kInvulnerableRadius = 0.34f; ///< 키트가 그리는 플레이어 공보다 조금 크다
-        };
-    } // namespace
-
     VelmoraEncounterViewComponent::VelmoraEncounterViewComponent()
         : _attackAction{}
         , _dashAction{}
+        , _spherePrefab{}
+        , _roomLook{}
+        , _invulnerableRadius{ 0.34f }
+        , _invulnerableHeight{ 0.5f }
+        , _invulnerableColor{ 0.6f, 0.9f, 1.0f, 1.0f }
         , _encounter{}
+        , _sphereViews{}
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
         , _reserved{ 0 }
@@ -69,6 +63,15 @@ namespace sw
             SW_LOG_ERROR_ID( "Velmora.ViewActionMissing", "Velmora encounter view: attack '%#' and dash '%#' actions must both be named - the view reads no input", _attackAction.c_str(), _dashAction.c_str() );
     }
 
+    void VelmoraEncounterViewComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+            _sphereViews.destroyAll( *pManager );
+        Component::onEndPlay();
+    }
+
     void VelmoraEncounterViewComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -89,14 +92,21 @@ namespace sw
             const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
             (void)pEncounter->submitCombatInput( input.wasActionTriggered( _attackAction ), input.wasActionTriggered( _dashAction ) ); // 열린 판인지는 위에서 보았다
         }
-        DebugDrawQueue* const pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr || pEncounter->isFighting() == false )
-            return;
-        using Internal            = VelmoraEncounterViewComponentInternal;
-        const WorldOrigin& origin = manager.getWorldOrigin();
-        ActionRoomDebugDraw::draw( *pDraw, origin, pEncounter->getRoom() );
-        const AdventureGameModeComponent* const pDirector = pEncounter->getRoom().isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
-        if ( pDirector != nullptr )
-            pDraw->drawSphere( ActionRoomDebugDraw::toScene( origin, pDirector->getPlayerPosition(), Internal::kInvulnerableHeight ), Internal::kInvulnerableRadius, Internal::kInvulnerableColor );
+        showRoom( *pEncounter, manager );
+    }
+
+    void VelmoraEncounterViewComponent::showRoom( const VelmoraEncounterGameModeComponent& encounter, GameObjectManager& manager )
+    {
+        _sphereViews.begin();
+        if ( encounter.isFighting() )
+        {
+            _roomLook.forEachSphere( encounter.getRoom(), [this, &manager]( const AbsolutePosition& position, float32 radius, const float4& color )
+            { (void)_sphereViews.show( manager, _spherePrefab, position, float3{ radius * 2.0f }, 0.0f, color ); } );
+            const AdventureGameModeComponent* const pDirector = encounter.getRoom().isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
+            if ( pDirector != nullptr )
+                (void)_sphereViews.show( manager, _spherePrefab, ActionRoomLook::makePosition( pDirector->getPlayerPosition(), _invulnerableHeight ), float3{ _invulnerableRadius * 2.0f }, 0.0f,
+                                         _invulnerableColor );
+        }
+        _sphereViews.end( manager );
     }
 } // namespace sw

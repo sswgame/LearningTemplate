@@ -9,7 +9,6 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -52,6 +51,8 @@ namespace sw
         : _moveAction{ CommonInputActions::kMove }
         , _confirmAction{}
         , _endTurnAction{}
+        , _cubePrefab{}
+        , _spherePrefab{}
         , _tileHalfExtent{ 0.48f, 0.05f, 0.48f }
         , _tileColor{ 0.3f, 0.35f, 0.3f, 1.0f }
         , _unitRadius{ 0.35f }
@@ -63,6 +64,8 @@ namespace sw
         , _cursorHeight{ 0.05f }
         , _cursorColor{ 1.0f, 0.95f, 0.3f, 1.0f }
         , _director{}
+        , _cubeViews{}
+        , _unitViews{}
         , _cursor{}
         , _lastStep{}
         , _bCursorPlaced{ SW_FALSE }
@@ -99,6 +102,18 @@ namespace sw
                              _confirmAction.c_str(), _endTurnAction.c_str() );
         _bCursorPlaced = SW_FALSE;
         _lastStep      = int2{};
+    }
+
+    void SRPGCursorComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _cubeViews.destroyAll( *pManager );
+            _unitViews.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
     }
 
     void SRPGCursorComponent::onTick( TickContext& context )
@@ -156,24 +171,28 @@ namespace sw
                     (void)pDirector->endPlayerPhase();
             }
         }
-        drawField( *pDirector, manager );
+        showField( *pDirector, manager );
     }
 
-    void SRPGCursorComponent::drawField( const SRPGGameModeComponent& director, const GameObjectManager& manager ) const
+    void SRPGCursorComponent::showField( const SRPGGameModeComponent& director, GameObjectManager& manager )
     {
-        DebugDrawQueue* pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        const WorldOrigin&     origin = manager.getWorldOrigin();
-        const SRPGBattlefield& field  = director.getField();
+        const SRPGBattlefield& field = director.getField();
         // 칸 (x, y) 를 절대 자리 (x, 0, y) 에 둔다 — 위에서 내려다본다.
+        const float3 tileScale = _tileHalfExtent * 2.0f;
+        _cubeViews.begin();
         for ( int32 y = 0; y < field.getHeight(); ++y )
         {
             for ( int32 x = 0; x < field.getWidth(); ++x )
             {
-                pDraw->drawBox( origin.toLocal( float3( static_cast<float32>( x ), -_tileHalfExtent._y, static_cast<float32>( y ) ) ), _tileHalfExtent, _tileColor );
+                (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( static_cast<float32>( x ), -_tileHalfExtent._y, static_cast<float32>( y ) ) }, tileScale, 0.0f, _tileColor );
             }
         }
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( static_cast<float32>( _cursor._x ), _cursorHeight, static_cast<float32>( _cursor._y ) ) }, _cursorHalfExtent * 2.0f, 0.0f,
+                               _cursorColor );
+        _cubeViews.end( manager );
+
+        const float3 unitScale{ _unitRadius * 2.0f };
+        _unitViews.begin();
         for ( size_t index = 0; index < field.getUnits().size(); ++index )
         {
             const SRPGUnit& unit = field.getUnits()[index];
@@ -181,9 +200,9 @@ namespace sw
                 continue;
             const bool   bSelected = static_cast<int32>( index ) == director.getSelectedUnit();
             const float4 color     = unit._team == SRPGTeam::Player ? ( bSelected ? _selectedColor : _playerColor ) : _enemyColor;
-            pDraw->drawSphere( origin.toLocal( float3( static_cast<float32>( unit._cell._x ), _unitHeight, static_cast<float32>( unit._cell._y ) ) ), _unitRadius, color );
+            (void)_unitViews.show( manager, _spherePrefab, AbsolutePosition{ float3( static_cast<float32>( unit._cell._x ), _unitHeight, static_cast<float32>( unit._cell._y ) ) }, unitScale, 0.0f, color );
         }
-        pDraw->drawBox( origin.toLocal( float3( static_cast<float32>( _cursor._x ), _cursorHeight, static_cast<float32>( _cursor._y ) ) ), _cursorHalfExtent, _cursorColor );
+        _unitViews.end( manager );
     }
 
     void SRPGCursorComponent::writeGrowthDebugLines( DebugHUDSectionWriter& writer, const GameObjectManager& manager ) const

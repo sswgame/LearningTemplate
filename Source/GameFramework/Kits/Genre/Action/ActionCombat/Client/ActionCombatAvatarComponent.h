@@ -1,6 +1,6 @@
 /**
  * @file ActionCombatAvatarComponent.h
- * @brief 액션 컴뱃 키트의 클라이언트 쪽 — 입력 맵 액션을 디렉터(`ActionCombatGameModeComponent`)의 입력 명령으로 넘기고, 룸 · 플레이어를 디버그 그리기로 그리며 HP 바에 체력을 넣습니다.
+ * @brief 액션 컴뱃 키트의 클라이언트 쪽 — 입력 맵 액션을 디렉터(`ActionCombatGameModeComponent`)의 입력 명령으로 넘기고, 룸 · 플레이어를 프리팹 인스턴스로 보이며 HP 바에 체력을 넣습니다.
  * @details 키트 세 갈래의 클라이언트 몫이다(`GF_Client_ActionCombat`, 전용 서버는 짓지 않는다). 디렉터의 명령(`submitPlayerInput`)과 읽기 API(`getRoom` · `getPlayerHP` 등)만 쓰고
  *          룸(규칙)을 직접 고치지 않는다. 디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다.
  *          명령 · 그리기 · HP 바는 틱 뒤 게임 스레드에서 한다. 이 컴포넌트는 `PostUpdate` 라 디렉터 걸음 뒤에 돌아, 넘긴 입력은 다음 걸음이 쓰고
@@ -11,12 +11,16 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomLook.h"
 
 namespace sw
 {
@@ -41,6 +45,8 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
         void onBeginPlay() override;
+        /** @brief 세운 모습을 지웁니다. */
+        void onEndPlay() override;
         /** @brief 입력 · 명령 · 그리기를 틱 뒤 게임 스레드로 미룹니다. */
         void onTick( TickContext& context ) override;
 
@@ -49,8 +55,8 @@ namespace sw
         void updateAvatar( GameObjectManager& manager );
         /** @brief 지금 플레이어 HP 를 뷰 오브젝트의 체력 뷰에 넣습니다. 칸이 비었으면 할 일이 없고, 가리킨 오브젝트에 체력 뷰가 없으면 한 번 오류를 남깁니다. */
         void pushPlayerHealthView( GameObjectManager& manager, const ActionCombatGameModeComponent& director );
-        /** @brief 룸과 플레이어를 그립니다. 룸의 자리는 절대 자리라 @p manager 의 원점으로 옮긴다. */
-        static void draw( const ActionCombatGameModeComponent& director, const GameObjectManager& manager );
+        /** @brief 룸과 플레이어를 보입니다. 룸의 자리는 절대 자리다. */
+        void showRoom( const ActionCombatGameModeComponent& director, GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player (required)" )
@@ -61,8 +67,21 @@ namespace sw
         hashed_string _dashAction;
         PROPERTY( Category = "View", DisplayName = "Player View", Tooltip = "Object whose RuleHealthViewComponent shows the player's rule HP (health bar); empty = no bar" )
         GameObjectHandle _playerView;
+        PROPERTY( Category = "View", DisplayName = "Sphere Prefab", Required, Tooltip = "1 m diameter sphere scaled to the actors, projectiles and the player" )
+        AssetRef<PrefabAsset> _spherePrefab;
+        PROPERTY( Category = "View", DisplayName = "Room Look" )
+        ActionRoomLook _roomLook;
+        PROPERTY( Category = "View", DisplayName = "Player Radius", Min = 0.01, Units = m )
+        float32 _playerRadius;
+        PROPERTY( Category = "View", DisplayName = "Player Height", Tooltip = "Height of the player's center above the floor", Units = m )
+        float32 _playerHeight;
+        PROPERTY( Category = "View", DisplayName = "Player Color" )
+        float4 _playerColor;
+        PROPERTY( Category = "View", DisplayName = "Invulnerable Color", Tooltip = "Player color while a dash makes it invulnerable" )
+        float4 _invulnerableColor;
 
         TComponentHandle<ActionCombatGameModeComponent> _director;
+        PrefabViewBatch                                 _sphereViews;
         uint8                                           _bInputLive         : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
         uint8                                           _bActionsValid      : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
         uint8                                           _bViewReset         : 1; ///< 이 판에서 HP 바 스냅숏을 연출 없이 다시 두었다

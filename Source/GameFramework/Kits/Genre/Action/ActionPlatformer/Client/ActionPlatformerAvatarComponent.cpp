@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Client/ActionPlatformerAvatarComponent.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -21,14 +20,19 @@ namespace sw
     ActionPlatformerAvatarComponent::ActionPlatformerAvatarComponent()
         : _moveAction{ CommonInputActions::kMove }
         , _jumpAction{}
+        , _cubePrefab{}
+        , _spherePrefab{}
         , _tileColor{ 0.45f, 0.4f, 0.35f, 1.0f }
         , _secretRadius{ 0.25f }
         , _secretColor{ 1.0f, 0.85f, 0.2f, 1.0f }
         , _playerHalfExtent{ 0.35f, 0.45f, 0.35f }
         , _playerColor{ 0.2f, 0.6f, 1.0f, 1.0f }
         , _goalHeight{ 4.0f }
+        , _goalWidth{ 0.1f }
         , _goalColor{ 0.3f, 1.0f, 0.4f, 1.0f }
         , _director{}
+        , _cubeViews{}
+        , _secretViews{}
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
         , _reserved{ 0 }
@@ -63,6 +67,18 @@ namespace sw
                              _jumpAction.c_str() );
     }
 
+    void ActionPlatformerAvatarComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+        {
+            _cubeViews.destroyAll( *pManager );
+            _secretViews.destroyAll( *pManager );
+        }
+        Component::onEndPlay();
+    }
+
     void ActionPlatformerAvatarComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -84,39 +100,48 @@ namespace sw
             // 판이 끝났으면 디렉터가 거절한다 — 거절은 할 일이 없다는 뜻이라 버린다.
             (void)pDirector->submitPlayerInput( input.getVector2D( _moveAction )._x, input.isActionDown( _jumpAction ) );
         }
-        drawStage( *pDirector, manager );
+        showStage( *pDirector, manager );
     }
 
-    void ActionPlatformerAvatarComponent::drawStage( const ActionPlatformerGameModeComponent& director, const GameObjectManager& manager ) const
+    void ActionPlatformerAvatarComponent::showStage( const ActionPlatformerGameModeComponent& director, GameObjectManager& manager )
     {
-        DebugDrawQueue* pDraw = game::findSubsystem<DebugDrawQueue>();
-        if ( pDraw == nullptr )
-            return;
-        // 화면은 x 오른쪽 · y 위 평면이다(카메라가 -Z 에서 본다).
-        const WorldOrigin&     origin = manager.getWorldOrigin();
-        const PlatformTileMap& map    = director.getTileMap();
-        const float32          half   = map.getTileSize() * 0.5f;
+        // 화면은 x 오른쪽 · y 위 평면이다(카메라가 -Z 에서 본다). 가로로 이어진 타일은 상자 하나로 보인다.
+        const PlatformTileMap& map  = director.getTileMap();
+        const float32          size = map.getTileSize();
+        const float32          half = size * 0.5f;
+        _cubeViews.begin();
         for ( int32 y = 0; y < map.getHeight(); ++y )
         {
             for ( int32 x = 0; x < map.getWidth(); ++x )
             {
                 if ( map.getTile( x, y ) != PlatformTile::Solid )
                     continue;
-                pDraw->drawBox( origin.toLocal( float3( map.getTileLeft( x ) + half, map.getTileBottom( y ) + half, 0.0f ) ), float3( half, half, half ), _tileColor );
+                int32 endX = x + 1;
+                while ( endX < map.getWidth() && map.getTile( endX, y ) == PlatformTile::Solid )
+                    ++endX;
+                const float32 width = static_cast<float32>( endX - x ) * size;
+                (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( map.getTileLeft( x ) + width * 0.5f, map.getTileBottom( y ) + half, 0.0f ) }, float3( width, size, size ), 0.0f,
+                                       _tileColor );
+                x = endX;
             }
         }
+        const float2  position = director.getPlayerPosition();
+        const float32 goalX    = director.getGoalX();
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( position._x, position._y, 0.0f ) }, _playerHalfExtent * 2.0f, 0.0f, _playerColor );
+        (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( goalX, _goalHeight * 0.5f, 0.0f ) }, float3( _goalWidth, _goalHeight, _goalWidth ), 0.0f, _goalColor );
+        _cubeViews.end( manager );
+
         const ActionStageRun& run            = director.getRun();
         const ActionStageDef* pStage         = run.getStage();
         const vector<float2>& listSecretSpot = director.getSecretPositions();
+        const float3          secretScale{ _secretRadius * 2.0f };
+        _secretViews.begin();
         for ( size_t secretIndex = 0; pStage != nullptr && secretIndex < listSecretSpot.size(); ++secretIndex )
         {
             if ( run.isSecretFound( pStage->_listSecret[secretIndex] ) )
                 continue;
-            pDraw->drawSphere( origin.toLocal( float3( listSecretSpot[secretIndex]._x, listSecretSpot[secretIndex]._y, 0.0f ) ), _secretRadius, _secretColor );
+            (void)_secretViews.show( manager, _spherePrefab, AbsolutePosition{ float3( listSecretSpot[secretIndex]._x, listSecretSpot[secretIndex]._y, 0.0f ) }, secretScale, 0.0f, _secretColor );
         }
-        const float2  position = director.getPlayerPosition();
-        const float32 goalX    = director.getGoalX();
-        pDraw->drawBox( origin.toLocal( float3( position._x, position._y, 0.0f ) ), _playerHalfExtent, _playerColor );
-        pDraw->drawLine( origin.toLocal( float3( goalX, 0.0f, 0.0f ) ), origin.toLocal( float3( goalX, _goalHeight, 0.0f ) ), _goalColor );
+        _secretViews.end( manager );
     }
 } // namespace sw

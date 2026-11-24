@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -22,10 +21,16 @@ namespace sw
         : _player{}
         , _color{ 1.0f, 1.0f, 1.0f, 0.18f }
         , _colorPerLevel{ 0.0f, -0.2f, -0.2f, 0.15f }
+        , _outlinePrefab{}
         , _outlineColor{ 0.05f, 0.05f, 0.05f, 1.0f }
         , _outlineHalfExtent{ 0.505f }
+        , _outlineWidth{ 0.015f }
         , _arrLevelLook{}
+        , _outlineViews{}
+        , _targetCenter{}
         , _level{ -1 }
+        , _bTargeted{ SW_FALSE }
+        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
@@ -53,6 +58,15 @@ namespace sw
         pMesh->setVisible( false );
     }
 
+    void VoxelHighlightComponent::onEndPlay()
+    {
+        GameObject* const        pOwner   = getOwner();
+        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        if ( pManager != nullptr )
+            _outlineViews.destroyAll( *pManager );
+        Component::onEndPlay();
+    }
+
     void VoxelHighlightComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
@@ -66,44 +80,39 @@ namespace sw
         const bool bHasTarget = pPlayer != nullptr && pPlayer->findTarget( block );
         if ( pMesh->isVisible() != bHasTarget )
             pMesh->setVisible( bHasTarget );
+        // 블록은 절대 자리다 — 메시도 테두리도 원점으로 옮긴다
+        _targetCenter = AbsolutePosition{
+            float3{ static_cast<float32>( block._x ) + 0.5f, static_cast<float32>( block._y ) + 0.5f, static_cast<float32>( block._z ) + 0.5f }
+        };
+        _bTargeted = bHasTarget ? SW_TRUE : SW_FALSE;
+        context.deferPostTickOnComponent( *this, []( VoxelHighlightComponent& highlight, GameObjectManager& manager )
+        { highlight.showOutline( manager ); } );
         if ( bHasTarget == false )
             return;
-        const float3 center{ static_cast<float32>( block._x ) + 0.5f, static_cast<float32>( block._y ) + 0.5f, static_cast<float32>( block._z ) + 0.5f };
-        const float3 localCenter = context.getManager().getWorldOrigin().toLocal( center ); // 블록은 절대 자리다 — 메시도 테두리도 원점으로 옮긴다
-        pMesh->setLocalPosition( localCenter );
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( _targetCenter ) );
         const int32 level = static_cast<int32>( MathUtil::clamp( pPlayer->getBreakProgress(), 0.0f, 0.99f ) * static_cast<float32>( kLevelCount ) );
         if ( level != _level && _arrLevelLook[level] != nullptr )
         {
             _level = level;
             pMesh->setMaterialInstance( _arrLevelLook[level] );
         }
-        scheduleOutline( localCenter );
     }
 
-    void VoxelHighlightComponent::scheduleOutline( const float3& localCenter ) const
+    void VoxelHighlightComponent::showOutline( GameObjectManager& manager )
     {
-        const GameObject*        pOwner   = getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        // 디버그 선 큐는 게임 스레드에서만 쓸 수 있습니다. 이 선은 에디터 게임 뷰에서만 보입니다.
-        pManager->executeOrDeferPostTickOnScene( [localCenter, halfExtent = _outlineHalfExtent, color = _outlineColor]( GameObjectManager& /*sceneManager*/ )
+        _outlineViews.begin();
+        if ( _bTargeted == SW_TRUE )
         {
-            DebugDrawQueue* pDebugDraw = game::findSubsystem<DebugDrawQueue>();
-            if ( pDebugDraw == nullptr )
-                return;
-            const float3 minCorner = localCenter - float3{ halfExtent };
-            const float3 maxCorner = localCenter + float3{ halfExtent };
+            const float32 length = _outlineHalfExtent * 2.0f + _outlineWidth; // 모서리가 꼭짓점에서 맞물리게 굵기만큼 길다
             for ( int32 edge = 0; edge < 4; ++edge )
             {
-                const float32 x = ( edge & 1 ) != 0 ? maxCorner._x : minCorner._x;
-                const float32 z = ( edge & 2 ) != 0 ? maxCorner._z : minCorner._z;
-                const float32 y = ( edge & 1 ) != 0 ? maxCorner._y : minCorner._y;
-                const float32 w = ( edge & 2 ) != 0 ? maxCorner._y : minCorner._y;
-                pDebugDraw->drawLine( float3{ x, minCorner._y, z }, float3{ x, maxCorner._y, z }, color );
-                pDebugDraw->drawLine( float3{ minCorner._x, y, z }, float3{ maxCorner._x, y, z }, color );
-                pDebugDraw->drawLine( float3{ x, w, minCorner._z }, float3{ x, w, maxCorner._z }, color );
+                const float32 sideA = ( edge & 1 ) != 0 ? _outlineHalfExtent : -_outlineHalfExtent;
+                const float32 sideB = ( edge & 2 ) != 0 ? _outlineHalfExtent : -_outlineHalfExtent;
+                (void)_outlineViews.show( manager, _outlinePrefab, _targetCenter + float3{ 0.0f, sideA, sideB }, float3{ length, _outlineWidth, _outlineWidth }, 0.0f, _outlineColor );
+                (void)_outlineViews.show( manager, _outlinePrefab, _targetCenter + float3{ sideA, 0.0f, sideB }, float3{ _outlineWidth, length, _outlineWidth }, 0.0f, _outlineColor );
+                (void)_outlineViews.show( manager, _outlinePrefab, _targetCenter + float3{ sideA, sideB, 0.0f }, float3{ _outlineWidth, _outlineWidth, length }, 0.0f, _outlineColor );
             }
-        } );
+        }
+        _outlineViews.end( manager );
     }
 } // namespace sw
