@@ -8,7 +8,7 @@ Scripts/generate/client_only_types.py
 - 왜 표인가: 서버는 그 소스를 짓지 않아 형식을 모른다. 씬 · 프리팹에 HUD · 마커 · 월드 위젯 · 소리(에미터 · 리스너 · 잔향 존) 컴포넌트가 있으면 서버는 모르는 형식을 만나는데,
   이름 바꾸기 · 빠진 모듈(오류)과 클라이언트 전용(정상)을 가르려면 이 이름들을 서버도 알아야 한다. 서버의 직렬화기는 표의 형식이면 만들지 않고 조용히
   건너뛴다(`ClientOnlyTypeTable` — 언리얼은 클래스를 서버도 지어 두고 액터를 띄우지 않는다. 여기는 클래스를 짓지 않으니 이름만 싣는다 — 기억).
-- 누가 쓰는가: 서버 구성의 빌드(`Source/Server/CMakeLists.txt`)가 헤더 목록을 넘겨 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 쓴다. 헤더가 바뀌면 다시 쓰고,
+- 누가 쓰는가: 전용 서버 실행 파일을 짓는 빌드(`Source/Server/CMakeLists.txt` — 서버 구성 · 개발 구성)가 헤더 목록을 넘겨 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 쓴다. 헤더가 바뀌면 다시 쓰고,
   패키지(`Scripts/package/pack.py`)가 서버 실행 파일과 함께 싣는다. 저장소에는 두지 않는다(낡을 사본이 없다).
 
   python -X utf8 Scripts/generate/client_only_types.py --headers <헤더 목록 파일> --output <Bin>/ClientOnlyTypes.json
