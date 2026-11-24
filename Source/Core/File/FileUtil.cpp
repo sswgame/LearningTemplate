@@ -63,10 +63,10 @@ namespace sw
             /** @brief @p path 에 체크아웃하지 않은 파일(`FileUtil::findNotOpenForEdit`)이 있으면 경로와 이유를 오류로 남기고 true 입니다 — 지우기 · 옮기기 · 덮는 복사의 입구가 부른다. */
             [[nodiscard]] static bool refuseNotOpenForEdit( string_view path, const utf8* pAction )
             {
-                const optional<string> lockedPath = FileUtil::findNotOpenForEdit( FileUtil::toDiskPath( path ) );
+                const optional<AbsolutePath> lockedPath = FileUtil::findNotOpenForEdit( FileUtil::toDiskPath( path ) );
                 if ( lockedPath.has_value() == false )
                     return false;
-                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, *lockedPath );
+                SW_LOG_ERROR_ID( "File.NotOpenForEdit", "Refused to %# %# - '%#' is read-only (not checked out), check it out first", pAction, path, lockedPath->str() );
                 return true;
             }
 
@@ -142,7 +142,7 @@ namespace sw
                 // Windows 는 바꿔 끼우기가 져 아래 재시도(20 ms × 10)를 헛되이 잔다. 언리얼 `IFileManager::Move` 도 읽기 전용 대상은 덮지 않는다(EvenIfReadOnly 를 따로 받는다).
                 if ( FileUtil::isReadOnlyFile( FileUtil::toDiskPath( filePath ) ) )
                     return false;
-                outTempPath = FileUtil::makeWriteTempPath( filePath );
+                outTempPath = FileUtil::makeWriteTempPath( FileUtil::toDiskPath( filePath ) ).str();
                 outFilePath = filePath;
                 return true;
             }
@@ -870,22 +870,22 @@ namespace sw
         return FileUtilInternal::s_writeCounters._checkoutRule.exchange( rule, std::memory_order_acq_rel );
     }
 
-    optional<string> FileUtil::findNotOpenForEdit( string_view path )
+    optional<AbsolutePath> FileUtil::findNotOpenForEdit( string_view path )
     {
         const CheckoutRule             rule = FileUtilInternal::s_writeCounters._checkoutRule.load( std::memory_order_acquire );
         PlatformFileSystem::FileStatus status;
         if ( rule == nullptr || path.empty() || PlatformFileSystem::queryStatus( path, status ) == false )
             return nullopt; // 없는 자리는 지우거나 옮길 것이 없다
         if ( status._kind == PlatformFileSystem::FileKind::File )
-            return status._bReadOnly && rule( path ) ? optional<string>{ normalizeSeparators( path ) } : nullopt;
+            return status._bReadOnly && rule( path ) ? optional<AbsolutePath>{ toDiskPath( path ) } : nullopt;
         if ( status._kind != PlatformFileSystem::FileKind::Directory || status._bLink )
             return nullopt; // 폴더 링크는 링크만 지운다(가리키는 폴더는 그대로다)
-        optional<string> found;
+        optional<AbsolutePath> found;
         (void)forEachDirectoryEntry( path, true, [&found, rule]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory == false && isReadOnlyFile( entry._path ) && rule( entry._path ) )
             {
-                found = normalizeSeparators( entry._path );
+                found = toDiskPath( entry._path );
                 return false;
             }
             return true;
@@ -1041,17 +1041,17 @@ namespace sw
         return isCreateAllowed( path.str() );
     }
 
-    optional<string> FileUtil::findNotOpenForEdit( const AbsolutePath& path )
+    optional<AbsolutePath> FileUtil::findNotOpenForEdit( const AbsolutePath& path )
     {
         return findNotOpenForEdit( path.str() );
     }
 
-    string FileUtil::findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative )
+    AbsolutePath FileUtil::findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative )
     {
         return findPathIgnoringCase( root.str(), lowerRelative );
     }
 
-    string FileUtil::makePathIgnoringCase( const AbsolutePath& root, string_view relative )
+    AbsolutePath FileUtil::makePathIgnoringCase( const AbsolutePath& root, string_view relative )
     {
         return makePathIgnoringCase( root.str(), relative );
     }
@@ -1061,7 +1061,7 @@ namespace sw
         return makeCanonicalPath( path.str(), outResult );
     }
 
-    string FileUtil::reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
+    AbsolutePath FileUtil::reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
     {
         return reserveUniquePath( basePath.str(), extension, bDirectory, maxAttempt, numberSeparator );
     }
@@ -1090,7 +1090,7 @@ namespace sw
         }
     }
 
-    string FileUtil::findPathIgnoringCase( string_view root, string_view lowerRelative )
+    AbsolutePath FileUtil::findPathIgnoringCase( string_view root, string_view lowerRelative )
     {
         string current = trimTrailingSlashes( normalizeSeparators( root ) );
         size_t start   = 0;
@@ -1108,10 +1108,10 @@ namespace sw
                 return {};
             current = joinPath( current, match );
         }
-        return current;
+        return toDiskPath( current );
     }
 
-    string FileUtil::makePathIgnoringCase( string_view root, string_view relative )
+    AbsolutePath FileUtil::makePathIgnoringCase( string_view root, string_view relative )
     {
         string current  = trimTrailingSlashes( normalizeSeparators( root ) );
         bool   bPresent = true; // 앞 성분까지 디스크에 있다 — 없는 성분 아래는 있을 수 없어 더 훑지 않는다
@@ -1134,10 +1134,10 @@ namespace sw
             bPresent = false;
             current  = joinPath( current, component );
         }
-        return current;
+        return toDiskPath( current );
     }
 
-    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
+    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
     {
         if ( isDirectory( directory ) == false )
             return false;
@@ -1149,7 +1149,7 @@ namespace sw
                 return false;
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
                 return true;
-            outListFilePath.push_back( string( entry._path ) );
+            outListFilePath.push_back( AbsolutePath{ string( entry._path ) } ); // 절대 폴더 아래의 `/` 구분 항목이라 다시 검사하지 않는다
             return true;
         } );
         const bool bStopped   = stopToken.isStopRequested();
@@ -1158,7 +1158,7 @@ namespace sw
         return bWalked;
     }
 
-    bool FileUtil::collectFolders( string_view directory, vector<string>& outListFolder, const bool bRecursive )
+    bool FileUtil::collectFolders( string_view directory, vector<AbsolutePath>& outListFolder, const bool bRecursive )
     {
         if ( isDirectory( directory ) == false )
             return false;
@@ -1166,7 +1166,7 @@ namespace sw
         const bool bWalked = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory )
-                outListFolder.push_back( string( entry._path ) );
+                outListFolder.push_back( AbsolutePath{ string( entry._path ) } );
             return true;
         } );
         if ( bWalked == false )
@@ -1384,14 +1384,32 @@ namespace sw
         return forEachDirectoryEntry( directory.str(), bRecursive, visit, pContext );
     }
 
-    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
+    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken )
     {
         return collectFiles( directory.str(), filterExtension, outListFilePath, bRecursive, stopToken );
     }
 
-    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive )
+    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, bool bRecursive )
     {
         return collectFolders( directory.str(), outListFolder, bRecursive );
+    }
+
+    bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken )
+    {
+        vector<AbsolutePath> listPath;
+        const bool           bWalked = collectFiles( directory, filterExtension, listPath, bRecursive, stopToken );
+        for ( const AbsolutePath& path : listPath )
+            outListFilePath.push_back( path.str() );
+        return bWalked;
+    }
+
+    bool FileUtil::collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive )
+    {
+        vector<AbsolutePath> listPath;
+        const bool           bWalked = collectFolders( directory, listPath, bRecursive );
+        for ( const AbsolutePath& path : listPath )
+            outListFolder.push_back( path.str() );
+        return bWalked;
     }
 
     bool FileUtil::makeAbsolutePath( string_view path, string& outResult )
@@ -1425,7 +1443,7 @@ namespace sw
         return true;
     }
 
-    string FileUtil::reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
+    AbsolutePath FileUtil::reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
     {
         if ( basePath.empty() || ensureParentDirectoryExists( basePath ) == false )
             return {};
@@ -1447,7 +1465,7 @@ namespace sw
                 if ( PlatformFileSystem::createDirectory( path ) )
                 {
                     recordFileCreated();
-                    return path;
+                    return toDiskPath( path );
                 }
                 if ( exists( path ) == false )
                 {
@@ -1463,7 +1481,7 @@ namespace sw
                 std::fclose( pFile );
                 recordFileCreated();
                 PlatformFileUtil::recordFileWritten( path );
-                return path;
+                return toDiskPath( path );
             }
             if ( exists( path ) == false )
             {
@@ -1509,7 +1527,7 @@ namespace sw
         return true;
     }
 
-    string FileUtil::getCurrentPath()
+    AbsolutePath FileUtil::getCurrentPath()
     {
         string current;
         if ( PlatformFileSystem::getCurrentDirectory( current ) == false )
@@ -1517,7 +1535,7 @@ namespace sw
             SW_LOG_WARNING_ID( "FileUtil.CouldNotReadCurrent", "Could not read the current directory: %#", PlatformFileSystem::describeLastError().c_str() );
             return {};
         }
-        return current;
+        return toDiskPath( current );
     }
 
     bool FileUtil::setCurrentPath( string_view path )
@@ -1595,17 +1613,16 @@ namespace sw
         return true;
     }
 
-    string FileUtil::makeWriteTempPath( string_view targetPath )
+    AbsolutePath FileUtil::makeWriteTempPath( const AbsolutePath& targetPath )
     {
         const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
         // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
-        StringBuilder<constant::file::kMaxPathSize> tempPathBuilder;
-        tempPathBuilder.append( FileUtil::normalizeSeparators( targetPath ).c_str() )
-            .append( ".tmp" )
+        StringBuilder<constant::buffer::kMax64> tempPathBuilder;
+        tempPathBuilder.append( ".tmp" )
             .append( processID )
             .append( '_' )
             .append( FileUtilInternal::s_writeCounters._tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
-        return string{ tempPathBuilder.c_str() };
+        return targetPath.appendSuffix( tempPathBuilder.view() );
     }
 
     bool FileUtil::replaceFile( string_view tempPath, string_view targetPath )
@@ -1707,12 +1724,12 @@ namespace sw
         return false;
     }
 
-    string FileUtil::getTempDirectory()
+    AbsolutePath FileUtil::getTempDirectory()
     {
         string temp;
         if ( PlatformFileSystem::getTempDirectory( temp ) == false )
             return {};
-        return trimTrailingSlashes( temp ); // OS 가 준 끝 구분자는 여기서 한 규칙으로 뗀다(드라이브 루트는 남긴다)
+        return toDiskPath( trimTrailingSlashes( temp ) ); // OS 가 준 끝 구분자는 여기서 한 규칙으로 뗀다(드라이브 루트는 남긴다)
     }
 
     bool FileUtil::forEachDirectoryEntry( string_view directory, const bool bRecursive, const DirectoryEntryVisitFn visit, void* pContext )

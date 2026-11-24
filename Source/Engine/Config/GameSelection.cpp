@@ -33,7 +33,7 @@ namespace sw
             return string{ config::kShippingGameName };
 
         string       text;
-        const string path = FileUtil::joinPath( ModuleLibraryUtil::getModuleDirectory(), config::kFileActiveGame );
+        const string path = FileUtil::joinPath( ModuleLibraryUtil::getModuleDirectory().str(), config::kFileActiveGame );
         if ( FileUtil::readTextFile( FileUtil::toDiskPath( path ), text ) == false )
             return {};
         return string{ StringUtil::trim( text ) };

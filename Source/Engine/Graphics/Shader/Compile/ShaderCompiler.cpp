@@ -530,9 +530,9 @@ namespace sw
                 const uint64                           hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
                 fixed_string<constant::buffer::kMax32> tintStem;
                 formatstring( tintStem.data(), tintStem.capacity(), "sw_tint_%#", hash );
-                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::getTempDirectory(), tintStem ) ), ".spv", false );
+                const string spirvPath = FileUtil::reserveUniquePath( FileUtil::getTempDirectory().join( tintStem ), ".spv", false ).str();
                 if ( spirvPath.empty() )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory() } );
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not reserve a temporary SPIR-V file for Tint", FileUtil::getTempDirectory().str() } );
                 StringBuilder<constant::buffer::kMax512> wgslBuilder;
                 wgslBuilder.appendFormat( "%#.wgsl", FileUtil::removeExtension( spirvPath ) );
                 const string wgslPath( wgslBuilder.view() ); // 잡은 이름에서 나온다 — 다른 작업과 겹치지 않는다
@@ -650,7 +650,7 @@ namespace sw
                 // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
                 const wstring wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
                 vector<uint8> sourceBytes;
-                if ( FileUtil::readFile( FileUtil::toDiskPath( input._source.str() ), sourceBytes ) == false )
+                if ( FileUtil::readFile( input._source, sourceBytes ) == false )
                     return DxcResult::NoOutput;
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );

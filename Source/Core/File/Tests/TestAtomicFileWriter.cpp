@@ -10,10 +10,10 @@
 namespace
 {
     /** @brief @p directory 안의 파일 수입니다(임시 파일이 남았는지 본다). */
-    size_t countFiles( const sw::string& directory )
+    size_t countFiles( const sw::AbsolutePath& directory )
     {
         sw::vector<sw::string> listFile;
-        (void)sw::FileUtil::collectFiles( sw::FileUtil::toDiskPath( directory ), "", listFile, false ); // 비었으면 빈 목록
+        (void)sw::FileUtil::collectFiles( directory, "", listFile, false ); // 비었으면 빈 목록
         return listFile.size();
     }
 } // namespace
@@ -39,7 +39,7 @@ SW_TEST_CASE( AtomicFileWriterTest, AppendedChunksAndPatchedHeaderLand )
     sw::string text;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
     SW_EXPECT_TRUE( text == "HEADabcabc" );
-    SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path.str() ) ), size_t{ 1 } );
+    SW_EXPECT_EQUAL( countFiles( path.getParent() ), size_t{ 1 } );
 }
 
 /** @brief [AtomicFileWriterTest] commit 없이 끝난 쓰기는 원본을 건드리지 않고 임시 파일을 지운다. */
@@ -56,5 +56,5 @@ SW_TEST_CASE( AtomicFileWriterTest, AbandonedWriteLeavesTheOriginal )
     sw::string text;
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
     SW_EXPECT_TRUE( text == "original" );
-    SW_EXPECT_EQUAL( countFiles( sw::FileUtil::getDirectoryPart( path.str() ) ), size_t{ 1 } );
+    SW_EXPECT_EQUAL( countFiles( path.getParent() ), size_t{ 1 } );
 }

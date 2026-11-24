@@ -316,15 +316,15 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
  */
 SW_TEST_CASE( FileTest, WriteAndReadFile )
 {
-    sw::string testPath    = sw::test::makeScratchPath( "test_output_temp.bin" ).str();
-    sw::string testContent = "Hello C++ Workspace!";
+    sw::AbsolutePath testPath    = sw::test::makeScratchPath( "test_output_temp.bin" );
+    sw::string       testContent = "Hello C++ Workspace!";
 
-    bool writeOk = sw::FileUtil::writeFile( sw::FileUtil::toDiskPath( testPath ), reinterpret_cast<const uint8*>( testContent.data() ), testContent.size() );
+    bool writeOk = sw::FileUtil::writeFile( testPath, reinterpret_cast<const uint8*>( testContent.data() ), testContent.size() );
     SW_EXPECT_TRUE( writeOk );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( testPath ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( testPath ) );
 
     sw::vector<uint8> readBuffer;
-    bool              readOk = sw::FileUtil::readFile( sw::FileUtil::toDiskPath( testPath ), readBuffer );
+    bool              readOk = sw::FileUtil::readFile( testPath, readBuffer );
     SW_EXPECT_TRUE( readOk );
 
     sw::string readContent( readBuffer.begin(), readBuffer.end() );
@@ -345,18 +345,18 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
  */
 SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
 {
-    const sw::string executablePath = sw::FileUtil::getExecutablePath();
+    const sw::AbsolutePath executablePath = sw::FileUtil::toDiskPath( sw::FileUtil::getExecutablePath() );
 
     SW_REQUIRE_TRUE( executablePath.empty() == false );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( sw::FileUtil::toDiskPath( executablePath ) ), "the executable path names a missing file - it was cut or broken" );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::isAbsolutePath( executablePath ), "the executable path is not absolute" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( executablePath ), "the executable path names a missing file - it was cut or broken" );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::isAbsolutePath( executablePath.str() ), "the executable path is not absolute" );
 
     // 디렉터리 부분도 실제로 있어야 한다 — 엔진이 리소스·모듈을 찾는 기준점이다.
-    const sw::string executableDirectory = sw::FileUtil::getDirectoryPart( executablePath );
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::isDirectory( sw::FileUtil::toDiskPath( executableDirectory ) ), "the executable directory does not exist" );
+    const sw::AbsolutePath executableDirectory = executablePath.getParent();
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::isDirectory( executableDirectory ), "the executable directory does not exist" );
 
     // 두 번 물어도 같은 답이어야 한다(버퍼를 키우는 루프가 상태를 남기지 않는다).
-    SW_EXPECT_TRUE( sw::FileUtil::getExecutablePath() == executablePath );
+    SW_EXPECT_TRUE( sw::FileUtil::getExecutablePath() == executablePath.str() );
 }
 
 /**
@@ -611,10 +611,10 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( loose, false ) );
 
-    const sw::FileUtil::CheckoutRule previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
+    const sw::FileUtil::CheckoutRule     previousRule = sw::FileUtil::setCheckoutRule( []( sw::string_view path )
     { return path.find( "/controlled/" ) != sw::string_view::npos; } );
-    const sw::optional<sw::string>   found        = sw::FileUtil::findNotOpenForEdit( controlled );
-    SW_EXPECT_TRUE( found.has_value() && *found == sw::FileUtil::normalizeSeparators( locked.str() ) );
+    const sw::optional<sw::AbsolutePath> found        = sw::FileUtil::findNotOpenForEdit( controlled );
+    SW_EXPECT_TRUE( found.has_value() && *found == locked );
     SW_EXPECT_FALSE( sw::FileUtil::removeFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::tryRemoveFile( locked ) );
     SW_EXPECT_FALSE( sw::FileUtil::removeDirectory( controlled ) );
@@ -702,9 +702,9 @@ SW_TEST_CASE( FileTest, FindPathIgnoringCaseReturnsTheDiskSpelling )
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root.join( "MixedDir/Sub" ) ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( root.join( "MixedDir/Sub/File.TXT" ), "x" ) );
 
-    const sw::string found = sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/file.txt" );
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( sw::FileUtil::normalizeSeparators( root.str() ), "MixedDir/Sub/File.TXT" ), found );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::toDiskPath( found ) ) );
+    const sw::AbsolutePath found = sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/file.txt" );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( sw::FileUtil::normalizeSeparators( root.str() ), "MixedDir/Sub/File.TXT" ), found.str() );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( found ) );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/missing.txt" ).empty() );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "nodir/sub/file.txt" ).empty() );
 }
@@ -722,13 +722,13 @@ SW_TEST_CASE( FileTest, MakePathIgnoringCaseKeepsExistingSpellingAndAppendsTheRe
     const sw::string base = sw::FileUtil::normalizeSeparators( root.str() );
 
     // 있는 파일: 디스크 표기로 풀려 같은 파일을 가리킨다(둘째 쓰기가 옆 파일을 만들지 않는다).
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/File.TXT" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/File.TXT" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ).str() );
     // 새 파일: 있는 폴더는 디스크 표기이고 파일 이름은 받은 표기다. 구분자는 `\` 도 받는다.
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/New.Txt" ), sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Sub/New.Txt" ), sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ).str() );
     // 새 폴더: 없는 성분부터는 받은 표기를 그대로 잇고 그 아래는 훑지 않는다.
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Fresh/Deep/x.txt" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ) );
-    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "NoDir/a.txt" ), sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ) );
-    SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ) );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "MixedDir/Fresh/Deep/x.txt" ), sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ).str() );
+    SW_EXPECT_EQUAL( sw::FileUtil::joinPath( base, "NoDir/a.txt" ), sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ).str() );
+    SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ).str() );
 }
 
 /**

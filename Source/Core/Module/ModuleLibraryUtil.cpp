@@ -73,7 +73,7 @@ namespace sw
                 static const bool s_bAdded = []()
                 {
                     const string binaryDir = FileUtil::toNativeSeparators( ProcessRoots::get()._binary.str() );
-                    const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory() );
+                    const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory().str() );
                     for ( const string& directory : { binaryDir, moduleDir } )
                     {
                         if ( FileUtil::isDirectory( FileUtil::toDiskPath( directory ) ) )
@@ -116,12 +116,12 @@ namespace sw
         return string( sb.view() );
     }
 
-    string ModuleLibraryUtil::getDebugSymbolPath( string_view libraryPath )
+    AbsolutePath ModuleLibraryUtil::getDebugSymbolPath( string_view libraryPath )
     {
 #if defined( SW_PLATFORM_WINDOWS )
-        return FileUtil::replaceExtension( libraryPath, ".pdb" );
+        return FileUtil::toDiskPath( FileUtil::replaceExtension( libraryPath, ".pdb" ) );
 #elif defined( SW_PLATFORM_POSIX )
-        return FileUtil::replaceExtension( libraryPath, ".debug" );
+        return FileUtil::toDiskPath( FileUtil::replaceExtension( libraryPath, ".debug" ) );
 #else
     #error "Unsupported platform"
 #endif
@@ -129,27 +129,27 @@ namespace sw
 
     string ModuleLibraryUtil::findBuiltDebugSymbolPath( string_view libraryPath )
     {
-        const string besideLibrary = getDebugSymbolPath( libraryPath );
-        string_view  fileName;
-        FileUtil::getFileNamePart( besideLibrary, fileName );
-        string symbolDirectory = FileUtil::joinPath( ProcessRoots::get()._binary.str(), kSymbolFolder );
+        const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
+        string_view        fileName;
+        FileUtil::getFileNamePart( besideLibrary.str(), fileName );
+        AbsolutePath symbolDirectory = ProcessRoots::get()._binary.join( kSymbolFolder );
         // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
         const ModuleSubdirectory& moved = s_moduleSubdirectory;
         if ( moved._arrDirectory[0] != '\0' )
         {
             const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( moved._arrDirectory );
             if ( FileUtil::isSameDiskPath( FileUtil::getDirectoryPart( libraryPath ), movedDirectory.str() ) )
-                symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
+                symbolDirectory = symbolDirectory.join( moved._arrDirectory );
         }
-        string found = FileUtil::joinPath( symbolDirectory, fileName );
-        if ( FileUtil::exists( FileUtil::toDiskPath( found ) ) == false )
-            found = FileUtil::exists( FileUtil::toDiskPath( besideLibrary ) ) ? besideLibrary : string{};
-        return found;
+        AbsolutePath found = symbolDirectory.join( fileName );
+        if ( FileUtil::exists( found ) == false )
+            found = FileUtil::toDiskPath( FileUtil::exists( besideLibrary ) ? besideLibrary.str() : string{} );
+        return found.str();
     }
 
-    string ModuleLibraryUtil::getModuleDirectory()
+    AbsolutePath ModuleLibraryUtil::getModuleDirectory()
     {
-        return FileUtil::joinPath( ProcessRoots::get()._binary.str(), kModuleFolder );
+        return ProcessRoots::get()._binary.join( kModuleFolder );
     }
 
     void ModuleLibraryUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
@@ -184,14 +184,14 @@ namespace sw
         const string_view movedDirectory = ModuleLibraryUtilInternal::findModuleSubdirectory( baseName );
         if ( movedDirectory.empty() == false )
             return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), fileName );
-        string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
-        if ( FileUtil::exists( FileUtil::toDiskPath( modulePath ) ) == false )
+        AbsolutePath modulePath = getModuleDirectory().join( fileName );
+        if ( FileUtil::exists( modulePath ) == false )
         {
             const AbsolutePath binaryPath = ProcessRoots::get()._binary.join( fileName );
             if ( FileUtil::exists( binaryPath ) )
-                modulePath = binaryPath.str();
+                modulePath = binaryPath;
         }
-        return modulePath;
+        return modulePath.str();
     }
 
     void* ModuleLibraryUtil::loadLibraryAt( const AbsolutePath& libraryPath )

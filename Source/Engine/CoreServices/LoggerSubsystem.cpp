@@ -23,7 +23,7 @@ namespace sw
         {
             string logFilePath; // 비면 기본 폴더(Saved/Logs)다
             (void)_commandLine.getCommandLine().getArgument( CommandLineArgument::LOG_FILE, logFilePath );
-            _logger = make_unique<AsyncLogSink>( std::move( logFilePath ) );
+            _logger = make_unique<AsyncLogSink>( FileUtil::toDiskPath( logFilePath ) ); // 명령줄이 받을 때 절대로 올렸다(`CommandLineDiskPath`)
             _logger->initialize();
         }
         return SubsystemInitResult::Succeeded;

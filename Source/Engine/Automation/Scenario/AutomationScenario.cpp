@@ -40,7 +40,7 @@ namespace sw
                 const string                             loosePath = looseFile.has_value() ? looseFile->str() : string{};
                 const bool                               bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
                 StringBuilder<constant::buffer::kMax512> reason;
-                reason.appendFormat( "[read] not found (content root '%#', working folder '%#', ", engine::getSubsystem<AssetPaths>().getRootFolderPath(), FileUtil::getCurrentPath() );
+                reason.appendFormat( "[read] not found (content root '%#', working folder '%#', ", engine::getSubsystem<AssetPaths>().getRootFolderPath(), FileUtil::getCurrentPath().str() );
                 if ( loosePath.empty() )
                     reason.append( "loose file unresolved" );
                 else

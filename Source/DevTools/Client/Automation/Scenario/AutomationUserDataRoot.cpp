@@ -60,7 +60,7 @@ namespace sw
                 string text;
                 if ( commandLine.findPendingGlobalValue( name, text ) == false || text.empty() )
                     return string{};
-                const optional<AbsolutePath> workingFolder = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+                const optional<AbsolutePath> workingFolder = AbsolutePath::tryMake( FileUtil::getCurrentPath().str() );
                 const optional<AbsolutePath> resolved      = workingFolder.has_value() ? AbsolutePath::tryResolve( text, *workingFolder ) : optional<AbsolutePath>{};
                 if ( resolved.has_value() == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a state path variable is not a usable path", text } );

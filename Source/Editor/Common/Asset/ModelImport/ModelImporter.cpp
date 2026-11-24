@@ -1106,7 +1106,7 @@ namespace sw::editor
                     }
                     continue;
                 }
-                const bool bBaked = FileUtil::ensureDirectoryExists( FileUtil::toDiskPath( FileUtil::getDirectoryPart( outFile->str() ) ) ) &&
+                const bool bBaked = FileUtil::ensureDirectoryExists( outFile->getParent() ) &&
                                     PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, outFile->str() );
                 if ( bBaked == false )
                 {

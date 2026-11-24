@@ -125,7 +125,7 @@ namespace sw
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() );
-                return FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder.view() ), {}, true );
+                return FileUtil::reserveUniquePath( FileUtil::toDiskPath( textBuilder.view() ), {}, true ).str();
             }
 
             /**

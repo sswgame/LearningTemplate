@@ -262,7 +262,7 @@ namespace sw
             }
         }
 
-        const string moduleDir = ModuleLibraryUtil::getModuleDirectory();
+        const string moduleDir = ModuleLibraryUtil::getModuleDirectory().str();
         if ( FileUtil::isDirectory( FileUtil::toDiskPath( moduleDir ) ) == false )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryDoesNot", "Module directory does not exist: %#", moduleDir );

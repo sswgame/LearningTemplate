@@ -379,7 +379,7 @@ namespace sw::editor
     string EditorAssetFileCommands::makeUniquePath( string_view folderAbs, string_view stem, string_view suffix )
     {
         // 만들기가 곧 자리 잡기다(`reserveUniquePath`) — "있나 보고 고르기" 는 번호를 다 쓰면 있는 파일을 돌려줘 덮어썼다. 접미사가 빈 글이면 폴더다.
-        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( folderAbs, stem ) ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
+        return FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::joinPath( folderAbs, stem ) ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" ).str();
     }
 
     uint32 EditorAssetFileCommands::replaceReference( string& inoutText, string_view oldID, string_view newID )
@@ -892,7 +892,7 @@ namespace sw::editor
 
             // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 빈 이름은 원자적으로 잡는다(`reserveUniquePath` - 고유 이름의 입구 하나).
-            const string destPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( plainPath ) ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
+            const string destPath = FileUtil::reserveUniquePath( FileUtil::toDiskPath( FileUtil::removeExtension( plainPath ) ), FileUtil::getExtension( plainPath ), false, 10000, "_" ).str();
             if ( destPath.empty() || FileUtil::copyFile( FileUtil::toDiskPath( sourcePath ), FileUtil::toDiskPath( destPath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorAssetFileCommands.FailedImport", "Failed to import: %#", sourcePath.c_str() );

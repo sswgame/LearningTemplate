@@ -217,9 +217,9 @@ namespace sw
          * @brief `<basePath><extension>` 이 없으면 그것을, 있으면 `<basePath><numberSeparator>2<extension>` · `3` … 가운데 처음 빈 이름을 **원자적으로 만들어** 자리를 잡고 그 경로를 돌려줍니다.
          * @details @p bDirectory 면 빈 폴더를, 아니면 빈 파일을 만든다(파일은 부른 쪽이 나중에 내용을 덮어쓴다 — `writeFile` 의 바꿔치기).
          *          "있나 보고 만들기" 는 그 사이에 같은 이름을 고른 다른 프로세스 · 스레드와 겹친다 — 여기서는 만들기가 실패한 쪽이 다음 번호로 간다.
-         *          부모 폴더는 만든다. @p maxAttempt 개를 다 써도 못 잡거나 쓰기 게이트가 막으면 이유를 남기고 빈 글입니다.
+         *          부모 폴더는 만든다. @p maxAttempt 개를 다 써도 못 잡거나 쓰기 게이트가 막으면 이유를 남기고 빈 경로입니다.
          */
-        [[nodiscard]] static string reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
+        [[nodiscard]] static AbsolutePath reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
         /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
         static bool exists( const AbsolutePath& path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
@@ -240,8 +240,8 @@ namespace sw
          * @return 바꾸지 못했으면 경로와 이유를 알리고 false 입니다.
          */
         [[nodiscard]] static bool setWritable( const AbsolutePath& path, bool bWritable );
-        /** @brief 현재 작업 디렉터리를 반환합니다. */
-        static string getCurrentPath();
+        /** @brief 현재 작업 디렉터리를 반환합니다. 읽지 못하면 경고를 남기고 빈 경로입니다. */
+        static AbsolutePath getCurrentPath();
         /** @brief 현재 작업 디렉터리를 바꿉니다. 바꾸지 못하면 false 입니다(경고를 남긴다). 프로세스 전체에 걸리므로 시나리오 체인처럼 "처음 폴더로 되돌린다" 가 필요한 곳에서만 씁니다. */
         [[nodiscard]] static bool setCurrentPath( string_view path );
         /** @brief 실행 파일의 경로를 반환합니다. */
@@ -337,7 +337,7 @@ namespace sw
          *          POSIX 는 폴더 권한만으로 읽기 전용 파일을 지우고 옮기며, Windows 지우기(`removeEntry`)는 정리를 위해 속성을 풀고 지워 잠금이 뚫렸다.
          *          유니티 `AssetDatabase.IsOpenForEdit` 의 반대 질의이고, 언리얼 `IFileManager::Delete` 가 `EvenReadOnly` 없이 읽기 전용을 지우지 않는 자리다.
          */
-        [[nodiscard]] static optional<string> findNotOpenForEdit( const AbsolutePath& path );
+        [[nodiscard]] static optional<AbsolutePath> findNotOpenForEdit( const AbsolutePath& path );
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( const AbsolutePath& source, const AbsolutePath& destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
@@ -349,7 +349,7 @@ namespace sw
          */
         [[nodiscard]] static bool isAbandonedWriteTemp( string_view path );
         /** @brief @p targetPath 옆의 원자적 쓰기 임시 경로입니다(`<원본>.tmp<pid>_<번호>` — `isAbandonedWriteTemp` 가 알아보는 이름). 다 쓴 뒤 `replaceFile` 로 바꿔 끼운다. */
-        static string makeWriteTempPath( string_view targetPath );
+        static AbsolutePath makeWriteTempPath( const AbsolutePath& targetPath );
         /**
          * @brief 다 쓴 임시 파일 @p tempPath(`makeWriteTempPath`)를 @p targetPath 와 원자적으로 바꿔 끼웁니다 — `writeFile` 의 뒤 절반(쓰기 게이트 · 읽기 전용 거절 · 재시도 · 쓰기 기록)과 같다.
          * @return 바꾸지 못하면 임시 파일을 지우고 false 입니다. 대상은 그대로다.
@@ -372,8 +372,8 @@ namespace sw
          * @details 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
          */
         [[nodiscard]] static bool moveToRecycleBin( const vector<AbsolutePath>& listPath );
-        /** @brief 시스템 임시 디렉터리 경로를 반환합니다. */
-        static string getTempDirectory();
+        /** @brief 시스템 임시 디렉터리 경로를 반환합니다. 읽지 못하면 빈 경로입니다. */
+        static AbsolutePath getTempDirectory();
         /**
          * @brief 바이너리 데이터를 파일에 씁니다. **원자적입니다**: 같은 폴더의 임시 파일에 다 쓰고 결과를 확인한 뒤 원본과 바꿔 끼웁니다.
          * @details 실패하면(디스크 가득 · 잠김 · 도중 종료) false 이고 원본은 그대로 남습니다. 반쯤 쓴 파일이 남지 않습니다.
@@ -442,9 +442,9 @@ namespace sw
          *          정렬 순으로 앞선 것이다(훑는 순서에 기대지 않는다).
          * @param root 실제 표기의 절대 폴더
          * @param lowerRelative 소문자 · `/` 구분 상대 키(`..` 없음)
-         * @return `root` 로 시작하는 `/` 구분 경로, 못 찾으면 빈 문자열
+         * @return `root` 로 시작하는 `/` 구분 경로, 못 찾으면 빈 경로
          */
-        [[nodiscard]] static string findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative );
+        [[nodiscard]] static AbsolutePath findPathIgnoringCase( const AbsolutePath& root, string_view lowerRelative );
         /**
          * @brief **쓰기용**입니다. @p relative 를 @p root 아래의 경로로 잇되, 이미 디스크에 있는 성분은 그 표기를 쓰고 없는 성분부터는 @p relative 의 표기를 그대로 씁니다.
          * @details 대소문자를 구분하는 파일 시스템에서 소문자 id 를 그대로 이으면 대소문자만 다른 새 폴더가 생긴다(`Saved/Automation` 이 있는데 `saved/automation` 을 만든다).
@@ -454,7 +454,7 @@ namespace sw
          * @param relative `/` 또는 `\` 구분 상대 경로(대소문자 무관, `..` 없음)
          * @return `root` 로 시작하는 `/` 구분 경로. 성분이 모두 없어도 `root` 아래에 이어 붙인 경로다.
          */
-        [[nodiscard]] static string makePathIgnoringCase( const AbsolutePath& root, string_view relative );
+        [[nodiscard]] static AbsolutePath makePathIgnoringCase( const AbsolutePath& root, string_view relative );
         /**
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
@@ -464,51 +464,55 @@ namespace sw
          *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
          * @param stopToken 협조 중단 신호입니다(`StopSource::getToken`). 올라가면 알리지 않고 멈추고 false 를 돌려줍니다 — 부른 쪽이 신호를 다시 읽고 목록을 버린다. 기본값(묶이지 않은 토큰)이면 끝까지 훑는다.
          */
+        [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        /** @brief `collectFiles` 의 글 목록 판입니다 — 형식으로 옮기지 않은 자리(리플렉션 파서 · 에셋 색인)만 쓴다. 새 코드는 형식 판을 쓴다. */
         [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
+        [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, bool bRecursive );
+        /** @brief `collectFolders` 의 글 목록 판입니다 — 형식으로 옮기지 않은 자리만 쓴다. 새 코드는 형식 판을 쓴다. */
         [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<string>& outListFolder, bool bRecursive );
 
     private:
         // 디스크 I/O 의 문자열 경로 판 — 구현은 이것이고 위의 `const AbsolutePath&` 판이 넘긴다. 바깥 호출이 문자열을 넘기면 형식 판이 아니라 이것이 골라져
         // 접근 오류가 난다(논리 경로 글이 I/O 에 들어가지 못한다). 문자열은 `toDiskPath` 로 올린다.
-        [[nodiscard]] static bool             forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
-        [[nodiscard]] static bool             ensureParentDirectoryExists( string_view filePath );
-        [[nodiscard]] static bool             ensureDirectoryExists( string_view directoryPath );
-        static bool                           exists( string_view path );
-        static bool                           isDirectory( string_view path );
-        static bool                           isRegularFile( string_view path );
-        static bool                           isReadOnlyFile( string_view fileName );
-        [[nodiscard]] static bool             setWritable( string_view path, bool bWritable );
-        [[nodiscard]] static bool             tryGetFileTimestamp( string_view fileName, uint64& outSeconds );
-        [[nodiscard]] static bool             getFileWriteTime( string_view path, int64& outTicks );
-        [[nodiscard]] static bool             setFileWriteTime( string_view path, int64 ticks );
-        [[nodiscard]] static bool             tryGetFileSize( string_view fileName, uint64& outSize );
-        [[nodiscard]] static bool             getFileStamp( string_view fileName, FileStamp& outStamp );
-        [[nodiscard]] static bool             copyFile( string_view source, string_view destination );
-        [[nodiscard]] static bool             removeFile( string_view path );
-        [[nodiscard]] static bool             replaceFile( string_view tempPath, string_view targetPath );
-        [[nodiscard]] static bool             tryRemoveFile( string_view path );
-        [[nodiscard]] static bool             removeDirectory( string_view path );
-        [[nodiscard]] static bool             renamePath( string_view from, string_view to );
-        [[nodiscard]] static bool             writeFile( string_view fileName, const uint8* pData, uint64 size );
-        [[nodiscard]] static FileWriteResult  tryWriteFile( string_view fileName, const uint8* pData, uint64 size );
-        [[nodiscard]] static bool             writeFileDurable( string_view fileName, const uint8* pData, uint64 size );
-        [[nodiscard]] static bool             readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
-        [[nodiscard]] static bool             readTextFile( string_view fileName, string& outText );
-        [[nodiscard]] static OptionalFileRead readOptionalTextFile( string_view fileName, string& outText );
-        [[nodiscard]] static bool             readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
-        [[nodiscard]] static bool             writeTextFile( string_view fileName, string_view text );
-        [[nodiscard]] static bool             writeTextFileDurable( string_view fileName, string_view text );
-        [[nodiscard]] static bool             appendTextFile( string_view fileName, string_view text );
-        [[nodiscard]] static bool             collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
-        [[nodiscard]] static bool             collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
-        [[nodiscard]] static bool             makeCanonicalPath( string_view path, string& outResult );
-        [[nodiscard]] static string           reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator );
-        [[nodiscard]] static bool             isWriteAllowed( string_view path );
-        [[nodiscard]] static bool             isCreateAllowed( string_view path );
-        [[nodiscard]] static optional<string> findNotOpenForEdit( string_view path );
-        [[nodiscard]] static string           findPathIgnoringCase( string_view root, string_view lowerRelative );
-        [[nodiscard]] static string           makePathIgnoringCase( string_view root, string_view relative );
+        [[nodiscard]] static bool                   forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
+        [[nodiscard]] static bool                   ensureParentDirectoryExists( string_view filePath );
+        [[nodiscard]] static bool                   ensureDirectoryExists( string_view directoryPath );
+        static bool                                 exists( string_view path );
+        static bool                                 isDirectory( string_view path );
+        static bool                                 isRegularFile( string_view path );
+        static bool                                 isReadOnlyFile( string_view fileName );
+        [[nodiscard]] static bool                   setWritable( string_view path, bool bWritable );
+        [[nodiscard]] static bool                   tryGetFileTimestamp( string_view fileName, uint64& outSeconds );
+        [[nodiscard]] static bool                   getFileWriteTime( string_view path, int64& outTicks );
+        [[nodiscard]] static bool                   setFileWriteTime( string_view path, int64 ticks );
+        [[nodiscard]] static bool                   tryGetFileSize( string_view fileName, uint64& outSize );
+        [[nodiscard]] static bool                   getFileStamp( string_view fileName, FileStamp& outStamp );
+        [[nodiscard]] static bool                   copyFile( string_view source, string_view destination );
+        [[nodiscard]] static bool                   removeFile( string_view path );
+        [[nodiscard]] static bool                   replaceFile( string_view tempPath, string_view targetPath );
+        [[nodiscard]] static bool                   tryRemoveFile( string_view path );
+        [[nodiscard]] static bool                   removeDirectory( string_view path );
+        [[nodiscard]] static bool                   renamePath( string_view from, string_view to );
+        [[nodiscard]] static bool                   writeFile( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static FileWriteResult        tryWriteFile( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static bool                   writeFileDurable( string_view fileName, const uint8* pData, uint64 size );
+        [[nodiscard]] static bool                   readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
+        [[nodiscard]] static bool                   readTextFile( string_view fileName, string& outText );
+        [[nodiscard]] static OptionalFileRead       readOptionalTextFile( string_view fileName, string& outText );
+        [[nodiscard]] static bool                   readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
+        [[nodiscard]] static bool                   writeTextFile( string_view fileName, string_view text );
+        [[nodiscard]] static bool                   writeTextFileDurable( string_view fileName, string_view text );
+        [[nodiscard]] static bool                   appendTextFile( string_view fileName, string_view text );
+        [[nodiscard]] static bool                   collectFiles( string_view directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        [[nodiscard]] static bool                   collectFolders( string_view directory, vector<AbsolutePath>& outListFolder, bool bRecursive );
+        [[nodiscard]] static bool                   makeCanonicalPath( string_view path, string& outResult );
+        [[nodiscard]] static AbsolutePath           reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator );
+        [[nodiscard]] static bool                   isWriteAllowed( string_view path );
+        [[nodiscard]] static bool                   isCreateAllowed( string_view path );
+        [[nodiscard]] static optional<AbsolutePath> findNotOpenForEdit( string_view path );
+        [[nodiscard]] static AbsolutePath           findPathIgnoringCase( string_view root, string_view lowerRelative );
+        [[nodiscard]] static AbsolutePath           makePathIgnoringCase( string_view root, string_view relative );
         template <typename Func>
         [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, Func&& func )
         {

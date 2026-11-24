@@ -73,7 +73,7 @@ namespace sw
              */
             [[nodiscard]] static expected<LoadBotOptions, string> readOptions( int32 argc, utf8* argv[] )
             {
-                const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+                const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath().str() );
                 if ( baseDirectory.has_value() == false )
                     return unexpected( string( "cannot read the startup directory - path arguments cannot be resolved" ) );
                 CommandLineManager commandLine;

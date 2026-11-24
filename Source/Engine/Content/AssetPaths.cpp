@@ -642,9 +642,9 @@ namespace sw
             string mountedKey;
             if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( state, lowerFile, mountedRoot, mountedKey ) )
             {
-                const string hit = FileUtil::findPathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), mountedKey );
-                if ( hit.empty() == false && FileUtil::exists( FileUtil::toDiskPath( hit ) ) )
-                    found = FileUtil::normalizeSeparators( hit );
+                const AbsolutePath hit = FileUtil::findPathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), mountedKey );
+                if ( hit.empty() == false && FileUtil::exists( hit ) )
+                    found = hit.str();
             }
 #endif
         }
@@ -764,7 +764,7 @@ namespace sw
             string     mountedRoot;
             string     mountedKey;
             const bool bMixedCaseDomain = AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, id, mountedRoot, mountedKey );
-            result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), id.substr( id.find( '/' ) + 1 ) ) : FileUtil::joinPath( domainRoot, keyUnderRoot );
+            result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( FileUtil::toDiskPath( mountedRoot ), id.substr( id.find( '/' ) + 1 ) ).str() : FileUtil::joinPath( domainRoot, keyUnderRoot );
         }
         optional<AbsolutePath> absPath = AbsolutePath::tryMake( result );
         if ( absPath.has_value() == false )

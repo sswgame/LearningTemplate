@@ -29,7 +29,7 @@ namespace sw
             {
                 // 원본 심볼은 Bin/Symbols 에, 섀도 복사본의 심볼은 그 복사본 옆에 둔다.
                 const string originalDebugPath = ModuleLibraryUtil::findBuiltDebugSymbolPath( originalModulePath );
-                const string shadowDebugPath   = ModuleLibraryUtil::getDebugSymbolPath( shadowModulePath );
+                const string shadowDebugPath   = ModuleLibraryUtil::getDebugSymbolPath( shadowModulePath ).str();
                 if ( originalDebugPath.empty() )
                     return;
 
@@ -222,7 +222,7 @@ namespace sw
         if ( shadowPath.empty() )
             return;
         ModuleShadowCopyInternal::tryDeleteFile( shadowPath );
-        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ) );
+        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ).str() );
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
         string_view directoryPath;

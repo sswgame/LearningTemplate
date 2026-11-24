@@ -18,10 +18,10 @@ namespace sw
             /** @brief 셰이더 짝(`Content/engine/shaders/pack.hlsli`)의 본문입니다. 프로젝트 루트가 없으면 빈 글입니다. */
             static string readShaderPair()
             {
-                const string projectRoot = FileUtil::normalizeSeparators( ProcessRoots::get()._project.str() );
-                string       text;
+                const AbsolutePath projectRoot = ProcessRoots::get()._project;
+                string             text;
                 if ( projectRoot.empty() == false )
-                    std::ignore = FileUtil::readTextFile( FileUtil::toDiskPath( FileUtil::joinPath( FileUtil::joinPath( projectRoot, "Content/engine/shaders" ), "pack.hlsli" ) ), text );
+                    std::ignore = FileUtil::readTextFile( projectRoot.join( "Content/engine/shaders" ).join( "pack.hlsli" ), text );
                 return text;
             }
         };

@@ -33,10 +33,10 @@ SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "C:foo" ).has_value() );
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "../escape" ).has_value() );
     SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "saves/../../escape" ).has_value() );
-    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( FileUtil::getCurrentPath() ).has_value() );
+    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( FileUtil::getCurrentPath().str() ).has_value() );
     SW_EXPECT_TRUE( LocalStoreLocation::tryUnderUserData( "saves/..hidden" ).has_value() ); // `..` 로 시작할 뿐인 이름은 마디 `..` 가 아니다
 
-    const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::getCurrentPath(), "elsewhere/saves" ) );
+    const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::getCurrentPath().str(), "elsewhere/saves" ) );
     SW_REQUIRE_TRUE( absolutePath.has_value() );
     const LocalStoreLocation absolute = LocalStoreLocation::absolute( *absolutePath );
     SW_EXPECT_TRUE( absolute.getKind() == LocalStoreLocation::Kind::Absolute );

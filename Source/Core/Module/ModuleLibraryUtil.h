@@ -36,7 +36,7 @@ namespace sw
          * @brief 라이브러리 **옆**에 있는 디버그 심볼 파일의 경로를 반환합니다(섀도 복사본의 심볼 위치).
          * @note Windows 는 `.pdb`, Linux 는 `.debug` 입니다(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다).
          */
-        static string getDebugSymbolPath( string_view libraryPath );
+        static AbsolutePath getDebugSymbolPath( string_view libraryPath );
         /**
          * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다. `Bin/Symbols/<이름>` 을 먼저 보고, 없으면 라이브러리 옆을 봅니다. 둘 다 없으면 빈 문자열을 반환합니다.
          * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/BuildLayout.cmake`). `setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
@@ -52,7 +52,7 @@ namespace sw
         /** @brief 디버그 심볼 폴더 이름입니다(`Bin/Symbols`). */
         static constexpr const utf8* kSymbolFolder = "Symbols";
         /** @brief 모듈 폴더(`<Bin>/Modules`)입니다. */
-        static string getModuleDirectory();
+        static AbsolutePath getModuleDirectory();
         /**
          * @brief 모듈 이름 @p baseName 의 라이브러리 경로를 찾습니다. `Bin/Modules` 에 있으면 그 경로를, 없으면 `Bin` 의 경로를 반환합니다(GameFramework 처럼 Bin 에 남는 공유 라이브러리).
          * @details 둘 다 없으면 `Bin/Modules` 의 경로를 반환한다. 부르는 쪽은 이 경로로 "없다"를 알린다.

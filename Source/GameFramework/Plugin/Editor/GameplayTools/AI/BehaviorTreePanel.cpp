@@ -120,7 +120,7 @@ namespace sw::editor
         _nodeGraph.requestContentFit();
         const auto diskPath = getDocumentDiskPath();
         string     text;
-        if ( diskPath.has_value() == false || FileUtil::readTextFile( FileUtil::toDiskPath( diskPath->str() ), text ) == false )
+        if ( diskPath.has_value() == false || FileUtil::readTextFile( *diskPath, text ) == false )
         {
             _statusText = "The file could not be read";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould", "Behavior tree file '%#' could not be read", path.c_str() );

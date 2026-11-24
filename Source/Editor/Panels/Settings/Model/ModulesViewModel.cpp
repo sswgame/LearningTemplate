@@ -106,7 +106,7 @@ namespace sw::editor
 
     void ModulesViewModel::requestReload()
     {
-        _loadJob.request( ModuleLibraryUtil::getModuleDirectory() );
+        _loadJob.request( ModuleLibraryUtil::getModuleDirectory().str() );
     }
 
     void ModulesViewModel::pollReload()

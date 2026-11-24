@@ -232,7 +232,7 @@ namespace sw
             return false;
         }
         _reportPath    = string( reportPath );
-        _workingFolder = FileUtil::getCurrentPath();
+        _workingFolder = FileUtil::getCurrentPath().str();
         if ( const GenericWindow* const pWindow = MainWindowSubsystem::findMainWindow(); pWindow != nullptr )
         {
             _startWindowWidth  = pWindow->getWidth();
@@ -277,7 +277,7 @@ namespace sw
         // 앞 단계가 프로세스의 작업 폴더를 옮겼으면(파일 대화상자 같은 것) 상대 경로를 쓰는 다음 단계가 엉뚱한 폴더에 쓴다 — 알리고 처음 폴더로 되돌린다.
         if ( _pChain->getStageIndex() > 0 && _workingFolder.empty() == false )
         {
-            const string currentFolder = FileUtil::getCurrentPath();
+            const string currentFolder = FileUtil::getCurrentPath().str();
             if ( currentFolder != _workingFolder )
             {
                 SW_LOG_WARNING_ID( "AutomationSession.WorkingFolderChangedDuring", "[Scenario] the working folder changed to '%#' during stage %# - restoring '%#'", currentFolder.c_str(),

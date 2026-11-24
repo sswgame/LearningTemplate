@@ -591,7 +591,7 @@ namespace sw::editor
         presetFile.appendFormat( "%#%#", presetID.c_str(), AppearanceDatabase::kPresetExtension );
         const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), presetFile.view() );
         const auto   writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        const bool   bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( FileUtil::toDiskPath( writePath->str() ) ) && doc.saveCompleteToFile( writePath->str() );
+        const bool   bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( *writePath ) && doc.saveCompleteToFile( writePath->str() );
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax512> status;
