@@ -60,7 +60,7 @@ SW_TEST_CASE( InputUsersTest, EachUserReadsOnlyTheirDevices )
     script.addEvent( 1, RawInputEvent::makeKeyUp( Key::Space ) );
     script.addGamepadConnection( 1, 1 );
     script.addEvent( 2, RawInputEvent::makeGamepadButtonDown( GamepadButton::A, 1 ) );
-    input.attachVirtualInput( &script, VirtualInputMode::Exclusive );
+    Subscription attachment = input.attachVirtualInput( script, VirtualInputMode::Exclusive );
 
     input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( pFirst->isActionDown( jump ) );
@@ -74,7 +74,7 @@ SW_TEST_CASE( InputUsersTest, EachUserReadsOnlyTheirDevices )
     SW_EXPECT_TRUE( pSecond->isActionDown( jump ) ); // 바인딩의 패드 0 은 "내 패드" — 짝지은 1 번이다
     input.endFrame();
 
-    input.detachVirtualInput();
+    attachment.reset();
     input.closeLocalUsers();
     SW_EXPECT_EQUAL( 1u, input.getLocalUserCount() );
     SW_EXPECT_NULL( input.findUserMap( 1 ) );

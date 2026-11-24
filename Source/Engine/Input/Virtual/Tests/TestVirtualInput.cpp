@@ -1,10 +1,11 @@
-// VirtualInputScriptTest · InputReplayTest — 가상 입력 원천: 프레임 순서 · 탭 · 마우스 위치 · 밀기, 녹화 · 시작 프레임 · 파일 왕복과 망가진 파일 거절(nogpu).
+// VirtualInputScriptTest · InputReplayTest — 가상 입력 원천: 프레임 순서 · 탭 · 마우스 위치 · 밀기, 녹화 · 시작 프레임 · 파일 왕복과 망가진 파일 거절, VirtualInputAttachmentTest — 붙임의 쌓임과 수명(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 
@@ -293,4 +294,101 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     vector<uint8> craftedEvents = good;
     Memory::copy( craftedEvents.data() + 24, &hugeEvent, sizeof( hugeEvent ) );
     refuses( craftedEvents );
+}
+
+/** @brief [VirtualInputAttachmentTest] 위에 붙은 원천이 떨어지면 아래 원천이 제 프레임 번호(멈춘 동안에도 흐른다)로 다시 낸다. 구독이 사라지면 떼어진다 */
+SW_TEST_CASE( VirtualInputAttachmentTest, LowerSourceResumes )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    VirtualInputScript lower;
+    lower.addEvent( 1, RawInputEvent::makeKeyDown( Key::A ) ); // 덮여 있는 동안의 이벤트는 내지 않는다
+    lower.addEvent( 2, RawInputEvent::makeKeyDown( Key::B ) );
+    VirtualInputScript upper;
+    upper.addEvent( 0, RawInputEvent::makeKeyDown( Key::C ) );
+    {
+        const Subscription lowerAttachment = input.attachVirtualInput( lower );
+        input.beginFrame( 0.016f );
+        input.endFrame();
+        Subscription upperAttachment = input.attachVirtualInput( upper, VirtualInputMode::Mixed );
+        SW_EXPECT_TRUE( input.getVirtualInput() == &upper );
+        SW_EXPECT_TRUE( input.isOSInputSuppressed() ); // 아래의 배타는 위의 혼합이 풀지 않는다
+        input.beginFrame( 0.016f );
+        SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( Key::C ) );
+        SW_EXPECT_FALSE( input.getKeyboard()->isKeyDown( Key::A ) );
+        input.endFrame();
+
+        upperAttachment.reset();
+        SW_EXPECT_TRUE( input.getVirtualInput() == &lower );
+        SW_EXPECT_EQUAL( 2u, input.getVirtualFrameIndex( lower ) );
+        input.beginFrame( 0.016f );
+        SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( Key::B ) );
+        SW_EXPECT_FALSE( input.getKeyboard()->isKeyDown( Key::C ) ); // 떨어진 원천의 누름은 남지 않는다
+        input.endFrame();
+    }
+    SW_EXPECT_FALSE( input.isVirtualInputAttached() );
+    SW_EXPECT_FALSE( input.isOSInputSuppressed() );
+    input.shutdown();
+}
+
+/** @brief [VirtualInputAttachmentTest] 아래 붙임이 풀리면 위 붙임도 떨어지고 그 구독은 무효가 된다(시나리오가 끝나면 그 시나리오가 부른 재생도 끝난다) */
+SW_TEST_CASE( VirtualInputAttachmentTest, ReleasingLowerEndsUpper )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    VirtualInputScript lower;
+    VirtualInputScript upper;
+    Subscription       lowerAttachment = input.attachVirtualInput( lower );
+    input.setOSDeviceInputBlocked( true );
+    Subscription upperAttachment = input.attachVirtualInput( upper );
+    SW_EXPECT_TRUE( input.isOSDeviceInputBlocked() ); // 무인 실행은 재생이 덮어도 사람의 장치를 버린다
+
+    lowerAttachment.reset();
+    SW_EXPECT_FALSE( input.isVirtualInputAttached() );
+    SW_EXPECT_FALSE( input.isOSDeviceInputBlocked() );
+    SW_EXPECT_FALSE( upperAttachment.isActive() );
+
+    const Subscription again = input.attachVirtualInput( upper );
+    upperAttachment.reset(); // 무효가 된 옛 구독은 새 붙임을 떼지 않는다
+    SW_EXPECT_TRUE( input.isVirtualInputAttached( upper ) );
+    input.shutdown();
+    SW_EXPECT_FALSE( again.isActive() );
+}
+
+/** @brief [VirtualInputAttachmentTest] 같은 원천을 두 번 붙이면 거절하고 먼저 붙임을 그대로 둔다 */
+SW_TEST_CASE( VirtualInputAttachmentTest, SameSourceIsRefused )
+{
+    SW_EXPECT_LOG( "InputManager.VirtualInputAlreadyAttached" );
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    VirtualInputScript script;
+    const Subscription first  = input.attachVirtualInput( script );
+    const Subscription second = input.attachVirtualInput( script );
+    SW_EXPECT_TRUE( first.isActive() );
+    SW_EXPECT_FALSE( second.isActive() );
+    SW_EXPECT_TRUE( input.getVirtualInput() == &script );
+    input.shutdown();
+}
+
+/** @brief [VirtualInputAttachmentTest] 탐색은 붙어 있는 원천을 떼지 않고 그 프레임 번호도 흘리지 않으며, 만든 장치 상태를 남긴다 */
+SW_TEST_CASE( VirtualInputAttachmentTest, SeekKeepsOtherSource )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    InputReplay replay;
+    replay.startRecording();
+    replay.recordFrame( 0.016f, { RawInputEvent::makeKeyDown( Key::A ) } );
+    replay.recordFrame( 0.016f, {} );
+    replay.stopRecording();
+    VirtualInputScript script;
+    const Subscription attachment = input.attachVirtualInput( script );
+    input.beginFrame( 0.016f );
+    input.endFrame();
+
+    replay.seekTo( input, 2 );
+    SW_EXPECT_TRUE( input.getVirtualInput() == &script );
+    SW_EXPECT_EQUAL( 1u, input.getVirtualFrameIndex( script ) );
+    SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( Key::A ) );
+    SW_EXPECT_EQUAL( 2u, replay.getStartFrameIndex() );
+    input.shutdown();
 }

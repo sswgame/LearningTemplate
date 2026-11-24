@@ -103,22 +103,19 @@ namespace sw
     {
         const uint32 endIndex = MathUtil::min( frameIndex, getFrameCount() );
         // 원시 이벤트는 누름과 뗌처럼 방향이 있는 전이라 목표 프레임만 다시 넣으면 상태가 틀린다. 처음부터 그 프레임 직전까지 다시 재생한다.
-        input.detachVirtualInput();
+        SW_ASSERT( input.isVirtualInputAttached( *this ) == false ); // 시작 프레임을 바꾸므로 재생 중이면 붙임을 먼저 푼다
         VirtualInputScript prefix;
+        vector<float32>    listDeltaSeconds;
+        listDeltaSeconds.reserve( endIndex );
         for ( uint32 index = 0; index < endIndex; ++index )
         {
             for ( const RawInputEvent& event : _listFrame[index]._listRawEvent )
             {
                 prefix.addEvent( index, event );
             }
+            listDeltaSeconds.push_back( _listFrame[index]._deltaTime );
         }
-        input.attachVirtualInput( &prefix );
-        for ( uint32 index = 0; index < endIndex; ++index )
-        {
-            input.beginFrame( _listFrame[index]._deltaTime );
-            input.endFrame();
-        }
-        input.detachVirtualInput( false );
+        input.runVirtualFrames( prefix, listDeltaSeconds );
         _startFrameIndex = endIndex;
     }
 

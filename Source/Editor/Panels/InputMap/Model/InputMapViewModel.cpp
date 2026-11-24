@@ -69,6 +69,7 @@ namespace sw::editor
         : _pRecorder{ &recorder }
         , _inputMap{}
         , _replay{}
+        , _replayPlayback{}
         , _listConflict{}
         , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._debugKeyInputMap } // 처음 여는 맵은 디버그 키 맵이다 — 경로의 원본은 enginedefaultassets.xml
         , _replayFilePath{ getEditorToolDefaults()._inputReplayFile }                  // 처음 가리키는 파일 — 원본은 editortooldefaults.json
@@ -102,18 +103,16 @@ namespace sw::editor
             _replay.recordFrame( deltaTime, input.getLastFrameEvents() );
         }
         // 재생(가상 입력으로 붙인 리플레이)이 끝나면 해제한다.
-        const bool bReplayFinished = input.getVirtualInput() == &_replay && _replay.isFinished( input.getVirtualFrameIndex() );
+        const bool bReplayFinished = input.getVirtualInput() == &_replay && _replay.isFinished( input.getVirtualFrameIndex( _replay ) );
         if ( bReplayFinished )
-            input.detachVirtualInput();
+            _replayPlayback.reset();
     }
 
     void InputMapViewModel::releaseInput()
     {
         _replay.stopRecording();
         cancelKeyCapture();
-        InputManager* pInput = _inputMap.getInputManager();
-        if ( pInput != nullptr && pInput->getVirtualInput() == &_replay )
-            pInput->detachVirtualInput();
+        _replayPlayback.reset();
     }
 
     void InputMapViewModel::sampleInput( InputManager& input )
@@ -616,12 +615,12 @@ namespace sw::editor
 
     bool InputMapViewModel::isReplayPlaying() const
     {
-        return getInputManager().getVirtualInput() == &_replay;
+        return _replayPlayback.isActive();
     }
 
     uint32 InputMapViewModel::getReplayCurrentFrame() const
     {
-        return _replay.getStartFrameIndex() + ( isReplayPlaying() ? getInputManager().getVirtualFrameIndex() : 0u );
+        return _replay.getStartFrameIndex() + getInputManager().getVirtualFrameIndex( _replay );
     }
 
     void InputMapViewModel::startRecording()
@@ -632,14 +631,16 @@ namespace sw::editor
 
     void InputMapViewModel::playReplay()
     {
-        InputManager& input = getInputManager();
+        if ( isReplayPlaying() )
+            return;
         if ( getReplayCurrentFrame() >= _replay.getFrameCount() )
-            _replay.seekTo( input, 0 );
-        input.attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
+            seekReplay( 0 );
+        _replayPlayback = getInputManager().attachVirtualInput( _replay, VirtualInputMode::Exclusive, false );
     }
 
     void InputMapViewModel::seekReplay( uint32 frame )
     {
+        _replayPlayback.reset();
         _replay.seekTo( getInputManager(), frame );
     }
 
@@ -652,9 +653,7 @@ namespace sw::editor
 
     void InputMapViewModel::loadReplay()
     {
-        InputManager& input = getInputManager();
-        if ( input.getVirtualInput() == &_replay )
-            input.detachVirtualInput();
+        _replayPlayback.reset();
         _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
         const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )

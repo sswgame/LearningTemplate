@@ -75,7 +75,7 @@ SW_TEST_CASE( InputFrameQueueTest, VirtualInputTakesTheSamePathAsRealInput )
     VirtualInputScript script;
     SW_REQUIRE_TRUE( virtualInput.initialize() );
     script.addEvent( 0, RawInputEvent::makeKeyDown( Key::A ) );
-    virtualInput.attachVirtualInput( &script, VirtualInputMode::Exclusive );
+    Subscription attachment = virtualInput.attachVirtualInput( script, VirtualInputMode::Exclusive );
     virtualInput.beginFrame( 0.016f );
 
     SW_EXPECT_TRUE( realInput.getKeyboard()->isKeyDown( Key::A ) && virtualInput.getKeyboard()->isKeyDown( Key::A ) );
@@ -90,7 +90,7 @@ SW_TEST_CASE( InputFrameQueueTest, VirtualInputTakesTheSamePathAsRealInput )
 
     realInput.endFrame();
     virtualInput.endFrame();
-    virtualInput.detachVirtualInput();
+    attachment.reset();
     virtualInput.shutdown();
     realInput.shutdown();
 }
