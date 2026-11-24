@@ -85,6 +85,12 @@ namespace sw
         // 알리는 읽기 — 아래는 실패를 경고 · 오류 로그로 남기고 bool 을 돌려준다(게임 데이터 표 · 키트 데이터가 같은 문구로 알리게).
         // ------------------------------------------------------------------------------
 
+        /**
+         * @brief 리소스 @p assetID 를 XML 글로 읽습니다. 팩의 이진 쿠킹본(`XMLBinary`)이면 글로 되살리고, 깨진 쿠킹본이면 오류를 남기고 false 입니다.
+         * @details 문서로 읽기만 하면 `XMLDocument::loadResource` 다(쿠킹본을 그대로 읽는다). 이것은 글을 고쳐 합치는 자리 — 부모 · 덮어쓰기 층 — 의 입구다. 쿠킹본은 고쳐 쓸 수 없어
+         *          글로 되살리지 않은 층은 부모를 적지 못하고 원본을 통째로 갈아 끼운다.
+         */
+        [[nodiscard]] static bool readText( const AssetID& assetID, string& outText );
         /** @brief `loadRoot` 를 하고 실패하면 경고합니다. @p outSourceName 은 실제로 읽은 경로가 되어 이후 경고가 어느 파일인지 가리킨다. */
         [[nodiscard]] static bool loadRootOrWarn( XMLDocument& outDocument, const AssetID& assetID, const utf8* pRootName, XMLNode& outRoot, string& outSourceName );
         /** @brief `parseRoot` 를 하고 실패하면 경고합니다. 테스트와 에디터 미리보기가 씁니다. */

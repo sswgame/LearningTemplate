@@ -23,6 +23,7 @@
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
@@ -41,6 +42,7 @@
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -119,9 +121,10 @@ namespace sw
                 unordered_set<string>         _setIncluded;
                 unordered_set<string>         _setReferencedExcluded;
                 PackStagedSelection           _staged;
-                vector<PackSceneReach>        _listSceneReach; ///< 씬 청크로 미룬 씬마다의 닿음(`PackSplitConfig::_listScenePattern` 이 비면 빈 목록)
-                PackSceneChunkPlan            _scenePlan;      ///< 기동 필수가 아닌 에셋의 청크
-                unordered_map<string, string> _mapStemChunk;   ///< `<폴더 id>/<줄기>` → 청크 — 스테이징 산출물(씬 쿠킹본 · 프리로드 목록)이 원본의 청크를 따른다
+                vector<PackSceneReach>        _listSceneReach;    ///< 씬 청크로 미룬 씬마다의 닿음(`PackSplitConfig::_listScenePattern` 이 비면 빈 목록)
+                PackSceneChunkPlan            _scenePlan;         ///< 기동 필수가 아닌 에셋의 청크
+                vector<vector<string>>        _listGameLayerRoot; ///< 굽는 게임마다의 덮어쓰기 층 뿌리(`PackEngineSettings::_listResourceLayer` — 정규화, 아래 층이 먼저)
+                unordered_map<string, string> _mapStemChunk;      ///< `<폴더 id>/<줄기>` → 청크 — 스테이징 산출물(씬 쿠킹본 · 프리로드 목록)이 원본의 청크를 따른다
             };
 
             /** @brief 고르기가 글을 읽는 디스크 입구입니다. 읽기는 `AssetIO::readBinaryFile` 이라 고르기 범위(`PackReach`)가 받아 준다(그 범위의 기록은 쓰지 않는다). */
@@ -165,6 +168,129 @@ namespace sw
             /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/playground/maps/a.scene.xml`)입니다. */
             static string makeAssetID( string_view domain, string_view relativePath ) { return FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ).str(); }
 
+            /** @brief 원소 @p node 나 그 아래에 조건(`_when`)이 있으면 true 입니다. 주석 · 글에 적힌 이름은 조건이 아니다. */
+            [[nodiscard]] static bool hasCondition( const XMLNode& node )
+            {
+                if ( StringUtil::equals( node.getName(), DataInheritance::kWhenElement ) )
+                    return true;
+                for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( hasCondition( child ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief @p assetID 가 굽는 게임의 덮어쓰기 층 파일(`<층 뿌리>/<리소스 id>`)이면 true 입니다. 층은 원본과의 차이라 혼자서는 완전한 문서가 아니다. */
+            [[nodiscard]] static bool isLayerFile( const PackSelection& selection, string_view assetID )
+            {
+                for ( const vector<string>& listRoot : selection._listGameLayerRoot )
+                {
+                    for ( const string& root : listRoot )
+                    {
+                        if ( assetID.size() > root.size() && assetID[root.size()] == '/' && StringUtil::startsWith( assetID, root ) )
+                            return true;
+                    }
+                }
+                return false;
+            }
+
+            /** @brief 쿠킹 축 조건만 풉니다(층 글 — 부모는 읽을 때 얹힌다). */
+            [[nodiscard]] static bool resolveCookConditions( string& inoutText, string_view id )
+            {
+                string         resolvedText;
+                bool           bResolved = false;
+                vector<string> listLoadTag;
+                if ( ResourceComposer::resolveConditions( inoutText, id, ResourceTagTiming::Cook, engine::getSubsystem<ResourceTags>().capture(), resolvedText, bResolved, listLoadTag ) == false )
+                    return false;
+                if ( bResolved )
+                    inoutText = std::move( resolvedText );
+                return true;
+            }
+
+            /** @brief 굽는 게임마다 팩 설정의 덮어쓰기 층 뿌리를 읽습니다 — 런타임이 기동 때 읽는 그 값(`PackEngineSettings`)이다. */
+            [[nodiscard]] static bool collectLayerRoots( const vector<string>& listDomain, string_view gamePrefix, PackSelection& outSelection )
+            {
+                for ( const string& domain : listDomain )
+                {
+                    if ( StringUtil::startsWith( domain, gamePrefix ) == false )
+                        continue;
+                    const AssetID      settingsID{ FileUtil::joinPath( FileUtil::trimTrailingSlashes( domain ), PackEngineSettings::kPackRelativePath ) };
+                    string             text;
+                    PackEngineSettings settings;
+                    if ( AssetIO::readTextAsset( settingsID, text ) == false || settings.loadFromXMLText( text, settingsID.view() ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.PackSettingsUnreadable", "Pack cook: '%#' could not be read - the resource layers of '%#' are unknown", settingsID.view(), domain );
+                        return false;
+                    }
+                    vector<string>& listRoot = outSelection._listGameLayerRoot.emplace_back();
+                    for ( const string& root : settings._listResourceLayer )
+                        listRoot.push_back( FileUtil::normalizePath( root ).str() );
+                }
+                return true;
+            }
+
+            /**
+             * @brief 층이 얹히는 카탈로그를 게임마다 층까지 합쳐 참조 규칙을 봅니다 — 층의 행은 원본의 행을 가리킬 수 있어 층 파일 하나만 보면 답할 수 없다. 깨진 참조가 있으면 false 입니다.
+             * @details 합치기는 런타임의 층 단계와 같은 함수(`ResourceComposer::mergeLayer`)다. 원본이 굽는 도메인에 없는 층은 경고만 한다(일부 도메인만 굽는 실행).
+             */
+            [[nodiscard]] static bool validateLayeredCatalogs( const PackCookParams& params, const PackDiskReachSource& files, const PackSelection& selection )
+            {
+                DataCatalogReferenceRules references;
+                if ( references.loadFromAsset() == false )
+                    return false;
+                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                bool                      bValid = true;
+                for ( const vector<string>& listRoot : selection._listGameLayerRoot )
+                {
+                    unordered_map<string, vector<string>> mapTargetLayer; // 원본 id → 층 파일(아래 층이 먼저)
+                    vector<string>                        listTarget;
+                    for ( const string& root : listRoot )
+                    {
+                        for ( const string& assetID : selection._setIncluded )
+                        {
+                            if ( assetID.size() <= root.size() || assetID[root.size()] != '/' || StringUtil::startsWith( assetID, root ) == false )
+                                continue;
+                            string          target   = assetID.substr( root.size() + 1 );
+                            vector<string>& listFile = mapTargetLayer[target];
+                            if ( listFile.empty() )
+                                listTarget.push_back( std::move( target ) );
+                            listFile.push_back( assetID );
+                        }
+                    }
+                    VectorUtil::sort( listTarget );
+                    for ( const string& target : listTarget )
+                    {
+                        string mergedText;
+                        if ( files.readText( target, mergedText ) == false )
+                        {
+                            SW_LOG_WARNING_ID( "PackCooker.LayerWithoutBase", "Pack cook: layers lie over '%#' but it is not in the cooked domains - their references are not checked", target );
+                            continue;
+                        }
+                        if ( references.isRootMentioned( mergedText ) == false )
+                            continue;
+                        string flatText;
+                        bool   bComposed = false;
+                        bool   bMerged   = ResourceComposer::compose( mergedText, target, ResourceContext::forPackCook( source ), flatText, bComposed );
+                        if ( bComposed )
+                            mergedText = std::move( flatText );
+                        for ( const string& layerID : mapTargetLayer[target] )
+                        {
+                            string layerText;
+                            bMerged = bMerged && files.readText( layerID, layerText ) && resolveCookConditions( layerText, layerID ) &&
+                                      ResourceComposer::mergeLayer( layerText, layerID, ResourceContext::forDocument(), target, mergedText );
+                        }
+                        XMLDocument doc;
+                        if ( bMerged && doc.parse( mergedText, target ) && references.validateDocument( doc.getRoot(), target ) )
+                            continue;
+                        SW_LOG_ERROR_ID( "PackCooker.BrokenLayeredCatalog", "Pack cook: '%#' with its resource layers (last '%#') does not compose or names ids that are not in it (rules in %#)", target,
+                                         mapTargetLayer[target].back(), DataCatalogReferenceRules::kTableAssetID );
+                        bValid = false;
+                    }
+                }
+                return bValid;
+            }
+
             /** @brief 고르기 요약입니다 — 도메인마다 담은 파일 수 · 바이트와 후보 수 · 바이트, 그리고 합계(보고 · 크기 추적용). */
             static void logSelection( const vector<PackDomainCandidates>& listCandidates, const PackReachResult& reach )
             {
@@ -203,7 +329,7 @@ namespace sw
              * @details 팩 작업은 도메인 · 몫마다 따로 돌아 한 팩만 보면 다른 팩(`common`)의 카탈로그를 볼 수 없다 — 모든 도메인을 한 번에 보는 고르기 작업 안에서 한다.
              *          카탈로그는 펼친 글로 본다(물려받은 항목 · 다른 팩 부모의 항목도 항목이다). 표에 칸 줄이 없으면 읽지 않는다.
              */
-            [[nodiscard]] static bool validateCatalogKeys( const PackCookParams& params, const vector<PackDomainCandidates>& listCandidates )
+            [[nodiscard]] static bool validateCatalogKeys( const PackCookParams& params, const PackSelection& selection, const vector<PackDomainCandidates>& listCandidates )
             {
                 DataCatalogReferenceRules references;
                 if ( references.loadFromAsset() == false )
@@ -222,10 +348,10 @@ namespace sw
                         string text;
                         if ( AssetIO::readTextFile( file._absolutePath, text ) == false || check.isMentioned( text ) == false )
                             continue;
-                        // 쿠킹본을 따로 만드는 종류(씬 · 프리팹)는 펼치지 않는다 — 그 쿠커가 펼치고, 칸 값은 원문에 적힌 그대로다.
+                        // 쿠킹본을 따로 만드는 종류(씬 · 프리팹)는 펼치지 않는다 — 그 쿠커가 펼치고, 칸 값은 원문에 적힌 그대로다. 층은 부모(원본)가 읽을 때 정해진다 — 적힌 행과 값만 본다.
                         string flatText;
                         bool   bComposed = false;
-                        if ( AssetCookPath::isCookableSource( file._assetID ) == false &&
+                        if ( AssetCookPath::isCookableSource( file._assetID ) == false && isLayerFile( selection, file._assetID ) == false &&
                              ResourceComposer::compose( text, file._absolutePath.str(), ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
                         {
                             SW_LOG_ERROR_ID( "PackCooker.CatalogKeyFlattenFailed", "Pack cook: could not flatten '%#' to check catalog keys", file._absolutePath.str() );
@@ -306,8 +432,6 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackCooker.PackReachFailed", "Pack cook: following references from the cook roots failed (reasons above) - no pack is written" );
                     return false;
                 }
-                if ( validateCatalogKeys( params, listCandidates ) == false )
-                    return false;
                 vector<PackDomainSources> listSources;
                 for ( const PackDomainCandidates& candidates : listCandidates )
                 {
@@ -318,6 +442,12 @@ namespace sw
                 outSelection._staged.build( listSources, reach );
                 outSelection._setIncluded           = std::move( reach._setIncluded );
                 outSelection._setReferencedExcluded = std::move( reach._setReferencedExcluded );
+                if ( collectLayerRoots( listDomain, gamePrefix.data(), outSelection ) == false )
+                    return false;
+                // 둘 다 돈다 — 한 번에 모두 알린다.
+                const bool bLayersValid = validateLayeredCatalogs( params, source, outSelection );
+                if ( validateCatalogKeys( params, outSelection, listCandidates ) == false || bLayersValid == false )
+                    return false;
                 return planSceneChunks( config, graph, outSelection );
             }
 
@@ -421,6 +551,11 @@ namespace sw
                 }
                 VectorUtil::sort( listID );
                 uint64 hash = settingsHash;
+                for ( const vector<string>& listRoot : selection._listGameLayerRoot ) // 층 파일은 다르게 담는다(`readSourceFile`)
+                {
+                    for ( const string& root : listRoot )
+                        hash = HashUtil::combine( hash, HashUtil::computeStringHash64( root.c_str(), root.size(), false ) );
+                }
                 for ( const string& assetID : listID )
                 {
                     hash = HashUtil::combine( hash, HashUtil::computeStringHash64( assetID.c_str(), assetID.size(), false ) );
@@ -583,9 +718,10 @@ namespace sw
              * @details 부모도 디스크 입구로 읽으므로 이 작업의 입력이 되어, 부모가 바뀌면 팩을 다시 굽는다. 스스로 쿠킹본을 만드는 종류(프리팹 변형 — `PrefabCooker::cookAll`)는 그 쿠커가 펼쳤다.
              *          펼치지 못하면 쿠킹 실패다 — 부모 없이 자식 칸만 담지 않는다. 카탈로그 참조 규칙(@p references)이 있는 루트는 펼친 글로 참조를 보고, 필수 참조가 깨졌으면
              *          쿠킹 실패다 — 런타임 카탈로그 읽기와 같은 표 · 같은 검사라 실행해야 드러나던 깨진 id 가 팩에 담기지 않는다.
+             *          덮어쓰기 층(@p bLayer)은 읽을 때 원본 위에 얹히는 차이라 쿠킹 축 조건만 풀어 글로 담는다 — 부모 · 참조는 원본과 합쳐야 답할 수 있다(`validateLayeredCatalogs`).
              */
             [[nodiscard]] static bool readSourceFile( string_view relativePath, const AbsolutePath& absPath, const AbsolutePath& contentRoot, const DataCatalogReferenceRules& references,
-                                                      PackCookTiming& ioTiming, vector<uint8>& outBytes )
+                                                      bool bLayer, PackCookTiming& ioTiming, vector<uint8>& outBytes )
             {
                 vector<uint8>&  bytes = outBytes;
                 const Stopwatch readWatch;
@@ -599,6 +735,14 @@ namespace sw
                 const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
                 if ( AssetCookPath::isCookableSource( relativePath ) )
                     return true;
+                if ( bLayer )
+                {
+                    string layerText{ text };
+                    if ( resolveCookConditions( layerText, absPath.str() ) == false )
+                        return false;
+                    bytes.assign( layerText.begin(), layerText.end() );
+                    return true;
+                }
                 DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
                 string                    flatText;
                 bool                      bComposed = false;
@@ -618,15 +762,25 @@ namespace sw
                     }
                 }
                 // 카탈로그는 이진 쿠킹본으로 담는다(`XMLBinary`). 로드 축 조건이 남은 글은 읽을 때 풀어야 하므로 글로 둔다.
-                const bool bPlainCatalog = references.isCookedRootMentioned( packedText ) && packedText.find( DataInheritance::kWhenElement ) == string_view::npos;
-                if ( bPlainCatalog )
+                if ( references.isCookedRootMentioned( packedText ) )
                 {
-                    XMLDocument   doc;
-                    vector<uint8> cookedBytes;
-                    if ( doc.parse( packedText, absPath.str() ) && references.isCookedRoot( doc.getRoot().getName() ) && XMLBinary::encode( doc.getRoot(), cookedBytes ) )
+                    XMLDocument doc;
+                    const bool  bParsed  = doc.parse( packedText, absPath.str() );
+                    const bool  bCatalog = bParsed && references.isCookedRoot( doc.getRoot().getName() ) && hasCondition( doc.getRoot() ) == false;
+                    if ( bCatalog )
                     {
-                        bytes = std::move( cookedBytes );
-                        return true;
+                        vector<uint8> cookedBytes;
+                        if ( XMLBinary::encode( doc.getRoot(), cookedBytes ) )
+                        {
+                            bytes = std::move( cookedBytes );
+                            return true;
+                        }
+                    }
+                    // 읽지 못한 카탈로그를 글로 담지 않는다 — 배포본에서야 드러난다. 루트가 다른 글(이름이 글 속에 나왔을 뿐이다)은 그대로 담는다.
+                    if ( StringUtil::endsWith( relativePath, ".xml", true ) && ( bParsed == false || bCatalog ) )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.CatalogNotCooked", "Pack cook: catalog '%#' could not be cooked to binary (%#)", absPath.str(), doc.getLastError() );
+                        return false;
                     }
                 }
                 if ( bComposed )
@@ -638,8 +792,8 @@ namespace sw
              * @brief 모은 항목을 경로 해시 순으로 세워 하나씩 읽고 @p outputPath 에 스트림으로 씁니다. 항목은 하나씩(창 크기까지)만 들고 내용 해시를 함께 센다.
              * @return 같은 경로가 두 번이거나 읽기 · 쓰기가 실패하면 이유를 오류로 남기고 false 입니다.
              */
-            [[nodiscard]] static bool writePackItems( const PackConfig& config, const PackWriterDesc& writerDesc, const AbsolutePath& outputPath, const PackCookParams& params, const DataCatalogReferenceRules& references,
-                                                      vector<PackItem>& inoutListItem, PackCookTiming& ioTiming, PackWriteResult& outResult )
+            [[nodiscard]] static bool writePackItems( const PackConfig& config, const PackWriterDesc& writerDesc, const AbsolutePath& outputPath, const PackCookParams& params, const PackSelection& selection,
+                                                      const DataCatalogReferenceRules& references, vector<PackItem>& inoutListItem, PackCookTiming& ioTiming, PackWriteResult& outResult )
             {
                 VectorUtil::sort( inoutListItem, []( const PackItem& left, const PackItem& right )
                 { return left._pathHash < right._pathHash; } );
@@ -651,7 +805,7 @@ namespace sw
                     vector<uint8> bytes;
                     bool          bRead = true;
                     if ( item._source == PackItemSource::Source )
-                        bRead = readSourceFile( item._relativePath, item._absPath, params._resourceRoot, references, ioTiming, bytes );
+                        bRead = readSourceFile( item._relativePath, item._absPath, params._resourceRoot, references, isLayerFile( selection, makeAssetID( writerDesc._mountDomain, item._relativePath ) ), ioTiming, bytes );
                     else if ( item._source == PackItemSource::Staged )
                         bRead = readStagedFile( item._absPath, ioTiming, bytes );
                     else
@@ -970,7 +1124,7 @@ namespace sw
              * @details 목록(@p listing)은 나누기가 한 번 고른 것을 받아 이 몫의 경로 해시만 담는다 — 목록이 바뀌면 몫의 경로 해시가 설정 해시에 들어 있어 다시 굽는다.
              *          첫 팩(기본 청크 0 번)은 도메인 전체의 정체성 색인을 함께 담는다.
              */
-            static CookStreamedStep cookDomainPack( const PackConfig& config, const PackCookParams& params, const string& domain, const AbsolutePath& outputPath, const DomainListing& listing,
+            static CookStreamedStep cookDomainPack( const PackConfig& config, const PackCookParams& params, const PackSelection& selection, const string& domain, const AbsolutePath& outputPath, const DomainListing& listing,
                                                     const PackPart& part, PackCookTiming& ioTiming )
             {
                 constexpr CookStreamedStep kFailed{ CookStep::Failed, 0 };
@@ -1030,7 +1184,7 @@ namespace sw
                 }
 
                 PackWriteResult writeResult;
-                if ( writePackItems( config, writerDesc, outputPath, params, references, listItem, ioTiming, writeResult ) == false )
+                if ( writePackItems( config, writerDesc, outputPath, params, selection, references, listItem, ioTiming, writeResult ) == false )
                     return kFailed;
                 // 나누기의 어림은 압축 전 · 펼치기 전 크기다 — 데이터 상속을 펼친 글이 커져 한도를 넘었으면 오류로 멈춘다(한도는 FAT32 같은 바깥 상한이라 넘긴 팩은 못 싣는다).
                 if ( writeResult._fileSize > config._split._maxPackBytes )
@@ -1441,7 +1595,7 @@ namespace sw
                 CookJobDesc  partDesc   = desc;
                 partDesc._settingsHash  = PackCookerInternal::computePartHash( PackCookerInternal::computeSelectionHash( desc._settingsHash, domain, selection ), part );
                 const CookResult result = store.cookStreamedFile( partDesc, outputID, packName, outputPath, [&]()
-                { return PackCookerInternal::cookDomainPack( config, params, domain, outputPath, listing, part, timing ); } );
+                { return PackCookerInternal::cookDomainPack( config, params, selection, domain, outputPath, listing, part, timing ); } );
                 if ( result == CookResult::Failed )
                     ++failedCount;
                 else if ( result != CookResult::Skipped )

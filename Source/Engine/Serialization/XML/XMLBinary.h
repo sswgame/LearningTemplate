@@ -58,7 +58,7 @@ namespace sw
         [[nodiscard]] static bool isBinary( string_view bytes );
         /** @brief 원소 @p root 의 나무를 쿠킹본으로 굽습니다. 무효 원소면 false 입니다. */
         [[nodiscard]] static bool encode( const XMLNode& root, vector<uint8>& outBytes );
-        /** @brief 쿠킹본의 모든 번호 · 글 자리가 범위 안이고 나무가 순환하지 않으면 true 입니다. 읽는 쪽은 이것을 지난 바이트만 따라간다. */
+        /** @brief 쿠킹본의 모든 번호 · 글 자리가 범위 안이고, 나무가 순환하지 않으며, 원소 중첩이 `XMLDocument::kMaxDepth` 안이면 true 입니다. 읽는 쪽은 이것을 지난 바이트만 따라간다. */
         [[nodiscard]] static bool validate( string_view bytes );
         /** @brief 쿠킹본을 XML 글로 되살립니다. 깨졌으면 false 입니다. */
         [[nodiscard]] static bool decodeText( string_view bytes, string& outText );

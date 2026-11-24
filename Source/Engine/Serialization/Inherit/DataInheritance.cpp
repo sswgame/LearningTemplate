@@ -20,8 +20,8 @@
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
-#include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include <algorithm>
 
@@ -708,13 +708,7 @@ namespace sw
 
     bool DataInheritanceResourceSource::readText( string_view assetID, string& outText )
     {
-        if ( AssetIO::readTextAsset( AssetID{ assetID }, outText ) == false )
-            return false;
-        // 팩의 카탈로그는 이진 쿠킹본이다 — 부모로 합칠 때는 글로 되살린다.
-        if ( XMLBinary::isBinary( outText ) == false )
-            return true;
-        const string cookedBytes = std::move( outText );
-        return XMLBinary::decodeText( cookedBytes, outText );
+        return XMLReadUtil::readText( AssetID{ assetID }, outText );
     }
 
     DataInheritanceDiskSource::DataInheritanceDiskSource( const AbsolutePath& contentRoot, optional<uint32> maxDepth )

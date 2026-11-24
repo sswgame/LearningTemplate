@@ -26,6 +26,7 @@
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModPackBuilder.h"
@@ -115,7 +116,7 @@ namespace sw
                 if ( listArgument.size() != 1 )
                     return false;
                 string text;
-                if ( AssetIO::readTextAsset( AssetID{ listArgument[0] }, text ) == false )
+                if ( XMLReadUtil::readText( AssetID{ listArgument[0] }, text ) == false ) // 팩의 카탈로그는 이진 쿠킹본이다
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "mod.read %#: not found", listArgument[0] );

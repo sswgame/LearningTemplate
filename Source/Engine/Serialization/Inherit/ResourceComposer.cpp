@@ -21,6 +21,7 @@
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -44,13 +45,7 @@ namespace sw
                     outText = _baseText;
                     return true;
                 }
-                if ( AssetIO::readTextAsset( AssetID{ assetID }, outText ) == false )
-                    return false;
-                // 팩의 카탈로그는 이진 쿠킹본이다 — 부모로 합칠 때는 글로 되살린다.
-                if ( XMLBinary::isBinary( outText ) == false )
-                    return true;
-                const string cookedBytes = std::move( outText );
-                return XMLBinary::decodeText( cookedBytes, outText );
+                return XMLReadUtil::readText( AssetID{ assetID }, outText );
             }
 
         private:
@@ -606,7 +601,7 @@ namespace sw
              * @details 리플렉션 형식은 리플렉션에서 규칙을 만든다(코드가 곁에 있으니 표를 읽지 않는다). 표와 리플렉션이 같은지는
              *          `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다. 카탈로그 표 문맥(`forDocument`)은 표를 읽는다 — 표는 엔진 팩에 담겨 배포 런타임의 층(DLC · 모드)도 읽는다.
              */
-            [[nodiscard]] static bool mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, DataInheritanceSource& source, string& outText )
+            [[nodiscard]] static bool flattenLayer( string_view layerText, string_view layerID, const ResourceContext& context, DataInheritanceSource& source, string& outText )
             {
                 switch ( context._parentRule )
                 {
@@ -672,14 +667,9 @@ namespace sw
                     if ( AssetIO::hasAsset( layerID ) == false )
                         continue;
                     string layerText;
-                    if ( AssetIO::readTextAsset( layerID, layerText ) == false )
+                    if ( XMLReadUtil::readText( layerID, layerText ) == false )
                     {
                         SW_LOG_ERROR_ID( "ResourceLayer.NotRead", "Resource layer '%#' could not be read", layerID.view() );
-                        return false;
-                    }
-                    if ( DataInheritance::findBasePath( layerText ).empty() == false )
-                    {
-                        SW_LOG_ERROR_ID( "ResourceLayer.HasBase", "Resource layer '%#' writes %# - a layer's base is the resource it lies over ('%#')", layerID.view(), DataInheritance::kBaseAttribute, assetID );
                         return false;
                     }
                     // 층의 조건은 층의 차이에 얹는다 — 거짓이면 그 차이를 얹지 않는다.
@@ -687,21 +677,8 @@ namespace sw
                     bool   bResolved = false;
                     if ( ResourceComposer::resolveConditions( layerText, layerID.view(), ResourceTagTiming::Load, tags, resolvedText, bResolved, inoutListLoadTag ) == false )
                         return false;
-                    XMLDocument layerDoc;
-                    if ( layerDoc.parse( bResolved ? string_view( resolvedText ) : string_view( layerText ), layerID.view() ) == false || layerDoc.getRoot().isValid() == false )
-                    {
-                        SW_LOG_ERROR_ID( "ResourceLayer.NotXML2", "Resource layer '%#' could not be parsed: %#", layerID.view(), layerDoc.getLastError() );
+                    if ( ResourceComposer::mergeLayer( bResolved ? string_view( resolvedText ) : string_view( layerText ), layerID.view(), context, assetID, inoutText ) == false )
                         return false;
-                    }
-                    layerDoc.getRoot().setAttribute( DataInheritance::kBaseAttribute, assetID );
-                    ResourceLayerBaseSource source{ assetID, inoutText };
-                    string                  mergedText;
-                    if ( mergeLayer( layerDoc.saveToString(), layerID.view(), context, source, mergedText ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "ResourceLayer.NotMerged", "Resource layer '%#' could not be laid over '%#' - the resource is not loaded", layerID.view(), assetID );
-                        return false;
-                    }
-                    inoutText   = std::move( mergedText );
                     outbLayered = true;
                 }
                 return true;
@@ -821,6 +798,32 @@ namespace sw
             outText      = std::move( current );
             outbComposed = true;
         }
+        return true;
+    }
+
+    bool ResourceComposer::mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, string_view assetID, string& inoutText )
+    {
+        XMLDocument layerDoc;
+        if ( layerDoc.parse( layerText, layerID ) == false || layerDoc.getRoot().isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "ResourceLayer.NotXML2", "Resource layer '%#' could not be parsed: %#", layerID, layerDoc.getLastError() );
+            return false;
+        }
+        const XMLNode root = layerDoc.getRoot();
+        if ( root.hasAttribute( DataInheritance::kBaseAttribute ) )
+        {
+            SW_LOG_ERROR_ID( "ResourceLayer.HasBase", "Resource layer '%#' writes %# - a layer's base is the resource it lies over ('%#')", layerID, DataInheritance::kBaseAttribute, assetID );
+            return false;
+        }
+        root.setAttribute( DataInheritance::kBaseAttribute, assetID );
+        ResourceLayerBaseSource source{ assetID, inoutText };
+        string                  mergedText;
+        if ( ResourceComposerInternal::flattenLayer( layerDoc.saveToString(), layerID, context, source, mergedText ) == false )
+        {
+            SW_LOG_ERROR_ID( "ResourceLayer.NotMerged", "Resource layer '%#' could not be laid over '%#' - the resource is not loaded", layerID, assetID );
+            return false;
+        }
+        inoutText = std::move( mergedText );
         return true;
     }
 

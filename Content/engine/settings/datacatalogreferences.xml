@@ -317,6 +317,7 @@
 	<Cooked root="AdventureCooking"/>
 	<Cooked root="AdventureDungeons"/>
 	<Cooked root="AdventureRegionCatalog"/>
+	<Cooked root="AdventureWorld"/>
 	<Cooked root="AreaGraph"/>
 	<Cooked root="AsymmetricHorrorRules"/>
 	<Cooked root="BattleRoyaleCatalog"/>
@@ -331,6 +332,7 @@
 	<Cooked root="CropCatalog"/>
 	<Cooked root="CurrencyCatalog"/>
 	<Cooked root="ElementChart"/>
+	<Cooked root="ElementRules"/>
 	<Cooked root="FighterCatalog"/>
 	<Cooked root="GhostHunt"/>
 	<Cooked root="HousingPartCatalog"/>
