@@ -952,6 +952,10 @@ namespace sw
         // 지난 수집이 초기화 전의 머티리얼 때문에 뺀 칸은, 올라갔는지 씬에 신호가 없으므로 이번에 **그 칸만** 다시 본다(더티로 더한다 — 예전에는 전체 수집이었고,
         // 실패한 머티리얼은 매 프레임 전체 수집을 불렀다). 언리얼이 자원이 준비되지 않은 프리미티브를 대기 목록에 두고 다시 더하는 것과 같은 자리다.
         _listMaterialRetrySlot.swap( _listMaterialPendingSlot );
+        // 지난 빌드가 다시 본 칸 가운데 이제 기다리지 않는 것은 머티리얼이 준비됐다 — 발광 · 불투명 여부를 초기화 전 값으로 읽어 둔 소비자(실시간 프로브의 복셀)가 그 칸을 다시 보게 한다.
+        VectorUtil::removeIf( _listMaterialPendingSlot, [this]( uint32 slot )
+        { return VectorUtil::contains( _listMaterialRetrySlot, slot ); } );
+        pObjects->getPrimitiveRegistry().markMeshChanged( _listMaterialPendingSlot );
         _listMaterialPendingSlot.clear();
         SW_PROFILE_COUNT( "GT.Material.notReadyBatches", _listMaterialRetrySlot.size() );
         const bool bNothingChanged = input._bSetSame && bCamSame && bPermutationLocal && _listPermutationDirtySlot.empty() && primitives.hasDirty() == false &&
@@ -979,7 +983,6 @@ namespace sw
                 _listDirtyPrimitive.insert( _listDirtyPrimitive.end(), _listMaterialRetrySlot.begin(), _listMaterialRetrySlot.end() );
                 VectorUtil::sortUnique( _listDirtyPrimitive );
             }
-            _listMaterialRetrySlot.clear();
         }
         updateStaticShadowGeneration( primitives, setGeneration != _lastPrimitiveSetGeneration );
 

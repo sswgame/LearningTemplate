@@ -387,6 +387,45 @@ SW_TEST_CASE( SceneVoxelizerTest, MovedOccluderRepaintsOnlyItsLayer )
 }
 
 /**
+ * @brief [SceneVoxelizerTest] 복셀을 만든 뒤에 머티리얼이 준비되면(움직임 · 렌더 상태 변화 없음) 그 칸만 다시 보고 격자가 준비된 머티리얼을 따른다
+ * @details 변이: 준비된 칸을 변경 기록에 남기지 않으면 초기화 전 값(불투명 · 발광 없음)으로 모은 유리가 빛을 영영 막는다.
+ */
+SW_TEST_CASE( SceneVoxelizerTest, LateMaterialIsReadAgain )
+{
+    const sw::shared_ptr<sw::Material> sceneOpaque = makeOpaqueMaterial();
+    const sw::shared_ptr<sw::Material> late        = sw::Material::create(); // 아직 읽지 않았다
+    sw::Scene                          scene( "SceneVoxelizerLate" );
+    sw::GameObjectManager*             pObjects = scene.getObjectManager();
+    SW_REQUIRE_NOT_NULL( pObjects );
+    sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
+    const sw::AABB         bounds{
+        sw::float3{-2.0f, -2.0f, -2.0f},
+        sw::float3{ 2.0f,  2.0f,  2.0f}
+    };
+    sw::MeshComponent* pGlass = addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, late.get(), true );
+    SW_REQUIRE_NOT_NULL( pGlass );
+    pObjects->flushSceneTransforms();
+    sw::vector<uint32> listState;
+    sw::vector<uint32> listTransform;
+    registry.consumeDirty( listState, listTransform );
+    sw::SceneVoxelScene voxelScene = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
+    SW_REQUIRE_EQUAL( size_t( 1 ), voxelScene.getStaticSources().size() );
+    SW_REQUIRE_TRUE( voxelScene.getStaticSources()[0].isPainted() );
+    const uint64 generation = registry.getMeshChangeGeneration();
+
+    SW_REQUIRE_TRUE( late->loadFromXML( "<MaterialDef formatVersion=\"0\" name=\"LateGlass\" shaderPath=\"engine/shaders/forward_lit.hlsl\" surfaceModel=\"Lit\" alphaMode=\"Blend\">"
+                                        "<_permutations><_alwaysDefines><item>MATERIAL_BLEND_TRANSLUCENT</item></_alwaysDefines></_permutations></MaterialDef>" ) );
+    registry.markMeshChanged( sw::vector<uint32>{} );
+    SW_EXPECT_EQUAL( generation, registry.getMeshChangeGeneration() );
+    registry.markMeshChanged( sw::vector<uint32>{ 0u } );
+    sw::vector<uint32> listChanged;
+    registry.appendMeshChanges( generation, listChanged );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listChanged.size() );
+    SW_EXPECT_TRUE( sw::SceneVoxelizer::updateScene( voxelScene, registry, sceneOpaque.get(), listChanged ) );
+    SW_EXPECT_FALSE( voxelScene.getStaticSources()[0].isPainted() );
+}
+
+/**
  * @brief [SceneVoxelizerTest] 노멀의 가장 큰 축으로 투영해 칠한 칸(셰이더의 식)이 상자 안 모든 칸을 분리축으로 본 칸(보수적 복셀화의 기준)과 같다 — 축 정렬 · 비스듬한 · 가는 삼각형
  * @details 변이: 투영 축을 하나로 고정하거나 층 범위에서 기울기 몫(spread)을 빼면 비스듬한 삼각형에서 빠지는 칸이 생겨 진다.
  */
