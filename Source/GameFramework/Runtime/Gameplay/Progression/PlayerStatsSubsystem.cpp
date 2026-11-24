@@ -162,9 +162,10 @@ namespace sw
         if ( _settings._statCatalog.isSet() == false )
             return SubsystemInitResult::Succeeded; // 통계를 쓰지 않는 게임이다
         const UserSettingsManager* const pUserSettings = game::findSubsystem<UserSettingsManager>();
-        if ( pUserSettings == nullptr )
+        // 전용 서버에는 설정 객체가 있어도 기동 단계(`kClient`)가 돌지 않아 저장 자리가 비어 있다 — 객체의 유무가 아니라 자리로 가른다.
+        if ( pUserSettings == nullptr || pUserSettings->getUserFilePath().empty() )
         {
-            SW_LOG_INFO_ID( "PlayerStatsSubsystem.NoPlayerHost", "Player stats: this host has no user settings (dedicated server) - '%#' is not used", _settings._statCatalog.c_str() );
+            SW_LOG_INFO_ID( "PlayerStatsSubsystem.NoPlayerHost", "Player stats: this host has no user settings file (dedicated server) - '%#' is not used", _settings._statCatalog.c_str() );
             return SubsystemInitResult::Succeeded;
         }
         _pCatalog = SharedAssetCache<StatCatalog>::acquire( _settings._statCatalog.get() );
