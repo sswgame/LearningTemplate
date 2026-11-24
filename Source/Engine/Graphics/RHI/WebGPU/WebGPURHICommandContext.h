@@ -106,13 +106,14 @@ namespace sw
          * @brief WebGPU 는 자원 상태를 구현이 따라간다 — 전이가 없다(언리얼 · 유니티의 WebGPU 백엔드도 같다, 기억). 깊이 텍스처는 여기서 R32 실수 사본을 채운다.
          * @details 깊이를 읽는 셰이더는 사본을 읽는다(`WebGPURHIDevice::createDepthSampleCopy`). 다른 백엔드도 깊이를 읽기 전에 이 함수를 부르는 계약이라(Vulkan 레이아웃 전이) 자리가 같다.
          */
-        void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
-        void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { (void)texture; }
-        void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
-        void blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
-        void transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
-        void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
-        void copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
+        void   prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
+        void   prepareTextureForRenderTargetNative( RHITextureHandle texture ) override { (void)texture; }
+        void   prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
+        void   blitTextureNative( RHITextureHandle src, RHITextureHandle dst ) override;
+        void   transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void   copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
+        uint64 findBufferBytes( RHIBufferHandle buffer ) const override;
+        void   copyBufferRegionNative( RHIBufferHandle destination, uint64 destinationOffset, RHIBufferHandle source, uint64 sourceOffset, uint64 sizeBytes ) override;
         /** @brief 같은 패스 안의 디스패치 사이는 구현이 순서를 지킨다 — 배리어가 없다. */
         void uavBarrierNative( RHIBufferHandle buffer ) override { (void)buffer; }
         void uavBarrierTextureNative( RHITextureHandle texture ) override { (void)texture; } ///< 패스 경계가 저장 텍스처 쓰기를 동기화한다(버퍼 판과 같다)
