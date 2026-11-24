@@ -468,7 +468,7 @@ namespace sw
     {
         const bool bWasPlaying = _player.isPlaying() || kind == SequenceHistoryKind::Finished;
         const bool bHoldsState = _state._listSpawned.empty() == false || _state._listSpan.empty() == false || _state._bRestoreCaptured == SW_TRUE || _bInputLayerPushed == SW_TRUE ||
-                                 _hudHide.isActive();
+                                 _hudHide.isActive() || _state._cameraCut.isActive();
         if ( bWasPlaying == false && bHoldsState == false )
             return;
         if ( _bTimelineOnly == SW_TRUE )
@@ -500,6 +500,12 @@ namespace sw
             listSignal.push_back( signal );
         }
         broadcastCameraSignals( listSignal ); // 컷 카메라가 아직 살아 있을 때 알린다(듣는 쪽이 그 화면에서 섞는다)
+        if ( bWasPlaying )
+        {
+            SequenceCameraSignal endSignal;
+            endSignal._kind = SequenceCameraSignalKind::PlaybackEnd;
+            _cameraSignalMulticast.broadcast( endSignal ); // 컷이 덮지 않은 때 끝나도 예고한 것(대기 뷰)을 거둔다. 항목이 없는 신호라 기록에 남기지 않는다
+        }
         releaseCutsceneOptions();
         // 정상 끝(끝 프레임 · 건너뛰기)은 위치를 끝에 둔다(언리얼 OnFinished · GoToEndAndStop) — 멈춤(Stop)만 처음으로 되감는다.
         if ( kind != SequenceHistoryKind::Finished )
@@ -507,7 +513,7 @@ namespace sw
         SequenceTimelineUtil::releaseSpans( pManager, asset, view, _framesPerSecond, _state._listSpan );
         SequenceTimelineUtil::releaseSpawns( pManager, _state._listSpawned );
         // 카메라 컷은 컷 구간이 끝나야 해제되므로, 구간 안에서 끝나면 여기서 해제한다(게임 카메라가 원래 규칙으로 돌아간다).
-        SequenceTimelineUtil::releaseCameraCut( pManager, asset );
+        _state._cameraCut.reset();
         if ( _state._bRestoreCaptured == SW_TRUE )
             SequenceTimelineUtil::applyRestoreState( pManager, asset, view, _state._listRestore );
         _state._listRestore.clear();
@@ -634,7 +640,7 @@ namespace sw
         // 지난 구간마다(반복 되감기 · 왕복 꺾임이면 둘) 문턱을 넘은 이벤트를 본다(`applyPlayback`).
         const SequenceBindingView        view = makeBindingView();
         vector<const SequenceTrackItem*> listCrossed;
-        SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, &listCrossed );
+        SequenceTimelineUtil::applyPlayback( pManager, _player.getAsset(), step, view, _state._cameraCut, &listCrossed );
         SequenceTimelineUtil::applySpawns( pManager, _player.getAsset(), _player.getCurrentFrame(), _state._listSpawned );
         vector<const SequenceTrackItem*> listEnteredSpan;
         SequenceTimelineUtil::applySpans( pManager, _player.getAsset(), view, _player.getCurrentFrame(), _framesPerSecond, _player.getPlayRate(), _state._listSpan, &listEnteredSpan );

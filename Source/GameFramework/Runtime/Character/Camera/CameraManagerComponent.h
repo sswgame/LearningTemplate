@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -85,12 +86,10 @@ namespace sw
         /** @brief 화면이 지금 @p from 이라고 보고 뷰 타깃으로 @p blend 를 따라 섞습니다. 시네마틱 컷에서 게임 카메라로 돌아올 때 씁니다(언리얼 시퀀스 Blend Out). */
         void blendFromPose( const CameraPose& from, const BlendCurveDef& blend );
 
-        /** @brief 곧 볼 시점을 등록합니다. 앞의 대기 뷰를 바꾸고 듣는 쪽에 알립니다. 시퀀서 컷 트랙의 프리롤과 게임의 뷰 타깃 전환이 같은 함수를 씁니다. */
-        void setPendingView( const CameraPendingView& view );
-        /** @brief 대기 뷰를 풉니다(그 시점으로 바뀌었거나 취소했다). 등록된 것이 없으면 아무것도 하지 않습니다. */
-        void                     clearPendingView();
-        bool                     hasPendingView() const { return _pendingView._camera.isValid(); }
-        const CameraPendingView& getPendingView() const { return _pendingView; }
+        /** @brief 곧 볼 시점(대기 뷰)을 적습니다. 앞 대기 뷰를 갈음하고, 돌려준 구독이 풀리면(예고한 쪽이 사라지거나 컷이 왔다) 지웁니다 — 이미 다른 쪽이 갈음했으면 아무것도 하지 않습니다. */
+        [[nodiscard]] Subscription setPendingView( const CameraPendingView& view );
+        bool                       hasPendingView() const { return _pendingView._camera.isValid(); }
+        const CameraPendingView&   getPendingView() const { return _pendingView; }
         /** @brief 대기 뷰가 바뀔 때 부를 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerPendingViewListener( const OnCameraPendingViewDelegate& delegate );
 
@@ -119,6 +118,8 @@ namespace sw
         void resolveCamera();
         /** @brief 대기 뷰의 카메라를 애니메이션 LOD · 메시 LOD 의 대기 뷰로 넣거나(있을 때) 지웁니다(틱 뒤 게임 스레드, `resolveCamera` 끝). */
         void updatePendingLODView();
+        /** @brief 대기 뷰 @p id 의 구독이 풀렸습니다. 지금 것이면 지우고 알립니다. */
+        void releasePendingView( uint64 id );
         /** @brief 핸들의 오브젝트에 있는 카메라입니다. 없거나 자기 오브젝트면 nullptr 입니다. */
         CameraComponent* findTargetCamera( const GameObjectHandle& target ) const;
         /** @brief 애니메이션 알림(`CameraShake` 처리기)이 카메라 충격을 요청했습니다. 충격으로 더합니다. */
@@ -139,6 +140,8 @@ namespace sw
         GameObjectHandle                                    _previousTarget; ///< 살아 있는 나가는 쪽(블렌드가 없던 때 바꿨을 때)
         CameraPendingView                                   _pendingView;
         MulticastDelegate<void( const CameraPendingView& )> _pendingViewMulticast;
+        uint64                                              _pendingViewID; ///< 지금 대기 뷰의 구독 id
+        SubscriptionList                                    _pendingViewSubscriptions;
         CameraPoseBlender                                   _blender;
         CameraImpulseListener                               _impulseListener;
         Subscription                                        _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)

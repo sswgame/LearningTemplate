@@ -201,6 +201,7 @@ namespace sw
         , _bPhotoModeCut{ false }
         , _photoPause{}
         , _photoLayerHide{}
+        , _photoCut{}
         , _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _director{}
         , _channelImpulse{}
@@ -245,6 +246,7 @@ namespace sw
             _photoInputMap.reset();
             _photoPause.reset();
             _photoLayerHide.reset();
+            _photoCut.reset();
         }
         CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
@@ -345,6 +347,13 @@ namespace sw
         IUILayerVisibility* pLayerVisibility = game::findSubsystem<IUILayerVisibility>();
         if ( pLayerVisibility != nullptr )
             _photoLayerHide = pLayerVisibility->addLayerHideRequest( _photoHiddenUILayers );
+        // 시퀀스 컷 · 킬캠이 화면을 쥔 동안 켜면 멈춘 컷 화면만 보인다 — 주 화면의 카메라면 그 위에 컷 자리를 쥔다. 놓으면 아래 컷이 이어진다.
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+        const bool         bCovered = pManager != nullptr && pCamera != nullptr && pManager->getCameraRegistry().getCutCamera() != nullptr;
+        if ( bCovered && pCamera->getRenderOutput()._target == CameraOutputTarget::MainView )
+            pManager->getCameraRegistry().setCutCamera( _photoCut, pCamera );
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
         return true;
@@ -358,6 +367,7 @@ namespace sw
         _photoInputMap.reset();
         _photoPause.reset();
         _photoLayerHide.reset();
+        _photoCut.reset();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
     }

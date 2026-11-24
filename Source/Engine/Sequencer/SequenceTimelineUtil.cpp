@@ -172,13 +172,13 @@ namespace sw
                     writeLens( *pCamera, arrValue, arrKeyed );
             }
 
-            /** @brief 그 프레임을 덮는 카메라 컷 가운데 가장 늦게 시작한 것(`SequenceAsset::findCameraCut`)의 카메라를 게임 카메라로 고릅니다. 덮는 컷이 없으면 풉니다. */
-            static void applyCameraCut( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame )
+            /** @brief 그 프레임을 덮는 카메라 컷 가운데 가장 늦게 시작한 것(`SequenceAsset::findCameraCut`)의 카메라를 게임 카메라로 고릅니다. 덮는 컷이 없으면 자리만 쥡니다. */
+            static void applyCameraCut( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, Subscription& inoutCameraCut )
             {
                 const SequenceTrackItem* pCut    = asset.findCameraCut( frame );
                 GameObject*              pTarget = pCut != nullptr ? SequenceTimelineUtil::findTarget( pManager, bindings, pCut->_binding ) : nullptr;
                 CameraComponent*         pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
-                pManager->getCameraRegistry().setCutCamera( pCamera );
+                pManager->getCameraRegistry().setCutCamera( inoutCameraCut, pCamera );
             }
 
             /** @brief 항목 @p itemIndex 의 구간 상태입니다. 없으면 nullptr 입니다. */
@@ -220,6 +220,7 @@ namespace sw
         : _listSpawned{}
         , _listSpan{}
         , _listRestore{}
+        , _cameraCut{}
         , _bRestoreCaptured{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -354,7 +355,7 @@ namespace sw
         inoutListSpawned.clear();
     }
 
-    void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame )
+    void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, Subscription& inoutCameraCut )
     {
         if ( pManager == nullptr )
             return;
@@ -377,7 +378,7 @@ namespace sw
         }
 
         if ( asset.hasCameraCut() )
-            SequenceTimelineUtilInternal::applyCameraCut( pManager, asset, bindings, frame );
+            SequenceTimelineUtilInternal::applyCameraCut( pManager, asset, bindings, frame, inoutCameraCut );
 
         const float32 keyFrame = static_cast<float32>( frame );
         for ( const SequenceKeyTrack& track : asset._listTrack )
@@ -427,12 +428,12 @@ namespace sw
         }
     }
 
-    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings,
+    void SequenceTimelineUtil::applyPlayback( GameObjectManager* pManager, const SequenceAsset& asset, const SequencePlaybackStep& step, const SequenceBindingView& bindings, Subscription& inoutCameraCut,
                                               vector<const SequenceTrackItem*>* pOutListCrossedEvent )
     {
         if ( pOutListCrossedEvent != nullptr )
             pOutListCrossedEvent->clear();
-        applyFrame( pManager, asset, bindings, step._frame );
+        applyFrame( pManager, asset, bindings, step._frame, inoutCameraCut );
         for ( uint32 segmentIndex = 0; segmentIndex < step._segmentCount; ++segmentIndex )
             appendCrossedEvents( asset, step._arrSegment[segmentIndex], pOutListCrossedEvent );
     }
@@ -598,12 +599,6 @@ namespace sw
         // 무게 트랙에 키가 없으면 슬롯을 다 건다(1) — 무게 트랙의 계약이다.
         const optional<float32> weight = track.evaluateChannel( 0, frame );
         return weight.has_value() ? MathUtil::saturate( *weight ) : 1.0f;
-    }
-
-    void SequenceTimelineUtil::releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset )
-    {
-        if ( pManager != nullptr && asset.hasCameraCut() )
-            pManager->getCameraRegistry().setCutCamera( nullptr );
     }
 
     void SequenceTimelineUtil::applySpans( GameObjectManager* pManager, const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond,

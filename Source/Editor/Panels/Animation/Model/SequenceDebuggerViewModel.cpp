@@ -75,6 +75,8 @@ namespace sw::editor
                         return "blend out";
                     case SequenceCameraSignalKind::CutPrewarm:
                         return "standby view";
+                    case SequenceCameraSignalKind::PlaybackEnd:
+                        return "playback end";
                     case SequenceCameraSignalKind::Shake:
                         return "shake";
                 }

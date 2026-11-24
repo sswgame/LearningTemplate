@@ -279,6 +279,7 @@ namespace sw
         bool                 _bPhotoModeCut;  ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
         Subscription         _photoPause;     ///< 포토 모드가 건 게임 시간 정지 요청
         Subscription         _photoLayerHide; ///< 포토 모드가 건 UI 레이어 숨김 요청(`IUILayerVisibility`)
+        Subscription         _photoCut;       ///< 포토 모드가 시퀀스 컷 · 킬캠 위에 쥔 컷 자리(`CameraRegistry::setCutCamera`)
 
         SharedAssetRef<CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
         CameraDirector                      _director;
