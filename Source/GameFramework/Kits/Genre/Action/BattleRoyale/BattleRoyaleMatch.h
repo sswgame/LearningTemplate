@@ -59,11 +59,17 @@ namespace sw
 namespace sw
 {
     /** @brief 떨어진 보급 상자 하나입니다. */
+    REFLECT()
     struct BattleRoyaleSupplyDrop
     {
+        REFLECT_BODY();
+
+        PROPERTY()
         vector<BattleRoyaleGroundItem> _listItem{};
-        float2                         _position{};
-        float32                        _time{ 0.0f };
+        PROPERTY()
+        float2 _position{};
+        PROPERTY( Min = 0 )
+        float32 _time{ 0.0f };
     };
 } // namespace sw
 
@@ -179,7 +185,8 @@ namespace sw
         void               pushEvent( BattleRoyaleEvent::Kind kind, optional<int32> player, optional<int32> other, optional<int32> team, int32 value );
 
     private:
-        vector<BattleRoyalePlayer>            _listPlayer;
+        vector<BattleRoyalePlayer> _listPlayer;
+        PROPERTY( RuntimeState )
         vector<BattleRoyaleSupplyDrop>        _listSupplyDrop;
         NotificationBuffer<BattleRoyaleEvent> _eventBuffer;
         MatchState                            _matchState;

@@ -243,7 +243,7 @@ namespace sw
     {
         if ( io.check( _pChart != nullptr ) == false )
             return;
-        io.reflected( *this ); // 입력 기록 · 점수 · 정확도 합 · 라이프 · 시각 · 콤보 · 놓침 · 판정 수 · 상태 — 바닥은 칸의 `PROPERTY( Min )`
+        io.reflected( *this ); // 등급 수 · 입력 기록 · 점수 · 정확도 합 · 라이프 · 시각 · 콤보 · 놓침 · 판정 수 · 상태 — 바닥은 칸의 `PROPERTY( Min )`
         // 같은 채보(노트 수와 레인 수)로 `initialize` 한 판이어야 한다. 레인 대기열은 채보에서 다시 만든 것을 쓴다.
         io.expect( static_cast<uint32>( _pChart != nullptr ? _pChart->getNotes().size() : 0 ) );
         io.expect( static_cast<uint32>( _listLane.size() ) );
@@ -265,12 +265,11 @@ namespace sw
             lane._cursor = cursor;
             cursorSum += cursor;
         }
-        io.expect( static_cast<uint32>( _listGradeCount.size() ) );
+        if ( io.check( _pJudge != nullptr && _listGradeCount.size() == _pJudge->getWindows().size() ) == false )
+            return; // 등급 수는 판정기의 창마다 하나다
         int64 gradeSum = 0;
-        for ( int32& gradeCount : _listGradeCount )
+        for ( const int32 gradeCount : _listGradeCount )
         {
-            io.value( gradeCount );
-            io.check( 0 <= gradeCount );
             gradeSum += gradeCount;
         }
         if ( io.isWriting() || io.check( _combo <= _maxCombo ) == false )

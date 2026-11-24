@@ -10,6 +10,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -29,12 +31,19 @@ namespace sw
 namespace sw
 {
     /** @brief 바닥에 놓인 아이템 한 무더기입니다. */
+    REFLECT()
     struct SW_KIT_API BattleRoyaleGroundItem
     {
-        float2        _position{};
+        REFLECT_BODY();
+
+        PROPERTY()
+        float2 _position{};
+        PROPERTY()
         hashed_string _itemID{};
-        int32         _count{ 0 };
-        int32         _spotIndex{ constant::invalid_index::kInt32 }; ///< 나온 지점(보급 상자면 −1)
+        PROPERTY( Min = 1 )
+        int32 _count{ 0 };
+        PROPERTY()
+        int32 _spotIndex{ constant::invalid_index::kInt32 }; ///< 나온 지점(보급 상자면 −1)
 
         // 배치를 만드는 규칙입니다. 지점마다 난수를 (지점 번호, 시드) 해시로 따로 만들므로, 목록 끝에 지점을 더해도 앞 지점의 아이템은 그대로입니다(중간을 빼면 뒤 지점의 번호가 바뀌어 달라집니다).
         // 지점의 확률(`_chance`)을 넘으면 `_minRolls`..`_maxRolls` 번 테이블을 굴리고, 같은 아이템은 합쳐서 id 사전순으로 놓는다(결정적이다).

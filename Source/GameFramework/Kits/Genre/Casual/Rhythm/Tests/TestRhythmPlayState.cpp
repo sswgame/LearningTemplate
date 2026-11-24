@@ -48,6 +48,8 @@ namespace
             sw::Archive sessionBytes;
             inoutSession.writeState( sessionBytes );
             written.writeBytes( sessionBytes.getData(), sw::StateIO::kReflectedHeaderBytes );
+            written << static_cast<uint32>( 1 ); // 등급 하나
+            written << _gradeCount;
             written << static_cast<uint32>( 1 ); // 입력 기록 하나
             written << 2.0f;
             written << _recordLane;
@@ -67,8 +69,6 @@ namespace
             written << _holdingNote0;
             written << _cursor1;
             written << _holdingNote1;
-            written << static_cast<uint32>( 1 );
-            written << _gradeCount;
             sw::Archive reading( written.getData(), written.getSize() );
             return inoutSession.readState( reading );
         }

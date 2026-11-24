@@ -747,18 +747,14 @@ namespace sw
             // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
             io.check( habitat._listTile.empty() == false && 0 < habitat._id && 0 <= habitat._rotation && habitat._rotation < CreatureTownInternal::kRotationCount );
         } );
-        // 생물 · 열린 부탁 · 다음 서식지 번호 · 마지막 방문 굴림은 리플렉션 상태 칸이다(칸마다의 범위는 `PROPERTY( Min )`). 서식지 · 집은 셀(int2) · 크기 맞춤이 든 손 본문이다.
+        // 생물 · 집 · 열린 부탁 · 다음 서식지 번호 · 마지막 방문 굴림은 리플렉션 상태 칸이다(칸마다의 범위는 `PROPERTY( Min )`). 서식지는 크기 맞춤이 든 손 본문이다.
         io.reflected( *this );
-        // 집마다 사는 수(4) + 셀(8) + 정원(4) 이상
-        io.list( _listHouse, 16, [&]( CreatureHouse& house )
-        {
-            io.list( house._listResident );
-            io.value( house._tile );
-            io.value( house._capacity );
-            io.check( 1 <= house._capacity && _topology.isInside( house._tile._x, house._tile._y ) );
-        } );
         if ( io.isWriting() || io.isOk() == false )
             return;
+        for ( const CreatureHouse& house : _listHouse )
+        {
+            io.check( _topology.isInside( house._tile ) ); // 마을 크기가 정하는 범위만 손으로
+        }
         io.check( areLinksValid() );
         _eventBuffer.clear();
         updateAppealTier();

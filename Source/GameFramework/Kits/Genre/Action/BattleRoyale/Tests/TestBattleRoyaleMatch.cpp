@@ -582,31 +582,33 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReadRejectsBrokenBytes )
         SW_EXPECT_EQUAL( 4, target._match.getPlayerCount() );
     };
 
-    // 끝에서: 상자 수(4), 그 앞이 마지막 사람의 살리는 대상(4) 기절시킨 사람(4) 기절 수(4) 처치(4) 위치(8).
-    const float32 nan = std::numeric_limits<float32>::quiet_NaN();
-    expectRejected( written, 28, nan );
-    expectRejected( written, 24, std::numeric_limits<float32>::infinity() );
-    expectRejected( written, 20, static_cast<int32>( -1 ) );
-    expectRejected( written, 16, static_cast<int32>( -1 ) );
-    expectRejected( written, 12, static_cast<int32>( 2 ) ); // 사람은 둘(0, 1)
-    expectRejected( written, 12, static_cast<int32>( -2 ) );
-    expectRejected( written, 8, static_cast<int32>( 2 ) );
+    // 끝에서: 리플렉션 칸(머리, 상자 수 4, 판 시각 4, 다음 상자 4), 그 앞이 마지막 사람의 살리는 대상(4) 기절시킨 사람(4) 기절 수(4) 처치(4) 위치(8).
+    constexpr size_t kTail    = sw::StateIO::kReflectedHeaderBytes + 12;
+    constexpr size_t kTailEnd = 8; // 판 시각 · 다음 상자
+    const float32    nan      = std::numeric_limits<float32>::quiet_NaN();
+    expectRejected( written, kTail + 24, nan );
+    expectRejected( written, kTail + 20, std::numeric_limits<float32>::infinity() );
+    expectRejected( written, kTail + 16, static_cast<int32>( -1 ) );
+    expectRejected( written, kTail + 12, static_cast<int32>( -1 ) );
+    expectRejected( written, kTail + 8, static_cast<int32>( 2 ) ); // 사람은 둘(0, 1)
+    expectRejected( written, kTail + 8, static_cast<int32>( -2 ) );
+    expectRejected( written, kTail + 4, static_cast<int32>( 2 ) );
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target._match.readState( truncated ) );
 
-    // 끝에서: 시각(4), 상자 위치(8), 무더기의 지점(4), 개수(4).
+    // 상자 끝에서: 시각(4), 상자 위치(8), 무더기의 지점(4), 개수(4).
     MatchBench withDrop;
     SW_REQUIRE_TRUE( withDrop.setUp( kMatchXML, 1 ) );
     withDrop.stepFrames( 3 );
     SW_REQUIRE_EQUAL( size_t( 1 ), withDrop._match.getSupplyDrops().size() );
     sw::Archive dropWritten;
     withDrop._match.writeState( dropWritten );
-    expectRejected( dropWritten, 4, nan );
-    expectRejected( dropWritten, 4, -1.0f );
-    expectRejected( dropWritten, 12, nan );
-    expectRejected( dropWritten, 20, static_cast<int32>( 0 ) );
-    expectRejected( dropWritten, 20, static_cast<int32>( -3 ) );
+    expectRejected( dropWritten, kTailEnd + 4, nan );
+    expectRejected( dropWritten, kTailEnd + 4, -1.0f );
+    expectRejected( dropWritten, kTailEnd + 12, nan );
+    expectRejected( dropWritten, kTailEnd + 20, static_cast<int32>( 0 ) );
+    expectRejected( dropWritten, kTailEnd + 20, static_cast<int32>( -3 ) );
 
     sw::Archive whole( dropWritten.getData(), dropWritten.getSize() );
     SW_EXPECT_TRUE( target._match.readState( whole ) );
