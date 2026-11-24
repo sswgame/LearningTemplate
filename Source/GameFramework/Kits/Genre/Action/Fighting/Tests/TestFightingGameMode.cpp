@@ -30,10 +30,10 @@ namespace
   <_rules _roundsToWin="1" _startDistance="1.2" />
 </FightingGameModeComponent>)";
 
-    constexpr uint8   kNeutralDirection = 5;
-    constexpr uint16  kLowButton        = 1 << 2; ///< 버튼 "3"
-    constexpr float32 kFrame            = 1.0f / 60.0f;
-    constexpr int32   kFrameLimit       = 30;
+    constexpr uint8   kFightingGameModeNeutral    = 5;
+    constexpr uint16  kFightingGameModeLowButton  = 1 << 2; ///< 버튼 "3"
+    constexpr float32 kFightingGameModeFrame      = 1.0f / 60.0f;
+    constexpr int32   kFightingGameModeFrameLimit = 30;
 
     /** @brief 카탈로그를 건 게임 범위와 디렉터 하나입니다. */
     struct FightingDirectorTest
@@ -63,7 +63,7 @@ SW_TEST_CASE( FightingGameModeTest, InputBeforeTheMatchOpensIsRefused )
     FightingGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<FightingGameModeComponent>();
     SW_REQUIRE_NOT_NULL( pGameMode );
     SW_EXPECT_FALSE( pGameMode->isAcceptingInput() );
-    SW_EXPECT_FALSE( pGameMode->submitPlayerInput( kNeutralDirection, kLowButton ) );
+    SW_EXPECT_FALSE( pGameMode->submitPlayerInput( kFightingGameModeNeutral, kFightingGameModeLowButton ) );
     SW_EXPECT_EQUAL( -1, pGameMode->getMatchWinner() );
 }
 
@@ -99,12 +99,12 @@ SW_TEST_CASE( FightingGameModeTest, PlayerLowWinsTheMatchAndReportsTheMoney )
     game::ScopedGameScope scopedScope( test._scope );
     test._manager.beginPlay();
     SW_REQUIRE_TRUE( test._pGameMode->isStarted() );
-    SW_EXPECT_FALSE( test._pGameMode->submitPlayerInput( 0, kLowButton ) ); // 넘패드에 없는 방향
-    test._manager.update( kFrame );
-    SW_REQUIRE_TRUE( test._pGameMode->submitPlayerInput( kNeutralDirection, kLowButton ) );
-    for ( int32 frame = 0; frame < kFrameLimit && test._pGameMode->getMatchWinner() < 0; ++frame )
+    SW_EXPECT_FALSE( test._pGameMode->submitPlayerInput( 0, kFightingGameModeLowButton ) ); // 넘패드에 없는 방향
+    test._manager.update( kFightingGameModeFrame );
+    SW_REQUIRE_TRUE( test._pGameMode->submitPlayerInput( kFightingGameModeNeutral, kFightingGameModeLowButton ) );
+    for ( int32 frame = 0; frame < kFightingGameModeFrameLimit && test._pGameMode->getMatchWinner() < 0; ++frame )
     {
-        test._manager.update( kFrame );
+        test._manager.update( kFightingGameModeFrame );
     }
     SW_EXPECT_EQUAL( FightingGameModeComponent::kPlayer, test._pGameMode->getMatchWinner() );
     SW_EXPECT_EQUAL( 0, test._pGameMode->getOpponentHealth() );

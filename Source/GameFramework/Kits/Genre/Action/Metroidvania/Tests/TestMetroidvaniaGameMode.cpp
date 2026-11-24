@@ -37,7 +37,7 @@ namespace
   <_listSitePosition><item>2.5,1.5</item></_listSitePosition>
 </MetroidvaniaGameModeComponent>)";
 
-    constexpr float32 kFrame = 1.0f / 60.0f;
+    constexpr float32 kMetroidvaniaGameModeFrame = 1.0f / 60.0f;
 
     /** @brief 카탈로그를 건 게임 범위와 디렉터 하나입니다. */
     struct MetroidvaniaDirectorTest
@@ -59,7 +59,7 @@ namespace
         {
             for ( int32 frame = 0; frame < frameCount; ++frame )
             {
-                _manager.update( kFrame );
+                _manager.update( kMetroidvaniaGameModeFrame );
             }
         }
     };

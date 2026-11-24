@@ -38,8 +38,8 @@ namespace
   <_listEnemySpawn><item>0,0,10</item></_listEnemySpawn>
 </MechArenaGameModeComponent>)";
 
-    constexpr float32 kFrame      = 1.0f / 60.0f;
-    constexpr int32   kFrameLimit = 60;
+    constexpr float32 kMechArenaGameModeFrame      = 1.0f / 60.0f;
+    constexpr int32   kMechArenaGameModeFrameLimit = 60;
 
     /** @brief 카탈로그를 건 게임 범위와 디렉터 하나입니다. */
     struct MechDirectorTest
@@ -115,13 +115,13 @@ SW_TEST_CASE( MechArenaGameModeTest, PlayerFireEmptiesTheEnemyGaugeAndReportsThe
     SW_EXPECT_EQUAL( 100, test._pGameMode->getEnemyGauge() );
     SW_EXPECT_EQUAL( 3, test._pGameMode->getPlayerAmmo() );
     SW_EXPECT_FALSE( test._pGameMode->requestNextMech() ); // 격추되지 않았고 덱도 하나다
-    test._manager.update( kFrame );
+    test._manager.update( kMechArenaGameModeFrame );
     MechInput fire;
     fire._bFire = SW_TRUE;
     SW_REQUIRE_TRUE( test._pGameMode->submitPlayerInput( fire ) );
-    for ( int32 frame = 0; frame < kFrameLimit && test._pGameMode->getEnded() == 0; ++frame )
+    for ( int32 frame = 0; frame < kMechArenaGameModeFrameLimit && test._pGameMode->getEnded() == 0; ++frame )
     {
-        test._manager.update( kFrame );
+        test._manager.update( kMechArenaGameModeFrame );
     }
     SW_REQUIRE_EQUAL( 1, test._pGameMode->getEnded() );
     SW_EXPECT_TRUE( test._pGameMode->hasWon() );

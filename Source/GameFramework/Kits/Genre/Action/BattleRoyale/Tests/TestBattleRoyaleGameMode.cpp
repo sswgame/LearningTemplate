@@ -26,8 +26,8 @@ namespace
 
     constexpr const utf8* kBattleRoyaleGameModeXML = R"(<BattleRoyaleGameModeComponent _squadCount="2" _squadSize="1" _seed="7" _playerHitChance="0" _botHitChance="0" />)";
 
-    constexpr float32 kFrame      = 1.0f / 60.0f;
-    constexpr int32   kFrameLimit = 600;
+    constexpr float32 kBattleRoyaleGameModeFrame      = 1.0f / 60.0f;
+    constexpr int32   kBattleRoyaleGameModeFrameLimit = 600;
 
     /** @brief 카탈로그를 건 게임 범위와 디렉터 하나입니다. */
     struct BattleRoyaleDirectorTest
@@ -48,9 +48,9 @@ namespace
         /** @brief 단계가 @p phase 에 닿을 때까지 프레임을 돌립니다. 상한 안에 닿았으면 true 입니다. */
         [[nodiscard]] bool runUntil( BattleRoyalePhase phase )
         {
-            for ( int32 frame = 0; frame < kFrameLimit && _pGameMode->getMatchPhase() != phase; ++frame )
+            for ( int32 frame = 0; frame < kBattleRoyaleGameModeFrameLimit && _pGameMode->getMatchPhase() != phase; ++frame )
             {
-                _manager.update( kFrame );
+                _manager.update( kBattleRoyaleGameModeFrame );
             }
             return _pGameMode->getMatchPhase() == phase;
         }
@@ -90,11 +90,11 @@ SW_TEST_CASE( BattleRoyaleGameModeTest, DropThenZoneEndsTheMatch )
     SW_REQUIRE_TRUE( test._pGameMode->isStarted() );
     SW_EXPECT_EQUAL( 0, test._pGameMode->getPlayerDropStage() );
     SW_EXPECT_TRUE( test._pGameMode->getPersonPosition( BattleRoyaleGameModeComponent::kPlayer )._value._y > 0.0f );
-    test._manager.update( kFrame );
+    test._manager.update( kBattleRoyaleGameModeFrame );
     SW_REQUIRE_TRUE( test._pGameMode->submitPlayerInput( float2{ 0.0f, 0.0f }, false, false, true ) );
     for ( int32 frame = 0; frame < 2; ++frame )
     {
-        test._manager.update( kFrame );
+        test._manager.update( kBattleRoyaleGameModeFrame );
     }
     SW_EXPECT_EQUAL( 1, test._pGameMode->getPlayerDropStage() );
 
