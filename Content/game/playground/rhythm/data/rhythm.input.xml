@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="066b7d32a258421655a850e0ee1f8278"?>
+<!--
+  리듬 미니게임(minigames/rhythm)의 입력 차이. 레인마다 키 하나(왼쪽부터)이고 누르고 있는 동안 롱노트가 이어진다. 걷기 레이어를 켜지 않는다(D 가 겹친다) — Playground 공통 묶음(data/gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 한 게임만 쓰는 이름은 게임 접두다.
+  레이어 Rhythm 는 꺼져 있고 미니게임의 inputContexts 가 들어가 있는 동안만 켠다 — 허브 · 다른 미니게임의 같은 키와 겹치지 않는다.
+-->
+<InputMap>
+	<layers>
+		<layer name="Rhythm" enabled="0" blockLower="0"/>
+	</layers>
+	<action name="Rhythm.Lane1" layer="Rhythm" trigger="Down">
+		<bind source="Key" code="D"/>
+		<bind source="Gamepad" code="DPadLeft"/>
+	</action>
+	<action name="Rhythm.Lane2" layer="Rhythm" trigger="Down">
+		<bind source="Key" code="F"/>
+		<bind source="Gamepad" code="DPadDown"/>
+	</action>
+	<action name="Rhythm.Lane3" layer="Rhythm" trigger="Down">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="Rhythm.Lane4" layer="Rhythm" trigger="Down">
+		<bind source="Key" code="K"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+</InputMap>
