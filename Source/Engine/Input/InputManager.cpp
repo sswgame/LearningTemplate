@@ -85,6 +85,10 @@ namespace sw
         , _pInputMap{ nullptr }
         , _listUserMap{}
         , _listUserDevices{}
+        , _listMouseLockClaim{}
+        , _lastMouseLockID{ 0 }
+        , _listSharedLayer{}
+        , _lastSharedLayerID{ 0 }
         , _listPolledEvent{}
         , _listQueuedEvent{}
         , _listFramePress{}
@@ -106,6 +110,7 @@ namespace sw
         , _arrCapturedKeyMask{}
         , _arrCapturedGamepadMask{}
         , _arrSavedAccessibilityFlags{}
+        , _arrKeyboardClaimCount{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
         , _cursorShape{ CursorShape::Arrow }
         , _pendingHighSurrogate{ 0 }
@@ -119,6 +124,9 @@ namespace sw
         , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
         , _bBackgroundGamepadInput{ SW_TRUE }
+        , _mouseLockSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseMouseLock, this ) }
+        , _sharedLayerSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseSharedLayer, this ) }
+        , _keyboardFocusSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseKeyboardFocus, this ) }
         , _virtualInputSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputManager::releaseVirtualInput, this ) }
     {
     }
@@ -175,6 +183,16 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
+        _mouseLockSubscriptions.detachAll();
+        _listMouseLockClaim.clear();
+        _sharedLayerSubscriptions.detachAll();
+        _listSharedLayer.clear();
+        _keyboardFocusSubscriptions.detachAll();
+        for ( uint32& claimCount : _arrKeyboardClaimCount )
+        {
+            claimCount = 0;
+        }
+        _keyboardFocus = InputKeyboardFocus::Game;
         _virtualInputSubscriptions.detachAll();
         _listVirtualInput.clear();
         releaseMouseLockMode();
@@ -376,7 +394,7 @@ namespace sw
     }
 
     // 프레임 단계(폴링 → 큐 비우기 → 가상 입력 → 적용 → 마무리 → 글리프 감지 → 맵 갱신)의 순서가 곧 의미인 선형 본문이라 나누지 않는다.
-    void InputManager::beginFrame( float32 deltaSeconds )
+    void InputManager::beginFrame( float32 unscaledDeltaSeconds )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         ++_beginFrameCount;
@@ -396,10 +414,10 @@ namespace sw
         {
             if ( pDev != nullptr )
             {
-                pDev->onFrameBegin( deltaSeconds );
+                pDev->onFrameBegin( unscaledDeltaSeconds );
                 const bool bSkipPoll = bOSSuppressed || ( bPadSuppressed && pDev->getDeviceKind() == InputDeviceKind::Gamepad );
                 if ( bSkipPoll == false )
-                    pDev->poll( deltaSeconds );
+                    pDev->poll( unscaledDeltaSeconds );
                 pDev->onPolled();
             }
         }
@@ -430,7 +448,7 @@ namespace sw
         }
         // OS 이벤트에 프레임 안 자리를 채운다(서브틱 입력). 가상 이벤트는 녹화된 자리를 그대로 쓴다 — 재생이 녹화와 같은 순간을 본다.
         _frameEndMicroseconds = _pfnNowMicroseconds();
-        assignFrameFractions( _listPolledEvent.size(), deltaSeconds );
+        assignFrameFractions( _listPolledEvent.size(), unscaledDeltaSeconds );
         // 2-1) 맨 위 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다. 멈춘 아래 원천도 프레임은 센다.
         if ( isVirtualInputAttached() )
         {
@@ -456,7 +474,7 @@ namespace sw
         {
             // 커서는 게임 화면 안에 머문다(창 전체가 아니다 — 에디터 게임 뷰는 창의 일부다).
             const size_t firstCursorEvent = _listPolledEvent.size();
-            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, deltaSeconds, _listPolledEvent );
+            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, unscaledDeltaSeconds, _listPolledEvent );
             for ( size_t eventIndex = firstCursorEvent; eventIndex < _listPolledEvent.size(); ++eventIndex )
             {
                 _listPolledEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
@@ -484,7 +502,7 @@ namespace sw
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
-                pDev->onEventsDispatched( deltaSeconds );
+                pDev->onEventsDispatched( unscaledDeltaSeconds );
         }
 
         // 가운데 고정 잠금: 이번 프레임의 델타를 측정한 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖, Alt, 콘솔)은 되돌리지 않는다.
@@ -520,16 +538,16 @@ namespace sw
 
         // 세션 입력 기록(버그 리포트) — 꺼져 있으면 비트 하나 검사뿐이다.
         if ( _sessionRecording.isRecording() )
-            _sessionRecording.recordFrame( deltaSeconds, _listPolledEvent );
+            _sessionRecording.recordFrame( unscaledDeltaSeconds, _listPolledEvent );
 
         // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다.
         //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.
         pairLocalUsers();
         if ( _pInputMap != nullptr )
-            _pInputMap->update( deltaSeconds );
+            _pInputMap->update( unscaledDeltaSeconds );
         for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
         {
-            pUserMap->update( deltaSeconds );
+            pUserMap->update( unscaledDeltaSeconds );
         }
 
         // 세션 기록 재생(`bugreport.replay`)은 끝 프레임을 맵까지 흘린 뒤 뗀다(떼면 장치 상태를 지운다). 다른 원천(시나리오)은 붙인 쪽이 뗀다.
@@ -556,27 +574,30 @@ namespace sw
                 return false; // 담지 못하는 바인딩은 맵이 알렸다
             listSource.push_back( std::move( source ) );
         }
-        vector<hashed_string> listLayer;
-        _pInputMap->collectLayerStack( listLayer );
+        vector<hashed_string> listEnabledLayer;
+        _pInputMap->collectEnabledLayers( listEnabledLayer );
         vector<unique_ptr<InputMap>> listUserMap;
         for ( uint32 userIndex = 1; userIndex < userCount; ++userIndex )
         {
             unique_ptr<InputMap> pUserMap = make_unique<InputMap>();
             pUserMap->setInputManager( this );
             if ( pUserMap->loadBundleTexts( listSource ) == false )
-                return false; // 까닭은 맵이 남겼다
-            pUserMap->getAccessibilitySettings() = _pInputMap->getAccessibilitySettings();
+                return false;                                    // 까닭은 맵이 남겼다
+            pUserMap->shareAccessibilitySettings( *_pInputMap ); // 베끼면 열린 동안 바꾼 설정이 주 사용자에게만 듣는다
             for ( const hashed_string& layer : _pInputMap->getLayerNames() )
             {
-                pUserMap->setLayerEnabled( layer, _pInputMap->isLayerEnabled( layer ) );
-            }
-            for ( const hashed_string& layer : listLayer )
-            {
-                pUserMap->pushLayer( layer );
+                pUserMap->setLayerEnabled( layer, VectorUtil::contains( listEnabledLayer, layer ) ); // 스택(주 사용자 폰의 레이어)은 베끼지 않는다 — 그 사람의 것이다
             }
             listUserMap.push_back( std::move( pUserMap ) );
         }
         _listUserMap = std::move( listUserMap );
+        for ( SharedLayer& shared : _listSharedLayer )
+        {
+            for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
+            {
+                applySharedLayer( shared, *pUserMap );
+            }
+        }
         _listUserDevices.resize( userCount );
         _listUserDevices[0]._bKeyboardMouse = SW_TRUE;
         pairLocalUsers();
@@ -592,6 +613,44 @@ namespace sw
         _listUserDevices.clear();
         if ( _pInputMap != nullptr )
             _pInputMap->setUserDevices( nullopt );
+    }
+
+    Subscription InputManager::pushSharedLayer( const hashed_string& layer, bool bBlockLower )
+    {
+        return addSharedLayer( layer, true, bBlockLower );
+    }
+
+    Subscription InputManager::enableSharedLayer( const hashed_string& layer )
+    {
+        return addSharedLayer( layer, false, false );
+    }
+
+    Subscription InputManager::addSharedLayer( const hashed_string& layer, bool bStacked, bool bBlockLower )
+    {
+        SharedLayer shared;
+        shared._layer       = layer;
+        shared._id          = ++_lastSharedLayerID;
+        shared._bStacked    = bStacked;
+        shared._bBlockLower = bBlockLower;
+        if ( _pInputMap != nullptr )
+            applySharedLayer( shared, *_pInputMap );
+        for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
+        {
+            applySharedLayer( shared, *pUserMap );
+        }
+        _listSharedLayer.push_back( std::move( shared ) );
+        return _sharedLayerSubscriptions.issue( _lastSharedLayerID );
+    }
+
+    void InputManager::applySharedLayer( SharedLayer& shared, InputMap& map )
+    {
+        shared._listMapLayer.push_back( shared._bStacked ? map.pushLayer( shared._layer, shared._bBlockLower ) : map.enableLayer( shared._layer ) );
+    }
+
+    void InputManager::releaseSharedLayer( uint64 id )
+    {
+        (void)VectorUtil::removeIf( _listSharedLayer, [id]( const SharedLayer& shared )
+        { return shared._id == id; } ); // 맵마다의 구독이 함께 풀린다
     }
 
     InputMap* InputManager::findUserMap( uint32 userIndex )
@@ -890,9 +949,31 @@ namespace sw
         return _listUserDevices.empty() ? nullptr : "local users";
     }
 
-    void InputManager::setKeyboardFocus( InputKeyboardFocus focus )
+    Subscription InputManager::claimKeyboardFocus( InputKeyboardFocus owner )
     {
-        if ( focus == InputKeyboardFocus::Count )
+        SW_ASSERT( owner != InputKeyboardFocus::Game && owner != InputKeyboardFocus::Count );
+        if ( owner == InputKeyboardFocus::Game || owner == InputKeyboardFocus::Count )
+            return Subscription{};
+        ++_arrKeyboardClaimCount[static_cast<size_t>( owner )];
+        syncKeyboardFocus();
+        return _keyboardFocusSubscriptions.issue( static_cast<uint64>( owner ) );
+    }
+
+    void InputManager::releaseKeyboardFocus( uint64 ownerID )
+    {
+        --_arrKeyboardClaimCount[static_cast<size_t>( ownerID )];
+        syncKeyboardFocus();
+    }
+
+    void InputManager::syncKeyboardFocus()
+    {
+        InputKeyboardFocus focus = InputKeyboardFocus::Game;
+        for ( size_t ownerIndex = 0; ownerIndex < kKeyboardFocusCount; ++ownerIndex )
+        {
+            if ( _arrKeyboardClaimCount[ownerIndex] > 0 )
+                focus = static_cast<InputKeyboardFocus>( ownerIndex );
+        }
+        if ( _keyboardFocus == focus )
             return;
         _keyboardFocus = focus;
         // 글을 받는 포커스만 입력기를 켠다 - 게임이 키보드를 가진 동안 입력기가 WASD 를 조합으로 가져가지 않는다(언리얼 · SDL 도 글 칸에서만 켠다). 도구 창은 에디터가 글 칸마다 따로 알린다.
@@ -1221,12 +1302,28 @@ namespace sw
         syncMouseLock();
     }
 
-    void InputManager::setMouseLockMode( MouseLockMode mode )
+    Subscription InputManager::claimMouseLock( MouseLockMode mode )
+    {
+        _listMouseLockClaim.push_back( MouseLockClaim{ ++_lastMouseLockID, mode } );
+        syncMouseLockClaims();
+        return _mouseLockSubscriptions.issue( _lastMouseLockID );
+    }
+
+    void InputManager::releaseMouseLock( uint64 id )
+    {
+        (void)VectorUtil::removeIf( _listMouseLockClaim, [id]( const MouseLockClaim& claim )
+        { return claim._id == id; } );
+        syncMouseLockClaims();
+    }
+
+    void InputManager::syncMouseLockClaims()
     {
         if ( _pMouse == nullptr )
             return;
-        const bool bWasLocked = _pMouse->getLockMode() != MouseLockMode::None;
+        const MouseLockMode mode       = _listMouseLockClaim.empty() ? MouseLockMode::None : _listMouseLockClaim.back()._mode;
+        const bool          bWasLocked = _pMouse->getLockMode() != MouseLockMode::None;
         _pMouse->setLockMode( mode );
+        _pMouse->setCursorVisible( mode == MouseLockMode::None );
         // 잠금을 새로 켤 때 창이 지금 전경이면 바로 잡는다(시작 직후나 Esc 로 다시 잠글 때). 아니면 클라이언트를 눌러야 잡는다.
         if ( mode != MouseLockMode::None && bWasLocked == false )
         {
@@ -1234,13 +1331,6 @@ namespace sw
             _bWindowFocused     = bFocused ? SW_TRUE : SW_FALSE;
             _bMouseLockEngaged  = bFocused ? SW_TRUE : SW_FALSE;
         }
-        syncMouseLock();
-    }
-
-    void InputManager::setCursorVisible( bool bVisible )
-    {
-        if ( _pMouse != nullptr )
-            _pMouse->setCursorVisible( bVisible );
         syncMouseLock();
     }
 

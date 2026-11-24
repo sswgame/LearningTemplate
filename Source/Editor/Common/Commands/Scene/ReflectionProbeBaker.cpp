@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Visual/Component/ReflectionProbeComponent.h"
@@ -153,7 +154,8 @@ namespace sw
         pCamera->setFieldOfViewY( MathUtil::kHalfPi );
         pCamera->setNearPlane( Internal::kCaptureNearPlane );
         pCamera->setFarPlane( Internal::kCaptureFarPlane );
-        scene.setActiveGameCamera( pCamera );
+        Subscription captureCut; // 찍는 동안 다른 컷(시퀀서 미리보기) · 직접 고른 카메라 위에 선다
+        manager.getCameraRegistry().setCutCamera( captureCut, pCamera );
 
         outCapture._capturePosition = capturePosition;
         outCapture._resolution      = probe.getResolution();
@@ -171,7 +173,7 @@ namespace sw
             face._forward                    = pCamera->getCameraForward();
             captured                         = captureFace( scene, *pCamera, faceSize, face );
         }
-        // 카메라를 지우면 직접 고른 카메라가 풀린다(클래스 설명).
+        captureCut.reset();
         manager.destroyGameObject( pCameraObject );
         return captured;
     }

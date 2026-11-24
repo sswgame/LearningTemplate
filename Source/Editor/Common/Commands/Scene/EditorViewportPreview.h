@@ -10,7 +10,7 @@ namespace sw
 {
     struct FunctionInfo;
     struct SequenceBindingView;
-    struct SequenceSpanState;
+    struct SequencePlaybackState;
     struct TypeInfo;
 
     class Material;
@@ -36,9 +36,9 @@ namespace sw::editor
         static void applyAnimationNode( string_view nodeName, string_view graphPath = {} );
         /**
          * @brief 시퀀스 프레임을 활성 씬에 적용합니다 — 클립 · 컷 · 키 트랙(`applyFrame`)과 구간 동작(애니메이션 · 소리 · 자막, `applySpans`)입니다. 대상은 @p bindings 로 찾는다.
-         * @param inoutListSpan 미리보기가 들어간 구간 상태(패널이 쥔다 — 멈출 때 `SequenceTimelineUtil::releaseSpans`).
+         * @param inoutState 미리보기가 쥔 구간 상태 · 컷 자리(패널이 쥔다 — 멈출 때 `SequenceTimelineUtil::releaseSpans` 와 컷 자리 풀기).
          */
-        static void applySequenceFrame( const sw::SequenceAsset& asset, const sw::SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, vector<sw::SequenceSpanState>& inoutListSpan );
+        static void applySequenceFrame( const sw::SequenceAsset& asset, const sw::SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, sw::SequencePlaybackState& inoutState );
         /**
          * @brief 대사 미리보기 메서드(`EditorPreview = "DialogueLine"`)가 있는 컴포넌트마다 그래프 @p graphPath 의 대사를 넣고, 그 화자에 묶인 오브젝트를 선택합니다.
          * @details 컴포넌트는 타입 이름이 아니라 메서드 메타로 찾습니다 — EditorModule 은 GameFramework 를 링크하지 않으므로

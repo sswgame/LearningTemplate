@@ -13,6 +13,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -217,30 +218,37 @@ namespace sw
         void registerLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
         void setLayerEnabled( const hashed_string& layer, bool enabled );
         /**
-         * @brief LIFO 레이어 스택 맨 위에 레이어를 넣고 켭니다(blockLower=false 는 비모달 동시 조작, true 는 모달 차단).
-         * @details push 와 pop 은 한 쌍이다(언리얼 Enhanced Input 의 Add/RemoveMappingContext) — 스택 칸이 push 전의 켬 · 아래 막기를 기억하고 pop 이 되돌린다.
-         *          켜 둔 채 스택만 비우면 빈 스택은 켜진 레이어를 모두 살리므로(`isLayerActiveInternal`), 켬은 스택 칸이 소유한다. 없는 레이어는 빈 레이어로 만들고 pop 이 끈다.
-         *          이미 스택에 있는 레이어를 다시 넣으면 맨 위로 옮기고 처음 push 전의 값을 그대로 기억한다.
+         * @brief 레이어를 스택에 넣어 켭니다. 돌려준 구독이 넣은 쪽의 것이며, 풀리면 그 칸만 빠집니다(언리얼 Enhanced Input 의 Add/RemoveMappingContext).
+         * @details 같은 레이어를 여럿이 넣으면 칸도 여럿이다 — 한쪽이 빼도 남은 칸이 켜 둔다. 켬은 칸이 소유하므로(파일의 `enabled` 는 바꾸지 않는다) 빈 스택이 push 로 켠 레이어를 살려 두지 않는다.
+         *          없는 레이어는 빈 레이어로 만든다. 맵을 다시 읽어도 칸은 남는다(넣은 쪽이 아직 살아 있다).
+         * @param bBlockLower true 면 막는 칸이다. 막는 칸은 넣은 순서와 무관하게 막지 않는 칸 위에 선다 — 컷씬이 막는 동안 다시 빙의한 폰 · 미니게임이 레이어를 넣어도 막힌 채다
+         *                    (언리얼의 이동 · 시선 무시가 매핑 문맥 스택과 따로인 것과 같다). 늘 켜지는 레이어(alwaysOn)는 막지 않는다.
          */
-        void pushLayer( const hashed_string& layer, bool blockLower = false, bool showCursor = false );
-        /** @brief LIFO 레이어 스택 맨 위의 레이어를 빼고 그 push 가 바꾼 켬 · 아래 막기를 되돌립니다. */
-        void popLayer();
-        /** @brief LIFO 레이어 스택에서 특정 레이어를 찾아 빼고 그 push 가 바꾼 켬 · 아래 막기를 되돌립니다. 스택에 없으면 아무것도 하지 않습니다. */
-        void popLayer( const hashed_string& layer );
+        [[nodiscard]] Subscription pushLayer( const hashed_string& layer, bool bBlockLower = false );
+        /** @brief 레이어를 스택에 넣지 않고 켜 둡니다(늘 켜지는 덧층 — 컷씬 건너뛰기). 돌려준 구독이 풀리면 끕니다(파일 · 다른 쪽이 켠 것은 남는다). */
+        [[nodiscard]] Subscription enableLayer( const hashed_string& layer );
         /** @brief 지금 LIFO 스택 맨 위 레이어 이름을 반환합니다. */
         string_view getCurrentTopLayer() const;
         /** @brief LIFO 레이어 스택의 이름들입니다(아래부터). 게임 기능 범위의 해제 검사가 켜기 전후를 견준다. */
         void collectLayerStack( vector<hashed_string>& outListLayer ) const;
-        /** @brief 켜진 레이어 이름들입니다(등록 순서, 항상 켜짐 포함). 게임 기능 범위의 해제 검사가 "스택에는 없는데 켜진 레이어"를 찾는다. */
+        /** @brief 스택 · `enableLayer` 와 무관하게 켜진(파일 · `setLayerEnabled`) 레이어 이름들입니다(등록 순서, 항상 켜짐 포함). 게임 기능 범위의 해제 검사가 "스택에는 없는데 켜진 레이어"를 찾는다. */
         void collectEnabledLayers( vector<hashed_string>& outListLayer ) const;
+        /** @brief @p layer 와 늘 켜지는 레이어만 켭니다(파일의 켬 — 스택에 넣은 칸은 건드리지 않는다). */
         void enableOnlyLayer( const hashed_string& layer );
 
         // ------------------------------------------------------------------------------
         // 5) 감도, 축 반전, 데드존 모드, 접근성 설정
         // ------------------------------------------------------------------------------
-        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화 · 토글 액션)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. */
-        InputAccessibilitySettings&       getAccessibilitySettings() { return _accessibility; }
-        const InputAccessibilitySettings& getAccessibilitySettings() const { return _accessibility; }
+        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화 · 토글 액션)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. 다른 맵의 설정을 함께 쓰면 그 설정입니다. */
+        const InputAccessibilitySettings& getAccessibilitySettings() const { return _pAccessibilitySource != nullptr ? _pAccessibilitySource->getAccessibilitySettings() : _accessibility; }
+        /** @brief 이 맵의 플레이어 설정을 고칩니다(설정 화면). 다른 맵의 설정을 함께 쓰는 맵은 고칠 것이 없으므로 부르지 않습니다. */
+        InputAccessibilitySettings& getMutableAccessibilitySettings()
+        {
+            SW_ASSERT( _pAccessibilitySource == nullptr );
+            return _accessibility;
+        }
+        /** @brief @p source 의 플레이어 설정을 함께 읽습니다(로컬 멀티의 다른 사용자 · 포토 모드 — 실행 중 바뀐 감도 · 반전도 바로 듣는다). @p source 는 이 맵보다 오래 살아야 합니다. */
+        void shareAccessibilitySettings( const InputMap& source ) { _pAccessibilitySource = &source; }
 
         /** @brief 토글 액션(`InputAccessibilitySettings::setToggleAction`)이 지금 켜져 있는지입니다. 누를 때마다 뒤집히고, 토글에서 빠지면 꺼집니다. */
         bool isActionToggled( const hashed_string& action ) const;
@@ -315,7 +323,7 @@ namespace sw
          */
         void setUserDevices( const optional<InputUserDevices>& devices ) { _userDevices = devices; }
         /**
-         * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
+         * @brief true 면 이 맵은 키보드 포커스(`InputManager::claimKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
          * @details 디버그 키 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
          *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
          *          단, 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안은 이 맵도 키를 보지 않는다 — 에디터 패널에 친 글자가 셸 · UI 맵의 키(콘솔 여는 `~`, UI 확인 Enter)가 되지 않게.
@@ -693,17 +701,25 @@ namespace sw
         friend struct InputRemapSerializer; ///< 사용자 바인딩 읽기가 가상 커서와 겹친 바인딩을 지운다(`removeVirtualCursorConflicts`)
 
     private:
-        /** @brief 레이어 스택 한 칸 — push 가 바꾸기 전의 켬 · 아래 막기를 기억해 pop 이 되돌린다. */
+        /** @brief 레이어 스택 한 칸입니다(`pushLayer`). */
         struct LayerStackEntry
         {
-            hashed_string          _name;
-            uint8                  _bEnabledBefore    : 1;
-            uint8                  _bBlockLowerBefore : 1;
-            [[maybe_unused]] uint8 _reserved          : 6;
+            hashed_string _name{};
+            uint64        _id{ 0 };
+            bool          _bBlockLower{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다). 막는 칸 — 막지 않는 칸 위에 선다
         };
 
-        /** @brief 스택 칸 @p index 를 빼고 그 레이어의 켬 · 아래 막기를 push 전으로 되돌립니다. */
-        void eraseLayerStackEntry( size_t index );
+        /** @brief 스택 밖에서 켜 둔 요청 하나입니다(`enableLayer`). */
+        struct LayerEnableRequest
+        {
+            hashed_string _name{};
+            uint64        _id{ 0 };
+        };
+
+        /** @brief 파일 · `setLayerEnabled` · 스택 · `enableLayer` 가운데 하나라도 켰으면 true 입니다(스택의 가림은 보지 않는다). */
+        bool isLayerRequested( const LayerDef& layer ) const;
+        /** @brief 칸이나 켜기 요청 @p id 의 구독이 풀렸습니다. */
+        void releaseLayer( uint64 id );
 
     private:
         InputManager*                        _pInput;
@@ -713,14 +729,17 @@ namespace sw
         vector<LayerDef>                     _listLayerEntry;  /**< 레이어를 소유하는 저장소입니다. 안정된 인덱스로만 접근하고, `ActionBinding::_cachedLayerIndex` 가 이 인덱스를 참조합니다. */
         vector<hashed_string>                _listActionName;
         vector<hashed_string>                _listLayerName;
-        vector<LayerStackEntry>              _listLayerStack; /**< push 순서(아래부터). 칸이 그 레이어의 켬을 소유한다 — pop 이 push 전으로 되돌린다. */
-        vector<SourceRecord>                 _listSource;     /**< 읽은 파일(묶음 순서). 맵을 비우면 함께 비운다. */
+        vector<LayerStackEntry>              _listLayerStack;     /**< 막지 않는 칸(push 순서, 아래부터) 다음에 막는 칸입니다. */
+        vector<LayerEnableRequest>           _listLayerEnable;    /**< 스택 밖에서 켜 둔 요청입니다(`enableLayer`). */
+        uint64                               _lastLayerRequestID; /**< 마지막으로 내준 칸 · 요청의 id 입니다(0 은 없음). */
+        vector<SourceRecord>                 _listSource;         /**< 읽은 파일(묶음 순서). 맵을 비우면 함께 비운다. */
         InputActionBuffer                    _actionBuffer;
         uint32                               _nextGeneration;
         uint32                               _currentSourceIndex; /**< 새로 만드는 액션 · 레이어가 속할 파일입니다. 읽기가 끝나면 마지막 파일 — 패널이 새로 만든 것은 묶음의 차이 파일로 간다. */
         hashed_string                        _defaultLayerName;
         InputAccessibilitySettings           _accessibility;
-        InputTriggerRules                    _triggerRules; ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)
+        const InputMap*                      _pAccessibilitySource; ///< 설정을 함께 읽는 맵(빌림, 없으면 nullptr — `shareAccessibilitySettings`)
+        InputTriggerRules                    _triggerRules;         ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)
         float32                              _totalElapsedTime;
         float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
         InputMapVirtualCursor                _virtualCursorStick; ///< 맵 전체가 켜는 가상 커서(`<InputMap virtualCursor>` — 레이어 값은 `LayerDef`)
@@ -729,5 +748,6 @@ namespace sw
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(디버그 키 맵). */
         uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */
         [[maybe_unused]] uint8               _reservedFlags              : 5;
+        SubscriptionList                     _layerSubscriptions; ///< 칸 · 켜기 요청의 구독입니다
     };
 } // namespace sw

@@ -369,20 +369,19 @@ namespace sw
         /** @brief 쥔 쓰기 입구 게이트를 놓습니다. 쥐지 않았으면 아무것도 하지 않습니다. */
         void releaseWriteFilter();
         /**
-         * @brief 시작 전 기다리는 동안 게임 시간을 멈춥니다(`GameTimeScale` 정지 요청). 시작 · 끝 · 소멸 때 `releaseStartPause` 가 풉니다.
+         * @brief 시작 전 기다리는 동안 게임 시간을 멈춥니다(`GameTimeScale` 정지 요청). 시작 · 끝 · 소멸이 구독(`_startPause`)을 풉니다.
          * @details 시작 조건(씬 플레이 · 차단 조건 · 앞 단계의 백그라운드 작업)을 기다리는 프레임 수는 로드 속도 · 백엔드 · 체인의 앞 단계에 달린다. 그동안 게임이 돌면
          *          물리 · 애니메이션이 그 수만큼 앞서 같은 시나리오가 혼자와 체인에서 다른 상태로 시작했다(boat 가 dx11 체인에서만 다른 사진). 언리얼 기능 테스트도
          *          월드 시간은 BeginPlay 뒤 테스트가 시작될 때부터 센다.
          */
         void holdGameTimeUntilStart();
-        /** @brief `holdGameTimeUntilStart` 가 건 정지 요청을 풉니다(걸려 있을 때만). */
-        void releaseStartPause();
         /** @brief 감시 스레드가 읽을 스냅샷을 갱신합니다(@p position 은 `describeRunPosition`). 감시가 돌고 있지 않으면 아무것도 하지 않습니다. */
         void publishHangSnapshot( string_view position );
 
     private:
         AutomationScenario                _scenario;
         VirtualInputScript                _inputScript;
+        Subscription                      _startPause;   ///< 시작 전 게임 시간 정지 요청(`holdGameTimeUntilStart`)
         Subscription                      _virtualInput; ///< `_inputScript` 의 붙임(`InputManager::attachVirtualInput`). 끝(`endRun`)이나 소멸이 풀고, 이 실행이 부른 재생도 함께 떨어진다
         AutomationEvaluator               _evaluator;    ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다
         AutomationStepTimeline            _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
@@ -393,8 +392,7 @@ namespace sw
         uint8                             _bStarted        : 1;
         uint8                             _bEnded          : 1;
         uint8                             _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                             _bStartPauseHeld : 1; ///< 시작 전 게임 시간 정지 요청을 쥐고 있다(`holdGameTimeUntilStart`)
-        [[maybe_unused]] uint8            _reserved        : 4;
+        [[maybe_unused]] uint8            _reserved        : 5;
         string                            _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
         AutomationReproduceInput          _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
         AutomationHangPayload             _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)

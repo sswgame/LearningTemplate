@@ -213,7 +213,7 @@ SW_TEST_CASE( WindowTextInputTest, CompositionThenCommitReachesTheFocusOwner )
     const Subscription    compositionSubscription =
         input.bindTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onComposition, &util ), InputKeyboardFocus::UI );
     const Subscription commitSubscription = input.bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onCommit, &util ), InputKeyboardFocus::UI );
-    input.setKeyboardFocus( InputKeyboardFocus::UI );
+    Subscription       keyboardFocus      = input.claimKeyboardFocus( InputKeyboardFocus::UI );
 
     window.imeEdit( 0, 0, "\xE3\x85\x8E" ); // ㅎ
     window.imeEdit( 0, 1, "\xED\x95\x98" ); // 하
@@ -229,7 +229,7 @@ SW_TEST_CASE( WindowTextInputTest, CompositionThenCommitReachesTheFocusOwner )
     SW_EXPECT_TRUE( util._committed == "\xED\x95\x9C" );
 
     // 포커스가 게임이면 UI 콜백은 받지 않는다.
-    input.setKeyboardFocus( InputKeyboardFocus::Game );
+    keyboardFocus.reset();
     window.imeCommit( "x" );
     input.beginFrame();
     input.endFrame();
@@ -315,7 +315,7 @@ SW_TEST_CASE( WindowTextInputTest, AndroidConnectionReachesTheFocusOwner )
     const Subscription    compositionSubscription =
         input.bindTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onComposition, &util ), InputKeyboardFocus::UI );
     const Subscription commitSubscription = input.bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &WindowTextInputTestUtil::onCommit, &util ), InputKeyboardFocus::UI );
-    input.setKeyboardFocus( InputKeyboardFocus::UI );
+    Subscription       keyboardFocus      = input.claimKeyboardFocus( InputKeyboardFocus::UI );
 
     using Connection = AndroidInputConnectionState;
     using ActionList = vector<AndroidTextAction>;

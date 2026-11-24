@@ -57,6 +57,6 @@ namespace sw
             return;
         const GameObjectHandle owner = pOwner->getHandle();
         for ( CameraDirectorComponent* pDirector : manager.getComponentRegistry().getAll<CameraDirectorComponent>() )
-            pDirector->setPostProcessOverlay( owner, _postProcess, pDirector->getTarget() == owner ? weight : 0.0f );
+            pDirector->setPostProcessOverlay( getHandle(), _postProcess, pDirector->getTarget() == owner ? weight : 0.0f );
     }
 } // namespace sw

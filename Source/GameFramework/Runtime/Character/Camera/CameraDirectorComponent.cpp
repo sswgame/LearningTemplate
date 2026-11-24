@@ -43,6 +43,8 @@ namespace sw
         struct CameraDirectorComponentInternal
         {
             /** @brief 덮어쓴 시점 프리셋의 id 입니다. 카탈로그에 없으므로 저장하면 고정 포즈로 돌아온다. */
+            /** @brief 포토 모드 동안 게임 입력 레이어를 막는 칸의 이름입니다(액션이 없는 빈 레이어). */
+            static constexpr const utf8* kPhotoModeLayer   = "PhotoMode";
             static constexpr const utf8* kOverridePresetID = "__viewOverride";
             /** @brief 덮어쓴 원근 시점의 가까운 면(m)입니다. 탑승 카메라가 바로 앞 레일을 자르지 않게 짧게 둔다. */
             static constexpr float32 kOverrideNearPlane = 0.1f;
@@ -199,7 +201,10 @@ namespace sw
         , _photoMode{}
         , _photoInputMap{}
         , _bPhotoModeCut{ false }
-        , _photoAppliedHiddenLayers{ UILayerMask::None }
+        , _photoPause{}
+        , _photoLayerHide{}
+        , _photoCut{}
+        , _photoInputBlock{}
         , _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _director{}
         , _channelImpulse{}
@@ -242,8 +247,10 @@ namespace sw
         {
             _photoMode.end();
             _photoInputMap.reset();
-            game::getSubsystem<GameTimeScale>().removePauseRequest();
-            releasePhotoModeUILayers();
+            _photoPause.reset();
+            _photoLayerHide.reset();
+            _photoCut.reset();
+            _photoInputBlock.reset();
         }
         CameraSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
@@ -336,17 +343,28 @@ namespace sw
             SW_LOG_ERROR_ID( "CameraDirectorComponent.PhotoModeInputMap3", "Photo mode input map '%#' lacks the photo actions listed above - not entered", mapPath );
             return false;
         }
-        photoInputMap->setInputManager( game::findSubsystem<InputManager>() );
+        InputManager* const pInput = game::findSubsystem<InputManager>();
+        photoInputMap->setInputManager( pInput );
+        // 게임이 멈춰도 조종자는 프레임마다 의도를 만든다 — 막지 않으면 자유 카메라를 돌리는 입력이 폰의 시선 · 발동으로도 샌다(세션 중에는 멈추지도 않는다).
+        if ( pInput != nullptr )
+        {
+            photoInputMap->shareAccessibilitySettings( pInput->getInputMap() ); // 축 반전 · 감도 · 데드존은 플레이어의 것이다
+            _photoInputBlock = pInput->pushSharedLayer( hashed_string( CameraDirectorComponentInternal::kPhotoModeLayer ), true );
+        }
         _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
-        game::getSubsystem<GameTimeScale>().addPauseRequest();
+        _photoPause = game::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Player );
         // UI 는 이 컴포넌트가 모른다 — 숨길 레이어는 속성(데이터)이 정하고, 숨기는 일은 레이어 숨김 창구(`IUILayerVisibility`, 구현은 UI 시스템)가 한다. 창구가 없으면(전용 서버) 가릴 화면도 없다.
         IUILayerVisibility* pLayerVisibility = game::findSubsystem<IUILayerVisibility>();
-        if ( pLayerVisibility != nullptr && _photoHiddenUILayers != UILayerMask::None )
-        {
-            pLayerVisibility->addLayerHideRequest( _photoHiddenUILayers );
-            _photoAppliedHiddenLayers = _photoHiddenUILayers;
-        }
+        if ( pLayerVisibility != nullptr )
+            _photoLayerHide = pLayerVisibility->addLayerHideRequest( _photoHiddenUILayers );
+        // 시퀀스 컷 · 킬캠이 화면을 쥔 동안 켜면 멈춘 컷 화면만 보인다 — 주 화면의 카메라면 그 위에 컷 자리를 쥔다. 놓으면 아래 컷이 이어진다.
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+        const bool         bCovered = pManager != nullptr && pCamera != nullptr && pManager->getCameraRegistry().getCutCamera() != nullptr;
+        if ( bCovered && pCamera->getRenderOutput()._target == CameraOutputTarget::MainView )
+            pManager->getCameraRegistry().setCutCamera( _photoCut, pCamera );
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
         return true;
@@ -358,20 +376,12 @@ namespace sw
             return;
         _photoMode.end();
         _photoInputMap.reset();
-        game::getSubsystem<GameTimeScale>().removePauseRequest();
-        releasePhotoModeUILayers();
+        _photoPause.reset();
+        _photoLayerHide.reset();
+        _photoCut.reset();
+        _photoInputBlock.reset();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
-    }
-
-    void CameraDirectorComponent::releasePhotoModeUILayers()
-    {
-        if ( _photoAppliedHiddenLayers == UILayerMask::None )
-            return;
-        IUILayerVisibility* pLayerVisibility = game::findSubsystem<IUILayerVisibility>();
-        if ( pLayerVisibility != nullptr )
-            pLayerVisibility->removeLayerHideRequest( _photoAppliedHiddenLayers );
-        _photoAppliedHiddenLayers = UILayerMask::None;
     }
 
     void CameraDirectorComponent::setFocusPoint( const float3& point )

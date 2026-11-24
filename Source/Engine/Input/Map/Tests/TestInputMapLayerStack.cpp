@@ -1,16 +1,20 @@
-// InputMapLayerStackTest — pushLayer · popLayer 는 한 쌍이다: pop 이 push 가 바꾼 켬을 되돌려, 빈 스택이 push 로 켠 레이어를 살려 두지 않는다(nogpu).
+// InputMapLayerStackTest — pushLayer 의 칸은 넣은 쪽이 소유한다: 풀리면 그 칸만 빠지고, 막는 칸은 나중에 넣은 레이어에도 막는다(nogpu).
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 
 using namespace sw;
 
 /**
- * @brief [InputMapLayerStackTest] 꺼진 레이어를 push 했다가 pop 하면 다시 꺼진다 — 빈 스택은 켜진 레이어를 모두 살리므로 켬이 남으면 그 레이어가 계속 발화한다
+ * @brief [InputMapLayerStackTest] 꺼진 레이어를 push 했다가 풀면 다시 꺼진다 — 빈 스택은 켜진 레이어를 모두 살리므로 켬이 남으면 그 레이어가 계속 발화한다
  */
-SW_TEST_CASE( InputMapLayerStackTest, PopRestoresTheEnabledStateBeforePush )
+SW_TEST_CASE( InputMapLayerStackTest, ReleaseRestoresTheEnabledState )
 {
     InputMap            map;
     const hashed_string overlay( "Overlay" );
@@ -19,75 +23,99 @@ SW_TEST_CASE( InputMapLayerStackTest, PopRestoresTheEnabledStateBeforePush )
     map.registerLayer( overlay, 0, false );
     SW_REQUIRE_FALSE( map.isLayerEnabled( overlay ) );
 
-    map.pushLayer( overlay );
+    Subscription pushed = map.pushLayer( overlay );
     SW_EXPECT_TRUE( map.isLayerEnabled( overlay ) );
     SW_EXPECT_FALSE( map.isLayerEnabled( gameplay ) ); // 스택이 차면 스택의 레이어만 산다
-    map.popLayer( overlay );
-    SW_EXPECT_FALSE( map.isLayerEnabled( overlay ) ); // 음성 대조: 고치기 전에는 켬이 남아 빈 스택에서 살아났다
+    pushed.reset();
+    SW_EXPECT_FALSE( map.isLayerEnabled( overlay ) );
     SW_EXPECT_TRUE( map.isLayerEnabled( gameplay ) );
 
-    map.pushLayer( overlay );
-    map.popLayer(); // 이름 없는 pop 도 같은 뜻이다
-    SW_EXPECT_FALSE( map.isLayerEnabled( overlay ) );
-}
-
-/**
- * @brief [InputMapLayerStackTest] 켜져 있던 레이어는 pop 뒤에도 켜져 있고, push 가 만든 없던 레이어는 pop 뒤에 꺼진다
- */
-SW_TEST_CASE( InputMapLayerStackTest, PopKeepsPriorEnabledAndDisablesCreatedLayers )
-{
-    InputMap            map;
-    const hashed_string hub( "Hub" );
     const hashed_string created( "CreatedByPush" );
-    map.registerLayer( hub );
-    map.pushLayer( hub );
-    map.popLayer( hub );
-    SW_EXPECT_TRUE( map.isLayerEnabled( hub ) );
-
-    SW_REQUIRE_FALSE( map.hasLayer( created ) );
-    map.pushLayer( created );
+    pushed = map.pushLayer( created );
+    SW_EXPECT_TRUE( map.isLayerEnabled( created ) );
+    pushed.reset();
     SW_EXPECT_TRUE( map.hasLayer( created ) );
-    map.popLayer( created );
     SW_EXPECT_FALSE( map.isLayerEnabled( created ) );
 }
 
 /**
- * @brief [InputMapLayerStackTest] 이미 스택에 있는 레이어를 다시 넣으면 맨 위로 옮기고, 처음 push 전의 켬을 기억해 pop 이 그리로 되돌린다
+ * @brief [InputMapLayerStackTest] 같은 레이어를 둘이 넣으면 하나가 풀려도 남은 쪽이 켜 둔다(옛 코드는 먼저 끝난 쪽의 pop 이 남의 것까지 껐다)
  */
-SW_TEST_CASE( InputMapLayerStackTest, RepushKeepsTheFirstSavedState )
+SW_TEST_CASE( InputMapLayerStackTest, TwoOwnersOfOneLayer )
 {
     InputMap            map;
     const hashed_string cutscene( "Cutscene" );
-    const hashed_string menu( "Menu" );
+    const hashed_string gameplay( "Gameplay" );
+    map.registerLayer( gameplay );
     map.registerLayer( cutscene, 0, false );
-    map.registerLayer( menu );
-    map.pushLayer( cutscene, true );
-    map.pushLayer( menu );
-    map.pushLayer( cutscene, true );
-    vector<hashed_string> listStack;
-    map.collectLayerStack( listStack );
-    SW_REQUIRE_TRUE( listStack.size() == 2 );
-    SW_EXPECT_TRUE( listStack[1] == cutscene );
-    map.popLayer( cutscene );
-    map.popLayer( menu );
-    SW_EXPECT_FALSE( map.isLayerEnabled( cutscene ) );
-    SW_EXPECT_TRUE( map.isLayerEnabled( menu ) );
-    map.collectLayerStack( listStack );
-    SW_EXPECT_TRUE( listStack.empty() );
+    Subscription       firstBlock   = map.pushLayer( cutscene, true );
+    Subscription       firstEnable  = map.enableLayer( cutscene );
+    const Subscription secondBlock  = map.pushLayer( cutscene, true );
+    const Subscription secondEnable = map.enableLayer( cutscene );
+    firstBlock.reset();
+    firstEnable.reset();
+    SW_EXPECT_TRUE( map.isLayerEnabled( cutscene ) );
+    SW_EXPECT_FALSE( map.isLayerEnabled( gameplay ) );
 }
 
 /**
- * @brief [InputMapLayerStackTest] 스택에 없는 레이어의 pop 은 아무것도 바꾸지 않는다(다른 레이어의 켬을 건드리지 않는다)
+ * @brief [InputMapLayerStackTest] 막는 칸은 나중에 넣은 막지 않는 레이어도 막고(컷씬 중 다시 빙의한 폰), 풀리면 그 레이어가 산다. 늘 켜지는 레이어는 막지 않는다
  */
-SW_TEST_CASE( InputMapLayerStackTest, PopOfAnAbsentLayerChangesNothing )
+SW_TEST_CASE( InputMapLayerStackTest, BlockingEntryStaysOnTop )
 {
     InputMap            map;
-    const hashed_string hub( "Hub" );
-    const hashed_string other( "Other" );
-    map.registerLayer( hub );
-    map.registerLayer( other, 0, false );
-    map.popLayer( other );
-    map.popLayer();
-    SW_EXPECT_TRUE( map.isLayerEnabled( hub ) );
-    SW_EXPECT_FALSE( map.isLayerEnabled( other ) );
+    const hashed_string cutscene( "Cutscene" );
+    const hashed_string onFoot( "OnFoot" );
+    const hashed_string always( "Always" );
+    map.registerLayer( onFoot, 0, false );
+    map.registerLayer( always, 0, true, false, true );
+    Subscription       block = map.pushLayer( cutscene, true );
+    const Subscription pawn  = map.pushLayer( onFoot );
+    SW_EXPECT_FALSE( map.isLayerEnabled( onFoot ) );
+    SW_EXPECT_TRUE( map.isLayerEnabled( always ) );
+    block.reset();
+    SW_EXPECT_TRUE( map.isLayerEnabled( onFoot ) );
+}
+
+/**
+ * @brief [InputMapLayerStackTest] 맵을 다시 읽어도 넣은 칸은 남는다(폰은 다시 빙의하지 않는다)
+ */
+SW_TEST_CASE( InputMapLayerStackTest, EntriesSurviveReload )
+{
+    const utf8* const   pText = R"(<InputMap><layers><layer name="Gameplay"/><layer name="OnFoot" enabled="0"/></layers></InputMap>)";
+    InputMap            map;
+    const hashed_string onFoot( "OnFoot" );
+    SW_REQUIRE_TRUE( map.loadFromXMLText( pText, "InputMapLayerStackTest" ) );
+    Subscription pawn = map.pushLayer( onFoot );
+    SW_REQUIRE_TRUE( map.loadFromXMLText( pText, "InputMapLayerStackTest" ) );
+    SW_EXPECT_TRUE( map.isLayerEnabled( onFoot ) );
+    pawn.reset();
+    SW_EXPECT_FALSE( map.isLayerEnabled( onFoot ) );
+}
+
+/**
+ * @brief [InputMapLayerStackTest] 공유 레이어는 나중에 연 사용자의 맵에도 걸리고, 주 사용자만의 칸(폰 레이어)은 다른 사용자에게 베끼지 않으며, 풀리면 모두에게서 사라진다
+ */
+SW_TEST_CASE( InputMapLayerStackTest, SharedLayerCoversEveryUser )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "shared.input.xml" ), R"(<InputMap><layers><layer name="Gameplay"/><layer name="OnFoot" enabled="0"/></layers></InputMap>)" ) );
+    InputManager        input;
+    const hashed_string cutscene( "Cutscene" );
+    const hashed_string onFoot( "OnFoot" );
+    const hashed_string gameplay( "Gameplay" );
+    SW_REQUIRE_TRUE( input.initialize() );
+    SW_REQUIRE_TRUE( input.getInputMap().loadBundle( vector<AssetID>{ test::ScopedScratchDomain::makeID( "shared.input.xml" ) } ) );
+    const Subscription pawn  = input.getInputMap().pushLayer( onFoot );
+    Subscription       block = input.pushSharedLayer( cutscene, true );
+    SW_REQUIRE_TRUE( input.openLocalUsers( 2 ) );
+    InputMap* const pSecond = input.findUserMap( 1 );
+    SW_REQUIRE_NOT_NULL( pSecond );
+    SW_EXPECT_FALSE( input.getInputMap().isLayerEnabled( onFoot ) );
+    SW_EXPECT_FALSE( pSecond->isLayerEnabled( gameplay ) ); // 컷씬이 모두를 막는다
+    block.reset();
+    SW_EXPECT_TRUE( input.getInputMap().isLayerEnabled( onFoot ) );
+    SW_EXPECT_TRUE( pSecond->isLayerEnabled( gameplay ) ); // 주 사용자 폰의 칸 · 컷씬의 사본이 남아 있으면 꺼져 있다
+    input.closeLocalUsers();
+    input.shutdown();
 }

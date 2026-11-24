@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -205,11 +206,12 @@ namespace sw
         , _textRevision{ 0 }
         , _converterRevision{ 0 }
         , _glyphStyle{ InputGlyphStyle::KeyboardMouse }
-        , _bPauseRequested{ SW_FALSE }
         , _bPendingClose{ SW_FALSE }
         , _bTextRevisionKnown{ SW_FALSE }
         , _bGlyphStyleKnown{ SW_FALSE }
         , _bOnScreenSuppressed{ SW_FALSE }
+        , _pauseRequest{}
+        , _layerHideSubscriptions{ make_unique<SubscriptionList>( SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &UISystem::releaseLayerHideRequest, this ) ) }
     {
     }
 
@@ -956,16 +958,10 @@ namespace sw
         {
             bPause = bPause || ( screen->isClosing() == false && screen->getDesc()._bPausesGame );
         }
-        if ( bPause && _bPauseRequested == SW_FALSE )
-        {
-            engine::getSubsystem<GameTimeScale>().addPauseRequest();
-            _bPauseRequested = SW_TRUE;
-        }
-        else if ( bPause == false && _bPauseRequested == SW_TRUE )
-        {
-            engine::getSubsystem<GameTimeScale>().removePauseRequest();
-            _bPauseRequested = SW_FALSE;
-        }
+        if ( bPause == false )
+            _pauseRequest.reset();
+        else if ( _pauseRequest.isActive() == false )
+            _pauseRequest = engine::getSubsystem<GameTimeScale>().addPauseRequest( GamePauseReason::Player );
     }
 
     UIPaintContext UISystem::makePaintContext() const
@@ -1047,15 +1043,18 @@ namespace sw
         update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
     }
 
-    void UISystem::addLayerHideRequest( UILayerMask layers )
+    Subscription UISystem::addLayerHideRequest( UILayerMask layers )
     {
+        if ( layers == UILayerMask::None )
+            return Subscription{};
         _paintState.addLayerHideRequest( layers );
         refreshHiddenLayers();
+        return _layerHideSubscriptions->issue( static_cast<uint64>( layers ) );
     }
 
-    void UISystem::removeLayerHideRequest( UILayerMask layers )
+    void UISystem::releaseLayerHideRequest( uint64 layers )
     {
-        _paintState.removeLayerHideRequest( layers );
+        _paintState.removeLayerHideRequest( static_cast<UILayerMask>( layers ) );
         refreshHiddenLayers();
     }
 

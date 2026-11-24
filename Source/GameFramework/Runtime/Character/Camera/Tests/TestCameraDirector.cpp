@@ -30,9 +30,9 @@ SW_TEST_CASE( CameraDirectorTest, PostProcessOverlayBlendsByWeight )
     SW_EXPECT_NEAR( 0.0f, director.step( 1.0f / 60.0f, target )._postProcess._vignetteIntensity, 1.0e-6f ); // 프리셋은 중립
 
     PostProcessValues look;
-    look._vignetteIntensity    = 0.8f;
-    look._saturation           = 0.2f;
-    const GameObjectHandle gas = GameObjectHandle::make( 7 );
+    look._vignetteIntensity   = 0.8f;
+    look._saturation          = 0.2f;
+    const ComponentHandle gas = ComponentHandle::makeOwned( 7, 1 );
     director.setPostProcessOverlay( gas, look, 0.5f );
     SW_EXPECT_EQUAL( 1u, CameraDirectorTestAccess::getPostProcessOverlayCount( director ) );
     const CameraPose& half = director.step( 1.0f / 60.0f, target );
@@ -42,6 +42,10 @@ SW_TEST_CASE( CameraDirectorTest, PostProcessOverlayBlendsByWeight )
     director.setPostProcessOverlay( gas, look, 2.0f ); // 같은 출처는 바꾸고, 가중치는 1 로 자른다
     SW_EXPECT_EQUAL( 1u, CameraDirectorTestAccess::getPostProcessOverlayCount( director ) );
     SW_EXPECT_NEAR( 0.8f, director.step( 1.0f / 60.0f, target )._postProcess._vignetteIntensity, 1.0e-5f );
+
+    // 한 오브젝트의 다른 컴포넌트가 프레임마다 가중치 0 을 적어도 이 덧칠은 남는다
+    director.setPostProcessOverlay( ComponentHandle::makeOwned( 7, 2 ), look, 0.0f );
+    SW_EXPECT_EQUAL( 1u, CameraDirectorTestAccess::getPostProcessOverlayCount( director ) );
 
     director.setPostProcessOverlay( gas, look, 0.0f );
     SW_EXPECT_EQUAL( 0u, CameraDirectorTestAccess::getPostProcessOverlayCount( director ) );

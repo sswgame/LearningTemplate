@@ -162,6 +162,7 @@ namespace sw
         InputManager*                _pInput;
         Subscription                 _textInputSubscription;       ///< 입력 관리자의 UI 포커스 글자 칸 구독
         Subscription                 _textCompositionSubscription; ///< 입력 관리자의 UI 포커스 조합 글자 칸 구독
+        Subscription                 _keyboardFocus;               ///< 글자 위젯이 포커스를 가진 동안 쥔 키보드(`InputManager::claimKeyboardFocus`)
         float2                       _lastPointerPosition;
         int2                         _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 위치입니다(창 픽셀).
         float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간입니다.

@@ -174,6 +174,8 @@ namespace sw
 
         /** @brief 끌 때 부를 일을 더합니다(입력 레이어 빼기 · 화면 닫기처럼 거는 길이 위에 없는 것). 건 역순으로 부른다. */
         void addCleanup( Delegate<void()> cleanup );
+        /** @brief 구독을 범위가 들고, 끌 때 되돌릴 일과 같은 차례(건 역순)로 풉니다. */
+        void holdSubscription( Subscription subscription );
 
         /** @brief 기능들이 읽은 카탈로그 종류입니다(`loadCatalog` 의 차례). */
         const vector<hashed_string>& getLoadedCatalogs() const { return _listLoadedCatalog; }
