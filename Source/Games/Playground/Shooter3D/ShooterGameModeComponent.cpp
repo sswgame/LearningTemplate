@@ -165,6 +165,7 @@ namespace sw
         , _profileReload{}
         , _nextEnemyNetID{ ShooterNetPawnComponent::kEnemyEntityIDBase }
         , _appliedAutoPlay{ -1 }
+        , _bSpawnEnemies{ SW_TRUE }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
         , _bReplica{ SW_FALSE }
@@ -494,6 +495,8 @@ namespace sw
         const ShooterAutoPlayOptions* const pOptions    = game::findSubsystem<ShooterAutoPlayOptions>();
         if ( pOptions != nullptr && pOptions->isEnemiesOff() )
             return; // 개발 스위치 — 적 없는 판(두 사람 대전 시나리오)
+        if ( _bSpawnEnemies == SW_FALSE )
+            return; // 사람끼리만 두는 맵이다(씬 데이터)
         if ( pAppearance == nullptr || bEnemiesSet == false )
         {
             SW_LOG_ERROR_ID( "ShooterGameMode.EnemyPresetsNotSet", "[Shooter] enemy kinds are not set (or no appearance database) - no enemies will come" );

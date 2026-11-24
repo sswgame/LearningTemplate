@@ -216,6 +216,14 @@ namespace sw
         void collectPlayerObjects( vector<GameObjectHandle>& outListObject ) const;
         /** @brief 지금 보이는 남의 몸 수입니다(클라이언트). */
         uint32 getRemotePawnCount() const { return static_cast<uint32>( _listRemotePawn.size() ); }
+        /** @brief 자기 몸이 디딘 움직이는 바닥의 번호입니다(클라이언트, 0 이면 없다). */
+        int32 getFloorNumber() const { return static_cast<int32>( _floorNumber ); }
+        /** @brief 그 바닥 기준의 자기 몸 자리입니다(`getFloorNumber` 가 0 이면 뜻이 없다). */
+        const float3& getFloorLocalPosition() const { return _floorLocalPosition; }
+        /** @brief 움직이는 바닥 위에 보이는 첫 남의 몸이 디딘 바닥의 번호입니다(0 이면 없다). */
+        int32 getRemoteFloorNumber() const;
+        /** @brief 그 남의 몸을 그린 자리입니다(바닥 기준). */
+        float3 getRemoteFloorLocalPosition() const;
         /** @brief @p from 에서 가장 가까운 남의 몸의 발입니다(클라이언트). 보이는 남이 없으면 비어 있습니다. */
         optional<AbsolutePosition> findNearestRemotePawn( const AbsolutePosition& from ) const;
         /** @brief 입력 틱 @p commandTick 의 예측 스윕이 맞힌 적을 다음 입력에 실어 서버로 주장합니다(클라이언트, 틱 뒤). */
@@ -278,7 +286,9 @@ namespace sw
         {
             GameObjectHandle _object{};
             AbsolutePosition _position{};
+            float3           _floorLocalPosition{}; ///< 바닥 기준으로 그린 자리(`_floorNumber` 일 때)
             uint32           _entityID{ 0 };
+            uint8            _floorNumber{ 0 }; ///< 디딘 움직이는 바닥의 번호(0 이면 없다)
             uint8            _weaponIndex{ 0 };
             uint8            _bArmed{ SW_FALSE }; ///< 몸의 손에 무기 아이템을 쥐였다
             uint8            _bSeen{ SW_FALSE };  ///< 이번 프레임의 보이는 목록에 있다
@@ -393,10 +403,12 @@ namespace sw
         uint32                                            _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
         uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
         uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
+        float3                                            _floorLocalPosition;  ///< 클라이언트 — 디딘 바닥 기준의 자리
         int32                                             _floorTickOffset;     ///< 클라이언트 — 서버가 정해 준 바닥 틱 차이
         int32                                             _pendingStepCount;    ///< 클라이언트 — 이번 프레임 틱 뒤에 돌 입력 틱 수
         Role                                              _role;
         uint8                                             _bFloorTickKnown;
+        uint8                                             _floorNumber;        ///< 클라이언트 — 디딘 바닥의 번호
         uint8                                             _bSeatsReported : 1; ///< 서버 — 자리 수를 매칭에 알렸다
         [[maybe_unused]] uint8                            _reserved       : 7;
     };

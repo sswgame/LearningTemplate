@@ -82,10 +82,221 @@
 					                              _gravityScale="1"
 					                              _mass="70"
 					                              _layer="Character" />
-					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _bLockMouse="false">
+					<PawnComponent _localID="11149290121538025405" _maxPitch="80.21409" _autoPossess="None" _bLockMouse="false">
 						<_listButton />
 						<_listAnalog />
 					</PawnComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<!-- 사람 대전(minigames/shooter3d_floormatch)의 몸 · 감독 · 화면 — 값은 아레나(arena.scene.xml)와 같고 출발점만 바닥이 지나는 길 앞이다. 적은 내지 않는다(_bSpawnEnemies). -->
+		<entity id="50" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,0,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="75"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<AudioListenerComponent _localID="1103268144467300195" _componentName="AudioListenerComponent"
+					                        _bActive="true"
+					                        _localPosition="0,0,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerID="0"
+					                        _attachComponent="#f5c571168b1146be"
+					                        _screenHalfWidth="10"
+					                        _listenerIndex="0"
+					                        _mode="World3D" />
+					<MeshComponent _localID="18226351309133183543" _componentName="ViewWeapon"
+					               _bActive="true"
+					               _localPosition="0.16,-0.15,0.42"
+					               _localRotation="0,3.1415927,0"
+					               _localScale="0.5,0.5,0.5"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#f5c571168b1146be"
+					               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
+					               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<NavMeshModifierComponent _localID="7476001263293725082" _componentName="NavMeshModifierComponent"
+					                          _bActive="true"
+					                          _areaName=""
+					                          _bIgnoreFromBuild="true" />
+					<PawnComponent _localID="11149290121538025405" _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="Move"
+					               _lookAction="Look"
+					               _upAction="None"
+					               _triggerLookButton="Fire"
+					               _aiControllerPrefab=""
+					               _maxPitch="85"
+					               _autoPossess="Player0"
+					               _bLockMouse="true">
+						<_listButton>
+							<item>Jump</item>
+							<item>Sprint</item>
+							<item>Fire</item>
+							<item>Reload</item>
+							<item>SwitchWeapon</item>
+							<item>Weapon1</item>
+							<item>Weapon2</item>
+							<item>Weapon3</item>
+							<item>Melee</item>
+						</_listButton>
+						<_listAnalog>
+							<item>SwitchWeapon</item>
+						</_listAnalog>
+					</PawnComponent>
+					<ShooterBodyMovementComponent _localID="10555112802505069990" _componentName="ShooterBodyMovementComponent"
+					                              _bActive="true"
+					                              _sprintButton="Sprint"
+					                              _jumpButton="Jump"
+					                              _walkSpeed="5.5"
+					                              _sprintSpeed="8.5"
+					                              _jumpSpeed="6"
+					                              _gravity="18"
+					                              _radius="0.35" />
+					<ShooterNetPawnComponent _localID="11501936812592707388" _componentName="ShooterNetPawnComponent"
+					                         _bActive="true"
+					                         _tickInterval="0.033333335"
+					                         _smoothingHalfLife="0.05"
+					                         _smoothingSnapDistance="2"
+					                         _reconcileTolerance="0.01"
+					                         _interestCellSize="16"
+					                         _interestEnterRadius="60"
+					                         _interestLeaveRadius="70"
+					                         _pawnHitHeight="1.8">
+						<_listGuestSpawn>
+							<item>3.6,0,-5</item>
+						</_listGuestSpawn>
+					</ShooterNetPawnComponent>
+					<FirstPersonCameraComponent _localID="17347683538408078309" _componentName="FirstPersonCameraComponent"
+					                            _bActive="true"
+					                            _yaw="0"
+					                            _pitch="0"
+					                            _maxPitch="85"
+					                            _fieldOfViewY="75"
+					                            _nearPlane="0.05"
+					                            _farPlane="120"
+					                            _viewModelName="ViewWeapon"
+					                            _viewModelOffset="0.16,-0.15,0.42"
+					                            _viewModelYawOffset="180">
+						<_headBob _verticalAmplitude="0.03"
+						          _lateralAmplitude="0.015"
+						          _strideLength="1.8"
+						          _referenceSpeed="4.5"
+						          _blendTime="0.15" />
+					</FirstPersonCameraComponent>
+					<HUDControllerComponent _localID="17122754535480611078" _componentName="HUDControllerComponent"
+					                        _bActive="true"
+					                        _documentPath="game/playground/shooter3d/ui/hud.ui.xml" />
+					<ShooterPlayerComponent _localID="4923146993261169814" _componentName="ShooterPlayerComponent"
+					                        _bActive="true"
+					                        _gameMode="51"
+					                        _spawnPosition="2.4,0,-5"
+					                        _bodyPrefab="game/playground/shooter3d/prefabs/player_body.prefab.xml"
+					                        _eyeHeight="1.6"
+					                        _maxHealth="100"
+					                        _regenDelay="4"
+					                        _regenPerSecond="6">
+						<_listWeaponID>
+							<item>rifle</item>
+							<item>shotgun</item>
+							<item>pistol</item>
+						</_listWeaponID>
+					</ShooterPlayerComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="51" name="ShooterGameMode">
+			<GameObject _schemaVersion="0" _name="ShooterGameMode" _bActive="true">
+				<_listComponent>
+					<ShooterGameModeComponent _localID="13246353635651928858" _componentName="ShooterGameModeComponent"
+					                          _bActive="true"
+					                          _effectPrefab="game/playground/shooter3d/prefabs/effect.prefab.xml"
+					                          _tracerPrefab="game/playground/shooter3d/prefabs/tracer.prefab.xml"
+					                          _autoPlayPrefab="game/playground/shooter3d/prefabs/autoplay_ai.prefab.xml"
+					                          _player="50"
+					                          _arenaHalfSize="20"
+					                          _effectPoolSize="32"
+					                          _tracerPoolSize="24"
+					                          _matchDownLimit="3"
+					                          _bAutoPlay="false"
+					                          _bSpawnEnemies="false">
+					</ShooterGameModeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="120" name="PlayerCamera">
+			<GameObject _schemaVersion="0" _name="PlayerCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="2.4,1.6,-5"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="75"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="10"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<CameraManagerComponent _localID="3555541265262269731" _componentName="CameraManagerComponent" _bActive="true" _viewTarget="52" _localPlayerIndex="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="121" name="PlayerController">
+			<GameObject _schemaVersion="0" _name="PlayerController" _bActive="true">
+				<_listComponent>
+					<PlayerControllerComponent _localID="4811566279812111972" _componentName="PlayerControllerComponent" _bActive="true" _playerIndex="0" _bManageViewTarget="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="52" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="2.4,1.6,-5"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="75"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Custom"
+					                 _bOrthographic="false" />
+					<CameraDirectorComponent _localID="17954231826208681790" _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/playground/shooter3d/data/shooter.cameras.xml"
+					                         _initialPreset="firstperson"
+					                         _target="50"
+					                         _cycleAction="CycleCamera"
+					                         _bReadInput="true">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -186,10 +186,12 @@ namespace sw
         , _sentClaimCount{ 0 }
         , _confirmedClaimCount{ 0 }
         , _rejectedClaimCount{ 0 }
+        , _floorLocalPosition{}
         , _floorTickOffset{ 0 }
         , _pendingStepCount{ 0 }
         , _role{ Role::None }
         , _bFloorTickKnown{ SW_FALSE }
+        , _floorNumber{ 0 }
         , _bSeatsReported{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -839,6 +841,12 @@ namespace sw
             }
         }
         movement.setState( current, float3{ current._position._x - before._position._x, 0.0f, current._position._z - before._position._z } * ( 1.0f / _tickInterval ) );
+        float3  floorPosition;
+        float32 floorYaw   = 0.0f;
+        _floorNumber       = current._bOnGround == SW_TRUE ? ShooterFloorStep::findNumber( _listFloorScratch, current._position ) : uint8{ 0 };
+        const bool bRiding = _floorNumber != 0 && floorTick.has_value() && gameMode.computeFloorPose( _floorNumber, static_cast<float64>( *floorTick ) * static_cast<float64>( _tickInterval ), floorPosition, floorYaw );
+        if ( bRiding )
+            _floorLocalPosition = ShooterFloorStep::toLocal( floorPosition, floorYaw, current._position );
         // 서버와 같은 순서다 — 이동한 자리에서 이 명령의 발동을 예측한다.
         ShooterPlayerComponent* const pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
         if ( pPlayer != nullptr && movement.isSuspended() == false )
@@ -1164,8 +1172,10 @@ namespace sw
                 pose._feet = AbsolutePosition{ ShooterFloorStep::toAbsolute( floorPosition, floorYaw, pose._feet._value ) };
                 pose._yaw  = MathUtil::wrapAngle( pose._yaw + floorYaw );
             }
-            pose._velocity     = float3{ velocity._x, 0.0f, velocity._z };
-            pRemote->_position = pose._feet;
+            pose._velocity               = float3{ velocity._x, 0.0f, velocity._z };
+            pRemote->_position           = pose._feet;
+            pRemote->_floorNumber        = floorNumber;
+            pRemote->_floorLocalPosition = floorNumber != 0 ? ShooterFloorStep::toLocal( floorPosition, floorYaw, pose._feet._value ) : float3{};
 
             GameObject*             pObject = manager.resolveGameObject( pRemote->_object );
             ShooterAvatarComponent* pAvatar = pObject != nullptr ? pObject->getComponent<ShooterAvatarComponent>() : nullptr;
@@ -1206,6 +1216,26 @@ namespace sw
                 nearest = remote._position;
         }
         return nearest;
+    }
+
+    int32 ShooterNetPawnComponent::getRemoteFloorNumber() const
+    {
+        for ( const RemotePawn& remote : _listRemotePawn )
+        {
+            if ( remote._floorNumber != 0 )
+                return static_cast<int32>( remote._floorNumber );
+        }
+        return 0;
+    }
+
+    float3 ShooterNetPawnComponent::getRemoteFloorLocalPosition() const
+    {
+        for ( const RemotePawn& remote : _listRemotePawn )
+        {
+            if ( remote._floorNumber != 0 )
+                return remote._floorLocalPosition;
+        }
+        return float3{};
     }
 
     void ShooterNetPawnComponent::collectBodyPoses( const GameObjectManager& manager, const GameObject& object, vector<LagBodyPose>& outListBody )
@@ -1375,5 +1405,7 @@ namespace sw
         return delta.getLength() <= _reconcileTolerance && left._bOnGround == right._bOnGround;
     }
 
+    SW_AUTOMATION_GETTER_WATCH( shooterFloorNumber, "Shooter.FloorNumber", "Number of the moving floor the own body stands on (0 none)", ShooterNetPawnComponent, &ShooterNetPawnComponent::getFloorNumber );
+    SW_AUTOMATION_GETTER_WATCH( shooterRemoteFloorNumber, "Shooter.RemoteFloorNumber", "Number of the moving floor another player is shown standing on (0 none)", ShooterNetPawnComponent, &ShooterNetPawnComponent::getRemoteFloorNumber );
     SW_AUTOMATION_GETTER_WATCH( shooterRemotePawnCount, "Shooter.RemotePawnCount", "Other players' bodies this client sees", ShooterNetPawnComponent, &ShooterNetPawnComponent::getRemotePawnCount );
 } // namespace sw

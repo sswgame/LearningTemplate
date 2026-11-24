@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="621801e2deee4223bf17c3243d108c3f"?>
+<!--
+  움직이는 바닥 위의 두 사람(둘째 사람) — match_floor_first 의 짝. 첫 사람이 두고 있는 매치 서버의 빈 자리로 들어간다.
+  ① 바닥에 올라 실려 가고, 첫 사람도 바닥 위로 보인다(Shooter.RemoteFloorNumber). ② 본 자리를 남긴다. ③ 실려 가며 쏴 쓰러뜨린다 — 서버는 쏜 사람이 본 바닥 위의 자리로 판정한다.
+-->
+<Scenario name="game.playground.netpair.match_floor_second" fixedDelta="0.0166667" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.login 2"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.joinhub 127.0.0.1:17977"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.enter shooter3d_floormatch"/>
+	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="120"/>
+	<WaitUntil watch="Shooter.ServerHealth" atLeast="50" timeoutWallSeconds="60"/>
+	<!-- 바닥이 지나는 길로 걸어 들어가 서 있으면 바닥이 실어 간다(윗면이 올라설 높이 안이다) -->
+	<Press slot="Key.W"/>
+	<WaitUntil watch="Object.Z" target="Player" atLeast="-0.5" timeoutWallSeconds="20"/>
+	<Release slot="Key.W"/>
+	<WaitUntil watch="Shooter.FloorNumber" equals="1" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Shooter.RemoteFloorNumber" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Object.X" target="Floor" atLeast="5" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Object.X" target="Floor" atMost="1" timeoutWallSeconds="20"/>
+	<WaitUntil watch="Object.X" target="Floor" atLeast="5" timeoutWallSeconds="20"/>
+	<Expect watch="Shooter.RemoteFloorNumber" equals="1"/>
+	<DevCommand line="shooter.floor"/>
+	<DevCommand line="cheat.shooter.face"/>
+	<Press slot="Mouse.Left"/>
+	<WaitUntil watch="Shooter.ServerKillCount" atLeast="1" timeoutWallSeconds="30"/>
+	<Release slot="Mouse.Left"/>
+	<DevCommand line="minigame.quit"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>

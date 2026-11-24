@@ -325,6 +325,34 @@ namespace sw
                 return true;
             }
 
+            /** @brief `shooter.floor` — 움직이는 바닥 위의 자기 자리와 본 자리를 로그에 남깁니다. 두 클라이언트의 줄을 `Scripts net-pair match` 가 견줍니다. */
+            static bool runFloorStatus( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const expected<vector<ShooterPlayerComponent*>> collected = collectPlayers();
+                if ( collected.has_value() == false )
+                {
+                    outReply = string( collected.error().message() );
+                    return true;
+                }
+                for ( const ShooterPlayerComponent* pPlayer : *collected )
+                {
+                    const ShooterNetPawnComponent* pNetPawn = pPlayer->getOwner()->getComponent<ShooterNetPawnComponent>();
+                    if ( pNetPawn == nullptr )
+                        continue;
+                    const float3                             own  = pNetPawn->getFloorLocalPosition();
+                    const float3                             seen = pNetPawn->getRemoteFloorLocalPosition();
+                    StringBuilder<constant::buffer::kMax256> reply;
+                    reply.appendFormat( "floor self=%# x=%# z=%# seen=%# x=%# z=%#", pNetPawn->getFloorNumber(), own._x, own._z, pNetPawn->getRemoteFloorNumber(), seen._x, seen._z );
+                    outReply = string( reply.view() );
+                    SW_LOG_INFO_ID( "Shooter.FloorStatus", "[Shooter] %#", outReply.c_str() );
+                    return true;
+                }
+                outReply = "no networked shooter player in the scene";
+                return true;
+            }
+
             static constexpr float32 kFaceHeight = 0.9f; ///< 겨누는 높이(몸 가운데, m) — 반동이 위로 튀어도 몸 안에 남는다
 
             /** @brief `cheat.shooter.projectile [id]` — 슈터 플레이어의 지금 무기에 탄을 장전합니다. id 를 빼면 그 무기의 기본 탄입니다(무기 · 탄 조합 시나리오). */
@@ -1535,6 +1563,7 @@ namespace sw
     SW_DEV_COMMAND( CheatShooterGod, "cheat.shooter.god", "cheat.shooter.god", "Toggle damage immunity of every shooter player", &ShooterDevCommandsInternal::runGod );
     SW_DEV_COMMAND( CheatShooterDown, "cheat.shooter.down", "cheat.shooter.down", "Down every living shooter player at once (clears damage immunity)", &ShooterDevCommandsInternal::runDown );
     SW_DEV_COMMAND( CheatShooterFace, "cheat.shooter.face", "cheat.shooter.face", "Turn the connected player toward the nearest other player", &ShooterDevCommandsInternal::runFace );
+    SW_DEV_COMMAND( ShooterFloor, "shooter.floor", "shooter.floor", "Log where this player and the player it sees stand on the moving floor", &ShooterDevCommandsInternal::runFloorStatus );
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );
