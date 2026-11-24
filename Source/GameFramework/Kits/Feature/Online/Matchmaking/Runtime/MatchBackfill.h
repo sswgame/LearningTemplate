@@ -47,8 +47,14 @@ namespace sw
         [[nodiscard]] virtual MatchmakingServiceResult submitBackfill( const MatchBackfillSlots& slots, UnixMilliseconds nowMs ) = 0;
         /**
          * @brief 경기에서 나간 계정 @p leftAccountID 의 자리 하나를 채워 달라고 맡깁니다. 경기 · 모드 · 팀 · 남은 사람의 평균 실력은 이 서버가 읽은 명단에서 찾습니다.
-         * @return 이 서버의 명단에 없는 계정(배정 없이 들어온 개발 접속, 이미 맡긴 자리)이면 NotQueued 이고 아무것도 맡기지 않습니다. 같은 계정의 자리는 한 번만 맡깁니다.
+         * @return 이 서버의 명단에 없는 계정(배정 없이 들어온 개발 접속, 이미 맡긴 자리)이거나 마지막 사람이 나가 경기가 빈 것이면 NotQueued 이고 아무것도 맡기지 않습니다(빈 서버는 다음 경기가 통째로 받는다). 같은 계정의 자리는 한 번만 맡깁니다.
          */
         [[nodiscard]] virtual MatchmakingServiceResult submitPlayerLeft( AccountID leftAccountID, UnixMilliseconds nowMs ) = 0;
+        /**
+         * @brief 이 서버가 한 번에 받을 수 있는 사람 수(1 이상)를 정합니다 — 맵이 세우는 몸 수다. 부르기 전에는 온라인 설정의 정원(`OnlineServerConfig::_capacity`)이다.
+         * @details 매칭은 접속 · 예약한 사람이 정원에 찬 서버에 배정하지 않고, 이 서버는 정원을 넘는 명단 가운데 오래된 경기부터 접속을 받지 않는다.
+         *          몸 수를 아는 쪽이 정한다 — 설정에 손으로 적으면 맵과 어긋난 서버가 몸 없는 사람을 배정받는다(Agones SDK `SetPlayerCapacity`).
+         */
+        virtual void setSeatCapacity( int32 seatCount ) = 0;
     };
 } // namespace sw
