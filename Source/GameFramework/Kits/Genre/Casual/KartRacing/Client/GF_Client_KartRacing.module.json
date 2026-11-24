@@ -1,0 +1,22 @@
+{
+    "_name": "GF_Client_KartRacing",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "카트 레이싱 키트(클라이언트) — 운전 입력을 디렉터 명령으로 바꾸고 트랙 · 차 · 아이템을 보이며 HUD 를 채운다(뷰 · 입력 · HUD). 규칙 · 디렉터는 GF_KartRacing",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_KartRacing"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

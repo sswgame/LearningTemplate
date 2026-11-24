@@ -1,0 +1,56 @@
+<?asset guid="a69e2414bc417532acfd9a97b27406be"?>
+<UIDocument _schemaVersion="1">
+	<UIScreenDef _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel _visibility="SelfHitTestInvisible">
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<TextWidget _name="PlaceLabel" _text="Place" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,40" _offsetMax="308,76" />
+			</TextWidget>
+			<TextWidget _name="Place" _text="{bind:_place}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,40" _offsetMax="468,76" />
+			</TextWidget>
+			<TextWidget _name="RacerCountLabel" _text="Karts" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,80" _offsetMax="308,116" />
+			</TextWidget>
+			<TextWidget _name="RacerCount" _text="{bind:_racerCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,80" _offsetMax="468,116" />
+			</TextWidget>
+			<TextWidget _name="LapLabel" _text="Lap" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,120" _offsetMax="308,156" />
+			</TextWidget>
+			<TextWidget _name="Lap" _text="{bind:_lap}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,120" _offsetMax="468,156" />
+			</TextWidget>
+			<TextWidget _name="LapCountLabel" _text="Laps to race" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,160" _offsetMax="308,196" />
+			</TextWidget>
+			<TextWidget _name="LapCount" _text="{bind:_lapCount}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,160" _offsetMax="468,196" />
+			</TextWidget>
+			<TextWidget _name="SpeedLabel" _text="Speed (km/h)" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,200" _offsetMax="308,236" />
+			</TextWidget>
+			<TextWidget _name="Speed" _text="{bind:_speed}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,200" _offsetMax="468,236" />
+			</TextWidget>
+			<TextWidget _name="CountdownLabel" _text="Seconds to start" _styleClass="hud" _visibility="HitTestInvisible">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="48,240" _offsetMax="308,276" />
+			</TextWidget>
+			<TextWidget _name="Countdown" _text="{bind:_countdown}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
+				<_slot _anchorMin="0,0" _anchorMax="0,0" _offsetMin="308,240" _offsetMax="468,276" />
+			</TextWidget>
+			<TextWidget _name="GetReady" _text="Get ready!" _styleClass="hud" _visibility="{bind:_countdownVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,120" _offsetMax="200,156" />
+			</TextWidget>
+			<TextWidget _name="ItemReady" _text="Item ready" _styleClass="hud" _visibility="{bind:_itemVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,160" _offsetMax="200,196" />
+			</TextWidget>
+			<TextWidget _name="WrongWay" _text="Wrong way!" _styleClass="hud" _visibility="{bind:_wrongWayVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,200" _offsetMax="200,236" />
+			</TextWidget>
+			<TextWidget _name="Finish" _text="Finish!" _styleClass="hud" _visibility="{bind:_finishVisibility}">
+				<_slot _anchorMin="0.5,0" _anchorMax="0.5,0" _offsetMin="-200,240" _offsetMax="200,276" />
+			</TextWidget>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>
