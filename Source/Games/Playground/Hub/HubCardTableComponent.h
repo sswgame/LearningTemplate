@@ -2,7 +2,7 @@
  * @file HubCardTableComponent.h
  * @brief 접속한 허브의 카드 탁자입니다 — 두 사람이 셰딩 카드 게임 한 판을 턴 중계(`GF_NetTurnRelay`)로 둡니다.
  * @details 서버는 행동의 순서와 규칙만 본다: 방마다 받은 행동을 처음부터 다시 돌려(`HubCardTurnPolicy::replay` — 판은 씨앗이 정해 결정적이다) 다음 행동이 규칙에 맞는지 정하고, 맞는 것에만
- *          번호를 붙여 두 자리에 보낸다. 방이 찼으면 다음 방으로 간다.
+ *          번호를 붙여 두 자리에 보낸다. 방이 찼으면 다음 방으로 간다. 판이 끝나고 두 자리가 떠나면 중계가 방을 되돌려 다음 판이 쓴다 — 섞기는 방의 세대로 갈라 같은 방의 다음 판도 다른 판이다.
  *          서버는 접속 티켓(계정)을 요구하는 세션에서만 선다(`NetLinkValue::_bTicketRequired`) — 허브 서버와 같은 문턱이다.
  *          **패는 서버만 안다.** 서버가 운영체제 난수에서 만든 비밀 키로 섞고, 자리마다 자기 손패 · 낼 수 있는 패 · 상대 장수만 담은 모습(`HubCardSeatView`)을 보낸다. 클라이언트에는 키도
  *          씨앗도 남의 패도 없어 판을 다시 돌릴 수 없다. 낼 수 있는 패도 서버가 골라 보낸다(하스스톤의 선택지 — 규칙을 클라이언트에 두 벌 두지 않는다).
@@ -62,11 +62,12 @@ namespace sw
         /** @brief 섞기의 비밀 키를 정합니다(서버가 세션을 세울 때마다 새 키). */
         void setShuffleKey( const SipHashKey& key ) { _shuffleKey = key; }
 
-        /** @brief 방 @p roomID 의 행동 @p listAction 을 처음부터 돌려 @p outGame 에 판을 만듭니다. 규칙 밖 행동이 있으면 false 입니다. */
-        [[nodiscard]] bool replay( uint32 roomID, const vector<TurnAction>& listAction, SheddingCardGame& outGame ) const;
+        /** @brief 방 @p room 의 행동을 처음부터 돌려 @p outGame 에 판을 만듭니다(섞기는 방의 세대로). 규칙 밖 행동이 있으면 false 입니다. */
+        [[nodiscard]] bool replay( const TurnRoom& room, SheddingCardGame& outGame ) const;
 
         bool isActionAllowed( const TurnRoom& room, int32 seat, const vector<uint8>& actionBuffer ) const override;
         void applyAction( TurnRoom& room, int32 seat, const vector<uint8>& actionBuffer ) const override;
+        bool isRoomFinished( const TurnRoom& room ) const override;
         bool writeSeatView( const TurnRoom& room, int32 seat, vector<uint8>& outView ) const override;
         /** @brief 서버가 보낸 모습을 읽습니다. 깨졌거나 덱에 없는 카드가 있으면 false 이고 @p outView 는 그대로입니다. */
         [[nodiscard]] static bool readSeatView( const vector<uint8>& bytes, HubCardSeatView& outView );
@@ -101,8 +102,10 @@ namespace sw
         void onEndPlay() override;
         void onTick( TickContext& context ) override;
 
-        /** @brief 빈 방에 앉습니다(클라이언트). 접속하지 않았거나 이미 앉았으면 false 입니다. */
+        /** @brief 빈 방에 앉습니다(클라이언트). 끝난 판에 앉아 있으면 떠나고 새 판에 앉습니다. 접속하지 않았거나 두는 판에 앉아 있으면 false 입니다. */
         [[nodiscard]] bool requestSeat();
+        /** @brief 앉은 탁자를 떠납니다. 앉지 않았으면 false 입니다. */
+        [[nodiscard]] bool requestLeave();
         /** @brief 내 손의 낼 수 있는 첫 패를 내거나, 없거나 @p bDrawOnly 면 뽑습니다. 내 차례가 아니어도 보낸다 — 거절은 서버가 한다. 판이 없으면 false 입니다. */
         [[nodiscard]] bool requestPlay( bool bDrawOnly );
 
@@ -130,6 +133,8 @@ namespace sw
         void startRole( const NetLinkValue& link );
         void stopRole();
         void pollClientEvents();
+        /** @brief 탁자에서 일어났습니다 — 마지막 모습을 버리고 다음에는 첫 방부터 빈 자리를 찾습니다. */
+        void clearTable();
         /** @brief 받은 모습을 HUD 뷰모델에 넣습니다. 전용 서버 · 헤드리스에는 HUD 창구가 없어 보일 곳이 없다. */
         void updateHUD();
 

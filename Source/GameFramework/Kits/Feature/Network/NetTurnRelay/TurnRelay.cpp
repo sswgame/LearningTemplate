@@ -12,6 +12,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Time/MonotonicClock.h"
 #include "Core/UUID/UUID.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -77,6 +78,9 @@ namespace sw
         , _pPolicy{ nullptr }
         , _tokenKey{}
         , _tokenCount{ 0 }
+        , _finishedRoomNanoseconds{ 0 }
+        , _abandonedRoomNanoseconds{ 0 }
+        , _lastGeneration{ 0 }
         , _seatCount{ 2 }
         , _maxRoomCount{ 0 }
         , _maxActionsPerRoom{ 0 }
@@ -101,6 +105,10 @@ namespace sw
         _pPolicy           = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
         _tokenKey          = TurnRelayInternal::makeTokenKey( tokenSeed );
         _tokenCount        = 0;
+        _lastGeneration    = 0;
+
+        _finishedRoomNanoseconds  = MonotonicClock::secondsToNanoseconds( static_cast<float64>( settings._finishedRoomSeconds ) );
+        _abandonedRoomNanoseconds = MonotonicClock::secondsToNanoseconds( static_cast<float64>( settings._abandonedRoomSeconds ) );
         _listRoom.clear();
         _listPending.clear();
         _eventBuffer.clear();
@@ -203,10 +211,11 @@ namespace sw
             const int32       index  = seat._sentActionCount;
             const TurnAction& action = room._listAction[static_cast<size_t>( index )];
             TurnAppliedBody   body;
-            body._roomID = room._roomID;
-            body._index  = index;
-            body._seat   = action._seat;
-            body._action = action._buffer;
+            body._roomID     = room._roomID;
+            body._generation = room._generation;
+            body._index      = index;
+            body._seat       = action._seat;
+            body._action     = action._buffer;
             if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Applied>( body ) == false )
                 return; // 받아들일 때 상한을 봤다 — 여기 오면 결함이고 오류 로그가 남았다
             if ( _messageWriter.sendMessage( *_pHost, seat._connectionID ) == false )
@@ -229,6 +238,7 @@ namespace sw
             return;
         }
         body._roomID      = room._roomID;
+        body._generation  = room._generation;
         body._actionCount = actionCount;
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::View>( body ) == false )
             return; // 정책이 상한을 넘겼다 — 오류 로그가 남았다
@@ -236,10 +246,11 @@ namespace sw
             seat._sentViewActionCount = actionCount; // 창이 찼으면 `update` 가 그때의 가장 새 모습을 보낸다
     }
 
-    void TurnRelayServer::update()
+    void TurnRelayServer::update( int64 nowNanoseconds )
     {
         if ( _pHost == nullptr )
             return;
+        releaseIdleRooms( nowNanoseconds );
         flushPending();
         for ( TurnRoom& room : _listRoom )
         {
@@ -250,12 +261,57 @@ namespace sw
         }
     }
 
-    void TurnRelayServer::sendJoined( int32 connectionID, uint32 roomID, int32 seat, uint32 token )
+    void TurnRelayServer::releaseIdleRooms( int64 nowNanoseconds )
+    {
+        size_t keepCount = 0;
+        for ( size_t index = 0; index < _listRoom.size(); ++index )
+        {
+            TurnRoom& room       = _listRoom[index];
+            bool      bConnected = false;
+            bool      bHeld      = false; // 끊긴 사람이 토큰으로 돌아올 수 있다(스스로 떠난 자리는 토큰이 없다)
+            for ( const TurnSeat& seat : room._listSeat )
+            {
+                bConnected = bConnected || seat._connectionID >= 0;
+                bHeld      = bHeld || seat._token != 0;
+            }
+            const bool bFinished = room._bFinished != SW_FALSE;
+            const bool bUnused   = bConnected == false && ( bFinished || room._bStarted == SW_FALSE || bHeld == false ); // 돌아올 판이 없다
+            if ( bConnected && bFinished == false )
+                room._idleSinceNanoseconds.reset();
+            else if ( room._idleSinceNanoseconds.has_value() == false )
+                room._idleSinceNanoseconds = nowNanoseconds;
+            const int64 limit    = bFinished ? _finishedRoomNanoseconds : _abandonedRoomNanoseconds;
+            const bool  bExpired = room._idleSinceNanoseconds.has_value() && nowNanoseconds - *room._idleSinceNanoseconds >= limit;
+            if ( bExpired == false && bUnused == false )
+            {
+                if ( keepCount != index )
+                    _listRoom[keepCount] = std::move( room );
+                ++keepCount;
+                continue;
+            }
+            TurnRoomBody body;
+            body._roomID     = room._roomID;
+            body._generation = room._generation;
+            for ( const TurnSeat& seat : room._listSeat )
+            {
+                if ( seat._connectionID >= 0 && _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Closed>( body ) )
+                    sendOrQueue( seat._connectionID );
+            }
+            TurnRelayEvent event;
+            event._kind   = TurnRelayEvent::Kind::RoomClosed;
+            event._roomID = room._roomID;
+            _eventBuffer.push( event );
+        }
+        _listRoom.resize( keepCount );
+    }
+
+    void TurnRelayServer::sendJoined( int32 connectionID, const TurnRoom& room, int32 seat )
     {
         TurnJoinedBody body;
-        body._roomID = roomID;
-        body._seat   = seat;
-        body._token  = token;
+        body._roomID     = room._roomID;
+        body._generation = room._generation;
+        body._seat       = seat;
+        body._token      = room._listSeat[static_cast<size_t>( seat )]._token;
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Joined>( body ) )
             sendOrQueue( connectionID );
     }
@@ -287,11 +343,17 @@ namespace sw
             for ( size_t index = 0; index < pHeldRoom->_listSeat.size(); ++index )
             {
                 if ( pHeldRoom->_listSeat[index]._connectionID == connectionID )
-                    sendJoined( connectionID, roomID, static_cast<int32>( index ), pHeldRoom->_listSeat[index]._token );
+                    sendJoined( connectionID, *pHeldRoom, static_cast<int32>( index ) );
             }
             return;
         }
         TurnRoom* pRoom = findRoomMutable( roomID );
+        // 지난 세대의 토큰은 새 방의 자리를 열지 못한다. 새 자리도 주지 않는다 — 돌아오려던 판이 없어졌음을 알고 새로 들어오게 한다.
+        if ( token != 0 && ( pRoom == nullptr || pRoom->_generation != body._generation ) )
+        {
+            sendDenied( connectionID, roomID, TurnRejectReason::RoomClosed );
+            return;
+        }
         if ( pRoom == nullptr )
         {
             if ( static_cast<int32>( _listRoom.size() ) >= _maxRoomCount )
@@ -300,7 +362,8 @@ namespace sw
                 return;
             }
             TurnRoom room;
-            room._roomID = roomID;
+            room._roomID     = roomID;
+            room._generation = ++_lastGeneration;
             room._listSeat.resize( static_cast<size_t>( _seatCount ) );
             _listRoom.push_back( room );
             pRoom = &_listRoom.back();
@@ -323,11 +386,11 @@ namespace sw
         TurnSeat& seat            = pRoom->_listSeat[static_cast<size_t>( *seatIndex )];
         seat._bTaken              = SW_TRUE;
         seat._connectionID        = connectionID;
-        seat._sentActionCount     = static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) );
+        seat._sentActionCount     = bReturning ? static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) ) : 0;
         seat._sentViewActionCount = constant::invalid_index::kInt32; // 돌아온 연결도 지금 모습을 받는다
         if ( bReturning == false )
             seat._token = nextToken();
-        sendJoined( connectionID, roomID, *seatIndex, seat._token );
+        sendJoined( connectionID, *pRoom, *seatIndex );
 
         TurnRelayEvent event;
         event._kind   = bReturning ? TurnRelayEvent::Kind::SeatReturned : TurnRelayEvent::Kind::Joined;
@@ -355,6 +418,7 @@ namespace sw
                 continue;
             TurnStartedBody body;
             body._roomID      = room._roomID;
+            body._generation  = room._generation;
             body._currentSeat = room._currentSeat;
             if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Started>( body ) )
                 sendOrQueue( other._connectionID );
@@ -382,7 +446,9 @@ namespace sw
         TurnRoom*        pRoom        = findRoomMutable( roomID );
         int32            seat         = constant::invalid_index::kInt32;
         TurnRejectReason reason       = TurnRejectReason::UnknownRoom;
-        if ( pRoom != nullptr )
+        if ( pRoom != nullptr && pRoom->_generation != body._generation )
+            reason = TurnRejectReason::RoomClosed; // 같은 번호를 다시 쓴 방이다 — 지난 판의 늦은 행동은 닿지 않는다
+        else if ( pRoom != nullptr )
         {
             for ( size_t index = 0; index < pRoom->_listSeat.size(); ++index )
             {
@@ -393,6 +459,8 @@ namespace sw
                 reason = TurnRejectReason::UnknownRoom;
             else if ( pRoom->_bStarted == SW_FALSE )
                 reason = TurnRejectReason::NotStarted;
+            else if ( pRoom->_bFinished != SW_FALSE )
+                reason = TurnRejectReason::RoomClosed;
             else if ( _pPolicy->isActionAllowed( *pRoom, seat, actionBuffer ) == false )
                 reason = seat != pRoom->_currentSeat ? TurnRejectReason::NotYourTurn : TurnRejectReason::InvalidAction;
             else if ( static_cast<int32>( pRoom->_listAction.size() ) >= _maxActionsPerRoom )
@@ -401,6 +469,7 @@ namespace sw
             {
                 pRoom->_listAction.push_back( TurnAction{ actionBuffer, seat } );
                 _pPolicy->applyAction( *pRoom, seat, actionBuffer );
+                pRoom->_bFinished = _pPolicy->isRoomFinished( *pRoom ) ? SW_TRUE : SW_FALSE;
                 for ( TurnSeat& other : pRoom->_listSeat )
                 {
                     flushSeat( *pRoom, other );
@@ -416,9 +485,10 @@ namespace sw
             }
         }
         TurnRejectedBody rejected;
-        rejected._roomID   = roomID;
-        rejected._submitID = submitID;
-        rejected._reason   = reason;
+        rejected._roomID     = roomID;
+        rejected._generation = body._generation;
+        rejected._submitID   = submitID;
+        rejected._reason     = reason;
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Rejected>( rejected ) )
             sendOrQueue( connectionID );
     }
@@ -435,6 +505,33 @@ namespace sw
         if ( _pHost != nullptr )
             handleAction( context._connectionID, body );
         return NetHandleResult::Handled;
+    }
+
+    NetHandleResult TurnRelayServer::receive( NetTurnRelayMessage::Leave, const NetMessageContext& context, const TurnRoomBody& body )
+    {
+        if ( _pHost != nullptr )
+            handleLeave( context._connectionID, body );
+        return NetHandleResult::Handled;
+    }
+
+    void TurnRelayServer::handleLeave( int32 connectionID, const TurnRoomBody& body )
+    {
+        TurnRoom* const pRoom = findRoomMutable( body._roomID );
+        if ( pRoom == nullptr || pRoom->_generation != body._generation )
+            return; // 이미 되돌린 방이다
+        for ( size_t index = 0; index < pRoom->_listSeat.size(); ++index )
+        {
+            TurnSeat& seat = pRoom->_listSeat[index];
+            if ( seat._connectionID != connectionID )
+                continue;
+            seat         = TurnSeat{}; // 토큰도 버린다 — 시작하기 전이면 남겨 둔 자리가 다음 사람과 판을 시작한다
+            seat._bTaken = pRoom->_bStarted;
+            TurnRelayEvent event;
+            event._kind   = TurnRelayEvent::Kind::SeatLeft;
+            event._roomID = pRoom->_roomID;
+            event._seat   = static_cast<int32>( index );
+            _eventBuffer.push( event );
+        }
     }
 
     void TurnRelayServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
@@ -482,6 +579,7 @@ namespace sw
         , _eventBuffer{}
         , _pHost{ nullptr }
         , _roomID{ 0 }
+        , _generation{ 0 }
         , _token{ 0 }
         , _seat{ constant::invalid_index::kInt32 }
         , _nextSubmitID{ 0 }
@@ -495,21 +593,38 @@ namespace sw
         _pHost = pHost;
     }
 
+    void TurnRelayClient::clearRoom()
+    {
+        _listAction.clear();
+        _viewBuffer.clear();
+        _generation = 0;
+        _token      = 0;
+        _seat       = constant::invalid_index::kInt32;
+        _bStarted   = SW_FALSE;
+    }
+
+    void TurnRelayClient::leave()
+    {
+        TurnRoomBody body;
+        body._roomID     = _roomID;
+        body._generation = _generation;
+        clearRoom();
+        _eventBuffer.clear(); // 떠난 방의 일은 더 알리지 않는다
+        _roomID = 0;
+        if ( body._generation != 0 && _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Leave>( body ) )
+            (void)_messageWriter.sendMessage( *_pHost, 0 ); // 못 보내면 서버가 시간이 지난 뒤 방을 되돌린다
+    }
+
     void TurnRelayClient::join( uint32 roomID, int32 seat )
     {
         if ( _roomID != roomID )
-        {
-            _listAction.clear();
-            _viewBuffer.clear();
-            _token    = 0;
-            _seat     = constant::invalid_index::kInt32;
-            _bStarted = SW_FALSE;
-        }
+            clearRoom();
         _roomID = roomID;
         TurnJoinBody body;
         body._roomID           = roomID;
         body._seat             = seat;
         body._token            = _token;
+        body._generation       = _generation;
         body._knownActionCount = static_cast<uint32>( _listAction.size() );
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Join>( body ) )
             (void)_messageWriter.sendMessage( *_pHost, 0 ); // 못 보내면 다시 join 한다
@@ -524,9 +639,10 @@ namespace sw
         }
         const int32    submitID = _nextSubmitID++;
         TurnActionBody body;
-        body._roomID   = _roomID;
-        body._submitID = submitID;
-        body._action   = buffer;
+        body._roomID     = _roomID;
+        body._generation = _generation;
+        body._submitID   = submitID;
+        body._action     = buffer;
         if ( _messageWriter.writeMessage<NetTurnRelayMessage::Table, NetTurnRelayMessage::Action>( body ) )
             (void)_messageWriter.sendMessage( *_pHost, 0 ); // 못 보낸 행동은 거절 알림도 오지 않는다 — 예전과 같다
         return submitID;
@@ -535,10 +651,13 @@ namespace sw
     NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Joined, const NetMessageContext& context, const TurnJoinedBody& body )
     {
         (void)context;
-        if ( isCurrentRoom( body._roomID ) == false )
+        if ( body._roomID != _roomID )
             return NetHandleResult::Handled; // 다른 방의 알림이다
-        _seat  = body._seat;
-        _token = body._token;
+        if ( body._generation != _generation )
+            clearRoom(); // 같은 번호의 새 방에 앉았다
+        _generation = body._generation;
+        _seat       = body._seat;
+        _token      = body._token;
         TurnRelayEvent event;
         event._kind   = TurnRelayEvent::Kind::Joined;
         event._roomID = body._roomID;
@@ -550,7 +669,7 @@ namespace sw
     NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Started, const NetMessageContext& context, const TurnStartedBody& body )
     {
         (void)context;
-        if ( isCurrentRoom( body._roomID ) == false )
+        if ( isCurrentRoom( body._roomID, body._generation ) == false )
             return NetHandleResult::Handled;
         _bStarted = SW_TRUE;
         TurnRelayEvent event;
@@ -564,7 +683,7 @@ namespace sw
     NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Applied, const NetMessageContext& context, const TurnAppliedBody& body )
     {
         (void)context;
-        if ( isCurrentRoom( body._roomID ) == false )
+        if ( isCurrentRoom( body._roomID, body._generation ) == false )
             return NetHandleResult::Handled;
         if ( body._index != static_cast<int32>( _listAction.size() ) )
             return NetHandleResult::Handled; // 이미 가진 행동이다. 다시 들어올 때 겹친 것이다
@@ -582,7 +701,7 @@ namespace sw
     NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Rejected, const NetMessageContext& context, const TurnRejectedBody& body )
     {
         (void)context;
-        if ( isCurrentRoom( body._roomID ) == false )
+        if ( isCurrentRoom( body._roomID, body._generation ) == false )
             return NetHandleResult::Handled;
         TurnRelayEvent event;
         event._kind   = TurnRelayEvent::Kind::ActionRejected;
@@ -596,8 +715,10 @@ namespace sw
     NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Denied, const NetMessageContext& context, const TurnDeniedBody& body )
     {
         (void)context;
-        if ( isCurrentRoom( body._roomID ) == false )
+        if ( body._roomID != _roomID )
             return NetHandleResult::Handled;
+        if ( body._reason == TurnRejectReason::RoomClosed )
+            clearRoom(); // 돌아가려던 방이 되돌려졌다 — 다음 입장은 처음부터다
         TurnRelayEvent event;
         event._kind   = TurnRelayEvent::Kind::Denied;
         event._roomID = body._roomID;
@@ -609,7 +730,7 @@ namespace sw
     NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::View, const NetMessageContext& context, const TurnViewBody& body )
     {
         (void)context;
-        if ( isCurrentRoom( body._roomID ) == false )
+        if ( isCurrentRoom( body._roomID, body._generation ) == false )
             return NetHandleResult::Handled;
         _viewBuffer = body._view;
         TurnRelayEvent event;
@@ -618,6 +739,19 @@ namespace sw
         event._index  = body._actionCount;
         event._seat   = _seat;
         event._buffer = body._view;
+        _eventBuffer.push( event );
+        return NetHandleResult::Handled;
+    }
+
+    NetHandleResult TurnRelayClient::receive( NetTurnRelayMessage::Closed, const NetMessageContext& context, const TurnRoomBody& body )
+    {
+        (void)context;
+        if ( isCurrentRoom( body._roomID, body._generation ) == false )
+            return NetHandleResult::Handled;
+        clearRoom();
+        TurnRelayEvent event;
+        event._kind   = TurnRelayEvent::Kind::RoomClosed;
+        event._roomID = body._roomID;
         _eventBuffer.push( event );
         return NetHandleResult::Handled;
     }

@@ -6,6 +6,7 @@
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Time/MonotonicClock.h"
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -49,7 +50,7 @@ namespace sw
 
             static bool runCards( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() != 1 || ( listArgument[0] != "join" && listArgument[0] != "play" && listArgument[0] != "draw" ) )
+                if ( listArgument.size() != 1 || ( listArgument[0] != "join" && listArgument[0] != "leave" && listArgument[0] != "play" && listArgument[0] != "draw" ) )
                     return false;
                 HubCardTableComponent* const pTable = findTable();
                 if ( pTable == nullptr )
@@ -57,8 +58,14 @@ namespace sw
                     outReply = "hub.cards: no connected card table in the active scene";
                     return true;
                 }
-                const bool bSent = listArgument[0] == "join" ? pTable->requestSeat() : pTable->requestPlay( listArgument[0] == "draw" );
-                outReply         = bSent ? "hub.cards: sent" : "hub.cards: refused - already seated, or no game yet";
+                bool bSent = false;
+                if ( listArgument[0] == "join" )
+                    bSent = pTable->requestSeat();
+                else if ( listArgument[0] == "leave" )
+                    bSent = pTable->requestLeave();
+                else
+                    bSent = pTable->requestPlay( listArgument[0] == "draw" );
+                outReply = bSent ? "hub.cards: sent" : "hub.cards: refused - already seated, not seated, or no game yet";
                 return true;
             }
         };
@@ -72,13 +79,13 @@ namespace sw
     {
     }
 
-    bool HubCardTurnPolicy::replay( uint32 roomID, const vector<TurnAction>& listAction, SheddingCardGame& outGame ) const
+    bool HubCardTurnPolicy::replay( const TurnRoom& room, SheddingCardGame& outGame ) const
     {
         SheddingCardSettings settings;
         settings._playerCount = kSeatCount;
-        if ( outGame.initializeSecret( settings, _shuffleKey, roomID ) == false )
+        if ( outGame.initializeSecret( settings, _shuffleKey, room._generation ) == false ) // 방 번호로 섞으면 다시 쓴 방의 판이 지난 판과 같다
             return false;
-        for ( const TurnAction& turn : listAction )
+        for ( const TurnAction& turn : room._listAction )
         {
             CardAction action;
             if ( CardAction::decodeAction( turn._buffer, action ) == false || outGame.applyAction( turn._seat, action ) == false )
@@ -97,7 +104,7 @@ namespace sw
         const bool bOutOfTurn = seat != room._currentSeat && action._kind != static_cast<uint8>( SheddingCardActionKind::CallLastCard );
         if ( bOutOfTurn )
             return false; // 남의 차례에 퍼붓는 행동마다 판을 다시 돌리지 않는다
-        return replay( room._roomID, room._listAction, game ) && game.getWinner() < 0 && game.applyAction( seat, action );
+        return replay( room, game ) && game.getWinner() < 0 && game.applyAction( seat, action );
     }
 
     void HubCardTurnPolicy::applyAction( TurnRoom& room, int32 seat, const vector<uint8>& actionBuffer ) const
@@ -105,14 +112,20 @@ namespace sw
         (void)seat;
         (void)actionBuffer;
         SheddingCardGame game;
-        if ( replay( room._roomID, room._listAction, game ) ) // 받은 행동은 이미 목록에 있다
+        if ( replay( room, game ) ) // 받은 행동은 이미 목록에 있다
             room._currentSeat = game.getCurrentPlayer();
+    }
+
+    bool HubCardTurnPolicy::isRoomFinished( const TurnRoom& room ) const
+    {
+        SheddingCardGame game;
+        return replay( room, game ) && game.getWinner() >= 0;
     }
 
     bool HubCardTurnPolicy::writeSeatView( const TurnRoom& room, int32 seat, vector<uint8>& outView ) const
     {
         SheddingCardGame game;
-        if ( replay( room._roomID, room._listAction, game ) == false )
+        if ( replay( room, game ) == false )
             return false;
         HubCardSeatView view;
         for ( const Card& card : game.getHand( seat ).getCards() )
@@ -226,7 +239,7 @@ namespace sw
                 table.stopRole(); // 틱 사이에 세션이 닫히고 새로 열렸다 — 새 세션에 다시 건다
             table.startRole( *pLink );
             if ( table._role == Role::Server )
-                table._server.update();
+                table._server.update( MonotonicClock::nowNanoseconds() );
             else if ( table._role == Role::Client )
                 table.pollClientEvents();
             table.updateHUD();
@@ -288,6 +301,11 @@ namespace sw
                 ++_roomID; // 찬 탁자다 — 다음 탁자에 앉는다
                 _client.join( _roomID );
             }
+            else if ( event._kind == TurnRelayEvent::Kind::RoomClosed || ( event._kind == TurnRelayEvent::Kind::Denied && event._reason == TurnRejectReason::RoomClosed ) )
+            {
+                clearTable();
+                SW_LOG_INFO_ID( "Hub.CardsTableClosed", "[Hub] the card table was cleared - sit down again for a new game" );
+            }
             else if ( event._kind == TurnRelayEvent::Kind::Denied )
                 SW_LOG_WARNING_ID( "Hub.CardsNoSeat", "[Hub] no seat at the card tables (reason %#)", static_cast<int32>( event._reason ) );
             else if ( event._kind == TurnRelayEvent::Kind::ViewChanged && HubCardTurnPolicy::readSeatView( event._buffer, _view ) == false )
@@ -309,10 +327,27 @@ namespace sw
 
     bool HubCardTableComponent::requestSeat()
     {
-        if ( _role != Role::Client || _client.getSeat() >= 0 )
+        if ( _role != Role::Client )
             return false;
+        if ( _client.getSeat() >= 0 && ( _view._winner < 0 || requestLeave() == false ) )
+            return false; // 두는 판이 있다
         _client.join( _roomID );
         return true;
+    }
+
+    bool HubCardTableComponent::requestLeave()
+    {
+        if ( _role != Role::Client || _client.getSeat() < 0 )
+            return false;
+        _client.leave();
+        clearTable();
+        return true;
+    }
+
+    void HubCardTableComponent::clearTable()
+    {
+        _view   = HubCardSeatView{};
+        _roomID = kFirstRoomID;
     }
 
     bool HubCardTableComponent::requestPlay( bool bDrawOnly )
@@ -342,7 +377,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEV_COMMAND( HubCards, "hub.cards", "hub.cards join | play | draw", "Sit at a card table of the connected hub, play the first legal card (draw without one), or draw", &HubCardTableInternal::runCards );
+    SW_DEV_COMMAND( HubCards, "hub.cards", "hub.cards join | leave | play | draw", "Sit at or leave a card table of the connected hub, play the first legal card (draw without one), or draw", &HubCardTableInternal::runCards );
     SW_AUTOMATION_GETTER_WATCH( hubCardsSeat, "Hub.CardsSeat", "Seat at the card table (-1 without one)", HubCardTableComponent, &HubCardTableComponent::getSeat );
     SW_AUTOMATION_GETTER_WATCH( hubCardsStarted, "Hub.CardsStarted", "1 once both seats of the card table are taken", HubCardTableComponent, &HubCardTableComponent::getStartedValue );
     SW_AUTOMATION_GETTER_WATCH( hubCardsMyTurn, "Hub.CardsMyTurn", "1 while it is this client's turn at the card table", HubCardTableComponent, &HubCardTableComponent::getMyTurnValue );

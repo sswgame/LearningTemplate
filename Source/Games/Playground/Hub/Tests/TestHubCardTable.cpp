@@ -51,7 +51,7 @@ SW_TEST_CASE( HubCardTableTest, ForgedActionsAreRefused )
     room._roomID = 7;
     room._listSeat.resize( HubCardTurnPolicy::kSeatCount );
     SheddingCardGame game;
-    SW_REQUIRE_TRUE( policy.replay( room._roomID, room._listAction, game ) );
+    SW_REQUIRE_TRUE( policy.replay( room, game ) );
     const int32 first = game.getCurrentPlayer();
     const int32 other = 1 - first;
 
@@ -72,7 +72,7 @@ SW_TEST_CASE( HubCardTableTest, ReplayFollowsTheAppliedActions )
     room._roomID = 7;
     room._listSeat.resize( HubCardTurnPolicy::kSeatCount );
     SheddingCardGame game;
-    SW_REQUIRE_TRUE( policy.replay( room._roomID, room._listAction, game ) );
+    SW_REQUIRE_TRUE( policy.replay( room, game ) );
     int32 seat = game.getCurrentPlayer();
     for ( int32 turn = 0; turn < 6; ++turn )
     {
@@ -81,8 +81,8 @@ SW_TEST_CASE( HubCardTableTest, ReplayFollowsTheAppliedActions )
     }
     SheddingCardGame left;
     SheddingCardGame right;
-    SW_REQUIRE_TRUE( policy.replay( room._roomID, room._listAction, left ) );
-    SW_REQUIRE_TRUE( policy.replay( room._roomID, room._listAction, right ) );
+    SW_REQUIRE_TRUE( policy.replay( room, left ) );
+    SW_REQUIRE_TRUE( policy.replay( room, right ) );
     SW_EXPECT_EQUAL( left.getCurrentPlayer(), room._currentSeat );
     SW_EXPECT_EQUAL( left.getHand( 0 ).getCount(), right.getHand( 0 ).getCount() );
     SW_EXPECT_TRUE( left.getTopCard() == right.getTopCard() );
@@ -98,7 +98,7 @@ SW_TEST_CASE( HubCardTableTest, SeatViewHidesTheOtherHand )
     room._roomID = 7;
     room._listSeat.resize( HubCardTurnPolicy::kSeatCount );
     SheddingCardGame game;
-    SW_REQUIRE_TRUE( policy.replay( room._roomID, room._listAction, game ) );
+    SW_REQUIRE_TRUE( policy.replay( room, game ) );
     for ( int32 seat = 0; seat < HubCardTurnPolicy::kSeatCount; ++seat )
     {
         vector<uint8>   bytes;
@@ -122,8 +122,13 @@ SW_TEST_CASE( HubCardTableTest, SeatViewHidesTheOtherHand )
     HubCardTurnPolicy otherPolicy;
     otherPolicy.setShuffleKey( SipHashKey{ 3, 4 } );
     SheddingCardGame otherGame;
-    SW_REQUIRE_TRUE( otherPolicy.replay( room._roomID, room._listAction, otherGame ) );
-    SW_EXPECT_FALSE( game.getHand( 0 ).getCards() == otherGame.getHand( 0 ).getCards() ); // 방 번호만으로는 판을 알 수 없다
+    SW_REQUIRE_TRUE( otherPolicy.replay( room, otherGame ) );
+    SW_EXPECT_FALSE( game.getHand( 0 ).getCards() == otherGame.getHand( 0 ).getCards() ); // 방만으로는 판을 알 수 없다
+
+    room._generation = 1;
+    SheddingCardGame nextGame;
+    SW_REQUIRE_TRUE( policy.replay( room, nextGame ) );
+    SW_EXPECT_FALSE( game.getHand( 0 ).getCards() == nextGame.getHand( 0 ).getCards() ); // 같은 방을 다시 쓴 다음 판은 다른 판이다
 }
 
 namespace
@@ -257,6 +262,8 @@ SW_TEST_CASE( HubCardTableTest, TwoClientsPlayOnViewsDealtByTheServer )
     }
     SW_EXPECT_EQUAL( 1, arrTable[0]->getMyTurnValue() + arrTable[1]->getMyTurnValue() );
 
+    SW_EXPECT_FALSE( arrTable[0]->requestSeat() ); // 두는 판이 있으면 다른 탁자에 앉지 않는다
+
     for ( int32 turn = 0; turn < 12; ++turn )
     {
         HubCardTableComponent* const pMover = arrTable[0]->getMyTurnValue() != 0 ? arrTable[0] : arrTable[1];
@@ -269,4 +276,15 @@ SW_TEST_CASE( HubCardTableTest, TwoClientsPlayOnViewsDealtByTheServer )
         SW_EXPECT_EQUAL( arrTable[1]->getHandCount(), arrTable[0]->getOpponentCardCount() );
     }
     SW_EXPECT_EQUAL( 0, arrTable[0]->getRejectedCount() + arrTable[1]->getRejectedCount() );
+
+    SW_REQUIRE_TRUE( arrTable[0]->requestLeave() );
+    SW_EXPECT_FALSE( arrTable[0]->requestLeave() );
+    poll();
+    SW_EXPECT_EQUAL( -1, arrTable[0]->getSeat() );
+    SW_EXPECT_EQUAL( 0, arrTable[0]->getHandCount() );
+    SW_EXPECT_EQUAL( 0, arrTable[0]->getStartedValue() );
+    SW_REQUIRE_TRUE( arrTable[0]->requestSeat() ); // 첫 탁자는 차 있으니 다음 탁자에 앉는다
+    poll();
+    SW_EXPECT_EQUAL( 0, arrTable[0]->getSeat() );
+    SW_EXPECT_EQUAL( 0, arrTable[0]->getStartedValue() );
 }
