@@ -6,9 +6,11 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Config/ServerConfig.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Server/ServerServiceRegistry.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
@@ -37,7 +39,7 @@ namespace sw
                 _pKitDirectory = nullptr;
                 _runtime.shutdown();
             }
-            void  update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
+            void  update( UnixMilliseconds nowMs ) override;
             int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
             int32 getOpenJobCount() const override { return _runtime.getOpenJobCount(); }
             void  beginShutdown( const ServerShutdownNotice& notification ) override { _runtime.beginShutdown( notification ); }
@@ -108,6 +110,14 @@ namespace sw
         if ( _pKitDirectory != nullptr )
             _pKitDirectory->publish( &_runtime.getKitScope() ); // 게임 서버 코드가 키트 인터페이스(백필 …)를 찾는다
         return {};
+    }
+
+    void OnlineServerService::update( UnixMilliseconds nowMs )
+    {
+        const GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server )
+            _runtime.setGameConnectionCount( pNetSession->getConnectedCount() ); // 디렉터리의 부하는 게임 포트의 손님 수다
+        _runtime.update( nowMs );
     }
 
     /** @brief 서버 서비스 중 앞쪽에 둔다. 게임과 키트가 올린 서버 서비스가 온라인 서비스를 볼 수 있게 한다. */

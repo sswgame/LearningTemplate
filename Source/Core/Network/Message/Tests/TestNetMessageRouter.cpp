@@ -238,6 +238,30 @@ SW_TEST_CASE( NetMessageRouterTest, MessageRouterDestroyedFirstInvalidatesTheSub
 }
 
 /**
+ * @brief [NetMessageRouterTest] 세션이 닫히면 구독이 무효가 되고 번호가 오른다 — 다음 세션의 처리기가 같은 종류를 맡을 수 있고, 닫힌 세션의 구독을 놓아도 새 등록은 남는다
+ */
+SW_TEST_CASE( NetMessageRouterTest, ClosingTheSessionInvalidatesSubscriptions )
+{
+    NetMessageRouter                              router;
+    NetMessageRouterTestInternal::CountingHandler first( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 );
+    NetMessageRouterTestInternal::CountingHandler second( NetMessageRange::kGame, NetMessageRouterTestInternal::kGameKind1 );
+    SW_EXPECT_LOG( "Net.RouterKindClaimed" );
+    sw::Subscription firstSubscription = router.registerHandler( &first );
+    SW_REQUIRE_TRUE( firstSubscription.isActive() );
+    const uint32 serial = router.getSessionSerial();
+
+    router.closeSession();
+    SW_EXPECT_FALSE( firstSubscription.isActive() );
+    SW_EXPECT_NOT_EQUAL( serial, router.getSessionSerial() );
+
+    const sw::Subscription secondSubscription = router.registerHandler( &second );
+    SW_EXPECT_TRUE( secondSubscription.isActive() );
+    firstSubscription.reset();
+    SW_EXPECT_TRUE( secondSubscription.isActive() );
+    SW_EXPECT_FALSE( router.registerHandler( &first ).isActive() ); // 새 세션의 등록이 남아 있다 — 같은 종류는 거절된다
+}
+
+/**
  * @brief [NetMessageRouterTest] 맡은 종류인데 몸이 깨진 메시지는 라우터가 세고 버린다 — 다른 처리기 · "처리기 없음" 목록으로 가지 않는다
  * @details `bool` 하나가 "내 것 아님" 과 "깨짐" 을 함께 뜻하던 때는 깨진 메시지가 다음 처리기로 넘어가 결국 처리기 없는 메시지 목록에 섞였다.
  */

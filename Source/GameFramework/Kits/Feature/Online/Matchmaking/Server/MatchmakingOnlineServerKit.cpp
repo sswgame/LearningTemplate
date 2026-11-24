@@ -73,7 +73,7 @@ namespace sw
                 if ( _bGameServer == SW_FALSE )
                     return {};
                 // 배정받은 계정만 게임 포트에 들이는 정책이다. 계정 키트의 `gameConnect` 가 `start` 에서 찾는다.
-                _agent.initialize( context._serverDescriptor._serverID );
+                _agent.initialize( context._serverDescriptor._serverID, context._serverDescriptor._capacity );
                 _backfill.initialize( &_queue, &_agent, context._serverDescriptor ); // 채운 사람이 접속할 곳은 디렉터리에 올린 이 서버의 설명이다
                 return exposeInterface<IConnectAdmission>( context, entry, _agent ).and_then( [&]
                 { return exposeInterface<IMatchBackfillSender>( context, entry, _backfill ); } );

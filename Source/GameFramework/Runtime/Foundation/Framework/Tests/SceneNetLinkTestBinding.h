@@ -60,6 +60,8 @@ namespace sw
             link._bTicketRequired = bTicketRequired ? SW_TRUE : SW_FALSE;
             SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link ) );
         }
+        /** @brief 세션이 닫힌 것처럼 라우터를 닫습니다 — 링크는 저절로 빈 것이 된다. */
+        void closeSession() { _router.closeSession(); }
         ~SceneNetLinkTestBinding() { _manager.getSubsystem<SceneNetLink>().unbind(); }
 
         SceneNetLinkTestBinding( const SceneNetLinkTestBinding& )            = delete;

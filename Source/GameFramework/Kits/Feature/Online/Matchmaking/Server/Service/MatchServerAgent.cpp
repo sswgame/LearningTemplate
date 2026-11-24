@@ -26,6 +26,7 @@ namespace sw
         , _listRequestID{ 0 }
         , _nextListReadMs{ 0 }
         , _nowMs{ 0 }
+        , _seatCapacity{ 0 }
     {
     }
 
@@ -34,9 +35,16 @@ namespace sw
         shutdown();
     }
 
-    void MatchServerAgent::initialize( uint64 serverID )
+    void MatchServerAgent::initialize( uint64 serverID, int32 seatCapacity )
     {
-        _serverID = serverID;
+        _serverID     = serverID;
+        _seatCapacity = seatCapacity;
+    }
+
+    void MatchServerAgent::setSeatCapacity( int32 seatCapacity )
+    {
+        _seatCapacity = seatCapacity;
+        trimToCapacity();
     }
 
     void MatchServerAgent::startReading( EphemeralStoreRouter* pRouter )
@@ -72,6 +80,7 @@ namespace sw
 
     void MatchServerAgent::acceptMatch( const MatchFormed& match, int64 expiresMs )
     {
+        vector<AccountID> listAccepted;
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
             for ( const MatchMember& member : match._listTeam[team]._listMember )
@@ -84,7 +93,7 @@ namespace sw
                 }
                 MatchSeat& seat = _mapAccountToSeat[member._accountID]; // 백필 기록도 같은 경기 id · 팀 수를 싣는다
                 if ( match._placedMs < seat._placedMs )
-                    continue; // 늦게 읽은 옛 명단이다(목록은 새 기록부터 나온다)
+                    continue; // 늦게 읽은 옛 명단이다(목록은 새 기록부터 나온다) — 받는지는 새 자리가 정했다
                 if ( seat._matchID != match._matchID || seat._ticketID != ticketID )
                     seat._bTaken = SW_FALSE; // 새 자리다
                 seat._modeID        = match._modeID;
@@ -95,17 +104,65 @@ namespace sw
                 seat._team          = static_cast<int32>( team );
                 seat._teamCount     = static_cast<int32>( match._listTeam.size() );
                 seat._averageRating = match._averageRating;
+                if ( seat._bTaken == SW_FALSE )
+                    listAccepted.push_back( member._accountID ); // 꺼낸 자리의 명단이 다시 와도(버스 · 기록) 나간 사람을 되살리지 않는다
             }
         }
-        ScopedLock<mutex> lock{ _mutex };
-        for ( const MatchFormedTeam& team : match._listTeam )
         {
-            for ( const MatchMember& member : team._listMember )
+            ScopedLock<mutex> lock{ _mutex };
+            for ( const AccountID accountID : listAccepted )
             {
-                int64& acceptedUntilMs = _mapAccountToExpiresMs[member._accountID];
+                int64& acceptedUntilMs = _mapAccountToExpiresMs[accountID];
                 acceptedUntilMs        = acceptedUntilMs > expiresMs ? acceptedUntilMs : expiresMs;
             }
         }
+        trimToCapacity();
+    }
+
+    void MatchServerAgent::trimToCapacity()
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        while ( static_cast<int32>( _mapAccountToExpiresMs.size() ) > _seatCapacity )
+        {
+            const MatchSeat* pOldest      = nullptr;
+            bool             bSingleMatch = true;
+            for ( const auto& seatEntry : _mapAccountToSeat )
+            {
+                if ( _mapAccountToExpiresMs.count( seatEntry.first ) == 0 )
+                    continue;
+                const MatchSeat& seat   = seatEntry.second;
+                const bool       bOlder = pOldest == nullptr || seat._placedMs < pOldest->_placedMs || ( seat._placedMs == pOldest->_placedMs && seat._matchID < pOldest->_matchID );
+                if ( pOldest != nullptr && pOldest->_matchID != seat._matchID )
+                    bSingleMatch = false;
+                if ( bOlder )
+                    pOldest = &seat;
+            }
+            if ( bSingleMatch )
+            {
+                SW_LOG_WARNING_ID( "MatchServerAgent.MatchOverCapacity", "MatchServerAgent: a match has %# players but this server takes %# - the mode does not fit the map",
+                                   static_cast<uint32>( _mapAccountToExpiresMs.size() ), _seatCapacity );
+                return;
+            }
+            const uint64 droppedMatchID = pOldest->_matchID;
+            for ( const auto& seatEntry : _mapAccountToSeat )
+            {
+                if ( seatEntry.second._matchID == droppedMatchID )
+                    _mapAccountToExpiresMs.erase( seatEntry.first );
+            }
+            SW_LOG_INFO_ID( "MatchServerAgent.OlderMatchDropped", "MatchServerAgent: match %# gave its seats to a newer match - its players are no longer accepted", droppedMatchID );
+        }
+    }
+
+    int32 MatchServerAgent::getSeatCount( uint64 matchID ) const
+    {
+        int32 count = 0;
+        for ( const auto& seatEntry : _mapAccountToSeat )
+        {
+            const MatchSeat& seat      = seatEntry.second;
+            const bool       bOccupied = seat._matchID == matchID && seat._bTaken == SW_FALSE && seat._expiresMs > _nowMs;
+            count += bOccupied ? 1 : 0;
+        }
+        return count;
     }
 
     bool MatchServerAgent::takeSeat( AccountID accountID, MatchSeat& outSeat )
@@ -116,6 +173,8 @@ namespace sw
             return false;
         seatIt->second._bTaken = SW_TRUE; // 지우지 않고 표시한다 — 지우면 뒤에 온 같은 명단이 자리를 되살린다
         outSeat                = seatIt->second;
+        ScopedLock<mutex> lock{ _mutex };
+        _mapAccountToExpiresMs.erase( accountID ); // 자리의 주인은 이제 채우는 사람이다 — 나간 사람이 되돌아와 자리 없는 접속이 되지 않게 한다
         return true;
     }
 

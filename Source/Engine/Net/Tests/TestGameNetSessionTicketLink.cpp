@@ -34,3 +34,24 @@ SW_TEST_CASE( GameNetSessionTicketLinkTest, LinkFollowsTheServerConfig )
     session.shutdown();
     session.getConnectSecurity().setProvider( nullptr );
 }
+
+/** @brief [GameNetSessionTicketLinkTest] 닫힌 세션의 링크는 비고, 같은 세션 객체로 새로 열어도 되살아나지 않는다 — 새로 만든 링크만 쓸 수 있다 */
+SW_TEST_CASE( GameNetSessionTicketLinkTest, ClosedSessionLinkStaysEmpty )
+{
+    GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
+    ServerConfig   config;
+    config._listenAddress = "127.0.0.1";
+    config._gamePort      = 0; // 운영체제가 고른다
+    GameNetSessionParams params;
+    SW_REQUIRE_TRUE( session.makeServerParams( config, params ) );
+    SW_REQUIRE_TRUE( session.initialize( params ) );
+    const NetLinkValue link = session.makeNetLink();
+    SW_EXPECT_TRUE( link.isComplete() );
+
+    session.shutdown();
+    SW_EXPECT_FALSE( link.isComplete() );
+    SW_REQUIRE_TRUE( session.initialize( params ) );
+    SW_EXPECT_FALSE( link.isComplete() );
+    SW_EXPECT_TRUE( session.makeNetLink().isComplete() );
+    session.shutdown();
+}

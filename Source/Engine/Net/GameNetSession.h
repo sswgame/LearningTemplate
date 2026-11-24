@@ -317,7 +317,7 @@ namespace sw
          *          송신 상한과 속도 조절 계수는 @p requested 의 값 대신 `Config/Engine/NetSendThrottle.json` 이 정한다(`NetSendThrottleSettings`). 없거나 틀리면 열지 않는다.
          */
         [[nodiscard]] bool initialize( const GameNetSessionParams& requested );
-        /** @brief 모든 연결을 끊고 네트워크 스레드와 소켓을 닫습니다. 두 번 불러도 됩니다. */
+        /** @brief 모든 연결을 끊고 네트워크 스레드와 소켓을 닫습니다. 라우터의 처리기 등록도 모두 풀립니다(`NetMessageRouter::closeSession`). 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 쌓인 연결 이벤트와 받은 메시지를 처리기에 나눠 주고, 연결과 끊김을 로그에 남깁니다. 게임 스레드에서 프레임마다 부릅니다. */
         void update();
@@ -350,7 +350,7 @@ namespace sw
         [[nodiscard]] NetLinkValue makeNetLink()
         {
             const bool bServer = _role == GameNetRole::Server;
-            return NetLinkValue{ &_peers, &_router, bServer ? NetLinkRole::Server : NetLinkRole::Client, bServer ? _bTicketBound : uint8{ SW_FALSE } };
+            return NetLinkValue{ &_peers, &_router, bServer ? NetLinkRole::Server : NetLinkRole::Client, _router.getSessionSerial(), bServer ? _bTicketBound : uint8{ SW_FALSE } };
         }
         /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 poll 합니다. */
         NetMessageRouter& getRouter() { return _router; }

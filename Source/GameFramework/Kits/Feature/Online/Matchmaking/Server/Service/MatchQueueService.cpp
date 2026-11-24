@@ -816,8 +816,8 @@ namespace sw
             ServerSelectionQuery query;
             query._kind              = mode._serverKind;
             query._buildVersion      = mode._buildVersion;
-            query._seatCount         = static_cast<int32>( lobby._listMember.size() );
-            query._bAllowOtherRegion = SW_TRUE; // 로비는 지역을 고르지 않았으므로 다른 지역도 허용한다
+            query._seatCount         = MathUtil::max( static_cast<int32>( lobby._listMember.size() ), mode._teamCount * mode._teamSize ); // 덜 찬 로비도 경기 하나 몫을 통째로 잡는다 — 남은 자리에 다른 경기가 들어오지 않는다
+            query._bAllowOtherRegion = SW_TRUE;                                                                                           // 로비는 지역을 고르지 않았으므로 다른 지역도 허용한다
             bPlaced                  = pState->_reader->pickServer( query, nowMs, picked );
         }
         PendingPlacement placement;

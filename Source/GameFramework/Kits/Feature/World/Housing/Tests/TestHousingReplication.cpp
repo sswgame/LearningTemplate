@@ -238,6 +238,26 @@ namespace
 } // namespace
 
 /**
+ * @brief [HousingReplicationTest] 붙었던 서버와 끊기면 답이 오지 않는 것을 안다 — 아직 붙지 않은 것과 다르고, 다시 붙으면 돌아온다
+ */
+SW_TEST_CASE( HousingReplicationTest, ClientKnowsItsServerIsLost )
+{
+    FakeHousingPeers         peers( false );
+    HousingReplicationClient client;
+    client.initialize( &peers );
+    SW_EXPECT_TRUE( client.isAwaitingServer() );
+    SW_EXPECT_FALSE( client.isServerLost() );
+    peers._listConnected.push_back( 0 );
+    SW_EXPECT_FALSE( client.isAwaitingServer() );
+    SW_EXPECT_FALSE( client.isServerLost() );
+    peers._listConnected.clear();
+    SW_EXPECT_FALSE( client.isAwaitingServer() );
+    SW_EXPECT_TRUE( client.isServerLost() );
+    peers._listConnected.push_back( 0 );
+    SW_EXPECT_FALSE( client.isServerLost() );
+}
+
+/**
  * @brief [HousingReplicationTest] 서버는 남의 부지 · 겹침 · 예산 초과 요청을 자기 레이아웃 · 지갑으로 거절한다 — 클라이언트의 큰 지갑은 판정에 들지 않는다
  */
 SW_TEST_CASE( HousingReplicationTest, ServerRefusesOthersPlotOverlapAndBudget )

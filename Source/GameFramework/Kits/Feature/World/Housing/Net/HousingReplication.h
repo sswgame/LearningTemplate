@@ -379,6 +379,8 @@ namespace sw
         [[nodiscard]] uint32 sendEdit( const hashed_string& plotID, const HousingEditRequest& request );
         /** @brief 서버에 아직 한 번도 붙지 않았으면 true 입니다 — 그동안 요청은 보내지 말고 들고 있는다(붙은 뒤 끊긴 것과 다르다, 그때는 답이 오지 않는다). */
         bool isAwaitingServer();
+        /** @brief 붙었던 서버와 끊겨 있으면 true 입니다 — 보낸 요청의 답이 오지 않는다. */
+        bool isServerLost() const { return _bServerReached == SW_TRUE && ( _pHost == nullptr || _pHost->getConnectedCount() <= 0 ); }
         /** @brief 받은 상태 · 델타를 받은 순서대로 적용하고 판정을 @p outListReply 에 더합니다. 목록에 아직 없는 부지의 것은 들고 있다가 그 부지가 생기면 적용한다. */
         void update( const vector<HousingNetPlotRef>& listPlot, vector<HousingEditReply>& outListReply );
         /** @brief 마지막으로 받은 부지의 주인입니다(받은 적이 없으면 `None`). */

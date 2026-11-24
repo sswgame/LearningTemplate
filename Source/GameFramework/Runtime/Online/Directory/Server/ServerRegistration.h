@@ -38,6 +38,8 @@ namespace sw
 
         void setState( ServerState state );
         void setLoad( int32 load );
+        /** @brief 정원을 바꿉니다(게임 서버가 씬을 연 뒤 자리 수를 정하는 매치 서버 — Agones SDK `SetPlayerCapacity` 와 같은 자리). */
+        void setCapacity( int32 capacity );
         /**
          * @brief 예약된 좌석 @p seatCount 개가 들어와 부하(`setLoad`)에 잡혔음을 알립니다 — 서버 사이의 예약 셈에서 뺍니다. 예약 창(@p reservationTTLMs)이 지났으면 셈은 이미 없다.
          * @details 부하와 예약을 둘 다 세면 같은 사람이 두 번 자리를 차지한다. 부하를 올린 뒤 부른다.

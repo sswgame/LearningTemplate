@@ -78,6 +78,12 @@ SW_TEST_CASE( DestructionNetSessionComponentTest, ServerSessionUpdatesOncePerFra
         SW_EXPECT_EQUAL( startTick + frame - 1, pReader->_seenServerTick );
     }
     SW_EXPECT_TRUE( pComponent->getSession().isActive() );
+    // 플레이 중에 세션이 닫히면 복제가 멈춘다 — 같은 라우터로 새 세션이 열려도 닫힌 창구로 이어 가지 않는다.
+    const uint32 lastTick = pComponent->getSession().getServerTick();
+    router.closeSession();
+    manager.update( deltaTime );
+    SW_EXPECT_FALSE( pComponent->getSession().isActive() );
+    SW_EXPECT_EQUAL( lastTick, pComponent->getSession().getServerTick() );
     manager.endPlay();
 }
 
