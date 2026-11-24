@@ -510,7 +510,7 @@ SW_TEST_CASE_F( RESPStoreTest, SubscribeDeliversMessagesWithoutPrefix )
 SW_TEST_CASE_F( RESPStoreTest, ReconnectResubscribes )
 {
     RESPStoreConfig config;
-    config._timeoutMs = 1;
+    config._timeoutMs = 200; // 첫 물러섬의 위 끝(100 ms)보다 길다 — 물러섬의 지터가 0 이어서 곧바로 다시 접속해도 확인 시한에 걸리지 않는다
     start( config );
     SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
     SW_EXPECT_LOG( "RespConnection.RESPConnectionClosed" );
@@ -521,7 +521,7 @@ SW_TEST_CASE_F( RESPStoreTest, ReconnectResubscribes )
 
     _server._transport->close( _server._lastHandle, StreamCloseMode::Abort );
     (void)collectMessages();
-    _clock.advanceMilliseconds( 6000 );
+    _clock.advanceMilliseconds( 100 );
     (void)collectMessages();
     SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a | SUBSCRIBE g:b" ) );
 }
@@ -597,7 +597,7 @@ SW_TEST_CASE( RESPConnectionTest, SubscribeConnectionHoldsItsUnconfirmedCommands
 SW_TEST_CASE_F( RESPStoreTest, UnconfirmedSubscriptionReconnects )
 {
     RESPStoreConfig config;
-    config._timeoutMs = 1;
+    config._timeoutMs = 200; // 첫 물러섬의 위 끝(100 ms)보다 길다 — 물러섬의 지터가 0 이어서 곧바로 다시 접속해도 확인 시한에 걸리지 않는다
     start( config );
     SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
     SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
@@ -606,9 +606,9 @@ SW_TEST_CASE_F( RESPStoreTest, UnconfirmedSubscriptionReconnects )
     const int32 opened = _server._openedCount;
     SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
 
-    _clock.advanceMilliseconds( 2 ); // 확인 시한을 넘긴다
+    _clock.advanceMilliseconds( 201 ); // 확인 시한을 넘긴다
     (void)collectMessages();
-    _clock.advanceMilliseconds( 6000 ); // 물러섬이 지난다
+    _clock.advanceMilliseconds( 100 ); // 물러섬이 지난다
     (void)collectMessages();
     SW_EXPECT_EQUAL( _server._openedCount, opened + 1 );
     SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
@@ -618,7 +618,7 @@ SW_TEST_CASE_F( RESPStoreTest, UnconfirmedSubscriptionReconnects )
 SW_TEST_CASE_F( RESPStoreTest, SilentSubscriptionIsPingedAndReplaced )
 {
     RESPStoreConfig config;
-    config._timeoutMs = 1;
+    config._timeoutMs = 200; // 첫 물러섬의 위 끝(100 ms)보다 길다 — 물러섬의 지터가 0 이어서 곧바로 다시 접속해도 확인 시한에 걸리지 않는다
     start( config );
     SW_EXPECT_LOG( "RespEphemeralStore.RESPSubscriptionNotConfirmed" );
     SW_EXPECT_LOG( "RespConnection.RESPConnectionAborted" );
@@ -638,9 +638,9 @@ SW_TEST_CASE_F( RESPStoreTest, SilentSubscriptionIsPingedAndReplaced )
     _clock.advanceMilliseconds( 15000 );
     (void)collectMessages();
     SW_EXPECT_EQUAL( takeCommands(), string( "PING" ) ); // 이번에는 답이 없다
-    _clock.advanceMilliseconds( 2 );
+    _clock.advanceMilliseconds( 201 );
     (void)collectMessages();
-    _clock.advanceMilliseconds( 6000 );
+    _clock.advanceMilliseconds( 100 );
     (void)collectMessages();
     SW_EXPECT_EQUAL( _server._openedCount, opened + 1 );
     SW_EXPECT_EQUAL( takeCommands(), string( "SUBSCRIBE g:a" ) );
