@@ -8,14 +8,12 @@
  * 2. 이종 키 조회: `string_view` 같은 이종 키로 찾을 때 키를 새로 만들지 않습니다(할당 없음).
  *    성립 조건은 **해시가 transparent** 라는 것 하나입니다. 기본 해시 `DefaultHash<sw::string>`(`Core/Container/string.h` 의 특수화)에
  *    `string_view` 오버로드가 있어서 같은 바이트에서 같은 해시가 나옵니다. 비교자의 기본값을 `std::equal_to<>` 로 둔 이유도 여기에 있습니다.
- *    `std::equal_to<Key>` 였다면 `SW_ENABLE_STL_CONTAINER` 로 std 컨테이너를 쓸 때만 이종 검색이 컴파일되지 않아,
- *    같은 코드가 빌드 옵션에 따라 달라졌을 것입니다.
  * 3. 기본 해시: `DefaultHash<Key>`(`Core/Hash/HashUtil.h`)입니다. 키에 `computeHash() const` 가 있으면 그것을 부르므로 키마다 해시 구조체를
  *    따로 두지 않습니다.
  * 4. 원소 주소: 삽입이 밀집 배열을 키우면 모든 원소가, `erase` 가 마지막 원소를 옮기면 그 원소가 다른 주소로 갑니다. `&it->second` 를 다른 삽입 · 삭제를 거쳐
  *    쥐어야 하면 값을 `unique_ptr<T>` 로 듭니다(`unordered_map<Key, unique_ptr<T>>` — 원소가 옮겨져도 가리키는 객체는 제자리다. 언리얼 `TMap<K, TUniquePtr<V>>`).
- * 5. 구성: 모든 컨테이너 형식이 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이고 바뀌는 것은 안쪽 `vector` 의 할당자(`ContainerAllocator`)뿐입니다.
- *          순회 순서(넣은 순서, `erase` 는 마지막 원소를 빈 슬롯으로 옮긴다)와 무효화 규칙이 구성마다 달라지지 않습니다.
+ * 5. 구성: `SW_ENABLE_STL_CONTAINER` 를 켜면 안쪽 `vector` 와 태그 색인이 std 저장으로 바뀝니다(`Core/Container/DenseHashTable.h` 한 자리).
+ *          순회 순서(넣은 순서, `erase` 는 마지막 원소를 빈 슬롯으로 옮긴다)와 무효화 규칙은 두 구성에서 같습니다.
  */
 #pragma once
 #include "Core/Concurrency/DataRaceDetector.h"
@@ -370,9 +368,9 @@ namespace sw
         }
     };
 
-    /** @brief 버킷 · 밀집 배열(`vector` 둘)과 함수 객체뿐이다. */
+    /** @brief 색인 · 밀집 배열과 함수 객체뿐이다(std 구성의 색인은 노드 컨테이너라 옮길 수 없다). */
     template <typename Key, typename T, typename Hash, typename KeyEqual, typename Allocator>
-    struct is_bitwise_relocatable<unordered_map<Key, T, Hash, KeyEqual, Allocator>> : std::bool_constant<std::is_empty_v<Hash> && std::is_empty_v<KeyEqual>>
+    struct is_bitwise_relocatable<unordered_map<Key, T, Hash, KeyEqual, Allocator>> : std::bool_constant<kUsesStdContainers == false && std::is_empty_v<Hash> && std::is_empty_v<KeyEqual>>
     {
     };
 } // namespace sw

@@ -13,7 +13,7 @@
  *          - 원소를 더하거나 지우지는 못합니다(길이는 고정입니다). 그런 일은 컨테이너를 받거나 `VectorUtil` 을 씁니다.
  *          - **소유하지 않습니다.** 가리키는 컨테이너가 커지거나(재할당) 사라지면 뷰는 무효입니다. 멤버로 오래 들고 있지 말고 인자로만 씁니다.
  *
- * @note C++ 최소 표준이 17 이라 `std::span` 을 쓸 수 없어 직접 둡니다. 두 구성(`SW_ENABLE_STL_CONTAINER`)에서 같은 구현이며, 여기 없는 기능(정적 길이 · `as_bytes`)을 더할 때는 `std::span` 과 같은 이름 · 의미로 더합니다.
+ * @note C++ 최소 표준이 17 이라 `std::span` 을 쓸 수 없어 직접 둡니다. C++17 에 std 짝이 없어 `SW_ENABLE_STL_CONTAINER` 의 교체 대상이 아니며, 여기 없는 기능(정적 길이 · `as_bytes`)을 더할 때는 `std::span` 과 같은 이름 · 의미로 더합니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
