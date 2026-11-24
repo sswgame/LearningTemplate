@@ -331,7 +331,7 @@ namespace sw
         const RHIStructuredBuffer& getPrevInstanceWorldBuffer() const { return _prevInstanceWorlds; }
         /** @brief 지난 월드 행렬 버퍼의 원소 수(인스턴스 수)입니다. */
         uint32 getPrevInstanceWorldCount() const { return _prevInstanceWorldCount; }
-        /** @brief 마지막 upload 에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
+        /** @brief 지금 스냅샷(`applyCPUSnapshot`)에서 기록이 있는 물체가 하나라도 움직였으면 true 입니다. 카메라가 서 있어도 모션 블러를 끄지 않는 근거다(`FrameViewResources::applyViewPassSelection`). */
         bool hasObjectMotion() const { return _bObjectMotion != SW_FALSE; }
         /**
          * @brief 배치 가운데 화면 왜곡 머티리얼(`kMaterialDistortionDefine`)이 있으면 true 입니다. 없으면 왜곡 누적 · 적용 패스가 비활성이다(쓰지 않을 때 비용이 없다).
@@ -387,10 +387,11 @@ namespace sw
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
         void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
         /**
-         * @brief 움직임 기록을 한 걸음 나아가 지난 월드 행렬 버퍼를 올립니다. 스냅샷이 그대로인 프레임에도 부른다 — 멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이 된다.
-         * @details 내용이 지난번 올린 것과 같으면(모두 멈춘 씬의 두 번째 프레임부터) 올리지 않는다.
+         * @brief 움직임 기록을 한 걸음 나아가게 합니다(CPU 만 — 올리기는 `uploadMotionHistory`). 스냅샷마다 한 번 부른다(내용이 그대로여도) — 멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이 된다.
          */
-        void updateMotionHistory( IRHIDevice* pDevice );
+        void advanceMotionHistory();
+        /** @brief 지난 월드 행렬 버퍼를 올립니다. 내용이 지난번 올린 것과 같으면(모두 멈춘 씬의 두 번째 프레임부터) 올리지 않는다. */
+        void uploadMotionHistory( IRHIDevice* pDevice );
         /** @brief 배치의 퍼뮤테이션에 화면 왜곡 · 굴절 define 이 있는지 다시 봅니다(CPU 내용이 바뀐 스냅샷을 적용할 때). */
         void refreshScreenEffectBatches();
 
@@ -485,7 +486,7 @@ namespace sw
         uint32 _prevInstanceWorldCount{ 0 };
         /// @brief 지난 업로드 뒤 바뀐 칸입니다(스크래치 — `GPUSceneSlotBuffer::takeChangedSlots`).
         vector<uint32> _listScratchChangedSlot;
-        /// @brief 마지막 upload 에서 물체가 움직였는지입니다(`hasObjectMotion`).
+        /// @brief 지금 스냅샷에서 물체가 움직였는지입니다(`hasObjectMotion`).
         uint8 _bObjectMotion{ SW_FALSE };
         /// @brief 배치에 화면 왜곡 머티리얼이 있는지입니다(`hasDistortionBatches`).
         uint8 _bDistortionBatches{ SW_FALSE };

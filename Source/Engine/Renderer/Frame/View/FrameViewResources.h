@@ -38,10 +38,10 @@ namespace sw
     class SW_API FrameViewResources
     {
     public:
-        /** @brief 패스 고르기가 보는 이번 프레임의 씬 상태입니다(뷰마다 같다 — 스냅샷을 적용한 뒤 정한다. 값 묶음이라 Context 가 아니라 State 다 — 언리얼 FViewInfo · …State). */
+        /** @brief 패스 고르기가 보는 이번 프레임의 씬 상태입니다(뷰마다 같다 — 고르기 앞에서 `FrameRenderer::prepareViewPassSceneState` 가 한 번 정한다. 값 묶음이라 Context 가 아니라 State 다 — 언리얼 FViewInfo · …State). */
         struct ViewPassSceneState
         {
-            uint8 _bObjectMotion{ SW_FALSE };      ///< 기록이 있는 물체가 움직였다(`GPUScene::hasObjectMotion` — 업로드 앞이라 지난 프레임 값이다. 막 움직이기 시작한 한 프레임은 모션 블러가 늦게 켜진다)
+            uint8 _bObjectMotion{ SW_FALSE };      ///< 기록이 있는 물체가 움직였다(`GPUScene::hasObjectMotion` — 스냅샷을 적용할 때 정한 이번 프레임 값)
             uint8 _bContactShadows{ SW_FALSE };    ///< 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스가 빠진다
             uint8 _bLocalShadows{ SW_FALSE };      ///< 그림자 칸을 받은 점광 · 스폿이 있다(`FrameShadowData::_listLocalTile` 이 비지 않았다) — 없으면 점광 · 스폿 아틀라스 패스가 빠진다
             uint8 _bRefractionBatches{ SW_FALSE }; ///< 굴절 머티리얼(`MATERIAL_REFRACTION` — 물 · 유리) 배치가 있다(`GPUScene::hasRefractionBatches`) — 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다(언리얼 MaterialUsesSceneColorCopy)

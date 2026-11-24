@@ -378,8 +378,10 @@ namespace sw
         void collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] );
         /** @brief 프레임을 시작할 때마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();
-        /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */
-        void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
+        /** @brief 이번 프레임의 출력 크기(`_state._outputWidth` · `_outputHeight`)를 정합니다 — 덮어쓴 크기가 있으면(0 이 아니면) 그 값, 없으면 백버퍼입니다. */
+        void updateOutputSize( uint32 overrideWidth, uint32 overrideHeight );
+        /** @brief 주 시점의 풀과 출력 크기를 따르는 자원을 맞춥니다. 풀 크기는 출력 크기(`updateOutputSize`) × 사각형 × 해상도 배율입니다. */
+        void ensureTransientResources();
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
         void releaseExtraView( FrameViewTarget& view );
         /** @brief 추가 뷰를 모두 놓고 목록에 주 시점만 남깁니다. */
@@ -392,7 +394,7 @@ namespace sw
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태에 반영합니다. 새 뷰를 만들고, 사라진 뷰를 해제하고, 출력 텍스처, 풀 크기, 컬링 입력을 맞추고,
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
          */
-        void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        void prepareExtraViews( const vector<RenderViewRequest>& listRequest, const FrameViewResources::ViewPassSceneState& sceneState );
         /**
          * @brief 주 시점의 캐스케이드별 컬링 슬롯 수를 정하고 상수 버퍼를 맞춥니다(`RenderFrameSettings::_bShadowCascadeCulling` 이고 캐스케이드가 둘 이상일 때만 켭니다).
          * @return 슬롯 수(0 이면 쓰지 않음)
@@ -408,7 +410,7 @@ namespace sw
         /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
         FrameViewTarget& getOrCreateExtraView( uint64 viewID );
         /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */
-        void prepareExtraView( const RenderViewRequest& request );
+        void prepareExtraView( const RenderViewRequest& request, const FrameViewResources::ViewPassSceneState& sceneState );
         /**
          * @brief 스냅샷에 든 이 뷰의 투명 순서를 뷰 자원(순번 테이블, 슬롯 스트림, 배치 순서)에 옮깁니다. 없으면 주 순서로 그립니다.
          * @details GPU 정렬 백엔드는 순번 테이블을 정렬 디스패치에 쓰고, 컬링이 없는 백엔드는 배치 안을 뷰 순서로 다시 배치한 슬롯 스트림을 드로우에 쓴다. 업로드 뒤, 기록 전에 부른다.
@@ -423,9 +425,12 @@ namespace sw
          * @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드와 바인딩은 ShaderParameterBinder 가 합니다.
          * @param mainViewProj 주 시점 카메라의 뷰-투영입니다. 카메라가 없는 프레임은 여기까지 오지 않습니다(기본 카메라로 대신 그리지 않는다).
          */
-        void updatePassConstants( FramePassContext& context, const float4x4& mainViewProj );
-        /** @brief 뷰 패스 고르기가 보는 이번 프레임의 씬 사실입니다 — 주 시점과 추가 뷰가 같은 값을 쓴다(스냅샷을 적용한 뒤 부른다). */
-        [[nodiscard]] FrameViewResources::ViewPassSceneState captureViewPassSceneState() const;
+        void updatePassConstants( FramePassContext& context, const float4x4& mainViewProj, const FrameViewResources::ViewPassSceneState& sceneState );
+        /**
+         * @brief 뷰 패스 고르기가 보는 이번 프레임의 씬 상태를 **준비해** 값으로 냅니다 — 주 시점과 추가 뷰가 같은 값을 쓴다. 프레임에 한 번, 스냅샷을 적용한 뒤 부른다.
+         * @details 고르기는 이 값만 받는다 — 상태를 만드는 일(데칼 목록)이 이 안에 있어 고르기보다 늦게 준비한 상태(지난 프레임 값)를 읽을 수 없다.
+         */
+        [[nodiscard]] FrameViewResources::ViewPassSceneState prepareViewPassSceneState();
 
         /** @brief 이번 프레임의 하늘(`_state._frameSky` · `_state._bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky, const float4& skyLight );
@@ -444,12 +449,12 @@ namespace sw
         // 5) 업로드와 제출 — 기록은 패스 실행(`FramePassExecutor`)이 한다
         // ------------------------------------------------------------------------------
         /**
-         * @brief execute() 와 executePacket() 이 공통으로 쓰는 뒷부분입니다. 스냅샷을 GPU 로 올리고, 기록 전에 준비해야 하는 것(콜백, 상수 버퍼 슬롯, 머티리얼 PSO)을 갖춘 뒤 그래프를 제출합니다.
+         * @brief execute() 와 executePacket() 이 공통으로 쓰는 뒷부분입니다. 스냅샷을 GPU 로 올리고, 기록 전에 준비해야 하는 것(상수 버퍼 슬롯, 머티리얼 PSO)을 갖춘 뒤 그래프를 제출합니다.
          * @details 두 진입점이 이 단계를 각자 가지면 한쪽만 빠지기 쉽다. 예를 들어 시드를 채우는 순서가 갈리면 한쪽만 상수가 빠진다. 그래서 한 함수로 둔다.
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          */
         [[nodiscard]] bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
-        /** @brief `executePacket` 의 뒷부분(모듈 구간 안)입니다 — 패스 고르기 · 추가 뷰 · 프레임 준비를 하고 올려 제출합니다. */
+        /** @brief `executePacket` 의 뒷부분(모듈 구간 안)입니다 — 그래프 묶기 · 풀 크기 · 씬 상태 · 패스 고르기 · 추가 뷰 · 프레임 준비를 하고 올려 제출합니다. */
         [[nodiscard]] bool drawPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
          * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).

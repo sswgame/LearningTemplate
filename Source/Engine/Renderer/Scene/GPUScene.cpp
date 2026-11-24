@@ -146,11 +146,7 @@ namespace sw
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
         uploadMaterialGroups( pDevice );
         // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 렌더 쪽 값(`_listBatchBinding`)도 한 벌이다.
-        // 새 스냅샷이면 바뀐 칸을 칸 순 사본에 받는다 — 움직임 기록이 칸 순 사본을 읽으므로 그 앞이다.
-        if ( _snapshot._bCPUDirty != SW_FALSE )
-            syncSlotInstances();
-        // 움직임 기록은 스냅샷이 그대로인 프레임에도 나아간다(멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이다).
-        updateMotionHistory( pDevice );
+        uploadMotionHistory( pDevice );
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 · 간접 인자 재업로드를 생략한다.
         // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안 개수는 매 프레임 0 으로 되돌아가야 하는데, 그 일은 GPU 가 컬링 바로 앞에서 한다
@@ -449,13 +445,17 @@ namespace sw
         }
     }
 
-    void GPUScene::updateMotionHistory( IRHIDevice* pDevice )
+    void GPUScene::advanceMotionHistory()
     {
         SW_PROFILE_SCOPE( "RT.GPUScene.motionHistory" );
         // 칸 순이다 — 정점 셰이더가 칸 번호로 지난 행렬을 읽는다(binding.hlsli `InstanceData::loadPreviousWorld`). 구멍은 열쇠가 0 이라 기록이 없다.
         _slotBuffer.takeChangedSlots( _listScratchChangedSlot );
         _bObjectMotion = _motionHistory.update( _slotBuffer.getSlots(), _listScratchChangedSlot ) ? SW_TRUE : SW_FALSE;
+    }
 
+    void GPUScene::uploadMotionHistory( IRHIDevice* pDevice )
+    {
+        SW_PROFILE_SCOPE( "RT.GPUScene.motionHistoryUpload" );
         constexpr RHIBufferUsage kPrevWorldUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         constexpr uint32         kStride          = static_cast<uint32>( sizeof( float4x4 ) );
         const vector<float4x4>&  listPrevWorld    = _motionHistory.getPreviousWorlds();
@@ -718,9 +718,15 @@ namespace sw
         }
         _appliedExportSerial = _snapshot._exportSerial;
         resetBatchBindings();
-        // 뷰 패스 고르기가 이번 프레임 값을 보도록 업로드 전에 정한다(업로드는 고르기 뒤에 돈다). CPU 내용이 그대로면 지난 값이 맞다.
+        // 뷰 패스 고르기가 이번 프레임 값을 보도록 업로드 전에 정한다(업로드는 컬링 칸 수가 정해진 뒤 — 고르기 뒤에 돈다). CPU 내용이 그대로면 지난 값이 맞다.
+        // 새 스냅샷이면 바뀐 칸을 칸 순 사본에 받는다 — 움직임 기록이 칸 순 사본을 읽으므로 그 앞이다.
         if ( _snapshot._bCPUDirty != SW_FALSE )
+        {
             refreshScreenEffectBatches();
+            syncSlotInstances();
+        }
+        // 움직임 기록은 스냅샷이 그대로인 프레임에도 나아간다(멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이다).
+        advanceMotionHistory();
     }
 
     void GPUScene::resetBatchBindings()

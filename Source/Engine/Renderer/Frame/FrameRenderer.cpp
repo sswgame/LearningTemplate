@@ -222,7 +222,7 @@ namespace sw
         _bCallbacksBound                  = SW_FALSE;
         _state._graph.clear();
         _state._frameGraph.clear();
-        // 새 파이프라인의 첨부 이름은 옛 계획과 짝이 맞지 않는다 — 비우고 세대를 올려 뷰 풀이 앨리어싱 없이 다시 만든다(묶은 뒤 새 계획으로 한 번 더 만든다).
+        // 새 파이프라인의 첨부 이름은 옛 계획과 짝이 맞지 않는다 — 비우고 세대를 올려 뷰 풀이 다시 만든다(묶을 때 새 계획이 선다).
         _state._transientAliasPlan = RenderGraphAliasPlan{};
         ++_state._transientAliasGeneration;
         releaseTransientResources();
@@ -264,8 +264,10 @@ namespace sw
         // 파이프라인 패스 설정(셰이더, 진입점, 블렌드, 퍼뮤테이션)으로 PSO 를 다시 만든다.
         releasePassResources();
         ensurePassResources();
-        ensureTransientResources();
+        // 그래프를 묶어 앨리어싱 계획을 먼저 짓는다 — 풀은 그 세대로 맞춘다.
         _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
+        updateOutputSize( 0, 0 );
+        ensureTransientResources();
 
         SW_LOG_INFO_ID( "FrameRenderer.BuiltGraphPassesCallbacks", "Built graph '%#' (%# passes, callbacks bound once)",
                         _pipelineResource.getDesc()._name, listPass.size() );
@@ -348,7 +350,7 @@ namespace sw
         _state._lightBuffer.populate( packet._listLight, _state._frameShadow._listTileElement, packet._pLightProbe, _state._listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
-        ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
+        updateOutputSize( packet._viewportWidth, packet._viewportHeight );
         // 모듈 구간(ExtensionRenderPass M3) — 확장 훅부터 기록 · 제출까지 모듈 코드가 도는 동안 레지스트리의 렌더 잠금을 쥔다(등록 해제의 flush 가 이 잠금을 기다린다).
         // 미리보기 씬 렌더러는 모듈 확장을 받지 않는다(확장은 주 렌더러의 파이프라인에 붙는다). 구간이 끝나면 모듈이 넣은 콜백을 모두 놓는다(소멸 코드가 모듈 안에 있다).
         // 확장이 읽고 쓰는 첨부도 패스 고르기가 보므로(`applyViewPassSelection`) 고르기보다 먼저 모은다.
@@ -356,7 +358,7 @@ namespace sw
         if ( pExtensionRegistry == nullptr )
             return drawPacket( pDevice, packet );
         RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
-        // 선언이 그래프에 묶인 것과 다르면 다음 `bindPassCallbacks` 가 모듈 노드를 새로 넣는다.
+        // 선언이 그래프에 묶인 것과 다르면 `drawPacket` 이 모듈 노드를 새로 넣어 다시 묶는다.
         if ( _extensionHost.collectFrame( *pExtensionRegistry, _state._outputWidth, _state._outputHeight ) )
             _bCallbacksBound = SW_FALSE;
         const bool bDrew = drawPacket( pDevice, packet );
@@ -366,13 +368,17 @@ namespace sw
 
     bool FrameRenderer::drawPacket( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
+        // 패스 고르기가 보는 것을 먼저 갖춘다 — 묶은 그래프의 앨리어싱 계획(확장 선언이 바뀌면 첨부의 수명이 바뀐다) → 풀 크기 → 씬 상태 → 고르기(주 시점 · 추가 뷰).
+        if ( _bCallbacksBound == SW_FALSE )
+            _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
+        ensureTransientResources();
         resetPassCbRing();
         prepareRainOcclusion( packet );
+        const FrameViewResources::ViewPassSceneState sceneState = prepareViewPassSceneState();
         _passExecutor.setIdentityWorld( _state._frameContext );
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트, 블룸, 아웃라인 색 상수가
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
-        updatePassConstants( _state._frameContext, packet._viewProj );
-        prepareFrameDecals(); // 후처리 텍스처 묶음의 정리(updatePassConstants) 뒤 — 이번 프레임에 묻는 경로가 남는다
+        updatePassConstants( _state._frameContext, packet._viewProj, sceneState );
         _state.getMainView()._cullInput._position = packet._cameraPos;
         // 렌즈 플레어 스프라이트는 주 시점(패킷의 뷰-투영 · 화면비)으로 펼쳐 기록 전에 올린다. 추가 뷰는 플레어를 그리지 않는다. 빈 화면(높이 0)은 그릴 것이 없다.
         if ( packet._viewportHeight > 0 )
@@ -380,7 +386,7 @@ namespace sw
         else
             _state._lensFlare.prepare( pDevice, {}, packet._viewProj, 1.0f );
         // 추가 뷰의 풀, 텍스처, 컬링 슬롯을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
-        prepareExtraViews( packet._listView );
+        prepareExtraViews( packet._listView, sceneState );
         // 모듈 임시 텍스처도 이번 프레임에 그리는 뷰마다 기록 전에 만든다.
         for ( const unique_ptr<FrameViewTarget>& pView : _state._listView )
         {
@@ -611,9 +617,6 @@ namespace sw
                 applyViewTransparentOrder( view );
         }
 
-        if ( _bCallbacksBound == SW_FALSE )
-            _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
-
         // 상수 버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
         ensurePassCbCapacityForFrame();
 
@@ -731,8 +734,11 @@ namespace sw
         _state._shadowCache.update( _state._frameShadow._listLocalTile, atlasResolution, _state._gpuScene.getStaticShadowGeneration(), _state._settings._bShadowCache != SW_FALSE );
     }
 
-    FrameViewResources::ViewPassSceneState FrameRenderer::captureViewPassSceneState() const
+    FrameViewResources::ViewPassSceneState FrameRenderer::prepareViewPassSceneState()
     {
+        // 지난 프레임 어느 뷰도 묻지 않은 텍스처(후처리 · 데칼)를 놓는다 — 이번 프레임의 데칼과 뷰들이 묻기 전에 한 번.
+        _state._pathTextures.pruneUnused();
+        prepareFrameDecals();
         FrameViewResources::ViewPassSceneState sceneState{};
         sceneState._bObjectMotion      = _state._gpuScene.hasObjectMotion() ? SW_TRUE : SW_FALSE;
         sceneState._bContactShadows    = _state._frameShadow.hasContactShadows() ? SW_TRUE : SW_FALSE;
@@ -744,7 +750,7 @@ namespace sw
         return sceneState;
     }
 
-    void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj )
+    void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj, const FrameViewResources::ViewPassSceneState& sceneState )
     {
         // **프레임당 한 번** 프레임 시드(_state._frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
@@ -757,7 +763,7 @@ namespace sw
         _state.getMainView().beginViewHistory();
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
-        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state.getMainView(), mainViewProj, captureViewPassSceneState(), _state._transientAliasPlan, _extensionHost.getPasses() );
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state.getMainView(), mainViewProj, sceneState, _state._transientAliasPlan, _extensionHost.getPasses() );
         if ( selection._bTargetsRebound == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
             publishRenderTargets();
         if ( selection._bTargetsChanged == SW_TRUE )
@@ -793,8 +799,7 @@ namespace sw
         context._passValues.setMatrix( passConstantNames()._rainOcclusionViewProj, _state._rainOcclusion.getViewProjection() );
         context._passValues.setFloat4( passConstantNames()._rainOcclusionParams, _state._rainOcclusion.getShaderParams() );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
-        // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
-        _state._pathTextures.pruneUnused();
+        // 지난 프레임 어느 뷰도 묻지 않은 후처리 머티리얼의 원소 버퍼를 놓는다.
         _postProcessMaterials.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state.getMainView() );
     }
@@ -978,7 +983,7 @@ namespace sw
             _psoManager.createPassPSOs();
     }
 
-    void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )
+    void FrameRenderer::updateOutputSize( uint32 overrideWidth, uint32 overrideHeight )
     {
         if ( _pDevice == nullptr )
             return;
@@ -1000,9 +1005,17 @@ namespace sw
         }
         _state._outputWidth  = width;
         _state._outputHeight = height;
+    }
+
+    void FrameRenderer::ensureTransientResources()
+    {
+        if ( _pDevice == nullptr )
+            return;
 
         // 주 시점의 풀은 출력 × 사각형 × 해상도 배율이다(분할 화면의 한 칸 · 낮춘 해상도). 비율을 지키려고 둘 다 같은 배율로 줄인다.
         // 정수 업스케일이면 사각형 픽셀 / 배율(내림)이다 — Present 가 그 배로 키운다.
+        const uint32              width      = _state._outputWidth;
+        const uint32              height     = _state._outputHeight;
         const RenderViewSettings& settings   = _state.getMainView()._settings;
         const uint32              poolWidth  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( width ) * settings._screenRect._z,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
@@ -1207,7 +1220,7 @@ namespace sw
         return string_view{};
     }
 
-    void FrameRenderer::prepareExtraViews( const vector<RenderViewRequest>& listRequest )
+    void FrameRenderer::prepareExtraViews( const vector<RenderViewRequest>& listRequest, const FrameViewResources::ViewPassSceneState& sceneState )
     {
         if ( _pDevice == nullptr )
             return;
@@ -1222,7 +1235,7 @@ namespace sw
         const uint32 requestCount = MathUtil::min( static_cast<uint32>( listRequest.size() ), RenderViewCollector::getMaxExtraViewCount() );
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
         {
-            prepareExtraView( listRequest[requestIndex] );
+            prepareExtraView( listRequest[requestIndex], sceneState );
             // 그리지 않는 프레임(갱신 주기 · 예산 · 숨음)을 적는다 — 다음에 그리는 프레임은 시간 누적 기록을 버린다(물체의 지난 행렬은 한 프레임 전 것이라 어긋난다).
             FrameViewTarget& view = getOrCreateExtraView( listRequest[requestIndex]._viewID );
             if ( view._bRenderThisFrame == SW_FALSE )
@@ -1350,7 +1363,7 @@ namespace sw
         view._shadowCullInput._cullCb.release( _pDevice );
     }
 
-    void FrameRenderer::prepareExtraView( const RenderViewRequest& request )
+    void FrameRenderer::prepareExtraView( const RenderViewRequest& request, const FrameViewResources::ViewPassSceneState& sceneState )
     {
         FrameViewTarget& view  = getOrCreateExtraView( request._viewID );
         view._bSeenThisFrame   = SW_TRUE;
@@ -1419,7 +1432,7 @@ namespace sw
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         view.beginViewHistory();
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
-        (void)_viewResources.applyViewPassSelection( view, request._viewProj, captureViewPassSceneState(), _state._transientAliasPlan, _extensionHost.getPasses() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
+        (void)_viewResources.applyViewPassSelection( view, request._viewProj, sceneState, _state._transientAliasPlan, _extensionHost.getPasses() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
         _postProcessMaterials.prepareView( view );
     }
