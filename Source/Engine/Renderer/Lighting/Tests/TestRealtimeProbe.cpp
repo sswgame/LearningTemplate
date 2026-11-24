@@ -779,6 +779,51 @@ SW_TEST_CASE( RealtimeProbeTest, ErrorDecaysPerUpdate )
 }
 
 /**
+ * @brief [RealtimeProbeTest] 정착 진척은 되돌림부터 세고, 움직이는 동안은 움직임이 시작한 뒤, 멈추면 마지막으로 움직인 뒤부터 센다. 갱신 주기보다 짧은 틈은 이어진 움직임이다
+ * @details 변이: 움직임마다 처음부터 세면 도는 물체가 있는 장면이 끝내 정착하지 않고, 움직임을 세지 않으면 막 멈춘 문의 옛 그늘이 남은 채 사진을 찍는다.
+ */
+SW_TEST_CASE( RealtimeProbeTest, AccumulationCountsFromMotion )
+{
+    constexpr uint32              kGap = 4u;
+    sw::RealtimeProbeAccumulation accumulation;
+    accumulation.advance( true, false, kGap );
+    for ( uint32 frame = 0; frame < 9u; ++frame )
+    {
+        accumulation.advance( false, false, kGap );
+    }
+    SW_EXPECT_EQUAL( 10u, accumulation.getAccumulatedFrames() );
+
+    // 움직이기 시작하면 1 부터, 이어지는 동안 는다(두 프레임에 한 번도 이어진 것이다).
+    for ( uint32 frame = 0; frame < 21u; ++frame )
+    {
+        accumulation.advance( false, frame % 2u == 0u, kGap );
+        if ( frame == 0u )
+            SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+    }
+    SW_EXPECT_EQUAL( 21u, accumulation.getAccumulatedFrames() );
+
+    // 멈추면 마지막으로 움직인 뒤부터 센다.
+    accumulation.advance( false, false, kGap );
+    SW_EXPECT_EQUAL( 2u, accumulation.getAccumulatedFrames() );
+    for ( uint32 frame = 0; frame < 10u; ++frame )
+    {
+        accumulation.advance( false, false, kGap );
+    }
+    SW_EXPECT_EQUAL( 12u, accumulation.getAccumulatedFrames() );
+
+    // 멈췄다가 다시 움직이면 새 움직임이다. 되돌림은 언제나 처음부터다.
+    accumulation.advance( false, true, kGap );
+    SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+    for ( uint32 frame = 0; frame < 5u; ++frame )
+    {
+        accumulation.advance( false, true, kGap );
+    }
+    SW_EXPECT_EQUAL( 6u, accumulation.getAccumulatedFrames() );
+    accumulation.advance( true, true, kGap );
+    SW_EXPECT_EQUAL( 1u, accumulation.getAccumulatedFrames() );
+}
+
+/**
  * @brief [RealtimeProbeTest] 하늘 가림 · 발광 배율의 기본값은 0 이다 — 설정을 적지 않은 씬은 이전 그림 그대로다. 볼륨 원소의 colorIntensity.w 가 하늘 가림 세기를 싣는다
  */
 SW_TEST_CASE( RealtimeProbeTest, GIExtrasDefaultToOff )

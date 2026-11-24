@@ -15,6 +15,7 @@
 #include "Core/Container/SpanAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/SphericalHarmonics.h"
@@ -104,6 +105,28 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct RealtimeProbeAccumulation
+     * @brief 프로브 기록이 지금 입력에 수렴한 프레임 수입니다 — 사진 앞 정착 조건 `RenderRealtimeGI` 의 진척. 프레임마다 한 번 `advance` 를 부릅니다(순수 값 — 단위 테스트가 바로 부른다).
+     * @details 되돌림(기록이 0 에서 시작 · 정적 가리개가 바뀜)은 처음부터 센다. 움직이는 가리개는 두 때를 가른다.
+     *          - 움직이는 동안: 움직임이 시작한 뒤의 프레임 수다. 멈추지 않는 물체(도는 기믹)는 기록이 같은 시차로 따라가는 정상 상태에 이르면 다 된 것이다 — 끝나지 않는 움직임이 사진을 막지 않는다
+     *            (카메라만 보는 TAA 정지 프레임과 같은 까닭). 고정 프레임 시간의 결정적 실행에서는 같은 프레임이면 같은 그림이다.
+     *          - 움직이지 않는 프레임: 마지막으로 움직인 뒤의 프레임 수다. 막 멈춘 물체의 시차가 가라앉을 때까지 기다린다.
+     *          갱신 한 바퀴(갱신 주기)보다 짧은 틈은 이어진 움직임이다 — 두 프레임에 한 번 걷는 애니메이션이 프레임마다 처음부터 세지 않는다. 시한 · 고정 대기는 없다.
+     */
+    struct SW_API RealtimeProbeAccumulation
+    {
+        uint32 _framesSinceReset{ 0 };                                 ///< 되돌린 뒤의 갱신 프레임 수
+        uint32 _framesSinceMotion{ constant::invalid_index::kUint32 }; ///< 마지막으로 움직인 뒤의 갱신 프레임 수(움직인 프레임이 1). 움직인 적이 없으면 무한
+        uint32 _motionFrames{ 0 };                                     ///< 이어진 움직임이 시작한 뒤의 갱신 프레임 수
+        uint8  _bMoving{ SW_FALSE };                                   ///< 이번 프레임에 움직였다
+
+        /** @brief 갱신한 프레임 하나를 셉니다. @p motionGapFrames 는 이어진 움직임으로 치는 틈의 상한입니다(갱신 주기). */
+        void advance( bool bReset, bool bMoved, uint32 motionGapFrames );
+        /** @brief 지금 입력에 수렴한 프레임 수입니다. */
+        [[nodiscard]] uint32 getAccumulatedFrames() const;
+    };
+
     /** @brief 실시간 프로브 갱신 컴퓨트의 렌더 스레드 소유자입니다. */
     class SW_API RealtimeProbeUpdater
     {
@@ -153,10 +176,10 @@ namespace sw
         /** @brief 프로브 기록 버퍼(컴퓨트 u0 — 프레임을 넘어 남는다)입니다. 프레임 그래프 표가 크기와 함께 등록한다(`ProbeHistory`). */
         const RHIStructuredBuffer& getHistoryBuffer() const { return _historyBuffer; }
         /**
-         * @brief 기록을 0 에서 다시 쌓거나 복셀(점유 · 발광)이 바뀐 뒤 갱신한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 렌더 정착 조건 `RenderRealtimeGI` 의 진척.
+         * @brief 프로브 기록이 지금 입력(되돌린 기록 · 정적 복셀 · 움직이는 가리개 — `RealtimeProbeAccumulation`)에 수렴한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 렌더 정착 조건 `RenderRealtimeGI` 의 진척.
          * @details 복셀이 바뀌어도 기록은 0 으로 돌리지 않고 섞어 따라간다 — 그래서 섞는 비율의 초기 가속(`_framesSinceReset`)과 따로 센다.
          */
-        [[nodiscard]] uint32 getAccumulatedFrames() const { return _bActive == SW_TRUE ? _framesSinceInputChange : 0u; }
+        [[nodiscard]] uint32 getAccumulatedFrames() const { return _bActive == SW_TRUE ? _accumulation.getAccumulatedFrames() : 0u; }
         /** @brief 기록에 남은 옛 값의 몫입니다(`computeError` — 이번 프레임까지). 이번 프레임에 돌지 않으면 0 입니다 — 감시 값 `Render.GIError`. */
         [[nodiscard]] float32 getError() const { return _bActive == SW_TRUE ? _error : 0.0f; }
         /**
@@ -188,8 +211,8 @@ namespace sw
             uint64           _sizeBytes{ 0 };
         };
 
-        /** @brief 바뀐 장면을 칠할 일을 짜고 버퍼를 갖춥니다. 버퍼를 만들지 못하면 오류를 남기고 false 입니다. @p outChanged 는 정적 층을 다시 칠하는지입니다(움직이는 것만 칠한 프레임은 기록의 누적을 되돌려 세지 않는다 — 섞어 따라간다). */
-        [[nodiscard]] bool prepareVoxelPaint( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeLayout& layout, bool bCreateMissingMeshes, bool& outChanged );
+        /** @brief 바뀐 장면을 칠할 일을 짜고 버퍼를 갖춥니다. 버퍼를 만들지 못하면 오류를 남기고 false 입니다. @p outStaticChanged 는 정적 층을 다시 칠하는지, @p outMoved 는 움직이는 가리개를 다시 칠하는지입니다. */
+        [[nodiscard]] bool prepareVoxelPaint( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeLayout& layout, bool bCreateMissingMeshes, bool& outStaticChanged, bool& outMoved );
         /** @brief 칠할 일의 입력 행 · 인덱스를 올리고 위치 복사를 쌓습니다. 버퍼를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool uploadPaint( IRHIDevice* pDevice, const SceneVoxelPaintPlan& plan, bool bCreateMissingMeshes );
         /** @brief 칠하기 디스패치 하나를 기록합니다(@p jobBuffer 의 입력 행, 스레드 @p threadCount 개). */
@@ -208,7 +231,7 @@ namespace sw
         vector<uint32>                _listIndexScratch;                       ///< 인덱스 업로드 임시 버퍼
         vector<float32>               _listPositionScratch;                    ///< GPU 버퍼가 없는 메시(동적 메시)의 위치 업로드 임시 버퍼
         RealtimeProbeHistoryAllocator _historyAllocator;                       ///< 볼륨 정체마다의 기록 구간(드나든 볼륨만 새로 시작한다)
-        uint32                        _framesSinceInputChange{ 0 };            ///< 기록을 되돌리거나 복셀이 바뀐 뒤의 갱신 프레임 수(`getAccumulatedFrames`)
+        RealtimeProbeAccumulation     _accumulation;                           ///< 정착 진척(`getAccumulatedFrames`)
         uint32                        _frameCounter{ 0 };
         float32                       _error{ 0.0f }; ///< `getError`
         uint32                        _totalProbes{ 0 };

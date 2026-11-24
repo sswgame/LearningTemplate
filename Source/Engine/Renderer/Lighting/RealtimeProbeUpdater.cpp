@@ -123,6 +123,28 @@ namespace sw
         _bGrowPending = SW_FALSE;
     }
 
+    void RealtimeProbeAccumulation::advance( bool bReset, bool bMoved, uint32 motionGapFrames )
+    {
+        if ( bReset )
+            _framesSinceReset = 0;
+        if ( bMoved )
+        {
+            if ( _framesSinceMotion > motionGapFrames )
+                _motionFrames = 0; // 멈춰 있다가 새로 움직인다
+            _framesSinceMotion = 0;
+        }
+        _bMoving = bMoved ? SW_TRUE : SW_FALSE;
+        ++_framesSinceReset;
+        ++_motionFrames;
+        if ( _framesSinceMotion != constant::invalid_index::kUint32 )
+            ++_framesSinceMotion;
+    }
+
+    uint32 RealtimeProbeAccumulation::getAccumulatedFrames() const
+    {
+        return MathUtil::min( _framesSinceReset, _bMoving == SW_TRUE ? _motionFrames : _framesSinceMotion );
+    }
+
     RealtimeProbeLayout RealtimeProbeUpdater::planLayout( const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeHistoryAllocator& history )
     {
         using Internal = RealtimeProbeUpdaterInternal;
@@ -270,11 +292,10 @@ namespace sw
         const uint32              float4Stride = static_cast<uint32>( sizeof( float4 ) );
 
         // 복셀 - 장면 포인터가 달라진 볼륨의 바뀐 구간만 다시 칠한다(컴포넌트가 같은 장면을 캐시로 돌려준다).
-        bool bVoxelChanged = false;
-        if ( prepareVoxelPaint( pDevice, listRequest, layout, bCreateMissingMeshes, bVoxelChanged ) == false )
+        bool bReset          = false; // 정적 가리개가 바뀌었거나 기록을 0 에서 시작한다 — 정착을 처음부터 센다
+        bool bOccludersMoved = false;
+        if ( prepareVoxelPaint( pDevice, listRequest, layout, bCreateMissingMeshes, bReset, bOccludersMoved ) == false )
             return;
-        if ( bVoxelChanged )
-            _framesSinceInputChange = 0;
 
         // 기록 - 볼륨 정체마다 구간이다. 용량이 늘었거나 버퍼가 없으면 통째로 0 에서, 아니면 새로 든 볼륨의 구간만 0 으로 채운다(서 있는 볼륨은 누적을 잇는다).
         if ( bHistoryGrew || _historyBuffer.isValid() == false )
@@ -287,7 +308,7 @@ namespace sw
                 return;
             }
             _historyBuffer.upload( pDevice, zeros.data(), layout._totalHistoryElements * float4Stride );
-            _framesSinceInputChange = 0;
+            bReset = true;
         }
         else
         {
@@ -298,7 +319,7 @@ namespace sw
                 const uint32         elementCount = listRequest[requestIndex]._probeCount * RealtimeProbeHistoryAllocator::kFloat4PerProbe;
                 const vector<float4> zeros( elementCount, float4{} );
                 _historyBuffer.upload( pDevice, zeros.data(), elementCount * float4Stride, layout._listHistoryOffset[requestIndex] * float4Stride );
-                _framesSinceInputChange = 0;
+                bReset = true;
             }
         }
 
@@ -320,16 +341,22 @@ namespace sw
         _totalProbes = layout._totalProbes;
         ++_frameCounter;
         _historyAllocator.advanceFrame();
-        ++_framesSinceInputChange;
-        _error   = computeError( listRequest, _framesSinceInputChange );
+        uint32 motionGapFrames = 1;
+        for ( const RealtimeProbeRequest& request : listRequest )
+        {
+            motionGapFrames = MathUtil::max( motionGapFrames, request._updatePeriod );
+        }
+        _accumulation.advance( bReset, bOccludersMoved, motionGapFrames );
+        _error   = computeError( listRequest, _accumulation.getAccumulatedFrames() );
         _bActive = SW_TRUE;
     }
 
     bool RealtimeProbeUpdater::prepareVoxelPaint( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const RealtimeProbeLayout& layout, bool bCreateMissingMeshes,
-                                                  bool& outChanged )
+                                                  bool& outStaticChanged, bool& outMoved )
     {
-        using Internal = RealtimeProbeUpdaterInternal;
-        outChanged     = false;
+        using Internal   = RealtimeProbeUpdaterInternal;
+        outStaticChanged = false;
+        outMoved         = false;
         // 앞 프레임이 짠 칠하기를 기록하지 못했다(그래프가 돌지 않았다) — 무엇이 칠해졌는지 모르므로 모두 새로 칠한다.
         if ( _bPaintPending == SW_TRUE )
             _listPainted.clear();
@@ -376,7 +403,8 @@ namespace sw
         _arrVoxelThreadCount[1] = plan._paintThreadCount;
         _arrVoxelThreadCount[2] = plan._restoreThreadCount;
         _arrVoxelThreadCount[3] = plan._movingThreadCount;
-        outChanged              = plan.hasStaticPaint();
+        outStaticChanged        = plan.hasStaticPaint();
+        outMoved                = plan._restoreThreadCount != 0;
         _bPaintPending          = plan.isEmpty() ? SW_FALSE : SW_TRUE;
         return true;
     }
@@ -519,8 +547,8 @@ namespace sw
         _listPainted.clear();
         _listPendingCopy.clear();
         _historyAllocator.clear();
-        _framesSinceInputChange = 0;
-        _bActive                = SW_FALSE;
-        _bPaintPending          = SW_FALSE;
+        _accumulation  = RealtimeProbeAccumulation{};
+        _bActive       = SW_FALSE;
+        _bPaintPending = SW_FALSE;
     }
 } // namespace sw
