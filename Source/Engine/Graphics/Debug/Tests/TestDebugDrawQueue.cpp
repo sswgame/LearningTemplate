@@ -5,6 +5,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
 using namespace sw;
@@ -170,4 +171,34 @@ SW_TEST_CASE( DebugDrawQueueTest, ArrowHasAShaftAndAPlanarHead )
             ++planarHeadCount;
     }
     SW_EXPECT_EQUAL( 2u, planarHeadCount );
+}
+
+/** @brief [DebugDrawQueueTest] 절대 자리의 도형은 원점만큼 옮겨 넣고, 남은 도형은 원점이 옮겨질 때 함께 옮긴다 */
+SW_TEST_CASE( DebugDrawQueueTest, AbsoluteShapesFollowTheWorldOrigin )
+{
+    sw::DebugDrawQueue    queue;
+    const sw::WorldOrigin origin{
+        sw::double3{ 1000.0, 0.0, -2000.0 }
+    };
+    const sw::float4 color{ 1.0f, 1.0f, 1.0f, 1.0f };
+    queue.drawLine( origin, sw::AbsolutePosition{
+                                sw::float3{ 1001.0f, 2.0f, -2000.0f }
+    },
+                    sw::AbsolutePosition{ sw::float3{ 1003.0f, 2.0f, -2000.0f } }, color, 10.0f );
+    queue.drawSphere( origin, sw::AbsolutePosition{
+                                  sw::float3{ 1000.0f, 0.0f, -1995.0f }
+    },
+                      1.0f, color, 10.0f );
+    queue.endFrame( 0.0f );
+    SW_REQUIRE_EQUAL( size_t( 1 ), queue.getVisibleLines().size() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), queue.getVisibleSpheres().size() );
+    SW_EXPECT_NEAR( 1.0f, queue.getVisibleLines()[0]._from._x, 1e-4f );
+    SW_EXPECT_NEAR( 3.0f, queue.getVisibleLines()[0]._to._x, 1e-4f );
+    SW_EXPECT_NEAR( 5.0f, queue.getVisibleSpheres()[0]._center._z, 1e-4f );
+
+    queue.shiftOrigin( sw::float3{ -100.0f, 0.0f, 0.0f } );
+    queue.endFrame( 0.0f );
+    SW_REQUIRE_EQUAL( size_t( 1 ), queue.getVisibleLines().size() );
+    SW_EXPECT_NEAR( -99.0f, queue.getVisibleLines()[0]._from._x, 1e-4f );
+    SW_EXPECT_NEAR( -100.0f, queue.getVisibleSpheres()[0]._center._x, 1e-4f );
 }

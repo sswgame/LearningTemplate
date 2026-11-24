@@ -13,6 +13,7 @@
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -38,7 +39,8 @@ namespace sw
                 const utf8* const                        pLeaf   = pRunner != nullptr ? pRunner->getActiveLeafName() : nullptr;
                 StringBuilder<constant::buffer::kMax256> text;
                 text.appendFormat( "%# / %#", controller.getStateName().c_str(), pLeaf != nullptr ? pLeaf : "-" );
-                pLogger->logText( pPawnOwner->getObjectID(), hashed_string( AIControllerComponent::kDebugCategoryName ), pScene->getWorldPosition(), text.view(), float4( 1.0f, 1.0f, 1.0f, 1.0f ) );
+                pLogger->logText( pPawnOwner->getObjectID(), hashed_string( AIControllerComponent::kDebugCategoryName ),
+                                  AbsolutePosition{ pPawnOwner->getManager()->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) }, text.view(), float4( 1.0f, 1.0f, 1.0f, 1.0f ) );
             }
         };
     } // namespace

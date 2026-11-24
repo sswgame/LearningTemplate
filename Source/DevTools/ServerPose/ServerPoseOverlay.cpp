@@ -78,10 +78,10 @@ namespace sw
                 outText.append( value._x ).append( ' ' ).append( value._y ).append( ' ' ).append( value._z );
             }
 
-            /** @brief 루트 씬 컴포넌트의 월드 위치 · 회전 · 히트박스(`getWorldBox`, 있으면)를 @p outPose 에 씁니다. */
-            static void readPoseValues( const SceneComponent& root, AuthorityPose& outPose )
+            /** @brief 루트 씬 컴포넌트의 절대 자리(@p origin 을 더한다) · 회전 · 히트박스(`getWorldBox`, 있으면)를 @p outPose 에 씁니다. */
+            static void readPoseValues( const SceneComponent& root, const WorldOrigin& origin, AuthorityPose& outPose )
             {
-                outPose._position     = root.getWorldPosition();
+                outPose._position     = AbsolutePosition{ origin.toAbsolute( root.getWorldPosition() ) };
                 const quaternion rot  = root.getWorldMatrix().getRotation();
                 outPose._rotation     = float4{ rot._x, rot._y, rot._z, rot._w };
                 outPose._bHasRotation = true;
@@ -89,7 +89,8 @@ namespace sw
                 outPose._bHasBox = root.getWorldBox( box ) && box.isValid();
                 if ( outPose._bHasBox )
                 {
-                    outPose._boxCenter     = float3{ ( box._min._x + box._max._x ) * 0.5f, ( box._min._y + box._max._y ) * 0.5f, ( box._min._z + box._max._z ) * 0.5f };
+                    const float3 localCenter{ ( box._min._x + box._max._x ) * 0.5f, ( box._min._y + box._max._y ) * 0.5f, ( box._min._z + box._max._z ) * 0.5f };
+                    outPose._boxCenter     = AbsolutePosition{ origin.toAbsolute( localCenter ) };
                     outPose._boxHalfExtent = float3{ ( box._max._x - box._min._x ) * 0.5f, ( box._max._y - box._min._y ) * 0.5f, ( box._max._z - box._min._z ) * 0.5f };
                 }
             }
@@ -161,13 +162,15 @@ namespace sw
             pose._bHasRotation = ServerPoseOverlayInternal::peelSection( rest, "rot", arrRotation, 4 );
             if ( pose._bHasBox )
             {
-                pose._boxCenter     = float3{ arrBox[0], arrBox[1], arrBox[2] };
+                pose._boxCenter = AbsolutePosition{
+                    float3{ arrBox[0], arrBox[1], arrBox[2] }
+                };
                 pose._boxHalfExtent = float3{ arrBox[3], arrBox[4], arrBox[5] };
             }
             if ( pose._bHasRotation )
                 pose._rotation = float4{ arrRotation[0], arrRotation[1], arrRotation[2], arrRotation[3] };
             bool     bOk         = true;
-            float32* arrValue[3] = { &pose._position._z, &pose._position._y, &pose._position._x };
+            float32* arrValue[3] = { &pose._position._value._z, &pose._position._value._y, &pose._position._value._x };
             for ( float32* pValue : arrValue )
             {
                 const size_t space = rest.rfind( ' ' );
@@ -188,7 +191,7 @@ namespace sw
         for ( const AuthorityPose& pose : listPose )
         {
             text.append( pose._name ).append( ' ' );
-            ServerPoseOverlayInternal::appendFloat3( text, pose._position );
+            ServerPoseOverlayInternal::appendFloat3( text, pose._position._value );
             if ( pose._bHasRotation )
             {
                 text.append( " rot " );
@@ -198,7 +201,7 @@ namespace sw
             if ( pose._bHasBox )
             {
                 text.append( " box " );
-                ServerPoseOverlayInternal::appendFloat3( text, pose._boxCenter );
+                ServerPoseOverlayInternal::appendFloat3( text, pose._boxCenter._value );
                 text.append( ' ' );
                 ServerPoseOverlayInternal::appendFloat3( text, pose._boxHalfExtent );
             }
@@ -210,14 +213,14 @@ namespace sw
     void ServerPoseOverlay::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
     {
         outListPose.clear();
-        manager.forEachGameObject( DevSceneIterationAccess::getKey(), [&outListPose]( const GameObject* pObject )
+        manager.forEachGameObject( DevSceneIterationAccess::getKey(), [&manager, &outListPose]( const GameObject* pObject )
         {
             const SceneComponent* pRoot = pObject->getName().empty() ? nullptr : pObject->getComponent<SceneComponent>();
             if ( pRoot == nullptr )
                 return;
             AuthorityPose& pose = outListPose.emplace_back();
             pose._name          = pObject->getName().c_str();
-            ServerPoseOverlayInternal::readPoseValues( *pRoot, pose );
+            ServerPoseOverlayInternal::readPoseValues( *pRoot, manager.getWorldOrigin(), pose );
             pose._object = pObject->getHandle();
         } );
         VectorUtil::sort( outListPose, []( const AuthorityPose& left, const AuthorityPose& right )
@@ -237,7 +240,7 @@ namespace sw
                 delta._name                = local._name;
                 delta._local               = local._position;
                 delta._server              = server._position;
-                delta._distance            = float3::getDistance( local._position, server._position );
+                delta._distance            = float3::getDistance( local._position._value, server._position._value );
                 delta._bHasServerRotation  = server._bHasRotation;
                 delta._serverRotation      = server._rotation;
                 delta._bHasServerBox       = server._bHasBox;
@@ -247,7 +250,7 @@ namespace sw
                     delta._angleDegrees = ServerPoseOverlayInternal::computeAngleDegrees( local._rotation, server._rotation );
                 delta._bHasBoxPair = local._bHasBox && server._bHasBox;
                 if ( delta._bHasBoxPair )
-                    delta._boxCenterDistance = float3::getDistance( local._boxCenter, server._boxCenter );
+                    delta._boxCenterDistance = float3::getDistance( local._boxCenter._value, server._boxCenter._value );
                 break;
             }
         }
@@ -261,9 +264,9 @@ namespace sw
         for ( const AuthorityDelta& delta : listDelta )
         {
             text.append( delta._name ).append( ' ' ).append( delta._distance ).append( " local " );
-            ServerPoseOverlayInternal::appendFloat3( text, delta._local );
+            ServerPoseOverlayInternal::appendFloat3( text, delta._local._value );
             text.append( " server " );
-            ServerPoseOverlayInternal::appendFloat3( text, delta._server );
+            ServerPoseOverlayInternal::appendFloat3( text, delta._server._value );
             text.append( " angle " ).append( delta._angleDegrees ).append( " box " ).append( delta._boxCenterDistance ).append( '\n' );
         }
         outText = string( text.view() );
@@ -357,9 +360,10 @@ namespace sw
                 const GameObject*     pObject = pManager->resolveGameObject( pose._object );
                 const SceneComponent* pRoot   = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
                 if ( pRoot != nullptr )
-                    ServerPoseOverlayInternal::readPoseValues( *pRoot, pose );
+                    ServerPoseOverlayInternal::readPoseValues( *pRoot, pManager->getWorldOrigin(), pose );
             }
         }
+        const WorldOrigin&     origin = pManager->getWorldOrigin();
         vector<AuthorityDelta> listDelta;
         computeDeltas( _listLocalPose, _listServerPose, listDelta );
         const float4        ghostColor{ 0.2f, 0.9f, 1.0f, 1.0f };
@@ -368,30 +372,30 @@ namespace sw
         for ( const AuthorityDelta& delta : listDelta )
         {
             // 서버의 히트박스가 있으면 그 상자(서버 회전으로 돌려서), 없으면 기본 크기 상자를 서버 위치에 그린다.
-            const float3     ghostCenter   = delta._bHasServerBox ? delta._serverBoxCenter : delta._server;
-            const float3     ghostExtent   = delta._bHasServerBox ? delta._serverBoxHalfExtent
-                                                                  : float3{ ServerPoseOverlayInternal::kGhostHalfExtent, ServerPoseOverlayInternal::kGhostHalfExtent, ServerPoseOverlayInternal::kGhostHalfExtent };
-            const quaternion ghostRotation = delta._bHasServerRotation ? quaternion( delta._serverRotation ) : quaternion::Identity;
+            const AbsolutePosition ghostCenter   = delta._bHasServerBox ? delta._serverBoxCenter : delta._server;
+            const float3           ghostExtent   = delta._bHasServerBox ? delta._serverBoxHalfExtent
+                                                                        : float3{ ServerPoseOverlayInternal::kGhostHalfExtent, ServerPoseOverlayInternal::kGhostHalfExtent, ServerPoseOverlayInternal::kGhostHalfExtent };
+            const quaternion       ghostRotation = delta._bHasServerRotation ? quaternion( delta._serverRotation ) : quaternion::Identity;
             if ( delta._bHasServerBox && delta._bHasServerRotation )
-                queue.drawOrientedBox( ghostCenter, ghostExtent, ghostRotation, ghostColor, 0.0f, category );
+                queue.drawOrientedBox( origin, ghostCenter, ghostExtent, ghostRotation, ghostColor, 0.0f, category );
             else
-                queue.drawBox( ghostCenter, ghostExtent, ghostColor, 0.0f, category );
+                queue.drawBox( origin, ghostCenter, ghostExtent, ghostColor, 0.0f, category );
             if ( delta._bHasServerRotation )
             {
                 // 서버가 바라보는 앞쪽(로컬 +Z)을 화살표로 보인다 — 로컬의 방향과 견주는 기준이다.
-                const float3 forward = float3{ 0.0f, 0.0f, 1.0f };
-                const float3 tip     = delta._server + float3::transformVector( forward, float4x4::makeFromQuaternion( ghostRotation ) );
-                queue.drawArrow( delta._server, tip, ghostColor, 0.0f, category );
+                const float3           forward = float3{ 0.0f, 0.0f, 1.0f };
+                const AbsolutePosition tip     = delta._server + float3::transformVector( forward, float4x4::makeFromQuaternion( ghostRotation ) );
+                queue.drawArrow( origin, delta._server, tip, ghostColor, 0.0f, category );
             }
             const bool bAngleOff = delta._angleDegrees > ServerPoseOverlayInternal::kVisibleAngleDegrees;
             if ( delta._distance <= ServerPoseOverlayInternal::kVisibleDistance && bAngleOff == false )
                 continue;
-            queue.drawLine( delta._local, delta._server, errorColor, 0.0f, category );
+            queue.drawLine( origin, delta._local, delta._server, errorColor, 0.0f, category );
             StringBuilder<constant::buffer::kMax256> label;
             label.append( delta._name ).append( ' ' ).append( delta._distance ).append( " m" );
             if ( bAngleOff )
                 label.append( ' ' ).append( delta._angleDegrees ).append( " deg" );
-            queue.drawText( delta._server, label.view(), errorColor, 0.0f, category );
+            queue.drawText( origin, delta._server, label.view(), errorColor, 0.0f, category );
         }
         ScopedLock<mutex> lock{ _mutex };
         _listDelta = listDelta;

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Client/ActionPlatformerAvatarComponent.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -11,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Component/ActionPlatformerGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -102,7 +102,7 @@ namespace sw
             {
                 if ( map.getTile( x, y ) != PlatformTile::Solid )
                     continue;
-                pDraw->drawBox( origin.toLocal( float3( map.getTileLeft( x ) + half, map.getTileBottom( y ) + half, 0.0f ) ), float3( half, half, half ), _tileColor );
+                pDraw->drawBox( origin, AbsolutePosition{ float3( map.getTileLeft( x ) + half, map.getTileBottom( y ) + half, 0.0f ) }, float3( half, half, half ), _tileColor );
             }
         }
         const ActionStageRun& run            = director.getRun();
@@ -112,11 +112,11 @@ namespace sw
         {
             if ( run.isSecretFound( pStage->_listSecret[secretIndex] ) )
                 continue;
-            pDraw->drawSphere( origin.toLocal( float3( listSecretSpot[secretIndex]._x, listSecretSpot[secretIndex]._y, 0.0f ) ), _secretRadius, _secretColor );
+            pDraw->drawSphere( origin, AbsolutePosition{ float3( listSecretSpot[secretIndex]._x, listSecretSpot[secretIndex]._y, 0.0f ) }, _secretRadius, _secretColor );
         }
         const float2  position = director.getPlayerPosition();
         const float32 goalX    = director.getGoalX();
-        pDraw->drawBox( origin.toLocal( float3( position._x, position._y, 0.0f ) ), _playerHalfExtent, _playerColor );
-        pDraw->drawLine( origin.toLocal( float3( goalX, 0.0f, 0.0f ) ), origin.toLocal( float3( goalX, _goalHeight, 0.0f ) ), _goalColor );
+        pDraw->drawBox( origin, AbsolutePosition{ float3( position._x, position._y, 0.0f ) }, _playerHalfExtent, _playerColor );
+        pDraw->drawLine( origin, AbsolutePosition{ float3( goalX, 0.0f, 0.0f ) }, AbsolutePosition{ float3( goalX, _goalHeight, 0.0f ) }, _goalColor );
     }
 } // namespace sw

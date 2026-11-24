@@ -7,6 +7,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
@@ -14,7 +15,6 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw

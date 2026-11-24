@@ -7,6 +7,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -14,7 +15,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 

@@ -8,6 +8,7 @@
 #include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -16,7 +17,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Visual/Component/MeshComponent.h"

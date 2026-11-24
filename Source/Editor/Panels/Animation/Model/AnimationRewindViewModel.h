@@ -13,6 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Animation/Scene/AnimationDebugState.h"
+#include "Engine/Foundation/WorldOrigin.h"
 
 namespace sw::editor
 {
@@ -68,6 +69,6 @@ namespace sw::editor
         void submitSkeletonDraw( bool bAllTracks, const float4& selectedColor, const float4& otherColor );
 
     private:
-        vector<float3> _listScratchPosition; ///< 뼈대 월드 위치 버퍼(프레임마다 다시 쓴다)
+        vector<AbsolutePosition> _listScratchPosition; ///< 뼈대 절대 자리 버퍼(프레임마다 다시 쓴다)
     };
 } // namespace sw::editor

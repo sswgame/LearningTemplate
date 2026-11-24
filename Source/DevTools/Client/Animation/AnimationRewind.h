@@ -18,6 +18,7 @@
 
 #include "Engine/Animation/Scene/AnimationDebugState.h"
 #include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 
 namespace sw
 {
@@ -40,11 +41,11 @@ namespace sw
      */
     struct AnimationRewindFrame
     {
-        float64             _time{ 0.0 };     ///< 기록기 시계(초)
-        uint64              _frameIndex{ 0 }; ///< 애니메이션 시스템 프레임 번호
-        float4x4            _worldMatrix{};   ///< 기록 때의 유닛 월드 행렬(그리기용)
-        vector<uint8>       _poseByte;        ///< 압축 포즈(스프라이트는 비었다)
-        AnimationDebugState _state;           ///< 그래프 상태 · 알림 · 커브 · 루트 모션 · 스프라이트 프레임
+        float64             _time{ 0.0 };      ///< 기록기 시계(초)
+        uint64              _frameIndex{ 0 };  ///< 애니메이션 시스템 프레임 번호
+        float4x4            _absoluteMatrix{}; ///< 기록 때의 유닛 월드 행렬(절대 자리 — 원점이 옮겨져도 같은 곳, 그리기용)
+        vector<uint8>       _poseByte;         ///< 압축 포즈(스프라이트는 비었다)
+        AnimationDebugState _state;            ///< 그래프 상태 · 알림 · 커브 · 루트 모션 · 스프라이트 프레임
         float32             _translationRange{ 0.0f };
         float32             _scaleRange{ 0.0f }; ///< 0 이면 스케일을 싣지 않았다(모두 1)
         uint32              _boneCount{ 0 };
@@ -136,8 +137,8 @@ namespace sw
         static void decodePose( const AnimationRewindFrame& frame, Pose& outPose );
         /** @brief 포즈를 압축합니다(테스트가 오차를 측정한다). */
         static void encodePose( const Pose& pose, AnimationRewindFrame& outFrame );
-        /** @brief 풀어 낸 포즈의 모델 공간 위치(월드)를 구합니다 — 그리기용. */
-        static void computeWorldBonePositions( const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<float3>& outListPosition );
+        /** @brief 풀어 낸 포즈의 본 자리(절대)를 구합니다 — 그리기용. */
+        static void computeAbsoluteBonePositions( const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<AbsolutePosition>& outListPosition );
 
     private:
         /** @brief 대상의 트랙을 찾거나 만듭니다. */

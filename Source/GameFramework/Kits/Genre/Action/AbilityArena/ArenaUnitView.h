@@ -9,7 +9,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

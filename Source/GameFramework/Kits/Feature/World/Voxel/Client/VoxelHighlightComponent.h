@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    struct AbsolutePosition;
     class MaterialInstance;
 
     /**
@@ -40,7 +41,7 @@ namespace sw
 
     private:
         /** @brief 겨눈 블록의 테두리(디버그 선)를 틱이 끝난 뒤 게임 스레드에서 그립니다. */
-        void scheduleOutline( const float3& localCenter ) const;
+        void scheduleOutline( const AbsolutePosition& center ) const;
 
     private:
         PROPERTY( Category = "Highlight", DisplayName = "Player", Tooltip = "Object with the VoxelPlayerComponent" )

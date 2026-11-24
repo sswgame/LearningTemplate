@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavClusterGraph.h"
@@ -11,7 +12,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
 namespace sw

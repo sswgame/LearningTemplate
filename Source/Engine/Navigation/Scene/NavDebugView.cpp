@@ -2,6 +2,7 @@
 
 #include "Engine/Navigation/Scene/NavDebugView.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"
@@ -13,7 +14,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 

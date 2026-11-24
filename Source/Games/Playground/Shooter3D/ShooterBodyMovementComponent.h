@@ -9,8 +9,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "Games/Playground/Shooter3D/ShooterBlockerComponent.h"

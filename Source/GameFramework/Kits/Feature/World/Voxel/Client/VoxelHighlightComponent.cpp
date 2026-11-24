@@ -4,12 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelPlayerComponent.h"
@@ -68,32 +68,33 @@ namespace sw
             pMesh->setVisible( bHasTarget );
         if ( bHasTarget == false )
             return;
-        const float3 center{ static_cast<float32>( block._x ) + 0.5f, static_cast<float32>( block._y ) + 0.5f, static_cast<float32>( block._z ) + 0.5f };
-        const float3 localCenter = context.getManager().getWorldOrigin().toLocal( center ); // 블록은 절대 자리다 — 메시도 테두리도 원점으로 옮긴다
-        pMesh->setLocalPosition( localCenter );
+        const AbsolutePosition center{
+            float3{ static_cast<float32>( block._x ) + 0.5f, static_cast<float32>( block._y ) + 0.5f, static_cast<float32>( block._z ) + 0.5f }
+        };
+        pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( center ) );
         const int32 level = static_cast<int32>( MathUtil::clamp( pPlayer->getBreakProgress(), 0.0f, 0.99f ) * static_cast<float32>( kLevelCount ) );
         if ( level != _level && _arrLevelLook[level] != nullptr )
         {
             _level = level;
             pMesh->setMaterialInstance( _arrLevelLook[level] );
         }
-        scheduleOutline( localCenter );
+        scheduleOutline( center );
     }
 
-    void VoxelHighlightComponent::scheduleOutline( const float3& localCenter ) const
+    void VoxelHighlightComponent::scheduleOutline( const AbsolutePosition& center ) const
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         // 디버그 선 큐는 게임 스레드에서만 쓸 수 있습니다. 이 선은 에디터 게임 뷰에서만 보입니다.
-        pManager->executeOrDeferPostTickOnScene( [localCenter, halfExtent = _outlineHalfExtent, color = _outlineColor]( GameObjectManager& /*sceneManager*/ )
+        pManager->executeOrDeferPostTickOnScene( [center, halfExtent = _outlineHalfExtent, color = _outlineColor]( GameObjectManager& sceneManager )
         {
             DebugDrawQueue* pDebugDraw = game::findSubsystem<DebugDrawQueue>();
             if ( pDebugDraw == nullptr )
                 return;
-            const float3 minCorner = localCenter - float3{ halfExtent };
-            const float3 maxCorner = localCenter + float3{ halfExtent };
+            const float3 minCorner = sceneManager.getWorldOrigin().toLocal( center ) - float3{ halfExtent };
+            const float3 maxCorner = sceneManager.getWorldOrigin().toLocal( center ) + float3{ halfExtent };
             for ( int32 edge = 0; edge < 4; ++edge )
             {
                 const float32 x = ( edge & 1 ) != 0 ? maxCorner._x : minCorner._x;

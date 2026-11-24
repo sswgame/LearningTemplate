@@ -18,7 +18,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

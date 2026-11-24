@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    struct AbsolutePosition;
+    struct WorldOrigin;
     struct quaternion;
 
     /// @brief 디버그 선입니다(시작, 끝, 색, 남은 시간, 카테고리). 상자와 화살표도 넣을 때 선으로 펼쳐집니다.
@@ -66,6 +68,8 @@ namespace sw
      *            씬을 틱하지 않은 프레임(에디터 일시정지)은 델타가 0 이라 보이던 것이 그대로 남습니다.
      *          - **카테고리**: 비우면 `Default` 입니다. 끈 카테고리는 보이는 목록에서 빠집니다(남은 시간은 그대로 흐릅니다).
      *          - 넣기는 어느 스레드에서 해도 됩니다(병렬 onTick). `endFrame` 과 `getVisible*` 는 게임 스레드에서만 부릅니다.
+     *          - **자리**: `float3` 는 씬 자리(월드 원점 기준 로컬)다. 시뮬레이션 · 격자 · 서버 · 기록의 절대 자리는 `AbsolutePosition` 과 원점을 받는 오버로드로 넣는다 —
+     *            큐가 그 자리에서 옮긴다(절대 자리는 `float3` 로 바뀌지 않으므로 원점을 빼는 것을 잊을 수 없다). 남은 도형은 원점이 옮겨질 때 함께 옮긴다(`shiftOrigin`).
      *          - 2D 는 Z 가 같은 평면의 도형입니다. 반 크기 중 0 인 축이 있는 상자는 사각형 하나(선 넷)로 펼칩니다.
      */
     class SW_API DebugDrawQueue : public Subsystem
@@ -113,6 +117,22 @@ namespace sw
         void drawArrow( const float3& from, const float3& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
         /** @brief 월드 위치에 글자를 예약합니다. */
         void drawText( const float3& position, string_view text, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+
+        /** @brief 절대 자리의 선을 @p origin 으로 옮겨 예약합니다. */
+        void drawLine( const WorldOrigin& origin, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 구를 @p origin 으로 옮겨 예약합니다. */
+        void drawSphere( const WorldOrigin& origin, const AbsolutePosition& center, float32 radius, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 축 정렬 상자를 @p origin 으로 옮겨 예약합니다. */
+        void drawBox( const WorldOrigin& origin, const AbsolutePosition& center, const float3& halfExtent, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 회전한 상자를 @p origin 으로 옮겨 예약합니다. */
+        void drawOrientedBox( const WorldOrigin& origin, const AbsolutePosition& center, const float3& halfExtent, const quaternion& rotation, const float4& color, float32 durationSeconds = 0.0f,
+                              const hashed_string& category = {} );
+        /** @brief 절대 자리의 화살표를 @p origin 으로 옮겨 예약합니다. */
+        void drawArrow( const WorldOrigin& origin, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 글자를 @p origin 으로 옮겨 예약합니다. */
+        void drawText( const WorldOrigin& origin, const AbsolutePosition& position, string_view text, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 남은 도형과 보이는 도형을 @p delta 만큼 옮깁니다(월드 원점이 옮겨졌을 때 — 게임 스레드). 지속 시간이 긴 도형이 옛 자리에 남지 않게 한다. */
+        void shiftOrigin( const float3& delta );
 
         /** @brief 카테고리를 켜거나 끕니다. 처음 보는 이름이면 목록에 더합니다. */
         void setCategoryEnabled( const hashed_string& category, bool bEnabled );

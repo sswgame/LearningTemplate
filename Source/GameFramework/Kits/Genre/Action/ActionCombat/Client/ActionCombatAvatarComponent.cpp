@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionCombatAvatarComponent.h"
 
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -11,7 +12,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Object/GameObject/WorldOrigin.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionRoomDebugDraw.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
@@ -131,7 +131,7 @@ namespace sw
         const ActionCombatPhase phase  = director.getCombatPhase();
         if ( phase == ActionCombatPhase::Hall || phase == ActionCombatPhase::Boss )
             ActionRoomDebugDraw::draw( *pDraw, origin, room );
-        pDraw->drawSphere( ActionRoomDebugDraw::toScene( origin, director.getPlayerPosition(), Internal::kPlayerHeight ), Internal::kPlayerRadius,
+        pDraw->drawSphere( origin, ActionRoomDebugDraw::makePosition( director.getPlayerPosition(), Internal::kPlayerHeight ), Internal::kPlayerRadius,
                            room.isPlayerInvulnerable() ? Internal::kInvulnerablePlayerColor : Internal::kPlayerColor );
     }
 } // namespace sw

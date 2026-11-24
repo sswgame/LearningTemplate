@@ -11,7 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Object/GameObject/WorldOrigin.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
