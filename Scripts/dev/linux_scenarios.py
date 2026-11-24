@@ -220,19 +220,29 @@ def ensure_vcpkg_manifest(installed_dir):
     return True
 
 
+def read_debug_cache(key):
+    """Linux-Debug 캐시의 값 — 다른 구성이 컴파일러 · 툴체인 · 설치본의 절대 경로를 여기서 가져온다(상대 경로면 컴파일러 확인에서 진다)."""
+    cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
+    return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
+
+
+def make_configure_command(preset, build_dir, definitions='', installed_dir=None):
+    """
+    프리셋을 Linux-Debug 캐시의 컴파일러 · 툴체인 절대 경로로 build_dir 에 구성하는 명령. 구성은 모두 프리셋으로 한다 — 프리셋 없이 다시 구성하면
+    프리셋이 되돌리는 값(유도 옵션의 auto, cmake/Modules/Config/AutoOption.cmake)이 옛 캐시에 묶인다.
+    """
+    return (f'cmake --preset {preset} -S {CLONE} -B {build_dir} {definitions} '
+            f'-DCMAKE_C_COMPILER="{read_debug_cache("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{read_debug_cache("CMAKE_CXX_COMPILER")}" '
+            f'-DCMAKE_TOOLCHAIN_FILE="{read_debug_cache("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{installed_dir or read_debug_cache("VCPKG_INSTALLED_DIR")}"')
+
+
 def build():
     sync_clone()
-    cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
-
-    def cached(key):
-        return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
-
-    if ensure_vcpkg_manifest(cached('VCPKG_INSTALLED_DIR')) is False:
+    if ensure_vcpkg_manifest(read_debug_cache('VCPKG_INSTALLED_DIR')) is False:
         return 1
-    configure = (f'cmake -S {CLONE} -B {RELEASE} -G Ninja -DCMAKE_BUILD_TYPE=Release -DSW_GAMES=ALL -DSW_BUILD_UNUSED_KITS=ON '
-                 f'-DCMAKE_C_COMPILER="{cached("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{cached("CMAKE_CXX_COMPILER")}" '
-                 f'-DCMAKE_TOOLCHAIN_FILE="{cached("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{cached("VCPKG_INSTALLED_DIR")}"')
-    if shell(f'{configure} > {RELEASE}.configure.log 2>&1').returncode != 0:
+    # 유니티 빌드는 끈다 - TU 하나씩 지어 빠진 include 를 잡는다(유니티 Release 는 Windows 가 짓는다).
+    configure = make_configure_command('Linux-Release', RELEASE, '-DSW_ENABLE_UNITY_BUILD=OFF')
+    if shell(f'cd {CLONE} && {configure} > {RELEASE}.configure.log 2>&1').returncode != 0:
         print(f'구성 실패 - {RELEASE}.configure.log')
         return 1
     pathlib.Path(BUILT_COMMIT).unlink(missing_ok=True)  # 지다 만 빌드는 어느 커밋의 바이너리도 아니다
@@ -506,10 +516,11 @@ def verify_all(arguments):
         return code
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
     server_dir = f'{CLONE}/build/Linux-Server'
-    # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
+    # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 구성 → 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
     # 체인(시간 · 그림 판정)은 이것들이 끝난 뒤 혼자 돈다.
     jobs = [[('Release 단위', f'cd {RELEASE} && ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.unit.log 2>&1; rc=$?; grep -E "case run|FAILED|TEST_RESULT=" {VERIFY_LOGS}/lt.unit.log | tail -n 6 | cut -c1-160; exit $rc')],
-             [('서버 빌드', f'cmake --build {server_dir} -j8 > {VERIFY_LOGS}/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" {VERIFY_LOGS}/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
+             [('서버 구성', f'cd {CLONE} && {make_configure_command("Linux-Debug", server_dir, "-DSW_TARGET_TYPE=Server")} > {VERIFY_LOGS}/srv.configure.log 2>&1'),
+              ('서버 빌드', f'cmake --build {server_dir} -j8 > {VERIFY_LOGS}/srv.build.log 2>&1; rc=$?; grep -E "error:|FAILED:|undefined reference" {VERIFY_LOGS}/srv.build.log | head -n 20 | cut -c1-220; exit $rc'),
               ('서버 기동', f'cd {server_dir} && timeout 120 ./Bin/Server -gv_serverExitAfterTicks=60 > {VERIFY_LOGS}/srv.run.log 2>&1'),
               ('서버 단위', f'cd {server_dir} && timeout 1800 ./Bin/Server --test > {VERIFY_LOGS}/srv.unit.log 2>&1; rc=$?; grep -E "case run|FAILED|NO TESTS|TEST_RESULT=" {VERIFY_LOGS}/srv.unit.log | cut -c1-140; exit $rc')]]
     with concurrent.futures.ThreadPoolExecutor(len(jobs)) as pool:
@@ -555,18 +566,12 @@ def sanitize(arguments):
 
 def configure_and_build(preset, targets, tsan=False):
     """Debug 계열 프리셋을 Linux-Debug 캐시의 컴파일러 · 툴체인 절대 경로로 구성하고 targets 를 짓는다(sanitize · fuzz 가 함께 쓴다). 실패면 1."""
-    cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
-
-    def cached(key):
-        return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
-
     build_dir = f'{CLONE}/build/{preset}'
-    # 컴파일러 · 툴체인은 Linux-Debug 캐시의 절대 경로를 쓴다(서버 구성과 같은 이유). TSan 은 계측한 포트 트리플릿을 따로 깐다.
-    installed = f'{build_dir}/vcpkg_installed' if tsan else cached('VCPKG_INSTALLED_DIR')
-    triplet = '-DVCPKG_TARGET_TRIPLET=x64-linux-tsan ' if tsan else ''
-    configure = (f'cmake --preset {preset} -S {CLONE} -B {build_dir} {triplet}'
-                 f'-DCMAKE_C_COMPILER="{cached("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{cached("CMAKE_CXX_COMPILER")}" '
-                 f'-DCMAKE_TOOLCHAIN_FILE="{cached("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{installed}"')
+    # TSan 은 계측한 포트 트리플릿을 따로 깐다.
+    if tsan:
+        configure = make_configure_command(preset, build_dir, '-DVCPKG_TARGET_TRIPLET=x64-linux-tsan', f'{build_dir}/vcpkg_installed')
+    else:
+        configure = make_configure_command(preset, build_dir)
     if shell(f'cd {CLONE} && {configure} > {build_dir}.configure.log 2>&1').returncode != 0:
         print(f'구성 실패 - {build_dir}.configure.log')
         return 1
