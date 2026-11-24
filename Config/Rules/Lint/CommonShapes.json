@@ -48,6 +48,7 @@
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|sessionFolder": "자동 저장 세션 폴더 하나(Saved 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Commands/Scene/EditorAutosaveCommands.cpp|slotFolder": "자동 저장 칸 하나(Saved 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Commands/Asset/EditorDocumentAutosave.cpp|Internal::makeFolder( sessionFolder )": "자동 저장 세션 폴더의 문서 사본 칸(Saved 아래)이다 — 리소스 트리 밖",
+        "Source/Editor/Common/Commands/Asset/EditorSaveFileLock.cpp|EditorSaveFileLockInternal::getLedgerFolder()": "파일 잠금 장부 폴더(자동화 출력 아래)다 — 리소스 트리 밖",
         "Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp|_rootFolder": "버그 보고 폴더(Saved/BugReports 또는 실행 뿌리 아래)다 — 리소스 트리 밖",
         "Source/Editor/Common/Workspace/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
         "Source/Editor/Panels/Packaging/Model/PackagingViewModel.cpp|ProcessRoots::get()._project.join( \"Config/Game\" )": "게임 설정 폴더(Config/Game)다 — 리소스 트리 밖",
