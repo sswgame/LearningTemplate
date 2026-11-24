@@ -74,9 +74,9 @@ namespace sw
         int32 _respawnStepsLeft;
         PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Fall Steps Left", Tooltip = "Runtime" )
         int32 _fallStepsLeft;
-        PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Fall Yaw", Tooltip = "Direction it falls toward (runtime)" )
+        PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Fall Yaw", Tooltip = "Direction it falls toward (runtime)", Units = rad )
         float32 _fallYaw;
-        PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Standing Rotation", Tooltip = "Local rotation to stand up with again (runtime)" )
+        PROPERTY( RuntimeState, Category = "Gathering", DisplayName = "Standing Rotation", Tooltip = "Local rotation to stand up with again (runtime)", Units = rad )
         float3 _standingRotation;
 
         FixedStepTimer _clock;

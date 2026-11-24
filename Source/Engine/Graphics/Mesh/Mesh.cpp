@@ -62,6 +62,28 @@ namespace sw
             static bool isSamePosition( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kPositionKeyBytes ) == 0; }
             static bool isSameWeldKey( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
 
+            /**
+             * @brief 묶는 키의 -0 을 +0 으로 바꿉니다 — 키는 바이트로 비교하므로 값이 같은 두 0 이 다른 묶음이 되지 않게 한다.
+             * @details 외적으로 구한 노멀은 같은 면의 두 삼각형에서도 0 의 부호가 갈린다(큐브 면의 대각선이 이음매로 읽혔다).
+             */
+            static void normalizeSignedZeros( vector<RHIVertex>& inoutListVertex )
+            {
+                const auto normalizeAll = []( auto& arrValue )
+                {
+                    for ( float32& value : arrValue )
+                    {
+                        if ( value == 0.0f )
+                            value = 0.0f;
+                    }
+                };
+                for ( RHIVertex& vertex : inoutListVertex )
+                {
+                    normalizeAll( vertex._arrPosition );
+                    normalizeAll( vertex._arrNormal );
+                    normalizeAll( vertex._arrUV );
+                }
+            }
+
             /** @brief 정점 번호를 묶는 키(바이트) 순서로 세웁니다. 같은 키가 이웃하게 됩니다. */
             struct WeldLess
             {
@@ -550,6 +572,7 @@ namespace sw
 
     void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex )
     {
+        MeshInternal::normalizeSignedZeros( inoutListVertex );
         const uint32   vertexCount = static_cast<uint32>( inoutListVertex.size() );
         const uint32   indexCount  = static_cast<uint32>( listIndex.size() );
         vector<float3> listTangent( vertexCount, float3{} );
@@ -652,6 +675,7 @@ namespace sw
 
     void Mesh::refineSeamEdges( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex )
     {
+        MeshInternal::normalizeSignedZeros( inoutListVertex );
         const uint32 vertexCount = static_cast<uint32>( inoutListVertex.size() );
         // 1) 묶음(위치 · 노멀 · UV 가 같은 정점들)과 위치에 정렬 순서로 번호를 매긴다.
         vector<uint32> listOrder( vertexCount );

@@ -20,7 +20,7 @@
           },
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/reply_guard.py\""
+            "command": "py -3 -I -S \"$CLAUDE_PROJECT_DIR/.claude/hooks/reply_guard.py\""
           }
         ]
       }
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/tool_policy.py\""
+            "command": "py -3 -I -S \"$CLAUDE_PROJECT_DIR/.claude/hooks/tool_policy.py\""
           }
         ]
       },
@@ -40,18 +40,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent_prompt_check.py\""
+            "command": "py -3 -I -S \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent_prompt_check.py\""
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Skill|Bash|PowerShell|mcp__.*",
+        "matcher": "Skill|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
-            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/tool_policy.py\""
+            "command": "py -3 -I -S \"$CLAUDE_PROJECT_DIR/.claude/hooks/tool_policy.py\""
           }
         ]
       }

@@ -11,7 +11,7 @@
     },
     {
       "name": "Shooter_KayKitDungeon",
-      "filter": { "includePatterns": ["*/shooter3d/models_raw/kaykit_dungeon/**"] },
+      "filter": { "includePatterns": ["game/playground/shooter3d/models_raw/kaykit_dungeon/**"] },
       "importMaterials": false
     },
     {

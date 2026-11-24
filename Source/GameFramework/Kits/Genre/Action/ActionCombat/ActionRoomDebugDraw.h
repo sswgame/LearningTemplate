@@ -1,7 +1,7 @@
 /**
  * @file ActionRoomDebugDraw.h
  * @brief 액션 룸의 디버그 그리기입니다 — 살아 있는 적과 탄을 공으로 그립니다. 룸을 도는 쪽(키트의 디렉터 · 룸을 빌려 쓰는 게임)의 클라이언트가 함께 씁니다.
- * @details 룸 규칙(`ActionRoom`)은 그리지 않는다(렌더 의존 없음). 룸의 자리는 절대 자리라 원점을 빼고 그린다. 헤더에만 있어 게임 모듈이 클라이언트 키트(`GF_Client_ActionCombat`)를 링크하지 않고 쓴다.
+ * @details 룸 규칙(`ActionRoom`)은 그리지 않는다(렌더 의존 없음). 룸의 자리는 절대 자리라 원점을 빼고 그린다. 공유 키트 폴더의 헤더라, 클라이언트 키트(`GF_Client_ActionCombat`)를 링크하지 못하는 게임 모듈의 클라이언트도 쓴다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

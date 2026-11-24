@@ -163,6 +163,9 @@ namespace sw
         const bool bKnownConnection = _mapAgent.find( connectionID ) != _mapAgent.end() || _mapPendingAccount.find( connectionID ) != _mapPendingAccount.end();
         if ( _pPeers == nullptr || bKnownConnection )
             return;
+        // 앞서 거절해 끊는 중인 연결의 늦은 열림 사건도 들이지 않는다 — 다시 들이면 같은 연결을 두 번 거절한다.
+        if ( _pPeers->getConnectionState( connectionID ) != NetConnectionState::Connected )
+            return;
         if ( accountID == 0 )
         {
             ++_stats._refusedCount;

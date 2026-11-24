@@ -100,6 +100,7 @@
       { "_field": "item", "_kind": "item" },
       { "_field": "items", "_kind": "item" },
       { "_field": "_itemID", "_kind": "item" },
+      { "_field": "_item", "_kind": "item" },
       { "_field": "visual", "_kind": "visual" },
       { "_field": "visible", "_kind": "visual" },
       { "_field": "body", "_kind": "visual" },

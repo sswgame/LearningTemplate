@@ -15,10 +15,17 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
+namespace sw
+{
+    class CommandStack;
+} // namespace sw
+
 namespace sw::editor
 {
     class DocumentEditRecorder;
+    class EditorExternalToolJob;
     class EditorListFilter;
+    class EditorStateTextHistory;
 
     /** @brief 현지화 표에서 어떤 행을 볼지입니다. */
     enum class LocalizationRowFilter : uint8
