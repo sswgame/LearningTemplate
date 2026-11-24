@@ -1,15 +1,17 @@
 /**
  * @file Weapon.h
  * @brief 총 한 자루의 정의(weapons.xml)와 상태를 정의합니다.
- * @details 무기는 쏘는 법(연사 간격, 탄창, 재장전, 퍼짐, 반동, 알 수)만 가진다. 날아가는 것(피해, 사거리, 탄속, 감쇠)은 탄 정의(`ProjectileDef`, projectiles.xml)이고,
+ * @details 무기는 쏘는 법(연사 간격, 탄창, 재장전, 퍼짐, 반동, 알 수)과 그 소리(발사, 재장전, 빈 탄창)만 가진다. 날아가는 것(피해, 사거리, 탄속, 감쇠)은 탄 정의(`ProjectileDef`, projectiles.xml)이고,
  *          무기는 받는 탄을 태그 조건(`accepts`)으로, 기본 탄을 id(`projectile`)로, 탄 값에 얹는 배율을 `<Modifier>` 로 적는다. 장전한 조합은 `ResolvedShot` 하나로 든다.
  *          장르와 무관하며 1인칭 슈터, 배틀로얄, 서부극, 기체 액션이 같은 정의와 상태를 쓴다. 키트끼리는 링크하지 않으므로 기반에 둔다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/Ray.h"
 #include "Core/Name/hashed_string.h"
@@ -30,6 +32,7 @@
 namespace sw
 {
     class Archive;
+    class GameSoundQueue;
     struct ItemDef;
     class XMLNode;
 
@@ -57,6 +60,12 @@ namespace sw
         string _accepts; ///< 받는 탄의 태그 조건식(`Ammo.Rifle || Ammo.Pistol`). 그냥 이름은 태그다. 비면 모든 탄을 받는다
         PROPERTY()
         string _name; ///< 로그용 이름. 데이터에 `name` 이 없으면 id 다
+        PROPERTY()
+        hashed_string _fireSound; ///< 쏠 때의 사운드 이벤트(`*.audioevents.xml`). 비면 소리가 없다(아래도). `WeaponState::queueSound` 가 낸다
+        PROPERTY()
+        hashed_string _reloadSound; ///< 재장전을 시작할 때
+        PROPERTY()
+        hashed_string _emptySound; ///< 탄창도 예비탄도 없는 총의 방아쇠를 새로 당겼을 때
         PROPERTY( Min = 0.01, Units = s )
         float32 _fireInterval; ///< 발사 사이 최소 간격(s)
         PROPERTY( Min = 0.0, Units = s )
@@ -215,6 +224,11 @@ namespace sw
         [[nodiscard]] bool startReload();
         /** @brief 예비탄을 상한까지 더합니다. */
         void addReserveAmmo( int32 amount );
+        /**
+         * @brief 지난번 부른 뒤 이 총에 생긴 일(발사 · 재장전 시작 · 빈 방아쇠)의 무기 표 소리를 @p inoutQueue 에 쌓습니다. @p position 이 있으면 그 자리(로컬)에서, 없으면 2D 다.
+         * @details 어느 소리인지는 무기 표가, 언제인지는 이 상태가 정한다 — 쓰는 쪽은 걸음 · 틱 끝에 한 번 부르기만 한다(부르지 않는 서버 · 모의실험은 소리가 없다).
+         */
+        void queueSound( GameSoundQueue& inoutQueue, const optional<float3>& position = nullopt );
 
         const WeaponDef&    getDef() const { return _def; }
         const ResolvedShot& getShot() const { return _shot; }
@@ -242,6 +256,10 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         int32 _magazineAmmo;
         PROPERTY( RuntimeState, Min = 0 )
-        int32 _reserveAmmo;
+        int32                  _reserveAmmo;
+        uint8                  _bFireSound   : 1; ///< 낼 소리(`queueSound` 가 비운다) — 싣지 않는다(아래도)
+        uint8                  _bReloadSound : 1;
+        uint8                  _bEmptySound  : 1;
+        [[maybe_unused]] uint8 _reserved     : 5;
     };
 } // namespace sw

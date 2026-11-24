@@ -104,7 +104,9 @@ namespace sw
         /** @brief 컴퓨터가 쥔 @p pilot 의 한 걸음 입력입니다 — 가까운 적에게 다가가 쏘고, 거리를 지키며 옆으로 돌고, 닿으면 벤다. */
         MechInput       makeBotInput( int32 pilot, float32 deltaTime );
         optional<int32> findNearestEnemy( int32 pilot ) const;
-        void            settle();
+        /** @brief 특수기가 쏜 알림이면 그 슬롯의 소리(`MechWeaponSlotDef::_fireSound`)를 쌓습니다. 주무기는 무기 표의 소리다. */
+        void queueSpecialSound( const MechArenaEvent& event );
+        void settle();
 
     private:
         PROPERTY( Category = "Match", DisplayName = "Rules", Tooltip = "Match rules (seconds, meters)" )

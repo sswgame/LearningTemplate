@@ -15,6 +15,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
@@ -38,6 +39,9 @@ namespace sw
         , _projectileID{}
         , _accepts{}
         , _name{}
+        , _fireSound{}
+        , _reloadSound{}
+        , _emptySound{}
         , _fireInterval{ 0.1f }
         , _reloadTime{ 1.8f }
         , _minSpread{ Radians::fromDegrees( 0.5f ) }
@@ -140,6 +144,10 @@ namespace sw
         , _currentSpread{}
         , _magazineAmmo{ 0 }
         , _reserveAmmo{ 0 }
+        , _bFireSound{ SW_FALSE }
+        , _bReloadSound{ SW_FALSE }
+        , _bEmptySound{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -158,6 +166,9 @@ namespace sw
         _currentSpread = weapon._minSpread;
         _magazineAmmo  = weapon._magazineSize;
         _reserveAmmo   = MathUtil::clamp( reserveAmmo, 0, weapon._maxReserveAmmo );
+        _bFireSound    = SW_FALSE;
+        _bReloadSound  = SW_FALSE;
+        _bEmptySound   = SW_FALSE;
         return true;
     }
 
@@ -203,12 +214,17 @@ namespace sw
         if ( _magazineAmmo <= 0 )
         {
             if ( _reserveAmmo <= 0 )
+            {
+                if ( bTriggerJustPressed )
+                    _bEmptySound = SW_TRUE;
                 return WeaponFireResult::OutOfAmmo;
+            }
             (void)startReload(); // 빈 탄창으로 당기면 재장전한다(예비탄이 있음을 위에서 봤다)
             return WeaponFireResult::EmptyMagazine;
         }
 
         --_magazineAmmo;
+        _bFireSound = SW_TRUE;
         // 늦은 몫을 다음 간격에서 뺀다(연사가 fps 에 매이지 않는다). 몫은 한 간격까지만 — 한 번 당기면 한 발이다.
         _cooldown.restart( _def._fireInterval );
         const float32 coneHalfAngle = _currentSpread.radians();
@@ -229,6 +245,7 @@ namespace sw
         if ( bCannotReload )
             return false;
         _reload.start( MathUtil::max( 1.0e-3f, _def._reloadTime ) );
+        _bReloadSound = SW_TRUE;
         return true;
     }
 
@@ -236,6 +253,25 @@ namespace sw
     {
         if ( amount > 0 )
             _reserveAmmo = MathUtil::min( _def._maxReserveAmmo, _reserveAmmo + amount );
+    }
+
+    void WeaponState::queueSound( GameSoundQueue& inoutQueue, const optional<float3>& position )
+    {
+        const auto queueEvent = [&]( bool bQueued, const hashed_string& eventName )
+        {
+            if ( bQueued == false || eventName.empty() )
+                return;
+            if ( position.has_value() )
+                inoutQueue.queueEventAt( eventName.c_str(), *position ); // 이름 표의 글은 사라지지 않는다
+            else
+                inoutQueue.queueEvent( eventName.c_str() );
+        };
+        queueEvent( _bFireSound == SW_TRUE, _def._fireSound );
+        queueEvent( _bReloadSound == SW_TRUE, _def._reloadSound );
+        queueEvent( _bEmptySound == SW_TRUE, _def._emptySound );
+        _bFireSound   = SW_FALSE;
+        _bReloadSound = SW_FALSE;
+        _bEmptySound  = SW_FALSE;
     }
 
     void WeaponState::serializeState( StateIO& io )
@@ -248,6 +284,12 @@ namespace sw
         io.value( _cooldown );
         io.value( _reload );
         io.value( _currentSpread ); // 리플렉션 밖 값 — `GameRandom` · `Countdown` · `Radians` 는 손 코덱이 있다
+        if ( io.isWriting() )
+            return;
+        // 되돌리기 전에 생긴 소리는 내지 않는다.
+        _bFireSound   = SW_FALSE;
+        _bReloadSound = SW_FALSE;
+        _bEmptySound  = SW_FALSE;
     }
 
 } // namespace sw

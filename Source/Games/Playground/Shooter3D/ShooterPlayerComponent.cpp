@@ -497,6 +497,7 @@ namespace sw
 
         _lookYaw = pCamera->getLook().getYaw();
         pCamera->setEyePosition( getEyePosition() );
+        _arrWeapon[_weaponIndex].queueSound( _soundQueue ); // 무기 표의 소리 — 플레이어 자신의 총이라 2D 다
         // HUD 는 틱이 끝난 뒤 넣는다(위젯은 게임 스레드만 고친다). 탄약, 체력, 맞음 표시가 거의 매 프레임 바뀐다.
         scheduleFlush();
     }

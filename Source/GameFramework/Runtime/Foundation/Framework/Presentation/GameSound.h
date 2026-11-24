@@ -63,7 +63,7 @@ namespace sw
     /**
      * @class GameSoundQueue
      * @brief 틱 안(워커)에서 낼 소리를 모았다가, 틱 뒤 게임 스레드에서 쌓은 순서대로 냅니다. 오디오는 게임 스레드에서만 부릅니다.
-     * @details 이름은 포인터만 보관하므로 리터럴이나 정적 문자열을 넘겨야 한다.
+     * @details 이름은 포인터만 보관하므로 리터럴 · 정적 문자열이나 `hashed_string::c_str()`(영구 포인터)을 넘겨야 한다.
      *          언리얼은 게임 스레드에서 바로 내지만, 여기서는 컴포넌트 틱이 워커에서 돈다.
      */
     class SW_GF_API GameSoundQueue

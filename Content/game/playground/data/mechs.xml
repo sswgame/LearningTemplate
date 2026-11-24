@@ -9,7 +9,7 @@
 	<Class id="Far" melee="0.8" shot="1.1"/>
 	<Mech id="trooper" name="Trooper" class="Mid" rank="B" cost="300" hp="400" radius="0.9" speed="8" dashSpeed="22" dashTime="0.3" jumpSpeed="11" down="100" downTime="1.5" wakeInvulnerable="1.5" lockOn="50">
 		<Weapon id="rifle" kind="Shot" weapon="mech_rifle" down="20" stagger="0.2" homing="40"/>
-		<Weapon id="missile" kind="Special" projectile="mech_missile" homing="120" cooldown="4" down="60" stagger="0.4" knockback="2"/>
+		<Weapon id="missile" kind="Special" projectile="mech_missile" fireSound="MechArenaMissile" homing="120" cooldown="4" down="60" stagger="0.4" knockback="2"/>
 		<Weapon id="saber" kind="Melee" moves="mech_slash,mech_cleave" range="4" down="30"/>
 	</Mech>
 	<Mech id="duelist" name="Duelist" class="Near" rank="A" cost="400" hp="450" radius="0.9" speed="10" dashSpeed="28" dashTime="0.3" jumpSpeed="13" down="120" downTime="1.2" wakeInvulnerable="1.5" lockOn="40">

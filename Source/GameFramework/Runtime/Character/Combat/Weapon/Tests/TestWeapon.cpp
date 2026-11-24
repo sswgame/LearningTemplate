@@ -1,14 +1,17 @@
 #include "pch.h"
 
 #include "Core/Math/Ray.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
-// WeaponTest — 피해 공식(거리 감쇠 · 머리 · 방어)과 총 한 자루의 상태(연사 속도 · 재장전 · 반자동 · 상태 왕복). 정의는 구조체로 직접 준다(nogpu).
+// WeaponTest — 피해 공식(거리 감쇠 · 머리 · 방어)과 총 한 자루의 상태(연사 속도 · 재장전 · 반자동 · 소리 · 상태 왕복). 정의는 구조체로 직접 준다(nogpu).
 
 using namespace sw;
 
@@ -54,6 +57,36 @@ namespace
             }
             return firedCount;
         }
+    };
+
+    /** @brief 낸 이벤트 이름과 자리를 차례로 적는 소리 창구입니다. */
+    class WeaponTestSoundPlayer final : public ISoundPlayer
+    {
+    public:
+        bool                         play( const AssetID&, const hashed_string& ) override { return false; }
+        bool                         playMusic( const AssetID& ) override { return false; }
+        [[nodiscard]] bool           loadEvents( const AssetID& ) override { return true; }
+        void                         unloadEvents( string_view ) override {}
+        SoundPlayingID               postEvent( const hashed_string& eventName ) override { return record( eventName, 0.0f ); }
+        SoundPlayingID               postEventAt( const hashed_string& eventName, const float3& position ) override { return record( eventName, position._x ); }
+        SoundPlayingID               postEventOn( GameObject&, const hashed_string& ) override { return 0; }
+        void                         setObjectParameter( const GameObject&, const hashed_string&, float32 ) override {}
+        void                         setParameter( const hashed_string&, float32 ) override {}
+        void                         stop( SoundPlayingID, float32 ) override {}
+        const vector<hashed_string>& getPosted() const { return _listPosted; }
+        float32                      getLastX() const { return _lastX; }
+
+    private:
+        SoundPlayingID record( const hashed_string& eventName, float32 x )
+        {
+            _listPosted.push_back( eventName );
+            _lastX = x;
+            return _listPosted.size();
+        }
+
+    private:
+        vector<hashed_string> _listPosted{};
+        float32               _lastX{ 0.0f };
     };
 } // namespace
 
@@ -185,4 +218,56 @@ SW_TEST_CASE( WeaponTest, StateRoundTripKeepsTheNextShot )
     SW_REQUIRE_TRUE( otherRound.equip( WeaponTestUtil::makeRifle(), slug, 0 ) );
     Archive slugReading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( otherRound.readState( slugReading ) ); // 다른 탄을 장전한 총은 그 상태를 받지 않는다
+}
+
+/** @brief [WeaponTest] 발사 · 재장전 시작 · 빈 방아쇠의 소리는 무기 표의 것이 한 번씩 나고, 빈 방아쇠는 새로 당길 때만 나며, 적지 않은 소리는 나지 않는다 */
+SW_TEST_CASE( WeaponTest, SoundsComeFromTheWeaponTable )
+{
+    WeaponTestSoundPlayer player;
+    SubsystemScope        scope;
+    SW_REQUIRE_TRUE( scope.bind<ISoundPlayer>( &player ) );
+    game::ScopedGameScope scopedScope( scope );
+    WeaponDef             weapon = WeaponTestUtil::makeRifle();
+    weapon._magazineSize         = 1;
+    weapon._fireSound            = hashed_string( "Fire" );
+    weapon._reloadSound          = hashed_string( "Reload" );
+    weapon._emptySound           = hashed_string( "Empty" );
+    WeaponState state;
+    SW_REQUIRE_TRUE( state.equip( weapon, WeaponTestUtil::makeRound(), 1 ) );
+    const Ray      aim;
+    WeaponShot     shot;
+    GameSoundQueue queue;
+    state.queueSound( queue );
+    SW_EXPECT_TRUE( queue.isEmpty() );
+
+    SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
+    state.queueSound( queue, float3{ 3.0f, 0.0f, 0.0f } );
+    state.queueSound( queue ); // 같은 일은 한 번만
+    queue.playAll();
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( player.getPosted().size() ) );
+    SW_EXPECT_TRUE( player.getPosted()[0] == hashed_string( "Fire" ) );
+    SW_EXPECT_EQUAL( 3.0f, player.getLastX() );
+
+    state.update( 1.0f );
+    SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::EmptyMagazine );
+    state.update( 2.0f ); // 예비탄 하나를 넣었다
+    SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
+    state.update( 1.0f );
+    SW_EXPECT_TRUE( state.pullTrigger( aim, false, shot ) == WeaponFireResult::OutOfAmmo ); // 누르고 있는 빈 총은 조용하다
+    state.queueSound( queue );
+    queue.playAll();
+    SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( player.getPosted().size() ) );
+    SW_EXPECT_TRUE( player.getPosted()[1] == hashed_string( "Fire" ) );
+    SW_EXPECT_TRUE( player.getPosted()[2] == hashed_string( "Reload" ) );
+    SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::OutOfAmmo );
+    state.queueSound( queue );
+    queue.playAll();
+    SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( player.getPosted().size() ) );
+    SW_EXPECT_TRUE( player.getPosted()[3] == hashed_string( "Empty" ) );
+
+    WeaponState silent;
+    SW_REQUIRE_TRUE( silent.equip( WeaponTestUtil::makeRifle(), WeaponTestUtil::makeRound(), 0 ) );
+    SW_EXPECT_TRUE( silent.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
+    silent.queueSound( queue );
+    SW_EXPECT_TRUE( queue.isEmpty() );
 }

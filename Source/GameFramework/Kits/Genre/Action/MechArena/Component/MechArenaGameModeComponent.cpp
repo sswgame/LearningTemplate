@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/Component/MechArenaGameModeComponent.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
@@ -33,7 +34,6 @@ namespace sw
             static constexpr uint32  kMinBotHandBytes = 8; ///< 손놀림 하나: 생각(4) + 옆걸음(4)
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
-            static constexpr const utf8* kEventFired       = "MechArenaFired";
             static constexpr const utf8* kEventHit         = "MechArenaHit";
             static constexpr const utf8* kEventDowned      = "MechArenaDowned";
             static constexpr const utf8* kEventDestroyed   = "MechArenaDestroyed";
@@ -49,10 +49,6 @@ namespace sw
             {
                 switch ( kind )
                 {
-                    case MechArenaEvent::Kind::Fired:
-                    {
-                        return kEventFired;
-                    }
                     case MechArenaEvent::Kind::Hit:
                     {
                         return kEventHit;
@@ -340,8 +336,18 @@ namespace sw
         return input;
     }
 
+    void MechArenaGameModeComponent::queueSpecialSound( const MechArenaEvent& event )
+    {
+        const MechPilot* const         pPilot = event._kind == MechArenaEvent::Kind::Fired && event._pilot.has_value() ? _world.findPilot( *event._pilot ) : nullptr;
+        const MechModeDef* const       pMode  = pPilot != nullptr && pPilot->getMech() != nullptr ? pPilot->getMode() : nullptr;
+        const MechWeaponSlotDef* const pSlot  = pMode != nullptr ? VectorUtil::findBy<&MechWeaponSlotDef::_id>( pMode->_listWeapon, event._id ) : nullptr;
+        if ( pSlot != nullptr && pSlot->_kind == MechWeaponKind::Special && pSlot->_fireSound.empty() == false )
+            getSoundQueue().queueEvent( pSlot->_fireSound.c_str() ); // 이름 표의 글은 사라지지 않는다
+    }
+
     void MechArenaGameModeComponent::settle()
     {
+        _world.queueWeaponSound( getSoundQueue() );
         _listEvent.clear();
         _world.pollEvents( _listEvent );
         for ( const MechArenaEvent& event : _listEvent )
@@ -350,6 +356,7 @@ namespace sw
             const utf8* const pSound      = bOthersOnly ? nullptr : MechArenaGameModeComponentInternal::findSound( event._kind );
             if ( pSound != nullptr )
                 getSoundQueue().queueEvent( pSound );
+            queueSpecialSound( event );
             if ( event._kind == MechArenaEvent::Kind::Destroyed )
                 SW_LOG_INFO_ID( "MechArena.Destroyed", "[MechArena] pilot %# destroyed, gauge %# against %#", event._pilot.value(), getPlayerGauge(), getEnemyGauge() );
             else if ( event._kind == MechArenaEvent::Kind::Respawned )

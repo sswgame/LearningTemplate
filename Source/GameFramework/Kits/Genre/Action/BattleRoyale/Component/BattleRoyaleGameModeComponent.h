@@ -173,6 +173,8 @@ namespace sw
         optional<int32> findDownedMate( int32 person, float32 range ) const;
         /** @brief 사람 @p person 의 자리에서 나는 소리를 쌓습니다(플레이어 자신이 아닌 사람의 소리도 들린다). */
         void queuePersonSound( const utf8* pEventName, int32 person );
+        /** @brief 사람 @p person 의 총에서 이번 걸음에 난 소리(무기 표)를 그 자리에서 쌓습니다. */
+        void queueWeaponSound( int32 person );
         void settle();
         void endGame();
 

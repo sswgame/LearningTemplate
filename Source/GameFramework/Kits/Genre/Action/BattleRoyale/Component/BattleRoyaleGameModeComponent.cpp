@@ -44,8 +44,6 @@ namespace sw
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventJump        = "BattleRoyaleJump";
             static constexpr const utf8* kEventParachute   = "BattleRoyaleParachute";
-            static constexpr const utf8* kEventShot        = "BattleRoyaleShot";
-            static constexpr const utf8* kEventReload      = "BattleRoyaleReload";
             static constexpr const utf8* kEventArmorBroken = "BattleRoyaleArmorBroken";
             static constexpr const utf8* kEventDowned      = "BattleRoyaleDowned";
             static constexpr const utf8* kEventKilled      = "BattleRoyaleKilled";
@@ -497,10 +495,8 @@ namespace sw
         WeaponState& weapon = _listPerson[static_cast<size_t>( person )]._weapon;
         weapon.update( deltaTime );
         BattleRoyalePlayer& player = *_match.findPlayerMutable( person );
-        // 재장전 중이거나 탄이 없으면 그대로다.
-        const bool bReloading = weapon.getMagazineAmmo() == 0 && player._loadout.tryReload( weapon, player._inventory );
-        if ( bReloading && person == kPlayer )
-            getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventReload );
+        if ( weapon.getMagazineAmmo() == 0 )
+            (void)player._loadout.tryReload( weapon, player._inventory ); // 재장전 중이거나 탄이 없으면 그대로다
     }
 
     void BattleRoyaleGameModeComponent::fire( int32 person, bool bTriggerJustPressed, float32 hitChance )
@@ -521,7 +517,6 @@ namespace sw
         WeaponShot shot;
         if ( weapon.pullTrigger( ray, bTriggerJustPressed, shot ) != WeaponFireResult::Fired )
             return;
-        queuePersonSound( BattleRoyaleGameModeComponentInternal::kEventShot, person );
         for ( size_t pellet = 0; pellet < shot._listRay.size() && _match.findPlayer( *target )->isAlive(); ++pellet )
         {
             if ( _random.nextChance( hitChance ) == false )
@@ -660,7 +655,8 @@ namespace sw
             else if ( enemy.has_value() )
                 walkRoute( person, _match.findPlayer( *enemy )->_position, deltaTime );
         }
-        fire( person, true, _botHitChance );
+        if ( canShoot( person ) )
+            fire( person, true, _botHitChance );
     }
 
     void BattleRoyaleGameModeComponent::stepBattle( float32 deltaTime )
@@ -676,6 +672,7 @@ namespace sw
             else
                 stepBot( person, deltaTime );
             pickUpItems( person );
+            queueWeaponSound( person );
         }
         _bUseQueued  = SW_FALSE;
         _bFireQueued = SW_FALSE;
@@ -697,6 +694,12 @@ namespace sw
     {
         if ( const GameObjectManager* const pManager = getObjectManager() )
             getSoundQueue().queueEventAt( pEventName, pManager->getWorldOrigin().toLocal( getPersonPosition( person ) ) );
+    }
+
+    void BattleRoyaleGameModeComponent::queueWeaponSound( int32 person )
+    {
+        if ( const GameObjectManager* const pManager = getObjectManager() )
+            _listPerson[static_cast<size_t>( person )]._weapon.queueSound( getSoundQueue(), pManager->getWorldOrigin().toLocal( getPersonPosition( person ) ) );
     }
 
     void BattleRoyaleGameModeComponent::settle()

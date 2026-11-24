@@ -43,6 +43,7 @@ namespace sw
 
     class Archive;
     class BitWriter;
+    class GameSoundQueue;
     class NetMessageChannel;
     class NetMessageWriter;
 
@@ -279,6 +280,8 @@ namespace sw
          */
         SW_DECLARE_STATE_IO();
         void pollEvents( vector<MechArenaEvent>& outListEvent );
+        /** @brief 모든 주무기에서 지난번 부른 뒤 난 소리(무기 표)를 2D 로 쌓습니다(`WeaponState::queueSound`). */
+        void queueWeaponSound( GameSoundQueue& inoutQueue );
 
         const MechPilot*               findPilot( int32 pilot ) const { return isValidPilot( pilot ) ? &_listPilot[static_cast<size_t>( pilot )] : nullptr; }
         int32                          getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
