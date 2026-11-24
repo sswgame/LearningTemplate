@@ -123,33 +123,28 @@ namespace sw
     {
     }
 
-    bool SurvivalHorrorSession::initialize( const SurvivalHorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, GameFlags* pFlags,
+    bool SurvivalHorrorSession::initialize( const SurvivalHorrorCatalog& catalog, AreaGraph& areaGraph, const hashed_string& startArea, GameFlags& flags,
                                             GridInventory& inventory, Inventory& itemBox )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "SurvivalHorrorSession.SurvivalHorrorSessionRefusedNoCatalog", "SurvivalHorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
-            return false;
-        }
         // 없는 방에서 시작하면 어느 길도 지날 수 없어 판이 멈춘다.
-        if ( pAreaGraph != nullptr && startArea.empty() == false && pAreaGraph->findArea( startArea ) == nullptr )
+        if ( startArea.empty() == false && areaGraph.findArea( startArea ) == nullptr )
         {
             SW_LOG_ERROR_ID( "SurvivalHorrorSession.UnknownStartArea", "SurvivalHorrorSession: refused - start area '%#' is not on the graph", startArea.c_str() );
             return false;
         }
-        const SurvivalHorrorRules& rules = pCatalog->getRules();
+        const SurvivalHorrorRules& rules = catalog.getRules();
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
         ResourceGauge sanity;
         ResourceGauge battery;
         if ( sanity.initialize( SurvivalHorrorSessionInternal::makeSanitySettings( rules ) ) == false || battery.initialize( SurvivalHorrorSessionInternal::makeBatterySettings( rules ) ) == false )
             return false;
-        if ( inventory.initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight ) == false )
+        if ( inventory.initialize( catalog.makeShapeLookup(), rules._gridWidth, rules._gridHeight ) == false )
             return false;
-        _pCatalog   = pCatalog;
-        _pAreaGraph = pAreaGraph;
+        _pCatalog   = &catalog;
+        _pAreaGraph = &areaGraph;
         _pInventory = &inventory;
         _pItemBox   = &itemBox;
-        _pFlags     = pFlags;
+        _pFlags     = &flags;
         _sanity     = sanity;
         _battery    = battery;
         _uniqueSeenMonster.clear();
@@ -166,7 +161,7 @@ namespace sw
         _bFlashlightOn       = SW_FALSE;
         _bHallucinating      = SW_FALSE;
         _currentArea         = startArea;
-        if ( _pAreaGraph != nullptr && startArea.empty() == false )
+        if ( startArea.empty() == false )
             (void)_pAreaGraph->enterArea( startArea );
         return true;
     }
@@ -413,8 +408,7 @@ namespace sw
 
     bool SurvivalHorrorSession::tryMoveTo( const hashed_string& areaID )
     {
-        static const GameFlags kNoFlags; // 빌리지 않은 세션이므로 조건 있는 길은 닫힌 채이다
-        if ( _pAreaGraph == nullptr || _pAreaGraph->canTraverse( _currentArea, areaID, _pFlags != nullptr ? *_pFlags : kNoFlags ) == false )
+        if ( _pAreaGraph == nullptr || _pAreaGraph->canTraverse( _currentArea, areaID, *_pFlags ) == false )
             return false;
         (void)_pAreaGraph->enterArea( areaID );
         _currentArea = areaID;
@@ -584,7 +578,7 @@ namespace sw
             if ( bInvalid )
                 return false;
         }
-        return _currentArea.empty() || _pAreaGraph == nullptr || _pAreaGraph->findArea( _currentArea ) != nullptr;
+        return _currentArea.empty() || _pAreaGraph->findArea( _currentArea ) != nullptr;
     }
 
     void SurvivalHorrorSession::pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value )
@@ -608,7 +602,7 @@ namespace sw
 
     bool SurvivalHorrorSession::markSolved( const hashed_string& puzzleID, const hashed_string& flag )
     {
-        if ( flag.empty() == false && _pFlags != nullptr )
+        if ( flag.empty() == false )
             _pFlags->setFlag( flag, 1 );
         return _uniqueSolvedPuzzle.insert( puzzleID ).second;
     }

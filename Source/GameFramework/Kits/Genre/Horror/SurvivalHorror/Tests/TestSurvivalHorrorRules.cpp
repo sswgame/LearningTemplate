@@ -144,7 +144,7 @@ namespace
 
         bool open( SurvivalHorrorSession& outSession, const hashed_string& startArea = "hall" )
         {
-            return outSession.initialize( &_catalog, &_graph, startArea, &_flags, _grid, _box );
+            return outSession.initialize( _catalog, _graph, startArea, _flags, _grid, _box );
         }
 
         /** @brief 규칙 하나를 바꿔 새 판을 엽니다. */
@@ -429,16 +429,6 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesOutOfRangeItem )
 }
 
 // ── 세션 시작 ─────────────────────────────────────────────────────────
-
-/**
- * @brief [SurvivalHorrorRulesTest] 시작 거절: 카탈로그 없음
- */
-SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeRefusesNoCatalog )
-{
-    SW_EXPECT_LOG( "SurvivalHorrorSession.SurvivalHorrorSessionRefusedNoCatalog" );
-    SurvivalHorrorSession session;
-    SW_EXPECT_FALSE( session.initialize( nullptr, &_graph, "hall", nullptr, _grid, _box ) );
-}
 
 /**
  * @brief [SurvivalHorrorRulesTest] 결함: 그래프에 없는 방에서 시작해도 받았고, 그러면 어느 길도 지날 수 없어 판이 멈췄다 — 거절한다
@@ -787,13 +777,14 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, KeyLocksOpenPaths )
 }
 
 /**
- * @brief [SurvivalHorrorRulesTest] 플래그를 빌리지 않은 세션은 조건 있는 길이 닫힌 채이다
+ * @brief [SurvivalHorrorRulesTest] 빌린 플래그가 없는 조건의 길은 닫힌 채이다
  */
-SW_TEST_CASE_F( SurvivalHorrorRulesTest, NoFlagsKeepsConditionalPathsClosed )
+SW_TEST_CASE_F( SurvivalHorrorRulesTest, MissingFlagKeepsConditionalPathsClosed )
 {
-    _flags.setFlag( "redOpen", 1 );
+    GameFlags             otherFlags;
     SurvivalHorrorSession session;
-    SW_REQUIRE_TRUE( session.initialize( &_catalog, &_graph, "hall", nullptr, _grid, _box ) );
+    _flags.setFlag( "redOpen", 1 );
+    SW_REQUIRE_TRUE( session.initialize( _catalog, _graph, "hall", otherFlags, _grid, _box ) );
     SW_EXPECT_FALSE( session.tryMoveTo( "cellar" ) );
 }
 

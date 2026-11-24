@@ -36,9 +36,9 @@ namespace sw
     {
     }
 
-    void WesternLawState::initialize( const WesternCatalog* pCatalog )
+    void WesternLawState::initialize( const WesternCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listRecord.clear();
         _listPending.clear();
         _eventBuffer.clear();

@@ -135,7 +135,7 @@ namespace
         ThemeParkReadStateTest()
         {
             _wallet.add( sw::ThemeParkTestRules::make()._currency, 100000 );
-            SW_REQUIRE_TRUE( _park.initialize( sw::ThemeParkTestRules::make(), &_wallet ) );
+            SW_REQUIRE_TRUE( _park.initialize( sw::ThemeParkTestRules::make(), _wallet ) );
         }
     };
 } // namespace
@@ -162,7 +162,7 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
     sw::Archive written;
     _park.writeState( written );
     sw::ThemeParkSimulation restored;
-    SW_REQUIRE_TRUE( restored.initialize( sw::ThemeParkTestRules::make(), &_wallet ) );
+    SW_REQUIRE_TRUE( restored.initialize( sw::ThemeParkTestRules::make(), _wallet ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( _park.getGuests().size(), restored.getGuests().size() );
@@ -181,7 +181,7 @@ SW_TEST_CASE( ThemeParkSimulationTest, ParkDeterminism )
     {
         const sw::ThemeParkSettings settings = sw::ThemeParkTestRules::make();
         run._wallet.add( settings._currency, 100000 );
-        return run._park.initialize( settings, &run._wallet );
+        return run._park.initialize( settings, run._wallet );
     };
     const auto step = []( ThemeParkRun& run, int32 stepIndex )
     {
@@ -368,16 +368,17 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RefusesOutOfRangeValues )
 SW_TEST_CASE( ThemeParkSimulationTest, RejectsZeroDivisorSettings )
 {
     SW_EXPECT_LOG( "ThemePark.RefusedSettings" );
+    sw::Wallet              wallet;
     sw::ThemeParkSimulation park;
     sw::ThemeParkSettings   zeroFee = sw::ThemeParkTestRules::make();
     zeroFee._noArrivalEntryFee      = 0.0f;
-    SW_EXPECT_FALSE( park.initialize( zeroFee, nullptr ) );
+    SW_EXPECT_FALSE( park.initialize( zeroFee, wallet ) );
     sw::ThemeParkSettings zeroScale = sw::ThemeParkTestRules::make();
     zeroScale._arrivalRatingScale   = 0.0f;
-    SW_EXPECT_FALSE( park.initialize( zeroScale, nullptr ) );
+    SW_EXPECT_FALSE( park.initialize( zeroScale, wallet ) );
     sw::ThemeParkSettings swappedCash = sw::ThemeParkTestRules::make();
     swappedCash._guestCashMin         = 100;
     swappedCash._guestCashMax         = 10;
-    SW_EXPECT_FALSE( park.initialize( swappedCash, nullptr ) );
-    SW_EXPECT_TRUE( park.initialize( sw::ThemeParkTestRules::make(), nullptr ) );
+    SW_EXPECT_FALSE( park.initialize( swappedCash, wallet ) );
+    SW_EXPECT_TRUE( park.initialize( sw::ThemeParkTestRules::make(), wallet ) );
 }

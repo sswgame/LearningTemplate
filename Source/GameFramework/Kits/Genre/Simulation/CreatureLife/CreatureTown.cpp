@@ -88,7 +88,7 @@ namespace sw
     {
     }
 
-    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, ReputationState* pReputation, QuestLog* pQuestLog, WorldClock* pClock, int32 width, int32 height )
+    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, ReputationState& reputation, QuestLog& questLog, const WorldClock& clock, int32 width, int32 height )
     {
         if ( pCatalog == nullptr )
         {
@@ -101,9 +101,9 @@ namespace sw
             return false;
         }
         _pCatalog    = pCatalog;
-        _pReputation = pReputation;
-        _pQuestLog   = pQuestLog;
-        _pClock      = pClock;
+        _pReputation = &reputation;
+        _pQuestLog   = &questLog;
+        _pClock      = &clock;
         _settings    = pCatalog->getRules();
         _topology    = GridTopology{ width, height };
         _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
@@ -205,8 +205,7 @@ namespace sw
                 creature._listAbilityUse.assign( species._listAbility.size(), 0 );
                 _listCreature.push_back( creature );
                 _eventBuffer.push( CreatureTownEvent{ species._id, {}, instance._id, CreatureTownEvent::Kind::CreatureArrived } );
-                if ( _pReputation != nullptr )
-                    (void)_pReputation->changeValue( CreatureTownInternal::makeFactionID( species._id ), 0 ); // 세력 항목을 만들어 둔다(시작값)
+                (void)_pReputation->changeValue( CreatureTownInternal::makeFactionID( species._id ), 0 ); // 세력 항목을 만들어 둔다(시작값)
                 ++arrivedCount;
             }
         }
@@ -258,10 +257,8 @@ namespace sw
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
         if ( pSpecies == nullptr || pSpecies->canOfferRequest( questID ) == false )
             return CreatureRequestResult::NotOffered;
-        if ( _pQuestLog == nullptr )
-            return CreatureRequestResult::Unavailable;
-        // 우정 단계가 레벨 자리다 — 평판이 없거나 단계를 적지 않은 종은 가장 낮은 단계다.
-        const optional<int32>  tier        = _pReputation != nullptr ? _pReputation->getTierIndex( CreatureTownInternal::makeFactionID( speciesID ) ) : optional<int32>{};
+        // 우정 단계가 레벨 자리다 — 단계를 적지 않은 종은 가장 낮은 단계다.
+        const optional<int32>  tier        = _pReputation->getTierIndex( CreatureTownInternal::makeFactionID( speciesID ) );
         const QuestStartResult startResult = _pQuestLog->start( questID, tier.has_value() ? *tier : 0 );
         if ( startResult == QuestStartResult::AlreadyActive )
             return CreatureRequestResult::AlreadyActive;
@@ -275,7 +272,7 @@ namespace sw
 
     int32 CreatureTown::deliverItem( const hashed_string& itemID, int32 count, Inventory& inventory )
     {
-        const bool bCanDeliver = 0 < count && _pQuestLog != nullptr && inventory.hasItem( itemID, count );
+        const bool bCanDeliver = 0 < count && inventory.hasItem( itemID, count );
         if ( bCanDeliver == false )
             return 0;
         const int32 progressedCount = _pQuestLog->notify( CreatureTownInternal::makeDeliverKind(), itemID, count );
@@ -288,7 +285,7 @@ namespace sw
         return progressedCount;
     }
 
-    CreatureAbilityResult CreatureTown::useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory* pYieldInventory )
+    CreatureAbilityResult CreatureTown::useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory& yieldInventory )
     {
         const optional<int32> foundCreature = findCreatureIndex( speciesID );
         if ( foundCreature.has_value() == false )
@@ -324,8 +321,8 @@ namespace sw
         if ( _land.isUsable( x, y ) == false )
             return CreatureAbilityResult::LandTaken;
         ++usedCount;
-        if ( pRule->_yieldItem.empty() == false && pYieldInventory != nullptr )
-            (void)pYieldInventory->addItem( pRule->_yieldItem, pRule->_yieldCount );
+        if ( pRule->_yieldItem.empty() == false )
+            (void)yieldInventory.addItem( pRule->_yieldItem, pRule->_yieldCount );
         _eventBuffer.push( CreatureTownEvent{ speciesID, pRule->_yieldItem, tileIndex, CreatureTownEvent::Kind::AbilityUsed } );
         (void)setObject( x, y, pRule->_to );
         return CreatureAbilityResult::Ok;
@@ -638,8 +635,6 @@ namespace sw
 
     void CreatureTown::notifyHabitatObjectives()
     {
-        if ( _pQuestLog == nullptr )
-            return;
         const hashed_string habitatKind = CreatureTownInternal::makeHabitatKind();
         for ( const HabitatDef& habitat : _pCatalog->getHabitats() )
         {
@@ -649,8 +644,6 @@ namespace sw
 
     void CreatureTown::changeFriendship( const hashed_string& speciesID, int32 delta )
     {
-        if ( _pReputation == nullptr )
-            return;
         const hashed_string   factionID  = CreatureTownInternal::makeFactionID( speciesID );
         const optional<int32> tierBefore = _pReputation->getTierIndex( factionID );
         (void)_pReputation->changeValue( factionID, delta );
@@ -661,7 +654,7 @@ namespace sw
 
     void CreatureTown::collectCompletedRequests()
     {
-        if ( _pQuestLog == nullptr || _listOpenRequest.empty() )
+        if ( _listOpenRequest.empty() )
             return;
         size_t keptCount = 0;
         for ( size_t requestIndex = 0; requestIndex < _listOpenRequest.size(); ++requestIndex )

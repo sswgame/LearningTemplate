@@ -51,7 +51,7 @@ namespace
             for ( int32 player = 0; player < 2; ++player )
             {
                 _arrWallet[player].add( _world.getSettings()._mineralCurrency, 600 );
-                (void)_world.addPlayer( player, &_arrWallet[player], sw::float3{} );
+                (void)_world.addPlayer( player, _arrWallet[player], sw::float3{} );
             }
             for ( int32 player = 0; player < 2; ++player )
             {
@@ -360,7 +360,7 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeIndices )
     sw::RTSWorld world;
     SW_REQUIRE_TRUE( world.initialize( &catalog, RTSFixture::kSize, RTSFixture::kSize ) );
     sw::Wallet wallet;
-    SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, &wallet, sw::float3{} ) );
+    SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, wallet, sw::float3{} ) );
 
     const RTSFixture    valid;
     const sw::RTSUnitID unitID = sw::RTSUnitID::make( 0, 1 );
@@ -432,7 +432,7 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeValues )
     sw::RTSWorld world;
     SW_REQUIRE_TRUE( world.initialize( &catalog, RTSFixture::kSize, RTSFixture::kSize ) );
     sw::Wallet wallet;
-    SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, &wallet, sw::float3{} ) );
+    SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, wallet, sw::float3{} ) );
 
     RTSFixture valid;
     valid._bWithOrder     = SW_TRUE;

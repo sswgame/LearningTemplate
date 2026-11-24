@@ -232,7 +232,7 @@ namespace sw
         _wallet.clear();
         _startingCash = layout.getStartingCash();
         _wallet.add( _settings._currency, _startingCash );
-        if ( _simulation.initialize( _settings, &_wallet ) == false )
+        if ( _simulation.initialize( _settings, _wallet ) == false )
             return false; // 까닭은 시뮬레이션이 남겼다 — 틀린 규칙으로 공원을 열지 않는다
         _listCoaster.clear();
 

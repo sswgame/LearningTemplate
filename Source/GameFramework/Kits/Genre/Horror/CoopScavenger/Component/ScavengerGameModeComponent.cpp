@@ -144,13 +144,8 @@ namespace sw
         GameStateComponent* const pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr || _storage.initialize( _pItemCatalog.get(), _storageSlotCount ) == false )
             return false;
-        ScavengerExpeditionData data;
-        data._pCatalog        = _pCatalog.get();
-        data._pWeatherCatalog = _pWeatherCatalog.get();
-        data._pThreatTable    = _pThreatTable.get();
-        data._pShopCatalog    = _pShopCatalog.get();
-        data._pItemCatalog    = _pItemCatalog.get();
-        return _expedition.initialize( data, &_wallet, &pState->getClock(), pState->findWeather(), &_flags, _storage, _seed, _crewCount );
+        const ScavengerExpeditionData data{ *_pCatalog, *_pWeatherCatalog, *_pThreatTable, *_pShopCatalog, *_pItemCatalog };
+        return _expedition.initialize( data, _wallet, pState->getClock(), pState->getWeather(), _flags, _storage, _seed, _crewCount );
     }
 
     bool ScavengerGameModeComponent::validateKeys() const

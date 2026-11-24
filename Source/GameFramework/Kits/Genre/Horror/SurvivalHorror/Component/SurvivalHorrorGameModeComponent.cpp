@@ -146,7 +146,7 @@ namespace sw
         _graph = *_pGraphAsset;
         _graph.resetState();
         _flags.clear();
-        return _itemBox.initialize( nullptr, _boxSlotCount ) && _session.initialize( _pCatalog.get(), &_graph, _stage._startArea, &_flags, _bag, _itemBox );
+        return _itemBox.initialize( nullptr, _boxSlotCount ) && _session.initialize( *_pCatalog, _graph, _stage._startArea, _flags, _bag, _itemBox );
     }
 
     bool SurvivalHorrorGameModeComponent::startGame()

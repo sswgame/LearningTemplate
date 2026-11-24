@@ -127,9 +127,9 @@ namespace sw
     {
     }
 
-    void AdventureDungeonState::initialize( const AdventureDungeonCatalog* pCatalog )
+    void AdventureDungeonState::initialize( const AdventureDungeonCatalog& catalog )
     {
-        _pCatalog    = pCatalog;
+        _pCatalog    = &catalog;
         _listRuntime = makeInitialRuntime();
         _eventBuffer.clear();
     }

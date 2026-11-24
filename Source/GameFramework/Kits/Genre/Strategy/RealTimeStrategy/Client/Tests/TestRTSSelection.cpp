@@ -30,6 +30,7 @@ namespace
     /** @brief 두 플레이어가 해병 여덟(네 기 두 줄)과 일꾼 하나를 대칭으로 둔 월드입니다. */
     struct SelectionWorld
     {
+        Wallet            _arrWallet[2];
         RTSWorld          _world;
         vector<RTSUnitID> _arrArmy[2];
 
@@ -39,7 +40,7 @@ namespace
                 return false;
             for ( int32 player = 0; player < 2; ++player )
             {
-                (void)_world.addPlayer( player, nullptr, float3{} );
+                (void)_world.addPlayer( player, _arrWallet[player], float3{} );
                 const auto at = [player]( float32 x, float32 z )
                 { return player == 0 ? float3{ x, 0.0f, z } : float3{ kMapSize - x, 0.0f, kMapSize - z }; };
                 (void)_world.spawnUnit( hashed_string( "worker" ), player, at( 9.5f, 3.5f ) );

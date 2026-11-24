@@ -15,10 +15,10 @@ namespace sw
     {
     }
 
-    void WesternHonor::initialize( const WesternCatalog* pCatalog, ReputationState* pReputation )
+    void WesternHonor::initialize( const WesternCatalog& catalog, ReputationState& reputation )
     {
-        _pCatalog    = pCatalog;
-        _pReputation = pReputation;
+        _pCatalog    = &catalog;
+        _pReputation = &reputation;
     }
 
     int32 WesternHonor::applyAction( const hashed_string& actionID )

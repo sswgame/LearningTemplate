@@ -89,8 +89,8 @@ namespace sw
         const AreaGraph& getGraph() const { return _graph; }
         /** @brief 빌린 플래그를 반환합니다(빌리지 않았으면 빈 플래그입니다). */
         const GameFlags& getFlags() const;
-        /** @brief 문 잠금을 둘 플래그를 빌립니다. 시설보다 오래 살아야 하며, 없으면 잠긴 문은 열리지 않습니다. */
-        void                          setFlags( GameFlags* pFlags ) { _pFlags = pFlags; }
+        /** @brief 문 잠금을 둘 플래그를 빌립니다. 시설보다 오래 살아야 합니다. 빌리기 전의 시설은 잠긴 문이 열리지 않습니다. */
+        void                          bindFlags( GameFlags& flags ) { _pFlags = &flags; }
         const vector<ScavengerScrap>& getGroundScrap() const { return _listGroundScrap; }
         const ScavengerScrap*         findGroundScrap( int32 uid ) const;
         /** @brief 바닥 고철 가치의 합을 반환합니다(시신은 제외합니다). */

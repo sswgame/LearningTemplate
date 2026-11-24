@@ -97,7 +97,7 @@ namespace
         WesternTestSight    _sight{};
         sw::hashed_string   _region{ "lemoyne" };
 
-        WesternLawTest() { _law.initialize( &_catalog ); }
+        WesternLawTest() { _law.initialize( _catalog ); }
 
         static sw::WesternWitness makeWitness( uint64 witnessID, bool bLawman )
         {
@@ -271,7 +271,7 @@ namespace
         WesternHonorTest()
         {
             _reputation.initialize( &_catalog.getHonorReputation() );
-            _honor.initialize( &_catalog, &_reputation );
+            _honor.initialize( _catalog, _reputation );
         }
     };
 } // namespace
@@ -560,7 +560,7 @@ SW_TEST_CASE_F( WesternHonorTest, TierDrivesPriceAndFlags )
 }
 
 /**
- * @brief [WesternHonorDetachedTest] 빌린 평판이 없어도 멀쩡하다(값 0, 단계 없음, 배율 1)
+ * @brief [WesternHonorDetachedTest] 열기 전에 물어도 멀쩡하다(값 0, 단계 없음, 배율 1)
  */
 SW_TEST_CASE( WesternHonorDetachedTest, WorksWithoutReputation )
 {
@@ -1034,7 +1034,9 @@ SW_TEST_CASE_F( WesternHuntingTest, SkinningOnceWithLoot )
     SW_EXPECT_TRUE( rotten._bSkinned == SW_FALSE );
 
     sw::WesternCarcass noLoot = carcass( 1, 0.0f );
-    SW_EXPECT_TRUE( sw::WesternCarcass::skin( _catalog, noLoot, nullptr, random, pelt, items ) );
+    SW_EXPECT_LOG( "WesternCarcass.LootCatalogMissing" ); // 전리품을 적은 동물이다
+    SW_EXPECT_FALSE( sw::WesternCarcass::skin( _catalog, noLoot, nullptr, random, pelt, items ) );
+    SW_EXPECT_TRUE( noLoot._bSkinned == SW_FALSE );
     SW_EXPECT_EQUAL( 1, items.getItemCount( "meat" ) );
 }
 

@@ -307,11 +307,11 @@ namespace sw
         }
     }
 
-    int32 RTSWorld::addPlayer( int32 team, Wallet* pWallet, const float3& startPosition )
+    int32 RTSWorld::addPlayer( int32 team, Wallet& wallet, const float3& startPosition )
     {
         RTSPlayer player;
         player._team          = MathUtil::max( 0, team );
-        player._pWallet       = pWallet;
+        player._pWallet       = &wallet;
         player._startPosition = startPosition;
         _listPlayer.push_back( player );
         _vision.ensureTeamCount( player._team + 1 );
@@ -475,9 +475,9 @@ namespace sw
             return RTSCommandResult::NotOwner;
         if ( def._requires.empty() == false && hasConstructed( player, def._requires ) == false )
             return RTSCommandResult::TechRequired;
-        if ( def._minerals > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._mineralCurrency, def._minerals ) == false ) )
+        if ( def._minerals > 0 && pPlayer->_pWallet->canAfford( _settings._mineralCurrency, def._minerals ) == false )
             return RTSCommandResult::NotEnoughMinerals;
-        if ( def._gas > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._gasCurrency, def._gas ) == false ) )
+        if ( def._gas > 0 && pPlayer->_pWallet->canAfford( _settings._gasCurrency, def._gas ) == false )
             return RTSCommandResult::NotEnoughGas;
         return RTSCommandResult::Ok;
     }
@@ -720,13 +720,13 @@ namespace sw
     int64 RTSWorld::getMinerals( int32 player ) const
     {
         const RTSPlayer* pPlayer = findPlayer( player );
-        return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._mineralCurrency ) : 0;
+        return pPlayer != nullptr ? pPlayer->_pWallet->getBalance( _settings._mineralCurrency ) : 0;
     }
 
     int64 RTSWorld::getGas( int32 player ) const
     {
         const RTSPlayer* pPlayer = findPlayer( player );
-        return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._gasCurrency ) : 0;
+        return pPlayer != nullptr ? pPlayer->_pWallet->getBalance( _settings._gasCurrency ) : 0;
     }
 
     // ------------------------------------------------------------------------------
@@ -1027,8 +1027,7 @@ namespace sw
         }
         unit._agent.stop();
         RTSPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
-        if ( player._pWallet != nullptr )
-            player._pWallet->add( unit._cargoType == RTSResourceKind::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
+        player._pWallet->add( unit._cargoType == RTSResourceKind::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
         pushEvent( RTSEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
         unit._cargoAmount = 0;
         unit._cargoType   = RTSResourceKind::None;
@@ -1261,16 +1260,12 @@ namespace sw
     void RTSWorld::payCost( RTSPlayer& player, const RTSUnitDef& def )
     {
         // evaluateCost 가 둘 다 된다고 판단한 뒤에만 호출한다. 한쪽만 빠지는 일이 없게 하려는 것이다.
-        if ( player._pWallet == nullptr )
-            return;
         if ( player._pWallet->trySpend( _settings._mineralCurrency, def._minerals ) == false || player._pWallet->trySpend( _settings._gasCurrency, def._gas ) == false )
             SW_LOG_WARNING_ID( "RTSWorld.RTSWorldCostCheckedBut", "RTSWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
     }
 
     void RTSWorld::refundCost( RTSPlayer& player, const RTSUnitDef& def )
     {
-        if ( player._pWallet == nullptr )
-            return;
         player._pWallet->add( _settings._mineralCurrency, def._minerals );
         player._pWallet->add( _settings._gasCurrency, def._gas );
     }

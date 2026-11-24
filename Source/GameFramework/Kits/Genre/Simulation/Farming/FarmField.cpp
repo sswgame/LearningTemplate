@@ -19,10 +19,10 @@ namespace sw
     {
     }
 
-    void FarmField::initialize( int32 width, int32 height, const CropCatalog* pCatalog )
+    void FarmField::initialize( int32 width, int32 height, const CropCatalog& catalog )
     {
         _topology = GridTopology{ width, height }; // 음수는 0 타일로 처리한다(GridTopology 생성자)
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _listTile.clear();
         _listTile.resize( static_cast<size_t>( _topology.getCellCount() ) );
     }

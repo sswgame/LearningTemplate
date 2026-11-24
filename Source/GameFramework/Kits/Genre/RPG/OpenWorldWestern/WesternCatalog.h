@@ -439,12 +439,18 @@ namespace sw
 
         WesternCatalog();
 
-        const WesternCrimeDef*       findCrime( const hashed_string& id ) const { return _crimeCatalog.find( id ); }
-        const WesternRegionDef*      findRegion( const hashed_string& id ) const { return _regionCatalog.find( id ); }
-        const WesternHorseDef*       findHorse( const hashed_string& id ) const { return _horseCatalog.find( id ); }
-        const WesternFoodDef*        findFood( const hashed_string& id ) const { return _foodCatalog.find( id ); }
-        const WesternClothingDef*    findClothing( const hashed_string& id ) const { return _clothingCatalog.find( id ); }
-        const WesternAnimalDef*      findAnimal( const hashed_string& id ) const { return _animalCatalog.find( id ); }
+        const WesternCrimeDef*    findCrime( const hashed_string& id ) const { return _crimeCatalog.find( id ); }
+        const WesternRegionDef*   findRegion( const hashed_string& id ) const { return _regionCatalog.find( id ); }
+        const WesternHorseDef*    findHorse( const hashed_string& id ) const { return _horseCatalog.find( id ); }
+        const WesternFoodDef*     findFood( const hashed_string& id ) const { return _foodCatalog.find( id ); }
+        const WesternClothingDef* findClothing( const hashed_string& id ) const { return _clothingCatalog.find( id ); }
+        const WesternAnimalDef*   findAnimal( const hashed_string& id ) const { return _animalCatalog.find( id ); }
+        /** @brief 전리품 테이블(`loot`)을 적은 첫 동물입니다. 없으면 nullptr 입니다. */
+        const WesternAnimalDef* findAnimalWithLoot() const
+        {
+            return _animalCatalog.findIf( []( const WesternAnimalDef& animal )
+            { return animal._lootTable.empty() == false; } );
+        }
         const WesternHuntWeaponDef*  findHuntWeapon( const hashed_string& id ) const { return _huntWeaponCatalog.find( id ); }
         const WesternHitZoneDef*     findHitZone( const hashed_string& id ) const { return _hitZoneCatalog.find( id ); }
         const WesternHonorActionDef* findHonorAction( const hashed_string& id ) const { return _honorActionCatalog.find( id ); }

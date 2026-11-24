@@ -178,7 +178,7 @@ namespace sw
         _graph.resetState();
         _flags.clear();
         _wallet.clear();
-        return _bag.initialize( nullptr, _bagSlotCount ) && _mansion.initialize( _pCatalog.get(), _pLoot.get(), &_graph, &_flags, &_bag, &_wallet, _seed );
+        return _bag.initialize( nullptr, _bagSlotCount ) && _mansion.initialize( *_pCatalog, *_pLoot, _graph, _flags, _bag, _wallet, _seed );
     }
 
     bool GhostHuntGameModeComponent::startGame()

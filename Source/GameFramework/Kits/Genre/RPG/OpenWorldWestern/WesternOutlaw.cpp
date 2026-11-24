@@ -54,8 +54,8 @@ namespace sw
     {
     }
 
-    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags* pFlags,
-                                    WeatherSystem* pWeather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
+    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
+                                    WeatherSystem& weather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                     const AIPerceptionSettings& sight )
     {
         if ( pCatalog == nullptr )
@@ -68,16 +68,23 @@ namespace sw
             SW_LOG_ERROR_ID( "WesternOutlaw.RegionNotInCatalog", "[Western] region '%#' is not in the western catalog", regionID.c_str() );
             return false;
         }
+        const WesternAnimalDef* const pLootAnimal = pCatalog->findAnimalWithLoot();
+        if ( pLootAnimal != nullptr && ( pLoot == nullptr || pInventory == nullptr ) )
+        {
+            SW_LOG_ERROR_ID( "WesternOutlaw.LootWithoutCatalogOrBag", "[Western] animal '%#' names loot table '%#' but the outlaw has no loot catalog or bag - the outlaw does not start", pLootAnimal->_id.c_str(),
+                             pLootAnimal->_lootTable.c_str() );
+            return false;
+        }
         if ( _survival.initialize( pCatalog ) == false )
             return false; // 까닭은 생존이 남겼다
-        _honor.initialize( pCatalog, &reputation );
-        _law.initialize( pCatalog );
+        _honor.initialize( *pCatalog, reputation );
+        _law.initialize( *pCatalog );
         _sight                 = WesternPerceptionSight{ sight, nullptr };
         _pWallet               = &wallet;
         _pReputation           = &reputation;
         _pClock                = &clock;
-        _pFlags                = pFlags;
-        _pWeather              = pWeather;
+        _pFlags                = &flags;
+        _pWeather              = &weather;
         _pInventory            = pInventory;
         _regionID              = regionID;
         _pCatalog              = pCatalog;
@@ -93,7 +100,7 @@ namespace sw
     void WesternOutlaw::rebindCatalog( const WesternCatalog& catalog )
     {
         _pCatalog = &catalog;
-        _honor.initialize( &catalog, _pReputation );
+        _honor.initialize( catalog, *_pReputation );
     }
 
     float32 WesternOutlaw::computeAirTemperature() const
@@ -129,8 +136,7 @@ namespace sw
             _law.advanceDay();
         }
         logLawEvents();
-        if ( _pFlags != nullptr )
-            _honor.applyDialogueFlags( *_pFlags );
+        _honor.applyDialogueFlags( *_pFlags );
     }
 
     bool WesternOutlaw::perform( const WesternDeed& deed, const vector<WesternWitness>& listCandidate )
@@ -220,12 +226,6 @@ namespace sw
         // 사체의 전리품 테이블(고기 · 깃털)을 굴려 빌린 가방에 넣는다(RDR2 의 손질 → 가방과 같다).
         for ( size_t carcassIndex = _listCarcass.size(); carcassIndex > 0; --carcassIndex )
         {
-            const WesternAnimalDef* const pAnimal = _pCatalog->findAnimal( _listCarcass[carcassIndex - 1]._animalID );
-            if ( pAnimal != nullptr && pAnimal->_lootTable.empty() == false && ( _pLoot == nullptr || _pInventory == nullptr ) )
-            {
-                SW_LOG_ERROR_ONCE_ID( "WesternOutlaw.LootWithoutCatalogOrBag", "[Western] animal '%#' names loot table '%#' but the outlaw has no loot catalog or bag - the loot is not rolled",
-                                      pAnimal->_id.c_str(), pAnimal->_lootTable.c_str() );
-            }
             WesternPelt pelt;
             if ( WesternCarcass::skin( *_pCatalog, _listCarcass[carcassIndex - 1], _pInventory != nullptr ? _pLoot : nullptr, _random, pelt, listItem ) == false )
                 continue;
@@ -312,7 +312,7 @@ namespace sw
         if ( io.isReading() )
         {
             _law = WesternLawState{};
-            _law.initialize( _pCatalog );
+            _law.initialize( *_pCatalog );
             _survival = WesternSurvival{};
             if ( io.check( _survival.initialize( _pCatalog ) ) == false )
                 return;

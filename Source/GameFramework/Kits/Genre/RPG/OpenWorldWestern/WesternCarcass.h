@@ -57,7 +57,7 @@ namespace sw
         static int32 computeCarcassStars( const WesternCatalog& catalog, const WesternCarcass& carcass );
         static bool  isRotten( const WesternCatalog& catalog, const WesternCarcass& carcass );
         /**
-         * @brief 가죽을 벗깁니다(지금 등급 그대로). 이미 벗겼거나 썩었으면 false 를 반환합니다. 전리품 테이블이 있으면 @p pLoot 로 굴려서 @p outItems 에 더합니다.
+         * @brief 가죽을 벗깁니다(지금 등급 그대로). 이미 벗겼거나 썩었으면 false 를 반환합니다. 동물이 전리품 테이블을 적었으면 @p pLoot 로 굴려서 @p outItems 에 더하고, 적었는데 @p pLoot 가 없으면 오류를 남기고 false 이며 사체는 그대로입니다.
          */
         [[nodiscard]] static bool skin( const WesternCatalog& catalog, WesternCarcass& inoutCarcass, const LootCatalog* pLoot, GameRandom& random,
                                         WesternPelt& outPelt, ItemStackList& outItems );
