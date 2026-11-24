@@ -83,6 +83,8 @@ _SUBCOMMAND: tuple[Subcommand, ...] = (
     Subcommand("test-history", "dev.test_history", "테스트 이력(sqlite) — ingest · report(흔들림 · p95 추세) · flaky(끝 줄 FLAKY=) · stage(단계 시간) · quarantine · costs · changed"),
     Subcommand("scenario-bisect", "dev.scenario_bisect", "시나리오 체인의 진 단계를 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다(--rerun-failed 는 마지막 보고에서 고른다)"),
     Subcommand("linux-scenarios", "dev.linux_scenarios", "Linux(WSL 클론) 빌드 · 체인 · 새니타이저 · 골든 입구(setup · all · build · chain · stages · rerun · sanitize · goldens …)"),
+    Subcommand("next-done", "dev.next_done", "커밋 꼬리말 `NEXT: <줄 앞말> 끝` 이 가리킨 줄이 docs/NEXT.md 에 그대로 남아 있는지 본다(--base, 묶음 검증 시작에서)"),
+    Subcommand("git-locks", "dev.git_locks", "강제로 끝난 git 이 남긴 빈 잠금 파일(index.lock 등)을 찾는다 — --remove 는 연 프로세스가 없는 빈 것만 지운다"),
     Subcommand("verify-record", "dev.verify_record", "묶음 검증 단계 통과 기록(skip · pass) · Windows 통과 기록(ok, build/verify.ok) · git pre-push 게이트"),
     Subcommand("destruction-net", "net.destruction_net_pair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )

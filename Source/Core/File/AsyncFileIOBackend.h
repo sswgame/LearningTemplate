@@ -71,7 +71,8 @@ namespace sw
     struct AsyncReadRequest
     {
 
-        string                    _path;       ///< 열 경로(`_pFile` 이 있으면 쓰지 않는다)
+        string                    _path;       ///< 열 경로(`_pFile` · `_onOpen` 이 있으면 쓰지 않는다)
+        AsyncFileOpenDelegate     _onOpen;     ///< 파일을 여는 콜백(있으면 `_path` 대신 `prepare` 가 부르고 바로 놓는다)
         shared_ptr<AsyncOpenFile> _pFile;      ///< 이미 연 파일. 없으면 백엔드가 `prepare` 에서 연다
         AsyncReadCompleteDelegate _onComplete; ///< 완료 콜백
         AsyncReadResult           _result;     ///< 결과(바이트 · 상태)

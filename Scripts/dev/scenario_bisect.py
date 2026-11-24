@@ -29,21 +29,9 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
 from common.paths import get_bin_dir, get_build_dir  # noqa: E402
-from common.run_process import run_cmake  # noqa: E402
+from common.run_process import build_preset_or_exit  # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-
-
-
-def build_preset_or_exit(preset: str) -> None:
-    """
-    시나리오를 돌리기 전에 @p preset 을 증분 빌드한다(바뀐 것이 없으면 몇 초). 짓지 않으면 고친 코드 대신 옛 바이너리가 돌아 고친 단계가 다시 지거나,
-    고치기 전 결함을 다시 찾는다(preflight.sh --from 과 같은 틈). 지면 멈춘다 — 반쯤 지은 바이너리로 돌리지 않는다.
-    """
-    print(f'{preset} 증분 빌드', flush=True)
-    result = run_cmake(['--build', '--preset', preset], cwd=REPO)
-    if not result.succeeded:
-        sys.exit('\n'.join([line for line in result.stdout.splitlines() if 'error' in line or 'FAILED' in line][:30] + [f'{preset} 빌드 실패 — 고친 뒤 다시 돌린다']))
 
 
 def record_rerun(run_dir: pathlib.Path) -> None:
@@ -482,7 +470,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     paths = app_arguments.read_chain_stages(command)
     if options.advances:
         return print_advance_steps(paths)
-    build_preset_or_exit(options.preset)
+    build_preset_or_exit(options.preset, cwd=REPO)
     dropped = ('unattended',) if options.show else ()
     # 셰이더 요청 기록은 체인 전체의 것이라 단계 몇 개로 덮지 않는다(preflight shader warm 이 그 몫만 데우게 된다).
     base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report', 'shader-request-log', *dropped)
