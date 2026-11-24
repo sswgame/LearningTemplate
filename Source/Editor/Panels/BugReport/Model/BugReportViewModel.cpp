@@ -22,7 +22,13 @@
 namespace sw::editor
 {
     BugReportViewModel::BugReportViewModel()
-        : _listRow{}
+        : BugReportViewModel{ BugReport::getRoot() }
+    {
+    }
+
+    BugReportViewModel::BugReportViewModel( string_view rootFolder )
+        : _rootFolder{ rootFolder }
+        , _listRow{}
         , _bRowsDirty{ SW_TRUE }
     {
     }
@@ -39,8 +45,10 @@ namespace sw::editor
 
     bool BugReportViewModel::captureNow( const string& note )
     {
-        string     directory;
-        const bool bCaptured         = BugReport::capture( BugReport::makeInputs( note ), directory );
+        string          directory;
+        BugReportInputs inputs       = BugReport::makeInputs( note );
+        inputs._root                 = _rootFolder;
+        const bool bCaptured         = BugReport::capture( inputs, directory );
         _bRowsDirty                  = SW_TRUE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
@@ -54,7 +62,7 @@ namespace sw::editor
     {
         _listRow.clear();
         vector<string> listFolder;
-        if ( FileUtil::collectFolders( FileUtil::toDiskPath( BugReport::getRoot() ), listFolder, false ) == false )
+        if ( FileUtil::collectFolders( FileUtil::toDiskPath( _rootFolder ), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
         VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )
