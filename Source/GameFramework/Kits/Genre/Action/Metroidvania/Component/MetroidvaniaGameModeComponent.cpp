@@ -32,6 +32,83 @@ namespace sw
 
             /** @brief 칸 한 변(m)입니다. 씬의 자리와 방 사각형이 이 격자의 월드 좌표다. */
             static constexpr float32 kTileSize = 1.0f;
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventSwing           = "MetroidvaniaSwing";
+            static constexpr const utf8* kEventEnemyHit        = "MetroidvaniaEnemyHit";
+            static constexpr const utf8* kEventPlayerHit       = "MetroidvaniaPlayerHit";
+            static constexpr const utf8* kEventBlocked         = "MetroidvaniaBlocked";
+            static constexpr const utf8* kEventParried         = "MetroidvaniaParried";
+            static constexpr const utf8* kEventEnemyKilled     = "MetroidvaniaEnemyKilled";
+            static constexpr const utf8* kEventBossDefeated    = "MetroidvaniaBossDefeated";
+            static constexpr const utf8* kEventPickup          = "MetroidvaniaPickup";
+            static constexpr const utf8* kEventRested          = "MetroidvaniaRested";
+            static constexpr const utf8* kEventFlask           = "MetroidvaniaFlask";
+            static constexpr const utf8* kEventFastTravel      = "MetroidvaniaFastTravel";
+            static constexpr const utf8* kEventDied            = "MetroidvaniaDied";
+            static constexpr const utf8* kEventCorpseRecovered = "MetroidvaniaCorpseRecovered";
+            static constexpr const utf8* kEventWon             = "MetroidvaniaWon";
+
+            /** @brief 죽음 · 휴식 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( MetroidvaniaDeathRestEventKind kind )
+            {
+                switch ( kind )
+                {
+                    case MetroidvaniaDeathRestEventKind::Rested:
+                    {
+                        return kEventRested;
+                    }
+                    case MetroidvaniaDeathRestEventKind::Died:
+                    {
+                        return kEventDied;
+                    }
+                    case MetroidvaniaDeathRestEventKind::CorpseRecovered:
+                    {
+                        return kEventCorpseRecovered;
+                    }
+                    case MetroidvaniaDeathRestEventKind::FlaskUsed:
+                    {
+                        return kEventFlask;
+                    }
+                    case MetroidvaniaDeathRestEventKind::EnemyKilled:
+                    {
+                        return kEventEnemyKilled;
+                    }
+                    case MetroidvaniaDeathRestEventKind::BossDefeated:
+                    {
+                        return kEventBossDefeated;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
+            /** @brief 플레이어가 공격을 받은 결과 @p result 에 낼 소리입니다. 이미 죽었으면 nullptr 입니다. */
+            static const utf8* findDefenseSound( MetroidvaniaDefenseResult result )
+            {
+                switch ( result )
+                {
+                    case MetroidvaniaDefenseResult::Hit:
+                    case MetroidvaniaDefenseResult::GuardBroken:
+                    {
+                        return kEventPlayerHit;
+                    }
+                    case MetroidvaniaDefenseResult::Blocked:
+                    {
+                        return kEventBlocked;
+                    }
+                    case MetroidvaniaDefenseResult::Parried:
+                    {
+                        return kEventParried;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -279,6 +356,7 @@ namespace sw
         _loadout.mergeStats( stats );
         const float32 damage = _player.computeAttackDamage( _playerDamage + stats.getValue( hashed_string( MetroidvaniaGameModeComponentInternal::kDamageStat ) ), enemy._duelist );
         (void)enemy._duelist.receiveAttack( damage, _playerPoiseDamage ); // 막지 않는 적이라 결과는 체력으로 본다
+        getSoundQueue().queueEvent( MetroidvaniaGameModeComponentInternal::kEventEnemyHit );
         if ( enemy._duelist.getHealthMachine().isAlive() )
             return;
         ItemStackList drops; // 전리품 표를 쓰지 않는 적이라 비어 있다
@@ -310,6 +388,7 @@ namespace sw
         if ( bCanSwing )
         {
             _attackCooldown.start( _playerAttackInterval );
+            getSoundQueue().queueEvent( MetroidvaniaGameModeComponentInternal::kEventSwing );
             swing();
         }
         if ( _command._bFlaskPressed == SW_TRUE )
@@ -335,8 +414,12 @@ namespace sw
             if ( enemy._startup.update( deltaTime ) )
             {
                 enemy._cooldown.start( _enemyInterval );
-                if ( bInReach )
-                    (void)_player.receiveAttack( enemy._bBoss == SW_TRUE ? _bossDamage : _enemyDamage, 0.0f ); // 패리 · 막기는 전투원이 정하고 결과는 체력으로 본다
+                if ( bInReach == false )
+                    continue;
+                // 패리 · 막기는 전투원이 정한다.
+                const MetroidvaniaDefenseOutcome defense = _player.receiveAttack( enemy._bBoss == SW_TRUE ? _bossDamage : _enemyDamage, 0.0f );
+                if ( const utf8* const pSound = MetroidvaniaGameModeComponentInternal::findDefenseSound( defense._result ) )
+                    getSoundQueue().queueEvent( pSound );
             }
             else if ( bInReach && enemy._startup.isActive() == false && enemy._cooldown.isActive() == false )
             {
@@ -354,6 +437,7 @@ namespace sw
             _abilities.applyToMotor( _motor );
         if ( pPickup->_charm.empty() == false && _loadout.grantCharm( pPickup->_charm ) )
             (void)_loadout.equip( pPickup->_charm ); // 슬롯이 모자라면 가방에 남는다
+        getSoundQueue().queueEvent( MetroidvaniaGameModeComponentInternal::kEventPickup );
         SW_LOG_INFO_ID( "Metroidvania.Pickup", "[Metroidvania] picked up '%#' - %# abilities, completion %# percent", pPickup->_id.c_str(), getAbilityCount(), _mapState.computeCompletionPercent() );
     }
 
@@ -412,6 +496,7 @@ namespace sw
                 continue;
             _motor.setPosition( _listSitePosition[next] );
             _motor.setVelocity( float2{ 0.0f, 0.0f } );
+            getSoundQueue().queueEvent( MetroidvaniaGameModeComponentInternal::kEventFastTravel );
             SW_LOG_INFO_ID( "Metroidvania.FastTravel", "[Metroidvania] travelled from '%#' to '%#'", siteID.c_str(), _listSite[next].c_str() );
             return;
         }
@@ -454,6 +539,7 @@ namespace sw
             return;
         _phase = MetroidvaniaPhase::Won;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( MetroidvaniaGameModeComponentInternal::kEventWon );
         SW_LOG_INFO_ID( "Metroidvania.Won", "[Metroidvania] '%#' is set - won with %# currency, completion %# percent", _goalFlag.c_str(), getCurrency(), _mapState.computeCompletionPercent() );
     }
 
@@ -463,6 +549,8 @@ namespace sw
         _deathRest.pollEvents( _listEvent );
         for ( const MetroidvaniaDeathRestEvent& event : _listEvent )
         {
+            if ( const utf8* const pSound = MetroidvaniaGameModeComponentInternal::findSound( event._type ) )
+                getSoundQueue().queueEvent( pSound );
             if ( event._type == MetroidvaniaDeathRestEventKind::Rested )
                 SW_LOG_INFO_ID( "Metroidvania.Rested", "[Metroidvania] rested at '%#'", event._id.c_str() );
             else if ( event._type == MetroidvaniaDeathRestEventKind::Died )

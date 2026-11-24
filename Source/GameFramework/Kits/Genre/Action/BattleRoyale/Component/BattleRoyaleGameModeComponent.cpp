@@ -41,6 +41,50 @@ namespace sw
             static constexpr float32 kMinDirection     = 1.0e-3f;
             static constexpr float32 kRouteReach       = 0.3f; ///< 길의 점에 닿았다고 보는 거리(m)
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventJump        = "BattleRoyaleJump";
+            static constexpr const utf8* kEventParachute   = "BattleRoyaleParachute";
+            static constexpr const utf8* kEventShot        = "BattleRoyaleShot";
+            static constexpr const utf8* kEventReload      = "BattleRoyaleReload";
+            static constexpr const utf8* kEventArmorBroken = "BattleRoyaleArmorBroken";
+            static constexpr const utf8* kEventDowned      = "BattleRoyaleDowned";
+            static constexpr const utf8* kEventKilled      = "BattleRoyaleKilled";
+            static constexpr const utf8* kEventRevived     = "BattleRoyaleRevived";
+            static constexpr const utf8* kEventWeaponTaken = "BattleRoyaleWeaponTaken";
+            static constexpr const utf8* kEventItemTaken   = "BattleRoyaleItemTaken";
+            static constexpr const utf8* kEventSupplyDrop  = "BattleRoyaleSupplyDrop";
+            static constexpr const utf8* kEventZoneShrink  = "BattleRoyaleZoneShrink";
+            static constexpr const utf8* kEventWon         = "BattleRoyaleWon";
+            static constexpr const utf8* kEventLost        = "BattleRoyaleLost";
+
+            /** @brief 판의 알림 @p kind 가 그 사람(`_player`)의 자리에서 내는 소리입니다. 소리가 없는 알림이면 nullptr 입니다. */
+            static const utf8* findSound( BattleRoyaleEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case BattleRoyaleEvent::Kind::PlayerDowned:
+                    {
+                        return kEventDowned;
+                    }
+                    case BattleRoyaleEvent::Kind::PlayerKilled:
+                    {
+                        return kEventKilled;
+                    }
+                    case BattleRoyaleEvent::Kind::PlayerRevived:
+                    {
+                        return kEventRevived;
+                    }
+                    case BattleRoyaleEvent::Kind::ArmorBroken:
+                    {
+                        return kEventArmorBroken;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
             /** @brief @p from 에서 @p to 쪽 방향(길이 1, 같은 자리면 0)입니다. */
             static float2 makeDirection( const float2& from, const float2& to ) { return ( to - from ).normalizeOr( float2{ 0.0f, 0.0f }, kMinDirection ); }
         };
@@ -280,6 +324,8 @@ namespace sw
                     continue;
                 const float2 plane = _flightPath.computePosition( _flightTime );
                 entry._bJumped     = SW_TRUE;
+                if ( person == kPlayer )
+                    getSoundQueue().queueEvent( Internal::kEventJump );
                 entry._skydiver.initialize( _pCatalog->getFallSettings(), float3( plane._x, _groundHeight + _flightPath._altitude, plane._y ), _groundHeight );
                 continue;
             }
@@ -288,11 +334,15 @@ namespace sw
                 ++landedCount;
                 continue;
             }
-            const float3 position = entry._skydiver.getPosition();
-            const float2 steer    = bHuman ? _commandMove : Internal::makeDirection( float2{ position._x, position._z }, _match.getZone().getNextCenter() );
+            const float3                position    = entry._skydiver.getPosition();
+            const float2                steer       = bHuman ? _commandMove : Internal::makeDirection( float2{ position._x, position._z }, _match.getZone().getNextCenter() );
+            const BattleRoyaleFallStage stageBefore = entry._skydiver.getStage();
             if ( bHuman && _bUseQueued == SW_TRUE )
                 (void)entry._skydiver.tryOpenParachute(); // 이미 폈으면 할 일이 없다
             entry._skydiver.update( deltaTime, steer );
+            const bool bOpened = stageBefore != BattleRoyaleFallStage::Parachute && entry._skydiver.getStage() == BattleRoyaleFallStage::Parachute;
+            if ( person == kPlayer && bOpened )
+                getSoundQueue().queueEvent( Internal::kEventParachute );
             if ( entry._skydiver.isLanded() )
                 landPerson( person );
         }
@@ -447,8 +497,10 @@ namespace sw
         WeaponState& weapon = _listPerson[static_cast<size_t>( person )]._weapon;
         weapon.update( deltaTime );
         BattleRoyalePlayer& player = *_match.findPlayerMutable( person );
-        if ( weapon.getMagazineAmmo() == 0 )
-            (void)player._loadout.tryReload( weapon, player._inventory ); // 재장전 중이거나 탄이 없으면 그대로다
+        // 재장전 중이거나 탄이 없으면 그대로다.
+        const bool bReloading = weapon.getMagazineAmmo() == 0 && player._loadout.tryReload( weapon, player._inventory );
+        if ( bReloading && person == kPlayer )
+            getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventReload );
     }
 
     void BattleRoyaleGameModeComponent::fire( int32 person, bool bTriggerJustPressed, float32 hitChance )
@@ -469,6 +521,7 @@ namespace sw
         WeaponShot shot;
         if ( weapon.pullTrigger( ray, bTriggerJustPressed, shot ) != WeaponFireResult::Fired )
             return;
+        queuePersonSound( BattleRoyaleGameModeComponentInternal::kEventShot, person );
         for ( size_t pellet = 0; pellet < shot._listRay.size() && _match.findPlayer( *target )->isAlive(); ++pellet )
         {
             if ( _random.nextChance( hitChance ) == false )
@@ -538,14 +591,18 @@ namespace sw
 
     void BattleRoyaleGameModeComponent::pickUpItems( int32 person )
     {
-        const float2 position = _match.findPlayer( person )->_position;
-        const size_t before   = _listGroundItem.size();
+        const float2 position     = _match.findPlayer( person )->_position;
+        const size_t before       = _listGroundItem.size();
+        const int32  weaponBefore = _listPerson[static_cast<size_t>( person )]._weaponIndex;
         (void)VectorUtil::removeIf( _listGroundItem, [&]( const BattleRoyaleGroundItem& item )
         {
             return float2::getDistanceSquared( item._position, position ) <= _pickupRadius * _pickupRadius && tryTakeItem( person, item );
         } );
-        if ( _listGroundItem.size() != before )
-            ++_groundItemRevision;
+        if ( _listGroundItem.size() == before )
+            return;
+        ++_groundItemRevision;
+        if ( person == kPlayer )
+            getSoundQueue().queueEvent( weaponBefore != _listPerson[static_cast<size_t>( person )]._weaponIndex ? BattleRoyaleGameModeComponentInternal::kEventWeaponTaken : BattleRoyaleGameModeComponentInternal::kEventItemTaken );
     }
 
     void BattleRoyaleGameModeComponent::stepPlayer( float32 deltaTime )
@@ -631,8 +688,15 @@ namespace sw
             return;
         _phase = BattleRoyalePhase::Ended;
         _resultHold.start( _resultHoldSeconds );
+        getSoundQueue().queueEvent( hasWon() ? BattleRoyaleGameModeComponentInternal::kEventWon : BattleRoyaleGameModeComponentInternal::kEventLost );
         SW_LOG_INFO_ID( "BattleRoyale.Ended", "[BattleRoyale] the match ends for squad %# - winning team %# (-1 = still fought or draw), %# people left", kPlayerSquad,
                         _match.getMatchState().getWinningTeam(), _match.countRemainingPlayers() );
+    }
+
+    void BattleRoyaleGameModeComponent::queuePersonSound( const utf8* pEventName, int32 person )
+    {
+        if ( const GameObjectManager* const pManager = getObjectManager() )
+            getSoundQueue().queueEventAt( pEventName, pManager->getWorldOrigin().toLocal( getPersonPosition( person ) ) );
     }
 
     void BattleRoyaleGameModeComponent::settle()
@@ -642,6 +706,9 @@ namespace sw
         bool bEnded = false;
         for ( const BattleRoyaleEvent& event : _listEvent )
         {
+            const utf8* const pSound = BattleRoyaleGameModeComponentInternal::findSound( event._kind );
+            if ( pSound != nullptr && event._player.has_value() )
+                queuePersonSound( pSound, *event._player );
             if ( event._kind == BattleRoyaleEvent::Kind::PlayerDowned )
                 SW_LOG_INFO_ID( "BattleRoyale.Downed", "[BattleRoyale] person %# is down", event._player.value() );
             else if ( event._kind == BattleRoyaleEvent::Kind::PlayerRevived )
@@ -653,6 +720,8 @@ namespace sw
                 const vector<BattleRoyaleGroundItem>& listDropped = _match.getSupplyDrops()[static_cast<size_t>( event._value )]._listItem;
                 _listGroundItem.insert( _listGroundItem.end(), listDropped.begin(), listDropped.end() );
                 ++_groundItemRevision;
+                if ( const GameObjectManager* const pManager = getObjectManager() )
+                    getSoundQueue().queueEventAt( BattleRoyaleGameModeComponentInternal::kEventSupplyDrop, pManager->getWorldOrigin().toLocal( toAbsolute( event._position ) ) );
                 SW_LOG_INFO_ID( "BattleRoyale.SupplyDrop", "[BattleRoyale] a supply drop landed with %# item piles", listDropped.size() );
             }
             const bool bSquadLost = event._kind == BattleRoyaleEvent::Kind::TeamEliminated && event._team == kPlayerSquad;
@@ -662,8 +731,10 @@ namespace sw
         _match.getZoneMutable().pollEvents( _listZoneEvent );
         for ( const BattleRoyaleZoneEvent& event : _listZoneEvent )
         {
-            if ( event._kind == BattleRoyaleZoneEvent::Kind::ShrinkStarted )
-                SW_LOG_INFO_ID( "BattleRoyale.ZoneShrinks", "[BattleRoyale] the zone starts to shrink (phase %#)", event._phase );
+            if ( event._kind != BattleRoyaleZoneEvent::Kind::ShrinkStarted )
+                continue;
+            getSoundQueue().queueEvent( BattleRoyaleGameModeComponentInternal::kEventZoneShrink );
+            SW_LOG_INFO_ID( "BattleRoyale.ZoneShrinks", "[BattleRoyale] the zone starts to shrink (phase %#)", event._phase );
         }
         if ( bEnded )
             endGame();

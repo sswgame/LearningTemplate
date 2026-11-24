@@ -35,6 +35,61 @@ namespace sw
             /** @brief 화면 쪽 @p side(+1 이면 오른쪽을 본다)에서 상대 쪽(앞)과 반대쪽(뒤)입니다. */
             static uint8 findForward( int32 side ) { return side > 0 ? kRight : kLeft; }
             static uint8 findBackward( int32 side ) { return side > 0 ? kLeft : kRight; }
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventMove        = "FightingMove";
+            static constexpr const utf8* kEventHit         = "FightingHit";
+            static constexpr const utf8* kEventBlocked     = "FightingBlocked";
+            static constexpr const utf8* kEventThrow       = "FightingThrow";
+            static constexpr const utf8* kEventThrowBroken = "FightingThrowBroken";
+            static constexpr const utf8* kEventSpecial     = "FightingSpecial";
+            static constexpr const utf8* kEventRoundEnd    = "FightingRoundEnd";
+            static constexpr const utf8* kEventWon         = "FightingWon";
+            static constexpr const utf8* kEventLost        = "FightingLost";
+
+            /** @brief 대전의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(대전 끝은 이긴 쪽이 정한다). */
+            static const utf8* findSound( FightingEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case FightingEvent::Kind::MoveStarted:
+                    {
+                        return kEventMove;
+                    }
+                    case FightingEvent::Kind::Hit:
+                    case FightingEvent::Kind::WallSplat:
+                    {
+                        return kEventHit;
+                    }
+                    case FightingEvent::Kind::Blocked:
+                    {
+                        return kEventBlocked;
+                    }
+                    case FightingEvent::Kind::ThrowLanded:
+                    {
+                        return kEventThrow;
+                    }
+                    case FightingEvent::Kind::ThrowBroken:
+                    {
+                        return kEventThrowBroken;
+                    }
+                    case FightingEvent::Kind::RageEntered:
+                    case FightingEvent::Kind::RageArt:
+                    case FightingEvent::Kind::HeatActivated:
+                    {
+                        return kEventSpecial;
+                    }
+                    case FightingEvent::Kind::Knockout:
+                    case FightingEvent::Kind::TimeOut:
+                    {
+                        return kEventRoundEnd;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
         };
     } // namespace
 
@@ -183,11 +238,14 @@ namespace sw
         _match.pollEvents( _listEvent );
         for ( const FightingEvent& event : _listEvent )
         {
+            if ( const utf8* const pSound = FightingGameModeComponentInternal::findSound( event._kind ) )
+                getSoundQueue().queueEvent( pSound );
             if ( event._kind == FightingEvent::Kind::RoundEnd )
                 SW_LOG_INFO_ID( "Fighting.RoundEnd", "[Fighting] round %# ends - winner %# (2 = draw)", _match.getRound(), event._value );
             if ( event._kind != FightingEvent::Kind::MatchEnd )
                 continue;
             _resultHold.start( _resultHoldSeconds );
+            getSoundQueue().queueEvent( event._value == kPlayer ? FightingGameModeComponentInternal::kEventWon : FightingGameModeComponentInternal::kEventLost );
             SW_LOG_INFO_ID( "Fighting.MatchEnd", "[Fighting] the match ends - winner %# (2 = draw), rounds %# to %#", event._value, getPlayerRounds(), getOpponentRounds() );
         }
     }

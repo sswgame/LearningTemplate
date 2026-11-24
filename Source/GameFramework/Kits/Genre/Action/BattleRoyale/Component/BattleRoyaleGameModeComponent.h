@@ -171,8 +171,10 @@ namespace sw
         optional<int32> findNearestEnemy( int32 person ) const;
         optional<int32> findVisibleEnemy( int32 person, float32 range ) const;
         optional<int32> findDownedMate( int32 person, float32 range ) const;
-        void            settle();
-        void            endGame();
+        /** @brief 사람 @p person 의 자리에서 나는 소리를 쌓습니다(플레이어 자신이 아닌 사람의 소리도 들린다). */
+        void queuePersonSound( const utf8* pEventName, int32 person );
+        void settle();
+        void endGame();
 
     private:
         PROPERTY( Category = "Squads", DisplayName = "Squad Count", Min = 2 )

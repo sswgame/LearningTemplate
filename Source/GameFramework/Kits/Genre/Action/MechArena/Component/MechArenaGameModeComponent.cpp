@@ -32,6 +32,63 @@ namespace sw
             static constexpr float32 kMinDirection    = 1.0e-3f;
             static constexpr uint32  kMinBotHandBytes = 8; ///< 손놀림 하나: 생각(4) + 옆걸음(4)
 
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
+            static constexpr const utf8* kEventFired       = "MechArenaFired";
+            static constexpr const utf8* kEventHit         = "MechArenaHit";
+            static constexpr const utf8* kEventDowned      = "MechArenaDowned";
+            static constexpr const utf8* kEventDestroyed   = "MechArenaDestroyed";
+            static constexpr const utf8* kEventRespawned   = "MechArenaRespawned";
+            static constexpr const utf8* kEventOverheated  = "MechArenaOverheated";
+            static constexpr const utf8* kEventTransformed = "MechArenaTransformed";
+            static constexpr const utf8* kEventSkill       = "MechArenaSkill";
+            static constexpr const utf8* kEventWon         = "MechArenaWon";
+            static constexpr const utf8* kEventLost        = "MechArenaLost";
+
+            /** @brief 판의 알림 @p kind 에 낼 소리입니다. 소리가 없는 알림이면 nullptr 입니다(판 끝은 이긴 팀이 정한다). */
+            static const utf8* findSound( MechArenaEvent::Kind kind )
+            {
+                switch ( kind )
+                {
+                    case MechArenaEvent::Kind::Fired:
+                    {
+                        return kEventFired;
+                    }
+                    case MechArenaEvent::Kind::Hit:
+                    {
+                        return kEventHit;
+                    }
+                    case MechArenaEvent::Kind::Downed:
+                    {
+                        return kEventDowned;
+                    }
+                    case MechArenaEvent::Kind::Destroyed:
+                    {
+                        return kEventDestroyed;
+                    }
+                    case MechArenaEvent::Kind::Respawned:
+                    case MechArenaEvent::Kind::MechSwapped:
+                    {
+                        return kEventRespawned;
+                    }
+                    case MechArenaEvent::Kind::Overheated:
+                    {
+                        return kEventOverheated;
+                    }
+                    case MechArenaEvent::Kind::Transformed:
+                    {
+                        return kEventTransformed;
+                    }
+                    case MechArenaEvent::Kind::SkillStarted:
+                    {
+                        return kEventSkill;
+                    }
+                    default:
+                    {
+                        return nullptr;
+                    }
+                }
+            }
+
             /** @brief 두 입력의 누름을 합칩니다(@p latest 의 이동 · 사격 · 부유는 그대로 이긴다). */
             static MechInput mergePresses( const MechInput& queued, const MechInput& latest )
             {
@@ -289,6 +346,10 @@ namespace sw
         _world.pollEvents( _listEvent );
         for ( const MechArenaEvent& event : _listEvent )
         {
+            const bool        bOthersOnly = event._kind == MechArenaEvent::Kind::Overheated && event._pilot != kPlayer; // 남의 과열은 알리지 않는다
+            const utf8* const pSound      = bOthersOnly ? nullptr : MechArenaGameModeComponentInternal::findSound( event._kind );
+            if ( pSound != nullptr )
+                getSoundQueue().queueEvent( pSound );
             if ( event._kind == MechArenaEvent::Kind::Destroyed )
                 SW_LOG_INFO_ID( "MechArena.Destroyed", "[MechArena] pilot %# destroyed, gauge %# against %#", event._pilot.value(), getPlayerGauge(), getEnemyGauge() );
             else if ( event._kind == MechArenaEvent::Kind::Respawned )
@@ -296,6 +357,7 @@ namespace sw
             else if ( event._kind == MechArenaEvent::Kind::MatchEnded )
             {
                 _resultHold.start( _resultHoldSeconds );
+                getSoundQueue().queueEvent( hasWon() ? MechArenaGameModeComponentInternal::kEventWon : MechArenaGameModeComponentInternal::kEventLost );
                 SW_LOG_INFO_ID( "MechArena.MatchEnd", "[MechArena] the match ends - winning team %# (-1 = draw)", _world.getMatch().getWinningTeam() );
             }
         }
