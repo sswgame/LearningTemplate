@@ -2,6 +2,10 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanMemoryAllocator.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/Log/ScopedDeferredLog.h"
+
 #include "Engine/Graphics/RHI/Backend/RHIAllocationLeakUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -64,6 +68,88 @@ namespace sw
     {
         if ( _allocator != nullptr )
             vmaSetCurrentFrameIndex( _allocator, static_cast<uint32>( frameSerial ) );
+        if constexpr ( build::kShipping == false )
+        {
+            ScopedLock<mutex> lock{ _placementMutex };
+            _currentFrame = frameSerial;
+        }
+    }
+
+    void VulkanMemoryAllocator::recordPlacement( const VulkanAllocation& allocation, const utf8* pName )
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            VmaAllocationInfo info{};
+            vmaGetAllocationInfo( _allocator, allocation._allocation, &info );
+            Placement added{};
+            added._memory = info.deviceMemory;
+            added._offset = info.offset;
+            added._size   = info.size;
+            added._pName  = pName;
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _placementMutex };
+            added._createdFrame = _currentFrame;
+            for ( const Placement& live : _listLive )
+            {
+                if ( live.overlaps( added ) )
+                    SW_LOG_ERROR_ID( "Vulkan.MemoryOverlap", "The allocation '%#' ([%#, +%#)) overlaps the live allocation '%#' ([%#, +%#), created in frame %#)", pName, added._offset, added._size,
+                                     live._pName, live._offset, live._size, live._createdFrame );
+            }
+            _listLive.push_back( added );
+        }
+    }
+
+    void VulkanMemoryAllocator::recordRelease( const VulkanAllocation& allocation )
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            if ( allocation.isValid() == false )
+                return;
+            VmaAllocationInfo info{};
+            vmaGetAllocationInfo( _allocator, allocation._allocation, &info );
+            ScopedLock<mutex> lock{ _placementMutex };
+            for ( size_t index = 0; index < _listLive.size(); ++index )
+            {
+                if ( _listLive[index]._memory != info.deviceMemory || _listLive[index]._offset != info.offset )
+                    continue;
+                Placement freed   = _listLive[index];
+                freed._freedFrame = _currentFrame;
+                VectorUtil::removeAtSwap( _listLive, index );
+                if ( _listFreed.size() < kFreedPlacementCount )
+                    _listFreed.push_back( freed );
+                else
+                    _listFreed[_freedCursor] = freed;
+                _freedCursor = ( _freedCursor + 1u ) % kFreedPlacementCount;
+                return;
+            }
+        }
+    }
+
+    void VulkanMemoryAllocator::reportPlacement( const VulkanAllocation& allocation ) const
+    {
+        if constexpr ( build::kShipping == false )
+        {
+            if ( _allocator == nullptr || allocation.isValid() == false )
+                return;
+            VmaAllocationInfo info{};
+            vmaGetAllocationInfo( _allocator, allocation._allocation, &info );
+            Placement own{};
+            own._memory = info.deviceMemory;
+            own._offset = info.offset;
+            own._size   = info.size;
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       lock{ _placementMutex };
+            for ( const vector<Placement>* pList : { &_listLive, &_listFreed } )
+            {
+                for ( const Placement& other : *pList )
+                {
+                    if ( other.overlaps( own ) == false )
+                        continue;
+                    SW_LOG_INFO_ID( "Vulkan.MemoryPlacement", "The memory [%#, +%#) is or was used by '%#' at byte %# (+%# bytes), created in frame %#, freed in frame %# (0 = live), now frame %#", own._offset,
+                                    own._size, other._pName, static_cast<int64>( other._offset ) - static_cast<int64>( own._offset ), other._size, other._createdFrame, other._freedFrame, _currentFrame );
+                }
+            }
+        }
     }
 
     bool VulkanMemoryAllocator::createBuffer( const VkBufferCreateInfo& info, VulkanBufferMemory placement, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outAllocation )
@@ -98,6 +184,7 @@ namespace sw
         outAllocation._pMapped   = static_cast<uint8*>( allocated.pMappedData );
         outAllocation._sizeBytes = allocated.size;
         vmaSetAllocationName( _allocator, outAllocation._allocation, pName );
+        recordPlacement( outAllocation, pName );
         if ( placement != VulkanBufferMemory::DeviceLocal && outAllocation._pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "Vulkan.BufferNotMapped", "The host visible buffer '%#' (%# bytes) was not mapped", pName, static_cast<uint64>( info.size ) );
@@ -124,19 +211,24 @@ namespace sw
         }
         outAllocation._sizeBytes = allocated.size;
         vmaSetAllocationName( _allocator, outAllocation._allocation, pName );
+        recordPlacement( outAllocation, pName );
         return true;
     }
 
     void VulkanMemoryAllocator::destroyBuffer( VkBuffer buffer, const VulkanAllocation& allocation )
     {
-        if ( _allocator != nullptr )
-            vmaDestroyBuffer( _allocator, buffer, allocation._allocation );
+        if ( _allocator == nullptr )
+            return;
+        recordRelease( allocation );
+        vmaDestroyBuffer( _allocator, buffer, allocation._allocation );
     }
 
     void VulkanMemoryAllocator::destroyImage( VkImage image, const VulkanAllocation& allocation )
     {
-        if ( _allocator != nullptr )
-            vmaDestroyImage( _allocator, image, allocation._allocation );
+        if ( _allocator == nullptr )
+            return;
+        recordRelease( allocation );
+        vmaDestroyImage( _allocator, image, allocation._allocation );
     }
 
     bool VulkanMemoryAllocator::allocateHeap( const VkMemoryRequirements& requirements, const utf8* pName, VulkanAllocation& outAllocation )

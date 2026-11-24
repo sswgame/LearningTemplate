@@ -678,6 +678,7 @@ namespace sw
         void savePipelineCacheIfDue();
 
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
+        void                      reportBufferPlacement( RHIBufferHandle buffer ) const override;
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
         /**

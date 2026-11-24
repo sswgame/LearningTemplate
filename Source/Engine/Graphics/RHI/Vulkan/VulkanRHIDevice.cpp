@@ -619,6 +619,13 @@ namespace sw
         return ( pTex != nullptr && pTex->_imageView != VK_NULL_HANDLE ) ? reinterpret_cast<void*>( pTex->_imageView ) : nullptr;
     }
 
+    void VulkanRHIDevice::reportBufferPlacement( RHIBufferHandle buffer ) const
+    {
+        const VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( buffer );
+        if ( pRecord != nullptr )
+            _memoryAllocator.reportPlacement( pRecord->_memory );
+    }
+
     VulkanRHIDevice::VulkanBufferRecord* VulkanRHIDevice::resolveAllocatedBuffer( RHIBufferHandle handle )
     {
         return _gpuBuffers.get( handle );
