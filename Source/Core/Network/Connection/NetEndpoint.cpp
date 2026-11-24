@@ -134,6 +134,8 @@ namespace sw
         , _listClosedReceiveCrypt{}
         , _plainWriter{}
         , _credentials{}
+        , _listDeferredWarning{}
+        , _listClosing{}
         , _settings{}
         , _sentKindStats{}
         , _listDueSlot{}
@@ -184,6 +186,7 @@ namespace sw
             _pendingBatch.clear();
             _pendingBatch._bytes.reserve( static_cast<size_t>( kNetMaxPacketSize ) * 4 );
             _listEvent.clear();
+            _listClosing.clear();
             _rejectedPacketCount        = 0;
             _authenticationFailureCount = 0;
             _replayRejectedCount        = 0;
@@ -942,12 +945,12 @@ namespace sw
             _slotTable.markDue( *slotIndex ); // 받은 것이 확인 · 응답 · 상태를 바꿨을 수 있다 — 이번 갱신에서 그 슬롯을 본다
         if ( isEncrypted() && ( type == PacketKind::Payload || type == PacketKind::Disconnect ) )
         {
-            queueSealedPacket( nowSeconds, type, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
+            queueSealedPacket( nowSeconds, type, from, slotIndex, pData + NetEndpointInternal::kHeaderSize, size - NetEndpointInternal::kHeaderSize );
             return;
         }
         if ( type == PacketKind::Payload )
         {
-            handlePayloadPacket( nowSeconds, slotIndex, reader );
+            handlePayloadPacket( nowSeconds, from, slotIndex, reader );
             return;
         }
         ControlPacket packet;
@@ -964,7 +967,7 @@ namespace sw
         handleControlPacket( type, packet, reader );
     }
 
-    void NetEndpoint::handlePayloadPacket( float64 nowSeconds, const optional<int32> slotIndex, BitReader& reader )
+    void NetEndpoint::handlePayloadPacket( float64 nowSeconds, const NetAddress& from, const optional<int32> slotIndex, BitReader& reader )
     {
         const uint32     token = reader.readBits( 32 );
         NetEndpointSlot* pSlot = slotIndex.has_value() ? &_slotTable.get( *slotIndex ) : nullptr;
@@ -981,12 +984,14 @@ namespace sw
                 return;
             }
             ++_rejectedPacketCount;
+            resendClosing( nowSeconds, from, token );
             return;
         }
         NetEndpointSlot& slot = *pSlot;
         if ( token != static_cast<uint32>( slot.getConnectionToken() ) )
         {
             ++_rejectedPacketCount;
+            resendClosing( nowSeconds, from, token );
             return;
         }
         const uint8 bRemoteDebugHold = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
@@ -1176,7 +1181,7 @@ namespace sw
         sendAccepted( freeIndex );
     }
 
-    void NetEndpoint::queueSealedPacket( float64 nowSeconds, PacketKind type, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
+    void NetEndpoint::queueSealedPacket( float64 nowSeconds, PacketKind type, const NetAddress& from, const optional<int32> slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
         ByteReader       body( pBody, bodySize > 0 ? static_cast<size_t>( bodySize ) : 0 );
@@ -1196,6 +1201,8 @@ namespace sw
                 return;
             }
             ++_rejectedPacketCount;
+            if ( type == PacketKind::Payload )
+                resendClosing( nowSeconds, from, token );
             return;
         }
         SealedDatagram sealed;
@@ -1333,6 +1340,7 @@ namespace sw
                 else if ( slot._security->_bKeysReady == SW_TRUE )
                     (void)sendSealed( slot, PacketKind::Disconnect, nullptr, 0 );
             }
+            addClosingRecord( slot );
         }
         const bool bWasVisible = slot.isEstablished() || _bServer == SW_FALSE;
         addClosedReceiveCrypt( slotIndex, slot ); // 받는 키는 `update` 스레드가 지운다
@@ -1349,6 +1357,38 @@ namespace sw
             pushEvent( NetEndpointEvent{ slotIndex, reason, NetEndpointEvent::Kind::Disconnected } );
         if ( _bServer == SW_FALSE )
             _clientIndex = nullopt;
+    }
+
+    void NetEndpoint::addClosingRecord( const NetEndpointSlot& slot )
+    {
+        if ( _pendingBatch._listDatagram.empty() || _pendingBatch._listDatagram.back()._to != slot._address )
+            return; // 봉인 번호가 다 떨어져 알림을 만들지 못했다
+        if ( _listClosing.size() >= kMaxClosingCount )
+            _listClosing.erase( _listClosing.begin() );
+        const OutgoingDatagram& datagram = _pendingBatch._listDatagram.back();
+        ClosingRecord           record;
+        record._datagram.assign( _pendingBatch._bytes.begin() + datagram._offset, _pendingBatch._bytes.begin() + datagram._offset + datagram._size );
+        record._address         = slot._address;
+        record._expireTime      = _lastUpdateTime + _settings._timeoutSeconds;
+        record._nextSendTime    = _lastUpdateTime + _settings._connectRetryInterval;
+        record._connectionToken = static_cast<uint32>( slot.getConnectionToken() );
+        _listClosing.push_back( std::move( record ) );
+    }
+
+    void NetEndpoint::resendClosing( float64 nowSeconds, const NetAddress& from, uint32 connectionToken )
+    {
+        for ( ClosingRecord& record : _listClosing )
+        {
+            if ( record._connectionToken != connectionToken || record._address != from )
+                continue;
+            if ( nowSeconds >= record._expireTime || nowSeconds < record._nextSendTime )
+                return;
+            record._nextSendTime = nowSeconds + _settings._connectRetryInterval;
+            const int32 offset   = static_cast<int32>( _pendingBatch._bytes.size() );
+            _pendingBatch._bytes.insert( _pendingBatch._bytes.end(), record._datagram.begin(), record._datagram.end() );
+            _pendingBatch._listDatagram.push_back( OutgoingDatagram{ record._address, offset, static_cast<int32>( record._datagram.size() ) } );
+            return;
+        }
     }
 
     bool NetEndpoint::sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size )

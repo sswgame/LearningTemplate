@@ -16,7 +16,10 @@
  *          서버는 요청에 상태를 남기지 않는다(netcode.io connect token, QUIC Retry, 언리얼 StatelessConnectHandlerComponent와 같은 방식).
  *          챌린지 값은 비밀 키, 주소, 클라이언트 솔트, 시간 윈도우를 섞어 만들어 돌려주기만 한다. 그 값을 되돌려 주는 응답이 와야 슬롯을 할당한다.
  *          응답은 값을 만든 윈도우와 그다음 윈도우 안(`NetChallenge::kWindowSeconds` 의 1~2배)에만 유효하다.
- *          값은 키를 섞는 splitmix 이므로 암호학적 MAC은 아니다. 위조한 주소로 슬롯을 채우는 공격을 막는 데까지만 쓴다.
+ *          값은 비밀 키의 SipHash 이고(`NetChallenge`), 위조한 주소로 슬롯을 채우는 공격을 막는 데까지만 쓴다.
+ *
+ *          **닫기**: 끊김 알림은 확인이 없어 묶음으로 잃으면 상대가 타임아웃까지 멈춘다. 그래서 알림을 보내고 닫은 연결은 그 바이트를 타임아웃만큼 들고,
+ *          닫힌 줄 모르는 상대의 패킷이 오면 다시 보낸다(QUIC 의 닫기 상태, RFC 9000 10.2.1 — 간격을 두어 답한다).
  *
  *          **책임 나누기**: 이 클래스는 패킷 형식(체크섬 헤더, 패킷 종류), 핸드셰이크 순서, 연결 수명, 대역폭, 송신 배치를 맡는다.
  *          챌린지 값과 솔트는 `NetChallenge`, 슬롯과 주소 맵은 `NetSlotTable`, AEAD 봉인과 키 유도는 `NetPacketSealer` 가 맡는다.
@@ -525,11 +528,26 @@ namespace sw
             int32  _slotIndex{ 0 };
         };
 
+        /** @brief 끊김 알림을 보내고 닫은 연결입니다. 상대가 아직 보내면 알림을 다시 보낸다. */
+        struct ClosingRecord
+        {
+            vector<uint8> _datagram{}; ///< 보낸 끊김 알림 그대로(봉인된 채 — 키는 닫을 때 지웠다)
+            NetAddress    _address{};
+            float64       _expireTime{ 0.0 };
+            float64       _nextSendTime{ 0.0 };
+            uint32        _connectionToken{ 0 }; ///< 데이터 패킷에 실리는 연결 값(아래 32 비트)
+        };
+        static constexpr size_t kMaxClosingCount = 64; ///< 넘으면 가장 오래된 것을 버린다(그 상대는 타임아웃으로 안다)
+
         // 아래 함수는 모두 잠금을 잡은 채로 부른다.
+        /** @brief 방금 보낼 배치에 넣은 끊김 알림을 @p slot 의 닫은 기록으로 남깁니다. */
+        void addClosingRecord( const NetEndpointSlot& slot ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief @p from 이 닫은 연결로 보낸 패킷이면 끊김 알림을 다시 보냅니다(재요청 간격마다 한 번). */
+        void resendClosing( float64 nowSeconds, const NetAddress& from, uint32 connectionToken ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 받은 데이터그램 하나의 헤더와 종류를 검사하고 종류별 처리로 넘깁니다. 틀린 패킷은 `_rejectedPacketCount` 로만 셉니다. 암호화 데이터는 `_listSealed` 에 모읍니다. */
         void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 암호화하지 않은 데이터 패킷의 연결 값을 확인하고 본문을 연결에 넘깁니다. */
-        void handlePayloadPacket( float64 nowSeconds, optional<int32> slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
+        void handlePayloadPacket( float64 nowSeconds, const NetAddress& from, optional<int32> slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
         void handleControlPacket( PacketKind type, const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
@@ -558,7 +576,7 @@ namespace sw
         /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
         int32 sendSealed( NetEndpointSlot& slot, PacketKind type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)의 슬롯 · 연결 값을 확인해 `_listSealed` 에 넣습니다. 여는 것은 잠금 밖(`openSealedPackets`)이다. */
-        void queueSealedPacket( float64 nowSeconds, PacketKind type, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
+        void queueSealedPacket( float64 nowSeconds, PacketKind type, const NetAddress& from, optional<int32> slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 잠금 밖에서 연 데이터그램 하나를 처리합니다. 슬롯이 그사이 닫혔거나 다른 연결이면 버립니다. */
         void handleOpenedPacket( float64 nowSeconds, const SealedDatagram& sealed ) SW_REQUIRES_LOCK( _mutex, _updateThread );
         /** @brief 키를 막 만든 슬롯의 받는 방향 상태를 `update` 스레드 소유(`_listReceiveCrypt`)로 옮깁니다. 슬롯에는 보내는 쪽만 남는다. */
@@ -627,6 +645,7 @@ namespace sw
         BitWriter _plainWriter                                  SW_GUARDED_BY( _mutex );        ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
         NetConnectCredentials _credentials                      SW_GUARDED_BY( _mutex );        ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         vector<DeferredWarning> _listDeferredWarning            SW_GUARDED_BY( _mutex );        ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
+        vector<ClosingRecord> _listClosing                      SW_GUARDED_BY( _mutex );        ///< 끊김 알림을 보내고 닫은 연결(오래된 것이 앞).
         NetEndpointConfig _settings                             SW_GUARDED_BY( _mutex );
         NetMessageKindStatsTable _sentKindStats                 SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
         vector<int32> _listDueSlot                              SW_GUARDED_BY( _mutex ); ///< `updateSlots` 가 이번에 볼 슬롯 번호(버퍼를 다시 쓴다).

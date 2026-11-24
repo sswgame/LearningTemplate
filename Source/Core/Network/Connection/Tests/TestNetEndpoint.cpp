@@ -981,6 +981,29 @@ SW_TEST_CASE( NetEndpointTest, ReconnectWaitsForHeldSlotInsteadOfServerFull )
     SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
 }
 
+/** @brief [NetEndpointTest] 끊김 알림을 모두 잃어도 상대의 다음 패킷에 다시 알려 타임아웃(5 초) 전에 끊긴다 */
+SW_TEST_CASE( NetEndpointTest, LostDisconnectIsSentAgainToAPeerStillTalking )
+{
+    NetEndpointConfig settings;
+    settings._debugHold = NetDebugHold::Off;
+    test::LoopbackCluster cluster( 93u );
+    NetTestUtil::addServerAndClient( cluster, settings );
+    SW_REQUIRE_TRUE( cluster.connectClients( 30 ) );
+    NetEmulationConditions conditions;
+    conditions._lossRate = 1.0f;
+    cluster.setConditions( conditions );
+    cluster.getServer().disconnect( 0, NetLinger::none() ); // 알림 셋을 모두 잃는다
+    cluster.run( 0.1 );
+    SW_EXPECT_TRUE( cluster.areClientsConnected() );
+    cluster.setConditions( NetEmulationConditions{} );
+    cluster.run( 2.0 );
+    SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Disconnected );
+    vector<NetEndpointEvent> listEvent;
+    cluster.getClient( 0 ).pollEvents( listEvent );
+    SW_REQUIRE_TRUE( listEvent.empty() == false );
+    SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Remote );
+}
+
 /**
  * @brief [NetEndpointTest] 닫기 전에 비울 시간을 주면 방금 보낸 신뢰 메시지가 손실 속에서도 닿은 뒤 닫히고, 상대가 사라졌으면 기한에 닫힌다 — 비우는 동안은 새로 보내지 못한다
  */
