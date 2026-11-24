@@ -142,6 +142,8 @@
 	<Field owner="ScavengerGameModeComponent" field="_companyMoon" tag="ScavengerMoonDef"/>
 	<Field owner="ScavengerGameModeComponent" field="_unlockItem" tag="ItemDef"/>
 	<Field owner="ScavengerGameModeComponent" field="_speedItem" tag="ItemDef"/>
+	<CatalogKey tag="SurvivalHorrorItemDef" catalog="SurvivalHorrorCatalog" entry="Item"/>
+	<Field owner="SurvivalHorrorGameModeComponent" field="_ammoItem" tag="SurvivalHorrorItemDef"/>
 	<CatalogKey tag="AsymmetricHorrorKillerDef" catalog="AsymmetricHorrorRules" entry="Killer"/>
 	<Field owner="AsymmetricHorrorGameModeComponent" field="_killer" tag="AsymmetricHorrorKillerDef"/>
 	<CatalogKey tag="KartTrackDef" catalog="KartTrackCatalog" entry="Track"/>

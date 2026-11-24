@@ -305,7 +305,7 @@ namespace sw
         const SurvivalHorrorMonsterDef* const pMonster = _pCatalog->findMonster( _stage._listSpot[spotIndex]._id );
         if ( pMonster == nullptr )
             return;
-        _bArmed = _ammoItem.empty() == false && _session.tryConsumeAmmo( _ammoItem, 1 ) ? SW_TRUE : SW_FALSE;
+        _bArmed = _ammoItem.empty() == false && _session.tryConsumeAmmo( _ammoItem.key(), 1 ) ? SW_TRUE : SW_FALSE;
         if ( _encounter.initialize( *pMonster, makeInvestigators(), _seed ) == false )
             return; // 조사자 값이 범위 밖이면 전투가 이유를 남겼다
         _encounterSpot = static_cast<int32>( spotIndex );
