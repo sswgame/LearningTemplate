@@ -39,7 +39,7 @@ namespace sw
         thread_local ThreadBufferCache t_threadBufferCache{};
 
         /** @brief 기록 중인 타임라인 수입니다(`ProfilerTimeline::isAnyTimelineRecording`). 네트워크 흐름 링이 메시지마다 읽는 프로세스 칸이다. */
-        atomic<uint32> s_recordingTimelineCount{ 0 };
+        [[maybe_unused]] atomic<uint32> s_recordingTimelineCount{ 0 };
     } // namespace
 } // namespace sw
 

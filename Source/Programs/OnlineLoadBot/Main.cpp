@@ -3,10 +3,10 @@
  * @brief 온라인 부하 테스트 봇의 실행 파일 — 엔진(`DedicatedServer`)을 세우고, GameFramework · 키트 · 봇 모듈(`OnlineLoadBotCore`)을 이름으로 올려 봇 진입점을 부릅니다.
  * @details - 인자는 대시 수로 가른다: `-이름`(대시 하나 — `-log-file=<path>` · `-gv_…`)은 엔진 인자로 엔진이 읽고(모르면 기동 오류), `--이름`(대시 둘)은 봇 인자로
  *            봇 모듈이 읽는다(`LoadBotMain.cpp`). 종료 코드는 `LoadBotModuleEntry` 의 것이고, 엔진 · 모듈이 서지 못하면 3 이다.
- *          - 이 실행 파일은 Engine · ModuleManager 만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 쓰므로, 실행 파일이 직접 링크해
+ *          - 이 실행 파일은 Engine · ModuleManager · DevTools(개발 계층 — 단위 테스트 같은 헤드리스 작업의 등록자)만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 쓰므로, 실행 파일이 직접 링크해
  *            main 전에 올라오면 DLL 초기화가 실패하고(0xC0000142) 로그 한 줄 없이 죽는다(Windows 는 오류 대화상자를 띄워 CTest 가 시간 초과까지 기다렸다).
  *            App · Server 처럼 엔진 기동 단계 `ModuleTypes` 에서 의존 순서대로 올리고, 올릴 때마다 그 모듈 이름으로 타입을 등록한다.
- *          - 프로세스 바닥은 전용 서버(`ServerApp`)와 같은 모양이다 — 호스트 범위(모듈 라이브러리 창구) 위에 `Engine`(`DedicatedServer`)을 세운다. 서버 키트가 쓰는 엔진 서비스와
+ *          - 프로세스 바닥은 전용 서버(`ServerApp`)와 같은 부팅 열(`HostLaunch`)이다 — 호스트 범위(개발 계층 · 모듈 라이브러리 창구) 위에 `Engine`(`DedicatedServer`)을 세운다. 서버 키트가 쓰는 엔진 서비스와
  *            타입 레지스트리(설정의 범위 검사 · 리플렉션)가 이 엔진에 있다.
  */
 #include "pch.h"
@@ -20,6 +20,8 @@
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
+#include "ModuleManager/Host/HostDevLayer.h"
+#include "ModuleManager/Host/HostLaunch.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"
@@ -29,7 +31,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 프로세스 바닥 — 전용 서버(`ServerApp`)와 같은 모양의 호스트 범위와 `Engine`(`DedicatedServer`)을 세우고 역순으로 내립니다.
+         * @brief 프로세스 바닥 — 전용 서버(`ServerApp`)와 같은 부팅 열로 호스트 범위와 `Engine`(`DedicatedServer`)을 세우고 역순으로 내립니다.
          * @details 호스트 범위(모듈 라이브러리 창구)가 엔진 범위의 부모이고, 엔진이 부트스트랩(이름 풀 · 로거 · 크래시 핸들러) · 서비스 · 기동 단계를 세운다.
          *          엔진 기동 단계 `ModuleTypes` 가 창구의 로더(`loadModules`)를 불러 봇이 쓰는 모듈을 올리고 그 타입을 등록한다.
          *          main 의 맨 처음에 두어 hashed_string 을 든 객체가 모두 사라진 뒤에 이름 풀이 내려가게 한다(로거는 비동기라 내리지 않으면 마지막 줄을 잃는다).
@@ -39,22 +41,17 @@ namespace sw
         {
         public:
             ToolHostScope()
-                : _host{}
-                , _engine{}
+                : _launch{}
                 , _listLoadedModule{}
                 , _unloadSubscription{}
                 , _pBotModule{ nullptr }
-                , _bEngineStarted{ SW_FALSE }
             {
             }
 
             ~ToolHostScope()
             {
-                // `Engine::shutdown` 은 일부만 서도 된다. 엔진 범위가 사라진 뒤 부트스트랩(종료 누수 보고)보다 먼저 호스트 범위를 내린다.
-                if ( _bEngineStarted == SW_TRUE )
-                    _engine.shutdown( _host );
-                else
-                    _host.destroyAll();
+                _launch.stopHostServices();
+                _launch.shutdownEngine();
             }
 
             ToolHostScope( const ToolHostScope& )            = delete;
@@ -68,19 +65,19 @@ namespace sw
              */
             [[nodiscard]] bool initialize( vector<utf8*>& listEngineArgument )
             {
-                ModuleLoaderSubsystem* pModuleLoader =
-                    ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ToolHostScope::loadModules, this ), "OnlineLoadBot" );
-                if ( pModuleLoader == nullptr )
+                // 봇은 배포에 없는 개발 도구라 개발 계층을 늘 준다 — 헤드리스 작업(단위 테스트)의 등록자가 DevTools.dll 에 있다.
+                if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ToolHostScope::loadModules, this ), "OnlineLoadBot", makeHostDevLayer() ) == false )
                 {
                     SW_LOW_LEVEL_ERROR( "OnlineLoadBot: the host scope did not start" );
                     return false;
                 }
                 // 엔진 종료의 모듈 내리기 자리(`ModuleUnloadStage`)에서 등록을 역순으로 거둔다 — 모듈 서브시스템(GameFramework · 키트의 캐시)이 엔진보다 먼저 내려간다.
-                _unloadSubscription             = pModuleLoader->bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &ToolHostScope::unregisterModules, this ) );
+                _unloadSubscription             = requireSubsystem<ModuleLoaderSubsystem>( _launch.getHostScope() ).bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &ToolHostScope::unregisterModules, this ) );
                 const int32 engineArgumentCount = static_cast<int32>( listEngineArgument.size() );
                 listEngineArgument.push_back( nullptr );
-                _bEngineStarted = SW_TRUE;
-                if ( _engine.initialize( engineArgumentCount, listEngineArgument.data(), EngineHostRole::DedicatedServer, &_host ) == false )
+                // 진 헤드리스 작업도 Failed 다 — 그 결과는 `runBot` 이 종료 코드로 낸다. 엔진이 서지 못한 것만 여기서 멈춘다.
+                const HostEngineStart start = _launch.initializeEngine( engineArgumentCount, listEngineArgument.data(), EngineHostRole::DedicatedServer );
+                if ( start == HostEngineStart::Failed && _launch.getEngine().isHeadless() == false )
                 {
                     SW_LOW_LEVEL_ERROR( "OnlineLoadBot: the engine did not start (dedicated server role)" );
                     return false;
@@ -95,8 +92,8 @@ namespace sw
              */
             [[nodiscard]] int32 runBot( vector<utf8*>& listBotArgument )
             {
-                if ( _engine.isHeadless() )
-                    return _engine.didHeadlessTaskFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
+                if ( _launch.getEngine().isHeadless() )
+                    return _launch.getEngine().didHeadlessTaskFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
                 const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( ModuleLibraryUtil::getDynamicSymbol( _pBotModule, LoadBotModuleEntry::kEntrySymbol ) );
                 if ( pfnRun == nullptr )
                 {
@@ -155,12 +152,10 @@ namespace sw
             }
 
         private:
-            SubsystemScope      _host;
-            Engine              _engine;
+            HostLaunch          _launch;
             vector<const utf8*> _listLoadedModule;
             Subscription        _unloadSubscription;
             void*               _pBotModule;
-            uint8               _bEngineStarted;
         };
     } // namespace
 } // namespace sw

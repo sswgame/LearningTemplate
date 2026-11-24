@@ -35,12 +35,12 @@ namespace sw
         uint32 getLoadCount() const { return _loadCount; }
 
     private:
-        void*                  _pLibrary;             ///< 올린 에디터 모듈의 OS 핸들(없으면 nullptr)
-        uint32                 _loadCount;            ///< 올린 횟수
-        uint32                 _entryCallCount;       ///< 진입점을 찾은 작업 수
-        uint8                  _bLoadAttempted   : 1; ///< 올리기를 한 번 해 봤다(실패해도 다시 하지 않는다)
-        uint8                  _bTypesRegistered : 1;
-        [[maybe_unused]] uint8 _reserved         : 6;
+        [[maybe_unused]] void*  _pLibrary;             ///< 올린 에디터 모듈의 OS 핸들(없으면 nullptr)
+        uint32                  _loadCount;            ///< 올린 횟수
+        [[maybe_unused]] uint32 _entryCallCount;       ///< 진입점을 찾은 작업 수
+        [[maybe_unused]] uint8  _bLoadAttempted   : 1; ///< 올리기를 한 번 해 봤다(실패해도 다시 하지 않는다)
+        [[maybe_unused]] uint8  _bTypesRegistered : 1;
+        [[maybe_unused]] uint8  _reserved         : 6;
     };
 
     /**
