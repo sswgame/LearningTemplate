@@ -33,7 +33,7 @@ namespace sw
 
     SceneCapture::SceneCapture()
         : _pRenderThread{ nullptr }
-        , _pipelinePath{}
+        , _pipeline{}
         , _outputTarget{ nullptr }
         , _scene{}
         , _job{}
@@ -54,10 +54,16 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneCapture.RenderThreadNoDevice", "The render thread has no device, renderer or off-screen renderers - nothing can be captured" );
             return false;
         }
+        // 파일은 여기(게임 스레드)서 읽는다 — 렌더 스레드는 읽은 것을 받는다.
+        _pipeline = pipelinePath.empty() ? RenderPipelineRequest{} : RenderPipelineRequest::load( pipelinePath );
+        if ( pipelinePath.empty() == false && _pipeline._asset == nullptr )
+        {
+            SW_LOG_ERROR_ID( "SceneCapture.PipelineNotLoaded", "The capture pipeline could not be loaded - nothing can be captured ('%#')", pipelinePath );
+            return false;
+        }
         _pRenderThread = &renderThread;
-        _scene.initialize( *renderThread.getDevice() ); // 배치 합치기는 주 화면 · 미리보기와 같은 규칙(디바이스가 정한다)
-        _pipelinePath = string( pipelinePath );
-        _sceneKey     = renderThread.getOffscreenRenderers()->allocateCaptureSceneKey(); // 키의 주인은 키로 렌더러를 드는 화면 밖 렌더러 표다
+        _scene.initialize( *renderThread.getDevice() );                              // 배치 합치기는 주 화면 · 미리보기와 같은 규칙(디바이스가 정한다)
+        _sceneKey = renderThread.getOffscreenRenderers()->allocateCaptureSceneKey(); // 키의 주인은 키로 렌더러를 드는 화면 밖 렌더러 표다
         return true;
     }
 
@@ -91,7 +97,7 @@ namespace sw
             if ( MonotonicClock::nowMicroseconds() > deadlineMicro )
             {
                 SW_LOG_ERROR_ID( "SceneCapture.CaptureNeverDrewComplete", "The capture never drew a complete frame within %# s (scene work %#, or batches waiting for their material PSO) - nothing was read ('%#')",
-                                 SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneJobs( scene.getObjectManager() ), _pipelinePath.c_str() );
+                                 SceneCaptureInternal::kReadyWaitSeconds, CaptureReadiness::countPendingSceneJobs( scene.getObjectManager() ), _pipeline._path.c_str() );
                 _job._bSucceeded = false;
                 break;
             }
@@ -129,11 +135,11 @@ namespace sw
         _job._packet._outputRenderTarget = _outputTarget->getHandle();
         device.beginFrame();
         OffscreenSceneRenderers* const pOffscreen = _pRenderThread->getOffscreenRenderers();
-        FrameRenderer* const           pRenderer  = pOffscreen != nullptr ? pOffscreen->execute( *_pRenderThread->getFrameRenderer(), &device, _job._packet, request._clearColor, _pipelinePath ) : nullptr;
+        FrameRenderer* const           pRenderer  = pOffscreen != nullptr ? pOffscreen->execute( *_pRenderThread->getFrameRenderer(), &device, _job._packet, request._clearColor, &_pipeline ) : nullptr;
         device.endFrame( false, false ); // GPU 를 기다리지 않는다 — 읽기 전송이 앞서 제출한 이 프레임 뒤에 실행된다(전송 계약). 다 그려지지 않은 장은 읽지 않으니 기다릴 까닭이 없다
         if ( pRenderer == nullptr )
         {
-            SW_LOG_ERROR_ID( "SceneCapture.CaptureCouldNotDraw", "The capture could not draw the frame ('%#')", _pipelinePath.c_str() );
+            SW_LOG_ERROR_ID( "SceneCapture.CaptureCouldNotDraw", "The capture could not draw the frame ('%#')", _pipeline._path.c_str() );
             _job._bSucceeded = false;
             return;
         }

@@ -95,7 +95,7 @@ namespace sw
          */
         RenderFrameSettings _settings{};
         GPUScene            _gpuScene{};
-        /** @brief 파이프라인 XML 의 `_listPass` 로 만든 뷰 그래프입니다. 뷰마다 다시 돈다. 렌더러가 다시 만들고(`loadPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
+        /** @brief 파이프라인 XML 의 `_listPass` 로 만든 뷰 그래프입니다. 뷰마다 다시 돈다. 렌더러가 다시 만들고(`selectPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
         RenderGraph _graph{};
         /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
         RenderGraph _frameGraph{};

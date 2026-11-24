@@ -11,9 +11,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
@@ -75,7 +75,7 @@ namespace sw
     {
         Uninitialized = 0, ///< initialize 를 아직 부르지 않았다.
         Ready,             ///< 파이프라인을 로드했고 그래프가 준비되었다.
-        Failed             ///< initialize 나 loadPipeline 이 실패했다(getStatusMessage 참고).
+        Failed             ///< initialize 나 selectPipeline 이 실패했다(getStatusMessage 참고).
     };
 
 } // namespace sw
@@ -84,13 +84,17 @@ namespace sw
 {
     /**
      * @struct RenderPipelineRequest
-     * @brief 파이프라인 고르기의 변수 몫(`-gv_renderPipeline` · `-gv_deferredShading`)을 게임 스레드가 뜬 사본입니다(`FrameRendererSubsystem`).
-     * @details 고르기는 렌더 스레드에서도 돈다(실행 중 변수 변경 · 화면 밖 렌더러) — 렌더 스레드는 변수 대신 이 사본을 받는다.
+     * @brief 다 읽은 파이프라인 하나입니다. 게임 스레드의 엔진 코드가 골라 읽어(`FrameRendererSubsystem` · `SceneCapture`) 렌더러에 넘깁니다.
+     * @details 렌더러는 렌더 스레드에서도 파이프라인을 바꾸고(실행 중 변수 변경) 새로 선다(화면 밖 렌더러) — 경로가 아니라 읽은 것을 받으므로 렌더 스레드가 파일을 열 길이 없다
+     *          (유니티가 `RenderPipelineAsset` 을 메인 스레드에서 올려 렌더러에 넘기는 것과 같다).
      */
     struct RenderPipelineRequest
     {
-        string _commandLinePath{};     ///< `-gv_renderPipeline`(비면 다음 순서)
-        uint8  _bDeferred{ SW_FALSE }; ///< `-gv_deferredShading`
+        /** @brief 파이프라인 @p path 를 읽습니다(파일을 연다 — 렌더 스레드에서 부르지 않는다). 읽지 못하면 `_asset` 이 비고 이유는 로그에 남는다. */
+        [[nodiscard]] SW_API static RenderPipelineRequest load( string_view path );
+
+        string                                _path{};  ///< 파이프라인 XML(비면 "정하지 않음" — 화면 밖 렌더러는 주 렌더러의 것을 쓴다)
+        shared_ptr<const RenderPipelineAsset> _asset{}; ///< 읽은 파이프라인(읽지 못했으면 비어 있다)
     };
 
     /**
@@ -140,11 +144,10 @@ namespace sw
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
         /**
-         * @brief 디바이스, TaskManager, 설정 사본, 파이프라인 요청, 파이프라인 XML 로 초기화합니다.
-         * @details @p settings · @p pipelineRequest 는 게임 스레드가 뜬 사본이다(`RenderFrameSettings::capture`) — 렌더러는 전역 변수를 읽지 않는다. 첫 패킷부터는 패킷의 사본을 쓴다.
+         * @brief 디바이스, TaskManager, 설정 사본, 읽은 파이프라인으로 초기화합니다.
+         * @details @p settings 는 게임 스레드가 뜬 사본이다(`RenderFrameSettings::capture`) — 렌더러는 전역 변수를 읽지 않는다. 첫 패킷부터는 패킷의 사본을 쓴다.
          */
-        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipelineRequest,
-                                       string_view pipelineXMLPath = {} );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager, const RenderFrameSettings& settings, const RenderPipelineRequest& pipeline );
         /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
         void bindHost( const FrameRendererHost& host )
         {
@@ -153,25 +156,23 @@ namespace sw
         }
         /**
          * @brief 화면 밖 씬(미리보기 · 캡처) 하나를 그리는 렌더러로 초기화합니다(`OffscreenSceneRenderers` 가 만든다).
-         * @details @p mainRenderer 의 TaskManager 를 쓰고, @p pipelinePath 가 비면 그 파이프라인과 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다).
+         * @details @p mainRenderer 의 TaskManager 를 쓰고, @p pipeline 의 경로가 비면 그 파이프라인과 PSO 저장소를 함께 쓴다(같은 파이프라인이면 PSO 가 같다).
          *          호스트(`FrameRendererHost`)는 걸지 않는다 — 프로파일러 보고 · 렌더 타깃 목록 · 모듈 확장 · 고정 PSO 미리 만들기는 주 렌더러의 일이다.
          */
-        [[nodiscard]] bool initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, string_view pipelinePath );
+        [[nodiscard]] bool initializeOffscreen( IRHIDevice* pDevice, FrameRenderer& mainRenderer, const RenderPipelineRequest& pipeline );
         /** @brief 핫패스에서 쓰는 TaskManager 를 연결합니다. */
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
         void shutdown();
 
         // ------------------------------------------------------------------------------
-        // 2) 파이프라인 · 실행: XML 로드, execute / executePacket
+        // 2) 파이프라인 · 실행: 파이프라인 바꾸기, execute / executePacket
         // ------------------------------------------------------------------------------
-        /** @brief RenderPipeline XML 로 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번만 바인딩합니다. */
-        [[nodiscard]] bool loadPipeline( const AssetID& assetID );
         /**
-         * @brief 파이프라인을 고르는 순서(초기화 인자 > @p request 의 명령줄 경로 > 디퍼드 > 팩 설정 > 기본 포워드)로 다시 골라 불러옵니다. 요청은 다음 화면 밖 렌더러가 이어받는다.
-         * @details 초기화가 부르고, 실행 중에는 두 변수가 바뀔 때 렌더 스레드를 재운 뒤 부른다(`FrameRendererSubsystem`) — 언리얼 `r.*` 렌더 설정을 실행 중에 바꾸는 것과 같다.
+         * @brief 읽은 파이프라인 @p pipeline 으로 그래프를 다시 만듭니다(지금 그것이면 아무것도 하지 않는다). 패스 콜백은 한 번만 바인딩합니다. 다음 화면 밖 렌더러가 이어받는다.
+         * @details 초기화가 부르고, 실행 중에는 파이프라인 변수가 바뀔 때 렌더 스레드가 프레임 기록 전에 부른다(`FrameRendererSubsystem`) — 언리얼 `r.*` 렌더 설정을 실행 중에 바꾸는 것과 같다.
          */
-        [[nodiscard]] bool selectPipeline( const RenderPipelineRequest& request );
+        [[nodiscard]] bool selectPipeline( const RenderPipelineRequest& pipeline );
         /**
          * @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다.
          * @details 주 시점이 없는 패킷(`RenderFramePacket::_bHasViewProj` 가 0 — 활성 씬이 없거나 씬에 카메라가 없다)은 그리지 않고 false 입니다.
@@ -221,7 +222,7 @@ namespace sw
         /** @brief Failed 일 때의 원인 메시지입니다(그 밖에는 비어 있습니다). */
         const string& getStatusMessage() const { return _statusMessage; }
         /** @brief 지금 그리는 파이프라인 XML 입니다(불러오기 전이면 빈 글). */
-        const string& getPipelinePath() const { return _pipelinePath; }
+        const string& getPipelinePath() const { return _pipeline._path; }
         /** @brief 렌더 그래프를 반환합니다. */
         const RenderGraph& getGraph() const { return _state._graph; }
         /** @brief GPUScene 을 반환합니다. */
@@ -366,6 +367,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 셋업: 패스 자원, 트랜지언트, 추가 뷰, 프레임 상수(기록 전)
         // ------------------------------------------------------------------------------
+        /** @brief @p pipeline 으로 그래프 · 패스 자원 · 트랜지언트를 다시 짓습니다(`selectPipeline`). 읽지 못한 파이프라인이거나 패스가 없으면 false 입니다. */
+        [[nodiscard]] bool rebuildPipeline( const RenderPipelineRequest& pipeline );
         /** @brief 패스용 상주 GPU 자원을 확보합니다. 패스 CB 링, 컴퓨트 CB 테이블, 엔진 PSO, Present 변형, 머티리얼 폴백이 해당합니다. */
         void ensurePassResources();
         /**
@@ -521,9 +524,7 @@ namespace sw
          * @details `_autoExposure` · `_upscale` 을 참조로 쓰므로(뷰의 노출 기록 · 업스케일 중간 RT 를 함께 놓는다) 그 뒤에 선언한다.
          */
         FrameViewResources    _viewResources;
-        string                _pipelinePath;
-        string                _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 요청 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
-        RenderPipelineRequest _pipelineRequest;      ///< 마지막으로 받은 파이프라인 요청(게임 스레드의 사본) — 화면 밖 렌더러가 이어받는다
+        RenderPipelineRequest _pipeline; ///< 마지막으로 받은 파이프라인 — 화면 밖 렌더러가 이어받는다
 
         uint32           _lastPendingPSOBatchCount; ///< 마지막 프레임의 값입니다(getLastPendingPSOBatchCount).
         uint8            _bOffscreenRenderer;       ///< 화면이 없는 미리보기 렌더러다(`initializeOffscreen`) — 화면 출력(HDR 의 두 RT)을 짓지 않는다
