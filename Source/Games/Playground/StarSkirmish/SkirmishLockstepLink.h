@@ -68,7 +68,8 @@ namespace sw
         int32 getAppliedCommandCount( int32 player ) const;
 
     private:
-        [[nodiscard]] bool isPeerConnected() const;
+        /** @brief 상대가 같은 월드(판의 씬)에 들어와 있으면 true 입니다. 붙기만 하고 씬을 읽는 상대에게 낸 입력은 받을 처리기가 없어 사라진다. */
+        [[nodiscard]] bool isPeerInWorld() const;
 
     private:
         LockstepSession        _session;

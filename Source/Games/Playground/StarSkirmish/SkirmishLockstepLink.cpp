@@ -99,18 +99,21 @@ namespace sw
         return 0 <= player && player < kPlayerCount ? _arrAppliedCount[player] : 0;
     }
 
-    bool SkirmishLockstepLink::isPeerConnected() const
+    bool SkirmishLockstepLink::isPeerInWorld() const
     {
-        return _pNetSession != nullptr && _pNetSession->getConnectedCount() > 0;
+        if ( _pNetSession == nullptr )
+            return false;
+        const INetPeers& peers = _pNetSession->getPeers();
+        return peers.isServer() ? peers.getInWorldCount() > 0 : peers.isInWorld( 0 );
     }
 
     int32 SkirmishLockstepLink::advance( float32 deltaTime, float32 step, SkirmishMatch& match )
     {
         if ( isActive() == false )
             return 0;
-        // 걸음마다 입력 하나를 낸다. 상대가 붙기 전에는 내지 않는다 - 받을 쪽이 없는 입력은 사라지고 그 틱은 영영 모이지 않는다.
+        // 걸음마다 입력 하나를 낸다. 상대가 판의 씬에 들어오기 전에는 내지 않는다 - 받을 쪽이 없는 입력은 사라지고 그 틱은 영영 모이지 않는다.
         _accumulator = MathUtil::min( _accumulator + deltaTime, step * static_cast<float32>( kMaxCatchUpSteps ) );
-        while ( isPeerConnected() && _accumulator >= step )
+        while ( isPeerInWorld() && _accumulator >= step )
         {
             if ( _bPendingInput == SW_FALSE )
             {
