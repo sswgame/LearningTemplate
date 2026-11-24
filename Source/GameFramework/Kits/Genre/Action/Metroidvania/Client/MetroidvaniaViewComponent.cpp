@@ -131,7 +131,8 @@ namespace sw
         MeshComponent* const pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr )
             return;
-        pMesh->setVisible( bShown );
+        if ( pMesh->isVisible() != bShown ) // 같은 값이어도 렌더 상태를 다시 짓는다
+            pMesh->setVisible( bShown );
         if ( bShown == false )
             return;
         pMesh->setLocalScale( size );

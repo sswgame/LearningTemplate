@@ -155,7 +155,8 @@ namespace sw
             if ( pMesh == nullptr )
                 continue;
             const bool bShown = pPlayer != nullptr && pPlayer->isDead() == false;
-            pMesh->setVisible( bShown );
+            if ( pMesh->isVisible() != bShown ) // 같은 값이어도 렌더 상태를 다시 짓는다
+                pMesh->setVisible( bShown );
             if ( bShown == false )
                 continue;
             const float32 height = pPlayer->isDowned() ? _personHeight * BattleRoyaleViewComponentInternal::kDownedHeightRatio : _personHeight;

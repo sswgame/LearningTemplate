@@ -165,7 +165,8 @@ namespace sw
             if ( pMesh == nullptr )
                 continue;
             const bool bShown = pPilot != nullptr && pPilot->getMech() != nullptr && pPilot->_state != MechPilotState::Destroyed && pPilot->_state != MechPilotState::Waiting;
-            pMesh->setVisible( bShown );
+            if ( pMesh->isVisible() != bShown ) // 같은 값이어도 렌더 상태를 다시 짓는다
+                pMesh->setVisible( bShown );
             if ( bShown == false )
                 continue;
             const float32 height = pPilot->_state == MechPilotState::Down ? _mechHeight * kMechArenaDownHeightRatio : _mechHeight;
