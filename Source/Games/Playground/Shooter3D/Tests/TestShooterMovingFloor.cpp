@@ -408,7 +408,7 @@ SW_TEST_CASE( ShooterFloorRewindTest, ShotsHitTheBodyWhereTheShooterSawItOnTheFl
     {
         (void)target.send( makeIntent() );
         (void)shooter.send( makeIntent() );
-        world._manager.update( kFloorTestStep );
+        world.advanceFrame( kFloorTestStep );
     }
     ShooterPlayerComponent* pTarget  = world.findPlayer( 0 );
     ShooterPlayerComponent* pShooter = world.findPlayer( 1 );
@@ -421,7 +421,7 @@ SW_TEST_CASE( ShooterFloorRewindTest, ShotsHitTheBodyWhereTheShooterSawItOnTheFl
     (void)shooter.send( fire );
     for ( int32 frame = 0; frame < 3; ++frame )
     {
-        world._manager.update( kFloorTestStep );
+        world.advanceFrame( kFloorTestStep );
     }
     SW_EXPECT_EQUAL( 1u, pShooter->getShotCount() );
     SW_EXPECT_EQUAL( 1u, pShooter->getHitCount() );

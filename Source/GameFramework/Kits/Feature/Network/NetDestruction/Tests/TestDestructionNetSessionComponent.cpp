@@ -3,6 +3,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -21,41 +22,16 @@
 
 using namespace sw;
 
-namespace
-{
-    /** @brief 아무 데도 보내지 않는 서버 쪽 상대입니다(연결 없음). */
-    class SilentServerPeers final : public INetPeers
-    {
-    public:
-        bool               sendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return false; }
-        bool               trySendMessage( int32, NetChannelKind, const uint8*, int32 ) override { return false; }
-        bool               sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32              broadcast( NetChannelKind, const uint8*, int32, int32 ) override { return 0; }
-        void               disconnect( int32, NetLinger ) override {}
-        void               pollInbound( NetInbound& ) override {}
-        bool               isServer() const override { return true; }
-        NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Disconnected; }
-        bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
-        NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-        uint64             getConnectionPrincipal( int32 ) const override { return 0; }
-        optional<int32>    getClientIndex() const override { return nullopt; }
-        int32              getConnectedCount() const override { return 0; }
-        void               collectConnected( vector<int32>& outListConnection ) const override { outListConnection.clear(); }
-        bool               isConnectionSaturated( int32 ) const override { return false; }
-        void               addSentKindStats( NetMessageKindStatsTable& ) const override {}
-    };
-} // namespace
-
 /**
  * @brief [DestructionNetSessionComponentTest] 서버 세션은 프레임마다 정확히 한 번, 틱이 아니라 틱 뒤 큐에서 복제를 돌린다(남의 파괴 컴포넌트를 쓰는 일이다)
  * @details 같은 그룹에서 세션의 주 틱 뒤에 도는 읽는 쪽 서브틱은 이번 프레임의 복제 전 번호를 봐야 한다. 틱 안에서 복제하던 옛 판은 오른 번호를 보여 진다.
  */
 SW_TEST_CASE( DestructionNetSessionComponentTest, ServerSessionUpdatesOncePerFrameAfterTheTick )
 {
-    SilentServerPeers peers;
-    NetMessageRouter  router;
-    GameObjectManager manager;
-    NetLinkValue      link;
+    test::FakeNetPeers peers{ true };
+    NetMessageRouter   router;
+    GameObjectManager  manager;
+    NetLinkValue       link;
     link._pPeers  = &peers;
     link._pRouter = &router;
     link._role    = NetLinkRole::Server;

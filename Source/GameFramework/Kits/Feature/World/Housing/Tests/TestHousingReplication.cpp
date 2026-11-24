@@ -2,7 +2,9 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -15,73 +17,10 @@
 // 주인이 주체라 다시 붙어도 같은지, 되돌리기 · 다시 하기의 거리, 큰 부지의 조각 전송 · 델타.
 
 using namespace sw;
+using test::FakeNetPeers;
 
 namespace
 {
-    /** @brief 보낸 메시지를 쌓기만 하는 상대입니다. 연결 목록은 테스트가 정합니다. */
-    class FakeHousingPeers final : public INetPeers
-    {
-    public:
-        struct Sent
-        {
-            vector<uint8> _bytes{};
-            int32         _connectionID{ -1 };
-        };
-
-        vector<Sent>   _listSent;
-        vector<int32>  _listConnected;
-        vector<uint64> _listPrincipal; ///< 연결 번호 자리의 주체(접속 인증기가 지정한 계정, 0 은 계정 없음)
-        int32          _sendBudget;    ///< 남은 보내기 수. 음수면 무한이다(신뢰 창이 찬 것을 흉내)
-        uint8          _bServer;
-
-        explicit FakeHousingPeers( bool bServer )
-            : _listSent{}
-            , _listConnected{}
-            , _listPrincipal{}
-            , _sendBudget{ -1 }
-            , _bServer{ static_cast<uint8>( bServer ? SW_TRUE : SW_FALSE ) }
-        {
-        }
-
-        bool sendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override { return trySendMessage( connectionID, channel, pData, size ); }
-        bool trySendMessage( int32 connectionID, NetChannelKind channel, const uint8* pData, int32 size ) override
-        {
-            (void)channel;
-            if ( _sendBudget == 0 )
-                return false;
-            if ( _sendBudget > 0 )
-                --_sendBudget;
-            _listSent.push_back( Sent{ vector<uint8>( pData, pData + size ), connectionID } );
-            return true;
-        }
-        bool  sendNotifiedMessage( int32, const uint8*, int32, uint32 ) override { return false; }
-        int32 broadcast( NetChannelKind channel, const uint8* pData, int32 size, int32 exceptID ) override
-        {
-            int32 count = 0;
-            for ( const int32 connectionID : _listConnected )
-            {
-                if ( connectionID != exceptID && trySendMessage( connectionID, channel, pData, size ) )
-                    ++count;
-            }
-            return count;
-        }
-        void               disconnect( int32, NetLinger ) override {}
-        void               pollInbound( NetInbound& ) override {}
-        bool               isServer() const override { return _bServer != SW_FALSE; }
-        NetConnectionState getConnectionState( int32 ) const override { return NetConnectionState::Connected; }
-        bool               getConnectionStats( int32, NetConnectionStats& ) const override { return false; }
-        NetAddress         getConnectionAddress( int32 ) const override { return NetAddress{}; }
-        uint64             getConnectionPrincipal( int32 connectionID ) const override
-        {
-            return connectionID >= 0 && static_cast<size_t>( connectionID ) < _listPrincipal.size() ? _listPrincipal[static_cast<size_t>( connectionID )] : 0;
-        }
-        optional<int32> getClientIndex() const override { return nullopt; }
-        int32           getConnectedCount() const override { return static_cast<int32>( _listConnected.size() ); }
-        void            collectConnected( vector<int32>& outListConnection ) const override { outListConnection = _listConnected; }
-        bool            isConnectionSaturated( int32 ) const override { return false; }
-        void            addSentKindStats( NetMessageKindStatsTable& ) const override {}
-    };
-
     /** @brief 부지 하나(레이아웃 + 지갑)입니다. 레이아웃이 지갑 주소를 묶으므로 옮기지 않는다. */
     struct HousingNetTestPlotState
     {
@@ -122,7 +61,7 @@ namespace
 
         struct Client
         {
-            FakeHousingPeers                    _peers{ false };
+            FakeNetPeers                        _peers{ false };
             HousingReplicationClient            _replication{};
             unique_ptr<HousingNetTestPlotState> _pPlot{};
             vector<HousingEditReply>            _listReply{};
@@ -130,7 +69,7 @@ namespace
 
         HousingPartCatalog                  _catalog;
         HousingPlotSettings                 _settings;
-        FakeHousingPeers                    _serverPeers;
+        FakeNetPeers                        _serverPeers;
         HousingReplicationServer            _server;
         unique_ptr<HousingNetTestPlotState> _pServerPlot;
         vector<unique_ptr<Client>>          _listClient;
@@ -167,14 +106,12 @@ namespace
             _listClient.push_back( make_unique<Client>() );
             Client&     client       = *_listClient.back();
             const int32 connectionID = static_cast<int32>( _listClient.size() ) - 1;
-            _serverPeers._listPrincipal.resize( _listClient.size(), 0 );
-            _serverPeers._listPrincipal.back() = principal;
-            client._pPlot                      = make_unique<HousingNetTestPlotState>( _settings, _catalog, 100000 );
+            client._pPlot            = make_unique<HousingNetTestPlotState>( _settings, _catalog, 100000 );
             client._replication.initialize( &client._peers );
             client._peers.setWorldGeneration( kGeneration );
             _serverPeers.setWorldGeneration( kGeneration );
-            _serverPeers._listConnected.push_back( connectionID );
-            _serverPeers.setInWorld( connectionID, true );
+            client._peers.connect( 0 );
+            _serverPeers.connectInWorld( connectionID, principal );
             _server.onPeerEnteredWorld( connectionID );
             return client;
         }
@@ -205,15 +142,13 @@ namespace
         {
             for ( size_t index = 0; index < _listClient.size(); ++index )
             {
-                vector<FakeHousingPeers::Sent> listSent = std::move( _listClient[index]->_peers._listSent );
-                _listClient[index]->_peers._listSent.clear();
-                for ( const FakeHousingPeers::Sent& sent : listSent )
+                const vector<FakeNetPeers::Sent> listSent = _listClient[index]->_peers.takeSent();
+                for ( const FakeNetPeers::Sent& sent : listSent )
                     (void)_server.handleMessage( static_cast<int32>( index ), sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered );
             }
             _server.update( vector<HousingNetPlotRef>{ _pServerPlot->makeNetPlot() } );
-            vector<FakeHousingPeers::Sent> listOut = std::move( _serverPeers._listSent );
-            _serverPeers._listSent.clear();
-            for ( const FakeHousingPeers::Sent& sent : listOut )
+            const vector<FakeNetPeers::Sent> listOut = _serverPeers.takeSent();
+            for ( const FakeNetPeers::Sent& sent : listOut )
             {
                 Client& client = *_listClient[static_cast<size_t>( sent._connectionID )];
                 SW_EXPECT_TRUE( client._replication.handleMessage( 0, sent._bytes.data(), static_cast<int32>( sent._bytes.size() ), NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
@@ -228,8 +163,7 @@ namespace
         /** @brief 연결 @p connectionID 를 닫습니다(서버 쪽). */
         void disconnect( int32 connectionID )
         {
-            (void)VectorUtil::removeValue( _serverPeers._listConnected, connectionID );
-            _serverPeers.setInWorld( connectionID, false );
+            _serverPeers.drop( connectionID );
             _server.onPeerLeftWorld( connectionID );
         }
 
@@ -248,12 +182,12 @@ namespace
  */
 SW_TEST_CASE( HousingReplicationTest, ClientKnowsItsServerIsLost )
 {
-    FakeHousingPeers         peers( false );
+    FakeNetPeers             peers( false );
     HousingReplicationClient client;
     client.initialize( &peers );
     SW_EXPECT_TRUE( client.isAwaitingServer() );
     SW_EXPECT_FALSE( client.isServerLost() );
-    peers._listConnected.push_back( 0 ); // 붙었지만 씬을 읽는 중이다
+    peers.connect( 0 ); // 붙었지만 씬을 읽는 중이다
     SW_EXPECT_TRUE( client.isAwaitingServer() );
     peers.setWorldGeneration( 1 );
     SW_EXPECT_FALSE( client.isAwaitingServer() );
@@ -564,14 +498,19 @@ SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
     }
     HousingNetRig::Client& late = rig.connect();
     // 신뢰 창이 조각 둘만 받는다 — 나머지는 서버가 들고 있다가 다음 틱에 잇는다(연결을 닫지 않는다).
-    rig._serverPeers._sendBudget = 2;
+    constexpr int32 kChunkFragmentCount = NetHousingMessage::kSnapshotChunkBytes / NetConnection::kMaxSingleMessageSize + 1;      // 머리 몫으로 하나 더
+    rig._serverPeers._heldFragmentCount = NetConnection::kReliableBulkWindow - 2 * kChunkFragmentCount - kChunkFragmentCount / 2; // 조각 둘 반
     rig.update();
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._snapshotChunkCount );
     SW_EXPECT_EQUAL( size_t{ 1 }, rig._server.getTransferCount() );
     SW_EXPECT_TRUE( late._pPlot->_layout.getPlacements().empty() );
-    rig._serverPeers._sendBudget = -1;
-    rig.update();
+    rig._serverPeers._heldFragmentCount = 0;
+    for ( int32 tick = 0; tick < 8 && rig._server.getTransferCount() > 0; ++tick )
+    {
+        rig.update();
+    }
     SW_EXPECT_EQUAL( size_t{ 0 }, rig._server.getTransferCount() );
+    SW_EXPECT_TRUE( rig._serverPeers._listDisconnected.empty() );
     SW_EXPECT_TRUE( rig._server.getStats()._snapshotChunkCount > 4 ); // 4096 배치는 64 KB 를 넘는다 — 조각이 여럿이다
     SW_REQUIRE_EQUAL( size_t{ 4096 }, late._pPlot->_layout.getPlacements().size() );
     SW_EXPECT_EQUAL( uint64{ 1 }, late._replication.getStats()._snapshotAppliedCount );
