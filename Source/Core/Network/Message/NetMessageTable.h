@@ -93,7 +93,8 @@ namespace sw
     template <uint8 RangeBase, typename... TMessage>
     struct NetMessageTable
     {
-        static constexpr uint8 kRangeBase = RangeBase;
+        static constexpr uint8 kRangeBase   = RangeBase;
+        static constexpr bool  kWorldScoped = false; ///< 종류 뒤에 월드 세대를 싣는 표인가(`NetWorldMessageTable`)
 
         /** @brief 메시지 @p TOne 이 이 표에 있는지 봅니다. */
         template <typename TOne>
@@ -187,6 +188,20 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 월드(씬)의 것을 가리키는 메시지의 표입니다 — 오브젝트 번호 · 엔티티 번호 · 부지처럼 씬이 바뀌면 다른 것을 뜻하는 값을 싣는 표는 이 형식이다.
+     * @details 종류 뒤에 보낸 쪽 월드의 세대 한 바이트가 저절로 실리고(`NetMessageWriter`), 라우터가 처리기에 넘기기 전에 가른다 — 앞 월드의 늦은 메시지는 버리고, 아직 서지 않은 월드의
+     *          신뢰 메시지는 그 월드의 씬이 설 때까지 보류한다. 키트마다 세대 칸을 적고 견주면 빠뜨린 메시지가 새로 생긴다(실제로 하우징 · 복제 스냅샷이 빠져 있었다).
+     */
+    template <uint8 RangeBase, typename... TMessage>
+    struct NetWorldMessageTable : NetMessageTable<RangeBase, TMessage...>
+    {
+        static constexpr bool kWorldScoped = true;
+
+        /** @brief 세대 바이트가 있는 선 형식이라 같은 메시지의 보통 표와 판이 다르다. */
+        static uint32 computeWireVersion() { return HashUtil::fnvStep32( NetMessageTable<RangeBase, TMessage...>::computeWireVersion(), 1u ); }
+    };
+
+    /**
      * @struct NetMessageDelivery
      * @brief 표 메시지 하나를 처리기의 `receive` 오버로드로 넘깁니다. 표 처리기(`NetTableHandler`)와 역할마다 마스크를 고르는 처리기(엔진 세션)가 함께 쓴다.
      * @details 본문 형식이 있는 메시지(`NetMessageHasBody`)는 본문을 다 읽은 뒤에만 넘긴다 — 처리기가 넘침 · 범위 검사를 빠뜨릴 자리가 없다.
@@ -236,6 +251,7 @@ namespace sw
             return TTable::template dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled ); // 마스크가 거른 뒤라 표 밖 종류는 오지 않는다
         }
 
+        bool   isWorldScoped() const final { return TTable::kWorldScoped; }
         uint32 getHoldLimit( uint8 kind ) const final
         {
             HoldVisitor visitor{};

@@ -196,7 +196,7 @@ namespace
             link._pRouter         = &_router;
             link._role            = role;
             link._bTicketRequired = SW_TRUE;
-            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link ) );
+            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link, 0 ) );
             _pTable = _manager.createGameObject( hashed_string( "CardTable" ) )->addComponent<HubCardTableComponent>();
             _manager.beginPlay();
             _manager.update( 1.0f / 60.0f );

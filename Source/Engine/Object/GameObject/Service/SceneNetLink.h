@@ -65,9 +65,12 @@ namespace sw
 
         /**
          * @brief 링크를 올립니다. 세 칸 중 하나라도 비면 오류를 남기고 올리지 않습니다(false).
-         * @details 서버 역할이면 라우터에 새 월드 세대를 연다(`NetMessageRouter::openWorld`) — 씬을 받아들일 때마다 한 번 올리므로 월드가 곧 세대다.
+         * @details 서버 역할이면 라우터에 새 월드 세대를 열고(`NetMessageRouter::openWorld`), 클라이언트면 이쪽에 선 씬을 알린다(`setLocalScene`) — 씬을 받아들일 때마다 한 번 올리므로 월드가 곧 세대다.
+         * @param sceneID 씬의 번호입니다(`computeSceneID` — 씬 문서의 경로). 서버와 클라이언트가 같은 씬이면 같다. 문서 없는 월드(하니스 · 테스트)는 0 이다.
          */
-        [[nodiscard]] bool bind( const NetLinkValue& value );
+        [[nodiscard]] bool bind( const NetLinkValue& value, uint64 sceneID );
+        /** @brief 씬 문서의 경로에서 씬 번호를 냅니다. 빈 경로는 0 입니다. */
+        static uint64 computeSceneID( string_view scenePath );
         /** @brief 링크를 비웁니다(월드가 혼자 도는 월드로 돌아간다). */
         void unbind() { _value = NetLinkValue{}; }
 
@@ -79,8 +82,8 @@ namespace sw
 
         /** @brief 올라 있으면 true 입니다. 거짓이면 이 월드는 네트워크가 없습니다. */
         [[nodiscard]] bool isBound() const { return _value.isComplete(); }
-        /** @brief 이 월드의 세대입니다(서버가 정한다). 오브젝트 번호를 실은 메시지는 이 값을 함께 싣고, 받는 쪽은 자기 값과 다르면 버린다. 링크가 비었으면 0 입니다. */
-        [[nodiscard]] uint32 getWorldGeneration() const;
+        /** @brief 이 월드의 세대입니다(서버가 정한다). 월드 범위 메시지에 저절로 실리고 라우터가 가른다(`NetWorldMessageTable`). 링크가 비었으면 0 입니다. */
+        [[nodiscard]] uint8 getWorldGeneration() const;
         /** @brief 올라 있는 값입니다(`isBound` 일 때만 씁니다). */
         [[nodiscard]] const NetLinkValue& get() const { return _value; }
 

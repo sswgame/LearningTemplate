@@ -231,7 +231,7 @@ namespace sw
         // 넷 링크는 플레이가 시작되기 전(활성화 · `beginPlay` 앞)에 올린다. 미리보기 씬은 만드는 쪽(가상 서버 하니스)이 자기 링크를 올린다.
         GameObjectManager* const pNewManager = pScene->getObjectManager();
         if ( role != SceneRole::Preview && _netLink.isComplete() && pNewManager != nullptr )
-            (void)pNewManager->getSubsystem<SceneNetLink>().bind( _netLink );
+            (void)pNewManager->getSubsystem<SceneNetLink>().bind( _netLink, SceneNetLink::computeSceneID( pScene->getSourcePath() ) );
 
         if ( role == SceneRole::Preview )
         {
@@ -1104,7 +1104,7 @@ namespace sw
             return;
         SceneNetLink& link = pActive->getSubsystem<SceneNetLink>();
         if ( value.isComplete() )
-            (void)link.bind( value );
+            (void)link.bind( value, SceneNetLink::computeSceneID( _pActiveScene->getSourcePath() ) );
         else
             link.unbind();
     }

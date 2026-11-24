@@ -68,14 +68,14 @@ namespace sw
         BitWriter& beginMessage()
         {
             static_assert( TMessage::kChannelPolicy == NetChannelPolicy::Descriptor, "the sender chooses this message's channel - pass it to beginMessage( channel )" );
-            return beginDescribed( TTable::template getKindOf<TMessage>(), TMessage::kChannel );
+            return beginDescribed( TTable::template getKindOf<TMessage>(), TMessage::kChannel, TTable::kWorldScoped );
         }
         /** @brief 보내는 쪽이 채널을 고르는 표 메시지(`NetChannelPolicy::SenderChooses`)를 @p channel 로 시작합니다. 서술자가 허락하지 않으면 컴파일되지 않는다. */
         template <typename TTable, typename TMessage>
         BitWriter& beginMessage( NetChannelKind channel )
         {
             static_assert( TMessage::kChannelPolicy == NetChannelPolicy::SenderChooses, "this message travels on its descriptor channel - use beginMessage()" );
-            return beginDescribed( TTable::template getKindOf<TMessage>(), channel );
+            return beginDescribed( TTable::template getKindOf<TMessage>(), channel, TTable::kWorldScoped );
         }
         /**
          * @brief 비우고 표 @p TTable 의 메시지 @p TMessage 의 종류 바이트와 본문(고정 배치형, `NetMessageBodyDef`)을 씁니다.
@@ -84,8 +84,7 @@ namespace sw
         template <typename TTable, typename TMessage>
         [[nodiscard]] bool writeMessage( const typename TMessage::Body& body )
         {
-            const bool bWritten = TMessage::writeBody( body, begin( TTable::template getKindOf<TMessage>() ) );
-            _messageChannel     = TMessage::kChannel;
+            const bool bWritten = TMessage::writeBody( body, beginDescribed( TTable::template getKindOf<TMessage>(), TMessage::kChannel, TTable::kWorldScoped ) );
             _state              = bWritten ? State::Typed : State::Failed;
             return bWritten;
         }
@@ -96,19 +95,19 @@ namespace sw
         /** @brief 손으로 쓴 본문을 상대 모두에게 보냅니다. 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게 보냅니다. 반환값은 보낸 수입니다. */
         int32 sendToPeers( INetPeers& peers, NetChannelKind channel ) const;
         /** @brief `writeMessage` 로 쓴 메시지를 서술자의 채널로 보냅니다. 쓰지 못했거나 손으로 쓴 본문이면 오류 로그와 false 입니다. */
-        [[nodiscard]] bool sendMessage( INetPeers& peers, int32 connectionID ) const;
+        [[nodiscard]] bool sendMessage( INetPeers& peers, int32 connectionID );
         /** @brief `sendMessage` 와 같되 신뢰 창이 차면 기다리지 않고 false 입니다(`INetPeers::trySendMessage`). */
-        [[nodiscard]] bool trySendMessage( INetPeers& peers, int32 connectionID ) const;
+        [[nodiscard]] bool trySendMessage( INetPeers& peers, int32 connectionID );
         /** @brief `writeMessage` 로 쓴 메시지를 서술자의 채널로 연결된 모두에게 보냅니다. 반환값은 보낸 수입니다. */
-        int32 broadcastMessage( INetPeers& peers, int32 exceptID = constant::invalid_index::kInt32 ) const;
+        int32 broadcastMessage( INetPeers& peers, int32 exceptID = constant::invalid_index::kInt32 );
         /** @brief `writeMessage` 로 쓴 메시지를 서술자의 채널로 상대 모두에게 보냅니다. 반환값은 보낸 수입니다. */
-        int32 sendMessageToPeers( INetPeers& peers ) const;
+        int32 sendMessageToPeers( INetPeers& peers );
         /** @brief 전달 통지를 달아 보냅니다(`INetPeers::sendNotifiedMessage` — 비신뢰). 서술자 채널이 `Unreliable` 이 아니면 오류 로그와 false 입니다. */
-        [[nodiscard]] bool sendNotifiedMessage( INetPeers& peers, int32 connectionID, uint32 tag ) const;
+        [[nodiscard]] bool sendNotifiedMessage( INetPeers& peers, int32 connectionID, uint32 tag );
         /** @brief `writeMessage` 로 쓴 메시지의 채널입니다(줄에 세웠다가 나중에 보내는 쪽이 바이트와 함께 든다). 손으로 쓴 본문이면 nullopt 입니다. */
         optional<NetChannelKind> getMessageChannel() const;
         /** @brief 서술자에 묶인 메시지를 줄에 세울 사본으로 만듭니다. 표 밖 종류(`begin`)이거나 쓰지 못한 메시지면 오류 로그와 nullopt 입니다. */
-        [[nodiscard]] optional<NetQueuedMessage> makeQueuedMessage() const;
+        [[nodiscard]] optional<NetQueuedMessage> makeQueuedMessage() const; ///< 월드 범위 표의 메시지는 세울 수 없다(보낼 때의 월드가 정해지지 않았다 — 오류 로그와 nullopt)
 
         /** @brief 검사 · 테스트용 바이트입니다. 보내는 길은 위의 send 계열이다(바이트를 꺼내 채널을 따로 고르지 않는다). */
         const vector<uint8>& getBytes() const { return _writer.getBytes(); }
@@ -125,12 +124,15 @@ namespace sw
 
         [[nodiscard]] bool allowsCallerChannel() const;
         [[nodiscard]] bool allowsDescriptorChannel() const;
-        BitWriter&         beginDescribed( uint8 kind, NetChannelKind channel );
+        BitWriter&         beginDescribed( uint8 kind, NetChannelKind channel, bool bWorldScoped );
+        /** @brief 월드 범위 메시지에 @p peers 의 월드 세대를 적습니다. 서술자에 묶인 메시지가 아니면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool prepareDescribed( const INetPeers& peers );
 
     private:
         BitWriter      _writer;
         NetChannelKind _messageChannel;
         State          _state;
+        uint8          _bWorldScoped; ///< 종류 뒤의 한 바이트가 월드 세대다(보낼 때 적는다)
     };
 } // namespace sw
 
@@ -248,8 +250,10 @@ namespace sw
             (void)connectionID;
             (void)reason;
         }
+        /** @brief 이 처리기의 메시지가 월드 세대를 싣는가입니다(`NetWorldMessageTable`). 표 기반 처리기는 표에서 저절로 낸다. */
+        virtual bool isWorldScoped() const { return false; }
         /**
-         * @brief 클라이언트가 서버의 새 월드 세대를 받았습니다(`NetMessageRouter::openWorld`). 같은 `poll` 의 뒤따르는 메시지보다 먼저 부른다.
+         * @brief 클라이언트의 월드가 서버의 새 월드 세대가 됐습니다 — 알림이 오고 이쪽 씬이 그 씬일 때다. 같은 `poll` 의 뒤따르는 메시지보다 먼저 부른다.
          * @details 세대를 세션 번호로 쓰는 처리기(락스텝 판)가 그 세대의 첫 메시지를 받기 전에 갈아 끼우는 자리다. 서버 쪽에는 부르지 않는다(스스로 열었다).
          */
         virtual void onWorldOpened( uint32 generation ) { (void)generation; }
@@ -383,9 +387,17 @@ namespace sw
          *          (`SceneNetLink::getWorldGeneration`). 유니티 NGO 처럼 번호를 다시 쓰지 않는 길은 양쪽이 이름으로 따로 내는 씬 번호를 덮지 못해, 언리얼이 레벨 이동마다 NetGUID 를
          *          새로 짜는 것처럼 서버가 정하는 세대로 가른다. 양쪽이 따로 세면 클라이언트 혼자 씬을 다시 여는 때 어긋난다.
          */
-        void openWorld( INetPeers& peers );
-        /** @brief 지금 월드의 세대입니다. 서버는 자기가 연 것, 클라이언트는 서버에게 받은 것이다. 아직 없으면 0. */
-        uint32 getWorldGeneration() const { return _worldGeneration; }
+        void openWorld( INetPeers& peers, uint64 sceneID );
+        /**
+         * @brief 클라이언트가 씬 @p sceneID 를 세웠습니다(`SceneNetLink::bind`). 서버가 알린 월드의 씬이면 그 세대가 이쪽 월드의 세대가 됩니다.
+         * @details 서버가 먼저 새 씬을 열면 그 메시지는 앞 씬의 오브젝트에 닿으면 안 된다 — 이쪽 씬이 다르면 세대는 0 이고 월드 범위 신뢰 메시지는 씬이 설 때까지 보류된다.
+         *          같은 씬을 다시 여는 것(재대결)은 씬 번호로 가를 수 없어 알림이 온 때 바뀐다.
+         */
+        void setLocalScene( INetPeers& peers, uint64 sceneID );
+        /** @brief 이쪽 월드의 세대입니다. 서버는 자기가 연 것, 클라이언트는 서버에게 받았고 이쪽 씬이 그 씬인 것이다. 아직 없거나 씬이 다르면 0. */
+        uint8 getWorldGeneration() const { return _worldGeneration; }
+        /** @brief 세대 @p generation 이 이쪽 월드보다 뒤(아직 서지 않은 월드)면 true 입니다. */
+        bool isLaterWorld( uint8 generation ) const;
         /**
          * @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다.
          * @details 받는 쪽 역할 @p role 로 갈 수 없는 종류(서버가 받은 `ToClient` 종류)는 처리기에 넘기지 않고 세고 Malformed 를 반환합니다.
@@ -406,6 +418,8 @@ namespace sw
          */
         static int32      relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
         const DevCounter& getMalformedCount() const { return _malformedCount; }
+        /** @brief 앞 월드의 늦은 메시지라 처리기에 넘기지 않은 수입니다. */
+        const DevCounter& getOtherWorldCount() const { return _otherWorldCount; }
         /** @brief 보류했다가 시한 · 상한 · 월드 바뀜으로 전하지 못한 메시지 수입니다. */
         const DevCounter& getDeliveryFailedCount() const { return _deliveryFailedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
@@ -425,6 +439,14 @@ namespace sw
         void sendWireVersions( INetPeers& peers, int32 connectionID );
         /** @brief 상대 @p connectionID 의 판 알림을 읽어 들고 이 쪽과 견줍니다. 깨졌거나 다르면 연결을 끊습니다. */
         void receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 메시지의 월드가 이쪽 월드의 앞 · 같음 · 뒤 가운데 어디인지입니다. */
+        enum class WorldOrder : uint8
+        {
+            Same = 0,
+            Earlier, ///< 앞 월드의 늦은 것
+            Later    ///< 아직 이쪽에 서지 않은 월드의 것
+        };
+
         /** @brief 보류 중인 메시지 하나입니다. */
         struct HeldMessage
         {
@@ -433,7 +455,7 @@ namespace sw
             int64          _deadline{ 0 };
             int32          _connectionID{ 0 };
             NetChannelKind _channel{ NetChannelKind::ReliableOrdered };
-            uint8          _bMissingHandler{ SW_FALSE }; ///< 처리기가 없어 기다린다(열쇠를 모른다 — 같은 영역의 뒤 메시지가 모두 뒤에 선다)
+            uint8          _bMissingHandler{ SW_FALSE }; ///< 처리기 또는 그 월드의 씬이 없어 기다린다(열쇠를 모른다 — 같은 영역의 뒤 메시지가 모두 뒤에 선다)
             uint8          _rangeBase{ 0 };
         };
 
@@ -443,12 +465,20 @@ namespace sw
         NetHandleResult deliverOrHold( INetPeers& peers, NetPeerRole role, const NetInboundMessage& message, const uint8* pData, bool bHoldMissingHandler );
         /** @brief 보류 줄에 세웁니다. 줄이 찼으면 전하지 못한 것으로 끝냅니다. */
         void holdMessage( INetPeers& peers, const NetInboundMessage& message, const uint8* pData, uint64 key, int64 holdMilliseconds, bool bMissingHandler );
+        /** @brief 같은 연결 · 영역에 처리기 · 월드를 기다리는 앞 메시지가 있으면 true 입니다. */
+        bool isBlockedByWorld( int32 connectionID, uint8 rangeBase ) const;
         bool isBlockedByHeld( int32 connectionID, uint8 rangeBase, uint64 key ) const;
         /** @brief 전하지 못한 메시지를 세고, 보류를 선언한 종류면 보낸 쪽에 알립니다. */
         void reportDeliveryFailed( INetPeers& peers, const HeldMessage& held, NetDeliveryFailure reason );
-        void dropHeldMessages( INetPeers& peers, NetDeliveryFailure reason );
         /** @brief 상대가 알린 "전하지 못함" 을 그 영역의 처리기에 넘깁니다. 깨졌으면 연결을 끊습니다. */
         void receiveDeliveryFailed( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 알림과 이쪽 씬을 맞춰 이쪽 월드의 세대를 정합니다. */
+        void updateClientWorld( INetPeers& peers );
+        void setWorldGeneration( INetPeers& peers, uint8 generation );
+        /** @brief @p generation 이 @p localGeneration 의 앞인지 뒤인지입니다. 1 ~ 255 를 돌고 0 은 "월드 없음" 이다. */
+        static WorldOrder compareWorld( uint8 generation, uint8 localGeneration );
+        /** @brief 메시지의 월드 세대를 이쪽과 견줍니다. 월드 범위가 아니거나 세대 바이트가 없으면(깨진 메시지 — 처리기 앞에서 거른다) 같은 것으로 봅니다. */
+        WorldOrder compareMessageWorld( const INetMessageHandler& handler, const uint8* pData, int32 size ) const;
         /** @brief 지금 월드 세대를 @p connectionID 에(-1 이면 상대 모두에게) 보냅니다. */
         void sendWorldGeneration( INetPeers& peers, int32 connectionID );
         /** @brief 서버가 보낸 월드 세대를 읽어 들고 처리기에 알립니다. 깨졌거나 서버가 받은 것이면 연결을 끊습니다. */
@@ -478,6 +508,7 @@ namespace sw
         NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
         DevCounter                                    _malformedCount;
+        DevCounter                                    _otherWorldCount;     ///< 앞 월드의 것이라 버린 메시지 수
         DevCounter                                    _deliveryFailedCount; ///< 보류했다가 전하지 못한 메시지 수
         uint64                                        _unclaimedNotificationCount;
         unordered_map<int32, vector<PeerWireVersion>> _mapPeerWireVersion;    ///< 연결마다 상대가 알린 표 판. 연결이 닫히면 지운다
@@ -485,7 +516,10 @@ namespace sw
         vector<HeldMessage>                           _listHeld;              ///< 보류 중인 메시지(온 순서)
         ClockFunction                                 _pClock;                ///< 보류 시한의 시계
         uint32                                        _sessionSerial;         ///< 지금 세션의 번호(`closeSession` 이 올린다)
-        uint32                                        _worldGeneration;       ///< 서버가 연 월드의 세대(`openWorld`). 0 이면 아직 없다
+        uint64                                        _worldSceneID;          ///< 서버가 연 월드의 씬(서버는 연 것, 클라이언트는 알림)
+        uint64                                        _localSceneID;          ///< 클라이언트 — 이쪽에 선 씬(`setLocalScene`)
+        uint8                                         _announcedGeneration;   ///< 서버가 연 월드의 세대(서버는 연 것, 클라이언트는 알림). 0 이면 아직 없다
+        uint8                                         _worldGeneration;       ///< 이쪽 월드의 세대. 클라이언트의 씬이 다르면 0
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<INetMessageHandler> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<INetMessageHandler>::ReleaseFunction, &NetMessageRouter::releaseHandler, this ) };

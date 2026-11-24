@@ -458,7 +458,7 @@ SW_TEST_CASE( NetMessageRouterTest, WorldGenerationReachesEveryClient )
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
     SW_REQUIRE_TRUE( pair.getServer().listen() );
-    serverRouter.openWorld( pair.getServer() ); // 아직 아무도 없다 — 붙을 때 받는다
+    serverRouter.openWorld( pair.getServer(), 0 ); // 아직 아무도 없다 — 붙을 때 받는다
     SW_REQUIRE_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     const auto pollAll = [&]()
     {
@@ -470,23 +470,23 @@ SW_TEST_CASE( NetMessageRouterTest, WorldGenerationReachesEveryClient )
         }
     };
     pollAll();
-    SW_EXPECT_EQUAL( 1u, serverRouter.getWorldGeneration() );
-    SW_EXPECT_EQUAL( 1u, clientRouter.getWorldGeneration() );
-    serverRouter.openWorld( pair.getServer() );
-    SW_EXPECT_EQUAL( 1u, clientRouter.getWorldGeneration() ); // 닿기 전이다
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( serverRouter.getWorldGeneration() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( clientRouter.getWorldGeneration() ) );
+    serverRouter.openWorld( pair.getServer(), 0 );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( clientRouter.getWorldGeneration() ) ); // 닿기 전이다
     pollAll();
-    SW_EXPECT_EQUAL( 2u, clientRouter.getWorldGeneration() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( clientRouter.getWorldGeneration() ) );
 
     // 세대는 서버가 정한다 — 클라이언트가 보내면 끊는다.
     NetMessageWriter messageWriter;
-    messageWriter.begin( NetMessageRange::kRouterWorldKind ).writeUint32( 77u );
+    messageWriter.begin( NetMessageRange::kRouterWorldKind ).writeBits( 77u, 8 );
     SW_REQUIRE_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelKind::ReliableOrdered ) );
     SW_EXPECT_LOG( "Net.RouterWrongDirection" );
     pollAll();
-    SW_EXPECT_EQUAL( 2u, serverRouter.getWorldGeneration() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( serverRouter.getWorldGeneration() ) );
     SW_EXPECT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) != NetConnectionState::Connected );
     clientRouter.closeSession();
-    SW_EXPECT_EQUAL( 0u, clientRouter.getWorldGeneration() );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( clientRouter.getWorldGeneration() ) );
 }
 
 /**
@@ -803,7 +803,7 @@ SW_TEST_CASE( NetMessageRouterTest, HeldMessagesRunInOrderWhenTheirTargetIsReady
     SW_EXPECT_TRUE( server._listFailedKey.empty() );
 }
 
-/** @brief [NetMessageRouterTest] 선언한 시간을 넘긴 보류 · 월드가 바뀐 보류는 조용히 버리지 않고 보낸 쪽에 알린다. 줄은 상한에서 멈춘다 */
+/** @brief [NetMessageRouterTest] 선언한 시간을 넘긴 보류는 조용히 버리지 않고 보낸 쪽에 알린다. 줄은 상한에서 멈춘다 */
 SW_TEST_CASE( NetMessageRouterTest, FailedHeldMessagesAreReportedToTheSender )
 {
     HoldTestRig            rig;
@@ -821,15 +821,6 @@ SW_TEST_CASE( NetMessageRouterTest, FailedHeldMessagesAreReportedToTheSender )
     SW_REQUIRE_EQUAL( size_t{ 1 }, server._listFailedKey.size() );
     SW_EXPECT_EQUAL( uint64{ 7 }, server._listFailedKey[0] );
 
-    rig.send( 8, 1 );
-    rig.pollAll();
-    SW_EXPECT_LOG( "Net.RouterDeliveryFailed" );
-    rig._serverRouter.openWorld( rig._pair.getServer() );
-    rig.pollAll();
-    SW_EXPECT_EQUAL( 0, rig._clientRouter.getHeldMessageCount() );
-    SW_REQUIRE_EQUAL( size_t{ 2 }, server._listFailedKey.size() );
-    SW_EXPECT_EQUAL( uint64{ 8 }, server._listFailedKey[1] );
-
     for ( int32 index = 0; index < NetMessageRouter::kMaxHeldMessages; ++index )
     {
         rig.send( 9, static_cast<uint64>( index ) );
@@ -840,7 +831,7 @@ SW_TEST_CASE( NetMessageRouterTest, FailedHeldMessagesAreReportedToTheSender )
     rig.send( 9, 99 );
     rig.pollAll();
     SW_EXPECT_EQUAL( NetMessageRouter::kMaxHeldMessages, rig._clientRouter.getHeldMessageCount() );
-    SW_EXPECT_EQUAL( size_t{ 3 }, server._listFailedKey.size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, server._listFailedKey.size() );
 }
 
 /** @brief [NetMessageRouterTest] 처리기를 달기 전(씬을 읽는 동안)에 온 신뢰 메시지는 처리기가 서면 온 순서대로 전해진다 */
@@ -860,4 +851,105 @@ SW_TEST_CASE( NetMessageRouterTest, ReliableMessagesWaitForTheirHandler )
     SW_EXPECT_EQUAL( uint64{ 10 }, client._listHandled[0]._number );
     SW_EXPECT_EQUAL( uint64{ 12 }, client._listHandled[2]._number );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._clientRouter.getDeliveryFailedCount().get() );
+}
+
+namespace
+{
+    /** @brief 월드 범위 표를 받는 처리기입니다 — 받은 값을 순서대로 적습니다. */
+    struct WorldTestMessage
+    {
+        using Order = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using Pose  = NetMessageDef<1, NetMessageDirection::Both, NetChannelKind::Unreliable>;
+        using Table = NetWorldMessageTable<NetMessageRange::kGame, Order, Pose>;
+    };
+
+    class WorldTestHandler final : public NetTableHandler<WorldTestHandler, WorldTestMessage::Table, WorldTestMessage::Order, WorldTestMessage::Pose>
+    {
+    public:
+        vector<uint64> _listNumber{};
+
+        NetHandleResult receive( WorldTestMessage::Order, const NetMessageContext& context, BitReader& body )
+        {
+            (void)context;
+            _listNumber.push_back( body.readVarUint() );
+            return NetHandleResult::Handled;
+        }
+        NetHandleResult receive( WorldTestMessage::Pose, const NetMessageContext& context, BitReader& body )
+        {
+            return receive( WorldTestMessage::Order{}, context, body );
+        }
+    };
+
+    struct WorldTestUtil
+    {
+        static constexpr uint64 kFirstScene  = 11;
+        static constexpr uint64 kSecondScene = 22;
+
+        template <typename TMessage>
+        static void send( INetPeers& peers, uint64 number )
+        {
+            NetMessageWriter writer;
+            writer.beginMessage<WorldTestMessage::Table, TMessage>().writeVarUint( number );
+            SW_REQUIRE_TRUE( writer.sendMessageToPeers( peers ) > 0 );
+        }
+    };
+} // namespace
+
+/**
+ * @brief [NetMessageRouterTest] 서버가 새 씬을 먼저 열면 그 신뢰 메시지는 앞 씬의 처리기에 닿지 않고 클라이언트의 씬이 설 때까지 기다린다 — 앞 씬의 늦은 메시지는 새 씬에 닿지 않는다
+ */
+SW_TEST_CASE( NetMessageRouterTest, WorldMessagesReachOnlyTheirOwnScene )
+{
+    HoldTestRig rig;
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kFirstScene );
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kFirstScene );
+    rig.pollAll();
+    WorldTestHandler       serverHandler;
+    WorldTestHandler       firstScene;
+    const sw::Subscription serverSubscription = rig._serverRouter.registerHandler( &serverHandler );
+    sw::Subscription       firstSubscription  = rig._clientRouter.registerHandler( &firstScene );
+    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 1 );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 1 }, firstScene._listNumber.size() );
+
+    // 서버가 다음 씬을 열고 보낸다 — 클라이언트는 아직 앞 씬이다. 비신뢰는 버린다.
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kSecondScene );
+    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 2 );
+    WorldTestUtil::send<WorldTestMessage::Pose>( rig._pair.getServer(), 3 );
+    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getServer(), 4 );
+    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 90 ); // 앞 씬에서 늦게 보낸 것이다 — 서버의 새 씬에 닿지 않는다
+    rig.pollAll();
+    SW_EXPECT_EQUAL( size_t{ 1 }, firstScene._listNumber.size() );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( rig._clientRouter.getWorldGeneration() ) );
+    SW_EXPECT_TRUE( serverHandler._listNumber.empty() );
+    SW_EXPECT_EQUAL( 2, rig._clientRouter.getHeldMessageCount() );
+
+    // 새 씬이 서면 온 순서대로 닿는다.
+    firstSubscription.reset();
+    WorldTestHandler       secondScene;
+    const sw::Subscription secondSubscription = rig._clientRouter.registerHandler( &secondScene );
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kSecondScene );
+    WorldTestUtil::send<WorldTestMessage::Order>( rig._pair.getClient( 0 ), 91 );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 2 }, secondScene._listNumber.size() );
+    SW_EXPECT_EQUAL( uint64{ 2 }, secondScene._listNumber[0] );
+    SW_EXPECT_EQUAL( uint64{ 4 }, secondScene._listNumber[1] );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, serverHandler._listNumber.size() );
+    SW_EXPECT_EQUAL( uint64{ 91 }, serverHandler._listNumber[0] );
+    SW_EXPECT_TRUE( rig._serverRouter.getOtherWorldCount().get() >= 1u );
+}
+
+/** @brief [NetMessageRouterTest] 세대는 255 에서 1 로 돌아도 앞뒤를 안다 */
+SW_TEST_CASE( NetMessageRouterTest, WorldGenerationWrapsAround )
+{
+    HoldTestRig rig;
+    for ( int32 index = 0; index < 255; ++index )
+    {
+        rig._serverRouter.openWorld( rig._pair.getServer(), 0 );
+    }
+    SW_EXPECT_EQUAL( 255u, static_cast<uint32>( rig._serverRouter.getWorldGeneration() ) );
+    SW_EXPECT_TRUE( rig._serverRouter.isLaterWorld( 1 ) );
+    SW_EXPECT_FALSE( rig._serverRouter.isLaterWorld( 254 ) );
+    rig._serverRouter.openWorld( rig._pair.getServer(), 0 );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( rig._serverRouter.getWorldGeneration() ) );
 }

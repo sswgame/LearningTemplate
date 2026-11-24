@@ -404,9 +404,9 @@ SW_TEST_CASE( NetLockstepTest, RematchFollowsTheServerWorldAndResendsLostInputs 
             (void)clientRouter.poll( cluster.getClient( 0 ) );
         }
     };
-    serverRouter.openWorld( cluster.getServer() );
+    serverRouter.openWorld( cluster.getServer(), 0 );
     pollAll();
-    SW_REQUIRE_EQUAL( 1u, clientRouter.getWorldGeneration() );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( clientRouter.getWorldGeneration() ) );
 
     // 클라이언트가 먼저 다음 판을 연다 — 아직 세대 1 이다. 서버는 처리기가 없어 그 입력을 버린다.
     LockstepSession client;
@@ -417,7 +417,7 @@ SW_TEST_CASE( NetLockstepTest, RematchFollowsTheServerWorldAndResendsLostInputs 
     pollAll();
 
     // 서버가 새 월드를 열고 바로 입력을 낸다.
-    serverRouter.openWorld( cluster.getServer() );
+    serverRouter.openWorld( cluster.getServer(), 0 );
     LockstepSession server;
     settings._matchID = serverRouter.getWorldGeneration();
     SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), 2, 0, settings ) );
@@ -437,7 +437,7 @@ SW_TEST_CASE( NetLockstepTest, RematchFollowsTheServerWorldAndResendsLostInputs 
 
     // 진행한 판은 서버가 또 새 월드를 열어도 지난 판이다 — 새 판의 입력을 받지 않는다.
     const uint32 tickBefore = client.getCurrentTick();
-    serverRouter.openWorld( cluster.getServer() );
+    serverRouter.openWorld( cluster.getServer(), 0 );
     settings._matchID = serverRouter.getWorldGeneration();
     SW_REQUIRE_TRUE( server.initialize( &cluster.getServer(), 2, 0, settings ) );
     for ( uint32 tick = 0; tick <= tickBefore; ++tick )

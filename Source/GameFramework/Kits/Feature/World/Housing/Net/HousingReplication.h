@@ -137,7 +137,7 @@ namespace sw
         using PlotDelta = NetMessageDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 2>; ///< 판 2: 변환을 칸 선언(`HousingTransformNetState`)으로 쓴다
         /** @brief 클라이언트 → 서버. 부지 상태를 처음부터 다시 달라는 요청(`HousingSnapshotRequestBody`). */
         using SnapshotRequest = NetMessageBodyDef<4, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, HousingSnapshotRequestBody>;
-        using Table           = NetMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
+        using Table           = NetWorldMessageTable<NetKitMessageRange::kHousing, Edit, Reply, PlotSnapshot, PlotDelta, SnapshotRequest>;
 
         static constexpr uint8 kEdit            = Table::getKindOf<Edit>();
         static constexpr uint8 kReply           = Table::getKindOf<Reply>();

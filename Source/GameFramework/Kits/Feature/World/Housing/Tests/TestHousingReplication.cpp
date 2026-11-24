@@ -374,6 +374,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         HousingNetRig    rig( 100 );
         NetMessageWriter writer;
         BitWriter&       body = writer.begin( NetHousingMessage::kEdit );
+        body.writeBits( 0, 8 ); // 월드 세대
         body.writeVarUint( 1 );
         body.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         body.writeBits( static_cast<uint32>( HousingEditOp::Place ), 3 );
@@ -385,6 +386,7 @@ SW_TEST_CASE( HousingReplicationTest, ServerChecksReachRateAndRawValues )
         body.writeBool( false );
         SW_EXPECT_TRUE( rig._server.handleMessage( 0, writer.getBytes().data(), writer.getByteCount(), NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
         BitWriter& badOp = writer.begin( NetHousingMessage::kEdit );
+        badOp.writeBits( 0, 8 ); // 월드 세대
         badOp.writeVarUint( 2 );
         badOp.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         badOp.writeBits( 7u, 3 );
@@ -599,6 +601,7 @@ SW_TEST_CASE( HousingReplicationTest, BodyMessagesRejectUnknownValuesAndTruncati
 
     // 판정 — 결과 열거자 자리에 등록 밖 값을 꾸민다(요청 번호 · 부지 해시 뒤 8 비트 0xFF).
     BitWriter& badReply = writer.begin( NetHousingMessage::kReply );
+    badReply.writeBits( 0, 8 ); // 월드 세대
     badReply.writeVarUint( 1 );
     badReply.writeVarUint( 7 );
     badReply.writeBits( 0xFFu, 8 );
@@ -629,6 +632,7 @@ SW_TEST_CASE( HousingReplicationTest, HandBodiesRejectTrailingTailsAndUnknownOwn
         HousingNetRig    rig( 100 );
         NetMessageWriter writer;
         BitWriter&       claim = writer.begin( NetHousingMessage::kEdit );
+        claim.writeBits( 0, 8 ); // 월드 세대
         claim.writeVarUint( 1 );
         claim.writeVarUint( static_cast<uint64>( hashed_string( "home" ).getHash() ) );
         claim.writeBits( static_cast<uint32>( HousingEditOp::Claim ), 3 );
@@ -642,6 +646,7 @@ SW_TEST_CASE( HousingReplicationTest, HandBodiesRejectTrailingTailsAndUnknownOwn
     const auto               writeDeltaHead = [&writer]( uint32 owner, uint64 removedCount ) -> BitWriter&
     {
         BitWriter& delta = writer.begin( NetHousingMessage::kPlotDelta );
+        delta.writeBits( 0, 8 );     // 월드 세대
         delta.writeVarUint( 7 );     // 부지
         delta.writeBits( owner, 2 ); // 주인
         delta.writeVarInt( 0 );      // 잔액

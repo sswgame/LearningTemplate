@@ -58,7 +58,7 @@ namespace sw
             link._pRouter         = &_router;
             link._role            = role;
             link._bTicketRequired = bTicketRequired ? SW_TRUE : SW_FALSE;
-            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link ) );
+            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link, 0 ) );
         }
         /** @brief 세션이 닫힌 것처럼 라우터를 닫습니다 — 링크는 저절로 빈 것이 된다. */
         void closeSession() { _router.closeSession(); }

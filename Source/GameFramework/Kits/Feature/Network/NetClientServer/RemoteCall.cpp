@@ -228,7 +228,7 @@ namespace sw
             }
 
             /** @brief 호출 메시지 하나를 씁니다. 함수의 `Reliable` 로 채널을 고르고, 비신뢰가 한 조각(1 KB)을 넘으면 `TooLarge` 입니다. */
-            [[nodiscard]] static WriteResult writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, uint32 worldGeneration, const FunctionInfo& function, const vector<ReflectedValue>& listArg,
+            [[nodiscard]] static WriteResult writeCall( NetMessageWriter& messageWriter, uint32 sequence, uint32 targetID, uint8 worldGeneration, const FunctionInfo& function, const vector<ReflectedValue>& listArg,
                                                         NetChannelKind& outChannel )
             {
                 if ( listArg.size() > function._listParameter.size() || listArg.size() > static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentCount ) )
@@ -238,7 +238,7 @@ namespace sw
                 writer.writeVarUint( sequence );
                 writer.writeVarUint( targetID );
                 if ( targetID != RemoteCallTargets::kSessionTargetID )
-                    writer.writeUint32( worldGeneration ); // 세션 대상은 연결의 것이라 씬이 바뀌어도 같다
+                    writer.writeBits( worldGeneration, 8 ); // 세션 대상은 연결의 것이라 씬이 바뀌어도 같다
                 writer.writeUint32( RemoteCallTargets::getFunctionID( function ) );
                 writer.writeVarUint( listArg.size() );
                 for ( size_t index = 0; index < listArg.size(); ++index )
@@ -251,19 +251,19 @@ namespace sw
             }
 
             /** @brief 지금 월드의 세대입니다. 라우터가 없으면 0 입니다. */
-            static uint32 getWorldGeneration( const NetMessageRouter* pRouter ) { return pRouter != nullptr ? pRouter->getWorldGeneration() : 0u; }
+            static uint8 getWorldGeneration( const NetMessageRouter* pRouter ) { return pRouter != nullptr ? pRouter->getWorldGeneration() : uint8{ 0 }; }
 
             /** @brief 받은 호출 하나의 머리입니다. 인자는 함수를 찾은 뒤에 읽습니다(`readArguments`). */
             struct CallHead
             {
                 uint32 _sequence{ 0 };
                 uint32 _targetID{ 0 };
-                uint32 _worldGeneration{ 0 }; ///< 세션 대상이면 싣지 않는다(0)
+                uint8  _worldGeneration{ 0 }; ///< 세션 대상이면 싣지 않는다(0)
                 uint32 _functionID{ 0 };
                 uint32 _argumentCount{ 0 };
 
                 /** @brief 월드 대상의 세대가 @p worldGeneration 과 다르면 true 입니다 — 앞 씬의 늦은 호출은 같은 번호의 다른 대상에 닿지 않는다. */
-                bool isFromOtherWorld( uint32 worldGeneration ) const { return _targetID != RemoteCallTargets::kSessionTargetID && _worldGeneration != worldGeneration; }
+                bool isFromOtherWorld( uint8 worldGeneration ) const { return _targetID != RemoteCallTargets::kSessionTargetID && _worldGeneration != worldGeneration; }
             };
 
             /** @brief 호출 머리에서 대상 번호만 읽습니다. 깨졌으면 0 입니다(처리기가 깨진 호출로 거른다). */
@@ -279,7 +279,7 @@ namespace sw
                 outHead._sequence = body.readVarUint32();
                 outHead._targetID = body.readVarUint32();
                 if ( outHead._targetID != RemoteCallTargets::kSessionTargetID )
-                    outHead._worldGeneration = body.readUint32();
+                    outHead._worldGeneration = static_cast<uint8>( body.readBits( 8 ) );
                 outHead._functionID    = body.readUint32();
                 outHead._argumentCount = body.readCount( static_cast<uint32>( NetRemoteCallMessage::kMaxArgumentCount ) );
                 if ( body.hasOverflowed() )
@@ -774,7 +774,8 @@ namespace sw
         const bool                       bOtherWorld = call.isFromOtherWorld( RemoteCallInternal::getWorldGeneration( _pRouter ) );
         const RemoteCallTargets::Target* pTarget     = bOtherWorld ? nullptr : _targets.findTarget( call._targetID );
         // 대상이 아직 서지 않았다(씬 로드 · 스폰 복제보다 먼저 왔다) — 신뢰 호출은 라우터가 보류한다. 비신뢰는 늦으면 쓸모가 없어 버린다.
-        if ( pTarget == nullptr && bOtherWorld == false && context._channel == NetChannelKind::ReliableOrdered )
+        const bool bEarlierWorld = bOtherWorld && ( _pRouter == nullptr || _pRouter->isLaterWorld( call._worldGeneration ) == false ); // 뒤 월드의 것이면 그 씬이 설 때까지 기다린다
+        if ( pTarget == nullptr && bEarlierWorld == false && context._channel == NetChannelKind::ReliableOrdered )
             return NetHandleResult::NotReady;
         const FunctionInfo* pFunction = pTarget != nullptr ? _targets.findFunctionByID( *pTarget->_pType, call._functionID )._pFunction : nullptr;
         if ( pFunction == nullptr || RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false ) == false )

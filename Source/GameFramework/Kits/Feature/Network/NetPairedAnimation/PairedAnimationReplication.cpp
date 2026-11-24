@@ -14,7 +14,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include <algorithm>
@@ -186,7 +185,6 @@ namespace sw
     bool PairedAnimationReplicationServer::writeStateMessage( const PairedAnimationNetState& state )
     {
         BitWriter& writer = _writer.beginMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState>();
-        writer.writeUint32( _pManager->getSubsystem<SceneNetLink>().getWorldGeneration() );
         writer.writeVarUint( state._snapshot._sessionID ); // 보류의 열쇠 — 상태를 다 읽지 않고 안다
         if ( state.write( writer ) )
             return true;
@@ -205,8 +203,7 @@ namespace sw
             if ( bEnded == false )
                 continue;
             PairedAnimationSessionEndBody body;
-            body._sessionID       = sessionID;
-            body._worldGeneration = _pManager->getSubsystem<SceneNetLink>().getWorldGeneration();
+            body._sessionID = sessionID;
             if ( _writer.writeMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionEnd>( body ) )
                 (void)_writer.broadcastMessage( *_pHost ); // 연결이 없으면 보낼 곳이 없다 — 늦게 들어온 쪽은 재생 중인 세션만 받는다
             ++_stats._endSentCount;
@@ -357,7 +354,6 @@ namespace sw
 
     uint64 PairedAnimationReplicationClient::readHoldKey( NetPairedAnimationMessage::SessionState, BitReader& body ) const
     {
-        (void)body.readUint32(); // 월드 세대
         return body.readVarUint32();
     }
 
@@ -372,8 +368,6 @@ namespace sw
         (void)context;
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
-        if ( body._worldGeneration != _pManager->getSubsystem<SceneNetLink>().getWorldGeneration() )
-            return NetHandleResult::Handled; // 앞 씬의 늦은 끝은 이 씬의 세션과 번호만 같을 수 있다
         const uint32                  sessionID = body._sessionID;
         PairedAnimationSystem*        pSystem   = PairedAnimationSystem::find( *_pManager );
         const PairedAnimationSession* pSession  = pSystem != nullptr ? pSystem->findSession( sessionID ) : nullptr;
@@ -392,13 +386,10 @@ namespace sw
         (void)context;
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
-        const uint32 generation = body.readUint32();
-        (void)body.readVarUint32(); // 보류의 열쇠 — 상태 안의 세션 번호가 원본이다
+        (void)body.readVarUint32();          // 보류의 열쇠 — 상태 안의 세션 번호가 원본이다
         PairedAnimationNetState state{};
         if ( PairedAnimationNetState::read( body, state ) == false || body.readEnd() == false )
             return NetHandleResult::Malformed;
-        if ( generation != _pManager->getSubsystem<SceneNetLink>().getWorldGeneration() )
-            return NetHandleResult::Handled; // 앞 씬의 늦은 상태 — 이름이 같은 다른 씬의 오브젝트일 수 있다
         // 거절은 applyState 가 오류로 남기고 셌다.
         return applyState( state ) == PairedAnimationStartResult::ParticipantNotReady ? NetHandleResult::NotReady : NetHandleResult::Handled;
     }

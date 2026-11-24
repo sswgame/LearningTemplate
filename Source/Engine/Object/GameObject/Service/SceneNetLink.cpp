@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Network/Message/NetMessage.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -24,7 +25,7 @@ namespace sw
         (void)manager;
     }
 
-    bool SceneNetLink::bind( const NetLinkValue& value )
+    bool SceneNetLink::bind( const NetLinkValue& value, uint64 sceneID )
     {
         if ( value.isComplete() == false )
         {
@@ -33,13 +34,20 @@ namespace sw
         }
         _value = value;
         if ( value._role == NetLinkRole::Server )
-            value._pRouter->openWorld( *value._pPeers );
+            value._pRouter->openWorld( *value._pPeers, sceneID );
+        else
+            value._pRouter->setLocalScene( *value._pPeers, sceneID );
         return true;
     }
 
-    uint32 SceneNetLink::getWorldGeneration() const
+    uint64 SceneNetLink::computeSceneID( string_view scenePath )
     {
-        return isBound() ? _value._pRouter->getWorldGeneration() : 0u;
+        return scenePath.empty() ? 0u : HashUtil::computeStringHash64( scenePath.data(), scenePath.size() );
+    }
+
+    uint8 SceneNetLink::getWorldGeneration() const
+    {
+        return isBound() ? _value._pRouter->getWorldGeneration() : uint8{ 0 };
     }
 
     const NetLinkValue* SceneNetLink::findBoundFor( const Component& component )

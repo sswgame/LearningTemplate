@@ -142,7 +142,7 @@ namespace sw
         link._pPeers  = &_host;
         link._pRouter = &_router;
         link._role    = isServer() ? NetLinkRole::Server : NetLinkRole::Client;
-        if ( getObjectManager().getSubsystem<SceneNetLink>().bind( link ) == false )
+        if ( getObjectManager().getSubsystem<SceneNetLink>().bind( link, 0 ) == false )
             SW_LOG_ERROR_ID( "NetSimHarness.NetSimWorldCould", "Net sim world %# could not bind its net link", _worldIndex );
         if ( pGame != nullptr )
             _pSession = pGame->createSession( *this );

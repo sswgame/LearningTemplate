@@ -111,6 +111,8 @@ namespace sw
          * @details 크기를 따로 세는 함수(쓰기와 짝을 손으로 맞추는)를 두지 않으려는 것이다. 지금보다 큰 값이나 음수는 단언으로 멈추고 아무것도 하지 않습니다.
          */
         void truncate( int32 bitCount );
+        /** @brief 이미 쓴 바이트 하나를 바꿉니다(보낼 때 정해지는 머리 칸). 쓰지 않은 자리면 아무 일도 없습니다. */
+        void overwriteByte( int32 byteIndex, uint8 value );
 
         int32 getBitCount() const { return _bitCount; }
         int32 getByteCount() const { return ( _bitCount + 7 ) / 8; }

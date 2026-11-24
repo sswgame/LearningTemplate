@@ -79,8 +79,6 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         uint32 _sessionID{ 0 };
-        PROPERTY()
-        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
     };
 
     /**
@@ -91,9 +89,9 @@ namespace sw
     struct NetPairedAnimationMessage
     {
         static constexpr uint32 kHoldMilliseconds = 5000;                                                                                                                                                      ///< 참가자가 클립을 읽는 동안 상태를 기다리는 시간. 끝은 같은 세션의 상태를 앞지르지 않는다
-        using SessionState                        = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 5>, kHoldMilliseconds>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 5: 세대 뒤에 세션 번호(보류의 열쇠)가 온다. 4: 월드 세대가 앞에 온다. 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
+        using SessionState                        = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 6>, kHoldMilliseconds>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 6: 월드 세대가 표의 머리로 갔다. 5: 세션 번호(보류의 열쇠)가 온다. 4: 월드 세대가 앞에 온다. 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
         using SessionEnd                          = NetHeldMessageDef<NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>, kHoldMilliseconds>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
-        using Table                               = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
+        using Table                               = NetWorldMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
         static constexpr uint8 kSessionState = Table::getKindOf<SessionState>();
         static constexpr uint8 kSessionEnd   = Table::getKindOf<SessionEnd>();

@@ -103,7 +103,7 @@ namespace
             link._pPeers  = &_peers;
             link._pRouter = &_router;
             link._role    = NetLinkRole::Server;
-            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link ) );
+            SW_REQUIRE_TRUE( _manager.getSubsystem<SceneNetLink>().bind( link, 0 ) );
             GameObject* pGameMode = _manager.createGameObject( hashed_string( "GameMode" ) );
             (void)pGameMode->addComponent<ShooterGameModeComponent>();
             _pPlayer = _manager.createGameObject( hashed_string( "Player" ) );

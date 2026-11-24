@@ -10,7 +10,6 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -79,10 +78,9 @@ namespace sw
             return NetHandleResult::Malformed;
         // 클라이언트가 보낸 값은 믿지 않는다: 살아 있는 재생 · 그 플레이어만의 재생 · 요청한 연결이 그 폰을 가진 연결일 때만 서버 재생을 끝낸다.
         // 위조 · 늦은 요청(이미 끝난 재생)은 셈만 한다 — 연결마다 로그를 남기면 요청으로 로그를 채울 수 있다.
-        const bool               bThisWorld = _pManager != nullptr && body._worldGeneration == _pManager->getSubsystem<SceneNetLink>().getWorldGeneration();
-        const Play*              pPlay      = bThisWorld ? findPlay( body._playID ) : nullptr;
-        const bool               bOwner     = pPlay != nullptr && pPlay->_audience == SequenceTriggerAudience::Activator && pPlay->_targetConnection == context._connectionID;
-        SequencePlayerComponent* pPlayer    = bOwner ? findDirectorPlayer( *_pManager, pPlay->_director ) : nullptr;
+        const Play*              pPlay   = findPlay( body._playID );
+        const bool               bOwner  = pPlay != nullptr && pPlay->_audience == SequenceTriggerAudience::Activator && pPlay->_targetConnection == context._connectionID;
+        SequencePlayerComponent* pPlayer = bOwner && _pManager != nullptr ? findDirectorPlayer( *_pManager, pPlay->_director ) : nullptr;
         if ( pPlayer == nullptr || pPlayer->skipToEnd() == false )
         {
             ++_stats._skipRejectedCount;
@@ -149,12 +147,11 @@ namespace sw
         if ( pPlayer == nullptr || pPlayer->isPlaying() == false )
             return false;
         SequenceNetStartBody body;
-        body._playID          = play._playID;
-        body._worldGeneration = _pManager->getSubsystem<SceneNetLink>().getWorldGeneration();
-        body._director        = play._directorNetID;
-        body._activator       = play._activatorNetID;
-        body._frame           = static_cast<uint32>( pPlayer->getCurrentFrame() > 0 ? pPlayer->getCurrentFrame() : 0 );
-        body._audience        = static_cast<uint8>( play._audience );
+        body._playID    = play._playID;
+        body._director  = play._directorNetID;
+        body._activator = play._activatorNetID;
+        body._frame     = static_cast<uint32>( pPlayer->getCurrentFrame() > 0 ? pPlayer->getCurrentFrame() : 0 );
+        body._audience  = static_cast<uint8>( play._audience );
         return _writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::Start>( body );
     }
 
@@ -179,8 +176,7 @@ namespace sw
             if ( pPlayer != nullptr && pPlayer->isPlaying() )
                 continue;
             SequenceNetEndBody body;
-            body._playID          = play._playID;
-            body._worldGeneration = _pManager->getSubsystem<SceneNetLink>().getWorldGeneration();
+            body._playID = play._playID;
             if ( _writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::End>( body ) )
                 _stats._endSentCount += sendToAudience( play );
             _listPlay.erase( _listPlay.begin() + static_cast<ptrdiff_t>( index - 1 ) );
@@ -288,8 +284,7 @@ namespace sw
                 continue;
             // 서버의 끝보다 먼저 끝났다 — 로컬 건너뛰기(`Cutscene.Skip`)다(제 속도로 끝났으면 서버도 곧 끝나 요청은 무해하다). 서버가 소유 연결로 검증한다.
             SequenceNetSkipRequestBody body;
-            body._playID          = play._playID;
-            body._worldGeneration = _pManager->getSubsystem<SceneNetLink>().getWorldGeneration();
+            body._playID = play._playID;
             if ( _writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( body ) && _writer.sendMessage( *_pHost, 0 ) )
                 ++_stats._skipRequestCount;
             play._bSkipRequested = SW_TRUE;
@@ -301,8 +296,6 @@ namespace sw
         (void)context;
         if ( _pManager == nullptr )
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
-        if ( body._worldGeneration != _pManager->getSubsystem<SceneNetLink>().getWorldGeneration() )
-            return NetHandleResult::Handled; // 앞 씬의 늦은 시작 — 이름이 같은 다른 씬의 디렉터일 수 있다
         const NetObjectTable&         table      = _pManager->getSubsystem<NetObjectTable>();
         GameObject*                   pDirector  = table.findObject( body._director );
         const GameObject*             pActivator = table.findObject( body._activator );
@@ -344,8 +337,8 @@ namespace sw
     NetHandleResult SequenceReplicationClient::receive( NetSequenceMessage::End, const NetMessageContext& context, const SequenceNetEndBody& body )
     {
         (void)context;
-        if ( _pManager == nullptr || body._worldGeneration != _pManager->getSubsystem<SceneNetLink>().getWorldGeneration() )
-            return NetHandleResult::Handled; // 앞 씬의 늦은 끝은 이 씬의 재생과 번호만 같을 수 있다
+        if ( _pManager == nullptr )
+            return NetHandleResult::Handled;
         for ( size_t index = 0; index < _listPlay.size(); ++index )
         {
             if ( _listPlay[index]._playID != body._playID )

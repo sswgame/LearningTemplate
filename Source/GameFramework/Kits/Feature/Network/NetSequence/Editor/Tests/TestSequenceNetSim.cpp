@@ -193,19 +193,21 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     SW_REQUIRE_NOT_NULL( pSecond );
     NetMessageWriter           writer;
     SequenceNetSkipRequestBody request;
-    request._playID          = 1; // 이 씬의 첫 재생
-    request._worldGeneration = harness.getServer().getRouter().getWorldGeneration();
-    SW_EXPECT_NOT_EQUAL( 0u, request._worldGeneration );
+    request._playID = 1; // 이 씬의 첫 재생
     SW_REQUIRE_TRUE( ( writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( request ) ) );
     SW_REQUIRE_TRUE( writer.sendMessage( pSecond->getPeers(), 0 ) );
-    // 소유 연결이라도 앞 씬의 세대를 실은 늦은 요청이면 번호가 같은 이 씬의 재생에 닿지 않는다.
+    // 소유 연결이라도 앞 씬에서 보낸 늦은 요청은 라우터가 거른다 — 번호가 같은 이 씬의 재생에 닿지 않는다.
     NetSimWorld* pFirst = harness.findClient( fixture._firstClient );
     SW_REQUIRE_NOT_NULL( pFirst );
-    --request._worldGeneration;
+    INetPeers&  firstPeers      = pFirst->getPeers();
+    const uint8 worldGeneration = firstPeers.getWorldGeneration();
+    SW_EXPECT_NOT_EQUAL( 0u, static_cast<uint32>( worldGeneration ) );
+    firstPeers.setWorldGeneration( static_cast<uint8>( worldGeneration - 1u ) ); // 앞 월드에서 보낸 것처럼
     SW_REQUIRE_TRUE( ( writer.writeMessage<NetSequenceMessage::Table, NetSequenceMessage::SkipRequest>( request ) ) );
-    SW_REQUIRE_TRUE( writer.sendMessage( pFirst->getPeers(), 0 ) );
+    SW_REQUIRE_TRUE( writer.sendMessage( firstPeers, 0 ) );
+    firstPeers.setWorldGeneration( worldGeneration );
     harness.stepTicks( 5 );
-    SW_EXPECT_EQUAL( 2.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );
+    SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );
     SW_EXPECT_TRUE( SequenceNetSimGame::isTriggerPlaying( harness.getServer(), SequenceNetSimGame::kPlayerTrigger ) );
     SW_EXPECT_FALSE( SequenceNetSimTestUtil::isPlaying( harness.getServer(), SequenceNetSimGame::kPlayerDirector ) ); // 원격 플레이어만의 재생은 서버의 씬 디렉터를 쓰지 않는다
 
@@ -219,5 +221,5 @@ SW_TEST_CASE( SequenceNetSimTest, SkipRequestIsCheckedAgainstTheOwningConnection
     }
     SW_EXPECT_FALSE( SequenceNetSimGame::isTriggerPlaying( harness.getServer(), SequenceNetSimGame::kPlayerTrigger ) );
     SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipAccepted" ) );
-    SW_EXPECT_EQUAL( 2.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );
+    SW_EXPECT_EQUAL( 1.0, SequenceNetSimTestUtil::readServerValue( harness, "SkipRejected" ) );
 }

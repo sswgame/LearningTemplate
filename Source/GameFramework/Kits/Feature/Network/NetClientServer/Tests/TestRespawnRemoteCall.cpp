@@ -184,7 +184,7 @@ SW_TEST_CASE( RespawnRemoteCallTest, MalformedAndFloodedCallsNeverReachTheFlow )
     BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
     writer.writeVarUint( 1 );
     writer.writeVarUint( kPlayerID );
-    writer.writeUint32( 0 ); // 월드 세대
+    writer.writeBits( 0, 8 ); // 월드 세대
     writer.writeUint32( hashed_string::computeHash( "requestRespawn" ) );
     writer.writeVarUint( 2 );
     writer.writeVarInt( 99 ); // 등록되지 않은 `RespawnPolicyKind`

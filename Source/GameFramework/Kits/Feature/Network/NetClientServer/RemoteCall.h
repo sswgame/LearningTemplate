@@ -84,7 +84,7 @@ namespace sw
          *        판 2: 함수 이름 글 대신 함수 번호를 싣는다. 판 3: 인자를 글 대신 타입별 이진 꼴로 싣는다.
          */
         static constexpr uint32 kCallHoldMilliseconds = 10000;                                                                                                                                  ///< 대상이 아직 서지 않은 신뢰 호출을 기다리는 시간(씬 로드 · 스폰 복제)
-        using Call                                    = NetHeldMessageDef<NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 4>, kCallHoldMilliseconds>; ///< 판 4: 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
+        using Call                                    = NetHeldMessageDef<NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 5>, kCallHoldMilliseconds>; ///< 판 5: 월드 세대가 8 비트다. 4: 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
         /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
         using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;

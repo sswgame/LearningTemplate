@@ -47,9 +47,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY()
-        uint32 _playID{ 0 }; ///< 서버가 매긴 재생 번호. 서버가 씬마다 1 부터 하나씩 올린다(앞 씬의 것은 월드 세대가 가른다)
-        PROPERTY()
-        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
+        uint32 _playID{ 0 }; ///< 서버가 매긴 재생 번호. 서버가 씬마다 1 부터 하나씩 올린다(앞 씬의 것은 라우터가 월드 세대로 가른다)
         PROPERTY()
         NetObjectID _director{ 0 }; ///< 시퀀스 플레이어를 가진 오브젝트
         PROPERTY()
@@ -67,8 +65,6 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         uint32 _playID{ 0 };
-        PROPERTY()
-        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
     };
 
     /** @brief 건너뛰기 요청(클라이언트 → 서버) 본문입니다. 서버가 요청한 연결로 검증한다. */
@@ -78,8 +74,6 @@ namespace sw
         REFLECT_BODY();
         PROPERTY()
         uint32 _playID{ 0 };
-        PROPERTY()
-        uint32 _worldGeneration{ 0 }; ///< 서버 월드의 세대(`SceneNetLink::getWorldGeneration`) — 다르면 앞 씬의 늦은 메시지라 버린다
     };
 
     /** @brief 컷씬 재생 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). 본문은 모두 고정 배치형이다. */
@@ -88,7 +82,7 @@ namespace sw
         using Start       = NetMessageBodyDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;
         using End         = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetEndBody>; ///< 시작 뒤에 닿아야 한다(같은 순서 채널)
         using SkipRequest = NetMessageBodyDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>;
-        using Table       = NetMessageTable<NetKitMessageRange::kSequence, Start, End, SkipRequest>;
+        using Table       = NetWorldMessageTable<NetKitMessageRange::kSequence, Start, End, SkipRequest>;
 
         static constexpr uint8 kStart       = Table::getKindOf<Start>();
         static constexpr uint8 kEnd         = Table::getKindOf<End>();

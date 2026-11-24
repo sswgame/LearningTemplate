@@ -7,6 +7,8 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include <limits>
+
 namespace sw
 {
     namespace
@@ -21,6 +23,7 @@ namespace sw
         : _writer{}
         , _messageChannel{ NetChannelKind::ReliableOrdered }
         , _state{ State::Raw }
+        , _bWorldScoped{ SW_FALSE }
     {
         _writer.reserve( NetConnection::kMaxSingleMessageSize );
     }
@@ -29,15 +32,21 @@ namespace sw
     {
         _writer.clear();
         _writer.writeBits( kind, 8 );
-        _state = State::Raw;
+        _state        = State::Raw;
+        _bWorldScoped = SW_FALSE;
         return _writer;
     }
 
-    BitWriter& NetMessageWriter::beginDescribed( uint8 kind, NetChannelKind channel )
+    BitWriter& NetMessageWriter::beginDescribed( uint8 kind, NetChannelKind channel, bool bWorldScoped )
     {
         BitWriter& writer = begin( kind );
-        _messageChannel   = channel;
-        _state            = State::Typed;
+        if ( bWorldScoped )
+        {
+            _bWorldScoped = SW_TRUE;
+            writer.writeBits( 0, 8 ); // 보낼 때 적는다 — 쓰는 쪽이 월드를 고르지 않는다
+        }
+        _messageChannel = channel;
+        _state          = State::Typed;
         return writer;
     }
 
@@ -60,6 +69,15 @@ namespace sw
         return false;
     }
 
+    bool NetMessageWriter::prepareDescribed( const INetPeers& peers )
+    {
+        if ( allowsDescriptorChannel() == false )
+            return false;
+        if ( _bWorldScoped == SW_TRUE )
+            _writer.overwriteByte( 1, peers.getWorldGeneration() );
+        return true;
+    }
+
     bool NetMessageWriter::send( INetPeers& peers, int32 connectionID, NetChannelKind channel ) const
     {
         return allowsCallerChannel() && peers.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
@@ -79,33 +97,33 @@ namespace sw
         return peers.sendMessage( 0, channel, _writer.getBytes().data(), _writer.getByteCount() ) ? 1 : 0;
     }
 
-    bool NetMessageWriter::sendMessage( INetPeers& peers, int32 connectionID ) const
+    bool NetMessageWriter::sendMessage( INetPeers& peers, int32 connectionID )
     {
-        return allowsDescriptorChannel() && peers.sendMessage( connectionID, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() );
+        return prepareDescribed( peers ) && peers.sendMessage( connectionID, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
-    bool NetMessageWriter::trySendMessage( INetPeers& peers, int32 connectionID ) const
+    bool NetMessageWriter::trySendMessage( INetPeers& peers, int32 connectionID )
     {
-        return allowsDescriptorChannel() && peers.trySendMessage( connectionID, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() );
+        return prepareDescribed( peers ) && peers.trySendMessage( connectionID, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
-    int32 NetMessageWriter::broadcastMessage( INetPeers& peers, int32 exceptID ) const
+    int32 NetMessageWriter::broadcastMessage( INetPeers& peers, int32 exceptID )
     {
-        return allowsDescriptorChannel() ? peers.broadcast( _messageChannel, _writer.getBytes().data(), _writer.getByteCount(), exceptID ) : 0;
+        return prepareDescribed( peers ) ? peers.broadcast( _messageChannel, _writer.getBytes().data(), _writer.getByteCount(), exceptID ) : 0;
     }
 
-    int32 NetMessageWriter::sendMessageToPeers( INetPeers& peers ) const
+    int32 NetMessageWriter::sendMessageToPeers( INetPeers& peers )
     {
-        if ( allowsDescriptorChannel() == false )
+        if ( prepareDescribed( peers ) == false )
             return 0;
         if ( peers.isServer() )
             return peers.broadcast( _messageChannel, _writer.getBytes().data(), _writer.getByteCount(), constant::invalid_index::kInt32 );
         return peers.sendMessage( 0, _messageChannel, _writer.getBytes().data(), _writer.getByteCount() ) ? 1 : 0;
     }
 
-    bool NetMessageWriter::sendNotifiedMessage( INetPeers& peers, int32 connectionID, uint32 tag ) const
+    bool NetMessageWriter::sendNotifiedMessage( INetPeers& peers, int32 connectionID, uint32 tag )
     {
-        if ( allowsDescriptorChannel() == false )
+        if ( prepareDescribed( peers ) == false )
             return false;
         if ( _messageChannel != NetChannelKind::Unreliable )
         {
@@ -120,6 +138,11 @@ namespace sw
     {
         if ( allowsDescriptorChannel() == false )
             return nullopt;
+        if ( _bWorldScoped == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "Net.MessageWorldScopedQueued", "NetMessageWriter: message kind 0x%02x belongs to a world and cannot be queued for later - it is not sent", static_cast<int32>( _writer.getBytes()[0] ) );
+            return nullopt;
+        }
         return NetQueuedMessage{ _writer.getBytes(), _messageChannel };
     }
 
@@ -143,7 +166,10 @@ namespace sw
         const bool bMessageNotHandled = pData == nullptr || size <= 0 || isMessageKindHandled( pData[0] ) == false;
         if ( bMessageNotHandled )
             return NetHandleResult::NotMine;
-        BitReader body( pData + 1, size - 1 );
+        const int32 headSize = isWorldScoped() ? 2 : 1; // 종류 · 월드 세대(직접 전달은 세대를 보지 않는다)
+        if ( size < headSize )
+            return NetHandleResult::Malformed;
+        BitReader body( pData + headSize, size - headSize );
         return handleNetMessage( NetMessageContext{ pData, size, connectionID, channel, pData[0] }, body );
     }
 
@@ -161,6 +187,9 @@ namespace sw
         , _listHeld{}
         , _pClock{ &NetMessageInternal::nowMilliseconds }
         , _sessionSerial{ 0 }
+        , _worldSceneID{ 0 }
+        , _localSceneID{ 0 }
+        , _announcedGeneration{ 0 }
         , _worldGeneration{ 0 }
         , _bWireVersionsChanged{ SW_FALSE }
     {
@@ -231,6 +260,9 @@ namespace sw
         _listRefusedConnection.clear();
         _listHeld.clear();
         ++_sessionSerial;
+        _worldSceneID         = 0;
+        _localSceneID         = 0;
+        _announcedGeneration  = 0;
         _worldGeneration      = 0;
         _bWireVersionsChanged = SW_FALSE;
     }
@@ -306,18 +338,73 @@ namespace sw
         (void)disconnectOnWireVersionMismatch( peers, connectionID );
     }
 
-    void NetMessageRouter::openWorld( INetPeers& peers )
+    NetMessageRouter::WorldOrder NetMessageRouter::compareWorld( uint8 generation, uint8 localGeneration )
     {
-        SW_ASSERT( peers.isServer() );                               // 세대는 서버가 정한다 — 클라이언트는 받기만 한다
-        dropHeldMessages( peers, NetDeliveryFailure::WorldChanged ); // 앞 월드의 대상을 기다리던 것이다
-        _worldGeneration = _worldGeneration == ~0u ? 1u : _worldGeneration + 1u;
+        if ( generation == localGeneration )
+            return WorldOrder::Same;
+        if ( localGeneration == 0 )
+            return WorldOrder::Later; // 이쪽에는 아직 월드가 없다
+        if ( generation == 0 )
+            return WorldOrder::Earlier; // 보낸 쪽이 월드를 모른다
+        constexpr int32 kCycle = std::numeric_limits<uint8>::max();
+        const int32     ahead  = ( static_cast<int32>( generation ) - static_cast<int32>( localGeneration ) + kCycle ) % kCycle;
+        return ahead <= kCycle / 2 ? WorldOrder::Later : WorldOrder::Earlier;
+    }
+
+    NetMessageRouter::WorldOrder NetMessageRouter::compareMessageWorld( const INetMessageHandler& handler, const uint8* pData, int32 size ) const
+    {
+        if ( handler.isWorldScoped() == false || size < 2 )
+            return WorldOrder::Same;
+        return compareWorld( pData[1], _worldGeneration );
+    }
+
+    bool NetMessageRouter::isLaterWorld( uint8 generation ) const
+    {
+        return compareWorld( generation, _worldGeneration ) == WorldOrder::Later;
+    }
+
+    void NetMessageRouter::setWorldGeneration( INetPeers& peers, uint8 generation )
+    {
+        _worldGeneration = generation;
+        peers.setWorldGeneration( generation ); // 이 뒤에 보내는 월드 범위 메시지가 싣는다
+    }
+
+    void NetMessageRouter::openWorld( INetPeers& peers, uint64 sceneID )
+    {
+        SW_ASSERT( peers.isServer() ); // 세대는 서버가 정한다 — 클라이언트는 받기만 한다
+        _worldSceneID        = sceneID;
+        _announcedGeneration = _announcedGeneration == std::numeric_limits<uint8>::max() ? uint8{ 1 } : static_cast<uint8>( _announcedGeneration + 1u );
+        setWorldGeneration( peers, _announcedGeneration );
         sendWorldGeneration( peers, constant::invalid_index::kInt32 );
+    }
+
+    void NetMessageRouter::setLocalScene( INetPeers& peers, uint64 sceneID )
+    {
+        SW_ASSERT( peers.isServer() == false );
+        _localSceneID = sceneID;
+        updateClientWorld( peers );
+    }
+
+    void NetMessageRouter::updateClientWorld( INetPeers& peers )
+    {
+        const uint8 generation = _localSceneID == _worldSceneID ? _announcedGeneration : uint8{ 0 };
+        if ( generation == _worldGeneration )
+            return;
+        setWorldGeneration( peers, generation );
+        if ( generation == 0 )
+            return;
+        for ( size_t handlerIndex = 0; handlerIndex < _listHandler.size(); ++handlerIndex )
+        {
+            _listHandler[handlerIndex]->onWorldOpened( generation );
+        }
     }
 
     void NetMessageRouter::sendWorldGeneration( INetPeers& peers, int32 connectionID )
     {
         NetMessageWriter messageWriter;
-        messageWriter.begin( NetMessageRange::kRouterWorldKind ).writeUint32( _worldGeneration );
+        BitWriter&       body = messageWriter.begin( NetMessageRange::kRouterWorldKind );
+        body.writeBits( _announcedGeneration, 8 );
+        body.writeVarUint( _worldSceneID );
         if ( connectionID == constant::invalid_index::kInt32 )
             (void)messageWriter.sendToPeers( peers, NetChannelKind::ReliableOrdered ); // 연결이 없으면 보낼 곳이 없다 — 연결이 열릴 때 보낸다
         else
@@ -332,7 +419,8 @@ namespace sw
             return;
         }
         BitReader    body( pData + 1, size - 1 );
-        const uint32 generation = body.readUint32();
+        const uint8  generation = static_cast<uint8>( body.readBits( 8 ) );
+        const uint64 sceneID    = body.readVarUint();
         if ( body.hasOverflowed() || generation == 0 )
         {
             _malformedCount.add();
@@ -341,12 +429,9 @@ namespace sw
             _listRefusedConnection.push_back( connectionID );
             return;
         }
-        dropHeldMessages( peers, NetDeliveryFailure::WorldChanged );
-        _worldGeneration = generation;
-        for ( INetMessageHandler* pHandler : _listHandler )
-        {
-            pHandler->onWorldOpened( generation );
-        }
+        _announcedGeneration = generation;
+        _worldSceneID        = sceneID;
+        updateClientWorld( peers );
     }
 
     void NetMessageRouter::setClock( ClockFunction pClock )
@@ -361,6 +446,16 @@ namespace sw
         {
             const bool bSameStream = held._connectionID == connectionID && held._rangeBase == rangeBase;
             if ( bSameStream && ( held._bMissingHandler == SW_TRUE || held._key == key ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool NetMessageRouter::isBlockedByWorld( int32 connectionID, uint8 rangeBase ) const
+    {
+        for ( const HeldMessage& held : _listHeld )
+        {
+            if ( held._connectionID == connectionID && held._rangeBase == rangeBase && held._bMissingHandler == SW_TRUE )
                 return true;
         }
         return false;
@@ -410,16 +505,6 @@ namespace sw
         (void)messageWriter.send( peers, held._connectionID, NetChannelKind::ReliableOrdered ); // 닫히는 중이면 알릴 곳이 없다
     }
 
-    void NetMessageRouter::dropHeldMessages( INetPeers& peers, NetDeliveryFailure reason )
-    {
-        vector<HeldMessage> listDropped;
-        listDropped.swap( _listHeld );
-        for ( const HeldMessage& held : listDropped )
-        {
-            reportDeliveryFailed( peers, held, reason );
-        }
-    }
-
     void NetMessageRouter::receiveDeliveryFailed( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size )
     {
         BitReader    body( pData + 1, size - 1 );
@@ -456,9 +541,25 @@ namespace sw
             holdMessage( peers, message, pData, 0, kMissingHandlerHoldMilliseconds, true );
             return NetHandleResult::NotReady;
         }
+        const uint8      rangeBase = pHandler->getMessageRangeBase();
+        const WorldOrder world     = compareMessageWorld( *pHandler, pData, message._size );
+        if ( world == WorldOrder::Earlier )
+        {
+            _otherWorldCount.add(); // 앞 월드의 늦은 메시지다 — 번호가 같은 다른 것에 닿지 않는다
+            return NetHandleResult::Handled;
+        }
+        // 아직 서지 않은 월드의 것이다 — 신뢰 메시지는 그 월드의 씬이 설 때까지 기다린다(같은 영역의 뒤 메시지도 앞지르지 않는다).
+        const bool bWaits = bReliable && ( world == WorldOrder::Later || isBlockedByWorld( message._connectionID, rangeBase ) );
+        if ( bWaits )
+        {
+            holdMessage( peers, message, pData, 0, kMissingHandlerHoldMilliseconds, true );
+            return NetHandleResult::NotReady;
+        }
+        if ( world == WorldOrder::Later )
+            return NetHandleResult::Handled; // 비신뢰는 다음 것이 온다
+        const int32  headSize         = pHandler->isWorldScoped() ? 2 : 1;
         const uint32 holdMilliseconds = bReliable ? pHandler->getHoldLimit( pData[0] ) : 0u;
-        const uint8  rangeBase        = pHandler->getMessageRangeBase();
-        const uint64 key              = holdMilliseconds != 0u ? pHandler->readHoldKey( pData[0], BitReader( pData + 1, message._size - 1 ) ) : 0u;
+        const uint64 key              = holdMilliseconds != 0u && message._size >= headSize ? pHandler->readHoldKey( pData[0], BitReader( pData + headSize, message._size - headSize ) ) : 0u;
         if ( holdMilliseconds != 0u && isBlockedByHeld( message._connectionID, rangeBase, key ) )
         {
             holdMessage( peers, message, pData, key, static_cast<int64>( holdMilliseconds ), false ); // 같은 대상의 앞 메시지가 기다린다 — 앞지르지 않는다
@@ -489,19 +590,29 @@ namespace sw
             NetHandleResult           result   = NetHandleResult::NotReady;
             if ( pHandler != nullptr )
             {
-                const int32 size = static_cast<int32>( held._buffer.size() );
-                if ( held._bMissingHandler == SW_TRUE )
+                const int32      size     = static_cast<int32>( held._buffer.size() );
+                const int32      headSize = pHandler->isWorldScoped() ? 2 : 1;
+                const WorldOrder world    = compareMessageWorld( *pHandler, held._buffer.data(), size );
+                if ( world == WorldOrder::Earlier )
                 {
-                    held._bMissingHandler = SW_FALSE;
+                    reportDeliveryFailed( peers, held, NetDeliveryFailure::WorldChanged ); // 기다리는 사이 월드가 바뀌었다
+                    continue;
+                }
+                if ( held._bMissingHandler == SW_TRUE && world == WorldOrder::Same )
+                {
                     if ( isInboundAllowed( held._buffer[0], role ) == false )
                     {
                         refuseWrongDirection( peers, held._connectionID, held._buffer[0], role );
                         continue;
                     }
-                    if ( pHandler->getHoldLimit( held._buffer[0] ) != 0u )
-                        held._key = pHandler->readHoldKey( held._buffer[0], BitReader( held._buffer.data() + 1, size - 1 ) );
+                    const bool bEarlierWaits = isBlockedByWorld( held._connectionID, held._rangeBase );
+                    if ( bEarlierWaits == false )
+                        held._bMissingHandler = SW_FALSE;
+                    if ( bEarlierWaits == false && size >= headSize && pHandler->getHoldLimit( held._buffer[0] ) != 0u )
+                        held._key = pHandler->readHoldKey( held._buffer[0], BitReader( held._buffer.data() + headSize, size - headSize ) );
                 }
-                const bool bBlocked = VectorUtil::contains( _listRefusedConnection, held._connectionID ) || isBlockedByHeld( held._connectionID, held._rangeBase, held._key );
+                const bool bBlocked = world == WorldOrder::Later || held._bMissingHandler == SW_TRUE || VectorUtil::contains( _listRefusedConnection, held._connectionID ) ||
+                                      ( pHandler->getHoldLimit( held._buffer[0] ) != 0u && isBlockedByHeld( held._connectionID, held._rangeBase, held._key ) );
                 if ( bBlocked == false )
                     result = dispatch( role, NetMessageContext{ held._buffer.data(), size, held._connectionID, held._channel, held._buffer[0] }, held._buffer.data(), size );
             }
@@ -612,7 +723,13 @@ namespace sw
             _malformedCount.add();
             return NetHandleResult::Malformed; // 반대 방향 종류다 — 처리기는 자기 역할이 받는 종류만 본다
         }
-        BitReader             body( pData + 1, size - 1 );
+        const int32 headSize = pHandler->isWorldScoped() ? 2 : 1; // 종류 · 월드 세대
+        if ( size < headSize )
+        {
+            _malformedCount.add();
+            return NetHandleResult::Malformed;
+        }
+        BitReader             body( pData + headSize, size - headSize );
         const NetHandleResult result = pHandler->handleNetMessage( NetMessageContext{ pData, size, context._connectionID, context._channel, pData[0] }, body );
         if ( result == NetHandleResult::Malformed )
             _malformedCount.add();
@@ -638,13 +755,20 @@ namespace sw
         for ( const NetEndpointEvent& event : _inbound._listEvent )
         {
             // 월드 세대는 처리기가 열림 사건에서 보내는 첫 메시지보다 먼저 닿는다(같은 신뢰 순서 채널).
-            const bool bTellWorld = event._kind == NetEndpointEvent::Kind::Connected && role == NetPeerRole::Server && _worldGeneration != 0;
+            const bool bTellWorld = event._kind == NetEndpointEvent::Kind::Connected && role == NetPeerRole::Server && _announcedGeneration != 0;
             if ( bTellWorld )
                 sendWorldGeneration( peers, event._connectionID );
             dispatchEvent( event );
             if ( event._kind == NetEndpointEvent::Kind::Connected )
             {
                 _mapPeerWireVersion.erase( event._connectionID ); // 같은 연결 ID 를 다음 연결이 다시 쓴다
+                if ( role == NetPeerRole::Client )
+                {
+                    // 새 연결이다 — 앞 서버의 세대 · 씬을 이어 보지 않는다(새 서버는 처음부터 센다).
+                    _announcedGeneration = 0;
+                    _worldSceneID        = 0;
+                    setWorldGeneration( peers, 0 );
+                }
                 sendWireVersions( peers, event._connectionID );
             }
             else

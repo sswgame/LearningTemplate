@@ -255,8 +255,15 @@ namespace sw
         virtual int32                         getConnectedCount() const                                  = 0;
         virtual void                          collectConnected( vector<int32>& outListConnection ) const = 0;
         virtual bool                          isConnectionSaturated( int32 connectionID ) const          = 0;
+        /** @brief 이쪽 월드의 세대입니다(0 이면 없다). 월드 범위 메시지(`NetWorldMessageTable`)를 보낼 때 실린다. 라우터만 바꾼다(`NetMessageRouter::openWorld` · `setLocalScene`). */
+        uint8 getWorldGeneration() const { return _worldGeneration.load( std::memory_order_relaxed ); }
+        void  setWorldGeneration( uint8 generation ) { _worldGeneration.store( generation, std::memory_order_relaxed ); }
+
         /** @brief 큐에 넣은 메시지의 종류별 셈입니다. @p outTable 에 **더합니다**(샤드 묶음은 샤드마다 더한다) — 새로 셀 때는 빈 표를 넘긴다. */
         virtual void addSentKindStats( NetMessageKindStatsTable& outTable ) const = 0;
+
+    private:
+        atomic<uint8> _worldGeneration{ 0 };
     };
 } // namespace sw
 
