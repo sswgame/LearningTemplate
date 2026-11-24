@@ -209,7 +209,7 @@ namespace sw
         int32 consumeTicks( float32 seconds );
 
         // 서버
-        void runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, float32 seconds );
+        void runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, const NetLinkValue& link, float32 seconds );
         void syncServerPawnList( GameObjectManager& manager, const HubWorldComponent& hub );
         void spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session );
         void removeServerPawn( GameObjectManager& manager, const ServerPawn& pawn );
@@ -302,7 +302,8 @@ namespace sw
         float32                                      _accumulator;
         vector<ControlTrigger>                       _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
         uint32                                       _pendingPawnEntityID; ///< 클라이언트 — 모은 발동을 낸 폰(폰이 바뀌면 모은 것을 버린다)
-        uint32                                       _tick;                ///< 서버 — 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        uint32                                       _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
+        uint32                                       _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
         uint32                                       _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         uint32                                       _localAvatarID;       ///< 클라이언트 — 예측하는 자기 아바타(0 이면 아직 없다)
         Role                                         _role;

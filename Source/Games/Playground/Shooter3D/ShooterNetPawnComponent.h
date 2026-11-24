@@ -279,7 +279,7 @@ namespace sw
         void stepClient( GameObjectManager& manager, ShooterBodyMovementComponent& movement, const vector<ShooterArenaBox>& listBox );
         // 서버(틱 뒤 · 게임 스레드 — 여러 몸을 옮기고 세우고 거둔다)
         void runServerFrame( GameObjectManager& manager );
-        void stepServer( GameObjectManager& manager, const vector<ShooterArenaBox>& listBox );
+        void stepServer( GameObjectManager& manager, INetPeers& peers, const vector<ShooterArenaBox>& listBox );
         /** @brief 끊긴 연결의 자리를 비우고 새 연결을 빈 자리에 앉힙니다. */
         void assignSeats( INetPeers& peers );
         void stepServerPawn( GameObjectManager& manager, ServerPawn& pawn, const vector<ShooterArenaBox>& listBox );
@@ -365,7 +365,8 @@ namespace sw
         LagCompensationHistory                            _lagHistory; ///< 서버 — 틱마다 산 적 · 산 플레이어의 자리
         float32                                           _accumulator;
         vector<ControlTrigger>                            _listPendingTrigger;  ///< 클라이언트 — 다음 입력 틱에 실을 발동 사건
-        uint32                                            _tick;                ///< 서버 — 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
+        uint32                                            _stride;              ///< 이 컴포넌트의 틱 하나가 월드의 서버 틱 몇 개인지
+        uint32                                            _tick;                ///< 서버 — 월드의 서버 시계에서 낸 시뮬레이션 틱, 클라이언트 — 예측한 입력 틱
         uint32                                            _pawnEntityID;        ///< 클라이언트 — 서버가 알려 준 내 몸의 엔티티(0 이면 아직)
         uint32                                            _reconciledTick;      ///< 클라이언트 — 마지막으로 맞춘 소유자 상태의 입력 틱
         uint32                                            _rewoundShotCount;    ///< 서버 — 랙 보정으로 판정한 광선 수
@@ -374,7 +375,7 @@ namespace sw
         uint32                                            _sentClaimCount;      ///< 클라이언트 — 보낸 주장 수
         uint32                                            _confirmedClaimCount; ///< 서버 — 인정한 주장 수
         uint32                                            _rejectedClaimCount;  ///< 서버 — 거절한 주장 수
-        int32                                             _pendingStepCount;    ///< 이번 프레임 틱 뒤에 돌 고정 틱 수
+        int32                                             _pendingStepCount;    ///< 클라이언트 — 이번 프레임 틱 뒤에 돌 입력 틱 수
         Role                                              _role;
         uint8                                             _bSeatsReported : 1; ///< 서버 — 자리 수를 매칭에 알렸다
         [[maybe_unused]] uint8                            _reserved       : 7;

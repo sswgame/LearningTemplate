@@ -16,26 +16,11 @@
 
 namespace sw
 {
-    namespace
-    {
-        /** @brief 틱 간격을 정수 틱 빈도(Hz)로 바꿉니다. 서버 틱 빈도는 정수(`ServerConfig::_tickRateHz`)이므로 실수 반올림 차이 없이 비교한다. */
-        int32 computeDestructionNetTickRateHz( float32 interval )
-        {
-            return static_cast<int32>( MathUtil::round( 1.0f / interval ) );
-        }
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     DestructionNetSessionComponent::DestructionNetSessionComponent()
-        : _tickInterval{ constant::time::kDefaultFixedStepSeconds }
-        , _hashInterval{ 1.0f }
+        : _hashInterval{ 1.0f }
         , _interpolationDelay{ 0.1f }
         , _session{}
         , _hashSubscription{}
-        , _pendingDeltaTime{ 0.0f }
-        , _bTickChecked{ SW_FALSE }
     {
         setCanEverTick( true );
     }
@@ -43,8 +28,6 @@ namespace sw
     void DestructionNetSessionComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        _bTickChecked = SW_FALSE;
-
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
         GameObject*         pOwner   = getOwner();
         GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
@@ -54,7 +37,6 @@ namespace sw
         const NetLinkValue& link = *pLink;
 
         DestructionReplicationConfig settings;
-        settings._tickInterval        = _tickInterval;
         settings._hashInterval        = _hashInterval;
         settings._interpolationDelay  = _interpolationDelay;
         const DestructionNetSide side = link._role == NetLinkRole::Server ? DestructionNetSide::Server : DestructionNetSide::Client;
@@ -78,7 +60,7 @@ namespace sw
         Component::onTick( context );
         if ( _session.isActive() == false )
             return;
-        _pendingDeltaTime = context.getDeltaTime(); // 자기 오브젝트 쓰기 — 복제는 틱 뒤에 남의 파괴 컴포넌트를 쓴다
+        // 복제는 남의 파괴 컴포넌트를 쓴다 — 틱 뒤에 돈다.
         context.deferPostTickOnComponent( *this, []( DestructionNetSessionComponent& component, GameObjectManager& manager )
         {
             (void)manager;
@@ -90,20 +72,7 @@ namespace sw
     {
         if ( _session.isActive() == false )
             return;
-        // 서버의 첫 틱(델타가 있는)에서 틱 빈도를 한 번 비교한다.
-        const bool bCheckServerTick = _session.getSide() == DestructionNetSide::Server && _bTickChecked == SW_FALSE && _pendingDeltaTime > 0.0f;
-        if ( bCheckServerTick )
-        {
-            _bTickChecked = SW_TRUE;
-            if ( computeDestructionNetTickRateHz( _pendingDeltaTime ) != computeDestructionNetTickRateHz( _tickInterval ) )
-            {
-                SW_LOG_ERROR_ID( "DestructionNetSessionComponent.DestructionNetSessionStopped", "Destruction net session stopped: the server ticks every %# s but Tick Interval is %# s - pose times would drift; set Tick Interval to the server fixed step",
-                                 _pendingDeltaTime, _tickInterval );
-                _session.shutdown();
-                return;
-            }
-        }
-        _session.update( _pendingDeltaTime );
+        _session.update();
         reportReplicaStats();
     }
 

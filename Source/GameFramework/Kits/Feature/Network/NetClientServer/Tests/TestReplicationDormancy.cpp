@@ -38,6 +38,7 @@ namespace
         test::LoopbackCluster  _cluster{ 13u };
         DormancyCountingPolicy _policy;
         ReplicationServer      _server;
+        NetClock               _worldClock;
         ReplicationClient      _client;
 
         ReplicationDormancyTestRig()
@@ -49,7 +50,7 @@ namespace
             ReplicationServerConfig serverSettings;
             serverSettings._dormancyTicks = 4;
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), serverSettings, &_policy ) );
-            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), ReplicationClientConfig{} ) );
+            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), _worldClock, ReplicationClientConfig{} ) );
         }
 
         void pollUntilDelivered()

@@ -19,14 +19,15 @@ namespace sw
         , _inputWindow{}
         , _settings{}
         , _pHost{ nullptr }
-        , _clock{}
-        , _pendingSeconds{ 0.0f }
+        , _pWorldClock{ nullptr }
+        , _renderClock{}
+        , _stride{ 1 }
         , _decodeFailureCount{}
         , _messageWriter{}
     {
     }
 
-    bool ReplicationClient::initialize( INetPeers* pHost, const ReplicationClientConfig& settings )
+    bool ReplicationClient::initialize( INetPeers* pHost, NetClock& worldClock, const ReplicationClientConfig& settings )
     {
         // 실패하면 호스트 없는 클라이언트로 남기고 지난 설정을 그대로 둔다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pHost                  = nullptr;
@@ -36,13 +37,21 @@ namespace sw
             SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientRefusedStartSettings", "ReplicationClient: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        _pHost    = pHost;
-        _settings = settings;
-        NetClockConfig clockSettings;
-        clockSettings._tickInterval       = settings._tickInterval;
+        const optional<uint32> stride = NetClock::computeStride( settings._tickInterval );
+        if ( stride.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ReplicationClient.ReplicationClientTickInterval", "ReplicationClient: refused to start - tick interval %# s is not a multiple of the server tick (%# s)", settings._tickInterval, NetClock::kTickSeconds );
+            return false;
+        }
+        _pHost       = pHost;
+        _settings    = settings;
+        _pWorldClock = &worldClock;
+        _stride      = *stride;
+        NetRenderClockConfig clockSettings;
+        clockSettings._stride             = _stride;
         clockSettings._interpolationDelay = settings._interpolationDelay;
-        clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 서버 틱마다 온다
-        _clock.initialize( clockSettings );
+        clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 그 틱마다 온다
+        _renderClock.initialize( clockSettings );
 
         _listSnapshot.initialize( settings._historySize ); // 범위(4 이상)는 위에서 봤다
         _inputWindow.initialize( NetClientServerMessage::kMaxInputCount, NetClientServerMessage::kInputFormat );
@@ -55,7 +64,7 @@ namespace sw
     {
         _listSnapshot.reset(); // 스냅샷 버퍼는 그대로 남아 다음 연결이 재사용한다
         _inputWindow.reset();  // 새 서버이므로 이전 확인은 이 연결의 것이 아니다
-        _clock.reset();        // 새 서버의 틱은 이전 서버보다 작을 수 있으므로 첫 스냅샷에서 다시 맞춘다
+        _renderClock.reset();  // 새 서버의 틱은 이전 서버보다 작을 수 있으므로 첫 스냅샷에서 다시 맞춘다(월드의 시계는 라우터가 되돌린다)
     }
 
     void ReplicationClient::onConnectionOpened( int32 connectionID )
@@ -106,7 +115,8 @@ namespace sw
             return NetHandleResult::Malformed;                             // 적용 전에 본다 — 남는 바이트가 있는 스냅샷은 복원하지 않는다
         _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱이다. 그 이전 입력은 다시 싣지 않는다
         std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이 스냅샷이 된다. 밀려난 이전 스냅샷의 버퍼는 다음 복원에 재사용한다
-        _clock.observeServerTick( tick );                                  // 첫 스냅샷이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
+        _pWorldClock->observe( tick * _stride );
+        _renderClock.observeSample( tick );
         NetSnapshotAckBody ack;
         ack._tick = tick;
         if ( _pHost != nullptr && _messageWriter.writeMessage<NetClientServerMessage::Table, NetClientServerMessage::SnapshotAck>( ack ) )
@@ -116,10 +126,8 @@ namespace sw
 
     void ReplicationClient::onPollFinished()
     {
-        // 렌더 틱은 서버 틱 추정값에서 지연을 뺀 값이다.
-        // 추정값은 받은 스냅샷 틱의 하한에 흐른 시간을 더한 것이고 받은 가장 새 틱 + 지연까지만 간다. 그래서 통신이 끊겨도 되돌아가지 않고 받은 틱을 지나치지도 않는다.
-        _clock.advance( _pendingSeconds );
-        _pendingSeconds = 0.0f;
+        if ( _pWorldClock != nullptr )
+            _renderClock.follow( *_pWorldClock );
     }
 
     void ReplicationClient::findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, NetSampleRatio& outRatio ) const

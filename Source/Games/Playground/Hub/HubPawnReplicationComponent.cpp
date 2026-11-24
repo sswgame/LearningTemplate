@@ -122,6 +122,7 @@ namespace sw
         , _accumulator{ 0.0f }
         , _listPendingTrigger{}
         , _pendingPawnEntityID{ 0 }
+        , _stride{ 1 }
         , _tick{ 0 }
         , _reconciledTick{ 0 }
         , _localAvatarID{ 0 }
@@ -174,7 +175,7 @@ namespace sw
         TickedFloorStep floorStep{ manager, _tickInterval };
         _pFloorStep = &floorStep;
         if ( _role == Role::Server )
-            runServerFrame( manager, *pHub, seconds );
+            runServerFrame( manager, *pHub, *pLink, seconds );
         else if ( _role == Role::Client )
             runClientFrame( manager, *pHub, seconds );
         _pFloorStep = nullptr;
@@ -186,7 +187,14 @@ namespace sw
         const bool bHubReady = bServer ? hub.findServer() != nullptr : hub.getClient().isActive();
         if ( _bStartTried == SW_TRUE || bHubReady == false )
             return; // 티켓 없는 서버 세션에는 허브 서버가 없다 — 폰도 세우지 않는다
-        _bStartTried = SW_TRUE;
+        _bStartTried                  = SW_TRUE;
+        const optional<uint32> stride = NetClock::computeStride( _tickInterval );
+        if ( stride.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Hub.PawnTickIntervalNotMultiple", "[Hub] pawn replication tick interval %# s is not a multiple of the server tick (%# s) - pawns stay local", _tickInterval, NetClock::kTickSeconds );
+            return;
+        }
+        _stride = *stride;
         PredictionSmootherSettings smoothing;
         smoothing._halfLifeSeconds = _smoothingHalfLife;
         smoothing._snapDistance    = _smoothingSnapDistance;
@@ -207,7 +215,7 @@ namespace sw
         {
             ReplicationClientConfig settings;
             settings._tickInterval = _tickInterval;
-            if ( _client.initialize( link._pPeers, settings ) )
+            if ( _client.initialize( link._pPeers, link._pRouter->getWorldClock(), settings ) )
                 _routerSubscription = link._pRouter->registerHandler( &_client );
         }
         if ( _routerSubscription.isActive() == false )
@@ -219,6 +227,7 @@ namespace sw
         _role        = bServer ? Role::Server : Role::Client;
         if ( bServer == false )
             return;
+        _tick = link._pRouter->getWorldClock().getWholeTick( _stride );
         // 서버 씬의 플레이어 오브젝트는 아무도 조종하지 않는다 — 나는 자리에 선 캡슐이 접속한 폰을 막지 않게 물리 몸만 끈다(튜닝의 원본으로는 남는다).
         const GameObjectManager*      pManager    = getOwner()->getManager();
         const GameObject*             pLocal      = pManager != nullptr ? pManager->resolveGameObject( _localPawn ) : nullptr;
@@ -295,20 +304,18 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 서버
     // ------------------------------------------------------------------------------
-    void HubPawnReplicationComponent::runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, float32 seconds )
+    void HubPawnReplicationComponent::runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, const NetLinkValue& link, float32 seconds )
     {
         if ( hub.findServer() == nullptr )
             return;
         syncServerPawnList( manager, hub );
         syncServerMountList( manager );
         _server.accumulateInputBudget( seconds );
-        ControlSystem* const pControl  = ControlSystem::find( manager );
-        const int32          tickCount = consumeTicks( seconds );
-        for ( int32 tickIndex = 0; tickIndex < tickCount; ++tickIndex )
+        // 월드의 서버 시계가 지난 이 컴포넌트의 틱을 차례로 돈다 — 번호를 따로 세지 않는다. 바닥의 자세도 같은 시계다.
+        const uint32 presentTick = link._pRouter->getWorldClock().getWholeTick( _stride );
+        while ( _tick < presentTick )
         {
             ++_tick;
-            if ( pControl != nullptr )
-                publishFloorTick( *pControl, static_cast<int64>( _tick ) );
             _server.beginTick( _tick );
             for ( ServerPawn& pawn : _listServerPawn )
             {
@@ -538,7 +545,6 @@ namespace sw
         {
             stepClient( manager, hub, *pPawnObject );
         }
-        _client.accumulateFrameTime( seconds ); // 화면 시각은 다음 프레임의 시작에 옮겨진다
         _smoother.update( seconds );
         applyDisplay( manager, *pPawnObject );
         updateRemotePawnList( manager );
@@ -864,8 +870,7 @@ namespace sw
 
     void HubPawnReplicationComponent::publishFloorTick( ControlSystem& control, int64 netTick ) const
     {
-        // 씬의 바닥은 조종 틱(고정 프레임 길이)의 함수다 — 네트 틱을 같은 시각의 조종 틱으로 바꿔 알린다.
-        control.publishServerTick( static_cast<int64>( MathUtil::round( static_cast<float64>( netTick ) * static_cast<float64>( _tickInterval ) / static_cast<float64>( constant::time::kDefaultFixedStepSeconds ) ) ) );
+        control.publishServerTick( netTick * static_cast<int64>( _stride ) ); // 씬의 바닥은 월드의 서버 틱으로 돈다
     }
 
     float64 HubPawnReplicationComponent::computeDisplayFloorTick() const

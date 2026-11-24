@@ -585,7 +585,6 @@
 				<_listComponent>
 					<DestructionNetSessionComponent _localID="15984163241990109434" _componentName="DestructionNetSessionComponent"
 					                                _bActive="true"
-					                                _tickInterval="0.016666668"
 					                                _hashInterval="1"
 					                                _interpolationDelay="0.1" />
 				</_listComponent>

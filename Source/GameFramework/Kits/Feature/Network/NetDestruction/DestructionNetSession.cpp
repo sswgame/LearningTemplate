@@ -27,6 +27,7 @@ namespace sw
         , _listRecord{}
         , _pManager{ nullptr }
         , _routerSubscription{}
+        , _pWorldClock{ nullptr }
         , _serverTick{ 0 }
         , _seenSpawnedRevision{ 0 }
         , _side{ DestructionNetSide::Server }
@@ -47,7 +48,8 @@ namespace sw
         _listEntry.clear();
         _mapEntryIndex.clear();
         _listRecord.clear();
-        _pManager = &manager;
+        _pManager    = &manager;
+        _pWorldClock = &router.getWorldClock();
 
         if ( side == DestructionNetSide::Client )
         {
@@ -67,7 +69,7 @@ namespace sw
         if ( side == DestructionNetSide::Server )
             _server.initialize( &host, &manager, settings );
         else
-            _client.initialize( &host, &manager, settings );
+            _client.initialize( &host, &manager, router.getWorldClock(), settings );
         NetObjectTable& table = manager.getSubsystem<NetObjectTable>();
         table.captureSceneObjects( SceneIterationKey{} );
         _seenSpawnedRevision = table.getSpawnedRevision();
@@ -128,7 +130,7 @@ namespace sw
         }
     }
 
-    void DestructionNetSession::update( float32 deltaTime )
+    void DestructionNetSession::update()
     {
         if ( _routerSubscription.isActive() == false )
             return;
@@ -140,9 +142,14 @@ namespace sw
             registerNumberedObjects();
         }
         if ( _side == DestructionNetSide::Server )
-            _server.update( _serverTick++ );
+        {
+            _serverTick = _pWorldClock->getWholeTick();
+            _server.update( _serverTick );
+        }
         else
-            _client.update( deltaTime );
+        {
+            _client.update();
+        }
         recordChangedHashes();
     }
 

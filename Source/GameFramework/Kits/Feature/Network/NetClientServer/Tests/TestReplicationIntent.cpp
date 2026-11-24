@@ -21,6 +21,7 @@ namespace
     {
         test::LoopbackCluster _cluster{ 7u };
         ReplicationServer     _server;
+        NetClock              _worldClock;
         ReplicationClient     _client;
         int32                 _connectionID{ -1 };
 
@@ -31,7 +32,7 @@ namespace
             (void)_cluster.addEndpoint( 4200, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), ReplicationServerConfig{} ) );
-            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), ReplicationClientConfig{} ) );
+            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), _worldClock, ReplicationClientConfig{} ) );
             vector<int32> listConnection;
             _cluster.getServer().collectConnected( listConnection );
             SW_EXPECT_EQUAL( size_t{ 1 }, listConnection.size() );
@@ -239,14 +240,14 @@ SW_TEST_CASE( ReplicationIntentTest, TriggersKeepTheTickTheySawAndForgedOnesAreC
     SW_EXPECT_NEAR( 492.0, received._listTrigger[2].getViewTick().getServerTick( 0.0 ), 1e-6 );
 }
 
-/** @brief [ReplicationIntentTest] 화면 시각은 프레임 안에서 움직이지 않는다 — 시간을 모아도 라우터가 다음 프레임을 열 때까지 같은 값이다. */
+/** @brief [ReplicationIntentTest] 화면 시각은 프레임 안에서 움직이지 않는다 — 월드의 시계가 흘러도 라우터가 다음 프레임을 열 때까지 같은 값이다. */
 SW_TEST_CASE( ReplicationIntentTest, RenderTickMovesOnlyBetweenFrames )
 {
     ReplicationIntentTestRig rig;
     rig.sendSnapshot( 100 );
     rig._client.onPollFinished();
     const float64 renderTick = rig._client.getRenderTick();
-    rig._client.accumulateFrameTime( 1.0f / 30.0f );
+    rig._worldClock.advance( 1.0f / 30.0f );
     SW_EXPECT_NEAR( renderTick, rig._client.getRenderTick(), 1e-9 );
     rig._client.onPollFinished();
     SW_EXPECT_NEAR( renderTick + 1.0, rig._client.getRenderTick(), 1e-3 );

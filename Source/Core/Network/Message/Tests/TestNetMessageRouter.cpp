@@ -939,6 +939,41 @@ SW_TEST_CASE( NetMessageRouterTest, WorldMessagesReachOnlyTheirOwnScene )
     SW_EXPECT_TRUE( rig._serverRouter.getOtherWorldCount().get() >= 1u );
 }
 
+/** @brief [NetMessageRouterTest] 월드의 서버 시계는 같은 씬의 클라이언트에만 닿고, 새 월드에서는 처음부터다 — 앞 월드의 시각을 이어 보지 않는다 */
+SW_TEST_CASE( NetMessageRouterTest, WorldClockReachesOnlyItsOwnScene )
+{
+    constexpr float64 kTolerance = static_cast<float64>( NetMessageRouter::kClockSendTicks );
+    HoldTestRig       rig;
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kFirstScene );
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kFirstScene );
+    rig.pollAll();
+    SW_EXPECT_FALSE( rig._clientRouter.getWorldClock().hasServerTick() );
+    for ( int32 frame = 0; frame < 30; ++frame )
+    {
+        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), NetClock::kTickSeconds );
+    }
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 30u, rig._serverRouter.getWorldClock().getWholeTick() );
+    SW_EXPECT_NEAR( 30.0, rig._clientRouter.getWorldClock().getServerTick(), kTolerance );
+
+    rig._serverRouter.openWorld( rig._pair.getServer(), WorldTestUtil::kSecondScene );
+    SW_EXPECT_EQUAL( 0u, rig._serverRouter.getWorldClock().getWholeTick() );
+    for ( int32 frame = 0; frame < 12; ++frame )
+    {
+        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), NetClock::kTickSeconds );
+    }
+    rig.pollAll();
+    SW_EXPECT_FALSE( rig._clientRouter.getWorldClock().hasServerTick() ); // 아직 앞 씬이다
+
+    rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kSecondScene );
+    for ( int32 frame = 0; frame < 6; ++frame )
+    {
+        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), NetClock::kTickSeconds );
+    }
+    rig.pollAll();
+    SW_EXPECT_NEAR( 18.0, rig._clientRouter.getWorldClock().getServerTick(), kTolerance );
+}
+
 /** @brief [NetMessageRouterTest] 세대는 255 에서 1 로 돌아도 앞뒤를 안다 */
 SW_TEST_CASE( NetMessageRouterTest, WorldGenerationWrapsAround )
 {

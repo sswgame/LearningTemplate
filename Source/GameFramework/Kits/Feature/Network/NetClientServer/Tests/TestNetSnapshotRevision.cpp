@@ -43,6 +43,7 @@ namespace
     {
         test::LoopbackCluster _cluster{ 11u };
         ReplicationServer     _server;
+        NetClock              _worldClock;
         ReplicationClient     _client;
         size_t                _receivedBytes{ 0 }; ///< 마지막 `pollUntilDelivered` 동안 클라이언트가 받은 바이트
 
@@ -53,7 +54,7 @@ namespace
             (void)_cluster.addEndpoint( 4400, settings );
             SW_EXPECT_TRUE( _cluster.connectClients( 30 ) );
             SW_EXPECT_TRUE( _server.initialize( &_cluster.getServer(), ReplicationServerConfig{} ) );
-            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), ReplicationClientConfig{} ) );
+            SW_EXPECT_TRUE( _client.initialize( &_cluster.getClient( 0 ), _worldClock, ReplicationClientConfig{} ) );
         }
 
         void pollUntilDelivered()

@@ -187,6 +187,9 @@ namespace sw
         , _listHeld{}
         , _pClock{ &NetMessageInternal::nowMilliseconds }
         , _sessionSerial{ 0 }
+        , _worldClock{}
+        , _bindSerial{ 0 }
+        , _sentClock{ 0 }
         , _worldSceneID{ 0 }
         , _localSceneID{ 0 }
         , _announcedGeneration{ 0 }
@@ -264,7 +267,9 @@ namespace sw
         _localSceneID         = 0;
         _announcedGeneration  = 0;
         _worldGeneration      = 0;
+        _sentClock            = 0;
         _bWireVersionsChanged = SW_FALSE;
+        _worldClock.reset( NetClockSide::Replica );
     }
 
     void NetMessageRouter::releaseHandler( INetMessageHandler* pHandler )
@@ -366,12 +371,15 @@ namespace sw
     void NetMessageRouter::setWorldGeneration( INetPeers& peers, uint8 generation )
     {
         _worldGeneration = generation;
+        _sentClock       = 0;
+        _worldClock.reset( peers.isServer() ? NetClockSide::Authority : NetClockSide::Replica );
         peers.setWorldGeneration( generation ); // 이 뒤에 보내는 월드 범위 메시지가 싣는다
     }
 
     void NetMessageRouter::openWorld( INetPeers& peers, uint64 sceneID )
     {
         SW_ASSERT( peers.isServer() ); // 세대는 서버가 정한다 — 클라이언트는 받기만 한다
+        ++_bindSerial;
         _worldSceneID        = sceneID;
         _announcedGeneration = _announcedGeneration == std::numeric_limits<uint8>::max() ? uint8{ 1 } : static_cast<uint8>( _announcedGeneration + 1u );
         setWorldGeneration( peers, _announcedGeneration );
@@ -381,6 +389,7 @@ namespace sw
     void NetMessageRouter::setLocalScene( INetPeers& peers, uint64 sceneID )
     {
         SW_ASSERT( peers.isServer() == false );
+        ++_bindSerial;
         _localSceneID = sceneID;
         updateClientWorld( peers );
     }
@@ -423,15 +432,56 @@ namespace sw
         const uint64 sceneID    = body.readVarUint();
         if ( body.hasOverflowed() || generation == 0 )
         {
-            _malformedCount.add();
-            SW_LOG_WARNING_ID( "Net.RouterWorldMalformed", "NetMessageRouter: connection %# sent a broken world generation - disconnecting it", connectionID );
-            peers.disconnect( connectionID, NetLinger::none() );
-            _listRefusedConnection.push_back( connectionID );
+            refuseMalformed( peers, connectionID, pData[0] );
             return;
         }
         _announcedGeneration = generation;
         _worldSceneID        = sceneID;
         updateClientWorld( peers );
+    }
+
+    void NetMessageRouter::refuseMalformed( INetPeers& peers, int32 connectionID, uint8 kind )
+    {
+        _malformedCount.add();
+        SW_LOG_WARNING_ID( "Net.RouterMessageMalformed", "NetMessageRouter: connection %# sent a broken router message of kind 0x%02x - disconnecting it", connectionID, static_cast<int32>( kind ) );
+        peers.disconnect( connectionID, NetLinger::none() );
+        _listRefusedConnection.push_back( connectionID );
+    }
+
+    void NetMessageRouter::advanceWorldClock( INetPeers& peers, float32 deltaTime )
+    {
+        _worldClock.advance( deltaTime );
+        const uint32 sendIndex = _worldClock.getWholeTick( kClockSendTicks );
+        const bool   bSend     = peers.isServer() && _worldGeneration != 0 && sendIndex != _sentClock;
+        if ( bSend == false )
+            return;
+        _sentClock = sendIndex;
+        if ( peers.getConnectedCount() == 0 )
+            return;
+        NetMessageWriter messageWriter;
+        BitWriter&       body = messageWriter.begin( NetMessageRange::kRouterClockKind );
+        body.writeBits( _worldGeneration, 8 );
+        body.writeVarUint( _worldClock.getWholeTick() );
+        (void)messageWriter.broadcast( peers, NetChannelKind::Unreliable ); // 잃어도 다음 것이 더 새 시각이다
+    }
+
+    void NetMessageRouter::receiveWorldClock( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size )
+    {
+        if ( peers.isServer() )
+        {
+            refuseWrongDirection( peers, connectionID, pData[0], NetPeerRole::Server );
+            return;
+        }
+        BitReader    body( pData + 1, size - 1 );
+        const uint8  generation = static_cast<uint8>( body.readBits( 8 ) );
+        const uint32 serverTick = body.readVarUint32();
+        if ( body.hasOverflowed() || generation == 0 )
+        {
+            refuseMalformed( peers, connectionID, pData[0] );
+            return;
+        }
+        if ( generation == _worldGeneration )
+            _worldClock.observe( serverTick ); // 다른 월드의 시각은 이 수열이 아니다
     }
 
     void NetMessageRouter::setClock( ClockFunction pClock )
@@ -814,6 +864,11 @@ namespace sw
             if ( message._size > 0 && pData[0] == NetMessageRange::kRouterWorldKind )
             {
                 receiveWorldGeneration( peers, message._connectionID, pData, message._size );
+                continue;
+            }
+            if ( message._size > 0 && pData[0] == NetMessageRange::kRouterClockKind )
+            {
+                receiveWorldClock( peers, message._connectionID, pData, message._size );
                 continue;
             }
             if ( message._size > 0 && pData[0] == NetMessageRange::kRouterDeliveryFailedKind )

@@ -90,11 +90,12 @@ namespace
             serverSettings._snapshotBudgetBytes = 300; // 예산이 모자라 우선도가 결과를 바꾼다
             IReplicationPolicy* pPolicy         = bReference ? static_cast<IReplicationPolicy*>( &reference ) : static_cast<IReplicationPolicy*>( &interest );
             SW_EXPECT_TRUE( server.initialize( &cluster.getServer(), serverSettings, pPolicy ) );
+            NetClock                        worldClock;
             ChunkedArray<ReplicationClient> listReplication; // 메시지 처리기(NetTableHandler)라 주소가 걸린다 — 옮기지 않는다
             for ( int32 index = 0; index < cluster.getClientCount(); ++index )
             {
                 listReplication.emplace_back();
-                SW_EXPECT_TRUE( listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientConfig{} ) );
+                SW_EXPECT_TRUE( listReplication.back().initialize( &cluster.getClient( index ), worldClock, ReplicationClientConfig{} ) );
             }
             vector<int32> listConnection;
             cluster.getServer().collectConnected( listConnection );
@@ -138,7 +139,6 @@ namespace
                         listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
                         (void)listReplication[static_cast<size_t>( index )].handleMessage( 0, buffer ); // 받은 스냅샷 — 판의 결과는 해시가 본다
                     }
-                    listReplication[static_cast<size_t>( index )].accumulateFrameTime( 1.0f / 60.0f );
                     listReplication[static_cast<size_t>( index )].onPollFinished();
                 }
             }

@@ -39,9 +39,9 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( Min = 0.001, Units = s )
-        float32 _tickInterval{ 1.0f / 30.0f }; ///< 서버 틱 간격. 스냅샷이 틱마다 오므로 표본 간격이기도 하다
+        float32 _tickInterval{ 1.0f / 30.0f }; ///< 스냅샷의 틱 간격. 월드의 서버 틱(`NetClock::kTickSeconds`)의 정수 배수다
         PROPERTY( Min = 0, Units = s )
-        float32 _interpolationDelay{ 0.1f }; ///< 렌더 지연의 최솟값. 실제 값은 이 값과 (틱 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이며, 스냅샷 하나를 잃어도 끊기지 않게 하려는 것이다
+        float32 _interpolationDelay{ 0.1f }; ///< 렌더 지연의 최솟값. 실제 값은 이 값과 (틱 간격 × `NetRenderClock::kSampleIntervalsBehind`) 중 큰 쪽이며, 스냅샷 하나를 잃어도 끊기지 않게 하려는 것이다
         PROPERTY( Min = 4 )
         int32 _historySize{ 64 }; ///< 받아 두는 스냅샷 수. 델타의 기준과 보간 구간을 이 안에서 찾는다
     };
@@ -72,20 +72,18 @@ namespace sw
         ReplicationClient();
 
         /**
-         * @brief 호스트와 설정을 받아 시작합니다. 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
+         * @brief 호스트와 월드의 서버 시계(`SceneNetLink::getServerClock`)와 설정을 받아 시작합니다. 설정이 범위 밖이거나 틱 간격이 서버 틱의 정수 배수가 아니면 오류를 남기고 false 를 반환합니다.
          * @details 거절된 클라이언트는 호스트가 없는 클라이언트와 같다. 입력을 보내지 않는다.
          */
-        [[nodiscard]] bool initialize( INetPeers* pHost, const ReplicationClientConfig& settings );
+        [[nodiscard]] bool initialize( INetPeers* pHost, NetClock& worldClock, const ReplicationClientConfig& settings );
         NetHandleResult    receive( NetClientServerMessage::Snapshot, const NetMessageContext& context, BitReader& body );
         /** @brief 서버에 (다시) 연결되면 호출합니다. 받은 스냅샷과 렌더 시각을 초기화하며, 새 서버의 틱은 이전 서버보다 작을 수 있기 때문입니다. */
         void onConnectionOpened( int32 connectionID ) override;
         /**
-         * @brief 이번 프레임이 흐른 시간을 모읍니다. 화면 시각은 여기서 움직이지 않습니다.
-         * @details 화면 시각(`getRenderTick`)은 프레임에 한 번, 라우터가 메시지를 다 나눠 준 뒤(`onPollFinished`) 정해지고 그 프레임의 표본(적 · 남의 몸 · 발동 도장)이 모두 그 값을 쓴다.
-         *          프레임 중간에 시계를 움직이던 API 는 앞 틱의 표본과 뒤 틱의 표본을 다른 시각으로 갈랐다(언리얼 NetworkPrediction 의 보간 시각도 프레임에 하나다).
+         * @brief 화면 시각을 월드의 서버 시계에 맞춥니다. 라우터가 프레임에 한 번, 메시지를 다 나눠 준 뒤 부릅니다.
+         * @details 그 프레임의 표본(적 · 남의 몸 · 발동 도장)이 모두 이 값을 쓴다 — 프레임 중간에 시계를 움직이면 앞 틱의 표본과 뒤 틱의 표본이 다른 시각으로 갈린다
+         *          (언리얼 NetworkPrediction 의 보간 시각도 프레임에 하나다). 서버 시각의 추정은 월드에 하나뿐이고 여기는 보간 지연만 갖는다.
          */
-        void accumulateFrameTime( float32 deltaTime ) { _pendingSeconds += deltaTime; }
-        /** @brief 모은 시간만큼 화면 시각을 옮깁니다. 라우터가 부른다. */
         void onPollFinished() override;
         /**
          * @brief 이 틱의 입력을 넣고, 서버가 확인하지 않은 입력을 오래된 것부터 메시지 상한 안에서 보냅니다.
@@ -138,7 +136,7 @@ namespace sw
          */
         [[nodiscard]] optional<int64> findServerTickOffset() const;
         /** @brief 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수이고, 프레임 안에서 바뀌지 않습니다. 스냅샷을 받기 전에는 0 입니다. */
-        float64 getRenderTick() const { return _clock.hasServerTick() ? _clock.getRenderTick() : 0.0; }
+        float64 getRenderTick() const { return _renderClock.hasSample() ? _renderClock.getRenderTick() : 0.0; }
         /** @brief 그리는 서버 틱을 보는 시각으로 냅니다 — 그린 뒤 `ControlSystem::publishViewTick` 에 넘긴다. */
         ControlViewTick   getViewTick() const { return ControlViewTick::makeSeen( getRenderTick() ); }
         const DevCounter& getDecodeFailureCount() const { return _decodeFailureCount; }
@@ -158,8 +156,9 @@ namespace sw
         NetInputSendWindow          _inputWindow;   ///< 내 입력. 서버가 스냅샷에 실어 돌려준 확인 틱의 다음 틱부터 싣는다
         ReplicationClientConfig     _settings;
         INetPeers*                  _pHost;
-        NetClock                    _clock;          ///< 렌더 틱의 시계. 받은 스냅샷 틱의 하한에 흐른 시간을 더하고 지연을 뺀 값이며, 받은 가장 새 틱까지만 가고 되돌아가지 않는다
-        float32                     _pendingSeconds; ///< 다음 `onPollFinished` 가 시계에 넣을 시간
+        NetClock*                   _pWorldClock; ///< 월드의 서버 시계. 스냅샷의 틱을 알리고 화면 시각이 따라간다
+        NetRenderClock              _renderClock; ///< 스냅샷을 그리는 시각
+        uint32                      _stride;      ///< 스냅샷 틱 하나가 서버 틱 몇 개인지
         DevCounter                  _decodeFailureCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다
     };

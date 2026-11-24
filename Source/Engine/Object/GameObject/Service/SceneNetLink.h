@@ -18,6 +18,7 @@ namespace sw
     class Component;
     class GameObjectManager;
     class INetPeers;
+    class NetClock;
     class NetMessageRouter;
 
     /** @brief 월드의 네트워크 역할입니다. 링크가 비어 있으면 역할이 없는 월드입니다. */
@@ -58,8 +59,8 @@ namespace sw
         SceneNetLink( const SceneNetLink& )            = delete;
         SceneNetLink& operator=( const SceneNetLink& ) = delete;
 
-        /** @brief 프레임마다 할 일이 없습니다. */
-        void update( float32 deltaTime ) override { (void)deltaTime; }
+        /** @brief 이 월드의 서버 시계를 흘립니다(프레임의 끝 — 다음 프레임의 받은 메시지 · 틱이 새 시각을 본다). */
+        void update( float32 deltaTime ) override;
         /** @brief 씬을 비워도 링크는 월드의 성질이라 남깁니다. */
         void onSceneCleared() override {}
 
@@ -82,6 +83,12 @@ namespace sw
 
         /** @brief 올라 있으면 true 입니다. 거짓이면 이 월드는 네트워크가 없습니다. */
         [[nodiscard]] bool isBound() const { return _value.isComplete(); }
+        /**
+         * @brief 이 월드의 서버 시계입니다 — 월드에 하나다(`NetClock`). 올라 있을 때(`isBound`)만 부릅니다.
+         * @details 시각은 라우터가 세대와 함께 든다. 씬이 겹쳐 있는 동안 같은 라우터에 나중에 올라온 씬이 있으면 그 씬만 시계를 흘린다.
+         */
+        [[nodiscard]] NetClock&       getServerClock();
+        [[nodiscard]] const NetClock& getServerClock() const;
         /** @brief 이 월드의 세대입니다(서버가 정한다). 월드 범위 메시지에 저절로 실리고 라우터가 가른다(`NetWorldMessageTable`). 링크가 비었으면 0 입니다. */
         [[nodiscard]] uint8 getWorldGeneration() const;
         /** @brief 올라 있는 값입니다(`isBound` 일 때만 씁니다). */
@@ -89,5 +96,6 @@ namespace sw
 
     private:
         NetLinkValue _value;
+        uint32       _bindSerial; ///< 올린 때의 라우터 번호(`NetMessageRouter::getBindSerial`). 달라졌으면 같은 라우터에 다른 씬이 나중에 올랐다
     };
 } // namespace sw

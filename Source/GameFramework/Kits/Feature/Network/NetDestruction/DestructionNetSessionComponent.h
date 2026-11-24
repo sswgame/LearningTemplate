@@ -6,9 +6,9 @@
  *          예: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777`, 클라이언트 `App -gv_firstScene=<같은 씬> -gv_netConnectAddress=127.0.0.1:7777`.
  *          두 로그를 `py -3 -m Scripts destruction-net compare` 로(두 프로세스를 띄우는 것까지는 `run`) 맞대면 컴파일러 · 플랫폼을 넘어 구조 해시가 같은지 본다.
  *
- *          틱은 마지막 그룹(`PostUpdate`)이다 — 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다. 서버의 사건 · 자세 시각은 틱 번호 × `_tickInterval` 이므로
- *          서버 고정 틱과 같아야 한다. 서버는 첫 틱의 델타가 다르면 오류를 남기고 복제를 멈춘다(다른 값으로 대신 돌지 않는다).
- *          틱은 델타만 적고 복제는 틱 뒤 큐 한 번에 건다 — 복제가 남의 오브젝트(파괴 컴포넌트)의 상태를 쓰므로 틱 안(워커)에서 하지 않는다
+ *          틱은 마지막 그룹(`PostUpdate`)이다 — 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다. 사건 · 자세의 시각은 월드의 서버 틱(`NetClock`)이라
+ *          서버의 프레임 길이와 무관하다(예전에는 프레임마다 하나씩 세어 서버 틱 빈도가 설정과 다르면 복제를 멈췄다).
+ *          틱은 걸기만 하고 복제는 틱 뒤 큐 한 번에 건다 — 복제가 남의 오브젝트(파괴 컴포넌트)의 상태를 쓰므로 틱 안(워커)에서 하지 않는다
  *          (`Gameplay.md` 규칙 6 — 씬에 하나라 프레임에 한 일이다. 하우징 `HousingNetSessionComponent` 와 같은 자리).
  */
 #pragma once
@@ -45,13 +45,11 @@ namespace sw
         const DestructionNetSession& getSession() const { return _session; }
 
     private:
-        /** @brief 틱 뒤(게임 스레드): 서버의 첫 틱 빈도를 보고 복제를 한 번 돌린 뒤 셈을 올립니다. */
+        /** @brief 틱 뒤(게임 스레드): 복제를 한 번 돌린 뒤 셈을 올립니다. */
         void updateSession();
         /** @brief 파괴 복제의 누적 셈을 `GameNetSession::setReplicaStats( "destruction" … )` 로 올립니다(Profiler 탭의 `replicas=` 표). */
         void reportReplicaStats();
 
-        PROPERTY( Category = "Network", DisplayName = "Tick Interval", Min = 0.001, Units = s, Tooltip = "Server fixed step; pose times are tick x interval, so it must equal the server tick" )
-        float32 _tickInterval;
         PROPERTY( Category = "Network", DisplayName = "Hash Interval", Min = 0.1, Units = s, Tooltip = "How often the server sends its structure hash for the clients to compare" )
         float32 _hashInterval;
         PROPERTY( Category = "Network", DisplayName = "Interpolation Delay", Min = 0.0, Units = s, Tooltip = "Least time clients draw moving chunks in the past" )
@@ -59,7 +57,5 @@ namespace sw
 
         DestructionNetSession _session;
         Subscription          _hashSubscription; ///< 해시 이력의 `destruction` 줄 등록. `_session` 보다 뒤에 선언한다 — 먼저 풀린다
-        float32               _pendingDeltaTime; ///< 이번 틱의 델타 — 틱이 적고 틱 뒤 복제가 읽는다
-        uint8                 _bTickChecked;     ///< 서버 — 첫 틱의 델타를 `_tickInterval` 과 견줬다
     };
 } // namespace sw

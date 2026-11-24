@@ -21,6 +21,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Replication/NetClock.h"
 #include "Core/Serialization/BitStream.h"
 
 namespace sw
@@ -352,6 +353,8 @@ namespace sw
         static constexpr int32 kMaxHeldBytes    = 128 * 1024;
         /** @brief 처리기가 아직 없는 신뢰 메시지를 기다리는 시간(밀리초)입니다 — 씬을 읽고 처리기를 다는 동안이다. */
         static constexpr int64 kMissingHandlerHoldMilliseconds = 10000;
+        /** @brief 서버 시계를 알리는 간격(서버 틱)입니다 — 0.1 초. 언리얼 `ServerWorldTimeSecondsUpdateFrequency` 의 기본과 같다. */
+        static constexpr uint32 kClockSendTicks = 6;
 
         /** @brief 보류 시한이 읽는 단조 시계(밀리초)입니다. */
         using ClockFunction = int64 ( * )();
@@ -394,10 +397,20 @@ namespace sw
          *          같은 씬을 다시 여는 것(재대결)은 씬 번호로 가를 수 없어 알림이 온 때 바뀐다.
          */
         void setLocalScene( INetPeers& peers, uint64 sceneID );
+        /** @brief 월드를 올린 횟수입니다(`openWorld` · `setLocalScene`). 같은 라우터에 나중에 올라온 씬이 있는지 가른다. */
+        uint32 getBindSerial() const { return _bindSerial; }
         /** @brief 이쪽 월드의 세대입니다. 서버는 자기가 연 것, 클라이언트는 서버에게 받았고 이쪽 씬이 그 씬인 것이다. 아직 없거나 씬이 다르면 0. */
         uint8 getWorldGeneration() const { return _worldGeneration; }
         /** @brief 세대 @p generation 이 이쪽 월드보다 뒤(아직 서지 않은 월드)면 true 입니다. */
         bool isLaterWorld( uint8 generation ) const;
+        /**
+         * @brief 이쪽 월드의 서버 시계를 프레임에 한 번 흘립니다(`SceneNetLink::update`). 서버면 `kClockSendTicks` 마다 연결된 모두에게 알립니다.
+         * @details 시계는 월드 세대와 수명이 같다 — 새 월드 · 새 연결이면 처음부터다.
+         */
+        void advanceWorldClock( INetPeers& peers, float32 deltaTime );
+        /** @brief 이쪽 월드의 서버 시계입니다. 서버 틱을 실은 메시지를 받은 키트는 `observe` 로 알린다. */
+        NetClock&       getWorldClock() { return _worldClock; }
+        const NetClock& getWorldClock() const { return _worldClock; }
         /**
          * @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다.
          * @details 받는 쪽 역할 @p role 로 갈 수 없는 종류(서버가 받은 `ToClient` 종류)는 처리기에 넘기지 않고 세고 Malformed 를 반환합니다.
@@ -483,6 +496,10 @@ namespace sw
         void sendWorldGeneration( INetPeers& peers, int32 connectionID );
         /** @brief 서버가 보낸 월드 세대를 읽어 들고 처리기에 알립니다. 깨졌거나 서버가 받은 것이면 연결을 끊습니다. */
         void receiveWorldGeneration( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 서버가 보낸 서버 시계를 읽습니다. 다른 월드의 것이면 버리고, 깨졌거나 서버가 받은 것이면 연결을 끊습니다. */
+        void receiveWorldClock( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 깨진 라우터 메시지를 보낸 연결을 세고 끊습니다. */
+        void refuseMalformed( INetPeers& peers, int32 connectionID, uint8 kind );
         /** @brief 종류 @p kind 를 역할 @p role 쪽이 받을 수 있으면 true 입니다(맡은 처리기의 방향 선언). */
         bool isInboundAllowed( uint8 kind, NetPeerRole role ) const;
         /** @brief 반대 방향 종류를 보낸 연결 @p connectionID 를 세고 끊습니다. 같은 `poll` 의 남은 메시지도 넘기지 않는다. */
@@ -516,6 +533,9 @@ namespace sw
         vector<HeldMessage>                           _listHeld;              ///< 보류 중인 메시지(온 순서)
         ClockFunction                                 _pClock;                ///< 보류 시한의 시계
         uint32                                        _sessionSerial;         ///< 지금 세션의 번호(`closeSession` 이 올린다)
+        NetClock                                      _worldClock;            ///< 이쪽 월드의 서버 시계(세대가 바뀌면 처음부터)
+        uint32                                        _bindSerial;            ///< 월드를 올린 횟수(`getBindSerial`)
+        uint32                                        _sentClock;             ///< 서버 — 마지막으로 알린 시계(`kClockSendTicks` 단위)
         uint64                                        _worldSceneID;          ///< 서버가 연 월드의 씬(서버는 연 것, 클라이언트는 알림)
         uint64                                        _localSceneID;          ///< 클라이언트 — 이쪽에 선 씬(`setLocalScene`)
         uint8                                         _announcedGeneration;   ///< 서버가 연 월드의 세대(서버는 연 것, 클라이언트는 알림). 0 이면 아직 없다

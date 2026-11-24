@@ -4,6 +4,7 @@
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Replication/NetClock.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -21,6 +22,7 @@ namespace sw
 
     SceneNetLink::SceneNetLink( GameObjectManager& manager )
         : _value{}
+        , _bindSerial{ 0 }
     {
         (void)manager;
     }
@@ -37,7 +39,27 @@ namespace sw
             value._pRouter->openWorld( *value._pPeers, sceneID );
         else
             value._pRouter->setLocalScene( *value._pPeers, sceneID );
+        _bindSerial = value._pRouter->getBindSerial();
         return true;
+    }
+
+    void SceneNetLink::update( float32 deltaTime )
+    {
+        const bool bOwnsClock = isBound() && _value._pRouter->getBindSerial() == _bindSerial; // 나가는 씬과 들어온 씬이 겹치는 동안 두 번 흘리지 않는다
+        if ( bOwnsClock )
+            _value._pRouter->advanceWorldClock( *_value._pPeers, deltaTime );
+    }
+
+    NetClock& SceneNetLink::getServerClock()
+    {
+        SW_ASSERT( isBound() );
+        return _value._pRouter->getWorldClock();
+    }
+
+    const NetClock& SceneNetLink::getServerClock() const
+    {
+        SW_ASSERT( isBound() );
+        return _value._pRouter->getWorldClock();
     }
 
     uint64 SceneNetLink::computeSceneID( string_view scenePath )

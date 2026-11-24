@@ -186,9 +186,8 @@ namespace sw
     /** @brief 파괴 복제 설정입니다. */
     struct DestructionReplicationConfig
     {
-        float32 _tickInterval{ constant::time::kDefaultFixedStepSeconds }; ///< 서버 틱 간격. 자세의 시각 계산에 쓴다
-        float32 _hashInterval{ 1.0f };                                     ///< 서버가 상태 해시를 보내는 간격(초)
-        float32 _interpolationDelay{ 0.1f };                               ///< 클라이언트가 덩어리 자세를 그리는 과거 시점의 최솟값. 실제 값은 이 값과 (가장 긴 자세 간격 × `NetClock::kSampleIntervalsBehind`) 중 큰 쪽이다
+        float32 _hashInterval{ 1.0f };       ///< 서버가 상태 해시를 보내는 간격(초)
+        float32 _interpolationDelay{ 0.1f }; ///< 클라이언트가 덩어리 자세를 그리는 과거 시점의 최솟값. 실제 값은 이 값과 (가장 긴 자세 간격 × `NetRenderClock::kSampleIntervalsBehind`) 중 큰 쪽이다
     };
 } // namespace sw
 
@@ -233,7 +232,7 @@ namespace sw
         void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켜며, 같은 번호가 이미 있으면 교체합니다. */
         void registerObject( NetObjectID netID, FractureBaseComponent& component );
-        /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. */
+        /** @brief 월드 틱 뒤에 부릅니다. 새 이벤트, 스냅숏, 자세, 해시 순서로 보냅니다. @p serverTick 은 월드의 서버 시계입니다(`NetClock::getWholeTick`). */
         void update( uint32 serverTick );
 
         NetHandleResult receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, const DestructionSnapshotRequestBody& body );
@@ -275,7 +274,7 @@ namespace sw
         void   sendEvents( Entry& entry, FractureBaseComponent& component, uint32 serverTick );
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false 를 반환하고, 호출한 쪽이 요청을 다음 `update` 로 미룹니다. */
         [[nodiscard]] bool sendSnapshot( Entry& entry, FractureBaseComponent& component, int32 connectionID );
-        void               sendPoses( Entry& entry, FractureBaseComponent& component, uint32 serverTick );
+        void               sendPoses( Entry& entry, FractureBaseComponent& component, uint32 serverTick, float32 elapsedSeconds );
         /**
          * @brief 자세 목록 하나를 메시지 예산(`kPoseMessageBudget`)에서 끊어 보냅니다.
          * @details 멈춘 자세(@p bRest)는 비트 그대로, 움직이는 자세는 양자화해서 쓴다. 자세마다 써 보고 예산을 넘으면 물려 다음 메시지로 넘긴다(`BitWriter::truncate`).
@@ -297,6 +296,7 @@ namespace sw
         INetPeers*                   _pHost;
         GameObjectManager*           _pManager;
         float32                      _hashTime;
+        uint32                       _lastTick; ///< 지난 `update` 의 서버 틱
     };
 } // namespace sw
 
@@ -306,10 +306,10 @@ namespace sw
      * @class DestructionReplicationClient
      * @brief 클라이언트 쪽에서 이벤트를 번호 순서로 컴포넌트에 적용하고, 스냅숏을 적용하고, 덩어리 자세를 보간하며, 해시가 어긋나면 스냅숏을 요청합니다.
      * @code
-     *     client.initialize( &host, &manager, settings );
+     *     client.initialize( &host, &manager, worldClock, settings );
      *     client.registerObject( netID, *pFracture );          // 권한을 끈다
      *     _subscription = router.registerHandler( &client );
-     *     client.update( deltaTime );                          // 월드 틱 앞에 부른다(받은 메시지를 분배한 뒤)
+     *     client.update();                                     // 월드 틱 앞에 부른다(받은 메시지를 분배한 뒤)
      * @endcode
      */
     class SW_KIT_API DestructionReplicationClient : public NetTableHandler<DestructionReplicationClient, NetDestructionMessage::Table, NetDestructionMessage::Event, NetDestructionMessage::Snapshot, NetDestructionMessage::Pose, NetDestructionMessage::Hash>
@@ -317,11 +317,14 @@ namespace sw
     public:
         DestructionReplicationClient();
 
-        void initialize( INetPeers* pHost, GameObjectManager* pManager, const DestructionReplicationConfig& settings );
+        /** @brief @p worldClock 은 월드의 서버 시계입니다(`SceneNetLink::getServerClock`) — 사건 · 자세의 틱을 알리고 덩어리를 그리는 시각이 따라간다. */
+        void initialize( INetPeers* pHost, GameObjectManager* pManager, NetClock& worldClock, const DestructionReplicationConfig& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 권한을 끄므로 충돌이 이벤트를 만들지 않습니다. */
         void registerObject( NetObjectID netID, FractureBaseComponent& component );
-        /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 진행해 덩어리 자세를 보간합니다. */
-        void update( float32 deltaTime );
+        /** @brief 월드 틱 앞에 부릅니다. 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 월드의 시계에 맞춰 덩어리 자세를 보간합니다. */
+        void update();
+        /** @brief 새 서버에 붙었습니다 — 그리던 시각을 잊습니다. */
+        void onConnectionOpened( int32 connectionID ) override;
         /** @brief 테스트용 결함 주입입니다. 그 오브젝트의 다음 이벤트 하나를 적용하지 않고 건너뛰며, 해시 불일치에서 스냅숏 복구까지의 흐름을 확인할 때 씁니다. */
         void skipNextEvent( NetObjectID netID );
 
@@ -332,7 +335,7 @@ namespace sw
         NetHandleResult receive( NetDestructionMessage::Hash, const NetMessageContext& context, const DestructionHashBody& body );
 
         /** @brief 덩어리를 그리는 서버 틱입니다. 보간 지연만큼 과거이며 소수입니다. 자세를 하나도 받지 않았으면 음수입니다. */
-        float64                            getRenderTick() const { return _clock.getRenderTick(); }
+        float64                            getRenderTick() const { return _renderClock.getRenderTick(); }
         const DestructionReplicationStats& getStats() const { return _stats; }
 
     private:
@@ -385,6 +388,8 @@ namespace sw
         static void applyToComponent( FractureBaseComponent& component, const BufferedEvent& buffered );
         /** @brief 스냅숏 하나를 적용합니다. */
         void handleSnapshot( Entry& entry, const DestructionSnapshotBody& body );
+        /** @brief 사건 · 자세가 실은 서버 틱을 월드의 시계와 그리는 시각에 알립니다. */
+        void observeTick( uint32 serverTick );
         /** @brief 자세 메시지 본문을 끝까지 읽고 남는 비트가 없을 때만 적용합니다. 깨졌으면 아무것도 적용하지 않고 false 입니다. */
         [[nodiscard]] bool handlePose( BitReader& reader, bool bRest );
         void               compareHashes( Entry& entry, FractureBaseComponent& component );
@@ -398,6 +403,7 @@ namespace sw
         NetMessageWriter             _writer;
         INetPeers*                   _pHost;
         GameObjectManager*           _pManager;
-        NetClock                     _clock; ///< 덩어리를 그리는 서버 틱의 시계. 흐른 시간으로 서버 틱을 추정하고(받은 가장 새 틱 + 지연까지) 보간 지연을 뺀 값이며 뒤로 가지 않는다. 표본 간격은 등록한 오브젝트 중 가장 긴 자세 간격이다
+        NetClock*                    _pWorldClock; ///< 월드의 서버 시계(빌린 것)
+        NetRenderClock               _renderClock; ///< 덩어리를 그리는 서버 틱의 시계. 흐른 시간으로 서버 틱을 추정하고(받은 가장 새 틱 + 지연까지) 보간 지연을 뺀 값이며 뒤로 가지 않는다. 표본 간격은 등록한 오브젝트 중 가장 긴 자세 간격이다
     };
 } // namespace sw

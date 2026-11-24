@@ -131,8 +131,8 @@ namespace sw
             }
 
             /**
-             * @brief 씬에 서버 틱 @p serverTick 을 알린다 — 틱 함수 바닥(`InterpToMovementComponent`)이 자기 서브틱에서 그 자리를 읽는다(바닥을 돌지 않는다).
-             *        조종 시스템이 없는 씬이면 바닥도 움직이지 않으므로 알릴 곳이 없다.
+             * @brief 클라이언트가 예측하는 월드의 서버 틱 @p serverTick 을 씬에 알린다 — 틱 함수 바닥(`InterpToMovementComponent`)이 자기 서브틱에서 그 자리를 읽는다(바닥을 돌지 않는다).
+             *        조종 시스템이 없는 씬이면 바닥도 움직이지 않으므로 알릴 곳이 없다. 서버의 바닥은 월드의 서버 시계를 바로 본다.
              */
             static void publishServerTick( const GameObject* pOwner, int64 serverTick )
             {
@@ -174,6 +174,7 @@ namespace sw
         , _lagHistory{ ReplicationServerConfig{}._maxViewLagTicks + 1 } // 보던 시각의 되감기 한도(서버 클램프)까지 기억한다
         , _accumulator{ 0.0f }
         , _listPendingTrigger{}
+        , _stride{ 1 }
         , _tick{ 0 }
         , _pawnEntityID{ 0 }
         , _reconciledTick{ 0 }
@@ -203,7 +204,14 @@ namespace sw
         const bool                    bNoSession = pLink == nullptr || pMovement == nullptr;
         if ( bNoSession )
             return; // 혼자 하는 게임 — 몸 이동은 프레임마다 예전 길로 돈다
-        const NetLinkValue& link = *pLink;
+        const NetLinkValue&    link   = *pLink;
+        const optional<uint32> stride = NetClock::computeStride( _tickInterval );
+        if ( stride.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "ShooterNetPawn.TickIntervalNotMultiple", "Shooter net pawn: tick interval %# s is not a multiple of the server tick (%# s) - the networked movement stays off", _tickInterval, NetClock::kTickSeconds );
+            return;
+        }
+        _stride = *stride;
 
         PredictionSmootherSettings smoothing;
         smoothing._halfLifeSeconds = _smoothingHalfLife;
@@ -245,7 +253,7 @@ namespace sw
         {
             ReplicationClientConfig settings;
             settings._tickInterval = _tickInterval;
-            if ( _client.initialize( link._pPeers, settings ) )
+            if ( _client.initialize( link._pPeers, link._pRouter->getWorldClock(), settings ) )
                 _routerSubscription = link._pRouter->registerHandler( &_client );
             if ( _routerSubscription.isActive() == false )
             {
@@ -255,14 +263,15 @@ namespace sw
             _role = Role::Client;
         }
         _accumulator      = 0.0f;
-        _tick             = 0;
+        _tick             = _role == Role::Server ? link._pRouter->getWorldClock().getWholeTick( _stride ) : 0u;
         _pawnEntityID     = 0;
         _reconciledTick   = 0;
         _pendingStepCount = 0;
         _bSeatsReported   = SW_FALSE;
         pMovement->setNetDriven( true );
-        // 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
-        if ( ControlSystem* pControl = ControlSystem::find( *getOwner()->getMutableManager() ) )
+        // 클라이언트가 알리는 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
+        ControlSystem* pControl = _role == Role::Client ? ControlSystem::find( *getOwner()->getMutableManager() ) : nullptr;
+        if ( pControl != nullptr )
             pControl->setServerTickSource( getTickHandle() );
         SW_LOG_INFO_ID( "ShooterNetPawn.ShooterNetPawnMovement", "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
     }
@@ -327,9 +336,15 @@ namespace sw
         // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
         if ( _role == Role::Client )
             collectPendingTriggers( *pMovement );
-        // 입력 몫도 틱과 같은 시계(게임 시간)로 채운다 — 클라이언트의 입력 틱이 이 시계로 돌고, 고정 간격으로 되풀이하는 넷 재생에서도 같은 몫이 된다.
+        // 걸음은 여러 몸을 옮기고 바로 판정한다(물리 질의 · 남의 체력) — 서버 · 클라이언트 모두 틱 뒤(게임 스레드)의 한 자리에서 돈다.
         if ( _role == Role::Server )
+        {
+            // 입력 몫도 틱과 같은 시계(게임 시간)로 채운다 — 클라이언트의 입력 틱이 이 시계로 돌고, 고정 간격으로 되풀이하는 넷 재생에서도 같은 몫이 된다.
             _server.accumulateInputBudget( context.getDeltaTime() );
+            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
+            { netPawn.runServerFrame( manager ); } );
+            return;
+        }
         _accumulator += context.getDeltaTime();
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
@@ -339,22 +354,10 @@ namespace sw
         }
         if ( _accumulator >= _tickInterval )
             _accumulator = 0.0f; // 따라잡지 못한 시간은 버린다 — 몰아 돌린 틱이 다음 프레임을 또 밀지 않게
-        // 걸음은 여러 몸을 옮기고 바로 판정한다(물리 질의 · 남의 체력) — 서버 · 클라이언트 모두 틱 뒤(게임 스레드)의 한 자리에서 돈다.
         _pendingStepCount += tickCount;
-        if ( _role == Role::Server )
-        {
-            if ( tickCount > 0 )
-                ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) + _pendingStepCount );
-            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
-            { netPawn.runServerFrame( manager ); } );
-        }
-        else
-        {
-            _client.accumulateFrameTime( context.getDeltaTime() ); // 화면 시각은 다음 프레임의 시작에 옮겨진다
-            _smoother.update( context.getDeltaTime() );
-            context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
-            { netPawn.runClientFrame( manager ); } );
-        }
+        _smoother.update( context.getDeltaTime() );
+        context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
+        { netPawn.runClientFrame( manager ); } );
     }
 
     // ------------------------------------------------------------------------------
@@ -362,19 +365,21 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ShooterNetPawnComponent::runServerFrame( GameObjectManager& manager )
     {
-        const int32 stepCount                   = _pendingStepCount;
-        _pendingStepCount                       = 0;
+        const NetLinkValue*            pLink    = SceneNetLink::findBoundFor( *this );
         const vector<ShooterArenaBox>* pListBox = findArenaBoxes();
-        if ( _role != Role::Server || pListBox == nullptr )
+        if ( _role != Role::Server || pListBox == nullptr || pLink == nullptr )
             return;
         if ( _bSeatsReported == SW_FALSE )
         {
             _bSeatsReported = SW_TRUE;
             reportSeatCapacity();
         }
-        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        // 월드의 서버 시계가 지난 이 컴포넌트의 틱을 차례로 돈다 — 번호를 따로 세지 않는다(시계가 한 프레임에 흐르는 상한을 갖는다).
+        const uint32 presentTick = pLink->_pRouter->getWorldClock().getWholeTick( _stride );
+        while ( _tick < presentTick )
         {
-            stepServer( manager, *pListBox );
+            ++_tick;
+            stepServer( manager, *pLink->_pPeers, *pListBox );
         }
         syncServerPawnList( manager );
         for ( ServerPawn& pawn : _listServerPawn )
@@ -383,14 +388,10 @@ namespace sw
         }
     }
 
-    void ShooterNetPawnComponent::stepServer( GameObjectManager& manager, const vector<ShooterArenaBox>& listBox )
+    void ShooterNetPawnComponent::stepServer( GameObjectManager& manager, INetPeers& peers, const vector<ShooterArenaBox>& listBox )
     {
-        ++_tick;
-        const NetLinkValue* pLink = SceneNetLink::findBoundFor( *this );
-        if ( pLink == nullptr )
-            return;
         _server.beginTick( _tick ); // 입력을 꺼내기 전에 — 보던 틱은 서버의 지금 틱으로 자른다(`getClientViewTick`)
-        assignSeats( *pLink->_pPeers );
+        assignSeats( peers );
         for ( ServerPawn& pawn : _listServerPawn )
         {
             stepServerPawn( manager, pawn, listBox );
@@ -737,7 +738,7 @@ namespace sw
         // 예측하는 이 입력 틱은 서버에서 (입력 틱 + 서버 차이) 틱에 시뮬레이션된다 — 바닥을 그 자리에 둬야 바닥 위 예측이 서버와 맞는다.
         const optional<int64> serverTickOffset = _client.findServerTickOffset();
         if ( serverTickOffset.has_value() )
-            ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
+            ShooterNetPawnComponentInternal::publishServerTick( getOwner(), ( static_cast<int64>( _tick ) + *serverTickOffset ) * static_cast<int64>( _stride ) );
         const ControlIntent intent = takeNetIntent( movement );
         // 입력 하나의 상한을 넘는 주장은 다음 입력 틱에 싣는다. 주장의 걸음은 휘두른 입력 틱이다.
         const size_t claimCount = MathUtil::min( _listClaim.size(), static_cast<size_t>( NetClientServerMessage::kMaxClaimsPerIntent ) );
