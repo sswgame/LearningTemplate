@@ -34,9 +34,12 @@ namespace sw::editor
     class BugReportViewModel
     {
     public:
+        /** @brief 프로세스의 BugReport 루트(`BugReport::getRoot`)를 봅니다. */
         BugReportViewModel();
+        /** @brief 루트 @p rootFolder(디스크 경로) 아래 폴더를 봅니다. */
+        explicit BugReportViewModel( string_view rootFolder );
 
-        /** @brief 창이 그릴 값을 채웁니다. 줄을 다시 읽어야 하면(처음 · 모은 뒤 · `refresh`) `Saved/BugReports` 아래 폴더를 다시 읽습니다. */
+        /** @brief 창이 그릴 값을 채웁니다. 줄을 다시 읽어야 하면(처음 · 모은 뒤 · `refresh`) 루트 아래 폴더를 다시 읽습니다. */
         void gather( BugReportViewState& outState );
         /** @brief 다음 `gather` 가 줄을 다시 읽게 합니다(Refresh 단추). */
         void refresh() { _bRowsDirty = SW_TRUE; }
@@ -51,10 +54,11 @@ namespace sw::editor
         static void goTo( const string& directory );
 
     private:
-        /** @brief `Saved/BugReports` 아래 폴더를 다시 읽어 줄을 채웁니다. */
+        /** @brief 루트 아래 폴더를 다시 읽어 줄을 채웁니다. */
         void readRows();
 
     private:
+        string               _rootFolder; ///< 폴더들의 루트(디스크 경로)
         vector<BugReportRow> _listRow;
         uint8                _bRowsDirty : 1;
     };
