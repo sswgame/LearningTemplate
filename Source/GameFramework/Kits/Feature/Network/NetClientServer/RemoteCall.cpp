@@ -266,6 +266,13 @@ namespace sw
                 bool isFromOtherWorld( uint32 worldGeneration ) const { return _targetID != RemoteCallTargets::kSessionTargetID && _worldGeneration != worldGeneration; }
             };
 
+            /** @brief 호출 머리에서 대상 번호만 읽습니다. 깨졌으면 0 입니다(처리기가 깨진 호출로 거른다). */
+            static uint64 readTargetID( BitReader& body )
+            {
+                (void)body.readVarUint32(); // 순번
+                return body.readVarUint32();
+            }
+
             /** @brief 호출의 머리를 읽습니다. 상한을 넘거나 깨졌으면 false 입니다. 인자가 없다면 여기가 본문의 끝이다. */
             [[nodiscard]] static bool readHead( BitReader& body, CallHead& outHead )
             {
@@ -551,6 +558,18 @@ namespace sw
         return _messageWriter.sendMessage( *_pPeers, pTarget->_ownerConnectionID ); // 채널은 `writeCall` 이 시작에서 골랐다
     }
 
+    uint64 RemoteCallServer::readHoldKey( NetRemoteCallMessage::Call, BitReader& body ) const
+    {
+        return RemoteCallInternal::readTargetID( body );
+    }
+
+    void RemoteCallServer::onMessageDeliveryFailed( int32 connectionID, uint8 kind, uint64 key, NetDeliveryFailure reason )
+    {
+        (void)kind; // 보류를 선언한 종류는 호출 하나다
+        ++_stats._deliveryFailedCount;
+        SW_LOG_WARNING_ID( "RemoteCall.ClientCallDeliveryFailed", "Remote call for target %# never ran on connection %# (reason %#) - the target did not appear there", key, connectionID, static_cast<int32>( reason ) );
+    }
+
     NetHandleResult RemoteCallServer::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
     {
         RemoteCallInternal::CallHead call;
@@ -742,15 +761,22 @@ namespace sw
         return _messageWriter.sendMessageToPeers( *_pPeers ) > 0 ? sequence : 0; // 채널은 `writeCall` 이 시작에서 골랐다
     }
 
+    uint64 RemoteCallClient::readHoldKey( NetRemoteCallMessage::Call, BitReader& body ) const
+    {
+        return RemoteCallInternal::readTargetID( body );
+    }
+
     NetHandleResult RemoteCallClient::receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body )
     {
-        (void)context;
         RemoteCallInternal::CallHead call;
         if ( RemoteCallInternal::readHead( body, call ) == false )
             return NetHandleResult::Malformed;
         const bool                       bOtherWorld = call.isFromOtherWorld( RemoteCallInternal::getWorldGeneration( _pRouter ) );
         const RemoteCallTargets::Target* pTarget     = bOtherWorld ? nullptr : _targets.findTarget( call._targetID );
-        const FunctionInfo*              pFunction   = pTarget != nullptr ? _targets.findFunctionByID( *pTarget->_pType, call._functionID )._pFunction : nullptr;
+        // 대상이 아직 서지 않았다(씬 로드 · 스폰 복제보다 먼저 왔다) — 신뢰 호출은 라우터가 보류한다. 비신뢰는 늦으면 쓸모가 없어 버린다.
+        if ( pTarget == nullptr && bOtherWorld == false && context._channel == NetChannelKind::ReliableOrdered )
+            return NetHandleResult::NotReady;
+        const FunctionInfo* pFunction = pTarget != nullptr ? _targets.findFunctionByID( *pTarget->_pType, call._functionID )._pFunction : nullptr;
         if ( pFunction == nullptr || RemoteCallInternal::isRoleReceivedBy( pFunction->_metadata->_netRole, false ) == false )
         {
             // 클라이언트는 서버를 끊지 않는다 — 대상이 이미 사라졌을 수 있다(서버가 먼저 보냈다). 로그만 남긴다.

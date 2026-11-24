@@ -83,7 +83,8 @@ namespace sw
          * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자들(타입별 이진 꼴). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
          *        판 2: 함수 이름 글 대신 함수 번호를 싣는다. 판 3: 인자를 글 대신 타입별 이진 꼴로 싣는다.
          */
-        using Call = NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 4>; ///< 판 4: 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
+        static constexpr uint32 kCallHoldMilliseconds = 10000;                                                                                                                                  ///< 대상이 아직 서지 않은 신뢰 호출을 기다리는 시간(씬 로드 · 스폰 복제)
+        using Call                                    = NetHeldMessageDef<NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, 4>, kCallHoldMilliseconds>; ///< 판 4: 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`)
         /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
         using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
@@ -113,6 +114,7 @@ namespace sw
         uint64 _rejectedCount{ 0 };         ///< 거절 알림을 돌려준 호출(대상 · 함수 없음, 인자)
         uint64 _validationFailedCount{ 0 }; ///< 검증 짝이 거짓이라 연결을 끊은 호출
         uint64 _violationCount{ 0 };        ///< 주인 아님 · 역할 · 채널을 어겨 연결을 끊은 호출
+        uint64 _deliveryFailedCount{ 0 };   ///< 클라이언트가 대상을 기다리다 부르지 못했다고 알려 온 신뢰 호출
         uint64 _rateLimitedCount{ 0 };      ///< 호출률 상한(연결 · 함수)을 넘어 거절한 호출(`_rejectedCount` 에도 든다)
     };
 
@@ -228,6 +230,10 @@ namespace sw
         [[nodiscard]] bool callSession( int32 connectionID, string_view functionName, const vector<ReflectedValue>& listArg );
 
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
+        /** @brief 보류의 열쇠는 대상 번호다 — 같은 대상의 호출끼리 순서를 지킨다. */
+        uint64 readHoldKey( NetRemoteCallMessage::Call, BitReader& body ) const;
+        /** @brief 클라이언트가 대상이 서기를 기다리다 끝내 부르지 못했습니다 — 세고 알린다. */
+        void onMessageDeliveryFailed( int32 connectionID, uint8 kind, uint64 key, NetDeliveryFailure reason ) override;
         /** @brief 그 연결이 주인인 대상과 그 연결의 세션을 지웁니다(같은 연결 ID 를 다음 연결이 다시 쓴다). */
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
@@ -295,6 +301,8 @@ namespace sw
         [[nodiscard]] uint32 callServer( uint32 targetID, const TypeInfo& type, string_view functionName, const vector<ReflectedValue>& listArg );
 
         NetHandleResult receive( NetRemoteCallMessage::Call, const NetMessageContext& context, BitReader& body );
+        /** @brief 보류의 열쇠는 대상 번호다 — 같은 대상의 호출끼리 순서를 지킨다. */
+        uint64          readHoldKey( NetRemoteCallMessage::Call, BitReader& body ) const;
         NetHandleResult receive( NetRemoteCallMessage::Rejected, const NetMessageContext& context, const RemoteCallRejectedBody& body );
 
         /** @brief 쌓인 거절 알림을 @p outListNotification 뒤에 옮깁니다. */

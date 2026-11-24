@@ -90,9 +90,10 @@ namespace sw
      */
     struct NetPairedAnimationMessage
     {
-        using SessionState = NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 4>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 4: 월드 세대가 앞에 온다. 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
-        using SessionEnd   = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
-        using Table        = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
+        static constexpr uint32 kHoldMilliseconds = 5000;                                                                                                                                                      ///< 참가자가 클립을 읽는 동안 상태를 기다리는 시간. 끝은 같은 세션의 상태를 앞지르지 않는다
+        using SessionState                        = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, 5>, kHoldMilliseconds>;                                 ///< 세션 상태(시작 · 늦은 참가). 판 5: 세대 뒤에 세션 번호(보류의 열쇠)가 온다. 4: 월드 세대가 앞에 온다. 3: 칸 선언(`PairedAnimationSessionStateBody`)으로 쓴다(2: 번호 64 비트)
+        using SessionEnd                          = NetHeldMessageDef<NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, PairedAnimationSessionEndBody>, kHoldMilliseconds>; ///< 세션 끝 — 상태 메시지 뒤에 닿아야 한다
+        using Table                               = NetMessageTable<NetKitMessageRange::kPairedAnimation, SessionState, SessionEnd>;
 
         static constexpr uint8 kSessionState = Table::getKindOf<SessionState>();
         static constexpr uint8 kSessionEnd   = Table::getKindOf<SessionEnd>();
@@ -126,14 +127,14 @@ namespace sw
     /** @brief 보낸 · 받은 횟수입니다. 테스트와 확인에 씁니다. */
     struct PairedAnimationReplicationStats
     {
-        uint32 _stateSentCount{ 0 };    ///< 보낸 상태 메시지(연결 하나에 하나로 센다 — 모두에게 보내면 1)
-        uint32 _endSentCount{ 0 };      ///< 보낸 끝 메시지
-        uint32 _unreplicableCount{ 0 }; ///< 서버 — 복제할 수 없어 보내지 않은 세션(경로 없는 에셋, 표에 없는 참가자)
-        uint32 _sendRejectedCount{ 0 }; ///< 서버 — 연결이 메시지를 거절한 횟수
-        uint32 _appliedCount{ 0 };      ///< 클라이언트 — 복원한 세션
-        uint32 _rejectedCount{ 0 };     ///< 클라이언트 — 복원이 거절된 상태(오류 로그)
-        uint32 _endAppliedCount{ 0 };   ///< 클라이언트 — 끝 메시지로 중단한 세션
-        uint32 _deferredCount{ 0 };     ///< 클라이언트 — 참가자가 클립을 읽는 중이라 보관해 둔 상태(정상 거절, 오류 아님)
+        uint32 _stateSentCount{ 0 };      ///< 보낸 상태 메시지(연결 하나에 하나로 센다 — 모두에게 보내면 1)
+        uint32 _endSentCount{ 0 };        ///< 보낸 끝 메시지
+        uint32 _unreplicableCount{ 0 };   ///< 서버 — 복제할 수 없어 보내지 않은 세션(경로 없는 에셋, 표에 없는 참가자)
+        uint32 _sendRejectedCount{ 0 };   ///< 서버 — 연결이 메시지를 거절한 횟수
+        uint32 _appliedCount{ 0 };        ///< 클라이언트 — 복원한 세션
+        uint32 _rejectedCount{ 0 };       ///< 클라이언트 — 복원이 거절된 상태(오류 로그)
+        uint32 _endAppliedCount{ 0 };     ///< 클라이언트 — 끝 메시지로 중단한 세션
+        uint32 _deliveryFailedCount{ 0 }; ///< 서버 — 클라이언트가 참가자를 기다리다 잇지 못했다고 알려 온 메시지
     };
 } // namespace sw
 
@@ -174,6 +175,8 @@ namespace sw
          */
         [[nodiscard]] bool makeSessionState( const PairedAnimationSession& session, PairedAnimationNetState& outState ) const;
 
+        /** @brief 클라이언트가 참가자를 기다리다 세션을 잇지 못했습니다 — 세고 알린다. */
+        void                                   onMessageDeliveryFailed( int32 connectionID, uint8 kind, uint64 key, NetDeliveryFailure reason ) override;
         const PairedAnimationReplicationStats& getStats() const { return _stats; }
 
     private:
@@ -209,8 +212,6 @@ namespace sw
     class SW_KIT_API PairedAnimationReplicationClient : public NetTableHandler<PairedAnimationReplicationClient, NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState, NetPairedAnimationMessage::SessionEnd>
     {
     public:
-        /** @brief 보관한 상태를 기다린 프레임 상한입니다. 이 프레임 수를 넘게 준비되지 않으면 오류를 남기고 버립니다(무한히 기다리지 않는다). */
-        static constexpr uint32 kMaxPendingFrames = 300;
         PairedAnimationReplicationClient();
 
         /** @brief @p pManager 의 씬 오브젝트를 번호표(`NetObjectTable::captureSceneObjects`)에 잡고 시작합니다. */
@@ -219,40 +220,21 @@ namespace sw
          * @brief 복제 상태로 세션을 복원합니다(게임 스레드, 틱 밖). 받은 메시지와 롤백(되감은 뒤 소유 상태)이 함께 씁니다.
          * @details 같은 id 가 재생 중이면 먼저 중단하고 복원한다(서버 상태가 기준). 에셋을 읽지 못하면 `AssetNotLoaded`, 역할 수가 에셋과 다르면 `InvalidSnapshot`,
          *          번호의 오브젝트가 없으면 `ParticipantMissing` 이고 모두 오류를 남긴다. 그 밖은 `PairedAnimationSystem::restoreSession` 의 결과다.
-         *          참가자가 클립을 아직 읽는 중이면(`ParticipantNotReady`, 정상 거절) 오류 없이 상태를 보관하고(같은 세션 id 의 옛 보관은 바꾼다) 그 결과를 돌려준다 —
-         *          `retryPending` 이 준비된 뒤 적용한다.
+         *          참가자가 클립을 아직 읽는 중이면 오류 없이 `ParticipantNotReady` 다 — 메시지는 라우터가 보류했다가 다시 준다(`NetHeldMessageDef`).
          */
         [[nodiscard]] PairedAnimationStartResult applyState( const PairedAnimationNetState& state );
-        /**
-         * @brief 보관한 상태를 다시 적용합니다(게임 스레드, 틱 밖 — 프레임에 한 번). 준비됐으면 복원하고, 아직이면 프레임을 세며 두고, 상한(`kMaxPendingFrames`)을 넘으면
-         *        기다린 프레임 수와 함께 오류를 남기고 버립니다. 서버 상태가 기준이라 복원 시각은 보관한 상태의 시각이다(기다린 만큼 서버를 뒤따르다 서버 보정을 받는다).
-         */
-        void retryPending();
-        /** @brief 준비를 기다리며 보관한 상태의 수입니다. */
-        uint32 getPendingCount() const { return static_cast<uint32>( _listPending.size() ); }
 
         // 표의 메시지
         NetHandleResult receive( NetPairedAnimationMessage::SessionState, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( NetPairedAnimationMessage::SessionEnd, const NetMessageContext& context, const PairedAnimationSessionEndBody& body );
+        /** @brief 보류의 열쇠는 세션 번호다 — 같은 세션의 상태 · 끝끼리 순서를 지킨다. */
+        uint64 readHoldKey( NetPairedAnimationMessage::SessionState, BitReader& body ) const;
+        uint64 readHoldKey( NetPairedAnimationMessage::SessionEnd, BitReader& body ) const;
 
         const PairedAnimationReplicationStats& getStats() const { return _stats; }
 
     private:
-        /** @brief 준비를 기다리는 상태 하나와 기다린 프레임 수입니다. */
-        struct PendingState
-        {
-            PairedAnimationNetState _state{};
-            uint32                  _waitedFrames{ 0 };
-        };
-
-        /** @brief 상태를 바로 복원합니다. 참가자가 준비되지 않았으면 오류 없이 `ParticipantNotReady` 를 돌려줍니다(보관은 부르는 쪽이 한다). */
-        [[nodiscard]] PairedAnimationStartResult applyStateNow( const PairedAnimationNetState& state );
-        /** @brief 세션 id 의 보관한 상태를 버립니다(더 새로운 상태가 왔거나 끝 메시지를 받았다). */
-        void dropPending( uint32 sessionID );
-
-    private:
         PairedAnimationReplicationStats _stats;
-        vector<PendingState>            _listPending;
         GameObjectManager*              _pManager;
     };
 } // namespace sw

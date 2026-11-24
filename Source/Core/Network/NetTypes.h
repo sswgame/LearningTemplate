@@ -34,8 +34,11 @@ namespace sw
         /** @brief 라우터가 쓰는 또 한 종류(엔진 영역 0x0D, 서버 → 클라이언트) — 서버의 월드 세대 알림이다(`NetMessageRouter::openWorld`). 몸: 세대 32 비트. 처리기는 맡지 못한다. */
         static constexpr uint8 kRouterWorldKind = kEngine + kSize - 3;
 
+        /** @brief 라우터가 쓰는 또 한 종류(엔진 영역 0x0C, 양방향) — 보류한 메시지를 끝내 전하지 못했다고 보낸 쪽에 알린다. 몸: 종류 8 비트 · 까닭 2 비트 · 보류 열쇠(varuint). */
+        static constexpr uint8 kRouterDeliveryFailedKind = kEngine + kSize - 4;
+
         /** @brief 라우터가 스스로 읽는 종류면 true 입니다. 처리기 · 메시지 표가 쓰지 못한다. */
-        static constexpr bool isRouterKind( int32 kind ) { return kind == kRouterWireVersionKind || kind == kRouterWorldKind; }
+        static constexpr bool isRouterKind( int32 kind ) { return kind == kRouterWireVersionKind || kind == kRouterWorldKind || kind == kRouterDeliveryFailedKind; }
 
         static constexpr bool isInRange( uint8 kind, uint8 rangeBase ) { return kind >= rangeBase && kind < rangeBase + kSize; }
     };
@@ -51,7 +54,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 13; ///< 13: 라우터가 서버의 월드 세대를 알리는 종류(`NetMessageRange::kRouterWorldKind`)가 생겼다. 12: 엔진 영역 부하 메시지(`net.traffic`)가 라우터 판 알림 종류(0x0F)에서 0x0E 로 옮겼다. 11: 게임 영역이 0x80 에서 0xC0 으로 옮겨 키트 영역이 0x10..0xBF 가 됐다. 10: 라우터가 영역마다 메시지 표의 판을 알리는 종류(`NetMessageRange::kRouterWireVersionKind`)가 생겼다. 9: 엔진 세션 영역에 합성 해시 메시지(`kResourceDigest`, 클라이언트 → 서버)가 생겼다. 8: 엔진 세션 영역에 서버 종료 통지 메시지(`kShutdownNotice`)가 생겼다. 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
+        static constexpr uint32 kCore = 14; ///< 14: 보류한 메시지를 전하지 못했다고 알리는 종류(`NetMessageRange::kRouterDeliveryFailedKind`)가 생겼다. 13: 라우터가 서버의 월드 세대를 알리는 종류(`NetMessageRange::kRouterWorldKind`)가 생겼다. 12: 엔진 영역 부하 메시지(`net.traffic`)가 라우터 판 알림 종류(0x0F)에서 0x0E 로 옮겼다. 11: 게임 영역이 0x80 에서 0xC0 으로 옮겨 키트 영역이 0x10..0xBF 가 됐다. 10: 라우터가 영역마다 메시지 표의 판을 알리는 종류(`NetMessageRange::kRouterWireVersionKind`)가 생겼다. 9: 엔진 세션 영역에 합성 해시 메시지(`kResourceDigest`, 클라이언트 → 서버)가 생겼다. 8: 엔진 세션 영역에 서버 종료 통지 메시지(`kShutdownNotice`)가 생겼다. 7: 엔진 세션 영역(`NetMessageRange::kEngine`)에 서버 틱 메시지가 생겼다. 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
 
         /** @brief 계층별 버전을 값 하나로 섞습니다. FNV-1a 이므로 순서도 결과에 반영됩니다. */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )

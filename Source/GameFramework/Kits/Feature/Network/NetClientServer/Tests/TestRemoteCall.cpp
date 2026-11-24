@@ -408,6 +408,37 @@ SW_TEST_CASE( RemoteCallTest, RateOnANonServerFunctionIsRefused )
 }
 
 /**
+ * @brief [RemoteCallTest] 대상보다 먼저 온 신뢰 호출은 버리지 않고 미룬다(라우터가 보류한다) — 비신뢰 호출 · 앞 씬의 호출은 미루지 않는다
+ */
+SW_TEST_CASE( RemoteCallTest, ReliableCallWaitsForItsTarget )
+{
+    RemoteCallTestRig rig;
+    NetMessageWriter  messageWriter;
+    const auto        writeCall = [&messageWriter]( uint32 worldGeneration )
+    {
+        BitWriter& writer = messageWriter.begin( NetRemoteCallMessage::kCall );
+        writer.writeVarUint( 0 );
+        writer.writeVarUint( kAvatarID );
+        writer.writeUint32( worldGeneration );
+        writer.writeUint32( hashed_string::computeHash( "receiveHealth" ) );
+        writer.writeVarUint( 1 );
+        writer.writeVarInt( 42 );
+    };
+    writeCall( 0 );
+    const uint8* pData = messageWriter.getBytes().data();
+    const int32  size  = messageWriter.getByteCount();
+    SW_EXPECT_TRUE( NetHandleResult::NotReady == rig._client.handleMessage( 0, pData, size, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_LOG( "RemoteCall.ClientCallDropped" );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, pData, size, NetChannelKind::Unreliable ) );
+    SW_REQUIRE_TRUE( rig._client.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, pData, size, NetChannelKind::ReliableOrdered ) );
+    SW_EXPECT_EQUAL( 42, rig._clientAvatar._shownHealth );
+    writeCall( 7 );
+    SW_EXPECT_LOG( "RemoteCall.ClientCallDropped" );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, messageWriter.getBytes().data(), messageWriter.getByteCount(), NetChannelKind::ReliableOrdered ) );
+}
+
+/**
  * @brief [RemoteCallTest] 거절 본문은 고정 배치형이다 — 옛 형식(까닭 1 바이트) · 잘린 본문은 깨진 메시지이고 알림이 쌓이지 않는다. 온전한 거절은 쌓인다
  */
 SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )

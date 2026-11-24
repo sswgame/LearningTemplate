@@ -55,6 +55,27 @@ namespace sw
         static constexpr NetChannelPolicy kChannelPolicy = NetChannelPolicy::SenderChooses;
     };
 
+    /**
+     * @brief 서술자 @p TMessage 에 보류를 선언합니다 — 받는 쪽이 아직 처리할 수 없으면(`NetHandleResult::NotReady`) @p HoldMilliseconds 동안 들고 있다가 순서대로 다시 주고, 끝내 못 전하면 보낸 쪽에 알린다.
+     * @details 전달 약속은 채널 이름이 아니라 메시지 선언이 갖는다. 처리기에 `uint64 readHoldKey( TMessage, BitReader ) const`(같은 열쇠끼리 순서를 지킨다)가 없으면 컴파일되지 않는다.
+     */
+    template <typename TMessage, uint32 HoldMilliseconds>
+    struct NetHeldMessageDef : TMessage
+    {
+        static_assert( HoldMilliseconds > 0, "a held message needs a time limit" );
+        static constexpr uint32 kHoldMilliseconds = HoldMilliseconds;
+    };
+
+    /** @brief 메시지 서술자 @p TMessage 가 보류를 선언했으면 true 입니다(`NetHeldMessageDef`). */
+    template <typename TMessage, typename = void>
+    struct NetMessageIsHeld : std::false_type
+    {
+    };
+    template <typename TMessage>
+    struct NetMessageIsHeld<TMessage, std::void_t<decltype( TMessage::kHoldMilliseconds )>> : std::true_type
+    {
+    };
+
     /** @brief 메시지 서술자 @p TMessage 가 본문 형식(`Body`)을 가지면 true 입니다 — 표가 본문을 읽어 처리기에 넘긴다. */
     template <typename TMessage, typename = void>
     struct NetMessageHasBody : std::false_type
@@ -215,7 +236,45 @@ namespace sw
             return TTable::template dispatch<NetHandleResult>( context._kind, visitor, NetHandleResult::Handled ); // 마스크가 거른 뒤라 표 밖 종류는 오지 않는다
         }
 
+        uint32 getHoldLimit( uint8 kind ) const final
+        {
+            HoldVisitor visitor{};
+            return TTable::template dispatch<uint32>( kind, visitor, 0u );
+        }
+        uint64 readHoldKey( uint8 kind, BitReader body ) const final
+        {
+            HoldKeyVisitor visitor{ static_cast<const TDerived&>( *this ), body };
+            return TTable::template dispatch<uint64>( kind, visitor, uint64{ 0 } );
+        }
+
     private:
+        struct HoldVisitor
+        {
+            template <typename TMessage>
+            uint32 visit()
+            {
+                if constexpr ( NetMessageIsHeld<TMessage>::value )
+                    return TMessage::kHoldMilliseconds;
+                else
+                    return 0u;
+            }
+        };
+
+        struct HoldKeyVisitor
+        {
+            const TDerived& _handler;
+            BitReader&      _body;
+
+            template <typename TMessage>
+            uint64 visit()
+            {
+                if constexpr ( NetMessageIsHeld<TMessage>::value && ( std::is_same_v<TMessage, TReceived> || ... ) )
+                    return _handler.readHoldKey( TMessage{}, _body );
+                else
+                    return 0;
+            }
+        };
+
         struct ReceiveVisitor
         {
             TDerived&                _handler;

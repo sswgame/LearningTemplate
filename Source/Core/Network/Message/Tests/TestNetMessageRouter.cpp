@@ -680,3 +680,184 @@ SW_TEST_CASE( NetMessageRouterTest, HandWrittenTableMessagesTakeTheirChannelFrom
     }
     SW_EXPECT_EQUAL( 2, receivedCount );
 }
+
+namespace
+{
+    /** @brief 열쇠(첫 값)가 준비됐을 때만 처리하는 보류 처리기입니다. 처리한 (열쇠, 값)을 순서대로 적습니다. */
+    class HoldingHandler final : public NetTableHandler<HoldingHandler, NetMessageTable<NetMessageRange::kGame, NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1000>>,
+                                                        NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1000>>
+    {
+    public:
+        using Message = NetHeldMessageDef<NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, 1000>;
+
+        struct Entry
+        {
+            uint64 _key{ 0 };
+            uint64 _number{ 0 };
+        };
+
+        vector<uint64> _listReadyKey{};
+        vector<Entry>  _listHandled{};
+        vector<uint64> _listFailedKey{};
+
+        uint64 readHoldKey( Message, BitReader& body ) const { return body.readVarUint(); }
+
+        NetHandleResult receive( Message, const NetMessageContext& context, BitReader& body )
+        {
+            (void)context;
+            const uint64 key    = body.readVarUint();
+            const uint64 number = body.readVarUint();
+            for ( const uint64 ready : _listReadyKey )
+            {
+                if ( ready != key )
+                    continue;
+                _listHandled.push_back( Entry{ key, number } );
+                return NetHandleResult::Handled;
+            }
+            return NetHandleResult::NotReady;
+        }
+
+        void onMessageDeliveryFailed( int32 connectionID, uint8 kind, uint64 key, NetDeliveryFailure reason ) override
+        {
+            (void)connectionID;
+            (void)kind;
+            (void)reason;
+            _listFailedKey.push_back( key );
+        }
+    };
+
+    /** @brief 테스트가 정하는 시계입니다 — 보류 시한이 실행 속도와 무관하다. */
+    struct HoldTestClock
+    {
+        static int64& getNow()
+        {
+            static int64 s_now = 0; // NOLINT(sw-mutable-static): 시계 함수 포인터가 읽는 테스트 값이다
+            return s_now;
+        }
+        static int64 readNow() { return getNow(); }
+    };
+
+    /** @brief 서버 · 클라이언트 라우터 짝입니다. */
+    struct HoldTestRig
+    {
+        test::LoopbackCluster _pair{ 83u };
+        NetMessageRouter      _serverRouter{};
+        NetMessageRouter      _clientRouter{};
+
+        HoldTestRig()
+        {
+            HoldTestClock::getNow() = 0;
+            NetTestUtil::addServerAndClient( _pair, NetEndpointConfig{} );
+            SW_REQUIRE_TRUE( _pair.getServer().listen() );
+            SW_REQUIRE_TRUE( _pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
+            _serverRouter.setClock( &HoldTestClock::readNow );
+            _clientRouter.setClock( &HoldTestClock::readNow );
+            pollAll();
+        }
+
+        void pollAll()
+        {
+            for ( int32 round = 0; round < 12; ++round )
+            {
+                _pair.run( 0.05 );
+                (void)_serverRouter.poll( _pair.getServer() );
+                (void)_clientRouter.poll( _pair.getClient( 0 ) );
+            }
+        }
+
+        void send( uint64 key, uint64 number )
+        {
+            NetMessageWriter writer;
+            BitWriter&       body = writer.begin( NetMessageRange::kGame );
+            body.writeVarUint( key );
+            body.writeVarUint( number );
+            SW_REQUIRE_TRUE( writer.send( _pair.getServer(), 0, NetChannelKind::ReliableOrdered ) );
+        }
+    };
+} // namespace
+
+/** @brief [NetMessageRouterTest] 대상보다 먼저 온 메시지는 보류됐다가 대상이 서면 순서대로 실행되고, 다른 대상의 메시지는 기다리지 않는다 */
+SW_TEST_CASE( NetMessageRouterTest, HeldMessagesRunInOrderWhenTheirTargetIsReady )
+{
+    HoldTestRig            rig;
+    HoldingHandler         server;
+    HoldingHandler         client;
+    const sw::Subscription serverSubscription = rig._serverRouter.registerHandler( &server );
+    const sw::Subscription clientSubscription = rig._clientRouter.registerHandler( &client );
+    client._listReadyKey.push_back( 2 );
+    rig.send( 1, 10 );
+    rig.send( 2, 20 );
+    rig.send( 1, 11 );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 1 }, client._listHandled.size() ); // 대상 2 는 막히지 않는다
+    SW_EXPECT_EQUAL( uint64{ 20 }, client._listHandled[0]._number );
+    SW_EXPECT_EQUAL( 2, rig._clientRouter.getHeldMessageCount() );
+    client._listReadyKey.push_back( 1 );
+    rig.send( 1, 12 ); // 대상이 선 뒤에 온 것도 앞의 것을 앞지르지 않는다
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 4 }, client._listHandled.size() );
+    SW_EXPECT_EQUAL( uint64{ 10 }, client._listHandled[1]._number );
+    SW_EXPECT_EQUAL( uint64{ 11 }, client._listHandled[2]._number );
+    SW_EXPECT_EQUAL( uint64{ 12 }, client._listHandled[3]._number );
+    SW_EXPECT_EQUAL( 0, rig._clientRouter.getHeldMessageCount() );
+    SW_EXPECT_TRUE( server._listFailedKey.empty() );
+}
+
+/** @brief [NetMessageRouterTest] 선언한 시간을 넘긴 보류 · 월드가 바뀐 보류는 조용히 버리지 않고 보낸 쪽에 알린다. 줄은 상한에서 멈춘다 */
+SW_TEST_CASE( NetMessageRouterTest, FailedHeldMessagesAreReportedToTheSender )
+{
+    HoldTestRig            rig;
+    HoldingHandler         server;
+    HoldingHandler         client;
+    const sw::Subscription serverSubscription = rig._serverRouter.registerHandler( &server );
+    const sw::Subscription clientSubscription = rig._clientRouter.registerHandler( &client );
+    rig.send( 7, 1 );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 1, rig._clientRouter.getHeldMessageCount() );
+    HoldTestClock::getNow() = 1001;
+    SW_EXPECT_LOG( "Net.RouterDeliveryFailed" );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 0, rig._clientRouter.getHeldMessageCount() );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, server._listFailedKey.size() );
+    SW_EXPECT_EQUAL( uint64{ 7 }, server._listFailedKey[0] );
+
+    rig.send( 8, 1 );
+    rig.pollAll();
+    SW_EXPECT_LOG( "Net.RouterDeliveryFailed" );
+    rig._serverRouter.openWorld( rig._pair.getServer() );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 0, rig._clientRouter.getHeldMessageCount() );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, server._listFailedKey.size() );
+    SW_EXPECT_EQUAL( uint64{ 8 }, server._listFailedKey[1] );
+
+    for ( int32 index = 0; index < NetMessageRouter::kMaxHeldMessages; ++index )
+    {
+        rig.send( 9, static_cast<uint64>( index ) );
+    }
+    rig.pollAll();
+    SW_EXPECT_EQUAL( NetMessageRouter::kMaxHeldMessages, rig._clientRouter.getHeldMessageCount() );
+    SW_EXPECT_LOG( "Net.RouterDeliveryFailed" );
+    rig.send( 9, 99 );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( NetMessageRouter::kMaxHeldMessages, rig._clientRouter.getHeldMessageCount() );
+    SW_EXPECT_EQUAL( size_t{ 3 }, server._listFailedKey.size() );
+}
+
+/** @brief [NetMessageRouterTest] 처리기를 달기 전(씬을 읽는 동안)에 온 신뢰 메시지는 처리기가 서면 온 순서대로 전해진다 */
+SW_TEST_CASE( NetMessageRouterTest, ReliableMessagesWaitForTheirHandler )
+{
+    HoldTestRig rig;
+    rig.send( 1, 10 );
+    rig.send( 1, 11 );
+    rig.pollAll();
+    SW_EXPECT_EQUAL( 2, rig._clientRouter.getHeldMessageCount() );
+    HoldingHandler client;
+    client._listReadyKey.push_back( 1 );
+    const sw::Subscription clientSubscription = rig._clientRouter.registerHandler( &client );
+    rig.send( 1, 12 );
+    rig.pollAll();
+    SW_REQUIRE_EQUAL( size_t{ 3 }, client._listHandled.size() );
+    SW_EXPECT_EQUAL( uint64{ 10 }, client._listHandled[0]._number );
+    SW_EXPECT_EQUAL( uint64{ 12 }, client._listHandled[2]._number );
+    SW_EXPECT_EQUAL( uint64{ 0 }, rig._clientRouter.getDeliveryFailedCount().get() );
+}

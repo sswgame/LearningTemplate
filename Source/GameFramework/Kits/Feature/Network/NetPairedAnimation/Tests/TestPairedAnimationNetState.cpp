@@ -73,6 +73,7 @@ SW_TEST_CASE( PairedAnimationNetStateTest, StateFromAnEarlierWorldIsDropped )
     NetMessageWriter messageWriter;
     BitWriter&       writer = messageWriter.beginMessage<NetPairedAnimationMessage::Table, NetPairedAnimationMessage::SessionState>();
     writer.writeUint32( 7 ); // 이 월드는 링크가 없어 0 이다
+    writer.writeVarUint( state._snapshot._sessionID );
     SW_REQUIRE_TRUE( state.write( writer ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, messageWriter.getBytes() ) );
     SW_EXPECT_EQUAL( 0u, client.getStats()._rejectedCount ); // 적용을 시도하지 않았다(없는 에셋이면 거절로 센다)

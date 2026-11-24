@@ -3,10 +3,20 @@
 #include "Core/Network/Message/NetMessage.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct NetMessageInternal
+        {
+            static int64 nowMilliseconds() { return MonotonicClock::nowNanoseconds() / constant::time::kNanosecondsPerMillisecond; }
+        };
+    } // namespace
+
     NetMessageWriter::NetMessageWriter()
         : _writer{}
         , _messageChannel{ NetChannelKind::ReliableOrdered }
@@ -148,6 +158,8 @@ namespace sw
         , _unclaimedNotificationCount{ 0 }
         , _mapPeerWireVersion{}
         , _listRefusedConnection{}
+        , _listHeld{}
+        , _pClock{ &NetMessageInternal::nowMilliseconds }
         , _sessionSerial{ 0 }
         , _worldGeneration{ 0 }
         , _bWireVersionsChanged{ SW_FALSE }
@@ -217,6 +229,7 @@ namespace sw
         rebuildKindTable();
         _mapPeerWireVersion.clear();
         _listRefusedConnection.clear();
+        _listHeld.clear();
         ++_sessionSerial;
         _worldGeneration      = 0;
         _bWireVersionsChanged = SW_FALSE;
@@ -295,7 +308,8 @@ namespace sw
 
     void NetMessageRouter::openWorld( INetPeers& peers )
     {
-        SW_ASSERT( peers.isServer() ); // 세대는 서버가 정한다 — 클라이언트는 받기만 한다
+        SW_ASSERT( peers.isServer() );                               // 세대는 서버가 정한다 — 클라이언트는 받기만 한다
+        dropHeldMessages( peers, NetDeliveryFailure::WorldChanged ); // 앞 월드의 대상을 기다리던 것이다
         _worldGeneration = _worldGeneration == ~0u ? 1u : _worldGeneration + 1u;
         sendWorldGeneration( peers, constant::invalid_index::kInt32 );
     }
@@ -327,10 +341,176 @@ namespace sw
             _listRefusedConnection.push_back( connectionID );
             return;
         }
+        dropHeldMessages( peers, NetDeliveryFailure::WorldChanged );
         _worldGeneration = generation;
         for ( INetMessageHandler* pHandler : _listHandler )
         {
             pHandler->onWorldOpened( generation );
+        }
+    }
+
+    void NetMessageRouter::setClock( ClockFunction pClock )
+    {
+        SW_ASSERT( pClock != nullptr );
+        _pClock = pClock;
+    }
+
+    bool NetMessageRouter::isBlockedByHeld( int32 connectionID, uint8 rangeBase, uint64 key ) const
+    {
+        for ( const HeldMessage& held : _listHeld )
+        {
+            const bool bSameStream = held._connectionID == connectionID && held._rangeBase == rangeBase;
+            if ( bSameStream && ( held._bMissingHandler == SW_TRUE || held._key == key ) )
+                return true;
+        }
+        return false;
+    }
+
+    void NetMessageRouter::holdMessage( INetPeers& peers, const NetInboundMessage& message, const uint8* pData, uint64 key, int64 holdMilliseconds, bool bMissingHandler )
+    {
+        HeldMessage held;
+        held._buffer.assign( pData, pData + message._size );
+        held._key             = key;
+        held._deadline        = _pClock() + holdMilliseconds;
+        held._connectionID    = message._connectionID;
+        held._channel         = message._channel;
+        held._bMissingHandler = bMissingHandler ? SW_TRUE : SW_FALSE;
+        held._rangeBase       = static_cast<uint8>( pData[0] - pData[0] % NetMessageRange::kSize );
+        int32 heldCount       = 0;
+        int32 heldBytes       = message._size;
+        for ( const HeldMessage& other : _listHeld )
+        {
+            if ( other._connectionID != message._connectionID )
+                continue;
+            ++heldCount;
+            heldBytes += static_cast<int32>( other._buffer.size() );
+        }
+        if ( heldCount >= kMaxHeldMessages || heldBytes > kMaxHeldBytes )
+            reportDeliveryFailed( peers, held, NetDeliveryFailure::Overflow );
+        else
+            _listHeld.push_back( std::move( held ) );
+    }
+
+    void NetMessageRouter::reportDeliveryFailed( INetPeers& peers, const HeldMessage& held, NetDeliveryFailure reason )
+    {
+        _deliveryFailedCount.add();
+        if ( held._bMissingHandler == SW_TRUE )
+        {
+            SW_LOG_WARNING_ONCE_ID( "Net.RouterNoHandlerInTime", "NetMessageRouter: a reliable message of kind 0x%02x from connection %# found no handler in time - dropped (further ones are only counted)",
+                                    static_cast<int32>( held._buffer[0] ), held._connectionID );
+            return; // 처리기를 달지 않는 쪽(키트가 없는 씬)일 수 있다 — 보류를 선언했는지 모른다
+        }
+        SW_LOG_WARNING_ID( "Net.RouterDeliveryFailed", "NetMessageRouter: a held message of kind 0x%02x (key %#) from connection %# was not delivered (reason %#)", static_cast<int32>( held._buffer[0] ), held._key,
+                           held._connectionID, static_cast<int32>( reason ) );
+        NetMessageWriter messageWriter;
+        BitWriter&       writer = messageWriter.begin( NetMessageRange::kRouterDeliveryFailedKind );
+        writer.writeBits( held._buffer[0], 8 );
+        writer.writeBits( static_cast<uint32>( reason ), 2 );
+        writer.writeVarUint( held._key );
+        (void)messageWriter.send( peers, held._connectionID, NetChannelKind::ReliableOrdered ); // 닫히는 중이면 알릴 곳이 없다
+    }
+
+    void NetMessageRouter::dropHeldMessages( INetPeers& peers, NetDeliveryFailure reason )
+    {
+        vector<HeldMessage> listDropped;
+        listDropped.swap( _listHeld );
+        for ( const HeldMessage& held : listDropped )
+        {
+            reportDeliveryFailed( peers, held, reason );
+        }
+    }
+
+    void NetMessageRouter::receiveDeliveryFailed( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size )
+    {
+        BitReader    body( pData + 1, size - 1 );
+        const uint8  kind   = static_cast<uint8>( body.readBits( 8 ) );
+        const uint32 reason = body.readBits( 2 );
+        const uint64 key    = body.readVarUint();
+        if ( body.hasOverflowed() || reason > static_cast<uint32>( NetDeliveryFailure::WorldChanged ) )
+        {
+            _malformedCount.add();
+            SW_LOG_WARNING_ID( "Net.RouterDeliveryFailedMalformed", "NetMessageRouter: connection %# sent a broken undelivered notice - disconnecting it", connectionID );
+            peers.disconnect( connectionID, NetLinger::none() );
+            _listRefusedConnection.push_back( connectionID );
+            return;
+        }
+        for ( size_t handlerIndex = 0; handlerIndex < _listHandler.size(); ++handlerIndex )
+        {
+            INetMessageHandler* const pHandler = _listHandler[handlerIndex];
+            if ( NetMessageRange::isInRange( kind, pHandler->getMessageRangeBase() ) )
+                pHandler->onMessageDeliveryFailed( connectionID, kind, key, static_cast<NetDeliveryFailure>( reason ) );
+        }
+    }
+
+    NetHandleResult NetMessageRouter::deliverOrHold( INetPeers& peers, NetPeerRole role, const NetInboundMessage& message, const uint8* pData, bool bHoldMissingHandler )
+    {
+        const NetMessageContext   context{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } };
+        const bool                bReliable = message._channel == NetChannelKind::ReliableOrdered || message._channel == NetChannelKind::ReliableUnordered;
+        INetMessageHandler* const pHandler  = message._size > 0 ? _arrKindHandler[pData[0]] : nullptr;
+        if ( pHandler == nullptr )
+        {
+            // 엔진 영역(부하 메시지 등)은 처리기 없이 버리는 종류가 있다. 비신뢰는 늦으면 쓸모가 없다.
+            const bool bHold = bHoldMissingHandler && bReliable && message._size > 0 && pData[0] >= NetMessageRange::kFramework;
+            if ( bHold == false )
+                return NetHandleResult::NotMine;
+            holdMessage( peers, message, pData, 0, kMissingHandlerHoldMilliseconds, true );
+            return NetHandleResult::NotReady;
+        }
+        const uint32 holdMilliseconds = bReliable ? pHandler->getHoldLimit( pData[0] ) : 0u;
+        const uint8  rangeBase        = pHandler->getMessageRangeBase();
+        const uint64 key              = holdMilliseconds != 0u ? pHandler->readHoldKey( pData[0], BitReader( pData + 1, message._size - 1 ) ) : 0u;
+        if ( holdMilliseconds != 0u && isBlockedByHeld( message._connectionID, rangeBase, key ) )
+        {
+            holdMessage( peers, message, pData, key, static_cast<int64>( holdMilliseconds ), false ); // 같은 대상의 앞 메시지가 기다린다 — 앞지르지 않는다
+            return NetHandleResult::NotReady;
+        }
+        const NetHandleResult result = dispatch( role, context, pData, message._size );
+        if ( result != NetHandleResult::NotReady )
+            return result;
+        if ( holdMilliseconds != 0u )
+            holdMessage( peers, message, pData, key, static_cast<int64>( holdMilliseconds ), false );
+        else if ( bReliable )
+            SW_LOG_ERROR_ID( "Net.RouterHoldNotDeclared", "NetMessageRouter: the handler of kind 0x%02x is not ready but its message does not declare a hold (NetHeldMessageDef) - dropped", static_cast<int32>( pData[0] ) );
+        return result;
+    }
+
+    void NetMessageRouter::retryHeldMessages( INetPeers& peers, NetPeerRole role )
+    {
+        if ( _listHeld.empty() )
+            return;
+        // 줄을 떼어 앞에서부터 다시 준다 — 아직이면 `deliverOrHold` 가 새 시한 없이 다시 세워야 하므로 시한은 여기서 지킨다.
+        vector<HeldMessage> listRetry;
+        listRetry.swap( _listHeld );
+        const int64 now = _pClock();
+        for ( HeldMessage& held : listRetry )
+        {
+            INetMessageHandler* const pHandler = _arrKindHandler[held._buffer[0]];
+            const bool                bExpired = now >= held._deadline;
+            NetHandleResult           result   = NetHandleResult::NotReady;
+            if ( pHandler != nullptr )
+            {
+                const int32 size = static_cast<int32>( held._buffer.size() );
+                if ( held._bMissingHandler == SW_TRUE )
+                {
+                    held._bMissingHandler = SW_FALSE;
+                    if ( isInboundAllowed( held._buffer[0], role ) == false )
+                    {
+                        refuseWrongDirection( peers, held._connectionID, held._buffer[0], role );
+                        continue;
+                    }
+                    if ( pHandler->getHoldLimit( held._buffer[0] ) != 0u )
+                        held._key = pHandler->readHoldKey( held._buffer[0], BitReader( held._buffer.data() + 1, size - 1 ) );
+                }
+                const bool bBlocked = VectorUtil::contains( _listRefusedConnection, held._connectionID ) || isBlockedByHeld( held._connectionID, held._rangeBase, held._key );
+                if ( bBlocked == false )
+                    result = dispatch( role, NetMessageContext{ held._buffer.data(), size, held._connectionID, held._channel, held._buffer[0] }, held._buffer.data(), size );
+            }
+            if ( result != NetHandleResult::NotReady )
+                continue;
+            if ( bExpired )
+                reportDeliveryFailed( peers, held, NetDeliveryFailure::TimedOut );
+            else
+                _listHeld.push_back( std::move( held ) );
         }
     }
 
@@ -470,6 +650,8 @@ namespace sw
             else
             {
                 _mapPeerWireVersion.erase( event._connectionID );
+                VectorUtil::removeIf( _listHeld, [&event]( const HeldMessage& held )
+                { return held._connectionID == event._connectionID; } ); // 같은 번호의 다음 연결이 물려받지 않는다
             }
         }
         // 등록이 바뀌었으면 알리고, 이미 들고 있는 상대 판과 견준다 — 이 쪽이 늦게 등록한 영역도 메시지를 넘기기 전에 걸러진다.
@@ -493,6 +675,7 @@ namespace sw
         {
             dispatchNotification( notification );
         }
+        retryHeldMessages( peers, role ); // 앞서 온 것이 새 메시지보다 먼저다
         for ( const NetInboundMessage& message : _inbound._listMessage )
         {
             const uint8* pData = _inbound._bytes.data() + message._offset;
@@ -509,15 +692,19 @@ namespace sw
                 receiveWorldGeneration( peers, message._connectionID, pData, message._size );
                 continue;
             }
+            if ( message._size > 0 && pData[0] == NetMessageRange::kRouterDeliveryFailedKind )
+            {
+                receiveDeliveryFailed( peers, message._connectionID, pData, message._size );
+                continue;
+            }
             const bool bWrongDirection = message._size > 0 && _arrKindHandler[pData[0]] != nullptr && isInboundAllowed( pData[0], role ) == false;
             if ( bWrongDirection )
             {
                 refuseWrongDirection( peers, message._connectionID, pData[0], role );
                 continue;
             }
-            if ( dispatch( role, NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
-                     NetHandleResult::NotMine ||
-                 pOutUnhandled == nullptr )
+            // 처리기 없는 메시지를 부르는 쪽이 받아 가면(테스트 · 하니스) 보류하지 않는다.
+            if ( deliverOrHold( peers, role, message, pData, pOutUnhandled == nullptr ) != NetHandleResult::NotMine || pOutUnhandled == nullptr )
                 continue;
             NetReceivedMessage unhandled;
             unhandled._buffer.assign( pData, pData + message._size );

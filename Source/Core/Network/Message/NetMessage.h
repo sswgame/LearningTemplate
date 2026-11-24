@@ -141,7 +141,16 @@ namespace sw
     {
         Handled = 0, ///< 받아서 처리했다(낡아서 버린 것도 포함한다. 형식은 맞았다).
         Malformed,   ///< 내 종류인데 본문이 깨졌다. 라우터가 세고 버리며, 다른 처리기나 남은 목록으로 넘기지 않는다.
-        NotMine      ///< 맡은 종류가 아니다(`handleMessage` 로 직접 전달할 때만 반환한다. 라우터는 마스크로 미리 거른다).
+        NotMine,     ///< 맡은 종류가 아니다(`handleMessage` 로 직접 전달할 때만 반환한다. 라우터는 마스크로 미리 거른다).
+        NotReady     ///< 아직 처리할 수 없다(대상이 서지 않았다). 서술자가 보류를 선언한 종류(`NetHeldMessageDef`)만 낼 수 있고, 라우터가 보류했다가 순서대로 다시 준다.
+    };
+
+    /** @brief 보류한 메시지를 끝내 전하지 못한 까닭입니다. */
+    enum class NetDeliveryFailure : uint8
+    {
+        TimedOut = 0, ///< 조건이 차지 않은 채 선언한 시간이 지났다
+        Overflow,     ///< 그 연결의 보류 줄이 찼다
+        WorldChanged  ///< 기다리는 사이 월드가 바뀌었다 — 대상은 앞 월드의 것이다
     };
 } // namespace sw
 
@@ -245,6 +254,29 @@ namespace sw
          */
         virtual void onWorldOpened( uint32 generation ) { (void)generation; }
         /**
+         * @brief 종류 @p kind 를 처리기가 `NotReady` 로 미룰 때 보류하는 시간(밀리초)입니다. 0 이면 보류하지 않습니다. 표 기반 처리기는 서술자(`NetHeldMessageDef`)에서 저절로 낸다.
+         */
+        virtual uint32 getHoldLimit( uint8 kind ) const
+        {
+            (void)kind;
+            return 0;
+        }
+        /** @brief 보류하는 종류의 열쇠(대상 · 세션 번호)입니다. 같은 연결 · 영역 · 열쇠의 메시지는 앞의 것이 전해질 때까지 순서대로 기다립니다. @p body 는 종류 바이트 다음부터인 사본입니다. */
+        virtual uint64 readHoldKey( uint8 kind, BitReader body ) const
+        {
+            (void)kind;
+            (void)body;
+            return 0;
+        }
+        /** @brief 이쪽이 보낸 영역 안의 종류 @p kind 메시지를 상대가 보류했다가 끝내 전하지 못했습니다(보류를 선언한 종류만). */
+        virtual void onMessageDeliveryFailed( int32 connectionID, uint8 kind, uint64 key, NetDeliveryFailure reason )
+        {
+            (void)connectionID;
+            (void)kind;
+            (void)key;
+            (void)reason;
+        }
+        /**
          * @brief 이번 프레임의 사건 · 메시지를 다 나눠 줬습니다(`NetMessageRouter::poll` 의 끝). 게임 프레임(조종 · 틱)은 이 뒤에 돕니다.
          * @details 프레임 안에서 값이 바뀌면 안 되는 것(화면 시각)을 여기서 한 번 정한다 — 프레임 중간에 움직이면 같은 프레임의 표본끼리 시각이 갈린다.
          */
@@ -293,7 +325,10 @@ namespace sw
      *          알리고(`NetMessageRange::kRouterWireVersionKind`), 상대가 알린 판은 연결마다 들고 있다가 양쪽이 같은 영역을 쓰면 견준다. 다르면 오류를 남기고 그 연결을 끊고,
      *          같은 `poll` 안의 그 연결 메시지는 처리기에 넘기지 않는다. 상대가 아직 등록하지 않은 영역은 견주지 않는다(뒤에 등록하면 그때 알려 온다).
      *          게임이 표 판을 손으로 섞던 방식(`NetWireVersion::combine`)은 빠뜨릴 수 있었다 — 섞는 게임이 하나도 없었다.
-     * @details - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
+     * @details - **보류:** 처리기가 아직 처리할 수 없는 메시지(대상이 서지 않았다 — `NotReady`)와, 처리기가 아직 없는 신뢰 메시지(씬을 읽는 중)는 버리지 않고 상한(연결마다
+     *            개수 · 바이트, 종류마다 시간) 안에서 들고 있다가 `poll` 마다 온 순서대로 다시 준다. 시한 · 상한을 넘거나 월드가 바뀌면 버리고, 보류를 선언한 종류면 보낸 쪽에 알린다
+     *            (`onMessageDeliveryFailed`). 유니티 NGO `DeferredMessageManager`(스폰 앞에 온 RPC, `SpawnTimeout`) · 언리얼 GUID 대기 큐 자리 — 시한 뒤 조용히 버리는 것만 다르다.
+     *          - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
      *            구독이 사라지면 처리기가 빠진다. 라우터가 먼저 사라지거나 세션이 닫히면(`closeSession`) 구독은 무효가 된다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(빈 구독).
      *          - `poll` 는 엔드포인트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::pollInbound` — 엔드포인트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed 를 반환)는 세고(`getMalformedCount`) 버린다.
@@ -308,8 +343,21 @@ namespace sw
     {
     public:
         static constexpr int32 kKindCount = NetMessageKindStatsTable::kKindCount;
+        /** @brief 연결 하나가 보류 줄에 둘 수 있는 메시지 수 · 바이트입니다. 넘는 것은 전하지 못한 것이다(상대가 줄을 끝없이 늘리지 못한다). */
+        static constexpr int32 kMaxHeldMessages = 64;
+        static constexpr int32 kMaxHeldBytes    = 128 * 1024;
+        /** @brief 처리기가 아직 없는 신뢰 메시지를 기다리는 시간(밀리초)입니다 — 씬을 읽고 처리기를 다는 동안이다. */
+        static constexpr int64 kMissingHandlerHoldMilliseconds = 10000;
+
+        /** @brief 보류 시한이 읽는 단조 시계(밀리초)입니다. */
+        using ClockFunction = int64 ( * )();
 
         NetMessageRouter();
+
+        /** @brief 보류 시한의 시계를 바꿉니다(기본은 `MonotonicClock`). 테스트 · 하니스가 실행 속도와 무관하게 돌린다. nullptr 은 받지 않는다(`SW_ASSERT`). */
+        void setClock( ClockFunction pClock );
+        /** @brief 보류 중인 메시지 수입니다. */
+        int32 getHeldMessageCount() const { return static_cast<int32>( _listHeld.size() ); }
 
         NetMessageRouter( const NetMessageRouter& )            = delete;
         NetMessageRouter& operator=( const NetMessageRouter& ) = delete;
@@ -358,6 +406,8 @@ namespace sw
          */
         static int32      relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
         const DevCounter& getMalformedCount() const { return _malformedCount; }
+        /** @brief 보류했다가 시한 · 상한 · 월드 바뀜으로 전하지 못한 메시지 수입니다. */
+        const DevCounter& getDeliveryFailedCount() const { return _deliveryFailedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
         uint64 getUnclaimedNotificationCount() const { return _unclaimedNotificationCount; }
         /** @brief `poll` 가 지금까지 꺼낸 종류별 메시지 수와 바이트입니다(받은 쪽 셈 — 처리기가 없는 메시지도 센다. 보낸 쪽은 `INetPeers::addSentKindStats`). */
@@ -375,6 +425,30 @@ namespace sw
         void sendWireVersions( INetPeers& peers, int32 connectionID );
         /** @brief 상대 @p connectionID 의 판 알림을 읽어 들고 이 쪽과 견줍니다. 깨졌거나 다르면 연결을 끊습니다. */
         void receiveWireVersions( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
+        /** @brief 보류 중인 메시지 하나입니다. */
+        struct HeldMessage
+        {
+            vector<uint8>  _buffer{};
+            uint64         _key{ 0 };
+            int64          _deadline{ 0 };
+            int32          _connectionID{ 0 };
+            NetChannelKind _channel{ NetChannelKind::ReliableOrdered };
+            uint8          _bMissingHandler{ SW_FALSE }; ///< 처리기가 없어 기다린다(열쇠를 모른다 — 같은 영역의 뒤 메시지가 모두 뒤에 선다)
+            uint8          _rangeBase{ 0 };
+        };
+
+        /** @brief 보류한 메시지를 온 순서대로 다시 줍니다. 앞의 같은 열쇠가 남아 있으면 건너뛰고, 시한이 지난 것은 버립니다. */
+        void retryHeldMessages( INetPeers& peers, NetPeerRole role );
+        /** @brief 메시지 하나를 처리기에 주거나 보류합니다. NotMine 이면 처리기도 보류도 아닙니다. */
+        NetHandleResult deliverOrHold( INetPeers& peers, NetPeerRole role, const NetInboundMessage& message, const uint8* pData, bool bHoldMissingHandler );
+        /** @brief 보류 줄에 세웁니다. 줄이 찼으면 전하지 못한 것으로 끝냅니다. */
+        void holdMessage( INetPeers& peers, const NetInboundMessage& message, const uint8* pData, uint64 key, int64 holdMilliseconds, bool bMissingHandler );
+        bool isBlockedByHeld( int32 connectionID, uint8 rangeBase, uint64 key ) const;
+        /** @brief 전하지 못한 메시지를 세고, 보류를 선언한 종류면 보낸 쪽에 알립니다. */
+        void reportDeliveryFailed( INetPeers& peers, const HeldMessage& held, NetDeliveryFailure reason );
+        void dropHeldMessages( INetPeers& peers, NetDeliveryFailure reason );
+        /** @brief 상대가 알린 "전하지 못함" 을 그 영역의 처리기에 넘깁니다. 깨졌으면 연결을 끊습니다. */
+        void receiveDeliveryFailed( INetPeers& peers, int32 connectionID, const uint8* pData, int32 size );
         /** @brief 지금 월드 세대를 @p connectionID 에(-1 이면 상대 모두에게) 보냅니다. */
         void sendWorldGeneration( INetPeers& peers, int32 connectionID );
         /** @brief 서버가 보낸 월드 세대를 읽어 들고 처리기에 알립니다. 깨졌거나 서버가 받은 것이면 연결을 끊습니다. */
@@ -404,9 +478,12 @@ namespace sw
         NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
         DevCounter                                    _malformedCount;
+        DevCounter                                    _deliveryFailedCount; ///< 보류했다가 전하지 못한 메시지 수
         uint64                                        _unclaimedNotificationCount;
         unordered_map<int32, vector<PeerWireVersion>> _mapPeerWireVersion;    ///< 연결마다 상대가 알린 표 판. 연결이 닫히면 지운다
         vector<int32>                                 _listRefusedConnection; ///< 이번 `poll` 에서 판이 달라 끊은 연결 — 남은 메시지를 넘기지 않는다
+        vector<HeldMessage>                           _listHeld;              ///< 보류 중인 메시지(온 순서)
+        ClockFunction                                 _pClock;                ///< 보류 시한의 시계
         uint32                                        _sessionSerial;         ///< 지금 세션의 번호(`closeSession` 이 올린다)
         uint32                                        _worldGeneration;       ///< 서버가 연 월드의 세대(`openWorld`). 0 이면 아직 없다
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다
