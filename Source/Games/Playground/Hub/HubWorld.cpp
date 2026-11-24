@@ -197,17 +197,19 @@ namespace sw
         return HubActionResult::Ok;
     }
 
-    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const AbsolutePosition& position, bool bRiding )
+    HubActionResult HubWorld::moveAvatar( uint32 avatarID, const AbsolutePosition& position, float32 stepSeconds, bool bRiding )
     {
         const float3& target  = position._value; // 규칙의 계산은 모두 절대 자리다
         HubAvatar*    pAvatar = findAvatarMutable( avatarID );
         if ( pAvatar == nullptr )
             return HubActionResult::UnknownTarget;
-        pAvatar->_bRiding = bRiding ? SW_TRUE : SW_FALSE;
+        // 예산은 이 걸음의 시간이 채운다 — 걸음을 낸 시간(입력 몫)과 같은 시계다.
+        const float32 speedLimit = bRiding ? _rules._rideSpeed : _rules._moveSpeed;
+        pAvatar->_moveBudget     = MathUtil::min( _rules._maxMoveStep, pAvatar->_moveBudget + speedLimit * MathUtil::max( stepSeconds, 0.0f ) );
         if ( isInsideHub( target._x, target._z ) == false || MathUtil::isFinite( target._y ) == false )
             return HubActionResult::StepTooLong;
         // 걸음 길이만 보면 몰아서 아무 속도로나 갈 수 있었다(감사 K-1 — 공격에는 서버 쿨다운이 있는데 이동에는 없었다). 간 거리를
-        // 시간이 채우는 예산으로 막는다(언리얼 UCharacterMovementComponent 의 시간 불일치 감지 자리).
+        // 걸음의 시간이 채우는 예산으로 막는다(언리얼 UCharacterMovementComponent 의 시간 불일치 감지 자리).
         const float32 distance = float3::getHorizontalDistance( pAvatar->_profile._position, target );
         if ( distance > _rules._maxMoveStep || distance > pAvatar->_moveBudget )
             return HubActionResult::StepTooLong;
@@ -278,8 +280,6 @@ namespace sw
         for ( auto& entry : _mapAvatar )
         {
             entry.second._attackCooldown = MathUtil::max( 0.0f, entry.second._attackCooldown - deltaSeconds );
-            const float32 speedLimit     = entry.second._bRiding == SW_TRUE ? _rules._rideSpeed : _rules._moveSpeed;
-            entry.second._moveBudget     = MathUtil::min( _rules._maxMoveStep, entry.second._moveBudget + speedLimit * deltaSeconds );
         }
         for ( HubPlacementState& spawn : _listPlacement )
         {

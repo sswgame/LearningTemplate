@@ -96,7 +96,7 @@ namespace sw
         float32 _herbRespawnSeconds{ 5.0f };
         PROPERTY( Min = 0.1, Units = m, Tooltip = "Farthest an avatar may move at once - also the most move budget an avatar can save up" )
         float32 _maxMoveStep{ 12.0f };
-        PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may move on foot - the server refills this much move budget per second and moves spend it" )
+        PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may move on foot - each simulated step refills the move budget for its own seconds at this speed and spends the distance moved" )
         float32 _moveSpeed{ 0.0f };
         PROPERTY( Required, Min = 0.1, Units = "m/s", Tooltip = "Fastest an avatar may move while riding (not below the gallop speed of the horses)" )
         float32 _rideSpeed{ 0.0f };
@@ -171,8 +171,7 @@ namespace sw
         uint32     _partyID{ 0 };      ///< 0 이면 파티가 없다
         uint32     _inviteFromID{ 0 }; ///< 받은 초대를 보낸 아바타. 0 이면 없다
         float32    _attackCooldown{ 0.0f };
-        float32    _moveBudget{ 0.0f };   ///< 지금 갈 수 있는 거리(m) — 틱이 속도 한도 × dt 만큼 채우고(`_maxMoveStep` 까지) 이동이 쓴다(감사 K-1)
-        uint8      _bRiding{ SW_FALSE };  ///< 타고 있다 — 속도 한도가 `_rideSpeed` 다
+        float32    _moveBudget{ 0.0f };   ///< 지금 갈 수 있는 거리(m) — 이동이 그 걸음의 시간 × 속도 한도만큼 채우고(`_maxMoveStep` 까지) 간 거리만큼 쓴다(감사 K-1)
         uint8      _bChanged{ SW_FALSE }; ///< 알릴 진행 · 파티가 바뀌었다(`HubWorld::consumeDirtyFlag`)
     };
 
@@ -220,8 +219,12 @@ namespace sw
 
         HubActionResult attackCreature( uint32 avatarID, uint32 placementID );
         HubActionResult gatherHerb( uint32 avatarID, uint32 placementID );
-        /** @brief 서버가 움직인 폰의 자리를 아바타에 옮깁니다. 경계 밖이거나 속도 한도의 예산을 넘으면 StepTooLong 이고 자리는 그대로입니다(부르는 쪽이 폰을 되돌린다). */
-        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, bool bRiding );
+        /**
+         * @brief 서버가 움직인 폰의 자리를 아바타에 옮깁니다. 경계 밖이거나 속도 한도의 예산을 넘으면 StepTooLong 이고 자리는 그대로입니다(부르는 쪽이 폰을 되돌린다).
+         * @details 예산은 그 걸음의 시간 @p stepSeconds 가 채운다 — 시계를 따로 재지 않는다. 걸음 수(흐른 시간)는 서버의 입력 몫(`ReplicationServer::accumulateInputBudget`)이 막는다.
+         *          예산을 게임 시간으로 채우면 입력 몫(실제 시간)과 흐름이 달라, 서버가 프레임을 놓칠 때마다 몫이 모자라 정직한 걸음을 되돌렸다.
+         */
+        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, float32 stepSeconds, bool bRiding );
         HubActionResult inviteToParty( uint32 avatarID, uint32 targetAvatarID );
         HubActionResult acceptPartyInvite( uint32 avatarID, uint32 leaderAvatarID );
         HubActionResult leaveParty( uint32 avatarID );
