@@ -384,7 +384,7 @@ namespace sw
     }
 
     // 프레임 단계(폴링 → 큐 비우기 → 가상 입력 → 적용 → 마무리 → 글리프 감지 → 맵 갱신)의 순서가 곧 의미인 선형 본문이라 나누지 않는다.
-    void InputManager::beginFrame( float32 deltaSeconds )
+    void InputManager::beginFrame( float32 unscaledDeltaSeconds )
     {
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         ++_beginFrameCount;
@@ -404,10 +404,10 @@ namespace sw
         {
             if ( pDev != nullptr )
             {
-                pDev->onFrameBegin( deltaSeconds );
+                pDev->onFrameBegin( unscaledDeltaSeconds );
                 const bool bSkipPoll = bOSSuppressed || ( bPadSuppressed && pDev->getDeviceKind() == InputDeviceKind::Gamepad );
                 if ( bSkipPoll == false )
-                    pDev->poll( deltaSeconds );
+                    pDev->poll( unscaledDeltaSeconds );
                 pDev->onPolled();
             }
         }
@@ -438,7 +438,7 @@ namespace sw
         }
         // OS 이벤트에 프레임 안 자리를 채운다(서브틱 입력). 가상 이벤트는 녹화된 자리를 그대로 쓴다 — 재생이 녹화와 같은 순간을 본다.
         _frameEndMicroseconds = _pfnNowMicroseconds();
-        assignFrameFractions( _listPolledEvent.size(), deltaSeconds );
+        assignFrameFractions( _listPolledEvent.size(), unscaledDeltaSeconds );
         // 2-1) 맨 위 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다. 멈춘 아래 원천도 프레임은 센다.
         if ( isVirtualInputAttached() )
         {
@@ -464,7 +464,7 @@ namespace sw
         {
             // 커서는 게임 화면 안에 머문다(창 전체가 아니다 — 에디터 게임 뷰는 창의 일부다).
             const size_t firstCursorEvent = _listPolledEvent.size();
-            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, deltaSeconds, _listPolledEvent );
+            _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(), _gameView, unscaledDeltaSeconds, _listPolledEvent );
             for ( size_t eventIndex = firstCursorEvent; eventIndex < _listPolledEvent.size(); ++eventIndex )
             {
                 _listPolledEvent[eventIndex]._frameFraction = 1.0f; // 패드를 지금 폴링해 만든 이벤트다 — 프레임 끝의 순간이다
@@ -492,7 +492,7 @@ namespace sw
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
-                pDev->onEventsDispatched( deltaSeconds );
+                pDev->onEventsDispatched( unscaledDeltaSeconds );
         }
 
         // 가운데 고정 잠금: 이번 프레임의 델타를 측정한 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖, Alt, 콘솔)은 되돌리지 않는다.
@@ -528,16 +528,16 @@ namespace sw
 
         // 세션 입력 기록(버그 리포트) — 꺼져 있으면 비트 하나 검사뿐이다.
         if ( _sessionRecording.isRecording() )
-            _sessionRecording.recordFrame( deltaSeconds, _listPolledEvent );
+            _sessionRecording.recordFrame( unscaledDeltaSeconds, _listPolledEvent );
 
         // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다.
         //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.
         pairLocalUsers();
         if ( _pInputMap != nullptr )
-            _pInputMap->update( deltaSeconds );
+            _pInputMap->update( unscaledDeltaSeconds );
         for ( const unique_ptr<InputMap>& pUserMap : _listUserMap )
         {
-            pUserMap->update( deltaSeconds );
+            pUserMap->update( unscaledDeltaSeconds );
         }
 
         // 세션 기록 재생(`bugreport.replay`)은 끝 프레임을 맵까지 흘린 뒤 뗀다(떼면 장치 상태를 지운다). 다른 원천(시나리오)은 붙인 쪽이 뗀다.

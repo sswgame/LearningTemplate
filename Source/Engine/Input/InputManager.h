@@ -116,9 +116,9 @@ namespace sw
          *          메시지를 받을 때 상태를 바로 바꾸면, 여기서 엣지를 지운 뒤 재생할 때 이미 눌린 키라서 "새로 눌림" 이 사라진다.
          *          끝에서 통합 InputMap(`getInputMap()`)을 갱신하므로, 그 맵을 따로 `update()` 하면 한 프레임에 두 번 흐른다.
          *          따로 만든 InputMap 은 만든 쪽이 갱신한다.
-         * @param deltaSeconds 지난 프레임의 실제 시간(초)입니다. 진동 타이머와 재연결 주기가 이 값으로 흐릅니다.
+         * @param unscaledDeltaSeconds 지난 프레임의 실제 시간(초, 게임 시간 배율 · 정지와 무관)입니다. 진동 · 가상 커서 · 길게 누르기 · 이벤트의 프레임 안 자리가 이 값으로 흐릅니다.
          */
-        void beginFrame( float32 deltaSeconds = 0.016f );
+        void beginFrame( float32 unscaledDeltaSeconds = 0.016f );
         /** @brief 프레임을 마치며 엣지 플래그와 원시 델타를 리셋합니다. */
         void endFrame();
         /** @brief 창이 포커스를 얻었습니다. 잠금은 다시 잡지 않으며, 클라이언트 영역을 눌러야 잡습니다(`isMouseLockActive`). */
