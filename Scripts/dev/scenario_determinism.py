@@ -104,7 +104,7 @@ def check_determinism(list_path: Sequence[str], target_index: int, scenario_name
         problem = run(list_stage)
         if problem:
             return [f"'{run_name}' 실행이 졌다: {problem}"]
-        list_folder = sorted(list_output_folders(automation_dir, scenario_name) - before, key=lambda path: path.stat().st_mtime)
+        list_folder = sorted(list_output_folders(automation_dir, scenario_name) - before, key=lambda path: (path.stat().st_mtime_ns, len(path.name), path.name))
         if len(list_folder) != list_stage.count(list_path[target_index]):
             return [f"'{run_name}' 실행의 산출물 폴더가 {len(list_folder)} 개다({automation_dir / scenario_name})"]
         for index, folder in enumerate(list_folder):
