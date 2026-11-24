@@ -195,7 +195,7 @@ namespace sw
         }
     }
 
-    bool ReplicationClient::sendInput( uint32 tick, const vector<uint8>& listInput )
+    bool ReplicationClient::sendInput( uint32 tick, span<const uint8> listInput )
     {
         if ( static_cast<int32>( listInput.size() ) > NetClientServerMessage::kMaxInputBytes )
         {
@@ -236,8 +236,7 @@ namespace sw
             claim.write( intentWriter );
         }
         intentWriter.writeVarUint( pawnEntityID );
-        const uint8*        pBytes = intentWriter.getBytes().data();
-        const vector<uint8> listInput( pBytes, pBytes + intentWriter.getByteCount() );
-        return sendInput( tick, listInput );
+        // 쓴 바이트를 그대로 넘긴다 — 틱마다 사본 벡터를 만들지 않는다(입력 창이 제 저장소로 베낀다).
+        return sendInput( tick, span<const uint8>{ intentWriter.getBytes().data(), static_cast<size_t>( intentWriter.getByteCount() ) } );
     }
 } // namespace sw

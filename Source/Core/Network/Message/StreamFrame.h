@@ -81,8 +81,29 @@ namespace sw
 {
     struct SW_API StreamFrameEncoder
     {
-        /** @brief @p outBytes 끝에 프레임 하나를 붙입니다. 몸이 @p maxBodySize 를 넘으면 붙이지 않고 false 입니다. */
-        [[nodiscard]] static bool appendFrame( vector<uint8>& outBytes, StreamFrameKind kind, uint8 flags, const uint8* pBody, int32 bodySize,
-                                               int32 maxBodySize = StreamFrameConstant::kDefaultMaxFrameSize );
+        /**
+         * @brief @p outBytes 끝에 프레임 하나를 붙입니다. 몸이 @p maxBodySize 를 넘으면 붙이지 않고 false 입니다.
+         * @details 버퍼 형식을 가리지 않는다 — 연결의 재사용 버퍼(`vector`)와 보내는 쪽 스택의 인라인 버퍼(`small_vector`)가 같은 머리 쓰기를 쓴다.
+         */
+        template <typename TBytes>
+        [[nodiscard]] static bool appendFrame( TBytes& outBytes, StreamFrameKind kind, uint8 flags, const uint8* pBody, int32 bodySize,
+                                               int32 maxBodySize = StreamFrameConstant::kDefaultMaxFrameSize )
+        {
+            if ( bodySize < 0 || bodySize > maxBodySize )
+                return false;
+            const uint32 length                                      = static_cast<uint32>( bodySize ) + 2;
+            const uint8  arrHeader[StreamFrameConstant::kHeaderSize] = {
+                static_cast<uint8>( length ),
+                static_cast<uint8>( length >> 8 ),
+                static_cast<uint8>( length >> 16 ),
+                static_cast<uint8>( length >> 24 ),
+                static_cast<uint8>( kind ),
+                flags,
+            };
+            outBytes.insert( outBytes.end(), arrHeader, arrHeader + StreamFrameConstant::kHeaderSize );
+            if ( bodySize > 0 )
+                outBytes.insert( outBytes.end(), pBody, pBody + bodySize );
+            return true;
+        }
     };
 } // namespace sw

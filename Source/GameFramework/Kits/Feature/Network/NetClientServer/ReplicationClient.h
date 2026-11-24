@@ -90,7 +90,7 @@ namespace sw
          * @details 못 실은 새 입력은 다음 메시지가 싣는다.
          *          입력이 `NetClientServerMessage::kMaxInputBytes` 를 넘으면 넣지도 보내지도 않고 false 를 반환한다. 같은 틱을 다시 내면 처음 값이 남는다.
          */
-        bool sendInput( uint32 tick, const vector<uint8>& listInput );
+        bool sendInput( uint32 tick, span<const uint8> listInput );
         /**
          * @brief 폰을 조종하는 게임의 입력입니다 — 의도 하나와 이 입력 틱의 근접 맞음 주장을 한 형식으로 써서 `sendInput` 으로 보냅니다.
          * @details 바이트를 게임이 직접 짓지 않으므로 서버의 `ReplicationServer::popIntent` 와 형식이 어긋날 수 없습니다. 주장의 `_frame` 은 입력 틱이다 — 서버 프레임은 서버만 안다.

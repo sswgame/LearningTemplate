@@ -52,23 +52,4 @@ namespace sw
     {
         return static_cast<int32>( _bytes.size() ) - _readOffset;
     }
-
-    bool StreamFrameEncoder::appendFrame( vector<uint8>& outBytes, StreamFrameKind kind, uint8 flags, const uint8* pBody, int32 bodySize, int32 maxBodySize )
-    {
-        if ( bodySize < 0 || bodySize > maxBodySize )
-            return false;
-        const uint32 length                                      = static_cast<uint32>( bodySize ) + 2;
-        const uint8  arrHeader[StreamFrameConstant::kHeaderSize] = {
-            static_cast<uint8>( length ),
-            static_cast<uint8>( length >> 8 ),
-            static_cast<uint8>( length >> 16 ),
-            static_cast<uint8>( length >> 24 ),
-            static_cast<uint8>( kind ),
-            flags,
-        };
-        outBytes.insert( outBytes.end(), arrHeader, arrHeader + StreamFrameConstant::kHeaderSize );
-        if ( bodySize > 0 )
-            outBytes.insert( outBytes.end(), pBody, pBody + bodySize );
-        return true;
-    }
 } // namespace sw

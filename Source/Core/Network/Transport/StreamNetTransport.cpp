@@ -129,7 +129,8 @@ namespace sw
                 startConnect(); // 이미 거는 중이면 아무 일도 하지 않는다
             return false;
         }
-        vector<uint8> frame;
+        // 패킷마다 힙을 잡지 않는다 — 가장 큰 패킷과 프레임 머리가 스택의 인라인 버퍼에 든다(전송 계층은 받은 바이트를 제 큐로 베낀다).
+        small_vector<uint8, kNetMaxPacketSize + StreamFrameConstant::kHeaderSize> frame;
         if ( StreamFrameEncoder::appendFrame( frame, StreamFrameKind::Message, 0, pData, size, kNetMaxPacketSize ) == false )
             return false;
         const StreamSendResult result = _pStream->send( handle, frame.data(), static_cast<int32>( frame.size() ) );
