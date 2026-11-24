@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
@@ -28,4 +29,27 @@ SW_TEST_CASE( ProjectSettingsPageTest, OpeningAnUnknownTypeClearsTypeFound )
     SW_EXPECT_TRUE( page._bOpened );
     SW_EXPECT_FALSE( page._bTypeFound );
     SW_EXPECT_FALSE( page._bDirty );
+}
+
+/** @brief [ProjectSettingsPageTest] 연 뒤 밖에서 바뀐 설정 파일은 첫 저장이 덮지 않고, 다시 저장하면 덮는다 — 페이지별 Save 단추도 같은 길이다 */
+SW_TEST_CASE( ProjectSettingsPageTest, FirstSaveRefusesAFileChangedOnDisk )
+{
+    const AbsolutePath file = test::makeScratchPath( "ProjectSettingsPage" ).join( "probe.json" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( file, "{\n  \"value\": 1\n}\n" ) );
+    ProjectSettingsPage page;
+    page._entry._page  = "Probe/probe.json"; // 형식 이름이 없으면 표 페이지다
+    page._absolutePath = file;
+    page.open();
+    SW_REQUIRE_TRUE( page._bTypeFound );
+
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( file, "{\n  \"value\": 2\n}\n" ) ); // 다른 도구가 고쳤다
+    bool   bApplied = false;
+    string text;
+    SW_EXPECT_LOG( "EditorDiskBaseline.ChangedOnDisk" );
+    SW_EXPECT_FALSE( page.saveDocument( bApplied ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( file, text ) );
+    SW_EXPECT_TRUE( text.find( "2" ) != string::npos );
+    SW_EXPECT_TRUE( page.saveDocument( bApplied ) );
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( file, text ) );
+    SW_EXPECT_TRUE( text.find( "1" ) != string::npos );
 }

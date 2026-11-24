@@ -61,6 +61,7 @@ namespace sw::editor
         , _stagedSelection{}
         , _thumbnailPresetName{}
         , _thumbnailSlot{}
+        , _diskBaseline{}
         , _presetRequest{}
         , _thumbnailRequest{}
         , _paths{}
@@ -179,6 +180,7 @@ namespace sw::editor
             return false;
         }
         _status.clear();
+        _diskBaseline.capture( span<const AbsolutePath>( &*readPath, 1 ) );
         _selectedSocket  = hashed_string{};
         _bExternalChange = SW_FALSE;
         _pReloadGuard->reset();
@@ -217,6 +219,8 @@ namespace sw::editor
             return; // 고친 파일은 다시 읽지 않는다 — 같은 파일은 이미 열렸다
         if ( model.openFile( *diskPath ) == false )
             _status = model.getError();
+        else
+            _diskBaseline.capture( span<const AbsolutePath>( &*diskPath, 1 ) );
     }
 
     void CharacterEditorViewModel::openBodyData( const hashed_string& bodyShapesAsset )
@@ -235,12 +239,19 @@ namespace sw::editor
         {
             if ( pModel->isDirty() == false )
                 continue;
+            if ( _diskBaseline.validateOverwrite( span<const AbsolutePath>( &pModel->getDiskPath(), 1 ) ) == false )
+            {
+                _status = "Body data file changed on disk - save again to overwrite it";
+                bSaved  = false;
+                continue;
+            }
             if ( pModel->save() == false )
             {
                 _status = pModel->getError();
                 bSaved  = false;
                 continue;
             }
+            _diskBaseline.capture( span<const AbsolutePath>( &pModel->getDiskPath(), 1 ) );
             SW_LOG_INFO_ID( "CharacterEditorViewModel.BodyDataSaved", "Body data file saved to %#", pModel->getDiskPath().c_str() );
         }
         // 몸 프로필 · 구간은 이 창의 외형 데이터가 읽은 것이다 — 다시 읽어야 미리보기 몸이 새 값을 입는다(채널 매핑은 공유 캐시의 파일 감시가 다시 읽는다).
@@ -255,13 +266,14 @@ namespace sw::editor
         if ( _sockets.isDirty() )
         {
             const auto writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._socketPath.c_str() ) );
-            if ( writePath.has_value() == false || _sockets.saveDocument( *writePath ) == false )
+            if ( writePath.has_value() == false || _diskBaseline.validateOverwrite( span<const AbsolutePath>( &*writePath, 1 ) ) == false || _sockets.saveDocument( *writePath ) == false )
             {
                 _status = "Socket file could not be saved";
                 bSaved  = false;
             }
             else
             {
+                _diskBaseline.capture( span<const AbsolutePath>( &*writePath, 1 ) );
                 _pReloadGuard->onSaved( nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
                 SW_LOG_INFO_ID( "CharacterEditorViewModel.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
             }
@@ -269,13 +281,16 @@ namespace sw::editor
         if ( _pose.isDirty() )
         {
             const auto writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._refPosePath.c_str() ) );
-            if ( writePath.has_value() == false || _pose.saveDocument( *writePath ) == false )
+            if ( writePath.has_value() == false || _diskBaseline.validateOverwrite( span<const AbsolutePath>( &*writePath, 1 ) ) == false || _pose.saveDocument( *writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
                 bSaved  = false;
             }
             else
+            {
+                _diskBaseline.capture( span<const AbsolutePath>( &*writePath, 1 ) );
                 SW_LOG_INFO_ID( "CharacterEditorViewModel.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
+            }
         }
         if ( isBodyDataDirty() && saveBodyData() == false )
             bSaved = false; // 까닭은 saveBodyData 가 상태 줄에 남겼다
@@ -322,7 +337,10 @@ namespace sw::editor
         else if ( _pose.loadFromFile( *readPath ) == false )
             _status = "Reference pose file could not be loaded (see log)";
         else
+        {
+            _diskBaseline.capture( span<const AbsolutePath>( &*readPath, 1 ) );
             _status.clear();
+        }
     }
 
     void CharacterEditorViewModel::loadSkeleton()
