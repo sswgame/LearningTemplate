@@ -125,7 +125,7 @@ namespace
         {
             BitWriter writer;
             writer.writeUint32( FourCCUtil::make( "SWDS" ) );
-            writer.writeVarUint( 1 );
+            writer.writeVarUint( 0 ); // 판 — 파괴 상태 스냅샷은 첫 판(0)이다
             writer.writeVarUint( graph._listNode.size() );
             writer.writeVarUint( graph._listLink.size() );
             writer.writeVarUint( graph._leafCount );
