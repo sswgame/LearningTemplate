@@ -145,12 +145,12 @@ namespace sw
     App::~App() = default;
 
     /** @brief 게임(과 에디터) 인스턴스 — 모듈 호스트입니다. `ClientModuleManager` 로 게임과 에디터 인스턴스를 만든다(라이브러리는 `loadModuleLibraries` 가 이미 올렸다). */
-    class App::GameHostService final : public Subsystem
+    class App::GameHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "Game";
 
-        explicit GameHostService( App& app )
+        explicit GameHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -172,7 +172,7 @@ namespace sw
         void shutdownSubsystem() override
         {
             _app._launch.getHostScope().unbind<IGameRestarter>();
-            // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서비스는 엔진 종료 앞에서 내려간다.
+            // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서브시스템은 엔진 종료 앞에서 내려간다.
             _app.getModuleManager()->shutdown();
             // 렌더 스레드가 받은 패킷을 끝낸 뒤 훅을 뗀다(`RenderThread::setPresentHook`) — 그 뒤에 매니저를 지운다.
             _app.bindEditorRenderHooks( false );
@@ -186,12 +186,12 @@ namespace sw
     };
 
     /** @brief 사용자 설정의 화면 적용입니다. */
-    class App::UserSettingsHostService final : public Subsystem
+    class App::UserSettingsHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "UserSettings";
 
-        explicit UserSettingsHostService( App& app )
+        explicit UserSettingsHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -209,12 +209,12 @@ namespace sw
     };
 
     /** @brief 런타임 UI 의 클립보드 · 접근성 · 끝내기 명령입니다. */
-    class App::RuntimeUIHooksHostService final : public Subsystem
+    class App::RuntimeUIHooksHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RuntimeUIHooks";
 
-        explicit RuntimeUIHooksHostService( App& app )
+        explicit RuntimeUIHooksHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -232,12 +232,12 @@ namespace sw
     };
 
     /** @brief 개발 콘솔(게임 창 콘솔과 표준 입력 채널)입니다. 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임 뒤에 서고 게임보다 먼저 내려간다. */
-    class App::DevConsoleHostService final : public Subsystem
+    class App::DevConsoleHostSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "DevConsole";
 
-        explicit DevConsoleHostService( App& app )
+        explicit DevConsoleHostSubsystem( App& app )
             : _app{ app }
         {
         }
@@ -256,7 +256,7 @@ namespace sw
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override
         {
-            static constexpr const utf8* kArrDependency[] = { GameHostService::kSubsystemName };
+            static constexpr const utf8* kArrDependency[] = { GameHostSubsystem::kSubsystemName };
             return kArrDependency;
         }
 
@@ -343,13 +343,13 @@ namespace sw
         }
         timings._windowEndMicro = MonotonicClock::nowMicroseconds();
 
-        // 3. 호스트 서비스(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
+        // 3. 호스트 서브시스템(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
-        _launch.addHostService<GameHostService>( *this );
-        _launch.addHostService<UserSettingsHostService>( *this );
-        _launch.addHostService<RuntimeUIHooksHostService>( *this );
-        _launch.addHostService<DevConsoleHostService>( *this );
-        if ( _launch.startHostServices() == false )
+        _launch.addHostSubsystem<GameHostSubsystem>( *this );
+        _launch.addHostSubsystem<UserSettingsHostSubsystem>( *this );
+        _launch.addHostSubsystem<RuntimeUIHooksHostSubsystem>( *this );
+        _launch.addHostSubsystem<DevConsoleHostSubsystem>( *this );
+        if ( _launch.startHostSubsystems() == false )
         {
             splash.dismiss();
             return false;
@@ -357,7 +357,7 @@ namespace sw
         timings._modulesEndMicro = MonotonicClock::nowMicroseconds();
 
         // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 `AppHeadlessTasks` 가 맡는다. 실행했으면 창을 띄우지 않고 끝낸다.
-        const AppHeadlessTasks::TaskResult afterServices = AppHeadlessTasks::runAfterHostServices( *pCommandLineManager, _launch.getEngine() );
+        const AppHeadlessTasks::TaskResult afterServices = AppHeadlessTasks::runAfterHostSubsystems( *pCommandLineManager, _launch.getEngine() );
         if ( afterServices != AppHeadlessTasks::TaskResult::NotRequested )
         {
             splash.dismiss();
@@ -482,14 +482,14 @@ namespace sw
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
         {
-            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 `GameHostService` 가 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
+            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서브시스템 `GameHostSubsystem` 가 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &ClientModuleManager::getSceneViewCamera, static_cast<const ClientModuleManager*>( getModuleManager() ) );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
             // 대화형 에디터 실행의 단언 대화상자는 개발 도구가 스스로 건다(`AssertDialog` — 배포는 DevTools 를 링크하지 않는다).
         }
 
-        // 에디터 렌더 훅은 게임 호스트 서비스와 함께 걸고 뗀다(`bindEditorRenderHooks`). 개발 도구의 렌더 스레드 훅(장치 제거 시험)은 개발 도구가 스스로 건다(`RHIBackendSwitcher`).
+        // 에디터 렌더 훅은 게임 호스트 서브시스템과 함께 걸고 뗀다(`bindEditorRenderHooks`). 개발 도구의 렌더 스레드 훅(장치 제거 시험)은 개발 도구가 스스로 건다(`RHIBackendSwitcher`).
     }
 
     void App::bindEditorRenderHooks( bool bBind )
@@ -505,8 +505,8 @@ namespace sw
 
     void App::shutdown()
     {
-        // 호스트 서비스를 선 순서의 역순으로 내린다(순서는 각 서비스 형식의 의존 선언 — 게임에 기대는 콘솔이 게임보다 먼저, 게임이 엔진보다 먼저).
-        _launch.stopHostServices();
+        // 호스트 서브시스템을 선 순서의 역순으로 내린다(순서는 각 서비스 형식의 의존 선언 — 게임에 기대는 콘솔이 게임보다 먼저, 게임이 엔진보다 먼저).
+        _launch.stopHostSubsystems();
 
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 자동화 실행기는 엔진 범위와 함께 내려간다(스스로 프레임 · 호스트 범위에서 뗀다) — 빌린 포인터만 놓는다.

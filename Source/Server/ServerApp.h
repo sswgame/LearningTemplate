@@ -2,12 +2,12 @@
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다. 창과 GPU 없이 엔진을 서버 역할로 시작하고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청이 오면 정상 종료합니다.
  * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/GameModuleManager` 의 것 —
- *          모듈 호스트와 매니페스트 해석, 부팅 열(`HostLaunch` — 호스트 범위 · 엔진 · 모듈 관리자 · 호스트 서비스의 순서), 개발 계층(`IHostDevLayer` — 핫 리로드 · 개발 명령 `module.reload` 와
+ *          모듈 호스트와 매니페스트 해석, 부팅 열(`HostLaunch` — 호스트 범위 · 엔진 · 모듈 관리자 · 호스트 서브시스템의 순서), 개발 계층(`IHostDevLayer` — 핫 리로드 · 개발 명령 `module.reload` 와
  *          감시 값 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
  *          기동 순서는 다음과 같다. 호스트 범위(모듈 라이브러리 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
- *          호스트 서비스(각 서비스 형식의 의존 선언 순서 — 관측, 크래시 묶음, 서버 문맥, 게임 인스턴스(창과 디바이스는 nullptr), 개발 콘솔, 디버그 채널, 표준 입력), 서버 서비스,
- *          "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 서버 서비스 멈춤, 호스트 서비스 역순 종료, "Dedicated server shutdown complete" 로그, 엔진 종료, 호스트 범위 종료다.
+ *          호스트 서브시스템(각 서비스 형식의 의존 선언 순서 — 관측, 크래시 묶음, 서버 문맥, 게임 인스턴스(창과 디바이스는 nullptr), 개발 콘솔, 디버그 채널, 표준 입력), 서버 서비스,
+ *          "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 서버 서비스 멈춤, 호스트 서브시스템 역순 종료, "Dedicated server shutdown complete" 로그, 엔진 종료, 호스트 범위 종료다.
  *          한 틱은 게임 고정 스텝 하나이며, 델타는 항상 `1 / _tickRateHz` 다. 그래서 서버 시뮬레이션이 실제 시계의 흔들림을 받지 않는다.
  *          다음 틱 마감까지 잠을 자고, 밀리면 `_maxCatchUpTicks` 까지 잠 없이 몰아서 돌고 그 이상은 버린다(경고를 남긴다).
  *
@@ -99,14 +99,14 @@ namespace sw
          * @details 운영 포트 바인드 · 토큰, 관리 채널 토큰, 크래시 보고 동의. 배포 전에 CI · 이미지 빌드(`Scripts/package/server_image.py`)가 돌린다(언리얼 `-run=` 커맨드릿 · 서버 `-validate` 자리).
          */
         [[nodiscard]] static bool validateServerConfig( const ServerConfig& config );
-        // 호스트 서비스 — 이름 · 의존 · 몸통을 한 형식에 둔다(`ServerApp.cpp`). 중첩 형식이라 ServerApp 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostService` 로 더한다.
-        class ObservabilityHostService;
-        class CrashReportsHostService;
-        class ServiceContextHostService;
-        class GameHostService;
-        class StandardInputHostService;
-        class DevConsoleHostService;
-        class DebugChannelHostService;
+        // 호스트 서브시스템 — 이름 · 의존 · 몸통을 한 형식에 둔다(`ServerApp.cpp`). 중첩 형식이라 ServerApp 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostSubsystem` 로 더한다.
+        class ObservabilityHostSubsystem;
+        class CrashReportsHostSubsystem;
+        class ServiceContextHostSubsystem;
+        class GameHostSubsystem;
+        class StandardInputHostSubsystem;
+        class DevConsoleHostSubsystem;
+        class DebugChannelHostSubsystem;
         /** @brief 서버 서비스 연결 수입니다(서비스가 없으면 0). 관측 · 드레인 · 상태가 읽는다. */
         [[nodiscard]] int32 getServiceConnectionCount() const;
         /** @brief 레지스트리에 올라온 서버 서비스(온라인 서비스 호스트 등)를 시작합니다. 하나라도 실패하면 false 입니다(기동 실패). */
@@ -133,19 +133,19 @@ namespace sw
 
     private:
         /**
-         * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서비스의 수명과 순서를 듭니다(App 과 같은 것, `HostLaunch`).
-         * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서비스의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서비스를 내린다.
+         * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서브시스템의 수명과 순서를 듭니다(App 과 같은 것, `HostLaunch`).
+         * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서브시스템의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서브시스템을 내린다.
          *          호스트 범위에는 종료 신호 처리기도 든다 — 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
          *          게임이 서 있는 동안은 서버 설정(`const ServerConfig`)도 빌려 건다(네트워크 세션이 게임 포트를 찾는다).
          *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다.
          */
         HostLaunch _launch;
-        /** @brief 개발 조종(개발 콘솔 · 디버그 채널 · 일시정지/한 걸음)입니다. 호스트 서비스 `DevConsole` · `DebugChannel` 이 세우고 내린다. 배포 서버는 nullptr 이다(`build::kShipping`). */
+        /** @brief 개발 조종(개발 콘솔 · 디버그 채널 · 일시정지/한 걸음)입니다. 호스트 서브시스템 `DevConsole` · `DebugChannel` 이 세우고 내린다. 배포 서버는 nullptr 이다(`build::kShipping`). */
         unique_ptr<IServerDebugControl> _pDebugControl;
-        /** @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료)입니다. 호스트 서비스 `DebugChannel` 이 세우고 내린다. 모든 구성(Shipping 포함)이다. */
+        /** @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료)입니다. 호스트 서브시스템 `DebugChannel` 이 세우고 내린다. 모든 구성(Shipping 포함)이다. */
         ServerAdminChannel    _adminChannel;
         StandardInputCommands _console; ///< 표준 입력 명령 채널(설정 `_bConsoleInput` 이 켤 때만 시작한다)
-        /** @brief 운영 관측(지표 · 상태 · 운영 HTTP · 프레임 이력 · 틱 사용률)입니다. 호스트 서비스 `Observability` 가 세우고 내린다. */
+        /** @brief 운영 관측(지표 · 상태 · 운영 HTTP · 프레임 이력 · 틱 사용률)입니다. 호스트 서브시스템 `Observability` 가 세우고 내린다. */
         ServerObservability              _observability;
         unique_ptr<ServerServiceManager> _serverServices;       ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
         Subscription                     _reloadStopsServices;  ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)

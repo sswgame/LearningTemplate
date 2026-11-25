@@ -19,7 +19,7 @@ namespace sw
      */
     struct AppHeadlessTasks
     {
-        /** @brief 호스트 서비스 뒤 작업 하나의 결과입니다. */
+        /** @brief 호스트 서브시스템 뒤 작업 하나의 결과입니다. */
         enum class TaskResult : uint8
         {
             NotRequested, ///< 인자가 없어 실행하지 않았다.
@@ -35,10 +35,10 @@ namespace sw
         [[nodiscard]] static bool runAll( const CommandLineManager* pCommandLine, IHostDevLayer* pDevLayer );
 
         /**
-         * @brief 호스트 서비스(게임 · 에디터 인스턴스)가 선 뒤 한 번 하고 끝나는 작업(초상화 굽기 `--render-portraits`)을 실행합니다. 게임 타입 · 렌더 스레드가 있어 엔진을 받습니다.
+         * @brief 호스트 서브시스템(게임 · 에디터 인스턴스)가 선 뒤 한 번 하고 끝나는 작업(초상화 굽기 `--render-portraits`)을 실행합니다. 게임 타입 · 렌더 스레드가 있어 엔진을 받습니다.
          * @details 창과 RHI 없이 시작하는 위 작업과 달리 이 작업들은 일반 기동(창 · 렌더 스레드 · 모듈)을 모두 거친 뒤에 돈다 — `--render-portraits` 는 게임 컴포넌트 타입과 디바이스가 있어야 그린다.
          * @return 실행한 작업이 없으면 `NotRequested` 입니다(기동을 이어 간다). 그 밖이면 App 은 메인 루프에 들어가지 않고 끝낸다.
          */
-        [[nodiscard]] static TaskResult runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine );
+        [[nodiscard]] static TaskResult runAfterHostSubsystems( const CommandLineManager& commandLine, Engine& hostEngine );
     };
 } // namespace sw

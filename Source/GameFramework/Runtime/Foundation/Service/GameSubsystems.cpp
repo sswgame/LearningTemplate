@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief App 이 넘긴 호스트 서비스 범위와 지금 게임 범위입니다. GameFramework.dll 의 정적이라 게임 · 키트 이미지보다 오래 산다. */
+        /** @brief App 이 넘긴 호스트 서브시스템 범위와 지금 게임 범위입니다. GameFramework.dll 의 정적이라 게임 · 키트 이미지보다 오래 산다. */
         struct GameSubsystemState
         {
             const ISubsystemLocator* _pHostSubsystems{ nullptr };

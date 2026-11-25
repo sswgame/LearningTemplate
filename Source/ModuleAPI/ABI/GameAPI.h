@@ -54,7 +54,7 @@ namespace sw
     X( void, update, ( GameHandle game, float32 deltaTime ) )                                       \
     /** 고정 프레임 업데이트를 수행합니다. */                                                       \
     X( void, fixedUpdate, ( GameHandle game, float32 fixedDeltaTime ) )                             \
-    /** 호스트 서비스 범위를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */                       \
+    /** 호스트 서브시스템 범위를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */                   \
     X( void, bindService, ( const ISubsystemLocator* pService ) )                                   \
     /** 게임 상태를 한 번 직렬화해 pSink 가 준 버퍼에 씁니다. 구현이 지원하는 범위만 복원됩니다. */ \
     X( bool, serializeState, ( GameHandle game, const StateBufferSink* pSink ) )                    \

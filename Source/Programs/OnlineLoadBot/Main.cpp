@@ -50,7 +50,7 @@ namespace sw
 
             ~ToolHostScope()
             {
-                _launch.stopHostServices();
+                _launch.stopHostSubsystems();
                 _launch.shutdownEngine();
             }
 

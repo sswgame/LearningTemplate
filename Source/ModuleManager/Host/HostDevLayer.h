@@ -68,7 +68,7 @@ namespace sw
         [[nodiscard]] virtual bool runEditorModuleHeadlessTasks( const CommandLineManager& commandLine ) = 0;
         /** @brief 엔진이 선 뒤 개발 도구의 프레임 훅을 붙입니다. */
         virtual void attachFrameHooks( Engine& engine ) = 0;
-        /** @brief 개발 콘솔을 세웁니다(호스트 서비스 `DevConsole`). */
+        /** @brief 개발 콘솔을 세웁니다(호스트 서브시스템 `DevConsole`). */
         virtual void startConsole( bool bEnableEditor ) = 0;
         /** @brief 개발 콘솔을 지웁니다. */
         virtual void stopConsole() = 0;

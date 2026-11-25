@@ -312,7 +312,7 @@ namespace sw
         [[nodiscard]] bool startInstance();
         /**
          * @brief 기동(`initialize`)이 쓰는 엔진 서비스가 있는지 아무것도 걸기 전에 확인합니다(언리얼 `InitializeDependency`). 들고 있지 않고 쓰는 자리에서 게임 창구로 찾는다.
-         * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,
+         * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서브시스템라 창이 있는 호스트(클라이언트)에서는 필수이고,
          *          창이 없는 호스트(전용 서버 · 테스트)에서만 없다. 필수 서비스가 없으면 오류를 남기고 false 입니다(인스턴스가 서지 않는다).
          */
         [[nodiscard]] static bool validateEngineServices( const GenericWindow* pWindow );

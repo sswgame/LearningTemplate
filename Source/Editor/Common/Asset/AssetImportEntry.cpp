@@ -33,7 +33,7 @@ namespace sw::editor
             static int32 importAssets( EditorImportKind kind, bool bCheckOnly )
             {
                 const AssetImportMode mode = bCheckOnly ? AssetImportMode::CheckOnly : AssetImportMode::ImportStale;
-                // 경로 상태는 이 호출이 묶은 호스트 서비스에서 한 번 찾아 넘긴다 — 임포트는 워커에서 돌아 서비스를 찾지 않는다.
+                // 경로 상태는 이 호출이 묶은 호스트 서브시스템에서 한 번 찾아 넘긴다 — 임포트는 워커에서 돌아 서비스를 찾지 않는다.
                 const AssetPaths&  assetPaths = editor::getSubsystem<AssetPaths>();
                 AssetImportSummary summary;
                 const utf8*        pKindLabel = nullptr;

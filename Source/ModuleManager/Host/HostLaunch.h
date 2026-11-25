@@ -1,11 +1,11 @@
 /**
  * @file ModuleManager/Host/HostLaunch.h
- * @brief App · Server 가 함께 쓰는 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서비스의 수명과 그 세우기 · 내리기 순서를 한 형식이 듭니다.
+ * @brief App · Server 가 함께 쓰는 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서브시스템의 수명과 그 세우기 · 내리기 순서를 한 형식이 듭니다.
  * @details 호스트마다 이 걸음을 줄로 적으면 공통 부품을 만들어도 부르는 순서 · 종료 순서가 갈라진다(예전에 Server 만 모듈 맡김 칸이 없었고, 모르는 `-gv_*` 를 조용히 버렸다).
  *          호스트에만 있는 일(종료 신호 처리기 · 서버 서비스 · 창)은 이 함수들 사이에 호스트가 끼운다. 언리얼 `FEngineLoop` 하나가 게임 · 서버 대상을 함께 세우는 것과 같은 자리다(기억).
  *
  *          수명 순서는 칸의 선언 순서가 그대로 가진다: 호스트 범위는 엔진보다 먼저 서서 나중에 사라지고(엔진 범위의 부모다), 개발 계층은 엔진 종료 뒤까지 산다(리로드 구동기가 호스트 범위에 건 것을 쥔다).
- *          호스트 서비스의 몸통은 호스트의 멤버를 쓰는데 이 형식은 호스트의 맨 앞 멤버다 — 그래서 `stopHostServices` 를 호스트의 다른 멤버가 사라지기 전(호스트의 `shutdown`)에 반드시 부른다.
+ *          호스트 서브시스템의 몸통은 호스트의 멤버를 쓰는데 이 형식은 호스트의 맨 앞 멤버다 — 그래서 `stopHostSubsystems` 를 호스트의 다른 멤버가 사라지기 전(호스트의 `shutdown`)에 반드시 부른다.
  *          기동이 중간에 실패해도 같은 길로 내린다(선 것만 내린다).
  */
 #pragma once
@@ -29,7 +29,7 @@ namespace sw
     enum class HostEngineStart : uint8
     {
         Failed,   ///< 엔진이 서지 못했거나 헤드리스 작업이 실패했다. 호스트는 기동을 멈춘다.
-        Headless, ///< 헤드리스 작업(쿠킹 등)을 마쳤다. 창 · 호스트 서비스를 세우지 않는다.
+        Headless, ///< 헤드리스 작업(쿠킹 등)을 마쳤다. 창 · 호스트 서브시스템을 세우지 않는다.
         Ready,    ///< 일반 기동이다. 호스트가 이어 간다.
     };
 
@@ -65,32 +65,32 @@ namespace sw
          */
         [[nodiscard]] bool loadModuleLibraries( uint8 targetMask, unique_ptr<GameModuleManager> moduleManager );
         /**
-         * @brief 호스트 서비스 하나를 더합니다(세우지 않는다 — `startHostServices` 가 의존 순서로 세운다).
+         * @brief 호스트 서브시스템 하나를 더합니다(세우지 않는다 — `startHostSubsystems` 가 의존 순서로 세운다).
          * @details 서비스는 호스트가 자기 폴더에 두는 `Subsystem` 이다. 이름 · 의존은 그 형식의 `kSubsystemName` 상수가 가리키고(철자가 틀리면 컴파일 오류),
          *          몸통은 호스트의 멤버를 쓴다 — 엔진이 호스트의 서비스 목록을 열거형 · 분기로 알지 않는다(언리얼 게임 인스턴스 서브시스템 자리).
          */
         template <class TService, class... TArgs>
-        TService& addHostService( TArgs&&... args )
+        TService& addHostSubsystem( TArgs&&... args )
         {
             const ScopedMemoryTag memoryScope{ TService::kSubsystemMemoryTag };
-            return _hostServices.add( make_unique<TService>( std::forward<TArgs>( args )... ) );
+            return _hostSubsystems.add( make_unique<TService>( std::forward<TArgs>( args )... ) );
         }
         /**
-         * @brief 더한 호스트 서비스를 의존 순서로 세웁니다. 서면 선 순서를 로그로 남기고, 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 를 경고합니다.
+         * @brief 더한 호스트 서브시스템을 의존 순서로 세웁니다. 서면 선 순서를 로그로 남기고, 모듈 · 게임이 모두 선 지금까지 가져간 곳이 없는 `-gv_*` 를 경고합니다.
          * @details 예전에는 두 호스트가 이 세 걸음을 저마다 적어 Server 만 모르는 `-gv_*` 를 조용히 버렸다 — 세우는 길을 여기 하나로 둔다(언리얼 `FEngineLoop::PreInit` 하나가 게임 · 서버 대상을 함께 세운다).
-         * @return 하나라도 서지 못하면(모르는 의존 포함) 오류를 남기고 false 이고, 선 것은 `stopHostServices` 가 내립니다.
+         * @return 하나라도 서지 못하면(모르는 의존 포함) 오류를 남기고 false 이고, 선 것은 `stopHostSubsystems` 가 내립니다.
          */
-        [[nodiscard]] bool startHostServices();
-        /** @brief 지금 서 있는 호스트 서비스를 선 순서대로 `A > B > C` 로 적습니다(기동 로그 · 테스트). */
-        [[nodiscard]] string describeHostServiceOrder() const;
+        [[nodiscard]] bool startHostSubsystems();
+        /** @brief 지금 서 있는 호스트 서브시스템을 선 순서대로 `A > B > C` 로 적습니다(기동 로그 · 테스트). */
+        [[nodiscard]] string describeHostSubsystemOrder() const;
         /** @brief 바뀐 모듈 라이브러리를 보고 리로드를 돌립니다(동적 모듈 구성의 개발 계층만 — 그 밖에는 아무것도 하지 않는다). 호스트가 프레임마다 씬 틱 직전에 부릅니다. */
         void updateModuleReload();
 
-        /** @brief 호스트 서비스를 역순으로 내리고 모듈 관리자를 놓습니다 — 라이브러리를 쥔 관리자는 엔진(모듈 라이브러리 종료 단계)보다 먼저 사라진다. 헤드리스 부팅 · 기동 실패면 선 것만 내립니다. */
-        void stopHostServices();
+        /** @brief 호스트 서브시스템을 역순으로 내리고 모듈 관리자를 놓습니다 — 라이브러리를 쥔 관리자는 엔진(모듈 라이브러리 종료 단계)보다 먼저 사라진다. 헤드리스 부팅 · 기동 실패면 선 것만 내립니다. */
+        void stopHostSubsystems();
         /** @brief 호스트의 게임 서비스를 내릴 때 모듈 관리자를 지웁니다. */
         void releaseModuleManager();
-        /** @brief 개발 도구의 프레임 훅을 떼고 엔진을 내립니다. 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비웁니다(`Engine::shutdown`). `stopHostServices` 뒤에 부릅니다. */
+        /** @brief 개발 도구의 프레임 훅을 떼고 엔진을 내립니다. 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비웁니다(`Engine::shutdown`). `stopHostSubsystems` 뒤에 부릅니다. */
         void shutdownEngine();
 
         SubsystemScope& getHostScope() { return _host; }
@@ -105,7 +105,7 @@ namespace sw
         /** @brief 정적 구성에는 핫 리로드 매니저가 없다 — 모듈 관리자는 정적 링크 표로 선다. */
         ILiveReloadManager* getLiveReloadManager() const { return nullptr; }
 #endif
-        /** @brief 모듈 관리자입니다. 호스트 로더가 돌기 전과 `stopHostServices` 뒤에는 nullptr 입니다. */
+        /** @brief 모듈 관리자입니다. 호스트 로더가 돌기 전과 `stopHostSubsystems` 뒤에는 nullptr 입니다. */
         GameModuleManager* getModuleManager() const { return _moduleManager.get(); }
 
     private:
@@ -123,7 +123,7 @@ namespace sw
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석입니다. 무엇을 어떤 순서로 로드할지 정합니다(개발 구성). */
         ModuleCatalog    _moduleCatalog;
         ModuleResolution _moduleResolution;
-        /** @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스입니다. 순서는 각 서비스 형식의 의존 선언이 정한다. */
-        SubsystemCollection _hostServices;
+        /** @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서브시스템입니다. 순서는 각 서비스 형식의 의존 선언이 정한다. */
+        SubsystemCollection _hostSubsystems;
     };
 } // namespace sw

@@ -32,7 +32,7 @@ namespace sw::editor
 
     namespace internal
     {
-        /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorSubsystems`). 없으면 nullptr 입니다. */
+        /** @brief App 이 넘긴 호스트 서브시스템 범위입니다(`bindEditorSubsystems`). 없으면 nullptr 입니다. */
         SW_EDITOR_API const ISubsystemLocator* findHostSubsystems();
     } // namespace internal
 
@@ -58,7 +58,7 @@ namespace sw::editor
     template <typename T>
     inline constexpr bool kIsAccessorOnlySubsystem = IsAccessorOnlySubsystem<std::remove_cv_t<T>>::value;
 
-    /** @brief App 이 넘긴 호스트 서비스 범위를 연결합니다. 범위는 `unbindEditorSubsystems` 까지 살아 있어야 합니다(호스트가 소유). */
+    /** @brief App 이 넘긴 호스트 서브시스템 범위를 연결합니다. 범위는 `unbindEditorSubsystems` 까지 살아 있어야 합니다(호스트가 소유). */
     void bindEditorSubsystems( const ISubsystemLocator& hostServices );
     void unbindEditorSubsystems();
 
@@ -74,7 +74,7 @@ namespace sw::editor
 
     /**
      * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다.
-     * @details 지금 에디터 범위와 그 상위 범위에서 먼저 찾고, 없으면 호스트 서비스 범위를 본다. 게임 쪽 `game::findSubsystem<T>()` 와 계약이 같다.
+     * @details 지금 에디터 범위와 그 상위 범위에서 먼저 찾고, 없으면 호스트 서브시스템 범위를 본다. 게임 쪽 `game::findSubsystem<T>()` 와 계약이 같다.
      *          한쪽만 실패 위치에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. 그래서 두 함수 모두 받는 쪽이 널을 검사해야 한다.
      *          에디터 컨텍스트도 이 창구로 찾는다(컨텍스트가 자기 범위에 자신을 등록한다): 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 명령)은
      *          `getSubsystem<EditorContext>()`, 없는 채로 계속하는 정상 경로(종료 정리 · 컨텍스트 없이 도는 테스트가 부르는 함수 · 감시 값)는 `findSubsystem<EditorContext>()` 다.
@@ -90,7 +90,7 @@ namespace sw::editor
     }
 
     /**
-     * @brief 반드시 있어야 하는 에디터 · 호스트 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 모든 구성에서 오류 로그를 남기고 멈춥니다.
+     * @brief 반드시 있어야 하는 에디터 · 호스트 서브시스템 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 모든 구성에서 오류 로그를 남기고 멈춥니다.
      * @details 에디터가 떠 있으면 늘 있는 서비스(워크스페이스, 씬 관리자, 알림 관리자…)는 `findSubsystem` 으로 받아 nullptr 에서 조용히 돌아가지 말고 이것으로 받는다.
      *          테스트나 도구에서 정말 없을 수 있는 것만 `findSubsystem` 으로 받고, 그 자리에 왜 선택인지 한 줄 적는다.
      */

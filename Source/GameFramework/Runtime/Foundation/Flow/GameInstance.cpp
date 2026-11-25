@@ -163,7 +163,7 @@ namespace sw
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart", "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );
             return false;
         }
-        // UI(입력 포획 창구로 본다) · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
+        // UI(입력 포획 창구로 본다) · 사용자 설정은 Client 호스트 서브시스템다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
         if ( pWindow != nullptr && ( game::findSubsystem<IInputCaptureQuery>() == nullptr || game::findSubsystem<UserSettingsManager>() == nullptr ) )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart2", "Game instance cannot start - a windowed (client) host must bind the engine services UISystem and UserSettingsManager to the game services" );

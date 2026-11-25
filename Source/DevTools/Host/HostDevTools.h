@@ -2,7 +2,7 @@
  * @file DevTools/Host/HostDevTools.h
  * @brief 호스트(App · Server)의 개발 도구 연결 — 개발 도구 호스트(`DevToolsHost`)를 호스트 범위에 더하고, 엔진 기동 확장 · 프레임 훅 · 개발 콘솔을 겁니다.
  * @details 개발 도구(DevTools.dll)에만 있다 — 배포는 DevTools 를 짓지 않는다. 호스트는 개발 계층(`IHostDevLayer`)으로 닿고, 같은 순서로 부른다 — `addToHostScope`(호스트 범위를 세울 때) →
- *          `attachFrameHooks`(엔진 기동 뒤) → `startConsole` / `stopConsole`(호스트 서비스, App 만) → `detach`(엔진 종료 앞).
+ *          `attachFrameHooks`(엔진 기동 뒤) → `startConsole` / `stopConsole`(호스트 서브시스템, App 만) → `detach`(엔진 종료 앞).
  *          리로드 단축키는 리로드 구동기(`ModuleReloadDriver::pollReloadActions`), 백엔드 교체 · 장치 제거 시험은 기동 단계 서브시스템 `RHIBackendSwitcher`(`DevTools/Client/Render`)가 든다.
  */
 #pragma once
@@ -29,9 +29,9 @@ namespace sw
         void addToHostScope( SubsystemScope& host, Engine& engine, FileWatchService& fileWatch );
         /** @brief 엔진이 선 뒤 개발 도구의 프레임 훅(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드)을 붙입니다. */
         void attachFrameHooks( Engine& engine );
-        /** @brief 개발 콘솔을 세웁니다(App 의 호스트 서비스 `DevConsole`). */
+        /** @brief 개발 콘솔을 세웁니다(App 의 호스트 서브시스템 `DevConsole`). */
         void startConsole( bool bEnableEditor );
-        /** @brief 개발 콘솔을 내립니다(App 의 호스트 서비스 `DevConsole`). */
+        /** @brief 개발 콘솔을 내립니다(App 의 호스트 서브시스템 `DevConsole`). */
         void stopConsole();
         /** @brief 개발 도구의 프레임 훅을 뗍니다. 개발 도구는 엔진 서비스를 빌려 쓰므로 엔진 종료 앞에 부릅니다. */
         void detach();

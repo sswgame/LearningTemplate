@@ -2,7 +2,7 @@
  * @file App.h
  * @brief 런타임 클라이언트 앱(얇은 런처)입니다.
  *
- * 소유권: App 은 최상위 창 콜백과 부팅 열(`HostLaunch` — Engine · 모듈 관리자 · 호스트 서비스)만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
+ * 소유권: App 은 최상위 창 콜백과 부팅 열(`HostLaunch` — Engine · 모듈 관리자 · 호스트 서브시스템)만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기는 모듈 관리자(`GameModuleManager::applyPendingDeviceChange` — 교체 요청은 개발 도구의 RHIBackendSwitcher), 모듈 수명은 ClientModuleManager(공통 GameModuleManager 위의 App 전용 층),
@@ -93,14 +93,14 @@ namespace sw
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleLibraries();
-        // 호스트 서비스 — 이름 · 의존 · 몸통을 한 형식에 둔다(`App.cpp`). 중첩 형식이라 App 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostService` 로 더한다.
-        class GameHostService;
-        class UserSettingsHostService;
-        class RuntimeUIHooksHostService;
-        class DevConsoleHostService;
-        /** @brief 창 콜백 · 개발 도구의 프레임 시작 훅을 연결합니다(호스트 서비스가 선 뒤). */
+        // 호스트 서브시스템 — 이름 · 의존 · 몸통을 한 형식에 둔다(`App.cpp`). 중첩 형식이라 App 의 멤버를 쓴다. `initialize` 가 `HostLaunch::addHostSubsystem` 로 더한다.
+        class GameHostSubsystem;
+        class UserSettingsHostSubsystem;
+        class RuntimeUIHooksHostSubsystem;
+        class DevConsoleHostSubsystem;
+        /** @brief 창 콜백 · 개발 도구의 프레임 시작 훅을 연결합니다(호스트 서브시스템이 선 뒤). */
         void bindHostCallbacks();
-        /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 게임 호스트 서비스가 매니저를 세운 뒤 걸고 지우기 전에 뗀다. */
+        /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 게임 호스트 서브시스템이 매니저를 세운 뒤 걸고 지우기 전에 뗀다. */
         void bindEditorRenderHooks( bool bBind );
 
         /** @brief 메인 루프에 들어가는 줄(시작 시간 · 파일 연 횟수)을 남깁니다. */
@@ -134,8 +134,8 @@ namespace sw
 
     private:
         /**
-         * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서비스의 수명과 순서를 듭니다(Server 와 같은 것, `HostLaunch`).
-         * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서비스의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서비스를 내린다.
+         * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서브시스템의 수명과 순서를 듭니다(Server 와 같은 것, `HostLaunch`).
+         * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서브시스템의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서브시스템을 내린다.
          */
         HostLaunch _launch;
         /**
@@ -143,14 +143,14 @@ namespace sw
          * @details 엔진이 선 뒤 `startAutomation` 이 찾고, 엔진 종료 전에 놓는다(실행기는 엔진 범위와 함께 내려간다).
          */
         IAutomationRuntime* _pAutomation;
-        /** @brief 부팅 열(`_launch`)이 소유한 모듈 관리자를 만든 형식으로 보는 관찰 포인터입니다. `loadModuleLibraries` 가 채우고 호스트 서비스 `GameHostService` 가 내려가며 비운다. */
+        /** @brief 부팅 열(`_launch`)이 소유한 모듈 관리자를 만든 형식으로 보는 관찰 포인터입니다. `loadModuleLibraries` 가 채우고 호스트 서브시스템 `GameHostSubsystem` 가 내려가며 비운다. */
         ClientModuleManager* _pModuleManager;
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
         GenericWindow* _pWindow;
 
         FixedTimestep    _fixedTimestep;
         UserSettingsHost _userSettingsHost;
-        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooksHostService` 가 세우고 내린다. */
+        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서브시스템 `RuntimeUIHooksHostSubsystem` 가 세우고 내린다. */
         UIPlatformBinding _uiPlatformBinding;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.

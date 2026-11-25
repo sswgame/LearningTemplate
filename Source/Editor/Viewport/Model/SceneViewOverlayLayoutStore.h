@@ -27,7 +27,7 @@ namespace sw::editor
     /**
      * @class SceneViewOverlayLayoutStore
      * @brief 에디터 범위 서브시스템입니다(`editor::getSubsystem<SceneViewOverlayLayoutStore>()`). UI 스레드에서만 쓴다.
-     * @details 초기화에서 상태 폴더의 `ViewportOverlays.json` 을 읽고 기본 바를 등록한다. 의존하는 에디터 서브시스템은 없다 — 상태 폴더는 `EditorPaths`(호스트 서비스)가 정한다.
+     * @details 초기화에서 상태 폴더의 `ViewportOverlays.json` 을 읽고 기본 바를 등록한다. 의존하는 에디터 서브시스템은 없다 — 상태 폴더는 `EditorPaths`(호스트 서브시스템)가 정한다.
      */
     class SceneViewOverlayLayoutStore final : public EditorSubsystem
     {

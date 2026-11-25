@@ -71,7 +71,7 @@ namespace sw::editor
             atomic<std::thread::id> _ownerThreadID{};
         };
 
-        const ISubsystemLocator* s_pHostSubsystems{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
+        const ISubsystemLocator* s_pHostSubsystems{ nullptr }; ///< App 이 넘긴 호스트 서브시스템 범위
         EditorScopeSlot          s_editorScope{};
 
         /**

@@ -84,7 +84,7 @@ namespace sw
         return pDevLayer == nullptr || pDevLayer->runEditorModuleHeadlessTasks( *pCommandLine );
     }
 
-    AppHeadlessTasks::TaskResult AppHeadlessTasks::runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine )
+    AppHeadlessTasks::TaskResult AppHeadlessTasks::runAfterHostSubsystems( const CommandLineManager& commandLine, Engine& hostEngine )
     {
         return AppHeadlessTasksInternal::runPortraitBake( commandLine, hostEngine ); // 지금은 초상화 굽기 하나다
     }

@@ -22,7 +22,7 @@ namespace sw::editor
             row._name                       = pBookmark != nullptr ? pBookmark->_name : string{};
             row._position                   = pBookmark != nullptr ? pBookmark->_position : float3{};
         }
-        // 렌더러는 호스트 서비스다(선택 서브시스템 칸) — 테스트 하네스처럼 렌더러가 없는 호스트에서는 비워 콤보를 막는다.
+        // 렌더러는 호스트 서브시스템다(선택 서브시스템 칸) — 테스트 하네스처럼 렌더러가 없는 호스트에서는 비워 콤보를 막는다.
         const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
         outState._sceneViewMode.reset();
         if ( pRenderer != nullptr )

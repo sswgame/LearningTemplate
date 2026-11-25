@@ -85,7 +85,7 @@ namespace sw
         TelemetryService* const pTelemetry = game::findSubsystem<TelemetryService>();
         if ( pTelemetry == nullptr )
         {
-            // 텔레메트리는 클라이언트 호스트 서비스다(`TelemetryService::getSubsystemHost`). 전용 서버는 운영 지표를 따로 낸다(`ServerObservability`).
+            // 텔레메트리는 클라이언트 호스트 서브시스템다(`TelemetryService::getSubsystemHost`). 전용 서버는 운영 지표를 따로 낸다(`ServerObservability`).
             SW_LOG_INFO_ID( "TelemetryUploadLink.NoTelemetryHost", "[TelemetryUpload] this host has no telemetry service - '%#' is not used", endpoint.c_str() );
             return {};
         }
