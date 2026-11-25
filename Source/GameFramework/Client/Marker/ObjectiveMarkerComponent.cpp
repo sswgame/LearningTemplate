@@ -16,17 +16,14 @@ namespace sw
     {
         struct ObjectiveMarkerComponentInternal
         {
-            static constexpr uint32  kArrowIndex    = 0;
-            static constexpr uint32  kDistanceIndex = 2;
-            static constexpr float32 kArrowWidth    = 6.0f;
-            static constexpr float32 kArrowLength   = 20.0f;
-            static constexpr float32 kFontSize      = 16.0f;
+            static constexpr uint32 kArrowIndex    = 0;
+            static constexpr uint32 kDistanceIndex = 2;
 
-            static unique_ptr<TextWidget> makeText( string_view text, bool bLocalized )
+            static unique_ptr<TextWidget> makeText( string_view text, bool bLocalized, float32 fontSize )
             {
                 unique_ptr<TextWidget> widget = make_unique<TextWidget>();
                 TextLayoutStyle        style  = widget->getTextStyle();
-                style._fontSize               = kFontSize;
+                style._fontSize               = fontSize;
                 style._alignment              = TextAlignment::Center;
                 widget->setTextStyle( style );
                 widget->setLocalized( bLocalized );
@@ -39,6 +36,9 @@ namespace sw
     ObjectiveMarkerComponent::ObjectiveMarkerComponent()
         : WidgetComponent{}
         , _label{}
+        , _arrowColor{ 1.0f, 0.82f, 0.25f, 1.0f }
+        , _arrowSize{ 6.0f, 20.0f }
+        , _fontSize{ 16.0f }
         , _shownMeters{ -1 }
     {
         setClampToScreenEdge( true );
@@ -92,16 +92,16 @@ namespace sw
         column->setOrientation( UIOrientation::Vertical );
         column->setSpacing( 2.0f );
         unique_ptr<BorderPanel> arrow = make_unique<BorderPanel>();
-        arrow->setBackground( UIBrush::makeSolid( float4{ 1.0f, 0.82f, 0.25f, 1.0f }, 2.0f ) );
+        arrow->setBackground( UIBrush::makeSolid( _arrowColor, 2.0f ) );
         WidgetLayoutSlot arrowSlot     = arrow->getLayoutSlot();
-        arrowSlot._widthOverride       = Internal::kArrowWidth;
-        arrowSlot._heightOverride      = Internal::kArrowLength;
+        arrowSlot._widthOverride       = _arrowSize._x;
+        arrowSlot._heightOverride      = _arrowSize._y;
         arrowSlot._horizontalAlignment = UIAlignment::Center;
         arrow->setLayoutSlot( arrowSlot );
         arrow->setVisibility( WidgetVisibility::Hidden );
         (void)column->addChild( std::move( arrow ) );
-        (void)column->addChild( Internal::makeText( _label, true ) );
-        (void)column->addChild( Internal::makeText( "", false ) );
+        (void)column->addChild( Internal::makeText( _label, true, _fontSize ) );
+        (void)column->addChild( Internal::makeText( "", false, _fontSize ) );
         return column;
     }
 } // namespace sw
