@@ -17,7 +17,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeEditModel.h"
 
 namespace sw
 {

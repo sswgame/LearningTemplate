@@ -18,7 +18,7 @@
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogEditModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h"
 
 namespace sw::editor
 {

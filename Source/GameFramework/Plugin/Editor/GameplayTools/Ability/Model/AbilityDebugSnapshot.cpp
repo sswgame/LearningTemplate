@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugSnapshot.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityDebugSnapshot.h"
 
 #include "Engine/Reflection/EnumName.h"
 

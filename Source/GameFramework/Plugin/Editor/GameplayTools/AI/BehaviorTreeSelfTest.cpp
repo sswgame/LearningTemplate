@@ -11,8 +11,8 @@
 
 #include "Engine/Reflection/TypeInfo.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeEditModel.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

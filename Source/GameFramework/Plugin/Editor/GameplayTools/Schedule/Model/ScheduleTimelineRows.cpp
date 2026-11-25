@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleTimelineRows.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Schedule/Model/ScheduleTimelineRows.h"
 
 #include "Core/String/StringBuilder.h"
 

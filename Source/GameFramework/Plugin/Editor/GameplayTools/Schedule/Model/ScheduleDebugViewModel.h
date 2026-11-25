@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleTimelineRows.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Schedule/Model/ScheduleTimelineRows.h"
 
 namespace sw
 {

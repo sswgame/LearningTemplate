@@ -10,7 +10,7 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeEditModel.h"
 
 using namespace sw;
 using namespace sw::editor;

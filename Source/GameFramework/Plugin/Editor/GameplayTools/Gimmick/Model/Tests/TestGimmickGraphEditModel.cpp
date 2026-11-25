@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphEditModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickGraphEditModel.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickNodeRegistry.h"
 
 using namespace sw;

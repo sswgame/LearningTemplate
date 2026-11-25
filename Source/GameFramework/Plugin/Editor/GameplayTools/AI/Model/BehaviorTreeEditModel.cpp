@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeEditModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 
