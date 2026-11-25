@@ -1011,6 +1011,135 @@ SW_TEST_CASE( NetEndpointTest, LostDisconnectIsSentAgainToAPeerStillTalking )
 }
 
 /**
+ * @brief [NetEndpointTest] 확인하지 않은 주소에는 받은 것보다 많이 보내지 않는다 — 위조한 연결 요청 · 다른 판 · 다른 게임 · 잘린 요청 · 위조 응답 · 데이터 · 끊김, 1200 바이트 요청
+ * @details 보낸 주소는 위조할 수 있으므로 더 보내면 남을 때리는 증폭기가 된다(RFC 9000 8.1). 답은 패킷마다 많아야 하나이고 뒤따라 더 나가는 것이 없다.
+ */
+SW_TEST_CASE( NetEndpointTest, UnconfirmedAddressNeverGetsMoreThanItSent )
+{
+    using PacketKind = NetEndpoint::PacketKind;
+    NetEndpointConfig        settings;
+    LoopbackNetwork          network;
+    test::RecordingTransport serverTransport( network.createEndpoint( 4000 ) );
+    LoopbackTransport*       pRequest   = network.createEndpoint( 6000 );
+    LoopbackTransport*       pForeign   = network.createEndpoint( 6001 );
+    LoopbackTransport*       pTruncated = network.createEndpoint( 6002 );
+    LoopbackTransport*       pInvalid   = network.createEndpoint( 6003 );
+    LoopbackTransport*       pPadded    = network.createEndpoint( 6004 );
+    NetEndpoint              server;
+    SW_REQUIRE_TRUE( server.initialize( &serverTransport, settings ) );
+    SW_REQUIRE_TRUE( server.listen() );
+    const uint32        protocolID = server.getProtocolID();
+    const uint64        identity   = ( static_cast<uint64>( settings._gameID ) << 32 ) | protocolID;
+    const vector<uint8> request    = NetTestUtil::makeControlPacket( NetProtocol::kHandshakeID, PacketKind::ConnectRequest, 11u, identity );
+    NetTestUtil::sendRaw( *pRequest, request, 20 );
+    NetTestUtil::sendRaw( *pForeign, NetTestUtil::makeControlPacket( NetProtocol::kHandshakeID, PacketKind::ConnectRequest, 12u, identity ^ 1u ), 5 );
+    NetTestUtil::sendRaw( *pForeign, NetTestUtil::makeControlPacket( NetProtocol::kHandshakeID, PacketKind::ConnectRequest, 12u, identity ^ ( 1ull << 32 ) ^ 1u ), 5 );
+    NetTestUtil::sendRaw( *pTruncated, NetTestUtil::resizePacket( request, static_cast<int32>( request.size() ) - 1 ), 5 );
+    NetTestUtil::sendRaw( *pInvalid, NetTestUtil::makeControlPacket( protocolID, PacketKind::ChallengeResponse, 13u, 14u ), 5 );
+    NetTestUtil::sendRaw( *pInvalid, NetTestUtil::makeControlPacket( protocolID, PacketKind::Payload, 15u, 16u ), 5 );
+    NetTestUtil::sendRaw( *pInvalid, NetTestUtil::makeControlPacket( protocolID, PacketKind::Disconnect, 17u, 18u ), 5 );
+    NetTestUtil::sendRaw( *pInvalid, NetTestUtil::makeControlPacket( protocolID, PacketKind::PathProbe, 19u, 20u ), 5 );
+    NetTestUtil::sendRaw( *pPadded, NetTestUtil::resizePacket( request, 1200 ), 1 );
+    for ( int32 frame = 1; frame <= 120; ++frame )
+    {
+        server.update( static_cast<float64>( frame ) / 60.0 );
+    }
+    for ( const LoopbackTransport* pPeer : { pRequest, pForeign, pTruncated, pInvalid, pPadded } )
+    {
+        const test::RecordingTransport::Traffic& traffic = serverTransport.getTraffic( pPeer->getLocalAddress() );
+        SW_EXPECT_TRUE( traffic._receivedBytes > 0 );
+        SW_EXPECT_TRUE( traffic._sentBytes <= traffic._receivedBytes );
+    }
+    SW_EXPECT_EQUAL( 20, serverTransport.getTraffic( pRequest->getLocalAddress() )._sentCount );
+    SW_EXPECT_EQUAL( 10, serverTransport.getTraffic( pForeign->getLocalAddress() )._sentCount );
+    SW_EXPECT_EQUAL( 0, serverTransport.getTraffic( pTruncated->getLocalAddress() )._sentCount );
+    SW_EXPECT_EQUAL( 0, serverTransport.getTraffic( pInvalid->getLocalAddress() )._sentCount );
+    SW_EXPECT_EQUAL( 1, serverTransport.getTraffic( pPadded->getLocalAddress() )._sentCount );
+    SW_EXPECT_EQUAL( 0, server.getConnectedCount() );
+}
+
+/**
+ * @brief [NetEndpointTest] 가득 찬 서버 · 이미 연결된 주소 · 닫힌 연결에 쏟는 패킷에도 받은 것보다 많이 보내지 않는다 — 끊김 알림은 재요청 간격마다 하나, 알림보다 작은 패킷에는 답하지 않는다
+ */
+SW_TEST_CASE( NetEndpointTest, FullServerAndClosedConnectionDoNotAmplify )
+{
+    using PacketKind = NetEndpoint::PacketKind;
+    NetEndpointConfig settings;
+    settings._maxConnections = 1;
+    settings._debugHold      = NetDebugHold::Off;
+    LoopbackNetwork          network;
+    test::RecordingTransport serverTransport( network.createEndpoint( 4000 ) );
+    LoopbackTransport*       pClient = network.createEndpoint( 5000 );
+    LoopbackTransport*       pLate   = network.createEndpoint( 6000 );
+    test::RecordingTransport clientTransport( pClient );
+    NetEndpoint              server;
+    NetEndpoint              client;
+    SW_REQUIRE_TRUE( server.initialize( &serverTransport, settings ) );
+    SW_REQUIRE_TRUE( client.initialize( &clientTransport, settings ) );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64    time = 0.0;
+    const auto step = [&]()
+    {
+        time += 1.0 / 60.0;
+        client.update( time );
+        server.update( time );
+    };
+    for ( int32 frame = 0; frame < 30; ++frame )
+    {
+        step();
+    }
+    SW_REQUIRE_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    const vector<uint8> request  = clientTransport.findLastSent( PacketKind::ConnectRequest );
+    const vector<uint8> response = clientTransport.findLastSent( PacketKind::ChallengeResponse );
+    const vector<uint8> payload  = clientTransport.findLastSent( PacketKind::Payload );
+    SW_REQUIRE_TRUE( request.empty() == false && response.empty() == false && payload.empty() == false );
+
+    // 가득 찬 서버의 거절과, 연결된 주소가 되풀이한 요청(답하지 않는다) · 응답(수락 하나씩).
+    serverTransport.clear();
+    const uint64 identity = ( static_cast<uint64>( settings._gameID ) << 32 ) | server.getProtocolID();
+    NetTestUtil::sendRaw( *pLate, NetTestUtil::makeControlPacket( NetProtocol::kHandshakeID, PacketKind::ConnectRequest, 21u, identity ), 10 );
+    NetTestUtil::sendRaw( *pClient, request, 10 );
+    NetTestUtil::sendRaw( *pClient, response, 3 );
+    step();
+    step();
+    const test::RecordingTransport::Traffic late = serverTransport.getTraffic( pLate->getLocalAddress() );
+    SW_EXPECT_EQUAL( 10, late._sentCount );
+    SW_EXPECT_TRUE( late._sentBytes <= late._receivedBytes );
+    const test::RecordingTransport::Traffic accepted = serverTransport.sumSent( PacketKind::Accepted );
+    SW_EXPECT_EQUAL( 3, accepted._sentCount );
+    SW_EXPECT_TRUE( accepted._sentBytes <= 3 * static_cast<int32>( response.size() ) );
+
+    // 닫힌 연결에 1 초 동안 쏟는다(클라이언트는 더 돌지 않는다 — 가로챈 패킷을 위조한 주소로 다시 보내는 것과 같다).
+    server.disconnect( 0, NetLinger::none() );
+    vector<NetEndpointEvent> listEvent;
+    server.pollEvents( listEvent );
+    serverTransport.clear();
+    for ( int32 frame = 0; frame < 60; ++frame )
+    {
+        time += 1.0 / 60.0;
+        NetTestUtil::sendRaw( *pClient, payload, 5 );
+        server.update( time );
+    }
+    const test::RecordingTransport::Traffic closed = serverTransport.getTraffic( pClient->getLocalAddress() );
+    SW_EXPECT_TRUE( closed._sentCount > 0 );
+    SW_EXPECT_TRUE( closed._sentCount <= static_cast<int32>( 1.0 / settings._connectRetryInterval ) + 1 );
+    SW_EXPECT_TRUE( closed._sentBytes <= closed._receivedBytes );
+    const vector<uint8> disconnectPacket = serverTransport.findLastSent( PacketKind::Disconnect );
+    SW_REQUIRE_TRUE( disconnectPacket.empty() == false );
+    SW_EXPECT_TRUE( disconnectPacket.size() <= payload.size() ); // 한가한 상대의 가장 작은 데이터 패킷에도 알릴 수 있다
+    // 연결 값까지만 든 13 바이트 패킷은 알림보다 작다 — 몇 개를 쏟아도 답하지 않는다.
+    serverTransport.clear();
+    for ( int32 frame = 0; frame < 60; ++frame )
+    {
+        time += 1.0 / 60.0;
+        NetTestUtil::sendRaw( *pClient, NetTestUtil::resizePacket( payload, 13 ), 5 );
+        server.update( time );
+    }
+    SW_EXPECT_EQUAL( 0, serverTransport.getTraffic( pClient->getLocalAddress() )._sentCount );
+}
+
+/**
  * @brief [NetEndpointTest] 닫기 전에 비울 시간을 주면 방금 보낸 신뢰 메시지가 손실 속에서도 닿은 뒤 닫히고, 상대가 사라졌으면 기한에 닫힌다 — 비우는 동안은 새로 보내지 못한다
  */
 SW_TEST_CASE( NetEndpointTest, LingerDeliversReliableMessagesBeforeClosing )

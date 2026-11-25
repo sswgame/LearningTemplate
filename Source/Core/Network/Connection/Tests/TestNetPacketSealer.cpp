@@ -490,3 +490,82 @@ SW_TEST_CASE( NetPacketSealerTest, EncryptedConnectionFollowsTheClientToANewAddr
     SW_EXPECT_TRUE( server.getConnectionAddress( 0 ) == NetAddress::makeLoopback( 4002 ) );
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), server.getAuthenticationFailureCount() );
 }
+
+/**
+ * @brief [NetPacketSealerTest] 암호화 방식에서도 답이 부른 패킷보다 크지 않다 — 키와 태그가 붙는 수락, 자른 응답의 되풀이, 새 주소의 경로 확인, 닫힌 연결의 봉인된 끊김 알림
+ */
+SW_TEST_CASE( NetPacketSealerTest, EncryptedRepliesNeverExceedWhatAskedForThem )
+{
+    using PacketKind = NetEndpoint::PacketKind;
+    using test::NetTestUtil;
+    MixingSecurityProvider provider;
+    NetEndpointConfig      settings;
+    settings._debugHold           = NetDebugHold::Off;
+    settings._security._mode      = NetSecurityMode::Encrypted;
+    settings._security._pProvider = &provider;
+    LoopbackNetwork          network;
+    test::RecordingTransport serverTransport( network.createEndpoint( 4000 ) );
+    LoopbackTransport*       pClient = network.createEndpoint( 5000 );
+    LoopbackTransport*       pOther  = network.createEndpoint( 6000 );
+    test::RecordingTransport clientTransport( pClient );
+    NetEndpoint              server;
+    NetEndpoint              client;
+    SW_REQUIRE_TRUE( server.initialize( &serverTransport, settings ) );
+    SW_REQUIRE_TRUE( client.initialize( &clientTransport, settings ) );
+    SW_REQUIRE_TRUE( server.listen() );
+    SW_REQUIRE_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64    time = 0.0;
+    const auto run  = [&]( int32 frameCount )
+    {
+        for ( int32 frame = 0; frame < frameCount; ++frame )
+        {
+            time += 1.0 / 60.0;
+            client.update( time );
+            server.update( time );
+        }
+    };
+    run( 30 );
+    SW_REQUIRE_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    const vector<uint8> request  = clientTransport.findLastSent( PacketKind::ConnectRequest );
+    const vector<uint8> response = clientTransport.findLastSent( PacketKind::ChallengeResponse );
+    SW_EXPECT_TRUE( serverTransport.findLastSent( PacketKind::Challenge ).size() <= request.size() );
+    SW_EXPECT_TRUE( serverTransport.findLastSent( PacketKind::Accepted ).size() <= response.size() );
+
+    // 요청과, 솔트까지만 남긴 응답에는 그보다 큰 수락을 보내지 않는다. 온전한 응답에는 하나씩 보낸다.
+    serverTransport.clear();
+    NetTestUtil::sendRaw( *pClient, request, 10 );
+    NetTestUtil::sendRaw( *pClient, NetTestUtil::resizePacket( response, static_cast<int32>( request.size() ) ), 10 );
+    run( 2 );
+    SW_EXPECT_EQUAL( 0, serverTransport.sumSent( PacketKind::Accepted )._sentCount );
+    NetTestUtil::sendRaw( *pClient, response, 3 );
+    run( 2 );
+    SW_EXPECT_EQUAL( 3, serverTransport.sumSent( PacketKind::Accepted )._sentCount );
+    SW_EXPECT_TRUE( serverTransport.sumSent( PacketKind::Accepted )._sentBytes <= 3 * static_cast<int32>( response.size() ) );
+
+    // 진짜 패킷이 남의 주소에서 온다 — 경로 확인은 재요청 간격마다 하나이고 그 주소에서 온 것보다 많지 않다.
+    serverTransport.clear();
+    clientTransport._pRelay = pOther;
+    run( 60 );
+    clientTransport._pRelay                        = nullptr;
+    const test::RecordingTransport::Traffic probed = serverTransport.getTraffic( pOther->getLocalAddress() );
+    SW_EXPECT_TRUE( probed._sentCount > 0 );
+    SW_EXPECT_TRUE( probed._sentCount <= static_cast<int32>( 1.0 / settings._connectRetryInterval ) + 1 );
+    SW_EXPECT_TRUE( probed._sentBytes <= probed._receivedBytes );
+
+    // 닫힌 연결에 쏟는 봉인된 패킷 — 봉인된 끊김 알림도 재요청 간격마다 하나다.
+    const vector<uint8> payload = clientTransport.findLastSent( PacketKind::Payload );
+    SW_REQUIRE_TRUE( payload.empty() == false );
+    server.disconnect( 0, NetLinger::none() );
+    serverTransport.clear();
+    for ( int32 frame = 0; frame < 60; ++frame )
+    {
+        time += 1.0 / 60.0;
+        NetTestUtil::sendRaw( *pClient, payload, 5 );
+        server.update( time );
+    }
+    const test::RecordingTransport::Traffic closed = serverTransport.getTraffic( pClient->getLocalAddress() );
+    SW_EXPECT_TRUE( closed._sentCount > 0 );
+    SW_EXPECT_TRUE( closed._sentCount <= static_cast<int32>( 1.0 / settings._connectRetryInterval ) + 1 );
+    SW_EXPECT_TRUE( closed._sentBytes <= closed._receivedBytes );
+    SW_EXPECT_TRUE( serverTransport.findLastSent( PacketKind::Disconnect ).size() <= payload.size() );
+}
