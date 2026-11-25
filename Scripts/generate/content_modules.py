@@ -22,18 +22,19 @@ Scripts/generate/content_modules.py
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
-from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common.paths import get_project_root  # noqa: E402
+from common.command import Command, ScriptContext  # noqa: E402
+from common.exit_code import ExitCode  # noqa: E402
 from common.project_constants import DIR_RUNTIME_GAME_PRESET  # noqa: E402
-from generate.generator_output import GeneratorError, run_generator  # noqa: E402
+from generate.generator_output import GeneratorError  # noqa: E402
 
 TAG = "ContentModules"
 CONTENT_SUFFIX = (".scene.xml", ".prefab.xml")
@@ -178,18 +179,20 @@ def check_content_modules(project_root: Path, inputs_path: Path) -> int:
     return len(list_game_folder)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    def add_arguments(parser) -> None:
+class ContentModulesCommand(Command):
+    name = "content-modules"
+    help = "게임 콘텐츠가 쓰는 형식의 모듈이 게임 매니페스트 의존 안인지 본다(빌드 단계)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--inputs", type=Path, required=True, help="CMake 가 쓴 `<주인>\\t<ReflectedTypes.list>` 줄 파일")
         parser.add_argument("--stamp", type=Path, required=True, help="검사가 통과하면 쓰는 스탬프(빌드 단계의 산출물)")
 
-    def generate(args) -> None:
-        pack_count = check_content_modules(get_project_root(), args.inputs)
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        pack_count = check_content_modules(context.root, args.inputs)
         args.stamp.write_text(f"{pack_count} game packs checked\n", encoding="utf-8")
         print(f"[{TAG}] {pack_count} game packs · common · editor · engine: content uses only modules its domain has")
-    return run_generator(argv, tag=TAG, description="게임 콘텐츠가 쓰는 형식의 모듈 ⊂ 게임 매니페스트 의존", add_arguments=add_arguments,
-                        generate=generate)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(ContentModulesCommand.main())

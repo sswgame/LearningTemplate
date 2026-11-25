@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import argparse
 import math
 import struct
 import sys
@@ -17,9 +18,14 @@ from pathlib import Path
 
 import numpy as np
 
-_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(_ROOT / "Scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+
+from common.command import Command, ScriptContext  # noqa: E402
+from common.exit_code import ExitCode  # noqa: E402
+from common.paths import get_project_root  # noqa: E402
 from lint.asset_identity import write_keeping_identity  # noqa: E402 — 다시 지어도 있던 프리팹의 정체성(머리 GUID)을 지킨다
+
+_ROOT = get_project_root()
 _SOURCE = _ROOT / "Content/engine/textures_raw/sky"
 _OUTPUT = _ROOT / "Content/engine/prefabs/sky"
 # .radiancemap 한 변 텍셀 수 — 2K 등장방형의 해 원반이 텍셀 몇 개에 남고 파일이 약 200 KB 다. 스카이 라이트는 이것을 밉 사슬로 줄여 거른다.
@@ -139,13 +145,18 @@ def _write_prefab(name: str, coefficients: np.ndarray) -> None:
     write_keeping_identity(_OUTPUT / f"{name}.prefab.xml", text)
 
 
-def main() -> None:
-    for path in sorted(_SOURCE.glob("*.hdr")):
-        image = _read_hdr(path)
-        _write_prefab(path.stem, _project(image))
-        _write_radiance_map(path.stem, _fold_octahedral(image, _RADIANCE_RESOLUTION), _RADIANCE_RESOLUTION)
-        print(path.stem)
+class MakeSkyHdriPrefabsCommand(Command):
+    name = "make-sky-hdri-prefabs"
+    help = "HDRI 하늘 프리팹 · radiancemap 을 다시 짓는다(원본 .hdr 을 바꾼 뒤)"
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        for path in sorted(_SOURCE.glob("*.hdr")):
+            image = _read_hdr(path)
+            _write_prefab(path.stem, _project(image))
+            _write_radiance_map(path.stem, _fold_octahedral(image, _RADIANCE_RESOLUTION), _RADIANCE_RESOLUTION)
+            print(path.stem)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(MakeSkyHdriPrefabsCommand.main())

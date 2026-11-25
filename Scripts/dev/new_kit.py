@@ -20,8 +20,8 @@ import re
 import sys
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
-from common.paths import get_project_root
 
 KIT_ROOT = "Source/GameFramework/Kits"
 REFERENCE_TABLE = "Content/engine/settings/datacatalogreferences.xml"
@@ -370,33 +370,37 @@ def describe_invalid_request(root: Path, name: str, group: str) -> str | None:
     return None
 
 
-def main_new_kit(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts new-kit", description="키트 뼈대를 만든다")
-    parser.add_argument("name", help="키트 이름(PascalCase, 예: Fishing)")
-    parser.add_argument("--group", required=True, help="키트 묶음 폴더(예: Feature/World · Genre/Simulation)")
-    parser.add_argument("--dry-run", action="store_true", help="만들 파일만 보인다")
-    args = parser.parse_args(argv)
-    root = get_project_root()
-    reason = describe_invalid_request(root, args.name, args.group)
-    if reason is not None:
-        print(f"[new-kit] {reason}", file=sys.stderr)
-        return ExitCode.CHECK_INVALID
-    table_path = root / REFERENCE_TABLE
-    table_text = table_path.read_bytes().decode("utf-8")
-    new_table_text = add_reference_rows(table_text, args.name)  # 파일을 하나라도 쓰기 전에 표의 자리를 확인한다
-    kit_directory = root / KIT_ROOT / args.group / args.name
-    for relative, content in make_files(args.name, args.group).items():
-        path = kit_directory / relative
-        print(f"[new-kit] {'would write' if args.dry_run else 'write'} {path.relative_to(root).as_posix()}")
+class NewKitCommand(Command):
+    name = "new-kit"
+    help = "키트 뼈대(카탈로그 · 컴포넌트 · 에디터 확장의 맵 검사 · 테스트)를 만들고 카탈로그 키 표에 세 줄을 더한다(--group <묶음 폴더>)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("name", help="키트 이름(PascalCase, 예: Fishing)")
+        parser.add_argument("--group", required=True, help="키트 묶음 폴더(예: Feature/World · Genre/Simulation)")
+        parser.add_argument("--dry-run", action="store_true", help="만들 파일만 보인다")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        root = context.root
+        reason = describe_invalid_request(root, args.name, args.group)
+        if reason is not None:
+            print(f"[new-kit] {reason}", file=sys.stderr)
+            return ExitCode.CHECK_INVALID
+        table_path = root / REFERENCE_TABLE
+        table_text = table_path.read_bytes().decode("utf-8")
+        new_table_text = add_reference_rows(table_text, args.name)  # 파일을 하나라도 쓰기 전에 표의 자리를 확인한다
+        kit_directory = root / KIT_ROOT / args.group / args.name
+        for relative, content in make_files(args.name, args.group).items():
+            path = kit_directory / relative
+            print(f"[new-kit] {'would write' if args.dry_run else 'write'} {path.relative_to(root).as_posix()}")
+            if args.dry_run is False:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8", newline="")
+        if new_table_text != table_text:
+            print(f"[new-kit] {'would add rows to' if args.dry_run else 'added rows to'} {REFERENCE_TABLE}")
+            if args.dry_run is False:
+                table_path.write_bytes(new_table_text.encode("utf-8"))
         if args.dry_run is False:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8", newline="")
-    if new_table_text != table_text:
-        print(f"[new-kit] {'would add rows to' if args.dry_run else 'added rows to'} {REFERENCE_TABLE}")
-        if args.dry_run is False:
-            table_path.write_bytes(new_table_text.encode("utf-8"))
-    if args.dry_run is False:
-        print(f"[new-kit] next: py -3 -m Scripts format, "
-              f"then add GF_{args.name} to `_listDependency` of Source/Games/<game>/SWGame.module.json "
-              f"and '{args.name}' to gamesettings gameFeatures or a minigame's features")
-    return ExitCode.PASSED
+            print(f"[new-kit] next: py -3 -m Scripts format, "
+                  f"then add GF_{args.name} to `_listDependency` of Source/Games/<game>/SWGame.module.json "
+                  f"and '{args.name}' to gamesettings gameFeatures or a minigame's features")
+        return ExitCode.PASSED

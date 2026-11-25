@@ -151,14 +151,7 @@ ENV_SW_VCPKG_AUTO_BOOTSTRAP = "SW_VCPKG_AUTO_BOOTSTRAP"
 #:. 프로그램(리플렉션 파서 · 부하 봇)도 `Source/Programs` 아래라 따로 적지 않는다.
 LINT_TARGET_REL_DIRS: tuple[str, ...] = ("Source",)
 
-#: `LINT_TARGET_REL_DIRS` 의 맨 앞 폴더 이름(`Source`) — include 경로의 기준 폴더를 찾는 게이트가 쓴다.
-LINT_TARGET_BASE_DIR_NAMES: tuple[str, ...] = tuple(dict.fromkeys(root.split("/")[0] for root in LINT_TARGET_REL_DIRS))
-
-#: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다. 저장소를 훑는 린트는 이 이름의 폴더로 내려가지 않습니다
-#: (`collect_repository_files`). 빌드 산출물과, 부트스트랩이 `Tools/` 아래로 내려받는 외부 도구(vcpkg · LLVM ·
-#: ninja · 캐시)입니다. 게이트마다 제외 목록을 따로 들지 말 것 — 목록이 서로 갈리고, 저장소 전체를 다 걸은 뒤에 거르는
-#: 게이트는 `Tools/vcpkg` 의 외부 헤더 수천 개까지 훑느라 한 번에 십수 초를 씁니다.
-#: `ThirdParty/` 는 여기 없습니다 — 저장소에 들어 있고 우리 CMake 연결 파일도 있어, 빼는 것은 게이트가 정합니다.
+#: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다(빌드 산출물 · 받아 온 외부 도구). 포맷이 이 폴더 아래의 셰이더를 고치지 않습니다.
 NOT_OUR_DIR_NAMES: frozenset[str] = frozenset({
     "build",
     "generated",
@@ -172,8 +165,3 @@ NOT_OUR_DIR_NAMES: frozenset[str] = frozenset({
     "_deps",
     "worktrees",  # 에이전트 격리 워크트리(`.claude/worktrees/<이름>/`) — 저장소 전체의 사본이라 훑으면 같은 파일이 여러 번 잡힌다
 })
-
-#: 저장소 기준 경로로 못 박은 생성물 폴더 — .gitignore 대상이라 저장소에 들어 있지 않고, 테스트와 실행이 셰이더 · 텍스처 캐시 수만 개를 쌓는다.
-#: 이름만으로 빼면 같은 이름의 추적 폴더(`Source/Engine/Asset/Cache/`)까지 빠지므로 경로로 뺀다. 지금은 없다(셰이더 캐시는 `Bin/Saved` 로 옮겼다). 파일 걷기(`collect_repository_files` · `resolve_file_arguments`)가 건너뛴다.
-GENERATED_REL_DIRS: frozenset[str] = frozenset()
-

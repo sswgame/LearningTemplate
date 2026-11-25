@@ -15,7 +15,6 @@ Scripts/dev/verify_record.py
   py -3 Scripts/dev/verify_record.py pass <단계> <sha>           # 단계 통과를 적는다
   py -3 Scripts/dev/verify_record.py ok <sha>                   # Windows 통과를 적는다(build/verify.ok)
   py -3 Scripts/dev/verify_record.py pre-push                   # git pre-push 훅 — 표준 입력은 `<로컬 ref> <로컬 sha> <원격 ref> <원격 sha>` 줄
-  py -3 Scripts/dev/verify_record.py --self-check
 """
 
 from __future__ import annotations
@@ -28,7 +27,7 @@ from typing import Iterable, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.command import Command, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import get_main_working_tree, run_git  # noqa: E402
 
@@ -131,51 +130,29 @@ def write_ok(project_root: Path, sha: str) -> int:
     return ExitCode.PASSED
 
 
-def run_self_check() -> None:
-    prefixes = ["docs/", ".claude/skills/", "CLAUDE.md"]
-    assert is_non_input("docs/NEXT.md", prefixes) and is_non_input("CLAUDE.md", prefixes)
-    assert not is_non_input("docs.txt", prefixes) and not is_non_input("Source/CLAUDE.md", prefixes), "파일 줄은 그 경로 하나만"
-    assert decide_skip("cpu", "b" * 40, {"cpu": "a" * 40}, ["docs/x.md", ".claude/skills/p/SKILL.md"], prefixes)[0]
-    assert not decide_skip("cpu", "b" * 40, {"cpu": "a" * 40}, ["docs/x.md", "Source/a.cpp"], prefixes)[0], "입력이 하나라도 바뀌면 돈다"
-    assert not decide_skip("cpu", "b" * 40, {}, [], prefixes)[0], "기록이 없으면 돈다"
-    assert not decide_skip("cpu", "b" * 40, {"cpu": "a" * 40}, None, prefixes)[0], "견주지 못하면 돈다"
-    assert decide_skip("cpu", "a" * 40, {"cpu": "a" * 40}, None, prefixes)[0], "같은 커밋은 건너뛴다"
-    protected = ["refs/heads/main"]
-    good, bad = "a" * 40, "b" * 40
-    assert find_unverified_pushes([f"refs/heads/w {good} refs/heads/main {bad}"], good, protected) == []
-    assert len(find_unverified_pushes([f"refs/heads/w {bad} refs/heads/main {good}"], good, protected)) == 1
-    assert len(find_unverified_pushes([f"(delete) {'0' * 40} refs/heads/main {good}"], good, protected)) == 1, "보호 ref 지우기는 막는다"
-    assert find_unverified_pushes([f"refs/heads/w {bad} refs/heads/w {good}"], good, protected) == [], "보호하지 않는 ref 는 보지 않는다"
-    assert len(find_unverified_pushes([f"refs/heads/w {bad} refs/heads/main {good}"], "", protected)) == 1, "기록이 없으면 막는다"
+class VerifyRecordCommand(Command):
+    name = "verify-record"
+    help = "묶음 검증 단계 통과 기록(skip · pass) · Windows 통과 기록(ok, build/verify.ok) · git pre-push 게이트"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        sub = parser.add_subparsers(dest="command", required=True)
+        for name in ("skip", "pass"):
+            stage_parser = sub.add_parser(name)
+            stage_parser.add_argument("stage")
+            stage_parser.add_argument("sha")
+        sub.add_parser("ok").add_argument("sha")
+        sub.add_parser("pre-push")
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="묶음 검증의 단계 통과 기록 · Windows 통과 기록(verify.ok) · pre-push 게이트")
-    parser.add_argument("--self-check", action="store_true")
-    sub = parser.add_subparsers(dest="command")
-    for name in ("skip", "pass"):
-        stage_parser = sub.add_parser(name)
-        stage_parser.add_argument("stage")
-        stage_parser.add_argument("sha")
-    sub.add_parser("ok").add_argument("sha")
-    sub.add_parser("pre-push")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[VerifyRecord] self-check OK")
-        return ExitCode.PASSED
-    project_root = Path.cwd()
-    if arguments.command == "skip":
-        return run_skip(project_root, arguments.stage, arguments.sha)
-    if arguments.command == "pass":
-        return write_stage(project_root, arguments.stage, arguments.sha)
-    if arguments.command == "ok":
-        return write_ok(project_root, arguments.sha)
-    if arguments.command == "pre-push":
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        project_root = Path.cwd()
+        if args.command == "skip":
+            return run_skip(project_root, args.stage, args.sha)
+        if args.command == "pass":
+            return write_stage(project_root, args.stage, args.sha)
+        if args.command == "ok":
+            return write_ok(project_root, args.sha)
         return run_pre_push(project_root, sys.stdin.read().splitlines())
-    parser.error("skip · pass · ok · pre-push 중 하나")
-    return ExitCode.CHECK_INVALID
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(VerifyRecordCommand.main())

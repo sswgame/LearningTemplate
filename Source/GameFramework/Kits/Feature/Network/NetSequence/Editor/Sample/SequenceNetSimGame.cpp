@@ -216,7 +216,11 @@ namespace sw
             GameObject*    pPawnObject = manager.createGameObject( hashed_string( makePawnName( playerNumber ) ) );
             PawnComponent* pPawn       = pPawnObject != nullptr ? pPawnObject->addComponent<PawnComponent>() : nullptr;
             if ( pPawn != nullptr )
-                pPawn->setLookAction( hashed_string{} ); // 본보기 폰은 보기가 없다 — 입력 맵 없는 하니스 월드에서 축 경고를 내지 않게
+            {
+                // 본보기 폰은 움직이지도 보지도 않는다(컷씬을 켜는 주인일 뿐이다) — 게임의 입력 맵이 없는 하니스 월드에서 축을 묻지 않는다.
+                pPawn->setMoveAction( hashed_string{} );
+                pPawn->setLookAction( hashed_string{} );
+            }
             if ( pPawn == nullptr || world.isServer() == false )
                 continue;
             // 언리얼 서버가 접속마다 PlayerController 를 세우는 자리 — 원격 조종자가 플레이어 상태를 들고 그 연결의 폰을 쥔다.

@@ -49,13 +49,13 @@
 	<Expect watch="Editor.CharacterEditorBoneGizmoPlaced" equals="0"/>
 	<Expect watch="Editor.CharacterEditorStatusSet" near="0" tolerance="0.5"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="socketgizmo/before.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="socketgizmo/before.png" everyBackend="true"/>
 	<EditorWaitStable/>
 	<Store watch="Editor.CharacterEditorSelectedSocketX" as="socketX"/>
 	<EditorDrag mark="charactereditor.gizmoCenter" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.CharacterEditorSelectedSocketX" differsFrom="socketX" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="socketgizmo/dragged.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="socketgizmo/dragged.png"/>
 	<EditorWaitStable/>
 	<!-- 되돌리기 한 번이 끌기 전체다 -->
 	<EditorClick mark="charactereditor.socketUndo"/>

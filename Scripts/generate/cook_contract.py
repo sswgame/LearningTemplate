@@ -8,19 +8,15 @@ RHIBackendUtil · ShaderCooker · PackCooker · AssetPaths)이 X 를 정의해 �
 (Pack 등)는 같은 파일을 `CookContractSpec` 으로 읽는다.
 
 Usage:
-  python Scripts/generate/cook_contract.py <output_header_path> <output_cmake_path>
 """
 
 from __future__ import annotations
 
-import argparse
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.cook_table import CookContractSpec, COOK_CONTRACT_CONFIG_RELATIVE  # noqa: E402
-from generate.generator_output import GeneratorError, run_generator, write_generated_file  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.cook_table import CookContractSpec, COOK_CONTRACT_CONFIG_RELATIVE
+from generate.generator_output import Generator, GeneratorError, write_generated_file
+from common.paths import get_project_root
 
 TAG = "CookContract"
 
@@ -112,15 +108,6 @@ def generate_cook_contract(header_path: Path, cmake_path: Path) -> None:
     write_generated_file(cmake_path, make_cmake_text(spec), tag=TAG)
 
 
-def main(argv: list[str] | None = None) -> int:
-    def _add_arguments(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("header", type=Path, help="쓸 C++ 헤더")
-        parser.add_argument("cmake", type=Path, help="쓸 CMake 표(RHI 백엔드)")
-
-    return run_generator(argv, tag=TAG, description="CookContract.json → C++ X-매크로 헤더 · CMake 백엔드 표",
-                        add_arguments=_add_arguments,
-                        generate=lambda args: generate_cook_contract(args.header, args.cmake))
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+class CookContractGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        generate_cook_contract(output_dir / "CookContract.gen.h", output_dir / "CookContract.cmake")

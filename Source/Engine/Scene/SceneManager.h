@@ -381,7 +381,7 @@ namespace sw
         uint64                    _nextSceneSerial;   ///< 다음 씬 핸들 번호(1 부터, 다시 쓰지 않는다)
         uint32                    _nextPreviewKey;    ///< 다음 미리보기 씬 키(1 부터, 줄이지 않는다)
         uint8                     _bWorldPlaying : 1; ///< `setWorldPlaying`
-        uint8                     _bInitialized  : 1;
+        uint8                     _bShutDown     : 1; ///< `shutdown` 을 지났다(두 번 거두지 않는다). `initializeSubsystem` 이 다시 연다
         uint8                     _bRestartLoad  : 1; ///< `suspendPendingLoad` 가 멈춰 둔 로드가 있다 — 다음 `updateTransitions` 가 같은 약속으로 다시 띄운다
         uint64                    _sceneGeneration;
         ISceneRenderBinding*      _pRenderBinding;

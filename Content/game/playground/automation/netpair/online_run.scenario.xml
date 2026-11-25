@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="af87a2e3a7446179e6b31025f623d93d"?>
+<!--
+  온라인 서비스 한 바퀴(클라이언트) — `py -3 -m Scripts online-local run` 이 전용 서버(Playground — 매치 서버, 설정은 Config/Server/Online)와 함께 두 프로세스로 돈다.
+  TLS 서비스 연결 → 공지(로그인 전) → 로그인 → 라이브 이벤트 → 우편함 → 매칭(혼자 서는 모드라 바로 이 서버로 배정된다) → 매치 진입 → 나가면 서버가 점수를 낸다 →
+  순위표 1 항목 → 클라이언트가 내는 점수는 거절. 값은 모두 감시 값으로 여기서 판정한다(실행기는 종료 코드와 로그 id 만 본다).
+  순위표는 실행기가 서버의 점수 저장(로그 id `Leaderboard.ServerScoreStored`)을 본 뒤 표준 입력으로 `playground.online.topkills` 를 보내 읽힌다.
+-->
+<Scenario name="game.playground.netpair.online_run" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<Variable name="gv_playgroundAutoPlay" value="0"/>
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.servicestatus"/>
+	<WaitUntil watch="Log.Count" key="Playground.OnlineServiceStatus" atLeast="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.login"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.liveevents"/>
+	<WaitUntil watch="Log.Count" key="Playground.OnlineLiveEvents" atLeast="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.listmail"/>
+	<WaitUntil watch="Log.Count" key="Playground.OnlineMailList" atLeast="1" timeoutWallSeconds="30"/>
+	<DevCommand line="minigame.enter shooter3d_match"/>
+	<WaitUntil watch="Playground.OnlineMatchFound" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Minigame.Active" is="shooter3d_match" timeoutWallSeconds="60"/>
+	<!-- 서버가 이 접속의 몸을 조종할 사람으로 정했다 — 그 뒤에 나가야 서버가 점수를 낸다 -->
+	<WaitUntil watch="Shooter.ServerHealth" atLeast="1" timeoutWallSeconds="60"/>
+	<DevCommand line="minigame.quit"/>
+	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Playground.OnlineTopKillsCount" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="playground.online.submitkills 999"/>
+	<WaitUntil watch="Playground.OnlineRefusedScoreCount" equals="1" timeoutWallSeconds="30"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>

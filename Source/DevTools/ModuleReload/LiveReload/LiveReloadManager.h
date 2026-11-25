@@ -41,6 +41,14 @@ namespace sw
 {
     class FileWatchService;
     struct FileChangeEvent;
+
+    /** @brief 리로드 매니저가 모듈 라이브러리를 여는 방법입니다. */
+    enum class ModuleOpenMode : uint8
+    {
+        ShadowCopy, ///< 섀도 복사본으로 연다 — 도는 동안 원본을 다시 짓고 갈아 끼울 수 있다(App · Server 의 보통 실행)
+        Direct,     ///< 원본을 그대로 연다 — 복사 · 모듈 폴더 감시 · 리로드가 없다(헤드리스 작업: 단위 테스트 · 쿠킹 · 도구. 언리얼 커맨드릿에 라이브 코딩이 없는 것과 같다)
+    };
+
     /**
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
@@ -68,9 +76,8 @@ namespace sw
          */
         static constexpr uint32 kMaxDeferredUnloadBatchCount = 4;
 
-        /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
-        /** @brief @p fileWatch 로 모듈 폴더의 빌드 스탬프를 봅니다(호스트 개발 계층의 것 — 이것보다 오래 산다). */
-        explicit LiveReloadManager( FileWatchService& fileWatch );
+        /** @brief 모듈 맵과 감시가 빈 상태로 시작합니다. @p openMode 가 `ShadowCopy` 면 @p fileWatch 로 모듈 폴더의 빌드 스탬프를 봅니다(호스트 개발 계층의 것 — 이것보다 오래 산다). */
+        LiveReloadManager( FileWatchService& fileWatch, ModuleOpenMode openMode );
         /** @brief 로드된 모듈을 언로드합니다. */
         ~LiveReloadManager() override;
 
@@ -320,6 +327,8 @@ namespace sw
         ModuleRecord& getOrCreateRecord( string_view moduleName );
         /** @brief 모든 모듈 기록과 의존 그래프를 비웁니다. */
         void clearRecords();
+        /** @brief @p moduleRecord 의 의존이 지금 라이브러리에 바인딩됐으면 true 입니다(`verifyModuleBindings` 의 모듈 하나). */
+        [[nodiscard]] bool verifyBindings( string_view moduleName, const ModuleRecord& moduleRecord ) const;
 
         /** @brief 모듈 폴더 감시의 사건을 받습니다(프레임 끝, 게임 스레드). 깨우기만 한다. */
         void onModuleFolderChanged( const FileChangeEvent& changeEvent );
@@ -346,6 +355,7 @@ namespace sw
         ShadowCopySerials                                _shadowCopySerials;                                                                                                       ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
         ModuleReloadPhases                               _cascadePhases;                                                                                                           ///< 지금(마지막) 연쇄의 단계별 시간 — `runCascade` 가 채우고 `reloadCascade` 가 집계에 적는다
         float64                                          _buildFinishedSeconds;                                                                                                    ///< 빌드 끝을 처음 본 시각(단조 초, 0 이면 없음) — 연쇄 시작까지의 대기 구간을 잰다
+        const ModuleOpenMode                             _openMode;                                                                                                                ///< 라이브러리를 여는 방법(만들 때 정한다)
         uint32                                           _completedReloadCount;                                                                                                    ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                            _bReloadGraphBroken   : 1;
         uint8                                            _bBuildStampPending   : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다

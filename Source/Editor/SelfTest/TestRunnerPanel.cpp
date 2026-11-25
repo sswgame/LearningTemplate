@@ -288,7 +288,7 @@ namespace sw::editor
     void TestRunnerPanel::drawUnitTestTab()
     {
         // 케이스는 이 프로세스의 등록에서 읽는다 — 테스트는 App 안에 있다(`App -test`, 따로 있던 `TestBin/*Test.exe` 는 없앴다).
-        // 에디터 · 편집기 플러그인 케이스는 자식 `App -test` 에 등록되지 않는다(자체 테스트 `editor.unitTests` 가 돌린다) — 돌리지 못할 이름은 고르지 않게 뺀다.
+        // 에디터 · 편집기 플러그인 케이스는 자식 `App -test` 에 등록되지 않는다(`App --test-editor` 가 돌린다) — 돌리지 못할 이름은 고르지 않게 뺀다.
         if ( _bUnitTestListDirty == SW_TRUE )
         {
             _bUnitTestListDirty = SW_FALSE;

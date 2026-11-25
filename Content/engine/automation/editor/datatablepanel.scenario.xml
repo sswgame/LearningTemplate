@@ -45,7 +45,7 @@
 	<EditorKey key="Ctrl+Y"/>
 	<WaitUntil watch="Editor.DataTableVisibleRecordCount" equals="0" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="datatablepanel/localization.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="datatablepanel/localization.png"/>
 	<!-- 다시 읽기 — 고친 것을 버린다 -->
 	<EditorClick mark="dataTable.reload"/>
 	<WaitUntil watch="Editor.PanelDirty" equals="0" timeoutFrames="10"/>

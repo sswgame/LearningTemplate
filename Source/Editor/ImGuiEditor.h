@@ -44,6 +44,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼 백엔드, 렌더러, 폰트를 초기화합니다. */
         [[nodiscard]] bool initialize( GenericWindow* pWindow, IRHIDevice* pRHIDevice ) override;
+        /** @brief 창 · RHI 없이 세웁니다(`IEditor::initializeHeadless`) — 플랫폼 · 렌더러 백엔드 · 창 닫기 처리기만 빠진다. */
+        [[nodiscard]] bool initializeHeadless() override;
         /** @brief 에디터 리소스를 해제합니다. */
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
@@ -102,6 +104,8 @@ namespace sw::editor
         SubsystemInitResult initializeWindowCloseQuery();
         void                shutdownWindowCloseQuery();
         bool                onWindowCloseQuery();
+        /** @brief 기동 단계를 채우고 의존 순서로 세웁니다(`initialize` · `initializeHeadless` 공통). 실패하면 선 단계만 역순으로 내린다. */
+        [[nodiscard]] bool startStages();
 
         class EditorContextSubsystem;
         class EditorDataSubsystem;
@@ -151,7 +155,9 @@ namespace sw::editor
 
         uint8 _bInitialized : 1;
         /// @brief 호스트가 앱 종료를 알렸다(`requestBackgroundStop` — 종료 앞에서만 온다). 리로드 · 백엔드 교체와 편집기 종료를 가른다(자동 저장 세션 폴더는 종료 때만 지운다).
-        uint8                  _bAppExiting   : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 6;
+        uint8 _bAppExiting : 1;
+        uint8 _bHeadless   : 1; ///< 창 · RHI 없이 섰다(`initializeHeadless`)
+
+        [[maybe_unused]] uint8 _reservedFlags : 5;
     };
 } // namespace sw::editor

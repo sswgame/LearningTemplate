@@ -520,9 +520,9 @@ namespace sw
         else if ( params._shardCount == 1 )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP", "Net session listening on UDP port %#", _listenPort );
         else if ( params._bShardsSharePort )
-            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP2", "Net session listening on UDP port %# (%# shards share the port)", _listenPort, params._shardCount );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP", "Net session listening on UDP port %# (%# shards share the port)", _listenPort, params._shardCount );
         else
-            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP3", "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, params._shardCount, _listenPort, _listenPort + params._shardCount - 1 );
+            SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningUDP", "Net session listening on UDP port %# (%# shards, ports %#-%#)", _listenPort, params._shardCount, _listenPort, _listenPort + params._shardCount - 1 );
         if ( streamShardCount > 0 )
             SW_LOG_INFO_ID( "GameNetSession.NetSessionListeningStream", "Net session listening on stream port %# (%# port(s), browser clients)", params._streamListenPort, streamShardCount );
         return true;

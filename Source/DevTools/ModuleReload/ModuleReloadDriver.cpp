@@ -2,6 +2,7 @@
 
 #include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/String/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -11,6 +12,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -155,11 +157,18 @@ namespace sw
         // 무엇을 로드할지는 모듈 매니페스트가 정한다(App 은 빌드가 담은 모든 대상, 전용 서버는 Server 대상).
         if ( ModuleCatalogLoader::loadAndResolve( targetMask, outCatalog, outResolution ) == false )
             return false;
+        const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+        // 테스트 자식(자식 역할 · 격리 케이스)은 그 케이스가 등록된 모듈과 그 의존만 연다 — 엔진 · 개발 도구의 케이스면 하나도 열지 않는다.
+        string childModule;
+        if ( commandLine.getArgument( CommandLineArgument::TEST_CHILD_MODULE, childModule ) && childModule.empty() == false )
+            outResolution.keepOnly( outCatalog, childModule );
         moduleLibraryHost.setResolution( outResolution );
 
-        _pState->_liveReloadManager = make_unique<LiveReloadManager>( fileWatch );
-        _pState->_pHostScope        = &hostScope;
-        const bool bBound           = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
+        // 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — 모듈을 복사 없이 바로 연다.
+        const ModuleOpenMode openMode = HeadlessTaskRegistration::isAnyRequested( commandLine ) ? ModuleOpenMode::Direct : ModuleOpenMode::ShadowCopy;
+        _pState->_liveReloadManager   = make_unique<LiveReloadManager>( fileWatch, openMode );
+        _pState->_pHostScope          = &hostScope;
+        const bool bBound             = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
         SW_ASSERT( bBound );
         (void)bBound;
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 라이브러리 창구가 엔진 종료 안에서 그 자리를 부른다.

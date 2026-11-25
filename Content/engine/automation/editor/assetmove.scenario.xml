@@ -34,7 +34,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="assetmove/confirm.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="assetmove/confirm.png"/>
 	<EditorClick mark="contentBrowser.move.confirm" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.move.confirm" state="Up"/>
@@ -52,7 +52,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="assetmove/refused.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="assetmove/refused.png"/>
 	<EditorClick mark="contentBrowser.move.cancel" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="contentBrowser.move.cancel" state="Up"/>

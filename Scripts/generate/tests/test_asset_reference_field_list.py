@@ -24,7 +24,7 @@ OWNER_COUNT = 12
 def update_one_owner(arguments: tuple[str, int]) -> bool:
     """자식 프로세스 하나 — 주인 하나의 줄을 갈아 끼운다(빌드 폴더 하나의 생성 단계)."""
     table_path, owner_index = arguments
-    return update_table(Path(table_path), {f"game:owner{owner_index}": {f"Type{owner_index}._field": {"ref"}}}, {f"owner{index}" for index in range(OWNER_COUNT)})
+    return update_table(Path(table_path), {f"game:owner{owner_index}": {f"Type{owner_index}._field"}}, {f"owner{index}" for index in range(OWNER_COUNT)})
 
 
 class AssetReferenceFieldListTest(unittest.TestCase):
@@ -44,30 +44,27 @@ class AssetReferenceFieldListTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             table_path = Path(folder) / "AssetReferenceFields.generated.json"
             table_path.write_text(json.dumps({"listOwner": []}) + "\n", encoding="utf-8")
-            self.assertTrue(update_table(table_path, {"game:a": {"A._x": {"path"}}}, {"a"}))
-            self.assertFalse(update_table(table_path, {"game:a": {"A._x": {"path"}}}, {"a"}))
+            self.assertTrue(update_table(table_path, {"game:a": {"A._x"}}, {"a"}))
+            self.assertFalse(update_table(table_path, {"game:a": {"A._x"}}, {"a"}))
 
     def test_rows_of_removed_games_are_dropped(self) -> None:
         list_owner = [{"owner": ""}, {"owner": "GF_Kit"}, {"owner": "game:Kept"}, {"owner": "game:Removed"}]
         self.assertEqual([entry["owner"] for entry in drop_removed_games(list_owner, {"Kept"})], ["", "GF_Kit", "game:Kept"])
 
-    def test_field_names_are_listed_by_stored_form(self) -> None:
-        """`AssetRef<T>` 칸(ref) · `DataPath` 칸(data) · 경로 글 칸(path) · 경로가 아닌 글 칸(text)을 따로 적는다 — GUID 이전 도구가 ref 칸만 바꾸고, ref 와 text 가 겹친 이름의 경로 값은 멈춘다.
-        한 주인에서 두 꼴인 이름은 두 목록에 다 든다. 글 칸은 경로 칸 목록(`listField` — 검사 · 옮기기가 읽는다)에 들지 않는다."""
+    def test_field_names_are_sorted_and_old_columns_go(self) -> None:
+        """경로 칸 이름을 주인마다 한 목록으로 적고, 이 구성이 짓지 않은 주인의 옛 꼴별 칸도 떨군다."""
         with tempfile.TemporaryDirectory() as folder:
             list_path = Path(folder) / "AssetReferenceFields.list"
-            list_path.write_text("_mesh\tMesh\tref\n_base\t-\tpath\n_shared\tMesh\tref\n_shared\t-\tpath\n_shader\t-\tdata\n_name\t-\ttext\n", encoding="utf-8")
+            list_path.write_text("_mesh\tMesh\n_base\t-\n_mesh\tMesh\n", encoding="utf-8")
             inputs_path = Path(folder) / "inputs.txt"
             inputs_path.write_text(f"game:a\t{list_path}\n", encoding="utf-8")
-            list_owner = merge_owners([], read_built_owners(inputs_path))
-            self.assertEqual(list_owner, [{"owner": "game:a", "listField": ["_base", "_mesh", "_shader", "_shared"],
-                                           "listAssetRefField": ["_mesh", "_shared"], "listDataPathField": ["_shader"], "listPathTextField": ["_base", "_shared"],
-                                           "listTextField": ["_name"]}])
+            list_owner = merge_owners([{"owner": "game:b", "listField": ["_x"], "listTextField": ["_y"]}, {"owner": "game:c", "listField": []}], read_built_owners(inputs_path))
+            self.assertEqual(list_owner, [{"owner": "game:a", "listField": ["_base", "_mesh"]}, {"owner": "game:b", "listField": ["_x"]}])
 
-    def test_two_column_lines_of_old_parser_are_refused(self) -> None:
+    def test_three_column_lines_of_old_parser_are_refused(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             list_path = Path(folder) / "AssetReferenceFields.list"
-            list_path.write_text("_mesh\tMesh\n", encoding="utf-8")
+            list_path.write_text("_mesh\tMesh\tref\n", encoding="utf-8")
             inputs_path = Path(folder) / "inputs.txt"
             inputs_path.write_text(f"game:a\t{list_path}\n", encoding="utf-8")
             with self.assertRaises(ValueError):

@@ -16,7 +16,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from dev.move_asset import (PackAbsorb, PackRename, ScenarioRename, get_pack_absorb, get_pack_rename, get_scenario_rename, is_domain_root, is_pack_string_file,  # noqa: E402
                             list_golden_renames, list_leftover_patterns, list_scenario_golden_renames, rewrite_absorbed_strings, rewrite_pack_strings,
                             rewrite_scenario_name)
-from lint.asset_identity import FOUND, read_header  # noqa: E402
 
 RENAME = PackRename("oldpack", "newpack")
 

@@ -519,6 +519,7 @@ namespace sw::editor
         , _renderSlot{ DrawSnapshotHandoff::kInvalidSlot }
         , _bInitialized{ SW_FALSE }
         , _bAppExiting{ SW_FALSE }
+        , _bHeadless{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
     }
@@ -541,14 +542,31 @@ namespace sw::editor
         }
         _pWindow    = pWindow;
         _pRHIDevice = pRHIDevice;
+        _bHeadless  = SW_FALSE;
+        return startStages();
+    }
 
+    bool ImGuiEditor::initializeHeadless()
+    {
+        if ( _bInitialized != SW_FALSE )
+            return true;
+        _bHeadless = SW_TRUE;
+        if ( startStages() == false )
+            return false;
+        EditorSubsystemSet::syncExtensionRegistrations( *_editorContext ); // 프레임 앞(`prepareFrameState`)이 하던 일 — 헤드리스는 프레임을 돌지 않는다
+        return true;
+    }
+
+    bool ImGuiEditor::startStages()
+    {
         // 단계마다 먼저 서야 하는 단계를 적는다. 목록이 그 순서로 초기화하고, 실패하면 초기화한 단계만 역순으로 종료한다.
         _startup.add( make_unique<EditorDataSubsystem>( *this ) );
         _startup.add( make_unique<ImGuiContextSubsystem>( *this ) );
         _startup.add( make_unique<PlatformBackendSubsystem>( *this ) );
         _startup.add( make_unique<RendererBackendSubsystem>( *this ) );
         _startup.add( make_unique<EditorContextSubsystem>( *this ) );
-        _startup.add( make_unique<WindowCloseQuerySubsystem>( *this ) );
+        if ( _bHeadless == SW_FALSE )
+            _startup.add( make_unique<WindowCloseQuerySubsystem>( *this ) );
         SubsystemTimingReport::enableTiming( _startup ); // 종료 요약 줄(`ImGuiEditor.ShutdownMs`) — 백엔드 교체 · 리로드의 에디터 몫
         if ( _startup.initializeAll( EngineSubsystemHost::kClient ) == false )
         {
@@ -610,7 +628,7 @@ namespace sw::editor
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
         // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹은 자체 테스트를 모르므로 셸이 알려 준다.
-        _dockLayout.setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
+        _dockLayout.setPanelOverrideRequested( EditorSelfTestRunner::isRequested() || _bHeadless == SW_TRUE );
         _dockLayout.initializePersistencePaths();
         _dockLayout.applyINIFilename();
 
@@ -635,6 +653,8 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializePlatformBackend()
     {
+        if ( _bHeadless == SW_TRUE )
+            return SubsystemInitResult::Succeeded; // 창이 없다
         SW_LOG_TRACE_ID( "ImGuiEditor.CreatingPlatformBackend", "Creating Platform Backend" );
         if ( _pWindow == nullptr )
         {
@@ -676,6 +696,8 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeRendererBackend()
     {
+        if ( _bHeadless == SW_TRUE )
+            return SubsystemInitResult::Succeeded; // 디바이스가 없다 — 프레임을 돌지 않아 그릴 것도 없다
         SW_LOG_TRACE_ID( "ImGuiEditor.CreatingRendererBackend", "Creating Renderer Backend" );
         // 네 RHI 백엔드가 같은 렌더러 하나를 쓴다(ImGuiRenderer — RHI 로 그린다).
         _renderer = make_unique<ImGuiRenderer>();
@@ -732,7 +754,8 @@ namespace sw::editor
         // 우선순위는 스위치(자동화), 환경설정(General 의 UI 배율), 모니터 DPI 순이다. 배율이 0 이면 다음 순위로 넘어간다.
         const float32 fixedUIScale  = gv_editorUiScale > 0.0f ? static_cast<float32>( gv_editorUiScale ) : getPreferences<EditorGeneralPreferences>()._uiScale;
         const bool    bFixedUIScale = fixedUIScale > 0.0f;
-        EditorThemeUtil::setDPIScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDPIScale() );
+        const float32 monitorScale  = _platformBackend != nullptr ? _platformBackend->getDPIScale() : 1.0f; // 헤드리스는 모니터가 없다
+        EditorThemeUtil::setDPIScale( bFixedUIScale ? fixedUIScale : monitorScale );
         ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
         ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
         SW_LOG_INFO_ID( "ImGuiEditor.EditorUIScaleFrame", "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDPIScale(), bFixedUIScale ? "fixed" : "monitor DPI",

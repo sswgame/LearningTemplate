@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/shader_kill_order.py
 
@@ -11,30 +9,22 @@ Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 
 - 버리는 함수: 본문에 버리기가 있거나 그런 함수를 부르는 함수(`Appearance::clipDither`). `SW_APPEARANCE_CLIP(` 는 그 자체로 버리기다.
 - 위반: 한 함수 본문에서 첫 버리기 뒤에 미분을 쓰는 읽기 · 호출이 있다. 전처리 갈래는 보지 않는다(보수적).
 
-`py -3 -m Scripts lint shader-kill-order [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
+`py -3 -m Scripts lint shader-kill-order [--self-check]` 로 돌리고, 커밋 훅이 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import re
-import sys
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Mapping, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+from lint.index_cache import Facts, compute_version, CACHE_FOLDER, open_facts, write_json
+from lint.lint_rule import LintRule
+from lint.lint_scope import LintScope, list_repo_files
+from lint.shader_code import COMMENT_PATTERN, EXTENSIONS, PREPROCESSOR_PATTERN
 
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.index_cache import Facts, compute_version, CACHE_FOLDER, open_facts, write_json  # noqa: E402
-from lint.lint_scope import LintScope, list_repo_files, make_whole_scope  # noqa: E402
-
-EXTENSIONS = (".hlsl", ".hlsli")
-COMMENT_PATTERN = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)
-PREPROCESSOR_PATTERN = re.compile(r"^[ \t]*#[^\n]*(?:\\\n[^\n]*)*", re.M)
 FUNCTION_PATTERN = re.compile(r"(?:^|[;}\n])[ \t]*(?:static[ \t]+|inline[ \t]+|precise[ \t]+)*[\w:<>,]+[ \t]+([A-Za-z_][\w:]*)[ \t]*\(([^;{}()]|\([^;{}()]*\))*\)\s*(?::\s*\w+\s*)?\{")
 DERIVATIVE_PATTERN = re.compile(r"\.(?:Sample|SampleBias|SampleCmp)\s*\(|\b(?:ddx|ddy|ddx_coarse|ddy_coarse|ddx_fine|ddy_fine|fwidth)\s*\(")
 KILL_PATTERN = re.compile(r"\bclip\s*\(|\bdiscard\b|\bSW_APPEARANCE_CLIP\s*\(")
@@ -69,17 +59,17 @@ def collect_functions(path: str, text: str) -> list[tuple[str, str, str]]:
 
 def close_over(list_function: list[tuple[str, str, str]], pattern: re.Pattern) -> set[str]:
     """본문에 @p pattern 이 있거나 그런 함수를 부르는 함수 이름의 닫힘이다."""
-    setName = {name for _, name, body in list_function if pattern.search(body)}
+    set_name = {name for _, name, body in list_function if pattern.search(body)}
     changed = True
     while changed:
         changed = False
         for _, name, body in list_function:
-            if name in setName:
+            if name in set_name:
                 continue
-            if any(call in setName for call in CALL_PATTERN.findall(body)):
-                setName.add(name)
+            if any(call in set_name for call in CALL_PATTERN.findall(body)):
+                set_name.add(name)
                 changed = True
-    return setName
+    return set_name
 
 
 def find_first_kill(body: str, set_kill: set[str]) -> int:
@@ -148,14 +138,14 @@ def close_over_rows(list_row: list[FunctionRow], is_direct: Callable[[FunctionRo
     for row in list_row:
         for call in row.set_call:
             map_caller.setdefault(call, set()).add(row.name)
-    setName = {row.name for row in list_row if is_direct(row)}
-    list_pending = list(setName)
+    set_name = {row.name for row in list_row if is_direct(row)}
+    list_pending = list(set_name)
     while list_pending:
         for caller in map_caller.get(list_pending.pop(), ()):
-            if caller not in setName:
-                setName.add(caller)
+            if caller not in set_name:
+                set_name.add(caller)
                 list_pending.append(caller)
-    return setName
+    return set_name
 
 
 def evaluate_incremental(list_row: list[FunctionRow], map_cached: dict[str, str], read_bodies: Callable[[list[str]], dict[str, list[list[str]]]],
@@ -186,82 +176,68 @@ def evaluate_incremental(list_row: list[FunctionRow], map_cached: dict[str, str]
     return list_problem, map_result
 
 
-def check_shader_kill_order(project_root: Path, scope: LintScope) -> list[str]:
-    """
-    Content · Source 의 셰이더 함수 — 함수마다의 요약 행(`fold_functions`)만 읽어 버리기 · 미분 닫힘을 내고(역방향 간선), 버리기에 닿는 함수의 판정은
-    `judgement.json` 에 둔다. 본문 조각은 판정이 없는(바뀐 파일 · 닫힘 소속이 바뀐 이름을 부르는) 함수의 파일만 읽는다(`evaluate_incremental`).
-    """
-    if not scope.whole_repo and not scope.touches(("Content", "Source"), EXTENSIONS):
-        return []
-    list_path = [path for path in list_repo_files(project_root)
-                if path.startswith(("Content/", "Source/")) and path.endswith(EXTENSIONS) and "ThirdParty" not in path.split("/")]
+class ShaderKillOrderRule(LintRule):
+    id = "shader-kill-order"
+    group = "셰이더"
+    blocks = "픽셀 버리기(clip · discard) 뒤의 미분 읽기"
+    why_not_type = "HLSL 에 미분을 쓰는 함수를 적을 형식이 없다"
 
-    def open_functions(want: Iterable[str]) -> Facts:
-        return open_facts(project_root, "shader-kill-order", [__file__], list_path, lambda path, text: [[name, body] for _, name, body in collect_functions(path, text)],
-                         want=want, contribute=fold_functions)
+    def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
+        """
+        Content · Source 의 셰이더 함수 — 함수마다의 요약 행(`fold_functions`)만 읽어 버리기 · 미분 닫힘을 내고(역방향 간선), 버리기에 닿는 함수의 판정은
+        `judgement.json` 에 둔다. 본문 조각은 판정이 없는(바뀐 파일 · 닫힘 소속이 바뀐 이름을 부르는) 함수의 파일만 읽는다(`evaluate_incremental`).
+        """
+        if not scope.whole_repo and not scope.touches(("Content", "Source"), EXTENSIONS):
+            return []
+        list_path = [path for path in list_repo_files(self.root)
+                    if path.startswith(("Content/", "Source/")) and path.endswith(EXTENSIONS) and "ThirdParty" not in path.split("/")]
 
-    list_row = [parse_row(token) for token in open_functions(()).summary]
-    judgement_path = project_root / CACHE_FOLDER / "shader-kill-order" / "judgement.json"
-    version = compute_version([__file__])   # 판정 글이 바뀌면 캐시한 판정을 버린다
-    try:
-        document = json.loads(judgement_path.read_text(encoding="utf-8"))
-        map_cached = document["results"] if document.get("version") == version else {}
-    except (OSError, ValueError, KeyError):
-        map_cached = {}
-    list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: open_functions(list_miss).map_fact, list_path)
-    if map_result != map_cached:
-        judgement_path.parent.mkdir(parents=True, exist_ok=True)
-        write_json(judgement_path, {"version": version, "results": map_result})
-    return list_problem
+        def open_functions(want: Iterable[str]) -> Facts:
+            return open_facts(self.root, "shader-kill-order", [__file__], list_path, lambda path, text: [[name, body] for _, name, body in collect_functions(path, text)],
+                             want=want, contribute=fold_functions)
 
+        list_row = [parse_row(token) for token in open_functions(()).summary]
+        judgement_path = self.root / CACHE_FOLDER / "shader-kill-order" / "judgement.json"
+        version = compute_version([__file__])   # 판정 글이 바뀌면 캐시한 판정을 버린다
+        try:
+            document = json.loads(judgement_path.read_text(encoding="utf-8"))
+            map_cached = document["results"] if document.get("version") == version else {}
+        except (OSError, ValueError, KeyError):
+            map_cached = {}
+        list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: open_functions(list_miss).map_fact, list_path)
+        if map_result != map_cached:
+            judgement_path.parent.mkdir(parents=True, exist_ok=True)
+            write_json(judgement_path, {"version": version, "results": map_result})
+        return list_problem
 
-def run_self_check() -> None:
-    helper = "float4 readAlbedo( float2 uv )\n{\n    return g_Albedo.Sample( g_Sampler, uv );\n}\n"
-    killer = "static void Appearance::clipDither( float a, float2 p )\n{\n    clip( a - 0.5f );\n}\n"
-    bad = helper + killer + "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    Appearance::clipDither( 0.5f, uv );\n    return readAlbedo( uv );\n}\n"
-    good = helper + killer + "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    const float4 albedo = readAlbedo( uv );\n    Appearance::clipDither( 0.5f, uv );\n    return albedo;\n}\n"
-    direct = "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    clip( uv.x - 0.5f );\n    return float4( ddx( uv ), 0.0f, 1.0f );\n}\n"
-    level = "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    discard;\n    return g_Albedo.SampleLevel( g_Sampler, uv, 0.0f );\n}\n"
-    assert len(find_problems([("a.hlsl", bad)])) == 1, find_problems([("a.hlsl", bad)])
-    assert find_problems([("a.hlsl", good)]) == [], find_problems([("a.hlsl", good)])
-    assert len(find_problems([("a.hlsl", direct)])) == 1
-    assert find_problems([("a.hlsl", level)]) == []  # 밉을 적은 읽기는 미분을 쓰지 않는다
-    assert find_problems([("a.hlsl", "// clip( x ); g.Sample( s, uv );\nfloat f() { return 1.0f; }\n")]) == []
-    # 요약 + 판정 캐시(증분)가 전체 판정과 같다 — 처음(캐시 없음), 그대로(본문을 읽지 않는다), 버리기 함수를 고친 뒤(그 이름을 부르는 함수만 다시 판정).
-    map_source = {"a.hlsl": helper + killer, "b.hlsl": "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    Appearance::clipDither( 0.5f, uv );\n    return readAlbedo( uv );\n}\n",
-                 "c.hlsl": good.replace("PSMain", "PSGood"), "d.hlsl": direct}
+    def self_check(self) -> None:
+        helper = "float4 readAlbedo( float2 uv )\n{\n    return g_Albedo.Sample( g_Sampler, uv );\n}\n"
+        killer = "static void Appearance::clipDither( float a, float2 p )\n{\n    clip( a - 0.5f );\n}\n"
+        bad = helper + killer + "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    Appearance::clipDither( 0.5f, uv );\n    return readAlbedo( uv );\n}\n"
+        good = helper + killer + "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    const float4 albedo = readAlbedo( uv );\n    Appearance::clipDither( 0.5f, uv );\n    return albedo;\n}\n"
+        direct = "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    clip( uv.x - 0.5f );\n    return float4( ddx( uv ), 0.0f, 1.0f );\n}\n"
+        level = "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    discard;\n    return g_Albedo.SampleLevel( g_Sampler, uv, 0.0f );\n}\n"
+        assert len(find_problems([("a.hlsl", bad)])) == 1, find_problems([("a.hlsl", bad)])
+        assert find_problems([("a.hlsl", good)]) == [], find_problems([("a.hlsl", good)])
+        assert len(find_problems([("a.hlsl", direct)])) == 1
+        assert find_problems([("a.hlsl", level)]) == []  # 밉을 적은 읽기는 미분을 쓰지 않는다
+        assert find_problems([("a.hlsl", "// clip( x ); g.Sample( s, uv );\nfloat f() { return 1.0f; }\n")]) == []
+        # 요약 + 판정 캐시(증분)가 전체 판정과 같다 — 처음(캐시 없음), 그대로(본문을 읽지 않는다), 버리기 함수를 고친 뒤(그 이름을 부르는 함수만 다시 판정).
+        map_source = {"a.hlsl": helper + killer, "b.hlsl": "float4 PSMain( float2 uv : TEXCOORD0 ) : SV_Target\n{\n    Appearance::clipDither( 0.5f, uv );\n    return readAlbedo( uv );\n}\n",
+                     "c.hlsl": good.replace("PSMain", "PSGood"), "d.hlsl": direct}
 
-    def incremental(map_text: dict[str, str], map_cached: dict[str, str]) -> tuple[list[str], dict[str, str], list[str]]:
-        map_fact = {path: [[name, body] for _, name, body in collect_functions(path, text)] for path, text in map_text.items()}
-        list_read: list[str] = []
-        list_row = [parse_row(token) for path in sorted(map_fact) for token in fold_functions(path, map_fact[path])]
-        list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: (list_read.extend(list_miss), {path: map_fact[path] for path in list_miss})[1], sorted(map_text))
-        assert list_problem == find_problems(sorted(map_text.items())), (list_problem, find_problems(sorted(map_text.items())))
-        return list_problem, map_result, list_read
+        def incremental(map_text: dict[str, str], map_cached: dict[str, str]) -> tuple[list[str], dict[str, str], list[str]]:
+            map_fact = {path: [[name, body] for _, name, body in collect_functions(path, text)] for path, text in map_text.items()}
+            list_read: list[str] = []
+            list_row = [parse_row(token) for path in sorted(map_fact) for token in fold_functions(path, map_fact[path])]
+            list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: (list_read.extend(list_miss), {path: map_fact[path] for path in list_miss})[1], sorted(map_text))
+            assert list_problem == find_problems(sorted(map_text.items())), (list_problem, find_problems(sorted(map_text.items())))
+            return list_problem, map_result, list_read
 
-    list_problem, map_cached, list_read = incremental(map_source, {})
-    assert len(list_problem) == 2 and list_read, list_problem
-    assert incremental(map_source, map_cached)[2] == [], "바뀐 것이 없으면 본문을 읽지 않는다"
-    map_split = {"h.hlsl": helper, "k.hlsl": killer, "p.hlsl": map_source["b.hlsl"], "d.hlsl": direct}
-    _, map_cached, _ = incremental(map_split, {})
-    list_problem, _, list_read = incremental(dict(map_split, **{"h.hlsl": helper.replace("g_Albedo.Sample( g_Sampler, uv )", "float4( uv, 0.0f, 1.0f )")}), map_cached)
-    assert list_read == ["p.hlsl"] and len(list_problem) == 1, (list_read, list_problem)   # 미분 닫힘에서 빠진 이름을 부르는 함수의 파일만 다시 읽는다
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="픽셀 버리기 뒤의 미분 읽기를 본다")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[ShaderKillOrder] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_shader_kill_order(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[ShaderKillOrder] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        list_problem, map_cached, list_read = incremental(map_source, {})
+        assert len(list_problem) == 2 and list_read, list_problem
+        assert incremental(map_source, map_cached)[2] == [], "바뀐 것이 없으면 본문을 읽지 않는다"
+        map_split = {"h.hlsl": helper, "k.hlsl": killer, "p.hlsl": map_source["b.hlsl"], "d.hlsl": direct}
+        _, map_cached, _ = incremental(map_split, {})
+        list_problem, _, list_read = incremental(dict(map_split, **{"h.hlsl": helper.replace("g_Albedo.Sample( g_Sampler, uv )", "float4( uv, 0.0f, 1.0f )")}), map_cached)
+        assert list_read == ["p.hlsl"] and len(list_problem) == 1, (list_read, list_problem)   # 미분 닫힘에서 빠진 이름을 부르는 함수의 파일만 다시 읽는다

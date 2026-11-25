@@ -1,10 +1,12 @@
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
+#include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "DevTools/Client/Automation/Tests/ScenarioFileCheck.h"
 
 #include "Engine/Config/GameSelection.h"
@@ -21,13 +23,31 @@ SW_TEST_CASE( ScenarioFilesTest, AllScenariosParseResolveAndValidate )
     SW_EXPECT_TRUE( test::validateScenarioFolder( "engine/automation", pModuleLoader ) );
     (void)test::validateScenarioFolder( "engine/automation/rhiswap", pModuleLoader ); // 조건이 붙은 시나리오(네 백엔드) — 없어도 된다
     (void)test::validateScenarioFolder( gameFolder.view(), pModuleLoader );           // 시나리오가 없는 게임도 있다
-    // desktop: 혼자 도는 데스크톱 시나리오(Test/Scenario 가 따로 등록한다), sequence: 두 번 기동 쌍, showcase: 따로 띄우는 쇼케이스 씬
-    for ( const string_view subFolder : { "desktop", "sequence", "showcase" } )
+    (void)test::validateScenarioFolder( "engine/automation/render", pModuleLoader );
+    (void)test::validateScenarioFolder( "engine/automation/load", pModuleLoader );
+    // desktop: 혼자 도는 데스크톱 시나리오(Test/Scenario 가 따로 등록한다), sequence: 두 번 기동 쌍, showcase: 따로 띄우는 쇼케이스 씬, load: 부하 측정, netpair: 여러 프로세스(Test/Net),
+    // debugger · web: 도구가 띄우는 것(Config/Rules/Test/ManualScenarios.json) — 손으로만 도는 것일수록 여기서 이름(감시 값 · 명령)이 썩지 않는지 본다
+    for ( const string_view subFolder : { "desktop", "sequence", "showcase", "load", "netpair", "debugger", "web" } )
     {
         StringBuilder<constant::buffer::kMax256> folder;
         folder.appendFormat( "%#/%#", gameFolder.view(), subFolder );
         (void)test::validateScenarioFolder( folder.view(), pModuleLoader );
     }
+}
+
+// 개발 명령 줄의 `{gv_…}` 은 그 전역 변수의 값이다 - 실행마다 다른 주소를 시나리오에 적지 않는다. 없는 변수 · 안 닫힌 자리는 오류다.
+SW_TEST_CASE( ScenarioFilesTest, DevCommandLineTakesGlobalVariables )
+{
+    const expected<string> plain = AutomationEnvironmentSteps::expandVariables( "hub.attack 100000" );
+    SW_REQUIRE_TRUE( plain.has_value() );
+    SW_EXPECT_EQUAL( string( "hub.attack 100000" ), *plain );
+    StringBuilder<constant::buffer::kMax64> wanted;
+    wanted.appendFormat( "a%#b c", engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_standardInputCommands" )->getValueAsString() );
+    const expected<string> expanded = AutomationEnvironmentSteps::expandVariables( "a{gv_standardInputCommands}b c" );
+    SW_REQUIRE_TRUE( expanded.has_value() );
+    SW_EXPECT_EQUAL( string( wanted.view() ), *expanded );
+    SW_EXPECT_FALSE( AutomationEnvironmentSteps::expandVariables( "a {gv_noSuchVariable}" ).has_value() );
+    SW_EXPECT_FALSE( AutomationEnvironmentSteps::expandVariables( "a {gv_standardInputCommands" ).has_value() );
 }
 
 // `<ExpectImage>` 는 시나리오 끝에서 판정한다 - 같은 파일을 두 번 찍으면 앞 단언이 뒤 그림을 보므로 읽을 때 거절한다.

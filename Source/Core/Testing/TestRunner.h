@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -50,8 +51,11 @@ namespace sw::test
         uint32            _shardCount{ 1 };  ///< 몫 수 — 케이스는 이름 해시로 나뉜다(섞기 · 거르개와 무관하게 늘 같은 몫)
         SnapshotWriteMode _snapshotWriteMode{ SnapshotWriteMode::Off };
         bool              _bListOnly{ false };
-        bool              _bRunDisabled{ false };    ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인)
-        CrashHandler*     _pCrashHandler{ nullptr }; ///< 도는 케이스 이름을 문맥(`TestCase`)에 적을 크래시 처리기 — 크래시 보고에 어느 케이스였는지 남는다. nullptr 이면 적지 않는다
+        bool              _bRunDisabled{ false }; ///< `_disabledReason` 이 있는 케이스도 돈다(고친 뒤 확인)
+        Delegate<void()>  _onCaseBegin{};         ///< 케이스 앞에 부른다 — 부르는 쪽(엔진을 아는 쪽)이 프로세스 상태를 찍는다
+        /// 케이스 뒤, 로그를 아직 이 케이스의 것으로 모으는 동안 부른다 — 케이스가 흘린 것을 한 줄씩 채우면 그 케이스가 `StateLeak` 으로 진다(`DevTools/Diagnostics/TestCaseStateProbe`)
+        Delegate<void( vector<string>& )> _onCaseEnd{};
+        CrashHandler*                     _pCrashHandler{ nullptr }; ///< 도는 케이스 이름을 문맥(`TestCase`)에 적을 크래시 처리기 — 크래시 보고에 어느 케이스였는지 남는다. nullptr 이면 적지 않는다
     };
 
     /**
@@ -63,7 +67,7 @@ namespace sw::test
     public:
         /**
          * @brief JSON 보고 형식의 판입니다. 칸을 바꾸면 올린다(읽는 도구가 판으로 가른다).
-         *        실패 종류는 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crash, 통과 · 건너뜀이면 빈 글),
+         *        실패 종류는 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crash · StateLeak, 통과 · 건너뜀이면 빈 글),
          *           위 `failureKinds`(종류별 진 케이스 수) · `unmatchedPatterns`(등록된 케이스에 맞지 않은 더하기 패턴).
          *        건너뜀(`SW_TEST_SKIP`) — 위 `skippedCount`, 케이스의 `skipped` · `skipReason`. 건너뛴 케이스는 `passed` 가 거짓이다(통과로 세지 않는다).
          */

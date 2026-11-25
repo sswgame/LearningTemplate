@@ -16,7 +16,6 @@ include 자리 맨 앞에 둔다.
 
 파일 수가 많아(키트 60 여 개 × 헤더 수백) CMake 대신 여기서 쓴다. 게이트마다 목록 스탬프가 같으면 파일을 건드리지 않아 configure 가 파일 하나만 읽는다.
 
-  python Scripts/generate/target_layers.py <출력 .cmake 파일>
 """
 
 from __future__ import annotations
@@ -25,17 +24,13 @@ import hashlib
 import json
 import re
 import shutil
-import sys
 import tomllib
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.file_collect import list_files_under  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from generate.generator_output import GeneratorError, run_generator, write_generated_file  # noqa: E402
+from common.file_collect import list_files_under
+from common.host_platform import is_windows_host
+from common.paths import get_project_root
+from generate.generator_output import Generator, GeneratorError, write_generated_file
 
 TAG = "TargetLayers"
 RULE_FILE = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers" / "TargetLayers.toml"
@@ -275,11 +270,6 @@ def generate_target_layers(output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=TAG, summary=f"{len(map_gate)} gates · {sum(len(entry[0]) for entry in map_gate.values())} stubs")
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    return run_generator(argv, tag=TAG, description="타깃 경계 표 → #error 껍데기",
-                        add_arguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일(<빌드>/generated/sw/config/TargetLayers.cmake — 껍데기는 <빌드>/gates)"),
-                        generate=lambda args: generate_target_layers(args.output))
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+class TargetLayersGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        generate_target_layers(output_dir / "TargetLayers.cmake")

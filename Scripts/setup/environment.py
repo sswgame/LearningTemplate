@@ -22,6 +22,7 @@ from typing import Any
 # Scripts/ → sys.path (common 패키지 부트스트랩)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from common.command import Command, ScriptContext  # noqa: E402
 from common.clang_format import ensure_clang_format
 from common.toolchain_config import auto_bootstrap_enabled, load_search_paths, load_toolchain_config, read_optional_config, require_config
 from common.project_constants import (
@@ -51,7 +52,7 @@ from common.paths import get_project_root, normalize_path
 from common.host_platform import is_windows_host, HOST
 from common.file_collect import get_or_find_cached, is_vcpkg_root
 from common.exit_code import ExitCode  # noqa: E402
-from generate.generator_output import GeneratorError, write_generated_file
+from generate.generator_output import write_generated_file
 from generate.toolchain_cmake import generate_toolchain_cmake
 from setup.toolchain_detect import (
     find_msvc_path,
@@ -256,29 +257,28 @@ class EnvironmentSetupManager:
         )
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="SW Engine Setup Environment Script")
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.",
-    )
-    # configure 는 이 뒤에 늘 ToolchainVars.cmake 를 만든다 — 같은 프로세스에서 해 파이썬을 한 번 덜 띄운다(DetectToolchain.cmake).
-    parser.add_argument("--cmake-vars", type=Path, help="toolchain_config.json 을 CMake set() 목록으로도 쓴다(toolchain_cmake.py 와 같은 출력)")
-    args = parser.parse_args(argv)
+class EnvironmentCommand(Command):
+    name = "setup"
+    help = "개발 환경 및 도구체인 탐색/설정"
 
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="기존 캐시를 무시하고 설정을 처음부터 다시 탐색합니다.",
+        )
+        # configure 는 이 뒤에 늘 ToolchainVars.cmake 를 만든다 — 같은 프로세스에서 해 파이썬을 한 번 덜 띄운다(DetectToolchain.cmake).
+        parser.add_argument("--cmake-vars", type=Path, help="toolchain_config.json 을 CMake set() 목록으로도 쓴다(generate/toolchain_cmake.py)")
 
-    manager = EnvironmentSetupManager(force_refresh=args.force)
-    manager.run()
-    if args.cmake_vars:
-        try:
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+        manager = EnvironmentSetupManager(force_refresh=args.force)
+        manager.run()
+        if args.cmake_vars:
             generate_toolchain_cmake(args.cmake_vars)
-        except GeneratorError as error:
-            print(f"[ToolchainCMake] {error}", file=sys.stderr)
-            return ExitCode.VIOLATION
-    return ExitCode.PASSED
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(EnvironmentCommand.main())

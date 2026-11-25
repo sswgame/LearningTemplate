@@ -11,9 +11,15 @@ Scripts/lint/commit_message.py
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+
+from common.command import Command, ScriptContext  # noqa: E402
+from common.exit_code import ExitCode  # noqa: E402
 
 LABELS = ("원인", "조치", "결과")
 EXEMPT_SUBJECT_PREFIXES = ("Merge ", "Revert ", "fixup!", "squash!")
@@ -70,21 +76,23 @@ def find_problems(message: str) -> list[str]:
     return problems
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
-    if len(args) != 1:
-        print("[commit-msg] 쓰임: commit_message.py <메시지 파일>", file=sys.stderr)
-        return 2
-    message = Path(args[0]).read_text(encoding="utf-8", errors="replace")
-    problems = find_problems(message)
-    if not problems:
-        return 0
-    print("[commit-msg] 커밋 메시지 양식 위반 — 첫 줄 요약 + 본문 `원인:` → `조치:` → `결과:`(사용자 결정 2026-11-20):", file=sys.stderr)
-    for problem in problems:
-        print(f"  - {problem}", file=sys.stderr)
-    print(SAMPLE_MESSAGE, file=sys.stderr)
-    return 1
+class CommitMessageCommand(Command):
+    name = "commit-message"
+    help = "커밋 메시지 양식(첫 줄 요약 + 원인: → 조치: → 결과:)을 본다 — git commit-msg 훅이 부른다"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("message_file", type=Path, help="커밋 메시지 파일")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        problems = find_problems(args.message_file.read_text(encoding="utf-8", errors="replace"))
+        if not problems:
+            return ExitCode.PASSED
+        print("[commit-msg] 커밋 메시지 양식 위반 — 첫 줄 요약 + 본문 `원인:` → `조치:` → `결과:`(사용자 결정 2026-11-20):", file=sys.stderr)
+        for problem in problems:
+            print(f"  - {problem}", file=sys.stderr)
+        print(SAMPLE_MESSAGE, file=sys.stderr)
+        return ExitCode.VIOLATION
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(CommitMessageCommand.main())

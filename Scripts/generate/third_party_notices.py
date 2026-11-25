@@ -22,7 +22,8 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from generate.generator_output import write_generated_file  # noqa: E402
+from common.command import Command, ScriptContext  # noqa: E402
+from generate.generator_output import GeneratorError, write_generated_file  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 
 #: 포트를 짓는 데만 쓰는 vcpkg 도우미 포트의 이름 접두입니다 — 산출물에 들어가지 않는다.
@@ -191,30 +192,30 @@ def _make_notice_text(list_port: list[str], share_root: Path, list_vendored: Seq
     return "\n".join(list_line) + "\n"
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="vcpkg 설치 트리의 copyright 를 모아 서드파티 고지 파일을 씁니다.")
-    parser.add_argument("--manifest", required=True, help="vcpkg.json 경로")
-    parser.add_argument("--installed", required=True, help="vcpkg 설치 루트(VCPKG_INSTALLED_DIR)")
-    parser.add_argument("--triplet", required=True, help="대상 트리플릿(VCPKG_TARGET_TRIPLET)")
-    parser.add_argument("--out", required=True, help="쓸 고지 파일 경로")
-    parser.add_argument("--vendored-root", default=None, help="저장소에 둔 서드파티 코드 폴더(하위 폴더의 LICENSE.md 를 붙인다)")
-    parser.add_argument("--features", default="", help="켠 매니페스트 기능(VCPKG_MANIFEST_FEATURES, 쉼표로 가름) — 그 기능의 포트도 넣는다")
-    args = parser.parse_args(argv)
+class ThirdPartyNoticesCommand(Command):
+    name = "third-party-notices"
+    help = "vcpkg 설치 트리의 copyright 를 모아 서드파티 고지 파일을 쓴다(빌드 단계)"
 
-    status_path = Path(args.installed) / "vcpkg" / "status"
-    if status_path.is_file() is False:
-        print(f"[ThirdPartyNotices] no vcpkg status file: {status_path}", file=sys.stderr)
-        return ExitCode.VIOLATION
-    map_depends = _read_status_depends(status_path, args.triplet)
-    list_feature = [feature for feature in args.features.split(",") if feature]
-    list_port = _collect_ports(_read_manifest_ports(args.manifest, args.triplet, list_feature), map_depends)
-    list_vendored = _collect_vendored_licenses(args.vendored_root)
-    text = _make_notice_text(list_port, Path(args.installed) / args.triplet / "share", list_vendored)
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--manifest", required=True, help="vcpkg.json 경로")
+        parser.add_argument("--installed", required=True, help="vcpkg 설치 루트(VCPKG_INSTALLED_DIR)")
+        parser.add_argument("--triplet", required=True, help="대상 트리플릿(VCPKG_TARGET_TRIPLET)")
+        parser.add_argument("--out", required=True, help="쓸 고지 파일 경로")
+        parser.add_argument("--vendored-root", default=None, help="저장소에 둔 서드파티 코드 폴더(하위 폴더의 LICENSE.md 를 붙인다)")
+        parser.add_argument("--features", default="", help="켠 매니페스트 기능(VCPKG_MANIFEST_FEATURES, 쉼표로 가름) — 그 기능의 포트도 넣는다")
 
-    write_generated_file(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(list_port) + len(list_vendored)} libraries", newline="\n",
-                       report_unchanged=False)
-    return ExitCode.PASSED
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        status_path = Path(args.installed) / "vcpkg" / "status"
+        if status_path.is_file() is False:
+            raise GeneratorError(f"no vcpkg status file: {status_path}")
+        map_depends = _read_status_depends(status_path, args.triplet)
+        list_feature = [feature for feature in args.features.split(",") if feature]
+        list_port = _collect_ports(_read_manifest_ports(args.manifest, args.triplet, list_feature), map_depends)
+        list_vendored = _collect_vendored_licenses(args.vendored_root)
+        text = _make_notice_text(list_port, Path(args.installed) / args.triplet / "share", list_vendored)
+        write_generated_file(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(list_port) + len(list_vendored)} libraries", newline="\n", report_unchanged=False)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(ThirdPartyNoticesCommand.main())

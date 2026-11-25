@@ -619,7 +619,7 @@ namespace sw
 #define SW_DECLARE_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::Delegate<ReturnType( __VA_ARGS__ )>
 /** @brief MulticastDelegate 별칭을 선언합니다. */
 #define SW_DECLARE_MULTI_CAST_DELEGATE( ReturnType, DelegateName, ... ) using DelegateName = sw::MulticastDelegate<ReturnType( __VA_ARGS__ )>
-// 델리게이트에 함수를 붙일 때는 아래 셋을 쓴다(린트 cpp-shape 가 맨 create 를 막는다 — 바꾸기는 `py -3 -m Scripts delegate-macros`).
+// 델리게이트에 함수를 붙일 때는 아래 셋을 쓴다(린트 cpp-shape 가 맨 create 를 막는다).
 // `template` 은 의존 형식(`OnlineReplyDelegate<TMethod>`)에도 같은 매크로를 쓰게 한다 — C++11 부터 템플릿 밖에서도 허용된다.
 /** @brief 자유 함수를 델리게이트에 붙입니다. */
 #define SW_DELEGATE_FUNCTION( DelegateName, Func ) DelegateName::template create<Func>()

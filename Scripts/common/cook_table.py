@@ -96,16 +96,6 @@ class CookContractSpec:
             cls._map_cached[root] = cls(json.loads(config_path.read_text(encoding="utf-8")))
         return cls._map_cached[root]
 
-    # --- 값 --------------------------------------------------------------------
-
-    def find_backend(self, text: str) -> RhiBackendSpec | None:
-        """백엔드 이름(대소문자 무시 — EngineConfig · CMake 값) 또는 명령줄 이름으로 줄을 찾습니다. 모르면 None."""
-        key = text.strip().lower()
-        for backend in self.list_backend:
-            if key in (backend.name.lower(), backend.command_line_name):
-                return backend
-        return None
-
 
 def _make_backend(row: dict) -> RhiBackendSpec:
     backend = RhiBackendSpec(

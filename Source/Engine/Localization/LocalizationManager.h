@@ -68,10 +68,11 @@ namespace sw
         friend struct LocalizationManagerTestAccess;
 
     public:
-        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
+        /** @brief 서브시스템 이름입니다. 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)은 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "Localization";
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        /** @brief 엔진의 언어 관리자로 섭니다 — 이 뒤로 언어를 바꾸면 엔진의 리소스 조건(`locale` 축)이 따라간다. */
+        SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
         void                resetGameInstanceState( GameInstanceBoundary boundary ) override;
@@ -284,6 +285,8 @@ namespace sw
         const utf8* findByHash( uint64 keyHash ) const;
         /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
+        /** @brief 지금 언어를 엔진의 리소스 조건(`locale` 축)에 적습니다 — 언어가 정해지는 자리(바꾸기 · 프로젝트 올리기 · 표 읽기 · 비우기)마다 부른다. `_mutex` 밖에서 부른다. */
+        void syncLocaleTag() const;
 
     private:
         mutable shared_mutex                                            _mutex;
@@ -308,6 +311,9 @@ namespace sw
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
         atomic<uint32> _textRevision;
+        /// @brief 엔진 서비스로 선 관리자입니다. 따로 지은 관리자(에디터 UI 미리보기 · 도구 · 테스트)가 언어를 바꿔도 엔진 전체의 리소스 조건은 바뀌지 않는다.
+        uint8                  _bEngineInstance : 1;
+        [[maybe_unused]] uint8 _reserved        : 7;
         /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */
         LockedMulticastDelegate<void( string_view, string_view )> _onLanguageChanged;
 

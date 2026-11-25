@@ -12,7 +12,7 @@
 <Scenario name="game.playground.netpair.hub_walk_south" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Expect watch="Hub.NetRole" equals="0"/>
 	<Expect watch="Hub.PawnPredicted" equals="0"/>
-	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_south hub_south_pw_1 playground_hub 127.0.0.1:17877"/>
+	<DevCommand line="net.ticketconnect {gv_onlineServerAddress} hub_south hub_south_pw_1 playground_hub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="30"/>
 	<WaitUntil watch="Hub.PawnPredicted" equals="1" timeoutWallSeconds="20"/>
 	<!-- ① 상대의 폰(HubRemotePawn)이 선 뒤 걷는다 — 자리 값이 있으면 보인다 -->
@@ -54,8 +54,9 @@
 	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
 	<Expect watch="Hub.PawnFloor" equals="1"/>
 	<Expect watch="Hub.PawnFloorSlip" atMost="0.5"/>
-	<!-- 상대가 본 자리와 견줄 줄(`Scripts net-pair mmo`) — 상대가 남길 틈으로 바닥이 한 번 더 오간다 -->
-	<DevCommand line="hub.floor"/>
+	<!-- 상대가 본 자리와 견줄 값(보고의 records — `Scripts net-pair mmo`) — 상대가 남길 틈으로 바닥이 한 번 더 오간다 -->
+	<Record watch="Hub.PawnFloorX"/>
+	<Record watch="Hub.PawnFloorZ"/>
 	<WaitUntil watch="Object.X" target="FloorShuttle" atLeast="8.5" timeoutWallSeconds="20"/>
 	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
 	<Expect watch="Hub.PawnFloor" equals="1"/>

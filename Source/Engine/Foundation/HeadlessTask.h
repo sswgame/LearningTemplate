@@ -132,6 +132,11 @@ namespace sw
         static HeadlessTaskResult selectAndRun( span<const HeadlessTaskRegistration* const> listRegistration, HeadlessTaskContext& context, HeadlessLeakBaseline leakBaseline );
         /** @brief 등록된 작업으로 `selectAndRun` 합니다. */
         static HeadlessTaskResult runRequested( HeadlessTaskContext& context );
+        /**
+         * @brief 이 명령줄이 등록된 작업을 하나라도 청했으면 true 입니다 — `Headless` 단계보다 먼저 서는 것(오디오 장치 · 파일 감시 · 모듈 로드)이 헤드리스 실행인지 미리 본다.
+         * @details 작업은 엔진 · 개발 도구 이미지에 있어 기동 단계를 채울 때 모두 올라와 있다(모듈이 올리는 헤드리스 작업은 없다 — 모듈 로드 뒤라 여기서 보이지 않는다).
+         */
+        [[nodiscard]] static bool isAnyRequested( const CommandLineManager& commandLine );
     };
 } // namespace sw
 

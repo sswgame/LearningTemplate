@@ -26,7 +26,7 @@ class BlobReadsTest(unittest.TestCase):
         self.assertEqual(list_blob_reads(["clang-format", "show"], None), [])
 
     def test_show_names_its_blob(self) -> None:
-        self.assertEqual(list_blob_reads(["git", "show", "--no-patch", "HEAD:Scripts/lint/rules.py"], None), [("HEAD", "Scripts/lint/rules.py")])
+        self.assertEqual(list_blob_reads(["git", "show", "--no-patch", "HEAD:Scripts/lint/lint_rule.py"], None), [("HEAD", "Scripts/lint/lint_rule.py")])
 
 
 if __name__ == "__main__":

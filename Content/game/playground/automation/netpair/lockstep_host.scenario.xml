@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="f5d3a3a168b86ddf31976ffc0bef6e21"?>
+<!--
+  락스텝 2 인 대전(리슨 호스트, 0 번) — `lockstep_client` 의 짝. 클라이언트가 낸 명령이 여기서도 한 번 적용되고 600 걸음 넘게 비동기 없이 나아가는지 본다.
+  클라이언트가 다 보고 나갈 때(로그 id `LockstepSkirmish.PeerLost`)까지 판을 이어 준다 — 먼저 나가면 상대의 걸음이 멈춘다.
+-->
+<Scenario name="game.playground.netpair.lockstep_host" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<WaitUntil watch="Skirmish.LockstepPlayer" equals="0" timeoutWallSeconds="90"/>
+	<WaitUntil watch="Skirmish.LockstepClientCommands" equals="1" timeoutWallSeconds="540"/>
+	<WaitUntil watch="Skirmish.LockstepTick" atLeast="600" timeoutWallSeconds="120"/>
+	<Expect watch="Skirmish.LockstepDesynced" equals="0"/>
+	<Expect watch="Skirmish.LockstepClientCommands" equals="1"/>
+	<WaitUntil watch="Log.Count" key="LockstepSkirmish.PeerLost" atLeast="1" timeoutWallSeconds="180"/>
+	<Pass/>
+</Scenario>

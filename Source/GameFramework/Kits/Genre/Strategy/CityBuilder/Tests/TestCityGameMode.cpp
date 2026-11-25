@@ -41,6 +41,7 @@ SW_TEST_CASE( CityGameModeTest, BuildCommandsBeforeTheTownOpensAreRefused )
 SW_TEST_CASE( CityGameModeTest, TownWithoutCityDataDoesNotOpen )
 {
     SW_EXPECT_LOG( "GameMode.RequiredAssetMissing" );
+    SW_EXPECT_LOG( "ObjectValidation.RequiredEmptyAtBeginPlay" ); // 랜드마크 건물(필수 칸)도 적지 않은 씬이다
     GameObjectManager      manager;
     CityGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<CityGameModeComponent>();
     SW_REQUIRE_NOT_NULL( pGameMode );

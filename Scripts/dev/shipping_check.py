@@ -36,20 +36,17 @@ import os
 import re
 import signal
 import subprocess
-import sys
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import app_arguments  # noqa: E402
-from common.exit_code import ExitCode  # noqa: E402
-from common.host_platform import executable_name, is_windows_host  # noqa: E402
-from common.paths import get_bin_dir, get_build_dir, get_project_root  # noqa: E402
-from common.run_process import run_cmake, run_process  # noqa: E402
-from package.pack import LIST_SHARED_PACK_NAME, PACK_FOLDER_NAME, list_pack_name_of_game  # noqa: E402
-from package.pack_index import PackIndexError, read_pack_paths  # noqa: E402
+from common.command import Command, ScriptContext
+from common import app_arguments
+from common.exit_code import ExitCode
+from common.host_platform import executable_name, is_windows_host
+from common.paths import get_bin_dir, get_build_dir
+from common.run_process import run_cmake, run_process
+from package.pack_files import LIST_SHARED_PACK_NAME, PACK_FOLDER_NAME, list_pack_name_of_game
+from package.pack_index import PackIndexError, read_pack_paths
 
 #: 배포 App 을 살려 두는 시간(초) — 기동 · 첫 씬 · 몇 프레임이 지나기에 넉넉하다.
 APP_RUN_SECONDS = 8.0
@@ -278,38 +275,38 @@ def report_log_lines(result: SmokeResult) -> int:
     return unexpected_error_count
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="배포 프리셋을 빌드하고 산출물의 기동 · 종료를 본다")
-    parser.add_argument("--skip-build", action="store_true", help="빌드를 건너뛰고 지어 둔 산출물만 띄운다")
-    args = parser.parse_args(argv)
-    project_root = get_project_root()
+class ShippingCheckCommand(Command):
+    name = "shipping-check"
+    help = "배포 프리셋 둘(클라이언트 · 서버 · 개발 인자 거절)을 빌드하고 산출물의 기동 · 종료를 본다(묶음 검증 build 단계)"
 
-    list_run = ((run_app, "Ninja-Shipping"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
-    if args.skip_build is False:
-        list_failed_build = [preset for preset in dict.fromkeys(preset for _, preset in list_run) if build_preset(project_root, preset) is False]
-        if list_failed_build:
-            print(f"[shipping-check] FAILED build: {', '.join(list_failed_build)}", flush=True)
-            for preset in list_failed_build:
-                report_cook_log(project_root, preset)
-            return ExitCode.VIOLATION
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--skip-build", action="store_true", help="빌드를 건너뛰고 지어 둔 산출물만 띄운다")
 
-    all_passed = True
-    for check in (check_no_test_variables, check_redirect_tables):
-        result = check(project_root)
-        print(f"[shipping-check] {result.name}: {'PASS' if result.passed else 'FAIL'} - {result.reason}", flush=True)
-        all_passed = all_passed and result.passed
-    list_failed_preset: list[str] = []
-    for run, preset in list_run:
-        result = run(project_root)
-        print(f"[shipping-check] {result.name}: {'PASS' if result.passed else 'FAIL'} - {result.reason} ({result.log_path})", flush=True)
-        unexpected_error_count = report_log_lines(result)
-        if result.passed is False or unexpected_error_count > 0:
-            all_passed = False
-            list_failed_preset.append(preset)
-    for preset in dict.fromkeys(list_failed_preset):
-        report_cook_log(project_root, preset)  # 실행이 진 까닭이 팩(빠진 셰이더 · 데이터)이면 굽기 로그에 그 줄이 있다
-    return ExitCode.PASSED if all_passed else ExitCode.VIOLATION
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        project_root = context.root
 
+        list_run = ((run_app, "Ninja-Shipping"), (run_server, "Ninja-Shipping-Server"), (run_dev_arguments_rejected, "Ninja-Shipping"))
+        if args.skip_build is False:
+            list_failed_build = [preset for preset in dict.fromkeys(preset for _, preset in list_run) if build_preset(project_root, preset) is False]
+            if list_failed_build:
+                print(f"[shipping-check] FAILED build: {', '.join(list_failed_build)}", flush=True)
+                for preset in list_failed_build:
+                    report_cook_log(project_root, preset)
+                return ExitCode.VIOLATION
 
-if __name__ == "__main__":
-    sys.exit(main())
+        all_passed = True
+        for check in (check_no_test_variables, check_redirect_tables):
+            result = check(project_root)
+            print(f"[shipping-check] {result.name}: {'PASS' if result.passed else 'FAIL'} - {result.reason}", flush=True)
+            all_passed = all_passed and result.passed
+        list_failed_preset: list[str] = []
+        for run, preset in list_run:
+            result = run(project_root)
+            print(f"[shipping-check] {result.name}: {'PASS' if result.passed else 'FAIL'} - {result.reason} ({result.log_path})", flush=True)
+            unexpected_error_count = report_log_lines(result)
+            if result.passed is False or unexpected_error_count > 0:
+                all_passed = False
+                list_failed_preset.append(preset)
+        for preset in dict.fromkeys(list_failed_preset):
+            report_cook_log(project_root, preset)  # 실행이 진 까닭이 팩(빠진 셰이더 · 데이터)이면 굽기 로그에 그 줄이 있다
+        return ExitCode.PASSED if all_passed else ExitCode.VIOLATION

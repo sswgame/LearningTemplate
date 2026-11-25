@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Modules/Environment/DetectToolchain.cmake
-# @brief Scripts/setup/Environment.py를 실행하여 개발 환경을 탐색하고,
+# @brief Scripts/setup/environment.py를 실행하여 개발 환경을 탐색하고,
 # 생성된 Config/Environment/toolchain_config.json으로부터 LLVM/vcpkg/SDK 경로를 CMake에 주입
 #
 # [동작 파이프라인]:
