@@ -9,11 +9,10 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Runtime/Online/Ledger/Server/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -33,11 +32,8 @@ namespace sw
     {
         struct LedgerInternal
         {
-            static constexpr FormatDef kJournalFormat{ "LJRN" };
-            static constexpr FormatDef kCarryFormat{ "LCRY" };
-            static constexpr FormatDef kTombstoneFormat{ "LTMB" };
-            static constexpr int32     kListPageSize = 64;
-            static constexpr int32     kTimeHexWidth = 16;
+            static constexpr int32 kListPageSize = 64;
+            static constexpr int32 kTimeHexWidth = 16;
 
             /** @brief 한 (보유자, 자산)의 순변화입니다. */
             struct Delta
@@ -56,13 +52,6 @@ namespace sw
                 return result;
             }
 
-            static vector<uint8> encodeBalance( int64 amount )
-            {
-                BitWriter writer;
-                writer.writeVarInt( amount );
-                return writer.releaseBytes();
-            }
-
             static uint64 computeContentHash( const LedgerTransferRequest& request )
             {
                 BitWriter writer;
@@ -77,108 +66,77 @@ namespace sw
                 return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
             }
 
-            static vector<uint8> encodeJournal( const LedgerTransferRequest& request, uint64 contentHash, const vector<LedgerTransferResult::HolderBalance>& listHolderBalance )
+            static LedgerJournalRecord encodeJournal( const LedgerTransferRequest& request, uint64 contentHash, const vector<LedgerTransferResult::HolderBalance>& listHolderBalance )
             {
-                BitWriter writer;
-                kJournalFormat.writeVersion( writer );
-                writer.writeVarInt( request._timeMs );
-                writer.writeVarUint( static_cast<uint64>( request._actorKind ) );
-                writer.writeVarUint( request._actorID );
-                writer.writeUint32( static_cast<uint32>( contentHash >> 32 ) );
-                writer.writeUint32( static_cast<uint32>( contentHash ) );
-                ServiceKeyUtil::writeString( writer, request._reason );
-                ServiceKeyUtil::writeString( writer, request._memo );
-                writer.writeVarUint( request._listPosting.size() );
-                for ( const LedgerPosting& posting : request._listPosting )
-                {
-                    LedgerPosting::write( writer, posting );
-                }
-                writer.writeVarUint( listHolderBalance.size() );
+                LedgerJournalRecord record;
+                record._timeMs      = request._timeMs;
+                record._actorKind   = request._actorKind;
+                record._actorID     = request._actorID;
+                record._contentHash = contentHash;
+                record._reason      = request._reason;
+                record._memo        = request._memo;
+                record._listPosting = request._listPosting;
                 for ( const LedgerTransferResult::HolderBalance& holderBalance : listHolderBalance )
                 {
-                    LedgerHolder::write( writer, holderBalance._holder );
-                    ServiceKeyUtil::writeString( writer, holderBalance._balance._assetID );
-                    writer.writeVarInt( holderBalance._balance._amount );
+                    record._listHolderBalance.push_back( LedgerJournalBalance{ holderBalance._holder, holderBalance._balance._assetID, holderBalance._balance._amount } );
                 }
-                return writer.releaseBytes();
+                return record;
             }
 
-            [[nodiscard]] static bool decodeJournal( const vector<uint8>& bytes, LedgerJournalEntry& outEntry, vector<LedgerTransferResult::HolderBalance>* pOutListHolderBalance )
+            /** @brief 받은 분개를 읽습니다. 깨졌거나(표가 오류 로그를 남긴다) 보유자 · 행위자가 규칙 밖이면 false 입니다. */
+            [[nodiscard]] static bool decodeJournal( const ServiceRecord& raw, LedgerJournalEntry& outEntry, vector<LedgerTransferResult::HolderBalance>* pOutListHolderBalance )
             {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kJournalFormat.readVersion( reader ) == false )
+                LedgerJournalRecord record;
+                if ( Ledger::getJournalTable().decode( raw, record ) == false || record._actorKind == LedgerActorKind::Count )
                     return false;
-                outEntry._timeMs       = reader.readVarInt();
-                const uint64 actorKind = reader.readVarUint();
-                outEntry._actorID      = reader.readVarUint();
-                const uint64 hashHigh  = reader.readUint32();
-                const uint64 hashLow   = reader.readUint32();
-                outEntry._contentHash  = ( hashHigh << 32 ) | hashLow;
-                if ( actorKind >= static_cast<uint64>( LedgerActorKind::Count ) )
-                    return false;
-                outEntry._actorKind = static_cast<LedgerActorKind>( actorKind );
-                if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxReasonSize, outEntry._reason ) == false )
-                    return false;
-                if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxStoredTextSize, outEntry._memo ) == false )
-                    return false;
-                const uint64 postingCount = reader.readVarUint();
-                if ( postingCount > static_cast<uint64>( LedgerConstant::kMaxPostingCount ) )
-                    return false;
-                outEntry._listPosting.resize( static_cast<size_t>( postingCount ) );
-                for ( LedgerPosting& posting : outEntry._listPosting )
+                for ( const LedgerPosting& posting : record._listPosting )
                 {
-                    if ( LedgerPosting::read( reader, posting ) == false )
+                    if ( posting._from.isValid() == false || posting._to.isValid() == false )
                         return false;
                 }
-                const uint64 balanceCount = reader.readVarUint();
-                if ( balanceCount > static_cast<uint64>( LedgerConstant::kMaxPostingCount * 2 ) )
-                    return false;
+                for ( const LedgerJournalBalance& balance : record._listHolderBalance )
+                {
+                    if ( balance._holder.isValid() == false )
+                        return false;
+                }
+                outEntry._timeMs      = record._timeMs;
+                outEntry._actorKind   = record._actorKind;
+                outEntry._actorID     = record._actorID;
+                outEntry._contentHash = record._contentHash;
+                outEntry._reason      = std::move( record._reason );
+                outEntry._memo        = std::move( record._memo );
+                outEntry._listPosting = std::move( record._listPosting );
                 if ( pOutListHolderBalance != nullptr )
-                    pOutListHolderBalance->clear();
-                for ( uint64 balanceIndex = 0; balanceIndex < balanceCount; ++balanceIndex )
                 {
-                    LedgerTransferResult::HolderBalance holderBalance;
-                    if ( LedgerHolder::read( reader, holderBalance._holder ) == false )
-                        return false;
-                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, holderBalance._balance._assetID ) == false )
-                        return false;
-                    holderBalance._balance._amount = reader.readVarInt();
-                    if ( pOutListHolderBalance != nullptr )
-                        pOutListHolderBalance->push_back( std::move( holderBalance ) );
+                    pOutListHolderBalance->clear();
+                    for ( LedgerJournalBalance& balance : record._listHolderBalance )
+                    {
+                        LedgerTransferResult::HolderBalance& holderBalance = pOutListHolderBalance->emplace_back();
+                        holderBalance._holder                              = std::move( balance._holder );
+                        holderBalance._balance._assetID                    = std::move( balance._assetID );
+                        holderBalance._balance._amount                     = balance._amount;
+                    }
                 }
-                return reader.hasOverflowed() == false;
+                return true;
             }
 
             /** @brief 분개 레코드에서 이동 시각을 읽습니다(분개 쓸기 규칙 용). 분개 전체를 읽지 못하면 false 라 지우지 않는다 — 이월에 넣지 못하는 분개다. */
             static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs )
             {
                 LedgerJournalEntry entry;
-                if ( decodeJournal( record._bytes, entry, nullptr ) == false )
+                if ( decodeJournal( record, entry, nullptr ) == false )
                     return false;
                 outTimeMs = entry._timeMs;
                 return true;
             }
 
-            static vector<uint8> encodeCarry( const LedgerSupplyStats& supply )
+            [[nodiscard]] static bool decodeCarry( const ServiceRecord& raw, LedgerSupplyStats& inoutSupply )
             {
-                BitWriter writer;
-                kCarryFormat.writeVersion( writer );
-                writer.writeVarInt( supply._issued );
-                writer.writeVarInt( supply._burned );
-                return writer.releaseBytes();
-            }
-
-            [[nodiscard]] static bool decodeCarry( const vector<uint8>& bytes, LedgerSupplyStats& inoutSupply )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kCarryFormat.readVersion( reader ) == false )
+                LedgerCarryRecord record;
+                if ( Ledger::getCarryTable().decode( raw, record ) == false )
                     return false;
-                const int64 issued = reader.readVarInt();
-                const int64 burned = reader.readVarInt();
-                if ( reader.hasOverflowed() )
-                    return false;
-                inoutSupply._issued = issued;
-                inoutSupply._burned = burned;
+                inoutSupply._issued = record._issued;
+                inoutSupply._burned = record._burned;
                 return true;
             }
 
@@ -215,7 +173,7 @@ namespace sw
                 for ( const ServiceRecord* pRecord : listErased )
                 {
                     LedgerJournalEntry entry;
-                    if ( decodeJournal( pRecord->_bytes, entry, nullptr ) == false )
+                    if ( decodeJournal( *pRecord, entry, nullptr ) == false )
                         return ServiceStoreResult::Invalid; // 시각을 읽은 분개라 여기 오지 않는다
                     Ledger::addSupply( entry, mapSupply );
                     stageHistoryErase( entry, pRecord->_key, inoutTransaction );
@@ -227,14 +185,11 @@ namespace sw
                     if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                         return read;
                     LedgerSupplyStats total{ assetID };
-                    if ( read == ServiceStoreResult::Ok && decodeCarry( carryRecord._bytes, total ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "Ledger.LedgerCarryUnreadable", "Ledger carry '%#' is unreadable", assetID.c_str() );
-                        return ServiceStoreResult::Invalid; // 깨진 이월에 더하면 합이 틀린다 - 지우지 않고 멈춘다
-                    }
+                    if ( read == ServiceStoreResult::Ok && decodeCarry( carryRecord, total ) == false )
+                        return ServiceStoreResult::Invalid; // 깨진 이월(표가 오류 로그를 남긴다)에 더하면 합이 틀린다 - 지우지 않고 멈춘다
                     total._issued += supply._issued;
                     total._burned += supply._burned;
-                    inoutTransaction.put( Ledger::getCarryTable(), assetID, encodeCarry( total ), carryRecord._version );
+                    inoutTransaction.put( Ledger::getCarryTable(), assetID, LedgerCarryRecord{ total._issued, total._burned, {} }, carryRecord._version );
                 }
                 return ServiceStoreResult::Ok;
             }
@@ -341,10 +296,10 @@ namespace sw
             }
 
             /** @brief 저장된 분개로 결과를 채웁니다(같은 내용이면 Ok + 다시 돌려줌, 다르면 JournalKeyReused). */
-            static LedgerResult replayJournal( const vector<uint8>& bytes, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
+            static LedgerResult replayJournal( const ServiceRecord& journalRecord, const LedgerTransferRequest& request, LedgerTransferResult& outResult )
             {
                 LedgerJournalEntry entry;
-                if ( decodeJournal( bytes, entry, &outResult._listHolderBalance ) == false )
+                if ( decodeJournal( journalRecord, entry, &outResult._listHolderBalance ) == false )
                 {
                     SW_LOG_ERROR_ID( "Ledger.LedgerJournalUnreadable", "Ledger journal '%#' is unreadable", request._journalKey.c_str() );
                     return finish( outResult, LedgerResult::Unavailable );
@@ -404,7 +359,7 @@ namespace sw
                 ServiceRecord            journalRecord;
                 const ServiceStoreResult journalRead = connection.readRecord( Ledger::getJournalTable(), request._journalKey, journalRecord );
                 if ( journalRead == ServiceStoreResult::Ok )
-                    return replayJournal( journalRecord._bytes, request, outResult );
+                    return replayJournal( journalRecord, request, outResult );
                 if ( journalRead != ServiceStoreResult::NotFound )
                     return finish( outResult, LedgerResult::Unavailable );
 
@@ -426,11 +381,8 @@ namespace sw
                     if ( balanceRead != ServiceStoreResult::Ok && balanceRead != ServiceStoreResult::NotFound )
                         return finish( outResult, LedgerResult::Unavailable );
                     int64 currentAmount = 0;
-                    if ( balanceRead == ServiceStoreResult::Ok && Ledger::decodeBalanceRecord( balanceRecord._bytes, currentAmount ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", balanceKey.c_str() );
-                        return finish( outResult, LedgerResult::Unavailable );
-                    }
+                    if ( balanceRead == ServiceStoreResult::Ok && Ledger::decodeBalanceRecord( balanceRecord, currentAmount ) == false )
+                        return finish( outResult, LedgerResult::Unavailable ); // 표가 오류 로그를 남겼다
                     const int64 nextAmount = currentAmount + delta._delta;
                     if ( isAmountAllowed( request, delta, nextAmount ) == false )
                     {
@@ -448,7 +400,7 @@ namespace sw
                         if ( nextAmount == 0 )
                             pending.erase( Ledger::getBalanceTable(), balanceKey, balanceRecord._version );
                         else
-                            pending.put( Ledger::getBalanceTable(), balanceKey, encodeBalance( nextAmount ), balanceRecord._version );
+                            pending.put( Ledger::getBalanceTable(), balanceKey, LedgerBalanceRecord{ nextAmount, {} }, balanceRecord._version );
                     }
                     LedgerTransferResult::HolderBalance& holderBalance = outResult._listHolderBalance.emplace_back();
                     holderBalance._holder                              = delta._holder;
@@ -571,27 +523,27 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& Ledger::getBalanceTable()
+    const ServiceRecordTable<LedgerBalanceRecord>& Ledger::getBalanceTable()
     {
-        static const hashed_string s_table{ "ledger_balance" };
+        static const ServiceRecordTable<LedgerBalanceRecord> s_table{ "ledger_balance" };
         return s_table;
     }
 
-    const hashed_string& Ledger::getJournalTable()
+    const ServiceRecordTable<LedgerJournalRecord>& Ledger::getJournalTable()
     {
-        static const hashed_string s_table{ "ledger_journal" };
+        static const ServiceRecordTable<LedgerJournalRecord> s_table{ "ledger_journal" };
         return s_table;
     }
 
-    const hashed_string& Ledger::getCarryTable()
+    const ServiceRecordTable<LedgerCarryRecord>& Ledger::getCarryTable()
     {
-        static const hashed_string s_table{ "ledger_carry" };
+        static const ServiceRecordTable<LedgerCarryRecord> s_table{ "ledger_carry" };
         return s_table;
     }
 
-    const hashed_string& Ledger::getTombstoneTable()
+    const ServiceRecordTable<LedgerTombstoneRecord>& Ledger::getTombstoneTable()
     {
-        static const hashed_string s_table{ "ledger_tombstone" };
+        static const ServiceRecordTable<LedgerTombstoneRecord> s_table{ "ledger_tombstone" };
         return s_table;
     }
 
@@ -604,10 +556,7 @@ namespace sw
     void Ledger::stageAccountDeletion( uint64 accountID, int64 timeMs, ServiceTransaction& inoutTransaction )
     {
         const string key = LedgerHolder::makeAccount( accountID ).makeKey();
-        BitWriter    writer;
-        LedgerInternal::kTombstoneFormat.writeVersion( writer );
-        writer.writeVarInt( timeMs );
-        inoutTransaction.put( getTombstoneTable(), key, writer.releaseBytes() );
+        inoutTransaction.put( getTombstoneTable(), key, LedgerTombstoneRecord{ timeMs, {} } );
         inoutTransaction.put( getDeletionQueueTable(), key );
     }
 
@@ -684,7 +633,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 LedgerSupplyStats carried{ record._key };
-                if ( LedgerInternal::decodeCarry( record._bytes, carried ) == false )
+                if ( LedgerInternal::decodeCarry( record, carried ) == false )
                 {
                     ++outUnreadableCount;
                     continue;
@@ -719,7 +668,7 @@ namespace sw
         if ( journalRead == ServiceStoreResult::Ok )
         {
             outResult._listHolderBalance.clear();
-            return LedgerInternal::replayJournal( journalRecord._bytes, request, outResult );
+            return LedgerInternal::replayJournal( journalRecord, request, outResult );
         }
         if ( journalRead == ServiceStoreResult::NotFound )
             return LedgerInternal::finish( outResult, LedgerResult::Conflict );
@@ -795,11 +744,8 @@ namespace sw
             LedgerBalance& balance = outListBalance.emplace_back();
             balance._assetID       = record._key.substr( prefix.size() );
             balance._version       = record._version;
-            if ( decodeBalanceRecord( record._bytes, balance._amount ) == false )
-            {
-                SW_LOG_ERROR_ID( "Ledger.LedgerBalanceUnreadable", "Ledger balance '%#' is unreadable", record._key.c_str() );
-                return ServiceStoreResult::Unavailable;
-            }
+            if ( decodeBalanceRecord( record, balance._amount ) == false )
+                return ServiceStoreResult::Unavailable; // 표가 오류 로그를 남겼다
         }
         return ServiceStoreResult::Ok;
     }
@@ -818,7 +764,7 @@ namespace sw
         if ( read != ServiceStoreResult::Ok )
             return read;
         outBalance._version = record._version;
-        return decodeBalanceRecord( record._bytes, outBalance._amount ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+        return decodeBalanceRecord( record, outBalance._amount ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
     }
 
     ServiceStoreResult Ledger::listHistory( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view cursor, int32 maxCount,
@@ -864,21 +810,20 @@ namespace sw
         if ( read != ServiceStoreResult::Ok )
             return read;
         outEntry._journalKey = string( journalKey );
-        return LedgerInternal::decodeJournal( record._bytes, outEntry, nullptr ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+        return LedgerInternal::decodeJournal( record, outEntry, nullptr ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
     }
 
     void Ledger::appendWrites( const ServiceTransaction& source, ServiceTransaction& inoutTarget )
     {
-        for ( const ServiceWrite& write : source.getWrites() )
-        {
-            inoutTarget.addWrite( write );
-        }
+        inoutTarget.append( source );
     }
 
-    bool Ledger::decodeBalanceRecord( const vector<uint8>& bytes, int64& outAmount )
+    bool Ledger::decodeBalanceRecord( const ServiceRecord& raw, int64& outAmount )
     {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        outAmount = reader.readVarInt();
-        return reader.hasOverflowed() == false;
+        LedgerBalanceRecord record;
+        if ( getBalanceTable().decode( raw, record ) == false )
+            return false;
+        outAmount = record._amount;
+        return true;
     }
 } // namespace sw

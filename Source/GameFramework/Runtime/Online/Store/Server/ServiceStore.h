@@ -147,8 +147,17 @@ namespace sw
         void requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 fingerprint );
         /** @brief 이 트랜잭션을 커밋하지 못하게 합니다(`Invalid`). 넣으려던 값이 규칙을 어겨 일부만 쓰면 안 될 때 — 빈 키 같은 가짜 쓰기로 대신하지 않는다. */
         void markMalformed() { _bMalformed = SW_TRUE; }
-        /** @brief 쓰기 하나를 그대로 덧붙입니다(다른 트랜잭션에서 짠 쓰기를 옮길 때). */
+        /** @brief 쓰기 하나를 그대로 덧붙입니다(조건을 고친 사본을 다시 짤 때 — 읽기 집합 연결 · 운영 쓰기). */
         void addWrite( const ServiceWrite& write ) { _listWrite.push_back( write ); }
+        /** @brief 다른 트랜잭션의 쓰기를 모두 덧붙입니다. 그 트랜잭션이 커밋하지 못하는 것이었으면(`markMalformed`) 이것도 그렇다 — 쓰지 못한 값을 빈 값으로 옮기지 않는다. */
+        void append( const ServiceTransaction& source )
+        {
+            _listWrite.insert( _listWrite.end(), source._listWrite.begin(), source._listWrite.end() );
+            if ( source._bMalformed == SW_TRUE )
+                _bMalformed = SW_TRUE;
+        }
+        /** @brief 표 형식으로 쓰지 못한 값이 있었는지입니다(`markMalformed`). 사본을 다시 짜는 쪽이 본다. */
+        bool isMalformed() const { return _bMalformed == SW_TRUE; }
         void clear()
         {
             _listWrite.clear();

@@ -71,6 +71,8 @@ namespace sw
             return nullptr;
         };
         ServiceTransaction conditioned;
+        if ( transaction.isMalformed() )
+            conditioned.markMalformed(); // 사본도 커밋하지 못한다 — 쓰지 못한 값이 빈 값으로 들어가지 않는다
         for ( const ServiceWrite& write : listWrite )
         {
             ServiceWrite           copy  = write;

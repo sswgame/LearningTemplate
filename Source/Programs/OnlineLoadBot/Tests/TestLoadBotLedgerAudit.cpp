@@ -48,7 +48,7 @@ namespace
         ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override { return _inner.readRecord( table, key, outRecord ); }
         ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, vector<ServiceRecord>& outListRecord ) override
         {
-            if ( _bInterleaved == false && table == Ledger::getBalanceTable() )
+            if ( _bInterleaved == false && table == Ledger::getBalanceTable().getName() )
             {
                 _bInterleaved = true;
                 LedgerTransferResult moved;
