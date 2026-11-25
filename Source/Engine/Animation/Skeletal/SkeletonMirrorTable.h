@@ -15,6 +15,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -54,7 +55,7 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `AnimationAssetCache.cpp` 의 공유 캐시 줄 — 스켈레톤 · 본 LOD 와 같은 자리). */
+        /** @brief 이 에셋 종류입니다(등록은 SkeletonMirrorTable.cpp 끝의 공유 캐시 줄 — 스켈레톤 · 본 LOD 와 같은 자리). */
         static constexpr AssetTypeDef kAssetType{ "SkeletonMirrorTable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief XML 본문을 읽습니다. 모르는 키 · 빠진 칸이면 오류를 남기고 false 이며 표는 빕니다. */
@@ -110,4 +111,7 @@ namespace sw
         IdentityToken                       _builtRevision;  ///< 짝 번호 표를 만든 표 내용 토큰이다
         const Skeleton*                     _pBuiltSkeleton; ///< 짝 번호 표를 만든 스켈레톤이다(동일성만 확인한다)
     };
+
+    /** @brief 스켈레톤 옆의 미러 표를 나눠 줍니다("SkeletonMirrorTable"). 짝 번호 표를 든 쪽은 `SkeletonMirrorTable::getRevision` 으로 다시 읽힌 것을 알아챕니다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SkeletonMirrorTable );
 } // namespace sw

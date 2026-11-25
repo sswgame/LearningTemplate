@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
@@ -206,4 +207,9 @@ namespace sw
         return FileUtil::joinPath( FileUtil::joinPath( "common/models/_retargeted", profileName ), FileUtil::getFileNamePart( sourceClipPath ) );
     }
 
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( AnimationSet, AnimationSet, AnimationSet::kAssetType.withLoader( AssetTypeLoader::of<AnimationSet>( MemoryTag::Animation ) ) );
 } // namespace sw

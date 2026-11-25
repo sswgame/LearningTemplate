@@ -16,6 +16,7 @@
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -351,4 +352,7 @@ namespace sw
         uint8                  _bPartial : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };
+
+    /** @brief 스켈레톤을 경로별로 나눠 줍니다("Skeleton"). 같은 경로는 같은 객체라서 클립에서 본으로 가는 테이블을 스켈레톤 포인터로 캐시할 수 있습니다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, Skeleton );
 } // namespace sw

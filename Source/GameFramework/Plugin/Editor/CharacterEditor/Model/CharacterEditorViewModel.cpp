@@ -12,7 +12,6 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/SaveReloadGuard.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
