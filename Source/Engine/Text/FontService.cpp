@@ -107,7 +107,7 @@ namespace sw
     }
 
     FontService::FontService( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization )
-        : _rasterizer{ std::move( rasterizer ) }
+        : _rasterizer{ rasterizer != nullptr ? std::move( rasterizer ) : IFontRasterizer::createDefault() }
         , _glyphCache{}
         , _catalog{}
         , _mapOpenedFamilyFace{}
@@ -119,6 +119,8 @@ namespace sw
         , _pLocalization{ pLocalization }
         , _bInitialized{ SW_FALSE }
     {
+        if ( _rasterizer == nullptr )
+            reportFatalError( "the font service could not create its rasterizer - no text can be drawn" );
     }
 
     FontService::~FontService()
@@ -138,10 +140,6 @@ namespace sw
     {
         shutdown();
         if ( catalog.validate() == false )
-            return false;
-        if ( _rasterizer == nullptr )
-            _rasterizer = IFontRasterizer::createDefault();
-        if ( _rasterizer == nullptr )
             return false;
         _catalog                     = std::move( catalog );
         _glyphCache                  = make_unique<GlyphCache>( *_rasterizer, _catalog._glyphField, GlyphAtlasLayout{ _catalog._glyphAtlasPageSize, _catalog._glyphAtlasMaxPageCount, _catalog._glyphRetainFrameCount } );
@@ -173,13 +171,10 @@ namespace sw
     void FontService::shutdown()
     {
         _glyphCache.reset();
-        if ( _rasterizer != nullptr )
+        for ( const auto& [key, face] : _mapOpenedFile )
         {
-            for ( const auto& [key, face] : _mapOpenedFile )
-            {
-                (void)key;
-                _rasterizer->unloadFace( face );
-            }
+            (void)key;
+            _rasterizer->unloadFace( face );
         }
         _mapOpenedFamilyFace.clear();
         _mapOpenedFile.clear();
@@ -253,7 +248,7 @@ namespace sw
     FontFaceID FontService::findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex )
     {
         outGlyphIndex = IFontRasterizer::kNotdefGlyphIndex;
-        if ( chain._faceCount == 0 || _rasterizer == nullptr )
+        if ( chain._faceCount == 0 )
             return kInvalidFontFaceID;
         for ( uint32 index = 0; index < chain._faceCount; ++index )
         {
