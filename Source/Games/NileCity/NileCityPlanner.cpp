@@ -10,6 +10,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -21,12 +22,6 @@ namespace sw
     {
         struct NileCityPlannerInternal
         {
-            /** @brief 동쪽 사막이 시작하는 x(실수)입니다 — 모래 언덕처럼 베이크한다. */
-            static float32 computeDesertEdge( const NileCityLayout& layout, int32 y )
-            {
-                return static_cast<float32>( layout._desertStartX ) + layout._desertDuneHeight * MathUtil::sin( static_cast<float32>( y ) * layout._desertDuneRate );
-            }
-
             /**
              * @brief 순서표의 칸 글 "x,y" 를 읽습니다. x 는 수이거나 배치의 칸 이름(`road` = 남북 도로, `farm` = 농장 왼쪽)입니다.
              * @return 칸. 모양이 틀리면 그 칸 글이 대상인 오류입니다(부르는 쪽이 원소와 함께 알린다).
@@ -59,14 +54,6 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the block is not 1..3", to_string( block ) } );
                 return arrBlockPopulation[block - 1];
             }
-
-            /** @brief 사막의 바위 — 흩어진 돌(결정적 무늬)과 동쪽 끝 능선입니다. */
-            static bool isRock( const NileCityLayout& layout, int32 x, int32 y )
-            {
-                if ( ( x * 7 + y * 3 ) % 13 == 0 )
-                    return true;
-                return x >= layout._rockRidgeX && ( y / 4 ) % 3 == 0;
-            }
         };
     } // namespace
 } // namespace sw
@@ -86,46 +73,42 @@ namespace sw
         io.check( _nextStep <= static_cast<int32>( _listStep.size() ) ); // 계획표와의 검사만 손으로 — 칸마다의 범위는 `PROPERTY( Min )` 이 지킨다
     }
 
-    float32 NileCityPlanner::computeRiverCenter( const NileCityLayout& layout, int32 y )
+    bool NileCityPlanner::paintTerrain( CitySimulation& city, const TileMapXMLData& tileMap, const vector<hashed_string>& listTerrain )
     {
-        return layout._riverCenterX + layout._riverMeander * MathUtil::sin( static_cast<float32>( y ) * layout._riverMeanderRate );
-    }
-
-    bool NileCityPlanner::paintTerrain( CitySimulation& city, const NileCityLayout& layout )
-    {
-        bool       bKnown      = true;
-        const auto findTerrain = [&city, &bKnown]( const hashed_string& id )
+        const optional<uint32> layer = tileMap.findDataLayer( kTerrainLayer );
+        if ( layer.has_value() == false || tileMap._width != city.getWidth() || tileMap._height != city.getHeight() )
+        {
+            SW_LOG_ERROR_ID( "NileCityPlanner.MapLayerMissing", "[Nile] the %#x%# tile map has no data layer '%#' for the %#x%# city - nothing is painted", tileMap._width, tileMap._height, kTerrainLayer,
+                             city.getWidth(), city.getHeight() );
+            return false;
+        }
+        bool          bKnown = true;
+        vector<int32> listRow; // 목록 번호 → 카탈로그 행 번호
+        for ( const hashed_string& id : listTerrain )
         {
             const optional<int32> index = city.findTerrainIndex( id );
             if ( index.has_value() == false )
                 SW_LOG_ERROR_ID( "NileCityPlanner.UnknownTerrain", "[Nile] the map paints terrain '%#', which the city catalog does not have", id.c_str() );
             bKnown = bKnown && index.has_value();
-            return index.value_or( constant::invalid_index::kInt32 );
-        };
-        const int32 ground = findTerrain( layout._groundTerrain );
-        const int32 water  = findTerrain( layout._riverTerrain );
-        const int32 flood  = findTerrain( layout._floodTerrain );
-        const int32 sand   = findTerrain( layout._desertTerrain );
-        const int32 rock   = findTerrain( layout._rockTerrain );
+            listRow.push_back( index.value_or( constant::invalid_index::kInt32 ) );
+        }
+        const vector<int32>& listValue = tileMap._listDataLayer[*layer]._listValue;
+        for ( size_t cell = 0; cell < listValue.size(); ++cell )
+        {
+            if ( 0 <= listValue[cell] && listValue[cell] < static_cast<int32>( listRow.size() ) )
+                continue;
+            SW_LOG_ERROR_ID( "NileCityPlanner.TerrainValueUnknown", "[Nile] cell (%#, %#) of the map has terrain %#, which the %# listed terrains do not cover", static_cast<int32>( cell ) % tileMap._width,
+                             static_cast<int32>( cell ) / tileMap._width, listValue[cell], static_cast<int32>( listRow.size() ) );
+            bKnown = false;
+            break;
+        }
         if ( bKnown == false )
             return false;
-        for ( int32 y = 0; y < city.getHeight(); ++y )
+        for ( int32 y = 0; y < tileMap._height; ++y )
         {
-            const float32 river  = computeRiverCenter( layout, y );
-            const float32 desert = NileCityPlannerInternal::computeDesertEdge( layout, y );
-            for ( int32 x = 0; x < city.getWidth(); ++x )
+            for ( int32 x = 0; x < tileMap._width; ++x )
             {
-                const float32 offset  = static_cast<float32>( x ) + 0.5f - river;
-                int32         terrain = ground;
-                if ( MathUtil::abs( offset ) <= layout._riverHalfWidth )
-                    terrain = water;
-                else if ( offset > 0.0f && offset <= layout._riverHalfWidth + layout._eastFloodWidth )
-                    terrain = flood;
-                else if ( offset < 0.0f && offset >= -( layout._riverHalfWidth + layout._westFloodWidth ) )
-                    terrain = flood;
-                else if ( offset < 0.0f || static_cast<float32>( x ) + 0.5f >= desert )
-                    terrain = NileCityPlannerInternal::isRock( layout, x, y ) && offset > 0.0f ? rock : sand;
-                city.setTerrain( x, y, terrain );
+                city.setTerrain( x, y, listRow[static_cast<size_t>( listValue[static_cast<size_t>( y * tileMap._width + x )] )] );
             }
         }
         return true;

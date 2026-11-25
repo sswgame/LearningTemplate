@@ -8,10 +8,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/Radians.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -64,7 +65,7 @@ namespace sw
         /** @brief 이번 걸음의 도시 알림에서 달 · 진화 · 범람을 세고 달마다 로그를 남깁니다. */
         void logCityEvents();
         bool isAutoPlanOn() const;
-        /** @brief 땅 모양 · 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
+        /** @brief 자동 계획 PROPERTY 를 플래너에 넘길 설정으로 모읍니다. */
         NileCityLayout makeCityLayout() const;
 
     private:
@@ -73,36 +74,10 @@ namespace sw
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
         float32 _secondsPerMonth;
 
-        PROPERTY( Category = "Map", DisplayName = "River Center X", Tooltip = "Average x of the river's middle (tiles)", Min = 0.0 )
-        float32 _riverCenterX;
-        PROPERTY( Category = "Map", DisplayName = "River Meander", Tooltip = "How far the river swings east and west (tiles)", Min = 0.0 )
-        float32 _riverMeander;
-        PROPERTY( Category = "Map", DisplayName = "River Meander Rate", Tooltip = "Phase of the river's swing per tile north to south" )
-        Radians _riverMeanderRate;
-        PROPERTY( Category = "Map", DisplayName = "River Half Width", Tooltip = "Half the river's width (tiles)", Min = 0.0 )
-        float32 _riverHalfWidth;
-        PROPERTY( Category = "Map", DisplayName = "East Floodplain Width", Tooltip = "Floodplain east of the river, where the farms and the city stand (tiles)", Min = 0.0 )
-        float32 _eastFloodWidth;
-        PROPERTY( Category = "Map", DisplayName = "West Floodplain Width", Tooltip = "Floodplain west of the river (tiles)", Min = 0.0 )
-        float32 _westFloodWidth;
-        PROPERTY( Category = "Map", DisplayName = "Desert Dune Height", Tooltip = "How far the east desert's edge waves (tiles)", Min = 0.0 )
-        float32 _desertDuneHeight;
-        PROPERTY( Category = "Map", DisplayName = "Desert Dune Rate", Tooltip = "Phase of the desert edge's wave per tile north to south" )
-        Radians _desertDuneRate;
-        PROPERTY( Category = "Map", DisplayName = "Desert Start X", Tooltip = "Tile x where the east desert begins", Min = 0 )
-        int32 _desertStartX;
-        PROPERTY( Category = "Map", DisplayName = "Rock Ridge X", Tooltip = "Tile x from which the east rock ridge runs", Min = 0 )
-        int32 _rockRidgeX;
-        PROPERTY( Category = "Map", DisplayName = "Ground Terrain", Tooltip = "Terrain (city catalog) between the floodplain and the desert; every terrain of the map is required" )
-        CatalogKey<CityTerrainDef> _groundTerrain;
-        PROPERTY( Category = "Map", DisplayName = "River Terrain", Tooltip = "Terrain (city catalog) of the river" )
-        CatalogKey<CityTerrainDef> _riverTerrain;
-        PROPERTY( Category = "Map", DisplayName = "Flood Terrain", Tooltip = "Terrain (city catalog) on both river banks" )
-        CatalogKey<CityTerrainDef> _floodTerrain;
-        PROPERTY( Category = "Map", DisplayName = "Desert Terrain", Tooltip = "Terrain (city catalog) west of the river and in the far east" )
-        CatalogKey<CityTerrainDef> _desertTerrain;
-        PROPERTY( Category = "Map", DisplayName = "Rock Terrain", Tooltip = "Terrain (city catalog) of the rocks in the east desert" )
-        CatalogKey<CityTerrainDef> _rockTerrain;
+        PROPERTY( Category = "Map", DisplayName = "Tile Map", Tooltip = "Tile map of the land: the city size and the data layer 'terrain' whose values are numbers of Terrains; required" )
+        AssetRef<TileMapXMLData> _tileMapPath;
+        PROPERTY( Category = "Map", DisplayName = "Terrains", Tooltip = "Terrains (city catalog) the map's data layer 'terrain' numbers from 0; every value of the layer needs one" )
+        vector<CatalogKey<CityTerrainDef>> _listTerrain;
         PROPERTY( Category = "Auto Plan", DisplayName = "Road X", Tooltip = "Tile x of the north-south road between the floodplain farms and the city", Min = 0 )
         int32 _roadX;
         PROPERTY( Category = "Auto Plan", DisplayName = "Farm X", Tooltip = "Left tile x of the 3x3 farms; must be floodplain on every row", Min = 0 )

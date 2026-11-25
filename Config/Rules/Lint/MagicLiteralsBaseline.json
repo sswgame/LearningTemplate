@@ -938,7 +938,6 @@
     "Source/GameFramework/Runtime/World/Environment/WorldClock.cpp": {"float": 9},
     "Source/GameFramework/Runtime/World/Spline/SplinePath.cpp": {"float": 15},
     "Source/GameFramework/Runtime/World/Spline/SplinePath.h": {"integer": 1},
-    "Source/Games/NileCity/NileCityPlanner.cpp": {"integer": 1},
     "Source/Games/Playground/Client/Dev/PlaygroundRenderDemo.cpp": {"float": 12},
     "Source/Games/Playground/Client/Dev/StressTestCombatComponent.cpp": {"float": 16, "integer": 5},
     "Source/Games/Playground/Client/Dev/StressTestMoverComponent.cpp": {"float": 3},

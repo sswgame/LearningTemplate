@@ -1,11 +1,11 @@
-// NileCityPlannerTest — NileCity 의 땅과 자동 계획 진행(nogpu): 강 곡선, 강 · 범람원 · 풀 · 사막 띠의 칠, 빈 순서표의 진행,
+// NileCityPlannerTest — NileCity 의 땅과 자동 계획 진행(nogpu): 타일맵의 땅 칠하기와 모자란 데이터의 거절, 빈 순서표의 진행,
 // 진행 상태 바이트의 왕복과 순서표 밖 단계 거절. 순서표 파일(`reset`)은 에셋을 읽어 여기서 다루지 않는다.
 #include "pch.h"
 
-#include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
@@ -28,41 +28,25 @@ namespace
   <HouseLevel name="Hut" population="5"/>
 </CityCatalog>)";
 
-    constexpr int32   kTestWidth     = 40;
-    constexpr int32   kTestHeight    = 4;
-    constexpr float32 kTolerance     = 1.0e-4f;
-    constexpr int32   kRoadCost      = 1;
-    constexpr int32   kStartingMoney = 100;
-
-    /** @brief 굽이 · 모래 언덕이 없는 곧은 강입니다: 강 가운데 x 10, 반폭 2, 동쪽 범람원 3, 서쪽 범람원 2, 사막 x 30 부터, 바위 능선 없음. */
-    NileCityLayout makeStraightLayout()
-    {
-        NileCityLayout layout;
-        layout._riverCenterX   = 10.0f;
-        layout._riverHalfWidth = 2.0f;
-        layout._eastFloodWidth = 3.0f;
-        layout._westFloodWidth = 2.0f;
-        layout._desertStartX   = 30;
-        layout._rockRidgeX     = 1000;
-        layout._groundTerrain  = hashed_string( "Grass" );
-        layout._riverTerrain   = hashed_string( "Water" );
-        layout._floodTerrain   = hashed_string( "Floodplain" );
-        layout._desertTerrain  = hashed_string( "Sand" );
-        layout._rockTerrain    = hashed_string( "Rock" );
-        return layout;
-    }
+    constexpr int32 kTestWidth     = 6;
+    constexpr int32 kTestHeight    = 4;
+    constexpr int32 kRoadCost      = 1;
+    constexpr int32 kStartingMoney = 100;
 
     struct NileCityPlannerTest
     {
         CityCatalog    _catalog{};
         Wallet         _wallet{};
         CitySimulation _city{};
+        TileMapXMLData _tileMap{};
 
         NileCityPlannerTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kNileCityXML, "NileCityPlannerTest" ) );
             _wallet.add( _catalog.getRules()._currency, kStartingMoney );
             SW_REQUIRE_TRUE( _city.initialize( &_catalog, kTestWidth, kTestHeight, _wallet ) );
+            SW_REQUIRE_TRUE( _tileMap.resetTiles( kTestWidth, kTestHeight ) );
+            SW_REQUIRE_TRUE( _tileMap.addDataLayer( NileCityPlanner::kTerrainLayer, 0 ) );
         }
 
         string findTerrain( int32 x, int32 y ) const { return string( _catalog.getTerrainRows()[_city.findTile( x, y )->_terrain]._id.view() ); }
@@ -70,45 +54,42 @@ namespace
 } // namespace
 
 /**
- * @brief [NileCityPlannerTest] 강 가운데는 평균 x 에서 굽이 폭만큼 사인 곡선으로 흔들린다(y 0 은 평균, 위상 π/2 는 평균 + 굽이 폭)
+ * @brief [NileCityPlannerTest] 칸 값은 목록의 번호다 — 같은 지도라도 목록의 순서를 바꾸면 땅이 바뀐다
  */
-SW_TEST_CASE( NileCityPlannerTest, RiverCenterFollowsTheMeander )
+SW_TEST_CASE_F( NileCityPlannerTest, PaintTerrainFollowsTheMapLayer )
 {
-    NileCityLayout layout    = makeStraightLayout();
-    layout._riverMeander     = 3.0f;
-    layout._riverMeanderRate = MathUtil::kHalfPi;
-    SW_EXPECT_NEAR( 10.0f, NileCityPlanner::computeRiverCenter( layout, 0 ), kTolerance );
-    SW_EXPECT_NEAR( 13.0f, NileCityPlanner::computeRiverCenter( layout, 1 ), kTolerance );
-    SW_EXPECT_NEAR( 7.0f, NileCityPlanner::computeRiverCenter( layout, 3 ), kTolerance );
+    SW_REQUIRE_TRUE( _tileMap.setCellData( 0, 2, 1, 1 ) );
+    SW_REQUIRE_TRUE( _tileMap.setCellData( 0, 5, 3, 2 ) );
+    SW_REQUIRE_TRUE( NileCityPlanner::paintTerrain( _city, _tileMap, { hashed_string( "Grass" ), hashed_string( "Water" ), hashed_string( "Rock" ) } ) );
+    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 0, 0 ) );
+    SW_EXPECT_EQUAL( string( "Water" ), findTerrain( 2, 1 ) );
+    SW_EXPECT_EQUAL( string( "Rock" ), findTerrain( 5, 3 ) );
+
+    SW_REQUIRE_TRUE( NileCityPlanner::paintTerrain( _city, _tileMap, { hashed_string( "Sand" ), hashed_string( "Floodplain" ), hashed_string( "Grass" ) } ) );
+    SW_EXPECT_EQUAL( string( "Sand" ), findTerrain( 0, 0 ) );
+    SW_EXPECT_EQUAL( string( "Floodplain" ), findTerrain( 2, 1 ) );
+    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 5, 3 ) );
 }
 
 /**
- * @brief [NileCityPlannerTest] 곧은 강의 칠: 서쪽 사막 · 서쪽 범람원 · 강 · 동쪽 범람원 · 풀 · 동쪽 사막 띠가 칸 가운데 기준으로 나뉜다
+ * @brief [NileCityPlannerTest] 레이어가 없거나 크기가 다른 지도, 카탈로그에 없는 땅, 목록 밖 칸 값은 오류이고 칠하지 않는다
  */
-SW_TEST_CASE_F( NileCityPlannerTest, PaintTerrainLaysTheBands )
+SW_TEST_CASE_F( NileCityPlannerTest, IncompleteMapDataIsRefused )
 {
-    SW_REQUIRE_TRUE( NileCityPlanner::paintTerrain( _city, makeStraightLayout() ) );
-    constexpr int32 kRow = 1;                                           // 흩어진 바위 무늬((x*7 + y*3) % 13 == 0)가 아래 동쪽 사막 칸에 걸리지 않는 줄
-    SW_EXPECT_EQUAL( string( "Sand" ), findTerrain( 5, kRow ) );        // 강 서쪽 4.5 칸 — 범람원(4) 밖은 사막
-    SW_EXPECT_EQUAL( string( "Floodplain" ), findTerrain( 7, kRow ) );  // 서쪽 2.5 칸
-    SW_EXPECT_EQUAL( string( "Water" ), findTerrain( 9, kRow ) );       // 서쪽 0.5 칸
-    SW_EXPECT_EQUAL( string( "Water" ), findTerrain( 10, kRow ) );      // 동쪽 0.5 칸
-    SW_EXPECT_EQUAL( string( "Floodplain" ), findTerrain( 14, kRow ) ); // 동쪽 4.5 칸 — 반폭 2 + 범람원 3 안
-    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 15, kRow ) );      // 동쪽 5.5 칸
-    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 29, kRow ) );      // 사막 경계 30 앞
-    SW_EXPECT_EQUAL( string( "Sand" ), findTerrain( 31, kRow ) );       // 사막 경계 뒤
-}
-
-/**
- * @brief [NileCityPlannerTest] 배치가 적은 땅이 카탈로그에 없으면 오류이고 칠하지 않는다
- */
-SW_TEST_CASE_F( NileCityPlannerTest, UnknownTerrainIsRefused )
-{
+    SW_EXPECT_LOG( "NileCityPlanner.MapLayerMissing" );
     SW_EXPECT_LOG( "NileCityPlanner.UnknownTerrain" );
-    NileCityLayout layout = makeStraightLayout();
-    layout._riverTerrain  = hashed_string( "Lava" );
-    SW_EXPECT_FALSE( NileCityPlanner::paintTerrain( _city, layout ) );
-    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 10, 1 ) );
+    SW_EXPECT_LOG( "NileCityPlanner.TerrainValueUnknown" );
+    TileMapXMLData withoutLayer;
+    SW_REQUIRE_TRUE( withoutLayer.resetTiles( kTestWidth, kTestHeight ) );
+    SW_EXPECT_FALSE( NileCityPlanner::paintTerrain( _city, withoutLayer, { hashed_string( "Sand" ) } ) );
+    TileMapXMLData otherSize;
+    SW_REQUIRE_TRUE( otherSize.resetTiles( kTestWidth + 1, kTestHeight ) );
+    SW_REQUIRE_TRUE( otherSize.addDataLayer( NileCityPlanner::kTerrainLayer, 0 ) );
+    SW_EXPECT_FALSE( NileCityPlanner::paintTerrain( _city, otherSize, { hashed_string( "Sand" ) } ) );
+    SW_EXPECT_FALSE( NileCityPlanner::paintTerrain( _city, _tileMap, { hashed_string( "Sand" ), hashed_string( "Lava" ) } ) );
+    SW_REQUIRE_TRUE( _tileMap.setCellData( 0, 3, 2, 1 ) );
+    SW_EXPECT_FALSE( NileCityPlanner::paintTerrain( _city, _tileMap, { hashed_string( "Sand" ) } ) );
+    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 0, 0 ) );
 }
 
 /**

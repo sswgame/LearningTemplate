@@ -194,11 +194,7 @@
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
 	<Field owner="CityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
 	<CatalogKey tag="CityTerrainDef" catalog="CityCatalog" entry="Terrain"/>
-	<Field owner="NileGameModeComponent" field="_groundTerrain" tag="CityTerrainDef"/>
-	<Field owner="NileGameModeComponent" field="_riverTerrain" tag="CityTerrainDef"/>
-	<Field owner="NileGameModeComponent" field="_floodTerrain" tag="CityTerrainDef"/>
-	<Field owner="NileGameModeComponent" field="_desertTerrain" tag="CityTerrainDef"/>
-	<Field owner="NileGameModeComponent" field="_rockTerrain" tag="CityTerrainDef"/>
+	<Field owner="NileGameModeComponent" field="_listTerrain" tag="CityTerrainDef"/>
 	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
 	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
 	<Field owner="RTSCommandInputComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>

@@ -29,21 +29,8 @@ namespace sw
     NileGameModeComponent::NileGameModeComponent()
         : _autoPlanPath{}
         , _secondsPerMonth{ 20.0f }
-        , _riverCenterX{ 9.0f }
-        , _riverMeander{ 2.0f }
-        , _riverMeanderRate{ Radians::fromRadians( 0.22f ) }
-        , _riverHalfWidth{ 1.5f }
-        , _eastFloodWidth{ 8.0f }
-        , _westFloodWidth{ 3.0f }
-        , _desertDuneHeight{ 1.5f }
-        , _desertDuneRate{ Radians::fromRadians( 0.3f ) }
-        , _desertStartX{ 40 }
-        , _rockRidgeX{ 45 }
-        , _groundTerrain{}
-        , _riverTerrain{}
-        , _floodTerrain{}
-        , _desertTerrain{}
-        , _rockTerrain{}
+        , _tileMapPath{}
+        , _listTerrain{}
         , _roadX{ 17 }
         , _farmX{ 14 }
         , _secondBlockPeople{ 60 }
@@ -110,13 +97,23 @@ namespace sw
             return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
         _wallet.clear();
         _wallet.add( findCatalog()->getRules()._currency, getStartingMoney() );
+        TileMapXMLData tileMap;
+        if ( _tileMapPath.empty() || tileMap.load( AssetID{ _tileMapPath } ) == false )
+        {
+            SW_LOG_ERROR_ID( "NileGameMode.MapMissing", "[Nile] the game mode needs a readable _tileMapPath (got '%#') - the city cannot start", _tileMapPath.c_str() );
+            return false;
+        }
+        vector<hashed_string> listTerrain;
+        for ( const CatalogKey<CityTerrainDef>& terrain : _listTerrain )
+        {
+            listTerrain.push_back( terrain.key() );
+        }
         CitySimulation& city = getMutableCity();
-        if ( city.initialize( findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) == false )
+        if ( city.initialize( findCatalog(), tileMap._width, tileMap._height, _wallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
-        const NileCityLayout layout = makeCityLayout();
-        if ( NileCityPlanner::paintTerrain( city, layout ) == false )
-            return false; // 카탈로그에 없는 땅은 플래너가 남겼다
-        if ( _planner.reset( layout, AssetID{ _autoPlanPath } ) == false )
+        if ( NileCityPlanner::paintTerrain( city, tileMap, listTerrain ) == false )
+            return false; // 모자란 땅 · 레이어는 플래너가 남겼다
+        if ( _planner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) == false )
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         return beginCity();
     }
@@ -155,25 +152,10 @@ namespace sw
     NileCityLayout NileGameModeComponent::makeCityLayout() const
     {
         NileCityLayout layout;
-        layout._riverCenterX      = _riverCenterX;
-        layout._riverMeander      = _riverMeander;
-        layout._riverMeanderRate  = _riverMeanderRate.radians();
-        layout._riverHalfWidth    = _riverHalfWidth;
-        layout._eastFloodWidth    = _eastFloodWidth;
-        layout._westFloodWidth    = _westFloodWidth;
-        layout._desertDuneHeight  = _desertDuneHeight;
-        layout._desertDuneRate    = _desertDuneRate.radians();
-        layout._desertStartX      = _desertStartX;
-        layout._rockRidgeX        = _rockRidgeX;
         layout._roadX             = _roadX;
         layout._farmX             = _farmX;
         layout._secondBlockPeople = _secondBlockPeople;
         layout._thirdBlockPeople  = _thirdBlockPeople;
-        layout._groundTerrain     = _groundTerrain.key();
-        layout._riverTerrain      = _riverTerrain.key();
-        layout._floodTerrain      = _floodTerrain.key();
-        layout._desertTerrain     = _desertTerrain.key();
-        layout._rockTerrain       = _rockTerrain.key();
         return layout;
     }
 
@@ -193,7 +175,7 @@ namespace sw
         {
             // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
             if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
-                 io.check( restoredCity.initialize( findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) ) == false )
+                 io.check( restoredCity.initialize( findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ) ) == false )
                 return;
         }
         io.value( io.isWriting() ? getMutableCity() : restoredCity );
