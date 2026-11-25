@@ -8,19 +8,27 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class Inventory;
 
-    /** @brief 내구도 규칙입니다. */
-    struct AdventureWeaponWearSettings
+    /** @brief 내구도 규칙입니다. 값은 데이터에 있고 코드에는 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API AdventureWeaponWearSettings
     {
-        float32 _wearPerHit{ 1.0f };
-        float32 _wearPerThrow{ 2.0f };    ///< 던지면 더 많이 닳는다
-        float32 _breakMultiplier{ 2.0f }; ///< 부서지는 한 방의 피해 배율
-        float32 _warningRatio{ 0.25f };   ///< 남은 내구도가 최대값의 이 비율 아래면 경고한다(무기 아이콘이 깜빡인다)
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0 )
+        float32 _wearPerHit{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _wearPerThrow{ 0.0f }; ///< 던지면 더 많이 닳는다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _breakMultiplier{ 0.0f }; ///< 부서지는 한 방의 피해 배율
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _warningRatio{ 0.0f }; ///< 남은 내구도가 최대값의 이 비율 아래면 경고한다(무기 아이콘이 깜빡인다)
     };
 } // namespace sw
 

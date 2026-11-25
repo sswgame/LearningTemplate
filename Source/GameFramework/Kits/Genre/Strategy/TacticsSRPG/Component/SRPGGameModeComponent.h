@@ -115,6 +115,8 @@ namespace sw
         vector<int2> _listEnemyCell;
         PROPERTY( Category = "Units", DisplayName = "Pilot", Tooltip = "Pilot id (catalog) every unit flies with" )
         CatalogKey<SRPGPilotDef> _pilot;
+        PROPERTY( Required, Category = "AI", DisplayName = "Commander AI", Tooltip = "Score weights of the computer commander; every value is required" )
+        SRPGCommanderAISettings _aiSettings;
 
         BoundAssetRef<SRPGCatalog> _pCatalog;
         SRPGBattlefield            _field;

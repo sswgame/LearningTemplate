@@ -86,6 +86,7 @@ namespace sw
         , _listEnemyUnit{}
         , _listEnemyCell{}
         , _pilot{}
+        , _aiSettings{}
         , _pCatalog{}
         , _field{}
         , _ai{}
@@ -133,6 +134,7 @@ namespace sw
             return false;
         if ( openField( _field ) == false )
             return false;
+        _ai.setSettings( _aiSettings );
         _field.beginBattle();
         if ( _eventLease.isHeld() == false && _field.claimEvents( _eventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다

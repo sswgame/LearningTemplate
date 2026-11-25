@@ -32,6 +32,7 @@
 					                       _defaultTerrain="plain"
 					                       _seed="7"
 					                       _pilot="demo_pilot">
+						<_aiSettings _counterRiskPercent="100" _killBonus="1000" _commanderBonus="500" />
 						<_listPlayerUnit>
 							<item>demo_knight</item>
 						</_listPlayerUnit>

@@ -49,6 +49,20 @@ namespace
             return graph.addArea( area );
         }
     };
+
+    struct AdventureWearTestUtil
+    {
+        /** @brief 한 번 칠 때 1, 던질 때 2 닳고, 부서지는 한 방은 2 배, 25 % 아래면 경고하는 규칙입니다(코드에는 기본값이 없다). */
+        static sw::AdventureWeaponWearSettings makeSettings()
+        {
+            sw::AdventureWeaponWearSettings settings;
+            settings._wearPerHit      = 1.0f;
+            settings._wearPerThrow    = 2.0f;
+            settings._breakMultiplier = 2.0f;
+            settings._warningRatio    = 0.25f;
+            return settings;
+        }
+    };
 } // namespace
 
 /**
@@ -203,7 +217,8 @@ SW_TEST_CASE( AdventureWeaponWearTest, WearsWarnsOnceAndBreaksWithBonus )
     sw::Inventory inventory;
     SW_REQUIRE_TRUE( inventory.initialize( items, 2 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
-    const sw::AdventureWeaponWear wear;
+    sw::AdventureWeaponWear wear;
+    wear.setSettings( AdventureWearTestUtil::makeSettings() );
 
     sw::AdventureStrikeResult result = wear.strike( inventory, 0, 10.0f ); // 4 → 3
     SW_EXPECT_EQUAL( kSword, result._itemID );
@@ -241,6 +256,7 @@ SW_TEST_CASE( AdventureWeaponWearTest, ThrowWearsMoreAndOutOfRangeIsSafe )
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kRock, 1 ) );
     sw::AdventureWeaponWear wear;
+    wear.setSettings( AdventureWearTestUtil::makeSettings() );
 
     sw::AdventureStrikeResult result = wear.strike( inventory, 0, 10.0f, true ); // 4 → 2
     SW_EXPECT_NEAR( 2.0f, result._durabilityLeft, kWearTolerance );
@@ -259,8 +275,8 @@ SW_TEST_CASE( AdventureWeaponWearTest, ThrowWearsMoreAndOutOfRangeIsSafe )
     SW_EXPECT_TRUE( wear.strike( inventory, -1, 7.0f )._itemID.empty() );
     SW_EXPECT_TRUE( wear.strike( inventory, 2, 7.0f )._itemID.empty() );
 
-    sw::AdventureWeaponWearSettings settings;
-    settings._breakMultiplier = 3.0f;
+    sw::AdventureWeaponWearSettings settings = AdventureWearTestUtil::makeSettings();
+    settings._breakMultiplier                = 3.0f;
     wear.setSettings( settings );
     SW_REQUIRE_EQUAL( 1, inventory.addItem( kSword, 1 ) );
     settings._wearPerHit = 100.0f;

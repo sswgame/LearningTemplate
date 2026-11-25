@@ -151,6 +151,19 @@ namespace
             return settings;
         }
     };
+
+    struct SRPGCommanderTestUtil
+    {
+        /** @brief 씬 데이터(`kitdemo_tactics.scene.xml`)와 같은 지휘관 가중치입니다(코드에는 기본값이 없다). */
+        static sw::SRPGCommanderAISettings makeSettings()
+        {
+            sw::SRPGCommanderAISettings settings;
+            settings._counterRiskPercent = 100;
+            settings._killBonus          = 1000;
+            settings._commanderBonus     = 500;
+            return settings;
+        }
+    };
 } // namespace
 
 /**
@@ -952,7 +965,8 @@ SW_TEST_CASE_F( SRPGRulesTest, BattlefieldDeterminism )
             field.endPhase(); // 아군이 움직이지 않고 국면을 넘긴다
             return;
         }
-        const sw::SRPGCommanderAI ai;
+        sw::SRPGCommanderAI ai;
+        ai.setSettings( SRPGCommanderTestUtil::makeSettings() );
         (void)ai.runPhase( field, field.getPhaseTeam() );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::SRPGBattlefield>( setup, step, 60 ) );
@@ -1458,7 +1472,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderPlansTargets )
     const int32 plainFoe  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 4, 3 } ).value();
     const int32 killable  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 2, 3 } ).value();
     _field.beginBattle();
-    sw::SRPGCommanderAI     ai;
+    sw::SRPGCommanderAI ai;
+    ai.setSettings( SRPGCommanderTestUtil::makeSettings() );
     sw::SRPGCommanderAIPlan plan;
     SW_EXPECT_FALSE( ai.makePlan( _field, plainFoe, plan ) ); // 적 차례가 아니다
     SW_EXPECT_FALSE( ai.makePlan( _field, 99, plan ) );
@@ -1500,7 +1515,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderMovesTowardEnemy )
     const int32 unitIndex = place( "runner", sw::SRPGTeam::Player, sw::int2{ 0, 0 } ).value();
     const int32 foe       = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } ).value();
     _field.beginBattle();
-    sw::SRPGCommanderAI     ai;
+    sw::SRPGCommanderAI ai;
+    ai.setSettings( SRPGCommanderTestUtil::makeSettings() );
     sw::SRPGCommanderAIPlan plan;
     SW_REQUIRE_TRUE( ai.makePlan( _field, unitIndex, plan ) );
     SW_REQUIRE_TRUE( plan._attack.has_value() );
@@ -1547,7 +1563,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderAttacksAfterAlreadyMoving )
     _field.beginBattle();
     SW_REQUIRE_TRUE( _field.moveUnit( unitIndex, sw::int2{ 2, 0 } ) ); // 사람이 먼저 옮겼다
 
-    sw::SRPGCommanderAI  ai;
+    sw::SRPGCommanderAI ai;
+    ai.setSettings( SRPGCommanderTestUtil::makeSettings() );
     sw::SRPGCombatResult result;
     SW_REQUIRE_TRUE( ai.runUnit( _field, unitIndex, &result ) );
     SW_EXPECT_EQUAL( size_t( 1 ), result._listStrike.size() );
@@ -1566,6 +1583,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CommanderRunsPhase )
     const int32 second = place( "runner", sw::SRPGTeam::Enemy, sw::int2{ 6, 7 } ).value();
     _field.beginBattle();
     sw::SRPGCommanderAI ai;
+    ai.setSettings( SRPGCommanderTestUtil::makeSettings() );
     SW_EXPECT_EQUAL( 0, ai.runPhase( _field, sw::SRPGTeam::Enemy ) ); // 아군 차례다
     SW_EXPECT_EQUAL( sw::SRPGTeam::Player, _field.getPhaseTeam() );
 
