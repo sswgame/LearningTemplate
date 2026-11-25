@@ -11,8 +11,8 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -165,7 +165,7 @@ namespace sw
         moduleLibraryHost.setResolution( outResolution );
 
         // 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — 모듈을 복사 없이 바로 연다.
-        const ModuleOpenMode openMode = HeadlessTaskRegistration::isAnyRequested( commandLine ) ? ModuleOpenMode::Direct : ModuleOpenMode::ShadowCopy;
+        const ModuleOpenMode openMode = CommandletRegistration::isAnyRequested( commandLine ) ? ModuleOpenMode::Direct : ModuleOpenMode::ShadowCopy;
         _pState->_liveReloadManager   = make_unique<LiveReloadManager>( fileWatch, openMode );
         _pState->_pHostScope          = &hostScope;
         const bool bBound             = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다

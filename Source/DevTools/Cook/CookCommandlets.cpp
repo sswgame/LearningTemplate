@@ -30,8 +30,8 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackPatch.h"
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -47,7 +47,7 @@ namespace sw
     namespace
     {
         /** @brief 쿠킹 명령줄(`--cook-*` · `--verify-shaders` · `-make-patch`)의 헤드리스 작업입니다. 배포 구성은 DevTools 를 짓지 않아 굽지 않는다 — 배포 팩은 호스트 개발 빌드가 굽는다(cmake/Modules/Build/AssetAndToolTargets.cmake). */
-        struct CookTasksInternal
+        struct CookCommandletsInternal
         {
             /** @brief bool 인자 @p argument 가 켜져 주어졌으면 true 입니다. */
             static bool isFlagGiven( const CommandLineManager& commandLine, CommandLineArgument argument )
@@ -253,7 +253,7 @@ namespace sw
             static bool isCookShadersRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::COOK_SHADERS ); }
 
             /** @brief 셰이더 쿠킹은 렌더러의 일이다(`IShaderCookService`) — 렌더러를 짓지 않는 구성은 쿠커가 없다는 오류로 멈춘다. */
-            static bool runCookShadersTask( HeadlessTaskContext& context )
+            static bool runCookShadersTask( CommandletContext& context )
             {
                 const CommandLineManager& commandLine = context._commandLine;
                 AbsolutePath              cookedDir;
@@ -290,7 +290,7 @@ namespace sw
             }
 
             /** @brief 셰이더 판정 — 쿠킹 스테이징(`-cooked-dir`)의 쿠킹 표 모든 백엔드를 본다. 고치지 않는다. */
-            static bool runVerifyShadersTask( HeadlessTaskContext& context )
+            static bool runVerifyShadersTask( CommandletContext& context )
             {
                 const CommandLineManager& commandLine = context._commandLine;
                 AbsolutePath              cookedDir;
@@ -314,14 +314,14 @@ namespace sw
             static bool isMakePatchRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::MAKE_PATCH ); }
 
             /** @brief 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다. */
-            static bool runMakePatchTask( HeadlessTaskContext& context )
+            static bool runMakePatchTask( CommandletContext& context )
             {
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessMakePatch", "Starting Headless (MakePatch)..." );
                 return makePatchStage( context._commandLine );
             }
 
             /** @brief 씬 · 팩 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고 그것은 엔진 안에만 있다. 팩은 그 산출물을 함께 담는다. */
-            static bool runCookTask( HeadlessTaskContext& context )
+            static bool runCookTask( CommandletContext& context )
             {
                 const CommandLineManager& commandLine = context._commandLine;
                 const bool                bCookPacks  = isFlagGiven( commandLine, CommandLineArgument::COOK_PACKS );
@@ -383,9 +383,9 @@ namespace sw
         };
     } // namespace
 
-    // 서버가 돌지 않는 작업(셰이더 쿠킹 · 판정)도 여기서 올린다 — 서버에 주면 조용히 넘어가지 않고 거절된다(`HeadlessTaskHost::Client`).
-    SW_HEADLESS_TASK( cookShaders, "CookShaders", HeadlessTaskPriority::kCookShaders, Client, &CookTasksInternal::isCookShadersRequested, &CookTasksInternal::runCookShadersTask );
-    SW_HEADLESS_TASK( verifyShaders, "VerifyShaders", HeadlessTaskPriority::kVerifyShaders, Client, &CookTasksInternal::isVerifyShadersRequested, &CookTasksInternal::runVerifyShadersTask );
-    SW_HEADLESS_TASK( makePatch, "MakePatch", HeadlessTaskPriority::kMakePatch, Any, &CookTasksInternal::isMakePatchRequested, &CookTasksInternal::runMakePatchTask );
-    SW_HEADLESS_TASK( cook, "Cook", HeadlessTaskPriority::kCook, Any, &CookTasksInternal::isCookRequested, &CookTasksInternal::runCookTask );
+    // 서버가 돌지 않는 작업(셰이더 쿠킹 · 판정)도 여기서 올린다 — 서버에 주면 조용히 넘어가지 않고 거절된다(`CommandletHost::Client`).
+    SW_COMMANDLET( cookShaders, "CookShaders", CommandletPriority::kCookShaders, Client, &CookCommandletsInternal::isCookShadersRequested, &CookCommandletsInternal::runCookShadersTask );
+    SW_COMMANDLET( verifyShaders, "VerifyShaders", CommandletPriority::kVerifyShaders, Client, &CookCommandletsInternal::isVerifyShadersRequested, &CookCommandletsInternal::runVerifyShadersTask );
+    SW_COMMANDLET( makePatch, "MakePatch", CommandletPriority::kMakePatch, Any, &CookCommandletsInternal::isMakePatchRequested, &CookCommandletsInternal::runMakePatchTask );
+    SW_COMMANDLET( cook, "Cook", CommandletPriority::kCook, Any, &CookCommandletsInternal::isCookRequested, &CookCommandletsInternal::runCookTask );
 } // namespace sw

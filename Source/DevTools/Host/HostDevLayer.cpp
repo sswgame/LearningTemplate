@@ -3,7 +3,7 @@
 #include "ModuleManager/Host/HostDevLayer.h"
 
 #include "DevTools/FileWatch/FileWatchService.h"
-#include "DevTools/Host/EditorModuleHeadlessTasks.h"
+#include "DevTools/Host/EditorModuleCommandlets.h"
 #include "DevTools/Host/HostDevTools.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -54,7 +54,7 @@ namespace sw
             void                updateModuleReload() override { _moduleReload.update(); }
 #endif
 
-            bool runEditorModuleHeadlessTasks( const CommandLineManager& commandLine ) override { return EditorModuleHeadlessTask::runRequested( commandLine ); }
+            bool runEditorModuleCommandlets( const CommandLineManager& commandLine ) override { return EditorModuleCommandlet::runRequested( commandLine ); }
             void attachFrameHooks( Engine& engine ) override { _devTools.attachFrameHooks( engine ); }
             void startConsole( bool bEnableEditor ) override { _devTools.startConsole( bEnableEditor ); }
             void stopConsole() override { _devTools.stopConsole(); }

@@ -1,5 +1,5 @@
 /**
- * @file AppHeadlessTasks.h
+ * @file App/AppCommandlets.h
  * @brief App 이 맡는 헤드리스 작업입니다. 엔진의 `Headless` 단계가 하지 못하는 일(크래시 보고, 엔진이 선 뒤의 에디터 모듈 작업 · 초상화 굽기)만 여기에 둡니다.
  */
 #pragma once
@@ -12,12 +12,12 @@ namespace sw
     class IHostDevLayer;
 
     /**
-     * @struct AppHeadlessTasks
+     * @struct AppCommandlets
      * @brief 창과 RHI 없이 시작한 App 이 인자에 따라 실행하는 작업들입니다.
-     * @details 에디터 모듈 작업(로컬라이제이션, 임포트, 참조 검사)은 개발 계층의 표가 든다(`DevTools/Host/EditorModuleHeadlessTasks` — 인자 · 호스트 · 실행이 한 줄). 여기서는 부르기만 한다.
+     * @details 에디터 모듈 작업(로컬라이제이션, 임포트, 참조 검사)은 개발 계층의 표가 든다(`DevTools/Host/EditorModuleCommandlets` — 인자 · 호스트 · 실행이 한 줄). 여기서는 부르기만 한다.
      *          실패한 작업이 하나라도 있으면 `App::initialize` 가 false 를 반환한다(종료 코드가 0 이 아님).
      */
-    struct AppHeadlessTasks
+    struct AppCommandlets
     {
         /** @brief 호스트 서비스 뒤 작업 하나의 결과입니다. */
         enum class TaskResult : uint8

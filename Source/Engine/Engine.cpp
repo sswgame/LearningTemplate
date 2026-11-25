@@ -43,11 +43,11 @@
 #include "Engine/CoreServices/MemoryBudgetSubsystem.h"
 #include "Engine/CoreServices/NamePoolSubsystem.h"
 #include "Engine/CoreServices/StaticStorageSubsystem.h"
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -235,7 +235,7 @@ namespace sw
             _startup.setParentScope( &_services );
             // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
             // 전용 서버 역할은 창 · RHI · 렌더러를 두지 않는다(그 구성은 렌더러를 짓지도 않는다) — 그 공장들이 `_bDedicatedServer` 를 보고 만들지 않는다.
-            engine::StartupSetup         startupSetup{ _headlessState, bDedicatedServer, HeadlessTaskRegistration::isAnyRequested( commandLine.getCommandLine() ) };
+            engine::StartupSetup         startupSetup{ _headlessState, bDedicatedServer, CommandletRegistration::isAnyRequested( commandLine.getCommandLine() ) };
             engine::EngineSubsystemBuild startupBuild;
             startupBuild._pStartupSetup = &startupSetup;
             engine::EngineRegistrationList::getGlobal().buildSubsystems( engine::EngineSubsystemStage::Startup, _startup, startupBuild );

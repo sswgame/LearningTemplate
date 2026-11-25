@@ -75,7 +75,7 @@ namespace sw
             _pDevLayer->attachFrameHooks( _engine );
         // 작업이 실패했으면 **기동 실패다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `pack.py` 가 "쿠킹하지 못했다" 는 사실을 알 수 있다.
         if ( _engine.isHeadless() )
-            return _engine.didHeadlessTaskFail() ? HostEngineStart::Failed : HostEngineStart::Headless;
+            return _engine.didCommandletFail() ? HostEngineStart::Failed : HostEngineStart::Headless;
         return HostEngineStart::Ready;
     }
 

@@ -696,7 +696,7 @@ namespace sw
         _frameSubscription.reset();
     }
 
-    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState )
     {
         // 창 · RHI 를 세우기 전에 가로챈다 — 이 프로세스는 기다리기만 한다.
         inoutState.enterHeadless();

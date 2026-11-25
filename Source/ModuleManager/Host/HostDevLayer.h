@@ -65,7 +65,7 @@ namespace sw
          * @brief 헤드리스로 선 호스트가 명령줄이 청한 에디터 모듈 작업(현지화 도구 · 원본 임포트 · 대조 · 에셋 참조 검사)을 차례로 돌립니다. 엔진이 선 뒤에 부릅니다.
          * @return 실패한 작업이 없으면(청한 것이 없어도) true 입니다.
          */
-        [[nodiscard]] virtual bool runEditorModuleHeadlessTasks( const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual bool runEditorModuleCommandlets( const CommandLineManager& commandLine ) = 0;
         /** @brief 엔진이 선 뒤 개발 도구의 프레임 훅을 붙입니다. */
         virtual void attachFrameHooks( Engine& engine ) = 0;
         /** @brief 개발 콘솔을 세웁니다(호스트 서비스 `DevConsole`). */

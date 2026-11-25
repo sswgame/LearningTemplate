@@ -6,7 +6,7 @@
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기는 모듈 관리자(`GameModuleManager::applyPendingDeviceChange` — 교체 요청은 개발 도구의 RHIBackendSwitcher), 모듈 수명은 ClientModuleManager(공통 GameModuleManager 위의 App 전용 층),
- *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
+ *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppCommandlets 가 각자 맡습니다.
  *          자동화가 찾아야 하는 호스트 객체(리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 엔진의 `UIPlatformBinding` 이 맡습니다.
  */

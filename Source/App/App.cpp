@@ -2,7 +2,7 @@
 
 #include "App/App.h"
 
-#include "App/AppHeadlessTasks.h"
+#include "App/AppCommandlets.h"
 #include "App/ClientModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -295,9 +295,9 @@ namespace sw
             return false;
         timings._engineEndMicro = MonotonicClock::nowMicroseconds();
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
-        // App 이 맡는 헤드리스 작업은 크래시 보고와, 개발 계층의 에디터 모듈 작업 표(로컬라이제이션 도구, 원본 임포트)를 부르는 일이다(`AppHeadlessTasks`).
+        // App 이 맡는 헤드리스 작업은 크래시 보고와, 개발 계층의 에디터 모듈 작업 표(로컬라이제이션 도구, 원본 임포트)를 부르는 일이다(`AppCommandlets`).
         if ( engineStart == HostEngineStart::Headless )
-            return AppHeadlessTasks::runAll( _launch.getEngine().getCommandLineManager(), _launch.getDevLayer() );
+            return AppCommandlets::runAll( _launch.getEngine().getCommandLineManager(), _launch.getDevLayer() );
 
         // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
         // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
@@ -356,13 +356,13 @@ namespace sw
         }
         timings._modulesEndMicro = MonotonicClock::nowMicroseconds();
 
-        // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 `AppHeadlessTasks` 가 맡는다. 실행했으면 창을 띄우지 않고 끝낸다.
-        const AppHeadlessTasks::TaskResult afterServices = AppHeadlessTasks::runAfterHostServices( *pCommandLineManager, _launch.getEngine() );
-        if ( afterServices != AppHeadlessTasks::TaskResult::NotRequested )
+        // 모듈이 선 뒤 한 번 하고 끝나는 작업(초상화 굽기)은 `AppCommandlets` 가 맡는다. 실행했으면 창을 띄우지 않고 끝낸다.
+        const AppCommandlets::TaskResult afterServices = AppCommandlets::runAfterHostServices( *pCommandLineManager, _launch.getEngine() );
+        if ( afterServices != AppCommandlets::TaskResult::NotRequested )
         {
             splash.dismiss();
             _bQuitAfterInitialize = SW_TRUE;
-            return afterServices != AppHeadlessTasks::TaskResult::Failed;
+            return afterServices != AppCommandlets::TaskResult::Failed;
         }
 
         // 4. 창 콜백과 이벤트 전달을 설정한다.
@@ -713,7 +713,7 @@ namespace sw
     int32 App::getInitFailureExitCode() const
     {
         // 헤드리스 작업이 정한 코드(시나리오 행렬의 시나리오 결과)가 먼저다.
-        if ( _launch.getEngine().isHeadless() && _launch.getEngine().didHeadlessTaskFail() && _launch.getEngine().getHeadlessFailureExitCode() != -1 )
+        if ( _launch.getEngine().isHeadless() && _launch.getEngine().didCommandletFail() && _launch.getEngine().getHeadlessFailureExitCode() != -1 )
             return _launch.getEngine().getHeadlessFailureExitCode();
         // 기동 단계가 실패하면서 종료 코드를 골랐으면 그 코드다(시나리오 실행의 사용자 데이터 뿌리 거절 — 로드 오류 11, `AutomationUserDataIsolation`).
         if ( _launch.getEngine().isQuitRequested() && _launch.getEngine().getExitCode() != ProcessExitCode::Passed )

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "App/AppHeadlessTasks.h"
+#include "App/AppCommandlets.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Logger.h"
@@ -22,9 +22,9 @@ namespace sw
     namespace
     {
         /** @brief 이 TU 의 작업 함수입니다. */
-        struct AppHeadlessTasksInternal
+        struct AppCommandletsInternal
         {
-            using TaskResult = AppHeadlessTasks::TaskResult;
+            using TaskResult = AppCommandlets::TaskResult;
 
             /**
              * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄 처리까지만 시작한 상태이며(서비스와 게임 모듈이 없습니다) 번들만 보내고 끝냅니다. 청해지지 않았으면 false 입니다.
@@ -74,18 +74,18 @@ namespace sw
 
 namespace sw
 {
-    bool AppHeadlessTasks::runAll( const CommandLineManager* pCommandLine, IHostDevLayer* pDevLayer )
+    bool AppCommandlets::runAll( const CommandLineManager* pCommandLine, IHostDevLayer* pDevLayer )
     {
         if ( pCommandLine == nullptr )
             return true;
-        if ( AppHeadlessTasksInternal::runCrashReporter( *pCommandLine ) )
+        if ( AppCommandletsInternal::runCrashReporter( *pCommandLine ) )
             return true; // 이 작업만 하고 끝낸다
         // 에디터 모듈 작업은 개발 계층의 표가 든다 — 배포에는 개발 계층도 그 인자도 없다.
-        return pDevLayer == nullptr || pDevLayer->runEditorModuleHeadlessTasks( *pCommandLine );
+        return pDevLayer == nullptr || pDevLayer->runEditorModuleCommandlets( *pCommandLine );
     }
 
-    AppHeadlessTasks::TaskResult AppHeadlessTasks::runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine )
+    AppCommandlets::TaskResult AppCommandlets::runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine )
     {
-        return AppHeadlessTasksInternal::runPortraitBake( commandLine, hostEngine ); // 지금은 초상화 굽기 하나다
+        return AppCommandletsInternal::runPortraitBake( commandLine, hostEngine ); // 지금은 초상화 굽기 하나다
     }
 } // namespace sw
