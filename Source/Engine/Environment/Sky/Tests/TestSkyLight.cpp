@@ -242,12 +242,15 @@ SW_TEST_CASE( SkyLightTest, HdriSkyFiltersTheRadianceMap )
 
     const float3 front{ 0.0f, 0.0f, 1.0f };
     const float3 back{ 0.0f, 0.0f, -1.0f };
-    // 매끈한 단계는 원본 × 세기(앞 8 · 뒤 0.2), 거친 단계는 앞이 어두워지고 뒤가 밝아진다.
+    // 매끈한 단계는 원본 × 세기(앞 8 · 뒤 0.2), 거친 단계는 앞이 어두워지고 옆이 밝아진다.
     SW_EXPECT_NEAR( 8.0f, data._reflection.sampleLevel( 0, front )._x, 0.05f );
     SW_EXPECT_NEAR( 0.2f, data._reflection.sampleLevel( 0, back )._x, 0.05f );
     const uint32 roughLevel = data._reflection._levelCount - 1u;
     SW_EXPECT_TRUE( data._reflection.sampleLevel( roughLevel, front )._x < 8.0f );
-    SW_EXPECT_TRUE( data._reflection.sampleLevel( roughLevel, back )._x > 0.2f );
+    // 반사 로브는 노멀의 반구만 모은다 — 정면으로 등진 쪽은 거칠어도 그대로고, 밝은 쪽을 반쯤 보는 옆은 밝아진다.
+    const float3 side = float3{ 0.95f, 0.0f, 0.31f }.normalizeOr( front, 1e-6f );
+    SW_EXPECT_NEAR( 0.2f, data._reflection.sampleLevel( 0, side )._x, 0.05f );
+    SW_EXPECT_TRUE( data._reflection.sampleLevel( roughLevel, side )._x > 0.4f );
     // 확산도 원본에서 투영한다 — 앞을 보는 면이 뒤보다 밝다(SH9 계수 한 색이면 같았을 것이다).
     SW_EXPECT_TRUE( Util::evaluateDiffuse( data, front ) > Util::evaluateDiffuse( data, back ) * 2.0f );
 

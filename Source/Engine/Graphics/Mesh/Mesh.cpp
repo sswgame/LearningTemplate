@@ -850,8 +850,8 @@ namespace sw
         movedNormal   = movedNormal.normalizeOr( normal, MathUtil::kEpsilon );
         for ( uint32 axis = 0; axis < 3; ++axis )
         {
-            inoutVertex._arrPosition[axis] = ( &movedPosition._x )[axis];
-            inoutVertex._arrNormal[axis]   = ( &movedNormal._x )[axis];
+            inoutVertex._arrPosition[axis] = movedPosition.data()[axis];
+            inoutVertex._arrNormal[axis]   = movedNormal.data()[axis];
         }
     }
 
