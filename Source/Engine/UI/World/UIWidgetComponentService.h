@@ -25,6 +25,7 @@ namespace sw
     class UISystem;
     class Widget;
     class WidgetComponent;
+    struct UIEngineDocuments;
 
     /**
      * @class UIWidgetComponentService
@@ -52,6 +53,15 @@ namespace sw
         SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         /** @brief 기동했고 아직 내려가지 않았으면 true 입니다(컴포넌트가 붙기 전에 본다). */
         bool isActive() const { return _pUI != nullptr; }
+
+        // --- 내용 ------------------------------------------------------------------
+        /** @brief 엔진 UI 문서 경로입니다(`UISystem::getEngineDocuments`). 기동한 뒤에만 부릅니다. */
+        const UIEngineDocuments& getEngineDocuments() const;
+        /**
+         * @brief 위젯 컴포넌트의 내용을 UI 문서 @p documentPath 로 만듭니다. 실패하면 이유를 로그에 남기고 nullptr 입니다.
+         * @details 마커 화면은 여러 컴포넌트가 나눠 쓰므로 문서의 스타일 시트 · 바인딩 · 화면 서술은 쓸 자리가 없다 — 시트나 바인딩을 가진 문서는 거절한다(모양은 테마 시트와 문서의 값이 정한다).
+         */
+        unique_ptr<Widget> instantiateDocument( string_view documentPath );
 
         // --- 등록 ------------------------------------------------------------------
         /** @brief 위젯 컴포넌트를 등록합니다. 컴포넌트가 시작할 때 부르며, UI 갱신이 레이아웃 앞에서 화면 마커 위치를 갱신합니다. 이미 있으면 아무것도 하지 않습니다. */

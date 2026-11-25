@@ -32,9 +32,6 @@ namespace sw
 
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 
-        /** @brief `spawnNumber` 로 띄운 숫자의 수명(초)과 떠오르는 빠르기(m/s)입니다. */
-        static constexpr float32 kSpawnedLifeTime   = 0.9f;
-        static constexpr float32 kSpawnedFloatSpeed = 1.2f;
         /** @brief 숫자 글 위젯의 스타일 클래스입니다. 엔진 기본 테마의 `TextWidget.damage` 입니다. */
         static constexpr const utf8* kStyleClass = "damage";
 
@@ -72,11 +69,11 @@ namespace sw
         float32 getFloatSpeed() const { return _floatSpeed; }
 
         /**
-         * @brief 피해 숫자 하나를 @p position 에 띄웁니다. 떠오르며 흐려지다가 `kSpawnedLifeTime` 초 뒤에 지워집니다.
+         * @brief 피해 숫자 하나를 @p position 에 띄웁니다. 떠오르며 흐려지다가 수명이 다하면 지워집니다.
          * @details 피해를 내는 모든 곳(`UnitStatsComponent`, `AbilitySystemComponent`)이 이것 하나를 쓴다.
          *          오브젝트에 씬 컴포넌트, 화면 마커(`WidgetComponent`, 가운데 피벗), 이 컴포넌트를 붙인다.
          *          틱 중이면 만들기를 틱 직후로 미룬다. 틱 안에서는 컴포넌트를 붙일 수 없기 때문이다.
-         *          직접 만들면 안 된다. 수명 기본값 0 은 "지우지 않음"이라서 맞을 때마다 숫자 오브젝트가 남는다.
+         *          수명 · 빠르기 · 색은 컴포넌트 칸의 기본값이다 — 게임은 gamesettings `<Defaults>` 로 바꾼다(언리얼 클래스 기본값 자리).
          */
         static void spawnNumber( GameObjectManager& manager, const float3& position, int32 value );
 

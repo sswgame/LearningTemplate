@@ -33,6 +33,7 @@ namespace sw
         string _settingsUnsaved;      ///< 저장하지 않고 닫을 때의 확인 창
         string _confirmDialog;        ///< 공통 확인 대화 상자(`ConfirmDialogScreen`)
         string _screenFade;           ///< 씬 이동 페이드 판(`LoadingScreenController`)
+        string _objectiveMarker;      ///< 목표 마커의 내용(`ObjectiveMarkerComponent`)
         string _quantityDialog;       ///< 수량 대화 상자(`QuantityDialogScreen`)
         string _mainMenu;             ///< 메인 메뉴(`MainMenuScreen`)
         string _keyRebind;            ///< 키 바인딩을 받는 창

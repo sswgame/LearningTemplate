@@ -135,6 +135,8 @@ namespace sw
          * @details 언리얼 `SWidget::GetChildren` · Godot `Node::get_children` 과 같은 자리다. 패널만의 질문(자르기, 그리기 순서, 배치)은 `asPanel` 로 묻는다.
          */
         virtual span<const unique_ptr<Widget>> getChildren() const { return {}; }
+        /** @brief 이 위젯과 그 아래에서 이름 @p name 의 첫 위젯을 찾습니다(깊이 우선). 같은 문서를 여러 번 붙여 트리 전체의 이름이 겹칠 때, 또는 트리에 붙기 전에 씁니다. 없으면 nullptr 입니다. */
+        Widget* findDescendant( const hashed_string& name );
         /** @brief 글리프 아틀라스를 쓰는 위젯(텍스트 위젯)이면 true 입니다. 아틀라스 페이지를 비우면(세대가 오르면) 그리기 캐시를 다시 칠합니다. */
         virtual bool usesGlyphAtlas() const { return false; }
         /**

@@ -21,6 +21,7 @@ namespace sw
         documents._settingsUnsaved      = assets._uiSettingsUnsaved.get();
         documents._confirmDialog        = assets._uiConfirmDialog.get();
         documents._screenFade           = assets._uiScreenFade.get();
+        documents._objectiveMarker      = assets._uiObjectiveMarker.get();
         documents._quantityDialog       = assets._uiQuantityDialog.get();
         documents._mainMenu             = assets._uiMainMenu.get();
         documents._keyRebind            = assets._uiKeyRebind.get();

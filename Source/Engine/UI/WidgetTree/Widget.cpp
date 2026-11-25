@@ -223,6 +223,18 @@ namespace sw
         return _opacity;
     }
 
+    Widget* Widget::findDescendant( const hashed_string& name )
+    {
+        if ( _name == name )
+            return this;
+        for ( const unique_ptr<Widget>& child : getChildren() )
+        {
+            if ( Widget* pFound = child->findDescendant( name ); pFound != nullptr )
+                return pFound;
+        }
+        return nullptr;
+    }
+
     float2 Widget::computeFixedSize() const
     {
         float2                 fixedSize{ _slot._widthOverride, _slot._heightOverride };

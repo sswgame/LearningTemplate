@@ -631,7 +631,6 @@
     "Source/Engine/Window/Web/WebWindow.cpp": {"float": 2, "hex": 1},
     "Source/Engine/Window/Windows/Win32SplashWindow.cpp": {"minus-one": 1, "integer": 22},
     "Source/Engine/Window/Windows/Win32Window.cpp": {"integer": 1},
-    "Source/GameFramework/Client/Marker/ObjectiveMarkerComponent.cpp": {"minus-one": 1},
     "Source/GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Content/ModSupport/ModManifest.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.cpp": {"integer": 1},
