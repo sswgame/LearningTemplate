@@ -124,7 +124,7 @@ namespace sw
 
         /** @brief 시작했는지(기본 가족이 열렸는지)입니다. */
         bool isInitialized() const { return _bInitialized; }
-        /** @brief 래스터라이저입니다. 시작 전에는 부르지 않습니다. */
+        /** @brief 래스터라이저입니다. 생성할 때 서므로 카탈로그를 열지 않은 프로세스(헤드리스 에디터 · 도구)도 글꼴 파일의 치수를 잴 수 있다. */
         IFontRasterizer& getRasterizer() { return *_rasterizer; }
         /** @brief 글리프 캐시(SDF 아틀라스)입니다. 시작 전에는 부르지 않습니다. */
         GlyphCache& getGlyphCache() { return *_glyphCache; }

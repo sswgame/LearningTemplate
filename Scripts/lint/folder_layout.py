@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/folder_layout.py
 
@@ -14,21 +12,10 @@ Scripts/lint/folder_layout.py
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
+from typing import Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import LintScope, make_whole_scope  # noqa: E402
-from lint.rule_tables import read_rule_table  # noqa: E402
-
-RULE_ID = "folder-layout"
-
-
-def check_folder_layout(project_root: Path, scope: LintScope) -> list[str]:
-    return find_problems(scope.select(("Source",)), read_rule_table(project_root, RULE_ID))
+from lint.lint_rule import LintRule
+from lint.lint_scope import LintScope
 
 
 def find_problems(list_path: list[str], table: dict) -> list[str]:
@@ -53,25 +40,19 @@ def find_problems(list_path: list[str], table: dict) -> list[str]:
     return list_problem
 
 
-def run_self_check() -> None:
-    table = {"_bannedFolderNames": {"Utils": "기능 이름으로"}, "_componentFolderModel": ["Source/GameFramework/Runtime/"], "_componentSuffixes": ["Component"]}
-    list_problem = find_problems(["Source/Engine/Utils/A.h", "Source/Engine/utils/B.h", "Source/Engine/X/Component/FooComponent.h",
-                                "Source/Engine/X/Component/FooQuery.h", "Source/GameFramework/Runtime/Component/Any.h", "Source/Engine/X/Component/Tests/T.cpp"], table)
-    assert list_problem == ["Source/Engine/Utils/: 잡동사니 폴더 'Utils' — 기능 이름으로", "Source/Engine/utils/: 잡동사니 폴더 'utils' — 기능 이름으로",
-                           "Source/Engine/X/Component/FooQuery.h: `Component/` 에는 컴포넌트만 — 씬 서비스 · 질의 · 검사는 `<기능>/Scene/`(FolderLayout 4 절)"], list_problem
+class FolderLayoutRule(LintRule):
+    id = "folder-layout"
+    group = "경계"
+    blocks = "잡동사니 폴더 · Component 폴더"
+    why_not_type = "파일 자리는 형식이 아니다"
+    tables = ("",)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
+        return find_problems(scope.select(("Source",)), self.read_table())
 
-def main(list_argument: list[str] | None = None) -> int:  # `py -3 -m Scripts lint folder-layout [--self-check]` 가 인자 목록을 넘긴다
-    if list_argument and list_argument[0] == "--self-check":
-        run_self_check()
-        print("[FolderLayout] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_folder_layout(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[FolderLayout] {'OK' if not list_problem else f'FAIL {len(list_problem)}건'}")
-    return ExitCode.PASSED if not list_problem else ExitCode.VIOLATION
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    def self_check(self) -> None:
+        table = {"_bannedFolderNames": {"Utils": "기능 이름으로"}, "_componentFolderModel": ["Source/GameFramework/Runtime/"], "_componentSuffixes": ["Component"]}
+        list_problem = find_problems(["Source/Engine/Utils/A.h", "Source/Engine/utils/B.h", "Source/Engine/X/Component/FooComponent.h",
+                                    "Source/Engine/X/Component/FooQuery.h", "Source/GameFramework/Runtime/Component/Any.h", "Source/Engine/X/Component/Tests/T.cpp"], table)
+        assert list_problem == ["Source/Engine/Utils/: 잡동사니 폴더 'Utils' — 기능 이름으로", "Source/Engine/utils/: 잡동사니 폴더 'utils' — 기능 이름으로",
+                               "Source/Engine/X/Component/FooQuery.h: `Component/` 에는 컴포넌트만 — 씬 서비스 · 질의 · 검사는 `<기능>/Scene/`(FolderLayout 4 절)"], list_problem

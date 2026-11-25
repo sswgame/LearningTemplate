@@ -18,6 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from common.command import Command, ScriptContext  # noqa: E402
 from common.tool_download import resolve_tools_subdir
 from common.toolchain_config import auto_bootstrap_enabled, load_search_paths, record_engine_path
 from common.project_constants import (
@@ -262,30 +263,25 @@ def setup_vcpkg(allow_bootstrap: bool = False) -> Path | None:
     return Path(record_engine_path(KEY_VCPKG_ROOT, tools_dir))
 
 
-def main(argv: list[str] | None = None) -> int:
-    """
-    vcpkg 설정 스크립트의 CLI 진입점입니다.
+class VcpkgCommand(Command):
+    name = "vcpkg"
+    help = "vcpkg 탐색 및 부트스트랩"
 
-    Args:
-        argv: 명령줄 인수 리스트.
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--install",
+            action="store_true",
+            help="If not found, git clone + bootstrap under Tools/vcpkg",
+        )
 
-    Returns:
-        종료 코드 (성공 시 0).
-    """
-    parser = argparse.ArgumentParser(description="Locate or bootstrap vcpkg.")
-    parser.add_argument(
-        "--install",
-        action="store_true",
-        help="If not found, git clone + bootstrap under Tools/vcpkg",
-    )
-    parsed_args = parser.parse_args(argv)
-    resolved_path = setup_vcpkg(allow_bootstrap=parsed_args.install)
-    if resolved_path:
-        print(resolved_path.as_posix())
-        return ExitCode.PASSED
-    sys.stderr.write("[Vcpkg Error] vcpkg not found\n")
-    return ExitCode.VIOLATION
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        resolved_path = setup_vcpkg(allow_bootstrap=args.install)
+        if resolved_path:
+            print(resolved_path.as_posix())
+            return ExitCode.PASSED
+        sys.stderr.write("[Vcpkg Error] vcpkg not found\n")
+        return ExitCode.VIOLATION
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(VcpkgCommand.main())

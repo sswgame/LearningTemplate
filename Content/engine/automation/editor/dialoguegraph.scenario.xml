@@ -14,7 +14,7 @@
 	<DevCommand line="panel.focus dialogue_graph"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="150"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
-	<CaptureEditorUI file="open.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="open.png"/>
 	<EditorWaitStable/>
 	<Pass/>
 </Scenario>

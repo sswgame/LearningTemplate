@@ -52,6 +52,8 @@ namespace sw
     X( void, destroy, ( EditorHandle editor ) )                                                                                                                                                 \
     /** 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */                                                                                                                                      \
     X( bool, initialize, ( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ) )                                                                                              \
+    /** 창 · RHI 없이 에디터를 세웁니다(에디터 단위 테스트 — 프레임을 돌리지 않는다). */                                                                                                        \
+    X( bool, initializeHeadless, ( EditorHandle editor ) )                                                                                                                                      \
     /** 에디터를 종료합니다. */                                                                                                                                                                 \
     X( void, shutdown, ( EditorHandle editor ) )                                                                                                                                                \
     /** 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */                                                                                                                             \

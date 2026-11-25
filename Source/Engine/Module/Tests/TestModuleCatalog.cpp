@@ -279,6 +279,25 @@ SW_TEST_CASE( ModuleCatalogTest, DependencyProblemsAreErrors )
     SW_EXPECT_TRUE( error.find( "disabled by default" ) != string::npos );
 }
 
+/** @brief [ModuleCatalogTest] 하나만 남기면 그 모듈과 건너 의존이 로드 순서대로 남고, 켜진 모듈이 아닌 이름이면 비어 있다(테스트 자식이 여는 모듈) */
+SW_TEST_CASE( ModuleCatalogTest, KeepOnlyLeavesTheModuleAndItsDependencies )
+{
+    ModuleCatalog catalog;
+    Util::add( catalog, Util::makeManifest( "Base" ) );
+    Util::add( catalog, Util::makeManifest( "Middle", ModuleKind::Kit, { "Base" } ) );
+    Util::add( catalog, Util::makeManifest( "Top", ModuleKind::Kit, { "Middle" } ) );
+    Util::add( catalog, Util::makeManifest( "Other", ModuleKind::Kit, { "Base" } ) );
+
+    ModuleResolution resolution;
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
+    ModuleResolution kept = resolution;
+    kept.keepOnly( catalog, "Top" );
+    const vector<string> listExpected{ "Base", "Middle", "Top" };
+    SW_EXPECT_TRUE( kept._listLoadOrder == listExpected );
+    resolution.keepOnly( catalog, "Engine" );
+    SW_EXPECT_TRUE( resolution._listLoadOrder.empty() );
+}
+
 SW_TEST_CASE( ModuleCatalogTest, UnavailableModulesAreInactiveWithAReason )
 {
     ModuleCatalog  catalog;

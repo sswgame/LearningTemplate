@@ -62,7 +62,7 @@ namespace sw
         , _nextPreviewKey{ 1 }
         , _nextSceneSerial{ 1 }
         , _bWorldPlaying{ SW_FALSE }
-        , _bInitialized{ SW_FALSE }
+        , _bShutDown{ SW_FALSE }
         , _bRestartLoad{ SW_FALSE }
         , _sceneGeneration{ 0 }
         , _pRenderBinding{ nullptr }
@@ -125,7 +125,7 @@ namespace sw
         }
         _bLoadInFlight = false;
         _queuedPath.clear();
-        _bInitialized = SW_TRUE;
+        _bShutDown = SW_FALSE;
 
         SW_LOG_INFO_ID( "SceneManager.Initialized", "Initialized." );
         return SubsystemInitResult::Succeeded;
@@ -153,6 +153,9 @@ namespace sw
      */
     void SceneManager::shutdown()
     {
+        if ( _bShutDown == SW_TRUE )
+            return;
+        _bShutDown = SW_TRUE;   // 세운 관리자는 늘 쓸 수 있다(생성자가 다 준비한다) — 초기화를 부르지 않은 관리자도 똑같이 로드를 거두고 씬을 내린다
         _pScenePreload.reset(); // 붙든 에셋을 에셋 매니저가 살아 있는 동안 놓는다
         _pAheadPreload.reset();
         if ( _queuedPath.empty() == false )
@@ -189,10 +192,6 @@ namespace sw
         }
         _bRestartLoad  = SW_FALSE;
         _bLoadInFlight = false;
-        // 위의 로드는 초기화 전에도 띄울 수 있다 — 초기화 여부와 무관하게 거둔다(워커가 사라진 관리자의 로드를 잇지 않는다).
-        if ( _bInitialized == false )
-            return;
-        _bInitialized = SW_FALSE;
         // 미리보기 씬이 먼저다 — 로드된 씬과 서비스를 공유하지 않지만, 내리는 순서를 만든 순서의 역으로 둔다.
         while ( _listPreviewScene.empty() == false )
         {

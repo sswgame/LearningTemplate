@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/shader_branch_shape.py
 
@@ -11,23 +9,17 @@ NVIDIA GL(ARB_gl_spirv)은 DXC 가 낸 이 모양의 SPIR-V 를 잘못 컴파일
 - 사슬: `if ( … )` 뒤에 `else if ( … )` 가 이어진 갈래들. 조건은 맨 바깥 `&&` 로 나눈 항(공백 · 바깥 괄호를 뺀 글)으로 본다.
 - 위반: 뒤 갈래의 항 하나가 앞 갈래 중 항이 둘 이상인 조건의 항과 같다. 전처리 줄은 지운다(보수적).
 
-`py -3 -m Scripts lint shader-branch-shape [--self-check]` 로 돌리고, 커밋 훅(`rules.py` 표)이 돌린다.
+`py -3 -m Scripts lint shader-branch-shape [--self-check]` 로 돌리고, 커밋 훅이 돌린다.
 """
 
 from __future__ import annotations
 
-import argparse
 import re
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import LintScope, make_whole_scope, read_texts  # noqa: E402
-from lint.shader_kill_order import COMMENT_PATTERN, EXTENSIONS, PREPROCESSOR_PATTERN  # noqa: E402
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope
+from lint.shader_code import COMMENT_PATTERN, EXTENSIONS, PREPROCESSOR_PATTERN
 
 IF_PATTERN = re.compile(r"\bif\s*\(")
 ELSE_PATTERN = re.compile(r"\s*else\b")
@@ -123,47 +115,32 @@ def find_problems_in_text(path: str, text: str) -> list[str]:
     return list_problem
 
 
-def find_problems(list_source: Iterable[tuple[str, str]]) -> list[str]:
-    list_problem: list[str] = []
-    for path, text in list_source:
-        list_problem.extend(find_problems_in_text(path, text))
-    return list_problem
+class ShaderBranchShapeRule(LintRule):
+    id = "shader-branch-shape"
+    group = "셰이더"
+    blocks = "`if ( a && b ) … else if ( a )` 사슬(NVIDIA GL 오컴파일)"
+    why_not_type = "분기 모양은 형식이 아니다"
 
+    def selects(self, path: str) -> bool:
+        return path.startswith(("Content/", "Source/")) and path.endswith(EXTENSIONS) and "ThirdParty" not in path.split("/")
 
-def check_shader_branch_shape(project_root: Path, scope: LintScope) -> list[str]:
-    return find_problems(read_texts(project_root, scope.select(("Content", "Source"), EXTENSIONS, ("ThirdParty",))))
+    def inspect(self, file: SourceFile) -> list[str]:
+        return find_problems_in_text(file.path, file.text)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[str]]) -> list[str]:
+        return [problem for list_found in found.values() for problem in list_found]
 
-def run_self_check() -> None:
-    bad = "float f( bool a, bool b )\n{\n    float x = 0;\n    if ( a && b )\n    {\n        x = 1;\n    }\n    else if ( a )\n        x = 2;\n    return x;\n}\n"
-    bad_branch = "void f() { SW_BRANCH if ( ( inside ) && usesSoft() ) { x = 1; } else if ( c ) { } else SW_BRANCH if ( inside ) { x = 2; } }"
-    bad_nested = "void f() { if ( a && b ) { if ( c ) { x = 1; } else { x = 3; } } else if ( b && d ) { x = 2; } }"
-    good = "void f() { SW_BRANCH if ( a ) { SW_BRANCH if ( b ) { x = 1; } else { x = 2; } } }"
-    good_or = "void f() { if ( a || b && c ) { x = 1; } else if ( a ) { x = 2; } }"
-    good_separate = "void f() { if ( a && b ) { x = 1; } if ( a ) { x = 2; } }"
-    good_single = "void f() { if ( a ) { x = 1; } else if ( a && b ) { x = 2; } }"
-    assert len(find_problems([("a.hlsl", bad)])) == 1, find_problems([("a.hlsl", bad)])
-    assert ":8:" in find_problems([("a.hlsl", bad)])[0]
-    assert len(find_problems([("a.hlsl", bad_branch)])) == 1, find_problems([("a.hlsl", bad_branch)])
-    assert len(find_problems([("a.hlsl", bad_nested)])) == 1, find_problems([("a.hlsl", bad_nested)])
-    for text in (good, good_or, good_separate, good_single, "// if ( a && b ) {} else if ( a ) {}\n"):
-        assert find_problems([("a.hlsl", text)]) == [], (text, find_problems([("a.hlsl", text)]))
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="`if ( a && b ) … else if ( a )` 분기 사슬을 본다")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[ShaderBranchShape] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_shader_branch_shape(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[ShaderBranchShape] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    def self_check(self) -> None:
+        bad = "float f( bool a, bool b )\n{\n    float x = 0;\n    if ( a && b )\n    {\n        x = 1;\n    }\n    else if ( a )\n        x = 2;\n    return x;\n}\n"
+        bad_branch = "void f() { SW_BRANCH if ( ( inside ) && usesSoft() ) { x = 1; } else if ( c ) { } else SW_BRANCH if ( inside ) { x = 2; } }"
+        bad_nested = "void f() { if ( a && b ) { if ( c ) { x = 1; } else { x = 3; } } else if ( b && d ) { x = 2; } }"
+        good = "void f() { SW_BRANCH if ( a ) { SW_BRANCH if ( b ) { x = 1; } else { x = 2; } } }"
+        good_or = "void f() { if ( a || b && c ) { x = 1; } else if ( a ) { x = 2; } }"
+        good_separate = "void f() { if ( a && b ) { x = 1; } if ( a ) { x = 2; } }"
+        good_single = "void f() { if ( a ) { x = 1; } else if ( a && b ) { x = 2; } }"
+        assert len(find_problems_in_text("a.hlsl", bad)) == 1, find_problems_in_text("a.hlsl", bad)
+        assert ":8:" in find_problems_in_text("a.hlsl", bad)[0]
+        assert len(find_problems_in_text("a.hlsl", bad_branch)) == 1, find_problems_in_text("a.hlsl", bad_branch)
+        assert len(find_problems_in_text("a.hlsl", bad_nested)) == 1, find_problems_in_text("a.hlsl", bad_nested)
+        for text in (good, good_or, good_separate, good_single, "// if ( a && b ) {} else if ( a ) {}\n"):
+            assert find_problems_in_text("a.hlsl", text) == [], (text, find_problems_in_text("a.hlsl", text))

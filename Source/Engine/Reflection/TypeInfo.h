@@ -392,7 +392,8 @@ namespace sw
         static constexpr uint8 kDerivedPODFastPath         = 1u << 0;
         static constexpr uint8 kDerivedHasSaveGameProperty = 1u << 1;
         static constexpr uint8 kDerivedHasValidator        = 1u << 2;
-        static constexpr uint8 kDerivedFlagsBuilt          = 1u << 3; ///< 위 셋을 구했다. 상속 목록을 비우면 함께 내려간다
+        static constexpr uint8 kDerivedFlagsBuilt          = 1u << 3; ///< 판정을 구했다. 상속 목록을 비우면 함께 내려간다
+        static constexpr uint8 kDerivedHasRequiredProperty = 1u << 4;
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
@@ -439,6 +440,8 @@ namespace sw
         bool hasSaveGameProperty() const;
         /** @brief 검증 함수 유무입니다(`ReflectionValidation::hasValidator` 가 읽는다). */
         bool hasValidator() const;
+        /** @brief 상속한 기반까지 포함해 필수 칸(`PROPERTY( Required )`)이 하나라도 있으면 true 입니다. 시작 때의 필수 칸 검사(`ObjectValidation::reportEmptyRequired`)가 칸을 훑기 전에 본다. */
+        bool hasRequiredProperty() const;
         /**
          * @brief 판정(POD · 세이브 · 검증)을 지금의 상속 목록으로 구합니다. `rebuildDerivedCaches` 뒤에 부르고, 칸 타입의 목록도 지어져 있어야 합니다.
          * @details 레지스트리가 독점 잠금 안에서 바뀐 타입마다 잠그지 않는 조회(@p resolver)로 부른다. 레지스트리 밖 사본은 인자 없는 쪽(공개 조회)을 직접 부른다.

@@ -60,7 +60,7 @@
 	<EditorWaitStable/>
 	<EditorClick mark="contentBrowser.collection.Level Kit"/>
 	<WaitUntil watch="Editor.ContentCollectionItemCount" equals="1" timeoutFrames="60"/>
-	<CaptureEditorUI file="savedsearch/collections.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="savedsearch/collections.png"/>
 	<!-- 줄 끝 Remove 는 줄(Selectable)과 겹친다 — 겹침을 허락하지 않으면 눌리지 않았다 -->
 	<EditorClick mark="contentBrowser.collection.remove.game/playground/models/crate_medium.mesh" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
@@ -77,7 +77,7 @@
 	<EditorWaitStable/>
 	<EditorText value="crate_medium.mesh"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="savedsearch/palette.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="savedsearch/palette.png"/>
 	<EditorKey key="Escape"/>
 	<EditorWaitStable/>
 	<Variable name="gv_editorUiScale" value="0"/>

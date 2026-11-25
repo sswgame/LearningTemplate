@@ -25,19 +25,16 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다
-from common.exit_code import ExitCode  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from common.run_process import run_process  # noqa: E402
-from lint.clang_tidy import DEFAULT_BASE, HEADER_EXTENSIONS, SOURCE_EXTENSIONS, IncludeIndex, changed_files, lower_priority, main_tree_root, rewrite_command  # noqa: E402
+from common.command import Command, ScriptContext
+from common.compile_database import DEFAULT_BASE, HEADER_EXTENSIONS, SOURCE_EXTENSIONS, IncludeIndex, changed_files, lower_priority, rewrite_command
+from common.exit_code import ExitCode
+from common.host_platform import is_windows_host
+from common.run_process import run_process
 
 #: 유니티 빌드 구성이어도 된다 — 묶음 TU 는 담은 파일로 푼다. 개발 중 늘 짓는 구성이라 생성 헤더가 가장 새것이다.
 DEFAULT_PRESET = "Ninja-Release"
@@ -164,63 +161,63 @@ def split_command(command: str) -> list[str]:
     return list_argument
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts syntax", description="유니티를 푼 구문 확인(본 트리 컴파일 DB 를 읽기만 한다)")
-    mode = parser.add_argument_group("고르기(하나 이상)")
-    mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일이 닿는 TU")
-    mode.add_argument("--all", action="store_true", help="컴파일 DB 의 Source TU 전부")
-    mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일(헤더는 포함하는 TU 로)")
-    parser.add_argument("--direct", action="store_true", help="고른 .cpp 만 — 고른 헤더를 포함하는 TU 로 넓히지 않는다")
-    parser.add_argument("--define", action="append", default=[], metavar="이름", help="모든 TU 에 더할 매크로(되풀이해 준다)")
-    parser.add_argument("--rest", action="store_true", help="고른 것의 나머지 TU")
-    parser.add_argument("--jobs", type=int, default=DEFAULT_JOBS, help=f"동시 수(기본 {DEFAULT_JOBS})")
-    parser.add_argument("--preset", default=DEFAULT_PRESET, help=f"읽을 컴파일 DB 의 프리셋(기본 {DEFAULT_PRESET})")
-    args = parser.parse_args(argv)
-    if args.all == (args.changed is not None or args.files is not None):
-        parser.error("--all 하나 또는 --changed · --files 를 준다")
-    if args.rest and args.all:
-        parser.error("--rest 는 --changed · --files 와 쓴다")
-    if not is_windows_host():
-        print("[syntax] Windows 의 clang-cl 컴파일 DB 만 읽는다")
-        return ExitCode.CHECK_INVALID
+class SyntaxCheckCommand(Command):
+    name = "syntax"
+    help = "유니티를 푼 구문 확인(clang-cl -fsyntax-only, 본 트리 컴파일 DB 를 읽기만 한다) — --changed [기준]: 바뀐 파일이 닿는 TU, --all: 전부, --files: 지정 파일, --direct: 헤더를 넓히지 않음, --define: 더할 매크로, --jobs: 동시 수"
 
-    tree_root = get_project_root()
-    main_root = main_tree_root(tree_root)
-    database_path = main_root / "build" / args.preset / "compile_commands.json"
-    if not database_path.is_file():
-        print(f"[syntax] {database_path} 가 없다 — 본 트리를 구성한 뒤 돌린다(이 명령은 빌드하지 않는다)")
-        return ExitCode.CHECK_INVALID
-    units = make_units(json.loads(database_path.read_text(encoding="utf-8")), main_root, tree_root)
-    selected, list_unbuilt = units, []
-    if not args.all:
-        list_file = [path if path.is_absolute() else tree_root / path for path in args.files or []]
-        if args.changed is not None:
-            list_file += changed_files(tree_root, args.changed)
-        if args.direct:
-            list_file = [path for path in list_file if path.suffix.lower() in SOURCE_EXTENSIONS]
-        selected, list_unbuilt = select_units(list_file, units, main_root, tree_root)
-    for relative in list_unbuilt:
-        print(f"[syntax] 건너뜀({args.preset} 이 짓지 않는 파일): {relative}")
-    if args.rest:
-        selected = {key: unit for key, unit in units.items() if key not in selected}
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        mode = parser.add_argument_group("고르기(하나 이상)")
+        mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일이 닿는 TU")
+        mode.add_argument("--all", action="store_true", help="컴파일 DB 의 Source TU 전부")
+        mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일(헤더는 포함하는 TU 로)")
+        parser.add_argument("--direct", action="store_true", help="고른 .cpp 만 — 고른 헤더를 포함하는 TU 로 넓히지 않는다")
+        parser.add_argument("--define", action="append", default=[], metavar="이름", help="모든 TU 에 더할 매크로(되풀이해 준다)")
+        parser.add_argument("--rest", action="store_true", help="고른 것의 나머지 TU")
+        parser.add_argument("--jobs", type=int, default=DEFAULT_JOBS, help=f"동시 수(기본 {DEFAULT_JOBS})")
+        parser.add_argument("--preset", default=DEFAULT_PRESET, help=f"읽을 컴파일 DB 의 프리셋(기본 {DEFAULT_PRESET})")
 
-    defines = "".join(f" /D{name}" for name in args.define)
-    selected = {key: replace(unit, arguments=unit.arguments + defines) for key, unit in selected.items()}
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if args.all == (args.changed is not None or args.files is not None):
+            self.parser.error("--all 하나 또는 --changed · --files 를 준다")
+        if args.rest and args.all:
+            self.parser.error("--rest 는 --changed · --files 와 쓴다")
+        if not is_windows_host():
+            print("[syntax] Windows 의 clang-cl 컴파일 DB 만 읽는다")
+            return ExitCode.CHECK_INVALID
 
-    lower_priority()
-    started = time.monotonic()
-    print(f"[syntax] TU {len(selected)}개 · 동시 {args.jobs}", flush=True)
-    failed_count = 0
-    with ThreadPoolExecutor(args.jobs) as pool:
-        for done_count, (key, list_error) in enumerate(zip(selected, pool.map(check_unit, selected.values())), start=1):
-            if list_error:
-                failed_count += 1
-                print(f"  {key}", *(f"    {line}" for line in list_error), sep="\n", flush=True)
-            if done_count % PROGRESS_STEP == 0:
-                print(f"[syntax] {done_count}/{len(selected)} ({time.monotonic() - started:.0f} s)", flush=True)
-    print(f"[syntax] {'FAIL' if failed_count else 'OK'} — TU {len(selected)}개 가운데 오류 {failed_count}개 ({time.monotonic() - started:.0f} s)")
-    return ExitCode.VIOLATION if failed_count else ExitCode.PASSED
+        tree_root = context.root
+        main_root = context.main_root
+        database_path = main_root / "build" / args.preset / "compile_commands.json"
+        if not database_path.is_file():
+            print(f"[syntax] {database_path} 가 없다 — 본 트리를 구성한 뒤 돌린다(이 명령은 빌드하지 않는다)")
+            return ExitCode.CHECK_INVALID
+        units = make_units(json.loads(database_path.read_text(encoding="utf-8")), main_root, tree_root)
+        selected, list_unbuilt = units, []
+        if not args.all:
+            list_file = [path if path.is_absolute() else tree_root / path for path in args.files or []]
+            if args.changed is not None:
+                list_file += changed_files(tree_root, args.changed)
+            if args.direct:
+                list_file = [path for path in list_file if path.suffix.lower() in SOURCE_EXTENSIONS]
+            selected, list_unbuilt = select_units(list_file, units, main_root, tree_root)
+        for relative in list_unbuilt:
+            print(f"[syntax] 건너뜀({args.preset} 이 짓지 않는 파일): {relative}")
+        if args.rest:
+            selected = {key: unit for key, unit in units.items() if key not in selected}
 
+        defines = "".join(f" /D{name}" for name in args.define)
+        selected = {key: replace(unit, arguments=unit.arguments + defines) for key, unit in selected.items()}
 
-if __name__ == "__main__":
-    sys.exit(main())
+        lower_priority()
+        started = time.monotonic()
+        print(f"[syntax] TU {len(selected)}개 · 동시 {args.jobs}", flush=True)
+        failed_count = 0
+        with ThreadPoolExecutor(args.jobs) as pool:
+            for done_count, (key, list_error) in enumerate(zip(selected, pool.map(check_unit, selected.values())), start=1):
+                if list_error:
+                    failed_count += 1
+                    print(f"  {key}", *(f"    {line}" for line in list_error), sep="\n", flush=True)
+                if done_count % PROGRESS_STEP == 0:
+                    print(f"[syntax] {done_count}/{len(selected)} ({time.monotonic() - started:.0f} s)", flush=True)
+        print(f"[syntax] {'FAIL' if failed_count else 'OK'} — TU {len(selected)}개 가운데 오류 {failed_count}개 ({time.monotonic() - started:.0f} s)")
+        return ExitCode.VIOLATION if failed_count else ExitCode.PASSED

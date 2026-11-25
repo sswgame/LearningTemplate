@@ -148,7 +148,7 @@ namespace sw
          * @brief `writeInt` 로 쓴 정수를 읽습니다.
          * @return 비트가 모자라거나 읽은 단계가 범위를 넘으면 @p minValue 이고 `hasOverflowed` 가 섭니다(범위를 넘은 단계도 깨진 데이터다).
          * @details 한 값 읽기는 모두 값을 돌려준다 — 출력 인자 꼴은 반환 `bool` 을 버리면 실패를 잃었고 실패 때 출력 칸이 옛 값으로 남았다(`ByteReader` 와 같은 규칙).
-         *          실패는 끈적한 `hasOverflowed()` 하나로 본다. 되돌리는 도구 · 남은 옛 모양 검사는 `py -3 -m Scripts byte-reader-values`(린트 `cpp-shape` 규칙 13).
+         *          실패는 끈적한 `hasOverflowed()` 하나로 본다.
          */
         [[nodiscard]] int32 readInt( int32 minValue, int32 maxValue );
         uint32              readUint32() { return readBits( 32 ); }

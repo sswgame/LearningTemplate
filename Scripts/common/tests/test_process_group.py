@@ -7,9 +7,11 @@
 
 from __future__ import annotations
 
-import re
+import json
+import socket
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -18,10 +20,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import process_group  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
-from common.process_group import ProcessGroup, problem_lines, report  # noqa: E402
+from common.log_lines import count_id, payloads, problem_lines  # noqa: E402
+from common.process_group import ChildProcess, ProcessGroup, free_port, report  # noqa: E402
 
 # 준비 줄을 찍고 표준 입력 줄을 되울리다 quit 에 0 으로 끝나는 자식.
-_ECHO_CHILD = "import sys\nprint('ready', flush=True)\nfor line in sys.stdin:\n    print('got ' + line.strip(), flush=True)\n    if line.strip() == 'quit':\n        sys.exit(0)\n"
+_ECHO_CHILD = "import sys\nprint('[t] [x] [Info] - [id:Child.Ready] ready', flush=True)\nfor line in sys.stdin:\n    print('[t] [x] [Info] - [id:Child.Got] ' + line.strip(), flush=True)\n    if line.strip() == 'quit':\n        sys.exit(0)\n"
 
 
 class ProcessGroupTest(unittest.TestCase):
@@ -42,19 +45,49 @@ class ProcessGroupTest(unittest.TestCase):
     def test_wait_send_and_quit(self) -> None:
         with ProcessGroup("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", _ECHO_CHILD])
-            self.assertTrue(child.wait_for(re.compile("ready"), 30))
+            self.assertTrue(child.wait_for_log("Child.Ready", 30))
             child.send("hello")
-            self.assertTrue(child.wait_for(re.compile("got hello"), 30))
+            self.assertTrue(child.wait_for_log("Child.Got", 30))
+            child.send("again")
+            self.assertTrue(child.wait_for_log("Child.Got", 30, 2))
             child.stop(timeout_seconds=30)
         self.assertEqual(child.return_code, 0)
-        self.assertIn("got quit", child.text())
+        self.assertIn("[id:Child.Got] quit", child.text())
         self.assertEqual(child.log, Path(self._folder.name) / "Saved" / "Run" / "child.log")
 
     def test_wait_for_stops_when_the_process_exits(self) -> None:
         with ProcessGroup("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", "print('bye')"], stdin=False)
-            self.assertFalse(child.wait_for(re.compile("never"), 30))
+            self.assertFalse(child.wait_for_log("Child.Never", 30))
             self.assertTrue(child.wait(30))
+
+    def test_waiting_stops_at_once_when_a_peer_fails(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            failed = group.start("failed", [sys.executable, "-c", "import sys\nsys.exit(3)"], stdin=False, report_path=group.out_dir / "failed.report.json")
+            waiting = group.start("waiting", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False, report_path=group.out_dir / "waiting.report.json")
+            started = time.monotonic()
+            self.assertFalse(waiting.wait(300))
+            self.assertFalse(waiting.wait_for_log("Child.Never", 300))
+            self.assertLess(time.monotonic() - started, 120)
+            self.assertIs(waiting.lost_peer, failed)
+            self.assertEqual(waiting.scenario_problems(), [f"waiting was stopped because failed ended first with code 3 (log: {failed.log})"])
+
+    def test_passed_scenario_peer_is_not_lost(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            passed = group.start("passed", [sys.executable, "-c", "print('bye')"], stdin=False, report_path=group.out_dir / "passed.report.json")
+            server = group.start("server", [sys.executable, "-c", _ECHO_CHILD])
+            self.assertTrue(passed.wait(60))
+            self.assertTrue(server.wait_for_log("Child.Ready", 60))
+            self.assertIsNone(server.find_lost_peer())
+            server.stop(timeout_seconds=30)
+            self.assertFalse(server.ended_early())   # 실행기가 멈췄다
+
+    def test_server_ending_by_itself_is_lost(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            server = group.start("server", [sys.executable, "-c", "print('bye')"], stdin=False)
+            client = group.start("client", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False, report_path=group.out_dir / "client.report.json")
+            self.assertFalse(client.wait(300))
+            self.assertIs(client.lost_peer, server)
 
     def test_leaving_the_block_stops_running_processes(self) -> None:
         with ProcessGroup("test", "Preset", "Run") as group:
@@ -66,11 +99,33 @@ class ProcessGroupTest(unittest.TestCase):
             self.assertIsNone(group.require("NoSuchProgram"))
 
     def test_problem_lines_and_report(self) -> None:
-        text = "[Info] fine\n[Warning] allowed one\n[Error] broken\n"
-        problems = problem_lines("server", text, re.compile("allowed"))
-        self.assertEqual(problems, ["server log: [Error] broken"])
+        text = "[t] [s] [Info] - fine\n[t] [s] [Warning] - [id:A.Allowed] one\n[t] [s] [Error] [tick=3] - [id:A.Broken] two - dash\n[Error] [id:A.Assert] f.cpp:3: x\n -> f.cpp:4\n"
+        problems = problem_lines("server", text, frozenset({"A.Allowed"}))
+        self.assertEqual(problems, ["server log: [Error] A.Broken: two - dash", "server log: [Error] A.Assert: f.cpp:3: x"])
         self.assertEqual(report("test", problems, [], "ok"), ExitCode.VIOLATION)
         self.assertEqual(report("test", [], [], "ok"), ExitCode.PASSED)
+
+    def test_ids_and_json_payloads(self) -> None:
+        text = '[t] [s] [Info] - [id:A.Value] {"x":-1.4305115e-06}\n[t] [s] [Info] - [id:A.Other] x\n'
+        self.assertEqual(count_id(text, "A.Value"), 1)
+        self.assertEqual(payloads(text, "A.Value"), [{"x": -1.4305115e-06}])
+        with self.assertRaises(ValueError):
+            payloads(text, "A.Other")
+
+    def test_scenario_report_records_and_failure(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            child = group.start("child", [sys.executable, "-c", "raise SystemExit(10)"], stdin=False)
+            child.report_path = group.out_dir / "child.report.json"
+            child.report_path.write_text(json.dumps({"records": ["frame 3 Hub.PawnFloorX = -1.4305115e-06", "frame 4 Object.X(Player) = 2"],
+                                                     "failure": {"kind": "WatchMismatch", "reason": "why", "step": "step 4"}}), encoding="utf-8")
+            child.wait(30)
+        self.assertEqual(child.records(), {"Hub.PawnFloorX": -1.4305115e-06, "Object.X(Player)": 2.0})
+        self.assertIn("WatchMismatch why at step 4", child.scenario_problems()[0])
+        self.assertEqual(ChildProcess("none", child.process, child.log).records(), {})
+
+    def test_free_port_can_be_bound(self) -> None:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.bind(("127.0.0.1", free_port(socket.SOCK_DGRAM)))
 
 
 if __name__ == "__main__":

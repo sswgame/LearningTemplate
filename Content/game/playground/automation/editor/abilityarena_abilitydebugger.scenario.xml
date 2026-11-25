@@ -37,7 +37,7 @@
 	<DevCommand line="hud.print ability"/>
 	<ExpectLog id="DebugHUD.PrintLine" contains="Applied GE_Dash from devcommand" atLeast="1"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="abilityarena_abilitydebugger/log.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="abilityarena_abilitydebugger/log.png"/>
 	<DevCommand line="debug.target clear"/>
 	<EditorWaitStable/>
 	<!-- ③ 멈춤 -->

@@ -24,6 +24,10 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+
+from common.command import Command, ScriptContext  # noqa: E402
+
 TAG = "CookIfInputsChanged"
 #: 쿠커 실행 파일 폴더(`--binaries`)에서 지문에 넣는 파일 — 실행 파일 · 공유 라이브러리(`.so.1` 도) · 그 설정(JSON). 개발 빌드 Bin 에는 실행 로그 · 사진이 쌓여 바뀔 때마다 다시 구웠다.
 LIST_BINARY_SUFFIX = {"", ".exe", ".dll", ".json"}
@@ -103,28 +107,24 @@ def run(stamp: Path, list_input: Sequence[Path], list_binary: Sequence[Path], li
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    argv = list(sys.argv[1:] if argv is None else argv)
-    if "--" not in argv:
-        print(f"[{TAG}] missing '--' before the commands", file=sys.stderr)
-        return 2
-    split = argv.index("--")
-    parser = argparse.ArgumentParser(description="쿠킹 입력 · 출력 지문이 같으면 쿠킹 명령을 건너뛴다")
-    parser.add_argument("--stamp", type=Path, required=True, help="지문 파일 — 출력 폴더 밖(안에 두면 쓴 지문이 다음 지문을 바꾼다)")
-    parser.add_argument("--input", type=Path, action="append", default=[], help="입력 폴더 · 파일(여럿)")
-    parser.add_argument("--binaries", type=Path, action="append", default=[], help="쿠커 실행 파일 폴더(여럿) — 바로 아래 파일만 본다")
-    parser.add_argument("--output", type=Path, action="append", default=[], help="출력 폴더(여럿) — 지우거나 고치면 다시 돈다")
-    args = parser.parse_args(argv[:split])
-    if not args.input:
-        print(f"[{TAG}] no --input", file=sys.stderr)
-        return 2
-    try:
-        list_command = split_commands(argv[split + 1:])
-    except ValueError as error:
-        print(f"[{TAG}] {error}", file=sys.stderr)
-        return 2
-    return run(args.stamp, args.input, args.binaries, args.output, list_command)
+class CookIfInputsChangedCommand(Command):
+    name = "cook-if-inputs-changed"
+    help = "쿠킹 입력 · 출력 지문이 같으면 쿠킹 명령을 건너뛴다(빌드 단계)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--stamp", type=Path, required=True, help="지문 파일 — 출력 폴더 밖(안에 두면 쓴 지문이 다음 지문을 바꾼다)")
+        parser.add_argument("--input", type=Path, action="append", required=True, help="입력 폴더 · 파일(여럿)")
+        parser.add_argument("--binaries", type=Path, action="append", default=[], help="쿠커 실행 파일 폴더(여럿) — 바로 아래 파일만 본다")
+        parser.add_argument("--output", type=Path, action="append", default=[], help="출력 폴더(여럿) — 지우거나 고치면 다시 돈다")
+        parser.add_argument("commands", nargs="+", metavar="-- 명령", help="지문이 다르면 차례로 도는 명령들")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        try:
+            list_command = split_commands(args.commands)
+        except ValueError as error:
+            self.parser.error(str(error))
+        return run(args.stamp, args.input, args.binaries, args.output, list_command)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(CookIfInputsChangedCommand.main())

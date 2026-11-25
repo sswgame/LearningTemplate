@@ -23,6 +23,14 @@ namespace
 {
     struct SkeletalSeveringTestUtil
     {
+        /** @brief 필수 칸 `_severedSurfaceChannel` 을 채웁니다 — 시작할 때도 뜬 상태를 되돌릴 때도 본다. */
+        static void fillSeveredChannel( SkeletalSeveringComponent& severing )
+        {
+            const PropertyInfo* pChannel = SkeletalSeveringComponent::StaticType()->findProperty( hashed_string( "_severedSurfaceChannel" ) );
+            SW_REQUIRE_NOT_NULL( pChannel );
+            *pChannel->getValuePtr<hashed_string>( static_cast<void*>( &severing ) ) = hashed_string( "Blood" );
+        }
+
         /** @brief 띠 하나입니다 — 정점 0 ~ 3 은 영역 0, 4 · 5 는 영역 1 입니다. 삼각형 넷 중 마지막만 영역 1 의 정점이 둘입니다. */
         static AppearanceGeometry makeStrip()
         {
@@ -122,6 +130,7 @@ SW_TEST_CASE( SkeletalSeveringTest, NewBodyMeshStaysSevered )
     GameObject*                pBody     = manager.createGameObject( hashed_string( "Body" ) );
     SkeletalMeshComponent*     pUnit     = pBody->addComponent<SkeletalMeshComponent>();
     SkeletalSeveringComponent* pSevering = pBody->addComponent<SkeletalSeveringComponent>();
+    SkeletalSeveringTestUtil::fillSeveredChannel( *pSevering );
     pSevering->setRegionTablePath( test::ScopedScratchDomain::makeID( "body.fit.xml" ).str() );
     manager.beginPlay();
     pUnit->setSkeleton( skeleton );
@@ -156,9 +165,7 @@ SW_TEST_CASE( SkeletalSeveringTest, RestoredBodyIsSeveredAgain )
     GameObject*                pBody     = manager.createGameObject( hashed_string( "Body" ) );
     SkeletalMeshComponent*     pUnit     = pBody->addComponent<SkeletalMeshComponent>();
     SkeletalSeveringComponent* pSevering = pBody->addComponent<SkeletalSeveringComponent>();
-    const PropertyInfo*        pChannel  = SkeletalSeveringComponent::StaticType()->findProperty( hashed_string( "_severedSurfaceChannel" ) ); // 뜬 상태를 되돌릴 때 필수 칸을 본다
-    SW_REQUIRE_NOT_NULL( pChannel );
-    *pChannel->getValuePtr<hashed_string>( static_cast<void*>( pSevering ) ) = hashed_string( "Blood" );
+    SkeletalSeveringTestUtil::fillSeveredChannel( *pSevering );
     pSevering->setRegionTablePath( test::ScopedScratchDomain::makeID( "body.fit.xml" ).str() );
     manager.beginPlay();
     pUnit->setSkeleton( skeleton );

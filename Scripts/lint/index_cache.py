@@ -222,8 +222,3 @@ def _open_facts(project_root: Path, name: str, list_version_file: Sequence[str],
                 (folder / shard_name).unlink(missing_ok=True)
         write_json(manifest_path, {"version": version, "shards": dict(sorted(map_new_digest.items())), "summary": dict(summary)})
     return Facts(map_fact, summary)
-
-
-def load_facts(project_root: Path, name: str, list_version_file: Sequence[str], list_relative: Iterable[str], extract: Callable[[str, str], Any], **options: Any) -> dict[str, Any]:
-    """`open_facts` 의 사실만(`want` 의 경로)."""
-    return open_facts(project_root, name, list_version_file, list_relative, extract, **options).map_fact

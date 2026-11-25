@@ -16,7 +16,7 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
 	<!-- 눈 확인용(GPU 검증): 열린 오디오 그래프 패널 -->
 	<EditorWaitStable/>
-	<CaptureEditorUI file="audiographpanel/open.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="audiographpanel/open.png"/>
 	<EditorWaitStable/>
 	<DevCommand line="panel.close audiograph"/>
 	<EditorWaitStable/>

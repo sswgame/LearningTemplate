@@ -13,22 +13,18 @@ Engine(`Source/Engine`)과 GameFramework 런타임(`Source/GameFramework/Runtime
 
 파일마다 층을 표에서 정한다(키는 모듈 폴더 아래 경로 접두어, 가장 긴 것이 이긴다). 표에 없는 파일이 있으면 멈춘다(configure 가 서지 않는다).
 
-  python Scripts/generate/module_layers.py <모듈 이름> <출력 .cmake 파일>
 """
 
 from __future__ import annotations
 
-import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.file_collect import list_files_under  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from generate.generator_output import GeneratorError, run_generator, write_generated_file  # noqa: E402
+from common.file_collect import list_files_under
+from common.paths import get_project_root
+from generate.generator_output import Generator, GeneratorError, write_generated_file
 
 TAG = "ModuleLayers"
 RULE_DIR = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers"
@@ -129,14 +125,7 @@ def generate_module_layers(module: str, output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=f"{module}Layers", summary=f"{file_count} files · {len(list_tier)} tiers")
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    def add_arguments(parser) -> None:
-        parser.add_argument("module", help="층 표의 모듈 이름(Engine · GameFramework)")
-        parser.add_argument("output", type=Path, help="쓸 .cmake 파일")
-
-    return run_generator(argv, tag=TAG, description="모듈 층 표 → CMake 변수", add_arguments=add_arguments,
-                        generate=lambda args: generate_module_layers(args.module, args.output))
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+class ModuleLayersGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        for table in LIST_LAYER_TABLE:
+            generate_module_layers(table._module, output_dir / f"{table._module}Layers.cmake")

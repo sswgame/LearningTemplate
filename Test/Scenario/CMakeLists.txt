@@ -10,7 +10,8 @@
 #        골든이 백엔드별이라 자식마다 제 골든과 견준다. 이 PC 에서 못 도는 백엔드는 그 백엔드만 건너뛴다.
 # @details 종료 코드는 표 하나(`Config/Engine/ProcessExitCodes.json` → `SW_EXIT_CODE_<이름>`)다 — 건너뜀(`SW_EXIT_CODE_Skipped`)은 CTest 의 건너뜀이다. 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          단계별 결과는 `<빌드>/Testing/Logs/Scenario.<팩>.<백엔드>.log` 의 `chain stage i/n` 줄에 있다.
-#          하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 체인이 줍지 않는다 — 손으로 돌린다.
+#          하위 폴더는 조건이 붙은 시나리오라 체인이 줍지 않고 폴더마다 제 항목이 있다(`rhiswap/` — 네 백엔드가 있는 Windows, `netpair/` — 여러 프로세스, Test/Net).
+#          어느 항목도 띄우지 않는 시나리오가 있으면 구성이 선다(이 파일 끝) — 돌릴 수 없는 것(디버거 · 브라우저)만 까닭과 함께 `Config/Rules/Test/ManualScenarios.json` 에 둔다.
 #          게임의 하위 폴더 다섯은 게임마다 같은 `-game=` 규칙으로 따로 항목이 된다: `showcase/`(쇼케이스 체인 `Scenario.<팩>.showcase`), `desktop/`(혼자 도는 데스크톱 시나리오),
 #          `sequence/`(두 번 기동 쌍), `editor/`(그 게임의 편집기 체인 `Scenario.<팩>.editor`), `load/`(부하 측정 — 라벨 load, 엔진 폴더도).
 #          항목이 GPU 자식을 백엔드 수만큼 띄우므로 그 수를 슬롯으로 선언한다(`PROCESSORS`) — `ctest -j` 의 다른 항목(단위 테스트)과 겹쳐도 GPU 자식이 늘지 않는다.
@@ -53,6 +54,7 @@ function(sw_add_scenario_chain test_name stage_seconds)
 	list(FILTER list_reload_scenario INCLUDE REGEX "modulereload\\.scenario\\.xml$")
 	list(FILTER list_scenario EXCLUDE REGEX "modulereload\\.scenario\\.xml$")
 	list(APPEND list_scenario ${list_reload_scenario})
+	sw_register_scenarios(${list_scenario})
 	list(LENGTH list_scenario stage_count)
 	list(GET list_scenario 0 first_path)
 	sw_read_scenario_launch("${first_path}" list_launch_argument)
@@ -94,7 +96,7 @@ endfunction()
 
 # 부하 시나리오 하나 — 측정 창(`<Load durationSeconds="N"/>`)이 끝내는 성능 측정이라 체인에 넣지 않고 기본 백엔드 한 프로세스로 혼자 돈다
 # (RUN_SERIAL — 다른 항목이 CPU · GPU 를 나눠 쓰면 잰 값이 흔들린다). 라벨은 `load` 하나라 기본 실행(`-L hostgpu` · `-L nogpu`)에 들지 않고
-# `ctest -L load` 로 돈다(언리얼 Gauntlet 의 성능 테스트가 따로 도는 것과 같다). 시한은 측정 창 + 기동 여유다. 이름은 Scenario.<팩>.load.<이름> · Scenario.engine.load.<이름>.
+# `ctest -L load` 로 돈다 — 묶음 검증의 gpu-release 에서 빠지고 Linux 와 함께 모아서 돈다(preflight.sh load — 언리얼 Gauntlet 의 성능 테스트가 따로 도는 것과 같다). 시한은 측정 창 + 기동 여유다. 이름은 Scenario.<팩>.load.<이름> · Scenario.engine.load.<이름>.
 function(sw_add_load_scenario load_path)
 	file(STRINGS "${scenario_root}/${load_path}" list_load_line REGEX "<Load ")
 	if(NOT list_load_line MATCHES "durationSeconds=\"([0-9]+)\"")
@@ -107,6 +109,7 @@ function(sw_add_load_scenario load_path)
 	string(REPLACE "/" "." load_name "${load_name}")
 	sw_read_scenario_launch("${load_path}" list_load_launch)
 	set(load_test_name Scenario.${load_name})
+	sw_register_scenarios("${load_path}")
 	add_test(NAME ${load_test_name}
 		COMMAND $<TARGET_FILE:App> ${ARGN} -scenario=${load_path} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${load_test_name}.log ${list_load_launch}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
@@ -180,6 +183,7 @@ foreach(game IN LISTS list_built_game)
 		string(REGEX REPLACE "\\.scenario\\.xml$" "" desktop_name "${desktop_name}")
 		sw_read_scenario_launch("${desktop_path}" list_desktop_launch)
 		set(desktop_test_name Scenario.${pack}.desktop.${desktop_name})
+		sw_register_scenarios("${desktop_path}")
 		add_test(NAME ${desktop_test_name}
 			COMMAND $<TARGET_FILE:App> ${game_argument} -scenario=${desktop_path} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${desktop_test_name}.log ${list_desktop_launch}
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
@@ -194,6 +198,7 @@ foreach(game IN LISTS list_built_game)
 			string(REGEX REPLACE "\\.scenario\\.xml$" "" desktop_name "${desktop_name}")
 			sw_read_scenario_launch("${desktop_path}" list_desktop_launch)
 			set(desktop_test_name Scenario.${pack}.desktop.editor.${desktop_name})
+			sw_register_scenarios("${desktop_path}")
 			add_test(NAME ${desktop_test_name}
 				COMMAND $<TARGET_FILE:App> ${game_argument} -EnableEditor -scenario=${desktop_path} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${desktop_test_name}.log ${list_desktop_launch}
 				WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
@@ -213,6 +218,7 @@ foreach(game IN LISTS list_built_game)
 		string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pair_path "${first_path}")
 		get_filename_component(pair_name "${pair_path}" NAME)
 		set(sequence_test_name Scenario.${pack}.sequence.${pair_name})
+		sw_register_scenarios("${pair_path}.1.scenario.xml" "${pair_path}.2.scenario.xml")
 		set(sequence_state_dir "${CMAKE_BINARY_DIR}/Testing/StateDir/${pack}.${pair_name}")
 		add_test(NAME ${sequence_test_name}
 			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DSCENARIO_ROOT=${scenario_root} -DPAIR=${pair_path} -DSTATE_DIR=${sequence_state_dir} "-DSTATE_ARG=-gv_userSettingsFile=${sequence_state_dir}/usersettings.json"
@@ -245,12 +251,59 @@ if(TARGET EditorModule)
 	foreach(first_path IN LISTS list_state_dir_first)
 		string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pair_path "${first_path}")
 		get_filename_component(pair_name "${pair_path}" NAME)
+		sw_register_scenarios("${pair_path}.1.scenario.xml" "${pair_path}.2.scenario.xml")
 		add_test(NAME Scenario.editor.statedir.${pair_name}
 			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DSCENARIO_ROOT=${scenario_root} -DPAIR=${pair_path} -DSTATE_DIR=${CMAKE_BINARY_DIR}/Testing/StateDir/${pair_name}
 				"-DSTATE_ARG=-gv_editorStateDir=${CMAKE_BINARY_DIR}/Testing/StateDir/${pair_name}" -DUSER_DATA_DIR=$<TARGET_FILE_DIR:App>/Saved/Automation/UserData/statedir.${pair_name} -DEDITOR=ON -DLOG_NAME=Scenario.editor.statedir.${pair_name} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(Scenario.editor.statedir.${pair_name} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 	endforeach()
+endif()
+
+# 백엔드 교체 — 한 프로세스가 네 백엔드를 차례로 건넌다. 넷이 모두 있는 Windows 에서만 통과하므로 체인(백엔드마다 자식)에 넣지 않고 혼자 돈다.
+if(WIN32)
+	sw_glob_source_tree(list_swap_scenario RELATIVE "${scenario_root}" "${scenario_root}/engine/automation/rhiswap/*.scenario.xml")
+	foreach(swap_path IN LISTS list_swap_scenario)
+		get_filename_component(swap_name "${swap_path}" NAME)
+		string(REGEX REPLACE "\\.scenario\\.xml$" "" swap_name "${swap_name}")
+		sw_register_scenarios("${swap_path}")
+		add_test(NAME Scenario.engine.rhiswap.${swap_name}
+			COMMAND $<TARGET_FILE:App> -scenario=${swap_path} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Scenario.engine.rhiswap.${swap_name}.log
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(Scenario.engine.rhiswap.${swap_name} PROPERTIES LABELS hostgpu TIMEOUT 600 RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+	endforeach()
+endif()
+
+# 어느 항목도 띄우지 않는 시나리오 — 새 하위 폴더 · 새 이름 규칙을 만들고 등록을 잊으면 아무도 돌리지 않아 썩는다(여러 프로세스 시나리오가 그랬다). 모든 항목이 서는 구성
+# (Windows Release, 편집기 포함)에서 폴더 전체와 등록한 것을 견주어, 남은 것이 `ManualScenarios.json`(돌릴 수 없는 까닭)에 없으면 구성을 세운다. 낡은 줄(가리키는 시나리오가 없다)도 세운다.
+if(WIN32 AND TARGET EditorModule AND TARGET Server AND CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT SW_ENABLE_SANITIZER)
+	set(list_all_scenario_glob "${scenario_root}/engine/automation/*.scenario.xml")
+	foreach(game IN LISTS list_built_game)
+		sw_require_json_value(game_pack_root "${CMAKE_SOURCE_DIR}/${SW_DIR_RUNTIME_GAME_PRESET}/${game}.json" _packRoot)
+		list(APPEND list_all_scenario_glob "${scenario_root}/${game_pack_root}/automation/*.scenario.xml")
+	endforeach()
+	sw_glob_source_tree(list_unregistered RECURSE RELATIVE "${scenario_root}" ${list_all_scenario_glob})
+	get_property(list_registered GLOBAL PROPERTY SW_REGISTERED_SCENARIOS)
+	list(REMOVE_ITEM list_unregistered ${list_registered})
+	set(manual_scenarios_file "${CMAKE_SOURCE_DIR}/Config/Rules/Test/ManualScenarios.json")
+	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${manual_scenarios_file}")
+	sw_require_json_value(manual_count "${manual_scenarios_file}" LENGTH _scenarios)
+	if(manual_count GREATER 0)
+		math(EXPR manual_last "${manual_count} - 1")
+		foreach(manual_index RANGE ${manual_last})
+			sw_require_json_value(manual_path "${manual_scenarios_file}" _scenarios ${manual_index} path)
+			sw_require_json_value(manual_reason "${manual_scenarios_file}" _scenarios ${manual_index} reason)
+			sw_require_json_value(manual_command "${manual_scenarios_file}" _scenarios ${manual_index} command)
+			if(manual_path IN_LIST list_registered OR NOT EXISTS "${scenario_root}/${manual_path}")
+				message(FATAL_ERROR "[Scenario] ${manual_scenarios_file}: '${manual_path}' is run by a ctest item (or does not exist) - drop the line")
+			endif()
+			list(REMOVE_ITEM list_unregistered "${manual_path}")
+		endforeach()
+	endif()
+	if(list_unregistered)
+		list(JOIN list_unregistered "\n  " unregistered_text)
+		message(FATAL_ERROR "[Scenario] no ctest item runs these scenarios - put them in a folder the items pick up, add an item, or give the reason in ${manual_scenarios_file}:\n  ${unregistered_text}")
+	endif()
 endif()
 
 # 모든 시나리오가 임포트한 산출물을 요구한다(Test/CMakeLists.txt 의 `Import.*`).

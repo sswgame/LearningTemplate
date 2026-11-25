@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from common.command import Command, ScriptContext  # noqa: E402
 from common.tool_download import ensure_cached_download, extract_zip_safe, resolve_tools_subdir, tools_cache_dir  # noqa: E402
 from common.toolchain_config import load_search_paths  # noqa: E402
 from common.host_platform import is_windows_host  # noqa: E402
@@ -128,18 +129,22 @@ class PlatformSdk:
         print("[PlatformSdk] presets match the configured emsdk · NDK")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="웹 · Android 빌드 도구를 Tools/ 아래에 받는다")
-    parser.add_argument("target", choices=["web", "android", "all", "check"])
-    args = parser.parse_args()
-    sdk = PlatformSdk()
-    sdk.check_presets()
-    if args.target in ("web", "all"):
-        sdk.install_web()
-    if args.target in ("android", "all"):
-        sdk.install_android()
-    return ExitCode.PASSED
+class PlatformSdkCommand(Command):
+    name = "platform-sdk"
+    help = "웹 · Android 빌드 도구를 Tools/ 아래에 받는다"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("target", choices=["web", "android", "all", "check"])
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        sdk = PlatformSdk()
+        sdk.check_presets()
+        if args.target in ("web", "all"):
+            sdk.install_web()
+        if args.target in ("android", "all"):
+            sdk.install_android()
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(PlatformSdkCommand.main())

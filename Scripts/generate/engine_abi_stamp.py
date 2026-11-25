@@ -18,10 +18,10 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
+from common.command import Command, ScriptContext  # noqa: E402
 from generate.file_digest_cache import FileDigestCache  # noqa: E402
 from generate.generator_output import write_generated_file  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
@@ -75,20 +75,23 @@ def _make_header_text(stamp: str) -> str:
     )
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Core · Engine 헤더 지문(핫 리로드 ABI 도장)을 씁니다.")
-    parser.add_argument("--root", required=True, help="저장소 루트")
-    parser.add_argument("--out", required=True, help="쓸 헤더 경로")
-    parser.add_argument("--cache", required=True, help="파일 지문 캐시(빌드 트리 안 JSON)")
-    args = parser.parse_args(argv)
+class EngineABIStampCommand(Command):
+    name = "engine-abi-stamp"
+    help = "Core · Engine 헤더 지문(핫 리로드 ABI 도장)을 쓴다(빌드 단계)"
 
-    cache = FileDigestCache(Path(args.cache), drop_comments)
-    text = _make_header_text(_compute_stamp(Path(os.path.normpath(Path(args.root).absolute())), cache))
-    cache.save()
-    # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
-    write_generated_file(Path(args.out), text, tag="EngineABIStamp", newline="\n", report_unchanged=False)
-    return ExitCode.PASSED
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--root", required=True, help="저장소 루트")
+        parser.add_argument("--out", required=True, help="쓸 헤더 경로")
+        parser.add_argument("--cache", required=True, help="파일 지문 캐시(빌드 트리 안 JSON)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        cache = FileDigestCache(Path(args.cache), drop_comments)
+        text = _make_header_text(_compute_stamp(Path(os.path.normpath(Path(args.root).absolute())), cache))
+        cache.save()
+        # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
+        write_generated_file(Path(args.out), text, tag="EngineABIStamp", newline="\n", report_unchanged=False)
+        return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(EngineABIStampCommand.main())

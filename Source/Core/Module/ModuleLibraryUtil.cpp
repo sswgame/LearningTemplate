@@ -264,6 +264,33 @@ namespace sw
 #endif
     }
 
+    string ModuleLibraryUtil::findImageNameContaining( const void* pAddress )
+    {
+        string path;
+#if defined( SW_PLATFORM_WINDOWS )
+        HMODULE hModule = nullptr;
+        if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCWSTR>( pAddress ), &hModule ) == FALSE )
+            return {};
+        utf16       arrPath[constant::buffer::kMax1024]{};
+        const DWORD length = GetModuleFileNameW( hModule, arrPath, static_cast<DWORD>( std::size( arrPath ) ) );
+        if ( length == 0 || length >= std::size( arrPath ) )
+            return {};
+        path = StringUtil::utf16ToUTF8( arrPath );
+#elif defined( SW_PLATFORM_POSIX )
+        Dl_info info{};
+        if ( dladdr( pAddress, &info ) == 0 || info.dli_fname == nullptr )
+            return {};
+        path = info.dli_fname;
+#else
+    #error "Unsupported platform"
+#endif
+        string            stem   = FileUtil::removeExtension( FileUtil::getFileNamePart( path ) );
+        const string_view prefix = getSharedLibraryPrefix();
+        if ( prefix.empty() == false && StringUtil::startsWith( stem, prefix ) )
+            stem.erase( 0, prefix.size() );
+        return stem;
+    }
+
     void* ModuleLibraryUtil::getDynamicSymbol( void* pHandle, string_view symbolName )
     {
         if ( pHandle == nullptr || symbolName.empty() )

@@ -6,7 +6,7 @@
 -->
 <Scenario name="game.playground.netpair.hub_return" fixedDelta="0.0166667" realTime="true" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900">
 	<Expect watch="Hub.NetRole" equals="0"/>
-	<DevCommand line="net.ticketconnect 127.0.0.1:17880 hub_netpair hub_netpair_pw_1 playground_hub 127.0.0.1:17877"/>
+	<DevCommand line="net.ticketconnect {gv_onlineServerAddress} hub_netpair hub_netpair_pw_1 playground_hub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutSeconds="30"/>
 	<Expect watch="Hub.Level" equals="2"/>
 	<Expect watch="Hub.Experience" equals="135"/>

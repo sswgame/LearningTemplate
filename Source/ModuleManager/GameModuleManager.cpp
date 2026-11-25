@@ -584,6 +584,8 @@ namespace sw
         // 게임 모듈은 라이브러리만 로드한다(타입 등록까지). 등록이 곧 첫 로드의 "리로드 직후" 를 부르므로 주인 창구는 등록 **뒤에** 건다 —
         // 인스턴스 생성은 기동(`startGameInstance` 의 `runAfterReload`)이 하고, 첫 로드의 API 표 대조는 그 바인딩(`bindGameAPI`)이 같은 검사로 한다.
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
+        if ( resolution.isActive( sw::config::kTargetGameModule ) == false )
+            return true; // 테스트 자식이 연 모듈에 게임이 없다(`ModuleResolution::keepOnly`)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
             SW_LOG_ERROR_ID( "GameModuleManager.SWGameModuleRegisterFailed", "SWGame module register failed" );

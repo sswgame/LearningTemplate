@@ -165,7 +165,6 @@ namespace sw
          * @details 리소스 id · `DataPath` · `PathKey` 같은 논리 경로를 글로 꺼내 I/O 에 넘기는 자리가 눈에 보이게 한다(예전에는 `string_view` 라 무엇이든 들어갔다).
          *          엄격한 절대 경로면 구분자를 `/` 로 맞춘 값이다. 상대 · `C:foo` · `\foo` 는 OS 경계와 같은 오류(`File.RelativePath`)를 남기고 빈 경로 — 그 값을 받은 I/O 는 실패한다(폴백 없음).
          *          빈 글은 오류 없이 빈 경로다(없는 파일처럼 실패한다 — 예전 빈 글 인자와 같다). 실패를 갈라야 하면 `requireAbsolutePath`(빈 값을 돌려준다)를 쓴다.
-         *          바꾸기 도구 · 남은 문자열 인자 검사는 `py -3 -m Scripts disk-path-args`(린트 `cpp-shape` 규칙 14).
          */
         [[nodiscard]] static AbsolutePath toDiskPath( string_view text );
         /**

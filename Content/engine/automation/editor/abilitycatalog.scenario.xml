@@ -28,7 +28,7 @@
 	<EditorWaitStable/>
 	<EditorClick mark="abilityCatalog.entry.4"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="abilitycatalog/issue.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="abilitycatalog/issue.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="abilityCatalog.ref.5"/>
 	<EditorWaitStable/>
@@ -39,7 +39,7 @@
 	<!-- 쓰이는 곳: 이펙트 GE_Heal(항목 0)을 고르면 GA_Heal 의 Param 이 쓴다 -->
 	<EditorClick mark="abilityCatalog.entry.0"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="abilitycatalog/usedby.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="abilitycatalog/usedby.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="abilityCatalog.save"/>
 	<WaitUntil watch="Editor.AbilityCatalogValidation" equals="1" timeoutFrames="90"/>

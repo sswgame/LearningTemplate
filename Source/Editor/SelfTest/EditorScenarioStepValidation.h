@@ -182,6 +182,9 @@ namespace sw::editor
         float32 _maxMagentaFraction{ kEditorCaptureNoLimit };
         PROPERTY( Min = 0 )
         float32 _maxClippedWindows{ kEditorCaptureNoLimit };
+        /// 찍은 그림이 렌더러에서 나온다(미리보기 · 썸네일 · 씬 뷰 겹쳐 그리기) — 백엔드 나누기에서도 모든 백엔드가 이 시나리오를 돈다(`AutomationPerBackend`). 패널 · 글자만 찍은 캡처는 적지 않는다.
+        PROPERTY()
+        bool _bEveryBackend{ false };
     };
 
     /** @brief 인자가 없는 에디터 단계의 스키마입니다. */

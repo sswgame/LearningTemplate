@@ -5,19 +5,15 @@ Config/Engine/ProcessExitCodes.json(프로세스 종료 코드 표의 단일 출
 CMake 표(ProcessExitCodes.cmake — `SW_EXIT_CODE_<name>`)를 생성합니다. 숫자는 JSON 에만 있다.
 
 Usage:
-  python Scripts/generate/process_exit_codes.py <output_header_path> <output_cmake_path>
 """
 
 from __future__ import annotations
 
-import argparse
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from generate.generator_output import GeneratorError, run_generator, write_generated_file  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from generate.generator_output import Generator, GeneratorError, write_generated_file
+from common.paths import get_project_root
 
 TAG = "ProcessExitCodes"
 CONFIG_RELATIVE = "Config/Engine/ProcessExitCodes.json"
@@ -101,15 +97,6 @@ def generate_process_exit_codes(header_path: Path, cmake_path: Path) -> None:
     write_generated_file(cmake_path, make_cmake_text(list_row), tag=TAG)
 
 
-def main(argv: list[str] | None = None) -> int:
-    def _add_arguments(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("header", type=Path, help="쓸 C++ 헤더")
-        parser.add_argument("cmake", type=Path, help="쓸 CMake 표")
-
-    return run_generator(argv, tag=TAG, description="ProcessExitCodes.json → C++ 열거형 · CMake 변수",
-                        add_arguments=_add_arguments,
-                        generate=lambda args: generate_process_exit_codes(args.header, args.cmake))
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+class ProcessExitCodesGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        generate_process_exit_codes(output_dir / "ProcessExitCodes.gen.h", output_dir / "ProcessExitCodes.cmake")

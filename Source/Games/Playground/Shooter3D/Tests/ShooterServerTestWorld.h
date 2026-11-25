@@ -19,6 +19,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
@@ -135,6 +136,10 @@ namespace sw
             SW_REQUIRE_TRUE( pPlayer != nullptr );
             *pPlayer->getValuePtr<GameObjectHandle>( static_cast<void*>( &gameMode ) ) = player.getHandle();
             SW_REQUIRE_TRUE( gameMode.getPlayer() == player.getHandle() );
+            // 필수 칸(자동 플레이 조종자) — 자동 플레이를 켜지 않아 읽지 않지만, 빈 필수 칸으로 시작하면 오류다.
+            const PropertyInfo* pAutoPlay = ShooterGameModeComponent::StaticType()->findProperty( hashed_string( "_autoPlayPrefab" ) );
+            SW_REQUIRE_TRUE( pAutoPlay != nullptr );
+            SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( *pAutoPlay, MutableObjectAddress{ &gameMode }, "game/playground/shooter3d/prefabs/autoplay_ai.prefab.xml", SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
         }
 
         ShooterServerTestWorld( const ShooterServerTestWorld& )            = delete;

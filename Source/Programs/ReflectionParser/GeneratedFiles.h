@@ -47,7 +47,7 @@ namespace sw
 
     /**
      * @brief 입력 하나의 스탬프(`<.gen.cpp>.stamp`) 한 장 - 마지막으로 성공한 생성이 그 입력에 대해 안 사실입니다.
-     * @details 줄 꼴: 첫 줄 원본 경로, `input <시각>`, `args <해시>`(산출물을 정하는 명령줄 — 필수, `IncrementalCheck::makeArgsHash`), `flags`(ENUM(Flags) 가 있으면), `type <FQN>`(타입 · 열거형마다), `schema <FQN> | <정규 문자열 또는 이유>`(타입마다), `assetfield <이름>\t<대상>`(경로 칸마다), `dep <시각> <경로>`.
+     * @details 줄 꼴: 첫 줄 원본 경로, `input <시각>`, `args <해시>`(산출물을 정하는 명령줄 — 필수, `IncrementalCheck::makeArgsHash`), `flags`(ENUM(Flags) 가 있으면), `type <FQN>`(타입 · 열거형마다), `schema <FQN> | <정규 문자열 또는 이유>`(타입마다), `pathfield <이름>\t<대상>`(경로 칸마다), `dep <시각> <경로>`.
      *          FlagOps 우산 · `ReflectedTypes.list` · `FixedSchemas.gen.txt` 는 이 사실만 읽는다 - 예전에는 생성 글에서 표식 글자(`IsBitFlagEnum` · `// FixedSchema:`)를 찾았다.
      *          스탬프가 없으면 산출물은 자리 표시자다(CMake 가 자리 표시자를 심을 때 스탬프를 지운다).
      */
@@ -56,7 +56,7 @@ namespace sw
         AbsolutePath            _sourcePath;
         vector<string>          _listTypeFqn;
         vector<string>          _listFixedSchema; ///< 고정 배치형 코덱 판정 줄(`FixedCodecGenerator::makeSchemaLine`)
-        vector<string>          _listAssetField;  ///< 칸 줄 `<이름>\t<대상>\t<ref|data|path|text>`(`AssetReferenceFields.list`). 대상을 모르면 `-`, `AssetRef<T>` 칸이면 `ref`, `DataPath` 칸이면 `data`, 경로가 아닌 글 칸이면 `text` 다
+        vector<string>          _listAssetField;  ///< 경로 칸 줄 `<이름>\t<대상>`(`AssetReferenceFields.list`). 대상을 모르면 `-` 다
         vector<StampDependency> _listDependency;
         uint64                  _inputWriteTime{ 0 };
         uint64                  _argsHash{ 0 }; ///< 산출물을 정한 명령줄의 해시. 다르면 최신이 아니다(UBT 가 UHT 매니페스트 변경으로 무효화하는 자리)

@@ -56,7 +56,7 @@ From taste-skill `references/app-screens.md`:
 
 ## Capture
 
-- 화면 확인은 `editor/uiaudit.scenario.xml`(패널 하나씩) · `editor/uicapture.scenario.xml`(기본 배치를 dark · light · highcontrast × 모든 백엔드) 캡처 PNG 로 한다. `<CaptureEditorUI maxMagentaFraction="0" maxClippedWindows="N"/>` 이 마젠타 · 잘린 창을 센다. 화소 골든은 두지 않는다.
+- 화면 확인은 `editor/uiaudit.scenario.xml`(패널 하나씩) · `editor/uicapture.scenario.xml`(기본 배치를 dark · light · highcontrast × 모든 백엔드) 캡처 PNG 로 한다. `<CaptureEditorUI maxClippedWindows="N"/>` 이 마젠타(문턱 0) · 잘린 창을 센다. 그림이 렌더러에서 나오는 캡처(미리보기 · 썸네일 · 씬 뷰)만 `everyBackend="true"` 를 적어 모든 백엔드에서 돈다. 화소 골든은 두지 않는다.
 
 ## Review checklist
 

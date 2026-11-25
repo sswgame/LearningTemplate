@@ -34,9 +34,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git
-from common.paths import get_project_root
 from lint.asset_identity import META_EXTENSION, make_meta_text, parse_meta
 from lint.asset_references import FieldConfig, check_working_tree, extract_references, is_referrer, CONTENT_FOLDER, REDIRECT_FILE_NAME, list_index_files, load_config, make_redirect_table_id
 
@@ -322,32 +322,35 @@ def report_leftovers(root: Path, list_pattern: list[str]) -> None:
         print(f"  [남은 옛 경로 — 칸 밖] {relative_path}")
 
 
-def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts move-asset", description="에셋을 옮기고 경로 칸의 참조를 고친다")
-    parser.add_argument("id", nargs="+", help="옛 리소스 id(파일 또는 폴더)와 새 리소스 id — 여러 쌍이면 차례로 옮긴다")
-    parser.add_argument("--dry-run", action="store_true", help="고칠 파일만 찍는다")
-    parser.add_argument("--resume", action="store_true", help="파일은 이미 옮겼다 — 이름 · 참조 · 옛 경로 표 고치기만 다시 돈다(도구 규칙을 넓힌 뒤 같은 옮기기에 적용)")
-    args = parser.parse_args(argv)
+class MoveAssetCommand(Command):
+    name = "move-asset"
+    help = "에셋 파일 · 폴더를 옮기고 경로 칸(Config/Dev/AssetReferenceFields.json)의 참조를 고친다(리소스 id old new)"
 
-    if len(args.id) % 2 != 0:
-        parser.error("옛 id 와 새 id 는 짝이다")
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("id", nargs="+", help="옛 리소스 id(파일 또는 폴더)와 새 리소스 id — 여러 쌍이면 차례로 옮긴다")
+        parser.add_argument("--dry-run", action="store_true", help="고칠 파일만 찍는다")
+        parser.add_argument("--resume", action="store_true", help="파일은 이미 옮겼다 — 이름 · 참조 · 옛 경로 표 고치기만 다시 돈다(도구 규칙을 넓힌 뒤 같은 옮기기에 적용)")
 
-    root = get_project_root()
-    config = load_config(root)
-    for old_argument, new_argument in zip(args.id[0::2], args.id[1::2]):
-        exit_code = move_one(root, config, to_asset_id(old_argument), to_asset_id(new_argument), args.dry_run, args.resume)
-        if exit_code != ExitCode.PASSED:
-            return exit_code
-    if args.dry_run:
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if len(args.id) % 2 != 0:
+            self.parser.error("옛 id 와 새 id 는 짝이다")
+
+        root = context.root
+        config = load_config(root)
+        for old_argument, new_argument in zip(args.id[0::2], args.id[1::2]):
+            exit_code = move_one(root, config, to_asset_id(old_argument), to_asset_id(new_argument), args.dry_run, args.resume)
+            if exit_code != ExitCode.PASSED:
+                return exit_code
+        if args.dry_run:
+            return ExitCode.PASSED
+
+        list_problem = check_working_tree(root)
+        for problem in list_problem:
+            print(f"  - {problem}")
+        if list_problem:
+            print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 읽는 구조체에 PROPERTY( AssetPath ) 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
+            return ExitCode.VIOLATION
         return ExitCode.PASSED
-
-    list_problem = check_working_tree(root)
-    for problem in list_problem:
-        print(f"  - {problem}")
-    if list_problem:
-        print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 읽는 구조체에 PROPERTY( AssetPath ) 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
-        return ExitCode.VIOLATION
-    return ExitCode.PASSED
 
 
 def move_one(root: Path, config: FieldConfig, old_id: str, new_id: str, dry_run: bool, resume: bool) -> ExitCode:

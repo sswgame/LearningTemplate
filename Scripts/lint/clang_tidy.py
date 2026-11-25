@@ -7,7 +7,7 @@ clang-tidy 를 병렬로 돌리고 진단을 검사 이름별로 모아 센다. 
   py -3 -m Scripts tidy                      # Source 의 모든 TU
   py -3 -m Scripts tidy --changed [기준]     # 기준(기본 origin/main)과 작업 트리가 다른 파일만 — 묶음 검증이 부른다
   py -3 -m Scripts tidy --files a.cpp b.h    # 지정한 파일만
-  py -3 -m Scripts tidy --checks '-*,modernize-*' --out 진단.json   # 검사 바꿔 보기 · 진단 전체를 JSON 으로
+  py -3 -m Scripts tidy --out 진단.json      # 진단 전체를 JSON 으로
   py -3 -m Scripts tidy --files a.cpp -- --fix                       # `--` 뒤는 clang-tidy 에 그대로
 
 컴파일 DB 는 **본 트리** `build/<프리셋>/compile_commands.json` 을 읽기만 한다 — 빌드하지 않고 빌드 폴더에 쓰지도 않는다.
@@ -28,42 +28,28 @@ clang-tidy 는 낮은 우선순위로 돈다 — 묶음 검증이 changed · cpu
 from __future__ import annotations
 
 import argparse
-import ctypes
 import hashlib
 import json
 import os
 import re
-import sys
 import tempfile
 import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다
-from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from common.project_constants import KEY_LLVM_TOOLS_SUBDIR  # noqa: E402
-from common.run_process import run_process  # noqa: E402
-from common.toolchain_config import load_search_paths  # noqa: E402
-from setup.llvm import clang_tidy_file_name  # noqa: E402
+from common.command import Command, ScriptContext
+from common.compile_database import DEFAULT_BASE, HEADER_EXTENSIONS, SOURCE_EXTENSIONS, IncludeIndex, changed_files, lower_priority, rewrite_command
+from common.exit_code import ExitCode
+from common.project_constants import KEY_LLVM_TOOLS_SUBDIR
+from common.run_process import run_process
+from common.toolchain_config import load_search_paths
+from setup.llvm import clang_tidy_file_name
 
 #: 유니티 빌드를 끈 묶음 검증 구성 — 유니티 구성(Ninja-Release)의 DB 에는 묶음 TU 만 있어 바꾼 파일을 고르지 못한다.
 DEFAULT_PRESET = "Ninja-Release-ASan"
-DEFAULT_BASE = "origin/main"
-SOURCE_EXTENSIONS = {".cpp", ".cc", ".cxx"}
-HEADER_EXTENSIONS = {".h", ".hpp"}
 #: `경로:줄:열: warning|error: 메시지 [검사,별칭]`
 DIAGNOSTIC_PATTERN = re.compile(r"^(?P<path>.+?):(?P<line>\d+):(?P<column>\d+): (?P<level>warning|error): (?P<message>.*?) \[(?P<check>[^\]]+)\]$")
-#: PCH 를 쓰라는 clang-cl 플래그(/Yu<헤더> · /Fp<파일>) — 붙여 쓴 꼴이라 한 낱말이다.
-PCH_USE_PATTERN = re.compile(r'\s/(Yu|Fp)("[^"]*"|\S*)')
-#: CMake 가 강제 포함하는 미리 컴파일 머리 — 담은 헤더를 본 트리의 절대 경로로 적는다.
-PCH_HEADER_PATTERN = re.compile(r'(\s/FI)"?([^"\s]*cmake_pch\.hxx)"?')
-#: 저장소 include 꼴(`#include "Core/…/X.h"` — `Source/` 기준 경로).
-INCLUDE_PATTERN = re.compile(r'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', re.MULTILINE)
 #: 캐시 키의 포함 닫힘을 훑는 꼴 — 따옴표 · 꺾쇠, 그리고 둘 다 아닌 매크로 포함(풀지 못해 그 TU 는 캐시하지 않는다).
 ANY_INCLUDE_PATTERN = re.compile(r'^[ \t]*#[ \t]*include[ \t]*(?:"([^"]+)"|<([^>]+)>|(\S.*))', re.MULTILINE)
 #: 명령의 포함 폴더(-I · /I)와 강제 포함(/FI) — 붙여 쓴 꼴(`-ID:\…`)이다. /imsvc 시스템 폴더는 vcpkg 설치 상태 해시로 대신한다.
@@ -79,41 +65,12 @@ SYSTEM_INCLUDE_PATTERN = re.compile(r'"-(?:internal-isystem|internal-externc-isy
 TREE_PLACEHOLDER = "<SW_TREE>"
 
 
-def main_tree_root(tree_root: Path) -> Path:
-    """워크트리면 본 트리, 아니면 자기 자신. 공통 git 폴더(`.git`)의 부모다."""
-    result = run_git(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=tree_root)
-    if result.return_code != 0:
-        raise RuntimeError(f"git rev-parse --git-common-dir 실패: {result.stderr.strip()}")
-    return Path(result.stdout.strip()).parent
-
-
 def clang_tidy_path(main_root: Path) -> Path:
     """본 트리 LLVM 키트의 clang-tidy. 없으면 오류 — 다른 판으로 대신하지 않는다(판마다 검사 목록 · 결과가 다르다)."""
     path = main_root / load_search_paths()[KEY_LLVM_TOOLS_SUBDIR] / "bin" / clang_tidy_file_name()
     if not path.is_file():
         raise RuntimeError(f"{path} 가 없다 — `py -3 -m Scripts llvm` 이 이미 깐 키트에도 clang-tidy 를 더한다")
     return path
-
-
-def expand_pch_header(match: re.Match[str]) -> str:
-    """강제 포함한 `cmake_pch.hxx` 를 그 안의 헤더 강제 포함으로 바꾼다. 아직 만들지 않았으면 그대로 둔다."""
-    path = Path(match.group(2))
-    if not path.is_file():
-        return match.group(0)
-    return "".join(f"{match.group(1)}{header}" for header in INCLUDE_PATTERN.findall(path.read_text(encoding="utf-8", errors="replace")))
-
-
-def rewrite_command(command: str, main_root: Path, tree_root: Path) -> str:
-    """PCH 사용 플래그를 빼고, 워크트리면 본 트리 소스 경로(build · Tools 밖)를 이 트리로 바꾼다."""
-    command = PCH_USE_PATTERN.sub("", command)
-    if main_root.resolve() == tree_root.resolve():
-        return command
-    command = PCH_HEADER_PATTERN.sub(expand_pch_header, command)   # 담은 헤더를 직접 강제 포함해 아래에서 이 트리 것이 된다 — 그대로 두면 같은 헤더가 두 번 정의된다
-    for separator in ("/", "\\"):
-        main_text = str(main_root).replace("\\", "/").replace("/", separator) + separator
-        tree_text = str(tree_root).replace("\\", "/").replace("/", separator) + separator
-        command = re.sub(re.escape(main_text) + r"(?!build[/\\]|Tools[/\\])", lambda _: tree_text, command, flags=re.IGNORECASE)
-    return command
 
 
 def load_database(main_root: Path, tree_root: Path, preset: str) -> list[dict]:
@@ -134,33 +91,6 @@ def load_database(main_root: Path, tree_root: Path, preset: str) -> list[dict]:
             "command": rewrite_command(entry["command"], main_root, tree_root),
         })
     return list_entry
-
-
-def changed_files(tree_root: Path, base: str) -> list[Path]:
-    """기준과 작업 트리가 다른 C++ 파일(지운 것은 뺀다)."""
-    result = run_git(["diff", "--name-only", "--diff-filter=ACMR", base, "--", "Source"], cwd=tree_root)
-    if result.return_code != 0:
-        raise RuntimeError(f"git diff {base} 실패: {result.stderr.strip()}")
-    return [tree_root / line.strip() for line in result.stdout.splitlines()
-            if line.strip() and Path(line.strip()).suffix.lower() in SOURCE_EXTENSIONS | HEADER_EXTENSIONS]
-
-
-class IncludeIndex:
-    """`Source/` 아래 파일의 역 포함 표(include 글 → 그 글을 적은 파일) — 짝 .cpp 가 없는 헤더를 포함하는 TU 를 찾는다. 처음 물을 때 한 번 훑는다."""
-
-    def __init__(self, source_root: Path) -> None:
-        self._source_root = source_root
-        self._map_includer: dict[str, list[Path]] | None = None
-
-    def get_including_files(self, include_key: str) -> list[Path]:
-        if self._map_includer is None:
-            self._map_includer = {}
-            for path in self._source_root.rglob("*"):
-                if path.suffix.lower() not in SOURCE_EXTENSIONS | HEADER_EXTENSIONS or not path.is_file():
-                    continue
-                for included in INCLUDE_PATTERN.findall(path.read_text(encoding="utf-8", errors="replace")):
-                    self._map_includer.setdefault(included.replace("\\", "/").lower(), []).append(path)
-        return self._map_includer.get(include_key.lower(), [])
 
 
 def find_including_unit(header: Path, entry_by_file: dict[str, dict], index: IncludeIndex, source_root: Path) -> dict | None:
@@ -357,110 +287,94 @@ def prune_cache(cache_dir: Path, now: float) -> int:
     return removed
 
 
-def lower_priority() -> None:
-    """이 프로세스(와 우선순위를 물려받는 clang-tidy 자식)를 낮춘다 — 겹쳐 도는 테스트가 CPU 를 먼저 받는다."""
-    if is_windows_host():
-        below_normal_priority_class = 0x4000
-        ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(), below_normal_priority_class)
-    else:
-        os.nice(10)
-
-
 def run_one(clang_tidy: Path, database_dir: Path, file_path: str, list_extra: list[str]) -> tuple[str, int, str]:
     result = run_process([clang_tidy, "-p", database_dir, "--quiet", *list_extra, file_path])
     return file_path, result.return_code, result.stdout + result.stderr
 
 
-def main(argv: list[str] | None = None) -> int:
-    list_argument = list(sys.argv[1:] if argv is None else argv)
-    list_extra: list[str] = []
-    if "--" in list_argument:
-        cut = list_argument.index("--")
-        list_argument, list_extra = list_argument[:cut], list_argument[cut + 1:]
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts tidy", description="clang-tidy 병렬 실행 · 검사별 집계")
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일만")
-    mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일만")
-    parser.add_argument("--checks", help="`.clang-tidy` 의 Checks 대신 쓸 목록(검사 확대 실측용)")
-    parser.add_argument("--out", type=Path, help="중복을 뺀 진단 전체를 JSON 으로 쓴다")
-    args = parser.parse_args(list_argument)
+class ClangTidyCommand(Command):
+    name = "tidy"
+    help = "clang-tidy 병렬 실행 · 검사별 집계(본 트리 컴파일 DB 를 읽기만 한다) — 인자 없음: 전체, --changed [기준]: 바뀐 파일만(묶음 검증), --files: 지정 파일"
 
-    tree_root = get_project_root()
-    main_root = main_tree_root(tree_root)
-    clang_tidy = clang_tidy_path(main_root)
-    list_entry = load_database(main_root, tree_root, DEFAULT_PRESET)
-    compiler = find_compiler(list_entry[0])
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        mode = parser.add_mutually_exclusive_group()
+        mode.add_argument("--changed", nargs="?", const=DEFAULT_BASE, metavar="기준", help=f"기준(기본 {DEFAULT_BASE})과 다른 파일만")
+        mode.add_argument("--files", nargs="+", type=Path, help="지정한 파일만")
+        parser.add_argument("--out", type=Path, help="중복을 뺀 진단 전체를 JSON 으로 쓴다")
+        parser.add_argument("extra", nargs="*", help="`--` 뒤는 clang-tidy 에 그대로")
 
-    list_skipped: list[Path] = []
-    if args.changed is not None:
-        list_entry, list_skipped = select_entries(list_entry, changed_files(tree_root, args.changed), tree_root / "Source")
-    elif args.files:
-        list_entry, list_skipped = select_entries(list_entry, [path if path.is_absolute() else tree_root / path for path in args.files], tree_root / "Source")
-    for path in list_skipped:
-        print(f"[tidy] 건너뜀(컴파일 DB 에 TU 가 없다): {path}")
-    # `--` 뒤 인자(--fix 등)는 부작용이 있어 캐시를 쓰지 않는다. --checks 는 키에 들어간다.
-    use_cache = not list_extra
-    if args.checks:
-        list_extra = [f"--checks={args.checks}", *list_extra]
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        list_extra: list[str] = args.extra
+        tree_root = context.root
+        main_root = context.main_root
+        clang_tidy = clang_tidy_path(main_root)
+        list_entry = load_database(main_root, tree_root, DEFAULT_PRESET)
+        compiler = find_compiler(list_entry[0])
 
-    lower_priority()
-    started = time.monotonic()
-    cache_dir = main_root / CACHE_DIR
-    base_digest = make_base_digest(clang_tidy, compiler, tree_root, main_root, list_extra) if use_cache else ""
-    closure = IncludeClosure()
-    list_result: list[tuple[str, int, str]] = []
-    list_run: list[tuple[dict, str | None]] = []
-    for entry in list_entry:
-        key = make_cache_key(base_digest, entry, closure, tree_root) if use_cache else None
-        cached = read_cache(cache_dir, key, tree_root) if key else None
-        if cached is None:
-            list_run.append((entry, key))
-        else:
-            list_result.append((entry["file"], 0, cached))
-    print(f"[tidy] 캐시 적중 {len(list_result)}/{len(list_entry)} TU ({time.monotonic() - started:.0f} 초)", flush=True)
-    with tempfile.TemporaryDirectory(prefix="sw-tidy-") as database_dir:
-        (Path(database_dir) / "compile_commands.json").write_text(json.dumps([entry for entry, _ in list_run]), encoding="utf-8")
-        with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) - 2)) as pool:
-            futures = [(pool.submit(run_one, clang_tidy, Path(database_dir), entry["file"], list_extra), key) for entry, key in list_run]
-            for index, (future, key) in enumerate(futures, 1):
-                result = future.result()
-                if key and result[1] == 0:   # 진 TU 는 적지 않는다 — 고친 뒤 다시 돌아야 한다
-                    write_cache(cache_dir, key, result[2], tree_root)
-                list_result.append(result)
-                if index % 100 == 0:
-                    print(f"[tidy] {index}/{len(futures)} TU", flush=True)
+        list_skipped: list[Path] = []
+        if args.changed is not None:
+            list_entry, list_skipped = select_entries(list_entry, changed_files(tree_root, args.changed), tree_root / "Source")
+        elif args.files:
+            list_entry, list_skipped = select_entries(list_entry, [path if path.is_absolute() else tree_root / path for path in args.files], tree_root / "Source")
+        for path in list_skipped:
+            print(f"[tidy] 건너뜀(컴파일 DB 에 TU 가 없다): {path}")
+        # `--` 뒤 인자(--fix 등)는 부작용이 있어 캐시를 쓰지 않는다.
+        use_cache = not list_extra
 
-    if use_cache and (removed := prune_cache(cache_dir, time.time())) > 0:
-        print(f"[tidy] 캐시 정리 {removed} 항목({CACHE_MAX_AGE_DAYS} 일 넘게 쓰지 않음)", flush=True)
+        lower_priority()
+        started = time.monotonic()
+        cache_dir = main_root / CACHE_DIR
+        base_digest = make_base_digest(clang_tidy, compiler, tree_root, main_root, list_extra) if use_cache else ""
+        closure = IncludeClosure()
+        list_result: list[tuple[str, int, str]] = []
+        list_run: list[tuple[dict, str | None]] = []
+        for entry in list_entry:
+            key = make_cache_key(base_digest, entry, closure, tree_root) if use_cache else None
+            cached = read_cache(cache_dir, key, tree_root) if key else None
+            if cached is None:
+                list_run.append((entry, key))
+            else:
+                list_result.append((entry["file"], 0, cached))
+        print(f"[tidy] 캐시 적중 {len(list_result)}/{len(list_entry)} TU ({time.monotonic() - started:.0f} 초)", flush=True)
+        with tempfile.TemporaryDirectory(prefix="sw-tidy-") as database_dir:
+            (Path(database_dir) / "compile_commands.json").write_text(json.dumps([entry for entry, _ in list_run]), encoding="utf-8")
+            with ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 2) - 2)) as pool:
+                futures = [(pool.submit(run_one, clang_tidy, Path(database_dir), entry["file"], list_extra), key) for entry, key in list_run]
+                for index, (future, key) in enumerate(futures, 1):
+                    result = future.result()
+                    if key and result[1] == 0:   # 진 TU 는 적지 않는다 — 고친 뒤 다시 돌아야 한다
+                        write_cache(cache_dir, key, result[2], tree_root)
+                    list_result.append(result)
+                    if index % 100 == 0:
+                        print(f"[tidy] {index}/{len(futures)} TU", flush=True)
 
-    diagnostics: dict[tuple[str, int, int, str], dict] = {}
-    error_count = 0
-    for file_path, return_code, output in list_result:
-        for line in output.splitlines():
-            match = DIAGNOSTIC_PATTERN.match(line.strip())
-            # 시스템 헤더(MSVC STL 등)에 찍힌 것은 우리 코드의 매크로 · 템플릿이 끌고 들어간 것이라 그 자리를 고칠 수 없다 — 이 트리 밖은 세지 않는다.
-            if match and Path(match["path"]).resolve().is_relative_to(tree_root.resolve()):
-                key = (str(Path(match["path"]).resolve()).lower(), int(match["line"]), int(match["column"]), match["check"])
-                if key not in diagnostics:
-                    diagnostics[key] = {"path": str(Path(match["path"]).resolve()), "line": int(match["line"]),
-                                        "column": int(match["column"]), "level": match["level"],
-                                        "check": match["check"].split(",")[0], "message": match["message"]}
-        if return_code != 0:
-            error_count += 1
-            if not any(DIAGNOSTIC_PATTERN.match(line.strip()) for line in output.splitlines()):
-                print(f"[tidy] {file_path}: clang-tidy {return_code}\n{output.strip()[:2000]}")
+        if use_cache and (removed := prune_cache(cache_dir, time.time())) > 0:
+            print(f"[tidy] 캐시 정리 {removed} 항목({CACHE_MAX_AGE_DAYS} 일 넘게 쓰지 않음)", flush=True)
 
-    list_diagnostic = sorted(diagnostics.values(), key=lambda d: (d["check"], d["path"], d["line"]))
-    if args.out:
-        args.out.write_text(json.dumps(list_diagnostic, ensure_ascii=False, indent=1), encoding="utf-8")
-    counts = Counter(d["check"] for d in list_diagnostic)
-    errors = Counter(d["check"] for d in list_diagnostic if d["level"] == "error")
-    for check, count in counts.most_common():
-        print(f"{count:6d}  {check}{'  (오류 ' + str(errors[check]) + ')' if errors[check] else ''}")
-    print(f"[tidy] TU {len(list_entry)}, 진단 {len(list_diagnostic)}(오류 {sum(errors.values())}), 실패한 TU {error_count}, "
-          f"{time.monotonic() - started:.0f} 초")
-    return ExitCode.VIOLATION if error_count else ExitCode.PASSED
+        diagnostics: dict[tuple[str, int, int, str], dict] = {}
+        error_count = 0
+        for file_path, return_code, output in list_result:
+            for line in output.splitlines():
+                match = DIAGNOSTIC_PATTERN.match(line.strip())
+                # 시스템 헤더(MSVC STL 등)에 찍힌 것은 우리 코드의 매크로 · 템플릿이 끌고 들어간 것이라 그 자리를 고칠 수 없다 — 이 트리 밖은 세지 않는다.
+                if match and Path(match["path"]).resolve().is_relative_to(tree_root.resolve()):
+                    key = (str(Path(match["path"]).resolve()).lower(), int(match["line"]), int(match["column"]), match["check"])
+                    if key not in diagnostics:
+                        diagnostics[key] = {"path": str(Path(match["path"]).resolve()), "line": int(match["line"]),
+                                            "column": int(match["column"]), "level": match["level"],
+                                            "check": match["check"].split(",")[0], "message": match["message"]}
+            if return_code != 0:
+                error_count += 1
+                if not any(DIAGNOSTIC_PATTERN.match(line.strip()) for line in output.splitlines()):
+                    print(f"[tidy] {file_path}: clang-tidy {return_code}\n{output.strip()[:2000]}")
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+        list_diagnostic = sorted(diagnostics.values(), key=lambda d: (d["check"], d["path"], d["line"]))
+        if args.out:
+            args.out.write_text(json.dumps(list_diagnostic, ensure_ascii=False, indent=1), encoding="utf-8")
+        counts = Counter(d["check"] for d in list_diagnostic)
+        errors = Counter(d["check"] for d in list_diagnostic if d["level"] == "error")
+        for check, count in counts.most_common():
+            print(f"{count:6d}  {check}{'  (오류 ' + str(errors[check]) + ')' if errors[check] else ''}")
+        print(f"[tidy] TU {len(list_entry)}, 진단 {len(list_diagnostic)}(오류 {sum(errors.values())}), 실패한 TU {error_count}, "
+              f"{time.monotonic() - started:.0f} 초")
+        return ExitCode.VIOLATION if error_count else ExitCode.PASSED

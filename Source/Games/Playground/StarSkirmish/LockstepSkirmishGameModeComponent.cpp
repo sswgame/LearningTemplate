@@ -2,15 +2,7 @@
 
 #include "Games/Playground/StarSkirmish/LockstepSkirmishGameModeComponent.h"
 
-#include "Core/String/StringBuilder.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
-
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 
 namespace sw
 {
@@ -18,40 +10,43 @@ namespace sw
     {
         struct LockstepSkirmishGameModeComponentInternal
         {
-            /** @brief 개발 명령 `skirmish.lockstep` 입니다. */
-            static bool runLockstepStatus( const vector<string>& listArgument, string& outReply )
+            // 두 프로세스 시나리오(`netpair/lockstep_*`)가 판정하는 감시 값. 넷 대전이 아니면 값이 없다.
+            [[nodiscard]] static bool readPlayer( const LockstepSkirmishGameModeComponent& gameMode, float64& outValue )
             {
-                if ( listArgument.empty() == false )
-                    return false;
-                const SceneManager* const                      pScenes   = game::findSubsystem<SceneManager>();
-                const Scene* const                             pScene    = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
-                const GameObjectManager* const                 pManager  = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                const SkirmishGameModeComponent* const         pMatch    = pManager != nullptr ? SkirmishGameModeComponent::findInScene( *pManager ) : nullptr;
-                const LockstepSkirmishGameModeComponent* const pDirector = pMatch != nullptr ? pMatch->getOwner()->getComponent<LockstepSkirmishGameModeComponent>() : nullptr;
-                if ( pDirector == nullptr )
-                {
-                    outReply = "skirmish: no lockstep skirmish director in the active scene";
-                    return true;
-                }
-                const SkirmishLockstepLink& lockstep = pDirector->getLockstep();
-                if ( lockstep.isActive() == false )
-                {
-                    outReply = "skirmish: not a network match";
-                    return true;
-                }
-                const LockstepSession&                   session = lockstep.getSession();
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "skirmish lockstep: player %# tick %# stalls %# desynced %# applied %# %#", lockstep.getLocalPlayer(), session.getCurrentTick(), session.getStallCount(),
-                                           session.isDesynced() ? 1 : 0, lockstep.getAppliedCommandCount( 0 ), lockstep.getAppliedCommandCount( 1 ) );
-                outReply = string( replyBuilder.view() );
-                SW_LOG_INFO_ID( "LockstepSkirmish.Status", "[Skirmish] %#", outReply.c_str() );
+                outValue = static_cast<float64>( gameMode.getLockstep().getLocalPlayer() );
+                return gameMode.getLockstep().isActive();
+            }
+            [[nodiscard]] static bool readTick( const LockstepSkirmishGameModeComponent& gameMode, float64& outValue )
+            {
+                outValue = static_cast<float64>( gameMode.getLockstep().getSession().getCurrentTick() );
+                return gameMode.getLockstep().isActive();
+            }
+            [[nodiscard]] static bool readDesynced( const LockstepSkirmishGameModeComponent& gameMode, float64& outValue )
+            {
+                outValue = gameMode.getLockstep().getSession().isDesynced() ? 1.0 : 0.0;
+                return gameMode.getLockstep().isActive();
+            }
+            [[nodiscard]] static bool readClientCommands( const LockstepSkirmishGameModeComponent& gameMode, float64& outValue )
+            {
+                outValue = static_cast<float64>( gameMode.getLockstep().getAppliedCommandCount( 1 ) );
+                return gameMode.getLockstep().isActive();
+            }
+            [[nodiscard]] static bool readLocalArmy( const LockstepSkirmishGameModeComponent& gameMode, float64& outValue )
+            {
+                outValue = static_cast<float64>( gameMode.getMatch().makeSummary( gameMode.getLocalPlayer() )._army );
                 return true;
             }
         };
     } // namespace
 
-    SW_DEV_COMMAND( SkirmishLockstepStatus, "skirmish.lockstep", "skirmish.lockstep", "Show the network match lockstep tick, stalls, desync and applied command counts",
-                    &LockstepSkirmishGameModeComponentInternal::runLockstepStatus );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishLockstepPlayer, "Skirmish.LockstepPlayer", "Player this process runs in the network match (0 host, 1 client; no value outside one)", LockstepSkirmishGameModeComponent,
+                                   &LockstepSkirmishGameModeComponentInternal::readPlayer );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishLockstepTick, "Skirmish.LockstepTick", "Lockstep tick the network match reached", LockstepSkirmishGameModeComponent, &LockstepSkirmishGameModeComponentInternal::readTick );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishLockstepDesynced, "Skirmish.LockstepDesynced", "1 when the checksums of the two processes differed", LockstepSkirmishGameModeComponent,
+                                   &LockstepSkirmishGameModeComponentInternal::readDesynced );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishLockstepClientCommands, "Skirmish.LockstepClientCommands", "Commands of player 1 (the joining client) applied by this process", LockstepSkirmishGameModeComponent,
+                                   &LockstepSkirmishGameModeComponentInternal::readClientCommands );
+    SW_AUTOMATION_COMPONENT_WATCH( skirmishLocalArmy, "Skirmish.LocalArmy", "Army units of this screen's player", LockstepSkirmishGameModeComponent, &LockstepSkirmishGameModeComponentInternal::readLocalArmy );
 
     LockstepSkirmishGameModeComponent::LockstepSkirmishGameModeComponent()
         : _lockstep{}

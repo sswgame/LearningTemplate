@@ -212,15 +212,6 @@ namespace sw
 
     string AutomationStepArgsUtil::formatNumber( float64 value )
     {
-        string text = to_string( value );
-        // 끝의 0 을 정리한다(1.000000 → 1)
-        while ( text.find( '.' ) != string::npos && ( text.back() == '0' || text.back() == '.' ) )
-        {
-            const bool bDot = text.back() == '.';
-            text.pop_back();
-            if ( bDot )
-                break;
-        }
-        return text;
+        return to_string( value ); // 가장 짧은 표기라 끝의 0 이 없다 — 0 을 지우던 것이 지수의 0 을 먹었다(1.5e-10 → 1.5e-1)
     }
 } // namespace sw

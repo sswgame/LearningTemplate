@@ -31,14 +31,13 @@ import tokenize
 from pathlib import Path
 from typing import Sequence
 
+from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git_or_raise
-from common.paths import get_project_root
-from common.rename_scope import (
-    BANNED_NAMES_PATH, KEEP_OLD_NAME_MARKER, check_rewrite_unmarked_lines, check_serialized_rename, collect_reflected_properties, dump_naming_table, is_rename_table,
-    plan_serialized_rename, replace_serialized_name, rewrite_rename_target,
+from dev.rename_scope import (
+    BANNED_NAMES_PATH, C_LIKE_SUFFIX, CPP_SUFFIX, KEEP_OLD_NAME_MARKER, TEXT_SUFFIX, collect_reflected_properties, dump_naming_table, is_rename_table,
+    list_tracked_text, plan_serialized_rename, read_text, replace_serialized_name, rewrite_rename_target, write_text,
 )
-from dev.move_source import C_LIKE_SUFFIX, CPP_SUFFIX, TEXT_SUFFIX, list_tracked_text, read_text, write_text
 
 TAG = "[rename-symbol]"
 #: 데이터 · 설정의 글 형식 가운데 소스 이동(`move-source`)이 보지 않는 것 — 머티리얼 칸 이름 · 설정 키에 식별자가 든다.
@@ -61,7 +60,7 @@ C_LITERAL_OR_COMMENT = re.compile(
     r"|'(?:\\.|[^'\\\n])+'",
     re.S | re.M,
 )
-#: 파이썬 토큰 가운데 건너뛸 글 — 스크립트의 문자열은 테스트 글(`--self-check` 사례) · 바깥 철자라, 금지 명사 이전(1692df1e3a)이
+#: 파이썬 토큰 가운데 건너뛸 글 — 스크립트의 문자열은 테스트 글 · 바깥 철자라, 금지 명사 이전(1692df1e3a)이
 #: NamingWords 테스트 글 `hasPendingWork` 를 바꿔 자체 테스트가 늘 졌다.
 PYTHON_LITERAL_TOKEN = {tokenize.STRING, tokenize.COMMENT} | ({tokenize.FSTRING_MIDDLE} if hasattr(tokenize, "FSTRING_MIDDLE") else set())
 
@@ -173,7 +172,7 @@ def find_files_named(list_file: Sequence[Path], root: Path, stem: str) -> list[P
 
 def format_changed(root: Path, list_path: list[Path]) -> int:
     """이름 길이가 바뀌면 clang-format 의 정렬 칸이 어긋난다 — 바꾼 C++ 파일만 다시 포맷한다."""
-    from lint.format import run_clang_format_batch
+    from lint.format_files import run_clang_format_batch
 
     list_cpp = [path for path in list_path if path.suffix.lower() in CPP_SUFFIX]
     return run_clang_format_batch(list_cpp, cwd=root) if list_cpp else ExitCode.PASSED
@@ -265,54 +264,28 @@ def rename_all(root: Path, list_pair: Sequence[dict], options: argparse.Namespac
     return format_changed(root, sorted(set_changed))
 
 
-def self_check() -> None:
-    # 예시 이름은 이 도구의 치환이 다시 바꾸지 않게 표지를 단다.
-    assert check_pair("isCursorCaptured", "shouldShowCursor") is None  # keep-old-name
-    assert check_pair("reads", "uses") is not None, "낱말 하나는 거절"
-    assert check_pair("reads", "uses", allow_common_name=True) is None
-    assert check_pair("When", "Condition") is not None, "흔한 이름은 거절"
-    assert check_pair("_bNot", "_bNegate") is None, "멤버 머리 이름은 낱말 하나여도 받는다"
-    assert check_pair("swText", "text", CMAKE_SCOPE) is None, "CMake 낙타 지역 변수는 짧아도 받는다"
-    assert check_pair("target", "goal", CMAKE_SCOPE) is not None, "CMake 소문자 한 낱말은 명령 · 키워드와 겹친다"
-    text, count = replace_word("isCursorCaptured(); bool isCursorCapturedLater; x.isCursorCaptured", "isCursorCaptured", "shouldShowCursor")  # keep-old-name
-    assert count == 2 and "isCursorCapturedLater" in text, (text, count)
-    source = 'Ogg a; // Ogg "x\nf( "Ogg", R"(Ogg)", \'"\' ); /* Ogg */ Ogg b;\n#include "A/Ogg.h"\nOgg c; // keep-old-name\n'
-    rewritten, skipped = rename_in_text(Path("a.cpp"), "a.cpp", source, "Ogg", "OGG", False)
-    assert rewritten == 'OGG a; // OGG "x\nf( "Ogg", R"(Ogg)", \'"\' ); /* OGG */ OGG b;\n#include "A/OGG.h"\nOgg c; // keep-old-name\n', rewritten
-    assert skipped == 2, skipped
-    python = "def runOgg():  # Ogg\n    return f\"Ogg {Ogg}\" + 'Ogg' + Ogg + \"\"\"\nOgg\n\"\"\"\n"
-    rewritten, skipped = rename_in_text(Path("a.py"), "a.py", python, "Ogg", "OGG", False)
-    assert rewritten == "def runOgg():  # Ogg\n    return f\"Ogg {OGG}\" + 'Ogg' + OGG + \"\"\"\nOgg\n\"\"\"\n", rewritten   # 이름 토큰만 — 여러 줄 문자열 · 주석은 지킨다
-    assert skipped == 4, skipped
-    assert is_cmake_file(Path("cmake/A.cmake")) and is_cmake_file(Path("Source/CMakeLists.txt")) and not is_cmake_file(Path("Source/A.cpp"))
-    check_rewrite_unmarked_lines()
-    check_serialized_rename()
+class RenameSymbolCommand(Command):
+    name = "rename-symbol"
+    help = "식별자 이름을 코드 · 데이터 · 설정 · 문서에서 한 번에 바꾼다(Old=New 또는 --pairs 표, --reapply) — 문자열 안 · 흔한 이름 · 이미 있는 새 이름은 멈추고, 옛 이름은 금지 이름 표에 올린다"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("pair", nargs="*", help="Old=New")
+        parser.add_argument("--pairs", help="쌍 표(JSON 목록: old · new · why[, scope · ban · serializedName · allowExisting])")
+        parser.add_argument("--why", default="", help="금지 이름 표에 적을 까닭(Old=New 쌍)")
+        parser.add_argument("--dry-run", action="store_true")
+        parser.add_argument("--reapply", action="store_true", help="병합 뒤 같은 쌍을 다시 돌린다(새 이름이 이미 있어도 옛 이름을 마저 바꾼다)")
+        parser.add_argument("--force", action="store_true", help="새 이름이 이미 쓰이거나 직렬화 이름을 가를 수 없어도 바꾼다")
+        parser.add_argument("--include-strings", action="store_true", help="C 계열 · 파이썬 소스의 문자열 리터럴 안도 바꾼다")
+        parser.add_argument("--allow-common-name", action="store_true", help="짧거나 흔한 이름도 바꾼다")
+        parser.add_argument("--no-ban", action="store_true", help="옛 이름을 금지 이름 표에 올리지 않는다(지역 변수 — 옛 철자가 다른 뜻으로 다시 쓰일 수 있다)")
 
-def main(argv: Sequence[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts rename-symbol", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("pair", nargs="*", help="Old=New")
-    parser.add_argument("--pairs", help="쌍 표(JSON 목록: old · new · why[, scope · ban · serializedName · allowExisting])")
-    parser.add_argument("--why", default="", help="금지 이름 표에 적을 까닭(Old=New 쌍)")
-    parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--reapply", action="store_true", help="병합 뒤 같은 쌍을 다시 돌린다(새 이름이 이미 있어도 옛 이름을 마저 바꾼다)")
-    parser.add_argument("--force", action="store_true", help="새 이름이 이미 쓰이거나 직렬화 이름을 가를 수 없어도 바꾼다")
-    parser.add_argument("--include-strings", action="store_true", help="C 계열 · 파이썬 소스의 문자열 리터럴 안도 바꾼다")
-    parser.add_argument("--allow-common-name", action="store_true", help="짧거나 흔한 이름도 바꾼다")
-    parser.add_argument("--no-ban", action="store_true", help="옛 이름을 금지 이름 표에 올리지 않는다(지역 변수 — 옛 철자가 다른 뜻으로 다시 쓰일 수 있다)")
-    parser.add_argument("--self-check", action="store_true")
-    options = parser.parse_args(argv)
-    if options.self_check:
-        self_check()
-        print(f"{TAG} self-check OK")
-        return ExitCode.PASSED
-    list_pair: list[dict] = json.loads(Path(options.pairs).read_text(encoding="utf-8")) if options.pairs else []
-    for text in options.pair:
-        old, separator, new = text.partition("=")
-        if not separator:
-            parser.error(f"'{text}' 은 Old=New 모양이 아니다")
-        list_pair.append({"old": old, "new": new, "why": options.why})
-    if not list_pair:
-        parser.error("Old=New 쌍이나 --pairs 표를 준다")
-    self_check()
-    return rename_all(get_project_root(), list_pair, options)
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        list_pair: list[dict] = json.loads(Path(args.pairs).read_text(encoding="utf-8")) if args.pairs else []
+        for text in args.pair:
+            old, separator, new = text.partition("=")
+            if not separator:
+                self.parser.error(f"'{text}' 은 Old=New 모양이 아니다")
+            list_pair.append({"old": old, "new": new, "why": args.why})
+        if not list_pair:
+            self.parser.error("Old=New 쌍이나 --pairs 표를 준다")
+        return rename_all(context.root, list_pair, args)
