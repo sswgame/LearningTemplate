@@ -5,7 +5,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
-#include "Core/Network/Transport/ProxyProtocol.h"
 #include "Core/Network/Transport/ProxyProtocolAcceptTransport.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
