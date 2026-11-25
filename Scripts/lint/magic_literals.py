@@ -92,7 +92,7 @@ def classify_place(relative: str, line: str) -> str:
     """리터럴이 놓인 장소입니다. 생성물 · 테스트가 가장 먼저(줄 모양과 무관하게 옮기지 않는다)."""
     if ".gen." in relative or "/Generated/" in relative or ".generated." in relative:
         return "generated"
-    if "/Tests/" in relative or "/Test/" in relative:
+    if "/Tests/" in relative:
         return "test"
     if REFLECTION_META.search(line) is not None:
         return "reflection-meta"

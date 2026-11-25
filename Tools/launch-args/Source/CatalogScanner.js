@@ -9,7 +9,7 @@
  *          - 인자: `argument.files` 에서 `argument.macro` 호출(이름 · 기본값 · 철자들). 서로 배타인 인자 묶음(`exclusive_groups`)은
  *            이름 목록으로 적거나, 표 매크로 자리에 JSON 표의 줄을 펼쳐 넣습니다.
  *          파일 하나의 결과를 따로 들고 있어서, 소스가 바뀌면 그 파일만 다시 읽습니다(`rescanFile`).
- *          vscode 를 모르는 순수 모듈입니다(`Test/CatalogScannerTest.js`).
+ *          vscode 를 모르는 순수 모듈입니다(`Tests/CatalogScannerTest.js`).
  */
 
 const fs = require('fs');
