@@ -60,12 +60,14 @@ namespace sw
     class Mesh;
     class RenderExtensionRegistry;
     class FrameProfiler;
+    class GPUPixelInspector;
     class MaterialCache;
     class MaterialInstance;
     class RenderDebugRegistry;
     class RenderTargetRegistry;
     class Scene;
     class ShaderBindingLayout;
+    class SimulationOnlyFrameQueue;
     class TaskArgs;
     class TaskManager;
     class Texture2D;
@@ -105,11 +107,13 @@ namespace sw
      */
     struct FrameRendererHost
     {
-        FrameProfiler*           _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
-        RenderExtensionRegistry* _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
-        RenderTargetRegistry*    _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
-        MaterialCache*           _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
-        RenderDebugRegistry*     _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
+        FrameProfiler*            _pProfiler{ nullptr };        ///< 패스별 GPU 시간 보고(타임스탬프 슬롯은 디바이스에 하나 — 렌더러 하나만 계측한다)
+        RenderExtensionRegistry*  _pExtensions{ nullptr };      ///< 모듈 렌더 확장(주 파이프라인에 붙는다)
+        RenderTargetRegistry*     _pRenderTargets{ nullptr };   ///< 렌더 타깃 패널의 목록(주 시점의 첨부)
+        MaterialCache*            _pPinnedMaterials{ nullptr }; ///< 고정 머티리얼의 PSO 미리 만들기 줄(줄은 하나 — 렌더러 하나만 꺼낸다)
+        GPUPixelInspector*        _pPixelInspector{ nullptr };  ///< 개발 명령 `gpu.inspect` · `gpu.thread` · `gpu.show` 의 선택(주 화면의 픽셀 — 미리보기 · 캡처는 고르지 않는다)
+        SimulationOnlyFrameQueue* _pSimulationOnly{ nullptr };  ///< 건너뛴 프레임의 따라잡기 보고(번호는 주 패킷이 싣는다)
+        RenderDebugRegistry*      _pRenderDebug{ nullptr };     ///< 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기 — 주 시점만)
     };
 
     /**
@@ -152,8 +156,9 @@ namespace sw
         /** @brief 주 렌더러만 하는 일의 상대를 겁니다(`FrameRendererHost`). `initialize` 앞에 부릅니다(파이프라인 로드가 렌더 타깃을 공개한다). */
         void bindHost( const FrameRendererHost& host )
         {
-            _host                = host;
-            _state._pRenderDebug = host._pRenderDebug;
+            _host                   = host;
+            _state._pRenderDebug    = host._pRenderDebug;
+            _state._pPixelInspector = host._pPixelInspector;
         }
         /**
          * @brief 화면 밖 씬(미리보기 · 캡처) 하나를 그리는 렌더러로 초기화합니다(`OffscreenSceneRenderers` 가 만든다).
@@ -181,10 +186,17 @@ namespace sw
          */
         [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
-         * @brief 그리지 않는 패킷(`FrameDrawMode::SimulationOnly`)을 받습니다 — 텍스처 업로드와 GPU 장면 사본 · 고친 구간만 받고, 뷰마다 시간 누적 기록을 다음에 그릴 때 버리게 표시한다.
+         * @brief 그리지 않는 패킷(`FrameDrawMode::SimulationOnly`)을 받습니다 — GPU 장면 사본 · 고친 구간만 받고, 뷰마다 시간 누적 기록을 다음에 그릴 때 버리게 표시한다.
          * @details 기록 · 제출하지 않는다(렌더 스레드가 Present 도 하지 않는다). 그 밖의 패킷 값(라이트 · 캔버스 · 추가 뷰)은 다음 패킷이 통째로 다시 싣는다.
          */
         void executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet );
+        /**
+         * @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다. **프레임을 연 쪽**(`RenderThread` · `SceneCapture`)이 `beginFrame` 바로 뒤, 아무것도 기록하기 전에 한 번 부릅니다.
+         * @param viewHeightPixels 밉 스트리밍이 화면 크기를 재는 출력 높이입니다.
+         */
+        static void updateTextureUploads( IRHIDevice* pDevice, uint32 viewHeightPixels );
+        /** @brief 이번 프레임의 출력 높이입니다(`updateTextureUploads`). 아직 그린 적이 없으면 0 입니다. */
+        uint32 getOutputHeight() const { return _state._outputHeight; }
         // ------------------------------------------------------------------------------
         // 3) 조회
         // ------------------------------------------------------------------------------
@@ -473,8 +485,6 @@ namespace sw
         void prepareFrameDecals();
         /** @brief (셋업) 그리기 목록의 데칼 원소를 데칼 구조 버퍼(`FrameRenderState::_decalBuffer`)에 한 번 올립니다. 버퍼를 못 만들면 그리기 목록을 비운다. */
         void uploadFrameDecals();
-        /** @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다(그리는 패킷 · 그리지 않는 패킷 공통). */
-        void updateTextureUploads( IRHIDevice* pDevice );
         /** @brief GPU 장면(인스턴스 · 배치 표)을 올립니다 — 간접 인자 방식 · 모프 풀 · 정점 풀을 먼저 맞춘다(그리는 패킷 · 그리지 않는 패킷 공통). */
         void uploadGPUScene( IRHIDevice* pDevice );
         /**

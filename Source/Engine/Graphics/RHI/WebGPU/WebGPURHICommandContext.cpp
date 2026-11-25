@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIDevice.h"
 
 namespace sw
@@ -45,33 +46,8 @@ namespace sw
                 entry.sampler = sampler;
                 return entry;
             }
-
-            static void fillInvalid( RHIDescriptorIndex* pArray, size_t count )
-            {
-                for ( size_t index = 0; index < count; ++index )
-                {
-                    pArray[index] = kInvalidDescriptorIndex;
-                }
-            }
         };
     } // namespace
-
-    WebGPUSlotState::WebGPUSlotState()
-        : _arrConstantBuffer{}
-        , _arrShaderResource{}
-        , _arrUnorderedAccess{}
-        , _arrRootConstant{}
-        , _rootSliceBuffer{ nullptr }
-        , _rootSliceOffset{ 0 }
-        , _rootSliceSerial{ 0 }
-        , _bRootConstantSet{ SW_FALSE }
-        , _bRootSliceDirty{ SW_TRUE }
-        , _reserved{ 0 }
-    {
-        WebGPURHICommandContextInternal::fillInvalid( _arrConstantBuffer, SW_COUNT_OF( _arrConstantBuffer ) );
-        WebGPURHICommandContextInternal::fillInvalid( _arrShaderResource, SW_COUNT_OF( _arrShaderResource ) );
-        WebGPURHICommandContextInternal::fillInvalid( _arrUnorderedAccess, SW_COUNT_OF( _arrUnorderedAccess ) );
-    }
 
     WebGPURHICommandContext::WebGPURHICommandContext( WebGPURHIDevice* pDevice, bool bOwnEncoder )
         : _pDevice{ pDevice }
@@ -114,7 +90,10 @@ namespace sw
     {
         if ( _bOwnEncoder != SW_FALSE )
             return _ownEncoder;
-        return _pDevice != nullptr ? _pDevice->getFrameEncoder() : nullptr;
+        if ( _pDevice == nullptr )
+            return nullptr;
+        _pDevice->markFrameEncoderUsed();
+        return _pDevice->getFrameEncoder();
     }
 
     void WebGPURHICommandContext::beginCommandList()
@@ -131,6 +110,7 @@ namespace sw
         desc.label  = WebGPURHIUtil::toStringView( "SW Command List" );
         _ownEncoder = wgpuDeviceCreateCommandEncoder( _pDevice->_device, &desc );
         _state      = WebGPURecordingState{};
+        resetBindings();
     }
 
     void WebGPURHICommandContext::endCommandList()
@@ -177,7 +157,7 @@ namespace sw
     // 렌더 패스
     // ------------------------------------------------------------------------------
     // 길이 유지(긴 함수 정리 기준): 컬러 첨부 · 깊이 첨부 · 패스 시작 · 기본 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassBeginResult WebGPURHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassBeginResult WebGPURHICommandContext::beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
     {
         endComputePass();
         const WGPUCommandEncoder encoder = getEncoder();
@@ -185,9 +165,7 @@ namespace sw
             return RHIRenderPassBeginResult::Failed;
 
         WGPURenderPassColorAttachment arrColor[kMaxColorAttachments]{};
-        uint32                        colorCount   = 0;
-        uint32                        targetWidth  = beginInfo._width;
-        uint32                        targetHeight = beginInfo._height;
+        uint32                        colorCount = 0;
         if ( beginInfo._bBindColor != SW_FALSE )
         {
             const uint32 bindCount = MathUtil::min( beginInfo._colorTargetCount > 0 ? beginInfo._colorTargetCount : 1u, kMaxColorAttachments );
@@ -202,10 +180,7 @@ namespace sw
                     view                                 = pSwapChain->getCurrentView();
                     if ( view == nullptr )
                         return RHIRenderPassBeginResult::NoBackBuffer;
-                    if ( targetWidth == 0 )
-                        targetWidth = pSwapChain->getWidth();
-                    if ( targetHeight == 0 )
-                        targetHeight = pSwapChain->getHeight();
+                    outTargetExtent = RHIRenderPassExtent{ pSwapChain->getWidth(), pSwapChain->getHeight() };
                 }
                 else
                 {
@@ -219,10 +194,8 @@ namespace sw
                             break;
                         return RHIRenderPassBeginResult::Failed;
                     }
-                    if ( targetWidth == 0 )
-                        targetWidth = MathUtil::max( pTexture->_desc._width >> mip, 1u );
-                    if ( targetHeight == 0 )
-                        targetHeight = MathUtil::max( pTexture->_desc._height >> mip, 1u );
+                    if ( attachment == 0 )
+                        outTargetExtent = RHIRenderPassExtent{ MathUtil::max( pTexture->_desc._width >> mip, 1u ), MathUtil::max( pTexture->_desc._height >> mip, 1u ) };
                 }
                 WGPURenderPassColorAttachment& color = arrColor[colorCount++];
                 const float4&                  clear = beginInfo._arrClearColor[attachment];
@@ -257,10 +230,8 @@ namespace sw
                 depth.stencilLoadOp  = WGPULoadOp_Undefined;
                 depth.stencilStoreOp = WGPUStoreOp_Undefined;
             }
-            if ( targetWidth == 0 )
-                targetWidth = pDepth->_desc._width;
-            if ( targetHeight == 0 )
-                targetHeight = pDepth->_desc._height;
+            if ( colorCount == 0 )
+                outTargetExtent = RHIRenderPassExtent{ MathUtil::max( pDepth->_desc._width >> beginInfo._depthTargetMip, 1u ), MathUtil::max( pDepth->_desc._height >> beginInfo._depthTargetMip, 1u ) };
         }
 
         WGPURenderPassDescriptor passDesc{};
@@ -271,9 +242,6 @@ namespace sw
         _state._boundRenderPSO          = 0;
         if ( _state._renderPass == nullptr )
             return RHIRenderPassBeginResult::Failed;
-        // 앞 패스의 뷰포트 · 가위가 새지 않게 패스 전체로 둔다(DX11 · GL 과 같다).
-        wgpuRenderPassEncoderSetViewport( _state._renderPass, 0.0f, 0.0f, static_cast<float32>( targetWidth ), static_cast<float32>( targetHeight ), 0.0f, 1.0f );
-        wgpuRenderPassEncoderSetScissorRect( _state._renderPass, 0, 0, targetWidth, targetHeight );
         return RHIRenderPassBeginResult::Begun;
     }
 
@@ -287,109 +255,21 @@ namespace sw
         _state._boundRenderPSO = 0;
     }
 
-    void WebGPURHICommandContext::setViewport( const RHIViewport& viewport )
+    void WebGPURHICommandContext::setViewportNative( const RHIViewport& viewport )
     {
         if ( _state._renderPass != nullptr )
             wgpuRenderPassEncoderSetViewport( _state._renderPass, viewport._x, viewport._y, viewport._width, viewport._height, viewport._minDepth, viewport._maxDepth );
     }
 
-    void WebGPURHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    void WebGPURHICommandContext::setScissorRectNative( const RHIScissorRect& rect )
     {
         if ( _state._renderPass != nullptr )
             wgpuRenderPassEncoderSetScissorRect( _state._renderPass, rect._x, rect._y, rect._width, rect._height );
     }
 
     // ------------------------------------------------------------------------------
-    // 파이프라인 · 슬롯
+    // 슬롯
     // ------------------------------------------------------------------------------
-    void WebGPURHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
-    {
-        // 등록되지 않은 핸들도 적는다 — 앞 PSO 로 대신 그리지 않고 prepareDraw 에서 멈춘다(DX11 과 같다).
-        _state._graphicsPSO = pso;
-        _state._geometry.clearVertexBuffers(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
-    }
-
-    void WebGPURHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
-    {
-        _state._computePSO = pso;
-    }
-
-    void WebGPURHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
-    {
-        _state._geometry.setVertexBuffer( slot, buffer, stride, offset );
-    }
-
-    void WebGPURHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
-    {
-        _state._geometry.setIndexBuffer( buffer, indexStride, offset );
-    }
-
-    void WebGPURHICommandContext::writeRootConstants( WebGPUSlotState& slots, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
-    {
-        if ( pData == nullptr || num32BitValues == 0 )
-            return;
-        if ( destOffsetIn32BitValues + num32BitValues > shaderslot::kRootConstantDwords )
-            reportFatalError( "WebGPU root constants overflow: offset %# + %# dwords > %#", destOffsetIn32BitValues, num32BitValues, shaderslot::kRootConstantDwords );
-        Memory::copy( &slots._arrRootConstant[destOffsetIn32BitValues], pData, num32BitValues * sizeof( uint32 ) );
-        slots._bRootConstantSet = SW_TRUE;
-        slots._bRootSliceDirty  = SW_TRUE;
-    }
-
-    void WebGPURHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
-    {
-        (void)rootParameterIndex; // 에뮬 백엔드는 루트 매개변수가 하나(b2)다
-        writeRootConstants( _state._compute, num32BitValues, pData, destOffsetIn32BitValues );
-    }
-
-    void WebGPURHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
-    {
-        (void)rootParameterIndex;
-        writeRootConstants( _state._graphics, num32BitValues, pData, destOffsetIn32BitValues );
-    }
-
-    void WebGPURHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
-    {
-        if ( slot < shaderslot::wgpu::kURange )
-            _state._compute._arrUnorderedAccess[slot] = index;
-    }
-
-    void WebGPURHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
-    {
-        // 그래픽스 단계 u 바인딩은 구현하지 않았다(`RHICapabilities::_bGraphicsShaderWrites` 가 거짓) — 셰이더 메시지 채널은 이 백엔드에서 켜지지 않아 여기에 오지 않는다.
-        (void)index;
-        (void)slot;
-    }
-
-    void WebGPURHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
-    {
-        if ( slot < shaderslot::wgpu::kTRange )
-            _state._graphics._arrShaderResource[slot] = index;
-    }
-
-    void WebGPURHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
-    {
-        if ( slot < shaderslot::wgpu::kTRange )
-            _state._graphics._arrShaderResource[slot] = index;
-    }
-
-    void WebGPURHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
-    {
-        if ( slot < shaderslot::wgpu::kBRange )
-            _state._graphics._arrConstantBuffer[slot] = constantBufferIndex;
-    }
-
-    void WebGPURHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
-    {
-        if ( slot < shaderslot::wgpu::kBRange )
-            _state._compute._arrConstantBuffer[slot] = constantBufferIndex;
-    }
-
-    void WebGPURHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
-    {
-        if ( slot < shaderslot::wgpu::kTRange )
-            _state._compute._arrShaderResource[slot] = index;
-    }
-
     void WebGPURHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         // 기록 중 갱신은 상수 링의 새 칸으로 이름을 바꾼다 — 같은 버퍼를 한 프레임에 여러 번 갱신해도 앞서 기록한 그리기는 제 칸을 읽는다(DX11 WRITE_DISCARD 와 같은 뜻).
@@ -406,12 +286,16 @@ namespace sw
         pRecord->_overrideOffset = ringOffset;
     }
 
-    WGPUTextureView WebGPURHICommandContext::resolveSampledView( RHIDescriptorIndex index ) const
+    WGPUTextureView WebGPURHICommandContext::resolveSampledView( uint32 slot, RHIDescriptorIndex index ) const
     {
         const WebGPUBindlessEntry  entry    = _pDevice->findBindless( _pDevice->_textureTable, index );
         const WebGPUTextureRecord* pTexture = entry._texture != 0 ? _pDevice->findTexture( entry._texture ) : nullptr;
         if ( pTexture == nullptr )
+        {
+            if ( index != kInvalidDescriptorIndex )
+                _pDevice->getDrawDiagnostics().reportDescriptorNotRegistered( "t", slot, index );
             return _pDevice->_defaultTextureView;
+        }
         // 깊이 텍스처의 샘플 뷰는 R32 사본이다 — 깊이를 쓴 뒤 옮기지 않았으면 낡은 깊이(또는 0)를 읽는다. 부르는 쪽이 `prepareTextureForShaderRead` 를 빠뜨렸다.
         if ( pTexture->_depthSampleTexture != nullptr && pTexture->_depthCopySourceWriteCount != pTexture->_depthWriteCount )
             SW_LOG_ERROR_ONCE_ID( "WebGPU.DepthSampledWithoutPrepare", "WebGPU: a depth texture (%#x%#) is sampled without prepareTextureForShaderRead after a depth write - its R32 copy is stale",
@@ -420,12 +304,17 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 바인딩 번호의 띠(b · t · s · u)마다 한 갈래라 나누면 같은 표를 네 번 넘긴다.
-    WGPUBindGroup WebGPURHICommandContext::findBindGroup( const WebGPUPipelineRecord& pipeline, WebGPUSlotState& slots )
+    WGPUBindGroup WebGPURHICommandContext::findBindGroup( const WebGPUPipelineRecord& pipeline, RHIBindPoint point )
     {
         namespace wgpu = shaderslot::wgpu;
         using Internal = WebGPURHICommandContextInternal;
         if ( pipeline._groupLayout == nullptr || pipeline._listBinding.empty() )
             return nullptr;
+        // 그룹은 슬롯 전부로 짓는다 — 바뀐 비트는 보지 않는다(같은 항목의 그룹은 캐시가 준다). 걸지 않은 칸은 아래에서 빈 자원이다.
+        const RHIShaderSlots&      slots       = _bindings.getSlots( point );
+        RHIRootConstants&          constants   = _bindings.getRootConstants( point );
+        WebGPURootSlice&           rootSlice   = _state._arrRootSlice[static_cast<uint32>( point )];
+        const RHIDrawDiagnostics&  diagnostics = _pDevice->getDrawDiagnostics();
         vector<WGPUBindGroupEntry> listEntry;
         listEntry.reserve( pipeline._listBinding.size() );
         for ( const uint32 binding : pipeline._listBinding )
@@ -433,7 +322,8 @@ namespace sw
             if ( binding >= wgpu::kUShift )
             {
                 const uint32              slot  = binding - wgpu::kUShift;
-                const WebGPUBindlessEntry entry = slot < wgpu::kURange ? _pDevice->findBindless( _pDevice->_uavTable, slots._arrUnorderedAccess[slot] ) : WebGPUBindlessEntry{};
+                const RHIDescriptorIndex  index = slot < RHIShaderSlots::kUnorderedAccessCount ? slots.get( RHIShaderSlotKind::UnorderedAccess, slot ) : kInvalidDescriptorIndex;
+                const WebGPUBindlessEntry entry = _pDevice->findBindless( _pDevice->_uavTable, index );
                 if ( entry._texture != 0 )
                 {
                     const WebGPUTextureRecord* pTexture = _pDevice->findTexture( entry._texture );
@@ -446,6 +336,8 @@ namespace sw
                 const WebGPUBufferRecord* pBuffer = entry._buffer != 0 ? _pDevice->_buffers.get( entry._buffer ) : nullptr;
                 if ( pBuffer == nullptr )
                 {
+                    if ( index != kInvalidDescriptorIndex )
+                        diagnostics.reportDescriptorNotRegistered( "u", slot, index );
                     // 셰이더가 쓰는 쓰기 자리를 엔진이 걸지 않았다 — 빈 버퍼에 쓴다. DX11 · GL 도 안 걸린 UAV 쓰기를 버린다(같은 결과).
                     listEntry.push_back( Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
                     continue;
@@ -465,14 +357,16 @@ namespace sw
             {
                 const uint32             slot       = binding - wgpu::kTShift;
                 const bool               bTextureAt = slot >= shaderslot::kMaterialTexture0; // 머티리얼(t16..) · 엔진 텍스처 칸(t32..)은 텍스처, 그 앞 띠는 구조 버퍼다(binding_slots.hlsli 2)
-                const RHIDescriptorIndex index      = slot < wgpu::kTRange ? slots._arrShaderResource[slot] : kInvalidDescriptorIndex;
+                const RHIDescriptorIndex index      = slot < RHIShaderSlots::kShaderResourceCount ? slots.get( RHIShaderSlotKind::ShaderResource, slot ) : kInvalidDescriptorIndex;
                 if ( bTextureAt )
                 {
-                    listEntry.push_back( Internal::makeTextureEntry( binding, resolveSampledView( index ) ) );
+                    listEntry.push_back( Internal::makeTextureEntry( binding, resolveSampledView( slot, index ) ) );
                     continue;
                 }
                 const WebGPUBindlessEntry entry   = _pDevice->findBindless( _pDevice->_bufferTable, index );
                 const WebGPUBufferRecord* pBuffer = entry._buffer != 0 ? _pDevice->_buffers.get( entry._buffer ) : nullptr;
+                if ( pBuffer == nullptr && index != kInvalidDescriptorIndex )
+                    diagnostics.reportDescriptorNotRegistered( "t", slot, index );
                 // 안 걸린 읽기 버퍼는 빈 버퍼다 — 셰이더는 PassCB 의 인덱스가 무효면 읽지 않는다(DX11 · GL 의 빈 SRV 와 같다).
                 listEntry.push_back( pBuffer != nullptr ? Internal::makeBufferEntry( binding, pBuffer->_buffer, 0, pBuffer->_sizeBytes )
                                                         : Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
@@ -481,20 +375,23 @@ namespace sw
             const uint32 slot = binding - wgpu::kBShift;
             if ( slot == shaderslot::kRootConstantEmulationSlot )
             {
-                const bool bNeedSlice = slots._bRootSliceDirty != SW_FALSE || slots._rootSliceSerial != _pDevice->getFrameSerial() || slots._rootSliceBuffer == nullptr;
+                const bool bNeedSlice = constants.isDirty() || rootSlice._serial != _pDevice->getFrameSerial() || rootSlice._buffer == nullptr;
                 if ( bNeedSlice )
                 {
-                    _pDevice->allocateConstantSlice( slots._arrRootConstant, sizeof( slots._arrRootConstant ), sizeof( slots._arrRootConstant ), slots._rootSliceBuffer, slots._rootSliceOffset );
-                    slots._rootSliceSerial = _pDevice->getFrameSerial();
-                    slots._bRootSliceDirty = SW_FALSE;
+                    _pDevice->allocateConstantSlice( constants._arrDword, sizeof( constants._arrDword ), sizeof( constants._arrDword ), rootSlice._buffer, rootSlice._offset );
+                    rootSlice._serial = _pDevice->getFrameSerial();
+                    constants.markFlushed();
                 }
-                listEntry.push_back( Internal::makeBufferEntry( binding, slots._rootSliceBuffer, slots._rootSliceOffset, sizeof( slots._arrRootConstant ) ) );
+                listEntry.push_back( Internal::makeBufferEntry( binding, rootSlice._buffer, rootSlice._offset, sizeof( constants._arrDword ) ) );
                 continue;
             }
-            const WebGPUBindlessEntry entry   = slot < wgpu::kBRange ? _pDevice->findBindless( _pDevice->_bufferTable, slots._arrConstantBuffer[slot] ) : WebGPUBindlessEntry{};
+            const RHIDescriptorIndex  index   = slot < RHIShaderSlots::kConstantBufferCount ? slots.get( RHIShaderSlotKind::ConstantBuffer, slot ) : kInvalidDescriptorIndex;
+            const WebGPUBindlessEntry entry   = _pDevice->findBindless( _pDevice->_bufferTable, index );
             const WebGPUBufferRecord* pBuffer = entry._buffer != 0 ? _pDevice->_buffers.get( entry._buffer ) : nullptr;
             if ( pBuffer == nullptr )
             {
+                if ( index != kInvalidDescriptorIndex )
+                    diagnostics.reportDescriptorNotRegistered( "b", slot, index );
                 listEntry.push_back( Internal::makeBufferEntry( binding, _pDevice->_defaultBuffer, 0, WGPU_WHOLE_SIZE ) );
                 continue;
             }
@@ -517,17 +414,17 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool WebGPURHICommandContext::prepareDraw()
     {
-        const WebGPUPipelineRecord* pPipeline = _pDevice->_pipelines.get( _state._graphicsPSO );
+        const WebGPUPipelineRecord* pPipeline = _pDevice->_pipelines.get( _bindings._graphicsPSO );
         // 백엔드 계약(다섯 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다(부르는 쪽의 결함).
         if ( pPipeline == nullptr || pPipeline->_renderPipeline == nullptr )
-            reportFatalError( "WebGPU draw without a registered graphics PSO (handle %#)", _state._graphicsPSO.getPacked() );
-        if ( _state._boundRenderPSO != _state._graphicsPSO )
+            reportFatalError( "WebGPU draw without a registered graphics PSO (handle %#)", _bindings._graphicsPSO.getPacked() );
+        if ( _state._boundRenderPSO != _bindings._graphicsPSO )
         {
             wgpuRenderPassEncoderSetPipeline( _state._renderPass, pPipeline->_renderPipeline );
             wgpuRenderPassEncoderSetStencilReference( _state._renderPass, pPipeline->_stencilRef );
-            _state._boundRenderPSO = _state._graphicsPSO;
+            _state._boundRenderPSO = _bindings._graphicsPSO;
         }
-        const bool bBound = _state._geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), pPipeline->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
+        const bool bBound = _bindings._geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), pPipeline->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
         {
             const WebGPUBufferRecord* pBuffer = _pDevice->findBuffer( binding._buffer );
             if ( pBuffer == nullptr )
@@ -537,7 +434,7 @@ namespace sw
         } );
         if ( bBound == false )
             return false;
-        const WGPUBindGroup group = findBindGroup( *pPipeline, _state._graphics );
+        const WGPUBindGroup group = findBindGroup( *pPipeline, RHIBindPoint::Graphics );
         if ( group != nullptr )
             wgpuRenderPassEncoderSetBindGroup( _state._renderPass, 0, group, 0, nullptr ); // 그룹은 캐시가 가진다 — 인코더가 기록한 동안 붙들고 있다(명세)
         return true;
@@ -545,7 +442,7 @@ namespace sw
 
     bool WebGPURHICommandContext::prepareIndexBuffer()
     {
-        return _state._geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
+        return _bindings._geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
         {
             const WebGPUBufferRecord* pBuffer = _pDevice->findBuffer( binding._buffer );
             if ( pBuffer == nullptr )
@@ -612,14 +509,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     WGPUComputePassEncoder WebGPURHICommandContext::prepareDispatch()
     {
-        const WebGPUPipelineRecord* pPipeline = _pDevice != nullptr ? _pDevice->_pipelines.get( _state._computePSO ) : nullptr;
+        const WebGPUPipelineRecord* pPipeline = _pDevice != nullptr ? _pDevice->_pipelines.get( _bindings._computePSO ) : nullptr;
         if ( pPipeline == nullptr || pPipeline->_computePipeline == nullptr )
-            reportFatalError( "WebGPU dispatch without a registered compute PSO (handle %#)", _state._computePSO.getPacked() );
+            reportFatalError( "WebGPU dispatch without a registered compute PSO (handle %#)", _bindings._computePSO.getPacked() );
         const WGPUComputePassEncoder pass = ensureComputePass();
         if ( pass == nullptr )
             return nullptr;
         wgpuComputePassEncoderSetPipeline( pass, pPipeline->_computePipeline );
-        const WGPUBindGroup group = findBindGroup( *pPipeline, _state._compute );
+        const WGPUBindGroup group = findBindGroup( *pPipeline, RHIBindPoint::Compute );
         if ( group != nullptr )
             wgpuComputePassEncoderSetBindGroup( pass, 0, group, 0, nullptr );
         return pass;

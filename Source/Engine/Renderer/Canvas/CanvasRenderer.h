@@ -62,12 +62,11 @@ namespace sw
          * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 위치(주 출력 0, 대상은 `getTargetQuadBase`)
          * @param pso            대상 포맷의 캔버스 PSO
          * @param targetWidth    대상 픽셀 크기(가위가 없는 일괄의 가위와 셰이더의 NDC 변환에 씁니다)
-         * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t16..t19 에 서수로 바인딩합니다
          * @param colorVisionMode 색각 보정 방식(`CanvasFrameData::_colorVisionMode`, 주 출력만 쓰고 렌더 텍스처 대상은 0)
          * @return 그린 일괄 수입니다
          */
         uint32 drawList( IRHIPassCommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
-                         bool bNativeBindless, uint32 colorVisionMode = 0 ) const;
+                         uint32 colorVisionMode = 0 ) const;
         /**
          * @brief 렌더 텍스처 대상(월드 공간 UI)을 지우고 그립니다. 내용 번호와 텍스처가 지난번과 같은 대상은 건너뜁니다(언리얼 위젯 컴포넌트의 다시 그리기 조건에 해당합니다).
          * @details 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트에 기록한다. PSO 는 대상 포맷의 출력 PSO(`RenderPSOCache::findOutputPSO`)뿐이다 —
@@ -79,13 +78,13 @@ namespace sw
          * @brief 화면 마커 투영 컴퓨트(`canvas_marker.hlsl`)를 기록합니다. 마커 입력(`CanvasFrameData::_listMarker`)이 있는 프레임에만 돌고, 렌더 패스 밖(프레임 그래프)에서 부릅니다 —
          *        `prepareFrame` 이 사각형 버퍼에 올린 앵커 원소 중 켜진 마커의 것을 화면 좌표 · 배율로 덮어쓰고, 캔버스 그리기(셰이더 읽기)를 위해 읽기 상태로 돌려놓는다.
          * @param instanceBuffer GPUScene 인스턴스 버퍼와 그 SRV 입니다(`GPUScene::getInstanceBuffer` · `getInstanceSRV`). 인스턴스 칸을 읽는 마커가 있으면 읽기 상태로 전환해 바인딩한다. 없으면 @p placeholderSRV 를 건다(읽지 않는다).
-         * @param pso `RenderPassKind::CanvasMarker` 의 엔진 PSO 입니다. 0 이면(셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드) 오류를 한 번 남기고 아무것도 하지 않습니다 —
+         * @param pipeline `RenderPassKind::CanvasMarker` 의 엔진 컴퓨트 PSO 입니다. 비면(셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드) 오류를 한 번 남기고 아무것도 하지 않습니다 —
          *        그 마커는 CPU 가 앵커 배율을 0 으로 올렸으므로 그려지지 않는다(CPU 투영으로 대신하지 않는다).
          * @param bShowInstanceSlots 보기 모드 `MarkerSlots` 입니다 — 참이면 컴퓨트가 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 써 캔버스가 마커 위젯을 칠한다.
-         * @param inoutMessages 셰이더 메시지 링입니다. 메시지 변형 PSO 일 때 디스패치 앞에서 u4 에 겁니다(꺼져 있으면 아무것도 하지 않는다).
+         * @param messages 셰이더 메시지 링입니다. 메시지 변형 PSO 일 때 매개변수(u4)로 겁니다(꺼져 있으면 걸지 않는다).
          */
-        void recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV, RHIBufferSRVIndex placeholderSRV,
-                                     GPUMessageChannel& inoutMessages, bool bShowInstanceSlots );
+        void recordMarkerProjection( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV, RHIBufferSRVIndex placeholderSRV,
+                                     const GPUMessageChannel& messages, bool bShowInstanceSlots );
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _quadBuffer.getMainQuadBase(); }
         /** @brief 이번 프레임 사각형 버퍼(앵커 · 주 출력 · 대상)입니다. 마커 투영이 쓰는 프레임에 프레임 그래프 표가 등록한다(`CanvasMarkers`). */

@@ -300,14 +300,8 @@ namespace sw
         void               shutdownInternal() override;
         void               resizeInternal( uint32 width, uint32 height ) override;
         void               applyVSyncInternal() override;
-
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
-        bool   isFrameStarted() const override { return _frameEncoder != nullptr; } // 잃은 장치의 beginFrame 은 인코더를 열지 않는다
+        bool               isFrameStarted() const override { return _frameEncoder != nullptr; } // 잃은 장치의 beginFrame 은 인코더를 열지 않는다
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다 — 손실 콜백이 따로 들던 비트필드는 다른 스레드가 쓰는 경쟁이라 없앴다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
 
         RHIFormat            getBackBufferFormat() const override { return _swapChain.getRHIFormat(); }
         RHICapabilities      getCapabilities() const override;
@@ -337,7 +331,7 @@ namespace sw
         [[nodiscard]] WGPUTextureFormat toTextureFormat( RHIFormat format ) const;
 
     protected:
-        void                         waitIdleInternal() override;
+        bool                         waitIdleInternal() override;
         void                         detachCommandRecordingInternal() override;
         void*                        getNativeDevice() const override { return _device; }
         void*                        getNativeContext() const override { return _frameEncoder; }
@@ -419,6 +413,13 @@ namespace sw
 
         /** @brief 지금 프레임 인코더입니다. 프레임 밖이면 nullptr 입니다. */
         WGPUCommandEncoder getFrameEncoder() const { return _frameEncoder; }
+        /** @brief 프레임 인코더에 명령을 기록했음을 적습니다(프레임 스트림 문맥이 인코더를 꺼낼 때). */
+        void markFrameEncoderUsed() { _bFrameEncoderUsed = SW_TRUE; }
+        /**
+         * @brief 프레임 안의 큐 쓰기(`wgpuQueueWriteBuffer`) 앞에서 지금까지의 기록을 냅니다. 프레임 밖이거나 기록한 것이 없으면 아무것도 하지 않습니다.
+         * @details 큐 쓰기는 뒤에 내는 제출보다 앞에 실행된다(명세) — 이미 기록한 드로우 · 디스패치가 새 내용을 읽지 않게 먼저 낸다(다른 백엔드의 기록 순서와 같다).
+         */
+        void submitRecordedBeforeQueueWrite();
         /** @brief @p table 의 @p index 칸 값을 공유 잠금 아래에서 읽습니다(빈 칸이면 빈 값). 값으로 돌려준다 — 포인터는 다른 스레드의 등록이 표를 늘리면 매달린다. */
         WebGPUBindlessEntry findBindless( const WebGPUBindlessTable& table, RHIDescriptorIndex index ) const;
         /** @brief 이번 프레임(다음 제출)의 시리얼입니다. 상수 링 칸 · 지연 해제가 이 값을 쓴다. 어느 스레드에서나 읽는다. */
@@ -473,6 +474,7 @@ namespace sw
         RHISwapChainSet<WebGPURHISwapChain> _windowSwapChains; ///< 다른 창과 이번 프레임에 그린 창(endFrame 이 표시한다)
 
         WGPUCommandEncoder        _frameEncoder;
+        uint8                     _bFrameEncoderUsed{ SW_FALSE }; ///< 지금 프레임 인코더에 기록한 것이 있다
         vector<WGPUCommandBuffer> _listPendingCommandBuffer;
 
         unique_ptr<WebGPURHIResourceFactory> _resourceFactory;
@@ -508,8 +510,6 @@ namespace sw
         vector<ConstantRing> _listConstantRing;
         uint32               _activeRingIndex;
 
-        RHIReleaseQueue                                        _releaseQueue;
-        RHITransferSerials                                     _transferSerials;
         RHITransferFenceQueue<unique_ptr<WebGPUTransferFence>> _transferQueue;
         RHIPendingReadbackTable<WebGPUTextureReadback>         _readbackTable;
         vector<RHIBufferHandle>                                _listQueuedReadbackBuffer;
@@ -518,8 +518,7 @@ namespace sw
         vector<WebGPURHICommandList*> _listLiveCommandList;
 
         /// @brief 칸마다의 프레임 완료(`RHIFrameFenceRing::getSlot`). 콜백 userdata 라 자리가 움직이지 않는 고정 배열이다.
-        WebGPUFrameFence  _arrFrameFence[RHIFrameFenceRing::kSlotCount];
-        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
+        WebGPUFrameFence _arrFrameFence[RHIFrameFenceRing::kSlotCount];
 
         uint8 _bInitialized         : 1;
         uint8 _bTextureFormatsTier1 : 1; ///< rg16snorm 첨부 · 블렌드(`texture-formats-tier1`)

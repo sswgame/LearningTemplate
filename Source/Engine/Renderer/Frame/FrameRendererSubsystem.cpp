@@ -15,11 +15,13 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
+#include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
@@ -103,6 +105,8 @@ namespace sw
         host._pExtensions      = engine::findSubsystem<RenderExtensionRegistry>();
         host._pRenderTargets   = engine::findSubsystem<RenderTargetRegistry>();
         host._pRenderDebug     = engine::findSubsystem<RenderDebugRegistry>();
+        host._pPixelInspector  = engine::findSubsystem<GPUPixelInspector>();
+        host._pSimulationOnly  = engine::findSubsystem<SimulationOnlyFrameQueue>();
         host._pPinnedMaterials = &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         _frameRenderer->bindHost( host );
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).

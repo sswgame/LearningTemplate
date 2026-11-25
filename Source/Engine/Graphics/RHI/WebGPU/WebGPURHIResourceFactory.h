@@ -24,45 +24,47 @@ namespace sw
 
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
-        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
+        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased ) override;
 
-        RHIBufferHandle               createConstantBuffer( uint32 size ) override;
-        void                          updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        RHIBufferHandle               createConstantBufferPage( uint32 size ) override;
-        void                          updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
-        RHIBufferHandle               createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                          updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle               createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
-        RHIBufferHandle               createGPUVertexBuffer( uint32 sizeBytes ) override;
-        void                          updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle               createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
-        [[nodiscard]] bool            destroyBufferNative( RHIBufferHandle buffer ) override;
-        [[nodiscard]] RHIBufferHandle createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
-        [[nodiscard]] bool            readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
+        RHIBufferHandle               createConstantBufferNative( uint32 size ) override;
+        RHIBufferHandle               createConstantBufferPageNative( uint32 size ) override;
+        void                          writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
+        RHIBufferHandle               createStructuredBufferNative( uint32 elementSize, uint32 elementCount ) override;
+        void                          updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle               createVertexBufferNative( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle               createGPUVertexBufferNative( uint32 sizeBytes ) override;
+        void                          updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle               createIndexBufferNative( const void* pData, uint32 sizeBytes ) override;
+        [[nodiscard]] bool            destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased ) override;
+        [[nodiscard]] RHIBufferHandle createReadbackBufferNative( uint32 elementSize, uint32 elementCount ) override;
+        [[nodiscard]] bool            readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
 
-        RHITextureHandle   createTexture2D( const RHITextureDesc& desc ) override;
-        [[nodiscard]] bool destroyTextureNative( RHITextureHandle texture ) override;
+        RHITextureHandle   createTexture2DNative( const RHITextureDesc& desc ) override;
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased ) override;
         RHIFormat          getTextureFormat( RHITextureHandle texture ) const override;
 
-        [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
-        [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
-        [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
         [[nodiscard]] RHITransferStatus pollTransfer( RHITransferTicket ticket ) override;
         [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
 
-        RHITextureSRVIndex      registerBindlessTexture( RHITextureHandle texture ) override;
-        [[nodiscard]] bool      rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
-        RHITextureSRVIndex      reserveBindlessTextureIndex() override;
-        [[nodiscard]] bool      activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
-        [[nodiscard]] bool      isTextureReadyToSample( RHITextureHandle texture ) override;
-        void                    unregisterBindlessTexture( RHITextureSRVIndex index ) override;
-        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
-        RHIBufferSRVIndex       registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
-        void                    unregisterBindlessResource( RHIBufferSRVIndex index ) override;
-        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
-        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
+        RHITextureSRVIndex      registerBindlessTextureNative( RHITextureHandle texture ) override;
+        [[nodiscard]] bool      rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex      reserveBindlessTextureIndexNative() override;
+        [[nodiscard]] bool      activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        [[nodiscard]] uint64    findAllocationBytesNative( RHIBufferHandle buffer ) const override;
+        [[nodiscard]] uint64    findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& desc ) const override;
+        [[nodiscard]] bool      describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override;
+        [[nodiscard]] uint32    findConstantPageBytesNative( RHIBufferHandle buffer ) override;
+        [[nodiscard]] bool      unregisterBindlessTextureNative( RHITextureSRVIndex index ) override;
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( RHIBufferHandle buffer ) override;
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( const RHIBufferSlice& slice ) override;
+        [[nodiscard]] bool      unregisterBindlessResourceNative( RHIBufferSRVIndex index ) override;
+        RHIUnorderedAccessIndex registerBindlessBufferUAVNative( RHIBufferHandle buffer ) override;
+        RHIUnorderedAccessIndex registerBindlessTextureUAVNative( RHITextureHandle texture ) override;
+        [[nodiscard]] bool      unregisterBindlessUAVNative( RHIUnorderedAccessIndex index ) override;
 
     private:
         /** @brief 용도 @p usage 의 버퍼를 만들고 @p pData 가 있으면 담습니다(크기는 4 의 배수로 올린다 — 명세의 쓰기 정렬). */

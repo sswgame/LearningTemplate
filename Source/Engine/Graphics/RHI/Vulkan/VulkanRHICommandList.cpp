@@ -64,6 +64,7 @@ namespace sw
     void VulkanRHICommandList::beginCommandList()
     {
         _state = VulkanRecordingState{};
+        _context.beginRecording();
         if ( _pDevice == nullptr )
             return;
 

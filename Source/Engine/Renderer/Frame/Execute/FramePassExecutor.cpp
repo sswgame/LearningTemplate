@@ -51,6 +51,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Capture/FrameCapture.h"
 #include "Engine/Renderer/Debug/MeshVertexCheck.h"
+#include "Engine/Renderer/Debug/RHIContractCheck.h"
 #include "Engine/Renderer/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
@@ -156,6 +157,8 @@ namespace sw
         _bufferInspector.release();
         if ( _meshVertexCheck != nullptr )
             _meshVertexCheck->release( _pDevice );
+        if ( _rhiContractCheck != nullptr )
+            _rhiContractCheck->release( _pDevice );
         _nanCheckCommandList.reset();
         _frameEndCommandList.reset();
         _nanCheck.shutdown();
@@ -245,6 +248,9 @@ namespace sw
             if ( _meshVertexCheck == nullptr )
                 _meshVertexCheck = make_unique<MeshVertexCheck>();
             _meshVertexCheck->service( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
+            if ( _rhiContractCheck == nullptr )
+                _rhiContractCheck = make_unique<RHIContractCheck>();
+            _rhiContractCheck->service( *_pCmd, *pDevice, *_state._pRenderDebug );
         }
 #endif
 #if SW_PROFILE_COMPILED
@@ -342,7 +348,7 @@ namespace sw
 
     void FramePassExecutor::prepareShadowCacheLayerResource()
     {
-        // 그림자 캐시 층은 기록 **전에** 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 만들면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
+        // 그림자 캐시 층은 기록 **전에** 만든다 — 패스 기록(병렬 레벨) 안에서 텍스처를 등록하면 자원 표를 바꿔 디바이스가 멈춘다(`requireRegistryMutableNow`).
         // 아틀라스는 점광 · 스폿 그림자 패스(깊이 첨부가 LocalShadowMap 역할)의 깊이 첨부다(첨부 풀이 이미 잡았다). 같은 형식 · 크기면 아무것도 하지 않는다.
         ShadowCache& cache = _state._shadowCache;
         if ( cache.usesCacheLayer() == false )
@@ -362,6 +368,7 @@ namespace sw
     {
         prepareShadowCacheLayerResource();
         registerViewResources( _state.getMainView() );
+        const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
         const bool bCanRunParallel = _state._pTaskManager != nullptr &&
@@ -403,6 +410,7 @@ namespace sw
         prepareShadowCacheLayerResource(); // 주 시점보다 먼저 그리는 뷰도 있다 — 층은 기록 전에
         registerViewResources( view );
 
+        const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
         pCmd->beginCommandList();
         if ( _state._graph.execute( _graphContext, pCmd ) == false )
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.RenderGraphCouldNot", "Render graph could not run for an extra view (cycle or compile failure)" );
@@ -687,7 +695,7 @@ namespace sw
     void FramePassExecutor::prepareVisualizedAttachment( IRHICommandList& cmd ) const
     {
         // 개발 보기 `gpu.show <첨부>` — Present 가 선언하지 않은 첨부를 읽는다. 앞 레벨이 쓴 첨부라 같은 레벨의 다른 패스가 그것을 쓰지 않는다(쓰기 사슬).
-        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        const GPUPixelInspector* const pInspector = _state._pPixelInspector;
         string                         attachment;
         if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
             return;
@@ -700,7 +708,7 @@ namespace sw
     void FramePassExecutor::registerVisualizedAttachment( FramePassContext& context )
     {
         // 주 시점만 바꾼다 — 추가 뷰(CCTV · 렌더 텍스처)는 제 원본을 그대로 낸다. 없는 이름이면 원본을 그대로 둔다(개발 명령이 이미 이름을 알렸다).
-        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        const GPUPixelInspector* const pInspector = _state._pPixelInspector;
         string                         attachment;
         if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
             return;
@@ -717,8 +725,8 @@ namespace sw
     {
         if ( _nanCheck.isActive() == false || pDevice == nullptr )
             return;
-        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::NanCheck );
-        if ( pso == 0 )
+        const ComputePipeline pipeline = _psoManager.getComputePSO( RenderPassKind::NanCheck );
+        if ( pipeline.isValid() == false )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
             return;
@@ -745,7 +753,7 @@ namespace sw
                 formatstring( arrName, sizeof( arrName ), "%#:%#", pass._name, output._attachment.view() );
                 // 컴퓨트가 엔진 텍스처로 읽도록 셰이더 읽기 상태로 옮기고, 다음 프레임의 패스가 쓰도록 렌더 타깃 상태로 돌려 둔다.
                 pCmd->prepareTextureForShaderRead( attachment._texture );
-                _nanCheck.scan( *pCmd, pso, arrName, attachment._srv, attachment._width, attachment._height );
+                _nanCheck.scan( *pCmd, pipeline, arrName, attachment._srv, attachment._width, attachment._height );
                 pCmd->prepareTextureForRenderTarget( attachment._texture );
             }
         }
@@ -1074,10 +1082,12 @@ namespace sw
             // 비동기 묶음이 있다 — 컴퓨트 큐 리스트를 그래프가 포크마다 열고 닫는다. 프리패스 리스트는 포크 · 조인에서 잘려 큐에 나가고 다시 열린다.
             if ( _asyncComputeCmd == nullptr )
                 _asyncComputeCmd = pDevice->createAsyncComputeCommandList();
+            const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
             bOk = _asyncComputeCmd != nullptr && frameGraph.executeOnQueues( _frameGraphContext, *pDevice, *_pCmd, _asyncComputeCmd.get() );
         }
         else if ( frameGraph.getNodeCount() > 0 )
         {
+            const IRHIDevice::PassRecordingScope recordingScope{ *pDevice };
             bOk = frameGraph.execute( _frameGraphContext, _pCmd );
         }
         if ( bOk == false )

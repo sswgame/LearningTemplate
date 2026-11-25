@@ -80,7 +80,7 @@ namespace sw
                          getBackendName(), pOperation, CallStackCapture::symbolize( stack ).c_str() );
     }
 
-    void RHIDrawDiagnostics::reportConstantBufferRewrite( RHIBufferHandle handle ) const
+    void RHIDrawDiagnostics::reportConstantBufferRewrite( RHIBufferHandle handle, uint32 offset ) const
     {
         const uint32 count = countReport();
         if ( count >= kMaxReportedDraw )
@@ -88,8 +88,39 @@ namespace sw
         // 부른 자리를 함께 남긴다 — 버퍼를 나눌 곳이 곧 그 호출자다.
         CallStack stack{};
         CallStackCapture::capture( stack, 2 );
-        SW_LOG_ERROR_ID( "RHI.ConstantBufferRewrittenInFrame", "%# constant buffer %# was written twice in one frame - earlier draws read the last value. Give each value its own buffer (PassConstantRing)\n%#",
-                         getBackendName(), handle.getPacked(), CallStackCapture::symbolize( stack ).c_str() );
+        SW_LOG_ERROR_ID( "RHI.ConstantBufferRewrittenInFrame", "%# constant buffer %# (offset %#) was written twice in one frame - earlier draws read the last value. Give each value its own buffer (PassConstantRing)\n%#",
+                         getBackendName(), handle.getPacked(), offset, CallStackCapture::symbolize( stack ).c_str() );
+    }
+
+    void RHIDrawDiagnostics::reportShaderSlotOutOfRange( const utf8* pOperation, uint32 slot, uint32 firstSlot, uint32 endSlot ) const
+    {
+        const uint32 count = countReport();
+        if ( count >= kMaxReportedDraw )
+            return;
+        // 부른 자리를 함께 남긴다 — 슬롯 번호를 고칠 곳이 곧 그 호출자다.
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.ShaderSlotOutOfRange", "%# %#: slot %# is outside [%#, %#) - the binding was dropped\n%#", getBackendName(), pOperation, slot, firstSlot, endSlot,
+                         CallStackCapture::symbolize( stack ).c_str() );
+    }
+
+    void RHIDrawDiagnostics::reportRootConstantsOverflow( const utf8* pOperation, uint32 firstDword, uint32 count, uint32 capacity ) const
+    {
+        const uint32 reportCount = countReport();
+        if ( reportCount >= kMaxReportedDraw )
+            return;
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.RootConstantsOverflow", "%# %#: %# dwords at %# do not fit the %#-dword root constant block - the write was dropped\n%#", getBackendName(), pOperation, count, firstDword,
+                         capacity, CallStackCapture::symbolize( stack ).c_str() );
+    }
+
+    void RHIDrawDiagnostics::reportDescriptorNotRegistered( const utf8* pKind, uint32 slot, RHIDescriptorIndex index ) const
+    {
+        const uint32 count = countReport();
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DescriptorNotRegistered", "%# shader slot %# %#: descriptor index %# is not registered (released, or another kind of index) - the slot is left empty", getBackendName(),
+                             pKind, slot, index.getValue() );
     }
 
     void RHIDrawDiagnostics::reportIndexBufferUnbound() const

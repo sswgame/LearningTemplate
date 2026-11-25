@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 
@@ -525,44 +526,46 @@ namespace sw
         _listPendingCopy.clear();
     }
 
-    void RealtimeProbeUpdater::dispatchVoxelJobs( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const RHIStructuredBuffer& jobBuffer, uint32 threadCount ) const
+    void RealtimeProbeUpdater::dispatchVoxelJobs( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, const RHIStructuredBuffer& jobBuffer, uint32 threadCount ) const
     {
-        if ( pso == 0 || threadCount == 0 )
+        if ( pipeline.isValid() == false || threadCount == 0 )
             return;
-        // 바인딩은 scene_voxelize.hlsl 레지스터와 1:1 이다. 그룹 크기는 셰이더 리플렉션이 준다. 스레드가 한 줄(`kThreadsPerRow`)을 넘으면 y 축으로 접는다.
-        cmd.setComputePipelineState( pso );
-        cmd.bindComputeShaderResource( jobBuffer._srv, 0 );
-        cmd.bindComputeShaderResource( _voxelPositionBuffer._srv, 1 );
-        cmd.bindComputeShaderResource( _voxelIndexBuffer._srv, 2 );
-        cmd.bindComputeUAV( _voxelBuffer._uav, 0 );
+        // 그룹 크기는 셰이더 리플렉션이 준다. 스레드가 한 줄(`kThreadsPerRow`)을 넘으면 y 축으로 접는다.
+        ComputeShaderParameters<SceneVoxelizeShader> parameters;
+        parameters.set( SceneVoxelizeShader::Jobs, jobBuffer._srv );
+        parameters.set( SceneVoxelizeShader::Positions, _voxelPositionBuffer._srv );
+        parameters.set( SceneVoxelizeShader::Indices, _voxelIndexBuffer._srv );
+        parameters.set( SceneVoxelizeShader::VoxelGrid, _voxelBuffer._uav );
+        if ( parameters.apply( cmd, pipeline ) == false )
+            return;
         const uint32 rowCount = ( threadCount + SceneVoxelizer::kThreadsPerRow - 1u ) / SceneVoxelizer::kThreadsPerRow;
         cmd.dispatchThreads( MathUtil::min( threadCount, SceneVoxelizer::kThreadsPerRow ), rowCount, 1 );
     }
 
-    void RealtimeProbeUpdater::dispatchVoxelPass( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, uint32 dispatchIndex ) const
+    void RealtimeProbeUpdater::dispatchVoxelPass( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, uint32 dispatchIndex ) const
     {
-        dispatchVoxelJobs( cmd, pso, _arrVoxelJobBuffer[dispatchIndex], _arrVoxelThreadCount[dispatchIndex] );
+        dispatchVoxelJobs( cmd, pipeline, _arrVoxelJobBuffer[dispatchIndex], _arrVoxelThreadCount[dispatchIndex] );
     }
 
-    void RealtimeProbeUpdater::dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV )
+    void RealtimeProbeUpdater::dispatch( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV )
     {
-        if ( _bActive == SW_FALSE || pso == 0 )
+        if ( _bActive == SW_FALSE || pipeline.isValid() == false )
             return;
         const RHIStructuredBuffer* pProbeBuffer = lightBuffer.findProbeBuffer();
         if ( pProbeBuffer == nullptr || lightBuffer.getProbeUAV() == kInvalidDescriptorIndex )
             return;
-        // t0 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).
+        // 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).
         const RHIBufferSRVIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSRV;
 
         // 두 쓰기 버퍼의 UAV 전이와 조명 패스(그래프, t13) 앞 셰이더 읽기는 프레임 그래프가 낸다(`ProbeIrradiance` · `ProbeHistory` — `FrameGraphExecutor::beginFrame` 이 등록한다).
-        cmd.setComputePipelineState( pso );
-        // g_ProbeLights(t0) / g_ProbeParams(t1) / g_ProbeVoxels(t2) / g_ProbeHistoryRW(u0) / g_ProbeOutRW(u1). probe_update.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeShaderResource( lights, 0 );
-        cmd.bindComputeShaderResource( _paramBuffer._srv, 1 );
-        cmd.bindComputeShaderResource( _voxelBuffer._srv, 2 );
-        cmd.bindComputeUAV( _historyBuffer._uav, 0 );
-        cmd.bindComputeUAV( lightBuffer.getProbeUAV(), 1 );
-        cmd.dispatchThreads( _totalProbes, 1, 1 );
+        ComputeShaderParameters<ProbeUpdateShader> parameters;
+        parameters.set( ProbeUpdateShader::Lights, lights );
+        parameters.set( ProbeUpdateShader::Params, _paramBuffer._srv );
+        parameters.set( ProbeUpdateShader::VoxelGrid, _voxelBuffer._srv );
+        parameters.set( ProbeUpdateShader::History, _historyBuffer._uav );
+        parameters.set( ProbeUpdateShader::Output, lightBuffer.getProbeUAV() );
+        if ( parameters.apply( cmd, pipeline ) )
+            cmd.dispatchThreads( _totalProbes, 1, 1 );
     }
 
     void RealtimeProbeUpdater::release( IRHIDevice* pDevice )

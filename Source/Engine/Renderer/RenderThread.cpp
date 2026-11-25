@@ -521,7 +521,10 @@ namespace sw
             _pDevice->beginFrame();
         }
         if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+        {
+            FrameRenderer::updateTextureUploads( _pDevice, _pFrameRenderer->getOutputHeight() );
             _pFrameRenderer->executePacketWithoutDrawing( _pDevice, packet );
+        }
         // 제출만 하고 Present 하지 않는다(수직 동기도 기다리지 않는다) — Present 간격으로 건너뛰는 프레임과 같은 길이다.
         _pDevice->endFrame( false, false );
         return false;
@@ -658,6 +661,9 @@ namespace sw
                 _beginFrameHook( *_pDevice );
             _pDevice->beginFrame();
         }
+        // 텍스처 전송은 이번 프레임이 기록한 것보다 먼저 실행된다 — 게임 뷰를 지우는 기록보다도 앞에서, 렌더러(주 화면 · 미리보기) 수와 상관없이 한 번 낸다.
+        if ( _pFrameRenderer != nullptr && _pFrameRenderer->isReady() )
+            FrameRenderer::updateTextureUploads( _pDevice, _pFrameRenderer->getOutputHeight() );
         // 열지 못한 프레임(스왑체인 이미지를 얻지 못함 · 크기 0)은 기록해도 제출되지 않는다 — 그린 척하면 한 번뿐인 일(정점 풀 · 프로브 칠하기 · 층 굽기 · 쿠키)과 지난 깊이 ·
         // 노출 기록이 없는 그림을 있다고 믿는다. 그리지 않고 진행하는 프레임과 같은 길로 상태만 받고, 다음에 그리는 프레임이 시간 누적을 버린다.
         if ( _pDevice->isFrameStarted() == false )
@@ -675,13 +681,7 @@ namespace sw
         // 아래 prepareTextureForShaderRead 의 배리어가 보장한다(별도 스트림이나 블로킹 제출을 두지 않는다).
         if ( bOffscreen )
         {
-            RHIRenderPassBeginInfo gameViewPass{};
-            gameViewPass._bBindColor        = SW_TRUE;
-            gameViewPass._colorTargetCount  = 1;
-            gameViewPass._arrColorTarget[0] = packet._outputRenderTarget;
-            gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
-            gameViewPass._arrClearColor[0]  = packet._clearColor;
-            pFrameStream->clearRenderTargets( gameViewPass );
+            pFrameStream->clearRenderTargets( RHIRenderPassBeginInfo::color( packet._outputRenderTarget, RHIRenderPassLoadOp::Clear, packet._clearColor ) );
         }
 
         // 그래프가 이 프레임을 실제로 그렸는가. 그리지 않은 프레임(렌더러 준비 전, 주 시점이 없는 패킷)은 백버퍼를 아무도 건드리지 않았다.
@@ -714,16 +714,11 @@ namespace sw
         const RHITextureHandle screenTarget   = bRendererReady ? _pFrameRenderer->getScreenTarget() : kRHIBackBufferTexture;
         if ( pFrameStream != nullptr )
         {
-            RHIRenderPassBeginInfo backbufferPass{};
-            backbufferPass._bBindColor        = SW_TRUE;
-            backbufferPass._colorTargetCount  = 1;
-            backbufferPass._arrColorTarget[0] = screenTarget; // `kRHIBackBufferTexture` = 백버퍼
             // 오프스크린 경로에서는 그래프가 게임 RT 에만 그렸으므로 백버퍼는 아직 아무도 건드리지 않았다.
             // 그래서 여기서 클리어한다. 백버퍼 경로에서는 그래프가 이미 그렸으므로 보존해야 한다.
             // 그래프가 그리지 않은 프레임도 백버퍼는 받은 그대로(Vulkan 은 레이아웃 UNDEFINED)라 Load 로 열 수 없다 — 클리어한다.
-            backbufferPass._arrLoadOp[0]     = ( bOffscreen || bGraphDrew == false ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
-            backbufferPass._arrClearColor[0] = packet._clearColor;
-            pFrameStream->beginRenderPass( backbufferPass );
+            const RHIRenderPassLoadOp loadOp = ( bOffscreen || bGraphDrew == false ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
+            pFrameStream->beginRenderPass( RHIRenderPassBeginInfo::color( screenTarget, loadOp, packet._clearColor ) );
         }
 
         if ( _presentHook.isBound() )

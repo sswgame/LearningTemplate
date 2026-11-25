@@ -196,6 +196,14 @@ namespace sw
         /** @brief 대조 요청이 있으면 꺼내고 true 입니다(렌더 스레드). */
         [[nodiscard]] bool takeMeshVertexCheckRequest() { return _bMeshVertexCheckRequested.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE; }
 
+        // ------------------------------------------------------------------------------
+        // 5) RHI 계약 검사
+        // ------------------------------------------------------------------------------
+        /** @brief 다음 프레임에 RHI 공통 입구의 계약을 확인해 달라고 요청합니다(`RHIContractCheck` — 결과는 로그). */
+        void requestRHIContractCheck() { _bRHIContractCheckRequested.store( SW_TRUE, std::memory_order_release ); }
+        /** @brief 계약 검사 요청이 있으면 꺼내고 true 입니다(렌더 스레드). */
+        [[nodiscard]] bool takeRHIContractCheckRequest() { return _bRHIContractCheckRequested.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE; }
+
     private:
         mutable mutex                          _mutex;
         vector<RenderGraphSnapshot> _listGraph SW_GUARDED_BY( _mutex );
@@ -227,6 +235,7 @@ namespace sw
         atomic<uint32> _statsWantedFrames{ 0 };
         atomic<uint8>  _bGraphCaptureRequested{ SW_FALSE };
         atomic<uint8>  _bMeshVertexCheckRequested{ SW_FALSE };
+        atomic<uint8>  _bRHIContractCheckRequested{ SW_FALSE };
         atomic<uint8>  _bBufferListRequested{ SW_FALSE };
         atomic<uint8>  _bRecording{ SW_FALSE };
 

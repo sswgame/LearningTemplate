@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -27,7 +28,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIGeometryBindings.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIRecordingBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingBudget.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -69,31 +71,24 @@ namespace sw
 
         ID3D11Buffer* _arrBuffer[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
         UINT          _arrFirstConstant[kStageCount][D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT]{};
-        uint32        _nativeContextSerialSeen{ 0 }; ///< 즉시 컨텍스트 그림자가 마지막으로 본 `D3D11RHIDevice::_nativeContextSerial`(바깥 코드가 컨텍스트를 만지면 그림자를 버린다)
 
         /** @brief 모든 칸을 "모름" 으로 둡니다. */
-        void invalidate()
-        {
-            const uint32 seen        = _nativeContextSerialSeen;
-            *this                    = D3D11ConstantBufferBindings{};
-            _nativeContextSerialSeen = seen;
-        }
+        void invalidate() { *this = D3D11ConstantBufferBindings{}; }
     };
 
     struct D3D11RecordingState
     {
         /**
-         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼와 CPU 그림자입니다. **기록 스트림마다** 따로 있습니다.
+         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼입니다(바인드 포인트마다). **기록 스트림마다** 따로 있습니다.
          * @details D3D11 에는 루트 상수가 없어 작은 상수 버퍼로 흉내 낸다. 이것이 디바이스 전역이면
-         *          병렬로 기록하는 두 패스가 같은 그림자 배열과 같은 버퍼를 번갈아 덮어써서, 한쪽 패스의
-         *          드로우가 **다른 패스의 월드 행렬**로 그려진다.
+         *          병렬로 기록하는 두 패스가 같은 버퍼를 번갈아 덮어써서, 한쪽 패스의 드로우가 **다른 패스의 월드 행렬**로 그려진다.
          */
-        Microsoft::WRL::ComPtr<ID3D11Buffer> _rootConstantCb;
-        uint32                               _arrRootConstantShadow[shaderslot::kRootConstantDwords]{};
+        Microsoft::WRL::ComPtr<ID3D11Buffer> _arrRootConstantCb[RHIRecordingBindings::kBindPointCount];
 
-        RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
-        RHIPipelineStateHandle _activeGraphicsPSO{ 0 };
-        RHIPipelineStateHandle _activeComputePSO{ 0 }; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+        RHIPipelineStateHandle _boundNativeGraphicsPSO{ 0 };  ///< 네이티브에 셰이더 · 렌더 상태를 건 그래픽스 PSO(0 이면 모름)
+        RHIPipelineStateHandle _boundNativeComputePSO{ 0 };   ///< 네이티브에 셰이더를 건 컴퓨트 PSO(0 이면 모름)
+        uint64                 _pixelSRVMask{ 0 };            ///< PS 에 무언가 걸린 t 슬롯 비트
+        uint32                 _nativeContextSerialSeen{ 0 }; ///< 즉시 컨텍스트 상태가 마지막으로 본 `D3D11RHIDevice::_nativeContextSerial`(바깥 코드가 컨텍스트를 만지면 다시 건다)
         /**
          * @brief CS UAV 슬롯마다 지금 바인딩되어 있는 버퍼입니다(0이면 없음).
          * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 바인딩할 수 없다. UAV 를 해제하지 않으면
@@ -109,7 +104,7 @@ namespace sw
          *          `prepareTextureForRenderTarget` 가 이 테이블을 보고 그 텍스처가 바인딩된 슬롯만 해제한다(언리얼 D3D11 RHI 의
          *          `ConditionalClearShaderResource` 에 해당한다).
          */
-        RHITextureHandle _arrPixelSRVTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
+        RHITextureHandle _arrPixelSRVTexture[RHIShaderSlots::kShaderResourceCount]{};
         /// @brief 스테이지 · 슬롯마다 건 상수 버퍼의 그림자입니다(`D3D11ConstantBufferBindings`).
         D3D11ConstantBufferBindings _constantBuffers;
     };
@@ -183,7 +178,7 @@ namespace sw
         IRHICommandContext* getFrameStreamContext() override;
 
         /** @brief GPU 가 유휴 상태가 될 때까지 기다린 뒤 해제 큐를 비웁니다. */
-        void waitIdleInternal() override;
+        bool waitIdleInternal() override;
 
         /**
          * @brief 장치 제거를 흉내 냅니다(개발 명령 `rhi.removeDevice`). D3D11 에는 `RemoveDevice` 가 없어 첫 `DXGI_ERROR_DEVICE_REMOVED` 를 본 뒤의 상태(전송 손실 표시)만 만듭니다.
@@ -191,8 +186,6 @@ namespace sw
          */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
@@ -207,11 +200,6 @@ namespace sw
 
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
-
-        /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. D3D11 은 펜스 대신 프레임 끝마다 내는 이벤트 쿼리(`_arrFrameDoneQuery`)로 확인합니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }
@@ -372,7 +360,7 @@ namespace sw
             uint32                                                 _arraySize; ///< 면 수
             uint32                                                 _mipLevels; ///< 밉 수
             RHITextureDimension                                    _dimension;
-            /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isFirstUploadComplete`).
             RHITextureTransferSerials _transferSerials;
             uint8                     _bDepth   : 1;
             [[maybe_unused]] uint8    _reserved : 7;
@@ -388,6 +376,8 @@ namespace sw
                 , _bDepth{ SW_FALSE }
                 , _reserved{ 0 } {}
 
+            /** @brief 밉 하나의 크기입니다. */
+            RHIRenderPassExtent getMipExtent( uint32 mip ) const { return RHIRenderPassExtent{ MathUtil::max( _width >> mip, 1u ), MathUtil::max( _height >> mip, 1u ) }; }
             /** @brief (밉 `mip`, 면 `slice`) 의 RTV 입니다. 없으면 nullptr 입니다. */
             ID3D11RenderTargetView* findSliceRTV( uint32 slice, uint32 mip ) const
             {
@@ -529,17 +519,10 @@ namespace sw
         /** @brief UAV 인덱스가 가리키는 원본 버퍼 핸들입니다(없으면 0). SRV/UAV 해저드를 해소할 때 씁니다. */
         RHIBufferHandle uavSourceBufferAt( RHIUnorderedAccessIndex index ) const;
 
-        /** @brief 이 기록 스트림의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
-        [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state );
-        /**
-         * @brief 살아 있는 모든 기록 상태에서 이 버퍼와 PSO 캐시를 지웁니다.
-         * @details 캐시가 리스트마다 있으므로 자원이 사라질 때 **모두** 훑어야 한다. 한 곳만 지우면
-         *          다른 리스트가 죽은 핸들을 드로우 시점에 다시 참조한다.
-         *          목록은 `_liveCmdListMutex` 가 지키지만 **리스트의 상태**는 그 리스트를 기록하는 스레드의 것이다. 그래서 병렬 기록 중에는 부르지 않는다
-         *          (`destroyBuffer` · `destroyPipelineState` 가 `requireRegistryMutableNow` 로 모든 구성에서 감시한다. 해제는 `IRHIDevice::releaseHandle` 이 기록 밖으로 미룬다).
-         */
-        void removeBufferInRecordingStates( RHIBufferHandle buffer );
-        void removePipelineStateInRecordingStates( RHIPipelineStateHandle pso );
+        /** @brief 즉시 컨텍스트의 네이티브 상태가 지워졌습니다 — 프레임 스트림이 건 것을 다시 걸게 합니다. */
+        void invalidateFrameStreamState();
+        /** @brief 이 기록 스트림 · 바인드 포인트의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
+        [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state, RHIBindPoint point );
         /** @brief 불투명 버퍼 핸들로 ID3D11Buffer 를 찾습니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
         /**
@@ -564,7 +547,7 @@ namespace sw
          * @brief TextureRecord 를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 `desc` 의 항목과 논리 크기를 올리는 유일한 지점입니다.
          * @details D3D11 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 기록한다(추적기 기준은 Logical).
          */
-        RHITextureHandle storeTexture( TextureRecord record, const RHITextureDesc& desc );
+        RHITextureHandle storeTexture( TextureRecord record );
         /**
          * @brief 큰 업로드 하나를 스테이징 텍스처로 올립니다. 소스 복사는 즉시 컨텍스트 잠금 밖에서, 잠금 안에서는 복사 명령과 끝을 알리는 쿼리만 냅니다.
          * @details 스테이징(대상과 같은 포맷, @p width × @p height, 밉 @p mipCount 개)은 장치(`ID3D11Device`, 스레드 안전)가 초기 데이터로 만든다 — 그 생성이 소스를
@@ -579,7 +562,7 @@ namespace sw
                                                             UINT destinationY );
 
         /**
-         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
          * @details 다른 창은 이 프레임에 처음 쓰일 때 백버퍼를 잡고(FLIP_DISCARD 라 매 프레임 다시 잡는다) `endFrame` 의 표시 목록에 오른다.
          */
         D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
@@ -646,7 +629,6 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
         /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 칸은 `RHIFrameFenceRing::getSlot` 입니다. 디바이스를 세울 때 만듭니다.
         Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[RHIFrameFenceRing::kSlotCount];
-        RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
         /// @brief UAV 번호 하나입니다 — 뷰와 그 원본(버퍼 UAV 면 버퍼 — SRV/UAV 해저드를 풀 때 본다, 텍스처 UAV 면 텍스처 — 텍스처를 부술 때 번호를 놓는다).
@@ -685,10 +667,6 @@ namespace sw
         mutex                        _liveCmdListMutex;
         vector<D3D11RHICommandList*> _listLiveCmd;
 
-        RHIReleaseQueue _releaseQueue;
-
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(DX11 은 즉시 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
-        RHITransferSerials _transferSerials;
         /// @brief 제출한 전송마다 이벤트 쿼리 하나(와 있으면 업로드 스테이징)를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올리고 스테이징을 놓습니다.
         ///        쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
         RHITransferFenceQueue<TransferFence> _transferQueue;

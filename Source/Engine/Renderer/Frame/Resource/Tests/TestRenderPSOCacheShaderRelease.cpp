@@ -85,7 +85,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     computeDesc._computeShaderPath = "shaders/blur_cs.hlsl";
     cache.registerDesc( kBlurPSO, computeDesc );
     const hashed_string computePassName{ "Blur" };
-    cache.setExtensionProgramPSO( &device, computePassName, makePSO( kBlurPSO ) );
+    cache.setPipelineComputePSO( &device, computePassName, makePSO( kBlurPSO ), ComputeShaderBindings{} );
     // 머티리얼 변형: 만든 것(4 — 그림자 셰이더) · 실패한 것 · 만드는 중인 것.
     cache.registerDesc( kVariantPSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
     cache.setMaterialPSO( makeVariantKey( 100 ), RenderPSOCache::MaterialPSOEntry::ready( makePSO( kVariantPSO ) ) );
@@ -95,8 +95,8 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
     // 컴퓨트 셰이더 하나 — 그 PSO 만 놓고, 실패한 변형 · 만드는 중인 변형은 다시 만들게 지운다. 패스 PSO · 만든 변형은 그대로다.
     SW_EXPECT_EQUAL( 1u, cache.releasePSOsUsingShader( &device, "engine:shaders/blur_cs.hlsl" ) );
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == vector<RHIPipelineStateHandle>{ kBlurPSO } );
-    RHIPipelineStateHandle found{ 0 };
-    SW_EXPECT_FALSE( cache.findExtensionProgramPSO( computePassName, found ) );
+    ComputePipeline found{};
+    SW_EXPECT_FALSE( cache.findPipelineComputePSO( computePassName, found ) );
     SW_EXPECT_EQUAL( kForwardPSO, cache.findEnginePSO( RenderPassKind::ForwardOpaque ) );
     SW_EXPECT_EQUAL( kShadowPSO, cache.findEnginePSO( RenderPassKind::Shadow ) );
     SW_EXPECT_EQUAL( kVariantPSO, cache.findMaterialPSO( makeVariantKey( 100 ) ) );
@@ -128,7 +128,7 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
 
     const RHIPipelineStateHandle kOld{ 11 };
     const RHIPipelineStateHandle kNew{ 12 };
-    const hashed_string          programKey{ "Program" };
+    constexpr uint64             kProgramDescHash = 0x5052'4F47ull; // 서술체 지문 하나(값은 무엇이든 같은 키)
     RenderPSOCache               cache;
     cache.setEnginePSO( &device, RenderPassKind::Shadow, makePSO( kOld ) );
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState.empty() );
@@ -139,8 +139,8 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, OverwriteReleasesThePreviousPSO )
     factory._listDestroyedPipelineState.clear();
     cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, makePSO( kOld ) );
     cache.setOutputPSO( &device, RenderPassKind::Present, RHIFormat::R8G8B8A8_UNORM, makePSO( kNew ) );
-    cache.setExtensionProgramPSO( &device, programKey, makePSO( kOld ) );
-    cache.setExtensionProgramPSO( &device, programKey, makePSO( RHIPipelineStateHandle{} ) ); // 실패(0)로 덮어도 옛 핸들은 놓는다
+    cache.setGlobalPSO( &device, kProgramDescHash, makePSO( kOld ) );
+    cache.setGlobalPSO( &device, kProgramDescHash, makePSO( RHIPipelineStateHandle{} ) ); // 실패(0)로 덮어도 옛 핸들은 놓는다
     SW_EXPECT_TRUE( factory._listDestroyedPipelineState == ( vector<RHIPipelineStateHandle>{ kOld, kOld } ) );
 }
 

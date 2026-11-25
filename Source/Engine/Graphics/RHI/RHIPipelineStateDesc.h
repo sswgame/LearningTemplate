@@ -48,5 +48,12 @@ namespace sw
 
         /** @brief 기본 토폴로지로, 컬링 · 깊이 테스트 없이 만듭니다. */
         RHIPipelineStateDesc() noexcept;
+
+        /**
+         * @brief 서술체 전체(셰이더 · 진입점 · define · 위상 · 타깃 포맷 · 렌더 상태 · 정점 형식)의 지문입니다. 코드가 짓는 PSO 저장소의 키입니다(`FramePSOManager::getOrCreateGlobalPSO`).
+         * @details 칸을 골라 키를 따로 만들지 않는다 — 포맷 하나를 키에서 빠뜨려 다른 포맷의 PSO 를 돌려주던 일(쿠키 아틀라스)이 형식으로 막힌다(언리얼 global shader PSO 캐시가 서술 전체로 찾는 자리).
+         *          칸을 더하면 이 함수(RHI.cpp)에도 더한다. 쓰는 타깃 수(`_numRenderTargets`)를 넘는 포맷 칸은 섞지 않는다.
+         */
+        [[nodiscard]] uint64 computeHash() const noexcept;
     };
 } // namespace sw

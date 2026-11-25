@@ -172,7 +172,7 @@ namespace sw
      * @enum RHITextureDimension
      * @brief 텍스처의 형태입니다. 세 가지 모두 2D 면(slice)을 겹친 것이고, 면 수와 셰이더가 보는 뷰만 다릅니다.
      *        D3D 의 Texture2D + ArraySize, TEXTURECUBE 와 같으며, 그래서 텍스처를 만드는 함수는 `createTexture2D` 하나입니다.
-     * @details 면 하나는 렌더 패스의 타깃(`RHIRenderPassBeginInfo::_arrColorTargetSlice`, `_depthTargetSlice`)이 될 수 있고, 업로드와
+     * @details 면 하나는 렌더 패스의 타깃(`RHIRenderPassInfo::_arrColorTargetSlice`, `_depthTargetSlice`)이 될 수 있고, 업로드와
      *          읽기도 면 단위로 한다(`RHITextureUploadDesc::_arraySlice`, `submitTextureReadback` 의 slice). 셰이더에 바인딩하는
      *          bindless 등록은 아직 Texture2D 만 받는다. 배열이나 큐브 뷰를 읽는 셰이더 테이블이 생기면 넓힌다(점광 그림자).
      */

@@ -4,62 +4,27 @@
  * @details 등급 칸 고르기는 `ConstantBufferSlotAllocator`, 이 클래스는 페이지 번호마다 RHI 버퍼(`createConstantBufferPage`)와 구간마다 디스크립터
  *          (`registerBindlessBufferSRV( RHIBufferSlice )`)를 갖는다. 비행 중 프레임 복제는 페이지가 갖는다(백엔드가 구간을 그 프레임 칸에 쓴다).
  *          가장 큰 등급(4096 B)보다 큰 요청은 전용 버퍼 하나다(칸 없음). 언리얼 `FD3D12PoolAllocator` · 유니티 SRP Batcher 의 영속 버퍼 오프셋 자리다.
- *          디바이스가 하나씩 갖는다(`IRHIDevice::getConstantBufferPagePool`). 렌더 스레드가 맞추고(`fit`), 놓기(`ConstantBufferPoolSlice::reset`)는 어느 스레드에서든 한다.
+ *          디바이스가 하나씩 갖는다(`IRHIDevice::getConstantBufferPagePool`). 렌더 스레드가 쓰고(`write`), 놓기(`ConstantBufferPoolSlice::reset`)는 어느 스레드에서든 한다.
+ *          **구간은 받을 때 한 번만 쓴다.** 값이 바뀌면 새 구간을 받아 쓰고 옛 구간은 놓는다 — 놓은 칸 · 디스크립터 · 전용 버퍼는 그것을 읽는 프레임이 모두 끝난 뒤에 다시 쓴다.
+ *          같은 구간을 덮어쓰면 이번 프레임이 이미 기록한 드로우(백엔드의 프레임 칸 · 큐 쓰기)와 GPU 가 읽는 중인 프레임(DX11 NO_OVERWRITE)이 새 값을 본다. 언리얼 유니폼 버퍼 갱신도 새 할당이다.
  *          잠금은 잎 잠금이다(결정 5-3) — 할당기 · 페이지 표만 그 안에서 고치고, RHI 호출(만들기 · 등록 · `releaseHandle`)과 로그는 잠금 밖에서 한다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
+#include "Engine/Graphics/RHI/ConstantBufferPoolSlice.h"
 #include "Engine/Graphics/RHI/ConstantBufferSlotAllocator.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
 {
     class IRHIDevice;
-
-    /**
-     * @class ConstantBufferPoolSlice
-     * @brief 풀에서 받은 상수 버퍼 구간 하나의 소유 핸들입니다(옮기기만 된다). 소멸 · `reset` 이 준 디바이스의 풀에 돌려준다.
-     * @details 칸이 무효이고 구간 버퍼가 있으면 등급보다 커서 받은 전용 버퍼다. 디바이스가 이미 사라졌으면(`RHIRenderResource::clearRHI`) `detach` 으로 핸들만 잊는다 —
-     *          든 쪽이 (디바이스, 구간) 짝을 따로 들지 않게 한 형식이다(언리얼 `TRefCountPtr<FRHIUniformBuffer>` 의 소유 자리).
-     */
-    class SW_API ConstantBufferPoolSlice
-    {
-    public:
-        ConstantBufferPoolSlice() = default;
-        ~ConstantBufferPoolSlice();
-        ConstantBufferPoolSlice( ConstantBufferPoolSlice&& other ) noexcept;
-        ConstantBufferPoolSlice& operator=( ConstantBufferPoolSlice&& other ) noexcept;
-        ConstantBufferPoolSlice( const ConstantBufferPoolSlice& )            = delete;
-        ConstantBufferPoolSlice& operator=( const ConstantBufferPoolSlice& ) = delete;
-
-        /** @brief 구간을 들고 있으면 true 입니다. */
-        bool isValid() const { return _range._buffer != 0; }
-        /** @brief 구간을 준 디바이스입니다(들고 있지 않으면 nullptr). */
-        IRHIDevice* getDevice() const { return _pDevice; }
-        /** @brief 버퍼 안의 구간입니다. */
-        const RHIBufferSlice& getRange() const { return _range; }
-        /** @brief 구간의 bindless 인덱스입니다. */
-        RHIBufferSRVIndex getDescriptorIndex() const { return _descriptorIndex; }
-        /** @brief 등급 칸입니다(전용 버퍼면 무효). */
-        const ConstantBufferSlot& getSlot() const { return _slot; }
-
-        /** @brief 살아 있는 디바이스의 풀에 구간을 돌려주고 비웁니다(어느 스레드든 — 핸들 반환은 `releaseHandle` 이 미룬다). */
-        void reset();
-        /** @brief 디바이스가 이미 사라졌을 때 핸들만 잊습니다(돌려줄 곳이 없다). */
-        void detach();
-
-    private:
-        friend class ConstantBufferPagePool;
-
-        IRHIDevice*        _pDevice{ nullptr };
-        ConstantBufferSlot _slot;
-        RHIBufferSlice     _range;
-        RHIBufferSRVIndex  _descriptorIndex{ kInvalidDescriptorIndex };
-    };
 
     /**
      * @class ConstantBufferPagePool
@@ -68,22 +33,24 @@ namespace sw
     class SW_API ConstantBufferPagePool
     {
     public:
-        ConstantBufferPagePool()                                           = default;
+        /** @brief 놓은 구간을 다시 쓰기까지 지나야 하는 경계 수입니다 — 놓은 프레임을 GPU 가 끝내고 그 프레임 칸이 돌아온 뒤다. */
+        static constexpr uint64 kReuseDelayCount = constant::render::kMaxFrameCountInFlight;
+
+        /** @brief @p handleReuseCount 는 장치가 프레임을 열 때(1) · GPU 를 통째로 기다린 뒤 오르는 수이고(`IRHIDevice::getHandleReuseCount`) 풀보다 오래 산다 — 칸 다시 쓰기를 프레임에서 떼어 낼 수 없게 받아야 만든다. */
+        explicit ConstantBufferPagePool( const atomic<uint64>& handleReuseCount )
+            : _handleReuseCount{ handleReuseCount }
+        {
+        }
         ConstantBufferPagePool( const ConstantBufferPagePool& )            = delete;
         ConstantBufferPagePool& operator=( const ConstantBufferPagePool& ) = delete;
 
         /**
-         * @brief (렌더 스레드) @p inoutSlice 가 @p sizeBytes 를 담게 합니다. 비었으면 받고, 등급이 바뀌었으면 옮기며(디스크립터가 새로 난다 — 옛 것은 놓는다), 같으면 그대로입니다.
-         * @details 다른 디바이스의 구간이면 먼저 그 디바이스에 돌려준다(백엔드 교체).
-         * @return 페이지 · 디스크립터를 만들지 못하면 오류를 남기고 false 이며 @p inoutSlice 는 빈다.
+         * @brief (렌더 스레드) 새 구간을 받아 @p size 바이트를 쓰고 @p inoutSlice 를 그 구간으로 바꿉니다. 옛 구간은 놓는다(다른 디바이스의 구간이면 그 디바이스에).
+         * @details bindless 인덱스가 바뀐다 — 부르는 쪽은 매번 새 값을 읽는다.
+         * @return 널 데이터 · 크기 0 이거나 페이지 · 디스크립터를 만들지 못하면 오류를 남기고 false 이며 @p inoutSlice 는 그대로입니다.
          */
-        [[nodiscard]] bool fit( IRHIDevice& device, uint32 sizeBytes, ConstantBufferPoolSlice& inoutSlice );
-        /**
-         * @brief (렌더 스레드) 구간의 이번 프레임 칸에 @p size 바이트를 씁니다.
-         * @return 빈 구간 · 널 데이터 · 구간보다 큰 @p size 는 오류를 남기고 false 이며 쓰지 않습니다(자르지 않는다 — 먼저 `fit`).
-         */
-        [[nodiscard]] static bool update( const ConstantBufferPoolSlice& slice, const void* pData, uint32 size );
-        /** @brief (디바이스 종료) 남은 페이지 버퍼를 모두 돌려주고 할당기를 비웁니다. 구간을 든 쪽은 이미 `releaseRHI` 로 놓았다. */
+        [[nodiscard]] bool write( IRHIDevice& device, const void* pData, uint32 size, ConstantBufferPoolSlice& inoutSlice ) SW_EXCLUDES_LOCK( _mutex );
+        /** @brief (디바이스 종료) 남은 구간과 페이지 버퍼를 모두 돌려주고 할당기를 비웁니다. 구간을 든 쪽은 이미 `releaseRHI` 로 놓았다. */
         void releaseAllPages( IRHIDevice& device );
 
         /** @brief 열린 페이지 수입니다(백엔드 할당 수 — 측정 `RT.RHI.constantBufferPages`). */
@@ -92,20 +59,34 @@ namespace sw
     private:
         friend class ConstantBufferPoolSlice;
 
-        /** @brief 구간의 디스크립터 · 칸(빈 페이지) · 전용 버퍼를 `IRHIDevice::releaseHandle` 로 돌려줍니다. 구간 값은 부르는 쪽이 비운다. */
-        void releaseSlice( IRHIDevice& device, const ConstantBufferPoolSlice& slice );
+        /** @brief 놓았지만 아직 다시 쓰지 않는 구간입니다. 칸이 무효면 전용 버퍼다. */
+        struct RetiredSlice
+        {
+            ConstantBufferSlot _slot;
+            RHIBufferSlice     _range;
+            RHIBufferSRVIndex  _descriptorIndex{ kInvalidDescriptorIndex };
+        };
+
+        /** @brief 구간을 놓은 줄에 넣습니다(어느 스레드든). 구간 값은 부르는 쪽이 비운다. */
+        void retireSlice( const ConstantBufferPoolSlice& slice ) SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 놓은 지 `kReuseDelayCount` 경계가 지난 구간의 칸을 할당기에 돌려주고 디스크립터 · 전용 버퍼 · 닫힌 페이지를 놓습니다. */
+        void releaseReadySlices( IRHIDevice& device ) SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 구간들의 디스크립터 · 전용 버퍼와 페이지 버퍼를 놓습니다(잠금 밖). */
+        static void releaseRHI( IRHIDevice& device, const vector<RetiredSlice>& listRetired, const vector<RHIBufferHandle>& listPage );
         /** @brief 칸 @p slot 의 구간을 엽니다 — 새 페이지면 RHI 버퍼를 만들고, 구간 디스크립터를 등록한다. 실패하면 칸을 할당기에 돌려준다. */
         [[nodiscard]] bool openSlice( IRHIDevice& device, const ConstantBufferSlot& slot, bool bNewPage, ConstantBufferPoolSlice& outSlice ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 전용 버퍼(등급 밖)를 만들고 디스크립터를 등록합니다. */
         [[nodiscard]] static bool openDedicated( IRHIDevice& device, uint32 sizeBytes, ConstantBufferPoolSlice& outSlice );
-        /** @brief 칸을 할당기에 돌려주고, 페이지가 닫히면 그 RHI 버퍼를 놓습니다. */
+        /** @brief 쓰지 않은 칸(열기 실패)을 할당기에 곧바로 돌려주고, 페이지가 닫히면 그 RHI 버퍼를 놓습니다. */
         void releaseSlot( IRHIDevice& device, const ConstantBufferSlot& slot ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 칸을 할당기에 돌려주고, 페이지가 닫혔으면 그 번호의 RHI 버퍼를 표에서 떼어 돌려줍니다(아니면 0). 잠금 안에서 부른다. */
         RHIBufferHandle releaseSlotLocked( const ConstantBufferSlot& slot ) SW_REQUIRES_LOCK( _mutex );
 
     private:
-        ConstantBufferSlotAllocator _allocator  SW_GUARDED_BY( _mutex );
-        vector<RHIBufferHandle> _listPageBuffer SW_GUARDED_BY( _mutex ); ///< 페이지 번호마다 RHI 버퍼(닫힌 번호는 0)
-        mutable mutex                           _mutex;
+        ConstantBufferSlotAllocator _allocator   SW_GUARDED_BY( _mutex );
+        RHIRetireList<RetiredSlice> _listRetired SW_GUARDED_BY( _mutex ); ///< 놓은 구간(다시 쓸 경계 수가 키)
+        vector<RHIBufferHandle> _listPageBuffer  SW_GUARDED_BY( _mutex ); ///< 페이지 번호마다 RHI 버퍼(닫힌 번호는 0)
+        const atomic<uint64>&                    _handleReuseCount;
+        mutable mutex                            _mutex;
     };
 } // namespace sw

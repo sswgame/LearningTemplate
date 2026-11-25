@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 
 namespace sw
 {
@@ -111,9 +112,9 @@ namespace sw
         return static_cast<uint32>( _listSlotName.size() - 1 );
     }
 
-    void GPUNanCheck::scan( IRHICommandList& commands, RHIPipelineStateHandle pso, string_view name, RHITextureSRVIndex srv, uint32 width, uint32 height )
+    void GPUNanCheck::scan( IRHICommandList& commands, const ComputePipeline& pipeline, string_view name, RHITextureSRVIndex srv, uint32 width, uint32 height )
     {
-        if ( isActive() == false || pso == 0 || srv == kInvalidDescriptorIndex || width == 0 || height == 0 )
+        if ( isActive() == false || pipeline.isValid() == false || srv == kInvalidDescriptorIndex || width == 0 || height == 0 )
             return;
         const uint32 slot = getOrCreateSlot( name );
         if ( slot >= kMaxSlot )
@@ -123,9 +124,11 @@ namespace sw
         }
         GPUNanCheckRootConstants constants{ srv, width, height, slot };
         commands.transitionBuffer( _buffer._buffer, RHIBufferState::UnorderedAccess );
-        commands.setComputePipelineState( pso );
-        commands.bindComputeUAV( _buffer._uav, 0 );
-        commands.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        ComputeShaderParameters<GPUNanCheckShader> parameters;
+        parameters.set( GPUNanCheckShader::Counts, _buffer._uav );
+        if ( parameters.apply( commands, pipeline ) == false )
+            return;
+        commands.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         commands.dispatchThreads( width, height, 1 );
         _bScannedThisFrame = SW_TRUE;
     }

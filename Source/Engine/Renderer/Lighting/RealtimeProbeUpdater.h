@@ -29,6 +29,7 @@
 
 namespace sw
 {
+    struct ComputePipeline;
     struct SceneVoxelPaintPlan;
     struct SkyGradient;
     class IRHICommandList;
@@ -185,7 +186,7 @@ namespace sw
         /** @brief @p dispatchIndex 번째 디스패치에 할 일이 있는지입니다. 없으면 배리어도 걸지 않는다. */
         [[nodiscard]] bool hasVoxelDispatch( uint32 dispatchIndex ) const { return _arrVoxelThreadCount[dispatchIndex] != 0; }
         /** @brief @p dispatchIndex 번째 디스패치를 기록합니다(`scene_voxelize.hlsl`, 앞 디스패치와 사이에 UAV 배리어). */
-        void dispatchVoxelPass( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, uint32 dispatchIndex ) const;
+        void dispatchVoxelPass( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, uint32 dispatchIndex ) const;
         /** @brief 디스패치를 모두 기록했음을 적습니다 — 이 장면이 칠해진 것이다. */
         void finishVoxelPaint() { _bPaintPending = SW_FALSE; }
         /** @brief 이번 프레임에 컴퓨트가 도는지입니다. */
@@ -205,7 +206,7 @@ namespace sw
          */
         [[nodiscard]] static float32 computeError( const vector<RealtimeProbeRequest>& listRequest, uint32 accumulatedFrames );
         /** @brief 컴퓨트를 기록합니다(라이트 업로드 뒤 · 조명 패스 앞). @p placeholderSRV 는 라이트가 없는 프레임에 t0 에 거는 자리표입니다. */
-        void dispatch( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV );
+        void dispatch( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, const GPULightBuffer& lightBuffer, RHIBufferSRVIndex placeholderSRV );
         /** @brief 버퍼를 놓습니다. */
         void release( IRHIDevice* pDevice );
 
@@ -233,7 +234,7 @@ namespace sw
         /** @brief 칠할 일의 입력 행 · 인덱스를 올리고 위치 복사를 쌓습니다. 버퍼를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool uploadPaint( IRHIDevice* pDevice, const SceneVoxelPaintPlan& plan, bool bCreateMissingMeshes );
         /** @brief 칠하기 디스패치 하나를 기록합니다(@p jobBuffer 의 입력 행, 스레드 @p threadCount 개). */
-        void dispatchVoxelJobs( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, const RHIStructuredBuffer& jobBuffer, uint32 threadCount ) const;
+        void dispatchVoxelJobs( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, const RHIStructuredBuffer& jobBuffer, uint32 threadCount ) const;
 
     private:
         RHIStructuredBuffer           _voxelBuffer;                            ///< 볼륨들의 점유 비트 · 발광 순위 단어(uint, 프로브 갱신 t2, 칠하기 u0, 프레임을 넘어 남는다)

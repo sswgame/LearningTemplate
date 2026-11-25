@@ -3,7 +3,7 @@
  * @brief 머티리얼의 렌더 스레드 쪽 객체입니다(언리얼 `FMaterialRenderProxy` 에 해당).
  * @details 게임 스레드의 `Material` · `MaterialInstance` 는 CPU 상태(속성, 패킹한 바이트, 텍스처 요청)만 가지고, 바뀔 때마다 불변 사본
  *          `MaterialRenderData` 를 새로 만든다. 장면 빌더가 배치 · 원소마다 (프록시, 그 사본) 쌍(`MaterialRenderBinding` — 게임이 보는 헤더가 쓰도록 따로 둔다)을 스냅샷에 싣고,
- *          렌더 스레드가 받은 사본이 지난번과 다를 때만 프록시의 상수 버퍼 구간에 올린다.
+ *          렌더 스레드가 받은 사본이 지난번과 다를 때만 새 상수 버퍼 구간을 받아 올린다.
  *          상수 버퍼는 인스턴스마다 만들지 않고 디바이스의 페이지 풀(`ConstantBufferPagePool`)에서 등급 칸 하나를 받는다 — 백엔드 할당이 페이지 수로 준다(감사 R-4).
  *          상수 버퍼는 원소 배열(g_SwMaterials)을 쓰지 않는 셰이더(MaterialCB — `_elementStride` 0)만 받는다. 원소 셰이더는 사본의 바이트가 구조 버퍼로 바로 간다(`GPUScene::uploadMaterialGroups`).
  *          한 객체를 두 스레드가 고치지 않으므로 잠금이 없다 — 사본은 불변이고, 프록시는 렌더 스레드만 고친다.
@@ -14,7 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
-#include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
+#include "Engine/Graphics/RHI/ConstantBufferPoolSlice.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -65,8 +65,8 @@ namespace sw
         ~MaterialRenderProxy() override;
 
         /**
-         * @brief (렌더 스레드) @p data 를 상수 버퍼 구간에 올립니다. 지난번과 같은 사본이고 구간이 이 디바이스에 있으면 아무것도 하지 않습니다.
-         * @details 셰이더를 다시 쿠킹해 레이아웃의 등급이 바뀌면 구간을 그 등급으로 옮긴다(bindless 인덱스가 바뀐다 — 부르는 쪽은 매번 돌려받은 값을 쓴다).
+         * @brief (렌더 스레드) @p data 를 새 상수 버퍼 구간에 올립니다. 지난번과 같은 사본이고 구간이 이 디바이스에 있으면 아무것도 하지 않습니다.
+         * @details 사본이 바뀔 때마다 구간과 bindless 인덱스가 바뀐다 — 부르는 쪽은 매번 돌려받은 값을 쓴다. 옛 구간은 이미 기록한 드로우가 다 읽을 때까지 그대로다.
          * @return 상수 버퍼 구간의 bindless 인덱스입니다. 바이트가 비었거나 구간을 받지 못하면 kInvalidDescriptorIndex 입니다.
          */
         RHIBufferSRVIndex sync( IRHIDevice* pDevice, const shared_ptr<const MaterialRenderData>& data );

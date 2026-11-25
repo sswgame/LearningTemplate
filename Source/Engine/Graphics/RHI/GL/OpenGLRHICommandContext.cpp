@@ -2,8 +2,11 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -292,39 +295,14 @@ namespace sw
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
+    void OpenGLRHICommandContext::beginRecording()
     {
-        // 등록되지 않은 핸들도 기록한다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 resolveDrawProgram 에서 멈춘다.
-        _pDevice->_recordingState._boundGraphicsPSO = pso;
-        _pState->_geometry.clearVertexBuffers(); // 정점 버퍼는 PSO 뒤에 건다(IRHICommandList::setPipelineState 계약)
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
-        if ( pRecord == nullptr || pRecord->_program == 0 )
-            return;
-
-        glUseProgram( pRecord->_program );
-
-        if ( pRecord->_vao != 0 )
-            glBindVertexArray( pRecord->_vao );
-        else if ( _pDevice->_vao != 0 )
-            glBindVertexArray( _pDevice->_vao );
-
-        OpenGLRenderStateInternal::apply( pRecord->_renderState );
-    }
-
-    void OpenGLRHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
-    {
-        // 등록되지 않은 핸들도 기록한다 — 앞 컴퓨트 PSO 를 남겨 두면 다음 디스패치가 그것으로 대신 돈다. 그 디스패치는 resolveComputeProgram 에서 멈춘다.
-        _pDevice->_recordingState._boundComputePSO                = pso;
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
-        if ( pRecord == nullptr )
-            return;
-
-        if ( pRecord->_program != 0 )
-            glUseProgram( pRecord->_program );
+        resetBindings();
+        _pState->_pLastFlushedSlots = nullptr;
     }
 
     // 길이 유지(긴 함수 정리 기준): 프레임버퍼 바인딩 · 드로우 버퍼 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
-    RHIRenderPassBeginResult OpenGLRHICommandContext::beginRenderPassNative( const RHIRenderPassBeginInfo& beginInfo )
+    RHIRenderPassBeginResult OpenGLRHICommandContext::beginRenderPassNative( const RHIRenderPassInfo& beginInfo, RHIRenderPassExtent& outTargetExtent )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return RHIRenderPassBeginResult::Failed;
@@ -334,8 +312,7 @@ namespace sw
         const OpenGLRHISwapChain* pSwapChain        = bBackBufferTarget ? _pDevice->useSwapChain( beginInfo._pSwapChain ) : &_pDevice->_swapChain;
         if ( pSwapChain == nullptr )
             return RHIRenderPassBeginResult::Failed;
-        uint32 targetWidth  = beginInfo._width > 0 ? beginInfo._width : pSwapChain->getWidth();
-        uint32 targetHeight = beginInfo._height > 0 ? beginInfo._height : pSwapChain->getHeight();
+        outTargetExtent = RHIRenderPassExtent{ pSwapChain->getWidth(), pSwapChain->getHeight() };
 
         const bool       bBindColor = beginInfo._bBindColor != SW_FALSE;
         const bool       bHasDepth  = beginInfo._depthTarget != 0;
@@ -355,6 +332,15 @@ namespace sw
                 bDepthOnly = true;
         }
 
+        const RHITextureHandle sizedTarget = bBindColor ? colorHandles[0] : beginInfo._depthTarget;
+        if ( sizedTarget != 0 && sizedTarget != kRHIBackBufferTexture )
+        {
+            const OpenGLRHIDevice::OpenGLTextureRecord* const pSized = _pDevice->resolveTexture( sizedTarget );
+            const uint32                                      mip    = bBindColor ? beginInfo._arrColorTargetMip[0] : beginInfo._depthTargetMip;
+            if ( pSized != nullptr )
+                outTargetExtent = RHIRenderPassExtent{ MathUtil::max( pSized->_width >> mip, 1u ), MathUtil::max( pSized->_height >> mip, 1u ) };
+        }
+
         // 프레임버퍼는 합성 FBO 하나로만 만든다. 만들지 못하면 텍스처별 FBO 로 대신하지 않고 멈춘다 — 대신하면 깊이 · 나머지 컬러 첨부가
         // 조용히 빠진 채 그려진다(다른 백엔드도 패스를 열지 못한 대상에는 그리지 않는다).
         GLuint     fbo{ 0 };
@@ -364,14 +350,7 @@ namespace sw
             fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, beginInfo._arrColorTargetMip, colorCount, beginInfo._depthTarget,
                                                    beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
         else if ( bDepthAsColor )
-        {
-            fbo                                                 = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0], beginInfo._arrColorTargetMip[0] );
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
-            if ( pRecord != nullptr && beginInfo._width == 0 )
-                targetWidth = pRecord->_width;
-            if ( pRecord != nullptr && beginInfo._height == 0 )
-                targetHeight = pRecord->_height;
-        }
+            fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0], beginInfo._arrColorTargetMip[0] );
         else if ( bBindColor == false && bHasDepth )
             fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice, beginInfo._depthTargetMip );
 
@@ -390,25 +369,10 @@ namespace sw
         // 풀스크린 블릿의 uv 는 DX 규약(NDC 위쪽 = uv.y 0)이라, 위 조합이면 두 경로 모두 바로 선다.
         if ( glad_glClipControl != nullptr )
             glClipControl( fbo == 0 ? GL_LOWER_LEFT : GL_UPPER_LEFT, GL_ZERO_TO_ONE );
-        // bindShaderResource 가 실제로 바인딩한 유닛만 언바인드한다.
-        const uint64 unbindMask = _pDevice->_recordingState._boundTextureUnitMask;
-        for ( uint32 unit = 0; unit < shaderslot::gl::kTextureUnitLimit && unbindMask != 0; ++unit )
-        {
-            if ( ( unbindMask & ( uint64{ 1 } << unit ) ) == 0 )
-                continue;
-            if ( glad_glBindTextureUnit != nullptr )
-                glBindTextureUnit( unit, 0 );
-            else
-            {
-                glActiveTexture( GL_TEXTURE0 + unit );
-                glBindTexture( GL_TEXTURE_2D, 0 );
-            }
-        }
-        _pDevice->_recordingState._boundTextureUnitMask = 0;
-        _pDevice->_recordingState._renderTargetHeight   = targetHeight;
-        _pDevice->_recordingState._bDefaultFramebuffer  = fbo == 0 ? SW_TRUE : SW_FALSE;
-        glViewport( 0, 0, static_cast<GLsizei>( targetWidth ), static_cast<GLsizei>( targetHeight ) );
-        // 가위 = 패스 전체(IRHICommandList 규약). 아래 클리어보다 먼저다 — glClear 는 가위를 따른다(D3D · Vulkan 의 클리어는 따르지 않는다).
+        _pDevice->_recordingState._renderTargetHeight     = outTargetExtent._height;
+        _pDevice->_recordingState._bDefaultFramebuffer    = fbo == 0 ? SW_TRUE : SW_FALSE;
+        _pDevice->_recordingState._boundNativeGraphicsPSO = 0; // 아래가 깊이 · 쓰기 마스크를 바꾼다 — 첫 드로우가 PSO 상태를 다시 건다
+        // 가위는 기반이 패스를 연 뒤 건다. 앞 패스의 가위를 아래 클리어보다 먼저 끈다 — glClear 는 가위를 따른다(D3D · Vulkan 의 클리어는 따르지 않는다).
         glDisable( GL_SCISSOR_TEST );
         _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
 
@@ -479,7 +443,9 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-        // 패스 밖에서는 **GL 기본 상태**로 되돌린다(기본 프레임버퍼 · 좌하단 원점). 오프스크린 패스가 걸어 둔 UPPER_LEFT 가 다음 패스 밖 일(블릿 · 되읽기)에 새지 않게 한다.
+        // 패스 밖에서는 **GL 기본 상태**로 되돌린다(기본 프레임버퍼 · 좌하단 원점 · 가위 없음). 오프스크린 패스가 걸어 둔 UPPER_LEFT 가 다음 패스 밖 일(블릿 · 되읽기)에 새지 않게 한다.
+        glDisable( GL_SCISSOR_TEST );
+        _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
         if ( glad_glClipControl != nullptr )
             glClipControl( GL_LOWER_LEFT, GL_ZERO_TO_ONE );
     }
@@ -584,144 +550,140 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
-    void OpenGLRHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
+    void OpenGLRHICommandContext::flushBindings( RHIBindPoint point )
     {
-        // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
-        // 레코드가 말해 준다. 다른 레지스트리를 넘겨짚지 않는다.
-        //
-        // 주의: UAV 레지스트리에서 못 찾았다고 **bindless(SRV) 레지스트리**로 흘러내리면 안 된다. 세 레지스트리가 각자
-        // 0 부터 번호를 발급하므로 그 넘겨짚기는 언젠가 맞아떨어지고, 그때 **엉뚱한 버퍼가 엉뚱한
-        // binding 에** 조용히 걸린다.
-        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
-            return;
-
-        const OpenGLRHIDevice::BindlessResourceRecord record = _pDevice->findBindlessUAV( index );
-        if ( record == OpenGLRHIDevice::BindlessResourceRecord{} )
+        RHIShaderSlots&       slots     = _bindings.getSlots( point );
+        RHIRootConstants&     constants = _bindings.getRootConstants( point );
+        OpenGLRecordingState& native    = *_pState;
+        if ( native._pLastFlushedSlots != &slots )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVIndexNotRegistered", "bindComputeUAV: index %# is not a registered UAV.", index.getValue() );
-            return;
-        }
-
-        if ( record._texture != 0 )
-        {
-            // RW 텍스처. u5..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수)이다.
-            if ( slot < shaderslot::kComputeTextureUAV0 || slot >= shaderslot::kComputeTextureUAV0 + shaderslot::kComputeTextureUAVSlotCount )
+            // 다른 스트림 · 다른 바인드 포인트가 건 것이 남아 있다 — 걸린 것은 모두 다시 걸고, 이쪽이 걸지 않은 칸은 뗀다.
+            slots.markAllDirty();
+            for ( uint32 kind = 0; kind < RHIShaderSlots::kKindCount; ++kind )
             {
-                SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVTriedBindRW", "bindComputeUAV: tried to bind an RW texture to a buffer slot (u%#).", slot );
-                return;
+                slots._arrDirtyMask[kind] |= native._arrBoundSlotMask[kind];
             }
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( record._texture );
-            if ( pRecord == nullptr || pRecord->_texture == 0 )
-                return;
-            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUAV0 ), pRecord->_texture, 0,
-                                GL_FALSE, 0, GL_READ_WRITE, pRecord->_internalFormat );
-            return;
+            constants.markAllDirty();
+            native._pLastFlushedSlots = &slots;
         }
-
-        if ( record._buffer == 0 )
+        if ( slots.isDirty( RHIShaderSlotKind::ConstantBuffer ) )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindComputeUAVUAVRecordIndex", "bindComputeUAV: the UAV record at index %# is empty.", index.getValue() );
-            return;
+            slots.flush( RHIShaderSlotKind::ConstantBuffer, [this]( uint32 slot, RHIDescriptorIndex index )
+            { bindUniformSlot( slot, index ); } );
+        }
+        if ( slots.isDirty( RHIShaderSlotKind::ShaderResource ) )
+        {
+            slots.flush( RHIShaderSlotKind::ShaderResource, [this]( uint32 slot, RHIDescriptorIndex index )
+            { bindResourceSlot( slot, index ); } );
+        }
+        if ( slots.isDirty( RHIShaderSlotKind::UnorderedAccess ) )
+        {
+            slots.flush( RHIShaderSlotKind::UnorderedAccess, [this]( uint32 slot, RHIDescriptorIndex index )
+            { bindUnorderedAccessSlot( slot, index ); } );
+        }
+        for ( uint32 kind = 0; kind < RHIShaderSlots::kKindCount; ++kind )
+        {
+            native._arrBoundSlotMask[kind] = slots._arrBoundMask[kind];
         }
 
-        const GLuint ssbo = _pDevice->resolveGlBuffer( record._buffer );
-        if ( ssbo == 0 )
+        if ( constants.isDirty() == false || _pDevice->ensureRootConstantUbo( point ) == false )
             return;
-        // u# → 계약 SSBO 번호. `-fvk-u-shift`(= SW_GL_UAV_BINDING0) 와 반드시 같아야 한다.
+        // GL 에는 루트 상수가 없다 — 계약 슬롯(b SW_SLOT_ROOT_CB_EMUL → UBO binding, SW_ROOT_CONSTANTS_BEGIN)의 작은 UBO 로 흉내 낸다. 바인드 포인트마다 따로다.
+        const GLuint ubo = _pDevice->_arrRootConstantUbo[static_cast<uint32>( point )];
+        if ( glad_glNamedBufferSubData != nullptr )
+            glNamedBufferSubData( ubo, 0, static_cast<GLsizeiptr>( sizeof( constants._arrDword ) ), constants._arrDword );
+        else
+        {
+            glBindBuffer( GL_UNIFORM_BUFFER, ubo );
+            glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( sizeof( constants._arrDword ) ), constants._arrDword );
+            glBindBuffer( GL_UNIFORM_BUFFER, 0 );
+        }
+        glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulationSlot, ubo );
+        constants.markFlushed();
+    }
+
+    void OpenGLRHICommandContext::bindUnorderedAccessSlot( uint32 slot, RHIDescriptorIndex index )
+    {
+        // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는 레코드가 말해 준다.
+        // u5..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수), 그 앞은 SSBO `kUAVBinding0 + slot`(= `-fvk-u-shift`)이다. GL 의 번호는 단계를 가리지 않아 그래픽스도 같은 자리다.
+        const bool                                    bImageSlot = slot >= shaderslot::kComputeTextureUAV0;
+        const bool                                    bBound     = index != kInvalidDescriptorIndex;
+        const OpenGLRHIDevice::BindlessResourceRecord record     = bBound ? _pDevice->findBindlessUAV( RHIUnorderedAccessIndex{ index } ) : OpenGLRHIDevice::BindlessResourceRecord{};
+        if ( bImageSlot )
+        {
+            const OpenGLRHIDevice::OpenGLTextureRecord* const pRecord = record._texture != 0 ? _pDevice->resolveTexture( record._texture ) : nullptr;
+            const GLuint                                      texture = pRecord != nullptr ? pRecord->_texture : 0;
+            if ( bBound && texture == 0 )
+                _pDevice->getDrawDiagnostics().reportDescriptorNotRegistered( "u", slot, index );
+            glBindImageTexture( shaderslot::gl::kImageUnit0 + ( slot - shaderslot::kComputeTextureUAV0 ), texture, 0, GL_FALSE, 0, GL_READ_WRITE,
+                                texture != 0 ? pRecord->_internalFormat : static_cast<GLenum>( GL_R32F ) );
+            return;
+        }
+        const GLuint ssbo = record._buffer != 0 ? _pDevice->resolveGlBuffer( record._buffer ) : 0;
+        if ( bBound && ssbo == 0 )
+            _pDevice->getDrawDiagnostics().reportDescriptorNotRegistered( "u", slot, index );
         glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUAVBinding0 + slot, ssbo );
     }
 
-    void OpenGLRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
+    void OpenGLRHICommandContext::bindResourceSlot( uint32 slot, RHIDescriptorIndex index )
     {
-        // GL 의 SSBO · 이미지 유닛 번호는 단계를 가리지 않는다 — 컴퓨트와 같은 자리(SSBO kUAVBinding0 + slot)에 건다.
-        bindComputeUAV( index, slot );
-    }
-
-    void OpenGLRHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
-    {
-        // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
-        //
-        // 주의: 텍스처 레지스트리에 없다고 버퍼 레지스트리로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터
-        // 시작하는 별개의 프리리스트**라 같은 번호가 셋 다 유효할 수 있고, 그러면 버퍼 인덱스가 그 번호의
-        // **텍스처**로 걸린다(모프 정점 버퍼 t7 이 텍스처로 걸리면 정점 셰이더가 SSBO 7 에서 0 을 읽어
-        // **OpenGL 에서만** 기하가 사라진다). 부르는 쪽은 종류를 이미 알고 그에 맞는 함수를 부른다.
-        // 다른 세 백엔드도 추측하지 않는다(DX11 은 텍스처 레지스트리만 본다).
-        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
-            return;
-
-        const RHITextureHandle texture = _pDevice->findBindlessTexture( index );
-        if ( texture == 0 )
+        // 칸 번호가 종류를 정한다 — 버퍼 칸(t0..t15)은 SSBO, 텍스처 칸(머티리얼 t16..t31 · 엔진 t32..)은 텍스처 유닛이다.
+        // 주의: 텍스처 레지스트리에 없다고 버퍼 레지스트리로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터 시작하는 별개의 프리리스트**라 같은 번호가 셋 다 유효할 수 있다
+        // (모프 정점 버퍼 t7 이 텍스처로 걸리면 정점 셰이더가 SSBO 7 에서 0 을 읽어 **OpenGL 에서만** 기하가 사라진다).
+        const bool bBound = index != kInvalidDescriptorIndex;
+        if ( slot < RHIShaderSlots::kBufferResourceCount )
         {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindShaderResourceIndexNotRegistered", "bindShaderResource: index %# is not a registered texture - use bindStructuredBuffer for a buffer.", index.getValue() );
+            // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 이다(common.hlsli SW_GL_BINDING).
+            const RHIBufferHandle buffer = bBound ? _pDevice->findBindlessBuffer( RHIBufferSRVIndex{ index } )._buffer : RHIBufferHandle{ 0 };
+            const GLuint          ssbo   = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
+            if ( bBound && ssbo == 0 )
+                _pDevice->getDrawDiagnostics().reportDescriptorNotRegistered( "t", slot, index );
+            glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
             return;
         }
-
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        const GLuint                                tex     = pRecord != nullptr ? pRecord->_texture : 0;
-        if ( tex == 0 )
-            return;
-
+        const RHITextureHandle                            texture = bBound ? _pDevice->findBindlessTexture( RHITextureSRVIndex{ index } ) : RHITextureHandle{ 0 };
+        const OpenGLRHIDevice::OpenGLTextureRecord* const pRecord = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
+        const GLuint                                      name    = pRecord != nullptr ? pRecord->_texture : 0;
+        if ( bBound && name == 0 )
+            _pDevice->getDrawDiagnostics().reportDescriptorNotRegistered( "t", slot, index );
         // GL 텍스처 유닛은 레지스터 번호 그대로다(머티리얼 t16..t31 · 엔진 t32..). 유닛 번호는 결합 유닛 수(GL 4.5 최소 80) 안이면 되고,
         // 스테이지 한도(프래그먼트 32)는 한 셰이더가 실제로 쓰는 유닛 수에 걸린다 — 초기화가 결합 유닛 수를 확인한다.
-        const uint32 unit = slot;
-        glBindTextureUnit( unit, tex );
-        static_assert( shaderslot::gl::kTextureUnitLimit <= 64 && shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount <= shaderslot::gl::kTextureUnitLimit, "텍스처 유닛 마스크(uint64)가 엔진 텍스처 유닛을 다 담지 못한다" );
-        if ( unit < shaderslot::gl::kTextureUnitLimit )
-            _pDevice->_recordingState._boundTextureUnitMask |= ( uint64{ 1 } << unit );
+        static_assert( RHIShaderSlots::kShaderResourceCount <= shaderslot::gl::kTextureUnitLimit, "엔진 텍스처 유닛이 GL 텍스처 유닛 한도를 넘는다" );
+        if ( glad_glBindTextureUnit != nullptr )
+            glBindTextureUnit( slot, name );
+        else
+        {
+            glActiveTexture( GL_TEXTURE0 + slot );
+            glBindTexture( pRecord != nullptr ? pRecord->_target : static_cast<GLenum>( GL_TEXTURE_2D ), name );
+        }
     }
 
-    void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
+    void OpenGLRHICommandContext::bindUniformSlot( uint32 slot, RHIDescriptorIndex index )
     {
-        // 그래픽스 bindConstantBuffer 와 같은 근거다. 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
-        // 않으므로 b# 는 SPIR-V binding # 그대로다(gpu_cull 의 CullParams b0 = binding 0).
-        const bool bInvalidConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex;
-        if ( bInvalidConstantBufferIndex )
-            return;
-        bindUniformBuffer( constantBufferIndex, slot );
-    }
-
-    void OpenGLRHICommandContext::bindUniformBuffer( RHIBufferSRVIndex index, uint32 slot )
-    {
-        const OpenGLRHIDevice::BindlessResourceRecord record = _pDevice->findBindlessBuffer( index );
+        // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
+        // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는다(common.hlsli 가 항상 명시한다).
+        // 주의: 엔진이 16+# 에 걸면 셰이더가 PassCB 를 못 읽어 g_ViewProj 가 0 이 되고, 드로우도 GL 에러도
+        // 정상인 채로 메시가 하나도 그려지지 않는다.
+        // 확인 방법: 쿠킹된 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
+        const bool                                    bBound = index != kInvalidDescriptorIndex;
+        const OpenGLRHIDevice::BindlessResourceRecord record = bBound ? _pDevice->findBindlessBuffer( RHIBufferSRVIndex{ index } ) : OpenGLRHIDevice::BindlessResourceRecord{};
         const GLuint                                  ubo    = record._buffer != 0 ? _pDevice->resolveGlBuffer( record._buffer ) : 0;
-        if ( ubo == 0 )
-            return;
+        if ( bBound && ubo == 0 )
+            _pDevice->getDrawDiagnostics().reportDescriptorNotRegistered( "b", slot, index );
         // 상수 버퍼 페이지의 구간이면 그 범위만 건다(감사 R-4).
-        if ( record._sliceSize != 0 )
+        if ( ubo != 0 && record._sliceSize != 0 )
             glBindBufferRange( GL_UNIFORM_BUFFER, slot, ubo, static_cast<GLintptr>( record._sliceOffset ), static_cast<GLsizeiptr>( record._sliceSize ) );
         else
             glBindBufferBase( GL_UNIFORM_BUFFER, slot, ubo );
     }
 
-    void OpenGLRHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
-    {
-        // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpu_cull 의 g_Instances 등).
-        const bool bInvalidBufferIndex = _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex;
-        if ( bInvalidBufferIndex )
-            return;
-        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( index )._buffer;
-        const GLuint          ssbo   = buffer != 0 ? _pDevice->resolveGlBuffer( buffer ) : 0;
-        if ( ssbo != 0 )
-            glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
-    }
-
-    void OpenGLRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
-    {
-        _pState->_geometry.setVertexBuffer( slot, buffer, stride, offset );
-    }
-
-    void OpenGLRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
-    {
-        _pState->_geometry.setIndexBuffer( buffer, indexStride, offset );
-    }
-
     bool OpenGLRHICommandContext::bindVertexInputsForDraw()
     {
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO  = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
-        const RHIVertexLayout                             input = pPSO != nullptr ? pPSO->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO  = _pDevice->_pipelineStates.get( _bindings._graphicsPSO );
+        const RHIVertexLayout                             input = pPSO != nullptr ? pPSO->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 bindDrawPipeline 이 멈췄다
         // GL 은 슬롯마다 버퍼를 걸지 않고 속성마다 포인터를 건다 — 순회는 슬롯의 GL 버퍼만 풀어 두고, 속성은 아래 공용 표로 건다.
         GLuint     arrBuffer[constant::render::kVertexBufferSlotCount]{};
-        const bool bResolved = _pState->_geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), input, [this, &arrBuffer]( uint32 slot, const RHIBufferBinding& binding )
+        const bool bResolved = _bindings._geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), input, [this, &arrBuffer]( uint32 slot, const RHIBufferBinding& binding )
         {
             arrBuffer[slot] = _pDevice->resolveGlBuffer( binding._buffer );
             return arrBuffer[slot] != 0;
@@ -753,7 +715,7 @@ namespace sw
                     glDisableVertexAttribArray( attribute._location );
                 continue;
             }
-            const RHIBufferBinding&               binding = _pState->_geometry._arrVertexSlot[attribute._inputSlot];
+            const RHIBufferBinding&               binding = _bindings._geometry._arrVertexSlot[attribute._inputSlot];
             const OpenGLVertexAttribShadow::Entry desired{ glBuffer, binding._stride, binding._offset + attribute._byteOffset, attribute._format, attribute._bPerInstance, SW_TRUE };
             if ( shadow.update( attributeIndex, desired ) == false )
                 continue;
@@ -787,26 +749,32 @@ namespace sw
         return true;
     }
 
-    void OpenGLRHICommandContext::resolveDrawProgram( uint32& outProgram, uint32& outMode ) const
+    void OpenGLRHICommandContext::bindDrawPipeline( uint32& outMode )
     {
         // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 기본 프로그램으로 대신 그리지 않는다 — PSO 가 0 이면
         // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _bindings._graphicsPSO );
         if ( pPSO == nullptr || pPSO->_program == 0 )
-            reportFatalError( "GL draw without a registered graphics PSO (handle %#)", _pDevice->_recordingState._boundGraphicsPSO.getPacked() );
-        outProgram = pPSO->_program;
-        outMode    = toGlPrimitive( pPSO->_topology );
+            reportFatalError( "GL draw without a registered graphics PSO (handle %#)", _bindings._graphicsPSO.getPacked() );
+        outMode = toGlPrimitive( pPSO->_topology );
         if ( outMode == GL_PATCHES )
             glPatchParameteri( GL_PATCH_VERTICES, 3 );
+        glUseProgram( pPSO->_program ); // 디스패치가 프로그램을 바꾼다 — 드로우마다 건다
+        if ( _pState->_boundNativeGraphicsPSO != _bindings._graphicsPSO )
+        {
+            OpenGLRenderStateInternal::apply( pPSO->_renderState );
+            _pState->_boundNativeGraphicsPSO = _bindings._graphicsPSO;
+        }
+        flushBindings( RHIBindPoint::Graphics );
     }
 
     uint32 OpenGLRHICommandContext::resolveComputeProgram() const
     {
         // 백엔드 계약(네 백엔드 같음): 등록된 컴퓨트 PSO 없이 디스패치하면 오류로 멈춘다. 조용히 건너뛰지 않고 그래픽스 프로그램으로도 돌지 않는다 — PSO 가 0 이면
         // 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 걸지 않은 디스패치).
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _bindings._computePSO );
         if ( pPSO == nullptr || pPSO->_program == 0 )
-            reportFatalError( "GL dispatch without a registered compute PSO (handle %#)", _pDevice->_recordingState._boundComputePSO.getPacked() );
+            reportFatalError( "GL dispatch without a registered compute PSO (handle %#)", _bindings._computePSO.getPacked() );
         return pPSO->_program;
     }
 
@@ -816,12 +784,8 @@ namespace sw
         if ( bNothingToDraw )
             return;
 
-        GLuint program{ 0 };
         GLenum mode{ GL_TRIANGLES };
-        resolveDrawProgram( program, mode );
-
-        glUseProgram( program );
-
+        bindDrawPipeline( mode );
         if ( bindVertexInputsForDraw() == false )
             return;
 
@@ -850,39 +814,7 @@ namespace sw
     void OpenGLRHICommandContext::updateConstantBufferNative( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( _pDevice != nullptr )
-            _pDevice->getResourceFactory()->updateConstantBuffer( buffer, pData, size );
-    }
-
-    void OpenGLRHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
-    {
-        // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
-        // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는다(common.hlsli 가 항상 명시한다).
-        // 주의: 엔진이 16+# 에 걸면 셰이더가 PassCB 를 못 읽어 g_ViewProj 가 0 이 되고, 드로우도 GL 에러도
-        // 정상인 채로 메시가 하나도 그려지지 않는다.
-        // 확인 방법: 쿠킹된 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
-        const bool bInvalidComputeConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex;
-        if ( bInvalidComputeConstantBufferIndex )
-            return;
-        bindUniformBuffer( constantBufferIndex, slot );
-    }
-
-    void OpenGLRHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
-    {
-        // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다(그쪽 주의 참고).
-        // t# 는 시프트 없이 그대로 GL SSBO binding # 이다(common.hlsli SW_GL_BINDING).
-        if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
-            return;
-
-        const RHIBufferHandle buffer = _pDevice->findBindlessBuffer( index )._buffer;
-        if ( buffer == 0 )
-        {
-            SW_LOG_WARNING_ID( "OpenGLRHICommandContext.BindStructuredBufferIndexNotRegistered", "bindStructuredBuffer: index %# is not a registered buffer - use bindShaderResource for a texture.", index.getValue() );
-            return;
-        }
-
-        const GLuint ssbo = _pDevice->resolveGlBuffer( buffer );
-        if ( ssbo != 0 )
-            glBindBufferBase( GL_SHADER_STORAGE_BUFFER, slot, ssbo );
+            _pDevice->_resourceImpl->writeConstantBuffer( buffer, pData, size );
     }
 
     void OpenGLRHICommandContext::dispatchComputeNative( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
@@ -894,12 +826,13 @@ namespace sw
         // 디스패치하면 GL_INVALID_OPERATION("no active compute program") 이 나는데, 컬링 결과가 CPU 가 채운
         // 인자 그대로 남아 화면에는 드러나지 않는다.
         glUseProgram( resolveComputeProgram() );
+        flushBindings( RHIBindPoint::Compute );
         glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
         // 이미지 스토어 결과를 이후 샘플링 · 읽기 · 업로드가 보도록 한다. SSBO 는 transitionBuffer 가 따로 막는다.
         glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );
     }
 
-    void OpenGLRHICommandContext::setViewport( const RHIViewport& viewport )
+    void OpenGLRHICommandContext::setViewportNative( const RHIViewport& viewport )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
@@ -913,12 +846,9 @@ namespace sw
                     static_cast<GLint>( originY ),
                     static_cast<GLsizei>( viewport._width ),
                     static_cast<GLsizei>( viewport._height ) );
-        // 가위 = 뷰포트(IRHICommandList 규약). 삼각형은 이미 뷰포트로 잘리므로 가위 테스트를 끄는 것이 같은 결과다.
-        glDisable( GL_SCISSOR_TEST );
-        _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
     }
 
-    void OpenGLRHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    void OpenGLRHICommandContext::setScissorRectNative( const RHIScissorRect& rect )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
@@ -932,41 +862,6 @@ namespace sw
         _pDevice->_recordingState._bScissorEnabled = SW_TRUE;
     }
 
-    void OpenGLRHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
-    {
-        // UBO 바인딩 포인트는 스테이지 무관이라 컴퓨트 경로와 같은 호출이면 된다.
-        setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
-    }
-
-    void OpenGLRHICommandContext::setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
-    {
-        const bool bInvalidRootConstants = _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr;
-        if ( bInvalidRootConstants )
-            return;
-        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
-            return;
-
-        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
-        const uint32 count    = ( num32BitValues > maxCount ) ? maxCount : num32BitValues;
-
-        if ( _pDevice->ensureComputeRootConstantUbo() == false )
-            return;
-
-        Memory::copy( _pDevice->_arrComputeRootConstantShadow + destOffsetIn32BitValues, pData, static_cast<size_t>( count ) * sizeof( uint32 ) );
-
-        if ( glad_glNamedBufferSubData != nullptr )
-            glNamedBufferSubData( _pDevice->_computeRootConstantUbo, 0, static_cast<GLsizeiptr>( sizeof( _pDevice->_arrComputeRootConstantShadow ) ), _pDevice->_arrComputeRootConstantShadow );
-        else
-        {
-            glBindBuffer( GL_UNIFORM_BUFFER, _pDevice->_computeRootConstantUbo );
-            glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( sizeof( _pDevice->_arrComputeRootConstantShadow ) ), _pDevice->_arrComputeRootConstantShadow );
-            glBindBuffer( GL_UNIFORM_BUFFER, 0 );
-        }
-        // 루트 상수는 계약 슬롯(b SW_SLOT_ROOT_CB_EMUL → UBO binding, SW_ROOT_CONSTANTS_BEGIN)에 건다.
-        (void)rootParameterIndex;
-        glBindBufferBase( GL_UNIFORM_BUFFER, shaderslot::kRootConstantEmulationSlot, _pDevice->_computeRootConstantUbo );
-    }
-
     void OpenGLRHICommandContext::drawIndirectNative( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
                                                       RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {
@@ -974,11 +869,8 @@ namespace sw
         if ( bNothingToDrawIndirect )
             return;
 
-        GLuint program{ 0 };
         GLenum mode{ GL_TRIANGLES };
-        resolveDrawProgram( program, mode );
-
-        glUseProgram( program );
+        bindDrawPipeline( mode );
 
         // 메시를 걸지 않은 간접 드로우(GPU 입자 — SV_VertexID 로 정점을 만든다)는 정점 입력이 없는 PSO 라 빈 VAO 로 그린다(drawArrays 와 같다).
         const GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
@@ -1017,14 +909,11 @@ namespace sw
 
     bool OpenGLRHICommandContext::bindIndexedMeshForDraw( uint32& outMode, uint32& outIndexType )
     {
-        GLuint program{ 0 };
-        outMode = GL_TRIANGLES;
-        resolveDrawProgram( program, outMode );
-        glUseProgram( program );
+        bindDrawPipeline( outMode );
         // 정점 슬롯은 PSO 가 읽는 것만 건다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 버퍼는 VAO 상태라 VAO 를 건 뒤에 건다.
         if ( bindVertexInputsForDraw() == false )
             return false;
-        const bool bIndexBound = _pState->_geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
+        const bool bIndexBound = _bindings._geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
         {
             const GLuint ibo = _pDevice->resolveGlBuffer( binding._buffer );
             if ( ibo == 0 )
@@ -1037,7 +926,7 @@ namespace sw
             unbindIndexedMesh(); // 건 VAO 를 남기지 않는다
             return false;
         }
-        outIndexType = ( _pState->_geometry._index._stride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
+        outIndexType = ( _bindings._geometry._index._stride == 2 ) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
         return true;
     }
 
@@ -1058,7 +947,7 @@ namespace sw
         if ( bNothingToDraw || bindIndexedMeshForDraw( mode, indexType ) == false )
             return;
         const uint32 indexBytes = ( indexType == GL_UNSIGNED_SHORT ) ? 2u : 4u;
-        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _pState->_geometry._index._offset + startIndex * indexBytes ) );
+        const void*  pOffset    = reinterpret_cast<const void*>( static_cast<uintptr_t>( _bindings._geometry._index._offset + startIndex * indexBytes ) );
         glDrawElementsInstancedBaseVertex( mode, static_cast<GLsizei>( indexCount ), indexType, pOffset, static_cast<GLsizei>( instanceCount ), static_cast<GLint>( baseVertex ) );
         unbindIndexedMesh();
     }
@@ -1106,6 +995,7 @@ namespace sw
         // dispatchCompute 와 같다 — 간접 디스패치도 **컴퓨트 PSO** 의 프로그램으로 한다. 앞서 그래픽스 PSO 가 건 프로그램이 남아 있으면
         // GL_INVALID_OPERATION("no active compute program")이 난다(D3D · Vulkan 은 컴퓨트 PSO 를 따로 걸어 이 차이가 없다).
         glUseProgram( resolveComputeProgram() );
+        flushBindings( RHIBindPoint::Compute );
         glBindBuffer( GL_DISPATCH_INDIRECT_BUFFER, buf );
         if ( glad_glDispatchComputeIndirect != nullptr )
             glDispatchComputeIndirect( static_cast<GLintptr>( argumentBufferOffset ) );

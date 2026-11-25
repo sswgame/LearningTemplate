@@ -25,15 +25,6 @@
 #include <thread>
 #include <type_traits>
 
-namespace sw
-{
-    /** @brief 안을 보는 테스트 창구입니다(`friend`). */
-    struct RHIDeviceTestAccess
-    {
-        static size_t getDeferredHandleCount( const IRHIDevice& device ) { return device.getDeferredHandleCount(); }
-    };
-} // namespace sw
-
 using namespace sw;
 
 namespace
@@ -186,24 +177,25 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
 }
 
 /**
- * @brief [RHIDeviceShutdownTest] 종료가 끝났는데 해제 큐에 남은 것이 있으면 단언한다 — 그 해제는 네이티브 디바이스가 사라진 뒤에 불린다
- * @details 해제 큐는 2 단계(GPU 대기)에서 비워야 한다. 남은 채로 3 · 4 단계를 지나면 해제 큐의 소멸자가 죽은 디바이스로 콜백을 부른다.
+ * @brief [RHIDeviceShutdownTest] 종료 4 단계가 넣은 해제가 남으면 단언한다 — 그 해제는 네이티브 디바이스가 사라진 뒤에 불린다
+ * @details 2 단계(GPU 대기)는 장치가 큐를 비운다. 그 뒤에 넣은 것은 해제 큐의 소멸자가 죽은 디바이스로 부른다.
  *          `SW_LOG_ASSERT` 는 모든 구성에서 오류 로그를 남기고, 멈추는 단언(수)은 Debug 에만 있다.
  */
 SW_TEST_CASE( RHIDeviceShutdownTest, PendingReleasesAfterShutdownAssert )
 {
     SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
     test::FakeRHIDevice device;
-    device._pendingReleaseCount = 2;
+    device._releaseCountInShutdown = 2;
     {
         test::ScopedAssertCapture assertCapture;
         device.shutdown();
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
-            SW_EXPECT_EQUAL( 2u, assertCapture.getCount() ); // GPU 대기 뒤 · 4 단계 뒤
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() ); // 4 단계 뒤
     }
 
     // 비운 채로 끝나면 단언이 없다.
-    device._pendingReleaseCount = 0;
+    device.completeGPUFrames();
+    device._releaseCountInShutdown = 0;
     {
         test::ScopedAssertCapture assertCapture;
         device.shutdown();
@@ -219,16 +211,15 @@ SW_TEST_CASE( RHIDeviceShutdownTest, ReleasesQueuedAfterShutdownAssert )
     SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
     test::FakeRHIDevice device;
     device.shutdown();
-    device._pendingReleaseCount = 1; // 종료 뒤에 누군가 해제를 넣었다(가짜는 비우지 않으므로 이후 단계 단언도 함께 센다)
+    device.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, []() {} ) ); // 종료 뒤에 누군가 해제를 넣었다
     {
         test::ScopedAssertCapture assertCapture;
         device.shutdown();
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
-            SW_EXPECT_EQUAL( 3u, assertCapture.getCount() ); // 종료 뒤에 쌓인 것 · GPU 대기 뒤 · 4 단계 뒤
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() ); // 종료 뒤에 쌓인 것(GPU 대기가 비운다)
         else
             SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
     }
-    device._pendingReleaseCount = 0; // 소멸자의 종료는 조용히
 }
 
 /**
@@ -482,7 +473,7 @@ SW_TEST_CASE( RHIReleaseHandleTest, SecondReleaseOfTheSameHandleAsserts )
     test::FakeRHIBufferFactory factory;
     test::FakeRHIDevice        device;
     device._pResourceFactory     = &factory;
-    const RHIBufferHandle buffer = factory.createVertexBuffer( nullptr, 16 );
+    const RHIBufferHandle buffer = factory.createVertexBufferNative( nullptr, 16 );
     {
         test::ScopedAssertCapture assertCapture;
         device.releaseHandle( buffer ); // 든 프레임이 없다 — 바로 백엔드에 닿는다
@@ -503,7 +494,7 @@ SW_TEST_CASE( RHIReleaseHandleTest, DeferredReleaseWaitsForTheFrameFence )
     test::FakeRHIBufferFactory factory;
     test::FakeRHIDevice        device;
     device._pResourceFactory         = &factory;
-    const RHIBufferHandle     buffer = factory.createVertexBuffer( nullptr, 16 );
+    const RHIBufferHandle     buffer = factory.createVertexBufferNative( nullptr, 16 );
     test::ScopedAssertCapture assertCapture;
 
     device.notifyRenderFrameQueued(); // 프레임 1 이 GPU 로 갔다 — 게임 스레드는 패킷 2 를 짓는 중이다
@@ -534,4 +525,22 @@ SW_TEST_CASE( VulkanPhysicalDeviceRankTest, CPUIsAlwaysLast )
     SW_EXPECT_TRUE( Rank::compute( Rank::kDiscreteGPU, false ) < Rank::compute( Rank::kIntegratedGPU, false ) );
     SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, true ) < Rank::compute( Rank::kDiscreteGPU, true ) );
     SW_EXPECT_TRUE( Rank::compute( Rank::kIntegratedGPU, false ) < Rank::compute( Rank::kVirtualGPU, false ) );
+}
+
+/**
+ * @brief [RHIDeviceFrameNumberTest] 장치 프레임 번호는 프레임을 열 때만 하나씩 오른다 — GPU 대기는 올리지 않는다
+ * @details 핸들 재사용 경계 수(`getHandleReuseCount`)와 다르다. 프레임에 한 번인 일(PSO 생성 예산)이 이 번호로 가른다. 변이: 대기에서도 올리면 한 프레임에 예산을 두 번 연다.
+ */
+SW_TEST_CASE( RHIDeviceFrameNumberTest, CountsOpenedFramesOnly )
+{
+    test::FakeRHIDevice device;
+    const uint64        first = device.getFrameNumber();
+    device.beginFrame();
+    SW_EXPECT_EQUAL( first + 1, device.getFrameNumber() );
+    device.waitIdle( RHIWaitIdleReason::WindowSwapChain );
+    device.endFrame();
+    SW_EXPECT_EQUAL( first + 1, device.getFrameNumber() );
+    device.beginFrame();
+    device.endFrame();
+    SW_EXPECT_EQUAL( first + 2, device.getFrameNumber() );
 }

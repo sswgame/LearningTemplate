@@ -4,6 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/ScopedDeferredLog.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -11,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/View/RenderViewMode.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -21,7 +24,8 @@ namespace sw
         , _layoutMutex{}
         , _mapEnginePSO{}
         , _mapOutputPSO{}
-        , _mapExtensionProgramPSO{}
+        , _mapGlobalPSO{}
+        , _mapPipelineComputePSO{}
         , _mapMaterialPSO{}
         , _materialPSOMutex{}
     {
@@ -35,6 +39,13 @@ namespace sw
         ScopedLock<shared_mutex>   lock{ _layoutMutex };
         _mapPSOLayout[pso] = &layout;
         _mapPSODesc[pso]   = desc;
+        ++_layoutSerial;
+    }
+
+    uint64 RenderPSOCache::getLayoutSerial() const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _layoutMutex };
+        return _layoutSerial;
     }
 
     const ShaderBindingLayout* RenderPSOCache::findLayout( RHIPipelineStateHandle pso ) const
@@ -61,13 +72,13 @@ namespace sw
         return it != _mapPSODesc.end() ? it->second._depthStencilFormat : RHIFormat::Unknown;
     }
 
-    const ShaderBindingSlot* RenderPSOCache::findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV, ShaderTargetFormat targetFormat )
+    const ShaderBindingSlot* RenderPSOCache::findComputeBufferSlot( RHIPipelineStateHandle pso, uint32 slot, bool bUAV ) const
     {
-        RHIPipelineStateDesc desc{};
-        if ( findDesc( pso, desc ) == false || desc._computeShaderPath.empty() )
+        const ShaderBindingLayout* pLayout = findLayout( pso );
+        if ( pLayout == nullptr )
             return nullptr;
         const ShaderBindingKind kind = bUAV ? ShaderBindingKind::RwStructuredBuffer : ShaderBindingKind::StructuredBuffer;
-        for ( const ShaderBindingSlot& candidate : _bindingLayoutCache.getOrBuild( desc, targetFormat ).getSlots() )
+        for ( const ShaderBindingSlot& candidate : pLayout->getSlots() )
         {
             if ( candidate._kind == kind && candidate._registerIndex == slot )
                 return &candidate;
@@ -116,17 +127,24 @@ namespace sw
         _mapPSODesc.erase( handle );
     }
 
-    void RenderPSOCache::setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso )
+    void RenderPSOCache::setEnginePSO( IRHIDevice* pDevice, RenderPassKind passType, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings )
     {
-        RHIPipelineState& slot = _mapEnginePSO[passType];
-        releaseReplacedPSO( pDevice, slot );
-        slot = std::move( pso );
+        PassPSOEntry& slot = _mapEnginePSO[passType];
+        releaseReplacedPSO( pDevice, slot._pso );
+        slot._pso             = std::move( pso );
+        slot._computeBindings = computeBindings;
     }
 
     RHIPipelineStateHandle RenderPSOCache::findEnginePSO( RenderPassKind passType ) const
     {
         const auto it = _mapEnginePSO.find( passType );
-        return ( it != _mapEnginePSO.end() ) ? it->second._handle : RHIPipelineStateHandle{ 0 };
+        return ( it != _mapEnginePSO.end() ) ? it->second._pso._handle : RHIPipelineStateHandle{ 0 };
+    }
+
+    ComputePipeline RenderPSOCache::findEngineComputePSO( RenderPassKind passType ) const
+    {
+        const auto it = _mapEnginePSO.find( passType );
+        return ( it != _mapEnginePSO.end() ) ? ComputePipeline{ it->second._pso._handle, it->second._computeBindings } : ComputePipeline{};
     }
 
     void RenderPSOCache::setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineState&& pso )
@@ -145,19 +163,36 @@ namespace sw
         return true;
     }
 
-    void RenderPSOCache::setExtensionProgramPSO( IRHIDevice* pDevice, const hashed_string& programKey, RHIPipelineState&& pso )
+    void RenderPSOCache::setGlobalPSO( IRHIDevice* pDevice, uint64 descHash, RHIPipelineState&& pso )
     {
-        RHIPipelineState& slot = _mapExtensionProgramPSO[programKey];
+        RHIPipelineState& slot = _mapGlobalPSO[descHash];
         releaseReplacedPSO( pDevice, slot );
         slot = std::move( pso );
     }
 
-    bool RenderPSOCache::findExtensionProgramPSO( const hashed_string& programKey, RHIPipelineStateHandle& outPipelineState ) const
+    bool RenderPSOCache::findGlobalPSO( uint64 descHash, RHIPipelineStateHandle& outPipelineState ) const
     {
-        const auto it = _mapExtensionProgramPSO.find( programKey );
-        if ( it == _mapExtensionProgramPSO.end() )
+        const auto it = _mapGlobalPSO.find( descHash );
+        if ( it == _mapGlobalPSO.end() )
             return false;
         outPipelineState = it->second._handle;
+        return true;
+    }
+
+    void RenderPSOCache::setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings )
+    {
+        PassPSOEntry& slot = _mapPipelineComputePSO[passName];
+        releaseReplacedPSO( pDevice, slot._pso );
+        slot._pso             = std::move( pso );
+        slot._computeBindings = computeBindings;
+    }
+
+    bool RenderPSOCache::findPipelineComputePSO( const hashed_string& passName, ComputePipeline& outPipeline ) const
+    {
+        const auto it = _mapPipelineComputePSO.find( passName );
+        if ( it == _mapPipelineComputePSO.end() )
+            return false;
+        outPipeline = ComputePipeline{ it->second._pso._handle, it->second._computeBindings };
         return true;
     }
 
@@ -204,8 +239,21 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return 0;
-        if ( bAsync == false )
-            (void)_materialPSOBuilder.buildOnCaller( budgetMicroseconds );
+        if ( _pollFrameNumber != pDevice->getFrameNumber() )
+        {
+            _pollFrameNumber        = pDevice->getFrameNumber();
+            _buildBudgetNanoseconds = static_cast<int64>( budgetMicroseconds ) * constant::time::kNanosecondsPerMicrosecond;
+            SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", getPendingMaterialPSOBuilds() ); // 카운터는 프레임 합이라 프레임에 한 번 낸다(앞 프레임까지 밀린 수)
+        }
+        const bool bBuildAll = budgetMicroseconds == 0;
+        if ( bAsync == false && ( bBuildAll || _buildBudgetNanoseconds > 0 ) )
+        {
+            const int64  startNanoseconds = MonotonicClock::nowNanoseconds();
+            const uint32 leftMicroseconds = static_cast<uint32>( MathUtil::max<int64>( _buildBudgetNanoseconds / constant::time::kNanosecondsPerMicrosecond, 1 ) );
+            const uint32 builtCount       = _materialPSOBuilder.buildOnCaller( bBuildAll ? 0u : leftMicroseconds );
+            if ( builtCount > 0 )
+                _buildBudgetNanoseconds -= MonotonicClock::nowNanoseconds() - startNanoseconds;
+        }
         vector<MaterialPSOBuilder::Result> listResult;
         _materialPSOBuilder.takeResults( listResult );
         uint32 readyCount{ 0 };
@@ -257,9 +305,9 @@ namespace sw
             _mapMaterialPSO.clear();
         }
 
-        for ( auto& [passType, pso] : _mapEnginePSO )
+        for ( auto& [passType, entry] : _mapEnginePSO )
         {
-            pso.release( pDevice );
+            entry._pso.release( pDevice );
         }
         _mapEnginePSO.clear();
 
@@ -269,11 +317,16 @@ namespace sw
         }
         _mapOutputPSO.clear();
 
-        for ( auto& [programKey, pso] : _mapExtensionProgramPSO )
+        for ( auto& [descHash, pso] : _mapGlobalPSO )
         {
             pso.release( pDevice );
         }
-        _mapExtensionProgramPSO.clear();
+        _mapGlobalPSO.clear();
+        for ( auto& [passName, entry] : _mapPipelineComputePSO )
+        {
+            entry._pso.release( pDevice );
+        }
+        _mapPipelineComputePSO.clear();
 
         // 두 맵은 방금 파괴한 PSO 핸들을 키로 가지고 있다. 핸들에 generation 이 들어 있어 같은 핸들이 다시 발급되어도
         // 이전 항목을 집는 일은 없지만, 셰이더 리로드마다 PSO 를 다시 만드는 지금은 그대로 두면
@@ -313,12 +366,12 @@ namespace sw
         bool bPassReleased{ false };
         for ( auto it = _mapEnginePSO.begin(); it != _mapEnginePSO.end(); )
         {
-            if ( VectorUtil::contains( listAffected, it->second._handle ) == false )
+            if ( VectorUtil::contains( listAffected, it->second._pso._handle ) == false )
             {
                 ++it;
                 continue;
             }
-            destroy( it->second );
+            destroy( it->second._pso );
             bPassReleased = true;
             it            = _mapEnginePSO.erase( it );
         }
@@ -332,7 +385,7 @@ namespace sw
             destroy( it->second );
             it = _mapOutputPSO.erase( it );
         }
-        for ( auto it = _mapExtensionProgramPSO.begin(); it != _mapExtensionProgramPSO.end(); )
+        for ( auto it = _mapGlobalPSO.begin(); it != _mapGlobalPSO.end(); )
         {
             if ( it->second.isValid() && VectorUtil::contains( listAffected, it->second._handle ) == false )
             {
@@ -340,10 +393,20 @@ namespace sw
                 continue;
             }
             destroy( it->second );
-            it = _mapExtensionProgramPSO.erase( it );
+            it = _mapGlobalPSO.erase( it );
+        }
+        for ( auto it = _mapPipelineComputePSO.begin(); it != _mapPipelineComputePSO.end(); )
+        {
+            if ( it->second._pso.isValid() && VectorUtil::contains( listAffected, it->second._pso._handle ) == false )
+            {
+                ++it;
+                continue;
+            }
+            destroy( it->second._pso );
+            it = _mapPipelineComputePSO.erase( it );
         }
 
-        // 3) 머티리얼 변형(입자 · 쿠키 아틀라스 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_owned` 가 비면 패스 PSO 그대로다.
+        // 3) 머티리얼 변형. 소유한 것만 파괴한다 — `_owned` 가 비면 패스 PSO 그대로다.
         // 만드는 중인 것은 모두 무효로 하고 지운다 — 옛 바이트코드를 집었을 수 있고, 패스 PSO 를 놓았으면 그 키를 다시 찾는 쪽이 없다. 다음 셋업이 다시 넣는다.
         _materialPSOBuilder.discardPending();
         {
@@ -381,7 +444,8 @@ namespace sw
         _materialPSOBuilder.shutdown( nullptr );
         _mapEnginePSO.clear();
         _mapOutputPSO.clear();
-        _mapExtensionProgramPSO.clear();
+        _mapGlobalPSO.clear();
+        _mapPipelineComputePSO.clear();
         {
             ScopedLock<shared_mutex> lock{ _materialPSOMutex };
             _mapMaterialPSO.clear();

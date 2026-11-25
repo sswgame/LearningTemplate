@@ -68,18 +68,18 @@ namespace sw
             TJob job{};
             if ( fnBegin( job ) == false )
             {
-                ring._allocator.free( std::move( span ) );
+                ring.getAllocator().free( std::move( span ) );
                 return RHITransferSubmit::rejected();
             }
             fnRecord( job );
             const uint64 serial = fnSubmit( job );
             if ( serial == 0 )
             {
-                ring._allocator.free( std::move( span ) );
+                ring.getAllocator().free( std::move( span ) );
                 return RHITransferSubmit::rejected();
             }
             if ( bReleaseSpanAtSerial )
-                ring._allocator.markSubmitted( std::move( span ), serial );
+                ring.getAllocator().markSubmitted( std::move( span ), serial );
             fnCommit( serial ); // 되읽기는 여기서 구간을 보관표로 옮긴다 — 이 뒤로 @p span 을 만지지 않는다
             return serials.makeAccepted( serial );
         }

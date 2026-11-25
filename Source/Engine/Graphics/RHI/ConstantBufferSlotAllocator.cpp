@@ -84,15 +84,4 @@ namespace sw
         }
         return count;
     }
-
-    ConstantBufferSlot ConstantBufferSlotAllocator::reallocate( const ConstantBufferSlot& slot, const uint32 sizeBytes, bool& outbNewPage, bool& outbOldPageClosed )
-    {
-        outbNewPage       = false;
-        outbOldPageClosed = false;
-        if ( slot.isValid() && findSlotBytes( sizeBytes ) == slot._sizeBytes )
-            return slot;
-        const ConstantBufferSlot moved = allocate( sizeBytes, outbNewPage );
-        outbOldPageClosed              = release( slot );
-        return moved;
-    }
 } // namespace sw

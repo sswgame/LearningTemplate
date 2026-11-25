@@ -14,9 +14,7 @@ namespace
     /** @brief 백버퍼 컬러 타깃 하나의 패스입니다(컬러 타깃 0 은 무효라 기본값으로는 패스가 열리지 않는다). */
     RHIRenderPassBeginInfo backBufferPass()
     {
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo.setColorTarget( kRHIBackBufferTexture );
-        return beginInfo;
+        return RHIRenderPassBeginInfo::backBuffer( nullptr, RHIRenderPassLoadOp::Clear );
     }
 } // namespace
 
@@ -62,7 +60,7 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, NullColorTargetIsRejected )
     SW_EXPECT_LOG( "RHI.NullTextureHandle" );
     SW_EXPECT_LOG( "RHI.DrawSkippedNoRenderPass" );
 
-    context.beginRenderPass( RHIRenderPassBeginInfo{} ); // 컬러 수 0 + 컬러 걸기 = 0 번 하나(핸들 0)
+    context.beginRenderPass( RHIRenderPassBeginInfo::color( RHITextureHandle{ 0 }, RHIRenderPassLoadOp::Clear ) ); // 컬러 핸들 0
     SW_EXPECT_FALSE( context.isRenderPassOpen() );
     SW_EXPECT_EQUAL( 0u, context._beginNativeCount );
     context.draw( 3 );
@@ -75,10 +73,7 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, DepthOnlyPassIgnoresColorHandles )
     test::FakeRHIDevice         device;
     test::FakeRHICommandContext context{ device };
 
-    RHIRenderPassBeginInfo beginInfo{};
-    beginInfo._bBindColor  = SW_FALSE;
-    beginInfo._depthTarget = RHITextureHandle{ 7 };
-    context.beginRenderPass( beginInfo );
+    context.beginRenderPass( RHIRenderPassBeginInfo::depthOnly( RHITextureHandle{ 7 }, RHIRenderPassLoadOp::Clear ) );
     SW_EXPECT_TRUE( context.isRenderPassOpen() );
     SW_EXPECT_EQUAL( 1u, context._beginNativeCount );
 }
@@ -107,4 +102,24 @@ SW_TEST_CASE( RHIRenderPassInterruptTest, NullTextureTransitionAndBlitAreDropped
     context.blitTexture( RHITextureHandle{ 4 }, kRHIBackBufferTexture );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( context._listTransitionTexture.size() ) );
     SW_EXPECT_EQUAL( 1u, context._blitNativeCount );
+}
+
+/** @brief [RHIRenderPassInterruptTest] 만들기 함수가 컬러 수와 컬러 걸기를 함께 정한다 — 깊이만은 컬러를 걸지 않고, 넘치는 MRT 는 알리고 자른다. 변이: 컬러 걸기를 따로 두면 진다. */
+SW_TEST_CASE( RHIRenderPassInterruptTest, BeginInfoFactoriesKeepColorCountAndBindTogether )
+{
+    const RHIRenderPassBeginInfo depthOnly = RHIRenderPassBeginInfo::depthOnly( RHITextureHandle{ 7 }, RHIRenderPassLoadOp::Clear );
+    SW_EXPECT_EQUAL( 0u, depthOnly.getInfo()._colorTargetCount );
+    SW_EXPECT_TRUE( depthOnly.getInfo()._bBindColor == SW_FALSE );
+
+    const RHIRenderPassBeginInfo one = RHIRenderPassBeginInfo::color( RHITextureHandle{ 3 }, RHIRenderPassLoadOp::Load ).setExtent( 8, 4 );
+    SW_EXPECT_EQUAL( 1u, one.getInfo()._colorTargetCount );
+    SW_EXPECT_TRUE( one.getInfo()._bBindColor == SW_TRUE );
+    SW_EXPECT_EQUAL( 8u, one.getWidth() );
+
+    SW_EXPECT_LOG( "RHI.RenderPassColorOverflow" );
+    RHIRenderPassColorTarget arrColor[kMaxColorAttachments + 1]{};
+    for ( uint32 colorIndex = 0; colorIndex <= kMaxColorAttachments; ++colorIndex )
+        arrColor[colorIndex]._texture = RHITextureHandle{ 10u + colorIndex };
+    const RHIRenderPassBeginInfo many = RHIRenderPassBeginInfo::colors( arrColor, kMaxColorAttachments + 1 );
+    SW_EXPECT_EQUAL( kMaxColorAttachments, many.getInfo()._colorTargetCount );
 }

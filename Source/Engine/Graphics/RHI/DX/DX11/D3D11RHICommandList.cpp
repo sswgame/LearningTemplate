@@ -56,7 +56,7 @@ namespace sw
     void D3D11RHICommandList::releaseRecordedState()
     {
         _pFinishedList.Reset();
-        _recordingState._constantBuffers.invalidate();
+        _context.beginRecording();
         if ( _pNativeContext != nullptr )
             _pNativeContext->ClearState();
     }
@@ -66,7 +66,7 @@ namespace sw
         // FinishCommandList(FALSE, ...) 가 이전 실행 직후 Deferred Context 를 이미 기본 상태로
         // 되돌려 놨다. 이전에 제출한 네이티브 리스트 참조를 정리하고, 그 기본 상태에 없는 정적 샘플러 세트를 다시 바인딩한다.
         _pFinishedList.Reset();
-        _recordingState._constantBuffers.invalidate(); // FinishCommandList( FALSE ) 가 지운 상태 — 상수 버퍼 그림자도 모른다
+        _context.beginRecording(); // FinishCommandList( FALSE ) 가 지운 상태 — 건 것이 없다
         if ( _pDevice != nullptr )
             _pDevice->bindStaticSamplers( _pNativeContext.Get() );
     }

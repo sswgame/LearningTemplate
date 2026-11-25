@@ -113,37 +113,24 @@ namespace sw
             return false;
 
         // 원본은 Present 의 입력 선언이, 중간 RT 는 이 패스의 렌더 타깃 선언(`ViewGraphResource::upscaleIntermediate` — 키우는 뷰만 등록)이 레벨 콜백에서 옮겼다.
-        IRHIPassCommandList&   cmd = *context._pCmd;
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = view._upscaleIntermediate._texture;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
-        beginInfo._depthTarget       = 0;
-        beginInfo._width             = view._upscaleIntermediate._width;
-        beginInfo._height            = view._upscaleIntermediate._height;
-        cmd.beginRenderPass( beginInfo );
-        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
+        IRHIPassCommandList& cmd = *context._pCmd;
+        context.beginRenderPass( RHIRenderPassBeginInfo::color( view._upscaleIntermediate._texture, RHIRenderPassLoadOp::DontCare )
+                                     .setExtent( view._upscaleIntermediate._width, view._upscaleIntermediate._height ) );
+        context.setPipeline( _psoManager.getEnginePSO( RenderPassKind::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameUpscaleInternal::RootConstants constants{};
-        constants._source             = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
+        constants._source             = cmd.bindSampledTexture( source._srv, shaderslot::emulated::getSlot( "SourceColor" ) );
         constants._inputWidth         = static_cast<float32>( view.scaleToRect( source, true ) );
         constants._inputHeight        = static_cast<float32>( view.scaleToRect( source, false ) );
         constants._inputTextureWidth  = static_cast<float32>( source._width );
         constants._inputTextureHeight = static_cast<float32>( source._height );
         constants._outputWidth        = static_cast<float32>( view._upscaleIntermediate._width );
         constants._outputHeight       = static_cast<float32>( view._upscaleIntermediate._height );
-        constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
-        if ( bNativeBindless == false )
-            cmd.bindShaderResource( source._srv, kSourceSlot );
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         // 같은 패스의 RCAS 가 읽는다 — 쓰기로 선언한 중간 RT 를 패스 안에서 셰이더 읽기로 옮긴다.
         context._pGraphPass->transition( ViewGraphResource::upscaleIntermediate(), RenderGraphAccess::ShaderRead );
-        // PSO · 슬롯을 직접 바꿨다 — 뒤의 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
-        context.resetBindingCache();
         return true;
     }
 
@@ -151,18 +138,13 @@ namespace sw
     {
         const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassKind::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHIPassCommandList&         cmd = *context._pCmd;
-        cmd.setPipelineState( pso );
-        const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        context.setPipeline( pso );
         FrameUpscaleInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediate._srv ) : 0u;
-        constants._outputWidth       = static_cast<float32>( view._upscaleIntermediate._width ); // 픽셀 = 정점 UV × 중간 RT 크기(SV_Position 은 GL 기본 프레임버퍼에서 원점이 다르다)
-        constants._outputHeight      = static_cast<float32>( view._upscaleIntermediate._height );
-        constants._sharpness         = _frameSettings._upscalerSharpness; // 사본을 뜰 때 0 아래를 잘랐다
-        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
-        if ( bNativeBindless == false )
-            cmd.bindShaderResource( view._upscaleIntermediate._srv, kSourceSlot );
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        constants._source       = cmd.bindSampledTexture( view._upscaleIntermediate._srv, shaderslot::emulated::getSlot( "SourceColor" ) );
+        constants._outputWidth  = static_cast<float32>( view._upscaleIntermediate._width ); // 픽셀 = 정점 UV × 중간 RT 크기(SV_Position 은 GL 기본 프레임버퍼에서 원점이 다르다)
+        constants._outputHeight = static_cast<float32>( view._upscaleIntermediate._height );
+        constants._sharpness    = _frameSettings._upscalerSharpness; // 사본을 뜰 때 0 아래를 잘랐다
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
-        context.resetBindingCache();
     }
 } // namespace sw

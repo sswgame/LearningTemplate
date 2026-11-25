@@ -18,7 +18,7 @@
 #include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
@@ -110,7 +110,7 @@ namespace sw
         table.registerBuffer( getTilesUAV()._name, viewSlot, target._occlusionTiles, RenderGraphAccess::ShaderRead );
     }
 
-    bool HZBOcclusion::record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+    bool HZBOcclusion::record( const RenderGraphPassContext& graphContext, uint32 viewSlot, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight,
                                const float4x4& viewProj, bool bWriteTiles, FrameViewTarget& target ) const
     {
         // 버퍼가 없는 뷰는 등록하지 않았다(`registerFrameResources`) — 짓지 않는다. 있는데 선언 · 등록이 없으면 그래프가 전이를 내지 않았다 — 짓지 않는다(오류는 문맥이 남겼다).
@@ -122,10 +122,10 @@ namespace sw
             target._bHZBValid = SW_FALSE;
             return false;
         }
-        return recordPyramid( *graphContext.getCommandList(), device, pso, depthWidth, depthHeight, viewProj, bWriteTiles, target, HZBGraphBarriers{ graphContext, viewSlot } );
+        return recordPyramid( *graphContext.getCommandList(), device, pipeline, depthWidth, depthHeight, viewProj, bWriteTiles, target, HZBGraphBarriers{ graphContext, viewSlot } );
     }
 
-    bool HZBOcclusion::recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight,
+    bool HZBOcclusion::recordInViewPass( const RenderGraphPassContext& graphContext, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight,
                                          const float4x4& viewProj, FrameViewTarget& target ) const
     {
         if ( graphContext.getCommandList() == nullptr )
@@ -133,17 +133,17 @@ namespace sw
             target._bHZBValid = SW_FALSE;
             return false;
         }
-        return recordPyramid( *graphContext.getCommandList(), device, pso, depthWidth, depthHeight, viewProj, false, target, HZBViewPassBarriers{ graphContext } );
+        return recordPyramid( *graphContext.getCommandList(), device, pipeline, depthWidth, depthHeight, viewProj, false, target, HZBViewPassBarriers{ graphContext } );
     }
 
     template <typename Barriers>
-    bool HZBOcclusion::recordPyramid( IRHIPassCommandList& cmd, IRHIDevice& device, RHIPipelineStateHandle pso, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
+    bool HZBOcclusion::recordPyramid( IRHIPassCommandList& cmd, IRHIDevice& device, const ComputePipeline& pipeline, uint32 depthWidth, uint32 depthHeight, const float4x4& viewProj,
                                       bool bWriteTiles, FrameViewTarget& target, const Barriers& barriers ) const
     {
         using Internal         = HZBOcclusionInternal;
         target._bHZBValid      = SW_FALSE;
         const HZBLayout layout = HZBLayout::make( depthWidth, depthHeight );
-        const bool      bReady = pso != 0 && target._hzb.isValid() && target._occlusionTiles.isValid() && target._depthHistory.isValid();
+        const bool      bReady = pipeline.isValid() && target._hzb.isValid() && target._occlusionTiles.isValid() && target._depthHistory.isValid();
         if ( bReady == false || layout._mipCount == 0 )
             return false;
         if ( layout._texelCount > target._hzb._capacityElements )
@@ -156,11 +156,16 @@ namespace sw
 
         // 깊이 사본은 방금 RT 로 썼고 복사 풀스크린이 끝에 RW 텍스처 상태로 넘겨 두었다(`FrameGraphExecutor::recordDepthHistory` · `recordCurrentDepthHZB` — 짓는 세 자리 모두 그 복사 뒤다).
         barriers.begin();
-        cmd.setComputePipelineState( pso );
-        // g_HZBRW(u0) / g_OcclusionTilesRW(u1) / 깊이 사본(RW 슬롯 0 — 에뮬만). hzb_build.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeUAV( target._hzb._uav, 0 );
-        cmd.bindComputeUAV( target._occlusionTiles._uav, 1 );
-        cmd.bindComputeUAV( target._depthHistory._uav, shaderslot::kComputeTextureUAV0 );
+        // 깊이 사본은 에뮬 백엔드의 RW 칸 0 이다(네이티브는 셰이더가 루트 상수의 번호로 읽어 칸이 리플렉션에 없다).
+        ComputeShaderParameters<HZBBuildShader> parameters;
+        parameters.set( HZBBuildShader::HZB, target._hzb._uav );
+        parameters.set( HZBBuildShader::TileDepths, target._occlusionTiles._uav );
+        parameters.set( HZBBuildShader::DepthHistory, target._depthHistory._uav );
+        if ( parameters.apply( cmd, pipeline ) == false )
+        {
+            barriers.end();
+            return false;
+        }
         Internal::RootConstants constants{};
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
         constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistory._uav ) : 0u;
@@ -178,7 +183,7 @@ namespace sw
             const bool            bTiles = mip == HZBLayout::kTileMip && constants._tileColumns > 0;
             const uint32          countX = bTiles && target._occlusionColumns > level._width ? target._occlusionColumns : level._width;
             const uint32          countY = bTiles && target._occlusionRows > level._height ? target._occlusionRows : level._height;
-            cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+            cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchThreads( countX, countY, 1 );
         }
         barriers.end();

@@ -37,6 +37,7 @@
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -496,17 +497,18 @@ namespace sw
         constants._albedoIndex = static_cast<uint32>( albedo._srv );
 
         // 1) 분류 — 간접 인자를 지우고(그룹 하나) 타일마다 그룹 하나. 렌더 패스 밖이다. G버퍼 알베도는 그래프가 이 패스의 입력으로 셰이더 읽기 상태로 옮겨 두었다.
-        IRHIPassCommandList& cmd = *context._pCmd;
-        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::DeferredTileClassify ) );
-        // g_DeferredTileArgsRW(u0) / g_DeferredTileListRW(u1) — deferred_tile_classify.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeUAV( graphPass.getBufferUAV( ViewGraphResource::deferredTileArgs() ), 0 );
-        cmd.bindComputeUAV( graphPass.getBufferUAV( ViewGraphResource::deferredTileList() ), 1 );
+        IRHIPassCommandList&                                cmd = *context._pCmd;
+        ComputeShaderParameters<DeferredTileClassifyShader> parameters;
+        parameters.set( DeferredTileClassifyShader::TileArgs, graphPass.getBufferUAV( ViewGraphResource::deferredTileArgs() ) );
+        parameters.set( DeferredTileClassifyShader::TileList, graphPass.getBufferUAV( ViewGraphResource::deferredTileList() ) );
+        if ( parameters.apply( cmd, _psoManager.getComputePSO( RenderPassKind::DeferredTileClassify ) ) == false )
+            return false;
         constants._mode = kModeClear;
-        cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( 1, 1, 1 );
         graphPass.uavBarrier( ViewGraphResource::deferredTileArgs() );
         constants._mode = kModeClassify;
-        cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.dispatchCompute( columns, rows, 1 );
         graphPass.transition( ViewGraphResource::deferredTileArgs(), RenderGraphAccess::IndirectArgs );
         graphPass.transition( ViewGraphResource::deferredTileList(), RenderGraphAccess::ShaderRead );
@@ -521,8 +523,7 @@ namespace sw
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
             const RHIPipelineStateHandle tilePSO = _psoManager.findDeferredTilePSO( tileClass );
-            commitBindlessTextureBindings( context );
-            cmd.setPipelineState( tilePSO );
+            context.setPipeline( tilePSO );
             if ( bindForDraw( context, tilePSO, kInvalidDescriptorIndex ) == false )
                 continue;
             cmd.bindStructuredBuffer( tileListSRV, shaderslot::kPassBuffer );
@@ -551,9 +552,9 @@ namespace sw
         FramePassContext&                         context  = input._context;
         const RenderGraphPassDesc&                passDesc = input._passDesc;
         const hashed_string&                      target   = input._declaredColor[0]._attachment;
-        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const ComputePipeline                     pipeline = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
         const TransientAttachmentPool::Attachment output   = activePool().find( target );
-        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        if ( pipeline.isValid() == false || output._uav == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNotReady", "Pass '%#' compute implementation has no PSO or no RW output - it does not run", passDesc._name );
             return;
@@ -604,8 +605,10 @@ namespace sw
             return;
         }
         // 입력은 레벨 콜백이 셰이더 읽기로, 출력은 이 패스의 UAV 선언으로 RW 텍스처 상태로 옮겼다(`bindPassCallbacks`). 뒤 패스의 읽기 · UAV 는 레벨 콜백이 옮기거나 기다린다.
-        context._pCmd->setComputePipelineState( pso );
-        context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        // 컴퓨트 구현은 네이티브 bindless 에서만 만든다 — 출력도 루트 상수의 RW 번호라 이름으로 거는 칸이 없다(표는 같은 컴퓨트 패스 표다).
+        if ( ComputeShaderParameters<ComputePassShader>{}.apply( *context._pCmd, pipeline ) == false )
+            return;
+        context._pCmd->setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         (void)markAttachmentCleared( target );
     }
@@ -623,9 +626,9 @@ namespace sw
         FramePassContext&                         context  = input._context;
         const RenderGraphPassDesc&                passDesc = input._passDesc;
         const hashed_string&                      target   = input._declaredColor[0]._attachment;
-        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const ComputePipeline                     pipeline = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
         const TransientAttachmentPool::Attachment output   = activePool().find( target );
-        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        if ( pipeline.isValid() == false || output._uav == kInvalidDescriptorIndex )
         {
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassNotReady", "Compute pass '%#' has no PSO or no RW output - it does not run", passDesc._name );
             return;
@@ -637,7 +640,11 @@ namespace sw
         constants._width       = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
         constants._height      = _pActiveView->scaleToRect( output, false );
         // 출력은 UAV, 입력은 UAV 읽기로 이 패스가 선언했다 — 레벨 콜백이 RW 텍스처 상태로 옮기고, 앞 컴퓨트의 쓰기 뒤면 텍스처 UAV 배리어로 기다린다(`bindPassCallbacks`).
-        context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
+        // 에뮬은 출력 · 입력이 RW 칸 0 · 1 · 2 다(네이티브는 셰이더가 번호로 읽어 칸이 리플렉션에 없다 — 걸지 않는다).
+        constexpr ComputePassShader::Parameter arrInputParameter[] = { ComputePassShader::Input0, ComputePassShader::Input1 };
+        static_assert( sizeof( arrInputParameter ) / sizeof( arrInputParameter[0] ) == sizeof( constants._arrInputIndex ) / sizeof( constants._arrInputIndex[0] ), "compute pass inputs and RW slots differ" );
+        ComputeShaderParameters<ComputePassShader> parameters;
+        parameters.set( ComputePassShader::Output, output._uav );
         for ( uint32 inputIndex = 0; inputIndex < passDesc._listResolvedInput.size(); ++inputIndex )
         {
             const TransientAttachmentPool::Attachment source = activePool().find( passDesc._listResolvedInput[inputIndex]._attachment );
@@ -647,10 +654,11 @@ namespace sw
                 return;
             }
             constants._arrInputIndex[inputIndex] = bNative ? static_cast<uint32>( source._uav ) : inputIndex + 1u;
-            context._pCmd->bindComputeUAV( source._uav, shaderslot::kComputeTextureUAV0 + inputIndex + 1u );
+            parameters.set( arrInputParameter[inputIndex], source._uav );
         }
-        context._pCmd->setComputePipelineState( pso );
-        context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        if ( parameters.apply( *context._pCmd, pipeline ) == false )
+            return;
+        context._pCmd->setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
@@ -977,8 +985,7 @@ namespace sw
             return;
         // drawFullscreen 과 같은 순서다. 볼륨 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다.
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
-        context._pCmd->setPipelineState( pso );
+        context.setPipeline( pso );
         if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
         {
             if ( bVolume )
@@ -1012,8 +1019,7 @@ namespace sw
             return;
         // drawFullscreen 과 같은 순서다. HZB 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개의 볼륨 버퍼와 같다).
         setIdentityWorld( context );
-        commitBindlessTextureBindings( context );
-        context._pCmd->setPipelineState( pso );
+        context.setPipeline( pso );
         if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) )
         {
             context._pCmd->bindStructuredBuffer( view._hzb._srv, shaderslot::kPassBuffer );
@@ -1078,8 +1084,7 @@ namespace sw
             context._passValues.setFloat4( passConstantNames()._postProcessMaterial, float4{ draw._weight, 0.0f, 0.0f, 0.0f } );
             context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, draw._buffer, draw._srv );
             context._drawMaterialCount = 1u;
-            commitBindlessTextureBindings( context );
-            context._pCmd->setPipelineState( draw._pso );
+            context.setPipeline( draw._pso );
             if ( bindForDraw( context, draw._pso, kInvalidDescriptorIndex, draw._pTextureSRV ) )
                 context._pCmd->draw( 3, 0 );
         }
@@ -1126,8 +1131,7 @@ namespace sw
                     ++end;
                 }
                 context._passValues.setUint( passConstantNames()._decalFirst, first );
-                commitBindlessTextureBindings( context );
-                context._pCmd->setPipelineState( pso );
+                context.setPipeline( pso );
                 // 상자 하나 = 삼각형 12 개(정점 버퍼 없이 SV_VertexID — decal.hlsl VSMain), 인스턴스 하나 = 데칼 하나. 앞면은 XML 의 컬(Front)이 버린다(거울 상자는 VSMain 이 감김을 되돌린다).
                 if ( bindForDraw( context, pso, kInvalidDescriptorIndex, listDecal[first]._arrTextureSRV ) )
                 {
@@ -1159,7 +1163,6 @@ namespace sw
         // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
         setIdentityWorld( context );
         // 구간마다 그리기 하나 — Image 구간은 텍스처를 머티리얼 칸 0 으로 빌려 건다(데칼과 같다). 아직 읽는 중인 텍스처의 구간은 이번 프레임에 뺀다(흰 사각형으로 대신하지 않는다).
-        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         for ( const LensFlareDrawRange& range : sprites.getDrawRanges() )
         {
             RHITextureSRVIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
@@ -1174,11 +1177,10 @@ namespace sw
                 if ( pTexture == nullptr )
                     continue;
                 arrTextureSRV[0] = pTexture->getSRV();
-                textureIndex     = bNativeBindless ? pTexture->getSRV() : 0u;
+                textureIndex     = _pDevice->getMaterialTextureIndex( pTexture->getSRV(), 0 );
             }
             context._passValues.setUint( passConstantNames()._lensFlareTexture, textureIndex );
-            commitBindlessTextureBindings( context );
-            context._pCmd->setPipelineState( pso );
+            context.setPipeline( pso );
             if ( bindForDraw( context, pso, kInvalidDescriptorIndex, arrTextureSRV ) )
             {
                 context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
@@ -1274,16 +1276,8 @@ namespace sw
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
             _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
-            const bool             bUpscale = _upscale.recordUpscaleEasu( context, *_pActiveView, srcName );
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo._bBindColor        = SW_TRUE;
-            beginInfo._arrColorTarget[0] = dstTarget;
-            beginInfo._colorTargetCount  = 1;
-            beginInfo._arrLoadOp[0]      = outputLoad;
-            beginInfo._arrClearColor[0]  = outputClear;
-            beginInfo._width             = outputWidth;
-            beginInfo._height            = outputHeight;
-            context._pCmd->beginRenderPass( beginInfo );
+            const bool bUpscale = _upscale.recordUpscaleEasu( context, *_pActiveView, srcName );
+            context.beginRenderPass( RHIRenderPassBeginInfo::color( dstTarget, outputLoad, outputClear ).setExtent( outputWidth, outputHeight ) );
             // 사각형이면 뷰포트로 그 안에만 그린다. 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
             // 정수 업스케일이면 원본 크기 × 배율을 사각형 가운데에 놓는다 — 셰이더가 점 샘플(SW_PASS_FLAG_POINT_UPSCALE)이라 원본 픽셀이 배율 × 배율 칸이다.
             if ( bFullRect == false )
@@ -1339,16 +1333,9 @@ namespace sw
         if ( bDraw )
         {
             const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassKind::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
-            RHIRenderPassBeginInfo       beginInfo{};
-            beginInfo._bBindColor        = SW_TRUE;
-            beginInfo._arrColorTarget[0] = target._texture;
-            beginInfo._colorTargetCount  = 1;
-            beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-            beginInfo._width             = target._width;
-            beginInfo._height            = target._height;
-            context._pCmd->beginRenderPass( beginInfo );
+            context.beginRenderPass( RHIRenderPassBeginInfo::color( target._texture, RHIRenderPassLoadOp::Load ).setExtent( target._width, target._height ) );
             (void)_state._canvasRenderer.drawList( *context._pCmd, _state._canvasFrame.getMainOutput(), _state._canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
-                                                   _pDevice->supportsNativeBindlessSampling(), _state._canvasFrame._colorVisionMode );
+                                                   _state._canvasFrame._colorVisionMode );
             context._pCmd->endRenderPass();
         }
         const bool bLastWriter = isLastSwapchainWriter( input._passDesc );
@@ -1375,16 +1362,9 @@ namespace sw
         // 화면 대상(스왑체인 · 회전 대기 텍스처 · HDR UI RT)은 모두 UI 대상 포맷이다 — 셋업이 그 포맷의 캔버스 PSO 를 만든다.
         const RHIFormat              format = _pDevice->getUITargetFormat();
         const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 셋업에 없으면 멈춘다
-        RHIRenderPassBeginInfo       beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._arrColorTarget[0] = screen; // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
-        beginInfo._width             = target._width;
-        beginInfo._height            = target._height;
-        context._pCmd->beginRenderPass( beginInfo );
-        (void)_state._canvasRenderer.drawList( *context._pCmd, list, _state._canvasRenderer.getDevOverlayQuadBase(), pso, target._width, target._height,
-                                               _pDevice->supportsNativeBindlessSampling() );
+        // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
+        context.beginRenderPass( RHIRenderPassBeginInfo::color( screen, RHIRenderPassLoadOp::Load ).setExtent( target._width, target._height ) );
+        (void)_state._canvasRenderer.drawList( *context._pCmd, list, _state._canvasRenderer.getDevOverlayQuadBase(), pso, target._width, target._height );
         context._pCmd->endRenderPass();
     }
 
@@ -1498,10 +1478,9 @@ namespace sw
             ExtensionConstantScope<FramePassContext> elementScope( context, _frameArena );
             elementScope.apply( element._arrConstant, element._constantCount );
             context._world = element._world;
-            context._pCmd->setPipelineState( pass._pso ); // 정점 슬롯을 비운다 — 메시 스트림은 그 뒤에 건다
+            context.setPipeline( pass._pso ); // 정점 슬롯을 비운다 — 메시 스트림은 그 뒤에 건다
             RHIMeshVertexStreams::bind( *context._pCmd, mesh.getRenderData().getVertexBuffer(), mesh.getAttributeStreamOffset(), mesh.getVertexFormat() );
             context._pCmd->setIndexBuffer( mesh.getRenderData().getIndexBuffer(), mesh.getRenderData().getIndexStride(), 0 );
-            commitBindlessTextureBindings( context );
             if ( bindForDraw( context, pass._pso, kInvalidDescriptorIndex ) )
             {
                 context._pCmd->drawIndexedInstanced( indexCount, element._instanceCount );

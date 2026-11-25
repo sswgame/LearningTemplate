@@ -21,49 +21,53 @@ namespace sw
     public:
         explicit D3D12RHIResourceFactory( D3D12RHIDevice* pDevice )
             : _pDevice{ pDevice } {}
-        RHIPipelineStateHandle          createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
-        RHIPipelineStateHandle          createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
-        [[nodiscard]] bool              destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
-        RHIBufferHandle                 createConstantBuffer( uint32 size ) override;
-        void                            updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
-        RHIBufferHandle                 createConstantBufferPage( uint32 size ) override;
-        void                            updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
-        RHIBufferHandle                 createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
-        void                            updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                       const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle                 createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
-        RHIBufferHandle                 createGPUVertexBuffer( uint32 sizeBytes ) override;
-        void                            updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
-        RHIBufferHandle                 createIndexBuffer( const void* pData, uint32 sizeBytes ) override;
-        [[nodiscard]] bool              destroyBufferNative( RHIBufferHandle buffer ) override;
-        RHIBufferHandle                 createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
-        [[nodiscard]] bool              readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
-        RHITextureHandle                createTexture2D( const RHITextureDesc& desc ) override;
-        RHITextureAllocationInfo        getTextureAllocationInfo( const RHITextureDesc& desc ) override;
-        RHITransientHeapHandle          createTransientHeap( uint64 sizeBytes ) override;
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
+        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
+        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased ) override;
+        RHIBufferHandle        createConstantBufferNative( uint32 size ) override;
+        /** @brief 기록 경로의 상수 버퍼 쓰기입니다(커맨드 컨텍스트만 부른다 — 두 번째 쓰기 진단은 `IRHICommandContext::updateConstantBuffer` 가 했다). */
+        void                            writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size );
+        RHIBufferHandle                 createConstantBufferPageNative( uint32 size ) override;
+        void                            writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size ) override;
+        RHIBufferHandle                 createStructuredBufferNative( uint32 elementSize, uint32 elementCount ) override;
+        void                            updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                             const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle                 createVertexBufferNative( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle                 createGPUVertexBufferNative( uint32 sizeBytes ) override;
+        void                            updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle                 createIndexBufferNative( const void* pData, uint32 sizeBytes ) override;
+        [[nodiscard]] bool              destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased ) override;
+        RHIBufferHandle                 createReadbackBufferNative( uint32 elementSize, uint32 elementCount ) override;
+        [[nodiscard]] bool              readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
+        RHITextureHandle                createTexture2DNative( const RHITextureDesc& desc ) override;
+        RHITextureAllocationInfo        getTextureAllocationInfoNative( const RHITextureDesc& desc ) override;
+        RHITransientHeapHandle          createTransientHeapNative( uint64 sizeBytes ) override;
         [[nodiscard]] bool              destroyTransientHeapNative( RHITransientHeapHandle heap ) override;
-        RHITextureHandle                createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes ) override;
-        void                            setTextureDebugName( RHITextureHandle texture, const utf8* pName ) override;
-        [[nodiscard]] bool              destroyTextureNative( RHITextureHandle texture ) override;
-        [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
-        [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
-        [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
+        RHITextureHandle                createPlacedTexture2DNative( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes ) override;
+        void                            setTextureDebugNameNative( RHITextureHandle texture, const utf8* pName ) override;
+        [[nodiscard]] bool              destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
         [[nodiscard]] RHITransferStatus pollTransfer( RHITransferTicket ticket ) override;
         [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
         void                            discardTextureReadback( RHITransferTicket ticket ) override;
         RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
-        RHITextureSRVIndex              registerBindlessTexture( RHITextureHandle texture ) override;
-        [[nodiscard]] bool              rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
-        RHITextureSRVIndex              reserveBindlessTextureIndex() override;
-        [[nodiscard]] bool              activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture ) override;
-        bool                            isTextureReadyToSample( RHITextureHandle texture ) override;
-        void                            unregisterBindlessTexture( RHITextureSRVIndex index ) override;
-        RHIBufferSRVIndex               registerBindlessBufferSRV( RHIBufferHandle buffer ) override;
-        RHIBufferSRVIndex               registerBindlessBufferSRV( const RHIBufferSlice& slice ) override;
-        void                            unregisterBindlessResource( RHIBufferSRVIndex index ) override;
-        RHIUnorderedAccessIndex         registerBindlessBufferUAV( RHIBufferHandle buffer ) override;
-        RHIUnorderedAccessIndex         registerBindlessTextureUAV( RHITextureHandle texture ) override;
-        void                            unregisterBindlessUAV( RHIUnorderedAccessIndex index ) override;
+        RHITextureSRVIndex              registerBindlessTextureNative( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        RHITextureSRVIndex              reserveBindlessTextureIndexNative() override;
+        [[nodiscard]] bool              activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        [[nodiscard]] uint64            findAllocationBytesNative( RHIBufferHandle buffer ) const override;
+        [[nodiscard]] uint64            findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& desc ) const override;
+        [[nodiscard]] bool              describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override;
+        [[nodiscard]] uint32            findConstantPageBytesNative( RHIBufferHandle buffer ) override;
+        [[nodiscard]] bool              unregisterBindlessTextureNative( RHITextureSRVIndex index ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRVNative( RHIBufferHandle buffer ) override;
+        RHIBufferSRVIndex               registerBindlessBufferSRVNative( const RHIBufferSlice& slice ) override;
+        [[nodiscard]] bool              unregisterBindlessResourceNative( RHIBufferSRVIndex index ) override;
+        RHIUnorderedAccessIndex         registerBindlessBufferUAVNative( RHIBufferHandle buffer ) override;
+        RHIUnorderedAccessIndex         registerBindlessTextureUAVNative( RHITextureHandle texture ) override;
+        [[nodiscard]] bool              unregisterBindlessUAVNative( RHIUnorderedAccessIndex index ) override;
 
         /** @brief 남은 트랜지언트 힙 핸들을 모두 놓습니다(장치 종료 — 할당기보다 먼저). */
         void releaseTransientHeaps() { _mapTransientHeap.clear(); }
@@ -101,6 +105,8 @@ namespace sw
          *          네 등록 함수가 같이 씁니다. 한 곳이 오프라인 힙을 빠뜨리면 그 종류의 리소스만 슬롯 테이블에서 사라집니다.
          */
         BindlessHandleSet bindlessHandlesAt( RHIDescriptorIndex index ) const;
+        /** @brief bindless 텍스처 표의 SRV 서술입니다(등록 · 다시 묶기 · 예약 활성화가 같은 서술을 쓴다). 깊이(typeless)는 깊이 평면만 읽습니다. */
+        static D3D12_SHADER_RESOURCE_VIEW_DESC makeBindlessTextureDesc( ID3D12Resource* pResource );
 
         /**
          * @brief 어느 bindless 레지스트리인지 나타냅니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
@@ -116,9 +122,9 @@ namespace sw
         /**
          * @brief 레지스트리의 슬롯 하나를 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
          * @details **이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다.** 그 검사를 SRV/CBV 쪽과
-         *          UAV 쪽이 같이 씁니다(다른 것은 레지스트리와 로그 문구뿐입니다).
+         *          UAV 쪽이 같이 씁니다. 산 칸이 아니면 false 입니다(입구가 알린다).
          */
-        void releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );
+        [[nodiscard]] bool releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );
         /**
          * @brief 레지스트리의 슬롯 `index` 에 리소스, 핸들 쌍, 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 기록합니다. 슬롯이 모자라면 늘립니다.
          * @details 다섯 등록 경로(텍스처 SRV, 구조 버퍼 SRV, CBV, 버퍼 UAV, 텍스처 UAV)가 같이 씁니다.
@@ -127,22 +133,30 @@ namespace sw
         void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
                                   RHIBufferHandle buffer, RHITextureHandle texture, RHIBindlessLink link, uint32 sliceOffset = 0 );
 
-        /** @brief 텍스처와 버퍼 공용 힙 슬롯을 비우고 프리리스트에 돌려줍니다(빈 슬롯은 무시합니다). */
-        void releaseBindlessSlot( RHIDescriptorIndex index );
         /** @brief 인덱스를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 실행 중인 리스트가 새 리소스를 읽지 않게 합니다. */
         void deferFreeBindlessIndex( RHIDescriptorIndex index );
 
+        /** @brief 버퍼 복사를 어디에 기록하는가입니다. */
+        enum class UploadOrder : uint8
+        {
+            FrameStream, ///< 프레임 스트림의 지금 자리 — 앞서 낸 리스트 뒤, 뒤에 내는 리스트 앞에 실행된다
+            BeforeFrame, ///< 업로드 리스트 — 다음 제출의 맨 앞에 실행된다(프레임 밖 · 다른 스레드 · 새 버퍼의 첫 내용)
+        };
+
+        /** @brief 조각들을 스테이징에 모아 복사와 상태 전이를 @p order 자리에 기록합니다. */
+        void recordBufferCopies( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount, UploadOrder order );
         /**
-         * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당하고 복사 리스트를 열어 둡니다.
-         * @details 얼로케이터는 펜스 구간이 바뀔 때만 Reset 합니다. 같은 구간의 앞선 복사가 GPU 에서 도는 중일 수
-         *          있습니다. 성공하면 `_pDevice->_arrStructuredUploadSlot[outSlotIndex]._copyCommandList` 에 기록합니다.
-         *          리스트는 **닫지 않습니다.** 프레임 끝(또는 큐 대기 직전)에 `D3D12RHIDevice::flushPendingUploads` 가
-         *          한 번 닫아 제출합니다. updateStructuredBufferRegions 전용입니다(텍스처 전송은 `D3D12RHIDevice::beginTransferJob` 과 스테이징 링을 쓴다).
-         *          부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
+         * @brief 현재 프레임 링 슬롯의 스테이징 힙에서 sizeBytes 를 bump 할당합니다.
+         * @details 같은 펜스 구간의 앞선 복사가 GPU 에서 도는 중일 수 있어 구간이 바뀔 때만 되감습니다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
-        /** @brief 현재 프레임 링 슬롯의 복사 리스트를 엽니다(`acquireUploadStaging` 이 부른다). 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다. */
-        [[nodiscard]] bool openUploadSlot( uint32& outSlotIndex );
+        /**
+         * @brief 슬롯 @p slotIndex 의 펜스 구간이 바뀌었으면 앞 구간의 복사가 끝나기를 기다려 얼로케이터를 Reset 하고 스테이징을 되감습니다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
+         * @details 그 슬롯의 복사 리스트가 앞 구간에서 열린 채면(프레임 제출과 Signal 사이에 연 복사) 내보내고, 프레임 스트림 복사가 남았으면 되감지 않는다.
+         */
+        [[nodiscard]] bool beginUploadPeriod( uint32 slotIndex );
+        /** @brief 슬롯 @p slotIndex 의 복사 리스트를 엽니다(`beginUploadPeriod` 뒤). 다른 칸이 열려 있으면 먼저 내보냅니다. 닫고 제출하는 것은 `D3D12RHIDevice::flushPendingUploads`. */
+        [[nodiscard]] bool openUploadList( uint32 slotIndex );
 
     public:
     private:

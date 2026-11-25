@@ -3,11 +3,13 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -31,6 +33,35 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief SPIR-V 의 구조 버퍼 번호(종류별 시프트 + 레지스터)를 레지스터 번호로 되돌리고 읽기 · 쓰기를 번호 띠로 가릅니다.
+             * @details 바인더는 레지스터 번호로 건다(`IRHIPassCommandList::bindStructuredBuffer`) — WebGPU 리플렉션이 이미 하는 일을 Vulkan(t 16.. · u 32..) · GL(u 16..)도 여기서 같게 한다.
+             *          예전에는 Vulkan 커맨드 컨텍스트가 받은 번호의 범위로 어림했고, 버퍼 보기는 Vulkan · GL 의 컴퓨트 슬롯 이름을 찾지 못했다. 계약 검사(`ShaderBindingValidatorIssue`)는 네이티브 번호를 본 뒤다.
+             */
+            static void toRegisterNumbers( ShaderTargetFormat targetFormat, ShaderReflectionData& inoutReflection )
+            {
+                const bool   bVulkan = targetFormat == ShaderTargetFormat::SPIRV_Vulkan;
+                const bool   bOpenGL = targetFormat == ShaderTargetFormat::SPIRV_OpenGL;
+                const uint32 uShift  = bVulkan ? shaderslot::vk::kUShift : shaderslot::gl::kUAVBinding0;
+                const uint32 tShift  = bVulkan ? shaderslot::vk::kTShift : 0u;
+                if ( bVulkan == false && bOpenGL == false )
+                    return;
+                for ( ShaderReflectedBinding& resource : inoutReflection._listResource )
+                {
+                    // GL 의 컴퓨트 RW 텍스처 칸은 이미지 유닛 번호다(common.hlsli 의 명시 binding) — 레지스터 u5..u7 로 되돌린다(컴퓨트 매개변수 표가 그 번호로 건다).
+                    if ( bOpenGL && resource._kind == ShaderBindingKind::RwTexture && resource._registerSpace == 0 && resource._bindPoint >= shaderslot::gl::kImageUnit0 )
+                    {
+                        resource._bindPoint = shaderslot::kComputeTextureUAV0 + ( resource._bindPoint - shaderslot::gl::kImageUnit0 );
+                        continue;
+                    }
+                    if ( resource._kind != ShaderBindingKind::StructuredBuffer || resource._registerSpace != 0 )
+                        continue;
+                    const bool bWritable = resource._bindPoint >= uShift;
+                    resource._kind       = bWritable ? ShaderBindingKind::RwStructuredBuffer : ShaderBindingKind::StructuredBuffer;
+                    resource._bindPoint -= bWritable ? uShift : MathUtil::min( tShift, resource._bindPoint );
+                }
+            }
+
             /** @brief 한 스테이지를 컴파일하고 리플렉션합니다. 실패하면 false 입니다. */
             static bool reflectStage( string_view shaderPath, string_view entryPoint, ShaderStage stage,
                                       ShaderTargetFormat targetFormat, const vector<ShaderMacroDefine>& listDefine,
@@ -49,6 +80,7 @@ namespace sw
 
                 // 리플렉션을 얻는 순간 계약과 대조한다. 어긋나면 로그에 이름과 숫자로 남는다(검증 에러는 안 난다).
                 ShaderBindingValidatorIssue::validate( outReflection, targetFormat, shaderPath );
+                toRegisterNumbers( targetFormat, outReflection );
                 return true;
             }
         };

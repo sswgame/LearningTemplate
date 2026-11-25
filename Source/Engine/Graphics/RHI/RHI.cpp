@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -103,6 +104,22 @@ namespace sw
         }
     }
 
+    uint64 RHIPipelineStateDesc::computeHash() const noexcept
+    {
+        uint64 hash = HashUtil::makeHash( _vertexShaderPath, _vertexEntryPoint, _pixelShaderPath, _pixelEntryPoint, _computeShaderPath, _computeEntryPoint, _geometryEntryPoint,
+                                          _hullEntryPoint, _domainEntryPoint );
+        for ( const string& define : _listShaderDefine )
+        {
+            hash = HashUtil::combine( hash, HashUtil::computeStringHash64( define, false ) );
+        }
+        hash = HashUtil::combine( hash, HashUtil::makeHash( _topology, _numRenderTargets, _depthStencilFormat, _renderState.computeHash(), _meshVertexFormat ) );
+        for ( uint32 targetIndex = 0; targetIndex < _numRenderTargets && targetIndex < kMaxColorAttachments; ++targetIndex )
+        {
+            hash = HashUtil::combine( hash, static_cast<uint64>( _arrRTVFormat[targetIndex] ) );
+        }
+        return hash;
+    }
+
     RHITextureDesc::RHITextureDesc() noexcept
         : _clearColor{ 0.0f, 0.0f, 0.0f, 0.0f }
         , _width{ 1 }
@@ -131,7 +148,7 @@ namespace sw
     {
     }
 
-    RHIRenderPassBeginInfo::RHIRenderPassBeginInfo() noexcept
+    RHIRenderPassInfo::RHIRenderPassInfo() noexcept
         : _pSwapChain{ nullptr }
         , _arrColorTarget{}
         , _depthTarget{ 0 }
@@ -147,7 +164,7 @@ namespace sw
         , _arrColorTargetMip{}
         , _depthTargetMip{ 0 }
         , _clearStencil{ 0 }
-        , _bBindColor{ SW_TRUE }
+        , _bBindColor{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _arrStoreOp{}
         , _depthStoreOp{ RHIRenderPassStoreOp::Store }
@@ -160,12 +177,65 @@ namespace sw
         }
     }
 
-    void RHIRenderPassBeginInfo::setColorTarget( RHITextureHandle target, const float4& clearColor, RHIRenderPassLoadOp loadOp )
+    RHIRenderPassBeginInfo RHIRenderPassBeginInfo::color( RHITextureHandle target, RHIRenderPassLoadOp loadOp, const float4& clearColor )
     {
-        _arrColorTarget[0] = target;
-        _arrClearColor[0]  = clearColor;
-        _arrLoadOp[0]      = loadOp;
-        _colorTargetCount  = 1;
+        RHIRenderPassColorTarget colorTarget{};
+        colorTarget._texture    = target;
+        colorTarget._loadOp     = loadOp;
+        colorTarget._clearColor = clearColor;
+        return colors( &colorTarget, 1 );
+    }
+
+    RHIRenderPassBeginInfo RHIRenderPassBeginInfo::colors( const RHIRenderPassColorTarget* pTargets, uint32 count )
+    {
+        RHIRenderPassBeginInfo beginInfo{};
+        if ( count > kMaxColorAttachments )
+        {
+            SW_LOG_ERROR_ID( "RHI.RenderPassColorOverflow", "render pass has %# color targets, at most %# - the rest are dropped", count, kMaxColorAttachments );
+            count = kMaxColorAttachments;
+        }
+        RHIRenderPassInfo& info = beginInfo._info;
+        for ( uint32 colorIndex = 0; colorIndex < count; ++colorIndex )
+        {
+            info._arrColorTarget[colorIndex] = pTargets[colorIndex]._texture;
+            info._arrLoadOp[colorIndex]      = pTargets[colorIndex]._loadOp;
+            info._arrStoreOp[colorIndex]     = pTargets[colorIndex]._storeOp;
+            info._arrClearColor[colorIndex]  = pTargets[colorIndex]._clearColor;
+        }
+        info._colorTargetCount = count;
+        info._bBindColor       = count > 0 ? SW_TRUE : SW_FALSE;
+        return beginInfo;
+    }
+
+    RHIRenderPassBeginInfo RHIRenderPassBeginInfo::backBuffer( IRHISwapChain* pSwapChain, RHIRenderPassLoadOp loadOp, const float4& clearColor )
+    {
+        RHIRenderPassBeginInfo beginInfo = color( kRHIBackBufferTexture, loadOp, clearColor );
+        beginInfo._info._pSwapChain      = pSwapChain;
+        return beginInfo;
+    }
+
+    RHIRenderPassBeginInfo RHIRenderPassBeginInfo::depthOnly( RHITextureHandle depth, RHIRenderPassLoadOp loadOp, RHIRenderPassStoreOp storeOp, float32 clearDepth, uint8 clearStencil )
+    {
+        RHIRenderPassBeginInfo beginInfo{};
+        beginInfo.setDepth( depth, loadOp, storeOp, clearDepth, clearStencil );
+        return beginInfo;
+    }
+
+    RHIRenderPassBeginInfo& RHIRenderPassBeginInfo::setDepth( RHITextureHandle depth, RHIRenderPassLoadOp loadOp, RHIRenderPassStoreOp storeOp, float32 clearDepth, uint8 clearStencil )
+    {
+        _info._depthTarget  = depth;
+        _info._depthLoadOp  = loadOp;
+        _info._depthStoreOp = storeOp;
+        _info._clearDepth   = clearDepth;
+        _info._clearStencil = clearStencil;
+        return *this;
+    }
+
+    RHIRenderPassBeginInfo& RHIRenderPassBeginInfo::setExtent( uint32 width, uint32 height )
+    {
+        _info._width  = width;
+        _info._height = height;
+        return *this;
     }
 
     bool validateTextureRegionUpload( RHIFormat format, uint32 textureWidth, uint32 textureHeight, uint32 mipLevels, uint32 arraySize,

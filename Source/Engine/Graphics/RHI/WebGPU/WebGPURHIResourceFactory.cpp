@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -252,7 +253,7 @@ namespace sw
         return _pDevice->_pipelines.insert( std::move( record ) );
     }
 
-    bool WebGPURHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool WebGPURHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         WebGPUPipelineRecord record{};
         if ( _pDevice->_pipelines.take( pso, record ) == false )
@@ -260,15 +261,15 @@ namespace sw
         WGPURenderPipeline  renderPipeline  = record._renderPipeline;
         WGPUComputePipeline computePipeline = record._computePipeline;
         WGPUBindGroupLayout layout          = record._groupLayout;
-        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [renderPipeline, computePipeline, layout]()
-        {
+        outReleased._release                = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [renderPipeline, computePipeline, layout]()
+                       {
             if ( layout != nullptr )
                 wgpuBindGroupLayoutRelease( layout );
             if ( renderPipeline != nullptr )
                 wgpuRenderPipelineRelease( renderPipeline );
             if ( computePipeline != nullptr )
                 wgpuComputePipelineRelease( computePipeline );
-        } ) );
+        } );
         return true;
     }
 
@@ -277,8 +278,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     RHIBufferHandle WebGPURHIResourceFactory::createBufferWithUsage( uint64 sizeBytes, uint32 elementSize, WGPUBufferUsage usage, const void* pData, const utf8* pLabel )
     {
-        using Internal = WebGPURHIResourceFactoryInternal;
-        _pDevice->requireRegistryMutableNow( "WebGPU.createBuffer" );
+        using Internal                   = WebGPURHIResourceFactoryInternal;
         const uint64         alignedSize = MathUtil::align( MathUtil::max<uint64>( sizeBytes, Internal::kCopyAlignment ), Internal::kCopyAlignment );
         WGPUBufferDescriptor desc{};
         desc.label              = WebGPURHIUtil::toStringView( pLabel );
@@ -305,38 +305,25 @@ namespace sw
         return _pDevice->_buffers.insert( std::move( record ) );
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createConstantBuffer( uint32 size )
+    RHIBufferHandle WebGPURHIResourceFactory::createConstantBufferNative( uint32 size )
     {
-        const uint64 aligned = MathUtil::align( static_cast<uint64>( MathUtil::max( size, 1u ) ), WebGPURHIResourceFactoryInternal::kUniformSizeAlignment );
+        const uint64 aligned = MathUtil::align( static_cast<uint64>( size ), WebGPURHIResourceFactoryInternal::kUniformSizeAlignment );
         return createBufferWithUsage( aligned, 0, WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst, nullptr, "SW Constant Buffer" );
     }
 
-    void WebGPURHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    RHIBufferHandle WebGPURHIResourceFactory::createConstantBufferPageNative( uint32 size )
     {
-        WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
-        if ( pRecord == nullptr || pData == nullptr || size == 0 )
-            return;
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateConstantBuffer" );
-        // 프레임 밖 갱신은 버퍼 자체에 쓴다 — 기록 중의 이름 바꾼 칸은 이제 낡았다(다음 그리기는 버퍼를 읽는다).
-        const uint64  alignedSize = MathUtil::align( static_cast<uint64>( size ), WebGPURHIResourceFactoryInternal::kCopyAlignment );
-        vector<uint8> padded( static_cast<size_t>( MathUtil::min( alignedSize, pRecord->_sizeBytes ) ), 0 );
-        Memory::copy( padded.data(), pData, MathUtil::min<size_t>( size, padded.size() ) );
-        wgpuQueueWriteBuffer( _pDevice->_queue, pRecord->_buffer, 0, padded.data(), padded.size() );
-        pRecord->_overrideSerial = 0;
+        // 균일 버퍼 하나를 구간이 나눠 쓴다(감사 R-4). 구간은 새로 받았을 때 한 번만 쓴다(`writeConstantBufferSlice`).
+        return createConstantBufferNative( size );
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createConstantBufferPage( uint32 size )
-    {
-        // 균일 버퍼 하나를 구간이 나눠 쓴다(감사 R-4). 큐 쓰기는 큐 순서라 진행 중 프레임과 겹치지 않는다(`createConstantBuffer` 와 같다).
-        return createConstantBuffer( size );
-    }
-
-    void WebGPURHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void WebGPURHIResourceFactory::writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
         if ( pRecord == nullptr || pData == nullptr || size == 0 )
             return;
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateConstantBuffer(slice)" );
+        // 큐 쓰기는 이번 프레임이 기록했지만 아직 내지 않은 명령보다 먼저 실행된다 — 새로 받은 구간이라 그 명령이 읽지 않으므로 앞 기록을 먼저 낼 까닭이 없다(`submitRecordedBeforeQueueWrite` 는
+        // 같은 버퍼를 다시 쓰는 구조 버퍼 갱신의 것이다). https://www.w3.org/TR/webgpu/#dom-gpuqueue-writebuffer
         // 큐 쓰기 크기는 4 의 배수다 — 4 B 배수 앞부분은 원본에서 바로 쓰고, 남는 꼬리(머티리얼 바이트는 256 B 정렬이라 보통 없다)만 스택의 0 채운 4 B 로 쓴다(구간 오프셋은 256 배수).
         constexpr uint32 kCopyBytes = static_cast<uint32>( WebGPURHIResourceFactoryInternal::kCopyAlignment );
         const uint32     writeBytes = MathUtil::min( size, slice._size );
@@ -352,10 +339,8 @@ namespace sw
         }
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle WebGPURHIResourceFactory::createStructuredBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        if ( elementSize == 0 || elementCount == 0 )
-            return 0;
         // 컬링 컴퓨트가 간접 인자를 구조 버퍼로 쓰고 그 버퍼를 간접 그리기로 읽는다 — 한 버퍼에 Storage | Indirect 를 같이 준다(WebGPU 는 허용한다).
         const WGPUBufferUsage usage = WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc | WGPUBufferUsage_Indirect;
         return createBufferWithUsage( static_cast<uint64>( elementSize ) * elementCount, elementSize, usage, nullptr, "SW Structured Buffer" );
@@ -366,6 +351,7 @@ namespace sw
         const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
         if ( pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr )
             return;
+        _pDevice->submitRecordedBeforeQueueWrite();
         const uint8* const pBase = static_cast<const uint8*>( pBaseSource );
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
@@ -384,39 +370,36 @@ namespace sw
         }
     }
 
-    void WebGPURHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void WebGPURHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateStructuredBufferRegions" );
         writeBufferRegions( buffer, pBaseSource, pRegions, regionCount );
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle WebGPURHIResourceFactory::createVertexBufferNative( const void* pData, uint32 sizeBytes )
     {
         // 메시 풀은 정점을 저장 버퍼로도 읽는다(모프 · 스킨 컴퓨트) — Storage 를 함께 준다.
         // CopySrc: 렌더 프록시 정점 버퍼가 정점 풀 복사의 원본이 된다(R-15 — copyBufferRegion).
         return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, pData, "SW Vertex Buffer" );
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    RHIBufferHandle WebGPURHIResourceFactory::createGPUVertexBufferNative( uint32 sizeBytes )
     {
         // 내용 없이 만든 버퍼는 0 으로 시작한다(명세). 복사의 도착 · 원본(다시 꾸릴 때 옛 풀이 원본이다).
         return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Vertex | WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst | WGPUBufferUsage_CopySrc, nullptr, "SW GPU Vertex Buffer" );
     }
 
-    void WebGPURHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void WebGPURHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "WebGPU.updateGeometryBufferRegions" );
         writeBufferRegions( buffer, pBaseSource, pRegions, regionCount );
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle WebGPURHIResourceFactory::createIndexBufferNative( const void* pData, uint32 sizeBytes )
     {
         return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst, pData, "SW Index Buffer" );
     }
 
-    bool WebGPURHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool WebGPURHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.destroyBuffer" );
         WebGPUBufferRecord record{};
         if ( _pDevice->_buffers.take( buffer, record ) == false )
             return false;
@@ -428,15 +411,15 @@ namespace sw
             _pDevice->_uavTable.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         }
         const WGPUBuffer native = record._buffer;
-        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native]()
-        {
+        outReleased._release    = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native]()
+           {
             wgpuBufferDestroy( native );
             wgpuBufferRelease( native );
-        } ) );
+        } );
         return true;
     }
 
-    RHIBufferHandle WebGPURHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle WebGPURHIResourceFactory::createReadbackBufferNative( uint32 elementSize, uint32 elementCount )
     {
         const RHIBufferHandle     handle  = createBufferWithUsage( static_cast<uint64>( elementSize ) * elementCount, elementSize, WGPUBufferUsage_MapRead | WGPUBufferUsage_CopyDst, nullptr,
                                                                    "SW Readback Buffer" );
@@ -446,10 +429,10 @@ namespace sw
         return handle;
     }
 
-    bool WebGPURHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    bool WebGPURHIResourceFactory::readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
     {
         const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( readback );
-        if ( pRecord == nullptr || pRecord->_bReadback == SW_FALSE || pDestination == nullptr )
+        if ( pRecord == nullptr || pRecord->_bReadback == SW_FALSE )
         {
             SW_LOG_ERROR_ID( "WebGPU.ReadNotReadbackBuffer", "WebGPU: readReadbackBuffer got a handle that is not a readback buffer (%#)", readback.getPacked() );
             return false;
@@ -476,19 +459,18 @@ namespace sw
     // 텍스처
     // ------------------------------------------------------------------------------
     // 길이 유지(긴 함수 정리 기준): 형식 · 용도 · 생성 · 샘플 뷰 · 면 뷰의 순서가 곧 의미라 나누지 않는다.
-    RHITextureHandle WebGPURHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    RHITextureHandle WebGPURHIResourceFactory::createTexture2DNative( const RHITextureDesc& desc )
     {
-        using Internal = WebGPURHIResourceFactoryInternal;
-        _pDevice->requireRegistryMutableNow( "WebGPU.createTexture2D" );
+        using Internal                 = WebGPURHIResourceFactoryInternal;
         const WGPUTextureFormat format = _pDevice->toTextureFormat( desc._format );
-        if ( format == WGPUTextureFormat_Undefined || desc._width == 0 || desc._height == 0 )
+        if ( format == WGPUTextureFormat_Undefined )
         {
             SW_LOG_ERROR_ID( "WebGPU.TextureFormatUnsupported", "WebGPU: cannot create a %#x%# texture of RHIFormat %# on this device", desc._width, desc._height, static_cast<uint32>( desc._format ) );
             return 0;
         }
         const bool       bDepth    = Internal::isDepthFormat( format );
-        const uint32     layers    = MathUtil::max( desc._arraySize, 1u );
-        const uint32     mipLevels = MathUtil::max( desc._mipLevels, 1u );
+        const uint32     layers    = desc._arraySize;
+        const uint32     mipLevels = desc._mipLevels;
         WGPUTextureUsage usage     = WGPUTextureUsage_CopyDst | WGPUTextureUsage_CopySrc;
         if ( desc._bIsShaderResource != SW_FALSE )
             usage |= WGPUTextureUsage_TextureBinding;
@@ -557,9 +539,8 @@ namespace sw
         return _pDevice->_textures.insert( std::move( record ) );
     }
 
-    bool WebGPURHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool WebGPURHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.destroyTexture" );
         WebGPUTextureRecord record{};
         if ( _pDevice->_textures.take( texture, record ) == false )
             return false;
@@ -574,8 +555,8 @@ namespace sw
         const WGPUTexture       native     = record._texture;
         const WGPUTextureView   sampleView = record._sampleView;
         vector<WGPUTextureView> listSlice  = std::move( record._listSliceView );
-        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native, sampleView, listSlice]()
-        {
+        outReleased._release               = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native, sampleView, listSlice]()
+                      {
             for ( const WGPUTextureView view : listSlice )
             {
                 wgpuTextureViewRelease( view );
@@ -584,7 +565,7 @@ namespace sw
                 wgpuTextureViewRelease( sampleView );
             wgpuTextureDestroy( native );
             wgpuTextureRelease( native );
-        } ) );
+        } );
         return true;
     }
 
@@ -610,7 +591,7 @@ namespace sw
         return serial;
     }
 
-    RHITransferSubmit WebGPURHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit WebGPURHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         if ( pRecord == nullptr || _pDevice->isDeviceLost() )
@@ -646,7 +627,7 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    RHITransferSubmit WebGPURHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit WebGPURHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
         if ( pRecord == nullptr || _pDevice->isDeviceLost() )
@@ -672,7 +653,7 @@ namespace sw
     }
 
     // 길이 유지(긴 함수 정리 기준): 검사 · 배치 · 읽기 버퍼 · 복사 제출 · 매핑 요청의 순서가 곧 의미라 나누지 않는다.
-    RHITransferSubmit WebGPURHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit WebGPURHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         using Internal                     = WebGPURHIResourceFactoryInternal;
         WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
@@ -818,81 +799,78 @@ namespace sw
     // ------------------------------------------------------------------------------
     // bindless
     // ------------------------------------------------------------------------------
-    RHITextureSRVIndex WebGPURHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    uint64 WebGPURHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessTexture" );
+        const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
+        return pRecord != nullptr ? pRecord->_sizeBytes : kRHIMemoryUnknownBytes; // 할당 크기를 물을 API 가 없다
+    }
+
+    uint64 WebGPURHIResourceFactory::findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& desc ) const
+    {
+        return RHIMemoryTracker::computeTextureLogicalBytes( desc ); // 깊이의 R32 실수 사본은 원본에 딸려 생기고 사라져 따로 세지 않는다
+    }
+
+    bool WebGPURHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
+    {
+        _pDevice->processCompletions();
         const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
-            return kInvalidDescriptorIndex;
+        if ( pRecord == nullptr )
+            return false;
+        outInfo._dimension            = pRecord->_desc._dimension;
+        outInfo._bShaderResource      = pRecord->_desc._bIsShaderResource;
+        outInfo._bUnorderedAccess     = pRecord->_desc._bIsUnorderedAccess;
+        outInfo._bFirstUploadComplete = _pDevice->_transferSerials.isFirstUploadComplete( *pRecord->_pUploadSerials ) ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
+    uint32 WebGPURHIResourceFactory::findConstantPageBytesNative( RHIBufferHandle buffer )
+    {
+        const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
+        const bool                      bPage   = pRecord != nullptr && ( pRecord->_usage & WGPUBufferUsage_Uniform ) != 0;
+        return bPage ? static_cast<uint32>( pRecord->_sizeBytes ) : 0u;
+    }
+
+    RHITextureSRVIndex WebGPURHIResourceFactory::registerBindlessTextureNative( RHITextureHandle texture )
+    {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureTable.allocate( WebGPUBindlessEntry{ 0, texture } ) };
     }
 
-    bool WebGPURHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    bool WebGPURHIResourceFactory::rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->processCompletions();
-        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( *pRecord->_pUploadSerials );
-    }
-
-    bool WebGPURHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
-    {
-        _pDevice->requireRegistryMutableNow( "WebGPU.rebindBindlessTexture" );
-        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
-            return false;
         // 바인드 그룹은 기록 때 번호를 뷰로 풀어 그 뷰로 캐시한다(`WebGPUBindGroupCache` — 번호 키가 아니다). 등록표 값만 바꾸면 다음 그룹이 새 뷰를 쓴다.
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_textureTable.rebind( index, WebGPUBindlessEntry{ 0, texture } );
     }
 
-    RHITextureSRVIndex WebGPURHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex WebGPURHIResourceFactory::reserveBindlessTextureIndexNative()
     {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureTable.reserveIndex() };
     }
 
-    bool WebGPURHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool WebGPURHIResourceFactory::activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.activateReservedBindlessTexture" );
-        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || _pDevice->_transferSerials.isTextureReadyToRegister( *pRecord->_pUploadSerials, texture ) == false )
-            return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_textureTable.assign( index, WebGPUBindlessEntry{ 0, texture }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
-    void WebGPURHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
+    bool WebGPURHIResourceFactory::unregisterBindlessTextureNative( RHITextureSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessTexture" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_textureTable.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_textureTable.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIBufferSRVIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex WebGPURHIResourceFactory::registerBindlessBufferSRVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferSRV" );
         if ( _pDevice->findBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIBufferSRVIndex{ _pDevice->_bufferTable.allocate( WebGPUBindlessEntry{ buffer } ) };
     }
 
-    RHIBufferSRVIndex WebGPURHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex WebGPURHIResourceFactory::registerBindlessBufferSRVNative( const RHIBufferSlice& slice )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferSRV(slice)" );
-        const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( slice._buffer );
-        if ( pRecord == nullptr )
-            return kInvalidDescriptorIndex;
-        // 바인딩 오프셋은 minUniformBufferOffsetAlignment(기본 한도 256)의 배수여야 한다 — 구간은 256 B 배수다. 버퍼를 넘는 구간은 부르는 쪽의 결함이다.
-        const bool bBadSlice = slice._size == 0 || slice._offset % constant::render::kConstantBufferAlignment != 0 ||
-                               static_cast<uint64>( slice._offset ) + slice._size > pRecord->_sizeBytes;
-        if ( bBadSlice )
-        {
-            SW_LOG_ERROR_ID( "WebGPU.BadConstantBufferSlice", "WebGPU: registerBindlessBufferSRV slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page", slice._offset,
-                             slice._size );
-            return kInvalidDescriptorIndex;
-        }
         WebGPUBindlessEntry entry{};
         entry._buffer      = slice._buffer;
         entry._sliceOffset = slice._offset;
@@ -901,36 +879,29 @@ namespace sw
         return RHIBufferSRVIndex{ _pDevice->_bufferTable.allocate( entry ) };
     }
 
-    void WebGPURHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
+    bool WebGPURHIResourceFactory::unregisterBindlessResourceNative( RHIBufferSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessResource" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_bufferTable.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_bufferTable.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIUnorderedAccessIndex WebGPURHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex WebGPURHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessBufferUAV" );
         if ( _pDevice->findBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIUnorderedAccessIndex{ _pDevice->_uavTable.allocate( WebGPUBindlessEntry{ buffer } ) };
     }
 
-    RHIUnorderedAccessIndex WebGPURHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex WebGPURHIResourceFactory::registerBindlessTextureUAVNative( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.registerBindlessTextureUAV" );
-        const WebGPUTextureRecord* const pRecord = _pDevice->findTexture( texture );
-        if ( pRecord == nullptr || pRecord->_desc._bIsUnorderedAccess == SW_FALSE )
-            return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIUnorderedAccessIndex{ _pDevice->_uavTable.allocate( WebGPUBindlessEntry{ 0, texture } ) };
     }
 
-    void WebGPURHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
+    bool WebGPURHIResourceFactory::unregisterBindlessUAVNative( RHIUnorderedAccessIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "WebGPU.unregisterBindlessUAV" );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_uavTable.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_uavTable.release( index, RHIBindlessReuse::Immediately );
     }
 } // namespace sw

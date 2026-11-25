@@ -11,7 +11,7 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
+#include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
@@ -62,7 +62,7 @@ namespace sw
         };
     } // namespace
 
-    RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
+    RHIBufferHandle D3D12RHIResourceFactory::createConstantBufferNative( uint32 size )
     {
         const UINT                             alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
@@ -80,7 +80,7 @@ namespace sw
         return handle;
     }
 
-    void D3D12RHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void D3D12RHIResourceFactory::writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( buffer == 0 || pData == nullptr )
             return;
@@ -96,13 +96,13 @@ namespace sw
         { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createConstantBufferPage( uint32 size )
+    RHIBufferHandle D3D12RHIResourceFactory::createConstantBufferPageNative( uint32 size )
     {
         // 업로드 버퍼 하나(프레임 칸 × 페이지 크기)를 구간이 나눠 쓴다 — 상수 버퍼마다 버퍼 하나이던 것을 페이지당 하나로 줄인다(감사 R-4).
-        return createConstantBuffer( size );
+        return createConstantBufferNative( size );
     }
 
-    void D3D12RHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void D3D12RHIResourceFactory::writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         if ( slice._buffer == 0 || pData == nullptr )
             return;
@@ -116,10 +116,9 @@ namespace sw
         { _pDevice->writeConstantBufferSlot( target, slot, offset, pBytes, byteCount ); } );
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle D3D12RHIResourceFactory::createStructuredBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        // 64비트로 곱한다. `UINT` 로 곱해 `Width`(UINT64)에 넣으면 넘칠 때 조용히 작은 버퍼가 된다.
-        const uint64              totalBytes   = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
+        const uint32              totalBytes   = elementSize * elementCount; // 32비트에 담긴다(앞단이 봤다)
         const D3D12_RESOURCE_DESC resourceDesc = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
 
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
@@ -133,83 +132,87 @@ namespace sw
         {
             // 등록(registerBindlessBufferSRV · registerBindlessBufferUAV)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
             UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
+            _pDevice->_mapStructuredStride[handle] = elementSize;
         }
         return handle;
     }
 
-    bool D3D12RHIResourceFactory::openUploadSlot( uint32& outSlotIndex )
+    bool D3D12RHIResourceFactory::beginUploadPeriod( uint32 slotIndex )
     {
         if ( _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
             return false;
-        const uint32                          slotIndex       = _pDevice->_frameRing.currentIndex();
-        D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        bool                                  bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
-
-        // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
-        if ( slot._bListOpen != SW_FALSE && bNewFencePeriod == false )
-        {
-            outSlotIndex = slotIndex;
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        // 프레임 스트림에 기록한 복사가 아직 나가지 않았으면 그 구간이 이어진다 — 프레임 도중의 장치 대기가 펜스 값을 올려도 스테이징을 되감지 않는다.
+        if ( slot._bFrameCopies != SW_FALSE || slot._resetFence == _pDevice->_frameFenceRing.getRecordingSerial() )
             return true;
-        }
-        // 구간이 바뀌었는데 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
-        // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다 — 다시 판정한다.
-        if ( slot._bListOpen != SW_FALSE )
+        // 구간이 바뀌었는데 이 슬롯의 리스트가 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
+        // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다.
+        if ( _pDevice->_openUploadSlotIndex == slotIndex )
         {
             _pDevice->flushPendingUploads( true );
-            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
+            return true;
         }
+        if ( slot._resetFence != UINT64_MAX )
+        {
+            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
+            // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
+            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 하게 된다
+            // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
+            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 슬롯의 펜스(_resetFence: 그 구간의 제출 뒤에
+            // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
+            if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotPreviousCopiesAllocator", "beginUploadPeriod: previous copies on allocator %# have not completed (fence %#)",
+                                 slotIndex, slot._resetFence );
+                return false;
+            }
+            if ( slot._copyAllocator != nullptr && isHrSuccess( slot._copyAllocator->Reset(), "Reset" ) == false )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyAllocatorReset", "beginUploadPeriod: copy allocator Reset failed" );
+                return false;
+            }
+        }
+        slot._uploadOffset = 0;
+        slot._resetFence   = _pDevice->_frameFenceRing.getRecordingSerial();
+        return true;
+    }
 
+    bool D3D12RHIResourceFactory::openUploadList( uint32 slotIndex )
+    {
+        // 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
+        if ( _pDevice->_openUploadSlotIndex == slotIndex )
+            return true;
+        // 다른 칸이 열려 있으면(링이 넘어가기 전에 연 프레임 밖 업로드) 지금 내보낸다 — 열린 리스트는 하나라 기록 순서가 큐 순서다(`_openUploadSlotIndex`).
+        _pDevice->flushPendingUploads( true );
+        D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
         if ( slot._copyAllocator == nullptr )
         {
             if ( isHrSuccess( _pDevice->_device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( slot._copyAllocator.GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy", "openUploadSlot: failed to create copy command allocator" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy", "openUploadList: failed to create copy command allocator" );
                 return false;
             }
             utf16 arrName[constant::buffer::kMax64]{};
             swprintf_s( arrName, L"StructuredUploadAllocator%u", slotIndex );
             slot._copyAllocator->SetName( arrName );
         }
-        else if ( bNewFencePeriod )
-        {
-            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
-            // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
-            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 하게 된다
-            // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
-            // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 얼로케이터의 펜스(_resetFence: 그 구간의 제출 뒤에
-            // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
-            if ( _pDevice->waitForFenceValue( slot._resetFence ) == false )
-            {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotPreviousCopiesAllocator", "openUploadSlot: previous copies on allocator %# have not completed (fence %#)",
-                                 slotIndex, slot._resetFence );
-                return false;
-            }
-            if ( isHrSuccess( slot._copyAllocator->Reset(), "Reset" ) == false )
-            {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyAllocatorReset", "openUploadSlot: copy allocator Reset failed" );
-                return false;
-            }
-        }
-        if ( bNewFencePeriod )
-            slot._uploadOffset = 0;
-        slot._resetFence = _pDevice->_fenceValue.load();
-
         if ( slot._copyCommandList == nullptr )
         {
             if ( isHrSuccess( _pDevice->_device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, slot._copyAllocator.Get(), nullptr, IID_PPV_ARGS( slot._copyCommandList.GetAddressOf() ) ), "CreateCommandList" ) == false )
             {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy2", "openUploadSlot: failed to create copy command list" );
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy2", "openUploadList: failed to create copy command list" );
                 return false;
             }
+            utf16 arrListName[constant::buffer::kMax64]{};
+            swprintf_s( arrListName, L"StructuredUploadList%u", slotIndex );
+            slot._copyCommandList->SetName( arrListName ); // 디버그 레이어 글이 이 이름으로 업로드 리스트를 가리킨다
         }
         else if ( isHrSuccess( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ), "Reset" ) == false )
         {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyCommandList", "openUploadSlot: copy command list Reset failed" );
+            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyCommandList", "openUploadList: copy command list Reset failed" );
             return false;
         }
-        slot._bListOpen = SW_TRUE;
-        outSlotIndex    = slotIndex;
+        _pDevice->_openUploadSlotIndex = slotIndex;
         return true;
     }
 
@@ -224,9 +227,9 @@ namespace sw
         // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다. **프레임 사이에는**.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
-        // 얼로케이터 · 리스트를 먼저 연다. 펜스 구간이 바뀌었으면 여기서 오프셋도 0 으로 되감긴다.
-        uint32 slotIndex{ 0 };
-        if ( openUploadSlot( slotIndex ) == false )
+        // 펜스 구간이 바뀌었으면 여기서 오프셋이 0 으로 되감긴다.
+        const uint32 slotIndex = _pDevice->_frameRing.currentIndex();
+        if ( beginUploadPeriod( slotIndex ) == false )
             return false;
         D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
 
@@ -241,11 +244,10 @@ namespace sw
             {
                 Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap  = slot._uploadHeap;
                 RHIMemoryTracker*                      pTracker = &_pDevice->getMemoryTracker();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pTracker]()
+                _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pTracker]()
                 {
                     pTracker->recordFree( RHIMemoryKey::makeDeviceObject( oldHeap.Get() ) );
-                } ),
-                                                           _pDevice->_fenceValue );
+                } ) );
                 slot._uploadHeap   = nullptr;
                 slot._pMapped      = nullptr;
                 slot._uploadOffset = 0;
@@ -274,10 +276,14 @@ namespace sw
         return true;
     }
 
-    void D3D12RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                 const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D12RHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                       const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
+        recordBufferCopies( buffer, pBaseSource, pRegions, regionCount, _pDevice->isRecordingFrameOnThisThread() ? UploadOrder::FrameStream : UploadOrder::BeforeFrame );
+    }
+
+    void D3D12RHIResourceFactory::recordBufferCopies( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount, UploadOrder order )
+    {
         const bool bInvalidBufferRegionUpload = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
                                                 _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
         if ( bInvalidBufferRegionUpload )
@@ -286,6 +292,9 @@ namespace sw
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
         if ( pDest == nullptr )
             return;
+        // 프레임 스트림의 복사는 패스 밖이다(위 판정이 렌더 스레드의 위반을 알리고 닫았다 — 렌더 스레드가 없는 실행은 여기서 닫는다).
+        if ( order == UploadOrder::FrameStream )
+            _pDevice->_frameStreamContext->endRenderPass();
 
         const ScopedDeferredLog deferredLog;
         ScopedLock<mutex>       uploadLock{ _pDevice->_uploadSlotMutex };
@@ -319,12 +328,24 @@ namespace sw
         }
 
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
+        ID3D12GraphicsCommandList*            pList = _pDevice->_pActiveFrameList;
+        if ( order == UploadOrder::FrameStream )
+        {
+            // 프레임 스트림의 지금 자리에 기록한다 — 추적 상태는 기록 시점의 값이고 실행 순서도 기록 순서다. 업로드 리스트(제출 맨 앞)로 보내면 이 프레임이 이미 낸 전이와 어긋나고
+            // 앞서 기록한 읽기가 새 내용을 본다(Vulkan 도 렌더 스레드의 갱신은 프레임 커맨드버퍼에 기록한다).
+            _pDevice->_frameStreamState._bRecordedAny = SW_TRUE;
+            slot._bFrameCopies                        = SW_TRUE;
+        }
+        else
+        {
+            if ( openUploadList( slotIndex ) == false )
+                return;
+            pList = slot._copyCommandList.Get();
+        }
 
         D3D12RHIDevice::BufferRecord* const pBufferRecord = _pDevice->findBufferRecord( buffer );
         const bool                          bTracked      = pBufferRecord != nullptr && pBufferRecord->_bTrackedState != SW_FALSE;
         const D3D12_RESOURCE_STATES         stateBefore   = bTracked ? pBufferRecord->_state.load() : D3D12_RESOURCE_STATE_COMMON;
-
         // 끝낸 뒤 둘 읽기 상태는 버퍼 종류가 정한다(정점 · 인덱스 · 구조 — `BufferRecord::_uploadReadState`). 추적하지 않는 버퍼는 셰이더 읽기다.
         constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         const D3D12_RESOURCE_STATES     readState        = bTracked ? pBufferRecord->_uploadReadState : kShaderReadState;
@@ -359,14 +380,14 @@ namespace sw
         toShaderRead.Transition.StateAfter  = readState;
         toShaderRead.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         pList->ResourceBarrier( 1, &toShaderRead );
-        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
+        // 업로드 리스트의 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
 
         if ( bTracked )
             pBufferRecord->_state.store( readState );
     }
 
     // 길이를 나누지 않는다: 서브리소스 · 풋프린트 · 스테이징 복사 · 상태 전이의 순서가 곧 뜻이다.
-    RHITransferSubmit D3D12RHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit D3D12RHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         ID3D12Resource* pTexture                  = _pDevice->resolveTexture( texture );
         const bool      bTextureUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
@@ -412,7 +433,7 @@ namespace sw
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span.getOffsetBytes(), arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다. 큐 락 밖의 일이다.
-        uint8* const pRingBase = ring.getSpanMappedBase( span );
+        uint8* const pRingBase = ring.getSpanBuffer( span )._pMapped;
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan&                  mipSpan   = arrMip[mip];
@@ -443,7 +464,7 @@ namespace sw
                 dst.SubresourceIndex = firstSubresource + arrMip[mip]._mip;
 
                 D3D12_TEXTURE_COPY_LOCATION src{};
-                src.pResource       = ring.getSpanResource( span );
+                src.pResource       = ring.getSpanBuffer( span )._resource.Get();
                 src.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
                 src.PlacedFootprint = arrFootprint[mip];
                 pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
@@ -460,7 +481,7 @@ namespace sw
         } );
     }
 
-    RHITransferSubmit D3D12RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit D3D12RHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         ID3D12Resource* pTexture                        = _pDevice->resolveTexture( texture );
         const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
@@ -484,7 +505,7 @@ namespace sw
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
 
-        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span.getOffsetBytes();
+        uint8*       pDstBase = ring.getSpanBuffer( span )._pMapped + span.getOffsetBytes();
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
         {
@@ -507,7 +528,7 @@ namespace sw
             dst.SubresourceIndex = desc._mip + desc._arraySlice * resourceDesc.MipLevels; // D3D12CalcSubresource 와 같은 순서
 
             D3D12_TEXTURE_COPY_LOCATION src{};
-            src.pResource                          = ring.getSpanResource( span );
+            src.pResource                          = ring.getSpanBuffer( span )._resource.Get();
             src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             src.PlacedFootprint.Offset             = span.getOffsetBytes();
             src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
@@ -559,14 +580,14 @@ namespace sw
 
         // 링은 영속 매핑이다. 읽을 범위로 한 번 더 Map 해 CPU 캐시를 무효화하고(중첩 Map 은 참조를 센다) 그 주소에서 읽는다.
         D3D12RHIDevice::D3D12StagingRing& ring    = _pDevice->_readbackRing;
-        ID3D12Resource* const             pBuffer = ring.getSpanResource( record._span );
+        ID3D12Resource* const             pBuffer = ring.getSpanBuffer( record._span )._resource.Get();
         const D3D12_RANGE                 readRange{ static_cast<SIZE_T>( record._footprint.Offset ),
                                      static_cast<SIZE_T>( record._footprint.Offset + static_cast<uint64>( record._footprint.Footprint.RowPitch ) * record._rowCount ) };
         void*                             pMapped{ nullptr };
         if ( pBuffer == nullptr || isHrSuccess( pBuffer->Map( 0, &readRange, &pMapped ), "Map" ) == false || pMapped == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.TakeTextureReadbackFailedMapReadback", "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
-            RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
+            RHITextureTransferDriver::releaseTakenReadback( ring.getAllocator(), std::move( record._span ) );
             return false;
         }
         outBytes.assign( record._layout._sizeBytes, 0 );
@@ -578,7 +599,7 @@ namespace sw
         }
         D3D12_RANGE noWrite{ 0, 0 };
         pBuffer->Unmap( 0, &noWrite );
-        RHITextureTransferDriver::releaseTakenReadback( ring._allocator, std::move( record._span ) );
+        RHITextureTransferDriver::releaseTakenReadback( ring.getAllocator(), std::move( record._span ) );
         if ( record._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
@@ -592,7 +613,7 @@ namespace sw
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 복사가 아직 GPU 에서 도는 중이면 구간에 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(Vulkan 과 같은 꼬리).
-        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing._allocator, std::move( record._span ), _pDevice->_transferSerials, ticket._serial );
+        RHITextureTransferDriver::releaseDiscardedReadback( _pDevice->_readbackRing.getAllocator(), std::move( record._span ), _pDevice->_transferSerials, ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -611,7 +632,7 @@ namespace sw
         return fromDXGIFormat( pTexture->GetDesc().Format );
     }
 
-    RHITransferSubmit D3D12RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit D3D12RHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         ID3D12Resource* pTexture                    = _pDevice->resolveTexture( texture );
         const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr || _pDevice->pollDeviceLost();
@@ -674,7 +695,7 @@ namespace sw
             src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
             src.SubresourceIndex = subresource;
             D3D12_TEXTURE_COPY_LOCATION dst{};
-            dst.pResource       = ring.getSpanResource( span );
+            dst.pResource       = ring.getSpanBuffer( span )._resource.Get();
             dst.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             dst.PlacedFootprint = footprint;
             pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
@@ -697,12 +718,10 @@ namespace sw
         } );
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle D3D12RHIResourceFactory::createVertexBufferNative( const void* pData, uint32 sizeBytes )
     {
         // 정적 정점은 default 힙에 둔다 — 업로드 힙(시스템 메모리)에서 그리면 디스크리트 GPU 가 그릴 때마다 PCIe 로 읽는다(언리얼 · 유니티의 정적 버퍼도 default 힙 + 복사).
-        // 내용은 스테이징 복사로 올린다(`updateStructuredBufferRegions` — 이번 프레임 리스트보다 먼저 실행된다).
-        if ( pData == nullptr || sizeBytes == 0 )
-            return 0;
+        // 내용은 스테이징 복사로 올린다(`recordBufferCopies` — 이번 프레임 리스트보다 먼저 실행된다).
         constexpr D3D12_RESOURCE_STATES kVertexRead =
             D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         return createDefaultBufferWithData( pData, sizeBytes, kVertexRead );
@@ -710,20 +729,19 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResourceFactory::createDefaultBufferWithData( const void* pData, uint32 sizeBytes, D3D12_RESOURCE_STATES readState )
     {
-        const RHIBufferHandle handle = createGPUVertexBuffer( sizeBytes );
+        const RHIBufferHandle handle = createGPUVertexBufferNative( sizeBytes );
         if ( handle == 0 )
             return 0;
         if ( D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( handle ) )
             pRecord->_uploadReadState = readState; // 핸들을 돌려주기 전이라 락 없이 쓴다
+        // 새 버퍼의 첫 내용은 제출 맨 앞에 실행된다 — 어느 스레드 · 어느 자리에서 만들어도 이 버퍼를 쓰는 기록보다 먼저다(Vulkan `uploadDeviceLocal` 과 같다).
         const RHIBufferCopyRegion region{ 0, 0, sizeBytes };
-        updateStructuredBufferRegions( handle, pData, &region, 1 );
+        recordBufferCopies( handle, pData, &region, 1, UploadOrder::BeforeFrame );
         return handle;
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    RHIBufferHandle D3D12RHIResourceFactory::createGPUVertexBufferNative( uint32 sizeBytes )
     {
-        if ( _pDevice->_device == nullptr || sizeBytes == 0 )
-            return 0;
         // default 힙 — 복사의 도착이 된다(업로드 힙 `createVertexBuffer` 는 못 된다). 구조 버퍼처럼 상태를 추적한다(COMMON 으로 시작, 그리기 전 VertexOrConstant 로 옮긴다).
         Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
         if ( _pDevice->createResource( D3D12_HEAP_TYPE_DEFAULT, D3D12RHIResourcePreset::bufferDesc( sizeBytes ), D3D12_RESOURCE_STATE_COMMON, nullptr, L"GeometryBuffer", buffer ) == false )
@@ -737,13 +755,12 @@ namespace sw
         return handle;
     }
 
-    void D3D12RHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void D3D12RHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;
-        // 정점 · 인덱스 버퍼는 default 힙이다(정적 자원을 시스템 메모리에서 그리지 않는다) — 스테이징 복사로 쓴다. 복사는 이번 프레임 리스트보다 먼저 실행되고
+        // 정점 · 인덱스 버퍼는 default 힙이다(정적 자원을 시스템 메모리에서 그리지 않는다) — 스테이징 복사로 쓴다. 복사는 기록한 자리에서 실행되고
         // 앞 프레임이 읽는 조각이 아님은 부르는 쪽이 지킨다(IRHIResourceFactory::updateGeometryBufferRegions). 범위는 여기서 본다.
         ID3D12Resource* pDest = _pDevice->resolveBuffer( buffer );
         if ( pDest == nullptr )
@@ -757,19 +774,17 @@ namespace sw
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.UpdateGeometryBufferRegionsRegionOutsideByte", "updateGeometryBufferRegions: region [%#, +%#) is outside the %#-byte vertex or index buffer; skipped", region._dstOffset, region._sizeBytes, bufferBytes );
                 continue;
             }
-            updateStructuredBufferRegions( buffer, pBaseSource, &region, 1 );
+            updateStructuredBufferRegionsNative( buffer, pBaseSource, &region, 1 );
         }
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle D3D12RHIResourceFactory::createIndexBufferNative( const void* pData, uint32 sizeBytes )
     {
         // 정적 인덱스도 default 힙 + 스테이징 복사다(`createVertexBuffer` 와 같은 까닭).
-        if ( pData == nullptr || sizeBytes == 0 )
-            return 0;
         return createDefaultBufferWithData( pData, sizeBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER );
     }
 
-    bool D3D12RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool D3D12RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         if ( buffer == 0 )
             return false;
@@ -796,28 +811,23 @@ namespace sw
         _pDevice->_srvRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
         _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
 
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
         return true;
     }
 
-    RHIBufferHandle D3D12RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle D3D12RHIResourceFactory::createReadbackBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = _pDevice->_device == nullptr || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
-        if ( bInvalidReadbackRequest )
-            return 0;
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
-        if ( _pDevice->createResource( D3D12_HEAP_TYPE_READBACK, D3D12RHIResourcePreset::bufferDesc( totalBytes ), D3D12_RESOURCE_STATE_COPY_DEST, nullptr, L"ReadbackBuffer", readback ) == false )
+        if ( _pDevice->createResource( D3D12_HEAP_TYPE_READBACK, D3D12RHIResourcePreset::bufferDesc( elementSize * elementCount ), D3D12_RESOURCE_STATE_COPY_DEST, nullptr, L"ReadbackBuffer", readback ) == false )
             return 0;
         // 읽기 힙 리소스는 COPY_DEST 로 고정이다 — 상태 추적(`BufferRecord::_bTrackedState`)에 올리지 않는다.
         return _pDevice->storeBuffer( readback );
     }
 
-    bool D3D12RHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    bool D3D12RHIResourceFactory::readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
     {
-        ID3D12Resource* pResource   = _pDevice->resolveBuffer( readback );
-        const bool      bUnreadable = pResource == nullptr || pDestination == nullptr || sizeBytes == 0;
-        if ( bUnreadable )
+        ID3D12Resource* pResource = _pDevice->resolveBuffer( readback );
+        if ( pResource == nullptr )
             return false;
         // 읽기 힙이 아닌 버퍼(업로드 힙 정점 버퍼 등)는 매핑되더라도 읽기 버퍼가 아니다. 네 백엔드가 같이 거절한다.
         D3D12_HEAP_PROPERTIES heapProperties{};
@@ -844,27 +854,24 @@ namespace sw
         return true;
     }
 
-    void D3D12RHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    void D3D12RHIResourceFactory::setTextureDebugNameNative( RHITextureHandle texture, const utf8* pName )
     {
         ID3D12Resource* const pResource = _pDevice->resolveTexture( texture );
-        if ( pResource == nullptr || pName == nullptr )
+        if ( pResource == nullptr )
             return;
-        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // PIX · DRED 페이지 폴트 출력이 이 이름을 보인다(디버그 빌드의 `SW Texture <핸들>` 이름을 첨부 이름으로 덮는다).
         const wstring wideName = StringUtil::utf8ToUTF16( pName );
         D3D12RHIDevice::setResourceName( pResource, wideName.c_str() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰 · 초기 데이터 업로드의 순서가 곧 의미라 나누지 않는다.
-    RHITextureHandle D3D12RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    RHITextureHandle D3D12RHIResourceFactory::createTexture2DNative( const RHITextureDesc& desc )
     {
         return createTextureResource( desc, nullptr, 0 );
     }
 
-    RHITextureAllocationInfo D3D12RHIResourceFactory::getTextureAllocationInfo( const RHITextureDesc& desc )
+    RHITextureAllocationInfo D3D12RHIResourceFactory::getTextureAllocationInfoNative( const RHITextureDesc& desc )
     {
-        if ( isRHITextureShapeValid( desc ) == false )
-            return {};
         const D3D12_RESOURCE_DESC            resourceDesc = D3D12TextureInternal::makeResourceDesc( desc );
         const D3D12_RESOURCE_ALLOCATION_INFO info         = _pDevice->_device->GetResourceAllocationInfo( 0, 1, &resourceDesc );
         if ( info.SizeInBytes == UINT64_MAX )
@@ -872,7 +879,7 @@ namespace sw
         return RHITextureAllocationInfo{ info.SizeInBytes, info.Alignment };
     }
 
-    RHITransientHeapHandle D3D12RHIResourceFactory::createTransientHeap( uint64 sizeBytes )
+    RHITransientHeapHandle D3D12RHIResourceFactory::createTransientHeapNative( uint64 sizeBytes )
     {
         if ( sizeBytes == 0 || _pDevice->_allocator == nullptr )
             return 0;
@@ -898,7 +905,7 @@ namespace sw
         return _mapTransientHeap.erase( heap ) != 0;
     }
 
-    RHITextureHandle D3D12RHIResourceFactory::createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
+    RHITextureHandle D3D12RHIResourceFactory::createPlacedTexture2DNative( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
     {
         const auto it = _mapTransientHeap.find( heap );
         if ( it == _mapTransientHeap.end() )
@@ -911,18 +918,6 @@ namespace sw
 
     RHITextureHandle D3D12RHIResourceFactory::createTextureResource( const RHITextureDesc& desc, D3D12MA::Allocation* pHeap, uint64 offsetBytes )
     {
-        if ( isRHITextureShapeValid( desc ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                             desc._arraySize, desc._width, desc._height );
-            return 0;
-        }
-        // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
-        if ( RHIFormatUtil::isBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D12.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
-            return 0;
-        }
         const bool                bDepth       = desc._bIsDepthStencil != SW_FALSE;
         const DXGI_FORMAT         dsvFmt       = toDXGIFormat( constant::render::kDepthStencilFormat );
         const DXGI_FORMAT         colorFmt     = toDXGIFormat( desc._format );
@@ -959,24 +954,24 @@ namespace sw
             return 0;
         }
 
-        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, desc );
+        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
-        record._format     = bDepth ? dsvFmt : colorFmt;
-        record._width      = desc._width;
-        record._height     = desc._height;
-        record._arraySize  = desc._arraySize;
-        record._dimension  = desc._dimension;
-        record._bHasRTV    = SW_FALSE;
-        record._bHasDSV    = SW_FALSE;
-        record._reserved   = 0;
-        const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
-
-        _pDevice->requireRegistryMutableNow( "createTexture2D" );
+        record._format           = bDepth ? dsvFmt : colorFmt;
+        record._width            = desc._width;
+        record._height           = desc._height;
+        record._arraySize        = desc._arraySize;
+        record._dimension        = desc._dimension;
+        record._bHasRTV          = SW_FALSE;
+        record._bHasDSV          = SW_FALSE;
+        record._bShaderResource  = desc._bIsShaderResource;
+        record._bUnorderedAccess = desc._bIsUnorderedAccess;
+        record._reserved         = 0;
+        const bool bSliced       = desc._dimension != RHITextureDimension::Texture2D;
 
         // RTV · DSV 칸 발급기만 잠근다. 오프스크린 레코드는 핸들 테이블 칸에 들어가고, 핸들을 돌려주기 전이라 기록 워커가 그 칸을 아직 모른다.
         // 칸은 쪽 목록이라 상한이 없다. 쪽을 만들지 못하면(힙 메모리 부족) 뷰 없는 텍스처를 유효 핸들로 내보내지 않고 생성 실패다(R-11 — 예전엔 128 · 64 칸을 넘으면 로그 뒤 뷰 없이 나갔다).
-        const uint32 mipLevels = desc._mipLevels > 0 ? desc._mipLevels : 1u;
+        const uint32 mipLevels = desc._mipLevels;
         record._mipLevels      = mipLevels;
         bool bViewsCreated     = pNative != nullptr;
         {
@@ -1070,7 +1065,8 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenViewPageFailed", "Could not create the RTV/DSV views of a %#x%# texture (%# slices) - texture creation fails", desc._width, desc._height,
                              desc._arraySize );
-            (void)destroyTextureNative( handle ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
+            RHIReleasedResource released;                   // GPU 가 본 적 없는 자원이라 여기서 놓인다
+            (void)destroyTextureNative( handle, released ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
             return 0;
         }
 
@@ -1083,11 +1079,10 @@ namespace sw
         return handle;
     }
 
-    bool D3D12RHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         if ( texture == 0 )
             return false;
-        _pDevice->requireRegistryMutableNow( "destroyTexture" );
         D3D12RHIDevice::TextureRecord taken{};
         if ( _pDevice->_gpuTextures.take( texture, taken ) == false )
             return false;
@@ -1117,15 +1112,9 @@ namespace sw
         }
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 같은 핸들이 다시 쓰이지 않도록 표의 칸도 지운다.
-        const uint64 lastTransferSerial = _pDevice->findTextureTransferSerial( texture );
+        outReleased._transferSerial = _pDevice->findTextureTransferSerial( texture );
         _pDevice->eraseTextureTransfer( texture );
-        const bool bUnfinishedTransfer = lastTransferSerial != 0 && _pDevice->_transferSerials.isComplete( lastTransferSerial ) == false;
-        if ( bUnfinishedTransfer )
-        {
-            _pDevice->releaseTextureAfterTransfer( std::move( owned ), texture, lastTransferSerial );
-            return true;
-        }
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
         return true;
     }
 
@@ -1146,62 +1135,64 @@ namespace sw
         // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). SRV/CBV 와 UAV 가 등록표 둘에 나뉘어도 힙 인덱스 공간은 하나라 발급기도 하나다.
         uint32 index{ 0 };
         if ( _pDevice->_bindlessIndexAllocator.tryAllocate( index ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.ShaderVisibleDescriptorHeap", "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
             return kInvalidDescriptorIndex;
-        }
         return static_cast<RHIDescriptorIndex>( index );
     }
 
-    bool D3D12RHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    uint64 D3D12RHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
     {
-        return _pDevice->resolveTexture( texture ) != nullptr && _pDevice->isTextureFirstUploadComplete( texture );
+        return _pDevice->computeAllocationBytes( _pDevice->resolveBuffer( buffer ) );
     }
 
-    RHITextureSRVIndex D3D12RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    uint64 D3D12RHIResourceFactory::findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& ) const
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
-        if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
-            return kInvalidDescriptorIndex;
+        return _pDevice->computeAllocationBytes( _pDevice->resolveTexture( texture ) );
+    }
 
-        auto* pResource = _pDevice->resolveTexture( texture );
+    bool D3D12RHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
+    {
+        const D3D12RHIDevice::TextureRecord* const pRecord = _pDevice->findTextureRecord( texture );
+        if ( pRecord == nullptr || pRecord->_bOffscreen == SW_FALSE )
+            return false;
+        outInfo._dimension            = pRecord->_offscreen._dimension;
+        outInfo._bShaderResource      = pRecord->_offscreen._bShaderResource;
+        outInfo._bUnorderedAccess     = pRecord->_offscreen._bUnorderedAccess;
+        outInfo._bFirstUploadComplete = _pDevice->isTextureFirstUploadComplete( texture ) ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
+    uint32 D3D12RHIResourceFactory::findConstantPageBytesNative( RHIBufferHandle buffer )
+    {
+        // 루트 CBV 는 링 칸 주소 + 구간 오프셋이다(`resolveBufferAddress` 가 프레임 칸을 더한다) — 링 페이지만 구간으로 나눈다.
+        const D3D12RHIDevice::BufferRecord* const pRecord = _pDevice->findBufferRecord( buffer );
+        return pRecord != nullptr ? static_cast<uint32>( pRecord->_constantAlignedSize ) : 0u;
+    }
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC D3D12RHIResourceFactory::makeBindlessTextureDesc( ID3D12Resource* pResource )
+    {
+        const D3D12_RESOURCE_DESC       resourceDesc = pResource->GetDesc();
+        const bool                      bDepth       = resourceDesc.Format == DXGI_FORMAT_R24G8_TYPELESS || resourceDesc.Format == DXGI_FORMAT_D24_UNORM_S8_UINT;
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Format                  = bDepth ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : resourceDesc.Format;
+        srvDesc.Texture2D.MipLevels     = resourceDesc.MipLevels;
+        return srvDesc;
+    }
+
+    RHITextureSRVIndex D3D12RHIResourceFactory::registerBindlessTextureNative( RHITextureHandle texture )
+    {
+        ID3D12Resource* const pResource = _pDevice->_cbvHeap != nullptr ? _pDevice->resolveTexture( texture ) : nullptr;
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
-        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        if ( _pDevice->isTextureReadyToRegister( texture ) == false )
-            return kInvalidDescriptorIndex;
-        // 셰이더의 bindless 텍스처 배열은 Texture2D[] 다 — 배열 · 큐브 뷰를 넣으면 셰이더가 읽지 못한다(RHITextureDimension 참고).
-        {
-            const D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( texture );
-            if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
-            {
-                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
-                                 texture.getPacked(), static_cast<uint32>( pTextureRecord->_offscreen._dimension ) );
-                return kInvalidDescriptorIndex;
-            }
-        }
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-        srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.Texture2D.MostDetailedMip     = 0;
-        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
-        srvDesc.Texture2D.PlaneSlice          = 0;
-        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-        const DXGI_FORMAT resourceFormat = pResource->GetDesc().Format;
-        if ( resourceFormat == DXGI_FORMAT_R24G8_TYPELESS || resourceFormat == DXGI_FORMAT_D24_UNORM_S8_UINT )
-            srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-        else
-            srvDesc.Format = resourceFormat;
-
-        const BindlessHandleSet handle = bindlessHandlesAt( index );
-
+        const D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = makeBindlessTextureDesc( pResource );
+        const BindlessHandleSet               handle  = bindlessHandlesAt( index );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
@@ -1209,13 +1200,9 @@ namespace sw
         return RHITextureSRVIndex{ index };
     }
 
-    RHIBufferSRVIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex D3D12RHIResourceFactory::registerBindlessBufferSRVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
-        if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
-            return kInvalidDescriptorIndex;
-
-        auto* pResource = _pDevice->resolveBuffer( buffer );
+        ID3D12Resource* const pResource = _pDevice->_cbvHeap != nullptr ? _pDevice->resolveBuffer( buffer ) : nullptr;
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -1266,27 +1253,13 @@ namespace sw
         return RHIBufferSRVIndex{ index };
     }
 
-    RHIBufferSRVIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex D3D12RHIResourceFactory::registerBindlessBufferSRVNative( const RHIBufferSlice& slice )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
-        if ( slice._buffer == 0 || _pDevice->_cbvHeap == nullptr )
-            return kInvalidDescriptorIndex;
-        auto* pResource = _pDevice->resolveBuffer( slice._buffer );
+        ID3D12Resource* const pResource = _pDevice->_cbvHeap != nullptr ? _pDevice->resolveBuffer( slice._buffer ) : nullptr;
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        // 루트 CBV 는 링 칸 주소 + 구간 오프셋이다(`resolveBufferAddress` 가 프레임 칸을 더한다). 링 페이지가 아니거나 칸을 넘는 구간은 부르는 쪽의 결함이다.
-        const D3D12RHIDevice::BufferRecord* const pRecord           = _pDevice->findBufferRecord( slice._buffer );
-        const bool                                bSliceOutsidePage = pRecord == nullptr || static_cast<uint64>( slice._offset ) + slice._size > pRecord->_constantAlignedSize;
-        const bool                                bSliceMisaligned  = slice._offset % D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT != 0 || slice._size == 0;
-        if ( bSliceOutsidePage || bSliceMisaligned )
-        {
-            lock.unlock(); // 잠금은 잎 잠금이다 — 로그는 놓은 뒤에 남긴다
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not a 256-aligned slice of a constant buffer page",
-                             slice._offset, slice._size );
-            return kInvalidDescriptorIndex;
-        }
         const RHIDescriptorIndex index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
@@ -1294,20 +1267,15 @@ namespace sw
         return RHIBufferSRVIndex{ index };
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
+    bool D3D12RHIResourceFactory::unregisterBindlessResourceNative( RHIBufferSRVIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
-        releaseBindlessSlot( index );
+        return releaseBindlessRecord( BindlessRegistry::ShaderResource, index );
     }
 
-    bool D3D12RHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "rebindBindlessTexture" );
-        ID3D12Resource* const pResource = texture != 0 ? _pDevice->resolveTexture( texture ) : nullptr;
-        if ( pResource == nullptr || _pDevice->isTextureReadyToRegister( texture ) == false )
-            return false;
-        const D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( texture );
-        if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
+        ID3D12Resource* const pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr )
             return false;
 
         UniqueLock<shared_mutex>                      lock{ _pDevice->_bindlessMutex };
@@ -1315,14 +1283,7 @@ namespace sw
         if ( pPrevious == nullptr || pPrevious->_texture == 0 )
             return false; // 산 텍스처 번호가 아니다(버퍼 번호를 텍스처로 다시 묶지 않는다)
 
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-        srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
-        const DXGI_FORMAT resourceFormat      = pResource->GetDesc().Format;
-        srvDesc.Format                        = ( resourceFormat == DXGI_FORMAT_R24G8_TYPELESS || resourceFormat == DXGI_FORMAT_D24_UNORM_S8_UINT ) ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : resourceFormat;
-        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
+        const D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = makeBindlessTextureDesc( pResource );
         // 오프라인 뷰는 지금 덮는다 — 슬롯 테이블은 기록 때 복사해 가고 병렬 기록 중에는 여기 오지 않는다. 셰이더 가시 사본은 진행 중 프레임이 읽으므로
         // 덮지 않고 링 슬롯마다 그 차례에 쓴다(`_bindlessRingMirror` → `flushBindlessRingSlot`). 늦어도 다음 프레임부터 새 텍스처다.
         const BindlessHandleSet handle = bindlessHandlesAt( index );
@@ -1336,33 +1297,23 @@ namespace sw
         return true;
     }
 
-    RHITextureSRVIndex D3D12RHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex D3D12RHIResourceFactory::reserveBindlessTextureIndexNative()
     {
         // 힙 번호 발급기만 건드린다 — 뷰 · 읽기 칸은 그대로라 기록 경로가 읽는 상태를 바꾸지 않는다(어느 스레드든).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ acquireBindlessIndex( lock ) };
     }
 
-    bool D3D12RHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "activateReservedBindlessTexture" );
-        ID3D12Resource* const pResource = texture != 0 && _pDevice->_cbvHeap != nullptr ? _pDevice->resolveTexture( texture ) : nullptr;
-        if ( pResource == nullptr || _pDevice->isTextureReadyToRegister( texture ) == false )
-            return false;
-        const D3D12RHIDevice::TextureRecord* const pTextureRecord = _pDevice->findTextureRecord( texture );
-        if ( pTextureRecord != nullptr && pTextureRecord->_bOffscreen != SW_FALSE && pTextureRecord->_offscreen._dimension != RHITextureDimension::Texture2D )
+        ID3D12Resource* const pResource = _pDevice->_cbvHeap != nullptr ? _pDevice->resolveTexture( texture ) : nullptr;
+        if ( pResource == nullptr )
             return false;
 
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_srvRegistry.isLive( index ) || _pDevice->_uavRegistry.isLive( index ) )
             return false;
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-        srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
-        const DXGI_FORMAT resourceFormat      = pResource->GetDesc().Format;
-        srvDesc.Format                        = ( resourceFormat == DXGI_FORMAT_R24G8_TYPELESS || resourceFormat == DXGI_FORMAT_D24_UNORM_S8_UINT ) ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : resourceFormat;
-        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+        const D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = makeBindlessTextureDesc( pResource );
         // 새 번호다(예약은 펜스 뒤에야 다시 나간 번호를 준다) — 등록과 같이 힙 · 오프라인 뷰를 쓰고 모든 링 사본에 복사한다(`writeBindlessRecord`).
         const BindlessHandleSet handle = bindlessHandlesAt( index );
         _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
@@ -1371,29 +1322,22 @@ namespace sw
         return true;
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
+    bool D3D12RHIResourceFactory::unregisterBindlessTextureNative( RHITextureSRVIndex index )
     {
         // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
-        releaseBindlessSlot( index );
+        return releaseBindlessRecord( BindlessRegistry::ShaderResource, index );
     }
 
-    void D3D12RHIResourceFactory::releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index )
+    bool D3D12RHIResourceFactory::releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index )
     {
-        const bool bUAV = ( registry == BindlessRegistry::UnorderedAccess );
-
-        const ScopedDeferredLog                                      deferredLog;
         UniqueLock<shared_mutex>                                     lock{ _pDevice->_bindlessMutex };
-        RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target = bUAV ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
+        RHIBindlessRegistry<D3D12RHIDevice::BindlessResourceRecord>& target = registry == BindlessRegistry::UnorderedAccess ? _pDevice->_uavRegistry : _pDevice->_srvRegistry;
         // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다 — 등록표가 거절한다.
         if ( target.release( index, RHIBindlessReuse::AfterFence ) == false )
-        {
-            SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.IndexAlreadyFreeIgnoring", "%# index %# is already free; ignoring the duplicate release.",
-                             bUAV ? "Bindless UAV" : "Bindless", index.getValue() );
-            return;
-        }
+            return false;
         _pDevice->retireBindlessReadSlot( index );
         deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 발급기도 하나다
+        return true;
     }
 
     void D3D12RHIResourceFactory::writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource,
@@ -1414,31 +1358,21 @@ namespace sw
         _pDevice->copyBindlessDescriptorToAllRingSlots( index );
     }
 
-    void D3D12RHIResourceFactory::releaseBindlessSlot( RHIDescriptorIndex index )
-    {
-        releaseBindlessRecord( BindlessRegistry::ShaderResource, index );
-    }
-
     void D3D12RHIResourceFactory::deferFreeBindlessIndex( RHIDescriptorIndex index )
     {
         // 인덱스는 GPU 가 이 프레임까지의 커맨드를 다 읽은 뒤에야 재사용한다(언리얼의 지연 디스크립터 해제와 같다).
         // 즉시 프리리스트에 넣으면 같은 프레임에 등록된 새 리소스가 그 자리를 받아, 아직 실행 중인 리스트가 새 리소스를 읽는다.
         D3D12RHIDevice* pDevice = _pDevice;
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             pDevice->_bindlessIndexAllocator.free( index );
-        } ),
-                                                   _pDevice->_fenceValue );
+        } ) );
     }
 
-    RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
-        if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
-            return kInvalidDescriptorIndex;
-
-        ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
+        ID3D12Resource* pResource = _pDevice->_cbvHeap != nullptr ? _pDevice->resolveBuffer( buffer ) : nullptr;
         if ( pResource == nullptr || pResource->GetDesc().Width < 4 )
             return kInvalidDescriptorIndex;
 
@@ -1478,13 +1412,10 @@ namespace sw
         return RHIUnorderedAccessIndex{ index };
     }
 
-    RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessTextureUAVNative( RHITextureHandle texture )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
-        if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
-            return kInvalidDescriptorIndex;
-        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
-        if ( pResource == nullptr || ( pResource->GetDesc().Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
+        ID3D12Resource* pResource = _pDevice->_cbvHeap != nullptr ? _pDevice->resolveTexture( texture ) : nullptr;
+        if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
 
         // 텍스처 UAV 도 같은 힙 인덱스 공간이다. 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
@@ -1507,10 +1438,9 @@ namespace sw
         return RHIUnorderedAccessIndex{ index };
     }
 
-    void D3D12RHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
+    bool D3D12RHIResourceFactory::unregisterBindlessUAVNative( RHIUnorderedAccessIndex index )
     {
-        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
-        releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
+        return releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
     }
 
     RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
@@ -1658,16 +1588,14 @@ namespace sw
         return _pDevice->_pipelineStates.insert( { pso, RHIVertexLayout{} } ); // 컴퓨트는 정점 입력이 없다
     }
 
-    bool D3D12RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool D3D12RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         if ( pso == 0 )
             return false;
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return false;
-        if ( _pDevice->_frameStreamState._activeGraphicsPSO == pso )
-            _pDevice->_frameStreamState._activeGraphicsPSO = 0;
-        _pDevice->_releaseQueue.enqueueGPUKeepAlive( record._pso, _pDevice->_fenceValue );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( record._pso ) );
         return true;
     }
 } // namespace sw

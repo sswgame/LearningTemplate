@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -18,20 +19,21 @@ namespace sw
     {
     }
 
-    void IRHICommandContext::trackComputeBinding( RHIDescriptorIndex index, bool bUAV, uint32 slot )
+    void IRHICommandContext::resetBindings()
     {
-        if ( slot < kTrackedComputeSlotCount )
-            _arrTrackedCompute[bUAV ? 1 : 0][slot] = index;
+        _bindings         = RHIRecordingBindings{};
+        _computeGroupSize = RHIThreadGroupSize{};
     }
 
-    void IRHICommandContext::clearTrackedComputeBindings()
+    void IRHICommandContext::markBindingsDirty()
     {
-        for ( RHIDescriptorIndex( &arrSlot )[kTrackedComputeSlotCount] : _arrTrackedCompute )
+        for ( RHIShaderSlots& slots : _bindings._arrSlots )
         {
-            for ( RHIDescriptorIndex& index : arrSlot )
-            {
-                index = kInvalidDescriptorIndex;
-            }
+            slots.markAllDirty();
+        }
+        for ( RHIRootConstants& constants : _bindings._arrRootConstants )
+        {
+            constants.markAllDirty();
         }
     }
 
@@ -40,22 +42,153 @@ namespace sw
         if constexpr ( build::kShipping == false )
         {
             RHIComputeBindingLog& log = getContextDevice().getComputeBindingLog();
-            for ( uint32 space = 0; log.isEnabled() && _computePSO != 0 && space < 2; ++space )
+            if ( log.isEnabled() == false || _bindings._computePSO == 0 )
+                return;
+            const RHIShaderSlots& slots = _bindings.getSlots( RHIBindPoint::Compute );
+            for ( const RHIShaderSlotKind kind : { RHIShaderSlotKind::ShaderResource, RHIShaderSlotKind::UnorderedAccess } )
             {
-                for ( uint32 slot = 0; slot < kTrackedComputeSlotCount; ++slot )
+                for ( uint32 slot = 0; slot < RHIShaderSlots::kShaderResourceCount; ++slot ) // 걸린 칸만 있다 — u 는 t 보다 좁다
                 {
-                    if ( _arrTrackedCompute[space][slot] != kInvalidDescriptorIndex )
-                        log.record( _arrTrackedCompute[space][slot], space == 1, _computePSO, slot );
+                    if ( slots.isBound( kind, slot ) )
+                        log.record( slots.get( kind, slot ), kind == RHIShaderSlotKind::UnorderedAccess, _bindings._computePSO, slot );
                 }
             }
-            clearTrackedComputeBindings();
         }
+    }
+
+    // ------------------------------------------------------------------------------
+    // 바인딩 상태
+    // ------------------------------------------------------------------------------
+    void IRHICommandContext::bindSlot( RHIBindPoint point, RHIShaderSlotKind kind, uint32 firstSlot, uint32 endSlot, RHIDescriptorIndex index, uint32 slot, const utf8* pOperation )
+    {
+        if ( slot < firstSlot || slot >= endSlot )
+        {
+            getContextDevice().getDrawDiagnostics().reportShaderSlotOutOfRange( pOperation, slot, firstSlot, endSlot );
+            return;
+        }
+        _bindings.getSlots( point ).bind( kind, slot, index );
+    }
+
+    void IRHICommandContext::bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ConstantBuffer, 0, RHIShaderSlots::kConstantBufferCount, constantBufferIndex, slot, "bindConstantBuffer" );
+    }
+
+    void IRHICommandContext::bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ShaderResource, 0, RHIShaderSlots::kBufferResourceCount, index, slot, "bindStructuredBuffer" );
+    }
+
+    void IRHICommandContext::bindShaderResource( RHITextureSRVIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ShaderResource, RHIShaderSlots::kBufferResourceCount, RHIShaderSlots::kShaderResourceCount, index, slot, "bindShaderResource" );
+    }
+
+    uint32 IRHICommandContext::bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot )
+    {
+        if ( getContextDevice().supportsNativeBindlessSampling() )
+            return static_cast<uint32>( srv );
+        bindShaderResource( srv, emulatedSlot );
+        return 0u;
+    }
+
+    uint32 IRHICommandContext::bindMaterialTexture( RHITextureSRVIndex srv, uint32 ordinal )
+    {
+        const IRHIDevice& device = getContextDevice();
+        if ( device.supportsNativeBindlessSampling() == false )
+            bindShaderResource( srv, shaderslot::kMaterialTexture0 + ordinal );
+        return device.getMaterialTextureIndex( srv, ordinal );
+    }
+
+    void IRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::UnorderedAccess, 0, shaderslot::kComputeUAVSlotCount, index, slot, "bindGraphicsUAV" );
+    }
+
+    void IRHICommandContext::bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Compute, RHIShaderSlotKind::ConstantBuffer, 0, RHIShaderSlots::kConstantBufferCount, constantBufferIndex, slot, "bindComputeConstantBuffer" );
+    }
+
+    void IRHICommandContext::bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Compute, RHIShaderSlotKind::ShaderResource, 0, RHIShaderSlots::kBufferResourceCount, index, slot, "bindComputeShaderResource" );
+    }
+
+    void IRHICommandContext::bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot )
+    {
+        bindSlot( RHIBindPoint::Compute, RHIShaderSlotKind::UnorderedAccess, 0, RHIShaderSlots::kUnorderedAccessCount, index, slot, "bindComputeUAV" );
+    }
+
+    void IRHICommandContext::writeRootConstants( RHIBindPoint point, uint32 count, const void* pData, uint32 firstDword, const utf8* pOperation )
+    {
+        if ( _bindings.getRootConstants( point ).write( count, pData, firstDword ) == RHIRootConstantWrite::Overflow )
+            getContextDevice().getDrawDiagnostics().reportRootConstantsOverflow( pOperation, firstDword, count, shaderslot::kRootConstantDwords );
+    }
+
+    void IRHICommandContext::setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        writeRootConstants( RHIBindPoint::Compute, num32BitValues, pData, destOffsetIn32BitValues, "setComputeRootConstants" );
+    }
+
+    void IRHICommandContext::setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
+    {
+        writeRootConstants( RHIBindPoint::Graphics, num32BitValues, pData, destOffsetIn32BitValues, "setGraphicsRootConstants" );
+    }
+
+    void IRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
+    {
+        // 등록되지 않은 핸들도 적는다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 백엔드가 멈춘다.
+        _bindings.setGraphicsPipeline( pso );
+    }
+
+    void IRHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )
+    {
+        _bindings._geometry.setVertexBuffer( slot, buffer, stride, offset );
+    }
+
+    void IRHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )
+    {
+        _bindings._geometry.setIndexBuffer( buffer, indexStride, offset );
+    }
+
+    void IRHICommandContext::setViewport( const RHIViewport& viewport )
+    {
+        if ( _bRenderPassOpen == false )
+            return; // 패스를 열면 패스 전체로 돌아간다 — 패스 밖에서 건 값은 쓰이지 않는다
+        setViewportNative( viewport );
+        // 가위 = 뷰포트(왼쪽 위가 타깃 밖이면 그만큼 줄인다).
+        const uint32 left   = static_cast<uint32>( MathUtil::max( viewport._x, 0.0f ) );
+        const uint32 top    = static_cast<uint32>( MathUtil::max( viewport._y, 0.0f ) );
+        const uint32 right  = static_cast<uint32>( MathUtil::max( viewport._x + viewport._width, 0.0f ) );
+        const uint32 bottom = static_cast<uint32>( MathUtil::max( viewport._y + viewport._height, 0.0f ) );
+        applyScissorRect( RHIScissorRect{ left, top, MathUtil::max( right, left ) - left, MathUtil::max( bottom, top ) - top } );
+    }
+
+    void IRHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        if ( _bRenderPassOpen )
+            applyScissorRect( rect );
+    }
+
+    void IRHICommandContext::applyScissorRect( const RHIScissorRect& rect )
+    {
+        // 타깃 밖의 가위는 API 마다 다르다(WebGPU 는 검증 오류) — 여기서 패스 안으로 자른다.
+        const uint32 x = MathUtil::min( rect._x, _passExtent._width );
+        const uint32 y = MathUtil::min( rect._y, _passExtent._height );
+        setScissorRectNative( RHIScissorRect{ x, y, MathUtil::min( rect._width, _passExtent._width - x ), MathUtil::min( rect._height, _passExtent._height - y ) } );
+    }
+
+    RHIRenderPassExtent IRHICommandContext::computePassExtent( const RHIRenderPassInfo& beginInfo, const RHIRenderPassExtent& targetExtent )
+    {
+        return RHIRenderPassExtent{ beginInfo._width > 0 ? MathUtil::min( beginInfo._width, targetExtent._width ) : targetExtent._width,
+                                    beginInfo._height > 0 ? MathUtil::min( beginInfo._height, targetExtent._height ) : targetExtent._height };
     }
 
     namespace
     {
         /** @brief 이 패스가 거는 컬러 타깃 중 핸들 0 이 있으면 true 입니다. 컬러 수 0 에 컬러를 걸면 0 번 하나를 건다(백엔드 다섯이 같은 규칙). */
-        bool hasNullColorTarget( const RHIRenderPassBeginInfo& beginInfo )
+        bool hasNullColorTarget( const RHIRenderPassInfo& beginInfo )
         {
             if ( beginInfo._bBindColor == SW_FALSE )
                 return false;
@@ -69,8 +202,9 @@ namespace sw
         }
     } // namespace
 
-    void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
+    void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& passInfo )
     {
+        const RHIRenderPassInfo& beginInfo = passInfo.getInfo();
         endRenderPassBefore( "beginRenderPass" ); // 패스는 겹치지 않는다 — 닫지 않고 새로 열면 알린다
         // 컬러 타깃 0 은 무효다(백버퍼는 `kRHIBackBufferTexture`) — 열지 않고 알린다. 이 패스의 드로우는 `isDrawAllowed` 가 알리고 버린다.
         if ( hasNullColorTarget( beginInfo ) )
@@ -80,15 +214,39 @@ namespace sw
             _bRenderPassNoBackBuffer = SW_FALSE;
             return;
         }
-        const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo );
+        if ( beginInfo._bBindColor != SW_FALSE )
+        {
+            const uint32 colorCount = beginInfo._colorTargetCount > 0 ? MathUtil::min( beginInfo._colorTargetCount, kMaxColorAttachments ) : 1u;
+            for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+            {
+                recordTextureUse( beginInfo._arrColorTarget[colorIndex] );
+            }
+        }
+        recordTextureUse( beginInfo._depthTarget );
+        _bindings.resetGraphics();
+        RHIRenderPassExtent            targetExtent{};
+        const RHIRenderPassBeginResult result = beginRenderPassNative( beginInfo, targetExtent );
         _bRenderPassOpen                      = result == RHIRenderPassBeginResult::Begun;
         _bRenderPassNoBackBuffer              = result == RHIRenderPassBeginResult::NoBackBuffer;
+        if ( _bRenderPassOpen == false )
+            return;
+        // 앞 패스의 뷰포트 · 가위가 새지 않게 패스 전체로 연다.
+        _passExtent = computePassExtent( beginInfo, targetExtent );
+        RHIViewport viewport{};
+        viewport._width    = static_cast<float32>( _passExtent._width );
+        viewport._height   = static_cast<float32>( _passExtent._height );
+        viewport._minDepth = 0.0f;
+        viewport._maxDepth = 1.0f;
+        setViewport( viewport );
     }
 
     void IRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        if ( buffer != 0 && getContextDevice().getConstantBufferWriteLog().recordWrite( buffer ) == false )
-            getContextDevice().getDrawDiagnostics().reportConstantBufferRewrite( buffer );
+        if constexpr ( build::kShipping == false )
+        {
+            if ( buffer != 0 && getContextDevice().getConstantBufferWriteLog().recordWrite( buffer, 0 ) == false )
+                getContextDevice().getDrawDiagnostics().reportConstantBufferRewrite( buffer, 0 );
+        }
         updateConstantBufferNative( buffer, pData, size );
     }
 
@@ -151,8 +309,9 @@ namespace sw
     void IRHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
         endRenderPassBefore( "setComputePipelineState" );
-        setComputePipelineStateNative( pso );
-        _computePSO       = pso;
+        if ( pso == _bindings._computePSO )
+            return;
+        _bindings.setComputePipeline( pso );
         _computeGroupSize = pso != 0 ? getContextDevice().getResourceFactory()->getThreadGroupSize( pso ) : RHIThreadGroupSize{};
     }
 
@@ -195,6 +354,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "prepareTextureForShaderRead" ) == false )
             return;
         endRenderPassBefore( "prepareTextureForShaderRead" );
+        recordTextureUse( texture );
         prepareTextureForShaderReadNative( texture );
     }
 
@@ -203,6 +363,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "prepareTextureForRenderTarget" ) == false )
             return;
         endRenderPassBefore( "prepareTextureForRenderTarget" );
+        recordTextureUse( texture );
         prepareTextureForRenderTargetNative( texture );
     }
 
@@ -211,6 +372,7 @@ namespace sw
         if ( isTextureHandleValid( texture, "prepareTextureForUnorderedAccess" ) == false )
             return;
         endRenderPassBefore( "prepareTextureForUnorderedAccess" );
+        recordTextureUse( texture );
         prepareTextureForUnorderedAccessNative( texture );
     }
 
@@ -219,6 +381,10 @@ namespace sw
         if ( pTransition == nullptr || count == 0 )
             return;
         endRenderPassBefore( "transitionTextures" );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            recordTextureUse( pTransition[index]._texture );
+        }
         // 핸들 0 원소는 알리고 그 원소만 뺀다 — 앞뒤의 정상 원소는 원래 차례대로 묶음째 낸다(복사 없이 0 사이 구간마다).
         uint32 runBegin = 0;
         for ( uint32 index = 0; index < count; ++index )
@@ -258,12 +424,27 @@ namespace sw
         if ( isTextureHandleValid( src, "blitTexture(src)" ) == false || isTextureHandleValid( dst, "blitTexture(dst)" ) == false )
             return;
         endRenderPassBefore( "blitTexture" );
+        recordTextureUse( src );
+        recordTextureUse( dst );
         blitTextureNative( src, dst );
+    }
+
+    void IRHICommandContext::recordBufferUse( RHIBufferHandle buffer )
+    {
+        if constexpr ( build::kShipping == false )
+            getContextDevice().getBufferUploadLog().recordUse( buffer );
+    }
+
+    void IRHICommandContext::recordTextureUse( RHITextureHandle texture )
+    {
+        if constexpr ( build::kShipping == false )
+            getContextDevice().getTextureUploadLog().recordUse( texture );
     }
 
     void IRHICommandContext::transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )
     {
         endRenderPassBefore( "transitionBuffer" );
+        recordBufferUse( buffer );
         transitionBufferNative( buffer, newState );
     }
 
@@ -272,6 +453,10 @@ namespace sw
         if ( pTransition == nullptr || count == 0 )
             return;
         endRenderPassBefore( "transitionBuffers" );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            recordBufferUse( pTransition[index]._buffer );
+        }
         transitionBuffersNative( pTransition, count );
     }
 
@@ -295,6 +480,7 @@ namespace sw
             return;
         }
         endRenderPassBefore( "copyBufferToReadback" );
+        recordBufferUse( source );
         copyBufferToReadbackNative( source, readback, sizeBytes );
     }
 
@@ -318,6 +504,8 @@ namespace sw
             return;
         }
         endRenderPassBefore( "copyBufferRegion" );
+        recordBufferUse( destination );
+        recordBufferUse( source );
         copyBufferRegionNative( destination, destinationOffset, source, sourceOffset, sizeBytes );
     }
 
@@ -327,11 +515,21 @@ namespace sw
         uavBarrierNative( buffer );
     }
 
+    void IRHICommandContext::beginTextureAlias( RHITextureHandle texture )
+    {
+        if ( isTextureHandleValid( texture, "beginTextureAlias" ) == false )
+            return;
+        endRenderPassBefore( "beginTextureAlias" );
+        recordTextureUse( texture );
+        beginTextureAliasNative( texture );
+    }
+
     void IRHICommandContext::uavBarrierTexture( RHITextureHandle texture )
     {
         if ( isTextureHandleValid( texture, "uavBarrierTexture" ) == false )
             return;
         endRenderPassBefore( "uavBarrierTexture" );
+        recordTextureUse( texture );
         uavBarrierTextureNative( texture );
     }
 } // namespace sw

@@ -314,7 +314,7 @@ namespace sw
      * @brief 어태치먼트와 패스 리소스 이름의 hashed_string 캐시입니다.
      * @details PassConstantNames 와 같은 이유로 둔다. hashed_string 생성은 전역 레지스트리 intern
      *          (FNV 해시, 32-way 샤드 뮤텍스, 조회)이다. 이 이름들은 모두 코드 리터럴이라
-     *          값이 고정이므로 한 번만 intern 한다. 특히 `commitBindlessTextureBindings` 는 DX11 과 GL 경로에서
+     *          값이 고정이므로 한 번만 intern 한다. 특히 `bindEngineTextures` 는 DX11 과 GL 경로에서
      *          **드로우 호출마다** 불리므로 이름을 그 자리에서 만들면 안 된다.
      * @note 문자열이 필요한 곳에는 `view()` 를 씁니다. 락 없는 O(1) 포인터 역참조입니다.
      */

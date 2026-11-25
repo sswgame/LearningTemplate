@@ -8,7 +8,6 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
@@ -186,7 +185,7 @@ namespace sw
         return findFormatRow( format )._internalFormat != 0;
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createConstantBuffer( uint32 size )
+    RHIBufferHandle OpenGLRHIResourceFactory::createConstantBufferNative( uint32 size )
     {
         // 머티리얼 상수버퍼는 **게임 스레드**(Material::initialize) 에서 만들어진다. GL 컨텍스트는 렌더 스레드가
         // 프레임 동안만 쥐고 executePacket 끝에 놓으므로(RenderThread), 여기서도 createBuffer 처럼 잠깐 빌려야 한다.
@@ -205,7 +204,7 @@ namespace sw
         return _pDevice->storeGlBuffer( ubo, alignedSize );
     }
 
-    void OpenGLRHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    void OpenGLRHIResourceFactory::writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
         if ( buffer == 0 || pData == nullptr )
             return;
@@ -218,13 +217,13 @@ namespace sw
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createConstantBufferPage( uint32 size )
+    RHIBufferHandle OpenGLRHIResourceFactory::createConstantBufferPageNative( uint32 size )
     {
         // UBO 하나를 구간이 나눠 쓴다(감사 R-4). 프레임 칸 복제는 드라이버의 이름 바꾸기가 맡는다(`createConstantBuffer` 와 같다).
-        return createConstantBuffer( size );
+        return createConstantBufferNative( size );
     }
 
-    void OpenGLRHIResourceFactory::updateConstantBuffer( const RHIBufferSlice& slice, const void* pData, uint32 size )
+    void OpenGLRHIResourceFactory::writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void* pData, uint32 size )
     {
         if ( slice._buffer == 0 || pData == nullptr )
             return;
@@ -237,29 +236,19 @@ namespace sw
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle OpenGLRHIResourceFactory::createStructuredBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        const bool bInvalidStructuredBufferRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0;
-        if ( bInvalidStructuredBufferRequest )
-            return 0;
-
-        // 32비트 API 다. 담기지 않으면 만들지 않는다(RHIBufferSizeUtil 가 세 백엔드의 규칙 하나).
-        uint32 totalBytes{ 0 };
-        if ( RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false )
-            return 0;
-
         RHIBufferDesc desc{};
         desc._elementSize  = elementSize;
         desc._elementCount = elementCount;
-        desc._sizeBytes    = static_cast<uint32>( totalBytes );
+        desc._sizeBytes    = elementSize * elementCount; // 32비트에 담긴다(앞단이 봤다)
         desc._usage        = RHIBufferUsage::Structured | RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs;
-        return createBuffer( desc );
+        return createBufferNative( desc );
     }
 
-    void OpenGLRHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
-                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void OpenGLRHIResourceFactory::updateStructuredBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource,
+                                                                        const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateStructuredBufferRegions" );
         const bool bInvalidBufferRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidBufferRegionUpdate )
             return;
@@ -283,14 +272,11 @@ namespace sw
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createBuffer( const RHIBufferDesc& desc )
+    RHIBufferHandle OpenGLRHIResourceFactory::createBufferNative( const RHIBufferDesc& desc )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
-        // 정점 · 인덱스 · 상수 버퍼는 각자의 생성 함수다 — 서술이 비거나 틀리면 값을 지어내지 않고 거절한다(`isValidBufferDesc`).
-        if ( isValidBufferDesc( desc, "createBuffer" ) == false )
-            return 0;
         ScopedOpenGLContext contextScope( _pDevice );
         const uint32        sizeBytes = desc._sizeBytes;
 
@@ -319,7 +305,7 @@ namespace sw
         return _pDevice->storeGlBuffer( ssbo, alignedSize );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createIndexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle OpenGLRHIResourceFactory::createIndexBufferNative( const void* pData, uint32 sizeBytes )
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
@@ -327,19 +313,16 @@ namespace sw
         return _pDevice->createIndexBuffer( pData, sizeBytes );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createGPUVertexBuffer( uint32 sizeBytes )
+    RHIBufferHandle OpenGLRHIResourceFactory::createGPUVertexBufferNative( uint32 sizeBytes )
     {
         // GL 버퍼는 어느 것이든 glCopyBufferSubData 의 도착이 된다 — 0 으로 채운 정점 버퍼와 같다.
-        if ( sizeBytes == 0 )
-            return 0;
         const vector<uint8> listZero( sizeBytes, uint8{ 0 } );
-        return createVertexBuffer( listZero.data(), sizeBytes );
+        return createVertexBufferNative( listZero.data(), sizeBytes );
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
+    RHIBufferHandle OpenGLRHIResourceFactory::createVertexBufferNative( const void* pData, uint32 sizeBytes )
     {
-        const bool bInvalidVertexBufferRequest = _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0;
-        if ( bInvalidVertexBufferRequest )
+        if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
         ScopedOpenGLContext contextScope( _pDevice );
@@ -352,9 +335,8 @@ namespace sw
         return _pDevice->storeGlBuffer( vbo, sizeBytes );
     }
 
-    void OpenGLRHIResourceFactory::updateGeometryBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
+    void OpenGLRHIResourceFactory::updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        _pDevice->requireNoOpenRenderPassForUpload( "updateGeometryBufferRegions" );
         const bool bInvalidVertexRegionUpdate = _pDevice->_bInitialized == SW_FALSE || buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0;
         if ( bInvalidVertexRegionUpdate )
             return;
@@ -382,13 +364,12 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
-    bool OpenGLRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool OpenGLRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         if ( buffer == 0 )
             return false;
 
         ScopedOpenGLContext contextScope( _pDevice );
-        _pDevice->_recordingState._geometry.remove( buffer );
 
         OpenGLRHIDevice::OpenGLBufferRecord taken{};
         if ( _pDevice->_gpuBuffers.take( buffer, taken ) == false )
@@ -403,26 +384,22 @@ namespace sw
             _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         }
 
-        // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
-        RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
-        OpenGLRHIDevice*  pDevice   = _pDevice;
-        auto              releaseCb = [glBuffer = glName, pTracker, buffer, pDevice]()
+        OpenGLRHIDevice* pDevice   = _pDevice;
+        auto             releaseCb = [glBuffer = glName, pDevice]()
         {
             GLuint name = glBuffer;
             glDeleteBuffers( 1, &name );
             pDevice->_meshVaoAttribShadow.invalidateBuffer( glBuffer ); // 이름이 새 버퍼에 다시 나오면 사본이 같아 보여 지운 버퍼로 그린다
-            pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb );
         return true;
     }
 
-    RHIBufferHandle OpenGLRHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
+    RHIBufferHandle OpenGLRHIResourceFactory::createReadbackBufferNative( uint32 elementSize, uint32 elementCount )
     {
-        uint32     totalBytes{ 0 };
-        const bool bInvalidReadbackRequest = _pDevice->_bInitialized == SW_FALSE || elementSize == 0 || elementCount == 0 || RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) == false;
-        if ( bInvalidReadbackRequest )
+        if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
+        const uint32        totalBytes = elementSize * elementCount;
         ScopedOpenGLContext contextScope( _pDevice );
         GLuint              name{ 0 };
         glGenBuffers( 1, &name );
@@ -435,10 +412,9 @@ namespace sw
         return _pDevice->storeGlBuffer( name, totalBytes );
     }
 
-    bool OpenGLRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
+    bool OpenGLRHIResourceFactory::readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
     {
-        const bool bInvalidRead = _pDevice->_bInitialized == SW_FALSE || pDestination == nullptr || sizeBytes == 0;
-        if ( bInvalidRead )
+        if ( _pDevice->_bInitialized == SW_FALSE )
             return false;
         const GLuint name = _pDevice->resolveGlBuffer( readback );
         if ( name == 0 )
@@ -464,7 +440,7 @@ namespace sw
     }
 
     // 길이를 나누지 않는다: 검사 · 링 복사 · 컨텍스트 빌려 올리기 · 펜스의 순서가 곧 뜻이다(전송 계약 1 · 2 · 4).
-    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 뒤에는 워터마크가 멈춰 링이 비지 않으므로 아래 할당까지 가면 Busy 로 끝없이 되풀이된다.
@@ -569,7 +545,7 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE ||
@@ -672,7 +648,7 @@ namespace sw
         return pRecord != nullptr ? pRecord->_format : RHIFormat::Unknown;
     }
 
-    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord             = _pDevice->resolveTexture( texture );
         const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
@@ -733,38 +709,24 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    void OpenGLRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    void OpenGLRHIResourceFactory::setTextureDebugNameNative( RHITextureHandle texture, const utf8* pName )
     {
         const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord == nullptr || pRecord->_texture == 0 || pName == nullptr )
+        if ( pRecord == nullptr || pRecord->_texture == 0 )
             return;
-        _pDevice->getMemoryTracker().setLabel( RHIMemoryKey::makeTexture( texture ), pName ); // 메모리 스냅숏 · RT 목록이 같은 이름을 보인다
         // KHR_debug(GL 4.3 코어) — 이벤트 표지 glPushDebugGroup 과 같은 확장이다.
         const string_view name = pName;
         glObjectLabel( GL_TEXTURE, pRecord->_texture, static_cast<GLsizei>( name.size() ), name.data() );
     }
 
     // 길이 유지(긴 함수 정리 기준): 텍스처 생성 · 저장소 할당 · 매개변수 · 초기 데이터의 순서가 곧 의미라 나누지 않는다.
-    RHITextureHandle OpenGLRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
+    RHITextureHandle OpenGLRHIResourceFactory::createTexture2DNative( const RHITextureDesc& desc )
     {
-        const bool bInvalidTextureRequest = _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0;
-        if ( bInvalidTextureRequest )
+        if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
-        if ( isRHITextureShapeValid( desc ) == false )
-        {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.CreateTexture2DDimensionSlicesX", "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
-                             desc._arraySize, desc._width, desc._height );
-            return 0;
-        }
-        // 이 장치가 샘플링하지 못하는 압축 형식(데스크톱의 ASTC · ETC2)은 드라이버에 넘기지 않는다 — 넘기면 D3D12 는 실패, Vulkan 드라이버는 0 나누기로 죽었다.
-        if ( RHIFormatUtil::isBlockCompressed( desc._format ) && _pDevice->supportsTextureFormat( desc._format ) == false )
-        {
-            SW_LOG_ERROR_ID( "OpenGL.CreateTexture2DFormatUnsupported", "createTexture2D: this device cannot sample format %# (%#x%#) - the texture is not created", static_cast<uint32>( desc._format ), desc._width, desc._height );
-            return 0;
-        }
 
         ScopedOpenGLContext contextScope( _pDevice );
-        const uint32        mipLevels   = desc._mipLevels > 0 ? desc._mipLevels : 1;
+        const uint32        mipLevels   = desc._mipLevels;
         const GLenum        internalFmt = toGlInternalFormat( desc._format );
         const bool          bDepth      = desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
         const GLenum        target      = ( desc._dimension == RHITextureDimension::TextureCube )    ? GL_TEXTURE_CUBE_MAP
@@ -812,18 +774,19 @@ namespace sw
         glBindTexture( target, 0 );
 
         OpenGLRHIDevice::OpenGLTextureRecord record{};
-        record._texture        = tex;
-        record._width          = desc._width;
-        record._height         = desc._height;
-        record._mipLevels      = mipLevels;
-        record._format         = desc._format;
-        record._internalFormat = static_cast<uint32>( internalFmt );
-        record._target         = static_cast<uint32>( target );
-        record._arraySize      = desc._arraySize;
-        record._dimension      = desc._dimension;
-        record._bDepthStencil  = bDepth ? 1 : 0;
-        record._bUAV           = desc._bIsUnorderedAccess ? 1 : 0;
-        record._reserved       = 0;
+        record._texture         = tex;
+        record._width           = desc._width;
+        record._height          = desc._height;
+        record._mipLevels       = mipLevels;
+        record._format          = desc._format;
+        record._internalFormat  = static_cast<uint32>( internalFmt );
+        record._target          = static_cast<uint32>( target );
+        record._arraySize       = desc._arraySize;
+        record._dimension       = desc._dimension;
+        record._bDepthStencil   = bDepth ? 1 : 0;
+        record._bShaderResource = desc._bIsShaderResource;
+        record._bUAV            = desc._bIsUnorderedAccess;
+        record._reserved        = 0;
 
         // 복사 · 블릿 원본/대상용 FBO — 컬러 렌더 타깃의 0 번 면 하나(copyTexture · blitToBackBuffer 가 읽는다). 렌더 패스는
         // 합성 FBO(ensureCompositeFboMrt)만 쓰므로 면마다 · 깊이용 FBO 는 만들지 않는다.
@@ -844,13 +807,10 @@ namespace sw
             record._fbo = fbo;
         }
 
-        // GPU 메모리 추적기에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
-        const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
-        return handle;
+        return _pDevice->_gpuTextures.insert( record );
     }
 
-    bool OpenGLRHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         if ( texture == 0 )
             return false;
@@ -889,76 +849,57 @@ namespace sw
             _pDevice->_uavRegistry.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
         }
 
-        RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
-        auto              releaseCb = [fboName, texName, pTracker, texture]()
-        {
-            deleteTextureNames( fboName, texName );
-            // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
-            pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
-        };
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        auto releaseCb = [fboName, texName]()
+        { deleteTextureNames( fboName, texName ); };
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb );
         return true;
     }
 
-    bool OpenGLRHIResourceFactory::isTextureReadyToSample( RHITextureHandle texture )
+    uint64 OpenGLRHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
     {
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        return pRecord != nullptr && _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials );
+        return _pDevice->resolveGlBufferSize( buffer );
     }
 
-    RHITextureSRVIndex OpenGLRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    uint64 OpenGLRHIResourceFactory::findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& desc ) const
     {
-        if ( texture == 0 )
-            return kInvalidDescriptorIndex;
+        return RHIMemoryTracker::computeTextureLogicalBytes( desc ); // GL 에는 할당 크기를 물을 API 가 없다
+    }
 
-        ScopedOpenGLContext contextScope( _pDevice );
-        const uint32        glName = _pDevice->getGlTextureName( texture );
-        if ( glName == 0 )
-            return kInvalidDescriptorIndex;
-        // 셰이더의 텍스처 유닛은 sampler2D 로 선언돼 있다. 배열과 큐브는 바인딩할 수 없다(RHITextureDimension 참고).
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
-        if ( pRecord != nullptr && pRecord->_dimension != RHITextureDimension::Texture2D )
-        {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.RegisterBindlessTextureTextureTextureOnly", "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture.getPacked(),
-                             static_cast<uint32>( pRecord->_dimension ) );
-            return kInvalidDescriptorIndex;
-        }
-        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
-        if ( pRecord != nullptr && _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false )
-            return kInvalidDescriptorIndex;
+    bool OpenGLRHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
+    {
+        const OpenGLRHIDevice::OpenGLTextureRecord* const pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == 0 )
+            return false;
+        outInfo._dimension            = pRecord->_dimension;
+        outInfo._bShaderResource      = pRecord->_bShaderResource;
+        outInfo._bUnorderedAccess     = pRecord->_bUAV;
+        outInfo._bFirstUploadComplete = _pDevice->_transferSerials.isFirstUploadComplete( pRecord->_transferSerials ) ? SW_TRUE : SW_FALSE;
+        return true;
+    }
 
+    uint32 OpenGLRHIResourceFactory::findConstantPageBytesNative( RHIBufferHandle buffer )
+    {
+        // 구간 오프셋 정렬(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT)이 256 의 약수인 것은 초기화가 확인했다.
+        return _pDevice->resolveGlBufferSize( buffer );
+    }
+
+    // bindless 등록표는 번호 → 핸들이고 텍스처 · 버퍼 이름은 기록 때 푼다 — 등록 · 해제에는 GL 컨텍스트가 필요 없다.
+    RHITextureSRVIndex OpenGLRHIResourceFactory::registerBindlessTextureNative( RHITextureHandle texture )
+    {
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureRegistry.allocate( OpenGLRHIDevice::BindlessTextureRecord{ texture } ) };
     }
 
-    RHIBufferSRVIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    RHIBufferSRVIndex OpenGLRHIResourceFactory::registerBindlessBufferSRVNative( RHIBufferHandle buffer )
     {
-        if ( buffer == 0 )
-            return kInvalidDescriptorIndex;
-
-        ScopedOpenGLContext contextScope( _pDevice );
-        GLuint              ubo = _pDevice->resolveGlBuffer( buffer );
-        if ( ubo == 0 )
+        if ( _pDevice->resolveGlBuffer( buffer ) == 0 )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } ) };
     }
 
-    RHIBufferSRVIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( const RHIBufferSlice& slice )
+    RHIBufferSRVIndex OpenGLRHIResourceFactory::registerBindlessBufferSRVNative( const RHIBufferSlice& slice )
     {
-        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV(slice)" );
-        if ( slice._buffer == 0 || slice._size == 0 )
-            return kInvalidDescriptorIndex;
-        // glBindBufferRange 의 오프셋은 GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT(초기화가 256 의 약수임을 확인했다)의 배수여야 하고, 구간은 버퍼 안이어야 한다.
-        const uint32 bufferBytes = _pDevice->resolveGlBufferSize( slice._buffer );
-        const bool   bBadSlice   = bufferBytes == 0 || _pDevice->_uniformBufferOffsetAlignment == 0 || slice._offset % _pDevice->_uniformBufferOffsetAlignment != 0 ||
-                               static_cast<uint64>( slice._offset ) + slice._size > bufferBytes;
-        if ( bBadSlice )
-        {
-            SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.BadConstantBufferSlice", "registerBindlessBufferSRV: slice (offset %#, size %#) is not an aligned slice inside the buffer (%# bytes, alignment %#)",
-                             slice._offset, slice._size, bufferBytes, _pDevice->_uniformBufferOffsetAlignment );
-            return kInvalidDescriptorIndex;
-        }
         OpenGLRHIDevice::BindlessResourceRecord record{};
         record._buffer      = slice._buffer;
         record._sliceOffset = slice._offset;
@@ -967,90 +908,59 @@ namespace sw
         return RHIBufferSRVIndex{ _pDevice->_bufferRegistry.allocate( record ) };
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIBufferSRVIndex index )
+    bool OpenGLRHIResourceFactory::unregisterBindlessResourceNative( RHIBufferSRVIndex index )
     {
-        ScopedOpenGLContext contextScope( _pDevice );
-        // 이중 해제 · 다른 공간 번호는 `RHIBindlessRegistry::release` 가 거절한다.
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_bufferRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    bool OpenGLRHIResourceFactory::rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        if ( texture == 0 )
-            return false;
-        ScopedOpenGLContext                         contextScope( _pDevice );
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord       = _pDevice->resolveTexture( texture );
-        const bool                                  bCannotRebind = pRecord == nullptr || _pDevice->getGlTextureName( texture ) == 0 || pRecord->_dimension != RHITextureDimension::Texture2D ||
-                                   _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false;
-        if ( bCannotRebind )
-            return false;
         // 기록 때 번호를 텍스처 이름으로 풀므로 등록표 값만 바꾼다(다음 바인딩부터 새 텍스처).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_textureRegistry.rebind( index, OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
-    RHITextureSRVIndex OpenGLRHIResourceFactory::reserveBindlessTextureIndex()
+    RHITextureSRVIndex OpenGLRHIResourceFactory::reserveBindlessTextureIndexNative()
     {
-        // 번호 발급기만 건드린다(어느 스레드든 — GL 컨텍스트가 필요 없다).
+        // 번호 발급기만 건드린다(어느 스레드든).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHITextureSRVIndex{ _pDevice->_textureRegistry.reserveIndex() };
     }
 
-    bool OpenGLRHIResourceFactory::activateReservedBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
     {
-        if ( texture == 0 )
-            return false;
-        ScopedOpenGLContext                         contextScope( _pDevice );
-        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord         = _pDevice->resolveTexture( texture );
-        const bool                                  bCannotActivate = pRecord == nullptr || _pDevice->getGlTextureName( texture ) == 0 || pRecord->_dimension != RHITextureDimension::Texture2D ||
-                                     _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_transferSerials, texture ) == false;
-        if ( bCannotActivate )
-            return false;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return _pDevice->_textureRegistry.assign( index, OpenGLRHIDevice::BindlessTextureRecord{ texture }, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽의 것이다
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHITextureSRVIndex index )
+    bool OpenGLRHIResourceFactory::unregisterBindlessTextureNative( RHITextureSRVIndex index )
     {
-        ScopedOpenGLContext      contextScope( _pDevice );
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_textureRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
-    RHIUnorderedAccessIndex OpenGLRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    RHIUnorderedAccessIndex OpenGLRHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
     {
-        if ( buffer == 0 )
-            return kInvalidDescriptorIndex;
-
-        ScopedOpenGLContext contextScope( _pDevice );
-        GLuint              ssbo = _pDevice->resolveGlBuffer( buffer );
-        if ( ssbo == 0 )
+        if ( _pDevice->resolveGlBuffer( buffer ) == 0 )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIUnorderedAccessIndex{ _pDevice->_uavRegistry.allocate( OpenGLRHIDevice::BindlessResourceRecord{ buffer } ) };
     }
 
-    RHIUnorderedAccessIndex OpenGLRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    RHIUnorderedAccessIndex OpenGLRHIResourceFactory::registerBindlessTextureUAVNative( RHITextureHandle texture )
     {
-        if ( texture == 0 )
-            return kInvalidDescriptorIndex;
-
-        ScopedOpenGLContext contextScope( _pDevice );
-        if ( _pDevice->getGlTextureName( texture ) == 0 )
-            return kInvalidDescriptorIndex;
         OpenGLRHIDevice::BindlessResourceRecord record{};
         record._texture = texture;
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         return RHIUnorderedAccessIndex{ _pDevice->_uavRegistry.allocate( record ) };
     }
 
-    void OpenGLRHIResourceFactory::unregisterBindlessUAV( RHIUnorderedAccessIndex index )
+    bool OpenGLRHIResourceFactory::unregisterBindlessUAVNative( RHIUnorderedAccessIndex index )
     {
-        ScopedOpenGLContext contextScope( _pDevice );
         // 이중 해제는 등록표가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        (void)_pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
+        return _pDevice->_uavRegistry.release( index, RHIBindlessReuse::Immediately );
     }
 
     RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages )
@@ -1212,7 +1122,7 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    bool OpenGLRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool OpenGLRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecordPtr = _pDevice->_pipelineStates.get( pso );
         if ( pRecordPtr == nullptr )
@@ -1222,11 +1132,6 @@ namespace sw
         const GLuint                                program = record._program;
         const GLuint                                vao     = record._vao;
         _pDevice->_pipelineStates.erase( pso );
-
-        if ( _pDevice->_recordingState._boundGraphicsPSO == pso )
-            _pDevice->_recordingState._boundGraphicsPSO = 0;
-        if ( _pDevice->_recordingState._boundComputePSO == pso )
-            _pDevice->_recordingState._boundComputePSO = 0;
 
         if ( program == 0 && vao == 0 )
             return true;
@@ -1244,7 +1149,7 @@ namespace sw
                 glDeleteVertexArrays( 1, &name );
             }
         };
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb );
         return true;
     }
 

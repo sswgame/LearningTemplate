@@ -134,6 +134,7 @@ namespace sw
         }
         _job._packet._outputRenderTarget = _outputTarget->getHandle();
         device.beginFrame();
+        FrameRenderer::updateTextureUploads( &device, request._view._height ); // 기록 전에 한 번(`RenderThread` 의 프레임과 같다)
         if ( device.isFrameStarted() == false )
         {
             device.endFrame( false, false ); // 기록이 제출되지 않을 프레임이다 — 그리지 않은 출력을 읽지 않고 다음 장에서 다시 그린다(시한은 `capture` 가 센다)

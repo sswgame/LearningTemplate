@@ -21,6 +21,7 @@
 
 namespace sw
 {
+    struct ComputePipeline;
     struct GPUParticleBatch;
     struct GPUVFXMeshEmitter;
     struct VFXCollisionDef;
@@ -157,11 +158,11 @@ namespace sw
          * @brief 프레임 패스 `VFXSimulation` — 방출기마다 시뮬레이션 디스패치를 기록합니다(`prepareFrame` 뒤, 정렬 · 메시 쓰기 · 인스턴스 애니메이션 · 컬링 앞).
          * @details 전이는 그래프 레벨 콜백이 냈다. 다중 그룹 패스 사이 · 라이트를 쓰는 방출기 사이는 선언한 UAV 핸들의 `uavBarrier` 다. 선언 · 등록이 없는 방출기는 건너뛴다(오류는 문맥이 남겼다).
          */
-        void recordSimulation( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const;
+        void recordSimulation( const RenderGraphPassContext& context, const ComputePipeline& pipeline ) const;
         /** @brief 프레임 패스 `VFXParticleSort` — 정렬 일마다 워크그룹 하나를 기록합니다. 렌더 입력 · 인자는 셰이더 읽기, 순서 버퍼는 UAV 로 그래프가 옮겼다. */
-        void recordSort( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const;
+        void recordSort( const RenderGraphPassContext& context, const ComputePipeline& pipeline ) const;
         /** @brief 프레임 패스 `VFXMeshInstance` — 메시 방출기마다 인스턴스 칸 쓰기를 기록합니다. 방출기 사이는 `InstanceBuffer` UAV 의 `uavBarrier` 다. */
-        void recordMeshInstances( const RenderGraphPassContext& context, RHIPipelineStateHandle pso ) const;
+        void recordMeshInstances( const RenderGraphPassContext& context, const ComputePipeline& pipeline ) const;
 
         /** @brief 프레임 자원 `LightBuffer`(파이프라인 XML — `VFXSimulation` 출력)입니다. 라이트 버퍼 주인 대신 이 등록을 정하는 쪽이 여기라 이름도 여기 둔다. */
         static RenderGraphBufferUAV getLightBufferUAV();

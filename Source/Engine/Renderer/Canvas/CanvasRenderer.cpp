@@ -71,14 +71,14 @@ namespace sw
         _quadBuffer.upload( device, inoutFrame, _markers.getMarkerCount() > 0 );
     }
 
-    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV, RHIBufferSRVIndex placeholderSRV,
-                                                 GPUMessageChannel& inoutMessages, bool bShowInstanceSlots )
+    void CanvasRenderer::recordMarkerProjection( IRHIPassCommandList& cmd, const ComputePipeline& pipeline, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV,
+                                                 RHIBufferSRVIndex placeholderSRV, const GPUMessageChannel& messages, bool bShowInstanceSlots )
     {
-        _markers.record( cmd, _quadBuffer, pso, instanceBuffer, instanceSRV, placeholderSRV, inoutMessages, bShowInstanceSlots );
+        _markers.record( cmd, _quadBuffer, pipeline, instanceBuffer, instanceSRV, placeholderSRV, messages, bShowInstanceSlots );
     }
 
     uint32 CanvasRenderer::drawList( IRHIPassCommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
-                                     uint32 targetHeight, bool bNativeBindless, uint32 colorVisionMode ) const
+                                     uint32 targetHeight, uint32 colorVisionMode ) const
     {
         const bool bNothingToDraw = list.isEmpty() || pso == 0 || _quadBuffer.getSlot().isValid() == false || targetWidth == 0 || targetHeight == 0;
         if ( bNothingToDraw )
@@ -114,18 +114,10 @@ namespace sw
                     arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = constant::invalid_index::kUint32;
                     continue;
                 }
-                if ( bNativeBindless )
-                {
-                    arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = srv; // 전역 번호
-                }
-                else
-                {
-                    // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t16..t19 에 서수로 건다 — MaterialTexture::sampleIndex 가 서수로 고른다.
-                    cmd.bindShaderResource( srv, shaderslot::kMaterialTexture0 + slot );
-                    arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = slot;
-                }
+                // 네이티브는 전역 번호, 에뮬은 머티리얼 칸의 서수 — MaterialTexture::sampleIndex 가 고른다.
+                arrRoot[CanvasRendererInternal::kRootTexture0 + slot] = cmd.bindMaterialTexture( srv, slot );
             }
-            cmd.setGraphicsRootConstants( 0, CanvasRendererInternal::kRootConstantCount, arrRoot );
+            cmd.setGraphicsRootConstants( CanvasRendererInternal::kRootConstantCount, arrRoot );
             // 시작 인스턴스는 0 — D3D 는 SV_InstanceID 에 시작 인스턴스를 더하지 않는다. 시작 사각형은 루트 상수로 간다.
             cmd.drawInstanced( CanvasRendererInternal::kVerticesPerQuad, batch._quadCount, 0, 0 );
             ++drawnBatchCount;
@@ -166,13 +158,8 @@ namespace sw
             const bool             bInvalidCanvasTarget = bHasPSO == false || pso == 0 || width == 0 || height == 0;
             if ( bInvalidCanvasTarget )
                 continue;
-            RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( texture, target._clearColor, RHIRenderPassLoadOp::Clear );
-            beginInfo._bBindColor = SW_TRUE;
-            beginInfo._width      = width;
-            beginInfo._height     = height;
-            cmd.beginRenderPass( beginInfo );
-            (void)drawList( cmd, target._list, getTargetQuadBase( targetIndex ), pso, width, height, device.supportsNativeBindlessSampling() );
+            cmd.beginRenderPass( RHIRenderPassBeginInfo::color( texture, RHIRenderPassLoadOp::Clear, target._clearColor ).setExtent( width, height ) );
+            (void)drawList( cmd, target._list, getTargetQuadBase( targetIndex ), pso, width, height );
             cmd.endRenderPass();
             // 그린 텍스처는 셰이더가 읽는다(머티리얼 · 에디터 ImGui 이미지) — 카메라 렌더 텍스처 출력과 같이 읽기 상태로 둔다(Vulkan 레이아웃).
             cmd.prepareTextureForShaderRead( texture );

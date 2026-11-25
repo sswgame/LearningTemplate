@@ -299,8 +299,6 @@ namespace sw
         if ( GPUMessageChannel::isRequested() != _state._gpuMessages.isActive() )
             releasePassResources();
 
-        updateTextureUploads( pDevice );
-
         _pDevice                               = pDevice;
         _state._outputRenderTarget             = packet._outputRenderTarget;
         _state.getMainView()._settings         = packet._mainView;
@@ -402,8 +400,8 @@ namespace sw
             pRenderDebug->endFrame();
 #endif
         // 건너뛴 프레임 뒤의 따라잡기 — GPU 입자가 다 따라잡았으면 이 패킷이 실은 건너뛴 번호까지 끝났다고 적는다(캡처 준비가 본다).
-        if ( SimulationOnlyFrameQueue* const pSimulationOnly = engine::areEngineServicesBound() ? engine::findSubsystem<SimulationOnlyFrameQueue>() : nullptr )
-            pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );
+        if ( _host._pSimulationOnly != nullptr )
+            _host._pSimulationOnly->reportDrawnFrame( packet._simulationOnlySerial, _state._particleRenderer.getPendingGPUStepCount() );
         return bDrew;
     }
 
@@ -415,14 +413,13 @@ namespace sw
     void FrameRenderer::executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
         // 그리지 않고 진행하는 프레임(`SimulationOnlyFrameQueue`) — 다음 패킷이 이어 쓸 상태만 받는다. 기록 · 제출하지 않는다.
-        // 받는 것: 텍스처 업로드(구간 · 읽기 · 스트리밍), GPU 장면의 CPU 사본과 고친 구간 업로드(빠뜨리면 다음에 그릴 때 인스턴스가 옛 값이다).
+        // 받는 것: GPU 장면의 CPU 사본과 고친 구간 업로드(빠뜨리면 다음에 그릴 때 인스턴스가 옛 값이다).
         // 받지 않는 것: 라이트 · 그림자 · 안개 · 캔버스 · 데칼 · 추가 뷰 · 입자 — 다음 패킷이 통째로 다시 싣는 값이다. GPU 입자는 누적 단계 요청이라 다음에 그릴 때 따라잡는다.
         if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
             return;
         SW_PROFILE_SCOPE( "RT.SimulationOnly" );
         _state._settings = packet._settings;
-        updateTextureUploads( pDevice );
-        _pDevice = pDevice;
+        _pDevice         = pDevice;
         _state._gpuScene.applyCPUSnapshot( packet._gpuScene );
         uploadGPUScene( pDevice );
         // 시간 누적(TAA · 모션 블러 · 노출 적응 · 가림)과 깊이 히스토리는 그리지 않은 프레임을 건너 이을 수 없다 — 다음에 그리는 프레임이 버린다.
@@ -444,10 +441,11 @@ namespace sw
         _state._gpuScene.upload( pDevice );
     }
 
-    void FrameRenderer::updateTextureUploads( IRHIDevice* pDevice )
+    void FrameRenderer::updateTextureUploads( IRHIDevice* pDevice, uint32 viewHeightPixels )
     {
-        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 업로드는 뒤이은 드로우보다 먼저 실행된다(IRHIResourceFactory 계약).
-        // 그리지 않는 패킷(`executePacketWithoutDrawing`)도 같은 길이다 — 결정적 실행은 상한 없이 끝내므로 그리는 프레임이 따라잡을 몫이 남지 않는다.
+        // 게임 스레드가 맡긴 텍스처 구간(지형 스플랫 칠하기)을 기록 전에 올린다. 전송은 이번 프레임이 기록한 것보다 먼저 실행되므로(전송 계약 3) **아무것도 기록하기 전에 한 번** 부른다.
+        // 렌더러마다 부르면 미리보기가 주 화면을 기록한 뒤에 전송을 내고(주 화면이 전이를 기록한 텍스처의 앞 상태가 어긋나고 백엔드마다 보는 내용이 다르다), 프레임당 상한 · 프레임 수를 여러 번 센다.
+        // 그리지 않는 프레임도 같은 길이다 — 결정적 실행은 상한 없이 끝내므로 그리는 프레임이 따라잡을 몫이 남지 않는다.
         if ( engine::areEngineServicesBound() == false )
             return;
         // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetJobsEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
@@ -471,7 +469,7 @@ namespace sw
         streamingBudget._maxUpgradesPerFrame        = bFinishAssetJobs ? UINT32_MAX : streamingConfig._upgradesPerFrame;
         streamingBudget._poolBytes                  = static_cast<uint64>( streamingConfig._poolMegabytes ) * constant::memory::kBytesPerMegabyte;
         streamingBudget._maxBytesInFlight           = static_cast<uint64>( streamingConfig._maxMegabytesInFlight ) * constant::memory::kBytesPerMegabyte;
-        streamingBudget._viewHeightPixels           = _state._outputHeight;
+        streamingBudget._viewHeightPixels           = viewHeightPixels;
         streamingBudget._idleFramesBeforeRelease    = streamingConfig._idleFramesBeforeRelease;
         streamingBudget._minFramesBetweenChanges    = streamingConfig._minFramesBetweenChanges;
         streamingBudget._promoteBudgetMarginPercent = streamingConfig._promoteBudgetMarginPercent;
@@ -491,7 +489,8 @@ namespace sw
                                     static_cast<uint32>( _state._listFrameDecal.size() ), _pipeline._path );
             return;
         }
-        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        if ( _pDevice == nullptr )
+            return;
         for ( const DecalDrawData& decal : _state._listFrameDecal )
         {
             // 텍스처를 적었는데 아직 읽는 중이면 이 프레임은 그 데칼을 빼고 그린다(흰색 · 평평한 노멀로 대신 그리지 않는다).
@@ -508,12 +507,12 @@ namespace sw
             if ( pAlbedo != nullptr )
             {
                 draw._arrTextureSRV[0]       = pAlbedo->getSRV();
-                draw._element._albedoTexture = bNativeBindless ? pAlbedo->getSRV() : 0u;
+                draw._element._albedoTexture = _pDevice->getMaterialTextureIndex( pAlbedo->getSRV(), 0 );
             }
             if ( pNormal != nullptr )
             {
                 draw._arrTextureSRV[1]       = pNormal->getSRV();
-                draw._element._normalTexture = bNativeBindless ? pNormal->getSRV() : 1u;
+                draw._element._normalTexture = _pDevice->getMaterialTextureIndex( pNormal->getSRV(), 1 );
             }
             _state._listFrameDecalDraw.push_back( draw );
         }

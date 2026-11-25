@@ -8,7 +8,7 @@
  *
  *          **퍼뮤테이션이다.** 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bGPUMessages`, 개발 도구의 `-gv_gpuMessages=1`, 기본 끔)이고, 켜면 메시지를 가진 패스
  *          (표의 `RenderPassTraitFlag::kGPUMessageTarget`)가 셰이더에 `SW_GPU_MESSAGES_ENABLED` 를 붙여 컴파일되고(`selectRenderPassShader` — 쿠커와 같은 함수) 렌더러가 그 패스 앞에서
- *          이 버퍼를 u4 에 건다(컴퓨트 `bindCompute`, 그래픽스 `bindGraphics`). Shipping 은 `isRequested` 가 늘 거짓이라 define 도 PSO 변형도 바인딩도 생기지 않는다.
+ *          이 버퍼를 u4 에 건다(컴퓨트는 매개변수 구조체의 `getComputeUAV`, 그래픽스 `bindGraphics`). Shipping 은 `isRequested` 가 늘 거짓이라 define 도 PSO 변형도 바인딩도 생기지 않는다.
  *          필수 값(버퍼 · 컴퓨트 · 그래픽스 쓰기 능력)이 없으면 오류로 멈춘다 — 메시지가 켜진 PSO 를 버퍼 없이 돌리는 길은 없다.
  *
  *          버퍼는 상한 있는 링이다. 셰이더가 누적 카운터를 원자적으로 올려 순번을 받고 순번 % 용량 칸에 적는다(지우지 않는다 — 클리어 패스가 필요 없다). CPU 는 지난번 읽은 누적 수와의 차에서
@@ -157,10 +157,10 @@ namespace sw
          * @details 누적 카운터(머리 [0])는 건드리지 않는다 — GPU 만 쓴다. 업로드는 프레임 순서로 큐에 들어가 앞 프레임의 기록 뒤 · 이번 프레임의 기록 앞에 놓인다.
          */
         void updateControl( const GPUMessageSelection& selection, uint32 logBudget );
-        /** @brief 링을 셰이더가 쓰는 UAV 상태로 옮깁니다. `updateControl`(업로드) 뒤 · 프레임 그래프 앞에 한 번 부릅니다 — 패스 몸통의 걸기(`bindCompute` · `bindGraphics`)는 전이하지 않는다. */
+        /** @brief 링을 셰이더가 쓰는 UAV 상태로 옮깁니다. `updateControl`(업로드) 뒤 · 프레임 그래프 앞에 한 번 부릅니다 — 패스 몸통의 걸기(컴퓨트 매개변수 `getComputeUAV` · `bindGraphics`)는 전이하지 않는다. */
         void transitionForWrite( IRHICommandList& commands );
-        /** @brief 메시지가 켜진 컴퓨트 디스패치 **앞에서** 부릅니다. u4 에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
-        void bindCompute( IRHIPassCommandList& commands );
+        /** @brief 컴퓨트 셰이더 매개변수(`g_GPUMessageRW`, u4)에 채울 링의 쓰기 번호입니다. 꺼져 있으면 무효 번호라 걸지 않는다(메시지 변형 PSO 가 아니면 셰이더도 읽지 않는다). */
+        RHIUnorderedAccessIndex getComputeUAV() const { return isActive() ? _buffer._uav : RHIUnorderedAccessIndex{}; }
         /** @brief 메시지가 켜진 그래픽스 드로우 **앞에서**(렌더 패스를 연 뒤) 부릅니다. u4 를 그래픽스 단계에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
         void bindGraphics( IRHIPassCommandList& commands );
         /** @brief 이 프레임의 메시지 디스패치가 모두 끝난 뒤 한 번 부릅니다. 링 전체를 읽기 버퍼로 복사하는 명령을 넣습니다(프레임 번호가 요청의 tag 다). */

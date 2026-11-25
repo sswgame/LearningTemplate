@@ -11,7 +11,7 @@
 
 using namespace sw;
 
-/** @brief [RHIComputeBindingLogTest] PSO 를 뒤에 걸어도 디스패치 순간의 PSO 로 적고, 다음 PSO 의 디스패치는 새로 건 번호만 적는다. 변이: 디스패치 뒤 비우기를 빼면 앞 번호가 둘째 PSO 로 바뀐다. */
+/** @brief [RHIComputeBindingLogTest] 디스패치 순간의 PSO 로 적고, 다음 PSO 의 디스패치는 새로 건 번호만 적는다. 변이: PSO 를 바꿀 때 컴퓨트 슬롯을 비우지 않으면 앞 번호가 둘째 PSO 로 바뀐다. */
 SW_TEST_CASE( RHIComputeBindingLogTest, DispatchRecordsTheBindingsMadeForItsPipeline )
 {
     test::FakeRHIDevice        device;
@@ -21,12 +21,12 @@ SW_TEST_CASE( RHIComputeBindingLogTest, DispatchRecordsTheBindingsMadeForItsPipe
     RHIComputeBindingLog&       log = device.getComputeBindingLog();
     log.setEnabled( true );
 
-    context.trackComputeBinding( RHIDescriptorIndex{ 11 }, false, 0 );
-    context.trackComputeBinding( RHIDescriptorIndex{ 11 }, true, 2 );
     context.setComputePipelineState( RHIPipelineStateHandle{ 100 } );
+    context.bindComputeShaderResource( RHIBufferSRVIndex{ 11 }, 0 );
+    context.bindComputeUAV( RHIUnorderedAccessIndex{ 11 }, 2 );
     context.dispatchCompute( 1, 1, 1 );
     context.setComputePipelineState( RHIPipelineStateHandle{ 200 } );
-    context.trackComputeBinding( RHIDescriptorIndex{ 12 }, false, 1 );
+    context.bindComputeShaderResource( RHIBufferSRVIndex{ 12 }, 1 );
     context.dispatchCompute( 1, 1, 1 );
 
     const optional<RHIComputeBindingLog::Binding> srv = log.find( RHIDescriptorIndex{ 11 }, false );

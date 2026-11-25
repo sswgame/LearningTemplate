@@ -22,7 +22,8 @@
 namespace sw
 {
     OpenGLRHIDevice::OpenGLRHIDevice( uint32 deviceGeneration )
-        : _pHDC{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _pHDC{ nullptr }
         , _pHRC{ nullptr }
         , _width{ 1280 }
         , _height{ 720 }
@@ -44,12 +45,8 @@ namespace sw
         , _arrTimestampQuery{}
         , _timestampRing{}
         , _timestampFrame{}
-        , _arrComputeRootConstantShadow{}
         , _pipelineStates{ getHandleReuseCount() }
-        , _releaseQueue{}
         , _arrFrameDoneSync{}
-        , _frameFenceRing{}
-        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
         , _stagingRing{}
@@ -62,7 +59,7 @@ namespace sw
         , _resourceImpl{ nullptr }
         , _timestampProvider{ *this }
         , _contextThreadBinding{ *this }
-        , _computeRootConstantUbo{ 0 }
+        , _arrRootConstantUbo{}
         , _stagingRingBuffer{ 0 }
         , _readbackRingBuffer{ 0 }
         , _lastVsync{ -1 }
@@ -145,28 +142,30 @@ namespace sw
         return storeGlBuffer( ibo, sizeBytes );
     }
 
-    bool OpenGLRHIDevice::ensureComputeRootConstantUbo()
+    bool OpenGLRHIDevice::ensureRootConstantUbo( RHIBindPoint point )
     {
-        if ( _computeRootConstantUbo != 0 )
+        uint32& outUbo = _arrRootConstantUbo[static_cast<uint32>( point )];
+        if ( outUbo != 0 )
             return true;
         if ( _bInitialized == SW_FALSE )
             return false;
 
-        GLuint ubo{ 0 };
+        constexpr GLsizeiptr kBlockBytes = static_cast<GLsizeiptr>( shaderslot::kRootConstantDwords * sizeof( uint32 ) );
+        GLuint               ubo{ 0 };
         if ( glad_glCreateBuffers != nullptr )
         {
             glCreateBuffers( 1, &ubo );
-            glNamedBufferStorage( ubo, static_cast<GLsizeiptr>( sizeof( _arrComputeRootConstantShadow ) ), nullptr, GL_DYNAMIC_STORAGE_BIT );
+            glNamedBufferStorage( ubo, kBlockBytes, nullptr, GL_DYNAMIC_STORAGE_BIT );
         }
         else
         {
             glGenBuffers( 1, &ubo );
             glBindBuffer( GL_UNIFORM_BUFFER, ubo );
-            glBufferData( GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>( sizeof( _arrComputeRootConstantShadow ) ), nullptr, GL_DYNAMIC_DRAW );
+            glBufferData( GL_UNIFORM_BUFFER, kBlockBytes, nullptr, GL_DYNAMIC_DRAW );
             glBindBuffer( GL_UNIFORM_BUFFER, 0 );
         }
-        _computeRootConstantUbo = ubo;
-        return _computeRootConstantUbo != 0;
+        outUbo = ubo;
+        return outUbo != 0;
     }
 
     void OpenGLRHIDevice::attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice, uint32 mip )
@@ -285,9 +284,7 @@ namespace sw
     {
         if ( glName == 0 )
             return 0;
-        const RHIBufferHandle handle = _gpuBuffers.insert( OpenGLBufferRecord{ glName, sizeBytes } );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, sizeBytes );
-        return handle;
+        return _gpuBuffers.insert( OpenGLBufferRecord{ glName, sizeBytes } );
     }
 
     OpenGLRHIDevice::OpenGLTextureRecord* OpenGLRHIDevice::resolveTexture( RHITextureHandle handle )
@@ -497,7 +494,6 @@ namespace sw
                 _initResult = RHIInitResult::DriverUnsupported;
                 return false;
             }
-            _uniformBufferOffsetAlignment = static_cast<uint32>( uniformOffsetAlignment );
             GLint maxFragmentTextureUnit{ 0 };
             GLint maxCombinedTextureUnit{ 0 };
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
@@ -815,14 +811,13 @@ namespace sw
                 record._glName = 0;
             }
         } );
-        _recordingState._geometry = RHIGeometryBindings{};
+        _recordingState = OpenGLRecordingState{};
         {
             UniqueLock<shared_mutex> lock{ _bindlessMutex };
             _bufferRegistry.clear();
             _uavRegistry.clear();
             _textureRegistry.clear();
         }
-        Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
 
         _pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )
         {
@@ -886,10 +881,11 @@ namespace sw
             glDeleteSamplers( 1, &_defaultSampler );
             _defaultSampler = 0;
         }
-        if ( _computeRootConstantUbo != 0 )
+        for ( uint32& ubo : _arrRootConstantUbo )
         {
-            glDeleteBuffers( 1, &_computeRootConstantUbo );
-            _computeRootConstantUbo = 0;
+            if ( ubo != 0 )
+                glDeleteBuffers( 1, &ubo );
+            ubo = 0;
         }
         shutdownStagingRing();
         shutdownReadbackRing();
@@ -1128,7 +1124,8 @@ namespace sw
 
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
-        (void)bindSwapChain( _swapChain ); // 지난 프레임 끝에 메인 창으로 돌아오지 못했으면 다시 건다(`reacquireForFrame` 은 WGL 만 건다)
+        _frameStreamContext->beginRecording(); // 프레임 스트림은 프레임마다 새 기록이다(다른 백엔드의 새 커맨드 버퍼와 같다)
+        (void)bindSwapChain( _swapChain );     // 지난 프레임 끝에 메인 창으로 돌아오지 못했으면 다시 건다(`reacquireForFrame` 은 WGL 만 건다)
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
         // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
@@ -1179,10 +1176,10 @@ namespace sw
         retireFrameOnGPU();
     }
 
-    void OpenGLRHIDevice::waitIdleInternal()
+    bool OpenGLRHIDevice::waitIdleInternal()
     {
         if ( _bInitialized == SW_FALSE )
-            return;
+            return false;
 
         {
             ScopedOpenGLContext contextScope( this );
@@ -1202,11 +1199,7 @@ namespace sw
                 pSync = nullptr;
             } );
         }
-        // glFinish 는 잃은 문맥에서도 돌아온다 — 잃었으면 끝났는지 모른다.
-        if ( isDeviceLost() )
-            _releaseQueue.abandonAll();
-        else
-            _releaseQueue.releaseAllCompleted();
+        return isDeviceLost() == false; // glFinish 는 잃은 문맥에서도 돌아온다 — 잃었으면 끝났는지 모른다
     }
 
     bool OpenGLRHIDevice::debugRemoveDevice()
@@ -1392,7 +1385,7 @@ namespace sw
         (void)_frameFenceRing.markSubmitted();
 
         // 이미 끝난 프레임을 오래된 순서로 모은다(기다리지 않고 묻기만 한다).
-        const uint64 completedSerial = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
+        (void)_frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
             (void)serial;
             void*&       rpSync     = _arrFrameDoneSync[slot];
@@ -1405,17 +1398,7 @@ namespace sw
         } );
         // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
         retireFinishedTransfers();
-        _releaseQueue.releaseCompleted( completedSerial );
-    }
-
-    void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void OpenGLRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
+        releaseCompletedFrames();
     }
 
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()

@@ -340,13 +340,6 @@ namespace sw
             commands.transitionBuffer( _buffer._buffer, RHIBufferState::UnorderedAccess );
     }
 
-    void GPUMessageChannel::bindCompute( IRHIPassCommandList& commands )
-    {
-        if ( isActive() == false )
-            return;
-        commands.bindComputeUAV( _buffer._uav, SW_SLOT_GPU_MESSAGE_UAV );
-    }
-
     void GPUMessageChannel::bindGraphics( IRHIPassCommandList& commands )
     {
         if ( isActive() == false )

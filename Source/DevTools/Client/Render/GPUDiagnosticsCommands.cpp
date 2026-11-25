@@ -1,6 +1,6 @@
 /**
  * @file DevTools/Client/Render/GPUDiagnosticsCommands.cpp
- * @brief GPU 진단 개발 명령입니다 — `gpu.inspect x y [첨부] | off`(픽셀 검사 · 셰이더 출력 선택), `gpu.thread n`(컴퓨트 스레드 선택), `gpu.timings [on|off]`(패스별 GPU 시간 줄).
+ * @brief GPU 진단 개발 명령입니다 — `gpu.inspect x y [첨부] | off`(픽셀 검사 · 셰이더 출력 선택), `gpu.thread n`(컴퓨트 스레드 선택), `gpu.rhicontract`(RHI 계약 검사 — `RHIContractCheck`), `gpu.timings [on|off]`(패스별 GPU 시간 줄).
  * @details 언리얼 `r.ShaderPrint` 커서 · `stat gpu`, RenderDoc 픽셀 기록과 같은 자리다. 상태는 엔진 서브시스템(`GPUPixelInspector` · `FrameProfiler`)이 들고, 이 파일은 명령 줄만 푼다.
  *          셰이더 출력(`SW_GPU_PRINT`)은 `-gv_gpuMessages=1` 로 띄운 실행에서만 줄이 나온다(메시지 변형 PSO). 첨부 값 줄(`GPUInspect.Pixel`)은 늘 나온다.
  */
@@ -15,6 +15,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimingRow.h"
 
 namespace sw
@@ -89,6 +90,16 @@ namespace sw
                 return true;
             }
 
+            static bool runRHIContract( const vector<string>& listArgument, string& outReply )
+            {
+                RenderDebugRegistry* const pRegistry = engine::findSubsystem<RenderDebugRegistry>();
+                if ( pRegistry == nullptr || listArgument.empty() == false )
+                    return false;
+                pRegistry->requestRHIContractCheck();
+                outReply = "checking the RHI contract on this device - RHIContractCheck.Done follows in a few frames";
+                return true;
+            }
+
             static bool runTimings( const vector<string>& listArgument, string& outReply )
             {
                 FrameProfiler* const pProfiler = engine::findSubsystem<FrameProfiler>();
@@ -126,5 +137,7 @@ namespace sw
     SW_DEV_COMMAND( GPUSelectThread, "gpu.thread", "gpu.thread <dispatch thread>", "Select the compute dispatch thread for SW_GPU_PRINT", &GPUDiagnosticsCommandsInternal::runThread );
     SW_DEV_COMMAND( GPUShowAttachment, "gpu.show", "gpu.show <attachment> | gpu.show off", "Show a pipeline attachment (GBuffer, depth, ...) on screen instead of the normal output",
                     &GPUDiagnosticsCommandsInternal::runShow );
+    SW_DEV_COMMAND( GPURHIContract, "gpu.rhicontract", "gpu.rhicontract", "Check the common RHI entry points on the live device (rejections, bindings, readback) and log RHIContractCheck.Done",
+                    &GPUDiagnosticsCommandsInternal::runRHIContract );
     SW_DEV_COMMAND( GPUTimings, "gpu.timings", "gpu.timings [on|off]", "Log the last frame GPU time per pass (GPUTiming.Pass), or turn GPU timing on/off", &GPUDiagnosticsCommandsInternal::runTimings );
 } // namespace sw

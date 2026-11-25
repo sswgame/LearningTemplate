@@ -43,7 +43,8 @@ namespace sw
     } // namespace
 
     D3D12RHIDevice::D3D12RHIDevice( uint32 deviceGeneration )
-        : _device{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _device{ nullptr }
         , _allocator{ nullptr }
         , _commandQueue{ nullptr }
         , _computeQueue{ nullptr }
@@ -103,8 +104,6 @@ namespace sw
         , _cbvDescriptorSize{ 0 }
         , _cmdListEntryCreated{ 0 }
         , _fence{ nullptr }
-        , _fenceValue{ 0 }
-        , _transferSerials{ deviceGeneration }
         , _transferFence{ nullptr }
         , _transferFenceValue{ 0 }
         , _transferSubmitMutex{}
@@ -116,8 +115,6 @@ namespace sw
         , _textureTransferMutex{}
         , _mapTextureTransferMarks{}
         , _readbackTable{}
-        , _releaseQueue{}
-        , _transferReleaseQueue{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _timestampProvider{ *this }
@@ -191,6 +188,7 @@ namespace sw
         outView._format                      = record._format;
         outView._bHasRTV                     = record._bHasRTV;
         outView._bHasDSV                     = record._bHasDSV;
+        outView._extent                      = RHIRenderPassExtent{ MathUtil::max( record._width >> mip, 1u ), MathUtil::max( record._height >> mip, 1u ) };
         if ( slice >= record._arraySize || mip >= record._mipLevels )
             return true;
 
@@ -339,7 +337,7 @@ namespace sw
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
                 _bOnlineHeapExhaustedLogged = SW_TRUE;
-                // 실제 동작은 건너뛰기다 — flushSlotTables 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
+                // 실제 동작은 건너뛰기다 — flushBindings 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
                 SW_LOG_ERROR_ID( "D3D12.OutOnlineDescriptorBlocks", "Out of online descriptor blocks (%#x%#) - draws and dispatches that need a new slot table are skipped.",
                                  kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
@@ -361,7 +359,7 @@ namespace sw
         // 벡터를 복사하지 않고 통째로 묶음에 옮긴다. 상태는 풀에서 온 빈 벡터를 받아 다음 기록에 그대로 쓴다.
         ScopedLock<mutex>       lock{ _onlineBlockMutex };
         OnlineBlockRecycleBatch batch{};
-        batch._fence = _fenceValue.load();
+        batch._fence = _frameFenceRing.getRecordingSerial();
         if ( _listOnlineRecyclePool.empty() == false )
         {
             batch._listBlock.swap( _listOnlineRecyclePool.back() );
@@ -401,14 +399,12 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
-        const uint64 bytes = computeAllocationBytes( buffer.Get() );
     #if defined( SW_DO_CHECKS )
         ID3D12Resource* pNamed = buffer.Get();
     #endif
         BufferRecord record{};
         record._resource             = std::move( buffer );
         const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
     #if defined( SW_DO_CHECKS )
         nameResourceForDiagnostics( pNamed, L"Buffer", handle.getPacked() );
     #endif
@@ -423,16 +419,6 @@ namespace sw
         const D3D12_RESOURCE_ALLOCATION_INFO info = _device->GetResourceAllocationInfo( 0, 1, &desc );
         // 서술이 잘못됐으면 SizeInBytes 가 UINT64_MAX 다. 지어내지 않고 "크기 모름" 으로 센다.
         return info.SizeInBytes == UINT64_MAX ? kRHIMemoryUnknownBytes : static_cast<uint64>( info.SizeInBytes );
-    }
-
-    void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key )
-    {
-        const uint64 releaseFence = _fenceValue.load();
-        // 키 공간은 템플릿 인자로 갈라 람다를 델리게이트의 인라인 칸(24 바이트)에 맞춘다.
-        if ( key._space == RHIMemoryKeySpace::Texture )
-            _releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryTracker(), key._id, releaseFence );
-        else
-            _releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryTracker(), key._id, releaseFence );
     }
 
     bool D3D12RHIDevice::createAllocator( IDXGIAdapter* pAdapter )
@@ -555,18 +541,16 @@ namespace sw
         return true;
     }
 
-    RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, const RHITextureDesc& desc )
+    RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture )
     {
         if ( texture == nullptr )
             return 0;
-        const uint64 bytes = computeAllocationBytes( texture.Get() );
     #if defined( SW_DO_CHECKS )
         ID3D12Resource* pNamed = texture.Get();
     #endif
         TextureRecord record{};
         record._resource              = std::move( texture );
         const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
-        getMemoryTracker().recordTexture( handle, desc, bytes );
     #if defined( SW_DO_CHECKS )
         nameResourceForDiagnostics( pNamed, L"Texture", handle.getPacked() );
     #endif
@@ -1002,7 +986,7 @@ namespace sw
 
         if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
-        _fenceValue = 1;
+        _frameFenceRing.reset();
         // 전송 전용 펜스: 전송 작업(복사 리스트 하나)을 낼 때마다 한 값을 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RHIAsyncUploads).
         if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ), "CreateFence" ) == false )
             return false;
@@ -1280,6 +1264,7 @@ namespace sw
         _windowSwapChains.clear();
         _swapChain.shutdown();
         _rootSignature.Reset();
+        _nullConstantBuffer.Reset();
         _drawCommandSignature.Reset();
         _drawIndexedCommandSignature.Reset();
         _dispatchCommandSignature.Reset();
@@ -1316,6 +1301,7 @@ namespace sw
         {
             slot = StructuredUploadSlot{};
         }
+        _openUploadSlotIndex.reset();
         _timestampReadback.Reset();
         _timestampHeap.Reset();
         _resourceImpl->releaseTransientHeaps();
@@ -1329,7 +1315,7 @@ namespace sw
         _device.Reset();
         _listPipelineLibraryBlob.clear(); // 라이브러리에서 나온 파이프라인이 모두 사라진 뒤다
 
-        _fenceValue        = 0;
+        _frameFenceRing.reset();
         _rtvDescriptorSize = 0;
         _cbvDescriptorSize = 0;
     }
@@ -1431,6 +1417,10 @@ namespace sw
                 _commandQueue->ExecuteCommandLists( 1, arrCommandList );
             _frameStreamState._bRecording = SW_FALSE;
             releaseOnlineBlocksDeferred( _frameStreamState );
+            _frameThreadID.store( std::thread::id{}, std::memory_order_relaxed );
+            const ScopedDeferredLog deferredLog;
+            ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
+            retireFrameCopies();
         }
 
         (void)waitForPreviousFrame(); // 잃은 장치여도 백 버퍼는 놓는다
@@ -1453,7 +1443,7 @@ namespace sw
         }
     }
 
-    void D3D12RHIDevice::waitIdleInternal()
+    bool D3D12RHIDevice::waitIdleInternal()
     {
         // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
@@ -1461,23 +1451,8 @@ namespace sw
         // 프레임 안에서 낸 비동기 컴퓨트 일은 프레임 펜스가 덮지만, 프레임 도중에 세웠으면 아직 돌 수 있다 — 이벤트 없이(null) 끝날 때까지 기다린다.
         if ( _computeFence != nullptr && _computeFence->GetCompletedValue() < _computeFenceValue )
             requireHr( _computeFence->SetEventOnCompletion( _computeFenceValue, nullptr ), "ID3D12Fence::SetEventOnCompletion (compute idle)" );
-        // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
-        retireCompletedTransfers();
-        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 제거된 장치는 끝났는지 모른다.
-        if ( bIdle )
-            _releaseQueue.releaseAllCompleted();
-        else
-            _releaseQueue.abandonAll();
-    }
-
-    void D3D12RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _fenceValue );
-    }
-
-    void D3D12RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _fenceValue );
+        retireCompletedTransfers(); // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크 · 스테이징 구간을 거둔다
+        return bIdle;               // 제거된 장치는 끝났는지 모른다
     }
 
     unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
@@ -1592,6 +1567,7 @@ namespace sw
         _frameStreamState.resetForRecording();
         _frameStreamState._bRecording = SW_TRUE;
         _frameStreamContext->rebindCommandList( pNextSegment );
+        _frameStreamContext->beginRecording();
 
         D3D12_VIEWPORT viewport{};
         viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
@@ -1697,26 +1673,35 @@ namespace sw
         if ( _commandQueue == nullptr )
             return;
         SW_PROFILE_SCOPE( "RT.Upload.flush" ); // Vulkan 의 `RT.Upload.waitIdle` 과 견주는 자리(여기는 기다리지 않고 제출만 한다)
+        if ( _openUploadSlotIndex.has_value() == false )
+            return;
+        StructuredUploadSlot& slot = _arrStructuredUploadSlot[*_openUploadSlotIndex];
+        _openUploadSlotIndex.reset();
+        requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
+        // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
+        // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
+        // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
+        slot._resetFence = _frameFenceRing.getRecordingSerial();
+        if ( bExecuteNow )
+        {
+            ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
+            _commandQueue->ExecuteCommandLists( 1, arrList );
+        }
+        else
+        {
+            // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
+            _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
+        }
+    }
+
+    void D3D12RHIDevice::retireFrameCopies()
+    {
         for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
         {
-            if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )
+            if ( slot._bFrameCopies == SW_FALSE )
                 continue;
-            requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
-            slot._bListOpen = SW_FALSE;
-            // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
-            // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
-            // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
-            slot._resetFence = _fenceValue.load();
-            if ( bExecuteNow )
-            {
-                ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
-                _commandQueue->ExecuteCommandLists( 1, arrList );
-            }
-            else
-            {
-                // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
-                _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
-            }
+            slot._bFrameCopies = SW_FALSE;
+            slot._resetFence   = _frameFenceRing.getRecordingSerial(); // 이 제출 뒤 첫 Signal 이 복사의 끝을 덮는다(`flushPendingUploads` 와 같은 까닭)
         }
     }
 
@@ -1752,16 +1737,16 @@ namespace sw
         if ( isDeviceRemoved() )
             return false;
 
-        // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fenceValue` 의 설명). 기다리는 것은 락 밖에서다.
+        // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fence` 의 설명). 기다리는 것은 락 밖에서다.
         UINT64  fenceToWait{ 0 };
         HRESULT signalHr{ S_OK };
         {
             const ScopedDeferredLog deferredLog;
             ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
-            fenceToWait = _fenceValue.load();
+            fenceToWait = _frameFenceRing.getRecordingSerial();
             signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
-            _fenceValue.store( fenceToWait + 1 );
+            (void)_frameFenceRing.markSubmitted();
         }
 
         if ( FAILED( signalHr ) )
@@ -1774,6 +1759,7 @@ namespace sw
 
         if ( waitForFenceValue( fenceToWait ) == false )
             return false;
+        _frameFenceRing.markCompleted( fenceToWait );
 
         if ( isDeviceRemoved() )
             return false;
@@ -1855,15 +1841,15 @@ namespace sw
         if ( isDeviceRemoved() )
             return;
 
-        // Signal 과 올리기를 업로드 락 안에서 한 덩어리로 한다. 다른 스레드의 업로드가 그 사이에 `_fenceValue` 를 읽고 복사를 실행하면
-        // 복사는 Signal 뒤에 나가는데 앞 값을 받아, 그 펜스를 기다린 얼로케이터 Reset 이 아직 도는 복사를 지운다(`_fenceValue` 의 설명).
+        // Signal 과 올리기를 업로드 락 안에서 한 덩어리로 한다. 다른 스레드의 업로드가 그 사이에 기록 시리얼을 읽고 복사를 실행하면
+        // 복사는 Signal 뒤에 나가는데 앞 값을 받아, 그 펜스를 기다린 얼로케이터 Reset 이 아직 도는 복사를 지운다(`_fence` 의 설명).
         UINT64  fenceToSignal{ 0 };
         HRESULT signalHr{ S_OK };
         {
             ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
-            fenceToSignal = _fenceValue.load();
+            fenceToSignal = _frameFenceRing.getRecordingSerial();
             signalHr      = _commandQueue->Signal( _fence.Get(), fenceToSignal );
-            _fenceValue.store( fenceToSignal + 1 );
+            (void)_frameFenceRing.markSubmitted();
         }
         if ( FAILED( signalHr ) )
         {
@@ -1872,7 +1858,8 @@ namespace sw
         }
         _frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
         const uint64 completedFence = _fence->GetCompletedValue();
-        _releaseQueue.releaseCompleted( completedFence );
+        _frameFenceRing.markCompleted( completedFence );
+        releaseCompletedFrames();
         recycleCompletedOnlineBlocks( completedFence );
         // 프레임을 돌리는 동안 폴링하는 쪽이 없어도 끝난 전송의 작업 · 스테이징 구간 · 전송을 기다리던 해제가 돌아오게 한다(기다리지 않는다).
         retireCompletedTransfers();
@@ -1959,7 +1946,7 @@ namespace sw
             else
                 _listFreeCmdListEntry.push_back( entry );
         };
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ) );
     }
 
     uint32 D3D12RHIDevice::getTimestampSlotCount() const
@@ -2110,7 +2097,7 @@ namespace sw
         if ( _frameStreamState._bRecording == SW_FALSE )
         {
             waitForRingSlot();
-            _allocator->SetCurrentFrameIndex( static_cast<UINT>( _fenceValue.load() ) ); // 예산을 다시 읽는다
+            _allocator->SetCurrentFrameIndex( static_cast<UINT>( _frameFenceRing.getRecordingSerial() ) ); // 예산을 다시 읽는다
             D3D12MA::Budget localBudget{};
             D3D12MA::Budget nonLocalBudget{};
             _allocator->GetBudget( &localBudget, &nonLocalBudget );
@@ -2131,11 +2118,12 @@ namespace sw
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다. 실패하면 이번 프레임을 건너뛴다.
             if ( isHrSuccess( pAllocator->Reset(), "Reset" ) == false || isHrSuccess( _commandList->Reset( pAllocator, nullptr ), "Reset" ) == false )
                 return;
-            _frameStreamState._bRecording      = SW_TRUE;
-            _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다
-            _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
-            _pActiveFrameList                  = _commandList.Get();
+            _frameStreamState.resetForRecording(); // 새 리스트라 PSO · 슬롯 테이블은 첫 드로우가 다시 굳힌다
+            _frameStreamState._bRecording = SW_TRUE;
+            _pActiveFrameList             = _commandList.Get();
+            _frameThreadID.store( std::this_thread::get_id(), std::memory_order_relaxed );
             _frameStreamContext->rebindCommandList( _pActiveFrameList );
+            _frameStreamContext->beginRecording();
             bindBindlessRootState( _pActiveFrameList );
         }
         _swapChain.acquireNextImage();
@@ -2246,9 +2234,11 @@ namespace sw
                                                         _listPendingSubmit.data() );
                 }
                 _listPendingSubmit.clear();
+                retireFrameCopies();
             }
             _pActiveFrameList = nullptr;
         }
+        _frameThreadID.store( std::thread::id{}, std::memory_order_relaxed );
 
         // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
         for ( D3D12CommandListEntry& segment : _listFrameSegment )
@@ -2316,6 +2306,11 @@ namespace sw
         pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
         pList->SetComputeRootSignature( _rootSignature.Get() );
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+        for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+        {
+            pList->SetGraphicsRootConstantBufferView( kCBVRootParam0 + slot, getNullConstantBufferAddress() ); // 걸지 않은 b 슬롯은 0 을 읽는다
+            pList->SetComputeRootConstantBufferView( kCBVRootParam0 + slot, getNullConstantBufferAddress() );
+        }
     }
 
     void D3D12RHIDevice::bindBindlessComputeRootState( ID3D12GraphicsCommandList* pList )
@@ -2330,6 +2325,10 @@ namespace sw
         D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
         heapStart.ptr += static_cast<UINT64>( getBindlessRingBase( _frameRing.currentIndex() ) ) * _cbvDescriptorSize; // 이번 링 슬롯의 bindless 사본(R-6)
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+        for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+        {
+            pList->SetComputeRootConstantBufferView( kCBVRootParam0 + slot, getNullConstantBufferAddress() );
+        }
     }
 
     void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, uint32 offset, const void* pData, uint32 size )
@@ -2383,7 +2382,7 @@ namespace sw
             setRootDescriptor( kCBVRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
         }
 
-        // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
+        // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushBindings 가 온라인 블록에 굳혀 건다.
         D3D12_DESCRIPTOR_RANGE srvSlotRange{};
         srvSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         srvSlotRange.NumDescriptors                                  = shaderslot::kSRVSlotCount;
@@ -2522,6 +2521,12 @@ namespace sw
         if ( isHrSuccess( _device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) ), "CreateCommandSignature (dispatch)" ) == false )
             return false;
 
+        // cbuffer 하나의 상한(64 KB)만큼이라 어떤 선언도 버퍼 밖을 읽지 않는다.
+        void*            pNullConstantMapped{ nullptr };
+        constexpr uint64 kNullConstantBytes = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 4u * sizeof( uint32 );
+        if ( createMappedUploadBuffer( kNullConstantBytes, L"NullConstantBuffer", _nullConstantBuffer, pNullConstantMapped ) == false )
+            return false;
+        Memory::set( pNullConstantMapped, 0, kNullConstantBytes );
         return true;
     }
 
@@ -2574,8 +2579,7 @@ namespace sw
         _transferFenceQueue.retireAll( [this]( D3D12TransferJob& job )
         { recycleTransferJob( std::move( job ) ); } );
         // 전송을 기다리던 해제를 프레임 해제 큐로 넘기고 바로 비운다 — 네이티브 디바이스가 사라진 뒤의 소멸자에 맡기지 않는다(종료 3 · 4단계가 넣은 해제는 부를 단계가 없다).
-        _transferReleaseQueue.abandonAll();
-        _releaseQueue.abandonAll();
+        abandonReleases();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             _listFreeTransferJob.clear();
@@ -2592,79 +2596,57 @@ namespace sw
 
     bool D3D12RHIDevice::createStagingRing( D3D12StagingRing& ring, D3D12_HEAP_TYPE heapType, uint64 capacityBytes, uint64 soloMaxBytes )
     {
-        ring._heapType = heapType;
-        if ( createMappedStagingBuffer( heapType, capacityBytes, ring._buffer, ring._pMapped ) == false )
-            return false;
         // 구간 시작 정렬은 텍스처 복사의 배치 오프셋 규칙(512)이다 — 구간 안에서 다시 맞추지 않아도 된다.
-        ring._allocator.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes );
-        return true;
+        return ring.initialize( capacityBytes, static_cast<uint64>( D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT ), soloMaxBytes, [this, heapType]( uint64 sizeBytes, D3D12StagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( heapType, sizeBytes, outBuffer ); } );
     }
 
     void D3D12RHIDevice::destroyStagingRing( D3D12StagingRing& ring )
     {
-        {
-            ScopedLock<mutex> soloLock{ ring._soloMutex };
-            destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        }
-        destroyMappedStagingBuffer( ring._buffer, ring._pMapped );
-        ring._allocator.shutdown();
+        ring.shutdown( [this]( D3D12StagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
-    bool D3D12RHIDevice::createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped )
+    bool D3D12RHIDevice::createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, D3D12StagingBuffer& outBuffer )
     {
-        pOutMapped = nullptr;
+        outBuffer = D3D12StagingBuffer{};
         void*      pMapped{ nullptr };
-        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, L"ReadbackRing", outBuffer, pMapped ) : createMappedUploadBuffer( sizeBytes, L"UploadRing", outBuffer, pMapped );
+        const bool bCreated = heapType == D3D12_HEAP_TYPE_READBACK ? createMappedReadbackBuffer( sizeBytes, L"ReadbackRing", outBuffer._resource, pMapped )
+                                                                   : createMappedUploadBuffer( sizeBytes, L"UploadRing", outBuffer._resource, pMapped );
         if ( bCreated == false )
         {
             SW_LOG_ERROR_ID( "D3D12.FailedCreateMapD3D12", "Failed to create or map the D3D12 staging upload buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._stagingSingleMaxMegabytes)", sizeBytes );
             return false;
         }
-        pOutMapped = static_cast<uint8*>( pMapped );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer.Get() ), RHIMemoryKind::Staging, computeAllocationBytes( outBuffer.Get() ) );
+        outBuffer._pMapped = static_cast<uint8*>( pMapped );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer._resource.Get() ), RHIMemoryKind::Staging, computeAllocationBytes( outBuffer._resource.Get() ) );
         return true;
     }
 
-    void D3D12RHIDevice::destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped )
+    void D3D12RHIDevice::destroyMappedStagingBuffer( D3D12StagingBuffer& rBuffer )
     {
         // 자원을 놓으면 매핑도 풀린다. 추적기에는 매핑까지 끝난 버퍼만 올렸다.
-        if ( rBuffer != nullptr )
-            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer.Get() ) );
-        rBuffer.Reset();
-        pMapped = nullptr;
+        if ( rBuffer.isValid() )
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer._resource.Get() ) );
+        rBuffer = D3D12StagingBuffer{};
     }
 
     RHISubmitResult D3D12RHIDevice::allocateStagingSpan( D3D12StagingRing& ring, uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan )
     {
-        RHIStagingAllocateResult result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        if ( result == RHIStagingAllocateResult::Full )
-        {
-            retireCompletedTransfers();
-            result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        }
-        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "D3D12", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
-            return submitResult;
-        // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        const ScopedDeferredLog deferredLog;
-        ScopedLock<mutex>       soloLock{ ring._soloMutex };
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
-        if ( createMappedStagingBuffer( ring._heapType, outSpan.getSizeBytes(), ring._soloBuffer, ring._pSoloMapped ) )
-            return RHISubmitResult::Accepted;
-        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "D3D12", pCaller );
+        const D3D12_HEAP_TYPE heapType = &ring == &_readbackRing ? D3D12_HEAP_TYPE_READBACK : D3D12_HEAP_TYPE_UPLOAD; // 단독 버퍼도 링과 같은 힙이다
+        return ring.allocate(
+            sizeBytes, _transferSerials, "D3D12", pCaller, [this]()
+        { retireCompletedTransfers(); },
+            [this, heapType]( uint64 soloBytes, D3D12StagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( heapType, soloBytes, outBuffer ); },
+            [this]( D3D12StagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); }, outSpan );
     }
 
     void D3D12RHIDevice::destroyIdleSoloBuffer( D3D12StagingRing& ring )
     {
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
-        if ( ring._soloBuffer == nullptr )
-            return;
-        // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
-        ring._allocator.freeCompleted( _transferSerials.getWatermark() );
-        if ( ring._allocator.hasLiveSolo() )
-            return;
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
+        ring.destroyIdleSolo( _transferSerials, [this]( D3D12StagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
     bool D3D12RHIDevice::beginTransferJob( D3D12TransferJob& outJob )
@@ -2767,18 +2749,10 @@ namespace sw
             { recycleTransferJob( std::move( job ) ); } );
         }
         // 워터마크가 지난 전송을 기다리던 해제를 프레임 해제 큐로 넘긴다(그 프레임 펜스 뒤에 놓인다).
-        _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() );
+        releaseCompletedTransfers();
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(업로드 힙 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
         destroyIdleSoloBuffer( _readbackRing );
-    }
-
-    void D3D12RHIDevice::releaseTextureAfterTransfer( Microsoft::WRL::ComPtr<ID3D12Resource> owned, RHITextureHandle texture, uint64 lastSerial )
-    {
-        // 전송이 끝난 뒤의 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다. 전송과 프레임이 같은 큐여도 해제가 그 공유에 기대지 않게 전송 완료를 직접 본다.
-        _transferReleaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, owned, texture]()
-        { releaseTrackedResourceDeferred( owned, RHIMemoryKey::makeTexture( texture ) ); } ),
-                                                 lastSerial );
     }
 
     void D3D12RHIDevice::recordTextureTransfer( RHITextureHandle texture, uint64 serial )
@@ -2792,14 +2766,6 @@ namespace sw
         ScopedLock<mutex> lock{ _textureTransferMutex };
         const auto        foundIt = _mapTextureTransferMarks.find( texture );
         return foundIt != _mapTextureTransferMarks.end() ? foundIt->second._lastSerial.load() : 0;
-    }
-
-    bool D3D12RHIDevice::isTextureReadyToRegister( RHITextureHandle texture )
-    {
-        const ScopedDeferredLog deferredLog;
-        ScopedLock<mutex>       lock{ _textureTransferMutex };
-        const auto              foundIt = _mapTextureTransferMarks.find( texture );
-        return foundIt == _mapTextureTransferMarks.end() || _transferSerials.isTextureReadyToRegister( foundIt->second, texture );
     }
 
     bool D3D12RHIDevice::isTextureFirstUploadComplete( RHITextureHandle texture )

@@ -74,6 +74,7 @@ SW_TEST_CASE( RHITextureSlotTest, RecreatesOnlyWhenTheShapeChanges )
  */
 SW_TEST_CASE( RHITextureSlotTest, PartialViewFailureLeavesNothing )
 {
+    SW_EXPECT_LOG( "RHI.BindlessRegisterFailed" );
     test::FakeRHIBufferFactory factory;
     factory._nextTexture     = 1;
     factory._bFailTextureUAV = true;

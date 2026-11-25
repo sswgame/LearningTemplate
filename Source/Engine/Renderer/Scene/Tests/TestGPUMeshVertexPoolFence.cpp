@@ -58,10 +58,7 @@ SW_TEST_CASE( GPUMeshVertexPoolFenceTest, RetiredSpanWaitsForTheGPUFence )
     }
 
     // GPU 가 지금까지 낸 프레임을 모두 끝냈다 — 다음 `update` 가 구간 0 을 돌려받아 새 메시에 준다(가장 잘 맞는 빈 구간).
-    for ( const RHIFrameCompletionDelegate& completion : device._listFrameCompletion )
-    {
-        completion( RHIFrameCompletion::Completed );
-    }
+    device.completeGPUFrames();
     const shared_ptr<Mesh> meshLate = makeTriangle();
     listMesh.push_back( meshLate.get() );
     SW_REQUIRE_TRUE( pool.update( &device, listMesh ) );

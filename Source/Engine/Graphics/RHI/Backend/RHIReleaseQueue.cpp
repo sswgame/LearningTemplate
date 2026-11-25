@@ -10,6 +10,17 @@ namespace sw
         , _listReadyScratch{}
         , _listCompletionScratch{}
         , _spinLock{}
+        , _pTracker{ nullptr }
+    {
+    }
+
+    RHIReleaseQueue::RHIReleaseQueue( RHIMemoryTracker& tracker )
+        : _listGPUEntry{}
+        , _listCompletionEntry{}
+        , _listReadyScratch{}
+        , _listCompletionScratch{}
+        , _spinLock{}
+        , _pTracker{ &tracker }
     {
     }
 
@@ -24,7 +35,25 @@ namespace sw
             return;
 
         ScopedLock<SpinLock> lock{ _spinLock };
-        _listGPUEntry.push( releaseDelegate, fenceValue );
+        _listGPUEntry.push( ReleaseEntry{ releaseDelegate, RHIMemoryKey{} }, fenceValue );
+    }
+
+    void RHIReleaseQueue::enqueueResource( const RHIResourceReleaseDelegate& release, const RHIMemoryKey& key, uint64 fenceValue )
+    {
+        SW_ASSERT( _pTracker != nullptr && "a tracked release needs the tracker given at construction" );
+        ScopedLock<SpinLock> lock{ _spinLock };
+        _listGPUEntry.push( ReleaseEntry{ release, key }, fenceValue );
+    }
+
+    void RHIReleaseQueue::runReleases( const vector<ReleaseEntry>& listEntry )
+    {
+        for ( const ReleaseEntry& entry : listEntry )
+        {
+            if ( entry._release.isBound() )
+                entry._release();
+            if ( entry._trackedKey._id != 0 )
+                _pTracker->recordFree( entry._trackedKey );
+        }
     }
 
     void RHIReleaseQueue::enqueueCompletion( const RHIFrameCompletionDelegate& completionDelegate, uint64 fenceValue )
@@ -42,7 +71,7 @@ namespace sw
         // 꺼내고 돌려놓는 것도 잠금 안에서 한다. DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의
         // 업로드 펜스 대기(D3D12RHIResourceFactory)가 releaseCompleted 를 동시에 부를 수 있다.
         // 잠금 안에서는 할당하지 않는다(`RHIRetireList::extractReadyReserving`).
-        vector<RHIResourceReleaseDelegate> listReady;
+        vector<ReleaseEntry>               listReady;
         vector<RHIFrameCompletionDelegate> listCompletion;
         {
             UniqueLock<SpinLock> lock{ _spinLock };
@@ -57,10 +86,7 @@ namespace sw
         {
             callback( RHIFrameCompletion::Completed );
         }
-        for ( const RHIResourceReleaseDelegate& callback : listReady )
-        {
-            callback();
-        }
+        runReleases( listReady );
         listReady.clear();
         listCompletion.clear();
         ScopedLock<SpinLock> lock{ _spinLock };
@@ -83,7 +109,7 @@ namespace sw
 
     void RHIReleaseQueue::flushAll( RHIFrameCompletion result )
     {
-        RHIRetireList<RHIResourceReleaseDelegate> listGPUFlush;
+        RHIRetireList<ReleaseEntry>               listGPUFlush;
         RHIRetireList<RHIFrameCompletionDelegate> listCompletionFlush;
         {
             ScopedLock<SpinLock> lock{ _spinLock };
@@ -98,13 +124,10 @@ namespace sw
         {
             callback( result );
         }
-        vector<RHIResourceReleaseDelegate> listFlush;
+        vector<ReleaseEntry> listFlush;
         listFlush.reserve( listGPUFlush.size() );
         listGPUFlush.extractAll( listFlush );
-        for ( const RHIResourceReleaseDelegate& callback : listFlush )
-        {
-            callback();
-        }
+        runReleases( listFlush );
     }
 
     uint32 RHIReleaseQueue::getPendingReleaseCount() const

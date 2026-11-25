@@ -86,7 +86,8 @@ namespace sw
     } // namespace
 
     D3D11RHIDevice::D3D11RHIDevice( uint32 deviceGeneration )
-        : _device{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _device{ nullptr }
         , _memoryAdapter{ nullptr }
         , _immediateContext{}
         , _backBufferFormat{ constant::render::kBackBufferFormat }
@@ -103,7 +104,6 @@ namespace sw
         , _clockQuery{}
         , _idleQuery{}
         , _arrFrameDoneQuery{}
-        , _frameFenceRing{}
         , _lastTimestampFrequency{ 0 }
         , _bufferRegistry{}
         , _textureRegistry{}
@@ -111,8 +111,6 @@ namespace sw
         , _pipelineStates{ getHandleReuseCount() }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _releaseQueue{}
-        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
         , _readbackTable{}
@@ -208,9 +206,10 @@ namespace sw
         _nativeContextSerial.fetch_add( 1u ); // 바깥 코드가 상수 버퍼 슬롯을 바꿨을 수 있다 — 렌더 스레드의 그림자가 다음 바인딩에서 버린다
     }
 
-    bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )
+    bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state, RHIBindPoint point )
     {
-        if ( state._rootConstantCb != nullptr )
+        Microsoft::WRL::ComPtr<ID3D11Buffer>& buffer = state._arrRootConstantCb[static_cast<uint32>( point )];
+        if ( buffer != nullptr )
             return true;
         if ( _device == nullptr )
             return false;
@@ -222,7 +221,7 @@ namespace sw
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다.
         // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 테이블을 건드리지 않는다.
-        if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ), "CreateBuffer" ) == false )
+        if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
         {
             SW_LOG_ERROR_ID( "D3D11.FailedCreateRootConstant", "Failed to create root-constant cbuffer." );
             return false;
@@ -281,14 +280,10 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
-        D3D11_BUFFER_DESC bufferDesc{};
-        buffer->GetDesc( &bufferDesc );
         BufferRecord record{};
-        record._buffer               = std::move( buffer );
-        record._srv                  = std::move( srv );
-        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bufferDesc.ByteWidth );
-        return handle;
+        record._buffer = std::move( buffer );
+        record._srv    = std::move( srv );
+        return _gpuBuffers.insert( std::move( record ) );
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBufferWithSRV( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
@@ -310,13 +305,9 @@ namespace sw
         return _gpuTextures.get( handle );
     }
 
-    RHITextureHandle D3D11RHIDevice::storeTexture( TextureRecord record, const RHITextureDesc& desc )
+    RHITextureHandle D3D11RHIDevice::storeTexture( TextureRecord record )
     {
-        if ( record._texture == nullptr )
-            return 0;
-        const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
-        getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
-        return handle;
+        return record._texture != nullptr ? _gpuTextures.insert( std::move( record ) ) : RHITextureHandle{ 0 };
     }
 
     D3D11RHIDevice::UploadStaging::UploadStaging()
@@ -703,7 +694,6 @@ namespace sw
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
-        _recordingState._activeGraphicsPSO = 0;
         {
             UniqueLock<shared_mutex> lock{ _bindlessMutex };
             _bufferRegistry.clear();
@@ -754,7 +744,7 @@ namespace sw
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
-            _recordingState._constantBuffers.invalidate();
+            invalidateFrameStreamState();
         }
         _windowSwapChains.remove( static_cast<D3D11RHISwapChain&>( swapChain ) );
     }
@@ -808,7 +798,7 @@ namespace sw
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             context->ClearState();
             context->Flush();
-            _recordingState._constantBuffers.invalidate();
+            invalidateFrameStreamState();
         }
     }
 
@@ -1054,6 +1044,7 @@ namespace sw
 
         // FLIP_DISCARD 는 백버퍼를 돌려 쓴다. Present 가 보여 줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
         _swapChain.acquireNextImage( _device.Get() );
+        _frameStreamContext->beginRecording(); // 프레임 스트림은 프레임마다 새 기록이다(다른 백엔드의 새 커맨드 버퍼와 같다)
         // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다. 프레임마다 다시 건다(값싸다).
         bindStaticSamplers( context.get() );
         if ( _swapChain.getBackBufferRTV() == nullptr )
@@ -1134,7 +1125,7 @@ namespace sw
         retireFrameOnGPU();
     }
 
-    void D3D11RHIDevice::waitIdleInternal()
+    bool D3D11RHIDevice::waitIdleInternal()
     {
         bool bIdle{ false };
         if ( _immediateContext.isValid() )
@@ -1153,18 +1144,13 @@ namespace sw
             _transferQueue.retireAll( [this]( TransferFence& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
         }
-        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 시간 초과 · 잃은 장치는 끝났는지 모른다.
-        if ( bIdle && isDeviceLost() == false )
-            _releaseQueue.releaseAllCompleted();
-        else
-            _releaseQueue.abandonAll();
+        return bIdle && isDeviceLost() == false; // 시간 초과 · 잃은 장치는 끝났는지 모른다
     }
 
     void D3D11RHIDevice::retireFrameOnGPU()
     {
         if ( _immediateContext.isValid() == false )
             return;
-        uint64 completedSerial{ 0 };
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             // 링이 한 바퀴 돌았다. 이 칸은 kMaxFrameCountInFlight 프레임 앞의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
@@ -1179,14 +1165,14 @@ namespace sw
             (void)_frameFenceRing.markSubmitted();
 
             // 이미 끝난 프레임을 오래된 순서로 모은다. Present 가 명령을 보냈으므로 여기서는 Flush 하지 않고 묻기만 한다.
-            completedSerial = _frameFenceRing.retire( [this, &context]( uint32 slot, uint64 serial )
+            (void)_frameFenceRing.retire( [this, &context]( uint32 slot, uint64 serial )
             {
                 (void)serial;
                 return isEventQueryDone( context, _arrFrameDoneQuery[slot].Get(), D3D11_ASYNC_GETDATA_DONOTFLUSH );
             } );
         }
         // 콜백은 즉시 컨텍스트 잠금 밖에서 부른다 — 비동기 되읽기의 콜백이 같은 잠금을 잡고 Map 한다.
-        _releaseQueue.releaseCompleted( completedSerial );
+        releaseCompletedFrames();
     }
 
     Microsoft::WRL::ComPtr<ID3D11Query> D3D11RHIDevice::acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context )
@@ -1235,16 +1221,6 @@ namespace sw
         { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
     }
 
-    void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void D3D11RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()
     {
         unique_ptr<D3D11RHICommandList> list = make_unique<D3D11RHICommandList>( this );
@@ -1256,30 +1232,10 @@ namespace sw
         return list;
     }
 
-    void D3D11RHIDevice::removeBufferInRecordingStates( RHIBufferHandle buffer )
+    void D3D11RHIDevice::invalidateFrameStreamState()
     {
-        _recordingState._geometry.remove( buffer );
-
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        for ( D3D11RHICommandList* pList : _listLiveCmd )
-        {
-            if ( pList == nullptr )
-                continue;
-            pList->getRecordingState()._geometry.remove( buffer );
-        }
-    }
-
-    void D3D11RHIDevice::removePipelineStateInRecordingStates( RHIPipelineStateHandle pso )
-    {
-        if ( _recordingState._activeGraphicsPSO == pso )
-            _recordingState._activeGraphicsPSO = 0;
-
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        for ( D3D11RHICommandList* pList : _listLiveCmd )
-        {
-            if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPSO == pso )
-                pList->getRecordingState()._activeGraphicsPSO = 0;
-        }
+        if ( _frameStreamContext != nullptr )
+            _frameStreamContext->onNativeStateCleared();
     }
 
     void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
@@ -1307,7 +1263,7 @@ namespace sw
         // 그대로 끼워진다. DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         context->ExecuteCommandList( pList, FALSE );
-        _recordingState._constantBuffers.invalidate(); // RestoreContextState FALSE 가 즉시 컨텍스트 상태를 지웠다
+        invalidateFrameStreamState(); // RestoreContextState FALSE 가 즉시 컨텍스트 상태를 지웠다
 
         // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한
         // 때(보통 Present)에 GPU 로 보내므로, 오류가 나면 어느 리스트 때문인지 알 수 없다.

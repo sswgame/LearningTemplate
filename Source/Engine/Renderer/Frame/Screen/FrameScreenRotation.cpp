@@ -79,15 +79,9 @@ namespace sw
         const RHISurfaceRect         viewRect = rotation.mapLogicalRect( RHISurfaceRect{ 0, 0, rotation._logicalWidth, rotation._logicalHeight } );
 
         cmd.prepareTextureForShaderRead( _target._texture );
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = kRHIBackBufferTexture;      // 스왑체인 이미지(실제 크기)
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear; // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다 — 타일 GPU 에서 클리어는 거의 공짜다
-        beginInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
-        beginInfo._width             = rotation.getPhysicalWidth();
-        beginInfo._height            = rotation.getPhysicalHeight();
-        cmd.beginRenderPass( beginInfo );
+        // 스왑체인 이미지(실제 크기). 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다 — 타일 GPU 에서 클리어는 거의 공짜다
+        cmd.beginRenderPass( RHIRenderPassBeginInfo::backBuffer( nullptr, RHIRenderPassLoadOp::Clear, float4{ 0.0f, 0.0f, 0.0f, 1.0f } )
+                                 .setExtent( rotation.getPhysicalWidth(), rotation.getPhysicalHeight() ) );
         cmd.setPipelineState( pso );
         RHIViewport viewport{};
         viewport._x      = static_cast<float32>( viewRect._x );
@@ -96,22 +90,18 @@ namespace sw
         viewport._height = static_cast<float32>( viewRect._height );
         cmd.setViewport( viewport );
 
-        const RHISurfaceUVMapping                  mapping         = rotation.computeLogicalUVMapping();
-        const bool                                 bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        const RHISurfaceUVMapping                  mapping = rotation.computeLogicalUVMapping();
         FrameScreenRotationInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( _target._srv ) : 0u;
-        constants._logicalWidth      = static_cast<float32>( _target._width );
-        constants._logicalHeight     = static_cast<float32>( _target._height );
-        constants._m00               = mapping._m00;
-        constants._m01               = mapping._m01;
-        constants._m10               = mapping._m10;
-        constants._m11               = mapping._m11;
-        constants._offsetU           = mapping._offsetU;
-        constants._offsetV           = mapping._offsetV;
-        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
-        if ( bNativeBindless == false )
-            cmd.bindShaderResource( _target._srv, kSourceSlot );
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        constants._source        = cmd.bindSampledTexture( _target._srv, shaderslot::emulated::getSlot( "SourceColor" ) );
+        constants._logicalWidth  = static_cast<float32>( _target._width );
+        constants._logicalHeight = static_cast<float32>( _target._height );
+        constants._m00           = mapping._m00;
+        constants._m01           = mapping._m01;
+        constants._m10           = mapping._m10;
+        constants._m11           = mapping._m11;
+        constants._offsetU       = mapping._offsetU;
+        constants._offsetV       = mapping._offsetV;
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         cmd.prepareTextureForRenderTarget( _target._texture );

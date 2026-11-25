@@ -21,6 +21,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -246,20 +247,20 @@ namespace sw
         if ( _bFogVolumeActive == SW_FALSE )
             return;
         SW_PROFILE_SCOPE( "RT.Fog.Volume" );
-        // t0 라이트 · t2 그리드는 라이트 버퍼가 없거나 뷰의 그리드가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 — DX12 는 빈 디스크립터를 읽으면 폴트).
+        // 라이트 · 그리드는 라이트 버퍼가 없거나 뷰의 그리드가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 — DX12 는 빈 디스크립터를 읽으면 폴트).
         const bool                 bLights = lightBuffer.isBindable();
         const RHIStructuredBuffer* pGrid   = bLights ? lightBuffer.findGridBuffer() : nullptr;
         const RHIBufferSRVIndex    lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
         const RHIBufferSRVIndex    grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
 
         // 쓰기 앞 UAV · 안개 패스(그래프, t11) 앞 셰이더 읽기는 프레임 그래프가 낸다(`VolumetricFogVolume` — `FrameGraphExecutor::beginFrame` 이 등록한다).
-        cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassKind::VolumetricFog ) );
-        // g_FogLights(t0) / g_FogParams(t1) / g_FogLightGrid(t2) / g_FogVolumeRW(u0). volumetric_fog.hlsl 레지스터와 1:1 이다.
-        cmd.bindComputeShaderResource( lights, 0 );
-        cmd.bindComputeShaderResource( _fogVolumeParamBuffer._srv, 1 );
-        cmd.bindComputeShaderResource( grid, 2 );
-        cmd.bindComputeUAV( _fogVolumeBuffer._uav, 0 );
-        cmd.dispatchThreads( SW_FOG_VOLUME_DIM_X, SW_FOG_VOLUME_DIM_Y, 1 );
+        ComputeShaderParameters<VolumetricFogShader> parameters;
+        parameters.set( VolumetricFogShader::Lights, lights );
+        parameters.set( VolumetricFogShader::Params, _fogVolumeParamBuffer._srv );
+        parameters.set( VolumetricFogShader::LightGrid, grid );
+        parameters.set( VolumetricFogShader::Volume, _fogVolumeBuffer._uav );
+        if ( parameters.apply( cmd, _psoManager.getComputePSO( RenderPassKind::VolumetricFog ) ) )
+            cmd.dispatchThreads( SW_FOG_VOLUME_DIM_X, SW_FOG_VOLUME_DIM_Y, 1 );
     }
 } // namespace sw
 

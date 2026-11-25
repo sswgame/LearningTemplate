@@ -233,14 +233,14 @@ namespace sw
         if ( source._texture == 0 )
             return;
 
-        const RHITextureSlot&                    current         = view._autoExposureHistory.getCurrent();
-        const RHITextureSlot&                    previous        = view._autoExposureHistory.getPrevious();
-        const RHITextureHandle                   target          = current._texture;
-        IRHIPassCommandList&                     cmd             = *context._pCmd;
-        const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        const RHITextureSlot&                    current  = view._autoExposureHistory.getCurrent();
+        const RHITextureSlot&                    previous = view._autoExposureHistory.getPrevious();
+        const RHITextureHandle                   target   = current._texture;
+        IRHIPassCommandList&                     cmd      = *context._pCmd;
         FrameAutoExposureInternal::RootConstants constants{};
-        constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._history      = bNativeBindless ? static_cast<uint32>( previous._srv ) : 0u;
+        // 컴퓨트 판은 네이티브 bindless 에서만 만든다(`findHistogramPSO`) — 번호 그대로다. 그리기 판은 PSO 뒤에 `bindSampledTexture` 가 다시 정한다.
+        constants._source       = static_cast<uint32>( source._srv );
+        constants._history      = static_cast<uint32>( previous._srv );
         constants._minEv        = view._autoExposureParams._x;
         constants._maxEv        = view._autoExposureParams._y;
         constants._rateUp       = view._autoExposureParams._z;
@@ -257,40 +257,24 @@ namespace sw
         {
             constants._output = static_cast<uint32>( current._uav );
             cmd.setComputePipelineState( histogramPSO );
-            cmd.setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+            cmd.setComputeRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
             cmd.dispatchCompute( 1, 1, 1 );
             graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
-            context.resetBindingCache();
             context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
             return;
         }
         // 1 px 그리기 판 — 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV — 컴퓨트 판이 기본이다).
         graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::RenderTarget );
 
-        RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = target;
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
-        beginInfo._depthTarget       = 0;
-        beginInfo._width             = 1;
-        beginInfo._height            = 1;
-        cmd.beginRenderPass( beginInfo );
-        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
+        context.beginRenderPass( RHIRenderPassBeginInfo::color( target, RHIRenderPassLoadOp::DontCare ).setExtent( 1, 1 ) );
+        context.setPipeline( _psoManager.getEnginePSO( RenderPassKind::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        if ( bNativeBindless == false )
-        {
-            constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
-            constexpr uint32 kHistorySlot = shaderslot::emulated::getSlot( "AutoExposure" );
-            cmd.bindShaderResource( source._srv, kSourceSlot );
-            cmd.bindShaderResource( previous._srv, kHistorySlot );
-        }
-        cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        constants._source  = cmd.bindSampledTexture( source._srv, shaderslot::emulated::getSlot( "SourceColor" ) );
+        constants._history = cmd.bindSampledTexture( previous._srv, shaderslot::emulated::getSlot( "AutoExposure" ) );
+        cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
         graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::ShaderRead );
-        // 측정 그리기는 PSO · 슬롯을 직접 바꿨다 — 톤맵 그리기가 바인딩 캐시를 믿고 PSO 를 건너뛰지 않게 지운다.
-        context.resetBindingCache();
         context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
     }
 } // namespace sw

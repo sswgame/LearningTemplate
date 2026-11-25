@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    struct ComputePipeline;
     struct CanvasFrameData;
 
     class CanvasQuadBuffer;
@@ -40,8 +41,8 @@ namespace sw
          *        @p quadBuffer 에 올린 앵커 원소 중 켜진 마커의 것을 화면 좌표 · 배율로 덮어쓰고, 캔버스 그리기(셰이더 읽기)를 위해 읽기 상태로 돌려놓는다.
          * @details 인자는 `CanvasRenderer::recordMarkerProjection` 과 같습니다.
          */
-        void record( IRHIPassCommandList& cmd, const CanvasQuadBuffer& quadBuffer, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV,
-                     RHIBufferSRVIndex placeholderSRV, GPUMessageChannel& inoutMessages, bool bShowInstanceSlots ) const;
+        void record( IRHIPassCommandList& cmd, const CanvasQuadBuffer& quadBuffer, const ComputePipeline& pipeline, RHIBufferHandle instanceBuffer, RHIBufferSRVIndex instanceSRV,
+                     RHIBufferSRVIndex placeholderSRV, const GPUMessageChannel& messages, bool bShowInstanceSlots ) const;
         /** @brief 입력 행 버퍼를 해제합니다(디바이스가 없으면 핸들만 잊습니다). */
         void release( IRHIDevice* pDevice );
 

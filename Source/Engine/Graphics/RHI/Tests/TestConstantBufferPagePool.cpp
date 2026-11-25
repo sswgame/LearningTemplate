@@ -31,22 +31,24 @@ namespace
     class FakePageFactory final : public IRHIResourceFactory
     {
     public:
-        vector<FactoryEvent> _listEvent;
-        uint64               _nextBuffer{ 100 }; ///< 다음에 낼 버퍼 핸들의 packed 값
-        uint32               _nextIndex{ 1 };
-        bool                 _bFailPage{ false };
-        bool                 _bFailRegister{ false };
-        RHIBufferSlice       _lastRegistered;
-        vector<uint32>       _listUpdateSize; ///< 구간 갱신으로 받은 크기(받은 순서)
+        vector<FactoryEvent>   _listEvent;
+        uint64                 _nextBuffer{ 100 }; ///< 다음에 낼 버퍼 핸들의 packed 값
+        uint32                 _nextIndex{ 1 };
+        uint32                 _pageBytes{ 0 }; ///< 만든 페이지 가운데 가장 큰 바이트
+        bool                   _bFailPage{ false };
+        bool                   _bFailRegister{ false };
+        RHIBufferSlice         _lastRegistered;
+        vector<RHIBufferSlice> _listWritten; ///< 쓰기로 받은 구간(받은 순서)
 
-        RHIBufferHandle createConstantBufferPage( uint32 size ) override
+        RHIBufferHandle createConstantBufferPageNative( uint32 size ) override
         {
             if ( _bFailPage )
                 return 0;
             _listEvent.push_back( FactoryEvent{ 'P', size } );
+            _pageBytes = _pageBytes > size ? _pageBytes : size;
             return RHIBufferHandle{ _nextBuffer++ };
         }
-        RHIBufferSRVIndex registerBindlessBufferSRV( const RHIBufferSlice& slice ) override
+        RHIBufferSRVIndex registerBindlessBufferSRVNative( const RHIBufferSlice& slice ) override
         {
             if ( _bFailRegister )
                 return kInvalidDescriptorIndex;
@@ -54,48 +56,60 @@ namespace
             _listEvent.push_back( FactoryEvent{ 'R', _nextIndex } );
             return RHIBufferSRVIndex{ _nextIndex++ };
         }
-        void unregisterBindlessResource( RHIBufferSRVIndex index ) override { _listEvent.push_back( FactoryEvent{ 'U', index.getValue() } ); }
-        void updateConstantBuffer( const RHIBufferSlice&, const void*, uint32 size ) override { _listUpdateSize.push_back( size ); }
+        bool unregisterBindlessResourceNative( RHIBufferSRVIndex index ) override
+        {
+            _listEvent.push_back( FactoryEvent{ 'U', index.getValue() } );
+            return true;
+        }
+        void writeConstantBufferSliceNative( const RHIBufferSlice& slice, const void*, uint32 ) override { _listWritten.push_back( slice ); }
 
-        RHIBufferHandle         createVertexBuffer( const void*, uint32 ) override { return 0; }
-        RHIBufferHandle         createGPUVertexBuffer( uint32 ) override { return 0; }
-        RHIBufferHandle         createIndexBuffer( const void*, uint32 ) override { return 0; }
-        void                    updateGeometryBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        void                    updateStructuredBufferRegions( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
-        RHITransferSubmit       submitTextureUpload( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferSubmit       submitTextureRegionUpload( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferSubmit       submitTextureReadback( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
-        RHITransferStatus       pollTransfer( RHITransferTicket ) override { return RHITransferStatus::Failed; }
-        bool                    takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
-        void                    discardTextureReadback( RHITransferTicket ) override {}
-        RHIPipelineStateHandle  createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
-        RHIPipelineStateHandle  createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
-        RHIBufferHandle         createConstantBuffer( uint32 ) override { return 0; }
-        void                    updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-        RHIBufferHandle         createStructuredBuffer( uint32, uint32 ) override { return 0; }
-        RHIBufferHandle         createReadbackBuffer( uint32, uint32 ) override { return 0; }
-        [[nodiscard]] bool      readReadbackBuffer( RHIBufferHandle, uint32, void* ) override { return false; }
-        RHITextureHandle        createTexture2D( const RHITextureDesc& ) override { return 0; }
-        RHIFormat               getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
-        RHITextureSRVIndex      registerBindlessTexture( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        bool                    rebindBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
-        RHITextureSRVIndex      reserveBindlessTextureIndex() override { return kInvalidDescriptorIndex; }
-        bool                    activateReservedBindlessTexture( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
-        bool                    isTextureReadyToSample( RHITextureHandle ) override { return false; }
-        void                    unregisterBindlessTexture( RHITextureSRVIndex ) override {}
-        RHIBufferSRVIndex       registerBindlessBufferSRV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIUnorderedAccessIndex registerBindlessBufferUAV( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
-        RHIUnorderedAccessIndex registerBindlessTextureUAV( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
-        void                    unregisterBindlessUAV( RHIUnorderedAccessIndex ) override {}
+        RHIBufferHandle        createVertexBufferNative( const void*, uint32 ) override { return 0; }
+        RHIBufferHandle        createGPUVertexBufferNative( uint32 ) override { return 0; }
+        RHIBufferHandle        createIndexBufferNative( const void*, uint32 ) override { return 0; }
+        void                   updateGeometryBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        void                   updateStructuredBufferRegionsNative( RHIBufferHandle, const void*, const RHIBufferCopyRegion*, uint32 ) override {}
+        RHITransferSubmit      submitTextureUploadNative( RHITextureHandle, const RHITextureUploadDesc& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit      submitTextureRegionUploadNative( RHITextureHandle, const RHITextureRegionUploadDesc& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferSubmit      submitTextureReadbackNative( RHITextureHandle, uint32, uint32, RHITextureMipSpan& ) override { return RHITransferSubmit::rejected(); }
+        RHITransferStatus      pollTransfer( RHITransferTicket ) override { return RHITransferStatus::Failed; }
+        bool                   takeTextureReadback( RHITransferTicket, vector<uint8>& ) override { return false; }
+        void                   discardTextureReadback( RHITransferTicket ) override {}
+        RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc&, const RHICompiledGraphicsStages& ) override { return 0; }
+        RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage&, string_view ) override { return 0; }
+        RHIBufferHandle        createConstantBufferNative( uint32 ) override { return 0; }
+        RHIBufferHandle        createStructuredBufferNative( uint32, uint32 ) override { return 0; }
+        RHIBufferHandle        createReadbackBufferNative( uint32, uint32 ) override { return 0; }
+        [[nodiscard]] bool     readReadbackBufferNative( RHIBufferHandle, uint32, void* ) override { return false; }
+        RHITextureHandle       createTexture2DNative( const RHITextureDesc& ) override { return 0; }
+        RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        RHITextureSRVIndex     registerBindlessTextureNative( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                   rebindBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        RHITextureSRVIndex     reserveBindlessTextureIndexNative() override { return kInvalidDescriptorIndex; }
+        bool                   activateReservedBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        uint64                 findAllocationBytesNative( RHIBufferHandle ) const override { return kRHIMemoryUnknownBytes; }
+        uint64                 findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& ) const override { return kRHIMemoryUnknownBytes; }
+        bool                   describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
+        {
+            outInfo._bShaderResource      = SW_TRUE;
+            outInfo._bUnorderedAccess     = SW_TRUE;
+            outInfo._bFirstUploadComplete = SW_TRUE;
+            return texture != 0;
+        }
+        uint32                  findConstantPageBytesNative( RHIBufferHandle ) override { return _pageBytes; }
+        bool                    unregisterBindlessTextureNative( RHITextureSRVIndex ) override { return true; }
+        RHIBufferSRVIndex       registerBindlessBufferSRVNative( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex registerBindlessBufferUAVNative( RHIBufferHandle ) override { return kInvalidDescriptorIndex; }
+        RHIUnorderedAccessIndex registerBindlessTextureUAVNative( RHITextureHandle ) override { return kInvalidDescriptorIndex; }
+        bool                    unregisterBindlessUAVNative( RHIUnorderedAccessIndex ) override { return true; }
 
     protected:
-        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer ) override
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& ) override
         {
             _listEvent.push_back( FactoryEvent{ 'D', buffer.getPacked() } );
             return true;
         }
-        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
-        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle, RHIReleasedResource& ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle, RHIReleasedResource& ) override { return true; }
     };
 
     /** @brief 적힌 사건이 @p listExpected 와 같은지 봅니다. */
@@ -112,57 +126,109 @@ namespace
     }
 
     constexpr uint64 kPageBytes = ConstantBufferSlotAllocator::kPageBytes;
+
+    /** @brief 놓은 구간을 다시 쓸 수 있을 만큼 프레임을 엽니다. */
+    void passReuseDelay( test::FakeRHIDevice& device )
+    {
+        for ( uint64 frame = 0; frame < ConstantBufferPagePool::kReuseDelayCount; ++frame )
+        {
+            device.beginFrame();
+            device.endFrame();
+        }
+    }
+
+    /** @brief 0 으로 찬 @p size 바이트를 씁니다. */
+    bool writeZeros( ConstantBufferPagePool& pool, test::FakeRHIDevice& device, uint32 size, ConstantBufferPoolSlice& inoutSlice )
+    {
+        const vector<uint8> bytes( size, 0 );
+        return pool.write( device, bytes.data(), size, inoutSlice );
+    }
 } // namespace
 
 /**
- * @brief [ConstantBufferPagePoolTest] 같은 등급 안의 변화는 그대로이고, 등급이 커지면 옛 디스크립터 → 닫힌 옛 페이지 → 새 페이지 → 새 디스크립터 차례로 옮긴다
- * @details 변이: 옛 디스크립터를 놓지 않으면 'U' 가 빠지고, 새 칸이 닫힌 옛 번호를 받으면(할당 전에 놓기) 새 페이지 핸들이 부서진다.
+ * @brief [ConstantBufferPagePoolTest] 쓸 때마다 새 구간을 받는다 — 같은 프레임의 두 번째 값이 첫 값의 구간을 덮지 않고, 놓은 칸 · 디스크립터는 그 프레임이 GPU 에서 끝난 뒤에 다시 쓴다
+ * @details 예전 풀은 같은 구간을 덮어썼고 놓은 칸을 곧바로 다시 내줬다 — 이미 기록한 드로우가 새 값을 읽었다(DX12 · Vulkan · GL 프레임 칸 · WebGPU 큐 쓰기 · DX11 NO_OVERWRITE).
+ *          변이: 옛 구간을 그대로 쓰면 둘째 단언이, 놓은 칸을 곧바로 돌려주면 넷째 쓰기가 첫 칸을 받아 단언과 쓰기 기록(`RHIConstantBufferWriteLog`)이 진다.
  */
-SW_TEST_CASE( ConstantBufferPagePoolTest, MovesToTheFittingClassInOrder )
+SW_TEST_CASE( ConstantBufferPagePoolTest, EachWriteGetsItsOwnRangeUntilTheGPUIsDone )
 {
     FakePageFactory     factory;
     test::FakeRHIDevice device;
     device._pResourceFactory     = &factory;
     ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
 
+    device.beginFrame();
     ConstantBufferPoolSlice slice;
-    SW_REQUIRE_TRUE( pool.fit( device, 200, slice ) );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, slice ) );
     SW_EXPECT_TRUE( hasEvents( factory, {
                                             {'P', kPageBytes},
                                             {'R',          1}
     } ) );
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 100 }, slice.getRange()._buffer );
+    SW_EXPECT_EQUAL( 0u, slice.getRange()._offset );
     SW_EXPECT_EQUAL( 256u, slice.getRange()._size );
     SW_EXPECT_TRUE( slice.getDevice() == &device );
 
-    factory._listEvent.clear();
-    SW_REQUIRE_TRUE( pool.fit( device, 256, slice ) ); // 같은 등급 — 그대로
-    SW_EXPECT_TRUE( factory._listEvent.empty() );
-    SW_EXPECT_EQUAL( RHIBufferSRVIndex{ 1 }, slice.getDescriptorIndex() );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, slice ) ); // 같은 프레임의 다른 값
+    SW_EXPECT_EQUAL( 256u, slice.getRange()._offset );
+    SW_EXPECT_EQUAL( RHIBufferSRVIndex{ 2 }, slice.getDescriptorIndex() );
 
-    SW_REQUIRE_TRUE( pool.fit( device, 1500, slice ) ); // 2048 B 등급
-    SW_EXPECT_TRUE( hasEvents( factory, {
-                                            {'U',          1},
-                                            {'D',        100},
-                                            {'P', kPageBytes},
-                                            {'R',          2}
-    } ) );
-    SW_EXPECT_EQUAL( RHIBufferHandle{ 101 }, slice.getRange()._buffer );
-    SW_EXPECT_EQUAL( 2048u, slice.getRange()._size );
+    ConstantBufferPoolSlice other;
+    slice.reset();
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, other ) ); // 방금 놓은 칸을 받지 않는다
+    SW_EXPECT_EQUAL( 512u, other.getRange()._offset );
     SW_EXPECT_EQUAL( 1u, pool.getOpenPageCount() );
+    device.endFrame();
 
     factory._listEvent.clear();
-    slice.reset(); // 마지막 칸 — 디스크립터를 놓고 페이지를 반납한다
+    passReuseDelay( device );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, slice ) ); // 놓은 칸 둘이 돌아왔다
     SW_EXPECT_TRUE( hasEvents( factory, {
-                                            {'U',   2},
-                                            {'D', 101}
+                                            {'U', 1},
+                                            {'U', 2},
+                                            {'R', 4}
     } ) );
-    SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
-    SW_EXPECT_FALSE( slice.isValid() );
+    SW_EXPECT_TRUE( slice.getRange()._offset < 512u );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), factory._listWritten.size() );
+    slice.reset();
+    other.reset();
+    pool.releaseAllPages( device );
 }
 
 /**
- * @brief [ConstantBufferPagePoolTest] 페이지를 만들지 못하거나 구간을 등록하지 못하면 false 이고 칸은 할당기에 돌아간다(열린 페이지 0, 만든 페이지는 부순다)
+ * @brief [ConstantBufferPagePoolTest] 놓은 구간은 `kReuseDelayCount` 프레임 동안 남고, 그 사이의 쓰기는 다른 칸을 받는다
+ * @details 변이: 경계 수를 하나 줄이면 마지막 프레임 전에 칸이 돌아와 첫 단언이 진다(GPU 가 아직 읽는다).
+ */
+SW_TEST_CASE( ConstantBufferPagePoolTest, RetiredRangeStaysUntilTheLastFrameInFlight )
+{
+    FakePageFactory     factory;
+    test::FakeRHIDevice device;
+    device._pResourceFactory     = &factory;
+    ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
+
+    device.beginFrame();
+    ConstantBufferPoolSlice neighbor; // 페이지를 열어 둔다
+    ConstantBufferPoolSlice slice;
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, neighbor ) );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, slice ) );
+    const uint32 retiredOffset = slice.getRange()._offset;
+    slice.reset();
+    for ( uint64 frame = 1; frame < ConstantBufferPagePool::kReuseDelayCount; ++frame )
+    {
+        device.beginFrame();
+        ConstantBufferPoolSlice probe;
+        SW_REQUIRE_TRUE( writeZeros( pool, device, 200, probe ) );
+        SW_EXPECT_TRUE( probe.getRange()._offset != retiredOffset );
+    }
+    device.beginFrame();
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, slice ) );
+    SW_EXPECT_EQUAL( retiredOffset, slice.getRange()._offset );
+    slice.reset();
+    neighbor.reset();
+    pool.releaseAllPages( device );
+}
+
+/**
+ * @brief [ConstantBufferPagePoolTest] 페이지를 만들지 못하거나 구간을 등록하지 못하면 false 이고 칸은 할당기에 돌아간다(열린 페이지 0, 만든 페이지는 부순다). 든 구간은 그대로다
  */
 SW_TEST_CASE( ConstantBufferPagePoolTest, FailuresReturnTheSlot )
 {
@@ -170,36 +236,44 @@ SW_TEST_CASE( ConstantBufferPagePoolTest, FailuresReturnTheSlot )
     test::FakeRHIDevice device;
     device._pResourceFactory     = &factory;
     ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
-    // 실패를 일부러 넣는다 — 페이지 만들기 실패 · 구간 등록 실패가 오류 한 줄씩 남긴다.
+    // 실패를 일부러 넣는다 — 페이지 만들기 실패 · 구간 등록 실패 · 널 데이터가 오류 한 줄씩 남긴다.
     SW_EXPECT_LOG( "ConstantBufferPagePool.CouldNotCreatePage" );
     SW_EXPECT_LOG( "ConstantBufferPagePool.CouldNotRegisterSlice" );
+    SW_EXPECT_LOG( "RHI.BindlessRegisterFailed" );
+    SW_EXPECT_LOG( "ConstantBufferPagePool.WriteInvalid" );
 
     ConstantBufferPoolSlice slice;
     factory._bFailPage = true;
-    SW_EXPECT_FALSE( pool.fit( device, 200, slice ) );
+    SW_EXPECT_FALSE( writeZeros( pool, device, 200, slice ) );
     SW_EXPECT_FALSE( slice.isValid() );
     SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
     SW_EXPECT_TRUE( factory._listEvent.empty() );
 
     factory._bFailPage     = false;
     factory._bFailRegister = true;
-    SW_EXPECT_FALSE( pool.fit( device, 200, slice ) );
+    SW_EXPECT_FALSE( writeZeros( pool, device, 200, slice ) );
     SW_EXPECT_FALSE( slice.isValid() );
     SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
     SW_EXPECT_TRUE( hasEvents( factory, {
                                             {'P', kPageBytes},
                                             {'D',        100}
     } ) );
+    SW_EXPECT_TRUE( factory._listWritten.empty() );
 
     factory._bFailRegister = false;
-    factory._listEvent.clear();
-    SW_REQUIRE_TRUE( pool.fit( device, 200, slice ) ); // 실패 뒤에도 같은 칸 번호를 다시 쓴다
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, slice ) ); // 실패 뒤에도 같은 칸 번호를 다시 쓴다
     SW_EXPECT_EQUAL( 0u, slice.getSlot()._pageIndex );
     SW_EXPECT_EQUAL( 0u, slice.getSlot()._offset );
+
+    SW_EXPECT_FALSE( pool.write( device, nullptr, 16, slice ) );
+    SW_EXPECT_TRUE( slice.isValid() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), factory._listWritten.size() );
+    slice.reset();
+    pool.releaseAllPages( device );
 }
 
 /**
- * @brief [ConstantBufferPagePoolTest] 등급 밖(4096 B 초과)은 전용 버퍼 하나와 그 전체 구간이고, 전용 ↔ 등급 칸을 오가며 옛 디스크립터 · 옛 버퍼를 놓는다
+ * @brief [ConstantBufferPagePoolTest] 등급 밖(4096 B 초과)은 전용 버퍼 하나와 그 전체 구간이다. 전용 ↔ 등급 칸을 오가며 놓은 디스크립터 · 전용 버퍼 · 빈 페이지는 경계가 지난 뒤 놓인다
  */
 SW_TEST_CASE( ConstantBufferPagePoolTest, MovesBetweenDedicatedAndClassSlots )
 {
@@ -209,7 +283,7 @@ SW_TEST_CASE( ConstantBufferPagePoolTest, MovesBetweenDedicatedAndClassSlots )
     ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
 
     ConstantBufferPoolSlice slice;
-    SW_REQUIRE_TRUE( pool.fit( device, 5000, slice ) );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 5000, slice ) );
     SW_EXPECT_TRUE( hasEvents( factory, {
                                             {'P', 5120},
                                             {'R',    1}
@@ -220,38 +294,40 @@ SW_TEST_CASE( ConstantBufferPagePoolTest, MovesBetweenDedicatedAndClassSlots )
     SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
 
     factory._listEvent.clear();
-    SW_REQUIRE_TRUE( pool.fit( device, 5100, slice ) ); // 전용 버퍼에 담긴다 — 그대로
-    SW_EXPECT_TRUE( factory._listEvent.empty() );
-
-    SW_REQUIRE_TRUE( pool.fit( device, 100, slice ) ); // 등급 칸으로
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 100, slice ) ); // 등급 칸으로 — 옛 전용 버퍼는 남는다
     SW_EXPECT_TRUE( hasEvents( factory, {
-                                            {'U',          1},
-                                            {'D',        100},
                                             {'P', kPageBytes},
                                             {'R',          2}
     } ) );
     SW_EXPECT_TRUE( slice.getSlot().isValid() );
 
     factory._listEvent.clear();
-    SW_REQUIRE_TRUE( pool.fit( device, 9000, slice ) ); // 다시 전용 — 칸의 페이지가 닫힌다
+    passReuseDelay( device );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 9000, slice ) ); // 다시 전용 — 첫 전용 버퍼가 이제 놓인다
+    SW_EXPECT_TRUE( hasEvents( factory, {
+                                            {'U',    1},
+                                            {'D',  100},
+                                            {'P', 9216},
+                                            {'R',    3}
+    } ) );
+    SW_EXPECT_EQUAL( 1u, pool.getOpenPageCount() ); // 놓은 등급 칸의 페이지는 아직 읽힌다
+
+    factory._listEvent.clear();
+    passReuseDelay( device );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 9000, slice ) );
     SW_EXPECT_TRUE( hasEvents( factory, {
                                             {'U',    2},
                                             {'D',  101},
                                             {'P', 9216},
-                                            {'R',    3}
+                                            {'R',    4}
     } ) );
     SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
-
-    factory._listEvent.clear();
     slice.reset();
-    SW_EXPECT_TRUE( hasEvents( factory, {
-                                            {'U',   3},
-                                            {'D', 102}
-    } ) );
+    pool.releaseAllPages( device );
 }
 
 /**
- * @brief [ConstantBufferPagePoolTest] 칸 하나를 놓아도 이웃이 남으면 페이지는 열려 있고, `releaseAllPages`(디바이스 종료)가 남은 페이지를 돌려준다. `detach` 은 아무것도 돌려주지 않는다
+ * @brief [ConstantBufferPagePoolTest] `releaseAllPages`(디바이스 종료)가 놓은 구간과 남은 페이지를 모두 돌려준다. `detach` 은 아무것도 돌려주지 않는다
  */
 SW_TEST_CASE( ConstantBufferPagePoolTest, ReleaseAllPagesReturnsOpenPages )
 {
@@ -262,50 +338,20 @@ SW_TEST_CASE( ConstantBufferPagePoolTest, ReleaseAllPagesReturnsOpenPages )
 
     ConstantBufferPoolSlice first;
     ConstantBufferPoolSlice second;
-    SW_REQUIRE_TRUE( pool.fit( device, 200, first ) );
-    SW_REQUIRE_TRUE( pool.fit( device, 200, second ) );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, first ) );
+    SW_REQUIRE_TRUE( writeZeros( pool, device, 200, second ) );
     SW_EXPECT_EQUAL( 1u, pool.getOpenPageCount() );
     SW_EXPECT_EQUAL( 256u, second.getRange()._offset );
 
     factory._listEvent.clear();
     first.reset();
-    SW_EXPECT_TRUE( hasEvents( factory, {
-                                            { 'U', 1 }
-    } ) ); // 이웃이 남아 페이지는 그대로
-    SW_EXPECT_EQUAL( 1u, pool.getOpenPageCount() );
-
-    factory._listEvent.clear();
+    SW_EXPECT_FALSE( first.isValid() );
     second.detach(); // 디바이스가 사라졌을 때처럼 핸들만 잊는다
     SW_EXPECT_TRUE( factory._listEvent.empty() );
     pool.releaseAllPages( device );
     SW_EXPECT_TRUE( hasEvents( factory, {
-                                            { 'D', 100 }
+                                            {'U',   1},
+                                            {'D', 100}
     } ) );
     SW_EXPECT_EQUAL( 0u, pool.getOpenPageCount() );
-}
-
-/**
- * @brief [ConstantBufferPagePoolTest] 구간보다 큰 갱신은 자르지 않고 false 다 — 맞는 크기만 팩토리에 간다
- * @details 변이: 옛 `min( size, 구간 크기 )` 자르기로 되돌리면 넘친 갱신이 256 B 로 팩토리에 가 단언이 진다(커진 레이아웃 뒤쪽이 조용히 0).
- */
-SW_TEST_CASE( ConstantBufferPagePoolTest, OversizedUpdateFailsInsteadOfTruncating )
-{
-    SW_EXPECT_LOG( "ConstantBufferPagePool.UpdateOverflow" );
-    SW_EXPECT_LOG( "ConstantBufferPagePool.UpdateInvalid" );
-    FakePageFactory     factory;
-    test::FakeRHIDevice device;
-    device._pResourceFactory     = &factory;
-    ConstantBufferPagePool& pool = device.getConstantBufferPagePool();
-
-    ConstantBufferPoolSlice slice;
-    SW_REQUIRE_TRUE( pool.fit( device, 200, slice ) );
-    SW_REQUIRE_EQUAL( 256u, slice.getRange()._size );
-    const vector<uint8> bytes( 512, 0x5A );
-    SW_EXPECT_FALSE( ConstantBufferPagePool::update( slice, bytes.data(), 512 ) );
-    SW_EXPECT_TRUE( factory._listUpdateSize.empty() );
-    SW_EXPECT_FALSE( ConstantBufferPagePool::update( slice, nullptr, 16 ) );
-    SW_EXPECT_TRUE( ConstantBufferPagePool::update( slice, bytes.data(), 256 ) );
-    SW_REQUIRE_EQUAL( factory._listUpdateSize.size(), static_cast<size_t>( 1 ) );
-    SW_EXPECT_EQUAL( 256u, factory._listUpdateSize[0] );
-    slice.reset();
 }

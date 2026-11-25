@@ -7,6 +7,7 @@
 #include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 namespace sw
@@ -400,69 +401,89 @@ namespace sw
                     }
                     case RenderPassKind::GPUCull:
                     {
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUMessageTarget;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderGPUCull;
+                        info._pComputeParameters    = GPUCullShader::kParameters;
+                        info._computeParameterCount = GPUCullShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUMessageTarget;
                         break;
                     }
                     case RenderPassKind::InstanceAnimation:
                     {
                         // 인스턴스 버퍼 UAV 하나만 쓰므로 컬링 능력(간접 인자 제약)과 무관하다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceAnimation;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderInstanceAnimation;
+                        info._pComputeParameters    = InstanceAnimationShader::kParameters;
+                        info._computeParameterCount = InstanceAnimationShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::InstanceSort:
                     {
                         // 컬링이 압축한 가시 목록을 정렬하므로 컬링과 같은 조건이다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderInstanceSort;
+                        info._pComputeParameters    = InstanceSortShader::kParameters;
+                        info._computeParameterCount = InstanceSortShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
                     case RenderPassKind::InstanceSortMultiPass:
                     {
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
-                        info._pPassDefine    = kPassInstanceSortMultiPassDefine;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderInstanceSort;
+                        info._pPassDefine           = kPassInstanceSortMultiPassDefine;
+                        info._pComputeParameters    = InstanceSortShader::kParameters;
+                        info._computeParameterCount = InstanceSortShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
                     case RenderPassKind::MeshMorph:
                     {
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
-                        info._flags          = Flag::kCompute | Flag::kGPUMessageTarget;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderMeshMorph;
+                        info._pComputeParameters    = MeshMorphShader::kParameters;
+                        info._computeParameterCount = MeshMorphShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kGPUMessageTarget;
                         break;
                     }
                     case RenderPassKind::MeshSkin:
                     {
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderMeshSkin;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderMeshSkin;
+                        info._pComputeParameters    = MeshSkinShader::kParameters;
+                        info._computeParameterCount = MeshSkinShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::LightGrid:
                     {
                         // 구조 버퍼 UAV 와 그룹 공유 메모리 원자 연산만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderLightGrid;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderLightGrid;
+                        info._pComputeParameters    = LightGridShader::kParameters;
+                        info._computeParameterCount = LightGridShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::VFXSimulation:
                     {
                         // 입자 상태 · 렌더 입력은 구조 버퍼 UAV, 간접 인자는 따로 둔 버퍼(DX11 은 RAW UAV)라 구조 버퍼와 간접 인자 겸용 능력이 필요 없다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXSimulation;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderVFXSimulation;
+                        info._pComputeParameters    = VFXSimulationShader::kParameters;
+                        info._computeParameterCount = VFXSimulationShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::VFXMeshInstance:
                     {
                         // 인스턴스 버퍼 UAV 에 쓰고 구조 버퍼만 읽는다 — 간접 인자 능력과 무관하다(컬링이 없는 DX11 은 CPU 개수로 모두 그린다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXMeshInstance;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderVFXMeshInstance;
+                        info._pComputeParameters    = VFXMeshInstanceShader::kParameters;
+                        info._computeParameterCount = VFXMeshInstanceShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::VFXParticleSort:
                     {
                         // 렌더 입력 · 인자를 구조 버퍼로 읽고 순서 버퍼 UAV 에 쓴다 — 그룹공유 바이토닉 정렬이라 간접 인자 능력과 무관하다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderVFXParticleSort;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderVFXParticleSort;
+                        info._pComputeParameters    = VFXParticleSortShader::kParameters;
+                        info._computeParameterCount = VFXParticleSortShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::DepthHistory:
@@ -501,22 +522,28 @@ namespace sw
                     case RenderPassKind::HZBBuild:
                     {
                         // 구조 버퍼 UAV 와 RW 텍스처 읽기만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 화면 공간 반사의 hi-z trace 에 짓는다. 컬링용 짓기는 실행기가 컬링 능력으로 가린다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderHZBBuild;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderHZBBuild;
+                        info._pComputeParameters    = HZBBuildShader::kParameters;
+                        info._computeParameterCount = HZBBuildShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::VolumetricFog:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderVolumetricFog;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderVolumetricFog;
+                        info._pComputeParameters    = VolumetricFogShader::kParameters;
+                        info._computeParameterCount = VolumetricFogShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::CanvasMarker:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(컴퓨트 능력이 없는 백엔드는 렌더러가 마커 입력을 오류로 거절한다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderCanvasMarker;
-                        info._flags          = Flag::kCompute | Flag::kGPUMessageTarget;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderCanvasMarker;
+                        info._pComputeParameters    = CanvasMarkerShader::kParameters;
+                        info._computeParameterCount = CanvasMarkerShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kGPUMessageTarget;
                         break;
                     }
                     case RenderPassKind::ShadowCacheRestore:
@@ -530,24 +557,30 @@ namespace sw
                     case RenderPassKind::IndirectArgsReset:
                     {
                         // 컬링 셰이더의 다른 커널이다(같은 CullParams · 배치 표 · 간접 인자 바인딩). 컬링과 같은 조건(간접 인자 능력)이다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                        info._pPassDefine    = kPassIndirectArgsResetDefine;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderGPUCull;
+                        info._pPassDefine           = kPassIndirectArgsResetDefine;
+                        info._pComputeParameters    = GPUCullShader::kParameters;
+                        info._computeParameterCount = GPUCullShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
                     case RenderPassKind::IndirectArgsCompact:
                     {
                         // 컬링 셰이더의 다른 커널이다(되돌리기와 같은 바인딩).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                        info._pPassDefine    = kPassIndirectArgsCompactDefine;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderGPUCull;
+                        info._pPassDefine           = kPassIndirectArgsCompactDefine;
+                        info._pComputeParameters    = GPUCullShader::kParameters;
+                        info._computeParameterCount = GPUCullShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
                     case RenderPassKind::NanCheck:
                     {
                         // 부동소수 출력 텍스처를 엔진 텍스처(bindless)로 읽는 컴퓨트 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드(DX11 · GL)에는 만들지 않는다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderNanCheck;
-                        info._flags          = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderNanCheck;
+                        info._pComputeParameters    = GPUNanCheckShader::kParameters;
+                        info._computeParameterCount = GPUNanCheckShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kDiagnostic | Flag::kRequiresNativeBindless;
                         break;
                     }
                     case RenderPassKind::AutoExposureHistogram:
@@ -561,22 +594,28 @@ namespace sw
                     case RenderPassKind::DeferredTileClassify:
                     {
                         // G버퍼 알베도를 엔진 텍스처(bindless)로 읽고 간접 인자를 쓴다 — 간접 인자 능력(컬링과 같다)과 네이티브 bindless 가 함께 있어야 한다. 에뮬은 풀스크린 조명이다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredTileClassify;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kRequiresNativeBindless;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderDeferredTileClassify;
+                        info._pComputeParameters    = DeferredTileClassifyShader::kParameters;
+                        info._computeParameterCount = DeferredTileClassifyShader::Count;
+                        info._flags                 = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kRequiresNativeBindless;
                         break;
                     }
                     case RenderPassKind::SceneVoxelize:
                     {
                         // 구조 버퍼의 원자 쓰기만 쓴다 — 컴퓨트 능력 하나면 된다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderSceneVoxelize;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderSceneVoxelize;
+                        info._pComputeParameters    = SceneVoxelizeShader::kParameters;
+                        info._computeParameterCount = SceneVoxelizeShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::ProbeUpdate:
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(DX11 도 돈다).
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderProbeUpdate;
-                        info._flags          = Flag::kCompute;
+                        info._pDefaultShader        = &EngineDefaultAssets::_shaderProbeUpdate;
+                        info._pComputeParameters    = ProbeUpdateShader::kParameters;
+                        info._computeParameterCount = ProbeUpdateShader::Count;
+                        info._flags                 = Flag::kCompute;
                         break;
                     }
                     case RenderPassKind::ScreenRotation:

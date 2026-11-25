@@ -10,6 +10,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIConstantBufferWriteLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
@@ -19,6 +21,7 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHISurfaceTransform.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
 namespace sw
 {
@@ -35,12 +38,13 @@ namespace sw
     class IRHIResourceFactory;
     class IRHISwapChain;
     class IRHITimestampProvider;
-    class RHIMemoryTracker;
-    class RHITransferSerials;
     class BindlessIndexReportLog;
     class RHIComputeBindingLog;
     class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
+
+    template <typename THandle>
+    class RHIUploadLog;
 
     enum class RHIHandleKind : uint8; // 미룬 해제 줄의 칸 종류(IRHIDevice.cpp 안 — 부르는 쪽은 핸들 형식으로 오버로드를 고른다)
 
@@ -136,7 +140,8 @@ namespace sw
         /** @brief 가상 소멸자입니다. */
         virtual ~IRHIDevice();
         /** @brief 빈 디바이스를 만듭니다. initialize 전에 setRenderSurface 를 불러야 합니다. */
-        IRHIDevice();
+        /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다, 0 이 아니다). */
+        explicit IRHIDevice( uint32 deviceGeneration );
         /** @brief 복사를 금지합니다. */
         IRHIDevice( const IRHIDevice& ) = delete;
         /** @brief 대입을 금지합니다. */
@@ -216,22 +221,22 @@ namespace sw
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.
-         * @details 백엔드 해제 큐(`RHIReleaseQueue`)에 GPU 완료를 기준으로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 은 프레임 끝 이벤트 쿼리를, GL 은 프레임 끝 `glFenceSync` 를 쓴다.
+         * @details 장치 해제 큐(`RHIReleaseQueue`)에 기록 중인 프레임의 시리얼(`RHIFrameFenceRing::getRecordingSerial`)로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 은 프레임 끝 이벤트 쿼리를, GL 은 프레임 끝 `glFenceSync` 를 쓴다.
          *          네 백엔드 모두 **GPU 가 그 프레임을 끝낸 뒤에만** 부른다(프레임 수로 짐작하지 않는다). 그래서 콜백 안에서 `readReadbackBuffer` 를 기다리지 않고 부를 수 있다.
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
          *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
          */
-        virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
+        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) { _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() ); }
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝나면 @p completionDelegate 를 `Completed` 로, 끝났는지 모른 채 큐를 비우면 `Abandoned` 로 부릅니다.
          * @details 되읽기(`AsyncBufferReadback`)와 구간 재사용 펜스(`RHIFence`)가 쓴다. 기준 프레임 · 부르는 스레드 · 렌더 스레드 제약은 `enqueueGPURelease` 와 같다.
          *          `Completed` 는 대기를 확인한 경우(펜스 · 쿼리 · `glFinish` · `vkDeviceWaitIdle` · WebGPU 프레임 펜스)뿐이다. 언리얼 `FRHIGPUFence` 의 "끝났나" 질의와 같은 자리를 콜백으로 둔다.
          */
-        virtual void notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) = 0;
-        /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 · 통지 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
-        virtual uint32 getPendingReleaseCount() const = 0;
+        void notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) { _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() ); }
+        /** @brief 해제 큐에서 아직 불리지 않은 해제 · 통지 수입니다(전송을 기다리는 해제는 그 전송이 끝난 뒤부터 센다). `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
+        uint32 getPendingReleaseCount() const { return _releaseQueue.getPendingReleaseCount(); }
         /**
          * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan · DX11 · GL — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` · `DXGI_ERROR_DEVICE_REMOVED` · 실패한 펜스를 처음 본 뒤의 상태로 둔다. DX11 · GL 은 전송 제출이 거절되는 것만 만들고 GPU 는 살아 있다).
          * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
@@ -364,15 +369,9 @@ namespace sw
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
          *       `endFrame` 은 그 프레임에 그린 스왑체인을 모두 표시합니다(`createSwapChain`).
          */
-        void beginFrame()
-        {
-            assumeRenderThreadRole(); // 프레임 진행 상태는 렌더 스레드의 것이다 — 다른 스레드의 그리기는 `RenderThread::executeAndWait` 로 넘긴다
-            _handleReuseCount.fetch_add( 1, std::memory_order_acq_rel );
-            _constantBufferWriteLog.beginFrame();
-            activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
-            reportResourceCounts();
-            beginFrameInternal();
-        }
+        void beginFrame();
+        /** @brief 지금까지 연 장치 프레임 수입니다(렌더 스레드). 렌더러가 여럿이어도 프레임에 한 번인 일(예산 · 계측)이 "이번 프레임에 이미 했나" 를 이 값으로 가른다. */
+        uint64 getFrameNumber() const { return _frameNumber; }
         /**
          * @brief `beginFrame` 이 이번 프레임의 기록을 실제로 열었는지입니다. 렌더 스레드에서만 부른다.
          * @details 스왑체인 이미지를 얻지 못한 프레임(서피스 손실 · 크기 0 · 다시 만들기 실패)은 기록해도 제출되지 않는다 — 한 번만 기록하는 일(정점 풀 복사)은 이것을 보고 다음 프레임으로 미룬다.
@@ -443,6 +442,11 @@ namespace sw
          * @note false 면 CPU 가 그 인덱스로 슬롯을 바인딩해야 합니다(DX11, GL 에뮬레이션).
          */
         virtual bool supportsNativeBindlessSampling() const { return false; }
+        /**
+         * @brief 머티리얼 텍스처 칸 @p ordinal 로 읽는 셰이더에 넘길 번호입니다 — 네이티브 bindless 면 @p srv, 에뮬(DX11 · GL)이면 @p ordinal(칸은 기록 중 `IRHIPassCommandList::bindMaterialTexture` · 바인더가 건다).
+         * @details 기록 전에 상수 · 구조 버퍼 값을 정하는 자리(머티리얼 · 데칼 · 렌즈 플레어)가 백엔드 갈래를 저마다 쓰지 않게 규약을 한 곳에 둔다.
+         */
+        [[nodiscard]] uint32 getMaterialTextureIndex( RHITextureSRVIndex srv, uint32 ordinal ) const { return supportsNativeBindlessSampling() ? static_cast<uint32>( srv ) : ordinal; }
 
         /**
          * @brief @p index 가 @p space 에서 지금 살아 있는 리소스를 가리키면 true 입니다(Debug · Dev 진단 — 배포는 묻는 쪽 `BindlessIndexValidator` 가 꺼져 있다).
@@ -486,8 +490,12 @@ namespace sw
         virtual const utf8* getBackendName() const = 0;
         /** @brief 이 디바이스의 드로우 기록 진단입니다(잘못된 바인딩 알림과 그 횟수 — 문맥 · 지오메트리 바인딩이 여기로 알린다). */
         const RHIDrawDiagnostics& getDrawDiagnostics() const { return _drawDiagnostics; }
-        /** @brief 이번 프레임에 기록 경로가 쓴 상수 버퍼입니다(`IRHICommandContext::updateConstantBuffer` 가 두 번째 쓰기를 알린다). `beginFrame` 이 비운다. */
+        /** @brief 이번 프레임에 쓴 상수 버퍼 구간입니다(`IRHICommandContext::updateConstantBuffer` · `ConstantBufferPagePool::write` 가 두 번째 쓰기를 알린다 — 개발 구성). `beginFrame` 이 비운다. */
         RHIConstantBufferWriteLog& getConstantBufferWriteLog() { return _constantBufferWriteLog; }
+        /** @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`beginBufferUpload` 가 다른 스레드의 갱신을 본다 — 개발 구성). */
+        RHIUploadLog<RHIBufferHandle>& getBufferUploadLog() { return *_pBufferUploadLog; }
+        /** @brief 지금 기록하는 프레임이 쓰는 텍스처입니다(`beginTextureUpload` · `beginTextureReadback` 이 본다 — 개발 구성). */
+        RHIUploadLog<RHITextureHandle>& getTextureUploadLog() { return *_pTextureUploadLog; }
 
         // ------------------------------------------------------------------------------
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
@@ -539,7 +547,7 @@ namespace sw
 
         /**
          * @brief 창 하나에 스왑체인을 더 만듭니다(에디터 플로팅 창). 메인 창의 스왑체인은 `initialize` 가 만든다. 실패하면 이유를 남기고 nullptr 입니다.
-         * @details 언리얼 `RHICreateViewport` 자리다. 그리기는 `RHIRenderPassBeginInfo::_pSwapChain` 으로 고르고, 그 프레임의 `endFrame` 이 함께 표시한다.
+         * @details 언리얼 `RHICreateViewport` 자리다. 그리기는 `RHIRenderPassInfo::_pSwapChain` 으로 고르고, 그 프레임의 `endFrame` 이 함께 표시한다.
          *          **생성 · 크기 변경 · 파괴는 렌더 스레드와 GPU 를 비운 뒤에 한다**(`waitIdle`). 창이 생기고 사라지는 일은 드물고, 렌더 스레드는 스왑체인 목록을
          *          잠금 없이 읽기 때문이다(목록을 바꾸는 쪽은 프레임을 넘기는 게임 스레드라, 비운 뒤에는 렌더 스레드가 다음 프레임 전까지 쉰다).
          *          @p desc 의 창 핸들 · 디스플레이 · 표면 종류 · 크기를 읽는다. 버퍼 수 · 포맷 · VSync 는 메인 창과 같은 값을 쓴다(같은 렌더 패스 · 파이프라인을 쓴다).
@@ -644,24 +652,47 @@ namespace sw
          */
         void setParallelRecording( bool bEnable ) { _bParallelRecording.store( bEnable, std::memory_order_relaxed ); }
 
-        /**
-         * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
-         * @details 모든 백엔드의 register/unregister · create/destroy 진입부에서 부른다. 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이라(DX11 `forget*InRecordingStates`,
-         *          bindless 표의 디스크립터 참조) 한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
-         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다.
-         * @param pWhat 로그에 남길 호출 지점 이름입니다.
-         */
-        void requireRegistryMutableNow( const utf8* pWhat ) const;
+        /** @class PassRecordingScope @brief 렌더 스레드가 렌더 그래프(패스 몸통)를 기록하는 구간입니다 — 이 안의 버퍼 갱신을 `beginBufferUpload` 가 잡는다. 겹치지 않는다. */
+        class PassRecordingScope
+        {
+        public:
+            explicit PassRecordingScope( IRHIDevice& device )
+                : _device{ device }
+            {
+                _device._bPassRecording.store( true, std::memory_order_relaxed );
+            }
+            ~PassRecordingScope() { _device._bPassRecording.store( false, std::memory_order_relaxed ); }
+            PassRecordingScope( const PassRecordingScope& )            = delete;
+            PassRecordingScope& operator=( const PassRecordingScope& ) = delete;
+
+        private:
+            IRHIDevice& _device;
+        };
 
         /**
-         * @brief 렌더 스레드가 프레임 스트림에 렌더 패스를 연 채로 버퍼를 갱신하면 알리고 그 패스를 닫습니다(네 백엔드가 같다). 백엔드의 버퍼 갱신이 들어올 때 부릅니다.
-         * @details 전송 계약 3 — 업로드는 그리기 기록 전에 한다. Vulkan 은 패스 안에 복사를 기록할 수 없어 패스를 닫고, D3D12 는 업로드가 별도 복사 리스트로 가 프레임
-         *          리스트보다 **먼저** 실행된다(이미 기록한 드로우가 새 내용을 읽는다). 어느 백엔드에서든 같은 오류(`RHI.BufferUpdateInsideRenderPass`)로 드러나게 하고,
-         *          패스를 닫아 그 뒤의 드로우도 네 백엔드에서 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
-         *          다른 스레드의 갱신은 렌더 스레드가 기록하는 패스와 순서가 없어 보지 않는다(렌더 스레드가 없으면 보지 않는다).
-         * @param pWhat 로그에 남길 호출 지점 이름입니다.
+         * @brief 버퍼 갱신 하나가 기록하는 프레임과 순서가 맞는 자리인지 봅니다(다섯 백엔드가 같다). 갱신의 공통 입구(`IRHIResourceFactory::updateStructuredBufferRegions` · `updateGeometryBufferRegions`)가 부릅니다.
+         * @details **렌더 스레드**의 갱신은 패스 밖이어야 한다(전송 계약 3 — 업로드는 그리기 기록 전). 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다 — 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 **앞에**
+         *          실행된다. 그래프가 이미 기록한 전이(추적 상태)와 어긋나고(D3D12 상태 오류), 앞 패스가 새 내용을 읽는다. 그래프 앞(준비 단계)에서 올린다.
+         *          프레임 스트림에 렌더 패스를 연 채면 알리고(`RHI.BufferUpdateInsideRenderPass`) 그 패스를 닫는다 — Vulkan 은 패스 안에 복사를 기록할 수 없다. 어느 백엔드에서든 같은
+         *          오류로 드러나게 하고, 패스를 닫아 그 뒤의 드로우도 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
+         *          **다른 스레드**의 갱신은 다음 제출의 맨 앞에 실행되어 지금 기록하는 프레임과 순서가 없다. 그 프레임이 쓰는 버퍼(`RHIUploadLog`)면 개발 구성에서 멈춘다 — 갱신을
+         *          렌더 스레드(패킷)로 보낸다. 새 버퍼의 첫 내용은 지나간다.
+         * @param buffer 갱신할 버퍼입니다.
+         * @param pWhat  로그에 남길 호출 지점 이름입니다.
          */
-        void requireNoOpenRenderPassForUpload( const utf8* pWhat );
+        void beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat );
+        /**
+         * @brief 텍스처 쓰기 전송 하나가 기록하는 프레임과 순서가 맞는 자리인지 봅니다(다섯 백엔드가 같다). 전송의 공통 입구(`IRHIResourceFactory::submitTextureUpload` · `submitTextureRegionUpload`)가 부릅니다.
+         * @details 전송은 이번 프레임이 기록한 것보다 먼저 실행된다(전송 계약 3). 개발 구성에서 멈추는 자리:
+         *          - 이번 프레임이 그 텍스처의 전이 · 렌더 타깃을 기록했다 — 전송의 앞 상태(추적 값)가 실행 때의 상태와 다르다.
+         *          - 다른 스레드가 기록하는 프레임이 읽을 수 있는 텍스처다(첫 내용이 그 프레임보다 먼저 올라갔다). 새 텍스처의 첫 내용은 지나간다.
+         *          - 렌더 스레드가 렌더 그래프를 기록하는 동안(`PassRecordingScope`) 내용이 있던 텍스처를 고친다 — 그래프 앞(준비 단계)에서 올린다.
+         * @param texture 쓸 텍스처입니다.
+         * @param pWhat   로그에 남길 호출 지점 이름입니다.
+         */
+        void beginTextureUpload( RHITextureHandle texture, const utf8* pWhat );
+        /** @brief 텍스처 되읽기 하나의 자리를 봅니다(`submitTextureReadback`). 이번 프레임이 전이 · 렌더 타깃을 기록한 텍스처면 개발 구성에서 멈춘다 — 되읽기도 그 기록보다 먼저 실행되어 앞 상태가 어긋나고 지난 내용을 읽는다(프레임 끝 뒤에 낸다). */
+        void beginTextureReadback( RHITextureHandle texture, const utf8* pWhat );
 
         /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
@@ -700,14 +731,21 @@ namespace sw
         void refreshGPUMemoryBudget();
 
     protected:
-        /** @brief 이 장치의 전송 시리얼입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다(백엔드는 멤버 하나를 돌려준다). */
-        [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
-        /** @brief 같은 전송 시리얼의 쓰기 접근자입니다 — 손실 표시(`reportDeviceLost`)가 이 길로만 쓴다. 읽기 판과 같은 멤버를 돌려준다. */
-        [[nodiscard]] virtual RHITransferSerials& getTransferSerials() = 0;
         /** @brief 지난 경계 수입니다(`beginFrame` 은 1, GPU 를 통째로 기다린 지점은 `constant::render::kHandleReuseDelayCount`) — 핸들 표(`RHIHandleTable`)가 놓은 칸을 다시 쓸 때를 잰다. 어느 스레드에서나 읽는다. */
         const atomic<uint64>& getHandleReuseCount() const { return _handleReuseCount; }
-        /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
-        virtual void waitIdleInternal() = 0;
+        /**
+         * @brief 백엔드의 실제 GPU 대기입니다. 낸 일(프레임 · 전송)이 모두 끝난 것을 확인했으면 true, 모르면(잃은 장치 · 시간 초과) false 입니다.
+         * @details `waitForGPUIdle` 만 부른다 — 해제 큐는 그 답으로 장치가 비운다(백엔드가 비우면 확인하지 못한 대기도 `Completed` 로 알리는 곳이 생긴다).
+         */
+        [[nodiscard]] virtual bool waitIdleInternal() = 0;
+        /** @brief GPU 를 기다리고 해제 큐를 비웁니다 — 확인했으면 남은 통지는 `Completed`, 아니면 `Abandoned` 입니다. `waitIdle` · `shutdown` 과 프레임 안의 백엔드 대기가 부른다. */
+        void waitForGPUIdle();
+        /** @brief 끝난 프레임(`_frameFenceRing` 의 워터마크)까지의 해제 · 통지를 부릅니다(렌더 스레드). */
+        void releaseCompletedFrames() { _releaseQueue.releaseCompleted( _frameFenceRing.getCompletedSerial() ); }
+        /** @brief 끝난 전송(`_transferSerials` 의 워터마크)을 기다리던 해제를 다음 프레임 펜스로 넘깁니다(어느 스레드든). */
+        void releaseCompletedTransfers() { _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() ); }
+        /** @brief 끝났는지 모른 채 남은 해제를 모두 부릅니다(백엔드 종료가 네이티브 장치를 부수기 앞에). */
+        void abandonReleases();
         /**
          * @brief 종료 3단계입니다. 프레임 스트림 컨텍스트를 해제하고 살아 있는 커맨드 리스트를 디바이스에서 분리합니다.
          * @details 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임을 넘겨 보관한다). 분리하지 않으면 그쪽 소멸자가 이미 종료된 디바이스에 자원을 반납하려 한다.
@@ -782,26 +820,44 @@ namespace sw
         void markInitPhase( const utf8* pPhaseName ) { _initPhaseTimings.mark( pPhaseName ); }
 
     private:
+        friend class IRHIResourceFactory;  ///< 자원 표 감시(`requireRegistryMutableNow`)는 팩토리의 공통 입구만 부른다 — 백엔드는 따로 감시하지 않는다
         friend struct RHIDeviceTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
         /** @brief 아직 해제하지 않고 미뤄 둔 핸들 수입니다(테스트 — 줄의 형식이 cpp 안이라 본문도 cpp 에 있다). */
         size_t getDeferredHandleCount() const;
         /** @brief 모든 해제 오버로드의 본문입니다 — 지금 놓을지 다음에 넘길 프레임 뒤로 미룰지 정한다. 0 은 무시한다. */
         void releaseHandleInternal( RHIHandleKind kind, uint64 packed );
         /** @brief 핸들 하나를 지금 그 종류의 백엔드 파괴 함수로 내립니다. 백엔드가 산 핸들이 아니었다고 하면 단언한다(같은 핸들 두 번 해제). */
-        static void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
+        void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
+        /**
+         * @brief 지금 리소스 테이블(bindless 레지스트리 · 자원 해제)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
+         * @details 등록 · 해제의 공통 입구(`IRHIResourceFactory`)와 핸들 해제(`releaseNow`)가 부른다. 어긴 호출이 곧 다른 스레드의 기록이 읽는 표를 바꾸는 데이터 경쟁이라
+         *          한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
+         *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다.
+         * @param pWhat 로그에 남길 호출 지점 이름입니다.
+         */
+        void requireRegistryMutableNow( const utf8* pWhat ) const;
+        /** @brief 백엔드가 표에서 뺀 자원을 GPU(전송 · 프레임)가 다 쓴 뒤로 미룹니다. @p key 는 추적기에서 줄일 자원입니다. */
+        void retireResource( const RHIReleasedResource& released, const RHIMemoryKey& key );
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
+        /** @brief 렌더 스레드의 갱신이 패스 밖인지 봅니다(`beginBufferUpload` 의 렌더 스레드 몫). */
+        void requireUploadOutsidePass( const utf8* pWhat );
         /** @brief 할당 수 지표(`RT.RHI.liveBuffers` · `RT.RHI.constantBufferPages`)를 냅니다. `beginFrame` 이 프레임에 한 번 부른다. */
         void reportResourceCounts() const;
 
     protected:
+        /// @brief 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한입니다. 백엔드가 프레임을 낼 때 올리고 끝난 것을 알린다 — 지연 해제의 키는 이 링의 기록 시리얼 하나다.
+        RHIFrameFenceRing _frameFenceRing;
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다.
+        RHITransferSerials _transferSerials;
+
         IRenderSurface* _pSurface;
         /// @brief 렌더 스레드 역할입니다(잠금이 아니라 분석용 능력). 프레임 진행 상태(백엔드의 프레임 링 · 스왑체인 깃발 · 진행 중 커맨드 버퍼)는 이 역할 아래에 있고,
         ///        그 상태를 만지는 함수는 렌더 스레드에서 돌거나 렌더 스레드를 세운 뒤(`RenderThread::waitIdle` · 초기화 · 종료) 불린다고 진입에서 `assumeHeld` 로 적는다.
         ThreadRole _renderThread;
         /// @brief SDR 이던 마지막 백버퍼 포맷입니다 — HDR 인 동안의 `getUITargetFormat` 이다(`initialize` 와 `setBackBufferColorSpace` 가 SDR 을 떠나기 전에 적는다).
         RHIFormat _sdrBackBufferFormat{ constant::render::kBackBufferFormat };
-        /// @brief 기동 끝(`initialize`)에 채운 능력입니다 — PSO 앞단이 참조로 읽는다(`IRHIResourceFactory::bindPipelineFront`). 화면 출력 칸처럼 실행 중 바뀌는 값은 `getCapabilities` 로 묻는다.
+        /// @brief 기동 끝(`initialize`)에 채운 능력입니다 — PSO 앞단이 참조로 읽는다(`IRHIResourceFactory::bindDevice`). 화면 출력 칸처럼 실행 중 바뀌는 값은 `getCapabilities` 로 묻는다.
         RHICapabilities _startupCapabilities{};
         /// @brief 타임스탬프 계측 능력입니다(findTimestampProvider 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHITimestampProvider* _pTimestampProvider;
@@ -823,13 +879,20 @@ namespace sw
         uint8 _bShutDown : 1;
         /// @brief GPU 브레드크럼을 켰다(`isGPUBreadcrumbsEnabled`). `initialize` 만 쓴다.
         uint8 _bGPUBreadcrumbs : 1;
+        /// @brief 렌더 스레드가 렌더 그래프를 기록하는 구간인지 나타냅니다(`PassRecordingScope`). 다른 스레드의 갱신도 이 값을 지나므로 atomic 입니다.
+        atomic<bool> _bPassRecording;
         /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고). 렌더 스레드가 쓰고 등록 · 해제를 감시하는 다른 스레드가 읽으므로 atomic 입니다.
         atomic<bool>           _bParallelRecording;
         mutable atomic<uint32> _parallelBarrierReportCount; ///< 병렬 기록 중 배리어 진단을 남긴 횟수(장치마다 앞 8 번만 — `reportBarrierDuringRecording`)
         /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).
         RHIInitResult _initResult;
-        /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
+        /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 해제 큐가 놓으며 줄이므로 큐보다 먼저 선언한다.
         unique_ptr<RHIMemoryTracker> _memoryTracker;
+        /// @brief 지연 해제와 프레임 완료 통지입니다. 키 = 프레임 시리얼(`_frameFenceRing`).
+        RHIReleaseQueue _releaseQueue;
+        /// @brief 끝나지 않은 전송이 쓰는 자원의 해제입니다. 키 = 전송 시리얼이고, 끝나면 그때의 다음 프레임 펜스로 한 번 더 미룬다(`_releaseQueue`) — 그 자원을 그린 프레임도 지나게 한다.
+        ///        `_releaseQueue` 보다 뒤에 선언한다(소멸은 역순이라 이 큐가 먼저 비워진다).
+        RHIReleaseQueue _transferReleaseQueue;
         /// @brief 작은 상수 버퍼 페이지 풀입니다(getConstantBufferPagePool 참고).
         unique_ptr<ConstantBufferPagePool> _pConstantBufferPagePool;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
@@ -840,13 +903,18 @@ namespace sw
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
         /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
         unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
+        /// @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`getBufferUploadLog`).
+        unique_ptr<RHIUploadLog<RHIBufferHandle>> _pBufferUploadLog;
+        /// @brief 지금 기록하는 프레임이 쓰는 텍스처입니다(`getTextureUploadLog`).
+        unique_ptr<RHIUploadLog<RHITextureHandle>> _pTextureUploadLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.
         RHIDrawDiagnostics _drawDiagnostics;
-        /// @brief 이번 프레임의 기록 경로 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
+        /// @brief 이번 프레임의 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
         RHIConstantBufferWriteLog _constantBufferWriteLog;
         /// @brief 지난 경계 수입니다(`getHandleReuseCount`).
         atomic<uint64> _handleReuseCount{ 0 };
+        uint64         _frameNumber{ 0 }; ///< 연 프레임 수(`getFrameNumber`)
     };
 } // namespace sw

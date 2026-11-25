@@ -94,8 +94,12 @@ namespace sw
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassKind passType ) const;
-        /** @brief 파이프라인 컴퓨트 패스(`RenderPassKind::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
-        RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;
+        /**
+         * @brief 컴퓨트 패스 타입의 엔진 PSO 와 그 PSO 에서 풀어 둔 매개변수 표입니다(`ComputeShaderParameters::apply` 가 받는다). 없으면 빈 값입니다. 프레임 패스 규칙은 `getEnginePSO` 와 같다.
+         */
+        ComputePipeline getComputePSO( RenderPassKind passType ) const;
+        /** @brief 파이프라인 컴퓨트 패스(`RenderPassKind::Compute` · 풀스크린 패스의 컴퓨트 구현) @p passName 의 PSO 와 매개변수 표입니다. 없으면 빈 값입니다. */
+        ComputePipeline findPipelineComputePSO( const hashed_string& passName ) const;
         /**
          * @brief 디퍼드 조명 타일 종류 @p tileClass 의 PSO(조명 패스 서술 + 그 종류의 엽만 — deferred_lighting.hlsl VSTile)입니다. 없으면 0 입니다.
          * @details **조회만 한다.** 셋업(`createPassPSOs`)이 분류를 쓸 수 있는 백엔드(네이티브 bindless · 간접 인자)와 조명 패스가 있는 파이프라인에서 만든다.
@@ -206,11 +210,12 @@ namespace sw
         /** @brief 셋업이 만들 컴퓨트 패스 PSO 하나입니다(셰이더 경로 · define 은 쿠커와 같은 `selectRenderPassShader`). */
         struct ComputePSOJob
         {
-            string         _shaderPath;
-            string         _entryPoint; ///< 비면 스테이지 기본값입니다
-            vector<string> _listDefine;
-            hashed_string  _pipelinePassName; ///< 파이프라인 컴퓨트 패스면 그 이름입니다(비면 엔진 슬롯 `_passType`)
-            RenderPassKind _passType{ RenderPassKind::Invalid };
+            string                      _shaderPath;
+            string                      _entryPoint; ///< 비면 스테이지 기본값입니다
+            vector<string>              _listDefine;
+            hashed_string               _pipelinePassName; ///< 파이프라인 컴퓨트 패스면 그 이름입니다(비면 엔진 슬롯 `_passType`)
+            RenderPassKind              _passType{ RenderPassKind::Invalid };
+            ComputeShaderParameterTable _parameters{}; ///< 셰이더의 매개변수 표(PSO 를 만들 때 리플렉션에 푼다)
         };
 
         /** @brief 그래픽스 PSO desc 의 셰이더 요청(정점 · 있으면 픽셀)을 @p inoutListShader 에 더합니다. 백엔드 팩토리와 같은 해석이라(`RHIShaderRequest::resolveGraphics`) 캐시 키가 같다. */
@@ -229,6 +234,12 @@ namespace sw
         void ensureMaterialFallbackBuffers();
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 PSO 핸들에 연결합니다. */
         void registerLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
+        /**
+         * @brief 코드가 짓는 PSO 를 서술체 지문으로 찾거나 동기로 만듭니다(셰이더는 셋업이 데웠다 — 드라이버 생성만 남는다). 실패(0)도 저장소에 남겨 되풀이하지 않는다.
+         * @param pPurpose 실패 로그의 PSO 이름입니다(무엇을 그리지 못하는지).
+         * @return 0 이면 만들지 못한 것입니다(오류를 남겼다).
+         */
+        RHIPipelineStateHandle getOrCreateGlobalPSO( const RHIPipelineStateDesc& desc, const utf8* pPurpose );
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
         /**
@@ -250,15 +261,14 @@ namespace sw
         static uint32 getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask );
         /** @brief 변형 조건 하나를 @p passPSO · @p viewMode 로 그릴 PSO 입니다. 적용할 것이 없으면 패스 PSO 그대로, 만드는 중이면 직전 변형(`GPUShaderPermutation::_fallbackHash`)입니다. */
         GPUMeshBatchPSO resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const;
-        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. */
+        void ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pollMaterialPSOBuilds` 가 합칩니다).
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
-         * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
-        [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
-                                                     bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent = true );
+        void ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
+                                       bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent = true );
 
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고). nullptr 이면 아무것도 만들지 않는다
@@ -293,7 +303,12 @@ namespace sw
         vector<MaterialFallback>     _listMaterialFallback;
         /// @brief 바인딩 레이아웃 정체성(`ShaderBindingLayout::getIdentity`) → `_listMaterialFallback` 순번입니다. 주소가 아니라 정체성이라 핫 리로드가 같은 자리에 다시 지은 레이아웃은 옛 폴백을 집지 않는다.
         unordered_map<IdentityToken, uint32> _mapLayoutMaterialFallback;
-        /// @brief 이번 프레임 입자 PSO 의 변형 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 빈 키(`_passPSO` 0)입니다.
-        MaterialPSOKey _particlePSOKey{};
+        uint64                               _fallbackLayoutSerial{ 0 }; ///< 폴백을 맞춘 저장소의 레이아웃 번호(`RenderPSOCache::getLayoutSerial`)
+        /// @brief 입자 PSO 서술을 지은 투명 패스 PSO 입니다(`ensureParticlePSO` — 바뀌면 서술 · 지문을 다시 짓는다). 입자가 없거나 투명 패스가 없으면 0 입니다.
+        RHIPipelineStateHandle _particleSourcePSO{ 0 };
+        /// @brief 입자 PSO 의 서술체 지문(`RHIPipelineStateDesc::computeHash` — 코드가 짓는 PSO 저장소의 키)입니다. 0 이면 그리지 않는다.
+        uint64 _particlePSODescHash{ 0 };
+        /// @brief 디퍼드 조명 타일 종류마다의 PSO 서술체 지문입니다(`createPassPSOs` 가 정한다 — 0 이면 그 종류의 PSO 가 없다).
+        uint64 _arrDeferredTileDescHash[kDeferredTileClassCount]{};
     };
 } // namespace sw

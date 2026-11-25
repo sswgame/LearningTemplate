@@ -33,8 +33,9 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
-#include "Engine/Graphics/RHI/Transfer/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRing.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -57,7 +58,7 @@ namespace sw
     /**
      * @struct D3D12SlotTableState
      * @brief 바인드 포인트(그래픽스, 컴퓨트) 하나의 t/u 슬롯 테이블 상태입니다. 언리얼 FD3D12DescriptorCache 의 SRV/UAV 캐시에 해당합니다.
-     * @details bind*() 는 오프라인 힙의 뷰 핸들을 슬롯에 기록해 두기만 하고, 드로우나 디스패치 직전에 flushSlotTables 가 바뀐
+     * @details 공용 슬롯 표(`RHIShaderSlots`)의 번호를 오프라인 힙의 뷰 핸들로 푼 것이다. 드로우나 디스패치 직전에 flushBindings 가 바뀐
      *          테이블만 온라인(셰이더 가시) 힙 블록에 복사해 루트 테이블로 바인딩한다. 바인딩되지 않은 슬롯은 null 뷰로 채운다.
      */
     struct D3D12SlotTableState
@@ -85,16 +86,11 @@ namespace sw
         /// @brief 이 리스트가 빌린 온라인 힙 블록들입니다. 리스트가 닫힐 때 GPU 펜스 뒤에 반납합니다(releaseOnlineBlocksDeferred).
         vector<uint32> _listOnlineBlock;
         /// @brief 지금 쓰는 온라인 블록의 커서와 끝입니다(셰이더 가시 힙 인덱스). 같으면 블록이 없다는 뜻입니다.
-        uint32                 _onlineCursor;
-        uint32                 _onlineEnd;
-        RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
-        RHIPipelineStateHandle _activeGraphicsPSO;
-        D3D_PRIMITIVE_TOPOLOGY _activeTopology;   ///< 지금 PSO 의 위상입니다(드로우가 건다)
-        RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
-        /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
-         *  드로우가 _activeGraphicsPSO 와 같으면 다시 설정하지 않습니다. Reset() 직후에는
-         *  0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
-        RHIPipelineStateHandle _boundNativeGraphicsPSO;
+        uint32 _onlineCursor;
+        uint32 _onlineEnd;
+        /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다(그래픽스든 컴퓨트든 리스트에 하나다). 드로우 · 디스패치가 같은 PSO 면 다시 설정하지 않습니다.
+         *  Reset() 직후에는 0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 설정되지 않아 캐시가 무효입니다). */
+        RHIPipelineStateHandle _boundNativePSO;
         RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments];
         RHITextureHandle       _activeDepthTarget;
         uint8                  _bActiveSwapchainRT : 1;
@@ -113,11 +109,7 @@ namespace sw
             , _listOnlineBlock{}
             , _onlineCursor{ 0 }
             , _onlineEnd{ 0 }
-            , _geometry{}
-            , _activeGraphicsPSO{ 0 }
-            , _activeTopology{ D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST }
-            , _activeComputePSO{ 0 }
-            , _boundNativeGraphicsPSO{ 0 }
+            , _boundNativePSO{ 0 }
             , _arrActiveColorTarget{}
             , _activeDepthTarget{ 0 }
             , _bActiveSwapchainRT{ SW_FALSE }
@@ -194,22 +186,16 @@ namespace sw
         void detachCommandRecordingInternal() override;
 
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
-        void waitIdleInternal() override;
+        bool waitIdleInternal() override;
 
         /** @brief D3D12MA 가 DXGI `QueryVideoMemoryInfo` 로 읽은 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 할당기가 없으면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)을 기준으로 해제 큐에 넣습니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
-        bool   isFrameStarted() const override { return _frameStreamState._bRecording != SW_FALSE; } // 제거된 장치의 beginFrame 은 리스트를 열지 못한다
+        bool isFrameStarted() const override { return _frameStreamState._bRecording != SW_FALSE; } // 제거된 장치의 beginFrame 은 리스트를 열지 못한다
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
-        uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
+        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
         /** @brief DRED 자동 브레드크럼 · 페이지 폴트 할당을 로그로 남깁니다(손실 보고가 처음 한 번 부른다). */
         void   reportDeviceFaultInternal() override;
         uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
@@ -408,9 +394,11 @@ namespace sw
             vector<D3D12_CPU_DESCRIPTOR_HANDLE> _listExtraDSVHandle;
             uint32                              _arraySize{ 1 };
             RHITextureDimension                 _dimension{ RHITextureDimension::Texture2D };
-            uint8                               _bHasRTV  : 1;
-            uint8                               _bHasDSV  : 1;
-            [[maybe_unused]] uint8              _reserved : 6;
+            uint8                               _bHasRTV          : 1;
+            uint8                               _bHasDSV          : 1;
+            uint8                               _bShaderResource  : 1; ///< `RHITextureDesc::_bIsShaderResource` — SRV 를 막지 않는 리소스라 깃발에서 되읽을 수 없다
+            uint8                               _bUnorderedAccess : 1;
+            [[maybe_unused]] uint8              _reserved         : 4;
         };
 
         /// @brief 텍스처 · 버퍼 레코드의 추적 상태입니다(`RHITrackedState` — Vulkan 이미지 레이아웃과 같은 형식).
@@ -444,6 +432,7 @@ namespace sw
             D3D12_CPU_DESCRIPTOR_HANDLE _rtvHandle{}; ///< 고른 면의 RTV(없으면 0)
             D3D12_CPU_DESCRIPTOR_HANDLE _dsvHandle{}; ///< 고른 면의 DSV(없으면 0)
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
+            RHIRenderPassExtent         _extent{}; ///< 고른 밉의 크기
             uint8                       _bHasRTV{ SW_FALSE };
             uint8                       _bHasDSV{ SW_FALSE };
             uint8                       _bSliceInRange{ SW_FALSE }; ///< 고른 (밉, 면) 이 범위 안에 있고 그 뷰가 있다.
@@ -527,8 +516,8 @@ namespace sw
             void*                                             _pMapped{ nullptr };
             uint64                                            _capacity{ 0 };
             uint64                                            _uploadOffset{ 0 };        ///< 이번 펜스 구간에서 쓴 스테이징 바이트
-            uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간
-            uint8                                             _bListOpen{ SW_FALSE };    ///< 복사 리스트가 열려 있고 아직 제출하지 않은 복사가 있다.
+            uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간. 처음이면 UINT64_MAX
+            uint8                                             _bFrameCopies{ SW_FALSE }; ///< 이 스테이징을 읽는 복사를 프레임 스트림에 기록했고 프레임을 아직 내지 않았다 — 펜스 값이 올라도 되감지 않는다
         };
 
         /**
@@ -543,28 +532,16 @@ namespace sw
             UINT64                                            _fenceValue{ 0 }; ///< 제출 뒤 전송 펜스에 Signal 한 값. 0 이면 아직 내지 않았다
         };
 
-        /**
-         * @struct D3D12StagingRing
-         * @brief 영속 매핑한 스테이징 버퍼 하나와 그 구간 할당기입니다. 업로드 링은 소스를 여기에 복사한 뒤 복사 리스트가 읽고, 되읽기 링은 복사 리스트가 쓴 뒤 가져가기가 읽습니다(Vulkan 과 같은 두 링).
-         * @details 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::isSolo`, 오프셋 0)으로 내주고,
-         *          그 크기의 일회성 업로드 힙 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을 한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓)
-         *          `retireCompletedTransfers` 가 지운다. 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다.
-         */
-        struct D3D12StagingRing
+        /** @brief 영속 매핑한 스테이징 버퍼 하나입니다(링 · 단독 버퍼). 업로드 링은 UPLOAD 힙, 되읽기 링은 READBACK 힙이다. */
+        struct D3D12StagingBuffer
         {
-            D3D12_HEAP_TYPE                        _heapType{ D3D12_HEAP_TYPE_UPLOAD }; ///< UPLOAD(업로드 소스) 또는 READBACK(되읽기 도착지) — 단독 버퍼도 같은 힙에 만든다
-            RHIStagingAllocator                    _allocator;
-            Microsoft::WRL::ComPtr<ID3D12Resource> _buffer;
+            Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
             uint8*                                 _pMapped{ nullptr };
-            mutex                                  _soloMutex; ///< 단독 버퍼 칸(아래 둘)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
-            Microsoft::WRL::ComPtr<ID3D12Resource> _soloBuffer;
-            uint8*                                 _pSoloMapped{ nullptr };
 
-            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span.getOffsetBytes()` 에서 센다. */
-            [[nodiscard]] ID3D12Resource* getSpanResource( const RHIStagingSpan& span ) const { return span.isSolo() ? _soloBuffer.Get() : _buffer.Get(); }
-            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span.getOffsetBytes()` 이상의 오프셋을 더해 읽고 쓴다. */
-            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span.isSolo() ? _pSoloMapped : _pMapped; }
+            [[nodiscard]] bool isValid() const { return _resource != nullptr; }
         };
+        /// @brief 구간 시작은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT`(512)의 배수라 텍스처 복사의 배치 오프셋 규칙을 그대로 만족한다(`RHIStagingRing`).
+        using D3D12StagingRing = RHIStagingRing<D3D12StagingBuffer>;
         /** @brief 펜스를 기다리는 온라인 블록 묶음입니다. 리스트가 닫힐 때 상태의 블록 벡터를 통째로 옮겨 옵니다. */
         struct OnlineBlockRecycleBatch
         {
@@ -653,6 +630,8 @@ namespace sw
         void publishBindlessReadSlot( RHIDescriptorIndex index, BindlessReadRegistry registry, const BindlessResourceRecord& record );
         /** @brief 번호 @p index 가 고른 등록표(@p bUAV)에 살아 있으면 그 읽기 칸을, 아니면 nullptr 를 줍니다(락 없음 — 기록 경로의 바인딩이 부른다). */
         const BindlessReadSlot* findBindlessReadSlot( RHIDescriptorIndex index, bool bUAV ) const;
+        /** @brief 걸지 않은 b 슬롯이 읽는 0 버퍼의 주소입니다. */
+        D3D12_GPU_VIRTUAL_ADDRESS getNullConstantBufferAddress() const { return _nullConstantBuffer != nullptr ? _nullConstantBuffer->GetGPUVirtualAddress() : 0; }
         /** @brief bindless 번호 @p index 를 기록 경로에서 비웁니다(값은 번호가 다시 나갈 때까지 남긴다). `_bindlessMutex` 배타 락 아래에서 부릅니다. */
         void retireBindlessReadSlot( RHIDescriptorIndex index );
         /**
@@ -689,7 +668,7 @@ namespace sw
         /** @brief READBACK 힙 버퍼를 만들어 영속 매핑합니다(복사 도착지 상태로 만든다). */
         [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, const utf16* pName, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 서술 @p desc 의 항목 · 모양과 할당 크기를 올리는 유일한 지점입니다. */
-        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, const RHITextureDesc& desc );
+        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture );
     #if defined( SW_DO_CHECKS )
         /**
          * @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다.
@@ -699,12 +678,6 @@ namespace sw
     #endif
         /** @brief 자원 하나가 차지하는 실제 할당 크기입니다(`GetResourceAllocationInfo`이며 정렬과 패딩을 포함합니다). */
         uint64 computeAllocationBytes( ID3D12Resource* pResource ) const;
-        /**
-         * @brief 핸들 테이블에서 꺼낸 자원을 지금 펜스 뒤에 해제하고, 그때 추적기에서 뺍니다. destroyBuffer 와 destroyTexture 가 공통으로 쓰는 해제 함수입니다.
-         * @details 추적기는 GPU 가 실제로 해제한 뒤에 줄어야 한다. 해제 요청 시점에 빼면 아직 GPU 메모리를 쥔 자원이 추적기에서 먼저 사라진다.
-         *          끝나지 않은 전송이 있는 텍스처는 이 함수가 아니라 `releaseTextureAfterTransfer` 를 거쳐 온다(전송 완료 뒤에야 여기로 넘어온다).
-         */
-        void releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key );
         /**
          * @brief 루트 시그니처(루트 CBV, t/u 슬롯 테이블, 텍스처 배열 테이블, 루트 상수, 정적 샘플러), 커맨드 시그니처, 풀스크린 정점 버퍼를 만듭니다.
          */
@@ -756,15 +729,18 @@ namespace sw
         static void CALLBACK onValidationMessage( D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR pDescription,
                                                   void* pContext );
         /**
-         * @brief 열어 둔 구조 버퍼 복사 리스트를 닫아 제출합니다. **프레임에 한 번**입니다.
-         * @details 갱신 호출은 리스트를 열어 두고 기록만 하고, 여기서 한 번 닫는다. 갱신은 인스턴스, 배치 테이블, 뷰마다의
-         *          간접 인자, 머티리얼 그룹까지 프레임에 대여섯 번이고 제출 하나가 수십µs 라, 호출마다 `ExecuteCommandLists` 를
-         *          부르면 렌더 스레드 비용이 된다. 큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 갱신이 그 프레임의
-         *          드로우보다 먼저 실행된다. 텍스처 전송은 이 리스트를 거치지 않는다(`submitTransferJob`).
+         * @brief 열어 둔 업로드 복사 리스트를 닫아 제출합니다.
+         * @details 업로드 리스트는 프레임 밖 · 다른 스레드의 갱신과 새 버퍼의 첫 내용만 담는다 — 프레임을 기록하는 스레드의 갱신은 프레임 스트림에 기록 순서대로 들어간다
+         *          (`D3D12RHIResourceFactory::recordBufferCopies`). 큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 그 프레임의 드로우보다 먼저 실행된다.
+         *          텍스처 전송은 이 리스트를 거치지 않는다(`submitTransferJob`).
          * @param bExecuteNow true 면 지금 큐에 넣습니다(펜스 대기 직전). false 면 `_listPendingSubmit` 맨 앞에 끼워
          *                    endFrame 의 한 번의 제출에 같이 나갑니다.
          */
         void flushPendingUploads( bool bExecuteNow );
+        /** @brief 이 스레드가 프레임 스트림을 기록하는 중이면 true 입니다. */
+        bool isRecordingFrameOnThisThread() const { return _frameThreadID.load( std::memory_order_relaxed ) == std::this_thread::get_id() && _pActiveFrameList != nullptr; }
+        /** @brief 프레임을 냈다 — 프레임 스트림 복사가 읽은 스테이징은 지금 펜스 구간의 것이다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다. */
+        void retireFrameCopies();
 
         /**
          * @brief 전송 전용 스테이징 링(`RHIDeviceDesc::_stagingRingBytes`)을 만듭니다. 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
@@ -778,9 +754,9 @@ namespace sw
         /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
         void destroyStagingRing( D3D12StagingRing& ring );
         /** @brief 업로드 힙 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다). 실패하면 두 출력은 비어 있다. */
-        [[nodiscard]] bool createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, uint8*& pOutMapped );
+        [[nodiscard]] bool createMappedStagingBuffer( D3D12_HEAP_TYPE heapType, uint64 sizeBytes, D3D12StagingBuffer& outBuffer );
         /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. */
-        void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
+        void destroyMappedStagingBuffer( D3D12StagingBuffer& rBuffer );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
          * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::completeAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
@@ -810,11 +786,6 @@ namespace sw
          */
         void retireCompletedTransfers();
         /**
-         * @brief 전송 중인 텍스처의 해제를 마지막 전송이 끝난 뒤로 미룹니다(계약 6). 끝나면 그때의 프레임 펜스 뒤로 `_releaseQueue` 에 넘어가 이 텍스처를 그린 프레임도 지나게 한다.
-         * @param lastSerial 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다(끝나지 않은 것).
-         */
-        void releaseTextureAfterTransfer( Microsoft::WRL::ComPtr<ID3D12Resource> owned, RHITextureHandle texture, uint64 lastSerial );
-        /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
          *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
@@ -829,9 +800,7 @@ namespace sw
         void recordTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
         [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
-        /** @brief 텍스처의 첫 업로드가 끝나 bindless 에 등록해도 되는지 봅니다(아니면 오류를 남긴다 — `RHITransferSerials::isTextureReadyToRegister`). */
-        [[nodiscard]] bool isTextureReadyToRegister( RHITextureHandle texture );
-        /** @brief 텍스처의 첫 업로드가 끝났는지(또는 올린 적이 없는지)만 봅니다 — 오류를 남기지 않는다(`IRHIResourceFactory::isTextureReadyToSample`). */
+        /** @brief 텍스처의 첫 업로드가 끝났는지(또는 올린 적이 없는지) 봅니다(`IRHIResourceFactory::describeTextureNative`). */
         [[nodiscard]] bool isTextureFirstUploadComplete( RHITextureHandle texture );
         /** @brief 텍스처를 파괴할 때 전송 시리얼 칸을 지웁니다. */
         void eraseTextureTransfer( RHITextureHandle texture );
@@ -843,7 +812,7 @@ namespace sw
         void submitPendingIfImmediate();
 
         /**
-         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
          * @details 다른 창은 이 프레임에 처음 쓰일 때 DXGI 가 정한 현재 백버퍼를 읽고 `endFrame` 의 표시 목록에 오른다.
          */
         D3D12RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
@@ -884,6 +853,7 @@ namespace sw
         vector<uint8>                                     _listPipelineLibraryBlob; ///< 라이브러리를 만든 바이트 — 라이브러리가 사본 없이 가리키므로 라이브러리보다 오래 산다
         RHIPipelineCacheFile                              _pipelineCacheFile;
         mutex                                             _pipelineLibraryMutex; ///< 라이브러리에서 꺼내기를 줄 세운다(같은 이름을 두 스레드가 함께 꺼내면 안 된다 — D3D12 문서). 잎 락
+        Microsoft::WRL::ComPtr<ID3D12Resource>            _nullConstantBuffer;   ///< 걸지 않은 b 슬롯이 읽는 0 버퍼(루트 CBV 는 null 을 읽을 수 없다)
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _drawIndexedCommandSignature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature>    _dispatchCommandSignature;
@@ -931,6 +901,17 @@ namespace sw
         RHITimestampRing     _timestampRing;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
+        /**
+         * @brief 복사 리스트가 열려 있고 아직 제출하지 않은 복사가 있는 업로드 슬롯입니다. 없으면 빈 값입니다(`_uploadSlotMutex`).
+         * @details 열린 리스트는 **장치에 하나**다. 슬롯마다 열림 표시를 두면 프레임 밖 업로드(프레임 앞 렌더 명령의 자원 만들기)가 연 리스트와 다음 링 칸의 리스트가 함께 열리고,
+         *          제출 순서를 슬롯 번호로 정해 뒤에 기록한 복사가 먼저 실행됐다 — 0 채움이 그 뒤의 갱신을 덮고, 추적 상태로 적은 배리어의 앞 상태가 어긋났다(디버그 레이어 527).
+         *          다른 칸을 열려면 열린 리스트를 먼저 낸다(`openUploadSlot`). 같은 ExecuteCommandLists 안에서는 버퍼가 COMMON 으로 감쇠하지 않아 순서가 곧 상태다.
+         *          https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#state-decay-to-common
+         *          Vulkan 도 열린 업로드 커맨드버퍼가 하나다(`VulkanRHIDevice::_openUploadBuffer`).
+         */
+        optional<uint32> _openUploadSlotIndex;
+        /// @brief 프레임을 기록하는 스레드입니다(프레임 밖이면 빈 값). 이 스레드의 갱신은 프레임 스트림에, 다른 스레드의 갱신은 업로드 리스트에 기록한다. 업로드 스레드도 읽어 atomic 입니다.
+        atomic<std::thread::id> _frameThreadID{ std::thread::id{} };
 
         /// @brief 버퍼 · 텍스처 레코드입니다. 칸 찾기는 락이 없고(`SlotHandleTable::get`), 추적 상태도 칸 안의 원자값이라 배리어가 락을 잡지 않는다.
         RHIHandleTable<RHIBufferHandle, BufferRecord>   _gpuBuffers;
@@ -1011,14 +992,10 @@ namespace sw
         /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 확인하기 위한 계측입니다.
         atomic<uint32> _cmdListEntryCreated;
 
-        Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
-        /// @brief 이번 프레임이 Signal 할 프레임 펜스 값입니다. 렌더 스레드가 Signal 과 함께 올리고, 다른 스레드(구조 버퍼 갱신 · 해제)가 읽으므로 atomic 입니다.
-        /// @details Signal 과 올리기는 `_uploadSlotMutex` 안에서 한 덩어리로 한다. 구조 버퍼 갱신이 같은 락 안에서 이 값을 읽고 복사를 실행하므로
+        /// @brief 프레임 펜스입니다. Signal 하는 값은 기록 시리얼(`_frameFenceRing`)이다.
+        /// @details Signal 과 시리얼 올리기는 `_uploadSlotMutex` 안에서 한 덩어리로 한다. 구조 버퍼 갱신이 같은 락 안에서 시리얼을 읽고 복사를 실행하므로
         ///          "복사가 끝나는 펜스" 가 Signal 순서와 어긋나지 않는다(락 밖이면 Signal(V) 뒤에 실행된 복사가 V 를 받는다).
-        ///          텍스처 전송은 이 값에 기대지 않는다 — 전송 완료는 전송 펜스와 시리얼 워터마크가, 전송 중인 텍스처의 해제는 시리얼 키 해제 큐(`_transferReleaseQueue`)가 정한다.
-        atomic<uint64> _fenceValue;
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매깁니다.
-        RHITransferSerials _transferSerials;
+        Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
         /// @brief 전송 전용 펜스입니다. 프레임 펜스와 따로 두어 전송 완료를 프레임 없이도 알 수 있습니다. 전송마다 한 값을 올립니다(`submitTransferJob`).
         Microsoft::WRL::ComPtr<ID3D12Fence> _transferFence;
         UINT64                              _transferFenceValue; ///< 마지막으로 올린 전송 펜스 값(`_transferSubmitMutex` 안에서만 올린다)
@@ -1041,13 +1018,6 @@ namespace sw
         unordered_map<RHITextureHandle, RHITextureTransferSerials> _mapTextureTransferMarks SW_GUARDED_BY( _textureTransferMutex );
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
-
-        RHIReleaseQueue _releaseQueue;
-        /**
-         * @brief 끝나지 않은 전송이 쓰는 텍스처의 해제와 읽기 버퍼 유지입니다. 키는 전송 시리얼이고, 워터마크가 지나면 해제는 그때의 프레임 펜스 뒤로 `_releaseQueue` 에 넘어갑니다(계약 6).
-         * @details `_releaseQueue` 보다 **뒤에** 선언합니다. 소멸은 선언 역순이라 이 큐가 먼저 비워지고, 그 콜백이 아직 살아 있는 `_releaseQueue` 에 넣습니다.
-         */
-        RHIReleaseQueue _transferReleaseQueue;
 
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
         sw::unique_ptr<D3D12RHICommandContext> _frameStreamContext;

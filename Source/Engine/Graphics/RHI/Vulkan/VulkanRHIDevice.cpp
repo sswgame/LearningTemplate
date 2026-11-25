@@ -56,14 +56,14 @@
 namespace sw
 {
     VulkanRHIDevice::VulkanRHIDevice( uint32 deviceGeneration )
-        : _instance{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _instance{ nullptr }
         , _debugMessenger{ nullptr }
         , _physicalDevice{ nullptr }
         , _device{ nullptr }
         , _graphicsQueue{ nullptr }
         , _graphicsQueueFamilyIndex{ 0 }
         , _asyncComputeQueue{ nullptr }
-        , _frameFenceRing{}
         , _swapChain{}
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
@@ -142,7 +142,6 @@ namespace sw
         , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _gpuTextures{ getHandleReuseCount() }
-        , _releaseQueue{}
         , _renderPassCache{}
         , _textureRegistry{ kBindlessTextureCount }
         , _slotSetLayout{ nullptr }
@@ -159,10 +158,8 @@ namespace sw
         , _dummyUBOMemory{}
         , _pipelineStates{ getHandleReuseCount() }
         , _pipelineCache{ nullptr }
-        , _transferSerials{ deviceGeneration }
         , _readbackTable{}
         , _transferFenceQueue{ _transferSerials }
-        , _transferReleaseQueue{}
         , _uploadRing{}
         , _readbackRing{}
         , _transferMutex{}
@@ -406,7 +403,7 @@ namespace sw
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( _device )
         {
-            // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `_releaseQueue.flushAll` 보다 먼저 놓는다.
+            // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `abandonReleases` 보다 먼저 놓는다.
             shutdownTransfers();
             for ( vector<VkSemaphore>& listPool : _listAsyncSemaphorePool )
             {
@@ -429,7 +426,7 @@ namespace sw
             }
             // 해제 큐를 버퍼 표를 비우기 전에 한 번 비운다 — 업로드 배치 · 버퍼 해제 대리자가 표를 해석하므로, 표가 빈 뒤에 돌면 해석 실패 길이 생긴다.
             // GPU 는 종료 2 단계(waitIdle)에서 쉬었다. 아래 텍스처 정리가 새로 거는 프레임버퍼 해제는 뒤의 flushAll 이 놓는다.
-            _releaseQueue.abandonAll();
+            abandonReleases();
             shutdownUploads();
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
@@ -443,7 +440,7 @@ namespace sw
                 _memoryAllocator.destroyBuffer( slot._buffer, slot._memory );
                 slot = StructuredUploadSlot{};
             }
-            _recordingState._geometry = RHIGeometryBindings{};
+            _recordingState = VulkanRecordingState{};
 
             _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
             {
@@ -466,7 +463,7 @@ namespace sw
             _gpuTextures.clear();
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
-            _releaseQueue.abandonAll();
+            abandonReleases();
             _bufferRegistry.clear(); // 빈 목록도 함께 — 남기면 다음 장치가 표 밖 번호를 낸다
             _uavRegistry.clear();
             for ( uint32 index = 0; index < kBindlessBufferCapacity; ++index )
@@ -672,11 +669,7 @@ namespace sw
         record._usage      = usageFlags;
         record._cbSlotSize = cbSlotSize;
 
-        // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 할당 크기(정렬 포함)다.
-        const uint64          allocationBytes = record._memory._sizeBytes;
-        const RHIBufferHandle handle          = _gpuBuffers.insert( record );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, allocationBytes );
-        return handle;
+        return _gpuBuffers.insert( record );
     }
 
     namespace
@@ -2039,7 +2032,7 @@ namespace sw
         }
     }
 
-    void VulkanRHIDevice::waitIdleInternal()
+    bool VulkanRHIDevice::waitIdleInternal()
     {
         // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _renderThread };
@@ -2070,23 +2063,7 @@ namespace sw
                 { recycleTransferJob( job ); } );
             }
         }
-        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다(전송 큐에는 통지가 없다).
-        _transferReleaseQueue.releaseAllCompleted();
-        // 큐가 빈 것을 확인했을 때만 통지가 `Completed` 다 — 잃은 장치는 끝났는지 모른다.
-        if ( _device && isDeviceLost() == false )
-            _releaseQueue.releaseAllCompleted();
-        else
-            _releaseQueue.abandonAll();
-    }
-
-    void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void VulkanRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
+        return _device && isDeviceLost() == false; // 잃은 장치는 끝났는지 모른다
     }
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
@@ -2285,7 +2262,7 @@ namespace sw
         collectTimestampsForSlot();
         _timestampRing.beginFrame( getFrameSlot() );
         // 이 칸의 앞 프레임까지 GPU 가 끝냈다. 그 시리얼 이하로 태그된 리소스 해제를 지금 실행한다.
-        _releaseQueue.releaseCompleted( _frameFenceRing.getCompletedSerial() );
+        releaseCompletedFrames();
         trimIdleStagingBlocks(); // 돌려받은 업로드 블록 가운데 오래 쉰 것을 놓는다
         // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
         retireFinishedTransfers();
@@ -2365,13 +2342,11 @@ namespace sw
         _frameSegmentCursor = 0;
         _listPendingSubmit.clear();
 
-        // 새 커맨드버퍼에는 아직 아무 세트도 안 걸렸다. flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
-        _recordingState._bTextureSetBound = SW_FALSE;
-        _recordingState._arrSlotState[0]  = VulkanSlotState{};
-        _recordingState._arrSlotState[1]  = VulkanSlotState{};
+        // 새 커맨드버퍼에는 아직 아무것도 안 걸렸다. 첫 드로우 · 디스패치가 파이프라인과 세트를 다시 건다.
+        _recordingState = VulkanRecordingState{};
+        _frameStreamContext->beginRecording();
 
-        _bFrameStarted                     = SW_TRUE;
-        _recordingState._bRenderPassActive = SW_FALSE;
+        _bFrameStarted = SW_TRUE;
 
         constexpr float32 kDefaultViewportX        = 0.0f;
         constexpr float32 kDefaultViewportMinDepth = 0.0f;
@@ -2407,7 +2382,7 @@ namespace sw
             restoreDroppedFrameLayouts();
             // 프레임이 나가지 않아도 업로드(그리지 않는 프레임의 인스턴스 · 텍스처 구간)와 지연 해제는 쌓인다 — 최소화한 동안 끝없이 자라지 않게 여기서 내고 기다려 거둔다.
             // 이 프레임에 잡은 그리기가 없어 기다려도 막는 것이 없다(최소화한 루프는 `FramePacer` 가 재운다).
-            waitIdleInternal();
+            waitForGPUIdle();
             return;
         }
 
@@ -2591,7 +2566,7 @@ namespace sw
             ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceRing.getRecordingSerial() );
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ) );
     }
 
     VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()
@@ -2777,6 +2752,8 @@ namespace sw
         block._buffer     = createVulkanBuffer( capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0, VulkanBufferMemory::HostWrite, "UploadStagingBlock" );
         block._capacity   = capacity;
         block._bDedicated = bDedicated ? SW_TRUE : SW_FALSE;
+        if ( const VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( block._buffer ) )
+            getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( block._buffer ), RHIMemoryKind::Staging, pRecord->_memory._sizeBytes );
         return block;
     }
 
@@ -2881,7 +2858,7 @@ namespace sw
             return;
         auto retireCb = [this, retired = std::move( batch )]()
         { retireUploadBatch( retired ); };
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, retireCb ), _frameFenceRing.getRecordingSerial() );
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, retireCb ) );
     }
 
     void VulkanRHIDevice::retireUploadBatch( const UploadBatch& batch )
@@ -3056,6 +3033,7 @@ namespace sw
         }
         _activeFrameBuffer = nextSegment;
         _recordingState    = VulkanRecordingState{};
+        _frameStreamContext->beginRecording();
 
         VkViewport viewport{};
         viewport.x        = 0.0f;
@@ -3100,7 +3078,7 @@ namespace sw
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다. 잃은 장치면 끝나지 않은 작업이 남아 있을 수 있지만 더 기다리지 않는다(isDeviceLost 설명).
         _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
         { recycleTransferJob( job ); } );
-        _transferReleaseQueue.abandonAll();
+        abandonReleases();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             for ( const VulkanTransferJob& job : _listFreeTransferJob )
@@ -3126,23 +3104,17 @@ namespace sw
     {
         // 구간 시작 정렬. 복사 오프셋 규칙(텍셀 블록 바이트와 4 의 배수)은 제출 함수가 구간 안에서 맞추고, 여기서는 캐시 줄 경계에서 시작하도록 넉넉히 둔다(GL 링과 같다).
         constexpr uint64 kSpanAlignmentBytes = 256;
-        if ( createMappedStagingBuffer( capacityBytes, usageFlags, pName, ring._buffer, ring._memory ) == false )
-            return false;
-        ring._allocator.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes );
-        return true;
+        return ring.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes, [this, usageFlags, pName]( uint64 sizeBytes, VulkanStagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( sizeBytes, usageFlags, pName, outBuffer ); } );
     }
 
     void VulkanRHIDevice::destroyStagingRing( VulkanStagingRing& ring )
     {
-        {
-            ScopedLock<mutex> soloLock{ ring._soloMutex };
-            destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
-        }
-        destroyMappedStagingBuffer( ring._buffer, ring._memory );
-        ring._allocator.shutdown();
+        ring.shutdown( [this]( VulkanStagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
-    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VulkanAllocation& outMemory )
+    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VulkanStagingBuffer& outBuffer )
     {
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -3151,56 +3123,39 @@ namespace sw
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         // 되읽기는 CPU 가 읽는 자리(캐시 메모리를 먼저 고른다), 업로드는 쓰기 자리다 — 쓴 뒤 flush, 읽기 전 invalidate 는 제출 · 가져가기가 부른다.
         const VulkanBufferMemory placement = ( usageFlags & VK_BUFFER_USAGE_TRANSFER_DST_BIT ) != 0 ? VulkanBufferMemory::HostRead : VulkanBufferMemory::HostWrite;
-        if ( _memoryAllocator.createBuffer( bufferInfo, placement, pName, outBuffer, outMemory ) == false )
+        if ( _memoryAllocator.createBuffer( bufferInfo, placement, pName, outBuffer._buffer, outBuffer._memory ) == false )
         {
             SW_LOG_ERROR_ID( "Vulkan.FailedCreateVulkanStaging", "Failed to create the Vulkan %# staging buffer (%# bytes, _rhi._stagingRingMegabytes · _rhi._readbackRingMegabytes · _rhi._stagingSingleMaxMegabytes)",
                              pName, capacityBytes );
             return false;
         }
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory._allocation ), RHIMemoryKind::Staging, outMemory._sizeBytes );
+        getMemoryTracker().recordAllocation( RHIMemoryKey::makeDeviceObject( outBuffer._memory._allocation ), RHIMemoryKind::Staging, outBuffer._memory._sizeBytes );
         return true;
     }
 
-    void VulkanRHIDevice::destroyMappedStagingBuffer( VkBuffer& rBuffer, VulkanAllocation& rMemory )
+    void VulkanRHIDevice::destroyMappedStagingBuffer( VulkanStagingBuffer& rBuffer )
     {
-        if ( rMemory.isValid() )
-            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rMemory._allocation ) );
-        _memoryAllocator.destroyBuffer( rBuffer, rMemory );
-        rBuffer = VK_NULL_HANDLE;
-        rMemory = VulkanAllocation{};
+        if ( rBuffer._memory.isValid() )
+            getMemoryTracker().recordFree( RHIMemoryKey::makeDeviceObject( rBuffer._memory._allocation ) );
+        _memoryAllocator.destroyBuffer( rBuffer._buffer, rBuffer._memory );
+        rBuffer = VulkanStagingBuffer{};
     }
 
     RHISubmitResult VulkanRHIDevice::allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan )
     {
-        RHIStagingAllocateResult result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        if ( result == RHIStagingAllocateResult::Full )
-        {
-            retireFinishedTransfers();
-            result = ring._allocator.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        }
-        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
-        const RHISubmitResult submitResult = RHIStagingRingUtil::completeAllocation( ring._allocator, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
-        if ( submitResult != RHISubmitResult::Accepted || outSpan.isSolo() == false )
-            return submitResult;
-        // 할당기가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        const ScopedDeferredLog deferredLog;
-        ScopedLock<mutex>       soloLock{ ring._soloMutex };
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
-        if ( createMappedStagingBuffer( outSpan.getSizeBytes(), usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory ) )
-            return RHISubmitResult::Accepted;
-        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._allocator, outSpan, "Vulkan", pCaller );
+        return ring.allocate(
+            sizeBytes, _transferSerials, "Vulkan", pCaller, [this]()
+        { retireFinishedTransfers(); },
+            [this, usageFlags]( uint64 soloBytes, VulkanStagingBuffer& outBuffer )
+        { return createMappedStagingBuffer( soloBytes, usageFlags, "single transfer", outBuffer ); },
+            [this]( VulkanStagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); }, outSpan );
     }
 
     void VulkanRHIDevice::destroyIdleSoloBuffer( VulkanStagingRing& ring )
     {
-        ScopedLock<mutex> soloLock{ ring._soloMutex };
-        if ( ring._soloBuffer == VK_NULL_HANDLE )
-            return;
-        // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
-        ring._allocator.freeCompleted( _transferSerials.getWatermark() );
-        if ( ring._allocator.hasLiveSolo() )
-            return;
-        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory );
+        ring.destroyIdleSolo( _transferSerials, [this]( VulkanStagingBuffer& rBuffer )
+        { destroyMappedStagingBuffer( rBuffer ); } );
     }
 
     bool VulkanRHIDevice::beginTransferJob( VulkanTransferJob& outJob )
@@ -3306,7 +3261,7 @@ namespace sw
             { recycleTransferJob( job ); } );
         }
         // 워터마크가 지난 전송을 기다리던 텍스처 해제를 프레임 해제 큐로 넘긴다(그 다음 프레임 펜스 뒤에 놓인다).
-        _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() );
+        releaseCompletedTransfers();
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(GL 과 같은 규칙, 호스트 가시 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
         destroyIdleSoloBuffer( _readbackRing );
@@ -4211,14 +4166,13 @@ namespace sw
             return;
 
         VkDevice dev = _device;
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
         {
             if ( framebuffer != VK_NULL_HANDLE )
                 vkDestroyFramebuffer( dev, framebuffer, nullptr );
             if ( ownedRenderPass != VK_NULL_HANDLE )
                 vkDestroyRenderPass( dev, ownedRenderPass, nullptr );
-        } ),
-                                         _frameFenceRing.getRecordingSerial() );
+        } ) );
     }
 
     VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )
