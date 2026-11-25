@@ -11,8 +11,8 @@
 	<DevCommand line="skirmish.order 32 32"/>
 	<WaitUntil watch="Skirmish.LockstepClientCommands" equals="1" timeoutWallSeconds="30"/>
 	<WaitUntil watch="Skirmish.LockstepTick" atLeast="600" timeoutWallSeconds="120"/>
-	<!-- 명령이 적용된 뒤의 판도 맞춘다(체크섬 간격보다 길게) -->
-	<AdvanceSimulation frames="600" render="true"/>
+	<!-- 명령이 적용된 뒤의 판도 맞춘다(체크섬 간격보다 길게) — 벽시계 실행이라 프레임 수가 아니라 락스텝 걸음 수로 기다린다 -->
+	<WaitUntil watch="Skirmish.LockstepTick" atLeast="1200" timeoutWallSeconds="120"/>
 	<Expect watch="Skirmish.LockstepDesynced" equals="0"/>
 	<Expect watch="Skirmish.LockstepClientCommands" equals="1"/>
 	<Pass/>

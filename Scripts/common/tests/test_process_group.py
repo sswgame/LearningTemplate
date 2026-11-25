@@ -11,6 +11,7 @@ import json
 import socket
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -59,6 +60,34 @@ class ProcessGroupTest(unittest.TestCase):
             child = group.start("child", [sys.executable, "-c", "print('bye')"], stdin=False)
             self.assertFalse(child.wait_for_log("Child.Never", 30))
             self.assertTrue(child.wait(30))
+
+    def test_waiting_stops_at_once_when_a_peer_fails(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            failed = group.start("failed", [sys.executable, "-c", "import sys\nsys.exit(3)"], stdin=False, report_path=group.out_dir / "failed.report.json")
+            waiting = group.start("waiting", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False, report_path=group.out_dir / "waiting.report.json")
+            started = time.monotonic()
+            self.assertFalse(waiting.wait(300))
+            self.assertFalse(waiting.wait_for_log("Child.Never", 300))
+            self.assertLess(time.monotonic() - started, 120)
+            self.assertIs(waiting.lost_peer, failed)
+            self.assertEqual(waiting.scenario_problems(), [f"waiting was stopped because failed ended first with code 3 (log: {failed.log})"])
+
+    def test_passed_scenario_peer_is_not_lost(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            passed = group.start("passed", [sys.executable, "-c", "print('bye')"], stdin=False, report_path=group.out_dir / "passed.report.json")
+            server = group.start("server", [sys.executable, "-c", _ECHO_CHILD])
+            self.assertTrue(passed.wait(60))
+            self.assertTrue(server.wait_for_log("Child.Ready", 60))
+            self.assertIsNone(server.find_lost_peer())
+            server.stop(timeout_seconds=30)
+            self.assertFalse(server.ended_early())   # 실행기가 멈췄다
+
+    def test_server_ending_by_itself_is_lost(self) -> None:
+        with ProcessGroup("test", "Preset", "Run") as group:
+            server = group.start("server", [sys.executable, "-c", "print('bye')"], stdin=False)
+            client = group.start("client", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False, report_path=group.out_dir / "client.report.json")
+            self.assertFalse(client.wait(300))
+            self.assertIs(client.lost_peer, server)
 
     def test_leaving_the_block_stops_running_processes(self) -> None:
         with ProcessGroup("test", "Preset", "Run") as group:

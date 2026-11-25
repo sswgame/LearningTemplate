@@ -42,17 +42,33 @@ def free_port(kind: int) -> int:
 
 
 class ChildProcess:
-    """묶음이 띄운 프로세스 하나 — 이름(로그 · 메시지에 쓴다), 로그 파일, 표준 입력 파이프, 시나리오 보고(시나리오로 띄웠을 때)."""
+    """
+    묶음이 띄운 프로세스 하나 — 이름(로그 · 메시지에 쓴다), 로그 파일, 표준 입력 파이프, 시나리오 보고(시나리오로 띄웠을 때).
 
-    def __init__(self, name: str, process: subprocess.Popen, log: Path, report_path: Path | None = None) -> None:
+    같은 묶음의 다른 프로세스가 뜻밖에 끝나면(`find_lost_peer`) 기다리기는 곧바로 그친다 — 상대가 죽은 실행은 어차피 졌는데 남은 쪽이 제 시한(몇 분)을 다 쓰지 않게 한다.
+    """
+
+    def __init__(self, name: str, process: subprocess.Popen, log: Path, report_path: Path | None = None, list_peer: Sequence[ChildProcess] = ()) -> None:
         self.name = name
         self.process = process
         self.log = log
         self.report_path = report_path
+        self.stop_requested = False              # 실행기가 멈추게 했다 — 그 뒤의 끝남은 뜻밖이 아니다
+        self.lost_peer: ChildProcess | None = None   # 이 프로세스를 멈추게 한, 먼저 끝난 상대
+        self._list_peer = list_peer
 
     @property
     def return_code(self) -> int | None:
         return self.process.returncode
+
+    def ended_early(self) -> bool:
+        """실행기가 멈추지 않았는데 끝났다 — 시나리오는 지거나 크래시한 것(종료 코드 0 이 아님), 시나리오 없는 프로세스(서버)는 끝난 것 자체다."""
+        code = self.process.poll()
+        return code is not None and not self.stop_requested and (code != 0 or self.report_path is None)
+
+    def find_lost_peer(self) -> ChildProcess | None:
+        """같은 묶음에서 뜻밖에 끝난 다른 프로세스. 없으면 None."""
+        return next((peer for peer in self._list_peer if peer is not self and peer.ended_early()), None)
 
     def text(self) -> str:
         return read_log(self.log)
@@ -75,10 +91,10 @@ class ChildProcess:
             pass
 
     def wait_for_log(self, log_id: str, timeout_seconds: float, count: int = 1, *, while_running: ChildProcess | None = None) -> bool:
-        """로그에 id 가 @p log_id 인 줄이 @p count 개 나오면 참, 이 프로세스(또는 @p while_running)가 먼저 끝나거나 시간을 넘기면 거짓."""
+        """로그에 id 가 @p log_id 인 줄이 @p count 개 나오면 참, 이 프로세스(또는 @p while_running)가 먼저 끝나거나 묶음의 다른 프로세스가 뜻밖에 끝나거나 시간을 넘기면 거짓."""
         deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
-            exited = any(process.process.poll() is not None for process in (self, while_running) if process is not None)  # 끝난 뒤 마지막 줄까지 읽고 정한다
+            exited = any(process.process.poll() is not None for process in (self, while_running) if process is not None) or self.find_lost_peer() is not None  # 끝난 뒤 마지막 줄까지 읽고 정한다
             if self.count_log(log_id) >= count:
                 return True
             if exited:
@@ -105,23 +121,34 @@ class ChildProcess:
         """시나리오로 띄운 프로세스가 통과하지 않은 까닭(통과면 빈 목록)."""
         if self.return_code == 0:
             return []
+        if self.lost_peer is not None:
+            peer = self.lost_peer
+            return [f"{self.name} was stopped because {peer.name} ended first with code {peer.return_code} (log: {peer.log})"]
         failure = self.scenario_report().get("failure") or {}
         return [f"{self.name} exited with code {self.return_code}: {failure.get('kind', 'no report')} {failure.get('reason', '')} at {failure.get('step', '?')} (log: {self.log})"]
 
     def wait(self, timeout_seconds: float) -> bool:
-        """스스로 끝나기를 기다린다. 시간을 넘기면 죽이고 거짓."""
-        try:
-            self.process.wait(timeout=timeout_seconds)
-            return True
-        except subprocess.TimeoutExpired:
-            self.process.kill()
-            self.process.wait()
-            return False
+        """스스로 끝나기를 기다린다. 묶음의 다른 프로세스가 뜻밖에 끝나면 이쪽도 멈추고(`lost_peer`) 거짓, 시간을 넘기면 죽이고 거짓."""
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline:
+            try:
+                self.process.wait(timeout=_POLL_SECONDS)
+                return True
+            except subprocess.TimeoutExpired:
+                self.lost_peer = self.find_lost_peer()
+            if self.lost_peer is not None:
+                self.stop(quit_line=False, timeout_seconds=10)
+                return False
+        self.stop_requested = True
+        self.process.kill()
+        self.process.wait()
+        return False
 
     def stop(self, quit_line: bool = True, timeout_seconds: float = 20.0) -> None:
         """정상 종료를 청한다(@p quit_line 이면 표준 입력 `quit`, 아니면 terminate). 시간을 넘기면 죽인다."""
         if self.process.poll() is not None:
             return
+        self.stop_requested = True
         try:
             if quit_line and self.process.stdin is not None:
                 self.send("quit")
@@ -180,11 +207,9 @@ class ProcessGroup:
         report_path.unlink(missing_ok=True)
         command = [app, app_arguments.option("game", game), app_arguments.option("scenario", scenario), app_arguments.option("scenario-report", report_path), app_arguments.flag("unattended")]
         command += app_arguments.variables({**(variables or {}), **({"gv_standardInputCommands": 1} if stdin else {})})
-        child = self.start(name, command, stdin=stdin)
-        child.report_path = report_path
-        return child
+        return self.start(name, command, stdin=stdin, report_path=report_path)
 
-    def start(self, name: str, command: Sequence[str | Path], *, environment: Mapping[str, str] | None = None, stdin: bool = True) -> ChildProcess:
+    def start(self, name: str, command: Sequence[str | Path], *, environment: Mapping[str, str] | None = None, stdin: bool = True, report_path: Path | None = None) -> ChildProcess:
         """@p command 를 `Bin` 에서 띄운다. 출력은 `<out_dir>/<name>.log`, @p environment 는 이 프로세스의 환경 위에 더한다."""
         list_argument = [str(part) for part in command]
         print(f"[{self.tag}] {name}: {' '.join(list_argument)}")
@@ -193,7 +218,7 @@ class ProcessGroup:
         self._list_log_file.append(log_file)
         process = subprocess.Popen(list_argument, cwd=str(self.bin_dir), env={**os.environ, **environment} if environment else None,
                                    stdin=subprocess.PIPE if stdin else None, stdout=log_file, stderr=subprocess.STDOUT)
-        child = ChildProcess(name, process, log)
+        child = ChildProcess(name, process, log, report_path, self._list_process)
         self._list_process.append(child)
         return child
 
