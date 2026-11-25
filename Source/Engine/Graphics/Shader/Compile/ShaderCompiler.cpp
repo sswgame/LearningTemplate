@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include "Core/Container/EnumArray.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/ScopedProgressReport.h"
 #include "Core/Hash/HashUtil.h"
@@ -525,11 +526,14 @@ namespace sw
 
                 void run()
                 {
+                    bindSlots();
                     runStage( _listRequest.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::openRange, this ) );
                     if ( _recordScope == ShaderRecordScope::Source )
                         findSourceRecords();
+                    bindSlots();
                     runStage( _listRequest.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::prepareRange, this ) );
                     splitPending();
+                    bindSlots();
                     runStage( _listWinner.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::compileRange, this ) );
                     runStage( _listFollower.size(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &BatchChunk::finishRange, this ) );
                     if ( _recordScope == ShaderRecordScope::Source )
@@ -537,6 +541,21 @@ namespace sw
                 }
 
             private:
+                /** @brief 병렬 단계의 칸 창을 지금 칸으로 다시 잡습니다(한 스레드 — 단계 사이). */
+                void bindSlots()
+                {
+                    _slotSetup      = span<optional<CompileSetup>>( _listSetup.data(), _listSetup.size() );
+                    _slotActionKey  = span<uint64>( _listActionKey.data(), _listActionKey.size() );
+                    _slotPending    = span<optional<PendingCompile>>( _listPending.data(), _listPending.size() );
+                    _slotWritten    = span<WrittenResult>( _listWritten.data(), _listWritten.size() );
+                    _slotResult     = span<ShaderCompileResult>( _listResult.data(), _listResult.size() );
+                    _slotRequest    = span<const uint32>( _listRequest.data(), _listRequest.size() );
+                    _slotGroupIndex = span<const uint32>( _listGroupIndex.data(), _listGroupIndex.size() );
+                    _slotGroup      = span<const Group>( _listGroup.data(), _listGroup.size() );
+                    _slotWinner     = span<const uint32>( _listWinner.data(), _listWinner.size() );
+                    _slotFollower   = span<const Follower>( _listFollower.data(), _listFollower.size() );
+                }
+
                 /** @brief 같은 글을 다른 요청이 컴파일하는 요청 하나입니다. */
                 struct Follower
                 {
@@ -566,17 +585,17 @@ namespace sw
                 {
                     for ( uint32 index = start; index < end; ++index )
                     {
-                        expected<CompileSetup> opened = setUp( _listDesc[_listRequest[index]], &_session );
+                        expected<CompileSetup> opened = setUp( _listDesc[_slotRequest[index]], &_session );
                         if ( opened.has_value() )
                         {
                             opened->_bWriteRecord = _recordScope == ShaderRecordScope::Request;
-                            _listActionKey[index] = opened->_action._actionKey;
-                            _listSetup[index]     = std::move( *opened );
+                            _slotActionKey[index] = opened->_action._actionKey;
+                            _slotSetup[index]     = std::move( *opened );
                             continue;
                         }
                         ShaderCompileResult result;
                         setError( opened.error(), result );
-                        _onCompiled( _listRequest[index], result );
+                        _onCompiled( _slotRequest[index], result );
                     }
                 }
 
@@ -590,7 +609,7 @@ namespace sw
                         for ( size_t index = group._begin; index < group._end; ++index )
                         {
                             _listGroupIndex[index]              = static_cast<uint32>( _listGroup.size() );
-                            const optional<CompileSetup>& setup = _listSetup[index];
+                            const optional<CompileSetup>& setup = _slotSetup[index];
                             if ( group._source._description.empty() && setup.has_value() && setup->_action._bUseCache )
                                 group._source = findSourceRecord( *setup->_pCache, setup->_call._desc, setup->_action, _session );
                         }
@@ -601,17 +620,17 @@ namespace sw
                 /** @brief 요청 @p index 의 결과를 소스 기록에서 찾습니다. */
                 [[nodiscard]] bool findInSourceRecord( uint32 index, ShaderCompileResult& outResult )
                 {
-                    if ( _recordScope != ShaderRecordScope::Source || _listSetup[index]->_action._bUseCache == false )
+                    if ( _recordScope != ShaderRecordScope::Source || _slotSetup[index]->_action._bUseCache == false )
                         return false;
-                    const LoadedRecord&                    source = _listGroup[_listGroupIndex[index]]._source;
-                    const ShaderSourceRecord::Entry* const pEntry = source.findFresh( _listSetup[index]->_action._actionKey );
-                    if ( pEntry == nullptr || findBytecode( *_listSetup[index]->_pCache, pEntry->_bytecodeHash, outResult._bytecode ) == false )
+                    const LoadedRecord&                    source = _slotGroup[_slotGroupIndex[index]]._source;
+                    const ShaderSourceRecord::Entry* const pEntry = source.findFresh( _slotSetup[index]->_action._actionKey );
+                    if ( pEntry == nullptr || findBytecode( *_slotSetup[index]->_pCache, pEntry->_bytecodeHash, outResult._bytecode ) == false )
                         return false;
                     outResult._record._listInput  = source._record.getInputLists()[pEntry->_inputListIndex];
                     outResult._record._outputHash = pEntry->_bytecodeHash;
-                    outResult._record._key        = CookJob::computeKey( _listSetup[index]->_action._jobDesc, outResult._record._listInput );
+                    outResult._record._key        = CookJob::computeKey( _slotSetup[index]->_action._jobDesc, outResult._record._listInput );
                     outResult._bSuccess           = true;
-                    _listWritten[index]           = WrittenResult{ outResult._record._listInput, _listSetup[index]->_action._actionKey, pEntry->_bytecodeHash, true };
+                    _slotWritten[index]           = WrittenResult{ outResult._record._listInput, _slotSetup[index]->_action._actionKey, pEntry->_bytecodeHash, true };
                     return true;
                 }
 
@@ -620,8 +639,8 @@ namespace sw
                 {
                     const bool bRecorded = _recordScope == ShaderRecordScope::Source && result._bSuccess && result._record._listInput.empty() == false;
                     if ( bRecorded )
-                        _listWritten[index] = WrittenResult{ result._record._listInput, _listActionKey[index], result._record._outputHash, false };
-                    _onCompiled( _listRequest[index], result );
+                        _slotWritten[index] = WrittenResult{ result._record._listInput, _slotActionKey[index], result._record._outputHash, false };
+                    _onCompiled( _slotRequest[index], result );
                 }
 
                 /** @brief 요청마다 DDC 를 보고, 없으면 전처리해 글 키를 구합니다. 글로 겹치지 않는 요청은 여기서 컴파일합니다. */
@@ -629,16 +648,16 @@ namespace sw
                 {
                     for ( uint32 index = start; index < end; ++index )
                     {
-                        if ( _listSetup[index].has_value() == false )
+                        if ( _slotSetup[index].has_value() == false )
                             continue;
                         ShaderCompileResult result;
                         if ( findInSourceRecord( index, result ) )
                         {
-                            _onCompiled( _listRequest[index], result );
+                            _onCompiled( _slotRequest[index], result );
                             continue;
                         }
-                        optional<PendingCompile> pending = prepare( std::move( *_listSetup[index] ), &_session, result );
-                        _listSetup[index].reset();
+                        optional<PendingCompile> pending = prepare( std::move( *_slotSetup[index] ), &_session, result );
+                        _slotSetup[index].reset();
                         const bool bShared = pending.has_value() && pending->_sourceKey._key != 0 && pending->_setup._action._bUseCache;
                         if ( pending.has_value() && bShared == false )
                             compilePending( *pending, result );
@@ -647,7 +666,7 @@ namespace sw
                             deliver( index, result );
                             continue;
                         }
-                        _listPending[index] = std::move( pending );
+                        _slotPending[index] = std::move( pending );
                         claimText( index );
                     }
                 }
@@ -656,12 +675,12 @@ namespace sw
                 void claimText( uint32 index )
                 {
                     ScopedLock<mutex> lock{ _mutex };
-                    const auto [iter, bFirst] = _mapWinner.emplace( _listPending[index]->_sourceKey._key, index );
+                    const auto [iter, bFirst] = _mapWinner.emplace( _slotPending[index]->_sourceKey._key, index );
                     if ( bFirst )
                         return;
                     const uint32 loser = std::max( iter->second, index );
                     iter->second       = std::min( iter->second, index );
-                    _listPending[loser]->releaseCompileInput(); // 앞서 넣은 쪽도 자기 준비를 마친 뒤다
+                    _slotPending[loser]->releaseCompileInput(); // 앞서 넣은 쪽도 자기 준비를 마친 뒤다
                 }
 
                 /** @brief 글마다 컴파일할 요청과 그 결과를 함께 받을 요청을 가릅니다. */
@@ -670,9 +689,9 @@ namespace sw
                     unordered_map<uint64, uint32> mapResultIndex; // 글 키 → `_listResult` 자리. 컴파일할 요청이 같은 글의 나머지보다 앞선 번호다
                     for ( uint32 index = 0; index < static_cast<uint32>( _listPending.size() ); ++index )
                     {
-                        if ( _listPending[index].has_value() == false )
+                        if ( _slotPending[index].has_value() == false )
                             continue;
-                        const auto [iter, bWinner] = mapResultIndex.emplace( _listPending[index]->_sourceKey._key, static_cast<uint32>( _listWinner.size() ) );
+                        const auto [iter, bWinner] = mapResultIndex.emplace( _slotPending[index]->_sourceKey._key, static_cast<uint32>( _listWinner.size() ) );
                         if ( bWinner )
                             _listWinner.push_back( index );
                         else
@@ -685,10 +704,10 @@ namespace sw
                 {
                     for ( uint32 winner = start; winner < end; ++winner )
                     {
-                        PendingCompile& pending = *_listPending[_listWinner[winner]];
-                        compilePending( pending, _listResult[winner] );
+                        PendingCompile& pending = *_slotPending[_slotWinner[winner]];
+                        compilePending( pending, _slotResult[winner] );
                         pending.releaseCompileInput();
-                        deliver( _listWinner[winner], _listResult[winner] );
+                        deliver( _slotWinner[winner], _slotResult[winner] );
                     }
                 }
 
@@ -697,11 +716,11 @@ namespace sw
                 {
                     for ( uint32 follower = start; follower < end; ++follower )
                     {
-                        const PendingCompile& pending = *_listPending[_listFollower[follower]._index];
-                        ShaderCompileResult   result  = _listResult[_listFollower[follower]._resultIndex];
+                        const PendingCompile& pending = *_slotPending[_slotFollower[follower]._index];
+                        ShaderCompileResult   result  = _slotResult[_slotFollower[follower]._resultIndex];
                         if ( result._bSuccess )
                             writeSharedRecord( pending, result._record._outputHash, result );
-                        deliver( _listFollower[follower]._index, result );
+                        deliver( _slotFollower[follower]._index, result );
                     }
                 }
 
@@ -716,7 +735,7 @@ namespace sw
                         record.addFresh( group._source._record, group._source._listFresh );
                         for ( size_t index = group._begin; index < group._end; ++index )
                         {
-                            const WrittenResult& written = _listWritten[index];
+                            const WrittenResult& written = _slotWritten[index];
                             if ( written._bytecodeHash == 0 )
                                 continue;
                             record.add( written._actionKey, written._bytecodeHash, written._listInput );
@@ -746,6 +765,17 @@ namespace sw
                 unordered_map<uint64, uint32>    _mapWinner;      ///< 글 키 → 컴파일하는 요청
                 mutex                            _mutex;          ///< `_mapWinner` 와 진 요청의 글
                 ShaderRecordScope                _recordScope;
+                // 병렬 단계가 칸을 읽고 쓰는 창 — 워커마다 제 칸만 쓴다. `vector::operator[]` 를 워커에서 부르면 겹친 쓰기로 잡힌다(`RaceDetectContext`). 단계 앞에서(한 스레드) 다시 잡는다.
+                span<optional<CompileSetup>>   _slotSetup{};
+                span<uint64>                   _slotActionKey{};
+                span<optional<PendingCompile>> _slotPending{};
+                span<WrittenResult>            _slotWritten{};
+                span<ShaderCompileResult>      _slotResult{};
+                span<const uint32>             _slotRequest{};
+                span<const uint32>             _slotGroupIndex{};
+                span<const Group>              _slotGroup{};
+                span<const uint32>             _slotWinner{};
+                span<const Follower>           _slotFollower{};
             };
         };
     } // namespace
