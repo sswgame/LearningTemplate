@@ -53,22 +53,22 @@
 					<RhythmGameModeComponent _localID="8629025867396012359" _componentName="RhythmGameModeComponent" _bActive="true"
 					                         _chart="guid:e62d0ddecee57cae7b2d0a05e358e799"
 					                         _clock="Music"
-					                         _missLifeDelta="-4"
-					                         _maxLife="100"
 					                         _resultHoldSeconds="3"
 					                         _clearReward="30">
-						<_listWindow>
-							<RhythmJudgeWindow _grade="Cool" _width="0.045" _score="300" _lifeDelta="1" _bBreaksCombo="false" />
-							<RhythmJudgeWindow _grade="Good" _width="0.09" _score="150" _lifeDelta="0" _bBreaksCombo="false" />
-							<RhythmJudgeWindow _grade="Bad" _width="0.14" _score="50" _lifeDelta="-2" _bBreaksCombo="true" />
-						</_listWindow>
-						<_listRank>
-							<RhythmRankThreshold _rank="S" _minAccuracy="95" />
-							<RhythmRankThreshold _rank="A" _minAccuracy="90" />
-							<RhythmRankThreshold _rank="B" _minAccuracy="80" />
-							<RhythmRankThreshold _rank="C" _minAccuracy="70" />
-							<RhythmRankThreshold _rank="D" _minAccuracy="0" />
-						</_listRank>
+						<_playSettings _failedRank="F" _missLifeDelta="-4" _maxLife="100" _initialLife="100" _comboBonusPerCombo="0" _comboBonusCap="100" _globalOffset="0" _scrollMode="ConstantSpeed">
+							<_listWindow>
+								<RhythmJudgeWindow _grade="Cool" _width="0.045" _score="300" _lifeDelta="1" _bBreaksCombo="false" />
+								<RhythmJudgeWindow _grade="Good" _width="0.09" _score="150" _lifeDelta="0" _bBreaksCombo="false" />
+								<RhythmJudgeWindow _grade="Bad" _width="0.14" _score="50" _lifeDelta="-2" _bBreaksCombo="true" />
+							</_listWindow>
+							<_listRank>
+								<RhythmRankThreshold _rank="S" _minAccuracy="95" />
+								<RhythmRankThreshold _rank="A" _minAccuracy="90" />
+								<RhythmRankThreshold _rank="B" _minAccuracy="80" />
+								<RhythmRankThreshold _rank="C" _minAccuracy="70" />
+								<RhythmRankThreshold _rank="D" _minAccuracy="0" />
+							</_listRank>
+						</_playSettings>
 					</RhythmGameModeComponent>
 					<RhythmViewComponent _localID="5675568754244570621" _componentName="RhythmViewComponent" _bActive="true"
 					                     _music="game/playground/rhythm/data/stage1.music.xml"

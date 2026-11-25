@@ -81,12 +81,8 @@ namespace sw
         CatalogKey<CardBattleDeckDef> _deckID;
         PROPERTY( Category = "Battle", DisplayName = "Enemy", Required, Tooltip = "Enemy id in the catalog" )
         CatalogKey<CardBattleEnemyDef> _enemyID;
-        PROPERTY( Category = "Battle", DisplayName = "Player HP", Min = 1 )
-        int32 _playerHP;
-        PROPERTY( Category = "Battle", DisplayName = "Energy", Tooltip = "Energy every turn", Min = 0 )
-        int32 _energyPerTurn;
-        PROPERTY( Category = "Battle", DisplayName = "Draw", Tooltip = "Cards drawn every turn", Min = 1 )
-        int32 _drawPerTurn;
+        PROPERTY( Required, Category = "Battle", DisplayName = "Rules", Tooltip = "Player HP, energy, draw and hand limit; every value is required" )
+        CardBattleSettings _battleSettings;
         PROPERTY( Category = "Battle", DisplayName = "Seed" )
         uint32 _seed;
         PROPERTY( Category = "Match", DisplayName = "Auto Play Interval", Tooltip = "Time between two auto play moves", Min = 0.01, Units = s )

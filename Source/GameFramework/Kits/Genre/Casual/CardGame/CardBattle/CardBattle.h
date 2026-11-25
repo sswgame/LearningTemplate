@@ -147,13 +147,19 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 전투 설정입니다. */
-    struct CardBattleSettings
+    /** @brief 전투 설정입니다. 값은 데이터(디렉터의 `_battleSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다. */
+    REFLECT()
+    struct SW_KIT_API CardBattleSettings
     {
-        int32 _playerHP{ 50 };
-        int32 _energyPerTurn{ 3 };
-        int32 _drawPerTurn{ 5 };
-        int32 _handLimit{ 10 }; ///< 손이 넘치게 뽑은 패는 바로 버린 더미로 간다
+        REFLECT_BODY();
+        PROPERTY( Required, DisplayName = "Player HP", Min = 1 )
+        int32 _playerHP{ 0 };
+        PROPERTY( Required, DisplayName = "Energy", Tooltip = "Energy every turn", Min = 0 )
+        int32 _energyPerTurn{ 0 };
+        PROPERTY( Required, DisplayName = "Draw", Tooltip = "Cards drawn every turn", Min = 1 )
+        int32 _drawPerTurn{ 0 };
+        PROPERTY( Required, Min = 1 )
+        int32 _handLimit{ 0 }; ///< 손이 넘치게 뽑은 패는 바로 버린 더미로 간다
     };
 } // namespace sw
 

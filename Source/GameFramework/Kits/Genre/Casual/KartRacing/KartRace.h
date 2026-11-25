@@ -44,31 +44,55 @@ namespace sw
     class ProjectileCatalog;
     struct ProjectileDef;
 
-    /** @brief 경기 설정입니다. */
-    struct KartRaceSettings
+    /** @brief 경기 설정입니다. 값은 데이터(디렉터의 `_raceSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다. */
+    REFLECT()
+    struct SW_KIT_API KartRaceSettings
     {
-        KartAISettings _ai{}; ///< 필수 — AI 가 모는 차의 운전 수치(데이터). 비면 `KartRace::initialize` 가 거절한다
-        float32        _step{ constant::time::kDefaultFixedStepSeconds };
-        float32        _countdownTime{ 3.0f };
-        float32        _finishTimeout{ 30.0f };    ///< 1등이 들어온 뒤 이 시간(초)이 지나면 남은 차를 지금 순위로 끝낸다
-        float32        _gridFirstDistance{ 6.0f }; ///< 결승선 뒤 첫 줄까지의 거리(m)
-        float32        _gridRowSpacing{ 6.0f };    ///< 줄 간격(m)이다. 한 줄에 두 대가 선다
-        float32        _wrongWayDelay{ 1.0f };     ///< 이 시간(초) 동안 거꾸로 달리면 역주행으로 본다
-        float32        _wrongWaySpeed{ 2.0f };     ///< 트랙 방향 속도가 이보다 크게 음수이면 거꾸로 달리는 것이다
-        float32        _kartRadius{ 1.0f };        ///< 아이템과 상자에 맞는 차의 반지름
-        float32        _itemBoxRadius{ 1.5f };
-        float32        _itemBoxRespawn{ 2.0f };
-        float32        _ownerGrace{ 0.5f };             ///< 쏜 차는 이 시간(초) 동안 자기 껍질에 맞지 않는다
-        float32        _dropBehindDistance{ 2.5f };     ///< 바나나를 놓는 거리(차 뒤쪽)
-        float32        _projectionRange{ 40.0f };       ///< 지난 거리 앞뒤로 이만큼 안에서만 중심선을 찾는다(트랙이 겹치는 경우를 위해서이다)
-        float32        _rubberBandDistance{ 120.0f };   ///< 1등과 이만큼 벌어지면 보너스가 최대가 된다
-        float32        _rubberBandMaxBonus{ 0.15f };    ///< AI 최고 속도 보너스이다(0.15 는 +15 %)
-        float32        _rubberBandLeadPenalty{ 0.05f }; ///< 사람보다 앞선 AI 1등의 최고 속도 감소량
-        float32        _redShellLockDistance{ 120.0f };
-        float32        _redShellLockAngle{ 75.0f }; ///< 단위는 도(degree)이다
-        uint32         _seed{ GameRandom::kDefaultSeed };
-        uint8          _bRubberBand{ SW_TRUE };
-        uint8          _bItems{ SW_TRUE }; ///< 아이템 상자가 있는 경기다 — 켜면 카탈로그가 필요하다(`KartRace::initialize`)
+        REFLECT_BODY();
+        PROPERTY( Required )
+        KartAISettings _ai{}; ///< AI 가 모는 차의 운전 수치. 비면 `KartRace::initialize` 가 거절한다
+        PROPERTY( Required, Min = 0.001, Units = s )
+        float32 _step{ 0.0f }; ///< 고정 걸음
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _countdownTime{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s, Tooltip = "Time after the first finish before the rest is ranked as it stands" )
+        float32 _finishTimeout{ 0.0f }; ///< 1등이 들어온 뒤 이 시간(초)이 지나면 남은 차를 지금 순위로 끝낸다
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _gridFirstDistance{ 0.0f }; ///< 결승선 뒤 첫 줄까지의 거리(m)
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _gridRowSpacing{ 0.0f }; ///< 줄 간격(m)이다. 한 줄에 두 대가 선다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _wrongWayDelay{ 0.0f }; ///< 이 시간(초) 동안 거꾸로 달리면 역주행으로 본다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _wrongWaySpeed{ 0.0f }; ///< 트랙 방향 속도가 이보다 크게 음수이면 거꾸로 달리는 것이다
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _kartRadius{ 0.0f }; ///< 아이템과 상자에 맞는 차의 반지름
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _itemBoxRadius{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _itemBoxRespawn{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _ownerGrace{ 0.0f }; ///< 쏜 차는 이 시간(초) 동안 자기 껍질에 맞지 않는다
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _dropBehindDistance{ 0.0f }; ///< 바나나를 놓는 거리(차 뒤쪽)
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _projectionRange{ 0.0f }; ///< 지난 거리 앞뒤로 이만큼 안에서만 중심선을 찾는다(트랙이 겹치는 경우를 위해서이다)
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _rubberBandDistance{ 0.0f }; ///< 1등과 이만큼 벌어지면 보너스가 최대가 된다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rubberBandMaxBonus{ 0.0f }; ///< AI 최고 속도 보너스이다(0.15 는 +15 %)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _rubberBandLeadPenalty{ 0.0f }; ///< 사람보다 앞선 AI 1등의 최고 속도 감소량
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _redShellLockDistance{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Max = 180.0, Units = deg )
+        float32 _redShellLockAngle{ 0.0f };
+        PROPERTY( Required )
+        uint32 _seed{ 0 };
+        PROPERTY( Required )
+        bool _bRubberBand{ false };
+        PROPERTY( Required, Tooltip = "Races with item boxes; off is the only way to race without items" )
+        bool _bItems{ false }; ///< 아이템 상자가 있는 경기다 — 켜면 카탈로그가 필요하다(`KartRace::initialize`)
     };
 } // namespace sw
 

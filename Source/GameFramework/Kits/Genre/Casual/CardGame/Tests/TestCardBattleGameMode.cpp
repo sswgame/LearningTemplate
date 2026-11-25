@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
@@ -24,6 +25,10 @@ namespace
     constexpr const utf8* kCardCatalogXML = R"(<CardBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/>
         <Deck id="starter" cards="strike,strike,strike,strike,strike"/>
         <Enemy id="dummy" name="Dummy" hp="30" intents="Damage:5"/></CardBattleCatalog>)";
+
+    /** @brief 디렉터 원소입니다(전투 설정은 `table.scene.xml` 과 같은 값). */
+    constexpr const utf8* kCardDirectorXML = R"(<CardBattleGameModeComponent _deckID="starter" _enemyID="dummy" _resultHoldSeconds="0.5" _winReward="30">
+        <_battleSettings _playerHP="50" _energyPerTurn="3" _drawPerTurn="5" _handLimit="10" /></CardBattleGameModeComponent>)";
 
     /** @brief 카드 카탈로그를 건 게임 범위와 디렉터 하나입니다. */
     struct CardBattleGameModeTest
@@ -42,10 +47,8 @@ namespace
             _pScopeBinding = make_unique<game::ScopedGameScope>( _scope );
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<CardBattleGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );
-            set( "_deckID", "starter" );
-            set( "_enemyID", "dummy" );
-            set( "_resultHoldSeconds", "0.5" );
-            set( "_winReward", "30" );
+            // 전투 설정은 씬 데이터다(필수 칸) — 씬이 적는 것과 같은 모양으로 읽힌다.
+            SW_REQUIRE_TRUE( XMLSerializer::deserialize( _pGameMode, *CardBattleGameModeComponent::StaticType(), kCardDirectorXML ) );
         }
 
         void set( const utf8* pProperty, string_view text )

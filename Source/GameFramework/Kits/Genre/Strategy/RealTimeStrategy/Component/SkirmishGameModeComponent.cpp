@@ -144,18 +144,8 @@ namespace sw
     SkirmishGameModeComponent::SkirmishGameModeComponent()
         : _commanderTreePath{}
         , _map{}
-        , _huntIntervalSeconds{ 4.0f }
-        , _arrivedRadius{ 10.0f }
-        , _statusLogInterval{ 30.0f }
-        , _workerUnitID{}
-        , _depotUnitID{}
-        , _supplyUnitID{}
-        , _productionUnitID{}
-        , _armyUnitID{}
+        , _matchSettings{}
         , _speedRange{}
-        , _rushAI{}
-        , _macroAI{}
-        , _opponentAI{}
         , _pCommanderTree{}
         , _commanderDebugSource{ *this }
         , _match{}
@@ -233,14 +223,15 @@ namespace sw
         if ( acquireRequired( _commanderTreePath, _pCommanderTree ) == false )
             return false;
         // AI · 맵 배치가 쓰는 유닛 id 는 유닛 카탈로그에 있어야 한다.
-        if ( hasUnits( { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } ) == false )
+        const RTSCommanderUnits& units = _matchSettings._units;
+        if ( hasUnits( { &units._workerID, &units._depotID, &units._supplyID, &units._productionID, &units._armyUnitID } ) == false )
             return false;
         if ( _speed.initialize( _speedRange ) == false )
             return false; // 까닭은 남았다
-        const bool bAIStylesSet = _rushAI.isSet() && _macroAI.isSet() && _opponentAI.isSet();
+        const bool bAIStylesSet = _matchSettings._rushAI.isSet() && _matchSettings._macroAI.isSet() && _matchSettings._opponentAI.isSet();
         if ( bAIStylesSet == false )
         {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the game mode needs _rushAI, _macroAI and _opponentAI (every target, interval and radius) - the match cannot start" );
+            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the game mode needs _matchSettings._rushAI, _macroAI and _opponentAI (every target, interval and radius) - the match cannot start" );
             return false;
         }
         TileMapXMLData tileMap;
@@ -252,21 +243,7 @@ namespace sw
         const optional<uint8> humanMask = openPlayers( isAutoPlayOn() );
         if ( humanMask.has_value() == false )
             return false; // 까닭은 대전을 여는 파생이 남겼다
-        SkirmishMatchSettings matchSettings;
-        matchSettings._huntIntervalSeconds   = _huntIntervalSeconds;
-        matchSettings._arrivedRadius         = _arrivedRadius;
-        matchSettings._startMinerals         = getStartMinerals();
-        matchSettings._statusIntervalSeconds = _statusLogInterval;
-        matchSettings._workerID              = _workerUnitID.key();
-        matchSettings._depotID               = _depotUnitID.key();
-        matchSettings._supplyID              = _supplyUnitID.key();
-        matchSettings._productionID          = _productionUnitID.key();
-        matchSettings._armyUnitID            = _armyUnitID.key();
-        matchSettings._rushAI                = _rushAI;
-        matchSettings._macroAI               = _macroAI;
-        matchSettings._opponentAI            = _opponentAI;
-        matchSettings._pCommanderTree        = _pCommanderTree.snapshot(); // 판은 받은 때의 트리로 끝까지 돈다
-        if ( _match.initialize( findCatalog(), _map, tileMap, *humanMask, matchSettings ) == false )
+        if ( _match.initialize( findCatalog(), _map, tileMap, *humanMask, _matchSettings, getStartMinerals(), _pCommanderTree.get() ) == false )
             return false;
         _listStepEvent.clear();
         do

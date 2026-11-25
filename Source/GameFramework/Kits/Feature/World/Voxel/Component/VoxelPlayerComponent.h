@@ -124,6 +124,8 @@ namespace sw
         Radians _startYaw;
         PROPERTY( Category = "Player", DisplayName = "Start Pitch" )
         Radians _startPitch;
+        PROPERTY( Required, Category = "Player", DisplayName = "Body", Tooltip = "Size and movement of the body; every value is required" )
+        VoxelBodySettings _bodySettings;
         // ---- 폰 의도 이름입니다. 같은 오브젝트의 PawnComponent 스키마(_listButton, _listAnalog)에 있어야 합니다 ----
         PROPERTY( Category = "Intent", DisplayName = "Jump Button" )
         hashed_string _jumpButton;

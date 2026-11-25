@@ -120,9 +120,56 @@ namespace
         }
     };
 
+    /** @brief 씬 데이터(`island.scene.xml`)와 같은 지형 설정입니다(코드에는 기본값이 없다 — 눈 · 광석은 테스트가 더한다). */
+    struct VoxelTerrainTestUtil
+    {
+        static VoxelTerrainSettings makeSettings()
+        {
+            VoxelTerrainSettings settings;
+            settings._seed            = 1337u;
+            settings._baseHeight      = 18;
+            settings._heightAmplitude = 18;
+            settings._waterLevel      = 20;
+            settings._dirtDepth       = 3;
+            settings._noiseScale      = 1.0f / 48.0f;
+            settings._octaveCount     = 4;
+            settings._treeChance      = 0.012f;
+            settings._grassBlock      = CatalogKey<VoxelBlockDef>{ hashed_string( "grass" ) };
+            settings._dirtBlock       = CatalogKey<VoxelBlockDef>{ hashed_string( "dirt" ) };
+            settings._stoneBlock      = CatalogKey<VoxelBlockDef>{ hashed_string( "stone" ) };
+            settings._sandBlock       = CatalogKey<VoxelBlockDef>{ hashed_string( "sand" ) };
+            settings._waterBlock      = CatalogKey<VoxelBlockDef>{ hashed_string( "water" ) };
+            settings._bedrockBlock    = CatalogKey<VoxelBlockDef>{ hashed_string( "bedrock" ) };
+            settings._logBlock        = CatalogKey<VoxelBlockDef>{ hashed_string( "log" ) };
+            settings._leavesBlock     = CatalogKey<VoxelBlockDef>{ hashed_string( "leaves" ) };
+            return settings;
+        }
+    };
+
     /** @brief 몸을 @p seconds 동안 1/60 초씩 움직입니다. */
     struct VoxelBodyTestUtil
     {
+        /** @brief 씬 데이터(`island.scene.xml`)와 같은 크기 · 움직임의 몸입니다(코드에는 기본값이 없다). */
+        static VoxelBody makeBody()
+        {
+            VoxelBodySettings settings;
+            settings._halfWidth          = 0.3f;
+            settings._height             = 1.8f;
+            settings._eyeHeight          = 1.62f;
+            settings._gravity            = 28.0f;
+            settings._jumpSpeed          = 8.4f;
+            settings._walkSpeed          = 4.3f;
+            settings._sprintSpeed        = 5.6f;
+            settings._maxFallSpeed       = 50.0f;
+            settings._groundAcceleration = 40.0f;
+            settings._airAcceleration    = 10.0f;
+            settings._swimSpeed          = 3.0f;
+            settings._maxStep            = 1.0f / 120.0f;
+            VoxelBody body;
+            body.setSettings( settings );
+            return body;
+        }
+
         static void run( VoxelBody& body, const VoxelWorld& world, const float3& wish, bool bJump, float32 seconds )
         {
             constexpr float32 kFrame = 1.0f / 60.0f;
@@ -532,7 +579,7 @@ SW_TEST_CASE( VoxelBodyTest, FallsOntoTheFloorAndStands )
 {
     VoxelFixture rig;
     rig.layFloor( 2 );
-    VoxelBody body;
+    VoxelBody body = VoxelBodyTestUtil::makeBody();
     body.setPosition( float3{ 5.5f, 8.0f, 5.5f } );
     VoxelBodyTestUtil::run( body, rig._world, float3{}, false, 2.0f );
     SW_EXPECT_TRUE( body.isOnGround() );
@@ -546,7 +593,7 @@ SW_TEST_CASE( VoxelBodyTest, LongFrameDoesNotTunnelThroughTheFloor )
 {
     VoxelFixture rig;
     rig.layFloor( 2 );
-    VoxelBody body;
+    VoxelBody body = VoxelBodyTestUtil::makeBody();
     body.setPosition( float3{ 5.5f, 60.0f, 5.5f } );
     for ( int32 frame = 0; frame < 40; ++frame )
     {
@@ -560,7 +607,7 @@ SW_TEST_CASE( VoxelBodyTest, JumpNeedsTheGroundAndClearsOneBlock )
 {
     VoxelFixture rig;
     rig.layFloor( 2 );
-    VoxelBody body;
+    VoxelBody body = VoxelBodyTestUtil::makeBody();
     body.setPosition( float3{ 5.5f, 3.5f, 5.5f } ); // 공중이다
     body.step( rig._world, float3{}, true, false, 1.0f / 60.0f );
     SW_EXPECT_TRUE( body.getVelocity()._y <= 0.0f ); // 공중에서는 뛰지 못한다
@@ -586,7 +633,7 @@ SW_TEST_CASE( VoxelBodyTest, WallStopsOneAxisAndSlidesOnTheOther )
         SW_REQUIRE_TRUE( rig._world.setBlock( 8, 3, z, rig._stone ) );
         SW_REQUIRE_TRUE( rig._world.setBlock( 8, 4, z, rig._stone ) );
     }
-    VoxelBody body;
+    VoxelBody body = VoxelBodyTestUtil::makeBody();
     body.setPosition( float3{ 6.5f, 3.0f, 5.5f } );
     VoxelBodyTestUtil::run( body, rig._world, float3{ 0.7f, 0.0f, 0.7f }, false, 1.5f );
     SW_EXPECT_TRUE( body.getPosition()._x < 8.0f - body.getSettings()._halfWidth + 0.01f );
@@ -609,7 +656,7 @@ SW_TEST_CASE( VoxelBodyTest, WaterSlowsAndJumpSwimsUp )
             }
         }
     }
-    VoxelBody body;
+    VoxelBody body = VoxelBodyTestUtil::makeBody();
     body.setWaterBlock( rig._water );
     body.setPosition( float3{ 5.5f, 10.0f, 5.5f } );
     VoxelBodyTestUtil::run( body, rig._world, float3{}, false, 0.2f );
@@ -620,7 +667,7 @@ SW_TEST_CASE( VoxelBodyTest, WaterSlowsAndJumpSwimsUp )
     VoxelBodyTestUtil::run( body, rig._world, float3{}, true, 1.0f );
     SW_EXPECT_TRUE( body.getPosition()._y > startY );
 
-    VoxelBody dry; // 물 블록을 알려 주지 않은 몸은 헤엄치지 않는다
+    VoxelBody dry = VoxelBodyTestUtil::makeBody(); // 물 블록을 알려 주지 않은 몸은 헤엄치지 않는다
     dry.setPosition( float3{ 5.5f, 10.0f, 5.5f } );
     VoxelBodyTestUtil::run( dry, rig._world, float3{}, false, 0.2f );
     SW_EXPECT_FALSE( dry.isInWater() );
@@ -628,7 +675,7 @@ SW_TEST_CASE( VoxelBodyTest, WaterSlowsAndJumpSwimsUp )
 
 SW_TEST_CASE( VoxelBodyTest, OverlapIgnoresTheTouchingFace )
 {
-    VoxelBody body;
+    VoxelBody body = VoxelBodyTestUtil::makeBody();
     body.setPosition( float3{ 0.5f, 1.0f, 0.5f } );
     SW_EXPECT_TRUE( body.overlapsBlock( VoxelCoord{ 0, 1, 0 } ) );
     SW_EXPECT_TRUE( body.overlapsBlock( VoxelCoord{ 0, 2, 0 } ) );
@@ -766,9 +813,9 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
     const VoxelBlockIndex bedrock = rig.addBlock( "bedrock", true, true );
     (void)rig.addBlock( "sand", true, true );
 
-    VoxelTerrainSettings settings;
-    settings._treeChance   = 0.0f;
-    const auto loadTerrain = [&rig, &settings]( VoxelWorld& world )
+    VoxelTerrainSettings settings = VoxelTerrainTestUtil::makeSettings();
+    settings._treeChance          = 0.0f;
+    const auto loadTerrain        = [&rig, &settings]( VoxelWorld& world )
     {
         SW_REQUIRE_TRUE( world.initialize( 2, 2, &rig._catalog ) );
         world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );
@@ -809,10 +856,10 @@ SW_TEST_CASE( VoxelTerrainTest, TreesMatchAcrossChunksGeneratedApart )
     const VoxelBlockIndex leaves = rig.addBlock( "leaves", true, false );
     (void)rig.addBlock( "grass", true, true );
     (void)rig.addBlock( "dirt", true, true );
-    VoxelTerrainSettings settings;
-    settings._treeChance      = 0.3f;
-    settings._waterLevel      = 0; // 물 · 모래가 없어 모든 기둥이 풀이다
-    settings._heightAmplitude = 0;
+    VoxelTerrainSettings settings = VoxelTerrainTestUtil::makeSettings();
+    settings._treeChance          = 0.3f;
+    settings._waterLevel          = 0; // 물 · 모래가 없어 모든 기둥이 풀이다
+    settings._heightAmplitude     = 0;
     VoxelWorld world;
     SW_REQUIRE_TRUE( world.initialize( 2, 1, &rig._catalog ) );
     // 경계(x = 15 | 16)에 맞닿은 두 기둥: 한쪽에 줄기가 있으면 맞은편 같은 높이는 잎이다(잎 덩어리 반경 안). 경계에 나무가 서는 씨앗이 나올 때까지 씨앗을 바꿔 본다.
@@ -855,13 +902,15 @@ SW_TEST_CASE( VoxelTerrainTest, DecorationsFollowSeed )
     {
         VoxelWorld world;
         SW_EXPECT_TRUE( world.initialize( 2, 2, &fixture._catalog ) );
-        VoxelTerrainSettings settings;
-        settings._seed            = seed;
-        settings._treeChance      = 0.0f;
-        settings._heightAmplitude = 0; // 평지 — 지면은 씨앗과 무관해 광석 자리만 씨앗을 따르는지 본다
-        settings._listOreLayer    = {
-            VoxelOreLayer{ hashed_string( "coal" ), 0.05f, kVoxelChunkHeight }
-        };
+        VoxelTerrainSettings settings = VoxelTerrainTestUtil::makeSettings();
+        settings._seed                = seed;
+        settings._treeChance          = 0.0f;
+        settings._heightAmplitude     = 0; // 평지 — 지면은 씨앗과 무관해 광석 자리만 씨앗을 따르는지 본다
+        VoxelOreLayer ore;
+        ore._block     = CatalogKey<VoxelBlockDef>{ hashed_string( "coal" ) };
+        ore._chance    = 0.05f;
+        ore._maxHeight = kVoxelChunkHeight;
+        settings._listOreLayer.push_back( ore );
         world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( settings ) );
         (void)world.updateResidency( 0, 0, 1, 4 );
         uint64 digest = 14695981039346656037ull;

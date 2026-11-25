@@ -97,6 +97,8 @@ namespace sw
         vector<hashed_string> _listBossMonster;
         PROPERTY( Category = "Room", DisplayName = "Boss Positions", Tooltip = "Room-plane positions (m) of the boss monsters" )
         vector<float2> _listBossPosition;
+        PROPERTY( Required, Category = "Player", DisplayName = "Room", Tooltip = "Dash, invulnerability, attack cooldown and damage of the player; every value is required" )
+        ActionRoomSettings _roomSettings;
         PROPERTY( Category = "Player", DisplayName = "Max HP", Min = 1 )
         int32 _playerMaxHP;
         PROPERTY( Category = "Player", DisplayName = "Move Speed", Min = 0.0, Units = "m/s" )

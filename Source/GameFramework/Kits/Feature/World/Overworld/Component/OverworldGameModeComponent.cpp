@@ -41,7 +41,7 @@ namespace sw
         , _props{}
         , _hero{}
         , _interactButton{}
-        , _stepSeconds{ 0.18f }
+        , _moverSettings{}
         , _tileMap{}
         , _mover{}
         , _listVillager{}
@@ -104,15 +104,12 @@ namespace sw
         if ( collectVillagers( *pManager ) == false )
             return false;
 
-        OverworldTileMoverSettings settings;
-        settings._encounterRate = 0.0f; // 마을에는 조우가 없다
-        settings._stepSeconds   = _stepSeconds;
-        _mover                  = OverworldTileMover{};
-        _mover.setSettings( settings );
+        _mover = OverworldTileMover{};
+        _mover.setSettings( _moverSettings );
         _mover.setTileMap( &_tileMap );
         _mover.setPosition( _tileMap.getSpawnX(), _tileMap.getSpawnY() );
         _stepFromTile      = int2{ _tileMap.getSpawnX(), _tileMap.getSpawnY() };
-        _stepElapsed       = _stepSeconds;
+        _stepElapsed       = _moverSettings._stepSeconds;
         _talkTarget        = GameObjectHandle{};
         _pendingTarget     = GameObjectHandle{};
         _pendingTalk       = TalkRequest::None;
@@ -212,7 +209,7 @@ namespace sw
         if ( bRestored == false )
             SW_LOG_WARNING_ID( "OverworldGameMode.SavedTownStateDoes", "[Overworld] the saved town state does not match this build - starting at the spawn tile" );
         _stepFromTile = int2{ _mover.getTileX(), _mover.getTileY() };
-        _stepElapsed  = _stepSeconds;
+        _stepElapsed  = _moverSettings._stepSeconds;
         updateHeroPosition();
     }
 
@@ -251,7 +248,7 @@ namespace sw
         }
         else
         {
-            _stepElapsed = MathUtil::min( _stepElapsed + deltaTime, _stepSeconds );
+            _stepElapsed = MathUtil::min( _stepElapsed + deltaTime, _moverSettings._stepSeconds );
         }
         if ( _mover.consumeInteractRequest() )
         {
@@ -271,7 +268,7 @@ namespace sw
     {
         const float3  to       = computeTileCenter( _mover.getTileX(), _mover.getTileY() );
         const float3  from     = computeTileCenter( _stepFromTile._x, _stepFromTile._y );
-        const float32 progress = _stepSeconds > 0.0f ? MathUtil::clamp( _stepElapsed / _stepSeconds, 0.0f, 1.0f ) : 1.0f;
+        const float32 progress = _moverSettings._stepSeconds > 0.0f ? MathUtil::clamp( _stepElapsed / _moverSettings._stepSeconds, 0.0f, 1.0f ) : 1.0f;
         _heroPosition          = from + ( to - from ) * progress;
     }
 

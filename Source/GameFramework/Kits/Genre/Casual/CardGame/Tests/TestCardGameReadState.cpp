@@ -639,8 +639,10 @@ SW_TEST_CASE( CardGameReadStateTest, DeckBattleRefusesImpossibleBattles )
     sw::CardBattleCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCardBattleXML, "CardGameReadStateTest" ) );
     sw::CardBattleSettings settings;
-    settings._drawPerTurn = 1;
-    settings._handLimit   = 1;
+    settings._playerHP      = 50;
+    settings._energyPerTurn = 3;
+    settings._drawPerTurn   = 1;
+    settings._handLimit     = 1;
     sw::CardBattleEnemy enemy;
     enemy._hp = 10;
     enemy._listIntent.push_back( sw::CardBattleEffect{ 3, sw::CardBattleEffectKind::Damage } );

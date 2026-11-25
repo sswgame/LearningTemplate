@@ -86,6 +86,35 @@ namespace
             return settings;
         }
 
+        /** @brief 경기 씬과 같은 경기 설정입니다(코드에는 기본값이 없다). */
+        static sw::KartRaceSettings makeRaceSettings()
+        {
+            sw::KartRaceSettings settings;
+            settings._ai                    = makeAISettings();
+            settings._step                  = sw::constant::time::kDefaultFixedStepSeconds;
+            settings._countdownTime         = 3.0f;
+            settings._finishTimeout         = 30.0f;
+            settings._gridFirstDistance     = 6.0f;
+            settings._gridRowSpacing        = 6.0f;
+            settings._wrongWayDelay         = 1.0f;
+            settings._wrongWaySpeed         = 2.0f;
+            settings._kartRadius            = 1.0f;
+            settings._itemBoxRadius         = 1.5f;
+            settings._itemBoxRespawn        = 2.0f;
+            settings._ownerGrace            = 0.5f;
+            settings._dropBehindDistance    = 2.5f;
+            settings._projectionRange       = 40.0f;
+            settings._rubberBandDistance    = 120.0f;
+            settings._rubberBandMaxBonus    = 0.15f;
+            settings._rubberBandLeadPenalty = 0.05f;
+            settings._redShellLockDistance  = 120.0f;
+            settings._redShellLockAngle     = 75.0f;
+            settings._seed                  = sw::GameRandom::kDefaultSeed;
+            settings._bRubberBand           = true;
+            settings._bItems                = true;
+            return settings;
+        }
+
         /** @brief 진행 방향 오른쪽으로 @p offset 만큼 비킨 자리입니다. */
         static sw::float3 makeOffsetPoint( const sw::KartTrack& track, float32 distance, float32 offset )
         {
@@ -122,7 +151,7 @@ namespace
         sw::KartTrack                 _track{};
         sw::KartItemCatalog           _items{};
         sw::ProjectileCatalog         _projectiles{};
-        sw::KartRaceSettings          _settings{};
+        sw::KartRaceSettings          _settings{ KartTestUtil::makeRaceSettings() };
         sw::KartRace                  _race{};
         sw::vector<sw::KartRaceEvent> _listEvent{};
 
@@ -131,8 +160,7 @@ namespace
             SW_REQUIRE_TRUE( _items.loadFromXMLText( kKartItemsXML, "KartTest" ) );
             SW_REQUIRE_TRUE( _projectiles.loadFromXMLText( kKartProjectileXML, "KartTest" ) );
             _settings._countdownTime = 0.0f;
-            _settings._bRubberBand   = SW_FALSE;
-            _settings._ai            = KartTestUtil::makeAISettings();
+            _settings._bRubberBand   = false;
         }
 
         /** @brief @p race 를 이 판의 트랙 · 카탈로그로 엽니다(@p pTrack 이 비면 이 판의 트랙). */
@@ -438,9 +466,8 @@ SW_TEST_CASE( KartTrackTest, RefusesUnusableDefinitions )
     SW_EXPECT_FALSE( track.isValid() );
     SW_EXPECT_NEAR( 0.0f, track.getLength(), kKartTolerance );
 
-    sw::KartRaceSettings noItems;
-    noItems._ai     = KartTestUtil::makeAISettings();
-    noItems._bItems = SW_FALSE;
+    sw::KartRaceSettings noItems = KartTestUtil::makeRaceSettings();
+    noItems._bItems              = false;
     sw::KartRace race;
     SW_EXPECT_TRUE( race.initialize( noItems, track, nullptr, nullptr ) );
     SW_EXPECT_FALSE( race.addRacer( sw::KinematicVehicleSettings{}, false ).has_value() );
@@ -1374,7 +1401,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemBoxesRespawn )
     SW_EXPECT_TRUE( lastTaken.empty() ); // 받은 것이 없다
 
     sw::KartRaceSettings noItems = _settings;
-    noItems._bItems              = SW_FALSE;
+    noItems._bItems              = false;
     sw::KartRace plain;
     initializeRace( plain, noItems );
     SW_REQUIRE_TRUE( plain.addRacer( sw::KinematicVehicleSettings{}, false ) == 0 );
@@ -1396,7 +1423,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemsOnNeedTheirCatalogs )
     SW_EXPECT_FALSE( race.initialize( _settings, _track, nullptr, &_projectiles ) );
     SW_EXPECT_FALSE( race.initialize( _settings, _track, &_items, nullptr ) );
     SW_EXPECT_TRUE( race.getTrack() == nullptr );
-    _settings._bItems = SW_FALSE;
+    _settings._bItems = false;
     SW_EXPECT_TRUE( race.initialize( _settings, _track, nullptr, nullptr ) );
 }
 
@@ -1405,7 +1432,7 @@ SW_TEST_CASE_F( KartRaceTest, ItemsOnNeedTheirCatalogs )
  */
 SW_TEST_CASE_F( KartRaceTest, RubberBandScale )
 {
-    _settings._bRubberBand = SW_TRUE;
+    _settings._bRubberBand = true;
     open( KartTestUtil::makeRingDef( 3, {} ), 2, true ); // 0 은 사람, 1 은 AI
     const float32 length = _track.getLength();
 
@@ -1427,7 +1454,7 @@ SW_TEST_CASE_F( KartRaceTest, RubberBandScale )
     SW_EXPECT_NEAR( 1.0f, _race.computeRubberBandScale( -1 ), kKartTolerance );
 
     sw::KartRaceSettings off = _settings;
-    off._bRubberBand         = SW_FALSE;
+    off._bRubberBand         = false;
     sw::KartRace plain;
     initializeRace( plain, off );
     (void)plain.addRacer( sw::KinematicVehicleSettings{}, false );
@@ -1565,7 +1592,7 @@ SW_TEST_CASE_F( KartRaceTest, RaceDeterminism )
         def._listItemBox.push_back( box );
     }
     SW_REQUIRE_TRUE( _track.initialize( def ) );
-    _settings._bRubberBand    = SW_TRUE;
+    _settings._bRubberBand    = true;
     _settings._itemBoxRespawn = 0.5f;
 
     const auto setup = [this]( sw::KartRace& race )

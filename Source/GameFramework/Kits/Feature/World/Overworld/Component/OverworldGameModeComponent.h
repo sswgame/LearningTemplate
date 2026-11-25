@@ -120,8 +120,8 @@ namespace sw
         GameObjectHandle _hero;
         PROPERTY( Category = "Overworld", DisplayName = "Interact Button", Tooltip = "Pawn button that talks and advances a talk (input map action name)" )
         hashed_string _interactButton;
-        PROPERTY( Category = "Overworld", DisplayName = "Step Seconds", Min = 0.05, Max = 2.0, Units = s, Tooltip = "Time to walk one tile" )
-        float32 _stepSeconds;
+        PROPERTY( Required, Category = "Overworld", DisplayName = "Mover", Tooltip = "Dead zone, step time and encounter rate of the hero; every value is required" )
+        OverworldTileMoverSettings _moverSettings;
 
         TileMap            _tileMap;
         OverworldTileMover _mover;

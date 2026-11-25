@@ -152,6 +152,7 @@ namespace sw
         , _placeInterval{ 0.25f }
         , _startYaw{ Radians::fromRadians( 0.6f ) }
         , _startPitch{ Radians::fromRadians( -0.2f ) }
+        , _bodySettings{}
         , _jumpButton{}
         , _sprintButton{}
         , _breakButton{}
@@ -316,6 +317,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void VoxelPlayerComponent::initializeBody( const VoxelGameModeComponent& gameMode )
     {
+        _body.setSettings( _bodySettings );
         _body.setPosition( gameMode.findSpawnPosition() );
         _startPosition                      = _body.getPosition();
         _bBodyPlaced                        = SW_TRUE;

@@ -49,10 +49,11 @@ namespace sw
         , _missCount{ 0 }
         , _judgedCount{ 0 }
         , _state{ RhythmPlayState::Playing }
+        , _bAutoPlay{ SW_FALSE }
     {
     }
 
-    bool RhythmPlaySession::initialize( const RhythmChart& chart, const TimingJudge& judge, const RhythmPlaySettings& settings )
+    bool RhythmPlaySession::initialize( const RhythmChart& chart, const TimingJudge& judge, const RhythmPlaySettings& settings, bool bAutoPlay )
     {
         // 목록 필드가 있어 리플렉션 범위(`PROPERTY`)로 선언하지 못한 수치만 손으로 본다. 맞추지 않고 거절한다.
         const bool bLifeValid = settings._maxLife >= 1.0f && 0.0f <= settings._initialLife && settings._initialLife <= settings._maxLife && 0 <= settings._comboBonusCap;
@@ -63,9 +64,9 @@ namespace sw
             return false;
         }
         // 등급 표는 데이터다 — 없으면 결과 화면이 늘 실패 등급을 낸다.
-        if ( settings._listRankThreshold.empty() )
+        if ( settings._listRank.empty() )
         {
-            SW_LOG_ERROR_ID( "RhythmPlaySession.NoRankThresholds", "RhythmPlaySession: refused - no rank thresholds (the director's _listRank)" );
+            SW_LOG_ERROR_ID( "RhythmPlaySession.NoRankThresholds", "RhythmPlaySession: refused - no rank thresholds (the director's _playSettings._listRank)" );
             return false;
         }
         // 창이 없으면 어떤 누름도 노트에 닿지 않는다 — 오토플레이는 같은 노트를 끝없이 누르고 롱노트 끝은 줄 등급이 없다.
@@ -77,6 +78,7 @@ namespace sw
         _pChart            = &chart;
         _pJudge            = &judge;
         _settings          = settings;
+        _bAutoPlay         = bAutoPlay ? SW_TRUE : SW_FALSE;
         _life              = _settings._initialLife;
         _score             = 0;
         _accuracyWeightSum = 0.0;
@@ -128,7 +130,7 @@ namespace sw
                 else if ( lane._cursor < lane._listNoteIndex.size() )
                 {
                     laneTime = computeTargetTime( listNote[static_cast<size_t>( lane._listNoteIndex[lane._cursor] )] );
-                    if ( _settings._bAutoPlay == SW_TRUE )
+                    if ( _bAutoPlay == SW_TRUE )
                     {
                         if ( laneTime <= _now )
                             kind = RhythmPlaySessionInternal::DueKind::AutoPress;
@@ -185,7 +187,7 @@ namespace sw
     void RhythmPlaySession::press( int32 lane, float32 time )
     {
         const bool bValidLane    = 0 <= lane && lane < static_cast<int32>( _listLane.size() );
-        const bool bInputIgnored = _state != RhythmPlayState::Playing || bValidLane == false || _settings._bAutoPlay == SW_TRUE;
+        const bool bInputIgnored = _state != RhythmPlayState::Playing || bValidLane == false || _bAutoPlay == SW_TRUE;
         if ( bInputIgnored )
             return;
         RhythmInputRecord record;
@@ -203,7 +205,7 @@ namespace sw
     void RhythmPlaySession::release( int32 lane, float32 time )
     {
         const bool bValidLane    = 0 <= lane && lane < static_cast<int32>( _listLane.size() );
-        const bool bInputIgnored = _state != RhythmPlayState::Playing || bValidLane == false || _settings._bAutoPlay == SW_TRUE;
+        const bool bInputIgnored = _state != RhythmPlayState::Playing || bValidLane == false || _bAutoPlay == SW_TRUE;
         if ( bInputIgnored )
             return;
         RhythmInputRecord record;
@@ -300,7 +302,7 @@ namespace sw
         const float32 accuracy = computeAccuracy();
         hashed_string rank     = _settings._failedRank;
         float32       bestMin  = -1.0f;
-        for ( const RhythmRankThreshold& threshold : _settings._listRankThreshold )
+        for ( const RhythmRankThreshold& threshold : _settings._listRank )
         {
             if ( threshold._minAccuracy <= accuracy && threshold._minAccuracy > bestMin )
             {
@@ -402,7 +404,7 @@ namespace sw
                 _score += static_cast<int64>( static_cast<float64>( pWindow->_score ) * bonusFactor + 0.5 ); // 반올림한다. 0.01 같은 float32 는 조금 모자란다
             }
 
-            const RhythmGradeRule* pRule = findGradeRule( pWindow->_grade );
+            const RhythmJudgeWindow* pRule = findWindow( pWindow->_grade );
             if ( pRule != nullptr )
                 _life += pRule->_lifeDelta;
             float32 weight = 1.0f;
@@ -426,9 +428,9 @@ namespace sw
         }
     }
 
-    const RhythmGradeRule* RhythmPlaySession::findGradeRule( const hashed_string& grade ) const
+    const RhythmJudgeWindow* RhythmPlaySession::findWindow( const hashed_string& grade ) const
     {
-        return VectorUtil::findBy<&RhythmGradeRule::_grade>( _settings._listGradeRule, grade );
+        return VectorUtil::findBy<&RhythmJudgeWindow::_grade>( _settings._listWindow, grade );
     }
 
     void RhythmPlaySession::finishIfDone()

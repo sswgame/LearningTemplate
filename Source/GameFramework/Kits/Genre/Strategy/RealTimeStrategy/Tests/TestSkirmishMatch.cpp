@@ -92,16 +92,18 @@ namespace
 
         [[nodiscard]] bool open( SkirmishMatch& match, const RTSCatalog& catalog, uint8 humanMask, const SkirmishMatchSettings& settings ) const
         {
-            return match.initialize( &catalog, _map, _tileMap, humanMask, settings );
+            return match.initialize( &catalog, _map, _tileMap, humanMask, settings, kStartMinerals, nullptr );
         }
     };
 
     SkirmishMatchSettings makeSettings()
     {
         SkirmishMatchSettings settings;
-        settings._startMinerals = kStartMinerals;
-        settings._workerID      = hashed_string{ "worker" };
-        settings._depotID       = hashed_string{ "command_center" };
+        settings._huntIntervalSeconds   = 4.0f;
+        settings._arrivedRadius         = 10.0f;
+        settings._statusIntervalSeconds = 30.0f;
+        settings._units._workerID       = CatalogKey<RTSUnitDef>{ hashed_string{ "worker" } };
+        settings._units._depotID        = CatalogKey<RTSUnitDef>{ hashed_string{ "command_center" } };
         return settings;
     }
 

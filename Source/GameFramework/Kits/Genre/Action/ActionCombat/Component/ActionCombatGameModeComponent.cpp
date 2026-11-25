@@ -42,6 +42,7 @@ namespace sw
         , _playerSpeed{ 4.0f }
         , _bossDelaySeconds{ 1.0f }
         , _victoryHeal{ 25 }
+        , _roomSettings{}
         , _room{}
         , _bossDelay{}
         , _playerPosition{ 0.0f, 0.0f }
@@ -84,6 +85,7 @@ namespace sw
         ActionRoomLayout layout;
         if ( makeLayout( layout ) == false )
             return false;
+        _room.setSettings( _roomSettings );
         _room.setLayout( layout );
         _room.beginHall(); // 종이 카탈로그에 없으면 룸이 오류를 남기고 그 적을 세우지 않는다 — 시나리오의 첫 Alive 판정이 진다
         _facing   = FacingDirection::Right;
@@ -193,6 +195,7 @@ namespace sw
             ActionRoomLayout layout;
             if ( makeLayout( layout ) == false )
                 return false;
+            room.setSettings( _roomSettings );
             room.setLayout( layout );
             return true;
         } );

@@ -36,10 +36,7 @@ namespace sw
     RhythmGameModeComponent::RhythmGameModeComponent()
         : _chart{}
         , _clock{ RhythmClock::Music }
-        , _listWindow{}
-        , _listRank{}
-        , _missLifeDelta{ -5.0f }
-        , _maxLife{ 100.0f }
+        , _playSettings{}
         , _clearReward{ 0 }
         , _pChart{}
         , _judge{}
@@ -53,20 +50,7 @@ namespace sw
 
     bool RhythmGameModeComponent::openSession( RhythmPlaySession& outSession ) const
     {
-        RhythmPlaySettings settings;
-        settings._missLifeDelta     = _missLifeDelta;
-        settings._maxLife           = _maxLife;
-        settings._initialLife       = _maxLife;
-        settings._bAutoPlay         = isAutoPlayOn() ? SW_TRUE : SW_FALSE;
-        settings._listRankThreshold = _listRank;
-        for ( const RhythmJudgeWindow& window : _listWindow )
-        {
-            RhythmGradeRule rule;
-            rule._grade     = window._grade;
-            rule._lifeDelta = window._lifeDelta;
-            settings._listGradeRule.push_back( rule );
-        }
-        return outSession.initialize( *_pChart, _judge, settings ); // 거절하면 판이 까닭을 남긴다
+        return outSession.initialize( *_pChart, _judge, _playSettings, isAutoPlayOn() ); // 거절하면 판이 까닭을 남긴다
     }
 
     bool RhythmGameModeComponent::startGame()
@@ -74,7 +58,7 @@ namespace sw
         if ( acquireRequired( _chart, _pChart ) == false )
             return false;
         vector<TimingWindow> listWindow;
-        for ( const RhythmJudgeWindow& window : _listWindow )
+        for ( const RhythmJudgeWindow& window : _playSettings._listWindow )
         {
             TimingWindow timing;
             timing._grade        = window._grade;

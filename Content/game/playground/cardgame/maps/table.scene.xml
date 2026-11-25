@@ -53,13 +53,12 @@
 					<CardBattleGameModeComponent _localID="1268641875259238741" _componentName="CardBattleGameModeComponent" _bActive="true"
 					                             _deckID="starter"
 					                             _enemyID="slime"
-					                             _playerHP="50"
-					                             _energyPerTurn="3"
-					                             _drawPerTurn="5"
 					                             _seed="7"
 					                             _autoPlayInterval="0.4"
 					                             _resultHoldSeconds="3"
-					                             _winReward="30" />
+					                             _winReward="30">
+						<_battleSettings _playerHP="50" _energyPerTurn="3" _drawPerTurn="5" _handLimit="10" />
+					</CardBattleGameModeComponent>
 					<CardBattleViewComponent _localID="1286451381983802543" _componentName="CardBattleViewComponent" _bActive="true"
 					                         _moveAction="Move"
 					                         _confirmAction="Card.Confirm"

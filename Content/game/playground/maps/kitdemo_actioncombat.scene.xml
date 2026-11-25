@@ -30,6 +30,7 @@
 					                               _playerMaxHP="100"
 					                               _playerSpeed="4"
 					                               _bossDelaySeconds="1">
+						<_roomSettings _dashCooldownSeconds="0.85" _dashInvulnerableSeconds="0.22" _hitInvulnerableSeconds="0.7" _attackCooldownSeconds="0.28" _playerAttackDamage="34" />
 						<_listHallMonster>
 							<item>demo_grunt</item>
 							<item>demo_grunt</item>

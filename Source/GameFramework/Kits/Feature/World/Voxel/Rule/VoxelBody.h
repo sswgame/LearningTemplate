@@ -7,6 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 
@@ -14,21 +16,35 @@ namespace sw
 {
     class VoxelWorld;
 
-    /** @brief 몸의 크기와 움직임 설정입니다. 마인크래프트의 값에 가깝게 잡았습니다. */
-    struct VoxelBodySettings
+    /** @brief 몸의 크기와 움직임 설정입니다. 값은 데이터(`VoxelPlayerComponent` 의 `_bodySettings`)에 있고 코드에는 기본값이 없다. */
+    REFLECT()
+    struct SW_KIT_API VoxelBodySettings
     {
-        float32 _halfWidth{ 0.3f };
-        float32 _height{ 1.8f };
-        float32 _eyeHeight{ 1.62f };
-        float32 _gravity{ 28.0f };
-        float32 _jumpSpeed{ 8.4f }; ///< 블록 하나(1.25 m)를 넘을 수 있는 속도이다
-        float32 _walkSpeed{ 4.3f };
-        float32 _sprintSpeed{ 5.6f };
-        float32 _maxFallSpeed{ 50.0f };
-        float32 _groundAcceleration{ 40.0f }; ///< 원하는 속도로 다가가는 가속도(m/s²)
-        float32 _airAcceleration{ 10.0f };
-        float32 _swimSpeed{ 3.0f };
-        float32 _maxStep{ 1.0f / 120.0f }; ///< 한 걸음의 최대 시간이다. 빠르게 떨어져도 블록을 뚫지 않게 한다
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _halfWidth{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _height{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = m )
+        float32 _eyeHeight{ 0.0f };
+        PROPERTY( Required )
+        float32 _gravity{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _jumpSpeed{ 0.0f }; ///< 블록 하나(1.25 m)를 넘을 수 있는 속도이다
+        PROPERTY( Required, Min = 0.0 )
+        float32 _walkSpeed{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _sprintSpeed{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _maxFallSpeed{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _groundAcceleration{ 0.0f }; ///< 원하는 속도로 다가가는 가속도(m/s²)
+        PROPERTY( Required, Min = 0.0 )
+        float32 _airAcceleration{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _swimSpeed{ 0.0f };
+        PROPERTY( Required, Min = 0.001, Units = s )
+        float32 _maxStep{ 0.0f }; ///< 한 걸음의 최대 시간이다. 빠르게 떨어져도 블록을 뚫지 않게 한다
     };
 } // namespace sw
 

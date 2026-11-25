@@ -98,16 +98,23 @@ namespace sw
     // 2) ActionRoom: 적과 투사체를 스폰하고, 클리어하면 게이트를 연다
     // ------------------------------------------------------------------------------
     /**
-     * @brief 플레이어 쪽 조절 값입니다. 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다. 게임이 `setSettings` 로 넘기고, 넘기지 않으면 기본값입니다.
+     * @brief 플레이어 쪽 조절 값입니다. 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다. 값은 데이터(디렉터의 `_roomSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다.
      * @details 대시 쿨다운은 `update` 가 넣는 값이자 `getDashFill` 의 분모라 이 칸 하나만 둔다(둘로 두면 게이지가 쿨다운과 어긋난다).
      */
-    struct ActionRoomSettings
+    REFLECT()
+    struct SW_KIT_API ActionRoomSettings
     {
-        float32 _dashCooldownSeconds{ 0.85f };     ///< `getDashFill` 의 분모이기도 하다
-        float32 _dashInvulnerableSeconds{ 0.22f }; ///< 대시가 주는 무적
-        float32 _hitInvulnerableSeconds{ 0.7f };   ///< 맞았을 때의 무적 — 대시 무적보다 길다
-        float32 _attackCooldownSeconds{ 0.28f };
-        float32 _playerAttackDamage{ 34.0f }; ///< 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어간다
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _dashCooldownSeconds{ 0.0f }; ///< `getDashFill` 의 분모이기도 하다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _dashInvulnerableSeconds{ 0.0f }; ///< 대시가 주는 무적
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _hitInvulnerableSeconds{ 0.0f }; ///< 맞았을 때의 무적 — 대시 무적보다 길다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _attackCooldownSeconds{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _playerAttackDamage{ 0.0f }; ///< 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어간다
     };
 } // namespace sw
 

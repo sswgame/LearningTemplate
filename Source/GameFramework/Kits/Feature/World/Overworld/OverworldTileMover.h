@@ -28,12 +28,17 @@ namespace sw
     // 1) OverworldTileMover. 의도를 받아 한 칸 이동하고, 워프, 조우, 상호작용 플래그를 세운다
     //    화면 전환 중에는 setInputEnabled(false) 로 입력을 막는다
     // ------------------------------------------------------------------------------
-    /** @brief 이동 축 데드존, 걸음 시간, 조우율입니다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
-    struct OverworldTileMoverSettings
+    /** @brief 이동 축 데드존, 걸음 시간, 조우율입니다. 값은 데이터(디렉터의 `_moverSettings`)에 있고 코드에는 기본값이 없다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
+    REFLECT()
+    struct SW_KIT_API OverworldTileMoverSettings
     {
-        float32 _moveDeadZone{ 0.5f };   ///< 이보다 작게 기운 이동 축은 걸음으로 보지 않는다
-        float32 _encounterRate{ 0.33f }; ///< 조우 칸 걸음의 조우율이다. 결정적 주기(`StepEncounterMode::Period`, `1/rate` 걸음마다)로 읽는다. 0 은 끈다
-        float32 _stepSeconds{ 0.18f };   ///< 한 칸을 밟는 시간이다. 걷는 연출과 다음 입력 잠금이 같은 값을 쓴다
+        REFLECT_BODY();
+        PROPERTY( Required, Min = 0.0, Max = 1.0 )
+        float32 _moveDeadZone{ 0.0f }; ///< 이보다 작게 기운 이동 축은 걸음으로 보지 않는다
+        PROPERTY( Required, Min = 0.0, Max = 1.0, Tooltip = "Encounter chance of one step on an encounter tile; 0 means no encounters" )
+        float32 _encounterRate{ 0.0f }; ///< 조우 칸 걸음의 조우율이다. 결정적 주기(`StepEncounterMode::Period`, `1/rate` 걸음마다)로 읽는다. 0 은 끈다
+        PROPERTY( Required, Min = 0.0, Max = 2.0, Units = s, Tooltip = "Time to walk one tile" )
+        float32 _stepSeconds{ 0.0f }; ///< 한 칸을 밟는 시간이다. 걷는 연출과 다음 입력 잠금이 같은 값을 쓴다
     };
 } // namespace sw
 

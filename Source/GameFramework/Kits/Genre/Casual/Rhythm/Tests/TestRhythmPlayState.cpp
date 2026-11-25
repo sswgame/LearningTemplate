@@ -79,6 +79,12 @@ namespace
     sw::RhythmPlaySettings makeSettings()
     {
         sw::RhythmPlaySettings settings;
+        settings._failedRank         = sw::hashed_string( "F" );
+        settings._missLifeDelta      = -10.0f;
+        settings._maxLife            = 100.0f;
+        settings._initialLife        = 100.0f;
+        settings._comboBonusPerCombo = 0.0f;
+        settings._comboBonusCap      = 100;
         const struct
         {
             const utf8* _pRank;
@@ -95,7 +101,7 @@ namespace
             sw::RhythmRankThreshold threshold;
             threshold._rank        = sw::hashed_string( source._pRank );
             threshold._minAccuracy = source._minAccuracy;
-            settings._listRankThreshold.push_back( threshold );
+            settings._listRank.push_back( threshold );
         }
         return settings;
     }
@@ -115,7 +121,7 @@ namespace
             window._lateWidth  = 0.1f;
             window._score      = 100;
             _judge.setWindows( { window } );
-            SW_REQUIRE_TRUE( _session.initialize( _chart, _judge, makeSettings() ) );
+            SW_REQUIRE_TRUE( _session.initialize( _chart, _judge, makeSettings(), false ) );
         }
     };
 } // namespace
@@ -131,7 +137,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, RealAndCraftedStatesRead )
     _session.writeState( written );
 
     sw::RhythmPlaySession restored;
-    SW_REQUIRE_TRUE( restored.initialize( _chart, _judge, makeSettings() ) );
+    SW_REQUIRE_TRUE( restored.initialize( _chart, _judge, makeSettings(), false ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( restored.isHolding( 0 ) );
@@ -287,7 +293,7 @@ SW_TEST_CASE_F( RhythmPlayStateTest, PlayDeterminism )
     </Chart>)",
                                             "RhythmPlayStateTest" ) );
     const auto setup = [this, &chart]( sw::RhythmPlaySession& session ) -> bool
-    { return session.initialize( chart, _judge, makeSettings() ); };
+    { return session.initialize( chart, _judge, makeSettings(), false ); };
     const auto step = []( sw::RhythmPlaySession& session, int32 stepIndex )
     {
         const float32 now = static_cast<float32>( stepIndex ) / 30.0f;
@@ -311,12 +317,10 @@ SW_TEST_CASE( RhythmPlayStateTest, RefusesAJudgeWithoutWindows )
 {
     sw::RhythmChart chart;
     SW_REQUIRE_TRUE( chart.loadFromXMLText( kChartText, "NoWindows" ) );
-    const sw::TimingJudge  judge;
-    sw::RhythmPlaySettings settings = makeSettings();
-    settings._bAutoPlay             = SW_TRUE;
+    const sw::TimingJudge judge;
     sw::RhythmPlaySession session;
     SW_EXPECT_LOG( "RhythmPlaySession.NoTimingWindows" );
-    SW_EXPECT_FALSE( session.initialize( chart, judge, settings ) );
+    SW_EXPECT_FALSE( session.initialize( chart, judge, makeSettings(), true ) );
     session.update( 100.0f ); // 열리지 않은 판이라 할 일이 없다
     SW_EXPECT_EQUAL( 0, session.getJudgedCount() );
 }
@@ -325,17 +329,18 @@ SW_TEST_CASE( RhythmPlayStateTest, RefusesAJudgeWithoutWindows )
 SW_TEST_CASE_F( RhythmPlayStateTest, RanksComeFromTheSettings )
 {
     SW_EXPECT_LOG( "RhythmPlaySession.NoRankThresholds" );
+    sw::RhythmPlaySettings settings = makeSettings();
+    settings._listRank.clear();
     sw::RhythmPlaySession refused;
-    SW_EXPECT_FALSE( refused.initialize( _chart, _judge, sw::RhythmPlaySettings{} ) );
+    SW_EXPECT_FALSE( refused.initialize( _chart, _judge, settings, false ) );
 
     // 아무것도 판정하지 않은 판의 정확도는 100 % 다 — 기본 표에서는 S, 문턱 하나짜리 표에서는 그 이름이다.
     SW_EXPECT_TRUE( _session.computeRank() == sw::hashed_string( "S" ) );
-    sw::RhythmPlaySettings  settings;
     sw::RhythmRankThreshold only;
     only._rank        = sw::hashed_string( "Gold" );
     only._minAccuracy = 0.0f;
-    settings._listRankThreshold.push_back( only );
+    settings._listRank.push_back( only );
     sw::RhythmPlaySession custom;
-    SW_REQUIRE_TRUE( custom.initialize( _chart, _judge, settings ) );
+    SW_REQUIRE_TRUE( custom.initialize( _chart, _judge, settings, false ) );
     SW_EXPECT_TRUE( custom.computeRank() == sw::hashed_string( "Gold" ) );
 }

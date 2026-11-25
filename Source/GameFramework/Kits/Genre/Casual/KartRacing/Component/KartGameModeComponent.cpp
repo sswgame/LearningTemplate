@@ -118,14 +118,10 @@ namespace sw
 
     KartGameModeComponent::KartGameModeComponent()
         : _trackID{}
-        , _bItems{ true }
         , _itemCatalog{}
         , _vehicleSettings{}
         , _botCount{ 3 }
-        , _botAI{}
-        , _countdownSeconds{ 3.0f }
-        , _finishTimeoutSeconds{ 10.0f }
-        , _seed{ GameRandom::kDefaultSeed }
+        , _raceSettings{}
         , _firstReward{ 0 }
         , _rewardStep{ 0 }
         , _pTrackCatalog{}
@@ -148,13 +144,7 @@ namespace sw
             SW_LOG_ERROR_ID( "KartRacing.TrackUnusable", "Kart race game mode: track '%#' is not in the catalog or has no usable centre line - the race does not open", _trackID.c_str() );
             return false;
         }
-        KartRaceSettings settings;
-        settings._countdownTime = _countdownSeconds;
-        settings._finishTimeout = _finishTimeoutSeconds;
-        settings._seed          = _seed;
-        settings._ai            = _botAI;
-        settings._bItems        = _bItems ? SW_TRUE : SW_FALSE;
-        if ( outRace.initialize( settings, _track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
+        if ( outRace.initialize( _raceSettings, _track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
             return false; // 까닭은 경기가 남겼다
         const bool bAutoPlay = isAutoPlayOn();
         for ( int32 racer = 0; racer <= _botCount; ++racer )
@@ -173,7 +163,7 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pTrackCatalog ) == false || acquireRequired( _vehicleSettings, _pVehicle ) == false )
             return false;
-        if ( _bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
+        if ( _raceSettings._bItems && ( acquireRequired( _itemCatalog, _pItemCatalog ) == false || acquireBoundCatalog( _pProjectileCatalog ) == false ) )
             return false;
         if ( openRace( _race ) == false )
             return false;

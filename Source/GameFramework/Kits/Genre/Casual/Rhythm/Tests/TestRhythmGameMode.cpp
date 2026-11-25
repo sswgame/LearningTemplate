@@ -30,8 +30,8 @@ namespace
     constexpr const utf8* kRhythmChartXML = R"(<Chart title="Song" artist="Band" level="1" lanes="2"><Bpm beat="0" bpm="120"/><Note lane="0" beat="4" endBeat="8"/><Note lane="1" beat="6"/></Chart>)";
 
     /** @brief 채보 파일을 가리키는 디렉터 하나입니다. */
-    /** @brief 디렉터의 판정 창 · 등급 표입니다(`stage.scene.xml` 과 같은 값). */
-    constexpr const utf8* kJudgeDataXML = R"(<_listWindow>
+    /** @brief 디렉터의 판 규칙입니다(`stage.scene.xml` 과 같은 값). */
+    constexpr const utf8* kJudgeDataXML = R"(<_playSettings _failedRank="F" _missLifeDelta="-4" _maxLife="100" _initialLife="100" _comboBonusPerCombo="0" _comboBonusCap="100" _globalOffset="0" _scrollMode="ConstantSpeed"><_listWindow>
 <RhythmJudgeWindow _grade="Cool" _width="0.045" _score="300" _lifeDelta="1" _bBreaksCombo="false" />
 <RhythmJudgeWindow _grade="Good" _width="0.09" _score="150" _lifeDelta="0" _bBreaksCombo="false" />
 <RhythmJudgeWindow _grade="Bad" _width="0.14" _score="50" _lifeDelta="-2" _bBreaksCombo="true" />
@@ -42,7 +42,7 @@ namespace
 <RhythmRankThreshold _rank="B" _minAccuracy="80" />
 <RhythmRankThreshold _rank="C" _minAccuracy="70" />
 <RhythmRankThreshold _rank="D" _minAccuracy="0" />
-</_listRank>)";
+</_listRank></_playSettings>)";
     /** @brief 디렉터 원소입니다 — 차트 id, 판정 데이터. */
     constexpr const utf8* kDirectorXML = R"(<RhythmGameModeComponent _chart="%#" _resultHoldSeconds="0.5" _clearReward="25">%#</RhythmGameModeComponent>)";
 

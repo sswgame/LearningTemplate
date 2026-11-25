@@ -102,26 +102,26 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 한 판의 규칙 수치입니다. 디렉터의 PROPERTY 가 채웁니다. */
-    struct SkirmishMatchSettings
+    /** @brief 한 판의 규칙 수치입니다. 값은 데이터(디렉터의 `_matchSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다. */
+    REFLECT()
+    struct SW_KIT_API SkirmishMatchSettings
     {
-        float32 _huntIntervalSeconds{ 4.0f };    ///< 적 시작 지점에 닿아 노는 병력을 남은 적 건물로 보내는 주기
-        float32 _arrivedRadius{ 10.0f };         ///< 적 시작 지점에서 이 안이면 "닿았다"(m)
-        int32   _startMinerals{ 50 };            ///< 플레이어마다 시작 광물
-        float32 _statusIntervalSeconds{ 30.0f }; ///< 판 상황 로그 주기
-        // AI 가 쓰는 유닛 카탈로그 id — 디렉터의 PROPERTY(씬 데이터)가 채우고, 비어 있으면 AI 가 그 일을 하지 못한다.
-        hashed_string _workerID{};
-        hashed_string _depotID{};
-        hashed_string _supplyID{};
-        hashed_string _productionID{};
-        hashed_string _armyUnitID{};
+        REFLECT_BODY();
+        PROPERTY( Required, DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1, Units = s )
+        float32 _huntIntervalSeconds{ 0.0f }; ///< 적 시작 지점에 닿아 노는 병력을 남은 적 건물로 보내는 주기
+        PROPERTY( Required, DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )
+        float32 _arrivedRadius{ 0.0f }; ///< 적 시작 지점에서 이 안이면 "닿았다"(m)
+        PROPERTY( Required, DisplayName = "Status Log Interval", Tooltip = "Seconds between match status log lines", Min = 0.1, Units = s )
+        float32 _statusIntervalSeconds{ 0.0f }; ///< 판 상황 로그 주기
+        PROPERTY( Required, DisplayName = "AI Units" )
+        RTSCommanderUnits _units{};
         // 컴퓨터 상대의 성향 — 모두 AI 면 시작 지점이 적은 성향(러시 · 운영), 사람과 붙으면 상대 성향이다.
+        PROPERTY( Required, DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
         RTSCommanderAISettings _rushAI{};
+        PROPERTY( Required, DisplayName = "Macro AI", Tooltip = "Player 1 when both players are AI: more workers and production, later big attacks" )
         RTSCommanderAISettings _macroAI{};
+        PROPERTY( Required, DisplayName = "Opponent AI", Tooltip = "The computer player against a human" )
         RTSCommanderAISettings _opponentAI{};
-        // 컴퓨터 상대의 행동 트리 — 데이터(`commander.bt.xml`)의 받은 때 판(스냅숏)을 쥔다. AI 는 시작할 때 트리를 복사해 쥐고 노드 번호로 돌므로
-        // 판 중간에 다시 읽힌 판으로 바뀌면 안 된다. 날 포인터로 들면 다시 읽기 정리 뒤에 끊긴다. 컴퓨터 상대가 있으면 필수다.
-        shared_ptr<const BehaviorTreeAsset> _pCommanderTree;
     };
 } // namespace sw
 
@@ -152,9 +152,12 @@ namespace sw
          * @brief 지도를 칠하고 플레이어와 배치를 놓습니다.
          * @param tileMap @p map 이 가리키는 타일맵을 읽은 것입니다(크기 · 절벽 레이어).
          * @param humanMask 사람이 맡는 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`, 0 이면 모두 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
+         * @param startMinerals 플레이어마다 시작 광물입니다.
+         * @param pCommanderTree 컴퓨터 상대의 행동 트리입니다. AI 마다 트리를 복사해 쥐어 판은 받은 때의 트리로 끝까지 돈다. 모두 사람이면 nullptr 입니다.
          * @return 지도가 틀렸거나(절벽 레이어 없음 · 플레이어 수 · 맵 밖 시작 지점 · 놓을 수 없는 배치) 월드(`RTSWorld::initialize`)가 거절하면 까닭을 남기고 false 입니다. 그러면 판을 시작하지 않는다.
          */
-        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings );
+        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
+                                       int32 startMinerals, const BehaviorTreeAsset* pCommanderTree );
         /** @brief 월드를 배속 @p timeScale 로 돌리고 AI 는 월드가 진행한 시간만큼 돌려 알림을 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime, float32 timeScale );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */

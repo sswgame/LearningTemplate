@@ -16,18 +16,6 @@ namespace sw
     {
         struct SkirmishMatchInternal
         {
-            /** @brief 성향 @p style(씬 데이터)에 판의 유닛 id 를 채운 AI 설정입니다. */
-            static RTSCommanderAISettings makeAISettings( const RTSCommanderAISettings& style, const SkirmishMatchSettings& matchSettings )
-            {
-                RTSCommanderAISettings settings = style;
-                settings._workerID              = matchSettings._workerID;
-                settings._depotID               = matchSettings._depotID;
-                settings._supplyID              = matchSettings._supplyID;
-                settings._productionID          = matchSettings._productionID;
-                settings._armyUnitID            = matchSettings._armyUnitID;
-                return settings;
-            }
-
             /// @brief 시작할 때 일꾼을 보내는 광물을 시작 지점에서 찾는 반경(m)
             static constexpr float32 kStartMineralRadius = 16.0f;
 
@@ -51,7 +39,8 @@ namespace sw
     {
     }
 
-    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings )
+    bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
+                                    int32 startMinerals, const BehaviorTreeAsset* pCommanderTree )
     {
         if ( _world.initialize( pCatalog, tileMap._width, tileMap._height ) == false )
             return false;
@@ -85,7 +74,7 @@ namespace sw
         {
             Player& player = _listPlayer[index];
             player._start  = map._listPlayerStart[index];
-            player._wallet.add( settings._mineralCurrency, _settings._startMinerals );
+            player._wallet.add( settings._mineralCurrency, startMinerals );
             (void)_world.addPlayer( player._start._team, player._wallet, float3{ player._start._position._x, 0.0f, player._start._position._y } );
         }
         if ( placeUnits( map ) == false )
@@ -102,9 +91,9 @@ namespace sw
             Player&                       state = _listPlayer[static_cast<size_t>( player )];
             const RTSCommanderAISettings& style = hasHumanPlayer() ? _settings._opponentAI : state._start._aiRole == SkirmishAIRole::Rush ? _settings._rushAI
                                                                                                                                           : _settings._macroAI;
-            SW_ASSERT( _settings._pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
+            SW_ASSERT( pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
             state._pAI = make_unique<RTSCommanderAI>();
-            state._pAI->initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), _settings._pCommanderTree->getTree() );
+            state._pAI->initialize( &_world, player, style, _settings._units, pCommanderTree->getTree() );
         }
         SW_LOG_INFO_ID( "SkirmishMatch.MatchStart", "[Skirmish] match start - %# players, human mask %#", getPlayerCount(), static_cast<uint32>( _humanMask ) );
         return true;

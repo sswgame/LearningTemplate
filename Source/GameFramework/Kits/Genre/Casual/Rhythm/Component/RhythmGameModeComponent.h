@@ -31,23 +31,6 @@ namespace sw
         Simulation ///< 프레임 시간을 더한다
     };
 
-    /** @brief 판정 창 하나입니다(좁은 것부터 적는다). */
-    REFLECT()
-    struct RhythmJudgeWindow
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Required )
-        hashed_string _grade{};
-        PROPERTY( Min = 0.001, Units = s, Tooltip = "Accepted this much earlier or later than the note" )
-        float32 _width{ 0.05f };
-        PROPERTY()
-        int32 _score{ 0 };
-        PROPERTY( Tooltip = "Life added by a judgment in this window" )
-        float32 _lifeDelta{ 0.0f };
-        PROPERTY()
-        bool _bBreaksCombo{ false };
-    };
 } // namespace sw
 
 namespace sw
@@ -87,7 +70,7 @@ namespace sw
         const RhythmPlaySession& getSession() const { return _session; }
         RhythmClock              getClock() const { return _clock; }
         float32                  getMusicTime() const { return _musicTime; }
-        float32                  getMaxLife() const { return _maxLife; }
+        float32                  getMaxLife() const { return _playSettings._maxLife; }
         int32                    getState() const { return static_cast<int32>( _session.getState() ); }
         int32                    getJudged() const { return _session.getJudgedCount(); }
         int32                    getMissed() const { return _session.getMissCount(); }
@@ -110,14 +93,8 @@ namespace sw
         AssetRef<RhythmChart> _chart;
         PROPERTY( Category = "Song", DisplayName = "Clock", Tooltip = "Music follows the audio segment clock the client hands over; Simulation adds frame time" )
         RhythmClock _clock;
-        PROPERTY( Category = "Judge", DisplayName = "Windows", Required, Tooltip = "Judgment windows, narrowest first" )
-        vector<RhythmJudgeWindow> _listWindow;
-        PROPERTY( Category = "Judge", DisplayName = "Ranks", Required, Tooltip = "Result ranks by accuracy (%) - the highest threshold the accuracy reaches wins" )
-        vector<RhythmRankThreshold> _listRank;
-        PROPERTY( Category = "Judge", DisplayName = "Miss Life", Tooltip = "Life added by a miss (negative takes life)" )
-        float32 _missLifeDelta;
-        PROPERTY( Category = "Judge", DisplayName = "Max Life", Min = 1.0 )
-        float32 _maxLife;
+        PROPERTY( Required, Category = "Judge", DisplayName = "Play", Tooltip = "Judgment windows, ranks and life of the song; every value is required" )
+        RhythmPlaySettings _playSettings;
         PROPERTY( Category = "Match", DisplayName = "Clear Reward", Tooltip = "Money for clearing the song", Min = 0 )
         int32 _clearReward;
 

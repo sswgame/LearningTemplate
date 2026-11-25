@@ -24,18 +24,30 @@ namespace sw
     class Archive;
     class TimingJudge;
 
-    /** @brief 판정 등급 하나의 라이프 증감과 정확도 가중치입니다. 점수는 판정 창(`TimingWindow::_score`)의 값을 씁니다. */
-    struct RhythmGradeRule
+    /** @brief 판정 창 하나입니다(좁은 것부터 적는다). 판정기(`TimingJudge`)의 창과 판의 라이프 · 정확도가 이 한 줄에서 나온다. */
+    REFLECT()
+    struct RhythmJudgeWindow
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _grade{};
-        float32       _lifeDelta{ 0.0f };
-        float32       _accuracyWeight{ -1.0f }; ///< 0..1 범위이다. 음수이면 창 점수를 가장 좁은 창의 점수로 나눈 값을 쓴다
+        PROPERTY( Min = 0.001, Units = s, Tooltip = "Accepted this much earlier or later than the note" )
+        float32 _width{ 0.05f };
+        PROPERTY()
+        int32 _score{ 0 };
+        PROPERTY( Tooltip = "Life added by a judgment in this window" )
+        float32 _lifeDelta{ 0.0f };
+        PROPERTY( Min = -1.0, Max = 1.0, Tooltip = "Accuracy weight of a judgment; negative uses the score divided by the score of the narrowest window" )
+        float32 _accuracyWeight{ -1.0f };
+        PROPERTY()
+        bool _bBreaksCombo{ false };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 정확도(%)가 이 값 이상이면 이 등급입니다. 디렉터의 `_listRank` 칸(씬 데이터)이 이 형식으로 적힙니다. */
+    /** @brief 정확도(%)가 이 값 이상이면 이 등급입니다. 디렉터의 `_playSettings._listRank` 칸(씬 데이터)이 이 형식으로 적힙니다. */
     REFLECT()
     struct RhythmRankThreshold
     {
@@ -50,20 +62,32 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 한 판의 규칙 수치입니다. */
-    struct RhythmPlaySettings
+    /** @brief 한 판의 규칙 수치입니다. 값은 데이터(디렉터의 `_playSettings`)에 있고 코드에는 기본값이 없다 — 디렉터가 그대로 넘긴다. */
+    REFLECT()
+    struct SW_KIT_API RhythmPlaySettings
     {
-        vector<RhythmGradeRule>     _listGradeRule{};
-        vector<RhythmRankThreshold> _listRankThreshold{}; ///< 필수 — 비어 있으면 `initialize` 가 거절한다(등급 표는 데이터가 정한다)
-        hashed_string               _failedRank{ "F" };
-        float32                     _missLifeDelta{ -10.0f };
-        float32                     _maxLife{ 100.0f };
-        float32                     _initialLife{ 100.0f };
-        float32                     _comboBonusPerCombo{ 0.0f }; ///< 맞힌 판정의 점수에 창 점수 x min( 콤보, 상한 ) x 이 값을 더한다
-        int32                       _comboBonusCap{ 100 };
-        float32                     _globalOffset{ 0.0f }; ///< 전역 오프셋(초)이다. 기기와 음향 지연을 보정하며, 노트의 판정 시각은 채보 시각에 이 값을 더한 것이다
-        RhythmScrollMode            _scrollMode{ RhythmScrollMode::ConstantSpeed };
-        uint8                       _bAutoPlay{ SW_FALSE }; ///< 판정 시각에 정확히 누르고 롱노트는 끝까지 누른다(데모와 테스트용)
+        REFLECT_BODY();
+
+        PROPERTY( Required, DisplayName = "Windows", Tooltip = "Judgment windows, narrowest first" )
+        vector<RhythmJudgeWindow> _listWindow{};
+        PROPERTY( Required, DisplayName = "Ranks", Tooltip = "Result ranks by accuracy (%) - the highest threshold the accuracy reaches wins" )
+        vector<RhythmRankThreshold> _listRank{}; ///< 비어 있으면 `initialize` 가 거절한다(등급 표는 데이터가 정한다)
+        PROPERTY( Required, Tooltip = "Rank of a failed song" )
+        hashed_string _failedRank{};
+        PROPERTY( Required, DisplayName = "Miss Life", Tooltip = "Life added by a miss (negative takes life)" )
+        float32 _missLifeDelta{ 0.0f };
+        PROPERTY( Required, Min = 1.0 )
+        float32 _maxLife{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _initialLife{ 0.0f };
+        PROPERTY( Required, Min = 0.0 )
+        float32 _comboBonusPerCombo{ 0.0f }; ///< 맞힌 판정의 점수에 창 점수 x min( 콤보, 상한 ) x 이 값을 더한다
+        PROPERTY( Required, Min = 0 )
+        int32 _comboBonusCap{ 0 };
+        PROPERTY( Required, Units = s )
+        float32 _globalOffset{ 0.0f }; ///< 전역 오프셋(초)이다. 기기와 음향 지연을 보정하며, 노트의 판정 시각은 채보 시각에 이 값을 더한 것이다
+        PROPERTY( Required )
+        RhythmScrollMode _scrollMode{ RhythmScrollMode::ConstantSpeed };
     };
 } // namespace sw
 
@@ -140,7 +164,7 @@ namespace sw
          * @brief 판을 처음부터 시작합니다. 채보의 레인 수만큼 대기열을 만듭니다.
          * @return 판정 창이 없거나, 최대 라이프가 1 보다 작거나, 처음 라이프가 0..최대 밖이거나, 콤보 보너스 상한이 음수이면 오류를 남기고 false 입니다(맞춰 받지 않는다). 그러면 판은 그대로입니다.
          */
-        [[nodiscard]] bool initialize( const RhythmChart& chart, const TimingJudge& judge, const RhythmPlaySettings& settings );
+        [[nodiscard]] bool initialize( const RhythmChart& chart, const TimingJudge& judge, const RhythmPlaySettings& settings, bool bAutoPlay );
 
         /** @brief @p now 까지 지난 일(놓침, 롱노트를 끝까지 누름, 오토플레이 누름)을 시각 순으로 처리합니다. */
         void update( float32 now );
@@ -189,12 +213,12 @@ namespace sw
             int32         _holdingNote{ constant::invalid_index::kInt32 };
         };
 
-        float32                computeTargetTime( const RhythmNote& note ) const { return note._time + _settings._globalOffset; }
-        float32                computeTargetEndTime( const RhythmNote& note ) const { return note._endTime + _settings._globalOffset; }
-        void                   pressInternal( int32 lane, float32 time );
-        void                   applyJudgment( int32 noteIndex, const TimingWindow* pWindow, float32 offset, bool bTail );
-        const RhythmGradeRule* findGradeRule( const hashed_string& grade ) const;
-        void                   finishIfDone();
+        float32                  computeTargetTime( const RhythmNote& note ) const { return note._time + _settings._globalOffset; }
+        float32                  computeTargetEndTime( const RhythmNote& note ) const { return note._endTime + _settings._globalOffset; }
+        void                     pressInternal( int32 lane, float32 time );
+        void                     applyJudgment( int32 noteIndex, const TimingWindow* pWindow, float32 offset, bool bTail );
+        const RhythmJudgeWindow* findWindow( const hashed_string& grade ) const;
+        void                     finishIfDone();
 
     private:
         RhythmPlaySettings _settings;
@@ -224,5 +248,6 @@ namespace sw
         int32 _judgedCount;
         PROPERTY( RuntimeState )
         RhythmPlayState _state;
+        uint8           _bAutoPlay; ///< 판정 시각에 정확히 누르고 롱노트는 끝까지 누른다(자동 플레이)
     };
 } // namespace sw

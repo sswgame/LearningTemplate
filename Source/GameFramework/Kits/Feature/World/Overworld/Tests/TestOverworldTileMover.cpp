@@ -36,6 +36,7 @@ namespace
             }
             _mover.setTileMap( &_map );
             OverworldTileMoverSettings settings;
+            settings._moveDeadZone  = 0.5f;
             settings._stepSeconds   = kStepSeconds;
             settings._encounterRate = 0.5f;
             _mover.setSettings( settings );

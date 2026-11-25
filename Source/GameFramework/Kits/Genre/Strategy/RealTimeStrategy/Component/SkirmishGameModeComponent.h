@@ -114,32 +114,10 @@ namespace sw
         AssetRef<BehaviorTreeAsset> _commanderTreePath;
         PROPERTY( Category = "Map", DisplayName = "Map", Tooltip = "Ground, player starts and first units of the match; required" )
         SkirmishMap _map;
-        PROPERTY( Category = "Rules", DisplayName = "Hunt Interval", Tooltip = "Seconds between sending idle army at the enemy start to the nearest enemy building", Min = 0.1 )
-        float32 _huntIntervalSeconds;
-        PROPERTY( Category = "Rules", DisplayName = "Arrived Radius", Tooltip = "Army within this distance of the enemy start counts as arrived", Min = 0.0, Units = m )
-        float32 _arrivedRadius;
-        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between match status log lines", Min = 0.1, Units = s )
-        float32 _statusLogInterval;
-        // ---- AI 가 쓰는 유닛 — 유닛 카탈로그(data/units.xml)의 id 다 ----
-        PROPERTY( Category = "AI Units", DisplayName = "Worker" )
-        CatalogKey<RTSUnitDef> _workerUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Depot", Tooltip = "Resource drop-off building" )
-        CatalogKey<RTSUnitDef> _depotUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Supply", Tooltip = "Supply building" )
-        CatalogKey<RTSUnitDef> _supplyUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Production", Tooltip = "Building that trains the army unit" )
-        CatalogKey<RTSUnitDef> _productionUnitID;
-        PROPERTY( Category = "AI Units", DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
-        CatalogKey<RTSUnitDef> _armyUnitID;
+        PROPERTY( Required, Category = "Rules", DisplayName = "Match", Tooltip = "Rules, AI units and AI styles of the match; every value is required" )
+        SkirmishMatchSettings _matchSettings;
         PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
         GameSpeedRange _speedRange;
-        // ---- 컴퓨터 상대의 성향 — 셋 다 씬 데이터에 적는다(적지 않으면 판을 열지 않는다) ----
-        PROPERTY( Category = "AI Styles", DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
-        RTSCommanderAISettings _rushAI;
-        PROPERTY( Category = "AI Styles", DisplayName = "Macro AI", Tooltip = "Player 1 when both players are AI: more workers and production, later big attacks" )
-        RTSCommanderAISettings _macroAI;
-        PROPERTY( Category = "AI Styles", DisplayName = "Opponent AI", Tooltip = "The computer player against a human" )
-        RTSCommanderAISettings _opponentAI;
 
         BoundAssetRef<BehaviorTreeAsset> _pCommanderTree;
         CommanderDebugSource             _commanderDebugSource;

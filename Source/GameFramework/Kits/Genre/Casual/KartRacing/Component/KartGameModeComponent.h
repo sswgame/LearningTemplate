@@ -83,22 +83,14 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Track", Required, Tooltip = "Track id in the catalog" )
         CatalogKey<KartTrackDef> _trackID;
-        PROPERTY( Category = "Data", DisplayName = "Items On", Tooltip = "Races with item boxes; off is the only way to race without items" )
-        bool _bItems;
-        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_bItems" )
+        PROPERTY( Category = "Data", DisplayName = "Items", Tooltip = "Item and rank table file (required while items are on)", EditCondition = "_raceSettings._bItems" )
         AssetRef<KartItemCatalog> _itemCatalog;
         PROPERTY( Category = "Data", DisplayName = "Vehicle", Required, Tooltip = "Vehicle tuning every kart drives (*.vehicle.xml)" )
         AssetRef<KinematicVehicleSettings> _vehicleSettings;
         PROPERTY( Category = "Race", DisplayName = "Bots", Tooltip = "Karts driven by the AI", Min = 1, Max = 7 )
         int32 _botCount;
-        PROPERTY( Category = "Race", DisplayName = "Bot AI", Tooltip = "Driving values of the karts the AI drives; every value is required" )
-        KartAISettings _botAI;
-        PROPERTY( Category = "Race", DisplayName = "Countdown", Min = 0.0, Units = s )
-        float32 _countdownSeconds;
-        PROPERTY( Category = "Race", DisplayName = "Finish Timeout", Tooltip = "Time after the first finish before the rest is ranked as it stands", Min = 0.0, Units = s )
-        float32 _finishTimeoutSeconds;
-        PROPERTY( Category = "Race", DisplayName = "Seed" )
-        uint32 _seed;
+        PROPERTY( Required, Category = "Race", DisplayName = "Race", Tooltip = "Rules of the race and the karts the AI drives; every value is required" )
+        KartRaceSettings _raceSettings;
         PROPERTY( Category = "Race", DisplayName = "First Reward", Tooltip = "Money for first place", Min = 0 )
         int32 _firstReward;
         PROPERTY( Category = "Race", DisplayName = "Reward Step", Tooltip = "Money less for every place after the first (never below 0)", Min = 0 )

@@ -152,7 +152,7 @@ namespace sw
 
     bool KartRace::initialize( const KartRaceSettings& settings, const KartTrack& track, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog )
     {
-        if ( settings._bItems == SW_TRUE && ( pItemCatalog == nullptr || pProjectileCatalog == nullptr ) )
+        if ( settings._bItems && ( pItemCatalog == nullptr || pProjectileCatalog == nullptr ) )
         {
             SW_LOG_ERROR_ID( "KartRace.ItemCatalogMissing", "KartRace: refused - items are on but the item catalog (%#) or the projectile catalog (%#) is missing", pItemCatalog != nullptr ? "given" : "missing",
                              pProjectileCatalog != nullptr ? "given" : "missing" );
@@ -563,7 +563,7 @@ namespace sw
                 _listItemBoxTimer[boxIndex].update( deltaTime );
                 continue;
             }
-            if ( _settings._bItems == SW_FALSE )
+            if ( _settings._bItems == false )
                 continue;
             const float32 reach = _settings._itemBoxRadius + _settings._kartRadius;
             for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
@@ -818,7 +818,7 @@ namespace sw
 
     float32 KartRace::computeRubberBandScale( int32 racer ) const
     {
-        const bool bRubberBandDisabled = isValidRacer( racer ) == false || _settings._bRubberBand == SW_FALSE || _settings._rubberBandDistance <= 0.0f;
+        const bool bRubberBandDisabled = isValidRacer( racer ) == false || _settings._bRubberBand == false || _settings._rubberBandDistance <= 0.0f;
         if ( bRubberBandDisabled )
             return 1.0f;
         const KartRacer& kart = _listRacer[static_cast<size_t>( racer )];

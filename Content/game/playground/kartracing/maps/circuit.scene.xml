@@ -57,17 +57,15 @@
 				<_listComponent>
 					<KartGameModeComponent _localID="489024443286610025" _componentName="KartGameModeComponent" _bActive="true"
 					                       _trackID="sunny_oval"
-					                       _bItems="true"
 					                       _itemCatalog="guid:041dc3291ef33e6291a7d17fc9ab5826"
 					                       _vehicleSettings="guid:ac43c1f814fc7ab0ced13bbe596abca2"
 					                       _botCount="3"
-					                       _countdownSeconds="3"
-					                       _finishTimeoutSeconds="8"
 					                       _resultHoldSeconds="3"
-					                       _seed="7"
 					                       _firstReward="40"
 					                       _rewardStep="10">
-						<_botAI _lookAheadBase="6" _lookAheadPerSpeed="0.35" _steerGain="2.5" _racingLine="0.6" _cornerAngle="0.8" _cornerLookAhead="25" _driftStartAngle="0.9" _driftEndAngle="0.35" _brakeAngle="2.2" _brakeThrottle="0.4" _itemUseDelay="0.8" _itemMaxHold="8" _shellRange="45" _bananaRange="15" />
+						<_raceSettings _step="0.016666668" _countdownTime="3" _finishTimeout="8" _gridFirstDistance="6" _gridRowSpacing="6" _wrongWayDelay="1" _wrongWaySpeed="2" _kartRadius="1" _itemBoxRadius="1.5" _itemBoxRespawn="2" _ownerGrace="0.5" _dropBehindDistance="2.5" _projectionRange="40" _rubberBandDistance="120" _rubberBandMaxBonus="0.15" _rubberBandLeadPenalty="0.05" _redShellLockDistance="120" _redShellLockAngle="75" _seed="7" _bRubberBand="true" _bItems="true">
+							<_ai _lookAheadBase="6" _lookAheadPerSpeed="0.35" _steerGain="2.5" _racingLine="0.6" _cornerAngle="0.8" _cornerLookAhead="25" _driftStartAngle="0.9" _driftEndAngle="0.35" _brakeAngle="2.2" _brakeThrottle="0.4" _itemUseDelay="0.8" _itemMaxHold="8" _shellRange="45" _bananaRange="15" />
+						</_raceSettings>
 					</KartGameModeComponent>
 					<KartRaceViewComponent _localID="3445377818592114861" _componentName="KartRaceViewComponent" _bActive="true"
 					                       _moveAction="Move"

@@ -39,9 +39,7 @@ namespace sw
     CardBattleGameModeComponent::CardBattleGameModeComponent()
         : _deckID{}
         , _enemyID{}
-        , _playerHP{ 50 }
-        , _energyPerTurn{ 3 }
-        , _drawPerTurn{ 5 }
+        , _battleSettings{}
         , _seed{ GameRandom::kDefaultSeed }
         , _autoPlayInterval{ 0.5f }
         , _winReward{ 0 }
@@ -62,14 +60,10 @@ namespace sw
             SW_LOG_ERROR_ID( "CardBattle.DeckOrEnemyMissing", "Card battle game mode: deck '%#' or enemy '%#' is not in the catalog - the battle does not open", _deckID.c_str(), _enemyID.c_str() );
             return false;
         }
-        CardBattleSettings settings;
-        settings._playerHP      = _playerHP;
-        settings._energyPerTurn = _energyPerTurn;
-        settings._drawPerTurn   = _drawPerTurn;
         CardBattleEnemy enemy;
         enemy._listIntent = pEnemy->_listIntent;
         enemy._hp         = pEnemy->_hp;
-        if ( outBattle.initialize( *_pCatalog, settings, pDeck->_listCard, enemy, _seed ) )
+        if ( outBattle.initialize( *_pCatalog, _battleSettings, pDeck->_listCard, enemy, _seed ) )
             return true;
         SW_LOG_ERROR_ID( "CardBattle.DeckNotOpened", "Card battle game mode: deck '%#' has no card or an unknown one - the battle does not open", _deckID.c_str() );
         return false;
