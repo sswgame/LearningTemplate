@@ -91,6 +91,16 @@ namespace
 
         Fixture()
         {
+            settings._sessionLifetimeMs   = 43200000;
+            settings._reconnectGraceMs    = 120000;
+            settings._tombstoneLifetimeMs = 600000;
+            settings._ticketLifetimeMs    = 60000;
+            settings._lockoutMs           = 300000;
+            settings._attemptRefillMs     = 2000;
+            settings._deletionGraceMs     = 2592000000;
+            settings._revocationScanMs    = 60000;
+            settings._revocationBatchSize = 16;
+            settings._maxFailedCount      = 5;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
             ticketAuthority.initialize( &crypto, arrMasterKey );
         }

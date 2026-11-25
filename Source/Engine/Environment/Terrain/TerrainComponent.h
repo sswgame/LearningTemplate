@@ -135,6 +135,8 @@ namespace sw
          * @return 다시 만든 청크 수입니다. 남은 것은 `getStaleChunkCount` 입니다.
          */
         uint32 rebuildStaleChunkMeshes( uint32 maxCount );
+        /** @brief 낡은 청크 메시를 엔진 설정(`EngineConfig::_terrain`)의 프레임 한도만큼 다시 만듭니다. 설정 없는 씬이면 오류를 남기고 그대로 둡니다. */
+        void rebuildStaleChunkMeshes();
         /** @brief 높이를 썼지만 메시를 아직 다시 만들지 않은 청크 수입니다. */
         uint32 getStaleChunkCount() const { return static_cast<uint32>( _listStaleChunk.size() ); }
 

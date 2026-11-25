@@ -65,6 +65,27 @@ namespace
             return def;
         }
 
+        /** @brief 경기 씬과 같은 AI 운전 수치입니다(코드에는 기본값이 없다). */
+        static sw::KartAISettings makeAISettings()
+        {
+            sw::KartAISettings settings;
+            settings._lookAheadBase     = 6.0f;
+            settings._lookAheadPerSpeed = 0.35f;
+            settings._steerGain         = 2.5f;
+            settings._racingLine        = 0.6f;
+            settings._cornerAngle       = 0.8f;
+            settings._cornerLookAhead   = 25.0f;
+            settings._driftStartAngle   = 0.9f;
+            settings._driftEndAngle     = 0.35f;
+            settings._brakeAngle        = 2.2f;
+            settings._brakeThrottle     = 0.4f;
+            settings._itemUseDelay      = 0.8f;
+            settings._itemMaxHold       = 8.0f;
+            settings._shellRange        = 45.0f;
+            settings._bananaRange       = 15.0f;
+            return settings;
+        }
+
         /** @brief 진행 방향 오른쪽으로 @p offset 만큼 비킨 자리입니다. */
         static sw::float3 makeOffsetPoint( const sw::KartTrack& track, float32 distance, float32 offset )
         {
@@ -111,6 +132,7 @@ namespace
             SW_REQUIRE_TRUE( _projectiles.loadFromXMLText( kKartProjectileXML, "KartTest" ) );
             _settings._countdownTime = 0.0f;
             _settings._bRubberBand   = SW_FALSE;
+            _settings._ai            = KartTestUtil::makeAISettings();
         }
 
         /** @brief @p race 를 이 판의 트랙 · 카탈로그로 엽니다(@p pTrack 이 비면 이 판의 트랙). */
@@ -417,6 +439,7 @@ SW_TEST_CASE( KartTrackTest, RefusesUnusableDefinitions )
     SW_EXPECT_NEAR( 0.0f, track.getLength(), kKartTolerance );
 
     sw::KartRaceSettings noItems;
+    noItems._ai     = KartTestUtil::makeAISettings();
     noItems._bItems = SW_FALSE;
     sw::KartRace race;
     SW_EXPECT_TRUE( race.initialize( noItems, track, nullptr, nullptr ) );
@@ -614,8 +637,8 @@ SW_TEST_CASE( KartAITest, SteeringAndDrift )
     const float32    yaw   = KartTestUtil::computeTrackYaw( track, 0.0f );
 
     sw::KartAIDriver   driver;
-    sw::KartAISettings settings;
-    settings._driftStartAngle = 3.0f; // 드리프트 없이 조향만 본다
+    sw::KartAISettings settings = KartTestUtil::makeAISettings();
+    settings._driftStartAngle   = 3.0f; // 드리프트 없이 조향만 본다
     driver.setSettings( settings );
     motor.reset( start, yaw + 1.2f ); // 길보다 오른쪽을 본다
     SW_EXPECT_NEAR( -1.0f, driver.computeInput( track, motor, 0.0f )._steer, kKartTolerance );
@@ -1566,4 +1589,20 @@ SW_TEST_CASE_F( KartRaceTest, RaceDeterminism )
         (void)race.update( 1.0f / 30.0f );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::KartRace>( setup, step, 240 ) );
+}
+
+/** @brief [KartRaceTest] AI 운전 수치는 데이터다 — 빠진 칸이 있으면 경기를 열지 않고, 적은 값이 AI 차에 그대로 간다 */
+SW_TEST_CASE_F( KartRaceTest, AIDrivingValuesAreRequired )
+{
+    SW_EXPECT_LOG( "KartRace.AISettingsMissing" );
+    SW_REQUIRE_TRUE( _track.initialize( KartTestUtil::makeRingDef( 3, {} ) ) );
+    sw::KartRaceSettings missing = _settings;
+    missing._ai._steerGain       = 0.0f;
+    SW_EXPECT_FALSE( _race.initialize( missing, _track, &_items, &_projectiles ) );
+    sw::KartRaceSettings written = _settings;
+    written._ai._shellRange      = 12.0f;
+    initializeRace( _race, written );
+    SW_REQUIRE_TRUE( _race.addRacer( sw::KinematicVehicleSettings{}, true ) == 0 );
+    SW_REQUIRE_TRUE( _race.findRacer( 0 ) != nullptr );
+    SW_EXPECT_NEAR( 12.0f, _race.findRacer( 0 )->_ai.getSettings()._shellRange, kKartTolerance );
 }

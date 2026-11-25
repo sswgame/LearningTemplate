@@ -219,22 +219,22 @@ namespace sw
     {
     }
 
-    bool PushNotificationDispatcher::initialize( ServiceStore* pStore, const PushDispatcherConfig& settings )
+    bool PushNotificationDispatcher::initialize( ServiceStore* pStore, const LiveOpsKitConfig& settings )
     {
         SW_ASSERT( pStore != nullptr );
         // 운영 값은 서버 설정에서 온다 — 없는 값으로 서면 기기를 하나도 못 올리거나 재시도 없이 버린다.
-        const bool bDeviceOk = 0 < settings._maxDevicePerAccount && settings._maxDevicePerAccount <= PushLimit::kMaxDevicePerAccount;
-        const bool bRateOk   = settings._accountBurst > 0 && settings._accountRefillIntervalMs > 0;
-        if ( bDeviceOk == false || bRateOk == false || settings._maxRetry <= 0 || settings._firstBackoffMs <= 0 )
+        const bool bDeviceOk = 0 < settings._pushMaxDevicePerAccount && settings._pushMaxDevicePerAccount <= PushLimit::kMaxDevicePerAccount;
+        const bool bRateOk   = settings._pushAccountBurst > 0 && settings._pushAccountRefillIntervalMs > 0;
+        if ( bDeviceOk == false || bRateOk == false || settings._pushMaxRetry <= 0 || settings._pushFirstBackoffMs <= 0 || settings._pushMaxTrackedAccountCount <= 0 )
         {
             SW_LOG_ERROR_ID( "PushNotificationDispatcher.PushDispatcherNoLimits", "PushDispatcher needs _pushMaxDevicePerAccount in 1..%# (%#), and _pushMaxRetry (%#), _pushFirstBackoffMs (%#), _pushAccountBurst (%#), _pushAccountRefillIntervalMs (%#) above zero",
-                             static_cast<int32>( PushLimit::kMaxDevicePerAccount ), settings._maxDevicePerAccount, settings._maxRetry, settings._firstBackoffMs, settings._accountBurst,
-                             settings._accountRefillIntervalMs );
+                             static_cast<int32>( PushLimit::kMaxDevicePerAccount ), settings._pushMaxDevicePerAccount, settings._pushMaxRetry, settings._pushFirstBackoffMs, settings._pushAccountBurst,
+                             settings._pushAccountRefillIntervalMs );
             return false;
         }
         _settings = settings;
         _store.bindStore( pStore );
-        _accountBucketMap.initialize( settings._accountBurst, settings._accountRefillIntervalMs, static_cast<size_t>( settings._maxTrackedAccountCount ) );
+        _accountBucketMap.initialize( settings._pushAccountBurst, settings._pushAccountRefillIntervalMs, static_cast<size_t>( settings._pushMaxTrackedAccountCount ) );
         return true;
     }
 
@@ -428,13 +428,13 @@ namespace sw
                     case PushDeliveryStatus::Transient:
                     case PushDeliveryStatus::RateLimited:
                     {
-                        if ( ++delivery._attempt >= _settings._maxRetry )
+                        if ( ++delivery._attempt >= _settings._pushMaxRetry )
                         {
                             ++_stats._droppedCount;
                             _mapDelivery.erase( deliveryIt );
                             break;
                         }
-                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, _settings._firstBackoffMs << ( delivery._attempt - 1 ) );
+                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, _settings._pushFirstBackoffMs << ( delivery._attempt - 1 ) );
                         break;
                     }
                     case PushDeliveryStatus::Rejected:
@@ -491,7 +491,7 @@ namespace sw
 
     void PushNotificationDispatcher::submitWrite( AccountID accountID, string&& key, string&& ownerKey, vector<uint8>&& bytes, uint64 requestTag )
     {
-        _store.submit( [accountID, key = std::move( key ), ownerKey = std::move( ownerKey ), bytes = std::move( bytes ), maxDevice = _settings._maxDevicePerAccount]( IServiceStoreConnection& connection )
+        _store.submit( [accountID, key = std::move( key ), ownerKey = std::move( ownerKey ), bytes = std::move( bytes ), maxDevice = _settings._pushMaxDevicePerAccount]( IServiceStoreConnection& connection )
         { return PushStoreRun::writeDevice( connection, accountID, key, ownerKey, bytes, maxDevice ); },
                        [this, requestTag]( LiveOpsServiceResult result )
         { applyWrite( requestTag, result ); } );

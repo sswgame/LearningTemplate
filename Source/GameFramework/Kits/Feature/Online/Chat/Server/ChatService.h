@@ -40,6 +40,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
@@ -75,22 +76,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 채팅 설정입니다. */
-    struct ChatServiceConfig
+    /**
+     * @brief 채팅 설정입니다 — 운영 값은 키트 설정(`ChatKitConfig`, 리플렉션 필수 칸) 그대로이고, 풀어 둔 경로와 동작만 더합니다.
+     * @details 칸을 다시 적어 옮기지 않는다 — 옮기다 빠진 칸이 코드 기본값으로 서던 모양이다. 필수 칸이 비면 `initialize` 가 거절한다(키트 밖에서 지은 설정).
+     */
+    struct ChatServiceConfig : ChatKitConfig
     {
-        ChatSpamConfig _spam{};                  ///< 필수 — 채팅 키트 설정 `_spam`. 비면 `initialize` 가 거절한다
-        AbsolutePath   _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `Config/Server/chat_banned_words.txt` 를 쓴다
-        AbsolutePath   _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `Config/Server/chat_ignored_characters.txt` 를 쓴다
+        AbsolutePath   _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `_bannedWordsFile` 을 푼 경로다
+        AbsolutePath   _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `_ignoredCharactersFile` 을 푼 경로다
         ChatFilterMode _filterMode{ ChatFilterMode::Mask };
-        int64          _sanctionCacheMs{ 0 };            ///< 필수 — 제재 조회를 기억하는 밀리초(키트 설정 `_sanctionCacheMs`). 0 이하면 `initialize` 가 거절한다
-        int32          _historyFlushMax{ 60 };           ///< 트랜잭션 하나에 쓰는 기록 수이다. 색인 줄과 합쳐 상한 64 안에서 자른다
-        int32          _maxQueuedHistory{ 4096 };        ///< 저장소가 늦을 때 쌓아 둘 기록 수이다. 넘으면 오래된 것부터 버린다
-        int32          _maxPendingSendPerMember{ 4 };    ///< 제재 첫 읽기를 기다리는 말하기 요청의 상한이다
-        int64          _pendingSendRetryAfterMs{ 1000 }; ///< 대기 큐가 찼을 때 클라이언트에 알려 줄 기다릴 시간(ms)이다
-        int64          _reportRefillIntervalMs{ 0 };     ///< 필수 — 계정마다 신고 하나가 다시 차는 간격(키트 설정 `_reportRefillIntervalMs`)
-        int32          _maxChannelPerMember{ 0 };        ///< 필수 — 한 계정이 들어가 있을 수 있는 채널 수(키트 설정 `_maxChannelPerMember`). 0 이하면 `initialize` 가 거절한다
-        int32          _reportContextCount{ 0 };         ///< 필수 — 신고 스냅숏에 담는 메시지 수(키트 설정 `_reportContextCount`, `ServiceReportConstant::kMaxLineCount` 이하)
-        int32          _reportBurst{ 0 };                ///< 필수 — 계정마다 한꺼번에 낼 수 있는 신고 수(키트 설정 `_reportBurst`)
+        int32          _historyFlushMax{ 60 }; ///< 트랜잭션 하나에 쓰는 기록 수이다. 색인 줄과 합쳐 상한 64 안에서 자른다
     };
 } // namespace sw
 

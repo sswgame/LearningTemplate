@@ -17,6 +17,7 @@ namespace sw
         , _barracksUnit{}
         , _barracksX{ 20 }
         , _barracksY{ 20 }
+        , _playerStart{ -1.0f, 0.0f, -1.0f }
         , _workerStart{ 2.5f, 0.0f, 2.5f }
         , _patrolA{ 2.5f, 0.0f, 6.5f }
         , _patrolB{ 10.5f, 0.0f, 6.5f }
@@ -58,11 +59,17 @@ namespace sw
 
     bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const
     {
-        const GridTopology& land = state.getLand().getTopology();
+        const GridTopology& land         = state.getLand().getTopology();
+        const bool          bStartOnLand = 0.0f <= _playerStart._x && _playerStart._x < static_cast<float32>( land._width ) && 0.0f <= _playerStart._z && _playerStart._z < static_cast<float32>( land._height );
+        if ( bStartOnLand == false )
+        {
+            SW_LOG_ERROR_ID( "FrontierSkirmish.PlayerStartOffLand", "[Frontier] _playerStart (%#, %#) is not on the %#x%# land - the skirmish cannot start", _playerStart._x, _playerStart._z, land._width, land._height );
+            return false;
+        }
         if ( findCatalog() == nullptr || outWorld.initialize( findCatalog(), land._width, land._height ) == false )
             return false;
         outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
-        (void)outWorld.addPlayer( 0, wallet.getWallet(), float3{ 2.0f, 0.0f, 2.0f } ); // 플레이어 0 이 플레이어 지갑을 쓴다
+        (void)outWorld.addPlayer( 0, wallet.getWallet(), _playerStart ); // 플레이어 0 이 플레이어 지갑을 쓴다
         return true;
     }
 

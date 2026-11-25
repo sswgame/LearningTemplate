@@ -8,6 +8,7 @@
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Environment/Terrain/Tests/TerrainTestServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -55,7 +56,8 @@ SW_TEST_CASE( TerrainStateTest, UnsavedHeightEditsRoundTrip )
     namespace Util = TerrainStateTestUtil;
     const test::ScopedScratchDomain domain;
     const string                    heightfieldID = Util::writeFlatHeightfield( domain );
-    GameObjectManager               manager;
+    const test::TerrainTestServices services;
+    GameObjectManager               manager{ services.makeServices() };
     TerrainComponent*               pEdited = Util::addTerrain( manager, "Edited", heightfieldID );
     SW_REQUIRE_NOT_NULL( pEdited );
     SW_EXPECT_FALSE( pEdited->hasWrittenEdits() );

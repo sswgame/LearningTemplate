@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
+#include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 
 #include "Games/Playground/Shooter3D/ShooterGameModeComponent.h"
 
@@ -51,4 +52,26 @@ SW_TEST_CASE( ShooterPacingProfileTest, UnknownEffectsAreRefused )
     SW_EXPECT_FALSE( hasKnownEffects( R"(effect="Ammo")", R"(effect="Ammo")" ) );   // 보상 낱말을 조우에
     SW_EXPECT_FALSE( hasKnownEffects( R"(effect="Elite")", R"(effect="Elite")" ) ); // 조우 낱말을 보상에
     SW_EXPECT_FALSE( hasKnownEffects( "", "" ) );                                   // 보상은 무엇을 줄지 적어야 한다
+}
+
+/** @brief [ShooterPacingProfileTest] 스폰 표의 항목과 적 종류는 id 로 맞는다 — 표에 없는 id 의 종류 · 종류 없는 항목은 거절하고, 여러 종류가 한 항목을 나눠 써도 된다 */
+SW_TEST_CASE( ShooterPacingProfileTest, EnemyKindsMatchTheSpawnTableByID )
+{
+    SW_EXPECT_LOG( "ShooterGameMode.SpawnEntryUnknown" );
+    SpawnTable table;
+    SW_REQUIRE_TRUE( table.loadFromXMLText( R"(<SpawnTable budgetPerMinute="1" maxBudget="1" startBudget="1">
+  <Entry id="skeleton" cost="1" weight="1" max="6"/>
+  <Entry id="crab" cost="1" weight="1" max="6"/>
+</SpawnTable>)",
+                                            "ShooterPacingProfileTest" ) );
+    vector<ShooterEnemyKind> listKind( 3 );
+    listKind[0]._spawnEntryID = hashed_string( "skeleton" );
+    listKind[1]._spawnEntryID = hashed_string( "skeleton" );
+    listKind[2]._spawnEntryID = hashed_string( "crab" );
+    SW_EXPECT_TRUE( ShooterGameModeComponent::matchesSpawnTable( table, listKind, "test" ) );
+    listKind[2]._spawnEntryID = hashed_string( "skeleton" ); // crab 을 맡은 종류가 없다
+    SW_EXPECT_FALSE( ShooterGameModeComponent::matchesSpawnTable( table, listKind, "test" ) );
+    listKind[2]._spawnEntryID = hashed_string( "crab" );
+    listKind[0]._spawnEntryID = hashed_string{}; // 적지 않았다
+    SW_EXPECT_FALSE( ShooterGameModeComponent::matchesSpawnTable( table, listKind, "test" ) );
 }

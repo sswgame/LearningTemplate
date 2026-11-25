@@ -241,6 +241,7 @@ namespace
             settings._pRemoteConfig                    = &_remoteConfig;
             settings._requestBurstPerRemote            = 1000;
             settings._requestBurstPerAccount           = 1000;
+            settings._maxConnectionsPerRemote          = 64;
             settings._maxPendingCallsPerService        = 100000;
             {
                 const auto result = server._host.initialize( server._transport.get(), settings );

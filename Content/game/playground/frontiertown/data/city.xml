@@ -5,7 +5,8 @@
 <CityCatalog roadCost="1">
 	<!-- 규칙(CitySettings) — 모든 칸이 필수다 -->
 	<Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" immigrationJobMargin="4" immigrationMaxIdleRatio="0.25" floodFertilityStart="0.8" floodFertilityMin="0.4" floodFertilityMax="1" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
-  <Building id="house" name="House" kind="House" size="1" cost="5" blockHeight="0.15"/>
-  <Building id="temple" name="Temple" kind="Decoration" size="4" cost="40" blockHeight="0.4"/>
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>
+  <Building id="house" name="House" kind="House" size="1" cost="5" blockHeight="0.15" modelTint="1,1,1,1" blockColor="0.85,0.72,0.45,1"/>
+  <Building id="temple" name="Temple" kind="Decoration" size="4" cost="40" blockHeight="0.4" modelTint="1,1,1,1" blockColor="0.85,0.72,0.45,1"/>
   <HouseLevel name="Hut" population="4" tax="1" blockHeight="0.5"/>
 </CityCatalog>

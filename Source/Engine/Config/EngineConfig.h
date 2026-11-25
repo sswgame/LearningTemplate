@@ -123,6 +123,27 @@ namespace sw
         /** @brief 음악을 다른 곡으로 바꿀 때 앞 곡이 사라지고 새 곡이 들어오는 시간(초)입니다. 0 이면 바로 끊고 바꾼다. */
         PROPERTY( Required, Min = 0.0, Max = 60.0, Units = s )
         float32 _musicCrossfadeSeconds{};
+
+        /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). 에미터가 더 많으면 프레임마다 돌아가며 잰다. */
+        PROPERTY( Required, Min = 1, Max = 1024 )
+        uint32 _occlusionChecksPerFrame{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @struct TerrainConfig @brief 지형(`TerrainComponent`)의 정책 값입니다. */
+    REFLECT()
+    struct SW_API TerrainConfig
+    {
+        REFLECT_BODY();
+
+        /**
+         * @brief 높이 쓰기로 낡은 청크 메시를 한 프레임(쓰기 한 번 또는 틱 한 번)에 다시 만드는 최대 수입니다. 브러시 한 번이 닿는 청크(넷 이하)는 바로 끝나게 4 이상을 둔다.
+         * @details Debug 측정으로 32 칸 청크 하나가 약 4.4 ms 이고(`TerrainBenchTest.WriteHeightsRectSizes`) 청크 여럿은 워커로 나눠 만든다.
+         */
+        PROPERTY( Required, Min = 1, Max = 1024 )
+        uint32 _maxChunkMeshRebuildsPerFrame{};
     };
 
     /**
@@ -492,6 +513,17 @@ namespace sw
         PROPERTY( Min = 1, Max = 32 )
         uint32 _maxExtraViewCount{};
 
+        /**
+         * @brief 씬 메시 정점 풀(`GPUMeshVertexPool`)의 정점 상한입니다. 인덱스 상한은 이 값의 세 배다. 넘친 메시는 자기 버퍼로 그린다(멀티 드로우에 묶이지 않는다).
+         * @details 4M 정점 × 44 바이트(Packed — 위치 12 + 속성 32) = 176MB, 인덱스 12M × 4 바이트 = 48MB 다. 메모리 태그 예산(`MemoryBudget.json`)과 함께 정한다.
+         */
+        PROPERTY( Required, Min = 65536, Max = 268435456 )
+        uint32 _meshPoolMaxVertices{};
+
+        /** @brief 변형 메시 풀(`GPUMeshMorphPool`)의 결과 정점 상한입니다. 넘친 메시는 그리지 않는다(오류) — 언리얼 `r.SkinCache.SceneMemoryLimitInMB` 자리다. */
+        PROPERTY( Required, Min = 65536, Max = 268435456 )
+        uint32 _meshDeformPoolMaxVertices{};
+
         /** @brief 텍스처 밉 스트리밍 설정입니다(프레임당 제출 수 · 풀 예산 · 내리기까지의 유휴 프레임 — `TextureStreamingConfig`). 스트리밍 값은 이 칸 한 곳이다. */
         PROPERTY()
         TextureStreamingConfig _textureStreaming{};
@@ -746,7 +778,10 @@ namespace sw
         TextureFormatSettings _textureFormats{}; ///< 대상별 텍스처 압축 형식 목록
 
         PROPERTY()
-        AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산
+        AudioConfig _audio{}; ///< 오디오 출력 장치 다시 열기 간격 · 클립 캐시 예산 · 크로스페이드 · 가림 검사 수
+
+        PROPERTY( Required )
+        TerrainConfig _terrain{}; ///< 지형 정책 값 — 프레임마다 다시 만드는 청크 메시 수
 
         PROPERTY()
         SubtitleConfig _subtitles{}; ///< 자막 표시 규칙(줄 수 · 최소 표시 시간 · 읽기 속도 · 크기 배율)

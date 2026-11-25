@@ -158,6 +158,11 @@ namespace sw
                              pProjectileCatalog != nullptr ? "given" : "missing" );
             return false;
         }
+        if ( settings._ai.isSet() == false )
+        {
+            SW_LOG_ERROR_ID( "KartRace.AISettingsMissing", "KartRace: refused - the AI driving values are not all written" );
+            return false;
+        }
         _settings           = settings;
         _pTrack             = &track;
         _pItemCatalog       = pItemCatalog;
@@ -210,6 +215,7 @@ namespace sw
         kart._bAI          = bAI ? SW_TRUE : SW_FALSE;
         kart._motor.setSettings( vehicleSettings );
         kart._motor.setGround( _pTrack );
+        kart._ai.setSettings( _settings._ai );
         return static_cast<int32>( _listRacer.size() ) - 1;
     }
 

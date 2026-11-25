@@ -103,6 +103,16 @@ namespace
     LoginServiceConfig makeLoginServiceSettings()
     {
         LoginServiceConfig settings;
+        settings._sessionLifetimeMs           = 43200000;
+        settings._reconnectGraceMs            = 120000;
+        settings._tombstoneLifetimeMs         = 600000;
+        settings._ticketLifetimeMs            = 60000;
+        settings._lockoutMs                   = 300000;
+        settings._attemptRefillMs             = 2000;
+        settings._deletionGraceMs             = 2592000000;
+        settings._revocationScanMs            = 60000;
+        settings._revocationBatchSize         = 16;
+        settings._maxFailedCount              = 5;
         settings._maxConcurrentPasswordHashes = 2;
         settings._maxQueuedPasswordHashes     = 64;
         settings._loginNonceLifetimeMs        = 60000; // 키트 설정의 필수 칸(`_loginNonceLifetimeSeconds`) — 0 이면 nonce 를 내지 못한다

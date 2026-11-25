@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include <algorithm>
+
 namespace sw
 {
     const TypeInfo* AttributeSet::getTypeInfo() const
@@ -15,6 +17,7 @@ namespace sw
         : _mapAttribute{}
         , _mapRange{}
         , _listAttributeName{}
+        , _listUndefinedName{}
         , _pOwningAbilitySystem{ nullptr }
     {
     }
@@ -31,6 +34,15 @@ namespace sw
         AttributeData& attribute = _mapAttribute[name];
         attribute._baseValue     = baseValue;
         attribute._currentValue  = baseValue;
+        const auto undefinedIter = std::find( _listUndefinedName.begin(), _listUndefinedName.end(), name );
+        if ( undefinedIter != _listUndefinedName.end() )
+            _listUndefinedName.erase( undefinedIter );
+    }
+
+    void AttributeSet::requireAttribute( const hashed_string& name )
+    {
+        defineAttribute( name, 0.0f );
+        _listUndefinedName.push_back( name );
     }
 
     void AttributeSet::setAttributeRange( const hashed_string& name, float32 minValue, float32 maxValue )

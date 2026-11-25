@@ -526,6 +526,8 @@ namespace sw
         // 감독은 항목의 `effect` 를 그대로 건넨다. 이 게임이 모르는 낱말은 아무 일도 하지 않으므로 데이터 오타를 여기서 알리고 서지 않는다.
         if ( hasKnownEffects( *_pProfile, _pacingProfile.c_str() ) == false )
             return;
+        if ( matchesSpawnTable( *_pTable, _listEnemyKind, _spawnTable.c_str() ) == false )
+            return;
         _director.initialize( _pProfile.get(), _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
@@ -546,6 +548,27 @@ namespace sw
             }
         }
         return bEffectsKnown;
+    }
+
+    bool ShooterGameModeComponent::matchesSpawnTable( const SpawnTable& table, const vector<ShooterEnemyKind>& listKind, string_view tableName )
+    {
+        bool bMatches = true;
+        for ( const ShooterEnemyKind& kind : listKind )
+        {
+            if ( table.findEntry( kind._spawnEntryID ) != nullptr )
+                continue;
+            SW_LOG_ERROR_ID( "ShooterGameMode.SpawnEntryUnknown", "[Shooter] enemy kind '%#' stands for spawn entry '%#', which spawn table '%#' does not have - no enemies will come", kind._preset.c_str(),
+                             kind._spawnEntryID.c_str(), tableName );
+            bMatches = false;
+        }
+        for ( const SpawnEntryDef& entry : table.getEntries() )
+        {
+            if ( VectorUtil::findIndexBy<&ShooterEnemyKind::_spawnEntryID>( listKind, entry._id ).has_value() )
+                continue;
+            SW_LOG_ERROR_ID( "ShooterGameMode.SpawnEntryUnknown", "[Shooter] spawn table '%#' has entry '%#', but no enemy kind stands for it - no enemies will come", tableName, entry._id.c_str() );
+            bMatches = false;
+        }
+        return bMatches;
     }
 
     void ShooterGameModeComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )

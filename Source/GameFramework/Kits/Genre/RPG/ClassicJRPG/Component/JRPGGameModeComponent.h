@@ -16,7 +16,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -27,6 +26,7 @@
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGEncounter.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -223,17 +223,17 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
         float32 _resultHoldSeconds;
 
-        SharedAssetRef<JRPGCatalog> _pCatalog;
-        SharedAssetRef<ItemCatalog> _pItemCatalog;
-        Inventory                   _bag;   ///< 이 판의 가방(파티가 빌린다)
-        TimingJudge                 _judge; ///< 판정 창(전투가 빌린다)
-        JRPGParty                   _party;
-        Wallet                      _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
-        JRPGEncounterWalker         _walker;
-        JRPGBattle                  _battle;
-        vector<JRPGBattleEvent>     _listBattleEvent;
-        vector<JRPGPartyEvent>      _listPartyEvent;
-        Countdown                   _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
+        BoundAssetRef<JRPGCatalog> _pCatalog;
+        BoundAssetRef<ItemCatalog> _pItemCatalog;
+        Inventory                  _bag;   ///< 이 판의 가방(파티가 빌린다)
+        TimingJudge                _judge; ///< 판정 창(전투가 빌린다)
+        JRPGParty                  _party;
+        Wallet                     _wallet; ///< 이 판의 돈(파티가 빌린다) — 결과 값으로만 바탕 판에 나간다
+        JRPGEncounterWalker        _walker;
+        JRPGBattle                 _battle;
+        vector<JRPGBattleEvent>    _listBattleEvent;
+        vector<JRPGPartyEvent>     _listPartyEvent;
+        Countdown                  _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다

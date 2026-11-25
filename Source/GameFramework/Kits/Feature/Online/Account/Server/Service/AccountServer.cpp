@@ -5,6 +5,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
 namespace sw
 {
@@ -45,6 +46,13 @@ namespace sw
 
     void AccountServer::initialize( LoginService* pLoginService, const AccountServerConfig& settings )
     {
+        const string rangeError    = ConfigRangeUtil::describeRangeErrors( static_cast<const AccountServerPolicy&>( settings ) );
+        const string presenceError = ConfigRangeUtil::describeRangeErrors( settings._presence );
+        if ( rangeError.empty() == false || presenceError.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "AccountServer.PolicyRefused", "AccountServer refused its operating values (account kit _server): %# %#", rangeError.c_str(), presenceError.c_str() );
+            return; // 준비되지 않은 서비스로 남는다
+        }
         _pLoginService = pLoginService;
         _settings      = settings;
         _presence.setSettings( settings._presence );

@@ -13,13 +13,13 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -115,14 +115,14 @@ namespace sw
         PROPERTY( Category = "Arena", DisplayName = "Arena Settings" )
         TrampolineSettings _arenaSettings;
 
-        SharedAssetRef<PartyRoundSeries> _pCatalog;
-        SharedAssetRef<PartyItemSpawner> _pItems; ///< 아이템 없는 판이면 비었다
-        PartyRoundSeries                 _series;
-        TrampolineArena                  _arena;
-        vector<TrampolineEvent>          _listArenaEvent;
-        vector<PartyItemEvent>           _listItemEvent;
-        vector<PartySeriesEvent>         _listSeriesEvent;
-        Countdown                        _phaseTimer; ///< 쉬는 시간 · 결과를 보이는 시간
+        BoundAssetRef<PartyRoundSeries> _pCatalog;
+        BoundAssetRef<PartyItemSpawner> _pItems; ///< 아이템 없는 판이면 비었다
+        PartyRoundSeries                _series;
+        TrampolineArena                 _arena;
+        vector<TrampolineEvent>         _listArenaEvent;
+        vector<PartyItemEvent>          _listItemEvent;
+        vector<PartySeriesEvent>        _listSeriesEvent;
+        Countdown                       _phaseTimer; ///< 쉬는 시간 · 결과를 보이는 시간
         PROPERTY( RuntimeState )
         PartyGamePhase _phase;
         PROPERTY( RuntimeState, Min = -1 )

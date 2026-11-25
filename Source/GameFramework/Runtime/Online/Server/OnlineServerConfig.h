@@ -116,11 +116,11 @@ namespace sw
         PROPERTY()
         string _cacheName{};
         /** @brief 이 서버의 디렉터리 등록 종류(`game`, `lobby`)입니다. */
-        PROPERTY( DefaultName )
-        string _serverKind{ "game" };
+        PROPERTY( Required )
+        string _serverKind{};
         /** @brief 이 서버의 지역(`kr`, `us-west`)입니다. 매칭과 서버 고르기가 같은 지역을 먼저 고릅니다. */
-        PROPERTY( DefaultName )
-        string _region{ "local" };
+        PROPERTY( Required )
+        string _region{};
         /** @brief 클라이언트가 이 서버의 게임 포트에 붙을 주소입니다. 비우면 디렉터리에 이 서버를 등록하지 않습니다(서비스 전용 서버). */
         PROPERTY()
         string _publicAddress{};
@@ -128,26 +128,26 @@ namespace sw
         PROPERTY( Required, Min = 1, Max = 2000000000 )
         int32 _serverID{ 1 };
         /** @brief 디렉터리에 알릴 수용 인원입니다. */
-        PROPERTY( Min = 0, Max = 1000000 )
-        int32 _capacity{ 100 };
+        PROPERTY( Required, Min = 0, Max = 1000000 )
+        int32 _capacity{ 0 };
         /** @brief 서비스 연결 상한입니다. */
-        PROPERTY( Min = 1, Max = 1000000 )
-        int32 _maxConnections{ 4096 };
+        PROPERTY( Required, Min = 1, Max = 1000000 )
+        int32 _maxConnections{ 0 };
         /** @brief 서비스 전송의 I/O 스레드 수입니다. 0 이면 서버 루프가 전송을 돕니다(테스트). */
-        PROPERTY( Min = 0, Max = 64 )
-        int32 _ioThreadCount{ 2 };
+        PROPERTY( Required, Min = 0, Max = 64 )
+        int32 _ioThreadCount{ 0 };
         /** @brief SQL 저장소의 워커 수입니다. */
-        PROPERTY( Min = 1, Max = 64 )
-        int32 _storeWorkerCount{ 4 };
+        PROPERTY( Required, Min = 1, Max = 64 )
+        int32 _storeWorkerCount{ 0 };
         /** @brief 로그인 전 주소마다 한꺼번에 받는 요청 수입니다. */
-        PROPERTY( Min = 1, Max = 1000000 )
-        int32 _requestBurstPerRemote{ 10 };
+        PROPERTY( Required, Min = 1, Max = 1000000 )
+        int32 _requestBurstPerRemote{ 0 };
         /** @brief 계정마다 한꺼번에 받는 요청 수입니다. */
-        PROPERTY( Min = 1, Max = 1000000 )
-        int32 _requestBurstPerAccount{ 30 };
+        PROPERTY( Required, Min = 1, Max = 1000000 )
+        int32 _requestBurstPerAccount{ 0 };
         /** @brief 주소(IP)마다 동시에 여는 서비스 연결 상한입니다. 넘는 연결은 바로 닫습니다. 한 주소에서 많이 붙는 부하 봇이나 NAT 뒤 사무실은 올립니다. */
-        PROPERTY( Min = 1, Max = 1000000 )
-        int32 _maxConnectionsPerRemote{ 64 };
+        PROPERTY( Required, Min = 1, Max = 1000000 )
+        int32 _maxConnectionsPerRemote{ 0 };
         /** @brief 서비스(키트) 하나가 응답을 기다리게 둘 호출 상한입니다. 넘는 요청은 저장소에 맡기지 않고 `kBusy`(같은 키로 다시 한다)로 끝납니다 — 저장소 대기열의 상한이다(감사 O-3). */
         PROPERTY( Required, Min = 1, Max = 1000000 )
         int32 _maxPendingCallsPerService{ 0 };

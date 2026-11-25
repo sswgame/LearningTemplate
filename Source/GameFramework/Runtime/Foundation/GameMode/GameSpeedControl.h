@@ -6,24 +6,47 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     /**
+     * @struct GameSpeedRange
+     * @brief 배속의 범위와 한 단계입니다. 값은 데이터(디렉터의 PROPERTY)에 있고 코드에는 기본 범위가 없다 — 입력 · 빨리 감기 · 저장한 배속의 검사가 같은 값을 쓴다.
+     */
+    REFLECT()
+    struct SW_GF_API GameSpeedRange
+    {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.0, Tooltip = "Slowest time scale (above 0, at most 1)" )
+        float32 _minTimeScale{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Fastest time scale (at least 1)" )
+        float32 _maxTimeScale{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Factor of one faster / slower step (above 1)" )
+        float32 _stepFactor{ 0.0f };
+
+        /** @brief 세 값이 모두 적혔고 보통 배속(1)이 범위 안이면 true 입니다. */
+        bool isValid() const { return 0.0f < _minTimeScale && _minTimeScale <= 1.0f && 1.0f <= _maxTimeScale && 1.0f < _stepFactor; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class GameSpeedControl
-     * @brief 배속(0.25 ~ 8 배, 단계는 2 배)과 일시정지입니다. 게임마다 따로 들던 배속 · 일시정지 코드(Nile · Skirmish 의 같은 코드, 개척 마을의 시계 배율)를 하나로 모은다(감사 K-10).
+     * @brief 배속(범위 · 단계는 `GameSpeedRange` 데이터)과 일시정지입니다. 게임마다 따로 들던 배속 · 일시정지 코드(Nile · Skirmish 의 같은 코드, 개척 마을의 시계 배율)를 하나로 모은다(감사 K-10).
      * @details 유니티 `Time.timeScale` · 언리얼 `SetGlobalTimeDilation` 과 같은 자리지만 엔진 전역이 아니라 디렉터 하나가 쥔다 — 시뮬레이션만 느려지고 UI · 카메라는 그대로다.
      *          범위 밖 배율은 자르지 않고 거절한다(폴백 금지). 저장은 쓰는 디렉터가 자기 상태 순서대로 `getTimeScale` · `isPaused` 를 싣고 `restore` 로 되돌린다.
      */
     class SW_GF_API GameSpeedControl
     {
     public:
-        static constexpr float32 kMinTimeScale = 0.25f; ///< 가장 느린 배속
-        static constexpr float32 kMaxTimeScale = 8.0f;  ///< 가장 빠른 배속
-        static constexpr float32 kStepFactor   = 2.0f;  ///< 빠르게 · 느리게 한 단계의 배율
-
         GameSpeedControl();
+
+        /** @brief 배속 범위를 정합니다(판을 열 때). 빠졌거나 뒤집힌 범위면 오류를 남기고 false 이며 앞 범위 그대로다. 지금 배속이 새 범위 밖이면 1 로 둔다. */
+        [[nodiscard]] bool initialize( const GameSpeedRange& range );
 
         /** @brief 지금 배속입니다(일시정지와 따로 둔다 — 풀면 같은 배속으로 돈다). */
         float32 getTimeScale() const { return _timeScale; }
@@ -37,6 +60,7 @@ namespace sw
         [[nodiscard]] bool restore( float32 timeScale, bool bPaused );
 
     private:
+        GameSpeedRange         _range;
         float32                _timeScale;
         uint8                  _bPaused  : 1;
         [[maybe_unused]] uint8 _reserved : 7;

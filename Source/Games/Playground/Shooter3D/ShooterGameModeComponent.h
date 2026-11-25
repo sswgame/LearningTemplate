@@ -19,7 +19,6 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -29,6 +28,7 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
@@ -98,6 +98,8 @@ namespace sw
         AssetRef<PrefabAsset> _prefab{};
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
         CatalogKey<CharacterAppearanceDef> _preset{};
+        PROPERTY( Tooltip = "Entry id of the spawn table this kind stands for (several kinds may share one; the elite kind is called by the director's effect and names none)" )
+        hashed_string _spawnEntryID{};
         PROPERTY( Tooltip = "Pool of this kind's prefab (kinds sharing a prefab share its pool; 0 spawns every time)" )
         PrefabPoolPolicy _pool{};
     };
@@ -175,6 +177,11 @@ namespace sw
          * @details 모르는 낱말마다 `ShooterGameMode.PacingProfileUnknownEffect` 를 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다.
          */
         [[nodiscard]] static bool hasKnownEffects( const AIDirectorProfile& profile, string_view profileName );
+        /**
+         * @brief 스폰 표의 항목 id 와 적 종류의 `_spawnEntryID` 가 서로 빠짐없이 맞는지 봅니다 — 표의 항목마다 종류가 하나는 있고, 종류는 모두 표에 있는 항목을 적는다.
+         * @details 어긋난 것마다 `ShooterGameMode.SpawnEntryUnknown` 을 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다. 어느 종류가 나오는지는 자리 순서(목록 차례)다.
+         */
+        [[nodiscard]] static bool matchesSpawnTable( const SpawnTable& table, const vector<ShooterEnemyKind>& listKind, string_view tableName );
 
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
@@ -353,7 +360,7 @@ namespace sw
         float64                             _floorSeconds;  ///< 지난 프레임의 바닥 시각
         vector<ShooterEnemyView>            _listEnemyView;
         shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
-        SharedAssetRef<SpawnTable>          _pTable;
+        BoundAssetRef<SpawnTable>           _pTable;
         AIDirector                          _director;
         vector<AIDirectorEvent>             _listDirectorEvent;
         vector<EnemyRecord>                 _listEnemy;

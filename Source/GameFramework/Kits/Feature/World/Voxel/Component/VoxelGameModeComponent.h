@@ -18,7 +18,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -26,6 +25,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -127,11 +127,11 @@ namespace sw
         PROPERTY( Required, Category = "World", DisplayName = "Iron Ore Max Height", Tooltip = "Iron is placed only below this height", Min = 0 )
         int32 _ironOreMaxHeight;
 
-        SharedAssetRef<VoxelBlockCatalog> _pCatalog; ///< 게임 기능 Voxel 이 건 블록 카탈로그 — 월드가 빌린다
-        VoxelWorld                        _world;
-        GameObjectHandle                  _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
-        int32                             _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
-        int32                             _centerChunkZ;
-        int8                              _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
+        BoundAssetRef<VoxelBlockCatalog> _pCatalog; ///< 게임 기능 Voxel 이 건 블록 카탈로그 — 월드가 빌린다
+        VoxelWorld                       _world;
+        GameObjectHandle                 _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트입니다. 스폰한 오브젝트라 정리 목록에 들어갑니다.
+        int32                            _centerChunkX;       ///< 상주 범위의 가운데 청크입니다(몸이 든 청크).
+        int32                            _centerChunkZ;
+        int8                             _appliedAutoPlay; ///< 플레이어 폰에 적용한 자동 플레이 상태입니다(−1 아직 없음, 0 끔, 1 켬).
     };
 } // namespace sw

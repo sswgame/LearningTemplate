@@ -84,7 +84,7 @@ namespace sw
         int32 _roadToX;
         PROPERTY( Category = "Layout", DisplayName = "Road End Y", Min = 0 )
         int32 _roadToY;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0 )
         float32 _fastTimeScale;
 
         PROPERTY( RuntimeState )

@@ -1,6 +1,6 @@
 /**
  * @file NileCityPlanner.h
- * @brief NileCity 의 땅과 자동 도시 계획 — 절차 지형(나일 강 · 범람원 · 사막 · 바위)과 `-gv_nileAutoPlay=1` 이 따라 짓는 순서표입니다.
+ * @brief NileCity 의 땅과 자동 도시 계획 — 타일맵 에셋의 땅 칠하기와 `-gv_nileAutoPlay=1` 이 따라 짓는 순서표입니다.
  *
  * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `CitySimulation` 만 씁니다).
  *          순서표는 도로 고리 → 우물 → 범람원 농장 → 곡물 창고 → 바자 → 집 → 순회 서비스 → 다음 구역 순서이고, 단계마다 돈 · 인구 임계값이 있습니다.
@@ -22,27 +22,18 @@ namespace sw
     class Archive;
     class CitySimulation;
     class Wallet;
+    struct TileMapXMLData;
 
     /**
-     * @brief 땅 모양과 자동 계획의 튜닝값입니다. 값은 `NileGameModeComponent` 의 PROPERTY 가 채운다(기본값도 그 생성자에 있다).
-     * @details 길이 단위는 칸입니다. 계획표의 다른 좌표(구역 경계 · 집 줄)는 순서표 자체라 코드에 둔다.
+     * @brief 자동 계획의 튜닝값입니다. 값은 `NileGameModeComponent` 의 PROPERTY 가 채운다(기본값도 그 생성자에 있다).
+     * @details 길이 단위는 칸입니다. 계획표의 다른 좌표(구역 경계 · 집 줄)는 순서표 자체다(`data/autoplan.xml`).
      */
     struct NileCityLayout
     {
-        float32 _riverCenterX{};      ///< 강 한가운데 x 의 평균(칸)
-        float32 _riverMeander{};      ///< 강이 좌우로 굽이치는 폭(칸)
-        float32 _riverMeanderRate{};  ///< y 한 칸마다 굽이 위상(라디안)
-        float32 _riverHalfWidth{};    ///< 강 반폭(칸)
-        float32 _eastFloodWidth{};    ///< 동쪽 범람원 폭 — 농장 · 도시가 이쪽에 선다
-        float32 _westFloodWidth{};    ///< 서쪽 범람원 폭
-        float32 _desertDuneHeight{};  ///< 사막 경계가 모래 언덕처럼 베이크하는 폭(칸)
-        float32 _desertDuneRate{};    ///< y 한 칸마다 언덕 위상(라디안)
-        int32   _desertStartX{};      ///< 동쪽 사막이 시작하는 x
-        int32   _rockRidgeX{};        ///< 이 x 부터 동쪽 끝 바위 능선
-        int32   _roadX{};             ///< 범람원 농장과 도시 사이 남북 도로
-        int32   _farmX{};             ///< 3×3 농장의 왼쪽 — 어느 줄에서나 범람원이어야 한다
-        int32   _secondBlockPeople{}; ///< 2 구역을 짓기 시작하는 인구
-        int32   _thirdBlockPeople{};  ///< 3 구역을 짓기 시작하는 인구
+        int32 _roadX{};             ///< 범람원 농장과 도시 사이 남북 도로
+        int32 _farmX{};             ///< 3×3 농장의 왼쪽 — 어느 줄에서나 범람원이어야 한다
+        int32 _secondBlockPeople{}; ///< 2 구역을 짓기 시작하는 인구
+        int32 _thirdBlockPeople{};  ///< 3 구역을 짓기 시작하는 인구
     };
 } // namespace sw
 
@@ -92,15 +83,16 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32 kMapWidth  = 48;
-        static constexpr int32 kMapHeight = 40;
+        /// @brief 타일맵에서 땅을 적은 데이터 레이어 이름입니다. 칸 값은 땅 목록의 번호다
+        static constexpr const utf8* kTerrainLayer = "terrain";
 
         NileCityPlanner();
 
-        /** @brief 강(남북으로 굽이친다) · 양쪽 범람원 · 서쪽과 동쪽 끝의 사막 · 사막의 바위를 칠합니다. 결정적입니다(난수 없음). */
-        static void paintTerrain( CitySimulation& city, const NileCityLayout& layout );
-        /** @brief 칸의 강 한가운데 x(실수)입니다 — 지형과 화면이 같은 곡선을 씁니다. */
-        static float32 computeRiverCenter( const NileCityLayout& layout, int32 y );
+        /**
+         * @brief 타일맵 @p tileMap 의 데이터 레이어 `kTerrainLayer` 대로 땅을 칠합니다. 칸 값은 @p listTerrain(도시 카탈로그의 `<Terrain>` id)의 번호입니다.
+         * @return 레이어가 없거나 크기가 도시와 다르거나 목록의 땅이 카탈로그에 없거나 칸 값이 목록 밖이면 오류를 남기고 false 이며 칠하지 않습니다.
+         */
+        [[nodiscard]] static bool paintTerrain( CitySimulation& city, const TileMapXMLData& tileMap, const vector<hashed_string>& listTerrain );
 
         /**
          * @brief 순서표를 데이터 @p planPath(자동 계획 XML)와 @p layout 으로 처음부터 다시 짓습니다. 만든 직후에는 순서표가 비어 있습니다.

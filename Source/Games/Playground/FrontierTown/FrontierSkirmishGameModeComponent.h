@@ -67,6 +67,8 @@ namespace sw
         int32 _barracksX;
         PROPERTY( Category = "Layout", DisplayName = "Barracks Y", Min = 0 )
         int32 _barracksY;
+        PROPERTY( Category = "Layout", DisplayName = "Player Start", Tooltip = "Start position of the player on the shared land; required (the skirmish does not open off the land)", Units = m )
+        float3 _playerStart;
         PROPERTY( Category = "Layout", DisplayName = "Worker Start", Units = m )
         float3 _workerStart;
         PROPERTY( Category = "Layout", DisplayName = "Patrol A", Tooltip = "First patrol end (also the soldier's start)", Units = m )

@@ -16,6 +16,8 @@ using namespace sw;
 
 namespace
 {
+    constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u; // 엔진 설정 `_render._meshPoolMaxVertices` 의 값
+
     /** @brief 삼각형 하나짜리 Packed 메시입니다(만들 때마다 내용 토큰이 새것이다). */
     shared_ptr<Mesh> makeTriangle()
     {
@@ -40,9 +42,9 @@ SW_TEST_CASE( GPUMeshVertexPoolFenceTest, RetiredSpanWaitsForTheGPUFence )
     const shared_ptr<Mesh> meshB = makeTriangle();
 
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() } ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() }, kMaxPoolVertices ) );
     SW_REQUIRE_EQUAL( 0u, pool.getPlacementOf( meshA.get() )._baseVertex );
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() } ) ); // A 가 나간다 — 구간 0 은 이 펜스 값을 기다린다
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() }, kMaxPoolVertices ) ); // A 가 나간다 — 구간 0 은 이 펜스 값을 기다린다
     const uint32 baseB = pool.getPlacementOf( meshB.get() )._baseVertex;
     SW_EXPECT_NOT_EQUAL( 0u, baseB );
 
@@ -53,7 +55,7 @@ SW_TEST_CASE( GPUMeshVertexPoolFenceTest, RetiredSpanWaitsForTheGPUFence )
     {
         listKeep.push_back( makeTriangle() );
         listMesh.push_back( listKeep.back().get() );
-        (void)pool.update( &device, listMesh );
+        (void)pool.update( &device, listMesh, kMaxPoolVertices );
         SW_EXPECT_NOT_EQUAL( 0u, pool.getPlacementOf( listKeep.back().get() )._baseVertex );
     }
 
@@ -64,6 +66,6 @@ SW_TEST_CASE( GPUMeshVertexPoolFenceTest, RetiredSpanWaitsForTheGPUFence )
     }
     const shared_ptr<Mesh> meshLate = makeTriangle();
     listMesh.push_back( meshLate.get() );
-    SW_REQUIRE_TRUE( pool.update( &device, listMesh ) );
+    SW_REQUIRE_TRUE( pool.update( &device, listMesh, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 0u, pool.getPlacementOf( meshLate.get() )._baseVertex );
 }

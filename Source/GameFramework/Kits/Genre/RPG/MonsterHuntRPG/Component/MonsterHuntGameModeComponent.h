@@ -16,7 +16,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -29,6 +28,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntContract.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntMutagens.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -258,14 +258,14 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
         float32 _resultHoldSeconds;
 
-        SharedAssetRef<MonsterHuntCatalog>    _pCatalog;
-        SharedAssetRef<ElementChart>          _pChart;
-        SharedAssetRef<RecipeCatalog>         _pRecipes;
-        SharedAssetRef<ItemCatalog>           _pItemCatalog;
-        SharedAssetRef<QuestCatalog>          _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
+        BoundAssetRef<MonsterHuntCatalog>     _pCatalog;
+        BoundAssetRef<ElementChart>           _pChart;
+        BoundAssetRef<RecipeCatalog>          _pRecipes;
+        BoundAssetRef<ItemCatalog>            _pItemCatalog;
+        BoundAssetRef<QuestCatalog>           _pQuests;  ///< 퀘스트를 적지 않은 계약이면 비었다
         QuestLog                              _questLog; ///< 계약 퀘스트(`MonsterHuntContractDef::_questID`)만 진행한다 — 조사가 빌린다
         vector<QuestEvent>                    _listQuestEvent;
-        SharedAssetRef<SkillTreeCatalog>      _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
+        BoundAssetRef<SkillTreeCatalog>       _pSkillTreeCatalog; ///< 트리를 적지 않은 판이면 비었다
         MonsterHuntMutagens                   _mutagens;
         SkillTreeState                        _skills; ///< 배운 차례(`_listLearnedSkill`)가 상태다 — 복원은 차례대로 다시 배운다
         MonsterHuntHaggle                     _haggle;

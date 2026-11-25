@@ -114,6 +114,9 @@ namespace
             dependencies._pRouter = &_router;
             ServerDirectoryServiceConfig settings;
             settings._listServerKind.push_back( "game" );
+            settings._reloadPeriodMs          = 30000;
+            settings._registryRefreshPeriodMs = 2000;
+            settings._staleMs                 = 15000;
             settings._registryRefreshPeriodMs = 1;
             settings._seatReservationTTLMs    = 30000;
             _service.initialize( dependencies, settings );

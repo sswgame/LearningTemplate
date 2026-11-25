@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Reflection/TypeFqn.h"
@@ -19,15 +20,19 @@ namespace
     constexpr int32       kCitySize   = 4;
     constexpr const utf8* kCatalogXML = R"(<CityCatalog roadCost="1">
   <Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" immigrationJobMargin="4" immigrationMaxIdleRatio="0.25" floodFertilityStart="0.8" floodFertilityMin="0.4" floodFertilityMax="1" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>
+  <Service id="Water" name="Water" color="0.25,0.5,0.95,1"/>
+  <Service id="Tax" name="Tax" color="0.95,0.55,0.15,1" tax="true"/>
   <Good id="grain" name="Grain"/>
-  <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
-  <Building id="garden" name="Garden" kind="Decoration" size="2" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="garden" name="Garden" kind="Decoration" size="2" cost="1"/>
   <HouseLevel name="Hut" population="5"/>
 </CityCatalog>)";
 
     /** @brief 도로 (0,0) (1,0), 집 (1,1), 집에서 나온 일꾼 하나인 도시를 꾸밉니다. */
     struct CityFixture
     {
+        const sw::CityCatalog*       _pCatalog{ nullptr };
         sw::vector<sw::CityTile>     _listTile{};
         sw::vector<sw::CityBuilding> _listBuilding{};
         sw::vector<sw::CityWalker>   _listWalker{};
@@ -41,7 +46,8 @@ namespace
         static size_t toIndex( int32 x, int32 y ) { return static_cast<size_t>( y * kCitySize + x ); }
 
         explicit CityFixture( const sw::CityCatalog& catalog )
-            : _listTile( static_cast<size_t>( kCitySize * kCitySize ), sw::CityTile{} )
+            : _pCatalog{ &catalog }
+            , _listTile( static_cast<size_t>( kCitySize * kCitySize ), sw::CityTile{} )
         {
             _listTile[toIndex( 0, 0 )]._bRoad         = SW_TRUE;
             _listTile[toIndex( 0, 0 )]._roadComponent = 0;
@@ -64,6 +70,17 @@ namespace
             _listWalker.push_back( walker );
         }
 
+        /** @brief 행 id 목록(땅 · 서비스)입니다 — 도시가 행 번호로 든 값 앞에 온다. */
+        template <typename TDef>
+        static void writeRows( sw::Archive& outArchive, const sw::vector<TDef>& listDef )
+        {
+            outArchive << static_cast<uint32>( listDef.size() );
+            for ( const TDef& def : listDef )
+            {
+                sw::StateIO::writeName( outArchive, def._id );
+            }
+        }
+
         static void writeTiles( sw::Archive& outArchive, const sw::vector<sw::int2>& listTile )
         {
             outArchive << static_cast<uint32>( listTile.size() );
@@ -78,12 +95,14 @@ namespace
             sw::Archive written;
             written << kCitySize;
             written << kCitySize;
+            writeRows( written, _pCatalog->getTerrainRows() );
+            writeRows( written, _pCatalog->getServiceRows() );
             for ( const sw::CityTile& tile : _listTile )
             {
                 written << tile._buildingIndex;
                 written << tile._roadComponent;
                 written << tile._desirability;
-                written << static_cast<uint8>( tile._terrain );
+                written << tile._terrain;
                 written << tile._bRoad;
             }
             written << static_cast<uint32>( _listBuilding.size() );
@@ -96,9 +115,9 @@ namespace
                 written << building._efficiency;
                 written << building._walkerTimer;
                 written << building._productionProgress;
-                for ( const float32 serviceTime : building._arrServiceTime )
+                for ( size_t serviceIndex = 0; serviceIndex < _pCatalog->getServiceRows().size(); ++serviceIndex )
                 {
-                    written << serviceTime;
+                    written << 0.0f;
                 }
                 written << building._evolveTimer;
                 written << building._devolveTimer;
@@ -124,7 +143,7 @@ namespace
                 written << walker._stepsLeft;
                 written << walker._cargoAmount;
                 written << static_cast<uint8>( walker._kind );
-                written << static_cast<uint8>( walker._service );
+                written << walker._service;
                 written << walker._bReturning;
                 written << walker._bAlive;
             }
@@ -269,6 +288,10 @@ SW_TEST_CASE_F( CityReadStateTest, RefusesTilesAndBuildingsThatDoNotMatch )
     CityFixture roadBroken( _catalog );
     roadBroken._listTile[0]._bRoad = 2;
     SW_EXPECT_FALSE( roadBroken.readInto( _city ) );
+
+    CityFixture terrainOutside( _catalog );
+    terrainOutside._listTile[0]._terrain = static_cast<uint8>( _catalog.getTerrainRows().size() );
+    SW_EXPECT_FALSE( terrainOutside.readInto( _city ) );
 
     CityFixture componentBroken( _catalog );
     componentBroken._listTile[0]._roadComponent = -2;
@@ -417,6 +440,10 @@ SW_TEST_CASE_F( CityReadStateTest, RefusesBrokenWalkers )
     cargoNegative._listWalker[0]._cargoAmount = -1;
     SW_EXPECT_FALSE( cargoNegative.readInto( _city ) );
 
+    CityFixture serviceOutside( _catalog );
+    serviceOutside._listWalker[0]._service = static_cast<int32>( _catalog.getServiceRows().size() );
+    SW_EXPECT_FALSE( serviceOutside.readInto( _city ) );
+
     CityFixture returningBroken( _catalog );
     returningBroken._listWalker[0]._bReturning = 2;
     SW_EXPECT_FALSE( returningBroken.readInto( _city ) );
@@ -470,9 +497,174 @@ SW_TEST_CASE( CityCatalogTest, CatalogWithoutRulesIsRefused )
 {
     SW_EXPECT_LOG( "CityCatalog.RulesMissing" );
     sw::CityCatalog bare;
-    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
+    SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
     sw::CitySimulation city;
     sw::Wallet         wallet;
     SW_EXPECT_LOG( "CitySimulation.CitySimulationNeedsCatalog" );
     SW_EXPECT_FALSE( city.initialize( nullptr, 4, 4, wallet ) );
+}
+
+namespace
+{
+    /** @brief 땅 · 서비스 행을 바꿔 끼우는 도시 카탈로그입니다. 그늘(Shade)은 이 데이터에만 있는 서비스이고 둘째 집 단계가 그것을 바란다. */
+    struct CityRowTestUtil
+    {
+        static constexpr int32 kSize = 6;
+
+        static sw::string makeXML( sw::string_view rows )
+        {
+            sw::StringBuilder<sw::constant::buffer::kMax4096> text;
+            text.append( R"(<CityCatalog roadCost="1">
+  <Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" immigrationJobMargin="4" immigrationMaxIdleRatio="0.25" floodFertilityStart="0.8" floodFertilityMin="0.4" floodFertilityMax="1" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
+)" );
+            text.append( rows );
+            text.append( R"(
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/>
+  <Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="tree" name="Shade Tree" kind="Service" service="Shade" delivery="Radius" range="3" size="1" cost="1"/>
+  <HouseLevel name="Hut" population="5"/>
+  <HouseLevel name="Shaded Hut" population="7" services="Shade"/>
+</CityCatalog>)" );
+            return sw::string( text.view() );
+        }
+
+        /** @brief 도로 · 집 · 나무를 놓고 열 초를 돕니다. */
+        static void build( sw::CitySimulation& city )
+        {
+            SW_REQUIRE_TRUE( city.placeRoad( 0, 0 ) == sw::CityPlaceResult::Ok );
+            SW_REQUIRE_TRUE( city.placeBuilding( "hut", 0, 1 ) == sw::CityPlaceResult::Ok );
+            SW_REQUIRE_TRUE( city.placeBuilding( "tree", 1, 1 ) == sw::CityPlaceResult::Ok );
+            for ( int32 frame = 0; frame < 40; ++frame )
+            {
+                (void)city.update( 0.25f, 1.0f );
+            }
+        }
+    };
+
+    constexpr const utf8* kShadeRows = R"(
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>
+  <Terrain id="Mud" name="Mud" color="0.3,0.2,0.1,1" blocked="true"/>
+  <Service id="Shade" name="Shade" color="0.1,0.4,0.1,1" culture="true"/>)";
+} // namespace
+
+/** @brief [CityCatalogTest] 땅 · 서비스를 더하는 일은 데이터다 — 코드가 모르는 서비스로 집이 자라고 문화 평가에 들며, 지을 수 없는 땅에는 도로를 놓지 못한다 */
+SW_TEST_CASE( CityCatalogTest, TerrainAndServiceRowsAreData )
+{
+    using Util = CityRowTestUtil;
+    sw::CityCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( Util::makeXML( kShadeRows ), "CityCatalogTest" ) );
+    sw::Wallet wallet;
+    wallet.add( catalog.getRules()._currency, 100 );
+    sw::CitySimulation city;
+    SW_REQUIRE_TRUE( city.initialize( &catalog, Util::kSize, Util::kSize, wallet ) );
+    const sw::optional<int32> dirt = city.findTerrainIndex( sw::hashed_string( "Mud" ) );
+    SW_REQUIRE_TRUE( dirt.has_value() );
+    city.setTerrain( 5, 5, *dirt );
+    SW_EXPECT_TRUE( city.placeRoad( 5, 5 ) == sw::CityPlaceResult::BadTerrain );
+    Util::build( city );
+    SW_REQUIRE_TRUE( city.findBuildingAt( 0, 1 ) != nullptr );
+    SW_EXPECT_EQUAL( 1, city.findBuildingAt( 0, 1 )->_level );
+    SW_EXPECT_NEAR( 1.0f, city.computeCultureCoverage(), 1.0e-5f );
+
+    // 같은 도시라도 서비스 행이 문화가 아니면 평가에 들지 않는다.
+    sw::string plainRows{ kShadeRows };
+    plainRows.replace( plainRows.find( " culture=\"true\"" ), sw::string_view( " culture=\"true\"" ).size(), "" );
+    sw::CityCatalog plainCatalog;
+    SW_REQUIRE_TRUE( plainCatalog.loadFromXMLText( Util::makeXML( plainRows ), "CityCatalogTest" ) );
+    sw::CitySimulation plainCity;
+    SW_REQUIRE_TRUE( plainCity.initialize( &plainCatalog, Util::kSize, Util::kSize, wallet ) );
+    Util::build( plainCity );
+    SW_EXPECT_EQUAL( 1, plainCity.findBuildingAt( 0, 1 )->_level );
+    SW_EXPECT_NEAR( 0.0f, plainCity.computeCultureCoverage(), 1.0e-5f );
+}
+
+/** @brief [CityCatalogTest] 건물의 색은 건물 행이 적는다 — 종류가 같아도 행마다 다르고, 빠지면 로드가 실패한다(종류별 기본색이 없다) */
+SW_TEST_CASE( CityCatalogTest, BuildingColorsAreRowData )
+{
+    using Util                      = CityRowTestUtil;
+    const sw::string      xml       = Util::makeXML( kShadeRows );
+    const sw::string_view treeColor = R"(blockColor="0.5,0.4,0.3,1" id="tree")";
+    SW_REQUIRE_TRUE( xml.find( treeColor ) != sw::string::npos );
+    sw::string colored = xml;
+    colored.replace( colored.find( treeColor ), treeColor.size(), R"(blockColor="0.1,0.2,0.3,1" id="tree")" );
+    sw::CityCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( colored, "CityCatalogTest" ) );
+    SW_EXPECT_NEAR( 0.2f, catalog.findBuilding( "tree" )->_blockColor._y, 1.0e-5f );
+    SW_EXPECT_NEAR( 0.4f, catalog.findBuilding( "hut" )->_blockColor._y, 1.0e-5f );
+    SW_EXPECT_NEAR( 1.0f, catalog.findBuilding( "hut" )->_modelTint._y, 1.0e-5f );
+
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    sw::string withoutColor = xml;
+    withoutColor.replace( withoutColor.find( treeColor ), treeColor.size(), R"(id="tree")" );
+    sw::CityCatalog refused;
+    SW_EXPECT_FALSE( refused.loadFromXMLText( withoutColor, "CityCatalogTest" ) );
+}
+
+/** @brief [CityCatalogTest] 행이 늘거나 자리가 바뀐 카탈로그에서도 저장된 땅 · 서비스는 id 로 제자리를 찾고, 없어진 땅은 거절하고 도시를 둔다 */
+SW_TEST_CASE( CityCatalogTest, SavedRowsFollowTheirIDs )
+{
+    using Util = CityRowTestUtil;
+    sw::CityCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( Util::makeXML( kShadeRows ), "CityCatalogTest" ) );
+    sw::Wallet wallet;
+    wallet.add( catalog.getRules()._currency, 100 );
+    sw::CitySimulation city;
+    SW_REQUIRE_TRUE( city.initialize( &catalog, Util::kSize, Util::kSize, wallet ) );
+    city.setTerrain( 5, 5, *catalog.findTerrainIndex( sw::hashed_string( "Mud" ) ) );
+    Util::build( city );
+    sw::Archive written;
+    city.writeState( written );
+
+    sw::CityCatalog moved;
+    SW_REQUIRE_TRUE( moved.loadFromXMLText( Util::makeXML( R"(
+  <Terrain id="Mud" name="Mud" color="0.3,0.2,0.1,1" blocked="true"/>
+  <Terrain id="Sand" name="Sand" color="0.8,0.7,0.5,1"/>
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>
+  <Service id="Water" name="Water" color="0.25,0.5,0.95,1"/>
+  <Service id="Shade" name="Shade" color="0.1,0.4,0.1,1" culture="true"/>)" ),
+                                            "CityCatalogTest" ) );
+    sw::CitySimulation restored;
+    SW_REQUIRE_TRUE( restored.initialize( &moved, Util::kSize, Util::kSize, wallet ) );
+    sw::Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( restored.findTile( 5, 5 )->_terrain ) );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( restored.findTile( 4, 4 )->_terrain ) );
+    const sw::CityBuilding* pHouse = restored.findBuildingAt( 0, 1 );
+    SW_REQUIRE_TRUE( pHouse != nullptr );
+    SW_EXPECT_TRUE( restored.isHouseServed( *pHouse, *moved.findServiceIndex( sw::hashed_string( "Shade" ) ) ) );
+    SW_EXPECT_FALSE( restored.isHouseServed( *pHouse, *moved.findServiceIndex( sw::hashed_string( "Water" ) ) ) );
+
+    sw::CityCatalog withoutDirt;
+    SW_REQUIRE_TRUE( withoutDirt.loadFromXMLText( Util::makeXML( R"(
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>
+  <Service id="Shade" name="Shade" color="0.1,0.4,0.1,1" culture="true"/>)" ),
+                                                  "CityCatalogTest" ) );
+    sw::CitySimulation refused;
+    SW_REQUIRE_TRUE( refused.initialize( &withoutDirt, Util::kSize, Util::kSize, wallet ) );
+    sw::Archive refusedReading( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( refused.readState( refusedReading ) );
+    SW_EXPECT_EQUAL( size_t( 0 ), refused.getBuildings().size() );
+}
+
+/** @brief [CityCatalogTest] 땅이 하나도 없거나(색은 필수다) 없는 서비스를 적은 카탈로그는 로드가 실패한다 — 기본 땅 · 빈 서비스로 열지 않는다 */
+SW_TEST_CASE( CityCatalogTest, IncompleteRowsAreRefused )
+{
+    using Util = CityRowTestUtil;
+    {
+        SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+        SW_EXPECT_LOG( "CityCatalog.TerrainCount" );
+        sw::CityCatalog catalog;
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( Util::makeXML( R"(
+  <Terrain id="Grass" name="Grass"/>
+  <Service id="Shade" name="Shade" color="0.1,0.4,0.1,1"/>)" ),
+                                                  "CityCatalogTest" ) );
+    }
+    {
+        SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
+        SW_EXPECT_LOG( "CityCatalog.BuildingGivesUnknownService" );
+        SW_EXPECT_LOG( "CityCatalog.HouseLevelNeedsUnknown" );
+        sw::CityCatalog catalog;
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( Util::makeXML( R"(
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>)" ),
+                                                  "CityCatalogTest" ) );
+    }
 }

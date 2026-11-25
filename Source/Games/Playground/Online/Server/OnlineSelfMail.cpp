@@ -14,6 +14,7 @@
 
 #include "Engine/Console/DevCommandRegistry.h"
 
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -79,10 +80,10 @@ namespace sw
         struct OnlineSelfMailInternal
         {
             /** @brief 계정 @p accountID 앞으로 금화 우편을 저장소에 맡깁니다. */
-            static void submitMail( ServiceStore& store, PlaygroundOnlineFlow& flow, AccountID accountID, int64 amount, int64 nowMs )
+            static void submitMail( ServiceStore& store, PlaygroundOnlineFlow& flow, const string& currency, AccountID accountID, int64 amount, int64 nowMs )
             {
                 ServiceMailMessage message;
-                message._listAttachment.push_back( ServiceMailAttachment{ PlaygroundOnlineFlow::kAssetGold, amount } );
+                message._listAttachment.push_back( ServiceMailAttachment{ currency, amount } );
                 message._titleKey = "mail.reward";
                 StringBuilder<constant::buffer::kMax256> idempotencyKeyBuilder;
                 idempotencyKeyBuilder.appendFormat( "playground.selfmail.%#.%#", accountID, nowMs );
@@ -102,19 +103,19 @@ namespace sw
                 const AccountClient& account = session.get<AccountClient>();
                 if ( pStore == nullptr || account.isLoggedIn() == false )
                     return false;
-                submitMail( *pStore, flow, account.getIdentity()._accountID, amount, nowMs );
+                submitMail( *pStore, flow, session.getGameSettings()._onlineSoftCurrency, account.getIdentity()._accountID, amount, nowMs );
                 return true;
             }
 
             /** @brief 이 전용 서버에 접속한 계정 @p displayName 앞으로 금화 우편을 넣습니다(운영 콘솔 — 개발 서버만 개발 명령을 받는다). @return 온라인 조립이 없거나 그 이름이 접속해 있지 않으면 false 입니다. */
-            static bool sendOnDedicatedServer( PlaygroundOnlineFlow& flow, string_view displayName, int64 amount, int64 nowMs )
+            static bool sendOnDedicatedServer( PlaygroundOnlineFlow& flow, const string& currency, string_view displayName, int64 amount, int64 nowMs )
             {
                 const optional<OnlineSelfMailKits> kits       = OnlineSelfMailKits::resolve( game::findSubsystem<IServerKitLocator>() );
                 IAccountDirectory* const           pDirectory = kits.has_value() ? kits->find<IAccountDirectory>() : nullptr;
                 AccountIdentity                    identity;
                 if ( pDirectory == nullptr || pDirectory->findIdentityByDisplayName( displayName, identity ) == false )
                     return false;
-                submitMail( kits->get<ServiceStore>(), flow, identity._accountID, amount, nowMs );
+                submitMail( kits->get<ServiceStore>(), flow, currency, identity._accountID, amount, nowMs );
                 return true;
             }
 
@@ -130,8 +131,11 @@ namespace sw
                     outReply = "playground.online: no Playground game instance";
                     return true;
                 }
+                const string& currency = pSession->getGameSettings()._onlineSoftCurrency;
+                if ( PlaygroundOnlineFlow::requireSetting( currency, "onlineSoftCurrency" ) == false )
+                    return false;
                 const int64 nowMs = WallClock::nowUnixMilliseconds().count();
-                const bool  bSent = listArgument.size() == 2 ? sendOnDedicatedServer( *pFlow, listArgument[1], amount, nowMs ) : sendOnLocalServer( *pSession, *pFlow, amount, nowMs );
+                const bool  bSent = listArgument.size() == 2 ? sendOnDedicatedServer( *pFlow, currency, listArgument[1], amount, nowMs ) : sendOnLocalServer( *pSession, *pFlow, amount, nowMs );
                 outReply          = bSent ? "playground.online: mail queued" : "playground.online: needs the in-process server and a login, or a dedicated server and the name of an online account";
                 return true;
             }

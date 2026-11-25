@@ -28,19 +28,19 @@
 					                          _tracerPoolSize="24"
 					                          _bAutoPlay="false">
 						<_listEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite">
+							<ShooterEnemyKind _prefab="guid:487e9f4458a7d6ecf66c371db3a72749" _preset="Trilobite" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell">
+							<ShooterEnemyKind _prefab="guid:53ab17d5a6c435e2c34fc93965d562fe" _preset="QuadShell" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
-							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion">
+							<ShooterEnemyKind _prefab="guid:d09c50d9428157b3c1ac9ebde784336d" _preset="SkeletonMinion" _spawnEntryID="skeleton">
 								<_pool _maxIdleCount="8" />
 							</ShooterEnemyKind>
 						</_listEnemyKind>

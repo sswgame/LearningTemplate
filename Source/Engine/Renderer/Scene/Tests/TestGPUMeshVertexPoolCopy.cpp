@@ -29,6 +29,8 @@ using namespace sw;
 
 namespace
 {
+    constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u; // 엔진 설정 `_render._meshPoolMaxVertices` 의 값
+
     /** @brief 삼각형 하나짜리 Packed 메시입니다. */
     shared_ptr<Mesh> makeTriangle()
     {
@@ -67,7 +69,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, ProxyMeshFillsByGPUCopy )
     const RHIBufferHandle proxy = mesh->getRenderData().getVertexBuffer();
 
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 1u, factory._gpuVertexBufferCount );  // 풀 정점 버퍼는 GPU 전용이다
     SW_EXPECT_EQUAL( 0u, factory._structuredUpdateCount ); // CPU 정점을 올리지 않았다
     SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
@@ -108,9 +110,9 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, CopiesOfARemovedMeshAreDropped )
         SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     }
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() } ) ); // 기록하지 않는 프레임
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() }, kMaxPoolVertices ) ); // 기록하지 않는 프레임
     SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() } ) ); // A 가 나가고 B 가 들어온다
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() }, kMaxPoolVertices ) ); // A 가 나가고 B 가 들어온다
     SW_EXPECT_EQUAL( 2u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
     test::FakeRHICommandList list{ 0 };
     pool.recordPendingCopies( list, device );
@@ -138,7 +140,7 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, MeshWithoutProxyUploadsCPUVertices )
     const shared_ptr<Mesh> mesh = makeTriangle();
 
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 0u, GPUMeshVertexPoolTestAccess::getPendingCopyCount( pool ) );
     SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
     pool.release( &device );
@@ -164,12 +166,12 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, PartlyPlacedMeshesRefillFromTheirProxyO
         SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     }
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() } ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() }, kMaxPoolVertices ) );
     test::FakeRHICommandList firstList{ 0 };
     pool.recordPendingCopies( firstList, device );
     const RHIBufferHandle oldPool = pool.getVertexBuffer();
 
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get(), meshB.get(), meshC.get() } ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get(), meshB.get(), meshC.get() }, kMaxPoolVertices ) );
     SW_REQUIRE_TRUE( pool.getVertexBuffer() != oldPool ); // 다시 꾸렸다
     test::FakeRHICommandList list{ 0 };
     pool.recordPendingCopies( list, device );
@@ -202,9 +204,9 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, NewContentAtSameAddressIsNotACacheHit )
     const shared_ptr<Mesh> mesh = makeTriangle();
 
     GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
-    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
+    SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 1u, factory._structuredUpdateCount );
-    SW_EXPECT_FALSE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) ); // 같은 내용 — 올릴 것이 없다
+    SW_EXPECT_FALSE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) ); // 같은 내용 — 올릴 것이 없다
 
     const Mesh* const pAddress = mesh.get();
     vector<RHIVertex> listVertex( 3 );
@@ -212,9 +214,32 @@ SW_TEST_CASE( GPUMeshVertexPoolCopyTest, NewContentAtSameAddressIsNotACacheHit )
     listVertex[2]._arrPosition[1] = 2.0f;
     SW_REQUIRE_TRUE( mesh->setGeometry( std::move( listVertex ), vector<uint32>{ 0, 1, 2 } ) );
     SW_REQUIRE_TRUE( mesh.get() == pAddress );
-    SW_EXPECT_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() } ) );
+    SW_EXPECT_TRUE( pool.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices ) );
     SW_EXPECT_EQUAL( 2u, factory._structuredUpdateCount ); // 새 내용을 다시 올렸다
     SW_EXPECT_TRUE( pool.getPlacementOf( mesh.get() )._baseVertex != GPUMeshVertexPool::kInvalidBase );
     SW_EXPECT_EQUAL( 3u, pool.getVertexCount() ); // 옛 내용의 구간은 돌려받았다
     pool.release( &device );
+}
+
+/** @brief [GPUMeshVertexPoolCopyTest] 정점 상한은 부르는 쪽이 준 설정 값이다 — 상한을 넘는 메시는 들어가지 못하고(자기 버퍼로 그린다) 상한을 올리면 들어간다 */
+SW_TEST_CASE( GPUMeshVertexPoolCopyTest, LimitComesFromTheCaller )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory           = &factory;
+    constexpr uint32       kSmallLimit = 64u * 1024u;
+    const shared_ptr<Mesh> mesh        = Mesh::create( MeshCPUAccess::Keep );
+    vector<uint32>         listIndex;
+    for ( uint32 index = 0; index < kSmallLimit + 2u; ++index )
+    {
+        listIndex.push_back( index );
+    }
+    SW_REQUIRE_TRUE( mesh->setGeometry( vector<RHIVertex>( kSmallLimit + 2u ), std::move( listIndex ) ) );
+    SW_EXPECT_LOG( "GPUMeshVertexPool.VertexPoolFullVertices" );
+    GPUMeshVertexPool small{ RHIMeshVertexFormat::Packed };
+    (void)small.update( &device, vector<Mesh*>{ mesh.get() }, kSmallLimit );
+    SW_EXPECT_TRUE( small.getPlacementOf( mesh.get() )._baseVertex == GPUMeshVertexPool::kInvalidBase );
+    GPUMeshVertexPool large{ RHIMeshVertexFormat::Packed };
+    (void)large.update( &device, vector<Mesh*>{ mesh.get() }, kMaxPoolVertices );
+    SW_EXPECT_TRUE( large.getPlacementOf( mesh.get() )._baseVertex != GPUMeshVertexPool::kInvalidBase );
 }

@@ -12,13 +12,13 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
@@ -85,14 +85,16 @@ namespace sw
         int32 _fieldHeight;
         PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Min = 0 )
         int32 _startingGold;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (within the speed range)", Min = 1.0 )
         float32 _fastTimeScale;
 
-        SharedAssetRef<CropCatalog> _pCropCatalog;
-        FarmField                   _field;
-        GameSpeedControl            _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
-        uint32                      _fieldRevision;
-        uint8                       _bFastForward : 1; ///< 마지막 빨리 감기 명령 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
-        [[maybe_unused]] uint8      _reserved     : 7;
+        BoundAssetRef<CropCatalog> _pCropCatalog;
+        FarmField                  _field;
+        GameSpeedControl           _speed; ///< 배속(빨리 감기를 누르는 동안 `_fastTimeScale`) — 공유 시계와 시뮬레이션이 같은 값을 받는다
+        uint32                     _fieldRevision;
+        uint8                      _bFastForward : 1; ///< 마지막 빨리 감기 명령 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
+        [[maybe_unused]] uint8     _reserved     : 7;
     };
 } // namespace sw

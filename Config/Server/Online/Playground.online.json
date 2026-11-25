@@ -3,6 +3,15 @@
     "_serverID": 1,
     "_storeName": "local",
     "_cacheName": "local",
+    "_serverKind": "game",
+    "_region": "local",
+    "_capacity": 100,
+    "_maxConnections": 4096,
+    "_ioThreadCount": 2,
+    "_storeWorkerCount": 4,
+    "_requestBurstPerRemote": 10,
+    "_requestBurstPerAccount": 30,
+    "_maxConnectionsPerRemote": 64,
     "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
     "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
     "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
@@ -18,6 +27,8 @@
         {
             "_name": "account",
             "_settings": {
+                "_login": { "_sessionLifetimeMs": 43200000, "_reconnectGraceMs": 120000, "_tombstoneLifetimeMs": 600000, "_ticketLifetimeMs": 60000, "_lockoutMs": 300000, "_attemptRefillMs": 2000, "_deletionGraceMs": 2592000000, "_revocationScanMs": 60000, "_revocationBatchSize": 16, "_maxFailedCount": 5 },
+                "_server": { "_purgeIntervalMs": 60000, "_refreshIntervalMs": 10000, "_refreshCount": 64, "_purgeCount": 32, "_presence": { "_ttlMs": 60000, "_refreshIntervalMs": 30000 } },
                 "_attemptBurst": 10,
                 "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_maxConcurrentPasswordHashes": 2,
@@ -41,6 +52,9 @@
         {
             "_name": "chat",
             "_settings": {
+                "_maxQueuedHistory": 4096,
+                "_maxPendingSendPerMember": 4,
+                "_pendingSendRetryAfterMs": 1000,
                 "_reportBurst": 3,
                 "_reportRefillIntervalMs": 60000,
                 "_sanctionCacheMs": 60000,
@@ -55,12 +69,14 @@
         {
             "_name": "directory",
             "_settings": {
+                "_refresh": { "_reloadPeriodMs": 30000, "_registryRefreshPeriodMs": 2000, "_staleMs": 15000 },
                 "_endedAnnouncementTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 1000, "_maxDeletePerSweep": 500 }
             }
         },
         {
             "_name": "economy",
             "_settings": {
+                "_policy": { "_withdrawalWindowMs": 604800000, "_refundCursorRetryMs": 30000, "_deliveryScanIntervalMs": 300000, "_deliveryAlarmMarginMs": 86400000, "_deliveryScanMaxCount": 200, "_auditMinuteOfDay": 270 },
                 "_currencyCatalog": "game/playground/data/playground.currencies.xml",
                 "_offerCatalog": "game/playground/data/playground.offers.xml",
                 "_refundRecovery": "Debt"
@@ -85,6 +101,7 @@
         {
             "_name": "liveops",
             "_settings": {
+                "_pushMaxTrackedAccountCount": 100000,
                 "_pushAccountBurst": 6,
                 "_pushAccountRefillIntervalMs": 600000,
                 "_pushMaxDevicePerAccount": 10,
@@ -96,6 +113,7 @@
         {
             "_name": "mailbox",
             "_settings": {
+                "_delivery": { "_campaignRefreshMs": 60000, "_notificationIntervalMs": 1000, "_sweepBatchCount": 256, "_notificationBatchCount": 32 },
                 "_sweepIntervalMs": 60000,
                 "_maxClaimAllCount": 16,
                 "_maxClaimAllScanCount": 500,

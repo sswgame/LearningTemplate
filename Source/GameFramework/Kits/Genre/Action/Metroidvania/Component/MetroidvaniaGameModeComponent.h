@@ -20,7 +20,6 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -34,6 +33,7 @@
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaTrinketLoadout.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -211,26 +211,26 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Seed", Tooltip = "Seed of the loot rolls (not 0)", Min = 1 )
         uint32 _seed;
 
-        SharedAssetRef<MetroidvaniaCatalog> _pCatalog;
-        SharedAssetRef<AreaGraph>           _pAreas; ///< 방 정의(탐색 상태는 `_graph` 사본이 가진다)
-        AreaGraph                           _graph;  ///< 방문 · 발견
-        PlatformTileMap                     _terrain;
-        PlatformerMotor2D                   _motor;
-        MetroidvaniaAbilitySet              _abilities;
-        MetroidvaniaMapState                _mapState;  ///< `_graph` 를 빌린다
-        MetroidvaniaDeathRestState          _deathRest; ///< `_wallet` 을 빌린다
-        MetroidvaniaTrinketLoadout          _loadout;
-        MetroidvaniaDuelist                 _player;
-        Wallet                              _wallet;
-        GameFlags                           _flags;
-        GameRandom                          _random;
-        FixedStepTimer                      _timer;
-        Countdown                           _attackCooldown;
-        Countdown                           _respawnDelay;
-        Countdown                           _resultHold;
-        vector<MetroidvaniaEnemy>           _listEnemy;
-        vector<MetroidvaniaDeathRestEvent>  _listEvent;
-        MetroidvaniaPlayerCommand           _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
+        BoundAssetRef<MetroidvaniaCatalog> _pCatalog;
+        BoundAssetRef<AreaGraph>           _pAreas; ///< 방 정의(탐색 상태는 `_graph` 사본이 가진다)
+        AreaGraph                          _graph;  ///< 방문 · 발견
+        PlatformTileMap                    _terrain;
+        PlatformerMotor2D                  _motor;
+        MetroidvaniaAbilitySet             _abilities;
+        MetroidvaniaMapState               _mapState;  ///< `_graph` 를 빌린다
+        MetroidvaniaDeathRestState         _deathRest; ///< `_wallet` 을 빌린다
+        MetroidvaniaTrinketLoadout         _loadout;
+        MetroidvaniaDuelist                _player;
+        Wallet                             _wallet;
+        GameFlags                          _flags;
+        GameRandom                         _random;
+        FixedStepTimer                     _timer;
+        Countdown                          _attackCooldown;
+        Countdown                          _respawnDelay;
+        Countdown                          _resultHold;
+        vector<MetroidvaniaEnemy>          _listEnemy;
+        vector<MetroidvaniaDeathRestEvent> _listEvent;
+        MetroidvaniaPlayerCommand          _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
         PROPERTY( RuntimeState )
         hashed_string _area; ///< 지금 방(어느 방도 아니면 마지막 방)
         PROPERTY( RuntimeState )

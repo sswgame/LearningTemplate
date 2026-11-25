@@ -156,12 +156,12 @@ namespace sw
         IEphemeralStore*      _pEphemeralStore{ nullptr };     ///< 없으면 서버 한 대(라우터 없음)
         IServerBusTransport*  _pServerBusTransport{ nullptr }; ///< 없으면 서버 한 대. 키트에는 호스트가 만든 앞(`getServerBus`)만 간다
         RemoteConfig*         _pRemoteConfig{ nullptr };
-        int32                 _requestBurstPerAccount{ 30 };
+        int32                 _requestBurstPerAccount{ 0 }; ///< 필수(온라인 서버 설정) — 0 이하면 `initialize` 가 거절한다
         int64                 _requestRefillMsPerAccount{ 100 };
-        int32                 _requestBurstPerRemote{ 10 }; ///< 로그인 전(주소마다)
+        int32                 _requestBurstPerRemote{ 0 }; ///< 필수(온라인 서버 설정) — 로그인 전(주소마다)
         int64                 _requestRefillMsPerRemote{ 500 };
-        int64                 _helloTimeoutMs{ 5000 };        ///< 연결이 Hello 를 끝내야 하는 기한. 넘으면 닫는다(열기만 하고 슬롯을 잡는 연결을 막는다)
-        int32                 _maxConnectionsPerRemote{ 64 }; ///< 주소(IP)마다 동시 연결 상한. 넘는 연결은 바로 닫는다. 한 주소에서 많이 붙이는 부하 봇은 올린다
+        int64                 _helloTimeoutMs{ 5000 };       ///< 연결이 Hello 를 끝내야 하는 기한. 넘으면 닫는다(열기만 하고 슬롯을 잡는 연결을 막는다)
+        int32                 _maxConnectionsPerRemote{ 0 }; ///< 필수(온라인 서버 설정) — 주소(IP)마다 동시 연결 상한. 넘는 연결은 바로 닫는다. 한 주소에서 많이 붙이는 부하 봇은 올린다
         /**
          * @brief 서비스 하나가 응답을 기다리게 둘 호출 상한입니다. 넘는 요청은 저장소에 맡기지 않고 `kBusy` 로 끝납니다(`OnlineProtocolService`). 필수 — 1 미만이면 `initialize` 가 거절한다.
          * @details 저장소 대기열(SQL 워커 큐)은 상한이 없어 로그인 폭주가 원장 · 우편 · 거래를 뒤에 세웠다(감사 O-3). 서비스마다 상한을 두면 대기열 길이가 서비스 수 × 상한으로 묶인다.

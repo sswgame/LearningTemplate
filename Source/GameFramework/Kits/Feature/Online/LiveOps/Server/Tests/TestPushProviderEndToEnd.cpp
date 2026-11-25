@@ -326,12 +326,13 @@ namespace
                 return read;
             if ( expected<void> providers = _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock ); providers.has_value() == false )
                 return providers;
-            PushDispatcherConfig dispatcherConfig;
-            dispatcherConfig._maxDevicePerAccount     = 10;
-            dispatcherConfig._maxRetry                = 5;
-            dispatcherConfig._firstBackoffMs          = 1000;
-            dispatcherConfig._accountBurst            = 6;
-            dispatcherConfig._accountRefillIntervalMs = 600000;
+            LiveOpsKitConfig dispatcherConfig;
+            dispatcherConfig._pushMaxDevicePerAccount     = 10;
+            dispatcherConfig._pushMaxRetry                = 5;
+            dispatcherConfig._pushFirstBackoffMs          = 1000;
+            dispatcherConfig._pushAccountBurst            = 6;
+            dispatcherConfig._pushAccountRefillIntervalMs = 600000;
+            dispatcherConfig._pushMaxTrackedAccountCount  = 100000;
             SW_EXPECT_TRUE( _dispatcher.initialize( &_store, dispatcherConfig ) );
             for ( int32 index = 0; index < _providers.getProviderCount(); ++index )
             {
@@ -495,8 +496,8 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
         StringBuilder<constant::buffer::kMax1024> resultBuilder;
-        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushMaxDevicePerAccount": 10, "_pushMaxRetry": 5, "_pushFirstBackoffMs": 1000, "_pushAccountBurst": 6, "_pushAccountRefillIntervalMs": 600000, "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 }, "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
-        return test::OnlineRuntimeFixture::withBaseTTL( resultBuilder.view() );
+        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushMaxDevicePerAccount": 10, "_pushMaxRetry": 5, "_pushFirstBackoffMs": 1000, "_pushAccountBurst": 6, "_pushMaxTrackedAccountCount": 100000, "_pushAccountRefillIntervalMs": 600000, "_pushClaimTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 100, "_maxDeletePerSweep": 100 }, "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
+        return test::OnlineRuntimeFixture::withBaseSettings( resultBuilder.view() );
     };
     const int64 nowMs = WallClock::nowUnixMilliseconds().count();
 

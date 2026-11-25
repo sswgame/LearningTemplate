@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -104,6 +105,12 @@ namespace sw
         if ( pStore == nullptr )
         {
             SW_LOG_ERROR_ID( "MailboxService.MailboxServiceNeedsStore", "MailboxService needs a store" );
+            return false;
+        }
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( static_cast<const MailboxDeliveryPolicy&>( settings ) );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "MailboxService.PolicyRefused", "MailboxService refused its operating values (mailbox kit _delivery): %#", rangeError.c_str() );
             return false;
         }
         if ( settings._claimedRetentionMs <= 0 )

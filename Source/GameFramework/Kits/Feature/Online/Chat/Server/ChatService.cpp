@@ -333,7 +333,8 @@ namespace sw
         }
         const bool bReportContextOk = 0 < settings._reportContextCount && settings._reportContextCount <= ServiceReportConstant::kMaxLineCount;
         const bool bReportRateOk    = settings._reportBurst > 0 && settings._reportRefillIntervalMs > 0 && settings._sanctionCacheMs > 0;
-        if ( settings._maxChannelPerMember <= 0 || bReportContextOk == false || bReportRateOk == false )
+        const bool bQueueOk         = settings._maxQueuedHistory > 0 && settings._maxPendingSendPerMember > 0 && settings._pendingSendRetryAfterMs > 0;
+        if ( settings._maxChannelPerMember <= 0 || bReportContextOk == false || bReportRateOk == false || bQueueOk == false )
         {
             SW_LOG_ERROR_ID( "ChatService.ChatServiceNoLimits", "ChatService needs _maxChannelPerMember above zero (%#), _reportContextCount in 1..%# (%#), and _reportBurst (%#), _reportRefillIntervalMs (%#), _sanctionCacheMs (%#) above zero from the chat kit settings",
                              settings._maxChannelPerMember, static_cast<int32>( ServiceReportConstant::kMaxLineCount ), settings._reportContextCount, settings._reportBurst, settings._reportRefillIntervalMs,

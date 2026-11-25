@@ -18,7 +18,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -138,14 +137,14 @@ namespace sw
         PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
         float32 _statusLogInterval;
 
-        NavGrid                              _walkGrid; ///< 시뮬레이션이 빌린다 — 먼저 만들고 나중에 사라진다
-        ThemeParkSimulation                  _simulation;
-        Wallet                               _wallet;       ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
-        int32                                _startingCash; ///< 이 판을 연 돈(배치 데이터) — 나갈 때 번 돈을 센다
-        SharedAssetRef<CoasterLayoutCatalog> _pLayoutCatalog;
-        ThemeParkSettings                    _settings;
-        vector<RidePlacement>                _listPlacement;
-        vector<unique_ptr<CoasterRuntime>>   _listCoaster;
+        NavGrid                                _walkGrid; ///< 시뮬레이션이 빌린다 — 먼저 만들고 나중에 사라진다
+        ThemeParkSimulation                    _simulation;
+        Wallet                                 _wallet;         ///< 공원 금고. 한 판 임시 상태라 디렉터가 보관하고 빌려 준다(디렉터 계약 ③).
+        int32                                  _startingCash;   ///< 이 판을 연 돈(배치 데이터) — 나갈 때 번 돈을 센다
+        shared_ptr<const CoasterLayoutCatalog> _pLayoutCatalog; ///< 연 배치가 쥔 판 그대로(다시 읽힌 판은 다음 판이 쓴다)
+        ThemeParkSettings                      _settings;
+        vector<RidePlacement>                  _listPlacement;
+        vector<unique_ptr<CoasterRuntime>>     _listCoaster;
         PROPERTY( RuntimeState )
         float32 _autoBuildTimer;
         float32 _parkYaw;      ///< `getParkYaw`

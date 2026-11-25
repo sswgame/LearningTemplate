@@ -11,6 +11,7 @@
 
 #include "GameFramework/Client/Shop/ShopScreen.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyShopPurchaseProvider.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -38,10 +39,16 @@ namespace sw
                 EconomyShopPurchaseProvider* pProvider = pFlow->findShopProvider( *pSession );
                 if ( pProvider == nullptr )
                 {
-                    outReply = "playground.online.shop: no online settings or offer catalog";
+                    outReply = "playground.online.shop: no offer catalog";
                     return true;
                 }
-                const UIScreenHandle handle = ShopScreen::open( *pUI, pFlow->getSettings()._shopDocument.get(), *pProvider );
+                const DataPath& shopDocument = pSession->getGameSettings()._onlineShopDocument;
+                if ( shopDocument.isSet() == false )
+                {
+                    outReply = "playground.online.shop: GameSettings onlineShopDocument is empty";
+                    return true;
+                }
+                const UIScreenHandle handle = ShopScreen::open( *pUI, shopDocument.get(), *pProvider );
                 outReply                    = handle != kInvalidUIScreenHandle ? "playground.online.shop: opened" : "playground.online.shop: the shop document did not open";
                 return true;
             }

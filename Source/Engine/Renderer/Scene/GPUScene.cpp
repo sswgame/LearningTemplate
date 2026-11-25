@@ -128,7 +128,7 @@ namespace sw
         }
     }
 
-    bool GPUScene::upload( IRHIDevice* pDevice )
+    bool GPUScene::upload( IRHIDevice* pDevice, uint32 meshPoolMaxVertices )
     {
         SW_PROFILE_SCOPE( "RT.GPUScene.upload" );
         if ( pDevice != nullptr )
@@ -143,7 +143,7 @@ namespace sw
             SW_PROFILE_SCOPE( "RT.GPUScene.bindMaterials" );
             GPUSceneInternal::bindBatchMaterialResources( pDevice, _snapshot.getAllBatches(), _listBatchBinding, _snapshot.getMaterialGroups() );
         }
-        updateVertexPool( pDevice );
+        updateVertexPool( pDevice, meshPoolMaxVertices );
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
         uploadMaterialGroups( pDevice );
         // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 렌더 쪽 값(`_listBatchBinding`)도 한 벌이다.
@@ -189,7 +189,7 @@ namespace sw
         return _instances._buffer != 0 && getIndirectArgsBuffer() != 0;
     }
 
-    void GPUScene::updateVertexPool( IRHIDevice* pDevice )
+    void GPUScene::updateVertexPool( IRHIDevice* pDevice, uint32 meshPoolMaxVertices )
     {
         // 정점 풀: 배치 메시 모두를 한 정점 버퍼 · 한 인덱스 버퍼에 모은다. 집합이 같으면 아무것도 하지 않고, 바뀌면 들어오고 나간 메시의 구간만 고친다(CPU 사본에서 올린다).
         // 풀에 든 배치는 풀 버퍼와 시작으로 그리고(같은 버퍼 → 멀티 드로우로 묶인다), 못 든 배치만 자기 정점 · 인덱스 버퍼(시작 0)를 만들어 그린다.
@@ -219,7 +219,7 @@ namespace sw
             // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 · 인덱스 버퍼(시작 0)로 돌아간다.
             for ( GPUMeshVertexPool& pool : _arrVertexPool ) // 각 풀이 자기 형식의 메시만 담는다
             {
-                if ( pool.update( pDevice, _listScratchPoolMesh ) )
+                if ( pool.update( pDevice, _listScratchPoolMesh, meshPoolMaxVertices ) )
                     _bBatchTablesDirty = SW_TRUE;
             }
         }

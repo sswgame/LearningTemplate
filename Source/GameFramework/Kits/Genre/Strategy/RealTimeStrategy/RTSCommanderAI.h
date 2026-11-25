@@ -18,23 +18,47 @@
 
 namespace sw
 {
-    /** @brief AI 가 쓰는 정의 id 와 목표 수입니다. 종족과 난이도에 따라 데이터로 바꿉니다. */
-    struct RTSCommanderAISettings
+    /**
+     * @struct RTSCommanderAISettings
+     * @brief 컴퓨터 상대 하나의 성향(경제 · 병력 목표, 생각 주기, 짓는 자리)과 그것이 쓰는 정의 id 입니다.
+     * @details 값은 데이터(디렉터의 PROPERTY)에 있고 코드에는 기본 성향이 없다. 적지 않은 칸은 0 이라 판을 열 때 거절한다(`isSet`). 정의 id 는 판의 설정이 채운다.
+     */
+    REFLECT()
+    struct SW_KIT_API RTSCommanderAISettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds between two decisions" )
+        float32 _thinkInterval{ 0.0f };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "The army answers attacks only within this distance of the main base" )
+        float32 _defendRadius{ 0.0f };
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Workers are sent to minerals within this distance of the main base" )
+        float32 _resourceSearchRadius{ 0.0f };
+        PROPERTY( Min = 0, Tooltip = "Workers the AI trains" )
+        int32 _workerTarget{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Production buildings the AI builds" )
+        int32 _productionTarget{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Army size that starts an attack" )
+        int32 _attackArmySize{ 0 };
+        PROPERTY( Min = 0, Tooltip = "The AI builds supply when the free supply is at most this" )
+        int32 _supplyMargin{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Cells around the main base kept free when the AI looks for a building site" )
+        int32 _buildSiteMinRadius{ 0 };
+        PROPERTY( Min = 0, Tooltip = "Cells around the main base in which the AI looks for a building site" )
+        int32 _buildSiteMaxRadius{ 0 };
+        // 정의 id — 데이터가 아니라 판의 설정(`SkirmishMatchSettings`)이 채운다.
         hashed_string _workerID{};
         hashed_string _depotID{};      ///< 일꾼을 만드는 본진
         hashed_string _supplyID{};     ///< 보급 건물
         hashed_string _productionID{}; ///< 병력 건물
         hashed_string _armyUnitID{};   ///< 병력 유닛
-        float32       _thinkInterval{ 0.5f };
-        float32       _defendRadius{ 14.0f }; ///< 본진에서 이 거리 안의 공격만 막으러 간다
-        int32         _workerTarget{ 14 };
-        int32         _productionTarget{ 2 };
-        int32         _attackArmySize{ 8 };
-        int32         _supplyMargin{ 3 };             ///< 남은 보급이 이 값 이하이면 보급 건물을 짓는다
-        int32         _buildSiteMinRadius{ 3 };       ///< 건물을 지을 자리를 본진에서 이 칸 밖부터 찾는다
-        int32         _buildSiteMaxRadius{ 12 };      ///< 이 칸 안에서 찾는다. 없으면 짓지 못한다
-        float32       _resourceSearchRadius{ 16.0f }; ///< 본진에서 이 거리 안의 광물에 일꾼을 보낸다
+
+        /** @brief 성향이 모두 적혔으면 true 입니다(보급 여유는 0 도 뜻이 있다). */
+        bool isSet() const
+        {
+            const bool bTargets = _workerTarget >= 1 && _productionTarget >= 1 && _attackArmySize >= 1;
+            const bool bRanges  = _thinkInterval > 0.0f && _defendRadius > 0.0f && _resourceSearchRadius > 0.0f;
+            return bTargets && bRanges && _buildSiteMinRadius >= 1 && _buildSiteMaxRadius >= _buildSiteMinRadius;
+        }
     };
 } // namespace sw
 

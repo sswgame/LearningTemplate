@@ -7,6 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartItems.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
@@ -15,23 +17,51 @@ namespace sw
 {
     class KartTrack;
 
-    /** @brief AI 운전 수치입니다. 각의 단위는 라디안입니다. */
-    struct KartAISettings
+    /**
+     * @struct KartAISettings
+     * @brief AI 운전 수치입니다. 각의 단위는 라디안입니다. 값은 데이터(디렉터의 PROPERTY)에 있고 코드에는 기본값이 없다.
+     * @details 적지 않은 칸은 0 이라 경기를 열 때 거절한다(`isSet`). 레이싱 라인 · 늦춘 페달 · 아이템 지연은 0 도 뜻이 있다.
+     */
+    REFLECT()
+    struct SW_KIT_API KartAISettings
     {
-        float32 _lookAheadBase{ 6.0f };      ///< 겨누는 점까지의 기본 거리(m)
-        float32 _lookAheadPerSpeed{ 0.35f }; ///< 속도 1 m/초마다 더 멀리 본다
-        float32 _steerGain{ 2.5f };          ///< 방향 오차(라디안)를 조향으로 바꾸는 배율이다
-        float32 _racingLine{ 0.6f };         ///< 곡선 안쪽으로 붙는 정도이다(반 폭에 대한 비율이며 0 이면 중심선)
-        float32 _cornerAngle{ 0.8f };        ///< 이만큼 도는 곡선이면 레이싱 라인을 끝까지 쓴다
-        float32 _cornerLookAhead{ 25.0f };   ///< 곡선을 읽는 거리(m)
-        float32 _driftStartAngle{ 0.9f };    ///< 앞 곡선이 이만큼 돌면 드리프트를 건다
-        float32 _driftEndAngle{ 0.35f };     ///< 곡선이 이 값 아래로 펴지면 드리프트를 놓는다(미니터보)
-        float32 _brakeAngle{ 2.2f };         ///< 이보다 급한 곡선에서는 페달을 늦춘다
-        float32 _brakeThrottle{ 0.4f };      ///< 급한 곡선에서 밟는 페달(0..1)
-        float32 _itemUseDelay{ 0.8f };       ///< 아이템을 받고 이 시간(초) 동안은 들고 있는다
-        float32 _itemMaxHold{ 8.0f };        ///< 이 시간(초)보다 오래 들고 있지 않는다
-        float32 _shellRange{ 45.0f };        ///< 앞 차가 이 거리(m) 안에 있으면 껍질을 쏜다
-        float32 _bananaRange{ 15.0f };       ///< 뒤 차가 이 거리(m) 안에 있으면 바나나를 놓는다
+        REFLECT_BODY();
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _lookAheadBase{ 0.0f }; ///< 겨누는 점까지의 기본 거리(m)
+        PROPERTY( Min = 0.0 )
+        float32 _lookAheadPerSpeed{ 0.0f }; ///< 속도 1 m/초마다 더 멀리 본다
+        PROPERTY( Min = 0.0 )
+        float32 _steerGain{ 0.0f }; ///< 방향 오차(라디안)를 조향으로 바꾸는 배율이다
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _racingLine{ 0.0f }; ///< 곡선 안쪽으로 붙는 정도이다(반 폭에 대한 비율이며 0 이면 중심선)
+        PROPERTY( Min = 0.0 )
+        float32 _cornerAngle{ 0.0f }; ///< 이만큼(라디안) 도는 곡선이면 레이싱 라인을 끝까지 쓴다
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _cornerLookAhead{ 0.0f }; ///< 곡선을 읽는 거리(m)
+        PROPERTY( Min = 0.0 )
+        float32 _driftStartAngle{ 0.0f }; ///< 앞 곡선이 이만큼(라디안) 돌면 드리프트를 건다
+        PROPERTY( Min = 0.0 )
+        float32 _driftEndAngle{ 0.0f }; ///< 곡선이 이 값(라디안) 아래로 펴지면 드리프트를 놓는다(미니터보)
+        PROPERTY( Min = 0.0 )
+        float32 _brakeAngle{ 0.0f }; ///< 이보다(라디안) 급한 곡선에서는 페달을 늦춘다
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _brakeThrottle{ 0.0f }; ///< 급한 곡선에서 밟는 페달(0..1)
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _itemUseDelay{ 0.0f }; ///< 아이템을 받고 이 시간(초) 동안은 들고 있는다
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _itemMaxHold{ 0.0f }; ///< 이 시간(초)보다 오래 들고 있지 않는다
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _shellRange{ 0.0f }; ///< 앞 차가 이 거리(m) 안에 있으면 껍질을 쏜다
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _bananaRange{ 0.0f }; ///< 뒤 차가 이 거리(m) 안에 있으면 바나나를 놓는다
+
+        /** @brief 0 이 뜻이 없는 칸이 모두 적혔으면 true 입니다. */
+        bool isSet() const
+        {
+            const bool bLook  = _lookAheadBase > 0.0f && _lookAheadPerSpeed > 0.0f && _steerGain > 0.0f && _cornerAngle > 0.0f && _cornerLookAhead > 0.0f;
+            const bool bDrift = _driftStartAngle > 0.0f && _driftEndAngle > 0.0f && _brakeAngle > 0.0f;
+            return bLook && bDrift && _itemMaxHold > 0.0f && _shellRange > 0.0f && _bananaRange > 0.0f;
+        }
     };
 } // namespace sw
 

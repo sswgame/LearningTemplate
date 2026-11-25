@@ -98,6 +98,27 @@ namespace sw
         PROPERTY()
         string _onlineGameBuild; ///< Hello 와 로그인에 싣는 게임 빌드 글(점으로 나눈 정수열). 온라인 서버를 적었으면 필수다
 
+        PROPERTY()
+        string _onlineRegion; ///< 매칭 · 라이브 이벤트를 청하는 지역(서버 온라인 설정의 `_region`). 적지 않은 게임은 그 요청을 내지 않는다
+
+        PROPERTY()
+        DataPath _onlineOfferCatalog; ///< 상점 화면의 상품(`*.offers.xml`, `OfferCatalog` — 서버 경제 키트와 같은 파일). 적지 않으면 온라인 상점이 없다
+
+        PROPERTY()
+        DataPath _onlineShopDocument; ///< 온라인 상점 화면 문서(`*.ui.xml`). 적지 않으면 온라인 상점 화면이 없다
+
+        PROPERTY()
+        string _onlineSoftCurrency; ///< 놀며 얻는 재화의 자산 id(경제 키트 통화 카탈로그). 우편 · 거래가 싣는다
+
+        PROPERTY()
+        string _onlineHardCurrency; ///< 사서 얻는 재화의 자산 id(경제 키트 통화 카탈로그)
+
+        PROPERTY()
+        string _onlineLeaderboard; ///< 게임의 대표 순위표 id(순위표 카탈로그). 적지 않으면 순위를 묻지 않는다
+
+        PROPERTY( Min = 0, Max = 100 )
+        int32 _onlineLeaderboardTopCount{ 0 }; ///< 그 순위표에서 받을 상위 줄 수
+
         static constexpr int32 kUnsetRetryLimit = -1; ///< `_onlineRequestRetryLimit` 를 적지 않았다
 
         PROPERTY( Max = 10 )

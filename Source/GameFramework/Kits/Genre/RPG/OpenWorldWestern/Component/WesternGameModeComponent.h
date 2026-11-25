@@ -11,7 +11,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -19,6 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/WesternOutlaw.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
@@ -97,12 +97,12 @@ namespace sw
         PROPERTY( Category = "Outlaw", DisplayName = "Starting Money", Min = 0, Tooltip = "Money of a new game, in the catalog currency" )
         int32 _startingMoney;
 
-        WesternOutlaw                  _outlaw;
-        SharedAssetRef<WesternCatalog> _pWesternCatalog;
-        vector<WesternLawEvent>        _listLawEvent;            ///< `reportEvents` 의 임시 목록(용량만 넘긴다)
-        vector<ReputationEvent>        _listHonorEvent;          ///< `reportEvents` 의 임시 목록(용량만 넘긴다)
-        vector<WesternWitness>         _listWitness;             ///< `updateLawSight` 가 프레임마다 다시 채우는 목격자 목록(용량을 다시 쓴다 — 상태가 아니다)
-        uint8                          _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
-        [[maybe_unused]] uint8         _reserved            : 7;
+        WesternOutlaw                 _outlaw;
+        BoundAssetRef<WesternCatalog> _pWesternCatalog;
+        vector<WesternLawEvent>       _listLawEvent;            ///< `reportEvents` 의 임시 목록(용량만 넘긴다)
+        vector<ReputationEvent>       _listHonorEvent;          ///< `reportEvents` 의 임시 목록(용량만 넘긴다)
+        vector<WesternWitness>        _listWitness;             ///< `updateLawSight` 가 프레임마다 다시 채우는 목격자 목록(용량을 다시 쓴다 — 상태가 아니다)
+        uint8                         _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
+        [[maybe_unused]] uint8        _reserved            : 7;
     };
 } // namespace sw

@@ -13,7 +13,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -23,6 +22,7 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorMatch.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorStage.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -124,13 +124,13 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Escape Reward", Tooltip = "Money the base game gets per escaped survivor", Min = 0 )
         int32 _escapeReward;
 
-        SharedAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
-        AsymmetricHorrorMatch                        _match;
-        AsymmetricHorrorBot                          _bot;         ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
-        vector<AsymmetricHorrorCommand>              _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<AsymmetricHorrorEvent>                _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        Countdown                                    _killerRelease;
-        Countdown                                    _resultHold;
+        BoundAssetRef<AsymmetricHorrorRulesCatalog> _pCatalog;
+        AsymmetricHorrorMatch                       _match;
+        AsymmetricHorrorBot                         _bot;         ///< 살인마의 기억(본 자리)은 싣지 않는다 — 불러온 판은 다시 감지한다
+        vector<AsymmetricHorrorCommand>             _listCommand; ///< 생존자마다 받아 둔 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        vector<AsymmetricHorrorEvent>               _listEvent;   ///< 걸음마다 비워 다시 쓰는 알림 그릇
+        Countdown                                   _killerRelease;
+        Countdown                                   _resultHold;
         PROPERTY( RuntimeState )
         uint32 _humanMask; ///< 사람이 잡은 생존자의 비트(생존자 0 은 늘 사람이라 넣지 않는다)
         PROPERTY( RuntimeState )

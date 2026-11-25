@@ -75,15 +75,16 @@ namespace sw
                     return providers;
                 }
                 EconomyServiceConfig settings;
-                settings._pCurrencyCatalog       = _pCurrencyCatalog.get();
-                settings._pOfferCatalog          = _pOfferCatalog;
-                settings._pReceiptRegistry       = &_receiptRegistry;
-                settings._pMetricRegistry        = context._pMetricRegistry;
-                settings._pScheduler             = context._pScheduler;                            // 원장 보존 검사를 매일 서버 하나가 돌린다
-                settings._pPresence              = interfaces.find<AccountPresence>();             // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
-                settings._pExternalLinks         = interfaces.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
-                settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
-                settings._refundRecovery         = kitConfig._refundRecovery;
+                settings._pCurrencyCatalog              = _pCurrencyCatalog.get();
+                settings._pOfferCatalog                 = _pOfferCatalog;
+                settings._pReceiptRegistry              = &_receiptRegistry;
+                settings._pMetricRegistry               = context._pMetricRegistry;
+                settings._pScheduler                    = context._pScheduler;                            // 원장 보존 검사를 매일 서버 하나가 돌린다
+                settings._pPresence                     = interfaces.find<AccountPresence>();             // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
+                settings._pExternalLinks                = interfaces.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
+                static_cast<EconomyPolicy&>( settings ) = kitConfig._policy;
+                settings._bAcceptSandboxReceipts        = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
+                settings._refundRecovery                = kitConfig._refundRecovery;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     _receiptRegistry.shutdown();

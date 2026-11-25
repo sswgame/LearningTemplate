@@ -13,13 +13,13 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -91,10 +91,10 @@ namespace sw
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for taking every site", Min = 0 )
         int32 _winReward;
 
-        SharedAssetRef<ConquestCatalog> _pCatalog;
-        ConquestWorld                   _world;
-        ConsumerLease                   _eventLease;
-        vector<ConquestEvent>           _listEvent;
-        Countdown                       _resultHold;
+        BoundAssetRef<ConquestCatalog> _pCatalog;
+        ConquestWorld                  _world;
+        ConsumerLease                  _eventLease;
+        vector<ConquestEvent>          _listEvent;
+        Countdown                      _resultHold;
     };
 } // namespace sw

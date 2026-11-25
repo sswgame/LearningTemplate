@@ -89,6 +89,8 @@ namespace sw
          * @details 컴포넌트에 붙이기 **전에** 부른다. 붙인 뒤에 추가할 때는 `AbilitySystemComponent::defineAttribute` 를 쓴다. 이 함수는 집계와 알림을 거친다.
          */
         void defineAttribute( const hashed_string& name, float32 baseValue );
+        /** @brief 값을 데이터가 정해야 하는 어트리뷰트 가운데 아직 정하지 않은(`defineAttribute`) 이름들입니다. 남아 있으면 컴포넌트가 이 세트를 붙이지 않는다. */
+        const vector<hashed_string>& getUndefinedAttributes() const { return _listUndefinedName; }
         /** @brief 어트리뷰트 값이 머물 범위를 정합니다. 기본 훅(`preAttributeChange`, `preAttributeBaseChange`)이 이 범위로 값을 자릅니다. */
         void setAttributeRange( const hashed_string& name, float32 minValue, float32 maxValue );
         /** @brief 어트리뷰트가 있으면 true 입니다. */
@@ -123,6 +125,10 @@ namespace sw
          */
         virtual void postFatalDamage();
 
+    protected:
+        /** @brief 세트가 늘 가지지만 값은 데이터가 정해야 하는 어트리뷰트를 추가합니다(0 으로 두고 `defineAttribute` 를 기다린다 — 코드에 기본 능력치가 없다). 파생의 생성자가 부른다. */
+        void requireAttribute( const hashed_string& name );
+
     private:
         /** @brief 쓸 수 있는 값을 찾습니다. 없으면 nullptr 입니다. 값을 쓰는 쪽은 `AbilitySystemComponent` 뿐입니다. */
         AttributeData* findAttributeMutable( const hashed_string& name );
@@ -141,6 +147,7 @@ namespace sw
         unordered_map<hashed_string, AttributeData>  _mapAttribute;
         unordered_map<hashed_string, AttributeRange> _mapRange;
         vector<hashed_string>                        _listAttributeName;
+        vector<hashed_string>                        _listUndefinedName; ///< `getUndefinedAttributes`
         AbilitySystemComponent*                      _pOwningAbilitySystem;
     };
 } // namespace sw

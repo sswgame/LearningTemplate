@@ -15,7 +15,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -23,6 +22,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCampaign.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureVitals.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Grid/FacingDirection.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -133,9 +133,9 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Vitals" )
         AdventureVitalsSettings _vitalsSettings;
 
-        SharedAssetRef<AdventureRegionCatalog> _pRegions;
-        shared_ptr<const QuestCatalog>         _pQuests; ///< 일지가 처음 열 때의 판을 계속 빌린다(`QuestLogComponent::initialize` 는 첫 호출만 듣는다) — 그 판을 쥔다
-        AdventureCampaign                      _campaign;
+        BoundAssetRef<AdventureRegionCatalog> _pRegions;
+        shared_ptr<const QuestCatalog>        _pQuests; ///< 일지가 처음 열 때의 판을 계속 빌린다(`QuestLogComponent::initialize` 는 첫 호출만 듣는다) — 그 판을 쥔다
+        AdventureCampaign                     _campaign;
         PROPERTY( RuntimeState )
         float2              _playerPosition;
         float2              _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다

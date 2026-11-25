@@ -127,7 +127,7 @@ namespace sw
             return false;
         if ( _pQuests == nullptr )
         {
-            SharedAssetRef<QuestCatalog> quests;
+            BoundAssetRef<QuestCatalog> quests;
             if ( acquireBoundCatalog( quests ) == false )
                 return false;
             _pQuests = quests.snapshot();
