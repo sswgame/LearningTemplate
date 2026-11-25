@@ -46,8 +46,7 @@ namespace sw
                 ReceiptState _state{ ReceiptState::None };
             };
 
-            static constexpr uint64 kReceiptRecordVersion       = 2;
-            static constexpr uint64 kReceiptRecordVersionLegacy = 1; ///< 받은 계정을 담던 판 — 읽을 때 계정은 버리고, 다음 쓰기가 판 2 로 덮는다
+            static constexpr uint64 kReceiptRecordVersion = 0;
 
             [[nodiscard]] static bool isRefunded( ReceiptState state )
             {
@@ -80,10 +79,7 @@ namespace sw
                 BitReader    reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
                 const uint64 format = reader.readVarUint();
                 const uint64 state  = reader.readVarUint();
-                if ( format == kReceiptRecordVersionLegacy )
-                    (void)reader.readVarUint(); // 판 1 의 받은 계정 — 쓰지 않는다
-                const bool bKnownFormat = format == kReceiptRecordVersion || format == kReceiptRecordVersionLegacy;
-                if ( reader.hasOverflowed() || bKnownFormat == false || state == 0 || state >= static_cast<uint64>( ReceiptState::Count ) )
+                if ( reader.hasOverflowed() || format != kReceiptRecordVersion || state == 0 || state >= static_cast<uint64>( ReceiptState::Count ) )
                 {
                     SW_LOG_ERROR_ID( "EconomyStoreLogic.ReceiptRecordUnreadable", "The receipt record '%#' is unreadable - grants, refunds and withdrawals of that transaction wait until the record is fixed", redeemKey );
                     return ServiceStoreResult::Invalid;
@@ -202,7 +198,7 @@ namespace sw
                 return EconomyResult::Ok;
             }
 
-            static constexpr uint64 kDeliveryRecordVersion = 1;
+            static constexpr uint64 kDeliveryRecordVersion = 0;
 
             static void writeText( BitWriter& writer, string_view text )
             {
@@ -237,7 +233,7 @@ namespace sw
                     return false;
                 outTask._deadlineMs = reader.readVarInt();
                 outTask._recordKey  = record._key;
-                return reader.hasOverflowed() == false;
+                return reader.hasOverflowed() == false && outTask._storeName.empty() == false; // 스토어 이름이 없는 알림은 없다(0 으로 채워진 값을 첫 판으로 읽지 않는다)
             }
 
             /**

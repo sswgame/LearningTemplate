@@ -78,7 +78,7 @@ namespace sw
                 outFile._version    = version;
                 outFile._name       = string( stem.substr( 0, dot ) );
                 outFile._driverName = dot == string_view::npos ? string{} : string( stem.substr( dot + 1 ) );
-                return version > 0 && outFile._name.empty() == false;
+                return outFile._name.empty() == false;
             }
 
             static void removeCarriageReturns( string& inoutText )
@@ -231,9 +231,9 @@ namespace sw
                 errorBuilder.appendFormat( "%#, %#", stem, SQLMigrationRunner::kListFileName );
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a migration in the migration list is not named NNNN_name", errorBuilder.view() } );
             }
-            const int32 expectedVersion = static_cast<int32>( stemIndex ) + 1;
+            const int32 expectedVersion = static_cast<int32>( stemIndex );
             if ( file._version != expectedVersion )
-                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::InvalidArgument, "migration numbers must run 1, 2, 3 ... without gaps - expected this number at the stem", expectedVersion, stem ) );
+                return unexpected( SQLMigrationRunnerInternal::makeError( ErrorKind::InvalidArgument, "migration numbers must run 0, 1, 2 ... without gaps - expected this number at the stem", expectedVersion, stem ) );
             // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
             StringBuilder<constant::buffer::kMax256> textBuilder2;
             textBuilder2.appendFormat( "%#.%#.sql", stem, driverName );

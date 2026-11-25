@@ -17,7 +17,7 @@ namespace sw
     {
         struct ServiceMailInternal
         {
-            static constexpr uint64 kRecordFormat = 1;
+            static constexpr uint64 kRecordFormat = 0;
 
             static string makeMailKey( uint64 recipientAccountID, int64 createdMs, string_view idempotencyKey )
             {
@@ -92,7 +92,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &readSentTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readSentTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

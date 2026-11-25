@@ -29,7 +29,7 @@ namespace sw
     {
         struct LeaderboardServiceInternal
         {
-            static constexpr uint8       kFormatVersion        = 1;
+            static constexpr uint8       kFormatVersion        = 0;
             static constexpr int32       kRebuildBatch         = 256;
             static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
             static constexpr int64       kDayMs                = 86400000;

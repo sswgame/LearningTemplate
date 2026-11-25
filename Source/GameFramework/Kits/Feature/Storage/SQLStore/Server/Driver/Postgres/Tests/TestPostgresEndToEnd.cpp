@@ -776,7 +776,7 @@ SW_TEST_CASE( PostgresEndToEndTest, ConfigSelectsPostgresAndReachesTheEndpoint )
         const auto result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
-    SW_EXPECT_TRUE( server.getMigrationCount() >= 2 );
+    SW_EXPECT_TRUE( server.getMigrationCount() >= 1 );
     SW_EXPECT_TRUE( server.hasScript( "CREATE SEQUENCE sw_commit_version" ) ); // 방언 분기 파일(`.postgres.sql`)이 골렸다
     SW_EXPECT_TRUE( server.hasScript( "LOCK TABLE sw_schema_migration" ) );
 

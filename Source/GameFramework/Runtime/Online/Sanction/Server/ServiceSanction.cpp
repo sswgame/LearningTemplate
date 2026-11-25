@@ -12,7 +12,7 @@ namespace sw
     {
         struct ServiceSanctionInternal
         {
-            static constexpr uint64 kFormat    = 1;
+            static constexpr uint64 kFormat    = 0;
             static constexpr int32  kKindCount = static_cast<int32>( ServiceSanctionKind::Count );
 
             static bool isEmpty( const ServiceSanctionState& state )

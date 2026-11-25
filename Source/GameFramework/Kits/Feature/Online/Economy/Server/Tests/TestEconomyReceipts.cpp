@@ -633,7 +633,7 @@ SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAn
     SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
     BitWriter expected;
-    expected.writeVarUint( 2 ); // 판
+    expected.writeVarUint( 0 ); // 판
     expected.writeVarUint( 1 ); // Redeemed
     SW_EXPECT_TRUE( listMark[0]._bytes == expected.getBytes() );
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );

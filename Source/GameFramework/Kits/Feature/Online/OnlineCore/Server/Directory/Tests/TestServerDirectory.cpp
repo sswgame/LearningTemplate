@@ -124,7 +124,7 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     SW_EXPECT_TRUE( read._state == sw::ServerState::Maintenance );
 
     sw::vector<uint8> listOldVersion = listBytes;
-    listOldVersion[0]                = 1;
+    listOldVersion[0]                = static_cast<uint8>( sw::ServerRecord::kFormatVersion + 1 );
     SW_EXPECT_FALSE( sw::ServerRecord::decode( listOldVersion, read ) );
 
     sw::ServerStatus noPort       = status;

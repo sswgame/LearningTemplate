@@ -120,8 +120,8 @@ namespace
         FakeStoreFixture()
         {
             const AbsolutePath folder = _domain.makeDiskFolder( "sql" );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( folder.join( SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-            SW_EXPECT_TRUE( FileUtil::writeTextFile( folder.join( "0001_fake.sql" ), "CREATE FAKE" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( folder.join( SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0000_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( folder.join( "0000_fake.sql" ), "CREATE FAKE" ) );
             _driver.addRows( test::FakeSQLDriver::kNextCommitVersion, { vector<SQLValue>{ SQLValue::makeInt64( 77 ) } }, 1 );
             SQLConnectionPoolConfig settings;
             settings._connection  = "fake";
@@ -735,7 +735,7 @@ SW_TEST_CASE( SQLServiceStoreTest, InitializeFailuresAreStartupErrors )
         const SQLDriverRegistration registration{ driver };
         SQLServiceStore             store;
         error.clear();
-        error = describeError( store.initialize( test::FakeSQLDriver::kName, settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } ) ); // 0002 에 "fake" 방언이 없고 공통 파일도 없다
+        error = describeError( store.initialize( test::FakeSQLDriver::kName, settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 1 } ) ); // 0000 에 "fake" 방언이 없고 공통 파일도 없다
         SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE( error.find( test::FakeSQLDriver::kName ) != string::npos );
         SW_EXPECT_EQUAL( 0, driver.getOpenCount() );
@@ -747,8 +747,8 @@ SW_TEST_CASE( SQLServiceStoreTest, FailedMigrationStopsTheStartup )
 {
     test::ScopedScratchDomain domain;
     const AbsolutePath        folder = domain.makeDiskFolder( "sql" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0001_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "0001_fake.sql" ), "CREATE FAKE" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( SQLMigrationRunner::kListFileName ), "<SQLMigrationList><Migration _name=\"0000_fake\" _compatibility=\"Backward\" /></SQLMigrationList>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( folder.join( "0000_fake.sql" ), "CREATE FAKE" ) );
     test::FakeSQLDriver         driver;
     const SQLDriverRegistration registration{ driver };
     driver.addResult( "CREATE FAKE", SQLResult::Error );

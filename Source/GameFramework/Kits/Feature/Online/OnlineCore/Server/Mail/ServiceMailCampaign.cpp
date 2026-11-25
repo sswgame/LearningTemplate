@@ -13,7 +13,7 @@ namespace sw
     {
         struct ServiceMailCampaignInternal
         {
-            static constexpr uint64 kFormat   = 1;
+            static constexpr uint64 kFormat   = 0;
             static constexpr int32  kPageSize = 64;
         };
 
@@ -87,7 +87,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &readEndTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readEndTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -98,7 +98,7 @@ namespace sw
         rule._ttlIndexTable   = getClaimExpiryTable();
         rule._expireAfterMs   = expireAfterMs; // 시각 읽기는 두지 않는다 - 표식에는 시각이 없고, 끝난 캠페인의 표식은 묶음째 쓸모가 없다
         rule._pBackfillSource = make_shared<ServiceMailCampaignClaimBackfillSource>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

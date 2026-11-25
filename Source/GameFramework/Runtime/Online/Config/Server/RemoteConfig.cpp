@@ -19,8 +19,8 @@ namespace sw
     {
         struct RemoteConfigInternal
         {
-            static constexpr uint64 kRecordVersion   = 2; ///< 2 에서 값 종류가 3 비트가 됐다(실험). 옛 버전 레코드는 다시 쓴다
-            static constexpr uint64 kVersion         = 2;
+            static constexpr uint64 kRecordVersion   = 0;
+            static constexpr uint64 kVersion         = 0;
             static constexpr int32  kTypeBitCount    = 3;
             static constexpr int32  kMaxVariantCount = 16;
             static constexpr int32  kListPageSize    = 256;

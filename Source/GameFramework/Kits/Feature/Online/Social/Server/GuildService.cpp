@@ -24,8 +24,8 @@ namespace sw
     {
         struct GuildServiceInternal
         {
-            static constexpr uint8       kFormatVersion      = 1;
-            static constexpr uint8       kGuildFormatVersion = 2;                             ///< 길드 레코드이다. 2 에서 경험치와 공개 여부를 더했다(옛 레코드는 다시 쓴다)
+            static constexpr uint8       kFormatVersion      = 0;
+            static constexpr uint8       kGuildFormatVersion = 0;                             ///< 길드 레코드이다
             static constexpr int64       kMaxExperience      = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
             static constexpr const utf8* kSequenceKey        = "guild";
             static constexpr uint32      kReplacementChar    = 0xFFFDu;
@@ -1572,7 +1572,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &GuildServiceInternal::readInviteExpiryMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildServiceInternal::readInviteExpiryMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 
@@ -1585,7 +1585,7 @@ namespace sw
         rule._pfnReadTime     = &GuildServiceInternal::readApplicationExpiryMs;
         rule._pfnStageErase   = &GuildServiceInternal::stageApplicationErase;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildServiceInternal::readApplicationExpiryMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

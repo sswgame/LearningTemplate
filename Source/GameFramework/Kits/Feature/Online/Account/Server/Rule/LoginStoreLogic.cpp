@@ -26,7 +26,7 @@ namespace sw
     {
         struct LoginStoreLogicInternal
         {
-            static constexpr uint8 kRecordFormat       = 1;
+            static constexpr uint8 kRecordFormat       = 0;
             static constexpr int32 kStoreRetryLimit    = 4; ///< 조건부 쓰기가 다른 쓰기와 부딪혔을 때 다시 읽는 횟수이다
             static constexpr int32 kMaxLinkCount       = 16;
             static constexpr int32 kDigestHexSize      = LoginConstant::kDigestSize * 2;
@@ -1404,7 +1404,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &LoginStoreLogicInternal::readSessionExpiryMs; // 지우기 전에 만료를 다시 본다 - 늘린 세션은 남긴다
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&LoginStoreLogicInternal::readSessionExpiryMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

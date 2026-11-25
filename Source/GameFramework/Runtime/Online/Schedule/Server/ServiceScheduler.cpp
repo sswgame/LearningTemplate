@@ -21,7 +21,7 @@ namespace sw
             static constexpr int64  kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
             static constexpr int64  kRetryMs        = 5000;
             static constexpr int32  kMaxJobIDSize   = 128;
-            static constexpr uint64 kVersion        = 1;
+            static constexpr uint64 kVersion        = 0;
             static constexpr uint32 kStateRunning   = 0;
             static constexpr uint32 kStateSucceeded = 1;
             static constexpr uint32 kStateFailed    = 2;
@@ -204,7 +204,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &ServiceSchedulerInternal::readRunTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&ServiceSchedulerInternal::readRunTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

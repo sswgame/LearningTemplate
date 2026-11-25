@@ -21,13 +21,11 @@ namespace sw
     {
         struct LedgerInternal
         {
-            static constexpr uint64      kJournalFormat       = 1;
-            static constexpr uint64      kCarryFormat         = 1;
-            static constexpr uint64      kTombstoneFormat     = 1;
-            static constexpr int32       kListPageSize        = 64;
-            static constexpr int32       kTimeHexWidth        = 16;
-            static constexpr string_view kLegacyMintHolderKey = "sys/mint"; ///< 예전 판이 발행 다리에 넣던 내역 줄의 보유자 키
-            static constexpr string_view kLegacySinkHolderKey = "sys/sink"; ///< 예전 판이 소각 다리에 넣던 내역 줄의 보유자 키
+            static constexpr uint64 kJournalFormat   = 0;
+            static constexpr uint64 kCarryFormat     = 0;
+            static constexpr uint64 kTombstoneFormat = 0;
+            static constexpr int32  kListPageSize    = 64;
+            static constexpr int32  kTimeHexWidth    = 16;
 
             /** @brief 한 (보유자, 자산)의 순변화입니다. */
             struct Delta
@@ -193,18 +191,6 @@ namespace sw
                     inoutTransaction.erase( Ledger::getHistoryTable(), makeHistoryKey( delta._holderKey, entry._timeMs, journalKey ) );
                     pLastHolderKey = &delta._holderKey;
                 }
-                // 예전 판은 발행 · 소각에도 내역 줄(`sys/mint/…` · `sys/sink/…`)을 넣었다 — 그 줄도 분개와 함께 지운다(없으면 조건 없는 지우기라 그냥 지나간다)
-                bool bIssued = false;
-                bool bBurned = false;
-                for ( const LedgerPosting& posting : entry._listPosting )
-                {
-                    bIssued = bIssued || posting._from._kind == LedgerHolderKind::Mint;
-                    bBurned = bBurned || posting._to._kind == LedgerHolderKind::Sink;
-                }
-                if ( bIssued )
-                    inoutTransaction.erase( Ledger::getHistoryTable(), makeHistoryKey( string( kLegacyMintHolderKey ), entry._timeMs, journalKey ) );
-                if ( bBurned )
-                    inoutTransaction.erase( Ledger::getHistoryTable(), makeHistoryKey( string( kLegacySinkHolderKey ), entry._timeMs, journalKey ) );
             }
 
             /**
@@ -646,7 +632,7 @@ namespace sw
         rule._pfnReadTime     = &LedgerInternal::readJournalTimeMs;
         rule._pfnStageErase   = &LedgerInternal::stageJournalErase;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&LedgerInternal::readJournalTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

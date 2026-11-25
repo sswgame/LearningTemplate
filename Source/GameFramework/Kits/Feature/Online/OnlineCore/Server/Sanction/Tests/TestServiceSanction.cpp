@@ -83,10 +83,10 @@ SW_TEST_CASE( ServiceSanctionTest, CorruptRecordIsNotReadAsNoSanction )
         return sw::ServiceSanction::readState( database, kAccount, read );
     };
     SW_EXPECT_TRUE( readWith( sw::vector<uint8>{ 9 } ) == sw::ServiceStoreResult::Unavailable ); // 이 빌드가 모르는 형식
-    SW_EXPECT_TRUE( readWith( sw::vector<uint8>{ 1 } ) == sw::ServiceStoreResult::Unavailable ); // 형식 머리만 있고 몸이 잘렸다
+    SW_EXPECT_TRUE( readWith( sw::vector<uint8>{ 0 } ) == sw::ServiceStoreResult::Unavailable ); // 형식 머리만 있고 몸이 잘렸다
 
     sw::BitWriter writer; // 형식은 맞고 사유 길이만 상한 + 1
-    writer.writeVarUint( 1 );
+    writer.writeVarUint( 0 );
     for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( sw::ServiceSanctionKind::Count ); ++kindIndex )
         writer.writeVarInt( kNowMs + 1000 );
     sw::ServiceKeyUtil::writeString( writer, sw::string( static_cast<size_t>( sw::ServiceSanctionState::kMaxReasonCodeSize ) + 1, 'r' ) );

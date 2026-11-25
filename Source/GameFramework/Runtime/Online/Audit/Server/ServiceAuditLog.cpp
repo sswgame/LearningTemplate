@@ -13,7 +13,7 @@ namespace sw
     {
         struct ServiceAuditLogInternal
         {
-            static constexpr uint64 kVersion        = 1;
+            static constexpr uint64 kVersion        = 0;
             static constexpr int32  kMaxActorSize   = 128;
             static constexpr int32  kMaxActionSize  = 64;
             static constexpr int32  kMaxSubjectSize = 128;
@@ -89,7 +89,7 @@ namespace sw
         rule._expireAfterMs   = expireAfterMs;
         rule._pfnReadTime     = &readTimeMs;
         rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&readTimeMs>();
-        rule._backfillVersion = 1;
+        rule._backfillVersion = 0;
         return rule;
     }
 

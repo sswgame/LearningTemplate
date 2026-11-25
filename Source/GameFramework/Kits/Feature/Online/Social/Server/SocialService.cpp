@@ -25,7 +25,7 @@ namespace sw
     {
         struct SocialServiceInternal
         {
-            static constexpr uint8 kFormatVersion     = 1;
+            static constexpr uint8 kFormatVersion     = 0;
             static constexpr int64 kPresenceTTLMs     = 90000;
             static constexpr int64 kPresenceRefreshMs = 30000;
 
