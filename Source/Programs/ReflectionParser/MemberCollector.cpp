@@ -43,9 +43,9 @@ namespace sw
         clang_visitChildren( recordCursor, memberCollectVisitor, this );
     }
 
-    void MemberCollector::validate()
+    void MemberCollector::validate( const CXCursor recordCursor )
     {
-        // 넷 다 돈다 — 한 번의 실행이 그 타입의 오류를 모두 알린다.
+        // 모두 돈다 — 한 번의 실행이 그 타입의 오류를 모두 알린다.
         if ( DeclarationValidator::validateMemberFunctions( *_pType, _listMethodSignature ) == false )
             _bHasError = SW_TRUE;
         if ( DeclarationValidator::validatePropertyFlags( *_pType ) == false )
@@ -58,6 +58,131 @@ namespace sw
             _bHasError = SW_TRUE;
         if ( validateInterfaces() == false )
             _bHasError = SW_TRUE;
+        if ( validateStateDeclarations( recordCursor ) == false )
+            _bHasError = SW_TRUE;
+    }
+
+    void MemberCollector::recordField( const CXCursor cursor )
+    {
+        CollectedField field;
+        field._name                                                = CursorReader::getCursorSpelling( cursor );
+        field._type                                                = clang_getCursorType( cursor );
+        const pair<const utf8*, StateDeclaration> arrDeclaration[] = {
+            {      annotation::kPropertyPrefix,  StateDeclaration::Property},
+            {annotation::kCodecStateAnnotation,     StateDeclaration::Codec},
+            { annotation::kTransientAnnotation, StateDeclaration::Transient},
+        };
+        for ( const auto& [pAnnotation, declaration] : arrDeclaration )
+        {
+            if ( AnnotationLookup::findAnnotateAttr( cursor, pAnnotation ).empty() )
+                continue;
+            field._declaration = field._declaration == StateDeclaration::None ? declaration : StateDeclaration::Conflict;
+        }
+        _listField.push_back( std::move( field ) );
+    }
+
+    bool MemberCollector::validateStateDeclarations( const CXCursor recordCursor )
+    {
+        CXFile declarationFile = nullptr;
+        clang_getExpansionLocation( clang_getCursorLocation( recordCursor ), &declarationFile, nullptr, nullptr, nullptr );
+        const string headerPath = declarationFile != nullptr ? CursorReader::takeString( clang_getFileName( declarationFile ) ) : string{};
+        bool         bStateType = isDerivedFromComponent( recordCursor, _pSession->_config );
+        for ( const ParsedPropertyInfo& prop : _pType->_listProperty )
+        {
+            bStateType = bStateType || prop._bRuntimeState == SW_TRUE || prop._bSaveGame == SW_TRUE;
+        }
+        const bool bUndeclaredAllowed = bStateType == false || _pSession->_config.isStateDeclarationSkipped( headerPath );
+        const bool bCodec             = bStateType && hasStateCodec( recordCursor );
+        bool       bValid             = true;
+        for ( const CollectedField& field : _listField )
+        {
+            const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, field._name );
+            if ( field._declaration == StateDeclaration::Conflict )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORStateDeclarationConflict", "ERROR: '%#' carries more than one of PROPERTY(), SW_CODEC_STATE and SW_TRANSIENT - keep the one that says who carries the value.", owner );
+                bValid = false;
+                continue;
+            }
+            const bool bMarked = field._declaration == StateDeclaration::Codec || field._declaration == StateDeclaration::Transient;
+            if ( bMarked && bStateType == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORStateDeclarationUnused", "ERROR: '%#' writes SW_CODEC_STATE or SW_TRANSIENT, but '%#' is neither a component nor a type with RuntimeState / SaveGame "
+                                                                           "properties - remove it.",
+                                 owner, _pType->_fullyQualifiedName );
+                bValid = false;
+                continue;
+            }
+            if ( field._declaration == StateDeclaration::Codec && bCodec == false )
+            {
+                SW_LOG_ERROR_ID( "AstVisitor.ERRORCodecStateWithoutCodec", "ERROR: SW_CODEC_STATE on '%#' - neither '%#' nor a base declares serializeState / serializeGameState, so nothing carries the value.",
+                                 owner, _pType->_fullyQualifiedName );
+                bValid = false;
+                continue;
+            }
+            if ( bUndeclaredAllowed || bMarked || field._declaration == StateDeclaration::Property || hasStateValue( field._type ) == false )
+                continue;
+            // 남는 비트(`_reserved`)와 인터페이스 포트는 값이 아니다.
+            bool bWithoutValue = StringUtil::startsWith( field._name, annotation::kReservedMemberPrefix );
+            for ( const ParsedInterfaceExport& entry : _pType->_listInterfaceExport )
+            {
+                bWithoutValue = bWithoutValue || entry._portMember == field._name;
+            }
+            if ( bWithoutValue )
+                continue;
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORStateUndeclared", "ERROR: '%#' has no state declaration - a value the game must get back (save, streaming, rollback, hot reload) is PROPERTY( RuntimeState ) "
+                                                                "or SW_CODEC_STATE (carried by serializeState); a cache or per-frame value is SW_TRANSIENT.",
+                             owner );
+            bValid = false;
+        }
+        return bValid;
+    }
+
+    bool MemberCollector::hasStateValue( const CXType type )
+    {
+        const CXType canonical = clang_getCanonicalType( type );
+        if ( canonical.kind == CXType_ConstantArray )
+            return hasStateValue( clang_getArrayElementType( canonical ) );
+        const bool bReference = canonical.kind == CXType_Pointer || canonical.kind == CXType_LValueReference || canonical.kind == CXType_RValueReference || canonical.kind == CXType_MemberPointer;
+        if ( bReference || clang_isConstQualifiedType( canonical ) != 0 )
+            return false;
+        const string identity = CursorReader::getTypeIdentity( canonical );
+        if ( CursorReader::isAnyIdentity( identity, typeidentity::kArrNonStateType ) )
+            return false;
+        const bool bSharedConst = CursorReader::isAnyIdentity( identity, typeidentity::kArrSharedPointerTemplate ) &&
+                                  clang_isConstQualifiedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ) != 0;
+        return bSharedConst == false;
+    }
+
+    struct MemberCollector::StateCodecSearch
+    {
+        bool _bFound;
+    };
+
+    CXChildVisitResult MemberCollector::stateCodecVisitor( CXCursor cursor, CXCursor, CXClientData data )
+    {
+        StateCodecSearch&  search = *static_cast<StateCodecSearch*>( data );
+        const CXCursorKind kind   = clang_getCursorKind( cursor );
+        if ( kind == CXCursor_CXXMethod )
+        {
+            const string name = CursorReader::getCursorSpelling( cursor );
+            search._bFound    = name == annotation::kSerializeStateMethod || name == annotation::kSerializeGameStateMethod;
+        }
+        else if ( kind == CXCursor_CXXBaseSpecifier )
+        {
+            const CXCursor baseDecl = CursorReader::getBaseClassDeclaration( cursor );
+            search._bFound          = clang_Cursor_isNull( baseDecl ) == 0 && hasStateCodec( baseDecl );
+        }
+        return search._bFound ? CXChildVisit_Break : CXChildVisit_Continue;
+    }
+
+    bool MemberCollector::hasStateCodec( const CXCursor recordCursor )
+    {
+        const CXCursor definition = clang_getCursorDefinition( recordCursor );
+        if ( clang_Cursor_isNull( definition ) != 0 )
+            return false;
+        StateCodecSearch search{ false };
+        clang_visitChildren( definition, stateCodecVisitor, &search );
+        return search._bFound;
     }
 
     bool MemberCollector::validateInterfaces()
@@ -70,7 +195,7 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfaceHasState",
                                  "ERROR: REFLECT( Interface ) '%#' has a data member '%#' - an interface is pure virtual functions only; move the state to the implementing component.",
-                                 _pType->_fullyQualifiedName, _listField.front().first );
+                                 _pType->_fullyQualifiedName, _listField.front()._name );
                 bValid = false;
             }
             if ( _baseCount != 0 )
@@ -100,10 +225,10 @@ namespace sw
                     bValid = false;
                 }
             }
-            const pair<string, CXType>* pField = nullptr;
-            for ( const pair<string, CXType>& field : _listField )
+            const CollectedField* pField = nullptr;
+            for ( const CollectedField& field : _listField )
             {
-                if ( field.first == entry._portMember )
+                if ( field._name == entry._portMember )
                     pField = &field;
             }
             if ( pField == nullptr )
@@ -113,7 +238,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            entry._interfaceFQN = findPortInterface( pField->second, entry._interfaceSpelling );
+            entry._interfaceFQN = findPortInterface( pField->_type, entry._interfaceSpelling );
             if ( entry._interfaceFQN.empty() )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfacePortBase", "ERROR: port '%#' of '%#' does not derive from interface '%#' - make the port type a nested 'struct ...Port final : %#'.",
@@ -179,7 +304,7 @@ namespace sw
             collector.collectBase( cursor );
         else if ( kind == CXCursor_FieldDecl )
         {
-            collector._listField.emplace_back( CursorReader::getCursorSpelling( cursor ), clang_getCursorType( cursor ) );
+            collector.recordField( cursor );
             collector.collectField( cursor );
         }
         else if ( bFunction )

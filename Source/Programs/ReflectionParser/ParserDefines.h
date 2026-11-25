@@ -79,6 +79,15 @@ namespace sw
 
         /** @brief C 고정 배열(`T _arr[N]`)이 타는 `ReflectBuiltins.xxx` CONTAINER 줄의 이름입니다 — 래퍼 줄기 · 종류 · 역할은 그 줄이 정한다(`std::array` 와 같다). */
         inline constexpr const utf8* kFixedArrayTypeName = "array";
+
+        /** @brief 멤버의 상태 선언 `SW_TRANSIENT` · `SW_CODEC_STATE` 의 애노테이션 글입니다(`ReflectionMacros.h`). */
+        inline constexpr const utf8* kTransientAnnotation  = "SW_TRANSIENT";
+        inline constexpr const utf8* kCodecStateAnnotation = "SW_CODEC_STATE";
+        /** @brief `SW_CODEC_STATE` 멤버를 싣는 메서드 이름입니다(상태 코덱 · 디렉터의 본문). */
+        inline constexpr const utf8* kSerializeStateMethod     = "serializeState";
+        inline constexpr const utf8* kSerializeGameStateMethod = "serializeGameState";
+        /** @brief 비트필드의 남는 비트 이름 머리입니다 — 값이 아니라 상태 선언을 묻지 않는다. */
+        inline constexpr const utf8* kReservedMemberPrefix = "_reserved";
     } // namespace annotation
 
     /**
@@ -106,6 +115,15 @@ namespace sw
          *        (`PROPERTY( DefaultName )` · `Required`). 이것들의 `vector` 도 같다.
          */
         inline constexpr const utf8* kArrNameFieldType[] = { "sw::basic_hashed_string", "sw::DataPath", "sw::AssetID", "sw::TagID", "sw::AssetRef" };
+        /**
+         * @brief 값이 아니라 구독 · 연결 · 공유 에셋 · 잠금인 형식입니다 — 싣고 되살릴 값이 없어 상태 선언(`SW_TRANSIENT` · `SW_CODEC_STATE`)을 묻지 않는다
+         *        (포인터 · 참조 · const 값 · `shared_ptr<const T>` 도 같다, `MemberCollector::hasStateValue`).
+         */
+        inline constexpr const utf8* kArrNonStateType[] = { "sw::Subscription", "sw::SubscriptionList", "sw::ItemSubscriptionList", "sw::Delegate", "sw::MulticastDelegate",
+                                                            "sw::DelegateSlot", "sw::SharedAssetRef", "sw::AssetHandle", "sw::BoundAssetRef", "sw::AssetReloadWatch",
+                                                            "sw::ConsumerLease", "sw::DevCounter", "sw::IdentityToken", "sw::ThreadRole", "sw::mutex", "std::weak_ptr" };
+        /** @brief 나눠 쥐는 포인터 템플릿입니다(인자가 const 면 바꿀 수 없는 공유 데이터라 상태가 아니다). */
+        inline constexpr const utf8* kArrSharedPointerTemplate[] = { "std::shared_ptr" };
     } // namespace typeidentity
 
     namespace fixedlayout
@@ -181,6 +199,7 @@ namespace sw
         inline constexpr const utf8* kParsingComponentBaseTypes   = "component_base_types";
         inline constexpr const utf8* kParsingTypeStripPrefixes    = "type_strip_prefixes";
         inline constexpr const utf8* kParsingNameFieldSkipFolders = "name_field_skip_folders";
+        inline constexpr const utf8* kParsingStateSkipPaths       = "state_declaration_skip_paths";
 
         // tuning.*
         inline constexpr const utf8* kMaxParallelParses = "max_parallel_parses";

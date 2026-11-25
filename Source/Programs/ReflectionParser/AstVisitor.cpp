@@ -397,7 +397,7 @@ namespace sw
             MemberCollector collector( typeInfo, *_pSession );
             collector.collect( cursor );
             // 메서드는 프로퍼티 뒤에 선언될 수 있다 — 이름으로 가리키는 애노테이션은 멤버를 다 모은 뒤에 대조한다.
-            collector.validate();
+            collector.validate( cursor );
             if ( collector.hasError() )
             {
                 markHeaderError( outHeader );

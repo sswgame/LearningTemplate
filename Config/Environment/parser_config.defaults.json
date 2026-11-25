@@ -61,6 +61,11 @@
         ],
         "name_field_skip_folders": [
             "Tests"
+        ],
+        "state_declaration_skip_paths": [
+            "/Tests/",
+            "/Source/Games/",
+            "GameModeComponent.h"
         ]
     },
     "tuning": {
