@@ -92,6 +92,14 @@ namespace sw
         return 0u;
     }
 
+    uint32 IRHICommandContext::bindMaterialTexture( RHITextureSRVIndex srv, uint32 ordinal )
+    {
+        const IRHIDevice& device = getContextDevice();
+        if ( device.supportsNativeBindlessSampling() == false )
+            bindShaderResource( srv, shaderslot::kMaterialTexture0 + ordinal );
+        return device.getMaterialTextureIndex( srv, ordinal );
+    }
+
     void IRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::UnorderedAccess, 0, shaderslot::kComputeUAVSlotCount, index, slot, "bindGraphicsUAV" );

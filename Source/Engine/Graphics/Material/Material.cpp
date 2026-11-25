@@ -240,7 +240,7 @@ namespace sw
             _listTextureLoad.push_back( std::move( load ) );
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
             recordSlot( ordinal, prop._name, srv );
-            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? srv.getValue() : ordinal );
+            setTextureParameter( hashed_string( prop._name.c_str() ), pRHI->getMaterialTextureIndex( srv, ordinal ) );
         }
         return true;
     }

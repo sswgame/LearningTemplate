@@ -62,12 +62,11 @@ namespace sw
          * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 위치(주 출력 0, 대상은 `getTargetQuadBase`)
          * @param pso            대상 포맷의 캔버스 PSO
          * @param targetWidth    대상 픽셀 크기(가위가 없는 일괄의 가위와 셰이더의 NDC 변환에 씁니다)
-         * @param bNativeBindless DX12 와 Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t16..t19 에 서수로 바인딩합니다
          * @param colorVisionMode 색각 보정 방식(`CanvasFrameData::_colorVisionMode`, 주 출력만 쓰고 렌더 텍스처 대상은 0)
          * @return 그린 일괄 수입니다
          */
         uint32 drawList( IRHIPassCommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
-                         bool bNativeBindless, uint32 colorVisionMode = 0 ) const;
+                         uint32 colorVisionMode = 0 ) const;
         /**
          * @brief 렌더 텍스처 대상(월드 공간 UI)을 지우고 그립니다. 내용 번호와 텍스처가 지난번과 같은 대상은 건너뜁니다(언리얼 위젯 컴포넌트의 다시 그리기 조건에 해당합니다).
          * @details 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트에 기록한다. PSO 는 대상 포맷의 출력 PSO(`RenderPSOCache::findOutputPSO`)뿐이다 —

@@ -442,6 +442,11 @@ namespace sw
          * @note false 면 CPU 가 그 인덱스로 슬롯을 바인딩해야 합니다(DX11, GL 에뮬레이션).
          */
         virtual bool supportsNativeBindlessSampling() const { return false; }
+        /**
+         * @brief 머티리얼 텍스처 칸 @p ordinal 로 읽는 셰이더에 넘길 번호입니다 — 네이티브 bindless 면 @p srv, 에뮬(DX11 · GL)이면 @p ordinal(칸은 기록 중 `IRHIPassCommandList::bindMaterialTexture` · 바인더가 건다).
+         * @details 기록 전에 상수 · 구조 버퍼 값을 정하는 자리(머티리얼 · 데칼 · 렌즈 플레어)가 백엔드 갈래를 저마다 쓰지 않게 규약을 한 곳에 둔다.
+         */
+        [[nodiscard]] uint32 getMaterialTextureIndex( RHITextureSRVIndex srv, uint32 ordinal ) const { return supportsNativeBindlessSampling() ? static_cast<uint32>( srv ) : ordinal; }
 
         /**
          * @brief @p index 가 @p space 에서 지금 살아 있는 리소스를 가리키면 true 입니다(Debug · Dev 진단 — 배포는 묻는 쪽 `BindlessIndexValidator` 가 꺼져 있다).

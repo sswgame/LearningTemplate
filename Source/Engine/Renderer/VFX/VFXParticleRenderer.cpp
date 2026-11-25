@@ -126,8 +126,7 @@ namespace sw
         _uploadedParticleCount = particleCount;
     }
 
-    uint32 VFXParticleRenderer::drawBatches( IRHIPassCommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot,
-                                             bool bNativeBindless ) const
+    uint32 VFXParticleRenderer::drawBatches( IRHIPassCommandList& cmd, const vector<GPUParticleBatch>& listBatch, vector_reference<const GPUTransparentParticleSlot> listSlot ) const
     {
         const bool bNothingToDraw = listSlot.empty() || _listBatchBase.size() != listBatch.size();
         if ( bNothingToDraw )
@@ -182,16 +181,7 @@ namespace sw
                 SW_LOG_ERROR_ONCE_ID( "VFXParticleRenderer.OrderRangeTooFar", "Particle order list is too long for the root flags (%# entries) - an emitter draws unsorted", slot._order._first );
             // 셰이더가 이 구간 밖의 입자를 읽지 않는다(particle.hlsl loadParticle). CPU 방출기는 공유 버퍼 안 자기 입자 수, GPU 방출기는 자기 렌더 입력 버퍼의 원소 수다.
             arrRoot[Root::kRootParticleCount] = bGPUBatch ? pGPUSource->_particleCount : static_cast<uint32>( batch.findCPUParticles()->size() );
-            if ( bNativeBindless )
-            {
-                arrRoot[Root::kRootTexture] = srv; // 전역 번호
-            }
-            else
-            {
-                // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t16(kMaterialTexture0) 에 서수로 건다 — MaterialTexture::sampleIndex 가 서수로 고른다.
-                cmd.bindShaderResource( srv, shaderslot::kMaterialTexture0 );
-                arrRoot[Root::kRootTexture] = 0;
-            }
+            arrRoot[Root::kRootTexture]       = cmd.bindMaterialTexture( srv, 0 ); // 네이티브는 전역 번호, 에뮬은 머티리얼 칸 0 의 서수
             // 행벡터 규약의 열 c = (_1c, _2c, _3c, _4c) — 셰이더가 dot( float4( 로컬, 1 ), 열 ) 로 월드 좌표 c 를 얻는다.
             const float4x4& world                                                 = batch._world;
             const float32   arrColumn[Root::kColumnCount][Root::kFloatsPerColumn] = {

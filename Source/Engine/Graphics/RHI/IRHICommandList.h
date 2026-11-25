@@ -144,6 +144,12 @@ namespace sw
          *          언리얼은 텍스처가 셰이더 매개변수라 호출자가 bindless 여부를 모른다 — 그 자리다.
          */
         [[nodiscard]] virtual uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) = 0;
+        /**
+         * @brief 머티리얼 텍스처 칸 @p ordinal 로 읽는 셰이더(`MaterialTexture::sampleIndex` — 캔버스 · 입자 · ImGui · 층 굽기)에 텍스처 @p srv 를 걸고, 셰이더에 넘길 번호를 돌려줍니다. PSO 를 건 **뒤** 부릅니다.
+         * @details 네이티브 bindless 는 걸 것이 없고 @p srv 그대로다. 에뮬(DX11 · GL)은 머티리얼 칸 t(16 + @p ordinal) 에 걸고 @p ordinal 을 돌려준다 — 셰이더는 그 서수로 칸을 고른다.
+         *          `bindSampledTexture`(에뮬이 0 을 받는 엔진 칸 규약)와 반환 규약만 다르다. 기록 전에 값만 정하는 자리는 `IRHIDevice::getMaterialTextureIndex` 를 쓴다.
+         */
+        [[nodiscard]] virtual uint32 bindMaterialTexture( RHITextureSRVIndex srv, uint32 ordinal ) = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 기반 바인딩: 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩한다.

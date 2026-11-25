@@ -102,6 +102,7 @@ namespace sw::test
         void   bindGraphicsUAV( RHIUnorderedAccessIndex, uint32 ) override {}
         void   bindShaderResource( RHITextureSRVIndex, uint32 ) override {}
         uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 ) override { return static_cast<uint32>( srv ); }
+        uint32 bindMaterialTexture( RHITextureSRVIndex srv, uint32 ) override { return static_cast<uint32>( srv ); }
         void   bindConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
         void   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
         void   bindStructuredBuffer( RHIBufferSRVIndex, uint32 ) override {}

@@ -65,6 +65,7 @@ namespace sw
         void                 bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
         void                 bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
         [[nodiscard]] uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) override { return _pContext->bindSampledTexture( srv, emulatedSlot ); }
+        [[nodiscard]] uint32 bindMaterialTexture( RHITextureSRVIndex srv, uint32 ordinal ) override { return _pContext->bindMaterialTexture( srv, ordinal ); }
         void                 bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
         void                 updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
         void                 bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }

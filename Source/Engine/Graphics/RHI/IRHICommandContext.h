@@ -60,6 +60,7 @@ namespace sw
         void                 bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) final;
         void                 bindShaderResource( RHITextureSRVIndex index, uint32 slot ) final;
         [[nodiscard]] uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) final;
+        [[nodiscard]] uint32 bindMaterialTexture( RHITextureSRVIndex srv, uint32 ordinal ) final;
         void                 bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
         void                 bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
         void                 bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) final;

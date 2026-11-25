@@ -216,3 +216,20 @@ SW_TEST_CASE( RHIRecordingBindingsTest, SampledTextureBindsTheEmulatedSlot )
     SW_REQUIRE_TRUE( listChange.size() == 1 );
     SW_EXPECT_TRUE( listChange[0].second == RHIDescriptorIndex{ 9 } );
 }
+
+/** @brief [RHIRecordingBindingsTest] 에뮬 bindless 장치에서 머티리얼 칸 텍스처는 그 서수의 칸에 걸리고 셰이더 번호는 서수다. 변이: 0 을 돌려주거나 칸 0 에 걸면 진다. */
+SW_TEST_CASE( RHIRecordingBindingsTest, MaterialTextureBindsTheOrdinalSlot )
+{
+    test::FakeRHIDevice         device;
+    test::FakeRHICommandContext context{ device };
+    RHIShaderSlots&             slots = context.getBindings().getSlots( RHIBindPoint::Graphics );
+
+    context.beginRenderPass( makeBackBufferPass() );
+    context.setPipelineState( RHIPipelineStateHandle{ 10 } );
+    (void)takeChanges( slots, RHIShaderSlotKind::ShaderResource );
+    SW_EXPECT_EQUAL( 2u, context.bindMaterialTexture( RHITextureSRVIndex{ 9 }, 2 ) );
+    const vector<pair<uint32, RHIDescriptorIndex>> listChange = takeChanges( slots, RHIShaderSlotKind::ShaderResource );
+    SW_REQUIRE_TRUE( listChange.size() == 1 );
+    SW_EXPECT_EQUAL( shaderslot::kMaterialTexture0 + 2u, listChange[0].first );
+    SW_EXPECT_TRUE( listChange[0].second == RHIDescriptorIndex{ 9 } );
+}

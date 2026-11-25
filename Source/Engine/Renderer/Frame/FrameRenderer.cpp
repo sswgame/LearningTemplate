@@ -489,7 +489,8 @@ namespace sw
                                     static_cast<uint32>( _state._listFrameDecal.size() ), _pipeline._path );
             return;
         }
-        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        if ( _pDevice == nullptr )
+            return;
         for ( const DecalDrawData& decal : _state._listFrameDecal )
         {
             // 텍스처를 적었는데 아직 읽는 중이면 이 프레임은 그 데칼을 빼고 그린다(흰색 · 평평한 노멀로 대신 그리지 않는다).
@@ -506,12 +507,12 @@ namespace sw
             if ( pAlbedo != nullptr )
             {
                 draw._arrTextureSRV[0]       = pAlbedo->getSRV();
-                draw._element._albedoTexture = bNativeBindless ? pAlbedo->getSRV() : 0u;
+                draw._element._albedoTexture = _pDevice->getMaterialTextureIndex( pAlbedo->getSRV(), 0 );
             }
             if ( pNormal != nullptr )
             {
                 draw._arrTextureSRV[1]       = pNormal->getSRV();
-                draw._element._normalTexture = bNativeBindless ? pNormal->getSRV() : 1u;
+                draw._element._normalTexture = _pDevice->getMaterialTextureIndex( pNormal->getSRV(), 1 );
             }
             _state._listFrameDecalDraw.push_back( draw );
         }

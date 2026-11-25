@@ -142,7 +142,6 @@ namespace sw::editor
         , _listWord{}
         , _mapListBase{}
         , _listFrameSRV{}
-        , _bNativeBindless{ SW_FALSE }
     {
     }
 
@@ -153,9 +152,8 @@ namespace sw::editor
         using Internal = ImGuiRendererInternal;
         if ( pRHIDevice == nullptr || pRHIDevice->getResourceFactory() == nullptr )
             return false;
-        _pDevice         = pRHIDevice;
-        _pDrawHandoff    = &drawHandoff;
-        _bNativeBindless = pRHIDevice->supportsNativeBindlessSampling();
+        _pDevice      = pRHIDevice;
+        _pDrawHandoff = &drawHandoff;
 
         // 곧은 알파(ImGui 의 규약 — 글꼴 아틀라스 · 색 모두 곱하지 않은 알파다), 깊이 · 컬링 없음. 캡처 텍스처와 보조 창도 백버퍼 포맷이라 PSO 는 하나다.
         RHIPipelineStateDesc desc{};
@@ -365,7 +363,8 @@ namespace sw::editor
         arrRoot[Internal::kRootOffsetX] = BitUtil::floatToBits( -1.0f - drawData.DisplayPos.x * scaleX );
         arrRoot[Internal::kRootOffsetY] = BitUtil::floatToBits( 1.0f - drawData.DisplayPos.y * scaleY );
 
-        RHITextureSRVIndex boundSRV{ kInvalidDescriptorIndex }; // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
+        RHITextureSRVIndex boundSRV{ kInvalidDescriptorIndex };              // 에뮬 백엔드의 t16 — 명령 대부분이 글꼴 아틀라스 하나라 바뀔 때만 다시 건다
+        uint32             textureIndex{ constant::invalid_index::kUint32 }; // 건 텍스처의 셰이더 번호(`bindMaterialTexture`)
         for ( const ImDrawList* pList : drawData.CmdLists )
         {
             const auto it = _mapListBase.find( pList );
@@ -407,16 +406,11 @@ namespace sw::editor
                 pCmd->setScissorRect( scissor );
                 arrRoot[Internal::kRootVertexBase] = it->second._vertexWord + cmd.VtxOffset * Internal::kVertexWords;
                 arrRoot[Internal::kRootIndexBase]  = it->second._indexHalf + cmd.IdxOffset;
-                if ( _bNativeBindless )
-                    arrRoot[Internal::kRootTexture] = srv; // 전역 번호
-                else
-                {
-                    // 에뮬 백엔드(DX11 · GL)는 머티리얼 텍스처 슬롯 t16 에 서수 0 으로 건다 — MaterialTexture::sampleIndexTexture 가 서수로 고른다.
-                    if ( srv != boundSRV )
-                        pCmd->bindShaderResource( srv, shaderslot::kMaterialTexture0 );
-                    boundSRV                        = srv;
-                    arrRoot[Internal::kRootTexture] = 0;
-                }
+                // 네이티브는 전역 번호, 에뮬은 머티리얼 칸 0 의 서수(MaterialTexture::sampleIndexTexture 가 고른다). 같은 텍스처를 이어 그리면 다시 걸지 않는다.
+                if ( srv != boundSRV )
+                    textureIndex = pCmd->bindMaterialTexture( srv, 0 );
+                boundSRV                        = srv;
+                arrRoot[Internal::kRootTexture] = textureIndex;
                 pCmd->setGraphicsRootConstants( Internal::kRootConstantCount, arrRoot );
                 // 명령 하나 = 드로우 하나(인덱스 하나 = 정점 하나, 셰이더 VSMain) — 시작 위치는 루트 상수로 넘겨 SV_VertexID 는 0 부터다.
                 pCmd->drawInstanced( cmd.ElemCount, 1, 0, 0 );

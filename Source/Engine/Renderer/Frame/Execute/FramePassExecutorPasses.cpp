@@ -1163,7 +1163,6 @@ namespace sw
         // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
         setIdentityWorld( context );
         // 구간마다 그리기 하나 — Image 구간은 텍스처를 머티리얼 칸 0 으로 빌려 건다(데칼과 같다). 아직 읽는 중인 텍스처의 구간은 이번 프레임에 뺀다(흰 사각형으로 대신하지 않는다).
-        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         for ( const LensFlareDrawRange& range : sprites.getDrawRanges() )
         {
             RHITextureSRVIndex arrTextureSRV[shaderslot::kMaterialTextureCount];
@@ -1178,7 +1177,7 @@ namespace sw
                 if ( pTexture == nullptr )
                     continue;
                 arrTextureSRV[0] = pTexture->getSRV();
-                textureIndex     = bNativeBindless ? pTexture->getSRV() : 0u;
+                textureIndex     = _pDevice->getMaterialTextureIndex( pTexture->getSRV(), 0 );
             }
             context._passValues.setUint( passConstantNames()._lensFlareTexture, textureIndex );
             context.setPipeline( pso );
@@ -1336,7 +1335,7 @@ namespace sw
             const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassKind::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
             context.beginRenderPass( RHIRenderPassBeginInfo::color( target._texture, RHIRenderPassLoadOp::Load ).setExtent( target._width, target._height ) );
             (void)_state._canvasRenderer.drawList( *context._pCmd, _state._canvasFrame.getMainOutput(), _state._canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
-                                                   _pDevice->supportsNativeBindlessSampling(), _state._canvasFrame._colorVisionMode );
+                                                   _state._canvasFrame._colorVisionMode );
             context._pCmd->endRenderPass();
         }
         const bool bLastWriter = isLastSwapchainWriter( input._passDesc );
@@ -1365,8 +1364,7 @@ namespace sw
         const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassKind::Canvas, format ); // 셋업에 없으면 멈춘다
         // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
         context.beginRenderPass( RHIRenderPassBeginInfo::color( screen, RHIRenderPassLoadOp::Load ).setExtent( target._width, target._height ) );
-        (void)_state._canvasRenderer.drawList( *context._pCmd, list, _state._canvasRenderer.getDevOverlayQuadBase(), pso, target._width, target._height,
-                                               _pDevice->supportsNativeBindlessSampling() );
+        (void)_state._canvasRenderer.drawList( *context._pCmd, list, _state._canvasRenderer.getDevOverlayQuadBase(), pso, target._width, target._height );
         context._pCmd->endRenderPass();
     }
 

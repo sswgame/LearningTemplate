@@ -1002,7 +1002,7 @@ namespace sw
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
         if ( bindForDraw( context, pso, kInvalidDescriptorIndex ) == false )
             return false;
-        (void)_state._particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot, _pDevice->supportsNativeBindlessSampling() );
+        (void)_state._particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot );
         return true;
     }
 
@@ -1071,22 +1071,10 @@ namespace sw
         if ( listRequest.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.LayerBake" );
-        const bool bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        // 텍스처 칸을 루트 상수로 채운다 — 네이티브 bindless 는 전역 번호, 에뮬 백엔드는 머티리얼 칸 t16.. 에 서수로 걸고 그 서수(캔버스와 같은 길).
-        const auto bindTexture = [this, bNativeBindless]( const Texture2D* pTexture, uint32 slot, uint32& outRoot )
+        // 텍스처 칸을 루트 상수로 채운다 — 네이티브 bindless 는 전역 번호, 에뮬 백엔드는 머티리얼 칸에 걸고 그 서수(캔버스와 같은 길).
+        const auto bindTexture = [this]( const Texture2D* pTexture, uint32 slot, uint32& outRoot )
         {
-            if ( pTexture == nullptr )
-            {
-                outRoot = constant::invalid_index::kUint32;
-                return;
-            }
-            if ( bNativeBindless )
-            {
-                outRoot = pTexture->getSRV();
-                return;
-            }
-            _pCmd->bindShaderResource( pTexture->getSRV(), shaderslot::kMaterialTexture0 + slot );
-            outRoot = slot;
+            outRoot = pTexture != nullptr ? _pCmd->bindMaterialTexture( pTexture->getSRV(), slot ) : constant::invalid_index::kUint32;
         };
         const auto findReady = [&textures]( const string& path ) -> const Texture2D*
         {
