@@ -9,9 +9,9 @@
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;
