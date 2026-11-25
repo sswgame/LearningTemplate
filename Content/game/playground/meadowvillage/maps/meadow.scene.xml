@@ -86,6 +86,7 @@
 					                           _harvestedFlag="farm.harvested"
 					                           _fieldWidth="4"
 					                           _fieldHeight="2">
+						<_speedRange _minTimeScale="0.25" _maxTimeScale="8" _stepFactor="2" />
 						<_stateSettings _landWidth="40" _landHeight="40" _landCellSize="1" _landOrigin="-20,0,-20">
 							<_clock _secondsPerDay="120" _startHour="6" _daysPerSeason="28">
 								<_listSeason>

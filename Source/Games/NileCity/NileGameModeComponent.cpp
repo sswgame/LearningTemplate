@@ -190,7 +190,7 @@ namespace sw
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        GameSpeedControl restoredSpeed;
+        GameSpeedControl restoredSpeed = getSpeed(); // 같은 범위로 본다
         if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) ) == false )
             return; // 범위 밖 배속(깨진 세이브)은 거절한다
         getMutableCity()  = std::move( restoredCity );

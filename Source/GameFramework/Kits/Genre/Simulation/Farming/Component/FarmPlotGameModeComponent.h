@@ -85,7 +85,9 @@ namespace sw
         int32 _fieldHeight;
         PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Min = 0 )
         int32 _startingGold;
-        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (up to the game speed limit)", Min = 1.0, Max = 8.0 )
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held (within the speed range)", Min = 1.0 )
         float32 _fastTimeScale;
 
         BoundAssetRef<CropCatalog> _pCropCatalog;

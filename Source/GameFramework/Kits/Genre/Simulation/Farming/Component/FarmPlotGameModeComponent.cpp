@@ -20,6 +20,7 @@ namespace sw
         , _fieldWidth{ 4 }
         , _fieldHeight{ 2 }
         , _startingGold{ 20 }
+        , _speedRange{}
         , _fastTimeScale{ 8.0f }
         , _pCropCatalog{}
         , _field{}
@@ -57,8 +58,8 @@ namespace sw
 
     bool FarmPlotGameModeComponent::startGame()
     {
-        if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false )
-            return false;
+        if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false || _speed.initialize( _speedRange ) == false )
+            return false; // 까닭은 남았다
         if ( _pCropCatalog->findCrop( _crop.key() ) == nullptr )
         {
             SW_LOG_ERROR_ID( "FarmPlot.CropUnknown", "[FarmPlot] the field cannot start - crop '%#' is not in the crop catalog", _crop.c_str() );

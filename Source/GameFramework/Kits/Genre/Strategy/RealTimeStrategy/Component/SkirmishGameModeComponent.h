@@ -132,6 +132,8 @@ namespace sw
         CatalogKey<RTSUnitDef> _productionUnitID;
         PROPERTY( Category = "AI Units", DisplayName = "Army", Tooltip = "Unit the AI trains and attacks with" )
         CatalogKey<RTSUnitDef> _armyUnitID;
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
         // ---- 컴퓨터 상대의 성향 — 셋 다 씬 데이터에 적는다(적지 않으면 판을 열지 않는다) ----
         PROPERTY( Category = "AI Styles", DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
         RTSCommanderAISettings _rushAI;

@@ -35,6 +35,8 @@
     "kBoardKills": "GameSettings::_onlineLeaderboard(2026-11-25)",
     "kMatchRegion": "GameSettings::_onlineRegion(2026-11-25)",
     "SkirmishAIStyle": "RTSCommanderAISettings — 성향과 AI 설정은 한 형식이다(2026-11-25)",
+    "kMinTimeScale": "GameSpeedRange::_minTimeScale(2026-11-25)",
+    "kMaxTimeScale": "GameSpeedRange::_maxTimeScale(2026-11-25)",
     "paintMap": "SkirmishMap::_tileMapPath — 절벽은 타일맵의 데이터 레이어다(2026-11-25)",
     "spawnBase": "SkirmishMap::_listPlacement(2026-11-25)",
     "EngineSubsystemSet": "지움 — 코어 범위는 Engine::initialize 가 직접 채우고 서비스 · 기동 단계는 등록 줄이 채운다(2026-11-25)",

@@ -109,6 +109,7 @@
 					                                   _productionUnitID="barracks"
 					                                   _armyUnitID="marine"
 					                                   _bAutoPlay="false">
+						<_speedRange _minTimeScale="0.25" _maxTimeScale="8" _stepFactor="2" />
 						<_map _tileMapPath="guid:98c1076f7b3a88ee29dc8e392a310086">
 							<_listPlayerStart>
 								<SkirmishPlayerStart _team="0" _position="10,10" _aiRole="Rush" />

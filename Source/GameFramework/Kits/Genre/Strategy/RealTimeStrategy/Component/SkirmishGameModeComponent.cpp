@@ -153,6 +153,7 @@ namespace sw
         , _supplyUnitID{}
         , _productionUnitID{}
         , _armyUnitID{}
+        , _speedRange{}
         , _rushAI{}
         , _macroAI{}
         , _opponentAI{}
@@ -207,7 +208,7 @@ namespace sw
         io.end();
         if ( io.isReading() && io.isOk() )
         {
-            GameSpeedControl restoredSpeed;
+            GameSpeedControl restoredSpeed = _speed; // 같은 범위로 본다
             if ( io.check( restoredSpeed.restore( timeScale, bPaused != SW_FALSE ) && matchID != 0 ) == false )
                 return; // 범위 밖 배속 · 정체 없는 판(깨진 세이브)은 거절한다
             _speed   = restoredSpeed;
@@ -239,6 +240,8 @@ namespace sw
         // AI · 맵 배치가 쓰는 유닛 id 는 유닛 카탈로그에 있어야 한다.
         if ( hasUnits( { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } ) == false )
             return false;
+        if ( _speed.initialize( _speedRange ) == false )
+            return false; // 까닭은 남았다
         const bool bAIStylesSet = _rushAI.isSet() && _macroAI.isSet() && _opponentAI.isSet();
         if ( bAIStylesSet == false )
         {

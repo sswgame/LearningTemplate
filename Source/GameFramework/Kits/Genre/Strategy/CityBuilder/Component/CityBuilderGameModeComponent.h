@@ -91,6 +91,9 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Starting Money", Tooltip = "City money a fresh game starts with (the currency of the city catalog)", Min = 0 )
         int32 _startingMoney;
 
+        PROPERTY( Category = "Time", DisplayName = "Speed Range", Tooltip = "Slowest and fastest time scale and the factor of one step; required" )
+        GameSpeedRange _speedRange;
+
         BoundAssetRef<CityCatalog> _pCatalog;
         CitySimulation             _city;
         ConsumerLease              _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다)

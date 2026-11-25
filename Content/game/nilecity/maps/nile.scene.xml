@@ -90,6 +90,7 @@
 					                       _startingMoney="1500"
 					                       _tileMapPath="guid:1fe61e0ed0e5eb32fd3d7b3ab943268f"
 					                       _bAutoPlay="false">
+						<_speedRange _minTimeScale="0.25" _maxTimeScale="8" _stepFactor="2" />
 						<_listTerrain>
 							<item>Grass</item>
 							<item>Water</item>

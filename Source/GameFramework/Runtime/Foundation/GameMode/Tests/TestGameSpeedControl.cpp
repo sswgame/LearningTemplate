@@ -7,26 +7,42 @@
 
 // GameSpeedControlTest · SimulationViewSyncTest — 디렉터가 같이 쓰는 배속 · 일시정지와 규칙 → 뷰 동기화(감사 K-10, nogpu).
 
-/** @brief [GameSpeedControlTest] 한 단계는 2 배이고 범위(0.25 ~ 8) 끝에서 멈춘다. 일시정지는 배속을 지우지 않고 뒤집기만 한다. 범위 밖 배속 · 저장값은 거절한다 */
+/** @brief [GameSpeedControlTest] 한 단계와 범위는 데이터다 — 범위 끝에서 멈추고, 빠지거나 뒤집힌 범위는 거절한다. 일시정지는 배속을 지우지 않고 뒤집기만 한다. 범위 밖 배속 · 저장값은 거절한다 */
 SW_TEST_CASE( GameSpeedControlTest, StepsClampAndRefuseOutOfRange )
 {
     sw::GameSpeedControl speed;
+    SW_EXPECT_LOG( "GameSpeedControl.RangeInvalid" );
+    SW_EXPECT_FALSE( speed.initialize( sw::GameSpeedRange{} ) );
+    SW_EXPECT_FALSE( speed.setTimeScale( 1.0f ) ); // 범위가 없으면 어떤 배속도 받지 않는다
+    sw::GameSpeedRange range;
+    range._minTimeScale = 0.5f;
+    range._maxTimeScale = 4.0f;
+    range._stepFactor   = 3.0f;
+    SW_REQUIRE_TRUE( speed.initialize( range ) );
+    speed.applyInput( false, true, false );
+    SW_EXPECT_EQUAL( 3.0f, speed.getTimeScale() );
+    SW_EXPECT_FALSE( speed.restore( 8.0f, false ) ); // 저장한 배속도 같은 범위로 본다
+    range._minTimeScale = 0.25f;
+    range._maxTimeScale = 8.0f;
+    range._stepFactor   = 2.0f;
+    SW_REQUIRE_TRUE( speed.initialize( range ) );
+    SW_EXPECT_TRUE( speed.setTimeScale( 1.0f ) );
     SW_EXPECT_EQUAL( 1.0f, speed.getTimeScale() );
     SW_EXPECT_FALSE( speed.isPaused() );
     for ( int32 step = 0; step < 6; ++step )
     {
         speed.applyInput( false, true, false );
     }
-    SW_EXPECT_EQUAL( sw::GameSpeedControl::kMaxTimeScale, speed.getTimeScale() );
+    SW_EXPECT_EQUAL( range._maxTimeScale, speed.getTimeScale() );
     for ( int32 step = 0; step < 8; ++step )
     {
         speed.applyInput( false, false, true );
     }
-    SW_EXPECT_EQUAL( sw::GameSpeedControl::kMinTimeScale, speed.getTimeScale() );
+    SW_EXPECT_EQUAL( range._minTimeScale, speed.getTimeScale() );
 
     speed.applyInput( true, false, false );
     SW_EXPECT_TRUE( speed.isPaused() );
-    SW_EXPECT_EQUAL( sw::GameSpeedControl::kMinTimeScale, speed.getTimeScale() );
+    SW_EXPECT_EQUAL( range._minTimeScale, speed.getTimeScale() );
 
     SW_EXPECT_LOG( "GameSpeedControl.TimeScaleRefused" );
     SW_EXPECT_FALSE( speed.setTimeScale( 0.0f ) );
