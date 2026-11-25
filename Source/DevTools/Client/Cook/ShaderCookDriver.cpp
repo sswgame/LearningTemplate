@@ -704,7 +704,7 @@ namespace sw
             if ( slot.has_value() )
                 mapFolder[slot->_binDirectory].emplace( std::move( slot->_fileName ), &request );
         }
-        // 요청마다 지금 맞는 바이트코드 해시 — 굽는 것(`cookRequests`)과 같은 묶음으로 기록을 찾는다.
+        // 요청마다 지금 맞는 바이트코드 해시 — 소스마다의 기록을 한 번씩만 연다.
         const ShaderEnginePolicy         enginePolicy = ShaderEnginePolicy::capture();
         vector<const ShaderCookRequest*> listPlanned;
         vector<ShaderCompileDesc>        listDesc;

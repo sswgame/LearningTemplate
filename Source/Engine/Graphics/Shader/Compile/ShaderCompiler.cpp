@@ -20,12 +20,12 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/Compile/ShaderBatchRecord.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileClaims.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileSession.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompilerBackend.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderReachableText.h"
+#include "Engine/Graphics/Shader/Compile/ShaderSourceRecord.h"
 
 #include <algorithm>
 
@@ -51,6 +51,7 @@ namespace sw
             {
                 CookJobDesc _jobDesc;            ///< 요청 · 도구가 정하는 값(소스 내용은 작업의 입력이라 들지 않는다)
                 uint64      _actionKey{ 0 };     ///< 기록을 찾는 키 — 주 소스의 내용까지 든다(가지를 오가도 판마다 기록이 남는다)
+                uint64      _sourceHash{ 0 };    ///< 주 소스의 내용 해시
                 uint64      _fxcHash{ 0 };       ///< DXBC 요청이면 실린 FXC 의 내용 해시(`getFxcLibraryHash`), 아니면 0
                 bool        _bUseCache{ false }; ///< 거짓이면 DDC 를 쓰지 않는다(실린 FXC 의 판을 모른다)
             };
@@ -91,7 +92,8 @@ namespace sw
             static CompileAction makeCompileAction( const ShaderCompileDesc& desc, uint64 sourceHash )
             {
                 CompileAction action;
-                action._bUseCache = true;
+                action._bUseCache  = true;
+                action._sourceHash = sourceHash;
                 // define 은 정본(정렬)으로 적는다 — 받은 차례로 적으면 같은 조합이 차례만 달라 두 벌이 쌓인다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는
                 // 컴파일하고 나서야 알아(키는 컴파일 전에 필요하다) 작업의 입력으로 기록하고, 맞출 때 그 기록의 입력이 지금도 같은지 본다(`CookRecord::isFresh`).
                 string text;
@@ -430,30 +432,30 @@ namespace sw
                 return end;
             }
 
-            /** @brief 소스 하나의 기록(`ShaderBatchRecord`)과 입력 목록마다 지금도 맞는지입니다. */
-            struct SourceRecord
+            /** @brief 소스 하나의 기록(`ShaderSourceRecord`)과 입력 목록마다 지금도 맞는지입니다. */
+            struct LoadedRecord
             {
-                string            _description; ///< DDC 항목 서술
-                ShaderBatchRecord _record;
-                vector<uint8>     _listFresh; ///< 입력 목록마다 1 이면 지금도 맞다
+                string             _description; ///< DDC 항목 서술
+                ShaderSourceRecord _record;
+                vector<uint8>      _listFresh; ///< 입력 목록마다 1 이면 지금도 맞다
 
                 uint64 getKey() const { return HashUtil::computeStringHash64( _description, false ); }
                 /** @brief 동작의 결과입니다. 없거나 입력이 낡았으면 nullptr 입니다. */
-                const ShaderBatchRecord::Entry* findFresh( uint64 actionKey ) const
+                const ShaderSourceRecord::Entry* findFresh( uint64 actionKey ) const
                 {
-                    const ShaderBatchRecord::Entry* const pEntry = _record.find( actionKey );
+                    const ShaderSourceRecord::Entry* const pEntry = _record.find( actionKey );
                     return pEntry != nullptr && _listFresh[pEntry->_inputListIndex] != 0 ? pEntry : nullptr;
                 }
             };
 
-            /** @brief 동작 키 목록의 소스 기록을 DDC 에서 찾습니다. 없으면 빈 기록입니다(서술은 채운다). */
-            static SourceRecord findSourceRecord( const DerivedDataCache& cache, vector<uint64> listActionKey, ShaderCompileSession& session )
+            /** @brief 요청의 소스 기록을 DDC 에서 찾습니다(같은 소스 · 형식의 요청은 모두 같은 기록이다). 없으면 빈 기록입니다(서술은 채운다). */
+            static LoadedRecord findSourceRecord( const DerivedDataCache& cache, const ShaderCompileDesc& desc, const CompileAction& action, ShaderCompileSession& session )
             {
-                SourceRecord source;
-                source._description = ShaderBatchRecord::makeKeyDescription( std::move( listActionKey ) );
+                LoadedRecord source;
+                source._description = ShaderSourceRecord::makeKeyDescription( desc._source.str(), action._jobDesc._target, action._jobDesc._codeFingerprint, action._sourceHash );
                 vector<uint8> bytes;
                 if ( cache.find( source.getKey(), source._description, bytes ) == false || source._record.read( bytes ) == false )
-                    source._record = ShaderBatchRecord{};
+                    source._record = ShaderSourceRecord{};
                 for ( const vector<CookInput>& listInput : source._record.getInputLists() )
                 {
                     source._listFresh.push_back( session.areInputsFresh( listInput ) ? 1 : 0 );
@@ -462,9 +464,9 @@ namespace sw
             }
 
             /** @brief 동작의 지금 맞는 바이트코드 해시입니다 — 소스 기록, 없으면 요청마다의 기록(실행 중 컴파일 · 데우기가 쓴 것). */
-            static optional<uint64> findCurrentHash( const DerivedDataCache& cache, const SourceRecord& source, const CompileAction& action, ShaderCompileSession& session )
+            static optional<uint64> findCurrentHash( const DerivedDataCache& cache, const LoadedRecord& source, const CompileAction& action, ShaderCompileSession& session )
             {
-                const ShaderBatchRecord::Entry* const pEntry = source.findFresh( action._actionKey );
+                const ShaderSourceRecord::Entry* const pEntry = source.findFresh( action._actionKey );
                 if ( pEntry != nullptr )
                     return pEntry->_bytecodeHash;
                 CookRecord record;
@@ -554,7 +556,7 @@ namespace sw
                 {
                     size_t       _begin{ 0 };
                     size_t       _end{ 0 };
-                    SourceRecord _source;
+                    LoadedRecord _source;
                 };
 
                 static void runStage( size_t count, const ParallelBlockDelegate& body ) { engine::runParallel( static_cast<uint32>( count ), 1, body ); }
@@ -585,18 +587,13 @@ namespace sw
                         Group group;
                         group._begin = begin;
                         group._end   = findGroupEnd( _listDesc, _listRequest, begin );
-                        vector<uint64>          listActionKey;
-                        const DerivedDataCache* pCache = nullptr;
                         for ( size_t index = group._begin; index < group._end; ++index )
                         {
-                            _listGroupIndex[index] = static_cast<uint32>( _listGroup.size() );
-                            if ( _listSetup[index].has_value() == false || _listSetup[index]->_action._bUseCache == false )
-                                continue;
-                            listActionKey.push_back( _listSetup[index]->_action._actionKey );
-                            pCache = _listSetup[index]->_pCache;
+                            _listGroupIndex[index]              = static_cast<uint32>( _listGroup.size() );
+                            const optional<CompileSetup>& setup = _listSetup[index];
+                            if ( group._source._description.empty() && setup.has_value() && setup->_action._bUseCache )
+                                group._source = findSourceRecord( *setup->_pCache, setup->_call._desc, setup->_action, _session );
                         }
-                        if ( pCache != nullptr )
-                            group._source = findSourceRecord( *pCache, std::move( listActionKey ), _session );
                         _listGroup.push_back( std::move( group ) );
                     }
                 }
@@ -606,8 +603,8 @@ namespace sw
                 {
                     if ( _recordScope != ShaderRecordScope::Source || _listSetup[index]->_action._bUseCache == false )
                         return false;
-                    const SourceRecord&                   source = _listGroup[_listGroupIndex[index]]._source;
-                    const ShaderBatchRecord::Entry* const pEntry = source.findFresh( _listSetup[index]->_action._actionKey );
+                    const LoadedRecord&                    source = _listGroup[_listGroupIndex[index]]._source;
+                    const ShaderSourceRecord::Entry* const pEntry = source.findFresh( _listSetup[index]->_action._actionKey );
                     if ( pEntry == nullptr || findBytecode( *_listSetup[index]->_pCache, pEntry->_bytecodeHash, outResult._bytecode ) == false )
                         return false;
                     outResult._record._listInput  = source._record.getInputLists()[pEntry->_inputListIndex];
@@ -714,8 +711,9 @@ namespace sw
                     const expected<DerivedDataCache>& cache = getDerivedDataCache();
                     for ( const Group& group : _listGroup )
                     {
-                        ShaderBatchRecord record;
-                        bool              bChanged = false;
+                        ShaderSourceRecord record;
+                        bool               bChanged = false;
+                        record.addFresh( group._source._record, group._source._listFresh );
                         for ( size_t index = group._begin; index < group._end; ++index )
                         {
                             const WrittenResult& written = _listWritten[index];
@@ -847,14 +845,14 @@ namespace sw
         const vector<uint32> listOrder = Internal::makeGroupedOrder( listDesc );
         for ( size_t begin = 0; begin < listOrder.size(); )
         {
-            const size_t   end = Internal::findGroupEnd( listDesc, listOrder, begin );
-            vector<uint64> listActionKey;
-            for ( size_t index = begin; index < end; ++index )
+            const size_t           end = Internal::findGroupEnd( listDesc, listOrder, begin );
+            Internal::LoadedRecord source;
+            for ( size_t index = begin; index < end && source._description.empty(); ++index )
             {
-                if ( listAction[listOrder[index]].has_value() && listAction[listOrder[index]]->_bUseCache )
-                    listActionKey.push_back( listAction[listOrder[index]]->_actionKey );
+                const optional<Internal::CompileAction>& action = listAction[listOrder[index]];
+                if ( action.has_value() && action->_bUseCache )
+                    source = Internal::findSourceRecord( *cache, listDesc[listOrder[index]], *action, session );
             }
-            const Internal::SourceRecord source = Internal::findSourceRecord( *cache, std::move( listActionKey ), session );
             for ( ; begin < end; ++begin )
             {
                 const uint32 request = listOrder[begin];

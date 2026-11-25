@@ -271,7 +271,7 @@ namespace sw
     enum class ShaderRecordScope : uint8
     {
         Request, ///< 요청마다 파일 하나 — 뒤이은 실행 중 컴파일이 요청 하나로 찾는다(데우기 · 핫 리로드)
-        Source,  ///< 소스 · 형식마다 파일 하나(`ShaderBatchRecord`) — 쿠킹이 같은 묶음으로 다시 온다
+        Source,  ///< 소스 · 형식마다 파일 하나(`ShaderSourceRecord`) — 쿠킹이 같은 묶음으로 다시 온다
     };
 
     /** @brief 묶음 컴파일의 결과 하나를 받습니다 — 요청 번호(목록의 자리)와 결과. */
@@ -315,7 +315,7 @@ namespace sw
 
         /**
          * @brief 요청마다 컴파일한 바이트코드의 해시입니다 — 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞는 것만, 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
-         * @details @p listDesc 는 `compileBatch` 에 넣은 묶음과 같은 요청이다(소스마다의 기록은 그 소스의 요청 전부가 열쇠다).
+         * @details @p listDesc 는 `compileBatch` 에 넣는 것과 같다(엔진 define 은 안에서 더한다). 소스마다의 기록을 먼저 보고, 없으면 요청마다의 기록을 본다.
          */
         [[nodiscard]] static vector<optional<uint64>> findCurrentBytecodeHashes( const vector<ShaderCompileDesc>& listDesc );
         /** @brief 컴파일 결과 @p result 가 요청 @p desc 에 지금도 맞으면 true 입니다(메모리 캐시). 입력을 기록하지 않은 결과는 맞을 수 없습니다. */

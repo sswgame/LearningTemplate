@@ -1,18 +1,16 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/Compile/ShaderBatchRecord.h"
+#include "Engine/Graphics/Shader/Compile/ShaderSourceRecord.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/ByteStream.h"
 
-#include <algorithm>
-
 namespace sw
 {
     namespace
     {
-        struct ShaderBatchRecordInternal
+        struct ShaderSourceRecordInternal
         {
             static constexpr uint32 kFormatVersion = 1;
             /** @brief 입력 하나가 파일에서 차지하는 최소 바이트입니다(종류 1 + 글 길이 둘 8 + 해시 8). */
@@ -45,16 +43,16 @@ namespace sw
         };
     } // namespace
 
-    ShaderBatchRecord::ShaderBatchRecord()
+    ShaderSourceRecord::ShaderSourceRecord()
         : _listInputList{}
         , _mapInputListIndex{}
         , _mapEntry{}
     {
     }
 
-    void ShaderBatchRecord::add( uint64 actionKey, uint64 bytecodeHash, const vector<CookInput>& listInput )
+    void ShaderSourceRecord::add( uint64 actionKey, uint64 bytecodeHash, const vector<CookInput>& listInput )
     {
-        const auto [iter, bNew] = _mapInputListIndex.emplace( ShaderBatchRecordInternal::computeListHash( listInput ), static_cast<uint32>( _listInputList.size() ) );
+        const auto [iter, bNew] = _mapInputListIndex.emplace( ShaderSourceRecordInternal::computeListHash( listInput ), static_cast<uint32>( _listInputList.size() ) );
         uint32 index            = iter->second;
         if ( bNew == false && ( _listInputList[index] == listInput ) == false )
             index = static_cast<uint32>( _listInputList.size() ); // 해시가 겹친 다른 목록 — 따로 둔다
@@ -63,17 +61,26 @@ namespace sw
         _mapEntry.insert_or_assign( actionKey, Entry{ bytecodeHash, index } );
     }
 
-    const ShaderBatchRecord::Entry* ShaderBatchRecord::find( uint64 actionKey ) const
+    void ShaderSourceRecord::addFresh( const ShaderSourceRecord& other, const vector<uint8>& listFresh )
+    {
+        for ( const auto& [actionKey, entry] : other._mapEntry )
+        {
+            if ( listFresh[entry._inputListIndex] != 0 )
+                add( actionKey, entry._bytecodeHash, other._listInputList[entry._inputListIndex] );
+        }
+    }
+
+    const ShaderSourceRecord::Entry* ShaderSourceRecord::find( uint64 actionKey ) const
     {
         const auto iter = _mapEntry.find( actionKey );
         return iter != _mapEntry.end() ? &iter->second : nullptr;
     }
 
-    void ShaderBatchRecord::write( vector<uint8>& outBytes ) const
+    void ShaderSourceRecord::write( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         ByteWriter writer{ outBytes };
-        writer.writeUint32( ShaderBatchRecordInternal::kFormatVersion );
+        writer.writeUint32( ShaderSourceRecordInternal::kFormatVersion );
         writer.writeUint32( static_cast<uint32>( _listInputList.size() ) );
         for ( const vector<CookInput>& listInput : _listInputList )
         {
@@ -103,9 +110,9 @@ namespace sw
         }
     }
 
-    bool ShaderBatchRecord::read( const vector<uint8>& bytes )
+    bool ShaderSourceRecord::read( const vector<uint8>& bytes )
     {
-        using Internal = ShaderBatchRecordInternal;
+        using Internal = ShaderSourceRecordInternal;
         _listInputList.clear();
         _mapInputListIndex.clear();
         _mapEntry.clear();
@@ -129,17 +136,11 @@ namespace sw
         return bLists && reader.isFullyRead();
     }
 
-    string ShaderBatchRecord::makeKeyDescription( vector<uint64> listActionKey )
+    string ShaderSourceRecord::makeKeyDescription( string_view source, string_view target, uint64 toolchainFingerprint, uint64 sourceHash )
     {
-        VectorUtil::sort( listActionKey );
-        listActionKey.erase( std::unique( listActionKey.begin(), listActionKey.end() ), listActionKey.end() );
-        uint64 hash = HashUtil::kFNVOffset64;
-        for ( const uint64 actionKey : listActionKey )
-        {
-            hash = HashUtil::appendBytes64( hash, reinterpret_cast<const uint8*>( &actionKey ), sizeof( actionKey ) );
-        }
         string description;
-        description.append( "Shader batch record\ncount=" ).append( to_string( listActionKey.size() ) ).append( "\nactions=" ).append( to_string( hash ) ).append( "\n" );
+        description.append( "Shader source record\nsource=" ).append( source ).append( "\ntarget=" ).append( target ).append( "\ntoolchain=" ).append( to_string( toolchainFingerprint ) );
+        description.append( "\nsourceHash=" ).append( to_string( sourceHash ) ).append( "\n" );
         return description;
     }
 } // namespace sw
