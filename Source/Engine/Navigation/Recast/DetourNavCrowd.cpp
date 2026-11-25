@@ -121,10 +121,10 @@ namespace sw
 
     bool DetourNavCrowd::isActiveAgent( NavCrowdAgentID agentID ) const
     {
-        const bool bInvalidAgentID = _pCrowd == nullptr || agentID < 0 || static_cast<uint32>( agentID ) >= _maxAgentCount;
+        const bool bInvalidAgentID = _pCrowd == nullptr || agentID.getValue() < 0 || static_cast<uint32>( agentID.getValue() ) >= _maxAgentCount;
         if ( bInvalidAgentID )
             return false;
-        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
+        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID.getValue() );
         return pAgent != nullptr && pAgent->active;
     }
 
@@ -140,13 +140,13 @@ namespace sw
         _listFailed[static_cast<size_t>( agentIndex )] = SW_FALSE;
         _listTarget[static_cast<size_t>( agentIndex )] = position;
         _listLink[static_cast<size_t>( agentIndex )]   = LinkTraversal{};
-        return agentIndex;
+        return NavCrowdAgentID{ agentIndex };
     }
 
     void DetourNavCrowd::removeAgent( NavCrowdAgentID agentID )
     {
         if ( isActiveAgent( agentID ) )
-            _pCrowd->removeAgent( agentID );
+            _pCrowd->removeAgent( agentID.getValue() );
     }
 
     void DetourNavCrowd::updateAgentParams( NavCrowdAgentID agentID, const NavCrowdAgentParams& params )
@@ -155,32 +155,32 @@ namespace sw
             return;
         dtCrowdAgentParams detourParams{};
         DetourNavCrowdInternal::toDetourParams( params, detourParams );
-        _pCrowd->updateAgentParameters( agentID, &detourParams );
+        _pCrowd->updateAgentParameters( agentID.getValue(), &detourParams );
     }
 
     bool DetourNavCrowd::requestMoveTarget( NavCrowdAgentID agentID, const float3& target )
     {
         if ( isActiveAgent( agentID ) == false )
             return false;
-        _listTarget[static_cast<size_t>( agentID )] = target;
+        _listTarget[static_cast<size_t>( agentID.getValue() )] = target;
         float32         arrNearest[3]{};
         const dtPolyRef targetRef = RecastQueryUtil::findPolyInBox( _pQuery, &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrNearest ); // 상자 밖이면 0 이다
         if ( targetRef == 0 )
         {
-            _pCrowd->resetMoveTarget( agentID );
-            _listFailed[static_cast<size_t>( agentID )] = SW_TRUE;
+            _pCrowd->resetMoveTarget( agentID.getValue() );
+            _listFailed[static_cast<size_t>( agentID.getValue() )] = SW_TRUE;
             return false;
         }
-        _listFailed[static_cast<size_t>( agentID )] = SW_FALSE;
-        return _pCrowd->requestMoveTarget( agentID, targetRef, arrNearest );
+        _listFailed[static_cast<size_t>( agentID.getValue() )] = SW_FALSE;
+        return _pCrowd->requestMoveTarget( agentID.getValue(), targetRef, arrNearest );
     }
 
     void DetourNavCrowd::resetMoveTarget( NavCrowdAgentID agentID )
     {
         if ( isActiveAgent( agentID ) == false )
             return;
-        _pCrowd->resetMoveTarget( agentID );
-        _listFailed[static_cast<size_t>( agentID )] = SW_FALSE;
+        _pCrowd->resetMoveTarget( agentID.getValue() );
+        _listFailed[static_cast<size_t>( agentID.getValue() )] = SW_FALSE;
     }
 
     void DetourNavCrowd::teleportAgent( NavCrowdAgentID agentID, const float3& position )
@@ -188,7 +188,7 @@ namespace sw
         if ( isActiveAgent( agentID ) == false )
             return;
         // Detour 의 addAgent 가 하는 것과 같은 초기화다. 통로를 새 위치에서 다시 시작한다.
-        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentID );
+        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentID.getValue() );
         float32       arrNearest[3]{ position._x, position._y, position._z };
         // 못 찾거나 상자 밖이면 ref 0 이고 붙은 점 대신 요청한 위치를 쓴다.
         float32         arrFound[3]{};
@@ -212,16 +212,16 @@ namespace sw
         dtVset( pAgent->vel, 0.0f, 0.0f, 0.0f );
         dtVcopy( pAgent->npos, arrNearest );
         pAgent->state = polyRef != 0 ? DT_CROWDAGENT_STATE_WALKING : DT_CROWDAGENT_STATE_INVALID;
-        _pCrowd->resetMoveTarget( agentID );
-        _listFailed[static_cast<size_t>( agentID )] = SW_FALSE;
-        _listLink[static_cast<size_t>( agentID )]   = LinkTraversal{};
+        _pCrowd->resetMoveTarget( agentID.getValue() );
+        _listFailed[static_cast<size_t>( agentID.getValue() )] = SW_FALSE;
+        _listLink[static_cast<size_t>( agentID.getValue() )]   = LinkTraversal{};
     }
 
     void DetourNavCrowd::syncAgentPosition( NavCrowdAgentID agentID, const float3& position )
     {
         if ( isActiveAgent( agentID ) == false )
             return;
-        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentID );
+        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentID.getValue() );
         // 링크를 건너는 동안 위치는 군중이 정한다. 바깥(컨트롤러 · 폰)은 아직 출발점에 있으므로 받아들이면 순간이동이 되어 건너기가 끊긴다.
         if ( pAgent->state == DT_CROWDAGENT_STATE_OFFMESH )
             return;
@@ -298,14 +298,14 @@ namespace sw
         outState = NavCrowdAgentState{};
         if ( isActiveAgent( agentID ) == false )
             return false;
-        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
+        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID.getValue() );
         outState._position         = float3( pAgent->npos );
         outState._velocity         = float3( pAgent->vel );
         outState._desiredVelocity  = float3( pAgent->dvel );
-        outState._target           = _listTarget[static_cast<size_t>( agentID )];
+        outState._target           = _listTarget[static_cast<size_t>( agentID.getValue() )];
         outState._bOnNavMesh       = pAgent->state == DT_CROWDAGENT_STATE_WALKING;
         outState._nextCorner       = pAgent->ncorners > 0 ? float3( pAgent->cornerVerts ) : outState._position;
-        if ( _listFailed[static_cast<size_t>( agentID )] == SW_TRUE )
+        if ( _listFailed[static_cast<size_t>( agentID.getValue() )] == SW_TRUE )
         {
             outState._moveState = NavCrowdMoveState::Failed;
             return true;
@@ -313,7 +313,7 @@ namespace sw
         // 링크를 건너는 동안 Detour 는 모퉁이를 비운다 — 모퉁이 수로 도착을 판정하면 링크 위에서 도착으로 읽힌다.
         if ( pAgent->state == DT_CROWDAGENT_STATE_OFFMESH )
         {
-            const LinkTraversal& traversal = _listLink[static_cast<size_t>( agentID )];
+            const LinkTraversal& traversal = _listLink[static_cast<size_t>( agentID.getValue() )];
             const float3         span      = traversal._end - traversal._start;
             const float32        spanSq    = span._x * span._x + span._z * span._z;
             const float3         along     = outState._position - traversal._start;

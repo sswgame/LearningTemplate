@@ -91,9 +91,9 @@ namespace sw::test
             if ( fileBytes.empty() )
                 return kInvalidFontFaceID;
             ++_loadCount;
-            const auto       iter   = _mapConfigByPath.find( string( debugName ) );
-            const FontFaceID faceID = _nextFaceID++;
-            _mapFace[faceID]        = iter != _mapConfigByPath.end() ? iter->second : FakeFontFaceConfig{};
+            const auto       iter = _mapConfigByPath.find( string( debugName ) );
+            const FontFaceID faceID{ _nextFaceID++ };
+            _mapFace[faceID] = iter != _mapConfigByPath.end() ? iter->second : FakeFontFaceConfig{};
             return faceID;
         }
 
@@ -188,7 +188,7 @@ namespace sw::test
         unordered_map<string, FakeFontFaceConfig>     _mapConfigByPath{};
         unordered_map<FontFaceID, FakeFontFaceConfig> _mapFace{};
         unordered_map<uint64, float32>                _mapKerning{};
-        FontFaceID                                    _nextFaceID{ 1 };
+        uint32                                        _nextFaceID{ 1 };
         uint32                                        _rasterizeCount{ 0 };
         uint32                                        _msdfRasterizeCount{ 0 };
         uint32                                        _sdfSize{ kSDFSize };

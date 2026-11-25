@@ -44,7 +44,7 @@ namespace sw
     void AudioMusicPlayer::stop( IAudioMusicVoices& voices, float32 fadeSeconds )
     {
         const uint32 fadeFrames = static_cast<uint32>( MathUtil::max( 0.0f, fadeSeconds ) * static_cast<float32>( audio::kSampleRate ) );
-        if ( _playback._playingID != 0 )
+        if ( _playback._playingID.isValid() )
         {
             if ( fadeFrames == 0 || isPaused() ) // 멈춘 보이스는 페이드가 흐르지 않아 끝나지 않는다 — 이미 들리지 않으니 바로 놓는다
                 voices.freeMusicVoices( _playback._playingID, kAnySegment );

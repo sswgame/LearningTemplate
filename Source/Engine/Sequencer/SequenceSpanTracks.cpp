@@ -104,7 +104,7 @@ namespace sw
                 ISoundPlayer* pSound = findSoundPlayer( context );
                 if ( pSound != nullptr )
                     pSound->stop( context._pState->_playingID, -1.0f ); // 음수는 이벤트의 페이드다
-                context._pState->_playingID = 0;
+                context._pState->_playingID = SoundPlayingID{};
             }
 
             static void enterSubtitle( const SequenceSpanContext& context )

@@ -70,9 +70,9 @@ namespace sw
     ExtensionSceneProxyID RenderExtensionRegistry::addProxy( unique_ptr<IExtensionSceneProxy> pProxy )
     {
         if ( pProxy == nullptr )
-            return 0;
+            return ExtensionSceneProxyID{};
         ScopedLock<mutex>           lock{ _mutex };
-        const ExtensionSceneProxyID id = _nextProxyID++;
+        const ExtensionSceneProxyID id{ _nextProxyID++ };
         ProxyEntry                  entry;
         entry._id     = id;
         entry._pProxy = std::move( pProxy );
@@ -207,13 +207,13 @@ namespace sw
 
     ExtensionSceneProxyRegistration::~ExtensionSceneProxyRegistration()
     {
-        if ( _id != 0 )
+        if ( _id.isValid() )
             _registry.removeProxy( _id );
     }
 
     bool ExtensionSceneProxyRegistration::update( ExtensionProxyUpdateFn update )
     {
-        if ( _id == 0 )
+        if ( _id.isValid() == false )
             return false;
         return _registry.enqueueProxyUpdate( _id, std::move( update ) );
     }

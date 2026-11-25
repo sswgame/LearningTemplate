@@ -323,7 +323,7 @@ namespace sw
         AudioRenderListenerRegistry::notifyStreamEnded( _pEngine->getChannelLayout() );
         _pEngine->shutdown();
         _musicPath.clear();
-        _musicPlayingID = 0;
+        _musicPlayingID = AudioPlayingID{};
         _bGamePaused    = SW_FALSE; // 다시 세운 엔진은 멈추지 않은 채 선다 — 다음 프레임이 지금 값을 넘긴다
         _bInitialized   = SW_FALSE;
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
@@ -456,7 +456,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioService.AudioResourceNotFound", "Audio resource not found: %#", path );
             return false;
         }
-        return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ) != 0;
+        return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ).isValid();
     }
 
     bool AudioService::preload( string_view path )
@@ -480,7 +480,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioService.AudioResourceNotFound", "Audio resource not found: %#", path );
             return false;
         }
-        const bool bCrossfade = _musicPlayingID != 0;
+        const bool bCrossfade = _musicPlayingID.isValid();
         if ( bCrossfade )
         {
             _pEngine->stop( _musicPlayingID, AudioServiceInternal::kMusicCrossfadeSeconds );
@@ -492,7 +492,7 @@ namespace sw
         params._fadeInSeconds = bCrossfade ? AudioServiceInternal::kMusicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
         _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
-        return _musicPlayingID != 0;
+        return _musicPlayingID.isValid();
     }
 
     bool AudioService::playAdaptiveMusic( const AssetID& assetID )
@@ -505,19 +505,19 @@ namespace sw
         shared_ptr<AudioMusicDef> pMusic = make_shared<AudioMusicDef>();
         if ( pMusic->loadFromAsset( assetID ) == false )
             return false;
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->stop( _musicPlayingID, AudioServiceInternal::kMusicCrossfadeSeconds );
         _musicPath      = string( path );
         _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), AudioServiceInternal::kMusicCrossfadeSeconds );
-        return _musicPlayingID != 0;
+        return _musicPlayingID.isValid();
     }
 
     void AudioService::stopMusic()
     {
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->stop( _musicPlayingID, 0.0f );
         _pEngine->stopMusic( 0.0f );
-        _musicPlayingID = 0;
+        _musicPlayingID = AudioPlayingID{};
         _musicPath.clear();
     }
 
@@ -536,13 +536,13 @@ namespace sw
 
     void AudioService::pauseMusic()
     {
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->setPaused( _musicPlayingID, true );
     }
 
     void AudioService::resumeMusic()
     {
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->setPaused( _musicPlayingID, false );
     }
 

@@ -75,7 +75,7 @@ namespace sw
     {
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )
-            return 0;
+            return AudioPlayingID{};
         // 자리를 먼저 넣는다 — 씬 오디오가 이번 프레임의 자리를 넣기 전(틱 안)에 낸 소리도 첫 블록부터 제자리에서 난다.
         pEngine->setEmitter( getEmitterID(), computeAudioPosition( getWorldPosition() ), float3{} );
         return pEngine->postEvent( eventName, getEmitterID() );

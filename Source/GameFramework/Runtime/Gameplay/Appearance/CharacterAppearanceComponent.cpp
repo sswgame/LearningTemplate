@@ -994,8 +994,9 @@ namespace sw
         // 장비 소켓은 차림을 풀어야 안다(임포트 때 알 수 없다) — 소켓 표를 다시 지을 때마다 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 다시 낸다.
         const ResolvedSocketTable& socketTable = _rig.getTable();
         vector<hashed_string>      listSocketBone;
-        for ( SocketID socketID = 0; socketID < socketTable.getSocketCount(); ++socketID )
+        for ( uint32 socketIndex = 0; socketIndex < socketTable.getSocketCount(); ++socketIndex )
         {
+            const SocketID   socketID{ socketIndex };
             const SocketDef* pDef        = socketTable.isSocketActive( socketID ) ? socketTable.findSocketDef( socketID ) : nullptr;
             const bool       bBodySocket = pDef != nullptr && socketTable.getSocketUnit( socketID ) == AppearanceSocketRig::kBodyUnit && pDef->_parent.empty() == false;
             if ( bBodySocket )

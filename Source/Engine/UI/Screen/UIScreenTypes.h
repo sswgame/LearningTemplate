@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -15,9 +16,9 @@ namespace sw
     class Widget;
 
     /** @brief 화면을 가리키는 번호입니다. 다시 쓰지 않습니다(0 이면 없음). */
-    using UIScreenHandle = uint32;
+    using UIScreenHandle = TypedID<struct UIScreenHandleTag, uint32>;
     /** @brief 화면이 없음을 뜻하는 번호입니다. */
-    inline constexpr UIScreenHandle kInvalidUIScreenHandle = 0;
+    inline constexpr UIScreenHandle kInvalidUIScreenHandle{};
 
     /** @brief 위젯이 낸 명령(버튼의 `_command`)을 받는 함수입니다(`UIScreen::registerCommand`). */
     using UICommandDelegate = Delegate<void( const hashed_string&, Widget& )>;

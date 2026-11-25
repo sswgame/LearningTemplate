@@ -14,6 +14,7 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Presentation/ISubtitleSink.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/UIBrush.h"
@@ -30,14 +31,14 @@ namespace sw
     /** @brief 자막 한 줄입니다. */
     struct SW_API UISubtitleLine
     {
-        string  _speaker{};                 ///< 화자 이름입니다(현지화 키 · 메시지 · 원문 — 그릴 때 풀린다, 비면 이름 줄을 접습니다).
-        string  _text{};                    ///< 줄의 글입니다(현지화 키 · 메시지 · 원문 — 그릴 때 풀린다).
-        float32 _durationSeconds{ 0.0f };   ///< 보이는 시간
-        float32 _remainingSeconds{ 0.0f };  ///< 남은 시간입니다(보이기 시작한 뒤부터 줄어듭니다).
-        uint64  _voicePlayingID{ 0 };       ///< 이 줄을 낸 음성의 재생 id(`AudioPlayingID`)입니다. 0 이면 음성이 없는 줄입니다.
-        uint32  _id{ 0 };                   ///< `post` 가 돌려준 번호
-        bool    _bVoicePlaying{ false };    ///< 음성이 아직 나는 중입니다(`refreshVoiceState`). 나는 동안은 시간이 다 돼도 내리지 않는다
-        bool    _bRunsInGamePause{ false }; ///< 게임이 멈춘 동안에도 시간이 흐른다 — 멈추지 않는 버스의 음성이 낸 줄이다. 그 밖의 줄은 소리 · 시퀀스와 같이 선다
+        string         _speaker{};                 ///< 화자 이름입니다(현지화 키 · 메시지 · 원문 — 그릴 때 풀린다, 비면 이름 줄을 접습니다).
+        string         _text{};                    ///< 줄의 글입니다(현지화 키 · 메시지 · 원문 — 그릴 때 풀린다).
+        float32        _durationSeconds{ 0.0f };   ///< 보이는 시간
+        float32        _remainingSeconds{ 0.0f };  ///< 남은 시간입니다(보이기 시작한 뒤부터 줄어듭니다).
+        SoundPlayingID _voicePlayingID{};          ///< 이 줄을 낸 음성의 재생 id 입니다. 비었으면 음성이 없는 줄입니다.
+        uint32         _id{ 0 };                   ///< `post` 가 돌려준 번호
+        bool           _bVoicePlaying{ false };    ///< 음성이 아직 나는 중입니다(`refreshVoiceState`). 나는 동안은 시간이 다 돼도 내리지 않는다
+        bool           _bRunsInGamePause{ false }; ///< 게임이 멈춘 동안에도 시간이 흐른다 — 멈추지 않는 버스의 음성이 낸 줄이다. 그 밖의 줄은 소리 · 시퀀스와 같이 선다
     };
 
     /** @brief 지금 보이는 자막 줄의 배치 결과입니다(감시 값 · 진단). 마지막 UI 배치 기준입니다. */

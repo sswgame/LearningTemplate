@@ -71,7 +71,7 @@ namespace sw::editor
         void stopPreview();
         /** @brief 미리 듣기가 끝났으면 재생 id 를 잊습니다(멈춤 단추가 끝난 소리를 가리키지 않는다). 그리기마다 부릅니다. */
         void refreshPreview();
-        bool isPreviewPlaying() const { return _previewID != 0; }
+        bool isPreviewPlaying() const { return _previewID.isValid(); }
 
         const AudioGraphDef& getGraph() const { return _editGraph; }
         /** @brief 속성 그리드가 바로 고치는 사본입니다. 고치면 `markEdited` 를 부릅니다. */

@@ -8,9 +8,12 @@
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+
+#include "Engine/Presentation/ISoundPlayer.h"
 
 namespace sw
 {
@@ -33,9 +36,9 @@ namespace sw
 namespace sw
 {
     /** @brief 재생 하나(이벤트 인스턴스나 클립 재생)의 id 입니다. 0 은 없음이며, 다시 쓰지 않습니다. */
-    using AudioPlayingID = uint64;
+    using AudioPlayingID = SoundPlayingID;
     /** @brief 소리를 내는 에미터(게임 오브젝트)의 id 입니다. 0 은 "에미터 없음"이며 2D(공간화 없음)로 재생합니다. */
-    using AudioEmitterID = uint64;
+    using AudioEmitterID = TypedID<struct AudioEmitterIDTag, uint64>;
 } // namespace sw
 
 namespace sw

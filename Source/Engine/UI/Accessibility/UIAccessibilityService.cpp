@@ -63,7 +63,7 @@ namespace sw
         // 포커스는 한 화면에만 있다. 노드 번호는 스냅샷 전체의 번호라 `appendTree` 가 정한 `_focusedNode` 가 그대로 쓰인다.
         const UIFocusManager& focus         = ui.getInputRouter().getFocusManager();
         const WidgetID        focusedWidget = focus.getFocusedTree() == &screen.getTree() ? focus.getFocusedWidget() : kInvalidWidgetID;
-        UIAccessibilitySnapshot::appendTree( screen.getTree(), screen.getHandle(), focusedWidget, inoutSnapshot );
+        UIAccessibilitySnapshot::appendTree( screen.getTree(), screen.getHandle().getValue(), focusedWidget, inoutSnapshot );
     }
 
     void UIAccessibilityService::collectInteractiveScreens( const vector<unique_ptr<UIScreen>>& listScreen, vector<UIScreen*>& outListScreen )
@@ -120,7 +120,7 @@ namespace sw
             return;
         _focusScreen = screen;
         _focusWidget = widget;
-        _bridge->notifyFocusChanged( screen, widget );
+        _bridge->notifyFocusChanged( screen.getValue(), widget );
     }
 } // namespace sw
 

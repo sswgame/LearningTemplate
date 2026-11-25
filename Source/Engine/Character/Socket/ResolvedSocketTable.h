@@ -15,6 +15,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/hashed_string.h"
@@ -28,9 +29,9 @@ namespace sw
     struct CharacterBoneArray;
 
     /** @brief 해석된 소켓 테이블의 번호입니다. 같은 테이블에서 같은 이름은 해석을 다시 해도 같은 번호입니다. */
-    using SocketID = uint32;
+    using SocketID = TypedID<struct SocketIDTag, uint32, 0xFFFFFFFFu>;
     /** @brief 없는 소켓 번호입니다. */
-    inline constexpr SocketID kInvalidSocketID = 0xFFFFFFFFu;
+    inline constexpr SocketID kInvalidSocketID{};
 
     /**
      * @brief 유닛마다의 본 배열과 월드 행렬 모음입니다(유닛 번호로 찾습니다). 호출하는 동안만 쓰는 뷰입니다.

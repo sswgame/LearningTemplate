@@ -26,7 +26,7 @@ namespace sw
         void                         unloadEvents( string_view ) override {}
         SoundPlayingID               postEvent( const hashed_string& eventName ) override { return record( eventName, 0.0f ); }
         SoundPlayingID               postEventAt( const hashed_string& eventName, const float3& position ) override { return record( eventName, position._x ); }
-        SoundPlayingID               postEventOn( GameObject&, const hashed_string& ) override { return 0; }
+        SoundPlayingID               postEventOn( GameObject&, const hashed_string& ) override { return SoundPlayingID{}; }
         void                         setObjectParameter( const GameObject&, const hashed_string&, float32 ) override {}
         void                         setParameter( const hashed_string&, float32 ) override {}
         void                         stop( SoundPlayingID, float32 ) override {}
@@ -49,7 +49,7 @@ namespace sw
         {
             _listPosted.push_back( eventName );
             _lastX = x;
-            return _listPosted.size();
+            return SoundPlayingID{ _listPosted.size() };
         }
 
     private:

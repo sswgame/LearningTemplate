@@ -40,7 +40,7 @@ SW_TEST_CASE( AudioPauseTest, SegmentClockStandsWhilePaused )
     sw::test::OfflineAudioEngine offline;
     sw::AudioEngine&             engine    = offline.getEngine();
     const sw::AudioPlayingID     playingID = engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f );
-    SW_REQUIRE_TRUE( playingID != 0 );
+    SW_REQUIRE_TRUE( playingID.isValid() );
     offline.renderBlocks( 4 );
 
     engine.setPaused( playingID, true );
@@ -90,7 +90,7 @@ SW_TEST_CASE( AudioPauseTest, StoppingPausedMusicFreesItsVoices )
     SW_EXPECT_EQUAL( 0u, engine.getStats()._voiceCount );
     SW_EXPECT_FALSE( engine.getMusicStatus()._bPlaying );
 
-    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ) != 0 );
+    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ).isValid() );
     offline.renderBlocks( 2 );
     SW_EXPECT_TRUE( engine.getMusicStatus()._beat > 0.0 );
 }
@@ -129,7 +129,7 @@ SW_TEST_CASE( AudioPauseTest, GamePauseHoldsGameBusesButNotMusic )
     sw::AudioEngine&                    engine = offline.getEngine();
     sw::vector<sw::AudioInstanceStatus> listStatus;
     (void)engine.postEvent( sw::hashed_string( sw::test::OfflineAudioEngine::kLoopEvent ) ); // sfx 버스
-    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ) != 0 );
+    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ).isValid() );
     offline.renderBlocks( 4 );
     const float64 beatBefore = engine.getMusicStatus()._beat;
 
@@ -158,7 +158,7 @@ SW_TEST_CASE( AudioPauseTest, MusicFollowsItsBusInGamePause )
         bus._bPlaysInGamePause = false;
     }
     SW_REQUIRE_TRUE( engine.loadMixer( mixer ) );
-    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ) != 0 );
+    SW_REQUIRE_TRUE( engine.startMusic( AudioPauseTestUtil::makeTwoSegmentMusic(), 0.0f ).isValid() );
     offline.renderBlocks( 4 );
     const float64 beatBefore = engine.getMusicStatus()._beat;
     engine.setGamePaused( true );

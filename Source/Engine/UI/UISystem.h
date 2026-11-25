@@ -502,7 +502,7 @@ namespace sw
         UIEngineDocuments            _engineDocuments;     ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
         string                       _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
         string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
-        UIScreenHandle               _nextScreenHandle;
+        uint32                       _nextScreenHandle;
         uint32                       _nextPushOrder;
         uint32                       _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
         uint32                       _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).

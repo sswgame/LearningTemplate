@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
@@ -21,7 +22,7 @@ namespace sw
     class GameObject;
 
     /** @brief 재생 하나의 번호입니다(오디오 엔진의 재생 id 와 같은 값). 내지 않았으면 0 입니다. */
-    using SoundPlayingID = uint64;
+    using SoundPlayingID = TypedID<struct SoundPlayingIDTag, uint64>;
 
     /** @class ISoundPlayer @brief 소리를 오디오 엔진에 넘기는 쪽입니다. 게임 스레드에서 부릅니다. */
     class SW_API ISoundPlayer

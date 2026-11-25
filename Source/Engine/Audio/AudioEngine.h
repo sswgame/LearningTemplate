@@ -145,7 +145,7 @@ namespace sw
          * @param emitterID 0 이면 공간화하지 않습니다(UI, 2D).
          * @return 재생 id 입니다. 모르는 이벤트면 0 을 반환하고 경고를 남깁니다. 쿨다운이나 상한 때문에 버려진 재생은 다음 블록부터 `isPlaying` 이 false 입니다.
          */
-        AudioPlayingID postEvent( const hashed_string& eventName, AudioEmitterID emitterID = 0 );
+        AudioPlayingID postEvent( const hashed_string& eventName, AudioEmitterID emitterID = AudioEmitterID{} );
         /**
          * @brief 클립을 버스 하나로 재생합니다. 클립이 캐시에 없으면 디코드를 요청하고, 준비되면 시작합니다.
          * @param bus 비었거나 모르는 이름이면 `sfx` 입니다.

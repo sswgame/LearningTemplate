@@ -228,7 +228,7 @@ namespace sw::editor
 
     void AudioEventBrowserUtil::postEvent( const hashed_string& eventName )
     {
-        (void)getAudioService().getEngine().postEvent( eventName, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+        (void)getAudioService().getEngine().postEvent( eventName ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
     }
 
     bool AudioEventBrowserUtil::openDataFile( string_view path )

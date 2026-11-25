@@ -16,6 +16,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/ScopedDeferredLog.h"
@@ -29,7 +30,7 @@
 namespace sw
 {
     /** @brief 프록시 하나의 번호입니다. 0 은 등록 실패입니다. */
-    using ExtensionSceneProxyID = uint32;
+    using ExtensionSceneProxyID = TypedID<struct ExtensionSceneProxyIDTag, uint32>;
     /** @brief 프록시 갱신 함수입니다. 게임 스레드가 값을 캡처해 올리고, 렌더 스레드가 프레임 시작에 프록시에 적용합니다. */
     using ExtensionProxyUpdateFn = Delegate<void( IExtensionSceneProxy& )>;
 
@@ -115,7 +116,7 @@ namespace sw
         vector<ExtensionEntry> _listExtension    SW_GUARDED_BY( _mutex );
         vector<ProxyEntry> _listProxy            SW_GUARDED_BY( _mutex );
         vector<PendingUpdate> _listPendingUpdate SW_GUARDED_BY( _mutex );
-        ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;
+        uint32 _nextProxyID                      SW_GUARDED_BY( _mutex ) = 1;
         OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`recordFailureOnce`)
 
         SW_SERVICE_SLOT( RenderExtensionRegistry, Optional );
@@ -159,7 +160,7 @@ namespace sw
         ExtensionSceneProxyRegistration( const ExtensionSceneProxyRegistration& )            = delete;
         ExtensionSceneProxyRegistration& operator=( const ExtensionSceneProxyRegistration& ) = delete;
 
-        bool isRegistered() const { return _id != 0; }
+        bool isRegistered() const { return _id.isValid(); }
         /** @brief 프록시 갱신을 올립니다(값을 캡처한 함수). 렌더 스레드가 다음 프레임 시작에 프록시에 적용합니다. 등록하지 못한 등록이면 false 입니다. */
         [[nodiscard]] bool update( ExtensionProxyUpdateFn update );
 

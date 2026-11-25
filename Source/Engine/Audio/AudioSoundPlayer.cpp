@@ -82,16 +82,16 @@ namespace sw
     SoundPlayingID AudioSoundPlayer::postEvent( const hashed_string& eventName )
     {
         AudioEngine* pEngine = findEngine();
-        return pEngine != nullptr ? pEngine->postEvent( eventName, 0 ) : 0;
+        return pEngine != nullptr ? pEngine->postEvent( eventName ) : SoundPlayingID{};
     }
 
     SoundPlayingID AudioSoundPlayer::postEventAt( const hashed_string& eventName, const float3& position )
     {
         AudioEngine* pEngine = findEngine();
         if ( pEngine == nullptr )
-            return 0;
+            return SoundPlayingID{};
         // 한 번 쓰는 에미터 — 자리를 두고 내고 바로 지운다. 엔진은 그 자리의 소리가 끝날 때까지 자리를 남긴다.
-        const AudioEmitterID emitterID = kOneShotEmitterBase + _nextOneShotEmitter.fetch_add( 1 );
+        const AudioEmitterID emitterID{ kOneShotEmitterBase + _nextOneShotEmitter.fetch_add( 1 ) };
         pEngine->setEmitter( emitterID, position, float3{} );
         const AudioPlayingID playingID = pEngine->postEvent( eventName, emitterID );
         pEngine->removeEmitter( emitterID );
@@ -104,7 +104,7 @@ namespace sw
         if ( pEmitter == nullptr )
         {
             SW_LOG_ERROR_ID( "AudioSoundPlayer.NoEmitter", "Sound '%#' on '%#' - the object has no AudioEmitterComponent", eventName.c_str(), target.getName().c_str() );
-            return 0;
+            return SoundPlayingID{};
         }
         return pEmitter->post( eventName );
     }
@@ -125,7 +125,7 @@ namespace sw
     void AudioSoundPlayer::stop( SoundPlayingID playingID, float32 fadeSeconds )
     {
         AudioEngine* pEngine = findEngine();
-        if ( pEngine != nullptr && playingID != 0 )
+        if ( pEngine != nullptr && playingID.isValid() )
             pEngine->stop( playingID, fadeSeconds );
     }
 

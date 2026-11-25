@@ -401,7 +401,7 @@ namespace sw
         SW_ASSERT( screen->_pUISystem == nullptr );
         screen->_pUISystem = this;
         rebuildStyleSet( *screen );
-        screen->_handle    = _nextScreenHandle++;
+        screen->_handle    = UIScreenHandle{ _nextScreenHandle++ };
         screen->_pushOrder = _nextPushOrder++;
         screen->_bClosing  = SW_FALSE;
         // 숨김 요청이 걸린 레이어에 열리는 화면도 숨긴다(포토 모드 중에 뜬 알림이 그려지지 않게).
@@ -534,7 +534,7 @@ namespace sw
         screen->_documentPath       = FileUtil::normalizePath( documentPath ).str();
         screen->_listBinding        = std::move( listBinding );
         screen->_listStyleSheet     = std::move( listStyleSheet );
-        screen->_handle             = _nextScreenHandle++;
+        screen->_handle             = UIScreenHandle{ _nextScreenHandle++ };
         applyDocumentAnimations( *screen ); // 등록만 한다 — `Open` 은 스택에 올릴 때(`pushScreen`) 튼다
         rebuildStyleSet( *screen );
         return screen;
@@ -743,7 +743,7 @@ namespace sw
             if ( UISystemInternal::usesTypeOfModule( *_listScreen[index - 1], moduleName ) == false )
                 continue;
             const UIScreen& screen = *_listScreen[index - 1];
-            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds types of module %#", screen._handle, moduleName );
+            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds types of module %#", screen._handle.getValue(), moduleName );
             // 문서로 연 기본 화면은 문서 경로로 다시 연다(새 이미지의 위젯 타입으로). 화면 클래스가 모듈의 것이면 다시 열 수 없다.
             const bool bScreenClassInModule = UISystemInternal::isTypeOfModule( screen.getTypeInfo(), moduleName );
             if ( screen._documentPath.empty() == false && bScreenClassInModule == false )

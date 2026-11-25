@@ -31,7 +31,7 @@ namespace
         {
         }
 
-        NavCrowdAgentID addAgent( const float3&, const NavCrowdAgentParams& ) override { return 0; }
+        NavCrowdAgentID addAgent( const float3&, const NavCrowdAgentParams& ) override { return NavCrowdAgentID{ 0 }; }
         void            removeAgent( NavCrowdAgentID ) override {}
         void            updateAgentParams( NavCrowdAgentID, const NavCrowdAgentParams& ) override {}
         bool            requestMoveTarget( NavCrowdAgentID, const float3& ) override { return true; }

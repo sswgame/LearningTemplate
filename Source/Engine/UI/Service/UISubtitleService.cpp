@@ -130,7 +130,7 @@ namespace sw
             (void)post( cue._speakerKey.empty() ? string{} : LocalizedMessage( cue._speakerKey.c_str() ).str(), LocalizedMessage( cue._textKey.c_str() ).str() );
             // 신호는 보이스를 얻은 클립만 낸다 — 다음 `refreshVoiceState` 까지는 나는 중으로 둔다.
             _listQueued.back()._voicePlayingID   = cue._playingID;
-            _listQueued.back()._bVoicePlaying    = cue._playingID != 0;
+            _listQueued.back()._bVoicePlaying    = cue._playingID.isValid();
             _listQueued.back()._bRunsInGamePause = cue._bPlaysInGamePause;
         }
     }
@@ -142,7 +142,7 @@ namespace sw
             for ( UISubtitleLine& line : *pList )
             {
                 // 오디오가 내려갔으면(장치 · 서비스 없음) 아무 음성도 나지 않는다 — 줄이 영원히 남지 않게 시간만 따른다.
-                line._bVoicePlaying = line._voicePlayingID != 0 && pAudio != nullptr && pAudio->isPlaying( line._voicePlayingID );
+                line._bVoicePlaying = line._voicePlayingID.isValid() && pAudio != nullptr && pAudio->isPlaying( line._voicePlayingID );
             }
         }
     }

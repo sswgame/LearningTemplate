@@ -34,8 +34,8 @@ namespace sw
     bool AudioPublishedState::isPlaying( AudioPlayingID playingID, uint64 nextPlayingID ) const
     {
         // 아직 오디오 스레드가 보지 못한 재생은 살아 있는 것으로 친다.
-        if ( playingID > _appliedPlayingID.load( std::memory_order_acquire ) )
-            return playingID < nextPlayingID;
+        if ( playingID.getValue() > _appliedPlayingID.load( std::memory_order_acquire ) )
+            return playingID.getValue() < nextPlayingID;
         ScopedLock<mutex> lock{ _mutex };
         return std::binary_search( _listPlaying.begin(), _listPlaying.end(), playingID );
     }

@@ -107,7 +107,7 @@ namespace sw
 
     private:
         /** @brief 테이블 키는 (면 << 32) | 글리프입니다. */
-        static uint64 makeKey( FontFaceID face, uint32 glyphIndex ) { return ( static_cast<uint64>( face ) << 32 ) | glyphIndex; }
+        static uint64 makeKey( FontFaceID face, uint32 glyphIndex ) { return ( static_cast<uint64>( face.getValue() ) << 32 ) | glyphIndex; }
         /** @brief 표에 없는 글리프를 래스터화해 아틀라스에 올리고 표에 넣습니다. 자리가 없으면 압축을 요청하고 `Deferred` 입니다. */
         [[nodiscard]] GlyphLookup rasterizeAndAdd( FontFaceID face, uint32 glyphIndex, uint64 frameIndex );
         /** @brief 영역을 잡고, 자리가 없으면 글리프가 모두 최근이 아닌 가장 오래된 페이지를 통째로 비워 자리를 냅니다. 그런 페이지가 없으면 false 입니다. */

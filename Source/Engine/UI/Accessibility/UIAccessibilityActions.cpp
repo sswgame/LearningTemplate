@@ -28,7 +28,7 @@ namespace sw
                 UIAccessibilityService::collectInteractiveScreens( ui.getScreens(), listScreen );
                 for ( UIScreen* pScreen : listScreen )
                 {
-                    if ( pScreen->getHandle() == screen )
+                    if ( pScreen->getHandle() == UIScreenHandle{ screen } )
                         return pScreen;
                 }
                 return nullptr;
@@ -55,7 +55,7 @@ namespace sw
         Widget* pWidget = UIAccessibilityActionsInternal::findEnabledWidget( ui, screen, widget );
         if ( pWidget == nullptr )
             return false;
-        WidgetTree&  tree = ui.findScreen( screen )->getTree();
+        WidgetTree&  tree = ui.findScreen( UIScreenHandle{ screen } )->getTree();
         UIWidgetPath path{};
         if ( UIWidgetPath::makePathTo( tree, widget, path ) == false )
             return false;
@@ -69,7 +69,7 @@ namespace sw
     {
         if ( UIAccessibilityActionsInternal::findEnabledWidget( ui, screen, widget ) == nullptr )
             return false;
-        return ui.getInputRouter().getFocusManager().setFocus( ui.findScreen( screen )->getTree(), widget );
+        return ui.getInputRouter().getFocusManager().setFocus( ui.findScreen( UIScreenHandle{ screen } )->getTree(), widget );
     }
 
     bool UIAccessibilityActions::setRangeValue( UISystem& ui, uint32 screen, WidgetID widget, float32 value )
