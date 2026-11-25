@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file Test/CMakeLists.txt
 # @brief CTest 등록만 한다 — 테스트 코드는 여기 없다. 단위 테스트는 기능 폴더 옆 `Tests/`(`SW_TEST_CASE`)에 있고 `App --test` 한 번이 모두 돈다.
-#        시나리오는 `Content/**/automation/*.scenario.xml` 이고 `Test/Scenario/` 가 하나씩 올린다. 형식과 쓰는 법은 Test/README.md.
+#        시나리오는 `Content/**/automation/*.scenario.xml` 이고 `Test/Scenario/` 가 하나씩 올린다. 쓰는 법은 Test/README.md(단위 테스트) · Test/Scenario/README.md(시나리오).
 # ==============================================================================
 
 if(NOT TARGET App)
