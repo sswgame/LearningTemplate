@@ -72,7 +72,8 @@ namespace sw
         /** @brief Present 뒤에 에디터의 멀티 뷰포트 · 플랫폼 창을 처리합니다. 에디터가 없으면 아무것도 하지 않습니다. */
         void postPresentEditor( IRHIDevice& renderDevice );
 
-        // LiveReload 콜백. 에디터.
+    private:
+        // LiveReload 콜백 · API 바인딩 — 중첩 `EditorReloadClient` 와 리로드 잡음 델리게이트만 부른다(밖에서 부르는 곳이 없다).
         /** @brief 에디터 모듈을 언로드하기 직전에 불립니다. 인스턴스와 API 테이블을 해제합니다. */
         void onBeforeEditorReload();
         /** @brief 에디터 모듈이 다시 로드된 직후에 불립니다. API 를 다시 바인딩하고 인스턴스를 만듭니다. */
