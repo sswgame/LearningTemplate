@@ -112,7 +112,7 @@ namespace sw
         if ( pDepot == nullptr )
             return false;
         int2 cell{};
-        if ( _pWorld->findBuildSite( buildingID, pDepot->_position, 3, 12, cell ) == false )
+        if ( _pWorld->findBuildSite( buildingID, pDepot->_position, _settings._buildSiteMinRadius, _settings._buildSiteMaxRadius, cell ) == false )
             return false;
         // 짐 없이 노는 일꾼을 먼저, 광물로 가는 일꾼을 그다음에 고른다.
         RTSUnitID workerID{};
@@ -139,7 +139,7 @@ namespace sw
         if ( workerID.isValid() == false || _pWorld->issueBuild( workerID, buildingID, cell ) != RTSCommandResult::Ok )
             return false;
         // 다 지으면 다시 캐러 간다.
-        const RTSUnitID mineralID = _pWorld->findNearestResource( pDepot->_position, RTSResourceKind::Minerals, 16.0f );
+        const RTSUnitID mineralID = _pWorld->findNearestResource( pDepot->_position, RTSResourceKind::Minerals, _settings._resourceSearchRadius );
         if ( mineralID.isValid() )
             (void)_pWorld->issueGather( workerID, mineralID, true );
         return true;
@@ -179,7 +179,7 @@ namespace sw
         } );
         for ( const RTSUnitID workerID : listIdle )
         {
-            const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceKind::Minerals, 16.0f );
+            const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceKind::Minerals, self._settings._resourceSearchRadius );
             if ( mineralID.isValid() == false )
                 return ActionResult::Failed;
             (void)world.issueGather( workerID, mineralID );

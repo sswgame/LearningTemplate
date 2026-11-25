@@ -31,7 +31,10 @@ namespace sw
         int32         _workerTarget{ 14 };
         int32         _productionTarget{ 2 };
         int32         _attackArmySize{ 8 };
-        int32         _supplyMargin{ 3 }; ///< 남은 보급이 이 값 이하이면 보급 건물을 짓는다
+        int32         _supplyMargin{ 3 };             ///< 남은 보급이 이 값 이하이면 보급 건물을 짓는다
+        int32         _buildSiteMinRadius{ 3 };       ///< 건물을 지을 자리를 본진에서 이 칸 밖부터 찾는다
+        int32         _buildSiteMaxRadius{ 12 };      ///< 이 칸 안에서 찾는다. 없으면 짓지 못한다
+        float32       _resourceSearchRadius{ 16.0f }; ///< 본진에서 이 거리 안의 광물에 일꾼을 보낸다
     };
 } // namespace sw
 
