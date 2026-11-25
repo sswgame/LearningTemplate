@@ -426,8 +426,8 @@ namespace sw
         return MailboxServiceResult::fail( OnlineError::kBusy );
     }
 
-    MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, const ILedgerPolicy* pPolicy,
-                                                      MailboxClaimReply& outReply )
+    MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, int32 maxClaimCount, int32 maxScanCount,
+                                                      const ILedgerPolicy* pPolicy, MailboxClaimReply& outReply )
     {
         outReply                           = MailboxClaimReply{};
         MailboxServiceResult  firstFailure = MailboxResult::Ok;
@@ -443,7 +443,7 @@ namespace sw
                 return outReply._claimedCount > 0 ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable ); // 이미 받은 것은 커밋됐다
             for ( const ServiceRecord& record : listRecord )
             {
-                if ( outReply._claimedCount >= kMaxClaimAllCount || scannedCount >= kMaxClaimAllScanCount )
+                if ( outReply._claimedCount >= maxClaimCount || scannedCount >= maxScanCount )
                 {
                     outReply._bMoreRemaining = SW_TRUE;
                     break;

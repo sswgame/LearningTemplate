@@ -202,8 +202,8 @@ namespace sw
         PROPERTY( Required, Min = 0 )
         int32 _maxGuests{ 150 };
         int32 _entryFee{ 0 };
-        PROPERTY( Required, Min = 0 )
-        uint32 _randomSeed{ 12345u };
+        PROPERTY( Required, Min = 1 )
+        uint32 _randomSeed{ 0 }; ///< 0 은 씨앗이 아니다 — 규칙 읽기가 거절한다
         // ---- 새로 오는 손님의 성향(고르게 뽑는 범위). 가족 공원과 스릴 공원을 데이터로 나눈다 ----
         PROPERTY( Required, Min = 0 )
         int32 _guestCashMin{ 20 };

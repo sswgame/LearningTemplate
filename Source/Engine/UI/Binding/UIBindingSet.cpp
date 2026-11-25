@@ -66,7 +66,7 @@ namespace sw
             static void writeRange( const UIPropertyPath& path, Widget& widget, float64 number, bool bInteger )
             {
                 if ( path.isValid() && UIBindingValue::writeValue( path, &widget, UIBindingValue::makeNumber( number, bInteger ) ) )
-                    widget.onBoundPropertyChanged( path.getRootProperty() );
+                    widget.notifyPropertyWritten( path.getRootProperty() );
             }
 
             /** @brief 선택지에 보일 텍스트입니다(텍스트 키가 있으면 키, 없으면 값이며, 텍스트 위젯이 키로 해석합니다). */
@@ -156,7 +156,7 @@ namespace sw
             bind( listBinding, context );
             for ( ActiveBinding& binding : _listBinding )
             {
-                (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
+                (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`notifyPropertyWritten`)으로 안다
             }
             return;
         }
@@ -173,7 +173,7 @@ namespace sw
                         break;
                     const uint64 fieldSerial = _pViewModel->findFieldChangeSerial( binding._sourceField );
                     if ( bReformat || ( fieldSerial > _seenSerial && fieldSerial != binding._skipSerial ) )
-                        (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
+                        (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`notifyPropertyWritten`)으로 안다
                     break;
                 }
                 case UIBindingSource::Poll:
@@ -184,7 +184,7 @@ namespace sw
                     const bool           bPollUnchanged = binding._bPollKnown && binding._lastPollValue.isSameValue( polled ) && bReformat == false;
                     if ( bPollUnchanged )
                         break;
-                    (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
+                    (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`notifyPropertyWritten`)으로 안다
                     break;
                 }
                 case UIBindingSource::Setting:
@@ -192,7 +192,7 @@ namespace sw
                     const bool bReformat   = context._bTextRevisionChanged && binding._expression._format.empty() == false;
                     const bool bNeedsApply = _bSettingsChanged || binding._bDirty || bReformat;
                     if ( bNeedsApply )
-                        (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`onBoundPropertyChanged`)으로 안다
+                        (void)apply( binding, context ); // 필드가 바뀌었는지는 위젯이 알림(`notifyPropertyWritten`)으로 안다
                     break;
                 }
             }
@@ -241,7 +241,7 @@ namespace sw
         const Widget* pWidget = _pScreen->getTree().findWidgetByID( desc._widget );
         if ( pWidget == nullptr || pWidget->getTypeInfo() == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "the widget is not in the screen" } );
-        if ( expected<void> resolved = UIBindingValue::resolvePath( *pWidget->getTypeInfo(), desc._propertyPath, binding._target ); resolved.has_value() == false )
+        if ( expected<void> resolved = UIBindingValue::resolveWidgetTarget( *pWidget->getTypeInfo(), desc._propertyPath, binding._target ); resolved.has_value() == false )
             return resolved;
         UIBindingValueKind sourceKind     = UIBindingValueKind::None;
         hashed_string      sourceTypeName = {};
@@ -429,7 +429,7 @@ namespace sw
                     if ( pList != nullptr && *pList != listText )
                     {
                         *pList = std::move( listText );
-                        widget.onBoundPropertyChanged( binding._optionList.getRootProperty() );
+                        widget.notifyPropertyWritten( binding._optionList.getRootProperty() );
                     }
                 }
                 for ( uint32 index = 0; index < static_cast<uint32>( listOption.size() ); ++index )
@@ -518,7 +518,7 @@ namespace sw
         _bApplying          = SW_TRUE;
         const bool bChanged = UIBindingValue::writeValue( binding._target, pWidget, value );
         if ( bChanged )
-            pWidget->onBoundPropertyChanged( binding._target.getRootProperty() );
+            pWidget->notifyPropertyWritten( binding._target.getRootProperty() );
         _bApplying = SW_FALSE;
         return bChanged;
     }

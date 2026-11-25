@@ -26,17 +26,10 @@ namespace sw
         /** @brief 바뀐 값 알림입니다. */
         using CheckedDelegate = MulticastDelegate<void( bool )>;
 
-        /** @brief 상자 한 변(UI 단위)입니다. */
-        static constexpr float32 kBoxSize = 20.0f;
-        /** @brief 상자와 글 사이 틈입니다. */
-        static constexpr float32 kBoxGap = 8.0f;
-
         CheckBoxWidget();
         ~CheckBoxWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(체크는 그리기만 다시 합니다). */
-        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /** @brief 값을 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). kPaint 입니다. */
         void setChecked( bool bChecked );
@@ -46,6 +39,8 @@ namespace sw
         CheckedDelegate& getOnCheckedChanged() { return _onCheckedChanged; }
 
     protected:
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(체크는 스타일과 그리기). */
+        void   onBoundPropertyChanged( const PropertyInfo& property ) override;
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
         void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;

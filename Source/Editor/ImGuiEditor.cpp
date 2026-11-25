@@ -23,6 +23,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -508,6 +509,7 @@ namespace sw::editor
         , _editorToolDefaults{ nullptr }
         , _pIconGlyphTable{ nullptr }
         , _fontSetup{}
+        , _defaultAssets{ nullptr }
         , _pComponentIconTable{ nullptr }
         , _editorContext{ nullptr }
         , _dockLayout{}
@@ -588,11 +590,15 @@ namespace sw::editor
         _editorToolDefaults = make_unique<EditorToolDefaults>();
         if ( _editorToolDefaults->loadFromHost() == false )
             return SubsystemInitResult::Failed;
+        // 에디터가 이름으로 여는 데이터의 표 — 아래 아이콘 표도 여기서 경로를 얻는다.
+        _defaultAssets = make_unique<EditorDefaultAssets>();
+        if ( EditorDefaultAssets::load( *_defaultAssets ) == false )
+            return SubsystemInitResult::Failed;
         // 아이콘 표 둘도 에디터 필수 데이터다 — 글꼴(아이콘 글리프 범위)이 이 단계 뒤에 서고, 그리기가 이름으로 찾는다. 못 읽으면 이유를 남겼고 멈춘다.
         _pIconGlyphTable     = make_unique<EditorIconGlyphTable>();
         _pComponentIconTable = make_unique<EditorComponentIconTable>();
-        if ( _pIconGlyphTable->loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
-             _pComponentIconTable->loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
+        if ( _pIconGlyphTable->loadFromAsset( AssetID{ _defaultAssets->_iconGlyphTable.get() } ) == false ||
+             _pComponentIconTable->loadFromAsset( AssetID{ _defaultAssets->_componentIconTable.get() } ) == false )
             return SubsystemInitResult::Failed;
         // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;
@@ -605,6 +611,7 @@ namespace sw::editor
         EditorPreferencesStore::close(); // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
         _pComponentIconTable.reset();
         _pIconGlyphTable.reset();
+        _defaultAssets.reset();
         _editorToolDefaults.reset();
     }
 
@@ -721,7 +728,7 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
-        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, &EditorSubsystemSet::install );
+        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, *_defaultAssets, &EditorSubsystemSet::install );
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이

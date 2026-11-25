@@ -31,6 +31,8 @@
 #include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
+#include "Games/Playground/Online/PlaygroundOnlineSettings.h"
+
 namespace sw
 {
     class EconomyShopPurchaseProvider;
@@ -60,9 +62,8 @@ namespace sw
     public:
         static constexpr const utf8* kAssetGold          = "cur.gold";
         static constexpr const utf8* kAssetGem           = "cur.gem";
-        static constexpr const utf8* kMatchRegion        = "local";                                      ///< 서버 온라인 설정의 `_region` 기본값
-        static constexpr const utf8* kBoardKills         = "arena_kills";                                ///< `game/playground/data/playground.leaderboards.xml`
-        static constexpr const utf8* kOfferCatalog       = "game/playground/data/playground.offers.xml"; ///< 상점 화면의 상품(서버 경제 키트와 같은 파일 — `Config/Server/Online/Playground.online.json`)
+        static constexpr const utf8* kMatchRegion        = "local";       ///< 서버 온라인 설정의 `_region` 기본값
+        static constexpr const utf8* kBoardKills         = "arena_kills"; ///< `game/playground/data/playground.leaderboards.xml`
         static constexpr int32       kTopCount           = 10;
         static constexpr const utf8* kResultDisconnected = "disconnected"; ///< 판 도중 서버를 잃고 나온 결과 이름
 
@@ -107,10 +108,12 @@ namespace sw
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }
         /**
-         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 세션의 경제 클라이언트와 상품 카탈로그(`kOfferCatalog`)로 세운다. 카탈로그를 읽지 못하면 nullptr 입니다.
+         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 설정(`PlaygroundOnlineSettings`)을 읽어 세션의 경제 클라이언트와 상품 카탈로그로 세운다. 설정 · 카탈로그를 읽지 못하면 nullptr 입니다.
          * @details 공급자는 이 흐름(게임 범위)이 든다 — 화면은 빌려 쓰고, 게임이 내려가면 늦게 온 답은 공급자의 약한 참조가 버린다.
          */
         EconomyShopPurchaseProvider* findShopProvider( OnlineSession& session );
+        /** @brief 온라인 흐름의 에셋 설정입니다. `findShopProvider` 가 공급자를 돌려준 뒤에 값이 있습니다. */
+        const PlaygroundOnlineSettings& getSettings() const { return _settings; }
         /** @brief 받은 배정의 경기 id 입니다. 아직 없으면 0 입니다. */
         uint64 getMatchID() const { return _assignment._matchID; }
         /** @brief 매치 세션의 걸음입니다. */
@@ -167,6 +170,7 @@ namespace sw
         vector<AccountClientReply>              _listReplyScratch;
         vector<MatchAssignment>                 _listAssignmentScratch;
         vector<LeaderboardEntry>                _listTopKills;
+        PlaygroundOnlineSettings                _settings;     ///< 상점 에셋(처음 상점을 열 때 읽는다)
         shared_ptr<const OfferCatalog>          _offers;       ///< 상점 상품(처음 상점을 열 때 읽는다)
         unique_ptr<EconomyShopPurchaseProvider> _shopProvider; ///< 상점 화면의 온라인 공급자(`findShopProvider`)
         FriendList                              _friends;      ///< 친구 목록 모델(`update` 가 친구 클라이언트에 붙인다)

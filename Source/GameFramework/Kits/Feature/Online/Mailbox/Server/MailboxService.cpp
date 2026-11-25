@@ -30,6 +30,8 @@ namespace sw
             AccountID                   _accountID{ kInvalidAccountID };
             int64                       _nowMs{ 0 };
             int64                       _claimedRetentionMs{ 0 };
+            int32                       _maxClaimAllCount{ 0 };
+            int32                       _maxClaimAllScanCount{ 0 };
         };
 
         /** @brief 메서드마다의 저장 함수입니다. 오버로드라 표에 메서드를 더하고 줄을 빠뜨리면 컴파일되지 않습니다. */
@@ -63,7 +65,7 @@ namespace sw
             static MailboxServiceResult run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
             {
                 (void)request;
-                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._claimedRetentionMs, input._pPolicy, outReply );
+                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._claimedRetentionMs, input._maxClaimAllCount, input._maxClaimAllScanCount, input._pPolicy, outReply );
             }
 
             static MailboxServiceResult run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
@@ -107,6 +109,12 @@ namespace sw
         if ( settings._claimedRetentionMs <= 0 )
         {
             SW_LOG_ERROR_ID( "MailboxService.ClaimedRetentionMissing", "MailboxService needs a claimed-mail retention above zero (claimedRetentionMs %#)", settings._claimedRetentionMs );
+            return false;
+        }
+        if ( settings._maxClaimAllCount <= 0 || settings._maxClaimAllScanCount < settings._maxClaimAllCount )
+        {
+            SW_LOG_ERROR_ID( "MailboxService.ClaimAllLimitsMissing", "MailboxService needs _maxClaimAllCount above zero (%#) and _maxClaimAllScanCount at least that (%#) from the mailbox kit settings",
+                             settings._maxClaimAllCount, settings._maxClaimAllScanCount );
             return false;
         }
         _store.bindStore( pStore );
@@ -263,10 +271,12 @@ namespace sw
             return;
         }
         MailboxCallInput input;
-        input._pPolicy            = _settings._pPolicy;
-        input._accountID          = context._accountID;
-        input._nowMs              = context._nowMs.count();
-        input._claimedRetentionMs = _settings._claimedRetentionMs;
+        input._pPolicy              = _settings._pPolicy;
+        input._accountID            = context._accountID;
+        input._nowMs                = context._nowMs.count();
+        input._claimedRetentionMs   = _settings._claimedRetentionMs;
+        input._maxClaimAllCount     = _settings._maxClaimAllCount;
+        input._maxClaimAllScanCount = _settings._maxClaimAllScanCount;
         if ( bWithCampaigns )
             input._listCampaign = _listCampaign;
         _store.submit( [request, input = std::move( input )]( IServiceStoreConnection& connection )

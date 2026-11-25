@@ -35,8 +35,6 @@ namespace sw
     {
         struct AudioServiceInternal
         {
-            /** @brief 곡을 바꿀 때의 크로스페이드 길이(초)입니다. */
-            static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
             /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
             /** @brief 스피커 모드의 설정 값입니다(이름 → 값 — 열거자 순서와 묶이지 않는다). */
@@ -98,6 +96,7 @@ namespace sw
         , _reopenSecondsLeft{ 0.0 }
         , _reopenBackoff{ ExponentialBackoff::createWithRandomSeed( 0 ) } // `initialize` 가 설정의 첫 간격으로 바꾼다 — 그 전에는 `update` 가 돌지 않는다
         , _reopenMaxDelayMs{ 0 }
+        , _musicCrossfadeSeconds{ 0.0f }
         , _bOutputLost{ false }
         , _device{}
         , _masterVolume{ 1.0f }
@@ -142,9 +141,10 @@ namespace sw
             return false;
         }
         _pEngine->getClipStore().setBudgetBytes( static_cast<uint64>( config._clipCacheMegabytes ) * constant::memory::kBytesPerMegabyte );
-        _reopenBackoff     = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( config._reopenFirstDelayMs ) );
-        _reopenMaxDelayMs  = static_cast<int64>( config._reopenMaxDelayMs );
-        _reopenSecondsLeft = 0.0; // 장치 없이 시작하면 첫 update 가 바로 다시 열어 본다
+        _reopenBackoff         = ExponentialBackoff::createWithRandomSeed( static_cast<int64>( config._reopenFirstDelayMs ) );
+        _reopenMaxDelayMs      = static_cast<int64>( config._reopenMaxDelayMs );
+        _musicCrossfadeSeconds = config._musicCrossfadeSeconds;
+        _reopenSecondsLeft     = 0.0; // 장치 없이 시작하면 첫 update 가 바로 다시 열어 본다
 
         // 믹서 그래프는 엔진 데이터가 기준이다. 없거나 틀리면 코드 그래프로 대신하지 않고 기동이 실패한다.
         AudioMixerDef mixerDesc;
@@ -483,13 +483,13 @@ namespace sw
         const bool bCrossfade = _musicPlayingID != 0;
         if ( bCrossfade )
         {
-            _pEngine->stop( _musicPlayingID, AudioServiceInternal::kMusicCrossfadeSeconds );
-            _pEngine->stopMusic( AudioServiceInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, _musicCrossfadeSeconds );
+            _pEngine->stopMusic( _musicCrossfadeSeconds );
         }
 
         AudioClipPlayParams params;
         params._bLoop         = SW_TRUE;
-        params._fadeInSeconds = bCrossfade ? AudioServiceInternal::kMusicCrossfadeSeconds : 0.0f;
+        params._fadeInSeconds = bCrossfade ? _musicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
         _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
         return _musicPlayingID != 0;
@@ -506,9 +506,9 @@ namespace sw
         if ( pMusic->loadFromAsset( assetID ) == false )
             return false;
         if ( _musicPlayingID != 0 )
-            _pEngine->stop( _musicPlayingID, AudioServiceInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, _musicCrossfadeSeconds );
         _musicPath      = string( path );
-        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), AudioServiceInternal::kMusicCrossfadeSeconds );
+        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), _musicCrossfadeSeconds );
         return _musicPlayingID != 0;
     }
 

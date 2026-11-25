@@ -179,7 +179,8 @@ namespace sw
 
     float32 MonsterHuntAlchemy::getMaxToxicity() const
     {
-        return _pCatalog != nullptr ? _pCatalog->getAlchemy()._maxToxicity : 100.0f;
+        SW_ASSERT( _pCatalog != nullptr ); // 부르는 곳은 정의를 찾은 뒤의 `evaluateDrink` 하나다 — 정의는 카탈로그에서 나온다
+        return _pCatalog->getAlchemy()._maxToxicity;
     }
 
     int32 MonsterHuntAlchemy::getCharges( const hashed_string& itemID ) const

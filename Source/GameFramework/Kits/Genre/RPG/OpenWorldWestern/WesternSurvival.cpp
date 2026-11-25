@@ -52,16 +52,16 @@ namespace sw
         ResourceGaugeSettings     healthSettings;
         healthSettings._max        = survival._health;
         healthSettings._regenRate  = survival._healthRegen;
-        healthSettings._regenDelay = 4.0f;
+        healthSettings._regenDelay = survival._healthRegenDelay;
         ResourceGaugeSettings staminaSettings;
         staminaSettings._max              = survival._stamina;
         staminaSettings._regenRate        = survival._staminaRegen;
-        staminaSettings._regenDelay       = 1.0f;
-        staminaSettings._exhaustThreshold = survival._stamina * 0.2f;
+        staminaSettings._regenDelay       = survival._staminaRegenDelay;
+        staminaSettings._exhaustThreshold = survival._stamina * survival._exhaustRatio;
         ResourceGaugeSettings deadEyeSettings;
         deadEyeSettings._max            = survival._deadEye;
         deadEyeSettings._regenRate      = survival._deadEyeRegen;
-        deadEyeSettings._regenDelay     = 2.0f;
+        deadEyeSettings._regenDelay     = survival._deadEyeRegenDelay;
         deadEyeSettings._drainPerSecond = survival._deadEyeDrain;
         // 따로 만들어 셋 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
         ResourceGauge health;
@@ -203,8 +203,8 @@ namespace sw
 
     float32 WesternSurvival::computeRegenScale( WesternCore core ) const
     {
-        const float32 minScale = _pCatalog != nullptr ? _pCatalog->getSurvival()._minRegenScale : 0.2f;
-        return MathUtil::lerp( minScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
+        // `update` 가 카탈로그가 있을 때만 부른다.
+        return MathUtil::lerp( _pCatalog->getSurvival()._minRegenScale, 1.0f, MathUtil::saturate( getCore( core ) / kCoreMax ) );
     }
 
     void WesternSurvival::serializeState( StateIO& io )

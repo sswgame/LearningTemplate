@@ -423,6 +423,7 @@ namespace sw
         AIDirectorEvent event;
         event._kind      = pool._kind == AIDirectorPoolKind::Reward ? AIDirectorEventKind::Reward : AIDirectorEventKind::Encounter;
         event._id        = encounter._id;
+        event._effect    = encounter._effect;
         event._source    = pool._id;
         event._time      = _time;
         event._intensity = _intensity;

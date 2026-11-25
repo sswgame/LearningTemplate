@@ -244,6 +244,8 @@ namespace sw
         uint32 _wavesPerCaster;
         PROPERTY( Category = "Arena", DisplayName = "Waves Per Level", Tooltip = "Enemy level rises by one every this many waves", Min = 1 )
         uint32 _wavesPerLevel;
+        PROPERTY( Category = "Arena", DisplayName = "Stat Scale Per Level", Tooltip = "Enemy max health and attack power grow by this much of their base per level above 1", Min = 0.0 )
+        float32 _statScalePerLevel;
         PROPERTY( Category = "Arena", DisplayName = "Death Linger", Tooltip = "Seconds a fallen unit stays (squashing) before it is removed", Min = 0.01, Units = s )
         float32 _deathLifeSpan;
         PROPERTY( Category = "Arena", DisplayName = "Player Respawn Delay", Tooltip = "Seconds before a fallen player stands up again", Min = 0.0, Units = s )

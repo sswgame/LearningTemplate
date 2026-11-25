@@ -41,7 +41,7 @@ namespace
   </Honor>
   <Food id="jerky" healthCore="25" staminaCore="25"/>
   <Clothing id="duster" warmth="5"/>
-  <Survival comfortMin="-100" comfortMax="100" coreDrain="1.5" temperatureDrain="0" minRegenScale="0.2"/>
+  <Survival comfortMin="-100" comfortMax="100" coreDrain="1.5" temperatureDrain="0" minRegenScale="0.2" healthRegenDelay="4" staminaRegenDelay="1" deadEyeRegenDelay="2" exhaustRatio="0.2"/>
   <Animal id="deer" size="Medium" quality="3" pelt="30" carcass="10" decayHours="48" loot="venison"/>
   <HuntWeapon id="rifle" sizes="Medium,Large"/>
   <HitZone id="head" penalty="0"/>

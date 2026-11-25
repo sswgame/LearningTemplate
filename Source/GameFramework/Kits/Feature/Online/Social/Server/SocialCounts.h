@@ -9,6 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 
@@ -28,6 +30,37 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 한 계정이 가질 수 있는 관계 수의 운영 상한입니다(서버 설정 `SocialKitConfig::_links` — 값이 없으면 기동 오류).
+     * @details 네 값의 합은 목록 응답의 와이어 상한(`SocialLimit::kMaxLinkPage`) 이하여야 합니다(`isWithinWireLimits` — 넘으면 친구 키트가 서지 않는다).
+     */
+    REFLECT()
+    struct SocialLinkPolicy
+    {
+        REFLECT_BODY();
+        /** @brief 친구 수 상한입니다. 접속 상태 응답의 와이어 상한을 넘지 못합니다. */
+        PROPERTY( Required, Min = 1, Max = SocialLimit::kMaxFriend )
+        int32 _maxFriend{ 0 };
+        /** @brief 받은 신청 수 상한입니다. */
+        PROPERTY( Required, Min = 1, Max = SocialLimit::kMaxLinkPage )
+        int32 _maxIncoming{ 0 };
+        /** @brief 보낸 신청 수 상한입니다. */
+        PROPERTY( Required, Min = 1, Max = SocialLimit::kMaxLinkPage )
+        int32 _maxOutgoing{ 0 };
+        /** @brief 막은 계정 수 상한입니다. */
+        PROPERTY( Required, Min = 1, Max = SocialLimit::kMaxLinkPage )
+        int32 _maxBlocked{ 0 };
+
+        /** @brief 한 계정의 관계 줄 전부가 목록 응답 하나(`SocialLimit::kMaxLinkPage`)에 담기는지입니다. 64 비트로 더해 넘침이 없다. */
+        bool isWithinWireLimits() const
+        {
+            return int64{ _maxFriend } + int64{ _maxIncoming } + int64{ _maxOutgoing } + int64{ _maxBlocked } <= int64{ SocialLimit::kMaxLinkPage };
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     struct SocialLinkDecision;
 
     /** @brief 한 사람의 관계 개수입니다. `social_count` 레코드에 저장합니다. */
@@ -41,8 +74,8 @@ namespace sw
         bool isZero() const { return _friendCount == 0 && _incomingCount == 0 && _outgoingCount == 0 && _blockedCount == 0; }
 
         // 관계 바꾸기 규칙을 담은 순수 함수 모음입니다. */
-        static SocialLinkDecision decide( SocialLinkOperation operation, SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts,
-                                          const SocialCounts& otherCounts );
+        static SocialLinkDecision decide( const SocialLinkPolicy& policy, SocialLinkOperation operation, SocialLinkState selfState, SocialLinkState otherState,
+                                          const SocialCounts& selfCounts, const SocialCounts& otherCounts );
     };
 } // namespace sw
 

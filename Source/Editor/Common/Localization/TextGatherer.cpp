@@ -439,6 +439,18 @@ namespace sw
                 return value;
             }
 
+            /** @brief `LocalizableIf` 가 가리키는 불리언 칸이 @p node 에 거짓으로 적혔는지 봅니다. 적지 않았거나 바인딩 식이면 번역한다. */
+            static bool isTurnedOff( const XMLNode& node, const TypeInfo& type, const PropertyInfo& property )
+            {
+                const string* pSwitchName = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaLocalizableIf ) );
+                if ( pSwitchName == nullptr )
+                    return false;
+                const PropertyInfo* pSwitch = type.findPropertyInHierarchy( hashed_string( pSwitchName->c_str() ) );
+                SW_ASSERT( pSwitch != nullptr );
+                bool bLocalized{ true };
+                return pSwitch != nullptr && StringUtil::tryParseBool( readPropertyValue( node, *pSwitch ), bLocalized ) && bLocalized == false;
+            }
+
             static void gatherNode( const XMLNode& node, string_view originName, TextGatherer& gatherer, uint32 depth )
             {
                 if ( depth > 64 )
@@ -459,6 +471,8 @@ namespace sw
                         formatstring( context.data(), context.capacity(), "%#.%#", pType->_name.c_str(), property._name.c_str() );
                         if ( property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaLocalizable ) ) != nullptr )
                         {
+                            if ( isTurnedOff( node, *pType, property ) )
+                                return;
                             const string* pMaxLength = property._metadata->getEditor().findCustomMeta( hashed_string( TextGatherer::kMetaMaxLength ) );
                             int32         maxLength{ 0 };
                             if ( pMaxLength != nullptr && StringUtil::parseInt( *pMaxLength, maxLength ) == false )

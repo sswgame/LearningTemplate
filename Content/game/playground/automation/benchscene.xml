@@ -1,5 +1,8 @@
 <?asset guid="03d0a103fa865b8bd811cda6faeb90de"?>
-<StressTestSceneSettings _knightMesh="guid:0a55fa69f6f749e88ca135bc3d803483"
+<StressTestSceneSettings _uiDemoDocument="guid:c44f551b40a90ce3c1f2b5ee2c1a0117"
+                    _extensionTintShader="guid:d065c7e080a5fd21566ce30f25a0be89"
+                    _extensionDrawShader="guid:3b25ef0271c9987617ccbb6daa3a64d4"
+                    _knightMesh="guid:0a55fa69f6f749e88ca135bc3d803483"
                     _knightMaterial="guid:0b440989e7fbcb53768a75149e9b6bdb"
                     _knightSkeleton="guid:03273c012fee9c977aa7fb87663429b1"
                     _knightClips="guid:5cdc50168836caff61298efe87d056fc"

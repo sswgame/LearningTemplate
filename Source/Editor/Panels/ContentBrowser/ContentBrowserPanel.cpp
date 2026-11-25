@@ -26,13 +26,13 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserFavorite.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -1081,32 +1081,21 @@ namespace sw::editor
         EditorChrome::beginSection( sourcesDesc );
 
         EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdWidget", "Favorites" ) );
-        struct FavoriteFolder
+        const vector<ContentBrowserFavorite>& listFavorite = ContentBrowserFavorite::getFavorites();
+        for ( size_t favoriteIndex = 0; favoriteIndex < listFavorite.size(); ++favoriteIndex )
         {
-            const utf8* _pLabel;
-            const utf8* _pRelPath;
-            bool        _bEngine;
-        };
-        static const FavoriteFolder kArrFavorites[] = {
-            {  "Scenes",    constant::path::kMapsFolder, false},
-            { "Prefabs", constant::path::kPrefabsFolder, false},
-            {"Textures", constant::path::kTextureFolder, false},
-            { "Shaders",  constant::path::kShaderFolder,  true},
-            {    "Data",    constant::path::kDataFolder, false}
-        };
+            const ContentBrowserFavorite& favorite     = listFavorite[favoriteIndex];
+            const AbsolutePath            favoritePath = favorite.findFolder();
+            const bool                    bSelected    = FileUtil::isSameDiskPath( favoritePath.str(), _model.getSelectedFolderPath().str() );
 
-        const uint32 favoriteCount = static_cast<uint32>( sizeof( kArrFavorites ) / sizeof( kArrFavorites[0] ) );
-        for ( uint32 favoriteIndex = 0; favoriteIndex < favoriteCount; ++favoriteIndex )
-        {
-            const AbsolutePath favoritePath = kArrFavorites[favoriteIndex]._bEngine ? EditorPaths::findContentFolder( FileUtil::joinPath( constant::path::kEnginePack, kArrFavorites[favoriteIndex]._pRelPath ) ) : EditorPaths::findContentFolder( FileUtil::joinPath( ContentBrowserViewModel::getGamePackRoot(), kArrFavorites[favoriteIndex]._pRelPath ) );
-            const bool         bSelected    = FileUtil::isSameDiskPath( favoritePath.str(), _model.getSelectedFolderPath().str() );
-
-            if ( ImGui::Selectable( kArrFavorites[favoriteIndex]._pLabel, bSelected ) )
+            ImGui::PushID( static_cast<int32>( favoriteIndex ) );
+            if ( ImGui::Selectable( favorite._label.c_str(), bSelected ) )
             {
                 vector<ContentBrowserBreadcrumb> listBreadcrumb;
-                ContentBrowserBreadcrumb::makeFavoriteTrail( kArrFavorites[favoriteIndex]._pLabel, favoritePath, listBreadcrumb );
+                ContentBrowserBreadcrumb::makeFavoriteTrail( favorite._label, favoritePath, listBreadcrumb );
                 _model.selectFolder( favoritePath, listBreadcrumb );
             }
+            ImGui::PopID();
         }
 
         ImGui::Separator();

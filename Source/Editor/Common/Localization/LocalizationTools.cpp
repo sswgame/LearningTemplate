@@ -15,6 +15,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/PortableObjectFile.h"
 #include "Editor/Common/Localization/TranslationMemory.h"
@@ -471,7 +472,12 @@ namespace sw
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() ).str() );
         else
             SW_LOG_ERROR_ID( "LocalizationTools.EngineDefaultAssetsNot", "Engine default assets are not loaded - the engine localization project is left out" );
-        outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editor::EditorPaths::kLocalizationProject ).str() ); // 에디터 UI 문구
+        // 에디터 UI 문구 — 명령줄 도구는 에디터 컨텍스트 없이 돌므로 표를 직접 읽는다.
+        editor::EditorDefaultAssets editorAssets;
+        if ( editor::EditorDefaultAssets::load( editorAssets ) )
+            outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editorAssets._localizationProject.get() ).str() );
+        else
+            SW_LOG_ERROR_ID( "LocalizationTools.EditorDefaultAssetsNot", "Editor default assets are not loaded - the editor localization project is left out" );
 
         const string         localizationFolder = FileUtil::joinPath( constant::path::kDataFolder, constant::path::kLocalizationFolder );
         vector<AbsolutePath> listGameFolder;

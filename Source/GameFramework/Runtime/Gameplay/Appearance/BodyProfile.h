@@ -101,23 +101,40 @@ namespace sw
      *          효과(`effect` · `socket`)는 표면 밖으로 떨어지는 것이다 — 눈물은 줄기가 경로 끝(턱)에 닿으면 `dripSeconds` 동안 방울이, 침(`strand="true"`)은 방아쇠가 켜진 동안 가닥이 소켓에서 난다.
      *          언리얼에서는 나이아가라 시스템을 소켓에 붙여 애님 노티파이로 켜는 자리다 — 여기서는 표면 흐름과 같은 상태(줄기 · 방아쇠 세기)가 켜고 끈다.
      */
+    REFLECT()
     struct SW_GF_API BodyFluidDef
     {
-        vector<float2> _listPathPoint{}; ///< UV 경로(출처 → 끝)
-        hashed_string  _name{};
-        hashed_string  _channel{};
-        hashed_string  _residueChannel{};
-        hashed_string  _trigger{};             ///< 표정 또는 커브 이름
-        hashed_string  _part{};                ///< 자국을 찍을 몸 부품 이름(비어 있으면 몸 첫 부품)
-        float32        _ratePerSecond{ 0.5f }; ///< 방아쇠 1 에서 초당 새 줄기 수
-        float32        _speed{ 0.08f };        ///< 경로를 따라 흐르는 빠르기(UV / s)
-        float32        _radius{ 0.006f };      ///< 자국 반지름(UV)
-        float32        _wetValue{ 1.0f };      ///< 자국 값
-        float32        _residueValue{ 0.25f }; ///< 잔여 자국 값(마른 소금 자국 · 번진 화장)
-        hashed_string  _effect{};              ///< 방울 · 가닥 효과(`*.vfx.xml`). 비면 표면 자국만 남긴다
-        hashed_string  _socket{};              ///< 효과가 나는 몸 소켓(턱 끝 · 입꼬리) — 효과가 있으면 필수
-        float32        _dripSeconds{ 0.6f };   ///< 줄기 하나가 경로 끝에 닿은 뒤 방울이 떨어지는 시간(초) — 가닥(`strand`)이면 쓰지 않는다
-        uint8          _bStrand{ SW_FALSE };   ///< 가닥(침 · 콧물)이다 — 방아쇠가 켜진 동안 소켓에서 늘어지는 줄기를 낸다(방울은 경로 끝에 닿을 때만)
+        REFLECT_BODY();
+
+        vector<float2> _listPathPoint{}; ///< UV 경로(출처 → 끝) — 속성 `path` 의 글을 읽개가 푼다
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required )
+        hashed_string _channel{};
+        PROPERTY()
+        hashed_string _residueChannel{};
+        PROPERTY( Required, Tooltip = "Facial expression or animator curve that starts the stream" )
+        hashed_string _trigger{};
+        PROPERTY( Tooltip = "Body part the trail is stamped on; empty = the first body part" )
+        hashed_string _part{};
+        PROPERTY( Min = 0.0, Max = 10.0, Tooltip = "New streams per second at trigger 1" )
+        float32 _ratePerSecond{ 0.5f };
+        PROPERTY( Min = 0.0, Max = 10.0, Tooltip = "Speed along the path (UV per second)" )
+        float32 _speed{ 0.08f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Radius of the trail (UV)" )
+        float32 _radius{ 0.006f };
+        PROPERTY( Min = 0.0, Tooltip = "Value stamped into the channel" )
+        float32 _wetValue{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Value stamped into the residue channel (dried salt, smeared makeup)" )
+        float32 _residueValue{ 0.25f };
+        PROPERTY( Tooltip = "Drop or strand effect (*.vfx.xml); empty = surface trail only" )
+        hashed_string _effect{};
+        PROPERTY( Tooltip = "Body socket of the effect (chin, mouth corner); required with an effect" )
+        hashed_string _socket{};
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds a stream drips after it reaches the end of the path; unused by a strand" )
+        float32 _dripSeconds{ 0.6f };
+        PROPERTY( Name = "strand", Tooltip = "A strand (saliva) that hangs from the socket while the trigger is on" )
+        bool _bStrand{ false };
 
         /** @brief 경로의 전체 길이(UV)입니다. */
         float32 computePathLength() const;
@@ -128,9 +145,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 몸 프로필 하나입니다. 상속(`_base`)은 읽기 전에 합쳐져 있다. */
+    /** @brief 몸 프로필 하나입니다. 상속(`_base`)은 읽기 전에 합쳐져 있다. `id` 와 자식 원소는 카탈로그가 읽는다. */
+    REFLECT()
     struct SW_GF_API CharacterBodyProfileDef
     {
+        REFLECT_BODY();
+
         vector<BodyChannelLayerDef>  _listChannel{};
         vector<RigJiggleGroupParams> _listJiggle{};
         vector<BodyActionScaleDef>   _listActionScale{};
@@ -138,8 +158,9 @@ namespace sw
         vector<BodyFluidDef>         _listFluid{};
         BodyPupilDef                 _pupil{};
         hashed_string                _id{};
-        float32                      _wrinkleIntensity{ 1.0f };
         uint8                        _bHasPupil{ SW_FALSE };
+        PROPERTY( Min = 0.0, Max = 2.0, Tooltip = "Multiplier on every wrinkle weight" )
+        float32 _wrinkleIntensity{ 1.0f };
 
         /** @brief 상태 태그 @p tags 의 동작 배율입니다. 맞는 것 중 가장 큰 배율, 없으면 1 입니다. */
         float32 computeActionScale( const TagContainer& tags ) const;

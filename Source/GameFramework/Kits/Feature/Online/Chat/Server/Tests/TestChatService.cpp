@@ -6,6 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
@@ -22,14 +23,15 @@ using namespace sw;
 
 namespace
 {
-    constexpr AccountID   kAlice     = 11;
-    constexpr AccountID   kBob       = 12;
-    constexpr AccountID   kCarol     = 13;
-    constexpr int64       kNowMs     = 1700000000000ll;
-    constexpr int64       kChatDayMs = 86400000ll; ///< 기록 TTL 색인의 날짜 폭과 같다
-    constexpr uint64      kServerA   = 1;
-    constexpr uint64      kServerB   = 2;
-    constexpr const utf8* kWorld     = "world.kr";
+    constexpr AccountID   kAlice        = 11;
+    constexpr AccountID   kBob          = 12;
+    constexpr AccountID   kCarol        = 13;
+    constexpr int64       kNowMs        = 1700000000000ll;
+    constexpr int32       kChannelLimit = 16;         ///< 서버 설정 `_maxChannelPerMember` 와 같은 값
+    constexpr int64       kChatDayMs    = 86400000ll; ///< 기록 TTL 색인의 날짜 폭과 같다
+    constexpr uint64      kServerA      = 1;
+    constexpr uint64      kServerB      = 2;
+    constexpr const utf8* kWorld        = "world.kr";
 
     /** @brief 접속한 계정을 손으로 넣는 디렉터리입니다. */
     class FakeDirectory final : public IAccountDirectory
@@ -104,6 +106,11 @@ namespace
         settings._spam._burstCount        = 5;
         settings._spam._maxRepeatCount    = 2;
         settings._spam._maxTrackedAccount = 65536;
+        settings._maxChannelPerMember     = kChannelLimit;
+        settings._reportContextCount      = 10;
+        settings._reportBurst             = 3;
+        settings._reportRefillIntervalMs  = 60000;
+        settings._sanctionCacheMs         = 60000;
         return settings;
     }
 
@@ -308,7 +315,7 @@ SW_TEST_CASE( ChatServiceTest, JoinAndLeaveRules )
     SW_EXPECT_TRUE( rig.join( kAlice ) == ChatResult::Ok ); // 두 번 들어와도 한 번이다
     SW_EXPECT_EQUAL( 1, rig._service.getLocalMemberCount( kWorld ) );
 
-    for ( int32 index = 1; index < ChatLimit::kMaxChannelPerMember; ++index )
+    for ( int32 index = 1; index < kChannelLimit; ++index )
     {
         fixed_string<constant::buffer::kMax32> channelID;
         formatstring( channelID.data(), channelID.capacity(), "custom.room%#", index );
@@ -824,4 +831,29 @@ SW_TEST_CASE( ChatServiceTest, AccountDeletionErasesSentHistory )
     SW_REQUIRE_TRUE( ServiceTTLRule::sweep( database, senderRule, kNowMs + 31 * kChatDayMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, database.countRecords( senderTable ) );
     SW_EXPECT_EQUAL( 0, database.countRecords( senderExpiryTable ) );
+}
+
+/** @brief [ChatServiceTest] 채널 수 · 신고 문맥 수는 설정이 정한다 — 적지 않은 키트 설정은 읽지 못하고, 값이 없는 서비스 설정으로는 서지 않는다 */
+SW_TEST_CASE( ChatServiceTest, ChannelAndReportLimitsAreRequired )
+{
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    OnlineServerKitEntry entry;
+    entry._name     = "chat";
+    entry._settings = R"({ "_bannedWordsFile": "", "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt",
+"_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
+"_spam": { "_refillIntervalMs": 1000, "_repeatWindowMs": 10000, "_burstCount": 5, "_maxRepeatCount": 2, "_maxTrackedAccount": 65536 } })";
+    ChatKitConfig kitConfig;
+    SW_EXPECT_FALSE( entry.readSettings( kitConfig ) );
+
+    SW_EXPECT_LOG( "ChatService.ChatServiceNoLimits" );
+    MemoryServiceDatabase   database;
+    MemoryServiceStore      store( &database );
+    FakeDirectory           directory;
+    ChatService             service;
+    ChatServiceDependencies dependencies;
+    dependencies._pStore          = &store;
+    dependencies._pDirectory      = &directory;
+    ChatServiceConfig settings    = makeChatSettings();
+    settings._maxChannelPerMember = 0;
+    SW_EXPECT_FALSE( service.initialize( dependencies, settings ) );
 }

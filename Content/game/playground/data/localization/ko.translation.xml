@@ -91,6 +91,16 @@
 		<entry key="High Heels" text="하이힐" sourceHash="226fd9be54338c36" />
 		<entry key="Hollow Stag" text="텅 빈 수사슴" sourceHash="0b3a71e1453de039" />
 		<entry key="Hour" text="시각" sourceHash="6b0bffd88024372f" />
+		<entry key="HubCard.Blue" text="파랑" sourceHash="af63ff4c86022805" />
+		<entry key="HubCard.Card" text="{color}{value}" sourceHash="70ba07cecf43eed9" />
+		<entry key="HubCard.DrawTwo" text="+2" sourceHash="07e48c07b4a95568" />
+		<entry key="HubCard.Green" text="초록" sourceHash="af63fa4c86021f86" />
+		<entry key="HubCard.Red" text="빨강" sourceHash="af640f4c86024335" />
+		<entry key="HubCard.Reverse" text="리버스" sourceHash="af640b4c86023c69" />
+		<entry key="HubCard.Skip" text="스킵" sourceHash="af640e4c86024182" />
+		<entry key="HubCard.Wild" text="와일드" sourceHash="af640a4c86023ab6" />
+		<entry key="HubCard.WildDrawFour" text="와일드+4" sourceHash="73f24719e58ee4e9" />
+		<entry key="HubCard.Yellow" text="노랑" sourceHash="af64144c86024bb4" />
 		<entry key="In orbit - Move and Use buy from the terminal, the lever lands"
 		       text="궤도 - 이동으로 고르고 사용으로 구매, 레버로 착륙"
 		       sourceHash="9e4354dbc98adea2" />

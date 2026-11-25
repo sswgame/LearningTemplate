@@ -55,6 +55,16 @@ namespace sw
             /** @brief 물리 바디가 사각형 · 마커 점에서 이만큼(m) 안쪽에서 닿으면 그 점 자신의 표면으로 보고 막지 않은 것으로 칩니다. */
             static constexpr float32 kOcclusionTolerance = 0.05f;
 
+            /** @brief @p widget 과 그 아래의 이름을 지웁니다 — 화면 마커들이 한 트리를 나눠 써 같은 문서의 이름이 겹친다. */
+            static void clearNames( Widget& widget )
+            {
+                widget.setName( hashed_string{} );
+                for ( const unique_ptr<Widget>& child : widget.getChildren() )
+                {
+                    clearNames( *child );
+                }
+            }
+
             /**
              * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineServices::_pEngineSubsystems`)에서 찾은 위젯 컴포넌트 서비스입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
              * @details 전역 표(`engine::findSubsystem`)를 다시 찾지 않는다 — 씬 쪽은 만들 때 받은 묶음만 본다(`SceneEngineServices.h` 머리말).
@@ -115,9 +125,36 @@ namespace sw
         // 마커와 월드 사각형은 주 씬 컴포넌트의 월드 점을 따른다 — 위젯 자신이 씬 컴포넌트라(언리얼 `UWidgetComponent`) 오브젝트에 늘 주 씬 컴포넌트가 있다.
         const GameObject*         pOwner   = getOwner();
         UIWidgetComponentService* pService = WidgetComponentInternal::findUIService( pOwner );
+        if ( pService != nullptr && getContent() == nullptr )
+            createDocumentContent( *pService );
         bindUIService( pService );
         if ( pService != nullptr && _space == WidgetSpace::World )
             createWorldQuad();
+    }
+
+    void WidgetComponent::createDocumentContent( UIWidgetComponentService& service )
+    {
+        const string_view path = _documentPath.empty() ? getDefaultDocument( service.getEngineDocuments() ) : string_view{ _documentPath.path() };
+        if ( path.empty() )
+            return;
+        unique_ptr<Widget> content = service.instantiateDocument( path );
+        if ( content == nullptr || onDocumentCreated( *content ) == false )
+            return; // 이유는 만든 쪽이 남겼다
+        if ( _space == WidgetSpace::Screen )
+            WidgetComponentInternal::clearNames( *content );
+        setContent( std::move( content ) );
+    }
+
+    string_view WidgetComponent::getDefaultDocument( const UIEngineDocuments& documents ) const
+    {
+        (void)documents;
+        return {};
+    }
+
+    bool WidgetComponent::onDocumentCreated( Widget& content )
+    {
+        (void)content;
+        return true;
     }
 
     void WidgetComponent::onEndPlay()

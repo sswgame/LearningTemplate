@@ -147,6 +147,16 @@ namespace sw
         float32 _fearDecayPerSecond{ 0.25f }; ///< 쌓인 겁이 식는 속도(초당)
         PROPERTY( Name = "buckChance", Min = 0.0, Max = 1.0 )
         float32 _buckChanceScale{ 0.8f }; ///< 저항이 0일 때 탄 사람을 떨어뜨릴 확률
+        PROPERTY( Name = "healthRegenRatio", Required, Min = 0.0 )
+        float32 _healthRegenRatio{ 0.0f }; ///< 초당 회복하는 체력(최대 체력의 비율)
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _healthRegenDelay{ 0.0f }; ///< 다친 뒤 회복이 다시 시작하기까지
+        PROPERTY( Name = "staminaRegenRatio", Required, Min = 0.0 )
+        float32 _staminaRegenRatio{ 0.0f }; ///< 초당 회복하는 스태미나(최대의 비율)
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _staminaRegenDelay{ 0.0f }; ///< 쓴 뒤 회복이 다시 시작하기까지
+        PROPERTY( Name = "exhaustRatio", Required, Min = 0.0, Max = 1.0 )
+        float32 _exhaustRatio{ 0.0f }; ///< 바닥난 스태미나가 이 비율까지 차야 다시 달린다
     };
 } // namespace sw
 
@@ -268,6 +278,14 @@ namespace sw
         float32 _deadEyeDrain{ 20.0f }; ///< 데드아이를 켜 둔 동안 초당 소모량
         PROPERTY( Min = 0.0 )
         float32 _deadEyeMinimum{ 10.0f }; ///< 이만큼 있어야 켤 수 있다
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _healthRegenDelay{ 0.0f }; ///< 다친 뒤 체력 회복이 다시 시작하기까지
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _staminaRegenDelay{ 0.0f }; ///< 쓴 뒤 스태미나 회복이 다시 시작하기까지
+        PROPERTY( Required, Min = 0.0, Units = s )
+        float32 _deadEyeRegenDelay{ 0.0f }; ///< 끈 뒤 데드아이 회복이 다시 시작하기까지
+        PROPERTY( Name = "exhaustRatio", Required, Min = 0.0, Max = 1.0 )
+        float32 _exhaustRatio{ 0.0f }; ///< 바닥난 스태미나가 이 비율까지 차야 다시 달린다
     };
 } // namespace sw
 
@@ -412,12 +430,12 @@ namespace sw
      *         <Tier name="Outlaw" min="-1000" discount="-0.1" flag="honor_low"/><Tier name="Neutral" min="-200"/>
      *         <Action id="help_stranger" delta="25"/>
      *       </Honor>
-     *       <Horse id="arabian" health="90" stamina="120" speed="1.2" courage="0.7" gallopDrain="12" coreDrain="2" gallopCoreDrain="6"/>
+     *       <Horse id="arabian" health="90" stamina="120" speed="1.2" courage="0.7" gallopDrain="12" coreDrain="2" gallopCoreDrain="6" healthRegenRatio="0.02" healthRegenDelay="3" staminaRegenRatio="0.1" staminaRegenDelay="1" exhaustRatio="0.25"/>
      *       <Bond level="1" xp="0"/><Bond level="2" xp="100" unlocks="rear" stamina="10" fearResist="0.1"/>
      *       <BondExperience ride="0.1" brush="15" feed="10" calm="5" brushCooldown="6"/>
      *       <Food id="hay" healthCore="25" staminaCore="15" bond="5"/>
      *       <Clothing id="sheepskin_coat" warmth="15"/>
-     *       <Survival comfortMin="5" comfortMax="30" coreDrain="1.5" temperatureDrain="0.5" minRegenScale="0.2" deadEyeDrain="20"/>
+     *       <Survival comfortMin="5" comfortMax="30" coreDrain="1.5" temperatureDrain="0.5" minRegenScale="0.2" deadEyeDrain="20" healthRegenDelay="4" staminaRegenDelay="1" deadEyeRegenDelay="2" exhaustRatio="0.2"/>
      *       <DeadEye level="1" timeScale="0.5" marks="0"/><DeadEye level="2" timeScale="0.4" marks="3"/>
      *       <Animal id="deer" size="Medium" quality="3" pelt="1.5" carcass="3" decayHours="48" loot="deer_parts"/>
      *       <HuntWeapon id="varmint_rifle" sizes="Small"/><HuntWeapon id="dynamite" ruinsPelt="true"/>

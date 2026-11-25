@@ -8,7 +8,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -203,7 +205,7 @@ namespace sw
     {
         string profileName = FileUtil::getFileNamePart( profilePath );
         profileName        = profileName.substr( 0, profileName.find( '.' ) ); // `kaykit_to_ubc.retarget.xml` → `kaykit_to_ubc`
-        return FileUtil::joinPath( FileUtil::joinPath( "common/models/_retargeted", profileName ), FileUtil::getFileNamePart( sourceClipPath ) );
+        return FileUtil::joinPath( FileUtil::joinPath( engine::getSubsystem<EngineConfig>()._retargetedClipFolder.get(), profileName ), FileUtil::getFileNamePart( sourceClipPath ) );
     }
 
 } // namespace sw

@@ -1,0 +1,5 @@
+<?asset guid="a65c8a060a50b759804e7dcee40811e8"?>
+<UIStyleSheet _schemaVersion="1">
+	<!-- 가방 칸 단추(`InventorySlotWidget`) — 칸은 가방 크기만큼 코드가 만들고 크기는 여기서 정한다. 집은 칸은 `selected` 클래스를 더 가진다. -->
+	<Rule _selector=".inventorycell" _size="136,48" />
+</UIStyleSheet>

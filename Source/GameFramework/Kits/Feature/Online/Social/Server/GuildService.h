@@ -41,6 +41,8 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
@@ -96,6 +98,31 @@ namespace sw
     };
 
     using GuildEventDelegate = Delegate<void( const GuildEvent& )>;
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 길드의 운영 값입니다(서버 설정 `SocialKitConfig::_guild` — 값이 없으면 기동 오류). 수 상한은 와이어 · 읽기 상한(`GuildLimit`) 안에서만 정할 수 있습니다. */
+    REFLECT()
+    struct GuildPolicy
+    {
+        REFLECT_BODY();
+        /** @brief 길드 정원입니다. */
+        PROPERTY( Required, Min = 1, Max = GuildLimit::kMaxMember )
+        int32 _maxMember{ 0 };
+        /** @brief 길드 하나가 쌓아 두는 살아 있는 가입 신청 수입니다. */
+        PROPERTY( Required, Min = 1, Max = GuildLimit::kMaxApplication )
+        int32 _maxApplication{ 0 };
+        /** @brief 맡긴 사람 한 명이 남겨 둘 수 있는 꺼내기 허용(받는 계정 · 자산 쌍) 수입니다. */
+        PROPERTY( Required, Min = 1, Max = GuildLimit::kMaxStorageGrant )
+        int32 _maxStorageGrant{ 0 };
+        /** @brief 초대가 살아 있는 밀리초입니다. */
+        PROPERTY( Required, Min = 1 )
+        int64 _inviteLifetimeMs{ 0 };
+        /** @brief 가입 신청이 살아 있는 밀리초입니다. */
+        PROPERTY( Required, Min = 1 )
+        int64 _applicationLifetimeMs{ 0 };
+    };
 } // namespace sw
 
 namespace sw
@@ -165,7 +192,8 @@ namespace sw
     public:
         GuildService();
 
-        void initialize( ServiceStore* pStore );
+        /** @param policy 운영 값(서버 설정에서 읽은 것 — 설정 읽기가 범위를 이미 봤다) */
+        void initialize( ServiceStore* pStore, const GuildPolicy& policy );
         void shutdown();
 
         void submit( const GuildRequest& request, uint64 requestTag );
@@ -216,6 +244,7 @@ namespace sw
         DelegateSlot<GuildEventDelegate> _onEvent;
         vector<int64>                    _listLevelExperience; ///< 레벨 2 부터의 누적 경험치이다. 데이터(서버 설정)가 원본이다
         const ILedgerPolicy*             _pLedgerPolicy;
-        ServiceStoreTracker              _store; ///< 저장소에 맡긴 일의 앞이다
+        GuildPolicy                      _policy; ///< 운영 값이다(`initialize`)
+        ServiceStoreTracker              _store;  ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

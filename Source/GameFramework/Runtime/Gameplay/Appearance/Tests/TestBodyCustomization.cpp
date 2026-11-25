@@ -260,6 +260,31 @@ SW_TEST_CASE( BodyProfileTest, InheritsAndOverridesByKey )
 }
 
 /**
+ * @brief [BodyCustomizationTest] 주름 세기 · 표정 무게 · 체액 값은 데이터 칸의 범위(`PROPERTY( Min · Max )` — 에디터 슬라이더와 같은 끝) 밖이면 읽기 오류다
+ */
+SW_TEST_CASE( BodyProfileTest, ValuesOutsideTheirRangeAreErrors )
+{
+    const pair<const utf8*, uint32> arrCase[] = {
+        {                                                                                                        "<BodyProfile id=\"A\" wrinkleIntensity=\"2\"/>", 0u},
+        {                                                                                                      "<BodyProfile id=\"A\" wrinkleIntensity=\"2.5\"/>", 1u},
+        {                         "<BodyProfile id=\"A\"><Wrinkle region=\"Brow\" mask=\"1\"><Source expression=\"Angry\" weight=\"3\"/></Wrinkle></BodyProfile>", 1u},
+        {"<BodyProfile id=\"A\"><Fluid name=\"T\" channel=\"C\" trigger=\"Cry\" path=\"0 0; 1 1\" ratePerSecond=\"10\" speed=\"10\" radius=\"1\"/></BodyProfile>", 0u},
+        {"<BodyProfile id=\"A\"><Fluid name=\"T\" channel=\"C\" trigger=\"Cry\" path=\"0 0; 1 1\" ratePerSecond=\"11\" speed=\"-1\" radius=\"2\"/></BodyProfile>", 3u}
+    };
+    for ( const pair<const utf8*, uint32>& row : arrCase )
+    {
+        StringBuilder<constant::buffer::kMax512> text;
+        text.appendFormat( "<BodyProfileCatalog>%#</BodyProfileCatalog>", row.first );
+        XMLDocument document;
+        SW_REQUIRE_TRUE( document.parse( text.view() ) );
+        CharacterBodyProfileCatalog catalog;
+        AppearanceLoadReport        report;
+        SW_EXPECT_EQUAL( row.second == 0u, catalog.loadFromXML( document.getRoot( "BodyProfileCatalog" ), report, "test" ) );
+        SW_EXPECT_EQUAL( row.second, report.countWithID( "XMLFields.ValueOutOfRange" ) );
+    }
+}
+
+/**
  * @brief [BodyCustomizationTest] 동공: 밝아지면 0.3 초 상수로 빨리 좁아지고, 어두워지면 4 초 상수로 느리게 넓어진다
  */
 SW_TEST_CASE( BodyProfileTest, PupilConstrictsFastDilatesSlow )

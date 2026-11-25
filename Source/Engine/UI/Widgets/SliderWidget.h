@@ -28,16 +28,12 @@ namespace sw
         /** @brief 값이 바뀌었을 때의 알림입니다. */
         using ValueChangedDelegate = MulticastDelegate<void( float32 )>;
 
-        /** @brief 기본 원하는 크기(UI 단위)입니다. 슬롯 덮어쓰기로 바꿀 수 있습니다. */
-        static constexpr float32 kDefaultLength    = 200.0f;
-        static constexpr float32 kDefaultThickness = 24.0f;
-
         SliderWidget();
         ~SliderWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(값과 범위는 값을 범위로 제한하고 그리기만 합니다). */
-        void onBoundPropertyChanged( const PropertyInfo& property ) override;
+        /** @brief 범위와 걸음을 바로잡고 값을 범위로 제한합니다. */
+        void synchronizeProperties() override;
 
         bool supportsFocus() const override { return true; }
 
@@ -57,6 +53,8 @@ namespace sw
         void    onPointerCaptureLost() override { _bDragging = SW_FALSE; }
 
     protected:
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(값과 범위는 그리기만 합니다). */
+        void   onBoundPropertyChanged( const PropertyInfo& property ) override;
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
@@ -102,8 +100,8 @@ namespace sw
         ~ProgressBarWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(비율은 0..1 로 제한하고, 비율과 색은 그리기만 합니다). */
-        void onBoundPropertyChanged( const PropertyInfo& property ) override;
+        /** @brief 비율을 0..1 로 제한합니다. */
+        void synchronizeProperties() override;
 
         /** @brief 비율을 바꿉니다(0..1 로 제한). kPaint 로 무효화합니다. */
         void    setPercent( float32 percent );
@@ -118,6 +116,8 @@ namespace sw
         const float4& getBackgroundColor() const { return _backgroundColor; }
 
     protected:
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(비율과 색은 그리기만 합니다). */
+        void   onBoundPropertyChanged( const PropertyInfo& property ) override;
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 

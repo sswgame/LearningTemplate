@@ -4,7 +4,9 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Localization/EditorDataText.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Content/AssetID.h"
@@ -14,8 +16,6 @@ namespace sw::editor
 {
     namespace
     {
-        constexpr const utf8* kPanelTextAsset = "editor/panels/editor.panels.xml";
-
         /** @brief 읽은 표와 지금 언어로 푼 이름입니다. 에디터 범위의 상태라 에디터 컨텍스트와 함께 처음으로 돌아간다. */
         struct PanelTextState
         {
@@ -32,9 +32,10 @@ namespace sw::editor
             if ( state._bLoaded == SW_FALSE || state._revision != revision )
             {
                 EditorPanelTextTable table;
+                const string&        tablePath = editor::getSubsystem<const EditorDefaultAssets>()._panelNames.get();
                 state._listRow.clear();
-                if ( XMLSerializer::loadFromAsset( AssetID{ kPanelTextAsset }, &table, *EditorPanelTextTable::StaticType() ) == false )
-                    SW_LOG_ERROR_ID( "EditorPanel.TextCannotRead", "Editor panel names '%#' could not be read strictly - tabs show their titles", kPanelTextAsset );
+                if ( XMLSerializer::loadFromAsset( AssetID{ tablePath }, &table, *EditorPanelTextTable::StaticType() ) == false )
+                    SW_LOG_ERROR_ID( "EditorPanel.TextCannotRead", "Editor panel names '%#' could not be read strictly - tabs show their titles", tablePath );
                 for ( EditorPanelText& row : table._listPanel )
                 {
                     row._label = EditorDataText::localize( row._label );
@@ -47,7 +48,7 @@ namespace sw::editor
             if ( pRow == nullptr && VectorUtil::contains( state._listReported, string( pTitle ) ) == false )
             {
                 state._listReported.push_back( string( pTitle ) );
-                SW_LOG_ERROR_ID( "EditorPanel.NoName", "Panel '%#' has no row in %# - its tab shows the title", pTitle, kPanelTextAsset );
+                SW_LOG_ERROR_ID( "EditorPanel.NoName", "Panel '%#' has no row in %# - its tab shows the title", pTitle, editor::getSubsystem<const EditorDefaultAssets>()._panelNames.get() );
             }
             return pRow;
         }

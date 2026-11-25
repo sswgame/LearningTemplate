@@ -1027,8 +1027,10 @@ namespace sw
             case ScheduleActivityTarget::Wander:
             {
                 // 돌아다니기 — `every` 분마다 장소 둘레의 새 자리. 자리는 (씨앗, NPC, 날, 시각)의 해시라 몇 번을 다시 세워도 같다.
-                const int32   stepMinutes = pBlock != nullptr ? MathUtil::max( 1, pBlock->_wanderMinutes ) : 20;
-                const float32 radius      = pBlock != nullptr && pBlock->_radius >= 0.0f ? pBlock->_radius : ( pPlace != nullptr ? pPlace->_radius : 0.0f );
+                // 블록 없는 시간의 활동(`idle`)은 카탈로그가 집 활동만 받는다(`ScheduleCatalog::readNPC`) — 돌아다니기는 늘 블록의 것이다.
+                SW_ASSERT( pBlock != nullptr );
+                const int32   stepMinutes = MathUtil::max( 1, pBlock->_wanderMinutes );
+                const float32 radius      = pBlock->_radius >= 0.0f ? pBlock->_radius : ( pPlace != nullptr ? pPlace->_radius : 0.0f );
                 const uint32  npcKey      = ScheduleHash::computeNameKey( def._id );
                 for ( int32 hopStart = startMinute; hopStart < endMinute; hopStart += stepMinutes )
                 {

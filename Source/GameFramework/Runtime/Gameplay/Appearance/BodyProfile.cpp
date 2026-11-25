@@ -18,9 +18,6 @@ namespace sw
     {
         struct BodyProfileInternal
         {
-            static constexpr const utf8* kArrProfileAttribute[] = { "id", "wrinkleIntensity" };
-            static constexpr const utf8* kArrFluidAttribute[]   = { "name", "channel", "residueChannel", "trigger", "part", "path", "ratePerSecond", "speed", "radius", "wetValue", "residueValue", "effect", "socket", "dripSeconds", "strand" };
-
             /** @brief `"u v; u v; …"` 경로를 읽습니다. 점이 둘 미만이거나 숫자가 깨졌으면 false 입니다. */
             static bool readPath( string_view text, vector<float2>& outListPoint )
             {
@@ -46,22 +43,9 @@ namespace sw
 
             static void readFluid( const XMLNode& node, CharacterBodyProfileDef& inoutProfile, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrFluidAttribute, report, sourceName );
                 BodyFluidDef fluid;
-                fluid._name           = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                fluid._channel        = AppearanceXMLUtil::readRequiredName( node, "channel", report, sourceName );
-                fluid._trigger        = AppearanceXMLUtil::readRequiredName( node, "trigger", report, sourceName );
-                fluid._residueChannel = hashed_string( node.getAttributeText( "residueChannel" ) );
-                fluid._part           = hashed_string( node.getAttributeText( "part" ) );
-                AppearanceXMLUtil::readOptionalFloat( node, "ratePerSecond", 0.0f, MathUtil::kMaxFloat, fluid._ratePerSecond, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "speed", 0.0f, MathUtil::kMaxFloat, fluid._speed, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "radius", 0.0f, 1.0f, fluid._radius, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "wetValue", 0.0f, MathUtil::kMaxFloat, fluid._wetValue, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "residueValue", 0.0f, MathUtil::kMaxFloat, fluid._residueValue, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "dripSeconds", 0.0f, MathUtil::kMaxFloat, fluid._dripSeconds, report, sourceName );
-                fluid._effect  = hashed_string( node.getAttributeText( "effect" ) );
-                fluid._socket  = hashed_string( node.getAttributeText( "socket" ) );
-                fluid._bStrand = StringUtil::equals( node.getAttributeText( "strand" ), "true" ) ? SW_TRUE : SW_FALSE;
+                if ( AppearanceXMLUtil::readProperties( node, fluid, report, sourceName, { "path" } ) == false )
+                    return;
                 if ( fluid._effect.empty() == false && fluid._socket.empty() )
                 {
                     report.addErrorWithID( "Appearance.FluidEffectSocket", "%#: body profile '%#' fluid '%#' has an 'effect' but no 'socket' to spawn it at", sourceName, inoutProfile._id.c_str(),
@@ -105,8 +89,7 @@ namespace sw
 
             static void readProfile( const XMLNode& node, CharacterBodyProfileDef& outProfile, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrProfileAttribute, report, sourceName );
-                AppearanceXMLUtil::readOptionalFloat( node, "wrinkleIntensity", 0.0f, MathUtil::kMaxFloat, outProfile._wrinkleIntensity, report, sourceName );
+                (void)AppearanceXMLUtil::readProperties( node, outProfile, report, sourceName, { "id" } ); // 오류는 보고서에 남는다
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();

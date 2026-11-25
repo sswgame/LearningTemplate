@@ -6,49 +6,25 @@
 
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct ButtonWidgetInternal
-        {
-            /** @brief 기본 겉모습입니다(스타일 시트 5-2 가 생기기 전의 어두운 반투명 바탕과 둥근 모서리입니다). */
-            static constexpr float32 kCornerRadius    = 6.0f;
-            static constexpr float32 kNormalShade     = 0.16f; ///< 바탕 · 꺼짐의 밝기
-            static constexpr float32 kHoveredShade    = 0.24f;
-            static constexpr float32 kPressedShade    = 0.10f;
-            static constexpr float32 kGreenTint       = 1.1f; ///< 살짝 푸른 바탕 — 밝기에 곱한다
-            static constexpr float32 kBlueTint        = 1.35f;
-            static constexpr float32 kAlpha           = 0.95f;
-            static constexpr float32 kDisabledAlpha   = 0.4f;
-            static constexpr float32 kContentPaddingX = 16.0f;
-            static constexpr float32 kContentPaddingY = 8.0f;
-
-            static UIBrush makeBrush( float32 shade, float32 alpha )
-            {
-                return UIBrush::makeSolid( float4{ shade, shade * kGreenTint, shade * kBlueTint, alpha }, kCornerRadius );
-            }
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
     ButtonWidget::ButtonWidget()
         : BorderPanel{}
         , _onClicked{}
-        , _hoveredBrush{ ButtonWidgetInternal::makeBrush( ButtonWidgetInternal::kHoveredShade, ButtonWidgetInternal::kAlpha ) }
-        , _pressedBrush{ ButtonWidgetInternal::makeBrush( ButtonWidgetInternal::kPressedShade, ButtonWidgetInternal::kAlpha ) }
-        , _disabledBrush{ ButtonWidgetInternal::makeBrush( ButtonWidgetInternal::kNormalShade, ButtonWidgetInternal::kDisabledAlpha ) }
+        , _hoveredBrush{}
+        , _pressedBrush{}
+        , _disabledBrush{}
         , _command{}
         , _bPressed{ false }
     {
-        using Internal = ButtonWidgetInternal;
-        setBackground( Internal::makeBrush( Internal::kNormalShade, Internal::kAlpha ) );
-        setContentPadding( float4{ Internal::kContentPaddingX, Internal::kContentPaddingY, Internal::kContentPaddingX, Internal::kContentPaddingY } );
+        const UIWidgetSkin::Button& skin = UIWidgetSkin::get()._button;
+        setBackground( skin._brush._normal );
+        setStateBrushes( skin._brush._hovered, skin._brush._pressed, skin._brush._disabled );
+        setContentPadding( skin._padding );
     }
 
     ButtonWidget::~ButtonWidget() = default;

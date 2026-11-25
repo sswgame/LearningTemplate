@@ -3,6 +3,9 @@
 	<!-- 인벤토리 견본 문서(`InventoryScreen`). 가방 칸 단추(명령 Slot)는 코드가 `Grid` 에, 장비 칸 단추(명령 EquipSlot)는 `Equipment` 에 만든다.
 	     동작 메뉴 `Actions` 는 처음엔 접혀 있고 오른쪽 누름 · 길게 누르기 · UI.ContextMenu(패드 X)가 연다. 나누기 · 여러 개 버리기는 엔진 수량 대화 상자다. -->
 	<UIScreenDef _defaultFocus="Slot0" />
+	<_listStyleSheet>
+		<item>guid:a65c8a060a50b759804e7dcee40811e8</item>
+	</_listStyleSheet>
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Window" _styleClass="window">
