@@ -15,7 +15,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   rerun [체인]           마지막 체인 보고에서 진 단계를 혼자 → 앞을 붙여 → 이분 탐색으로 다시 돈다(scenario_bisect --rerun-failed 와 같은 함수)
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
-  all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
+  all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다(어디서 지든 LINUX_FAILED)
   sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. address 는 끝에 퍼저를 타깃마다 30 초. 끝 줄 SANITIZE_OK=<종류>
   fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, Test/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 Test/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
 """
@@ -511,11 +511,22 @@ def run_job(steps):
     return 0
 
 
+def finish(failure, work, arguments):
+    """끝 줄이 있는 명령을 돌린다 — work 는 (종료 코드, 끝 줄)을 돌려주므로 끝 줄 없이 지는 길이 없다. 예외(클론 동기화 실패 · sys.exit)로 끝나면 failure 를 찍는다."""
+    try:
+        code, line = work(arguments)
+    except BaseException:
+        print(failure, flush=True)
+        raise
+    print(line, flush=True)
+    return code
+
+
 def verify_all(arguments):
     """묶음 끝 Linux 검증 한 번. Debug 클라이언트는 짓지 않는다 - Release 단위가 키트까지 덮고 단언은 Windows Debug 가 본다. 서버 구성은 렌더러를 빼 여기서만 드러나는 층 위반이 있어 남긴다."""
     code = build()
     if code != 0:
-        return code
+        return code, 'LINUX_FAILED'
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
     server_dir = f'{CLONE}/build/Linux-Server'
     # 시간을 판정하지 않는 CPU 일 두 갈래를 겹친다(Release 단위 ‖ 서버 구성 → 빌드 → 기동 → 단위) — 묶음 검증(preflight.sh 의 cpu 단계)과 같은 원칙이다.
@@ -529,41 +540,35 @@ def verify_all(arguments):
         list_code = list(pool.map(run_job, jobs))
     code = next((rc for rc in list_code if rc != 0), 0)
     if code != 0:
-        return code
+        return code, 'LINUX_FAILED'
     # 빠른 실패: 단위 · 서버가 지면 긴 체인을 돌리지 않는다.
     code = chain(arguments + ALL_CHAINS)
     if code != 0:
-        print('LINUX_FAILED')
-        return code
-    print(f'LINUX_OK={head}')
-    return 0
+        return code, 'LINUX_FAILED'
+    return 0, f'LINUX_OK={head}'
 
 
 def sanitize(arguments):
     """새니타이저 Debug 로 단위 테스트를 돈다(감사 P-8). ASan 은 묶음마다 한 번, TSan 은 주기로 — 수명 · 경쟁 결함의 자동 그물이다."""
     kind = arguments[0] if arguments else 'address'
     if kind not in ('address', 'thread'):
-        print(f'sanitize 는 address 또는 thread 다: {kind}')
-        return 2
+        return 2, f'sanitize 는 address 또는 thread 다: {kind}'
     sync_clone()
     preset = 'Linux-Debug-ASan' if kind == 'address' else 'Linux-Debug-TSan'
     build_dir = f'{CLONE}/build/{preset}'
     if configure_and_build(preset, ['App'], tsan=kind == 'thread') != 0:
-        return 1
+        return 1, f'SANITIZE_FAILED={kind}'
     # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
     options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
                else f'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:suppressions={CLONE}/Config/Build/TsanSuppressions.txt')
     rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.sanitize.log 2>&1; rc=$?; '
                f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" {VERIFY_LOGS}/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
     if rc != 0:
-        print(f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log')
-        return rc
+        return rc, f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log'
     # 퍼저는 ASan 묶음 끝에 타깃마다 30 초 — 클론은 위에서 이미 옮겼다.
-    if kind == 'address' and run_fuzz([], FUZZ_SMOKE_SECONDS, sync=False) != 0:
-        print('SANITIZE_FAILED=fuzz')
-        return 1
-    print(f'SANITIZE_OK={kind}')
-    return 0
+    if kind == 'address' and finish('FUZZ_FAILED', lambda names: run_fuzz(names, FUZZ_SMOKE_SECONDS, sync=False), []) != 0:
+        return 1, 'SANITIZE_FAILED=fuzz'
+    return 0, f'SANITIZE_OK={kind}'
 
 
 def configure_and_build(preset, targets, tsan=False):
@@ -606,7 +611,7 @@ def run_fuzz(names, seconds, sync=True):
     seeds_root = pathlib.Path(f'{CLONE}/Test/Fuzz/Seeds')
     names = names or sorted(path.name for path in seeds_root.iterdir() if path.is_dir())
     if configure_and_build('Linux-Fuzz', [f'Fuzz_{name}' for name in names]) != 0:
-        return 1
+        return 1, 'FUZZ_FAILED'
     build_dir = f'{CLONE}/build/Linux-Fuzz'
     failed = []
     for name in names:
@@ -622,10 +627,8 @@ def run_fuzz(names, seconds, sync=True):
         if reason is not None:
             failed.append(name)
     if failed:
-        print('FUZZ_FAILED=' + ','.join(failed))
-        return 1
-    print('FUZZ_OK')
-    return 0
+        return 1, 'FUZZ_FAILED=' + ','.join(failed)
+    return 0, 'FUZZ_OK'
 
 
 def fuzz(arguments):
@@ -701,9 +704,9 @@ ACTIONS = {
     'rerun': retry_failed,
     'goldens': lambda arguments: goldens(),
     'stop': lambda arguments: stop(),
-    'all': verify_all,
-    'sanitize': sanitize,
-    'fuzz': fuzz,
+    'all': lambda arguments: finish('LINUX_FAILED', verify_all, arguments),
+    'sanitize': lambda arguments: finish('SANITIZE_FAILED', sanitize, arguments),
+    'fuzz': lambda arguments: finish('FUZZ_FAILED', fuzz, arguments),
 }
 
 
