@@ -16,7 +16,6 @@
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -29,6 +28,52 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @struct ScheduleHash
+         * @brief 일정 시스템이 쓰는 해시 함수 모음입니다(구간의 식별 키, 이름 키, 키 섞기). 모두 static 입니다.
+         * @details 계획, 실행, 저장, 디버그가 같은 구간에서 같은 키를 얻어야 합니다. 사건, 경로 캐시, 계획 비교, 저장 해시가 이 키를 씁니다.
+         *          바이트를 섞는 규칙과 상수는 `HashUtil` 에 있습니다. 저장과 네트워크로 나가는 값이라 섞는 순서를 바꾸지 않습니다.
+         */
+        struct ScheduleHash
+        {
+            static constexpr uint32 kGoldenRatio32 = 0x9e3779b1u; ///< 2^32 / 황금비 — 키 섞기의 곱수(저장 · 네트워크 값이라 바꾸지 않는다)
+            static constexpr uint32 kMixOffset     = 0x7f4a7c15u; ///< 둘째 키에 더하는 값(저장 · 네트워크 값이라 바꾸지 않는다)
+
+            /** @brief 이름의 글자 바이트를 @p hash 에 이어 섞습니다. */
+            [[nodiscard]] static uint64 appendName( const uint64 hash, const hashed_string& name ) { return HashUtil::appendBytes64( hash, name.c_str(), name.size() ); }
+
+            /** @brief 위치의 x, y, z 를 @p hash 에 이어 섞습니다. */
+            [[nodiscard]] static uint64 appendPosition( uint64 hash, const float3& position )
+            {
+                hash = HashUtil::appendValue64( hash, position._x );
+                hash = HashUtil::appendValue64( hash, position._y );
+                return HashUtil::appendValue64( hash, position._z );
+            }
+
+            /** @brief 이름 하나의 32 비트 키입니다(64 비트 해시의 아래 32 비트). */
+            [[nodiscard]] static uint32 computeNameKey( const hashed_string& name ) { return static_cast<uint32>( appendName( HashUtil::kFNVOffset64, name ) ); }
+
+            /** @brief 두 32 비트 키를 섞습니다(순서가 있다). */
+            [[nodiscard]] static uint32 mixKey( const uint32 lhs, const uint32 rhs ) { return HashUtil::mix32( lhs * kGoldenRatio32 ^ HashUtil::mix32( rhs + kMixOffset ) ); }
+
+            /** @brief 구간의 식별 키입니다. 출처, 블록, 시간, 위치, 출발이 같으면 같은 값입니다. 사건, 경로 캐시, 계획 비교가 씁니다. 0 은 쓰지 않습니다. */
+            [[nodiscard]] static uint64 computeSegmentKey( const ScheduleSegment& segment )
+            {
+                uint64 hash = HashUtil::kFNVOffset64;
+                hash        = appendName( hash, segment._sourceID );
+                hash        = appendName( hash, segment._activity );
+                hash        = HashUtil::appendValue64( hash, segment._startMinute );
+                hash        = HashUtil::appendValue64( hash, segment._endMinute );
+                hash        = HashUtil::appendValue64( hash, segment._blockIndex );
+                hash        = HashUtil::appendValue64( hash, segment._ownerIndex );
+                hash        = HashUtil::appendValue64( hash, segment._source );
+                hash        = appendPosition( hash, segment._target._position );
+                hash        = HashUtil::appendValue64( hash, segment._departMinute );
+                hash        = HashUtil::appendValue64( hash, segment._travelMinutes );
+                return hash == 0 ? 1 : hash;
+            }
+        };
+
         struct ScheduleSystemInternal
         {
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }

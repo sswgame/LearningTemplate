@@ -10,7 +10,6 @@
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
-#include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 

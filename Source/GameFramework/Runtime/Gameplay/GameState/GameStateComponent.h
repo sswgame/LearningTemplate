@@ -21,7 +21,6 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
 #include "GameFramework/Runtime/Gameplay/GameState/DeferredStateRestore.h"
-#include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"

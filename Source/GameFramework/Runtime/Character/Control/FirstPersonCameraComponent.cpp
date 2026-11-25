@@ -19,11 +19,11 @@
 
 namespace sw
 {
-    float3 FirstPersonCameraMath::computeViewModelPosition( const float3& eyePosition, const FirstPersonLook& look, const float3& offset )
+    float3 FirstPersonLook::computeViewModelPosition( const float3& eyePosition, const float3& offset ) const
     {
         // 롤이 없으니 시점의 오른쪽은 수평이고, 위는 앞 × 오른쪽이다 — 카메라 로컬 축과 같다.
-        const float3 forward = look.getForward();
-        const float3 right   = look.getFlatRight();
+        const float3 forward = getForward();
+        const float3 right   = getFlatRight();
         const float3 up      = forward.cross( right );
         return eyePosition + right * offset._x + up * offset._y + forward * offset._z;
     }
@@ -173,5 +173,67 @@ namespace sw
                 pFound = pMesh;
         } );
         return pFound;
+    }
+
+    namespace
+    {
+        struct FirstPersonLookInternal
+        {
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    FirstPersonLook::FirstPersonLook()
+        : _yaw{ 0.0f }
+        , _pitch{ 0.0f }
+        , _maxPitch{ 85.0f * MathUtil::kPi / 180.0f }
+    {
+    }
+
+    void FirstPersonLook::addMouseDelta( float32 deltaX, float32 deltaY, float32 sensitivity )
+    {
+        setAngles( _yaw + deltaX * sensitivity, _pitch - deltaY * sensitivity );
+    }
+
+    void FirstPersonLook::addRecoil( float32 pitchKick, float32 yawKick )
+    {
+        setAngles( _yaw + yawKick, _pitch + pitchKick );
+    }
+
+    void FirstPersonLook::setAngles( float32 yaw, float32 pitch )
+    {
+        // 요는 [-π, π) 로 감는다 — 오래 돌아도 실수 정밀도가 줄지 않게.
+        const float32 fullTurn = 2.0f * MathUtil::kPi;
+        float32       wrapped  = MathUtil::fmod( yaw + MathUtil::kPi, fullTurn );
+        if ( wrapped < 0.0f )
+            wrapped += fullTurn;
+        _yaw   = wrapped - MathUtil::kPi;
+        _pitch = MathUtil::clamp( pitch, -_maxPitch, _maxPitch );
+    }
+
+    bool FirstPersonLook::setMaxPitch( float32 maxPitch )
+    {
+        if ( maxPitch < 0.0f || maxPitch > MathUtil::kPi * 0.5f )
+        {
+            SW_LOG_ERROR_ID( "FirstPersonLook.FirstPersonLookRefusedMaxPitch", "FirstPersonLook: refused max pitch %# - it must be within [0, pi/2]", maxPitch );
+            return false;
+        }
+        _maxPitch = maxPitch;
+        _pitch    = MathUtil::clamp( _pitch, -_maxPitch, _maxPitch );
+        return true;
+    }
+
+    float3 FirstPersonLook::getFlatRight() const
+    {
+        return float3{ MathUtil::cos( _yaw ), 0.0f, -MathUtil::sin( _yaw ) };
+    }
+
+    float3 FirstPersonLook::computeMoveDirection( float32 forwardAxis, float32 rightAxis ) const
+    {
+        const float3  move   = getFlatForward() * forwardAxis + getFlatRight() * rightAxis;
+        const float32 length = move.getLength();
+        return length > 1.0f ? move * ( 1.0f / length ) : move;
     }
 } // namespace sw
