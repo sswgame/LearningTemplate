@@ -96,7 +96,7 @@ namespace sw
     /**
      * @class INetSecurityProvider
      * @brief 암호 원시 연산의 API 입니다. 모든 함수는 아무 스레드에서나 부른다(구현이 스레드 안전). `subscribeRetiring` · `retire` 만 게임 스레드다.
-     * @details **구현은 모듈의 것이다.** 제공자와 제공자가 만든 객체(`INetAEAD` · `ITLSContext` · `ITLSSession`)는 구현 모듈의 코드라 그 라이브러리가 내려가면 쓸 수 없다 —
+     * @details 구현은 모듈의 것이다. 제공자와 제공자가 만든 객체(`INetAEAD` · `ITLSContext` · `ITLSSession`)는 구현 모듈의 코드라 그 라이브러리가 내려가면 쓸 수 없다 —
      *          모듈보다 오래 사는 쪽(엔진 서비스)이 쥐려면 `subscribeRetiring` 으로 놓을 일을 건다. 구현을 든 모듈 서브시스템이 내려가기 전에 `retire` 를 부르므로,
      *          서브시스템의 종료 순서가 어떻든 쥔 쪽은 코드가 살아 있을 때 놓는다.
      */

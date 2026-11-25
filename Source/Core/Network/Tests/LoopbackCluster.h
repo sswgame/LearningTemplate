@@ -18,7 +18,7 @@ namespace sw::test
     /**
      * @class LoopbackCluster
      * @brief 엔드포인트 0 이 서버, 1 부터가 클라이언트입니다(`addEndpoint` 순서). 회선 조건은 모든 엔드포인트의 보내는 쪽 흉내에 한 번에 겁니다(`setConditions`).
-     * @details - 손 시각(`step` · `run`): 시각을 넘기고 흉내를 **모두 먼저** `update` 한 뒤(이 시각까지 닿을 패킷이 망에 실려 배달된다) 엔드포인트를 더한 순서로
+     * @details - 손 시각(`step` · `run`): 시각을 넘기고 흉내를 모두 먼저 `update` 한 뒤(이 시각까지 닿을 패킷이 망에 실려 배달된다) 엔드포인트를 더한 순서로
      *            `update` 한다. 흉내는 보내는 쪽 줄이라 엔드포인트만 차례로 돌리면 뒤에 도는 쪽이 보낸 것이 한 프레임 늦는다 — 여기서는 지연 L 이 방향 ·
      *            순서와 상관없이 "보낸 시각 + L 이 지난 첫 `step`" 이다. 한 스레드라 같은 씨앗이면 같은 손실이다.
      *          - 스레드(`startThreads`): 엔드포인트마다 `NetEndpointThread` 가 돈다. 도는 동안 `step` · `addEndpoint` 는 부르지 않는다(단언). 소멸자가 멈춘다.

@@ -107,7 +107,7 @@ namespace sw
         if ( bValidChunk == false )
             return;
 
-        // **이미 자유 목록에 있는 블록인가.** 두 번 넣으면 `_pNext` 가 자기 자신을 가리켜 목록이 자기 자신으로 도는 고리가
+        // 이미 자유 목록에 있는 블록인가. 두 번 넣으면 `_pNext` 가 자기 자신을 가리켜 목록이 자기 자신으로 도는 고리가
         // 되고, 그 뒤 모든 할당이 같은 블록을 돌려준다. 여기서 멈추지 않으면 증상은 한참 뒤 엉뚱한 곳에서 터진다.
         if ( static_cast<const FreeNode*>( pBlock )->_freeMagic == kFreeBlockMagic )
         {

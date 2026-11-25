@@ -29,7 +29,7 @@ namespace sw
     /**
      * @class INetTransport
      * @brief 데이터그램 한 개를 보내고 받습니다. 받기는 막히지 않습니다(없으면 바로 false) — 기다리려면 `waitForReceive`.
-     * @details **스레드 약속**: `send` 는 아무 스레드에서나 동시에 불러도 되고, `receive` · `waitForReceive` · `update` 는 한 번에 한 스레드
+     * @details 스레드 약속: `send` 는 아무 스레드에서나 동시에 불러도 되고, `receive` · `waitForReceive` · `update` 는 한 번에 한 스레드
      *          (그 엔드포인트를 `update` 하는 스레드)가 부릅니다 — `NetEndpoint` 는 잠금을 풀고 보내고 받는다. 구현은 이 약속을 지켜야 한다.
      */
     class SW_API INetTransport

@@ -92,7 +92,7 @@ namespace sw
         /** @brief 4x4 행렬로 2D 좌표(z = 0, w = 1)를 변환합니다. */
         static float2 transform( const float2& v, const float4x4& matrix ) noexcept;
 
-        /** @brief 4x4 행렬로 2D **방향**(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`). */
+        /** @brief 4x4 행렬로 2D 방향(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`). */
         static float2 transformVector( const float2& v, const float4x4& matrix ) noexcept;
 
         /** @brief 각 성분이 [-bound, bound] 안에 있으면 true 입니다. */
@@ -189,12 +189,12 @@ namespace sw
      * @struct int2
      * @brief 2차원 정수 벡터입니다(타일 좌표, 화면 픽셀 좌표, 정수 경계).
      *
-     * @details **float2 로 대신하지 않는 이유.** 타일과 픽셀은 세는 값이지 측정하는 값이 아닙니다. float2 에 담으면 정수가 아닌
+     * @details float2 로 대신하지 않는 이유. 타일과 픽셀은 세는 값이지 측정하는 값이 아닙니다. float2 에 담으면 정수가 아닌
      *          값이 섞여 들 수 있고, 비교가 오차에 걸립니다. 언리얼도 같은 이유로 `FVector2D` 와 별개로 `FIntPoint` 를 둡니다.
      *
-     * @note **일부러 얇게 두었습니다.** 정규화 · 길이 · 보간 · 행렬 변환은 넣지 않았습니다. 정수 좌표에서는 뜻이 없거나 실수로
+     * @note 일부러 얇게 두었습니다. 정규화 · 길이 · 보간 · 행렬 변환은 넣지 않았습니다. 정수 좌표에서는 뜻이 없거나 실수로
      *       넘어가야 하는 연산이라, 필요해지면 쓰는 쪽을 보고 더합니다. 3성분(`int3`)도 만들지 않았습니다. 유일한 후보였던
-     *       공간 해시의 셀 좌표(옛 겹침 월드의 `CellCoord`)는 공간 해시의 **키**라서 벡터 연산을 하지 않고 전용 해시 함수 객체를 달기 때문에,
+     *       공간 해시의 셀 좌표(옛 겹침 월드의 `CellCoord`)는 공간 해시의 키라서 벡터 연산을 하지 않고 전용 해시 함수 객체를 달기 때문에,
      *       벡터 타입으로 바꿀 이유가 없습니다.
      */
     struct int2 final
@@ -403,7 +403,7 @@ namespace sw
         static float3 transform( const float3& v, const float4x4& matrix ) noexcept;
 
         /**
-         * @brief 4x4 행렬로 3D **방향**(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`).
+         * @brief 4x4 행렬로 3D 방향(w = 0)을 변환합니다 — 평행 이동은 무시하고 회전 · 스케일만 겁니다(언리얼 `TransformVector`).
          * @details 법선 변환이 아니다 — 비균등 스케일에서 법선은 역전치(여인수) 행렬로 옮겨야 한다
          *          (셰이더의 `Transform::computeWorldNormal`). 법선을 옮기려면 `matrix.invert().transpose()` 를 넘긴다.
          */
@@ -596,7 +596,7 @@ namespace sw
         static float4 transform( const float4& v, const quaternion& rotation ) noexcept;
         /** @brief 4x4 행렬로 변환합니다. */
         static float4 transform( const float4& v, const float4x4& matrix ) noexcept;
-        /** @brief 4x4 행렬의 회전 · 스케일 부분(3x3)으로 **방향**을 변환합니다(언리얼 `TransformVector`). 결과의 w 는 0 입니다. */
+        /** @brief 4x4 행렬의 회전 · 스케일 부분(3x3)으로 방향을 변환합니다(언리얼 `TransformVector`). 결과의 w 는 0 입니다. */
         static float4 transformVector( const float4& v, const float4x4& matrix ) noexcept;
 
         /** @brief 다른 벡터와의 내적을 구합니다. */

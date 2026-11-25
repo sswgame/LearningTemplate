@@ -2,7 +2,7 @@
  * @file LogTypes.h
  * @brief 로그 한 줄을 나타내는 값 타입들입니다(`LogLevel` · `LogEvent` · `LogEntry` · `LogRecord`).
  *
- * `Logger`(파사드)와 `ILogOutput`(출력 장치)이 **둘 다** 이 타입들을 쓰므로 따로 둡니다. 한쪽 헤더에 두면 장치 헤더가
+ * `Logger`(파사드)와 `ILogOutput`(출력 장치)이 둘 다 이 타입들을 쓰므로 따로 둡니다. 한쪽 헤더에 두면 장치 헤더가
  * 파사드를 include 하게 되어 의존 방향이 뒤집힙니다. `Logger.h` 가 이 헤더를 include 합니다.
  */
 #pragma once
@@ -183,7 +183,7 @@ namespace sw
     };
 
     /**
-     * @brief 비동기 lock-free 큐로 보내는 로그 레코드입니다. **출력 장치에 필요한 것이 모두** 들어 있습니다.
+     * @brief 비동기 lock-free 큐로 보내는 로그 레코드입니다. 출력 장치에 필요한 것이 모두 들어 있습니다.
      * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 남긴 순간의 시각(`LogStamp::_time`)이고 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.
      *          콘솔은 `_level` 로 색만 고릅니다.
      */

@@ -4,17 +4,17 @@
  * @details 슬롯 번호가 곧 연결 ID다. 클라이언트는 슬롯 하나(서버 연결, ID 0), 서버는 `_maxConnections` 개를 쓴다.
  *          주소 맵은 패킷마다 슬롯을 O(1)로 찾게 한다. 맵에는 지금 그 주소를 가진 슬롯만 있다(`bindAddress` 와 `unbindAddress` 가 짝을 맞춘다).
  *
- *          **살아 있는 슬롯 · 빈 슬롯 목록**(감사 N-8): 슬롯의 열기 · 닫기 · 놓기(`open` · `close` · `release`)는 여기서만 상태를 바꾼다.
+ *          살아 있는 슬롯 · 빈 슬롯 목록(감사 N-8): 슬롯의 열기 · 닫기 · 놓기(`open` · `close` · `release`)는 여기서만 상태를 바꾼다.
  *          살아 있는(Connecting · Connected) 슬롯은 번호 순으로 정렬된 조밀한 목록에 다음에 볼 시각(`NetLiveSlot::_dueTime`)과 함께 있고,
  *          빈 슬롯은 내림차순 목록의 끝이 가장 낮은 번호다. 그래서 갱신은 정원(`_maxConnections`)이 아니라 기한이 된 연결만 보고,
  *          위조 요청마다 빈 슬롯을 선형으로 찾지 않는다. 열기 · 닫기는 목록을 밀어 O(N) 이지만 드물다.
  *
- *          **연결 객체는 열 때 만든다**: `NetConnection`(신뢰 창 · 순서 버퍼 — 약 75 KB)은 `open` 이 만들고 `close` 가 놓는다. 빈 슬롯은 몇십 바이트라
+ *          연결 객체는 열 때 만든다: `NetConnection`(신뢰 창 · 순서 버퍼 — 약 75 KB)은 `open` 이 만들고 `close` 가 놓는다. 빈 슬롯은 몇십 바이트라
  *          정원이 커도 연결된 수만큼만 메모리를 쓴다. 언리얼(`UNetConnection` 을 연결마다 NewObject) · GameNetworkingSockets(연결마다 new)와 같고,
  *          ENet 처럼 `peerCount` 개를 미리 잡지 않는다. 풀은 두지 않는다 — 열기는 챌린지를 통과한 응답에만 일어나 드물다.
  *          언리얼은 연결 객체 배열(`ClientConnections`)만 돌고 빈 칸이 없다 — 슬롯 번호가 곧 연결 ID 인 이 구조에서 같은 효과를 내는 모양이다.
  *
- *          **스레드**: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다.
+ *          스레드: 잠금이 없다. `NetEndpoint` 의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"

@@ -4,7 +4,7 @@
  * @details 메시지가 채널 상한(`NetConnection::getMaxMessageSize` — 순서만 · 비신뢰는 `kMaxSingleMessageSize`, 신뢰 순서는 `kMaxReliableMessageSize`)을 넘으면
  *          보내기가 오류와 함께 통째로 버린다. 그래서 예산은 그 상한(생성자의 `limitBytes`, 기본은 조각나지 않는 상한)으로 자르고, 항목 크기는 어림이 아니라
  *          `BitMath::computeVarUintBits` · `computeBlobBits` 로 정확히 센다. 목록 길이처럼 항목보다 먼저 쓰는 필드는 가장 큰 값으로 미리 잡는다.
- *          예산보다 큰 항목도 **첫 항목이면** 채널 상한 안에서 싣는다 — 회선이 막혀 예산이 항목보다 작아지면(하한 16 KB/s 는 60 Hz 에서 133 바이트) 그 항목은 우선도가 아무리 쌓여도
+ *          예산보다 큰 항목도 첫 항목이면 채널 상한 안에서 싣는다 — 회선이 막혀 예산이 항목보다 작아지면(하한 16 KB/s 는 60 Hz 에서 133 바이트) 그 항목은 우선도가 아무리 쌓여도
  *          영영 나가지 못하고 로그도 없었다. 항목마다 하나는 나아가고 넘친 만큼은 송신 속도(토큰)가 거른다(언리얼이 액터를 쓴 뒤에 포화를 보는 것과 같다).
  *          키트 틱 예산의 기본은 `computeTickBudget( 설정값, 연결의 지금 송신 속도(`NetConnectionStats::_sendBytesPerSecond`), 틱 간격 )` — 설정과 그 연결 속도의 할당량 중 작은 것이다(속도는 `NetSendThrottle` 이 RTT · 손실로 조절한다).
  * @code

@@ -179,7 +179,7 @@ namespace sw::test
             return buffer;
         }
 
-        /** @brief 서버(포트 4000 — 엔드포인트 0) · 클라이언트(포트 5000 — 엔드포인트 1)를 더합니다. listen · connect 는 케이스가 한다. */
+        /** @brief 서버(포트 4000, 엔드포인트 0) · 클라이언트(포트 5000, 엔드포인트 1)를 더합니다. listen · connect 는 케이스가 한다. */
         static void addServerAndClient( LoopbackCluster& cluster, const NetEndpointConfig& settings )
         {
             (void)cluster.addEndpoint( 4000, settings ); // 빈 클러스터라 포트가 겹치지 않는다

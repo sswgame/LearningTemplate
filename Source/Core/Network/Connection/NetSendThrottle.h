@@ -11,7 +11,7 @@
  *          상용 비교: ENet 의 패킷 스로틀(RTT 가 평균 + 흔들림을 넘으면 감속, 밑이면 가속) · 언리얼 NetDriver 의 연결 대역폭 · 유니티 Transport 의 혼잡 조절과 같은 자리다.
  *          ENet 은 스로틀로 비신뢰 패킷만 버리지만 여기서는 바이트 속도를 줄인다 — 비신뢰는 줄에서 나이 상한으로 버려지고(`NetConnection::kDefaultMaxUnreliableAge`), 신뢰는 기다린다.
  *
- *          **스레드**: 잠금이 없다. `NetEndpoint` 슬롯의 값 멤버로 그 잠금 안에서만 쓴다.
+ *          스레드: 잠금이 없다. `NetEndpoint` 슬롯의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
 #include "Core/Foundation/Expected.h"

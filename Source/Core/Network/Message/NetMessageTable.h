@@ -6,7 +6,7 @@
  *          (`NetKitWireVersion`)이 따로 놀았다. 마스크에서 종류 하나를 빠뜨리면 라우터가 그 메시지를 버렸고, 메시지를 더해도 버전을 올리지 않으면 다른 빌드와 갈리지 않았다.
  *          - 처리기는 `NetTableHandler<TDerived, TTable, TMessage...>` 로 서서 받는 메시지를 형식으로 적는다. 마스크와 디스패치는 그 목록에서 나오고,
  *            목록의 메시지마다 `receive( TMessage, const NetMessageContext&, BitReader& )` 오버로드가 없으면 컴파일되지 않는다.
- *          - **본문 형식이 있는 메시지**(`Body` 를 가진 서술자 — Engine 의 `NetMessageBodyDef`, 본문은 `REFLECT` 고정 배치형)는 처리기가 본문을 읽지 않는다.
+ *          - 본문 형식이 있는 메시지(`Body` 를 가진 서술자 — Engine 의 `NetMessageBodyDef`, 본문은 `REFLECT` 고정 배치형)는 처리기가 본문을 읽지 않는다.
  *            표가 본문을 다 읽고(잘림 · 남는 비트 · 범위 밖 값 · 등록 밖 열거자는 Malformed) `receive( TMessage, const NetMessageContext&, const Body& )` 를 부른다.
  *            보내는 쪽은 `NetMessageWriter::writeMessage<TTable, TMessage>( body )` 하나다.
  *          - 와이어 버전(`computeWireVersion`)은 영역과 메시지마다 (번호, 방향, 채널, 본문 판)을 섞은 값이다. 메시지를 더하거나 빼거나 방향 · 채널을 바꾸면 저절로 바뀐다.

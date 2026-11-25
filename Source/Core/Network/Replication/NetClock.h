@@ -3,8 +3,8 @@
  * @brief 월드 하나의 서버 시계(`NetClock`)와, 기능마다 그 시계를 보간 지연만큼 뒤에서 따라가는 화면 시계(`NetRenderClock`)입니다.
  * @details 서버 틱은 월드에 수열 하나다 — `NetClock::kTickSeconds` 간격이고 월드를 열 때 0 에서 시작한다. 주기가 긴 기능(30 Hz 이동 복제)은 자기 번호를 만들지 않고
  *          이 수열의 배수(`computeStride`)에서 돈다. 예전에는 사격장 · 허브 · 파괴가 저마다 다른 간격으로 처음부터 세고 클라이언트도 저마다 추정해, 같은 순간이 기능마다 다른 시각이었다.
- *          - **서버**(`Authority`): 흐른 게임 시간이 곧 시각이다.
- *          - **클라이언트**(`Replica`): 받은 틱을 하한으로 둔다. 받은 틱은 서버가 적어도 거기까지 왔다는 뜻이므로, 추정이 그보다 작으면 끌어올리고 그 사이에는 흐른 시간만큼 흐른다.
+ *          - 서버(`Authority`): 흐른 게임 시간이 곧 시각이다.
+ *          - 클라이언트(`Replica`): 받은 틱을 하한으로 둔다. 받은 틱은 서버가 적어도 거기까지 왔다는 뜻이므로, 추정이 그보다 작으면 끌어올리고 그 사이에는 흐른 시간만큼 흐른다.
  *            그래서 표본이 오지 않는 동안(멈춘 덩어리)에도 서버 시각을 따라간다. 받은 가장 새 틱 + `kMaxLeadSeconds` 를 넘지 않는다 — 로컬 시계가 빨라도 끝없이 앞서지 않는다.
  *          - 시계는 라우터가 월드 세대와 함께 든다(`NetMessageRouter::getWorldClock`) — 새 월드 · 새 연결이면 처음부터다. 서버가 주기적으로 알리고, 틱을 실은 메시지를 받은 키트도 알린다.
  *          - 흔들림 필터링(시간 척도를 조금씩 기울이기, 유니티 `NetworkTimeSystem` 의 AdjustmentRatio)은 하지 않는다. 받은 틱이 추정보다 앞서면 그만큼 한 번에 앞으로 간다.
@@ -35,7 +35,7 @@ namespace sw
     public:
         static constexpr float32 kTickSeconds        = constant::time::kDefaultFixedStepSeconds;
         static constexpr float32 kMaxLeadSeconds     = 0.25f; ///< 클라이언트 추정은 받은 가장 새 틱보다 이만큼까지만 앞선다
-        static constexpr uint32  kMaxTicksPerAdvance = 15;    ///< 서버 — 한 번에 흐르는 상한(0.25 초). 넘는 시간은 버린다 — 몰아 돌린 틱이 다음 프레임을 또 밀지 않는다
+        static constexpr uint32  kMaxTicksPerAdvance = 15;    ///< 서버: 한 번에 흐르는 상한(0.25 초). 넘는 시간은 버려 몰아 돌린 틱이 다음 프레임을 또 밀지 않게 한다
 
         NetClock();
 

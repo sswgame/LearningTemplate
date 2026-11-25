@@ -634,7 +634,7 @@ namespace sw
 
         string strName{ name };
 
-        // 맵이 아니라 **이 객체**가 주소의 주인이다. 맵이 재할당돼도 findVariable 이 내준 포인터가 유효하려면, 값이 밀집
+        // 맵이 아니라 이 객체가 주소의 주인이다. 맵이 재할당돼도 findVariable 이 내준 포인터가 유효하려면, 값이 밀집
         // 배열 안에 있으면 안 된다.
         unique_ptr<GlobalVariableInfo> pInfo = make_unique<GlobalVariableInfo>();
         pInfo->_name                         = strName;
@@ -651,7 +651,7 @@ namespace sw
         const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( pInfo ) );
         _registrationGeneration.fetch_add( 1, std::memory_order_release );
 
-        // 모듈(EditorModule · SWGame)이 선언한 변수는 커맨드라인 파싱이 **이미 끝난 뒤** 여기로 온다. 그 값은
+        // 모듈(EditorModule · SWGame)이 선언한 변수는 커맨드라인 파싱이 이미 끝난 뒤 여기로 온다. 그 값은
         // CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다. 이것이 없으면 `-gv_editorPanelDump=25` 같은
         // 모듈 스위치가 조용히 무시된다. 엔진 자체의 변수는 registerToCommandLine 전에 등록되므로 여기에 걸리지 않고
         // updateFromCommandLine 이 맡는다. 잠금 안이므로 매니저의 setValueFromString(다시 잠근다)이 아니라 info 쪽을 직접 부른다.
@@ -664,7 +664,7 @@ namespace sw
                 // 남는다)가 int 변수에 닿아 조용히 실패하고, 사용자에게는 "스위치가 아무 일도 하지 않는다" 로만 보인다.
                 //
                 // 변경 알림은 여기서 따로 부르지 않는다. setValueFromString 이 거치는 setValueAs* 네 함수가 모두 이미
-                // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
+                // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 두 번 온다).
                 const expected<void> result = iter->second->setValueFromCommandLine( pendingValue );
                 if ( result.has_value() == false )
                     SW_LOG_WARNING_ID( "GlobalVariableManager.Ignored", "-%#=%# : %# (%#). Ignored", strName.c_str(), pendingValue.c_str(), result.error().message(), result.error().detail() );

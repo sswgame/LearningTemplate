@@ -3,9 +3,9 @@
  * @brief 웹의 스트림 전송 — 브라우저에는 원시 TCP 가 없어 연결 하나를 WebSocket(이진 프레임) 하나로 연다. 서버는 같은 리슨에서 `WebSocketAcceptTransport` 가 받는다.
  * @details Emscripten `emscripten/websocket.h`(-lwebsocket.js)를 쓴다. 소켓은 늘 브라우저 메인 스레드에 있고(라이브러리가 그렇게 만든다 — 다른 스레드의 호출은 메인으로
  *          동기 위임된다), 콜백도 메인 런타임 스레드로 받는다 — 메인 루프가 프레임마다 브라우저에 돌려주므로 그 사이에 온다. 그래서 I/O 스레드를 두지 않는다(`pollIO` 는 다시 연 연결의 든 바이트만 넘긴다).
- *          연결 주소는 `<ws|wss>://<이름 또는 숫자 주소>:<포트>/` 다 — https 페이지는 혼합 콘텐츠라 `wss://` 만 열 수 있고(TLS 는 서버 앞의 종단 프록시가 푼다 — `deploy/haproxy/web-tls.cfg`),
+ *          연결 주소는 `<ws|wss>://<이름 또는 숫자 주소>:<포트>/` 다. https 페이지는 혼합 콘텐츠라 `wss://` 만 열 수 있고(TLS 는 서버 앞의 종단 프록시가 푼다, `deploy/haproxy/web-tls.cfg`),
  *          인증서는 이름으로 확인하므로 주소를 만든 이름(`PlatformSocketUtil::resolveAddress` — Emscripten 은 이름마다 가짜 주소를 준다)을 되찾아 쓴다.
- *          `connect` 는 아무 스레드에서나 — 만들기부터 칸 등록까지 메인 런타임 스레드에서 한 번에 한다(그 사이 브라우저 이벤트가 끼지 않는다). 할 수 없는 것: 리슨(브라우저는 받지 못한다 — false). 읽기 멈춤은 브라우저 WebSocket 에 흐름 제어가 없어
+ *          `connect` 는 아무 스레드에서나 부른다. 만들기부터 칸 등록까지 메인 런타임 스레드에서 한 번에 한다(그 사이 브라우저 이벤트가 끼지 않는다). 할 수 없는 것: 리슨(브라우저는 받지 못해 false). 읽기 멈춤은 브라우저 WebSocket 에 흐름 제어가 없어
  *          전송이 받은 바이트를 들고 있다가 다시 열면 `pollIO` 가 넘긴다(`StreamReceiveHold`, 상한 `_maxHeldReceiveBytes` 를 넘으면 닫는다).
  */
 #pragma once

@@ -40,7 +40,7 @@ namespace sw
         if ( alignment == 0 || MathUtil::isPowerOfTwo( alignment ) == false )
             alignment = alignof( std::max_align_t );
 
-        // 아래에서 `size + alignment` 로 새 블록 크기를 정한다. 오버플로하면 **더 작은** 블록을 잡고, 그 블록에도 들어가지
+        // 아래에서 `size + alignment` 로 새 블록 크기를 정한다. 오버플로하면 더 작은 블록을 잡고, 그 블록에도 들어가지
         // 않으니 블록을 끝없이 늘리게 된다. 담을 수 없는 크기는 여기서 거른다.
         if ( size > SIZE_MAX - alignment )
             return nullptr;
@@ -69,7 +69,7 @@ namespace sw
                 const uintptr_t basePtr       = dataPtr + oldOffset;
                 const uintptr_t alignedPtr    = MathUtil::align( basePtr, static_cast<uintptr_t>( alignment ) );
                 const size_t    alignedOffset = static_cast<size_t>( alignedPtr - dataPtr );
-                // **뺄셈으로 비교한다.** `alignedOffset + size` 로 쓰면 큰 size 에서 합이 오버플로해 검사를 통과하고, 블록 밖을
+                // 뺄셈으로 비교한다. `alignedOffset + size` 로 쓰면 큰 size 에서 합이 오버플로해 검사를 통과하고, 블록 밖을
                 // 가리키는 주소가 정상 할당인 것처럼 반환된다. 정렬 때문에 alignedOffset 이 capacity 를 넘을 수도 있어서 그것도 함께 본다.
                 if ( alignedOffset > pCurrentBlock->_capacity || size > pCurrentBlock->_capacity - alignedOffset )
                     break;
@@ -80,7 +80,7 @@ namespace sw
                     return reinterpret_cast<void*>( alignedPtr );
             }
 
-            // 블록이 가득 찼다. **이미 가지고 있는 다음 블록부터 본다.** reset() 은 오프셋만 되돌리므로 그 뒤의 블록들은 빈
+            // 블록이 가득 찼다. 이미 가지고 있는 다음 블록부터 본다. reset() 은 오프셋만 되돌리므로 그 뒤의 블록들은 빈
             // 채로 남아 있다. 여기서 곧바로 새 블록을 잡으면 그 빈 블록들은 다음 clear() 까지 놀고, reset 할 때마다 표가 한 칸씩
             // 늘면서 블록 용량은 두 배로 커진다(EventDispatcher 는 프레임마다 reset 하므로, 거기서 프레임마다 메모리가 불어난다).
             ScopedLock<mutex> lock{ _mutex };

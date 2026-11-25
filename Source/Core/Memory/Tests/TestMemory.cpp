@@ -150,7 +150,7 @@ SW_TEST_CASE( MemoryTest, PoolAllocatorMultiChunkStress )
 }
 
 /**
- * @brief [MemoryTest] 풀이 내주는 블록은 **16바이트 정렬**이다 (문서가 말하는 그 값)
+ * @brief [MemoryTest] 풀이 내주는 블록은 16바이트 정렬이다 (문서가 말하는 그 값)
  * @details 블록 크기도, 청크 헤더도, 기반 할당도 전부 16 이다. 이 값은 SSE 타입을 담아도 되는가를
  *          가르므로(읽는 사람이 직접 패딩을 붙이거나 아예 못 쓴다고 판단한다) 계약으로 못박는다.
  */
@@ -300,10 +300,10 @@ SW_TEST_CASE( MemoryTest, ThreadSafePoolSurvivesInterleavedAllocateAndFree )
 }
 
 /**
- * @brief [MemoryTest] 담을 수 없는 크기는 **주소를 만들어 주지 않는다**
+ * @brief [MemoryTest] 담을 수 없는 크기는 주소를 만들어 주지 않는다
  * @details 할당기 둘이 모두 `size + 무언가` 로 크기를 정한다 — `size` 가 크면 그 합이 **뒤집혀
  *          작아진다.** 그러면 (1) 요청보다 작은 블록이 잡히고, (2) `오프셋 + size <= 용량` 검사가
- *          통과해 **블록 밖을 가리키는 주소**가 정상 할당인 척 돌아간다. 쓰는 순간 남의 메모리다.
+ *          통과해 블록 밖을 가리키는 주소가 정상 할당인 척 돌아간다. 쓰는 순간 남의 메모리다.
  *          이런 크기는 어차피 할당될 수 없으므로 nullptr 로 끝내는 것이 맞다.
  */
 SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
@@ -334,9 +334,9 @@ SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
 }
 
 /**
- * @brief [MemoryTest] 원소 개수 × 크기가 뒤집히면 **던진다** — 작은 블록을 내주지 않는다
+ * @brief [MemoryTest] 원소 개수 × 크기가 뒤집히면 던진다 — 작은 블록을 내주지 않는다
  * @details `sw::Allocator<T>::allocate( n )` 은 `n * sizeof( T )` 로 바이트 수를 구한다. 그 곱이
- *          뒤집히면 **요청보다 훨씬 작은 블록**이 잡히고, 호출부는 원소 n 개를 쓸 수 있다고 믿고
+ *          뒤집히면 요청보다 훨씬 작은 블록이 잡히고, 호출부는 원소 n 개를 쓸 수 있다고 믿고
  *          그 밖으로 나간다. 한계는 `vector::max_size()` 와 같은 `SIZE_MAX / sizeof(T)` 다.
  *          표준 할당기가 같은 자리에서 던지는 이유가 이것이다.
  */
@@ -384,13 +384,13 @@ SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
 
 /**
  * @brief [MemoryTest] 풀의 자유 목록이 고리가 되지 않는지 검증(회귀 가드)
- * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 **자기 고리**가 된다 —
+ * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 자기 고리가 된다 —
  *          그 뒤 모든 할당이 같은 블록을 돌려주고, 서로 다른 두 객체가 같은 주소에 앉는다(파괴 경로의
  *          check-then-set 경쟁이 이렇게 드러난다).
  *
- *          Debug 에서는 `PoolAllocator::free` 가 **두 번째 반납 그 자리에서** 단언으로
+ *          Debug 에서는 `PoolAllocator::free` 가 두 번째 반납 그 자리에서 단언으로
  *          멈춘다(표식 하나로 O(1) 에 본다 — 목록을 훑으면 해제가 O(n) 이 된다). 그 단언은
- *          프로세스를 세우므로 테스트로 부를 수 없고, 여기서는 **정상 순환이 그대로인지**를
+ *          프로세스를 세우므로 테스트로 부를 수 없고, 여기서는 정상 순환이 그대로인지를
  *          지킨다: 한 바퀴 돌린 뒤 새로 받은 블록들이 전부 다른 주소여야 한다.
  */
 SW_TEST_CASE( MemoryTest, PoolFreeListDoesNotLoopAfterChurn )
@@ -437,7 +437,7 @@ namespace
     };
 
     /**
-     * @brief 할당 관찰자 테스트의 기록입니다. 다른 스레드(로거 등)도 같은 관찰자를 지나므로 **테스트가 고른 크기**의 블록만 셉니다.
+     * @brief 할당 관찰자 테스트의 기록입니다. 다른 스레드(로거 등)도 같은 관찰자를 지나므로 테스트가 고른 크기의 블록만 셉니다.
      */
     struct AllocationObserverRecordInternal
     {
@@ -554,7 +554,7 @@ SW_TEST_CASE( MemoryTest, NewArrayValueInitializesAndKeepsAlignment )
 
 /**
  * @brief [MemoryTest] 할당 관찰자는 관찰 중에 잡힌 블록의 해제만 알린다
- * @details 외부 프로파일러(Tracy)는 짝 없는 해제를 받으면 기록을 멈춘다. 관찰자를 걸기 **전에** 잡은 블록을 나중에 풀 때 알리면 안 된다.
+ * @details 외부 프로파일러(Tracy)는 짝 없는 해제를 받으면 기록을 멈춘다. 관찰자를 걸기 전에 잡은 블록을 나중에 풀 때 알리면 안 된다.
  *          배포본은 헤더가 없어 관찰자를 지원하지 않는다(아무것도 알리지 않는다).
  */
 SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached )

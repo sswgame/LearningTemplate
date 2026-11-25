@@ -26,7 +26,7 @@ SW_TEST_CASE( LinearAllocatorTest, AllocateHonorsAlignmentAndRejectsZeroSize )
 
     SW_EXPECT_NULL( allocator.allocate( 0 ) );
 
-    // 정렬은 2의 거듭제곱만 뜻이 있다 — 아닌 값은 **거절이 아니라** 기본 정렬로 되돌린다.
+    // 정렬은 2의 거듭제곱만 뜻이 있다 — 아닌 값은 거절이 아니라 기본 정렬로 되돌린다.
     void* pDefaultAligned = allocator.allocate( 8, 3 );
     SW_REQUIRE_NOT_NULL( pDefaultAligned );
     SW_EXPECT_EQUAL( uintptr_t( 0 ), reinterpret_cast<uintptr_t>( pDefaultAligned ) % alignof( std::max_align_t ) );
@@ -45,7 +45,7 @@ SW_TEST_CASE( LinearAllocatorTest, AllocateHonorsAlignmentAndRejectsZeroSize )
 }
 
 /**
- * @brief [LinearAllocatorTest] reset 은 이미 확보한 블록을 **전부** 다시 내준다
+ * @brief [LinearAllocatorTest] reset 은 이미 확보한 블록을 전부 다시 내준다
  * @details 헤더가 "오프셋만 되돌리고 메모리는 유지한다" 고 말하는 자리다. 첫 블록만 다시 쓰고
  *          나머지를 새로 잡으면, 비어 있는 블록을 끌어안은 채 reset 할 때마다 표가 늘어난다
  *          (블록 용량은 배로 커지므로 늘어나는 양도 배가 된다). 주소가 그 증거다 — 같은 순서로

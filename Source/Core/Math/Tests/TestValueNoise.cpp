@@ -5,7 +5,7 @@
 #include "Core/Math/ValueNoise.h"
 #include "Core/Testing/TestFramework.h"
 
-// ValueNoiseTest — 좌표 해시(`HashUtil::hashCoord` — 상태 없음, 좌표 · 씨앗에 민감, constexpr)와 값 노이즈(격자점 = 해시, 0..1, 연속, 옥타브 1 미만은 1). nogpu.
+// ValueNoiseTest: 좌표 해시(`HashUtil::hashCoord`. 상태 없음, 좌표 · 씨앗에 민감, constexpr)와 값 노이즈(격자점 = 해시, 0..1, 연속, 옥타브 1 미만은 1). nogpu.
 
 /**
  * @brief [ValueNoiseTest] 좌표 해시는 상태 없이 같은 입력에 같은 값이고, 좌표 · 씨앗 · 차원이 바뀌면 다른 값이며, 단위 실수는 [0, 1] 이다

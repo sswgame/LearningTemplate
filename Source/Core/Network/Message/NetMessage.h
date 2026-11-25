@@ -344,7 +344,7 @@ namespace sw
      *          알리고(`NetMessageRange::kRouterWireVersionKind`), 상대가 알린 판은 연결마다 들고 있다가 양쪽이 같은 영역을 쓰면 견준다. 다르면 오류를 남기고 그 연결을 끊고,
      *          같은 `poll` 안의 그 연결 메시지는 처리기에 넘기지 않는다. 상대가 아직 등록하지 않은 영역은 견주지 않는다(뒤에 등록하면 그때 알려 온다).
      *          게임이 표 판을 손으로 섞던 방식(`NetWireVersion::combine`)은 빠뜨릴 수 있었다 — 섞는 게임이 하나도 없었다.
-     * @details - **보류:** 처리기가 아직 처리할 수 없는 메시지(대상이 서지 않았다 — `NotReady`)와, 처리기가 아직 없는 신뢰 메시지(씬을 읽는 중)는 버리지 않고 상한(연결마다
+     * @details - 보류: 처리기가 아직 처리할 수 없는 메시지(대상이 서지 않았다 — `NotReady`)와, 처리기가 아직 없는 신뢰 메시지(씬을 읽는 중)는 버리지 않고 상한(연결마다
      *            개수 · 바이트, 종류마다 시간) 안에서 들고 있다가 `poll` 마다 온 순서대로 다시 준다. 시한 · 상한을 넘거나 월드가 바뀌면 버리고, 보류를 선언한 종류면 보낸 쪽에 알린다
      *            (`onMessageDeliveryFailed`). 유니티 NGO `DeferredMessageManager`(스폰 앞에 온 RPC, `SpawnTimeout`) · 언리얼 GUID 대기 큐 자리 — 시한 뒤 조용히 버리는 것만 다르다.
      *          - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
@@ -388,7 +388,7 @@ namespace sw
 
         /**
          * @brief 처리기를 등록하고 그 등록을 소유하는 구독을 반환합니다. 구독이 사라지면 처리기가 빠집니다.
-         * @details 맡으려는 종류 중 하나라도 이미 맡은 처리기가 있거나(같은 처리기를 다시 달아도 자기 종류와 겹친다), @p pHandler 가 nullptr 이면 **통째로 받지 않고**
+         * @details 맡으려는 종류 중 하나라도 이미 맡은 처리기가 있거나(같은 처리기를 다시 달아도 자기 종류와 겹친다), @p pHandler 가 nullptr 이면 통째로 받지 않고
          *          오류를 남긴 뒤 빈 구독(`isActive` 가 false)을 반환합니다(일부만 등록된 처리기는 없습니다). 영역이 겹친 게임은 빈 구독을 기동 실패로 다룬다.
          *          키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          */
@@ -444,7 +444,7 @@ namespace sw
          */
         int32 poll( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetEndpointEvent>* pOutListEvent = nullptr );
         /**
-         * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 **받은 채널 그대로** 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
+         * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 받은 채널 그대로 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
          * @details 처리기 안에서 부른다(@p context 의 메시지 바이트는 처리기 호출 동안만 유효하다).
          */
         static int32      relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
@@ -572,7 +572,7 @@ namespace sw
         uint32                                        _bindSerial;            ///< 월드를 올린 횟수(`getBindSerial`)
         uint32                                        _sentClock;             ///< 서버 — 마지막으로 알린 시계(`kClockSendTicks` 단위)
         uint64                                        _worldSceneID;          ///< 서버가 연 월드의 씬(서버는 연 것, 클라이언트는 알림)
-        optional<uint64>                              _localSceneID;          ///< 클라이언트 — 이쪽에 선 씬(`setLocalScene`). 아직 없으면 비었다 — 문서 없는 월드의 씬 번호(0)와 가른다
+        optional<uint64>                              _localSceneID;          ///< 클라이언트: 이쪽에 선 씬(`setLocalScene`). 아직 없으면 비어 있어 문서 없는 월드의 씬 번호(0)와 가른다
         uint8                                         _announcedGeneration;   ///< 서버가 연 월드의 세대(서버는 연 것, 클라이언트는 알림). 0 이면 아직 없다
         uint8                                         _worldGeneration;       ///< 이쪽 월드의 세대. 클라이언트의 씬이 다르면 0
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다

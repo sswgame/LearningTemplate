@@ -362,10 +362,10 @@ namespace sw
 
         /**
          * @brief 이름으로 전역 변수 정보를 찾습니다.
-         * @details **반환한 포인터는 그 변수가 등록 해제될 때까지 유효합니다.** 다른 변수를 등록하거나 해제해도 옮겨지지
+         * @details 반환한 포인터는 그 변수가 등록 해제될 때까지 유효합니다. 다른 변수를 등록하거나 해제해도 옮겨지지
          *          않습니다. 그래서 패널처럼 "이름을 훑으며 포인터를 모아 두었다가 한 번에 그리는" 방식이 안전합니다.
          * @note 이 보장은 맵이 주는 것이 아닙니다. `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로
-         *       **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨 갑니다. 그래서 값을 `unique_ptr` 로 보관합니다.
+         *       모든 원소가, 삭제하면 swap-and-pop 으로 마지막 원소가 옮겨 갑니다. 그래서 값을 `unique_ptr` 로 보관합니다.
          *       맵이 흔들려도 가리키는 객체는 제자리에 있습니다(값으로 담고 그 주소를 내주면 안 됩니다).
          */
         GlobalVariableInfo* findVariable( string_view name );
@@ -400,7 +400,7 @@ namespace sw
     private:
         mutable shared_mutex _mutex;
         /**
-         * @brief 이름 → 변수 맵입니다. **값이 `unique_ptr` 인 이유는 주소 안정성**입니다(`findVariable` 참고).
+         * @brief 이름 → 변수 맵입니다. 값이 `unique_ptr` 인 이유는 주소 안정성입니다(`findVariable` 참고).
          */
         unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable SW_GUARDED_BY( _mutex );
         /** @brief `_mapVariable` 에 넣거나 뺄 때마다 오른다(`getRegistrationGeneration`). 쓰기는 배타 잠금 안에서만 한다. */
@@ -487,7 +487,7 @@ namespace sw
          *        `Source/GameFramework/Developer` 도 같다 — 개발 구성만 싣는 모듈 GameFrameworkDev(매니페스트 `_listConfiguration ["Dev"]`, 언리얼 Developer 폴더)이고 Runtime · 키트 · 게임이 include 하지 못한다(TargetLayers).
          * @details 테스트용 정의 · 참조 매크로가 `static_assert` 로 부른다 — 런타임 클래스가 테스트 변수를 직접 읽으면 개발 기능이 런타임 코드 안에 남는다
          *          (런타임은 일반 창구만 두고 개발 쪽이 스스로 붙는다). 같은 DLL 안의 폴더라 include 게이트로는 가르지 못해 파일 경로로 컴파일에서 막는다.
-         *          구분자는 컴파일러마다 다르다(MSVC 는 `\`) — 둘 다 폴더 끝으로 본다. `Source` 가 경로에 없으면 false 다(폴백 없음 — 오류로 드러난다).
+         *          구분자는 컴파일러마다 달라(MSVC 는 `\`) 둘 다 폴더 끝으로 본다. `Source` 가 경로에 없으면 폴백 없이 false 를 돌려 오류로 드러낸다.
          */
         static constexpr bool isTestVariablePath( string_view path )
         {
@@ -567,7 +567,7 @@ namespace sw
 // 상수가 된 변수에 값을 쓰는 코드는 Shipping 에서 컴파일 오류다 — 개발 분기에서만 쓰게 한다.
 //
 // 정의 매크로는 대상의 `SW_REGISTRAR_MODULE`(CMake 가 준다)을 등록자에 찍는다 — 정의가 없는 대상에서 쓰면 컴파일 오류다.
-// `name` 은 **선언자 이름**이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰이고, `type` 은 선언 타입이면서 `#type` 이다.
+// `name` 은 선언자 이름이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰이고, `type` 은 선언 타입이면서 `#type` 이다.
 // 괄호를 씌우면 깨진다. 값 인자(`defaultValue`)는 괄호로 감싸 두었다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 
