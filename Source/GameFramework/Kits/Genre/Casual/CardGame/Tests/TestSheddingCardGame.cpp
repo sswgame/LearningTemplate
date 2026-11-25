@@ -5,7 +5,7 @@
 #include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCardGame.h"
 
 // SheddingCardGameTest — 셰딩 카드 게임의 손패 점수: 숫자는 그 수, 스킵 · 리버스 · +2 는 20, 와일드 두 가지는 50 이다(이긴 사람이 남의 손패 점수를 받는다). 키트 GF_CardGame(nogpu).
 

@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/KlondikeGame.h"
 
 // KlondikeGameTest — 클론다이크의 옮기기 규칙: 웨이스트 · 열 · 파운데이션 사이의 옮기기가 규칙(색 번갈아 하나씩 내려가기, 빈 열에는 킹, 파운데이션은 에이스부터)을
 // 지키고, 어긋난 옮기기는 판을 바꾸지 않으며, 자동 완료는 되돌리기 한 번으로 묶인다. 판은 `initializeFromState` 로 손으로 놓는다. 키트 GF_CardGame(nogpu).

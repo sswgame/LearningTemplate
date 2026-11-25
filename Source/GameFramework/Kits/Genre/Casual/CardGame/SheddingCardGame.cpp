@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCardGame.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"

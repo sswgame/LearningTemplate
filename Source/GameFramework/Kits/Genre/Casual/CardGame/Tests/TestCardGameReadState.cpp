@@ -7,11 +7,11 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/KlondikeGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCardGame.h"
 
 // CardGameReadStateTest — 카드 게임 상태 바이트의 신뢰 경계: 더미의 빈 카드 · 겹친 번호, 더미 사이의 복제 카드, 덱에 없는 카드, 음수 · 범위 밖 값을 거절하고 상태를 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다(리플렉션 머리는 정상 `writeState` 바이트에서 가져온다 — 손으로 짜면 다른 이유로 거절되어 거짓 통과한다).
