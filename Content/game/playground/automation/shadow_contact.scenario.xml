@@ -15,7 +15,7 @@
 	<Launch variable="gv_shadowFilter" value="0"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="contact_off.ppm"/>
-	<LoadScene path="game/playground/maps/shadowtest_contact.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:7dc407aa42264d3cd4108cfa3ec6f9f3" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

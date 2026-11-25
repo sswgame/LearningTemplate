@@ -7,7 +7,7 @@
 -->
 <Scenario name="game.playground.loadscene" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/>
-	<LoadScene path="game/playground/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:18182025ed2be61069d33dff8765efc9" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

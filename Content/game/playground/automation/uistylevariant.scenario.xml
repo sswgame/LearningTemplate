@@ -9,7 +9,7 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/uistylevariant.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="uistylevariant_base.ppm"/>
-	<LoadScene path="game/playground/maps/uistylevariant_child.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:38d644d7c175a05bc775f83332aa44e3" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

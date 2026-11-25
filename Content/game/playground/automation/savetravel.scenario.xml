@@ -13,10 +13,10 @@
 	<WaitUntil watch="Save.Written" atLeast="1" timeoutWallSeconds="10"/>
 
 	<!-- 다른 씬에서 불러온다 — 그 씬 위에 섞지 않고 A 로 옮긴 뒤 적용한다 -->
-	<LoadScene path="game/playground/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:18182025ed2be61069d33dff8765efc9" timeoutFrames="600"/>
 	<DevCommand line="game.load savetravel/a"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/rendertest3d.scene.xml"/>
+	<ExpectActiveScene path="guid:b3fdbd2e29297cae9d6c89508393807e"/>
 	<Expect watch="Scene.ObjectCount" sameAs="savedCount"/>
 	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="30"/>
 
@@ -30,7 +30,7 @@
 	<ExpectLog id="GameSaveSlots.RestoreBrokeScene" count="1"/>
 	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="60"/>
 	<ExpectLog id="GameSaveSlots.BrokenSceneReopened" contains="game/playground/maps/rendertest3d.scene.xml" count="1"/>
-	<ExpectActiveScene path="game/playground/maps/rendertest3d.scene.xml"/>
+	<ExpectActiveScene path="guid:b3fdbd2e29297cae9d6c89508393807e"/>
 	<DevCommand line="game.save savetravel/b"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBeforeBroken" timeoutWallSeconds="10"/>
 	<Pass/>

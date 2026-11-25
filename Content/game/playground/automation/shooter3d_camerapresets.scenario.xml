@@ -61,7 +61,7 @@
 	<Expect watch="CameraDirector.FieldOfView" target="ViewCamera" near="70" tolerance="0.5"/>
 
 	<!-- ③ 다시 기동 — 장면을 다시 열면 고른 시점에서 시작한다 -->
-	<LoadScene path="game/playground/shooter3d/maps/arena.scene.xml" timeoutFrames="900"/>
+	<LoadScene path="guid:12d39350b79eb1e5903098fceef6374f" timeoutFrames="900"/>
 	<Expect watch="CameraDirector.SelectedPreset" target="ViewCamera" is="thirdperson"/>
 	<Expect watch="CameraDirector.ActivePreset" target="ViewCamera" is="thirdperson"/>
 	<Pass/>

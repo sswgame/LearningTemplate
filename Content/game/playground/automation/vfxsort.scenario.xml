@@ -11,7 +11,7 @@
 <Scenario name="game.playground.vfxsort" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/vfxsort_unsorted.scene.xml"/>
 	<!-- 정렬하지 않은 무대 -->
-	<LoadScene path="game/playground/maps/vfxsort_unsorted.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:925e951f50604dd6883fc540e35813ac" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Variable name="gv_timeScale" value="1"/>
 	<AdvanceSimulation frames="150"/>
@@ -19,7 +19,7 @@
 	<Screenshot file="vfxsort_unsorted.ppm" stability="Assets"/>
 	<!-- 정렬한 무대 — 같은 입자(시드 · 진행 프레임 수가 같다) -->
 	<Variable name="gv_timeScale" value="1"/>
-	<LoadScene path="game/playground/maps/vfxsort.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:b4a983bd16f84bac8920ba7dc1ec565b" timeoutFrames="600"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="150"/>
 	<Variable name="gv_timeScale" value="0"/>

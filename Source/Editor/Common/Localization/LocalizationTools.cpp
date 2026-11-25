@@ -433,8 +433,9 @@ namespace sw
             /** @brief 에셋 루트 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 리소스 id 입니다. */
             static void gatherAssetRoots( const LocalizationProject& project, TextGatherer& gatherer )
             {
-                for ( const string& assetRoot : project._listAssetRoot )
+                for ( const DataPath& assetRootPath : project._listAssetRoot )
                 {
+                    const string&        assetRoot   = assetRootPath.get();
                     const AbsolutePath   assetFolder = resolveAbsolutePath( assetRoot );
                     vector<AbsolutePath> listFile;
                     // 에셋 루트가 리소스 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다

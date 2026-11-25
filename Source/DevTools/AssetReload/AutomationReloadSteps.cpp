@@ -59,13 +59,13 @@ namespace sw
                     return true;
                 }
                 string text = original; // from 이 비면 바꾸지 않은 저장이다 — 감시가 같은 글을 다시 읽는다
-                if ( params._from.empty() == false )
+                if ( params._from.isSet() )
                 {
-                    const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from );
+                    const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from.get() );
                     if ( sourcePath.has_value() == false || FileUtil::readTextFile( *sourcePath, text ) == false )
                     {
                         fixed_string<constant::buffer::kMax2048> message;
-                        formatstring( message.data(), message.capacity(), "no resource '%#' to copy over the config", params._from );
+                        formatstring( message.data(), message.capacity(), "no resource '%#' to copy over the config", params._from.get() );
                         context.recordFailure( step, message.view() );
                         return true;
                     }

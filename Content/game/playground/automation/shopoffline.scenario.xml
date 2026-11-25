@@ -58,7 +58,7 @@
 	<WaitUntil watch="UI.FocusedWidget" is="Offer1" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<AdvanceSimulation frames="10"/> <!-- 확인 창이 뜨지 않는다(일어나지 않음 — 시간이 내용) -->
-	<ExpectUI screen="common/ui/shop/shop.ui.xml"/>
+	<ExpectUI screen="guid:31d3621cede3fdd40788ddaf304c9288"/>
 	<ExpectLog id="ShopScreen.NotEnoughMoney" count="1"/>
 	<Expect watch="Shop.PurchaseCount" equals="2"/>
 	<Expect watch="Demo.Gold" target="InventoryDemo" equals="50"/>
@@ -88,7 +88,7 @@
 	<Store watch="Save.Written" as="writtenBefore"/>
 	<DevCommand line="game.save empty/shopoffline"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
-	<LoadScene path="game/playground/maps/inventorydemo.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:5e4824070a8d6dfc5280c9330cd91a9b" timeoutFrames="600"/>
 	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
 	<Expect watch="Demo.Gold" target="InventoryDemo" equals="100"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
 	<Store watch="Save.Loaded" as="loadedBefore"/>

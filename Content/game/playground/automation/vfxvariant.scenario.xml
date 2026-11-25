@@ -10,7 +10,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<AdvanceSimulation frames="60"/>
 	<Screenshot file="vfxvariant_off.ppm" stability="None"/>
-	<LoadScene path="game/playground/maps/vfxvariant_tinted.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:882536bb9993834ab2f420d7699905c4" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

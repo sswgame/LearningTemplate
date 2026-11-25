@@ -55,7 +55,7 @@
 	<WaitUntil watch="UI.FocusedWidget" is="LeaveMinigame" timeoutFrames="10"/>
 	<Tap slot="Key.Enter" hold="1"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<WaitUntil watch="Minigame.LastResult" is="quit" timeoutFrames="10"/>
 	<WaitUntil watch="Western.Money" target="Ranch" atLeast="21" timeoutFrames="10"/>
 	<Expect watch="Time.Paused" equals="0"/>

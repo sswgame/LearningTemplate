@@ -9,7 +9,7 @@
 <Scenario name="game.playground.spawndirector" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/spawndirector.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<LoadScene path="game/playground/maps/spawndirector.scene.xml" timeoutFrames="600"/> <!-- 에셋을 기다린 프레임이 시계에 들지 않게 새로 연다 -->
+	<LoadScene path="guid:15a7a8fcad90e335ced2ff67bfd687f5" timeoutFrames="600"/> <!-- 에셋을 기다린 프레임이 시계에 들지 않게 새로 연다 -->
 	<!-- ① 시작 예산 -->
 	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="2" timeoutFrames="10"/>
 	<WaitUntil watch="Object.Exists" target="Spawn.2" equals="1" timeoutFrames="10"/>
@@ -35,7 +35,7 @@
 	<Store watch="Save.Written" as="writtenBefore"/>
 	<DevCommand line="game.save playground/spawndirector"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
-	<LoadScene path="game/playground/maps/spawndirector.scene.xml" timeoutFrames="600"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
+	<LoadScene path="guid:15a7a8fcad90e335ced2ff67bfd687f5" timeoutFrames="600"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
 	<WaitUntil watch="Object.Property" target="SpawnDemo" key="SpawnDirectorDemoComponent._spawnedTotal" equals="2" timeoutFrames="30"/>
 	<Store watch="Save.Loaded" as="loadedBefore"/>
 	<DevCommand line="game.load playground/spawndirector"/>

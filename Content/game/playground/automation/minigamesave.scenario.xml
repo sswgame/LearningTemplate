@@ -32,7 +32,7 @@
 	<WaitUntil watch="Object.X" target="Marker" near="9" tolerance="0.001" timeoutFrames="10"/>
 	<DevCommand line="game.load minigamesave/a"/>
 	<WaitUntil watch="Save.Loaded" atLeast="1" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/pixeltown/maps/town.scene.xml"/>
+	<ExpectActiveScene path="guid:a022cb5ceed46f84dc9d6576fe13181f"/>
 	<Expect watch="Minigame.Active" is="pixeltown"/>
 	<Expect watch="Minigame.Depth" equals="1"/>
 	<WaitUntil watch="Save.Blocked" equals="0" timeoutWallSeconds="30"/>
@@ -50,7 +50,7 @@
 	<!-- ③ 나오면 세이브에 실린 허브다 -->
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="2" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Object.X" target="Marker" near="2" tolerance="0.001"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
