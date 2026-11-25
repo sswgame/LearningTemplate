@@ -28,13 +28,13 @@
   </Phase>
   <Pool id="surge" trigger="PhaseEnter" phase="Peak">
     <Encounter id="swarm" weight="3" count="3"/>
-    <Encounter id="elite" weight="1" count="2" scale="2" minCycle="1" cooldown="60"/>
+    <Encounter id="elite" effect="Elite" weight="1" count="2" scale="2" minCycle="1" cooldown="60"/>
   </Pool>
   <Pool id="resupply" kind="Reward" trigger="PhaseEnter" phase="Relax" picks="2">
-    <Encounter id="ammo" cooldown="1"/>
-    <Encounter id="repair" scale="3" cooldown="1"/>
+    <Encounter id="ammo" effect="Ammo" cooldown="1"/>
+    <Encounter id="repair" effect="Repair" scale="3" cooldown="1"/>
   </Pool>
   <Pool id="field" kind="Reward" trigger="Budget" perMinute="1" maxBudget="2" need="lowAmmo" needScale="2" pacing="BuildUp,Relax">
-    <Encounter id="repair" cost="1" scale="2" maxIntensity="0.6"/>
+    <Encounter id="repair" effect="Repair" cost="1" scale="2" maxIntensity="0.6"/>
   </Pool>
 </AIDirector>
