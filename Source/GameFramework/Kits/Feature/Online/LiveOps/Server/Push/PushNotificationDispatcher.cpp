@@ -224,10 +224,12 @@ namespace sw
         SW_ASSERT( pStore != nullptr );
         // 운영 값은 서버 설정에서 온다 — 없는 값으로 서면 기기를 하나도 못 올리거나 재시도 없이 버린다.
         const bool bDeviceOk = 0 < settings._maxDevicePerAccount && settings._maxDevicePerAccount <= PushLimit::kMaxDevicePerAccount;
-        if ( bDeviceOk == false || settings._maxRetry <= 0 || settings._firstBackoffMs <= 0 )
+        const bool bRateOk   = settings._accountBurst > 0 && settings._accountRefillIntervalMs > 0;
+        if ( bDeviceOk == false || bRateOk == false || settings._maxRetry <= 0 || settings._firstBackoffMs <= 0 )
         {
-            SW_LOG_ERROR_ID( "PushNotificationDispatcher.PushDispatcherNoLimits", "PushDispatcher needs _pushMaxDevicePerAccount in 1..%# (%#), _pushMaxRetry above zero (%#) and _pushFirstBackoffMs above zero (%#)",
-                             static_cast<int32>( PushLimit::kMaxDevicePerAccount ), settings._maxDevicePerAccount, settings._maxRetry, settings._firstBackoffMs );
+            SW_LOG_ERROR_ID( "PushNotificationDispatcher.PushDispatcherNoLimits", "PushDispatcher needs _pushMaxDevicePerAccount in 1..%# (%#), and _pushMaxRetry (%#), _pushFirstBackoffMs (%#), _pushAccountBurst (%#), _pushAccountRefillIntervalMs (%#) above zero",
+                             static_cast<int32>( PushLimit::kMaxDevicePerAccount ), settings._maxDevicePerAccount, settings._maxRetry, settings._firstBackoffMs, settings._accountBurst,
+                             settings._accountRefillIntervalMs );
             return false;
         }
         _settings = settings;

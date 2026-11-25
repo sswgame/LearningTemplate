@@ -30,8 +30,8 @@ namespace sw
         PROPERTY()
         vector<MatchModeDef> _listMode{};
         /** @brief 파티 최대 인원입니다. */
-        PROPERTY( Min = 1 )
-        int32 _maxPartySize{ 4 };
+        PROPERTY( Required, Min = PartyLobbyLimit::kMinPartySize, Max = PartyLobbyLimit::kMaxPartySize )
+        int32 _maxPartySize{ 0 };
         /** @brief 떠난 계정을 파티와 로비에 남겨 둘 밀리초입니다. 0 이면 바로 뺍니다. */
         PROPERTY( Required, Min = 0, Max = 3600000 )
         int32 _reconnectGraceMs{ 0 };

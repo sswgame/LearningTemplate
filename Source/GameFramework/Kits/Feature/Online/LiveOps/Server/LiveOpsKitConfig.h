@@ -39,5 +39,11 @@ namespace sw
         /** @brief 첫 재시도까지의 밀리초입니다. 시도마다 두 배가 됩니다. */
         PROPERTY( Required, Min = 1, Max = 60000 )
         int64 _pushFirstBackoffMs{ 0 };
+        /** @brief 계정마다 한꺼번에 보낼 수 있는 알림 수입니다(도배 제한). */
+        PROPERTY( Required, Min = 1, Max = 1000 )
+        int32 _pushAccountBurst{ 0 };
+        /** @brief 계정마다 알림 하나가 다시 차는 간격(밀리초)입니다. */
+        PROPERTY( Required, Min = 1000 )
+        int64 _pushAccountRefillIntervalMs{ 0 };
     };
 } // namespace sw

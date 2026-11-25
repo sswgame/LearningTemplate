@@ -18,6 +18,7 @@
         {
             "_name": "account",
             "_settings": {
+                "_attemptBurst": 10,
                 "_expiredSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_maxConcurrentPasswordHashes": 2,
                 "_maxQueuedPasswordHashes": 64,
@@ -40,6 +41,9 @@
         {
             "_name": "chat",
             "_settings": {
+                "_reportBurst": 3,
+                "_reportRefillIntervalMs": 60000,
+                "_sanctionCacheMs": 60000,
                 "_maxChannelPerMember": 16,
                 "_reportContextCount": 10,
                 "_historyTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 20000 },
@@ -81,6 +85,8 @@
         {
             "_name": "liveops",
             "_settings": {
+                "_pushAccountBurst": 6,
+                "_pushAccountRefillIntervalMs": 600000,
                 "_pushMaxDevicePerAccount": 10,
                 "_pushMaxRetry": 5,
                 "_pushFirstBackoffMs": 1000,
@@ -90,6 +96,7 @@
         {
             "_name": "mailbox",
             "_settings": {
+                "_sweepIntervalMs": 60000,
                 "_maxClaimAllCount": 16,
                 "_maxClaimAllScanCount": 500,
                 "_claimedRetentionDays": 30,
@@ -99,6 +106,7 @@
         {
             "_name": "matchmaking",
             "_settings": {
+                "_maxPartySize": 4,
                 "_partyLobby": { "_partyTTLMs": 1800000, "_lobbyTTLMs": 7200000, "_inviteTTLMs": 300000 },
                 "_queue": { "_leaseTTLMs": 10000, "_leaseRenewMs": 3000, "_noServerGiveUpMs": 30000, "_resultGraceMs": 10000, "_ratingWaitMs": 3000 },
                 "_agent": { "_expectTTLMs": 120000, "_recordRefreshMs": 1000, "_maxRecordCount": 256 },
@@ -120,6 +128,7 @@
         {
             "_name": "trade",
             "_settings": {
+                "_maxLegsPerSide": 8,
                 "_listTradablePrefix": [ "cur.gold" ],
                 "_closedSessionTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
                 "_inviteTimeoutMs": 30000,

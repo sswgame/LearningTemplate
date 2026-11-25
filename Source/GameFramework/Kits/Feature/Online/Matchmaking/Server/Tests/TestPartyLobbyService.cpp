@@ -270,7 +270,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, QueueingExtendsTheAccountIndex )
 {
     PartyFixture rig;
     const uint64 partyID = rig.makeParty( kAlice );
-    rig._clock.advanceMilliseconds( test::MatchmakingTestPolicy::kPartyTTLMs - 1000 );
+    rig._clock.advanceMilliseconds( test::MatchmakingTestPolicy::makePartyLobby()._partyTTLMs - 1000 );
     rig._service.reservePartyTicket( partyID, 0x100000001ull, vector<AccountID>{ kAlice }, PartyLobbyService::PartyFoundDelegate{} );
     rig.poll();
     rig._clock.advanceMilliseconds( 2000 );
@@ -331,7 +331,7 @@ SW_TEST_CASE( PartyLobbyServiceTest, PartyExpires )
 {
     PartyFixture rig;
     (void)rig.makeParty( kAlice );
-    rig._clock.advanceMilliseconds( test::MatchmakingTestPolicy::kPartyTTLMs + 1 );
+    rig._clock.advanceMilliseconds( test::MatchmakingTestPolicy::makePartyLobby()._partyTTLMs + 1 );
     SW_EXPECT_TRUE( rig.find( kAlice )._result == MatchmakingResult::NotInParty );
     (void)rig.makeParty( kAlice );
 }

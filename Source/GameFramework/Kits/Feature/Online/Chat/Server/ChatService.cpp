@@ -332,10 +332,12 @@ namespace sw
             return false;
         }
         const bool bReportContextOk = 0 < settings._reportContextCount && settings._reportContextCount <= ServiceReportConstant::kMaxLineCount;
-        if ( settings._maxChannelPerMember <= 0 || bReportContextOk == false )
+        const bool bReportRateOk    = settings._reportBurst > 0 && settings._reportRefillIntervalMs > 0 && settings._sanctionCacheMs > 0;
+        if ( settings._maxChannelPerMember <= 0 || bReportContextOk == false || bReportRateOk == false )
         {
-            SW_LOG_ERROR_ID( "ChatService.ChatServiceNoLimits", "ChatService needs _maxChannelPerMember above zero (%#) and _reportContextCount in 1..%# (%#) from the chat kit settings",
-                             settings._maxChannelPerMember, static_cast<int32>( ServiceReportConstant::kMaxLineCount ), settings._reportContextCount );
+            SW_LOG_ERROR_ID( "ChatService.ChatServiceNoLimits", "ChatService needs _maxChannelPerMember above zero (%#), _reportContextCount in 1..%# (%#), and _reportBurst (%#), _reportRefillIntervalMs (%#), _sanctionCacheMs (%#) above zero from the chat kit settings",
+                             settings._maxChannelPerMember, static_cast<int32>( ServiceReportConstant::kMaxLineCount ), settings._reportContextCount, settings._reportBurst, settings._reportRefillIntervalMs,
+                             settings._sanctionCacheMs );
             return false;
         }
         _dependencies = dependencies;

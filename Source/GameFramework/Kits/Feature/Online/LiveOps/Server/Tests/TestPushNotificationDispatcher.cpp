@@ -23,9 +23,11 @@ namespace
     PushDispatcherConfig makePushSettings()
     {
         PushDispatcherConfig settings;
-        settings._maxDevicePerAccount = kMaxDevicePerAccount;
-        settings._maxRetry            = 5;
-        settings._firstBackoffMs      = 1000;
+        settings._maxDevicePerAccount     = kMaxDevicePerAccount;
+        settings._maxRetry                = 5;
+        settings._firstBackoffMs          = 1000;
+        settings._accountBurst            = 6;
+        settings._accountRefillIntervalMs = 600000;
         return settings;
     }
 

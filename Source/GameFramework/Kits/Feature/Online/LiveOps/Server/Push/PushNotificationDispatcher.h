@@ -33,12 +33,12 @@ namespace sw
     /** @brief 발송기 설정입니다. */
     struct PushDispatcherConfig
     {
-        int64 _accountRefillIntervalMs{ 600000 }; ///< 계정마다 10분에 하나씩 다시 채운다
-        int32 _accountBurst{ 6 };                 ///< 한꺼번에 보낼 수 있는 상한이다
-        int32 _maxTrackedAccountCount{ 100000 };  ///< 도배 제한이 보관하는 계정 수의 상한이다
-        int32 _maxDevicePerAccount{ 0 };          ///< 필수 — 계정마다 등록할 수 있는 기기 수(키트 설정 `_pushMaxDevicePerAccount`, `PushLimit::kMaxDevicePerAccount` 이하). 넘으면 가장 오래된 기기를 밀어낸다
-        int32 _maxRetry{ 0 };                     ///< 필수 — 일시 실패 · 제공자 지연을 다시 시도하는 횟수(키트 설정 `_pushMaxRetry`)
-        int64 _firstBackoffMs{ 0 };               ///< 필수 — 첫 재시도까지의 밀리초이고 시도마다 두 배가 된다(키트 설정 `_pushFirstBackoffMs`)
+        int64 _accountRefillIntervalMs{ 0 };     ///< 필수 — 계정마다 알림 하나가 다시 차는 간격(키트 설정 `_pushAccountRefillIntervalMs`)
+        int32 _accountBurst{ 0 };                ///< 필수 — 계정마다 한꺼번에 보낼 수 있는 수(키트 설정 `_pushAccountBurst`)
+        int32 _maxTrackedAccountCount{ 100000 }; ///< 도배 제한이 보관하는 계정 수의 상한이다
+        int32 _maxDevicePerAccount{ 0 };         ///< 필수 — 계정마다 등록할 수 있는 기기 수(키트 설정 `_pushMaxDevicePerAccount`, `PushLimit::kMaxDevicePerAccount` 이하). 넘으면 가장 오래된 기기를 밀어낸다
+        int32 _maxRetry{ 0 };                    ///< 필수 — 일시 실패 · 제공자 지연을 다시 시도하는 횟수(키트 설정 `_pushMaxRetry`)
+        int64 _firstBackoffMs{ 0 };              ///< 필수 — 첫 재시도까지의 밀리초이고 시도마다 두 배가 된다(키트 설정 `_pushFirstBackoffMs`)
     };
 } // namespace sw
 

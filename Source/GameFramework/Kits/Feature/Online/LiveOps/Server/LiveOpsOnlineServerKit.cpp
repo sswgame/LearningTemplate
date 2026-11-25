@@ -74,9 +74,11 @@ namespace sw
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
                 PushDispatcherConfig dispatcherConfig;
-                dispatcherConfig._maxDevicePerAccount = kitConfig._pushMaxDevicePerAccount;
-                dispatcherConfig._maxRetry            = kitConfig._pushMaxRetry;
-                dispatcherConfig._firstBackoffMs      = kitConfig._pushFirstBackoffMs;
+                dispatcherConfig._maxDevicePerAccount     = kitConfig._pushMaxDevicePerAccount;
+                dispatcherConfig._maxRetry                = kitConfig._pushMaxRetry;
+                dispatcherConfig._firstBackoffMs          = kitConfig._pushFirstBackoffMs;
+                dispatcherConfig._accountBurst            = kitConfig._pushAccountBurst;
+                dispatcherConfig._accountRefillIntervalMs = kitConfig._pushAccountRefillIntervalMs;
                 if ( _dispatcher.initialize( context._pStore, dispatcherConfig ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the push dispatcher refused its settings (it logged which one)" } );
                 // 오프라인 푸시는 우편함 키트가 접속하지 않은 계정의 새 우편에, 이벤트 운영은 GM 키트가 쓴다. 부르는 것은 모든 키트가 시작한 뒤다.
