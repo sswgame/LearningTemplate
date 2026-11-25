@@ -1,6 +1,6 @@
 /**
  * @file ModuleManager/ModuleInstanceUtil.h
- * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`ClientModuleManager`)가 같은 절차를 씁니다.
+ * @brief 모듈 라이브러리에서 API 표를 받고 인스턴스를 만들고 내리는 절차입니다. 게임(`GameModuleManager`)과 에디터(`EditorGameModuleManager`)가 같은 절차를 씁니다.
  */
 #pragma once
 #include "Core/Foundation/StdHeaders.h"
@@ -33,7 +33,7 @@ namespace sw
         const utf8* _pModuleLabel;
     };
 
-    /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로(`ClientModuleManager`)와 헤드리스 작업(`DevTools/Host/EditorModuleHeadlessTasks`)이 같이 씁니다. */
+    /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로(`EditorGameModuleManager`)와 헤드리스 작업(`DevTools/Host/EditorModuleHeadlessTasks`)이 같이 씁니다. */
     inline constexpr ModuleAPISymbols kEditorModuleSymbols{ config::kTargetEditorModule, "exportEditorAPI", "Editor" };
 } // namespace sw
 

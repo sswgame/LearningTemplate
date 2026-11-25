@@ -1,17 +1,20 @@
 #include "pch.h"
 
-#include "App/ClientModuleManager.h"
+#include "DevTools/Host/EditorGameModuleManager.h"
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Window/GenericWindow.h"
 
 #include "ModuleManager/ModuleInstanceUtil.h"
 
@@ -27,27 +30,29 @@
 
 namespace sw
 {
-    ClientModuleManager::ClientModuleManager()
+    EditorGameModuleManager::EditorGameModuleManager( Engine& engine )
         : GameModuleManager{}
+        , _engine{ engine }
         , _editorAPI{}
         , _editor{ nullptr }
         , _editorServices{ nullptr }
-        , _views{}
         , _listEditorExtension{}
-        , _bEnableEditor{ SW_FALSE }
         , _bEditorModuleActive{ SW_TRUE }
         , _bFreshEditorInstance{ SW_FALSE }
+        , _bRenderHooksBound{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
-    ClientModuleManager::~ClientModuleManager()
+    EditorGameModuleManager::~EditorGameModuleManager()
     {
         // 공통 호스트의 소멸자 안에서는 가상 함수가 이 클래스로 오지 않는다. 그래서 에디터를 여기서 먼저 종료한다.
+        // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드를 쓴다 — 훅은 그 뒤에 뗀다(렌더 스레드가 사라진 관리자를 부르지 않는다).
         shutdown();
+        bindRenderHooks( false );
     }
 
-    bool ClientModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool EditorGameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
         // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
@@ -65,30 +70,47 @@ namespace sw
         return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
     }
 
-    bool ClientModuleManager::initialize( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
+    bool EditorGameModuleManager::initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
     {
-        _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
-
         // 게임이 먼저, 에디터가 나중이다. 게임은 처음 여는 씬을 요청하고(`GameSceneFlow::requestFirstScene`) 에디터는 제 시작 씬
         // (`-gv_editorStartupScene`)을 요청한다. 씬 매니저는 마지막 요청을 남기므로 나중에 요청한 에디터의 씬이 열린다(`GameSettings::_startMap` 주석).
         if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver ) == false )
             return false;
 
-        // 에디터 모듈을 리로드 그래프에 올리는 일은 동적 모듈 구성에만 있다(`ClientModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 — 정적 구성은 짓지 않는다).
+        // 에디터 모듈을 리로드 그래프에 올리는 일은 동적 모듈 구성에만 있다(이 파일의 `SW_WITH_DYNAMIC_MODULES` 구역 — 정적 구성은 짓지 않는다).
         if constexpr ( build::kStaticModules )
         {
             // 에디터를 켜 달라는 실행을 에디터 없이 조용히 시작하지 않는다.
-            if ( bEnableEditor )
-                SW_LOG_ERROR_ID( "ClientModuleManager.EnableEditorNeedsEditorModule", "-EnableEditor needs the editor module, which a build with statically linked modules (Shipping, Web-Release, Android-Release) does not have - run it from a desktop Dev build." );
-            return bEnableEditor == false;
+            SW_LOG_ERROR_ID( "EditorGameModuleManager.EnableEditorNeedsEditorModule",
+                             "-EnableEditor needs the editor module, which a build with statically linked modules (Web, Android) does not have - run it from a desktop Dev build." );
+            return false;
         }
         else
         {
-            return registerEditorModule( pLiveReloadManager );
+            if ( registerEditorModule( pLiveReloadManager ) == false )
+                return false;
         }
+        // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다.
+        if ( pWindow != nullptr )
+            pWindow->setMinimumClientSize( kMinClientWidth, kMinClientHeight );
+        bindRenderHooks( true );
+        return true;
     }
 
-    bool ClientModuleManager::isEditorReloadHeld() const
+    void EditorGameModuleManager::bindRenderHooks( bool bBind )
+    {
+        RenderThread* const pRenderThread = _engine.getRenderThread();
+        // 헤드리스 호스트는 그릴 렌더 스레드가 없다. 이미 그 상태면 다시 걸거나 떼지 않는다.
+        if ( pRenderThread == nullptr || ( _bRenderHooksBound == SW_TRUE ) == bBind )
+            return;
+        // 세터가 렌더 스레드를 비운 뒤 바꾼다 — 렌더 스레드가 훅을 부르는 중에 덮이거나, 뗀 뒤에 이 관리자를 부르는 일이 없다.
+        pRenderThread->setPrepareHook( bBind ? SW_DELEGATE_METHOD( PresentHookDelegate, &EditorGameModuleManager::onPrepareRender, this ) : PresentHookDelegate{} );
+        pRenderThread->setPresentHook( bBind ? SW_DELEGATE_METHOD( PresentHookDelegate, &EditorGameModuleManager::onRender, this ) : PresentHookDelegate{} );
+        pRenderThread->setPostPresentHook( bBind ? SW_DELEGATE_METHOD( PresentHookDelegate, &EditorGameModuleManager::onPostPresent, this ) : PresentHookDelegate{} );
+        _bRenderHooksBound = bBind ? SW_TRUE : SW_FALSE;
+    }
+
+    bool EditorGameModuleManager::isEditorReloadHeld() const
     {
         return _editorAPI.isReloadHeld != nullptr && _editorAPI.isReloadHeld();
     }
@@ -97,14 +119,14 @@ namespace sw
     // 프레임 단위 처리
     // ======================================================================
 
-    bool ClientModuleManager::queryGameplayActive() const
+    bool EditorGameModuleManager::queryGameplayActive() const
     {
         if ( hasEditor() == false || _editorAPI.isPlaying == nullptr )
             return true;
         return _editorAPI.isPlaying( _editor );
     }
 
-    bool ClientModuleManager::queryTickScene() const
+    bool EditorGameModuleManager::queryTickScene() const
     {
         if ( hasEditor() == false )
             return true;
@@ -116,22 +138,23 @@ namespace sw
         return true;
     }
 
-    void ClientModuleManager::sampleViewTargets()
+    void EditorGameModuleManager::sampleViewTargets()
     {
-        _views = FrameViewports{};
+        FrameViewports& views = getMutableViews();
+        views                 = FrameViewports{};
         if ( hasEditor() == false )
             return;
 
         if ( _editorAPI.getGameViewport != nullptr )
-            _editorAPI.getGameViewport( _editor, &_views._game );
+            _editorAPI.getGameViewport( _editor, &views._game );
         if ( _editorAPI.getSceneViewport != nullptr )
-            _editorAPI.getSceneViewport( _editor, &_views._scene );
+            _editorAPI.getSceneViewport( _editor, &views._scene );
         // 툴 창의 미리보기 씬 — 보이는 창만 온다(`Engine::update` 이 씬마다 따로 그린다).
         if ( _editorAPI.getPreviewSceneViews != nullptr )
-            _views._previewViewCount = _editorAPI.getPreviewSceneViews( _editor, _views._arrPreviewView, kMaxPreviewSceneView );
+            views._previewViewCount = _editorAPI.getPreviewSceneViews( _editor, views._arrPreviewView, kMaxPreviewSceneView );
     }
 
-    void ClientModuleManager::updateEditorUI( float32 /*deltaTime*/ )
+    void EditorGameModuleManager::updateHostModuleUI()
     {
         if ( hasEditor() == false )
             return;
@@ -151,7 +174,7 @@ namespace sw
         if ( _editorAPI.applyUICommands != nullptr )
             _editorAPI.applyUICommands( _editor );
 
-        // 명령을 적용한 **뒤에** 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endEditorFrame 에서 소비된다.
+        // 명령을 적용한 **뒤에** 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endHostModuleFrame 에서 소비된다.
         // 이 질의를 적용 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
@@ -160,14 +183,14 @@ namespace sw
         getMutableFrameState()._bEditorQuiet = bQuiet ? SW_TRUE : SW_FALSE;
     }
 
-    void ClientModuleManager::endEditorFrame()
+    void EditorGameModuleManager::endHostModuleFrame()
     {
         if ( hasEditor() == false || _editorAPI.endFrame == nullptr )
             return;
         _editorAPI.endFrame( _editor );
     }
 
-    bool ClientModuleManager::onWindowMessage( const NativeWindowEvent& event )
+    bool EditorGameModuleManager::processHostModuleEvent( const NativeWindowEvent& event )
     {
         if ( hasEditor() == false || _editorAPI.processEvent == nullptr )
             return false;
@@ -176,14 +199,15 @@ namespace sw
         return _editorAPI.processEvent( _editor, &event );
     }
 
-    CameraComponent* ClientModuleManager::getSceneViewCamera() const
+    CameraComponent* EditorGameModuleManager::getSceneViewCamera() const
     {
         if ( hasEditor() == false || _editorAPI.getSceneViewCamera == nullptr )
             return nullptr;
         return static_cast<CameraComponent*>( _editorAPI.getSceneViewCamera( _editor ) );
     }
 
-    void ClientModuleManager::prepareRenderEditor( IRHIDevice& renderDevice )
+    // 아래 셋은 렌더 스레드가 부른다(`bindRenderHooks`).
+    void EditorGameModuleManager::onPrepareRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
         if ( hasEditor() == false )
             return;
@@ -191,7 +215,7 @@ namespace sw
             _editorAPI.prepareRender( _editor, &renderDevice );
     }
 
-    void ClientModuleManager::renderEditor( IRHIDevice& renderDevice )
+    void EditorGameModuleManager::onRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
         if ( hasEditor() == false )
             return;
@@ -199,7 +223,7 @@ namespace sw
             _editorAPI.render( _editor, &renderDevice );
     }
 
-    void ClientModuleManager::postPresentEditor( IRHIDevice& renderDevice )
+    void EditorGameModuleManager::onPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
         if ( hasEditor() == false || _editorAPI.postPresent == nullptr )
             return;
@@ -210,12 +234,12 @@ namespace sw
     // LiveReload 콜백. 에디터.
     // ======================================================================
 
-    void ClientModuleManager::onBeforeEditorReload()
+    void EditorGameModuleManager::onBeforeEditorReload()
     {
         suspendModules( ModuleScope::Host, true, FlushReason::Reload );
     }
 
-    void ClientModuleManager::onAfterEditorReload( ModuleLibraryHandle library )
+    void EditorGameModuleManager::onAfterEditorReload( ModuleLibraryHandle library )
     {
         const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 다시 올린 모듈의 서비스 묶기(표의 `bindService`)가 모듈 코드다
         if ( bindEditorAPI( library ) == false )
@@ -232,15 +256,15 @@ namespace sw
         }
     }
 
-    bool ClientModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
+    bool EditorGameModuleManager::isEditorLibraryUsable( ModuleLibraryHandle library ) const
     {
         return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols );
     }
 
-    void ClientModuleManager::onEditorReloadFault( uint32 faultCode )
+    void EditorGameModuleManager::onEditorReloadFault( uint32 faultCode )
     {
         // 반쯤 만든 인스턴스를 부수는 코드도 결함을 낸 그 모듈이다. 부르지 않고 잊는다(새는 것은 재시작이 치운다).
-        SW_LOG_ERROR_ID( "ClientModuleManager.EditorModuleFaultedAfter", "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
+        SW_LOG_ERROR_ID( "EditorGameModuleManager.EditorModuleFaultedAfter", "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
                          Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
         _editor    = nullptr;
         _editorAPI = {};
@@ -250,7 +274,7 @@ namespace sw
     // 공통 호스트가 부르는 지점. 언로드와 비우기.
     // ======================================================================
 
-    bool ClientModuleManager::onBeforeSuspendModules( FlushReason reason )
+    bool EditorGameModuleManager::onBeforeSuspendModules( FlushReason reason )
     {
         if ( hasEditor() == false )
             return false;
@@ -262,25 +286,25 @@ namespace sw
         // 종료(다시 설 인스턴스가 없다)는 Stop 해 편집 씬을 되돌리고 월드를 멈춘다.
         if ( _editorAPI.stopSimulation != nullptr )
         {
-            SW_LOG_INFO_ID( "ClientModuleManager.StoppingEditorSimulationBefore", "Stopping editor simulation before module suspend." );
+            SW_LOG_INFO_ID( "EditorGameModuleManager.StoppingEditorSimulationBefore", "Stopping editor simulation before module suspend." );
             _editorAPI.stopSimulation( _editor );
         }
         return false;
     }
 
-    void ClientModuleManager::suspendHostModule( bool bReleaseAPITable )
+    void EditorGameModuleManager::suspendHostModule( bool bReleaseAPITable )
     {
         destroyEditorInstance( bReleaseAPITable );
     }
 
-    void ClientModuleManager::onBeforeFlushWorkers( FlushReason reason )
+    void EditorGameModuleManager::onBeforeFlushWorkers( FlushReason reason )
     {
         const bool bStopJobs = reason == FlushReason::Shutdown && hasEditor() && _editorAPI.requestBackgroundStop != nullptr;
         if ( bStopJobs )
             _editorAPI.requestBackgroundStop( _editor );
     }
 
-    void ClientModuleManager::onRenderWorkersFlushed()
+    void EditorGameModuleManager::onRenderWorkersFlushed()
     {
         // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 **아직 렌더 스레드에 제출되기 전인** 프레임의 것이다
         // (게임 스레드가 리로드하느라 제출하지 못했다). 풀어 버리면 UI 스레드가 풀려 다음 `updateUI` 에서 보조 뷰포트를 그리는 동안 렌더 스레드가 그 프레임의 메인 스냅샷을 그려
@@ -291,7 +315,7 @@ namespace sw
     // API 바인딩 · 인스턴스
     // ======================================================================
 
-    bool ClientModuleManager::bindEditorAPI( ModuleLibraryHandle library )
+    bool EditorGameModuleManager::bindEditorAPI( ModuleLibraryHandle library )
     {
         if ( ModuleInstanceUtil::exportAPIFromLibrary<EditorAPI, PFN_ExportEditorAPI>( library, kEditorModuleSymbols, _editorAPI ) == false )
             return false;
@@ -303,11 +327,8 @@ namespace sw
         return _editorAPI.create != nullptr && _editorAPI.destroy != nullptr;
     }
 
-    bool ClientModuleManager::recreateHostModule()
+    bool EditorGameModuleManager::recreateHostModule()
     {
-        if ( _bEnableEditor == SW_FALSE )
-            return true;
-
         // 테이블이 비어 있으면 모듈에서 다시 바인딩해야 한다 — 리로드 경로가 그 일을 한다. 핸들은 모듈 수명을 아는 공통 호스트가 찾는다(배포는 정적 링크라 nullptr).
         if ( _editorAPI.create == nullptr || _editorAPI.initialize == nullptr )
         {
@@ -319,18 +340,18 @@ namespace sw
         return createEditorInstance();
     }
 
-    void ClientModuleManager::destroyEditorInstance( bool bReleaseAPITable )
+    void EditorGameModuleManager::destroyEditorInstance( bool bReleaseAPITable )
     {
         // 인스턴스가 사라지면 그 프레임을 렌더할 쪽도 없다(렌더 워커는 이미 비웠다). 남은 in-flight 표시를 풀지 않으면 종료 단계의 `waitForDrawSnapshotIdle` 이 영원히 반환하지 않는다.
         if ( _editor != nullptr && _editorAPI.abandonPendingDraw != nullptr )
             _editorAPI.abandonPendingDraw( _editor );
-        // 이번 프레임에 샘플한 게임 뷰 · 씬 뷰 RT 는 이 인스턴스가 가진 텍스처다. 리로드는 샘플(`updateEditorUI`) 뒤 · 엔진 갱신 앞에 일어나므로,
+        // 이번 프레임에 샘플한 게임 뷰 · 씬 뷰 RT 는 이 인스턴스가 가진 텍스처다. 리로드는 샘플(`updateHostModuleUI`) 뒤 · 엔진 갱신 앞에 일어나므로,
         // 비우지 않으면 같은 프레임의 `Engine::update` 가 부서진 핸들에 그린다(포맷 Unknown — 출력 PSO 조회가 멈춘다). 새 인스턴스는 다음 샘플에서 채운다.
-        _views = FrameViewports{};
+        getMutableViews() = FrameViewports{};
         ModuleInstanceUtil::destroyInstance( _editorAPI, _editor, bReleaseAPITable, sw::config::kTargetEditorModule );
     }
 
-    bool ClientModuleManager::createEditorInstance()
+    bool EditorGameModuleManager::createEditorInstance()
     {
         const auto initializeEditor = [this]( void* pHandle )
         { return _editorAPI.initialize( pHandle, getWindow(), getRHI() != nullptr && getRHI()->hasDevice() ? &getRHI()->getDevice() : nullptr ); };
@@ -344,16 +365,19 @@ namespace sw
     // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `DevTools/Host/EditorModuleHeadlessTasks.cpp` 다.
     // 정적 구성(배포 · 웹 · Android 개발)은 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄). 부르는 자리는 `build::kStaticModules` 로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
-    bool ClientModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
+    bool EditorGameModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
     {
-        if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
+        if ( _bEditorModuleActive == SW_FALSE )
         {
             // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트나 구성 때문이다). 에디터 없이 조용히 시작하지 않는다.
-            SW_LOG_ERROR_ID( "ClientModuleManager.EnableEditorGivenButModule", "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
+            SW_LOG_ERROR_ID( "EditorGameModuleManager.EnableEditorGivenButModule", "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
             return false;
         }
-        if ( _bEnableEditor == SW_FALSE || pLiveReloadManager == nullptr )
-            return true;
+        if ( pLiveReloadManager == nullptr )
+        {
+            SW_LOG_ERROR_ID( "EditorGameModuleManager.EditorNeedsLiveReload", "-EnableEditor needs the module reload manager of a dynamic-module build" );
+            return false;
+        }
 
         BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
         {
@@ -361,10 +385,10 @@ namespace sw
             // 등록이 곧 첫 로드의 "리로드 직후" 다 — 주인 창구를 먼저 걸어 그때 에디터 인스턴스가 선다.
             holdReloadSubscription( pLiveReloadManager->setModuleClient( config::kTargetEditorModule, _editorReloadClient ) );
             // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
-            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &ClientModuleManager::isEditorReloadHeld, this ) ) );
+            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &EditorGameModuleManager::isEditorReloadHeld, this ) ) );
             if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
             {
-                SW_LOG_ERROR_ID( "ClientModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );
+                SW_LOG_ERROR_ID( "EditorGameModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );
                 return false;
             }
 
@@ -375,15 +399,15 @@ namespace sw
                 if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
                 {
                     // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
-                    SW_LOG_ERROR_ID( "ClientModuleManager.EditorExtensionModuleCould", "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
+                    SW_LOG_ERROR_ID( "EditorGameModuleManager.EditorExtensionModuleCould", "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
                     continue;
                 }
-                SW_LOG_INFO_ID( "ClientModuleManager.EditorExtensionModuleLoaded", "Editor extension module %# loaded", extension._name.c_str() );
+                SW_LOG_INFO_ID( "EditorGameModuleManager.EditorExtensionModuleLoaded", "Editor extension module %# loaded", extension._name.c_str() );
             }
 
             if ( pLiveReloadManager->isGraphBroken() )
             {
-                SW_LOG_ERROR_ID( "ClientModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
+                SW_LOG_ERROR_ID( "EditorGameModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
                 return false;
             }
         }
