@@ -39,6 +39,11 @@ namespace sw
         , _desertDuneRate{ Radians::fromRadians( 0.3f ) }
         , _desertStartX{ 40 }
         , _rockRidgeX{ 45 }
+        , _groundTerrain{}
+        , _riverTerrain{}
+        , _floodTerrain{}
+        , _desertTerrain{}
+        , _rockTerrain{}
         , _roadX{ 17 }
         , _farmX{ 14 }
         , _secondBlockPeople{ 60 }
@@ -109,7 +114,8 @@ namespace sw
         if ( city.initialize( findCatalog(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, _wallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         const NileCityLayout layout = makeCityLayout();
-        NileCityPlanner::paintTerrain( city, layout );
+        if ( NileCityPlanner::paintTerrain( city, layout ) == false )
+            return false; // 카탈로그에 없는 땅은 플래너가 남겼다
         if ( _planner.reset( layout, AssetID{ _autoPlanPath } ) == false )
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         return beginCity();
@@ -163,6 +169,11 @@ namespace sw
         layout._farmX             = _farmX;
         layout._secondBlockPeople = _secondBlockPeople;
         layout._thirdBlockPeople  = _thirdBlockPeople;
+        layout._groundTerrain     = _groundTerrain.key();
+        layout._riverTerrain      = _riverTerrain.key();
+        layout._floodTerrain      = _floodTerrain.key();
+        layout._desertTerrain     = _desertTerrain.key();
+        layout._rockTerrain       = _rockTerrain.key();
         return layout;
     }
 

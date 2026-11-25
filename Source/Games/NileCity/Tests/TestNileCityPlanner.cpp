@@ -19,6 +19,11 @@ namespace
 {
     constexpr const utf8* kNileCityXML = R"(<CityCatalog roadCost="1">
   <Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="30" immigrationInterval="1.5" immigrationJobMargin="4" immigrationMaxIdleRatio="0.25" floodFertilityStart="0.8" floodFertilityMin="0.4" floodFertilityMax="1" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
+  <Terrain id="Grass" name="Grass" color="1,1,1,1"/>
+  <Terrain id="Sand" name="Sand" color="1,1,1,1"/>
+  <Terrain id="Floodplain" name="Floodplain" color="1,1,1,1" flood="true"/>
+  <Terrain id="Water" name="Water" color="1,1,1,1" blocked="true"/>
+  <Terrain id="Rock" name="Rock" color="1,1,1,1" blocked="true"/>
   <Building id="hut" name="Hut" kind="House" size="1" cost="1"/>
   <HouseLevel name="Hut" population="5"/>
 </CityCatalog>)";
@@ -39,6 +44,11 @@ namespace
         layout._westFloodWidth = 2.0f;
         layout._desertStartX   = 30;
         layout._rockRidgeX     = 1000;
+        layout._groundTerrain  = hashed_string( "Grass" );
+        layout._riverTerrain   = hashed_string( "Water" );
+        layout._floodTerrain   = hashed_string( "Floodplain" );
+        layout._desertTerrain  = hashed_string( "Sand" );
+        layout._rockTerrain    = hashed_string( "Rock" );
         return layout;
     }
 
@@ -55,7 +65,7 @@ namespace
             SW_REQUIRE_TRUE( _city.initialize( &_catalog, kTestWidth, kTestHeight, _wallet ) );
         }
 
-        CityTerrain findTerrain( int32 x, int32 y ) const { return _city.findTile( x, y )->_terrain; }
+        string findTerrain( int32 x, int32 y ) const { return string( _catalog.getTerrainRows()[_city.findTile( x, y )->_terrain]._id.view() ); }
     };
 } // namespace
 
@@ -77,16 +87,28 @@ SW_TEST_CASE( NileCityPlannerTest, RiverCenterFollowsTheMeander )
  */
 SW_TEST_CASE_F( NileCityPlannerTest, PaintTerrainLaysTheBands )
 {
-    NileCityPlanner::paintTerrain( _city, makeStraightLayout() );
-    constexpr int32 kRow = 1;                                             // 흩어진 바위 무늬((x*7 + y*3) % 13 == 0)가 아래 동쪽 사막 칸에 걸리지 않는 줄
-    SW_EXPECT_TRUE( findTerrain( 5, kRow ) == CityTerrain::Sand );        // 강 서쪽 4.5 칸 — 범람원(4) 밖은 사막
-    SW_EXPECT_TRUE( findTerrain( 7, kRow ) == CityTerrain::Floodplain );  // 서쪽 2.5 칸
-    SW_EXPECT_TRUE( findTerrain( 9, kRow ) == CityTerrain::Water );       // 서쪽 0.5 칸
-    SW_EXPECT_TRUE( findTerrain( 10, kRow ) == CityTerrain::Water );      // 동쪽 0.5 칸
-    SW_EXPECT_TRUE( findTerrain( 14, kRow ) == CityTerrain::Floodplain ); // 동쪽 4.5 칸 — 반폭 2 + 범람원 3 안
-    SW_EXPECT_TRUE( findTerrain( 15, kRow ) == CityTerrain::Grass );      // 동쪽 5.5 칸
-    SW_EXPECT_TRUE( findTerrain( 29, kRow ) == CityTerrain::Grass );      // 사막 경계 30 앞
-    SW_EXPECT_TRUE( findTerrain( 31, kRow ) == CityTerrain::Sand );       // 사막 경계 뒤
+    SW_REQUIRE_TRUE( NileCityPlanner::paintTerrain( _city, makeStraightLayout() ) );
+    constexpr int32 kRow = 1;                                           // 흩어진 바위 무늬((x*7 + y*3) % 13 == 0)가 아래 동쪽 사막 칸에 걸리지 않는 줄
+    SW_EXPECT_EQUAL( string( "Sand" ), findTerrain( 5, kRow ) );        // 강 서쪽 4.5 칸 — 범람원(4) 밖은 사막
+    SW_EXPECT_EQUAL( string( "Floodplain" ), findTerrain( 7, kRow ) );  // 서쪽 2.5 칸
+    SW_EXPECT_EQUAL( string( "Water" ), findTerrain( 9, kRow ) );       // 서쪽 0.5 칸
+    SW_EXPECT_EQUAL( string( "Water" ), findTerrain( 10, kRow ) );      // 동쪽 0.5 칸
+    SW_EXPECT_EQUAL( string( "Floodplain" ), findTerrain( 14, kRow ) ); // 동쪽 4.5 칸 — 반폭 2 + 범람원 3 안
+    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 15, kRow ) );      // 동쪽 5.5 칸
+    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 29, kRow ) );      // 사막 경계 30 앞
+    SW_EXPECT_EQUAL( string( "Sand" ), findTerrain( 31, kRow ) );       // 사막 경계 뒤
+}
+
+/**
+ * @brief [NileCityPlannerTest] 배치가 적은 땅이 카탈로그에 없으면 오류이고 칠하지 않는다
+ */
+SW_TEST_CASE_F( NileCityPlannerTest, UnknownTerrainIsRefused )
+{
+    SW_EXPECT_LOG( "NileCityPlanner.UnknownTerrain" );
+    NileCityLayout layout = makeStraightLayout();
+    layout._riverTerrain  = hashed_string( "Lava" );
+    SW_EXPECT_FALSE( NileCityPlanner::paintTerrain( _city, layout ) );
+    SW_EXPECT_EQUAL( string( "Grass" ), findTerrain( 10, 1 ) );
 }
 
 /**

@@ -88,6 +88,11 @@
 					                       _cityDataPath="guid:b9b78a37f924b6b00dd1d7c53dc18678"
 					                       _autoPlanPath="game/nilecity/data/autoplan.xml"
 					                       _startingMoney="1500"
+					                       _groundTerrain="Grass"
+					                       _riverTerrain="Water"
+					                       _floodTerrain="Floodplain"
+					                       _desertTerrain="Sand"
+					                       _rockTerrain="Rock"
 					                       _bAutoPlay="false" />
 					<CityBuildInputComponent _localID="8074901273520097621" _componentName="CityBuildInputComponent"
 					                         _bActive="true"

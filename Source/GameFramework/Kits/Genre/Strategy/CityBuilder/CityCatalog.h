@@ -1,12 +1,14 @@
 /**
  * @file CityCatalog.h
- * @brief 도시 건설의 데이터를 담습니다. 물자, 건물(크기, 비용, 일꾼, 서비스, 생산, 저장, 시장, 매력도), 집 단계(수용 인구, 필요한 서비스, 필요한 물자, 매력도)를 정의합니다.
+ * @brief 도시 건설의 데이터를 담습니다. 땅, 서비스, 물자, 건물(크기, 비용, 일꾼, 서비스, 생산, 저장, 시장, 매력도), 집 단계(수용 인구, 필요한 서비스, 필요한 물자, 매력도)를 정의합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -21,18 +23,10 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 땅의 종류입니다. */
-    ENUM()
-    enum class CityTerrain : uint8
-    {
-        Grass = 0,
-        Sand,
-        Floodplain, ///< 나일 범람원이다. 해마다 범람이 비옥함을 정한다
-        Water,
-        Rock
-    };
-
-    /** @brief 건물의 역할입니다. */
+    /**
+     * @brief 건물의 역할입니다.
+     * @details 서비스 · 땅과 달리 행이 아니라 열거형으로 둔다 — 종류마다 시뮬레이션의 코드(생산 · 창고 · 시장 사 오기 · 서비스 전달 · 집 단계)가 다르고, 새 종류는 새 코드다.
+     */
     ENUM()
     enum class CityBuildingKind : uint8
     {
@@ -44,19 +38,6 @@ namespace sw
         Decoration ///< 매력도만 높인다(정원, 조각)
     };
 
-    /** @brief 집이 받는 서비스입니다. 선언 순서가 비트 번호입니다. */
-    ENUM()
-    enum class CityService : uint8
-    {
-        Water = 0,
-        Religion,
-        Entertainment,
-        Health,
-        Education,
-        Tax, ///< 집이 아니라 시가 받는다. 세리가 지나간 집만 세금을 낸다
-        Count
-    };
-
     /** @brief 서비스를 전달하는 방법입니다. */
     ENUM()
     enum class CityDelivery : uint8
@@ -65,10 +46,50 @@ namespace sw
         Radius      ///< 반경 안의 집에 항상 전달한다(우물)
     };
 
-    constexpr uint8 makeCityServiceBit( CityService service )
+    /**
+     * @brief 땅 한 종류입니다(`<Terrain>` 행). 첫 행이 새 도시의 땅이다.
+     * @details 규칙(지을 수 있는가 · 범람이 농장의 수확을 정하는가)과 모습(색 · 높이 · 솟은 돌)이 모두 행의 칸이다 — 땅을 더하는 일에 코드가 없다.
+     */
+    REFLECT()
+    struct CityTerrainDef
     {
-        return static_cast<uint8>( 1u << static_cast<uint32>( service ) );
-    }
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Required )
+        float4 _color{}; ///< 땅 상자의 색
+        PROPERTY( Units = m )
+        float32 _surfaceHeight{ 0.0f }; ///< 땅 상자 윗면의 높이(물은 둘레보다 낮다)
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _rockHeight{ 0.0f }; ///< 칸마다 솟은 돌 상자의 높이(0 이면 없다)
+        PROPERTY()
+        bool _bBlocked{ false }; ///< 도로 · 건물을 놓지 못한다
+        PROPERTY()
+        bool _bFlood{ false }; ///< 이 땅을 요구하는 농장의 수확을 해마다의 범람이 정한다
+    };
+
+    /** @brief 집이 받는 서비스 하나입니다(`<Service>` 행). 시가 하는 일(노동 우선 · 세금 · 문화)은 행의 깃발이다. */
+    REFLECT()
+    struct CityServiceDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Required )
+        float4 _color{}; ///< 순회 일꾼 · 색 상자의 색(모델에는 반쯤 섞는다)
+        PROPERTY()
+        bool _bLaborFirst{ false }; ///< 이 서비스의 건물이 일꾼을 가장 먼저 받는다(물)
+        PROPERTY()
+        bool _bTax{ false }; ///< 다녀간 집이 달마다 세금을 낸다(세리)
+        PROPERTY()
+        bool _bCulture{ false }; ///< 이런 서비스를 모두 받는 집이 문화 평가에 든다
+    };
 
     /** @brief 물자 하나입니다. 집이 먹는 물자는 집 단계의 `goods` 가 이름으로 적는다 — 식량 깃발(`food`)은 읽고 아무도 쓰지 않아 지웠다. */
     REFLECT()
@@ -124,11 +145,15 @@ namespace sw
         PROPERTY( Required )
         CityBuildingKind _kind{ CityBuildingKind::Decoration };
         PROPERTY()
-        CityService _service{ CityService::Count };
+        hashed_string _service{}; ///< 내는 서비스의 id(`kind="Service"` 는 필수)
+        PROPERTY( Name = "terrain" )
+        hashed_string _requiredTerrain{}; ///< 적었으면 건물 발밑이 모두 이 땅이어야 한다
         PROPERTY()
         CityDelivery _delivery{ CityDelivery::Walker };
-        CityTerrain  _requiredTerrain{ CityTerrain::Grass }; ///< `_bRequiresTerrain` 이 켜져 있으면 건물 발밑이 모두 이 땅이어야 한다
-        bool         _bRequiresTerrain{ false };
+        int32        _serviceIndex{ constant::invalid_index::kInt32 }; ///< `_service` 의 행 번호(없으면 -1) — 읽을 때 푼다
+        int32        _terrainIndex{ constant::invalid_index::kInt32 }; ///< `_requiredTerrain` 의 행 번호(없으면 -1) — 읽을 때 푼다
+
+        bool requiresTerrain() const { return _terrainIndex >= 0; }
     };
 } // namespace sw
 
@@ -152,7 +177,9 @@ namespace sw
         int32 _taxPerPerson{ 1 }; ///< 한 달마다 내는 세금(세리가 지나간 집만 낸다)
         PROPERTY( Name = "desirability" )
         int32 _minDesirability{ -100 };
-        uint8 _serviceMask{ 0 }; ///< `makeCityServiceBit` 값을 OR 한 것
+        PROPERTY( Name = "services" )
+        vector<hashed_string> _listRequiredService{};
+        vector<int32>         _listServiceIndex{}; ///< `_listRequiredService` 의 행 번호 — 읽을 때 푼다
     };
 } // namespace sw
 
@@ -220,7 +247,7 @@ namespace sw
 {
     /**
      * @class CityCatalog
-     * @brief `<CityCatalog roadCost="2"><Good .../><Building .../><HouseLevel .../></CityCatalog>` 를 읽습니다. 키 이름은 `Content/game/nilecity/data/city.xml` 입니다.
+     * @brief `<CityCatalog roadCost="2"><Terrain .../><Service .../><Good .../><Building .../><HouseLevel .../></CityCatalog>` 를 읽습니다. 키 이름은 `Content/game/nilecity/data/city.xml` 입니다.
      * @details 집은 `kind="House"` 인 건물 하나(보통 1셀)이고, 단계 정의는 `<HouseLevel>` 을 적은 순서대로 읽는다.
      */
     class SW_KIT_API CityCatalog : public XMLCatalog<CityCatalog>
@@ -237,19 +264,26 @@ namespace sw
 
         const CityBuildingDef* findBuilding( const hashed_string& id ) const { return _buildingCatalog.find( id ); }
         const CityGoodDef*     findGood( const hashed_string& id ) const { return _goodCatalog.find( id ); }
+        /** @brief 땅 @p id 의 행 번호입니다. 도시의 칸(`CityTile::_terrain`)은 이 번호다. */
+        optional<int32> findTerrainIndex( const hashed_string& id ) const { return _terrainCatalog.findIndex( id ); }
+        /** @brief 서비스 @p id 의 행 번호입니다. 집의 서비스 시각 · 일꾼의 서비스는 이 번호다. */
+        optional<int32> findServiceIndex( const hashed_string& id ) const { return _serviceCatalog.findIndex( id ); }
         /** @brief 집 건물(처음 나오는 `kind="House"`)을 반환합니다. */
         const CityBuildingDef*   findHouseBuilding() const;
         const CityHouseLevelDef* findHouseLevel( int32 level ) const;
 
         const vector<CityBuildingDef>&   getBuildings() const { return _buildingCatalog.getAll(); }
         const vector<CityGoodDef>&       getGoods() const { return _goodCatalog.getAll(); }
+        const vector<CityTerrainDef>&    getTerrainRows() const { return _terrainCatalog.getAll(); }
+        const vector<CityServiceDef>&    getServiceRows() const { return _serviceCatalog.getAll(); }
         const vector<CityHouseLevelDef>& getHouseLevels() const { return _listHouseLevel; }
         int32                            getRoadCost() const { return _roadCost; }
         /** @brief 규칙(`<Rules>`)입니다. 로드에 성공한 카탈로그는 반드시 한 줄을 가진다. */
         const CitySettings& getRules() const { return _rules; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "CityCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
+        static constexpr size_t      kMaxTerrainCount = 256;           ///< 도시의 칸이 땅을 uint8 번호로 든다
+        static constexpr const utf8* kXMLRootName     = "CityCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLCatalogRoot& root, string_view sourceName );
         [[nodiscard]] bool           loadBuilding( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadHouseLevel( const XMLNode& node, string_view sourceName );
@@ -257,6 +291,8 @@ namespace sw
         [[nodiscard]] bool loadRules( const XMLNode& node, string_view sourceName );
 
     private:
+        GameCatalog<CityTerrainDef>  _terrainCatalog;
+        GameCatalog<CityServiceDef>  _serviceCatalog;
         GameCatalog<CityBuildingDef> _buildingCatalog;
         GameCatalog<CityGoodDef>     _goodCatalog;
         vector<CityHouseLevelDef>    _listHouseLevel;

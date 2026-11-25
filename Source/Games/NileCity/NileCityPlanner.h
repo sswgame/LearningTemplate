@@ -43,6 +43,12 @@ namespace sw
         int32   _farmX{};             ///< 3×3 농장의 왼쪽 — 어느 줄에서나 범람원이어야 한다
         int32   _secondBlockPeople{}; ///< 2 구역을 짓기 시작하는 인구
         int32   _thirdBlockPeople{};  ///< 3 구역을 짓기 시작하는 인구
+        // 칠하는 땅 — 도시 카탈로그의 `<Terrain>` id
+        hashed_string _groundTerrain{}; ///< 강과 사막 사이의 땅
+        hashed_string _riverTerrain{};
+        hashed_string _floodTerrain{}; ///< 강 양쪽 범람원
+        hashed_string _desertTerrain{};
+        hashed_string _rockTerrain{}; ///< 동쪽 사막의 바위
     };
 } // namespace sw
 
@@ -97,8 +103,11 @@ namespace sw
 
         NileCityPlanner();
 
-        /** @brief 강(남북으로 굽이친다) · 양쪽 범람원 · 서쪽과 동쪽 끝의 사막 · 사막의 바위를 칠합니다. 결정적입니다(난수 없음). */
-        static void paintTerrain( CitySimulation& city, const NileCityLayout& layout );
+        /**
+         * @brief 강(남북으로 굽이친다) · 양쪽 범람원 · 서쪽과 동쪽 끝의 사막 · 사막의 바위를 칠합니다. 결정적입니다(난수 없음).
+         * @return 배치가 적은 땅 가운데 도시 카탈로그에 없는 것이 있으면 이름마다 오류를 남기고 false 이며 칠하지 않습니다.
+         */
+        [[nodiscard]] static bool paintTerrain( CitySimulation& city, const NileCityLayout& layout );
         /** @brief 칸의 강 한가운데 x(실수)입니다 — 지형과 화면이 같은 곡선을 씁니다. */
         static float32 computeRiverCenter( const NileCityLayout& layout, int32 y );
 

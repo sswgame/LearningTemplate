@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="b9b78a37f924b6b00dd1d7c53dc18678"?>
 <!-- NileCity 의 도시 데이터(파라오 장르, GF_CityBuilder 의 CityCatalog 형식).
+     Terrain · Service: 땅 · 서비스의 종류(규칙 깃발 · 색). 도시의 칸 · 집 · 일꾼은 행 번호로 든다(저장은 id 로 옮긴다).
      Good: 물자. 집이 먹는 물자는 HouseLevel 의 goods 가 이름으로 적는다. Building: kind = House · Service · Producer · Storage · Market · Decoration.
        service + delivery(Walker = 도로를 도는 일꾼 · Radius = 반경 안 집에 늘) · range(걸음 수 · 반경 칸) · walkerInterval(초).
        Producer: goods 첫 칸을 productionTime 초마다 amount 만큼(일꾼이 다 찼을 때). terrain="Floodplain" 이면 해마다의 범람이 양을 정한다.
@@ -10,6 +11,21 @@
 <CityCatalog roadCost="2">
 	<!-- 규칙(CitySettings) — 모든 칸이 필수다. 순회 서비스가 남는 시간은 이 도시의 도로망 한 바퀴(60 초)다 -->
 	<Rules walkerSpeed="2.5" workerRatio="0.4" serviceDuration="60" immigrationInterval="1.5" immigrationJobMargin="4" immigrationMaxIdleRatio="0.25" floodFertilityStart="0.8" floodFertilityMin="0.4" floodFertilityMax="1" evolveDelay="3" wagePerWorkerPerMonth="0.5" fixedStep="0.25" serviceReach="2" goodsPerFourPeople="1" randomSeed="3100" currency="Deben"/>
+  <!-- 땅 — 첫 행이 새 도시의 땅이다. blocked=true 면 도로 · 건물을 놓지 못한다. flood=true 인 땅을 요구하는 농장은 해마다의 범람이 양을 정한다. 색 · 높이(m)는 땅 상자의 모습이다 -->
+  <Terrain id="Grass" name="Grass" color="0.45,0.62,0.3,1"/>
+  <Terrain id="Sand" name="Sand" color="0.86,0.76,0.5,1"/>
+  <Terrain id="Floodplain" name="Floodplain" color="0.36,0.42,0.2,1" flood="true"/>
+  <Terrain id="Water" name="Water" color="0.2,0.45,0.75,1" blocked="true" surfaceHeight="-0.15"/>
+  <Terrain id="Rock" name="Rock" color="0.5,0.47,0.44,1" blocked="true" rockHeight="0.8"/>
+
+  <!-- 서비스 — laborFirst 는 일꾼을 먼저 받는다. tax 가 다녀간 집은 세금을 낸다. culture 를 모두 받는 집이 문화 평가에 든다 -->
+  <Service id="Water" name="Water" color="0.25,0.5,0.95,1" laborFirst="true"/>
+  <Service id="Religion" name="Religion" color="0.95,0.8,0.2,1" culture="true"/>
+  <Service id="Entertainment" name="Entertainment" color="0.7,0.35,0.85,1" culture="true"/>
+  <Service id="Health" name="Health" color="0.9,0.3,0.3,1"/>
+  <Service id="Education" name="Education" color="0.2,0.75,0.7,1"/>
+  <Service id="Tax" name="Tax" color="0.95,0.55,0.15,1" tax="true"/>
+
   <Good id="grain" name="Grain" price="8"/>
   <Good id="figs" name="Figs" price="10"/>
   <Good id="pottery" name="Pottery" price="20"/>

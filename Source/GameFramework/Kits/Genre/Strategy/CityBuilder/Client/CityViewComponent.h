@@ -15,6 +15,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -91,26 +92,26 @@ namespace sw
         /** @brief 모델 표를 받아 집 단계마다 줄이 있는지 보고 모델을 워커로 미리 읽게 합니다. 표를 적지 않았으면 그냥 true 입니다. 어긋나면 오류를 남기고 false 다 — 아무것도 세우지 않는다. */
         [[nodiscard]] bool acquireBuildingViews( const CityCatalog& catalog );
         /** @brief 지금 도시의 건물 · 도로와 세운 모습을 견줘 바뀐 슬롯만 다시 세웁니다. */
-        void syncTiles( GameObjectManager& manager, const CitySimulation& city );
-        /** @brief 줄마다 같은 땅이 이어지는 구간을 상자 하나로, 바위는 타일마다 솟은 상자로 세웁니다(땅은 바뀌지 않는다). */
-        void             spawnTerrain( GameObjectManager& manager, const CitySimulation& city );
+        void syncTiles( GameObjectManager& manager, const CitySimulation& city, const CityCatalog& catalog );
+        /** @brief 줄마다 같은 땅이 이어지는 구간을 상자 하나로, 솟은 돌이 있는 땅은 타일마다 상자로 세웁니다(땅은 바뀌지 않는다). 색 · 높이는 땅의 행이 정한다. */
+        void             spawnTerrain( GameObjectManager& manager, const CitySimulation& city, const CityCatalog& catalog );
         void             spawnGroundBox( GameObjectManager& manager, const float3& center, const float3& scale, const float4& color );
         GameObjectHandle spawnRoad( GameObjectManager& manager, const int2& tile );
-        GameObjectHandle spawnBuilding( GameObjectManager& manager, size_t buildingIndex, const CityBuildingDef& def );
+        GameObjectHandle spawnBuilding( GameObjectManager& manager, const CityCatalog& catalog, size_t buildingIndex, const CityBuildingDef& def );
         /** @brief 일꾼 수만큼 미리 세우고 남으면 뷰가 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). */
-        void spawnWalkers( GameObjectManager& manager, size_t count );
-        /** @brief 일꾼 종류와 서비스마다 모습 인스턴스를 만듭니다(뷰가 워커에서 고릅니다). */
-        void prepareWalkerLooks( Material* pMaterial );
+        void spawnWalkers( GameObjectManager& manager, const CityCatalog& catalog, size_t count );
+        /** @brief 일꾼 종류와 서비스 행마다 모습 인스턴스를 만듭니다(뷰가 워커에서 고릅니다). */
+        void prepareWalkerLooks( const CityCatalog& catalog, Material* pMaterial );
         /** @brief 프리팹 하나를 세웁니다. 읽지 못하면 nullptr 입니다(까닭은 프리팹 캐시가 남긴다). */
         [[nodiscard]] static GameObject* spawnView( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName );
 
-        float4 computeServiceColor( CityService service ) const;
+        /** @brief 서비스 행의 색입니다. @p serviceIndex 가 -1(서비스 없음)이면 회색이다. */
+        static float4 computeServiceColor( const CityCatalog& catalog, int32 serviceIndex );
         /** @brief 모델에 곱할 색입니다. 서비스는 서비스 색을 흰색 쪽으로 반쯤 섞어 벽이 그 색으로 보이게 하고, 집, 나무, 화분은 팔레트 그대로입니다. */
-        float4 computeModelTint( const CityBuildingDef& def ) const;
+        float4 computeModelTint( const CityCatalog& catalog, const CityBuildingDef& def ) const;
         /** @brief 내장 도형으로 남는 건물의 색입니다. */
-        float4 computeBlockColor( const CityBuildingDef& def ) const;
-        float4 computeTerrainColor( CityTerrain terrain ) const;
-        float4 computeWalkerColor( CityWalkerKind kind, CityService service ) const;
+        float4 computeBlockColor( const CityCatalog& catalog, const CityBuildingDef& def ) const;
+        float4 computeWalkerColor( const CityCatalog& catalog, CityWalkerKind kind, int32 serviceIndex ) const;
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Building Views", Tooltip = "Building id to kit model table (*.views.xml); a building without a row (or a city without a table) is drawn as a coloured block" )
@@ -128,18 +129,6 @@ namespace sw
 
         PROPERTY( Category = "Look", DisplayName = "Road Color", Tooltip = "Tint multiplied into the road tile (white keeps the prefab material)" )
         float4 _roadColor;
-        PROPERTY( Category = "Look", DisplayName = "Water Service Color", Tooltip = "Colour of the water service (walkers, blocks, half of the model tint)" )
-        float4 _waterServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Religion Service Color" )
-        float4 _religionServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Entertainment Service Color" )
-        float4 _entertainmentServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Health Service Color" )
-        float4 _healthServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Education Service Color" )
-        float4 _educationServiceColor;
-        PROPERTY( Category = "Look", DisplayName = "Tax Service Color" )
-        float4 _taxServiceColor;
         PROPERTY( Category = "Look", DisplayName = "Producer Model Tint", Tooltip = "Tint multiplied into a kit model of a producer" )
         float4 _producerModelTint;
         PROPERTY( Category = "Look", DisplayName = "Storage Model Tint" )
@@ -148,7 +137,7 @@ namespace sw
         float4 _marketModelTint;
         PROPERTY( Category = "Look", DisplayName = "House Block Color", Tooltip = "Colour of a house drawn as a block" )
         float4 _houseBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Field Block Color", Tooltip = "Colour of a producer that needs floodplain (a field)" )
+        PROPERTY( Category = "Look", DisplayName = "Field Block Color", Tooltip = "Colour of a producer that needs its own terrain (a field)" )
         float4 _fieldBlockColor;
         PROPERTY( Category = "Look", DisplayName = "Workshop Block Color", Tooltip = "Colour of a producer that stands on any ground" )
         float4 _workshopBlockColor;
@@ -158,16 +147,6 @@ namespace sw
         float4 _marketBlockColor;
         PROPERTY( Category = "Look", DisplayName = "Decoration Block Color" )
         float4 _decorationBlockColor;
-        PROPERTY( Category = "Look", DisplayName = "Grass Color" )
-        float4 _grassColor;
-        PROPERTY( Category = "Look", DisplayName = "Sand Color" )
-        float4 _sandColor;
-        PROPERTY( Category = "Look", DisplayName = "Floodplain Color" )
-        float4 _floodplainColor;
-        PROPERTY( Category = "Look", DisplayName = "Water Color" )
-        float4 _waterColor;
-        PROPERTY( Category = "Look", DisplayName = "Rock Color" )
-        float4 _rockColor;
         PROPERTY( Category = "Look", DisplayName = "Trader Color", Tooltip = "Colour of a trader walker" )
         float4 _traderColor;
         PROPERTY( Category = "Look", DisplayName = "Cart Color", Tooltip = "Colour of a cart walker" )
@@ -182,7 +161,9 @@ namespace sw
         SimulationViewSync<uint8>                      _roadViews;          ///< 타일 번호(y × 너비 + x) → 도로(1)
         vector<GameObjectHandle>                       _listGroundObject;
         vector<GameObjectHandle>                       _listWalkerObject;
-        vector<shared_ptr<MaterialInstance>>           _listWalkerLook;      ///< 일꾼 종류 x 16 + 서비스
+        vector<shared_ptr<MaterialInstance>>           _listWalkerLook;      ///< 일꾼 종류 × `_walkerLookStride` + 서비스 행 번호 + 1
+        AssetReloadWatch<CityCatalog>                  _catalogReload;       ///< 색을 읽은 카탈로그의 다시 읽기 횟수 — 바뀌면 모습을 다시 세운다
+        int32                                          _walkerLookStride;    ///< 서비스 행 수 + 1(서비스 없음)
         uint32                                         _shownRevision;       ///< 맞춘 도시 배치 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
         uint8                                          _bViewsChecked   : 1; ///< 모델 표를 보았다(판이 열린 뒤 한 번)
         uint8                                          _bViewsValid     : 1; ///< 모델 표가 맞다 — 아니면 아무것도 세우지 않는다

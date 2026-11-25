@@ -11,6 +11,7 @@
 #include "Core/Math/Radians.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -92,6 +93,16 @@ namespace sw
         int32 _desertStartX;
         PROPERTY( Category = "Map", DisplayName = "Rock Ridge X", Tooltip = "Tile x from which the east rock ridge runs", Min = 0 )
         int32 _rockRidgeX;
+        PROPERTY( Category = "Map", DisplayName = "Ground Terrain", Tooltip = "Terrain (city catalog) between the floodplain and the desert; every terrain of the map is required" )
+        CatalogKey<CityTerrainDef> _groundTerrain;
+        PROPERTY( Category = "Map", DisplayName = "River Terrain", Tooltip = "Terrain (city catalog) of the river" )
+        CatalogKey<CityTerrainDef> _riverTerrain;
+        PROPERTY( Category = "Map", DisplayName = "Flood Terrain", Tooltip = "Terrain (city catalog) on both river banks" )
+        CatalogKey<CityTerrainDef> _floodTerrain;
+        PROPERTY( Category = "Map", DisplayName = "Desert Terrain", Tooltip = "Terrain (city catalog) west of the river and in the far east" )
+        CatalogKey<CityTerrainDef> _desertTerrain;
+        PROPERTY( Category = "Map", DisplayName = "Rock Terrain", Tooltip = "Terrain (city catalog) of the rocks in the east desert" )
+        CatalogKey<CityTerrainDef> _rockTerrain;
         PROPERTY( Category = "Auto Plan", DisplayName = "Road X", Tooltip = "Tile x of the north-south road between the floodplain farms and the city", Min = 0 )
         int32 _roadX;
         PROPERTY( Category = "Auto Plan", DisplayName = "Farm X", Tooltip = "Left tile x of the 3x3 farms; must be floodplain on every row", Min = 0 )

@@ -91,6 +91,9 @@
 	</Catalog>
 	<Catalog root="CityCatalog">
 		<Reference owner="Building" attribute="goods" target="Good"/>
+		<Reference owner="Building" attribute="service" target="Service"/>
+		<Reference owner="Building" attribute="terrain" target="Terrain"/>
+		<Reference owner="HouseLevel" attribute="services" target="Service"/>
 	</Catalog>
 	<Catalog root="ConquestCatalog">
 		<Reference owner="Rules" attribute="waveUnit" target="Unit"/>
@@ -190,6 +193,12 @@
 	<Derived type="LockstepSkirmishGameModeComponent" base="SkirmishGameModeComponent"/>
 	<CatalogKey tag="CityBuildingDef" catalog="CityCatalog" entry="Building"/>
 	<Field owner="CityGameModeComponent" field="_landmarkBuilding" tag="CityBuildingDef"/>
+	<CatalogKey tag="CityTerrainDef" catalog="CityCatalog" entry="Terrain"/>
+	<Field owner="NileGameModeComponent" field="_groundTerrain" tag="CityTerrainDef"/>
+	<Field owner="NileGameModeComponent" field="_riverTerrain" tag="CityTerrainDef"/>
+	<Field owner="NileGameModeComponent" field="_floodTerrain" tag="CityTerrainDef"/>
+	<Field owner="NileGameModeComponent" field="_desertTerrain" tag="CityTerrainDef"/>
+	<Field owner="NileGameModeComponent" field="_rockTerrain" tag="CityTerrainDef"/>
 	<CatalogKey tag="CameraPresetDef" catalog="CameraPresetCatalog" entry="Preset"/>
 	<Field owner="CameraDirectorComponent" field="_initialPreset" tag="CameraPresetDef"/>
 	<Field owner="RTSCommandInputComponent" field="_watchCameraPreset" tag="CameraPresetDef"/>

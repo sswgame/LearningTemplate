@@ -21,19 +21,39 @@ namespace sw
         struct CitySimulationInternal
         {
             static constexpr uint32  kMinTileStateBytes     = 12;      ///< 칸 하나의 최소 바이트 — 건물(4) + 도로 번호(4) + 매력(2) + 지형(1) + 도로(1)
-            static constexpr uint32  kMinBuildingStateBytes = 64;      ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinBuildingStateBytes = 40;      ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
             static constexpr uint32  kMinWalkerStateBytes   = 56;      ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
             static constexpr float32 kNeverServedTime       = -1.0e9f; ///< 서비스를 받은 적 없는 집의 서비스 시각(기준을 옮겨도 이 아래로 내려가지 않는다)
 
             /** @brief 노동을 나누는 순서입니다. 물, 식량 사슬, 나머지 순이며 값이 작을수록 먼저입니다. */
-            static int32 computeLaborPriority( const CityBuildingDef& def )
+            static int32 computeLaborPriority( const CityCatalog& catalog, const CityBuildingDef& def )
             {
-                if ( def._kind == CityBuildingKind::Service && def._service == CityService::Water )
+                if ( def._kind == CityBuildingKind::Service && catalog.getServiceRows()[static_cast<size_t>( def._serviceIndex )]._bLaborFirst )
                     return 0;
                 const bool bStorageLikeBuilding = def._kind == CityBuildingKind::Producer || def._kind == CityBuildingKind::Storage || def._kind == CityBuildingKind::Market;
                 if ( bStorageLikeBuilding )
                     return 1;
                 return 2;
+            }
+
+            /** @brief 저장된 행 id 목록을 지금 카탈로그의 행 번호로 옮긴 표입니다(없는 행은 -1). 쓸 때는 지금 행을 그대로 쓴다. */
+            template <typename TDef>
+            static vector<int32> serializeRows( StateIO& io, const vector<TDef>& listDef )
+            {
+                vector<hashed_string> listID;
+                for ( const TDef& def : listDef )
+                {
+                    listID.push_back( def._id );
+                }
+                io.list( listID, sizeof( uint32 ), [&io]( hashed_string& id )
+                { io.value( id ); } );
+                vector<int32> listIndex;
+                for ( const hashed_string& id : listID )
+                {
+                    const optional<size_t> index = VectorUtil::findIndexBy<&TDef::_id>( listDef, id );
+                    listIndex.push_back( index.has_value() ? static_cast<int32>( *index ) : constant::invalid_index::kInt32 );
+                }
+                return listIndex;
             }
 
             static int32 computeChebyshev( const int2& tile, const int2& origin, int32 size )
@@ -202,20 +222,31 @@ namespace sw
         return true;
     }
 
-    void CitySimulation::setTerrain( int32 x, int32 y, CityTerrain terrain )
+    optional<int32> CitySimulation::findTerrainIndex( const hashed_string& id ) const
+    {
+        return _pCatalog != nullptr ? _pCatalog->findTerrainIndex( id ) : nullopt;
+    }
+
+    bool CitySimulation::isTerrainBlocked( const CityTile& tile ) const
+    {
+        return _pCatalog->getTerrainRows()[tile._terrain]._bBlocked;
+    }
+
+    void CitySimulation::setTerrain( int32 x, int32 y, int32 terrainIndex )
     {
         if ( _topology.isInside( x, y ) == false )
             return;
-        _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._terrain = terrain;
+        SW_ASSERT( 0 <= terrainIndex && static_cast<size_t>( terrainIndex ) < _pCatalog->getTerrainRows().size() );
+        _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._terrain = static_cast<uint8>( terrainIndex );
     }
 
-    void CitySimulation::fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain )
+    void CitySimulation::fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, int32 terrainIndex )
     {
         for ( int32 y = minY; y <= maxY; ++y )
         {
             for ( int32 x = minX; x <= maxX; ++x )
             {
-                setTerrain( x, y, terrain );
+                setTerrain( x, y, terrainIndex );
             }
         }
     }
@@ -261,7 +292,7 @@ namespace sw
         const bool bTileOccupied = pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x, y ) == false;
         if ( bTileOccupied )
             return CityPlaceResult::Occupied;
-        if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
+        if ( isTerrainBlocked( *pTile ) )
             return CityPlaceResult::BadTerrain;
         const int32 cost = _pCatalog != nullptr ? _pCatalog->getRoadCost() : 2;
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, cost ) == false )
@@ -306,9 +337,9 @@ namespace sw
                 const bool      bFootprintOccupied = pTile->_bRoad != SW_FALSE || pTile->_buildingIndex >= 0 || _land.isUsable( x + dx, y + dy ) == false;
                 if ( bFootprintOccupied )
                     return CityPlaceResult::Occupied;
-                if ( pTile->_terrain == CityTerrain::Water || pTile->_terrain == CityTerrain::Rock )
+                if ( isTerrainBlocked( *pTile ) )
                     return CityPlaceResult::BadTerrain;
-                if ( pDef->_bRequiresTerrain != SW_FALSE && pTile->_terrain != pDef->_requiredTerrain )
+                if ( pDef->requiresTerrain() && pTile->_terrain != pDef->_terrainIndex )
                     return CityPlaceResult::BadTerrain;
             }
         }
@@ -335,10 +366,7 @@ namespace sw
         building               = CityBuilding{};
         building._pDef         = pDef;
         building._origin       = int2{ x, y };
-        for ( float32& serviceTime : building._arrServiceTime )
-        {
-            serviceTime = CitySimulationInternal::kNeverServedTime;
-        }
+        building._listServiceTime.assign( _pCatalog->getServiceRows().size(), CitySimulationInternal::kNeverServedTime );
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
         {
             for ( int32 dx = 0; dx < pDef->_size; ++dx )
@@ -521,7 +549,7 @@ namespace sw
         {
             for ( CityBuilding& building : _listBuilding )
             {
-                for ( float32& serviceTime : building._arrServiceTime )
+                for ( float32& serviceTime : building._listServiceTime )
                 {
                     serviceTime = MathUtil::max( serviceTime - TimeRolloverUtil::kRebaseSeconds, CitySimulationInternal::kNeverServedTime );
                 }
@@ -548,7 +576,7 @@ namespace sw
         {
             for ( CityBuilding& building : _listBuilding )
             {
-                const bool bSkipLaborBuilding = building._bAlive == SW_FALSE || building.isHouse() || CitySimulationInternal::computeLaborPriority( *building._pDef ) != priority;
+                const bool bSkipLaborBuilding = building._bAlive == SW_FALSE || building.isHouse() || CitySimulationInternal::computeLaborPriority( *_pCatalog, *building._pDef ) != priority;
                 if ( bSkipLaborBuilding )
                     continue;
                 const int32 needed = building._pDef->_workers;
@@ -583,7 +611,7 @@ namespace sw
                             const bool bHouseInServiceRange = house._bAlive != SW_FALSE && house.isHouse() &&
                                                               CitySimulationInternal::computeChebyshev( house._origin, building._origin, def._size ) <= def._range;
                             if ( bHouseInServiceRange )
-                                house._arrServiceTime[def._service] = _time;
+                                house._listServiceTime[static_cast<size_t>( def._serviceIndex )] = _time;
                         }
                         break;
                     }
@@ -599,7 +627,8 @@ namespace sw
                 case CityBuildingKind::Producer:
                 {
                     // 범람원 농장은 해마다의 범람이, 다른 땅은 반쯤의 비옥함이 생산량을 정한다.
-                    const float32 fertility = ( def._bRequiresTerrain != SW_FALSE && def._requiredTerrain == CityTerrain::Floodplain ) ? _floodFertility : 1.0f;
+                    const bool    bFlood    = def.requiresTerrain() && _pCatalog->getTerrainRows()[static_cast<size_t>( def._terrainIndex )]._bFlood;
+                    const float32 fertility = bFlood ? _floodFertility : 1.0f;
                     building._productionProgress += deltaTime * building._efficiency * fertility / def._productionTime;
                     if ( building._productionProgress >= 1.0f && def._listGood.empty() == false )
                     {
@@ -660,7 +689,7 @@ namespace sw
         CityBuilding& building = _listBuilding[static_cast<size_t>( buildingIndex )];
         CityWalker    walker;
         walker._kind         = kind;
-        walker._service      = building._pDef->_service;
+        walker._service      = building._pDef->_serviceIndex;
         walker._homeBuilding = buildingIndex;
         walker._tile         = building._accessTile;
         walker._nextTile     = building._accessTile;
@@ -896,9 +925,9 @@ namespace sw
                 CityBuilding& house = _listBuilding[static_cast<size_t>( pTile->_buildingIndex )];
                 if ( house.isHouse() == false || house._population <= 0 )
                     continue;
-                if ( walker._kind == CityWalkerKind::Service && walker._service != CityService::Count )
+                if ( walker._kind == CityWalkerKind::Service && walker._service >= 0 )
                 {
-                    house._arrServiceTime[walker._service] = _time;
+                    house._listServiceTime[static_cast<size_t>( walker._service )] = _time;
                     continue;
                 }
                 if ( walker._kind != CityWalkerKind::Trader )
@@ -926,9 +955,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 집
     // ------------------------------------------------------------------------------
-    bool CitySimulation::isHouseServed( const CityBuilding& house, CityService service ) const
+    bool CitySimulation::isHouseServed( const CityBuilding& house, int32 serviceIndex ) const
     {
-        return service != CityService::Count && _time - house._arrServiceTime[service] <= _settings._serviceDuration;
+        const bool bKnown = 0 <= serviceIndex && static_cast<size_t>( serviceIndex ) < house._listServiceTime.size();
+        return bKnown && _time - house._listServiceTime[static_cast<size_t>( serviceIndex )] <= _settings._serviceDuration;
     }
 
     bool CitySimulation::hasReachedHouseLevel( const CityBuilding& house, int32 level ) const
@@ -936,10 +966,9 @@ namespace sw
         const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( level );
         if ( pLevel == nullptr )
             return false;
-        for ( int32 serviceIndex = 0; serviceIndex < static_cast<int32>( CityService::Count ); ++serviceIndex )
+        for ( const int32 serviceIndex : pLevel->_listServiceIndex )
         {
-            const CityService service = static_cast<CityService>( serviceIndex );
-            if ( ( pLevel->_serviceMask & makeCityServiceBit( service ) ) != 0 && isHouseServed( house, service ) == false )
+            if ( isHouseServed( house, serviceIndex ) == false )
                 return false;
         }
         for ( const hashed_string& goodID : pLevel->_listRequiredGood )
@@ -1024,8 +1053,14 @@ namespace sw
                 (void)house._stock.removeItem( goodID, MathUtil::min( need, house._stock.getItemCount( goodID ) ) );
             }
             // 세금: 세리가 다녀간 집만 낸다.
-            const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( house._level );
-            if ( pLevel != nullptr && isHouseServed( house, CityService::Tax ) )
+            const CityHouseLevelDef*      pLevel      = _pCatalog->findHouseLevel( house._level );
+            const vector<CityServiceDef>& listService = _pCatalog->getServiceRows();
+            bool                          bTax        = false;
+            for ( size_t serviceIndex = 0; serviceIndex < listService.size(); ++serviceIndex )
+            {
+                bTax = bTax || ( listService[serviceIndex]._bTax && isHouseServed( house, static_cast<int32>( serviceIndex ) ) );
+            }
+            if ( pLevel != nullptr && bTax )
                 income += house._population * pLevel->_taxPerPerson;
         }
         _wageDebt += static_cast<float32>( _employed ) * _settings._wagePerWorkerPerMonth;
@@ -1062,6 +1097,12 @@ namespace sw
 
     float32 CitySimulation::computeCultureCoverage() const
     {
+        vector<int32> listCulture; // 문화 서비스의 행 번호
+        for ( size_t serviceIndex = 0; _pCatalog != nullptr && serviceIndex < _pCatalog->getServiceRows().size(); ++serviceIndex )
+        {
+            if ( _pCatalog->getServiceRows()[serviceIndex]._bCulture )
+                listCulture.push_back( static_cast<int32>( serviceIndex ) );
+        }
         int32 covered = 0;
         int32 total   = 0;
         for ( const CityBuilding& house : _listBuilding )
@@ -1069,7 +1110,9 @@ namespace sw
             if ( house._bAlive == SW_FALSE || house.isHouse() == false )
                 continue;
             total += house._population;
-            if ( isHouseServed( house, CityService::Religion ) && isHouseServed( house, CityService::Entertainment ) )
+            const bool bCovered = listCulture.empty() == false && VectorUtil::allOf( listCulture, [this, &house]( int32 serviceIndex )
+            { return isHouseServed( house, serviceIndex ); } );
+            if ( bCovered )
                 covered += house._population;
         }
         return total > 0 ? static_cast<float32>( covered ) / static_cast<float32>( total ) : 0.0f;
@@ -1101,15 +1144,20 @@ namespace sw
         const GridTopology savedTopology = _topology.serializeSize( io );
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
+        // 땅 · 서비스는 행 번호로 든다 — 행 id 를 앞에 적어, 행이 늘거나 자리가 바뀐 카탈로그(다시 읽기 · 패치)에서 지금 번호로 옮긴다. 없어진 땅은 거절하고 없어진 서비스는 버린다.
+        const vector<int32> listTerrainRow = CitySimulationInternal::serializeRows( io, _pCatalog->getTerrainRows() );
+        const vector<int32> listServiceRow = CitySimulationInternal::serializeRows( io, _pCatalog->getServiceRows() );
         // 칸마다 건물(4) + 도로 번호(4) + 매력(2) + 지형(1) + 도로(1)
         _topology.serializeCells(
             io, savedTopology, _listTile, CitySimulationInternal::kMinTileStateBytes,
-            []( StateIO& tileIO, CityTile& tile )
+            [&listTerrainRow]( StateIO& tileIO, CityTile& tile )
         {
             tileIO.value( tile._buildingIndex );
             tileIO.value( tile._roadComponent );
             tileIO.value( tile._desirability );
-            tileIO.enumValue( tile._terrain, CityTerrain::Rock );
+            tileIO.value( tile._terrain );
+            if ( tileIO.isReading() && tileIO.check( tile._terrain < listTerrainRow.size() && listTerrainRow[tile._terrain] >= 0 ) )
+                tile._terrain = static_cast<uint8>( listTerrainRow[tile._terrain] );
             tileIO.value( tile._bRoad );
         },
             []( const CityTile& tile )
@@ -1124,10 +1172,16 @@ namespace sw
             io.value( building._efficiency );
             io.value( building._walkerTimer );
             io.value( building._productionProgress );
-            for ( float32& serviceTime : building._arrServiceTime )
+            vector<float32> listServiceTime( _pCatalog->getServiceRows().size(), CitySimulationInternal::kNeverServedTime );
+            for ( size_t savedIndex = 0; savedIndex < listServiceRow.size(); ++savedIndex )
             {
+                float32 serviceTime = io.isWriting() ? building._listServiceTime[savedIndex] : 0.0f;
                 io.value( serviceTime );
+                if ( listServiceRow[savedIndex] >= 0 )
+                    listServiceTime[static_cast<size_t>( listServiceRow[savedIndex] )] = serviceTime;
             }
+            if ( io.isReading() )
+                building._listServiceTime = std::move( listServiceTime );
             io.value( building._evolveTimer );
             io.value( building._devolveTimer );
             io.value( building._immigrationTimer );
@@ -1162,7 +1216,9 @@ namespace sw
             io.value( walker._stepsLeft );
             io.value( walker._cargoAmount );
             io.enumValue( walker._kind, CityWalkerKind::Cart );
-            io.enumValue( walker._service, CityService::Count );
+            io.value( walker._service );
+            if ( io.isReading() && io.check( constant::invalid_index::kInt32 <= walker._service && walker._service < static_cast<int32>( listServiceRow.size() ) ) && walker._service >= 0 )
+                walker._service = listServiceRow[static_cast<size_t>( walker._service )];
             io.flag( walker._bReturning );
             io.flag( walker._bAlive );
             if ( io.check( constant::invalid_index::kInt32 <= walker._homeBuilding && walker._homeBuilding < buildingCount && constant::invalid_index::kInt32 <= walker._targetBuilding && walker._targetBuilding < buildingCount && 0 <= walker._cargoAmount ) && io.isReading() )

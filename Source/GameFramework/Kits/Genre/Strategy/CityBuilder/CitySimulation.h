@@ -3,7 +3,6 @@
  * @brief 도시 한 판을 진행합니다. 땅, 도로, 건물 배치, 노동 배분, 순회 일꾼(서비스, 상인, 수레, 세리), 집 진화, 이민, 달마다 소비와 세금과 임금, 해마다 범람을 다룹니다.
  */
 #pragma once
-#include "Core/Container/EnumArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
@@ -58,11 +57,11 @@ namespace sw
     /** @brief 타일 하나입니다. */
     struct CityTile
     {
-        int32       _buildingIndex{ constant::invalid_index::kInt32 };
-        int32       _roadComponent{ constant::invalid_index::kInt32 }; ///< 이어진 도로끼리 같은 번호를 가진다(도로가 아니면 -1)
-        int16       _desirability{ 0 };
-        CityTerrain _terrain{ CityTerrain::Grass };
-        uint8       _bRoad{ SW_FALSE };
+        int32 _buildingIndex{ constant::invalid_index::kInt32 };
+        int32 _roadComponent{ constant::invalid_index::kInt32 }; ///< 이어진 도로끼리 같은 번호를 가진다(도로가 아니면 -1)
+        int16 _desirability{ 0 };
+        uint8 _terrain{ 0 }; ///< 땅의 행 번호(`CityCatalog::getTerrainRows`)
+        uint8 _bRoad{ SW_FALSE };
     };
 } // namespace sw
 
@@ -71,22 +70,22 @@ namespace sw
     /** @brief 지은 건물 하나입니다(집 포함). */
     struct CityBuilding
     {
-        ItemStackList                   _stock{};
-        const CityBuildingDef*          _pDef{ nullptr };
-        int2                            _origin{};
-        int2                            _accessTile{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 붙어 있는 도로 타일이다(없으면 -1)
-        float32                         _efficiency{ 0.0f };                                                             ///< 배정된 일꾼 수 / 필요한 일꾼 수이다(일꾼이 필요 없는 건물은 길만 있으면 1)
-        float32                         _walkerTimer{ 0.0f };
-        float32                         _productionProgress{ 0.0f };
-        EnumArray<CityService, float32> _arrServiceTime{};
-        float32                         _evolveTimer{ 0.0f };
-        float32                         _devolveTimer{ 0.0f };
-        float32                         _immigrationTimer{ 0.0f };
-        int32                           _assignedWorkers{ 0 };
-        int32                           _activeWalkerCount{ 0 };
-        int32                           _level{ 0 }; ///< 집 단계
-        int32                           _population{ 0 };
-        uint8                           _bAlive{ SW_TRUE };
+        ItemStackList          _stock{};
+        const CityBuildingDef* _pDef{ nullptr };
+        int2                   _origin{};
+        int2                   _accessTile{ constant::invalid_index::kInt32, constant::invalid_index::kInt32 }; ///< 붙어 있는 도로 타일이다(없으면 -1)
+        float32                _efficiency{ 0.0f };                                                             ///< 배정된 일꾼 수 / 필요한 일꾼 수이다(일꾼이 필요 없는 건물은 길만 있으면 1)
+        float32                _walkerTimer{ 0.0f };
+        float32                _productionProgress{ 0.0f };
+        vector<float32>        _listServiceTime{}; ///< 서비스 행마다 마지막으로 받은 시각
+        float32                _evolveTimer{ 0.0f };
+        float32                _devolveTimer{ 0.0f };
+        float32                _immigrationTimer{ 0.0f };
+        int32                  _assignedWorkers{ 0 };
+        int32                  _activeWalkerCount{ 0 };
+        int32                  _level{ 0 }; ///< 집 단계
+        int32                  _population{ 0 };
+        uint8                  _bAlive{ SW_TRUE };
 
         bool hasRoadAccess() const { return _accessTile._x >= 0; }
         bool isHouse() const { return _pDef != nullptr && _pDef->_kind == CityBuildingKind::House; }
@@ -110,7 +109,7 @@ namespace sw
         int32          _stepsLeft{ 0 };
         int32          _cargoAmount{ 0 };
         CityWalkerKind _kind{ CityWalkerKind::Service };
-        CityService    _service{ CityService::Count };
+        int32          _service{ constant::invalid_index::kInt32 }; ///< 서비스의 행 번호(없으면 -1)
         uint8          _bReturning{ SW_FALSE };
         uint8          _bAlive{ SW_TRUE };
     };
@@ -168,8 +167,11 @@ namespace sw
          * @return 규칙은 카탈로그의 `<Rules>`(`CityCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4). 카탈로그가 있고 크기가 1 이상이고 규칙이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
         [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet );
-        void               setTerrain( int32 x, int32 y, CityTerrain terrain );
-        void               fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
+        /** @brief 칸의 땅을 정합니다. @p terrainIndex 는 카탈로그의 땅 행 번호다(`findTerrainIndex` — 행 밖이면 단언). */
+        void setTerrain( int32 x, int32 y, int32 terrainIndex );
+        void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, int32 terrainIndex );
+        /** @brief 이 도시의 카탈로그에서 땅 @p id 의 행 번호입니다. 열기 전이거나 없으면 비어 있습니다. */
+        optional<int32> findTerrainIndex( const hashed_string& id ) const;
         /**
          * @brief 공유 땅을 빌립니다. 도시 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 도로와 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 막히지 않음) 허물면 반납합니다.
          * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.
@@ -216,12 +218,12 @@ namespace sw
         int32                getWorkforce() const { return _workforce; }
         int32                getEmployed() const { return _employed; }
         float32              getFloodFertility() const { return _floodFertility; }
-        /** @brief 종교와 오락을 받은 집 사람의 비율(0..1)을 반환합니다. 파라오의 문화 평가에 해당합니다. */
+        /** @brief 문화 서비스(`CityServiceDef::_bCulture` — 종교와 오락)를 모두 받은 집 사람의 비율(0..1)을 반환합니다. 파라오의 문화 평가에 해당합니다. */
         float32 computeCultureCoverage() const;
         /** @brief 집 단계의 인구 가중 평균을 반환합니다(번영 평가). */
         float32 computeAverageHouseLevel() const;
         /** @brief 그 집이 그 서비스를 지금 받고 있는지 반환합니다. */
-        bool isHouseServed( const CityBuilding& house, CityService service ) const;
+        bool isHouseServed( const CityBuilding& house, int32 serviceIndex ) const;
         /** @brief 시뮬레이션 시각(초)입니다. 차이만 뜻이 있다 — 커지면 기준을 옮긴다(`TimeRolloverUtil::rebase`, 서비스 시각도 같이 옮긴다). */
         float32 getTime() const { return _time; }
 
@@ -255,6 +257,7 @@ namespace sw
         optional<int32> findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
         int32           computeStorageFree( const CityBuilding& storage ) const;
         bool            hasReachedHouseLevel( const CityBuilding& house, int32 level ) const;
+        bool            isTerrainBlocked( const CityTile& tile ) const;
         bool            isRoad( int32 x, int32 y ) const;
         int32           getRoadComponent( const int2& tile ) const;
 

@@ -2,13 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 
-#include "Core/String/StringUtil.h"
-
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
-#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -17,7 +13,9 @@
 namespace sw
 {
     CityCatalog::CityCatalog()
-        : _buildingCatalog{}
+        : _terrainCatalog{}
+        , _serviceCatalog{}
+        , _buildingCatalog{}
         , _goodCatalog{}
         , _listHouseLevel{}
         , _roadCost{ CityCatalogRootDef{}._roadCost }
@@ -59,17 +57,26 @@ namespace sw
         _listHouseLevel.clear();
         using Element                          = XMLCatalogElement<CityCatalog>;
         static constexpr Element kArrElement[] = {
+            Element::of<&CityCatalog::_terrainCatalog>( "Terrain" ).uncounted(),
+            Element::of<&CityCatalog::_serviceCatalog>( "Service" ).uncounted(),
             Element::of<&CityCatalog::_goodCatalog>( "Good" ).uncounted(),
             Element::of<&CityCatalog::loadBuilding>( "Building" ),
             Element::of<&CityCatalog::loadHouseLevel>( "HouseLevel" ).uncounted(),
             Element::of<&CityCatalog::loadRules>( "Rules" ).uncounted(),
         };
-        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement ); // 건물 · 집 단계가 땅 · 서비스의 행을 찾는다
 
         // 규칙은 데이터에만 있다 — 한 번도 `<Rules>` 를 읽지 못한 카탈로그는 로드 실패다(도시가 C++ 기본값으로 열리지 않는다, 감사 K-4).
         if ( _rulesCount == 0 )
         {
             SW_LOG_ERROR_ID( "CityCatalog.RulesMissing", "%#: <CityCatalog> needs one <Rules .../> line (every rule value is data)", sourceName );
+            return 0;
+        }
+        // 땅이 없으면 칸이 무엇인지 모른다 — 기본 땅을 지어내지 않고 로드 실패로 본다(첫 행이 새 도시의 땅이다).
+        const size_t terrainCount = _terrainCatalog.getCount();
+        if ( terrainCount == 0 || terrainCount > kMaxTerrainCount )
+        {
+            SW_LOG_ERROR_ID( "CityCatalog.TerrainCount", "%#: %# <Terrain> entries - a city needs 1..%# (the first one is the ground of a new city)", sourceName, terrainCount, kMaxTerrainCount );
             return 0;
         }
         // 집 단계가 없으면 집이 자랄 곳이 없다 — 기본 단계를 지어내지 않고 로드 실패로 본다.
@@ -86,24 +93,29 @@ namespace sw
     bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         CityBuildingDef building;
-        bool            bValid = XMLFields::readProperties( node, building, sourceName, { "terrain" } );
-        // 땅 조건은 적었을 때만 있다(적지 않으면 아무 땅). 모르는 땅 이름은 오류다.
-        const string_view terrainText = node.getAttributeText( "terrain" );
-        if ( terrainText.empty() == false )
+        bool            bValid = XMLFields::readProperties( node, building, sourceName );
+        // 땅 조건 · 서비스는 적었을 때만 있다. 없는 행의 이름은 오류다.
+        if ( building._requiredTerrain.empty() == false )
         {
-            const optional<CityTerrain> terrain = tryParseEnum<CityTerrain>( terrainText );
-            building._bRequiresTerrain          = terrain.has_value();
-            if ( terrain.has_value() )
+            const optional<int32> terrain = _terrainCatalog.findIndex( building._requiredTerrain );
+            if ( terrain.has_value() == false )
             {
-                building._requiredTerrain = *terrain;
-            }
-            else
-            {
-                SW_LOG_ERROR_ID( "CityCatalog.BuildingNeedsUnknownTerrain", "%#: building '%#' needs an unknown terrain '%#'", sourceName, building._id.c_str(), terrainText );
+                SW_LOG_ERROR_ID( "CityCatalog.BuildingNeedsUnknownTerrain", "%#: building '%#' needs an unknown terrain '%#'", sourceName, building._id.c_str(), building._requiredTerrain.c_str() );
                 bValid = false;
             }
+            building._terrainIndex = terrain.value_or( constant::invalid_index::kInt32 );
         }
-        const bool bServiceWithoutService = building._kind == CityBuildingKind::Service && building._service == CityService::Count;
+        if ( building._service.empty() == false )
+        {
+            const optional<int32> service = _serviceCatalog.findIndex( building._service );
+            if ( service.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "CityCatalog.BuildingGivesUnknownService", "%#: building '%#' gives an unknown service '%#'", sourceName, building._id.c_str(), building._service.c_str() );
+                bValid = false;
+            }
+            building._serviceIndex = service.value_or( constant::invalid_index::kInt32 );
+        }
+        const bool bServiceWithoutService = building._kind == CityBuildingKind::Service && building._service.empty();
         if ( bServiceWithoutService )
         {
             SW_LOG_ERROR_ID( "CityCatalog.ServiceBuildingNeedsService", "%#: service building '%#' needs service=\"...\"", sourceName, building._id.c_str() );
@@ -117,19 +129,19 @@ namespace sw
     bool CityCatalog::loadHouseLevel( const XMLNode& node, string_view sourceName )
     {
         CityHouseLevelDef level;
-        bool              bValid = XMLFields::readProperties( node, level, sourceName, { "services" } );
-        StringUtil::forEachToken( node.getAttributeText( "services" ), XMLReadUtil::kListSeparators, [&]( string_view token )
+        bool              bValid = XMLFields::readProperties( node, level, sourceName );
+        for ( const hashed_string& serviceID : level._listRequiredService )
         {
-            if ( const optional<CityService> service = tryParseEnum<CityService>( token ) )
+            if ( const optional<int32> service = _serviceCatalog.findIndex( serviceID ) )
             {
-                level._serviceMask = static_cast<uint8>( level._serviceMask | makeCityServiceBit( *service ) );
+                level._listServiceIndex.push_back( *service );
             }
             else
             {
-                SW_LOG_ERROR_ID( "CityCatalog.HouseLevelNeedsUnknown", "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );
+                SW_LOG_ERROR_ID( "CityCatalog.HouseLevelNeedsUnknown", "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), serviceID.c_str() );
                 bValid = false;
             }
-        } );
+        }
         if ( bValid )
             _listHouseLevel.push_back( level ); // 적힌 순서가 단계다(0 = 처음 짓는 집)
         return bValid;

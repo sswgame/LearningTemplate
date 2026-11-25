@@ -204,6 +204,8 @@
 	<Catalog root="CityCatalog">
 		<Entry name="Building" key="id"/>
 		<Entry name="Good" key="id"/>
+		<Entry name="Service" key="id"/>
+		<Entry name="Terrain" key="id"/>
 	</Catalog>
 	<Catalog root="CoasterLayoutCatalog">
 		<Entry name="Layout" key="id"/>

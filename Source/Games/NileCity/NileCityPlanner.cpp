@@ -91,8 +91,24 @@ namespace sw
         return layout._riverCenterX + layout._riverMeander * MathUtil::sin( static_cast<float32>( y ) * layout._riverMeanderRate );
     }
 
-    void NileCityPlanner::paintTerrain( CitySimulation& city, const NileCityLayout& layout )
+    bool NileCityPlanner::paintTerrain( CitySimulation& city, const NileCityLayout& layout )
     {
+        bool       bKnown      = true;
+        const auto findTerrain = [&city, &bKnown]( const hashed_string& id )
+        {
+            const optional<int32> index = city.findTerrainIndex( id );
+            if ( index.has_value() == false )
+                SW_LOG_ERROR_ID( "NileCityPlanner.UnknownTerrain", "[Nile] the map paints terrain '%#', which the city catalog does not have", id.c_str() );
+            bKnown = bKnown && index.has_value();
+            return index.value_or( constant::invalid_index::kInt32 );
+        };
+        const int32 ground = findTerrain( layout._groundTerrain );
+        const int32 water  = findTerrain( layout._riverTerrain );
+        const int32 flood  = findTerrain( layout._floodTerrain );
+        const int32 sand   = findTerrain( layout._desertTerrain );
+        const int32 rock   = findTerrain( layout._rockTerrain );
+        if ( bKnown == false )
+            return false;
         for ( int32 y = 0; y < city.getHeight(); ++y )
         {
             const float32 river  = computeRiverCenter( layout, y );
@@ -100,18 +116,19 @@ namespace sw
             for ( int32 x = 0; x < city.getWidth(); ++x )
             {
                 const float32 offset  = static_cast<float32>( x ) + 0.5f - river;
-                CityTerrain   terrain = CityTerrain::Grass;
+                int32         terrain = ground;
                 if ( MathUtil::abs( offset ) <= layout._riverHalfWidth )
-                    terrain = CityTerrain::Water;
+                    terrain = water;
                 else if ( offset > 0.0f && offset <= layout._riverHalfWidth + layout._eastFloodWidth )
-                    terrain = CityTerrain::Floodplain;
+                    terrain = flood;
                 else if ( offset < 0.0f && offset >= -( layout._riverHalfWidth + layout._westFloodWidth ) )
-                    terrain = CityTerrain::Floodplain;
+                    terrain = flood;
                 else if ( offset < 0.0f || static_cast<float32>( x ) + 0.5f >= desert )
-                    terrain = NileCityPlannerInternal::isRock( layout, x, y ) && offset > 0.0f ? CityTerrain::Rock : CityTerrain::Sand;
+                    terrain = NileCityPlannerInternal::isRock( layout, x, y ) && offset > 0.0f ? rock : sand;
                 city.setTerrain( x, y, terrain );
             }
         }
+        return true;
     }
 
     void NileCityPlanner::addRoad( const int2& from, const int2& to, int32 minPopulation )
