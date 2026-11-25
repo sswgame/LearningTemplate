@@ -7,7 +7,7 @@
  *          오디오 컴포넌트는 틱하지 않고 여기에 등록합니다. 엔진은 생성자로 받은 오디오 서비스의 것이고, 테스트는 `setAudioEngine` 으로 바꿉니다.
  *
  *          **2D 게임**: 리스너 컴포넌트가 없고 게임 카메라가 직교면 리스너를 `Screen2D`(화면 평면 팬, 반폭 = 직교 높이 × 16/9 ÷ 2)로 둡니다.
- *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 없고 2D 물리 씬이 있으면 `Physics2DAudioOcclusionQuery`(월드 XY)로,
+ *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 없고 2D 물리 씬이 있으면 같은 질의의 2D 씬(월드 XY)로,
  *          프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
  */
 #pragma once
