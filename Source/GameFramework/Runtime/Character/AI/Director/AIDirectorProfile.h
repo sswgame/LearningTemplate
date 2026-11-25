@@ -16,6 +16,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -267,6 +268,9 @@ namespace sw
         friend struct AssetTypeLoader;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `AIDirectorProfile.cpp` 의 줄이 로더를 더한다). 타입 있는 참조 `AssetRef<AIDirectorProfile>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "aidirector", AssetPathRule{ {}, {}, ".director.xml" }, {} );
+
         AIDirectorProfile();
 
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

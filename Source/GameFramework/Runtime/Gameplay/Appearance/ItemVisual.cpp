@@ -7,6 +7,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Character/Fit/BodyShape.h"
+#include "Engine/Character/Fit/FitPartDef.h"
+#include "Engine/Character/Fit/FitTables.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -53,7 +60,7 @@ namespace sw
                     case AppearancePartKind::SocketPrefab:
                         return def._prefabAsset.key();
                     case AppearancePartKind::Sprite:
-                        return def._spriteAsset;
+                        return def._spriteAsset.key();
                     case AppearancePartKind::BodyModification:
                         return {};
                 }
@@ -449,6 +456,10 @@ namespace sw
 
 namespace sw
 {
+    AppearancePartVariantDef::AppearancePartVariantDef() = default;
+
+    AppearancePartDef::AppearancePartDef() = default;
+
     const AppearancePartVariantDef* AppearancePartDef::findVariant( const hashed_string& name ) const
     {
         return VectorUtil::findBy<&AppearancePartVariantDef::_name>( _listVariant, name );

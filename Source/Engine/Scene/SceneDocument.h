@@ -35,6 +35,8 @@ namespace sw
         string _name{};
     };
 
+    struct SceneDocument;
+
     /**
      * @brief 엔티티(`<entities><entity id name prefab>`)의 칸입니다. 상태(`<GameObject>`)와 프리팹 덮어쓰기는 자식 원소라 서브트리째 둔다.
      * @details 파일 id 는 0 이 아니어야 한다(`Scene::serializeToDocument` 가 늘 적는다) — 부착 · 핸들이 이 값으로 부모를 가리키고 쿠커가 엔티티를 찾는다.
@@ -53,7 +55,7 @@ namespace sw
         AssetRef<PrefabAsset> _prefab{};
         /** @brief 씬 인스턴스의 앵커면 넣을 씬의 리소스 id 입니다(언리얼 Level Instance). 앵커 자리에 그 씬이 펼쳐진다. */
         PROPERTY()
-        string _scene{};
+        AssetRef<SceneDocument> _scene{};
         /** @brief 이 엔티티가 붙은 데이터 레이어 이름들입니다(쉼표로 가른다). 모두 켜졌을 때 오른다. */
         PROPERTY()
         string _layers{};

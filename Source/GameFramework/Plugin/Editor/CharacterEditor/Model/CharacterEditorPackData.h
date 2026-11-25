@@ -9,7 +9,11 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Animation/AnimationSet.h"
+#include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
@@ -36,17 +40,17 @@ namespace sw::editor
         /** @brief 데이터 종류 이름입니다(`SW_ASSET_TYPE` 등록 줄과 팩 경로가 이것을 쓴다). */
         static constexpr const utf8* kDataKind = "charactereditor";
 
-        PROPERTY( AssetPath, Name = "sockets", Required )
-        string _socketPath{}; ///< 소켓 파일(`*.sockets.xml`)
-        PROPERTY( AssetPath, Name = "skeleton", Required )
-        string _skeletonPath{}; ///< 스켈레톤(`*.skeleton.xml`)
-        string _refPosePath{};  ///< 레퍼런스 포즈(`*.refpose.xml`) — 스켈레톤 경로에서 만든다(데이터 칸 아님)
+        PROPERTY( Name = "sockets", Required )
+        AssetRef<SocketSet> _socketPath{}; ///< 소켓 파일(`*.sockets.xml`)
+        PROPERTY( Name = "skeleton", Required )
+        AssetRef<Skeleton> _skeletonPath{}; ///< 스켈레톤(`*.skeleton.xml`)
+        string             _refPosePath{};  ///< 레퍼런스 포즈(`*.refpose.xml`) — 스켈레톤 경로에서 만든다(데이터 칸 아님)
         PROPERTY( Name = "items", Required )
         AssetRef<ItemCatalog> _itemsPath{}; ///< 장비 아이템 카탈로그(`data/items.xml`) — 저장 꼴은 GUID 참조(`AssetRefBase`)
-        PROPERTY( AssetPath, Name = "appearance", Required )
-        string _appearanceFolder{}; ///< 외형 데이터 폴더(`data/appearance`)
-        PROPERTY( AssetPath, Required )
-        string _animationSet{}; ///< 미리보기 몸이 재생하는 애니메이션 셋(`*.animset.xml` — 임포트가 스켈레톤 옆에 쓴다)
+        PROPERTY( Name = "appearance", Required )
+        DataPath _appearanceFolder; ///< 외형 데이터 폴더(`data/appearance` — 폴더는 정체성이 없어 경로 글이다)
+        PROPERTY( Required )
+        AssetRef<AnimationSet> _animationSet{}; ///< 미리보기 몸이 재생하는 애니메이션 셋(`*.animset.xml` — 임포트가 스켈레톤 옆에 쓴다)
         PROPERTY( Required )
         DataPath _mirrorNames; ///< 좌우 이름 규칙 표(`*.mirrornames.xml`, `MirrorNameRules`) — 뼈대의 철자(`_L`/`_R` · `Left`/`Right` …)마다 다르다
         /**
@@ -59,8 +63,8 @@ namespace sw::editor
          * @brief 미리보기 몸에 얹어 볼 제약 리그(`*.rig.xml` — 스트라이드 워핑 · 양손 IK 같은 후처리)의 경로입니다. **선택 칸**: 비면 게임에 미리볼 리그가 없다는 뜻이고 창은 리그 단추를 그리지 않는다.
          * @details 일곱 칸이 필수인 것은 없으면 창이 일하지 못하기 때문이고, 리그는 없어도 창이 일하므로 선택이다(없다고 다른 게임의 리그를 쓰지 않는다).
          */
-        PROPERTY( AssetPath, Name = "rig" )
-        string _rigPath{};
+        PROPERTY( Name = "rig" )
+        AssetRef<RigAsset> _rigPath{};
         /**
          * @brief 미리보기 몸이 얼굴을 닦는 애니 알림 이벤트(`CharacterBodyDynamicsComponent::_wipeEvent`)입니다. **선택 칸**: 비면 미리보기 몸은 닦지 않는다.
          * @details 창은 몸을 코드로 세워 컴포넌트 칸을 데이터가 채우지 못한다 — 이벤트 이름은 애니 셋의 것이라 셋 옆(이 줄)에 적는다.

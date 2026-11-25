@@ -1506,7 +1506,7 @@ namespace sw
         }
         // 부품 칸이 늘면 다시 만든다(마스크가 부품 번호별이라 늘리는 길이 없다). 같은 파일 · 같은 영역 수 · 충분한 부품 칸이면 값을 지킨다 — 장비를 바꿔도 젖음 · 피가 사라지지 않게.
         const uint32 partCount = static_cast<uint32>( _state.getResolved()._listPart.size() );
-        const bool   bSameData = _loadedSurfaceChannels == _surfaceChannelsPath && _surfaceRegionCount == regionCount;
+        const bool   bSameData = _surfaceChannelsPath == _loadedSurfaceChannels && _surfaceRegionCount == regionCount;
         const bool   bFits     = hasSurfaceState() && _surface.getPartCount() >= partCount;
         if ( bSameData && bFits )
             return;
@@ -1523,7 +1523,7 @@ namespace sw
         }
         _surfaceBinding.releaseTextures();
         _surface.initialize( *pChannels, regionCount, partCount );
-        _loadedSurfaceChannels  = _surfaceChannelsPath;
+        _loadedSurfaceChannels  = _surfaceChannelsPath.path();
         _surfaceRegionCount     = regionCount;
         _surfaceAppliedRevision = constant::invalid_index::kUint64;
     }

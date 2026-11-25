@@ -132,7 +132,7 @@ namespace sw
         if ( pRule != nullptr && pRule->_stinger.empty() == false )
         {
             AudioMusicVoiceRequest stinger;
-            stinger._clipPath   = pRule->_stinger;
+            stinger._clipPath   = pRule->_stinger.key();
             stinger._bus        = getBus();
             stinger._playingID  = _playback._playingID;
             stinger._startFrame = boundary;

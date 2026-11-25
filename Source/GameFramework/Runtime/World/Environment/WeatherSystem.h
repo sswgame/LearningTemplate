@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,6 +26,7 @@ namespace sw
 {
     class Archive;
     class XMLNode;
+    struct MaterialParameterCollectionDef;
 
     /** @brief 계절 하나의 가중치입니다. */
     struct WeatherSeasonWeight
@@ -143,7 +145,7 @@ namespace sw
      * @details `materialCollection` 과 `<MaterialBinding>` 은 날씨 값을 지면 머티리얼이 읽는 파라미터 묶음 칸에 잇는다 — 날씨를 연 판 상태가 늘 쓴다(`WeatherMaterialWriter`).
      *          바인딩이 있는데 묶음이 없으면 읽기 오류다. `<SceneBinding>` 은 해 · 하늘 · 안개 · 바람을, `<SoundBinding>` 은 빗소리 · 바람 소리를 날씨에 잇는다(`WeatherSceneWriter`).
      * @code
-     *     <WeatherCatalog transition="60" materialCollection="engine/materials/weather.matparams.xml">
+     *     <WeatherCatalog transition="60" materialCollection="guid:…">
      *         <MaterialBinding parameter="Weather" valueX="wetness"/>
      *         <Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
      *         <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>
@@ -158,7 +160,9 @@ namespace sw
         PROPERTY( Min = 0.0, Units = s )
         float32 _transition{ 0.0f };
         PROPERTY( Tooltip = "Material parameter collection (*.matparams.xml) the <MaterialBinding> rows write (empty: the weather drives no materials)" )
-        string _materialCollection{};
+        AssetRef<MaterialParameterCollectionDef> _materialCollection;
+
+        WeatherCatalogRootParams();
     };
 
     class SW_GF_API WeatherCatalog : public GameCatalog<WeatherDef, XMLCatalog<WeatherCatalog>>

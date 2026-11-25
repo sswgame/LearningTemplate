@@ -113,7 +113,7 @@ namespace sw
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         if ( NileCityPlanner::paintTerrain( city, tileMap, listTerrain ) == false )
             return false; // 모자란 땅 · 레이어는 플래너가 남겼다
-        if ( _planner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) == false )
+        if ( _planner.reset( makeCityLayout(), AssetID{ _autoPlanPath.isSet() ? string_view{ _autoPlanPath.get() } : string_view{} } ) == false )
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         return beginCity();
     }
@@ -174,7 +174,7 @@ namespace sw
         if ( io.isReading() )
         {
             // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
-            if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
+            if ( io.check( restoredPlanner.reset( makeCityLayout(), AssetID{ _autoPlanPath.isSet() ? string_view{ _autoPlanPath.get() } : string_view{} } ) ) == false || io.check( restoredClock.initialize( makeClockSettings() ) ) == false ||
                  io.check( restoredCity.initialize( findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ) ) == false )
                 return;
         }

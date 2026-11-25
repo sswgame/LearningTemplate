@@ -28,6 +28,7 @@ namespace sw
     class GameObjectManager;
     class RhythmGameModeComponent;
     class RhythmHUDViewModel;
+    struct AudioMusicAsset;
 
     /**
      * @class RhythmViewComponent
@@ -75,8 +76,8 @@ namespace sw
         void updateHUD( const RhythmGameModeComponent& director );
 
     private:
-        PROPERTY( Category = "Song", AssetPath, DisplayName = "Music", Required, Tooltip = "Adaptive music (*.music.xml) whose start segment is the song" )
-        string _music;
+        PROPERTY( Category = "Song", DisplayName = "Music", Required, Tooltip = "Adaptive music (*.music.xml) whose start segment is the song" )
+        AssetRef<AudioMusicAsset> _music;
         PROPERTY( Category = "Input", DisplayName = "Lane Actions", Tooltip = "InputMap action of each lane, left to right (one per chart lane)" )
         vector<hashed_string> _listLaneAction;
         PROPERTY( Category = "View", DisplayName = "Note Prefab", Required, Tooltip = "Unit piece used for lanes, the judge line and notes" )

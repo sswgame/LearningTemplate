@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Graphics/Material/MaterialParameterCollection.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -64,17 +65,21 @@ namespace sw
         return 0.0f;
     }
 
+    WeatherCatalogRootParams::WeatherCatalogRootParams() = default;
+
     uint32 WeatherCatalog::loadRoot( const XMLCatalogRoot& root, string_view sourceName )
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
         _listMaterialBinding.clear(); // 다시 읽기는 같은 카탈로그에 읽는다 — 옛 바인딩을 남기지 않는다
         _listSceneBinding.clear();
         _listSoundBinding.clear();
-        WeatherCatalogRootParams rootParams{ _transitionTime, _materialCollection };
+        WeatherCatalogRootParams rootParams;
+        rootParams._transition         = _transitionTime;
+        rootParams._materialCollection = _materialCollection;
         if ( root.readProperties( rootParams, sourceName ) == false )
             return 0;
         _transitionTime                        = rootParams._transition;
-        _materialCollection                    = rootParams._materialCollection;
+        _materialCollection                    = rootParams._materialCollection.path();
         using Element                          = XMLCatalogElement<WeatherCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&WeatherCatalog::loadWeather>( "Weather" ),

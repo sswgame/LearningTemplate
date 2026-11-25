@@ -24,4 +24,13 @@ namespace sw
         };
         static constexpr AssetTypeDef kAssetType{ "AudioPlayable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
     };
+
+    /** @brief 적응형 음악 파일(`*.music.xml`)을 가리키는 참조(`AssetRef<AudioMusicAsset>`)의 대상입니다 — `GameSound::playAdaptiveMusic` 이 받는다. 같은 까닭으로 검사에만 쓴다. */
+    struct AudioMusicAsset
+    {
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".music.xml", AssetSuffixRole::Plain },
+        };
+        static constexpr AssetTypeDef kAssetType{ "AudioMusic", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
+    };
 } // namespace sw

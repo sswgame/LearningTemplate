@@ -28,6 +28,7 @@
 
 #include "Engine/Animation/Facial/WrinkleMap.h"
 #include "Engine/Animation/Rig/RigBodyInput.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -38,6 +39,7 @@ namespace sw
     class AppearanceLoadReport;
     class TagContainer;
     class XMLNode;
+    struct VFXEffectDef;
 
     /** @brief 상태 태그 하나가 지글 동작 배율을 정합니다(`<ActionScale tag scale/>`). 맞는 태그가 여럿이면 가장 큰 배율, 없으면 1 입니다. */
     REFLECT()
@@ -128,7 +130,7 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "Value stamped into the residue channel (dried salt, smeared makeup)" )
         float32 _residueValue{ 0.25f };
         PROPERTY( Tooltip = "Drop or strand effect (*.vfx.xml); empty = surface trail only" )
-        hashed_string _effect{};
+        AssetRef<VFXEffectDef> _effect;
         PROPERTY( Tooltip = "Body socket of the effect (chin, mouth corner); required with an effect" )
         hashed_string _socket{};
         PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds a stream drips after it reaches the end of the path; unused by a strand" )
@@ -140,6 +142,8 @@ namespace sw
         float32 computePathLength() const;
         /** @brief 경로를 따라 @p distance 만큼 간 UV 점입니다(끝을 넘으면 끝). */
         float2 samplePath( float32 distance ) const;
+
+        BodyFluidDef(); // 효과 종류가 완전한 자리(.cpp)에서 짓는다
     };
 } // namespace sw
 

@@ -18,6 +18,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -25,6 +26,7 @@
 namespace sw
 {
     class AppearanceLoadReport;
+    class Texture2D;
     class XMLNode;
 
     /** @brief 층이 아래 색과 섞이는 방법입니다(`skin_layer_composite.hlsli` 와 같은 식). */
@@ -46,8 +48,8 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Required )
         hashed_string _category{}; ///< 편집 창 묶음과 부분 프리셋 카테고리(Makeup · Tattoo · Scar · Paint)
-        PROPERTY( AssetPath, Required )
-        hashed_string _mask{}; ///< 마스크 텍스처(R = 덮임). 배치가 없는 층은 피부 UV 그대로, 있는 층은 층 UV [0,1]
+        PROPERTY( Required )
+        AssetRef<Texture2D> _mask; ///< 마스크 텍스처(R = 덮임). 배치가 없는 층은 피부 UV 그대로, 있는 층은 층 UV [0,1]
         PROPERTY()
         hashed_string _palette{}; ///< 색 견본 묶음(`customization.xml` 의 `<Palette>`). 비어 있으면 자유 색
         PROPERTY()
@@ -75,6 +77,8 @@ namespace sw
 
         /** @brief 피부 UV 가 영역 경계 안이면 true 입니다. */
         bool isInsideRegion( const float2& skinUV ) const;
+
+        SkinLayerDef(); // 텍스처가 완전한 자리(.cpp)에서 짓는다
     };
 } // namespace sw
 

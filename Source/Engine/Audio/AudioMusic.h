@@ -92,7 +92,7 @@ namespace sw
         PROPERTY( Tooltip = "Destination segment" )
         hashed_string _to{};
         PROPERTY( Tooltip = "Clip played on the switch point (one shot)" )
-        hashed_string _stinger{};
+        AssetRef<AudioPlayableAsset> _stinger;
         PROPERTY( Min = 0.0, Tooltip = "Fade out of the old segment from the switch point", Units = s )
         float32 _fadeOutSeconds{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Fade in of the new segment from the switch point", Units = s )
@@ -118,7 +118,7 @@ namespace sw
      *                 </_listLayer>
      *             </AudioMusicSegmentDef>
      *         </_listSegment>
-     *         <_listTransition><AudioMusicTransitionDef _from="*" _to="Combat" _sync="NextBar" _stinger="game/x/music/hit.ogg" /></_listTransition>
+     *         <_listTransition><AudioMusicTransitionDef _from="*" _to="Combat" _sync="NextBar" _stinger="guid:…" /></_listTransition>
      *     </AudioMusicDef>
      * @endcode
      */

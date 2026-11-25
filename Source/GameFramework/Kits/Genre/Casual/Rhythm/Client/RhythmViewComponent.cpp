@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Client/RhythmHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
@@ -142,7 +143,7 @@ namespace sw
                 // 앞 음악의 위치를 이 곡의 시각으로 읽으면 노트가 한꺼번에 지나간다 — 멈춘 것을 본 뒤에 튼다.
                 if ( musicSeconds.has_value() )
                     return;
-                const bool bPlaying = GameSound::playAdaptiveMusic( AssetID( _music ) );
+                const bool bPlaying = GameSound::playAdaptiveMusic( _music.id() );
                 if ( bPlaying == false )
                     SW_LOG_ERROR_ID( "Rhythm.MusicNotPlaying", "Rhythm view: the music '%#' could not be played - the song does not advance", _music.c_str() );
                 _musicPhase   = bPlaying ? MusicPhase::Playing : MusicPhase::Refused;

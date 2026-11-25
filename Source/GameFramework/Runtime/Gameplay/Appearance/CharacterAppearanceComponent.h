@@ -511,7 +511,7 @@ namespace sw
         int32 _seed;
         PROPERTY( Category = "Appearance", DisplayName = "Surface Channels",
                   Tooltip = "Surface channel table (*.surfacechannels.xml): wetness, dirt, blood, tears... Empty keeps the body surface state off" )
-        string _surfaceChannelsPath;
+        AssetRef<SurfaceChannelTable> _surfaceChannelsPath;
         PROPERTY( Category = "Appearance", DisplayName = "Skin Bake Resolution", Min = 16, Max = 4096,
                   Tooltip = "Side (px) of the per-character skin layer bake (makeup, tattoos, smear) the body material reads instead of its albedo map" )
         uint32 _skinBakeResolution;

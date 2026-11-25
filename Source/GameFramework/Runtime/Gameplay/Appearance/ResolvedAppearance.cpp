@@ -308,7 +308,7 @@ namespace sw
                     }
                     layer._regionMin       = pDef->_regionMin;
                     layer._regionMax       = pDef->_regionMax;
-                    layer._mask            = pDef->_mask;
+                    layer._mask            = pDef->_mask.key();
                     layer._roughness       = pDef->_roughness;
                     layer._roughnessWeight = pDef->_roughnessWeight;
                     layer._metallic        = pDef->_metallic;
@@ -607,12 +607,12 @@ namespace sw
                 resolved._asset        = part._asset;
                 resolved._material     = part._material.key();
                 resolved._listSection  = part._listSection;
-                resolved._skeleton     = part._skeleton;
-                resolved._socketSet    = part._socketSet;
-                resolved._rig          = part._rig;
-                resolved._fit          = part._fit;
-                resolved._fitTables    = part._fitTables;
-                resolved._bodyShapes   = part._bodyShapes;
+                resolved._skeleton     = part._skeleton.key();
+                resolved._socketSet    = part._socketSet.key();
+                resolved._rig          = part._rig.key();
+                resolved._fit          = part._fit.key();
+                resolved._fitTables    = part._fitTables.key();
+                resolved._bodyShapes   = part._bodyShapes.key();
                 resolved._layer        = part._layer;
                 resolved._lodDetail    = part._lodDetail;
                 resolved._lodDropLevel = part._lodDropLevel;
@@ -639,7 +639,7 @@ namespace sw
                     if ( pVariant->_asset.empty() == false )
                         resolved._asset = pVariant->_asset;
                     if ( pVariant->_skeleton.empty() == false )
-                        resolved._skeleton = pVariant->_skeleton;
+                        resolved._skeleton = pVariant->_skeleton.key();
                     entry.applyVariantMaterials( part, *pVariant, resolved, out );
                 }
                 const AppearancePartVariantDef* pMaterialVariant = entry._customMaterialVariant.empty() ? nullptr : part.findMaterialVariant( entry._customMaterialVariant );
@@ -740,7 +740,7 @@ namespace sw
                     }
                     const ResolvedPart resolved = resolvePart( visual, entry, part, placement, pStage, pRuleVariant, listDecision, out );
                     if ( resolved._socketSet.empty() == false )
-                        out._listSocketSource.push_back( ResolvedSocketSource{ entry._owner, part._name, part._socketSet } );
+                        out._listSocketSource.push_back( ResolvedSocketSource{ entry._owner, part._name, part._socketSet.key() } );
                     out._listPart.push_back( resolved );
                 }
                 if ( pStage != nullptr )

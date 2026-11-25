@@ -28,9 +28,9 @@ namespace
                 <ItemVisual id="helm"><Part name="Shell" kind="SocketPrefab" prefab="helm.prefab" socket="Head"/></ItemVisual></ItemVisualCatalog>)" );
             load( R"(<CustomizationSchemaCatalog><Palette id="Lips"><Swatch name="Red" color="0.8 0.05 0.1 1"/><Swatch name="Nude" color="0.7 0.45 0.4 1"/></Palette></CustomizationSchemaCatalog>)" );
             load( R"(<SkinLayerCatalog>
-                <SkinLayer id="lipstick" category="Makeup" mask="lips.png" palette="Lips" roughness="0.15" roughnessWeight="1" smearResistance="0.2"/>
-                <SkinLayer id="mascara" category="Makeup" mask="lashes.png" blend="Multiply" smearResistance="0"/>
-                <SkinLayer id="rose_tattoo" category="Tattoo" mask="rose.png" placeable="true" regionMin="0.5 0" regionMax="1 0.5" smearResistance="1"/>
+                <SkinLayer id="lipstick" category="Makeup" mask="lips.dds" palette="Lips" roughness="0.15" roughnessWeight="1" smearResistance="0.2"/>
+                <SkinLayer id="mascara" category="Makeup" mask="lashes.dds" blend="Multiply" smearResistance="0"/>
+                <SkinLayer id="rose_tattoo" category="Tattoo" mask="rose.dds" placeable="true" regionMin="0.5 0" regionMax="1 0.5" smearResistance="1"/>
             </SkinLayerCatalog>)" );
             load( R"(<CharacterAppearanceCatalog><CharacterAppearance id="Base" body="body"/></CharacterAppearanceCatalog>)" );
             SW_REQUIRE_TRUE( _database.finishLoad( nullptr ) );

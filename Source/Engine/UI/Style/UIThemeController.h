@@ -15,7 +15,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Style/UIStyleSheet.h"
+#include "Engine/UI/Style/UIStyleSheetAssetKind.h"
 
 namespace sw
 {

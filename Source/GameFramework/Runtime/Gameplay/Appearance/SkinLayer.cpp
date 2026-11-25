@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
@@ -291,6 +292,8 @@ namespace sw
         }
         return report.getErrors().size() == errorCountBefore;
     }
+
+    SkinLayerDef::SkinLayerDef() = default;
 
     const SkinLayerDef* SkinLayerCatalog::findLayer( const hashed_string& id ) const
     {

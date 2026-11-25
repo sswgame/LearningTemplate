@@ -535,7 +535,7 @@ namespace sw
         }
         for ( const AudioMusicTransitionDef& transition : pMusic->_listTransition )
         {
-            _clipStore.requestClip( transition._stinger );
+            _clipStore.requestClip( transition._stinger.key() );
         }
         Command command;
         command._type   = CommandKind::StartMusic;

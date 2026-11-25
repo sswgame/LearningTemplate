@@ -12,6 +12,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
@@ -69,8 +70,8 @@ namespace sw
         NileCityLayout makeCityLayout() const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Auto Plan", AssetPath, Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
-        string _autoPlanPath;
+        PROPERTY( Category = "Data", DisplayName = "Auto Plan", Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
+        DataPath _autoPlanPath;
         PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
         float32 _secondsPerMonth;
 

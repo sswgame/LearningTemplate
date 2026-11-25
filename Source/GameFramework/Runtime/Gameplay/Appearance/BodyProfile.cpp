@@ -8,6 +8,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/VFX/VFXEffectDef.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -156,6 +157,8 @@ namespace sw
         const float32 follow       = 1.0f - MathUtil::exp( -MathUtil::max( deltaSeconds, 0.0f ) / timeConstant );
         return current + ( target - current ) * follow;
     }
+
+    BodyFluidDef::BodyFluidDef() = default;
 
     float32 BodyFluidDef::computePathLength() const
     {
