@@ -100,22 +100,3 @@ def run_git_bytes(args: Sequence[str], *, cwd: Path, input_bytes: bytes, hook_re
     completed = subprocess.run([resolve_git_executable() or "git", *args], input=input_bytes, cwd=cwd, capture_output=True, check=False,
                                env=make_hook_environment() if hook_repository else None)
     return completed.returncode, completed.stdout, completed.stderr.decode("utf-8", "replace")
-
-
-def list_git_files(project_root: Path, list_git_argument: list[str], extensions: set[str] | None) -> set[Path]:
-    """
-    git 명령이 한 줄에 하나씩 찍는 저장소 기준 경로를 절대 경로로 풀어 모읍니다. 지금 있는 파일만, `extensions` 가 있으면 그 확장자만.
-
-    staged 전체 · staged C++ · 수정된 C++ · untracked C++ 네 곳이 이 여덟 줄을 각자 적고 있었습니다.
-    """
-    file_set: set[Path] = set()
-    git_result = run_git(list_git_argument, cwd=project_root)
-    if git_result.return_code != 0:
-        # 목록을 못 얻으면 "바뀐 파일 없음" 이 아니다 — 빈 목록이면 커밋 훅이 검사 없이 통과한다.
-        raise RuntimeError(f"git {' '.join(list_git_argument)} 실패: {git_result.stderr.strip()}")
-    for raw_line in git_result.stdout.splitlines():
-        if line := raw_line.strip():
-            resolved_path = (project_root / line).resolve()
-            if resolved_path.is_file() and (extensions is None or resolved_path.suffix.lower() in extensions):
-                file_set.add(resolved_path)
-    return file_set

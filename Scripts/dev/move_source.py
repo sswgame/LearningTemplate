@@ -202,7 +202,7 @@ class MoveSourceCommand(Command):
                     changed_cpp_set.add(path)
         list_changed_cpp = sorted(changed_cpp_set)
 
-        from lint.format import run_clang_format_batch
+        from lint.format_files import run_clang_format_batch
 
         run_clang_format_batch(list_changed_cpp, cwd=root)  # 경로가 바뀌면 include 순서와 정렬 칸이 어긋난다
         print(f"[move-source] {len(map_file)} 파일을 옮기고 C++ {len(list_changed_cpp)} 파일의 참조 · include 순서를 고쳤다")

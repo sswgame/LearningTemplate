@@ -172,7 +172,7 @@ def find_files_named(list_file: Sequence[Path], root: Path, stem: str) -> list[P
 
 def format_changed(root: Path, list_path: list[Path]) -> int:
     """이름 길이가 바뀌면 clang-format 의 정렬 칸이 어긋난다 — 바꾼 C++ 파일만 다시 포맷한다."""
-    from lint.format import run_clang_format_batch
+    from lint.format_files import run_clang_format_batch
 
     list_cpp = [path for path in list_path if path.suffix.lower() in CPP_SUFFIX]
     return run_clang_format_batch(list_cpp, cwd=root) if list_cpp else ExitCode.PASSED

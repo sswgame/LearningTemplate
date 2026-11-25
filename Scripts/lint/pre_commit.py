@@ -29,23 +29,11 @@ from typing import Sequence
 
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
-from common.project_constants import CPP_ALL_EXTENSIONS, LINT_TARGET_REL_DIRS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS
-from lint.format import VCPKG_MANIFEST_NAME, run_clang_format_batch, run_vcpkg_manifest_format
+from lint.format_files import run_clang_format_batch, run_vcpkg_manifest_format, select_format_files, select_vcpkg_manifests
 from lint.index_cache import CACHE_FOLDER
 from lint.lint_rule import LintRule, find_orphan_tables, find_rules, format_rules, inspect_file, inspect_files
 from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_file_scope, make_staged_scope, make_whole_scope
 from lint.module_imports import list_imported_module_files
-
-CPP_SUFFIXES = tuple(sorted(CPP_ALL_EXTENSIONS))
-SHADER_SUFFIXES = tuple(sorted(SHADER_SOURCE_EXTENSIONS))
-
-
-def select_format_files(scope: LintScope) -> list[str]:
-    """clang-format 이 볼 파일 — `format --all` 과 같은 대상(C++ 은 `LINT_TARGET_REL_DIRS`, 셰이더는 남의 코드 · 산출물 폴더 밖). 받아 온 남의 헤더는 고치지 않는다."""
-    list_cpp = scope.select(LINT_TARGET_REL_DIRS, CPP_SUFFIXES)
-    list_shader = [path for path in scope.select(suffixes=SHADER_SUFFIXES) if not any(part in NOT_OUR_DIR_NAMES for part in path.split("/")[:-1])]
-    return list_cpp + list_shader
-
 
 def select_rule_scope(rule: LintRule, scope: LintScope) -> LintScope:
     """
@@ -230,8 +218,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
         has_errors = True
         print("[format] FAIL — 'py -3 -m Scripts format' 으로 고친 뒤 다시 git add 한다.")
     # vcpkg 실행 파일을 한 번 띄운다 — 매니페스트가 스테이지에 있을 때만(`--all` 은 모두).
-    list_manifest = [project_root / path for path in scope.list_file if path.rsplit("/", 1)[-1] == VCPKG_MANIFEST_NAME]
-    if run_vcpkg_manifest_format(list_manifest, check_only=True) != 0:
+    if run_vcpkg_manifest_format([project_root / path for path in select_vcpkg_manifests(scope)], check_only=True) != 0:
         has_errors = True
         print("[format] FAIL — 'py -3 -m Scripts format --files <vcpkg.json>' 으로 고친 뒤 다시 git add 한다.")
 

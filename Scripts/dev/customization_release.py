@@ -39,7 +39,6 @@ SNAPSHOT_PATH = Path("Config/Build/Release/CustomizationSchemas.json")
 CONTENT_GLOB = "**/data/appearance/*.xml"
 CATALOG_TAG = "CustomizationSchemaCatalog"
 PARAMETER_KINDS = ("Slider", "Color", "Choice", "Attachment")
-FIRST_MIGRATION_VERSION = 2
 
 
 @dataclass

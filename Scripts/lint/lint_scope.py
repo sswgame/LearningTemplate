@@ -67,6 +67,12 @@ def make_whole_scope(project_root: Path) -> LintScope:
     return LintScope(list_repo_files(project_root), (), True)
 
 
+def make_changed_scope(project_root: Path) -> LintScope:
+    """작업 트리가 HEAD 와 다른 파일과 새 파일 — `format` 의 기본 대상."""
+    set_changed = {*run_git_lines(project_root, ["diff", "--name-only", "HEAD"]), *run_git_lines(project_root, ["ls-files", "--others", "--exclude-standard"])}
+    return LintScope(tuple(sorted(path for path in set_changed if (project_root / path).is_file())), (), False)
+
+
 def list_merge_parents(project_root: Path) -> list[str]:
     """병합 중이면 들여오는 커밋들(`MERGE_HEAD` 의 줄 — 문어발 병합은 여럿), 아니면 빈 목록."""
     result = run_git_in_hook_repository(["rev-parse", "--path-format=absolute", "--git-path", "MERGE_HEAD"], cwd=project_root)

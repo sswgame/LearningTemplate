@@ -11,7 +11,6 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator
 
-from .project_constants import CPP_ALL_EXTENSIONS, GENERATED_REL_DIRS, LINT_TARGET_REL_DIRS, NOT_OUR_DIR_NAMES
 from .paths import expand_path_template, platform_key
 
 _RGLOB_SKIP_DIR_NAMES = {"buildtrees", "downloads", "packages"}
@@ -29,125 +28,6 @@ def list_files_under(root: Path) -> tuple[Path, ...]:
     for directory, _, list_file_name in os.walk(root):
         list_path.extend(Path(directory, name) for name in list_file_name)
     return tuple(sorted(list_path))
-
-
-def get_lint_search_dirs(repository_root: Path) -> list[Path]:
-    """린트 및 포맷팅 대상 루트 디렉터리 목록을 반환합니다 (Source, Test, Source/Programs/ReflectionParser)."""
-    return [repository_root / rel for rel in LINT_TARGET_REL_DIRS]
-
-
-def collect_source_files(roots: Iterable[Path],
-                       extensions: set[str] | None = None,
-                       *,
-                       exclude_subdirs: Iterable[str] | None = None) -> list[Path]:
-    """
-    지정된 디렉터리들에서 C++ 파일(.cpp, .h 등) 목록을 재귀적으로 수집하여 정렬된 리스트로 반환합니다.
-
-    Args:
-        roots: 탐색할 루트 디렉터리 목록
-        extensions: 대상 파일 확장자 집합 (기본값: CPP_ALL_EXTENSIONS)
-        exclude_subdirs: 제외할 폴더 이름 목록 — 루트 **아래** 경로의 폴더 하나와 같으면 뺀다. 절대 경로의 부분 문자열로 보면
-                        저장소가 `.../bl-buildlint/` 처럼 그 말을 이름에 품은 폴더에 있을 때 파일이 전부 빠진다.
-
-    Returns:
-        정렬된 Path 객체 리스트
-    """
-    target_extensions = extensions if extensions is not None else CPP_ALL_EXTENSIONS
-    set_excluded_dir_name = set(exclude_subdirs) if exclude_subdirs else set()
-    result_list: list[Path] = []
-    for root in roots:
-        if not root.is_dir():
-            continue
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in target_extensions:
-                continue
-            if set_excluded_dir_name and set_excluded_dir_name.intersection(path.relative_to(root).parts[:-1]):
-                continue
-            result_list.append(path)
-    return sorted(result_list)
-
-
-def _is_generated_dir(repository_root: Path, directory: Path) -> bool:
-    """`directory` 가 저장소 기준 생성물 폴더(`GENERATED_REL_DIRS`)인가."""
-    try:
-        return directory.relative_to(repository_root).as_posix() in GENERATED_REL_DIRS
-    except ValueError:
-        return False
-
-
-def collect_repository_files(repository_root: Path,
-                           list_root: Iterable[str] = ("",),
-                           *,
-                           suffixes: Iterable[str] = (),
-                           file_names: Iterable[str] = (),
-                           excluded_dir_names: Iterable[str] = NOT_OUR_DIR_NAMES,
-                           any_suffix: bool = False) -> list[Path]:
-    """
-    저장소의 `listRoot`(저장소 기준 경로, 비우면 전체) 아래에서 확장자가 `suffixes` 이거나 이름이 `file_names` 인 파일을 모읍니다
-    (`any_suffix` 면 확장자를 보지 않는다 — 리소스 폴더처럼 파일 종류를 가리지 않는 검사).
-
-    `excluded_dir_names` 의 폴더로는 **내려가지 않습니다**(걷는 중에 가지를 친다). `Path.rglob` 로 전부 걸은 뒤 거르면 빌드 트리와
-    내려받은 외부 도구까지 다 걷는다. 정렬된 목록을 돌려줍니다.
-    """
-    set_suffix = {suffix.lower() for suffix in suffixes}
-    set_file_name = set(file_names)
-    set_excluded = set(excluded_dir_names)
-    result_set: set[Path] = set()
-    for rel_root in list_root:
-        base_dir = repository_root / rel_root if rel_root else repository_root
-        if not base_dir.is_dir():
-            continue
-        for current, list_dir_name, list_file_name in os.walk(base_dir):
-            list_dir_name[:] = [name for name in list_dir_name
-                              if name not in set_excluded and _is_generated_dir(repository_root, Path(current) / name) == False]
-            for file_name in list_file_name:
-                if any_suffix or file_name in set_file_name or os.path.splitext(file_name)[1].lower() in set_suffix:
-                    result_set.add(Path(current) / file_name)
-    return sorted(result_set)
-
-
-def resolve_file_arguments(repository_root: Path,
-                         list_file_argument: Iterable[str],
-                         *,
-                         list_scan_root: Iterable[str] = ("",),
-                         suffixes: Iterable[str] = (),
-                         file_names: Iterable[str] = (),
-                         excluded_dir_names: Iterable[str] = NOT_OUR_DIR_NAMES,
-                         any_suffix: bool = False) -> list[Path]:
-    """
-    `--files` 로 받은 경로를 대상 파일로 풉니다 — 게이트 · 픽서 · 훅이 **같은 규칙**을 쓴다(`collect_repository_files` 의 걷기 규칙과 같다).
-
-    - 상대 경로는 **저장소 루트 기준**으로 풀고, 거기 없으면 현재 폴더 기준으로 푼다. 저장소 밖 파일 · 없는 파일은 뺀다.
-    - 확장자가 `suffixes` 이거나 이름이 `file_names` 인 파일만(`any_suffix` 면 모두).
-    - `excluded_dir_names` 의 폴더 아래 · `list_scan_root`(저장소 기준, `""` 은 전체) 밖은 뺀다.
-    """
-    set_suffix = {suffix.lower() for suffix in suffixes}
-    set_file_name = set(file_names)
-    set_excluded = set(excluded_dir_names)
-    list_scan_prefix = [root.rstrip("/") + "/" for root in list_scan_root if root]
-    result_set: set[Path] = set()
-    for item in list_file_argument:
-        path = Path(item)
-        if not path.is_absolute():
-            candidate = repository_root / path
-            path = candidate if candidate.exists() else path.resolve()
-        path = path.resolve()
-        if not path.is_file() or not (any_suffix or path.name in set_file_name or path.suffix.lower() in set_suffix):
-            continue
-        try:
-            relative = path.relative_to(repository_root.resolve()).as_posix()
-        except ValueError:
-            continue
-        if any(part in set_excluded for part in relative.split("/")[:-1]):
-            continue
-        if any(relative.startswith(generated + "/") for generated in GENERATED_REL_DIRS):
-            continue
-        if list_scan_prefix and not any(relative.startswith(prefix) for prefix in list_scan_prefix):
-            continue
-        result_set.add(path)
-    return sorted(result_set)
 
 
 def get_or_find_cached(existing: dict[str, Any],

@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from lint.format import run_vcpkg_manifest_format  # noqa: E402
+from lint.format_files import run_vcpkg_manifest_format  # noqa: E402
 
 FAKE_VCPKG = """
 import json, sys
