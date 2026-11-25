@@ -16,7 +16,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Runtime/Character/Control/InputActionCheckUtil.h"
+#include "GameFramework/Runtime/Character/Input/InputActionCheckUtil.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
