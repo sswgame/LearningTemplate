@@ -1,5 +1,5 @@
 <?asset guid="7055500ef1d8696c3deeea1e084e42a9"?>
-<Prefab formatVersion="1" name="TownsfolkMerged">
+<Prefab formatVersion="0" name="TownsfolkMerged">
 	<GameObject _schemaVersion="0" _name="TownsfolkMerged" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"

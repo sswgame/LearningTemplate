@@ -1,5 +1,5 @@
 <?asset guid="15a7a8fcad90e335ced2ff67bfd687f5"?>
-<Scene formatVersion="3" name="SpawnDirector">
+<Scene formatVersion="0" name="SpawnDirector">
 	<!-- 스폰 감독 시나리오(automation/spawndirector)의 무대 — SpawnDemo 가 예산 표(data/spawndemo.spawns.xml)대로 상자를 Spawn.[번호] 로 세운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

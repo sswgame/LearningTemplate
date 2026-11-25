@@ -1,5 +1,5 @@
 <?asset guid="30703977e33786c7530db23759979f13"?>
-<Prefab formatVersion="1" _base="game/playground/shooter3d/prefabs/effect.prefab.xml" name="Tracer">
+<Prefab formatVersion="0" _base="game/playground/shooter3d/prefabs/effect.prefab.xml" name="Tracer">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _localScale="0.02,0.02,1" _meshID="Cube" />

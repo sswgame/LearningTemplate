@@ -1,6 +1,6 @@
 <?asset guid="289d5620c20d4c35a8627ce623aa2501"?>
 <!-- 배틀로얄 미니게임의 바닥 무더기 모습 — BattleRoyaleViewComponent 가 풀에서 꺼내 무더기 자리에 둔다. -->
-<Prefab formatVersion="1" name="BattleRoyaleItem">
+<Prefab formatVersion="0" name="BattleRoyaleItem">
 	<GameObject _schemaVersion="0" _name="BattleRoyaleItem" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.866" _bVisible="true" />

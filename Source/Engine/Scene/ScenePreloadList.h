@@ -28,7 +28,7 @@ namespace sw
     struct SW_API ScenePreloadList
     {
         static constexpr string_view kExtension = ".preload.json";
-        static constexpr uint32      kVersion   = 1;
+        static constexpr uint32      kVersion   = 0;
 
         /**
          * @brief 씬 파일 경로(`….scene.xml` 또는 `….scene.bin`)의 프리로드 목록 경로(`….preload.json`)를 만듭니다. 씬 파일이 아니면 빈 문자열입니다.

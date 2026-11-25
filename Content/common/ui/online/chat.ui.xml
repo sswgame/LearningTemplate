@@ -1,5 +1,5 @@
 <?asset guid="d9269facbc3691183e923d7a2e062aa4"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 채팅 견본 문서(온라인 키트 U1). C++ 화면은 `ChatScreen` 이다. 줄 글은 코드가 `Lines` 패널에 `Line.<번호>` 이름으로 채운다. 문서 경로와 채널은 호출하는 게임이 `ChatScreen::open` 에 준다. -->
 	<UIScreenDef _bPausesGame="false" _defaultFocus="Input" />
 	<SafeZonePanel>

@@ -1,5 +1,5 @@
 <?asset guid="5115bc2de5be1882c6519acafd5089cf"?>
-<Scene formatVersion="3" name="Facial">
+<Scene formatVersion="0" name="Facial">
 	<!-- 표정 · 립싱크 시나리오(automation/facial · lipsync)의 무대 — 시험 머리(models_raw/testhead.gltf, 모프 일곱)에 얼굴 리그(data/testhead.facial.xml)를 건다. 깜빡임 · 사카드는 끈다(값이 시간에 흔들리지 않게). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

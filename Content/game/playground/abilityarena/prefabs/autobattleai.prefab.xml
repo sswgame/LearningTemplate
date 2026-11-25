@@ -1,5 +1,5 @@
 <?asset guid="76a6bb5b49efa8ed44c30117ccf360e7"?>
-<Prefab formatVersion="1" name="ArenaAutoBattleAI">
+<Prefab formatVersion="0" name="ArenaAutoBattleAI">
 	<GameObject _schemaVersion="0" _name="ArenaAutoBattleAI" _bActive="true">
 		<_listComponent>
 			<ArenaAutoBattleAIComponent _localID="4041145210292639849" _componentName="ArenaAutoBattleAIComponent"

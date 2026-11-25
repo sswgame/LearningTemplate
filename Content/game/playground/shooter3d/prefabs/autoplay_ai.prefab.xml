@@ -1,5 +1,5 @@
 <?asset guid="db9836711aca7b372e2ebbb9fc0c0eae"?>
-<Prefab formatVersion="1" name="ShooterAutoPlay">
+<Prefab formatVersion="0" name="ShooterAutoPlay">
 	<GameObject _schemaVersion="0" _name="ShooterAutoPlay" _bActive="true">
 		<_listComponent>
 			<ShooterAutoAimControllerComponent _localID="14420210856601955983" _componentName="ShooterAutoAimControllerComponent"

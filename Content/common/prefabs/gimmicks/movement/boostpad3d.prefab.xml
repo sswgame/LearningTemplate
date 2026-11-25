@@ -1,5 +1,5 @@
 <?asset guid="af37077a1b39819248fbf5141f8d96e9"?>
-<Prefab formatVersion="1" _base="common/prefabs/gimmicks/movement/spring3d.prefab.xml" name="BoostPad3D">
+<Prefab formatVersion="0" _base="common/prefabs/gimmicks/movement/spring3d.prefab.xml" name="BoostPad3D">
 	<PrefabOverrides>
 		<Remove key="#9db080fc534fcdd9" />
 		<Override key="#63e709ac676dd304">

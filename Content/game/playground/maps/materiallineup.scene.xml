@@ -1,5 +1,5 @@
 <?asset guid="edf8d133ac5a30237b852c3866350664"?>
-<Scene formatVersion="3" name="MaterialLineup">
+<Scene formatVersion="0" name="MaterialLineup">
 	<!-- 머티리얼 라이브러리 줄 세우기(시나리오 automation/surfacelibrary) — 줄 0 일상 물건 · 줄 1 소품 · 줄 2 배경 · 줄 3 기믹. 바닥은 콘크리트 프리셋이라 날씨(engine/materials/weather.matparams.xml)를 바꾸면 웅덩이 · 눈이 함께 보인다. 프리셋은 engine/materials/library/. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

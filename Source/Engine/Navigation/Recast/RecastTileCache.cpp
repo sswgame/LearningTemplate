@@ -24,7 +24,7 @@ namespace sw
         {
             /** @brief 층 묶음 바이트의 머리(`SWTC`)와 형식 버전입니다. */
             static constexpr uint32 kPackMagic   = 0x43545753u;
-            static constexpr uint32 kPackVersion = 1;
+            static constexpr uint32 kPackVersion = 0;
             /** @brief 층에서 짓는 동안 쓰는 임시 메모리 상한(바이트)입니다. 타일 크기 256 의 층도 담는다. */
             static constexpr size_t kBuildScratchBytes = 4u * constant::memory::kBytesPerMegabyte;
 

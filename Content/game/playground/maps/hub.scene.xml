@@ -1,5 +1,5 @@
 <?asset guid="57d6125ff94a46bfb947271e54e65b52"?>
-<Scene formatVersion="3" _base="game/playground/maps/prairie.scene.xml" name="Hub">
+<Scene formatVersion="0" _base="game/playground/maps/prairie.scene.xml" name="Hub">
 	<!-- 마을 — 팩의 시작 맵(gamesettings startMap). 서부 평원(maps/prairie — GF_OpenWorldWestern 의 말 · 법 · 날씨 · 도착 컷씬 · 자동 저장, 스트리밍 셀 16 m)을 바탕으로 물려받고,
 	     플레이어가 장소 · 사물로 장르 미니게임에 들어가고 돌아온다(MinigameFlow). 바탕을 고치면 마을도 따라간다(언리얼 레벨 인스턴스 · Godot 씬 상속과 같은 자리).
 	     CardTableGate(x -6): 카드 탁자 — minigames/cardtable(SubLevel)을 하위 레벨 maps/hub_cardtable 로 더한다(마을이 보인 채로).

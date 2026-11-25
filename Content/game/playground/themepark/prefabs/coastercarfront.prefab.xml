@@ -1,5 +1,5 @@
 <?asset guid="0387581112fae5da240a2bf963a5ba7a"?>
-<Prefab formatVersion="1" _base="game/playground/themepark/prefabs/coastercar.prefab.xml" name="CoasterCarFront">
+<Prefab formatVersion="0" _base="game/playground/themepark/prefabs/coastercar.prefab.xml" name="CoasterCarFront">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="game/playground/themepark/models/coaster_train_front.mesh" />

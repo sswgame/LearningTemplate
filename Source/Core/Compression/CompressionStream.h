@@ -24,7 +24,7 @@ namespace sw
         /** @brief 'SWCS'(SW Compression Stream). 스트림의 첫 4바이트입니다. */
         static constexpr uint32 kMagic = FourCCUtil::make( "SWCS" );
         /** @brief 현재 컨테이너 포맷 버전입니다. 읽을 때는 이 값만 받아들입니다. */
-        static constexpr uint8 kVersion = 1;
+        static constexpr uint8 kVersion = 0;
         /** @brief `_flags` 비트: 해제한 뒤 원본의 FNV-1a 체크섬(`_checksum`)을 검증하라는 표시입니다. */
         static constexpr uint16 kFlagChecksum = 0x01;
 

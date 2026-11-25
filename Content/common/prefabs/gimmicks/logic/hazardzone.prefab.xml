@@ -1,5 +1,5 @@
 <?asset guid="d9074ba59e9f2060fbad9d2646f2a5a4"?>
-<Prefab formatVersion="1" name="HazardZone">
+<Prefab formatVersion="0" name="HazardZone">
 	<GameObject _schemaVersion="0" _name="HazardZone" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

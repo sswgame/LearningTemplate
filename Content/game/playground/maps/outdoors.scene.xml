@@ -1,5 +1,5 @@
 <?asset guid="f7c4a4b8e8324effb3b0c729e405db26"?>
-<Scene formatVersion="3" name="Outdoors">
+<Scene formatVersion="0" name="Outdoors">
 	<!-- 야외 활동 장소 — 이동 방식(사다리 · 등반 벽 · 밧줄 · 헤엄) · 텔레포트 · 상자 · 줍기 · 나무 베기 · 낚시 · 이모트 · 미니맵. 시나리오 automation/outdoors · outdoorsloot 가 쓴다.
 	     플레이어(Player)는 로컬 조종자(PlayerController — 가방)가 쥐고 공용 액션 Move · Jump · Interact 와 이 장소의 액션(data/outdoors.input.xml)으로 움직인다.
 	     사다리(Ladder, z 6) · 등반 벽(ClimbWall, x 10, 옆으로도 간다) · 밧줄(Rope, x -10, 가는 쪽으로 뛰어내린다) 뒤에 3 m · 5 m 발판. 앞(+Z)이 벽 쪽이다.

@@ -1,5 +1,5 @@
 <?asset guid="b6813f907bb1086c4157d341f8c33115"?>
-<Prefab formatVersion="1" name="FloorSwitch">
+<Prefab formatVersion="0" name="FloorSwitch">
 	<GameObject _schemaVersion="0" _name="FloorSwitch" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

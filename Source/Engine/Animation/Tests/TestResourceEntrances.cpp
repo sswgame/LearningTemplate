@@ -92,7 +92,7 @@ namespace
         static string makeScene( const utf8* pName, const string& inner )
         {
             StringBuilder<constant::buffer::kMax512> builder;
-            builder.appendFormat( R"(<Scene formatVersion="2" name="%#"><SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0"><_cellGrid _cellSize="0" _loadingRadius="0" /></SceneSettings>%#</Scene>)", pName, inner );
+            builder.appendFormat( R"(<Scene formatVersion="0" name="%#"><SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0"><_cellGrid _cellSize="0" _loadingRadius="0" /></SceneSettings>%#</Scene>)", pName, inner );
             return string( builder.view() );
         }
     };

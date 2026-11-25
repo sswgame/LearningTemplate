@@ -1,5 +1,5 @@
 <?asset guid="9b22080035daccc74f67bd5469df5793"?>
-<Prefab formatVersion="1" name="ItemBox3D">
+<Prefab formatVersion="0" name="ItemBox3D">
 	<GameObject _schemaVersion="0" _name="ItemBox3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

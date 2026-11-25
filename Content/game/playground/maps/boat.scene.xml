@@ -1,5 +1,5 @@
 <?asset guid="58d4d67101c78582e4e3e776e1ecbf7f"?>
-<Scene formatVersion="3" name="Boat">
+<Scene formatVersion="0" name="Boat">
 	<!-- 배 무대(automation/boat) — 새 물리 없이 조합한 배(docs/agents/Gameplay.md "트리거 · 물리").
 	     바다(Sea, 수면 y 0, 파도 둘 — 날씨 wind 가 WeatherWaveComponent 로 진폭을 1 → 4 배) 위에 노 젓는 배(Rowboat — 선원 Sailor 가 갑판에 서 있고, 조타수 Helmsman 이
 	     조타륜 운전석에 앉는다) · 바람을 등진 돛배(Downwind, 선수 +x) · 바람을 마주한 돛배(Upwind, 선수 −x). 바람(Wind)은 +x 로 10 m/s.

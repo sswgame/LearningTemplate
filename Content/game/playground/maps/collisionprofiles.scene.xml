@@ -1,5 +1,5 @@
 <?asset guid="58514b2c976a44f493e91eaea073f4c5"?>
-<Scene formatVersion="3" name="CollisionProfiles">
+<Scene formatVersion="0" name="CollisionProfiles">
 	<!-- 충돌 프로필 무대(시나리오 automation/collisionprofiles) — 투사체(Bolt, Projectile)가 트리거(Gate, Trigger)를 겹치며 지나가 Pawn(Guard, Character)에 막힌다.
 	     z = 4 줄: 눈(Eye)이 +X 로 Camera · Visibility 트레이스를 쏜다 — Camera 는 Pawn(Watcher)을 무시하고 벽(Wall, Static)에 맞고, Visibility 는 Watcher 에 맞는다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

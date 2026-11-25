@@ -1,5 +1,5 @@
 <?asset guid="96dff9c03d7b6ce03cad36c74e73192c"?>
-<Prefab formatVersion="1" name="DestructibleCover3D">
+<Prefab formatVersion="0" name="DestructibleCover3D">
 	<GameObject _schemaVersion="0" _name="DestructibleCover3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

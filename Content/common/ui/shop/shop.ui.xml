@@ -1,5 +1,5 @@
 <?asset guid="31d3621cede3fdd40788ddaf304c9288"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 상점 견본 문서(`ShopScreen`). 상품 줄 단추(명령 Pick)는 코드가 가상 목록 `Offers` 에 보이는 만큼만 만든다. 구매 확인은 엔진 확인 대화 상자(engine/ui/confirm.ui.xml)다. -->
 	<UIScreenDef _defaultFocus="Close" />
 	<SafeZonePanel>

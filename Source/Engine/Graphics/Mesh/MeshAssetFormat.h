@@ -61,7 +61,7 @@ namespace sw
     struct SW_API MeshAssetFormat
     {
         /** @brief 지금 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델 원본을 다시 임포트합니다. */
-        static constexpr uint32 kVersion = 8; // 6: 역 바인드와 본 배치 지문을 스켈레톤에서 메시로 옮겼다, 7: 정점 65536 개 이하는 인덱스가 uint16 이다(R-15), 8: 정점 플래그가 이음매 · 변 묶음을 싣는다
+        static constexpr uint32 kVersion = 0;
         /** @brief 헤더의 바이트 수입니다(고정 필드 28 + UV 경계 float32 4 개). */
         static constexpr uint32 kHeaderSize = 44;
         /** @brief 파일의 정점 하나의 바이트 수입니다(압축 배치 — 메모리의 `RHIVertex` 는 64 바이트 float32 16 개이고 읽을 때 풉니다). */

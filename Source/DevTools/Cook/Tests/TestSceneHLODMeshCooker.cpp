@@ -49,7 +49,7 @@ namespace
         static bool loadSplitScene( const test::ScopedScratchDomain& domain, SceneDocument& outDoc )
         {
             StringBuilder<constant::buffer::kMax4096> scene;
-            scene.append( "<Scene formatVersion=\"3\" name=\"HLODMesh\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _hlodMergeMaxInstanceCount=\"2\" "
+            scene.append( "<Scene formatVersion=\"0\" name=\"HLODMesh\"><SceneSettings _bStreaming=\"true\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"8\" _hlodMergeMaxInstanceCount=\"2\" "
                           "_addToWorldBudgetMicroseconds=\"2000\"><_cellGrid _cellSize=\"10\" _loadingRadius=\"10\" /></SceneSettings><entities>" );
             for ( const string& entity : { makeMesh( "1", "Cube", "2,0,2" ), makeMesh( "2", "Sphere", "5,0,5" ), makeMesh( "3", "Cube", "22,0,2" ), makeMesh( "4", "Cube", "26,0,6" ) } )
             {

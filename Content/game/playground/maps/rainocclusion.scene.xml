@@ -1,5 +1,5 @@
 <?asset guid="53488a7b689d478885432cd0806ad03c"?>
-<Scene formatVersion="3" name="RainOcclusion">
+<Scene formatVersion="0" name="RainOcclusion">
 	<!-- 비 가림 맵 시나리오(automation/rainocclusion)의 무대 — 젖는 땅(날씨 묶음) 위에 세 벽과 지붕(8 x 8 m, 높이 3 m, 앞이 트였다). 카메라는 앞에서 지붕 안까지 바라본다.
 	     RainMap: 비 가림 맵. Rain: 맵으로 가려지는 굵은 GPU 비(engine/vfx/precipitation_rain_heavy) — 시나리오가 켜고 끈다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

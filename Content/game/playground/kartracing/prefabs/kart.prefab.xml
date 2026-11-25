@@ -1,6 +1,6 @@
 <?asset guid="ee5df9761e9e8b5cb7a2e648025636ea"?>
 <!-- 카트 한 대(원시 도형) — 앞이 +Z. 자리 · 방향 · 색은 뷰(KartRaceViewComponent)가 정한다. -->
-<Prefab formatVersion="1" name="Kart">
+<Prefab formatVersion="0" name="Kart">
 	<GameObject _schemaVersion="0" _name="Kart" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

@@ -39,7 +39,7 @@ namespace sw
     struct SW_API OctahedralRadianceMap
     {
         static constexpr uint32      kMagic     = FourCCUtil::make( "SWRM" );
-        static constexpr uint32      kVersion   = 1;
+        static constexpr uint32      kVersion   = 0;
         static constexpr string_view kExtension = ".radiancemap";
         /// @brief 밉 0 한 변 텍셀 수의 범위 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다.
         static constexpr uint32 kMinResolution = 4;
@@ -84,7 +84,7 @@ namespace sw
     struct SW_API ReflectionProbeAsset
     {
         static constexpr uint32      kMagic     = FourCCUtil::make( "SWRP" );
-        static constexpr uint32      kVersion   = 1;
+        static constexpr uint32      kVersion   = 0;
         static constexpr string_view kExtension = ".reflprobe";
         /// @brief 한 변 텍셀 수의 범위 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다.
         static constexpr uint32 kMinResolution = 4;

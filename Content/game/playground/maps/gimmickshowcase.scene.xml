@@ -1,5 +1,5 @@
 <?asset guid="2523a2cbcf96d75f2f7a966d5bcba9c4"?>
-<Scene formatVersion="3" name="GimmickShowcase">
+<Scene formatVersion="0" name="GimmickShowcase">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

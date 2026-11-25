@@ -1,5 +1,5 @@
 <?asset guid="1ff9de310e857c77af197f8d8261aebf"?>
-<Prefab formatVersion="1" name="TagGate3D">
+<Prefab formatVersion="0" name="TagGate3D">
 	<GameObject _schemaVersion="0" _name="TagGate3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

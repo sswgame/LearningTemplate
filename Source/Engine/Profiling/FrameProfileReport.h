@@ -44,7 +44,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 보고 판입니다. */
-        static constexpr uint32 kSchemaVersion = 1;
+        static constexpr uint32 kSchemaVersion = 0;
 
         PROPERTY()
         uint32 _schemaVersion{ kSchemaVersion };

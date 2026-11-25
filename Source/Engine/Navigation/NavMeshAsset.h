@@ -1,7 +1,7 @@
 /**
  * @file NavMeshAsset.h
  * @brief 쿠킹한 내비메시(`.navmesh`)입니다. 씬 하나의 에이전트 종류마다 타일 바이트를 싣습니다. 타일을 한꺼번에 베이크하는 도우미도 있습니다.
- * @details **형식**(리틀 엔디언, 판 2)은 머리와 타일 내용으로 나뉜다. 머리는 매직 `SWNV`, 형식 버전, 머리 길이(이 칸까지 포함한 머리 전체), 백엔드 이름, 백엔드 버전, 항목 수,
+ * @details **형식**(리틀 엔디언)은 머리와 타일 내용으로 나뉜다. 머리는 매직 `SWNV`, 형식 버전, 머리 길이(이 칸까지 포함한 머리 전체), 백엔드 이름, 백엔드 버전, 항목 수,
  *          항목마다 [종류 이름, 베이크 값 해시, 입력 해시, 경계 상자, 타일 수 → 타일마다 (x, z, 내용 안 시작, 길이, 타일 입력 해시),
  *          대략 그래프(클러스터 수 → 클러스터, 간선 수 → 간선 — `NavClusterGraph::write`)] 다. 타일이 곧 내비 데이터 청크다 — 셀과 같은 원점 · 반경으로 타일 단위로 오르내린다. 머리 뒤에 타일 바이트가 타일 순서로 빈틈없이 잇는다.
  *          타일 바이트는 백엔드의 것이고 그대로 `INavMesh::replaceTile` 에 넣는다. 스트리밍 씬은 머리만 읽고(`loadHeadFromAsset`) 타일을 원점 둘레에서 구간으로 올리고 내린다
@@ -81,8 +81,8 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `NavMeshAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "NavMeshAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
-        /** @brief 형식 버전입니다. 바꾸면 쿠킹본을 다시 만듭니다. 판 2 — 머리(타일 색인 · 구간)와 타일 내용을 나눴다. 판 3 — 타일 줄에 입력 해시를 더했다(감사 A-13). 판 4 — 항목에 대략 그래프를 더했다(스트리밍 월드 먼 경로). */
-        static constexpr uint32 kVersion = 4;
+        /** @brief 형식 버전입니다. 바꾸면 쿠킹본을 다시 만듭니다. */
+        static constexpr uint32 kVersion = 0;
 
         NavMeshAsset();
 

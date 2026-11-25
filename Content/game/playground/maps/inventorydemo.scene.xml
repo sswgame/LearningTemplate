@@ -1,5 +1,5 @@
 <?asset guid="5e4824070a8d6dfc5280c9330cd91a9b"?>
-<Scene formatVersion="3" name="InventoryDemo">
+<Scene formatVersion="0" name="InventoryDemo">
 	<!-- 인벤토리 · 오프라인 상점 시연(시나리오 automation/inventory · shopoffline). Player 는 마을 사람 프리셋에 장비 컴포넌트(가방 4 칸 · 무게 3)와 상호작용(Interact — 버린 것을 다시 줍는다)을 단다.
 	     바닥에 포션 더미(3 개) · 장화 · 투구 · 망토가 놓여 있다(PickupComponent). InventoryDemo 의 개발 명령(exec InventoryDemo openInventory · openShop)이 화면을 연다.
 	     CraftingStation 은 같은 가방으로 만드는 작업대다(시나리오 automation/crafting, 명령 craft.enqueue 등). -->

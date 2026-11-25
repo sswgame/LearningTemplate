@@ -104,12 +104,11 @@ namespace sw
 
     /**
      * @brief 현재 지원하는 리소스 팩 바이너리 포맷 버전입니다. 레이아웃을 바꾸면 올립니다.
-     * @details 2: 스트링 풀의 맨 앞(오프셋 0)이 마운트 도메인(NUL 종료, 언리얼 pak mount point)이다 — `engine` · `game/playground` · `dlc/winter`, 패치 팩은 빈 글(항목이 전체 경로).
-     *          예전에는 팩 파일 이름(`game_playground.pack`)에서 도메인을 추측했다.
-     *          3: 헤더가 파일 끝(96B)이고 블록 표가 생겼다. FAT 칸 `_crc32` 자리가 `_firstBlock` 이 되고 CRC 는 블록마다다. 옛 판은 리더가 거절하고 쿠커가 다시 쓴다
+     * @details 스트링 풀의 맨 앞(오프셋 0)이 마운트 도메인(NUL 종료, 언리얼 pak mount point)이다 — `engine` · `game/playground` · `dlc/winter`, 패치 팩은 빈 글(항목이 전체 경로).
+     *          헤더는 파일 끝(96B)이고 CRC 는 블록마다다(블록 표). 다른 판은 리더가 거절하고 쿠커가 다시 쓴다
      *          (판은 팩 쿠킹 설정 해시에 들어가 옛 산출물을 재사용하지 않는다).
      */
-    inline constexpr uint32 kPackFormatVersion = 3;
+    inline constexpr uint32 kPackFormatVersion = 0;
 
     /** @brief 블록 크기(압축 전)의 형식 한계입니다. 쓰는 쪽은 이 안의 2 의 거듭제곱만 쓰고(`PackConfig` 의 `_blockSize`) 리더는 밖의 값을 거절합니다. */
     inline constexpr uint32 kPackMinBlockSize = 64 * constant::memory::kBytesPerKilobyte;

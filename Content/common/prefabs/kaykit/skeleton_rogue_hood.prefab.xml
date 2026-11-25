@@ -1,5 +1,5 @@
 <?asset guid="39429c347eeae0bdaea02ec240018ce2"?>
-<Prefab formatVersion="1" _base="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" name="SkeletonRogueHood">
+<Prefab formatVersion="0" _base="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" name="SkeletonRogueHood">
 	<PrefabOverrides>
 		<Override key="#0244d8c8807cd288">
 			<MeshComponent _meshID="common/models/kaykit/skeleton_rogue/parts/skeleton_rogue_hood.mesh" />

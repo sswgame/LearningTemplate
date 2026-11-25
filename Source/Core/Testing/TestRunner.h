@@ -63,12 +63,11 @@ namespace sw::test
     public:
         /**
          * @brief JSON 보고 형식의 판입니다. 칸을 바꾸면 올린다(읽는 도구가 판으로 가른다).
-         *        4: 실패 종류 — 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crash, 통과 · 건너뜀이면 빈 글),
+         *        실패 종류는 케이스의 `failureKind`(Assertion · NoAssertion · UndeclaredLog · ExpectedLogMissing · SnapshotMissing · SnapshotDiffers · Timeout · Crash, 통과 · 건너뜀이면 빈 글),
          *           위 `failureKinds`(종류별 진 케이스 수) · `unmatchedPatterns`(등록된 케이스에 맞지 않은 더하기 패턴).
-         *        3: 건너뜀(`SW_TEST_SKIP`) — 위 `skippedCount`, 케이스의 `skipped` · `skipReason`. 건너뛴 케이스는 `passed` 가 거짓이다(통과로 세지 않는다).
-         *        2: 판 번호 · 케이스의 파일 · 줄 · 격리 칸을 더했다.
+         *        건너뜀(`SW_TEST_SKIP`) — 위 `skippedCount`, 케이스의 `skipped` · `skipReason`. 건너뛴 케이스는 `passed` 가 거짓이다(통과로 세지 않는다).
          */
-        static constexpr uint32 kReportSchemaVersion = 4;
+        static constexpr uint32 kReportSchemaVersion = 0;
 
         /** @brief @p name(`스위트.케이스`)이 거르개에 맞는지입니다. */
         [[nodiscard]] static bool matchesFilter( string_view filter, string_view name );

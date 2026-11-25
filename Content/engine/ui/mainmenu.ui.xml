@@ -1,5 +1,5 @@
 <?asset guid="bf80ccef202c6b984f26e57be78425bd"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 메인 메뉴(`MainMenuScreen`, 타이틀 씬의 `TitleMenuComponent` 가 연다). 시작 · 끝내기는 전역 명령 표(`StartGame` · `QuitGame`)로 넘기고, 끝내기는 확인 대화 상자를 먼저 띄운다. -->
 	<UIScreenDef _defaultFocus="StartGame" />
 	<SafeZonePanel>

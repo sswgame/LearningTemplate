@@ -1,6 +1,6 @@
 <?asset guid="17f143aaafa52a5087125a89f2ac27c8"?>
 <!-- 키트 클라이언트 뷰(PrefabViewBatch)가 쓰는 지름 0.8 m 공 — 아이템. 자리 · 색은 뷰가 정한다. -->
-<Prefab formatVersion="1" name="RuleBall">
+<Prefab formatVersion="0" name="RuleBall">
 	<GameObject _schemaVersion="0" _name="RuleBall" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

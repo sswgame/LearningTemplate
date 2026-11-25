@@ -16,7 +16,7 @@ namespace sw
             /** @brief 파일의 머리 표지입니다. */
             static constexpr uint32 kMagic = 0x53415753u; // "SWAS"
             /** @brief 파일 틀의 판입니다(줄의 배치). 뽑은 바이트의 판은 따로 든다. */
-            static constexpr uint32 kFormatVersion = 1;
+            static constexpr uint32 kFormatVersion = 0;
             /** @brief 머리(표지 · 틀의 판 · 뽑은 바이트의 판 · 몸통 해시)의 바이트 수입니다. */
             static constexpr size_t kHeaderBytes = 20;
             /** @brief 줄 하나가 차지하는 최소 바이트입니다(빈 열쇠 길이 4 + 도장 16 + 빈 바이트 길이 4). */

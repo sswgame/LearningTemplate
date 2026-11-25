@@ -5,7 +5,7 @@
  *          모든 칸이 필수이고, 모르는 원소 · 틀린 형식 · 범위 밖 값은 이유를 남기고 거절한다. 언리얼 UGC 플러그인의 `.uplugin`(판 · 의존)과 Godot `.pck` 의 덮어쓰기를
  *          한 파일에 둔 자리다(기억에 의존).
  *
- *          <Mod id="demo_lantern" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0">
+ *          <Mod id="demo_lantern" version="1.0.0" minContentVersion="0" maxContentVersion="0" priority="0">
  *              <Dependency id="base_pack" minVersion="1.0.0" optional="false"/>
  *              <Conflict id="other_mod"/>
  *              <Override path="game/playground/data/welcome.xml"/>

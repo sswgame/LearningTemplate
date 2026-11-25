@@ -1,5 +1,5 @@
 <?asset guid="789f2064e4b4bbfe74e18e50e467a147"?>
-<Scene formatVersion="3" name="GuardDemo">
+<Scene formatVersion="0" name="GuardDemo">
 	<!-- AI 인지 · 록온 시나리오(automation/perception · lockon)의 무대. Guard(팀 1, 앞은 +Z, 눈 (0.5,0,0.5))가 1 m 격자에서 보고, x 2.5 ~ 8.5 · z 5.5 의 벽 일곱이 시선을 막는다.
 	     Runner · TargetLeft · TargetRight 는 다른 팀(0)의 자극 원천이고 시나리오가 object.place 로 옮긴다. Friend 는 같은 팀이라 늘 무시된다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

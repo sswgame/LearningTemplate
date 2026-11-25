@@ -1,5 +1,5 @@
 <?asset guid="07fd8e4827554f62a9809a466d2785c7"?>
-<Scene formatVersion="3" name="CustomizationShowcase">
+<Scene formatVersion="0" name="CustomizationShowcase">
 	<!-- 게임 중 꾸미기 쇼케이스(시나리오 showcase/customizebody · customizeoutfit · customizedye) — 시나리오가 개발 명령(appearance.*)으로 외형을 바꾼다.
 	     Hero 와 Twin 은 같은 프리셋(CustomizeTownsfolk — UBC 마을 사람, 레인저 옷, 권총)이고 Hero 만 부품을 몸 메시에 합친다(_bMergeParts) — 한쪽을 바꿔도 다른 쪽이 그대로인지 본다.
 	     Brute 는 체형 슬라이더를 가진 해골 전사(CustomizeBrute — 두건 위 투구, 도끼, 방패)다.

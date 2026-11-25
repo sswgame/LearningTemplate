@@ -251,7 +251,7 @@ namespace sw::editor
         // 문서 트리로 만들어 엔진 XML 서식으로 저장한다(이스케이프는 문서가 한다) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XMLAssetMerge).
         XMLDocument   prefabDocument;
         const XMLNode prefab = prefabDocument.appendRoot( "Prefab" );
-        prefab.appendAttribute( "formatVersion", "1" ); // `PrefabAsset::kAssetType._formatVersion`
+        prefab.appendAttribute( "formatVersion", "0" ); // `PrefabAsset::kAssetType._formatVersion`
         prefab.appendAttribute( "name", stem );
         const XMLNode gameObject = prefab.appendChild( "GameObject" );
         gameObject.appendAttribute( "_schemaVersion", "0" );

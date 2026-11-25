@@ -1,5 +1,5 @@
 <?asset guid="a03a699e3f5df2fa2c4c75b90c65421c"?>
-<Scene formatVersion="3" name="PartyTrampoline">
+<Scene formatVersion="0" name="PartyTrampoline">
 	<!-- 트램펄린 무대 한 판 — 라운드 · 순위 점수는 data/partyrounds.xml. 무대 · 사람 · 아이템은 뷰가 원시 도형 프리팹으로 세운다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

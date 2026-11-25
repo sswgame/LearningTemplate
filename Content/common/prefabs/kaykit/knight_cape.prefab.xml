@@ -1,5 +1,5 @@
 <?asset guid="038e5f36534add2ce05ecd56e01e2f89"?>
-<Prefab formatVersion="1" name="KnightCape">
+<Prefab formatVersion="0" name="KnightCape">
 	<GameObject _schemaVersion="0" _name="KnightCape" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

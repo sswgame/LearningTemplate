@@ -1,5 +1,5 @@
 <?asset guid="99e4b76030ee0a9792316a5b3f547668"?>
-<Prefab formatVersion="1" name="ArrowProjectile">
+<Prefab formatVersion="0" name="ArrowProjectile">
 	<GameObject _schemaVersion="0" _name="ArrowProjectile" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"

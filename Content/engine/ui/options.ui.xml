@@ -1,5 +1,5 @@
 <?asset guid="db7b591135294205db91782a0cbdc89f"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<UIScreenDef _bPausesGame="true" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/options.uistyle.xml</item>

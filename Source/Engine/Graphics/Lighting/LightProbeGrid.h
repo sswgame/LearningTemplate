@@ -53,7 +53,7 @@ namespace sw
     struct SW_API LightProbeGrid
     {
         static constexpr uint32      kMagic     = FourCCUtil::make( "SWLP" );
-        static constexpr uint32      kVersion   = 1;
+        static constexpr uint32      kVersion   = 0;
         static constexpr string_view kExtension = ".probes";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

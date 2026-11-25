@@ -1,5 +1,5 @@
 <?asset guid="3fcd0f83c113a08accb7a73b7f3ca1bc"?>
-<Scene formatVersion="3" name="EditorTest">
+<Scene formatVersion="0" name="EditorTest">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

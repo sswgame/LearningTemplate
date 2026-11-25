@@ -1,5 +1,5 @@
 <?asset guid="c67980500a3cf0dd3fb173dfab4eae37"?>
-<Scene formatVersion="3" name="CameraShake">
+<Scene formatVersion="0" name="CameraShake">
 	<!-- 카메라 흔들림 시나리오(automation/camerashake)의 무대 — 화면 카메라(GameCamera)는 카메라 매니저로 View 를 본다. Fighter 의 베기 클립 알림(data/camerashake.notifies.xml)이 흔들림을 낸다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

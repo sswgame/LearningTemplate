@@ -154,7 +154,7 @@ namespace sw
         const expected<void> opened = _file.open( packDiskPath );
         if ( opened.has_value() == false )
             return fail( opened.error() );
-        // 풀의 맨 앞은 마운트 도메인이다(`kPackFormatVersion` 2) - 항목이 없어도 담아 풀은 늘 있다.
+        // 풀의 맨 앞은 마운트 도메인이다- 항목이 없어도 담아 풀은 늘 있다.
         _stringPoolBytes.assign( _desc._mountDomain.begin(), _desc._mountDomain.end() );
         _stringPoolBytes.push_back( 0 );
         const expected<void> loaded = loadPreviousSlots();

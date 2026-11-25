@@ -1,5 +1,5 @@
 <?asset guid="a9e0fb135306480181245d00abf1bd4f"?>
-<Scene formatVersion="3" name="GimmickEffects">
+<Scene formatVersion="0" name="GimmickEffects">
 	<!-- 기믹 효과 무대 — 발사(LaunchPad × 동적 상자) · 부스트(BoostPad × 바디 없는 탈것) · 소리(삐걱 바닥 × 경비 AI) · 연출 신호(CueTrigger)를 값으로 본다(automation/gimmickeffects).
 	     Crate 는 동적 강체(발사대 위로 떨어뜨리면 쏘인다), Kart 는 키네마틱 몸을 단 KinematicVehicle(부스트 판이 겹침으로 안다),
 	     Guard 는 GuardBrain(PerceptionAIController — 시야 · 청각, data/guard.bt.xml)이 쥔 폰이고 앞 6 m(시야 안)에 SqueakyFloor 가 있다 — 바닥은 소리만 내므로 보이지 않고 들린다. Stepper(Player 태그)가 바닥 · 트리거를 밟는다. -->

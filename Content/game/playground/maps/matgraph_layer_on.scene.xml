@@ -1,5 +1,5 @@
 <?asset guid="55567f826570db5b6ed12f2ed8771884"?>
-<Scene formatVersion="3" name="MatGraph_layer_on">
+<Scene formatVersion="0" name="MatGraph_layer_on">
 	<!-- 시나리오 automation/matgraph_layer 의 첫 무대 — 흙 층을 켠 머티리얼(생성된 layered_stone.gen.material, 층 무게 1)을 구에 건다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

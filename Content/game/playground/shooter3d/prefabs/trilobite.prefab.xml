@@ -1,5 +1,5 @@
 <?asset guid="487e9f4458a7d6ecf66c371db3a72749"?>
-<Prefab formatVersion="1" _base="game/playground/shooter3d/prefabs/quadshell.prefab.xml" name="Trilobite">
+<Prefab formatVersion="0" _base="game/playground/shooter3d/prefabs/quadshell.prefab.xml" name="Trilobite">
 	<PrefabOverrides>
 		<Override key="#55727fc07d545151">
 			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/trilobite.animgraph.xml" _animationSetPath="common/models/quaternius/scifi/enemy_trilobite/enemy_trilobite.animset.xml" />

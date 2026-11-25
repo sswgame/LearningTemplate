@@ -1,5 +1,5 @@
 <?asset guid="b3970c6ef9037b857fe6529894f15426"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<_listStyleSheet>
 		<item>game/playground/ui/stylevariant_base.uistyle.xml</item>
 	</_listStyleSheet>

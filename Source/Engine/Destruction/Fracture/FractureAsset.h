@@ -55,7 +55,7 @@ namespace sw
         friend struct AssetTypeLoader;
 
         /** @brief 현재 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델을 다시 임포트해야 합니다. */
-        static constexpr uint32 kVersion = 1;
+        static constexpr uint32 kVersion = 0;
         /** @brief 확장자입니다. */
         static constexpr string_view kExtension = ".fracture";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */

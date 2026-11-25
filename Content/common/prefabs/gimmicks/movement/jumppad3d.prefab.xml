@@ -1,5 +1,5 @@
 <?asset guid="1999460ba0f6a2e0c923f5612dab2ea9"?>
-<Prefab formatVersion="1" _base="common/prefabs/gimmicks/movement/spring3d.prefab.xml" name="JumpPad3D">
+<Prefab formatVersion="0" _base="common/prefabs/gimmicks/movement/spring3d.prefab.xml" name="JumpPad3D">
 	<PrefabOverrides>
 		<Override key="#63e709ac676dd304">
 			<RigidBodyComponent>

@@ -1,5 +1,5 @@
 <?asset guid="0a2d41b08b824afbf96953e786e3f5d8"?>
-<Prefab formatVersion="1" name="NileBlock">
+<Prefab formatVersion="0" name="NileBlock">
 	<GameObject _schemaVersion="0" _name="NileBlock" _bActive="true">
 		<_listComponent>
 			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"

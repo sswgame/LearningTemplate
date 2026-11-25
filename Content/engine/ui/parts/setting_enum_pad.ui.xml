@@ -1,5 +1,5 @@
 <?asset guid="91cba012b37fef9c079fee63539aa10e"?>
-<UIDocument _schemaVersion="1">
+<UIDocument _schemaVersion="0">
 	<!-- 패드 · 키보드로 연 옵션 메뉴의 열거형 행 — 펼치는 콤보 상자 대신 좌우로 하나씩 넘기는 로테이터(setting_enum.ui.xml 과 이름이 같다) -->
 	<BoxPanel _styleClass="settingrow" _spacing="12">
 		<TextWidget _name="Label" _styleClass="settinglabel">

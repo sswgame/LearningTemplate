@@ -2,7 +2,7 @@
 <!-- 허브의 미니게임 입구 — MinigamePortalSpawnerComponent(maps/hub 의 MinigamePortals)가 portalSlot 을 적은 미니게임 정의마다 하나씩 세우고 _minigame 을 채운다.
      원점은 바닥이다 — 하위 레벨 미니게임의 맵을 이 자리(+ 정의의 portalOffset)에 얹는다.
      Player 태그만 받고 다시 들어갈 수 있으며(_bOnce false), 안에서 나타난 플레이어(돌아와 복원된 자리)는 세지 않는다(_spawnInside Ignore). -->
-<Prefab formatVersion="1" name="MinigamePortal">
+<Prefab formatVersion="0" name="MinigamePortal">
 	<GameObject _schemaVersion="0" _name="MinigamePortal" _bActive="true" _bAlwaysLoaded="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Trigger" _material="Default" _mass="0" _bTrigger="true">

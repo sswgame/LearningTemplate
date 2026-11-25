@@ -1,5 +1,5 @@
 <?asset guid="4555b750f34fb4791a6fd7a565ee88eb"?>
-<Prefab formatVersion="1" name="FloorSwitch3D">
+<Prefab formatVersion="0" name="FloorSwitch3D">
 	<GameObject _schemaVersion="0" _name="FloorSwitch3D" _bActive="true">
 		<_listComponent>
 			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"

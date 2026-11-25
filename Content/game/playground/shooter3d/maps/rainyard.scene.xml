@@ -1,5 +1,5 @@
 <?asset guid="9a17abe1c4944db38b1aaa554d43869f"?>
-<Scene formatVersion="3" _base="game/playground/shooter3d/maps/arena.scene.xml" name="Shooter3DRainYard">
+<Scene formatVersion="0" _base="game/playground/shooter3d/maps/arena.scene.xml" name="Shooter3DRainYard">
 	<!-- 빗마당 무대(automation/rainyard.scenario.xml) — 아레나를 물려받아 시작 자리(0, -16) 앞 x = 0 줄에 표면을 +Z 로 늘어놓는다(플레이어가 W 로 곧장 지나간다):
 	     흙(Dirt, z -14 ~ -10) · 웅덩이(얕은 물 4 cm, z -10 ~ -6) · 진흙(Mud, z -6 ~ -2), 그리고 흙 옆 돌(아레나 바닥 Stone, x -3.5 z -12 — 젖은 자국이 보이게 변형 지면을 깐다).
 	     패드는 2 cm 두께의 정적 상자(물리 재질 = 표면 종류)와 그 위의 변형 지면(PlaneDense)이다 — 발걸음은 패드 재질로, 웅덩이는 물(WaterBodyComponent)로 종류를 정한다.

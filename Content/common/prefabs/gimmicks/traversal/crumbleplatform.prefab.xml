@@ -1,5 +1,5 @@
 <?asset guid="4bff2692797cc9838ade7e7f91e5ef26"?>
-<Prefab formatVersion="1" name="CrumblePlatform">
+<Prefab formatVersion="0" name="CrumblePlatform">
 	<GameObject _schemaVersion="0" _name="CrumblePlatform" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

@@ -1,5 +1,5 @@
 <?asset guid="6438040d29034fc98733242aedb956cd"?>
-<Scene formatVersion="3" name="Climb2D">
+<Scene formatVersion="0" name="Climb2D">
 	<!-- 2D 사다리 무대(automation/climb2d) — 사다리(Ladder, x 0, 높이 5)와 그 오른쪽 3 m 발판(Platform, x 1 ~ 5).
 	     Hero 는 2D 캐릭터(CharacterController2D 의 속 바디가 트리거에 잡힌다)이고 의도로 몬다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">

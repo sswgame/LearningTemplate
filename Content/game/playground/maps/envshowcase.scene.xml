@@ -1,5 +1,5 @@
 <?asset guid="00b449d65480c509bf9771ffdda59360"?>
-<Scene formatVersion="3" name="EnvShowcase">
+<Scene formatVersion="0" name="EnvShowcase">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

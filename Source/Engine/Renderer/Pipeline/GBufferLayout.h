@@ -93,10 +93,10 @@ namespace sw
     {
         /**
          * @brief 명세의 판입니다. 첨부 · 채널 · 인코딩이 바뀌면 올리고 binding_output.hlsli 의 `SW_GBUFFER_LAYOUT_VERSION` 도 같이 올린다.
-         * @details 판 3: 셰이딩 모델 번호 · 반사율 · 머티리얼 가림 · 모델별 사용자 칸 · 발광(장면 색에 미리 적는다)에 화면 속도(SceneVelocity, 판 2)를 더한 여섯 MRT 다.
+         * @details 셰이딩 모델 번호 · 반사율 · 머티리얼 가림 · 모델별 사용자 칸 · 발광(장면 색에 미리 적는다)에 화면 속도(SceneVelocity)를 더한 여섯 MRT 다.
          *          언리얼 G버퍼의 ShadingModelID · Specular · AO · CustomData 와 베이스 패스의 속도 출력(r.VelocityOutputPass=1)과 같은 자리다.
          */
-        static constexpr uint32 kVersion = 3;
+        static constexpr uint32 kVersion = 0;
         /** @brief 첨부 수입니다(G버퍼 패스의 MRT 수). */
         static constexpr uint32 kAttachmentCount = 6;
         /** @brief 화면 속도 첨부의 MRT 슬롯입니다. 포워드 불투명 패스도 같은 첨부 · 포맷을 둘째 컬러 출력으로 쓴다. */

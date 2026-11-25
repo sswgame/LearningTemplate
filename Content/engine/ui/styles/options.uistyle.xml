@@ -1,5 +1,5 @@
 <?asset guid="d36bc0fca75bc70df406ac878b0e9a37"?>
-<UIStyleSheet _schemaVersion="1">
+<UIStyleSheet _schemaVersion="0">
 	<Variable _name="tab" _value="0.18,0.2,0.3,0.9" />
 	<Variable _name="tabSelected" _value="0.25,0.5,1,1" />
 	<Variable _name="row" _value="0.1,0.11,0.18,0.6" />

@@ -34,7 +34,7 @@ namespace sw
     {
     public:
         static constexpr uint32      kMagic     = FourCCUtil::make( "SWLR" );
-        static constexpr uint32      kVersion   = 2; ///< 2: 키 해시가 64 비트(`LocalizationKeyIndex`)다 — 1 은 32 비트 해시라 조회가 맞지 않아 거절한다
+        static constexpr uint32      kVersion   = 0;
         static constexpr const utf8* kExtension = ".locres";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

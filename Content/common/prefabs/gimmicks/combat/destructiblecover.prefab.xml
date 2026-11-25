@@ -1,5 +1,5 @@
 <?asset guid="8911d3c79260a8f8016575c03414db21"?>
-<Prefab formatVersion="1" name="DestructibleCover">
+<Prefab formatVersion="0" name="DestructibleCover">
 	<GameObject _schemaVersion="0" _name="DestructibleCover" _bActive="true">
 		<_listComponent>
 			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"

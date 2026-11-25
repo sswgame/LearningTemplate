@@ -1,5 +1,5 @@
 <?asset guid="98f557e667d440eea27dcd4db994c4d4"?>
-<Scene formatVersion="3" name="VfxGPUMeshSlots">
+<Scene formatVersion="0" name="VfxGPUMeshSlots">
 	<!-- GPU 메시 입자 칸 시나리오(automation/vfxgpumeshslots)의 무대 — 바닥 위에서 큐브 파편(engine/vfx/gpudebrisburst)이 한 번 터진다.
 	     파편은 깊이 충돌로 바닥에 튀어 카메라 안에 머문다. 장면에 다른 큐브가 없어 파편 배치(Cube · 기본 머티리얼)에 다른 인스턴스가 섞이지 않는다 —
 	     그래서 그 배치의 간접 인스턴스 수가 곧 그린 파편 수다(VFX.GPUMeshDrawn). 해는 보통 밝기다. -->

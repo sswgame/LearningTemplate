@@ -41,7 +41,7 @@ namespace
         static string makeScene( const utf8* pName, std::initializer_list<string_view> listEntity, const utf8* pLayers = "", const utf8* pRootExtra = "" )
         {
             StringBuilder<constant::buffer::kMax4096> builder;
-            builder.appendFormat( "<Scene formatVersion=\"2\" name=\"%#\" %#>%#%#</SceneSettings><entities>", pName, pRootExtra, kSettings, pLayers );
+            builder.appendFormat( "<Scene formatVersion=\"0\" name=\"%#\" %#>%#%#</SceneSettings><entities>", pName, pRootExtra, kSettings, pLayers );
             for ( const string_view entity : listEntity )
             {
                 builder.append( entity );

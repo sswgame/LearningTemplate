@@ -137,16 +137,8 @@ def read_reports(list_root: Iterable[Path]) -> list[dict]:
 def open_database(path: Path) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path)
-    prepare_schema(connection)
-    return connection
-
-
-def prepare_schema(connection: sqlite3.Connection) -> None:
-    """표를 만들고, 실행 종류 칸이 없던 옛 DB 에 칸을 더한다(옛 줄은 빈 종류 — 흔들림 판정에 들지 않는다)."""
     connection.executescript(SCHEMA)
-    if "runKind" not in {row[1] for row in connection.execute("PRAGMA table_info(run)")}:
-        connection.execute("ALTER TABLE run ADD COLUMN runKind TEXT NOT NULL DEFAULT ''")
-        connection.commit()
+    return connection
 
 
 def read_verify_config(project_root: Path, key: str) -> float:
@@ -983,8 +975,7 @@ def run_changed_self_check() -> None:
 def run_history_self_check() -> None:
     """실행 종류 · 흔들림 · 느려짐 · 단계 시간."""
     connection = sqlite3.connect(":memory:")
-    connection.executescript(SCHEMA.replace("    runKind TEXT NOT NULL DEFAULT '',\n", ""))   # 옛 DB 모양에 칸을 더한다
-    prepare_schema(connection)
+    connection.executescript(SCHEMA)
     old = [{"name": "s", "result": "Failed", "startedAtUnixMs": 10, "backend": "dx12"}]
     new = [{"name": "s", "result": result, "startedAtUnixMs": started, "backend": "dx12"} for result, started in (("Passed", 100), ("Failed", 101))]
     assert ingest(connection, old + new, "c1", "verify", since_unix_ms=100) == 3
@@ -1007,7 +998,7 @@ def run_history_self_check() -> None:
 
 def run_self_check() -> None:
     connection = sqlite3.connect(":memory:")
-    prepare_schema(connection)
+    connection.executescript(SCHEMA)
     list_report = [{"name": "a", "result": result, "startedAtUnixMs": index, "wallMilliseconds": wall, "backend": "dx12"}
                   for index, (result, wall) in enumerate([("Passed", 100), ("Failed", 100), ("Passed", 300), ("Passed", 300)])]
     assert ingest(connection, list_report, "abc") == 4 and ingest(connection, list_report, "abc") == 0, "같은 보고는 한 번만"

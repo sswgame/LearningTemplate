@@ -1,5 +1,5 @@
 <?asset guid="8f2c183a045f2e574f08f164663d7083"?>
-<Scene formatVersion="3" name="KitDemoRespawn">
+<Scene formatVersion="0" name="KitDemoRespawn">
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

@@ -1,5 +1,5 @@
 <?asset guid="8258ab7c5f236ecfa69ddb071b23f7a1"?>
-<Prefab formatVersion="1" name="NockedArrow">
+<Prefab formatVersion="0" name="NockedArrow">
 	<GameObject _schemaVersion="0" _name="NockedArrow" _bActive="true">
 		<_listComponent>
 			<SkeletalMeshComponent _localID="15127961318995883145" _componentName="SkeletalMeshComponent"

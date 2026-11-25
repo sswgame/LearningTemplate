@@ -1,5 +1,5 @@
 <?asset guid="0a90a1bed33079165be960ce16c27d1e"?>
-<Scene formatVersion="3" name="PhotoMode">
+<Scene formatVersion="0" name="PhotoMode">
 	<!-- 사진 모드 시나리오(automation/photomode)의 무대 — 카메라 디렉터(고정 시점)와 옆으로 오가는 Runner. 사진 모드 동안 Runner 는 서고 카메라만 움직인다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />

@@ -1,5 +1,5 @@
 <?asset guid="af80aec1d890484aadbdd6a1855e3957"?>
-<Scene formatVersion="3" name="MechArenaColony">
+<Scene formatVersion="0" name="MechArenaColony">
 	<!-- 기체 대전 미니게임 판(minigames/mecharena) — 판 중심이 원점, 반 너비 30 m(_rules _arenaHalfSize). 벽은 모습뿐이고 판이 자리를 자른다. 기체는 MechArenaViewComponent 가 옮긴다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
