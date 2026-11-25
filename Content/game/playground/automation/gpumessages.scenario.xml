@@ -19,6 +19,25 @@
 	<ExpectLog id="GPUMessage.Print" contains="present pixel color" atLeast="1"/>
 	<ExpectLog id="GPUMessage.UnknownID" count="0"/>
 	<ExpectLog id="GPUMessage.Error" count="0"/>
+	<!-- 파이프라인을 바꾸면 링을 프레임 밖(프레임 앞 렌더 명령)에서 다시 만들고 그 프레임이 곧 다시 올린다 — 두 업로드의 실행 순서가 뒤집히면 DX12 디버그 레이어가 상태 어긋남(527)을 낸다.
+	     뒤집히는지는 링 칸(셋)에 달려 있었다. 사이에 진행하는 프레임 수를 달리해(1 · 2) 서로 다른 칸에서 바꾼다. -->
+	<Store watch="Log.Count" key="GPUMessage.RingReady" as="rings1"/>
+	<Variable name="gv_deferredShading" value="1"/>
+	<WaitUntil watch="Log.Count" key="GPUMessage.RingReady" differsFrom="rings1" timeoutFrames="120"/>
+	<AdvanceSimulation frames="1"/>
+	<Store watch="Log.Count" key="GPUMessage.RingReady" as="rings2"/>
+	<Variable name="gv_deferredShading" value="0"/>
+	<WaitUntil watch="Log.Count" key="GPUMessage.RingReady" differsFrom="rings2" timeoutFrames="120"/>
+	<AdvanceSimulation frames="2"/>
+	<Store watch="Log.Count" key="GPUMessage.RingReady" as="rings3"/>
+	<Variable name="gv_deferredShading" value="1"/>
+	<WaitUntil watch="Log.Count" key="GPUMessage.RingReady" differsFrom="rings3" timeoutFrames="120"/>
+	<AdvanceSimulation frames="1"/>
+	<Store watch="Log.Count" key="GPUMessage.RingReady" as="rings4"/>
+	<Variable name="gv_deferredShading" value="0"/>
+	<WaitUntil watch="Log.Count" key="GPUMessage.RingReady" differsFrom="rings4" timeoutFrames="120"/>
+	<Store watch="Log.Count" key="GPUMessage.Print" as="printsAfterRebuild"/>
+	<WaitUntil watch="Log.Count" key="GPUMessage.Print" differsFrom="printsAfterRebuild" timeoutFrames="60"/> <!-- 다시 만든 링도 돌려준다 -->
 	<DevCommand line="gpu.inspect off"/>
 	<DevCommand line="gpu.show off"/>
 	<DevCommand line="gpu.thread 0"/>

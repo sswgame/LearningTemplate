@@ -147,14 +147,14 @@ namespace sw
         bool                                  bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
 
         // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
-        if ( slot._bListOpen != SW_FALSE && bNewFencePeriod == false )
+        if ( _pDevice->_openUploadSlotIndex == slotIndex && bNewFencePeriod == false )
         {
             outSlotIndex = slotIndex;
             return true;
         }
-        // 구간이 바뀌었는데 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
-        // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다 — 다시 판정한다.
-        if ( slot._bListOpen != SW_FALSE )
+        // 다른 칸이 열려 있거나(링이 넘어가기 전에 연 프레임 밖 업로드) 이 칸이 앞 펜스 구간에서 열렸으면(프레임 제출과 Signal 사이에 연 복사) 지금 내보낸다 — 열린 리스트는 하나라 기록 순서가
+        // 큐 순서다(`_openUploadSlotIndex`). 이 칸을 내보냈으면 `_resetFence` 가 **지금** 구간이 되므로(그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다 — 다시 판정한다.
+        if ( _pDevice->_openUploadSlotIndex.has_value() )
         {
             _pDevice->flushPendingUploads( true );
             bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
@@ -202,14 +202,17 @@ namespace sw
                 SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotFailedCreateCopy2", "openUploadSlot: failed to create copy command list" );
                 return false;
             }
+            utf16 arrListName[constant::buffer::kMax64]{};
+            swprintf_s( arrListName, L"StructuredUploadList%u", slotIndex );
+            slot._copyCommandList->SetName( arrListName ); // 디버그 레이어 글이 이 이름으로 업로드 리스트를 가리킨다
         }
         else if ( isHrSuccess( slot._copyCommandList->Reset( slot._copyAllocator.Get(), nullptr ), "Reset" ) == false )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OpenUploadSlotCopyCommandList", "openUploadSlot: copy command list Reset failed" );
             return false;
         }
-        slot._bListOpen = SW_TRUE;
-        outSlotIndex    = slotIndex;
+        _pDevice->_openUploadSlotIndex = slotIndex;
+        outSlotIndex                   = slotIndex;
         return true;
     }
 

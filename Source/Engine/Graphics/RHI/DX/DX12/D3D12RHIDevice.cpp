@@ -1316,6 +1316,7 @@ namespace sw
         {
             slot = StructuredUploadSlot{};
         }
+        _openUploadSlotIndex.reset();
         _timestampReadback.Reset();
         _timestampHeap.Reset();
         _resourceImpl->releaseTransientHeaps();
@@ -1697,26 +1698,24 @@ namespace sw
         if ( _commandQueue == nullptr )
             return;
         SW_PROFILE_SCOPE( "RT.Upload.flush" ); // Vulkan 의 `RT.Upload.waitIdle` 과 견주는 자리(여기는 기다리지 않고 제출만 한다)
-        for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
+        if ( _openUploadSlotIndex.has_value() == false )
+            return;
+        StructuredUploadSlot& slot = _arrStructuredUploadSlot[*_openUploadSlotIndex];
+        _openUploadSlotIndex.reset();
+        requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
+        // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
+        // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
+        // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
+        slot._resetFence = _fenceValue.load();
+        if ( bExecuteNow )
         {
-            if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )
-                continue;
-            requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
-            slot._bListOpen = SW_FALSE;
-            // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
-            // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
-            // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
-            slot._resetFence = _fenceValue.load();
-            if ( bExecuteNow )
-            {
-                ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
-                _commandQueue->ExecuteCommandLists( 1, arrList );
-            }
-            else
-            {
-                // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
-                _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
-            }
+            ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
+            _commandQueue->ExecuteCommandLists( 1, arrList );
+        }
+        else
+        {
+            // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
+            _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
         }
     }
 

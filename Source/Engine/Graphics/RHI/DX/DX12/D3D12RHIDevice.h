@@ -528,7 +528,6 @@ namespace sw
             uint64                                            _capacity{ 0 };
             uint64                                            _uploadOffset{ 0 };        ///< 이번 펜스 구간에서 쓴 스테이징 바이트
             uint64                                            _resetFence{ UINT64_MAX }; ///< 마지막으로 얼로케이터를 Reset 한 펜스 구간
-            uint8                                             _bListOpen{ SW_FALSE };    ///< 복사 리스트가 열려 있고 아직 제출하지 않은 복사가 있다.
         };
 
         /**
@@ -931,6 +930,15 @@ namespace sw
         RHITimestampRing     _timestampRing;
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
+        /**
+         * @brief 복사 리스트가 열려 있고 아직 제출하지 않은 복사가 있는 업로드 슬롯입니다. 없으면 빈 값입니다(`_uploadSlotMutex`).
+         * @details 열린 리스트는 **장치에 하나**다. 슬롯마다 열림 표시를 두면 프레임 밖 업로드(프레임 앞 렌더 명령의 자원 만들기)가 연 리스트와 다음 링 칸의 리스트가 함께 열리고,
+         *          제출 순서를 슬롯 번호로 정해 뒤에 기록한 복사가 먼저 실행됐다 — 0 채움이 그 뒤의 갱신을 덮고, 추적 상태로 적은 배리어의 앞 상태가 어긋났다(디버그 레이어 527).
+         *          다른 칸을 열려면 열린 리스트를 먼저 낸다(`openUploadSlot`). 같은 ExecuteCommandLists 안에서는 버퍼가 COMMON 으로 감쇠하지 않아 순서가 곧 상태다.
+         *          https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#state-decay-to-common
+         *          Vulkan 도 열린 업로드 커맨드버퍼가 하나다(`VulkanRHIDevice::_openUploadBuffer`).
+         */
+        optional<uint32> _openUploadSlotIndex;
 
         /// @brief 버퍼 · 텍스처 레코드입니다. 칸 찾기는 락이 없고(`SlotHandleTable::get`), 추적 상태도 칸 안의 원자값이라 배리어가 락을 잡지 않는다.
         RHIHandleTable<RHIBufferHandle, BufferRecord>   _gpuBuffers;
