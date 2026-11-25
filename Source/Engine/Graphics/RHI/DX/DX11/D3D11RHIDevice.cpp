@@ -86,7 +86,8 @@ namespace sw
     } // namespace
 
     D3D11RHIDevice::D3D11RHIDevice( uint32 deviceGeneration )
-        : _device{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _device{ nullptr }
         , _memoryAdapter{ nullptr }
         , _immediateContext{}
         , _backBufferFormat{ constant::render::kBackBufferFormat }
@@ -103,7 +104,6 @@ namespace sw
         , _clockQuery{}
         , _idleQuery{}
         , _arrFrameDoneQuery{}
-        , _frameFenceRing{}
         , _lastTimestampFrequency{ 0 }
         , _bufferRegistry{}
         , _textureRegistry{}
@@ -111,8 +111,6 @@ namespace sw
         , _pipelineStates{ getHandleReuseCount() }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _releaseQueue{}
-        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
         , _readbackTable{}
@@ -282,14 +280,10 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
-        D3D11_BUFFER_DESC bufferDesc{};
-        buffer->GetDesc( &bufferDesc );
         BufferRecord record{};
-        record._buffer               = std::move( buffer );
-        record._srv                  = std::move( srv );
-        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( record ) );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bufferDesc.ByteWidth );
-        return handle;
+        record._buffer = std::move( buffer );
+        record._srv    = std::move( srv );
+        return _gpuBuffers.insert( std::move( record ) );
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBufferWithSRV( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
@@ -311,13 +305,9 @@ namespace sw
         return _gpuTextures.get( handle );
     }
 
-    RHITextureHandle D3D11RHIDevice::storeTexture( TextureRecord record, const RHITextureDesc& desc )
+    RHITextureHandle D3D11RHIDevice::storeTexture( TextureRecord record )
     {
-        if ( record._texture == nullptr )
-            return 0;
-        const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
-        getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
-        return handle;
+        return record._texture != nullptr ? _gpuTextures.insert( std::move( record ) ) : RHITextureHandle{ 0 };
     }
 
     D3D11RHIDevice::UploadStaging::UploadStaging()
@@ -1135,7 +1125,7 @@ namespace sw
         retireFrameOnGPU();
     }
 
-    void D3D11RHIDevice::waitIdleInternal()
+    bool D3D11RHIDevice::waitIdleInternal()
     {
         bool bIdle{ false };
         if ( _immediateContext.isValid() )
@@ -1154,18 +1144,13 @@ namespace sw
             _transferQueue.retireAll( [this]( TransferFence& probe )
             { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
         }
-        // 기다림을 확인했을 때만 통지가 `Completed` 다 — 시간 초과 · 잃은 장치는 끝났는지 모른다.
-        if ( bIdle && isDeviceLost() == false )
-            _releaseQueue.releaseAllCompleted();
-        else
-            _releaseQueue.abandonAll();
+        return bIdle && isDeviceLost() == false; // 시간 초과 · 잃은 장치는 끝났는지 모른다
     }
 
     void D3D11RHIDevice::retireFrameOnGPU()
     {
         if ( _immediateContext.isValid() == false )
             return;
-        uint64 completedSerial{ 0 };
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             // 링이 한 바퀴 돌았다. 이 칸은 kMaxFrameCountInFlight 프레임 앞의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
@@ -1180,14 +1165,14 @@ namespace sw
             (void)_frameFenceRing.markSubmitted();
 
             // 이미 끝난 프레임을 오래된 순서로 모은다. Present 가 명령을 보냈으므로 여기서는 Flush 하지 않고 묻기만 한다.
-            completedSerial = _frameFenceRing.retire( [this, &context]( uint32 slot, uint64 serial )
+            (void)_frameFenceRing.retire( [this, &context]( uint32 slot, uint64 serial )
             {
                 (void)serial;
                 return isEventQueryDone( context, _arrFrameDoneQuery[slot].Get(), D3D11_ASYNC_GETDATA_DONOTFLUSH );
             } );
         }
         // 콜백은 즉시 컨텍스트 잠금 밖에서 부른다 — 비동기 되읽기의 콜백이 같은 잠금을 잡고 Map 한다.
-        _releaseQueue.releaseCompleted( completedSerial );
+        releaseCompletedFrames();
     }
 
     Microsoft::WRL::ComPtr<ID3D11Query> D3D11RHIDevice::acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context )
@@ -1234,16 +1219,6 @@ namespace sw
         },
             [this]( TransferFence& probe )
         { _listFreeTransferQuery.push_back( std::move( probe._query ) ); } );
-    }
-
-    void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void D3D11RHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
     }
 
     unique_ptr<IRHICommandList> D3D11RHIDevice::createCommandList()

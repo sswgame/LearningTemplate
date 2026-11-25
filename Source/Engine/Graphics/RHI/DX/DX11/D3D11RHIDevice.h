@@ -178,7 +178,7 @@ namespace sw
         IRHICommandContext* getFrameStreamContext() override;
 
         /** @brief GPU 가 유휴 상태가 될 때까지 기다린 뒤 해제 큐를 비웁니다. */
-        void waitIdleInternal() override;
+        bool waitIdleInternal() override;
 
         /**
          * @brief 장치 제거를 흉내 냅니다(개발 명령 `rhi.removeDevice`). D3D11 에는 `RemoveDevice` 가 없어 첫 `DXGI_ERROR_DEVICE_REMOVED` 를 본 뒤의 상태(전송 손실 표시)만 만듭니다.
@@ -186,8 +186,6 @@ namespace sw
          */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
@@ -202,11 +200,6 @@ namespace sw
 
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 어댑터를 찾지 못하면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
-
-        /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. D3D11 은 펜스 대신 프레임 끝마다 내는 이벤트 쿼리(`_arrFrameDoneQuery`)로 확인합니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
 
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }
@@ -554,7 +547,7 @@ namespace sw
          * @brief TextureRecord 를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 `desc` 의 항목과 논리 크기를 올리는 유일한 지점입니다.
          * @details D3D11 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 기록한다(추적기 기준은 Logical).
          */
-        RHITextureHandle storeTexture( TextureRecord record, const RHITextureDesc& desc );
+        RHITextureHandle storeTexture( TextureRecord record );
         /**
          * @brief 큰 업로드 하나를 스테이징 텍스처로 올립니다. 소스 복사는 즉시 컨텍스트 잠금 밖에서, 잠금 안에서는 복사 명령과 끝을 알리는 쿼리만 냅니다.
          * @details 스테이징(대상과 같은 포맷, @p width × @p height, 밉 @p mipCount 개)은 장치(`ID3D11Device`, 스레드 안전)가 초기 데이터로 만든다 — 그 생성이 소스를
@@ -636,7 +629,6 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Query> _idleQuery;
         /// @brief 프레임마다 끝에 내는 이벤트 쿼리 링입니다(`retireFrameOnGPU`). 칸은 `RHIFrameFenceRing::getSlot` 입니다. 디바이스를 세울 때 만듭니다.
         Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[RHIFrameFenceRing::kSlotCount];
-        RHIFrameFenceRing                   _frameFenceRing;         ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
         /// @brief UAV 번호 하나입니다 — 뷰와 그 원본(버퍼 UAV 면 버퍼 — SRV/UAV 해저드를 풀 때 본다, 텍스처 UAV 면 텍스처 — 텍스처를 부술 때 번호를 놓는다).
@@ -675,10 +667,6 @@ namespace sw
         mutex                        _liveCmdListMutex;
         vector<D3D11RHICommandList*> _listLiveCmd;
 
-        RHIReleaseQueue _releaseQueue;
-
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(DX11 은 즉시 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
-        RHITransferSerials _transferSerials;
         /// @brief 제출한 전송마다 이벤트 쿼리 하나(와 있으면 업로드 스테이징)를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올리고 스테이징을 놓습니다.
         ///        쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
         RHITransferFenceQueue<TransferFence> _transferQueue;

@@ -300,14 +300,8 @@ namespace sw
         void               shutdownInternal() override;
         void               resizeInternal( uint32 width, uint32 height ) override;
         void               applyVSyncInternal() override;
-
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
-        bool   isFrameStarted() const override { return _frameEncoder != nullptr; } // 잃은 장치의 beginFrame 은 인코더를 열지 않는다
+        bool               isFrameStarted() const override { return _frameEncoder != nullptr; } // 잃은 장치의 beginFrame 은 인코더를 열지 않는다
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다 — 손실 콜백이 따로 들던 비트필드는 다른 스레드가 쓰는 경쟁이라 없앴다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
 
         RHIFormat            getBackBufferFormat() const override { return _swapChain.getRHIFormat(); }
         RHICapabilities      getCapabilities() const override;
@@ -337,7 +331,7 @@ namespace sw
         [[nodiscard]] WGPUTextureFormat toTextureFormat( RHIFormat format ) const;
 
     protected:
-        void                         waitIdleInternal() override;
+        bool                         waitIdleInternal() override;
         void                         detachCommandRecordingInternal() override;
         void*                        getNativeDevice() const override { return _device; }
         void*                        getNativeContext() const override { return _frameEncoder; }
@@ -516,8 +510,6 @@ namespace sw
         vector<ConstantRing> _listConstantRing;
         uint32               _activeRingIndex;
 
-        RHIReleaseQueue                                        _releaseQueue;
-        RHITransferSerials                                     _transferSerials;
         RHITransferFenceQueue<unique_ptr<WebGPUTransferFence>> _transferQueue;
         RHIPendingReadbackTable<WebGPUTextureReadback>         _readbackTable;
         vector<RHIBufferHandle>                                _listQueuedReadbackBuffer;
@@ -526,8 +518,7 @@ namespace sw
         vector<WebGPURHICommandList*> _listLiveCommandList;
 
         /// @brief 칸마다의 프레임 완료(`RHIFrameFenceRing::getSlot`). 콜백 userdata 라 자리가 움직이지 않는 고정 배열이다.
-        WebGPUFrameFence  _arrFrameFence[RHIFrameFenceRing::kSlotCount];
-        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
+        WebGPUFrameFence _arrFrameFence[RHIFrameFenceRing::kSlotCount];
 
         uint8 _bInitialized         : 1;
         uint8 _bTextureFormatsTier1 : 1; ///< rg16snorm 첨부 · 블렌드(`texture-formats-tier1`)

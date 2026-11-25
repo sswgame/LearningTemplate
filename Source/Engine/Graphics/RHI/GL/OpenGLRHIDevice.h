@@ -155,7 +155,7 @@ namespace sw
         IRHICommandContext* getFrameStreamContext() override;
 
         /** @brief GPU 가 끝날 때까지 기다리고(glFinish) 지연 해제 큐를 비웁니다. */
-        void waitIdleInternal() override;
+        bool waitIdleInternal() override;
 
         /**
          * @brief 벤더 확장이 있을 때만 드라이버 값을 채웁니다. `GL_NVX_gpu_memory_info` 는 총량과 남은 양(디바이스 전체이며 다른 프로세스 몫을 포함)을 주고,
@@ -163,15 +163,9 @@ namespace sw
          */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 지금 기록 중인 프레임을 GPU 가 지난 뒤에 부릅니다. GL 은 프레임 끝마다 내는 펜스(`_arrFrameDoneSync`)로 확인합니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
         /** @brief 장치 손실 흉내입니다. GL 은 문맥을 일부러 잃을 API 가 없어 DX11 처럼 첫 손실을 본 뒤의 상태(전송 거절 · 대기 멈춤)만 만든다 — GPU 는 살아 있다. */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
@@ -561,13 +555,9 @@ namespace sw
 
         RHIHandleTable<RHIPipelineStateHandle, OpenGLPipelineStateRecord> _pipelineStates;
 
-        RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 칸은 `RHIFrameFenceRing::getSlot` 이고, 비면 nullptr 입니다.
-        void*             _arrFrameDoneSync[RHIFrameFenceRing::kSlotCount];
-        RHIFrameFenceRing _frameFenceRing; ///< 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한(해제 키는 `getRecordingSerial`)
+        void* _arrFrameDoneSync[RHIFrameFenceRing::kSlotCount];
 
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(GL 은 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
-        RHITransferSerials _transferSerials;
         /// @brief 제출한 전송마다 펜스(`GLsync`, `void*`)를 제출 순서대로 쌓습니다(`endTransfer` 만 넣는다). 앞에서부터 끝난 것만 워터마크를 올립니다.
         RHITransferFenceQueue<void*> _transferQueue;
         /// @brief 아직 가져가지 않은 텍스처 읽기가 결과를 받는 되읽기 링 구간입니다. 바이트는 펜스가 지난 뒤 `takeTextureReadback` 이 컨텍스트 밖에서 복사한다.

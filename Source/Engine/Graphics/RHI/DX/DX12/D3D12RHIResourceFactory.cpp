@@ -143,7 +143,7 @@ namespace sw
             return false;
         D3D12RHIDevice::StructuredUploadSlot& slot = _pDevice->_arrStructuredUploadSlot[slotIndex];
         // 프레임 스트림에 기록한 복사가 아직 나가지 않았으면 그 구간이 이어진다 — 프레임 도중의 장치 대기가 펜스 값을 올려도 스테이징을 되감지 않는다.
-        if ( slot._bFrameCopies != SW_FALSE || slot._resetFence == _pDevice->_fenceValue.load() )
+        if ( slot._bFrameCopies != SW_FALSE || slot._resetFence == _pDevice->_frameFenceRing.getRecordingSerial() )
             return true;
         // 구간이 바뀌었는데 이 슬롯의 리스트가 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
         // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다.
@@ -173,7 +173,7 @@ namespace sw
             }
         }
         slot._uploadOffset = 0;
-        slot._resetFence   = _pDevice->_fenceValue.load();
+        slot._resetFence   = _pDevice->_frameFenceRing.getRecordingSerial();
         return true;
     }
 
@@ -244,11 +244,10 @@ namespace sw
             {
                 Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap  = slot._uploadHeap;
                 RHIMemoryTracker*                      pTracker = &_pDevice->getMemoryTracker();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pTracker]()
+                _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pTracker]()
                 {
                     pTracker->recordFree( RHIMemoryKey::makeDeviceObject( oldHeap.Get() ) );
-                } ),
-                                                           _pDevice->_fenceValue );
+                } ) );
                 slot._uploadHeap   = nullptr;
                 slot._pMapped      = nullptr;
                 slot._uploadOffset = 0;
@@ -785,7 +784,7 @@ namespace sw
         return createDefaultBufferWithData( pData, sizeBytes, D3D12_RESOURCE_STATE_INDEX_BUFFER );
     }
 
-    bool D3D12RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool D3D12RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         if ( buffer == 0 )
             return false;
@@ -812,7 +811,7 @@ namespace sw
         _pDevice->_srvRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
         _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, deferFree );
 
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
         return true;
     }
 
@@ -955,7 +954,7 @@ namespace sw
             return 0;
         }
 
-        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, desc );
+        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
         record._format           = bDepth ? dsvFmt : colorFmt;
@@ -1066,7 +1065,8 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.OffscreenViewPageFailed", "Could not create the RTV/DSV views of a %#x%# texture (%# slices) - texture creation fails", desc._width, desc._height,
                              desc._arraySize );
-            (void)destroyTextureNative( handle ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
+            RHIReleasedResource released;                   // GPU 가 본 적 없는 자원이라 여기서 놓인다
+            (void)destroyTextureNative( handle, released ); // 레코드를 붙이기 전이라 칸은 위에서 이미 돌려줬다
             return 0;
         }
 
@@ -1079,7 +1079,7 @@ namespace sw
         return handle;
     }
 
-    bool D3D12RHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool D3D12RHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         if ( texture == 0 )
             return false;
@@ -1112,15 +1112,9 @@ namespace sw
         }
 
         // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 같은 핸들이 다시 쓰이지 않도록 표의 칸도 지운다.
-        const uint64 lastTransferSerial = _pDevice->findTextureTransferSerial( texture );
+        outReleased._transferSerial = _pDevice->findTextureTransferSerial( texture );
         _pDevice->eraseTextureTransfer( texture );
-        const bool bUnfinishedTransfer = lastTransferSerial != 0 && _pDevice->_transferSerials.isComplete( lastTransferSerial ) == false;
-        if ( bUnfinishedTransfer )
-        {
-            _pDevice->releaseTextureAfterTransfer( std::move( owned ), texture, lastTransferSerial );
-            return true;
-        }
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
         return true;
     }
 
@@ -1143,6 +1137,16 @@ namespace sw
         if ( _pDevice->_bindlessIndexAllocator.tryAllocate( index ) == false )
             return kInvalidDescriptorIndex;
         return static_cast<RHIDescriptorIndex>( index );
+    }
+
+    uint64 D3D12RHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
+    {
+        return _pDevice->computeAllocationBytes( _pDevice->resolveBuffer( buffer ) );
+    }
+
+    uint64 D3D12RHIResourceFactory::findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& ) const
+    {
+        return _pDevice->computeAllocationBytes( _pDevice->resolveTexture( texture ) );
     }
 
     bool D3D12RHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
@@ -1359,12 +1363,11 @@ namespace sw
         // 인덱스는 GPU 가 이 프레임까지의 커맨드를 다 읽은 뒤에야 재사용한다(언리얼의 지연 디스크립터 해제와 같다).
         // 즉시 프리리스트에 넣으면 같은 프레임에 등록된 새 리소스가 그 자리를 받아, 아직 실행 중인 리스트가 새 리소스를 읽는다.
         D3D12RHIDevice* pDevice = _pDevice;
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             pDevice->_bindlessIndexAllocator.free( index );
-        } ),
-                                                   _pDevice->_fenceValue );
+        } ) );
     }
 
     RHIUnorderedAccessIndex D3D12RHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
@@ -1585,14 +1588,14 @@ namespace sw
         return _pDevice->_pipelineStates.insert( { pso, RHIVertexLayout{} } ); // 컴퓨트는 정점 입력이 없다
     }
 
-    bool D3D12RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool D3D12RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         if ( pso == 0 )
             return false;
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return false;
-        _pDevice->_releaseQueue.enqueueGPUKeepAlive( record._pso, _pDevice->_fenceValue );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( record._pso ) );
         return true;
     }
 } // namespace sw

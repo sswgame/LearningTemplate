@@ -364,7 +364,7 @@ namespace sw
         glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
     }
 
-    bool OpenGLRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool OpenGLRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         if ( buffer == 0 )
             return false;
@@ -384,17 +384,14 @@ namespace sw
             _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         }
 
-        // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
-        RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
-        OpenGLRHIDevice*  pDevice   = _pDevice;
-        auto              releaseCb = [glBuffer = glName, pTracker, buffer, pDevice]()
+        OpenGLRHIDevice* pDevice   = _pDevice;
+        auto             releaseCb = [glBuffer = glName, pDevice]()
         {
             GLuint name = glBuffer;
             glDeleteBuffers( 1, &name );
             pDevice->_meshVaoAttribShadow.invalidateBuffer( glBuffer ); // 이름이 새 버퍼에 다시 나오면 사본이 같아 보여 지운 버퍼로 그린다
-            pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb );
         return true;
     }
 
@@ -810,13 +807,10 @@ namespace sw
             record._fbo = fbo;
         }
 
-        // GPU 메모리 추적기에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
-        const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
-        return handle;
+        return _pDevice->_gpuTextures.insert( record );
     }
 
-    bool OpenGLRHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool OpenGLRHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         if ( texture == 0 )
             return false;
@@ -855,15 +849,20 @@ namespace sw
             _pDevice->_uavRegistry.releaseTexture( RHIBindlessReuse::Immediately, texture, ignore );
         }
 
-        RHIMemoryTracker* pTracker  = &_pDevice->getMemoryTracker();
-        auto              releaseCb = [fboName, texName, pTracker, texture]()
-        {
-            deleteTextureNames( fboName, texName );
-            // 추적기는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
-            pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
-        };
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        auto releaseCb = [fboName, texName]()
+        { deleteTextureNames( fboName, texName ); };
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb );
         return true;
+    }
+
+    uint64 OpenGLRHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
+    {
+        return _pDevice->resolveGlBufferSize( buffer );
+    }
+
+    uint64 OpenGLRHIResourceFactory::findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& desc ) const
+    {
+        return RHIMemoryTracker::computeTextureLogicalBytes( desc ); // GL 에는 할당 크기를 물을 API 가 없다
     }
 
     bool OpenGLRHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
@@ -1123,7 +1122,7 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    bool OpenGLRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool OpenGLRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecordPtr = _pDevice->_pipelineStates.get( pso );
         if ( pRecordPtr == nullptr )
@@ -1150,7 +1149,7 @@ namespace sw
                 glDeleteVertexArrays( 1, &name );
             }
         };
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_frameFenceRing.getRecordingSerial() );
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb );
         return true;
     }
 

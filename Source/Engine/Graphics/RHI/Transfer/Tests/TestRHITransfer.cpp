@@ -86,6 +86,8 @@ namespace
         bool                   rebindBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
         RHITextureSRVIndex     reserveBindlessTextureIndexNative() override { return kInvalidDescriptorIndex; }
         bool                   activateReservedBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        uint64                 findAllocationBytesNative( RHIBufferHandle ) const override { return 0; }
+        uint64                 findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& ) const override { return 0; }
         bool                   describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
         {
             outInfo._bShaderResource      = SW_TRUE;
@@ -103,9 +105,9 @@ namespace
         bool                    unregisterBindlessUAVNative( RHIUnorderedAccessIndex ) override { return true; }
 
     protected:
-        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
-        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
-        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle, RHIReleasedResource& ) override { return true; }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle, RHIReleasedResource& ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle, RHIReleasedResource& ) override { return true; }
     };
 } // namespace
 

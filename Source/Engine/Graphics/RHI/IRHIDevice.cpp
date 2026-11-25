@@ -75,19 +75,28 @@ namespace sw
             {
                 if constexpr ( build::kShipping == false )
                     _pBufferUploadLog->remove( RHIBufferHandle{ packed } );
-                bLive = factory.destroyBufferNative( RHIBufferHandle{ packed } );
+                RHIReleasedResource released;
+                bLive = factory.destroyBufferNative( RHIBufferHandle{ packed }, released );
+                if ( bLive )
+                    retireResource( released, RHIMemoryKey::makeBuffer( RHIBufferHandle{ packed } ) );
                 break;
             }
             case RHIHandleKind::Texture:
             {
                 if constexpr ( build::kShipping == false )
                     _pTextureUploadLog->remove( RHITextureHandle{ packed } );
-                bLive = factory.destroyTextureNative( RHITextureHandle{ packed } );
+                RHIReleasedResource released;
+                bLive = factory.destroyTextureNative( RHITextureHandle{ packed }, released );
+                if ( bLive )
+                    retireResource( released, RHIMemoryKey::makeTexture( RHITextureHandle{ packed } ) );
                 break;
             }
             case RHIHandleKind::PipelineState:
             {
-                bLive = factory.destroyPipelineStateNative( RHIPipelineStateHandle{ packed } );
+                RHIReleasedResource released;
+                bLive = factory.destroyPipelineStateNative( RHIPipelineStateHandle{ packed }, released );
+                if ( bLive )
+                    enqueueGPURelease( released._release );
                 factory.removeThreadGroupSize( RHIPipelineStateHandle{ packed } );
                 break;
             }
@@ -332,6 +341,39 @@ namespace sw
         pFrameStream->endRenderPass();
     }
 
+    void IRHIDevice::retireResource( const RHIReleasedResource& released, const RHIMemoryKey& key )
+    {
+        const bool bTransferPending = released._transferSerial != 0 && _transferSerials.isComplete( released._transferSerial ) == false;
+        if ( bTransferPending == false )
+        {
+            _releaseQueue.enqueueResource( released._release, key, _frameFenceRing.getRecordingSerial() );
+            return;
+        }
+        // 전송과 프레임이 같은 큐라 다음 프레임 펜스도 앞서 낸 전송을 덮지만, 해제가 그 큐 공유에 기대지 않게 전송 완료를 직접 본다.
+        _transferReleaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, release = released._release, key]()
+        { _releaseQueue.enqueueResource( release, key, _frameFenceRing.getRecordingSerial() ); } ),
+                                                 released._transferSerial );
+    }
+
+    void IRHIDevice::waitForGPUIdle()
+    {
+        const bool bIdle = waitIdleInternal();
+        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다(전송 큐에는 통지가 없다).
+        if ( bIdle )
+        {
+            _transferReleaseQueue.releaseAllCompleted();
+            _releaseQueue.releaseAllCompleted();
+        }
+        else
+            abandonReleases();
+    }
+
+    void IRHIDevice::abandonReleases()
+    {
+        _transferReleaseQueue.abandonAll();
+        _releaseQueue.abandonAll();
+    }
+
     void IRHIDevice::waitIdle( RHIWaitIdleReason reason )
     {
         SW_LOG_TRACE_ID( "RHI.WaitIdle", "waitIdle (%#)", getEnumName( reason ) );
@@ -341,7 +383,7 @@ namespace sw
         // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
         flushDeferredHandleReleases();
         _pDeferredHandleQueue->_gpuIdleWaitCount.add();
-        waitIdleInternal();
+        waitForGPUIdle();
         // 렌더 스레드가 쉬고 GPU 가 비었다 — 레코드 포인터를 쥔 기록이 없으니 놓은 칸을 모두 돌려받는다. 프레임을 열지 않는 도구(굽기 · 쿠킹)는 이 길로만 칸이 돌아온다.
         (void)_handleReuseCount.fetch_add( constant::render::kHandleReuseDelayCount, std::memory_order_acq_rel );
     }
@@ -382,12 +424,12 @@ namespace sw
 
     bool IRHIDevice::isDeviceLost() const
     {
-        return getTransferSerials().isLost();
+        return _transferSerials.isLost();
     }
 
     void IRHIDevice::reportDeviceLost( const utf8* pCause )
     {
-        RHITransferSerials& serials = getTransferSerials(); // 쓰기 접근자 — 표시 저장소는 백엔드가 든 멤버 하나다
+        RHITransferSerials& serials = _transferSerials; // 쓰기 접근자 — 표시 저장소는 백엔드가 든 멤버 하나다
         if ( serials.markLost() == false )
             return; // 이미 표시했다 — 보고는 처음 한 번
         SW_LOG_ERROR_ID( "RHI.DeviceLost", "%# device lost (%#) - later transfer submits are rejected and GPU waits stop", getBackendName(), pCause != nullptr ? pCause : "unknown" );
@@ -614,8 +656,10 @@ namespace sw
         RHIRenderResource::clearAllForDevice( this );
     }
 
-    IRHIDevice::IRHIDevice()
-        : _pSurface{ nullptr }
+    IRHIDevice::IRHIDevice( uint32 deviceGeneration )
+        : _frameFenceRing{}
+        , _transferSerials{ deviceGeneration }
+        , _pSurface{ nullptr }
         , _pTimestampProvider{ nullptr }
         , _pContextThreadBinding{ nullptr }
         , _pfnRenderThreadFlush{ nullptr }
@@ -633,6 +677,8 @@ namespace sw
         , _parallelBarrierReportCount{ 0 }
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
+        , _releaseQueue{ *_memoryTracker }
+        , _transferReleaseQueue{}
         , _pConstantBufferPagePool{ make_unique<ConstantBufferPagePool>( _handleReuseCount ) }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
@@ -882,7 +928,7 @@ namespace sw
         RHIRenderResource::releaseAllForDevice( this );
         _pConstantBufferPagePool->releaseAllPages( *this ); // 구간을 든 쪽이 모두 놓은 뒤 — 남은 페이지는 없어야 하지만 새지 않게 돌려준다
         flushDeferredHandleReleases();
-        waitIdleInternal();
+        waitForGPUIdle();
         SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# kept %# GPU releases after waiting for the GPU", getBackendName(), getPendingReleaseCount() );
         detachCommandRecordingInternal();
         shutdownInternal();

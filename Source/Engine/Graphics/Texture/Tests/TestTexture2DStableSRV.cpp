@@ -133,6 +133,8 @@ namespace
         RHIBufferHandle        createReadbackBufferNative( uint32, uint32 ) override { return 0; }
         [[nodiscard]] bool     readReadbackBufferNative( RHIBufferHandle, uint32, void* ) override { return false; }
         RHIFormat              getTextureFormat( RHITextureHandle ) const override { return RHIFormat::Unknown; }
+        uint64                 findAllocationBytesNative( RHIBufferHandle ) const override { return kRHIMemoryUnknownBytes; }
+        uint64                 findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& ) const override { return kRHIMemoryUnknownBytes; }
         bool                   describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
         {
             outInfo._bShaderResource      = SW_TRUE;
@@ -149,9 +151,9 @@ namespace
         bool                    unregisterBindlessUAVNative( RHIUnorderedAccessIndex ) override { return true; }
 
     protected:
-        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle ) override { return true; }
-        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
-        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle, RHIReleasedResource& ) override { return true; }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle, RHIReleasedResource& ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle, RHIReleasedResource& ) override { return true; }
     };
 
     /** @brief 아래쪽 밉 하나를 버릴 수 있는 RGBA8 이미지(128 → 64)입니다 — 스트리밍 기반은 밉 1 만 먼저 올린다. */

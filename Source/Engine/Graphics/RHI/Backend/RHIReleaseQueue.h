@@ -17,6 +17,16 @@
 namespace sw
 {
     /**
+     * @struct RHIReleasedResource
+     * @brief 백엔드가 핸들 표에서 뺀 자원입니다(`IRHIResourceFactory::destroyBufferNative` · `destroyTextureNative` · `destroyPipelineStateNative`). 언제 놓을지는 장치가 정합니다(`IRHIDevice::releaseNow`).
+     */
+    struct RHIReleasedResource
+    {
+        RHIResourceReleaseDelegate _release{};           ///< GPU 가 다 쓴 뒤에 네이티브 객체를 놓는 일. 놓을 것이 없으면 비어 있다
+        uint64                     _transferSerial{ 0 }; ///< 이 자원을 쓰는 마지막 전송의 시리얼 — 끝나기 전에는 놓지 않는다(전송 계약 6). 없으면 0
+    };
+
+    /**
      * @class RHIReleaseQueue
      * @brief GPU 리소스 해제 콜백을 GPU 펜스(프레임 시리얼 · 전송 시리얼)가 지난 뒤에 실행합니다.
      * @details 키는 하나다 — GPU 가 끝낸 시리얼. CPU 프레임 수를 세어 짐작하는 길은 두지 않는다(그 길은 해제 지연과 프레임 인 플라이트 수가 우연히 같아야 안전했다).
@@ -29,6 +39,8 @@ namespace sw
         // 1) 수명: 소멸 시 abandonAll
         // ------------------------------------------------------------------------------
         RHIReleaseQueue();
+        /** @brief 추적하는 자원(`enqueueResource`)을 놓을 때 줄일 추적기 @p tracker 와 함께 만듭니다. 추적기가 큐보다 오래 삽니다. */
+        explicit RHIReleaseQueue( RHIMemoryTracker& tracker );
         /** @brief 대기 중인 해제를 모두 실행하고 통지는 `Abandoned` 로 보냅니다. */
         ~RHIReleaseQueue();
 
@@ -41,29 +53,17 @@ namespace sw
         void enqueueCompletion( const RHIFrameCompletionDelegate& completionDelegate, uint64 fenceValue );
 
         /**
-         * @brief 자원을 해제 큐에 쥐여 두었다가 펜스가 지난 뒤 놓고, 그때 추적기에서 줄입니다.
-         * @details 키 공간은 템플릿 인자로 받아 람다가 델리게이트의 인라인 칸(24 바이트)에 들게 한다 — 자원 · 추적기 · id.
-         *          추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+         * @brief 추적기에 오른 자원 @p key 를 펜스 값이 완료된 뒤에 놓고, 놓은 뒤 추적기에서 줄입니다(해제 요청 시점이 아니라).
+         * @details 추적기를 줄이는 일이 해제 콜백 안에 있으면 백엔드마다 적어야 하고 빠뜨리면 그 종류의 바이트가 끝없이 는다 — 항목이 키를 든다. @p release 는 비어 있어도 된다(놓을 네이티브 객체가 없다).
          */
-        template <RHIMemoryKeySpace kSpace, class Owned>
-        void enqueueGPUTrackedRelease( Owned owned, RHIMemoryTracker& tracker, uint64 id, uint64 fenceValue )
-        {
-            RHIMemoryTracker* pTracker = &tracker;
-            enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [owned, pTracker, id]()
-            {
-                (void)owned;
-                pTracker->recordFree( RHIMemoryKey{ id, kSpace } );
-            } ),
-                               fenceValue );
-        }
+        void enqueueResource( const RHIResourceReleaseDelegate& release, const RHIMemoryKey& key, uint64 fenceValue );
 
-        /** @brief 펜스가 지날 때까지 자원을 쥐고 있다가 놓습니다(추적기에 오르지 않는 자원). */
+        /** @brief 펜스가 지날 때까지 @p owned 를 쥐고 있기만 하는 해제입니다(COM 참조 — 놓는 것이 곧 해제다). */
         template <class Owned>
-        void enqueueGPUKeepAlive( Owned owned, uint64 fenceValue )
+        static RHIResourceReleaseDelegate makeKeepAlive( Owned owned )
         {
-            enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [owned]()
-            { (void)owned; } ),
-                               fenceValue );
+            return SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [owned = std::move( owned )]()
+            { (void)owned; } );
         }
 
         /** @brief 완료된 GPU 펜스 이하의 해제 콜백을 실행하고 통지를 `Completed` 로 보냅니다. */
@@ -81,16 +81,28 @@ namespace sw
         uint32 getPendingReleaseCount() const;
 
     private:
+        friend struct RHIDeviceTestAccess; ///< 테스트가 통지를 하나씩 부른다 — 배포 공개 API 에 꺼내는 길을 두지 않는다
+
+        /** @brief 해제 하나입니다. */
+        struct ReleaseEntry
+        {
+            RHIResourceReleaseDelegate _release{};
+            RHIMemoryKey               _trackedKey{}; ///< 추적기에서 줄일 자원. `_id` 가 0 이면 추적하지 않는다(핸들 · 주소는 0 이 아니다)
+        };
+
         /** @brief 남은 항목을 모두 꺼내 해제를 부르고 통지를 @p result 로 보냅니다. */
         void flushAll( RHIFrameCompletion result );
+        /** @brief 항목을 넣은 순서대로 놓고 추적기에서 줄입니다(잠금 밖). */
+        void runReleases( const vector<ReleaseEntry>& listEntry );
 
     private:
-        RHIRetireList<RHIResourceReleaseDelegate> _listGPUEntry        SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
+        RHIRetireList<ReleaseEntry> _listGPUEntry                      SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
         RHIRetireList<RHIFrameCompletionDelegate> _listCompletionEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
         /// @brief tick 이 완료된 콜백을 옮겨 담는 임시 버퍼입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.
         ///        `_spinLock` 안에서만 꺼내고 돌려놓습니다. tick 은 여러 스레드에서 올 수 있습니다(DX12 업로드 펜스 대기).
-        vector<RHIResourceReleaseDelegate> _listReadyScratch      SW_GUARDED_BY( _spinLock );
+        vector<ReleaseEntry> _listReadyScratch                    SW_GUARDED_BY( _spinLock );
         vector<RHIFrameCompletionDelegate> _listCompletionScratch SW_GUARDED_BY( _spinLock ); ///< 통지 쪽 같은 용도의 임시 버퍼
         mutable SpinLock                                          _spinLock;
+        RHIMemoryTracker*                                         _pTracker; ///< `enqueueResource` 가 줄일 추적기(없으면 null)
     };
 } // namespace sw

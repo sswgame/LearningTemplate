@@ -56,14 +56,14 @@
 namespace sw
 {
     VulkanRHIDevice::VulkanRHIDevice( uint32 deviceGeneration )
-        : _instance{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _instance{ nullptr }
         , _debugMessenger{ nullptr }
         , _physicalDevice{ nullptr }
         , _device{ nullptr }
         , _graphicsQueue{ nullptr }
         , _graphicsQueueFamilyIndex{ 0 }
         , _asyncComputeQueue{ nullptr }
-        , _frameFenceRing{}
         , _swapChain{}
         , _offscreenRenderPass{ nullptr }
         , _commandPool{ nullptr }
@@ -142,7 +142,6 @@ namespace sw
         , _arrUAVBufferReadSlot{ makeFixedCountArray<atomic<RHIBufferHandle>, kBindlessBufferCapacity>() }
         , _arrBufferReadSlice{ makeFixedCountArray<atomic<uint64>, kBindlessBufferCapacity>() }
         , _gpuTextures{ getHandleReuseCount() }
-        , _releaseQueue{}
         , _renderPassCache{}
         , _textureRegistry{ kBindlessTextureCount }
         , _slotSetLayout{ nullptr }
@@ -159,10 +158,8 @@ namespace sw
         , _dummyUBOMemory{}
         , _pipelineStates{ getHandleReuseCount() }
         , _pipelineCache{ nullptr }
-        , _transferSerials{ deviceGeneration }
         , _readbackTable{}
         , _transferFenceQueue{ _transferSerials }
-        , _transferReleaseQueue{}
         , _uploadRing{}
         , _readbackRing{}
         , _transferMutex{}
@@ -406,7 +403,7 @@ namespace sw
         _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
         if ( _device )
         {
-            // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `_releaseQueue.flushAll` 보다 먼저 놓는다.
+            // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `abandonReleases` 보다 먼저 놓는다.
             shutdownTransfers();
             for ( vector<VkSemaphore>& listPool : _listAsyncSemaphorePool )
             {
@@ -429,7 +426,7 @@ namespace sw
             }
             // 해제 큐를 버퍼 표를 비우기 전에 한 번 비운다 — 업로드 배치 · 버퍼 해제 대리자가 표를 해석하므로, 표가 빈 뒤에 돌면 해석 실패 길이 생긴다.
             // GPU 는 종료 2 단계(waitIdle)에서 쉬었다. 아래 텍스처 정리가 새로 거는 프레임버퍼 해제는 뒤의 flushAll 이 놓는다.
-            _releaseQueue.abandonAll();
+            abandonReleases();
             shutdownUploads();
 
             _gpuBuffers.forEach( [this]( VulkanBufferRecord& record )
@@ -466,7 +463,7 @@ namespace sw
             _gpuTextures.clear();
             // 오프스크린 프레임버퍼는 해제 큐로 놓인다(`enqueueFramebufferRelease`). GPU 는 2 단계에서 이미 쉬고 있으니 디바이스가 살아 있는 지금 부른다 —
             // 남기면 해제 큐의 소멸자가 부순 VkDevice 로 vkDestroyFramebuffer 를 부른다(`IRHIDevice::shutdown` 이 단언한다).
-            _releaseQueue.abandonAll();
+            abandonReleases();
             _bufferRegistry.clear(); // 빈 목록도 함께 — 남기면 다음 장치가 표 밖 번호를 낸다
             _uavRegistry.clear();
             for ( uint32 index = 0; index < kBindlessBufferCapacity; ++index )
@@ -672,11 +669,7 @@ namespace sw
         record._usage      = usageFlags;
         record._cbSlotSize = cbSlotSize;
 
-        // GPU 메모리 추적기의 Buffer 줄에 올리는 유일한 자리다. 크기는 할당 크기(정렬 포함)다.
-        const uint64          allocationBytes = record._memory._sizeBytes;
-        const RHIBufferHandle handle          = _gpuBuffers.insert( record );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, allocationBytes );
-        return handle;
+        return _gpuBuffers.insert( record );
     }
 
     namespace
@@ -2039,7 +2032,7 @@ namespace sw
         }
     }
 
-    void VulkanRHIDevice::waitIdleInternal()
+    bool VulkanRHIDevice::waitIdleInternal()
     {
         // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _renderThread };
@@ -2070,23 +2063,7 @@ namespace sw
                 { recycleTransferJob( job ); } );
             }
         }
-        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다(전송 큐에는 통지가 없다).
-        _transferReleaseQueue.releaseAllCompleted();
-        // 큐가 빈 것을 확인했을 때만 통지가 `Completed` 다 — 잃은 장치는 끝났는지 모른다.
-        if ( _device && isDeviceLost() == false )
-            _releaseQueue.releaseAllCompleted();
-        else
-            _releaseQueue.abandonAll();
-    }
-
-    void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void VulkanRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
+        return _device && isDeviceLost() == false; // 잃은 장치는 끝났는지 모른다
     }
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
@@ -2285,7 +2262,7 @@ namespace sw
         collectTimestampsForSlot();
         _timestampRing.beginFrame( getFrameSlot() );
         // 이 칸의 앞 프레임까지 GPU 가 끝냈다. 그 시리얼 이하로 태그된 리소스 해제를 지금 실행한다.
-        _releaseQueue.releaseCompleted( _frameFenceRing.getCompletedSerial() );
+        releaseCompletedFrames();
         trimIdleStagingBlocks(); // 돌려받은 업로드 블록 가운데 오래 쉰 것을 놓는다
         // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
         retireFinishedTransfers();
@@ -2405,7 +2382,7 @@ namespace sw
             restoreDroppedFrameLayouts();
             // 프레임이 나가지 않아도 업로드(그리지 않는 프레임의 인스턴스 · 텍스처 구간)와 지연 해제는 쌓인다 — 최소화한 동안 끝없이 자라지 않게 여기서 내고 기다려 거둔다.
             // 이 프레임에 잡은 그리기가 없어 기다려도 막는 것이 없다(최소화한 루프는 `FramePacer` 가 재운다).
-            waitIdleInternal();
+            waitForGPUIdle();
             return;
         }
 
@@ -2589,7 +2566,7 @@ namespace sw
             ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceRing.getRecordingSerial() );
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ) );
     }
 
     VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()
@@ -2775,6 +2752,8 @@ namespace sw
         block._buffer     = createVulkanBuffer( capacity, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0, VulkanBufferMemory::HostWrite, "UploadStagingBlock" );
         block._capacity   = capacity;
         block._bDedicated = bDedicated ? SW_TRUE : SW_FALSE;
+        if ( const VulkanBufferRecord* const pRecord = resolveAllocatedBuffer( block._buffer ) )
+            getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( block._buffer ), RHIMemoryKind::Staging, pRecord->_memory._sizeBytes );
         return block;
     }
 
@@ -2879,7 +2858,7 @@ namespace sw
             return;
         auto retireCb = [this, retired = std::move( batch )]()
         { retireUploadBatch( retired ); };
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, retireCb ), _frameFenceRing.getRecordingSerial() );
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, retireCb ) );
     }
 
     void VulkanRHIDevice::retireUploadBatch( const UploadBatch& batch )
@@ -3099,7 +3078,7 @@ namespace sw
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다. 잃은 장치면 끝나지 않은 작업이 남아 있을 수 있지만 더 기다리지 않는다(isDeviceLost 설명).
         _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
         { recycleTransferJob( job ); } );
-        _transferReleaseQueue.abandonAll();
+        abandonReleases();
         {
             ScopedLock<mutex> jobLock{ _transferJobMutex };
             for ( const VulkanTransferJob& job : _listFreeTransferJob )
@@ -3305,7 +3284,7 @@ namespace sw
             { recycleTransferJob( job ); } );
         }
         // 워터마크가 지난 전송을 기다리던 텍스처 해제를 프레임 해제 큐로 넘긴다(그 다음 프레임 펜스 뒤에 놓인다).
-        _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() );
+        releaseCompletedTransfers();
         // 할당기가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(GL 과 같은 규칙, 호스트 가시 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
         destroyIdleSoloBuffer( _uploadRing );
         destroyIdleSoloBuffer( _readbackRing );
@@ -4210,14 +4189,13 @@ namespace sw
             return;
 
         VkDevice dev = _device;
-        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
+        enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
         {
             if ( framebuffer != VK_NULL_HANDLE )
                 vkDestroyFramebuffer( dev, framebuffer, nullptr );
             if ( ownedRenderPass != VK_NULL_HANDLE )
                 vkDestroyRenderPass( dev, ownedRenderPass, nullptr );
-        } ),
-                                         _frameFenceRing.getRecordingSerial() );
+        } ) );
     }
 
     VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )

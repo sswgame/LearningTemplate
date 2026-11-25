@@ -186,22 +186,16 @@ namespace sw
         void detachCommandRecordingInternal() override;
 
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
-        void waitIdleInternal() override;
+        bool waitIdleInternal() override;
 
         /** @brief D3D12MA 가 DXGI `QueryVideoMemoryInfo` 로 읽은 이 프로세스의 사용량(로컬과 비로컬)과 로컬 예산을 채웁니다. 할당기가 없으면 false 입니다. */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)을 기준으로 해제 큐에 넣습니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
-        bool   isFrameStarted() const override { return _frameStreamState._bRecording != SW_FALSE; } // 제거된 장치의 beginFrame 은 리스트를 열지 못한다
+        bool isFrameStarted() const override { return _frameStreamState._bRecording != SW_FALSE; } // 제거된 장치의 beginFrame 은 리스트를 열지 못한다
         /** @brief `ID3D12Device5::RemoveDevice` 로 장치를 제거합니다. 이후 펜스는 끝난 값(UINT64_MAX)을 돌려주고 호출은 DXGI_ERROR_DEVICE_REMOVED 로 실패한다. */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
-        uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
+        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
         /** @brief DRED 자동 브레드크럼 · 페이지 폴트 할당을 로그로 남깁니다(손실 보고가 처음 한 번 부른다). */
         void   reportDeviceFaultInternal() override;
         uint32 getValidationMessageCount() const override { return _validationMessageCount.load( std::memory_order_relaxed ); }
@@ -686,7 +680,7 @@ namespace sw
         /** @brief READBACK 힙 버퍼를 만들어 영속 매핑합니다(복사 도착지 상태로 만든다). */
         [[nodiscard]] bool createMappedReadbackBuffer( uint64 sizeBytes, const utf16* pName, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기에 서술 @p desc 의 항목 · 모양과 할당 크기를 올리는 유일한 지점입니다. */
-        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, const RHITextureDesc& desc );
+        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture );
     #if defined( SW_DO_CHECKS )
         /**
          * @brief 리소스에 `SW <종류> <핸들> (<폭>x<높이> fmt <포맷>)` 이름을 붙입니다. DRED 페이지 폴트 출력이 폴트 주소의 할당을 이 이름으로 보여 줍니다.
@@ -696,12 +690,6 @@ namespace sw
     #endif
         /** @brief 자원 하나가 차지하는 실제 할당 크기입니다(`GetResourceAllocationInfo`이며 정렬과 패딩을 포함합니다). */
         uint64 computeAllocationBytes( ID3D12Resource* pResource ) const;
-        /**
-         * @brief 핸들 테이블에서 꺼낸 자원을 지금 펜스 뒤에 해제하고, 그때 추적기에서 뺍니다. destroyBuffer 와 destroyTexture 가 공통으로 쓰는 해제 함수입니다.
-         * @details 추적기는 GPU 가 실제로 해제한 뒤에 줄어야 한다. 해제 요청 시점에 빼면 아직 GPU 메모리를 쥔 자원이 추적기에서 먼저 사라진다.
-         *          끝나지 않은 전송이 있는 텍스처는 이 함수가 아니라 `releaseTextureAfterTransfer` 를 거쳐 온다(전송 완료 뒤에야 여기로 넘어온다).
-         */
-        void releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key );
         /**
          * @brief 루트 시그니처(루트 CBV, t/u 슬롯 테이블, 텍스처 배열 테이블, 루트 상수, 정적 샘플러), 커맨드 시그니처, 풀스크린 정점 버퍼를 만듭니다.
          */
@@ -809,11 +797,6 @@ namespace sw
          * @details `pollTransfer` · 링이 찬 제출 · 프레임 끝(`signalCurrentFrame`) · `waitIdleInternal` 이 부른다. 잃은 장치의 펜스는 묻지 않는다(끝난 값을 돌려줘 잃은 전송이 `Complete` 로 보인다).
          */
         void retireCompletedTransfers();
-        /**
-         * @brief 전송 중인 텍스처의 해제를 마지막 전송이 끝난 뒤로 미룹니다(계약 6). 끝나면 그때의 프레임 펜스 뒤로 `_releaseQueue` 에 넘어가 이 텍스처를 그린 프레임도 지나게 한다.
-         * @param lastSerial 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다(끝나지 않은 것).
-         */
-        void releaseTextureAfterTransfer( Microsoft::WRL::ComPtr<ID3D12Resource> owned, RHITextureHandle texture, uint64 lastSerial );
         /**
          * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
          * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
@@ -1021,14 +1004,10 @@ namespace sw
         /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 확인하기 위한 계측입니다.
         atomic<uint32> _cmdListEntryCreated;
 
-        Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
-        /// @brief 이번 프레임이 Signal 할 프레임 펜스 값입니다. 렌더 스레드가 Signal 과 함께 올리고, 다른 스레드(구조 버퍼 갱신 · 해제)가 읽으므로 atomic 입니다.
-        /// @details Signal 과 올리기는 `_uploadSlotMutex` 안에서 한 덩어리로 한다. 구조 버퍼 갱신이 같은 락 안에서 이 값을 읽고 복사를 실행하므로
+        /// @brief 프레임 펜스입니다. Signal 하는 값은 기록 시리얼(`_frameFenceRing`)이다.
+        /// @details Signal 과 시리얼 올리기는 `_uploadSlotMutex` 안에서 한 덩어리로 한다. 구조 버퍼 갱신이 같은 락 안에서 시리얼을 읽고 복사를 실행하므로
         ///          "복사가 끝나는 펜스" 가 Signal 순서와 어긋나지 않는다(락 밖이면 Signal(V) 뒤에 실행된 복사가 V 를 받는다).
-        ///          텍스처 전송은 이 값에 기대지 않는다 — 전송 완료는 전송 펜스와 시리얼 워터마크가, 전송 중인 텍스처의 해제는 시리얼 키 해제 큐(`_transferReleaseQueue`)가 정한다.
-        atomic<uint64> _fenceValue;
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매깁니다.
-        RHITransferSerials _transferSerials;
+        Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
         /// @brief 전송 전용 펜스입니다. 프레임 펜스와 따로 두어 전송 완료를 프레임 없이도 알 수 있습니다. 전송마다 한 값을 올립니다(`submitTransferJob`).
         Microsoft::WRL::ComPtr<ID3D12Fence> _transferFence;
         UINT64                              _transferFenceValue; ///< 마지막으로 올린 전송 펜스 값(`_transferSubmitMutex` 안에서만 올린다)
@@ -1051,13 +1030,6 @@ namespace sw
         unordered_map<RHITextureHandle, RHITextureTransferSerials> _mapTextureTransferMarks SW_GUARDED_BY( _textureTransferMutex );
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
-
-        RHIReleaseQueue _releaseQueue;
-        /**
-         * @brief 끝나지 않은 전송이 쓰는 텍스처의 해제와 읽기 버퍼 유지입니다. 키는 전송 시리얼이고, 워터마크가 지나면 해제는 그때의 프레임 펜스 뒤로 `_releaseQueue` 에 넘어갑니다(계약 6).
-         * @details `_releaseQueue` 보다 **뒤에** 선언합니다. 소멸은 선언 역순이라 이 큐가 먼저 비워지고, 그 콜백이 아직 살아 있는 `_releaseQueue` 에 넣습니다.
-         */
-        RHIReleaseQueue _transferReleaseQueue;
 
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
         sw::unique_ptr<D3D12RHICommandContext> _frameStreamContext;

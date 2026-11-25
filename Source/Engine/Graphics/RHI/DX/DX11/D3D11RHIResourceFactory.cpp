@@ -263,7 +263,7 @@ namespace sw
         return _pDevice->storeBuffer( std::move( buffer ) );
     }
 
-    bool D3D11RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool D3D11RHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         if ( buffer == 0 )
             return false;
@@ -277,8 +277,7 @@ namespace sw
         _pDevice->_bufferRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
 
-        // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라). SRV 도 버퍼와 함께 그때 놓인다.
-        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Buffer>( owned, _pDevice->getMemoryTracker(), buffer.getPacked(), _pDevice->_frameFenceRing.getRecordingSerial() );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
         return true;
     }
 
@@ -731,10 +730,10 @@ namespace sw
             }
         }
 
-        return _pDevice->storeTexture( std::move( record ), desc );
+        return _pDevice->storeTexture( std::move( record ) );
     }
 
-    bool D3D11RHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool D3D11RHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         if ( texture == 0 )
             return false;
@@ -755,9 +754,23 @@ namespace sw
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return false;
 
-        // 추적기는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-        _pDevice->_releaseQueue.enqueueGPUTrackedRelease<RHIMemoryKeySpace::Texture>( owned, _pDevice->getMemoryTracker(), texture.getPacked(), _pDevice->_frameFenceRing.getRecordingSerial() );
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
         return true;
+    }
+
+    uint64 D3D11RHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
+    {
+        ID3D11Buffer* const pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
+            return kRHIMemoryUnknownBytes;
+        D3D11_BUFFER_DESC bufferDesc{};
+        pResource->GetDesc( &bufferDesc );
+        return bufferDesc.ByteWidth;
+    }
+
+    uint64 D3D11RHIResourceFactory::findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& desc ) const
+    {
+        return RHIMemoryTracker::computeTextureLogicalBytes( desc );
     }
 
     bool D3D11RHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
@@ -1025,11 +1038,15 @@ namespace sw
         return _pDevice->_pipelineStates.insert( std::move( pso ) );
     }
 
-    bool D3D11RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool D3D11RHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         if ( pso == 0 )
             return false;
-        return _pDevice->_pipelineStates.erase( pso ); // 건 채인 기록 스트림은 세대가 달라 풀리지 않는다 — 그 드로우 · 디스패치가 멈춘다
+        D3D11RHIDevice::D3D11PipelineStateRecord owned{};
+        if ( _pDevice->_pipelineStates.take( pso, owned ) == false )
+            return false;
+        outReleased._release = RHIReleaseQueue::makeKeepAlive( std::move( owned ) );
+        return true; // 건 채인 기록 스트림은 세대가 달라 풀리지 않는다 — 그 드로우 · 디스패치가 멈춘다
     }
 } // namespace sw
 #endif

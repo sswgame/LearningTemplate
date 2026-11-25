@@ -106,44 +106,58 @@ namespace sw
         return buffer;
     }
 
+    RHIBufferHandle IRHIResourceFactory::trackCreated( RHIBufferHandle buffer ) const
+    {
+        if ( buffer != 0 && _pUploadDevice != nullptr )
+            _pUploadDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( buffer ), RHIMemoryKind::Buffer, findAllocationBytesNative( buffer ) );
+        return buffer;
+    }
+
+    RHITextureHandle IRHIResourceFactory::trackCreated( RHITextureHandle texture, const RHITextureDesc& desc ) const
+    {
+        if ( texture != 0 && _pUploadDevice != nullptr )
+            _pUploadDevice->getMemoryTracker().recordTexture( texture, desc, findAllocationBytesNative( texture, desc ) );
+        return texture;
+    }
+
     RHIBufferHandle IRHIResourceFactory::createBuffer( RHIResourceCreateKey, const RHIBufferDesc& desc )
     {
-        return isValidBufferDesc( desc, "createBuffer" ) ? recordContent( createBufferNative( desc ), desc._pInitialData ) : RHIBufferHandle{ 0 };
+        return isValidBufferDesc( desc, "createBuffer" ) ? recordContent( trackCreated( createBufferNative( desc ) ), desc._pInitialData ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createConstantBuffer( RHIResourceCreateKey, uint32 size )
     {
-        return RHIResourceFactoryInternal::isValidBytes( size, "createConstantBuffer" ) ? createConstantBufferNative( size ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidBytes( size, "createConstantBuffer" ) ? trackCreated( createConstantBufferNative( size ) ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createConstantBufferPage( RHIResourceCreateKey, uint32 size )
     {
-        return RHIResourceFactoryInternal::isValidBytes( size, "createConstantBufferPage" ) ? createConstantBufferPageNative( size ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidBytes( size, "createConstantBufferPage" ) ? trackCreated( createConstantBufferPageNative( size ) ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createStructuredBuffer( RHIResourceCreateKey, uint32 elementSize, uint32 elementCount )
     {
-        return RHIResourceFactoryInternal::isValidElements( elementSize, elementCount, "createStructuredBuffer" ) ? createStructuredBufferNative( elementSize, elementCount ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidElements( elementSize, elementCount, "createStructuredBuffer" ) ? trackCreated( createStructuredBufferNative( elementSize, elementCount ) ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createVertexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes )
     {
-        return RHIResourceFactoryInternal::isValidContent( pData, sizeBytes, "createVertexBuffer" ) ? recordContent( createVertexBufferNative( pData, sizeBytes ), pData ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidContent( pData, sizeBytes, "createVertexBuffer" ) ? recordContent( trackCreated( createVertexBufferNative( pData, sizeBytes ) ), pData ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createGPUVertexBuffer( RHIResourceCreateKey, uint32 sizeBytes )
     {
-        return RHIResourceFactoryInternal::isValidBytes( sizeBytes, "createGPUVertexBuffer" ) ? createGPUVertexBufferNative( sizeBytes ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidBytes( sizeBytes, "createGPUVertexBuffer" ) ? trackCreated( createGPUVertexBufferNative( sizeBytes ) ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createIndexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes )
     {
-        return RHIResourceFactoryInternal::isValidContent( pData, sizeBytes, "createIndexBuffer" ) ? recordContent( createIndexBufferNative( pData, sizeBytes ), pData ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidContent( pData, sizeBytes, "createIndexBuffer" ) ? recordContent( trackCreated( createIndexBufferNative( pData, sizeBytes ) ), pData ) : RHIBufferHandle{ 0 };
     }
 
     RHIBufferHandle IRHIResourceFactory::createReadbackBuffer( RHIResourceCreateKey, uint32 elementSize, uint32 elementCount )
     {
-        return RHIResourceFactoryInternal::isValidElements( elementSize, elementCount, "createReadbackBuffer" ) ? createReadbackBufferNative( elementSize, elementCount ) : RHIBufferHandle{ 0 };
+        return RHIResourceFactoryInternal::isValidElements( elementSize, elementCount, "createReadbackBuffer" ) ? trackCreated( createReadbackBufferNative( elementSize, elementCount ) ) : RHIBufferHandle{ 0 };
     }
 
     bool IRHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
@@ -176,7 +190,7 @@ namespace sw
 
     RHITextureHandle IRHIResourceFactory::createTexture2D( RHIResourceCreateKey, const RHITextureDesc& desc )
     {
-        return validateTextureDesc( desc, "createTexture2D" ) ? createTexture2DNative( desc ) : RHITextureHandle{ 0 };
+        return validateTextureDesc( desc, "createTexture2D" ) ? trackCreated( createTexture2DNative( desc ), desc ) : RHITextureHandle{ 0 };
     }
 
     RHITextureAllocationInfo IRHIResourceFactory::getTextureAllocationInfo( const RHITextureDesc& desc )
@@ -191,7 +205,7 @@ namespace sw
 
     RHITextureHandle IRHIResourceFactory::createPlacedTexture2D( RHIResourceCreateKey, const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes )
     {
-        return validateTextureDesc( desc, "createPlacedTexture2D" ) ? createPlacedTexture2DNative( desc, heap, offsetBytes ) : RHITextureHandle{ 0 };
+        return validateTextureDesc( desc, "createPlacedTexture2D" ) ? trackCreated( createPlacedTexture2DNative( desc, heap, offsetBytes ), desc ) : RHITextureHandle{ 0 };
     }
 
     void IRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )

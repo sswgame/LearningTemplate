@@ -31,10 +31,11 @@ SW_TEST_CASE( AsyncBufferReadbackTest, AbandonedSlotIsNotReadAndStaysBlockedUnti
         SW_REQUIRE_TRUE( readback.request( commands, RHIBufferHandle{ 99 }, RHIBufferState::UnorderedAccess, tag ) );
     }
     SW_EXPECT_FALSE( readback.request( commands, RHIBufferHandle{ 99 }, RHIBufferState::UnorderedAccess, 100 ) ); // 칸이 모두 날아가는 중
-    SW_REQUIRE_EQUAL( device._listFrameCompletion.size(), static_cast<size_t>( AsyncBufferReadback::kSlotCount ) );
+    const vector<RHIFrameCompletionDelegate> listCompletion = RHIDeviceTestAccess::takeFrameCompletions( device );
+    SW_REQUIRE_EQUAL( listCompletion.size(), static_cast<size_t>( AsyncBufferReadback::kSlotCount ) );
 
     // 못 기다린 비우기: 읽지 않고, 칸도 풀지 않는다(GPU 복사 · 매핑이 아직 걸려 있을 수 있다).
-    device._listFrameCompletion[0]( RHIFrameCompletion::Abandoned );
+    listCompletion[0]( RHIFrameCompletion::Abandoned );
     SW_EXPECT_EQUAL( 0u, factory._readbackReadCount );
     SW_EXPECT_FALSE( readback.request( commands, RHIBufferHandle{ 99 }, RHIBufferState::UnorderedAccess, 101 ) );
     vector<uint8> bytes;
@@ -42,7 +43,7 @@ SW_TEST_CASE( AsyncBufferReadbackTest, AbandonedSlotIsNotReadAndStaysBlockedUnti
     SW_EXPECT_FALSE( readback.takeLatest( bytes, tag ) );
 
     // 뒤 요청이 끝났다 — 그 앞의 GPU 일도 끝났으니(큐 순서) 격리한 칸과 그 칸이 함께 풀린다.
-    device._listFrameCompletion[1]( RHIFrameCompletion::Completed );
+    listCompletion[1]( RHIFrameCompletion::Completed );
     SW_EXPECT_EQUAL( 1u, factory._readbackReadCount );
     SW_REQUIRE_TRUE( readback.takeLatest( bytes, tag ) );
     SW_EXPECT_EQUAL( static_cast<uint64>( 2 ), tag );
@@ -71,7 +72,7 @@ SW_TEST_CASE( AsyncBufferReadbackTest, FailedReadKeepsTheSlotOutOfUse )
     }
 
     factory._bReadbackReadable = false;
-    device._listFrameCompletion[0]( RHIFrameCompletion::Completed );
+    RHIDeviceTestAccess::takeFrameCompletions( device )[0]( RHIFrameCompletion::Completed );
     SW_EXPECT_EQUAL( 1u, factory._readbackReadCount );
     SW_EXPECT_FALSE( readback.request( commands, RHIBufferHandle{ 99 }, RHIBufferState::UnorderedAccess, 10 ) );
     readback.shutdown();

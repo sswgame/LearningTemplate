@@ -21,6 +21,23 @@
 
 #include <algorithm>
 
+namespace sw
+{
+    /** @brief 장치 안을 보는 테스트 창구입니다(`friend`). */
+    struct RHIDeviceTestAccess
+    {
+        static size_t getDeferredHandleCount( const IRHIDevice& device ) { return device.getDeferredHandleCount(); }
+        /** @brief 아직 부르지 않은 프레임 완료 통지를 받은 순서로 꺼냅니다 — 테스트가 GPU 의 답을 하나씩 흉내 냅니다. */
+        static vector<RHIFrameCompletionDelegate> takeFrameCompletions( IRHIDevice& device )
+        {
+            vector<RHIFrameCompletionDelegate> listCompletion;
+            ScopedLock<SpinLock>               lock{ device._releaseQueue._spinLock };
+            device._releaseQueue._listCompletionEntry.extractAll( listCompletion );
+            return listCompletion;
+        }
+    };
+} // namespace sw
+
 namespace sw::test
 {
     /**
@@ -124,27 +141,27 @@ namespace sw::test
     class FakeRHIDevice final : public IRHIDevice
     {
     public:
-        using IRHIDevice::getHandleReuseCount;                                                                         /**< 핸들 표 테스트가 장치의 경계 수를 받는다 */
-        uint32                             _maxCreatable{ 0xFFFFFFFFu };                                               /**< 이만큼 만든 뒤로는 만들지 못한다 */
-        uint32                             _createdCount{ 0 };                                                         /**< 지금까지 만든 리스트 수 */
-        vector<FakeRHICommandList*>        _listExecuted;                                                              /**< 제출된 순서 그대로의 리스트 */
-        vector<const utf8*>                _listShutdownStep;                                                          /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
-        void*                              _pNativeDevice{ nullptr };                                                  /**< `getNativeDevice` 가 돌려줄 값 */
-        mutable uint32                     _nativeHandleQueryCount{ 0 };                                               /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
-        vector<RHIResourceReleaseDelegate> _listGPURelease;                                                            /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
-        vector<RHIFrameCompletionDelegate> _listFrameCompletion;                                                       /**< `notifyFrameCompletion` 으로 받은 통지(받은 순서) */
-        uint32                             _pendingReleaseCount{ 0 };                                                  /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
-        uint32                             _deviceFaultReportCount{ 0 };                                               /**< `reportDeviceFaultInternal` 이 불린 횟수 — 손실 보고가 처음 한 번만 부르는지 본다 */
-        vector<RHIDescriptorIndex>         _listLiveTextureIndex;                                                      /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
-        vector<RHIDescriptorIndex>         _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
-        vector<RHIFormat>                  _listUnsupportedFormat;                                                     /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
-        uint8                              _bAsyncCompute{ SW_FALSE };                                                 /**< 능력 `_bAsyncCompute` 로 답할 값 */
-        uint8                              _bParallelRecording{ SW_TRUE };                                             /**< 능력 `_bParallelCommandRecording` */
-        uint8                              _bThreadSafeResourceCreation{ SW_FALSE };                                   /**< 능력 `_bThreadSafeResourceCreation` 으로 답할 값 */
-        RHIFormat                          _sdrBackBufferFormatForTest{ constant::render::kBackBufferFormat };         /**< SDR 백버퍼 포맷(BGRA8 설정을 흉내 낸다) */
-        RHIColorSpace                      _colorSpace{ RHIColorSpace::SRGBNonLinear };                                /**< 지금 색 공간 — `setBackBufferColorSpaceInternal` 이 바꾼다 */
-        uint8                              _displayOutputSupport{ makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) }; /**< 능력 `_displayOutputSupport` 로 답할 값 */
-        IRHIResourceFactory*               _pResourceFactory{ nullptr };                                               /**< `getResourceFactory` 가 돌려줄 팩토리 — 자원을 만드는 테스트가 꽂는다(없으면 nullptr) */
+        using IRHIDevice::_transferSerials;                                                                     /**< 전송 완료를 흉내 내는 테스트가 워터마크를 올린다 */
+        using IRHIDevice::getHandleReuseCount;                                                                  /**< 핸들 표 테스트가 장치의 경계 수를 받는다 */
+        uint32                      _maxCreatable{ 0xFFFFFFFFu };                                               /**< 이만큼 만든 뒤로는 만들지 못한다 */
+        uint32                      _createdCount{ 0 };                                                         /**< 지금까지 만든 리스트 수 */
+        vector<FakeRHICommandList*> _listExecuted;                                                              /**< 제출된 순서 그대로의 리스트 */
+        vector<const utf8*>         _listShutdownStep;                                                          /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
+        void*                       _pNativeDevice{ nullptr };                                                  /**< `getNativeDevice` 가 돌려줄 값 */
+        mutable uint32              _nativeHandleQueryCount{ 0 };                                               /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
+        uint32                      _releaseCountInShutdown{ 0 };                                               /**< 종료 4단계(`shutdownInternal`)가 넣을 해제 수 — 종료 단언 테스트가 정한다 */
+        uint32                      _deviceFaultReportCount{ 0 };                                               /**< `reportDeviceFaultInternal` 이 불린 횟수 — 손실 보고가 처음 한 번만 부르는지 본다 */
+        vector<RHIDescriptorIndex>  _listLiveTextureIndex;                                                      /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
+        vector<RHIDescriptorIndex>  _listLiveBufferIndex;                                                       /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
+        vector<RHIFormat>           _listUnsupportedFormat;                                                     /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
+        uint8                       _bIdleConfirmed{ SW_TRUE };                                                 /**< `waitIdleInternal` 이 유휴를 확인했다고 답할지 */
+        uint8                       _bAsyncCompute{ SW_FALSE };                                                 /**< 능력 `_bAsyncCompute` 로 답할 값 */
+        uint8                       _bParallelRecording{ SW_TRUE };                                             /**< 능력 `_bParallelCommandRecording` */
+        uint8                       _bThreadSafeResourceCreation{ SW_FALSE };                                   /**< 능력 `_bThreadSafeResourceCreation` 으로 답할 값 */
+        RHIFormat                   _sdrBackBufferFormatForTest{ constant::render::kBackBufferFormat };         /**< SDR 백버퍼 포맷(BGRA8 설정을 흉내 낸다) */
+        RHIColorSpace               _colorSpace{ RHIColorSpace::SRGBNonLinear };                                /**< 지금 색 공간 — `setBackBufferColorSpaceInternal` 이 바꾼다 */
+        uint8                       _displayOutputSupport{ makeColorSpaceBit( RHIColorSpace::SRGBNonLinear ) }; /**< 능력 `_displayOutputSupport` 로 답할 값 */
+        IRHIResourceFactory*        _pResourceFactory{ nullptr };                                               /**< `getResourceFactory` 가 돌려줄 팩토리 — 자원을 만드는 테스트가 꽂는다(없으면 nullptr) */
         /** @brief 큐 사건 하나입니다 — 'G'(그래픽스 리스트 제출) · 'F'(값 번째 비동기 제출 = 포크) · 'J'(그 값의 조인). */
         struct QueueEvent
         {
@@ -155,8 +172,20 @@ namespace sw::test
         vector<QueueEvent> _listQueueEvent;
         uint64             _asyncSubmitCount{ 0 }; /**< 지금까지 낸 비동기 제출 수(포크 번호) */
 
-        [[nodiscard]] bool   initializeInternal( const RHIDeviceDesc& ) override { return true; }
-        void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
+        FakeRHIDevice()
+            : IRHIDevice{ 1 } // 레지스트리를 거치지 않는 가짜의 세대
+        {
+        }
+
+        [[nodiscard]] bool initializeInternal( const RHIDeviceDesc& ) override { return true; }
+        void               shutdownInternal() override
+        {
+            _listShutdownStep.push_back( "shutdownInternal" );
+            for ( uint32 index = 0; index < _releaseCountInShutdown; ++index )
+            {
+                enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, []() {} ) );
+            }
+        }
         void                 resizeInternal( uint32, uint32 ) override {}
         IRHISwapChain*       createSwapChainInternal( const RHISwapChainDesc& ) override { return nullptr; } // 창이 없다
         void                 resizeSwapChainInternal( IRHISwapChain&, uint32, uint32 ) override {}
@@ -217,11 +246,16 @@ namespace sw::test
 
         void waitForAsyncCompute( RHIQueueSyncPoint point ) override { _listQueueEvent.push_back( QueueEvent{ 'J', point._value } ); }
 
-        /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override { _listFrameCompletion.push_back( completionDelegate ); }
-        uint32 getPendingReleaseCount() const override { return _pendingReleaseCount; }
-        void   reportDeviceFaultInternal() override { ++_deviceFaultReportCount; }
+        /** @brief GPU 가 지금까지 낸 프레임을 모두 끝낸 것으로 보고 해제 · 통지를 부릅니다. */
+        void completeGPUFrames()
+        {
+            (void)_frameFenceRing.markSubmitted();
+            _frameFenceRing.markAllCompleted();
+            releaseCompletedFrames();
+        }
+        /** @brief 끝난 전송(`_transferSerials` 의 워터마크)을 기다리던 해제를 프레임 펜스로 넘깁니다. */
+        void completeTransfers() { releaseCompletedTransfers(); }
+        void reportDeviceFaultInternal() override { ++_deviceFaultReportCount; }
         /** @brief 손실 표시만 세운다(실제 백엔드의 `debugRemoveDevice` 와 같은 상태 — 전송 거절 · `isDeviceLost`). */
         bool debugRemoveDevice() override
         {
@@ -239,10 +273,12 @@ namespace sw::test
 #endif
 
     protected:
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
-        void                      waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
-        void                      detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
+        bool waitIdleInternal() override
+        {
+            _listShutdownStep.push_back( "waitIdleInternal" );
+            return _bIdleConfirmed != SW_FALSE;
+        }
+        void detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
 
         [[nodiscard]] bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const override
         {
@@ -258,9 +294,6 @@ namespace sw::test
         void* getNativeContext() const override { return nullptr; }
         void* getNativeCommandQueue() const override { return nullptr; }
         void* getNativeTexturePointer( RHITextureHandle ) const override { return nullptr; }
-
-    private:
-        RHITransferSerials _transferSerials{ 1 }; ///< 손실 표시의 저장소(세대 1 — 레지스트리를 거치지 않는 가짜)
     };
 } // namespace sw::test
 
@@ -351,14 +384,17 @@ namespace sw::test
         RHIBufferSRVIndex              _bufferSRV{ kInvalidDescriptorIndex }; /**< `registerBindlessBufferSRV` 가 낼 번호(무효면 새 번호) */
         vector<RHIPipelineStateHandle> _listDestroyedPipelineState;           /**< `destroyPipelineStateNative` 로 받은 PSO(받은 순서) */
 
-        uint64                _nextTexture{ 0 };                         /**< 다음에 낼 텍스처 핸들의 packed 값 — 0 이면 텍스처를 만들지 못한다 */
-        uint32                _nextTextureView{ 1 };                     /**< 다음에 낼 텍스처 뷰 번호 */
-        bool                  _bFailTextureUAV{ false };                 /**< 텍스처 UAV 등록이 실패한다 */
-        uint32                _nextBufferView{ 1 };                      /**< 다음에 낼 버퍼 뷰 번호 */
-        RHIBufferSRVIndex     _releasedIndex{ kInvalidDescriptorIndex }; /**< 해제할 때 산 번호가 아니었다고 답할 버퍼 번호 */
-        uint32                _constantPageBytes{ 0 };                   /**< 상수 버퍼 페이지의 바이트(0 이면 구간으로 나눌 수 없다) */
-        RHITextureBindingInfo _textureInfo{ makeTextureInfo() };         /**< 산 텍스처가 답할 등록 조건 */
-        vector<const utf8*>   _listReleaseStep;                          /**< 텍스처 뷰 해제("srv" · "uav")와 텍스처 파괴("texture")의 차례 */
+        uint64                _nextTexture{ 0 };                          /**< 다음에 낼 텍스처 핸들의 packed 값 — 0 이면 텍스처를 만들지 못한다 */
+        uint32                _nextTextureView{ 1 };                      /**< 다음에 낼 텍스처 뷰 번호 */
+        bool                  _bFailTextureUAV{ false };                  /**< 텍스처 UAV 등록이 실패한다 */
+        uint32                _nextBufferView{ 1 };                       /**< 다음에 낼 버퍼 뷰 번호 */
+        RHIBufferSRVIndex     _releasedIndex{ kInvalidDescriptorIndex };  /**< 해제할 때 산 번호가 아니었다고 답할 버퍼 번호 */
+        uint32                _constantPageBytes{ 0 };                    /**< 상수 버퍼 페이지의 바이트(0 이면 구간으로 나눌 수 없다) */
+        RHITextureBindingInfo _textureInfo{ makeTextureInfo() };          /**< 산 텍스처가 답할 등록 조건 */
+        uint64                _allocationBytes{ kRHIMemoryUnknownBytes }; /**< 만든 자원마다 답할 할당 바이트 */
+        uint64                _textureTransferSerial{ 0 };                /**< 놓은 텍스처를 쓰는 마지막 전송의 시리얼 */
+        uint32*               _pReleasedCount{ nullptr };                 /**< 놓은 텍스처의 네이티브 해제가 불릴 때마다 오르는 수(없으면 세지 않는다) */
+        vector<const utf8*>   _listReleaseStep;                           /**< 텍스처 뷰 해제("srv" · "uav")와 텍스처 파괴("texture")의 차례 */
 
         /** @brief 등록할 수 있는 텍스처의 조건입니다. */
         static RHITextureBindingInfo makeTextureInfo()
@@ -420,6 +456,8 @@ namespace sw::test
         bool               rebindBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
         RHITextureSRVIndex reserveBindlessTextureIndexNative() override { return kInvalidDescriptorIndex; }
         bool               activateReservedBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        uint64             findAllocationBytesNative( RHIBufferHandle ) const override { return _allocationBytes; }
+        uint64             findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& ) const override { return _allocationBytes; }
         bool               describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
         {
             outInfo = _textureInfo;
@@ -443,17 +481,23 @@ namespace sw::test
         }
 
     protected:
-        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer ) override
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& ) override
         {
             _listDestroyedBuffer.push_back( buffer );
             return _setLiveBuffer.erase( buffer ) != 0;
         }
-        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle, RHIReleasedResource& outReleased ) override
         {
             _listReleaseStep.push_back( "texture" );
+            outReleased._transferSerial = _textureTransferSerial;
+            outReleased._release        = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pReleasedCount = _pReleasedCount]()
+                   {
+                if ( pReleasedCount != nullptr )
+                    ++( *pReleasedCount );
+            } );
             return true;
         }
-        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle pso ) override
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& ) override
         {
             _listDestroyedPipelineState.push_back( pso );
             return true;

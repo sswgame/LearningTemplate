@@ -186,7 +186,7 @@ namespace sw
         void detachCommandRecordingInternal() override;
 
         /** @brief GPU 가 끝날 때까지 기다리고(vkDeviceWaitIdle) 지연 해제 큐를 비웁니다. */
-        void waitIdleInternal() override;
+        bool waitIdleInternal() override;
 
         /**
          * @brief `VK_EXT_memory_budget` 으로 이 프로세스의 힙별 사용량과 예산을 채웁니다. 사용량은 모든 힙의 합이고, 예산은 DEVICE_LOCAL 힙의 합입니다.
@@ -194,11 +194,7 @@ namespace sw
          */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 기록 중인 프레임의 시리얼(`_frameFenceRing.getRecordingSerial()`)로 해제 큐에 넣습니다. */
-        void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
-        void   notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) override;
-        uint32 getPendingReleaseCount() const override { return _releaseQueue.getPendingReleaseCount(); }
-        bool   isFrameStarted() const override { return _bFrameStarted != SW_FALSE; }
+        bool isFrameStarted() const override { return _bFrameStarted != SW_FALSE; }
         /**
          * @brief 장치를 잃은 상태로 둡니다(개발 명령 `rhi.removeDevice`). Vulkan 에는 장치를 제거하는 API 가 없어, 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 처음 돌려준
          *        뒤와 같은 상태(`isDeviceLost`)를 만든다. 그 뒤로 제출 · 대기 · 표시를 하지 않고 프레임을 건너뛰며, 종료는 기다리지 않고 끝난다.
@@ -206,9 +202,7 @@ namespace sw
          */
         bool debugRemoveDevice() override;
         /** @brief 장치 손실 표시를 든 전송 시리얼입니다(`IRHIDevice::isDeviceLost` 가 읽는다). */
-        const RHITransferSerials& getTransferSerials() const override { return _transferSerials; }
-        RHITransferSerials&       getTransferSerials() override { return _transferSerials; }
-        uint32                    readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
+        uint32 readLastBreadcrumbs( uint32* pOutID, uint32 capacity ) override;
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void               resizeInternal( uint32 width, uint32 height ) override;
@@ -415,6 +409,7 @@ namespace sw
             RHITextureDimension                _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isFirstUploadComplete`).
             RHITextureTransferSerials _transferSerials;
+            uint64                    _allocationBytes{ 0 }; ///< 할당 크기(정렬 포함 — placed 는 힙에서 차지하는 크기). GPU 메모리 추적기가 읽는다
             uint8                     _bRenderTarget    : 1;
             uint8                     _bDepthStencil    : 1;
             uint8                     _bShaderResource  : 1;
@@ -922,9 +917,6 @@ namespace sw
          *          제출은 `_queueMutex` 로 그래픽스 큐와 같이 직렬화한다.
          */
         VkQueue _asyncComputeQueue;
-        /// @brief 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한입니다. 인플라이트 칸(`getFrameSlot`)은 스왑체인 이미지 인덱스와 **다른 값**입니다
-        ///        (이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있다). 렌더 스레드만 넘기고(`endFrame`), 다른 스레드도 칸 · 해제 키를 읽는다(원자).
-        RHIFrameFenceRing _frameFenceRing;
 
         /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
@@ -1102,7 +1094,6 @@ namespace sw
         /// @brief 트랜지언트 힙 핸들 표입니다. 생성 · 파괴는 셋업 스레드다(DX12 와 같다). 종료가 텍스처 표보다 먼저 비워 마지막 참조가 장치가 살아 있을 때 놓이게 한다.
         unordered_map<RHITransientHeapHandle, shared_ptr<VulkanHeapMemory>> _mapTransientHeap;
         uint64                                                              _nextTransientHeap{ 1 }; ///< 다음에 낼 힙 핸들의 packed 값
-        RHIReleaseQueue                                                     _releaseQueue;
         /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 스왑체인이 든다 — `VulkanRHISwapChain::getRenderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
@@ -1136,16 +1127,12 @@ namespace sw
         /// @brief 이 장치의 모든 버퍼 · 이미지 메모리를 준다(VMA). 논리 장치 바로 뒤에 서고 논리 장치 바로 앞에 부순다.
         VulkanMemoryAllocator _memoryAllocator;
 
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.
-        RHITransferSerials _transferSerials;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(결과는 되읽기 링에 있다).
         RHIPendingReadbackTable<VulkanPendingReadback> _readbackTable;
         /// @brief 제출 순서대로 쌓인 전송 작업입니다. 펜스가 앞에서부터 연속으로 지난 만큼 워터마크를 올린다(`retireFinishedTransfers`).
         RHITransferFenceQueue<VulkanTransferJob> _transferFenceQueue;
-        /// @brief 끝나지 않은 전송이 쓰는 텍스처의 해제입니다. 키는 전송 시리얼이고, 워터마크가 지나면 그때의 다음 프레임 펜스 뒤로 `_releaseQueue` 에 넘어간다(계약 6).
-        RHIReleaseQueue   _transferReleaseQueue;
-        VulkanStagingRing _uploadRing;   ///< 업로드 스테이징(`_rhi._stagingRingMegabytes`)
-        VulkanStagingRing _readbackRing; ///< 되읽기 스테이징(`_rhi._readbackRingMegabytes`)
+        VulkanStagingRing                        _uploadRing;   ///< 업로드 스테이징(`_rhi._stagingRingMegabytes`)
+        VulkanStagingRing                        _readbackRing; ///< 되읽기 스테이징(`_rhi._readbackRingMegabytes`)
         /**
          * @brief 텍스처 전송의 기록과 제출을 직렬화합니다. 전송 커맨드 풀, 전송이 바꾸는 레이아웃 기록의 순서를 지킨다.
          * @details 잡는 순서는 `_transferMutex` → `_queueMutex` → `_transferFenceQueue` 이다(레이아웃 기록은 레코드의 원자값이라 락이 없다). 링 할당과 소스 복사는 이 락 밖에서 한다.

@@ -416,7 +416,8 @@ namespace sw
     // 디바이스 — 수명
     // ------------------------------------------------------------------------------
     WebGPURHIDevice::WebGPURHIDevice( uint32 deviceGeneration )
-        : _instance{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _instance{ nullptr }
         , _adapter{ nullptr }
         , _device{ nullptr }
         , _queue{ nullptr }
@@ -450,15 +451,12 @@ namespace sw
         , _bTimestampEnabled{ SW_FALSE }
         , _listConstantRing{}
         , _activeRingIndex{ 0 }
-        , _releaseQueue{}
-        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
         , _listQueuedReadbackBuffer{}
         , _liveCommandListMutex{}
         , _listLiveCommandList{}
         , _arrFrameFence{}
-        , _frameFenceRing{}
         , _bInitialized{ SW_FALSE }
         , _bTextureFormatsTier1{ SW_FALSE }
         , _bDepth32Stencil8{ SW_FALSE }
@@ -949,7 +947,7 @@ namespace sw
     void WebGPURHIDevice::shutdownInternal()
     {
         // GPU 는 종료 2단계(waitIdle)에서 쉬었다 — 남은 해제는 모두 비었다. 장치 객체를 놓는다.
-        _releaseQueue.abandonAll();
+        abandonReleases();
         _transferQueue.retireAll( []( unique_ptr<WebGPUTransferFence>& probe )
         { (void)probe; } );
         _readbackTable.clear();
@@ -1379,7 +1377,7 @@ namespace sw
 
     void WebGPURHIDevice::retireFinishedFrames()
     {
-        const uint64 completed = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
+        (void)_frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
             (void)serial;
             const WebGPUFrameFence& fence = _arrFrameFence[slot];
@@ -1394,7 +1392,7 @@ namespace sw
             return true;
         } );
         // 그 프레임의 지연 해제를 부른다 — 읽기 버퍼를 읽는 콜백(`readReadbackBuffer`)이 여기서 돈다.
-        _releaseQueue.releaseCompleted( completed );
+        releaseCompletedFrames();
     }
 
     bool WebGPURHIDevice::waitFrameFence( const WebGPUFrameFence& fence ) const
@@ -1424,20 +1422,10 @@ namespace sw
         { (void)probe; } );
     }
 
-    void WebGPURHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void WebGPURHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void WebGPURHIDevice::waitIdleInternal()
+    bool WebGPURHIDevice::waitIdleInternal()
     {
         if ( _queue == nullptr )
-            return;
+            return false;
         // 열린 프레임 밖이다(렌더 스레드를 비웠다). 내지 않은 리스트가 있으면 마저 낸다.
         submitPending();
         // 낸 프레임을 오래된 순서로 프레임 펜스까지 기다린다 — `beginFrameInternal` 의 칸 대기와 같은 길(`wgpuInstanceWaitAny`, 잠 폴링 없음). 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
@@ -1453,11 +1441,7 @@ namespace sw
             }
         }
         processCompletions();
-        // 낸 프레임이 모두 끝난 것을 확인했을 때만 통지가 `Completed` 다(대기 실패 · 잃은 장치는 `Abandoned`).
-        if ( _frameFenceRing.isIdle() && isDeviceLost() == false )
-            _releaseQueue.releaseAllCompleted();
-        else
-            _releaseQueue.abandonAll();
+        return _frameFenceRing.isIdle() && isDeviceLost() == false; // 대기 실패 · 잃은 장치는 끝났는지 모른다
     }
 
     // ------------------------------------------------------------------------------

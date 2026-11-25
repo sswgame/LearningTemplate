@@ -10,6 +10,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
+#include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIConstantBufferWriteLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
@@ -19,6 +21,7 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHISurfaceTransform.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
+#include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 
 namespace sw
 {
@@ -35,8 +38,6 @@ namespace sw
     class IRHIResourceFactory;
     class IRHISwapChain;
     class IRHITimestampProvider;
-    class RHIMemoryTracker;
-    class RHITransferSerials;
     class BindlessIndexReportLog;
     class RHIComputeBindingLog;
     class ConstantBufferPagePool;
@@ -139,7 +140,8 @@ namespace sw
         /** @brief 가상 소멸자입니다. */
         virtual ~IRHIDevice();
         /** @brief 빈 디바이스를 만듭니다. initialize 전에 setRenderSurface 를 불러야 합니다. */
-        IRHIDevice();
+        /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다, 0 이 아니다). */
+        explicit IRHIDevice( uint32 deviceGeneration );
         /** @brief 복사를 금지합니다. */
         IRHIDevice( const IRHIDevice& ) = delete;
         /** @brief 대입을 금지합니다. */
@@ -219,22 +221,22 @@ namespace sw
 
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.
-         * @details 백엔드 해제 큐(`RHIReleaseQueue`)에 GPU 완료를 기준으로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 은 프레임 끝 이벤트 쿼리를, GL 은 프레임 끝 `glFenceSync` 를 쓴다.
+         * @details 장치 해제 큐(`RHIReleaseQueue`)에 기록 중인 프레임의 시리얼(`RHIFrameFenceRing::getRecordingSerial`)로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 은 프레임 끝 이벤트 쿼리를, GL 은 프레임 끝 `glFenceSync` 를 쓴다.
          *          네 백엔드 모두 **GPU 가 그 프레임을 끝낸 뒤에만** 부른다(프레임 수로 짐작하지 않는다). 그래서 콜백 안에서 `readReadbackBuffer` 를 기다리지 않고 부를 수 있다.
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
          *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
          */
-        virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
+        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) { _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() ); }
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝나면 @p completionDelegate 를 `Completed` 로, 끝났는지 모른 채 큐를 비우면 `Abandoned` 로 부릅니다.
          * @details 되읽기(`AsyncBufferReadback`)와 구간 재사용 펜스(`RHIFence`)가 쓴다. 기준 프레임 · 부르는 스레드 · 렌더 스레드 제약은 `enqueueGPURelease` 와 같다.
          *          `Completed` 는 대기를 확인한 경우(펜스 · 쿼리 · `glFinish` · `vkDeviceWaitIdle` · WebGPU 프레임 펜스)뿐이다. 언리얼 `FRHIGPUFence` 의 "끝났나" 질의와 같은 자리를 콜백으로 둔다.
          */
-        virtual void notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) = 0;
-        /** @brief 백엔드 해제 큐에서 아직 불리지 않은 해제 · 통지 수입니다. `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
-        virtual uint32 getPendingReleaseCount() const = 0;
+        void notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate ) { _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() ); }
+        /** @brief 해제 큐에서 아직 불리지 않은 해제 · 통지 수입니다(전송을 기다리는 해제는 그 전송이 끝난 뒤부터 센다). `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
+        uint32 getPendingReleaseCount() const { return _releaseQueue.getPendingReleaseCount(); }
         /**
          * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan · DX11 · GL — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` · `DXGI_ERROR_DEVICE_REMOVED` · 실패한 펜스를 처음 본 뒤의 상태로 둔다. DX11 · GL 은 전송 제출이 거절되는 것만 만들고 GPU 는 살아 있다).
          * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
@@ -724,14 +726,21 @@ namespace sw
         void refreshGPUMemoryBudget();
 
     protected:
-        /** @brief 이 장치의 전송 시리얼입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다(백엔드는 멤버 하나를 돌려준다). */
-        [[nodiscard]] virtual const RHITransferSerials& getTransferSerials() const = 0;
-        /** @brief 같은 전송 시리얼의 쓰기 접근자입니다 — 손실 표시(`reportDeviceLost`)가 이 길로만 쓴다. 읽기 판과 같은 멤버를 돌려준다. */
-        [[nodiscard]] virtual RHITransferSerials& getTransferSerials() = 0;
         /** @brief 지난 경계 수입니다(`beginFrame` 은 1, GPU 를 통째로 기다린 지점은 `constant::render::kHandleReuseDelayCount`) — 핸들 표(`RHIHandleTable`)가 놓은 칸을 다시 쓸 때를 잰다. 어느 스레드에서나 읽는다. */
         const atomic<uint64>& getHandleReuseCount() const { return _handleReuseCount; }
-        /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
-        virtual void waitIdleInternal() = 0;
+        /**
+         * @brief 백엔드의 실제 GPU 대기입니다. 낸 일(프레임 · 전송)이 모두 끝난 것을 확인했으면 true, 모르면(잃은 장치 · 시간 초과) false 입니다.
+         * @details `waitForGPUIdle` 만 부른다 — 해제 큐는 그 답으로 장치가 비운다(백엔드가 비우면 확인하지 못한 대기도 `Completed` 로 알리는 곳이 생긴다).
+         */
+        [[nodiscard]] virtual bool waitIdleInternal() = 0;
+        /** @brief GPU 를 기다리고 해제 큐를 비웁니다 — 확인했으면 남은 통지는 `Completed`, 아니면 `Abandoned` 입니다. `waitIdle` · `shutdown` 과 프레임 안의 백엔드 대기가 부른다. */
+        void waitForGPUIdle();
+        /** @brief 끝난 프레임(`_frameFenceRing` 의 워터마크)까지의 해제 · 통지를 부릅니다(렌더 스레드). */
+        void releaseCompletedFrames() { _releaseQueue.releaseCompleted( _frameFenceRing.getCompletedSerial() ); }
+        /** @brief 끝난 전송(`_transferSerials` 의 워터마크)을 기다리던 해제를 다음 프레임 펜스로 넘깁니다(어느 스레드든). */
+        void releaseCompletedTransfers() { _transferReleaseQueue.releaseCompleted( _transferSerials.getWatermark() ); }
+        /** @brief 끝났는지 모른 채 남은 해제를 모두 부릅니다(백엔드 종료가 네이티브 장치를 부수기 앞에). */
+        void abandonReleases();
         /**
          * @brief 종료 3단계입니다. 프레임 스트림 컨텍스트를 해제하고 살아 있는 커맨드 리스트를 디바이스에서 분리합니다.
          * @details 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임을 넘겨 보관한다). 분리하지 않으면 그쪽 소멸자가 이미 종료된 디바이스에 자원을 반납하려 한다.
@@ -822,6 +831,8 @@ namespace sw
          * @param pWhat 로그에 남길 호출 지점 이름입니다.
          */
         void requireRegistryMutableNow( const utf8* pWhat ) const;
+        /** @brief 백엔드가 표에서 뺀 자원을 GPU(전송 · 프레임)가 다 쓴 뒤로 미룹니다. @p key 는 추적기에서 줄일 자원입니다. */
+        void retireResource( const RHIReleasedResource& released, const RHIMemoryKey& key );
         /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
         void releaseRetiredHandles();
         /** @brief 렌더 스레드의 갱신이 패스 밖인지 봅니다(`beginBufferUpload` 의 렌더 스레드 몫). */
@@ -830,6 +841,11 @@ namespace sw
         void reportResourceCounts() const;
 
     protected:
+        /// @brief 프레임 시리얼 · 완료 워터마크 · 앞서가기 상한입니다. 백엔드가 프레임을 낼 때 올리고 끝난 것을 알린다 — 지연 해제의 키는 이 링의 기록 시리얼 하나다.
+        RHIFrameFenceRing _frameFenceRing;
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 장치 손실 표시의 유일한 저장소라 `isDeviceLost` 가 읽는다.
+        RHITransferSerials _transferSerials;
+
         IRenderSurface* _pSurface;
         /// @brief 렌더 스레드 역할입니다(잠금이 아니라 분석용 능력). 프레임 진행 상태(백엔드의 프레임 링 · 스왑체인 깃발 · 진행 중 커맨드 버퍼)는 이 역할 아래에 있고,
         ///        그 상태를 만지는 함수는 렌더 스레드에서 돌거나 렌더 스레드를 세운 뒤(`RenderThread::waitIdle` · 초기화 · 종료) 불린다고 진입에서 `assumeHeld` 로 적는다.
@@ -865,8 +881,13 @@ namespace sw
         mutable atomic<uint32> _parallelBarrierReportCount; ///< 병렬 기록 중 배리어 진단을 남긴 횟수(장치마다 앞 8 번만 — `reportBarrierDuringRecording`)
         /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).
         RHIInitResult _initResult;
-        /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
+        /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 해제 큐가 놓으며 줄이므로 큐보다 먼저 선언한다.
         unique_ptr<RHIMemoryTracker> _memoryTracker;
+        /// @brief 지연 해제와 프레임 완료 통지입니다. 키 = 프레임 시리얼(`_frameFenceRing`).
+        RHIReleaseQueue _releaseQueue;
+        /// @brief 끝나지 않은 전송이 쓰는 자원의 해제입니다. 키 = 전송 시리얼이고, 끝나면 그때의 다음 프레임 펜스로 한 번 더 미룬다(`_releaseQueue`) — 그 자원을 그린 프레임도 지나게 한다.
+        ///        `_releaseQueue` 보다 뒤에 선언한다(소멸은 역순이라 이 큐가 먼저 비워진다).
+        RHIReleaseQueue _transferReleaseQueue;
         /// @brief 작은 상수 버퍼 페이지 풀입니다(getConstantBufferPagePool 참고).
         unique_ptr<ConstantBufferPagePool> _pConstantBufferPagePool;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).

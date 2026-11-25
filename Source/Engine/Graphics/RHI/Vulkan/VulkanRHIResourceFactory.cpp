@@ -182,12 +182,11 @@ namespace sw
                 VkBuffer          buf      = slot._buffer;
                 VulkanAllocation  mem      = slot._memory;
                 RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
-                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [buf, mem, pTracker, pDevice = _pDevice]()
+                _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [buf, mem, pTracker, pDevice = _pDevice]()
                 {
                     pTracker->recordFree( RHIMemoryKey::makeDeviceObject( mem._allocation ) ); // 할당을 놓으면 같은 주소가 다른 할당에 다시 나갈 수 있다 — 추적기에서 먼저 내린다
                     pDevice->_memoryAllocator.destroyBuffer( buf, mem );
-                } ),
-                                                           _pDevice->_frameFenceRing.getRecordingSerial() );
+                } ) );
                 slot._buffer   = VK_NULL_HANDLE;
                 slot._memory   = VulkanAllocation{};
                 slot._capacity = 0;
@@ -337,7 +336,9 @@ namespace sw
         if ( _pDevice->recordUploadCopy( pData, sizeBytes, handle, 0 ) == false )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.DeviceLocalUploadFailed", "Failed to record a %#-byte device-local upload", sizeBytes );
-            (void)destroyBufferNative( handle );
+            RHIReleasedResource released;
+            if ( destroyBufferNative( handle, released ) )
+                _pDevice->enqueueGPURelease( released._release ); // 아직 추적기에 오르지 않았다(입구가 만든 뒤에 올린다)
             return 0;
         }
         return handle;
@@ -395,7 +396,7 @@ namespace sw
         }
     }
 
-    bool VulkanRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool VulkanRHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         if ( buffer == 0 )
             return false;
@@ -416,16 +417,10 @@ namespace sw
         _pDevice->_uavRegistry.releaseBuffer( RHIBindlessReuse::AfterFence, buffer, [this]( RHIDescriptorIndex index )
         { deferFreeBufferIndex( index, true ); } );
 
-        VkBuffer          buf      = owned._buffer;
-        VulkanAllocation  mem      = owned._memory;
-        RHIMemoryTracker* pTracker = &_pDevice->getMemoryTracker();
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [buf, mem, pTracker, buffer, pDevice = _pDevice]()
-        {
-            pDevice->_memoryAllocator.destroyBuffer( buf, mem );
-            // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-            pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
-        } ),
-                                                   _pDevice->_frameFenceRing.getRecordingSerial() );
+        VkBuffer         buf = owned._buffer;
+        VulkanAllocation mem = owned._memory;
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [buf, mem, pDevice = _pDevice]()
+        { pDevice->_memoryAllocator.destroyBuffer( buf, mem ); } );
         return true;
     }
 
@@ -672,10 +667,8 @@ namespace sw
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING_ID( "VulkanRHIResourceFactory.CreateTexture2DFramebufferCreationFailed", "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
-        // GPU 메모리 추적기에 올리는 유일한 자리다. 크기는 할당 크기(정렬 포함)다.
-        const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
-        _pDevice->getMemoryTracker().recordTexture( handle, desc, allocationBytes );
-        return handle;
+        record._allocationBytes = allocationBytes;
+        return _pDevice->_gpuTextures.insert( record );
     }
 
     // 전송(RHIAsyncUploads U6): 소스를 업로드 링에 복사하고, 전송 작업 하나에 기록해 펜스와 함께 낸 뒤 기다리지 않고 티켓을 준다. 완료는 pollTransfer 가 펜스로 본다.
@@ -1048,7 +1041,7 @@ namespace sw
         } );
     }
 
-    bool VulkanRHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool VulkanRHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         if ( texture == 0 )
             return false;
@@ -1078,10 +1071,8 @@ namespace sw
         VkImage             image      = owned._image;
         VulkanAllocation    mem        = owned._memory;
         vector<VkImageView> listSliceView{ owned._listSliceView };
-        RHIMemoryTracker*   pTracker = &_pDevice->getMemoryTracker();
         // placed 텍스처는 힙 메모리 참조를 대리자가 펜스까지 든다 — 대리자가 놓이면서 마지막 참조면 메모리가 풀린다(`VulkanHeapMemory`).
-        const RHIResourceReleaseDelegate releaseDelegate =
-            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pTracker, texture, heapMemory = owned._heapMemory, pDevice = _pDevice]()
+        outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, heapMemory = owned._heapMemory, pDevice = _pDevice]()
         {
             (void)heapMemory;
             for ( VkImageView sliceView : listSliceView )
@@ -1093,26 +1084,25 @@ namespace sw
             if ( sampleView != VK_NULL_HANDLE )
                 vkDestroyImageView( dev, sampleView, nullptr );
             pDevice->_memoryAllocator.destroyImage( image, mem );
-            // 추적기는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
-            pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
         } );
 
-        // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 끝나면 그때의 다음 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다.
-        // 지금은 전송과 프레임이 같은 큐라 다음 프레임 펜스도 앞서 낸 전송을 덮지만, 해제가 그 큐 공유에 기대지 않게 전송 완료를 직접 본다(DX12 와 같은 규칙).
-        const uint64 lastWriteSerial     = owned._transferSerials._lastSerial.load();
-        const uint64 lastReadSerial      = owned._transferSerials._lastReadbackSerial.load();
-        const uint64 lastSerial          = lastWriteSerial > lastReadSerial ? lastWriteSerial : lastReadSerial;
-        const bool   bUnfinishedTransfer = lastSerial != 0 && _pDevice->_transferSerials.isComplete( lastSerial ) == false;
-        if ( bUnfinishedTransfer )
-        {
-            VulkanRHIDevice* pDevice = _pDevice;
-            _pDevice->_transferReleaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, releaseDelegate]()
-            { pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, pDevice->_frameFenceRing.getRecordingSerial() ); } ),
-                                                               lastSerial );
-            return true;
-        }
-        _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceRing.getRecordingSerial() );
+        // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6 — 장치가 본다).
+        const uint64 lastWriteSerial = owned._transferSerials._lastSerial.load();
+        const uint64 lastReadSerial  = owned._transferSerials._lastReadbackSerial.load();
+        outReleased._transferSerial  = lastWriteSerial > lastReadSerial ? lastWriteSerial : lastReadSerial;
         return true;
+    }
+
+    uint64 VulkanRHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
+    {
+        const VulkanRHIDevice::VulkanBufferRecord* const pRecord = _pDevice->resolveAllocatedBuffer( buffer );
+        return pRecord != nullptr ? pRecord->_memory._sizeBytes : kRHIMemoryUnknownBytes;
+    }
+
+    uint64 VulkanRHIResourceFactory::findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& ) const
+    {
+        const VulkanRHIDevice::VulkanTextureRecord* const pRecord = _pDevice->resolveTexture( texture );
+        return pRecord != nullptr ? pRecord->_allocationBytes : kRHIMemoryUnknownBytes;
     }
 
     bool VulkanRHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
@@ -1199,15 +1189,14 @@ namespace sw
         // 같은 프레임에 등록된 새 버퍼가 아직 실행 중인 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
         _pDevice->publishBufferReadSlot( index, bUAV, 0 );
         VulkanRHIDevice* pDevice = _pDevice;
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
+        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             if ( bUAV )
                 pDevice->_uavRegistry.finishRelease( index );
             else
                 pDevice->_bufferRegistry.finishRelease( index );
-        } ),
-                                                   _pDevice->_frameFenceRing.getRecordingSerial() );
+        } ) );
     }
 
     bool VulkanRHIResourceFactory::rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture )
@@ -1261,13 +1250,12 @@ namespace sw
         // 커맨드버퍼가 쓰는 디스크립터를 덮어쓰는 것은 정의되지 않은 동작이고, 같은 프레임에 새 텍스처가
         // 이 인덱스를 받으면 이전 프레임이 새 텍스처를 샘플한다. 이미지 자체도 같은 펜스 뒤에 파괴된다(destroyTexture).
         VulkanRHIDevice* pDevice = _pDevice;
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             pDevice->writeBindlessTextureSlot( index, pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
             pDevice->_textureRegistry.finishRelease( index );
-        } ),
-                                                   _pDevice->_frameFenceRing.getRecordingSerial() );
+        } ) );
     }
 
     RHIUnorderedAccessIndex VulkanRHIResourceFactory::registerBindlessBufferUAVNative( RHIBufferHandle buffer )
@@ -1657,20 +1645,17 @@ namespace sw
         return _pDevice->_pipelineStates.insert( record );
     }
 
-    bool VulkanRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool VulkanRHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         VulkanRHIDevice::VulkanPipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return false;
         if ( record._pipeline != VK_NULL_HANDLE )
         {
-            VkDevice   dev  = _pDevice->_device;
-            VkPipeline pipe = record._pipeline;
-            _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
-            {
-                vkDestroyPipeline( dev, pipe, nullptr );
-            } ),
-                                                       _pDevice->_frameFenceRing.getRecordingSerial() );
+            VkDevice   dev       = _pDevice->_device;
+            VkPipeline pipe      = record._pipeline;
+            outReleased._release = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
+            { vkDestroyPipeline( dev, pipe, nullptr ); } );
         }
         return true;
     }

@@ -86,6 +86,8 @@ namespace
         bool                   rebindBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
         RHITextureSRVIndex     reserveBindlessTextureIndexNative() override { return kInvalidDescriptorIndex; }
         bool                   activateReservedBindlessTextureNative( RHITextureSRVIndex, RHITextureHandle ) override { return false; }
+        uint64                 findAllocationBytesNative( RHIBufferHandle ) const override { return kRHIMemoryUnknownBytes; }
+        uint64                 findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& ) const override { return kRHIMemoryUnknownBytes; }
         bool                   describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override
         {
             outInfo._bShaderResource      = SW_TRUE;
@@ -101,13 +103,13 @@ namespace
         bool                    unregisterBindlessUAVNative( RHIUnorderedAccessIndex ) override { return true; }
 
     protected:
-        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer ) override
+        [[nodiscard]] bool destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& ) override
         {
             _listEvent.push_back( FactoryEvent{ 'D', buffer.getPacked() } );
             return true;
         }
-        [[nodiscard]] bool destroyTextureNative( RHITextureHandle ) override { return true; }
-        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle ) override { return true; }
+        [[nodiscard]] bool destroyTextureNative( RHITextureHandle, RHIReleasedResource& ) override { return true; }
+        [[nodiscard]] bool destroyPipelineStateNative( RHIPipelineStateHandle, RHIReleasedResource& ) override { return true; }
     };
 
     /** @brief 적힌 사건이 @p listExpected 와 같은지 봅니다. */

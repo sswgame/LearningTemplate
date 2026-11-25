@@ -253,7 +253,7 @@ namespace sw
         return _pDevice->_pipelines.insert( std::move( record ) );
     }
 
-    bool WebGPURHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso )
+    bool WebGPURHIResourceFactory::destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased )
     {
         WebGPUPipelineRecord record{};
         if ( _pDevice->_pipelines.take( pso, record ) == false )
@@ -261,15 +261,15 @@ namespace sw
         WGPURenderPipeline  renderPipeline  = record._renderPipeline;
         WGPUComputePipeline computePipeline = record._computePipeline;
         WGPUBindGroupLayout layout          = record._groupLayout;
-        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [renderPipeline, computePipeline, layout]()
-        {
+        outReleased._release                = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [renderPipeline, computePipeline, layout]()
+                       {
             if ( layout != nullptr )
                 wgpuBindGroupLayoutRelease( layout );
             if ( renderPipeline != nullptr )
                 wgpuRenderPipelineRelease( renderPipeline );
             if ( computePipeline != nullptr )
                 wgpuComputePipelineRelease( computePipeline );
-        } ) );
+        } );
         return true;
     }
 
@@ -302,10 +302,7 @@ namespace sw
         record._sizeBytes   = alignedSize;
         record._elementSize = elementSize;
         record._usage       = usage;
-        // GPU 메모리 추적기에 올리는 유일한 자리다(버퍼). 할당 크기를 물을 API 가 없어 요청 크기를 적는다.
-        const RHIBufferHandle handle = _pDevice->_buffers.insert( std::move( record ) );
-        _pDevice->getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, alignedSize );
-        return handle;
+        return _pDevice->_buffers.insert( std::move( record ) );
     }
 
     RHIBufferHandle WebGPURHIResourceFactory::createConstantBufferNative( uint32 size )
@@ -401,7 +398,7 @@ namespace sw
         return createBufferWithUsage( sizeBytes, 0, WGPUBufferUsage_Index | WGPUBufferUsage_CopyDst, pData, "SW Index Buffer" );
     }
 
-    bool WebGPURHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer )
+    bool WebGPURHIResourceFactory::destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased )
     {
         WebGPUBufferRecord record{};
         if ( _pDevice->_buffers.take( buffer, record ) == false )
@@ -413,14 +410,12 @@ namespace sw
             _pDevice->_bufferTable.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
             _pDevice->_uavTable.releaseBuffer( RHIBindlessReuse::Immediately, buffer, ignore );
         }
-        const WGPUBuffer        native   = record._buffer;
-        RHIMemoryTracker* const pTracker = &_pDevice->getMemoryTracker();
-        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native, pTracker, buffer]()
-        {
+        const WGPUBuffer native = record._buffer;
+        outReleased._release    = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native]()
+           {
             wgpuBufferDestroy( native );
             wgpuBufferRelease( native );
-            pTracker->recordFree( RHIMemoryKey::makeBuffer( buffer ) ); // 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라)
-        } ) );
+        } );
         return true;
     }
 
@@ -541,13 +536,10 @@ namespace sw
             wgpuTextureRelease( failed._texture );
             return 0;
         }
-        // GPU 메모리 추적기에 올리는 유일한 자리다(텍스처). 깊이의 R32 실수 사본은 원본에 딸려 생기고 사라져 따로 세지 않는다.
-        const RHITextureHandle handle = _pDevice->_textures.insert( std::move( record ) );
-        _pDevice->getMemoryTracker().recordTexture( handle, desc, RHIMemoryTracker::computeTextureLogicalBytes( desc ) );
-        return handle;
+        return _pDevice->_textures.insert( std::move( record ) );
     }
 
-    bool WebGPURHIResourceFactory::destroyTextureNative( RHITextureHandle texture )
+    bool WebGPURHIResourceFactory::destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased )
     {
         WebGPUTextureRecord record{};
         if ( _pDevice->_textures.take( texture, record ) == false )
@@ -563,9 +555,8 @@ namespace sw
         const WGPUTexture       native     = record._texture;
         const WGPUTextureView   sampleView = record._sampleView;
         vector<WGPUTextureView> listSlice  = std::move( record._listSliceView );
-        RHIMemoryTracker* const pTracker   = &_pDevice->getMemoryTracker();
-        _pDevice->enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native, sampleView, listSlice, pTracker, texture]()
-        {
+        outReleased._release               = SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [native, sampleView, listSlice]()
+                      {
             for ( const WGPUTextureView view : listSlice )
             {
                 wgpuTextureViewRelease( view );
@@ -574,8 +565,7 @@ namespace sw
                 wgpuTextureViewRelease( sampleView );
             wgpuTextureDestroy( native );
             wgpuTextureRelease( native );
-            pTracker->recordFree( RHIMemoryKey::makeTexture( texture ) );
-        } ) );
+        } );
         return true;
     }
 
@@ -809,6 +799,17 @@ namespace sw
     // ------------------------------------------------------------------------------
     // bindless
     // ------------------------------------------------------------------------------
+    uint64 WebGPURHIResourceFactory::findAllocationBytesNative( RHIBufferHandle buffer ) const
+    {
+        const WebGPUBufferRecord* const pRecord = _pDevice->findBuffer( buffer );
+        return pRecord != nullptr ? pRecord->_sizeBytes : kRHIMemoryUnknownBytes; // 할당 크기를 물을 API 가 없다
+    }
+
+    uint64 WebGPURHIResourceFactory::findAllocationBytesNative( RHITextureHandle, const RHITextureDesc& desc ) const
+    {
+        return RHIMemoryTracker::computeTextureLogicalBytes( desc ); // 깊이의 R32 실수 사본은 원본에 딸려 생기고 사라져 따로 세지 않는다
+    }
+
     bool WebGPURHIResourceFactory::describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo )
     {
         _pDevice->processCompletions();

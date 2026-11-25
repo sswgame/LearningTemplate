@@ -20,6 +20,7 @@ namespace sw
     struct RHIConstantBuffer;
     struct RHIGeometryBuffer;
     struct RHIPipelineState;
+    struct RHIReleasedResource;
     struct RHIStructuredBuffer;
     struct RHITextureSlot;
 
@@ -424,14 +425,18 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 자원 생성 — 백엔드 구현. 부르는 쪽은 키를 받는 공개 판이다(`RHIResourceCreateKey` — 설명도 거기 있다). 크기 · 모양 · 형식 검사는 거기서 했다
         // ------------------------------------------------------------------------------
-        [[nodiscard]] virtual RHIBufferHandle  createConstantBufferNative( uint32 size )                               = 0;
-        [[nodiscard]] virtual RHIBufferHandle  createConstantBufferPageNative( uint32 size )                           = 0;
-        [[nodiscard]] virtual RHIBufferHandle  createStructuredBufferNative( uint32 elementSize, uint32 elementCount ) = 0;
-        [[nodiscard]] virtual RHIBufferHandle  createVertexBufferNative( const void* pData, uint32 sizeBytes )         = 0;
-        [[nodiscard]] virtual RHIBufferHandle  createGPUVertexBufferNative( uint32 sizeBytes )                         = 0;
-        [[nodiscard]] virtual RHIBufferHandle  createBufferNative( const RHIBufferDesc& desc );
-        [[nodiscard]] virtual RHIBufferHandle  createIndexBufferNative( const void* pData, uint32 sizeBytes )                             = 0;
-        [[nodiscard]] virtual RHIBufferHandle  createReadbackBufferNative( uint32 elementSize, uint32 elementCount )                      = 0;
+        [[nodiscard]] virtual RHIBufferHandle createConstantBufferNative( uint32 size )                               = 0;
+        [[nodiscard]] virtual RHIBufferHandle createConstantBufferPageNative( uint32 size )                           = 0;
+        [[nodiscard]] virtual RHIBufferHandle createStructuredBufferNative( uint32 elementSize, uint32 elementCount ) = 0;
+        [[nodiscard]] virtual RHIBufferHandle createVertexBufferNative( const void* pData, uint32 sizeBytes )         = 0;
+        [[nodiscard]] virtual RHIBufferHandle createGPUVertexBufferNative( uint32 sizeBytes )                         = 0;
+        [[nodiscard]] virtual RHIBufferHandle createBufferNative( const RHIBufferDesc& desc );
+        [[nodiscard]] virtual RHIBufferHandle createIndexBufferNative( const void* pData, uint32 sizeBytes )        = 0;
+        [[nodiscard]] virtual RHIBufferHandle createReadbackBufferNative( uint32 elementSize, uint32 elementCount ) = 0;
+        /** @brief 방금 만든 버퍼의 할당 바이트입니다(추적기 — 모르면 `kRHIMemoryUnknownBytes`). 추적은 입구가 하므로 백엔드가 빠뜨릴 수 없다. */
+        [[nodiscard]] virtual uint64 findAllocationBytesNative( RHIBufferHandle buffer ) const = 0;
+        /** @brief 방금 @p desc 로 만든 텍스처의 할당 바이트입니다. 할당 크기를 물을 API 가 없으면 서술로 계산한 크기다(`RHIMemorySizeBasis::Logical`). */
+        [[nodiscard]] virtual uint64           findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& desc ) const    = 0;
         [[nodiscard]] virtual bool             readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) = 0;
         [[nodiscard]] virtual RHITextureHandle createTexture2DNative( const RHITextureDesc& desc )                                        = 0;
         /** @brief 네이티브 객체에 디버그 이름을 붙입니다. 진단용이라 수단이 없는 백엔드는 할 일이 없다. */
@@ -493,17 +498,17 @@ namespace sw
 
         // ------------------------------------------------------------------------------
         // 자원 해제 — 백엔드 구현. 부르는 쪽은 `IRHIDevice::releaseHandle( 핸들 )` 하나다(종류는 핸들 형식이 고른다).
-        // 장치가 해제 시점(렌더 스레드 · 넘긴 프레임)을 정하고, 백엔드는 GPU 펜스가 지난 뒤 네이티브 객체를 놓는다(`RHIReleaseQueue`).
+        // 장치가 해제 시점(렌더 스레드 · 넘긴 프레임 · 끝나지 않은 전송 · 프레임 펜스)과 메모리 추적을 맡고, 백엔드는 표에서 빼고 네이티브 객체를 놓는 일(`RHIReleasedResource`)만 넘긴다.
         // 반환은 "산 핸들이었다" 다 — 거짓이면 이미 놓았거나 모르는 핸들이라 장치가 검사 구성에서 단언한다(같은 핸들 두 번 해제).
         // ------------------------------------------------------------------------------
         friend class IRHIDevice;
 
-        /** @brief GPU 버퍼 리소스를 놓습니다. 그 버퍼의 bindless 번호도 모두 놓는다. */
-        [[nodiscard]] virtual bool destroyBufferNative( RHIBufferHandle buffer ) = 0;
-        /** @brief GPU 텍스처 리소스를 놓습니다. 그 텍스처의 bindless 번호도 모두 놓는다. 전송 중이면 전송이 끝난 뒤로 미룬다(전송 계약 6). */
-        [[nodiscard]] virtual bool destroyTextureNative( RHITextureHandle texture ) = 0;
-        /** @brief 파이프라인 상태 객체를 놓습니다. */
-        [[nodiscard]] virtual bool destroyPipelineStateNative( RHIPipelineStateHandle pso ) = 0;
+        /** @brief GPU 버퍼 리소스를 표에서 뺍니다. 그 버퍼의 bindless 번호도 모두 놓는다. */
+        [[nodiscard]] virtual bool destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased ) = 0;
+        /** @brief GPU 텍스처 리소스를 표에서 뺍니다. 그 텍스처의 bindless 번호도 모두 놓는다. 전송 중이면 그 시리얼을 함께 넘긴다(전송 계약 6). */
+        [[nodiscard]] virtual bool destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased ) = 0;
+        /** @brief 파이프라인 상태 객체를 표에서 뺍니다. */
+        [[nodiscard]] virtual bool destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased ) = 0;
         /** @brief 놓은 PSO 의 스레드 그룹 크기를 지웁니다(장치가 `destroyPipelineStateNative` 뒤에 부른다). */
         void removeThreadGroupSize( RHIPipelineStateHandle pso );
         /** @brief 힙 핸들을 놓습니다. 그 위에 놓인 텍스처는 각자 힙을 붙들므로(텍스처 파괴가 끝날 때까지) 텍스처보다 먼저 불러도 된다. 힙이 없는 백엔드는 핸들을 내지 않는다. */
@@ -533,6 +538,9 @@ namespace sw
 
         /** @brief 버퍼 갱신의 순서를 봅니다(`IRHIDevice::beginBufferUpload`). 장치를 묶기 전이면 프레임이 없다. */
         void beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat );
+        /** @brief 만든 자원을 GPU 메모리 추적기에 올리고 그대로 돌려줍니다(핸들 0 은 올리지 않는다). 장치를 묶기 전이면 올리지 않는다(백엔드 기동). */
+        RHIBufferHandle  trackCreated( RHIBufferHandle buffer ) const;
+        RHITextureHandle trackCreated( RHITextureHandle texture, const RHITextureDesc& desc ) const;
         /** @brief (개발 구성) 첫 내용 @p pContent 와 함께 만든 @p buffer 를 장치의 갱신 기록에 적고 그대로 돌려줍니다. @p pContent 가 nullptr 이면 적지 않는다. */
         RHIBufferHandle recordContent( RHIBufferHandle buffer, const void* pContent );
         /** @brief 만든 컴퓨트 PSO 의 스레드 그룹 크기를 적습니다(핸들 0 은 적지 않는다). */

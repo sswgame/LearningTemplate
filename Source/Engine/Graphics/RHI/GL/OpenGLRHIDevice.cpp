@@ -22,7 +22,8 @@
 namespace sw
 {
     OpenGLRHIDevice::OpenGLRHIDevice( uint32 deviceGeneration )
-        : _pHDC{ nullptr }
+        : IRHIDevice{ deviceGeneration }
+        , _pHDC{ nullptr }
         , _pHRC{ nullptr }
         , _width{ 1280 }
         , _height{ 720 }
@@ -45,10 +46,7 @@ namespace sw
         , _timestampRing{}
         , _timestampFrame{}
         , _pipelineStates{ getHandleReuseCount() }
-        , _releaseQueue{}
         , _arrFrameDoneSync{}
-        , _frameFenceRing{}
-        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
         , _stagingRing{}
@@ -286,9 +284,7 @@ namespace sw
     {
         if ( glName == 0 )
             return 0;
-        const RHIBufferHandle handle = _gpuBuffers.insert( OpenGLBufferRecord{ glName, sizeBytes } );
-        getMemoryTracker().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, sizeBytes );
-        return handle;
+        return _gpuBuffers.insert( OpenGLBufferRecord{ glName, sizeBytes } );
     }
 
     OpenGLRHIDevice::OpenGLTextureRecord* OpenGLRHIDevice::resolveTexture( RHITextureHandle handle )
@@ -1180,10 +1176,10 @@ namespace sw
         retireFrameOnGPU();
     }
 
-    void OpenGLRHIDevice::waitIdleInternal()
+    bool OpenGLRHIDevice::waitIdleInternal()
     {
         if ( _bInitialized == SW_FALSE )
-            return;
+            return false;
 
         {
             ScopedOpenGLContext contextScope( this );
@@ -1203,11 +1199,7 @@ namespace sw
                 pSync = nullptr;
             } );
         }
-        // glFinish 는 잃은 문맥에서도 돌아온다 — 잃었으면 끝났는지 모른다.
-        if ( isDeviceLost() )
-            _releaseQueue.abandonAll();
-        else
-            _releaseQueue.releaseAllCompleted();
+        return isDeviceLost() == false; // glFinish 는 잃은 문맥에서도 돌아온다 — 잃었으면 끝났는지 모른다
     }
 
     bool OpenGLRHIDevice::debugRemoveDevice()
@@ -1393,7 +1385,7 @@ namespace sw
         (void)_frameFenceRing.markSubmitted();
 
         // 이미 끝난 프레임을 오래된 순서로 모은다(기다리지 않고 묻기만 한다).
-        const uint64 completedSerial = _frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
+        (void)_frameFenceRing.retire( [this]( uint32 slot, uint64 serial )
         {
             (void)serial;
             void*&       rpSync     = _arrFrameDoneSync[slot];
@@ -1406,17 +1398,7 @@ namespace sw
         } );
         // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
         retireFinishedTransfers();
-        _releaseQueue.releaseCompleted( completedSerial );
-    }
-
-    void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
-    {
-        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() );
-    }
-
-    void OpenGLRHIDevice::notifyFrameCompletion( const RHIFrameCompletionDelegate& completionDelegate )
-    {
-        _releaseQueue.enqueueCompletion( completionDelegate, _frameFenceRing.getRecordingSerial() );
+        releaseCompletedFrames();
     }
 
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()

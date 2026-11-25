@@ -1,9 +1,9 @@
 /**
  * @file RHIFrameFenceRing.h
  * @brief 프레임 시리얼 발급 · GPU 완료 워터마크 · 앞서가기 상한(`kMaxFrameCountInFlight`)을 한 곳에서 지키는 프레임 펜스 링입니다.
- * @details DX11(이벤트 쿼리) · GL(`glFenceSync`) · Vulkan(`VkFence`) · WebGPU(작업 완료 콜백)이 같은 링을 쓴다. 네이티브 펜스 객체는 백엔드가 칸(`getSlot`)마다 들고,
+ * @details 장치 기반(`IRHIDevice`)이 하나 들고 다섯 백엔드가 같은 링을 쓴다 — DX11(이벤트 쿼리) · GL(`glFenceSync`) · Vulkan(`VkFence`) · WebGPU(작업 완료 콜백) · DX12(큐 펜스 값 = 시리얼). 네이티브 펜스 객체는 백엔드가 칸(`getSlot`)마다 들고,
  *          링은 "어느 시리얼이 어느 칸에 있고 어디까지 끝났나" 만 안다. 해제 키는 `getRecordingSerial` 하나다 — 어느 스레드에서 읽어도 원자적이라
- *          전송 완료 콜백(폴링 스레드)이 읽어도 경쟁이 아니다. DX12 는 큐 펜스 값 자체가 시리얼이라(업로드도 같은 펜스에 Signal 한다) `FrameResourceRing` 을 그대로 쓴다.
+ *          전송 완료 콜백(폴링 스레드)이 읽어도 경쟁이 아니다. DX12 는 GPU 유휴 대기도 같은 펜스에 Signal 해 시리얼이 프레임마다 하나가 아니므로, 칸은 `FrameResourceRing` 이 고르고 여기서는 시리얼과 워터마크만 쓴다.
  *          언리얼 RHI 의 프레임 펜스(`FRHIGPUFence` 링 + `MaxFramesInFlight`)와 Godot `RenderingDevice` 의 프레임 링(`frames[frame_count]` + 칸 펜스 대기)과 같은 자리다(기억에 의존한 비교).
  */
 #pragma once
@@ -109,9 +109,11 @@ namespace sw
             return completed;
         }
 
-        /** @brief GPU 가 @p serial 까지 끝냈습니다(대기 · waitIdle 뒤). 워터마크는 뒤로 가지 않습니다. */
+        /** @brief GPU 가 @p serial 까지 끝냈습니다(대기 · waitIdle 뒤). 워터마크는 뒤로 가지 않고, 내지 않은 시리얼로도 가지 않습니다(제거된 DX12 장치의 펜스는 `UINT64_MAX` 를 답한다). */
         void markCompleted( uint64 serial )
         {
+            const uint64 last = getLastSubmittedSerial();
+            serial            = serial < last ? serial : last;
             if ( serial > _completedSerial.load( std::memory_order_relaxed ) )
                 _completedSerial.store( serial, std::memory_order_release );
         }

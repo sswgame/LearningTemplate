@@ -15,7 +15,7 @@ namespace sw
             : _pDevice{ pDevice } {}
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
-        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso ) override;
+        [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased ) override;
         RHIBufferHandle        createConstantBufferNative( uint32 size ) override;
         /** @brief 기록 경로의 상수 버퍼 쓰기입니다(커맨드 컨텍스트만 부른다 — 두 번째 쓰기 진단은 `IRHICommandContext::updateConstantBuffer` 가 했다). */
         void            writeConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size );
@@ -30,7 +30,7 @@ namespace sw
         RHIBufferHandle          createGPUVertexBufferNative( uint32 sizeBytes ) override;
         void                     updateGeometryBufferRegionsNative( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
         RHIBufferHandle          createIndexBufferNative( const void* pData, uint32 sizeBytes ) override;
-        [[nodiscard]] bool       destroyBufferNative( RHIBufferHandle buffer ) override;
+        [[nodiscard]] bool       destroyBufferNative( RHIBufferHandle buffer, RHIReleasedResource& outReleased ) override;
         RHIBufferHandle          createReadbackBufferNative( uint32 elementSize, uint32 elementCount ) override;
         [[nodiscard]] bool       readReadbackBufferNative( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle         createTexture2DNative( const RHITextureDesc& desc ) override;
@@ -39,7 +39,7 @@ namespace sw
         [[nodiscard]] bool       destroyTransientHeapNative( RHITransientHeapHandle heap ) override;
         RHITextureHandle         createPlacedTexture2DNative( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes ) override;
         void                     setTextureDebugNameNative( RHITextureHandle texture, const utf8* pName ) override;
-        [[nodiscard]] bool       destroyTextureNative( RHITextureHandle texture ) override;
+        [[nodiscard]] bool       destroyTextureNative( RHITextureHandle texture, RHIReleasedResource& outReleased ) override;
         // 전송(RHIAsyncUploads U6): 업로드 · 되읽기 링에 놓고 전송 작업(커맨드 버퍼 + 펜스)으로 내며 기다리지 않는다. 완료는 pollTransfer 가 펜스 줄의 연속 구간 워터마크로 본다.
         [[nodiscard]] RHITransferSubmit submitTextureUploadNative( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
         [[nodiscard]] RHITransferSubmit submitTextureRegionUploadNative( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
@@ -52,6 +52,8 @@ namespace sw
         [[nodiscard]] bool              rebindBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture ) override;
         RHITextureSRVIndex              reserveBindlessTextureIndexNative() override;
         [[nodiscard]] bool              activateReservedBindlessTextureNative( RHITextureSRVIndex index, RHITextureHandle texture ) override;
+        [[nodiscard]] uint64            findAllocationBytesNative( RHIBufferHandle buffer ) const override;
+        [[nodiscard]] uint64            findAllocationBytesNative( RHITextureHandle texture, const RHITextureDesc& desc ) const override;
         [[nodiscard]] bool              describeTextureNative( RHITextureHandle texture, RHITextureBindingInfo& outInfo ) override;
         [[nodiscard]] uint32            findConstantPageBytesNative( RHIBufferHandle buffer ) override;
         [[nodiscard]] bool              unregisterBindlessTextureNative( RHITextureSRVIndex index ) override;
