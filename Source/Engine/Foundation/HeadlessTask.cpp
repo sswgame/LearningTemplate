@@ -79,6 +79,17 @@ namespace sw
         return HeadlessTaskResult::Ran;
     }
 
+    bool HeadlessTaskRegistration::isAnyRequested( const CommandLineManager& commandLine )
+    {
+        const RegistrationList<const HeadlessTaskRegistration>& registrations = HeadlessTaskInternal::getRegistrations();
+        for ( uint32 index = 0; index < registrations.getCount(); ++index )
+        {
+            if ( registrations.getAt( index )->_pIsRequested( commandLine ) )
+                return true;
+        }
+        return false;
+    }
+
     HeadlessTaskResult HeadlessTaskRegistration::runRequested( HeadlessTaskContext& context )
     {
         const RegistrationList<const HeadlessTaskRegistration>& registrations = HeadlessTaskInternal::getRegistrations();

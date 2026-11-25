@@ -17,6 +17,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/StandardOutput.h"
@@ -352,7 +353,9 @@ namespace sw::test
             }
 
             /** @brief 이 실행 파일을 @p listArgument 로 자식으로 띄워 끝까지 기다립니다. 시한을 넘기면 죽이고 `_bTimedOut` 이다. 띄우지 못하면 실패로 적는다(케이스 안에서만 부른다). */
-            static void launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult );
+            /** @brief 자식이 여는 모듈 인자입니다 — 그 케이스가 등록된 이미지의 이름(`_pFile` 은 그 이미지의 글자다). 자식은 그 모듈과 의존만 연다(`--test-child-module`). */
+            [[nodiscard]] static string makeChildModuleArgument( const TestCaseRegistration& testCase );
+            static void                 launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult );
             /** @brief 격리 케이스(`._bIsolated`) 하나를 자식에서 돌리고 결과를 지금 케이스에 적습니다. 자식이 0 이 아닌 종료 코드면 출력 꼬리와 함께 실패다. */
             static void runIsolated( const TestCaseRegistration& testCase, float32 timeoutSeconds );
 
@@ -575,15 +578,18 @@ namespace sw::test
 
     ChildRunResult runChildRole( string_view roleName, string_view argument, float32 timeoutSeconds )
     {
-        ChildRunResult result;
-        bool           bRegistered = false;
+        ChildRunResult              result;
+        const TestCaseRegistration* pRole = nullptr;
         {
             TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
             ScopedLock<mutex>             lock{ registry._mutex };
             for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
-                bRegistered = bRegistered || ( pCase->_bChildRole && roleName == pCase->_pName );
+            {
+                if ( pCase->_bChildRole && roleName == pCase->_pName )
+                    pRole = pCase;
+            }
         }
-        if ( bRegistered == false )
+        if ( pRole == nullptr )
         {
             StringBuilder<constant::buffer::kMax256> message;
             message.appendFormat( "no child role named %# is registered (declare it with SW_TEST_CHILD_ROLE)", roleName );
@@ -597,7 +603,7 @@ namespace sw::test
         logFileName.appendFormat( "%#.child.log", TestRunnerInternal::toFileName( roleName ) );
         StringBuilder<constant::buffer::kMax1024> logFileArgument;
         logFileArgument.appendFormat( "-log-file=%#", makeScratchPath( logFileName.view() ).str() );
-        vector<string> listArgument{ "-test", string( roleArgument.view() ), "-unattended", string( logFileArgument.view() ) };
+        vector<string> listArgument{ "-test", string( roleArgument.view() ), "-unattended", string( logFileArgument.view() ), TestRunnerInternal::makeChildModuleArgument( *pRole ) };
         if ( argument.empty() == false )
         {
             StringBuilder<constant::buffer::kMax1024> childArgument;
@@ -606,6 +612,13 @@ namespace sw::test
         }
         TestRunnerInternal::launchSelf( std::move( listArgument ), timeoutSeconds, result );
         return result;
+    }
+
+    string TestRunnerInternal::makeChildModuleArgument( const TestCaseRegistration& testCase )
+    {
+        StringBuilder<constant::buffer::kMax256> argument;
+        argument.appendFormat( "-test-child-module=%#", ModuleLibraryUtil::findImageNameContaining( testCase._pFile ) );
+        return string( argument.view() );
     }
 
     void TestRunnerInternal::launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult )
@@ -667,7 +680,7 @@ namespace sw::test
         logFileName.appendFormat( "%#.isolated.log", toFileName( testCase._pName ) );
         StringBuilder<constant::buffer::kMax1024> logFileArgument;
         logFileArgument.appendFormat( "-log-file=%#", makeScratchPath( logFileName.view() ).str() );
-        vector<string> listArgument{ "-test", string( caseArgument.view() ), "-unattended", string( logFileArgument.view() ) };
+        vector<string> listArgument{ "-test", string( caseArgument.view() ), "-unattended", string( logFileArgument.view() ), makeChildModuleArgument( testCase ) };
         // 스냅숏 기록 범위를 자식에 넘긴다 — 넘기지 않으면 격리 케이스의 스냅숏은 기록 실행에서도 쓰이지 않고 진다.
         SnapshotWriteMode recording = SnapshotWriteMode::Off;
         {

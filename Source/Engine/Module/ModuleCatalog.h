@@ -215,6 +215,8 @@ namespace sw
 
 namespace sw
 {
+    class ModuleCatalog;
+
     /** @brief 해석 결과입니다. */
     struct SW_API ModuleResolution
     {
@@ -223,6 +225,8 @@ namespace sw
 
         /** @brief @p name 이 켜져 있으면 true 입니다. */
         bool isActive( string_view name ) const;
+        /** @brief 로드 순서를 @p moduleName 과 그것이 (건너서) 의존하는 것만 남깁니다. 켜진 모듈이 아니면(엔진 · 개발 도구 이미지) 빈 순서가 됩니다. */
+        void keepOnly( const ModuleCatalog& catalog, string_view moduleName );
     };
 } // namespace sw
 

@@ -32,6 +32,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -117,8 +118,11 @@ namespace sw
         (void)startup.emplaceSubsystem<SavedCleanupSubsystem>();
         // 리로드 결과 집계 — 설정 · 셰이더 · 에디터 에셋 리로드가 결과를 적는다(`reload.status`). 리로드 주인보다 먼저 선다(셰이더 라이브 리로드는 클라이언트 부분 `IDevToolsClientPart` 가 세운다).
         (void)startup.emplaceSubsystem<ReloadTracker>();
-        // 설정 파일 리로드는 서버에도 선다.
-        if ( ConfigManager* const pConfigManager = startup.find<ConfigManager>() )
+        // 설정 파일 리로드는 서버에도 선다. 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — `Config/` 감시를 걸지 않는다.
+        const CommandLineManager* const pHeadlessCommandLine = locateSubsystem<CommandLineManager>( &startup );
+        const bool                      bHeadless            = pHeadlessCommandLine != nullptr && HeadlessTaskRegistration::isAnyRequested( *pHeadlessCommandLine );
+        ConfigManager* const            pConfigManager       = startup.find<ConfigManager>();
+        if ( pConfigManager != nullptr && bHeadless == false )
             (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *pConfigManager, _fileWatch );
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
