@@ -58,8 +58,11 @@ namespace sw
 
     bool ModSupportSettings::readOverridable( const XMLNode& node, string_view sourceName )
     {
-        const string_view prefix = node.getAttributeText( "prefix" );
-        const string_view path   = node.getAttributeText( "path" );
+        ModOverridableDef def;
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
+            return false;
+        const string_view prefix = def._prefix;
+        const string_view path   = def._path;
         if ( path.empty() == false )
         {
             // 파일 하나 — 폴더(끝 `/`)나 정규형이 아닌 글은 받지 않는다(검사는 정확히 같은 id 만 연다). 접두와 함께 적으면 어느 쪽인지 알 수 없다.
@@ -88,7 +91,10 @@ namespace sw
 
     bool ModSupportSettings::readStored( const XMLNode& node, string_view sourceName )
     {
-        const string_view extension = node.getAttributeText( "extension" );
+        ModStoredDef def;
+        if ( XMLFields::readProperties( node, def, sourceName ) == false )
+            return false;
+        const string_view extension = def._extension;
         if ( extension.size() < 2 || extension[0] != '.' )
         {
             SW_LOG_ERROR_ID( "ModSupportSettings.BadStoredExtension", "Mod support settings '%#': stored extension '%#' must start with '.'", sourceName, extension );

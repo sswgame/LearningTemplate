@@ -23,6 +23,28 @@ namespace sw
     class XMLDocument;
     class XMLNode;
 
+    /** @struct ModOverridableDef @brief `<Overridable>` 한 줄의 스키마입니다. 접두와 파일 가운데 하나만 적는다. */
+    REFLECT()
+    struct SW_KIT_API ModOverridableDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _prefix;
+        PROPERTY()
+        string _path;
+    };
+
+    /** @struct ModStoredDef @brief `<Stored>` 한 줄의 스키마입니다. */
+    REFLECT()
+    struct SW_KIT_API ModStoredDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _extension;
+    };
+
     /**
      * @struct ModSupportSettings
      * @brief 모드 정책과 한계입니다. 값은 `parseXMLText` 가 채운다.

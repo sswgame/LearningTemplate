@@ -8,6 +8,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -59,9 +60,10 @@ namespace sw
                 AppearanceXMLUtil::readOptionalFloat( node, "wetValue", 0.0f, MathUtil::kMaxFloat, fluid._wetValue, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat( node, "residueValue", 0.0f, MathUtil::kMaxFloat, fluid._residueValue, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat( node, "dripSeconds", 0.0f, MathUtil::kMaxFloat, fluid._dripSeconds, report, sourceName );
-                fluid._effect  = hashed_string( node.getAttributeText( "effect" ) );
-                fluid._socket  = hashed_string( node.getAttributeText( "socket" ) );
-                fluid._bStrand = StringUtil::equals( node.getAttributeText( "strand" ), "true" ) ? SW_TRUE : SW_FALSE;
+                fluid._effect = hashed_string( node.getAttributeText( "effect" ) );
+                fluid._socket = hashed_string( node.getAttributeText( "socket" ) );
+                if ( XMLReadUtil::readOptionalFlag( node, "strand", fluid._bStrand ) == false )
+                    report.addErrorWithID( "Appearance.FluidStrandInvalid", "%#: body profile '%#' fluid '%#' strand must be true or false", sourceName, inoutProfile._id.c_str(), fluid._name.c_str() );
                 if ( fluid._effect.empty() == false && fluid._socket.empty() )
                 {
                     report.addErrorWithID( "Appearance.FluidEffectSocket", "%#: body profile '%#' fluid '%#' has an 'effect' but no 'socket' to spawn it at", sourceName, inoutProfile._id.c_str(),
