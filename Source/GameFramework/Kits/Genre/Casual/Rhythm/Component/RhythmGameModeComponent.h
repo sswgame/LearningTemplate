@@ -81,7 +81,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 진행 중이며 사람이 치면 true 입니다(자동 플레이면 false). */
-        bool isAcceptingInput() const;
+        bool isAcceptingInput() const override;
         /** @brief 이 판의 채보입니다. 열기 전이면 nullptr 입니다. */
         const RhythmChart*       findChart() const { return _pChart.get(); }
         const RhythmPlaySession& getSession() const { return _session; }
@@ -98,7 +98,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 채보와 판정 칸으로 판을 엽니다. 창이 없거나 수치가 틀렸으면 오류를 남기고 false 입니다. */

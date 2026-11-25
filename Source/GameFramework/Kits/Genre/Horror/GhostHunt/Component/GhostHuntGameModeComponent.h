@@ -98,7 +98,7 @@ namespace sw
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const GhostCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == GhostHuntResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == GhostHuntResult::Ongoing; }
         /** @brief 플레이어의 절대 자리입니다. */
         AbsolutePosition getPlayerPosition() const { return toAbsolute( _playerPosition ); }
         /** @brief 바라보는 쪽(XZ 단위 벡터)입니다. */
@@ -132,7 +132,6 @@ namespace sw
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 지갑 · 깃발 · 가방 · 방 그래프를 비우고 저택을 새로 엽니다(판을 열 때 · 상태를 읽기 전). 저택이 거절하면 이유를 남기고 false 입니다. */

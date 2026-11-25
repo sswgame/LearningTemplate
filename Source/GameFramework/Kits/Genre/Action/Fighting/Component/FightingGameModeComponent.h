@@ -55,7 +55,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 대전이 끝나지 않아 입력 명령을 받으면 true 입니다. */
-        bool                 isAcceptingInput() const;
+        bool                 isAcceptingInput() const override;
         const FightingMatch& getMatch() const { return _match; }
         /** @brief 캐릭터의 절대 자리입니다(무대 중심이 원점, y 는 점프 · 저글 높이). */
         AbsolutePosition getFighterPosition( int32 player ) const;
@@ -75,7 +75,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지거나 비기면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

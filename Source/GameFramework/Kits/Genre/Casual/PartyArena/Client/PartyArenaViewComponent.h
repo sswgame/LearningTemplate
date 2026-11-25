@@ -12,11 +12,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -31,7 +30,7 @@ namespace sw
      * @brief `Move` 축은 공중 이동, 점프 · 공격 · 찍기 액션은 눌린 순간을 디렉터에 넘깁니다.
      */
     REFLECT( Category = "PartyArena", DisplayName = "Party Arena View", Tooltip = "Client side of a party arena: moves the local player from input, shows the arena, players and items and fills the HUD" )
-    class SW_KIT_CLIENT_API PartyArenaViewComponent : public Component
+    class SW_KIT_CLIENT_API PartyArenaViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -41,20 +40,14 @@ namespace sw
         PartyArenaViewComponent();
         virtual ~PartyArenaViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
         /** @brief 세운 모습을 지우고 HUD 에서 뷰모델을 뗍니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 모습을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 내고 모습과 HUD 를 맞춥니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, PartyGameModeComponent& director );
         /** @brief 이번 프레임의 조작 입력을 디렉터에 냅니다. */
-        void submitInput( PartyGameModeComponent& director ) const;
+        void submitInput( const GameModeInput& input, PartyGameModeComponent& director ) const;
         /** @brief 무대 · 사람 · 아이템을 지금 자리에 보입니다. */
         void showArena( GameObjectManager& manager, const PartyGameModeComponent& director );
         /** @brief HUD 뷰모델을 채웁니다. HUD 가 없는 씬이면 값만 듭니다. */
@@ -63,11 +56,11 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that moves the player in the air (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action timed with the landing to bounce higher (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action timed with the landing to bounce higher (required)" )
         hashed_string _jumpAction;
-        PROPERTY( Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action that dashes into a rival (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action that dashes into a rival (required)" )
         hashed_string _attackAction;
-        PROPERTY( Category = "Input", DisplayName = "Pound Action", Tooltip = "InputMap action that pounds the trampoline (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Pound Action", Tooltip = "InputMap action that pounds the trampoline (required)" )
         hashed_string _poundAction;
         PROPERTY( Category = "View", DisplayName = "Floor Prefab", Required, Tooltip = "Unit disc stretched to the arena radius" )
         AssetRef<PrefabAsset> _floorPrefab;
@@ -84,13 +77,9 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Item Color" )
         float4 _itemColor;
 
-        TComponentHandle<PartyGameModeComponent> _director;
-        PrefabViewBatch                          _floorViews;
-        PrefabViewBatch                          _playerViews;
-        PrefabViewBatch                          _itemViews;
-        unique_ptr<PartyHUDViewModel>            _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        uint8                                    _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않는다)
-        uint8                                    _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                   _reserved      : 6;
+        PrefabViewBatch               _floorViews;
+        PrefabViewBatch               _playerViews;
+        PrefabViewBatch               _itemViews;
+        unique_ptr<PartyHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
     };
 } // namespace sw

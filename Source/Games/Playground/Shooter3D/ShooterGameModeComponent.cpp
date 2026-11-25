@@ -146,8 +146,8 @@ namespace sw
         , _director{}
         , _listDirectorEvent{}
         , _listEnemy{}
-        , _effectPool{ string{}, 0 }
-        , _tracerPool{ string{}, 0 }
+        , _effectPool{ string{}, 0, SpawnLifetime::Derived }
+        , _tracerPool{ string{}, 0, SpawnLifetime::Derived }
         , _listPendingEnemy{}
         , _listPendingEffect{}
         , _listReplicaSample{}
@@ -721,8 +721,8 @@ namespace sw
     void ShooterGameModeComponent::spawnEffectPools( GameObjectManager& manager )
     {
         // 탄착과 섬광 구, 탄도선 상자를 미리 스폰해 꺼 둔다(오브젝트를 매 발 만들고 지우지 않는다).
-        _effectPool = PrefabPool( _effectPrefab.path(), static_cast<uint32>( _effectPoolSize ) );
-        _tracerPool = PrefabPool( _tracerPrefab.path(), static_cast<uint32>( _tracerPoolSize ) );
+        _effectPool = PrefabPool( _effectPrefab.path(), static_cast<uint32>( _effectPoolSize ), SpawnLifetime::Derived );
+        _tracerPool = PrefabPool( _tracerPrefab.path(), static_cast<uint32>( _tracerPoolSize ), SpawnLifetime::Derived );
         (void)_effectPool.prewarm( manager, static_cast<uint32>( _effectPoolSize ), "ShotEffect" );
         (void)_tracerPool.prewarm( manager, static_cast<uint32>( _tracerPoolSize ), "Tracer" );
     }

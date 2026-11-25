@@ -5,14 +5,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Client/ScavengerHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Component/ScavengerGameModeComponent.h"
@@ -51,16 +46,14 @@ namespace sw
     } // namespace
 
     ScavengerAvatarComponent::ScavengerAvatarComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&ScavengerAvatarComponent::updateAvatar, &ScavengerAvatarComponent::submitInput>( GameModeInputUser::EachLocal ) )
+        , _moveAction{ CommonInputActions::kMove }
         , _useAction{}
         , _leverAction{}
         , _markerPrefab{}
-        , _director{}
         , _markers{}
         , _hudViewModel{}
         , _terminalIndex{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
         , _bTerminalAxis{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -69,63 +62,30 @@ namespace sw
 
     ScavengerAvatarComponent::~ScavengerAvatarComponent() = default;
 
-    void ScavengerAvatarComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                       pOwner    = getOwner();
-        const ScavengerGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<ScavengerGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Scavenger.AvatarWithoutGameMode", "Scavenger avatar on '%#': no ScavengerGameModeComponent in front of it on the same object - the avatar does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<ScavengerGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<ScavengerGameModeComponent>( pDirector );
-    }
-
-    void ScavengerAvatarComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _useAction.empty() == false && _leverAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "Scavenger.AvatarActionMissing", "Scavenger avatar: the actions must all be named (move '%#', use '%#', lever '%#') - the avatar reads no input", _moveAction.c_str(), _useAction.c_str(), _leverAction.c_str() );
-    }
-
     void ScavengerAvatarComponent::onEndPlay()
     {
         GameObject* const        pOwner   = getOwner();
         GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
         if ( pManager != nullptr )
             _markers.destroyAll( *pManager );
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void ScavengerAvatarComponent::onTick( TickContext& context )
+    void ScavengerAvatarComponent::updateAvatar( GameObjectManager& manager, ScavengerGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( ScavengerAvatarComponent& avatar, GameObjectManager& manager )
-        { avatar.updateAvatar( manager ); } );
-    }
-
-    void ScavengerAvatarComponent::updateAvatar( GameObjectManager& manager )
-    {
-        ScavengerGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        GameObject* const                 pOwner    = getOwner();
-        if ( pDirector == nullptr || pOwner == nullptr || pDirector->isStarted() == false )
+        GameObject* const pOwner = getOwner();
+        if ( pOwner == nullptr )
             return;
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput() )
-            submitInput( *pDirector );
+        dispatchInput( manager, director );
         _markers.begin();
-        drawGame( manager, *pDirector );
+        drawGame( manager, director );
         _markers.end( manager );
         if ( _hudViewModel == nullptr )
             _hudViewModel = make_unique<ScavengerHUDViewModel>();
         // 같은 뷰모델이면 거는 일은 아무것도 하지 않는다. HUD 가 없는 씬이면 값만 들고 보일 곳이 없다.
         if ( IHUDViewModelBinder* const pBinder = game::findSubsystem<IHUDViewModelBinder>() )
             (void)pBinder->bindHUDViewModel( *pOwner, _hudViewModel.get() );
-        fillHUD( *_hudViewModel, *pDirector );
+        fillHUD( *_hudViewModel, director );
     }
 
     void ScavengerAvatarComponent::updateTerminal( const ScavengerGameModeComponent& director, float32 axis, bool bBuy, ScavengerCommand& outCommand )
@@ -142,27 +102,17 @@ namespace sw
             outCommand._buyItemID = pTerminal->_listStock[_terminalIndex % stockCount]._itemID;
     }
 
-    void ScavengerAvatarComponent::submitInput( ScavengerGameModeComponent& director )
+    void ScavengerAvatarComponent::submitInput( const GameModeInput& input, ScavengerGameModeComponent& director )
     {
-        InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const IInputCaptureQuery* const pCapture = game::findSubsystem<IInputCaptureQuery>();
-        for ( uint32 user = 0; user < pInput->getLocalUserCount(); ++user )
-        {
-            const InputMap* const pUserMap = pInput->findUserMap( user ); // 로컬 사용자 n 이 승무원 n 을 잡는다
-            if ( pUserMap == nullptr )
-                continue;
-            const GameInputView input( *pUserMap, pCapture );
-            const int32         player = static_cast<int32>( user );
-            ScavengerCommand    command;
-            command._moveTo          = director.findNeighborToward( player, input.getVector2D( _moveAction ) );
-            command._bUseTriggered   = input.wasActionTriggered( _useAction ) ? SW_TRUE : SW_FALSE;
-            command._bLeverTriggered = input.wasActionTriggered( _leverAction ) ? SW_TRUE : SW_FALSE;
-            if ( user == ScavengerAvatarComponentInternal::kTerminalUser && director.getExpedition().getPhase() == ScavengerPhase::InOrbit )
-                updateTerminal( director, input.getVector2D( _moveAction )._x, command._bUseTriggered == SW_TRUE, command );
-            (void)director.submitCrewCommand( player, command ); // 승무원보다 많은 사용자의 입력은 쓸 곳이 없다
-        }
+        const uint32     user   = input.getLocalUser(); // 로컬 사용자 n 이 승무원 n 을 잡는다
+        const int32      player = static_cast<int32>( user );
+        ScavengerCommand command;
+        command._moveTo          = director.findNeighborToward( player, input.getVector2D( _moveAction ) );
+        command._bUseTriggered   = input.wasActionTriggered( _useAction ) ? SW_TRUE : SW_FALSE;
+        command._bLeverTriggered = input.wasActionTriggered( _leverAction ) ? SW_TRUE : SW_FALSE;
+        if ( user == ScavengerAvatarComponentInternal::kTerminalUser && director.getExpedition().getPhase() == ScavengerPhase::InOrbit )
+            updateTerminal( director, input.getVector2D( _moveAction )._x, command._bUseTriggered == SW_TRUE, command );
+        (void)director.submitCrewCommand( player, command ); // 승무원보다 많은 사용자의 입력은 쓸 곳이 없다
     }
 
     void ScavengerAvatarComponent::drawGame( GameObjectManager& manager, const ScavengerGameModeComponent& director )

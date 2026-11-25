@@ -12,23 +12,18 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityBuildingViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Client/CityWalkerViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityBuilderGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 상태를 싣기 전에 세운 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<CityViewComponent> s_viewRegistration{ "CityViewComponent" };
 
         struct CityViewComponentInternal
         {
@@ -76,7 +71,8 @@ namespace sw
 namespace sw
 {
     CityViewComponent::CityViewComponent()
-        : _buildingViewPath{}
+        : GameModeViewComponent( GameModeViewBinding::of<&CityViewComponent::updateView>() )
+        , _buildingViewPath{}
         , _groundPrefab{}
         , _roadPrefab{}
         , _modelBuildingPrefab{}
@@ -85,7 +81,6 @@ namespace sw
         , _roadColor{ 1.0f, 1.0f, 1.0f, 1.0f }
         , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
         , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
-        , _director{}
         , _pBuildingViewCatalog{}
         , _shownBuildingViews{}
         , _buildingModels{}
@@ -107,19 +102,9 @@ namespace sw
 
     CityViewComponent::~CityViewComponent() = default;
 
-    void CityViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        const GameObject* const pOwner = getOwner();
-        _director                      = TComponentHandle<CityBuilderGameModeComponent>( pOwner != nullptr ? pOwner->getComponent<CityBuilderGameModeComponent>() : nullptr );
-        if ( _director.isValid() == false )
-            SW_LOG_ERROR_ID( "City.ViewWithoutGameMode", "City view on '%#': no city game mode in front of it on the same object - nothing is drawn",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-    }
-
     void CityViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        GameModeViewComponent::onBeginPlay();
         _shownCatalog.reset();
     }
 
@@ -127,14 +112,7 @@ namespace sw
     {
         despawnViews();
         _buildingModels.clear();
-        Component::onEndPlay();
-    }
-
-    void CityViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( CityViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void CityViewComponent::despawnViews()
@@ -163,17 +141,14 @@ namespace sw
         return _listWalkerLook.data()[key];
     }
 
-    void CityViewComponent::updateView( GameObjectManager& manager )
+    void CityViewComponent::updateView( GameObjectManager& manager, const CityBuilderGameModeComponent& director )
     {
-        const CityBuilderGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const CityCatalog& catalog = *pDirector->findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
+        const CityCatalog& catalog = director->findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
         if ( _shownCatalog.get() != &catalog )
         {
             despawnViews(); // 도시가 새 판에 묶였다 — 땅 · 서비스의 색과 집 단계가 바뀌었을 수 있다
             _listWalkerLook.clear();
-            _shownCatalog = pDirector->getCatalogSnapshot();
+            _shownCatalog = director.getCatalogSnapshot();
             _bViewsValid  = acquireBuildingViews( catalog ) ? SW_TRUE : SW_FALSE;
         }
         if ( _bViewsValid == SW_FALSE )
@@ -183,13 +158,13 @@ namespace sw
             despawnViews();
             _shownBuildingViews = _pBuildingViewCatalog.snapshot();
         }
-        const CitySimulation& city = pDirector->getCity();
+        const CitySimulation& city = director.getCity();
         if ( _bTerrainSpawned == SW_FALSE )
             spawnTerrain( manager, city, catalog );
-        if ( _shownRevision != pDirector->getLayoutRevision() )
+        if ( _shownRevision != director.getLayoutRevision() )
         {
             syncTiles( manager, city );
-            _shownRevision = pDirector->getLayoutRevision();
+            _shownRevision = director.getLayoutRevision();
         }
         spawnWalkers( manager, catalog, city.getWalkers().size() );
     }
@@ -376,7 +351,7 @@ namespace sw
     GameObject* CityViewComponent::spawnView( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName )
     {
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
-        return pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName ) : nullptr;
+        return pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), SpawnLifetime::Derived, pName ) : nullptr;
     }
 
     // ------------------------------------------------------------------------------

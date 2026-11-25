@@ -59,11 +59,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override
-        {
-            (void)manager;
-            (void)bRespawnViews;
-        }
 
     private:
         HousingPlotComponent* findPlot() const;

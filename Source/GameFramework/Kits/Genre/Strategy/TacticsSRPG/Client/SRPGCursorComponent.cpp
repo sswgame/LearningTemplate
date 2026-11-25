@@ -10,18 +10,12 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Component/SRPGGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
@@ -48,7 +42,8 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( srpgCursorY, "SRPG.CursorY", "Cursor cell Y", SRPGCursorComponent, &SRPGCursorComponent::getCursorY );
 
     SRPGCursorComponent::SRPGCursorComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&SRPGCursorComponent::updateCursor, &SRPGCursorComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _confirmAction{}
         , _endTurnAction{}
         , _cubePrefab{}
@@ -63,42 +58,20 @@ namespace sw
         , _cursorHalfExtent{ 0.5f, 0.02f, 0.5f }
         , _cursorHeight{ 0.05f }
         , _cursorColor{ 1.0f, 0.95f, 0.3f, 1.0f }
-        , _director{}
         , _cubeViews{}
         , _unitViews{}
         , _cursor{}
         , _lastStep{}
         , _bCursorPlaced{ SW_FALSE }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
     SRPGCursorComponent::~SRPGCursorComponent() = default;
 
-    void SRPGCursorComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                  pOwner    = getOwner();
-        const SRPGGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<SRPGGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "SRPG.CursorWithoutGameMode", "SRPG cursor on '%#': no SRPGGameModeComponent in front of it on the same object - the cursor does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<SRPGGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<SRPGGameModeComponent>( pDirector );
-    }
-
     void SRPGCursorComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _confirmAction.empty() == false && _endTurnAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "SRPG.CursorActionMissing", "SRPG cursor: move '%#', confirm '%#' and end turn '%#' actions must all be named - the cursor reads no input", _moveAction.c_str(),
-                             _confirmAction.c_str(), _endTurnAction.c_str() );
+        GameModeViewComponent::onBeginPlay();
         _bCursorPlaced = SW_FALSE;
         _lastStep      = int2{};
     }
@@ -112,23 +85,12 @@ namespace sw
             _cubeViews.destroyAll( *pManager );
             _unitViews.destroyAll( *pManager );
         }
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void SRPGCursorComponent::onTick( TickContext& context )
+    void SRPGCursorComponent::moveCursor( const GameModeInput& input, const SRPGGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( SRPGCursorComponent& cursor, GameObjectManager& manager )
-        { cursor.updateCursor( manager ); } );
-    }
-
-    void SRPGCursorComponent::moveCursor( const SRPGGameModeComponent& director )
-    {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const float2 axis = GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).getVector2D( _moveAction );
+        const float2 axis = input.getVector2D( _moveAction );
         const int2   step{ SRPGCursorComponentInternal::computeStep( axis._x ), SRPGCursorComponentInternal::computeStep( axis._y ) };
         const int2   fresh{ step._x != _lastStep._x ? step._x : 0, step._y != _lastStep._y ? step._y : 0 };
         _lastStep = step;
@@ -137,15 +99,12 @@ namespace sw
             _cursor = moved;
     }
 
-    void SRPGCursorComponent::updateCursor( GameObjectManager& manager )
+    void SRPGCursorComponent::updateCursor( GameObjectManager& manager, SRPGGameModeComponent& director )
     {
-        SRPGGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
         if ( _bCursorPlaced == SW_FALSE )
         {
             // 첫 아군 유닛 칸에서 시작한다(디렉터는 아군을 먼저 놓는다).
-            for ( const SRPGUnit& unit : pDirector->getField().getUnits() )
+            for ( const SRPGUnit& unit : director.getField().getUnits() )
             {
                 if ( unit._team == SRPGTeam::Player )
                 {
@@ -155,22 +114,18 @@ namespace sw
             }
             _bCursorPlaced = SW_TRUE;
         }
-        const bool bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAwaitingCommand();
-        if ( bReadInput )
-        {
-            moveCursor( *pDirector );
-            const InputManager* const pInput = game::findSubsystem<InputManager>();
-            if ( pInput != nullptr )
-            {
-                const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-                // 할 수 없는 칸 · 페이즈 밖 명령은 디렉터가 거절하고 까닭을 남긴다 — 커서는 결과로 바뀌지 않는다.
-                if ( input.wasActionTriggered( _confirmAction ) )
-                    (void)pDirector->confirmCell( _cursor );
-                if ( input.wasActionTriggered( _endTurnAction ) )
-                    (void)pDirector->endPlayerPhase();
-            }
-        }
-        showField( *pDirector, manager );
+        dispatchInput( manager, director );
+        showField( director, manager );
+    }
+
+    void SRPGCursorComponent::submitInput( const GameModeInput& input, SRPGGameModeComponent& director )
+    {
+        moveCursor( input, director );
+        // 할 수 없는 칸 · 페이즈 밖 명령은 디렉터가 거절하고 까닭을 남긴다 — 커서는 결과로 바뀌지 않는다.
+        if ( input.wasActionTriggered( _confirmAction ) )
+            (void)director.confirmCell( _cursor );
+        if ( input.wasActionTriggered( _endTurnAction ) )
+            (void)director.endPlayerPhase();
     }
 
     void SRPGCursorComponent::showField( const SRPGGameModeComponent& director, GameObjectManager& manager )
@@ -206,7 +161,7 @@ namespace sw
 
     void SRPGCursorComponent::writeGrowthDebugLines( DebugHUDSectionWriter& writer, const GameObjectManager& manager ) const
     {
-        const SRPGGameModeComponent* const pDirector = manager.resolveComponent( _director );
+        const SRPGGameModeComponent* const pDirector = static_cast<const SRPGGameModeComponent*>( findGameMode( manager ) );
         if ( pDirector == nullptr )
         {
             writer.addLine( "target", "none (the cursor has no SRPG game mode)" );

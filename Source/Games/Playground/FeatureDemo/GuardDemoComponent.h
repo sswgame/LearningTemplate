@@ -45,7 +45,6 @@ namespace sw
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 이 오브젝트의 눈 자리와 앞 방향(로컬 +Z)입니다. 씬 컴포넌트가 없으면 false 입니다. */

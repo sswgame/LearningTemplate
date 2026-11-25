@@ -2,14 +2,10 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Client/MonsterCollectorAvatarComponent.h"
 
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Client/MonsterCollectorHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Component/MonsterCollectorGameModeComponent.h"
@@ -52,7 +48,8 @@ namespace sw
     } // namespace
 
     MonsterCollectorAvatarComponent::MonsterCollectorAvatarComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&MonsterCollectorAvatarComponent::updateAvatar, &MonsterCollectorAvatarComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _attackAction{}
         , _ballAction{}
         , _switchAction{}
@@ -60,45 +57,19 @@ namespace sw
         , _restAction{}
         , _bodyPrefab{}
         , _markerPrefab{}
-        , _director{}
         , _bodies{}
         , _markers{}
         , _hudViewModel{}
         , _moveSlot{ 0 }
         , _lastStep{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     MonsterCollectorAvatarComponent::~MonsterCollectorAvatarComponent() = default;
 
-    void MonsterCollectorAvatarComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                              pOwner    = getOwner();
-        const MonsterCollectorGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<MonsterCollectorGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MonsterCollector.AvatarWithoutGameMode", "Monster collector avatar on '%#': no MonsterCollectorGameModeComponent in front of it on the same object - the avatar does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<MonsterCollectorGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<MonsterCollectorGameModeComponent>( pDirector );
-    }
-
     void MonsterCollectorAvatarComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        const bool bMoveNamed   = _moveAction.empty() == false && _restAction.empty() == false;
-        const bool bBattleNamed = _attackAction.empty() == false && _ballAction.empty() == false && _switchAction.empty() == false && _runAction.empty() == false;
-        _bActionsValid          = bMoveNamed && bBattleNamed ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "MonsterCollector.AvatarActionMissing",
-                             "Monster collector avatar: move '%#', rest '%#', attack '%#', ball '%#', switch '%#' and run '%#' actions must all be named - the avatar reads no input", _moveAction.c_str(),
-                             _restAction.c_str(), _attackAction.c_str(), _ballAction.c_str(), _switchAction.c_str(), _runAction.c_str() );
+        GameModeViewComponent::onBeginPlay();
         _moveSlot = 0;
         _lastStep = 0;
     }
@@ -112,38 +83,26 @@ namespace sw
             _bodies.destroyAll( *pManager );
             _markers.destroyAll( *pManager );
         }
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void MonsterCollectorAvatarComponent::onTick( TickContext& context )
+    void MonsterCollectorAvatarComponent::updateAvatar( GameObjectManager& manager, MonsterCollectorGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( MonsterCollectorAvatarComponent& avatar, GameObjectManager& manager )
-        { avatar.updateAvatar( manager ); } );
-    }
-
-    void MonsterCollectorAvatarComponent::updateAvatar( GameObjectManager& manager )
-    {
-        MonsterCollectorGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-        {
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            if ( pDirector->getGamePhase() == MonsterCollectorPhase::Explore )
-                submitExploreInput( *pDirector, input );
-            else if ( pDirector->getGamePhase() == MonsterCollectorPhase::Battle )
-                submitBattleInput( *pDirector, input );
-        }
-        updateHUD( *pDirector );
+        dispatchInput( manager, director );
+        updateHUD( director );
         _bodies.begin();
         _markers.begin();
-        draw( *pDirector, manager );
+        draw( director, manager );
         _bodies.end( manager );
         _markers.end( manager );
+    }
+
+    void MonsterCollectorAvatarComponent::submitInput( const GameModeInput& input, MonsterCollectorGameModeComponent& director )
+    {
+        if ( director.getGamePhase() == MonsterCollectorPhase::Explore )
+            submitExploreInput( director, input );
+        else if ( director.getGamePhase() == MonsterCollectorPhase::Battle )
+            submitBattleInput( director, input );
     }
 
     void MonsterCollectorAvatarComponent::submitExploreInput( MonsterCollectorGameModeComponent& director, const GameInputView& input )

@@ -825,7 +825,7 @@ namespace sw
             const float3 position = float3{ origin + static_cast<float32>( column ) * _settings._characterSpacing, 0.0f, static_cast<float32>( row ) * _settings._characterSpacing };
             if ( pAssets != nullptr )
             {
-                GameObject*            pSpawned = pAssets->getAssetCache<PrefabCache>().spawn( pObjects, prefabPath, nameBuilder.c_str() );
+                GameObject*            pSpawned = pAssets->getAssetCache<PrefabCache>().spawn( pObjects, prefabPath, SpawnLifetime::Persistent, nameBuilder.c_str() );
                 SkeletalMeshComponent* pBody    = pSpawned != nullptr ? pSpawned->getComponent<SkeletalMeshComponent>() : nullptr;
                 if ( pBody == nullptr )
                 {

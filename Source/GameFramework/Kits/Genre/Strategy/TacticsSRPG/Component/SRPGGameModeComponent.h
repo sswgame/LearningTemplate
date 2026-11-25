@@ -71,6 +71,7 @@ namespace sw
         SRPGBattleResult   getBattleResult() const { return _result; }
         /** @brief 판이 열렸고 진행 중이며 아군 페이즈라 명령을 받으면 true 입니다. */
         bool  isAwaitingCommand() const;
+        bool  isAcceptingInput() const override { return isAwaitingCommand(); }
         int32 getPhaseTeam() const { return static_cast<int32>( _field.getPhaseTeam() ); }
         int32 getTurn() const { return _field.getTurn(); }
         int32 getResult() const { return static_cast<int32>( _result ); }
@@ -84,7 +85,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 씬 데이터로 전장을 열고 유닛을 놓습니다. 목록 길이가 다르거나 놓을 수 없는 유닛이 있으면 오류를 남기고 false 입니다. */

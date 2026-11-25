@@ -12,11 +12,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -33,7 +32,7 @@ namespace sw
      */
     REFLECT( Category = "ClassicJRPG", DisplayName = "JRPG Avatar",
              Tooltip = "Client side of a ClassicJRPG trail: sends commands to the JRPG Game Mode on the same object, draws the trail and the enemies and fills the HUD" )
-    class SW_KIT_CLIENT_API JRPGAvatarComponent : public Component
+    class SW_KIT_CLIENT_API JRPGAvatarComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -43,18 +42,14 @@ namespace sw
         JRPGAvatarComponent();
         virtual ~JRPGAvatarComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
         void onBeginPlay() override;
         /** @brief 세운 모습을 지웁니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 그리기를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 HUD · 그리기를 합니다. */
-        void updateAvatar( GameObjectManager& manager );
+        void updateAvatar( GameObjectManager& manager, JRPGGameModeComponent& director );
+        void submitInput( const GameModeInput& input, JRPGGameModeComponent& director );
         void submitExploreInput( JRPGGameModeComponent& director, const GameInputView& input );
         void submitBattleInput( JRPGGameModeComponent& director, const GameInputView& input );
         /** @brief 고른 적을 살아 있는 적으로 맞추고, `Move` 축을 한 번 기울였으면 다음 산 적으로 옮깁니다. */
@@ -68,19 +63,19 @@ namespace sw
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the party and cycles the battle target (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action that attacks the target (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action that attacks the target (required)" )
         hashed_string _attackAction;
-        PROPERTY( Category = "Input", DisplayName = "Spell Action", Tooltip = "InputMap action that casts the first usable spell (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Spell Action", Tooltip = "InputMap action that casts the first usable spell (required)" )
         hashed_string _spellAction;
-        PROPERTY( Category = "Input", DisplayName = "Defend Action", Tooltip = "InputMap action that defends this round (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Defend Action", Tooltip = "InputMap action that defends this round (required)" )
         hashed_string _defendAction;
-        PROPERTY( Category = "Input", DisplayName = "Flee Action", Tooltip = "InputMap action that flees the battle (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Flee Action", Tooltip = "InputMap action that flees the battle (required)" )
         hashed_string _fleeAction;
-        PROPERTY( Category = "Input", DisplayName = "Rest Action", Tooltip = "InputMap action that rests at the inn (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Rest Action", Tooltip = "InputMap action that rests at the inn (required)" )
         hashed_string _restAction;
-        PROPERTY( Category = "Input", DisplayName = "Equip Action", Tooltip = "InputMap action that wears the next gear from the bag (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Equip Action", Tooltip = "InputMap action that wears the next gear from the bag (required)" )
         hashed_string _equipAction;
-        PROPERTY( Category = "Input", DisplayName = "Class Change Action", Tooltip = "InputMap action that changes the class of a member at the inn (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Class Change Action", Tooltip = "InputMap action that changes the class of a member at the inn (required)" )
         hashed_string _classChangeAction;
         PROPERTY( Category = "Input", DisplayName = "Class Change Member", Tooltip = "Party member whose class the action changes", Min = 0 )
         int32 _classChangeMember;
@@ -90,14 +85,10 @@ namespace sw
         PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
         AssetRef<PrefabAsset> _markerPrefab;
 
-        TComponentHandle<JRPGGameModeComponent> _director;
-        PrefabViewBatch                         _bodies;
-        PrefabViewBatch                         _markers;
-        unique_ptr<JRPGBattleHUDViewModel>      _hudViewModel;      ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        int32                                   _target;            ///< 고른 적
-        int32                                   _lastStep;          ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 적을 고른다
-        uint8                                   _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 읽지 않고 그리기만 한다)
-        uint8                                   _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                  _reserved      : 6;
+        PrefabViewBatch                    _bodies;
+        PrefabViewBatch                    _markers;
+        unique_ptr<JRPGBattleHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        int32                              _target;       ///< 고른 적
+        int32                              _lastStep;     ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 적을 고른다
     };
 } // namespace sw

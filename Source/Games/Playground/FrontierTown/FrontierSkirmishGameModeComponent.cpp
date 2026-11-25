@@ -134,11 +134,4 @@ namespace sw
             continuePatrol();
         (void)_world.update( deltaTime, 1.0f ); // 배속 없는 시연 — 진행한 시간은 쓰지 않는다
     }
-
-    void FrontierSkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 키트의 클라이언트 모듈(`RTSBattlefieldViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
 } // namespace sw

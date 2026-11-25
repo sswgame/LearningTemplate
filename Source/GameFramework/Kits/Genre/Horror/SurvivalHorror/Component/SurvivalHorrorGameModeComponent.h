@@ -100,7 +100,7 @@ namespace sw
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const SurvivalHorrorCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == SurvivalHorrorResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == SurvivalHorrorResult::Ongoing; }
         /** @brief 전투 중이면 true 입니다. */
         bool isFighting() const { return _encounterSpot >= 0; }
         /** @brief 이미 줍거나 쓰러뜨린 자리이면 true 입니다. */
@@ -132,7 +132,6 @@ namespace sw
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 깃발 · 가방 · 상자 · 방 그래프를 비우고 세션을 새로 엽니다(판을 열 때 · 상태를 읽기 전). 세션이 거절하면 이유를 남기고 false 입니다. */

@@ -296,13 +296,6 @@ namespace sw
             addMoneyResult( outListValue, _firstReward - _rewardStep * placesBehind );
     }
 
-    void KartGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`KartRaceViewComponent`)이 읽어 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void KartGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( KartGameModeComponentInternal::kStateFormat );

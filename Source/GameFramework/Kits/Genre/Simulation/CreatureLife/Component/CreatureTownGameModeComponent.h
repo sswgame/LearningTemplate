@@ -82,7 +82,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 마을을 열고 공유 상태(일지 · 평판 · 시계)를 빌립니다(시작과 복원이 같은 설정으로 연다). 크기가 범위 밖이면 마을이 오류를 남기고 false 입니다. */

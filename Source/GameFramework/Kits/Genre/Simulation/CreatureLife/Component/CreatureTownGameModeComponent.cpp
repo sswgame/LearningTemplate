@@ -241,11 +241,4 @@ namespace sw
         ++_townRevision;
         SW_LOG_INFO_ID( "CreatureTown.UpgradeBought", "[CreatureTown] '%#' built on day %#", _upgradeHabitat.c_str(), day );
     }
-
-    void CreatureTownGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`CreatureTownViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
 } // namespace sw

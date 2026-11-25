@@ -78,7 +78,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 끝나지 않아 입력 명령을 받으면 true 입니다. */
-        bool                                  isAcceptingInput() const { return isStarted() && _phase != BattleRoyalePhase::Ended; }
+        bool                                  isAcceptingInput() const override { return isStarted() && _phase != BattleRoyalePhase::Ended; }
         const BattleRoyaleMatch&              getMatch() const { return _match; }
         const vector<BattleRoyaleGroundItem>& getGroundItems() const { return _listGroundItem; }
         /** @brief 바닥 무더기 목록이 바뀔 때마다 늘어나는 번호입니다 — 뷰가 다시 세울지 정한다. */
@@ -109,7 +109,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

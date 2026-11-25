@@ -125,7 +125,7 @@ namespace sw
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const ScavengerCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == ScavengerResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == ScavengerResult::Ongoing; }
         bool isHuman( int32 player ) const;
         /** @brief 승무원 @p player 가 있는 곳에서 @p direction(x 오른쪽 · y 앞) 쪽의 이웃입니다. 그쪽에 이웃이 없으면 빈 이름입니다(잠긴 문의 이웃도 답한다). */
         hashed_string findNeighborToward( int32 player, const float2& direction ) const;
@@ -165,7 +165,6 @@ namespace sw
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 씬 데이터가 가리키는 위성 · 가게 · 아이템이 카탈로그에 있는지 봅니다. 없으면 오류를 남기고 false 입니다. */

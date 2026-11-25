@@ -95,8 +95,8 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, SpawnMatchesTextState )
     // 매니저마다 하나씩 스폰한다 — 같은 매니저면 두 번째가 번호 붙은 이름(`Crate_2`)을 받아 글이 이름에서 갈린다.
     GameObjectManager firstManager;
     GameObjectManager secondManager;
-    GameObject*       pFirst  = cache.spawn( &firstManager, prefabID );
-    GameObject*       pSecond = cache.spawn( &secondManager, prefabID );
+    GameObject*       pFirst  = cache.spawn( &firstManager, prefabID, SpawnLifetime::Persistent );
+    GameObject*       pSecond = cache.spawn( &secondManager, prefabID, SpawnLifetime::Persistent );
     SW_REQUIRE_NOT_NULL( pFirst );
     SW_REQUIRE_NOT_NULL( pSecond );
 
@@ -163,7 +163,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, MissingComponentAndHandleSurviveTemplate 
 
     PrefabCache       cache;
     GameObjectManager spawnManager;
-    GameObject*       pSpawned = cache.spawn( &spawnManager, test::ScopedScratchDomain::makeID( "holder.prefab.xml" ).str() );
+    GameObject*       pSpawned = cache.spawn( &spawnManager, test::ScopedScratchDomain::makeID( "holder.prefab.xml" ).str(), SpawnLifetime::Persistent );
     SW_REQUIRE_NOT_NULL( pSpawned );
     SW_EXPECT_NOT_NULL( pSpawned->getComponent<MissingComponent>() );
     const HandleHolderTestComponent* pSpawnedHolder = pSpawned->getComponent<HandleHolderTestComponent>();
@@ -208,7 +208,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, TemplateBuiltOnWorkerLoadMatchesTextState
     const shared_ptr<const PrefabAsset> pAsset = cache.request( prefabID ).wait();
     SW_REQUIRE_NOT_NULL( pAsset.get() );
     GameObjectManager spawnManager;
-    GameObject*       pSpawned = cache.spawn( &spawnManager, prefabID );
+    GameObject*       pSpawned = cache.spawn( &spawnManager, prefabID, SpawnLifetime::Persistent );
     SW_REQUIRE_NOT_NULL( pSpawned );
 
     GameObjectManager textManager;
@@ -246,9 +246,18 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
     // 기준: 원본 글로 스폰한 바퀴 부품(소스 정책).
     PrefabCache       sourceCache;
     GameObjectManager sourceManager;
-    SW_REQUIRE_NOT_NULL( sourceCache.spawn( &sourceManager, cartID ) );
+    SW_REQUIRE_NOT_NULL( sourceCache.spawn( &sourceManager, cartID, SpawnLifetime::Persistent ) );
     const GameObject* pSourceWheel = sourceManager.findGameObjectByName( hashed_string( "Wheel" ) );
     SW_REQUIRE_NOT_NULL( pSourceWheel );
+    SW_EXPECT_FALSE( pSourceWheel->isTransient() );
+
+    // 모습으로 스폰하면 중첩 부품까지 파생이다 — 스냅샷 · 상태 해시는 오브젝트마다 본다.
+    GameObjectManager derivedManager;
+    const GameObject* pDerivedRoot  = sourceCache.spawn( &derivedManager, cartID, SpawnLifetime::Derived );
+    const GameObject* pDerivedWheel = derivedManager.findGameObjectByName( hashed_string( "Wheel" ) );
+    SW_REQUIRE_TRUE( pDerivedRoot != nullptr && pDerivedWheel != nullptr );
+    SW_EXPECT_TRUE( pDerivedRoot->isTransient() );
+    SW_EXPECT_TRUE( pDerivedWheel->isTransient() );
 
     PackManager* pPacks = engine::findSubsystem<PackManager>(); // 테스트 호스트는 에셋 매니저가 팩 매니저를 건다
     SW_REQUIRE_NOT_NULL( pPacks );
@@ -259,7 +268,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, CookedFlattenedNodeSpawnsFromTemplate )
     SW_REQUIRE_EQUAL( size_t{ 1 }, pCooked->getNestedInstances().size() );
     SW_EXPECT_TRUE( pCooked->getNestedInstances()[0].isResolved() );
     GameObjectManager cookedManager;
-    SW_REQUIRE_NOT_NULL( cookedCache.spawn( &cookedManager, cartID ) );
+    SW_REQUIRE_NOT_NULL( cookedCache.spawn( &cookedManager, cartID, SpawnLifetime::Persistent ) );
     const GameObject* pCookedWheel = cookedManager.findGameObjectByName( hashed_string( "Wheel" ) );
     SW_REQUIRE_NOT_NULL( pCookedWheel );
     const string cookedState = Util::saveState( pCookedWheel );
@@ -300,7 +309,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideFollowsNodeWhenAnEarlierNodeI
         SW_EXPECT_LOG( "Prefab.NestedPartPathNotKeyed" );
         PrefabCache       cache;
         GameObjectManager manager;
-        SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID ) );
+        SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID, SpawnLifetime::Persistent ) );
         const GameObject* pWheelB = manager.findGameObjectByName( hashed_string( "WheelB" ) );
         SW_REQUIRE_NOT_NULL( pWheelB );
         SW_EXPECT_TRUE( Util::saveState( pWheelB ).find( "_localPosition=\"7,7,7\"" ) == string::npos );
@@ -311,7 +320,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideFollowsNodeWhenAnEarlierNodeI
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cart.prefab.xml" ), Util::makePrefab( "Cart", "1,2,3", wheelB.view() ) ) );
     PrefabCache       cache;
     GameObjectManager manager;
-    SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID ) );
+    SW_REQUIRE_NOT_NULL( cache.spawn( &manager, depotID, SpawnLifetime::Persistent ) );
     const GameObject* pWheelB = manager.findGameObjectByName( hashed_string( "WheelB" ) );
     SW_REQUIRE_NOT_NULL( pWheelB );
     SW_EXPECT_TRUE( Util::saveState( pWheelB ).find( "_localPosition=\"7,7,7\"" ) != string::npos );
@@ -341,7 +350,7 @@ SW_TEST_CASE( PrefabSpawnTemplateTest, PartOverrideKeepsHandleToSceneObject )
     GameObjectManager          authored;
     GameObject*                pTargetObject = authored.createGameObject( hashed_string( "Target" ) );
     HandleTargetTestComponent* pTarget       = pTargetObject->addComponent<HandleTargetTestComponent>();
-    GameObject*                pRoot         = cache.spawn( &authored, cartID );
+    GameObject*                pRoot         = cache.spawn( &authored, cartID, SpawnLifetime::Persistent );
     SW_REQUIRE_NOT_NULL( pRoot );
     GameObject* pWheel = authored.findGameObjectByName( hashed_string( "Wheel" ) );
     SW_REQUIRE_TRUE( pWheel != nullptr && pWheel->getComponent<HandleHolderTestComponent>() != nullptr );

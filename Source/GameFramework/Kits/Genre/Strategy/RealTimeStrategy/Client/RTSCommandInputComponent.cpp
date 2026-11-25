@@ -7,14 +7,11 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/SkirmishGameModeComponent.h"
@@ -77,7 +74,8 @@ namespace sw
 namespace sw
 {
     RTSCommandInputComponent::RTSCommandInputComponent()
-        : _cameraRig{}
+        : GameModeViewComponent( GameModeViewBinding::of<&RTSCommandInputComponent::updateInput, &RTSCommandInputComponent::submitInput>() )
+        , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
         , _watchCameraPreset{}
         , _clickDragThreshold{ 0.6f }
@@ -100,48 +98,25 @@ namespace sw
         , _listGroupAction{}
         , _listBuildAction{}
         , _listBuildUnitID{}
-        , _director{}
         , _selection{}
         , _dragStart{}
         , _dragPoint{}
         , _appliedMatchID{ 0 }
         , _selectionMatchID{ 0 }
-        , _bInputLive{ SW_FALSE }
         , _bNamesValid{ SW_FALSE }
         , _bDragging{ SW_FALSE }
         , _bDragPointValid{ SW_FALSE }
         , _bAttackMovePending{ SW_FALSE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     RTSCommandInputComponent::~RTSCommandInputComponent() = default;
-
-    void RTSCommandInputComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        _director = TComponentHandle<SkirmishGameModeComponent>( findGameMode() );
-        if ( _director.isValid() == false )
-        {
-            const GameObject* const pOwner = getOwner();
-            SW_LOG_ERROR_ID( "RTSCommandInput.NoGameMode", "RTS command input on '%#': no SkirmishGameModeComponent in front of it on the same object - it reads no input",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-        }
-    }
 
     const SkirmishGameModeComponent* RTSCommandInputComponent::findGameMode() const
     {
         const GameObject* const pOwner = getOwner();
         return pOwner != nullptr ? pOwner->getComponent<SkirmishGameModeComponent>() : nullptr;
-    }
-
-    void RTSCommandInputComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( RTSCommandInputComponent& commandInput, GameObjectManager& manager )
-        { commandInput.updateInput( manager ); } );
     }
 
     void RTSCommandInputComponent::serializeState( StateIO& io )
@@ -176,28 +151,26 @@ namespace sw
         return true;
     }
 
-    void RTSCommandInputComponent::updateInput( GameObjectManager& manager )
+    void RTSCommandInputComponent::updateInput( GameObjectManager& manager, SkirmishGameModeComponent& director )
     {
-        SkirmishGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const uint64 matchID = pDirector->getMatchID();
+        const uint64 matchID = director.getMatchID();
         if ( _appliedMatchID != matchID || _selectionMatchID != matchID )
-            applyMatch( manager, *pDirector );
-        playStepEvents( manager, *pDirector );
-        _selection.prune( pDirector->getWorld() );
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bNamesValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput == nullptr )
+            applyMatch( manager, director );
+        playStepEvents( manager, director );
+        _selection.prune( director.getWorld() );
+        dispatchInput( manager, director );
+    }
+
+    void RTSCommandInputComponent::submitInput( const GameModeInput& inputMap, SkirmishGameModeComponent& director )
+    {
+        if ( _bNamesValid == SW_FALSE )
             return;
-        // 카메라 이동과 확대는 리그(PostPhysics)가 읽는다. 여기서는 속도, 일시정지, 명령을 처리한다.
-        // 키는 입력 맵이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-        const GameInputView inputMap( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        (void)pDirector->submitTimeInput( inputMap.wasActionTriggered( _pauseAction ), inputMap.wasActionTriggered( _fasterAction ), inputMap.wasActionTriggered( _slowerAction ) ); // 거절은 디렉터가 알린다
+        // 카메라 이동과 확대는 리그(PostPhysics)가 읽는다. 여기서는 속도, 일시정지, 명령을 처리한다. 키는 입력 맵이 정한다.
+        (void)director.submitTimeInput( inputMap.wasActionTriggered( _pauseAction ), inputMap.wasActionTriggered( _fasterAction ), inputMap.wasActionTriggered( _slowerAction ) ); // 거절은 디렉터가 알린다
         if ( inputMap.wasActionTriggered( _statusAction ) )
-            pDirector->getMatch().logStatus();
-        if ( pDirector->isLocalPlayerHuman() && pDirector->getMatch().isOver() == false )
-            updateHumanCommands( manager, *pDirector, *pInput, inputMap );
+            director.getMatch().logStatus();
+        if ( director.isLocalPlayerHuman() && director.getMatch().isOver() == false )
+            updateHumanCommands( inputMap.getManager(), director, inputMap.getDevices(), inputMap );
     }
 
     void RTSCommandInputComponent::applyMatch( GameObjectManager& manager, const SkirmishGameModeComponent& director )

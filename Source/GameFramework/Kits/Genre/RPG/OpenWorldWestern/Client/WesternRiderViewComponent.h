@@ -10,11 +10,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -30,7 +29,7 @@ namespace sw
      */
     REFLECT( Category = "Western", DisplayName = "Western Rider View",
              Tooltip = "Client side of a western game: keeps the camera rig on the rider and writes the ride and outlaw lines of the HUD from the Western Game Mode on the same object" )
-    class SW_KIT_CLIENT_API WesternRiderViewComponent : public Component
+    class SW_KIT_CLIENT_API WesternRiderViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -40,17 +39,12 @@ namespace sw
         WesternRiderViewComponent();
         virtual ~WesternRiderViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 카메라 초점 · HUD 를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
         /** @brief @p director 의 무법자 글입니다. 아무 일도 없으면(시작 명예 · 수배 없음 · 가죽 없음 · 코어 멀쩡) 비어 있어 HUD 에 아무것도 그리지 않습니다. */
         string formatOutlawStatus( const WesternGameModeComponent& director ) const;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 판이 열렸으면 카메라 초점과 HUD 를 씁니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, const WesternGameModeComponent& director );
         /** @brief 카메라 리그 초점을 기수(탔으면 기수가 붙은 말 위)의 발 아래에 둡니다. */
         void updateCameraFocus( GameObjectManager& manager, const PawnComponent& playerPawn );
         /** @brief 같은 오브젝트의 HUD 에 탑승 상태 한 줄과 말 스태미나, 무법자 글을 씁니다. */
@@ -62,7 +56,6 @@ namespace sw
         PROPERTY( Category = "HUD", DisplayName = "Low Core Warning", Min = 0.0, Max = 100.0, Tooltip = "The HUD warns when a core falls below this" )
         float32 _lowCoreWarning;
 
-        TComponentHandle<WesternGameModeComponent> _director;
-        unique_ptr<WesternHUDViewModel>            _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        unique_ptr<WesternHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
     };
 } // namespace sw

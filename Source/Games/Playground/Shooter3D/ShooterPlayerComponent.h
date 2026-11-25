@@ -135,8 +135,6 @@ namespace sw
         /** @brief 치트 `cheat.shooter.god` 입니다. 켜면 피해를 받지 않습니다(`HealthStateMachine::setDamageImmune`, 판을 다시 시작해도 남는다). */
         void setDamageImmune( bool bImmune ) { _healthMachine.setDamageImmune( bImmune ); }
         bool isDamageImmune() const { return _healthMachine.isDamageImmune(); }
-        /** @brief 스폰한 몸을 지웁니다(상태를 저장하기 전). 다음 틱이 끝난 뒤 다시 스폰합니다. */
-        void despawnViews();
         /**
          * @brief 지금 무기에 탄 @p projectileID 를 장전합니다(치트 `cheat.shooter.projectile`, 시나리오). 빈 id 는 그 무기의 기본 탄입니다.
          * @return 탄 카탈로그에 없거나 무기가 받지 않는 탄이면 오류를 남기고 false 이며 장전은 그대로입니다.
@@ -196,6 +194,8 @@ namespace sw
         bool isOut() const { return _bOut == SW_TRUE; }
 
     private:
+        /** @brief 세운 모습을 모두 지웁니다(플레이 끝 · 다시 세울 때). 모습은 파생이라 상태를 실을 때 걷지 않는다(`SpawnLifetime::Derived`). */
+        void despawnViews();
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
         struct TracerRequest
         {

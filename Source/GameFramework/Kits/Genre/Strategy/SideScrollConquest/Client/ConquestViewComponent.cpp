@@ -3,14 +3,9 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Client/ConquestViewComponent.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Client/ConquestHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Component/ConquestGameModeComponent.h"
@@ -36,7 +31,8 @@ namespace sw
     } // namespace
 
     ConquestViewComponent::ConquestViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&ConquestViewComponent::updateView, &ConquestViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _followAction{}
         , _holdAction{}
         , _chargeAction{}
@@ -48,44 +44,15 @@ namespace sw
         , _neutralColor{ 0.6f, 0.6f, 0.6f, 1.0f }
         , _playerColor{ 0.3f, 0.55f, 1.0f, 1.0f }
         , _enemyColor{ 1.0f, 0.35f, 0.3f, 1.0f }
-        , _director{}
         , _siteViews{}
         , _soldierViews{}
         , _commanderViews{}
         , _hudViewModel{ nullptr }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     ConquestViewComponent::~ConquestViewComponent() = default;
-
-    void ConquestViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                      pOwner    = getOwner();
-        const ConquestGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<ConquestGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Conquest.ViewWithoutGameMode", "Conquest view on '%#': no ConquestGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<ConquestGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<ConquestGameModeComponent>( pDirector );
-    }
-
-    void ConquestViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        const bool bOrders = _followAction.empty() == false && _holdAction.empty() == false && _chargeAction.empty() == false;
-        _bActionsValid     = bOrders && _moveAction.empty() == false && _trainAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "Conquest.ViewActionMissing", "Conquest view: move '%#', follow '%#', hold '%#', charge '%#' and train '%#' actions must all be named - the view reads no input",
-                             _moveAction.c_str(), _followAction.c_str(), _holdAction.c_str(), _chargeAction.c_str(), _trainAction.c_str() );
-    }
 
     void ConquestViewComponent::onEndPlay()
     {
@@ -98,34 +65,18 @@ namespace sw
             _commanderViews.destroyAll( *pManager );
         }
         _hudViewModel.reset(); // 지워지는 뷰모델은 HUD 가 스스로 뗀다
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void ConquestViewComponent::onTick( TickContext& context )
+    void ConquestViewComponent::updateView( GameObjectManager& manager, ConquestGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( ConquestViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        dispatchInput( manager, director );
+        showWorld( manager, director );
+        updateHUD( director );
     }
 
-    void ConquestViewComponent::updateView( GameObjectManager& manager )
+    void ConquestViewComponent::submitInput( const GameModeInput& input, ConquestGameModeComponent& director ) const
     {
-        ConquestGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAwaitingCommand() )
-            submitInput( *pDirector );
-        showWorld( manager, *pDirector );
-        updateHUD( *pDirector );
-    }
-
-    void ConquestViewComponent::submitInput( ConquestGameModeComponent& director ) const
-    {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
         // 받는지는 부른 쪽이 보았다(`isAwaitingCommand`). 훈련을 거절한 까닭은 디렉터가 남긴다.
         (void)director.submitCommanderMove( input.getVector2D( _moveAction )._x );
         if ( input.wasActionTriggered( _followAction ) )

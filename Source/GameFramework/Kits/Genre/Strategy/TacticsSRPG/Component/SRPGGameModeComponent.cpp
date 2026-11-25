@@ -278,13 +278,6 @@ namespace sw
         settle();
     }
 
-    void SRPGGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`SRPGCursorComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SRPGGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( SRPGGameModeComponentInternal::kStateFormat );

@@ -1326,7 +1326,7 @@ namespace sw
                 pObject = manager.getSubsystem<SocketPartPool>().takePart( Internal::makePoolKey( part._asset, part._material ) );
                 if ( pObject == nullptr && pAssetManager != nullptr )
                 {
-                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.view(), part._partName.c_str() );
+                    pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.view(), SpawnLifetime::Derived, part._partName.c_str() );
                     // 같은 메시를 머티리얼만 달리한 변형(`material` · `<MaterialVariant>`)이다. 풀에서 꺼낸 부품은 열쇠가 머티리얼을 담아 이미 입었다.
                     if ( pObject != nullptr && part._material.empty() == false )
                         Internal::forEachMesh( *pObject, [&part]( MeshComponent& mesh )

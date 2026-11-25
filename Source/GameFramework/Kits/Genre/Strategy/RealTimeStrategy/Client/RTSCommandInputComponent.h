@@ -14,14 +14,13 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
@@ -41,7 +40,7 @@ namespace sw
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "RTS Command Input",
              Tooltip = "Client side of a skirmish: selects units and sends orders, training, building and speed input to the Skirmish Game Mode on the same object" )
-    class SW_KIT_CLIENT_API RTSCommandInputComponent : public Component
+    class SW_KIT_CLIENT_API RTSCommandInputComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -54,11 +53,6 @@ namespace sw
 
         RTSCommandInputComponent();
         virtual ~RTSCommandInputComponent() override;
-
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 알림 · 입력 처리를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
         /** @brief 고른 유닛 · 부대를 씁니다(`ComponentStateCodec::captureObject`). 읽기는 사본에 받아 끝까지 맞으면 옮깁니다. */
         SW_DECLARE_STATE_IO_IN_PLACE();
@@ -75,7 +69,8 @@ namespace sw
 
     private:
         /** @brief 틱 뒤 게임 스레드: 새 판이면 맞추고, 알림을 내고, 시간이 흐르는 동안 입력을 명령으로 바꿉니다. */
-        void updateInput( GameObjectManager& manager );
+        void updateInput( GameObjectManager& manager, SkirmishGameModeComponent& director );
+        void submitInput( const GameModeInput& inputMap, SkirmishGameModeComponent& director );
         /** @brief 열린 판에 맞춥니다 — 다른 판의 고르기를 버리고 플레이어 · 상한을 정하고 데이터 이름을 보고 카메라를 맞춘 뒤 조작을 안내합니다. */
         void applyMatch( GameObjectManager& manager, const SkirmishGameModeComponent& director );
         /** @brief 씬 데이터가 준 이름(입력 액션 · 건설 단축키 표 · 관전 프리셋)이 입력 맵과 유닛 카탈로그에 모두 있는지 봅니다. 빠진 것은 모두 오류로 남기고 false 다 — 입력을 읽지 않는다. */
@@ -141,17 +136,16 @@ namespace sw
         PROPERTY( Category = "Input Actions", DisplayName = "Build Units", Tooltip = "Unit catalog id placed by the build action at the same index" )
         vector<CatalogKey<RTSUnitDef>> _listBuildUnitID;
 
-        TComponentHandle<SkirmishGameModeComponent> _director;
-        RTSSelection                                _selection;
-        float3                                      _dragStart;
-        float3                                      _dragPoint;
-        uint64                                      _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
-        uint64                                      _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
-        uint8                                       _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
-        uint8                                       _bNamesValid        : 1;
-        uint8                                       _bDragging          : 1;
-        uint8                                       _bDragPointValid    : 1;
-        uint8                                       _bAttackMovePending : 1;
-        [[maybe_unused]] uint8                      _reserved           : 4;
+        RTSSelection           _selection;
+        float3                 _dragStart;
+        float3                 _dragPoint;
+        uint64                 _appliedMatchID;   ///< 맞춘 판(`SkirmishGameModeComponent::getMatchID`, 0 이면 아직)
+        uint64                 _selectionMatchID; ///< 고르기가 속한 판(되돌린 구간이 실은 것이거나 맞춘 판)
+        uint8                  _bInputLive;       ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다). 틱이 쓰므로 뷰가 읽는 비트와 나눈다
+        uint8                  _bNamesValid        : 1;
+        uint8                  _bDragging          : 1;
+        uint8                  _bDragPointValid    : 1;
+        uint8                  _bAttackMovePending : 1;
+        [[maybe_unused]] uint8 _reserved           : 4;
     };
 } // namespace sw

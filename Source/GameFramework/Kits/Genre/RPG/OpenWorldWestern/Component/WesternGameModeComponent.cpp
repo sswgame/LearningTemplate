@@ -199,13 +199,6 @@ namespace sw
         { gameMode.updateLawSight(); } );
     }
 
-    void WesternGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 세우는 런타임 오브젝트가 없다 — 말과 기수는 씬에 있다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     const PawnComponent* WesternGameModeComponent::findPlayerPawn() const
     {
         return findOn<PawnComponent>( _player );

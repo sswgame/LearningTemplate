@@ -56,7 +56,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 진행 중(깸 · 게임 오버 전)이라 입력 명령을 받으면 true 입니다. */
-        bool                   isAcceptingInput() const;
+        bool                   isAcceptingInput() const override;
         const PlatformTileMap& getTileMap() const { return _map; }
         const ActionStageRun&  getRun() const { return _run; }
         /** @brief 씬이 놓은 비밀 자리입니다(스테이지 정의의 비밀 순서). */
@@ -80,7 +80,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 씬의 지형 줄로 칸 지형과 키트 격자를 칠합니다. 줄이 없거나 읽지 못하면 오류를 남기고 false 입니다. */

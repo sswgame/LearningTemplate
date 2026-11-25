@@ -56,7 +56,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 경기가 열렸고 사람이 모는 차가 결승 전이면 true 입니다(자동 플레이면 false). */
-        bool             isAcceptingInput() const;
+        bool             isAcceptingInput() const override;
         const KartRace&  getRace() const { return _race; }
         const KartTrack& getTrack() const { return _track; }
         /** @brief 차 @p racer 의 절대 자리입니다. 없는 번호면 원점입니다. */
@@ -71,7 +71,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 지금 카탈로그로 트랙을 풀고 @p outRace 를 열어 차를 모두 세웁니다(출발은 하지 않는다). 열지 못하면 오류를 남기고 false 입니다. */

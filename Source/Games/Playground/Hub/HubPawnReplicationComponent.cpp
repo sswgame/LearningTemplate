@@ -961,7 +961,7 @@ namespace sw
     GameObject* HubPawnReplicationComponent::spawnPawnObject( GameObjectManager& manager, const utf8* pName, const float3& localPosition ) const
     {
         AssetManager* const pAssetManager = game::findSubsystem<AssetManager>();
-        GameObject* const   pObject       = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, _pawnPrefab.path(), pName ) : nullptr;
+        GameObject* const   pObject       = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, _pawnPrefab.path(), SpawnLifetime::Derived, pName ) : nullptr;
         const GameObject*   pLocal        = manager.resolveGameObject( _localPawn );
         SceneComponent*     pRoot         = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
         PawnComponent*      pPawn         = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
@@ -984,8 +984,7 @@ namespace sw
         pMovement->copyTuning( *pSourceMovement );
         pController->copyTuning( *pSourceController );
         pMovement->setNetDriven( true );
-        pObject->setAlwaysLoaded( true ); // 존재는 접속 · 복제가 정한다 — 스트리밍 셀이 내리지 않는다
-        pObject->setTransient( true );    // 같은 까닭으로 세이브 · 스냅샷에도 싣지 않는다 — 복원한 씬에 주인 없는 폰이 서고, 복원한 이 컴포넌트가 접속마다 다시 세운다
+        pObject->setAlwaysLoaded( true ); // 존재는 접속 · 복제가 정한다 — 스트리밍 셀이 내리지 않고, 같은 까닭으로 세이브에도 싣지 않는다(`SpawnLifetime::Derived`)
         pRoot->teleportTo( localPosition );
         return pObject;
     }

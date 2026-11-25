@@ -129,7 +129,7 @@ namespace sw
         if ( item.isEmpty() )
             return nullptr;
         AssetManager* const pAssets = manager.findAssetManager();
-        GameObject* const   pObject = pAssets != nullptr && prefabPath.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, kSpawnedName ) : nullptr;
+        GameObject* const   pObject = pAssets != nullptr && prefabPath.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, SpawnLifetime::Persistent, kSpawnedName ) : nullptr;
         PickupComponent*    pPickup = pObject != nullptr ? pObject->getComponent<PickupComponent>() : nullptr;
         SceneComponent*     pRoot   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
         if ( pPickup == nullptr || pRoot == nullptr )

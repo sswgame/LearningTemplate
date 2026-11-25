@@ -204,12 +204,6 @@ namespace sw
         refreshLockedTarget();
     }
 
-    void GuardDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     bool GuardDemoComponent::lockBest()
     {
         float3 eye{};

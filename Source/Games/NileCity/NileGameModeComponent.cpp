@@ -69,12 +69,6 @@ namespace sw
         logCityEvents();
     }
 
-    void NileGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     bool NileGameModeComponent::submitAutoPlanToggle()
     {
         if ( isStarted() == false )

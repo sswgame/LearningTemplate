@@ -113,7 +113,7 @@ namespace sw
                 manager.executeOrDeferPostTick( [pManager, prefab, position]()
                 {
                     AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
-                    GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, prefab ) : nullptr;
+                    GameObject*     pSpawned      = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( pManager, prefab, SpawnLifetime::Persistent ) : nullptr;
                     SceneComponent* pSpawnedScene = pSpawned != nullptr ? pSpawned->getPrimarySceneComponent() : nullptr;
                     if ( pSpawnedScene != nullptr )
                         pSpawnedScene->setWorldPosition( position );

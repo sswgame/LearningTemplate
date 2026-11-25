@@ -200,13 +200,6 @@ namespace sw
         SW_LOG_INFO_ID( "Velmora.RegionCleared", "[Velmora] '%#' cleared%#", pArena->_name, result._bBossDefeated == SW_TRUE ? " - the boss fell" : "" );
     }
 
-    void VelmoraEncounterGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트의 디버그 그리기뿐이라 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void VelmoraEncounterGameModeComponent::serializeGameState( StateIO& io )
     {
         // 싸움은 싣지 않는다(클래스 설명) — 머리만 쓰고, 읽으면 싸움을 닫는다.

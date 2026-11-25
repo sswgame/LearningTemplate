@@ -14,15 +14,14 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
@@ -60,7 +59,7 @@ namespace sw
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Field View",
              Tooltip = "Client side of a farm: spawns the soil and crop views of the field tiles and keeps the camera rig between the field and the farmer of the Farm Game Mode on the same object" )
-    class SW_KIT_CLIENT_API FarmFieldViewComponent : public Component
+    class SW_KIT_CLIENT_API FarmFieldViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -73,15 +72,8 @@ namespace sw
         FarmFieldViewComponent();
         virtual ~FarmFieldViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
         /** @brief 세운 칸 오브젝트를 걷습니다. */
         void onEndPlay() override;
-        /** @brief 세우기 · 카메라 초점을 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
-        /** @brief 세운 칸 오브젝트를 모두 지웁니다. 다음 틱이 다시 세웁니다(상태 저장 전 — `StatefulComponentRegistrar`). */
-        void despawnViews();
 
         /** @brief 흙 상태(0 풀, 1 갈았음, 2 물 줌)의 모습을 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& getSoilLook( int32 soilState ) const;
@@ -93,6 +85,8 @@ namespace sw
         const string& findGrowingModel( const hashed_string& cropID, int32 stage ) const;
 
     private:
+        /** @brief 세운 모습을 모두 지웁니다(플레이 끝 · 다시 세울 때). 모습은 파생이라 상태를 실을 때 걷지 않는다(`SpawnLifetime::Derived`). */
+        void despawnViews();
         /** @brief 작물 하나의 다 자란 색 모습입니다. */
         struct CropLook
         {
@@ -102,7 +96,7 @@ namespace sw
 
     private:
         /** @brief 틱 뒤 게임 스레드: 판이 열렸으면 칸을 세우고(처음 · 걷은 뒤) 카메라 초점을 옮깁니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, const FarmGameModeComponent& director );
         /** @brief 작물 모델 표(씬 데이터)가 디렉터의 카탈로그와 맞는지 봅니다. 다르면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validateModels( const FarmGameModeComponent& director ) const;
         void               spawnField( GameObjectManager& manager, const FarmGameModeComponent& director );
@@ -136,16 +130,15 @@ namespace sw
                   Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
         vector<AssetRef<MeshAssetFormat>> _listDefaultGrowingModel;
 
-        TComponentHandle<FarmGameModeComponent> _director;
-        vector<GameObjectHandle>                _listTileObject; ///< 세운 칸 오브젝트(흙 · 작물)
-        MaterialTintCache                       _tintCache;      ///< 흙과 작물 색(같은 색은 나눠 쓴다).
-        vector<CropLook>                        _listCropLook;
-        vector<MeshHandle>                      _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        shared_ptr<MaterialInstance>            _arrSoilLook[3];
-        shared_ptr<MaterialInstance>            _plainCropLook;
-        shared_ptr<MaterialInstance>            _witheredCropLook;
-        uint8                                   _bSpawned  : 1; ///< 칸 오브젝트가 서 있다
-        uint8                                   _bRejected : 1; ///< 작물 모델 표가 틀려 세우지 않는다(`validateModels`)
-        [[maybe_unused]] uint8                  _reserved  : 6;
+        vector<GameObjectHandle>     _listTileObject; ///< 세운 칸 오브젝트(흙 · 작물)
+        MaterialTintCache            _tintCache;      ///< 흙과 작물 색(같은 색은 나눠 쓴다).
+        vector<CropLook>             _listCropLook;
+        vector<MeshHandle>           _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
+        shared_ptr<MaterialInstance> _arrSoilLook[3];
+        shared_ptr<MaterialInstance> _plainCropLook;
+        shared_ptr<MaterialInstance> _witheredCropLook;
+        uint8                        _bSpawned  : 1; ///< 칸 오브젝트가 서 있다
+        uint8                        _bRejected : 1; ///< 작물 모델 표가 틀려 세우지 않는다(`validateModels`)
+        [[maybe_unused]] uint8       _reserved  : 6;
     };
 } // namespace sw

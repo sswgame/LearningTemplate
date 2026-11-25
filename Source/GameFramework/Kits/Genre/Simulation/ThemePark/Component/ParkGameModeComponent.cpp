@@ -105,13 +105,6 @@ namespace sw
         }
     }
 
-    void ParkGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`ParkViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     const CoasterTrain* ParkGameModeComponent::findCoasterTrain( int32 coasterIndex ) const
     {
         if ( coasterIndex < 0 || coasterIndex >= static_cast<int32>( _listCoaster.size() ) )

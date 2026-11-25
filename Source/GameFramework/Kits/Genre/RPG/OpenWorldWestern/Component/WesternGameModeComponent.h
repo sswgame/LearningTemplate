@@ -60,7 +60,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 이 기수를 주인으로 둔 말 AI 를 모두 부릅니다. 틱 뒤에 돕니다. */

@@ -50,7 +50,6 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 같은 씬의 캐릭터 장비 컴포넌트입니다(시작했을 때만). */

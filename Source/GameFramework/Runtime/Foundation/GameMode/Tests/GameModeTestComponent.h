@@ -101,10 +101,5 @@ namespace sw
         }
         void onStateRestored( bool bRestored ) override { ++( bRestored ? _restoredCount : _refusedCount ); }
         void updateGame( float32 deltaTime ) override { (void)deltaTime; }
-        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
-        {
-            (void)manager;
-            (void)bRespawnViews;
-        }
     };
 } // namespace sw

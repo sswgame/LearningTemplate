@@ -11,11 +11,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -30,7 +29,7 @@ namespace sw
      */
     REFLECT( Category = "ActionPlatformer", DisplayName = "Action Platformer Avatar",
              Tooltip = "Client side of an ActionPlatformer stage: sends input commands to the Action Platformer Game Mode on the same object and draws the stage" )
-    class SW_KIT_CLIENT_API ActionPlatformerAvatarComponent : public Component
+    class SW_KIT_CLIENT_API ActionPlatformerAvatarComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -40,25 +39,20 @@ namespace sw
         ActionPlatformerAvatarComponent();
         virtual ~ActionPlatformerAvatarComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
-        /** @brief 액션 이름이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰와 같은 `PostUpdate` 입니다. */
-        void onBeginPlay() override;
         /** @brief 세운 모습을 지웁니다. */
         void onEndPlay() override;
-        /** @brief 입력 · 명령 · 그리기를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
 
     private:
         /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 스테이지를 그립니다. */
-        void updateAvatar( GameObjectManager& manager );
+        void updateAvatar( GameObjectManager& manager, ActionPlatformerGameModeComponent& director );
+        void submitInput( const GameModeInput& input, ActionPlatformerGameModeComponent& director );
         /** @brief 스테이지를 보입니다. 타일 · 플레이어 자리는 절대 자리다. */
         void showStage( const ActionPlatformerGameModeComponent& director, GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action whose X runs the body (required)" )
         hashed_string _moveAction;
-        PROPERTY( Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action held to jump (required, trigger Down - the game mode finds the press edge)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action held to jump (required, trigger Down - the game mode finds the press edge)" )
         hashed_string _jumpAction;
         PROPERTY( Category = "View", DisplayName = "Cube Prefab", Required, Tooltip = "1 m cube stretched into the tiles, the player and the goal post" )
         AssetRef<PrefabAsset> _cubePrefab;
@@ -81,11 +75,7 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Goal Color" )
         float4 _goalColor;
 
-        TComponentHandle<ActionPlatformerGameModeComponent> _director;
-        PrefabViewBatch                                     _cubeViews;
-        PrefabViewBatch                                     _secretViews;
-        uint8                                               _bInputLive    : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않고 그리기만 한다)
-        uint8                                               _bActionsValid : 1; ///< 액션 이름이 모두 있다(`onBeginPlay`)
-        [[maybe_unused]] uint8                              _reserved      : 6;
+        PrefabViewBatch _cubeViews;
+        PrefabViewBatch _secretViews;
     };
 } // namespace sw

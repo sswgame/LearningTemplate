@@ -5,13 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Client/RhythmHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/Rhythm/Component/RhythmGameModeComponent.h"
@@ -34,7 +29,8 @@ namespace sw
     } // namespace
 
     RhythmViewComponent::RhythmViewComponent()
-        : _music{}
+        : GameModeViewComponent( GameModeViewBinding::of<&RhythmViewComponent::updateView, &RhythmViewComponent::submitInput>() )
+        , _music{}
         , _listLaneAction{}
         , _notePrefab{}
         , _laneWidth{ 1.0f }
@@ -43,15 +39,12 @@ namespace sw
         , _laneColor{ 0.15f, 0.16f, 0.22f, 1.0f }
         , _heldColor{ 0.35f, 0.6f, 1.0f, 1.0f }
         , _noteColor{ 1.0f, 0.8f, 0.25f, 1.0f }
-        , _director{}
         , _laneViews{}
         , _noteViews{}
         , _hudViewModel{ nullptr }
         , _listLaneHeld{}
         , _musicStart{ 0.0f }
         , _musicPhase{ MusicPhase::Idle }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
         , _bMusicPaused{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -60,32 +53,9 @@ namespace sw
 
     RhythmViewComponent::~RhythmViewComponent() = default;
 
-    void RhythmViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                    pOwner    = getOwner();
-        const RhythmGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<RhythmGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Rhythm.ViewWithoutGameMode", "Rhythm view on '%#': no RhythmGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<RhythmGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<RhythmGameModeComponent>( pDirector );
-    }
-
     void RhythmViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        _bActionsValid = _listLaneAction.empty() ? SW_FALSE : SW_TRUE;
-        for ( const hashed_string& action : _listLaneAction )
-        {
-            if ( action.empty() )
-                _bActionsValid = SW_FALSE;
-        }
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "Rhythm.ViewActionMissing", "Rhythm view: every lane needs a named action (%# listed) - the view reads no input", _listLaneAction.size() );
+        GameModeViewComponent::onBeginPlay();
         _listLaneHeld.assign( _listLaneAction.size(), SW_FALSE );
         _musicPhase = MusicPhase::Idle;
     }
@@ -103,27 +73,15 @@ namespace sw
             _noteViews.destroyAll( *pManager );
         }
         _hudViewModel.reset(); // 지워지는 뷰모델은 HUD 가 스스로 뗀다
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void RhythmViewComponent::onTick( TickContext& context )
+    void RhythmViewComponent::updateView( GameObjectManager& manager, RhythmGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( RhythmViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
-    }
-
-    void RhythmViewComponent::updateView( GameObjectManager& manager )
-    {
-        RhythmGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        updateMusic( *pDirector );
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput() )
-            submitInput( *pDirector );
-        showNotes( manager, *pDirector );
-        updateHUD( *pDirector );
+        updateMusic( director );
+        dispatchInput( manager, director );
+        showNotes( manager, director );
+        updateHUD( director );
     }
 
     void RhythmViewComponent::updateMusic( RhythmGameModeComponent& director )
@@ -152,9 +110,9 @@ namespace sw
             }
             case MusicPhase::Playing:
             {
-                if ( _bMusicPaused == _bInputLive ) // 시간이 멈추거나 다시 흐르기 시작한 프레임이다
+                if ( ( _bMusicPaused == SW_TRUE ) == isTimeRunning() ) // 시간이 멈추거나 다시 흐르기 시작한 프레임이다
                 {
-                    _bMusicPaused = _bInputLive == SW_TRUE ? SW_FALSE : SW_TRUE;
+                    _bMusicPaused = isTimeRunning() ? SW_FALSE : SW_TRUE;
                     GameSound::setMusicPaused( _bMusicPaused == SW_TRUE );
                 }
                 if ( musicSeconds.has_value() == false || director.getClock() != RhythmClock::Music )
@@ -169,12 +127,8 @@ namespace sw
         }
     }
 
-    void RhythmViewComponent::submitInput( RhythmGameModeComponent& director )
+    void RhythmViewComponent::submitInput( const GameModeInput& input, RhythmGameModeComponent& director )
     {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
         for ( size_t laneIndex = 0; laneIndex < _listLaneAction.size(); ++laneIndex )
         {
             const uint8 bHeld = input.isActionDown( _listLaneAction[laneIndex] ) ? SW_TRUE : SW_FALSE;

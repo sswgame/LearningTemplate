@@ -597,13 +597,6 @@ namespace sw
             updateHunt( deltaTime );
     }
 
-    void MonsterHuntGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`MonsterHuntAvatarComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void MonsterHuntGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         if ( _phase == MonsterHuntPhase::Victory )

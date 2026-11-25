@@ -13,22 +13,17 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSUnitViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/RTSGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 유닛 · 절벽은 월드에서 다시 세우는 모습이라 상태를 저장하기 전에 걷는다 — 걷지 않으면 복원한 씬에서 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<RTSBattlefieldViewComponent> s_viewRegistration{ "RTSBattlefieldViewComponent" };
 
         struct RTSBattlefieldViewComponentInternal
         {
@@ -58,7 +53,8 @@ namespace sw
     } // namespace
 
     RTSBattlefieldViewComponent::RTSBattlefieldViewComponent()
-        : _unitModelPath{}
+        : GameModeViewComponent( GameModeViewBinding::of<&RTSBattlefieldViewComponent::updateViews>() )
+        , _unitModelPath{}
         , _listCliffPrefab{}
         , _unitPrefab{}
         , _unitPool{}
@@ -67,7 +63,6 @@ namespace sw
         , _neutralColor{ 0.7f, 0.7f, 0.7f, 1.0f }
         , _mineralColor{ 0.35f, 0.85f, 1.0f, 1.0f }
         , _gasColor{ 0.3f, 0.8f, 0.4f, 1.0f }
-        , _director{}
         , _pUnitModelCatalog{}
         , _shownUnitModels{}
         , _unitModels{}
@@ -86,18 +81,9 @@ namespace sw
 
     RTSBattlefieldViewComponent::~RTSBattlefieldViewComponent() = default;
 
-    void RTSBattlefieldViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        const GameObject* const pOwner = getOwner();
-        _director                      = TComponentHandle<RTSGameModeComponent>( pOwner != nullptr ? pOwner->getComponent<RTSGameModeComponent>() : nullptr );
-        if ( _director.isValid() == false )
-            SW_LOG_ERROR_ID( "RTSBattlefieldView.NoGameMode", "RTS battlefield view on '%#': no RTS game mode in front of it on the same object - nothing is drawn", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-    }
-
     void RTSBattlefieldViewComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        GameModeViewComponent::onBeginPlay();
         _bModelsChecked = SW_FALSE;
     }
 
@@ -105,14 +91,7 @@ namespace sw
     {
         despawnViews();
         _unitModels.clear();
-        Component::onEndPlay();
-    }
-
-    void RTSBattlefieldViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        context.deferPostTickOnComponent( *this, []( RTSBattlefieldViewComponent& view, GameObjectManager& manager )
-        { view.updateViews( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void RTSBattlefieldViewComponent::despawnViews()
@@ -146,15 +125,12 @@ namespace sw
         return _listUnitLook.data()[lookIndex];
     }
 
-    void RTSBattlefieldViewComponent::updateViews( GameObjectManager& manager )
+    void RTSBattlefieldViewComponent::updateViews( GameObjectManager& manager, const RTSGameModeComponent& director )
     {
-        const RTSGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
         if ( _bModelsChecked == SW_FALSE )
         {
             _bModelsChecked = SW_TRUE;
-            _bModelsValid   = acquireUnitModels( *pDirector ) ? SW_TRUE : SW_FALSE;
+            _bModelsValid   = acquireUnitModels( director ) ? SW_TRUE : SW_FALSE;
         }
         if ( _bModelsValid == SW_FALSE )
             return;
@@ -163,13 +139,13 @@ namespace sw
             despawnViews();
             _shownUnitModels = _pUnitModelCatalog.snapshot();
         }
-        const RTSWorld& world = pDirector->getWorld();
+        const RTSWorld& world = director.getWorld();
         if ( _bCliffsSpawned == SW_FALSE )
             spawnCliffs( manager, world );
 
         // 보일 유닛은 사람 쪽 화면이 안 보이는 적을 그리지 않게 정한다(자원은 항상 보인다). 슬롯의 유닛이 바뀌었거나 이번에 못 본 슬롯(죽음, 안개)만 쌓인다.
-        const bool  bFog        = pDirector->isLocalPlayerHuman();
-        const int32 localPlayer = pDirector->getLocalPlayer();
+        const bool  bFog        = director.isLocalPlayerHuman();
+        const int32 localPlayer = director.getLocalPlayer();
         _unitViews.beginCollect();
         world.forEachUnit( [this, &world, bFog, localPlayer]( const RTSUnit& unit )
         {
@@ -244,7 +220,7 @@ namespace sw
                 }
                 const uint32      hash   = XorShift32::next( XorShift32::next( static_cast<uint32>( y * width + x ) + 1u ) );
                 const string&     prefab = _listCliffPrefab[hash % static_cast<uint32>( _listCliffPrefab.size() )].path();
-                GameObject* const pCliff = pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab, "RTSCliff" );
+                GameObject* const pCliff = pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefab, SpawnLifetime::Derived, "RTSCliff" );
                 SceneComponent*   pRoot  = pCliff != nullptr ? pCliff->getComponent<SceneComponent>() : nullptr;
                 if ( pCliff != nullptr )
                     _listCliff.push_back( pCliff->getHandle() );
@@ -263,7 +239,7 @@ namespace sw
         if ( pModel == nullptr )
             return GameObjectHandle{};
         if ( _unitViewPool.has_value() == false )
-            _unitViewPool.emplace( string( _unitPrefab.path() ), _unitPool._maxIdleCount );
+            _unitViewPool.emplace( string( _unitPrefab.path() ), _unitPool._maxIdleCount, SpawnLifetime::Derived );
         GameObject* const pObject = _unitViewPool->acquire( manager, "RTSUnit" );
         if ( pObject == nullptr )
             return GameObjectHandle{};

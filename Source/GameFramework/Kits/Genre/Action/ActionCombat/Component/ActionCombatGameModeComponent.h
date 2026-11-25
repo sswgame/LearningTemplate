@@ -63,7 +63,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 승패가 나지 않아 입력 명령을 받으면 true 입니다. */
-        bool              isAcceptingInput() const;
+        bool              isAcceptingInput() const override;
         const ActionRoom& getRoom() const { return _room; }
         ActionCombatPhase getCombatPhase() const { return _phase; }
         int32             getPhase() const { return static_cast<int32>( _phase ); }
@@ -77,7 +77,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 승리면 결과 값 `heal`(`_victoryHeal`)을 냅니다. 패배는 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

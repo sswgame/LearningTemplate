@@ -39,7 +39,6 @@ namespace sw
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 쌓인 일정 이벤트를 점유 · 비우기로 잇습니다. */

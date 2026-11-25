@@ -5,15 +5,10 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Action/Fighting/Client/FightingHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/Component/FightingGameModeComponent.h"
@@ -54,78 +49,29 @@ namespace sw
     } // namespace
 
     FightingViewComponent::FightingViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&FightingViewComponent::updateView, &FightingViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _listButtonAction{}
         , _deadZone{ 0.4f }
         , _playerBody{}
         , _opponentBody{}
-        , _director{}
         , _hudViewModel{}
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     FightingViewComponent::~FightingViewComponent() = default;
 
-    void FightingViewComponent::onRegister( GameObjectManager& manager )
+    void FightingViewComponent::updateView( GameObjectManager& manager, FightingGameModeComponent& director )
     {
-        Component::onRegister( manager );
-        GameObject* const                      pOwner    = getOwner();
-        const FightingGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<FightingGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Fighting.ViewWithoutGameMode", "Fighting view on '%#': no FightingGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<FightingGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<FightingGameModeComponent>( pDirector );
+        dispatchInput( manager, director );
+        updateBody( manager, director, FightingGameModeComponent::kPlayer, _playerBody );
+        updateBody( manager, director, FightingGameModeComponent::kOpponent, _opponentBody );
+        updateHUD( director );
     }
 
-    void FightingViewComponent::onBeginPlay()
+    void FightingViewComponent::submitInput( const GameModeInput& input, FightingGameModeComponent& director ) const
     {
-        Component::onBeginPlay();
-        bool bActionsValid = _moveAction.empty() == false && _listButtonAction.empty() == false;
-        for ( const hashed_string& action : _listButtonAction )
-        {
-            bActionsValid = bActionsValid && action.empty() == false;
-        }
-        _bActionsValid = bActionsValid ? SW_TRUE : SW_FALSE;
-        if ( bActionsValid == false )
-            SW_LOG_ERROR_ID( "Fighting.ViewActionMissing", "Fighting view: the move action '%#' and every button action (%# listed) must be named - the view reads no input", _moveAction.c_str(),
-                             _listButtonAction.size() );
-    }
-
-    void FightingViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( FightingViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
-    }
-
-    void FightingViewComponent::updateView( GameObjectManager& manager )
-    {
-        FightingGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput();
-        if ( bReadInput )
-            submitInput( *pDirector );
-        updateBody( manager, *pDirector, FightingGameModeComponent::kPlayer, _playerBody );
-        updateBody( manager, *pDirector, FightingGameModeComponent::kOpponent, _opponentBody );
-        updateHUD( *pDirector );
-    }
-
-    void FightingViewComponent::submitInput( FightingGameModeComponent& director ) const
-    {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        uint16              buttons = 0;
+        uint16 buttons = 0;
         for ( size_t index = 0; index < _listButtonAction.size(); ++index )
         {
             if ( input.wasActionTriggered( _listButtonAction[index] ) )

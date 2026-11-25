@@ -70,7 +70,7 @@ namespace sw
         const AsymmetricHorrorMatch& getMatch() const { return _match; }
         const AsymmetricHorrorStage& getStage() const { return _stage; }
         /** @brief 판이 열렸고 결과가 나지 않았으면 true 입니다. */
-        bool isAcceptingInput() const { return isStarted() && _result == AsymmetricHorrorResult::Ongoing; }
+        bool isAcceptingInput() const override { return isStarted() && _result == AsymmetricHorrorResult::Ongoing; }
         /** @brief 사람이 잡은 생존자이면 true 입니다. */
         bool isHuman( int32 survivor ) const;
         /** @brief 무대의 자리(절대)를 형식으로 감쌉니다. */
@@ -93,7 +93,6 @@ namespace sw
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 씬 데이터로 판의 설정을 만듭니다. */

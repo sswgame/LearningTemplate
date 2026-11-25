@@ -101,7 +101,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 이기기 전이라 입력 명령을 받으면 true 입니다(죽어 있는 동안도 받는다). */
-        bool                              isAcceptingInput() const { return isStarted() && _phase != MetroidvaniaPhase::Won; }
+        bool                              isAcceptingInput() const override { return isStarted() && _phase != MetroidvaniaPhase::Won; }
         const PlatformerMotor2D&          getMotor() const { return _motor; }
         const MetroidvaniaDuelist&        getPlayer() const { return _player; }
         const MetroidvaniaDeathRestState& getDeathRest() const { return _deathRest; }
@@ -127,7 +127,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 가진 통화를 결과 값 `money` 로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

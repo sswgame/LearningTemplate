@@ -176,11 +176,4 @@ namespace sw
         if ( pCrop != nullptr )
             (void)_field.plant( x, y, pCrop->_seedItem, season );
     }
-
-    void FarmPlotGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`FarmPlotViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
 } // namespace sw

@@ -80,7 +80,7 @@ namespace sw::editor
             _playedClipPath.clear();
             _spawnedPrefabPath     = _activePrefabPath; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치고 Spawn 을 다시 누른다)
             AssetManager* pAssets  = pManager->findAssetManager();
-            GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activePrefabPath ) : nullptr;
+            GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activePrefabPath, SpawnLifetime::Persistent ) : nullptr;
             if ( pSpawned == nullptr )
             {
                 StringBuilder<constant::buffer::kMax256> statusBuilder;

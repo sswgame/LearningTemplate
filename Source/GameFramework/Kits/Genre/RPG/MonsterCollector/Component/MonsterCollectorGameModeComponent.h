@@ -106,7 +106,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 잡은 수 × `_captureReward` 를 돈으로 냅니다. 패배한 판은 내지 않습니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

@@ -5,14 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Client/RestaurantHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Component/RestaurantGameModeComponent.h"
@@ -51,7 +46,8 @@ namespace sw
     } // namespace
 
     RestaurantCounterComponent::RestaurantCounterComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&RestaurantCounterComponent::updateCounter, &RestaurantCounterComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _buyAction{}
         , _priceUpAction{}
         , _priceDownAction{}
@@ -61,44 +57,19 @@ namespace sw
         , _seatSpacing{ 1.5f }
         , _bodyPrefab{}
         , _markerPrefab{}
-        , _director{}
         , _bodies{}
         , _markers{}
         , _hudViewModel{}
         , _row{ 0 }
         , _lastStep{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     RestaurantCounterComponent::~RestaurantCounterComponent() = default;
 
-    void RestaurantCounterComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                        pOwner    = getOwner();
-        const RestaurantGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<RestaurantGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Restaurant.CounterWithoutGameMode", "Restaurant counter on '%#': no RestaurantGameModeComponent in front of it on the same object - the counter does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<RestaurantGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<RestaurantGameModeComponent>( pDirector );
-    }
-
     void RestaurantCounterComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
-        const bool bMarketNamed = _moveAction.empty() == false && _buyAction.empty() == false && _stationAction.empty() == false && _openAction.empty() == false;
-        const bool bPriceNamed  = _priceUpAction.empty() == false && _priceDownAction.empty() == false;
-        _bActionsValid          = bMarketNamed && bPriceNamed ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "Restaurant.CounterActionMissing", "Restaurant counter: move '%#', buy '%#', station '%#', open '%#', price up '%#' and price down '%#' actions must all be named - the counter reads no input",
-                             _moveAction.c_str(), _buyAction.c_str(), _stationAction.c_str(), _openAction.c_str(), _priceUpAction.c_str(), _priceDownAction.c_str() );
+        GameModeViewComponent::onBeginPlay();
         _row      = 0;
         _lastStep = 0;
     }
@@ -112,35 +83,21 @@ namespace sw
             _bodies.destroyAll( *pManager );
             _markers.destroyAll( *pManager );
         }
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void RestaurantCounterComponent::onTick( TickContext& context )
+    void RestaurantCounterComponent::updateCounter( GameObjectManager& manager, RestaurantGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( RestaurantCounterComponent& counter, GameObjectManager& manager )
-        { counter.updateCounter( manager ); } );
-    }
-
-    void RestaurantCounterComponent::updateCounter( GameObjectManager& manager )
-    {
-        RestaurantGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-            submitInput( *pDirector, GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ) );
-        updateHUD( *pDirector );
+        dispatchInput( manager, director );
+        updateHUD( director );
         _bodies.begin();
         _markers.begin();
-        draw( *pDirector, manager );
+        draw( director, manager );
         _bodies.end( manager );
         _markers.end( manager );
     }
 
-    void RestaurantCounterComponent::submitInput( RestaurantGameModeComponent& director, const GameInputView& input )
+    void RestaurantCounterComponent::submitInput( const GameModeInput& input, RestaurantGameModeComponent& director )
     {
         const int32 step     = RestaurantCounterComponentInternal::computeStep( input.getVector2D( _moveAction )._x );
         const int32 fresh    = step != _lastStep ? step : 0;

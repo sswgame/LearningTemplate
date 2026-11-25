@@ -53,6 +53,7 @@ namespace sw
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 승패가 나지 않았으며 사람이 지휘하면 true 입니다(자동 플레이면 false). */
         bool                 isAwaitingCommand() const;
+        bool                 isAcceptingInput() const override { return isAwaitingCommand(); }
         const ConquestWorld& getWorld() const { return _world; }
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const ConquestCatalog* findCatalog() const { return _pCatalog.get(); }
@@ -68,7 +69,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 씬 데이터의 시작 건물을 지을 수 있는지 봅니다(건물이 병사를 훈련하고 거점 · 병종이 카탈로그에 있다). 틀렸으면 오류를 남기고 false 입니다. */

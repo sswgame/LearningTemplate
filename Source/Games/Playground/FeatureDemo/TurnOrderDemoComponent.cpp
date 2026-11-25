@@ -170,12 +170,6 @@ namespace sw
         (void)deltaTime;
     }
 
-    void TurnOrderDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void TurnOrderDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( TurnOrderDemoComponentInternal::kStateFormat );

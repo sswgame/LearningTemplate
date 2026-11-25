@@ -90,7 +90,7 @@ namespace sw
         /** @brief 전투 중(명령 · 타이밍)이면 true 입니다. */
         bool isInBattle() const { return _phase == JRPGGamePhase::Battle || _phase == JRPGGamePhase::Timing; }
         /** @brief 판이 열렸고 자동 플레이가 아니라 플레이어의 명령을 받으면 true 입니다. */
-        bool  isAcceptingInput() const { return isStarted() && isAutoPlayOn() == false; }
+        bool  isAcceptingInput() const override { return isStarted() && isAutoPlayOn() == false; }
         int32 getPhase() const { return static_cast<int32>( _phase ); }
         /** @brief 명령을 기다리는 멤버 번호입니다. 전투 중이 아니면 비어 있습니다. */
         [[nodiscard]] optional<int32> findCommandMember() const;
@@ -129,7 +129,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 번 돈(지갑 - 시작 돈)을 냅니다. 패배한 판은 내지 않습니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

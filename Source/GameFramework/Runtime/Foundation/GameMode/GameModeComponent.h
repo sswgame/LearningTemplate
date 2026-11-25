@@ -30,6 +30,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class IBehaviorTreeDebugSource;
+    class StateHashBuilder;
     struct MinigameResultValue;
     template <typename AssetType>
     class SharedAssetCache;
@@ -98,6 +99,11 @@ namespace sw
         void onTick( TickContext& context ) override;
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를, 상태 로그 서브틱(`kStatusSubTick`)이면 `logStatus` 를 틱 뒤로 겁니다. */
         void onSubTick( uint32 subTickID, TickContext& context ) override;
+        /**
+         * @brief 상태 칸 뒤에 열린 판의 상태 바이트(`writeState`)를 접습니다 — 규칙 객체는 칸이 아니고 모습은 파생이라(`SpawnLifetime::Derived`) 바이트가 없으면 규칙이 어긋나도 해시가 같다.
+         * @details 네트 세션에 묶인 씬은 접지 않는다 — 클라이언트의 디렉터는 판을 돌리지 않아 서버와 바이트가 다르다.
+         */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
         /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다. 플레이를 시작하기 전에 불러야 하며, 씬 데이터는 PROPERTY `_tickAfter` 로 적습니다. */
         void setTickAfter( GameObjectHandle gameMode ) { _tickAfter = gameMode; }
         /** @brief 이 디렉터의 규칙이 도는 틱입니다. `_tickAfter` 를 걸었으면 규칙 서브틱이고, 아니면 주 틱입니다. 다른 디렉터가 선행 조건으로 겁니다. */
@@ -153,6 +159,8 @@ namespace sw
         virtual void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const { (void)outListValue; }
         /** @brief 판이 열렸으면(`startGame` 이 성공) true 입니다. */
         bool isStarted() const { return _bStarted == SW_TRUE; }
+        /** @brief 사람의 입력 명령을 받는 중이면 true 입니다(열린 판이 기본 — 끝난 판 · 남의 차례 · 자동 플레이를 가르는 디렉터가 덮는다). 뷰가 입력을 넘기기 전에 묻는다(`GameModeViewComponent`). */
+        virtual bool isAcceptingInput() const { return isStarted(); }
         /** @brief 플레이어 상태 오브젝트(`_playerState` — 조종자)입니다. 가리키는 것이 없으면 nullptr 입니다. */
         const GameObject* findPlayerState() const { return findGameObject( _playerState ); }
         /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay`, 또는 개발 구성에서 게임의 `-gv_<게임>AutoPlay=1`). */
@@ -197,10 +205,14 @@ namespace sw
         /** @brief 판이 열린 뒤 매 프레임 불립니다 — PrePhysics 틱이 건 틱 뒤 작업이라 게임 스레드(틱 밖)에서 돈다(`deferRules`). 시간이 멈춘 프레임(@p deltaTime 0)에도 불립니다. */
         virtual void updateGame( float32 deltaTime ) = 0;
         /**
-         * @brief 틱 뒤 게임 스레드에서 쌓인 요청을 세웁니다. @p bRespawnViews 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부를 세웁니다.
+         * @brief 틱 뒤 게임 스레드에서 쌓인 요청을 세웁니다. @p bRespawnViews 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부를 세웁니다. 오브젝트를 세우지 않는 디렉터는 덮지 않는다.
          * @details 쌓인 소리는 이 함수 뒤에 베이스가 냅니다.
          */
-        virtual void onFlush( GameObjectManager& manager, bool bRespawnViews ) = 0;
+        virtual void onFlush( GameObjectManager& manager, bool bRespawnViews )
+        {
+            (void)manager;
+            (void)bRespawnViews;
+        }
         /** @brief `despawnViews` 가 스폰한 오브젝트를 지운 뒤에 불립니다. 파생 클래스가 보관한 핸들 목록과 대기 요청을 비웁니다. */
         virtual void onViewsDespawned() {}
         /** @brief 세울 요청이 쌓여 있으면 true 입니다. 틱 끝에 플러시를 잡습니다. */

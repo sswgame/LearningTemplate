@@ -8,12 +8,14 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
+#include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectVisit.h"
@@ -238,6 +240,18 @@ namespace sw
         runRules( deltaTime );
     }
 
+    void GameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        Component::foldStateHash( inoutBuilder );
+        if ( _bStarted == SW_FALSE || SceneNetLink::findBoundFor( *this ) != nullptr )
+            return;
+        Archive state;
+        writeState( state );
+        vector<uint8> bytes;
+        state.writeData( bytes );
+        inoutBuilder.addBytes( bytes.data(), bytes.size() );
+    }
+
     SubTickHandle GameModeComponent::getRuleTickHandle() const
     {
         SubTickHandle handle = getTickHandle();
@@ -383,7 +397,7 @@ namespace sw
         AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefabPath.empty() )
             return nullptr;
-        GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, pName );
+        GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, SpawnLifetime::Persistent, pName );
         if ( pObject != nullptr )
             trackSpawned( *pObject );
         return pObject;
@@ -400,7 +414,7 @@ namespace sw
                 pPool = &existing;
         }
         if ( pPool == nullptr )
-            pPool = &_listPool.emplace_back( string( prefabPath ), pool._maxIdleCount );
+            pPool = &_listPool.emplace_back( string( prefabPath ), pool._maxIdleCount, SpawnLifetime::Persistent );
         return pPool->acquire( manager, pName );
     }
 

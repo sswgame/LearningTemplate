@@ -38,7 +38,6 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
@@ -55,8 +54,6 @@ namespace sw
 {
     namespace
     {
-        /** @brief 세운 몸(`despawnViews`)을 상태 저장 전에 걷게 모든 게임의 스냅샷에 올립니다 — 게임 생성자가 적지 않는다. */
-        const StatefulComponentRegistrar<ShooterPlayerComponent> s_viewRegistration{ "ShooterPlayerComponent" };
 
         struct ShooterPlayerComponentInternal
         {
@@ -1439,7 +1436,7 @@ namespace sw
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
         if ( pAssets == nullptr || _bodyPrefab.empty() )
             return GameObjectHandle{};
-        GameObject* const pBody = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _bodyPrefab, pName );
+        GameObject* const pBody = pAssets->getAssetCache<PrefabCache>().spawn( &manager, _bodyPrefab, SpawnLifetime::Derived, pName );
         if ( pBody != nullptr && pBody->getComponent<ShooterAvatarComponent>() != nullptr )
             return pBody->getHandle();
         SW_LOG_ERROR_ID( "ShooterPlayer.BodyPrefabNoShooterAvatarComponent", "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );

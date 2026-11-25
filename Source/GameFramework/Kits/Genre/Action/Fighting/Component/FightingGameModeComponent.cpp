@@ -305,13 +305,6 @@ namespace sw
         settle();
     }
 
-    void FightingGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`FightingViewComponent`)이 씬의 몸 오브젝트를 옮겨 보인다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void FightingGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         if ( getMatchWinner() == kPlayer )

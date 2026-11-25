@@ -295,13 +295,6 @@ namespace sw
         applyMarkers();
     }
 
-    void ActionPlatformerGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈의 디버그 그리기뿐이라 세울 오브젝트가 없다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void ActionPlatformerGameModeComponent::serializeGameState( StateIO& io )
     {
         io.header( ActionPlatformerGameModeComponentInternal::kStateFormat );

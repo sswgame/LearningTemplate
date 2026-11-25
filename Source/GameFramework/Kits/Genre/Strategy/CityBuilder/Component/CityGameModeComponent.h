@@ -54,7 +54,6 @@ namespace sw
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 빈 도시를 열고 공유 땅을 빌립니다(시작과 복원이 같은 설정으로 연다). 설정이 범위 밖이면 도시가 오류를 남기고 false 입니다. */

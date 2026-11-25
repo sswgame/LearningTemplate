@@ -62,7 +62,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 끝나지 않아 입력 명령을 받으면 true 입니다. */
-        bool                  isAcceptingInput() const { return isStarted() && _world.isEnded() == false; }
+        bool                  isAcceptingInput() const override { return isStarted() && _world.isEnded() == false; }
         const MechArenaWorld& getWorld() const { return _world; }
         /** @brief 조종사의 절대 자리(발밑)입니다. 없는 번호면 원점입니다. */
         AbsolutePosition getPilotPosition( int32 pilot ) const;
@@ -83,7 +83,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지거나 비기면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

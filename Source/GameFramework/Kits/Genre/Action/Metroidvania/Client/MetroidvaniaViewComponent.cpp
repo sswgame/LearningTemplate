@@ -5,14 +5,9 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Client/MetroidvaniaHUDViewModel.h"
@@ -32,7 +27,8 @@ namespace sw
     } // namespace
 
     MetroidvaniaViewComponent::MetroidvaniaViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&MetroidvaniaViewComponent::updateView, &MetroidvaniaViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _jumpAction{}
         , _dashAction{}
         , _attackAction{}
@@ -46,70 +42,21 @@ namespace sw
         , _enemySize{ 0.9f, 1.0f, 0.9f }
         , _startupScale{ 1.4f }
         , _markerSize{ 0.5f, 0.5f, 0.5f }
-        , _director{}
         , _hudViewModel{}
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     MetroidvaniaViewComponent::~MetroidvaniaViewComponent() = default;
 
-    void MetroidvaniaViewComponent::onRegister( GameObjectManager& manager )
+    void MetroidvaniaViewComponent::updateView( GameObjectManager& manager, MetroidvaniaGameModeComponent& director )
     {
-        Component::onRegister( manager );
-        GameObject* const                          pOwner    = getOwner();
-        const MetroidvaniaGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<MetroidvaniaGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "Metroidvania.ViewWithoutGameMode", "Metroidvania view on '%#': no MetroidvaniaGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<MetroidvaniaGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<MetroidvaniaGameModeComponent>( pDirector );
+        dispatchInput( manager, director );
+        updateScene( manager, director );
+        updateHUD( director );
     }
 
-    void MetroidvaniaViewComponent::onBeginPlay()
+    void MetroidvaniaViewComponent::submitInput( const GameModeInput& input, MetroidvaniaGameModeComponent& director ) const
     {
-        Component::onBeginPlay();
-        bool bActionsValid = true;
-        for ( const hashed_string* pAction : { &_moveAction, &_jumpAction, &_dashAction, &_attackAction, &_guardAction, &_useAction, &_flaskAction } )
-        {
-            bActionsValid = bActionsValid && pAction->empty() == false;
-        }
-        _bActionsValid = bActionsValid ? SW_TRUE : SW_FALSE;
-        if ( bActionsValid == false )
-            SW_LOG_ERROR_ID( "Metroidvania.ViewActionMissing", "Metroidvania view: the move, jump, dash, attack, guard, use and flask actions must all be named - the view reads no input" );
-    }
-
-    void MetroidvaniaViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( MetroidvaniaViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
-    }
-
-    void MetroidvaniaViewComponent::updateView( GameObjectManager& manager )
-    {
-        MetroidvaniaGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        const bool bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput();
-        if ( bReadInput )
-            submitInput( *pDirector );
-        updateScene( manager, *pDirector );
-        updateHUD( *pDirector );
-    }
-
-    void MetroidvaniaViewComponent::submitInput( MetroidvaniaGameModeComponent& director ) const
-    {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView       input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
         MetroidvaniaPlayerCommand command;
         command._move           = input.getVector2D( _moveAction );
         command._bJumpHeld      = toMetroidvaniaInputFlag( input.isActionDown( _jumpAction ) );

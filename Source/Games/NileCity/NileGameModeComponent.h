@@ -54,8 +54,6 @@ namespace sw
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
-        /** @brief 모습은 키트 클라이언트(`CityViewComponent`)가 세운다 — 여기서 세울 것이 없다. */
-        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 나일 달력입니다. 아케트, 페레트, 셰무가 각각 네 달씩(열두 달)이며, 계절 하루가 한 달입니다. */

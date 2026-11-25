@@ -165,7 +165,7 @@ namespace sw
         AssetManager&      assetManager = *_services._pAssetManager;
         Scene              studio( "PortraitStudio", _services );
         GameObjectManager* pManager = studio.getObjectManager();
-        GameObject*        pSubject = assetManager.getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
+        GameObject*        pSubject = assetManager.getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, SpawnLifetime::Persistent, "PortraitSubject" );
         if ( pSubject == nullptr )
         {
             SW_LOG_ERROR_ID( "PortraitStudio.PortraitPrefabCouldNot", "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );

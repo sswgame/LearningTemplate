@@ -5,14 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Client/PartyHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
@@ -30,7 +25,8 @@ namespace sw
     } // namespace
 
     PartyArenaViewComponent::PartyArenaViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&PartyArenaViewComponent::updateView, &PartyArenaViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _jumpAction{}
         , _attackAction{}
         , _poundAction{}
@@ -41,43 +37,15 @@ namespace sw
         , _playerColor{ 0.25f, 1.0f, 0.45f, 1.0f }
         , _opponentColor{ 1.0f, 0.4f, 0.3f, 1.0f }
         , _itemColor{ 1.0f, 0.85f, 0.2f, 1.0f }
-        , _director{}
         , _floorViews{}
         , _playerViews{}
         , _itemViews{}
         , _hudViewModel{ nullptr }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     PartyArenaViewComponent::~PartyArenaViewComponent() = default;
-
-    void PartyArenaViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                   pOwner    = getOwner();
-        const PartyGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<PartyGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "PartyArena.ViewWithoutGameMode", "Party arena view on '%#': no PartyGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<PartyGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<PartyGameModeComponent>( pDirector );
-    }
-
-    void PartyArenaViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _jumpAction.empty() == false && _attackAction.empty() == false && _poundAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "PartyArena.ViewActionMissing", "Party arena view: move '%#', jump '%#', attack '%#' and pound '%#' actions must all be named - the view reads no input", _moveAction.c_str(),
-                             _jumpAction.c_str(), _attackAction.c_str(), _poundAction.c_str() );
-    }
 
     void PartyArenaViewComponent::onEndPlay()
     {
@@ -90,36 +58,20 @@ namespace sw
             _itemViews.destroyAll( *pManager );
         }
         _hudViewModel.reset(); // 지워지는 뷰모델은 HUD 가 스스로 뗀다
-        Component::onEndPlay();
+        GameModeViewComponent::onEndPlay();
     }
 
-    void PartyArenaViewComponent::onTick( TickContext& context )
+    void PartyArenaViewComponent::updateView( GameObjectManager& manager, PartyGameModeComponent& director )
     {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( PartyArenaViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        dispatchInput( manager, director );
+        showArena( manager, director );
+        updateHUD( director );
     }
 
-    void PartyArenaViewComponent::updateView( GameObjectManager& manager )
+    void PartyArenaViewComponent::submitInput( const GameModeInput& input, PartyGameModeComponent& director ) const
     {
-        PartyGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput() )
-            submitInput( *pDirector );
-        showArena( manager, *pDirector );
-        updateHUD( *pDirector );
-    }
-
-    void PartyArenaViewComponent::submitInput( PartyGameModeComponent& director ) const
-    {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        const float2        axis = input.getVector2D( _moveAction );
-        TrampolineInput     player;
+        const float2    axis = input.getVector2D( _moveAction );
+        TrampolineInput player;
         player._moveX          = axis._x;
         player._moveZ          = axis._y;
         player._bJumpPressed   = input.wasActionTriggered( _jumpAction ) ? SW_TRUE : SW_FALSE;

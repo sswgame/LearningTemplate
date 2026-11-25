@@ -330,13 +330,6 @@ namespace sw
             closeDay();
     }
 
-    void RestaurantGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 디렉터는 세울 오브젝트가 없다 — 모습은 클라이언트 모듈(`RestaurantCounterComponent`)이 읽어 그린다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void RestaurantGameModeComponent::collectMinigameResult( vector<MinigameResultValue>& outListValue ) const
     {
         addMoneyResult( outListValue, _totalProfit );

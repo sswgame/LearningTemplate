@@ -119,7 +119,7 @@ namespace sw::editor
             return;
 
         AssetManager* pAssets  = manager.findAssetManager();
-        GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefabPath ) : nullptr;
+        GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, SpawnLifetime::Persistent ) : nullptr;
         slot._spawnedPath      = prefabPath; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치면 다시 한다)
         if ( pSpawned == nullptr )
         {

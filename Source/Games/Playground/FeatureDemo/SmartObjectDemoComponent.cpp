@@ -167,12 +167,6 @@ namespace sw
         (void)deltaTime; // 시각은 명령으로만 흐른다
     }
 
-    void SmartObjectDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void SmartObjectDemoComponent::serializeGameState( StateIO& io )
     {
         // 슬롯 점유는 스마트 오브젝트가, 시각 · 셈은 상태 칸이 싣는다. 일정은 시각의 함수라 그 시각으로 건너뛰고(이벤트는 버린다), 점유를 잇는 예약 번호만 다시 찾는다.

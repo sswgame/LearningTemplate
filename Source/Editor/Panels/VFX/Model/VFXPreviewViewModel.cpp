@@ -263,7 +263,7 @@ namespace sw::editor
                 return;
             }
             AssetManager* pAssets  = pManager->findAssetManager();
-            GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activeTargetPath ) : nullptr;
+            GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activeTargetPath, SpawnLifetime::Persistent ) : nullptr;
             if ( pSpawned == nullptr )
             {
                 StringBuilder<constant::buffer::kMax256> statusBuilder;

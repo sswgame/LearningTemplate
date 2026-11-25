@@ -136,12 +136,6 @@ namespace sw
         }
     }
 
-    void InventoryShopDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void InventoryShopDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( InventoryShopDemoInternal::kStateFormat );

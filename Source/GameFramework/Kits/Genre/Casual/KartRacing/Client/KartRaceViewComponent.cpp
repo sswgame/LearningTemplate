@@ -5,14 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Client/KartHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Component/KartGameModeComponent.h"
@@ -35,7 +30,8 @@ namespace sw
     } // namespace
 
     KartRaceViewComponent::KartRaceViewComponent()
-        : _moveAction{ CommonInputActions::kMove }
+        : GameModeViewComponent( GameModeViewBinding::of<&KartRaceViewComponent::updateView, &KartRaceViewComponent::submitInput>() )
+        , _moveAction{ CommonInputActions::kMove }
         , _driftAction{}
         , _boostAction{}
         , _itemAction{}
@@ -47,57 +43,21 @@ namespace sw
         , _trackColor{ 0.35f, 0.35f, 0.38f, 1.0f }
         , _finishColor{ 0.95f, 0.95f, 0.95f, 1.0f }
         , _itemColor{ 1.0f, 0.85f, 0.2f, 1.0f }
-        , _director{}
         , _trackViews{}
         , _kartViews{}
         , _itemViews{}
         , _hudViewModel{ nullptr }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
 
     KartRaceViewComponent::~KartRaceViewComponent() = default;
 
-    void KartRaceViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                  pOwner    = getOwner();
-        const KartGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<KartGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "KartRacing.ViewWithoutGameMode", "Kart race view on '%#': no KartGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<KartGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<KartGameModeComponent>( pDirector );
-    }
-
-    void KartRaceViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        _bActionsValid = _moveAction.empty() == false && _driftAction.empty() == false && _boostAction.empty() == false && _itemAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "KartRacing.ViewActionMissing", "Kart race view: move '%#', drift '%#', boost '%#' and item '%#' actions must all be named - the view reads no input", _moveAction.c_str(),
-                             _driftAction.c_str(), _boostAction.c_str(), _itemAction.c_str() );
-    }
-
     void KartRaceViewComponent::onEndPlay()
     {
         destroyViews();
         _hudViewModel.reset(); // 지워지는 뷰모델은 HUD 가 스스로 뗀다
-        Component::onEndPlay();
-    }
-
-    void KartRaceViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( KartRaceViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void KartRaceViewComponent::destroyViews()
@@ -112,26 +72,18 @@ namespace sw
         }
     }
 
-    void KartRaceViewComponent::updateView( GameObjectManager& manager )
+    void KartRaceViewComponent::updateView( GameObjectManager& manager, KartGameModeComponent& director )
     {
-        KartGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        if ( _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE && pDirector->isAcceptingInput() )
-            submitInput( *pDirector );
-        showTrack( manager, *pDirector );
-        showRace( manager, *pDirector );
-        updateHUD( *pDirector );
+        dispatchInput( manager, director );
+        showTrack( manager, director );
+        showRace( manager, director );
+        updateHUD( director );
     }
 
-    void KartRaceViewComponent::submitInput( KartGameModeComponent& director ) const
+    void KartRaceViewComponent::submitInput( const GameModeInput& input, KartGameModeComponent& director ) const
     {
-        const InputManager* const pInput = game::findSubsystem<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        const float2        axis = input.getVector2D( _moveAction );
-        KartRacerInput      driver;
+        const float2   axis = input.getVector2D( _moveAction );
+        KartRacerInput driver;
         driver._vehicle._throttle      = axis._y;
         driver._vehicle._steer         = axis._x;
         driver._vehicle._bDriftHeld    = input.isActionDown( _driftAction ) ? SW_TRUE : SW_FALSE;

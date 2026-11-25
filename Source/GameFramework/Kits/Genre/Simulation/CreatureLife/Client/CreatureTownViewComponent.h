@@ -4,7 +4,7 @@
  * @details 키트 세 갈래의 클라이언트 몫이다(`GF_Client_CreatureLife`, 전용 서버는 짓지 않는다). 디렉터의 명령(`submitTalk`)과 읽기 API(`getTown` · `getCatalog` · `getTownRevision`)만 쓰고
  *          마을(규칙)을 직접 고치지 않는다. 디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다.
  *          명령과 스폰은 틱 뒤 게임 스레드에서 한다. 이 컴포넌트는 `PostUpdate` 라 디렉터 걸음 뒤에 돌아, 넘긴 입력은 다음 걸음이 쓰고 모습은 이번 걸음의 결과를 보인다.
- *          세운 모습은 상태를 싣기 전에 걷는다(`despawnViews` — .cpp 의 `StatefulComponentRegistrar`). 다음 틱이 지금 마을대로 다시 세운다.
+ *          세운 모습은 파생이라 상태에 들지 않는다(`SpawnLifetime::Derived`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,13 +14,12 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"
 
@@ -71,7 +70,7 @@ namespace sw
      */
     REFLECT( Category = "CreatureLife", DisplayName = "Creature Town View",
              Tooltip = "Client side of a creature town: spawns the objects and creatures of the Creature Town Game Mode on the same object and sends the talk input to it" )
-    class SW_KIT_CLIENT_API CreatureTownViewComponent : public Component
+    class SW_KIT_CLIENT_API CreatureTownViewComponent : public GameModeViewComponent
     {
     public:
         REFLECT_BODY();
@@ -81,19 +80,14 @@ namespace sw
         CreatureTownViewComponent();
         virtual ~CreatureTownViewComponent() override;
 
-        /** @brief 같은 오브젝트의 디렉터를 찾아 핸들로 듭니다. 없으면 오류를 남기고 아무것도 하지 않습니다. */
-        void onRegister( GameObjectManager& manager ) override;
         /** @brief 액션 이름 · 대화할 종이 비었으면 오류를 남깁니다(폴백 없음). 틱 그룹은 뷰의 `PostUpdate` 입니다. */
         void onBeginPlay() override;
         /** @brief 세운 모습을 걷습니다. */
         void onEndPlay() override;
-        /** @brief 입력 명령과 모습 맞추기를 틱 뒤 게임 스레드로 미룹니다. */
-        void onTick( TickContext& context ) override;
-
-        /** @brief 세운 모습을 모두 지웁니다(상태를 싣기 전 · 플레이 끝). 마을은 그대로이고 다음 틱이 다시 세웁니다. */
-        void despawnViews();
 
     private:
+        /** @brief 세운 모습을 모두 지웁니다(플레이 끝 · 다시 세울 때). 모습은 파생이라 상태를 실을 때 걷지 않는다(`SpawnLifetime::Derived`). */
+        void despawnViews();
         /** @brief 생물 슬롯 하나가 지금 보이는 것 — 종과 머무는 서식지입니다. 서식지가 바뀌면 자리가 달라 다시 세운다. */
         struct CreatureView
         {
@@ -105,7 +99,8 @@ namespace sw
 
     private:
         /** @brief 틱 뒤 게임 스레드: 대화 입력을 넘기고, 마을이 바뀌었으면 모습을 맞춥니다. */
-        void updateView( GameObjectManager& manager );
+        void updateView( GameObjectManager& manager, CreatureTownGameModeComponent& director );
+        void submitInput( const GameModeInput& input, CreatureTownGameModeComponent& director );
         /** @brief 카탈로그의 서식지 오브젝트 · 종이 모두 뷰 표에 있는지 봅니다. 빠진 것마다 오류를 남기고 false 입니다(모습을 세우지 않는다). */
         [[nodiscard]] bool validateViews( const CreatureLifeCatalog& catalog ) const;
         /** @brief 지금 마을의 오브젝트 · 생물과 세운 모습을 견줘 바뀐 슬롯만 다시 세웁니다. */
@@ -122,19 +117,16 @@ namespace sw
         vector<CreatureTownCreatureView> _listCreatureView;
         PROPERTY( Category = "Layout", DisplayName = "Town Origin", Tooltip = "World position of the corner of town cell (0, 0)", Units = m )
         float3 _townOrigin;
-        PROPERTY( Category = "Input", DisplayName = "Talk Action", Tooltip = "InputMap action that talks to the creature (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Talk Action", Tooltip = "InputMap action that talks to the creature (required)" )
         hashed_string _talkAction;
-        PROPERTY( Category = "Input", DisplayName = "Talk Species", Tooltip = "Creature the talk action talks to (required)" )
+        PROPERTY( Required, Category = "Input", DisplayName = "Talk Species", Tooltip = "Creature the talk action talks to (required)" )
         CatalogKey<CreatureSpeciesDef> _talkSpecies;
 
-        TComponentHandle<CreatureTownGameModeComponent> _director;
-        SimulationViewSync<hashed_string>               _objectViews;        ///< 타일 번호(y × 너비 + x) → 오브젝트 id(빈 셀이면 빈 id)
-        SimulationViewSync<CreatureView>                _creatureViews;      ///< 온 순서 → 생물
-        shared_ptr<const CreatureLifeCatalog>           _pValidatedCatalog;  ///< 뷰 표를 견준 카탈로그의 판 — 마을이 새 판에 묶이면 다시 견준다
-        uint32                                          _shownRevision;      ///< 맞춘 마을 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
-        uint8                                           _bInputLive     : 1; ///< 이번 틱의 시간이 흘렀다(멈춤 중에는 입력을 넘기지 않는다)
-        uint8                                           _bActionsValid  : 1; ///< 액션 이름 · 종이 있다(`onBeginPlay`)
-        uint8                                           _bViewsRejected : 1; ///< 뷰 표에 빠진 줄이 있어 모습을 세우지 않는다
-        [[maybe_unused]] uint8                          _reserved       : 5;
+        SimulationViewSync<hashed_string>     _objectViews;        ///< 타일 번호(y × 너비 + x) → 오브젝트 id(빈 셀이면 빈 id)
+        SimulationViewSync<CreatureView>      _creatureViews;      ///< 온 순서 → 생물
+        shared_ptr<const CreatureLifeCatalog> _pValidatedCatalog;  ///< 뷰 표를 견준 카탈로그의 판 — 마을이 새 판에 묶이면 다시 견준다
+        uint32                                _shownRevision;      ///< 맞춘 마을 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
+        uint8                                 _bViewsRejected : 1; ///< 뷰 표에 빠진 줄이 있어 모습을 세우지 않는다
+        [[maybe_unused]] uint8                _reserved       : 7;
     };
 } // namespace sw

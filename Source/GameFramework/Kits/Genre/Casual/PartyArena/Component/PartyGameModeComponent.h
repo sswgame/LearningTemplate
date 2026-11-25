@@ -63,7 +63,7 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 라운드를 겨루는 중이고 사람이 움직이면 true 입니다(자동 플레이면 false). */
-        bool                    isAcceptingInput() const;
+        bool                    isAcceptingInput() const override;
         const TrampolineArena&  getArena() const { return _arena; }
         const PartyRoundSeries& getSeries() const { return _series; }
         /** @brief 사람 @p player 의 절대 자리입니다. 없는 번호면 원점입니다. */
@@ -81,7 +81,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 카탈로그의 라운드 · 점수로 시리즈를 엽니다. 열지 못하면 오류를 남기고 false 입니다. */

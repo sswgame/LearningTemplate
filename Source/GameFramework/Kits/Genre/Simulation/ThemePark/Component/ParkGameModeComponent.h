@@ -93,7 +93,6 @@ namespace sw
         void               onGameStarted() override;
         void               updateGame( float32 deltaTime ) override;
         void               collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 건설한 코스터 하나입니다. 트랙은 열차가 가리키므로 힙에 둡니다(목록이 자라도 주소가 그대로입니다). */

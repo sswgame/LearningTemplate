@@ -7,26 +7,18 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmPlotGameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 상태를 싣기 전에 세운 모습을 걷습니다 — 씬 섹션에 실리면 복원한 뒤 다시 세운 것과 겹친다. */
-        const StatefulComponentRegistrar<FarmPlotViewComponent> s_viewRegistration{ "FarmPlotViewComponent" };
 
         /** @brief 밭 칸의 모습입니다(뷰 동기화의 규칙 id — 바뀐 칸만 다시 세운다). 0 은 "칸 없음" 이다. */
         enum TileLook : uint8
@@ -61,60 +53,26 @@ namespace sw
     } // namespace
 
     FarmPlotViewComponent::FarmPlotViewComponent()
-        : _tilePrefab{}
+        : GameModeViewComponent( GameModeViewBinding::of<&FarmPlotViewComponent::updateView, &FarmPlotViewComponent::submitInput>() )
+        , _tilePrefab{}
         , _fastForwardAction{}
         , _readyColor{ 1.60f, 1.35f, 0.55f, 1.0f } // 메시 정점 색이 이미 흙색이라 상태 색은 그 위에 곱하는 틴트다
         , _wateredColor{ 0.60f, 0.58f, 0.62f, 1.0f }
         , _tilledColor{ 1.0f, 1.0f, 1.0f, 1.0f }
         , _grassColor{ 0.80f, 1.30f, 0.60f, 1.0f }
         , _tileSpacing{ 1.0f }
-        , _director{}
         , _tintCache{}
         , _tileViews{}
         , _shownRevision{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
     FarmPlotViewComponent::~FarmPlotViewComponent() = default;
 
-    void FarmPlotViewComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        GameObject* const                      pOwner    = getOwner();
-        const FarmPlotGameModeComponent* const pDirector = pOwner != nullptr ? pOwner->getComponent<FarmPlotGameModeComponent>() : nullptr;
-        if ( pDirector == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FarmPlot.ViewWithoutGameMode", "Farm plot view on '%#': no FarmPlotGameModeComponent in front of it on the same object - the view does nothing",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-            _director = TComponentHandle<FarmPlotGameModeComponent>{};
-            return;
-        }
-        _director = TComponentHandle<FarmPlotGameModeComponent>( pDirector );
-    }
-
-    void FarmPlotViewComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-        _bActionsValid = _fastForwardAction.empty() == false ? SW_TRUE : SW_FALSE;
-        if ( _bActionsValid == SW_FALSE )
-            SW_LOG_ERROR_ID( "FarmPlot.ViewActionMissing", "Farm plot view: the fast forward action must be named - the view reads no input" );
-    }
-
     void FarmPlotViewComponent::onEndPlay()
     {
         despawnViews();
-        Component::onEndPlay();
-    }
-
-    void FarmPlotViewComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령 · 스폰은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( FarmPlotViewComponent& view, GameObjectManager& manager )
-        { view.updateView( manager ); } );
+        GameModeViewComponent::onEndPlay();
     }
 
     void FarmPlotViewComponent::despawnViews()
@@ -132,22 +90,18 @@ namespace sw
         _shownRevision = 0;
     }
 
-    void FarmPlotViewComponent::updateView( GameObjectManager& manager )
+    void FarmPlotViewComponent::updateView( GameObjectManager& manager, FarmPlotGameModeComponent& director )
     {
-        FarmPlotGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
+        dispatchInput( manager, director );
+        if ( _shownRevision == director.getFieldRevision() )
             return;
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr )
-        {
-            const GameInputView input( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-            (void)pDirector->submitFastForward( input.isActionDown( _fastForwardAction ) ); // 열린 판인지는 위에서 보았다
-        }
-        if ( _shownRevision == pDirector->getFieldRevision() )
-            return;
-        syncTiles( manager, *pDirector );
-        _shownRevision = pDirector->getFieldRevision();
+        syncTiles( manager, director );
+        _shownRevision = director.getFieldRevision();
+    }
+
+    void FarmPlotViewComponent::submitInput( const GameModeInput& input, FarmPlotGameModeComponent& director )
+    {
+        (void)director.submitFastForward( input.isActionDown( _fastForwardAction ) ); // 열린 판인지는 위에서 보았다
     }
 
     void FarmPlotViewComponent::syncTiles( GameObjectManager& manager, const FarmPlotGameModeComponent& director )
@@ -177,7 +131,7 @@ namespace sw
     GameObjectHandle FarmPlotViewComponent::spawnTile( GameObjectManager& manager, const float3& center, uint8 look )
     {
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
-        GameObject* const   pView   = pAssets != nullptr && _tilePrefab.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, _tilePrefab, "FarmPlotTile" ) : nullptr;
+        GameObject* const   pView   = pAssets != nullptr && _tilePrefab.empty() == false ? pAssets->getAssetCache<PrefabCache>().spawn( &manager, _tilePrefab, SpawnLifetime::Derived, "FarmPlotTile" ) : nullptr;
         if ( pView == nullptr )
             return GameObjectHandle{}; // 읽지 못한 까닭은 프리팹 캐시가 남겼다
         MeshComponent* const pMesh = pView->getComponent<MeshComponent>();

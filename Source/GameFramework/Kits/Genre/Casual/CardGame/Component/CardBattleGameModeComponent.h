@@ -46,6 +46,7 @@ namespace sw
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 내 턴이며 사람이 하면 true 입니다(자동 플레이면 false). */
         bool              isAwaitingCommand() const;
+        bool              isAcceptingInput() const override { return isAwaitingCommand(); }
         const CardBattle& getBattle() const { return _battle; }
         /** @brief 손의 @p handIndex 번째 카드를 지금 낼 수 있으면 true 입니다(에너지가 된다). */
         bool isPlayable( int32 handIndex ) const;
@@ -62,7 +63,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               updateMatch( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
         /** @brief 카탈로그의 덱 · 상대로 @p outBattle 을 엽니다. 없는 덱 · 상대이거나 덱이 비면 오류를 남기고 false 입니다. */

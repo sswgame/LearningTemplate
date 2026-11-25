@@ -156,11 +156,4 @@ namespace sw
         }
         collectStepEvents();
     }
-
-    void CityGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`CityViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
 } // namespace sw

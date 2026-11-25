@@ -7,14 +7,11 @@
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -73,7 +70,8 @@ namespace sw
 namespace sw
 {
     CityBuildInputComponent::CityBuildInputComponent()
-        : _cameraRig{}
+        : GameModeViewComponent( GameModeViewBinding::of<&CityBuildInputComponent::updateInput, &CityBuildInputComponent::submitInput>() )
+        , _cameraRig{}
         , _placeAction{}
         , _demolishAction{}
         , _nextToolAction{}
@@ -84,12 +82,9 @@ namespace sw
         , _fasterAction{}
         , _slowerAction{}
         , _statusAction{}
-        , _director{}
         , _cursorTile{}
         , _cursorSize{ 1 }
         , _selectedTool{ 0 }
-        , _bInputLive{ SW_FALSE }
-        , _bActionsValid{ SW_FALSE }
         , _bCursorValid{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -98,19 +93,9 @@ namespace sw
 
     CityBuildInputComponent::~CityBuildInputComponent() = default;
 
-    void CityBuildInputComponent::onRegister( GameObjectManager& manager )
-    {
-        Component::onRegister( manager );
-        const GameObject* const pOwner = getOwner();
-        _director                      = TComponentHandle<CityBuilderGameModeComponent>( pOwner != nullptr ? pOwner->getComponent<CityBuilderGameModeComponent>() : nullptr );
-        if ( _director.isValid() == false )
-            SW_LOG_ERROR_ID( "City.BuildInputWithoutGameMode", "City build input on '%#': no city game mode in front of it on the same object - it reads no input",
-                             pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-    }
-
     void CityBuildInputComponent::onBeginPlay()
     {
-        Component::onBeginPlay();
+        GameModeViewComponent::onBeginPlay();
         // 입력 액션은 입력 맵에 있어야 한다. 입력이 없는 실행(헤드리스)은 보지 않는다.
         const InputManager* const pInput = game::findSubsystem<InputManager>();
         const bool                bValid = pInput != nullptr && InputActionCheckUtil::hasAllActions( pInput->getInputMap(),
@@ -118,14 +103,6 @@ namespace sw
                                                                                                        &_pauseAction, &_fasterAction, &_slowerAction, &_statusAction },
                                                                                                      "CityBuildInputComponent" );
         _bActionsValid                   = bValid ? SW_TRUE : SW_FALSE;
-    }
-
-    void CityBuildInputComponent::onTick( TickContext& context )
-    {
-        Component::onTick( context );
-        _bInputLive = context.getDeltaTime() > 0.0f ? SW_TRUE : SW_FALSE; // 자기 칸 쓰기 — 디렉터 명령은 틱 뒤에 낸다
-        context.deferPostTickOnComponent( *this, []( CityBuildInputComponent& buildInput, GameObjectManager& manager )
-        { buildInput.updateInput( manager ); } );
     }
 
     void CityBuildInputComponent::serializeState( StateIO& io )
@@ -154,33 +131,32 @@ namespace sw
         return true;
     }
 
-    void CityBuildInputComponent::updateInput( GameObjectManager& manager )
+    void CityBuildInputComponent::updateInput( GameObjectManager& manager, CityBuilderGameModeComponent& director )
     {
-        CityBuilderGameModeComponent* const pDirector = manager.resolveComponent( _director );
-        if ( pDirector == nullptr || pDirector->isStarted() == false )
-            return;
-        playStepEvents( *pDirector );
-        const bool                bReadInput = _bInputLive == SW_TRUE && _bActionsValid == SW_TRUE;
-        const InputManager* const pInput     = bReadInput ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput == nullptr )
-            return;
-        // 카메라 이동과 확대는 리그가 읽는다. 키는 입력 맵이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-        const GameInputView inputMap( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
-        updateTool( *pDirector, inputMap );
-        (void)pDirector->submitTimeInput( inputMap.wasActionTriggered( _pauseAction ), inputMap.wasActionTriggered( _fasterAction ), inputMap.wasActionTriggered( _slowerAction ) ); // 받지 않는 디렉터가 있다
-        if ( inputMap.wasActionTriggered( _autoPlanAction ) )
-            (void)pDirector->submitAutoPlanToggle(); // 자동 계획이 없는 디렉터는 거절한다
-        if ( inputMap.wasActionTriggered( _statusAction ) )
-            pDirector->logStatus();
+        playStepEvents( director );
+        dispatchInput( manager, director );
+    }
 
-        updateCursor( manager, *pDirector, *pInput );
+    void CityBuildInputComponent::submitInput( const GameModeInput& inputMap, CityBuilderGameModeComponent& director )
+    {
+        if ( _bActionsValid == SW_FALSE )
+            return;
+        // 카메라 이동과 확대는 리그가 읽는다. 키는 입력 맵이 정한다.
+        updateTool( director, inputMap );
+        (void)director.submitTimeInput( inputMap.wasActionTriggered( _pauseAction ), inputMap.wasActionTriggered( _fasterAction ), inputMap.wasActionTriggered( _slowerAction ) ); // 받지 않는 디렉터가 있다
+        if ( inputMap.wasActionTriggered( _autoPlanAction ) )
+            (void)director.submitAutoPlanToggle(); // 자동 계획이 없는 디렉터는 거절한다
+        if ( inputMap.wasActionTriggered( _statusAction ) )
+            director.logStatus();
+
+        updateCursor( inputMap.getManager(), director, inputMap.getDevices() );
         if ( _bCursorValid == SW_FALSE )
             return;
         // 커서 타일은 포인터 위치로 정하고, 누르는 것은 액션이 정한다. 도로 도구는 누르는 동안 끌어서 잇는다.
-        const bool bRoadTool = findSelectedBuilding( *pDirector ) == nullptr;
+        const bool bRoadTool = findSelectedBuilding( director ) == nullptr;
         if ( inputMap.wasActionPressed( _placeAction ) || ( bRoadTool && inputMap.isActionDown( _placeAction ) ) )
-            placeSelected( *pDirector );
-        if ( inputMap.wasActionTriggered( _demolishAction ) && pDirector->submitDemolish( _cursorTile ) )
+            placeSelected( director );
+        if ( inputMap.wasActionTriggered( _demolishAction ) && director.submitDemolish( _cursorTile ) )
             SW_LOG_INFO_ID( "City.Demolished", "[City] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
     }
 

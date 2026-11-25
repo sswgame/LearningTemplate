@@ -42,6 +42,18 @@ namespace sw
     {
         struct PrefabCacheInternal
         {
+            /** @brief @p object 아래의 오브젝트를 모두 파생으로 표시합니다(`SpawnLifetime::Derived`). */
+            static void markChildrenTransient( const GameObject& object )
+            {
+                vector<GameObject*> listChild;
+                object.getChildren( listChild );
+                for ( GameObject* pChild : listChild )
+                {
+                    pChild->setTransient( true );
+                    markChildrenTransient( *pChild );
+                }
+            }
+
             /** @brief 프리팹 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
             static const CacheStatsHandle& getCacheStats()
             {
@@ -454,7 +466,7 @@ namespace sw
         return bInCycle == false;
     }
 
-    GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
+    GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, SpawnLifetime lifetime, const utf8* pInstanceName )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         SW_PROFILE_SCOPE( "GT.Prefab.spawn" );
@@ -489,6 +501,7 @@ namespace sw
         GameObject* pGameObject = pGameObjectManager->createGameObject( hashed_string( pInstanceNameUTF8 ) );
         if ( pGameObject == nullptr )
             return nullptr;
+        pGameObject->setTransient( lifetime == SpawnLifetime::Derived );
 
         // 컴포넌트 틱 중이면 오브젝트는 지금 만들어 돌려주고(부르는 쪽이 핸들을 든다), 상태는 틱 직후 구조 변경 큐에서 채운다. 그 자리에서
         // 상태를 읽으면 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려지고** 빈 오브젝트만 남는다.
@@ -530,6 +543,8 @@ namespace sw
             pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
         }
         (void)spawnNestedInstances( pGameObject, asset, {}, nullptr, 0 ); // 건너뛴 노드는 노드마다 경고했다 — 바깥 인스턴스는 남는다
+        if ( pGameObject->isTransient() )
+            PrefabCacheInternal::markChildrenTransient( *pGameObject ); // 스냅샷 · 상태 해시는 오브젝트마다 본다 — 자식만 남아 실리지 않게
         return true;
     }
 

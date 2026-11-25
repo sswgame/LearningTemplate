@@ -51,11 +51,6 @@ namespace
         void serializeGameState( StateIO& io ) override { (void)io; }
         bool startGame() override { return true; }
         void updateMatch( float32 deltaTime ) override { (void)deltaTime; }
-        void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
-        {
-            (void)manager;
-            (void)bRespawnViews;
-        }
     };
 
     constexpr string_view kValidXML = R"(<Minigame name="arcade" map="testproject/minigame/arcade.scene.xml" entry="SceneSwitch" features="TestFeature"

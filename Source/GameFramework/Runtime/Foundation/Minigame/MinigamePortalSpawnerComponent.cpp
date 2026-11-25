@@ -62,7 +62,7 @@ namespace sw
     template <typename TTrigger>
     TTrigger* MinigamePortalSpawnerComponent::spawnVolume( GameObjectManager& manager, const AssetRef<PrefabAsset>& prefab, const utf8* pName, const MinigameDefinition& definition )
     {
-        GameObject* const     pVolume  = game::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), pName );
+        GameObject* const     pVolume  = game::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( &manager, prefab.path(), SpawnLifetime::Derived, pName );
         TTrigger* const       pTrigger = pVolume != nullptr ? pVolume->getComponent<TTrigger>() : nullptr;
         SceneComponent* const pRoot    = pVolume != nullptr ? pVolume->getPrimarySceneComponent() : nullptr;
         if ( pTrigger == nullptr || pRoot == nullptr )
@@ -73,7 +73,6 @@ namespace sw
                 manager.destroyGameObject( pVolume );
             return nullptr;
         }
-        pVolume->setTransient( true ); // 정의에서 다시 세우는 파생 — 스냅샷에 실으면 복원 뒤 다시 세운 것과 겹친다
         pTrigger->setMinigame( definition._name );
         pRoot->setWorldPosition( computeSlotPosition( definition._portalSlot ) );
         _listPortal.push_back( pVolume->getHandle() );

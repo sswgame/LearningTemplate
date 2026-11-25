@@ -82,7 +82,6 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               updateGame( float32 deltaTime ) override;
-        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
         /**
          * @brief 새 판에서 사람이 맡을 플레이어 깃발(`SkirmishMatch::kHumanPlayer0` …)입니다. 여기서는 0 번, 자동 플레이면 없음(0)입니다.

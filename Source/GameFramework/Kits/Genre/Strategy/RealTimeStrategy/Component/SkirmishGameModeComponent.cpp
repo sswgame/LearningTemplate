@@ -303,13 +303,6 @@ namespace sw
             _match.update( deltaTime, _speed.getTimeScale() );
     }
 
-    void SkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        // 모습은 클라이언트 모듈(`RTSBattlefieldViewComponent`)이 세운다.
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     int32 SkirmishGameModeComponent::submitCommand( RTSCommand&& command )
     {
         return isStarted() ? _match.getWorld().applyCommand( getLocalPlayer(), command ) : 0;

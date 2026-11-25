@@ -152,12 +152,6 @@ namespace sw
         _queueCount = static_cast<int32>( _crafter.getQueue().size() );
     }
 
-    void CraftingDemoComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
-    {
-        (void)manager;
-        (void)bRespawnViews;
-    }
-
     void CraftingDemoComponent::serializeGameState( StateIO& io )
     {
         io.header( CraftingDemoComponentInternal::kStateFormat );
