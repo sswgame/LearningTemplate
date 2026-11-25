@@ -139,6 +139,7 @@ namespace sw
     }
 } // namespace sw
 
+namespace sw
 {
     namespace
     {
