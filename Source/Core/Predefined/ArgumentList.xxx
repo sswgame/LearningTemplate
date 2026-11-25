@@ -183,6 +183,8 @@ SW_REGISTER_ARGUMENT( CRASH_REPORTER, All, CommandLineDiskPath{}, "crash-reporte
 SW_REGISTER_ARGUMENT( TEST, Test, false, "test" )
 // 돌릴 케이스 이름 와일드카드(`Suite.*`, 쉼표로 여럿, 앞에 - 면 뺀다).
 SW_REGISTER_ARGUMENT( TEST_FILTER, Test, "*", "test-filter" )
+// 에디터 단위 테스트 — 창 · GPU 없이 에디터 인스턴스를 세워 `/Editor/` 소스의 케이스를 돈다(거르개 · 씨앗 · 보고 인자는 `--test` 와 같다). 사람의 에디터 상태를 만지지 않게 `-unattended` 와 함께만 받는다.
+SW_REGISTER_ARGUMENT( TEST_EDITOR, Test, false, "test-editor" )
 // 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다 — 찍힌 값을 주면 같은 순서를 다시 돈다).
 SW_REGISTER_ARGUMENT( TEST_SEED, Test, 0, "test-seed" )
 // 같은 거른 케이스를 몇 회차 돌지(간헐 실패 찾기, 회차마다 씨앗 + 1).

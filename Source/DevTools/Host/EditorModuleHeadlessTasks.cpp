@@ -23,10 +23,20 @@
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
 
+    #include "DevTools/Diagnostics/UnitTestRun.h"
+
+    #include "Engine/Module/ModuleCatalog.h"
+    #include "Engine/Module/ModuleRegistrationHost.h"
+
+    #include "ModuleAPI/Service/IModuleStateStore.h"
+
+    #include "ModuleManager/ModuleCatalogLoader.h"
+
 namespace sw
 {
     EditorModuleHeadlessSession::EditorModuleHeadlessSession()
-        : _pLibrary{ nullptr }
+        : _listExtension{}
+        , _pLibrary{ nullptr }
         , _loadCount{ 0 }
         , _entryCallCount{ 0 }
         , _bLoadAttempted{ SW_FALSE }
@@ -37,6 +47,11 @@ namespace sw
 
     EditorModuleHeadlessSession::~EditorModuleHeadlessSession()
     {
+        for ( auto it = _listExtension.rbegin(); it != _listExtension.rend(); ++it )
+        {
+            engine::unregisterModuleTypes( it->_name );
+            (void)ModuleLibraryUtil::unloadModuleLibrary( it->_name, it->_pLibrary ); // 남으면 프로세스 끝까지 로드된 채다(이유는 경고로 남는다)
+        }
         if ( _bTypesRegistered == SW_TRUE )
             engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
         if ( _pLibrary != nullptr )
@@ -85,6 +100,30 @@ namespace sw
         }
         ++_entryCallCount;
         return pEntry;
+    }
+
+    bool EditorModuleHeadlessSession::loadExtensions()
+    {
+        ModuleCatalog    catalog;
+        ModuleResolution resolution;
+        if ( ModuleCatalogLoader::loadAndResolve( ModuleCatalog::getBuildTargetMask(), catalog, resolution ) == false )
+            return false;
+        for ( const string& moduleName : resolution._listLoadOrder )
+        {
+            const ModuleManifest* const pManifest = catalog.findManifest( moduleName );
+            if ( pManifest == nullptr || pManifest->_kind != ModuleKind::EditorExtension )
+                continue;
+            void* const pLibrary = ModuleLibraryUtil::loadLibraryAt( ModuleLibraryUtil::findModuleLibraryPath( moduleName ) );
+            if ( pLibrary == nullptr )
+            {
+                SW_LOG_ERROR_ID( "EditorModuleHeadlessTasks.CannotLoadExtension", "Editor extension module %# could not be loaded", moduleName );
+                return false;
+            }
+            _listExtension.push_back( ExtensionLibrary{ moduleName, pLibrary } );
+            if ( engine::registerModuleTypes( moduleName ) == false )
+                return false; // 등록이 이유를 남겼다
+        }
+        return true;
     }
 } // namespace sw
 
@@ -144,13 +183,46 @@ namespace sw
             return pfnCheck( &service ) == 0;
         } );
     }
+
+    bool runUnitTestsWithEditorModule( EditorModuleHeadlessSession& session, const CommandLineManager& commandLine )
+    {
+        if ( commandLine.isAutomatedRun() == false )
+        {
+            SW_LOG_ERROR_ID( "EditorModuleHeadlessTasks.EditorTestsNeedUnattended", "--test-editor needs -unattended - the editor instance would read and write the user's editor state" );
+            return false;
+        }
+        EditorAPI                 api{};
+        const PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( session.findEntry( kEditorModuleSymbols._pExportSymbol, "Editor unit tests" ) );
+        if ( pfnExport == nullptr || pfnExport( &api ) == false || session.loadExtensions() == false )
+            return false;
+        // 에디터 모듈이 보는 범위는 보통 실행(`GameModuleManager::fillModuleServiceScope`)과 같다 — 엔진 서비스, 모듈이 드러낸 서브시스템, 맡김 칸.
+        SubsystemScope services;
+        engine::bindModuleServices( services, false );
+        if ( const ModuleRegistrationHost* const pRegistrationHost = engine::findSubsystem<ModuleRegistrationHost>() )
+            services.setParentScope( &pRegistrationHost->getHostModuleLocator() );
+        if ( IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>() )
+            (void)services.bind( pStateStore ); // 새 범위라 겹치지 않는다
+        api.bindService( &services );
+        const auto initializeHeadless = [&api]( EditorHandle editor )
+        { return api.initializeHeadless( editor ); };
+        EditorHandle editor = nullptr;
+        bool         bPassed{ false };
+        if ( ModuleInstanceUtil::createInstance( api, editor, initializeHeadless, nullptr, false, "Editor" ) )
+        {
+            bPassed = UnitTestRun::run( commandLine, "/Editor/", "editorApp" ); // 에디터 모듈은 모두 `Editor/` 폴더다(확장 · 플러그인도)
+            api.requestBackgroundStop( editor );
+        }
+        ModuleInstanceUtil::destroyInstance( api, editor, false, sw::config::kTargetEditorModule ); // 타입 등록 · 라이브러리는 세션이 내린다
+        return bPassed;
+    }
 } // namespace sw
 #else
 namespace sw
 {
     // 정적 모듈 구성 — 에디터 모듈이 없다. 작업 표가 세션을 쥐지만 작업은 모듈을 찾기 전에 실패로 답한다(`build::kStaticModules`).
     EditorModuleHeadlessSession::EditorModuleHeadlessSession()
-        : _pLibrary{ nullptr }
+        : _listExtension{}
+        , _pLibrary{ nullptr }
         , _loadCount{ 0 }
         , _entryCallCount{ 0 }
         , _bLoadAttempted{ SW_FALSE }
@@ -164,6 +236,11 @@ namespace sw
     void* EditorModuleHeadlessSession::findEntry( const utf8* /*pSymbol*/, const utf8* /*pPurpose*/ )
     {
         return nullptr;
+    }
+
+    bool EditorModuleHeadlessSession::loadExtensions()
+    {
+        return false;
     }
 } // namespace sw
 #endif // SW_WITH_DYNAMIC_MODULES
@@ -240,6 +317,24 @@ namespace sw
                 }
             }
 
+            /** @brief 에디터 단위 테스트(`--test-editor`)입니다. */
+            static bool runEditorUnitTests( const CommandLineManager& commandLine, EditorModuleHeadlessSession& editorModule )
+            {
+                bool bRun = false;
+                commandLine.getArgument( CommandLineArgument::TEST_EDITOR, bRun );
+                if ( bRun == false )
+                    return true;                       // 꺼서 준 인자다
+                if constexpr ( build::kStaticModules ) // 에디터 모듈의 일이다 — 정적 구성에는 에디터 모듈도 그것을 올리는 길도 없다
+                {
+                    SW_LOG_ERROR_ID( "App.EditorTestsNeedEditor", "Editor unit tests need the editor module, which a build with statically linked modules does not have - run them from a desktop Dev build." );
+                    return false;
+                }
+                else
+                {
+                    return runUnitTestsWithEditorModule( editorModule, commandLine );
+                }
+            }
+
             /**
              * @brief 원본 임포트(`--import-<종류>`) 또는 대조만 하는 실행(`--check-<종류>`)입니다.
              * @tparam kKind 임포트 종류. @tparam kImportArgument 임포트 인자. @tparam kCheckArgument 대조만 하는 인자.
@@ -281,6 +376,7 @@ namespace sw
             { &EditorModuleTaskRun::isAnyProvided<CommandLineArgument::GATHER_TEXT, CommandLineArgument::CHECK_TEXT, CommandLineArgument::EXPORT_PO, CommandLineArgument::IMPORT_PO>, HeadlessTaskHost::Any,
              &EditorModuleTaskRun::runLocalizationTools },
             { &EditorModuleTaskRun::isAnyProvided<CommandLineArgument::CHECK_ASSET_REFS>, HeadlessTaskHost::Any, &EditorModuleTaskRun::runAssetReferenceCheck },
+            { &EditorModuleTaskRun::isAnyProvided<CommandLineArgument::TEST_EDITOR>, HeadlessTaskHost::Client, &EditorModuleTaskRun::runEditorUnitTests },
             EditorModuleTaskRun::makeImportTask<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>(),
             EditorModuleTaskRun::makeImportTask<EditorImportKind::TextureVariant, CommandLineArgument::COOK_TEXTURE_VARIANTS, CommandLineArgument::CHECK_TEXTURE_VARIANTS>(),
             EditorModuleTaskRun::makeImportTask<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>(),

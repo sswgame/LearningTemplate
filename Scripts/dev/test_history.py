@@ -40,7 +40,7 @@ Scripts/dev/test_history.py
 `git diff --name-status <base>...HEAD` 로 가른다(이력 DB 는 기계마다 달라 쓰지 않는다). 묶음 검증이 build 와 cpu 사이에 부른다(`preflight.sh` 의 `changed` 단계).
   (a) 바뀐 소스 · 테스트 파일의 기능 폴더(`…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더 — 테스트가 없으면 한 단계 위)를 그 폴더를 싣는 단위 항목
       (`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits` — ctest 의 명령을 `ctest --show-only=json-v1` 에서 읽는다)에 `--test-source=` 로 좁혀 돈다.
-      에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이나 리플렉션 선언(`REFLECT` 이 있는 헤더 — 메타 `Icon=` · 분류 · 표시 이름)이 바뀌었으면 에디터 단위 테스트(`editor.unitTests`)를 편집기 안에서 돈다 — `App --test` 에는 없다.
+      에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이나 리플렉션 선언(`REFLECT` 이 있는 헤더 — 메타 `Icon=` · 분류 · 표시 이름)이 바뀌었으면 에디터 단위 테스트(`UnitTests.Editor` — 창 · GPU 없는 `App --test-editor`)를 돈다. 단위라 시나리오보다 먼저다.
   (b) 더해지거나 바뀐 `*.scenario.xml`(골든이 바뀌면 그 시나리오)을 하나씩 제 프로세스로, 그 시나리오가 든 ctest 항목의 백엔드마다 돈다.
   돌 것이 있으면 먼저 프리셋을 증분 빌드한다 — HEAD 와 다른 옛 바이너리로 판정하지 않는다(지면 `CHANGED_FAILED`).
   둘 다 **없는 기준 파일만 쓴다**(`--record-missing-snapshots` · `-scenario-record-missing-golden`) — 쓴 케이스 · 시나리오는 `MissingBaseline` 으로 지고, 쓴 파일(추적 안 된
@@ -319,9 +319,8 @@ def make_ctest_exclude(list_entry: Sequence[QuarantineEntry]) -> str:
 # changed — origin/main 뒤에 들어온 테스트 · 시나리오를 먼저 돈다
 # ---------------------------------------------------------------------------
 CHANGED_OUTPUT = Path("Testing") / "Changed"   # 빌드 폴더 아래 이 단계의 로그 · 보고 — 돌 때마다 비운다
-# 에디터 단위 테스트는 편집기 안의 자체 테스트로만 돈다(`EditorSelfTestUnitTests.cpp`) — 시나리오 읽기 검사 · 아이콘 · 테마 · 현지화 검사가 모두 여기다.
-EDITOR_SELF_TEST_SCENARIO = "engine/automation/editor/selftests.scenario.xml"
-EDITOR_UNIT_TEST_ITEM = "editor.unitTests"
+# 에디터 단위 테스트(창 · GPU 없는 `App --test-editor`) — 시나리오 읽기 검사 · 아이콘 · 테마 · 현지화 검사가 모두 여기다.
+EDITOR_UNIT_TEST_ITEM = "UnitTests.Editor"
 REFLECT_DECLARATION = re.compile(r"^\s*(?:REFLECT|PROPERTY|ENUM)\(", re.MULTILINE)
 UNIT_ITEM_PATTERN = re.compile(r"^UnitTests(\.[A-Za-z0-9_]+)?$")
 SOURCE_SUFFIXES = (".cpp", ".h", ".hpp", ".inl")
@@ -404,7 +403,7 @@ def find_feature_folder(path: str, list_test_file: Sequence[str]) -> str | None:
 
 
 def select_unit_folders(list_changed: Sequence[ChangedFile], list_test_file: Sequence[str]) -> dict[str, list[ChangedFile]]:
-    """기능 폴더 → 그 폴더를 고른 바뀐 파일. 에디터 폴더(`/Editor/`)는 뺀다 — 그 케이스는 `App --test` 에 등록되지 않고 편집기 체인(`editor.unitTests`)이 돈다."""
+    """기능 폴더 → 그 폴더를 고른 바뀐 파일. 에디터 폴더(`/Editor/`)는 뺀다 — 그 케이스는 `App --test` 에 등록되지 않고 `UnitTests.Editor` 가 돈다."""
     map_folder: dict[str, list[ChangedFile]] = {}
     for changed in list_changed:
         if not changed.path.startswith("Source/") or "/Editor/" in changed.path:
@@ -448,7 +447,7 @@ def has_reflected_type(path: str, read_text: Callable[[str], str]) -> bool:
 
 
 def select_editor_files(list_changed: Sequence[ChangedFile], read_text: Callable[[str], str]) -> list[ChangedFile]:
-    """에디터 단위 테스트(`editor.unitTests`)를 돌게 하는 바뀐 파일 — 에디터 모듈 · 편집기 확장의 소스, 편집기 시나리오, 에디터 데이터, 리플렉션 헤더(어느 층이든)."""
+    """에디터 단위 테스트(`UnitTests.Editor`)를 돌게 하는 바뀐 파일 — 에디터 모듈 · 편집기 확장의 소스, 편집기 시나리오, 에디터 데이터, 리플렉션 헤더(어느 층이든)."""
     return [changed for changed in list_changed
             if (changed.path.startswith("Source/") and "/Editor/" in changed.path)
             or has_reflected_type(changed.path, read_text)
@@ -503,7 +502,7 @@ def make_unit_runs(list_item: Sequence[CtestItem], map_folder: dict[str, list[Ch
     """
     list_unit: list[CtestItem] = []
     for item in list_item:
-        if not UNIT_ITEM_PATTERN.match(item.name) or get_argument(item.command, "test-filter") is not None:
+        if not UNIT_ITEM_PATTERN.match(item.name) or item.name == EDITOR_UNIT_TEST_ITEM or get_argument(item.command, "test-filter") is not None:
             continue
         shard = get_argument(item.command, "test-shard")
         if shard is not None and not shard.startswith("0/"):
@@ -612,18 +611,18 @@ def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, l
     return list_run, list_row
 
 
-def make_editor_unit_run(list_item: Sequence[CtestItem], list_editor_file: list[ChangedFile], map_scenario: dict[str, list[ChangedFile]], content_root: Path,
-                         output: Path) -> ChangedRun | None:
-    """에디터 쪽이 바뀌었으면 자체 테스트 시나리오를 `editor.unitTests` 하나로 좁혀 도는 실행. 자체 테스트 시나리오가 바뀌었으면 그 실행이 모두 돌므로 없다."""
-    if not list_editor_file or EDITOR_SELF_TEST_SCENARIO in map_scenario:
+def make_editor_unit_run(list_item: Sequence[CtestItem], list_editor_file: list[ChangedFile], output: Path) -> ChangedRun | None:
+    """에디터 쪽이 바뀌었으면 에디터 단위 테스트(`UnitTests.Editor`)를 통째로 도는 실행(13 초 안팎이라 좁히지 않는다)."""
+    if not list_editor_file:
         return None
-    item = next((item for item in list_item if EDITOR_SELF_TEST_SCENARIO in (get_argument(item.command, "scenario") or "").split(",")), None)
+    item = next((item for item in list_item if item.name == EDITOR_UNIT_TEST_ITEM), None)
     if item is None:
-        raise RuntimeError(f"ctest 에 {EDITOR_SELF_TEST_SCENARIO} 를 도는 항목이 없다 - 에디터 단위 테스트를 돌 수 없다")
-    folder = output / "scenario" / EDITOR_UNIT_TEST_ITEM
-    command = make_scenario_command(item, EDITOR_SELF_TEST_SCENARIO, content_root, folder)
-    command.append(f"-gv_editorSelfTestPattern={EDITOR_UNIT_TEST_ITEM}")
-    return ChangedRun(EDITOR_UNIT_TEST_ITEM, list_editor_file, command, item.working_directory, folder, SINGLE_SCENARIO_TIMEOUT_SECONDS, is_scenario=True)
+        raise RuntimeError(f"ctest 에 {EDITOR_UNIT_TEST_ITEM} 이 없다 - 에디터 단위 테스트를 돌 수 없다")
+    dash = find_dash(item.command, "test-editor")
+    command = set_argument(list(item.command), "test-report", str(output / f"{item.name}.json"), dash)
+    command = set_argument(command, "log-file", str(output / f"{item.name}.log"))
+    command.append(f"{dash}record-missing-snapshots")
+    return ChangedRun(item.name, list_editor_file, command, item.working_directory, output / f"{item.name}.json", item.timeout_seconds)
 
 
 def get_last_result_line(text: str, prefix: str) -> str:
@@ -842,9 +841,9 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     map_net = {scenario: item.test_name for item in read_net_items() for scenario in item.scenarios}
     list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, project_root / "Content", build_dir, output, find_branch, map_quarantine, map_net,
                                                      read_manual_scenarios(project_root))
-    editor_unit_run = make_editor_unit_run(list_item, list_editor_file, map_scenario, project_root / "Content", output)
+    editor_unit_run = make_editor_unit_run(list_item, list_editor_file, output)
     if editor_unit_run is not None:
-        list_scenario_run.insert(0, editor_unit_run)   # 시나리오 읽기 오류 · 없는 이름을 시나리오보다 먼저 알린다
+        list_unit_run.append(editor_unit_run)   # 단위와 함께 — 시나리오 읽기 오류 · 없는 이름을 시나리오보다 먼저 알린다
 
     def execute(run: ChangedRun) -> None:
         print(f"[Changed] run {run.item}: {' '.join(run.command)}", flush=True)   # `run ` 머리 — preflight.sh 가 이 줄을 빼고 표만 찍는다
@@ -908,17 +907,12 @@ def run_changed_self_check() -> None:
     editor_changed = [ChangedFile("M", path) for path in ("Source/GameFramework/Plugin/Editor/X.cpp", "Content/game/g/automation/editor/e.scenario.xml",
                                                           "Content/editor/fonts/i.glyphs.xml", "Content/game/g/automation/editor/golden/e.dx12.ppm")]
     assert len(select_editor_files(editor_changed, read_no_text)) == 3, "편집기 확장 · 편집기 시나리오 · 에디터 데이터(골든은 아니다)"
-    self_test_item = CtestItem("Scenario.editor", ("App.exe", "-EnableEditor", f"-scenario=a.scenario.xml,{EDITOR_SELF_TEST_SCENARIO}", "-scenario-backends=all"), "B/Bin")
-    with tempfile.TemporaryDirectory() as temporary:
-        content_root = Path(temporary)
-        for name in ("a.scenario.xml", EDITOR_SELF_TEST_SCENARIO):
-            (content_root / name).parent.mkdir(parents=True, exist_ok=True)
-            (content_root / name).write_text("<Scenario>\n</Scenario>\n", encoding="utf-8")
-        editor_run = make_editor_unit_run([self_test_item], editor_changed, {}, content_root, Path("O"))
-        assert editor_run is not None and get_argument(editor_run.command, "scenario") == EDITOR_SELF_TEST_SCENARIO, editor_run
-        assert editor_run.command[-1] == "-gv_editorSelfTestPattern=editor.unitTests" and editor_run.is_scenario, editor_run.command
-        assert make_editor_unit_run([self_test_item], [], {}, content_root, Path("O")) is None, "에디터 쪽이 그대로면 돌지 않는다"
-        assert make_editor_unit_run([self_test_item], editor_changed, {EDITOR_SELF_TEST_SCENARIO: editor_changed}, content_root, Path("O")) is None, "통째로 도는 실행이 있다"
+    editor_item = CtestItem(EDITOR_UNIT_TEST_ITEM, ("App.exe", "--test-editor", "-unattended", "-log-file=L/E.log", "--test-report=R/E.json"), "B/Bin")
+    editor_run = make_editor_unit_run([editor_item], editor_changed, Path("O"))
+    assert editor_run is not None and not editor_run.is_scenario and "--test-editor" in editor_run.command, editor_run
+    assert f"--test-report={Path('O') / 'UnitTests.Editor.json'}" in editor_run.command and "--record-missing-snapshots" in editor_run.command, editor_run.command
+    assert make_editor_unit_run([editor_item], [], Path("O")) is None, "에디터 쪽이 그대로면 돌지 않는다"
+    assert make_unit_runs([editor_item], {"Source/Engine/Foo/": list_changed[:1]}, Path("O")) == [], "에디터 항목은 기능 폴더를 받지 않는다"
 
     shown = json.dumps({"tests": [
         {"name": "UnitTests", "command": ["App.exe", "--test", "-unattended", "-log-file=L/UnitTests.log", "--test-report=R/UnitTests.json"],

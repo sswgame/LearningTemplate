@@ -6,7 +6,7 @@
 
 #include <limits>
 
-// AdminToolUtilTest — GM 도구 패널의 입력 칸 해석, 표 칸의 글, 기간 계산(에디터 케이스, `editor.unitTests`).
+// AdminToolUtilTest — GM 도구 패널의 입력 칸 해석, 표 칸의 글, 기간 계산(에디터 케이스, `UnitTests.Editor`).
 
 using namespace sw;
 using namespace sw::editor;
