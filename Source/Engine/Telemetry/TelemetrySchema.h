@@ -37,7 +37,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 1 )
+        PROPERTY( Min = 0 )
         int32 _version{ 0 };
     };
 } // namespace sw
