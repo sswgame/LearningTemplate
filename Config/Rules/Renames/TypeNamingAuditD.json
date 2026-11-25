@@ -1,7 +1,0 @@
-[
-  { "old": "IInspectorComponent", "new": "IComponentInspector", "why": "컴포넌트가 아닌 인스펙터 계약 — Component 끝말은 컴포넌트만(naming-words component 규칙)" },
-  { "old": "FractureComponentBase", "new": "FractureBaseComponent", "why": "PhysicsComponent 파생 — 컴포넌트 이름은 Component 로 끝난다" },
-  { "old": "EditorMultiEditComponent", "new": "EditorMultiEditGroup", "why": "다중 편집의 같은 형식 컴포넌트 묶음 — 컴포넌트가 아니다" },
-  { "old": "KeyedComponent", "new": "KeyedComponentNode", "why": "프리팹 XML 의 컴포넌트 원소 — 컴포넌트가 아니다", "ban": false },
-  { "old": "TestMinigameDirector", "new": "MinigameDirectorTestComponent", "why": "GameModeComponent 파생 테스트 형식 — Component 끝말", "ban": false }
-]

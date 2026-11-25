@@ -35,7 +35,7 @@
 - Static registration tables are `RegistrationList` · `RegistrationSlot<T>` with `SW_DEFINE_*` / `SW_STATIC_REGISTRATION` registrars, removed at module unload; a cached reader compares `getGeneration()`.
 - A name-keyed registry does not check empty or duplicate names with its own `if`: `RegistrationList` (`bRequireName`), `NamedEntryRegistry<T>` (named static entries found across modules) or `NameRegistry`, and the caller reports `add`. Duplicate ids of one kind in XML are errors.
 - Subscriptions go through `RegistrationList::addSubscribed`, `ItemSubscriptionList<T>` or a `MulticastDelegate`; never turn an id back into an address.
-- 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-shape` 강제, `py -3 -m Scripts delegate-macros`). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
+- 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-shape` 강제). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
 - Cannot go on: `reportFatalError( "...%#", value )` (below the log tier `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
 - Never discard a graphics device result: `isVkSuccess` / `isHrSuccess`, `requireVk` / `requireHr`, or `FAILED()` with a comment (SDK types cannot be `[[nodiscard]]` — review keeps this).
 
@@ -95,7 +95,7 @@
 
 ## Includes and layers
 
-- Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`), never include ThirdParty headers. Diet headers have a fan-in ceiling (린트 `header-include-limits` 강제); a diet commit compares `py -3 -m Scripts header-fanin --json` before and after and adds the ceiling.
+- Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`), never include ThirdParty headers. Diet headers have a fan-in ceiling (린트 `header-include-limits` 강제); a diet commit adds the ceiling.
 - `.cpp` include order (clang-format 강제). Includes are full paths from a root or bare same-folder names.
 - Prefer `StdHeaders.h` · `PlatformOSHeaders.h`; heavy rarely-used standard headers are included by their user. Platform includes go in **one** `#if SW_PLATFORM_…` chain after the others.
 - **Layers:** a lower layer never includes an upper one (`#error` 껍데기 · 린트 `layer-includes` 강제). Fix the dependency, not the table; reach up through an interface or function pointer. Below `Log` report with `SW_LOW_LEVEL_*`.
@@ -137,10 +137,10 @@
 
 - Log `SW_LOG_*_ID` (`"Area.Event"`, once `*_ONCE_ID`), command-line output `StandardOutput::write`; assert `SW_ASSERT`. Never `printf` · `assert`.
 - Time `MonotonicClock` · `Stopwatch` · `Deadline` · `WallClock`; random `MathUtil::getRandom*`, deterministic `XorShift32` · `GameRandom`. Never `std::chrono` clocks · `rand`.
-- Files only through `FileUtil` (`[[nodiscard]]`, writes pass `isWriteAllowed`) and `AsyncFileIO`; disk I/O takes `const AbsolutePath&` (린트 `cpp-shape` 규칙 14 강제, `py -3 -m Scripts disk-path-args`). Path rules: [DataInheritance](DataInheritance.md) "경로 · 리소스 신원".
+- Files only through `FileUtil` (`[[nodiscard]]`, writes pass `isWriteAllowed`) and `AsyncFileIO`; disk I/O takes `const AbsolutePath&` (string overloads are private). Path rules: [DataInheritance](DataInheritance.md) "경로 · 리소스 신원".
 - Environment `ProcessEnvironment::tryRead`, child process `Process::execute`, shared library `ModuleLibraryUtil::loadLibraryAt`. Never `getenv` · `system` · `dlopen` · Python `subprocess`.
 - Text `StringUtil` · `HexUtil` · `Base64Util` · `hashed_string`; never `atoi` · `sscanf` · hand split loops.
-- Binary `ByteReader` · `Archive` · `BitReader` return values, no output parameter (린트 `byte-reader-values` 강제); a target outside the function gets a local moved in only after the failure check. Never a hand cursor or `.resize( countFromFile )`.
+- Binary `ByteReader` · `Archive` · `BitReader` return values, no output parameter (the old overloads do not exist); a target outside the function gets a local moved in only after the failure check. Never a hand cursor or `.resize( countFromFile )`.
 - Diagnostics: `SW_PROFILE_*` per frame, `DevCounter` cumulative — never a counter field + getter on a runtime class.
 - Callbacks `Delegate` · `MulticastDelegate`, events `EventDispatcher`, background work `TaskManager`, threads `sw::thread`. Never `std::function` · `std::async`.
 - Containers `Core/Container/`; handles `SlotHandleTable` · `GameObjectHandle`; identity `IdentityToken::make`; memory `MemoryBlock` · `LinearAllocator` · `PoolAllocator`. Never `std::` containers · `malloc` · raw `new`.

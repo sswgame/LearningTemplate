@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from dev.syntax_check import SyntaxUnit, borrow_unit, make_units, select_units, split_command, strip_arguments  # noqa: E402
-from lint.clang_tidy import rewrite_command  # noqa: E402
+from common.compile_database import rewrite_command  # noqa: E402
 
 
 def write(path: Path, text: str = "") -> Path:

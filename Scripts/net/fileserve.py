@@ -25,6 +25,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+
 CTEST_ITEMS = ()  # 판정 명령이 없다 — 파일 서버다(규칙은 Scripts.Fileserve 가 본다)
 DEFAULT_PORT = 1112
 DEFAULT_BIND = "127.0.0.1"
@@ -160,29 +163,29 @@ def make_server(root: Path, bind: str, port: int) -> ThreadingHTTPServer:
     return server
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts fileserve", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--root", required=True, help="내줄 폴더(장치 대상으로 쿠킹한 팩 폴더)")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--bind", default=DEFAULT_BIND, help="바인드 주소(기본 루프백 — USB 는 adb reverse, 같은 망은 0.0.0.0)")
-    args = parser.parse_args(argv)
-    root = Path(args.root).resolve()
-    try:
-        server = make_server(root, args.bind, args.port)
-    except (ValueError, OSError) as error:
-        print(f"[fileserve] {error}", file=sys.stderr)
-        return 2
-    if args.bind not in ("127.0.0.1", "::1", "localhost"):
-        print(f"[fileserve] warning: bound to {args.bind} - anyone on this network can read {root}", file=sys.stderr)
-    print(f"[fileserve] serving {root} on http://{args.bind}:{server.server_address[1]} (read-only, development only)", flush=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
-    return 0
+class FileserveCommand(Command):
+    name = "fileserve"
+    help = "장치 대상으로 쿠킹한 팩 폴더를 읽기 전용 HTTP 로 내준다(개발 전용 — 장치는 App -fileserve=<주소>, 기본 127.0.0.1:1112 + adb reverse)"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--root", required=True, help="내줄 폴더(장치 대상으로 쿠킹한 팩 폴더)")
+        parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+        parser.add_argument("--bind", default=DEFAULT_BIND, help="바인드 주소(기본 루프백 — USB 는 adb reverse, 같은 망은 0.0.0.0)")
 
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        root = Path(args.root).resolve()
+        try:
+            server = make_server(root, args.bind, args.port)
+        except (ValueError, OSError) as error:
+            print(f"[fileserve] {error}", file=sys.stderr)
+            return ExitCode.CHECK_INVALID
+        if args.bind not in ("127.0.0.1", "::1", "localhost"):
+            print(f"[fileserve] warning: bound to {args.bind} - anyone on this network can read {root}", file=sys.stderr)
+        print(f"[fileserve] serving {root} on http://{args.bind}:{server.server_address[1]} (read-only, development only)", flush=True)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            server.server_close()
+        return ExitCode.PASSED

@@ -18,20 +18,16 @@ Scripts/generate/toolchain_cmake.py
 직접 읽는 코드가 거기 있는 것이다.)
 
 Usage:
-  python Scripts/generate/toolchain_cmake.py <output_cmake_file>
 """
 
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.project_constants import DIR_CONFIG_ENV, FILE_TOOLCHAIN_CONFIG  # noqa: E402
-from generate.generator_output import GeneratorError, format_cmake_set, run_generator, write_generated_file  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.project_constants import DIR_CONFIG_ENV, FILE_TOOLCHAIN_CONFIG
+from generate.generator_output import GeneratorError, format_cmake_set, write_generated_file
+from common.paths import get_project_root
 
 TAG = "ToolchainCMake"
 
@@ -73,13 +69,3 @@ def generate_toolchain_cmake(output_path: Path, project_root: Path | None = None
     list_line += [format_cmake_set(_to_cmake_name(key), map_config[key]) for key in sorted(map_config)]
     list_line.append("")
     write_generated_file(output_path, "\n".join(list_line), tag=TAG, summary=f"{len(map_config)} keys")
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    return run_generator(argv, tag=TAG, description="toolchain_config.json → CMake set() 목록",
-                        add_arguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일"),
-                        generate=lambda args: generate_toolchain_cmake(args.output))
-
-
-if __name__ == "__main__":
-    sys.exit(main())

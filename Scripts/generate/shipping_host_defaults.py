@@ -9,20 +9,15 @@ Scripts/generate/shipping_host_defaults.py
 엔진 TU 가 다시 컴파일되지 않습니다(Dev 는 실행할 때 게임을 고른다, `GameSelection`).
 
 사용법:
-  python Scripts/generate/shipping_host_defaults.py <engine_header_path> <game_header_path> <game_preset_path>
 """
 from __future__ import annotations
 
-import argparse
 import json
-import sys
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common.project_constants import DIR_RUNTIME_PLATFORM_CONFIG, FILE_RUNTIME_ENGINE_CONFIG, FILE_RUNTIME_RENDER_QUALITY  # noqa: E402
-from generate.generator_output import GeneratorError, run_generator, write_generated_file  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.project_constants import DIR_RUNTIME_GAME_PRESET, DIR_RUNTIME_PLATFORM_CONFIG, FILE_RUNTIME_ENGINE_CONFIG, FILE_RUNTIME_RENDER_QUALITY
+from generate.generator_output import Generator, GeneratorError, write_generated_file
+from common.paths import get_project_root
 
 TAG = "ShippingHostDefaults"
 
@@ -156,16 +151,8 @@ namespace sw::shipping_host
     write_generated_file(game_output_path, game_content, tag=TAG, report_unchanged=False)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    def _add_arguments(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("output", type=Path, help="엔진 설정 헤더(ShippingHostDefaults.h)")
-        parser.add_argument("game_output", type=Path, help="게임 프리셋 헤더(ShippingGameDefaults.h)")
-        parser.add_argument("game_preset", help="게임 프리셋(저장소 기준 — Config/Game/<게임>.json)")
-
-    return run_generator(argv, tag=TAG, description="엔진 설정 + 게임 프리셋 → Shipping 기본값 C++ 헤더",
-                        add_arguments=_add_arguments,
-                        generate=lambda args: generate_shipping_host_defaults(args.output, args.game_output, args.game_preset))
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+class ShippingHostDefaultsGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        game_preset = f"{DIR_RUNTIME_GAME_PRESET}/{game_name}.json"
+        if (get_project_root() / game_preset).is_file():   # 없으면 CMake 가 그 자리에서 멈춘다
+            generate_shipping_host_defaults(output_dir / "ShippingHostDefaults.h", output_dir / "ShippingGameDefaults.h", game_preset)

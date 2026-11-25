@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import socket
 
+from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.log_lines import problem_lines
 from common.process_group import DEFAULT_PRESET, ProcessGroup, free_port, report
@@ -43,8 +44,13 @@ def _run(preset: str) -> int:
     return report("lockstep-pair", problems, [host.log, client.log], "both processes advanced the same lockstep match with no desync and the same player 1 command")
 
 
-def main(list_argument: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts lockstep-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mode", choices=("run",), help="호스트와 클라이언트를 띄워 락스텝 대전을 돌리고 판정한다")
-    parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
-    return _run(parser.parse_args(list_argument).preset)
+class LockstepPairCommand(Command):
+    name = "lockstep-pair"
+    help = "락스텝 2 인 대전 — RTS 매치 미니게임(Playground starskirmish) 호스트 · 클라이언트 두 프로세스가 명령만 나눠 같은 판을 비동기 없이 도는지 본다(run)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("mode", choices=("run",), help="호스트와 클라이언트를 띄워 락스텝 대전을 돌리고 판정한다")
+        parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 App 을 쓴다)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        return _run(args.preset)

@@ -79,7 +79,7 @@ if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	endif()
 	# 굽는 실행 파일은 호스트 빌드(SW_HOST_BUILD_DIR — HostTools.cmake)의 것이고, 굽기 앞에 그 빌드를 다시 짓는다 — 형식(EngineConfig 스키마 등)이 바뀐 소스로
 	# 낡은 쿠커가 돌면 설정 읽기부터 멈췄다. 게임 모듈 · 에디터 모듈(텍스처 변형 굽기)도 함께라 대상 하나가 아니라 빌드 전체를 짓는다.
-	# 같은 호스트 빌드 폴더를 다른 빌드가 동시에 짓지 않게 하는 것은 부르는 쪽(preflight.sh `job_shipping_build`)이다 — ninja 는 폴더 잠금이 없다.
+	# 같은 호스트 빌드 폴더를 다른 빌드가 동시에 짓지 않게 하는 것은 부르는 쪽(Scripts/dev/preflight_stages.py `ShippingBuildJob`)이다 — ninja 는 폴더 잠금이 없다.
 	if(NOT SW_HOST_BUILD_DIR)
 		message(FATAL_ERROR "[Cook] SW_HOST_BUILD_DIR is empty - include cmake/Modules/Build/HostTools.cmake before this file (CMakeLists.txt)")
 	endif()

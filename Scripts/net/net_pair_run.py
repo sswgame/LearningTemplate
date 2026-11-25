@@ -25,6 +25,7 @@ import threading
 import time
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import problem_lines
@@ -508,9 +509,13 @@ def _run_floor(argument: argparse.Namespace) -> int:
 _MODES = {"mmo": _run_mmo, "match": _run_match, "floor": _run_floor, "respawn": _run_respawn}
 
 
-def main(list_argument: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts net-pair", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("mode", choices=tuple(_MODES))
-    parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    argument = parser.parse_args(list_argument)
-    return _MODES[argument.mode](argument)
+class NetPairCommand(Command):
+    name = "net-pair"
+    help = "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(mmo · match · floor · respawn)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("mode", choices=tuple(_MODES))
+        parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        return _MODES[args.mode](args)

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/result_types.py
 
@@ -16,32 +14,20 @@ Scripts/lint/result_types.py
 **0** 이어야 하고, 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_exemptions`(`경로|종류` → 까닭)에만 둔다. 예전에는 Core 밖 파일마다 종류별 수를
 기준선에 두는 래칫이었다 — 옮김이 끝나 기준선이 비었으므로(2026-11-21) 기준선 · `--ratchet` · `--accept` 를 지우고 Core 와 같은 규칙 하나로 둔다.
 
-    py -3 -m Scripts lint result-types                    # 폴더별 남은 수
-    py -3 -m Scripts lint result-types --check [--all]    # 검사(커밋 훅은 staged 파일)
-    py -3 -m Scripts lint result-types --self-check
+    py -3 -m Scripts lint result-types [--self-check]
 """
 
 from __future__ import annotations
 
-import argparse
-import collections
 import re
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.exit_code import ExitCode  # noqa: E402
-from lint.cpp_shape import find_param_list_end, BODY_OPEN, match_brace, strip_code  # noqa: E402
-from lint.format import get_modified_cpp_files  # noqa: E402
-from lint.lint_scope import LintScope, read_text  # noqa: E402
-from lint.magic_literals import is_source_file, list_source_files  # noqa: E402
-from lint.rule_tables import ExceptionTable  # noqa: E402
+from lint.cpp_code import BODY_OPEN, find_param_list_end, is_source_file, match_brace, strip_code
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope
+from lint.rule_tables import ExceptionTable
 
 
-RULE_ID = "result-types"
-KINDS = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 PATTERN = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),
     "out-error": re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*out\w*(?:Error|Reason)\w*\b"),
@@ -84,119 +70,61 @@ def count_failure_only_text(code: str) -> int:
     return count
 
 
-def count_text(text: str) -> dict[str, int]:
+def count_kinds(code: str) -> dict[str, int]:
     """주석 · 문자열을 지운 코드에서 종류별 수입니다(0 인 종류는 적지 않는다)."""
-    code = strip_code(text)
     counts = {kind: len(pattern.findall(code)) for kind, pattern in PATTERN.items()}
     counts["out-text-on-failure"] = count_failure_only_text(code)
     return {kind: count for kind, count in counts.items() if count > 0}
 
 
-def count_files(project_root: Path, list_file: Iterable[Path]) -> dict[str, dict[str, int]]:
-    result: dict[str, dict[str, int]] = {}
-    for file in list_file:
-        text = read_text(file, errors="ignore")
-        if text is None:
-            raise FileNotFoundError(file)   # scope 의 파일은 있다 — 예전 read_text 처럼 멈춘다
-        counts = count_text(text)
-        if counts:
-            result[file.relative_to(project_root).as_posix()] = counts
-    return result
-
-
-def find_problems(actual: dict[str, dict[str, int]], list_path: Iterable[str], table: ExceptionTable) -> list[str]:
-    """`list_path` 파일마다 0 이어야 한다(예외 `경로|종류` 말고)."""
-    list_problem = [f"{path}: {kind} {count} — 0 이어야 한다: {ADVICE[kind]}" for path in sorted(set(list_path)) for kind, count in actual.get(path, {}).items()
+def find_problems(found: Mapping[str, Mapping[str, int]], table: ExceptionTable) -> list[str]:
+    """어느 파일이나 0 이어야 한다(예외 `경로|종류` 말고)."""
+    list_problem = [f"{path}: {kind} {count} — 0 이어야 한다: {ADVICE[kind]}" for path, counts in found.items() for kind, count in counts.items()
                     if not table.allows("_exemptions", f"{path}|{kind}")]
-    return list_problem + table.list_problems(whole_repo=False)   # 예외의 낡은 줄은 예전처럼 세지 않는다
+    return list_problem + table.list_problems(whole_repo=False)   # 예외의 낡은 줄은 세지 않는다
 
 
-def load_exemptions(project_root: Path) -> ExceptionTable:
-    """예외 `경로|종류` → 까닭(`ResultTypes.json`)."""
-    return ExceptionTable.load(project_root, RULE_ID, ("_exemptions",))
+class ResultTypesRule(LintRule):
+    id = "result-types"
+    group = "모양"
+    blocks = "std::optional · string& outError 모양(어디서나 0 — 예외는 까닭과 함께 표에)"
+    why_not_type = "언어가 주는 모양이다"
+    tables = ("",)
 
+    def selects(self, path: str) -> bool:
+        return is_source_file(path)
 
-def check_result_types(project_root: Path, scope: LintScope) -> list[str]:
-    """scope 의 C++ 파일 검사입니다."""
-    list_relative = [relative for relative in scope.select() if is_source_file(relative)]
-    if not list_relative:
-        return []
-    return find_problems(count_files(project_root, [project_root / relative for relative in list_relative]), list_relative, load_exemptions(project_root))
+    def inspect(self, file: SourceFile) -> dict[str, int]:
+        return count_kinds(file.code)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, Mapping[str, int]]) -> list[str]:
+        return find_problems(found, self.load_exceptions("_exemptions"))
 
-def print_summary(actual: dict[str, dict[str, int]]) -> None:
-    count_by_folder: collections.Counter[tuple[str, str]] = collections.Counter()
-    for path, counts in actual.items():
-        folder = "/".join(path.split("/")[:2])
-        for kind, count in counts.items():
-            count_by_folder[(folder, kind)] += count
-    list_folder = sorted({folder for folder, _ in count_by_folder})
-    print(f"{'folder':<28}" + "".join(f"{kind:>14}" for kind in KINDS))
-    for folder in list_folder:
-        print(f"{folder:<28}" + "".join(f"{count_by_folder[(folder, kind)]:>14}" for kind in KINDS))
-    print(f"{'total':<28}" + "".join(f"{sum(count for (_, k), count in count_by_folder.items() if k == kind):>14}" for kind in KINDS))
+    def self_check(self) -> None:
+        def count_text(text: str) -> dict[str, int]:
+            return count_kinds(strip_code(text))
 
-
-def run_self_check() -> int:
-    failures = 0
-
-    def expect(condition: bool, message: str) -> None:
-        nonlocal failures
-        if not condition:
-            print(f"[ResultTypes] self-check: {message}")
-            failures += 1
-
-    expect(count_text("std::optional<int32> find();") == {"std-optional": 1}, "std::optional is counted")
-    expect(count_text("return std::nullopt;") == {"std-optional": 1}, "std::nullopt is counted")
-    expect(count_text("sw::optional<int32> find(); // std::optional was here\nconst char* p = \"std::optional\";") == {}, "comments, strings and sw::optional are not counted")
-    expect(count_text("#include <optional>\n") == {}, "the include line is not counted")
-    expect(count_text("bool parse( string_view text, string& outError );") == {"out-error": 1}, "string& outError is counted")
-    expect(count_text("bool gate( sw::string_view path, sw::string& outReason );") == {"out-error": 1}, "sw::string& outReason is counted")
-    expect(count_text("bool take( StreamCloseReason& outReason );") == {}, "an enum out parameter is not counted")
-    expect(count_text("void f( string& outText );") == {}, "other string outputs are not counted")
-    expect(count_text("bool load( string_view text, string* pOutError = nullptr );") == {"out-error-pointer": 1}, "string* pOutError is counted")
-    expect(count_text("bool decode( sw::string* pOutReason ); void g( string* pOutMessage );") == {"out-error-pointer": 2}, "pOutReason · pOutMessage are counted")
-    expect(count_text("bool resolve( string* pOutAbsPath );") == {}, "a pointer to a value output is not counted")
-    failure_only = "bool find( int32 id, string& outReply )\n{\n    if ( id < 0 )\n    {\n        outReply = \"bad id\";\n        return false;\n    }\n    return true;\n}\n"
-    expect(count_text(failure_only) == {"out-text-on-failure": 1}, "a text output written only before `return false` is counted")
-    expect(count_text("Item* pick( string& outUnknown ) { if ( a ) { outUnknown = name; return nullptr; } return p; }") == {"out-text-on-failure": 1}, "`return nullptr` is a failure return")
-    both_sides = "bool run( string& outReply )\n{\n    if ( a )\n    {\n        outReply = \"no\";\n        return false;\n    }\n    outReply = \"done\";\n    return true;\n}\n"
-    expect(count_text(both_sides) == {}, "a text output also written on success is not counted")
-    expect(count_text("bool run( string& outReply ) { if ( a ) { outReply = \"no\"; return false; } return inner( outReply ); }") == {}, "a text output passed on is not counted")
-    expect(count_text("bool run( string& outReply );") == {}, "a declaration is not counted")
-    exemptions = ExceptionTable.make(RULE_ID, _exemptions={"Source/Core/Foundation/Expected.h|std-optional": "bridge"})
-    expect(find_problems({"Source/Engine/A.cpp": {}}, ["Source/Engine/A.cpp"], exemptions) == [], "zero passes")
-    expect(len(find_problems({"Source/Engine/A.cpp": {"std-optional": 1}}, ["Source/Engine/A.cpp"], exemptions)) == 1, "any count outside Core fails")
-    expect(len(find_problems({"Source/Core/X.h": {"out-error-pointer": 2}}, ["Source/Core/X.h"], exemptions)) == 1, "any count in Core fails")
-    expect(find_problems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, ["Source/Core/Foundation/Expected.h"], exemptions) == [], "an exempt kind passes")
-    expect(len(find_problems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, ["Source/Core/Foundation/Expected.h"], exemptions)) == 1, "an exemption covers only its kind")
-    print(f"[ResultTypes] self-check {'OK' if failures == 0 else 'FAIL'}")
-    return ExitCode.PASSED if failures == 0 else ExitCode.VIOLATION
-
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="결과 형식 검사: std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 어디에도 없게")
-    parser.add_argument("--check", action="store_true", help="수정된 C++ 파일(작업 트리 대 HEAD)을 검사한다(--all 은 모든 파일)")
-    parser.add_argument("--all", action="store_true", help="--check 와 함께: 모든 Source 파일")
-    parser.add_argument("--self-check", action="store_true", help="세기 · 판정의 자체 검사")
-    args = parser.parse_args(argv)
-    sys.stdout.reconfigure(encoding="utf-8")
-    if args.self_check:
-        return run_self_check()
-
-    project_root = Path(__file__).resolve().parents[2]
-    if args.check:
-        list_file = list_source_files(project_root) if args.all else get_modified_cpp_files(project_root)
-        list_relative = [path.relative_to(project_root).as_posix() for path in list_file]
-        list_source = [path for path, relative in zip(list_file, list_relative) if is_source_file(relative)]
-        list_problem = find_problems(count_files(project_root, list_source), [relative for relative in list_relative if is_source_file(relative)], load_exemptions(project_root))
-        for problem in list_problem:
-            print(f"  - {problem}")
-        print(f"[ResultTypes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-        return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-    print_summary(count_files(project_root, list_source_files(project_root)))
-    return ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        assert count_text("std::optional<int32> find();") == {"std-optional": 1}, "std::optional is counted"
+        assert count_text("return std::nullopt;") == {"std-optional": 1}, "std::nullopt is counted"
+        assert count_text("sw::optional<int32> find(); // std::optional was here\nconst char* p = \"std::optional\";") == {}, "comments, strings and sw::optional are not counted"
+        assert count_text("#include <optional>\n") == {}, "the include line is not counted"
+        assert count_text("bool parse( string_view text, string& outError );") == {"out-error": 1}, "string& outError is counted"
+        assert count_text("bool gate( sw::string_view path, sw::string& outReason );") == {"out-error": 1}, "sw::string& outReason is counted"
+        assert count_text("bool take( StreamCloseReason& outReason );") == {}, "an enum out parameter is not counted"
+        assert count_text("void f( string& outText );") == {}, "other string outputs are not counted"
+        assert count_text("bool load( string_view text, string* pOutError = nullptr );") == {"out-error-pointer": 1}, "string* pOutError is counted"
+        assert count_text("bool decode( sw::string* pOutReason ); void g( string* pOutMessage );") == {"out-error-pointer": 2}, "pOutReason · pOutMessage are counted"
+        assert count_text("bool resolve( string* pOutAbsPath );") == {}, "a pointer to a value output is not counted"
+        failure_only = "bool find( int32 id, string& outReply )\n{\n    if ( id < 0 )\n    {\n        outReply = \"bad id\";\n        return false;\n    }\n    return true;\n}\n"
+        assert count_text(failure_only) == {"out-text-on-failure": 1}, "a text output written only before `return false` is counted"
+        assert count_text("Item* pick( string& outUnknown ) { if ( a ) { outUnknown = name; return nullptr; } return p; }") == {"out-text-on-failure": 1}, "`return nullptr` is a failure return"
+        both_sides = "bool run( string& outReply )\n{\n    if ( a )\n    {\n        outReply = \"no\";\n        return false;\n    }\n    outReply = \"done\";\n    return true;\n}\n"
+        assert count_text(both_sides) == {}, "a text output also written on success is not counted"
+        assert count_text("bool run( string& outReply ) { if ( a ) { outReply = \"no\"; return false; } return inner( outReply ); }") == {}, "a text output passed on is not counted"
+        assert count_text("bool run( string& outReply );") == {}, "a declaration is not counted"
+        exemptions = ExceptionTable.make(self.id, _exemptions={"Source/Core/Foundation/Expected.h|std-optional": "bridge"})
+        assert find_problems({"Source/Engine/A.cpp": {}}, exemptions) == [], "zero passes"
+        assert len(find_problems({"Source/Engine/A.cpp": {"std-optional": 1}}, exemptions)) == 1, "any count outside Core fails"
+        assert len(find_problems({"Source/Core/X.h": {"out-error-pointer": 2}}, exemptions)) == 1, "any count in Core fails"
+        assert find_problems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, exemptions) == [], "an exempt kind passes"
+        assert len(find_problems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, exemptions)) == 1, "an exemption covers only its kind"

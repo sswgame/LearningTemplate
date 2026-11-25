@@ -18,6 +18,7 @@ import socket
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import payloads, read_log
@@ -123,15 +124,19 @@ def _run(preset: str) -> int:
     return _report(compare_logs(server.text(), client.text()), [server.log, client.log])
 
 
-def main(list_argument: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts destruction-net", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    sub = parser.add_subparsers(dest="mode", required=True)
-    run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 해시를 맞댄다")
-    run_parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
-    compare_parser = sub.add_parser("compare", help="이미 있는 서버 · 클라이언트 로그를 맞댄다")
-    compare_parser.add_argument("server_log", type=Path)
-    compare_parser.add_argument("client_log", type=Path)
-    argument = parser.parse_args(list_argument)
-    if argument.mode == "compare":
-        return _report(compare_logs(read_log(argument.server_log), read_log(argument.client_log)), [argument.server_log, argument.client_log])
-    return _run(argument.preset)
+class DestructionNetCommand(Command):
+    name = "destruction-net"
+    help = "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        sub = parser.add_subparsers(dest="mode", required=True)
+        run_parser = sub.add_parser("run", help="서버와 클라이언트를 띄워 해시를 맞댄다")
+        run_parser.add_argument("--preset", default=DEFAULT_PRESET, help="빌드 프리셋(build/<프리셋>/Bin 의 Server · App 을 쓴다)")
+        compare_parser = sub.add_parser("compare", help="이미 있는 서버 · 클라이언트 로그를 맞댄다")
+        compare_parser.add_argument("server_log", type=Path)
+        compare_parser.add_argument("client_log", type=Path)
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if args.mode == "compare":
+            return _report(compare_logs(read_log(args.server_log), read_log(args.client_log)), [args.server_log, args.client_log])
+        return _run(args.preset)

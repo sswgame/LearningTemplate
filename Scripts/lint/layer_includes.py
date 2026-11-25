@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Scripts/lint/layer_includes.py
 
@@ -19,22 +17,17 @@ Scripts/lint/layer_includes.py
 
 from __future__ import annotations
 
-import argparse
+import functools
 import re
-import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.exit_code import ExitCode  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.lint_scope import LintScope, list_repo_files, make_whole_scope, read_text  # noqa: E402
+from lint.lint_rule import LintRule, SourceFile
+from lint.lint_scope import LintScope, list_repo_files, read_text
 
 EXTENSIONS = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
-SOURCE_EXTENSIONS = (".cpp", ".c")
 INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
 
 
@@ -87,16 +80,15 @@ def make_editor_tier(table: dict) -> Callable[[str, bool], int | None]:
     return lambda relative, is_includer: map_tier.get(get_editor_layer_name(relative))
 
 
-def find_problems(module: LayerModule, map_source: Mapping[str, str], list_check: Sequence[str] | None = None) -> list[str]:
-    """`mapSource` 는 `Source/<root>` 기준 경로 → 글이다. `list_check`(없으면 모두)의 파일만 보고, 거쳐 가는 prelude 헤더는 `mapSource` 에서 찾는다."""
+def find_problems(module: LayerModule, found: Mapping[str, Sequence[str]], read_includes: Callable[[str], Sequence[str] | None]) -> list[str]:
+    """@p found 는 볼 파일(`Source/<root>` 기준 경로) → include 글이다. 있는 헤더인지 · 거쳐 가는 prelude 헤더가 무엇을 include 하는지는 @p read_includes(없는 파일이면 None)로 묻는다."""
     head = module._root + "/"
     list_problem: list[str] = []
-    for relative in sorted(map_source) if list_check is None else list_check:
-        text = map_source[relative]
+    for relative, list_include in found.items():
         tier = module._find_tier(relative, True)
         if tier is None:
             continue
-        list_pending = [(include, None) for include in INCLUDE.findall(text)]
+        list_pending = [(include, None) for include in list_include]
         set_seen: set[str] = set()
         while list_pending:
             include, via = list_pending.pop()
@@ -104,13 +96,11 @@ def find_problems(module: LayerModule, map_source: Mapping[str, str], list_check
                 continue
             set_seen.add(include)
             target = include[len(head):]
-            if target not in map_source:
-                continue
             if include in module._set_prelude:
-                list_pending.extend((nested, include) for nested in INCLUDE.findall(map_source[target]))
+                list_pending.extend((nested, include) for nested in read_includes(target) or ())
                 continue
             target_tier = module._find_tier(target, False)
-            if target_tier is not None and target_tier > tier:
+            if target_tier is not None and target_tier > tier and read_includes(target) is not None:
                 route = f" (`{via}` 를 거쳐)" if via else ""
                 list_problem.append(f"Source/{module._root}/{relative}: {module._name} 층 {tier} 파일이 층 {target_tier} 헤더 `{include}` 를 include 한다{route} — 빌드의 #error 껍데기가 멈춘다. 필요한 것을 아래로 내리거나 의존을 뒤집는다")
     return list_problem
@@ -130,78 +120,67 @@ def list_modules(project_root: Path) -> list[LayerModule]:
     ]
 
 
-class ModuleTexts(dict):
-    """`Source/<root>` 기준 경로 → 글. 처음 찾을 때 읽는다 — 커밋 훅은 바뀐 파일과 그것이 거쳐 가는 prelude 헤더만 읽는다."""
+class LayerIncludesRule(LintRule):
+    id = "layer-includes"
+    group = "경계"
+    blocks = "아래 층 파일이 위 층 헤더를 include(Core · Engine · GameFramework · Editor 층 표)"
+    why_not_type = "빌드의 #error 껍데기가 막지만 그 부분을 컴파일할 때(Debug 빌드)에야 드러나고, 아무도 include 하지 않는 헤더는 보지 않는다 — 같은 표로 커밋 때 먼저 본다"
+    inputs = ("Config/Rules/Layers/",)
 
-    def __init__(self, module_dir: Path, set_relative: set[str]) -> None:
-        super().__init__()
-        self._module_dir = module_dir
-        self._set_relative = set_relative
+    @functools.cached_property
+    def modules(self) -> list[LayerModule]:
+        return list_modules(self.root)
 
-    def __contains__(self, relative: object) -> bool:
-        return relative in self._set_relative
+    def selects(self, path: str) -> bool:
+        return path.endswith(EXTENSIONS) and path.startswith(tuple(f"Source/{module._root}/" for module in self.modules))
 
-    def __missing__(self, relative: str) -> str:
-        text = read_text(self._module_dir / relative, errors="replace")
-        if text is None:
-            raise FileNotFoundError(self._module_dir / relative)   # git 이 아는 파일만 찾는다 — 예전 read_text 처럼 멈춘다
-        self[relative] = text
-        return text
+    def inspect(self, file: SourceFile) -> list[str]:
+        return INCLUDE.findall(file.text)
 
+    def evaluate(self, scope: LintScope, found: Mapping[str, list[str]]) -> list[str]:
+        set_repo = set(list_repo_files(self.root))
+        list_problem: list[str] = []
+        for module in self.modules:
+            head = f"Source/{module._root}/"
 
-def check_layer_includes(project_root: Path, scope: LintScope) -> list[str]:
-    list_problem: list[str] = []
-    for module in list_modules(project_root):
-        head = f"Source/{module._root}/"
-        map_source = ModuleTexts(project_root / "Source" / module._root,
-                                {path[len(head):] for path in list_repo_files(project_root) if path.startswith(head) and path.endswith(EXTENSIONS)})
-        list_check = sorted(path[len(head):] for path in scope.select((head,), EXTENSIONS))
-        list_problem.extend(find_problems(module, map_source, list_check))
-    return list_problem
+            def read_includes(target: str) -> Sequence[str] | None:
+                path = head + target
+                if path not in set_repo:
+                    return None
+                if path in found or target not in {include[len(module._root) + 1:] for include in module._set_prelude}:
+                    return found.get(path, ())   # prelude 가 아닌 헤더는 있는지만 본다
+                return INCLUDE.findall(read_text(self.root / path, errors="replace") or "")
 
+            list_problem += find_problems(module, {path[len(head):]: list_include for path, list_include in found.items() if path.startswith(head)}, read_includes)
+        return list_problem
 
-def run_self_check() -> None:
-    engine = LayerModule("Engine", "Engine", make_module_tier({"tier": {"Low": 0, "High": 2, "Low/Up.h": 3}}), frozenset())
-    map_source = {
-        "Low/a.cpp": '#include "Engine/Low/b.h"\n#include "Core/x.h"\n',
-        "Low/b.h": "",
-        "High/c.h": '#include "Engine/Low/b.h"\n',
-        "Low/Up.h": "",
-    }
-    assert find_problems(engine, map_source) == [], "아래 · 같은 층 · 다른 모듈은 통과한다"
-    upward = dict(map_source, **{"Low/a.cpp": '#include "Engine/High/c.h"\n'})
-    assert len(find_problems(engine, upward)) == 1, "위 층 include"
-    file_key = dict(map_source, **{"Low/b.h": '#include "Engine/Low/Up.h"\n'})
-    assert len(find_problems(engine, file_key)) == 1, "더 긴 파일 키가 층을 정한다"
+    def self_check(self) -> None:
+        def check(module: LayerModule, map_text: Mapping[str, str]) -> list[str]:
+            map_include = {path: INCLUDE.findall(text) for path, text in sorted(map_text.items())}
+            return find_problems(module, map_include, map_include.get)
 
-    core = LayerModule("Core", "Core", make_core_tier({"tier": {"Math": 1, "Testing": 10}}), frozenset())
-    core_source = {"Math/Tests/TestX.cpp": '#include "Core/Testing/T.h"\n', "Testing/T.h": "", "pch.h": "", "Math/m.h": '#include "Core/pch.h"\n'}
-    assert find_problems(core, core_source) == [], "Core 테스트는 맨 위 부분, 바로 아래 헤더는 껍데기가 없다"
+        engine = LayerModule("Engine", "Engine", make_module_tier({"tier": {"Low": 0, "High": 2, "Low/Up.h": 3}}), frozenset())
+        map_source = {
+            "Low/a.cpp": '#include "Engine/Low/b.h"\n#include "Core/x.h"\n',
+            "Low/b.h": "",
+            "High/c.h": '#include "Engine/Low/b.h"\n',
+            "Low/Up.h": "",
+        }
+        assert check(engine, map_source) == [], "아래 · 같은 층 · 다른 모듈은 통과한다"
+        upward = dict(map_source, **{"Low/a.cpp": '#include "Engine/High/c.h"\n'})
+        assert len(check(engine, upward)) == 1, "위 층 include"
+        file_key = dict(map_source, **{"Low/b.h": '#include "Engine/Low/Up.h"\n'})
+        assert len(check(engine, file_key)) == 1, "더 긴 파일 키가 층을 정한다"
 
-    editor = LayerModule("Editor", "Editor", make_editor_tier({"tier": {"Common": 0, "Common/Workspace": 2, "Panels": 6}}),
-                         frozenset({"Editor/Common/Workspace/Leaf.h"}))
-    editor_source = {"Common/u.cpp": '#include "Editor/Common/Workspace/Leaf.h"\n', "Common/Workspace/Leaf.h": "", "Common/Workspace/W.h": "", "Panels/P.h": ""}
-    assert find_problems(editor, editor_source) == [], "prelude 헤더는 어느 층에서나"
-    via_prelude = dict(editor_source, **{"Common/Workspace/Leaf.h": '#include "Editor/Common/Workspace/W.h"\n'})
-    list_via_prelude = find_problems(editor, via_prelude)
-    assert len(list_via_prelude) == 1 and "Leaf.h" in list_via_prelude[0], "prelude 를 거친 위 층 include"
-    assert len(find_problems(editor, dict(editor_source, **{"Common/u.cpp": '#include "Editor/Panels/P.h"\n'}))) == 1, "에디터 위 층"
+        core = LayerModule("Core", "Core", make_core_tier({"tier": {"Math": 1, "Testing": 10}}), frozenset())
+        core_source = {"Math/Tests/TestX.cpp": '#include "Core/Testing/T.h"\n', "Testing/T.h": "", "pch.h": "", "Math/m.h": '#include "Core/pch.h"\n'}
+        assert check(core, core_source) == [], "Core 테스트는 맨 위 부분, 바로 아래 헤더는 껍데기가 없다"
 
-
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="아래 층 파일이 위 층 헤더를 include 하는지 본다(Core · Engine · GameFramework · Editor 층 표)")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[layer-includes] self-check OK")
-        return ExitCode.PASSED
-    list_problem = check_layer_includes(get_project_root(), make_whole_scope(get_project_root()))
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[layer-includes] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        editor = LayerModule("Editor", "Editor", make_editor_tier({"tier": {"Common": 0, "Common/Workspace": 2, "Panels": 6}}),
+                             frozenset({"Editor/Common/Workspace/Leaf.h"}))
+        editor_source = {"Common/u.cpp": '#include "Editor/Common/Workspace/Leaf.h"\n', "Common/Workspace/Leaf.h": "", "Common/Workspace/W.h": "", "Panels/P.h": ""}
+        assert check(editor, editor_source) == [], "prelude 헤더는 어느 층에서나"
+        via_prelude = dict(editor_source, **{"Common/Workspace/Leaf.h": '#include "Editor/Common/Workspace/W.h"\n'})
+        list_via_prelude = check(editor, via_prelude)
+        assert len(list_via_prelude) == 1 and "Leaf.h" in list_via_prelude[0], "prelude 를 거친 위 층 include"
+        assert len(check(editor, dict(editor_source, **{"Common/u.cpp": '#include "Editor/Panels/P.h"\n'}))) == 1, "에디터 위 층"

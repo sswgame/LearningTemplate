@@ -14,22 +14,17 @@ CMake 는 결과를 읽는다(`project_constants.py` → `ConfigVars.cmake` 와 
 
 층 이름: `Common/<하위 폴더>`(Common 바로 아래 파일은 `Common`), 그 밖의 최상위 폴더, `Source/Editor` 바로 아래 파일은 `<root>`.
 
-  python Scripts/generate/editor_layers.py <출력 .cmake 파일>
 """
 
 from __future__ import annotations
 
 import re
-import sys
 import tomllib
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-from common.project_constants import DIR_SOURCE_EDITOR  # noqa: E402
-from generate.generator_output import GeneratorError, run_generator, write_generated_file  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.project_constants import DIR_SOURCE_EDITOR
+from generate.generator_output import Generator, GeneratorError, write_generated_file
+from common.paths import get_project_root
 
 TAG = "EditorLayers"
 RULE_FILE = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers" / "EditorLayers.toml"
@@ -141,11 +136,6 @@ def generate_editor_layers(output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=TAG, summary=f"{len(list_actual)} layers · {len(list_tier)} tiers")
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    return run_generator(argv, tag=TAG, description="에디터 층 표 → CMake 변수",
-                        add_arguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 .cmake 파일"),
-                        generate=lambda args: generate_editor_layers(args.output))
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+class EditorLayersGenerator(Generator):
+    def generate(self, output_dir: Path, game_name: str) -> None:
+        generate_editor_layers(output_dir / "EditorLayers.cmake")

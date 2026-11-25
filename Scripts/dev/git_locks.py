@@ -21,18 +21,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import sys
 import time
 from pathlib import Path
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.exit_code import ExitCode  # noqa: E402
-from common.git import run_git_or_raise  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+from common.host_platform import is_windows_host
 
 MIN_AGE_SECONDS = 10.0
 
@@ -84,24 +78,23 @@ def describe_lock(path: Path, now: float) -> tuple[bool, str]:
     return True, f"0 바이트 · 연 프로세스 없음 · {age:.0f} 초 — 강제로 끝난 git 의 찌꺼기"
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts git-locks", description="강제로 끝난 git 이 남긴 잠금 파일을 찾는다")
-    parser.add_argument("--remove", action="store_true", help="찌꺼기(빈 파일 · 연 프로세스 없음)를 지운다")
-    arguments = parser.parse_args(argv)
-    git_directory = Path(run_git_or_raise(["rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=get_project_root()).strip())
-    left = 0
-    for path in list_lock_files(git_directory):
-        try:
-            is_leftover, reason = describe_lock(path, time.time())
-            if is_leftover and arguments.remove:
-                path.unlink()
-        except FileNotFoundError:
-            continue   # 그 사이 git 이 끝냈다
-        removed = is_leftover and arguments.remove
-        left += 0 if removed else 1
-        print(f"[git-locks] {'지웠다' if removed else '남아 있다'}: {path} — {reason}{'' if removed or not is_leftover else ' (--remove 로 지운다)'}")
-    return ExitCode.VIOLATION if left else ExitCode.PASSED
+class GitLocksCommand(Command):
+    name = "git-locks"
+    help = "강제로 끝난 git 이 남긴 빈 잠금 파일(index.lock 등)을 찾는다 — --remove 는 연 프로세스가 없는 빈 것만 지운다"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--remove", action="store_true", help="찌꺼기(빈 파일 · 연 프로세스 없음)를 지운다")
 
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        left = 0
+        for path in list_lock_files(context.main_root / ".git"):
+            try:
+                is_leftover, reason = describe_lock(path, time.time())
+                if is_leftover and args.remove:
+                    path.unlink()
+            except FileNotFoundError:
+                continue   # 그 사이 git 이 끝냈다
+            removed = is_leftover and args.remove
+            left += 0 if removed else 1
+            print(f"[git-locks] {'지웠다' if removed else '남아 있다'}: {path} — {reason}{'' if removed or not is_leftover else ' (--remove 로 지운다)'}")
+        return ExitCode.VIOLATION if left else ExitCode.PASSED

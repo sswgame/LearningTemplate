@@ -13,10 +13,10 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.command import Command, ScriptContext
 from common.paths import get_project_root
 from common.host_platform import is_windows_host
-from common.exit_code import ExitCode  # noqa: E402
+from common.exit_code import ExitCode
 
 
 def install_pre_commit_hook(project_root: Path | None = None) -> bool:
@@ -110,13 +110,12 @@ printf '%s\\n' "$refs" | git lfs pre-push "$@"
     return True
 
 
-def main(argv: list[str] | None = None) -> int:
-    argparse.ArgumentParser(description="Git pre-commit 훅(PreCommit)을 설치한다 — 인자 없음").parse_args(argv)
-    if not install_pre_commit_hook():
-        print("[GitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
-        return ExitCode.VIOLATION
-    return ExitCode.PASSED
+class GitHooksCommand(Command):
+    name = "git-hooks"
+    help = "Git pre-commit 훅(PreCommit)을 설치한다 — 인자 없음"
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if not install_pre_commit_hook():
+            print("[GitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
+            return ExitCode.VIOLATION
+        return ExitCode.PASSED

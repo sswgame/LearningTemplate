@@ -1,4 +1,0 @@
-[
-  { "old": "AutomationStepContext", "new": "IAutomationStepContext", "why": "순수 가상만, 상태 없는 계약 — I 접두(4.1)" },
-  { "old": "ZoneModuleProcessor", "new": "IZoneModuleProcessor", "why": "순수 가상 + 인라인 도우미, 상태 없는 처리기 계약 — I 접두(4.1)" }
-]

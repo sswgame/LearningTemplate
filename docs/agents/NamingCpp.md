@@ -197,7 +197,7 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 Lint `naming-words` enforces the function form.
 
 - **No `macro()`** — it leaks every local into the caller. Use `function()` + `set(<name> … PARENT_SCOPE)` (we require 3.24, so no `return(PROPAGATE)`). A body that must run in the caller's scope stays a macro with a one-line reason.
-- Renames go through a pair table: `py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`).
+- Renames go through a pair table: `py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`); delete the table once every branch is merged.
 
 ### Python
 
@@ -221,8 +221,8 @@ Shape (Python 3.10):
 - Every function annotated (`__init__` → `-> None`). `X | None` and built-in generics, never `typing.Optional` / `List` / `Dict`.
 - Text I/O names `encoding="utf-8"` (bytes: `"rb"` · `read_bytes()`).
 - `pathlib.Path`; `os.path` only for `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext`.
-- `sys.exit(main())` as the single `__main__` line, never `raise SystemExit(…)` (tests: `unittest.main()`).
-- Under `Scripts/`, `main( argv )` returns `ExitCode` values; `argparse.ArgumentParser` gets a `description=`.
+- `sys.exit(…main())` as the single `__main__` line, never `raise SystemExit(…)` (tests: `unittest.main()`).
+- Under `Scripts/`, a command is one `Command` subclass in one file (`common/command.py`): one-line literal `name` · `help`, `run` returns `ExitCode`, a failure raises `CommandError`. Adding or deleting the file adds or removes the command — no list names it. A lint rule is likewise one `LintRule` subclass in one file (`lint/lint_rule.py`): `inspect` sees one file, `evaluate` turns the findings into problem lines. Commands and rules share code only through a library module, never by importing each other; only a file run by path ends with `sys.exit(XCommand.main())`.
 - Output is plain `print`. Catch only expected exceptions; `except Exception` only at a boundary that must keep going and reports what it swallowed. A missing required setting stops with `sys.exit`, never `os.environ.get( "X", "<default>" )`.
 
 ### HLSL

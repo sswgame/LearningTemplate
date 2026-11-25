@@ -34,21 +34,19 @@ import os
 import secrets
 import shutil
 import subprocess
-import sys
 import tempfile
 import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common import app_arguments  # noqa: E402
-from common.exit_code import ExitCode  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_build_dir, get_project_root  # noqa: E402
-from package.pack import PACK_FOLDER_NAME  # noqa: E402
-from package.web_package import IsolatedRequestHandler, WebPackageError, INDEX_HTML, PACK_LOADER_NAME, PRESET_NAME, make_web_package  # noqa: E402
+from common.command import Command, ScriptContext
+from common import app_arguments
+from common.exit_code import ExitCode
+from common.host_platform import is_windows_host
+from common.paths import get_build_dir
+from package.pack_files import PACK_FOLDER_NAME
+from package.web_packager import IsolatedRequestHandler, INDEX_HTML, PACK_LOADER_NAME, PRESET_NAME, make_web_package
 
 #: Chrome, 없으면 Edge(둘 다 Chromium 이라 같은 DevTools 프로토콜) — 임시 프로필로 띄운다.
 BROWSER_CANDIDATES = (
@@ -276,78 +274,74 @@ def run_until_adapter(browser: str, profile: Path, url: str, headed: bool, timeo
     return report, headed
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts web-check", description="Web-Shipping 묶음을 브라우저에서 띄워 기동 · WebGPU · 화면 · IDBFS 영속을 본다")
-    parser.add_argument("--game", required=True, help="게임 프리셋 이름(Config/Game/<게임>.json)")
-    parser.add_argument("--skip-package", action="store_true", help="묶음을 다시 만들지 않는다(build/Web-Shipping/Web/<게임> 을 그대로 쓴다)")
-    parser.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="실행마다 앱을 돌리는 시간(초) — 그 뒤 화면 · 표지를 본다")
-    parser.add_argument("--scenario", default="", help="시나리오 경로 — 개발 빌드(Web-Release)로 이 시나리오 하나를 돌려 종료 코드로 판정한다(입력)")
-    parser.add_argument("--headed", action="store_true", help="처음부터 브라우저 창을 띄운다(헤드리스가 어댑터를 못 받으면 알아서 창으로 다시 돈다)")
-    args = parser.parse_args(argv)
-    project_root = get_project_root()
-    build_dir = get_build_dir(SCENARIO_PRESET_NAME if args.scenario else PRESET_NAME, project_root).resolve()
-    folder = build_dir / "Web" / args.game
-    if args.skip_package is False:
-        try:
-            make_web_package(args.game, build_dir, build_dir / "Bin" / PACK_FOLDER_NAME, folder, project_root)
-        except WebPackageError as error:
-            print(f"[web-check] FAILED {error}")
-            return ExitCode.VIOLATION
-    elif (folder / "App.wasm").is_file() is False:
-        print(f"[web-check] FAILED {folder} has no package - run without --skip-package")
-        return ExitCode.CHECK_INVALID
-    browser = find_browser()
-    if browser is None:
-        print("[web-check] FAILED Chrome or Edge not found (BROWSER_CANDIDATES)")
-        return ExitCode.CHECK_INVALID
+class WebCheckCommand(Command):
+    name = "web-check"
+    help = "Web-Shipping 묶음을 브라우저(헤드리스 Chrome · Edge)에서 두 번 띄워 기동 · WebGPU · 오류 없음 · 화면 PNG · IDBFS 영속을 본다(--game)"
 
-    token = secrets.token_hex(8)
-    if args.scenario:
-        write_scenario_page(folder, args.game, args.scenario)
-    else:
-        write_check_page(folder, args.game, token, args.seconds)
-    out_dir = folder / "check"
-    shutil.rmtree(out_dir, ignore_errors=True)
-    out_dir.mkdir(parents=True)
-    handler = functools.partial(CheckRequestHandler, directory=str(folder))
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", DEFAULT_PORT), handler)
-    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-    server_thread.start()
-    list_failure: list[str] = []
-    if args.scenario:
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--game", required=True, help="게임 프리셋 이름(Config/Game/<게임>.json)")
+        parser.add_argument("--skip-package", action="store_true", help="묶음을 다시 만들지 않는다(build/Web-Shipping/Web/<게임> 을 그대로 쓴다)")
+        parser.add_argument("--seconds", type=int, default=DEFAULT_SECONDS, help="실행마다 앱을 돌리는 시간(초) — 그 뒤 화면 · 표지를 본다")
+        parser.add_argument("--scenario", default="", help="시나리오 경로 — 개발 빌드(Web-Release)로 이 시나리오 하나를 돌려 종료 코드로 판정한다(입력)")
+        parser.add_argument("--headed", action="store_true", help="처음부터 브라우저 창을 띄운다(헤드리스가 어댑터를 못 받으면 알아서 창으로 다시 돈다)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        project_root = context.root
+        build_dir = get_build_dir(SCENARIO_PRESET_NAME if args.scenario else PRESET_NAME, project_root).resolve()
+        folder = build_dir / "Web" / args.game
+        if args.skip_package is False:
+            make_web_package(args.game, build_dir, build_dir / "Bin" / PACK_FOLDER_NAME, folder, project_root)
+        elif (folder / "App.wasm").is_file() is False:
+            print(f"[web-check] FAILED {folder} has no package - run without --skip-package")
+            return ExitCode.CHECK_INVALID
+        browser = find_browser()
+        if browser is None:
+            print("[web-check] FAILED Chrome or Edge not found (BROWSER_CANDIDATES)")
+            return ExitCode.CHECK_INVALID
+
+        token = secrets.token_hex(8)
+        if args.scenario:
+            write_scenario_page(folder, args.game, args.scenario)
+        else:
+            write_check_page(folder, args.game, token, args.seconds)
+        out_dir = folder / "check"
+        shutil.rmtree(out_dir, ignore_errors=True)
+        out_dir.mkdir(parents=True)
+        handler = functools.partial(CheckRequestHandler, directory=str(folder))
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", DEFAULT_PORT), handler)
+        server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+        server_thread.start()
+        list_failure: list[str] = []
+        if args.scenario:
+            try:
+                with tempfile.TemporaryDirectory(prefix="swwebcheck-") as profile:
+                    report, _ = run_until_adapter(browser, Path(profile), f"http://localhost:{DEFAULT_PORT}/{CHECK_PAGE_NAME}", args.headed, SCENARIO_SECONDS)
+            finally:
+                server.shutdown()
+                server.server_close()
+            (out_dir / "scenario.log").write_text("\n".join(report.list_line) + "\n", encoding="utf-8", newline="\n")
+            return print_result(args.game, evaluate_scenario(report), out_dir)
         try:
             with tempfile.TemporaryDirectory(prefix="swwebcheck-") as profile:
-                report, _ = run_until_adapter(browser, Path(profile), f"http://localhost:{DEFAULT_PORT}/{CHECK_PAGE_NAME}", args.headed, SCENARIO_SECONDS)
+                timeout_seconds = args.seconds + LOAD_ALLOWANCE_SECONDS
+                base_url = f"http://localhost:{DEFAULT_PORT}/{CHECK_PAGE_NAME}"
+                first, headed = run_until_adapter(browser, Path(profile), f"{base_url}?probe=write", args.headed, timeout_seconds)
+                time.sleep(1)  # 앞 브라우저가 프로필 잠금을 놓을 틈
+                second = run_browser(browser, Path(profile), f"{base_url}?probe=read", headed, timeout_seconds)
         finally:
             server.shutdown()
             server.server_close()
-        (out_dir / "scenario.log").write_text("\n".join(report.list_line) + "\n", encoding="utf-8", newline="\n")
-        return print_result(args.game, evaluate_scenario(report), out_dir)
-    try:
-        with tempfile.TemporaryDirectory(prefix="swwebcheck-") as profile:
-            timeout_seconds = args.seconds + LOAD_ALLOWANCE_SECONDS
-            base_url = f"http://localhost:{DEFAULT_PORT}/{CHECK_PAGE_NAME}"
-            first, headed = run_until_adapter(browser, Path(profile), f"{base_url}?probe=write", args.headed, timeout_seconds)
-            time.sleep(1)  # 앞 브라우저가 프로필 잠금을 놓을 틈
-            second = run_browser(browser, Path(profile), f"{base_url}?probe=read", headed, timeout_seconds)
-    finally:
-        server.shutdown()
-        server.server_close()
 
-    for name, report in (("run1", first), ("run2", second)):
-        (out_dir / f"{name}.log").write_text("\n".join(report.list_line) + "\n", encoding="utf-8", newline="\n")
-        list_failure.extend(evaluate_run(name, report))
-    if first.screen:
-        (out_dir / "screen.png").write_bytes(first.screen)
-    else:
-        list_failure.append("run1: no screen image (canvas.toBlob gave nothing)")
-    if first.probe != f"written {token}":
-        list_failure.append(f"run1: IDBFS write failed ({first.probe or 'no report'})")
-    if second.probe != f"read {token}":
-        list_failure.append(f"run2: IDBFS did not keep the marker across sessions ({second.probe or 'no report'})")
+        for name, report in (("run1", first), ("run2", second)):
+            (out_dir / f"{name}.log").write_text("\n".join(report.list_line) + "\n", encoding="utf-8", newline="\n")
+            list_failure.extend(evaluate_run(name, report))
+        if first.screen:
+            (out_dir / "screen.png").write_bytes(first.screen)
+        else:
+            list_failure.append("run1: no screen image (canvas.toBlob gave nothing)")
+        if first.probe != f"written {token}":
+            list_failure.append(f"run1: IDBFS write failed ({first.probe or 'no report'})")
+        if second.probe != f"read {token}":
+            list_failure.append(f"run2: IDBFS did not keep the marker across sessions ({second.probe or 'no report'})")
 
-    return print_result(args.game, list_failure, out_dir)
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        return print_result(args.game, list_failure, out_dir)

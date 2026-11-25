@@ -10,13 +10,12 @@ VS 의 vsdbg 는 DAP 시작 때 핸드셰이크 서명을 요구하고 "VS Code 
 import argparse
 import json
 import pathlib
-import subprocess
 import sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
-from common import app_arguments  # noqa: E402
-from common.paths import get_bin_dir, get_build_dir  # noqa: E402
-from common.run_process import run_cmake, run_process  # noqa: E402
+from common.command import Command, ScriptContext
+from common import app_arguments
+from common.paths import get_bin_dir, get_build_dir
+from common.run_process import run_cmake, run_process
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROBE_H = REPO / 'Source/Games/Playground/HotReloadTestComponent.h'
@@ -69,56 +68,56 @@ c.write_text(t, encoding="utf-8", newline="")
 '''
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--preset', default='Ninja-Debug')
-    parser.add_argument('--variant', choices=('code', 'layout'), default='code')
-    options = parser.parse_args()
-    bin_dir = get_bin_dir(options.preset)
-    lldb = REPO / 'Tools/LLVM/bin/lldb.exe'
-    if not lldb.is_file():
-        sys.exit(f'{lldb} 이 없다 — py -3 Scripts/setup/llvm.py 로 둔다')
-    scenario = 'game/playground/automation/debugger/hotreloadbreakpoint.scenario.xml' if options.variant == 'code' else 'game/playground/automation/debugger/hotreloadlayout.scenario.xml'
-    log_path = get_build_dir(options.preset) / 'Testing' / 'Logs' / f'HotReloadDebug.{options.variant}.log'
-    build = ['cmake', '--build', '--preset', options.preset, '--target', 'SWGame_Playground']
-    originals = {path: path.read_bytes() for path in (PROBE_H, PROBE_CPP)}
-    # 리로드 전 모듈이 지금 소스와 같아야 한다(확인 컴포넌트가 없는 옛 SWGame 으로 띄우면 씬이 읽히지 않는다).
-    if run_cmake(build[1:], cwd=REPO, capture=False).return_code != 0:
-        sys.exit('SWGame 을 짓지 못했다')
-    config = {
-        'app': str(bin_dir / 'App.exe'), 'bin': str(bin_dir), 'repo': str(REPO), 'function': FUNCTION,
-        'args': [app_arguments.option('scenario', scenario), app_arguments.flag('unattended'), app_arguments.option('log-file', log_path)],
-        'build': build, 'probe_h': str(PROBE_H), 'probe_cpp': str(PROBE_CPP),
-        'patch': PATCH_CODE if options.variant == 'code' else PATCH_LAYOUT,
-    }
-    driver_path = get_build_dir(options.preset) / 'HotReloadDebugDriver.py'
-    driver_path.write_text(f'CONFIG = {json.dumps(json.dumps(config))}\n' + DRIVER, encoding='utf-8')
-    try:
-        run = run_process([lldb, '--batch', '-o', f'command script import "{driver_path}"'])
-    finally:
-        for path, data in originals.items():
-            path.write_bytes(data)
-        restore = run_cmake(build[1:], cwd=REPO, capture=False).return_code
-    line = next((l for l in run.stdout.splitlines() if l.startswith('HOTRELOAD_RESULT ')), None)
-    if line is None:
-        print(run.stdout[-4000:], run.stderr[-4000:])
-        sys.exit('lldb 가 결과를 내지 않았다')
-    result = json.loads(line[len('HOTRELOAD_RESULT '):])
-    hits = result['hits']
-    checks = {
-        '링크(디버거가 PDB 를 쥔 채)': result['build_rc'] == 0,
-        '리로드 전 멈춤': len(hits) >= 1,
-        '리로드 뒤 새 모듈에서 멈춤': len(hits) >= 2 and hits[-1]['module'] != hits[0]['module'],
-        '소스 줄이 풀림': bool(hits) and all(h['file'].replace('\\', '/').endswith('HotReloadTestComponent.cpp') for h in hits),
-        '시나리오 통과': result['exit_code'] == 0,
-        '원래 소스로 다시 지음': restore == 0,
-    }
-    print(json.dumps(result, ensure_ascii=False, indent=1))
-    for name, ok in checks.items():
-        print(f"{'OK  ' if ok else 'FAIL'} {name}")
-    print(f'로그 {log_path}')
-    return 0 if all(checks.values()) else 1
+class HotReloadDebugCheckCommand(Command):
+    name = "hot-reload-debug-check"
+    help = "핫 리로드 디버그 확인 — 디버거(lldb)가 붙은 채 모듈을 다시 지어 올리고 중단점이 새 모듈에서 멈추는지 본다(--variant code · layout)"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('--preset', default='Ninja-Debug')
+        parser.add_argument('--variant', choices=('code', 'layout'), default='code')
 
-if __name__ == '__main__':
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        bin_dir = get_bin_dir(args.preset)
+        lldb = REPO / 'Tools/LLVM/bin/lldb.exe'
+        if not lldb.is_file():
+            sys.exit(f'{lldb} 이 없다 — py -3 Scripts/setup/llvm.py 로 둔다')
+        scenario = 'game/playground/automation/debugger/hotreloadbreakpoint.scenario.xml' if args.variant == 'code' else 'game/playground/automation/debugger/hotreloadlayout.scenario.xml'
+        log_path = get_build_dir(args.preset) / 'Testing' / 'Logs' / f'HotReloadDebug.{args.variant}.log'
+        build = ['cmake', '--build', '--preset', args.preset, '--target', 'SWGame_Playground']
+        originals = {path: path.read_bytes() for path in (PROBE_H, PROBE_CPP)}
+        # 리로드 전 모듈이 지금 소스와 같아야 한다(확인 컴포넌트가 없는 옛 SWGame 으로 띄우면 씬이 읽히지 않는다).
+        if run_cmake(build[1:], cwd=REPO, capture=False).return_code != 0:
+            sys.exit('SWGame 을 짓지 못했다')
+        config = {
+            'app': str(bin_dir / 'App.exe'), 'bin': str(bin_dir), 'repo': str(REPO), 'function': FUNCTION,
+            'args': [app_arguments.option('scenario', scenario), app_arguments.flag('unattended'), app_arguments.option('log-file', log_path)],
+            'build': build, 'probe_h': str(PROBE_H), 'probe_cpp': str(PROBE_CPP),
+            'patch': PATCH_CODE if args.variant == 'code' else PATCH_LAYOUT,
+        }
+        driver_path = get_build_dir(args.preset) / 'HotReloadDebugDriver.py'
+        driver_path.write_text(f'CONFIG = {json.dumps(json.dumps(config))}\n' + DRIVER, encoding='utf-8')
+        try:
+            run = run_process([lldb, '--batch', '-o', f'command script import "{driver_path}"'])
+        finally:
+            for path, data in originals.items():
+                path.write_bytes(data)
+            restore = run_cmake(build[1:], cwd=REPO, capture=False).return_code
+        line = next((l for l in run.stdout.splitlines() if l.startswith('HOTRELOAD_RESULT ')), None)
+        if line is None:
+            print(run.stdout[-4000:], run.stderr[-4000:])
+            sys.exit('lldb 가 결과를 내지 않았다')
+        result = json.loads(line[len('HOTRELOAD_RESULT '):])
+        hits = result['hits']
+        checks = {
+            '링크(디버거가 PDB 를 쥔 채)': result['build_rc'] == 0,
+            '리로드 전 멈춤': len(hits) >= 1,
+            '리로드 뒤 새 모듈에서 멈춤': len(hits) >= 2 and hits[-1]['module'] != hits[0]['module'],
+            '소스 줄이 풀림': bool(hits) and all(h['file'].replace('\\', '/').endswith('HotReloadTestComponent.cpp') for h in hits),
+            '시나리오 통과': result['exit_code'] == 0,
+            '원래 소스로 다시 지음': restore == 0,
+        }
+        print(json.dumps(result, ensure_ascii=False, indent=1))
+        for name, ok in checks.items():
+            print(f"{'OK  ' if ok else 'FAIL'} {name}")
+        print(f'로그 {log_path}')
+        return 0 if all(checks.values()) else 1

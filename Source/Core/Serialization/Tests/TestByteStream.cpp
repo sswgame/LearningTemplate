@@ -309,8 +309,8 @@ namespace
     struct HasOutParamStringRead<T, std::void_t<decltype( std::declval<T&>().readString( std::declval<string&>() ) )>> : std::true_type
     {
     };
-    static_assert( HasOutParamPodRead<ByteReader>::value == false, "ByteReader::readPod returns the value - no output parameter (byte-reader-values)" );
-    static_assert( HasOutParamStringRead<ByteReader>::value == false, "ByteReader::readString returns the value - no output parameter (byte-reader-values)" );
+    static_assert( HasOutParamPodRead<ByteReader>::value == false, "ByteReader::readPod returns the value - no output parameter" );
+    static_assert( HasOutParamStringRead<ByteReader>::value == false, "ByteReader::readString returns the value - no output parameter" );
 } // namespace
 
 /**
