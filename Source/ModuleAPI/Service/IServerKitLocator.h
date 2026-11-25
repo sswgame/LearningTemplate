@@ -3,7 +3,7 @@
  * @brief 전용 서버의 게임 모듈이 서버 키트 인터페이스(백필 · 저장소 …)를 받는 호스트 칸과, 받을 인터페이스를 적는 형식 목록 묶음입니다.
  * @details - 키트 인터페이스는 온라인 서버 조립(`OnlineServerRuntime`)의 지역 범위에 걸린다(`IOnlineServerKit::exposeInterface`). 조립은 서버 서비스라 모듈 리로드 · 종료마다
  *            멈췄다 다시 선다 — 게임 범위에 그 객체를 직접 걸면 매달린다. 그래서 호스트(Server)가 이 칸을 소유하고, 조립이 설 때 범위를 공개 · 내릴 때 거둔다.
- *          - 게임 모듈은 받을 인터페이스 **형식 목록 하나**를 적는다(`ServerKitDependencies<ServerKitRequired<…>, ServerKitOptional<…>>`). 의존 키트 이름은 그 형식들의
+ *          - 게임 모듈은 받을 인터페이스 형식 목록 하나를 적는다(`ServerKitDependencies<ServerKitRequired<…>, ServerKitOptional<…>>`). 의존 키트 이름은 그 형식들의
  *            제공 키트 상수(`kProviderKit`)에서 나오고, 꺼내기는 그 묶음(`get` 필수 · `find` 선택)으로만 한다 — 범위는 게임 모듈에 보이지 않아(`findKitScope` 비공개)
  *            선언하지 않은 형식을 찾을 자리가 없다. 온라인 서버 키트의 `OnlineServerKit<OnlineKitRequired<…>, …>` 와 같은 꼴이다.
  *          - 기동(게임 서버를 세울 때)에 `verify` 로 필수 인터페이스를 확인해 없으면 오류로 멈춘다. 부를 때마다 `resolve` 로 묶음을 다시 받는다(들고 있지 않는다).

@@ -40,7 +40,7 @@ namespace sw
 
         /** @brief 개발 도구를 호스트 범위에 더하고 엔진 기동 확장을 겁니다. 엔진을 세우기 전에 부릅니다. */
         virtual void addToHostScope( SubsystemScope& host, Engine& engine ) = 0;
-        /** @brief 셸 액션(디버그 키 — 개발 콘솔 키, 동적 모듈 구성이면 리로드 단축키도)을 이번 프레임 것으로 갱신하고 리로드 단축키를 요청으로 바꿉니다(App 이 프레임마다 — Ctrl+F6 에디터는 @p bEnableEditor 일 때만). */
+        /** @brief 셸 액션(디버그 키: 개발 콘솔 키, 동적 모듈 구성이면 리로드 단축키도)을 이번 프레임 것으로 갱신하고 리로드 단축키를 요청으로 바꿉니다. App 이 프레임마다 부르고, Ctrl+F6 에디터는 @p bEnableEditor 일 때만 받는다. */
         virtual void pollShellActions( float32 deltaTime, bool bEnableEditor ) = 0;
 #if SW_WITH_DYNAMIC_MODULES
         // ---- 핫 리로드 — 동적 모듈 구성에만 있다. 정적 구성(배포 · 웹 · Android 개발)에서 부르는 코드는 컴파일되지 않는다(`SW_WITH_DYNAMIC_MODULES`) ----

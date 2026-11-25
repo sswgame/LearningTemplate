@@ -21,10 +21,10 @@ namespace sw
         AbsolutePath _headerPath;
         AbsolutePath _editorMetadataPath; ///< 개발 전용 단위(`<이름>.gen.meta.cpp` — 에디터 메타데이터). 배포 구성은 짓지 않는다
         /**
-         * @brief 마지막으로 **성공한 생성**의 시각을 담는 빈 파일(`<.gen.cpp>.stamp`)입니다.
+         * @brief 마지막으로 성공한 생성의 시각을 담는 빈 파일(`<.gen.cpp>.stamp`)입니다.
          * @details 산출물은 내용이 같으면 다시 쓰지 않습니다 — 쓰면 그 파일을 include 하는 TU 가 전부 다시 컴파일됩니다. 그래서
          *          산출물의 시각은 "마지막 생성" 이 아니라 "내용이 마지막으로 바뀐 때" 이고, 그것으로 최신인지 물으면
-         *          파서 · 템플릿 · 설정을 고친 뒤로 **모든 파서 실행이 내용이 안 바뀐 헤더를 매번 다시 파싱**합니다(실측: 아무것도
+         *          파서 · 템플릿 · 설정을 고친 뒤로 모든 파서 실행이 내용이 안 바뀐 헤더를 매번 다시 파싱합니다(실측: 아무것도
          *          안 바뀐 Engine 재실행이 Debug 에서 2.2 초). 스탬프 이름은 CMake 의 `ReflectBuiltins.gen.cpp.stamp` 와 같은 규칙입니다.
          */
         AbsolutePath _stampPath;
@@ -79,7 +79,7 @@ namespace sw
 
         /**
          * @brief 스탬프를 씁니다(`GeneratedStamp` 의 줄 꼴).
-         * @details `_inputWriteTime` 은 **파싱하려고 읽기 전에** 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
+         * @details `_inputWriteTime` 은 파싱하려고 읽기 전에 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 같을 때만 최신으로
          *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
          *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
          */
@@ -90,7 +90,7 @@ namespace sw
 
         /**
          * @brief 이번 실행의 시작을 출력 폴더의 표식 파일(`ReflectionParser.run`)에 적고 그 쓰기 시각을 돌려줍니다.
-         * @details 의존의 시각은 파싱한 **뒤에야** 측정할 수 있다(무엇을 include 했는지 그때 안다). 그 사이에 저장한 편집을 놓치지 않으려고, 이 시각
+         * @details 의존의 시각은 파싱한 뒤에야 측정할 수 있다(무엇을 include 했는지 그때 안다). 그 사이에 저장한 편집을 놓치지 않으려고, 이 시각
          *          이후에 바뀐 의존은 0 으로 적는다 — 다음 실행이 다시 파싱한다. 파일 시각과 같은 시계 · 단위라 비교가 맞다.
          */
         static uint64 markRunStart( const AbsolutePath& outputDir );
@@ -105,8 +105,8 @@ namespace sw
     /**
      * @class IncrementalCheck
      * @brief "이 입력의 산출물은 최신인가" 를 답합니다. 도구 쪽 시각은 시작할 때 한 번만 측정합니다.
-     * @details **도구도 입력입니다.** 산출물의 모양은 입력 헤더만이 아니라 파서 실행 파일 · builtins · 철자 표 · 템플릿 ·
-     *          설정 파일이 함께 정합니다. 그중 가장 새것보다 스탬프가 오래됐으면 다시 만듭니다. **명령줄도 입력입니다** — `--module` · `--target-arg`(`-D…`) ·
+     * @details 도구도 입력입니다. 산출물의 모양은 입력 헤더만이 아니라 파서 실행 파일 · builtins · 철자 표 · 템플릿 ·
+     *          설정 파일이 함께 정합니다. 그중 가장 새것보다 스탬프가 오래됐으면 다시 만듭니다. 명령줄도 입력입니다 — `--module` · `--target-arg`(`-D…`) ·
      *          `--include` 를 바꾸면 파일 시각은 그대로라 시각만 보면 옛 산출물이 남는다. 그래서 스탬프의 명령줄 해시가 이번 실행의 것과 같아야 최신이다.
      */
     class IncrementalCheck

@@ -274,7 +274,7 @@ namespace sw
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
         _initializeStartMicro = MonotonicClock::nowMicroseconds();
-        // 리소스 루트 탐색은 Engine 가 로거를 시작한 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
+        // 리소스 루트 탐색은 Engine 가 로거를 시작한 뒤에 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단 메시지가
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
         // 0. 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 기동 단계가 여기서 모듈 라이브러리 창구를 찾아 타입 공급자 모듈을 올리고
@@ -621,7 +621,7 @@ namespace sw
         // 카메라 포인터를 미리 잡아 두면 tick 안의 씬 전환이나 핫 리로드가 그 GameObject 를 파괴한 뒤 역참조하게 된다. 그래서
         // 조회 자체를 tick 안으로 넘긴다.
         //
-        // 모듈 교체는 **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
+        // 모듈 교체는 틱 직전(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
         _launch.updateModuleReload();
 
         const ModuleFrameState& frameState = getModuleManager()->getFrameState();

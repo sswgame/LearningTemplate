@@ -186,7 +186,7 @@ namespace sw
          * @details 에디터 모듈과 에디터 확장(`GF_EditorPlugin_*`)만의 배치는 게임을 건드리지 않는다 — 언로드하면 다시 만들 쪽(게임 리로드 콜백)이 오지 않아
          *          게임 인스턴스가 사라지고 씬 저장이 막힌 채 남는다.
          * @param listModuleName 이번 배치에서 교체될 모듈 이름들
-         * @return 게임 상태를 저장하지 못해 **아무것도 언로드하지 않았으면** false 를 반환합니다. 그러면 리로드를 취소하고 옛 게임 모듈이 계속 돕니다.
+         * @return 게임 상태를 저장하지 못해 아무것도 언로드하지 않았으면 false 를 반환합니다. 그러면 리로드를 취소하고 옛 게임 모듈이 계속 돕니다.
          */
         [[nodiscard]] bool onBeforeCommitBatch( const vector<string>& listModuleName );
         /**
@@ -195,7 +195,7 @@ namespace sw
          */
         bool isGameLibraryUsable( ModuleLibraryHandle library ) const;
         /**
-         * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
+         * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 모듈을 부르지 않고 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
          */
         void onGameReloadFault( uint32 faultCode );
@@ -242,7 +242,7 @@ namespace sw
         [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /**
          * @brief 호스트 서비스 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
-         * @details 새 범위를 넘긴 **뒤에** 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleServiceScope` 와 같다).
+         * @details 새 범위를 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleServiceScope` 와 같다).
          */
         void rebindModuleService( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const;
 
@@ -282,7 +282,7 @@ namespace sw
          * @return 호스트 모듈이 없거나 다시 섰으면 true 입니다. false 면 장치 교체가 종료를 요청한다.
          */
         [[nodiscard]] virtual bool recreateHostModule() { return true; }
-        /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */
+        /** @brief 렌더 워커와 태스크를 비우기 앞에서 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */
         virtual void onBeforeFlushWorkers( FlushReason reason ) { (void)reason; }
         /** @brief 렌더 워커와 GPU 를 비운 직후, 태스크를 기다리기 전에 불립니다(에디터의 렌더 대기 표시를 버립니다). */
         virtual void onRenderWorkersFlushed() {}
@@ -308,7 +308,7 @@ namespace sw
         void destroyGameInstance( bool bReleaseAPITable );
         /**
          * @brief 이미 바인딩한 API 테이블로 게임 인스턴스를 만들고 초기화합니다. 실패하면 정리한 뒤 false 를 반환합니다.
-         * @note RHI 를 받은 호스트는 **디바이스가 없으면 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로, 디바이스가 없는 상태에서
+         * @note RHI 를 받은 호스트는 디바이스가 없으면 만들지 않습니다. `RHI::getDevice()` 는 널 참조를 반환하므로, 디바이스가 없는 상태에서
          *       호출하면 그 자리에서 죽습니다.
          */
         [[nodiscard]] bool createGameInstance();
@@ -324,7 +324,7 @@ namespace sw
          *        종료나 RHI 교체처럼 상태를 넘겨받을 새 라이브러리가 없으면 false 로 둡니다.
          */
         [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, FlushReason reason );
-        /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 **버리지 않고** 다음 리로드까지 보관합니다. */
+        /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 버리지 않고 다음 리로드까지 보관합니다. */
         void restoreGameState();
 
     private:

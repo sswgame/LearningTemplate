@@ -146,12 +146,12 @@ namespace sw
         }
         if ( _editorAPI.updateUI != nullptr )
             _editorAPI.updateUI( _editor );
-        // UI 가 보낸 명령(뷰 크기 · Play/Pause/Step)을 씬 틱 앞, 틱 여부 질의 앞에서 적용한다 — 이 프레임의 씬 틱이 받는다(예전 직접 변경과 같은 지연, `EditorUICommandQueue`).
+        // UI 가 보낸 명령(뷰 크기 · Play/Pause/Step)을 씬 틱 앞, 틱 여부 질의 앞에서 적용해 이 프레임의 씬 틱이 받게 한다(직접 바꾸던 때와 지연이 같다, `EditorUICommandQueue`).
         // UI 를 게임 틱과 나란히 돌리게 되어도 이 자리(게임 스레드)는 그대로다.
         if ( _editorAPI.applyUICommands != nullptr )
             _editorAPI.applyUICommands( _editor );
 
-        // 명령을 적용한 **뒤에** 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endEditorFrame 에서 소비된다.
+        // 명령을 적용한 뒤에 확정한다. Step 은 위에서 적용되고, 씬을 한 틱 진행한 다음 endEditorFrame 에서 소비된다.
         // 이 질의를 적용 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
@@ -282,7 +282,7 @@ namespace sw
 
     void ClientModuleManager::onRenderWorkersFlushed()
     {
-        // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 **아직 렌더 스레드에 제출되기 전인** 프레임의 것이다
+        // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 아직 렌더 스레드에 제출되기 전인 프레임의 것이다
         // (게임 스레드가 리로드하느라 제출하지 못했다). 풀어 버리면 UI 스레드가 풀려 다음 `updateUI` 에서 보조 뷰포트를 그리는 동안 렌더 스레드가 그 프레임의 메인 스냅샷을 그려
         // 같은 ImGui 백엔드(Vulkan 의 `RenderState` · 커맨드 풀)를 두 스레드가 함께 쓴다. 표시는 에디터 인스턴스를 없앨 때만 푼다(`destroyEditorInstance`).
     }

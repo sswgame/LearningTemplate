@@ -364,7 +364,7 @@ namespace sw
                 continue;
             }
 
-            // 시각을 **읽기 전에** 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
+            // 시각을 읽기 전에 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
             const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
             string       content;
             if ( FileUtil::readTextFile( inputFile, content ) == false )
@@ -407,7 +407,7 @@ namespace sw
     }
 
     /**
-     * @details **파싱 비용의 거의 전부는 헤더 자신이 아니라 공통 include 다.** 강제 include(`Core/CoreMinimal.h`) 하나만 파싱하는 데
+     * @details 파싱 비용의 거의 전부는 헤더 자신이 아니라 공통 include 다. 강제 include(`Core/CoreMinimal.h`) 하나만 파싱하는 데
      *          0.52 초, 엔진 공통 헤더(Windows · D3D)까지 가면 1.0 초인데, Engine 의 입력 27 개를 한 TU 로 묶어도 1.04 초였다
      *          (Release, 실측). 헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱하고, 워커 16 개가 한꺼번에 파싱하면
      *          메모리 대역을 다퉈 한 개가 1.0 → 2.1 초로 늘어난다.
@@ -584,12 +584,12 @@ namespace sw
             return false;
         }
 
-        // **다른 헤더가 이미 이 이름으로 썼는가.** 생성 파일 이름은 소스의 **파일 이름만** 으로 짓는다
+        // 다른 헤더가 이미 이 이름으로 썼는가. 생성 파일 이름은 소스의 파일 이름만 으로 짓는다
         // (`ParserUtil::makeGeneratedPath`). 그래서 한 모듈 안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을
-        // 덮고, **앞 헤더의 타입들은 아무 말 없이 등록되지 않는다.** 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로
+        // 덮고, 앞 헤더의 타입들은 아무 말 없이 등록되지 않는다. 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로
         // 나타나서 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
         //
-        // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
+        // 헤더를 옮긴 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
         // 앞 주인은 그 산출물의 스탬프가 안다(스탬프가 없으면 자리 표시자 - 주인이 없다).
         GeneratedStamp existingStamp;
         if ( GeneratedFileUtil::readStamp( paths._stampPath, existingStamp ) )
@@ -663,7 +663,7 @@ namespace sw
 
     /**
      * @details 이 파일은 타깃의 모든 TU 에 `/FI` 로 강제 include 됩니다. 트레이트는 열거형이 보이는 곳이면 어디서나 함께
-     *          보여야 하기 때문입니다. 그래서 **원본 헤더는 절대 들이지 않습니다** — 들이면 그 헤더가 끌어오는 것이 모든 TU 에 들어가
+     *          보여야 하기 때문입니다. 그래서 원본 헤더는 절대 들이지 않습니다 — 들이면 그 헤더가 끌어오는 것이 모든 TU 에 들어가
      *          다른 헤더들의 include 누락을 통째로 가립니다. `.gen.h` 자신이 열거형을 전방 선언하므로 그것 하나만 모으면 됩니다.
      */
     bool ReflectionPipeline::writeDepfile() const

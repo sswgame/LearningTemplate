@@ -45,7 +45,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool AstVisitor::visit()
     {
-        // 대상 헤더를 번역 단위에서 못 찾으면 그 헤더의 산출물은 **조용히 비게** 된다. 그 자리에서 멈춘다.
+        // 대상 헤더를 번역 단위에서 못 찾으면 그 헤더의 산출물은 조용히 비게 된다. 그 자리에서 멈춘다.
         for ( uint32 index = 0; index < _listTargetFile.size(); ++index )
         {
             if ( _listTargetFile[index] == nullptr )
@@ -133,7 +133,7 @@ namespace sw
     }
 
     /**
-     * @details 매크로가 만든 선언은 매크로를 **쓴** 자리(전개 위치)의 파일로 셉니다. `clang_Location_isFromMainFile` 로 물으면 매크로
+     * @details 매크로가 만든 선언은 매크로를 쓴 자리(전개 위치)의 파일로 셉니다. `clang_Location_isFromMainFile` 로 물으면 매크로
      *          위치를 통째로 밖으로 쳐서 `REFLECT_BODY()` 가 만드는 마커 함수가 검사되지 않고, "REFLECT_BODY() 인데 REFLECT() 가 없다"
      *          검사가 죽습니다. 여러 헤더를 한 TU 로 묶을 때도 같은 질문이면 됩니다.
      */
@@ -499,7 +499,7 @@ namespace sw
 
         BLOCK( "Collect forward-declaration facts" )
         {
-            // ENUM(Flags) 의 비트 연산자 트레이트는 이 열거형을 **전방 선언** 한 뒤 특수화한다
+            // ENUM(Flags) 의 비트 연산자 트레이트는 이 열거형을 전방 선언 한 뒤 특수화한다
             // (`CodeGenerator::makeHeaderText`). 그래서 기반 정수 타입이 필요하다. 원본 철자로
             // 받아야 `uint8` 같은 별칭이 아니라 `unsigned char` 가 나와 재선언이 어긋나지 않는다.
             enumInfo._underlyingType = CursorReader::takeString(
@@ -546,10 +546,10 @@ namespace sw
             }
         }
 
-        // **비트플래그인지는 선언이 정한다. 값의 모양이 아니다.** 비트플래그 열거형은 `ENUM( Flags )` 로 **명시한다.**
+        // 비트플래그인지는 선언이 정한다. 값의 모양이 아니다. 비트플래그 열거형은 `ENUM( Flags )` 로 명시한다.
         //
         // 주의: "0 이 아닌 값이 모두 2의 거듭제곱이면 BitFlag" 같은 자동 감지를 두지 말 것 — `{ Game = 0, Editor = 1, Custom = 2 }`
-        // 같은 **평범한 연속 열거형**에도 맞아 문자열 변환이 `toStringFlags` 로 가고 인스펙터가 콤보 대신 체크박스를 그리며,
+        // 같은 평범한 연속 열거형에도 맞아 문자열 변환이 `toStringFlags` 로 가고 인스펙터가 콤보 대신 체크박스를 그리며,
         // C++ 트레이트(`IsBitFlagEnum<>`, 명시한 `ENUM( Flags )` 로만 나간다)와 레지스트리가 다른 답을 낸다. 명시하지 않아 놓친 쪽은
         // 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 명시하지 않았는데 켜지는 쪽은 조용히 틀린다.
 

@@ -69,7 +69,7 @@ namespace sw
             /**
              * @brief 봇 인자를 `CommandLineManager` 로 읽습니다(엔진 표준 인자는 등록하지 않는다 — 봇 인자만 받는다).
              * @details 경로 인자는 `CommandLineDiskPath` 라 받을 때 기동 폴더 기준으로 한 번 절대화되고 비면 거절된다. 값 없는 `--tls` 도 그래서 거절된다
-             *          (예전에는 값 없는 `--tls` 가 개발용 인증서를 신뢰했다). 틀린 인자는 모두 모아 여러 줄 글(쓰는 법 포함)로 돌려준다 — 길이가 정해지지 않아 오류 형식이 글이다.
+             *          (받아 주면 값 없는 `--tls` 가 개발용 인증서를 신뢰한다). 틀린 인자는 모두 모아 여러 줄 글(쓰는 법 포함)로 돌려준다. 길이가 정해지지 않아 오류 형식이 글이다.
              */
             [[nodiscard]] static expected<LoadBotOptions, string> readOptions( int32 argc, utf8* argv[] )
             {

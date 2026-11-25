@@ -48,10 +48,10 @@ namespace sw
         using InstanceHandleOf = decltype( std::declval<const TAPI&>().create() );
 
         /**
-         * @brief 모듈이 호스트와 **같은 테이블 구조**로 빌드됐는지 대조합니다.
+         * @brief 모듈이 호스트와 같은 테이블 구조로 빌드됐는지 대조합니다.
          * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
-         *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** `create != nullptr && destroy != nullptr`
-         *          만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
+         *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 호스트가 엉뚱한 함수를 부릅니다. `create != nullptr && destroy != nullptr`
+         *          만으로는 막지 못합니다 — 그 둘은 맨 앞에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
          *          어긋남이 생기는 바로 그 상황입니다. 스탬프는 표 선언 글의 해시라 표를 고치면 저절로 바뀝니다(`ModuleABI.h`).
          */
         static bool matchesModuleABI( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )
@@ -95,7 +95,7 @@ namespace sw
 
         /**
          * @brief 바인딩한 API 표로 인스턴스를 만들고 초기화합니다(에디터 · 게임 공통). 실패하면 만든 것을 부수고 핸들을 비웁니다.
-         * @p initialize 는 핸들 하나를 받아 그 모듈 종류의 초기화를 부릅니다(인자가 종류마다 다르다). @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
+         * @p initialize 는 핸들 하나를 받아 그 모듈 종류의 초기화를 부릅니다(인자가 종류마다 다르다). @note @p bRequireDevice 면 디바이스가 없을 때 만들지 않습니다. `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
          *       길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있습니다. 전용 서버의 게임은 디바이스 없이(nullptr) 만듭니다.
          */
         template <typename TAPI, typename TInitialize>

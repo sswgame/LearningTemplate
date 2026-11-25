@@ -27,7 +27,7 @@ namespace sw
         [[nodiscard]] static bool tryResolveAliasSpelling( CXType type, const ParserSession& session, string& outSpelling );
 
         /**
-         * @brief 프로퍼티 타입이 사용자 별칭(`using` · `typedef`)이면 **알려진 이름**이 나올 때까지 벗겨 그 타입을 돌려줍니다.
+         * @brief 프로퍼티 타입이 사용자 별칭(`using` · `typedef`)이면 알려진 이름이 나올 때까지 벗겨 그 타입을 돌려줍니다.
          * @details 적힌 이름만 보면 `using ScoreList = sw::vector<int32>;` · `using Health = int32;` 로 적은 프로퍼티가 모르는 타입 이름
          *          (`ScoreList` · `Health`)으로 남는다 — 컨테이너로도 스칼라로도 읽히지 않아 직렬화가 그 값을 쓰지 못한다(JSON 에는 `"null"`).
          *          한 겹씩 벗기다가 컨테이너 · 표에 있는 이름(`int32` · `string` · `float3` …)이 나오면 거기서 멈추고, 별칭이 아닌 타입(구조체 ·

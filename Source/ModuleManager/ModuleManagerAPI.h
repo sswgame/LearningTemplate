@@ -1,7 +1,7 @@
 /**
  * @file ModuleManager/ModuleManagerAPI.h
  * @brief 모듈 관리 라이브러리의 내보내기 매크로 `SW_MODULEMANAGER_API` 와, 개발 계층을 만드는 함수의 `SW_HOST_DEV_API` 입니다.
- * @details 개발 구성의 ModuleManager 는 공유 라이브러리다 — 호스트(App · Server)와 개발 도구(DevTools.dll — 핫 리로드 · 호스트 개발 계층)가 같은 한 벌을 쓴다.
+ * @details 개발 구성의 ModuleManager 는 공유 라이브러리다. 호스트(App · Server)와 개발 도구(DevTools.dll: 핫 리로드 · 호스트 개발 계층)가 같은 한 벌을 쓴다.
  *          정적이면 DevTools 와 호스트가 한 벌씩 들어 정적 등록 · 상태가 둘이 된다(언리얼 Core 의 ModuleManager 가 DLL 이고 HotReload 가 그 위에 서는 자리).
  *          배포는 정적이라 매크로가 비고(`SW_MODULEMANAGER_EXPORTS` · `SW_MODULEMANAGER_IMPORTS` 둘 다 없음), CMake 가 정의를 준다(`sw_configure_dll_exports( … MODULEMANAGER )`).
  *

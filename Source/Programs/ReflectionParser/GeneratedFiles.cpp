@@ -43,7 +43,7 @@ namespace sw
             static constexpr const utf8* kRunMarkerName = "ReflectionParser.run";
 
             /**
-             * @brief 스탬프에 적은 쓰기 시각을 **부호 없는** 64 비트로 읽습니다.
+             * @brief 스탬프에 적은 쓰기 시각을 부호 없는 64 비트로 읽습니다.
              * @details 리눅스(libstdc++)의 파일 시계는 기원이 2174 년이라 지금 시각이 음수이고, 그것을 부호 없이 옮겨 적은 값은 int64 를 넘는다.
              *          `parseInt64` 로 읽으면 리눅스에서 늘 실패한다 — 스탬프가 시각 없는 꼴로 읽혀 매 실행이 모두 다시 파싱하고 depfile 의 의존이 빈다.
              */
@@ -64,7 +64,7 @@ namespace sw
 
             /**
              * @brief 스탬프 글을 읽습니다(`GeneratedStamp` 의 줄 꼴). 시각이 없거나 모르는 줄이 있으면 false.
-             * @details 경로에는 공백이 있을 수 있어 `dep` 줄은 시각 다음의 **나머지 전부**가 경로다.
+             * @details 경로에는 공백이 있을 수 있어 `dep` 줄은 시각 다음의 나머지 전부가 경로다.
              */
             [[nodiscard]] static bool parseStamp( string_view text, GeneratedStamp& outRecord )
             {
@@ -280,14 +280,14 @@ namespace sw
         if ( bStampMissing )
             return false;
 
-        // 스탬프 파일의 시각은 **도구**가 더 새로운지만 가린다. 입력은 스탬프에 적힌 "파싱 전에 본 시각" 과 같은지로 본다(아래).
+        // 스탬프 파일의 시각은 도구가 더 새로운지만 가린다. 입력은 스탬프에 적힌 "파싱 전에 본 시각" 과 같은지로 본다(아래).
         const uint64 inputTime = GeneratedFileUtil::getWriteTime( inputFile );
         if ( inputTime == 0 || stampTime < _newestToolWriteTime )
             return false;
 
         // 자리 표시자는 따로 알아보지 않는다 - CMake 가 자리 표시자를 심을 때 스탬프를 지우므로 위에서 "스탬프 없음" 으로 걸린다(생성 글을 읽어 추측하지 않는다).
 
-        // 헤더를 **옮기기만** 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
+        // 헤더를 옮기기만 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
         // 경로로 #include 하므로 그대로 두면 없는 경로를 가리켜 빌드가 깨진다. 스탬프에 적힌 원본 경로를 대조해 이동을 잡는다.
         // 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
         GeneratedStamp record;
@@ -296,7 +296,7 @@ namespace sw
         // 명령줄이 바뀌었으면(`--module` · `-D…` · `--include`) 파일 시각이 그대로여도 산출물이 달라진다.
         if ( record._argsHash != _argsHash )
             return false;
-        // **같아야** 최신이다. 파싱하는 동안 저장한 편집은 스탬프보다 오래된 시각을 가질 수 있다 — 크고 작음이 아니라 같음으로 본다.
+        // 같아야 최신이다. 파싱하는 동안 저장한 편집은 스탬프보다 오래된 시각을 가질 수 있다 — 크고 작음이 아니라 같음으로 본다.
         if ( record._inputWriteTime != inputTime )
             return false;
         // include 한 헤더도 같아야 한다. 없어졌으면(시각 0) 다시 만든다.

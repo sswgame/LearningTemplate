@@ -51,11 +51,11 @@ namespace sw
         static bool isTextStringType( CXType type );
         /** @brief 이름 · 경로 칸 형식(글 · `typeidentity::kArrNameFieldType`)이거나 그 `vector` 면 true 입니다 — 형식의 정체로 가른다(소스 철자를 보지 않는다). */
         static bool isNameFieldType( CXType type );
-        /** @brief 템플릿 특수화 @p type 의 @p index 번째 형식 인자를 **적힌 철자 그대로**(별칭 유지) 돌려줍니다. 없으면 빈 문자열입니다. */
+        /** @brief 템플릿 특수화 @p type 의 @p index 번째 형식 인자를 적힌 철자 그대로(별칭 유지) 돌려줍니다. 없으면 빈 문자열입니다. */
         static string getTemplateArgumentSpelling( CXType type, uint32 index );
 
         /**
-         * @brief 베이스 지정자(`: public X`)가 가리키는 **클래스** 선언입니다. 별칭(`using` · `typedef`)은 풀어 냅니다.
+         * @brief 베이스 지정자(`: public X`)가 가리키는 클래스 선언입니다. 별칭(`using` · `typedef`)은 풀어 냅니다.
          * @details 적힌 타입의 선언을 바로 물으면 `using Base = Component; struct X : Base` 의 답은 별칭 선언이다 — 그러면 부모 FQN 이
          *          별칭 이름(`sw::Base`)이 되어 실행 중에 부모를 못 찾고(상속 병합 · 캐스트가 사슬 중간에서 멈춘다), 컴포넌트 판별도 별칭에서
          *          멈춰 팩토리가 생기지 않는다. 정규 타입(canonical)은 별칭을 벗긴 레코드 타입이다.

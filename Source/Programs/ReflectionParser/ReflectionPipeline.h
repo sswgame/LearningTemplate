@@ -45,13 +45,13 @@ namespace sw
             const AbsolutePath* _pInputFile;
             string              _content;
             GeneratedPaths      _paths;
-            uint64              _inputWriteTime; /**< 내용을 **읽기 전에** 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedFileUtil::writeStamp`) */
+            uint64              _inputWriteTime; /**< 내용을 읽기 전에 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedFileUtil::writeStamp`) */
         };
 
         /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */
         int32 parsePending( const vector<PendingInput>& listPending ) const;
         /**
-         * @brief 헤더 여럿을 **한 번역 단위**로 파싱해 헤더마다 코드젠합니다.
+         * @brief 헤더 여럿을 한 번역 단위로 파싱해 헤더마다 코드젠합니다.
          * @param outErrorCount 수집 · 코드젠에 실패한 헤더 수
          * @return clang 이 묶음을 파싱하지 못했으면 false(헤더마다 다시 해 본다)
          */
@@ -68,7 +68,7 @@ namespace sw
         [[nodiscard]] bool writeOutputs( const AbsolutePath& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
                                          const vector<StampDependency>& listDependency ) const;
         /**
-         * @brief `--depfile` 이 있으면 모든 입력의 산출물을 목표로, 스탬프들의 의존을 합친 것을 Makefile 꼴로 씁니다. **실행마다** 씁니다.
+         * @brief `--depfile` 이 있으면 모든 입력의 산출물을 목표로, 스탬프들의 의존을 합친 것을 Makefile 꼴로 씁니다. 실행마다 씁니다.
          * @details ninja 는 이 파일로 "반사되지 않은 헤더가 바뀌면 이 단계를 다시 돌린다" 를 안다. 빠지면 단계가 늘 더럽다고 보거나(파일 없음)
          *          옛 의존으로 판단한다 — 그래서 모두 최신인 실행도 스탬프에서 모아 쓴다.
          */

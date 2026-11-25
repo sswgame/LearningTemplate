@@ -4,7 +4,7 @@
  *        UI · Present 훅, 장치 교체 뒤 재생성(`recreateHostModule`)을 구현합니다. 에디터를 켜지 않은 실행(배포 게임 포함)에서는 에디터 몫이 아무 일도 하지 않는다.
  *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 모듈 관리자의 일이 아니라 `DevTools/Host/EditorModuleHeadlessTasks` 에 있다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
- * @note 개발 전용 함수(에디터 모듈 등록 — `ClientModuleManager.cpp` 의 동적 모듈 구역)는 정적 모듈 구성이 짓지 않는다 — 부르는 자리가 `build::kStaticModules` 로 가른다.
+ * @note 개발 전용 함수(에디터 모듈 등록, `ClientModuleManager.cpp` 의 동적 모듈 구역)는 정적 모듈 구성이 짓지 않는다. 부르는 자리가 `build::kStaticModules` 로 가른다.
  *       배포 게임도 이 매니저로 장치 분실 재생성을 탄다(언리얼 `FEngineLoop` 이 에디터 · 게임 공통으로 모듈을 드는 자리).
  */
 #pragma once
@@ -40,7 +40,7 @@ namespace sw
         [[nodiscard]] bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
         /**
          * @brief LiveReloadManager 에 콜백을 등록하고 게임과 에디터 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
-         * @details **게임이 먼저, 에디터가 나중**입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
+         * @details 게임이 먼저, 에디터가 나중입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
          *          (`-gv_editorStartupScene`)을 요청해야, 마지막 요청을 남기는 씬 매니저에서 에디터의 씬이 열립니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
          * @param pRHI 활성 RHI
@@ -85,7 +85,7 @@ namespace sw
         /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`LiveReloadManager::addReloadHold`)으로 건다. */
         bool isEditorReloadHeld() const;
         /**
-         * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
+         * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 모듈을 부르지 않고 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
          */
         void onEditorReloadFault( uint32 faultCode );
