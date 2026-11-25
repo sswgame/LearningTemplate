@@ -12,21 +12,19 @@ namespace sw
 {
     bool NetSendThrottleSettings::loadInto( NetEndpointConfig& inoutSettings )
     {
-        NetSendThrottleSettings settings;
-        if ( ConfigManager::readConfigFileInto( kConfigFile, settings ) != ConfigReadResult::Loaded )
+        const expected<NetSendThrottleSettings> settings = ConfigManager::readConfig( kConfigFile );
+        if ( settings.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "NetSendThrottleSettings.ConfigMissing", "%# is missing or unreadable (the log above names the key) - the net endpoint stays closed", kConfigFile );
+            SW_LOG_ERROR_ID( "NetSendThrottleSettings.ConfigInvalid", "%# (%#) - the net endpoint stays closed", settings.error().message(), settings.error().detail() );
             return false;
         }
-        const NetSendThrottleConfig throttle = settings.makeThrottleConfig();
-        const expected<void>        valid    = NetSendThrottle::validate( throttle, settings._maxBytesPerSecond );
-        if ( valid.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "NetSendThrottleSettings.ConfigInvalid", "%# %#: %# - the net endpoint stays closed", kConfigFile, valid.error().detail(), valid.error().message() );
-            return false;
-        }
-        inoutSettings._maxBytesPerSecond = settings._maxBytesPerSecond;
-        inoutSettings._sendThrottle      = throttle;
+        inoutSettings._maxBytesPerSecond = settings->_maxBytesPerSecond;
+        inoutSettings._sendThrottle      = settings->makeThrottleConfig();
         return true;
+    }
+
+    expected<void> NetSendThrottleSettings::validate() const
+    {
+        return NetSendThrottle::validate( makeThrottleConfig(), _maxBytesPerSecond );
     }
 } // namespace sw

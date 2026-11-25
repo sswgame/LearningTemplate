@@ -5,6 +5,7 @@
 
 #include "DevTools/Client/Cook/ShaderCookDriver.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 using namespace sw;
@@ -52,18 +53,20 @@ SW_TEST_CASE( ShaderCookSampleTest, KeepsRequestsThatAddAnUncoveredValue )
 /** @brief [ShaderCookSampleTest] 규칙은 비지 않은 _listCoverAxis 배열이고 축 이름은 넷 가운데 하나씩이다 — 빠진 칸 · 빈 배열 · 모르는 · 겹친 이름은 오류다 */
 SW_TEST_CASE( ShaderCookSampleTest, RuleNeedsKnownAxesOnce )
 {
-    const expected<vector<ShaderCookSampleAxis>> rule = ShaderCookDriver::parseSampleRule( R"({ "_listCoverAxis": [ "stage", "source" ] })", "test" );
+    const expected<ShaderCookSampleRule> rule = ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [ "Stage", "Source" ] })", "test" );
     SW_REQUIRE_TRUE( rule.has_value() );
-    SW_EXPECT_TRUE( *rule == ( vector<ShaderCookSampleAxis>{ ShaderCookSampleAxis::Stage, ShaderCookSampleAxis::Source } ) );
-    SW_EXPECT_FALSE( ShaderCookDriver::parseSampleRule( R"({})", "test" ).has_value() );
-    SW_EXPECT_FALSE( ShaderCookDriver::parseSampleRule( R"({ "_listCoverAxis": [] })", "test" ).has_value() );
-    SW_EXPECT_FALSE( ShaderCookDriver::parseSampleRule( R"({ "_listCoverAxis": [ "format" ] })", "test" ).has_value() );
-    SW_EXPECT_FALSE( ShaderCookDriver::parseSampleRule( R"({ "_listCoverAxis": [ "stage", "stage" ] })", "test" ).has_value() );
+    SW_EXPECT_TRUE( rule->_listCoverAxis == ( vector<ShaderCookSampleAxis>{ ShaderCookSampleAxis::Stage, ShaderCookSampleAxis::Source } ) );
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({})", "test" ).has_value() );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [] })", "test" ).has_value() );
+    SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
+    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [ "Format" ] })", "test" ).has_value() );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [ "Stage", "Stage" ] })", "test" ).has_value() );
 }
 
 /** @brief [ShaderCookSampleTest] 저장소의 규칙 파일(`Config/Dev/ShaderCookSample.json`)이 읽힌다 — 표본 굽기 테스트(ShaderCache.RebuildFromEmpty)가 기대는 파일이다 */
 SW_TEST_CASE( ShaderCookSampleTest, ProjectRuleFileLoads )
 {
-    const expected<vector<ShaderCookSampleAxis>> rule = ShaderCookDriver::loadSampleRule();
-    SW_EXPECT_TRUE( rule.has_value() );
+    SW_EXPECT_TRUE( ConfigManager::readConfig( ShaderCookSampleRule::kConfigFile ).has_value() );
 }

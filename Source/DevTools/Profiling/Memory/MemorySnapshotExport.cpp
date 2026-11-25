@@ -121,32 +121,12 @@ namespace sw
         return FileUtil::writeTextFile( path, writeText() );
     }
 
-    expected<MemorySnapshotPolicy> MemorySnapshotPolicy::parse( string_view jsonText, string_view sourceName )
+    expected<void> MemorySnapshotPolicy::validate() const
     {
-        JSONDocument document;
-        if ( document.parse( jsonText, sourceName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the memory snapshot policy is not JSON", sourceName } );
-        const JSONValue        root      = document.getRoot();
-        const optional<string> folder    = root.readRequired<string>( "_exportFolder" );
-        const optional<uint32> siteLimit = root.readRequired<uint32>( "_allocationSiteLimit" );
-        if ( folder.has_value() == false || siteLimit.has_value() == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the memory snapshot policy needs _exportFolder and _allocationSiteLimit", sourceName } );
-        const bool bBadFolder = folder->empty() || folder->find_first_of( "/\\:" ) != string::npos || *folder == ".." || *folder == ".";
-        if ( bBadFolder || *siteLimit == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the memory snapshot policy is out of range (_exportFolder is one folder name, _allocationSiteLimit is 1 or more)", sourceName } );
-        MemorySnapshotPolicy policy;
-        policy._exportFolder        = *folder;
-        policy._allocationSiteLimit = *siteLimit;
-        return policy;
-    }
-
-    expected<MemorySnapshotPolicy> MemorySnapshotPolicy::load()
-    {
-        const AbsolutePath path = ProcessRoots::get()._project.join( kPolicyFile );
-        string             text;
-        if ( FileUtil::readTextFile( path, text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the memory snapshot policy", path.str() } );
-        return parse( text, path.str() );
+        const bool bBadFolder = _exportFolder.empty() || _exportFolder.find_first_of( "/\\:" ) != string::npos || _exportFolder == ".." || _exportFolder == ".";
+        if ( bBadFolder )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_exportFolder must be one folder name", kConfigFile.getPath() } );
+        return {};
     }
 
     string MemorySnapshotExport::formatMegabytes( uint64 bytes )

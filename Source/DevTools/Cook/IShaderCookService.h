@@ -22,7 +22,7 @@ namespace sw
     enum class ShaderCookScope : uint8
     {
         All,    ///< 요청 모두(배포 · 팩 쿠킹)
-        Sample, ///< 표본 규칙(`ShaderCookDriver::kSampleRuleFile`)이 고른 요청만 — 빈 스테이징에만 쓴다(`-cook-shaders-sample`, 테스트 ShaderCache.RebuildFromEmpty)
+        Sample, ///< 표본 규칙(`ShaderCookSampleRule`)이 고른 요청만 — 빈 스테이징에만 쓴다(`-cook-shaders-sample`, 테스트 ShaderCache.RebuildFromEmpty)
     };
 
     /** @class IShaderCookService @brief 셰이더 쿠킹을 맡는 쪽입니다. 헤드리스 작업 스레드에서 부릅니다. */

@@ -163,11 +163,10 @@ namespace sw
             {
                 const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
 
-                PackConfig         packConfig;
-                const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
+                const expected<PackConfig> packConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
+                if ( packConfig.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
+                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config: %# (%#)", packConfig.error().message(), packConfig.error().detail() );
                     return false;
                 }
 
@@ -192,7 +191,7 @@ namespace sw
                     params._gamePackFolder = FileUtil::getFileNamePart( packRoot );
                 }
                 uint32 packCount = 0;
-                if ( PackCooker::cookAllPacks( packConfig, params, cookStore, packCount ) == false )
+                if ( PackCooker::cookAllPacks( *packConfig, params, cookStore, packCount ) == false )
                     return false;
                 // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 쓰지 않는 빌드이며, 기록을 남기지 않는 대신
                 // `patching="none"` 을 명시한 기록을 남긴다(기록이 없는 폴더와 구별되고, 그 폴더에 패치 목록이 있으면 시작 마운트가 오류로 멈춘다).
@@ -231,17 +230,16 @@ namespace sw
                         return false;
                     }
                 }
-                PackConfig         packConfig;
-                const AbsolutePath packConfigPath = ProcessRoots::get()._project.join( PackConfig::kConfigPath );
-                if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
+                const expected<PackConfig> packConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
+                if ( packConfig.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config '%#' is missing or invalid", packConfigPath.str() );
+                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config: %# (%#)", packConfig.error().message(), packConfig.error().detail() );
                     return false;
                 }
-                params._writerDesc._compression      = packConfig._compression._codec;
-                params._writerDesc._compressionLevel = packConfig._compression._level;
-                params._writerDesc._blockSize        = packConfig._compression._blockSize;
-                params._writerDesc._writeWindowBytes = packConfig._compression._writeWindowBytes;
+                params._writerDesc._compression      = packConfig->_compression._codec;
+                params._writerDesc._compressionLevel = packConfig->_compression._level;
+                params._writerDesc._blockSize        = packConfig->_compression._blockSize;
+                params._writerDesc._writeWindowBytes = packConfig->_compression._writeWindowBytes;
                 return PackPatchBuilder::makePatch( params );
             }
 

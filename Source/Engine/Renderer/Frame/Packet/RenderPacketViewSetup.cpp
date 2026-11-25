@@ -91,25 +91,17 @@ namespace sw
         if ( _bAutoRenderScaleActive == false )
         {
             // 켤 때마다 설정 파일을 새로 읽는다. 없거나 틀린 값은 기본값으로 대신하지 않고 오류로 알린 뒤 끈다(배율 1).
-            RenderScaleAdjusterConfig config;
-            if ( ConfigManager::readConfigFileInto( RenderScaleAdjusterConfig::kConfigFile, config ) != ConfigReadResult::Loaded )
+            const expected<RenderScaleAdjusterConfig> config = ConfigManager::readConfig( RenderScaleAdjusterConfig::kConfigFile );
+            if ( config.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "RenderPacketBuilder.AutoRenderScaleConfigMissing", "gv_autoRenderScale is on but %# is missing or unreadable (the log above names the key)",
-                                 RenderScaleAdjusterConfig::kConfigFile );
+                SW_LOG_ERROR_ID( "RenderPacketBuilder.GvAutoRenderScaleButSettings", "gv_autoRenderScale is on but its settings are invalid: %# (%#)", config.error().message(), config.error().detail() );
                 gv_autoRenderScale = false;
                 return 1.0f;
             }
             if ( _renderScaleAdjuster == nullptr )
                 _renderScaleAdjuster = make_unique<RenderScaleAdjuster>();
-            const string reason = RenderScaleAdjuster::validate( config );
-            if ( reason.empty() == false )
-            {
-                SW_LOG_ERROR_ID( "RenderPacketBuilder.GvAutoRenderScaleButSettings", "gv_autoRenderScale is on but its settings are invalid: %#", reason );
-                gv_autoRenderScale = false;
-                return 1.0f;
-            }
-            if ( _renderScaleAdjuster->configure( config ) == false )
-                return 1.0f; // validate 가 통과했으니 오지 않는 길
+            if ( _renderScaleAdjuster->configure( *config ) == false )
+                return 1.0f; // 읽기가 검사했으니 오지 않는 길
             _bAutoRenderScaleActive = SW_TRUE;
         }
         // 입력은 GPU 프레임 시간이다(벽시계는 vsync 에 묶여 여유가 서지 않는다). 시계가 없는 렌더러(테스트)는 표본이 없어 배율이 그대로다.

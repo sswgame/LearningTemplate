@@ -25,6 +25,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -785,7 +786,7 @@ namespace sw
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();
         _recordingCommit.clear();
-        _goldenPolicy = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
+        _goldenPolicy = ConfigManager::readConfig( AutomationGoldenPolicy::kConfigFile ); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
         StringBuilder<constant::buffer::kMax1024> goldenFolder;
         goldenFolder.appendFormat( "%#/%#", FileUtil::getDirectoryPart( scenario.getSourcePath() ), kAutomationGoldenFolder );
         _goldenFolderID  = string( goldenFolder.view() );

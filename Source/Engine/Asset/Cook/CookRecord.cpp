@@ -11,6 +11,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -42,22 +43,6 @@ namespace sw
                 static constexpr string_view kArrBucketName[] = { "Cook", "Import", "Shader" };
                 static_assert( SW_COUNT_OF( kArrBucketName ) == static_cast<size_t>( DerivedDataBucket::Count ), "every DDC bucket needs a folder name" );
                 return kArrBucketName[static_cast<size_t>( bucket )];
-            }
-
-            /** @brief 설정의 버킷 상한(`_listBucket` 의 `_maxSizeGB`)입니다. 버킷 줄이 없거나 0 이면 빈 값입니다. */
-            static optional<uint32> readBucketMaxGB( const JSONValue& root, string_view bucketName )
-            {
-                const JSONValue buckets = root.get( "_listBucket" );
-                for ( size_t index = 0; buckets.isArray() && index < buckets.size(); ++index )
-                {
-                    const JSONValue        entry = buckets.at( index );
-                    const optional<string> name  = entry.readRequired<string>( "_name" );
-                    if ( name.has_value() == false || *name != bucketName )
-                        continue;
-                    const optional<uint32> maxGB = entry.readRequired<uint32>( "_maxSizeGB" );
-                    return maxGB.has_value() && *maxGB != 0 ? maxGB : nullopt;
-                }
-                return nullopt;
             }
 
             /** @brief 정리 규칙이 있는 층의 루트(버킷 폴더의 부모)에서 버킷이 아닌 폴더를 지웁니다 — 버킷이 없던 때의 항목 폴더(`<키 앞 두 글자>`)는 아무도 열지 않는다. */
@@ -342,6 +327,22 @@ namespace sw
         { return input.computeCurrentHash() != input._contentHash; } );
     }
 
+    expected<void> DerivedDataConfig::validate() const
+    {
+        if ( _listLayer.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC config needs at least one layer", kConfigFile.getPath() } );
+        for ( const DerivedDataLayerConfig& entry : _listLayer )
+        {
+            // 폴더와 환경 변수 중 정확히 하나 — 둘 다 적으면 어느 쪽이 이기는지가 숨은 규칙이 된다.
+            if ( entry._name.empty() || entry._root.empty() == entry._rootEnvironment.empty() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs a _name and exactly one of _root or _rootEnvironment", entry._name } );
+            // 쓰는 층은 정리 규칙이 필수다 — 없으면 쿠킹 팩 항목이 코드 지문마다 쌓여 디스크를 채운다(2026-11-19 로컬 111 GB).
+            if ( entry._access == DerivedDataAccess::ReadWrite && entry._unusedFileAgeDays == 0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays of at least 1", entry._name } );
+        }
+        return {};
+    }
+
     DerivedDataCache::DerivedDataCache( vector<DerivedDataLayer> listLayer )
         : _listLayer{ std::move( listLayer ) }
     {
@@ -353,47 +354,28 @@ namespace sw
         AbsolutePath      overrideRoot;
         if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
             return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ overrideRoot.join( bucketName ), DerivedDataAccess::ReadWrite } } };
-        const AbsolutePath path = ProcessRoots::get()._project.join( kConfigFile );
-        JSONDocument       document;
-        if ( document.loadFromFile( path ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the DDC layer config could not be read", path.str() } );
-        const JSONValue layers = document.getRoot().get( "_listLayer" );
-        if ( layers.isArray() == false || layers.size() == 0 )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC layer config needs a non-empty _listLayer array", path.str() } );
-        const optional<uint32> bucketMaxGB = CookRecordInternal::readBucketMaxGB( document.getRoot(), bucketName );
-        if ( bucketMaxGB.has_value() == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC config needs a _listBucket entry with _maxSizeGB of at least 1 for every bucket", bucketName } );
+        const expected<DerivedDataConfig> config = ConfigManager::readConfig( DerivedDataConfig::kConfigFile );
+        if ( config.has_value() == false )
+            return unexpected( config.error() );
+        const DerivedDataBucketConfig* const pBucket = VectorUtil::findIf( config->_listBucket, [bucketName]( const DerivedDataBucketConfig& entry )
+        { return entry._name == bucketName; } );
+        if ( pBucket == nullptr )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the DDC config needs a _listBucket entry for every bucket", bucketName } );
         vector<DerivedDataLayer> listLayer;
-        for ( size_t index = 0; index < layers.size(); ++index )
+        for ( const DerivedDataLayerConfig& entry : config->_listLayer )
         {
-            const JSONValue        entry        = layers.at( index );
-            const optional<string> name         = entry.readRequired<string>( "_name" );
-            const optional<string> root         = entry.readRequired<string>( "_root" );
-            const optional<string> environment  = entry.readRequired<string>( "_rootEnvironment" );
-            const optional<string> access       = entry.readRequired<string>( "_access" );
-            const bool             bAccessKnown = access.has_value() && ( *access == "ReadOnly" || *access == "ReadWrite" );
-            // 폴더와 환경 변수 중 정확히 하나 — 둘 다 적으면 어느 쪽이 이기는지가 숨은 규칙이 된다.
-            if ( name.has_value() == false || root.has_value() == false || environment.has_value() == false || bAccessKnown == false || root->empty() == environment->empty() )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "a DDC layer needs _name, _access (ReadOnly or ReadWrite) and exactly one of _root or _rootEnvironment", path.str() } );
-            const DerivedDataAccess             layerAccess = *access == "ReadWrite" ? DerivedDataAccess::ReadWrite : DerivedDataAccess::ReadOnly;
-            optional<DerivedDataEvictionPolicy> evictionPolicy;
-            if ( layerAccess == DerivedDataAccess::ReadWrite )
-            {
-                // 쓰는 층은 정리 규칙이 필수다 — 없으면 쿠킹 팩 항목이 코드 지문마다 쌓여 디스크를 채운다(2026-11-19 로컬 111 GB).
-                const optional<uint32> ageDays = entry.readRequired<uint32>( "_unusedFileAgeDays" );
-                if ( ageDays.has_value() == false || *ageDays == 0 )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a ReadWrite DDC layer needs _unusedFileAgeDays of at least 1", path.str() } );
-                evictionPolicy = DerivedDataEvictionPolicy{ *ageDays, uint64{ *bucketMaxGB } * constant::memory::kBytesPerGigabyte };
-            }
             string environmentRoot;
-            if ( root->empty() && ProcessEnvironment::tryReadNonEmpty( *environment, environmentRoot ) == false )
+            if ( entry._root.empty() && ProcessEnvironment::tryReadNonEmpty( entry._rootEnvironment, environmentRoot ) == false )
             {
-                SW_LOG_INFO_ID( "DDC.SharedLayerOff", "DDC layer '%#' is off - environment variable %# is not set", *name, *environment );
+                SW_LOG_INFO_ID( "DDC.SharedLayerOff", "DDC layer '%#' is off - environment variable %# is not set", entry._name, entry._rootEnvironment );
                 continue;
             }
+            optional<DerivedDataEvictionPolicy> evictionPolicy;
+            if ( entry._access == DerivedDataAccess::ReadWrite )
+                evictionPolicy = DerivedDataEvictionPolicy{ entry._unusedFileAgeDays, uint64{ pBucket->_maxSizeGB } * constant::memory::kBytesPerGigabyte };
             // 환경 변수는 머신마다 다른 절대 경로다 — 상대 글이면 toDiskPath 가 오류를 남기고 빈 경로라 그 층의 I/O 가 실패한다(폴백 없음).
-            const AbsolutePath rootPath = root->empty() ? FileUtil::toDiskPath( environmentRoot ) : ProcessRoots::get()._derivedData.join( *root );
-            listLayer.push_back( DerivedDataLayer{ rootPath.join( bucketName ), layerAccess, std::move( evictionPolicy ) } );
+            const AbsolutePath rootPath = entry._root.empty() ? FileUtil::toDiskPath( environmentRoot ) : ProcessRoots::get()._derivedData.join( entry._root );
+            listLayer.push_back( DerivedDataLayer{ rootPath.join( bucketName ), entry._access, std::move( evictionPolicy ) } );
         }
         return DerivedDataCache{ std::move( listLayer ) };
     }

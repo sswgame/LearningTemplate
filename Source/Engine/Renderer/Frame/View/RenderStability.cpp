@@ -19,7 +19,7 @@ namespace sw
     /**
      * @class RenderStabilityStatusHolder
      * @brief 주 렌더러의 마지막 정착 값(렌더 스레드가 쓰고 게임 스레드가 읽는다)을 엔진 범위에서 듭니다 — 엔진을 다시 세우면 새로 선다(`FrameFogVolumeStatus` 와 같은 모양).
-     * @details 렌더 정착 조건의 문턱(`ScenarioRun.json` 의 `_conditions`)도 여기 든다 — 게임 스레드가 시나리오 시작 때 쓰고(`configure*`) 조건이 읽는다. 읽기 전이면 없다(기본값이 없다).
+     * @details 렌더 정착 조건의 문턱(`ScenarioRun.json` 의 `_mapConditionThreshold`)도 여기 든다 — 게임 스레드가 시나리오 시작 때 쓰고(`configure*`) 조건이 읽는다. 읽기 전이면 없다(기본값이 없다).
      */
     class RenderStabilityStatusHolder final : public Subsystem
     {
@@ -108,9 +108,9 @@ namespace sw
         atomic<uint32>    _giErrorBits; ///< `float32` 의 비트
         atomic<uint32>    _cameraStillFrameCount;
         atomic<uint32>    _flags;              ///< `kTemporalAccumulationFlag` · `kAutoExposureFlag` · `kRealtimeGIFlag`
-        optional<uint32>  _minStillFrames;     ///< TAA 조건의 문턱(`_conditions.RenderTemporalAccumulation._minStillFrames`)
-        optional<float32> _maxExposureErrorEv; ///< 노출 조건의 문턱(`_conditions.RenderAutoExposure._maxExposureErrorEv`)
-        atomic<uint32>    _maxGIErrorBits;     ///< 실시간 GI 조건의 문턱(`_conditions.RenderRealtimeGI._maxGIError`)의 `float32` 비트. 싣지 않았으면 0
+        optional<uint32>  _minStillFrames;     ///< TAA 조건의 문턱(`_mapConditionThreshold.RenderTemporalAccumulation`)
+        optional<float32> _maxExposureErrorEv; ///< 노출 조건의 문턱(`_mapConditionThreshold.RenderAutoExposure`)
+        atomic<uint32>    _maxGIErrorBits;     ///< 실시간 GI 조건의 문턱(`_mapConditionThreshold.RenderRealtimeGI`)의 `float32` 비트. 싣지 않았으면 0
 
         SW_SERVICE_SLOT( RenderStabilityStatusHolder, Required );
     };
@@ -197,7 +197,7 @@ namespace sw
     namespace
     {
         /** @brief 문턱이 없을 때의 진행 중입니다 — 기본값으로 지나가지 않고 정지 시한에 이 까닭으로 진다. */
-        constexpr const utf8* kNoThresholdWhat = "no threshold - Config/Dev/ScenarioRun.json _conditions was not loaded";
+        constexpr const utf8* kNoThresholdWhat = "no threshold - Config/Dev/ScenarioRun.json _mapConditionThreshold was not loaded";
 
         /** @brief 조건 `RenderTemporalAccumulation` 입니다(`RenderStabilitySample::evaluateTemporalAccumulation`). */
         AutomationReadiness readTemporalAccumulation()
@@ -229,33 +229,31 @@ namespace sw
             return holder.load().evaluateRealtimeGI( maxError );
         }
 
-        /** @brief `_conditions.RenderTemporalAccumulation` 의 `_minStillFrames`(1 이상) — TAA 기록 섞는 비율의 역수 몇 배다. */
-        expected<void> configureTemporalAccumulation( const JSONValue& config )
+        /** @brief `RenderTemporalAccumulation` 의 문턱 — 가만히 있던 프레임 수(1 이상 정수, TAA 기록 섞는 비율의 역수 몇 배). */
+        expected<void> configureTemporalAccumulation( float64 threshold )
         {
-            const optional<uint32> minStillFrames = config.readRequired<uint32>( "_minStillFrames" );
-            if ( minStillFrames.has_value() == false || *minStillFrames == 0 )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "needs _minStillFrames (1 or more)", "ScenarioRun.json _conditions.RenderTemporalAccumulation" } );
-            engine::getSubsystem<RenderStabilityStatusHolder>().setMinStillFrames( *minStillFrames );
+            const uint32 minStillFrames = threshold >= 1.0 && threshold <= static_cast<float64>( MathUtil::kMaxInt32 ) ? static_cast<uint32>( threshold ) : 0u;
+            if ( minStillFrames == 0 || static_cast<float64>( minStillFrames ) != threshold )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is a frame count (a whole number, 1 or more)", "RenderTemporalAccumulation" } );
+            engine::getSubsystem<RenderStabilityStatusHolder>().setMinStillFrames( minStillFrames );
             return {};
         }
 
-        /** @brief `_conditions.RenderAutoExposure` 의 `_maxExposureErrorEv`(0 이상, EV). */
-        expected<void> configureAutoExposure( const JSONValue& config )
+        /** @brief `RenderAutoExposure` 의 문턱 — 남은 노출 오차(0 이상, EV). */
+        expected<void> configureAutoExposure( float64 threshold )
         {
-            const optional<float32> maxErrorEv = config.readRequired<float32>( "_maxExposureErrorEv" );
-            if ( maxErrorEv.has_value() == false || *maxErrorEv < 0.0f )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "needs _maxExposureErrorEv (0 or more, EV)", "ScenarioRun.json _conditions.RenderAutoExposure" } );
-            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxExposureErrorEv( *maxErrorEv );
+            if ( threshold < 0.0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is an exposure error (0 or more, EV)", "RenderAutoExposure" } );
+            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxExposureErrorEv( static_cast<float32>( threshold ) );
             return {};
         }
 
-        /** @brief `_conditions.RenderRealtimeGI` 의 `_maxGIError`(0 보다 크고 1 보다 작다 — 옛 기록의 남은 몫). */
-        expected<void> configureRealtimeGI( const JSONValue& config )
+        /** @brief `RenderRealtimeGI` 의 문턱 — 옛 기록의 남은 몫(0 보다 크고 1 보다 작다). */
+        expected<void> configureRealtimeGI( float64 threshold )
         {
-            const optional<float32> maxError = config.readRequired<float32>( "_maxGIError" );
-            if ( maxError.has_value() == false || *maxError <= 0.0f || *maxError >= 1.0f )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "needs _maxGIError (between 0 and 1)", "ScenarioRun.json _conditions.RenderRealtimeGI" } );
-            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxGIError( *maxError );
+            if ( threshold <= 0.0 || threshold >= 1.0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is the share of the old history left (between 0 and 1)", "RenderRealtimeGI" } );
+            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxGIError( static_cast<float32>( threshold ) );
             return {};
         }
     } // namespace

@@ -3,8 +3,6 @@
 #include "DevTools/Material/MaterialGraphCompileResult.h"
 
 #include "Core/Container/DependencyGraph.h"
-#include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Hash/HashUtil.h"
@@ -13,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -192,35 +191,8 @@ namespace sw
                 { "Emissive",  "_emissive", MaterialGraphValueKind::Float3},
             };
 
-            /** @brief 층 상한입니다(`Config/Dev/MaterialLayers.json`). 층마다 칸 · 텍스처 표본 · 섞기 줄이 늘어 셰이더 비용의 상한을 데이터로 둔다. */
-            struct LayerLimits
-            {
-                uint32 _maxLayerCount{ 0 };       ///< 머티리얼 하나의 층 수
-                uint32 _maxMaskChannelCount{ 0 }; ///< 마스크 텍스처(`_layerMask`)에서 쓸 수 있는 채널 수(R 부터)
-            };
-
-            static constexpr const utf8* kLayerLimitsPath = "Config/Dev/MaterialLayers.json";
-            static constexpr string_view kLayerMaskField  = "_layerMask";
-            static constexpr string_view kMaskChannels    = "RGBA";
-
-            /** @brief 층 상한을 읽습니다. 파일 · 칸이 없거나 0 이면 그 까닭입니다(폴백 없음). */
-            [[nodiscard]] static expected<LayerLimits> loadLayerLimits()
-            {
-                const AbsolutePath path = ProcessRoots::get()._project.join( kLayerLimitsPath );
-                string             text;
-                JSONDocument       doc;
-                if ( FileUtil::readTextFile( path, text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
-                    return unexpected( Error{ ErrorKind::NotFound, "the layer limits file cannot be read", kLayerLimitsPath } );
-                const optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
-                const optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();
-                const bool             bValid              = maxLayerCount.has_value() && *maxLayerCount > 0 && maxMaskChannelCount.has_value() && *maxMaskChannelCount > 0 && *maxMaskChannelCount <= kMaskChannels.size();
-                if ( bValid == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "the layer limits file needs _maxLayerCount (1 or more) and _maxMaskChannelCount (1 to 4)", kLayerLimitsPath } );
-                LayerLimits limits;
-                limits._maxLayerCount       = *maxLayerCount;
-                limits._maxMaskChannelCount = *maxMaskChannelCount;
-                return limits;
-            }
+            static constexpr string_view kLayerMaskField = "_layerMask";
+            static constexpr string_view kMaskChannels   = "RGBA";
 
             /** @brief 셰이딩 모델 Hair 의 머티리얼 칸을 덧붙입니다(이름 · 범위는 hair.material 의 같은 뜻 칸과 같다). */
             static void appendHairProperties( vector<MaterialGraphField>& inoutListField )
@@ -251,7 +223,7 @@ namespace sw
                 string                     _body;            ///< `evaluateMaterialGraph` 의 본문
                 string                     _outputLines;     ///< 출력 칸 대입. 층은 그 뒤에 이어 쓴다(층이 아래 칸 `output._x` 를 읽는다)
                 string                     _parameterPrefix; ///< 층 안 파라미터 칸 이름의 머리(`_<층 노드>`) — 같은 층 파일을 두 번 써도 칸이 갈린다
-                LayerLimits                _layerLimits;
+                MaterialGraphLayerLimits   _layerLimits;
                 uint32                     _nextVariable{ 1 };
                 bool                       _bEmissive{ false };
                 bool                       _bHair{ false };
@@ -731,7 +703,7 @@ namespace sw
                     if ( channelIndex == string_view::npos || channelIndex >= _layerLimits._maxMaskChannelCount )
                     {
                         string message{ "MaskChannel '" };
-                        message.append( channel ).append( "' must be None or one of the first " ).append( kMaskChannels.substr( 0, _layerLimits._maxMaskChannelCount ) ).append( " channels (" ).append( kLayerLimitsPath ).append( ")" );
+                        message.append( channel ).append( "' must be None or one of the first " ).append( kMaskChannels.substr( 0, _layerLimits._maxMaskChannelCount ) ).append( " channels (" ).append( MaterialGraphLayerLimits::kConfigFile.getPath() ).append( ")" );
                         report( scope, node._name, "BadValue", std::move( message ) );
                         return {};
                     }
@@ -859,7 +831,7 @@ namespace sw
                         report( scope, graph._listNode[listLayer.front()]._name, "LayerOutsideMaterial", "a Layer node belongs in a material graph, not in a subgraph or a layer" );
                         return false;
                     }
-                    const expected<LayerLimits> limits = loadLayerLimits();
+                    const expected<MaterialGraphLayerLimits> limits = ConfigManager::readConfig( MaterialGraphLayerLimits::kConfigFile );
                     if ( limits.has_value() == false )
                     {
                         StringBuilder<constant::buffer::kMax1024> message;
@@ -871,7 +843,7 @@ namespace sw
                     if ( listLayer.size() > _layerLimits._maxLayerCount )
                     {
                         string message{ "the material has more layers than _maxLayerCount in " };
-                        message.append( kLayerLimitsPath );
+                        message.append( MaterialGraphLayerLimits::kConfigFile.getPath() );
                         report( scope, graph._listNode[listLayer[_layerLimits._maxLayerCount]]._name, "TooManyLayers", std::move( message ) );
                         return false;
                     }

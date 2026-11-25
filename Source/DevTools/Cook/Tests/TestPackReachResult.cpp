@@ -637,8 +637,9 @@ SW_TEST_CASE( PackReachabilityTest, ExcludedRedirectTableIsACookError )
 /** @brief [PackReachabilityTest] 저장소의 실제 팩 규칙(`Config/Engine/PackConfig.json`)은 도메인 리다이렉트 표를 빼지 않는다 — 어느 빌드 타깃이든 */
 SW_TEST_CASE( PackReachabilityTest, RealPackRulesKeepRedirectTables )
 {
-    PackConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, ProcessRoots::get()._project.join( PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    const expected<PackConfig> loadedConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
+    SW_REQUIRE_TRUE( loadedConfig.has_value() );
+    const PackConfig& config = *loadedConfig;
     for ( const utf8* pBuildTarget : { "Game", "Client", "Server" } )
     {
         fixed_string<constant::buffer::kMax64> label;

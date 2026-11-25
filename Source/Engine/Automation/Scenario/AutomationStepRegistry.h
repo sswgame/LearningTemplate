@@ -3,6 +3,7 @@
  * @brief 시나리오 단계 종류의 레지스트리를 정의합니다. 엔진 단계(입력 · 단언 · 끝)와 GameFramework(액션 계층 의도), 에디터(ImGui), 플랫폼(창 메시지)의 단계가 모두 여기 등록합니다.
  */
 #pragma once
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -141,13 +142,11 @@ namespace sw
 
 namespace sw
 {
-    class JSONValue;
-
     /**
-     * @brief 조건의 문턱을 `Config/Dev/ScenarioRun.json` 의 `_conditions.<조건 이름>` 에서 읽어 조건을 등록한 기능이 제 자리에 둡니다. 칸이 없거나 틀리면 그 칸이 대상인 오류입니다.
+     * @brief 조건의 문턱(`Config/Dev/ScenarioRun.json` 의 `_mapConditionThreshold.<조건 이름>`)을 조건을 등록한 기능이 받아 제 자리에 둡니다. 범위 밖이면 까닭입니다.
      * @details 공용 구조체에 칸을 더하지 않는다 — 기능마다 칸을 더하던 닫힌 집합체(배포 엔진 설정의 사진 정착 문턱 칸)가 세 갈래의 충돌 자리였다.
      */
-    using AutomationConditionConfigureFunction = expected<void> ( * )( const JSONValue& config );
+    using AutomationConditionConfigureFunction = expected<void> ( * )( float64 threshold );
 
     /** @brief 차단 조건이 무엇을 미루는지입니다. 넓은 쪽이 좁은 쪽을 포함한다 — 시작을 미루는 조건은 캡처도 미룬다. */
     enum class AutomationBlockScope : uint8
@@ -171,10 +170,10 @@ namespace sw
      */
     struct AutomationBlocker
     {
-        const utf8*                          _pName; ///< 로그 · 중복 판정 · `ScenarioRun.json` 의 `_conditions` 칸 이름입니다.
+        const utf8*                          _pName; ///< 로그 · 중복 판정 · `ScenarioRun.json` 의 `_mapConditionThreshold` 칸 이름입니다.
         AutomationReadinessFunction          _pReadiness;
         AutomationBlockScope                 _scope;
-        AutomationConditionConfigureFunction _pConfigure{ nullptr }; ///< 문턱을 읽는 함수(없으면 문턱이 없는 조건)
+        AutomationConditionConfigureFunction _pConfigure{ nullptr }; ///< 문턱을 받는 함수(없으면 문턱이 없는 조건)
     };
 
     /** @brief 지금 기다리는 조건 하나(이름 · 무엇 · 진척)입니다. 기다리는 것이 없으면 이름이 nullptr 입니다. */
@@ -226,10 +225,10 @@ namespace sw
         /** @brief 지금 진행 중인 조건(정착 조건 `RenderStable` 은 빼고) 모두를 "이름 (무엇, progress N)" 으로 잇습니다. 없으면 "none" 입니다. 오래 기다릴 때의 보고(`AutomationRunner::reportOngoingWait`)가 부른다. */
         static string describeActiveBlockers();
         /**
-         * @brief 문턱을 읽는 조건마다 @p conditions(`ScenarioRun.json` 의 `_conditions`)에서 제 이름의 칸을 넘깁니다. 칸이 없거나 조건이 거절하면 그 오류입니다(첫 오류에서 멈춘다).
+         * @brief 문턱을 받는 조건마다 @p mapThreshold(`ScenarioRun.json` 의 `_mapConditionThreshold`)에서 제 이름의 값을 넘깁니다. 값이 없거나 조건이 거절하면 그 오류입니다(첫 오류에서 멈춘다).
          * @details 시나리오를 시작할 때마다 부른다(`AutomationRunPolicy::load`) — 뒤에 올라온 모듈의 조건도 문턱을 받는다.
          */
-        [[nodiscard]] static expected<void> configureConditions( const JSONValue& conditions );
+        [[nodiscard]] static expected<void> configureConditions( const map<string, float64>& mapThreshold );
     };
 } // namespace sw
 
@@ -276,7 +275,7 @@ namespace sw
 
     /**
      * @brief 사진 앞 렌더 정착 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그 상태(TAA 기록 · 노출 적응)를 만든 기능이 제 폴더에서 등록한다(`AutomationBlockScope::RenderStable`).
-     * @param pConfigure 문턱을 `ScenarioRun.json` 의 `_conditions.<pName>` 에서 읽는 함수(`AutomationConditionConfigureFunction`) — 칸이 없으면 시나리오가 읽기 오류로 시작하지 않는다
+     * @param pConfigure 문턱(`ScenarioRun.json` 의 `_mapConditionThreshold.<pName>`)을 받는 함수(`AutomationConditionConfigureFunction`) — 칸이 없으면 시나리오가 읽기 오류로 시작하지 않는다
      */
     #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure ) SW_STATIC_REGISTRATION( automationStabilityCondition, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::RenderStable, pConfigure )
 

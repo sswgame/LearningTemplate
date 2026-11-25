@@ -6,6 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 
 using namespace sw;
@@ -65,11 +66,9 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsUnknownKey )
  */
 SW_TEST_CASE( MemoryBudgetMonitorTest, RepositoryBudgetFileIsValid )
 {
-    const AbsolutePath path = ProcessRoots::get()._project.join( MemoryBudgetMonitor::kBudgetFile );
-    string             text;
-    SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( path, text ), path.str() );
-
+    const expected<MemoryBudgetFile> file = ConfigManager::readConfig( MemoryBudgetFile::kConfigFile );
+    SW_REQUIRE_TRUE( file.has_value() );
     MemoryProfiler profiler;
-    SW_EXPECT_TRUE( MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value() );
+    MemoryBudgetMonitor::applyBudget( *file, profiler );
     SW_EXPECT_TRUE( profiler.getBudget( MemoryTag::Texture ) > 0 );
 }

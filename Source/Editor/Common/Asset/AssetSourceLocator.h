@@ -13,18 +13,42 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Config/ConfigFileID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
 {
+    /**
+     * @struct AssetSourceStoreConfig
+     * @brief 원본 저장소의 자리입니다 — `_root`(`<프로젝트>/Saved` 아래) 또는 `_rootEnvironment`(절대 경로를 담은 환경 변수) 중 정확히 하나를 적는다.
+     */
+    REFLECT()
+    struct AssetSourceStoreConfig
+    {
+        REFLECT_BODY();
+
+        static constexpr ConfigFileID<AssetSourceStoreConfig> kConfigFile{ "Config/Dev/SourceStore.json" };
+
+        PROPERTY( Required )
+        string _root;
+        PROPERTY( Required )
+        string _rootEnvironment;
+
+        /** @brief 둘 중 하나만 적었는지 봅니다 — 둘 다 적으면 어느 쪽이 이기는지가 숨은 규칙이 된다(DDC 층과 같은 규칙). */
+        [[nodiscard]] expected<void> validate() const
+        {
+            if ( _root.empty() == _rootEnvironment.empty() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the source store needs exactly one of _root or _rootEnvironment", kConfigFile.getPath() } );
+            return {};
+        }
+    };
+
     /**
      * @struct AssetSourceLocator
      * @brief 원본 자리를 푸는 창구입니다. 상태가 없어 워커에서 불러도 된다. 파일 머리말 참고.
      */
     struct AssetSourceLocator
     {
-        /** @brief 저장소 설정 파일(프로젝트 루트 기준)입니다 — `_root`(`<프로젝트>/Saved` 아래) 또는 `_rootEnvironment`(절대 경로를 담은 환경 변수) 가운데 하나. */
-        static constexpr const utf8* kConfigFile = "Config/Dev/SourceStore.json";
-
         /**
          * @brief 원본 @p sourcePath(디스크 경로)의 바이트가 있는 파일입니다 — 그 자리에 있으면 그 파일(설정을 읽지 않는다), 없고 서술이 저장소 주소를 적었으면 설정한 저장소의 파일.
          * @return 원본도 저장소 주소도 없거나, 저장소 설정이 틀렸거나, 로컬 저장소에 그 내용이 없으면 까닭입니다.
@@ -40,7 +64,7 @@ namespace sw::editor
 
         /** @brief 저장소 안의 파일 자리입니다(`<뿌리>/<앞 두 자>/<다음 두 자>/<SHA-256>`). */
         [[nodiscard]] static AbsolutePath makeStorePath( const AbsolutePath& storeRoot, const AssetSourceAddress& address );
-        /** @brief 설정(`kConfigFile`)의 저장소 뿌리입니다. 설정이 없거나 틀렸거나 환경 변수가 비었으면 까닭입니다. */
+        /** @brief 설정(`AssetSourceStoreConfig`)의 저장소 뿌리입니다. 설정이 없거나 틀렸거나 환경 변수가 비었으면 까닭입니다. */
         [[nodiscard]] static expected<AbsolutePath> loadStoreRoot();
     };
 } // namespace sw::editor

@@ -114,18 +114,13 @@ namespace sw
             return SubsystemInitResult::Failed;
         }
         // 가림 판정 설정은 필수다 — 없거나 틀리면 기본값으로 대신하지 않고 기동을 멈춘다(설정 칸이 문턱의 정본이다).
-        OcclusionCullingConfig occlusionConfig{};
-        if ( ConfigManager::readConfigFileInto( OcclusionCullingConfig::kConfigFile, occlusionConfig ) != ConfigReadResult::Loaded )
+        const expected<OcclusionCullingConfig> occlusionConfig = ConfigManager::readConfig( OcclusionCullingConfig::kConfigFile );
+        if ( occlusionConfig.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "FrameRenderer.OcclusionConfigMissing", "%# is missing or unreadable - the occlusion culling settings have no default (the log above names the key)", OcclusionCullingConfig::kConfigFile );
+            SW_LOG_ERROR_ID( "FrameRenderer.OcclusionConfigInvalid", "The occlusion culling settings have no default: %# (%#)", occlusionConfig.error().message(), occlusionConfig.error().detail() );
             return SubsystemInitResult::Failed;
         }
-        if ( const string reason = occlusionConfig.validate(); reason.empty() == false )
-        {
-            SW_LOG_ERROR_ID( "FrameRenderer.OcclusionConfigInvalid", "%# is invalid: %#", OcclusionCullingConfig::kConfigFile, reason );
-            return SubsystemInitResult::Failed;
-        }
-        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), FrameRendererSubsystemInternal::loadChosenPipeline(), occlusionConfig ) == false )
+        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), FrameRendererSubsystemInternal::loadChosenPipeline(), *occlusionConfig ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.FailedInitializeFrameRenderer", "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;
