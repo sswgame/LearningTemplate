@@ -209,7 +209,7 @@ namespace sw
         return true;
     }
 
-    int32 KartGhostPlayer::advance( float32 frameTime )
+    int32 KartGhostPlayer::advance( GameSeconds frameTime )
     {
         const int32 stepCount = _timer.consume( frameTime );
         int32       stepped   = 0;

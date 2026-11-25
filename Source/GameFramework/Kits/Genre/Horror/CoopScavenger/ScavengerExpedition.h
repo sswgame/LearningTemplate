@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -160,7 +161,7 @@ namespace sw
         ScavengerActionResult land();
         /** @brief 이륙합니다(사람이 레버를 당겼을 때). */
         ScavengerActionResult takeOff();
-        void                  update( float32 deltaTime );
+        void                  update( GameSeconds frameTime );
 
         /** @brief 이어진 곳으로 옮깁니다(잠긴 문은 막힙니다). */
         ScavengerActionResult movePlayer( int32 player, const hashed_string& areaID );

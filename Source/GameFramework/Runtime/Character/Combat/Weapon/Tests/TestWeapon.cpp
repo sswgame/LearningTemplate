@@ -54,7 +54,7 @@ namespace
             {
                 if ( state.pullTrigger( aim, time == 0.0f, shot ) == WeaponFireResult::Fired )
                     ++firedCount;
-                state.update( deltaTime );
+                state.update( GameSeconds{ deltaTime } );
             }
             return firedCount;
         }
@@ -108,12 +108,12 @@ SW_TEST_CASE( WeaponTest, ReloadMovesOnlyWhatIsMissing )
     for ( int32 shotIndex = 0; shotIndex < 5; ++shotIndex )
     {
         SW_REQUIRE_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
-        state.update( 0.1f );
+        state.update( GameSeconds{ 0.1f } );
     }
     SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::EmptyMagazine );
     SW_EXPECT_TRUE( state.isReloading() );
     SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Reloading );
-    state.update( 1.0f );
+    state.update( GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( 5, state.getMagazineAmmo() );
     SW_EXPECT_EQUAL( 2, state.getReserveAmmo() );
 
@@ -126,7 +126,7 @@ SW_TEST_CASE( WeaponTest, ReloadMovesOnlyWhatIsMissing )
     oneShot._magazineSize = 1;
     SW_REQUIRE_TRUE( empty.equip( oneShot, WeaponTestUtil::makeRound(), 0, WorldSeed::makeFixed( 1u ) ) );
     SW_REQUIRE_TRUE( empty.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
-    empty.update( 0.2f );
+    empty.update( GameSeconds{ 0.2f } );
     SW_EXPECT_TRUE( empty.pullTrigger( aim, true, shot ) == WeaponFireResult::OutOfAmmo );
 }
 
@@ -144,7 +144,7 @@ SW_TEST_CASE( WeaponTest, SemiAutoAndPellets )
     WeaponShot shot;
     SW_REQUIRE_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
     SW_EXPECT_EQUAL( size_t( 8 ), shot._listRay.size() );
-    state.update( 1.0f );
+    state.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( state.pullTrigger( aim, false, shot ) == WeaponFireResult::SemiAutoHeld );
     SW_EXPECT_TRUE( shot._listRay.empty() );
 }
@@ -159,7 +159,7 @@ SW_TEST_CASE( WeaponTest, StateRoundTripKeepsTheNextShot )
     const Ray  aim;
     WeaponShot shot;
     SW_REQUIRE_TRUE( original.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
-    original.update( 0.1f );
+    original.update( GameSeconds{ 0.1f } );
 
     Archive written;
     original.writeState( written );
@@ -219,11 +219,11 @@ SW_TEST_CASE( WeaponTest, SoundsComeFromTheWeaponTable )
     SW_EXPECT_TRUE( player.getPosted()[0] == hashed_string( "Fire" ) );
     SW_EXPECT_EQUAL( 3.0f, player.getLastX() );
 
-    state.update( 1.0f );
+    state.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::EmptyMagazine );
-    state.update( 2.0f ); // 예비탄 하나를 넣었다
+    state.update( GameSeconds{ 2.0f } ); // 예비탄 하나를 넣었다
     SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
-    state.update( 1.0f );
+    state.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( state.pullTrigger( aim, false, shot ) == WeaponFireResult::OutOfAmmo ); // 누르고 있는 빈 총은 조용하다
     state.queueSound( queue );
     queue.playAll();

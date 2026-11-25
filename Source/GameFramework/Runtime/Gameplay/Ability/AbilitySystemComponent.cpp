@@ -160,7 +160,7 @@ namespace sw
     void AbilitySystemComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        advanceTime( context.getDeltaTime().count() );
+        advanceTime( context.getDeltaTime() );
     }
 
     void AbilitySystemComponent::compactPendingRemovals()
@@ -222,15 +222,16 @@ namespace sw
         setCanEverTick( wantsTick == SW_TRUE );
     }
 
-    void AbilitySystemComponent::advanceTime( float32 deltaTime )
+    void AbilitySystemComponent::advanceTime( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
 
         const ScopedListLock lock{ *this };
         _time += deltaTime;
         updateActiveEffects( deltaTime );
-        updateActiveAbilities( deltaTime );
+        updateActiveAbilities( frameTime );
     }
 
     const AbilityCatalog* AbilitySystemComponent::findCatalog() const

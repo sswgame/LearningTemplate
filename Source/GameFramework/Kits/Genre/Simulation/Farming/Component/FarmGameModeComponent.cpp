@@ -173,8 +173,9 @@ namespace sw
             addMoneyResult( outListValue, pWallet->getWallet().getBalance( _shipment.getCurrency() ) - _startingGold );
     }
 
-    void FarmGameModeComponent::updateGame( float32 deltaTime )
+    void FarmGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
 

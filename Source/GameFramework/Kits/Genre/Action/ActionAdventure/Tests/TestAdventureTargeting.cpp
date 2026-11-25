@@ -55,7 +55,7 @@ namespace
 
         static sw::AdventureTargetingState update( sw::AdventureTargeting& targeting, const sw::vector<sw::LockOnCandidate>& listCandidate, const sw::float2& move = sw::float2{}, bool bJump = false )
         {
-            return targeting.update( kEye, listCandidate, move, bJump, kAimStep );
+            return targeting.update( kEye, listCandidate, move, bJump, sw::GameSeconds{ kAimStep } );
         }
     };
 } // namespace
@@ -228,8 +228,8 @@ SW_TEST_CASE( AdventureTargetingTest, LosingTheTargetFallsBackToParallel )
     sw::AdventureTargeting hidden;
     AdventureTargetingTestUtil::setUp( hidden );
     SW_REQUIRE_TRUE( hidden.press( kEye, kForward, listTarget ) );
-    SW_EXPECT_TRUE( hidden.update( kEye, listHidden, sw::float2{}, false, 1.0f ) == sw::AdventureTargetingState::Locked ); // 유예 1 초는 넘지 않았다
-    SW_EXPECT_TRUE( hidden.update( kEye, listHidden, sw::float2{}, false, 0.125f ) == sw::AdventureTargetingState::Parallel );
+    SW_EXPECT_TRUE( hidden.update( kEye, listHidden, sw::float2{}, false, sw::GameSeconds{ 1.0f } ) == sw::AdventureTargetingState::Locked ); // 유예 1 초는 넘지 않았다
+    SW_EXPECT_TRUE( hidden.update( kEye, listHidden, sw::float2{}, false, sw::GameSeconds{ 0.125f } ) == sw::AdventureTargetingState::Parallel );
 
     sw::AdventureTargeting midEvade;
     AdventureTargetingTestUtil::setUp( midEvade );

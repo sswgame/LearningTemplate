@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/TagID.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Character/Hit/IHitReceiver.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -182,7 +183,7 @@ namespace sw
         // 1) 시간, 카탈로그, 세트
         // --------------------------------------------------------------------------
         /** @brief 시간을 @p deltaTime 만큼 진행합니다. 주기 이펙트 실행, 지속 이펙트 만료, 어빌리티와 작업의 틱을 처리합니다. 0 이하이면 아무것도 하지 않습니다. */
-        void advanceTime( float32 deltaTime );
+        void advanceTime( GameSeconds frameTime );
         /** @brief 이 컴포넌트가 지금까지 진행한 시간입니다. 시간으로 움직일 것이 없는 동안은 틱이 꺼져 멈춥니다. */
         float32 getTime() const { return _time; }
         /** @brief true 면 주 틱을 늘 끄고 게임이 `advanceTime` 으로 시간을 넣습니다(턴제). false(기본)면 시간으로 움직일 것이 있을 때만 틱합니다. */
@@ -524,7 +525,7 @@ namespace sw
         /** @brief 어빌리티가 끝났을 때를 처리합니다. 태그, 막기 해제, 알림이 해당합니다. */
         void handleAbilityEnded( Ability& ability, bool bWasCancelled );
         /** @brief 실행 중인 어빌리티들을 틱합니다. */
-        void updateActiveAbilities( float32 deltaTime );
+        void updateActiveAbilities( GameSeconds frameTime );
         /** @brief 제거할 스펙을 정리합니다. 취소하고 `onRemoved` 를 부른 뒤 제거 표시를 합니다. */
         void retireAbilitySpec( AbilitySpec& spec );
 

@@ -167,14 +167,15 @@ namespace sw
         SW_LOG_INFO_ID( "ActionCombat.Victory", "[ActionCombat] boss defeated (%#) with %# HP left", result._bBossDefeated == SW_TRUE ? "boss" : "room", _playerHP );
     }
 
-    void ActionCombatGameModeComponent::updateGame( float32 deltaTime )
+    void ActionCombatGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         const bool bFinished = _phase == ActionCombatPhase::Victory || _phase == ActionCombatPhase::Defeat;
         if ( bFinished )
         {
-            if ( _resultHold.update( deltaTime ) )
+            if ( _resultHold.update( frameTime ) )
             {
                 const bool bWon = _phase == ActionCombatPhase::Victory;
                 (void)finishMinigame( hashed_string( bWon ? ActionCombatGameModeComponentInternal::kWinResult : ActionCombatGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
@@ -184,7 +185,7 @@ namespace sw
         const ActionRoomFrameInput input = consumeInput( deltaTime );
         if ( _phase == ActionCombatPhase::BossWait )
         {
-            if ( _bossDelay.update( deltaTime ) )
+            if ( _bossDelay.update( frameTime ) )
             {
                 _room.beginBoss();
                 _phase = ActionCombatPhase::Boss;
@@ -192,7 +193,7 @@ namespace sw
             }
             return;
         }
-        applyResult( _room.update( deltaTime, input ) );
+        applyResult( _room.update( frameTime, input ) );
     }
 
     void ActionCombatGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

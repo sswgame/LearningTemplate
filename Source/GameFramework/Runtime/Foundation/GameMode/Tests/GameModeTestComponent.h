@@ -9,6 +9,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -96,7 +97,7 @@ namespace sw
             _pView  = pView;
         }
         void onStateRestored( bool bRestored ) override { ++( bRestored ? _restoredCount : _refusedCount ); }
-        void updateGame( float32 deltaTime ) override { (void)deltaTime; }
+        void updateGame( GameSeconds frameTime ) override { (void)frameTime; }
         void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
         {
             (void)manager;

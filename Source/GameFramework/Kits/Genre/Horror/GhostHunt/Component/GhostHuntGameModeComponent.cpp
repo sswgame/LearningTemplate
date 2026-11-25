@@ -281,8 +281,9 @@ namespace sw
         enterRoom( walk._pEntered->_id );
     }
 
-    void GhostHuntGameModeComponent::applyVacuum( const GhostHuntCommand& command, float32 deltaTime )
+    void GhostHuntGameModeComponent::applyVacuum( const GhostHuntCommand& command, GameSeconds frameTime )
     {
+        const float32   deltaTime = frameTime.count();
         GhostEncounter& encounter = _mansion.getEncounter();
         if ( command._bVacuum == SW_FALSE )
         {
@@ -301,7 +302,7 @@ namespace sw
         }
         if ( isSucking() )
         {
-            const GhostSuctionResult suction = encounter.updateSuction( float3{ command._move._x, 0.0f, command._move._y }, deltaTime );
+            const GhostSuctionResult suction = encounter.updateSuction( float3{ command._move._x, 0.0f, command._move._y }, frameTime );
             movePlayer( float2{ suction._drag._x, suction._drag._z } );
             return;
         }
@@ -342,8 +343,9 @@ namespace sw
         }
     }
 
-    void GhostHuntGameModeComponent::applyTools( const GhostHuntCommand& command, float32 deltaTime )
+    void GhostHuntGameModeComponent::applyTools( const GhostHuntCommand& command, GameSeconds frameTime )
     {
+        const float32   deltaTime = frameTime.count();
         GhostEncounter& encounter = _mansion.getEncounter();
         const float3    eye       = getPlayerPosition()._value;
         const float3    forward   = getFacing();
@@ -354,7 +356,7 @@ namespace sw
         _bStrobeHeld = command._bStrobe;
         if ( command._bLight == SW_TRUE )
             (void)encounter.shineBeam( eye, forward );
-        applyVacuum( command, deltaTime );
+        applyVacuum( command, frameTime );
         if ( command._bUseTriggered == SW_TRUE )
             use();
     }
@@ -381,14 +383,15 @@ namespace sw
         }
     }
 
-    void GhostHuntGameModeComponent::updateGame( float32 deltaTime )
+    void GhostHuntGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _result != GhostHuntResult::Ongoing )
         {
             using Internal = GhostHuntGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
+            if ( _resultHold.update( frameTime ) )
                 (void)finishMinigame( hashed_string( _result == GhostHuntResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
             return;
         }
@@ -401,9 +404,9 @@ namespace sw
             _facing = command._move * ( 1.0f / moveLength );
             movePlayer( command._move * ( _moveSpeed * deltaTime / MathUtil::max( 1.0f, moveLength ) ) );
         }
-        applyTools( command, deltaTime );
+        applyTools( command, frameTime );
         moveGhosts( deltaTime );
-        _mansion.update( deltaTime );
+        _mansion.update( frameTime );
         settle();
     }
 

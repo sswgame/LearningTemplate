@@ -553,12 +553,13 @@ namespace sw
         }
     }
 
-    void MonsterHuntGameModeComponent::updateHunt( float32 deltaTime )
+    void MonsterHuntGameModeComponent::updateHunt( GameSeconds frameTime )
     {
-        _combat.update( deltaTime );
-        _alchemy.update( deltaTime );
-        (void)_attackCooldown.update( deltaTime ); // 끝났는지는 `isActive` 로 본다
-        (void)_dodge.update( deltaTime );
+        const float32 deltaTime = frameTime.count();
+        _combat.update( frameTime );
+        _alchemy.update( frameTime );
+        (void)_attackCooldown.update( frameTime ); // 끝났는지는 `isActive` 로 본다
+        (void)_dodge.update( frameTime );
         if ( _alchemy.isEffectActive( _potion.key() ) )
         {
             _healProgress += _potionHealPerSecond * deltaTime;
@@ -574,7 +575,7 @@ namespace sw
             _monsterPosition += WalkSweep::walkOnGround( getObjectManager(), getMonsterPosition(), toPlayer, _bodyRadius ); // 바위에 막히면 따라 미끄러진다
         }
         const bool bInReach = computeMonsterDistance() <= _monsterReach + MathUtil::kLooseEpsilon;
-        if ( _monsterAttack.updateRepeat( deltaTime, _monsterAttackSeconds, bInReach ) == false || _dodge.isActive() )
+        if ( _monsterAttack.updateRepeat( frameTime, _monsterAttackSeconds, bInReach ) == false || _dodge.isActive() )
             return;
         _combat.registerHitTaken();
         getSoundQueue().queueEvent( MonsterHuntGameModeComponentInternal::kEventHurt );
@@ -593,8 +594,9 @@ namespace sw
             SW_LOG_INFO_ID( "MonsterHunt.Defeat", "[MonsterHunt] the hunter fell" );
     }
 
-    void MonsterHuntGameModeComponent::updateGame( float32 deltaTime )
+    void MonsterHuntGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _phase == MonsterHuntPhase::Haggle )
             return; // 흥정은 명령이 진행한다
         if ( isAlive() )
@@ -603,10 +605,10 @@ namespace sw
             _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, _fieldMin._x, _fieldMax._x );
             _playerPosition._y = MathUtil::clamp( _playerPosition._y + step._y, _fieldMin._y, _fieldMax._y );
             if ( _phase == MonsterHuntPhase::Hunt )
-                updateHunt( deltaTime );
+                updateHunt( frameTime );
             return;
         }
-        if ( _resultHold.update( deltaTime ) )
+        if ( _resultHold.update( frameTime ) )
         {
             const bool bWon = _phase == MonsterHuntPhase::Victory;
             (void)finishMinigame( hashed_string( bWon ? MonsterHuntGameModeComponentInternal::kWinResult : MonsterHuntGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다

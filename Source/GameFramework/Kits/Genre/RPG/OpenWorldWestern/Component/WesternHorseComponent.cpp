@@ -100,7 +100,7 @@ namespace sw
             }
             applyPendingState();
         }
-        _horse.update( context.getDeltaTime().count(), context.getDeltaTime().count() * _gameHoursPerSecond );
+        _horse.update( context.getDeltaTime(), context.getDeltaTime().count() * _gameHoursPerSecond );
         vector<WesternHorseEvent> listEvent;
         _horse.pollEvents( listEvent );
         const GameObject* pOwner = getOwner();

@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
@@ -132,7 +133,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -143,9 +144,9 @@ namespace sw
         /** @brief 걷고, 이어진 방으로 넘어가고, 잠긴 길이면 열쇠 문을 열어 봅니다. */
         void movePlayer( const float2& delta );
         /** @brief 손전등 · 스트로브 · 청소기 · 쓰기를 적용합니다. */
-        void applyTools( const GhostHuntCommand& command, float32 deltaTime );
+        void applyTools( const GhostHuntCommand& command, GameSeconds frameTime );
         /** @brief 청소기 — 기절한 유령을 빨아들이거나(줄다리기) 들킨 부를 깎습니다. */
-        void applyVacuum( const GhostHuntCommand& command, float32 deltaTime );
+        void applyVacuum( const GhostHuntCommand& command, GameSeconds frameTime );
         /** @brief 쓰기 — 서지 게이지가 찼으면 터뜨리고, 아니면 곁의 가구를 뒤집니다. */
         void use();
         /** @brief 나타난 유령을 플레이어 쪽으로 다가오게 합니다. */

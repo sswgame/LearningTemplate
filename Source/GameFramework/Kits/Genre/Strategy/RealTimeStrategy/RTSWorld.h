@@ -17,6 +17,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Navigation/PathRequestQueue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -266,7 +267,7 @@ namespace sw
          * @brief 실제 프레임 시간 @p deltaTime 을 배속 @p timeScale 로 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다.
          * @return 이번에 진행한 월드 시간(걸음 수 × 걸음)입니다. 월드와 같이 도는 것(AI · 시계)은 이 값으로 돌려 월드와 어긋나지 않게 한다(감사 K-6).
          */
-        float32 update( float32 deltaTime, float32 timeScale );
+        float32 update( GameSeconds frameTime, float32 timeScale );
         /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
         void               pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent );
@@ -340,12 +341,12 @@ namespace sw
         void      snapToWalkable( RTSUnit& unit );
         float32   computeRectDistance( const float3& position, const int2& cell, int32 footprint ) const;
         RTSUnitID allocateUnit();
-        void      stepFixed( float32 deltaTime );
+        void      stepFixed( StepSeconds step );
         void      recomputeSupply();
         void      rebuildBuckets();
         /** @brief 읽은 뒤 살아 있는 이동 유닛의 길찾기 에이전트를 맞추고, 흐름장을 쓰던 명령(@p listFlowFieldOrder, 유닛 · 명령 순서)에 흐름장을 다시 빌립니다. */
         void restoreAgents( const vector<uint8>& listFlowFieldOrder );
-        void updateUnit( RTSUnit& unit, float32 deltaTime );
+        void updateUnit( RTSUnit& unit, StepSeconds step );
         void updateOrder( RTSUnit& unit, float32 deltaTime );
         void updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
         /** @brief 실은 자원을 가까운 저장소로 가져가 지갑에 넣습니다(채취의 `Returning` 단계). */

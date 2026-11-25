@@ -18,6 +18,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -121,7 +122,7 @@ namespace sw
         /** @brief 한 스텝 진행합니다. */
         void step();
         /** @brief 시간을 흘려 고정 스텝을 진행하고, 진행한 스텝 수를 반환합니다. */
-        int32 update( float32 deltaTime );
+        int32 update( GameSeconds frameTime );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void pollEvents( vector<AdventureElementEvent>& outListEvent );
 

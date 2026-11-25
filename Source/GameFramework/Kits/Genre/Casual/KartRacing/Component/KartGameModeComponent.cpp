@@ -295,12 +295,13 @@ namespace sw
         }
     }
 
-    void KartGameModeComponent::updateGame( float32 deltaTime )
+    void KartGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         const bool bWasEnded = _race.getPhase() == MatchPhase::Ended;
-        (void)_race.update( deltaTime ); // 걸음 수는 쓰지 않는다
+        (void)_race.update( frameTime ); // 걸음 수는 쓰지 않는다
         reportEvents();
         if ( _race.getPhase() != MatchPhase::Ended )
             return;
@@ -309,7 +310,7 @@ namespace sw
             _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
             return;
         }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
+        if ( _resultHold.update( frameTime ) == false ) // 다 된 걸음에 한 번만 true 다
             return;
         const bool bWon = getPlayerFinishPlace() == KartGameModeComponentInternal::kFirstPlace;
         (void)finishMinigame( hashed_string( bWon ? KartGameModeComponentInternal::kWinResult : KartGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다

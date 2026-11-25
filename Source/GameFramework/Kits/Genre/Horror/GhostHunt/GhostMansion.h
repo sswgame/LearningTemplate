@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -125,7 +126,7 @@ namespace sw
         /** @brief 방에 들어갑니다. 불이 꺼진 방이면 그 방의 유령이 숨은 채로 나옵니다. 나온 유령 수를 반환하고, 없는 방이면 -1 입니다. */
         int32 enterRoom( const hashed_string& roomID );
         /** @brief 시간을 진행합니다. 싸움, 잡은 유령 세기, 불 켜기, 들킨 부의 탈출 시간을 처리합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 열쇠 문을 엽니다(열쇠 하나를 씁니다). */
         GhostDoorResult unlockDoor( const hashed_string& doorID );
         /** @brief 가구를 뒤집니다. 한 가구는 한 번만 전리품을 주며, 나온 것은 @p outLoot 에 더합니다. */

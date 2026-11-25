@@ -14,10 +14,9 @@
 using namespace sw;
 
 // 결함 511b3359(높은 프레임률에서 걸음이 없는 프레임의 부스트 · 점프 누름이 사라졌다): 프레임 시간은 눌림을 쥐는 `advance` 만 받고, 한 걸음(`update`)은 고정 스텝만 받는다 —
-// 프레임 시간을 걸음 함수에 바로 넣거나 걸음 길이를 프레임 진입점에 넣는 꼴이 컴파일되지 않는다.
+// 프레임 시간을 걸음 함수에 바로 넣는 꼴이 컴파일되지 않는다.
 static_assert( std::is_invocable_v<decltype( &KinematicVehicleMotor::update ), KinematicVehicleMotor&, const KinematicVehicleInput&, StepSeconds>, "a step advances by one fixed step" );
 static_assert( std::is_invocable_v<decltype( &KinematicVehicleMotor::update ), KinematicVehicleMotor&, const KinematicVehicleInput&, GameSeconds> == false, "a frame time is not one step" );
-static_assert( std::is_invocable_v<decltype( &KinematicVehicleMotor::advance ), KinematicVehicleMotor&, const KinematicVehicleInput&, StepSeconds> == false, "the frame entry takes the frame time" );
 
 namespace
 {

@@ -18,9 +18,9 @@ namespace sw
      *        스텝이 되거나 따라잡느라 다음 프레임이 더 길어지는 악순환을 막습니다(그 순간은 느리게 흐른다).
      * @details 화면은 마지막 두 스텝 사이를 `getAlpha()` 로 보간해 그립니다(유니티 Rigidbody interpolation). 상태 바이트는 `_accumulator` 를 그대로 적습니다.
      * @code
-     *     const int32 stepCount = _timer.consume( deltaTime );
+     *     const int32 stepCount = _timer.consume( deltaTime ); // deltaTime 은 GameSeconds
      *     for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
-     *         integrate( _timer.getStep().count() );
+     *         integrate( _timer.getStep() );
      * @endcode
      */
     struct FixedStepTimer
@@ -38,22 +38,21 @@ namespace sw
         }
 
         /**
-         * @brief @p deltaTime 을 쌓고 이번에 낼 스텝 수를 돌려줍니다(남은 시간은 다음 프레임으로). 0 이하 · NaN 은 쌓지 않습니다.
+         * @brief 프레임의 게임 시간 @p deltaTime 을 쌓고 이번에 낼 스텝 수를 돌려줍니다(남은 시간은 다음 프레임으로). 0 이하 · NaN 은 쌓지 않습니다.
          * @details 스텝의 10 만분의 1 은 봐 줍니다 — 1/60 초 프레임을 1/180 초 스텝 셋으로 나눌 때 float 반올림으로 한 스텝이 다음 프레임으로 밀려
          *          2 · 4 스텝이 번갈아 나오지 않게 합니다.
          */
-        constexpr int32 consume( float32 deltaTime ) { return consumeScaled( deltaTime, 1.0f ); }
-        /** @brief 게임 시간(정지 · 배율이 곱해진 프레임 시간) @p deltaTime 을 쌓습니다(`consume( float32 )` 와 같다). */
-        constexpr int32 consume( GameSeconds deltaTime ) { return consume( deltaTime.count() ); }
+        constexpr int32 consume( GameSeconds deltaTime ) { return consumeScaled( deltaTime, 1.0f ); }
 
         /**
          * @brief 배속 @p timeScale 을 걸음 수로 냅니다. 한 프레임 상한(`_maxFrameTime`)은 실제 프레임 시간에 걸고 배속은 그 뒤에 곱한다.
          * @details 배속을 곱한 델타를 `consume` 에 넘기면 상한이 곱한 값을 잘라 8 배속이 30 fps 에서 7.5 배가 된다(감사 K-6). 유니티 `Time.maximumDeltaTime` 도
          *          배율을 곱하기 전의 실제 시간에 건다. 0 이하 · NaN 배속은 쌓지 않는다(일시정지).
          */
-        constexpr int32 consumeScaled( float32 deltaTime, float32 timeScale )
+        constexpr int32 consumeScaled( GameSeconds frameTime, float32 timeScale )
         {
-            const bool bPositive = deltaTime > 0.0f && timeScale > 0.0f; // NaN 은 비교가 모두 거짓이라 여기서 걸러진다
+            const float32 deltaTime = frameTime.count();
+            const bool    bPositive = deltaTime > 0.0f && timeScale > 0.0f; // NaN 은 비교가 모두 거짓이라 여기서 걸러진다
             if ( bPositive == false )
                 return 0;
             _accumulator += ( deltaTime < _maxFrameTime ? deltaTime : _maxFrameTime ) * timeScale;

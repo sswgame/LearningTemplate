@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -67,7 +68,7 @@ namespace sw
         /** @brief 한 스텝 진행합니다. */
         void step();
         /** @brief 시간을 진행해서 고정 스텝을 실행합니다. 실행한 스텝 수를 반환합니다. */
-        int32 update( float32 deltaTime );
+        int32 update( GameSeconds frameTime );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 추가하고 비웁니다. */
         void pollEvents( vector<ElementEvent>& outListEvent );
 

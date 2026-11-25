@@ -41,7 +41,7 @@ namespace
             {
                 if ( session.isReactionOpen() )
                     return frame;
-                session.update( 1.0f / 60.0f, false, false );
+                session.update( GameSeconds{ 1.0f / 60.0f }, false, false );
             }
             return -1;
         }
@@ -54,19 +54,19 @@ SW_TEST_CASE( InteractionSessionTest, MashDecayStopsAtZero )
 {
     InteractionSession session;
     SW_REQUIRE_TRUE( session.begin( Util::makeMashDef( 4, 1.0f ), 1u ) );
-    session.update( 0.0f, true, true );
-    session.update( 0.0f, true, true );
+    session.update( GameSeconds{ 0.0f }, true, true );
+    session.update( GameSeconds{ 0.0f }, true, true );
     SW_EXPECT_NEAR( 0.5f, session.getStepProgress(), 1.0e-5f );
 
-    session.update( 0.3f, false, false );
+    session.update( GameSeconds{ 0.3f }, false, false );
     SW_EXPECT_NEAR( 0.2f, session.getStepProgress(), 1.0e-5f );
-    session.update( 1.0f, false, false ); // 0.2 보다 많이 깎는다 — 0 에서 멈춘다
+    session.update( GameSeconds{ 1.0f }, false, false ); // 0.2 보다 많이 깎는다 — 0 에서 멈춘다
     SW_EXPECT_NEAR( 0.0f, session.getStepProgress(), 0.0f );
     SW_EXPECT_TRUE( session.isActive() );
 
     for ( int32 press = 0; press < 4; ++press )
     {
-        session.update( 0.0f, true, true );
+        session.update( GameSeconds{ 0.0f }, true, true );
     }
     SW_EXPECT_TRUE( session.getState() == InteractionSessionState::Completed );
 }
@@ -81,7 +81,7 @@ SW_TEST_CASE( InteractionSessionTest, ReactionOpensAtADeterministicTime )
     const int32 frame = Util::runUntilOpen( first );
     SW_EXPECT_TRUE( 30 <= frame && frame <= 91 );
     SW_EXPECT_EQUAL( frame, Util::runUntilOpen( second ) );
-    first.update( 1.0f / 60.0f, true, true );
+    first.update( GameSeconds{ 1.0f / 60.0f }, true, true );
     SW_EXPECT_TRUE( first.getState() == InteractionSessionState::Completed );
 }
 
@@ -90,7 +90,7 @@ SW_TEST_CASE( InteractionSessionTest, ReactionTooEarlyOrTooLateCancels )
 {
     InteractionSession early;
     SW_REQUIRE_TRUE( early.begin( Util::makeReactionDef(), 1u ) );
-    early.update( 1.0f / 60.0f, true, true );
+    early.update( GameSeconds{ 1.0f / 60.0f }, true, true );
     SW_EXPECT_TRUE( early.getState() == InteractionSessionState::Cancelled );
 
     InteractionSession late;
@@ -98,7 +98,7 @@ SW_TEST_CASE( InteractionSessionTest, ReactionTooEarlyOrTooLateCancels )
     SW_REQUIRE_TRUE( Util::runUntilOpen( late ) >= 0 );
     for ( int32 frame = 0; frame < 30; ++frame )
     {
-        late.update( 1.0f / 60.0f, false, false );
+        late.update( GameSeconds{ 1.0f / 60.0f }, false, false );
     }
     SW_EXPECT_TRUE( late.getState() == InteractionSessionState::Cancelled );
 }

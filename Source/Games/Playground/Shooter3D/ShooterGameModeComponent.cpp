@@ -250,9 +250,10 @@ namespace sw
                            _pacingProfile.c_str() );
     }
 
-    void ShooterGameModeComponent::updateGame( float32 deltaTime )
+    void ShooterGameModeComponent::updateGame( GameSeconds frameTime )
     {
-        const float32 step = MathUtil::min( deltaTime, 0.1f );
+        const float32 deltaTime = frameTime.count();
+        const float32 step      = MathUtil::min( deltaTime, 0.1f );
         updatePlayerView();
         updateFloorSteps();
         if ( step > 0.0f && _bReplica == SW_TRUE )

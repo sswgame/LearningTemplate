@@ -70,14 +70,15 @@ namespace sw
         return SkirmishGameModeComponent::openPlayers( bAutoPlay );
     }
 
-    void LockstepSkirmishGameModeComponent::stepMatch( float32 deltaTime )
+    void LockstepSkirmishGameModeComponent::stepMatch( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _lockstep.releaseLostSession() )
             SW_LOG_INFO_ID( "LockstepSkirmish.PeerLost", "[Skirmish] the other player left the match - it goes on here without the other player" );
         if ( _lockstep.isActive() )
             (void)_lockstep.advance( deltaTime, getWorld().getSettings()._fixedStep, getMutableMatch() ); // 두 프로세스가 같은 걸음으로 돈다 - 속도 · 일시정지는 쓰지 않는다
         else
-            SkirmishGameModeComponent::stepMatch( deltaTime );
+            SkirmishGameModeComponent::stepMatch( frameTime );
     }
 
     int32 LockstepSkirmishGameModeComponent::submitCommand( RTSCommand&& command )

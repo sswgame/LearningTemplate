@@ -504,7 +504,7 @@ namespace sw
             pawn._floorTick = TickedFloorOffset::findTick( pawn._floorTickOffset, pawn._bFloorTickKnown, *inputTick ).value_or( static_cast<int64>( _tick ) );
             stepMovement( *pMovement, gameMode, pawn._floorTick, bDown ? Internal::makeStillIntent( intent ) : intent );
             if ( pPlayer != nullptr )
-                pPlayer->stepNetCommand( manager, intent, _tickInterval, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
+                pPlayer->stepNetCommand( manager, intent, StepSeconds{ _tickInterval }, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
             inputTick = _server.popNextIntent( pawn._connectionID, intent, pawnEntityID, _listClaim );
         }
         // 조종자가 있는데 입력이 오지 않았으면 그 자리다(언리얼 서버의 원격 폰 — 온 입력은 다음 틱에 몰아서 걷는다). 조종자가 없는 몸은 빈 의도로 계속 돈다(떨어지던 몸이 공중에 남지 않게).
@@ -851,7 +851,7 @@ namespace sw
         // 서버와 같은 순서다 — 이동한 자리에서 이 명령의 발동을 예측한다.
         ShooterPlayerComponent* const pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
         if ( pPlayer != nullptr && movement.isSuspended() == false )
-            pPlayer->stepNetCommand( manager, intent, _tickInterval, _tick );
+            pPlayer->stepNetCommand( manager, intent, StepSeconds{ _tickInterval }, _tick );
     }
 
     ShooterBodyMovementComponent* ShooterNetPawnComponent::findMovement() const

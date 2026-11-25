@@ -51,7 +51,7 @@ namespace
     {
         for ( int32 frame = 0; frame < frames; ++frame )
         {
-            match.update( kFrameDelta, 1.0f );
+            match.update( GameSeconds{ kFrameDelta }, 1.0f );
         }
     }
 } // namespace

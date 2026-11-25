@@ -271,7 +271,7 @@ namespace sw
         stored._bUseItem               = input._bUseItem != SW_FALSE || bUseItem != SW_FALSE ? SW_TRUE : SW_FALSE;
     }
 
-    int32 KartRace::update( float32 frameTime )
+    int32 KartRace::update( GameSeconds frameTime )
     {
         const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
@@ -283,10 +283,11 @@ namespace sw
 
     void KartRace::step()
     {
-        const float32 deltaTime = _settings._step;
+        const StepSeconds step{ _settings._step };
+        const float32     deltaTime = step.count();
         if ( _phase == MatchPhase::Warmup )
         {
-            _countdown.update( deltaTime );
+            _countdown.update( step );
             if ( _countdown.isActive() == false )
             {
                 _phase = MatchPhase::InProgress;
@@ -314,20 +315,20 @@ namespace sw
             updateRubberBand( racer );
 
             kart._previousPosition = kart._motor.getPosition();
-            kart._motor.update( input, StepSeconds{ deltaTime } );
+            kart._motor.update( input, step );
             if ( _pTrack->applyBoostPad( kart._motor, kart._lastBoostPad ) )
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, nullopt, kart._lastBoostPad, _raceTime );
             pushVehicleEvents( racer );
 
-            kart._spinTime.update( deltaTime );
-            kart._shieldTime.update( deltaTime );
+            kart._spinTime.update( step );
+            kart._shieldTime.update( step );
             if ( kart._itemID.empty() == false )
                 kart._itemHeldTime += deltaTime;
             updateProgress( racer );
         }
 
         // 2) 상자, 아이템, 순위, 종료 순서로 처리한다.
-        updateItemBoxes( deltaTime );
+        updateItemBoxes( step );
         updateProjectiles( deltaTime );
         updatePlaces();
         resolveRaceEnd();
@@ -547,14 +548,14 @@ namespace sw
         return static_cast<float32>( kart._lap - 1 ) * length + along;
     }
 
-    void KartRace::updateItemBoxes( float32 deltaTime )
+    void KartRace::updateItemBoxes( StepSeconds step )
     {
         const vector<float3>& listBox = _pTrack->getItemBoxPositions();
         for ( size_t boxIndex = 0; boxIndex < _listItemBoxTimer.size(); ++boxIndex )
         {
             if ( _listItemBoxTimer[boxIndex].isActive() )
             {
-                _listItemBoxTimer[boxIndex].update( deltaTime );
+                _listItemBoxTimer[boxIndex].update( step );
                 continue;
             }
             if ( _settings._bItems == SW_FALSE )

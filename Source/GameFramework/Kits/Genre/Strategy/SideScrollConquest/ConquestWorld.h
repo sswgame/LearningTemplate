@@ -18,6 +18,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -170,7 +171,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const ConquestCatalog& catalog );
         /** @brief 프레임 시간을 받아 고정 걸음으로 진행합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         /** @brief 지휘관의 이동 입력(-1..1)을 정합니다. 다음 입력이 올 때까지 유지됩니다. */
         void setCommanderMove( float32 axis );
@@ -233,9 +234,9 @@ namespace sw
             bool isValid() const { return _unitIndex >= 0 || _siteIndex >= 0 || _bCommander == SW_TRUE; }
         };
 
-        void step( float32 deltaTime );
-        void stepCommander( float32 deltaTime );
-        void stepUnit( int32 unitIndex, float32 deltaTime );
+        void step( StepSeconds step );
+        void stepCommander( StepSeconds step );
+        void stepUnit( int32 unitIndex, StepSeconds step );
         void stepCapture( float32 deltaTime );
         void stepEconomy( float32 deltaTime );
         void stepWaves( float32 deltaTime );

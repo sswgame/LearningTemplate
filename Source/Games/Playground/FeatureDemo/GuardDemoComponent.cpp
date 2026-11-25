@@ -180,9 +180,10 @@ namespace sw
         return pObject != nullptr ? pObject->getName() : hashed_string{};
     }
 
-    void GuardDemoComponent::updateGame( float32 deltaTime )
+    void GuardDemoComponent::updateGame( GameSeconds frameTime )
     {
-        const GameObjectManager* pManager = getObjectManager();
+        const float32            deltaTime = frameTime.count();
+        const GameObjectManager* pManager  = getObjectManager();
         float3                   eye{};
         float3                   forward{};
         if ( pManager == nullptr || readEye( eye, forward ) == false )

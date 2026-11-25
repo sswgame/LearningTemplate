@@ -299,7 +299,8 @@ namespace sw
         const ShooterGameModeComponent* pGameMode = context.readOther<ShooterGameModeComponent>( _gameMode );
         if ( pGameMode == nullptr )
             return;
-        const float32 step = MathUtil::min( context.getDeltaTime().count(), 0.1f );
+        const GameSeconds stepTime{ MathUtil::min( context.getDeltaTime().count(), 0.1f ) }; // 긴 프레임을 자른 게임 시간
+        const float32     step = stepTime.count();
         _phaseTime += step;
 
         // 판단은 AI 조종자가 했다 — 여기는 폰의 의도(이동 축 · 조종 요 · Attack)만 읽는다.
@@ -312,7 +313,7 @@ namespace sw
         const float32            distance    = toTarget.getLength();
         // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::updateRepeat`). 쿨다운은 어느 단계에서도 흐른다.
         const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && bAttackHeld;
-        const bool bSwing     = _attackCooldown.updateRepeat( step, _attackInterval, bWantSwing );
+        const bool bSwing     = _attackCooldown.updateRepeat( stepTime, _attackInterval, bWantSwing );
         switch ( _phase )
         {
             case ShooterEnemyPhase::Rising:

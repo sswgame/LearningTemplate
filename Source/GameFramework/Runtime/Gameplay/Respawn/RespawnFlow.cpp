@@ -90,12 +90,12 @@ namespace sw
         return true;
     }
 
-    optional<RespawnSpawn> RespawnFlow::update( float32 deltaTime, const RespawnContext& context )
+    optional<RespawnSpawn> RespawnFlow::update( GameSeconds frameTime, const RespawnContext& context )
     {
         if ( _phase == RespawnPhase::Waiting )
         {
             // 대기가 끝난 걸음에 바로 자리를 고른다(따로 한 걸음을 더 쉬지 않는다).
-            (void)_delay.update( deltaTime );
+            (void)_delay.update( frameTime );
             if ( _delay.isActive() )
                 return nullopt;
             _phase = RespawnPhase::Search;
@@ -105,7 +105,7 @@ namespace sw
             const float32 timeout = _rules._listPolicy[static_cast<size_t>( _choiceEntry )]._choiceTimeout;
             if ( timeout <= 0.0f )
                 return nullopt;
-            (void)_choice.update( deltaTime );
+            (void)_choice.update( frameTime );
             if ( _choice.isActive() )
                 return nullopt;
             // 시한 안에 고르지 않았다 — 고르기 다음 정책부터 저절로 시도한다.

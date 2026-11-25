@@ -248,7 +248,7 @@ SW_TEST_CASE( ReplicationIntentTest, RenderTickMovesOnlyBetweenFrames )
     rig.sendSnapshot( 100 );
     rig._client.onPollFinished();
     const float64 renderTick = rig._client.getRenderTick();
-    rig._worldClock.advance( 1.0f / 30.0f );
+    rig._worldClock.advance( GameSeconds{ 1.0f / 30.0f } );
     SW_EXPECT_NEAR( renderTick, rig._client.getRenderTick(), 1e-9 );
     rig._client.onPollFinished();
     SW_EXPECT_NEAR( renderTick + 1.0, rig._client.getRenderTick(), 1e-3 );

@@ -121,12 +121,12 @@ namespace sw
         collectMatchEvents();
     }
 
-    void BattleRoyaleMatch::update( float32 deltaTime )
+    void BattleRoyaleMatch::update( GameSeconds frameTime )
     {
-        const int32 stepCount = _stepTimer.consume( deltaTime );
+        const int32 stepCount = _stepTimer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            stepFixed( _stepTimer.getStep().count() );
+            stepFixed( _stepTimer.getStep() );
         }
     }
 
@@ -230,12 +230,13 @@ namespace sw
         return count;
     }
 
-    void BattleRoyaleMatch::stepFixed( float32 deltaTime )
+    void BattleRoyaleMatch::stepFixed( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         if ( _matchState.getPhase() != MatchPhase::InProgress )
             return;
         _time += deltaTime;
-        _matchState.update( deltaTime );
+        _matchState.update( step );
         _zone.update( deltaTime );
 
         // 판이 끝난 틱에는 남은 사람을 더 깎지 않는다. 이긴 팀이 끝난 뒤에 죽는 킬 피드가 나오면 안 된다.
@@ -270,11 +271,11 @@ namespace sw
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player.isDead() )
                 continue;
-            player._healthMachine.update( deltaTime );
+            player._healthMachine.update( step );
             processHealthMachine( static_cast<int32>( index ) );
             if ( player.isDowned() && player._revive.getParticipantCount() > 0 )
             {
-                player._revive.update( deltaTime );
+                player._revive.update( step );
                 if ( player._revive.isCompleted() )
                     finishRevive( static_cast<int32>( index ) );
             }
@@ -365,7 +366,7 @@ namespace sw
         }
         // 진행이 다 찼다. 멈춰 둔 HealthStateMachine 의 부활 시계를 한 번에 끝까지 돌린다.
         (void)downed._healthMachine.startRevive( reviver.value_or( constant::invalid_index::kInt32 ), 1.0f ); // 살린 쪽은 체력 상태 바이트 칸이라 없으면 -1
-        downed._healthMachine.update( downed._healthMachine.getSettings()._reviveTime );
+        downed._healthMachine.update( GameSeconds{ downed._healthMachine.getSettings()._reviveTime } );
         downed._healthMachine.discardEvents();
         downed._revive.reset();
         downed._downedBy = constant::invalid_index::kInt32;

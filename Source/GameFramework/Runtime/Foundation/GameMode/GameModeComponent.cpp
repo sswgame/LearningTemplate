@@ -76,7 +76,7 @@ namespace sw
         , _pendingStateBytes{}
         , _soundQueue{}
         , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
-        , _pendingRuleDeltaTime{ 0.0f }
+        , _pendingRuleDeltaTime{}
         , _bStarted{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
@@ -222,18 +222,18 @@ namespace sw
     {
         // 규칙은 오브젝트를 만들고 지우고 남의 오브젝트를 읽고 쓴다 — 틱(워커)은 시간만 쌓고 규칙은 틱 뒤(게임 스레드, 같은 프레임의 적용 단계)에 돈다.
         // 언리얼 GameMode 가 게임 스레드에서 도는 자리다. 디렉터 사이 순서(`_tickAfter`)는 틱 뒤 큐의 디스패치 순번(뒤 스테이지가 뒤)이 지킨다.
-        _pendingRuleDeltaTime += context.getDeltaTime().count();
+        _pendingRuleDeltaTime += context.getDeltaTime();
         context.deferPostTickOnComponent( *this, []( GameModeComponent& gameMode )
         { gameMode.runPendingRules(); } );
     }
 
     void GameModeComponent::runPendingRules()
     {
-        const float32 deltaTime = _pendingRuleDeltaTime;
-        _pendingRuleDeltaTime   = 0.0f;
+        const GameSeconds frameTime = _pendingRuleDeltaTime;
+        _pendingRuleDeltaTime       = GameSeconds{};
         if ( _bStarted == SW_TRUE )
             applyReloadedAssets();
-        runRules( deltaTime );
+        runRules( frameTime );
     }
 
     SubTickHandle GameModeComponent::getRuleTickHandle() const
@@ -262,7 +262,7 @@ namespace sw
         _bRuleOnSubTick = SW_TRUE;
     }
 
-    void GameModeComponent::runRules( float32 deltaTime )
+    void GameModeComponent::runRules( GameSeconds frameTime )
     {
         if ( _bStarted == SW_FALSE )
             return;
@@ -271,7 +271,7 @@ namespace sw
         // 디렉터 계약 ① 의 재는 자리 — 걸음 시간을 모든 디렉터가 줄 추가 없이 낸다.
         {
             SW_PROFILE_SCOPE( kStepScopeName );
-            updateGame( deltaTime );
+            updateGame( frameTime );
         }
         if ( _soundQueue.isEmpty() == false || hasPendingSpawn() )
             scheduleFlush();

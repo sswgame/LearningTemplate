@@ -1021,7 +1021,7 @@ SW_TEST_CASE( NetMessageRouterTest, WorldClockReachesOnlyItsOwnScene )
     SW_EXPECT_FALSE( rig._clientRouter.getWorldClock().hasServerTick() );
     for ( int32 frame = 0; frame < 30; ++frame )
     {
-        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), NetClock::kTickSeconds );
+        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), GameSeconds{ NetClock::kTickSeconds } );
     }
     rig.pollAll();
     SW_EXPECT_EQUAL( 30u, rig._serverRouter.getWorldClock().getWholeTick() );
@@ -1031,7 +1031,7 @@ SW_TEST_CASE( NetMessageRouterTest, WorldClockReachesOnlyItsOwnScene )
     SW_EXPECT_EQUAL( 0u, rig._serverRouter.getWorldClock().getWholeTick() );
     for ( int32 frame = 0; frame < 12; ++frame )
     {
-        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), NetClock::kTickSeconds );
+        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), GameSeconds{ NetClock::kTickSeconds } );
     }
     rig.pollAll();
     SW_EXPECT_FALSE( rig._clientRouter.getWorldClock().hasServerTick() ); // 아직 앞 씬이다
@@ -1039,7 +1039,7 @@ SW_TEST_CASE( NetMessageRouterTest, WorldClockReachesOnlyItsOwnScene )
     rig._clientRouter.setLocalScene( rig._pair.getClient( 0 ), WorldTestUtil::kSecondScene );
     for ( int32 frame = 0; frame < 6; ++frame )
     {
-        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), NetClock::kTickSeconds );
+        rig._serverRouter.advanceWorldClock( rig._pair.getServer(), GameSeconds{ NetClock::kTickSeconds } );
     }
     rig.pollAll();
     SW_EXPECT_NEAR( 18.0, rig._clientRouter.getWorldClock().getServerTick(), kTolerance );

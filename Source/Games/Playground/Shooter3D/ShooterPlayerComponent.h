@@ -12,6 +12,7 @@
 #include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -116,7 +117,7 @@ namespace sw
          *          합친 의도 · 컴포넌트 틱 차례에 달렸다 — 네트가 움직이는 몸은 그 길을 쓰지 않는다.
          * @param commandTick 이 명령의 입력 틱입니다(근접 주장을 맞추는 번호).
          */
-        void stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, float32 step, uint32 commandTick );
+        void stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, StepSeconds commandStep, uint32 commandTick );
         /** @brief 이 플레이어의 몸 프리팹을 하나 세웁니다(게임 스레드, 틱 밖) — 자기 몸과 남의 모습이 같은 몸이다. 프리팹에 `ShooterAvatarComponent` 가 없으면 오류를 남기고 빈 핸들입니다. */
         GameObjectHandle spawnBodyObject( GameObjectManager& manager, const utf8* pName ) const;
         /** @brief `spawnBodyObject` 로 세운 몸을 외형 부품까지 지웁니다. 이미 없으면 아무 일도 없습니다. */
@@ -255,7 +256,7 @@ namespace sw
         /** @brief 의도 하나의 발사 · 근접을 광선 · 칼날로 쌓습니다(`resolveShots` · `resolveMelee` 가 판정한다). 혼자 하는 프레임과 네트 걸음이 같은 이 함수를 쓴다. */
         void runIntent( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const PawnComponent& pawn, const ControlIntent& intent, float32 step, uint32 commandTick );
         /** @brief 무기의 연사 · 재장전 시간을 흘립니다. */
-        void advanceWeapons( float32 step );
+        void advanceWeapons( GameSeconds frameTime );
         /** @brief 발에서 눈까지의 높이입니다(`chooseEyeHeight`). */
         float32 computeEyeHeight() const;
         /** @brief 발사 · 근접의 눈 자리입니다(씬) — 예측 보정 오프셋이 없는 시뮬레이션 자리다. */

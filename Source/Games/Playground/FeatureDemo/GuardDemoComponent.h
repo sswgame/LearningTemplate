@@ -9,6 +9,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -44,7 +45,7 @@ namespace sw
     protected:
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:

@@ -321,9 +321,10 @@ namespace sw
         _match.setPlayerPosition( person, _terrain.findStandingSpot( inMap, mapSize ) );
     }
 
-    void BattleRoyaleGameModeComponent::stepDrop( float32 deltaTime )
+    void BattleRoyaleGameModeComponent::stepDrop( StepSeconds step )
     {
-        using Internal = BattleRoyaleGameModeComponentInternal;
+        const float32 deltaTime = step.count();
+        using Internal          = BattleRoyaleGameModeComponentInternal;
         _flightTime += deltaTime;
         const bool  bAutoPlay   = isAutoPlayOn();
         const bool  bForced     = _flightTime >= _flightPath.computeJumpCloseTime();
@@ -415,12 +416,13 @@ namespace sw
         { return other._team == team && other.isDowned(); } );
     }
 
-    void BattleRoyaleGameModeComponent::walkRoute( int32 person, const float2& goal, float32 deltaTime )
+    void BattleRoyaleGameModeComponent::walkRoute( int32 person, const float2& goal, StepSeconds step )
     {
-        using Internal        = BattleRoyaleGameModeComponentInternal;
-        Person&      entry    = _listPerson[static_cast<size_t>( person )];
-        const float2 position = _match.findPlayer( person )->_position;
-        (void)entry._routeHold.update( deltaTime ); // 끝났는지는 바로 아래에서 본다
+        const float32 deltaTime = step.count();
+        using Internal          = BattleRoyaleGameModeComponentInternal;
+        Person&      entry      = _listPerson[static_cast<size_t>( person )];
+        const float2 position   = _match.findPlayer( person )->_position;
+        (void)entry._routeHold.update( step ); // 끝났는지는 바로 아래에서 본다
         if ( entry._routeHold.isActive() == false )
         {
             _terrain.findRoute( position, goal, entry._listRoute );
@@ -509,10 +511,10 @@ namespace sw
         return weapon.getReserveAmmo() + _match.findPlayer( person )->_inventory.getItemCount( weapon.getDef()._ammoID.key() );
     }
 
-    void BattleRoyaleGameModeComponent::updateWeapon( int32 person, float32 deltaTime )
+    void BattleRoyaleGameModeComponent::updateWeapon( int32 person, StepSeconds step )
     {
         WeaponState& weapon = _listPerson[static_cast<size_t>( person )]._weapon;
-        weapon.update( deltaTime );
+        weapon.update( step );
         BattleRoyalePlayer& player = *_match.findPlayerMutable( person );
         if ( weapon.getMagazineAmmo() == 0 )
             (void)player._loadout.tryReload( weapon, player._inventory ); // 재장전 중이거나 탄이 없으면 그대로다
@@ -636,7 +638,7 @@ namespace sw
             fire( kPlayer, _bFireQueued == SW_TRUE, _playerHitChance );
     }
 
-    void BattleRoyaleGameModeComponent::stepBot( int32 person, float32 deltaTime )
+    void BattleRoyaleGameModeComponent::stepBot( int32 person, StepSeconds step )
     {
         using Internal                         = BattleRoyaleGameModeComponentInternal;
         const BattleRoyalePlayer& self         = *_match.findPlayer( person );
@@ -655,7 +657,7 @@ namespace sw
         }
         if ( bOutside || bMustMoveOn )
         {
-            walkRoute( person, zone.getNextCenter(), deltaTime );
+            walkRoute( person, zone.getNextCenter(), step );
         }
         else if ( bRescue )
         {
@@ -663,39 +665,40 @@ namespace sw
             if ( float2::getDistance( self._position, matePosition ) <= _reviveRange )
                 (void)_match.beginRevive( person, *downedMate ); // 자리가 찼으면 다음 걸음에 다시 본다
             else
-                walkRoute( person, matePosition, deltaTime );
+                walkRoute( person, matePosition, step );
         }
         else if ( enemyInRange.has_value() == false )
         {
             const optional<float2> wantedItem = findWantedItem( person, _botLootRange );
             const optional<int32>  enemy      = findNearestEnemy( person );
             if ( wantedItem.has_value() )
-                walkRoute( person, *wantedItem, deltaTime );
+                walkRoute( person, *wantedItem, step );
             else if ( enemy.has_value() )
-                walkRoute( person, _match.findPlayer( *enemy )->_position, deltaTime );
+                walkRoute( person, _match.findPlayer( *enemy )->_position, step );
         }
         if ( canShoot( person ) )
             fire( person, true, _botHitChance );
     }
 
-    void BattleRoyaleGameModeComponent::stepBattle( float32 deltaTime )
+    void BattleRoyaleGameModeComponent::stepBattle( StepSeconds step )
     {
-        const bool bAutoPlay = isAutoPlayOn();
+        const float32 deltaTime = step.count();
+        const bool    bAutoPlay = isAutoPlayOn();
         for ( int32 person = 0; person < getPersonCount() && _match.getMatchState().getPhase() == MatchPhase::InProgress; ++person )
         {
             if ( _match.findPlayer( person )->isAlive() == false )
                 continue;
-            updateWeapon( person, deltaTime );
+            updateWeapon( person, step );
             if ( person == kPlayer && bAutoPlay == false )
                 stepPlayer( deltaTime );
             else
-                stepBot( person, deltaTime );
+                stepBot( person, step );
             pickUpItems( person );
             queueWeaponSound( person );
         }
         _bUseQueued  = SW_FALSE;
         _bFireQueued = SW_FALSE;
-        _match.update( deltaTime );
+        _match.update( step );
     }
 
     void BattleRoyaleGameModeComponent::endGame()
@@ -779,23 +782,24 @@ namespace sw
             endGame();
     }
 
-    void BattleRoyaleGameModeComponent::updateGame( float32 deltaTime )
+    void BattleRoyaleGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _phase == BattleRoyalePhase::Ended )
         {
-            if ( _resultHold.update( deltaTime ) )
+            if ( _resultHold.update( frameTime ) )
                 (void)finishMinigame( hashed_string( hasWon() ? BattleRoyaleGameModeComponentInternal::kWinResult : BattleRoyaleGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
             return;
         }
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 step = 0; step < stepCount && _phase != BattleRoyalePhase::Ended; ++step )
         {
             if ( _phase == BattleRoyalePhase::Drop )
-                stepDrop( _timer.getStep().count() );
+                stepDrop( _timer.getStep() );
             else
-                stepBattle( _timer.getStep().count() );
+                stepBattle( _timer.getStep() );
             settle();
         }
     }

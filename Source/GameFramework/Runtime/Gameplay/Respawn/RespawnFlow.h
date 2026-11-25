@@ -15,6 +15,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -144,7 +145,7 @@ namespace sw
          *          어떤 정책도 자리를 내지 못하면 다음 걸음에 같은 자리부터 다시 본다(거점이 생길 때까지). 고른 자리가 준비되지 않았으면(`isLocationReady`) 기다린다.
          *          스폰 때 그 정책의 횟수를 세고, 비용 · 통화 벌칙을 지갑에서 빼며, 체력을 `respawn` 하고 무적을 건다.
          */
-        optional<RespawnSpawn> update( float32 deltaTime, const RespawnContext& context );
+        optional<RespawnSpawn> update( GameSeconds frameTime, const RespawnContext& context );
         /**
          * @brief 플레이어의 고르기를 판정합니다(서버에서 돈다). 고르기 단계에서만 받습니다.
          * @param kind `PlayerChoice` 면 @p pointHash 의 체크포인트 · 스폰 지점을 고르고, 다른 정책이면 규칙에 있는 그 정책(제자리 · 마지막 체크포인트 …)으로 부활한다.

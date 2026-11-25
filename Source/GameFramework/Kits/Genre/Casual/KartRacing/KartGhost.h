@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
@@ -99,7 +100,7 @@ namespace sw
         /** @brief 한 걸음 진행합니다. 기록이 끝났으면 false 를 반환합니다. */
         bool step();
         /** @brief 프레임 시간만큼(고정 걸음으로 나눠) 진행하고, 진행한 걸음 수를 반환합니다. */
-        int32 advance( float32 frameTime );
+        int32 advance( GameSeconds frameTime );
 
         bool                         isFinished() const;
         int32                        getFrameIndex() const { return _frameIndex; }

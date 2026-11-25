@@ -264,8 +264,9 @@ namespace sw
         return true;
     }
 
-    void SkirmishGameModeComponent::updateGame( float32 deltaTime )
+    void SkirmishGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         _listStepEvent.clear(); // pollEvents 는 뒤에 붙인다. 시간이 멈춘 걸음도 비워 클라이언트가 같은 알림을 두 번 받지 않는다
         if ( deltaTime <= 0.0f )
             return;
@@ -276,7 +277,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SkirmishGameMode.AutoPlayChangedAfterStart", "[Skirmish] autoplay changed after the match opened - it is read once when the match opens (set the game's autoplay variable at launch)" );
             _bAutoPlayChangeReported = SW_TRUE;
         }
-        stepMatch( deltaTime );
+        stepMatch( frameTime );
         _match.pollEvents( _listStepEvent );
     }
 
@@ -285,10 +286,10 @@ namespace sw
         return bAutoPlay ? uint8{ 0 } : SkirmishMatch::kHumanPlayer0;
     }
 
-    void SkirmishGameModeComponent::stepMatch( float32 deltaTime )
+    void SkirmishGameModeComponent::stepMatch( GameSeconds frameTime )
     {
         if ( _speed.isPaused() == false )
-            _match.update( deltaTime, _speed.getTimeScale() );
+            _match.update( frameTime, _speed.getTimeScale() );
     }
 
     void SkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )

@@ -208,8 +208,9 @@ namespace sw
         _bHasPendingSave = true;
     }
 
-    void FarmVillageGameModeComponent::updateGame( float32 deltaTime )
+    void FarmVillageGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
         const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr )

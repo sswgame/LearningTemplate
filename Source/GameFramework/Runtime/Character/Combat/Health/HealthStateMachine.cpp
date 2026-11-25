@@ -211,11 +211,12 @@ namespace sw
         return added;
     }
 
-    void HealthStateMachine::update( float32 deltaTime )
+    void HealthStateMachine::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _state == LifeState::Dead )
             return;
-        _invulnerable.update( deltaTime );
+        _invulnerable.update( frameTime );
 
         if ( _state == LifeState::Downed )
         {
@@ -242,7 +243,7 @@ namespace sw
             return;
         if ( isPoiseBroken() )
         {
-            if ( _poiseBreak.update( deltaTime ) )
+            if ( _poiseBreak.update( frameTime ) )
             {
                 _poise                = _settings._poiseMax;
                 _timeSincePoiseDamage = 0.0f;

@@ -466,8 +466,9 @@ namespace sw
             SW_LOG_INFO_ID( "MonsterCollector.Defeat", "[MonsterCollector] the party fell" );
     }
 
-    void MonsterCollectorGameModeComponent::updateGame( float32 deltaTime )
+    void MonsterCollectorGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _phase == MonsterCollectorPhase::Battle )
             return; // 전투는 명령이 진행한다
         if ( _phase == MonsterCollectorPhase::Explore )
@@ -475,7 +476,7 @@ namespace sw
             updateExplore( deltaTime );
             return;
         }
-        if ( _resultHold.update( deltaTime ) )
+        if ( _resultHold.update( frameTime ) )
         {
             const bool bWon = _phase == MonsterCollectorPhase::Victory;
             (void)finishMinigame(

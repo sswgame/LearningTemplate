@@ -249,14 +249,15 @@ namespace sw
         }
     }
 
-    void ConquestGameModeComponent::updateGame( float32 deltaTime )
+    void ConquestGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         const bool bOver = _world.isVictory() || _world.isDefeat();
         if ( bOver == false && isAutoPlayOn() )
             stepAutoPlay();
-        _world.update( deltaTime );
+        _world.update( frameTime );
         reportEvents();
         if ( _world.isVictory() == false && _world.isDefeat() == false )
             return;
@@ -265,7 +266,7 @@ namespace sw
             _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
             return;
         }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
+        if ( _resultHold.update( frameTime ) == false ) // 다 된 걸음에 한 번만 true 다
             return;
         (void)finishMinigame( hashed_string( _world.isVictory() ? ConquestGameModeComponentInternal::kWinResult : ConquestGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
     }

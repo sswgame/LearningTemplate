@@ -364,9 +364,9 @@ namespace sw
         ++_stepCount;
     }
 
-    int32 ElementGrid::update( float32 deltaTime )
+    int32 ElementGrid::update( GameSeconds frameTime )
     {
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             step();

@@ -326,19 +326,20 @@ namespace sw
         }
     }
 
-    void RestaurantGameModeComponent::updateGame( float32 deltaTime )
+    void RestaurantGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _phase == RestaurantPhase::Prepare || _phase == RestaurantPhase::Closed )
             return; // 준비 · 결산은 명령이 진행한다
         if ( _phase == RestaurantPhase::Open )
         {
-            _simulation.update( deltaTime * _minutesPerSecond );
+            _simulation.update( frameTime, _minutesPerSecond );
             reportEvents();
             if ( isDayOver() )
                 closeDay();
             return;
         }
-        if ( _resultHold.update( deltaTime ) )
+        if ( _resultHold.update( frameTime ) )
         {
             const bool bWon = _phase == RestaurantPhase::Victory;
             (void)finishMinigame( hashed_string( bWon ? RestaurantGameModeComponentInternal::kWinResult : RestaurantGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다

@@ -197,13 +197,14 @@ namespace sw
         SW_LOG_INFO_ID( "CardBattle.Finished", "[CardBattle] %# on turn %# with %# HP left", _battle.getPhase() == CardBattlePhase::Won ? "victory" : "defeat", _battle.getTurn(), _battle.getPlayerHP() );
     }
 
-    void CardBattleGameModeComponent::updateGame( float32 deltaTime )
+    void CardBattleGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _battle.getPhase() == CardBattlePhase::PlayerTurn )
         {
-            if ( isAutoPlayOn() && _timer.update( deltaTime ) )
+            if ( isAutoPlayOn() && _timer.update( frameTime ) )
             {
                 stepAutoPlay();
                 _timer.start( _autoPlayInterval );
@@ -211,7 +212,7 @@ namespace sw
             }
             return;
         }
-        if ( _timer.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
+        if ( _timer.update( frameTime ) == false ) // 다 된 걸음에 한 번만 true 다
             return;
         const bool bWon = _battle.getPhase() == CardBattlePhase::Won;
         (void)finishMinigame( hashed_string( bWon ? CardBattleGameModeComponentInternal::kWinResult : CardBattleGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다

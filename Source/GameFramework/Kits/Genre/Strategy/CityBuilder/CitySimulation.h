@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -195,7 +196,7 @@ namespace sw
          * @brief 실제 프레임 시간 @p deltaTime 을 배속 @p timeScale 로 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다.
          * @return 이번에 진행한 도시 시간(걸음 수 × 걸음)입니다. 도시와 같이 도는 시계는 이 값으로 돌려 어긋나지 않게 한다(감사 K-6).
          */
-        float32 update( float32 deltaTime, float32 timeScale );
+        float32 update( GameSeconds frameTime, float32 timeScale );
         /** @brief 쌓인 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
         void               pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent );
@@ -234,7 +235,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        void stepFixed( float32 deltaTime );
+        void stepFixed( StepSeconds step );
         void assignLabor();
         void updateBuildings( float32 deltaTime );
         void updateWalkers( float32 deltaTime );

@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -76,7 +77,7 @@ namespace sw
          * @brief 시간을 흘립니다. 게이지 회복(코어 배율), 코어 감소, 겁 식기, 탄 시간 경험치를 처리합니다.
          * @param deltaTime 실제 초 @param gameHours 이번에 흐른 게임 시간
          */
-        void update( float32 deltaTime, float32 gameHours );
+        void update( GameSeconds frameTime, float32 gameHours );
         void setRidden( bool bRidden ) { _bRidden = bRidden ? SW_TRUE : SW_FALSE; }
         /** @brief 이번 프레임에 질주합니다. 스태미나가 바닥나면 false 를 반환하며, 질주를 멈춰야 합니다. */
         bool gallop( float32 deltaTime );

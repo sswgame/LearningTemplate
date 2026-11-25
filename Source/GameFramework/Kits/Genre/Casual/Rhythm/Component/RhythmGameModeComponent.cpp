@@ -188,8 +188,9 @@ namespace sw
         }
     }
 
-    void RhythmGameModeComponent::updateGame( float32 deltaTime )
+    void RhythmGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         const bool bWasFinished = _session.isFinished();
@@ -207,7 +208,7 @@ namespace sw
             _resultHold.start( _resultHoldSeconds ); // 끝난 걸음 — 결과를 보이기 시작한다
             return;
         }
-        if ( _resultHold.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
+        if ( _resultHold.update( frameTime ) == false ) // 다 된 걸음에 한 번만 true 다
             return;
         const bool bCleared = _session.getState() == RhythmPlayState::Cleared;
         (void)finishMinigame( hashed_string( bCleared ? RhythmGameModeComponentInternal::kWinResult : RhythmGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다

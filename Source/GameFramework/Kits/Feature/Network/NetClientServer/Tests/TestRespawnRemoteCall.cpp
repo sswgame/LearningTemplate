@@ -142,7 +142,7 @@ SW_TEST_CASE( RespawnRemoteCallTest, ServerDecidesAndRepliesOverTheWire )
 
     // 서버가 아는 죽은 자리 — 땅 끝(x 10) 너머 구덩이
     SW_REQUIRE_TRUE( rig._flow.notifyDied( float3{ 11.0f, -2.0f, 0.0f }, 0.0f ) );
-    SW_EXPECT_FALSE( rig._flow.update( 0.016f, rig._serverTarget._context ).has_value() );
+    SW_EXPECT_FALSE( rig._flow.update( GameSeconds{ 0.016f }, rig._serverTarget._context ).has_value() );
     SW_REQUIRE_TRUE( rig._flow.getPhase() == RespawnPhase::Selection );
 
     SW_EXPECT_NOT_EQUAL( 0u, rig.requestRespawn( RespawnPolicyKind::InPlace, 0u ) );
@@ -152,7 +152,7 @@ SW_TEST_CASE( RespawnRemoteCallTest, ServerDecidesAndRepliesOverTheWire )
     SW_EXPECT_EQUAL( 1, rig._clientTarget._resultCount );
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._invokedCount );
 
-    const optional<RespawnSpawn> spawned = rig._flow.update( 0.016f, rig._serverTarget._context );
+    const optional<RespawnSpawn> spawned = rig._flow.update( GameSeconds{ 0.016f }, rig._serverTarget._context );
     SW_REQUIRE_TRUE( spawned.has_value() );
     SW_EXPECT_NEAR( 10.0, spawned->_position._x, 1e-4 );
     SW_EXPECT_NEAR( 1.0, spawned->_position._y, 1e-4 );
@@ -176,7 +176,7 @@ SW_TEST_CASE( RespawnRemoteCallTest, MalformedAndFloodedCallsNeverReachTheFlow )
     SW_REQUIRE_TRUE( rig._server.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._serverTarget, rig._connectionID ) );
     SW_REQUIRE_TRUE( rig._client.registerTarget( kPlayerID, *RespawnRemoteTarget::StaticType(), &rig._clientTarget ) );
     SW_REQUIRE_TRUE( rig._flow.notifyDied( float3{ 5.0f, 1.0f, 0.0f }, 0.0f ) );
-    (void)rig._flow.update( 0.016f, rig._serverTarget._context );
+    (void)rig._flow.update( GameSeconds{ 0.016f }, rig._serverTarget._context );
     SW_REQUIRE_TRUE( rig._flow.getPhase() == RespawnPhase::Selection );
 
     // 손으로 짠 호출 — 정책 자리에 없는 열거자(조작한 클라이언트의 흉내)

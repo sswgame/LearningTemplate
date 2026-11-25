@@ -66,7 +66,7 @@ namespace
             const int32 stepCount = static_cast<int32>( seconds / kAsymmetricStep + 0.5f );
             for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
             {
-                inoutMatch.update( kAsymmetricStep );
+                inoutMatch.update( GameSeconds{ kAsymmetricStep } );
             }
         }
     };
@@ -218,7 +218,7 @@ namespace
         {
             for ( int32 stepIndex = 0; stepIndex < 30; ++stepIndex )
             {
-                _match.update( kAsymmetricStep );
+                _match.update( GameSeconds{ kAsymmetricStep } );
                 const InteractionProgress* pProgress = _match.findActivityProgress( index );
                 if ( pProgress != nullptr && pProgress->hasPendingSkillCheck() )
                     return true;
@@ -385,16 +385,16 @@ SW_TEST_CASE( AsymmetricHorrorRulesTest, InitializeRefusesNoCatalog )
 SW_TEST_CASE_F( AsymmetricHorrorRulesTest, StartAndFixedStep )
 {
     SW_EXPECT_TRUE( _match.addSurvivor( float3{} ) == 0 );
-    _match.update( 1.0f );
+    _match.update( GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( 0u, _match.getTick() );
     SW_EXPECT_TRUE( _match.getMatch().getPhase() == MatchPhase::Waiting );
 
     _match.start();
     SW_EXPECT_TRUE( _match.getMatch().getPhase() == MatchPhase::InProgress );
     SW_EXPECT_FALSE( _match.addSurvivor( float3{} ).has_value() );
-    _match.update( 0.05f );
+    _match.update( GameSeconds{ 0.05f } );
     SW_EXPECT_EQUAL( 0u, _match.getTick() ); // 한 걸음이 차지 않았다
-    _match.update( 0.05f );
+    _match.update( GameSeconds{ 0.05f } );
     SW_EXPECT_EQUAL( 1u, _match.getTick() );
     SW_EXPECT_EQUAL( 1, _match.countStandingSurvivors() );
     SW_EXPECT_TRUE( _match.findSurvivor( 1 ) == nullptr );
@@ -870,7 +870,7 @@ SW_TEST_CASE_F( AsymmetricHorrorTest, SkillCheckBonusCompletesGenerator )
     SW_EXPECT_TRUE( _match.findSurvivor( 0 )->_activity == SurvivorActivity::None );
     SW_EXPECT_EQUAL( 1, countEvents( AsymmetricHorrorEvent::Kind::GeneratorCompleted ) );
     SW_EXPECT_EQUAL( 1, countEvents( AsymmetricHorrorEvent::Kind::SkillCheckResult ) );
-    _match.update( kAsymmetricStep );
+    _match.update( GameSeconds{ kAsymmetricStep } );
     SW_EXPECT_EQUAL( 1, _match.getCompletedGeneratorCount() ); // 두 번 세지 않는다
 
     // 응답 직후의 바이트도 완료 수와 맞아 다시 읽힌다.
@@ -1463,7 +1463,7 @@ SW_TEST_CASE_F( AsymmetricHorrorTest, MatchDeterminism )
         const float32 side = ( stepIndex / 15 ) % 2 == 0 ? 1.0f : -1.0f;
         match.moveSurvivor( 1, float3{ side, 0.0f, 0.0f }, kAsymmetricStep );
         match.moveKiller( float3{ -side * 0.5f, 0.0f, 0.5f }, kAsymmetricStep );
-        match.update( kAsymmetricStep );
+        match.update( GameSeconds{ kAsymmetricStep } );
     };
     SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<AsymmetricHorrorMatch>( setup, step, 180 ) );
 }

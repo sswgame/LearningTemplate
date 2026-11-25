@@ -48,14 +48,14 @@ namespace sw
         _runner.initialize( &_tree );
     }
 
-    void RTSCommanderAI::update( float32 deltaTime )
+    void RTSCommanderAI::update( GameSeconds frameTime )
     {
         if ( _pWorld == nullptr )
             return;
         const RTSPlayer* pPlayer = _pWorld->findPlayer( _player );
         if ( pPlayer == nullptr || pPlayer->_bDefeated )
             return;
-        if ( _thinkTimer.updateRepeat( deltaTime, _settings._thinkInterval, true ) ) // 늦음을 다음 간격으로 넘겨 생각 빈도가 프레임률에 매이지 않는다
+        if ( _thinkTimer.updateRepeat( frameTime, _settings._thinkInterval, true ) ) // 늦음을 다음 간격으로 넘겨 생각 빈도가 프레임률에 매이지 않는다
             _runner.tick( _blackboard, this, _settings._thinkInterval );
     }
 

@@ -418,11 +418,11 @@ namespace sw
             (void)_expedition.takeOff();
     }
 
-    void ScavengerGameModeComponent::applyCommand( int32 player, const ScavengerCommand& command, float32 deltaTime )
+    void ScavengerGameModeComponent::applyCommand( int32 player, const ScavengerCommand& command, GameSeconds frameTime )
     {
         const ScavengerCrewMember* const pMember = _expedition.findCrewMember( player );
         Countdown&                       step    = _listStep[static_cast<size_t>( player )];
-        (void)step.update( deltaTime ); // 끝난 걸음인지는 아래 isActive 로 본다
+        (void)step.update( frameTime ); // 끝난 걸음인지는 아래 isActive 로 본다
         if ( pMember == nullptr || pMember->isDead() )
             return;
         const bool bStep = command._moveTo.empty() == false && step.isActive() == false;
@@ -495,14 +495,15 @@ namespace sw
         { return threat._lifeRemaining <= 0.0f; } );
     }
 
-    void ScavengerGameModeComponent::updateGame( float32 deltaTime )
+    void ScavengerGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _result != ScavengerResult::Ongoing )
         {
             using Internal = ScavengerGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
+            if ( _resultHold.update( frameTime ) )
                 (void)finishMinigame( hashed_string( _result == ScavengerResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
             return;
         }
@@ -510,9 +511,9 @@ namespace sw
         {
             const ScavengerCommand command              = isHuman( player ) ? _listCommand[static_cast<size_t>( player )] : decideBot( player );
             _listCommand[static_cast<size_t>( player )] = ScavengerCommand{}; // 쓴 명령이다(클라이언트가 다음 프레임에 다시 넣는다)
-            applyCommand( player, command, deltaTime );
+            applyCommand( player, command, frameTime );
         }
-        _expedition.update( deltaTime );
+        _expedition.update( frameTime );
         updateThreats( deltaTime );
         settle();
         updateClock();

@@ -303,8 +303,9 @@ namespace sw
         _phaseTimer.start( _intermissionSeconds );
     }
 
-    void PartyGameModeComponent::updateGame( float32 deltaTime )
+    void PartyGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         switch ( _phase )
@@ -315,7 +316,7 @@ namespace sw
                 {
                     _arena.setInput( player, TrampolineBot::computeInput( _arena, player ) );
                 }
-                (void)_arena.update( deltaTime ); // 걸음 수는 쓰지 않는다
+                (void)_arena.update( frameTime ); // 걸음 수는 쓰지 않는다
                 reportEvents();
                 if ( _arena.isRoundOver() )
                     settleRound();
@@ -323,7 +324,7 @@ namespace sw
             }
             case PartyGamePhase::Intermission:
             {
-                if ( _phaseTimer.update( deltaTime ) == false )
+                if ( _phaseTimer.update( frameTime ) == false )
                     return;
                 TrampolineArena arena;
                 if ( openRound( _series, arena ) == false ) // 첫 라운드를 같은 설정으로 열었으므로 라운드 데이터가 틀린 것이다 — 까닭은 무대가 남겼다
@@ -339,7 +340,7 @@ namespace sw
             }
             case PartyGamePhase::Finished:
             {
-                if ( _phaseTimer.update( deltaTime ) == false ) // 다 된 걸음에 한 번만 true 다
+                if ( _phaseTimer.update( frameTime ) == false ) // 다 된 걸음에 한 번만 true 다
                     return;
                 (void)finishMinigame( hashed_string( _winner == kLocalPlayer ? PartyGameModeComponentInternal::kWinResult : PartyGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
                 return;

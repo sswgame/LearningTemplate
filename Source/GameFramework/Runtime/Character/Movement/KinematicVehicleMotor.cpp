@@ -137,7 +137,7 @@ namespace sw
         clamped._steer                = MathUtil::clamp( input._steer, -1.0f, 1.0f );
         if ( _settings._rail._bEnabled )
         {
-            updateRail( clamped, deltaTime );
+            updateRail( clamped, step );
             return;
         }
         const float32 steer = clamped._steer;
@@ -213,7 +213,7 @@ namespace sw
         _velocity._z = newCos * newAhead - newSin * newSide;
 
         // 8) 부스트 시간.
-        if ( _boost.update( deltaTime ) )
+        if ( _boost.update( step ) )
             pushEvent( KinematicVehicleEvent::Kind::BoostEnded, 0 );
 
         // 9) 위치 · 위아래.
@@ -470,8 +470,9 @@ namespace sw
         _bAirborne = SW_FALSE;
     }
 
-    void KinematicVehicleMotor::updateRail( const KinematicVehicleInput& input, float32 deltaTime )
+    void KinematicVehicleMotor::updateRail( const KinematicVehicleInput& input, StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         // 레일이 없으면 움직이지 않는다 — 설정 오류는 레일을 거는 쪽(컴포넌트의 시작)이 알린다.
         if ( _pRail == nullptr || _pRail->isValid() == false )
             return;
@@ -479,7 +480,7 @@ namespace sw
         float32            speed = _velocity._x * here._tangent._x + _velocity._y * here._tangent._y + _velocity._z * here._tangent._z;
         updateForwardSpeed( input, deltaTime, speed );
         speed += _settings._inertia.computeAlongAcceleration( speed, here._tangent._y, _settings._rail._rollingResistance, deltaTime ) * deltaTime;
-        if ( _boost.update( deltaTime ) )
+        if ( _boost.update( step ) )
             pushEvent( KinematicVehicleEvent::Kind::BoostEnded, 0 );
 
         float32 distance = _railDistance + speed * deltaTime;

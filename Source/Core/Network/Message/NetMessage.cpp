@@ -550,9 +550,9 @@ namespace sw
         _listRefusedConnection.push_back( connectionID );
     }
 
-    void NetMessageRouter::advanceWorldClock( INetPeers& peers, float32 deltaTime )
+    void NetMessageRouter::advanceWorldClock( INetPeers& peers, GameSeconds frameTime )
     {
-        _worldClock.advance( deltaTime );
+        _worldClock.advance( frameTime );
         const uint32 sendIndex = _worldClock.getWholeTick( kClockSendTicks );
         const bool   bSend     = peers.isServer() && _worldGeneration != 0 && sendIndex != _sentClock;
         if ( bSend == false )

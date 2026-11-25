@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Radians.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -51,7 +52,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         /** @brief 모습은 키트 클라이언트(`CityViewComponent`)가 세운다 — 여기서 세울 것이 없다. */
         void onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 

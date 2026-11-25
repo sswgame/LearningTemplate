@@ -14,6 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
@@ -106,7 +107,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         /** @brief 잡은 수 × `_captureReward` 를 돈으로 냅니다. 패배한 판은 내지 않습니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;

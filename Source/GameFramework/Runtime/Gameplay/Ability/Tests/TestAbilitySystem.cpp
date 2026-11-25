@@ -287,10 +287,10 @@ SW_TEST_CASE( AbilityEffectTest, DurationEffectChangesCurrentUntilItExpires )
     SW_EXPECT_EQUAL( 10.0f, rig.base( Rig::kPower ) );
     SW_EXPECT_NEAR( 1.0f, rig._pAbilities->getActiveEffectRemainingTime( handle ), 1e-4f );
 
-    rig._pAbilities->advanceTime( 0.6f );
+    rig._pAbilities->advanceTime( GameSeconds{ 0.6f } );
     SW_EXPECT_NEAR( 0.4f, rig._pAbilities->getActiveEffectRemainingTime( handle ), 1e-4f );
     SW_EXPECT_TRUE( rig._pAbilities->isActiveEffect( handle ) );
-    rig._pAbilities->advanceTime( 0.6f );
+    rig._pAbilities->advanceTime( GameSeconds{ 0.6f } );
     SW_EXPECT_FALSE( rig._pAbilities->isActiveEffect( handle ) );
     SW_EXPECT_EQUAL( 10.0f, rig.current( Rig::kPower ) );
     SW_EXPECT_EQUAL( 0u, rig._pAbilities->getActiveEffectCount() );
@@ -302,7 +302,7 @@ SW_TEST_CASE( AbilityEffectTest, InfiniteEffectLastsUntilRemoved )
     auto pDef = Rig::makeEffect( EffectDurationPolicy::Infinite );
     Rig::addModifier( *pDef, Rig::kPower, AttributeModOp::Add, 5.0f );
     const ActiveEffectHandle handle = rig.apply( pDef );
-    rig._pAbilities->advanceTime( 1000.0f );
+    rig._pAbilities->advanceTime( GameSeconds{ 1000.0f } );
     SW_EXPECT_EQUAL( 15.0f, rig.current( Rig::kPower ) );
     SW_EXPECT_TRUE( rig._pAbilities->removeActiveEffect( handle ) );
     SW_EXPECT_EQUAL( 10.0f, rig.current( Rig::kPower ) );
@@ -345,7 +345,7 @@ SW_TEST_CASE( AbilityEffectTest, StacksAggregateUpToTheLimit )
     pDef->_stackLimit     = 2;
     Rig::addModifier( *pDef, Rig::kPower, AttributeModOp::Add, 5.0f );
     const ActiveEffectHandle first = rig.apply( pDef );
-    rig._pAbilities->advanceTime( 1.0f );
+    rig._pAbilities->advanceTime( GameSeconds{ 1.0f } );
     const ActiveEffectHandle second = rig.apply( pDef );
     SW_EXPECT_TRUE( first == second );
     SW_EXPECT_EQUAL( 2, rig._pAbilities->getActiveEffectStackCount( first ) );
@@ -370,10 +370,10 @@ SW_TEST_CASE( AbilityEffectTest, SingleStackExpiryKeepsTheRest )
     Rig::addModifier( *pDef, Rig::kPower, AttributeModOp::Add, 5.0f );
     const ActiveEffectHandle handle = rig.apply( pDef );
     (void)rig.apply( pDef );
-    rig._pAbilities->advanceTime( 1.1f );
+    rig._pAbilities->advanceTime( GameSeconds{ 1.1f } );
     SW_EXPECT_EQUAL( 1, rig._pAbilities->getActiveEffectStackCount( handle ) );
     SW_EXPECT_EQUAL( 15.0f, rig.current( Rig::kPower ) );
-    rig._pAbilities->advanceTime( 1.1f );
+    rig._pAbilities->advanceTime( GameSeconds{ 1.1f } );
     SW_EXPECT_FALSE( rig._pAbilities->isActiveEffect( handle ) );
 }
 
@@ -387,10 +387,10 @@ SW_TEST_CASE( AbilityEffectTest, PeriodicEffectWritesTheBaseEachPeriod )
     Rig::addModifier( *pDef, Rig::kHealth, AttributeModOp::Add, -1.0f );
     (void)rig.apply( pDef );
     SW_EXPECT_EQUAL( 99.0f, rig.base( Rig::kHealth ) ); // 걸리는 순간 한 번
-    rig._pAbilities->advanceTime( 0.26f );
+    rig._pAbilities->advanceTime( GameSeconds{ 0.26f } );
     SW_EXPECT_EQUAL( 98.0f, rig.base( Rig::kHealth ) );
     // 한 프레임이 주기를 여럿 넘어도 순서대로 돌고, 만료 뒤의 주기는 돌지 않는다.
-    rig._pAbilities->advanceTime( 100.0f );
+    rig._pAbilities->advanceTime( GameSeconds{ 100.0f } );
     SW_EXPECT_TRUE( rig.base( Rig::kHealth ) >= 95.0f );
     SW_EXPECT_EQUAL( 0u, rig._pAbilities->getActiveEffectCount() );
 }
@@ -404,7 +404,7 @@ SW_TEST_CASE( AbilityEffectTest, PeriodicEffectCanWaitForTheFirstPeriod )
     Rig::addModifier( *pDef, Rig::kHealth, AttributeModOp::Add, -1.0f );
     (void)rig.apply( pDef );
     SW_EXPECT_EQUAL( 100.0f, rig.base( Rig::kHealth ) );
-    rig._pAbilities->advanceTime( 2.5f );
+    rig._pAbilities->advanceTime( GameSeconds{ 2.5f } );
     SW_EXPECT_EQUAL( 98.0f, rig.base( Rig::kHealth ) );
 }
 
@@ -469,7 +469,7 @@ SW_TEST_CASE( AbilityEffectTest, GrantedTagsLastAsLongAsTheEffect )
     (void)rig.apply( pDef );
     SW_EXPECT_TRUE( rig._pAbilities->getOwnedTagCounts().hasMatchingTag( slow ) );
     SW_EXPECT_NEAR( 1.0f, rig._pAbilities->findLongestRemainingTimeWithGrantedTags( Util::makeTags( { slow } ) ), 1e-4f );
-    rig._pAbilities->advanceTime( 2.0f );
+    rig._pAbilities->advanceTime( GameSeconds{ 2.0f } );
     SW_EXPECT_FALSE( rig._pAbilities->getOwnedTagCounts().hasMatchingTag( slow ) );
     SW_EXPECT_EQUAL( 0.0f, rig._pAbilities->findLongestRemainingTimeWithGrantedTags( Util::makeTags( { slow } ) ) );
 }
@@ -492,7 +492,7 @@ SW_TEST_CASE( AbilityEffectTest, MovementConstraintComposesByEffectLifetime )
     SW_EXPECT_TRUE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
     SW_EXPECT_TRUE( MovementConstraint::read( owner )._bJumpBlocked == SW_TRUE ); // 이동 차단이면 점프도
 
-    rig._pAbilities->advanceTime( 2.0f ); // 기절이 끝났다 — 속박은 남는다
+    rig._pAbilities->advanceTime( GameSeconds{ 2.0f } ); // 기절이 끝났다 — 속박은 남는다
     SW_EXPECT_TRUE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
     SW_REQUIRE_TRUE( rig._pAbilities->removeActiveEffect( root ) );
     SW_EXPECT_FALSE( MovementConstraint::read( owner )._bMoveBlocked == SW_TRUE );
@@ -620,13 +620,13 @@ SW_TEST_CASE( AbilityTest, GrantActivateEndAndClear )
     SW_EXPECT_TRUE( rig._pAbilities->isAbilityActive( handle ) );
     SW_EXPECT_TRUE( rig._pAbilities->tryActivateAbility( handle ) == AbilityActivationResult::AlreadyActive );
 
-    rig._pAbilities->advanceTime( 0.1f );
+    rig._pAbilities->advanceTime( GameSeconds{ 0.1f } );
     SW_EXPECT_EQUAL( 1u, ability._tickCount );
 
     ability.endAbility();
     SW_EXPECT_EQUAL( 1u, ability._endedCount );
     SW_EXPECT_EQUAL( 0u, ability._cancelledCount );
-    rig._pAbilities->advanceTime( 0.1f );
+    rig._pAbilities->advanceTime( GameSeconds{ 0.1f } );
     SW_EXPECT_EQUAL( 1u, ability._tickCount ); // 끝나면 돌지 않는다
 
     SW_EXPECT_TRUE( rig._pAbilities->tryActivateAbility( AbilitySpecHandle{} ) == AbilityActivationResult::InvalidSpec );
@@ -736,7 +736,7 @@ SW_TEST_CASE( AbilityTest, CostAndCooldownApplyOnCommit )
     SW_EXPECT_NEAR( 1.0f, ability.getCooldownRemaining(), 1e-4f );
     SW_EXPECT_TRUE( rig._pAbilities->tryActivateAbility( handle ) == AbilityActivationResult::OnCooldown );
 
-    rig._pAbilities->advanceTime( 1.5f );
+    rig._pAbilities->advanceTime( GameSeconds{ 1.5f } );
     SW_EXPECT_TRUE( rig._pAbilities->tryActivateAbility( handle ) == AbilityActivationResult::CannotAffordCost );
     SW_EXPECT_EQUAL( 20.0f, rig.base( Rig::kMana ) );
 }
@@ -855,7 +855,7 @@ SW_TEST_CASE( AbilityTest, IdleComponentStopsTicking )
     const auto               pTimed = Rig::makeEffect( EffectDurationPolicy::HasDuration, 1.0f );
     const ActiveEffectHandle handle = rig.apply( pTimed );
     SW_EXPECT_TRUE( rig._pAbilities->canEverTick() );
-    rig._pAbilities->advanceTime( 1.1f );
+    rig._pAbilities->advanceTime( GameSeconds{ 1.1f } );
     SW_EXPECT_FALSE( rig._pAbilities->isActiveEffect( handle ) );
     SW_EXPECT_FALSE( rig._pAbilities->canEverTick() );
 

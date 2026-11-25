@@ -296,13 +296,14 @@ namespace sw
         }
     }
 
-    void FightingGameModeComponent::updateGame( float32 deltaTime )
+    void FightingGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _match.getSeries().isFinished() )
         {
-            if ( _resultHold.update( deltaTime ) == false )
+            if ( _resultHold.update( frameTime ) == false )
                 return;
             const utf8* pResult = FightingGameModeComponentInternal::kDrawResult;
             if ( getMatchWinner() == kPlayer )
@@ -313,7 +314,7 @@ namespace sw
             return;
         }
         const bool  bAutoPlay = isAutoPlayOn();
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 step = 0; step < stepCount; ++step )
         {
             const InputFrame playerInput = bAutoPlay ? makeCPUInput( kPlayer ) : consumePlayerInput();

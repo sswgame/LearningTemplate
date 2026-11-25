@@ -399,9 +399,9 @@ namespace sw
         SW_LOG_INFO_ID( "SurvivalHorror.FightStarted", "[SurvivalHorror] fight with '%#' (%#)", pMonster->_id.c_str(), _bArmed == SW_TRUE ? "armed" : "unarmed" );
     }
 
-    void SurvivalHorrorGameModeComponent::updateEncounter( float32 deltaTime )
+    void SurvivalHorrorGameModeComponent::updateEncounter( GameSeconds frameTime )
     {
-        if ( _turn.update( deltaTime ) == false )
+        if ( _turn.update( frameTime ) == false )
             return;
         _turn.restart( _turnSeconds );
         const SurvivalHorrorTurnResult turn = _encounter.playNextTurn();
@@ -422,14 +422,15 @@ namespace sw
         _bArmed        = SW_FALSE;
     }
 
-    void SurvivalHorrorGameModeComponent::updateGame( float32 deltaTime )
+    void SurvivalHorrorGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _result != SurvivalHorrorResult::Ongoing )
         {
             using Internal = SurvivalHorrorGameModeComponentInternal;
-            if ( _resultHold.update( deltaTime ) )
+            if ( _resultHold.update( frameTime ) )
                 (void)finishMinigame( hashed_string( _result == SurvivalHorrorResult::Win ? Internal::kWinResult : Internal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다
             return;
         }
@@ -437,7 +438,7 @@ namespace sw
         _command                            = SurvivalHorrorCommand{}; // 쓴 명령이다(이동은 클라이언트가 다음 프레임에 다시 넣는다)
         if ( isFighting() )
         {
-            updateEncounter( deltaTime );
+            updateEncounter( frameTime );
         }
         else
         {
@@ -451,7 +452,7 @@ namespace sw
         }
         if ( command._bLightTriggered == SW_TRUE && _session.trySetFlashlight( _session.isFlashlightOn() == false ) ) // 배터리가 없으면 켜지지 않는다
             getSoundQueue().queueEvent( SurvivalHorrorGameModeComponentInternal::kEventFlashlight );
-        _session.update( deltaTime, isInDarkness() );
+        _session.update( frameTime, isInDarkness() );
         settle();
     }
 

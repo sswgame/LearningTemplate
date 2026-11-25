@@ -51,8 +51,9 @@ namespace sw
         return true;
     }
 
-    void MeadowHomeGameModeComponent::updateGame( float32 deltaTime )
+    void MeadowHomeGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32         deltaTime = frameTime.count();
         HousingPlotComponent* pPlot     = findPlot();
         const bool            bSkipped  = isAutoPlayOn() == false || pPlot == nullptr || pPlot->isStarted() == false || pPlot->getNetRole() == HousingNetRole::Server;
         const bool            bFinished = _bGaveUp == SW_TRUE || _nextStep >= static_cast<int32>( _listStep.size() );

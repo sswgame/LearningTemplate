@@ -114,8 +114,9 @@ namespace sw
             addMoneyResult( outListValue, pWallet->getWallet().getBalance( Wallet::getDefaultCurrency() ) - _startingGold );
     }
 
-    void FarmPlotGameModeComponent::updateGame( float32 deltaTime )
+    void FarmPlotGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
         GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
         WalletComponent*    pWallet = findOnPlayerState<WalletComponent>();

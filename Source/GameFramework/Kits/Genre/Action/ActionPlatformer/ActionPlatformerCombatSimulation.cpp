@@ -207,7 +207,7 @@ namespace sw
         }
 
         if ( _bGunEquipped == SW_TRUE )
-            _gun.update( kFrameTime );
+            _gun.update( StepSeconds{ kFrameTime } ); // 한 화면 걸음
 
         // 패리다. 창 안이면 가까운 적 탄을 왔던 쪽으로 되받아친다(내 편 탄이 되고 더 세진다).
         if ( _parryFrames > 0 && _pCatalog != nullptr )

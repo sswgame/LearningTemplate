@@ -15,6 +15,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -79,7 +80,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -92,7 +93,7 @@ namespace sw
         /** @brief 몸의 자리로 체크포인트 · 비밀 · 낙사 · 골을 진행에 알립니다. */
         void applyMarkers();
         /** @brief 죽어 있는 동안 부활 흐름을 돌리고, 스폰하면 몸을 그 자리에 세웁니다. */
-        void updateRespawn( float32 deltaTime );
+        void updateRespawn( GameSeconds frameTime );
 
     private:
         PROPERTY( Category = "Data", DisplayName = "Stage", Tooltip = "Stage id in the catalog" )

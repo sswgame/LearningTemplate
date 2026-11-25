@@ -276,7 +276,8 @@ namespace sw
             pose._bOnGround        = pPlayer->isOnGround() ? SW_TRUE : SW_FALSE;
             pose._bTwoHanded       = pPlayer->getWeapon( pPlayer->getWeaponIndex() ).getDef()._bTwoHanded;
         }
-        const float32 step = MathUtil::min( context.getDeltaTime().count(), 0.1f );
+        const GameSeconds stepTime{ MathUtil::min( context.getDeltaTime().count(), 0.1f ) }; // 긴 프레임을 자른 게임 시간
+        const float32     step = stepTime.count();
         sampleGunJerk( _locomotion.getDirection() != LocomotionDirection::Idle );
 
         // 몸은 발 자리에 서서 보는 쪽을 본다(KayKit 은 +Z 가 앞).

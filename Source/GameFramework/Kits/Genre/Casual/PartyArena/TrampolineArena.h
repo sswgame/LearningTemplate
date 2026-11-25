@@ -22,6 +22,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -216,7 +217,7 @@ namespace sw
 
         void setInput( int32 player, const TrampolineInput& input );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 진행하고, 진행한 걸음 수를 반환합니다. 판이 도는 동안(`start` 뒤 끝나기 전)만 시간이 흐릅니다. */
-        int32 update( float32 frameTime );
+        int32 update( GameSeconds frameTime );
         void  step();
 
         /** @brief 락스텝 입력을 직렬화합니다(3 + 8 + 8 비트). */
@@ -245,11 +246,11 @@ namespace sw
     private:
         bool   isValidPlayer( int32 player ) const { return 0 <= player && player < static_cast<int32>( _listPlayer.size() ); }
         float3 makeSpawnPosition( int32 player ) const;
-        void   updatePlayer( int32 player, float32 deltaTime );
+        void   updatePlayer( int32 player, StepSeconds step );
         /** @brief 트램펄린에 눌린 동안 점프 입력을 모으고, 눌림이 끝나면 닿은 순간을 목표로 판정해 띄웁니다. */
-        void updateContact( int32 player, float32 deltaTime );
+        void updateContact( int32 player, StepSeconds step );
         /** @brief 공중 한 프레임입니다. 찍기 · 돌진을 시작하고, 속도와 위치를 진행하고, 내려오면 착지나 낙하로 넘깁니다. */
-        void updateAir( int32 player, float32 deltaTime );
+        void updateAir( int32 player, StepSeconds step );
         void updateAirControl( TrampolinePlayer& body, float32 deltaTime );
         void land( int32 player );
         void launch( int32 player, bool bSuccess, const hashed_string& grade );

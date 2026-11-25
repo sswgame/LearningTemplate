@@ -131,8 +131,9 @@ namespace sw
         return true;
     }
 
-    void InventoryShopDemoComponent::updateGame( float32 deltaTime )
+    void InventoryShopDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
         _listShopEvent.clear();
         _shop.pollEvents( _listShopEvent );

@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -198,8 +199,8 @@ namespace sw
         static void addMoneyResult( vector<MinigameResultValue>& outListValue, int64 profit );
         /** @brief 판이 열리고(복원과 첫 플러시 뒤) 한 번 불립니다. 조작 안내, 첫 상태 로그, 카메라 맞추기에 씁니다. */
         virtual void onGameStarted() {}
-        /** @brief 판이 열린 뒤 매 프레임 불립니다 — PrePhysics 틱이 건 틱 뒤 작업이라 게임 스레드(틱 밖)에서 돈다(`deferRules`). 시간이 멈춘 프레임(@p deltaTime 0)에도 불립니다. */
-        virtual void updateGame( float32 deltaTime ) = 0;
+        /** @brief 판이 열린 뒤 매 프레임 불립니다 — PrePhysics 틱이 건 틱 뒤 작업이라 게임 스레드(틱 밖)에서 돈다(`deferRules`). 시간이 멈춘 프레임(@p frameTime 0)에도 불립니다. 시간은 게임 시간이다 — 판 안의 고정 걸음은 `FixedStepTimer` 가 `StepSeconds` 로 나눈다. */
+        virtual void updateGame( GameSeconds frameTime ) = 0;
         /**
          * @brief 틱 뒤 게임 스레드에서 쌓인 요청을 세웁니다. @p bRespawnViews 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부를 세웁니다.
          * @details 쌓인 소리는 이 함수 뒤에 베이스가 냅니다.
@@ -344,7 +345,7 @@ namespace sw
         /** @brief 게임 범위에 카탈로그가 걸려 있지 않다는 오류를 남깁니다(`GameMode.BoundCatalogMissing`). */
         static void reportMissingCatalog( string_view kind );
         /** @brief 걷혀 있으면 다시 세울 플러시를 잡고 `tickGame` 을 부릅니다. 끝에 쌓인 스폰이나 소리가 있으면 플러시를 잡습니다. */
-        void runRules( float32 deltaTime );
+        void runRules( GameSeconds frameTime );
         /** @brief 틱은 시간만 쌓고 규칙(`runRules`)은 틱 뒤에 돌게 겁니다 — `updateGame` 은 틱 밖(게임 스레드)에서 돈다. */
         void deferRules( TickContext& context );
         /** @brief 쌓인 시간으로 규칙을 돕니다(틱 뒤 작업 몸체). */
@@ -376,7 +377,7 @@ namespace sw
         vector<uint8>            _pendingStateBytes;    ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         GameSoundQueue           _soundQueue;           ///< 낼 소리. 오디오는 게임 스레드에서 다루므로 틱 뒤에 낸다
         uint32                   _compactThreshold;     ///< 이 수를 넘으면 사라진 핸들을 덜어 낸다
-        float32                  _pendingRuleDeltaTime; ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
+        GameSeconds              _pendingRuleDeltaTime; ///< 틱이 쌓고 틱 뒤 `runPendingRules` 가 쓰는 시간
         uint8                    _bStarted        : 1;
         uint8                    _bViewsSpawned   : 1; ///< 지금 상태의 뷰 오브젝트가 스폰돼 있다(정리하면 다음 틱이 다시 스폰한다)
         uint8                    _bFlushScheduled : 1;

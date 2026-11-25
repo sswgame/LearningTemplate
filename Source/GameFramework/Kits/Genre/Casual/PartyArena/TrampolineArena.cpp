@@ -204,7 +204,7 @@ namespace sw
         stored._bPoundPressed |= input._bPoundPressed;
     }
 
-    int32 TrampolineArena::update( float32 frameTime )
+    int32 TrampolineArena::update( GameSeconds frameTime )
     {
         const int32 stepCount = _timer.consume( frameTime );
         for ( int32 index = 0; index < stepCount; ++index )
@@ -219,17 +219,18 @@ namespace sw
         // `start` 전에도 돌면 몸이 스폰 지점 없이 원점에서 떨어지고 아이템이 나왔다.
         if ( _match.getPhase() != MatchPhase::InProgress )
             return;
-        const float32 deltaTime = _settings._step;
+        const StepSeconds step{ _settings._step };
+        const float32     deltaTime = step.count();
         _time += deltaTime;
         for ( int32 player = 0; player < getPlayerCount(); ++player )
         {
-            updatePlayer( player, deltaTime );
+            updatePlayer( player, step );
         }
         updateAttacks();
-        _itemSpawner.update( deltaTime );
+        _itemSpawner.update( step );
         pickUpItems();
 
-        _match.update( deltaTime );
+        _match.update( step );
         for ( const MatchEvent& event : _match.takeEvents() )
         {
             if ( event._kind == MatchEvent::Kind::Respawned && event._participant.has_value() && isValidPlayer( *event._participant ) )
@@ -331,15 +332,16 @@ namespace sw
         return float3{ MathUtil::cos( angle ) * radius, _settings._spawnHeight, MathUtil::sin( angle ) * radius };
     }
 
-    void TrampolineArena::updatePlayer( int32 player, float32 deltaTime )
+    void TrampolineArena::updatePlayer( int32 player, StepSeconds step )
     {
-        TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
-        body._attackCooldown.update( deltaTime );
-        body._stunTimer.update( deltaTime );
-        body._invulnerableTimer.update( deltaTime );
+        const float32     deltaTime = step.count();
+        TrampolinePlayer& body      = _listPlayer[static_cast<size_t>( player )];
+        body._attackCooldown.update( step );
+        body._stunTimer.update( step );
+        body._invulnerableTimer.update( step );
         if ( body._heavyTimer.isActive() )
         {
-            if ( body._heavyTimer.update( deltaTime ) )
+            if ( body._heavyTimer.update( step ) )
             {
                 body._knockbackTaken = 1.0f;
                 body._knockbackDealt = 1.0f;
@@ -362,25 +364,25 @@ namespace sw
             }
             case TrampolinePlayerState::Contact:
             {
-                updateContact( player, deltaTime );
+                updateContact( player, step );
                 return;
             }
             case TrampolinePlayerState::Air:
             {
-                updateAir( player, deltaTime );
+                updateAir( player, step );
                 return;
             }
         }
     }
 
-    void TrampolineArena::updateContact( int32 player, float32 deltaTime )
+    void TrampolineArena::updateContact( int32 player, StepSeconds step )
     {
         TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
         // 닿기 전 창 안에서 미리 누른 입력이 있으면 그것을, 없으면 닿은 뒤 처음 누른 입력을 쓴다(연타해도 늦어지지 않게 하려는 것이다).
         const bool bNoPressYet = body._jumpPressTime < body._landTime - _judge.getEarliestWidth();
         if ( body._input._bJumpPressed == SW_TRUE && bNoPressYet )
             body._jumpPressTime = _time;
-        body._contactTimer.update( deltaTime );
+        body._contactTimer.update( step );
         if ( body._contactTimer.isActive() )
             return;
         // 눌림이 끝났다. 닿은 순간을 목표로 점프 입력을 판정한다.
@@ -389,8 +391,9 @@ namespace sw
         launch( player, bSuccess, bSuccess ? result._pWindow->_grade : hashed_string{} );
     }
 
-    void TrampolineArena::updateAir( int32 player, float32 deltaTime )
+    void TrampolineArena::updateAir( int32 player, StepSeconds step )
     {
+        const float32 deltaTime      = step.count();
         using Internal               = TrampolineArenaInternal;
         TrampolinePlayer&      body  = _listPlayer[static_cast<size_t>( player )];
         const TrampolineInput& input = body._input;
@@ -422,7 +425,7 @@ namespace sw
 
         if ( body._attackTimer.isActive() )
         {
-            if ( body._attackTimer.update( deltaTime ) )
+            if ( body._attackTimer.update( step ) )
             {
                 // 돌진이 끝나면 공중 이동 속도로 돌아온다.
                 const float32 speed = Internal::computeFlatLength( body._velocity );

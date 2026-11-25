@@ -25,6 +25,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -192,7 +193,7 @@ namespace sw
 
         void setInput( int32 racer, const KartRacerInput& input );
         /** @brief 프레임 시간만큼 고정 걸음으로 진행하고, 진행한 걸음 수를 반환합니다. */
-        int32 update( float32 frameTime );
+        int32 update( GameSeconds frameTime );
         /** @brief 한 걸음 진행합니다. */
         void step();
 
@@ -247,7 +248,7 @@ namespace sw
         void    completeLap( int32 racer );
         void    finishRacer( int32 racer );
         float32 computeProgress( const KartRacer& kart ) const;
-        void    updateItemBoxes( float32 deltaTime );
+        void    updateItemBoxes( StepSeconds step );
         void    updateProjectiles( float32 deltaTime );
         /** @brief 1등 공격이 터집니다. 범위는 탄의 폭발 반지름(`ProjectileState::_blastRadius`)이고 맞은 차의 반응은 @p def 입니다. */
         void explode( const ProjectileState& projectile, const KartItemDef& def );

@@ -44,7 +44,7 @@ namespace
     protected:
         void serializeGameState( StateIO& io ) override { (void)io; }
         bool startGame() override { return true; }
-        void updateGame( float32 deltaTime ) override { (void)deltaTime; }
+        void updateGame( GameSeconds frameTime ) override { (void)frameTime; }
         void onFlush( GameObjectManager& manager, bool bRespawnViews ) override
         {
             (void)manager;

@@ -20,6 +20,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/ExponentialBackoff.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioSoundPlayer.h"

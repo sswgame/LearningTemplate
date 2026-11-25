@@ -499,15 +499,15 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, InitializeFillsAndResets )
  */
 SW_TEST_CASE_F( SurvivalHorrorRulesTest, DarknessDrainsAndLightRegens )
 {
-    _session.update( 1.0f, true );
+    _session.update( GameSeconds{ 1.0f }, true );
     SW_EXPECT_NEAR( 90.0f, _session.getSanity().getValue(), kHorrorTolerance );
-    _session.update( 0.0f, true );
-    _session.update( -1.0f, true );
+    _session.update( GameSeconds{ 0.0f }, true );
+    _session.update( GameSeconds{ -1.0f }, true );
     SW_EXPECT_NEAR( 90.0f, _session.getSanity().getValue(), kHorrorTolerance );
 
-    _session.update( 1.0f, false ); // 지연 2 초 안이다
+    _session.update( GameSeconds{ 1.0f }, false ); // 지연 2 초 안이다
     SW_EXPECT_NEAR( 90.0f, _session.getSanity().getValue(), kHorrorTolerance );
-    _session.update( 1.5f, false ); // 지연 뒤 0.5 초 x 5
+    _session.update( GameSeconds{ 1.5f }, false ); // 지연 뒤 0.5 초 x 5
     SW_EXPECT_NEAR( 92.5f, _session.getSanity().getValue(), kHorrorTolerance );
 }
 
@@ -518,9 +518,9 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, DarknessDoesNotRegen )
 {
     SW_REQUIRE_TRUE( reopen( []( SurvivalHorrorRules& rules )
     { rules._sanityRegenDelay = 0.0f; } ) );
-    _session.update( 1.0f, true );
+    _session.update( GameSeconds{ 1.0f }, true );
     SW_EXPECT_NEAR( 90.0f, _session.getSanity().getValue(), kHorrorTolerance );
-    _session.update( 1.0f, false );
+    _session.update( GameSeconds{ 1.0f }, false );
     SW_EXPECT_NEAR( 95.0f, _session.getSanity().getValue(), kHorrorTolerance );
 }
 
@@ -531,11 +531,11 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, FlashlightUsesBatteryAndDies )
 {
     SW_REQUIRE_TRUE( _session.trySetFlashlight( true ) );
     SW_EXPECT_TRUE( _session.isFlashlightOn() );
-    _session.update( 1.0f, true );
+    _session.update( GameSeconds{ 1.0f }, true );
     SW_EXPECT_NEAR( 8.0f, _session.getBattery().getValue(), kHorrorTolerance );
     SW_EXPECT_NEAR( 100.0f, _session.getSanity().getValue(), kHorrorTolerance );
 
-    _session.update( 4.0f, true );
+    _session.update( GameSeconds{ 4.0f }, true );
     SW_EXPECT_FALSE( _session.isFlashlightOn() );
     SW_EXPECT_EQUAL( 1, countEvents( SurvivalHorrorEvent::Kind::FlashlightDied ) );
     SW_EXPECT_NEAR( 60.0f, _session.getSanity().getValue(), kHorrorTolerance );
@@ -922,7 +922,7 @@ SW_TEST_CASE_F( SurvivalHorrorRulesTest, SessionStateRoundTrip )
     SW_REQUIRE_TRUE( _session.trySetFlashlight( true ) );
     _session.applyDamage( 10.0f );
     (void)_session.trySave();
-    _session.update( 1.0f, false );
+    _session.update( GameSeconds{ 1.0f }, false );
 
     SurvivalHorrorSession restored;
     SW_REQUIRE_TRUE( open( restored ) );

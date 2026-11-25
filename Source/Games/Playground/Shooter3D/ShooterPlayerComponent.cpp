@@ -524,7 +524,8 @@ namespace sw
         const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bMissingCameraContext )
             return;
-        const float32 step = MathUtil::min( context.getDeltaTime().count(), 0.1f );
+        const GameSeconds stepTime{ MathUtil::min( context.getDeltaTime().count(), 0.1f ) }; // 긴 프레임을 자른 게임 시간
+        const float32     step = stepTime.count();
 
         // 시점 카메라의 프리셋(1인칭, 3인칭, 궤도, CCTV)이 바뀌면 틱이 끝난 뒤 가시성을 맞춘다.
         const bool bFirstPerson = queryFirstPerson();
@@ -540,8 +541,8 @@ namespace sw
         ShooterBodyMovementComponent* pMovement  = findMovement();
         const bool                    bNetDriven = pMovement != nullptr && pMovement->isNetDriven(); // 무기 · 발동은 네트 걸음이 한다(`stepNetCommand`)
         if ( bNetDriven == false )
-            advanceWeapons( step );
-        _healthMachine.update( step );
+            advanceWeapons( stepTime );
+        _healthMachine.update( stepTime );
         _timeSinceShot += step;
         _hitMarkerTimer -= step;
         if ( _healthMachine.isAlive() == false )
@@ -569,11 +570,11 @@ namespace sw
         scheduleFlush();
     }
 
-    void ShooterPlayerComponent::advanceWeapons( float32 step )
+    void ShooterPlayerComponent::advanceWeapons( GameSeconds frameTime )
     {
         for ( WeaponState& weapon : _arrWeapon )
         {
-            weapon.update( step );
+            weapon.update( frameTime );
         }
     }
 
@@ -620,13 +621,14 @@ namespace sw
             _bMeleeActive = SW_FALSE;
     }
 
-    void ShooterPlayerComponent::stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, float32 step, uint32 commandTick )
+    void ShooterPlayerComponent::stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, StepSeconds commandStep, uint32 commandTick )
     {
+        const float32                   step      = commandStep.count();
         const GameObject*               pOwner    = getOwner();
         FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? getOwner()->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*            pPawn     = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const ShooterGameModeComponent* pGameMode = findGameMode<ShooterGameModeComponent>();
-        advanceWeapons( step );
+        advanceWeapons( commandStep );
         const bool bIdle = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || isAlive() == false || isServerDown();
         if ( bIdle )
             return;

@@ -120,16 +120,16 @@ SW_TEST_CASE( ActionRoomTest, AttackHitsFacingBoxWithArmorAndCooldown )
     ActionRoomTestUtil::beginBossWith( room, kGrunt, sw::float2{ 1.0f, 0.0f } );
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
 
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Left ) ); // 등 뒤로 휘두른다 — 쿨다운만 돈다
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Left ) ); // 등 뒤로 휘두른다 — 쿨다운만 돈다
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeInput() );
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() );
 
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack() ); // 34 - 방어 4 = 30
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() ); // 34 - 방어 4 = 30
     SW_EXPECT_NEAR( 0.4f, room.getBossHPFill(), kRoomTolerance );
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack() ); // 쿨다운 0.28 초가 아직 남았다
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() ); // 쿨다운 0.28 초가 아직 남았다
     SW_EXPECT_NEAR( 0.4f, room.getBossHPFill(), kRoomTolerance );
 
-    const sw::ActionRoomFrameResult result = room.update( kRoomStep, ActionRoomTestUtil::makeAttack() ); // 20 - 30 은 0 에서 멈춘다
+    const sw::ActionRoomFrameResult result = room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() ); // 20 - 30 은 0 에서 멈춘다
     SW_EXPECT_NEAR( 0.0f, room.getBossHPFill(), kRoomTolerance );
     SW_EXPECT_EQUAL( 0, room.getAliveEnemyCount() );
     SW_EXPECT_TRUE( result._bClearedThisFrame == SW_TRUE );
@@ -153,9 +153,9 @@ SW_TEST_CASE( ActionRoomTest, AttackDirectionsAndMinimumDamage )
     room.setSettings( settings );
     ActionRoomTestUtil::beginBossWith( room, kGrunt, sw::float2{ 0.0f, 1.0f } );
 
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Up ) );
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Up ) );
     SW_EXPECT_NEAR( 1.0f, room.getBossHPFill(), kRoomTolerance );
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Down ) ); // 방어 4 > 피해 1 이어도 1
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack( sw::FacingDirection::Down ) ); // 방어 4 > 피해 1 이어도 1
     SW_EXPECT_NEAR( 49.0f / 50.0f, room.getBossHPFill(), kRoomTolerance );
 }
 
@@ -170,7 +170,7 @@ SW_TEST_CASE( ActionRoomTest, ClearReportsOnce )
 
     sw::ActionRoom idle;
     SW_EXPECT_FALSE( idle.isActive() );
-    const sw::ActionRoomFrameResult idleResult = idle.update( kRoomStep, ActionRoomTestUtil::makeAttack() );
+    const sw::ActionRoomFrameResult idleResult = idle.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() );
     SW_EXPECT_TRUE( idleResult._bClearedThisFrame == SW_FALSE );
     SW_EXPECT_NEAR( 0.0f, idle.getBossHPFill(), kRoomTolerance );
 
@@ -178,10 +178,10 @@ SW_TEST_CASE( ActionRoomTest, ClearReportsOnce )
     ActionRoomTestUtil::beginHallWith( room, kGunner, sw::float2{ 1.0f, 0.0f } );
     SW_EXPECT_TRUE( room.getKind() == sw::ActionRoomKind::Hall );
     SW_EXPECT_NEAR( 0.0f, room.getBossHPFill(), kRoomTolerance ); // 보스 룸이 아니다
-    const sw::ActionRoomFrameResult cleared = room.update( kRoomStep, ActionRoomTestUtil::makeAttack() );
+    const sw::ActionRoomFrameResult cleared = room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() );
     SW_EXPECT_TRUE( cleared._bClearedThisFrame == SW_TRUE );
     SW_EXPECT_TRUE( cleared._bBossDefeated == SW_FALSE );
-    const sw::ActionRoomFrameResult after = room.update( kRoomStep, ActionRoomTestUtil::makeInput() );
+    const sw::ActionRoomFrameResult after = room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() );
     SW_EXPECT_TRUE( after._bClearedThisFrame == SW_FALSE );
 }
 
@@ -199,14 +199,14 @@ SW_TEST_CASE( ActionRoomTest, EmptyBossRoomIsNotABossKill )
     sw::ActionRoom empty;
     empty.beginBoss();
     SW_EXPECT_TRUE( empty.isActive() );
-    const sw::ActionRoomFrameResult emptyResult = empty.update( kRoomStep, ActionRoomTestUtil::makeInput() );
+    const sw::ActionRoomFrameResult emptyResult = empty.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() );
     SW_EXPECT_TRUE( emptyResult._bClearedThisFrame == SW_TRUE );
     SW_EXPECT_TRUE( emptyResult._bBossDefeated == SW_FALSE );
 
     sw::ActionRoom unknown;
     ActionRoomTestUtil::beginBossWith( unknown, sw::hashed_string( "ghost" ), sw::float2{} );
     SW_EXPECT_EQUAL( 0, unknown.getAliveEnemyCount() );
-    const sw::ActionRoomFrameResult unknownResult = unknown.update( kRoomStep, ActionRoomTestUtil::makeInput() );
+    const sw::ActionRoomFrameResult unknownResult = unknown.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() );
     SW_EXPECT_TRUE( unknownResult._bBossDefeated == SW_FALSE );
 }
 
@@ -246,16 +246,16 @@ SW_TEST_CASE( ActionRoomTest, ContactDamageRespectsInvulnerability )
     ActionRoomTestUtil::beginHallWith( room, kGrunt, sw::float2{ 0.0f, 0.0f } );
     const sw::ActionRoomFrameInput input = ActionRoomTestUtil::makeInput();
 
-    SW_EXPECT_EQUAL( 7, room.update( kRoomStep, input )._damageToPlayer );
+    SW_EXPECT_EQUAL( 7, room.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
     SW_EXPECT_TRUE( room.isPlayerInvulnerable() );
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, input )._damageToPlayer ); // 0.45 남음
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, input )._damageToPlayer ); // 0.2 남음
-    SW_EXPECT_EQUAL( 7, room.update( kRoomStep, input )._damageToPlayer ); // 끝났다
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer ); // 0.45 남음
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer ); // 0.2 남음
+    SW_EXPECT_EQUAL( 7, room.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer ); // 끝났다
 
     // 닿지 않으면 맞지 않는다: 적 상자 끝 0.5 와 몸 끝 0.28 사이가 벌어진 곳.
     sw::ActionRoom apart;
     ActionRoomTestUtil::beginHallWith( apart, kGrunt, sw::float2{ 0.79f, 0.0f } );
-    SW_EXPECT_EQUAL( 0, apart.update( kRoomStep, input )._damageToPlayer );
+    SW_EXPECT_EQUAL( 0, apart.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
 }
 
 /**
@@ -278,22 +278,22 @@ SW_TEST_CASE( ActionRoomTest, DashGrantsInvulnerabilityWithoutShorteningIt )
     const sw::ActionRoomFrameInput dash = ActionRoomTestUtil::makeInput( sw::float2{ 0.0f, 0.0f }, sw::FacingDirection::Right, false, true );
     SW_EXPECT_NEAR( 1.0f, room.getDashFill(), kRoomTolerance );
 
-    sw::ActionRoomFrameResult result = room.update( kRoomStep, dash ); // 대시한 프레임에는 맞지 않는다
+    sw::ActionRoomFrameResult result = room.update( sw::GameSeconds{ kRoomStep }, dash ); // 대시한 프레임에는 맞지 않는다
     SW_EXPECT_TRUE( result._bDashStarted == SW_TRUE );
     SW_EXPECT_EQUAL( 0, result._damageToPlayer );
     SW_EXPECT_NEAR( 0.0f, room.getDashFill(), kRoomTolerance );
-    result = room.update( kRoomStep, dash ); // 쿨다운 중
+    result = room.update( sw::GameSeconds{ kRoomStep }, dash ); // 쿨다운 중
     SW_EXPECT_TRUE( result._bDashStarted == SW_FALSE );
     SW_EXPECT_NEAR( 0.25f, room.getDashFill(), kRoomTolerance );
 
-    SW_EXPECT_EQUAL( 7, room.update( kRoomStep, idle )._damageToPlayer ); // 대시 무적 0.5 초 끝, 맞아서 1.5 초 무적
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, idle )._damageToPlayer ); // 1.25 남음, 대시 쿨다운 0.25 남음
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, idle )._damageToPlayer ); // 1.0 남음, 쿨다운 끝
-    result = room.update( kRoomStep, dash );                              // 0.75 남음에 대시 0.5 — 줄지 않는다
+    SW_EXPECT_EQUAL( 7, room.update( sw::GameSeconds{ kRoomStep }, idle )._damageToPlayer ); // 대시 무적 0.5 초 끝, 맞아서 1.5 초 무적
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, idle )._damageToPlayer ); // 1.25 남음, 대시 쿨다운 0.25 남음
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, idle )._damageToPlayer ); // 1.0 남음, 쿨다운 끝
+    result = room.update( sw::GameSeconds{ kRoomStep }, dash );                              // 0.75 남음에 대시 0.5 — 줄지 않는다
     SW_EXPECT_TRUE( result._bDashStarted == SW_TRUE );
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, idle )._damageToPlayer ); // 0.5
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, idle )._damageToPlayer ); // 0.25
-    SW_EXPECT_EQUAL( 7, room.update( kRoomStep, idle )._damageToPlayer ); // 0
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, idle )._damageToPlayer ); // 0.5
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, idle )._damageToPlayer ); // 0.25
+    SW_EXPECT_EQUAL( 7, room.update( sw::GameSeconds{ kRoomStep }, idle )._damageToPlayer ); // 0
 
     settings._dashCooldownSeconds = 0.0f; // 분모 0 이어도 게이지는 가득이다
     sw::ActionRoom noCooldown;
@@ -316,18 +316,18 @@ SW_TEST_CASE( ActionRoomTest, WalkersApproachAndNegativeTimeIsIgnored )
     // 정의대로면 프레임마다 0.5 씩 다가와 상자 끝이 몸에 닿는 x <= 0.78 은 9 번째 프레임이다.
     for ( int32 frame = 0; frame < 100; ++frame )
     {
-        (void)room.update( -1.0f, input );
+        (void)room.update( sw::GameSeconds{ -1.0f }, input );
     }
     for ( int32 frame = 0; frame < 8; ++frame )
     {
-        SW_EXPECT_EQUAL( 0, room.update( kRoomStep, input )._damageToPlayer );
+        SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
     }
-    SW_EXPECT_EQUAL( 7, room.update( kRoomStep, input )._damageToPlayer );
+    SW_EXPECT_EQUAL( 7, room.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
 
     // 플레이어 바로 위에 선 적의 방향은 0 이라 움직이지도 깨지지도 않는다.
     sw::ActionRoom onTop;
     ActionRoomTestUtil::beginHallWith( onTop, kWalker, sw::float2{ 0.0f, 0.0f } );
-    SW_EXPECT_EQUAL( 7, onTop.update( kRoomStep, input )._damageToPlayer );
+    SW_EXPECT_EQUAL( 7, onTop.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
     SW_EXPECT_EQUAL( 1, onTop.getAliveEnemyCount() );
 }
 
@@ -343,19 +343,19 @@ SW_TEST_CASE( ActionRoomTest, VolleysFollowDelayAndCoolTime )
     ActionRoomTestUtil::beginHallWith( room, kGunner, sw::float2{ 20.0f, 0.0f } ); // 탄이 닿지 않는 거리
     const sw::ActionRoomFrameInput input = ActionRoomTestUtil::makeInput();
 
-    SW_EXPECT_EQUAL( 0, room.update( kRoomStep, input )._enemyVolleyCount ); // 0.25
-    SW_EXPECT_EQUAL( 1, room.update( kRoomStep, input )._enemyVolleyCount ); // 0.5 — 첫 발
+    SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, input )._enemyVolleyCount ); // 0.25
+    SW_EXPECT_EQUAL( 1, room.update( sw::GameSeconds{ kRoomStep }, input )._enemyVolleyCount ); // 0.5 — 첫 발
     for ( int32 frame = 0; frame < 3; ++frame )
     {
-        SW_EXPECT_EQUAL( 0, room.update( kRoomStep, input )._enemyVolleyCount );
+        SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, input )._enemyVolleyCount );
     }
-    SW_EXPECT_EQUAL( 1, room.update( kRoomStep, input )._enemyVolleyCount ); // 1 초 뒤
+    SW_EXPECT_EQUAL( 1, room.update( sw::GameSeconds{ kRoomStep }, input )._enemyVolleyCount ); // 1 초 뒤
 
     sw::ActionRoom melee;
     ActionRoomTestUtil::beginHallWith( melee, kGrunt, sw::float2{ 20.0f, 0.0f } );
     for ( int32 frame = 0; frame < 8; ++frame )
     {
-        SW_EXPECT_EQUAL( 0, melee.update( kRoomStep, input )._enemyVolleyCount );
+        SW_EXPECT_EQUAL( 0, melee.update( sw::GameSeconds{ kRoomStep }, input )._enemyVolleyCount );
     }
 }
 
@@ -372,9 +372,9 @@ SW_TEST_CASE( ActionRoomTest, ProjectilesHitOrExpire )
     // x = 1.5 에서 쏜 탄(속도 2)은 쏜 프레임에 1.0, 다음 프레임에 0.5 로, 그 상자 끝 0.25 가 몸 끝 0.28 안이다.
     sw::ActionRoom near_;
     ActionRoomTestUtil::beginHallWith( near_, kGunner, sw::float2{ 1.5f, 0.0f } );
-    SW_EXPECT_EQUAL( 0, near_.update( kRoomStep, input )._damageToPlayer );
-    SW_EXPECT_EQUAL( 0, near_.update( kRoomStep, input )._damageToPlayer ); // 쏜 프레임
-    SW_EXPECT_EQUAL( 9, near_.update( kRoomStep, input )._damageToPlayer );
+    SW_EXPECT_EQUAL( 0, near_.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
+    SW_EXPECT_EQUAL( 0, near_.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer ); // 쏜 프레임
+    SW_EXPECT_EQUAL( 9, near_.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
     SW_EXPECT_TRUE( near_.isPlayerInvulnerable() );
 
     // x = 4 에서는 수명 1 초에 2 만큼만 날아 사라진다(다음 탄도 같다).
@@ -382,7 +382,7 @@ SW_TEST_CASE( ActionRoomTest, ProjectilesHitOrExpire )
     ActionRoomTestUtil::beginHallWith( distant, kGunner, sw::float2{ 4.0f, 0.0f } );
     for ( int32 frame = 0; frame < 16; ++frame )
     {
-        SW_EXPECT_EQUAL( 0, distant.update( kRoomStep, input )._damageToPlayer );
+        SW_EXPECT_EQUAL( 0, distant.update( sw::GameSeconds{ kRoomStep }, input )._damageToPlayer );
     }
 }
 
@@ -405,9 +405,9 @@ SW_TEST_CASE( ActionRoomTest, ShotAngleRotatesTheAim )
     {
         sw::ActionRoom room;
         ActionRoomTestUtil::beginHallWith( room, kSideGunner, sw::float2{ 0.0f, 1.5f } );
-        SW_EXPECT_EQUAL( 1, room.update( kRoomStep, ActionRoomTestUtil::makeInput() )._enemyVolleyCount );
+        SW_EXPECT_EQUAL( 1, room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() )._enemyVolleyCount );
         const sw::ActionRoomFrameInput moved = ActionRoomTestUtil::makeInput( arrSpot[caseIndex] );
-        SW_EXPECT_EQUAL( arrExpected[caseIndex], room.update( kRoomStep, moved )._damageToPlayer );
+        SW_EXPECT_EQUAL( arrExpected[caseIndex], room.update( sw::GameSeconds{ kRoomStep }, moved )._damageToPlayer );
     }
 }
 
@@ -453,12 +453,12 @@ SW_TEST_CASE( ActionRoomTest, ClearRemovesRemainingProjectiles )
     sw::ActionRoom            room;
     ActionRoomTestUtil::beginHallWith( room, kSlowGunner, sw::float2{ 1.0f, 0.0f } );
 
-    SW_REQUIRE_TRUE( room.update( kRoomStep, ActionRoomTestUtil::makeInput() )._enemyVolleyCount == 1 );  // 탄은 x = 0.75
-    const sw::ActionRoomFrameResult cleared = room.update( kRoomStep, ActionRoomTestUtil::makeAttack() ); // 쏜 적을 쓰러뜨렸다, 탄은 x = 0.5
+    SW_REQUIRE_TRUE( room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() )._enemyVolleyCount == 1 );  // 탄은 x = 0.75
+    const sw::ActionRoomFrameResult cleared = room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() ); // 쏜 적을 쓰러뜨렸다, 탄은 x = 0.5
     SW_EXPECT_TRUE( cleared._bClearedThisFrame == SW_TRUE );
     for ( int32 frame = 0; frame < 8; ++frame )
     {
-        SW_EXPECT_EQUAL( 0, room.update( kRoomStep, ActionRoomTestUtil::makeInput() )._damageToPlayer ); // 지우지 않으면 다음 프레임에 맞는다
+        SW_EXPECT_EQUAL( 0, room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() )._damageToPlayer ); // 지우지 않으면 다음 프레임에 맞는다
     }
 }
 
@@ -510,7 +510,7 @@ SW_TEST_CASE( ActionRoomTest, EventsFollowTheFight )
     SW_EXPECT_EQUAL( sw::string( "locked" ), listLog[0] );
     SW_EXPECT_EQUAL( sw::string( "zone1" ), lastZone );
 
-    (void)room.update( kRoomStep, ActionRoomTestUtil::makeAttack() );
+    (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeAttack() );
     SW_REQUIRE_EQUAL( size_t( 3 ), listLog.size() );
     SW_EXPECT_EQUAL( sw::string( "cleared" ), listLog[1] );
     SW_EXPECT_EQUAL( sw::string( "open" ), listLog[2] );
@@ -548,8 +548,8 @@ SW_TEST_CASE( ActionRoomTest, StateRoundTripResumes )
     sw::ActionRoom original;
     ActionRoomTestUtil::beginBossWith( original, kGunner, sw::float2{ 1.5f, 0.0f } );
     const sw::ActionRoomFrameInput input = ActionRoomTestUtil::makeInput();
-    (void)original.update( kRoomStep, input );
-    (void)original.update( kRoomStep, input ); // 탄이 x = 1.0 에 있다
+    (void)original.update( sw::GameSeconds{ kRoomStep }, input );
+    (void)original.update( sw::GameSeconds{ kRoomStep }, input ); // 탄이 x = 1.0 에 있다
 
     sw::Archive written;
     original.writeState( written );
@@ -565,8 +565,8 @@ SW_TEST_CASE( ActionRoomTest, StateRoundTripResumes )
 
     for ( int32 frame = 0; frame < 6; ++frame )
     {
-        const sw::ActionRoomFrameResult expected = original.update( kRoomStep, input );
-        const sw::ActionRoomFrameResult actual   = restored.update( kRoomStep, input );
+        const sw::ActionRoomFrameResult expected = original.update( sw::GameSeconds{ kRoomStep }, input );
+        const sw::ActionRoomFrameResult actual   = restored.update( sw::GameSeconds{ kRoomStep }, input );
         SW_EXPECT_EQUAL( expected._damageToPlayer, actual._damageToPlayer );
         SW_EXPECT_EQUAL( expected._enemyVolleyCount, actual._enemyVolleyCount );
         SW_EXPECT_TRUE( original.isPlayerInvulnerable() == restored.isPlayerInvulnerable() );
@@ -584,8 +584,8 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
 
     sw::ActionRoom source;
     ActionRoomTestUtil::beginHallWith( source, kGunner, sw::float2{ 20.0f, 0.0f } );
-    (void)source.update( kRoomStep, ActionRoomTestUtil::makeInput() );
-    (void)source.update( kRoomStep, ActionRoomTestUtil::makeInput() ); // 탄 하나가 난다
+    (void)source.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() );
+    (void)source.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput() ); // 탄 하나가 난다
     sw::Archive written;
     source.writeState( written );
     const size_t size = static_cast<size_t>( written.getSize() );
@@ -686,7 +686,7 @@ SW_TEST_CASE( ActionRoomTest, RoomDeterminism )
     {
         const sw::float2          position{ static_cast<float32>( stepIndex % 8 ) * 0.25f - 1.0f, static_cast<float32>( stepIndex % 5 ) * 0.2f - 0.4f };
         const sw::FacingDirection facing = stepIndex % 4 < 2 ? sw::FacingDirection::Right : sw::FacingDirection::Left;
-        (void)room.update( kRoomStep, ActionRoomTestUtil::makeInput( position, facing, stepIndex % 2 == 0, stepIndex % 7 == 3 ) );
+        (void)room.update( sw::GameSeconds{ kRoomStep }, ActionRoomTestUtil::makeInput( position, facing, stepIndex % 2 == 0, stepIndex % 7 == 3 ) );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::ActionRoom>( setup, step, 120 ) );
 }

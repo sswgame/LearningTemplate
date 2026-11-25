@@ -18,8 +18,9 @@ namespace sw
     {
     }
 
-    void AbilityTask::onTick( float32 deltaTime )
+    void AbilityTask::onTick( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
     }
 
@@ -51,14 +52,14 @@ namespace sw
     {
         // 0 이하의 지연은 다음 틱이 아니라 지금 끝낸다. "바로" 를 뜻하는 호출이 한 프레임 늦어지지 않게 하기 위해서다.
         if ( _delay.isActive() == false )
-            onTick( 0.0f );
+            onTick( GameSeconds{} );
     }
 
-    void AbilityTaskWaitDelay::onTick( float32 deltaTime )
+    void AbilityTaskWaitDelay::onTick( GameSeconds frameTime )
     {
         if ( isFinished() )
             return;
-        _delay.update( deltaTime );
+        _delay.update( frameTime );
         if ( _delay.isActive() )
             return;
 

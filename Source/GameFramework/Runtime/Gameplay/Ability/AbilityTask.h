@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/TagID.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
@@ -41,7 +42,7 @@ namespace sw
         /** @brief 붙은 직후에 한 번 불립니다. */
         virtual void onActivate();
         /** @brief 어빌리티가 실행되는 동안 매 틱 불립니다. */
-        virtual void onTick( float32 deltaTime );
+        virtual void onTick( GameSeconds frameTime );
         /** @brief 작업이 끝났을 때 불립니다. 어빌리티가 끝나서 함께 끝났으면 @p bAbilityEnded 가 true 입니다. 등록해 둔 구독은 여기서 해제합니다. */
         virtual void onDestroy( bool bAbilityEnded );
 
@@ -75,7 +76,7 @@ namespace sw
         AbilityTaskWaitDelay( float32 seconds, const Delegate<void()>& onFinished );
 
         void onActivate() override;
-        void onTick( float32 deltaTime ) override;
+        void onTick( GameSeconds frameTime ) override;
 
         /** @brief 콜백까지 남은 시간입니다. */
         float32 getRemainingTime() const { return _delay.getRemaining(); }

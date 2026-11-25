@@ -99,7 +99,7 @@ namespace
         {
             for ( int32 tick = 0; tick < maxTicks; ++tick )
             {
-                body.update( map, terrain, input, kBodyStep );
+                body.update( map, terrain, input, sw::GameSeconds{ kBodyStep } );
                 if ( body.hasEvent( event ) )
                     return true;
             }
@@ -193,21 +193,21 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GlideLimitsFallSpeedAndRestoresSettings 
     falling.setPosition( sw::float2{ 3.5f, 9.5f } );
 
     const sw::ActionBodyInput glideInput = ActionPlatformerBodyTestUtil::makeGlideInput();
-    gliding.update( map, terrain, glideInput, kBodyStep );
+    gliding.update( map, terrain, glideInput, sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( gliding.getMode() == sw::ActionMoveMode::Glide );
     SW_EXPECT_TRUE( gliding.hasEvent( sw::ActionBodyEvent::kGlideStarted ) );
     SW_EXPECT_NEAR( bodySettings._glideFallSpeed, gliding.getMotor().getSettings()._maxFallSpeed, kBodyTolerance );
 
     for ( int32 tick = 0; tick < 30; ++tick )
     {
-        gliding.update( map, terrain, glideInput, kBodyStep );
-        falling.update( map, terrain, sw::ActionBodyInput{}, kBodyStep );
+        gliding.update( map, terrain, glideInput, sw::GameSeconds{ kBodyStep } );
+        falling.update( map, terrain, sw::ActionBodyInput{}, sw::GameSeconds{ kBodyStep } );
         SW_EXPECT_TRUE( gliding.getVelocity()._y >= -bodySettings._glideFallSpeed - kBodyTolerance );
         SW_EXPECT_FALSE( gliding.hasEvent( sw::ActionBodyEvent::kGlideStarted ) ); // 켤 때 한 번만 알린다
     }
     SW_EXPECT_TRUE( falling.getVelocity()._y < -bodySettings._glideFallSpeed ); // 활공 없이는 상한을 넘는다
 
-    gliding.update( map, terrain, sw::ActionBodyInput{}, kBodyStep );
+    gliding.update( map, terrain, sw::ActionBodyInput{}, sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( gliding.getMode() == sw::ActionMoveMode::Normal );
     SW_EXPECT_TRUE( gliding.hasEvent( sw::ActionBodyEvent::kGlideEnded ) );
     SW_EXPECT_NEAR( motorSettings._maxFallSpeed, gliding.getMotor().getSettings()._maxFallSpeed, kBodyTolerance );
@@ -234,16 +234,16 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GlideEndsOnGround )
     SW_EXPECT_TRUE( body.getMode() == sw::ActionMoveMode::Normal );
     SW_EXPECT_TRUE( body.getMotor().isGrounded() );
 
-    body.update( map, terrain, glideInput, kBodyStep );
+    body.update( map, terrain, glideInput, sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( body.getMode() == sw::ActionMoveMode::Normal );
     SW_EXPECT_FALSE( body.hasEvent( sw::ActionBodyEvent::kGlideStarted ) );
 
     body.setPosition( sw::float2{ 3.5f, 9.5f } );
-    body.update( map, terrain, sw::ActionBodyInput{}, kBodyStep );
-    body.update( map, terrain, glideInput, kBodyStep );
+    body.update( map, terrain, sw::ActionBodyInput{}, sw::GameSeconds{ kBodyStep } );
+    body.update( map, terrain, glideInput, sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Glide );
     const sw::float2 before = body.getPosition();
-    body.update( map, terrain, glideInput, 0.0f );
+    body.update( map, terrain, glideInput, sw::GameSeconds{ 0.0f } );
     SW_EXPECT_EQUAL( 0u, body.getEvents() );
     SW_EXPECT_NEAR( before._y, body.getPosition()._y, kBodyTolerance );
     body.setPosition( sw::float2{ 4.5f, 9.5f } );
@@ -267,12 +267,12 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleKeepsRopeLengthAndHandsVelocityBa
 
     // 지점 바로 옆(최소 거리 0.75 안)에서는 걸리지 않는다.
     body.setPosition( sw::float2{ 6.5f, 9.0f } );
-    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGrappleInput( true, true ), kBodyStep );
+    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGrappleInput( true, true ), sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( body.getMode() == sw::ActionMoveMode::Normal );
     SW_EXPECT_FALSE( body.hasEvent( sw::ActionBodyEvent::kGrappleAttached ) );
 
     body.setPosition( sw::float2{ 3.5f, 6.5f } );
-    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGrappleInput( true, true ), kBodyStep );
+    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGrappleInput( true, true ), sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Grapple );
     SW_EXPECT_TRUE( body.hasEvent( sw::ActionBodyEvent::kGrappleAttached ) );
     SW_EXPECT_NEAR( 6.5f, body.getAnchor()._x, kBodyTolerance );
@@ -283,7 +283,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleKeepsRopeLengthAndHandsVelocityBa
     const sw::ActionBodyInput hold = ActionPlatformerBodyTestUtil::makeGrappleInput( false, true );
     for ( int32 tick = 0; tick < 40; ++tick )
     {
-        body.update( map, terrain, hold, kBodyStep );
+        body.update( map, terrain, hold, sw::GameSeconds{ kBodyStep } );
         SW_EXPECT_TRUE( sw::float2::getDistance( body.getPosition(), body.getAnchor() ) <= rope + kBodyTolerance );
         SW_EXPECT_TRUE( body.getVelocity().getLength() <= sw::ActionBodyDef{}._grappleMaxSpeed + kBodyTolerance );
     }
@@ -292,7 +292,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleKeepsRopeLengthAndHandsVelocityBa
     const sw::float2 positionBefore = body.getPosition();
     const sw::float2 velocityBefore = body.getVelocity();
     SW_EXPECT_TRUE( velocityBefore.getLength() > 1.0f );
-    body.update( map, terrain, sw::ActionBodyInput{}, kBodyStep );
+    body.update( map, terrain, sw::ActionBodyInput{}, sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( body.getMode() == sw::ActionMoveMode::Normal );
     SW_EXPECT_TRUE( body.hasEvent( sw::ActionBodyEvent::kGrappleReleased ) );
     SW_EXPECT_NEAR( positionBefore._x, body.getPosition()._x, kBodyTolerance );
@@ -314,10 +314,10 @@ SW_TEST_CASE( ActionPlatformerBodyTest, GrappleFromGlideRestoresSettings )
     sw::ActionPlatformerBody      body;
     body.initialize( catalog );
     body.setPosition( sw::float2{ 3.5f, 6.5f } );
-    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGlideInput(), kBodyStep );
+    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGlideInput(), sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Glide );
 
-    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGrappleInput( true, false ), kBodyStep );
+    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeGrappleInput( true, false ), sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( body.hasEvent( sw::ActionBodyEvent::kGlideEnded ) );
     SW_EXPECT_TRUE( body.hasEvent( sw::ActionBodyEvent::kGrappleAttached ) );
     SW_EXPECT_TRUE( body.hasEvent( sw::ActionBodyEvent::kGrappleReleased ) );
@@ -340,11 +340,11 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillEntersOnlyTowardDirtAndExitsOutside
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
 
     body.setPosition( sw::float2{ 3.5f, 2.5f } ); // 앞으로 0.65 를 봐도 빈 칸
-    body.update( map, terrain, right, kBodyStep );
+    body.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
     SW_EXPECT_TRUE( body.getMode() == sw::ActionMoveMode::Normal );
 
     body.setPosition( sw::float2{ 4.5f, 2.5f } );
-    body.update( map, terrain, right, kBodyStep );
+    body.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Drill );
     SW_EXPECT_TRUE( body.hasEvent( sw::ActionBodyEvent::kDrillEntered ) );
     SW_EXPECT_NEAR( 11.0f, body.getVelocity()._x, kBodyTolerance );
@@ -395,7 +395,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillAbortsWhenItNeverReachesDirt )
     sw::ActionPlatformerBody body;
     body.initialize( catalog );
     body.setPosition( sw::float2{ 4.5f, 2.5f } );
-    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f ), kBodyStep );
+    body.update( map, terrain, ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f ), sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Drill );
 
     SW_REQUIRE_TRUE( ActionPlatformerBodyTestUtil::runUntilEvent( body, map, terrain, ActionPlatformerBodyTestUtil::makeDrillInput( -1.0f, 0.0f ), sw::ActionBodyEvent::kDrillAborted, 20 ) );
@@ -418,7 +418,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillBlockedByRockBeforeDirtStillAborts 
     body.setPosition( sw::float2{ 1.95f, 1.25f } );
 
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
-    body.update( map, terrain, right, kBodyStep );
+    body.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( body.getMode() == sw::ActionMoveMode::Drill );
     SW_EXPECT_NEAR( 1.95f, body.getPosition()._x, kBodyTolerance ); // 바위에 막혀 움직이지 않는다
 
@@ -444,7 +444,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, DrillInsideDirtWaitsAtRock )
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
     for ( int32 tick = 0; tick < 60; ++tick )
     {
-        body.update( map, terrain, right, kBodyStep );
+        body.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
         SW_EXPECT_TRUE( body.getMode() == sw::ActionMoveMode::Drill );
         SW_EXPECT_FALSE( body.hasEvent( sw::ActionBodyEvent::kDrillAborted ) );
     }
@@ -474,7 +474,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
     const sw::ActionBodyInput right = ActionPlatformerBodyTestUtil::makeDrillInput( 1.0f, 0.0f );
     for ( int32 tick = 0; tick < 5; ++tick )
     {
-        drilling.update( map, terrain, right, kBodyStep );
+        drilling.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
     }
     SW_REQUIRE_TRUE( drilling.getMode() == sw::ActionMoveMode::Drill );
 
@@ -487,8 +487,8 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
     SW_EXPECT_TRUE( restored.getMode() == sw::ActionMoveMode::Drill );
     for ( int32 tick = 0; tick < 30; ++tick )
     {
-        drilling.update( map, terrain, right, kBodyStep );
-        restored.update( map, terrain, right, kBodyStep );
+        drilling.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
+        restored.update( map, terrain, right, sw::GameSeconds{ kBodyStep } );
         SW_EXPECT_TRUE( drilling.getMode() == restored.getMode() );
         SW_EXPECT_NEAR( drilling.getPosition()._x, restored.getPosition()._x, kBodyTolerance );
         SW_EXPECT_EQUAL( drilling.getEvents(), restored.getEvents() );
@@ -497,7 +497,7 @@ SW_TEST_CASE( ActionPlatformerBodyTest, StateRoundTripResumesEveryMode )
     sw::ActionPlatformerBody gliding;
     gliding.initialize( catalog );
     gliding.setPosition( sw::float2{ 2.5f, 5.0f } );
-    gliding.update( map, terrain, ActionPlatformerBodyTestUtil::makeGlideInput(), kBodyStep );
+    gliding.update( map, terrain, ActionPlatformerBodyTestUtil::makeGlideInput(), sw::GameSeconds{ kBodyStep } );
     SW_REQUIRE_TRUE( gliding.getMode() == sw::ActionMoveMode::Glide );
     sw::Archive glideWritten;
     gliding.writeState( glideWritten );

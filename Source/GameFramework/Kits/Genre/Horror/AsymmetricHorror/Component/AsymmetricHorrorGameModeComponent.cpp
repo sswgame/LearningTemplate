@@ -337,13 +337,14 @@ namespace sw
             interact( survivor );
     }
 
-    void AsymmetricHorrorGameModeComponent::updateGame( float32 deltaTime )
+    void AsymmetricHorrorGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _result != AsymmetricHorrorResult::Ongoing )
         {
-            if ( _resultHold.update( deltaTime ) )
+            if ( _resultHold.update( frameTime ) )
                 (void)finishMinigame( hashed_string( AsymmetricHorrorGameModeComponentInternal::findResultName( _result ) ) ); // 흐름이 없으면 베이스가 알린다
             return;
         }
@@ -353,10 +354,10 @@ namespace sw
             applyCommand( survivor, isHuman( survivor ) ? pending : _bot.decideSurvivor( _match, _stage, survivor ), deltaTime );
             pending._bUseTriggered = SW_FALSE; // 쓴 누름이다(봇이 움직인 걸음의 누름은 버린다)
         }
-        (void)_killerRelease.update( deltaTime ); // 풀려난 뒤의 첫 걸음을 따로 알리지 않는다
+        (void)_killerRelease.update( frameTime ); // 풀려난 뒤의 첫 걸음을 따로 알리지 않는다
         if ( _killerRelease.isActive() == false )
             _bot.stepKiller( _match, _stage, deltaTime );
-        _match.update( deltaTime );
+        _match.update( frameTime );
         settle();
     }
 

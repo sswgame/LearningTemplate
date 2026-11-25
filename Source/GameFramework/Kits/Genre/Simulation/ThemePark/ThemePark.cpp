@@ -135,12 +135,12 @@ namespace sw
         return true;
     }
 
-    void ThemeParkSimulation::update( float32 deltaTime )
+    void ThemeParkSimulation::update( GameSeconds frameTime )
     {
-        const int32 stepCount = _stepTimer.consume( deltaTime );
+        const int32 stepCount = _stepTimer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            stepFixed( _stepTimer.getStep().count() );
+            stepFixed( _stepTimer.getStep() );
         }
     }
 
@@ -284,11 +284,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 한 간격
     // ------------------------------------------------------------------------------
-    void ThemeParkSimulation::stepFixed( float32 deltaTime )
+    void ThemeParkSimulation::stepFixed( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         _elapsedTime += deltaTime;
         spawnGuests( deltaTime );
-        runRides( deltaTime );
+        runRides( step );
         updateGuests( deltaTime );
 
         // 운영비는 열린 놀이기구마다 분당 나간다.
@@ -326,7 +327,7 @@ namespace sw
         }
     }
 
-    void ThemeParkSimulation::runRides( float32 deltaTime )
+    void ThemeParkSimulation::runRides( StepSeconds step )
     {
         for ( size_t rideIndex = 0; rideIndex < _listRide.size(); ++rideIndex )
         {
@@ -335,7 +336,7 @@ namespace sw
             // 1) 도는 중이면 시간을 흘리고, 다 돌면 내린다.
             if ( ride._listRider.empty() == false )
             {
-                ride._cycleTimer.update( deltaTime );
+                ride._cycleTimer.update( step );
                 if ( ride._cycleTimer.isActive() )
                     continue;
 

@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 

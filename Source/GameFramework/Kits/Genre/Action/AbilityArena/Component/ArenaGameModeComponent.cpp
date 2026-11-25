@@ -198,8 +198,9 @@ namespace sw
             SW_LOG_WARNING_ID( "ArenaGameMode.SavedArenaStateDoes", "[Arena] the saved arena state does not match this build - starting from wave 1" );
     }
 
-    void ArenaGameModeComponent::updateGame( float32 deltaTime )
+    void ArenaGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _bUnitsRequested == SW_FALSE )
         {
             // 처음이거나 상태를 저장하기 전에 정리한 뒤다. 플레이어와 현재 웨이브를 스폰한다.

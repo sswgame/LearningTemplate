@@ -93,7 +93,7 @@ namespace
         }
 
         /** @brief 생각 간격 하나를 흘립니다. 한 번 생각합니다(첫 번째는 시작하자마자, 그 뒤는 간격이 찰 때). */
-        void think() { _ai.update( _settings._thinkInterval ); }
+        void think() { _ai.update( GameSeconds{ _settings._thinkInterval } ); }
 
         RTSUnitID spawnDepot( int32 owner = 0 ) { return _world.spawnUnit( kDepot, owner, float3{ 4.5f, 0.0f, 4.5f } ); }
         RTSUnitID spawnMinerals() { return _world.spawnUnit( kMinerals, RTSWorld::kNoOwner, float3{ 14.5f, 0.0f, 4.5f } ); }
@@ -143,7 +143,7 @@ namespace
 SW_TEST_CASE( RTSCommanderAITest, DoesNotThinkWithoutWorldOrPlayer )
 {
     RTSCommanderAI idle;
-    idle.update( 1.0f ); // 시작하지 않아도 죽지 않는다
+    idle.update( GameSeconds{ 1.0f } ); // 시작하지 않아도 죽지 않는다
     SW_EXPECT_EQUAL( -1, idle.getPlayer() );
 
     Rig rig;
@@ -162,12 +162,12 @@ SW_TEST_CASE( RTSCommanderAITest, ThinksAtOnceThenWaitsForTheInterval )
     SW_REQUIRE_TRUE( rig.setUp() );
     rig._settings._thinkInterval = 0.5f;
     rig.start( &Rig::taskCountThink );
-    rig._ai.update( 0.1f );
+    rig._ai.update( GameSeconds{ 0.1f } );
     SW_EXPECT_EQUAL( 1, Rig::s_thinkCount );
-    rig._ai.update( 0.1f );
-    rig._ai.update( 0.1f );
+    rig._ai.update( GameSeconds{ 0.1f } );
+    rig._ai.update( GameSeconds{ 0.1f } );
     SW_EXPECT_EQUAL( 1, Rig::s_thinkCount );
-    rig._ai.update( 0.4f );
+    rig._ai.update( GameSeconds{ 0.4f } );
     SW_EXPECT_EQUAL( 2, Rig::s_thinkCount );
 }
 
@@ -182,7 +182,7 @@ SW_TEST_CASE( RTSCommanderAITest, ThinkRateDoesNotDependOnFrameTime )
     rig.start( &Rig::taskCountThink );
     for ( int32 frame = 0; frame < 50; ++frame ) // 10 초
     {
-        rig._ai.update( 0.2f );
+        rig._ai.update( GameSeconds{ 0.2f } );
     }
     SW_EXPECT_TRUE( Rig::s_thinkCount >= 20 );
     SW_EXPECT_TRUE( Rig::s_thinkCount <= 21 );
@@ -326,7 +326,7 @@ SW_TEST_CASE( RTSCommanderAITest, BuildSupplyWaitsForMarginAndDoesNotRepeat )
     SW_REQUIRE_TRUE( rig.spawnMinerals().isValid() );
     const RTSUnitID workerID = rig.spawnWorker();
     const RTSUnitID spareID  = rig.spawnWorker( 14.5f );
-    (void)rig._world.update( 0.1f, 1.0f ); // 보급을 센다: 상한 10, 쓴 2
+    (void)rig._world.update( GameSeconds{ 0.1f }, 1.0f ); // 보급을 센다: 상한 10, 쓴 2
 
     rig._settings._supplyMargin = 3;
     rig.start( "rts.buildSupply" );
@@ -487,9 +487,9 @@ SW_TEST_CASE( RTSCommanderAITest, StateRoundTripKeepsTimerAndWaveCount )
     SW_EXPECT_NEAR( 0.4f, thinkTimer, 1.0e-6f );
     SW_EXPECT_EQUAL( 3, attackWaveCount );
 
-    rig._ai.update( 0.1f );
+    rig._ai.update( GameSeconds{ 0.1f } );
     SW_EXPECT_EQUAL( 0, Rig::s_thinkCount );
-    rig._ai.update( 0.4f );
+    rig._ai.update( GameSeconds{ 0.4f } );
     SW_EXPECT_EQUAL( 1, Rig::s_thinkCount );
 }
 

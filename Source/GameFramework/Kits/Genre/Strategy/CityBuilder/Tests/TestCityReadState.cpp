@@ -188,7 +188,7 @@ SW_TEST_CASE_F( CityReadStateTest, RealAndCraftedStatesRead )
     SW_REQUIRE_TRUE( _city.placeBuilding( "hut", 1, 1 ) == sw::CityPlaceResult::Ok );
     for ( int32 frame = 0; frame < 40; ++frame )
     {
-        (void)_city.update( 0.25f, 1.0f );
+        (void)_city.update( sw::GameSeconds{ 0.25f }, 1.0f );
     }
 
     sw::Archive written;
@@ -228,7 +228,7 @@ SW_TEST_CASE_F( CityReadStateTest, CityDeterminism )
             (void)city.demolish( 3, 1 );
         if ( stepIndex % 40 == 39 )
             city.settleMonth( stepIndex % 160 == 159 );
-        (void)city.update( 0.25f, 1.0f );
+        (void)city.update( sw::GameSeconds{ 0.25f }, 1.0f );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<CityRun>( setup, step, 200 ) );
 }

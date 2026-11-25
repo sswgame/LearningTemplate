@@ -174,9 +174,9 @@ SW_TEST_CASE( ElementGridTest, FixedStepAndHash )
     const ElementGridTestTable rules;
     ElementGrid                grid;
     SW_REQUIRE_TRUE( rules.makeGrid( 3, 1, "Wood", grid ) );
-    SW_EXPECT_EQUAL( 0, grid.update( 0.2f ) );
+    SW_EXPECT_EQUAL( 0, grid.update( GameSeconds{ 0.2f } ) );
     const uint32 still = grid.computeStateHash();
-    SW_EXPECT_EQUAL( 1, grid.update( 0.1f ) );
+    SW_EXPECT_EQUAL( 1, grid.update( GameSeconds{ 0.1f } ) );
     SW_EXPECT_EQUAL( 1u, grid.getStepCount() );
     const uint32 stepped = grid.computeStateHash();
     SW_EXPECT_NOT_EQUAL( still, stepped );
@@ -193,7 +193,7 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     original.setWind( int2{ 1, 0 } );
     original.setMaterial( int2{ 3, 1 }, rules.material( "Water" ) );
     SW_REQUIRE_EQUAL( 1, original.applyStimulus( int2{ 0, 0 }, rules._fire ) );
-    SW_EXPECT_EQUAL( 1, original.update( 0.3f ) );
+    SW_EXPECT_EQUAL( 1, original.update( GameSeconds{ 0.3f } ) );
     Archive written;
     original.writeState( written );
 
@@ -202,7 +202,7 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
-    SW_EXPECT_EQUAL( original.update( 0.2f ), restored.update( 0.2f ) ); // 남은 시간도 이어진다
+    SW_EXPECT_EQUAL( original.update( GameSeconds{ 0.2f } ), restored.update( GameSeconds{ 0.2f } ) ); // 남은 시간도 이어진다
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
 
     ElementGrid other;

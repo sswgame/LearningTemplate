@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeFqn.h"
@@ -96,7 +97,7 @@ namespace sw
          */
         float32 reduce( float32 amount );
         /** @brief 시간을 흘립니다. 회복 지연, 회복(식기), 잠금 풀기가 진행됩니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 바로 채웁니다. 물약과 보급에 씁니다. 과열형이면 그만큼 식히며, 잠금 풀기 조건도 다시 봅니다. */
         void restore( float32 amount );
         /** @brief 가득 채우고(과열형은 다 식히고) 잠금을 풉니다. */

@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
@@ -131,7 +132,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
 
     private:
@@ -154,7 +155,7 @@ namespace sw
         /** @brief 괴물 자리 @p spotIndex 와 싸움을 엽니다. 탄약이 있으면 한 발을 써 힘 주사위를 더합니다. */
         void startEncounter( size_t spotIndex );
         /** @brief 전투를 데이터의 간격으로 한 차례씩 진행합니다. */
-        void updateEncounter( float32 deltaTime );
+        void updateEncounter( GameSeconds frameTime );
         /** @brief 이 전투의 조사자입니다(씬 데이터 + 탄약 보너스). */
         vector<SurvivalHorrorInvestigator> makeInvestigators() const;
         /** @brief 이벤트를 로그로 내고 결과를 정합니다. */

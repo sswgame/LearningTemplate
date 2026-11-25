@@ -15,6 +15,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"

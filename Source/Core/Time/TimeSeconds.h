@@ -10,8 +10,14 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include <type_traits>
+
 namespace sw
 {
+    struct GameClockTag;
+    struct RealClockTag;
+    struct StepClockTag;
+
     /** @brief 시계 꼬리표가 붙은 초 길이입니다. 직접 쓰지 않고 아래 별칭을 씁니다. */
     template <typename TClockTag>
     class TimeSeconds
@@ -20,6 +26,16 @@ namespace sw
         constexpr TimeSeconds() noexcept = default;
         constexpr explicit TimeSeconds( float32 seconds ) noexcept
             : _seconds{ seconds }
+        {
+        }
+        /**
+         * @brief 고정 스텝 하나는 게임 시간의 한 토막이라 게임 시간으로 넓어집니다(한 방향 — 유니티 `Time.fixedDeltaTime` 도 배율이 곱해진 게임 시간이다).
+         * @details 그래서 쿨다운 · 체력 재생처럼 프레임과 걸음 어디서든 흘리는 값은 `GameSeconds` 하나만 받는다. 거꾸로(프레임 시간을 한 걸음 자리에)는 막는다 —
+         *          걸음 함수가 프레임 시간을 받으면 걸음이 없는 프레임 · 여러 걸음 프레임이 어긋난다(결함 511b3359 · 41653ecd).
+         */
+        template <typename TFromTag, typename TToTag = TClockTag, typename = std::enable_if_t<std::is_same_v<TToTag, GameClockTag> && std::is_same_v<TFromTag, StepClockTag>>>
+        constexpr TimeSeconds( TimeSeconds<TFromTag> step ) noexcept // NOLINT(google-explicit-constructor, hicpp-explicit-conversions) 한 방향 넓힘이 이 형식의 뜻이다
+            : _seconds{ step.count() }
         {
         }
 
@@ -52,10 +68,6 @@ namespace sw
     private:
         float32 _seconds{ 0.0f };
     };
-
-    struct GameClockTag;
-    struct RealClockTag;
-    struct StepClockTag;
 
     /** @brief 게임 시간 — 정지면 0, 배율(슬로 모션 · 빨리 감기)이 곱해진 프레임 시간입니다(유니티 `Time.deltaTime`). 게임 규칙 · 씬 틱이 받는다. */
     using GameSeconds = TimeSeconds<GameClockTag>;

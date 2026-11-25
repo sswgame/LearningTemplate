@@ -679,8 +679,9 @@ namespace sw
             SW_LOG_INFO_ID( "JRPG.Defeat", "[JRPG] the party fell" );
     }
 
-    void JRPGGameModeComponent::updateGame( float32 deltaTime )
+    void JRPGGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( isAutoPlayOn() )
@@ -697,7 +698,7 @@ namespace sw
             updateExplore( deltaTime );
             return;
         }
-        if ( _resultHold.update( deltaTime ) )
+        if ( _resultHold.update( frameTime ) )
         {
             const bool bWon = _phase == JRPGGamePhase::Victory;
             (void)finishMinigame( hashed_string( bWon ? JRPGGameModeComponentInternal::kWinResult : JRPGGameModeComponentInternal::kLoseResult ) ); // 흐름이 없으면 베이스가 알린다

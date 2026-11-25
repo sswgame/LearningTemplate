@@ -765,12 +765,12 @@ SW_TEST_CASE( KartGhostTest, PlayerStopsAtEnd )
     sw::KartGhostPlayer player;
     player.initialize( ghost, sw::KinematicVehicleSettings{}, track );
     SW_EXPECT_FALSE( player.isFinished() );
-    SW_EXPECT_EQUAL( 2, player.advance( 0.25f ) );
-    SW_EXPECT_EQUAL( 1, player.advance( 0.25f ) ); // 두 걸음 몫이지만 하나 남았다
+    SW_EXPECT_EQUAL( 2, player.advance( sw::GameSeconds{ 0.25f } ) );
+    SW_EXPECT_EQUAL( 1, player.advance( sw::GameSeconds{ 0.25f } ) ); // 두 걸음 몫이지만 하나 남았다
     SW_EXPECT_TRUE( player.isFinished() );
     SW_EXPECT_EQUAL( 3, player.getFrameIndex() );
     SW_EXPECT_FALSE( player.step() );
-    SW_EXPECT_EQUAL( 0, player.advance( 0.25f ) );
+    SW_EXPECT_EQUAL( 0, player.advance( sw::GameSeconds{ 0.25f } ) );
 
     sw::KartGhostPlayer empty;
     SW_EXPECT_TRUE( empty.isFinished() );
@@ -831,7 +831,7 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     initializeRace( _race, _settings );
     _race.start();
     SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, _race.getPhase() );
-    SW_EXPECT_EQUAL( 0, _race.update( 0.0f ) );
+    SW_EXPECT_EQUAL( 0, _race.update( sw::GameSeconds{ 0.0f } ) );
     _race.step();
     SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, _race.getPhase() );
 
@@ -1563,7 +1563,7 @@ SW_TEST_CASE_F( KartRaceTest, RaceDeterminism )
         input._vehicle._bBoostPressed = static_cast<uint8>( stepIndex % 50 == 0 ? SW_TRUE : SW_FALSE );
         input._bUseItem               = static_cast<uint8>( stepIndex % 23 == 0 ? SW_TRUE : SW_FALSE );
         race.setInput( 0, input );
-        (void)race.update( 1.0f / 30.0f );
+        (void)race.update( sw::GameSeconds{ 1.0f / 30.0f } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::KartRace>( setup, step, 240 ) );
 }

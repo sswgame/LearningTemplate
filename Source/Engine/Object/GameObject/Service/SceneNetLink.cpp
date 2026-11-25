@@ -54,7 +54,7 @@ namespace sw
     {
         const bool bOwnsClock = isBound() && _value._pRouter->getBindSerial() == _bindSerial; // 나가는 씬과 들어온 씬이 겹치는 동안 두 번 흘리지 않는다
         if ( bOwnsClock )
-            _value._pRouter->advanceWorldClock( *_value._pPeers, deltaTime );
+            _value._pRouter->advanceWorldClock( *_value._pPeers, GameSeconds{ deltaTime } ); // 씬 서비스의 update 는 씬의 게임 시간이다
     }
 
     NetClock& SceneNetLink::getServerClock()

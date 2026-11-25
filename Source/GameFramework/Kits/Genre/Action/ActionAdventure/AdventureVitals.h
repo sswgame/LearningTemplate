@@ -9,6 +9,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -125,7 +126,7 @@ namespace sw
         bool upgradeMagic();
 
         /** @brief 이번 틱의 스태미나 행동을 처리합니다. 스태미나가 바닥나면 행동마다 정해진 결과를 반환하며, 수영이면 피해까지 줍니다. */
-        AdventureStaminaResult updateStamina( AdventureStaminaAction action, float32 deltaTime );
+        AdventureStaminaResult updateStamina( AdventureStaminaAction action, GameSeconds frameTime );
         /** @brief 스태미나를 한 번에 씁니다(오르기 점프, 회전 베기 모으기). 탈진했거나 모자라면 false 를 반환합니다. */
         [[nodiscard]] bool trySpendStamina( float32 amount ) { return _stamina.trySpend( amount ); }
         /** @brief 스태미나 그릇 하나를 얻습니다. 이미 최대면 false 를 반환합니다. */

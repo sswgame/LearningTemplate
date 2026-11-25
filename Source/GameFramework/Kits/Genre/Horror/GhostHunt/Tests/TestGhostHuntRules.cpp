@@ -143,8 +143,8 @@ namespace
         uint32 spawnAttacking( const hashed_string& kind )
         {
             const uint32 ghostID = _encounter.spawnGhost( kind, float3{ 0.0f, 0.0f, 2.0f } );
-            _encounter.update( 1.0f );
-            _encounter.update( 1.0f );
+            _encounter.update( GameSeconds{ 1.0f } );
+            _encounter.update( GameSeconds{ 1.0f } );
             return ghostID;
         }
 
@@ -195,15 +195,15 @@ namespace
         /** @brief 지금 방의 유령을 모두 잡습니다. 잡은 이벤트는 다음 `update` 나 방 옮기기가 처리합니다. */
         void catchRoomGhosts()
         {
-            _mansion.update( 1.0f );
-            _mansion.update( 1.0f );
+            _mansion.update( GameSeconds{ 1.0f } );
+            _mansion.update( GameSeconds{ 1.0f } );
             GhostEncounter& encounter = _mansion.getEncounter();
             (void)encounter.shineBeam( float3{ 0.0f, 0.0f, -1.0f }, float3{ 0.0f, 0.0f, 1.0f } );
             const vector<GhostInstance> listGhost = encounter.getGhosts();
             for ( const GhostInstance& ghost : listGhost )
             {
                 SW_EXPECT_TRUE( encounter.startSuction( ghost._id, ghost._position ) );
-                const GhostSuctionResult result = encounter.updateSuction( float3{}, 5.0f );
+                const GhostSuctionResult result = encounter.updateSuction( float3{}, GameSeconds{ 5.0f } );
                 SW_EXPECT_EQUAL( SW_TRUE, result._bCaught );
             }
         }
@@ -442,15 +442,15 @@ SW_TEST_CASE_F( GhostHuntTest, SpawnAssignsIDs )
 SW_TEST_CASE_F( GhostHuntTest, GhostCycles )
 {
     const uint32 ghostID = _encounter.spawnGhost( "goob", float3{} );
-    _encounter.update( 0.0f );
-    _encounter.update( -1.0f );
+    _encounter.update( GameSeconds{ 0.0f } );
+    _encounter.update( GameSeconds{ -1.0f } );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Hidden );
-    _encounter.update( 1.0f );
+    _encounter.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Visible );
     SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Appeared ) );
-    _encounter.update( 1.0f );
+    _encounter.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Attacking );
-    _encounter.update( 1.0f );
+    _encounter.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Hidden );
     SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::AttackLanded ) );
     SW_EXPECT_NEAR( 8.0f, _listEvent.back()._amount, kGhostTolerance );
@@ -480,9 +480,9 @@ SW_TEST_CASE_F( GhostHuntTest, BeamStunsOnlyAttackers )
     const float3 forward{ 0.0f, 0.0f, 1.0f };
     const uint32 hiddenID = _encounter.spawnGhost( "goob", float3{ 0.0f, 0.0f, 2.0f } );
     SW_EXPECT_EQUAL( 0, _encounter.shineBeam( float3{}, forward ) );
-    _encounter.update( 1.0f );
+    _encounter.update( GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( 0, _encounter.shineBeam( float3{}, forward ) ); // 나타났을 뿐이다
-    _encounter.update( 1.0f );
+    _encounter.update( GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( 0, _encounter.shineBeam( float3{}, float3{ 0.0f, 0.0f, -1.0f } ) ); // 뒤를 비췄다
     SW_EXPECT_EQUAL( 1, _encounter.shineBeam( float3{}, forward ) );
     SW_EXPECT_TRUE( _encounter.findGhost( hiddenID )->_state == GhostState::Stunned );
@@ -520,9 +520,9 @@ SW_TEST_CASE_F( GhostHuntTest, StunWearsOff )
 {
     const uint32 ghostID = spawnAttacking( "goob" );
     SW_EXPECT_EQUAL( 1, _encounter.shineBeam( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) );
-    _encounter.update( 2.0f );
+    _encounter.update( GameSeconds{ 2.0f } );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Stunned );
-    _encounter.update( 1.0f );
+    _encounter.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Visible );
 }
 
@@ -549,7 +549,7 @@ SW_TEST_CASE_F( GhostHuntTest, SuctionTugOfWar )
 {
     const uint32 ghostID = startSucking();
 
-    const GhostSuctionResult aligned = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.25f );
+    const GhostSuctionResult aligned = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 0.25f } );
     SW_EXPECT_EQUAL( SW_TRUE, aligned._bAligned );
     SW_EXPECT_NEAR( 1.0f, aligned._alignment, kGhostTolerance );
     SW_EXPECT_NEAR( 5.0f, aligned._damage, kGhostTolerance );   // 10 x 0.25 x 2
@@ -557,13 +557,13 @@ SW_TEST_CASE_F( GhostHuntTest, SuctionTugOfWar )
     SW_EXPECT_NEAR( 0.25f, _encounter.getSurgeGauge(), kGhostTolerance );
     SW_EXPECT_NEAR( 35.0f, _encounter.findGhost( ghostID )->_hp, kGhostTolerance );
 
-    const GhostSuctionResult against = _encounter.updateSuction( float3{ 0.0f, 0.0f, 1.0f }, 0.25f );
+    const GhostSuctionResult against = _encounter.updateSuction( float3{ 0.0f, 0.0f, 1.0f }, GameSeconds{ 0.25f } );
     SW_EXPECT_EQUAL( SW_FALSE, against._bAligned );
     SW_EXPECT_NEAR( 2.5f, against._damage, kGhostTolerance );
     SW_EXPECT_NEAR( 0.5f, against._drag._z, kGhostTolerance );
     SW_EXPECT_NEAR( 0.25f, _encounter.getSurgeGauge(), kGhostTolerance );
 
-    const GhostSuctionResult idle = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.0f );
+    const GhostSuctionResult idle = _encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 0.0f } );
     SW_EXPECT_NEAR( 0.0f, idle._damage, kGhostTolerance ); // 0 시간은 아무 일도 없다
 }
 
@@ -574,7 +574,7 @@ SW_TEST_CASE_F( GhostHuntTest, SurgeNeedsFullGaugeAndCatches )
 {
     const uint32 ghostID = startSucking();
     SW_EXPECT_FALSE( _encounter.triggerSurge() );
-    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 1.0f ); // 10 x 1 x 2 = 20, 게이지가 찬다
+    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 1.0f } ); // 10 x 1 x 2 = 20, 게이지가 찬다
     SW_EXPECT_NEAR( 1.0f, _encounter.getSurgeGauge(), kGhostTolerance );
     SW_EXPECT_TRUE( _encounter.triggerSurge() );
 
@@ -588,7 +588,7 @@ SW_TEST_CASE_F( GhostHuntTest, SurgeNeedsFullGaugeAndCatches )
     SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Caught ) );
     SW_EXPECT_EQUAL( 10, _listEvent.back()._coins );
 
-    _encounter.update( 99.0f ); // 잡힌 유령은 깨어나지 않는다
+    _encounter.update( GameSeconds{ 99.0f } ); // 잡힌 유령은 깨어나지 않는다
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Caught );
 }
 
@@ -598,7 +598,7 @@ SW_TEST_CASE_F( GhostHuntTest, SurgeNeedsFullGaugeAndCatches )
 SW_TEST_CASE_F( GhostHuntTest, StopSuctionLetsGhostEscape )
 {
     const uint32 ghostID = startSucking();
-    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.5f );
+    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 0.5f } );
     _encounter.stopSuction();
     const GhostInstance* pGhost = _encounter.findGhost( ghostID );
     SW_EXPECT_TRUE( pGhost->_state == GhostState::Hidden );
@@ -634,13 +634,13 @@ SW_TEST_CASE_F( GhostHuntTest, SameSeedSameFight )
     for ( GhostEncounter* pEncounter : { &_encounter, &other } )
     {
         const uint32 ghostID = pEncounter->spawnGhost( "goob", float3{ 0.0f, 0.0f, 2.0f } );
-        pEncounter->update( 2.0f );
-        pEncounter->update( 2.0f );
+        pEncounter->update( GameSeconds{ 2.0f } );
+        pEncounter->update( GameSeconds{ 2.0f } );
         (void)pEncounter->shineBeam( float3{}, float3{ 0.0f, 0.0f, 1.0f } );
         SW_REQUIRE_TRUE( pEncounter->startSuction( ghostID, float3{} ) );
         for ( int32 tick = 0; tick < 5; ++tick )
         {
-            (void)pEncounter->updateSuction( float3{ 1.0f, 0.0f, 0.0f }, 0.5f ); // 간격마다 도망 방향을 다시 고른다
+            (void)pEncounter->updateSuction( float3{ 1.0f, 0.0f, 0.0f }, GameSeconds{ 0.5f } ); // 간격마다 도망 방향을 다시 고른다
         }
     }
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( _encounter, other ) );
@@ -652,7 +652,7 @@ SW_TEST_CASE_F( GhostHuntTest, SameSeedSameFight )
 SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
 {
     const uint32 ghostID = startSucking();
-    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 0.25f );
+    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 0.25f } );
     _encounter.chargeStrobe( 0.25f );
     _encounter.setVacuumStage( 1 );
 
@@ -667,8 +667,8 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
     SW_EXPECT_TRUE( listEvent.empty() );
 
     // 복원한 쪽도 같은 싸움을 잇는다.
-    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 1.0f );
-    (void)restored.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, 1.0f );
+    (void)_encounter.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 1.0f } );
+    (void)restored.updateSuction( float3{ 0.0f, 0.0f, -1.0f }, GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( _encounter, restored ) );
 
     GhostEncounter noCatalog;
@@ -809,7 +809,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, ClearingRoomLightsItAndGivesKey )
 {
     SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) == 1 );
     catchRoomGhosts();
-    _mansion.update( 0.01f );
+    _mansion.update( GameSeconds{ 0.01f } );
 
     SW_EXPECT_TRUE( _mansion.isRoomLit( "foyer" ) );
     SW_EXPECT_TRUE( _flags.hasFlag( "lit.foyer" ) );
@@ -854,14 +854,14 @@ SW_TEST_CASE_F( GhostHuntRulesTest, SavingRightAfterCatchKeepsTheCatch )
     GhostMansion restored;
     SW_REQUIRE_TRUE( open( restored, 77u ) );
     SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( _mansion, restored ) );
-    restored.update( 0.01f );
+    restored.update( GameSeconds{ 0.01f } );
     SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
     SW_EXPECT_TRUE( restored.isRoomLit( "foyer" ) );
 
     GhostMansion again;
     SW_REQUIRE_TRUE( open( again, 77u ) );
     SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( restored, again ) );
-    again.update( 0.01f );
+    again.update( GameSeconds{ 0.01f } );
     SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
 }
 
@@ -871,14 +871,14 @@ SW_TEST_CASE_F( GhostHuntRulesTest, SavingRightAfterCatchKeepsTheCatch )
 SW_TEST_CASE_F( GhostHuntRulesTest, PartialCatchKeepsRoomDark )
 {
     SW_REQUIRE_TRUE( _mansion.enterRoom( "parlor" ) == 2 );
-    _mansion.update( 1.0f );
-    _mansion.update( 1.0f );
+    _mansion.update( GameSeconds{ 1.0f } );
+    _mansion.update( GameSeconds{ 1.0f } );
     GhostEncounter& encounter = _mansion.getEncounter();
     (void)encounter.shineBeam( float3{ 0.0f, 0.0f, -1.0f }, float3{ 0.0f, 0.0f, 1.0f } );
     const uint32 firstID = encounter.getGhosts().front()._id;
     SW_REQUIRE_TRUE( encounter.startSuction( firstID, float3{} ) );
-    (void)encounter.updateSuction( float3{}, 5.0f );
-    _mansion.update( 0.01f );
+    (void)encounter.updateSuction( float3{}, GameSeconds{ 5.0f } );
+    _mansion.update( GameSeconds{ 0.01f } );
     SW_EXPECT_FALSE( _mansion.isRoomLit( "parlor" ) );
     SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
 }
@@ -891,7 +891,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
     SW_REQUIRE_TRUE( _bag.initialize( _items, 0 ) );
     SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) == 1 );
     catchRoomGhosts();
-    _mansion.update( 0.01f );
+    _mansion.update( GameSeconds{ 0.01f } );
     SW_EXPECT_TRUE( _mansion.isRoomLit( "foyer" ) );
     SW_EXPECT_EQUAL( 0, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 0, _bag.getItemCount( "parlorKey" ) );
@@ -989,9 +989,9 @@ SW_TEST_CASE_F( GhostHuntRulesTest, BooCatchRules )
 SW_TEST_CASE_F( GhostHuntRulesTest, BooEscapesToNeighbourRoom )
 {
     SW_EXPECT_EQUAL( 0, _mansion.enterRoom( "hall" ) );
-    _mansion.update( 4.0f );
+    _mansion.update( GameSeconds{ 4.0f } );
     SW_EXPECT_TRUE( _mansion.findBoo( "booB" )->_state == HidingGhostState::Revealed );
-    _mansion.update( 1.0f );
+    _mansion.update( GameSeconds{ 1.0f } );
 
     const HidingGhostRuntime* pBoo = _mansion.findBoo( "booB" );
     SW_EXPECT_TRUE( pBoo->_state == HidingGhostState::Hiding );
@@ -1013,7 +1013,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionStateRoundTrip )
     ItemStackList loot;
     SW_REQUIRE_TRUE( _mansion.searchFurniture( "curtain", GhostSearchMode::Vacuum, loot ) == GhostSearchResult::Found );
     SW_REQUIRE_TRUE( _mansion.searchFurniture( "dresser", GhostSearchMode::Shake, loot ) == GhostSearchResult::BooFound );
-    _mansion.update( 1.0f );
+    _mansion.update( GameSeconds{ 1.0f } );
 
     GhostMansion restored;
     SW_REQUIRE_TRUE( open( restored, 77u ) );
@@ -1026,8 +1026,8 @@ SW_TEST_CASE_F( GhostHuntRulesTest, MansionStateRoundTrip )
     restored.pollEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 
-    _mansion.update( 9.0f );
-    restored.update( 9.0f );
+    _mansion.update( GameSeconds{ 9.0f } );
+    restored.update( GameSeconds{ 9.0f } );
     SW_EXPECT_TRUE( StateBytesTestUtil::hasSameState( _mansion, restored ) );
 }
 
@@ -1089,7 +1089,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterDeterminism )
         constexpr float32 kDeltaTime = 0.1f;
         const float3      eye{};
         const float3      forward{ 0.0f, 0.0f, 1.0f };
-        encounter.update( kDeltaTime );
+        encounter.update( GameSeconds{ kDeltaTime } );
         if ( stepIndex % 5 == 0 )
             (void)encounter.shineBeam( eye, forward );
         if ( stepIndex % 20 < 10 )
@@ -1108,7 +1108,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterDeterminism )
             return;
         }
         const float3 pull = ( stepIndex / 7 ) % 2 == 0 ? float3{ 0.0f, 0.0f, -1.0f } : float3{ 1.0f, 0.0f, 0.0f };
-        (void)encounter.updateSuction( pull, kDeltaTime );
+        (void)encounter.updateSuction( pull, GameSeconds{ kDeltaTime } );
         if ( stepIndex % 15 == 14 )
             (void)encounter.triggerSurge();
         if ( stepIndex % 40 == 39 )

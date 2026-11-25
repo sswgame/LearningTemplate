@@ -364,7 +364,7 @@ namespace sw
         void           endDrift( bool bReward );
         void           updateVertical( const KinematicVehicleInput& input, float32 deltaTime );
         void           updateHover( float32 deltaTime );
-        void           updateRail( const KinematicVehicleInput& input, float32 deltaTime );
+        void           updateRail( const KinematicVehicleInput& input, StepSeconds step );
         void           pushEvent( KinematicVehicleEvent::Kind kind, int32 value );
 
     private:

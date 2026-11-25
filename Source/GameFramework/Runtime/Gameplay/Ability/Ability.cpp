@@ -251,8 +251,9 @@ namespace sw
         _bEnding = SW_FALSE;
     }
 
-    void Ability::updateAbility( float32 deltaTime )
+    void Ability::updateAbility( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( isActive() == false )
             return;
 
@@ -264,7 +265,7 @@ namespace sw
         {
             AbilityTask* pTask = _listTask[taskIndex].get();
             if ( pTask != nullptr && pTask->isFinished() == false )
-                pTask->onTick( deltaTime );
+                pTask->onTick( frameTime );
             if ( isActive() == false || serial != _activationSerial )
                 break;
         }
