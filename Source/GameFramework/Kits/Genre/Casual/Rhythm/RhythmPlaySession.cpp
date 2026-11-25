@@ -18,20 +18,6 @@ namespace sw
     {
         struct RhythmPlaySessionInternal
         {
-            struct DefaultRank
-            {
-                const utf8* _pRank;
-                float32     _minAccuracy;
-            };
-
-            static constexpr DefaultRank kArrDefaultRank[] = {
-                {"S", 95.0f},
-                {"A", 90.0f},
-                {"B", 80.0f},
-                {"C", 70.0f},
-                {"D",  0.0f},
-            };
-
             /** @brief 다음에 처리할 지난 일의 종류입니다. */
             enum class DueKind : uint8
             {
@@ -74,6 +60,12 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "RhythmPlaySession.RhythmPlaySessionRefusedSettingsMaxLife", "RhythmPlaySession: refused settings - maxLife %# (1 or more), initialLife %# (0..maxLife), comboBonusCap %# (0 or more)", settings._maxLife,
                              settings._initialLife, settings._comboBonusCap );
+            return false;
+        }
+        // 등급 표는 데이터다 — 없으면 결과 화면이 늘 실패 등급을 낸다.
+        if ( settings._listRankThreshold.empty() )
+        {
+            SW_LOG_ERROR_ID( "RhythmPlaySession.NoRankThresholds", "RhythmPlaySession: refused - no rank thresholds (the director's _listRank)" );
             return false;
         }
         // 창이 없으면 어떤 누름도 노트에 닿지 않는다 — 오토플레이는 같은 노트를 끝없이 누르고 롱노트 끝은 줄 등급이 없다.
@@ -308,18 +300,6 @@ namespace sw
         const float32 accuracy = computeAccuracy();
         hashed_string rank     = _settings._failedRank;
         float32       bestMin  = -1.0f;
-        if ( _settings._listRankThreshold.empty() )
-        {
-            for ( const RhythmPlaySessionInternal::DefaultRank& entry : RhythmPlaySessionInternal::kArrDefaultRank )
-            {
-                if ( entry._minAccuracy <= accuracy && entry._minAccuracy > bestMin )
-                {
-                    bestMin = entry._minAccuracy;
-                    rank    = hashed_string( entry._pRank );
-                }
-            }
-            return rank;
-        }
         for ( const RhythmRankThreshold& threshold : _settings._listRankThreshold )
         {
             if ( threshold._minAccuracy <= accuracy && threshold._minAccuracy > bestMin )

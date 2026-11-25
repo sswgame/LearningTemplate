@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -21,6 +22,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
@@ -49,9 +51,6 @@ namespace sw::editor
             static constexpr float32 kCustomizationReserve = 150.0f; ///< 꾸미기 머리글이 펼쳐졌을 때 뷰포트 아래에 남기는 높이(머리글 + 슬라이더 몇 줄, 96 DPI 픽셀)
             static constexpr float32 kUVDragSpeed          = 0.002f; ///< 체액 경로 점을 끄는 빠르기(UV)
             static constexpr uint32  kMaxWrinkleMask       = 7;      ///< 주름 마스크 채널의 끝 번호(0..7)
-            static constexpr float32 kMaxGravityScale      = 2.0f;   ///< 지글 중력 배율 슬라이더 끝
-            static constexpr float32 kMaxSwingDegrees      = 90.0f;  ///< 지글 흔들림 각 슬라이더 끝(도)
-            static constexpr float32 kMaxImpulseScale      = 4.0f;   ///< 지글 충격 배율 슬라이더 끝
             static constexpr float32 kMaxWrinkleWeight     = 2.0f;   ///< 주름 세기 · 표정 무게 슬라이더 끝
             static constexpr float32 kMaxFluidValue        = 10.0f;  ///< 체액 흐름 값(초당 줄기 · 빠르기 · 반지름) 끌기 끝
             static constexpr float32 kFillWidth            = -1.0f;  ///< ImGui 다음 칸 폭 "남은 폭 모두"
@@ -887,25 +886,30 @@ namespace sw::editor
             const RigJiggleGroupParams& params = row._params;
             ImGui::PushID( params._group.c_str() );
             ImGui::TextUnformatted( params._group.c_str() );
+            // 슬라이더의 끝은 데이터 칸의 리플렉션 범위(`RigJiggleGroupParams` 의 `Max`)다 — 파일을 읽는 쪽이 같은 범위로 거절하므로 에디터가 따로 정하지 않는다.
             struct JiggleField
             {
                 const utf8* _pAttribute;
+                const utf8* _pProperty;
                 float32     _value;
-                float32     _max;
             };
             const JiggleField arrField[] = {
-                {      "stiffness",          params._stiffness,                       1.0f},
-                {        "damping",            params._damping,                       1.0f},
-                {   "gravityScale",       params._gravityScale, Internal::kMaxGravityScale},
-                {"maxSwingDegrees", params._maxSwing.degrees(), Internal::kMaxSwingDegrees},
-                {   "impulseScale",       params._impulseScale, Internal::kMaxImpulseScale}
+                {      "stiffness",    "_stiffness",          params._stiffness},
+                {        "damping",      "_damping",            params._damping},
+                {   "gravityScale", "_gravityScale",       params._gravityScale},
+                {"maxSwingDegrees",     "_maxSwing", params._maxSwing.degrees()},
+                {   "impulseScale", "_impulseScale",       params._impulseScale}
             };
             for ( const JiggleField& field : arrField )
             {
+                const PropertyInfo* const pProperty = RigJiggleGroupParams::StaticType()->findPropertyInHierarchy( hashed_string( field._pProperty ) );
+                SW_ASSERT( pProperty != nullptr );
+                const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( *pProperty, ObjectAddress{ &params } );
+                SW_ASSERT( range._bHasClampMax ); // 지글 칸은 모두 위 끝을 적는다
                 float32 value = field._value;
                 ImGui::PushID( field._pAttribute );
                 EditorWidgets::drawPropertyRowLabel( field._pAttribute ); // 이름은 데이터 칸 이름이다(파일과 같은 철자)
-                const bool bChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &value, 0.0f, field._max );
+                const bool bChanged = EditorWidgets::sliderFloat( SW_WIDGET_ID( "##value" ), &value, 0.0f, static_cast<float32>( range._clampMax ) );
                 ImGui::PopID();
                 if ( bChanged )
                     (void)BodyCustomizationViewModel::setJiggleValue( profiles, state._bodyProfile, params._group, field._pAttribute, value, true );

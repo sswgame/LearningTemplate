@@ -27,7 +27,8 @@
     "_audio": {
         "_reopenFirstDelayMs": 1000,
         "_reopenMaxDelayMs": 30000,
-        "_clipCacheMegabytes": 192
+        "_clipCacheMegabytes": 192,
+        "_musicCrossfadeSeconds": 0.25
     },
     "_subtitles": {
         "_maxVisibleLineCount": 2,

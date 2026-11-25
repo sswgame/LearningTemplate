@@ -142,18 +142,22 @@ namespace sw
             SW_LOG_ERROR_ID( "TrampolineArena.TrampolineArenaRefusedRoundTimeScoreLimit", "TrampolineArena: refused roundTime %# or scoreLimit %# (0 means no limit, negative is not a limit)", roundTime, scoreLimit );
             return false;
         }
-        _settings = settings;
-        if ( _judge.getWindows().empty() )
+        // 넓은 창이 좁은 창보다 좁으면 Good 이 나올 자리가 없다 — 맞추지 않고 거절한다.
+        if ( settings._goodWindow < settings._perfectWindow )
         {
-            vector<TimingWindow> listWindow( 2 );
-            listWindow[0]._grade      = hashed_string( "Perfect" );
-            listWindow[0]._earlyWidth = 0.05f;
-            listWindow[0]._lateWidth  = 0.05f;
-            listWindow[1]._grade      = hashed_string( "Good" );
-            listWindow[1]._earlyWidth = 0.1f;
-            listWindow[1]._lateWidth  = 0.1f;
-            _judge.setWindows( listWindow );
+            SW_LOG_ERROR_ID( "TrampolineArena.TrampolineArenaRefusedWindows", "TrampolineArena: refused - goodWindow %# is narrower than perfectWindow %#", settings._goodWindow, settings._perfectWindow );
+            return false;
         }
+        _settings = settings;
+        // 튕김 판정 창은 설정(디렉터의 PROPERTY)이 정한다 — 좁은 것부터.
+        vector<TimingWindow> listWindow( 2 );
+        listWindow[0]._grade      = hashed_string( "Perfect" );
+        listWindow[0]._earlyWidth = settings._perfectWindow;
+        listWindow[0]._lateWidth  = settings._perfectWindow;
+        listWindow[1]._grade      = hashed_string( "Good" );
+        listWindow[1]._earlyWidth = settings._goodWindow;
+        listWindow[1]._lateWidth  = settings._goodWindow;
+        _judge.setWindows( listWindow );
 
         MatchSettings match;
         match._timeLimit    = roundTime;

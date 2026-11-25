@@ -6,16 +6,19 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchBackfillSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Tests/MatchmakingTestPolicy.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 using namespace sw;
 
@@ -141,6 +144,7 @@ namespace
             dependencies._pRouter              = &_router;
             dependencies._seatReservationTTLMs = 30000;
             dependencies._cancelConfirmWaitMs  = 3000;
+            dependencies._policy               = test::MatchmakingTestPolicy::makeQueue();
             dependencies._pBus                 = _bus.get();
             dependencies._serverID             = _serverID;
             return dependencies;
@@ -388,10 +392,10 @@ SW_TEST_CASE( MatchQueueServiceTest, UnplacedMatchWaitsThenGivesUp )
     SW_EXPECT_TRUE( world._server.takeNotifications().empty() );
     SW_EXPECT_EQUAL( 2, world._server._queue.getLocalTicketCount() );
 
-    world._server.update( kNowMs + MatchQueueLimit::kNoServerGiveUpMs - 1 );
+    world._server.update( kNowMs + test::MatchmakingTestPolicy::makeQueue()._noServerGiveUpMs - 1 );
     SW_EXPECT_TRUE( world._server.takeNotifications().empty() );
 
-    world._server.update( kNowMs + MatchQueueLimit::kNoServerGiveUpMs );
+    world._server.update( kNowMs + test::MatchmakingTestPolicy::makeQueue()._noServerGiveUpMs );
     const vector<MatchQueueNotification> listGaveUp = world._server.takeNotifications();
     SW_REQUIRE_EQUAL( size_t( 2 ), listGaveUp.size() );
     SW_EXPECT_TRUE( listGaveUp[0]._assignment._result == MatchQueueResult::NoServer );
@@ -556,8 +560,8 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
     world._serverA.poll( kNowMs );
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
-    world._clock.advanceMilliseconds( MatchQueueLimit::kLeaseTTLMs + 1 );
-    const int64 takeoverMs = kNowMs + MatchQueueLimit::kLeaseTTLMs + 1;
+    world._clock.advanceMilliseconds( test::MatchmakingTestPolicy::makeQueue()._leaseTTLMs + 1 );
+    const int64 takeoverMs = kNowMs + test::MatchmakingTestPolicy::makeQueue()._leaseTTLMs + 1;
     world._serverB.update( takeoverMs ); // A 는 돌지 않는다
     SW_EXPECT_TRUE( world._serverB._queue.isAuthority( "duel" ) );
 
@@ -566,7 +570,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
     SW_EXPECT_EQUAL( 0, world._serverA._queue.getQueuedTicketCount( "duel" ) );
 
     SW_EXPECT_TRUE( world._serverB.takeNotifications().empty() );
-    const int64 deadlineMs = kNowMs + kMaxWait + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
+    const int64 deadlineMs = kNowMs + kMaxWait + test::MatchmakingTestPolicy::makeQueue()._noServerGiveUpMs + test::MatchmakingTestPolicy::makeQueue()._resultGraceMs;
     world._serverB.update( deadlineMs );
     SW_EXPECT_TRUE( world._serverB.takeNotifications().empty() ); // 시한과 같은 시각은 아직 안 끝났다
     world._serverB.update( deadlineMs + 1 );
@@ -581,7 +585,7 @@ SW_TEST_CASE( MatchQueueServiceTest, GameServerAcceptsFromMatchRecordWithoutBus 
     SoloWorld world; // 버스가 없다 — 배정 버스 메시지가 하나도 닿지 않는 경우(잃은 것과 같다)
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
@@ -598,7 +602,7 @@ SW_TEST_CASE( MatchQueueServiceTest, GameServerAcceptsFromMatchRecordWithoutBus 
     SW_EXPECT_TRUE( agent.isAccepted( kBob ) );
     SW_EXPECT_FALSE( agent.isAccepted( kCarol ) );
 
-    const int64 reconnectMs = kNowMs + 1 + MatchServerAgent::kExpectTTLMs + 1; // 버스 명단이었으면 지워졌을 시각이다
+    const int64 reconnectMs = kNowMs + 1 + test::MatchmakingTestPolicy::makeAgent()._expectTTLMs + 1; // 버스 명단이었으면 지워졌을 시각이다
     agent.update( UnixMilliseconds{ reconnectMs } );
     world._server.poll( reconnectMs );
     SW_EXPECT_TRUE( agent.isAccepted( kAlice ) );
@@ -653,7 +657,7 @@ SW_TEST_CASE( MatchQueueServiceTest, MatchRecordWriteFailureEndsAsNoServer )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
     world._server._faultCache._bFailMatchRecord = SW_TRUE;
 
@@ -690,7 +694,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RefusedConnectReadsMatchListAtOnce )
     SoloWorld world; // 버스가 없다 — 배정 버스 메시지를 잃은 것과 같다
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
     agent.update( UnixMilliseconds{ kNowMs } ); // 첫 읽기 — 목록이 아직 없다. 다음 주기는 1 초 뒤이다
     world._server.poll( kNowMs );
@@ -724,7 +728,7 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillSenderFillsServerFromDescriptor )
     descriptor._portCount = 1;
     MatchServerAgent    agent; // 이 테스트는 자리를 꺼내지 않는다(빈 슬롯을 직접 적는다)
     MatchBackfillSender sender;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     sender.initialize( &world._serverB._queue, &agent, descriptor );
 
     MatchBackfillSlots slots;
@@ -798,7 +802,7 @@ SW_TEST_CASE( MatchQueueServiceTest, MatchesOfDifferentModesKeepTheirOwnRecords 
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel" ), MatchQueueTestUtil::makeMode( "arena" ) } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
 
     SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "duel" )._result == MatchmakingResult::Ok );
@@ -884,7 +888,7 @@ namespace
             : _world{}
             , _party{}
         {
-            SW_EXPECT_TRUE( _party.initialize( &_world._server._router, kServerA ) );
+            SW_EXPECT_TRUE( _party.initialize( &_world._server._router, kServerA, test::MatchmakingTestPolicy::makePartyLobby(), test::MatchmakingTestPolicy::kMaxPartySize ) );
             MatchQueueDependencies dependencies = _world._server.makeDependencies();
             dependencies._pPartyLobby           = &_party;
             SW_EXPECT_TRUE( _world._server._queue.initialize( dependencies, vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel", teamSize ) } ) );
@@ -1041,8 +1045,8 @@ namespace
             , _partyA{}
             , _partyB{}
         {
-            SW_EXPECT_TRUE( _partyA.initialize( &_pair._serverA._router, kServerA ) );
-            SW_EXPECT_TRUE( _partyB.initialize( &_pair._serverB._router, kServerB ) );
+            SW_EXPECT_TRUE( _partyA.initialize( &_pair._serverA._router, kServerA, test::MatchmakingTestPolicy::makePartyLobby(), test::MatchmakingTestPolicy::kMaxPartySize ) );
+            SW_EXPECT_TRUE( _partyB.initialize( &_pair._serverB._router, kServerB, test::MatchmakingTestPolicy::makePartyLobby(), test::MatchmakingTestPolicy::kMaxPartySize ) );
             const vector<MatchModeDef> listMode{ MatchQueueTestUtil::makeMode( "duel", 2 ) };
             MatchQueueDependencies     dependenciesA = _pair._serverA.makeDependencies();
             dependenciesA._pPartyLobby               = &_partyA;
@@ -1204,7 +1208,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     MatchQueueService& queue = world._server._queue;
 
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
-    world._server.update( kNowMs + MatchQueueLimit::kRatingWaitMs );
+    world._server.update( kNowMs + test::MatchmakingTestPolicy::makeQueue()._ratingWaitMs );
     SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::RatingUnavailable );
     SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
     SW_EXPECT_EQUAL( 0, stats._mapRetained[kAlice] );
@@ -1227,7 +1231,7 @@ SW_TEST_CASE( MatchQueueServiceTest, SeatTakenFromTheBusStaysTakenAfterTheRecord
     LocalServerBus gameBus( &world._hub, kGameID );
     gameBus.subscribe( MatchQueueService::makeAssignTopic( kGameID ) );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._serverA._router );
     ServerDescriptor descriptor;
     descriptor._serverID  = kGameID;
@@ -1259,7 +1263,7 @@ SW_TEST_CASE( MatchQueueServiceTest, OlderRosterDoesNotReplaceTheNewerSeat )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
 
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
@@ -1290,7 +1294,7 @@ SW_TEST_CASE( MatchQueueServiceTest, LeftPlayerSeatIsBackfilledOnce )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
     ServerDescriptor descriptor;
     descriptor._serverID  = kGameID;
@@ -1374,7 +1378,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AcceptedPlayersNeverExceedTheSeats )
     SoloWorld world;
     world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchServerAgent agent;
-    agent.initialize( kGameID, 100 );
+    agent.initialize( kGameID, 100, test::MatchmakingTestPolicy::makeAgent() );
     agent.startReading( &world._server._router );
     ServerDescriptor descriptor;
     descriptor._serverID  = kGameID;
@@ -1410,4 +1414,36 @@ SW_TEST_CASE( MatchQueueServiceTest, AcceptedPlayersNeverExceedTheSeats )
     SW_EXPECT_TRUE( sender.submitPlayerLeft( kDave, UnixMilliseconds{ kNowMs + 5 } ) == MatchmakingResult::NotQueued ); // 경기가 비었다
     SW_EXPECT_EQUAL( 0, agent.getExpectedCount() );
     agent.shutdown();
+}
+
+/** @brief [MatchQueueServiceTest] 통계 대기 시한은 설정이 정한다 — 시한을 1 초로 줄이면 1 초에 포기하고, 연장 주기가 임대 수명 이상인 설정으로는 서지 않는다 */
+SW_TEST_CASE( MatchQueueServiceTest, PolicyValuesComeFromSettings )
+{
+    {
+        SoloWorld              world;
+        FakeStatSource         stats;
+        MatchQueueDependencies dependencies = world._server.makeDependencies();
+        dependencies._pStatSource           = &stats;
+        dependencies._policy._ratingWaitMs  = 1000;
+        SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
+        world._server._queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+        world._server.update( kNowMs + 1000 );
+        SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::RatingUnavailable ); // 기본 테스트 값(3 초)이었다면 아직 기다려 완료가 없다
+    }
+    SW_EXPECT_LOG( "MatchQueueService.MatchQueueLeaseTimes" );
+    SoloWorld              world;
+    MatchQueueDependencies dependencies = world._server.makeDependencies();
+    dependencies._policy._leaseRenewMs  = dependencies._policy._leaseTTLMs;
+    SW_EXPECT_FALSE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel", 1 ) } ) );
+}
+
+/** @brief [MatchQueueServiceTest] 운영 값(`_partyLobby` · `_queue` · `_agent`)을 적지 않은 키트 설정은 읽지 못한다 — 코드 기본값으로 조용히 서지 않는다 */
+SW_TEST_CASE( MatchQueueServiceTest, KitConfigRequiresThePolicies )
+{
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    OnlineServerKitEntry entry;
+    entry._name     = "matchmaking";
+    entry._settings = R"({ "_maxPartySize": 4, "_reconnectGraceMs": 60000, "_cancelConfirmWaitMs": 3000 })";
+    MatchmakingKitConfig kitConfig;
+    SW_EXPECT_FALSE( entry.readSettings( kitConfig ) );
 }

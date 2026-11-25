@@ -112,8 +112,10 @@ namespace sw
         AssetRef<RhythmChart> _chart;
         PROPERTY( Category = "Song", DisplayName = "Clock", Tooltip = "Music follows the audio segment clock the client hands over; Simulation adds frame time" )
         RhythmClock _clock;
-        PROPERTY( Category = "Judge", DisplayName = "Windows", Tooltip = "Judgment windows, narrowest first" )
+        PROPERTY( Category = "Judge", DisplayName = "Windows", Required, Tooltip = "Judgment windows, narrowest first" )
         vector<RhythmJudgeWindow> _listWindow;
+        PROPERTY( Category = "Judge", DisplayName = "Ranks", Required, Tooltip = "Result ranks by accuracy (%) - the highest threshold the accuracy reaches wins" )
+        vector<RhythmRankThreshold> _listRank;
         PROPERTY( Category = "Judge", DisplayName = "Miss Life", Tooltip = "Life added by a miss (negative takes life)" )
         float32 _missLifeDelta;
         PROPERTY( Category = "Judge", DisplayName = "Max Life", Min = 1.0 )

@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/Tests/SocialTestPolicy.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
@@ -76,6 +77,7 @@ namespace
             dependencies._pStore     = &_store;
             dependencies._pRouter    = &_router;
             dependencies._pNameIndex = &_nameIndex;
+            dependencies._linkPolicy = test::SocialTestPolicy::makeLinks();
             if ( pHub != nullptr )
             {
                 _transport = make_unique<LocalServerBus>( pHub, serverID );

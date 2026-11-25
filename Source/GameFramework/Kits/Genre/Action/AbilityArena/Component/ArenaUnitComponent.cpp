@@ -23,9 +23,10 @@ namespace sw
         : _kind{ ArenaUnitKind::Grunt }
         , _facingMode{ PawnFacingMode::ControlYaw }
         , _unitRadius{ 0.5f }
+        , _listAbilityButton{}
         , _facing{ 0.0f, 0.0f, 1.0f }
         , _deathRemainRatio{ 1.0f }
-        , _arrButtonIndex{}
+        , _listButtonIndex{}
         , _previousButtonDown{ 0 }
         , _bButtonsResolved{ SW_FALSE }
         , _reserved{ 0 }
@@ -117,18 +118,19 @@ namespace sw
     {
         if ( _bButtonsResolved == SW_FALSE )
         {
-            for ( int32 buttonIndex = 0; buttonIndex < kAbilityButtonCount; ++buttonIndex )
+            _listButtonIndex.clear();
+            for ( const ArenaAbilityButton& button : _listAbilityButton )
             {
-                _arrButtonIndex[buttonIndex] = pawn.findButton( hashed_string( kArrAbilityButton[buttonIndex]._pName ) );
+                _listButtonIndex.push_back( pawn.findButton( button._button ) );
             }
             _bButtonsResolved = SW_TRUE;
         }
         // 발동은 누름, 지난 틱에 누르고 있던 버튼을 놓으면 뗌(차지 · 콤보 어빌리티가 뗌을 받는다). AI 의 한 번 누름은 다음 틱에 뗌이 된다.
         const ControlIntent& intent = pawn.getIntent();
-        for ( int32 buttonIndex = 0; buttonIndex < kAbilityButtonCount; ++buttonIndex )
+        for ( size_t buttonIndex = 0; buttonIndex < _listButtonIndex.size(); ++buttonIndex )
         {
-            const optional<int32> slot    = _arrButtonIndex[buttonIndex];
-            const int32           inputID = kArrAbilityButton[buttonIndex]._inputID;
+            const optional<int32> slot    = _listButtonIndex[buttonIndex];
+            const int32           inputID = _listAbilityButton[buttonIndex]._inputID;
             if ( ControlIntent::isInRange( slot ) == false )
                 continue;
             const bool bWasDown = ( _previousButtonDown & ( 1u << *slot ) ) != 0;

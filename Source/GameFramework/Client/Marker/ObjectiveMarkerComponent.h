@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/World/WidgetComponent.h"
@@ -47,6 +48,12 @@ namespace sw
     private:
         PROPERTY( Category = "Objective", DisplayName = "Label", Meta = "Localizable", Tooltip = "Objective name or localization key shown above the distance" )
         string _label;
-        int32  _shownMeters; ///< 마지막으로 쓴 거리(m). 같으면 글을 다시 쓰지 않는다
+        PROPERTY( Category = "Style", DisplayName = "Arrow Color", Meta = "Color", Tooltip = "Color of the arrow under the label" )
+        float4 _arrowColor;
+        PROPERTY( Category = "Style", DisplayName = "Arrow Size", Tooltip = "Width and length of the arrow in UI units", Min = 0.0 )
+        float2 _arrowSize;
+        PROPERTY( Category = "Style", DisplayName = "Font Size", Tooltip = "Font size of the label and the distance", Min = 1.0 )
+        float32 _fontSize;
+        int32   _shownMeters; ///< 마지막으로 쓴 거리(m). 같으면 글을 다시 쓰지 않는다
     };
 } // namespace sw

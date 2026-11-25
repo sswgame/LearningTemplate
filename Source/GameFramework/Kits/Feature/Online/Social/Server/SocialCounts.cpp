@@ -16,9 +16,9 @@ namespace sw
             }
 
             /** @brief 받은 신청을 받아 친구가 되는 결정입니다. 수락과 서로 신청이 해당하며 친구 상한을 확인합니다. */
-            static SocialLinkDecision makeFriends( const SocialCounts& selfCounts, const SocialCounts& otherCounts )
+            static SocialLinkDecision makeFriends( const SocialLinkPolicy& policy, const SocialCounts& selfCounts, const SocialCounts& otherCounts )
             {
-                if ( selfCounts._friendCount >= SocialLimit::kMaxFriend || otherCounts._friendCount >= SocialLimit::kMaxFriend )
+                if ( selfCounts._friendCount >= policy._maxFriend || otherCounts._friendCount >= policy._maxFriend )
                     return makeResult( SocialResult::FriendLimit );
                 SocialLinkDecision decision;
                 decision._bWrite                    = SW_TRUE;
@@ -52,7 +52,8 @@ namespace sw
                 }
             }
 
-            static SocialLinkDecision decideRequest( SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts, const SocialCounts& otherCounts )
+            static SocialLinkDecision decideRequest( const SocialLinkPolicy& policy, SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts,
+                                                     const SocialCounts& otherCounts )
             {
                 if ( selfState == SocialLinkState::Blocked )
                     return makeResult( SocialResult::YouBlocked );
@@ -63,8 +64,8 @@ namespace sw
                 if ( selfState == SocialLinkState::Outgoing )
                     return makeResult( SocialResult::AlreadyRequested );
                 if ( selfState == SocialLinkState::Incoming )
-                    return makeFriends( selfCounts, otherCounts ); // 서로 신청했으므로 바로 친구가 된다
-                const bool bPendingFull = selfCounts._outgoingCount >= SocialLimit::kMaxOutgoing || otherCounts._incomingCount >= SocialLimit::kMaxIncoming;
+                    return makeFriends( policy, selfCounts, otherCounts ); // 서로 신청했으므로 바로 친구가 된다
+                const bool bPendingFull = selfCounts._outgoingCount >= policy._maxOutgoing || otherCounts._incomingCount >= policy._maxIncoming;
                 if ( bPendingFull )
                     return makeResult( SocialResult::PendingLimit );
                 SocialLinkDecision decision;
@@ -90,11 +91,11 @@ namespace sw
                 return decision;
             }
 
-            static SocialLinkDecision decideBlock( SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts )
+            static SocialLinkDecision decideBlock( const SocialLinkPolicy& policy, SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts )
             {
                 if ( selfState == SocialLinkState::Blocked )
                     return makeResult( SocialResult::Ok );
-                if ( selfCounts._blockedCount >= SocialLimit::kMaxBlocked )
+                if ( selfCounts._blockedCount >= policy._maxBlocked )
                     return makeResult( SocialResult::BlockLimit );
                 SocialLinkDecision decision;
                 decision._bWrite                  = SW_TRUE;
@@ -123,21 +124,21 @@ namespace sw
 
 namespace sw
 {
-    SocialLinkDecision SocialCounts::decide( SocialLinkOperation operation, SocialLinkState selfState, SocialLinkState otherState, const SocialCounts& selfCounts,
-                                             const SocialCounts& otherCounts )
+    SocialLinkDecision SocialCounts::decide( const SocialLinkPolicy& policy, SocialLinkOperation operation, SocialLinkState selfState, SocialLinkState otherState,
+                                             const SocialCounts& selfCounts, const SocialCounts& otherCounts )
     {
         using Internal = SocialLinkRulesInternal;
         switch ( operation )
         {
             case SocialLinkOperation::Request:
-                return Internal::decideRequest( selfState, otherState, selfCounts, otherCounts );
+                return Internal::decideRequest( policy, selfState, otherState, selfCounts, otherCounts );
             case SocialLinkOperation::Accept:
-                return selfState == SocialLinkState::Incoming ? Internal::makeFriends( selfCounts, otherCounts ) : Internal::makeResult( SocialResult::NotFound );
+                return selfState == SocialLinkState::Incoming ? Internal::makeFriends( policy, selfCounts, otherCounts ) : Internal::makeResult( SocialResult::NotFound );
             case SocialLinkOperation::Decline:
             case SocialLinkOperation::Remove:
                 return Internal::decideRemove( operation, selfState );
             case SocialLinkOperation::Block:
-                return Internal::decideBlock( selfState, otherState, selfCounts );
+                return Internal::decideBlock( policy, selfState, otherState, selfCounts );
             case SocialLinkOperation::Unblock:
                 return Internal::decideUnblock( selfState, otherState );
         }

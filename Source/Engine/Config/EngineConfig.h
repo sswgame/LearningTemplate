@@ -118,6 +118,10 @@ namespace sw
          */
         PROPERTY( Min = 1, Meta = "Units=MB" )
         uint32 _clipCacheMegabytes{};
+
+        /** @brief 음악을 다른 곡으로 바꿀 때 앞 곡이 사라지고 새 곡이 들어오는 시간(초)입니다. 0 이면 바로 끊고 바꾼다. */
+        PROPERTY( Required, Min = 0.0, Max = 60.0, Units = s )
+        float32 _musicCrossfadeSeconds{};
     };
 
     /**

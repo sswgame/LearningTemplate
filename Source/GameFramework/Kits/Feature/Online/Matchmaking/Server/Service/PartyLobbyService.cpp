@@ -345,7 +345,7 @@ namespace sw
         shutdown();
     }
 
-    bool PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize )
+    bool PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverID, const PartyLobbyPolicy& policy, int32 maxPartySize )
     {
         // 실패하면 라우터 없는 서비스로 남긴다. 값을 범위 안으로 맞춰 돌지 않는다.
         _pRouter                = nullptr;
@@ -360,6 +360,7 @@ namespace sw
         _replyOwner   = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
         _serverID     = serverID;
         _maxPartySize = maxPartySize;
+        _policy       = policy;
         _sequence     = static_cast<uint32>( SecureRandom::nextUint64() ); // 순번은 난수에서 시작한다 — 0 에서 시작하면 재시작 뒤 캐시에 살아 있는 옛 기록(파티 30 분 · 로비 2 시간 · 티켓)과 id 가 겹친다(감사 O-7). 32 비트 순번이 한 바퀴 돌 때까지 겹치지 않는다
         _updater.initialize( pRouter );
         return true;
@@ -434,7 +435,7 @@ namespace sw
         request._actorID    = accountID;
         request._partyID    = allocateID();
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), MatchmakingProtocol::encodeID( request._partyID ), PartyLobbyLimit::kPartyTTLMs,
+        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), MatchmakingProtocol::encodeID( request._partyID ), _policy._partyTTLMs,
                                                EphemeralCondition::IfAbsent ),
                     StepKind::IndexReserve, request );
     }
@@ -610,12 +611,12 @@ namespace sw
 
     void PartyLobbyService::startPartyMutation( const Request& request )
     {
-        _updater.update( makePartyKey( request._partyID ), PartyLobbyLimit::kPartyTTLMs, make_unique<PartyMutation>( this, request ) );
+        _updater.update( makePartyKey( request._partyID ), _policy._partyTTLMs, make_unique<PartyMutation>( this, request ) );
     }
 
     void PartyLobbyService::startLobbyMutation( const Request& request )
     {
-        _updater.update( makeLobbyKey( request._lobbyID ), PartyLobbyLimit::kLobbyTTLMs, make_unique<LobbyMutation>( this, request ) );
+        _updater.update( makeLobbyKey( request._lobbyID ), _policy._lobbyTTLMs, make_unique<LobbyMutation>( this, request ) );
     }
 
     void PartyLobbyService::onStepReply( const EphemeralReply& reply )
@@ -656,7 +657,7 @@ namespace sw
                     break;
                 }
                 submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( step._request._actorID ), MatchmakingProtocol::encodeID( step._request._partyID ),
-                                                       PartyLobbyLimit::kPartyTTLMs, EphemeralCondition::IfAbsent ),
+                                                       _policy._partyTTLMs, EphemeralCondition::IfAbsent ),
                             StepKind::IndexReserve, step._request );
                 break;
             }
@@ -813,7 +814,7 @@ namespace sw
                 if ( result != MatchmakingResult::Ok )
                     break;
                 submitFireAndForget( EphemeralRequest::makeSet( makeInviteKey( request._targetID, request._partyID ), MatchmakingProtocol::encodeID( request._actorID ),
-                                                                PartyLobbyLimit::kInviteTTLMs ) );
+                                                                _policy._inviteTTLMs ) );
                 PartyLobbyNotification notification;
                 notification._recipientID       = request._targetID;
                 notification._pushKind          = MatchmakingMethod::PartyInvited::kKind;
@@ -899,7 +900,7 @@ namespace sw
                 }
             }
             if ( bErased == false ) // 목록도 살아 있는 로비만큼만 유지한다
-                submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeID ), PartyLobbyLimit::kLobbyTTLMs ) );
+                submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeID ), _policy._lobbyTTLMs ) );
         }
         if ( request._operation == PartyLobbyOperation::LobbyReopen )
             return; // 완료는 없다
@@ -919,7 +920,7 @@ namespace sw
     {
         for ( const AccountID memberID : party._listMemberID )
         {
-            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), PartyLobbyLimit::kPartyTTLMs ) ); // 파티 기록과 함께 연장한다
+            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), _policy._partyTTLMs ) ); // 파티 기록과 함께 연장한다
         }
     }
 
