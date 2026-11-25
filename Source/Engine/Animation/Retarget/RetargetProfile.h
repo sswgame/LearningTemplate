@@ -12,6 +12,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -21,6 +22,7 @@ namespace sw
 {
     struct ResourceContext;
 
+    class Skeleton;
     class XMLNode;
 
     /** @brief 루트와 골반 이동을 옮기는 방법입니다(파일에는 이름으로 적는다). */
@@ -103,16 +105,18 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Name = "source_skeleton" )
-        string _sourceSkeleton{};
-        PROPERTY( AssetPath, Name = "target_skeleton" )
-        string _targetSkeleton{};
+        PROPERTY( Name = "source_skeleton" )
+        AssetRef<Skeleton> _sourceSkeleton;
+        PROPERTY( Name = "target_skeleton" )
+        AssetRef<Skeleton> _targetSkeleton;
         PROPERTY( Name = "translation" )
-        RetargetTranslationMode _translation{ RetargetTranslationMode::ScaleByPelvisHeight };
+        RetargetTranslationMode _translation;
         PROPERTY( Name = "map_same_names" )
-        bool _bMapSameNames{ false };
+        bool _bMapSameNames;
         PROPERTY( Name = "height_ratio", Min = 0.0001, Units = ratio ) ///< 적지 않으면 0(골반 높이 비를 계산한다) — 적으면 양수여야 한다
-        float32 _heightRatio{ 0.0f };
+        float32 _heightRatio;
+
+        RetargetProfileRootParams(); // `Skeleton` 이 완전한 자리에서 짓는다(그 헤더가 이 헤더를 읽는다)
     };
 } // namespace sw
 
@@ -122,7 +126,7 @@ namespace sw
      * @class RetargetProfile
      * @brief 프로필 하나입니다. 형식은 XML 이며, 모르는 속성 · 자식이나 겹친 사슬 이름은 오류입니다(읽기는 후처리 리그와 같은 `RigXMLReader` 다 — 값은 속성, 목록은 `<item>`).
      * @code
-     * <RetargetProfile source_skeleton="game/.../knight.skeleton.xml" target_skeleton="game/.../skeleton_minion.skeleton.xml"
+     * <RetargetProfile source_skeleton="guid:…" target_skeleton="guid:…"
      *                  translation="ScaleByPelvisHeight" map_same_names="true" height_ratio="1.25">
      *   <root source="root" target="root" />
      *   <pelvis source="hips" target="hips" />

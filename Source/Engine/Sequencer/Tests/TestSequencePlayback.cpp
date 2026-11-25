@@ -268,7 +268,7 @@ SW_TEST_CASE( SequencePlaybackTest, AnimationSpanNeedsAnAnimator )
     SequenceTrackItem animation{};
     animation._kind    = SequenceItemKind::Animation;
     animation._binding = asset.addBinding( "Hero" );
-    animation._clip    = "game/none.animclip";
+    animation._clip    = "none";
     animation._start   = 2;
     animation._end     = 6;
     asset._listItem.push_back( animation );

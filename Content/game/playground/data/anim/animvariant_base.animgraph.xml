@@ -14,7 +14,7 @@
 		</node>
 	</nodes>
 	<bone_masks>
-		<bone_mask name="UpperBody" file="common/data/anim/masks/upper_body.bonemask.xml" />
+		<bone_mask name="UpperBody" file="guid:08c53d3e6095465f3d2b74842b9adf56" />
 	</bone_masks>
 	<layers>
 		<layer name="Upper" slot="Weapon" mask="UpperBody" weight="1" blend="Override" />

@@ -13,6 +13,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Animation/AnimationSet.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -46,12 +47,12 @@ namespace sw
         /** @brief 굽는 메시입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 경로 글 칸이었을 때는 다른 칸의 `AssetRef<MeshAssetFormat>` `mesh` 와 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
         PROPERTY( Name = "mesh", Required )
         AssetRef<MeshAssetFormat> _meshPath;
-        PROPERTY( AssetPath, Name = "skeleton", Required )
-        string _skeletonPath;
+        PROPERTY( Name = "skeleton", Required )
+        AssetRef<Skeleton> _skeletonPath;
         PROPERTY( Name = "animation_set", Required )
-        string                _animationSetPath;
-        AnimationSet          _animationSet; ///< 읽기가 채운다(칸이 아니다)
-        vector<hashed_string> _listClip;     ///< `<clips><item>` 자식(칸이 아니다)
+        AssetRef<AnimationSet> _animationSetPath;
+        AnimationSet           _animationSet; ///< 읽기가 채운다(칸이 아니다)
+        vector<hashed_string>  _listClip;     ///< `<clips><item>` 자식(칸이 아니다)
 
         /** @brief XML 을 읽습니다(가리키는 파일이 있는지도 봅니다). 틀리면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );

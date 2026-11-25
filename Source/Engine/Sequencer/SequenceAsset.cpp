@@ -340,6 +340,8 @@ namespace sw
     {
         if ( field == SequenceItemField::Prefab )
             return _spawnPrefab.path();
+        if ( field == SequenceItemField::Scenario )
+            return _scenario.path();
         const string* const pText = findStringField( field );
         return pText != nullptr ? *pText : string{};
     }
@@ -348,6 +350,8 @@ namespace sw
     {
         if ( field == SequenceItemField::Prefab )
             return _spawnPrefab.assign( text );
+        if ( field == SequenceItemField::Scenario )
+            return _scenario.assign( text );
         string* const pText = const_cast<string*>( findStringField( field ) ); // 칸 고르기는 const 쪽 한 곳이다(같은 switch 를 두 벌 두지 않는다)
         if ( pText == nullptr )
             return false;
@@ -361,8 +365,6 @@ namespace sw
         {
             case SequenceItemField::Preset:
                 return &_preset;
-            case SequenceItemField::Scenario:
-                return &_scenario;
             case SequenceItemField::Clip:
                 return &_clip;
             case SequenceItemField::Sound:
@@ -370,6 +372,7 @@ namespace sw
             case SequenceItemField::Text:
                 return &_text;
             case SequenceItemField::Prefab:
+            case SequenceItemField::Scenario:
             case SequenceItemField::Binding:
             case SequenceItemField::Count:
                 return nullptr;

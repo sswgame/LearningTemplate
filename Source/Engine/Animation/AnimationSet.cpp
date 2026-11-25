@@ -7,6 +7,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
@@ -42,6 +44,15 @@ namespace sw
         SW_DATA_INHERITANCE_SCHEMA( AnimationSet, &AnimationSetInternal::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
     } // namespace
 
+    AnimationSetClipParams::AnimationSetClipParams()
+        : _name{}
+        , _path{}
+        , _set{}
+        , _source{}
+        , _retarget{}
+    {
+    }
+
     const string* AnimationSet::findClipPath( const hashed_string& name ) const
     {
         const string lowered = StringUtil::toLower( name.c_str() );
@@ -74,9 +85,10 @@ namespace sw
         AssetXMLFormat::writeXMLVersion( root, kAssetType._formatVersion );
         for ( const AnimationSetEntry& entry : _listEntry )
         {
-            const XMLNode clip = root.appendChild( AnimationSetInternal::kClipName );
-            clip.appendAttribute( "name", string_view{ entry._name } );
-            clip.appendAttribute( "path", string_view{ entry._clipPath } );
+            AnimationSetClipParams params;
+            params._name = entry._name;
+            params._path = entry._clipPath;
+            XMLFields::writeProperties( root.appendChild( AnimationSetInternal::kClipName ), params );
         }
         return document.saveToString();
     }
@@ -174,7 +186,7 @@ namespace sw
             }
             if ( params._path.empty() == false )
             {
-                insertEntry( name, params._path );
+                insertEntry( name, params._path.path() );
                 continue;
             }
             AnimationSet other;
@@ -195,7 +207,7 @@ namespace sw
             insertEntry( name, makeRetargetedClipPath( params._retarget, *pClipPath ) );
             AnimationSetEntry& entry  = *std::find_if( _listEntry.begin(), _listEntry.end(), [&name]( const AnimationSetEntry& item )
              { return item._name == name; } );
-            entry._retargetProfile    = params._retarget;
+            entry._retargetProfile    = params._retarget.path();
             entry._retargetSourceClip = *pClipPath;
         }
         return true;
