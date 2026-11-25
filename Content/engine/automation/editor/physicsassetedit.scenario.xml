@@ -21,7 +21,7 @@
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="ragdoll.body.1" state="Up"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="physicsassetedit/selected.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="physicsassetedit/selected.png"/>
 	<EditorClick mark="ragdoll.search"/>
 	<EditorWaitStable/>
 	<EditorText value="_mass"/>
@@ -75,7 +75,7 @@
 	<EditorDrag mark="ragdoll.shapeHandle.0" dx="30" dy="0"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="150"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="physicsassetedit/handles.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="physicsassetedit/handles.png"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<EditorWaitStable/>

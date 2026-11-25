@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="e78fb033419866421e976b9e9f9db0e3"?>
+<!--
+  락스텝 2 인 대전(클라이언트, 1 번) — `py -3 -m Scripts lockstep-pair run` 이 RTS 매치 미니게임을 리슨 호스트(`lockstep_host`)와 이 클라이언트로 띄운다. 자동 플레이라 두 AI 가 양쪽에서 같은 규칙으로 돈다.
+  병력이 생기면 사람 명령(공격 이동)을 한 번 내고, 그 명령이 락스텝 입력으로 건너가 한 번 적용되며 600 걸음 넘게 비동기 없이 나아가는지 본다. 판 해시는 세션이 틱마다 맞춘다.
+-->
+<Scenario name="game.playground.netpair.lockstep_client" fixedDelta="0.0166667" realTime="true" timeoutFrames="120000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<WaitUntil watch="Skirmish.LockstepPlayer" equals="1" timeoutWallSeconds="90"/>
+	<!-- 병력은 AI 가 건물을 짓고 뽑아야 생긴다(판의 시간은 실제 시간과 같다) -->
+	<WaitUntil watch="Skirmish.LocalArmy" atLeast="1" timeoutWallSeconds="420"/>
+	<DevCommand line="skirmish.order 32 32"/>
+	<WaitUntil watch="Skirmish.LockstepClientCommands" equals="1" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Skirmish.LockstepTick" atLeast="600" timeoutWallSeconds="120"/>
+	<!-- 명령이 적용된 뒤의 판도 맞춘다(체크섬 간격보다 길게) -->
+	<AdvanceSimulation frames="600" render="true"/>
+	<Expect watch="Skirmish.LockstepDesynced" equals="0"/>
+	<Expect watch="Skirmish.LockstepClientCommands" equals="1"/>
+	<Pass/>
+</Scenario>

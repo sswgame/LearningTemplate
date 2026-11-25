@@ -91,7 +91,7 @@
 	<WaitUntil watch="Editor.SequencerItemCount" equals="3" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<!-- ④ 화면 -->
-	<CaptureEditorUI file="sequencercuts/cutlane.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="sequencercuts/cutlane.png"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

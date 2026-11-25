@@ -416,6 +416,13 @@ namespace sw
         return ( flags & kDerivedHasValidator ) != 0;
     }
 
+    bool TypeInfo::hasRequiredProperty() const
+    {
+        const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
+        SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return ( flags & kDerivedHasRequiredProperty ) != 0;
+    }
+
     void TypeInfo::computeDerivedFlags()
     {
         const TypeResolver resolver{ &engine::getSubsystem<TypeRegistry>(), []( const void* pContext, const hashed_string& name )
@@ -448,6 +455,7 @@ namespace sw
         // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열이나 컨테이너를 가진 타입도 통째 복사로 간다.
         bool   bPOD       = true;
         bool   bSaveGame  = false;
+        bool   bRequired  = false;
         uint64 layoutHash = 0;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
@@ -455,6 +463,8 @@ namespace sw
                 layoutHash = HashUtil::combine( layoutHash, TypeInfoInternal::computePropertyLayoutHash( prop ) );
             if ( prop._metadata->_bSaveGame == SW_TRUE )
                 bSaveGame = true;
+            if ( prop._metadata->_bRequired == SW_TRUE )
+                bRequired = true;
             if ( bPOD == false )
                 continue;
             // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 위치를 찾는 슬롯 번호가 복사돼 두 객체가 한 위치를 나눠 쓴다).
@@ -475,7 +485,7 @@ namespace sw
         }
         _derived._schemaLayoutHash.store( static_cast<uint32>( layoutHash ^ ( layoutHash >> 32 ) ), std::memory_order_relaxed ); // 아래 판정 비트의 release 가 함께 발행한다
         const bool   bValidator = ReflectionValidation::computeHasValidator( *this, resolver );
-        const uint32 flags      = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u );
+        const uint32 flags      = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u ) | ( bRequired ? kDerivedHasRequiredProperty : 0u );
         _derived._derivedFlags.store( static_cast<uint8>( flags ), std::memory_order_release ); // 한 번에 바꾼다 — 읽기는 옛 판정이나 새 판정 하나를 본다
     }
 

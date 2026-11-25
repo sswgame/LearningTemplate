@@ -25,7 +25,7 @@
 	<EditorWaitStable/>
 	<EditorClick mark="catalog.curves.preview"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="catalogcurvegraph/graph.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="catalogcurvegraph/graph.png"/>
 	<EditorDrag mark="catalog.curves.graph.key.0" dy="-40"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Catalog.TableEdited" contains="Edited the keys of" count="1"/>

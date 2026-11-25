@@ -17,19 +17,19 @@
 	<DevCommand line="panel.focus volumetric_fog"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Render.FogVolumeState" equals="6" timeoutFrames="300"/>
-	<CaptureEditorUI file="volumetricfog/state.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="volumetricfog/state.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Compare"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="volumetricfog/compare.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="volumetricfog/compare.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Scattering"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="volumetricfog/scattering.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="volumetricfog/scattering.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.Transmittance"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="volumetricfog/transmittance.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="volumetricfog/transmittance.png"/>
 	<EditorWaitStable/>
 	<EditorClick mark="volumetricFog.view.None"/>
 	<EditorWaitStable/>

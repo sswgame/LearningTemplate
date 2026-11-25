@@ -1,7 +1,7 @@
 /**
  * @file OnlinePeople.cpp
  * @brief 허브 사람들(친구 · 거래)의 개발 명령과 감시 값입니다. 규칙은 서버 키트(소셜 · 거래)가 정하고, 흐름(`PlaygroundOnlineFlow`)이 요청과 답을 잇습니다.
- * @details 시나리오: `game/playground/automation/online_people.scenario.xml`(거절 길), 두 계정의 친구 · 거래는 `py -3 -m Scripts online-local people`.
+ * @details 시나리오: `game/playground/automation/online_people.scenario.xml`(거절 길), 두 계정의 친구 · 거래는 `game/playground/automation/netpair/people_first.scenario.xml` · `people_second`(`py -3 -m Scripts online-local people`).
  */
 #include "pch.h"
 
@@ -9,6 +9,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
@@ -126,6 +127,64 @@ namespace sw
                 return readFlow( outValue, []( OnlineSession& /*session*/, PlaygroundOnlineFlow& flow )
                 { return flow.getTradeSettledCount(); } );
             }
+
+            [[nodiscard]] static bool readFriendPendingCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readFlow( outValue, []( OnlineSession& /*session*/, PlaygroundOnlineFlow& flow )
+                { return flow.getFriends().getPendingRequestCount(); } );
+            }
+
+            /** @brief 거래 한쪽이 내놓은 금화입니다. 거래가 없으면 값이 없습니다. */
+            [[nodiscard]] static bool readOfferedGold( bool bOwnSide, float64& outValue )
+            {
+                OnlineSession*        pSession = nullptr;
+                PlaygroundOnlineFlow* pFlow    = nullptr;
+                if ( findParts( pSession, pFlow ) == false )
+                    return false;
+                const TradeSnapshot&  snapshot  = pSession->get<TradeClient>().getSnapshot();
+                const optional<int32> sideIndex = snapshot.findSideIndex( pSession->get<AccountClient>().getIdentity()._accountID );
+                if ( sideIndex.has_value() == false )
+                    return false;
+                int64 gold = 0;
+                for ( const TradeLeg& leg : snapshot._arrSide[bOwnSide ? *sideIndex : 1 - *sideIndex]._listLeg )
+                {
+                    if ( leg._assetID == PlaygroundOnlineFlow::kAssetGold )
+                        gold += leg._amount;
+                }
+                outValue = static_cast<float64>( gold );
+                return true;
+            }
+
+            [[nodiscard]] static bool readOwnOffer( const GameObjectManager* /*pManager*/, float64& outValue ) { return readOfferedGold( true, outValue ); }
+            [[nodiscard]] static bool readPeerOffer( const GameObjectManager* /*pManager*/, float64& outValue ) { return readOfferedGold( false, outValue ); }
+
+            [[nodiscard]] static bool readTradeLockedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readFlow( outValue, []( OnlineSession& session, PlaygroundOnlineFlow& /*flow*/ )
+                {
+                    const TradeSnapshot& snapshot = session.get<TradeClient>().getSnapshot();
+                    return static_cast<int32>( snapshot._arrSide[0]._bLocked ) + static_cast<int32>( snapshot._arrSide[1]._bLocked );
+                } );
+            }
+
+            [[nodiscard]] static bool readTradeState( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
+            {
+                const OnlineSession* const pSession = game::findSubsystem<OnlineSession>();
+                if ( pSession == nullptr )
+                    return false;
+                const TradeSnapshot& snapshot = pSession->get<TradeClient>().getSnapshot();
+                outValue.setText( snapshot._tradeID != 0 ? getEnumName( snapshot._state ) : "none" );
+                return true;
+            }
+
+            [[nodiscard]] static bool readTradeRefusal( const AutomationWatchQuery& /*query*/, AutomationWatchValue& outValue )
+            {
+                const PlaygroundOnlineFlow* const pFlow = game::findSubsystem<PlaygroundOnlineFlow>();
+                if ( pFlow == nullptr )
+                    return false;
+                outValue.setText( getEnumName( pFlow->getLastTradeRefusal() ) );
+                return true;
+            }
         };
     } // namespace
 
@@ -135,6 +194,12 @@ namespace sw
                     &OnlinePeopleInternal::runTrade );
 
     SW_AUTOMATION_WATCH( playgroundFriendCount, "Playground.FriendCount", "Friends in the friend list model", &OnlinePeopleInternal::readFriendCount );
+    SW_AUTOMATION_WATCH( playgroundFriendPendingCount, "Playground.FriendPendingCount", "Incoming friend requests in the friend list model", &OnlinePeopleInternal::readFriendPendingCount );
+    SW_AUTOMATION_WATCH( playgroundTradeOwnOffer, "Playground.TradeOwnOffer", "Gold this player offers in the trade (no value without a trade)", &OnlinePeopleInternal::readOwnOffer );
+    SW_AUTOMATION_WATCH( playgroundTradePeerOffer, "Playground.TradePeerOffer", "Gold the other player offers in the trade (no value without a trade)", &OnlinePeopleInternal::readPeerOffer );
+    SW_AUTOMATION_WATCH( playgroundTradeLockedCount, "Playground.TradeLockedCount", "Sides of the trade that locked their offer (0 to 2)", &OnlinePeopleInternal::readTradeLockedCount );
+    SW_AUTOMATION_QUERY_WATCH( playgroundTradeState, "Playground.TradeState", "State of the last trade the server sent (none, Invited, Open, Settled, Failed, Cancelled)", &OnlinePeopleInternal::readTradeState, false, false );
+    SW_AUTOMATION_QUERY_WATCH( playgroundTradeRefusal, "Playground.TradeRefusal", "Business result of the last refused trade call (Ok before one)", &OnlinePeopleInternal::readTradeRefusal, false, false );
     SW_AUTOMATION_WATCH( playgroundPeopleRefusedCount, "Playground.PeopleRefusedCount", "Friend requests and trade calls the server refused", &OnlinePeopleInternal::readRefusedCount );
     SW_AUTOMATION_WATCH( playgroundTradeSettledCount, "Playground.TradeSettledCount", "Trades the server has settled for this player", &OnlinePeopleInternal::readTradeSettledCount );
 } // namespace sw

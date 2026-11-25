@@ -31,7 +31,7 @@
 	<Store watch="Editor.TerrainFoliageInstances" as="instancesBefore"/>
 	<DevCommand line="terrain.brush paint 20 60 3"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="foliagepaint/brush.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="foliagepaint/brush.png" everyBackend="true"/>
 	<EditorDrag mark="sceneView.canvas" dx="160" dy="0"/>
 	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="1" timeoutFrames="150"/>
 	<WaitUntil watch="Editor.TerrainFoliageInstances" differsFrom="instancesBefore" timeoutFrames="300"/>

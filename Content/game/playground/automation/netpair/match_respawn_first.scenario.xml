@@ -13,7 +13,7 @@
 	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
 	<DevCommand line="playground.online.login"/>
 	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
-	<DevCommand line="playground.online.joinhub 127.0.0.1:17977"/>
+	<DevCommand line="playground.online.joinhub {gv_gameServerAddress}"/>
 	<WaitUntil watch="Hub.AvatarID" atLeast="1" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.enter shooter3d_match"/>
 	<WaitUntil watch="Playground.MatchState" equals="4" timeoutWallSeconds="90"/>

@@ -33,7 +33,7 @@ namespace
  * @brief [DataLayersViewModelTest] 처음 상태 명령은 되돌리기 한 단계다 — 되돌리면 꺼지고 다시 하면 켜진다. 같은 값이면 기록이 늘지 않는다
  * @details 되돌리기 단계는 활성 씬을 찾으므로 에디터의 활성 씬에 시험 레이어를 잠시 선언하고 끝에 설정 · dirty 를 돌려 둔다. 메인 스택 대신 지역 스택을 범위에 건다.
  */
-SW_TEST_CASE( DataLayersViewModelTest, InitiallyActiveIsOneUndoStep )
+SW_TEST_CASE( DataLayersViewModelTest, InitiallyActiveIsOneUndoStep, ._tags = "editorApp" )
 {
     using Internal = DataLayersViewModelTestInternal;
 

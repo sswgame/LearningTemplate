@@ -345,6 +345,7 @@ namespace sw
         , _tradeSettledCount{ 0 }
         , _selfMailSentCount{ 0 }
         , _matchState{ PlaygroundMatchState::None }
+        , _lastTradeRefusal{ TradeResult::Ok }
         , _bHubTicket{ SW_FALSE }
         , _bReconnectHub{ SW_FALSE }
         , _bFriendsBound{ SW_FALSE }
@@ -848,6 +849,7 @@ namespace sw
             if ( reply._errorCode == OnlineError::kOk && reply._result == TradeResult::Ok )
                 continue;
             ++_peopleRefusedCount;
+            _lastTradeRefusal = reply._result;
             SW_LOG_INFO_ID( "Playground.TradeRefused", "[Playground] trade call refused (error %#, result %#)", reply._errorCode, static_cast<int32>( reply._result ) );
         }
         for ( const TradeClientUpdate& update : _listTradeUpdateScratch )

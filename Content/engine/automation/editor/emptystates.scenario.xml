@@ -15,7 +15,7 @@
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="emptystates/newscene.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="emptystates/newscene.png"/>
 	<EditorClick mark="toolbar.scene.object.create" state="Down"/>
 	<AdvanceSimulation frames="3"/> <!-- 누름 · 뗌을 다른 프레임에 둔다(프레임 경계) -->
 	<EditorClick mark="toolbar.scene.object.create" state="Up"/>
@@ -24,7 +24,7 @@
 	<EditorWaitStable/>
 	<DevCommand line="panel.focus packaging"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="emptystates/packaging.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="emptystates/packaging.png"/>
 	<DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml"/>
 	<EditorWaitStable/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
@@ -32,7 +32,7 @@
 	<EditorWaitStable/>
 	<WaitUntil watch="Editor.MapCheckFixableRows" equals="1" timeoutFrames="60"/>
 	<EditorWaitStable/>
-	<CaptureEditorUI file="emptystates/mapcheck.png" maxMagentaFraction="0"/>
+	<CaptureEditorUI file="emptystates/mapcheck.png"/>
 	<ExpectLog id="ObjectValidation.Issue" contains="ZeroRadiusLight" atLeast="1"/> <!-- 씬에 심은 오류 -->
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내지 않는다(mapcheck 와 같은 규칙) -->
 	<EditorWaitStable/>

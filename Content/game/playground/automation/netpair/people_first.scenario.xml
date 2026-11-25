@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?asset guid="5f505b3626a0b532edba6ec706e8954e"?>
+<!--
+  두 계정의 친구 · 거래(첫 사람) — `py -3 -m Scripts online-local people` 이 서버 하나와 클라이언트 둘(`people_second` 가 짝)로 돈다. 실행기가 로그인을 보고 서버 콘솔로 금화 우편 100 을 넣는다.
+  ① 친구 신청 → 상대가 받으면 목록이 하나다. ② 금화 우편을 받는다. ③ 가진 만큼(40)의 거래는 잠금 → 확정 → 정산. ④ 모자란 거래(100, 남은 것 60)는 서버가 잠글 때 거절하고, 물리면 두 쪽 모두 취소다.
+  상대를 기다리는 자리는 모두 감시 값이다(서버가 밀어 준 거래 · 친구 상태) — 명령 사이에 자지 않는다.
+-->
+<Scenario name="game.playground.netpair.people_first" fixedDelta="0.0166667" realTime="true" timeoutFrames="36000" startAfter="ScenePlaying" startTimeoutFrames="900">
+	<DevCommand line="online.connect"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.login 1"/>
+	<WaitUntil watch="Playground.OnlineLoggedIn" equals="1" timeoutWallSeconds="30"/>
+	<!-- ① -->
+	<DevCommand line="playground.online.friend list"/>
+	<WaitUntil watch="Log.Count" key="Playground.FriendList" atLeast="1" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.friend request playground_dev2"/>
+	<WaitUntil watch="Log.Count" key="Playground.FriendRequested" atLeast="1" timeoutWallSeconds="30"/>
+	<WaitUntil watch="Playground.FriendCount" equals="1" timeoutWallSeconds="90"/>
+	<!-- ② -->
+	<WaitUntil watch="Playground.OnlineMailCount" equals="1" timeoutWallSeconds="60"/>
+	<DevCommand line="playground.online.claimall"/>
+	<WaitUntil watch="Playground.OnlineGold" equals="100" timeoutWallSeconds="30"/>
+	<!-- ③ -->
+	<DevCommand line="playground.online.trade invite playground_dev2"/>
+	<WaitUntil watch="Playground.TradeState" is="Open" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade offer 40"/>
+	<WaitUntil watch="Playground.TradeOwnOffer" equals="40" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade lock"/>
+	<WaitUntil watch="Playground.TradeLockedCount" equals="2" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade confirm"/>
+	<WaitUntil watch="Playground.TradeSettledCount" equals="1" timeoutWallSeconds="30"/>
+	<Expect watch="Playground.PeopleRefusedCount" equals="0"/>
+	<!-- ④ -->
+	<DevCommand line="playground.online.trade invite playground_dev2"/>
+	<WaitUntil watch="Playground.TradeState" is="Open" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade offer 100"/>
+	<WaitUntil watch="Playground.TradeOwnOffer" equals="100" timeoutWallSeconds="30"/>
+	<DevCommand line="playground.online.trade lock"/>
+	<WaitUntil watch="Playground.PeopleRefusedCount" equals="1" timeoutWallSeconds="30"/>
+	<Expect watch="Playground.TradeRefusal" is="InsufficientFunds"/>
+	<DevCommand line="playground.online.trade cancel"/>
+	<WaitUntil watch="Playground.TradeState" is="Cancelled" timeoutWallSeconds="30"/>
+	<Expect watch="Playground.TradeSettledCount" equals="1"/>
+	<DevCommand line="online.disconnect"/>
+	<Pass/>
+</Scenario>

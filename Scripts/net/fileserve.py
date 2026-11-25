@@ -25,6 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+CTEST_ITEMS = ()  # 판정 명령이 없다 — 파일 서버다(규칙은 Scripts.Fileserve 가 본다)
 DEFAULT_PORT = 1112
 DEFAULT_BIND = "127.0.0.1"
 MAX_CHUNK_BYTES = 1024 * 1024          # 장치 HTTP 클라이언트의 응답 본문 상한(`HTTPConstant::kDefaultMaxBodyBytes`)과 같다
