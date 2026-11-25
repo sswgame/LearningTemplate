@@ -118,7 +118,7 @@ SW_TEST_CASE( TimeTest, ScopedTimerBasic )
 /**
  * @brief [TimeTest] 만들자마자 start 해도 첫 델타가 시계 기준점 이후 시간이 되지 않는다
  * @details 생성자가 타이머를 돌고 있는 상태로 두면 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않고,
- *          `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **시계 기준점 이후 전체 시간**이 된다.
+ *          `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 시계 기준점 이후 전체 시간이 된다.
  *          호출부가 `resetTimer()` 를 먼저 부르면 가려진다. 시험 시계는 1 초에서 시작하므로 그 결함이면 델타가 1.01 초다.
  */
 SW_TEST_CASE( TimeTest, FreshTimerDoesNotReportTimeSinceBoot )

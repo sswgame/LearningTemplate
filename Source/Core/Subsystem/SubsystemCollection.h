@@ -81,12 +81,12 @@ namespace sw
         void shutdownAll();
         /**
          * @brief 모든 서브시스템을 초기화 순서의 역순으로 소멸시키고 목록을 비웁니다. 아직 종료하지 않은 것이 있으면 먼저 `shutdownAll` 합니다.
-         * @details 초기화한 것만이 아니라 **모두**입니다 — 실패한 것, 건너뛴 것, 닿지 못한 것도 소멸합니다. 정렬이 안 됐으면(오류) 추가의 역순입니다.
+         * @details 초기화한 것만이 아니라 모두입니다 — 실패한 것, 건너뛴 것, 닿지 못한 것도 소멸합니다. 정렬이 안 됐으면(오류) 추가의 역순입니다.
          */
         void destroyAll();
 
         /**
-         * @brief @p subsystem 에 (간접으로라도) 의존하는 **초기화된** 서브시스템을 `shutdownAll` 과 같이 역순으로 멈춘 뒤 역순으로 종료합니다. @p subsystem 자신은 그대로 둡니다.
+         * @brief @p subsystem 에 (간접으로라도) 의존하는 초기화된 서브시스템을 `shutdownAll` 과 같이 역순으로 멈춘 뒤 역순으로 종료합니다. @p subsystem 자신은 그대로 둡니다.
          * @details 기동 중에 하나를 갈아 끼울 때 씁니다(백엔드 교체: RHI 의 디바이스를 다시 만든다). 내린 것은 `restartStopped` 가 다시 세웁니다.
          */
         void shutdownDependents( const Subsystem& subsystem );

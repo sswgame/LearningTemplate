@@ -1,7 +1,7 @@
 /**
  * @file NamedValue.h
  * @brief 이름 → 값 쌍의 표(`NamedValue`)와 그 찾기(`NamedValueUtil`)입니다. 순서와 상관없는 표가 쓴다 — 열거자 순서의 표는 `makeEnumTable`(EnumArray.h), 리플렉션 열거형의 이름은 `tryParseEnum` 이다.
- * @details **이름은 철자 그대로 견준다.** 대소문자를 무시하면 이름마다 별칭이 생기고(같은 값을 여러 철자로 적는 데이터가 쌓인다) 리플렉션 `EnumInfo` 의 텍스트 읽기와도 규칙이 갈린다.
+ * @details 이름은 철자 그대로 견준다. 대소문자를 무시하면 이름마다 별칭이 생기고(같은 값을 여러 철자로 적는 데이터가 쌓인다) 리플렉션 `EnumInfo` 의 텍스트 읽기와도 규칙이 갈린다.
  */
 #pragma once
 #include "Core/Container/string.h"

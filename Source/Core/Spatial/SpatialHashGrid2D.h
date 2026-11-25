@@ -19,10 +19,10 @@ namespace sw
 
         /**
          * @brief 핸들 하나를 그리드에 흩뿌릴 수 있는 최대 셀 수입니다.
-         * @details 셀 범위는 **입력 좌표에서** 나옵니다. 큰 AABB 하나가 수천만 개의 셀을 요구할 수
+         * @details 셀 범위는 입력 좌표에서 나옵니다. 큰 AABB 하나가 수천만 개의 셀을 요구할 수
          *          있고, 이 모듈이 스스로 제공하는 `AABB2D::infinite()` 가 바로 그런 값입니다. 상한을
          *          넘는 핸들은 셀에 흩뿌리는 대신 목록 하나에 모아 두고, 그리드를 보는 질의가 그
-         *          목록을 **항상 함께** 봅니다. 그런 핸들은 수가 적고 어차피 거의 모든 질의에 걸리므로
+         *          목록을 항상 함께 봅니다. 그런 핸들은 수가 적고 어차피 거의 모든 질의에 걸리므로
          *          셀에 흩어 두는 것이 이득이 되지 않습니다.
          * @note 옛 겹침 월드의 바디 셀 상한과 값이 같았지만 다른 질문입니다(그쪽은 물리 바디,
          *       이쪽은 범용 질의 색인). 한쪽 사정으로 값을 바꿀 수 있어야 하므로 별칭을 두지 않습니다.
@@ -81,9 +81,9 @@ namespace sw
     private:
         /**
          * @struct CellRange
-         * @brief 경계 상자 하나가 덮는 셀 범위입니다. **삽입 · 제거 · 질의가 같은 집합을 보게 하는 자리**입니다.
+         * @brief 경계 상자 하나가 덮는 셀 범위입니다. 삽입 · 제거 · 질의가 같은 집합을 보게 하는 자리입니다.
          * @details 삽입 · 제거 · `queryAABB` · `queryCircle` 이 이 계산 하나를 씁니다.
-         *          삽입이 덜 훑으면 그 핸들을 **질의가 찾지 못하고**, 제거가 덜 훑으면 죽은 핸들이 셀에
+         *          삽입이 덜 훑으면 그 핸들을 질의가 찾지 못하고, 제거가 덜 훑으면 죽은 핸들이 셀에
          *          남아 표가 끝없이 자랍니다. 둘 다 그 자리에서 터지지 않습니다.
          */
         struct CellRange
@@ -141,7 +141,7 @@ namespace sw
                 return;
             }
 
-            // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. **항상 함께** 본다.
+            // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. 항상 함께 본다.
             for ( const SlotHandle handle : _listOversizedHandle )
             {
                 func( handle );
@@ -169,7 +169,7 @@ namespace sw
         float32                                   _cellSize;
         unordered_map<uint64, vector<SlotHandle>> _mapBucket;
         unordered_map<SlotHandle, AABB2D>         _mapHandleBound;
-        /** @brief 그리드에 흩뿌리기에는 너무 큰 핸들들입니다. 그리드를 보는 질의가 **항상 함께** 봅니다. */
+        /** @brief 그리드에 흩뿌리기에는 너무 큰 핸들들입니다. 그리드를 보는 질의가 항상 함께 봅니다. */
         vector<SlotHandle> _listOversizedHandle;
     };
 } // namespace sw

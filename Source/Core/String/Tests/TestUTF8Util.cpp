@@ -1,4 +1,4 @@
-// UTF8Util · StringUtil 의 UTF-8 — 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체, UTF-16 단위 왕복(JNI 글 — 서로게이트 쌍 · 짝 없는 서로게이트).
+// UTF8Util · StringUtil 의 UTF-8: 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체, UTF-16 단위 왕복(JNI 글, 서로게이트 쌍 · 짝 없는 서로게이트).
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"

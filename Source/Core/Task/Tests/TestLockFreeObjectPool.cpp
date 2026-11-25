@@ -211,14 +211,14 @@ SW_TEST_CASE( LockFreeObjectPoolTest, Concurrent )
 
 /**
  * @brief [LockFreeObjectPoolTest] 경합 속에서 반납된 블록이 하나도 사라지지 않는다
- * @details 내부 MPMC 큐는 소비자가 칸을 집어간 뒤 **순번을 아직 공개하지 않은 찰나**에도
+ * @details 내부 MPMC 큐는 소비자가 칸을 집어간 뒤 순번을 아직 공개하지 않은 찰나에도
  *          생산자에게 "가득 찼다" 고 답한다. 반납이 그 답을 이중 반납으로 읽고 물러서면 그 블록은
- *          자유 목록으로 돌아가지 못한다 — 풀이 **조용히 줄어들고**, 오래 돌수록 `acquire` 가 더
+ *          자유 목록으로 돌아가지 못한다 — 풀이 조용히 줄어들고, 오래 돌수록 `acquire` 가 더
  *          자주 널을 돌려준다. 자리 수와 블록 수가 같으므로 그 찰나는 반드시 지나가니, 반납은
  *          물러서지 말고 다시 시도해야 한다.
  *
  *          작은 풀에 코어보다 많은 스레드를 붙여 그 찰나를 자주 만든다. 끝에 남는 질문은 하나다 —
- *          **풀이 여전히 용량만큼 내줄 수 있는가.**
+ *          풀이 여전히 용량만큼 내줄 수 있는가.
  */
 SW_TEST_CASE( LockFreeObjectPoolTest, LosesNoBlockUnderContention )
 {
@@ -248,7 +248,7 @@ SW_TEST_CASE( LockFreeObjectPoolTest, LosesNoBlockUnderContention )
 
     SW_EXPECT_EQUAL( 0u, pool.getActiveCount() );
 
-    // **용량만큼 다시 내줄 수 있어야 한다.** 블록 하나라도 잃었으면 여기서 널이 나온다.
+    // 용량만큼 다시 내줄 수 있어야 한다. 블록 하나라도 잃었으면 여기서 널이 나온다.
     sw::vector<int32*> listTaken;
     for ( uint32 takeIndex = 0; takeIndex < kCapacity; ++takeIndex )
     {
@@ -267,8 +267,8 @@ SW_TEST_CASE( LockFreeObjectPoolTest, LosesNoBlockUnderContention )
 
 /**
  * @brief [LockFreeObjectPoolTest] 풀은 자기 블록만 자기 것이라고 말한다
- * @details `release` 가 남의 포인터를 **기다리지 않고** 가려내는 근거다. 남의 포인터를 "자리가 안 난다" 는
- *          증상으로 알아내면 그 증상이 경합 중인 **정상 반납**과 구별되지 않아, 코어가 적은 CI 에서 진짜 반납이
+ * @details `release` 가 남의 포인터를 기다리지 않고 가려내는 근거다. 남의 포인터를 "자리가 안 난다" 는
+ *          증상으로 알아내면 그 증상이 경합 중인 정상 반납과 구별되지 않아, 코어가 적은 CI 에서 진짜 반납이
  *          그 단언에 걸려 프로세스가 죽는다. 범위와 간격은 기다릴 필요 없이 확정된다.
  */
 SW_TEST_CASE( LockFreeObjectPoolTest, OwnsOnlyItsOwnBlocks )
@@ -292,7 +292,7 @@ SW_TEST_CASE( LockFreeObjectPoolTest, OwnsOnlyItsOwnBlocks )
     SW_EXPECT_FALSE_MSG( pool.isOwnerOf( pTheirs ), "다른 풀의 블록을 자기 것이라고 말했다" );
     SW_EXPECT_FALSE_MSG( other.isOwnerOf( pMine ), "다른 풀의 블록을 자기 것이라고 말했다" );
 
-    // 블록 **중간**을 가리키는 포인터는 이 풀의 것이 아니다 — 범위만 보고 간격을 안 보면 통과한다.
+    // 블록 중간을 가리키는 포인터는 이 풀의 것이 아니다 — 범위만 보고 간격을 안 보면 통과한다.
     const int64* pInterior = reinterpret_cast<const int64*>( reinterpret_cast<const uint8*>( pMine ) + 1 );
     SW_EXPECT_FALSE_MSG( pool.isOwnerOf( pInterior ), "블록 중간을 가리키는 포인터를 자기 블록이라고 말했다" );
 

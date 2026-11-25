@@ -5,7 +5,7 @@
  *          (호스트 순서와 무관), 이 두 타입은 위치와 범위를 맡습니다. 비트 단위로 줄여 쓰는 패킷은 `BitStream.h` 입니다.
  *          읽기가 남은 바이트를 넘으면 0 을 돌려주고 `hasOverflowed` 가 참이 됩니다(`BitReader` 와 같은 규칙) — 깨진 파일을 받아도 버퍼 밖을 읽지 않으며,
  *          부르는 쪽은 필드를 모두 읽은 뒤 한 번 확인합니다. `read*( T& )` 꼴(가변 정수 · 길이 붙은 글 · POD)은 바로 bool 로도 답한다(넘침 표시도 함께 남긴다).
- *          **파일이 적은 개수는 이 타입의 개수 읽기(`readCount`)와 목록 읽기(`readList` · `readCountedList` · `readPodList`)로만 할당한다.** 남은 바이트로 먼저 거르고 곱셈 대신 나눗셈으로 재므로, 위조된 개수 하나가
+ *          파일이 적은 개수는 이 타입의 개수 읽기(`readCount`)와 목록 읽기(`readList` · `readCountedList` · `readPodList`)로만 할당한다. 남은 바이트로 먼저 거르고 곱셈 대신 나눗셈으로 재므로, 위조된 개수 하나가
  *          수십 기가 할당이나 넘친 곱셈으로 "길이가 맞아" 보이는 파일이 되지 못한다. 바이트 순서 읽기(`LittleEndianUtil::read*`)는 이 타입만 부른다(비공개 + friend). 언리얼 `FArchive::IsError` 처럼 끈적한 실패이고,
  *          원소 최소 크기로 미리 재는 것은 언리얼 `TArray` 직렬화의 `Ar.IsLoading()` 음수 · 상한 검사를 형식 쪽으로 옮긴 것이다(기억에 따른 비교).
  *          `readFloat32` 는 유한한 값만 받는다 — NaN 은 모든 비교를 빠져나가 깨진 파일이 값으로 번진다(`Archive::operator>>` · `BitReader::readFiniteFloat` 와 같은 규칙).
@@ -102,7 +102,7 @@ namespace sw
     /**
      * @class ByteReader
      * @brief 빌린 바이트를 앞에서부터 리틀 엔디언 값으로 읽습니다. 남은 바이트가 모자라면 읽지 않고 실패로 표시합니다.
-     * @details **오류 관례는 하나다 — 끈적한 실패(`_bFailed`)**. 모든 읽기(값 반환 · `bool` 반환 모두)와 `markFailed` 가 같은 깃발을 세우고, 한 번 서면 내려가지 않는다.
+     * @details 오류 관례는 하나다 — 끈적한 실패(`_bFailed`). 모든 읽기(값 반환 · `bool` 반환 모두)와 `markFailed` 가 같은 깃발을 세우고, 한 번 서면 내려가지 않는다.
      *          한 값 읽기는 모두 값을 돌려준다(`[[nodiscard]]`, 실패면 0 · 빈 값) — 출력 인자 `readX( T& out )` 은 없앴다: 반환 `bool` 을 버리면 실패를 잃었고
      *          (`(void)` · 무시), 실패 때 출력 칸이 옛 값으로 남았다. 실패는 깃발 하나라 매 줄 검사하지 않아도 된다 — 형식의 끝에서 `finish()` 한 번이 모든 실패와
      *          남은 바이트를 보고, 중간에 갈라야 하면 `hasOverflowed()` 를 본다(언리얼 `FArchive::IsError` 와 같은 자리). `finish()` 는 `[[nodiscard]]` 라 끝 검사를 잊는 모양이 컴파일 경고다.
@@ -265,7 +265,7 @@ namespace sw
         }
         /**
          * @brief 파일이 적은 개수만큼 목록을 읽습니다. 개수를 남은 바이트로 먼저 거른 뒤에 자리를 잡고, 원소마다 @p readElement 를 부릅니다.
-         * @param minElementBytes 원소 하나가 파일에서 차지하는 최소 바이트입니다. `sizeof( T )` 가 아니라 **파일의** 크기입니다.
+         * @param minElementBytes 원소 하나가 파일에서 차지하는 최소 바이트입니다. `sizeof( T )` 가 아니라 파일의 크기입니다.
          * @param readElement `void( T& )` 또는 `bool( T& )`. false 를 돌려주거나 넘침이 나면 그 자리에서 멈춥니다.
          * @return 실패하면 목록을 비우고 false 입니다(반쯤 읽은 목록을 남기지 않는다).
          */

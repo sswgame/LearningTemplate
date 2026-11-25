@@ -11,8 +11,8 @@ namespace sw
         struct StringUtilInternal
         {
             /**
-             * @brief 목적지 버퍼에 원본을 채우고 **반드시** NUL 로 끝냅니다. 들어가지 않으면 자릅니다.
-             * @details 두 오버로드(utf8 · utf16)가 같은 규칙을 따르도록 한 곳에 둡니다(플랫폼 함수를 부르면 **플랫폼마다 결과가 다릅니다**).
+             * @brief 목적지 버퍼에 원본을 채우고 반드시 NUL 로 끝냅니다. 들어가지 않으면 자릅니다.
+             * @details 두 오버로드(utf8 · utf16)가 같은 규칙을 따르도록 한 곳에 둡니다(플랫폼 함수를 부르면 플랫폼마다 결과가 다릅니다).
              */
             template <typename CharType>
             static void copyTerminated( CharType* pOutDest, const CharType* pSource, uint32 length )
@@ -82,10 +82,10 @@ namespace sw
             /**
              * @brief 바이트 배열이 UTF-8 인코딩 규칙을 지키는지 검증합니다.
              * @details
-             * - **64비트 SWAR(SIMD Within A Register) 빠른 검사**:
+             * - 64비트 SWAR(SIMD Within A Register) 빠른 검사:
              *   대부분의 텍스트(로그 포맷, 태그, 영문 등)가 7비트 ASCII(0x00 ~ 0x7F)라는 점을 이용해, `uint64` 로 8바이트씩 읽어
              *   최상위 비트 마스크(`0x8080808080808080ULL`)로 한 번에 8바이트를 검사합니다.
-             * - **멀티바이트 시퀀스 검증**:
+             * - 멀티바이트 시퀀스 검증:
              *   ASCII 가 아닌 바이트를 만났을 때만 2 ~ 4바이트 UTF-8 선행 바이트를 분류하고, 후속 바이트(0x80 ~ 0xBF) · overlong ·
              *   서로게이트(0xD800 ~ 0xDFFF) · 유니코드 최대 범위를 검사합니다.
              */
@@ -148,7 +148,7 @@ namespace sw
             };
 
             /**
-             * @brief UTF-8 한 글자를 읽습니다. 잘못된 입력은 U+FFFD 한 글자로 바꾸고, **읽을 수 있는 다음 바이트부터** 다시 시작합니다.
+             * @brief UTF-8 한 글자를 읽습니다. 잘못된 입력은 U+FFFD 한 글자로 바꾸고, 읽을 수 있는 다음 바이트부터 다시 시작합니다.
              * @details 주의: 검증 없이 비트만 이어 붙이면 선두가 될 수 없는 바이트(0x80~0xBF · 0xF8~0xFF)가 U+0000 이 되어 Win32
              *          경로 API 에서 문자열이 그 위치에서 끊기고, 연속 바이트를 확인하지 않으면 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼킵니다
              *          (CP949 로 된 한글 경로가 UTF-8 로 잘못 들어오면 경로가 조용히 다른 파일을 가리킵니다). 대체 방식은 유니코드 권고(최대
@@ -290,7 +290,7 @@ namespace sw
             }
 
             /**
-             * @brief 부동소수 토큰을 `from_chars` 로 **유한한 수로만** 읽습니다(`parseFloat` · `parseDouble`).
+             * @brief 부동소수 토큰을 `from_chars` 로 유한한 수로만 읽습니다(`parseFloat` · `parseDouble`).
              * @details 앞의 `+` 하나는 받는다(`from_chars` 가 받지 않는다). 그 뒤에 또 부호가 오면 숫자가 아니다 — `+` 를 제거하고 그냥
              *          넘기면 `"+-5"` 가 -5 가 된다(`parseInt` 는 거절한다). 그리고 `from_chars` 는 "nan" · "inf" 를 받는데, 설정 · 에셋의
              *          그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들면 원인을 찾기 어렵다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
@@ -509,7 +509,7 @@ namespace sw
         wstring      result{};
         result.reserve( length );
 
-        // 잘못된 입력은 어서트가 아니라 대체 문자다. 이 입력은 파일 이름 · 사용자 글자처럼 **밖에서** 온다.
+        // 잘못된 입력은 어서트가 아니라 대체 문자다. 이 입력은 파일 이름 · 사용자 글자처럼 밖에서 온다.
         bool   bHadInvalidSequence{ false };
         size_t pos{ 0 };
         while ( pos < length )
@@ -716,8 +716,8 @@ namespace sw
         return std::wcscmp( pLhs, pRhs ) == 0;
     }
 
-    // 바이트를 **부호 없이** 비교한다. `char` 를 그대로 int 로 넓히면 UTF-8 의 0x80 이상 바이트가 음수가 되어, 한글처럼
-    // ASCII 가 아닌 문자가 섞인 문자열이 ASCII 보다 **작다고** 나온다(strcmp 규약과 반대다). 그러면 정렬 · 이진 검색에
+    // 바이트를 부호 없이 비교한다. `char` 를 그대로 int 로 넓히면 UTF-8 의 0x80 이상 바이트가 음수가 되어, 한글처럼
+    // ASCII 가 아닌 문자가 섞인 문자열이 ASCII 보다 작다고 나온다(strcmp 규약과 반대다). 그러면 정렬 · 이진 검색에
     // 이 함수를 쓰는 쪽이 일관되지 않게 동작한다.
     int32 StringUtil::compare( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
     {

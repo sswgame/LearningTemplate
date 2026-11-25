@@ -1,7 +1,7 @@
 /**
  * @file TaskNodePool.h
  * @brief TaskManager 의 노드 풀입니다(태스크 슬랩 · 스테이지 · 병렬 그룹). 프레임이 안정된 상태에서는 힙을 건드리지 않게 합니다.
- * @details **공개 API 가 아닙니다.** `Core/Task` 안의 구현 파일만 include 합니다.
+ * @details 공개 API 가 아닙니다. `Core/Task` 안의 구현 파일만 include 합니다.
  */
 #pragma once
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
@@ -55,7 +55,7 @@ namespace sw
 
         /**
          * @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). 대기 시간 초과 때 원인을 로그에 적는 진단용입니다.
-         * @details 슬랩을 훑어 **제출됐고**(`_bScheduled`) 본문이 안 끝난(`_pendingChildren` > 0) 이름 있는 노드를 찾는다. 만들기만 하고 제출하지 않은 노드는 잡히지 않는다.
+         * @details 슬랩을 훑어 제출됐고(`_bScheduled`) 본문이 안 끝난(`_pendingChildren` > 0) 이름 있는 노드를 찾는다. 만들기만 하고 제출하지 않은 노드는 잡히지 않는다.
          *          이름은 노드의 참조를 하나 잡은 뒤(`TaskNode::tryRetain`)에 읽는다 — 참조가 있는 동안 노드는 풀로 돌아가 이름이 지워지거나 새 태스크로 쓰이지 않고,
          *          제출 뒤에는 이름이 바뀌지 않으므로 이름 읽기에 데이터 레이스가 없다. 오류 경로에서만 부른다.
          */
@@ -88,11 +88,11 @@ namespace sw
         TaskManager*                        _pOwner; ///< 노드를 낸 매니저. `detachOwner` 뒤 nullptr
         ConcurrentQueue<TaskNode*, 4096>    _freeQueue;
         vector<TaskNode*> _listOverflowFree SW_GUARDED_BY( _slabMutex );
-        vector<MemoryBlock> _listSlab       SW_GUARDED_BY( _slabMutex ); ///< 64개 슬랩의 바이트 블록. **소유한다**(노드의 소멸은 `~TaskNodePool`)
+        vector<MemoryBlock> _listSlab       SW_GUARDED_BY( _slabMutex ); ///< 64개 슬랩의 바이트 블록. 소유한다(노드의 소멸은 `~TaskNodePool`)
         mutex                               _slabMutex;
         vector<StageNode*> _listStageFree   SW_GUARDED_BY( _stageMutex ); ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
         /**
-         * @brief 지금까지 만든 스테이지 전부입니다. **소유합니다.**
+         * @brief 지금까지 만든 스테이지 전부입니다. 소유합니다.
          * @details 소유를 타입으로 적어 풀 소멸자에서 지우기를 빠뜨릴 수 없게 합니다(raw 포인터 목록이면 그 누락은 LeakSanitizer 만
          *          잡습니다). 꺼내 쓰는 쪽(`_listStageFree`)은 raw 포인터라 할당 경로에 간접 참조가 늘지 않습니다.
          */

@@ -104,7 +104,7 @@ namespace sw
 
         /**
          * @brief 병렬 그룹의 본문을 도는 동안 "지금 실행 중인 태스크" 를 비워 두는 RAII 스코프입니다. 끝나면 바깥 값을 되돌립니다.
-         * @details 병렬 본문은 어느 태스크의 본문도 아니다. 이 스레드가 **돕고 있던** 태스크를 그대로 물려받으면 본문에서 만든 태스크가
+         * @details 병렬 본문은 어느 태스크의 본문도 아니다. 이 스레드가 돕고 있던 태스크를 그대로 물려받으면 본문에서 만든 태스크가
          *          엉뚱한 태스크의 자식이 된다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식 — 어느 스레드가 티켓을 가져가느냐에
          *          따라 부모가 달라진다). 본문에서 만든 태스크는 최상위다. 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
          *
@@ -277,7 +277,7 @@ namespace sw
         _idleWorkerMask.store( 0, std::memory_order_relaxed );
         _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
         _runningWorkerCount.store( threadCount, std::memory_order_relaxed ); // 스레드를 시작하기 전에 정한다. 워커는 나갈 때 하나씩 내린다
-        // 슬롯을 모두 만든 **뒤에** 스레드를 시작한다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
+        // 슬롯을 모두 만든 뒤에 스레드를 시작한다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
         _listWorkerSlot.reserve( threadCount );
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
@@ -679,7 +679,7 @@ namespace sw
             pGroup->_memoryTag = Memory::getCurrentMemoryTag();
         pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
 
-        // 티켓은 **부모가 실행될 때** 큐에 넣는다(`launchParallelGroup`). 그래야 부모에 건 `runAfter` · 취소 · 실행 스레드 지정을 본문도 따른다.
+        // 티켓은 부모가 실행될 때 큐에 넣는다(`launchParallelGroup`). 그래야 부모에 건 `runAfter` · 취소 · 실행 스레드 지정을 본문도 따른다.
         // 부모는 그룹이 끝나야 완료된다(그룹 = 부모의 자식 분 하나).
         TaskNode*    pParent     = parentTask.getNode();
         const uint32 ticketCount = MathUtil::max( split._ticketCount, 1u );
@@ -838,7 +838,7 @@ namespace sw
             else
                 pushToNormalQueue( item );
         }
-        // 티켓을 모두 넣은 뒤 **한 번만** 세대를 올리고, 티켓 수만큼만 깨운다.
+        // 티켓을 모두 넣은 뒤 한 번만 세대를 올리고, 티켓 수만큼만 깨운다.
         wakeSleepingWorkers( ticketCount );
     }
 
@@ -922,7 +922,7 @@ namespace sw
                 }
             }
             ++finishedCount;
-            // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
+            // High 큐는 청크 사이에 확인한다. 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
             // 그 줄이 그대로 프레임 지연이 된다. 청크 하나(참여자당 4개)가 작으므로 기다리는 시간의 상한도 짧다. 남은 청크가 없으면 먼저 합류에 알린다.
             // High 그룹은 비우지 않는다 — 자기 티켓이 그 줄에 있어 같은 스레드가 제 티켓을 겹쳐 집고, 겹침이 티켓 수(워커 수)까지 자란다.
             if ( pGroup->_priority != TaskPriority::High && pGroup->_nextChunkStart.load( std::memory_order_relaxed ) < end )
@@ -1097,7 +1097,7 @@ namespace sw
         if ( isMainThread() )
             dispatchMainThreadTasks();
 
-        // **세대를 먼저 읽고 큐를 본다**(워커 루프와 같은 순서). 읽은 뒤에 들어온 일은 세대를 바꿔 다음 걸음이 보고, 읽기 전에 들어온 일은 바로 아래에서 본다.
+        // 세대를 먼저 읽고 큐를 본다(워커 루프와 같은 순서). 읽은 뒤에 들어온 일은 세대를 바꿔 다음 걸음이 보고, 읽기 전에 들어온 일은 바로 아래에서 본다.
         const uint32 jobEpoch      = _jobEpoch.load( std::memory_order_acquire );
         const bool   bQueueChanged = inoutState._bQueueCheckDue || jobEpoch != inoutState._observedJobEpoch;
         if ( bQueueChanged )
@@ -1169,7 +1169,7 @@ namespace sw
     {
         const uint32    slotIndex = getCurrentThreadScratchSlot();
         atomic<uint32>& word      = getWaiterWord( slotIndex );
-        // **등록하기 전에** 읽는다. 등록한 뒤에 온 깨우기는 워드를 바꾸므로 아래 wait 가 바로 돌아온다.
+        // 등록하기 전에 읽는다. 등록한 뒤에 온 깨우기는 워드를 바꾸므로 아래 wait 가 바로 돌아온다.
         const uint32 observed = word.load( std::memory_order_acquire );
 
         switch ( join.tryRegisterWaiter( slotIndex + 1 ) )
@@ -1317,7 +1317,7 @@ namespace sw
 
     void TaskManager::completeTask( TaskNode* pNode )
     {
-        // **활성 수는 스테이지 · 부모보다 먼저 내린다.** 맨 끝(후속 트리거 뒤)에서 내리면 `waitStage` 가 스테이지 완료 통지를 받고
+        // 활성 수는 스테이지 · 부모보다 먼저 내린다. 맨 끝(후속 트리거 뒤)에서 내리면 `waitStage` 가 스테이지 완료 통지를 받고
         // 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다. 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은 fetch_sub 가
         // 0xFFFFFFFF 로 돌아가 이후의 `waitAll` 이 영원히 기다린다(스케줄링에 따라 CTest 아래에서만 드러난다). 후속 태스크는 만들 때
         // 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
@@ -1357,7 +1357,7 @@ namespace sw
 
         BLOCK( "Trigger Successors and Cleanup" )
         {
-            // 목록을 **닫고** 해제한다. 닫은 뒤에 `runBefore` 로 붙으려는 후속은 "이미 끝났다" 를 듣고 스스로 의존을 되돌린다(`tryPushBack`).
+            // 목록을 닫고 해제한다. 닫은 뒤에 `runBefore` 로 붙으려는 후속은 "이미 끝났다" 를 듣고 스스로 의존을 되돌린다(`tryPushBack`).
             // 닫지 않고 훑으면 그 사이에 붙은 후속이 영영 풀리지 않거나 너무 일찍 돈다.
             pNode->_successors.closeAndForEach( [this]( TaskNode* pSuccessor )
             {
@@ -1494,7 +1494,7 @@ namespace sw
         if ( mask == 0 )
             return;
 
-        // **필요한 수만큼, 비트를 내린 쪽이** 깨운다. 두 제출자가 같은 워커를 두 번 깨우지 않고, 깨우기 하나는 주소 하나에 대한
+        // 필요한 수만큼, 비트를 내린 쪽이 깨운다. 두 제출자가 같은 워커를 두 번 깨우지 않고, 깨우기 하나는 주소 하나에 대한
         // 것이다(조건 변수의 `notify_one` × n 이면 깨어난 n 개가 뮤텍스를 다시 잡느라 줄을 선다).
         uint32 wokenCount = 0;
         while ( mask != 0 && wokenCount < requestedCount )
@@ -1538,7 +1538,7 @@ namespace sw
                 continue;
             }
 
-            // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 작업이 세대를 올려 스핀이 알아챈다.
+            // 세대를 먼저 읽고 큐를 본다. 그래야 그 사이에 들어온 작업이 세대를 올려 스핀이 알아챈다.
             // (읽은 뒤에 들어온 작업은 세대를 바꾸고, 읽기 전에 들어온 작업은 바로 아래 tryTakeItem 이 본다.)
             bool            bFoundInSpin  = false;
             uint32          observedEpoch = _jobEpoch.load( std::memory_order_acquire );

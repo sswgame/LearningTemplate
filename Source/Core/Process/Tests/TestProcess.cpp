@@ -104,7 +104,7 @@ SW_TEST_CASE( ProcessTest, ExitCodeStillActiveIsNotMistakenForRunning )
 #endif
 
 /**
- * @brief 실행 중인 프로세스 강제 종료 — **양쪽 플랫폼에서**
+ * @brief 실행 중인 프로세스 강제 종료 — 양쪽 플랫폼에서
  * @details 주의: 종료 대신 자식이 스스로 끝날 때까지 기다리는 구현(`pclose` 가 `sleep 10` 을 10초 기다려 주는 식)도
  *          통과할 수 있다 — 그래서 종료 코드가 0 이 아닌지를 본다.
  * @note 종료 코드가 갈리는 유일한 자리다. Windows 는 우리가 준 값(99)을 자식에게 물리고, POSIX 는
@@ -131,7 +131,7 @@ SW_TEST_CASE( ProcessTest, TerminateProcess )
 
     SW_EXPECT_TRUE( proc.terminate( 99 ) );
 
-    // 강제 종료는 **요청**이라 돌아온 직후에는 아직 죽지 않았을 수 있다. 끝났는지는 기다려야 알 수
+    // 강제 종료는 요청이라 돌아온 직후에는 아직 죽지 않았을 수 있다. 끝났는지는 기다려야 알 수
     // 있으므로 여기서 기다린다. 종료 코드가 0 이 아닌 것이 우리가 죽였다는 증거다 — 자식이 스스로
     // 끝났다면 0 이다(그리고 10초를 기다렸다는 뜻이기도 하다).
     SW_EXPECT_TRUE( proc.waitForExit() == expectedExitCode ); // 기다리지 못하면 값이 없어 진다
@@ -165,10 +165,10 @@ SW_TEST_CASE( ProcessTest, TerminateEndsGrandchildren )
 }
 
 /**
- * @brief 자식이 스스로 끝나면 묻는 쪽이 **바로** 안다
+ * @brief 자식이 스스로 끝나면 묻는 쪽이 바로 안다
  * @details `isRunning` 이 자기 깃발만 보면 자식이 끝나도 `waitForExit` 을 부르기 전까지 true 라, 취소 UI 가
  *          끝난 빌드를 "돌고 있다" 고 보여 준다. OS 에 물어 곧 false 가 되어야 하고, 그러면서도
- *          **종료 코드는 그대로 남아 있어야 한다**(POSIX 에서
+ *          종료 코드는 그대로 남아 있어야 한다(POSIX 에서
  *          묻는 김에 자식을 거둬 버리면 뒤이은 `waitForExit` 이 오류를 준다 — 실제로 쉬운 함정이다).
  */
 SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
@@ -201,9 +201,9 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
 /**
  * @brief 자식은 자기 출력 파이프 말고는 이 프로세스의 핸들 · 서술자를 물려받지 않는다
  * @details 다른 스레드가 거의 동시에 띄운 자식의 파이프(여기서는 테스트가 만든 상속 가능한 파이프로 흉내 낸다)를 새 자식이 물려받으면,
- *          그 파이프의 읽기는 **새 자식이 끝날 때까지** EOF 를 못 받는다. Windows 에서 `bInheritHandles = TRUE` 만 주면 상속
+ *          그 파이프의 읽기는 새 자식이 끝날 때까지 EOF 를 못 받는다. Windows 에서 `bInheritHandles = TRUE` 만 주면 상속
  *          가능한 핸들이 전부 넘어가고, POSIX 에서는 CLOEXEC 없는 서술자가 exec 를 넘어간다. 그래서 여기서는 오래 사는 자식을 띄운 뒤
- *          흉내 낸 파이프의 쓰기 끝을 닫고 읽는다 — 바로 EOF 여야 한다(물려받았다면 자식이 끝나야 온다 — 판정은 읽기가 돌아온 순간 자식이 살아 있는가).
+ *          흉내 낸 파이프의 쓰기 끝을 닫고 읽으면 바로 EOF 여야 한다. 물려받았다면 자식이 끝나야 오므로, 판정은 읽기가 돌아온 순간 자식이 살아 있는가다.
  */
 SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
 {
@@ -256,7 +256,7 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
  * @brief 분리 실행은 기다리지 않고 돌아오고, 명령은 실제로 돈다
  * @details "탐색기에서 보기" 같은 자리 — 사용자가 닫을 때까지 사는 프로그램을 띄운다. `execute` 로 띄우면 부른 스레드(에디터 UI)가
  *          그 프로그램이 출력 파이프를 놓을 때까지 멈춘다. 판정은 시간이 아니라 사건이다: 자식은 "놓아 주기" 파일을 기다렸다가 표식에 done 을
- *          쓰고, 그 파일은 `launchDetached` 가 **돌아온 뒤에** 이 케이스가 만든다. 분리 실행이 자식을 기다렸다면 놓아 주기가 영영 오지 않아
+ *          쓰고, 그 파일은 `launchDetached` 가 돌아온 뒤에 이 케이스가 만든다. 분리 실행이 자식을 기다렸다면 놓아 주기가 영영 오지 않아
  *          자식은 시한 뒤 timeout 을 쓴다. 예전 판정(돌아오기까지 700 ms 미만)은 기계가 바쁘면 2 초가 걸려 졌다(묶음 검증 2026-11-10).
  */
 SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
@@ -565,7 +565,7 @@ SW_TEST_CASE( ProcessTest, EndWithParentChildEndsWhenReleased )
     SW_EXPECT_FALSE( sw::Process::launchDetached( cmd, options ) ); // 분리한 자식은 부모와 묶지 않는다
 }
 
-/** @brief [ProcessTest] 분리 실행의 끝 기다리기 — 도는 동안은 시한에 걸리고, 끝나면 참이다(id 는 명령을 실제로 도는 프로세스 — POSIX 는 손자) */
+/** @brief [ProcessTest] 분리 실행의 끝 기다리기: 도는 동안은 시한에 걸리고, 끝나면 참이다(id 는 명령을 실제로 도는 프로세스, POSIX 는 손자) */
 SW_TEST_CASE( ProcessTest, DetachedExitCanBeAwaited )
 {
 #if defined( SW_PLATFORM_WINDOWS )

@@ -31,8 +31,8 @@ namespace sw
         , _stopTime{ 0 }
         , _prevTime{ 0 }
         , _currentTime{ 0 }
-        // **중지 상태로 둔다.** 돌고 있는 상태로 만들면 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않고,
-        // `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **시계 기준점 이후의 전체 시간**(부팅 이후 몇 시간)이 된다
+        // 중지 상태로 둔다. 돌고 있는 상태로 만들면 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않고,
+        // `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 시계 기준점 이후의 전체 시간(부팅 이후 몇 시간)이 된다
         // (`resetTimer()` 를 먼저 부르면 가려진다).
         //
         // 중지 상태로 두면 `startTimer()` 가 제 역할을 한다. `_pausedTime += ( 시작 시각 - _stopTime(0) )` 이 기준을

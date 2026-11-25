@@ -7,7 +7,7 @@
  *          타입 해시로 찾게 합니다. 조회(`locateSubsystem`)는 그 범위에서 찾고 없으면 상위 범위로 올라갑니다.
  *          범위는 그것을 든 객체(게임 인스턴스 · 에디터 컨텍스트)와 수명이 같아, 모듈 라이브러리가 내려갈 때 그 객체와 함께 사라진다 —
  *          "건 칸을 풀지 않고 내려간 이미지" 를 훑어 회수할 일이 없다.
- *          **매단 자식 범위**(`mountChildScope`): 범위가 이름 붙은 자식 범위를 소유하고, 자식이 **공개한**(`publish`) 칸은 이 범위의 조회에도 보인다.
+ *          매단 자식 범위(`mountChildScope`): 범위가 이름 붙은 자식 범위를 소유하고, 자식이 공개한(`publish`) 칸은 이 범위의 조회에도 보인다.
  *          모듈 라이브러리 하나가 자기 서브시스템을 프로세스 · 엔진 범위에 더했다가 내려갈 때 통째로 걷는 자리다(`ModuleSubsystemRegistrar`) —
  *          언리얼이 모듈을 올릴 때 그 모듈의 `UEngineSubsystem` 을 컬렉션에 더하고 내릴 때 빼는 것과 같다. 자식의 부모는 이 범위라 자식 서브시스템은 위로 찾는다.
  * @note 같은 범위에 같은 타입을 두 번 걸 수 없다(`bind` · `expose` 가 false). 조회는 선형 검색이라 핫 패스에서는 한 번 얻은 포인터를 든다.
@@ -52,7 +52,7 @@ namespace sw
         /**
          * @brief 이 범위의 칸 중 호스트 모듈(에디터)에 보인다고 선언한 것(`SubsystemModuleVisibility::HostModules`)에서만 @p typeHash 를 찾습니다. 상위는 보지 않습니다.
          * @details 호스트 모듈 창구(`ModuleRegistrationHost::getHostModuleLocator`)가 엔진 범위부터 상위로 올라가며 묻는다. 칸을 갖지 않는 창구는 없다(nullptr).
-         *          매단 자식 범위(모듈 서브시스템 — `SW_MODULE_SUBSYSTEM`)의 선언한 칸도 본다 — 서브시스템이 어느 모듈 이미지에 섰든 선언 하나로 에디터에 보인다(`AutomationSession`).
+         *          매단 자식 범위(모듈 서브시스템, `SW_MODULE_SUBSYSTEM`)의 선언한 칸도 본다. 서브시스템이 어느 모듈 이미지에 섰든 선언 하나로 에디터에 보인다(`AutomationSession`).
          */
         virtual void* findHostModuleVisibleInScope( uint64 typeHash ) const
         {
@@ -183,7 +183,7 @@ namespace sw
         }
 
         /**
-         * @brief 이미 걸린 객체 @p object 를 타입 @p TInterface 로 **공개**합니다 — 이 범위를 매단 부모 범위의 조회(`findInScope`)에도 보입니다.
+         * @brief 이미 걸린 객체 @p object 를 타입 @p TInterface 로 공개합니다 — 이 범위를 매단 부모 범위의 조회(`findInScope`)에도 보입니다.
          * @details 낮은 층이 높은 층의 구현을 받는 자리(공개 슬롯)다. 함수 칸 · 정적 포인터를 두고 높은 층이 채우게 하는 대신, 높은 층의 서브시스템이 자기 모듈 범위에서
          *          인터페이스를 공개하고 낮은 층은 그 인터페이스 타입으로 찾는다(언리얼 `IModularFeatures` 의 구현 등록과 같은 자리). @p TInterface 가 이미 같은 객체로
          *          걸려 있으면(소유한 서브시스템의 제 타입) 공개 표시만 더한다.
@@ -197,7 +197,7 @@ namespace sw
         }
 
         /**
-         * @brief 이미 걸린 객체 @p owner 가 멤버로 든 @p part 를 타입 @p TInterface 로 **공개**합니다 — 인터페이스를 상속하지 않고 멤버 객체로 든 서브시스템이 쓴다.
+         * @brief 이미 걸린 객체 @p owner 가 멤버로 든 @p part 를 타입 @p TInterface 로 공개합니다 — 인터페이스를 상속하지 않고 멤버 객체로 든 서브시스템이 쓴다.
          * @details 칸의 소유 여부는 @p owner 의 칸을 따른다 — 멤버는 주인과 수명이 같아, 소유한 서브시스템의 멤버 칸은 `destroyAll` 에서 함께 지워진다.
          * @return 같은 타입이 다른 객체로 이미 걸려 있으면 false 입니다.
          */

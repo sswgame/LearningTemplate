@@ -81,7 +81,7 @@ namespace sw
         static bool isValidUTF8( string_view text );
         /**
          * @brief 올바른 UTF-8 은 그대로 두고, 잘못된 바이트만 백슬래시 + `xNN`(16진 두 자리) 넉 자로 바꿉니다. 결과는 늘 올바른 UTF-8 입니다.
-         * @details 로그가 이것을 쓴다. 한 바이트만 틀려도 **줄 전체**를 로캘 변환하면, `setlocale` 을 부르는 곳이 없어 C 로캘이라
+         * @details 로그가 이것을 쓴다. 한 바이트만 틀려도 줄 전체를 로캘 변환하면, `setlocale` 을 부르는 곳이 없어 C 로캘이라
          *          Windows 에서는 멀쩡한 한글까지 깨지고 glibc 에서는 줄이 통째로 빈다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
          */
         static string escapeInvalidUTF8( string_view text );
@@ -207,8 +207,8 @@ namespace sw
         /** @brief 문자열이 suffix 로 끝나는지 확인합니다(할당 없음). */
         static bool endsWith( string_view str, string_view suffix, bool bIgnoreCase = false ) noexcept;
         /**
-         * @brief 문자열 **안 어딘가에** 부분 문자열이 있는지 확인합니다(할당 없음).
-         * @details `startsWith` · `endsWith` 의 짝입니다. `str.find( sub ) != npos` 로 직접 적으면 **`bIgnoreCase` 를 잃습니다**
+         * @brief 문자열 안 어딘가에 부분 문자열이 있는지 확인합니다(할당 없음).
+         * @details `startsWith` · `endsWith` 의 짝입니다. `str.find( sub ) != npos` 로 직접 적으면 `bIgnoreCase` 를 잃습니다
          *          (대소문자를 무시하는 짝 함수와 판정이 갈라져 `Dungeon_01` 만 던전이 아니게 되는 식).
          * @return 있으면 true. `sub` 가 비어 있으면 true 입니다(표준 `find` 와 같습니다).
          */
@@ -321,11 +321,11 @@ namespace sw
         static uint32 strlen( const utf16* pStr );
 
         /**
-         * @brief 원본을 목적지에 복사합니다. **항상 NUL 로 끝나고**, 들어가지 않으면 자릅니다.
-         * @param length 목적지 **버퍼의 크기**(문자 수)입니다. 종료 문자 몫을 포함합니다.
+         * @brief 원본을 목적지에 복사합니다. 항상 NUL 로 끝나고, 들어가지 않으면 자릅니다.
+         * @param length 목적지 버퍼의 크기(문자 수)입니다. 종료 문자 몫을 포함합니다.
          * @details 플랫폼 함수에 맡기지 않습니다 — Windows 의 `strncpy_s( dst, length, src, length )` 는 원본이 종료 문자까지
-         *          들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 매개변수 핸들러를 부르고, `::strncpy` 는 `length` 글자를
-         *          복사하고 **종료 문자를 붙이지 않습니다.** 잘라 낼 때도 반드시 끝을 맺는 하나의 규칙으로 맞춥니다.
+         *          들어가지 않으면 목적지를 빈 문자열로 만들고 잘못된 매개변수 핸들러를 부르고, `::strncpy` 는 `length` 글자를
+         *          복사하고 종료 문자를 붙이지 않습니다. 잘라 낼 때도 반드시 끝을 맺는 하나의 규칙으로 맞춥니다.
          */
         static void strncpy( utf8* pOutDest, const utf8* pSource, uint32 length );
         /** @brief 위와 같습니다. 항상 NUL 로 끝나고, 들어가지 않으면 자릅니다. */

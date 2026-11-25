@@ -121,8 +121,8 @@ namespace sw
     string TaskNodePool::describeFirstUnfinished( [[maybe_unused]] const StageNode* pStage )
     {
 #if !defined( SW_SHIPPING )
-        // 이름은 **참조를 잡은 뒤에** 읽는다. 참조가 있는 노드는 풀로 돌아가 이름을 지우거나 다시 쓰이지 않는다. 제출됐다(`_bScheduled`, 이름은 제출 전에 정해진다)는 것도
-        // 참조를 잡은 **뒤에** 다시 확인한다 — 잡기 전에 노드가 돌아가 새 태스크로 다시 만들어졌다면 아직 제출 전이라 걸러지고, 제출된 것이면 이름은 이미 확정이다.
+        // 이름은 참조를 잡은 뒤에 읽는다. 참조가 있는 노드는 풀로 돌아가 이름을 지우거나 다시 쓰이지 않는다. 제출됐다(`_bScheduled`, 이름은 제출 전에 정해진다)는 것도
+        // 참조를 잡은 뒤에 다시 확인한다 — 잡기 전에 노드가 돌아가 새 태스크로 다시 만들어졌다면 아직 제출 전이라 걸러지고, 제출된 것이면 이름은 이미 확정이다.
         TaskNode*         pHeld{ nullptr };
         string            name;
         vector<TaskNode*> listRejected; // 잡았다가 거른 노드. 잠금 밖에서 놓는다

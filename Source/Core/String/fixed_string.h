@@ -61,25 +61,25 @@ namespace sw
      * @tparam T 문자 타입(`utf8` 또는 `utf16`)
      * @tparam N 담을 수 있는 최대 문자 수(널 종료 문자 `\0` 자리 하나는 안에서 따로 잡습니다)
      * @details
-     * - **길이 필드가 없습니다**:
+     * - 길이 필드가 없습니다:
      *   객체는 배열 하나뿐이라 `sizeof` 는 `(N + 1) * sizeof( T )` 입니다. `size()` 는 앞 N 개 문자에서 첫 널을 찾는 경계 있는
      *   검색이고(O(길이)), const 호출은 아무것도 쓰지 않아 여러 스레드가 동시에 읽어도 됩니다.
-     * - **`data()` 로 바로 써도 됩니다**:
+     * - `data()` 로 바로 써도 됩니다:
      *   바깥(ImGui 입력 필드 · `formatstring` · Win32 API)은 `data()` 에 `max_size()` 자까지 널 종료 여부와 상관없이 쓸 수 있고, 그 뒤
      *   `size()` 가 맞습니다. 이를 위해 모든 생성자가 배열 전체를 0 으로 채우고, 길이를 정하는 연산(대입 · `clear` · `erase` ·
      *   `pop_back`)은 새 끝 뒤의 꼬리를 0 으로 채웁니다. 끝 칸(`_arrData[N]`)은 늘 널이라 `c_str()` 은 언제나 종료됩니다.
-     * - **용량을 넘으면 자릅니다**:
-     *   `N` 을 넘는 입력은 `N` 까지만 담고 경고를 남깁니다. 넘는 부분은 **버려지고**, 버퍼 밖은 절대 건드리지 않습니다.
+     * - 용량을 넘으면 자릅니다:
+     *   `N` 을 넘는 입력은 `N` 까지만 담고 경고를 남깁니다. 넘는 부분은 버려지고, 버퍼 밖은 절대 건드리지 않습니다.
      *   잘림이 문제인 곳은 `try_assign` · `try_append`(넘치면 바꾸지 않고 false, 로그 없음)를 씁니다.
      *   길이를 잃으면 안 되는 문자열에는 `sw::string` 을 쓰십시오.
-     * - **할당 없음과 캐시 지역성**:
+     * - 할당 없음과 캐시 지역성:
      *   문자열 데이터를 객체 안에 바로 들고 있어 힙 단편화가 생기지 않고 캐시 적중률이 높습니다.
-     * - **std::basic_string_view 호환**:
+     * - std::basic_string_view 호환:
      *   `view()` 와 `operator std::basic_string_view<T>()` 로 복사 없이 표준 문자열 뷰로 넘길 수 있습니다.
-     * - **std::hash 지원**:
+     * - std::hash 지원:
      *   `sw::string` 과 같은 `RuntimeStringHash` 기반의 `std::hash` 특수화가 있어(프로세스 안 전용 — 파일 · 네트워크에 남기지 않는다) `std::unordered_map` 이나 `std::unordered_set` 의 키로
      *   바로 쓸 수 있습니다.
-     * - **같음 · 사전순 비교(`equals`, `compare`)**:
+     * - 같음 · 사전순 비교(`equals`, `compare`):
      *   `StringUtil::equals` 와 `StringUtil::compare` 를 그대로 써서 식별자와 파일 경로를 빠르게 비교합니다.
      */
     template <typename T, uint32 N>
@@ -342,7 +342,7 @@ namespace sw
         /**
          * @brief 용량 N 을 넘는 길이를 N 으로 잘라 반환합니다.
          * @details 단언은 실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 알리기만 하고 원래 길이로 복사하면 `_arrData` 뒤를
-         *          덮어쓰는 버퍼 오버플로입니다. 넘치는 길이는 **데이터에서 옵니다**(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로
+         *          덮어쓰는 버퍼 오버플로입니다. 넘치는 길이는 데이터에서 옵니다(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로
          *          단언으로 멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다. 경고 안에서 다시 넘치면(로그 싱크가
          *          fixed_string 에 쓰는 경우) 경고 없이 자릅니다(`FixedStringWarningGuard`).
          */
@@ -473,7 +473,7 @@ namespace sw
         std::fill_n( _arrData, clampToCapacity( nullptr, count ), ch );
     }
 
-    // 자기 대입은 `fs = fs.c_str()` 처럼 들어온다. 시작 주소가 같으면 옮길 것이 없고, 자기 버퍼 **안쪽**(`s = s.c_str() + 2`)은 겹치므로
+    // 자기 대입은 `fs = fs.c_str()` 처럼 들어온다. 시작 주소가 같으면 옮길 것이 없고, 자기 버퍼 안쪽(`s = s.c_str() + 2`)은 겹치므로
     // `assignKnownLength` 가 memmove 로 옮긴다. 검사기는 copy-and-swap 이 아니라고 짚지만, 고정 버퍼에는 교환할 동적 자원이 없다.
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
     template <typename T, uint32 N>
@@ -609,7 +609,7 @@ namespace sw
         if ( pos >= currentSize )
             return *this;
 
-        // **뺄셈으로 비교한다.** `pos + length` 는 `uint32` 범위에서 오버플로할 수 있다. `npos` 가 아닌 큰 길이가 들어오면
+        // 뺄셈으로 비교한다. `pos + length` 는 `uint32` 범위에서 오버플로할 수 있다. `npos` 가 아닌 큰 길이가 들어오면
         // (끝과 시작을 거꾸로 뺀 계산 등) 합이 작은 수로 돌아와 아래 `else` 로 빠지고, 거기서 `_arrData + pos + length` 라는
         // 엉뚱한 주소를 읽는다. `pos < currentSize` 는 위에서 걸렀으므로 이 뺄셈은 안전하다(형제 함수인 `substr` 도 같은 형태다).
         if ( length == npos || length >= currentSize - pos )

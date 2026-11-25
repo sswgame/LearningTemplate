@@ -15,17 +15,17 @@ namespace sw
      */
     struct VarIntUtil
     {
-        // **인코딩에는 32비트 오버로드가 없다(일부러 비대칭이다).**
+        // 인코딩에는 32비트 오버로드가 없다(일부러 비대칭이다).
         // 32비트 값을 `encodeVarUint64` 에 넘기면 승격되어 같은 바이트가 나온다. 오버로드는 `static_cast` 한 줄을 감쌀 뿐이라
         // 두지 않는다(`ByteWriter::writeVarUint` 도 32비트 값을 64비트 인코더로 넣는다).
-        // 반대로 **디코딩에는 있다.** 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을 걸러 내는 진짜 검사를 한다.
+        // 반대로 디코딩에는 있다. 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을 걸러 내는 진짜 검사를 한다.
         //
-        // 주의: 32비트 디코더가 `static_cast` 로 자르면 범위 밖 값을 **조용히 잘라** 망가진 아카이브가 거부되지 않고 엉뚱하게
+        // 주의: 32비트 디코더가 `static_cast` 로 자르면 범위 밖 값을 조용히 잘라 망가진 아카이브가 거부되지 않고 엉뚱하게
         // 읽힌다(`Archive::readPooledString` 의 `poolID >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로 잘린 뒤에 보므로 통과한다).
         // `narrowToUint32` · `narrowToInt32` 가 실제로 거른다.
 
         /**
-         * @brief 64비트 값이 uint32 에 **손실 없이** 들어갈 때만 옮깁니다.
+         * @brief 64비트 값이 uint32 에 손실 없이 들어갈 때만 옮깁니다.
          * @return 범위를 벗어나면 false 이고, 그때 outValue 는 그대로 둡니다.
          */
         static bool narrowToUint32( uint64 value, uint32& outValue )
@@ -37,7 +37,7 @@ namespace sw
         }
 
         /**
-         * @brief 64비트 값이 int32 에 **손실 없이** 들어갈 때만 옮깁니다.
+         * @brief 64비트 값이 int32 에 손실 없이 들어갈 때만 옮깁니다.
          * @return 범위를 벗어나면 false 이고, 그때 outValue 는 그대로 둡니다.
          */
         static bool narrowToInt32( int64 value, int32& outValue )
@@ -74,7 +74,7 @@ namespace sw
          */
         static size_t encodeVarInt64( int64 value, vector<uint8>& outBytes )
         {
-            // 부호 있는 값의 왼쪽 시프트는 C++17 에서 **음수면 UB** 다. 부호 없는 쪽에서 민다.
+            // 부호 있는 값의 왼쪽 시프트는 C++17 에서 음수면 UB 다. 부호 없는 쪽에서 민다.
             const uint64 zigZag = ( static_cast<uint64>( value ) << 1 ) ^ static_cast<uint64>( value >> 63 );
             return encodeVarUint64( zigZag, outBytes );
         }
@@ -125,7 +125,7 @@ namespace sw
             uint64 val64     = 0;
             if ( decodeVarUint64( pData, dataSize, curOffset, val64 ) == false )
                 return false;
-            // 범위를 벗어나면 **오프셋도 되돌린다** — 실패한 읽기가 스트림을 먹고 가면 안 된다.
+            // 범위를 벗어나면 오프셋도 되돌린다 — 실패한 읽기가 스트림을 먹고 가면 안 된다.
             if ( narrowToUint32( val64, outValue ) == false )
                 return false;
             inoutOffset = curOffset;

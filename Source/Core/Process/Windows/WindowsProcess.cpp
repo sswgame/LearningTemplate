@@ -42,8 +42,8 @@ namespace sw
             }
 
             /**
-             * @brief 명령의 실행 파일을 `CreateProcessW` 의 응용 프로그램 이름(전체 경로)으로 정합니다. 이름 명령은 PATH 의 **절대 경로 폴더만** 뒤집니다. 못 찾으면 빈 글입니다.
-             * @details 응용 프로그램 이름 없이 명령줄만 주면 `CreateProcessW` 는 실행 파일 폴더 → **작업 폴더** → 시스템 폴더 → PATH 순으로 찾는다 — 프로젝트 폴더에 놓인
+             * @brief 명령의 실행 파일을 `CreateProcessW` 의 응용 프로그램 이름(전체 경로)으로 정합니다. 이름 명령은 PATH 의 절대 경로 폴더만 뒤집니다. 못 찾으면 빈 글입니다.
+             * @details 응용 프로그램 이름 없이 명령줄만 주면 `CreateProcessW` 는 실행 파일 폴더 → 작업 폴더 → 시스템 폴더 → PATH 순으로 찾는다 — 프로젝트 폴더에 놓인
              *          `git.exe` 가 PATH 의 git 보다 먼저 돈다(바이너리 심기). Go `os/exec.LookPath`(1.19 부터 작업 폴더 결과를 거절)와 같이 PATH 만 본다.
              *          확장자가 없으면 `.exe` 를 붙인다(`CreateProcessW` 와 같은 규칙).
              */
@@ -204,10 +204,10 @@ namespace sw
             }
 
             /**
-             * @brief **자식이 물려받는 핸들을 이 파이프 하나로 못박는** 속성 목록입니다. `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
+             * @brief 자식이 물려받는 핸들을 이 파이프 하나로 못박는 속성 목록입니다. `bInheritHandles = TRUE` 만 주면 이 프로세스의 *상속 가능한 핸들
              *        전부* 가 넘어간다. 두 스레드가 거의 동시에 자식을 띄우면 서로의 파이프 쓰기 끝을 물려받고, 그러면 한쪽의 읽기는 자기 자식이
-             *        끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다(Microsoft 가 권하는 방법이 이 속성 목록이다).
-             * @details 속성 목록은 핸들 배열을 복사하지 않고 **가리킨다** — 배열이 `CreateProcessW` 까지 살아 있어야 한다. 그래서 배열과 목록을 한 객체가
+             *        끝나도 EOF 를 못 받고 남의 자식이 끝날 때까지 막힌다(Microsoft 가 권하는 방법이 이 속성 목록이다).
+             * @details 속성 목록은 핸들 배열을 복사하지 않고 가리킨다 — 배열이 `CreateProcessW` 까지 살아 있어야 한다. 그래서 배열과 목록을 한 객체가
              *          함께 들고 복사 · 이동을 막는다(배열을 만든 함수의 지역 변수로 두었더니 함수가 끝난 뒤 목록이 사라진 배열을 가리켜 모든 자식 띄우기가 졌다).
              */
             struct InheritedHandleList
@@ -594,7 +594,7 @@ namespace sw
         if ( _pNativeHandle == nullptr )
             return false;
 
-        // 종료 코드로 묻지 않는다. `STILL_ACTIVE` 의 값이 **259** 라서, 259 로 끝난 자식은 영원히 실행 중으로 보인다
+        // 종료 코드로 묻지 않는다. `STILL_ACTIVE` 의 값이 259 라서, 259 로 끝난 자식은 영원히 실행 중으로 보인다
         // (`cmd /c exit 259` 로 재현된다). 핸들 자체가 신호 상태인지 묻는 것이 올바른 방법이다.
         return WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT;
     }

@@ -33,15 +33,15 @@ namespace sw
      * @class TaskManager
      * @brief 워커 스레드 풀을 만들어 관리하고, 큐에 등록된 태스크를 나눠 비동기로 실행합니다.
      * @details
-     * - **작업 훔치기 데크**: 워커마다 고정 크기 lock-free 데크를 따로 가지며, 할 일이 없는 워커는 다른 워커의 작업을 훔쳐
+     * - 작업 훔치기 데크: 워커마다 고정 크기 lock-free 데크를 따로 가지며, 할 일이 없는 워커는 다른 워커의 작업을 훔쳐
      *   옵니다(work stealing).
-     * - **DAG 의존성 기반 자동 스케줄링**: 선행 태스크가 끝나면 카운트다운을 거쳐 후속 태스크가 자동으로 큐에 들어갑니다.
-     * - **대기 중 돕기(work helping)**: 부모 태스크가 자식 · 병렬 태스크의 완료를 기다릴 때 그냥 잠들지 않고 큐의 다른 작업을
+     * - DAG 의존성 기반 자동 스케줄링: 선행 태스크가 끝나면 카운트다운을 거쳐 후속 태스크가 자동으로 큐에 들어갑니다.
+     * - 대기 중 돕기(work helping): 부모 태스크가 자식 · 병렬 태스크의 완료를 기다릴 때 그냥 잠들지 않고 큐의 다른 작업을
      *   직접 실행해 데드락을 막고 스레드 활용률을 높입니다.
-     * - **주소 대기**: 할 일이 없는 워커와 대기자는 잠깐 스핀한 뒤 **자기 워드 하나**에서 잠들고(`Futex`), 제출 · 완료하는 쪽은
+     * - 주소 대기: 할 일이 없는 워커와 대기자는 잠깐 스핀한 뒤 자기 워드 하나에서 잠들고(`Futex`), 제출 · 완료하는 쪽은
      *   그 주소만 깨웁니다. 뮤텍스도 조건 변수도 없습니다. 워커 n 개를 깨우는 일이 서로 독립적인 n 번의 깨우기이고, 깨어난 쪽이
      *   다시 잡아야 할 잠금도 없습니다.
-     * - **병렬 그룹은 티켓 방식**: `runParallel` · `emplaceParallel*` 은 청크마다 노드를 만들지 않습니다. 그룹 하나에 티켓 몇
+     * - 병렬 그룹은 티켓 방식: `runParallel` · `emplaceParallel*` 은 청크마다 노드를 만들지 않습니다. 그룹 하나에 티켓 몇
      *   장을 큐에 넣고, 티켓을 가져간 스레드는 원자 카운터로 남은 청크를 계속 가져와 실행합니다. 호출 스레드도 바로 함께
      *   실행합니다.
      */
@@ -149,7 +149,7 @@ namespace sw
         void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body );
 
         /**
-         * @brief 포크-조인 병렬 for 입니다. 일의 수가 아니라 **측정한 비용**으로 나눌지 정합니다(`runParallel` 은 호출처가 고른 수 `serialThreshold` 를 따른다).
+         * @brief 포크-조인 병렬 for 입니다. 일의 수가 아니라 측정한 비용으로 나눌지 정합니다(`runParallel` 은 호출처가 고른 수 `serialThreshold` 를 따른다).
          * @details 항목당 비용은 호출처가 알기 어렵다(무버 틱 ~25 ns, 애니메이션 평가는 수 us). 그래서 호출 스레드가 앞 항목을 1, 2, 4, … 개씩 늘려 가며
          *          직접 돌고(이 일은 버려지지 않는 실제 일이다), 경과가 `kCostProbeNanos` 를 넘으면 남은 일의 예상 직렬 시간으로 고른다 — `kSerialBudgetNanos`
          *          (디스패치 손익분기) 보다 짧으면 이어서 직렬로, 아니면 나머지 구간만 나눈다. 무거운 항목은 첫 항목에서 바로 나뉘고, 가벼운 일은 깨우는 비용을
@@ -169,7 +169,7 @@ namespace sw
 
         /**
          * @struct ParallelIntoJob
-         * @brief `runParallelInto` 의 본문 어댑터입니다. 출력 칸의 시작 포인터를 **호출 스레드에서** 한 번 집고, 구간의 항목마다 `body( index, slot )` 을 부릅니다.
+         * @brief `runParallelInto` 의 본문 어댑터입니다. 출력 칸의 시작 포인터를 호출 스레드에서 한 번 집고, 구간의 항목마다 `body( index, slot )` 을 부릅니다.
          */
         template <typename T, typename Body>
         struct ParallelIntoJob
@@ -189,7 +189,7 @@ namespace sw
 
         /**
          * @struct ParallelReduceJob
-         * @brief `runParallelReduce` 의 블록 본문입니다. 블록 하나의 항목을 **번호 순서로** 그 블록의 부분값 칸에 접습니다.
+         * @brief `runParallelReduce` 의 블록 본문입니다. 블록 하나의 항목을 번호 순서로 그 블록의 부분값 칸에 접습니다.
          * @details 블록 경계는 항목 수와 블록 크기로만 정해진다(워커 수 · 도착 순서와 무관) — 그래서 부분값과 그 합치기 순서가 직렬과 같다.
          */
         template <typename T, typename Body>
@@ -213,7 +213,7 @@ namespace sw
             /** @brief @p count 항목을 @p blockSize 씩 자른 블록 수입니다. */
             static uint32 computeBlockCount( uint32 count, uint32 blockSize ) { return count / blockSize + ( count % blockSize != 0 ? 1u : 0u ); } // 올림 — `count + blockSize - 1` 은 큰 수에서 넘친다
 
-            /** @brief 부분값을 **블록 순서로** 합칩니다. 첫 블록부터 왼쪽으로 접는다 — 부동소수 합도 실행마다 같은 비트다. */
+            /** @brief 부분값을 블록 순서로 합칩니다. 첫 블록부터 왼쪽으로 접는다 — 부동소수 합도 실행마다 같은 비트다. */
             template <typename Combine>
             static T combineInOrder( vector<T>& inoutListPartial, const Combine& combine )
             {
@@ -228,7 +228,7 @@ namespace sw
 
         /**
          * @brief 항목 하나가 출력 칸 하나를 쓰는 포크-조인 병렬 for 입니다(Taskflow `for_each_index` + 결과 배열, 언리얼 `ParallelFor` 의 결과 배열 모양).
-         * @details 본문은 `body( uint32 index, T& slot )` 이고 @p output 의 **제 칸만** 받습니다. 칸을 형식으로 건네므로 본문이 출력 컨테이너를 잡을 일이 없다 —
+         * @details 본문은 `body( uint32 index, T& slot )` 이고 @p output 의 제 칸만 받습니다. 칸을 형식으로 건네므로 본문이 출력 컨테이너를 잡을 일이 없다 —
          *          벡터를 람다로 잡으면 다른 칸이라도 컨테이너 쓰기 접근이라 경합 감지기에 걸리고(반사 프로브 거르기), 호출부마다 `.data()` 포인터를 손으로 받던 모양이
          *          여기 한 곳으로 모인다. 공유 쓰기는 끝난 뒤 호출 스레드가 목록 순서로 한다. 나누기 규칙은 `runParallel`. 엔진 코드는 `engine::runParallelInto`.
          *          원소 타입을 적어 부르면(`runParallelInto<float32>( list, … )`) 컨테이너가 span 으로 바뀐다.
@@ -282,7 +282,7 @@ namespace sw
         };
 
         /**
-         * @brief 출력 칸이 여럿인 포크-조인 병렬 for 입니다 — 본문은 `body( start, end, span<T0> out0, span<T1> out1, … )` 이고 각 출력의 [start, end) **조각만** 받습니다.
+         * @brief 출력 칸이 여럿인 포크-조인 병렬 for 입니다 — 본문은 `body( start, end, span<T0> out0, span<T1> out1, … )` 이고 각 출력의 [start, end) 조각만 받습니다.
          * @details 항목 하나가 칸 여럿을 쓰거나(후보 + 표시), 구간째 일괄 처리하는 백엔드 호출(바디 상태 묶음 읽기)이나 SoA 스트림(위치 · 법선)처럼 구간이 일의 모양인 곳에 씁니다.
          *          출력 시작 포인터를 호출부마다 손으로 받던 모양을 형식으로 막는다 — 본문은 제 구간 밖의 칸을 볼 수 없다. 출력은 길이가 @p count 이거나 비어야 하고(빈 것은
          *          "없는 스트림"), 원소 타입은 span 으로 넘겨 정해진다(`vector_reference<float3>( list )`). 읽기 입력은 지금처럼 const 포인터로 잡습니다. 나누기 규칙은 `runParallel`.
@@ -355,7 +355,7 @@ namespace sw
         void waitStage( const TaskStageHandle& stage );
         /**
          * @brief `waitStage` 와 같이 끝날 때까지 기다리되, 오래 걸리면 `kStageWaitReportMs` 마다 @p owner 와 남은 수 · 그 스테이지의 남은 태스크 이름 하나를 정보로 남깁니다(진행 알림 — 판정이 아니다).
-         * @details 주인이 "내가 낸 일만" 기다리는 자리(종료 · 취소)가 씁니다. **기한을 넘겨 그만 기다리지 않는다** — 낸 일은 반드시 끝나고(영구 태스크를 두지 않는 계약),
+         * @details 주인이 "내가 낸 일만" 기다리는 자리(종료 · 취소)가 씁니다. 기한을 넘겨 그만 기다리지 않는다 — 낸 일은 반드시 끝나고(영구 태스크를 두지 않는 계약),
          *          기다리다 이어 가면 도는 태스크가 곧 지울 상태를 건드려 멈춤이 메모리 오염이 된다. 오래 걸리는 일은 주인이 먼저 협조 중단(`StopSource`)을 올린다.
          *          정말 멈춘 것은 프로세스의 행 감시가 잡는다(기계 배율을 읽는 시한 하나 — 고정 간격의 이 알림이 오류면 느린 구성에서 제때 끝난 일도 실패가 된다). 스테이지는 태스크가 도는 중에도 `addTask` 할 수 있어(남은 수가 0 에서 다시 오르면 스스로를 다시 잡는다)
          *          오래 사는 주인이 스테이지 하나를 계속 쓴다. 엔진 전체 대기(`waitAll`)는 남이 낸 일까지 기다려 쓰지 않는다.
@@ -367,7 +367,7 @@ namespace sw
         /** @brief 스테이지의 모든 작업이 끝났는지 확인합니다. */
         bool isStageComplete( const TaskStageHandle& stage );
         /**
-         * @brief @p task 를 @p inoutStage 에 넣습니다(제출 **전에** 부른다). 스테이지가 아직 없으면 @p stageName 으로 만듭니다 — 오래 사는 주인이 처음 낼 때 만든다.
+         * @brief @p task 를 @p inoutStage 에 넣습니다(제출 전에 부른다). 스테이지가 아직 없으면 @p stageName 으로 만듭니다 — 오래 사는 주인이 처음 낼 때 만든다.
          * @details @p inoutStage 를 쓰는 일은 부르는 쪽이 직렬로 한다(주인의 잠금 · 한 스레드). 만들어진 뒤의 `addTask` 는 원자 연산이라 어느 스레드든 된다.
          */
         void addToStage( TaskStageHandle& inoutStage, const TaskHandle& task, string_view stageName );
@@ -445,12 +445,12 @@ namespace sw
          * @param continuation 모두 끝나면 실행할 델리게이트
          * @param affinity 실행할 스레드
          * @return 만든 후속 태스크의 핸들
-         * @note 후속은 새로 만든 노드라 사이클이 될 수 없습니다. 선행 중 **취소**된 것도 끝난 것으로 세어 후속이 돕니다(`TaskHandle::cancel`).
+         * @note 후속은 새로 만든 노드라 사이클이 될 수 없습니다. 선행 중 취소된 것도 끝난 것으로 세어 후속이 돕니다(`TaskHandle::cancel`).
          */
         TaskHandle whenAll( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
         /**
-         * @brief 넘긴 태스크 중 **하나라도** 먼저 끝나면 바로 실행되는 후속 태스크를 만듭니다.
+         * @brief 넘긴 태스크 중 하나라도 먼저 끝나면 바로 실행되는 후속 태스크를 만듭니다.
          * @param listTask 지켜볼 태스크 핸들들(vector · array · C 배열 무엇이든)
          * @param continuation 처음으로 끝난 태스크가 나오면 실행할 델리게이트
          * @param affinity 실행할 스레드
@@ -515,7 +515,7 @@ namespace sw
         /**
          * @brief 이 스레드가 받은 도우미 슬롯을 지금 돌려줍니다. 스레드가 끝나면 저절로 돌려주므로, 스레드가 살아 있는 채 이 매니저를 그만 도울 때만 부릅니다.
          * @details 돌려받지 않으면 백엔드 교체 · `gv_useRenderThread` 토글로 렌더 스레드를 새로 만들 때마다 새 슬롯을 받아, 상한(8)을 넘을 때
-         *          두 스레드가 마지막 슬롯을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
+         *          두 스레드가 마지막 슬롯을 나눠 써 스크래치 벡터가 겹치고(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
          */
         void releaseCurrentThreadHelperSlot();
 #if !defined( SW_SHIPPING )
@@ -548,7 +548,7 @@ namespace sw
         void scheduleReadyTask( TaskNode* pNode, bool bWakeWorker );
         /**
          * @brief 마지막 참조가 놓인 노드를 풀로 돌려줍니다(`TaskNode::release` 가 부릅니다).
-         * @details 만들기만 하고 **제출하지 않은 채** 버려진 태스크(큐에 한 번도 들어가지 않았다)는 취소된 태스크로 완료 처리한 뒤 돌려줍니다
+         * @details 만들기만 하고 제출하지 않은 채 버려진 태스크(큐에 한 번도 들어가지 않았다)는 취소된 태스크로 완료 처리한 뒤 돌려줍니다
          *          (안 그러면 활성 수 · 부모의 자식 수 · 후속이 영영 풀리지 않아 `waitAll` 과 종료가 멈춥니다).
          */
         void deallocateNode( TaskNode* pNode );
@@ -667,15 +667,15 @@ namespace sw
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot; ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
         /// 도우미 슬롯 장부 — 슬롯을 받은 스레드의 상태도 쥔다. 그 스레드가 끝날 때 매니저가 먼저 사라졌어도 돌려줄 자리가 남는다.
         shared_ptr<HelperSlotPool> _pHelperSlotPool;
-        uint32                     _instanceID; ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
+        uint32                     _instanceID; ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 이 매니저 것인지 가린다
         /**
-         * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 **원자적으로 내리고** 그 워커만 깨웁니다.
+         * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 원자적으로 내리고 그 워커만 깨웁니다.
          * @details 비트를 내린 쪽만 깨우므로 두 제출자가 같은 워커를 두 번 깨우지 않고, n 번의 깨우기는 서로 독립적인 n 번의 주소
          *          깨우기입니다(조건 변수의 `notify_one` 은 누구를 깨울지 고를 수 없고, 깨어난 워커가 모두 뮤텍스를 다시 잡아야 합니다).
          */
         alignas( 64 ) atomic<uint64> _idleWorkerMask;
         /**
-         * @brief 작업이 들어올 때마다 오르는 세대입니다. 스핀 중인 워커는 **이 값만 읽습니다.**
+         * @brief 작업이 들어올 때마다 오르는 세대입니다. 스핀 중인 워커는 이 값만 읽습니다.
          * @details 스핀 중에 매번 큐를 뒤지면(`tryTakeItem`) 전역 MPMC 큐의 CAS 와 데크마다의 steal 을 워커 전부가 동시에 반복해서
          *          건드려, 스핀을 늘릴 때 게임 · 렌더 스레드의 코어까지 빼앗습니다. 읽기 전용 캐시 라인 하나만 보면 경합이 없고,
          *          세대가 바뀌었을 때만 큐를 건드립니다. `SubmitBatch` 는 넣는 동안 세대를 올리지 않고 범위 끝에
@@ -684,7 +684,7 @@ namespace sw
         alignas( 64 ) atomic<uint32> _jobEpoch;
         /**
          * @brief 완료 브로드캐스트입니다(스테이지 완료 · 활성 수 0 · 메인 작업 · clear). `waitAll` 과 "두 번째 대기자" 가 잠듭니다.
-         * @details 스테이지 · 병렬 그룹은 대기자 **하나**를 자기 조인 카운터에 적어 두고, 마지막 태스크가 그 스레드만 깨웁니다. 같은
+         * @details 스테이지 · 병렬 그룹은 대기자 하나를 자기 조인 카운터에 적어 두고, 마지막 태스크가 그 스레드만 깨웁니다. 같은
          *          스테이지를 둘이 기다리거나 `waitAll` 처럼 대상이 전체인 대기만 여기서 잠듭니다.
          */
         alignas( 64 ) FutexBroadcast _completionBroadcast;
@@ -698,7 +698,7 @@ namespace sw
         atomic<int32> _mainThreadParkedSlot;
 
         /**
-         * @brief `TaskPriority::High` 전용 전역 큐입니다. **모든 워커가 자기 데크보다 먼저 봅니다.**
+         * @brief `TaskPriority::High` 전용 전역 큐입니다. 모든 워커가 자기 데크보다 먼저 봅니다.
          * @details 게임 스레드의 대량 잡(트랜스폼 플러시 · 씬 수집)과 렌더 스레드의 병렬 패스 기록이 같은 풀을 씁니다. 우선순위 큐가 없으면
          *          렌더 스레드가 방금 넣은 기록 태스크가 게임 스레드의 청크 수십 개 뒤에 줄을 서고, 렌더 스레드는 그 스테이지를 바로
          *          기다리므로 그 줄이 그대로 프레임 지연이 됩니다(큐브 8000개 벤치에서 렌더 스레드의 그래프 기록이 약 1.5 배로 늘어납니다).

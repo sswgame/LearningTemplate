@@ -43,11 +43,11 @@ namespace sw
     };
 
     /**
-     * @brief 서브시스템이 든 상태의 수명입니다. 등록 줄(`SW_ENGINE_SUBSYSTEM` · `SW_MODULE_SUBSYSTEM` …)이 **꼭 고른다** — 기본값이 없다.
+     * @brief 서브시스템이 든 상태의 수명입니다. 등록 줄(`SW_ENGINE_SUBSYSTEM` · `SW_MODULE_SUBSYSTEM` …)이 꼭 고른다 — 기본값이 없다.
      * @details 예전에는 엔진 서비스가 모두 프로세스 수명이라 떠 있는 자막 · 알림 · 재생 중인 소리 · 열린 화면이 게임을 다시 시작해도 남았고, 샐 때마다 하나씩 자동화 되돌리기로 등록했다.
      *          언리얼이 `UEngineSubsystem` 과 `UGameInstanceSubsystem` 을 형식으로 가르는 자리다. 여기서는 객체를 다시 만들지 않고 상태만 비운다 —
      *          서비스를 빌려 든 쪽(칸 · 다른 서브시스템)이 많고, 장치 · 구독처럼 게임을 넘어 남을 것과 한 객체에 있다.
-     *          `GameInstance` 는 `Subsystem` 의 두 함수를 **재정의해야 하고** `Process` 는 재정의하면 안 된다(`kSubsystemLifetimeMatches` — 컴파일 오류).
+     *          `GameInstance` 는 `Subsystem` 의 두 함수를 재정의해야 하고 `Process` 는 재정의하면 안 된다(`kSubsystemLifetimeMatches` — 컴파일 오류).
      */
     enum class SubsystemLifetime : uint8
     {
@@ -63,7 +63,7 @@ namespace sw
     };
 
     /**
-     * @brief 서브시스템이 제 범위 밖의 **모듈 서비스 범위**에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
+     * @brief 서브시스템이 제 범위 밖의 모듈 서비스 범위에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
      * @details 호스트가 모듈에 넘기는 범위가 손 목록으로 빌려 걸던 자리다 — 목록에서 빠지면 모듈이 조용히 못 찾았다. 이 길로는 게임 모듈에 닿을 수 없다:
      *          게임 모듈에 보이는 것은 엔진 서비스 칸(`GameVisible`)과 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM`)뿐이다 — 호스트 전용의 경계가 형식으로 선다.
      *          언리얼 `UEditorSubsystem`(에디터만 찾는 서브시스템)과 같은 자리다. 서브시스템이 드러낸 멤버(`SubsystemScope::exposeMember`)도 그 멤버의 형식이 같은 상수로 선언한다
@@ -92,9 +92,9 @@ namespace sw
      *          - 의존은 먼저 서야 하는 서브시스템 이름들입니다. 모르는 이름 · 순환 · 호스트 어긋남은 정렬 오류입니다.
      *          - `initializeSubsystem` 은 백엔드 교체(`shutdownDependents` → `restartStopped`)로 다시 불릴 수 있습니다 — 이미 있는 것은 다시 씁니다.
      *          - 종료는 두 번 역순으로 돕니다. 먼저 `stopSubsystem`(종료 전 단계 — 새 일 받기를 멈추고 남은 일을 비운다)이 모두에 불리고,
-     *            그다음 `shutdownSubsystem` 이 모두에 불립니다(언리얼의 PreExit 뒤 `Deinitialize`). 둘 다 **초기화에 성공한** 서브시스템에만,
+     *            그다음 `shutdownSubsystem` 이 모두에 불립니다(언리얼의 PreExit 뒤 `Deinitialize`). 둘 다 초기화에 성공한 서브시스템에만,
      *            성공한 초기화 한 번마다 한 번씩 불립니다. 이때 다른 서브시스템은 아직 모두 살아 있습니다.
-     *          - 소멸자는 모든 종료 뒤에 **모든** 서브시스템에(초기화하지 않았어도) 역순으로 불립니다.
+     *          - 소멸자는 모든 종료 뒤에 모든 서브시스템에(초기화하지 않았어도) 역순으로 불립니다.
      *          클래스가 따로 가진 `initialize( … )` · `shutdown()`(테스트가 자기 인스턴스로 쓰는 것)과 이름을 나눠, 컬렉션이 부르는 자리만 이 둘입니다.
      */
     class Subsystem
@@ -128,7 +128,7 @@ namespace sw
         /** @brief 먼저 서야 하는 서브시스템 이름들입니다(없으면 빈 구간). 배열은 프로세스 수명이어야 합니다(`static constexpr`). */
         virtual span<const utf8* const> getSubsystemDependencies() const { return {}; }
         /**
-         * @brief 이 서브시스템 **뒤에** 서야 하는 서브시스템 이름들입니다(그들이 이것에 의존한다 — 역방향 의존). 목록에 없는 이름은 건너뜁니다.
+         * @brief 이 서브시스템 뒤에 서야 하는 서브시스템 이름들입니다(그들이 이것에 의존한다 — 역방향 의존). 목록에 없는 이름은 건너뜁니다.
          * @details 이름 상수는 층을 따라 아래로만 include 된다. 그래서 낮은 층의 서브시스템(비동기 IO · 오디오 · 입력)이 높은 층의 것(모듈 라이브러리)보다
          *          늦게 서야 하면, 높은 층 쪽이 이 칸에 낮은 층의 이름을 적는다. 그 호스트에 없는 이름은 순서에 영향이 없다(선택 의존).
          */

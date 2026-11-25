@@ -6,7 +6,7 @@
  *          - `tryRead`: 빈 값도 "정해져 있음"으로 읽는다. 사용자가 일부러 비워 정한 값을 존중해야 하는 변수(허용 목록 · 비밀 · 명시적 선택)가 쓴다.
  *          - `tryReadNonEmpty`: 없음과 빈 값을 같게 읽는다. 경로 · 포트처럼 빈 글이 쓸모없는 변수가 쓴다(빈 `HOME` 으로 상대 경로를 만들지 않는다).
  *          Windows 는 `GetEnvironmentVariableW` 로 읽어 UTF-8 로 돌려준다(CRT 의 `getenv` 는 ANSI 코드 페이지라 한글 사용자 이름이 든 `LOCALAPPDATA` 가 깨진다). 정하기는 OS 환경과
- *          CRT 복사본을 함께 바꾼다(CRT 를 쓰는 서드파티 코드 — Tracy 클라이언트 — 가 `getenv` 로 읽는다). 메인 스레드 설정 단계에서 쓰는 것을 전제로 한다(`setenv` 는 스레드 안전하지 않다).
+ *          CRT 복사본을 함께 바꾼다(CRT 를 쓰는 서드파티 코드인 Tracy 클라이언트가 `getenv` 로 읽는다). 메인 스레드 설정 단계에서 쓰는 것을 전제로 한다(`setenv` 는 스레드 안전하지 않다).
  */
 #pragma once
 #include "Core/Container/string.h"

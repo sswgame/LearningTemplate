@@ -11,7 +11,7 @@ using namespace sw;
 //
 // 이 정책이 무너지면 증상은 "무거운 장면에서 게임이 점점 더 느려진다" 다. 프레임이 길어질수록
 // 고정 스텝을 더 부르고 그래서 더 길어지는 되먹임이라, 한 번 빠지면 스스로 빠져나오지 못한다.
-// 그런데 그 되먹임은 **느린 프레임에서만** 나타나므로 실행해 봐서는 좀처럼 걸리지 않는다.
+// 그런데 그 되먹임은 느린 프레임에서만 나타나므로 실행해 봐서는 좀처럼 걸리지 않는다.
 //
 // 시계는 손으로 민다(`ManualClock`) — 잠들지 않고 경과를 정확히 정하므로 단언은 정확한 값이다.
 // 예전에는 실제로 잠들어 "충분히 오래 잤으니 상한에서 잘렸다" 는 한 방향 단언만 걸 수 있었다.
@@ -55,10 +55,10 @@ SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
 }
 
 /**
- * @brief [FixedTimestepTest] 스텝 수는 상한에서 잘리고, **넘친 잔액은 버린다**
+ * @brief [FixedTimestepTest] 스텝 수는 상한에서 잘리고, 넘친 잔액은 버린다
  * @details 상한만 두고 잔액을 남기면 다음 프레임이 더 많은 스텝을 요구한다 — 상한이 있어도
  *          빚이 쌓여 영영 못 따라잡는다. 시뮬레이션이 실시간보다 느려지는 쪽을 택한 자리다.
- *          두 번째 호출 전에는 **시계를 밀지 않는다** — 잔액을 남겼다면 경과 없이도 스텝이 나온다.
+ *          두 번째 호출 전에는 시계를 밀지 않는다 — 잔액을 남겼다면 경과 없이도 스텝이 나온다.
  */
 SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
 {
@@ -130,7 +130,7 @@ SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy
  * @brief [FixedTimestepTest] 만들어 두고 한참 뒤에 start 해도 첫 델타는 "방금" 부터다
  * @details `App` 은 이 객체를 멤버로 만들어 두고 창·RHI·모듈을 다 세운 뒤에야 `start()` 를
  *          부른다. 그 사이의 시간이 첫 델타에 섞이면 첫 프레임이 상한 가득한 고정 스텝을 돌아
- *          **시작하자마자 한 박자 건너뛴 것처럼** 보인다. `GameTimer` 의 "첫 델타가 부팅 이후
+ *          시작하자마자 한 박자 건너뛴 것처럼 보인다. `GameTimer` 의 "첫 델타가 부팅 이후
  *          시간" 함정과 같은 자리를 이 층에서도 막아 둔다.
  */
 SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )

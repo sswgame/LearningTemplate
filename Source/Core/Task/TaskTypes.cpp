@@ -183,7 +183,7 @@ namespace sw
             bCycle                         = bSelf || bTargetReachesThis || bTargetIsDescendant;
             if ( bCycle == false )
             {
-                // 의존 수를 **먼저** 올린다. 목록에 붙인 뒤에 올리면, 그 사이에 이 태스크가 끝나 수를 내려 대상이 너무 일찍 돌 수 있다.
+                // 의존 수를 먼저 올린다. 목록에 붙인 뒤에 올리면, 그 사이에 이 태스크가 끝나 수를 내려 대상이 너무 일찍 돌 수 있다.
                 pTargetNode->retain();
                 pTargetNode->_unresolvedDependencies.fetch_add( 1, std::memory_order_acq_rel );
                 bAttached = _pNode->_successors.tryPushBack( pTargetNode );

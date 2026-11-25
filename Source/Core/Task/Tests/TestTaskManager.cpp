@@ -169,7 +169,7 @@ SW_TEST_CASE( TaskManagerTest, SubmittedTaskRunsBeforeWaitAllReturns )
 
 /**
  * @brief runBefore 로 건 순서가 지켜진다
- * @details 후속 태스크는 선행이 **끝난 뒤에만** 돌아야 한다. 순서를 직접 보려고 선행이 깃발을
+ * @details 후속 태스크는 선행이 끝난 뒤에만 돌아야 한다. 순서를 직접 보려고 선행이 깃발을
  *          세우고 후속이 그 깃발을 확인한다.
  */
 SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
@@ -207,10 +207,10 @@ SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
 
 /**
  * @brief 이미 제출한 태스크에 선행을 더 걸어도 그 태스크는 한 번만 돈다
- * @details 의존성 수는 제출로 0 이 되어 큐에 가고, 뒤늦은 `runBefore` 가 수를 1 로 올린 뒤 선행이 끝나며 **다시** 0 을
+ * @details 의존성 수는 제출로 0 이 되어 큐에 가고, 뒤늦은 `runBefore` 가 수를 1 로 올린 뒤 선행이 끝나며 다시 0 을
  *          지난다. 노드의 "큐에 넣었다" 문(`_bScheduled`)이 그 두 번째를 막는다.
  *
- *          선행은 **본문이 도는 동안** 건다. 본문이 끝난 뒤라면 완료 처리가 호출 대상을 이미 비워서, 문이 없어도 두 번째
+ *          선행은 본문이 도는 동안 건다. 본문이 끝난 뒤라면 완료 처리가 호출 대상을 이미 비워서, 문이 없어도 두 번째
  *          실행은 빈 본문을 돌 뿐이라 보이지 않는다. 본문이 도는 동안이면 두 번째 실행이
  *          다른 워커에서 같은 본문을 동시에 돈다.
  */
@@ -300,7 +300,7 @@ SW_TEST_CASE( TaskManagerTest, IsCompletedWaitsForTheBodyAndItsChildren )
 }
 
 /**
- * @brief 병렬 분할이 모든 인덱스를 **정확히 한 번씩** 덮는다
+ * @brief 병렬 분할이 모든 인덱스를 정확히 한 번씩 덮는다
  * @details 빠뜨리면 조용히 일부가 계산되지 않고, 겹치면 같은 자리를 두 번 쓴다. 둘 다 결과가
  *          "대체로 맞아" 보이므로 인덱스별 횟수를 세어야 드러난다.
  */
@@ -312,7 +312,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelCoversEveryIndexExactlyOnce )
     constexpr uint32              kCount = 1000;
     sw::vector<sw::atomic<int32>> listHit( kCount );
 
-    // **워커 안에서는 `sw::vector` 를 첨자로 만지지 않는다.** `operator[]` 에 레이스 탐지기가
+    // 워커 안에서는 `sw::vector` 를 첨자로 만지지 않는다. `operator[]` 에 레이스 탐지기가
     // 붙어 있어서, 여러 워커가 동시에 들어오면 그것이 먼저 울린다(진짜 레이스는 없다 —
     // 원소가 원자라 원소별 접근은 안전하다). 시작 전에 주소만 한 번 받아 둔다.
     sw::atomic<int32>* pHit = listHit.data();
@@ -409,7 +409,7 @@ SW_TEST_CASE( TaskManagerTest, WaitStageReturnsOnlyAfterEveryStageTaskIsDone )
 
     manager.waitStage( stage );
 
-    // 돌아온 시점에 **이미** 다 끝나 있어야 한다 — 여기서 더 기다리지 않는다.
+    // 돌아온 시점에 이미 다 끝나 있어야 한다 — 여기서 더 기다리지 않는다.
     SW_EXPECT_EQUAL( kTaskCount, doneCount.load( std::memory_order_acquire ) );
     SW_EXPECT_TRUE( manager.isStageComplete( stage ) );
 
@@ -560,7 +560,7 @@ SW_TEST_CASE( TaskManagerTest, WhenAllRunsOnceAfterEveryDependency )
 /**
  * @brief 태스크 안에서 다른 스테이지를 기다려도 멈추지 않는다
  * @details 워커가 대기에 들어가면 그 워커가 처리했어야 할 작업이 갈 곳을 잃는다 — 그래서
- *          `waitStage` 는 자면서 기다리지 않고 **다른 일을 도와 실행한다**(work helping).
+ *          `waitStage` 는 자면서 기다리지 않고 다른 일을 도와 실행한다(work helping).
  *          그 장치가 빠지면 워커 수보다 깊게 중첩되는 순간 전부 서로를 기다린다.
  */
 SW_TEST_CASE( TaskManagerTest, NestedWaitInsideATaskDoesNotStall )
@@ -647,7 +647,7 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
  *          프로세스가 끝날 때다 — 그래서 빠뜨려도 윈도우에서는 아무 테스트도 지지 않고 리눅스 CI 의 LeakSanitizer 만
  *          보고한다(`StageNode` + 태스크 목록 + 조건변수의 뮤텍스).
  *
- *          여기서는 살아 있는 할당 수로 같은 것을 본다: 매니저를 세워 스테이지를 여럿 **동시에** 쥐었다 부수는
+ *          여기서는 살아 있는 할당 수로 같은 것을 본다: 매니저를 세워 스테이지를 여럿 동시에 쥐었다 부수는
  *          한 바퀴를 돌고, 그 전후의 살아 있는 할당 수가 제자리로 돌아오는지 본다. 첫 바퀴는 워밍업이다 —
  *          로거·스레드 런타임이 한 번만 잡는 것들을 측정하지 않기 위해서다.
  */
@@ -721,7 +721,7 @@ SW_TEST_CASE( TaskManagerTest, HandlesOutlivingTheManagerKeepTheirNodes )
 /**
  * @brief 스테이지를 기다리다 잠든 메인 스레드는 메인 전용 작업이 생기면 깨어난다
  * @details 메인은 자기 워드 하나에 잠든다. 그 스테이지의 워커 태스크가 뒤늦게 `MainThread` 친화도 태스크를 같은
- *          스테이지에 넣으면, 그 작업은 메인만 돌릴 수 있으므로 **메인을 깨우지 않으면 둘 다 영원히 기다린다.**
+ *          스테이지에 넣으면, 그 작업은 메인만 돌릴 수 있으므로 메인을 깨우지 않으면 둘 다 영원히 기다린다.
  *          조건 변수 하나에 `notify_one` 을 쓰면 엉뚱한 스레드가 깨어 멈춘다 — 그래서 메인이 잠들기 전에
  *          자기 슬롯을 적어 두고 메인 작업을 넣는 쪽이 그 슬롯을 깨운다. 그 길이 끊기면 이 케이스는 CTest 타임아웃으로 진다.
  */
@@ -1504,7 +1504,7 @@ SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
 }
 
 /**
- * @brief 태스크 · 병렬 청크는 **만든 쪽의** 할당 태그로 실행된다
+ * @brief 태스크 · 병렬 청크는 만든 쪽의 할당 태그로 실행된다
  * @details 태그는 스레드 로컬이라 그대로 두면 워커에서 하는 할당(비동기 씬 로드 · 에셋 스트리밍)이 모두 Unknown 으로 샌다. 태스크 노드와 병렬
  *          그룹이 만든 스레드의 태그를 담아 실행하는 동안 그 태그를 쓴다. 기다리는 스레드가 대신 실행하는 경우도 본다 — 그 스레드의 태그(Mesh)가
  *          아니라 만든 쪽의 태그(Texture)여야 한다. `runParallel` 은 호출 스레드의 첫 청크가 워커의 청크를 기다려, 워커 경로를 반드시 지난다.

@@ -17,14 +17,14 @@ namespace sw
      * @class TaskValue
      * @brief 여러 타입의 값을 런타임에 안전하게 보관하는 타입 소거 컨테이너입니다.
      * @details
-     * - **SBO(Small Buffer Optimization, 32바이트)**:
+     * - SBO(Small Buffer Optimization, 32바이트):
      *   기본형(int32, float32, 포인터 등)과 32바이트 이하의 작은 구조체는 힙 할당(new/delete) 없이 인라인 버퍼(`_arrStorage`)에
      *   바로 저장합니다.
-     * - **큰 객체는 힙에 할당**:
+     * - 큰 객체는 힙에 할당:
      *   32바이트를 넘는 객체는 자동으로 힙에 할당하고 포인터로 관리합니다.
-     * - **소멸 · 복사 · 이동 VTable**:
+     * - 소멸 · 복사 · 이동 VTable:
      *   C++ 가상 함수 대신 함수 포인터 3개로 된 정적 VTable 로 수명을 가볍게 관리합니다.
-     * - **타입 안전성**:
+     * - 타입 안전성:
      *   값은 `getPtr<T>()` 로 읽으며, Debug 빌드에서는 저장 방식(인라인 여부)과 타입 크기를 비교해 잘못된 타입으로 읽으면 바로
      *   assert 합니다.
      */
@@ -406,9 +406,9 @@ namespace sw
         TaskPriority getPriority() const;
 
         /**
-         * @brief 이 태스크가 targetTask 보다 반드시 **먼저** 끝나도록 DAG 선후 의존성을 겁니다.
+         * @brief 이 태스크가 targetTask 보다 반드시 먼저 끝나도록 DAG 선후 의존성을 겁니다.
          * @param targetTask 이 태스크가 끝난 뒤 실행될 후속 태스크
-         * @return 의존이 성립했으면 true(이 태스크가 이미 끝나 바로 채워진 경우 포함). 새 간선이 **사이클**을 만들거나(자기 자신 포함)
+         * @return 의존이 성립했으면 true(이 태스크가 이미 끝나 바로 채워진 경우 포함). 새 간선이 사이클을 만들거나(자기 자신 포함)
          *         빈 핸들이 있으면 false 이고 아무것도 걸지 않습니다. 사이클은 `Task.DependencyCycle` Error 로그도 남깁니다 — 걸었다면
          *         후속의 의존 수가 영영 0 이 되지 않아 `waitAll` 이 멈춥니다. 검사는 Release 에서도 합니다.
          * @details 사이클 검사는 후속(`targetTask`)에서 후속 목록을 따라 이 태스크에 닿는지 봅니다. 비용은 후속 아래로 아직 안 끝난
@@ -418,16 +418,16 @@ namespace sw
          * @note 자식 → 부모 완료 기다림(본문 안에서 만든 태스크는 부모가 그 완료를 기다린다)은 후속 목록의 간선이 아니지만 `_pParent` 사슬로 따로 봅니다:
          *       `부모.runBefore( 자식 · 손자 )` 는 사이클이라 거부합니다. 사슬 확인은 대상의 조상만 보므로 `부모.runBefore( X )`, `X.runBefore( 자식 )` 처럼 둘 이상의
          *       간선을 지나는 간접 사이클은 후속 목록을 따라가는 검사가 `자식 → 부모` 를 지나지 못해 놓칩니다.
-         *       간선은 **같은 풀(= 같은 `TaskManager`)의 태스크끼리만** 겁니다 — 검사와 걸기를 지키는 잠금이 풀마다 하나라 다른 풀 사이의 반대 방향 간선은
+         *       간선은 같은 풀(= 같은 `TaskManager`)의 태스크끼리만 겁니다 — 검사와 걸기를 지키는 잠금이 풀마다 하나라 다른 풀 사이의 반대 방향 간선은
          *       동시 정확성을 보증하지 못해 `Task.DependencyCrossPool` Error 로 거부합니다.
-         *       `whenAny` 의 트리거 → 후속 연결은 후속 목록의 간선이 아니다(트리거가 후속의 의존 수를 직접 내린다 — 입력 중 **하나만** 후속을 풀어야 해서
+         *       `whenAny` 의 트리거 → 후속 연결은 후속 목록의 간선이 아니다(트리거가 후속의 의존 수를 직접 내린다 — 입력 중 하나만 후속을 풀어야 해서
          *       목록 간선으로 두면 나머지 입력이 내리는 수를 완료 순서에 맞춰 보정해야 한다). 대신 트리거 노드의 숨은 후속 칸(`TaskNode::_pAnyOfSuccessor`)을
          *       검사가 따라가 "입력 → 트리거 → 후속 → 입력" 도 사이클로 거부한다. 완료 경로는 그대로다.
          */
         [[nodiscard]] bool runBefore( const TaskHandle& targetTask );
 
         /**
-         * @brief dependencyTask 가 반드시 **먼저** 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
+         * @brief dependencyTask 가 반드시 먼저 끝난 뒤에 이 태스크가 실행되도록 DAG 선후 의존성을 겁니다.
          * @param dependencyTask 이 태스크보다 먼저 끝나야 하는 선행 태스크
          * @return `runBefore` 와 같습니다(사이클이나 빈 핸들이면 false 이고 걸지 않습니다).
          */
@@ -438,13 +438,13 @@ namespace sw
          * @param nextTaskDelegate 이어서 실행할 델리게이트
          * @param affinity 후속 태스크를 실행할 스레드
          * @return 새로 만든 후속 태스크의 핸들. 매니저가 멈추는 중이면 빈 핸들입니다. 후속은 새로 만든 노드라 사이클이 될 수 없습니다.
-         * @note 후속 본문은 선행이 **취소**돼도 돕니다(`cancel` 참고). 선행이 취소됐는지는 후속이 `isCancelled` 로 물어야 합니다.
+         * @note 후속 본문은 선행이 취소돼도 돕니다(`cancel` 참고). 선행이 취소됐는지는 후속이 `isCancelled` 로 물어야 합니다.
          */
         TaskHandle then( const TaskDelegate& nextTaskDelegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
         /**
          * @brief 태스크를 취소합니다. 아직 실행 중이 아니면 본문을 건너뜁니다.
-         * @details **취소는 전파되지 않습니다.** 취소된 태스크도 실행 차례가 오면 본문만 건너뛰고 평소처럼 **끝난 것으로 처리**되어
+         * @details 취소는 전파되지 않습니다. 취소된 태스크도 실행 차례가 오면 본문만 건너뛰고 평소처럼 끝난 것으로 처리되어
          *          후속(`runBefore` · `then` · `whenAll`)의 선행 하나가 풀립니다. 그래서 취소가 후속의 `waitAll` 을 영영 막지
          *          않습니다(만들기만 하고 버린 선행도 같은 길로 끝납니다). 후속까지 멈추려면 후속도 `cancel` 하거나, 후속 본문에서
          *          선행의 `isCancelled` 로 물어 일을 건너뜁니다(선행 핸들을 캡처해 둡니다).
@@ -477,7 +477,7 @@ namespace sw
      * @struct TaskStageHandle
      * @brief 여러 태스크를 하나의 논리적 단계(stage)로 묶어 관리하고 동기화하는 스테이지 핸들입니다.
      * @details 스테이지 안의 모든 태스크가 끝날 때까지 `waitStage()` 로 블로킹 대기할 수 있습니다. 스테이지는 남은 수만
-     *          세고 태스크를 붙들지 않습니다. `addTask` 는 태스크를 **제출하기 전에** 부르십시오.
+     *          세고 태스크를 붙들지 않습니다. `addTask` 는 태스크를 제출하기 전에 부르십시오.
      */
     struct SW_API TaskStageHandle
     {
@@ -485,7 +485,7 @@ namespace sw
 
         constexpr TaskStageHandle() = default;
         /**
-         * @brief 노드의 참조 하나를 **넘겨받아** 핸들을 만듭니다(매니저 전용).
+         * @brief 노드의 참조 하나를 넘겨받아 핸들을 만듭니다(매니저 전용).
          * @details `TaskHandle` 처럼 침입형 참조 계수이고 노드는 매니저의 풀에서 옵니다(렌더 그래프는 프레임마다 레벨 수만큼 스테이지를
          *          만듭니다). 그래서 프레임이 안정된 상태에서는 스테이지를 디스패치해도 힙을 건드리지 않습니다.
          */
