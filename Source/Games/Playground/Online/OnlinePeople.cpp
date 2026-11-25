@@ -12,6 +12,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeClient.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -80,9 +81,12 @@ namespace sw
                     (void)trade.respond( tradeID, true );
                 else if ( verb == "offer" && bAlone == false && StringUtil::parseInt( listArgument[1], amount ) && amount >= 0 )
                 {
+                    const string&    currency = pSession->getGameSettings()._onlineSoftCurrency;
                     vector<TradeLeg> listLeg;
+                    if ( amount > 0 && PlaygroundOnlineFlow::requireSetting( currency, "onlineSoftCurrency" ) == false )
+                        return false;
                     if ( amount > 0 )
-                        listLeg.push_back( TradeLeg{ PlaygroundOnlineFlow::kAssetGold, amount } );
+                        listLeg.push_back( TradeLeg{ currency, amount } );
                     (void)trade.setOffer( tradeID, listLeg );
                 }
                 else if ( verb == "lock" && bAlone )

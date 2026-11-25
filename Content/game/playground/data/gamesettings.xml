@@ -94,6 +94,12 @@
   <onlineServerAddress>127.0.0.1:17793</onlineServerAddress>
   <onlineHubServerID>playground_hub</onlineHubServerID>
   <onlineHubReconnectSeconds>30</onlineHubReconnectSeconds>
+  <onlineRegion>local</onlineRegion>
+  <onlineOfferCatalog>guid:759168d3d4fb5cdd2b8b822bf095eaf9</onlineOfferCatalog>
+  <onlineSoftCurrency>cur.gold</onlineSoftCurrency>
+  <onlineHardCurrency>cur.gem</onlineHardCurrency>
+  <onlineLeaderboard>arena_kills</onlineLeaderboard>
+  <onlineLeaderboardTopCount>10</onlineLeaderboardTopCount>
   <onlineGameBuild>1.0.0</onlineGameBuild>
   <onlineRequestRetryLimit>3</onlineRequestRetryLimit>
   <!-- 플레이어 통계 · 업적(PlayerStatsSubsystem) — 업적은 로컬 플랫폼 서비스(SDK 없음)까지 간다 -->

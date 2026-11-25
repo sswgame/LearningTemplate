@@ -98,6 +98,8 @@ namespace sw
         const string& getHubServerID() const;
         /** @brief gamesettings 의 허브에 다시 붙기 한도(초, `_onlineHubReconnectSeconds`)입니다. 0 이면 다시 붙지 않습니다. */
         float32 getHubReconnectSeconds() const;
+        /** @brief 세션이 선 게임의 설정(gamesettings)입니다 — 온라인 지역 · 상품 카탈로그 · 재화 · 순위표 칸을 게임이 읽는다. */
+        const GameSettings& getGameSettings() const { return _settings; }
 
         OnlineServiceClient& getServiceClient() { return _client; }
         OnlineClientState    getState() const { return _client.getState(); }

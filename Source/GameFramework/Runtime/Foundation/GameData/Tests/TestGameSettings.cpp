@@ -57,6 +57,35 @@ SW_TEST_CASE( GameSettingsTest, SkipsTheEngineElement )
 }
 
 /**
+ * @brief [GameSettingsTest] 온라인 식별자(지역 · 상품 카탈로그 · 재화 둘 · 순위표 · 상위 줄 수)는 데이터다 — 적지 않으면 비어 있고(코드 기본값이 없다) 쓰는 쪽이 오류로 거절한다
+ */
+SW_TEST_CASE( GameSettingsTest, OnlineIdentifiersComeFromData )
+{
+    sw::GameSettings written;
+    SW_REQUIRE_TRUE( written.loadFromXMLText( "<GameSettings>"
+                                              "<onlineRegion>kr</onlineRegion>"
+                                              "<onlineOfferCatalog>game/probe/data/probe.offers.xml</onlineOfferCatalog>"
+                                              "<onlineSoftCurrency>cur.coin</onlineSoftCurrency>"
+                                              "<onlineHardCurrency>cur.star</onlineHardCurrency>"
+                                              "<onlineLeaderboard>probe_board</onlineLeaderboard>"
+                                              "<onlineLeaderboardTopCount>7</onlineLeaderboardTopCount>"
+                                              "</GameSettings>",
+                                              "probe" ) );
+    SW_EXPECT_EQUAL( sw::string( "kr" ), written._onlineRegion );
+    SW_EXPECT_EQUAL( sw::string( "game/probe/data/probe.offers.xml" ), written._onlineOfferCatalog.get() );
+    SW_EXPECT_EQUAL( sw::string( "cur.coin" ), written._onlineSoftCurrency );
+    SW_EXPECT_EQUAL( sw::string( "cur.star" ), written._onlineHardCurrency );
+    SW_EXPECT_EQUAL( sw::string( "probe_board" ), written._onlineLeaderboard );
+    SW_EXPECT_EQUAL( 7, written._onlineLeaderboardTopCount );
+
+    sw::GameSettings bare;
+    SW_REQUIRE_TRUE( bare.loadFromXMLText( "<GameSettings></GameSettings>", "probe" ) );
+    SW_EXPECT_TRUE( bare._onlineRegion.empty() && bare._onlineSoftCurrency.empty() && bare._onlineHardCurrency.empty() && bare._onlineLeaderboard.empty() );
+    SW_EXPECT_FALSE( bare._onlineOfferCatalog.isSet() );
+    SW_EXPECT_EQUAL( 0, bare._onlineLeaderboardTopCount );
+}
+
+/**
  * @brief [GameSettingsTest] 팩 쿠킹 규칙의 필수 데이터 자리(`PackConfig::_cookRules._listRequiredData`)는 종류 등록 줄의 규칙(`tryMakeKindPath`)과 같다
  * @details 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 등록 줄을 보지 못해 같은 자리를 데이터로 적는다. 둘이 어긋나면 배포 팩에 필수 데이터가 빠지거나 엉뚱한 것이 든다.
  */
