@@ -12,7 +12,6 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/String/UTF8Util.h"
 
 namespace sw
 {
@@ -85,11 +84,67 @@ namespace sw
          *          Windows 에서는 멀쩡한 한글까지 깨지고 glibc 에서는 줄이 통째로 빈다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
          */
         static string escapeInvalidUTF8( string_view text );
+
+        /**
+         * @brief JSON 문자열 본문 이스케이프가 조각을 넘기는 함수입니다 — 고정 버퍼에 쓰는 쪽(`JSONWriter`)도 할당 없이 받는다.
+         */
+        using JSONAppendFunction = void ( * )( void* pContext, string_view piece );
+        /**
+         * @brief @p text 를 JSON 문자열 본문으로 이스케이프해 조각마다 @p pAppend 로 넘깁니다(따옴표는 붙이지 않는다). 그대로 둘 글자는 이어진 한 조각으로 넘긴다.
+         * @details 규칙 하나: 따옴표 · 역슬래시는 `\"` · `\\`, 짧은 이스케이프가 있는 제어 문자는 `\b \f \n \r \t`, 나머지 제어 문자는 `\u00xx`(소문자),
+         *          올바른 UTF-8 은 그대로, 잘못된 UTF-8 바이트는 `\ufffd` 로 바꾼다(출력이 늘 올바른 JSON 이다 — nlohmann `dump` 의 replace 와 같은 바이트).
+         *          엔진 JSON 쓰기(`JSONWriter`) · 구조화 로그(`JSONLinesLogOutput`)가 같은 바이트를 낸다 — Godot `String::json_escape` 자리.
+         */
+        static void escapeJSON( string_view text, JSONAppendFunction pAppend, void* pContext );
+        /** @brief `escapeJSON` 의 결과를 @p inoutText 뒤에 붙입니다(따옴표는 붙이지 않는다). */
+        static void appendJSONEscaped( string& inoutText, string_view text );
         /**
          * @brief @p text 의 @p inoutOffset 위치에서 UTF-8 글자 하나를 읽어 코드 포인트를 돌려주고, 오프셋을 그 글자 뒤로 옮깁니다.
          * @details 잘못된 바이트는 U+FFFD 로 읽고 한 바이트 이상 넘깁니다(무한 반복이 없습니다). 오프셋이 끝이면 0 을 돌려주고 옮기지 않습니다.
          */
         static uint32 decodeUTF8( string_view text, size_t& inoutOffset );
+        /** @brief UTF-8 글자 하나의 최대 바이트 수입니다. */
+        static constexpr uint32 kMaxUTF8CharacterBytes = 4;
+
+        /**
+         * @brief 선두 바이트가 알리는 UTF-8 시퀀스 길이(1 ~ 4)입니다. 선두가 될 수 없는 바이트(이어지는 바이트 · 0xF8 이상)는 0 입니다.
+         * @details 시퀀스 길이 규칙은 여기 하나다. 값 범위(overlong · 서로게이트 · U+10FFFF 초과)는 이 길이를 쓰는 디코더(`decodeUTF8`)가 판정한다.
+         *          바이트로 자르거나 한 글자 지우는 코드가 연속 바이트 판정을 제각각 쓰면 한 벌만 고쳐지고 나머지가 틀린 채 남는다 — 판정과 물러나기는 이 형식 하나다.
+         */
+        [[nodiscard]] static constexpr uint32 getUTF8SequenceLength( uint8 leadByte )
+        {
+            if ( ( leadByte & 0x80u ) == 0x00u )
+                return 1;
+            if ( ( leadByte & 0xE0u ) == 0xC0u )
+                return 2;
+            if ( ( leadByte & 0xF0u ) == 0xE0u )
+                return 3;
+            if ( ( leadByte & 0xF8u ) == 0xF0u )
+                return kMaxUTF8CharacterBytes;
+            return 0;
+        }
+
+        /** @brief UTF-8 글자의 이어지는 바이트(10xxxxxx)인가입니다. 글자의 선두 바이트(ASCII 포함)와 잘못된 바이트(0xF8 이상)는 false 입니다. */
+        template <typename TChar>
+        [[nodiscard]] static constexpr bool isUTF8Continuation( TChar value )
+        {
+            return ( static_cast<uint8>( value ) & 0xC0u ) == 0x80u;
+        }
+
+        /**
+         * @brief @p cut 위치에서 자를 때 글자 한가운데가 아니도록 가장 가까운 앞 글자 시작으로 물러난 위치를 돌려줍니다(길이를 모르는 버퍼 — 길이를 알면 `floorToUTF8Boundary`).
+         * @details @p pText 는 @p cut 위치를 읽을 수 있어야 한다(`pText[cut]` 이 잘려 나가는 첫 바이트). 잘못된 UTF-8 을 끝없이 거슬러 가지 않도록
+         *          이어지는 바이트를 `kMaxUTF8CharacterBytes - 1` 번까지만 물린다. 0 아래로는 가지 않는다.
+         */
+        template <typename TChar>
+        [[nodiscard]] static constexpr size_t backOffToUTF8CharacterStart( const TChar* pText, size_t cut )
+        {
+            for ( uint32 step = 0; step + 1 < kMaxUTF8CharacterBytes && cut > 0 && isUTF8Continuation( pText[cut] ); ++step )
+            {
+                --cut;
+            }
+            return cut;
+        }
         /**
          * @brief @p text 를 바이트 @p cut 에서 자를 때 글자 한가운데가 아닌 가장 가까운 앞 경계(글자 시작)를 돌려줍니다.
          * @details @p cut 이 @p text 길이 이상이면 길이를 돌려준다. UTF-8 글자는 최대 4 바이트라 이어지는 바이트(10xxxxxx)를 세 번까지만 물린다(잘못된 UTF-8 을 끝없이 거슬러 가지 않는다).
@@ -98,7 +153,7 @@ namespace sw
         {
             if ( cut >= text.size() )
                 return text.size();
-            return UTF8Util::backOffToCharacterStart( text.data(), cut );
+            return backOffToUTF8CharacterStart( text.data(), cut );
         }
         /**
          * @brief `decodeUTF8` 와 같게 글자 하나를 읽되, 올바른 UTF-8 이었는지 돌려줍니다(false 면 @p outCodepoint 는 U+FFFD).

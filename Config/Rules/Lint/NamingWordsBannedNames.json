@@ -1,6 +1,8 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "UTF8Util": "StringUtil — UTF-8 판정 · 물러나기(getUTF8SequenceLength · isUTF8Continuation · backOffToUTF8CharacterStart)는 UTF 변환과 한 형식(2026-11-26 Core/String 합치기)",
+    "JSONStringUtil": "StringUtil::escapeJSON · appendJSONEscaped — 글 이스케이프는 StringUtil(Godot String::json_escape, 2026-11-26)",
     "EngineChildProcess": "ProcessCommand::forEngineChild — 엔진 자식 명령은 ProcessCommand 의 만드는 함수(at · fromSearchPath 곁, 2026-11-26 Core/Process 합치기)",
     "runFloorStatus": "지움 — 바닥 위 자리는 감시 값 Hub.PawnFloorX/Z · Shooter.FloorX/Z 를 시나리오 <Record> 가 보고에 남긴다(2026-11-25)",
     "runLockstepStatus": "지움 — 감시 값 Skirmish.Lockstep*(LockstepSkirmishGameModeComponent.cpp, 2026-11-25)",

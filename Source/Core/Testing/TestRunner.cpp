@@ -21,7 +21,6 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/String/JSONStringUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -361,7 +360,7 @@ namespace sw::test
             static string escapeJSON( string_view text )
             {
                 string out;
-                JSONStringUtil::appendEscaped( out, text );
+                StringUtil::appendJSONEscaped( out, text );
                 return out;
             }
         };

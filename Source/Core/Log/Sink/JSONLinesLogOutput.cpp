@@ -5,7 +5,6 @@
 #include "Core/Container/EnumArray.h"
 #include "Core/Encoding/HexUtil.h"
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/String/JSONStringUtil.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -20,7 +19,7 @@ namespace sw
             static void appendTextField( string& outLine, const utf8* pName, string_view value )
             {
                 outLine.append( ",\"" ).append( pName ).append( "\":\"" );
-                JSONStringUtil::appendEscaped( outLine, value );
+                StringUtil::appendJSONEscaped( outLine, value );
                 outLine.append( "\"" );
             }
         };
@@ -72,7 +71,7 @@ namespace sw
     void JSONLinesLogOutput::appendLine( string& outLine, const JSONLogFields& params )
     {
         outLine.append( "{\"time\":\"" );
-        JSONStringUtil::appendEscaped( outLine, params._time );
+        StringUtil::appendJSONEscaped( outLine, params._time );
         outLine.append( "\",\"ts\":" ).append( to_string( params._stamp._time.count() ) );
         outLine.append( ",\"seq\":" ).append( to_string( params._stamp._sequence ) ).append( ",\"thread\":" ).append( to_string( params._stamp._threadID ) );
         outLine.append( ",\"level\":\"" ).append( params._level < LogLevel::Count ? JSONLinesInternal::kArrLevelName[params._level] : "info" ).append( "\"" );

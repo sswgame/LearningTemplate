@@ -4,8 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Network/Message/NetMessage.h"
-#include "Core/String/JSONStringUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Destruction/Fracture/FractureComponent.h"
 #include "Engine/Foundation/StateHashBuilder.h"
@@ -197,7 +197,7 @@ namespace sw
     {
         StringBuilder<constant::buffer::kMax256> text;
         string                                   escapedName;
-        JSONStringUtil::appendEscaped( escapedName, objectName );
+        StringUtil::appendJSONEscaped( escapedName, objectName );
         text.appendFormat( "{\"side\":\"%#\",\"id\":%#,\"events\":%#,\"hash\":\"%#\",\"name\":\"%#\"}", side == DestructionNetSide::Server ? "server" : "client", record._netID, record._eventCount,
                            Fmt( record._hash, Format( 16, Format::Padding::Zero ).hex() ), escapedName );
         return string( text.c_str(), text.size() );

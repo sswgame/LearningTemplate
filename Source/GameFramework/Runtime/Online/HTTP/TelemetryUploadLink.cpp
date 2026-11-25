@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
 
 #include "Core/Process/Process.h"
-#include "Core/String/JSONStringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -132,7 +132,7 @@ namespace sw
         // 동의는 묶을 때 정해져 보낼 줄(Queued)에 선 묶음만 올라간다. 보고 프로세스(기본 업로더)와 같은 폴더를 보아도 그쪽은 매니페스트를 쓰지 않는다.
         const uint32 sentCount = CrashReportService::runReporter( job._reportsFolder, *_pCrashUploader );
         string       folder;
-        JSONStringUtil::appendEscaped( folder, job._reportsFolder.str() );
+        StringUtil::appendJSONEscaped( folder, job._reportsFolder.str() );
         // 본문은 JSON 이다 — `Scripts telemetry-local` 이 묶음 폴더를 읽는다.
         SW_LOG_INFO_ID( "TelemetryUploadLink.CrashReportsSent", "{\"sent\":%#,\"folder\":\"%#\"}", sentCount, folder.c_str() );
     }
