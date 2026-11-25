@@ -104,6 +104,7 @@
 					                                   _barracksUnit="barracks"
 					                                   _barracksX="20"
 					                                   _barracksY="20"
+					                                   _playerStart="2,0,2"
 					                                   _workerStart="2.5,0,2.5"
 					                                   _patrolA="2.5,0,6.5"
 					                                   _patrolB="10.5,0,6.5" />
