@@ -36,7 +36,7 @@ namespace sw
 
         ServiceAccountCredentials _credentials{};                      ///< `_tokenURL` 은 서비스 계정의 `token_uri` 이고 설정이 덮어쓸 수 있다(가짜 서버)
         string                    _sendBaseURL{ kDefaultSendBaseURL }; ///< 설정이 덮어쓸 수 있다(가짜 서버)
-        int64                     _requestTimeoutMs{ 10000 };
+        int64                     _requestTimeoutMs{ HTTPConstant::kDefaultTimeoutMs };
     };
 } // namespace sw
 
@@ -65,9 +65,9 @@ namespace sw
         /** @brief 토픽 이름 규칙(`[A-Za-z0-9-_.~%]+`)입니다. */
         static bool isValidTopic( string_view topic );
         /** @brief 응답을 배달 결과로 바꿉니다(`Retry-After` 는 따로 읽는다). */
-        static PushDeliveryStatus mapStatus( int32 statusCode, bool bTransportFailed, string_view body );
+        static PushDeliveryStatus mapStatus( const HTTPClientResponse& response );
         /** @brief 다시 보내기 전에 기다릴 시간입니다. `Retry-After`(초)를 따르고, 없는데 429 면 FCM 문서가 정한 최소 1 분입니다. 그 밖에는 0(발송기의 백오프)입니다. */
-        static int64 computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader );
+        static int64 computeRetryAfterMs( const HTTPClientResponse& response, UnixMilliseconds nowMs );
 
     private:
         struct Waiting
@@ -80,7 +80,7 @@ namespace sw
         void submitSend( uint64 deliveryID, const vector<uint8>& bodyBytes, UnixMilliseconds nowMs );
         /** @brief 토큰을 기다리던 배달을 새 토큰으로 보내거나(Granted) 결과로 끝냅니다. */
         void flushWaiting( ServiceAccountTokenSource::ResponseResult result, UnixMilliseconds nowMs );
-        void finishSend( uint64 deliveryID, const HTTPClientResponse& response );
+        void finishSend( uint64 deliveryID, const HTTPClientResponse& response, UnixMilliseconds nowMs );
         void complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
     private:

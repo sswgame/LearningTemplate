@@ -4,6 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/CalendarDate.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -28,30 +29,6 @@ namespace sw
                         return false;
                 }
                 return true;
-            }
-
-            /** @brief 1970-01-01 부터 (년, 월, 일) 까지의 날 수입니다(그레고리력). */
-            static int64 daysFromCivil( int64 year, int64 month, int64 day )
-            {
-                year -= month <= 2 ? 1 : 0;
-                const int64 era       = ( year >= 0 ? year : year - 399 ) / 400;
-                const int64 yearOfEra = year - era * 400;
-                const int64 dayOfYear = ( 153 * ( month + ( month > 2 ? -3 : 9 ) ) + 2 ) / 5 + day - 1;
-                const int64 dayOfEra  = yearOfEra * 365 + yearOfEra / 4 - yearOfEra / 100 + dayOfYear;
-                return era * 146097 + dayOfEra - 719468;
-            }
-
-            static void civilFromDays( int64 days, int64& outYear, int64& outMonth, int64& outDay )
-            {
-                days += 719468;
-                const int64 era       = ( days >= 0 ? days : days - 146096 ) / 146097;
-                const int64 dayOfEra  = days - era * 146097;
-                const int64 yearOfEra = ( dayOfEra - dayOfEra / 1460 + dayOfEra / 36524 - dayOfEra / 146096 ) / 365;
-                const int64 dayOfYear = dayOfEra - ( 365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100 );
-                const int64 monthPart = ( 5 * dayOfYear + 2 ) / 153;
-                outDay                = dayOfYear - ( 153 * monthPart + 2 ) / 5 + 1;
-                outMonth              = monthPart < 10 ? monthPart + 3 : monthPart - 9;
-                outYear               = yearOfEra + era * 400 + ( outMonth <= 2 ? 1 : 0 );
             }
         };
     } // namespace
@@ -117,29 +94,21 @@ namespace sw
         const bool bRangeOk = arrField[1] >= 1 && arrField[1] <= 12 && arrField[2] >= 1 && arrField[2] <= 31 && arrField[3] <= 23 && arrField[4] <= 59 && arrField[5] <= 60;
         if ( bRangeOk == false )
             return false;
-        const int64 days      = Internal::daysFromCivil( arrField[0], arrField[1], arrField[2] );
-        int64       echoYear  = 0;
-        int64       echoMonth = 0;
-        int64       echoDay   = 0;
-        Internal::civilFromDays( days, echoYear, echoMonth, echoDay );
-        if ( echoMonth != arrField[1] || echoDay != arrField[2] )
+        const CalendarDate date{ arrField[0], static_cast<int32>( arrField[1] ), static_cast<int32>( arrField[2] ) };
+        if ( date.isValid() == false )
             return false; // 그 달에 없는 날(02-31)이 다음 달로 넘어가 다른 시각이 되지 않게 한다
-        outUnixMs = ( days * constant::time::kSecondsPerDay + arrField[3] * 3600 + arrField[4] * 60 + arrField[5] ) * constant::time::kMillisecondsPerSecond;
+        outUnixMs = ( date.toUnixDays() * constant::time::kSecondsPerDay + arrField[3] * 3600 + arrField[4] * 60 + arrField[5] ) * constant::time::kMillisecondsPerSecond;
         return true;
     }
 
     string SteamReceiptValidator::formatTime( int64 unixMs )
     {
-        using Internal       = SteamReceiptValidatorInternal;
-        const int64 totalSec = unixMs / constant::time::kMillisecondsPerSecond;
-        const int64 days     = totalSec >= 0 ? totalSec / constant::time::kSecondsPerDay : -( ( -totalSec + constant::time::kSecondsPerDay - 1 ) / constant::time::kSecondsPerDay );
-        const int64 secOfDay = totalSec - days * constant::time::kSecondsPerDay;
-        int64       year     = 0;
-        int64       month    = 0;
-        int64       day      = 0;
-        Internal::civilFromDays( days, year, month, day );
+        const int64                             totalSec = unixMs / constant::time::kMillisecondsPerSecond;
+        const int64                             days     = CalendarDate::floorDivide( totalSec, constant::time::kSecondsPerDay );
+        const int64                             secOfDay = totalSec - days * constant::time::kSecondsPerDay;
+        const CalendarDate                      date     = CalendarDate::fromUnixDays( days );
         StringBuilder<constant::buffer::kMax64> text;
-        text.appendFormat( "%04d-%02d-%02dT%02d:%02d:%02d", year, month, day, secOfDay / 3600, secOfDay / 60 % 60, secOfDay % 60 );
+        text.appendFormat( "%04d-%02d-%02dT%02d:%02d:%02d", date._year, date._month, date._day, secOfDay / 3600, secOfDay / 60 % 60, secOfDay % 60 );
         return string( text.view() );
     }
 
@@ -241,6 +210,6 @@ namespace sw
 
     void SteamReceiptValidator::onCredentialRejected( const HTTPClientResponse& response )
     {
-        SW_LOG_ERROR_ID( "SteamReceiptValidator.SteamRejectedPublisherKey", "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
+        SW_LOG_ERROR_ID( "SteamReceiptValidator.SteamRejectedPublisherKey", "Steam rejected the publisher key (status %#) - check the key environment variable", response.getStatusCode() );
     }
 } // namespace sw

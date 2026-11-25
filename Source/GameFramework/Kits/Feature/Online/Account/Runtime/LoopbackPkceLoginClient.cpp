@@ -141,7 +141,7 @@ namespace sw
                                                                  : JSONValue{};
                 if ( token.isString() == false || token.asString().empty() )
                 {
-                    finish( pending, false, false, response._bTransportFailed == SW_TRUE ? response._failureText : string( "token endpoint refused the code" ), vector<uint8>{} );
+                    finish( pending, false, false, response.getKind() == HTTPResponseKind::TransportFailed ? response.getFailureText() : string( "token endpoint refused the code" ), vector<uint8>{} );
                 }
                 else
                 {

@@ -19,7 +19,6 @@ namespace sw
         {
             static constexpr int64 kSecretLifetimeMs      = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
             static constexpr int64 kSecretRefreshMarginMs = constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
-            static constexpr int32 kStatusBadRequest      = 400;
         };
     } // namespace
 } // namespace sw
@@ -175,7 +174,7 @@ namespace sw
         }
         if ( pending._verified._linkSecret.empty() )
             SW_LOG_WARNING_ID( "AppleLoginProvider.LoginProviderCouldNot", "Login provider '%#' could not exchange the authorization code (status %#) - the account has no token to revoke later", _settings._name.c_str(),
-                               response._statusCode );
+                               response.getStatusCode() );
         _verificationBuffer.push( std::move( pending._verified ) );
         pending._outerID = 0;
     }
@@ -266,18 +265,16 @@ namespace sw
 
     void AppleLoginProvider::finishRevocation( uint64 revocationID, const HTTPClientResponse& response )
     {
-        using Internal = AppleLoginProviderInternal;
         _revocationBuffer.push( PlatformLoginRevocation{} );
         PlatformLoginRevocation& done = _revocationBuffer.getLast();
         done._revocationID            = revocationID;
         if ( response.isSuccess() )
             return; // 철회했다
-        const bool bInvalidGrant = response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest &&
-                                   response.getBodyText().find( "invalid_grant" ) != string_view::npos;
-        if ( bInvalidGrant )
+        const HTTPResponseKind kind = response.getKind();
+        if ( kind == HTTPResponseKind::Refused && response.getBodyText().find( "invalid_grant" ) != string_view::npos )
             return; // 이미 무효인 토큰이다 — 더 철회할 것이 없다
-        if ( response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest )
-            SW_LOG_ERROR_ID( "AppleLoginProvider.LoginProviderRejectedRevocation", "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response._statusCode );
+        if ( response.isTransientFailure() == false )
+            SW_LOG_ERROR_ID( "AppleLoginProvider.LoginProviderRejectedRevocation", "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response.getStatusCode() );
         done._bUnavailable = SW_TRUE;
     }
 

@@ -217,6 +217,6 @@ namespace sw
     void GoogleReceiptValidator::onCredentialRejected( const HTTPClientResponse& response )
     {
         _tokenSource.invalidate(); // 토큰이 거절됐다 — 다음 요청이 새로 받는다
-        SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedAccessToken", "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
+        SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedAccessToken", "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response.getStatusCode() );
     }
 } // namespace sw

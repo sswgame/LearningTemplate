@@ -97,9 +97,9 @@ namespace sw
             {
                 if ( clientResponse._requestID != requestID )
                     continue;
-                response._status = clientResponse._bTransportFailed == SW_TRUE ? 0 : clientResponse._statusCode;
-                if ( clientResponse._bTransportFailed == SW_TRUE )
-                    response._error = clientResponse._failureText;
+                response._status = clientResponse.getStatusCode();
+                if ( clientResponse.getKind() == HTTPResponseKind::TransportFailed )
+                    response._error = clientResponse.getFailureText();
                 else if ( clientResponse.isSuccess() == false )
                     response._error = string( clientResponse.getBodyText() );
                 else

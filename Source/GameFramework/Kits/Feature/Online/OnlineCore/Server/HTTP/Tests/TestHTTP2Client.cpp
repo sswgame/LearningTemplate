@@ -104,7 +104,7 @@ SW_TEST_CASE( HTTP2ClientTest, StalledHandshakeIsDroppedAfterItsRequestsTimeOut 
     vector<HTTPClientResponse> listResponse;
     SW_REQUIRE_EQUAL( 1, client.pollResponses( listResponse ) );
     SW_EXPECT_EQUAL( firstID, listResponse[0]._requestID );
-    SW_EXPECT_TRUE( listResponse[0]._bTransportFailed == SW_TRUE );
+    SW_EXPECT_TRUE( listResponse[0].getKind() == HTTPResponseKind::TransportFailed );
     SW_EXPECT_EQUAL( 0, client.getSessionCount() );
     SW_EXPECT_EQUAL( 1, server._closedCount );
 

@@ -18,7 +18,6 @@ namespace sw
     {
         struct APNSPushProviderInternal
         {
-            static constexpr int32       kStatusGone         = 410;
             static constexpr size_t      kMaxDeviceTokenSize = 200;
             static constexpr const utf8* kPushTypeAlert      = "alert";
             static constexpr const utf8* kPushTypeBackground = "background";
@@ -88,28 +87,24 @@ namespace sw
         return json;
     }
 
-    PushDeliveryStatus APNSPushProvider::mapStatus( int32 statusCode, bool bTransportFailed )
+    PushDeliveryStatus APNSPushProvider::mapStatus( const HTTPClientResponse& response )
     {
-        using Internal = APNSPushProviderInternal;
-        if ( bTransportFailed )
-            return PushDeliveryStatus::Transient;
-        if ( 200 <= statusCode && statusCode <= 299 )
+        const HTTPResponseKind kind = response.getKind();
+        if ( kind == HTTPResponseKind::Success )
             return PushDeliveryStatus::Delivered;
-        if ( statusCode == Internal::kStatusGone )
+        if ( kind == HTTPResponseKind::Gone )
             return PushDeliveryStatus::InvalidToken;
-        if ( statusCode == HTTPConstant::kStatusTooManyRequests )
+        if ( kind == HTTPResponseKind::RateLimited )
             return PushDeliveryStatus::RateLimited;
-        if ( statusCode >= HTTPConstant::kStatusServerError )
-            return PushDeliveryStatus::Transient;
-        return PushDeliveryStatus::Rejected; // 403(제공자 토큰)과 그 밖의 4xx
+        return response.isTransientFailure() ? PushDeliveryStatus::Transient : PushDeliveryStatus::Rejected; // 403(제공자 토큰)과 그 밖의 4xx 는 다시 보내지 않는다
     }
 
-    int64 APNSPushProvider::computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader )
+    int64 APNSPushProvider::computeRetryAfterMs( const HTTPClientResponse& response, UnixMilliseconds nowMs )
     {
-        int64 seconds = 0;
-        if ( StringUtil::parseInt64( retryAfterHeader, seconds ) && seconds > 0 )
-            return seconds * constant::time::kMillisecondsPerSecond;
-        return statusCode >= HTTPConstant::kStatusServerError ? APNSPushProviderInternal::kServerErrorRetryMs : 0;
+        const int64 retryAfterMs = response.getRetryAfterMs( nowMs );
+        if ( retryAfterMs > 0 )
+            return retryAfterMs;
+        return response.getKind() == HTTPResponseKind::ServerError ? APNSPushProviderInternal::kServerErrorRetryMs : 0;
     }
 
     int64 APNSPushProvider::ensureProviderToken( UnixMilliseconds nowMs )
@@ -177,18 +172,15 @@ namespace sw
         _mapRequestToDelivery[_pHTTPClient->submitRequest( request )] = deliveryID;
     }
 
-    void APNSPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response )
+    void APNSPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response, UnixMilliseconds nowMs )
     {
-        const PushDeliveryStatus status       = mapStatus( response._statusCode, response._bTransportFailed == SW_TRUE );
-        const HTTPHeader*        pRetryAfter  = response.findHeader( "retry-after" );
-        const int64              retryAfterMs = computeRetryAfterMs( response._statusCode, pRetryAfter != nullptr ? string_view( pRetryAfter->_value ) : string_view{} );
-        if ( response._statusCode == HTTPConstant::kStatusForbidden )
+        if ( response.getKind() == HTTPResponseKind::Denied )
         {
             // 제공자 토큰이 거절됐다(만료 · 서명 불일치) — 버려서 다음 배달이 새로 서명하게 한다.
             _providerToken.clear();
-            SW_LOG_WARNING_ID( "ApnsPushProvider.APNsRejectedProviderToken", "APNs rejected the provider token (status %#) - it will be signed again after the minimum interval", response._statusCode );
+            SW_LOG_WARNING_ID( "ApnsPushProvider.APNsRejectedProviderToken", "APNs rejected the provider token (status %#) - it will be signed again after the minimum interval", response.getStatusCode() );
         }
-        complete( deliveryID, status, retryAfterMs );
+        complete( deliveryID, mapStatus( response ), computeRetryAfterMs( response, nowMs ) );
     }
 
     void APNSPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
@@ -209,7 +201,7 @@ namespace sw
                 continue;
             const uint64 deliveryID = requestIt->second;
             _mapRequestToDelivery.erase( requestIt );
-            finishSend( deliveryID, response );
+            finishSend( deliveryID, response, nowMs );
         }
     }
 

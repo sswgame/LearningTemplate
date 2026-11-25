@@ -312,11 +312,10 @@ namespace sw
         call._requestID              = 0; // 한 번만 — 닫힘 콜백이 다시 끝내지 않게
         if ( pFailure != nullptr )
         {
-            response._bTransportFailed = SW_TRUE;
-            response._failureText      = pFailure;
+            response.setTransportFailed( pFailure );
             return;
         }
-        response._statusCode = call._parser.getStatusCode();
+        response.setStatusCode( call._parser.getStatusCode() );
         response._listHeader = call._parser.getHeaders();
         response._bodyBytes  = std::move( call._parser.getBody() );
     }
@@ -325,7 +324,6 @@ namespace sw
     {
         HTTPClientResponse& response = _listDone.emplace_back();
         response._requestID          = requestID;
-        response._bTransportFailed   = SW_TRUE;
-        response._failureText        = pFailure;
+        response.setTransportFailed( pFailure );
     }
 } // namespace sw

@@ -37,6 +37,20 @@ namespace
             return message;
         }
 
+        /** @brief 제공자가 받은 응답입니다. @p statusCode 가 0 이면 전송 실패다. */
+        static HTTPClientResponse makeResponse( int32 statusCode, string_view retryAfter = {}, string_view body = {} )
+        {
+            HTTPClientResponse response;
+            if ( statusCode == 0 )
+                response.setTransportFailed( "down" );
+            else
+                response.setStatusCode( statusCode );
+            if ( retryAfter.empty() == false )
+                response._listHeader.push_back( HTTPHeader{ "retry-after", string( retryAfter ) } );
+            response._bodyBytes.assign( body.begin(), body.end() );
+            return response;
+        }
+
         static string readText( JSONDocument& document, const utf8* pPath )
         {
             string text;
@@ -159,28 +173,28 @@ SW_TEST_CASE( FCMPushProviderTest, SendsTheV1RequestWithAnAccessToken )
 /** @brief [FCMPushProviderTest] 응답 표(FCM 오류 코드 문서): `errorCode` UNREGISTERED 만 기기를 지우고(404 만으로는 아니다), 429 · 5xx · 전송 실패는 다시 보내며, 그 밖의 4xx 는 다시 보내지 않는다 */
 SW_TEST_CASE( FCMPushProviderTest, StatusTable )
 {
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 200, false, "" ) == PushDeliveryStatus::Delivered );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 404, false, "" ) == PushDeliveryStatus::Rejected ); // 404 만으로는 지우지 않는다(끝점 · 프로젝트 설정 오류일 수 있다)
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 404, false, R"({"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}})" ) == PushDeliveryStatus::InvalidToken );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 400, false, R"({"error":{"message":"token UNREGISTERED?","status":"INVALID_ARGUMENT"}})" ) == PushDeliveryStatus::Rejected ); // 글 속 낱말이 아니라 오류 코드를 본다
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 400, false, R"({"error":{"details":[{"errorCode":"UNREGISTERED"}]}})" ) == PushDeliveryStatus::InvalidToken );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 400, false, R"({"error":{"status":"INVALID_ARGUMENT"}})" ) == PushDeliveryStatus::Rejected );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 429, false, "" ) == PushDeliveryStatus::RateLimited );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 500, false, "" ) == PushDeliveryStatus::Transient );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 503, false, "" ) == PushDeliveryStatus::Transient );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 0, true, "" ) == PushDeliveryStatus::Transient );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 401, false, "" ) == PushDeliveryStatus::Rejected );
-    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( 403, false, "" ) == PushDeliveryStatus::Rejected );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 200 ) ) == PushDeliveryStatus::Delivered );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 404 ) ) == PushDeliveryStatus::Rejected ); // 404 만으로는 지우지 않는다(끝점 · 프로젝트 설정 오류일 수 있다)
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 404, "", R"({"error":{"status":"NOT_FOUND","details":[{"errorCode":"UNREGISTERED"}]}})" ) ) == PushDeliveryStatus::InvalidToken );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 400, "", R"({"error":{"message":"token UNREGISTERED?","status":"INVALID_ARGUMENT"}})" ) ) == PushDeliveryStatus::Rejected ); // 글 속 낱말이 아니라 오류 코드를 본다
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 400, "", R"({"error":{"details":[{"errorCode":"UNREGISTERED"}]}})" ) ) == PushDeliveryStatus::InvalidToken );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 400, "", R"({"error":{"status":"INVALID_ARGUMENT"}})" ) ) == PushDeliveryStatus::Rejected );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 429 ) ) == PushDeliveryStatus::RateLimited );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 500 ) ) == PushDeliveryStatus::Transient );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 503 ) ) == PushDeliveryStatus::Transient );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 0 ) ) == PushDeliveryStatus::Transient );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 401 ) ) == PushDeliveryStatus::Rejected );
+    SW_EXPECT_TRUE( FCMPushProvider::mapStatus( PushTestUtil::makeResponse( 403 ) ) == PushDeliveryStatus::Rejected );
 }
 
 /** @brief [FCMPushProviderTest] 기다릴 시간: `Retry-After` 를 따르고, 없는 429 는 문서의 최소 1 분이며, 5xx 는 발송기의 백오프에 맡긴다 */
 SW_TEST_CASE( FCMPushProviderTest, RetryAfter )
 {
-    SW_EXPECT_EQUAL( int64( 7000 ), FCMPushProvider::computeRetryAfterMs( 503, "7" ) );
-    SW_EXPECT_EQUAL( int64( 7000 ), FCMPushProvider::computeRetryAfterMs( 429, "7" ) );
-    SW_EXPECT_EQUAL( int64( 60000 ), FCMPushProvider::computeRetryAfterMs( 429, "" ) );
-    SW_EXPECT_EQUAL( int64( 60000 ), FCMPushProvider::computeRetryAfterMs( 429, "not a number" ) );
-    SW_EXPECT_EQUAL( int64( 0 ), FCMPushProvider::computeRetryAfterMs( 503, "" ) );
+    SW_EXPECT_EQUAL( int64( 7000 ), FCMPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 503, "7" ), UnixMilliseconds{ 0 } ) );
+    SW_EXPECT_EQUAL( int64( 7000 ), FCMPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 429, "7" ), UnixMilliseconds{ 0 } ) );
+    SW_EXPECT_EQUAL( int64( 60000 ), FCMPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 429, "" ), UnixMilliseconds{ 0 } ) );
+    SW_EXPECT_EQUAL( int64( 60000 ), FCMPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 429, "not a number" ), UnixMilliseconds{ 0 } ) );
+    SW_EXPECT_EQUAL( int64( 0 ), FCMPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 503, "" ), UnixMilliseconds{ 0 } ) );
 
     FCMFixture rig;
     rig._sendStatus                 = 429;
@@ -250,23 +264,23 @@ SW_TEST_CASE( FCMPushProviderTest, Topics )
 /** @brief [APNSPushProviderTest] 응답 표(애플 문서): 410 만 기기를 지우고, 429 · 5xx · 전송 실패는 다시 보내며, 403 · 400 은 다시 보내지 않는다(`BadDeviceToken` 은 환경이 어긋난 토큰일 수 있어 지우지 않는다) */
 SW_TEST_CASE( APNSPushProviderTest, StatusTable )
 {
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 200, false ) == PushDeliveryStatus::Delivered );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 410, false ) == PushDeliveryStatus::InvalidToken );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 429, false ) == PushDeliveryStatus::RateLimited );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 500, false ) == PushDeliveryStatus::Transient );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 503, false ) == PushDeliveryStatus::Transient );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 0, true ) == PushDeliveryStatus::Transient );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 400, false ) == PushDeliveryStatus::Rejected );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 403, false ) == PushDeliveryStatus::Rejected );
-    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( 413, false ) == PushDeliveryStatus::Rejected );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 200 ) ) == PushDeliveryStatus::Delivered );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 410 ) ) == PushDeliveryStatus::InvalidToken );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 429 ) ) == PushDeliveryStatus::RateLimited );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 500 ) ) == PushDeliveryStatus::Transient );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 503 ) ) == PushDeliveryStatus::Transient );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 0 ) ) == PushDeliveryStatus::Transient );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 400 ) ) == PushDeliveryStatus::Rejected );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 403 ) ) == PushDeliveryStatus::Rejected );
+    SW_EXPECT_TRUE( APNSPushProvider::mapStatus( PushTestUtil::makeResponse( 413 ) ) == PushDeliveryStatus::Rejected );
 }
 
 /** @brief [APNSPushProviderTest] 기다릴 시간: `retry-after` 를 따르고, 없는 5xx 는 애플 문서의 15 분이며, 429 는 발송기의 백오프에 맡긴다 */
 SW_TEST_CASE( APNSPushProviderTest, RetryAfter )
 {
-    SW_EXPECT_EQUAL( int64( 5000 ), APNSPushProvider::computeRetryAfterMs( 429, "5" ) );
-    SW_EXPECT_EQUAL( int64( 900000 ), APNSPushProvider::computeRetryAfterMs( 503, "" ) );
-    SW_EXPECT_EQUAL( int64( 0 ), APNSPushProvider::computeRetryAfterMs( 429, "" ) );
+    SW_EXPECT_EQUAL( int64( 5000 ), APNSPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 429, "5" ), UnixMilliseconds{ 0 } ) );
+    SW_EXPECT_EQUAL( int64( 900000 ), APNSPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 503, "" ), UnixMilliseconds{ 0 } ) );
+    SW_EXPECT_EQUAL( int64( 0 ), APNSPushProvider::computeRetryAfterMs( PushTestUtil::makeResponse( 429, "" ), UnixMilliseconds{ 0 } ) );
 }
 
 /** @brief [APNSPushProviderTest] 본문: 문구가 있으면 현지화 키와 배지를, 없으면 조용한 알림(`content-available`)을 싣는다. 인자와 화면은 사용자 키다 */

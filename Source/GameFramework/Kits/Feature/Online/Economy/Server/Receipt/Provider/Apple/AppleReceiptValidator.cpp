@@ -274,7 +274,7 @@ namespace sw
     void AppleReceiptValidator::onCredentialRejected( const HTTPClientResponse& response )
     {
         _authorization.clear(); // 우리 토큰이 거절됐다 — 다음 요청이 새로 만든다
-        SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore", "Apple rejected the App Store Server API token (status %#, issuer '%#', key '%#') - check issuerId, keyId and the signing key", response._statusCode, _settings._issuerID.c_str(),
+        SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore", "Apple rejected the App Store Server API token (status %#, issuer '%#', key '%#') - check issuerId, keyId and the signing key", response.getStatusCode(), _settings._issuerID.c_str(),
                          _settings._keyID.c_str() );
     }
 } // namespace sw
