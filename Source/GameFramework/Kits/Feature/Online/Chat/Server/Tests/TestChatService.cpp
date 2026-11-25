@@ -111,6 +111,9 @@ namespace
         settings._reportBurst             = 3;
         settings._reportRefillIntervalMs  = 60000;
         settings._sanctionCacheMs         = 60000;
+        settings._maxQueuedHistory        = 4096;
+        settings._maxPendingSendPerMember = 4;
+        settings._pendingSendRetryAfterMs = 1000;
         return settings;
     }
 

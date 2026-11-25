@@ -47,5 +47,14 @@ namespace sw
         /** @brief 계정의 제재 조회를 기억하는 밀리초입니다. 이 시간 안에는 저장소를 다시 읽지 않습니다. */
         PROPERTY( Required, Min = 1000 )
         int64 _sanctionCacheMs{ 0 };
+        /** @brief 저장소가 늦을 때 쌓아 둘 채팅 기록 수입니다. 넘으면 오래된 것부터 버립니다. */
+        PROPERTY( Required, Min = 1, Max = 1000000 )
+        int32 _maxQueuedHistory{ 0 };
+        /** @brief 제재 첫 읽기를 기다리는 말하기 요청의 상한(접속마다)입니다. */
+        PROPERTY( Required, Min = 1, Max = 1024 )
+        int32 _maxPendingSendPerMember{ 0 };
+        /** @brief 그 대기열이 찼을 때 클라이언트에 알려 줄 기다릴 시간(밀리초)입니다. */
+        PROPERTY( Required, Min = 1, Max = 600000 )
+        int64 _pendingSendRetryAfterMs{ 0 };
     };
 } // namespace sw

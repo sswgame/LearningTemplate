@@ -45,5 +45,8 @@ namespace sw
         /** @brief 계정마다 알림 하나가 다시 차는 간격(밀리초)입니다. */
         PROPERTY( Required, Min = 1000 )
         int64 _pushAccountRefillIntervalMs{ 0 };
+        /** @brief 도배 제한이 보관하는 계정 수의 상한입니다. */
+        PROPERTY( Required, Min = 1, Max = 10000000 )
+        int32 _pushMaxTrackedAccountCount{ 0 };
     };
 } // namespace sw

@@ -285,6 +285,7 @@ namespace
             settings._listenAddress                    = NetAddress::makeLoopback( 0 );
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 — 도배 제한 테스트만 낮춘다
             settings._requestBurstPerAccount           = 1000;
+            settings._maxConnectionsPerRemote          = 64;
             settings._maxPendingCallsPerService        = 100000;
             return settings;
         }

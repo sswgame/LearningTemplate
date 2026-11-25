@@ -59,6 +59,15 @@ def make_online_config(list_kit: list[dict], server_id: int = 1, topology: str =
         "_serverID": server_id,
         "_storeName": "local",
         "_cacheName": "local",
+        "_serverKind": "game",
+        "_region": "local",
+        "_capacity": 100,
+        "_maxConnections": 4096,
+        "_ioThreadCount": 2,
+        "_storeWorkerCount": 4,
+        "_requestBurstPerRemote": 10,
+        "_requestBurstPerAccount": 30,
+        "_maxConnectionsPerRemote": 64,
         # 기반 표 TTL 은 필수다(코드에 기본값이 없다). 짧은 짝 실행이라 지우지 않는다(기간 0).
         **{name: {"_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1}
            for name in ("_auditRetention", "_ledgerRetention", "_closedReportTTL", "_mailSentTTL", "_scheduleRunTTL")},

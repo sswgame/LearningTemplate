@@ -20,14 +20,15 @@ namespace
     constexpr int32     kMaxDevicePerAccount = 10; ///< 서버 설정 `_pushMaxDevicePerAccount` 와 같은 값
 
     /** @brief 서버 설정과 같은 운영 값을 든 발송기 설정입니다. */
-    PushDispatcherConfig makePushSettings()
+    LiveOpsKitConfig makePushSettings()
     {
-        PushDispatcherConfig settings;
-        settings._maxDevicePerAccount     = kMaxDevicePerAccount;
-        settings._maxRetry                = 5;
-        settings._firstBackoffMs          = 1000;
-        settings._accountBurst            = 6;
-        settings._accountRefillIntervalMs = 600000;
+        LiveOpsKitConfig settings;
+        settings._pushMaxDevicePerAccount     = kMaxDevicePerAccount;
+        settings._pushMaxRetry                = 5;
+        settings._pushFirstBackoffMs          = 1000;
+        settings._pushAccountBurst            = 6;
+        settings._pushAccountRefillIntervalMs = 600000;
+        settings._pushMaxTrackedAccountCount  = 100000;
         return settings;
     }
 
@@ -40,7 +41,7 @@ namespace
         PushNotificationDispatcher _dispatcher;
         int64                      _nowMs;
 
-        explicit DispatcherFixture( const PushDispatcherConfig& settings = makePushSettings() )
+        explicit DispatcherFixture( const LiveOpsKitConfig& settings = makePushSettings() )
             : _database{}
             , _store{ &_database }
             , _provider{}
@@ -192,8 +193,8 @@ SW_TEST_CASE( PushDispatcherTest, RejectedIsDroppedOnce )
 /** @brief [PushDispatcherTest] 계정마다 한꺼번에 보낼 수 있는 상한이 있고 넘으면 보내지 않고 센다 */
 SW_TEST_CASE( PushDispatcherTest, AccountBurstIsLimited )
 {
-    PushDispatcherConfig settings = makePushSettings();
-    settings._accountBurst        = 2;
+    LiveOpsKitConfig settings  = makePushSettings();
+    settings._pushAccountBurst = 2;
     DispatcherFixture rig( settings );
     rig.addDevice( "a" );
     PushNotificationMessage message;
@@ -367,14 +368,14 @@ SW_TEST_CASE( PushDispatcherTest, DeviceAndRetryLimitsAreRequired )
     MemoryServiceDatabase      database;
     MemoryServiceStore         store( &database );
     PushNotificationDispatcher dispatcher;
-    SW_EXPECT_FALSE( dispatcher.initialize( &store, PushDispatcherConfig{} ) );
+    SW_EXPECT_FALSE( dispatcher.initialize( &store, LiveOpsKitConfig{} ) );
 }
 
 /** @brief [PushDispatcherTest] 기기 수 상한은 설정이 정한다 — 2 로 낮추면 세 번째 기기가 가장 오래된 것을 밀어내 둘에게만 간다 */
 SW_TEST_CASE( PushDispatcherTest, DeviceLimitComesFromSettings )
 {
-    PushDispatcherConfig settings = makePushSettings();
-    settings._maxDevicePerAccount = 2;
+    LiveOpsKitConfig settings         = makePushSettings();
+    settings._pushMaxDevicePerAccount = 2;
     DispatcherFixture rig( settings );
     rig.addDevice( "first", kNowMs );
     rig.addDevice( "second", kNowMs + 1 );

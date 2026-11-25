@@ -748,7 +748,7 @@ namespace
             return string( resultBuilder.view() );
         }
 
-        static constexpr const utf8* kOnlineJSON = R"({ "_storeName": "main", "_cacheName": "local", "_storeWorkerCount": 1, "_listKit": [ { "_name": "testLogin" } ] })";
+        static constexpr const utf8* kOnlineJSON = R"({ "_storeName": "main", "_cacheName": "local", "_listKit": [ { "_name": "testLogin" } ] })";
 
         /** @brief 일을 맡기고 끝날 때까지 조립을 돌립니다. */
         template <typename TFunction>
@@ -773,7 +773,7 @@ SW_TEST_CASE( PostgresEndToEndTest, ConfigSelectsPostgresAndReachesTheEndpoint )
     test::OnlineRuntimeFixture rig;
     string                     error;
     {
-        const auto result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
+        const auto result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseSettings( PostgresEndToEndTestUtil::kOnlineJSON, 1 ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     SW_EXPECT_TRUE( server.getMigrationCount() >= 2 );
@@ -838,7 +838,7 @@ SW_TEST_CASE( PostgresEndToEndTest, WrongPasswordStopsStartup )
 
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
+    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseSettings( PostgresEndToEndTestUtil::kOnlineJSON, 1 ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "postgres connection failed" ) != string::npos );
     SW_EXPECT_EQUAL( 0, server.getAuthenticatedCount() );
@@ -850,7 +850,7 @@ SW_TEST_CASE( PostgresEndToEndTest, MissingSecretStopsStartup )
     SW_EXPECT_LOG( "Server.SecretNotSet" );
     test::OnlineRuntimeFixture rig;
     string                     error;
-    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
+    error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( 5432 ), test::OnlineRuntimeFixture::withBaseSettings( PostgresEndToEndTestUtil::kOnlineJSON, 1 ), kNowMs ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "main" ) != string::npos );
 }
@@ -863,19 +863,19 @@ SW_TEST_CASE( PostgresEndToEndTest, NewerBreakingDatabaseStopsStartup )
     const test::ScopedEnvironmentVariable secret{ kSecretEnv, kSecret };
     {
         test::OnlineRuntimeFixture rig;
-        const auto                 result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
+        const auto                 result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseSettings( PostgresEndToEndTestUtil::kOnlineJSON, 1 ), kNowMs );
         SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
     }
     {
         SW_EXPECT_LOG( "SQLMigrationRunner.NewerBackwardSchema" ); // 더 새 빌드의 호환 판은 막지 않고 경고만 남긴다
         server.seedNewerMigration( 9998, false );
         test::OnlineRuntimeFixture rig;
-        const auto                 result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs );
+        const auto                 result = rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseSettings( PostgresEndToEndTestUtil::kOnlineJSON, 1 ), kNowMs );
         SW_EXPECT_TRUE( result.has_value() );
     }
     server.seedNewerMigration( 9999, true );
     test::OnlineRuntimeFixture rig;
-    const string               error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseTTL( PostgresEndToEndTestUtil::kOnlineJSON ), kNowMs ) );
+    const string               error = describeError( rig.fromConfig( PostgresEndToEndTestUtil::makeServerJSON( server.getPort() ), test::OnlineRuntimeFixture::withBaseSettings( PostgresEndToEndTestUtil::kOnlineJSON, 1 ), kNowMs ) );
     SW_EXPECT_TRUE( error.find( "newer" ) != string::npos );
     SW_EXPECT_TRUE( server.getUnknownStatements().empty() );
 }

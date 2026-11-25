@@ -40,7 +40,7 @@ namespace
 SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 {
     sw::ConfigManager manager;
-    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_topology": "MultiServer", "_serverID": 7, "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 24, "_maxPendingCallsPerService": 1024, "_listTrustedProxy": [], "_seatReservationSeconds": 30,
+    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_topology": "MultiServer", "_serverID": 7, "_ttlSweepMinuteOfDay": 300, "_ttlBackfillRolloutHours": 24, "_maxPendingCallsPerService": 1024, "_listTrustedProxy": [], "_seatReservationSeconds": 30, "_serverKind": "game", "_region": "local", "_capacity": 100, "_maxConnections": 4096, "_ioThreadCount": 2, "_storeWorkerCount": 4, "_requestBurstPerRemote": 10, "_requestBurstPerAccount": 30, "_maxConnectionsPerRemote": 64,
 "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
 "_ledgerRetention": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
 "_closedReportTTL": { "_expireAfterDays": 0, "_maxScanPerSweep": 1, "_maxDeletePerSweep": 1 },
@@ -67,14 +67,14 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 }
 
 /**
- * @brief [OnlineServerConfigTest] 서버 구성(`_topology`)과 서버 id 를 적지 않은 설정은 읽지 못한다 — 여러 대 배포가 "한 대" 기본값으로 조용히 서지 않는다
+ * @brief [OnlineServerConfigTest] 서버 구성(`_topology`) · 서버 id · 운영 한도를 적지 않은 설정은 읽지 못한다 — 여러 대 배포가 "한 대" 기본값으로, 공개 서버가 코드의 한도로 조용히 서지 않는다
  */
-SW_TEST_CASE( OnlineServerConfigTest, TopologyAndServerIDAreRequired )
+SW_TEST_CASE( OnlineServerConfigTest, TopologyServerIDAndLimitsAreRequired )
 {
     SW_EXPECT_LOG( "Config.KeyMissing" );
     const auto loadsWithout = []( sw::string_view fieldText )
     {
-        sw::string   text     = sw::test::OnlineRuntimeFixture::withBaseTTL( R"({ "_listKit": [] })" );
+        sw::string   text     = sw::test::OnlineRuntimeFixture::withBaseSettings( R"({ "_listKit": [] })" );
         const size_t position = text.find( fieldText );
         SW_EXPECT_TRUE( position != sw::string::npos );
         text.erase( position, fieldText.size() );
@@ -84,6 +84,11 @@ SW_TEST_CASE( OnlineServerConfigTest, TopologyAndServerIDAreRequired )
     SW_EXPECT_TRUE( loadsWithout( "" ) );
     SW_EXPECT_FALSE( loadsWithout( R"("_topology": "SingleServer", )" ) );
     SW_EXPECT_FALSE( loadsWithout( R"("_serverID": 1, )" ) );
+    for ( const utf8* pField : { R"("_serverKind": "game", )", R"("_region": "local", )", R"("_capacity": 100, )", R"("_maxConnections": 4096, )", R"("_ioThreadCount": 2, )",
+                                 R"("_requestBurstPerRemote": 10, )", R"("_requestBurstPerAccount": 30, )", R"("_maxConnectionsPerRemote": 64, )", R"("_storeWorkerCount": 4, )" } )
+    {
+        SW_EXPECT_FALSE( loadsWithout( pField ) );
+    }
 }
 
 /**

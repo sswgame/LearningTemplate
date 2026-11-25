@@ -3,6 +3,15 @@
     "_serverID": 1,
     "_storeName": "local",
     "_cacheName": "local",
+    "_serverKind": "game",
+    "_region": "local",
+    "_capacity": 100,
+    "_maxConnections": 4096,
+    "_ioThreadCount": 2,
+    "_storeWorkerCount": 4,
+    "_requestBurstPerRemote": 10,
+    "_requestBurstPerAccount": 30,
+    "_maxConnectionsPerRemote": 64,
     "_auditRetention": { "_expireAfterDays": 365, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
     "_ledgerRetention": { "_expireAfterDays": 400, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 500 },
     "_closedReportTTL": { "_expireAfterDays": 90, "_maxScanPerSweep": 2000, "_maxDeletePerSweep": 500 },
@@ -41,6 +50,9 @@
         {
             "_name": "chat",
             "_settings": {
+                "_maxQueuedHistory": 4096,
+                "_maxPendingSendPerMember": 4,
+                "_pendingSendRetryAfterMs": 1000,
                 "_reportBurst": 3,
                 "_reportRefillIntervalMs": 60000,
                 "_sanctionCacheMs": 60000,
@@ -85,6 +97,7 @@
         {
             "_name": "liveops",
             "_settings": {
+                "_pushMaxTrackedAccountCount": 100000,
                 "_pushAccountBurst": 6,
                 "_pushAccountRefillIntervalMs": 600000,
                 "_pushMaxDevicePerAccount": 10,
