@@ -1,7 +1,7 @@
 /**
  * @file AIPerception.h
  * @brief AI 의 감각입니다. 시야(거리, 시야각, 가림)와 청각(소리 반경)으로 대상을 감지하고, 본 것을 잠시 기억합니다.
- * @details 기억은 마지막으로 감지한 위치와 그 뒤로 지난 시간을 가집니다.
+ * @details 기억은 마지막으로 감지한 위치와 그 뒤로 지난 시간을 가집니다. 잠입 시야가 쓰는 빛 노출 질의(`LightExposure`)도 둡니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -134,5 +134,15 @@ namespace sw
         vector<AIStimulus>        _listCandidate; ///< 씬 판 `sense` 의 후보 버퍼
         vector<Component*>        _listQueryKey;  ///< 씬 판 `sense` 의 색인 질의 버퍼
         double3                   _worldOrigin;   ///< 기억한 자리가 기준한 월드 원점의 절대 자리
+    };
+
+    /**
+     * @struct LightExposure
+     * @brief 잠입의 빛 노출입니다. 한 위치가 씬의 라이트(점, 스폿, 방향)에 얼마나 드러나는지 계산하며, 0 이면 어둠입니다. 점 라이트와 스폿 라이트는 반경 안에서 (1 - d/r)² × 세기이고(스폿은 원뿔 밖이면 0),
+     *        방향광은 세기 그대로입니다. @p bOcclusion 이 켜져 있으면 라이트까지 광선이 막힐 때 그 라이트를 뺍니다(방향광은 라이트 반대쪽 100 m 까지 검사). 꺼져 있으면 가림을 검사하지 않습니다.
+     */
+    struct SW_GF_API LightExposure
+    {
+        static float32 computeExposure( const GameObjectManager& manager, const float3& position, bool bOcclusion, uint64 ignoreObjectID = 0 );
     };
 } // namespace sw

@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 
@@ -208,5 +209,24 @@ namespace sw
             length += float3::getDistance( grid.computeCellCenter( listCell[cellIndex - 1] ), grid.computeCellCenter( listCell[cellIndex] ) );
         }
         return length;
+    }
+
+    GridPathSolver::GridPathSolver( const NavGrid& grid )
+        : _pGrid{ &grid }
+        , _listPathfinder{}
+        , _pChunkPathfinder{ nullptr }
+    {
+    }
+
+    void GridPathSolver::prepareBatch( vector<GridPathJob>& /*inoutListJob*/, uint32 chunkCount )
+    {
+        if ( _listPathfinder.size() < chunkCount )
+            _listPathfinder.resize( chunkCount );
+        _pChunkPathfinder = _listPathfinder.data();
+    }
+
+    void GridPathSolver::solve( GridPathJob& inoutJob, uint32 chunkIndex )
+    {
+        inoutJob._result = NavAgent::planPath( *_pGrid, _pChunkPathfinder[chunkIndex], inoutJob._from, inoutJob._target, inoutJob._listPoint );
     }
 } // namespace sw

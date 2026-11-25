@@ -25,7 +25,29 @@ namespace sw
     {
         struct WeaponInternal
         {
-            static constexpr const utf8* kBareTag = "tag"; ///< `accepts` 의 그냥 이름은 탄 태그다
+            static constexpr const utf8* kBareTag         = "tag"; ///< `accepts` 의 그냥 이름은 탄 태그다
+            static constexpr float32     kNearlyVerticalY = 0.99f; ///< 방향의 y 가 이보다 크면 위(+Y) 대신 +X 로 직교 축을 만든다(평행한 두 벡터의 외적은 0)
+
+            /**
+             * @brief @p direction 주위의 원뿔(반각 @p coneHalfAngle 라디안) 안에서 고르게 고른 방향입니다. 반각이 0 이면 그대로입니다. 좌표계는 엔진과 같습니다(+Y 위, +Z 앞, 왼손).
+             * @details 원뿔 안의 입체각에 고르게 분포한다. cos θ 를 [cos 반각, 1] 에서 고르고 방위각을 [0, 2π) 에서 고른다.
+             */
+            static float3 applySpread( const float3& direction, float32 coneHalfAngle, GameRandom& random )
+            {
+                if ( coneHalfAngle <= 0.0f )
+                    return direction;
+                // 방향에 직교하는 두 축.
+                const float3 helper = MathUtil::abs( direction._y ) < kNearlyVerticalY ? float3{ 0.0f, 1.0f, 0.0f } : float3{ 1.0f, 0.0f, 0.0f };
+                float3       axisA  = helper.cross( direction );
+                axisA               = axisA * ( 1.0f / MathUtil::max( MathUtil::kEpsilon, axisA.getLength() ) );
+                const float3 axisB  = direction.cross( axisA );
+
+                const float32 cosMax   = MathUtil::cos( coneHalfAngle );
+                const float32 cosTheta = random.nextRange( cosMax, 1.0f );
+                const float32 sinTheta = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f - cosTheta * cosTheta ) );
+                const float32 phi      = random.nextRange( 0.0f, 2.0f * MathUtil::kPi );
+                return direction * cosTheta + axisA * ( sinTheta * MathUtil::cos( phi ) ) + axisB * ( sinTheta * MathUtil::sin( phi ) );
+            }
         };
     } // namespace
 } // namespace sw
@@ -232,7 +254,7 @@ namespace sw
         {
             Ray ray;
             ray._origin    = aim._origin;
-            ray._direction = WeaponMath::applySpread( aim._direction, coneHalfAngle, _random );
+            ray._direction = WeaponInternal::applySpread( aim._direction, coneHalfAngle, _random );
             outShot._listRay.push_back( ray );
         }
         _currentSpread = MathUtil::min( _def._maxSpread, _currentSpread + _def._spreadPerShot );

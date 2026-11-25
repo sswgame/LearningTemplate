@@ -1,6 +1,6 @@
 /**
  * @file NavAgent.h
- * @brief 길을 따라 걷는 행위자를 정의합니다.
+ * @brief 길을 따라 걷는 행위자를 정의합니다. 공통 이동 인터페이스(`INavMover`)로 감싼 어댑터(`NavGridMover`)도 둡니다.
  * @details 경로점 따라가기, 흐름장 따라가기, 도착 감속, 이웃과 떨어지기(분리), 막힌 셀을 따라 미끄러지기, 끼임 감지를 한다.
  */
 #pragma once
@@ -8,6 +8,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+
+#include "Engine/Navigation/INavMover.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
@@ -124,5 +126,32 @@ namespace sw
         size_t           _waypointIndex;
         float32          _stuckTimer;
         NavAgentState    _state;
+    };
+
+    class GridPathfinder;
+    class NavAgent;
+    class NavGrid;
+
+    /**
+     * @class NavGridMover
+     * @brief AI(행동 트리의 이동, 감독)가 격자 게임과 내비메시 게임에서 같은 코드로 걷게 하는 어댑터입니다. 격자, 길찾기, 행위자는 빌려 쓰며 이것보다 오래 살아야 합니다.
+     * @details 상태는 행위자의 것을 옮깁니다. 경로나 흐름장을 따르는 중이면 `Moving`, 도착이면 `Arrived`, 끼였거나 경로를 못 구했으면 `Failed`.
+     */
+    class SW_GF_API NavGridMover final : public INavMover
+    {
+    public:
+        NavGridMover( NavAgent& agent, const NavGrid& grid, GridPathfinder& pathfinder );
+
+        [[nodiscard]] bool moveTo( const float3& destination ) override;
+        void               stopMoving() override;
+        NavMoveStatus      getMoveStatus() const override;
+        float3             getMoveVelocity() const override;
+        float3             getMovePosition() const override;
+
+    private:
+        NavAgent&       _agent;
+        const NavGrid&  _grid;
+        GridPathfinder& _pathfinder;
+        uint8           _bFailed : 1;
     };
 } // namespace sw

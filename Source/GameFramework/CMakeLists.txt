@@ -78,8 +78,6 @@ sw_mark_deterministic_sources(GameFramework
 	Runtime/Character/Combat/Weapon/Weapon.cpp
 	# 락스텝 RTS(`GF_RealTimeStrategy`)가 판 걸음 안에서 부르는 격자 길찾기 · 흐름장
 	Runtime/Character/Navigation/FlowField.cpp
-	Runtime/Character/Navigation/FlowFieldCache.cpp
-	Runtime/Character/Navigation/GridPathSolver.cpp
 	Runtime/Character/Navigation/GridPathfinder.cpp
 	Runtime/Character/Navigation/GridReachability.cpp
 	Runtime/Character/Navigation/NavGrid.cpp

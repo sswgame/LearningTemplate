@@ -1,8 +1,9 @@
 /**
  * @file FlowField.h
- * @brief 흐름장입니다. 목적지에서 거꾸로 퍼진 거리장과, 셀마다 "어느 쪽으로 가면 가까워지는가" 를 담습니다. 한 번 구하면 몇 마리가 써도 같은 값입니다.
+ * @brief 흐름장입니다. 목적지에서 거꾸로 퍼진 거리장과, 셀마다 "어느 쪽으로 가면 가까워지는가" 를 담습니다. 한 번 구하면 몇 마리가 써도 같은 값입니다. 목적지마다 흐름장 하나를 나눠 쓰는 캐시(`FlowFieldCache`)도 둡니다.
  */
 #pragma once
+#include "Core/Container/ChunkedArray.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -59,5 +60,38 @@ namespace sw
         GridTopology      _topology; ///< 구한 격자의 너비, 높이, 셀 번호
         const NavGrid*    _pGrid;    ///< 구한 격자. 리비전만으로는 다른 격자를 구별하지 못한다
         uint32            _gridRevision;
+    };
+
+    class NavGrid;
+
+    /**
+     * @class FlowFieldCache
+     * @brief 목적지 셀을 키로 흐름장을 빌려 주고(`acquire`) 쓰는 수를 셉니다. 아무도 쓰지 않는 슬롯은 다음 목적지가 다시 씁니다.
+     * @details 슬롯은 ChunkedArray 라서 움직이지 않는다 — 빌린 쪽(명령 · 행위자)이 포인터를 쥐어도 된다. 격자가 바뀌면 `refreshStale` 이 쓰는 흐름장만 다시 구한다.
+     *          RTS 월드에서 떼었다 — 무리 이동을 쓰는 다른 키트(타워 디펜스 · 군중)도 같은 캐시를 쓴다(Supreme Commander · SC2 의 목적지별 흐름장 공유).
+     */
+    class SW_GF_API FlowFieldCache
+    {
+    public:
+        /** @brief @p goal 로 가는 흐름장을 빌립니다. 같은 목적지를 쓰는 흐름장이 있으면 그것을, 없으면 빈 슬롯에 새로 구합니다. */
+        const FlowField* acquire( const NavGrid& grid, const int2& goal );
+        /** @brief 빌린 흐름장을 돌려줍니다. 이 캐시의 것이 아니거나 이미 다 돌려받았으면 아무것도 하지 않습니다. */
+        void release( const FlowField* pField );
+        /** @brief 누군가 쓰는 흐름장 가운데 @p grid 가 바뀌어 낡은 것을 다시 구합니다. */
+        void refreshStale( const NavGrid& grid );
+        /** @brief 슬롯을 모두 버립니다. 빌려 간 포인터는 모두 무효가 됩니다. */
+        void clear() { _listSlot.clear(); }
+
+    private:
+        static constexpr int2 kNoGoal{ -1, -1 }; ///< 아직 아무 목적지도 구하지 않은 슬롯
+
+        struct Slot
+        {
+            FlowField _field{};
+            int2      _goal{ kNoGoal };
+            int32     _userCount{ 0 };
+        };
+
+        ChunkedArray<Slot> _listSlot;
     };
 } // namespace sw

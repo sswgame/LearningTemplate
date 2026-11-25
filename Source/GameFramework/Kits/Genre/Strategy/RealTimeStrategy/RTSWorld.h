@@ -27,8 +27,6 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSUnitBuckets.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowField.h"
-#include "GameFramework/Runtime/Character/Navigation/FlowFieldCache.h"
-#include "GameFramework/Runtime/Character/Navigation/GridPathSolver.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
