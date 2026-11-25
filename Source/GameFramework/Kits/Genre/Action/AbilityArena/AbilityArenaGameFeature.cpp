@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
 #include "Core/Name/hashed_string.h"
 
@@ -18,10 +19,10 @@ namespace sw
         template <typename TAbility>
         [[nodiscard]] bool addAbilityClass( GameFeatureScope& scope, AbilityClassRegistry& classes, const hashed_string& className )
         {
-            if ( classes.registerAbilityClass<TAbility>( className ) == false )
+            Subscription registration = classes.registerAbilityClass<TAbility>( className );
+            if ( registration.isActive() == false )
                 return false;
-            scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pClasses = &classes, className]()
-            { pClasses->unregisterAbilityClass( className ); } ) );
+            scope.holdSubscription( std::move( registration ) );
             return true;
         }
 

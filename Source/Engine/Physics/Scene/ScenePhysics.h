@@ -53,6 +53,8 @@ namespace sw
     class RigidBody2DComponent;
     class RigidBodyComponent;
     class SceneStreamingSubsystem;
+    class Subscription;
+    class SubscriptionList;
 
     /**
      * @struct ContactStayListener
@@ -246,13 +248,11 @@ namespace sw
         void collectContactLog( vector<PhysicsContactLogEntry>& outListEntry ) const;
 
         /**
-         * @brief @p component 의 오브젝트에 오는 유지 이벤트를 @p listener 의 함수로 받게 올립니다(보통 `onRegister`). 오브젝트가 없거나, 함수가 둘 다 없거나, 이미 올렸으면 오류입니다.
+         * @brief @p component 의 오브젝트에 오는 유지 이벤트를 @p listener 의 함수로 받게 올립니다(보통 `onRegister`). 돌려준 구독이 풀리면 내리고, 오브젝트의 마지막이면 물리 씬의 듣기도 끈다. 오브젝트가 없거나, 함수가 둘 다 없거나, 이미 올렸으면 오류를 남기고 빈 구독입니다.
          * @details 오브젝트의 첫 듣는 쪽이면 물리 씬에 그 오브젝트 id 를 듣는 사용자 값으로 건다(`IPhysicsScene::setContactStayListener`) — 그 오브젝트가 낀 쌍만
          *          유지를 만든다. 나눠 줄 때는 켜진 컴포넌트에만 준다(시작 · 끝과 같은 규칙).
          */
-        void registerContactStayListener( Component& component, const ContactStayListener& listener );
-        /** @brief 올린 듣는 쪽을 내립니다(`onUnregister`). 오브젝트의 마지막이면 물리 씬의 듣기도 끈다. 올리지 않았으면 아무것도 하지 않습니다. */
-        void unregisterContactStayListener( Component& component );
+        [[nodiscard]] Subscription registerContactStayListener( Component& component, const ContactStayListener& listener );
 
         /** @brief 물리 컴포넌트를 단계 목록에 넣습니다(`PhysicsComponent::onRegister`). */
         void registerComponent( PhysicsComponent* pComponent );
@@ -332,6 +332,8 @@ namespace sw
         void deliverEvent( GameObjectManager& manager, uint64 selfUserData, uint64 otherUserData, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody,
                            const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
                            bool bOverlap, bool bIs2D, float32 hitFraction, bool bOtherSpawnedInside );
+        /** @brief 유지 듣는 쪽의 구독이 풀렸습니다(`registerContactStayListener`). */
+        void releaseContactStayListener( uint64 listenerID );
         /** @brief 유지 하나를 그 오브젝트에 올린 듣는 쪽(`registerContactStayListener`)에만 줍니다. 오브젝트가 켜졌는지는 부른 쪽이 봤다. */
         void deliverStay( uint64 selfUserData, GameObject* pOther, PhysicsBodyHandle selfBody, PhysicsBodyHandle otherBody, const float3& point, const float3& normal,
                           float32 impulse, bool bSelfTrigger, bool bOtherTrigger, bool bOverlap, bool bIs2D );
@@ -384,6 +386,7 @@ namespace sw
         {
             Component*          _pComponent{ nullptr };
             ContactStayListener _listener{};
+            uint64              _listenerID{ 0 }; ///< 구독이 내릴 것을 찾는 번호
         };
         /** @brief 지금 있는 물리 씬에 오브젝트 @p objectID 의 유지 듣기를 겁니다. */
         void applyContactStayListener( uint64 objectID, bool bListen );
@@ -428,6 +431,7 @@ namespace sw
         vector<PhysicsOverlapEvent>                             _listOverlapTransition;              ///< 이번 프레임 진입 · 이탈(`dispatchEvents` 재사용)
         vector<PhysicsOverlapEvent>                             _listOverlapStay;                    ///< 이번 프레임 겹침 유지(올린 듣는 쪽이 있을 때만, 재사용)
         unordered_map<uint64, vector<ContactStayListenerEntry>> _mapStayListener;                    ///< 오브젝트 id → 유지 듣는 쪽(`registerContactStayListener`)
+        unordered_map<uint64, uint64>                           _mapStayListenerObject;              ///< 듣는 쪽 번호 → 오브젝트 id(`releaseContactStayListener`)
         vector<ContactStayListenerEntry>                        _listStayTarget;                     ///< 유지를 나눠 주는 동안의 듣는 쪽 사본(재사용)
         PhysicsContactLogEntry                                  _arrContactLog[kContactLogCapacity]; ///< 시작 · 끝 접촉 고리(진단 — `collectContactLog`)
         uint64                                                  _contactLogCount;                    ///< 기록한 누계(다음 칸은 `% kContactLogCapacity`)
@@ -437,8 +441,10 @@ namespace sw
         DebrisBudget                                            _debrisBudget;
         float32                                                 _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
         uint8                                                   _bConfigured         : 1;
-        uint8                                                   _bFrameEventsPending : 1; ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
-        uint8                                                   _bStreamingHolds     : 1; ///< 스트리밍하는 씬이라 바닥을 묻는 중이다(`updateStreamingHolds` — 스트리밍이 끝나면 한 번 모두 푼다)
+        uint8                                                   _bFrameEventsPending : 1;   ///< 마지막 `step` 의 이벤트를 아직 나눠 주지 않았다(`deliverFrameEvents`)
+        uint8                                                   _bStreamingHolds     : 1;   ///< 스트리밍하는 씬이라 바닥을 묻는 중이다(`updateStreamingHolds` — 스트리밍이 끝나면 한 번 모두 푼다)
+        uint64                                                  _lastStayListenerID;        ///< 마지막으로 준 유지 듣는 쪽 번호(0 은 없음)
+        unique_ptr<SubscriptionList>                            _stayListenerSubscriptions; ///< 유지 듣는 쪽의 구독 — 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다
     };
 
     /**

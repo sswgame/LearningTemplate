@@ -44,6 +44,7 @@ namespace sw
         , _grid{}
         , _replicator{}
         , _mapAgent{}
+        , _mapSessionTarget{}
         , _mapPendingAccount{}
         , _listLoadScratch{}
         , _listStateScratch{}
@@ -115,9 +116,9 @@ namespace sw
         }
         for ( const int32 connectionID : listConnection )
         {
-            _remoteCalls.unregisterSessionTarget( connectionID );
             _world.removeAvatar( _mapAgent[connectionID]->_avatarID );
         }
+        _mapSessionTarget.clear();
         _mapAgent.clear();
         _mapPendingAccount.clear();
         _listSubscription.clear();
@@ -290,7 +291,8 @@ namespace sw
         pAgent->_onAction                 = SW_DELEGATE_METHOD( decltype( pAgent->_onAction ), &HubServerLink::reportAction, this );
         pAgent->_connectionID             = connectionID;
         pAgent->_avatarID                 = _world.addAvatar( load._accountID, profile );
-        if ( _remoteCalls.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), pAgent.get() ) == false )
+        Subscription sessionTarget        = _remoteCalls.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), pAgent.get() );
+        if ( sessionTarget.isActive() == false )
         {
             _world.removeAvatar( pAgent->_avatarID );
             ++_stats._refusedCount;
@@ -303,7 +305,8 @@ namespace sw
                         profile._level, load._bFound != SW_FALSE ? "stored progress" : "new account" );
         sendProgress( *pAgent );
         (void)_world.consumeDirtyFlag( pAgent->_avatarID );
-        _mapAgent[connectionID] = std::move( pAgent );
+        _mapAgent[connectionID]         = std::move( pAgent );
+        _mapSessionTarget[connectionID] = std::move( sessionTarget );
     }
 
     void HubServerLink::releaseAgent( int32 connectionID )
@@ -311,7 +314,7 @@ namespace sw
         const auto iter = _mapAgent.find( connectionID );
         if ( iter == _mapAgent.end() )
             return;
-        _remoteCalls.unregisterSessionTarget( connectionID );
+        _mapSessionTarget.erase( connectionID );
         _replicator.removeObserver( connectionID );
         const HubAvatar* pAvatar = _world.findAvatar( iter->second->_avatarID );
         if ( pAvatar != nullptr )

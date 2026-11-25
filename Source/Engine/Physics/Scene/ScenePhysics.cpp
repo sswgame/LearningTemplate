@@ -3,6 +3,7 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "Core/Concurrency/DevCounter.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -176,6 +177,7 @@ namespace sw
         , _listOverlapTransition{}
         , _listOverlapStay{}
         , _mapStayListener{}
+        , _mapStayListenerObject{}
         , _listStayTarget{}
         , _arrContactLog{}
         , _contactLogCount{ 0 }
@@ -187,6 +189,8 @@ namespace sw
         , _bConfigured{ SW_FALSE }
         , _bFrameEventsPending{ SW_FALSE }
         , _bStreamingHolds{ SW_FALSE }
+        , _lastStayListenerID{ 0 }
+        , _stayListenerSubscriptions{ make_unique<SubscriptionList>( SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &ScenePhysics::releaseContactStayListener, this ) ) }
     {
     }
 
@@ -507,18 +511,18 @@ namespace sw
         return _pScene2D.get();
     }
 
-    void ScenePhysics::registerContactStayListener( Component& component, const ContactStayListener& listener )
+    Subscription ScenePhysics::registerContactStayListener( Component& component, const ContactStayListener& listener )
     {
         const GameObject* pOwner = component.getOwner();
         if ( pOwner == nullptr || pOwner->getObjectID() == 0 )
         {
             SW_LOG_ERROR_ID( "ScenePhysics.StayListenerWithoutObject", "A contact stay listener has no owner object - it would never receive Stay" );
-            return;
+            return Subscription{};
         }
         if ( listener._pOnCollisionStay == nullptr && listener._pOnOverlapStay == nullptr )
         {
             SW_LOG_ERROR_ID( "ScenePhysics.StayListenerWithoutFunction", "'%#': a contact stay listener has neither a collision nor an overlap function", pOwner->getName().c_str() );
-            return;
+            return Subscription{};
         }
         vector<ContactStayListenerEntry>& listListener = _mapStayListener[pOwner->getObjectID()];
         for ( const ContactStayListenerEntry& entry : listListener )
@@ -526,26 +530,28 @@ namespace sw
             if ( entry._pComponent == &component )
             {
                 SW_LOG_ERROR_ID( "ScenePhysics.StayListenerTwice", "'%#': the same component added a contact stay listener twice", pOwner->getName().c_str() );
-                return;
+                return Subscription{};
             }
         }
-        listListener.push_back( ContactStayListenerEntry{ &component, listener } );
+        const uint64 listenerID = ++_lastStayListenerID;
+        listListener.push_back( ContactStayListenerEntry{ &component, listener, listenerID } );
+        _mapStayListenerObject[listenerID] = pOwner->getObjectID();
         if ( listListener.size() == 1 )
             applyContactStayListener( pOwner->getObjectID(), true );
+        return _stayListenerSubscriptions->issue( listenerID );
     }
 
-    void ScenePhysics::unregisterContactStayListener( Component& component )
+    void ScenePhysics::releaseContactStayListener( uint64 listenerID )
     {
-        const GameObject* pOwner = component.getOwner();
-        if ( pOwner == nullptr )
-            return;
-        auto iter = _mapStayListener.find( pOwner->getObjectID() );
-        if ( iter == _mapStayListener.end() )
-            return;
+        const auto objectIter = _mapStayListenerObject.find( listenerID );
+        SW_ASSERT( objectIter != _mapStayListenerObject.end() ); // 구독이 살아 있는 동안 등록도 있다
+        auto iter = _mapStayListener.find( objectIter->second );
+        _mapStayListenerObject.erase( objectIter );
+        SW_ASSERT( iter != _mapStayListener.end() );
         vector<ContactStayListenerEntry>& listListener = iter->second;
         for ( size_t index = 0; index < listListener.size(); ++index )
         {
-            if ( listListener[index]._pComponent != &component )
+            if ( listListener[index]._listenerID != listenerID )
                 continue;
             listListener.erase( listListener.begin() + static_cast<std::ptrdiff_t>( index ) );
             break;

@@ -199,6 +199,7 @@ namespace sw
         MMOClientView                        _view;
         vector<RemoteCallRejectNotification> _listRejectScratch;
         vector<Subscription>                 _listSubscription;
+        Subscription                         _targetSubscription; ///< 원격 호출 대상 `_agent` 의 등록
         uint8                                _bActive;
     };
 } // namespace sw

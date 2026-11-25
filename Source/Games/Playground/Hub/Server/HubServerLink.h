@@ -143,6 +143,7 @@ namespace sw
         StreamingCellGrid                                _grid; ///< 복제기보다 먼저 선언한다 — 복제기가 빌려 쓴다
         MMOReplicator                                    _replicator;
         unordered_map<int32, unique_ptr<HubAvatarAgent>> _mapAgent;          ///< 연결 → 세션 객체(들인 접속)
+        unordered_map<int32, Subscription>               _mapSessionTarget;  ///< 연결 → 세션 대상(`_mapAgent` 의 것)의 등록 — 뒤 멤버라 대상보다 먼저 내린다
         unordered_map<int32, uint64>                     _mapPendingAccount; ///< 진행을 읽는 중인 연결 → 계정
         vector<HubProfileLoad>                           _listLoadScratch;
         vector<uint8>                                    _listStateScratch;

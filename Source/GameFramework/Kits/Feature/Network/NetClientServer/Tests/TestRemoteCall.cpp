@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
@@ -36,6 +37,7 @@ namespace
         RemoteCallTestAvatar  _serverAvatar;
         RemoteCallTestAvatar  _clientAvatar;
         int32                 _connectionID{ -1 };
+        vector<Subscription>  _listRegistration;
 
         explicit RemoteCallTestRig( const RemoteCallServerConfig& callLimit = kRoomyCallLimit )
         {
@@ -52,6 +54,14 @@ namespace
             SW_EXPECT_EQUAL( size_t{ 1 }, listConnection.size() );
             if ( listConnection.empty() == false )
                 _connectionID = listConnection.front();
+        }
+
+        /** @brief 등록 @p registration 을 rig 가 쥡니다. 등록하지 못했으면 false 입니다. */
+        [[nodiscard]] bool hold( Subscription registration )
+        {
+            const bool bActive = registration.isActive();
+            _listRegistration.push_back( std::move( registration ) );
+            return bActive;
         }
 
         void pollUntilDelivered()
@@ -114,7 +124,7 @@ namespace
 SW_TEST_CASE( RemoteCallTest, OwnerCallRunsTheServerFunction )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
 
     const uint32 sequence = rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "attackTarget", { ReflectedValue::make( int32{ 7 } ), ReflectedValue::make( int32{ 20 } ) } );
     SW_EXPECT_NOT_EQUAL( 0u, sequence );
@@ -130,7 +140,7 @@ SW_TEST_CASE( RemoteCallTest, OwnerCallRunsTheServerFunction )
 SW_TEST_CASE( RemoteCallTest, UnreliableFunctionTravelsUnreliable )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "moveStep", { ReflectedValue::make( 2.5f ) } ) );
     rig.pollUntilDelivered();
     SW_EXPECT_NEAR( 2.5, rig._serverAvatar._movedDistance, 1e-4 );
@@ -140,7 +150,7 @@ SW_TEST_CASE( RemoteCallTest, UnreliableFunctionTravelsUnreliable )
 SW_TEST_CASE( RemoteCallTest, ArgumentsTravelAsTypedBinary )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     const uint64  bigID  = 0xFEDCBA9876543210ull;
     const float64 number = 0.1 + 0.2; // 글로는 짧게 줄던 값이다
     SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "recordArguments",
@@ -178,7 +188,7 @@ SW_TEST_CASE( RemoteCallTest, ArgumentsTravelAsTypedBinary )
 SW_TEST_CASE( RemoteCallTest, FailedValidationDisconnects )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     SW_EXPECT_LOG( "RemoteCall.ValidationFailed" );
     // 정직한 클라이언트도 이 호출을 보낼 수 있다(검증은 서버 몫) — 망을 더 돌리지 않고 서버 쪽만 본다.
     SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { 7, 99 }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
@@ -192,7 +202,7 @@ SW_TEST_CASE( RemoteCallTest, FailedValidationDisconnects )
 SW_TEST_CASE( RemoteCallTest, NonOwnerIsDisconnected )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID + 1000 ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID + 1000 ) ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
     SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { 7, 20 }, NetChannelKind::ReliableOrdered ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
@@ -203,7 +213,7 @@ SW_TEST_CASE( RemoteCallTest, NonOwnerIsDisconnected )
 SW_TEST_CASE( RemoteCallTest, OnlyServerFunctionsAreCallable )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     SW_EXPECT_LOG( "RemoteCall.ServerCallRefused" );
     SW_EXPECT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "applyLocal", { ReflectedValue::make( int32{ 5 } ) } ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
@@ -216,7 +226,7 @@ SW_TEST_CASE( RemoteCallTest, OnlyServerFunctionsAreCallable )
 SW_TEST_CASE( RemoteCallTest, ReliableFunctionOnUnreliableChannelIsRefused )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     SW_EXPECT_LOG( "RemoteCall.Violation" );
     SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", { 7, 20 }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
     SW_EXPECT_EQUAL( 0, rig._serverAvatar._totalPower );
@@ -226,7 +236,7 @@ SW_TEST_CASE( RemoteCallTest, ReliableFunctionOnUnreliableChannelIsRefused )
 SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     const uint32 sequence = rig._client.callServer( 999, *RemoteCallTestAvatar::StaticType(), "moveStep", { ReflectedValue::make( 1.0f ) } );
     SW_REQUIRE_TRUE( sequence != 0u );
     rig.pollUntilDelivered();
@@ -249,7 +259,7 @@ SW_TEST_CASE( RemoteCallTest, UnknownTargetAndBadArgumentsAreRejected )
 SW_TEST_CASE( RemoteCallTest, TooManyArgumentsAreMalformed )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     const vector<int64> listInteger( static_cast<size_t>( NetRemoteCallMessage::kMaxArgumentCount + 1 ), int64{ 1 } );
     SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "attackTarget", listInteger, NetChannelKind::ReliableOrdered ) == NetHandleResult::Malformed );
 }
@@ -258,8 +268,8 @@ SW_TEST_CASE( RemoteCallTest, TooManyArgumentsAreMalformed )
 SW_TEST_CASE( RemoteCallTest, ServerCallsTheOwnerClientFunction )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
-    SW_REQUIRE_TRUE( rig._client.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._client.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) ) );
     SW_EXPECT_TRUE( rig._server.callClient( kAvatarID, "receiveHealth", { ReflectedValue::make( int32{ 42 } ) } ) );
     SW_EXPECT_LOG( "RemoteCall.ClientCallRefused" );
     SW_EXPECT_FALSE( rig._server.callClient( kAvatarID, "attackTarget", { ReflectedValue::make( int32{ 1 } ), ReflectedValue::make( int32{ 1 } ) } ) );
@@ -275,16 +285,17 @@ SW_TEST_CASE( RemoteCallTest, RegistrationChecksTheContract )
     RemoteCallTestMissingValidator missing;
     RemoteCallTestVectorArgument   vectorArgument;
     SW_EXPECT_LOG( "RemoteCall.ValidatorMissing" );
-    SW_EXPECT_FALSE( server.registerTarget( 1, *RemoteCallTestMissingValidator::StaticType(), &missing, 0 ) );
+    SW_EXPECT_FALSE( server.registerTarget( 1, *RemoteCallTestMissingValidator::StaticType(), &missing, 0 ).isActive() );
     SW_EXPECT_LOG( "RemoteCall.ParameterNotWire" );
-    SW_EXPECT_FALSE( server.registerTarget( 2, *RemoteCallTestVectorArgument::StaticType(), &vectorArgument, 0 ) );
+    SW_EXPECT_FALSE( server.registerTarget( 2, *RemoteCallTestVectorArgument::StaticType(), &vectorArgument, 0 ).isActive() );
     SW_EXPECT_FALSE( server.hasTarget( 1 ) );
     SW_EXPECT_FALSE( server.hasTarget( 2 ) );
 
     RemoteCallTestAvatar avatar;
-    SW_EXPECT_TRUE( server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 ) );
+    const Subscription   registered = server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 );
+    SW_EXPECT_TRUE( registered.isActive() );
     SW_EXPECT_LOG( "RemoteCall.ServerTargetRefused" );
-    SW_EXPECT_FALSE( server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 ) );
+    SW_EXPECT_FALSE( server.registerTarget( 3, *RemoteCallTestAvatar::StaticType(), &avatar, 0 ).isActive() );
 }
 
 /** @brief [RemoteCallTest] 와이어 번호는 타입마다 한 번 지은 색인으로 찾는다 — 검증 짝이 함께 들고, 타입 테이블 세대가 바뀌면 다시 짓는다. */
@@ -316,8 +327,8 @@ SW_TEST_CASE( RemoteCallTest, FunctionTableIsBuiltOncePerTypeGeneration )
 SW_TEST_CASE( RemoteCallTest, SessionTargetIsPerConnection )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerSessionTarget( rig._connectionID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar ) );
-    SW_REQUIRE_TRUE( rig._client.registerTarget( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerSessionTarget( rig._connectionID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar ) ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._client.registerTarget( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) ) );
     SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), "attackTarget",
                                                      { ReflectedValue::make( int32{ 3 } ), ReflectedValue::make( int32{ 5 } ) } ) );
     SW_EXPECT_TRUE( rig._server.callSession( rig._connectionID, "receiveHealth", { ReflectedValue::make( int32{ 77 } ) } ) );
@@ -326,7 +337,7 @@ SW_TEST_CASE( RemoteCallTest, SessionTargetIsPerConnection )
     SW_EXPECT_EQUAL( 77, rig._clientAvatar._shownHealth );
 
     SW_EXPECT_LOG( "RemoteCall.ServerTargetRefused" );
-    SW_EXPECT_FALSE( rig._server.registerTarget( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_EXPECT_FALSE( rig._server.registerTarget( RemoteCallTargets::kSessionTargetID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ).isActive() );
     rig._server.onConnectionClosed( rig._connectionID, NetDisconnectReason::Timeout );
     SW_EXPECT_FALSE( rig._server.hasSessionTarget( rig._connectionID ) );
 }
@@ -336,11 +347,20 @@ SW_TEST_CASE( RemoteCallTest, ClosedConnectionDropsItsTargets )
 {
     RemoteCallServer     server;
     RemoteCallTestAvatar avatar;
-    SW_REQUIRE_TRUE( server.registerTarget( 5, *RemoteCallTestAvatar::StaticType(), &avatar, 3 ) );
-    SW_REQUIRE_TRUE( server.registerTarget( 6, *RemoteCallTestAvatar::StaticType(), &avatar, 4 ) );
+    Subscription         closed = server.registerTarget( 5, *RemoteCallTestAvatar::StaticType(), &avatar, 3 );
+    Subscription         open   = server.registerTarget( 6, *RemoteCallTestAvatar::StaticType(), &avatar, 4 );
+    SW_REQUIRE_TRUE( closed.isActive() && open.isActive() );
     server.onConnectionClosed( 3, NetDisconnectReason::Timeout );
     SW_EXPECT_FALSE( server.hasTarget( 5 ) );
     SW_EXPECT_TRUE( server.hasTarget( 6 ) );
+
+    // 같은 번호의 다음 대상을 닫힌 연결의 옛 구독이 내리지 않는다.
+    const Subscription next = server.registerTarget( 5, *RemoteCallTestAvatar::StaticType(), &avatar, 4 );
+    SW_REQUIRE_TRUE( next.isActive() );
+    closed.reset();
+    SW_EXPECT_TRUE( server.hasTarget( 5 ) );
+    open.reset();
+    SW_EXPECT_FALSE( server.hasTarget( 6 ) );
 }
 
 /** @brief [RemoteCallTest] 연결이 버킷보다 많이 부르면 넘친 호출은 몸까지 가지 않고 `RateLimited` 로 거절된다 — 끊지는 않는다(감사 N-13, 언리얼 RPC DoS Detection). */
@@ -348,7 +368,7 @@ SW_TEST_CASE( RemoteCallTest, CallsOverTheRateLimitAreRejected )
 {
     // 다시 차는 간격을 길게 잡아 테스트가 도는 동안 버킷이 차지 않는다.
     RemoteCallTestRig rig( RemoteCallServerConfig{ 3, 600000 } );
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     for ( int32 index = 0; index < 5; ++index )
     {
         SW_EXPECT_TRUE( rig.craftFloatCall( kAvatarID, "moveStep", 1.0f, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
@@ -382,7 +402,7 @@ SW_TEST_CASE( RemoteCallTest, ServerRefusesAMissingRateLimit )
 SW_TEST_CASE( RemoteCallTest, PerFunctionRateLimitRejectsOnlyThatFunction )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     for ( int32 index = 0; index < 4; ++index )
     {
         SW_EXPECT_TRUE( rig.craftCall( kAvatarID, "placeMarker", { 9 }, NetChannelKind::Unreliable ) == NetHandleResult::Handled );
@@ -405,7 +425,7 @@ SW_TEST_CASE( RemoteCallTest, RateOnANonServerFunctionIsRefused )
     RemoteCallClient         client;
     RemoteCallTestClientRate target;
     SW_EXPECT_LOG( "RemoteCall.RateOnNonServerFunction" );
-    SW_EXPECT_FALSE( client.registerTarget( 1, *RemoteCallTestClientRate::StaticType(), &target ) );
+    SW_EXPECT_FALSE( client.registerTarget( 1, *RemoteCallTestClientRate::StaticType(), &target ).isActive() );
 }
 
 /**
@@ -431,7 +451,7 @@ SW_TEST_CASE( RemoteCallTest, ReliableCallWaitsForItsTarget )
     SW_EXPECT_TRUE( NetHandleResult::NotReady == rig._client.handleMessage( 0, pData, size, NetChannelKind::ReliableOrdered ) );
     SW_EXPECT_LOG( "RemoteCall.ClientCallDropped" );
     SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, pData, size, NetChannelKind::Unreliable ) );
-    SW_REQUIRE_TRUE( rig._client.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._client.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._clientAvatar ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == rig._client.handleMessage( 0, pData, size, NetChannelKind::ReliableOrdered ) );
     SW_EXPECT_EQUAL( 42, rig._clientAvatar._shownHealth );
     writeCall( 7 ); // 뒤 월드의 호출이다 — 그 씬이 설 때까지 기다린다
@@ -471,7 +491,7 @@ SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )
 SW_TEST_CASE( RemoteCallTest, CallFromAnEarlierWorldIsRejected )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     // 클라이언트가 아직 새 세대를 모른 채 보낸다(0) — 서버는 그 사이 새 씬을 열었다.
     SW_EXPECT_NOT_EQUAL( 0u, rig._client.callServer( kAvatarID, *RemoteCallTestAvatar::StaticType(), "attackTarget", { ReflectedValue::make( int32{ 7 } ), ReflectedValue::make( int32{ 20 } ) } ) );
     rig._serverRouter.openWorld( rig._cluster.getServer(), 0 );
@@ -487,7 +507,7 @@ SW_TEST_CASE( RemoteCallTest, CallFromAnEarlierWorldIsRejected )
     SW_EXPECT_EQUAL( uint64{ 1 }, rig._server.getStats()._invokedCount );
 
     // 세션 대상은 세대를 싣지 않는다 — 씬이 바뀌어도 그 연결의 것이다.
-    SW_REQUIRE_TRUE( rig._server.registerSessionTarget( rig._connectionID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerSessionTarget( rig._connectionID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == rig.craftCall( RemoteCallTargets::kSessionTargetID, "attackTarget", { 7, 20 }, NetChannelKind::ReliableOrdered ) );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._server.getStats()._invokedCount );
 }
@@ -498,7 +518,7 @@ SW_TEST_CASE( RemoteCallTest, CallFromAnEarlierWorldIsRejected )
 SW_TEST_CASE( RemoteCallTest, CallBodyRejectsTrailingBytesAndHugeArgumentCounts )
 {
     RemoteCallTestRig rig;
-    SW_REQUIRE_TRUE( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) );
+    SW_REQUIRE_TRUE( rig.hold( rig._server.registerTarget( kAvatarID, *RemoteCallTestAvatar::StaticType(), &rig._serverAvatar, rig._connectionID ) ) );
     NetMessageWriter messageWriter;
     BitWriter&       writer = messageWriter.begin( NetRemoteCallMessage::kCall );
     writer.writeVarUint( 1 );

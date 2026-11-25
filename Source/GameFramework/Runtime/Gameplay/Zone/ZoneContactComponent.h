@@ -102,5 +102,6 @@ namespace sw
         vector<ContactRecord>           _listCollision;         ///< 지난 갱신 뒤 강체 접촉 사건이 적은 것
         vector<ContactRecord>           _listContactScratch;    ///< `updateContacts` 가 이번 프레임에 닿은 표면을 모으는 재사용 버퍼
         Subscription                    _collisionSubscription; ///< 막는 접촉 시작 구독(`recordCollision`)
+        Subscription                    _staySubscription;      ///< 막는 접촉 유지 구독(`receiveCollisionStay`)
     };
 } // namespace sw

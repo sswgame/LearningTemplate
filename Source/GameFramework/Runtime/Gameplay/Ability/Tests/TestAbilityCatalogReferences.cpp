@@ -91,17 +91,19 @@ SW_TEST_CASE( AbilityCatalogTest, NonPositivePeriodIsRejected )
 }
 
 /** @brief [AbilityClassRegistryTest] 이미 있는 어빌리티 · 어트리뷰트 세트 클래스 이름은 거절하고(앞의 것이 남는다), 내린 이름은 다시 올릴 수 있다 — 게임 기능이 켜고 끌 때의 길 */
-SW_TEST_CASE( AbilityClassRegistryTest, DuplicateClassIsRejectedUntilUnregistered )
+SW_TEST_CASE( AbilityClassRegistryTest, DuplicateClassIsRejectedUntilReleased )
 {
     SW_EXPECT_LOG( "Registration.DuplicateName" ); // 둘 — 같은 id 의 선언 하나가 모두 센다
     AbilityClassRegistry classes;
-    SW_EXPECT_FALSE( classes.registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" ) ); // 기본 등록이 이미 있다
-    SW_EXPECT_FALSE( classes.registerAttributeSetClass<AttributeSet>( "Combat" ) );
-    SW_EXPECT_TRUE( classes.registerAbilityClass<ApplyEffectsAbility>( "KitStrike" ) );
-    SW_EXPECT_TRUE( classes.registerAttributeSetClass<AttributeSet>( "KitStats" ) );
-    classes.unregisterAbilityClass( "KitStrike" );
-    classes.unregisterAttributeSetClass( "KitStats" );
+    SW_EXPECT_FALSE( classes.registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" ).isActive() ); // 기본 등록이 이미 있다
+    SW_EXPECT_FALSE( classes.registerAttributeSetClass<AttributeSet>( "Combat" ).isActive() );
+    Subscription ability = classes.registerAbilityClass<ApplyEffectsAbility>( "KitStrike" );
+    Subscription set     = classes.registerAttributeSetClass<AttributeSet>( "KitStats" );
+    SW_EXPECT_TRUE( ability.isActive() && set.isActive() );
+    ability.reset();
+    set.reset();
     SW_EXPECT_FALSE( classes.hasAbilityClass( "KitStrike" ) );
-    SW_EXPECT_TRUE( classes.registerAbilityClass<ApplyEffectsAbility>( "KitStrike" ) );
-    SW_EXPECT_TRUE( classes.registerAttributeSetClass<AttributeSet>( "KitStats" ) );
+    ability = classes.registerAbilityClass<ApplyEffectsAbility>( "KitStrike" );
+    set     = classes.registerAttributeSetClass<AttributeSet>( "KitStats" );
+    SW_EXPECT_TRUE( ability.isActive() && set.isActive() );
 }

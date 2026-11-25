@@ -21,12 +21,13 @@
  *            정수 · 열거형은 가변 길이 정수, 실수는 그 비트(유한만), 글은 길이와 바이트다. 양쪽이 같은 함수 정의를 보므로 형식 표시를 싣지 않는다.
  *            원격 함수의 인자는 글 · 수 · bool · 열거형만 된다 — 등록이 확인한다. 인자 수 · 글 길이는 상한이 있고 넘는 메시지는 손상된 것으로 버린다.
  *            인자는 대상 · 주인 · 역할 · 채널 · 호출률을 모두 지난 뒤에만 푼다 — 거절할 호출에 푸는 비용을 쓰지 않는다.
- *          수명: 대상의 인스턴스는 빌려 쓴다 — 대상이 사라지기 전에 `unregisterTarget` 을 부른다. 서버는 연결이 닫히면 그 연결이 주인인 대상을 지운다.
+ *          수명: 대상의 인스턴스는 빌려 쓴다 — 등록이 돌려준 구독을 대상과 함께 쥔다(풀리면 내린다). 서버는 연결이 닫히면 그 연결이 주인인 대상을 지운다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
@@ -188,8 +189,8 @@ namespace sw
      * @code
      *     if ( server.initialize( &peers, &router, config ) == false ) ...; // 호출률 상한이 없으면 오류
      *     _subscription = router.registerHandler( &server );
-     *     if ( server.registerTarget( creatureID, *Creature::StaticType(), &creature, connectionID ) == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
-     *     (void)server.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
+     *     if ( ( creatureSubscription = server.registerTarget( creatureID, *Creature::StaticType(), &creature, connectionID ) ).isActive() == false ) ...; // 계약을 어긴 타입은 등록되지 않는다
+     *     agentSubscription = server.registerSessionTarget( connectionID, *HubAvatarAgent::StaticType(), &agent );      // 그 연결의 id 0
      *     (void)server.callSession( connectionID, "receiveProfile", { ReflectedValue::make( level ) } );
      * @endcode
      */
@@ -211,16 +212,14 @@ namespace sw
         [[nodiscard]] bool initialize( INetPeers* pPeers, const NetMessageRouter* pRouter, const RemoteCallServerConfig& config );
         /**
          * @brief 대상을 등록합니다. 연결 @p ownerConnectionID 만 이 대상의 `Server` 함수를 부를 수 있습니다.
-         * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::validateRemoteCallContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 false 입니다
+         * @return 등록을 소유하는 구독입니다 — 풀리면 내린다. 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::validateRemoteCallContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 빈 구독입니다
          */
-        [[nodiscard]] bool registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID );
-        void               unregisterTarget( uint32 targetID );
+        [[nodiscard]] Subscription registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID );
         /**
          * @brief 연결 @p connectionID 의 세션 대상(id 0)을 등록합니다. 그 연결이 id 0 으로 부르면 이 대상이 받습니다.
-         * @return 계약을 어기거나, 인스턴스가 없거나, 그 연결의 세션이 이미 있으면 오류를 남기고 false 입니다
+         * @return 등록을 소유하는 구독입니다 — 풀리면 내린다. 계약을 어기거나, 인스턴스가 없거나, 그 연결의 세션이 이미 있으면 오류를 남기고 빈 구독입니다
          */
-        [[nodiscard]] bool registerSessionTarget( int32 connectionID, const TypeInfo& type, void* pInstance );
-        void               unregisterSessionTarget( int32 connectionID );
+        [[nodiscard]] Subscription registerSessionTarget( int32 connectionID, const TypeInfo& type, void* pInstance );
         /**
          * @brief 대상의 주인 클라이언트에게 `Client` 함수를 부릅니다. 채널은 함수의 `Reliable` 이 정합니다. 클라이언트에서도 같은 id 의 대상이 받습니다.
          * @return 대상이 없거나, 그 이름의 `Client` 함수가 없거나, 인자가 그 타입으로 바뀌지 않거나, 보내지 못하면 오류를 남기고 false 입니다
@@ -254,6 +253,10 @@ namespace sw
         [[nodiscard]] bool tryConsumeCall( int32 connectionID, int64 nowMs );
         /** @brief 함수에 `MaxCallsPerSecond` 가 있으면 그 연결 · 그 함수의 버킷에서 하나를 씁니다. 없으면 늘 true(연결 상한만 받는다), 비었으면 false 입니다. */
         [[nodiscard]] bool tryConsumeFunctionCall( int32 connectionID, const FunctionInfo& function, int64 nowMs );
+        /** @brief 대상의 구독이 풀렸습니다(번호는 대상 id + 1 — 0 은 빈 구독이다). */
+        void releaseTarget( uint64 registrationID );
+        /** @brief 세션 대상의 구독이 풀렸습니다(번호는 연결 + 1). */
+        void releaseSessionTarget( uint64 registrationID );
 
     private:
         RemoteCallTargets                               _targets;
@@ -266,6 +269,8 @@ namespace sw
         INetPeers*                                      _pPeers;
         const NetMessageRouter*                         _pRouter; ///< 월드 세대를 묻는다(소유하지 않음)
         ClockFunction                                   _pClock;
+        SubscriptionList                                _sessionSubscriptions; ///< 세션 대상의 구독
+        SubscriptionList                                _targetSubscriptions;  ///< 대상의 구독 — 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다
     };
 } // namespace sw
 
@@ -291,9 +296,8 @@ namespace sw
             _pPeers  = pPeers;
             _pRouter = pRouter;
         }
-        /** @brief 서버가 부를 대상(`Client` · `Multicast` 함수를 가진)을 등록합니다. 계약을 어기거나 같은 id 가 있으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance );
-        void               unregisterTarget( uint32 targetID );
+        /** @brief 서버가 부를 대상(`Client` · `Multicast` 함수를 가진)을 등록하고 그 등록을 소유하는 구독을 돌려줍니다(풀리면 내린다). 계약을 어기거나 같은 id 가 있으면 오류를 남기고 빈 구독입니다. */
+        [[nodiscard]] Subscription registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance );
         /**
          * @brief 서버 대상 @p targetID 의 `Server` 함수를 부릅니다. @p type 은 서버가 그 대상에 등록한 타입이며, 이름 · 역할 · 인자 수를 보내기 전에 여기서 봅니다.
          * @return 보낸 호출의 순번(1 부터)입니다. 그 이름의 `Server` 함수가 없거나, 인자가 많거나 그 타입으로 바뀌지 않거나, 비신뢰 호출이 1 KB 를 넘거나, 보내지 못하면 오류를 남기고 0 입니다
@@ -310,6 +314,10 @@ namespace sw
         uint64 getInvokedCount() const { return _invokedCount; }
 
     private:
+        /** @brief 대상의 구독이 풀렸습니다(번호는 대상 id + 1 — 0 은 빈 구독이다). */
+        void releaseTarget( uint64 registrationID );
+
+    private:
         RemoteCallTargets                         _targets;
         EventBuffer<RemoteCallRejectNotification> _rejections;
         NetMessageWriter                          _messageWriter;
@@ -317,5 +325,6 @@ namespace sw
         const NetMessageRouter*                   _pRouter; ///< 월드 세대를 묻는다(소유하지 않음)
         uint64                                    _invokedCount;
         uint32                                    _nextSequence;
+        SubscriptionList                          _targetSubscriptions; ///< 대상의 구독 — 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다
     };
 } // namespace sw
