@@ -10,6 +10,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
@@ -553,7 +554,7 @@ namespace sw
         Memory::wipe( arrNonce, sizeof( arrNonce ) );
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginServiceInternal::kNonceKeyPrefix, nonce );
-        _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), vector<uint8>{ 1 }, _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ), _cacheReplyOwner, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
+        _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), EphemeralValueUtil::makeMarker(), _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ), _cacheReplyOwner, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
         {
             LoginCompletion completion;
             completion._operation  = LoginOperation::IssueLoginNonce;

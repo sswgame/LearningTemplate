@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 
@@ -252,11 +253,10 @@ namespace sw
         }
         if ( reply._result != EphemeralResult::Ok )
             return; // 수명이 다한 기록이다. 끝나는 시각까지 다시 읽지 않는다
-        MatchFormed          match;
-        const MixedBuildRead read = MixedBuildCodec::decode( reply._value.data(), reply._value.size(), MatchFormed::kBusVersion, match );
-        if ( read._result != MixedBuildReadResult::Read )
+        MatchFormed match;
+        if ( EphemeralRecordTable<MatchFormed>{}.decode( reply, match ) == false )
         {
-            SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' (version %#) could not be read - its players are refused", recordName, read._readVersion );
+            SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' could not be read (other build or corrupt) - its players are refused", recordName );
             return;
         }
         acceptMatch( match, recordIt->second );

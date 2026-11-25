@@ -1,6 +1,6 @@
 /**
  * @file DurableRecordTypeList.h
- * @brief 영속 레코드 형식(저장소 표 · 휘발 저장소 표가 싣는 `REFLECT` 형식)의 목록입니다. 배치 대조(`--write-state-layouts` → `py -3 -m Scripts format-release`)가 훑는다.
+ * @brief 영속 레코드 형식(저장소 표 `ServiceRecordTable` 이 싣는 `REFLECT` 형식 — 휘발 저장소 값은 다시 만드는 캐시라 넣지 않는다)의 목록입니다. 배치 대조(`--write-state-layouts` → `py -3 -m Scripts format-release`)가 훑는다.
  * @details 표의 코덱(`ServiceRecordCodec<T>`)이 형식마다 `DurableRecordType` 하나를 정적으로 두어 스스로 오른다 — 손으로 적는 목록이 없어 표를 더하고 목록을 빠뜨릴 수 없다.
  *          모듈이 내려가면 그 형식도 빠진다(정적 소멸). 배포 빌드에는 대조가 없어 오르지 않는다.
  */

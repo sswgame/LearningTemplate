@@ -21,11 +21,32 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
+
+namespace sw
+{
+    /** @brief 이름으로 찾는 접속 기록(키 `presence.name:<소문자 이름>`)입니다. 다시 만들 수 있는 캐시다. */
+    REFLECT()
+    struct OnlinePresenceNameRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        uint64 _accountID{ 0 };
+        PROPERTY()
+        uint64 _serverID{ 0 };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bGuest{ SW_FALSE };
+        PROPERTY( MaxCount = LoginConstant::kMaxDisplayNameSize )
+        string _displayName{};
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -105,8 +126,8 @@ namespace sw
         /** @brief 다시 쓰기의 비교가 어긋났고 계정이 아직 이 서버에 있으면 그 신원입니다. */
         const AccountIdentity* findLostEntry( AccountID accountID, const EphemeralReply& reply ) const;
         void                   deliverRelay( const OnlinePushRelay& relay );
-        vector<uint8>          makeServerBytes() const;
-        vector<uint8>          makeNameBytes( const AccountIdentity& identity ) const;
+        EphemeralValue         makeServerValue() const;
+        EphemeralValue         makeNameValue( const AccountIdentity& identity ) const;
 
     private:
         PendingRequestTable<uint64, AccountPresenceResult> _lookupTable;          ///< 부른 쪽에 준 번호 → 찾기(주인 몫의 번호가 주인이다)

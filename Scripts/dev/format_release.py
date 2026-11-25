@@ -4,7 +4,7 @@
   꾸미기 스키마(`<CustomizationSchemaCatalog>` — 콘텐츠 글): 판 올림 단계(`<Migration toVersion>`)가 빠진 바뀜
   상태 배치(`PROPERTY( RuntimeState )` 칸 — `App --write-state-layouts=<파일>` 이 쓴 글): `REFLECT( Version )` 을 올리지 않은 칸 더하기 · 빼기 · 이름 · 형식 · 차례 바꾸기.
   읽기는 배치 해시가 다른 바이트를 거절하므로(`StateIO.ReflectedLayoutChanged`) 빠뜨린 판 올림은 플레이어의 세이브를 잃는다.
-  레코드 형식(저장소 · 휘발 저장소 표가 싣는 형식 — 같은 글의 `records`): 칸을 이름으로 짝짓는 자기 기술형(A)이라 칸 더하기 · 빼기 · 차례 바꾸기는 판 없이 읽힌다.
+  레코드 형식(저장소 표가 싣는 형식 — 같은 글의 `records`): 칸을 이름으로 짝짓는 자기 기술형(A)이라 칸 더하기 · 빼기 · 차례 바꾸기는 판 없이 읽힌다.
   같은 이름 칸의 형식을 바꾼 것만 판을 요구한다(옛 레코드의 그 칸은 읽히지 않아 `readDurable` 이 손상으로 거절한다).
 
 스냅숏의 `released` 한 줄이 규칙을 가른다. false(출시 전): 옛 데이터가 없어 판을 올리지 않는다 — 바뀜을 알리기만 하고 통과한다. true: 아래 표대로 실패한다.

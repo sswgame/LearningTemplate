@@ -272,7 +272,7 @@ namespace
         void         onReply( const EphemeralReply& reply )
         {
             ++_replyCount;
-            SW_EXPECT_TRUE( ServerRecord::decode( reply._value, _status ) );
+            SW_EXPECT_TRUE( ServerRecord::decode( reply, _status ) );
         }
     };
 

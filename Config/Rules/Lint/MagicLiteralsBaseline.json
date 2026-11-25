@@ -923,7 +923,6 @@
     "Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Zone/ZoneWatches.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.cpp": {"integer": 2},
-    "Source/GameFramework/Runtime/Online/Directory/ServerRecord.cpp": {"integer": 2},
     "Source/GameFramework/Runtime/Online/HTTP/HTTPServer.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/HTTP/HTTPTypes.cpp": {"integer": 16},
     "Source/GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.cpp": {"integer": 4},

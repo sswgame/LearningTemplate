@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
@@ -107,15 +108,15 @@ namespace sw
     {
         const auto modeIt = _mapMode.find( placement._match._modeID );
         SW_ASSERT( modeIt != _mapMode.end() ); // 배정은 등록한 모드만 한다(로비 · 백필도 모드 상태를 찾은 뒤에 온다)
-        vector<uint8> bytes;
-        if ( modeIt == _mapMode.end() || MixedBuildCodec::encode( MatchFormed::kBusVersion, placement._match, bytes ) == false )
+        EphemeralValue value;
+        if ( modeIt == _mapMode.end() || EphemeralRecordTable<MatchFormed>{}.makeValue( placement._match, value ) == false )
         {
             failPlacement( placement ); // encode 가 오류 로그를 남겼다
             return;
         }
         const int64 ttlMs            = modeIt->second._matchTimeLimitMs;
         placement._expiresMs         = placement._match._placedMs + ttlMs;
-        const EphemeralRequest write = EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( bytes ), ttlMs );
+        const EphemeralRequest write = EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( value ), ttlMs );
         _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const EphemeralReply& reply ) mutable
         {
             if ( reply._result == EphemeralResult::Ok )
@@ -326,7 +327,7 @@ namespace sw
             return; // 응답을 기다린다
         if ( state._bLeaseAttempted != SW_FALSE && nowMs.count() - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
             return;
-        const vector<uint8>    selfValue = MatchmakingProtocol::encodeID( _dependencies._serverID );
+        const EphemeralValue   selfValue = EphemeralValueUtil::makeID( _dependencies._serverID );
         const EphemeralRequest request   = state._bAuthority != SW_FALSE
                                              ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTTLMs )
                                              : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTTLMs, EphemeralCondition::IfAbsent );

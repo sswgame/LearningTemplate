@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
@@ -735,12 +736,12 @@ namespace sw
 
     bool SocialService::writePresenceRecord( const SocialPresence& presence )
     {
-        vector<uint8> bytes;
-        if ( SocialProtocol::encodePresenceRecord( presence, bytes ) == false )
+        EphemeralValue value;
+        if ( EphemeralRecordTable<SocialPresence>{}.makeValue( presence, value ) == false )
             return false;
         if ( _dependencies._pRouter == nullptr )
             return true;
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( value ),
                                                                    SocialServiceInternal::kPresenceTTLMs ) );
         return true;
     }
@@ -774,7 +775,7 @@ namespace sw
         SocialPresence presence{ string{}, friendID, SocialPresenceStatus::Offline };
         if ( reply._result == EphemeralResult::Ok )
         {
-            if ( SocialProtocol::decodePresenceRecord( reply._value, presence ) == false || presence._accountID != friendID )
+            if ( EphemeralRecordTable<SocialPresence>{}.decode( reply, presence ) == false || presence._accountID != friendID )
                 presence = SocialPresence{ string{}, friendID, SocialPresenceStatus::Offline };
         }
         query._listPresence.push_back( std::move( presence ) );

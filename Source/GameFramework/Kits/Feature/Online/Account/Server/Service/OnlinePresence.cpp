@@ -8,6 +8,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -19,18 +20,6 @@ namespace sw
         {
             static constexpr const utf8* kAccountKeyPrefix = "presence:";
             static constexpr const utf8* kNameKeyPrefix    = "presence.name:";
-
-            static vector<uint8> takeBytes( const BitWriter& writer )
-            {
-                return vector<uint8>( writer.getBytes().begin(), writer.getBytes().begin() + writer.getByteCount() );
-            }
-
-            [[nodiscard]] static bool readServerID( const vector<uint8>& valueBytes, uint64& outServerID )
-            {
-                BitReader reader( valueBytes.data(), static_cast<int32>( valueBytes.size() ) );
-                outServerID = reader.readVarUint();
-                return reader.hasOverflowed() == false && outServerID != 0;
-            }
         };
     } // namespace
 } // namespace sw
@@ -92,7 +81,7 @@ namespace sw
         {
             // 표시 이름이 바뀌었으면(연동) 이전 이름의 기록을 지운다. 내 것일 때만 지운다.
             const AccountIdentity& previous = identityIt->second;
-            _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( previous._displayName ), makeNameBytes( previous ) ) );
+            _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( previous._displayName ), makeNameValue( previous ) ) );
         }
         _mapAccountToIdentity[identity._accountID] = identity;
         if ( _pHost != nullptr )
@@ -110,8 +99,8 @@ namespace sw
             return;
         // 내 것일 때만 지운다. 같은 계정이 다른 서버에 새로 접속했으면 그쪽 기록이 남는다.
         EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
-        pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerBytes() ) );
-        pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ) );
+        pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerValue() ) );
+        pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameValue( identity ) ) );
     }
 
     void OnlinePresence::update( UnixMilliseconds nowMs )
@@ -230,10 +219,10 @@ namespace sw
 
     void OnlinePresence::writeAccountEntries( const AccountIdentity& identity, bool bRefresh )
     {
-        const vector<uint8> serverBytes = makeServerBytes();
-        const vector<uint8> nameBytes   = makeNameBytes( identity );
-        const string        accountKey  = makeAccountKey( identity._accountID );
-        const string        nameKey     = makeNameKey( identity._displayName );
+        const EphemeralValue serverBytes = makeServerValue();
+        const EphemeralValue nameBytes   = makeNameValue( identity );
+        const string         accountKey  = makeAccountKey( identity._accountID );
+        const string         nameKey     = makeNameKey( identity._displayName );
         if ( bRefresh == false )
         {
             // 새로 접속했으므로 다른 서버의 이전 기록을 덮는다. 새 로그인이 이긴다.
@@ -246,12 +235,12 @@ namespace sw
         submitCache( EphemeralRequest::makeCompareAndSet( accountKey, serverBytes, serverBytes, _settings._ttlMs ), [this, accountID = identity._accountID]( const EphemeralReply& reply )
         {
             if ( const AccountIdentity* pIdentity = findLostEntry( accountID, reply ); pIdentity != nullptr )
-                _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeSet( makeAccountKey( pIdentity->_accountID ), makeServerBytes(), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
+                _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeSet( makeAccountKey( pIdentity->_accountID ), makeServerValue(), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
         } );
         submitCache( EphemeralRequest::makeCompareAndSet( nameKey, nameBytes, nameBytes, _settings._ttlMs ), [this, accountID = identity._accountID]( const EphemeralReply& reply )
         {
             if ( const AccountIdentity* pIdentity = findLostEntry( accountID, reply ); pIdentity != nullptr )
-                _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeSet( makeNameKey( pIdentity->_displayName ), makeNameBytes( *pIdentity ), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
+                _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeSet( makeNameKey( pIdentity->_displayName ), makeNameValue( *pIdentity ), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
         } );
     }
 
@@ -260,16 +249,17 @@ namespace sw
         AccountPresenceResult found{ AccountIdentity{}, lookupID, 0 };
         if ( reply._result == EphemeralResult::Ok )
         {
-            BitReader       reader( reply._value.data(), static_cast<int32>( reply._value.size() ) );
-            AccountIdentity identity;
-            identity._accountID = reader.readVarUint();
-            const uint64 server = reader.readVarUint();
-            identity._bGuest    = reader.readBool() ? SW_TRUE : SW_FALSE;
-            const bool bNameOk  = ServiceKeyUtil::readString( reader, LoginConstant::kMaxDisplayNameSize, identity._displayName );
+            OnlinePresenceNameRecord record;
             // 해시는 같지만 다른 이름이면 없는 것으로 본다.
-            const bool bNameMatchesLookup = bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == nameKey;
+            const bool bNameMatchesLookup = EphemeralRecordTable<OnlinePresenceNameRecord>{}.decode( reply, record ) && StringUtil::toLower( record._displayName.c_str() ) == nameKey;
             if ( bNameMatchesLookup )
-                found = AccountPresenceResult{ std::move( identity ), lookupID, server };
+            {
+                AccountIdentity identity;
+                identity._accountID   = record._accountID;
+                identity._bGuest      = record._bGuest;
+                identity._displayName = std::move( record._displayName );
+                found                 = AccountPresenceResult{ std::move( identity ), lookupID, record._serverID };
+            }
         }
         (void)_lookupTable.answer( lookupID, found ); // 모르는 번호는 주인이 몫을 놓은 찾기다
     }
@@ -278,7 +268,7 @@ namespace sw
     {
         AccountPresenceResult found{ AccountIdentity{}, lookupID, 0 };
         uint64                serverID = 0;
-        if ( reply._result == EphemeralResult::Ok && OnlinePresenceInternal::readServerID( reply._value, serverID ) )
+        if ( EphemeralValueUtil::readID( reply, serverID ) )
         {
             found._identity._accountID = accountID;
             found._serverID            = serverID;
@@ -300,7 +290,7 @@ namespace sw
     void OnlinePresence::finishPush( const OnlinePushRelay& relay, const EphemeralReply& reply )
     {
         uint64     serverID          = 0;
-        const bool bDropNotification = reply._result != EphemeralResult::Ok || OnlinePresenceInternal::readServerID( reply._value, serverID ) == false || _pHost == nullptr;
+        const bool bDropNotification = EphemeralValueUtil::readID( reply, serverID ) == false || _pHost == nullptr;
         if ( bDropNotification )
             return; // 접속해 있지 않으므로 알림은 버린다. 다시 접속하면 저장소에서 다시 읽는다
         if ( serverID == _serverID )
@@ -320,20 +310,20 @@ namespace sw
         return identityIt != _mapAccountToIdentity.end() ? &identityIt->second : nullptr;
     }
 
-    vector<uint8> OnlinePresence::makeServerBytes() const
+    EphemeralValue OnlinePresence::makeServerValue() const
     {
-        BitWriter writer;
-        writer.writeVarUint( _serverID );
-        return OnlinePresenceInternal::takeBytes( writer );
+        return EphemeralValueUtil::makeID( _serverID );
     }
 
-    vector<uint8> OnlinePresence::makeNameBytes( const AccountIdentity& identity ) const
+    EphemeralValue OnlinePresence::makeNameValue( const AccountIdentity& identity ) const
     {
-        BitWriter writer;
-        writer.writeVarUint( identity._accountID );
-        writer.writeVarUint( _serverID );
-        writer.writeBool( identity._bGuest == SW_TRUE );
-        ServiceKeyUtil::writeString( writer, identity._displayName );
-        return OnlinePresenceInternal::takeBytes( writer );
+        OnlinePresenceNameRecord record;
+        record._accountID   = identity._accountID;
+        record._serverID    = _serverID;
+        record._bGuest      = identity._bGuest;
+        record._displayName = identity._displayName;
+        EphemeralValue value;
+        (void)EphemeralRecordTable<OnlinePresenceNameRecord>{}.makeValue( record, value ); // 이름 규칙 밖이면 표가 오류 로그를 남기고 빈 값 — 찾기가 없는 것으로 읽는다
+        return value;
     }
 } // namespace sw

@@ -40,4 +40,13 @@ namespace sw
 
         ServiceRecordUnknownFields _unknownProperties{};
     };
+
+    /** @brief 순위표가 캐시에 둔 표시 이름(키 `lb.name:<계정>`)입니다. 다시 만들 수 있는 캐시라 판이 다르면 없는 것으로 본다. */
+    REFLECT()
+    struct LeaderboardNameCacheRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
+        string _displayName{};
+    };
 } // namespace sw

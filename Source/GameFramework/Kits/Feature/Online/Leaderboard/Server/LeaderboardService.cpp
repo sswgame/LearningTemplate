@@ -9,6 +9,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardStoreRecords.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -1185,8 +1186,11 @@ namespace sw
         if ( expireAfterMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
             _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
         if ( displayName.empty() == false )
-            _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
-                                                                       vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTTLMs ) );
+        {
+            EphemeralValue nameValue;
+            if ( EphemeralRecordTable<LeaderboardNameCacheRecord>{}.makeValue( LeaderboardNameCacheRecord{ string( displayName ) }, nameValue ) )
+                _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ), std::move( nameValue ), LeaderboardLimit::kNameTTLMs ) );
+        }
     }
 
     int64 LeaderboardService::computeRankRetentionMs( const LeaderboardDef& definition, uint64 periodID, UnixMilliseconds nowMs ) const
@@ -1361,7 +1365,7 @@ namespace sw
         const int64 expireAfterMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
         if ( expireAfterMs > 0 )
             _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, expireAfterMs ) );
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), EphemeralValueUtil::makeMarker(), expireAfterMs ) );
         // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
         {
@@ -1436,9 +1440,10 @@ namespace sw
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
-        RankQuery& query = queryIt->second;
-        if ( reply._result == EphemeralResult::Ok )
-            query._listEntry[entryIndex]._displayName.assign( reply._value.begin(), reply._value.end() );
+        RankQuery&                 query = queryIt->second;
+        LeaderboardNameCacheRecord name;
+        if ( EphemeralRecordTable<LeaderboardNameCacheRecord>{}.decode( reply, name ) )
+            query._listEntry[entryIndex]._displayName = std::move( name._displayName );
         if ( --query._outstandingNameCount == 0 )
             finishQuery( queryID );
     }

@@ -5,6 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 
@@ -113,7 +114,7 @@ namespace sw
         if ( reply._result == EphemeralResult::Ok )
         {
             ServerStatus status;
-            if ( ServerRecord::decode( reply._value, status ) && status._descriptor._serverID == serverID )
+            if ( ServerRecord::decode( reply, status ) && status._descriptor._serverID == serverID )
                 _listBuilding.push_back( std::move( status ) );
         }
         else if ( bServerRecordExpired )
@@ -129,8 +130,7 @@ namespace sw
     {
         --_outstandingCount;
         int64      reserved = 0;
-        const bool bRead    = reply._result == EphemeralResult::Ok &&
-                           StringUtil::parseInt64( string_view( reinterpret_cast<const utf8*>( reply._value.data() ), reply._value.size() ), reserved );
+        const bool bRead    = EphemeralValueUtil::readCounter( reply, reserved );
         if ( bRead && reserved > 0 ) // 확정이 창을 넘겨 음수가 될 수 있다 — 0 으로 본다
             _mapServerToReserved[serverID] = static_cast<int32>( reserved );
         if ( _outstandingCount == 0 )
