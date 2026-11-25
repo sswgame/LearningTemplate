@@ -215,7 +215,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, ReservedIndexIsReboundOnUpload )
     FakeBindlessFactory factory;
     test::FakeRHIDevice device;
     device._pResourceFactory             = &factory;
-    const RHITextureHandle   placeholder = factory.createTexture2D( RHITextureDesc{} ); // 로드 중 텍스처
+    const RHITextureHandle   placeholder = factory.createTexture2DNative( RHITextureDesc{} ); // 로드 중 텍스처
     const RHITextureSRVIndex reserved    = device.reserveBindlessTexture( placeholder );
     SW_REQUIRE_TRUE( reserved != kInvalidDescriptorIndex );
     Texture2D texture;
@@ -330,7 +330,7 @@ SW_TEST_CASE( Texture2DStableSRVTest, FailedUploadKeepsReservedSRV )
     FakeBindlessFactory factory;
     test::FakeRHIDevice device;
     device._pResourceFactory             = &factory;
-    const RHITextureHandle   placeholder = factory.createTexture2D( RHITextureDesc{} );
+    const RHITextureHandle   placeholder = factory.createTexture2DNative( RHITextureDesc{} );
     const RHITextureSRVIndex reserved    = device.reserveBindlessTexture( placeholder );
     SW_REQUIRE_TRUE( reserved != kInvalidDescriptorIndex );
     Texture2D texture;

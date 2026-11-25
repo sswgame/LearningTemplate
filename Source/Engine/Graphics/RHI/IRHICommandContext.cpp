@@ -47,7 +47,7 @@ namespace sw
             const RHIShaderSlots& slots = _bindings.getSlots( RHIBindPoint::Compute );
             for ( const RHIShaderSlotKind kind : { RHIShaderSlotKind::ShaderResource, RHIShaderSlotKind::UnorderedAccess } )
             {
-                for ( uint32 slot = 0; slot < RHIShaderSlots::getSlotCount( kind ); ++slot )
+                for ( uint32 slot = 0; slot < RHIShaderSlots::kShaderResourceCount; ++slot ) // 걸린 칸만 있다 — u 는 t 보다 좁다
                 {
                     if ( slots.isBound( kind, slot ) )
                         log.record( slots.get( kind, slot ), kind == RHIShaderSlotKind::UnorderedAccess, _bindings._computePSO, slot );
