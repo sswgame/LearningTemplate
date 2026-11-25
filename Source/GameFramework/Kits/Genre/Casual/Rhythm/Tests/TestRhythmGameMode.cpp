@@ -175,6 +175,8 @@ SW_TEST_CASE_F( RhythmGameModeTest, AutoPlayedSongIsClearedWithTheReward )
 SW_TEST_CASE( RhythmGameModeTest, JudgeDataIsRequired )
 {
     SW_EXPECT_LOG( "Serialization.RequiredMissing" );
+    // 빠진 칸의 초기값(0)은 반사의 `Min` 밖이라 읽기 공통 끝도 칸마다 알린다 — 빠졌다는 오류와 함께 난다.
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     GameObjectManager        manager;
     RhythmGameModeComponent* pGameMode = manager.createGameObject( hashed_string( "Director" ) )->addComponent<RhythmGameModeComponent>();
     SW_REQUIRE_NOT_NULL( pGameMode );
