@@ -21,7 +21,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Network/Replication/PredictionSmoother.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/Hit/MeleeSweepHistory.h"

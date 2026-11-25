@@ -7,10 +7,17 @@
  *          - 기록은 틱을 하나씩 이어서 넣는다(`record`). 빈 틱이 있으면 다시 시뮬레이션이 입력을 건너뛰므로 이어지지 않는 틱은 거절한다.
  *          - 재조정 결과는 `PredictionReconcileResult` 넷 중 하나이다. "맞았다" 와 "맞출 기록이 없다" 를 같은 false 로 돌려주면
  *            기록이 밀려나 예측이 영영 맞춰지지 않아도 부르는 쪽이 알 수 없었다.
+ *
+ *          예측 보정 시각 오프셋(`PredictionSmoother`, 같은 파일): 예측 보정(재조정)으로 순간 이동한 위치를 화면에서 부드럽게 녹이는 시각 오프셋입니다.
+ * @details 시뮬레이션 상태는 보정한 그대로 두고, 그릴 때만 "보정 전 자리 - 보정 후 자리" 오프셋을 더해 시간이 지나며 0 으로 줄인다.
+ *          줄이는 꼴은 반감기(`_halfLifeSeconds`)의 지수 감쇠다 — 프레임 간격이 달라도 같은 시간에 같은 만큼 줄어든다. 오프셋이 `_snapDistance` 를 넘으면
+ *          녹이지 않고 바로 0 이다(순간 이동 · 부활처럼 부드럽게 보일 까닭이 없는 큰 보정). 언리얼 `UCharacterMovementComponent` 의 네트워크 스무딩(지수 모드)과 같은 자리다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 namespace sw
@@ -102,5 +109,59 @@ namespace sw
         uint32                _latestTick{ 0 }; ///< 마지막으로 기록한 틱. 다시 시뮬레이션하는 범위가 여기까지이다
         uint32                _correctionCount{ 0 };
         uint8                 _bHasRecord : 1;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 시각 보정 설정입니다. */
+    struct PredictionSmootherSettings
+    {
+        float32 _halfLifeSeconds{ 0.05f }; ///< 오프셋이 반으로 주는 시간(초). 0 이하는 `PredictionSmoother::initialize` 가 거절한다
+        float32 _snapDistance{ 2.0f };     ///< 이보다 큰 보정은 녹이지 않고 바로 맞춘다(월드 단위). 0 이하는 거절한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class PredictionSmoother
+     * @brief 보정 오프셋 하나를 들고 프레임마다 줄입니다. 게임 스레드 하나가 씁니다.
+     */
+    class PredictionSmoother
+    {
+    public:
+        /** @brief 설정을 받고 오프셋을 비웁니다. 반감기 · 끊는 거리가 0 이하면 false 이고 아무것도 바꾸지 않습니다(다른 값으로 대신 돌지 않는다). */
+        [[nodiscard]] bool initialize( const PredictionSmootherSettings& settings )
+        {
+            if ( settings._halfLifeSeconds <= 0.0f || settings._snapDistance <= 0.0f )
+                return false;
+            _settings = settings;
+            _offset   = float3{ 0.0f, 0.0f, 0.0f };
+            return true;
+        }
+
+        /** @brief 보정 하나를 더합니다 — 보정 전에 그리던 자리 @p before 와 보정 뒤 자리 @p after 의 차이가 오프셋에 쌓입니다. 끊는 거리를 넘으면 오프셋을 비웁니다. */
+        void addCorrection( const float3& before, const float3& after )
+        {
+            _offset = _offset + ( before - after );
+            if ( _offset.getLength() > _settings._snapDistance )
+                _offset = float3{ 0.0f, 0.0f, 0.0f };
+        }
+
+        /** @brief @p deltaSeconds 만큼 오프셋을 줄입니다(반감기 지수 감쇠). */
+        void update( float32 deltaSeconds )
+        {
+            if ( deltaSeconds <= 0.0f )
+                return;
+            _offset = _offset * MathUtil::pow( 0.5f, deltaSeconds / _settings._halfLifeSeconds );
+        }
+
+        /** @brief 그릴 때 시뮬레이션 자리에 더할 오프셋입니다. */
+        const float3& getOffset() const { return _offset; }
+
+    private:
+        PredictionSmootherSettings _settings{};
+        float3                     _offset{ 0.0f, 0.0f, 0.0f };
     };
 } // namespace sw
