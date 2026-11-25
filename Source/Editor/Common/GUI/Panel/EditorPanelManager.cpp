@@ -3,19 +3,56 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/vector.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/GUI/Panel/EditorDocumentAutosaveScheduler.h"
+#include "Editor/Common/Commands/Asset/EditorDocumentAutosave.h"
+#include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanelBase.h"
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
+
+// 문서 패널 자동 저장의 주기입니다 — 열린 문서 패널의 사본(`EditorDocumentPanelBase::takeAutosaveCopies`)을 주기마다 모아 워커로 씁니다(감사 E-1). ImGui 를 그리지 않는다.
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorPanelEntry;
+
+        /**
+         * @struct EditorDocumentAutosaveScheduler
+         * @brief 주기(`EditorToolDefaults::_documentAutosaveSeconds` — 설정 필수)가 지나면 dirty 문서의 사본을 모아 쓰기 잡(`EditorDocumentAutosaveWriteJob`)에 넘깁니다.
+         * @details 상호작용 구간 중인 문서(`DocumentAutosaveResult::Deferred`)는 이 판에서 빼고 주기를 다시 재지 않는다 — 구간이 끝난 첫 프레임에 그 문서만 다시 나온다(다른 문서는 글이 같아 다시 나오지 않는다).
+         *          낸 잡이 끝나지 않았으면 내지 않고 다음 프레임에 다시 본다(앞 묶음을 새 세대가 버리지 않게). 사본 폴더는 씬 자동 저장의 세션 폴더다 — 세션이 없으면 쓰지 않는다.
+         *          상태(주기 시계 · 잡)는 에디터 상태 저장소가 든다. 패널 관리자가 패널을 다 그린 뒤 프레임마다 부른다.
+         */
+        struct EditorDocumentAutosaveScheduler
+        {
+            /**
+             * @brief 패널 목록 @p listPanel(패널 관리자의 줄 그대로) 을 보고 주기가 되었으면 사본을 냅니다.
+             * @details 주기가 되지 않은 프레임(거의 모든 프레임)은 목록을 읽지 않고 돌아온다 — 예전에는 부르는 쪽이 프레임마다 패널 포인터 목록을 새로 지어 넘겼다.
+             */
+            static void update( const vector<EditorPanelEntry>& listPanel );
+            /** @brief 이번 세션에 워커가 쓴 문서 사본 수입니다(감시 값 `Editor.AutosaveDocumentCopyCount`). */
+            static uint32 getWrittenCopyCount();
+        };
+    } // namespace
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -457,4 +494,109 @@ namespace sw::editor
                          &EditorPanelTimeWatchInternal::readPanelCreate );
     SW_AUTOMATION_WATCH( editorPanelsDrawUs, "Editor.PanelsDrawUs", "Microseconds every open editor panel took to draw last frame (measured while gv_editorWatchPanel is set)",
                          &EditorPanelTimeWatchInternal::readPanelsDraw );
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorDocumentAutosaveSchedulerInternal
+        {
+            /** @brief 주기 시계와 쓰기 잡입니다. 에디터 상태 저장소가 소유한다(UI 스레드만). */
+            struct State
+            {
+                Stopwatch                      _sinceCopy{};
+                EditorDocumentAutosaveWriteJob _writeJob{};
+                vector<const EditorPanel*>     _listDeferred{};      ///< 지난 판에 미룬 패널 — 비어 있지 않으면 이 패널만 다시 묻는다(다른 문서의 글을 끄는 동안 프레임마다 만들지 않게). 지금 목록에 있는 것만 쓴다(비교만 한다)
+                uint32                         _writtenCount{ 0 };   ///< 워커가 쓴 사본 수(끝난 잡의 결과를 더한다)
+                bool                           _bForceNext{ false }; ///< 다음 판은 주기를 보지 않는다(`autosave.documentsNow`).
+            };
+
+            /** @brief 설정의 초를 시계의 밀리초로 바꾸는 배수입니다. */
+            static constexpr float64 kMillisecondsPerSecond = 1000.0;
+
+            static State& getState() { return getEditorState<State>(); }
+
+            [[nodiscard]] static bool readCopyCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+                    return false;
+                outValue = static_cast<float64>( EditorDocumentAutosaveScheduler::getWrittenCopyCount() );
+                return true;
+            }
+
+            static bool runNow( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                getState()._bForceNext = true;
+                outReply               = "the next frame writes the autosave copies of the dirty documents (ignores the interval)";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_WATCH( editorAutosaveDocumentCopyCount, "Editor.AutosaveDocumentCopyCount", "Document autosave copies the writer finished this session",
+                         &EditorDocumentAutosaveSchedulerInternal::readCopyCount );
+    SW_DEV_COMMAND( AutosaveDocumentsNow, "autosave.documentsNow", "autosave.documentsNow",
+                    "Write autosave copies of the dirty document panels on the next frame (ignores the interval)", &EditorDocumentAutosaveSchedulerInternal::runNow );
+
+    void EditorDocumentAutosaveScheduler::update( const vector<EditorPanelEntry>& listPanel )
+    {
+        using Internal             = EditorDocumentAutosaveSchedulerInternal;
+        Internal::State&     state = Internal::getState();
+        uint32               writtenCount{ 0 };
+        const EditorTaskPoll poll = state._writeJob.take( writtenCount ); // 주기와 무관하게 끝난 결과는 프레임마다 받는다
+        if ( poll == EditorTaskPoll::Ready )
+            state._writtenCount += writtenCount;
+        const float64 intervalMilli = static_cast<float64>( getEditorToolDefaults()._documentAutosaveSeconds ) * Internal::kMillisecondsPerSecond;
+        if ( state._bForceNext == false && static_cast<float64>( state._sinceCopy.getElapsedMilliseconds() ) < intervalMilli )
+            return;
+        if ( poll == EditorTaskPoll::Running )
+            return; // 앞 묶음이 아직 쓰는 중이다 — 다음 프레임에 다시 본다
+        const AbsolutePath sessionFolder = EditorAutosaveCommands::getSessionFolder();
+        if ( sessionFolder.empty() )
+            return; // 씬 자동 저장이 세션을 아직 열지 않았거나 열지 못했다(이유는 거기서 남겼다)
+
+        EditorDocumentAutosaveBatch batch;
+        batch._sessionFolder                       = sessionFolder;
+        const vector<const EditorPanel*> listRetry = std::move( state._listDeferred );
+        state._listDeferred.clear();
+        for ( const EditorPanelEntry& panelEntry : listPanel )
+        {
+            EditorPanel* const pPanel = panelEntry._pInstance.get();
+            if ( pPanel == nullptr )
+                continue;
+            EditorDocumentPanelBase* const pDocument = pPanel->asDocumentPanel();
+            const bool                     bAsked    = listRetry.empty() || std::find( listRetry.begin(), listRetry.end(), pPanel ) != listRetry.end();
+            if ( pDocument == nullptr || bAsked == false )
+                continue;
+            const size_t                 firstIndex = batch._listEntry.size();
+            const DocumentAutosaveResult take       = pDocument->takeAutosaveCopies( batch._listEntry );
+            if ( take == DocumentAutosaveResult::Deferred )
+                state._listDeferred.push_back( pPanel );
+            for ( size_t index = firstIndex; index < batch._listEntry.size(); ++index )
+            {
+                EditorDocumentAutosaveEntry& entry = batch._listEntry[index];
+                if ( pDocument->getDocumentAssetPath().empty() )
+                    entry._panelID = panelEntry._id; // 연 에셋이 없는 상태 문서다 — 복원이 이 패널을 연다
+                entry._projectRoot       = ProcessRoots::get()._project.str();
+                entry._sourceContentHash = EditorAutosaveCommands::computeDocumentSourceHash( entry );
+            }
+        }
+        // 끄는 중인 문서가 있으면 주기를 다시 재지 않는다 — 구간이 끝난 첫 프레임에 그 문서가 나온다(감사 E-1 "끌기 중이면 한 프레임 미루기")
+        if ( state._listDeferred.empty() )
+        {
+            state._sinceCopy.restart();
+            state._bForceNext = false;
+        }
+        if ( batch._listEntry.empty() )
+            return;
+        state._writeJob.request( std::move( batch ) );
+    }
+
+    uint32 EditorDocumentAutosaveScheduler::getWrittenCopyCount()
+    {
+        return EditorDocumentAutosaveSchedulerInternal::getState()._writtenCount;
+    }
 } // namespace sw::editor
