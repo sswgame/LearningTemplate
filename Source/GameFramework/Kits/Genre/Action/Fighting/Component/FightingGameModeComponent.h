@@ -16,7 +16,6 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -24,6 +23,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
@@ -119,14 +119,14 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        SharedAssetRef<FighterCatalog> _pCatalog;
-        FightingMatch                  _match;
-        FixedStepTimer                 _timer; ///< 걸음 하나가 격투 프레임 하나(1/60 초)다
-        GameRandom                     _random;
-        Countdown                      _resultHold; ///< 대전이 끝난 뒤 미니게임을 끝내기까지
-        CPUHand                        _arrCPUHand[FightingMatch::kPlayerCount];
-        vector<FightingEvent>          _listEvent;
-        uint16                         _queuedButtons;    ///< 다음 걸음이 쓸 버튼 누름 — 클라이언트 입력이라 싣지 않는다
-        uint8                          _commandDirection; ///< 마지막 입력 명령의 방향(넘패드) — 클라이언트 입력이라 싣지 않는다
+        BoundAssetRef<FighterCatalog> _pCatalog;
+        FightingMatch                 _match;
+        FixedStepTimer                _timer; ///< 걸음 하나가 격투 프레임 하나(1/60 초)다
+        GameRandom                    _random;
+        Countdown                     _resultHold; ///< 대전이 끝난 뒤 미니게임을 끝내기까지
+        CPUHand                       _arrCPUHand[FightingMatch::kPlayerCount];
+        vector<FightingEvent>         _listEvent;
+        uint16                        _queuedButtons;    ///< 다음 걸음이 쓸 버튼 누름 — 클라이언트 입력이라 싣지 않는다
+        uint8                         _commandDirection; ///< 마지막 입력 명령의 방향(넘패드) — 클라이언트 입력이라 싣지 않는다
     };
 } // namespace sw

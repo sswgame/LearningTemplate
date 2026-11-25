@@ -577,9 +577,8 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || pOwner->getPrimarySceneComponent() == nullptr )
             return false;
-        SharedAssetRef<HousingPartCatalog> pCatalog = _pCatalog;
-        if ( pCatalog == nullptr && _partCatalog.empty() == false )
-            pCatalog = _partCatalog.acquire();
+        // 열기 전(에디터 그리기)에는 파일의 판이다.
+        const shared_ptr<const HousingPartCatalog> pCatalog = _pCatalog != nullptr || _partCatalog.empty() ? _pCatalog.snapshot() : _partCatalog.acquire().snapshot();
         if ( pCatalog == nullptr )
             return false;
         outOrigin   = getPlotOrigin();

@@ -104,10 +104,9 @@ namespace sw
         , _listGroundObject{}
         , _listWalkerObject{}
         , _listWalkerLook{}
-        , _catalogReload{}
+        , _shownCatalog{}
         , _walkerLookStride{ 0 }
         , _shownRevision{ 0 }
-        , _bViewsChecked{ SW_FALSE }
         , _bViewsValid{ SW_FALSE }
         , _bTerrainSpawned{ SW_FALSE }
         , _reserved{ 0 }
@@ -130,7 +129,7 @@ namespace sw
     void CityViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        _bViewsChecked = SW_FALSE;
+        _shownCatalog.reset();
     }
 
     void CityViewComponent::onEndPlay()
@@ -178,10 +177,13 @@ namespace sw
         const CityBuilderGameModeComponent* const pDirector = manager.resolveComponent( _director );
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
-        if ( _bViewsChecked == SW_FALSE )
+        const CityCatalog& catalog = *pDirector->findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
+        if ( _shownCatalog.get() != &catalog )
         {
-            _bViewsChecked = SW_TRUE;
-            _bViewsValid   = acquireBuildingViews( *pDirector->findCatalog() ) ? SW_TRUE : SW_FALSE; // 열린 판은 카탈로그를 쥐고 있다
+            despawnViews(); // 도시가 새 판에 묶였다 — 땅 · 서비스의 색과 집 단계가 바뀌었을 수 있다
+            _listWalkerLook.clear();
+            _shownCatalog = pDirector->getCatalogSnapshot();
+            _bViewsValid  = acquireBuildingViews( catalog ) ? SW_TRUE : SW_FALSE;
         }
         if ( _bViewsValid == SW_FALSE )
             return;
@@ -190,13 +192,7 @@ namespace sw
             despawnViews();
             _shownBuildingViews = _pBuildingViewCatalog.snapshot();
         }
-        if ( _catalogReload.takeChanged() ) // 땅 · 서비스의 색이 바뀌었을 수 있다
-        {
-            despawnViews();
-            _listWalkerLook.clear();
-        }
-        const CitySimulation& city    = pDirector->getCity();
-        const CityCatalog&    catalog = *pDirector->findCatalog(); // 열린 판은 카탈로그를 쥐고 있다
+        const CitySimulation& city = pDirector->getCity();
         if ( _bTerrainSpawned == SW_FALSE )
             spawnTerrain( manager, city, catalog );
         if ( _shownRevision != pDirector->getLayoutRevision() )

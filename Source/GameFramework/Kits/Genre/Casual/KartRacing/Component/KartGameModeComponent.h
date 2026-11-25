@@ -15,7 +15,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -25,6 +24,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -106,13 +106,13 @@ namespace sw
         PROPERTY( Category = "Race", DisplayName = "Reward Step", Tooltip = "Money less for every place after the first (never below 0)", Min = 0 )
         int32 _rewardStep;
 
-        SharedAssetRef<KartTrackCatalog>         _pTrackCatalog;
-        SharedAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템을 끈 경기면 비었다
-        SharedAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템을 끈 경기면 비었다)
-        SharedAssetRef<KinematicVehicleSettings> _pVehicle;
-        KartTrack                                _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
-        KartRace                                 _race;
-        vector<KartRaceEvent>                    _listEvent;
-        Countdown                                _resultHold; ///< 순위가 정해진 뒤 결과를 보이는 시간
+        BoundAssetRef<KartTrackCatalog>         _pTrackCatalog;
+        BoundAssetRef<KartItemCatalog>          _pItemCatalog;       ///< 아이템을 끈 경기면 비었다
+        BoundAssetRef<ProjectileCatalog>        _pProjectileCatalog; ///< 아이템이 쏘는 탄(아이템을 끈 경기면 비었다)
+        BoundAssetRef<KinematicVehicleSettings> _pVehicle;
+        KartTrack                               _track; ///< 경기 · 차가 빌려 쓴다 — 경기보다 먼저 선언한다
+        KartRace                                _race;
+        vector<KartRaceEvent>                   _listEvent;
+        Countdown                               _resultHold; ///< 순위가 정해진 뒤 결과를 보이는 시간
     };
 } // namespace sw

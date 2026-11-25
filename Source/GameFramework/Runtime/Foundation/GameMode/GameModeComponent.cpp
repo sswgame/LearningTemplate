@@ -110,39 +110,58 @@ namespace sw
 
     bool GameModeComponent::openGame()
     {
-        vector<FollowedAsset> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다
+        vector<shared_ptr<BoundAsset>> listPrevious = std::move( _listFollowedAsset ); // 규칙 객체는 `startGame` 이 다시 묶을 때까지 앞 판을 가리킨다
         _listFollowedAsset.clear();
         resetRuntimeState();
         if ( startGame() )
             return true;
-        for ( FollowedAsset& previous : listPrevious )
+        for ( shared_ptr<BoundAsset>& previous : listPrevious )
         {
             _listFollowedAsset.push_back( std::move( previous ) ); // 다시 묶지 못한 규칙 객체가 남았다 — 쥔 채로 둔다
         }
+        _bStarted = SW_FALSE; // 다시 열지 못한 판은 닫는다 — 참조는 새 판, 규칙 객체는 앞 판인 채로 돌지 않는다
         return false;
     }
 
     void GameModeComponent::applyReloadedAssets()
     {
-        bool bReloaded = false;
-        for ( FollowedAsset& followed : _listFollowedAsset )
+        vector<shared_ptr<BoundAsset>> listReloaded;
+        vector<shared_ptr<const void>> listPrevious; // 새 판에 묶지 못하면 되돌릴 판(`listReloaded` 와 같은 순서)
+        for ( const shared_ptr<BoundAsset>& pFollowed : _listFollowedAsset )
         {
-            shared_ptr<const void> pLatest = followed._takeLatest();
-            if ( pLatest == nullptr || pLatest == followed._listHeld.back() )
+            shared_ptr<const void> pLatest = pFollowed->_takeLatest();
+            if ( pLatest == nullptr || pLatest == pFollowed->_listHeld.back() )
                 continue;
-            followed._listHeld.push_back( std::move( pLatest ) );
-            bReloaded = true;
+            pFollowed->_listHeld.push_back( std::move( pLatest ) );
+            listReloaded.push_back( pFollowed );
+            listPrevious.push_back( pFollowed->_pBound );
         }
-        if ( bReloaded == false )
+        if ( listReloaded.empty() )
             return;
         Archive state;
-        writeState( state );
+        writeState( state ); // 규칙 객체가 묶인 판으로 적는다 — 참조를 옮기기 전이다
+        for ( const shared_ptr<BoundAsset>& pReloaded : listReloaded )
+        {
+            pReloaded->_pBound = pReloaded->_listHeld.back();
+        }
         state.setReadModeAndResetPosition( true );
         const bool bRebound = readState( state );
         if ( bRebound )
+        {
             SW_LOG_INFO_ID( "GameMode.ReloadedAssetApplied", "GameMode '%#': a reloaded asset is applied - the running game is bound to it", getTypeName().c_str() );
+        }
         else
+        {
             SW_LOG_WARNING_ID( "GameMode.ReloadedAssetRefused", "GameMode '%#': the running game does not fit a reloaded asset (see the messages above)", getTypeName().c_str() );
+            for ( size_t index = 0; index < listReloaded.size(); ++index )
+            {
+                listReloaded[index]->_pBound = listPrevious[index];
+            }
+            // 제자리에서 여는 규칙 객체(지갑 · 격자를 빌린 쪽)는 새 판에 묶인 채로 남는다 — 앞 판으로 다시 읽어 묶는다.
+            state.setReadModeAndResetPosition( true );
+            if ( readState( state ) == false )
+                SW_LOG_ERROR_ID( "GameMode.ReloadedAssetNotReverted", "GameMode '%#': the running game cannot go back to the previous asset either", getTypeName().c_str() );
+        }
         onStateRestored( bRebound );
         despawnViews(); // 새 판의 모습으로 다시 세운다(이번 규칙 틱이 플러시를 잡는다)
     }

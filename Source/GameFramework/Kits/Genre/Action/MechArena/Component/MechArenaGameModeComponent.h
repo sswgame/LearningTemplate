@@ -17,7 +17,6 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -26,6 +25,7 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/FrameData.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
@@ -144,16 +144,16 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        SharedAssetRef<MechCatalog>       _pMechs;
-        SharedAssetRef<WeaponCatalog>     _pWeapons;
-        SharedAssetRef<ProjectileCatalog> _pProjectiles;
-        SharedAssetRef<MoveCatalog>       _pMoves;
-        MechArenaWorld                    _world;
-        FixedStepTimer                    _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
-        GameRandom                        _random;
-        Countdown                         _resultHold;
-        vector<BotHand>                   _listBotHand;
-        vector<MechArenaEvent>            _listEvent;
-        MechInput                         _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
+        BoundAssetRef<MechCatalog>       _pMechs;
+        BoundAssetRef<WeaponCatalog>     _pWeapons;
+        BoundAssetRef<ProjectileCatalog> _pProjectiles;
+        BoundAssetRef<MoveCatalog>       _pMoves;
+        MechArenaWorld                   _world;
+        FixedStepTimer                   _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
+        GameRandom                       _random;
+        Countdown                        _resultHold;
+        vector<BotHand>                  _listBotHand;
+        vector<MechArenaEvent>           _listEvent;
+        MechInput                        _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다
     };
 } // namespace sw

@@ -10,10 +10,10 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h"
@@ -71,7 +71,7 @@ namespace sw
         PROPERTY( Category = "UI", DisplayName = "Shop Document" )
         AssetRef<UIDocumentAsset> _shopDocument;
 
-        SharedAssetRef<ShopCatalog>           _pShops;
+        BoundAssetRef<ShopCatalog>            _pShops;
         ShopManager                           _shop;
         vector<ShopEvent>                     _listShopEvent; ///< 이번 프레임의 가게 알림(용량만 넘긴다)
         Wallet                                _wallet;

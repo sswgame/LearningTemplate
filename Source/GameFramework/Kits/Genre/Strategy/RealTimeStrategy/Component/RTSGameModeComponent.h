@@ -9,12 +9,12 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 #include <initializer_list>
@@ -59,6 +59,6 @@ namespace sw
         PROPERTY( Category = "Rules", DisplayName = "Start Minerals", Tooltip = "Minerals a fresh game starts with (the currency of the unit catalog rules)", Min = 0 )
         int32 _startMinerals;
 
-        SharedAssetRef<RTSCatalog> _pCatalog;
+        BoundAssetRef<RTSCatalog> _pCatalog;
     };
 } // namespace sw

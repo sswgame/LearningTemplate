@@ -14,7 +14,6 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -25,6 +24,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 
 namespace sw
@@ -140,13 +140,13 @@ namespace sw
         PROPERTY( Category = "AI Styles", DisplayName = "Opponent AI", Tooltip = "The computer player against a human" )
         SkirmishAIStyle _opponentAI;
 
-        SharedAssetRef<BehaviorTreeAsset> _pCommanderTree;
-        CommanderDebugSource              _commanderDebugSource;
-        SkirmishMatch                     _match;
-        vector<RTSEvent>                  _listStepEvent;
-        GameSpeedControl                  _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
-        uint64                            _matchID;                     ///< `getMatchID`
-        uint8                             _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
-        [[maybe_unused]] uint8            _reserved                : 7;
+        BoundAssetRef<BehaviorTreeAsset> _pCommanderTree;
+        CommanderDebugSource             _commanderDebugSource;
+        SkirmishMatch                    _match;
+        vector<RTSEvent>                 _listStepEvent;
+        GameSpeedControl                 _speed;                       ///< 배속 · 일시정지(2 인 대전에서는 쓰지 않는다)
+        uint64                           _matchID;                     ///< `getMatchID`
+        uint8                            _bAutoPlayChangeReported : 1; ///< 판이 열린 뒤 자동 플레이가 바뀐 것을 한 번 알렸다
+        [[maybe_unused]] uint8           _reserved                : 7;
     };
 } // namespace sw

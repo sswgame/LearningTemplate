@@ -10,12 +10,12 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -69,8 +69,8 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0 )
         float32 _budget;
 
-        SharedAssetRef<SpawnTable> _pTable; ///< 감독이 빌려 쓴다
-        SpawnDirector              _director;
-        vector<SpawnedView>        _listView;
+        BoundAssetRef<SpawnTable> _pTable; ///< 감독이 빌려 쓴다
+        SpawnDirector             _director;
+        vector<SpawnedView>       _listView;
     };
 } // namespace sw

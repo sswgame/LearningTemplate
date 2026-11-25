@@ -17,7 +17,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -27,6 +26,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerExpedition.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -224,10 +224,10 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
         float32 _resultHoldSeconds;
 
-        SharedAssetRef<ScavengerCatalog> _pCatalog;
-        SharedAssetRef<SpawnTable>       _pThreatTable;
-        SharedAssetRef<ShopCatalog>      _pShopCatalog;
-        SharedAssetRef<ItemCatalog>      _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
+        BoundAssetRef<ScavengerCatalog>  _pCatalog;
+        BoundAssetRef<SpawnTable>        _pThreatTable;
+        BoundAssetRef<ShopCatalog>       _pShopCatalog;
+        BoundAssetRef<ItemCatalog>       _pItemCatalog;    ///< 게임 범위의 아이템 카탈로그
         shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 월드 상태가 쥔 것과 같은 판(스냅숏 — 날씨 상태가 그 판의 항목을 가리킨다)
         Wallet                           _wallet;          ///< 한 판의 회사 돈(원정이 빌린다)
         GameFlags                        _flags;           ///< 한 판의 문 잠금(원정이 빌린다)

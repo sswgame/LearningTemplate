@@ -18,7 +18,6 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -30,6 +29,7 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/BattleRoyaleSceneTerrain.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -227,21 +227,21 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        SharedAssetRef<BattleRoyaleCatalog> _pCatalog;
-        SharedAssetRef<WeaponCatalog>       _pWeaponCatalog;
-        SharedAssetRef<ProjectileCatalog>   _pProjectileCatalog;
-        SharedAssetRef<ItemCatalog>         _pItemCatalog;
-        SharedAssetRef<LootCatalog>         _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
-        BattleRoyaleSceneTerrain            _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
-        BattleRoyaleMatch                   _match;
-        BattleRoyaleFlightPath              _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
-        FixedStepTimer                      _timer;
-        GameRandom                          _random;
-        Countdown                           _resultHold;
-        vector<Person>                      _listPerson;
-        vector<BattleRoyaleGroundItem>      _listGroundItem;
-        vector<BattleRoyaleEvent>           _listEvent;
-        vector<BattleRoyaleZoneEvent>       _listZoneEvent;
+        BoundAssetRef<BattleRoyaleCatalog> _pCatalog;
+        BoundAssetRef<WeaponCatalog>       _pWeaponCatalog;
+        BoundAssetRef<ProjectileCatalog>   _pProjectileCatalog;
+        BoundAssetRef<ItemCatalog>         _pItemCatalog;
+        BoundAssetRef<LootCatalog>         _pLootCatalog; ///< 전리품 지점 · 보급 상자가 있을 때만 있다
+        BattleRoyaleSceneTerrain           _terrain;      ///< 판(`_match`)이 빌린다 — 먼저 만들고 나중에 사라진다
+        BattleRoyaleMatch                  _match;
+        BattleRoyaleFlightPath             _flightPath; ///< 씨앗과 카탈로그로 정해진다 — 싣지 않는다
+        FixedStepTimer                     _timer;
+        GameRandom                         _random;
+        Countdown                          _resultHold;
+        vector<Person>                     _listPerson;
+        vector<BattleRoyaleGroundItem>     _listGroundItem;
+        vector<BattleRoyaleEvent>          _listEvent;
+        vector<BattleRoyaleZoneEvent>      _listZoneEvent;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _flightTime;
         PROPERTY( RuntimeState )

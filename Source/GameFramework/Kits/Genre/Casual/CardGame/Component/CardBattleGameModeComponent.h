@@ -11,12 +11,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
@@ -96,8 +96,8 @@ namespace sw
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for winning the battle", Min = 0 )
         int32 _winReward;
 
-        SharedAssetRef<CardBattleCatalog> _pCatalog;
-        CardBattle                        _battle;
-        Countdown                         _timer; ///< 자동 플레이의 다음 수 · 결과를 보이는 시간
+        BoundAssetRef<CardBattleCatalog> _pCatalog;
+        CardBattle                       _battle;
+        Countdown                        _timer; ///< 자동 플레이의 다음 수 · 결과를 보이는 시간
     };
 } // namespace sw

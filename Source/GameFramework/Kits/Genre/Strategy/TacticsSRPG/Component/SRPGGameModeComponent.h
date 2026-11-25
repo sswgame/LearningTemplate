@@ -14,7 +14,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -22,6 +21,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCommanderAI.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/GrowthLog.h"
 
@@ -116,11 +116,11 @@ namespace sw
         PROPERTY( Category = "Units", DisplayName = "Pilot", Tooltip = "Pilot id (catalog) every unit flies with" )
         CatalogKey<SRPGPilotDef> _pilot;
 
-        SharedAssetRef<SRPGCatalog> _pCatalog;
-        SRPGBattlefield             _field;
-        SRPGCommanderAI             _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
-        ConsumerLease               _eventLease;
-        vector<SRPGEvent>           _listEvent;
+        BoundAssetRef<SRPGCatalog> _pCatalog;
+        SRPGBattlefield            _field;
+        SRPGCommanderAI            _ai; ///< 설정뿐이라 실을 상태가 없다(계획은 부를 때마다 전장에서 세운다)
+        ConsumerLease              _eventLease;
+        vector<SRPGEvent>          _listEvent;
         PROPERTY( RuntimeState, Min = -1 )
         int32 _selectedUnit;
         PROPERTY( RuntimeState )

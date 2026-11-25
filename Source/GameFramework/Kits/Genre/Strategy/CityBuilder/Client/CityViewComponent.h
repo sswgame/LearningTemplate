@@ -15,7 +15,6 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -162,12 +161,11 @@ namespace sw
         vector<GameObjectHandle>                       _listGroundObject;
         vector<GameObjectHandle>                       _listWalkerObject;
         vector<shared_ptr<MaterialInstance>>           _listWalkerLook;      ///< 일꾼 종류 × `_walkerLookStride` + 서비스 행 번호 + 1
-        AssetReloadWatch<CityCatalog>                  _catalogReload;       ///< 색을 읽은 카탈로그의 다시 읽기 횟수 — 바뀌면 모습을 다시 세운다
+        shared_ptr<const CityCatalog>                  _shownCatalog;        ///< 세운 모습이 색을 읽은 카탈로그의 판 — 도시가 새 판에 묶이면 모습을 다시 세운다
         int32                                          _walkerLookStride;    ///< 서비스 행 수 + 1(서비스 없음)
         uint32                                         _shownRevision;       ///< 맞춘 도시 배치 판(0 이면 아직 — 열린 디렉터의 판은 1 부터다)
-        uint8                                          _bViewsChecked   : 1; ///< 모델 표를 보았다(판이 열린 뒤 한 번)
         uint8                                          _bViewsValid     : 1; ///< 모델 표가 맞다 — 아니면 아무것도 세우지 않는다
         uint8                                          _bTerrainSpawned : 1;
-        [[maybe_unused]] uint8                         _reserved        : 5;
+        [[maybe_unused]] uint8                         _reserved        : 6;
     };
 } // namespace sw

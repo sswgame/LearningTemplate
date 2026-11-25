@@ -16,7 +16,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -26,6 +25,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
@@ -180,14 +180,14 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
         float32 _resultHoldSeconds;
 
-        SharedAssetRef<MonsterCollectorCatalog> _pCatalog;
-        SharedAssetRef<ElementChart>            _pChart;
-        MonsterStorage                          _storage;
-        MonsterBattle                           _battle;
-        StepEncounterCounter                    _encounterCounter;
-        GameRandom                              _random;
-        vector<MonsterBattleEvent>              _listBattleEvent;
-        Countdown                               _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
+        BoundAssetRef<MonsterCollectorCatalog> _pCatalog;
+        BoundAssetRef<ElementChart>            _pChart;
+        MonsterStorage                         _storage;
+        MonsterBattle                          _battle;
+        StepEncounterCounter                   _encounterCounter;
+        GameRandom                             _random;
+        vector<MonsterBattleEvent>             _listBattleEvent;
+        Countdown                              _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         float2 _commandMove; ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다

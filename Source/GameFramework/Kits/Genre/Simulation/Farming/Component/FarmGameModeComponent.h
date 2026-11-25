@@ -16,7 +16,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -26,6 +25,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
@@ -225,11 +225,11 @@ namespace sw
         PROPERTY( Category = "Economy", DisplayName = "Item Stack Size", Tooltip = "Most seeds or produce one bag slot holds", Min = 1 )
         int32 _itemStackSize;
 
-        SharedAssetRef<CropCatalog> _pCropCatalog;
-        ItemCatalog                 _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
-        FarmField                   _field;
-        FarmShippingBin             _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>       _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
+        BoundAssetRef<CropCatalog> _pCropCatalog;
+        ItemCatalog                _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
+        FarmField                  _field;
+        FarmShippingBin            _shipment; ///< 출하함에 든 것(하루 끝에 팔린다).
+        vector<hashed_string>      _listSeed; ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
         PROPERTY( RuntimeState )
         float3 _playerPosition;
         PROPERTY( RuntimeState )

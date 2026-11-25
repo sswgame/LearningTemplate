@@ -10,10 +10,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 
@@ -49,13 +49,13 @@ namespace sw
         PROPERTY( RuntimeState )
         int32 _winner; ///< 우승자 번호(-1 없음)
         PROPERTY( RuntimeState )
-        vector<int32>                   _listScore;
-        string                          _viewPath;
-        SharedAssetRef<RuleViewCatalog> _pViews;
-        const RuleViewCatalog*          _pBound; ///< 규칙 객체가 빌린 판
-        const RuleViewDef*              _pView;  ///< 규칙 객체가 빌린 항목
-        uint32                          _restoredCount;
-        uint32                          _refusedCount;
+        vector<int32>                  _listScore;
+        string                         _viewPath;
+        BoundAssetRef<RuleViewCatalog> _pViews;
+        const RuleViewCatalog*         _pBound; ///< 규칙 객체가 빌린 판
+        const RuleViewDef*             _pView;  ///< 규칙 객체가 빌린 항목
+        uint32                         _restoredCount;
+        uint32                         _refusedCount;
         PROPERTY( RuntimeState )
         uint8                  _bBonus   : 1;
         uint8                  _bWins    : 1; ///< 다음 판이 우승자를 적는다 — 상태 칸이 아니라 되돌리지 않는다

@@ -222,7 +222,7 @@ namespace sw
         if ( bBound == false || validateWeapons() == false )
             return false;
         const bool bNeedsLoot = _listLootPosition.empty() == false || _pCatalog->getSupplyDropSettings()._listTime.empty() == false;
-        _pLootCatalog         = SharedAssetRef<LootCatalog>{};
+        _pLootCatalog.reset();
         if ( bNeedsLoot && acquireRequired( _lootDataPath, _pLootCatalog ) == false )
             return false;
         if ( _listLootPosition.empty() == false && _pCatalog->findLootSpot( _lootSpotKind ) == nullptr )

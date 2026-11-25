@@ -15,7 +15,6 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -23,6 +22,7 @@
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -179,19 +179,19 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "How long the result stays on screen before the minigame ends", Min = 0.0, Units = s )
         float32 _resultHoldSeconds;
 
-        SharedAssetRef<GhostCatalog> _pCatalog;
-        SharedAssetRef<AreaGraph>    _pGraphAsset;
-        SharedAssetRef<LootCatalog>  _pLoot;
-        SharedAssetRef<ItemCatalog>  _pItemCatalog; ///< 가방 · 상자의 겹침 수(게임 범위의 아이템 카탈로그)
-        AreaGraph                    _graph;        ///< 방문 상태를 가진 이 판의 사본(저택이 빌린다)
-        GameFlags                    _flags;        ///< 한 판의 불 · 문(저택이 빌린다)
-        Inventory                    _bag;          ///< 한 판의 열쇠 가방(저택이 빌린다)
-        Wallet                       _wallet;       ///< 한 판의 동전(저택이 빌린다)
-        GhostMansion                 _mansion;
-        GhostHuntCommand             _command;        ///< 마지막 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
-        vector<GhostEvent>           _listGhostEvent; ///< 걸음마다 비워 다시 쓰는 알림 그릇
-        vector<GhostMansionEvent>    _listMansionEvent;
-        Countdown                    _resultHold;
+        BoundAssetRef<GhostCatalog> _pCatalog;
+        BoundAssetRef<AreaGraph>    _pGraphAsset;
+        BoundAssetRef<LootCatalog>  _pLoot;
+        BoundAssetRef<ItemCatalog>  _pItemCatalog; ///< 가방 · 상자의 겹침 수(게임 범위의 아이템 카탈로그)
+        AreaGraph                   _graph;        ///< 방문 상태를 가진 이 판의 사본(저택이 빌린다)
+        GameFlags                   _flags;        ///< 한 판의 불 · 문(저택이 빌린다)
+        Inventory                   _bag;          ///< 한 판의 열쇠 가방(저택이 빌린다)
+        Wallet                      _wallet;       ///< 한 판의 동전(저택이 빌린다)
+        GhostMansion                _mansion;
+        GhostHuntCommand            _command;        ///< 마지막 입력 — 클라이언트가 프레임마다 덮으므로 싣지 않는다
+        vector<GhostEvent>          _listGhostEvent; ///< 걸음마다 비워 다시 쓰는 알림 그릇
+        vector<GhostMansionEvent>   _listMansionEvent;
+        Countdown                   _resultHold;
         PROPERTY( RuntimeState )
         float2 _playerPosition;
         PROPERTY( RuntimeState )

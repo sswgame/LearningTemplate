@@ -16,7 +16,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -25,6 +24,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Respawn/RespawnFlow.h"
 
@@ -112,13 +112,13 @@ namespace sw
         PROPERTY( Category = "Stage", DisplayName = "Pickup Radius", Min = 0.1, Units = m )
         float32 _pickupRadius;
 
-        SharedAssetRef<ActionPlatformerCatalog> _pCatalog;
-        PlatformTileMap                         _map;
-        ActionTerrainGrid                       _terrain;
-        ActionPlatformerBody                    _body;
-        ActionStageRun                          _run;
-        RespawnFlow                             _respawn;        ///< 규칙은 스테이지의 `<Respawn>`
-        vector<RespawnSpawnPoint>               _listSpawnPoint; ///< 시작 지점 하나(`start`)
+        BoundAssetRef<ActionPlatformerCatalog> _pCatalog;
+        PlatformTileMap                        _map;
+        ActionTerrainGrid                      _terrain;
+        ActionPlatformerBody                   _body;
+        ActionStageRun                         _run;
+        RespawnFlow                            _respawn;        ///< 규칙은 스테이지의 `<Respawn>`
+        vector<RespawnSpawnPoint>              _listSpawnPoint; ///< 시작 지점 하나(`start`)
         PROPERTY( RuntimeState )
         int32 _respawnCount;
         PROPERTY( RuntimeState )

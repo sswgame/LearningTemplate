@@ -283,7 +283,7 @@ namespace sw
         if ( acquireRequiredSnapshot( _parkDataPath, pLayout ) == false )
             return false;
         const ParkLayout& layout = *pLayout;
-        _pLayoutCatalog          = layout.getCoasterLayouts();
+        _pLayoutCatalog          = layout.getCoasterLayouts().snapshot();
         _settings                = layout.getRules(); // 공원 규칙은 배치 데이터의 <Rules> 다(감사 K-4)
         _settings._entryFee      = layout.getEntryFee();
         if ( placeLayout( layout ) == false || rebuildWalkGrid() == false )

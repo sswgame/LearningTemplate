@@ -77,7 +77,7 @@ namespace sw
         , _director{}
         , _objectViews{}
         , _creatureViews{}
-        , _pValidatedCatalog{ nullptr }
+        , _pValidatedCatalog{}
         , _shownRevision{ 0 }
         , _bInputLive{ SW_FALSE }
         , _bActionsValid{ SW_FALSE }
@@ -106,7 +106,7 @@ namespace sw
     void CreatureTownViewComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        _pValidatedCatalog         = nullptr;
+        _pValidatedCatalog.reset();
         _bViewsRejected            = SW_FALSE;
         const bool bActionsMissing = _talkAction.empty() || _talkSpecies.empty();
         _bActionsValid             = bActionsMissing ? SW_FALSE : SW_TRUE;
@@ -154,9 +154,9 @@ namespace sw
                 (void)pDirector->submitTalk( _talkSpecies.key() ); // 거절한 까닭은 디렉터가 남긴다
         }
         const CreatureLifeCatalog* const pCatalog = pDirector->getCatalog(); // 열린 판에는 있다
-        if ( pCatalog != nullptr && pCatalog != _pValidatedCatalog )
+        if ( pCatalog != nullptr && pCatalog != _pValidatedCatalog.get() )
         {
-            _pValidatedCatalog = pCatalog;
+            _pValidatedCatalog = pDirector->getCatalogSnapshot();
             _bViewsRejected    = validateViews( *pCatalog ) ? SW_FALSE : SW_TRUE;
         }
         if ( _bViewsRejected == SW_TRUE || _shownRevision == pDirector->getTownRevision() )

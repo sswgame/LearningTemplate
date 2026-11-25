@@ -10,9 +10,9 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 
@@ -74,7 +74,7 @@ namespace sw
         PROPERTY( RuntimeState )
         hashed_string _lastResult; ///< 마지막 명령의 `CraftResult` 이름
 
-        SharedAssetRef<RecipeCatalog> _pRecipes; ///< 제작이 빌려 쓴다
-        Crafter                       _crafter;
+        BoundAssetRef<RecipeCatalog> _pRecipes; ///< 제작이 빌려 쓴다
+        Crafter                      _crafter;
     };
 } // namespace sw

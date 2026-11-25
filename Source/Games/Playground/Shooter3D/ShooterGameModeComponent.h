@@ -19,7 +19,6 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -29,6 +28,7 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
@@ -347,7 +347,7 @@ namespace sw
         float64                             _floorSeconds;  ///< 지난 프레임의 바닥 시각
         vector<ShooterEnemyView>            _listEnemyView;
         shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
-        SharedAssetRef<SpawnTable>          _pTable;
+        BoundAssetRef<SpawnTable>           _pTable;
         AIDirector                          _director;
         vector<AIDirectorEvent>             _listDirectorEvent;
         vector<EnemyRecord>                 _listEnemy;

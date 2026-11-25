@@ -14,12 +14,12 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -159,18 +159,18 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Result Hold", Tooltip = "Seconds the result stays on screen before the minigame finishes", Min = 0.1, Units = s )
         float32 _resultHoldSeconds;
 
-        SharedAssetRef<RestaurantCatalog> _pCatalog;
-        SharedAssetRef<RecipeCatalog>     _pRecipes;
-        SharedAssetRef<ShopCatalog>       _pShops;
-        SharedAssetRef<ItemCatalog>       _pItemCatalog;
-        WorldClock                        _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
-        SharedAssetRef<ReputationCatalog> _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
-        ReputationState                   _reputation;         ///< 손님 평판(식당이 빌린다)
-        Wallet                            _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
-        Inventory                         _pantry;             ///< 이 판의 창고(식당이 빌린다)
-        RestaurantSimulation              _simulation;
-        vector<RestaurantEvent>           _listEvent;
-        Countdown                         _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
+        BoundAssetRef<RestaurantCatalog> _pCatalog;
+        BoundAssetRef<RecipeCatalog>     _pRecipes;
+        BoundAssetRef<ShopCatalog>       _pShops;
+        BoundAssetRef<ItemCatalog>       _pItemCatalog;
+        WorldClock                       _clock;              ///< 이 판의 날(식당이 빌린다 — 시세의 시드). 하루를 덮을 때 다음 날로 넘긴다
+        BoundAssetRef<ReputationCatalog> _pReputationCatalog; ///< 단계를 적지 않은 판이면 비었다
+        ReputationState                  _reputation;         ///< 손님 평판(식당이 빌린다)
+        Wallet                           _wallet;             ///< 이 판의 돈(식당이 빌린다) — 결과 값으로만 바탕 판에 나간다
+        Inventory                        _pantry;             ///< 이 판의 창고(식당이 빌린다)
+        RestaurantSimulation             _simulation;
+        vector<RestaurantEvent>          _listEvent;
+        Countdown                        _resultHold; ///< 판이 끝난 뒤 미니게임을 끝내기까지(결과를 보여 주는 시간)
         PROPERTY( RuntimeState )
         int64 _totalProfit;
         PROPERTY( RuntimeState, Min = 1 )
