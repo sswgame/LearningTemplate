@@ -5,16 +5,18 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 import re
 import shutil
+import sqlite3
 import sys
 import pathlib
 from typing import Callable, Sequence
 
 from common.git import run_git, run_git_or_raise
 from common.paths import get_bin_dir
-from dev.run_history import DEFAULT_DATABASE, PASSED_RESULTS, ingest, open_database, read_reports
+from dev.run_history import DEFAULT_DATABASE, PASSED_RESULTS, find_report_commits, ingest, open_database, read_reports
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 
@@ -197,8 +199,27 @@ def collect_expected_stages(folder: pathlib.Path, log_dir: pathlib.Path, chain: 
 StageRunner = Callable[[list[str], str, str], bool]   # (돌릴 단계 경로들, 판정할 단계 이름, 백엔드) → 졌는가
 
 
-def retry_failed_stages(paths: list[str], failed: Sequence[tuple[str, str]], run: StageRunner) -> int:
+def describe_code_change(list_report: Sequence[dict], project_root: pathlib.Path, connection: sqlite3.Connection | None = None) -> str | None:
+    """
+    체인 보고(@p list_report)가 돈 뒤 코드가 바뀌었으면 그 까닭, 같은 코드면 None. 보고의 커밋은 이력(@p connection — 묶음 검증이 붙인 것)에서, 없으면 그 시각의 HEAD(reflog)에서
+    읽어 지금 HEAD 와 견준다. 커밋이 같아도 보고 뒤에 고친 추적 파일이 있으면 바뀐 것이다(지금 빌드는 그 파일을 담는다).
+    """
+    started_ms = min(int(report['startedAtUnixMs']) for report in list_report)
+    head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=project_root).strip()
+    started_at = datetime.datetime.fromtimestamp(started_ms / 1000, datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S +0000')
+    commits = (find_report_commits(connection, list_report) if connection is not None else set()) or {run_git_or_raise(['rev-parse', f'HEAD@{{{started_at}}}'], cwd=project_root).strip()}
+    if commits != {head}:
+        return f'보고는 {", ".join(sorted(commit[:10] for commit in commits))}, 지금은 {head[:10]}'
+    for relative in run_git_or_raise(['diff', '--name-only', 'HEAD'], cwd=project_root).splitlines():
+        path = project_root / relative
+        if not path.exists() or path.stat().st_mtime * 1000 > started_ms:
+            return f'보고 뒤에 고친 파일이 있다({relative})'
+    return None
+
+
+def retry_failed_stages(paths: list[str], failed: Sequence[tuple[str, str]], run: StageRunner, code_change: str | None) -> int:
     """진 단계마다: 혼자 돌려 지면 "단독으로 진다", 통과하면 "체인에서만 진다" — 앞 단계를 모두 붙여 다시 돌리고, 지면 이분 탐색으로 넘어간다.
+    보고 뒤에 코드가 바뀌었으면(@p code_change — `describe_code_change`) 혼자 통과한 단계는 고쳐졌을 수 있다 — 앞 단계를 붙이지 않는다(고친 뒤 확인이 단계마다 앞 160 여 개를 다시 돌았다).
     Windows(`main`)와 Linux(`linux_scenarios.py rerun`)가 자기 실행기(@p run)로 같은 함수를 부른다. 진 단계가 하나라도 남으면 1."""
     names = [read_scenario_name(path) for path in paths]
     still_failing = 0
@@ -207,6 +228,9 @@ def retry_failed_stages(paths: list[str], failed: Sequence[tuple[str, str]], run
         if run([paths[index]], stage, backend):
             print(f'{backend} {stage}: 단독으로 진다 — scenario-debug 의 단독 재현으로 본다', flush=True)
             still_failing += 1
+            continue
+        if code_change is not None:
+            print(f'{backend} {stage}: 고쳤을 수 있다 — 혼자 통과({code_change}). 체인에서만 지는지는 체인을 다시 돌려 본다', flush=True)
             continue
         print(f'{backend} {stage}: 체인에서만 진다 — 앞 {index} 단계를 붙여 다시 돈다', flush=True)
         if not run(paths[:index + 1], stage, backend):

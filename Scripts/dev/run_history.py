@@ -117,6 +117,13 @@ def ingest(connection: sqlite3.Connection, list_report: Iterable[dict], commit_s
     return connection.total_changes - before
 
 
+def find_report_commits(connection: sqlite3.Connection, list_report: Iterable[dict]) -> set[str]:
+    """보고들이 돈 커밋 — 묶음 검증이 쌓을 때 붙인 것(손으로 돈 실행은 없다)."""
+    list_row = [connection.execute("SELECT commitSha FROM run WHERE name = ? AND backend = ? AND startedAtUnixMs = ?",
+                                   (report["name"], report.get("backend", ""), int(report["startedAtUnixMs"]))).fetchone() for report in list_report]
+    return {row[0] for row in list_row if row is not None and row[0]}
+
+
 def find_slow_runs(connection: sqlite3.Connection, list_report: Iterable[dict], slow_factor: float) -> list[str]:
     """보고 가운데 통과했는데 같은 (이름, 백엔드)의 앞선 통과 실행 p95 의 `slow_factor` 배를 넘은 것. ingest 전에 부른다(자기 자신을 표본에 넣지 않게)."""
     list_warning: list[str] = []

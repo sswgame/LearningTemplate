@@ -31,7 +31,8 @@ from common.command import Command, ScriptContext  # noqa: E402
 from common.paths import get_build_dir  # noqa: E402
 from common.run_process import build_preset_or_exit  # noqa: E402
 from dev.scenario_determinism import check_determinism, make_runner  # noqa: E402
-from dev.scenario_runs import REPO, collect_expected_stages, describe_stage_failures, find_first_bad_step, find_latest_per_backend_folder, make_run_report_folder, minimize_stages, print_advance_steps, print_golden_coverage, print_golden_margins, read_backend_chain_order, read_backend_reports, read_run_reports, read_scenario_name, record_rerun, resolve_target, retry_failed_stages, select_failed_stages, stage_failed_in_reports  # noqa: E402
+from dev.run_history import DEFAULT_DATABASE, open_database  # noqa: E402
+from dev.scenario_runs import REPO, collect_expected_stages, describe_code_change, describe_stage_failures, find_first_bad_step, find_latest_per_backend_folder, make_run_report_folder, minimize_stages, print_advance_steps, print_golden_coverage, print_golden_margins, read_backend_chain_order, read_backend_reports, read_run_reports, read_scenario_name, record_rerun, resolve_target, retry_failed_stages, select_failed_stages, stage_failed_in_reports  # noqa: E402
 
 
 class ScenarioBisectCommand(Command):
@@ -48,7 +49,7 @@ class ScenarioBisectCommand(Command):
                             help='체인 대신: 시나리오 보고(goldenSamples[])를 모아 골든마다 실행 사이 최대 차이와 여유를 낸다(기본 build/<preset>/Bin/Saved/Automation)')
         parser.add_argument('--golden-coverage', action='store_true', help='체인 대신: 플랫폼 · 백엔드마다 저장소 골든 수(체인 백엔드 표와 대조, 체인 밖 백엔드의 골든 0 이 드러난다)')
         parser.add_argument('--rerun-failed', action='store_true',
-                            help='단계 대신: 마지막 체인 실행(Bin/Saved/Automation 의 per-backend 보고)에서 진 단계를 그 백엔드로 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다')
+                            help='단계 대신: 마지막 체인 실행(Bin/Saved/Automation 의 per-backend 보고)에서 진 단계를 그 백엔드로 혼자 → 앞 단계를 붙여 → 이분 탐색으로 다시 돈다(보고 뒤에 코드가 바뀌었으면 혼자만)')
         parser.add_argument('--from-stage', metavar='단계', help='단계 대신: 그 단계부터 체인 끝까지만 --backend 로 돌고 진 단계를 낸다')
         parser.add_argument('--determinism', action='store_true',
                             help='이분 탐색 대신: 그 단계를 혼자 · 앞 단계 하나 · 두 번 이어 --backend 로 돌려 찍은 사진이 바이트까지 같은지 본다(scenario_determinism)')
@@ -100,9 +101,11 @@ class ScenarioBisectCommand(Command):
             if folder is None:
                 self.parser.error(f'{args.chain} 의 체인 보고가 {automation_dir} 에 없다 — 체인을 먼저 돌린다')
             split = any('scenario-backend-split' in part for part in command)
-            failed = select_failed_stages(collect_expected_stages(folder, log_dir, args.chain, names, split), read_backend_reports(folder))
-            print(f'{args.chain}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
-            return retry_failed_stages(paths, failed, run_stage)
+            list_report = read_backend_reports(folder)
+            failed = select_failed_stages(collect_expected_stages(folder, log_dir, args.chain, names, split), list_report)
+            code_change = describe_code_change([report for _, report in list_report], REPO, open_database(REPO / DEFAULT_DATABASE))
+            print(f'{args.chain}: {folder} 에서 진 단계 {len(failed)} 개{f" — 코드가 바뀌었다: {code_change}" if code_change else ""}', flush=True)
+            return retry_failed_stages(paths, failed, run_stage, code_change)
         if args.from_stage:
             names = [read_scenario_name(path) for path in paths]
             start_index, _ = resolve_target(dict(enumerate(names)), args.from_stage)

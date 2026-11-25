@@ -442,8 +442,10 @@ def retry_failed(arguments):
         print(f'{pack} 의 체인 보고가 없다 - chain {pack} 을 먼저 돌린다')
         return 1
     split = any('scenario-backend-split' in part for part in command)
-    failed = scenario_runs.select_failed_stages(scenario_runs.collect_expected_stages(folder, log_dir, pack, names, split), scenario_runs.read_backend_reports(folder))
-    print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개', flush=True)
+    list_report = scenario_runs.read_backend_reports(folder)
+    failed = scenario_runs.select_failed_stages(scenario_runs.collect_expected_stages(folder, log_dir, pack, names, split), list_report)
+    code_change = scenario_runs.describe_code_change([report for _, report in list_report], pathlib.Path(CLONE))
+    print(f'{pack}: {folder} 에서 진 단계 {len(failed)} 개{f" — 코드가 바뀌었다: {code_change}" if code_change else ""}', flush=True)
     with Xvfb():
         env = scenario_env(99)
         base = app_arguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', 'scenario-report')
@@ -459,7 +461,7 @@ def retry_failed(arguments):
             print(backend, len(stage_paths), target_name, '짐' if bad else '통과', flush=True)
             return bad
 
-        return scenario_runs.retry_failed_stages(paths, failed, run_stage)
+        return scenario_runs.retry_failed_stages(paths, failed, run_stage, code_change)
 
 
 def read_ppm_colors(path):

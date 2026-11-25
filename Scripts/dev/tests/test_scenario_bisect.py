@@ -13,12 +13,14 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from common.git import run_git_or_raise  # noqa: E402
+from dev.run_history import ingest, open_database  # noqa: E402
 from dev.scenario_runs import (  # noqa: E402
-    collect_expected_stages, count_golden_coverage, describe_result, describe_stage_failures, find_first_bad_step, find_latest_per_backend_folder,
-    list_advance_steps, minimize_stages, read_backend_chain_order, select_failed_stages, stage_failed_in_reports, summarize_golden_margins,
+    collect_expected_stages, count_golden_coverage, describe_code_change, describe_result, describe_stage_failures, find_first_bad_step, find_latest_per_backend_folder, list_advance_steps, minimize_stages, read_backend_chain_order, retry_failed_stages, select_failed_stages, stage_failed_in_reports, summarize_golden_margins,
 )
 
 
@@ -44,6 +46,48 @@ class FindLatestPerBackendFolderTest(unittest.TestCase):
             root = Path(temp)
             write_reports(root / 'x' / 'per-backend-1', ['game.playground.boat'], time.time())
             self.assertIsNone(find_latest_per_backend_folder(root, {'editor.bugreport'}, root / 'no-chain.log'))
+
+
+class RetryFailedStagesTest(unittest.TestCase):
+    def test_code_change_is_seen_from_commit_and_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+
+            def git(*list_argument: str) -> None:
+                run_git_or_raise(['-c', 'user.name=t', '-c', 'user.email=t@localhost', '-c', 'core.autocrlf=false', *list_argument], cwd=root)
+
+            def commit(text: str, moment: str) -> None:
+                (root / 'a.txt').write_text(text, encoding='utf-8')
+                git('add', '.')
+                with mock.patch.dict(os.environ, {'GIT_AUTHOR_DATE': moment, 'GIT_COMMITTER_DATE': moment}):
+                    git('commit', '-qm', text)
+
+            git('init', '-q', '-b', 'main')
+            commit('one', '2026-01-01T00:00:00+0000')
+            report = {'name': 's', 'backend': 'vk', 'result': 'Failed', 'startedAtUnixMs': 1767229200000}   # 2026-01-01T01:00:00Z
+            self.assertIsNone(describe_code_change([report], root))
+            connection = open_database(root / 'history.sqlite')
+            ingest(connection, [report], 'f' * 40, 'verify')
+            self.assertIn('ffffffffff', describe_code_change([report], root, connection), '이력이 붙인 커밋이 지금과 다르다')
+            connection.close()
+            commit('two', '2026-01-01T02:00:00+0000')
+            self.assertIn('지금은', describe_code_change([report], root), '보고 뒤에 커밋했다')
+            late = {**report, 'startedAtUnixMs': 1767240000000}   # 커밋 둘 뒤(2026-01-01T04:00:00Z)
+            self.assertIsNone(describe_code_change([late], root))
+            (root / 'a.txt').write_text('three', encoding='utf-8')
+            self.assertIn('a.txt', describe_code_change([late], root), '보고 뒤에 고친 파일')
+
+    def test_stage_passed_alone_after_change_is_not_searched(self) -> None:
+        for change, want_runs, want_code in (('보고는 a, 지금은 b', 1, 0), (None, 2, 0)):
+            list_run: list[int] = []
+
+            def run(stage_paths: list[str], stage: str, backend: str) -> bool:
+                list_run.append(len(stage_paths))
+                return False   # 늘 통과
+
+            with mock.patch('dev.scenario_runs.read_scenario_name', side_effect=lambda path: path):
+                self.assertEqual(retry_failed_stages(['x', 'y'], [('vk', 'y')], run, change), want_code)
+            self.assertEqual(len(list_run), want_runs, (change, list_run))
 
 
 class ScenarioRunsTest(unittest.TestCase):
