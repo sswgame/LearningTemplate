@@ -28,7 +28,7 @@ foreach(unused_backend_source IN LISTS list_memory_backend_source)
 	get_filename_component(unused_backend_name "${unused_backend_source}" NAME_WE)
 	sw_remove_excluded_sources(list_core_source "/Source/Core/Memory/${unused_backend_name}\\.cpp$")
 endforeach()
-# 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
+# 단위 테스트(틀 `TestFramework/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
 	sw_remove_excluded_sources(list_core_source "/Source/Core/TestFramework/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
@@ -67,7 +67,7 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # 3) 소스를 티어로 가른다 — 티어마다 OBJECT 부분 `Core_tier<N>_objects` 하나(Engine 층 부분 `EngineLayer<N>` 과 같은 틀).
-#    단위 테스트(`<폴더>/Tests/`)와 `Source/Core` 바로 아래 파일은 테스트 틀(Testing)을 쓰므로 맨 위 티어 부분이 짓는다.
+#    단위 테스트(`<폴더>/Tests/`)와 `Source/Core` 바로 아래 파일은 테스트 틀(TestFramework)을 쓰므로 맨 위 티어 부분이 짓는다.
 # ------------------------------------------------------------------------------
 set(list_core_tier "")
 set(list_core_top_source "")
