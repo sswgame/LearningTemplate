@@ -17,8 +17,8 @@ import re
 import sys
 from pathlib import Path
 
+from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
-from common.paths import get_project_root
 
 KITS_ROOT = "Source/GameFramework/Kits"
 KIT_ROOT = f"{KITS_ROOT}/Feature/Online"
@@ -381,34 +381,38 @@ def describe_invalid_request(root: Path, name: str) -> str | None:
     return None
 
 
-def main_new_online_kit(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="py -3 -m Scripts new-online-kit", description="온라인 키트 뼈대를 만든다")
-    parser.add_argument("name", help="키트 이름(PascalCase, 예: Inventory)")
-    parser.add_argument("--dry-run", action="store_true", help="만들 파일만 보인다")
-    args = parser.parse_args(argv)
-    name: str = args.name
-    root = get_project_root()
-    reason = describe_invalid_request(root, name)
-    if reason is not None:
-        print(f"[new-online-kit] {reason}", file=sys.stderr)
-        return ExitCode.CHECK_INVALID
-    # 파일을 하나라도 쓰기 전에 중앙 표 두 곳의 자리를 확인한다 — 표가 옮겨졌으면 반쯤 만든 키트를 남기지 않는다.
-    list_table: list[tuple[str, str, str]] = []
-    for relative, add_row in ((RANGE_HEADER, add_method_range), (KIT_NAME_HEADER, add_kit_name)):
-        text = (root / relative).read_bytes().decode("utf-8")
-        list_table.append((relative, text, add_row(text, name)))
-    for relative, content in make_files(name).items():
-        path = root / KIT_ROOT / name / relative
-        print(f"[new-online-kit] {'would write' if args.dry_run else 'write'} {path.relative_to(root).as_posix()}")
+class NewOnlineKitCommand(Command):
+    name = "new-online-kit"
+    help = "온라인 키트 뼈대(Runtime · Server 모듈, 서술자 · 클라이언트 · 서비스 · 조립 · 테스트)를 만들고 중앙 표(메서드 영역 · 서버 키트 이름)에 한 줄씩 더한다"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("name", help="키트 이름(PascalCase, 예: Inventory)")
+        parser.add_argument("--dry-run", action="store_true", help="만들 파일만 보인다")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        name: str = args.name
+        root = context.root
+        reason = describe_invalid_request(root, name)
+        if reason is not None:
+            print(f"[new-online-kit] {reason}", file=sys.stderr)
+            return ExitCode.CHECK_INVALID
+        # 파일을 하나라도 쓰기 전에 중앙 표 두 곳의 자리를 확인한다 — 표가 옮겨졌으면 반쯤 만든 키트를 남기지 않는다.
+        list_table: list[tuple[str, str, str]] = []
+        for relative, add_row in ((RANGE_HEADER, add_method_range), (KIT_NAME_HEADER, add_kit_name)):
+            text = (root / relative).read_bytes().decode("utf-8")
+            list_table.append((relative, text, add_row(text, name)))
+        for relative, content in make_files(name).items():
+            path = root / KIT_ROOT / name / relative
+            print(f"[new-online-kit] {'would write' if args.dry_run else 'write'} {path.relative_to(root).as_posix()}")
+            if args.dry_run is False:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8", newline="")
+        for relative, text, new_text in list_table:
+            if new_text == text:
+                continue
+            print(f"[new-online-kit] {'would add a row to' if args.dry_run else 'added a row to'} {relative}")
+            if args.dry_run is False:
+                (root / relative).write_bytes(new_text.encode("utf-8"))
         if args.dry_run is False:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8", newline="")
-    for relative, text, new_text in list_table:
-        if new_text == text:
-            continue
-        print(f"[new-online-kit] {'would add a row to' if args.dry_run else 'added a row to'} {relative}")
-        if args.dry_run is False:
-            (root / relative).write_bytes(new_text.encode("utf-8"))
-    if args.dry_run is False:
-        print("[new-online-kit] next: py -3 -m Scripts format, then add the kit to the server config `_listKit` (and Programs/OnlineLoadBot to run its tests)")
-    return ExitCode.PASSED
+            print("[new-online-kit] next: py -3 -m Scripts format, then add the kit to the server config `_listKit` (and Programs/OnlineLoadBot to run its tests)")
+        return ExitCode.PASSED

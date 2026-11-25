@@ -8,7 +8,6 @@ Scripts/lint/asset_identity.py
   py -3 -m Scripts asset-ids              # 작업 트리 검사(결함을 찍는다)
   py -3 -m Scripts asset-ids --fix        # 없는 GUID 를 만들고, 짝 잃은 .meta 를 새 자리 원본에 다시 붙이고, 복사본에 새 GUID 를 준다
   py -3 -m Scripts asset-ids --redirect <지울 id> <남길 id>  # 두 에셋을 합친다 — 지울 쪽을 가리키던 참조가 남길 쪽으로 풀리는 줄을 리다이렉트 표에 적는다(그 뒤 지울 쪽을 지운다)
-  py -3 -m Scripts asset-ids --self-check # 머리 읽기 · 쓰기 규칙(C++ AssetGUIDTest 와 같은 사례)과 규칙 파일 대조
 
 - 우리 형식 글(`listHeaderSuffix` — XML)은 맨 앞 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `<파일>.meta`
   (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 원본이 저장소 밖에 있으면 `_source="store:<SHA-256>/<파일 이름>"`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
@@ -20,11 +19,11 @@ Scripts/lint/asset_identity.py
 
 from __future__ import annotations
 
+import argparse
 import fnmatch
 import json
 import re
 import secrets
-import sys
 import tempfile
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
@@ -32,11 +31,10 @@ from pathlib import Path
 from typing import Iterator
 from xml.sax.saxutils import quoteattr
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.git import run_git_bytes, run_git_in_hook_repository  # noqa: E402
-from lint.lint_scope import LintScope  # noqa: E402
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+from common.git import run_git_bytes, run_git_in_hook_repository
+from lint.lint_scope import LintScope
 
 RULES_PATH = "Config/Dev/AssetIdentity.json"
 CONTENT_FOLDER = "Content"
@@ -760,35 +758,27 @@ def check_asset_identity(project_root: Path, scope: LintScope) -> list[str]:
     return [str(issue) for issue in list_issue]
 
 
-def main(argv: list[str] | None = None) -> int:
-    import argparse
-    from common.exit_code import ExitCode
-    from common.paths import get_project_root
-    parser = argparse.ArgumentParser(description="에셋 정체성(GUID — 우리 형식 글의 머리 · 원본의 .meta)을 검사하고 --fix 로 채운다")
-    parser.add_argument("--fix", action="store_true", help="없는 GUID 를 만들고, 짝 잃은 .meta 를 다시 붙이고, 복사본에 새 GUID 를 준다")
-    parser.add_argument("--redirect", nargs=2, metavar=("지울_id", "남길_id"), help="지울 에셋을 가리키던 참조가 남길 에셋으로 풀리는 줄을 리다이렉트 표에 적는다")
-    parser.add_argument("--self-check", action="store_true", help="머리 읽기 · 쓰기 규칙과 규칙 파일 대조만 본다")
-    arguments = parser.parse_args(argv)
-    project_root = get_project_root()
-    if arguments.self_check:
-        run_self_check(project_root)
-        print("[asset-ids] self-check OK")
-        return ExitCode.PASSED
-    if arguments.redirect:
-        table_id = redirect_identity(project_root, *arguments.redirect)
-        print(f"[asset-ids] {CONTENT_FOLDER}/{table_id} 에 정체성 대체 줄을 적었다 — 이제 '{arguments.redirect[0]}' 를 지운다")
-        return ExitCode.PASSED
-    if arguments.fix:
-        left = fix_worktree(project_root)
-        print(f"[asset-ids] {'FAIL' if left else 'OK'} — 남은 결함 {left}건")
-        return ExitCode.VIOLATION if left else ExitCode.PASSED
-    rules = load_rules(project_root)
-    list_issue, map_guid = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
-    for issue in list_issue:
-        print(f"  - {issue}")
-    print(f"[asset-ids] {'FAIL' if list_issue else 'OK'} — 정체성 {len(map_guid)}개, 결함 {len(list_issue)}건")
-    return ExitCode.VIOLATION if list_issue else ExitCode.PASSED
+class AssetIdsCommand(Command):
+    name = "asset-ids"
+    help = "에셋 정체성(GUID — 우리 형식 글의 머리 <?asset guid?> · 원본 곁 .meta) 검사, --fix 로 없는 GUID 만들기 · 짝 잃은 .meta 다시 붙이기 · 복사본 새 GUID"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--fix", action="store_true", help="없는 GUID 를 만들고, 짝 잃은 .meta 를 다시 붙이고, 복사본에 새 GUID 를 준다")
+        parser.add_argument("--redirect", nargs=2, metavar=("지울_id", "남길_id"), help="지울 에셋을 가리키던 참조가 남길 에셋으로 풀리는 줄을 리다이렉트 표에 적는다")
 
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        project_root = context.root
+        if args.redirect:
+            table_id = redirect_identity(project_root, *args.redirect)
+            print(f"[asset-ids] {CONTENT_FOLDER}/{table_id} 에 정체성 대체 줄을 적었다 — 이제 '{args.redirect[0]}' 를 지운다")
+            return ExitCode.PASSED
+        if args.fix:
+            left = fix_worktree(project_root)
+            print(f"[asset-ids] {'FAIL' if left else 'OK'} — 남은 결함 {left}건")
+            return ExitCode.VIOLATION if left else ExitCode.PASSED
+        rules = load_rules(project_root)
+        list_issue, map_guid = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
+        for issue in list_issue:
+            print(f"  - {issue}")
+        print(f"[asset-ids] {'FAIL' if list_issue else 'OK'} — 정체성 {len(map_guid)}개, 결함 {len(list_issue)}건")
+        return ExitCode.VIOLATION if list_issue else ExitCode.PASSED

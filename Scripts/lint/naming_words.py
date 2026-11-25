@@ -184,7 +184,7 @@ def collect_path_names(relative: str, root_depth: int = 1) -> list[tuple[str, st
 
 
 # 스크립트 · 빌드 이름 — Python(Scripts · 훅 · 스킬 스크립트) · 셸 · CMake. 파이썬은 PEP 8(docs/agents/NamingCpp.md: 모듈 · 함수 snake_case ·
-# 클래스 PascalCase · 상수 UPPER_CASE)의 꼴도 보고, CMake 는 함수 꼴(sw_snake_case)과 낱말을 본다(옵션 SW_ 는 낱말만). CLI 하위 명령(`Subcommand("…"`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
+# 클래스 PascalCase · 상수 UPPER_CASE)의 꼴도 보고, CMake 는 함수 꼴(sw_snake_case)과 낱말을 본다(옵션 SW_ 는 낱말만). CLI 명령(`Command` 의 `name`)과 린트 규칙 id(`Rule("…"`)도 이름이다.
 SCRIPT_ROOTS = ("Scripts", ".claude/hooks", ".claude/skills", "cmake")
 SCRIPT_EXTENSIONS = (".py", ".sh", ".cmake")
 PYTHON_FUNCTION = re.compile(r"^[ \t]*def[ \t]+([A-Za-z_]\w*)", re.M)
@@ -193,7 +193,7 @@ PYTHON_CONSTANT = re.compile(r"^(_?[A-Z][A-Z0-9_]*|_?k[A-Z]\w*)[ \t]*[:=]", re.M
 PYTHON_SHAPES = {"function": (re.compile(r"_*[a-z0-9_]+"), "함수는 snake_case"), "type": (re.compile(r"_?[A-Z][A-Za-z0-9]*"), "클래스는 PascalCase"),
                "constant": (re.compile(r"_?[A-Z][A-Z0-9_]*"), "모듈 상수는 UPPER_CASE"), "file": (re.compile(r"_*[a-z0-9_]+"), "모듈 파일은 snake_case"),
                "folder": (re.compile(r"[a-z0-9_]+"), "패키지 폴더는 snake_case")}
-COMMAND_NAME = re.compile(r"\b(?:Subcommand|Rule)\(\s*\"([a-z][a-z0-9-]*)\"")
+COMMAND_NAME = re.compile(r"\b(?:LegacyCommand|Rule)\(\s*\"([a-z][a-z0-9-]*)\"|^    name = \"([a-z][a-z0-9-]*)\"", re.M)
 SHELL_FUNCTION = re.compile(r"^[ \t]*(?:function[ \t]+)?([A-Za-z_]\w*)[ \t]*\(\)", re.M)
 CMAKE_FUNCTION = re.compile(r"\b(?:function|macro)\s*\(\s*([A-Za-z_]\w*)", re.I)
 CMAKE_OPTION = re.compile(r"\boption\s*\(\s*([A-Za-z_]\w*)", re.I)
@@ -206,7 +206,7 @@ def collect_script_declarations(path: str, text: str) -> list[tuple[str, str]]:
     """스크립트 파일 하나의 (종류, 이름) — 함수 · 클래스 · 모듈 상수 · CLI 명령(파이썬), 함수(셸), 함수 · 매크로 · 옵션(CMake)."""
     if path.endswith(".py"):
         return ([("function", name) for name in PYTHON_FUNCTION.findall(text) if not name.startswith("__")] + [("type", name) for name in PYTHON_CLASS.findall(text)]
-                + [("constant", name) for name in PYTHON_CONSTANT.findall(text)] + [("command", name) for name in COMMAND_NAME.findall(text)])
+                + [("constant", name) for name in PYTHON_CONSTANT.findall(text)] + [("command", first or second) for first, second in COMMAND_NAME.findall(text)])
     if path.endswith(".sh"):
         return [("function", name) for name in SHELL_FUNCTION.findall(text)]
     return [("function", name) for name in CMAKE_FUNCTION.findall(text)] + [("macro", name) for name in CMAKE_OPTION.findall(text)]

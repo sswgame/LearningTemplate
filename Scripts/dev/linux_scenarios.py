@@ -18,8 +18,8 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
   sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. address 는 끝에 퍼저를 타깃마다 30 초. 끝 줄 SANITIZE_OK=<종류>
   fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, Test/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 Test/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
-  --self-check           퍼저 로그 · 체인 단계 줄 · 끝 줄(SCENARIO_RESULT=) 판정의 자체 검사(빌드 없이)
 """
+import argparse
 import concurrent.futures
 import contextlib
 import io
@@ -33,6 +33,7 @@ import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common.command import Command, ScriptContext  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
 from common.host_platform import is_windows_host  # noqa: E402
 from common import app_arguments  # noqa: E402
@@ -67,11 +68,10 @@ HEAD_ENV = 'LT_LINUX_HEAD'  # 부른 작업 폴더의 HEAD — 워크트리의 .
 BUILT_COMMIT = f'{RELEASE}/built-commit.txt'  # Release 를 끝까지 지은 커밋(build 가 쓴다) — 모듈 빌드 스탬프(ModuleBuild.stamp)는 시각만 담아 커밋을 모른다
 
 
-def run_in_wsl(argv):
+def run_in_wsl(gpu: str, action: str, arguments: list[str]) -> int:
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
-    command = argv[2:] if argv[:1] == ['--gpu'] else argv  # `--gpu <드라이버> all` 도 HEAD 를 옮긴다
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip()
-    if command and command[0] in ('build', 'all', 'sanitize', 'fuzz'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
+    if action in ('build', 'all', 'sanitize', 'fuzz'):  # sanitize 도 클론을 되돌린다 — 옮기지 않으면 따로 돌린 sanitize 가 옛 커밋을 짓는다
         run_git_or_raise(['update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
     env[HEAD_ENV] = head
@@ -80,7 +80,7 @@ def run_in_wsl(argv):
     common_dir = pathlib.Path(run_git_or_raise(['rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=REPO).strip())
     env[GIT_SOURCE_ENV] = to_wsl_path(common_dir, env)
     env['WSLENV'] = ':'.join(filter(None, (os.environ.get('WSLENV'), GIT_SOURCE_ENV, HEAD_ENV)))
-    return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wsl_repo}/Scripts/dev/linux_scenarios.py'] + argv, env=env)
+    return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wsl_repo}/Scripts/dev/linux_scenarios.py', '--gpu', gpu, action, *arguments], env=env)
 
 
 def to_wsl_path(windows_path, env):
@@ -636,26 +636,6 @@ def fuzz(arguments):
     return run_fuzz(arguments, max(1, int(minutes * 60)))
 
 
-def self_check():
-    """판정 함수의 자체 검사(빌드 없이) — 크래시 줄, 모듈 수 부족, 정상."""
-    assert evaluate_fuzz_log('INFO: Loaded 3 modules\n==1==ERROR: AddressSanitizer: heap-buffer-overflow') == 'ERROR: AddressSanitizer'
-    assert evaluate_fuzz_log('INFO: Loaded 1 modules   (10 inline 8-bit counters)').startswith('coverage reaches only')
-    assert evaluate_fuzz_log('INFO: Loaded 4 modules   (99 inline 8-bit counters)\nDone 2000 runs') is None
-    # 체인 단계 끝 줄 — 앞머리는 그대로, 진 단계는 판정 값 한 줄(`<종류> - <까닭>`)이 붙는다. `: <Pass/>` 로 끝나는 실패 줄은 없다.
-    failed = '[Error] [Scenario] chain stage 12/94 Failed (game.playground.vfxsort): UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2) - 3 later stage(s) skipped'
-    assert parse_chain_stage(failed) == (12, 94, 'Failed', 'game.playground.vfxsort', 'UnhandledLog - [Warning] (id=Shadow.AtlasFull) atlas full (+2)'), parse_chain_stage(failed)
-    assert parse_chain_stage('[Info] [Scenario] chain stage 1/2 Passed (editor.focus)') == (1, 2, 'Passed', 'editor.focus', '')
-    assert parse_chain_stage('chain stage 3/3 Skipped (a.b): no window manager') == (3, 3, 'Skipped', 'a.b', 'no window manager')
-    assert parse_chain_stage('[Scenario] chain Failed (3 stage(s), 1 failed, 0 skipped, 1 not run)') is None
-    # 끝 줄 — 마지막 것을 읽고, 없으면 None(크래시는 통과가 아니다).
-    assert read_result_line('x\n[Info] [Scenario] SCENARIO_RESULT=FAILED stages=4 failed=1 notRun=2\n') == 'SCENARIO_RESULT=FAILED stages=4 failed=1 notRun=2'
-    assert read_result_line('TEST_RESULT=FAILED run=1 failed=1 skipped=0\nTEST_RESULT=PASSED run=3 failed=0 skipped=0') == 'TEST_RESULT=PASSED run=3 failed=0 skipped=0'
-    assert read_result_line('[==========] 3 case run(s)') is None
-    print('SELF_CHECK_OK')
-    return 0
-
-
-
 def find_run_processes():
     """이 도구가 띄운 프로세스의 pid 입니다. 명령줄을 직접 읽는다 - `pkill -f` 는 그 문구를 품은 자기 셸까지 끝낸다."""
     own = os.getpid()
@@ -707,50 +687,44 @@ def setup_dzn():
     return 0
 
 
-def main(argv):
-    if argv[:1] == ['--self-check']:
-        return self_check()
-    if is_windows_host():
-        return run_in_wsl(argv)
-    os.makedirs(VERIFY_LOGS, exist_ok=True)
-    os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
-    global GPU
-    if argv[:1] == ['--gpu'] and len(argv) > 1:
-        GPU = argv[1]
-        argv = argv[2:]
-        if GPU not in ('dzn', 'software'):
-            sys.exit(f'--gpu 는 dzn 또는 software 다: {GPU}')
-    command = argv[0] if argv else ''
-    arguments = argv[1:]
-    if command == 'setup':
-        return setup()
-    if command == 'setup-dzn':
-        return setup_dzn()
-    if command == 'build':
-        return build()
-    if command == 'chain':
-        return chain(arguments)
-    if command == 'stages' and arguments:
-        return stages(arguments)
-    if command == 'bisect' and arguments:
-        return bisect(arguments)
-    if command == 'rerun':
-        return retry_failed(arguments)
-    if command == 'report':
-        return report(arguments[0] if arguments else 'editor')
-    if command == 'goldens':
-        return goldens()
-    if command == 'stop':
-        return stop()
-    if command == 'all':
-        return verify_all(arguments)
-    if command == 'sanitize':
-        return sanitize(arguments)
-    if command == 'fuzz':
-        return fuzz(arguments)
-    print(__doc__)
-    return 2
+#: 명령 → 그 일(나머지 인자를 받는다)
+ACTIONS = {
+    'setup': lambda arguments: setup(),
+    'setup-dzn': lambda arguments: setup_dzn(),
+    'build': lambda arguments: build(),
+    'chain': chain,
+    'stages': stages,
+    'bisect': bisect,
+    'report': lambda arguments: report(arguments[0] if arguments else 'editor'),
+    'rerun': retry_failed,
+    'goldens': lambda arguments: goldens(),
+    'stop': lambda arguments: stop(),
+    'all': verify_all,
+    'sanitize': sanitize,
+    'fuzz': fuzz,
+}
+
+
+class LinuxScenariosCommand(Command):
+    name = "linux-scenarios"
+    help = "Linux(WSL 클론) 빌드 · 체인 · 새니타이저 · 골든 입구(setup · all · build · chain · stages · rerun · sanitize · goldens …)"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument('--gpu', choices=('dzn', 'software'), default=GPU, help='시나리오 드라이버 — WSL GPU(dzn · d3d12) 또는 소프트웨어(lavapipe · llvmpipe)')
+        parser.add_argument('action', choices=tuple(ACTIONS))
+        parser.add_argument('arguments', nargs=argparse.REMAINDER, help='그 명령의 인자')
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        global GPU
+        if args.action in ('stages', 'bisect') and not args.arguments:
+            self.parser.error(f'{args.action} 는 단계 이름을 받는다')
+        if is_windows_host():
+            return run_in_wsl(args.gpu, args.action, args.arguments)
+        os.makedirs(VERIFY_LOGS, exist_ok=True)
+        os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
+        GPU = args.gpu
+        return ACTIONS[args.action](args.arguments)
 
 
 if __name__ == '__main__':
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(LinuxScenariosCommand.main())

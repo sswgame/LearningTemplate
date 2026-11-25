@@ -83,7 +83,7 @@ namespace sw
         /**
          * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath` · `PROPERTY( AssetPath )`)과 경로가 아닌 글 칸을 `<이름>\t<대상>\t<ref|data|path|text>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
          * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/asset_reference_field_list.py` 가 모은다).
-         *          셋째 열은 저장 꼴이다 — `ref`(`AssetRef<T>`)는 GUID 참조(`guid:<32자>`)로 쓰고, `data`(`DataPath`)도 같으며, `path`(`AssetPath` 글)는 경로 글이다. GUID 이전 도구(`migrate-asset-refs`)가 `ref` · `data` 칸을 바꾼다.
+         *          셋째 열은 저장 꼴이다 — `ref`(`AssetRef<T>`)는 GUID 참조(`guid:<32자>`)로 쓰고, `data`(`DataPath`)도 같으며, `path`(`AssetPath` 글)는 경로 글이다.
          *          `text` 는 경로 칸이 아닌 글 칸(`string` · `hashed_string`)이다 — 같은 이름이 다른 주인에서 `ref` 면 이름만으로 칸을 가를 수 없어, 이전 도구가 그 이름의 경로 값을 오류로 멈춘다.
          */
         [[nodiscard]] bool writeAssetFieldList() const;

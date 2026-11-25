@@ -20,6 +20,7 @@ Scripts/lint/pre_commit.py
 
 from __future__ import annotations
 
+import argparse
 import builtins
 import collections
 import contextlib
@@ -35,18 +36,15 @@ import time
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.project_constants import CPP_ALL_EXTENSIONS, LINT_TARGET_REL_DIRS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS  # noqa: E402
-from common.exit_code import ExitCode  # noqa: E402
-from common.git import outside_hook_repository, run_git, run_git_in_hook_repository  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from lint.format import VCPKG_MANIFEST_NAME, run_clang_format_batch, run_vcpkg_manifest_format  # noqa: E402
-from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_staged_scope, make_whole_scope  # noqa: E402
-from lint.index_cache import CACHE_FOLDER  # noqa: E402
-from lint.module_imports import list_imported_module_files  # noqa: E402
-from lint.rules import LAYER_TABLES, Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES  # noqa: E402
+from common.command import Command, ScriptContext
+from common.project_constants import CPP_ALL_EXTENSIONS, LINT_TARGET_REL_DIRS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS
+from common.exit_code import ExitCode
+from common.git import outside_hook_repository, run_git, run_git_in_hook_repository
+from lint.format import VCPKG_MANIFEST_NAME, run_clang_format_batch, run_vcpkg_manifest_format
+from lint.lint_scope import LintScope, clear_read_cache, list_staged_with_unstaged_changes, make_staged_scope, make_whole_scope
+from lint.index_cache import CACHE_FOLDER
+from lint.module_imports import list_imported_module_files
+from lint.rules import LAYER_TABLES, Rule, find_orphan_tables, format_table, RULE_BY_ID, RULES
 
 CPP_SUFFIXES = tuple(sorted(CPP_ALL_EXTENSIONS))
 SHADER_SUFFIXES = tuple(sorted(SHADER_SOURCE_EXTENSIONS))
@@ -394,32 +392,34 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
     return ExitCode.PASSED
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    list_argument = list(sys.argv[1:] if argv is None else argv)
-    if not list_argument:
-        project_root = get_project_root()
-        scope = make_staged_scope(project_root)
-        list_partial = list_staged_with_unstaged_changes(project_root, scope)
+class LintCommand(Command):
+    name = "lint"
+    help = "린트 — 인자 없음: 커밋 훅(스테이지된 파일), --all: 저장소 전체, --list: 규칙 표(lint/rules.py), <규칙 id> [인자…]: 규칙 하나"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        mode = parser.add_mutually_exclusive_group()
+        mode.add_argument("--all", action="store_true", help="모든 규칙이 저장소 전체를 본다 + 포맷(묶음 검증)")
+        mode.add_argument("--list", action="store_true", help="규칙 표를 찍는다")
+        parser.add_argument("rule", nargs="?", choices=tuple(RULE_BY_ID), metavar="규칙", help="규칙 id 하나의 단독 실행")
+        parser.add_argument("rule_arguments", nargs=argparse.REMAINDER, metavar="인자", help="그 규칙 모듈의 인자")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if args.list:
+            print(format_table())
+            return ExitCode.PASSED
+        if args.all:
+            return run_lint(context.root, make_whole_scope(context.root))
+        if args.rule is not None:
+            rule = RULE_BY_ID[args.rule]
+            module = importlib.import_module(rule.get_module_name())
+            if hasattr(module, "main") is False:
+                print(f"[lint] {rule.id} 는 커밋 훅으로만 돈다(단독 실행 없음)", file=sys.stderr)
+                return ExitCode.CHECK_INVALID
+            return module.main(args.rule_arguments)
+        scope = make_staged_scope(context.root)
+        list_partial = list_staged_with_unstaged_changes(context.root, scope)
         if list_partial:
             print(f"[lint] FAIL — 스테이지한 파일에 스테이지 안 된 변경이 더 있다(린트는 작업 폴더 글을 본다): {', '.join(list_partial)}\n"
                   "  남은 변경도 git add 하거나 되돌린 뒤 커밋한다(git stash 는 쓰지 않는다).")
             return ExitCode.VIOLATION
-        return run_lint(project_root, scope)
-    if list_argument[0] == "--all":
-        return run_lint(get_project_root(), make_whole_scope(get_project_root()))
-    if list_argument[0] == "--list":
-        print(format_table())
-        return ExitCode.PASSED
-    rule = RULE_BY_ID.get(list_argument[0])
-    if rule is None:
-        print(f"[lint] 모르는 규칙 '{list_argument[0]}' — `py -3 -m Scripts lint --list`", file=sys.stderr)
-        return ExitCode.CHECK_INVALID
-    module = importlib.import_module(rule.get_module_name())
-    if hasattr(module, "main") is False:
-        print(f"[lint] {rule.id} 는 커밋 훅으로만 돈다(단독 실행 없음)", file=sys.stderr)
-        return ExitCode.CHECK_INVALID
-    return module.main(list_argument[1:])
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+        return run_lint(context.root, scope)

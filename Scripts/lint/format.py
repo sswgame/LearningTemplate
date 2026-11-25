@@ -21,17 +21,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.clang_format import resolve_clang_format  # noqa: E402
-from common.exit_code import ExitCode  # noqa: E402
-from common.file_collect import collect_repository_files, collect_source_files, get_lint_search_dirs, resolve_file_arguments  # noqa: E402
-from common.git import list_git_files  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
-from common.project_constants import CPP_ALL_EXTENSIONS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS  # noqa: E402
-from common.run_process import run_process  # noqa: E402
-from lint.parallel import run_until_non_zero  # noqa: E402
+from common.command import Command, ScriptContext
+from common.clang_format import resolve_clang_format
+from common.exit_code import ExitCode
+from common.file_collect import collect_repository_files, collect_source_files, get_lint_search_dirs, resolve_file_arguments
+from common.git import list_git_files
+from common.paths import get_project_root
+from common.project_constants import CPP_ALL_EXTENSIONS, NOT_OUR_DIR_NAMES, SHADER_SOURCE_EXTENSIONS
+from common.run_process import run_process
+from lint.parallel import run_until_non_zero
 
 CLANG_FORMAT_TAG = "FormatClangFormat"
 
@@ -252,21 +250,24 @@ def _select_file_kind_targets(args: argparse.Namespace, repository_root: Path, t
 SHADER_FILE_KIND = FixerFileKind(suffixes=tuple(sorted(SHADER_SOURCE_EXTENSIONS)))
 
 
-def main_format(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 와 셰이더에 clang-format(include 순서 포함)을, vcpkg.json 에 vcpkg format-manifest 를 적용합니다.")
-    add_file_arguments(parser)
-    parser.add_argument("--check", action="store_true", help="고치지 않고 다른 파일만 알린다")
-    args = parser.parse_args(argv)
+class FormatCommand(Command):
+    name = "format"
+    help = "clang-format(C++ 는 include 순서 포함, 셰이더) · vcpkg format-manifest(vcpkg.json) — 린트 format 의 고치는 명령"
 
-    root = get_project_root()
-    list_cpp = select_fixer_target_files(args, root, CLANG_FORMAT_TAG)
-    list_shader = select_fixer_target_files(args, root, CLANG_FORMAT_TAG, SHADER_FILE_KIND)
-    file_list = list_cpp + list_shader
-    manifest_result = run_vcpkg_manifest_format(select_vcpkg_manifests(args, root), check_only=args.check)
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        add_file_arguments(parser)
+        parser.add_argument("--check", action="store_true", help="고치지 않고 다른 파일만 알린다")
 
-    if not file_list:
-        sys.stderr.write(f"[{CLANG_FORMAT_TAG}] 포맷팅 대상 C++ · 셰이더 파일이 없습니다.\n")
-        return manifest_result
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        root = context.root
+        list_cpp = select_fixer_target_files(args, root, CLANG_FORMAT_TAG)
+        list_shader = select_fixer_target_files(args, root, CLANG_FORMAT_TAG, SHADER_FILE_KIND)
+        file_list = list_cpp + list_shader
+        manifest_result = run_vcpkg_manifest_format(select_vcpkg_manifests(args, root), check_only=args.check)
 
-    print(f"[{CLANG_FORMAT_TAG}] {len(file_list)}개 파일(셰이더 {len(list_shader)}개)에 대해 clang-format {'검사' if args.check else '적용'} 중...", file=sys.stderr)
-    return run_clang_format_batch(file_list, check_only=args.check, cwd=root) or manifest_result
+        if not file_list:
+            sys.stderr.write(f"[{CLANG_FORMAT_TAG}] 포맷팅 대상 C++ · 셰이더 파일이 없습니다.\n")
+            return manifest_result
+
+        print(f"[{CLANG_FORMAT_TAG}] {len(file_list)}개 파일(셰이더 {len(list_shader)}개)에 대해 clang-format {'검사' if args.check else '적용'} 중...", file=sys.stderr)
+        return run_clang_format_batch(file_list, check_only=args.check, cwd=root) or manifest_result

@@ -18,20 +18,19 @@ GUID 로 적은 참조(`guid:<32자>`)는 색인을 짓는 쪽(`App --check-asse
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
-
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.git import run_git, run_git_bytes  # noqa: E402
-from lint.asset_identity import META_EXTENSION, RULES_PATH, ImportedFolder, iterate_imported_sources, load_rules  # noqa: E402
-from lint.index_cache import Facts, get_index_keys, open_facts  # noqa: E402
-from lint.lint_scope import LintScope  # noqa: E402
+from common.command import Command, ScriptContext
+from common.exit_code import ExitCode
+from common.git import run_git, run_git_bytes
+from lint.asset_identity import META_EXTENSION, RULES_PATH, ImportedFolder, iterate_imported_sources, load_rules
+from lint.index_cache import Facts, get_index_keys, open_facts
+from lint.lint_scope import LintScope
 
 CONFIG_PATH = "Config/Dev/AssetReferenceFields.json"
 GENERATED_PATH = "Config/Dev/AssetReferenceFields.generated.json"   # 리플렉션 파서가 낸 경로 칸 표 — Scripts/generate/asset_reference_field_list.py 가 쓴다
@@ -388,18 +387,13 @@ def check_working_tree(project_root: Path) -> list[str]:
     return collect_problems(list_referrer, map_text, assets, config)
 
 
-def main(argv: list[str] | None = None) -> int:
-    import argparse
-    from common.exit_code import ExitCode
-    from common.paths import get_project_root
-    parser = argparse.ArgumentParser(description="작업 트리의 에셋 참조(Config/Dev/AssetReferenceFields.json 의 칸)가 모두 있는지 본다")
-    parser.parse_args(argv)
-    list_problem = check_working_tree(get_project_root())
-    for problem in list_problem:
-        print(f"  - {problem}")
-    print(f"[AssetReferences] {'FAIL' if list_problem else 'OK'} — 끊어진 참조 {len(list_problem)}건")
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+class AssetRefsCommand(Command):
+    name = "asset-refs"
+    help = "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        list_problem = check_working_tree(context.root)
+        for problem in list_problem:
+            print(f"  - {problem}")
+        print(f"[AssetReferences] {'FAIL' if list_problem else 'OK'} — 끊어진 참조 {len(list_problem)}건")
+        return ExitCode.VIOLATION if list_problem else ExitCode.PASSED

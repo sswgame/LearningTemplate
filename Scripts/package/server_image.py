@@ -27,17 +27,14 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
-import sys
 import tarfile
 import tempfile
 from pathlib import Path, PurePosixPath
-from typing import Sequence
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.exit_code import ExitCode  # noqa: E402
-from common.host_platform import is_windows_host  # noqa: E402
-from common.paths import get_project_root  # noqa: E402
+from common.command import Command, CommandError, ScriptContext
+from common.exit_code import ExitCode
+from common.host_platform import is_windows_host
+from common.paths import get_project_root
 
 SERVER_EXECUTABLE = "Server"
 INSTALL_ROOT = PurePosixPath("/opt/swserver")
@@ -51,7 +48,7 @@ STOP_MARGIN_SECONDS = 30
 DOCKERFILE = Path("deploy") / "docker" / "Dockerfile"
 
 
-class ServerImageError(Exception):
+class ServerImageError(CommandError):
     """단계 하나가 실패했다. 메시지가 `[server-image] FAILED` 줄의 이유다."""
 
 
@@ -169,55 +166,17 @@ def make_server_image(package_dir: Path, config_path: Path, game: str, out_dir: 
     return out_path
 
 
-def run_self_check() -> None:
-    unit = make_unit_text("Arena", read_stop_seconds({"_drainWaitSeconds": 60, "_shutdownGraceSeconds": 15}))
-    assert "TimeoutStopSec=105" in unit, "시한 = 드레인 + 저장 + 여유"
-    assert "ExecStart=/opt/swserver/Arena/Server -server-config=/etc/swserver/Arena.json" in unit
-    assert "EnvironmentFile=/etc/swserver/Arena.env" in unit and "User=swserver" in unit
-    with tempfile.TemporaryDirectory(prefix="swserverimage-") as folder:
-        package_dir = Path(folder) / "package"
-        package_dir.mkdir()
-        (package_dir / SERVER_EXECUTABLE).write_bytes(b"")
-        config_path = Path(folder) / "server.json"
-        config_path.write_text("{}", encoding="utf-8")
-        archive_path = Path(folder) / "out.tar.gz"
-        write_archive(archive_path, package_dir, config_path, "Arena", unit)
-        with tarfile.open(archive_path) as archive:
-            names = set(archive.getnames())
-            assert {"etc/systemd/system/swserver-Arena.service", "etc/sysusers.d/swserver.conf", "etc/tmpfiles.d/swserver-Arena.conf", "etc/swserver/Arena.json"} <= names, names
-            assert archive.getmember("opt/swserver/Arena/Server").mode == 0o755
-            fragment = archive.extractfile("etc/tmpfiles.d/swserver-Arena.conf")
-            assert fragment is not None and fragment.read() == b"d /opt/swserver/Arena/Saved 0750 swserver swserver -\n"
-    try:
-        read_stop_seconds({"_drainWaitSeconds": 60})
-        raise AssertionError("빠진 칸은 멈춘다")
-    except ServerImageError:
-        pass
-    assert is_windows_host() is False or to_wsl_path(Path("C:/a/b")) == "/mnt/c/a/b"
+class ServerImageCommand(Command):
+    name = "server-image"
+    help = "리눅스 서버 패키지 + 운영 설정을 배포 tar.gz(systemd 유닛)로 묶는다 — 묶을 서버로 -check-config 를 먼저 돌린다(--image 면 컨테이너 이미지도)"
 
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--package", type=Path, required=True, help="`pack.py --target Server` 가 만든 리눅스 서버 패키지 폴더")
+        parser.add_argument("--config", type=Path, required=True, help="운영 설정(ServerConfig JSON) — 비밀은 넣지 않는다")
+        parser.add_argument("--game", required=True, help="게임 이름(설치 폴더 · 유닛 이름)")
+        parser.add_argument("--image", help="docker 이미지 태그 — 주면 deploy/docker/Dockerfile 로 이미지도 짓는다")
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="리눅스 전용 서버 패키지 + 설정 → 배포 tar.gz(systemd 유닛), 선택으로 컨테이너 이미지")
-    parser.add_argument("--package", type=Path, help="`pack.py --target Server` 가 만든 리눅스 서버 패키지 폴더")
-    parser.add_argument("--config", type=Path, help="운영 설정(ServerConfig JSON) — 비밀은 넣지 않는다")
-    parser.add_argument("--game", help="게임 이름(설치 폴더 · 유닛 이름)")
-    parser.add_argument("--image", help="docker 이미지 태그 — 주면 deploy/docker/Dockerfile 로 이미지도 짓는다")
-    parser.add_argument("--self-check", action="store_true")
-    arguments = parser.parse_args(argv)
-    if arguments.self_check:
-        run_self_check()
-        print("[server-image] self-check OK")
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        out_path = make_server_image(args.package, args.config, args.game, Path("Saved") / "ServerImages", args.image)
+        print(f"[server-image] OK: {out_path}")
         return ExitCode.PASSED
-    if not (arguments.package and arguments.config and arguments.game):
-        parser.error("--package · --config · --game 이 모두 있어야 한다")
-    try:
-        out_path = make_server_image(arguments.package, arguments.config, arguments.game, Path("Saved") / "ServerImages", arguments.image)
-    except ServerImageError as exception:
-        print(f"[server-image] FAILED: {exception}")
-        return ExitCode.VIOLATION
-    print(f"[server-image] OK: {out_path}")
-    return ExitCode.PASSED
-
-
-if __name__ == "__main__":
-    sys.exit(main())

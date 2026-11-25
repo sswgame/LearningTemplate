@@ -31,8 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다
-from common.paths import get_project_root  # noqa: E402
+from common.command import Command, ScriptContext  # noqa: E402
 
 #: 출시 스냅숏(판마다 스키마의 판 · 매개변수 이름 → 종류). 출시 때 `accept` 가 쓴다.
 SNAPSHOT_PATH = Path("Config/Build/Release/CustomizationSchemas.json")
@@ -230,14 +229,18 @@ def run(project_root: Path, mode: str, fix: bool) -> int:
     return 1 if failed else 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="customization-release", description="꾸미기 스키마를 출시 스냅숏과 견준다(쿠킹 검사)")
-    parser.add_argument("mode", nargs="?", default="check", choices=("check", "accept"))
-    parser.add_argument("--fix", action="store_true", help="추론할 수 있는 단계(제거)를 소스에 적는다")
-    parser.add_argument("--root", type=Path, default=None, help="프로젝트 뿌리(기본: 이 저장소)")
-    arguments = parser.parse_args(argv)
-    return run(arguments.root or get_project_root(), arguments.mode, arguments.fix)
+class CustomizationReleaseCommand(Command):
+    name = "customization-release"
+    help = "꾸미기 스키마를 출시 스냅숏과 견준다 — 판 올림 단계가 빠진 바뀜은 실패(쿠킹이 먼저 돈다), --fix 는 추론할 수 있는 제거 단계를 적고, accept 는 출시 때 스냅숏을 쓴다"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("mode", nargs="?", default="check", choices=("check", "accept"))
+        parser.add_argument("--fix", action="store_true", help="추론할 수 있는 단계(제거)를 소스에 적는다")
+        parser.add_argument("--root", type=Path, default=None, help="프로젝트 뿌리(기본: 이 저장소)")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        return run(args.root or context.root, args.mode, args.fix)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(CustomizationReleaseCommand.main())

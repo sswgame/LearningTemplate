@@ -16,15 +16,14 @@ from __future__ import annotations
 
 import argparse
 import os
-import json
 import shutil
 import sys
 import tarfile
 from pathlib import Path
-from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from common.command import Command, ScriptContext  # noqa: E402
 from common.tool_download import ensure_cached_download, extract_zip_safe, resolve_tools_subdir, tools_cache_dir
 from common.clang_format import ensure_clang_format
 from common.toolchain_config import auto_bootstrap_enabled, load_search_paths, record_engine_path
@@ -544,18 +543,20 @@ def setup_llvm(allow_bootstrap: bool = False) -> str:
 
     return _record(tools)
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Locate or bootstrap a minimal clang-cl + libclang kit under Tools/LLVM."
-    )
-    parser.add_argument("--install", action="store_true", help="Bootstrap when missing.")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    if path := setup_llvm(allow_bootstrap=args.install):
-        print(path)
-        return ExitCode.PASSED
-    sys.stderr.write("[Llvm Error] LLVM kit not available\n")
-    return ExitCode.VIOLATION
+class LlvmCommand(Command):
+    name = "llvm"
+    help = "LLVM/Clang 탐색 및 설정"
+
+    def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--install", action="store_true", help="Bootstrap when missing.")
+
+    def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
+        if path := setup_llvm(allow_bootstrap=args.install):
+            print(path)
+            return ExitCode.PASSED
+        sys.stderr.write("[Llvm Error] LLVM kit not available\n")
+        return ExitCode.VIOLATION
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(LlvmCommand.main())
