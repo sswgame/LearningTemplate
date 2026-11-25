@@ -116,6 +116,7 @@ namespace sw
         , _wavesPerCaster{ 2u }
         , _wavesPerLevel{ 2u }
         , _statScalePerLevel{ 0.15f }
+        , _hostileSearchRadius{ 0.0f }
         , _deathLifeSpan{ 0.8f }
         , _playerRespawnDelay{ 2.5f }
         , _statusLogInterval{ 5.0f }
@@ -148,6 +149,11 @@ namespace sw
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
             SW_LOG_ERROR_ID( "ArenaGameMode.AbilityCatalogNotLoaded", "[Arena] the ability catalog is not loaded - the arena cannot start" );
+            return false;
+        }
+        if ( _hostileSearchRadius <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "ArenaGameMode.HostileSearchRadiusMissing", "[Arena] the game mode needs _hostileSearchRadius above 0 - the arena cannot start" );
             return false;
         }
         bool bSetsKnown = true;
@@ -293,7 +299,7 @@ namespace sw
 
     bool ArenaGameModeComponent::findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const
     {
-        const ArenaUnitView* pNearest = findNearestHostileView( from, 100.0f );
+        const ArenaUnitView* pNearest = findNearestHostileView( from, _hostileSearchRadius );
         return pNearest != nullptr && findUnitPosition( pNearest->_object, outPosition );
     }
 

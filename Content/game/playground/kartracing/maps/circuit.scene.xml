@@ -66,7 +66,9 @@
 					                       _resultHoldSeconds="3"
 					                       _seed="7"
 					                       _firstReward="40"
-					                       _rewardStep="10" />
+					                       _rewardStep="10">
+						<_botAI _lookAheadBase="6" _lookAheadPerSpeed="0.35" _steerGain="2.5" _racingLine="0.6" _cornerAngle="0.8" _cornerLookAhead="25" _driftStartAngle="0.9" _driftEndAngle="0.35" _brakeAngle="2.2" _brakeThrottle="0.4" _itemUseDelay="0.8" _itemMaxHold="8" _shellRange="45" _bananaRange="15" />
+					</KartGameModeComponent>
 					<KartRaceViewComponent _localID="3445377818592114861" _componentName="KartRaceViewComponent" _bActive="true"
 					                       _moveAction="Move"
 					                       _driftAction="Kart.Drift"

@@ -44,31 +44,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @struct SkirmishAIStyle
-     * @brief 컴퓨터 상대 하나의 성향(경제 · 병력 목표)입니다. 값은 씬 데이터(디렉터의 PROPERTY)에 있고, 코드에는 기본 성향이 없다.
-     * @details 적지 않은 성향은 0 이라 판을 열 때 거절한다(`isSet`) — 조용히 키트 기본값으로 돌지 않는다.
-     */
-    REFLECT()
-    struct SW_KIT_API SkirmishAIStyle
-    {
-        REFLECT_BODY();
-        PROPERTY( Min = 1, Tooltip = "Workers the AI trains" )
-        int32 _workerTarget{ 0 };
-        PROPERTY( Min = 1, Tooltip = "Production buildings the AI builds" )
-        int32 _productionTarget{ 0 };
-        PROPERTY( Min = 1, Tooltip = "Army size that starts an attack" )
-        int32 _attackArmySize{ 0 };
-        PROPERTY( Min = 0, Tooltip = "The AI builds supply when the free supply is at most this" )
-        int32 _supplyMargin{ 0 };
-
-        /** @brief 목표가 모두 적혔으면 true 입니다(보급 여유는 0 도 뜻이 있다). */
-        bool isSet() const { return _workerTarget >= 1 && _productionTarget >= 1 && _attackArmySize >= 1; }
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 모두 컴퓨터인 판에서 그 자리가 쓰는 성향입니다(사람과 붙는 컴퓨터는 상대 성향 `_opponentAI` 다). */
     ENUM()
     enum class SkirmishAIRole : uint8
@@ -141,9 +116,9 @@ namespace sw
         hashed_string _productionID{};
         hashed_string _armyUnitID{};
         // 컴퓨터 상대의 성향 — 모두 AI 면 시작 지점이 적은 성향(러시 · 운영), 사람과 붙으면 상대 성향이다.
-        SkirmishAIStyle _rushAI{};
-        SkirmishAIStyle _macroAI{};
-        SkirmishAIStyle _opponentAI{};
+        RTSCommanderAISettings _rushAI{};
+        RTSCommanderAISettings _macroAI{};
+        RTSCommanderAISettings _opponentAI{};
         // 컴퓨터 상대의 행동 트리 — 데이터(`commander.bt.xml`)의 받은 때 판(스냅숏)을 쥔다. AI 는 시작할 때 트리를 복사해 쥐고 노드 번호로 돌므로
         // 판 중간에 다시 읽힌 판으로 바뀌면 안 된다. 날 포인터로 들면 다시 읽기 정리 뒤에 끊긴다. 컴퓨터 상대가 있으면 필수다.
         shared_ptr<const BehaviorTreeAsset> _pCommanderTree;

@@ -137,6 +137,7 @@ namespace sw
         , _itemCatalog{}
         , _vehicleSettings{}
         , _botCount{ 3 }
+        , _botAI{}
         , _countdownSeconds{ 3.0f }
         , _finishTimeoutSeconds{ 10.0f }
         , _resultHoldSeconds{ 3.0f }
@@ -168,6 +169,7 @@ namespace sw
         settings._countdownTime = _countdownSeconds;
         settings._finishTimeout = _finishTimeoutSeconds;
         settings._seed          = _seed;
+        settings._ai            = _botAI;
         settings._bItems        = _bItems ? SW_TRUE : SW_FALSE;
         if ( outRace.initialize( settings, _track, _pItemCatalog.get(), _pProjectileCatalog.get() ) == false )
             return false; // 까닭은 경기가 남겼다

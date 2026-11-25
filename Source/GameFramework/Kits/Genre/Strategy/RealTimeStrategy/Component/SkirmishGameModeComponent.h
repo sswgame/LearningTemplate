@@ -134,11 +134,11 @@ namespace sw
         CatalogKey<RTSUnitDef> _armyUnitID;
         // ---- 컴퓨터 상대의 성향 — 셋 다 씬 데이터에 적는다(적지 않으면 판을 열지 않는다) ----
         PROPERTY( Category = "AI Styles", DisplayName = "Rush AI", Tooltip = "Player 0 when both players are AI: few workers, early small attacks" )
-        SkirmishAIStyle _rushAI;
+        RTSCommanderAISettings _rushAI;
         PROPERTY( Category = "AI Styles", DisplayName = "Macro AI", Tooltip = "Player 1 when both players are AI: more workers and production, later big attacks" )
-        SkirmishAIStyle _macroAI;
+        RTSCommanderAISettings _macroAI;
         PROPERTY( Category = "AI Styles", DisplayName = "Opponent AI", Tooltip = "The computer player against a human" )
-        SkirmishAIStyle _opponentAI;
+        RTSCommanderAISettings _opponentAI;
 
         BoundAssetRef<BehaviorTreeAsset> _pCommanderTree;
         CommanderDebugSource             _commanderDebugSource;

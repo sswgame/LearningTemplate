@@ -6372,6 +6372,7 @@
 				<_listComponent>
 					<ArenaGameModeComponent _localID="2358713137147008199" _componentName="ArenaGameModeComponent"
 					                        _bActive="true"
+					                        _hostileSearchRadius="100"
 					                        _playerAbilitySet="ArenaPlayer"
 					                        _gruntAbilitySet="ArenaGrunt"
 					                        _casterAbilitySet="ArenaCaster"

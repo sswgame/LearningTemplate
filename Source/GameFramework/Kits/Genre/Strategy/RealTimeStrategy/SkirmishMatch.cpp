@@ -16,19 +16,15 @@ namespace sw
     {
         struct SkirmishMatchInternal
         {
-            /** @brief 성향 @p style(씬 데이터)과 판의 유닛 id 로 AI 설정을 만듭니다. 생각 주기 · 방어 반경은 키트의 값이다. */
-            static RTSCommanderAISettings makeAISettings( const SkirmishAIStyle& style, const SkirmishMatchSettings& matchSettings )
+            /** @brief 성향 @p style(씬 데이터)에 판의 유닛 id 를 채운 AI 설정입니다. */
+            static RTSCommanderAISettings makeAISettings( const RTSCommanderAISettings& style, const SkirmishMatchSettings& matchSettings )
             {
-                RTSCommanderAISettings settings;
-                settings._workerID         = matchSettings._workerID;
-                settings._depotID          = matchSettings._depotID;
-                settings._supplyID         = matchSettings._supplyID;
-                settings._productionID     = matchSettings._productionID;
-                settings._armyUnitID       = matchSettings._armyUnitID;
-                settings._workerTarget     = style._workerTarget;
-                settings._productionTarget = style._productionTarget;
-                settings._attackArmySize   = style._attackArmySize;
-                settings._supplyMargin     = style._supplyMargin;
+                RTSCommanderAISettings settings = style;
+                settings._workerID              = matchSettings._workerID;
+                settings._depotID               = matchSettings._depotID;
+                settings._supplyID              = matchSettings._supplyID;
+                settings._productionID          = matchSettings._productionID;
+                settings._armyUnitID            = matchSettings._armyUnitID;
                 return settings;
             }
 
@@ -103,9 +99,9 @@ namespace sw
         {
             if ( isHumanPlayer( player ) )
                 continue;
-            Player&                state = _listPlayer[static_cast<size_t>( player )];
-            const SkirmishAIStyle& style = hasHumanPlayer() ? _settings._opponentAI : state._start._aiRole == SkirmishAIRole::Rush ? _settings._rushAI
-                                                                                                                                   : _settings._macroAI;
+            Player&                       state = _listPlayer[static_cast<size_t>( player )];
+            const RTSCommanderAISettings& style = hasHumanPlayer() ? _settings._opponentAI : state._start._aiRole == SkirmishAIRole::Rush ? _settings._rushAI
+                                                                                                                                          : _settings._macroAI;
             SW_ASSERT( _settings._pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
             state._pAI = make_unique<RTSCommanderAI>();
             state._pAI->initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), _settings._pCommanderTree->getTree() );

@@ -93,6 +93,8 @@ namespace sw
         AssetRef<KinematicVehicleSettings> _vehicleSettings;
         PROPERTY( Category = "Race", DisplayName = "Bots", Tooltip = "Karts driven by the AI", Min = 1, Max = 7 )
         int32 _botCount;
+        PROPERTY( Category = "Race", DisplayName = "Bot AI", Tooltip = "Driving values of the karts the AI drives; every value is required" )
+        KartAISettings _botAI;
         PROPERTY( Category = "Race", DisplayName = "Countdown", Min = 0.0, Units = s )
         float32 _countdownSeconds;
         PROPERTY( Category = "Race", DisplayName = "Finish Timeout", Tooltip = "Time after the first finish before the rest is ranked as it stands", Min = 0.0, Units = s )
