@@ -170,6 +170,12 @@ namespace sw
         static constexpr uint32 kMaxFloor       = 8; ///< 씬에 둘 수 있는 움직이는 바닥 수(`ShooterPawnNetState::_floorNumber` 의 Max)
         static constexpr uint8  kEliteKindIndex = 255;
 
+        /**
+         * @brief 감독 프로필의 항목이 고르는 일(`effect`)이 모두 이 게임이 아는 낱말인지 봅니다(조우: 빈 글 · Elite, 보상: Ammo · Repair).
+         * @details 모르는 낱말마다 `ShooterGameMode.PacingProfileUnknownEffect` 를 남긴다. `startPacing` 이 거짓이면 감독을 세우지 않는다.
+         */
+        [[nodiscard]] static bool hasKnownEffects( const AIDirectorProfile& profile, string_view profileName );
+
         ShooterGameModeComponent();
         virtual ~ShooterGameModeComponent() override;
 

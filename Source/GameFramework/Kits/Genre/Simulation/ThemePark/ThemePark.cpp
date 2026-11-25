@@ -130,7 +130,7 @@ namespace sw
         _stepTimer         = FixedStepTimer( settings._fixedStep, settings._maxFrameTime );
         _nextGuestID       = 1;
         _totalVisitorCount = 0;
-        _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
+        _random.setSeed( settings._randomSeed );
         updateParkRating();
         return true;
     }

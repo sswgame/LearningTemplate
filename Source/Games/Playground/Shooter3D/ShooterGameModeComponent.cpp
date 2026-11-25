@@ -524,23 +524,28 @@ namespace sw
         if ( acquireRequired( _spawnTable, _pTable ) == false )
             return;
         // 감독은 항목의 `effect` 를 그대로 건넨다. 이 게임이 모르는 낱말은 아무 일도 하지 않으므로 데이터 오타를 여기서 알리고 서지 않는다.
-        bool bEffectsKnown = true;
-        for ( const AIDirectorPoolDef& pool : _pProfile->getPools() )
-        {
-            for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
-            {
-                if ( Internal::isKnownEffect( pool._kind, encounter._effect ) )
-                    continue;
-                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileUnknownEffect", "[Shooter] pacing profile '%#': '%#' in pool '%#' has effect '%#' this game does not know (encounters: empty or Elite, rewards: Ammo or Repair)",
-                                 _pacingProfile.c_str(), encounter._id.c_str(), pool._id.c_str(), encounter._effect.c_str() );
-                bEffectsKnown = false;
-            }
-        }
-        if ( bEffectsKnown == false )
+        if ( hasKnownEffects( *_pProfile, _pacingProfile.c_str() ) == false )
             return;
         _director.initialize( _pProfile.get(), _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
+    }
+
+    bool ShooterGameModeComponent::hasKnownEffects( const AIDirectorProfile& profile, string_view profileName )
+    {
+        bool bEffectsKnown = true;
+        for ( const AIDirectorPoolDef& pool : profile.getPools() )
+        {
+            for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
+            {
+                if ( ShooterGameModeComponentInternal::isKnownEffect( pool._kind, encounter._effect ) )
+                    continue;
+                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileUnknownEffect", "[Shooter] pacing profile '%#': '%#' in pool '%#' has effect '%#' this game does not know (encounters: empty or Elite, rewards: Ammo or Repair)",
+                                 profileName, encounter._id.c_str(), pool._id.c_str(), encounter._effect.c_str() );
+                bEffectsKnown = false;
+            }
+        }
+        return bEffectsKnown;
     }
 
     void ShooterGameModeComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )

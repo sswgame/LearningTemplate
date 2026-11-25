@@ -396,19 +396,20 @@ namespace sw
 
     bool RestaurantSimulation::areLinksValid() const
     {
-        if ( _pCatalog == nullptr && ( _listCustomer.empty() == false || _listOrder.empty() == false ) )
-            return false; // 카탈로그 없이는 손님을 받지 못한다(`admitCustomer`)
+        // 열기 전(카탈로그 없음)의 판은 카탈로그가 뜻을 주는 것 — 손님 · 주문 · 메뉴 · 만족도 — 이 하나도 없어야 한다. 그 밖의 검사는 볼 것이 없다.
+        const bool bNeedsCatalog = _listCustomer.empty() == false || _listOrder.empty() == false || _listMenu.empty() == false || _listSatisfaction.empty() == false;
+        if ( _pCatalog == nullptr && bNeedsCatalog )
+            return false;
         // 메뉴와 스테이션은 요리와 이름마다 한 줄이다. 찾기는 앞의 것만 돌려주어 뒤의 줄은 쓰이지 않는다.
         for ( const MenuEntry& entry : _listMenu )
         {
-            if ( _pCatalog == nullptr || _pCatalog->findDish( entry._dishID ) == nullptr )
+            if ( _pCatalog->findDish( entry._dishID ) == nullptr )
                 return false;
         }
         const bool bRepeatedLine = VectorUtil::findDuplicateBy<&MenuEntry::_dishID>( _listMenu ) != nullptr || VectorUtil::findDuplicateBy<&StationSlot::_station>( _listStation ) != nullptr;
         // 별점 창보다 많은 만족도는 `pushSatisfaction` 이 남기지 않는다.
-        // 카탈로그 없는 판은 손님 · 주문이 없어야 하듯(위) 만족도도 없어야 한다 — 창 0.
-        const size_t ratingWindow = _pCatalog != nullptr ? static_cast<size_t>( _pCatalog->getRatingWindow() ) : size_t{ 0 };
-        if ( bRepeatedLine || _listSatisfaction.size() > ratingWindow || VectorUtil::findDuplicateBy<&RestaurantCustomer::_id>( _listCustomer ) != nullptr )
+        const bool bTooManySatisfaction = _pCatalog != nullptr && _listSatisfaction.size() > static_cast<size_t>( _pCatalog->getRatingWindow() );
+        if ( bRepeatedLine || bTooManySatisfaction || VectorUtil::findDuplicateBy<&RestaurantCustomer::_id>( _listCustomer ) != nullptr )
             return false;
 
         vector<uint8> listSeatTaken( static_cast<size_t>( MathUtil::max( 0, _settings._seatCount ) ), SW_FALSE );
