@@ -200,6 +200,34 @@ SW_TEST_CASE( AssetImportStampTest, StaleSourceIsServedFromCache )
 }
 
 /**
+ * @brief [AssetImportStampTest] 바이트가 같은 두 원본은 한 DDC 항목을 받아도 결과가 각자 제 이름으로 쓰인다
+ * @details 키가 내용뿐인 종류(텍스처)에서 항목이 앞 원본의 파일 이름을 들고 있어, 뒤 원본의 결과가 앞 원본 이름으로 쓰이고 제 결과는 없었다(xbox_stick_l.png 가 playstation_stick_l.dds 로).
+ */
+SW_TEST_CASE( AssetImportStampTest, SameBytesUnderTwoNamesKeepTheirOwnNames )
+{
+    const DerivedDataCache  cache     = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
+    const AbsolutePath      firstRoot = makeCheckout( "ImportCacheSameBytesFirst" );
+    const FakeThingImporter first;
+    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( firstRoot, first, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+
+    const AbsolutePath secondRoot = test::makeScratchPath( "ImportCacheSameBytesSecond" );
+    SW_REQUIRE_TRUE( writeText( secondRoot.join( "pack/things_raw/twin.src" ), "a" ) ); // a.src 와 같은 바이트, 다른 이름
+    const FakeThingImporter  second;
+    const AssetImportSummary summary = AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::ImportStale, nullptr, cache );
+    SW_EXPECT_TRUE( summary.isClean() );
+    SW_EXPECT_EQUAL( 0u, second.getImportCount() ); // DDC 에서 받았다
+    SW_EXPECT_TRUE( FileUtil::exists( secondRoot.join( "pack/things/twin.out" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( secondRoot.join( "pack/things/twin/side.txt" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( secondRoot.join( "pack/things/a.out" ) ) );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( secondRoot, second, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( firstRoot ) );
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( secondRoot ) );
+}
+
+/**
  * @brief [AssetImportStampTest] 임포트하는 동안 원본이 바뀌면 그 결과를 스탬프 · DDC 에 앞 원본의 것으로 남기지 않고, 다음 임포트가 다시 만든다
  */
 SW_TEST_CASE( AssetImportStampTest, SourceChangedWhileImportingIsNotRecorded )

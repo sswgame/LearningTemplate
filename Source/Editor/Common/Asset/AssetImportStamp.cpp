@@ -201,6 +201,8 @@ namespace sw::editor
                 text.append( importer.getStampHeader() ).append( "\ncode=" ).append( formatHash( codeFingerprint ) ).append( "\nsource=" ).append( formatHash( sourceHash ) );
                 if ( importer.isImportedPathEmbedded() )
                     text.append( "\npath=" ).append( file._assetPath );
+                else
+                    text.append( "\nnames=stem" ); // 덩어리의 이름이 원본 줄기를 뺀 꼴이다 — 줄기를 박아 넣던 옛 항목은 미스가 된다
                 text.push_back( '\n' );
                 return text;
             }
@@ -213,6 +215,27 @@ namespace sw::editor
                 if ( base.empty() == false && base.back() != '/' )
                     base.push_back( '/' );
                 return base;
+            }
+
+            /** @brief 결과 파일 이름의 원본 줄기(`<폴더>/x.dds` 의 `x`)입니다. 경로가 박히지 않는 종류는 키가 내용만이라 같은 바이트의 다른 원본이 한 항목을 받는다 — 이름에서 이것을 빼 두고 받는 원본의 줄기로 다시 붙인다. */
+            static string makeCacheStem( const IRawAssetImporter& importer, const SourceFile& file )
+            {
+                if ( importer.isImportedPathEmbedded() )
+                    return {};
+                const string name = FileUtil::getFileNamePart( FileUtil::normalizeSeparators( file._importedPath.str() ) );
+                return name.substr( 0, name.find( '.' ) );
+            }
+
+            /** @brief 결과 이름(@p name, 기준 폴더 뒤)에서 줄기를 `*` 로 바꿉니다. 줄기로 시작하지 않으면(다른 원본 이름의 결과) false — 그 원본은 DDC 에 넣지 않는다. */
+            [[nodiscard]] static bool replaceStem( string& inoutName, const string& stem )
+            {
+                if ( stem.empty() )
+                    return true;
+                const bool bHasStem = StringUtil::startsWith( inoutName, stem ) && inoutName.size() > stem.size() && ( inoutName[stem.size()] == '.' || inoutName[stem.size()] == '/' );
+                if ( bHasStem == false )
+                    return false;
+                inoutName.replace( 0, stem.size(), "*" );
+                return true;
             }
 
             /** @brief 저장소 공유 파일(`<x>/models/_shared/…`)인지 봅니다 — 다른 원본도 쓰는 파일이라 지우지 않고 `writeIfAbsent` 로만 쓴다. */
@@ -234,6 +257,7 @@ namespace sw::editor
                 if ( listPath.empty() )
                     return false;
                 const string base = makeCacheNameBase( importer, file );
+                const string stem = makeCacheStem( importer, file );
                 for ( const AbsolutePath& path : listPath )
                 {
                     if ( path.str().size() <= base.size() || StringUtil::startsWith( path.str(), base ) == false )
@@ -247,6 +271,8 @@ namespace sw::editor
                     if ( FileUtil::readFile( path, bytes ) == false )
                         return false;
                     string head( string_view( path.str() ).substr( base.size() ) );
+                    if ( replaceStem( head, stem ) == false )
+                        return false;
                     head.push_back( '\n' );
                     HexUtil::appendUint64( head, bytes.size() );
                     head.push_back( '\n' );
@@ -300,10 +326,17 @@ namespace sw::editor
                         return false;
                 }
                 const string base = makeCacheNameBase( importer, file );
+                const string stem = makeCacheStem( importer, file );
                 for ( const Entry& entry : listEntry )
                 {
+                    const bool bHasStem = entry._name.front() == '*';
+                    if ( bHasStem != ( stem.empty() == false ) )
+                        return false; // 줄기 자리가 없는 이름(옛 항목)이거나 경로가 박히는 종류인데 줄기 자리가 있다
                     StringBuilder<constant::buffer::kMax256> pathBuilder;
-                    pathBuilder.appendFormat( "%#%#", base, entry._name );
+                    if ( bHasStem )
+                        pathBuilder.appendFormat( "%#%#%#", base, stem, string_view( entry._name ).substr( 1 ) );
+                    else
+                        pathBuilder.appendFormat( "%#%#", base, entry._name );
                     const AbsolutePath path( FileUtil::toDiskPath( pathBuilder.view() ) );
                     const uint8*       pBytes = payload.data() + entry._offset;
                     const bool         bWritten =
