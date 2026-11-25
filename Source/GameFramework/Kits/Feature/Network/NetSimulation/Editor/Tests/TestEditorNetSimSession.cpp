@@ -3,8 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
-#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimStepPacer.h"
-#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimWorldLayout.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/MultiplayerInProcessViewModel.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleGame.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 
