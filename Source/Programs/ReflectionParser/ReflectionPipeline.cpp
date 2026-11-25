@@ -33,23 +33,6 @@ namespace sw
              * @brief 칸 이름 @p name 의 XML 속성 이름입니다 — `XMLFields::getAttributeName` 과 같은 규칙이다(직접 적은 이름은 그대로, `_` 를 떼고, 불리언 `_bX` 는 `x`).
              * @details 파서는 엔진을 링크하지 않아 같은 규칙을 여기 둔다. 규칙을 바꾸면 둘을 함께 고친다(칸이 두 이름으로 생성 목록에 드는지 파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h` 가 본다).
              */
-            /**
-             * @brief 경로 칸이 아닌 글 칸(`string` · `hashed_string`, 그 한 겹 시퀀스)이면 true 입니다 — 생성 목록에 `text` 줄로 낸다.
-             * @details 글 칸만 경로를 담을 수 있다. GUID 이전 도구가 같은 이름의 참조 칸과 겹치는지 이 줄로 본다(파서 픽스처 `Test/ReflectionParser/Fixtures/AssetRefParams.h`).
-             *          이름 출처를 선언한 칸(`Meta = "NameSource=PhysicsMaterial"`)은 그 표의 이름만 담으므로 경로를 담는 글 칸이 아니다.
-             */
-            static bool isTextFieldType( const ParsedPropertyInfo& prop )
-            {
-                const auto isText = []( const string& typeName )
-                { return typeName == "string" || typeName == "hashed_string"; };
-                for ( const auto& [key, value] : prop._listCustomMeta )
-                {
-                    if ( key == "NameSource" )
-                        return false;
-                }
-                return isText( prop._typeName ) || isText( prop._elementTypeName );
-            }
-
             static string makeXMLAttributeName( const string& name )
             {
                 if ( name.empty() || name.front() != '_' )
@@ -636,21 +619,11 @@ namespace sw
             for ( const ParsedPropertyInfo& prop : parsed._listType[typeIndex]._listProperty )
             {
                 const bool bPathField = prop._bAssetPath == SW_TRUE || prop._typeName == "DataPath" || prop._elementTypeName == "DataPath";
-                // 경로 칸이 아닌 글 칸도 이름을 낸다 — 같은 이름이 다른 주인에서 참조 칸이면 GUID 이전 도구가 이름만으로 칸을 가르지 못한다(그 충돌을 도구가 잡는다).
-                const bool bTextField = bPathField == false && ReflectionPipelineInternal::isTextFieldType( prop );
-                if ( bPathField == false && bTextField == false )
+                if ( bPathField == false )
                     continue;
-                const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
-                // 저장 꼴 — `AssetRef<T>`(ref) · `DataPath`(data)는 GUID 참조로 쓴다, `PROPERTY( AssetPath )` 글은 경로 글(path), 경로가 아닌 글 칸은 `text` 다.
-                const utf8* pKind = "path";
-                if ( bTextField )
-                    pKind = "text";
-                else if ( prop._typeName == "AssetRef" || prop._elementTypeName == "AssetRef" )
-                    pKind = "ref";
-                else if ( prop._typeName == "DataPath" || prop._elementTypeName == "DataPath" )
-                    pKind = "data";
+                const string                             target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
                 StringBuilder<constant::buffer::kMax256> textBuilder3;
-                textBuilder3.appendFormat( "%#\t%#\t%#", prop._name, target, pKind );
+                textBuilder3.appendFormat( "%#\t%#", prop._name, target );
                 stamp._listAssetField.push_back( string( textBuilder3.view() ) );
                 // 속성으로 읽는 문서(`XMLFields::readProperties`)는 C++ 이름이 아니라 속성 이름(`_shaderPath` → `shaderPath`)으로 적는다 — 그 이름도 낸다.
                 // 예전에는 그 이름을 손 표(`AssetReferenceFields.json`)가 따로 적었다.
@@ -658,13 +631,13 @@ namespace sw
                 if ( attribute != prop._name )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder2;
-                    textBuilder2.appendFormat( "%#\t%#\t%#", attribute, target, pKind );
+                    textBuilder2.appendFormat( "%#\t%#", attribute, target );
                     stamp._listAssetField.push_back( string( textBuilder2.view() ) );
                 }
                 for ( const string& alias : prop._listAlias )
                 {
                     StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "%#\t%#\t%#", alias, target, pKind );
+                    textBuilder.appendFormat( "%#\t%#", alias, target );
                     stamp._listAssetField.push_back( string( textBuilder.view() ) );
                 }
             }
