@@ -5,7 +5,7 @@
 	<_listSegment>
 		<AudioMusicSegmentDef _name="Song" _bars="24" _bLoop="false">
 			<_listLayer>
-				<AudioMusicLayerDef _path="common/music/subspaceaudio_chiptune_adventures/1_stage_1.ogg" />
+				<AudioMusicLayerDef _path="guid:71cbc3294317964d91dbd0037c50fb04" />
 			</_listLayer>
 		</AudioMusicSegmentDef>
 	</_listSegment>

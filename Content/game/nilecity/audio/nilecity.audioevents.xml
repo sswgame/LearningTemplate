@@ -7,17 +7,17 @@
 	<_listEvent>
 		<AudioEventDef _name="CitySelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_003.ogg" />
+				<AudioClipEntry _path="guid:c1507d08f1c77736752919ce37031fcb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CityBuilt" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_002.ogg" />
+				<AudioClipEntry _path="guid:eeaa42ce167c737bfd102117d5a850bc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CityBlocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_002.ogg" />
+				<AudioClipEntry _path="guid:1b12ab26e8b711c830b7dd21ee314b5c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CityEvolved"
@@ -31,7 +31,7 @@
 		                _pitchMin="-1"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/drop_003.ogg" />
+				<AudioClipEntry _path="guid:3a20a66ae8bc15cc94d256bf9794afc8" />
 			</_listClip>
 		</AudioEventDef>
 	</_listEvent>

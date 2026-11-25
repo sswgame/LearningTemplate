@@ -33,7 +33,7 @@
 	<_listEvent>
 		<AudioEventDef _name="Weather.Rain" _bus="ambient" _priority="40" _fadeInSeconds="1" _fadeOutSeconds="1.5" _maxInstances="1" _steal="Oldest" _bLoop="true">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/audio/weather_rain.audiograph.xml" />
+				<AudioClipEntry _path="guid:5a0c7be1f2e84d8f9b3a6c2d417e90f3" />
 			</_listClip>
 			<_listParameterMap>
 				<AudioParameterMapping _parameter="WeatherRain" _target="Volume">
@@ -59,7 +59,7 @@
 		</AudioEventDef>
 		<AudioEventDef _name="Weather.Wind" _bus="ambient" _priority="40" _fadeInSeconds="1" _fadeOutSeconds="1.5" _maxInstances="1" _steal="Oldest" _bLoop="true">
 			<_listClip>
-				<AudioClipEntry _path="game/playground/audio/weather_wind.audiograph.xml" />
+				<AudioClipEntry _path="guid:e41d6b92c07f4f31a85be9d3720c16ab" />
 			</_listClip>
 			<_listParameterMap>
 				<AudioParameterMapping _parameter="WeatherWind" _target="Volume">
@@ -79,27 +79,27 @@
 		</AudioEventDef>
 		<AudioEventDef _name="CinematicCue" _bus="sfx" _priority="60" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" />
+				<AudioClipEntry _path="guid:a9cdbbc0d90e08595a54f70a3313eefe" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SubtitleGuideLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" _subtitleKey="Subtitle.GuideLine" />
+				<AudioClipEntry _path="guid:a9cdbbc0d90e08595a54f70a3313eefe" _subtitleKey="Subtitle.GuideLine" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SubtitleScoutLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Scout">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" _subtitleKey="Subtitle.ScoutLine" />
+				<AudioClipEntry _path="guid:a9cdbbc0d90e08595a54f70a3313eefe" _subtitleKey="Subtitle.ScoutLine" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SubtitleLongLine" _bus="sfx" _priority="70" _cooldownSeconds="0" _maxInstances="1" _steal="Oldest" _subtitleSpeakerKey="Subtitle.Guide">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_002.ogg" _subtitleKey="Subtitle.LongLine" />
+				<AudioClipEntry _path="guid:a9cdbbc0d90e08595a54f70a3313eefe" _subtitleKey="Subtitle.LongLine" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmToolSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_002.ogg" />
+				<AudioClipEntry _path="guid:0db52a02207170803234b71eff1eca8d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmPlant"
@@ -113,7 +113,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1.5">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/drop_002.ogg" />
+				<AudioClipEntry _path="guid:53c7b16c54e631c55e4dec854a736915" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmHarvest"
@@ -127,12 +127,12 @@
 		                _pitchMin="-1"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/pluck_001.ogg" />
+				<AudioClipEntry _path="guid:ab18b4ab325b58fc1196f0c28099eda5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FarmShip" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="VoxelLand"
@@ -146,7 +146,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_000.ogg" />
+				<AudioClipEntry _path="guid:026f39a2f5f2af708b463bc4bc9807ee" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="VoxelBlockBreak"
@@ -160,7 +160,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" />
+				<AudioClipEntry _path="guid:6595936b55ab040b806bb332f379e9c5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="VoxelBlockPlace"
@@ -174,22 +174,22 @@
 		                _pitchMin="-1"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_001.ogg" />
+				<AudioClipEntry _path="guid:dd4b7d2ad707d7fc5e3828f8b2f470f3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_004.ogg" />
+				<AudioClipEntry _path="guid:a8ba669cb589550569c516fa32306fbe" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSBuilt" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_003.ogg" />
+				<AudioClipEntry _path="guid:e33b48fa35106d821409b8172879a51f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSBlocked" _bus="ui" _priority="70" _cooldownSeconds="1" _maxInstances="1" _steal="Reject">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_003.ogg" />
+				<AudioClipEntry _path="guid:5570485754b47c56eaa7474fa321677a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RTSUnitDied"
@@ -204,32 +204,32 @@
 		                _pitchMax="1"
 		                _virtual="Stop">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_001.ogg" />
+				<AudioClipEntry _path="guid:e30af1cb2a4f53bf7e4ed1e9f50a898a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkBuilt" _bus="ui" _priority="70" _maxInstances="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ParkBlocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+				<AudioClipEntry _path="guid:b8485f170b38025c85d76378ecde6145" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaWaveStart" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/maximize_001.ogg" />
+				<AudioClipEntry _path="guid:bdffc329a25334c5b1a3349779c664aa" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaPlayerFell" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_004.ogg" />
+				<AudioClipEntry _path="guid:8008f1802f62d0b15b7d397424ce8963" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaEnemyFell"
@@ -243,7 +243,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ArenaProjectileHit"
@@ -257,7 +257,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1.5">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
+				<AudioClipEntry _path="guid:3037ce5d66d92b235f62c20ef22d7f98" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterLand"
@@ -272,7 +272,7 @@
 		                _pitchMin="-1.5"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_000.ogg" />
+				<AudioClipEntry _path="guid:2ebd30701678e1ab1f907ce40e8f3fe3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterHitEnemy"
@@ -287,7 +287,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_001.ogg" />
+				<AudioClipEntry _path="guid:bef44cd8addd7234afb1a9083c27519c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterHitCover"
@@ -302,7 +302,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
+				<AudioClipEntry _path="guid:62e3779c11884365aeb5dc4498710de9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GimmickExplosion"
@@ -318,7 +318,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GimmickBreak"
@@ -334,7 +334,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_001.ogg" />
+				<AudioClipEntry _path="guid:dd4b7d2ad707d7fc5e3828f8b2f470f3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GimmickNoise"
@@ -350,7 +350,7 @@
 		                _pitchMin="-2"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
+				<AudioClipEntry _path="guid:62e3779c11884365aeb5dc4498710de9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShooterEnemyDown"
@@ -366,441 +366,441 @@
 		                _pitchMax="0"
 		                _virtual="Stop">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_001.ogg" _volumeDb="-8" />
+				<AudioClipEntry _path="guid:52c7707dd6bde9ebb84ee4d0ed28d3a4" />
+				<AudioClipEntry _path="guid:bef44cd8addd7234afb1a9083c27519c" _volumeDb="-8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingStraight" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="0" _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth1.ogg" />
+				<AudioClipEntry _path="guid:46ee1c76aa97e77b6344a320eccbd321" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingHook" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth2.ogg" />
+				<AudioClipEntry _path="guid:2ac8c5ac6d752511767a2b65bab47a98" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingUppercut" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
+				<AudioClipEntry _path="guid:7b064c732d724fba70c0ee14b9e48bad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingLow" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth4.ogg" />
+				<AudioClipEntry _path="guid:8e8b6dfec04ddd638dda056bda08267b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingClinch" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/drop_leather.ogg" />
+				<AudioClipEntry _path="guid:0a8b293cf084056e35240441cf0dcb4f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingStraightHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="0" _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_004.ogg" />
+				<AudioClipEntry _path="guid:3037ce5d66d92b235f62c20ef22d7f98" />
+				<AudioClipEntry _path="guid:8bebe69af5b19b89916c9f9d7390057f" />
+				<AudioClipEntry _path="guid:cfd5cb8ee4cdeb6e49991d584b5cd9d3" />
+				<AudioClipEntry _path="guid:467b6ced2f74e8c69a3bc703e817ffda" />
+				<AudioClipEntry _path="guid:42a37816e913f9a372be5a8ad0786c95" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingHookHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
+				<AudioClipEntry _path="guid:57e87db875b3cf6edee5bdd2b24bef2a" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
+				<AudioClipEntry _path="guid:45b8d86dad0877cb727a2d0fd3e3036c" />
+				<AudioClipEntry _path="guid:d91d358688800f6c26d76d6afaf2270e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingUppercutHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_punch3.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_punch4.ogg" />
+				<AudioClipEntry _path="guid:ecbd1b9fbe8d6ee70c640c4bb4685a91" />
+				<AudioClipEntry _path="guid:a10d1ebd26098c63f5c2be0137e25b4f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingLowHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:2640efc525a52fba34543d43ec7b77a3" />
+				<AudioClipEntry _path="guid:188e001d3398901cce86aa9b7358aede" />
+				<AudioClipEntry _path="guid:ba2920ef6754935d563078d0444211ad" />
+				<AudioClipEntry _path="guid:631c4d8e7679e4f9bd24cc346d7dff2e" />
+				<AudioClipEntry _path="guid:7b46373780718528034d39227c5e5d2a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingClinchHit" _bus="sfx" _priority="60" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:65ec1214f018413955e2e592fb685ddb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingLightBlocked" _bus="sfx" _priority="50" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="0" _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
+				<AudioClipEntry _path="guid:62e3779c11884365aeb5dc4498710de9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingHeavyBlocked" _bus="sfx" _priority="50" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_000.ogg" />
+				<AudioClipEntry _path="guid:e7734a36b209ce0dd5da64abb83a674c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingWallSplat" _bus="sfx" _priority="60" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:6643b600d68f1532aebfece984ab1be1" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingThrowBroken" _bus="sfx" _priority="50" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_000.ogg" />
+				<AudioClipEntry _path="guid:8c0a2195d28798badee956675d538b41" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingSpecial" _bus="sfx" _priority="65" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+				<AudioClipEntry _path="guid:70f8c33dfb5c6bff567f8fae747caf8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingRoundEnd" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:506382516d0ad42f5019d4aad25743e5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingLaunch" _bus="sfx" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:ba2920ef6754935d563078d0444211ad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingThrowGrab" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth_belt2.ogg" />
+				<AudioClipEntry _path="guid:db2b90a727e1d964daaf8f08bda3183b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="FightingSidestep" _bus="sfx" _priority="30" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth2.ogg" />
+				<AudioClipEntry _path="guid:2ac8c5ac6d752511767a2b65bab47a98" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleJump" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling1.ogg" />
+				<AudioClipEntry _path="guid:79911f1a8a0e5d306713576d43045b27" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleParachute" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth_belt.ogg" />
+				<AudioClipEntry _path="guid:6df3cbc5c8c1aa7fca5267ee42a19553" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleArmorBroken" _bus="sfx" _attenuation="FarCamera" _priority="55" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_000.ogg" />
+				<AudioClipEntry _path="guid:87a062d19074b2170c2635eacb2593de" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleDowned" _bus="sfx" _attenuation="FarCamera" _priority="65" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human1.ogg" />
+				<AudioClipEntry _path="guid:bf6bc44506c91413e553fe7a028c8324" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleKilled" _bus="sfx" _attenuation="FarCamera" _priority="65" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human2.ogg" />
+				<AudioClipEntry _path="guid:45a6c2d38e6192e001060177d58c01e6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleRevived" _bus="sfx" _attenuation="FarCamera" _priority="65" _maxInstances="2" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup2.ogg" />
+				<AudioClipEntry _path="guid:639943fa394b21734f964b5f5c0d529d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleWeaponTaken" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_latch.ogg" />
+				<AudioClipEntry _path="guid:346478fb91aa87f088d87003838a2a20" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleItemTaken" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_small_leather.ogg" />
+				<AudioClipEntry _path="guid:0ac70d2d8ddd03522f9662145ac62578" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleSupplyDrop" _bus="sfx" _attenuation="FarCamera" _priority="60" _maxInstances="2" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:65ec1214f018413955e2e592fb685ddb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleZoneShrink" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/bong_001.ogg" />
+				<AudioClipEntry _path="guid:efceabe6833f469f58e19860d3b1ab48" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleReviveStarted" _bus="sfx" _attenuation="FarCamera" _priority="55" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth1.ogg" />
+				<AudioClipEntry _path="guid:46ee1c76aa97e77b6344a320eccbd321" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleReviveBroken" _bus="sfx" _attenuation="FarCamera" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error3.ogg" />
+				<AudioClipEntry _path="guid:d2bec628fb5dc6b56a334df7447751be" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleZoneRevealed" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/neutral_sounds/sfx_sound_neutral5.ogg" />
+				<AudioClipEntry _path="guid:c102e8a9c32052c24a4569839465cdc9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="BattleRoyaleFinalZone" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_003.ogg" />
+				<AudioClipEntry _path="guid:3cc2eb195a5948004846b868c8bf134b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaSlash" _bus="sfx" _priority="45" _cooldownSeconds="0.05" _maxInstances="4" _steal="Oldest" _pitchMin="0" _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword1.ogg" />
+				<AudioClipEntry _path="guid:1675019c1a9f82d5a8d33dc941a5075c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaCleave" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="4" _steal="Oldest" _pitchMin="-3" _pitchMax="-1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword3.ogg" />
+				<AudioClipEntry _path="guid:dff4f7b7a57da727682af43d22821a17" />
+				<AudioClipEntry _path="guid:db7a2323011280e2bbed3eeeb56f5fff" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaSlashHit" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_004.ogg" />
+				<AudioClipEntry _path="guid:52c7707dd6bde9ebb84ee4d0ed28d3a4" />
+				<AudioClipEntry _path="guid:3eb1c287e45ed8ee2c352cd8c3e7184c" />
+				<AudioClipEntry _path="guid:18a092bfd657031a29b7bc227aafb6b5" />
+				<AudioClipEntry _path="guid:ee16cea6c4fd23822a6981fdeb827429" />
+				<AudioClipEntry _path="guid:cdfa3302eb0ed209ec761934c0b49961" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaCleaveHit" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest" _pitchMin="-2" _pitchMax="0">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
+				<AudioClipEntry _path="guid:4bc384a0d4bf88cd8b099228d677b4ae" />
+				<AudioClipEntry _path="guid:38e507c6425c7df9394471d0b5332747" />
+				<AudioClipEntry _path="guid:cb401bbe74a8d1a7e515d15fc2608230" />
+				<AudioClipEntry _path="guid:5f7981adc18ed1bae7a035f414a8f0c9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaHit" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="6" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/impact_metal_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/impact_metal_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/impact_metal_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/impact_metal_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/impact_metal_004.ogg" />
+				<AudioClipEntry _path="guid:6a8d929bb758eea8bf5934cc001d9ea6" />
+				<AudioClipEntry _path="guid:1f12c00ac968d9099551f4a71ce57ece" />
+				<AudioClipEntry _path="guid:08cfaa611b89d69b06e7e6f68050fcd4" />
+				<AudioClipEntry _path="guid:c1b62570f7239171284d8b0268b4210d" />
+				<AudioClipEntry _path="guid:c6880b09674d69a00a16de173aa39cf7" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaDowned" _bus="sfx" _priority="55" _maxInstances="3" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaDestroyed" _bus="sfx" _container="Random" _priority="70" _maxInstances="4" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/explosion_crunch_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/explosion_crunch_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/explosion_crunch_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/explosion_crunch_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/explosion_crunch_004.ogg" />
+				<AudioClipEntry _path="guid:6629d004c3f448bfe1a87b1eec778750" />
+				<AudioClipEntry _path="guid:09063cadf7bd7d07003f8126e0ddafe6" />
+				<AudioClipEntry _path="guid:c206ee7eed61732319a5106c5335b51c" />
+				<AudioClipEntry _path="guid:abca7685676f4ac86d4cc59b715c31fa" />
+				<AudioClipEntry _path="guid:e1eb264471b4381abb3c2a290b36787a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaRespawned" _bus="sfx" _priority="60" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/thruster_fire_001.ogg" />
+				<AudioClipEntry _path="guid:68ee3a2a2d89b34559d98105d03ed6da" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaOverheated" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_004.ogg" />
+				<AudioClipEntry _path="guid:8008f1802f62d0b15b7d397424ce8963" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaTransformed" _bus="sfx" _priority="55" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_000.ogg" />
+				<AudioClipEntry _path="guid:d7531edcefd88d36754db0227d313189" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaSkill" _bus="sfx" _priority="60" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup3.ogg" />
+				<AudioClipEntry _path="guid:8e4d99c4004c67e1db10d54b9e2644db" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaSwing" _bus="sfx" _container="Random" _priority="40" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/melee/sfx_wpn_sword3.ogg" />
+				<AudioClipEntry _path="guid:1675019c1a9f82d5a8d33dc941a5075c" />
+				<AudioClipEntry _path="guid:dff4f7b7a57da727682af43d22821a17" />
+				<AudioClipEntry _path="guid:db7a2323011280e2bbed3eeeb56f5fff" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaEnemyHit" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_light_004.ogg" />
+				<AudioClipEntry _path="guid:4d54c081680f6b57b54a85b2330fdecc" />
+				<AudioClipEntry _path="guid:bef44cd8addd7234afb1a9083c27519c" />
+				<AudioClipEntry _path="guid:304123173c406c2138b1f4e2d0698bf5" />
+				<AudioClipEntry _path="guid:d427b5f7bf206b5a66aabf63fe7c21b2" />
+				<AudioClipEntry _path="guid:c1e0b901eaa80a111e6628f5cdad3f34" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaPlayerHit" _bus="sfx" _priority="70" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage1.ogg" />
+				<AudioClipEntry _path="guid:1b535d580d55eee18096afb0180081c3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaBlocked" _bus="sfx" _priority="60" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_000.ogg" />
+				<AudioClipEntry _path="guid:8c0a2195d28798badee956675d538b41" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaParried" _bus="sfx" _priority="65" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaEnemyKilled" _bus="sfx" _priority="60" _maxInstances="3" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/alien/sfx_deathscream_alien1.ogg" />
+				<AudioClipEntry _path="guid:22757d7069cf7ac16d4868a7dfb645ae" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaBossDefeated" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/explosions/medium_length/sfx_exp_medium1.ogg" />
+				<AudioClipEntry _path="guid:8fe42eac504fdc075d3eb2117ab24834" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaPickup" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup4.ogg" />
+				<AudioClipEntry _path="guid:de1c8f3ab3ba84fc98d1e652b6844a1d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaRested" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaFlask" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_001.ogg" />
+				<AudioClipEntry _path="guid:6099953755f4902684e441bfa03f10d3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaFastTravel" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_001.ogg" />
+				<AudioClipEntry _path="guid:752277c44c86e6fac56ac6f3d7dcf85a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaDied" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human3.ogg" />
+				<AudioClipEntry _path="guid:39064b1c8fcd9ddb4f9fa7cdb7ee23b0" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaCorpseRecovered" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/coins/sfx_coin_cluster1.ogg" />
+				<AudioClipEntry _path="guid:04a595a0fdc83cc47feb1475b48b36de" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MetroidvaniaCurrencyLost" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+				<AudioClipEntry _path="guid:4dc7e83727de42aebf20e87aa63c8865" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponRifleFire" _bus="sfx" _attenuation="FarCamera" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="6" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot7.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot8.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot9.ogg" />
+				<AudioClipEntry _path="guid:4a9b5e4e2dfd9d53f5b2dbb99a7e8dd0" />
+				<AudioClipEntry _path="guid:f78455bab7f46d52a523de8e1b77de75" />
+				<AudioClipEntry _path="guid:19eb12fefa7d4375b83c2ad8e05ee557" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponShotgunFire" _bus="sfx" _attenuation="FarCamera" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="4" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/shotgun/sfx_weapon_shotgun1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/shotgun/sfx_weapon_shotgun2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/shotgun/sfx_weapon_shotgun3.ogg" />
+				<AudioClipEntry _path="guid:b07a95a02f50aaa545e189b1d672a749" />
+				<AudioClipEntry _path="guid:93f6a4fa86db9724cb9b8446487660b3" />
+				<AudioClipEntry _path="guid:ee48002868a4b8282446a4919018bb84" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponPistolFire" _bus="sfx" _attenuation="FarCamera" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="6" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot3.ogg" />
+				<AudioClipEntry _path="guid:8913d86b8c2edf9dd9e4ca02087f9b70" />
+				<AudioClipEntry _path="guid:4473f224cbc8c910331fc664db88aede" />
+				<AudioClipEntry _path="guid:f54b31269ab0f604b52ba8b48654d167" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponRifleReload" _bus="sfx" _attenuation="FarCamera" _priority="45" _cooldownSeconds="0.1" _maxInstances="2" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/out_of_ammo/sfx_wpn_reload.ogg" />
+				<AudioClipEntry _path="guid:fba548f2e1971bb69ba5234f5058f0a3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponShotgunReload" _bus="sfx" _attenuation="FarCamera" _priority="45" _cooldownSeconds="0.1" _maxInstances="2" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_latch.ogg" />
+				<AudioClipEntry _path="guid:346478fb91aa87f088d87003838a2a20" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponPistolReload" _bus="sfx" _attenuation="FarCamera" _priority="45" _cooldownSeconds="0.1" _maxInstances="2" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_click.ogg" />
+				<AudioClipEntry _path="guid:b9559aa0317b8496ed5ede626f8ba1f3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponEmpty" _bus="sfx" _attenuation="FarCamera" _container="Random" _priority="45" _cooldownSeconds="0.1" _maxInstances="2" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/out_of_ammo/sfx_wpn_noammo1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/out_of_ammo/sfx_wpn_noammo2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/out_of_ammo/sfx_wpn_noammo3.ogg" />
+				<AudioClipEntry _path="guid:ab01a0079a21fc2681f90daa9a0a8a6a" />
+				<AudioClipEntry _path="guid:f8f9a5c14f7956a306f99bbf077a984d" />
+				<AudioClipEntry _path="guid:dbea20b61e3ee8bb4c5cef76c59cd807" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponMechFire" _bus="sfx" _container="Random" _priority="40" _cooldownSeconds="0.03" _maxInstances="6" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_large_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_large_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_large_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_large_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_large_004.ogg" />
+				<AudioClipEntry _path="guid:95e5af9e99c7d87337137ec0757017d0" />
+				<AudioClipEntry _path="guid:6ab2c522f3222cfd3456d62d1beece72" />
+				<AudioClipEntry _path="guid:8db7caa64e2f520caa6eeffd95d92e56" />
+				<AudioClipEntry _path="guid:e2f81621f6614f12ea3e42d15d9cd44f" />
+				<AudioClipEntry _path="guid:9645dbe8171726b27ee0381e71405a34" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WeaponMechReload" _bus="sfx" _priority="45" _cooldownSeconds="0.1" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/computer_noise_000.ogg" />
+				<AudioClipEntry _path="guid:27824883188bf29ee2649bb328367e40" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaMissile" _bus="sfx" _priority="50" _cooldownSeconds="0.03" _maxInstances="4" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/grenade_whistles/sfx_wpn_missilelaunch.ogg" />
+				<AudioClipEntry _path="guid:2108d6589c878e24801e486f0190185f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaWokeUp" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup7.ogg" />
+				<AudioClipEntry _path="guid:aa8a3cc88d919848b57870fd409044a2" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MechArenaSkillEnded" _bus="sfx" _priority="45" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/minimize_003.ogg" />
+				<AudioClipEntry _path="guid:11ff76e4f737b28fe8cd8397c93b0d28" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- 발걸음(표면 종류 표의 반응 _sound — 덮어쓰기 층 shooter3d/layers/footsteps 가 종류마다 적는다). 밟은 자리에서 3D(Default 감쇠). 마른 · 젖은 반응이 다른 소리다.
@@ -818,11 +818,11 @@
 		                _pitchMin="-1"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_concrete_004.ogg" />
+				<AudioClipEntry _path="guid:2ebd30701678e1ab1f907ce40e8f3fe3" />
+				<AudioClipEntry _path="guid:7b286ac7a39cac848583e8f17a410cce" />
+				<AudioClipEntry _path="guid:902c1f78742cb7eda2db34bf732a110e" />
+				<AudioClipEntry _path="guid:2a001e376d0b962606dbf4d6a3975d8b" />
+				<AudioClipEntry _path="guid:8dac6e61d6f159dbea4e8685b3ab3331" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.StoneWet"
@@ -838,11 +838,11 @@
 		                _pitchMin="-2"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_004.ogg" />
+				<AudioClipEntry _path="guid:6595936b55ab040b806bb332f379e9c5" />
+				<AudioClipEntry _path="guid:f1b6a9d266bfe21ae752fd4fb361ce16" />
+				<AudioClipEntry _path="guid:005814084044eff16ab0881016d9096e" />
+				<AudioClipEntry _path="guid:180e0358e79308a0b8a8620d7b9b921f" />
+				<AudioClipEntry _path="guid:0c6c6104ebe6f6432e5e2b644b8fca46" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Wood"
@@ -858,11 +858,11 @@
 		                _pitchMin="-1"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_wood_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_wood_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_wood_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_wood_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_wood_004.ogg" />
+				<AudioClipEntry _path="guid:9a2afc026062ad08dd80b476b0ef17b2" />
+				<AudioClipEntry _path="guid:e33fc6bc1f9814269bd676877a11b18b" />
+				<AudioClipEntry _path="guid:031c7663585aab0f225453b7a08f0fd9" />
+				<AudioClipEntry _path="guid:28da0420a677b98f5362d4023d63ab41" />
+				<AudioClipEntry _path="guid:120f4a95c4c781e48e020d2a4fffdfab" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Dirt"
@@ -878,11 +878,11 @@
 		                _pitchMin="-2"
 		                _pitchMax="0">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_004.ogg" />
+				<AudioClipEntry _path="guid:a0d7e22a824f2710af949fda96aa698b" />
+				<AudioClipEntry _path="guid:9e56ad5bbcf25033112e712602eaceea" />
+				<AudioClipEntry _path="guid:e090ffa741433504f2c9f0a76b60c10d" />
+				<AudioClipEntry _path="guid:0e86cdcd6857f718a55bba13c4f158dc" />
+				<AudioClipEntry _path="guid:80b150160701ca1471ac0baa7b292aad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.DirtWet"
@@ -898,11 +898,11 @@
 		                _pitchMin="-3"
 		                _pitchMax="0">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_004.ogg" />
+				<AudioClipEntry _path="guid:6595936b55ab040b806bb332f379e9c5" />
+				<AudioClipEntry _path="guid:f1b6a9d266bfe21ae752fd4fb361ce16" />
+				<AudioClipEntry _path="guid:005814084044eff16ab0881016d9096e" />
+				<AudioClipEntry _path="guid:180e0358e79308a0b8a8620d7b9b921f" />
+				<AudioClipEntry _path="guid:0c6c6104ebe6f6432e5e2b644b8fca46" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Grass"
@@ -918,11 +918,11 @@
 		                _pitchMin="-1"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_grass_004.ogg" />
+				<AudioClipEntry _path="guid:026f39a2f5f2af708b463bc4bc9807ee" />
+				<AudioClipEntry _path="guid:6517ede337026249ef20dddba55b2e80" />
+				<AudioClipEntry _path="guid:2960d4d66bd5cc11f85f9ce570447379" />
+				<AudioClipEntry _path="guid:b0b13902e66833eaac533e0721a7106c" />
+				<AudioClipEntry _path="guid:be8d6181b086f6b6749feb97b7027e93" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Snow"
@@ -938,11 +938,11 @@
 		                _pitchMin="-1"
 		                _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_snow_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_snow_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_snow_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_snow_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_snow_004.ogg" />
+				<AudioClipEntry _path="guid:fdb8cc6ba07a48d6882d8f09c66bb21b" />
+				<AudioClipEntry _path="guid:9395bb5519857e9c4e0e1a6a621f9829" />
+				<AudioClipEntry _path="guid:6e7a884005c9c99aa8da251af28c10e6" />
+				<AudioClipEntry _path="guid:fbfa63e935d2f98487f9b5914fee2ddb" />
+				<AudioClipEntry _path="guid:b035c5ea9fa141e95aba741e63499ae3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Sand"
@@ -958,11 +958,11 @@
 		                _pitchMin="0"
 		                _pitchMax="2">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/footstep_carpet_004.ogg" />
+				<AudioClipEntry _path="guid:a0d7e22a824f2710af949fda96aa698b" />
+				<AudioClipEntry _path="guid:9e56ad5bbcf25033112e712602eaceea" />
+				<AudioClipEntry _path="guid:e090ffa741433504f2c9f0a76b60c10d" />
+				<AudioClipEntry _path="guid:0e86cdcd6857f718a55bba13c4f158dc" />
+				<AudioClipEntry _path="guid:80b150160701ca1471ac0baa7b292aad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Mud"
@@ -978,11 +978,11 @@
 		                _pitchMin="-4"
 		                _pitchMax="-1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_004.ogg" />
+				<AudioClipEntry _path="guid:6595936b55ab040b806bb332f379e9c5" />
+				<AudioClipEntry _path="guid:f1b6a9d266bfe21ae752fd4fb361ce16" />
+				<AudioClipEntry _path="guid:005814084044eff16ab0881016d9096e" />
+				<AudioClipEntry _path="guid:180e0358e79308a0b8a8620d7b9b921f" />
+				<AudioClipEntry _path="guid:0c6c6104ebe6f6432e5e2b644b8fca46" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="Footstep.Water"
@@ -998,11 +998,11 @@
 		                _pitchMin="1"
 		                _pitchMax="3">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:2640efc525a52fba34543d43ec7b77a3" />
+				<AudioClipEntry _path="guid:188e001d3398901cce86aa9b7358aede" />
+				<AudioClipEntry _path="guid:ba2920ef6754935d563078d0444211ad" />
+				<AudioClipEntry _path="guid:631c4d8e7679e4f9bd24cc346d7dff2e" />
+				<AudioClipEntry _path="guid:7b46373780718528034d39227c5e5d2a" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- 사격장 환경음(AudioAmbientEmitterComponent) — 루프. 영역 소리는 ambient 버스로 간다. 발전기 쪽은 같은 소리를 점에서 낸다(벽 뒤 가림). -->
@@ -1016,1284 +1016,1284 @@
 		                _volumeDbMax="-16"
 		                _bLoop="true">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/thruster_fire_000.ogg" />
+				<AudioClipEntry _path="guid:19cb72af72b42184213684d5c394d2ad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGEncounter" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_001.ogg" />
+				<AudioClipEntry _path="guid:231ed29724c9c1bee9b6496685ae4da6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGBlade" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice2.ogg" />
+				<AudioClipEntry _path="guid:b624d98a85c4a5017f863ec13aca54a7" />
+				<AudioClipEntry _path="guid:efee4479fe2e28a8fc8f551f570291cb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGStaff" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_medium_004.ogg" />
+				<AudioClipEntry _path="guid:e7734a36b209ce0dd5da64abb83a674c" />
+				<AudioClipEntry _path="guid:2ddd933b3654ff2fba934df072d57a47" />
+				<AudioClipEntry _path="guid:19a8e6936eed73565cb7c8682b665d13" />
+				<AudioClipEntry _path="guid:7e3a16a6fc24680d9608c61c5cfa925d" />
+				<AudioClipEntry _path="guid:2bd72311860ea11d0c5d14d6bc42465b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGSpark" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_retro_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_retro_001.ogg" />
+				<AudioClipEntry _path="guid:546a97fe6285e4eb1f93e1f66696b9ec" />
+				<AudioClipEntry _path="guid:9367026d44558dc933054fc98cba0418" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGBalm" _bus="sfx" _priority="50" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_001.ogg" />
+				<AudioClipEntry _path="guid:6099953755f4902684e441bfa03f10d3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGHit" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
+				<AudioClipEntry _path="guid:57e87db875b3cf6edee5bdd2b24bef2a" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
+				<AudioClipEntry _path="guid:45b8d86dad0877cb727a2d0fd3e3036c" />
+				<AudioClipEntry _path="guid:d91d358688800f6c26d76d6afaf2270e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGHurt" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:2640efc525a52fba34543d43ec7b77a3" />
+				<AudioClipEntry _path="guid:188e001d3398901cce86aa9b7358aede" />
+				<AudioClipEntry _path="guid:ba2920ef6754935d563078d0444211ad" />
+				<AudioClipEntry _path="guid:631c4d8e7679e4f9bd24cc346d7dff2e" />
+				<AudioClipEntry _path="guid:7b46373780718528034d39227c5e5d2a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGTimed" _bus="sfx" _priority="65" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:ff9b3c0f09e06399f4f5483ff26e5e18" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGHeal" _bus="sfx" _priority="55" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGLevelUp" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+				<AudioClipEntry _path="guid:70f8c33dfb5c6bff567f8fae747caf8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGEquip" _bus="sfx" _container="Random" _priority="60" _maxInstances="1" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/belt_handle1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/belt_handle2.ogg" />
+				<AudioClipEntry _path="guid:6dfb0519b7b38d1e2cca204fe20efd89" />
+				<AudioClipEntry _path="guid:78f6b9b044548e48cb0fde6eb267803d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGClassChange" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_open.ogg" />
+				<AudioClipEntry _path="guid:11364cd902398697ac1aa0207bfd7b51" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGRest" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth_belt.ogg" />
+				<AudioClipEntry _path="guid:6df3cbc5c8c1aa7fca5267ee42a19553" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGRefused" _bus="sfx" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_004.ogg" />
+				<AudioClipEntry _path="guid:8008f1802f62d0b15b7d397424ce8963" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGDefend" _bus="sfx" _priority="50" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_001.ogg" />
+				<AudioClipEntry _path="guid:4db87c7e8e9fa0c9bd28f03ea09e913b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGCast" _bus="sfx" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup8.ogg" />
+				<AudioClipEntry _path="guid:f8bc0ce54440f6d988f3c56d866fa64f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGLockBroken" _bus="sfx" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_glass_medium_001.ogg" />
+				<AudioClipEntry _path="guid:92c8571842c8580b5bbe68c9913d5d89" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGCastCancelled" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_glass_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:7e09380406d42d5fa657c7a49959c752" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGCombo" _bus="sfx" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup9.ogg" />
+				<AudioClipEntry _path="guid:512fd8e61daddb05e0e19a2dafa10d16" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGDefeated" _bus="sfx" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling4.ogg" />
+				<AudioClipEntry _path="guid:fffd9cbff2132210c9680b3e1b882149" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGFled" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling5.ogg" />
+				<AudioClipEntry _path="guid:6196902bd25cc79363df093e28ea37a1" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="JRPGLearned" _bus="ui" _priority="75" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup14.ogg" />
+				<AudioClipEntry _path="guid:eb68a1d0a609aebc6e195eb6c588c96f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorEncounter" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:08186f13cbf063ccfe254a66c15756bf" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorMove" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth2.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
+				<AudioClipEntry _path="guid:46ee1c76aa97e77b6344a320eccbd321" />
+				<AudioClipEntry _path="guid:2ac8c5ac6d752511767a2b65bab47a98" />
+				<AudioClipEntry _path="guid:7b064c732d724fba70c0ee14b9e48bad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorStatusMove" _bus="sfx" _priority="45" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_000.ogg" />
+				<AudioClipEntry _path="guid:d7531edcefd88d36754db0227d313189" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorHit" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_004.ogg" />
+				<AudioClipEntry _path="guid:6595936b55ab040b806bb332f379e9c5" />
+				<AudioClipEntry _path="guid:f1b6a9d266bfe21ae752fd4fb361ce16" />
+				<AudioClipEntry _path="guid:005814084044eff16ab0881016d9096e" />
+				<AudioClipEntry _path="guid:180e0358e79308a0b8a8620d7b9b921f" />
+				<AudioClipEntry _path="guid:0c6c6104ebe6f6432e5e2b644b8fca46" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorFainted" _bus="sfx" _priority="65" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/alien/sfx_deathscream_alien1.ogg" />
+				<AudioClipEntry _path="guid:22757d7069cf7ac16d4868a7dfb645ae" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorLevelUp" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+				<AudioClipEntry _path="guid:70f8c33dfb5c6bff567f8fae747caf8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorEvolved" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/maximize_008.ogg" />
+				<AudioClipEntry _path="guid:908615e3e2bd9d0caabf891ead16cb6e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorSwitched" _bus="sfx" _priority="55" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth4.ogg" />
+				<AudioClipEntry _path="guid:8e8b6dfec04ddd638dda056bda08267b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorShake" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_click.ogg" />
+				<AudioClipEntry _path="guid:b9559aa0317b8496ed5ede626f8ba1f3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorCaptured" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_002.ogg" />
+				<AudioClipEntry _path="guid:eeaa42ce167c737bfd102117d5a850bc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorBrokeFree" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+				<AudioClipEntry _path="guid:b8485f170b38025c85d76378ecde6145" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorEscaped" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/footstep00.ogg" />
+				<AudioClipEntry _path="guid:15339066eca288e308f5182ddbe1bc17" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorRest" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth_belt.ogg" />
+				<AudioClipEntry _path="guid:6df3cbc5c8c1aa7fca5267ee42a19553" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorRefused" _bus="sfx" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_005.ogg" />
+				<AudioClipEntry _path="guid:29b4fbdc2b0073b3fe89311812e604b8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorMissed" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
+				<AudioClipEntry _path="guid:7b064c732d724fba70c0ee14b9e48bad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorCritical" _bus="sfx" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorStatus" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error4.ogg" />
+				<AudioClipEntry _path="guid:45cc76c61d44645da685c966591bd624" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorStat" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/switch_004.ogg" />
+				<AudioClipEntry _path="guid:3b3cb9b28f26d49944b749b69e96479a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorRecovered" _bus="sfx" _priority="55" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup10.ogg" />
+				<AudioClipEntry _path="guid:63114547cc4570346fad08356181d211" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorWeather" _bus="sfx" _priority="50" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glitch_003.ogg" />
+				<AudioClipEntry _path="guid:c1264858ed996bfb0076eb69d9d8ead9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterCollectorLearned" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup11.ogg" />
+				<AudioClipEntry _path="guid:1d1b970ed32d95bf312a8b509fa45ac5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntContract" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_place1.ogg" />
+				<AudioClipEntry _path="guid:7c75c5e531bf60524b2e9d53ac00e9a9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntClue" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/question_001.ogg" />
+				<AudioClipEntry _path="guid:6f8193825ebaffad035b1647bbce48f4" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntQuest" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_003.ogg" />
+				<AudioClipEntry _path="guid:e33b48fa35106d821409b8172879a51f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntLearn" _bus="sfx" _container="Random" _priority="70" _maxInstances="1" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip2.ogg" />
+				<AudioClipEntry _path="guid:80dd89129427fb97ab857b83bc2b66ac" />
+				<AudioClipEntry _path="guid:fb2272f292998d74d81c76cd70200d26" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntMutagen" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot1.ogg" />
+				<AudioClipEntry _path="guid:06691350dd169891fa48202492ce0259" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntMonster" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/alien/sfx_deathscream_alien3.ogg" />
+				<AudioClipEntry _path="guid:e663bc62182f5ca2bff54027be7996b8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntFast" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice2.ogg" />
+				<AudioClipEntry _path="guid:b624d98a85c4a5017f863ec13aca54a7" />
+				<AudioClipEntry _path="guid:efee4479fe2e28a8fc8f551f570291cb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntStrong" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/draw_knife1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/draw_knife2.ogg" />
+				<AudioClipEntry _path="guid:f8d616949ec9a491fc6369225ebfcec3" />
+				<AudioClipEntry _path="guid:15a01d22facdb18bce4c75fd5ecdafdb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntGust" _bus="sfx" _priority="55" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_001.ogg" />
+				<AudioClipEntry _path="guid:752277c44c86e6fac56ac6f3d7dcf85a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntHit" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_004.ogg" />
+				<AudioClipEntry _path="guid:3037ce5d66d92b235f62c20ef22d7f98" />
+				<AudioClipEntry _path="guid:8bebe69af5b19b89916c9f9d7390057f" />
+				<AudioClipEntry _path="guid:cfd5cb8ee4cdeb6e49991d584b5cd9d3" />
+				<AudioClipEntry _path="guid:467b6ced2f74e8c69a3bc703e817ffda" />
+				<AudioClipEntry _path="guid:42a37816e913f9a372be5a8ad0786c95" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntHurt" _bus="sfx" _container="Random" _priority="65" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:2640efc525a52fba34543d43ec7b77a3" />
+				<AudioClipEntry _path="guid:188e001d3398901cce86aa9b7358aede" />
+				<AudioClipEntry _path="guid:ba2920ef6754935d563078d0444211ad" />
+				<AudioClipEntry _path="guid:631c4d8e7679e4f9bd24cc346d7dff2e" />
+				<AudioClipEntry _path="guid:7b46373780718528034d39227c5e5d2a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntDodge" _bus="sfx" _priority="50" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
+				<AudioClipEntry _path="guid:7b064c732d724fba70c0ee14b9e48bad" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntBrew" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot2.ogg" />
+				<AudioClipEntry _path="guid:63be7b4082e684ef49f5a3f905ab3abd" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntPotion" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_small_leather.ogg" />
+				<AudioClipEntry _path="guid:0ac70d2d8ddd03522f9662145ac62578" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntStep" _bus="ui" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_004.ogg" />
+				<AudioClipEntry _path="guid:23f95943b84844c4c58dac77218bfbcf" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntSolved" _bus="ui" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup15.ogg" />
+				<AudioClipEntry _path="guid:6907e842bcd53baed6353fd1a0ec9c2d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="MonsterHuntKnowledge" _bus="ui" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_open.ogg" />
+				<AudioClipEntry _path="guid:11364cd902398697ac1aa0207bfd7b51" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantBuy" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins2.ogg" />
+				<AudioClipEntry _path="guid:2bfdc04555e111b107f099d4df4df94f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantStation" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_latch.ogg" />
+				<AudioClipEntry _path="guid:346478fb91aa87f088d87003838a2a20" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantOpen" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/door_open_1.ogg" />
+				<AudioClipEntry _path="guid:293c3ee40b838af8b8456f1172342579" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantClose" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/door_close_1.ogg" />
+				<AudioClipEntry _path="guid:986001692e6aedf205b6a9c93f06343a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantArrived" _bus="sfx" _container="Random" _priority="45" _cooldownSeconds="0.1" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/footstep01.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/footstep02.ogg" />
+				<AudioClipEntry _path="guid:c903b760456c66c201e1df58583437c4" />
+				<AudioClipEntry _path="guid:f970f63be99fd1dc0b7c4f33a5a3c606" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantCooked" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.1" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot2.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot3.ogg" />
+				<AudioClipEntry _path="guid:63be7b4082e684ef49f5a3f905ab3abd" />
+				<AudioClipEntry _path="guid:ad2c3df5bfc2154cfa56d7e699f6efa6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantPaid" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins.ogg" />
+				<AudioClipEntry _path="guid:2b393ae09e21c9f2e2cddce9d2bee455" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantLeft" _bus="sfx" _priority="50" _cooldownSeconds="0.1" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/creak1.ogg" />
+				<AudioClipEntry _path="guid:75e742bfaff797e1a53cb3ccec09d7a0" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantLevelUp" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+				<AudioClipEntry _path="guid:70f8c33dfb5c6bff567f8fae747caf8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantOrder" _bus="sfx" _priority="40" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip2.ogg" />
+				<AudioClipEntry _path="guid:fb2272f292998d74d81c76cd70200d26" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RestaurantSpoiled" _bus="sfx" _priority="55" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error5.ogg" />
+				<AudioClipEntry _path="guid:bf507a686a9d0a1de7a30f633cf61848" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- KartRacing* 은 카트 경기(kartracing)의 디렉터가 플레이어 차의 알림마다 낸다 — 카메라가 플레이어를 따라가 모두 2D 다. -->
 		<AudioEventDef _name="KartRacingGo" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingLap" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingFinalLap" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_004.ogg" />
+				<AudioClipEntry _path="guid:23f95943b84844c4c58dac77218bfbcf" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingItemBox" _bus="sfx" _container="Random" _priority="55" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_003.ogg" />
+				<AudioClipEntry _path="guid:6099953755f4902684e441bfa03f10d3" />
+				<AudioClipEntry _path="guid:e3a8069d455a6e7a60b82819bdef8483" />
+				<AudioClipEntry _path="guid:0084a86a0dc58c364746a553f9f8e1de" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingItemUsed" _bus="sfx" _container="Random" _priority="60" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_small_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_small_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/laser_small_002.ogg" />
+				<AudioClipEntry _path="guid:9e98c40ee127b28682f637daa50d9476" />
+				<AudioClipEntry _path="guid:e40b92b335b6d194c50d7b0e4d1dfa0e" />
+				<AudioClipEntry _path="guid:c96082b4feccc46542793d01aee05de8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingHit" _bus="sfx" _container="Random" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
+				<AudioClipEntry _path="guid:4bc384a0d4bf88cd8b099228d677b4ae" />
+				<AudioClipEntry _path="guid:38e507c6425c7df9394471d0b5332747" />
+				<AudioClipEntry _path="guid:cb401bbe74a8d1a7e515d15fc2608230" />
+				<AudioClipEntry _path="guid:5f7981adc18ed1bae7a035f414a8f0c9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingBlocked" _bus="sfx" _container="Random" _priority="65" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_001.ogg" />
+				<AudioClipEntry _path="guid:d7531edcefd88d36754db0227d313189" />
+				<AudioClipEntry _path="guid:752277c44c86e6fac56ac6f3d7dcf85a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingBoost" _bus="sfx" _priority="60" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/thruster_fire_001.ogg" />
+				<AudioClipEntry _path="guid:68ee3a2a2d89b34559d98105d03ed6da" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingWrongWay" _bus="sfx" _priority="65" _cooldownSeconds="1.0" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_004.ogg" />
+				<AudioClipEntry _path="guid:8008f1802f62d0b15b7d397424ce8963" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare3.ogg" />
+				<AudioClipEntry _path="guid:401d4e9fb130c94f7d74e2baedf99d02" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingLapLost" _bus="sfx" _priority="65" _cooldownSeconds="0.5" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error1.ogg" />
+				<AudioClipEntry _path="guid:fafb06e22f8d1b6412156af9f57ce954" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingBestLap" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup5.ogg" />
+				<AudioClipEntry _path="guid:ff0464b74c8f99945f98948efd510480" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingPlaceChanged" _bus="sfx" _priority="45" _cooldownSeconds="0.5" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/neutral_sounds/sfx_sound_neutral1.ogg" />
+				<AudioClipEntry _path="guid:f7f16da33c0dbb64bbf08d30c693384a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingDrift" _bus="sfx" _priority="50" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/neutral_sounds/sfx_sound_neutral2.ogg" />
+				<AudioClipEntry _path="guid:4f79916baa78e115330d455e3df618fb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="KartRacingLanded" _bus="sfx" _priority="45" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/jumping_and_landing/sfx_movement_jump9_landing.ogg" />
+				<AudioClipEntry _path="guid:c4d9de059c0ead0d53d72b70d304a58c" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- PartyArena* 는 파티 아레나(partyarena)의 디렉터가 낸다 — 무대의 소리는 그 사람의 자리에서 3D(PartyArenaStage 감쇠 — 카메라가 무대 전체를 본다), 라운드 · 결과는 2D 다. -->
 		<AudioEventDef _name="PartyArenaBounce" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="30" _cooldownSeconds="0.05" _maxInstances="3" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_000.ogg" _volumeDb="-6" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_001.ogg" _volumeDb="-6" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_soft_medium_002.ogg" _volumeDb="-6" />
+				<AudioClipEntry _path="guid:6595936b55ab040b806bb332f379e9c5" _volumeDb="-6" />
+				<AudioClipEntry _path="guid:f1b6a9d266bfe21ae752fd4fb361ce16" _volumeDb="-6" />
+				<AudioClipEntry _path="guid:005814084044eff16ab0881016d9096e" _volumeDb="-6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaAttack" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="40" _cooldownSeconds="0.05" _maxInstances="3" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/knife_slice2.ogg" />
+				<AudioClipEntry _path="guid:b624d98a85c4a5017f863ec13aca54a7" />
+				<AudioClipEntry _path="guid:efee4479fe2e28a8fc8f551f570291cb" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaHit" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="60" _cooldownSeconds="0.03" _maxInstances="4" _steal="Farthest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_medium_004.ogg" />
+				<AudioClipEntry _path="guid:3037ce5d66d92b235f62c20ef22d7f98" />
+				<AudioClipEntry _path="guid:8bebe69af5b19b89916c9f9d7390057f" />
+				<AudioClipEntry _path="guid:cfd5cb8ee4cdeb6e49991d584b5cd9d3" />
+				<AudioClipEntry _path="guid:467b6ced2f74e8c69a3bc703e817ffda" />
+				<AudioClipEntry _path="guid:42a37816e913f9a372be5a8ad0786c95" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaBlocked" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="55" _cooldownSeconds="0.03" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_medium_002.ogg" />
+				<AudioClipEntry _path="guid:87a062d19074b2170c2635eacb2593de" />
+				<AudioClipEntry _path="guid:edb4e6cbc31b332cb0c5e63257c967eb" />
+				<AudioClipEntry _path="guid:c40b5d1c966c489c1ff2965a6e9f55d4" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaPound" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="60" _cooldownSeconds="0.05" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:65ec1214f018413955e2e592fb685ddb" />
+				<AudioClipEntry _path="guid:bc0007ca488d045d7ca1d11ed2833a8b" />
+				<AudioClipEntry _path="guid:c4300021a1304dcad03bca39ad92e3cf" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaRingOut" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="70" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/movement/falling_sounds/sfx_sounds_falling3.ogg" />
+				<AudioClipEntry _path="guid:79911f1a8a0e5d306713576d43045b27" />
+				<AudioClipEntry _path="guid:64a677301e7595995ed8cbfd987a8898" />
+				<AudioClipEntry _path="guid:399a5334f727543ce712fc3856f9133e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaItem" _bus="sfx" _attenuation="PartyArenaStage" _container="Random" _priority="55" _maxInstances="3" _steal="Farthest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_004.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glass_005.ogg" />
+				<AudioClipEntry _path="guid:a8860db4f1860b193211c567b17e16ef" />
+				<AudioClipEntry _path="guid:43c78dc88b368be53b4916e46803a9df" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaRound" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/bong_001.ogg" />
+				<AudioClipEntry _path="guid:efceabe6833f469f58e19860d3b1ab48" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare2.ogg" />
+				<AudioClipEntry _path="guid:76e0a8d707bf9d2e78635ab8274c89a8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+				<AudioClipEntry _path="guid:4dc7e83727de42aebf20e87aa63c8865" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaComboBroken" _bus="sfx" _attenuation="PartyArenaStage" _priority="40" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error2.ogg" />
+				<AudioClipEntry _path="guid:ce453640386e71186fdb3f6470a132de" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaRespawn" _bus="sfx" _attenuation="PartyArenaStage" _priority="55" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup6.ogg" />
+				<AudioClipEntry _path="guid:883c37ed126069f916bad8105e6da76f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaItemSpawned" _bus="sfx" _attenuation="PartyArenaStage" _priority="45" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/drop_002.ogg" />
+				<AudioClipEntry _path="guid:53c7b16c54e631c55e4dec854a736915" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="PartyArenaItemExpired" _bus="sfx" _attenuation="PartyArenaStage" _priority="35" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/minimize_005.ogg" />
+				<AudioClipEntry _path="guid:62ddafb083ce40e53437e067b357106c" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- CardBattle* 은 덱 전투(cardgame)의 디렉터가 낸다 — 탁자를 내려다보는 판이라 모두 2D 다. -->
 		<AudioEventDef _name="CardBattlePlay" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.03" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip2.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_flip3.ogg" />
+				<AudioClipEntry _path="guid:80dd89129427fb97ab857b83bc2b66ac" />
+				<AudioClipEntry _path="guid:fb2272f292998d74d81c76cd70200d26" />
+				<AudioClipEntry _path="guid:b0023cc8da6597d7786621df6a208ad4" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleHit" _bus="sfx" _container="Random" _priority="60" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
+				<AudioClipEntry _path="guid:57e87db875b3cf6edee5bdd2b24bef2a" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleBlock" _bus="sfx" _container="Random" _priority="55" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_light_002.ogg" />
+				<AudioClipEntry _path="guid:8c0a2195d28798badee956675d538b41" />
+				<AudioClipEntry _path="guid:4db87c7e8e9fa0c9bd28f03ea09e913b" />
+				<AudioClipEntry _path="guid:92bb4cd06f0754e5eda30ea45507c572" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleEndTurn" _bus="sfx" _container="Random" _priority="50" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_place1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_place2.ogg" />
+				<AudioClipEntry _path="guid:7c75c5e531bf60524b2e9d53ac00e9a9" />
+				<AudioClipEntry _path="guid:54f55eff008ee4bef8a2e39863edc13d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleHurt" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage1.ogg" />
+				<AudioClipEntry _path="guid:1b535d580d55eee18096afb0180081c3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleRefused" _bus="sfx" _priority="50" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+				<AudioClipEntry _path="guid:b8485f170b38025c85d76378ecde6145" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare2.ogg" />
+				<AudioClipEntry _path="guid:76e0a8d707bf9d2e78635ab8274c89a8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CardBattleLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- Conquest* 는 정복(sidescrollconquest)의 디렉터가 판의 알림마다 낸다 — 옆에서 보는 전선이라 모두 2D 다. 병사가 한꺼번에 쓰러질 수 있어 쿨다운과 동시 재생 상한을 둔다. -->
 		<AudioEventDef _name="ConquestOrder" _bus="sfx" _container="Random" _priority="55" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_002.ogg" />
+				<AudioClipEntry _path="guid:e30af1cb2a4f53bf7e4ed1e9f50a898a" />
+				<AudioClipEntry _path="guid:0db52a02207170803234b71eff1eca8d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestTrained" _bus="sfx" _priority="50" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_latch.ogg" />
+				<AudioClipEntry _path="guid:346478fb91aa87f088d87003838a2a20" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestRefused" _bus="sfx" _priority="50" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+				<AudioClipEntry _path="guid:b8485f170b38025c85d76378ecde6145" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestUnitDown" _bus="sfx" _container="Random" _priority="40" _cooldownSeconds="0.08" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_generic_light_004.ogg" />
+				<AudioClipEntry _path="guid:ba4290a1f824b75ee86f1ac86e5478fa" />
+				<AudioClipEntry _path="guid:2897cbe60f6614326ae6891f7d196c0a" />
+				<AudioClipEntry _path="guid:b38f94adf61268934d7793691a050a8d" />
+				<AudioClipEntry _path="guid:bb219c8c1a0cabf2b259d7c9b35fb9ab" />
+				<AudioClipEntry _path="guid:dbe1640ae872b150d3cce358098d3743" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestBroken" _bus="sfx" _container="Random" _priority="65" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_004.ogg" />
+				<AudioClipEntry _path="guid:62e3779c11884365aeb5dc4498710de9" />
+				<AudioClipEntry _path="guid:dd4b7d2ad707d7fc5e3828f8b2f470f3" />
+				<AudioClipEntry _path="guid:d49699cbabdf8bc0313283a2291f5f5d" />
+				<AudioClipEntry _path="guid:9232c9117c530568988a21772eb4184c" />
+				<AudioClipEntry _path="guid:8bac4faae354cdb98d4c0e5f9d1ddbcc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestSiteTaken" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+				<AudioClipEntry _path="guid:70f8c33dfb5c6bff567f8fae747caf8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestSiteLost" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+				<AudioClipEntry _path="guid:4dc7e83727de42aebf20e87aa63c8865" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestWave" _bus="sfx" _priority="65" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:506382516d0ad42f5019d4aad25743e5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestCommanderDown" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage1.ogg" />
+				<AudioClipEntry _path="guid:1b535d580d55eee18096afb0180081c3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestCommanderBack" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup2.ogg" />
+				<AudioClipEntry _path="guid:639943fa394b21734f964b5f5c0d529d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestWon" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare3.ogg" />
+				<AudioClipEntry _path="guid:401d4e9fb130c94f7d74e2baedf99d02" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestLost" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ConquestIncome" _bus="sfx" _priority="40" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/coins/sfx_coin_double1.ogg" />
+				<AudioClipEntry _path="guid:1beb4f95fbc7bc035dd289b624bb2b20" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorHit" _bus="sfx" _container="Random" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
+				<AudioClipEntry _path="guid:57e87db875b3cf6edee5bdd2b24bef2a" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
+				<AudioClipEntry _path="guid:45b8d86dad0877cb727a2d0fd3e3036c" />
+				<AudioClipEntry _path="guid:d91d358688800f6c26d76d6afaf2270e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorDowned" _bus="sfx" _container="Random" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human3.ogg" />
+				<AudioClipEntry _path="guid:bf6bc44506c91413e553fe7a028c8324" />
+				<AudioClipEntry _path="guid:45a6c2d38e6192e001060177d58c01e6" />
+				<AudioClipEntry _path="guid:39064b1c8fcd9ddb4f9fa7cdb7ee23b0" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorHooked" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_latch.ogg" />
+				<AudioClipEntry _path="guid:346478fb91aa87f088d87003838a2a20" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorSacrificed" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human4.ogg" />
+				<AudioClipEntry _path="guid:e3e7be5e7360942a7a6ab40b3b0dc79c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorRescued" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_002.ogg" />
+				<AudioClipEntry _path="guid:eeaa42ce167c737bfd102117d5a850bc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorGenerator" _bus="sfx" _priority="70" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/computer_noise_000.ogg" />
+				<AudioClipEntry _path="guid:27824883188bf29ee2649bb328367e40" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorPowered" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_000.ogg" />
+				<AudioClipEntry _path="guid:d7531edcefd88d36754db0227d313189" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorGateOpened" _bus="sfx" _priority="70" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/door_open_000.ogg" />
+				<AudioClipEntry _path="guid:893b66bfd7ba10c6610da7789682a0a9" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorEscaped" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorPallet" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plank_medium_004.ogg" />
+				<AudioClipEntry _path="guid:62e3779c11884365aeb5dc4498710de9" />
+				<AudioClipEntry _path="guid:dd4b7d2ad707d7fc5e3828f8b2f470f3" />
+				<AudioClipEntry _path="guid:d49699cbabdf8bc0313283a2291f5f5d" />
+				<AudioClipEntry _path="guid:9232c9117c530568988a21772eb4184c" />
+				<AudioClipEntry _path="guid:8bac4faae354cdb98d4c0e5f9d1ddbcc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorVaulted" _bus="sfx" _container="Random" _priority="40" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth2.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth3.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth4.ogg" />
+				<AudioClipEntry _path="guid:46ee1c76aa97e77b6344a320eccbd321" />
+				<AudioClipEntry _path="guid:2ac8c5ac6d752511767a2b65bab47a98" />
+				<AudioClipEntry _path="guid:7b064c732d724fba70c0ee14b9e48bad" />
+				<AudioClipEntry _path="guid:8e8b6dfec04ddd638dda056bda08267b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorAbility" _bus="sfx" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/alien/sfx_deathscream_alien1.ogg" />
+				<AudioClipEntry _path="guid:22757d7069cf7ac16d4868a7dfb645ae" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorSkillCheck" _bus="ui" _priority="75" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/select_002.ogg" />
+				<AudioClipEntry _path="guid:0db52a02207170803234b71eff1eca8d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorWon" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorLost" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorMissed" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/draw_knife3.ogg" />
+				<AudioClipEntry _path="guid:8839f102b001334a296fdc1abd51e6da" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorPickedUp" _bus="sfx" _priority="55" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/cloth4.ogg" />
+				<AudioClipEntry _path="guid:8e8b6dfec04ddd638dda056bda08267b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorHookStage" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+				<AudioClipEntry _path="guid:4dc7e83727de42aebf20e87aa63c8865" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorHealed" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup12.ogg" />
+				<AudioClipEntry _path="guid:40ef0c30d0392fdf25c8d3178a6e6694" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorKicked" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_heavy_001.ogg" />
+				<AudioClipEntry _path="guid:4bc384a0d4bf88cd8b099228d677b4ae" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorHatchClosed" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/door_close_3.ogg" />
+				<AudioClipEntry _path="guid:ac47201b70a1156c0c0d24129dd9ba2a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorCollapse" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:08186f13cbf063ccfe254a66c15756bf" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorWindowBlocked" _bus="sfx" _priority="55" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_wood_heavy_001.ogg" />
+				<AudioClipEntry _path="guid:bc0007ca488d045d7ca1d11ed2833a8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorSkillCheckPassed" _bus="ui" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_002.ogg" />
+				<AudioClipEntry _path="guid:eeaa42ce167c737bfd102117d5a850bc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AsymmetricHorrorSkillCheckFailed" _bus="ui" _priority="75" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_006.ogg" />
+				<AudioClipEntry _path="guid:23b6b0200ac419078c1bf31adba6b67c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerLanded" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/door_open_001.ogg" />
+				<AudioClipEntry _path="guid:82d80e2944c0abb31e52bcbb51e86e9b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerDeparted" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/door_close_001.ogg" />
+				<AudioClipEntry _path="guid:fcaf383eaedae141c138cd0f2f6f9c00" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerDusk" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_000.ogg" />
+				<AudioClipEntry _path="guid:506382516d0ad42f5019d4aad25743e5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerThreat" _bus="sfx" _priority="70" _cooldownSeconds="0.2" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/alien/sfx_deathscream_alien2.ogg" />
+				<AudioClipEntry _path="guid:b1eaf4ce25ccd49b07e13cbf6d4bdc8d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerDied" _bus="sfx" _container="Random" _priority="80" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human1.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human2.ogg" />
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/human/sfx_deathscream_human3.ogg" />
+				<AudioClipEntry _path="guid:bf6bc44506c91413e553fe7a028c8324" />
+				<AudioClipEntry _path="guid:45a6c2d38e6192e001060177d58c01e6" />
+				<AudioClipEntry _path="guid:39064b1c8fcd9ddb4f9fa7cdb7ee23b0" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerPickup" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.05" _maxInstances="3" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot1.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot2.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_pot3.ogg" />
+				<AudioClipEntry _path="guid:06691350dd169891fa48202492ce0259" />
+				<AudioClipEntry _path="guid:63be7b4082e684ef49f5a3f905ab3abd" />
+				<AudioClipEntry _path="guid:ad2c3df5bfc2154cfa56d7e699f6efa6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerLoaded" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_002.ogg" />
+				<AudioClipEntry _path="guid:52c7707dd6bde9ebb84ee4d0ed28d3a4" />
+				<AudioClipEntry _path="guid:3eb1c287e45ed8ee2c352cd8c3e7184c" />
+				<AudioClipEntry _path="guid:18a092bfd657031a29b7bc227aafb6b5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerUnlocked" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/metal_click.ogg" />
+				<AudioClipEntry _path="guid:b9559aa0317b8496ed5ede626f8ba1f3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerSold" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins.ogg" />
+				<AudioClipEntry _path="guid:2b393ae09e21c9f2e2cddce9d2bee455" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerBought" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerRefused" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+				<AudioClipEntry _path="guid:b8485f170b38025c85d76378ecde6145" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerWon" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerLost" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerRouted" _bus="ui" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_003.ogg" />
+				<AudioClipEntry _path="guid:e33b48fa35106d821409b8172879a51f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerBody" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/drop_leather.ogg" />
+				<AudioClipEntry _path="guid:0a8b293cf084056e35240441cf0dcb4f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerWiped" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative2.ogg" />
+				<AudioClipEntry _path="guid:4dc7e83727de42aebf20e87aa63c8865" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ScavengerFine" _bus="ui" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error6.ogg" />
+				<AudioClipEntry _path="guid:34272743d89ef2e2179ba4774bcc12ac" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntAppeared" _bus="sfx" _priority="60" _cooldownSeconds="0.1" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/death_screams/alien/sfx_deathscream_alien3.ogg" />
+				<AudioClipEntry _path="guid:e663bc62182f5ca2bff54027be7996b8" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntHurt" _bus="sfx" _container="Random" _priority="80" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
+				<AudioClipEntry _path="guid:57e87db875b3cf6edee5bdd2b24bef2a" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
+				<AudioClipEntry _path="guid:45b8d86dad0877cb727a2d0fd3e3036c" />
+				<AudioClipEntry _path="guid:d91d358688800f6c26d76d6afaf2270e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntStunned" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_glass_medium_000.ogg" />
+				<AudioClipEntry _path="guid:4e8a0e60c1d17f19998a94cfd8cf7fdc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntSuction" _bus="sfx" _priority="50" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/space_engine_low_000.ogg" />
+				<AudioClipEntry _path="guid:0ae9a31fd5b9d99330e1be8fe6e42a48" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntSurge" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_scifi_sounds/force_field_001.ogg" />
+				<AudioClipEntry _path="guid:752277c44c86e6fac56ac6f3d7dcf85a" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntEscaped" _bus="sfx" _priority="50" _cooldownSeconds="0.1" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_002.ogg" />
+				<AudioClipEntry _path="guid:1b12ab26e8b711c830b7dd21ee314b5c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntCaught" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup1.ogg" />
+				<AudioClipEntry _path="guid:70f8c33dfb5c6bff567f8fae747caf8b" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntRoomLit" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/switch_001.ogg" />
+				<AudioClipEntry _path="guid:49008cf54ca5a12f5f4b298cb656fdf2" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntKey" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_002.ogg" />
+				<AudioClipEntry _path="guid:eeaa42ce167c737bfd102117d5a850bc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntDoorOpened" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/door_open_1.ogg" />
+				<AudioClipEntry _path="guid:293c3ee40b838af8b8456f1172342579" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntCoins" _bus="sfx" _container="Random" _priority="50" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins2.ogg" />
+				<AudioClipEntry _path="guid:2b393ae09e21c9f2e2cddce9d2bee455" />
+				<AudioClipEntry _path="guid:2bfdc04555e111b107f099d4df4df94f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntWon" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="GhostHuntLost" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorSanity" _bus="sfx" _priority="60" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage1.ogg" />
+				<AudioClipEntry _path="guid:1b535d580d55eee18096afb0180081c3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorHallucination" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/glitch_001.ogg" />
+				<AudioClipEntry _path="guid:a1a9b7715fb15c38fea2ff9f1f2a31e6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorFlashlight" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/switch_002.ogg" />
+				<AudioClipEntry _path="guid:0d67bbc4b5ceec7af3d3b614ae56b27d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorDoor" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/door_open_2.ogg" />
+				<AudioClipEntry _path="guid:978ea1fd1a9f7419771bd6b635276ed1" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorSolved" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorFailed" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/error_001.ogg" />
+				<AudioClipEntry _path="guid:b8485f170b38025c85d76378ecde6145" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorDocument" _bus="sfx" _priority="60" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_open.ogg" />
+				<AudioClipEntry _path="guid:11364cd902398697ac1aa0207bfd7b51" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorPickup" _bus="sfx" _container="Random" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_small_leather.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_small_leather2.ogg" />
+				<AudioClipEntry _path="guid:0ac70d2d8ddd03522f9662145ac62578" />
+				<AudioClipEntry _path="guid:a91524598fef5ded1f250c767121d52e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorHeal" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup2.ogg" />
+				<AudioClipEntry _path="guid:639943fa394b21734f964b5f5c0d529d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorSaved" _bus="ui" _priority="70" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_003.ogg" />
+				<AudioClipEntry _path="guid:e33b48fa35106d821409b8172879a51f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorFight" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/draw_knife1.ogg" />
+				<AudioClipEntry _path="guid:f8d616949ec9a491fc6369225ebfcec3" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorShot" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/weapons/single_shot_sounds/sfx_weapon_singleshot1.ogg" />
+				<AudioClipEntry _path="guid:8913d86b8c2edf9dd9e4ca02087f9b70" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorHurt" _bus="sfx" _container="Random" _priority="80" _cooldownSeconds="0.05" _maxInstances="2" _steal="Oldest" _pitchMin="-1" _pitchMax="1">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_000.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_001.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_002.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_003.ogg" />
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_punch_heavy_004.ogg" />
+				<AudioClipEntry _path="guid:5319f1cfcbbf50167b3c1448e85b657e" />
+				<AudioClipEntry _path="guid:57e87db875b3cf6edee5bdd2b24bef2a" />
+				<AudioClipEntry _path="guid:86017f916867cabb24681555d4fb67ab" />
+				<AudioClipEntry _path="guid:45b8d86dad0877cb727a2d0fd3e3036c" />
+				<AudioClipEntry _path="guid:d91d358688800f6c26d76d6afaf2270e" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorWon" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare1.ogg" />
+				<AudioClipEntry _path="guid:4419c630750ba10f4fbf5b6f5b5ea3c6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorLost" _bus="ui" _priority="90" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorCalm" _bus="sfx" _priority="55" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup13.ogg" />
+				<AudioClipEntry _path="guid:54a868ea45feb3c7533d2ec28c14dfd0" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorClue" _bus="ui" _priority="65" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/question_002.ogg" />
+				<AudioClipEntry _path="guid:869b123105e25a55f4aa081ff8889d69" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SurvivalHorrorArea" _bus="sfx" _priority="40" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/creak2.ogg" />
+				<AudioClipEntry _path="guid:e39b474875f0e84b3ca756536d1e032d" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- Rhythm* 는 리듬 미니게임(rhythm)의 디렉터가 판정 알림마다 낸다 — 모두 2D 다. -->
 		<AudioEventDef _name="RhythmJudged" _bus="sfx" _priority="50" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/tick_002.ogg" />
+				<AudioClipEntry _path="guid:f995a6632f25f2119961c82ed96dddd7" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RhythmMissed" _bus="sfx" _priority="45" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error7.ogg" />
+				<AudioClipEntry _path="guid:d541140ab5fcb8fde4b43145530eef04" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="RhythmEmptyPress" _bus="sfx" _priority="30" _cooldownSeconds="0.03" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/click_003.ogg" />
+				<AudioClipEntry _path="guid:36e88ab07b39515dfb6685404b6b37ad" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- SRPG* 는 택틱스 전투(kitdemo_tactics)의 디렉터가 전장 알림마다 낸다 — 적 페이즈는 한 프레임에 끝나므로 쿨다운으로 겹침을 줄인다. -->
 		<AudioEventDef _name="SRPGPhase" _bus="ui" _priority="70" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/maximize_004.ogg" />
+				<AudioClipEntry _path="guid:c161f9cf824e5edcda6907a1ad3a04ac" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SRPGMoved" _bus="sfx" _priority="40" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/footstep03.ogg" />
+				<AudioClipEntry _path="guid:aa552017ace882bdf6337fb56bf483fa" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SRPGHit" _bus="sfx" _priority="60" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_metal_medium_001.ogg" />
+				<AudioClipEntry _path="guid:3eb1c287e45ed8ee2c352cd8c3e7184c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SRPGMissed" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/draw_knife3.ogg" />
+				<AudioClipEntry _path="guid:8839f102b001334a296fdc1abd51e6da" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SRPGDestroyed" _bus="sfx" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_plate_heavy_002.ogg" />
+				<AudioClipEntry _path="guid:9eebd6703cba72201c18ce80964e4523" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="SRPGLevelUp" _bus="ui" _priority="75" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup16.ogg" />
+				<AudioClipEntry _path="guid:a24917158ee7d08a10229d74e54accdc" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- CreatureTown* 은 초원 마을(meadowvillage)의 디렉터가 마을 알림마다 낸다 — 모두 2D 다. -->
 		<AudioEventDef _name="CreatureTownHabitat" _bus="sfx" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup5.ogg" />
+				<AudioClipEntry _path="guid:ff0464b74c8f99945f98948efd510480" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CreatureTownHabitatLost" _bus="sfx" _priority="60" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error8.ogg" />
+				<AudioClipEntry _path="guid:48af638af3add7f258422c991fab7033" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CreatureTownArrived" _bus="sfx" _priority="70" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup2.ogg" />
+				<AudioClipEntry _path="guid:639943fa394b21734f964b5f5c0d529d" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CreatureTownFriendship" _bus="ui" _priority="65" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/confirmation_001.ogg" />
+				<AudioClipEntry _path="guid:f60fb9750d604c4b2a298e791709b1fc" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CreatureTownRequest" _bus="ui" _priority="75" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup17.ogg" />
+				<AudioClipEntry _path="guid:64ba53391327beefca047fae32107a8c" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CreatureTownAbility" _bus="sfx" _priority="45" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/pluck_001.ogg" />
+				<AudioClipEntry _path="guid:ab18b4ab325b58fc1196f0c28099eda5" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="CreatureTownAppeal" _bus="ui" _priority="75" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup18.ogg" />
+				<AudioClipEntry _path="guid:8306fbebde7502fe4d3e155aa419f22f" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- Western* 은 프레리(wildwest)의 디렉터가 법 · 명예 알림마다 낸다 — 모두 2D 다. -->
 		<AudioEventDef _name="WesternWitnessed" _bus="ui" _priority="65" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/question_003.ogg" />
+				<AudioClipEntry _path="guid:633203b03bea71982f7e7dd0e80fe270" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WesternReported" _bus="ui" _priority="70" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_error9.ogg" />
+				<AudioClipEntry _path="guid:b7194e3fd652cbd22eacfbc269a7eaae" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WesternWantedRaised" _bus="ui" _priority="80" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_impact_sounds/impact_bell_heavy_001.ogg" />
+				<AudioClipEntry _path="guid:231ed29724c9c1bee9b6496685ae4da6" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WesternWantedLowered" _bus="ui" _priority="70" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup6.ogg" />
+				<AudioClipEntry _path="guid:883c37ed126069f916bad8105e6da76f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WesternBountyPaid" _bus="ui" _priority="70" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins2.ogg" />
+				<AudioClipEntry _path="guid:2bfdc04555e111b107f099d4df4df94f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="WesternHonorTier" _bus="ui" _priority="75" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_interface_sounds/maximize_006.ogg" />
+				<AudioClipEntry _path="guid:5a607e9d34d3b07aeb69a9776137eb60" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- Adventure* 는 모험(velmora)의 디렉터가 체력 · 지갑 · 퀘스트 알림마다 낸다 — 모두 2D 다. -->
 		<AudioEventDef _name="AdventureHurt" _bus="sfx" _priority="75" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_damage2.ogg" />
+				<AudioClipEntry _path="guid:4dc94edf8d4a72414847a704a5d6dd00" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AdventureHeal" _bus="sfx" _priority="65" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/positive_sounds/sfx_sounds_powerup3.ogg" />
+				<AudioClipEntry _path="guid:8e4d99c4004c67e1db10d54b9e2644db" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AdventureDied" _bus="sfx" _priority="85" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/negative_sounds/sfx_sounds_negative1.ogg" />
+				<AudioClipEntry _path="guid:43d5c0ec30ff31148ec360145bda4045" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AdventureCoin" _bus="ui" _priority="55" _cooldownSeconds="0.1" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/coins/sfx_coin_single1.ogg" />
+				<AudioClipEntry _path="guid:9614149f7a8dbc69e84570383ec00547" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="AdventureQuest" _bus="ui" _priority="80" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/subspaceaudio_512_sfx/general_sounds/fanfares/sfx_sounds_fanfare2.ogg" />
+				<AudioClipEntry _path="guid:76e0a8d707bf9d2e78635ab8274c89a8" />
 			</_listClip>
 		</AudioEventDef>
 		<!-- Shop* 은 가게 시연(inventorydemo)이 가게 알림마다 낸다 — 화면 소리다. -->
 		<AudioEventDef _name="ShopBought" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins.ogg" />
+				<AudioClipEntry _path="guid:2b393ae09e21c9f2e2cddce9d2bee455" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShopSold" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/handle_coins2.ogg" />
+				<AudioClipEntry _path="guid:2bfdc04555e111b107f099d4df4df94f" />
 			</_listClip>
 		</AudioEventDef>
 		<AudioEventDef _name="ShopRestocked" _bus="ui" _priority="50" _cooldownSeconds="0.2" _maxInstances="1" _steal="Oldest">
 			<_listClip>
-				<AudioClipEntry _path="common/sounds/kenney_rpg_audio/book_place3.ogg" />
+				<AudioClipEntry _path="guid:53ce7e1a170894fd5bf56ddf1d7961f6" />
 			</_listClip>
 		</AudioEventDef>
 	</_listEvent>

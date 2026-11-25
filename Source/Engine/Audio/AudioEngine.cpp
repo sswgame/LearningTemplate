@@ -235,7 +235,7 @@ namespace sw
         {
             for ( const AudioClipEntry& clip : event._listClip )
             {
-                _clipStore.requestClip( clip._path );
+                _clipStore.requestClip( clip._path.key() );
             }
         }
         Command command;
@@ -442,7 +442,7 @@ namespace sw
         }
         for ( const AudioClipEntry& clip : pEvent->_listClip )
         {
-            _clipStore.requestClip( clip._path );
+            _clipStore.requestClip( clip._path.key() );
         }
 
         Command command;
@@ -530,7 +530,7 @@ namespace sw
         {
             for ( const AudioMusicLayerDef& layer : segment._listLayer )
             {
-                _clipStore.requestClip( layer._path );
+                _clipStore.requestClip( layer._path.key() );
             }
         }
         for ( const AudioMusicTransitionDef& transition : pMusic->_listTransition )
@@ -1824,7 +1824,7 @@ namespace sw
                 break; // 더 낮은 우선순위도 없다 — 버린 수는 게시 상태로 나간다
             pSlot->_playingID        = command._playingID;
             pSlot->_emitterID        = command._emitterID;
-            pSlot->_clipPath         = clip._path;
+            pSlot->_clipPath         = clip._path.key();
             pSlot->_busName          = event._bus;
             pSlot->_busIndex         = *busIndex;
             pSlot->_attenuationName  = event._attenuation;

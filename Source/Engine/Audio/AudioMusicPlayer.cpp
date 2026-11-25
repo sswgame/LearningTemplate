@@ -150,7 +150,7 @@ namespace sw
         for ( size_t layerIndex = 0; layerIndex < segment._listLayer.size(); ++layerIndex )
         {
             AudioMusicVoiceRequest request;
-            request._clipPath      = segment._listLayer[layerIndex]._path;
+            request._clipPath      = segment._listLayer[layerIndex]._path.key();
             request._bus           = bus;
             request._playingID     = _playback._playingID;
             request._startFrame    = startFrame;
