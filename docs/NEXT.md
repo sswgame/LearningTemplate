@@ -30,6 +30,8 @@
 
 ## 3. 알려진 실패 · 흔들림
 
+- 셰이더 리로드 시나리오(`desktop/editor/shaderreload`)가 묶음 검증에서 한 번도 돌지 않았다 — 재컴파일기가 Debug 전용이다. 개발 빌드에서 켤 수 있게(시나리오가 `<Launch>` 로 켬) 하고, 켰을 때 Ctrl+F8 이 재컴파일 묶음을 끝내지 않는 단축키 경로(편집 모드의 디버그 키)를 고친 뒤 격리(만료 2026-12-10)를 뺀다.
+
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
 
