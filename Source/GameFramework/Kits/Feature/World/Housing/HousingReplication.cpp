@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingReplication.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"

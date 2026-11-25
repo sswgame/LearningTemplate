@@ -23,7 +23,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Network/HousingNetSessionComponent.h"
+#include "GameFramework/Kits/Feature/World/Housing/Component/HousingNetSessionComponent.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 

@@ -16,7 +16,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingReplication.h"
 
 namespace sw
 {

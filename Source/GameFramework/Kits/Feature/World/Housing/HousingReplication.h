@@ -39,7 +39,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
-#include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingLayout.h"
 
 namespace sw
 {

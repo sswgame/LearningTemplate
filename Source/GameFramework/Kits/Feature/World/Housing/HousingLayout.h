@@ -18,7 +18,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingPart.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw

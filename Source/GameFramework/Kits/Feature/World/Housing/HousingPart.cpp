@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingPart.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"

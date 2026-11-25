@@ -8,9 +8,9 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
-#include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
-#include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingPart.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingReplication.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 // 하우징 서버 권위 배치 — 남의 부지 · 겹침 · 예산 · 거리 · 요청률 거절과 깨진 요청, 늦게 들어온 클라이언트가 같은 부지 상태를 받는지,
