@@ -20,7 +20,7 @@
 
 #include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/AutomationRuntime.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 
 namespace sw
 {

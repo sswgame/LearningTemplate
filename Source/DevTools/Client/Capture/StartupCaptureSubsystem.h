@@ -13,7 +13,7 @@
 
 #include "DevTools/DevToolsAPI.h"
 
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 
 namespace sw
 {
