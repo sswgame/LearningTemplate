@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
@@ -74,6 +75,43 @@ namespace
             const bool bImported = FakeThingImporter::importSource( sourcePath, importedPath, assetPath );
             return bImported && ( getImportCount() > 1 || writeText( sourcePath, "edited while importing" ) );
         }
+    };
+
+    /** @brief 이름이 `needs_` 로 시작하는 원본은 다른 원본의 결과를 읽는다고 답하고, 임포트한 순서를 적습니다(직렬 실행). */
+    class OrderedThingImporter final : public FakeThingImporter
+    {
+    public:
+        bool hasOrderDependency( const AbsolutePath& sourcePath, string_view /*assetPath*/ ) const override { return StringUtil::startsWith( FileUtil::getFileNamePart( sourcePath.str() ), "needs_" ); }
+        bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
+        {
+            _listOrder.push_back( FileUtil::getFileNamePart( sourcePath.str() ) );
+            return FakeThingImporter::importSource( sourcePath, importedPath, assetPath );
+        }
+        const vector<string>& getOrder() const { return _listOrder; }
+
+    private:
+        mutable vector<string> _listOrder; ///< 테스트 기록 — 작업 시스템 없이(한 스레드) 돈다
+    };
+
+    /** @brief 임포트하는 동안 같은 원본 폴더의 다른 원본을 따로 임포트합니다 — 에디터 핫 리로드와 겹친 `App --import-*` 의 자리입니다(한 번만). */
+    class OverlappingImporter final : public FakeThingImporter
+    {
+    public:
+        OverlappingImporter( const AbsolutePath& root, const DerivedDataCache& cache )
+            : _root{ root }
+            , _cache{ cache }
+        {
+        }
+        bool importSource( const AbsolutePath& sourcePath, const AbsolutePath& importedPath, string_view assetPath ) const override
+        {
+            const FakeThingImporter other;
+            const bool              bOther = AssetImportStampUtil::importSources( _root, other, vector<string>{ "pack/things_raw/b.src" }, nullptr, _cache ).isClean();
+            return bOther && FakeThingImporter::importSource( sourcePath, importedPath, assetPath );
+        }
+
+    private:
+        const AbsolutePath&     _root;
+        const DerivedDataCache& _cache;
     };
 
     /** @brief 같은 원본(`pack/things_raw/a.src`)을 둔 새 체크아웃 폴더입니다(결과 · 스탬프 없음). */
@@ -244,4 +282,60 @@ SW_TEST_CASE( AssetImportStampTest, FileHashFollowsTheContent )
     }
     SW_REQUIRE_TRUE( writeText( path, "" ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, AssetImportStampUtil::computeFileHash( path ) );
+}
+
+/**
+ * @brief [AssetImportStampTest] 다른 원본의 결과를 읽는 원본은 다른 원본 폴더의 것까지 모두 끝난 뒤에 임포트하고, 나머지는 큰 원본부터 임포트한다
+ */
+SW_TEST_CASE( AssetImportStampTest, DependentSourcesRunAfterEveryFolder )
+{
+    const DerivedDataCache cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
+    const AbsolutePath     root  = test::makeScratchPath( "ImportDependents" );
+    SW_REQUIRE_TRUE( writeText( root.join( "a/things_raw/needs_body.src" ), "the biggest source of all the sources" ) );
+    SW_REQUIRE_TRUE( writeText( root.join( "a/things_raw/small.src" ), "s" ) );
+    SW_REQUIRE_TRUE( writeText( root.join( "b/things_raw/big.src" ), "a big source" ) );
+    const OrderedThingImporter importer;
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( ( importer.getOrder() == vector<string>{ "big.src", "small.src", "needs_body.src" } ) );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+}
+
+/**
+ * @brief [AssetImportStampTest] 도는 동안 다른 실행이 같은 원본 폴더의 스탬프에 적은 줄을 지우지 않는다
+ */
+SW_TEST_CASE( AssetImportStampTest, OverlappingRunsKeepEachOthersStampLines )
+{
+    const DerivedDataCache cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
+    const AbsolutePath     root  = makeCheckout( "ImportOverlap" );
+    SW_REQUIRE_TRUE( writeText( root.join( "pack/things_raw/b.src" ), "b" ) );
+    const OverlappingImporter importer( root, cache );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importSources( root, importer, vector<string>{ "pack/things_raw/a.src" }, nullptr, cache ).isClean() );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
+}
+
+/**
+ * @brief [AssetImportStampTest] 취소한 임포트는 남은 원본을 건너뛰었다고 알리고 그 스탬프 줄을 건드리지 않는다
+ */
+SW_TEST_CASE( AssetImportStampTest, CanceledImportSkipsAndKeepsStampLines )
+{
+    const DerivedDataCache  cache = DerivedDataCacheTestAccess::make( vector<DerivedDataLayer>{
+        DerivedDataLayer{ test::makeScratchPath( "ImportDDC" ), DerivedDataAccess::ReadWrite }
+    } );
+    const AbsolutePath      root  = makeCheckout( "ImportCancel" );
+    const FakeThingImporter importer;
+    SW_REQUIRE_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::ImportStale, nullptr, cache ).isClean() );
+
+    StopSource         cancel;
+    AssetImportControl control;
+    control._cancel = cancel.getToken();
+    cancel.requestStop();
+    const vector<string>     listPath{ "pack/things_raw/a.src" };
+    const AssetImportSummary summary = AssetImportStampUtil::importSources( root, importer, listPath, nullptr, cache, &control );
+    SW_EXPECT_TRUE( summary._listSkippedPath == listPath );
+    SW_EXPECT_EQUAL( 0u, summary._importedCount );
+    SW_EXPECT_TRUE( AssetImportStampUtil::importAll( root, importer, AssetImportMode::CheckOnly, nullptr, cache ).isClean() );
 }

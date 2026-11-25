@@ -5,6 +5,8 @@
  *          원본 확장자, 결과 경로, 원본 해시, 임포트 자체가 그 예다. 폴더 스캔, 스탬프 읽기와 쓰기, 어긋남 판정은 여기에 한 벌만 있다.
  */
 #pragma once
+#include "Core/Concurrency/StopToken.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -37,11 +39,14 @@ namespace sw::editor
     {
         /** @brief 사람이 읽을 수 있는 한 줄 메시지의 목록입니다. CheckOnly 는 어긋남을, ImportStale 은 임포트하지 못한 것을 담습니다. */
         vector<string> _listProblem;
+        /** @brief 취소로 보지 않은 원본(리소스 경로)입니다(`AssetImportControl`). 스탬프 줄은 그대로다. */
+        vector<string> _listSkippedPath;
         uint32         _sourceCount;
         uint32         _importedCount;
 
         AssetImportSummary()
             : _listProblem{}
+            , _listSkippedPath{}
             , _sourceCount{ 0 }
             , _importedCount{ 0 }
         {
@@ -62,6 +67,27 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @struct AssetImportControl
+     * @brief 부른 쪽이 도는 일괄 임포트를 멈추고 진행을 읽는 자리입니다. 임포트 도중인 원본은 끝까지 가고, 남은 원본은 건너뛴다(`AssetImportSummary::_listSkippedPath`).
+     */
+    struct AssetImportControl
+    {
+        StopToken       _cancel{};                  ///< 부른 쪽의 취소
+        StopToken       _shutdown{};                ///< 에디터 종료
+        atomic<uint32>* _pFinishedCount{ nullptr }; ///< 끝난 원본 수(빌림, 아무 스레드나 더한다). nullptr 이면 세지 않는다
+
+        bool isCanceled() const { return _cancel.isStopRequested() || _shutdown.isStopRequested(); }
+        void recordFinished() const
+        {
+            if ( _pFinishedCount != nullptr )
+                _pFinishedCount->fetch_add( 1, std::memory_order_relaxed );
+        }
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
      * @class IRawAssetImporter
      * @brief 원본 종류 하나가 일괄 임포트(`AssetImportStampUtil::importAll`)에 제공하는 함수들입니다.
      * @details **임포터 규칙(일괄 임포트는 원본 파일을 병렬로 임포트한다).**
@@ -70,8 +96,8 @@ namespace sw::editor
      *          - 원본 하나의 임포트는 **자기 결과 경로**(`makeImportedPath` 에서 확장자를 뗀 경로와 그 아래 옆 폴더)에만 쓰고 지웁니다. 같은 경로(또는 그 아래)를 쓰는 원본들은 일괄 임포트가
      *            한 사슬로 묶어 한 스레드가 파일 순서대로 임포트합니다.
      *            공유 저장소(`ImportedAssetStore`)는 예외다 — 이름이 내용에서 나와 두 원본이 같은 자리를 쓰면 바이트가 같다(`writeIfAbsent`).
-     *          - **다른 원본의 임포트 결과를 읽는 순서 의존**(장비 메시가 몸 메시를 읽는다)은 `hasOrderDependency` 로 드러냅니다. 그 원본은 의존이 없는 원본이 모두 끝난 뒤 이 스레드에서 직렬로 임포트합니다.
-     *            의존 대상 자신은 의존이 없어야 합니다(의존끼리의 순서는 파일 순서일 뿐입니다).
+     *          - **다른 원본의 임포트 결과를 읽는 순서 의존**(장비 메시가 몸 메시를 읽는다)은 `hasOrderDependency` 로 드러냅니다. 그 원본은 의존이 없는 원본이 모두 끝난 뒤 병렬로 임포트합니다.
+     *            의존 대상 자신은 의존이 없어야 합니다(의존하는 원본끼리는 순서가 없습니다).
      */
     class IRawAssetImporter
     {
@@ -119,7 +145,7 @@ namespace sw::editor
         virtual const utf8* findUnsupportedReason( const AbsolutePath& sourcePath ) const = 0;
         /**
          * @brief 이 원본의 임포트가 다른 원본의 임포트 결과를 읽으면 true 입니다(기본은 false). 클래스 설명의 임포터 규칙을 보십시오.
-         * @details 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
+         * @details 병렬 구간의 워커가 부른다. 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
          */
         virtual bool hasOrderDependency( [[maybe_unused]] const AbsolutePath& sourcePath, [[maybe_unused]] string_view assetPath ) const { return false; }
         /**
@@ -147,8 +173,8 @@ namespace sw::editor
          *          `git` 이 시간 순서를 임의로 뒤집기 때문이다. 원본이 사라진 스탬프 줄도 어긋남이다. ImportStale 은 그 줄과 함께 결과(파일 · 옆 폴더)를 지운다 —
          *          결과는 생성물이라 깨끗한 클론에 없으므로, 남기면 지운 원본을 아직 가리키는 것이 이 PC 에서만 숨는다. 스탬프는 내용이 바뀔 때만 쓴다.
          *
-         *          **원본 파일은 병렬로 임포트하고 합치기는 직렬로 한다.** 원본 폴더마다 파일 목록과 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 만든 뒤 사슬 단위로 작업 시스템(@p pTaskManager)과
-         *          나눠 돌고(해시 계산 · 대조 · 임포트가 한 파일의 일이다), `IRawAssetImporter::hasOrderDependency` 인 원본이 든 사슬은 그 뒤에 이 스레드에서 직렬로 돈다.
+         *          **원본 파일은 병렬로 임포트하고 합치기는 직렬로 한다.** 모든 원본 폴더의 파일을 한 목록으로 모아 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 만든 뒤 사슬 단위로 작업 시스템(@p pTaskManager)과
+         *          나눠 돌고(해시 계산 · 대조 · 임포트가 한 파일의 일이고 큰 원본부터다), `IRawAssetImporter::hasOrderDependency` 인 원본은 나머지가 모두 끝난 둘째 단계에서 병렬로 돈다.
          *          파일마다 결과가 자기 칸에 담기고 요약(`_listProblem` 의 순서 · 카운터)과 스탬프 표는 파일 순서대로 합치므로, 결과 바이트 · 스탬프 · 요약은 직렬로 돌 때와 같다.
          *          작업 시스템이 없으면(테스트 하니스 · 서비스 연결 전) 이 스레드가 사슬을 파일 순서대로 돈다. 임포터 로그의 줄 순서만 병렬로 돌 때 파일 사이에서 섞인다.
          * @param resourceRoot `Content/` 의 절대 경로
@@ -165,15 +191,16 @@ namespace sw::editor
 
         /**
          * @brief @p listAssetPath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
-         * @details 루트 전체를 훑는 `importAll` 은 원본마다 내용 해시를 읽어 비용이 바뀐 파일 수가 아니라 원본 수에 비례한다. 이쪽은 범위 안 원본이 든 폴더만 훑고 범위 밖 원본은 읽지 않는다.
+         * @details 루트 전체를 훑는 `importAll` 은 비용이 바뀐 파일 수가 아니라 원본 수에 비례한다. 이쪽은 범위 안 원본이 든 원본 폴더만 목록을 내고 범위 밖 원본은 읽지 않는다.
          *          스탬프를 쓰는 길은 `importAll` 과 같은 한 곳이다(에디터가 임포트한 것과 `App --import-*` 가 임포트한 것이 같은 판정을 받는다). 범위 밖 원본의 스탬프 줄은 그대로 둔다.
          *          지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다. 사슬과 순서 의존은 범위 안 원본끼리만 따진다.
          *          **범위 밖에서 어긋난 것(규칙 파일만 고친 다른 원본 등)은 보정하지 않는다.** 그 보정은 `App --import-*` 의 전체 대조가 한다.
          *          작업 시스템(@p pTaskManager, `importAll` 과 같음)을 부르는 쪽이 넘기므로 에디터 스레드에서도 워커에서도 부를 수 있다.
          *          DDC(@p derivedDataCache)는 `importAll` 과 같이 쓴다.
+         * @param pControl 취소 · 진행(빌림). nullptr 이면 끝까지 돈다.
          */
         [[nodiscard]] static AssetImportSummary importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
-                                                               TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache );
+                                                               TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache, const AssetImportControl* pControl = nullptr );
 
         /** @brief @p path 가 @p rawFolderName 폴더 아래의 파일인지입니다. 에셋 경로 · 디스크 경로 글을 모두 받는다(에셋 종류를 가리는 자리가 둘을 다 묻는다). */
         [[nodiscard]] static bool isUnderRawFolder( string_view path, string_view rawFolderName );

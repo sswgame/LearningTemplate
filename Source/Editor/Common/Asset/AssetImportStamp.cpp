@@ -166,6 +166,20 @@ namespace sw::editor
                 string       _relativePath; ///< 원본 폴더 기준
                 string       _assetPath;    ///< 리소스 루트 기준
                 AbsolutePath _importedPath;
+                uint64       _byteCount{ 0 };   ///< 원본 크기 — 무거운 원본부터 임포트하는 순서에만 쓴다
+                uint32       _folderIndex{ 0 }; ///< 이 원본이 든 `RawFolder` 번호
+            };
+
+            /** @brief 원본 폴더 하나의 준비 결과입니다 — 스탬프와, 원본 목록(모든 폴더가 한 목록)에서 이 폴더의 구간. */
+            struct RawFolder
+            {
+                AbsolutePath                  _path;
+                map<string, StampEntry>       _mapStamped;
+                unordered_map<string, string> _mapImportedOwner; ///< 결과 경로(소문자) → 먼저 나온 원본
+                vector<string>                _listProblem;      ///< 준비에서 나온 문제(두 원본이 한 결과에 쓴다)
+                unordered_set<string>         _uniqueRejected;   ///< 준비에서 거절한 원본(폴더 기준 상대 경로) — 스탬프 줄을 남기지 않는다
+                size_t                        _firstFile{ 0 };
+                size_t                        _fileCount{ 0 };
             };
 
             /** @brief 원본 파일 하나의 결과입니다. 파일마다 자기 칸에만 쓰고, 요약과 스탬프 표에 합치는 일은 파일 순서대로 직렬로 합니다. */
@@ -175,6 +189,8 @@ namespace sw::editor
                 StampEntry _current;            ///< `_bStamped` 일 때 스탬프에 쓸 줄
                 bool       _bStamped{ false };  ///< 맞거나 방금 임포트해 스탬프 표에 넣는다
                 bool       _bImported{ false }; ///< 이번에 임포트했다
+                bool       _bDeferred{ false }; ///< 다른 원본의 결과를 읽는다(`hasOrderDependency`) — 나머지가 모두 끝난 둘째 단계에서 임포트한다
+                bool       _bSkipped{ false };  ///< 취소로 보지 않았다 — 스탬프 줄을 그대로 둔다
             };
 
             /** @brief DDC 키 서술입니다(`DerivedDataCache` 가 항목 머리에 적어 키 충돌을 미스로 만든다). 원본 해시가 원본 바이트 · 규칙 · 임포터 판 · 대상 형식을 이미 섞는다. */
@@ -328,22 +344,25 @@ namespace sw::editor
             }
 
             /**
-             * @brief 원본 폴더 하나의 파일들을 임포트하는 일입니다. 병렬 구간에서 입력은 읽기만 하고 파일마다 자기 결과 칸(`_pListFileResult[파일 번호]`)에만 씁니다.
+             * @brief 모든 원본 폴더의 파일들을 임포트하는 일입니다. 병렬 구간에서 입력은 읽기만 하고 파일마다 자기 결과 칸(`_pListFileResult[파일 번호]`)에만 씁니다.
              * @details 병렬 단위는 **사슬**(같은 결과 자리에 쓰는 파일의 묶음, `makeChains`)이라 두 스레드가 한 결과 경로를 쓰거나 지우지 않습니다.
              *          스레드는 원자 카운터에서 사슬을 하나씩 가져옵니다(무거운 원본 하나가 청크 끝을 늦추지 않게 동적으로 나눈다). 임포터 함수는 모두 스레드 안전해야 합니다(`IRawAssetImporter`).
+             *          단계는 둘이다 — 첫 단계가 다른 원본의 결과를 읽지 않는 파일을 모두 임포트하고, 둘째 단계가 읽는 파일(`hasOrderDependency`)을 임포트한다. 단계 안은 둘 다 병렬이다.
              */
             struct ImportJob
             {
-                const IRawAssetImporter*       _pImporter{ nullptr };
-                const map<string, StampEntry>* _pMapStamped{ nullptr };
-                const vector<SourceFile>*      _pListFile{ nullptr };
-                const vector<vector<uint32>>*  _pListChain{ nullptr };
-                const vector<uint32>*          _pListRunChain{ nullptr };   ///< 이번 구간에서 돌 사슬 번호
-                FileResult*                    _pListFileResult{ nullptr }; ///< 파일 수만큼
-                atomic<uint32>                 _nextSlot{ 0 };              ///< `_pListRunChain` 에서 다음에 가져갈 칸
-                AssetImportMode                _mode{ AssetImportMode::ImportStale };
-                TaskManager*                   _pTaskManager{ nullptr };      ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
-                const DerivedDataCache*        _pDerivedDataCache{ nullptr }; ///< 임포트 전에 찾고 임포트 뒤에 넣는 DDC(빌림). nullptr 이면 쓰지 않는다(CheckOnly)
+                const IRawAssetImporter*      _pImporter{ nullptr };
+                const vector<RawFolder>*      _pListFolder{ nullptr };
+                const vector<SourceFile>*     _pListFile{ nullptr };
+                const vector<vector<uint32>>* _pListChain{ nullptr };
+                const vector<uint32>*         _pListRunChain{ nullptr };   ///< 이번 단계에서 돌 사슬 번호
+                FileResult*                   _pListFileResult{ nullptr }; ///< 파일 수만큼
+                atomic<uint32>                _nextSlot{ 0 };              ///< `_pListRunChain` 에서 다음에 가져갈 칸
+                AssetImportMode               _mode{ AssetImportMode::ImportStale };
+                bool                          _bDependentPhase{ false };     ///< 둘째 단계(미룬 파일만)
+                TaskManager*                  _pTaskManager{ nullptr };      ///< 사슬을 나눠 돌 작업 시스템(빌림). nullptr 이면 직렬
+                const DerivedDataCache*       _pDerivedDataCache{ nullptr }; ///< 임포트 전에 찾고 임포트 뒤에 넣는 DDC(빌림). nullptr 이면 쓰지 않는다(CheckOnly)
+                const AssetImportControl*     _pControl{ nullptr };          ///< 취소 · 진행(빌림). nullptr 이면 끝까지 돈다
 
                 /** @brief 원본 하나를 대조하고, 어긋났고 ImportStale 이면 임포트합니다. 결과는 @p outResult 에만 씁니다. */
                 void importFile( const SourceFile& file, FileResult& outResult ) const
@@ -361,8 +380,9 @@ namespace sw::editor
                     current._sourceHash   = _pImporter->computeSourceHash( file._sourcePath, file._assetPath );
                     current._importedHash = _pImporter->computeImportedHash( file._importedPath );
 
-                    const auto   itStamped = _pMapStamped->find( file._relativePath );
-                    const string reason    = findDriftReason( itStamped != _pMapStamped->end() ? &itStamped->second : nullptr, current, _pImporter->getImportedLabel() );
+                    const map<string, StampEntry>& mapStamped = ( *_pListFolder )[file._folderIndex]._mapStamped;
+                    const auto                     itStamped  = mapStamped.find( file._relativePath );
+                    const string                   reason     = findDriftReason( itStamped != mapStamped.end() ? &itStamped->second : nullptr, current, _pImporter->getImportedLabel() );
                     if ( reason.empty() )
                     {
                         outResult._current  = current;
@@ -421,12 +441,31 @@ namespace sw::editor
                     outResult._bImported  = true;
                 }
 
-                /** @brief 사슬 하나를 파일 순서대로 임포트합니다. */
+                /** @brief 사슬 하나의 이번 단계 파일을 파일 순서대로 임포트합니다. 첫 단계는 다른 원본의 결과를 읽는 파일을 둘째 단계로 미룬다(CheckOnly 는 임포트하지 않으므로 미루지 않는다). */
                 void importChain( uint32 chainIndex ) const
                 {
                     for ( const uint32 fileIndex : ( *_pListChain )[chainIndex] )
                     {
-                        importFile( ( *_pListFile )[fileIndex], _pListFileResult[fileIndex] );
+                        const SourceFile& file   = ( *_pListFile )[fileIndex];
+                        FileResult&       result = _pListFileResult[fileIndex];
+                        if ( _bDependentPhase )
+                        {
+                            if ( result._bDeferred == false )
+                                continue;
+                        }
+                        else if ( _mode == AssetImportMode::ImportStale && _pImporter->hasOrderDependency( file._sourcePath, file._assetPath ) )
+                        {
+                            result._bDeferred = true;
+                            continue;
+                        }
+                        if ( _pControl != nullptr && _pControl->isCanceled() )
+                        {
+                            result._bSkipped = true;
+                            continue;
+                        }
+                        importFile( file, result );
+                        if ( _pControl != nullptr )
+                            _pControl->recordFinished();
                     }
                 }
 
@@ -444,23 +483,53 @@ namespace sw::editor
                 }
 
                 /**
-                 * @brief @p listRunChain 의 사슬을 임포트합니다. @p bParallel 이고 작업 시스템이 있으면 워커와 나눠 돌고, 아니면 이 스레드가 사슬 순서대로 돕니다(결과는 같다).
+                 * @brief @p listRunChain 의 사슬을 임포트합니다. 작업 시스템이 있으면 워커와 나눠 돌고, 아니면 이 스레드가 목록 순서대로 돕니다(결과는 같다).
                  * @details 텍스처 임포트의 밴드 압축(`TextureImporter`)이 이 안에서 다시 `runParallel` 을 부른다. 기다리는 스레드가 다른 일을 도우므로(`TaskManager::runParallelRange`) 중첩해도 막히지 않는다.
+                 *          동시에 열린 원본은 참여자 수(워커 + 1)를 넘지 않는다 — 원본 사이 병렬의 메모리 상한이다.
                  */
-                void importChains( const vector<uint32>& listRunChain, bool bParallel )
+                void importChains( const vector<uint32>& listRunChain )
                 {
                     _pListRunChain          = &listRunChain;
                     const uint32 chainCount = static_cast<uint32>( listRunChain.size() );
                     _nextSlot.store( 0 );
-                    TaskManager* const pTaskManager = bParallel && chainCount > 1 ? _pTaskManager : nullptr;
-                    if ( pTaskManager == nullptr )
+                    if ( _pTaskManager == nullptr || chainCount <= 1 )
                     {
                         flushPending( 0, chainCount );
                         return;
                     }
-                    // 참여자(워커 + 이 스레드)마다 청크 하나라 `drain` 이 청크 수만큼 불리고, 먼저 끝난 스레드가 남은 사슬을 이어서 가져간다.
-                    const uint32 participantCount = MathUtil::min( chainCount, pTaskManager->getWorkerCount() + 1 );
-                    pTaskManager->runParallel( participantCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ImportJob::flushPending, this ) );
+                    // 참여자(워커 + 이 스레드)마다 청크 하나라 `flushPending` 이 청크 수만큼 불리고, 먼저 끝난 스레드가 남은 사슬을 이어서 가져간다.
+                    const uint32 participantCount = MathUtil::min( chainCount, _pTaskManager->getWorkerCount() + 1 );
+                    _pTaskManager->runParallel( participantCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &ImportJob::flushPending, this ) );
+                }
+
+                /** @brief 두 단계를 차례로 돕니다. 사슬은 원본 크기가 큰 것부터 가져간다 — 무거운 원본이 끝에 혼자 남아 워커가 쉬지 않게(LPT 스케줄링). */
+                void runPhases()
+                {
+                    vector<uint32> listRunChain( _pListChain->size() );
+                    vector<uint64> listChainBytes( _pListChain->size(), 0 );
+                    for ( uint32 chainIndex = 0; chainIndex < static_cast<uint32>( _pListChain->size() ); ++chainIndex )
+                    {
+                        listRunChain[chainIndex] = chainIndex;
+                        for ( const uint32 fileIndex : ( *_pListChain )[chainIndex] )
+                            listChainBytes[chainIndex] += ( *_pListFile )[fileIndex]._byteCount;
+                    }
+                    const auto isHeavier = [&listChainBytes]( uint32 lhs, uint32 rhs )
+                    { return listChainBytes[lhs] != listChainBytes[rhs] ? listChainBytes[lhs] > listChainBytes[rhs] : lhs < rhs; };
+                    VectorUtil::sort( listRunChain, isHeavier );
+                    importChains( listRunChain );
+
+                    const auto hasNoDeferred = [this]( uint32 chainIndex )
+                    {
+                        for ( const uint32 fileIndex : ( *_pListChain )[chainIndex] )
+                        {
+                            if ( _pListFileResult[fileIndex]._bDeferred )
+                                return false;
+                        }
+                        return true;
+                    };
+                    VectorUtil::removeIf( listRunChain, hasNoDeferred );
+                    _bDependentPhase = true;
+                    importChains( listRunChain );
                 }
             };
 
@@ -522,25 +591,27 @@ namespace sw::editor
                 }
             }
 
-            /**
-             * @brief 원본 폴더 하나를 그 폴더의 스탬프와 대조하고, ImportStale 이면 어긋난 것을 임포트하고 스탬프를 다시 씁니다.
-             * @details 단계는 준비(직렬: 파일 목록 · 사슬) → 병렬 임포트(의존 없는 사슬) → 직렬 임포트(`hasOrderDependency` 인 원본이 든 사슬) → 합치기(직렬, 파일 순서)입니다.
-             *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
-             */
-            static void importRawFolder( const string& rootDir, const AbsolutePath& rawFolder, const IRawAssetImporter& importer, AssetImportMode mode,
-                                         const unordered_set<string>* pScope, TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache, AssetImportSummary& inoutSummary )
+            /** @brief 원본 폴더 하나의 스탬프를 읽고 임포트할 원본을 @p inoutListFile 끝에 더합니다(직렬 준비). @p pScope 밖의 원본은 읽지도 해시하지도 않는다. */
+            static void collectRawFolder( const string& rootDir, const AbsolutePath& rawFolder, const IRawAssetImporter& importer, const unordered_set<string>* pScope,
+                                          vector<RawFolder>& inoutListFolder, vector<SourceFile>& inoutListFile )
             {
-                const AbsolutePath      stampPath = rawFolder.join( importer.getStampFileName() );
-                map<string, StampEntry> mapStamped;
-                readStamp( stampPath, importer.getStampHeader(), mapStamped );
+                RawFolder folder;
+                folder._path      = rawFolder;
+                folder._firstFile = inoutListFile.size();
+                readStamp( rawFolder.join( importer.getStampFileName() ), importer.getStampHeader(), folder._mapStamped );
 
-                vector<AbsolutePath> listPath;
-                (void)EditorContentScan::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
+                vector<EditorContentFile> listContentFile;
+                (void)EditorContentScan::collectTreeFiles( rawFolder, AbsolutePath{}, listContentFile ); // 폴더는 방금 훑어서 찾았다
+                unordered_map<string, uint64> mapByteCount;
+                vector<AbsolutePath>          listPath;
+                for ( const EditorContentFile& contentFile : listContentFile )
+                {
+                    listPath.push_back( FileUtil::toDiskPath( contentFile._path ) );
+                    mapByteCount.emplace( listPath.back().str(), contentFile._fileStamp._sizeBytes );
+                }
                 AssetSourceLocator::collectStoredSources( rawFolder, listPath );
                 VectorUtil::sort( listPath );
 
-                vector<SourceFile>            listFile;
-                unordered_map<string, string> mapImportedOwner; // 결과 경로(소문자) → 먼저 나온 원본
                 for ( const AbsolutePath& path : listPath )
                 {
                     SourceFile file;
@@ -552,58 +623,52 @@ namespace sw::editor
                     file._relativePath = file._sourcePath.str().substr( rawFolder.str().size() + 1 );
                     file._assetPath    = file._sourcePath.str().substr( rootDir.size() + 1 );
                     file._importedPath = importer.makeImportedPath( file._sourcePath );
+                    file._folderIndex  = static_cast<uint32>( inoutListFolder.size() );
+                    const auto itBytes = mapByteCount.find( file._sourcePath.str() );
+                    file._byteCount    = itBytes != mapByteCount.end() ? itBytes->second : 0; // 저장소 주소만 적은 원본은 크기를 모른다 — 순서에만 쓰는 값이다
                     // 두 원본이 한 결과에 쓰면(`a.jpg` · `a.png` → `a.dds`) 돌 때마다 서로 덮어 둘 다 영원히 어긋난다 — 뒤의 것을 문제로 알리고 임포트하지 않는다.
-                    const auto owner       = mapImportedOwner.emplace( makeImportedKey( file._importedPath.str() ), file._assetPath );
+                    const auto owner       = folder._mapImportedOwner.emplace( makeImportedKey( file._importedPath.str() ), file._assetPath );
                     const bool bOutOfScope = pScope != nullptr && pScope->find( makeScopeKey( file._assetPath ) ) == pScope->end();
                     if ( bOutOfScope )
-                        continue; // 범위 밖 원본은 읽지도 해시하지도 않는다
+                        continue;
                     if ( file._importedPath.empty() == false && owner.second == false )
                     {
-                        ++inoutSummary._sourceCount;
                         StringBuilder<constant::buffer::kMax512> problemBuilder;
                         problemBuilder.appendFormat( "%#: '%#' 와 같은 결과에 씁니다 - 이름을 바꾸거나 하나를 지웁니다", file._assetPath, owner.first->second );
-                        inoutSummary._listProblem.push_back( string( problemBuilder.view() ) );
+                        folder._listProblem.push_back( string( problemBuilder.view() ) );
+                        folder._uniqueRejected.insert( file._relativePath );
                         continue;
                     }
-                    listFile.push_back( std::move( file ) );
+                    inoutListFile.push_back( std::move( file ) );
                 }
+                folder._fileCount = inoutListFile.size() - folder._firstFile;
+                inoutListFolder.push_back( std::move( folder ) );
+            }
 
-                vector<vector<uint32>> listChain;
-                makeChains( listFile, listChain );
-                // 다른 원본의 결과를 읽는 원본이 든 사슬은 의존이 없는 사슬이 모두 끝난 뒤 직렬로 임포트한다. CheckOnly 는 아무것도 임포트하지 않으므로 나눌 이유가 없다.
-                vector<uint32> listParallelChain;
-                vector<uint32> listSerialChain;
-                for ( uint32 chainIndex = 0; chainIndex < static_cast<uint32>( listChain.size() ); ++chainIndex )
-                {
-                    bool bOrderDependent = false;
-                    for ( const uint32 fileIndex : listChain[chainIndex] )
-                    {
-                        bOrderDependent = bOrderDependent || ( mode == AssetImportMode::ImportStale && importer.hasOrderDependency( listFile[fileIndex]._sourcePath, listFile[fileIndex]._assetPath ) );
-                    }
-                    if ( bOrderDependent )
-                        listSerialChain.push_back( chainIndex );
-                    else
-                        listParallelChain.push_back( chainIndex );
-                }
-
-                vector<FileResult> listFileResult( listFile.size() );
-                ImportJob          job;
-                job._pImporter         = &importer;
-                job._pMapStamped       = &mapStamped;
-                job._pListFile         = &listFile;
-                job._pListChain        = &listChain;
-                job._pListFileResult   = listFileResult.data();
-                job._mode              = mode;
-                job._pTaskManager      = pTaskManager;
-                job._pDerivedDataCache = mode == AssetImportMode::ImportStale ? pDerivedDataCache : nullptr;
-                job.importChains( listParallelChain, true );
-                job.importChains( listSerialChain, false );
+            /**
+             * @brief 원본 폴더 하나의 결과를 요약에 합치고, ImportStale 이면 사라진 원본의 결과를 지우고 스탬프를 다시 씁니다(직렬, 파일 순서).
+             * @details 스탬프는 쓰기 직전에 다시 읽어 이번에 본 줄만 바꾼다 — 그 사이 다른 실행(에디터 핫 리로드와 `App --import-*`)이 적은 줄을 지우지 않는다. 지워져도 다음 임포트가 DDC 에서 되살리므로
+             *          파일 잠금은 두지 않는다.
+             */
+            static void mergeRawFolder( const string& rootDir, const RawFolder& folder, const vector<SourceFile>& listFile, const vector<FileResult>& listFileResult, const IRawAssetImporter& importer,
+                                        AssetImportMode mode, const unordered_set<string>* pScope, AssetImportSummary& inoutSummary )
+            {
+                const AbsolutePath& rawFolder = folder._path;
+                inoutSummary._sourceCount += static_cast<uint32>( folder._listProblem.size() );
+                inoutSummary._listProblem.insert( inoutSummary._listProblem.end(), folder._listProblem.begin(), folder._listProblem.end() );
 
                 map<string, StampEntry> mapCurrent;
-                for ( uint32 fileIndex = 0; fileIndex < static_cast<uint32>( listFile.size() ); ++fileIndex )
+                unordered_set<string>   uniqueChecked = folder._uniqueRejected; // 이번에 판정한 원본 — 이 줄들은 판정대로 바꾼다
+                for ( size_t fileIndex = folder._firstFile; fileIndex < folder._firstFile + folder._fileCount; ++fileIndex )
                 {
                     const FileResult& fileResult = listFileResult[fileIndex];
                     ++inoutSummary._sourceCount;
+                    if ( fileResult._bSkipped )
+                    {
+                        inoutSummary._listSkippedPath.push_back( listFile[fileIndex]._assetPath );
+                        continue;
+                    }
+                    uniqueChecked.insert( listFile[fileIndex]._relativePath );
                     if ( fileResult._problem.empty() == false )
                         inoutSummary._listProblem.push_back( fileResult._problem );
                     if ( fileResult._bStamped )
@@ -612,19 +677,16 @@ namespace sw::editor
                         ++inoutSummary._importedCount;
                 }
 
-                // 범위를 정한 임포트는 범위 밖 원본의 줄을 그대로 둔다. 지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다.
-                if ( pScope != nullptr )
+                // 이번에 보지 않은 줄 — 범위 밖 · 취소한 원본, 훑은 뒤 다른 실행이 더한 원본. 지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다.
+                const AbsolutePath      stampPath = rawFolder.join( importer.getStampFileName() );
+                map<string, StampEntry> mapOnDisk;
+                if ( mode == AssetImportMode::ImportStale )
+                    readStamp( stampPath, importer.getStampHeader(), mapOnDisk );
+                for ( const auto& [relativePath, entry] : mapOnDisk )
                 {
-                    unordered_set<string> setInScope;
-                    for ( const SourceFile& file : listFile )
-                    {
-                        setInScope.insert( file._relativePath );
-                    }
-                    for ( const auto& [relativePath, entry] : mapStamped )
-                    {
-                        if ( setInScope.find( relativePath ) == setInScope.end() )
-                            mapCurrent.emplace( relativePath, entry );
-                    }
+                    const bool bKeep = uniqueChecked.contains( relativePath ) == false && ( pScope != nullptr || FileUtil::exists( rawFolder.join( relativePath ) ) );
+                    if ( bKeep )
+                        mapCurrent.emplace( relativePath, entry );
                 }
 
                 // 원본이 사라진 줄 — 그 결과(임포터가 답한 파일)도 지운다. 결과는 생성물이라 깨끗한 클론에는 없다. 남겨 두면 지운 원본을 아직 가리키는 코드 · 데이터가
@@ -633,9 +695,9 @@ namespace sw::editor
                 // 남은 원본의 자리마다 조상 자리를 한 번 색인한다 — 지울 결과마다 남은 원본 전체를 훑으면 지운 수 × 남은 수다. 지울 것이 있을 때만 만든다.
                 unordered_set<string> uniqueLiveAncestor;
                 bool                  bLiveAncestorBuilt = false;
-                for ( const auto& [relativePath, entry] : mapStamped )
+                for ( const auto& [relativePath, entry] : folder._mapStamped )
                 {
-                    if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
+                    if ( pScope != nullptr || mapCurrent.find( relativePath ) != mapCurrent.end() || uniqueChecked.contains( relativePath ) )
                         continue;
                     const AbsolutePath sourcePath = rawFolder.join( relativePath );
                     if ( FileUtil::exists( sourcePath ) )
@@ -648,11 +710,11 @@ namespace sw::editor
                         continue;
                     }
                     const AbsolutePath importedPath = importer.makeImportedPath( sourcePath );
-                    if ( mapImportedOwner.contains( makeImportedKey( importedPath.str() ) ) )
+                    if ( folder._mapImportedOwner.contains( makeImportedKey( importedPath.str() ) ) )
                         continue; // 남은 원본이 그 결과의 주인이다(`a.png` 를 지우고 `a.jpg` 를 두었다)
                     if ( bLiveAncestorBuilt == false )
                     {
-                        for ( const auto& [importedKey, ownerPath] : mapImportedOwner )
+                        for ( const auto& [importedKey, ownerPath] : folder._mapImportedOwner )
                             collectFootprintAncestors( importedKey, uniqueLiveAncestor );
                         bLiveAncestorBuilt = true;
                     }
@@ -716,48 +778,83 @@ namespace sw::editor
             /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
             static string makeScopeKey( string_view assetPath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( assetPath ).c_str() ); }
 
-            /** @brief 범위의 원본 열쇠마다 그 조상 폴더 열쇠(`a/b/c.png` → `a/b` · `a`)를 모읍니다 — 폴더마다 범위 전체를 훑지 않는다(폴더 수 × 범위 수). */
-            static void collectScopeFolders( const unordered_set<string>& uniqueScope, unordered_set<string>& outUniqueFolder )
+            /** @brief @p pScope 의 원본이 든 원본 폴더(절대 경로)를 모읍니다 — 리소스 트리를 훑지 않는다(비용이 바뀐 파일 수에 비례한다). */
+            static void collectScopeFolders( const AbsolutePath& rootDir, const vector<string>& listAssetPath, string_view rawFolderName, vector<AbsolutePath>& outListFolder )
             {
-                for ( const string& key : uniqueScope )
+                unordered_set<string> uniqueFolder;
+                for ( const string& assetPath : listAssetPath )
                 {
-                    for ( size_t slash = key.rfind( '/' ); slash != string::npos && slash > 0; slash = key.rfind( '/', slash - 1 ) )
-                        outUniqueFolder.insert( key.substr( 0, slash ) );
+                    string rawFolder;
+                    string relativePath;
+                    if ( splitRawPath( assetPath, rawFolderName, rawFolder, relativePath ) == false || uniqueFolder.insert( makeScopeKey( rawFolder ) ).second == false )
+                        continue;
+                    const AbsolutePath folder = rootDir.join( rawFolder );
+                    if ( FileUtil::isDirectory( folder ) )
+                        outListFolder.push_back( folder );
                 }
             }
 
-            /** @brief 리소스 루트 아래 모든 원본 폴더를 대조합니다. @p pScope 가 있으면 그 원본(리소스 경로 열쇠)만 대조하고 임포트합니다. */
-            static AssetImportSummary importFolders( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const unordered_set<string>* pScope,
-                                                     TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache )
+            /** @brief 리소스 루트 아래의 원본 폴더를 모두 모읍니다(옛 작업 도메인 자리의 찌꺼기는 `EditorContentScan` 이 뺀다). 훑지 못하면 false 입니다. */
+            [[nodiscard]] static bool collectRawFolders( const AbsolutePath& rootDir, string_view rawFolderName, vector<AbsolutePath>& outListFolder )
             {
-                AssetImportSummary summary;
-                const AbsolutePath rootDir = resourceRoot.join( {} );
+                if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, outListFolder, true ) == false )
+                    return false;
+                VectorUtil::removeIf( outListFolder, [rawFolderName]( const AbsolutePath& folder )
+                { return FileUtil::getFileNamePart( folder.str() ) != rawFolderName; } );
+                return true;
+            }
 
-                vector<AbsolutePath> listFolder;
-                // 옛 작업 도메인 자리(`Content/scratch/`)의 찌꺼기는 임포트하지 않는다(EditorContentScan 이 뺀다)
-                if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
+            /**
+             * @brief 리소스 루트 아래 원본 폴더들을 스탬프와 대조하고, ImportStale 이면 어긋난 것을 임포트합니다. @p pListScopePath 가 있으면 그 원본(리소스 경로)만 봅니다.
+             * @details 단계는 준비(직렬: 폴더마다 스탬프 · 파일 목록, 모든 폴더에 걸친 사슬) → 병렬 임포트(다른 원본의 결과를 읽지 않는 원본, 그 뒤 읽는 원본) → 합치기(직렬, 폴더 · 파일 순서)입니다.
+             *          폴더마다 끝을 기다리지 않는다 — 폴더 하나의 무거운 원본이 도는 동안 다른 폴더의 원본이 워커를 채운다.
+             *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 폴더 · 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
+             */
+            static AssetImportSummary importFolders( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, const vector<string>* pListScopePath,
+                                                     TaskManager* pTaskManager, const DerivedDataCache* pDerivedDataCache, const AssetImportControl* pControl )
+            {
+                AssetImportSummary    summary;
+                const AbsolutePath    rootDir = resourceRoot.join( {} );
+                vector<AbsolutePath>  listRawFolder;
+                unordered_set<string> uniqueScope;
+                if ( pListScopePath != nullptr )
+                {
+                    for ( const string& assetPath : *pListScopePath )
+                        uniqueScope.insert( makeScopeKey( assetPath ) );
+                    collectScopeFolders( rootDir, *pListScopePath, importer.getRawFolderName(), listRawFolder );
+                }
+                else if ( collectRawFolders( rootDir, importer.getRawFolderName(), listRawFolder ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
                     problemBuilder.appendFormat( "리소스 루트를 훑지 못했습니다: %#", rootDir.str() );
                     summary._listProblem.push_back( string( problemBuilder.view() ) );
                     return summary;
                 }
+                VectorUtil::sort( listRawFolder );
 
-                VectorUtil::sort( listFolder );
-                // 원본이 없는 폴더는 훑지 않는다 — 범위 원본의 조상 폴더 열쇠로 본다.
-                unordered_set<string> uniqueScopeFolder;
-                if ( pScope != nullptr )
-                    collectScopeFolders( *pScope, uniqueScopeFolder );
-                for ( const AbsolutePath& folder : listFolder )
-                {
-                    const AbsolutePath normalizedFolder = folder;
-                    if ( FileUtil::getFileNamePart( normalizedFolder.str() ) != importer.getRawFolderName() )
-                        continue;
-                    const bool bOutOfScope = pScope != nullptr && ( normalizedFolder.str().size() <= rootDir.str().size() + 1 || uniqueScopeFolder.contains( makeScopeKey( string_view( normalizedFolder.str() ).substr( rootDir.str().size() + 1 ) ) ) == false );
-                    if ( bOutOfScope )
-                        continue;
-                    importRawFolder( rootDir.str(), normalizedFolder, importer, mode, pScope, pTaskManager, pDerivedDataCache, summary );
-                }
+                const unordered_set<string>* const pScope = pListScopePath != nullptr ? &uniqueScope : nullptr;
+                vector<RawFolder>                  listFolder;
+                vector<SourceFile>                 listFile;
+                for ( const AbsolutePath& rawFolder : listRawFolder )
+                    collectRawFolder( rootDir.str(), rawFolder, importer, pScope, listFolder, listFile );
+
+                vector<vector<uint32>> listChain;
+                makeChains( listFile, listChain );
+                vector<FileResult> listFileResult( listFile.size() );
+                ImportJob          job;
+                job._pImporter         = &importer;
+                job._pListFolder       = &listFolder;
+                job._pListFile         = &listFile;
+                job._pListChain        = &listChain;
+                job._pListFileResult   = listFileResult.data();
+                job._mode              = mode;
+                job._pTaskManager      = pTaskManager;
+                job._pDerivedDataCache = mode == AssetImportMode::ImportStale ? pDerivedDataCache : nullptr;
+                job._pControl          = pControl;
+                job.runPhases();
+
+                for ( const RawFolder& folder : listFolder )
+                    mergeRawFolder( rootDir.str(), folder, listFile, listFileResult, importer, mode, pScope, summary );
                 return summary;
             }
         };
@@ -780,7 +877,7 @@ namespace sw::editor
     AssetImportSummary AssetImportStampUtil::importAll( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, AssetImportMode mode, TaskManager* pTaskManager,
                                                         const DerivedDataCache& derivedDataCache )
     {
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache );
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, mode, nullptr, pTaskManager, &derivedDataCache, nullptr );
     }
 
     vector<string> AssetImportStampUtil::collectSourceAssetPaths( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer )
@@ -788,16 +885,13 @@ namespace sw::editor
         const AbsolutePath   rootDir = resourceRoot.join( {} );
         vector<AbsolutePath> listFolder;
         vector<string>       listAssetPath;
-        if ( rootDir.empty() || EditorContentScan::collectFolders( rootDir, listFolder, true ) == false )
+        if ( AssetImportStampInternal::collectRawFolders( rootDir, importer.getRawFolderName(), listFolder ) == false )
             return listAssetPath;
         for ( const AbsolutePath& folder : listFolder )
         {
-            const AbsolutePath normalizedFolder = folder;
-            if ( FileUtil::getFileNamePart( normalizedFolder.str() ) != importer.getRawFolderName() )
-                continue;
             vector<AbsolutePath> listPath;
-            (void)EditorContentScan::collectFiles( normalizedFolder, "", listPath, true );
-            AssetSourceLocator::collectStoredSources( normalizedFolder, listPath );
+            (void)EditorContentScan::collectFiles( folder, "", listPath, true );
+            AssetSourceLocator::collectStoredSources( folder, listPath );
             for ( const AbsolutePath& path : listPath )
             {
                 const string sourcePath = FileUtil::normalizeSeparators( path.str() );
@@ -810,14 +904,9 @@ namespace sw::editor
     }
 
     AssetImportSummary AssetImportStampUtil::importSources( const AbsolutePath& resourceRoot, const IRawAssetImporter& importer, const vector<string>& listAssetPath,
-                                                            TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache )
+                                                            TaskManager* pTaskManager, const DerivedDataCache& derivedDataCache, const AssetImportControl* pControl )
     {
-        unordered_set<string> uniqueScope;
-        for ( const string& assetPath : listAssetPath )
-        {
-            uniqueScope.insert( AssetImportStampInternal::makeScopeKey( assetPath ) );
-        }
-        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &uniqueScope, pTaskManager, &derivedDataCache );
+        return AssetImportStampInternal::importFolders( resourceRoot, importer, AssetImportMode::ImportStale, &listAssetPath, pTaskManager, &derivedDataCache, pControl );
     }
 
     bool AssetImportStampUtil::isUnderRawFolder( string_view path, string_view rawFolderName )
