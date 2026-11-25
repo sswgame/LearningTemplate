@@ -9,6 +9,7 @@
 #include "Core/Testing/TestRunner.h"
 
 #include "DevTools/Diagnostics/ReflectionDocWriter.h"
+#include "DevTools/Diagnostics/TestCaseStateProbe.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LipSyncImport.h"
@@ -86,7 +87,10 @@ namespace sw
                 options._seed          = static_cast<uint32>( seed );
                 options._repeatCount   = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
                 options._pCrashHandler = &engine::getSubsystem<CrashHandler>();
-                const bool bPassed     = test::TestRunner::run( options );
+                TestCaseStateProbe stateProbe;
+                options._onCaseBegin = SW_DELEGATE_METHOD( Delegate<void()>, &TestCaseStateProbe::beginCase, &stateProbe );
+                options._onCaseEnd   = SW_DELEGATE_METHOD( Delegate<void( vector<string>& )>, &TestCaseStateProbe::endCase, &stateProbe );
+                const bool bPassed   = test::TestRunner::run( options );
                 // 이 실행의 "전부 통과" 를 에디터까지 통과한 것으로 읽지 않게 한다 - 에디터 모듈은 이 단계에 아직 올라오지 않았다.
                 SW_LOG_INFO_ID( "Headless.EditorCasesRunElsewhere", "Editor cases are not in this run - they run inside the editor (self test editor.unitTests, ctest Scenario.editor)" );
                 return bPassed;

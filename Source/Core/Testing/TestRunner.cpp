@@ -71,6 +71,7 @@ namespace sw::test
                 ExpectedLogMissing,
                 SnapshotMissing,
                 SnapshotDiffers,
+                StateLeak,
                 Timeout,
                 Crash,
                 Count,
@@ -79,7 +80,7 @@ namespace sw::test
             static const utf8* getFailureKindName( TestFailureKind kind )
             {
                 static constexpr auto kArrName = makeEnumTable<TestFailureKind, const utf8*>( "Assertion", "NoAssertion", "UndeclaredLog", "ExpectedLogMissing", "SnapshotMissing",
-                                                                                              "SnapshotDiffers", "Timeout", "Crash" );
+                                                                                              "SnapshotDiffers", "StateLeak", "Timeout", "Crash" );
                 return kArrName[kind];
             }
 
@@ -1051,10 +1052,12 @@ namespace sw::test
                 const float32 timeoutSeconds = pCase->_options._timeoutSeconds > 0.0f ? pCase->_options._timeoutSeconds : kDefaultCaseTimeoutSeconds;
                 const bool    bIsolate       = pCase->_options._bIsolated && bIsolatedRun == false;
                 // 격리 케이스의 부모는 자식 기동(Debug 에서 몇 초)까지 기다린다 — 자식 시한은 케이스 시한이고 부모 시한은 그 두 배에 기동 몫을 더한다.
-                const float32       parentSeconds = bIsolate ? timeoutSeconds * 2.0f + 60.0f : timeoutSeconds;
-                const int64         timeoutNanos  = static_cast<int64>( static_cast<float64>( parentSeconds ) * 1.0e9 );
-                const int64         caseStart     = MonotonicClock::nowNanoseconds();
-                Internal::Watchdog& watchdog      = Internal::getWatchdog();
+                const float32 parentSeconds = bIsolate ? timeoutSeconds * 2.0f + 60.0f : timeoutSeconds;
+                if ( options._onCaseBegin.isBound() )
+                    options._onCaseBegin();
+                const int64         timeoutNanos = static_cast<int64>( static_cast<float64>( parentSeconds ) * 1.0e9 );
+                const int64         caseStart    = MonotonicClock::nowNanoseconds();
+                Internal::Watchdog& watchdog     = Internal::getWatchdog();
                 watchdog._pCaseName.store( pCase->_pName, std::memory_order_release );
                 watchdog._timeoutMilliseconds.store( timeoutNanos / constant::time::kNanosecondsPerMillisecond, std::memory_order_release );
                 watchdog._deadlineNanoseconds.store( caseStart + timeoutNanos, std::memory_order_release );
@@ -1064,6 +1067,9 @@ namespace sw::test
                     pCase->_pfnRunIndexed( pCase->_index );
                 else
                     pCase->_pfnRun();
+                vector<string> listLeak;
+                if ( options._onCaseEnd.isBound() )
+                    options._onCaseEnd( listLeak ); // 감시 · 로그 모으기 안이다 — 흘린 비동기 일의 로그 · 멈춤도 이 케이스의 것이다
                 watchdog._deadlineNanoseconds.store( 0, std::memory_order_release );
                 const int64 caseMilliseconds = ( MonotonicClock::nowNanoseconds() - caseStart ) / constant::time::kNanosecondsPerMillisecond;
 
@@ -1094,6 +1100,12 @@ namespace sw::test
                             listLateFailure.push_back( LateFailure{ string( textBuilder.view() ), Internal::TestFailureKind::ExpectedLogMissing } );
                         }
                     }
+                }
+                for ( const string& leak : listLeak )
+                {
+                    StringBuilder<constant::buffer::kMax256> leakText;
+                    leakText.appendFormat( "%#(%#): error: the case left process state behind - %#", string( pCase->_pFile ), pCase->_line, leak );
+                    listLateFailure.push_back( LateFailure{ string( leakText.view() ), Internal::TestFailureKind::StateLeak } );
                 }
                 for ( LateFailure& failure : listLateFailure )
                 {
