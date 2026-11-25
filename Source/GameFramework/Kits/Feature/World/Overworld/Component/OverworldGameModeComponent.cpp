@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/TileMap/Component/TileMapComponent.h"
+#include "Engine/TileMap/TileMapComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"

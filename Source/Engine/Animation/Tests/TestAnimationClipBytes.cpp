@@ -6,7 +6,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
+#include "Engine/Animation/Codec/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 
 using namespace sw;

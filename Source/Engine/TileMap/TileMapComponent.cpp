@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/TileMap/Component/TileMapComponent.h"
+#include "Engine/TileMap/TileMapComponent.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/AABB.h"

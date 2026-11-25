@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
+#include "Engine/Animation/Codec/RawAnimationCodec.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/ByteStream.h"
