@@ -14,6 +14,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -215,4 +216,7 @@ namespace sw
         /** @brief 합친 글을 클립으로 옮깁니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면(`loadFromFile`) @p context 에 `withAsset` 이 실린다. */
         [[nodiscard]] bool loadComposed( string_view text, string_view sourceLabel, const ResourceContext& context );
     };
+
+    /** @brief 경로별로 나눠 주는 캐시입니다(`SharedAssetCache<SpriteClipAsset>` — 같은 클립을 쓰는 스프라이트 백 개가 파일을 백 번 읽지 않는다). 약한 참조라 마지막 사용자가 놓으면 사라진다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SpriteClipAsset );
 } // namespace sw

@@ -14,6 +14,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -99,4 +100,7 @@ namespace sw
         /** @brief 읽은 값의 의미를 보고 비율 테두리를 채웁니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
     };
+
+    /** @brief 경로별로 나눠 주는 캐시입니다(`SharedAssetCache<SpriteLibrary>` — 같은 클립을 쓰는 스프라이트 백 개가 파일을 백 번 읽지 않는다). 약한 참조라 마지막 사용자가 놓으면 사라진다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SpriteLibrary );
 } // namespace sw
