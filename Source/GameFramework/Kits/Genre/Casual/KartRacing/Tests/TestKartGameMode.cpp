@@ -52,7 +52,7 @@ namespace
             _pGameMode     = _manager.createGameObject( hashed_string( "Director" ) )->addComponent<KartGameModeComponent>();
             SW_REQUIRE_NOT_NULL( _pGameMode );
             set( "_trackID", "ring" );
-            set( "_vehicle", test::ScopedScratchDomain::makeID( "kart.vehicle.xml" ).str() );
+            set( "_vehicleSettings", test::ScopedScratchDomain::makeID( "kart.vehicle.xml" ).str() );
             set( "_bItems", "false" );
             set( "_countdownSeconds", "0" );
             set( "_finishTimeoutSeconds", "5" );

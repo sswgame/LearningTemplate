@@ -59,7 +59,7 @@
 					                       _trackID="sunny_oval"
 					                       _bItems="true"
 					                       _itemCatalog="game/playground/kartracing/data/circuit.kartitems.xml"
-					                       _vehicle="common/data/vehicles/kart.vehicle.xml"
+					                       _vehicleSettings="common/data/vehicles/kart.vehicle.xml"
 					                       _botCount="3"
 					                       _countdownSeconds="3"
 					                       _finishTimeoutSeconds="8"

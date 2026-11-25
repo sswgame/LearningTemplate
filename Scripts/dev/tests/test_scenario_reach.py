@@ -12,8 +12,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from dev.scenario_reach import Reach, collect_references, find_asset_reach, find_source_reach, resolve_token, select_reached  # noqa: E402
-from lint.asset_identity import ImportedFolder  # noqa: E402
+from dev.scenario_reach import Reach, collect_references, find_asset_reach, find_source_reach, map_output_sources, resolve_token, select_reached  # noqa: E402
+from lint.asset_identity import ImportedFolder, make_output_guid  # noqa: E402
 
 IMPORTED = [ImportedFolder("models", "models_raw", (".glb",), (".mesh",), True)]
 GUID = "a45146ba951afbe1d718e7011b81f425"
@@ -33,6 +33,13 @@ class ScenarioReachTest(unittest.TestCase):
     def test_imported_product_resolves_to_its_source(self) -> None:
         self.assertEqual(resolve_token("game/g/models/tree_leaf.mesh", CONTENT, IMPORTED), "game/g/models_raw/tree.glb")
         self.assertIsNone(resolve_token("game/g/models/treehouse.mesh", CONTENT, IMPORTED))
+
+    def test_output_guid_resolves_to_its_source(self) -> None:
+        source_guid = "0123456789abcdef0011223344556677"
+        output_guid = make_output_guid(source_guid, ".mesh")
+        map_output = map_output_sources(["game/g/models/tree.mesh", "game/g/models/other.mesh"], {source_guid: "game/g/models_raw/tree.glb"}, IMPORTED)
+        self.assertEqual(map_output, {output_guid: "game/g/models_raw/tree.glb"})
+        self.assertEqual(collect_references("game/g/maps/a.scene.xml", f'<Mesh mesh="guid:{output_guid}"/>', CONTENT, map_output, IMPORTED), {"game/g/models_raw/tree.glb"})
 
     def test_changed_include_model_and_guid_target_reach_the_scenario(self) -> None:
         for changed in ("engine/shaders/light.hlsli", "game/g/models_raw/tree.glb", "game/g/models_raw/tree.glb.meta", "game/g/textures/wall.png"):

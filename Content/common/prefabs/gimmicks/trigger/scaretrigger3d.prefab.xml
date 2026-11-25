@@ -38,7 +38,7 @@
 			                       _bActive="true"
 			                       _activatorTag="Player"
 			                       _cue="Scare"
-			                       _sound=""
+			                       _soundAsset=""
 			                       _bOnce="true"
 			                       _cooldown="10" />
 		</_listComponent>

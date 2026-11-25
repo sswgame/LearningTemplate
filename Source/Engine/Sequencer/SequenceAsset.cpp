@@ -333,22 +333,32 @@ namespace sw
     {
         if ( field == SequenceItemField::Binding )
             return _binding != kSequenceNoBinding;
-        const string* const pText = findTextField( field );
-        return pText != nullptr && pText->empty() == false;
+        return getFieldText( field ).empty() == false;
     }
 
-    string* SequenceTrackItem::accessTextField( SequenceItemField field )
+    string SequenceTrackItem::getFieldText( SequenceItemField field ) const
     {
-        // 칸 고르기는 const 쪽 한 곳이다(같은 switch 를 두 벌 두지 않는다).
-        return const_cast<string*>( static_cast<const SequenceTrackItem*>( this )->findTextField( field ) );
+        if ( field == SequenceItemField::Prefab )
+            return _spawnPrefab.path();
+        const string* const pText = findStringField( field );
+        return pText != nullptr ? *pText : string{};
     }
 
-    const string* SequenceTrackItem::findTextField( SequenceItemField field ) const
+    bool SequenceTrackItem::setFieldText( SequenceItemField field, string_view text )
+    {
+        if ( field == SequenceItemField::Prefab )
+            return _spawnPrefab.assign( text );
+        string* const pText = const_cast<string*>( findStringField( field ) ); // 칸 고르기는 const 쪽 한 곳이다(같은 switch 를 두 벌 두지 않는다)
+        if ( pText == nullptr )
+            return false;
+        *pText = text;
+        return true;
+    }
+
+    const string* SequenceTrackItem::findStringField( SequenceItemField field ) const
     {
         switch ( field )
         {
-            case SequenceItemField::Prefab:
-                return &_spawnPrefab;
             case SequenceItemField::Preset:
                 return &_preset;
             case SequenceItemField::Scenario:
@@ -359,6 +369,7 @@ namespace sw
                 return &_sound;
             case SequenceItemField::Text:
                 return &_text;
+            case SequenceItemField::Prefab:
             case SequenceItemField::Binding:
             case SequenceItemField::Count:
                 return nullptr;

@@ -260,11 +260,7 @@ namespace sw::editor
         for ( uint32 fieldIndex = 0; fieldIndex < static_cast<uint32>( SequenceItemField::Count ); ++fieldIndex )
         {
             const SequenceItemField field = static_cast<SequenceItemField>( fieldIndex );
-            string*                 pTo   = candidate.accessTextField( field );
-            string*                 pFrom = _itemEdit.accessTextField( field );
-            const bool              bText = pTo != nullptr && pFrom != nullptr;
-            if ( bText )
-                *pTo = *pFrom;
+            (void)candidate.setFieldText( field, _itemEdit.getFieldText( field ) ); // 사본의 값은 이미 받아들인 값이다. 바인딩은 위에서 옮겼다
         }
         const SequenceTrackItem* pSpawnOwner = _asset.findSpawnItem( candidate._binding );
         const bool               bSpawnClash = pSpawnOwner != nullptr && pSpawnOwner != &item && SequenceAsset::findItemKindInfo( candidate._kind )->_bSpawns;

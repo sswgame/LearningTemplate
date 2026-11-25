@@ -40,7 +40,7 @@ namespace sw
         PROPERTY( Required, Category = "Cue", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
         hashed_string _cue;
         PROPERTY( Category = "Cue", DisplayName = "Sound" )
-        AssetRef<AudioPlayableAsset> _sound;
+        AssetRef<AudioPlayableAsset> _soundAsset;
         PROPERTY( Category = "Cue", DisplayName = "Cooldown", Tooltip = "Time before a volume that is not Once fires again", Min = 0.0, Units = s )
         float32 _cooldown;
         PROPERTY( RuntimeState, Category = "Cue", DisplayName = "Cooldown Left", Tooltip = "Runtime", Units = s )

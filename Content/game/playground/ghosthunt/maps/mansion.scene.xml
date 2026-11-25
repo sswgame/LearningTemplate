@@ -78,7 +78,7 @@
 					<GhostHuntGameModeComponent _localID="8351720046193582771" _componentName="GhostHuntGameModeComponent"
 					                            _bActive="true"
 					                            _areaGraph="game/playground/ghosthunt/data/mansion.areas.xml"
-					                            _loot="game/playground/ghosthunt/data/mansion.loot.xml"
+					                            _lootCatalog="game/playground/ghosthunt/data/mansion.loot.xml"
 					                            _startRoom="foyer"
 					                            _seed="5"
 					                            _bagSlotCount="4"

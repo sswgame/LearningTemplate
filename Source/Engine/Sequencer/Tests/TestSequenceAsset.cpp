@@ -253,6 +253,22 @@ SW_TEST_CASE( SequencerTest, BindingIdsAreCheckedOnRead )
         asset.loadFromXMLText( R"(<SequenceAsset _frameMin="0" _frameMax="10" _whenFinished="RestoreState"><_listItem><SequenceTrackItem _name="Old" _targetObject="Hero" _kind="Event" /></_listItem></SequenceAsset>)" ) );
 }
 
+/** @brief [SequencerTest] 스폰의 프리팹 칸은 다른 종류의 에셋 경로를 받지 않고(값 그대로), 바인딩은 글 칸이 아니다 */
+SW_TEST_CASE( SequencerTest, PrefabFieldTakesOnlyPrefabs )
+{
+    SequenceTrackItem item{};
+    SW_EXPECT_TRUE( item.setFieldText( SequenceItemField::Prefab, "a.prefab.xml" ) );
+    SW_EXPECT_TRUE( item.getFieldText( SequenceItemField::Prefab ) == "a.prefab.xml" );
+    SW_EXPECT_LOG( "AssetRef.WrongType" );
+    SW_EXPECT_FALSE( item.setFieldText( SequenceItemField::Prefab, "a.material" ) );
+    SW_EXPECT_TRUE( item.getFieldText( SequenceItemField::Prefab ) == "a.prefab.xml" );
+    SW_EXPECT_TRUE( item.setFieldText( SequenceItemField::Prefab, "" ) );
+    SW_EXPECT_FALSE( item.hasField( SequenceItemField::Prefab ) );
+    SW_EXPECT_FALSE( item.setFieldText( SequenceItemField::Binding, "1" ) );
+    SW_EXPECT_TRUE( item.setFieldText( SequenceItemField::Preset, "wet" ) );
+    SW_EXPECT_TRUE( item._preset == "wet" );
+}
+
 /**
  * @brief [SequencerTest] 바인딩 창은 스폰 바인딩을 스폰한 오브젝트로, 나머지를 씬의 표로 푼다 — 스폰 바인딩은 표에 칸이 있어도 표를 보지 않는다(이름으로 찾지 않는다)
  */
