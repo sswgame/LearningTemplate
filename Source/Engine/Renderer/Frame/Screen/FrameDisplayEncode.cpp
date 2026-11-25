@@ -130,15 +130,11 @@ namespace sw
     void FrameDisplayEncode::drawFullscreen( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHITextureSRVIndex srv, float32 scale ) const
     {
         cmd.setPipelineState( pso );
-        const bool                                bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameDisplayEncodeInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( srv ) : 0u;
-        constants._sourceWidth       = static_cast<float32>( getWidth() );
-        constants._sourceHeight      = static_cast<float32>( getHeight() );
-        constants._scale             = scale;
-        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
-        if ( bNativeBindless == false )
-            cmd.bindShaderResource( srv, kSourceSlot );
+        constants._source       = cmd.bindSampledTexture( srv, shaderslot::emulated::getSlot( "SourceColor" ) );
+        constants._sourceWidth  = static_cast<float32>( getWidth() );
+        constants._sourceHeight = static_cast<float32>( getHeight() );
+        constants._scale        = scale;
         cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
     }

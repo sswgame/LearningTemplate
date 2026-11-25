@@ -138,6 +138,13 @@ namespace sw
          */
         virtual void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) = 0;
         virtual void bindShaderResource( RHITextureSRVIndex index, uint32 slot )   = 0;
+        /**
+         * @brief 셰이더가 읽을 텍스처 @p srv 를 걸고, 셰이더에 넘길 번호(루트 상수 · 상수 버퍼의 텍스처 번호 칸)를 돌려줍니다. PSO 를 건 **뒤** 부릅니다.
+         * @details 네이티브 bindless(DX12 · Vulkan · WebGPU)는 걸 것이 없고 @p srv 그대로다. 에뮬(DX11 · GL)은 @p emulatedSlot(t#) 에 걸고 0 을 돌려준다 — 셰이더는
+         *          `SW_PASS_FLAG_NATIVE_BINDLESS` 가 꺼져 있으면 번호 대신 그 칸을 읽는다. 부르는 쪽이 백엔드 능력을 묻고 갈래를 쓰면 한쪽 갈래만 고쳐 다른 백엔드가 검은 화면이 된다.
+         *          언리얼은 텍스처가 셰이더 매개변수라 호출자가 bindless 여부를 모른다 — 그 자리다.
+         */
+        [[nodiscard]] virtual uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 기반 바인딩: 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩한다.

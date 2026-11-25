@@ -62,22 +62,23 @@ namespace sw
         {
             _pContext->setComputeRootConstants( num32BitValues, pData, destOffsetIn32BitValues );
         }
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindComputeUAV( index, slot ); }
-        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
-        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
-        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
-        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
-        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }
-        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
-        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindComputeShaderResource( index, slot ); }
-        void prepareTextureForShaderRead( RHITextureHandle texture ) override { _pContext->prepareTextureForShaderRead( texture ); }
-        void prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
-        void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { _pContext->prepareTextureForUnorderedAccess( texture ); }
-        void beginTextureAlias( RHITextureHandle texture ) override { _pContext->beginTextureAlias( texture ); }
-        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _pContext->transitionTextures( pTransition, count ); }
-        void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override { _pContext->blitTexture( src, dst ); }
-        void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
-                           RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override
+        void                 bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindComputeUAV( index, slot ); }
+        void                 bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
+        void                 bindShaderResource( RHITextureSRVIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
+        [[nodiscard]] uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) override { return _pContext->bindSampledTexture( srv, emulatedSlot ); }
+        void                 bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
+        void                 updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
+        void                 bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }
+        void                 bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
+        void                 bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) override { _pContext->bindComputeShaderResource( index, slot ); }
+        void                 prepareTextureForShaderRead( RHITextureHandle texture ) override { _pContext->prepareTextureForShaderRead( texture ); }
+        void                 prepareTextureForRenderTarget( RHITextureHandle texture ) override { _pContext->prepareTextureForRenderTarget( texture ); }
+        void                 prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { _pContext->prepareTextureForUnorderedAccess( texture ); }
+        void                 beginTextureAlias( RHITextureHandle texture ) override { _pContext->beginTextureAlias( texture ); }
+        void                 transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _pContext->transitionTextures( pTransition, count ); }
+        void                 blitTexture( RHITextureHandle src, RHITextureHandle dst ) override { _pContext->blitTexture( src, dst ); }
+        void                 drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
+                                           RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) override
         {
             _pContext->drawIndirect( argumentBuffer, argumentBufferOffset, drawCount, countBuffer, countBufferOffset );
         }

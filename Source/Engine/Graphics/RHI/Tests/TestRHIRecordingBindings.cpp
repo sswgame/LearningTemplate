@@ -200,3 +200,19 @@ SW_TEST_CASE( RHIRecordingBindingsTest, InvalidIndexUnbindsTheSlot )
     SW_EXPECT_FALSE( slots.isBound( RHIShaderSlotKind::ShaderResource, 4 ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, takeChanges( slots, RHIShaderSlotKind::ShaderResource ).size() );
 }
+
+/** @brief [RHIRecordingBindingsTest] 에뮬 bindless 장치에서 읽을 텍스처는 이름 칸에 걸리고 셰이더 번호는 0 이다. 변이: 칸에 걸지 않거나 번호를 그대로 넘기면 진다. */
+SW_TEST_CASE( RHIRecordingBindingsTest, SampledTextureBindsTheEmulatedSlot )
+{
+    test::FakeRHIDevice         device;
+    test::FakeRHICommandContext context{ device };
+    RHIShaderSlots&             slots = context.getBindings().getSlots( RHIBindPoint::Graphics );
+
+    context.beginRenderPass( makeBackBufferPass() );
+    context.setPipelineState( RHIPipelineStateHandle{ 10 } );
+    (void)takeChanges( slots, RHIShaderSlotKind::ShaderResource );
+    SW_EXPECT_EQUAL( 0u, context.bindSampledTexture( RHITextureSRVIndex{ 9 }, shaderslot::kMaterialTexture0 ) );
+    const vector<pair<uint32, RHIDescriptorIndex>> listChange = takeChanges( slots, RHIShaderSlotKind::ShaderResource );
+    SW_REQUIRE_TRUE( listChange.size() == 1 );
+    SW_EXPECT_TRUE( listChange[0].second == RHIDescriptorIndex{ 9 } );
+}

@@ -83,39 +83,40 @@ namespace sw::test
             ++_endCount;
             _bOpen = false;
         }
-        void setViewport( const RHIViewport& ) override {}
-        void setScissorRect( const RHIScissorRect& ) override {}
-        void setPipelineState( RHIPipelineStateHandle ) override {}
-        void beginRenderPass( const RHIRenderPassBeginInfo& ) override {}
-        void endRenderPass() override {}
-        void setVertexBuffer( uint32, RHIBufferHandle, uint32, uint32 ) override {}
-        void draw( uint32, uint32 ) override {}
-        void drawInstanced( uint32, uint32, uint32, uint32 ) override {}
-        void setIndexBuffer( RHIBufferHandle, uint32, uint32 ) override {}
-        void drawIndexedInstanced( uint32, uint32, uint32, int32, uint32 ) override {}
-        void setComputePipelineState( RHIPipelineStateHandle ) override {}
-        void dispatchCompute( uint32, uint32, uint32 ) override {}
-        void dispatchThreads( uint32, uint32, uint32 ) override {}
-        void setComputeRootConstants( uint32, const void*, uint32 ) override {}
-        void setGraphicsRootConstants( uint32, const void*, uint32 ) override {}
-        void bindComputeUAV( RHIUnorderedAccessIndex, uint32 ) override {}
-        void bindGraphicsUAV( RHIUnorderedAccessIndex, uint32 ) override {}
-        void bindShaderResource( RHITextureSRVIndex, uint32 ) override {}
-        void bindConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
-        void updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
-        void bindStructuredBuffer( RHIBufferSRVIndex, uint32 ) override {}
-        void bindComputeConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
-        void bindComputeShaderResource( RHIBufferSRVIndex, uint32 ) override {}
-        void prepareTextureForShaderRead( RHITextureHandle ) override {}
-        void prepareTextureForRenderTarget( RHITextureHandle ) override {}
-        void prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
-        void beginTextureAlias( RHITextureHandle ) override {}
-        void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _listTextureTransition.insert( _listTextureTransition.end(), pTransition, pTransition + count ); }
-        void blitTexture( RHITextureHandle, RHITextureHandle ) override {}
-        void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
-        void dispatchIndirect( RHIBufferHandle, uint32 ) override {}
-        void transitionBuffer( RHIBufferHandle buffer, RHIBufferState state ) override { _listBufferTransition.push_back( RHIBufferTransition{ buffer, state } ); }
-        void transitionBuffers( const RHIBufferTransition*, uint32 count ) override
+        void   setViewport( const RHIViewport& ) override {}
+        void   setScissorRect( const RHIScissorRect& ) override {}
+        void   setPipelineState( RHIPipelineStateHandle ) override {}
+        void   beginRenderPass( const RHIRenderPassBeginInfo& ) override {}
+        void   endRenderPass() override {}
+        void   setVertexBuffer( uint32, RHIBufferHandle, uint32, uint32 ) override {}
+        void   draw( uint32, uint32 ) override {}
+        void   drawInstanced( uint32, uint32, uint32, uint32 ) override {}
+        void   setIndexBuffer( RHIBufferHandle, uint32, uint32 ) override {}
+        void   drawIndexedInstanced( uint32, uint32, uint32, int32, uint32 ) override {}
+        void   setComputePipelineState( RHIPipelineStateHandle ) override {}
+        void   dispatchCompute( uint32, uint32, uint32 ) override {}
+        void   dispatchThreads( uint32, uint32, uint32 ) override {}
+        void   setComputeRootConstants( uint32, const void*, uint32 ) override {}
+        void   setGraphicsRootConstants( uint32, const void*, uint32 ) override {}
+        void   bindComputeUAV( RHIUnorderedAccessIndex, uint32 ) override {}
+        void   bindGraphicsUAV( RHIUnorderedAccessIndex, uint32 ) override {}
+        void   bindShaderResource( RHITextureSRVIndex, uint32 ) override {}
+        uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 ) override { return static_cast<uint32>( srv ); }
+        void   bindConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
+        void   updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
+        void   bindStructuredBuffer( RHIBufferSRVIndex, uint32 ) override {}
+        void   bindComputeConstantBuffer( RHIBufferSRVIndex, uint32 ) override {}
+        void   bindComputeShaderResource( RHIBufferSRVIndex, uint32 ) override {}
+        void   prepareTextureForShaderRead( RHITextureHandle ) override {}
+        void   prepareTextureForRenderTarget( RHITextureHandle ) override {}
+        void   prepareTextureForUnorderedAccess( RHITextureHandle ) override {}
+        void   beginTextureAlias( RHITextureHandle ) override {}
+        void   transitionTextures( const RHITextureTransition* pTransition, uint32 count ) override { _listTextureTransition.insert( _listTextureTransition.end(), pTransition, pTransition + count ); }
+        void   blitTexture( RHITextureHandle, RHITextureHandle ) override {}
+        void   drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
+        void   dispatchIndirect( RHIBufferHandle, uint32 ) override {}
+        void   transitionBuffer( RHIBufferHandle buffer, RHIBufferState state ) override { _listBufferTransition.push_back( RHIBufferTransition{ buffer, state } ); }
+        void   transitionBuffers( const RHIBufferTransition*, uint32 count ) override
         {
             ++_transitionBatchCount;
             _transitionCount += count;

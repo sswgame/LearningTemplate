@@ -864,13 +864,7 @@ namespace sw
         cmd.beginRenderPass( RHIRenderPassBeginInfo::color( target._texture, RHIRenderPassLoadOp::Clear, float4{ 1.0f, 0.0f, 0.0f, 0.0f } ).setExtent( target._width, target._height ) );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassKind::DepthHistory ) );
         // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depth_history.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( sourceSRV ) : 0u;
-        if ( bNativeBindless == false )
-        {
-            constexpr uint32 kDepthSlot = shaderslot::emulated::getSlot( "SceneDepth" );
-            cmd.bindShaderResource( sourceSRV, kDepthSlot );
-        }
+        const uint32 sourceIndex = cmd.bindSampledTexture( sourceSRV, shaderslot::emulated::getSlot( "SceneDepth" ) );
         cmd.setGraphicsRootConstants( 1, &sourceIndex );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();

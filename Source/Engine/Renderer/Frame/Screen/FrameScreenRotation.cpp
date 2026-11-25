@@ -90,21 +90,17 @@ namespace sw
         viewport._height = static_cast<float32>( viewRect._height );
         cmd.setViewport( viewport );
 
-        const RHISurfaceUVMapping                  mapping         = rotation.computeLogicalUVMapping();
-        const bool                                 bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        const RHISurfaceUVMapping                  mapping = rotation.computeLogicalUVMapping();
         FrameScreenRotationInternal::RootConstants constants{};
-        constants._source            = bNativeBindless ? static_cast<uint32>( _target._srv ) : 0u;
-        constants._logicalWidth      = static_cast<float32>( _target._width );
-        constants._logicalHeight     = static_cast<float32>( _target._height );
-        constants._m00               = mapping._m00;
-        constants._m01               = mapping._m01;
-        constants._m10               = mapping._m10;
-        constants._m11               = mapping._m11;
-        constants._offsetU           = mapping._offsetU;
-        constants._offsetV           = mapping._offsetV;
-        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
-        if ( bNativeBindless == false )
-            cmd.bindShaderResource( _target._srv, kSourceSlot );
+        constants._source        = cmd.bindSampledTexture( _target._srv, shaderslot::emulated::getSlot( "SourceColor" ) );
+        constants._logicalWidth  = static_cast<float32>( _target._width );
+        constants._logicalHeight = static_cast<float32>( _target._height );
+        constants._m00           = mapping._m00;
+        constants._m01           = mapping._m01;
+        constants._m10           = mapping._m10;
+        constants._m11           = mapping._m11;
+        constants._offsetU       = mapping._offsetU;
+        constants._offsetV       = mapping._offsetV;
         cmd.setGraphicsRootConstants( sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();

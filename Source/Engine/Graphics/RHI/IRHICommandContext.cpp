@@ -84,6 +84,14 @@ namespace sw
         bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::ShaderResource, RHIShaderSlots::kBufferResourceCount, RHIShaderSlots::kShaderResourceCount, index, slot, "bindShaderResource" );
     }
 
+    uint32 IRHICommandContext::bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot )
+    {
+        if ( getContextDevice().supportsNativeBindlessSampling() )
+            return static_cast<uint32>( srv );
+        bindShaderResource( srv, emulatedSlot );
+        return 0u;
+    }
+
     void IRHICommandContext::bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot )
     {
         bindSlot( RHIBindPoint::Graphics, RHIShaderSlotKind::UnorderedAccess, 0, shaderslot::kComputeUAVSlotCount, index, slot, "bindGraphicsUAV" );

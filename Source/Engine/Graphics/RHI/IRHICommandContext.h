@@ -49,20 +49,21 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 바인딩 상태 — 여기서 적고, 백엔드는 드로우 · 디스패치 직전에 낸다
         // ------------------------------------------------------------------------------
-        void setViewport( const RHIViewport& viewport ) final;
-        void setScissorRect( const RHIScissorRect& rect ) final;
-        void setPipelineState( RHIPipelineStateHandle pso ) final;
-        void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) final;
-        void setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) final;
-        void setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) final;
-        void setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) final;
-        void bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
-        void bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) final;
-        void bindShaderResource( RHITextureSRVIndex index, uint32 slot ) final;
-        void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
-        void bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
-        void bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) final;
-        void bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
+        void                 setViewport( const RHIViewport& viewport ) final;
+        void                 setScissorRect( const RHIScissorRect& rect ) final;
+        void                 setPipelineState( RHIPipelineStateHandle pso ) final;
+        void                 setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) final;
+        void                 setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) final;
+        void                 setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) final;
+        void                 setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) final;
+        void                 bindConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
+        void                 bindStructuredBuffer( RHIBufferSRVIndex index, uint32 slot ) final;
+        void                 bindShaderResource( RHITextureSRVIndex index, uint32 slot ) final;
+        [[nodiscard]] uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) final;
+        void                 bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
+        void                 bindComputeConstantBuffer( RHIBufferSRVIndex constantBufferIndex, uint32 slot ) final;
+        void                 bindComputeShaderResource( RHIBufferSRVIndex index, uint32 slot ) final;
+        void                 bindComputeUAV( RHIUnorderedAccessIndex index, uint32 slot ) final;
 
         // ------------------------------------------------------------------------------
         // 렌더 패스
