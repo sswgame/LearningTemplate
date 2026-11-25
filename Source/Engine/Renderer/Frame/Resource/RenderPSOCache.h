@@ -146,7 +146,7 @@ namespace sw
         [[nodiscard]] bool findOutputPSO( RenderPassKind passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         /**
-         * @brief 코드가 짓는 PSO(모듈 확장 프로그램 · 쿠키 아틀라스 · 층 굽기) 하나를 서술체 지문(`RHIPipelineStateDesc::computeHash`)으로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다).
+         * @brief 코드가 짓는 PSO(모듈 확장 프로그램 · 쿠키 아틀라스 · 층 굽기 · 디퍼드 타일 · 입자) 하나를 서술체 지문(`RHIPipelineStateDesc::computeHash`)으로 둡니다. 실패(0)도 기록합니다(만들기를 되풀이하지 않는다).
          * @details 부르는 쪽이 키를 고르지 않는다 — 서술 전체가 키라 포맷 · 상태를 키에서 빠뜨릴 수 없다. 머티리얼 변형 키 공간을 빌리지 않는다.
          */
         void setGlobalPSO( IRHIDevice* pDevice, uint64 descHash, RHIPipelineState&& pso );

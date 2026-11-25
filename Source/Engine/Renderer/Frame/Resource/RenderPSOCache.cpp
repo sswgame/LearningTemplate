@@ -406,7 +406,7 @@ namespace sw
             it = _mapPipelineComputePSO.erase( it );
         }
 
-        // 3) 머티리얼 변형(입자 · 디퍼드 타일 포함). 소유한 것만 파괴한다 — `_owned` 가 비면 패스 PSO 그대로다.
+        // 3) 머티리얼 변형. 소유한 것만 파괴한다 — `_owned` 가 비면 패스 PSO 그대로다.
         // 만드는 중인 것은 모두 무효로 하고 지운다 — 옛 바이트코드를 집었을 수 있고, 패스 PSO 를 놓았으면 그 키를 다시 찾는 쪽이 없다. 다음 셋업이 다시 넣는다.
         _materialPSOBuilder.discardPending();
         {

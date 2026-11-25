@@ -304,7 +304,11 @@ namespace sw
         /// @brief 바인딩 레이아웃 정체성(`ShaderBindingLayout::getIdentity`) → `_listMaterialFallback` 순번입니다. 주소가 아니라 정체성이라 핫 리로드가 같은 자리에 다시 지은 레이아웃은 옛 폴백을 집지 않는다.
         unordered_map<IdentityToken, uint32> _mapLayoutMaterialFallback;
         uint64                               _fallbackLayoutSerial{ 0 }; ///< 폴백을 맞춘 저장소의 레이아웃 번호(`RenderPSOCache::getLayoutSerial`)
-        /// @brief 이번 프레임 입자 PSO 의 변형 키입니다(`ensureParticlePSO` 가 기록 전에 정한다). 입자가 없거나 투명 패스가 없으면 빈 키(`_passPSO` 0)입니다.
-        MaterialPSOKey _particlePSOKey{};
+        /// @brief 입자 PSO 서술을 지은 투명 패스 PSO 입니다(`ensureParticlePSO` — 바뀌면 서술 · 지문을 다시 짓는다). 입자가 없거나 투명 패스가 없으면 0 입니다.
+        RHIPipelineStateHandle _particleSourcePSO{ 0 };
+        /// @brief 입자 PSO 의 서술체 지문(`RHIPipelineStateDesc::computeHash` — 코드가 짓는 PSO 저장소의 키)입니다. 0 이면 그리지 않는다.
+        uint64 _particlePSODescHash{ 0 };
+        /// @brief 디퍼드 조명 타일 종류마다의 PSO 서술체 지문입니다(`createPassPSOs` 가 정한다 — 0 이면 그 종류의 PSO 가 없다).
+        uint64 _arrDeferredTileDescHash[kDeferredTileClassCount]{};
     };
 } // namespace sw

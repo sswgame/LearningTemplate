@@ -3,8 +3,6 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Encoding/FourCCUtil.h"
-#include "Core/Hash/HashUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -235,14 +233,6 @@ namespace sw
             return desc;
         }
 
-        /** @brief 디퍼드 조명 타일 종류 PSO 의 저장소 키입니다 — 머티리얼 변형 저장소의 키 공간을 빌린다(쿠키 아틀라스 PSO 와 같은 길 — 저장소가 소유하고 디바이스를 바꾸면 셋업이 다시 만든다). */
-        MaterialPSOKey makeDeferredTilePSOKey( uint32 tileClass )
-        {
-            MaterialPSOKey key{};
-            key._permutationHash = HashUtil::combine( static_cast<uint64>( FourCCUtil::make( "DTLC" ) ), static_cast<uint64>( tileClass ) );
-            return key;
-        }
-
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
         [[nodiscard]] RHIPipelineState createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
         {
@@ -408,23 +398,28 @@ namespace sw
         collectOutputPSOJobs( listJob );
 
         // 디퍼드 조명 타일 종류 변형 — 조명 패스 서술 그대로에 종류 define 과 타일 정점 진입점(deferred_lighting.hlsl VSTile). 분류 컴퓨트와 같은 조건(네이티브 bindless · 간접 인자)에서만 만든다.
+        // 키는 서술체 지문이다(코드가 짓는 다른 PSO 와 같은 저장소 — 파이프라인마다 조명 서술이 달라도 섞이지 않는다). 종류마다의 지문은 조회(`findDeferredTilePSO`)가 쓴다.
         struct DeferredTilePSOJob
         {
-            MaterialPSOKey       _key{};
+            uint64               _descHash{ 0 };
             RHIPipelineStateDesc _desc{};
         };
         vector<DeferredTilePSOJob> listTileJob;
         const RenderGraphPassDesc* pLightingDesc = findPassDescByType( RenderPassKind::Lighting );
         const bool                 bTileCapable  = pLightingDesc != nullptr && _pDevice->supportsNativeBindlessSampling() && caps._bGPUCulling != SW_FALSE;
-        for ( uint32 tileClass = 0; bTileCapable && tileClass < kDeferredTileClassCount; ++tileClass )
+        for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
+            _arrDeferredTileDescHash[tileClass] = 0;
             DeferredTilePSOJob tileJob;
-            tileJob._key = makeDeferredTilePSOKey( tileClass );
-            if ( _pCache->hasMaterialPSO( tileJob._key ) || makePassPSODesc( RenderPassKind::Lighting, pLightingDesc, nullptr, tileJob._desc ) == false )
+            if ( bTileCapable == false || makePassPSODesc( RenderPassKind::Lighting, pLightingDesc, nullptr, tileJob._desc ) == false )
                 continue;
-            tileJob._desc._listShaderDefine = selectDeferredTileLightingShader( *pLightingDesc, tileClass, engineDefaultAssets )._listDefine;
-            tileJob._desc._vertexEntryPoint = kDeferredTileVertexEntryPoint;
-            listTileJob.push_back( std::move( tileJob ) );
+            tileJob._desc._listShaderDefine     = selectDeferredTileLightingShader( *pLightingDesc, tileClass, engineDefaultAssets )._listDefine;
+            tileJob._desc._vertexEntryPoint     = kDeferredTileVertexEntryPoint;
+            tileJob._descHash                   = tileJob._desc.computeHash();
+            _arrDeferredTileDescHash[tileClass] = tileJob._descHash;
+            RHIPipelineStateHandle existing{ 0 };
+            if ( _pCache->findGlobalPSO( tileJob._descHash, existing ) == false )
+                listTileJob.push_back( std::move( tileJob ) );
         }
 
         // 2) 셰이더 데우기 — 패스 PSO 셋과, 처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더를 한 번에 나눈다.
@@ -516,7 +511,7 @@ namespace sw
                                  tileJob._desc._vertexShaderPath.c_str() );
             else
                 registerLayout( pso._handle, tileJob._desc );
-            _pCache->setMaterialPSO( tileJob._key, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
+            _pCache->setGlobalPSO( _pDevice, tileJob._descHash, std::move( pso ) ); // 실패(0)도 적는다 — 셋업이 다시 부를 때 되풀이하지 않는다
         }
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
@@ -524,7 +519,9 @@ namespace sw
 
     RHIPipelineStateHandle FramePSOManager::findDeferredTilePSO( uint32 tileClass ) const
     {
-        return _pCache->findMaterialPSO( makeDeferredTilePSOKey( tileClass ) );
+        RHIPipelineStateHandle pso{ 0 };
+        const uint64           descHash = tileClass < kDeferredTileClassCount ? _arrDeferredTileDescHash[tileClass] : 0;
+        return descHash != 0 && _pCache->findGlobalPSO( descHash, pso ) ? pso : RHIPipelineStateHandle{ 0 };
     }
 
     void FramePSOManager::release()
@@ -540,7 +537,8 @@ namespace sw
         _listMaterialFallback.clear();
         _mapLayoutMaterialFallback.clear();
         _fallbackLayoutSerial = 0;
-        _particlePSOKey       = MaterialPSOKey{};
+        _particleSourcePSO    = 0;
+        _particlePSODescHash  = 0;
     }
 
     void FramePSOManager::onShaderRecompiled( string_view shaderPath )
@@ -1196,38 +1194,37 @@ namespace sw
 
     void FramePSOManager::ensureParticlePSO()
     {
-        _particlePSOKey                              = MaterialPSOKey{};
         const RHIPipelineStateHandle transparentPSO  = getEnginePSO( RenderPassKind::Transparent );
         const bool                   bNoParticlePass = _pDevice == nullptr || transparentPSO == 0 || _gpuScene.getParticleBatches().empty();
         if ( bNoParticlePass )
+        {
+            _particleSourcePSO   = 0;
+            _particlePSODescHash = 0;
             return;
-
-        // 머티리얼 변형 캐시의 키 공간을 빌린다 — 퍼뮤테이션 해시 자리에 입자 셰이더 경로와 태그를 섞어 머티리얼 퍼뮤테이션과 겹치지 않게 한다.
-        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get();
-        const uint64  shaderHash = HashUtil::combine( HashUtil::computeStringHash64( shaderPath, false ), FourCCUtil::make( "VFXP" ) );
-        _particlePSOKey          = MaterialPSOKey{ transparentPSO, shaderHash, RenderViewMode::Lit, RHIMeshVertexFormat::Packed, SW_FALSE };
-        if ( _pCache->hasMaterialPSO( _particlePSOKey ) )
+        }
+        // 키는 서술체 지문이다(투명 패스의 렌더 상태 + 입자 셰이더). 서술을 다시 짓는 것은 투명 패스 PSO 가 바뀌었거나 저장소가 그 PSO 를 놓았을 때(셰이더 핫 리로드)뿐이다 —
+        // 프레임마다는 지문 조회 하나다. 투명 서술이 없던 투명 PSO 는 지문 0 으로 기억해 오류를 되풀이하지 않는다.
+        RHIPipelineStateHandle existing{ 0 };
+        if ( transparentPSO == _particleSourcePSO && ( _particlePSODescHash == 0 || _pCache->findGlobalPSO( _particlePSODescHash, existing ) ) )
             return;
-
+        _particleSourcePSO   = transparentPSO;
+        _particlePSODescHash = 0;
         RHIPipelineStateDesc transparentDesc{};
         if ( _pCache->findDesc( transparentPSO, transparentDesc ) == false )
         {
             SW_LOG_ERROR_ID( "FramePSOManager.TransparentPassPSONo", "Transparent pass PSO has no recorded desc - particles are not drawn" );
-            _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::failed() );
             return;
         }
         // 셰이더는 셋업이 투명 패스와 함께 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
-        const RHIPipelineStateDesc desc = makeParticlePSODesc( transparentDesc, shaderPath );
-        RHIPipelineState           pso  = createPipelineStateTimed( *_pDevice, desc );
-        if ( pso.isValid() == false )
-            SW_LOG_ERROR_ID( "FramePSOManager.FailedCreateParticlePSO", "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );
-        registerLayout( pso._handle, desc );
-        _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::ready( std::move( pso ) ) );
+        const RHIPipelineStateDesc desc = makeParticlePSODesc( transparentDesc, engine::getSubsystem<EngineDefaultAssets>()._shaderParticle.get() );
+        _particlePSODescHash            = desc.computeHash();
+        (void)getOrCreateGlobalPSO( desc, "particle" ); // 못 만들면 이유를 남기고 0 을 적는다 — 입자를 그리지 않는다
     }
 
     RHIPipelineStateHandle FramePSOManager::findParticlePSO() const
     {
-        return _particlePSOKey._passPSO != 0 ? _pCache->findMaterialPSO( _particlePSOKey ) : RHIPipelineStateHandle{ 0 };
+        RHIPipelineStateHandle pso{ 0 };
+        return _particlePSODescHash != 0 && _pCache->findGlobalPSO( _particlePSODescHash, pso ) ? pso : RHIPipelineStateHandle{ 0 };
     }
 
     GPUMeshBatchPSO FramePSOManager::resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const
