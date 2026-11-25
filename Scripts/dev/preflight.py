@@ -1,5 +1,5 @@
 """
-묶음 끝 전체 검증: Windows(린트, Release · ASan · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다. `bash Scripts/dev/preflight.sh` 도 이 명령이다.
+묶음 끝 전체 검증: Windows(린트, Release · ASan · 서버 · 배포 빌드, 단위 · ctest)가 모두 통과한 뒤에만 Linux 를 돌린다. 입구는 `bash Scripts/dev/preflight.sh` 하나다.
 
 단계는 `preflight_stages.py` 의 클래스 하나씩이고(`--help` 끝에 차례대로 찍힌다), 돌릴 명령의 차례는 `--dry-run` 이 찍는다.
 
@@ -35,9 +35,10 @@ from dev.run_history import read_verify_config
 
 class PreflightCommand(Command):
     name = "preflight"
-    help = "묶음 끝 전체 검증 — 린트 · 빌드 · 단위 · 체인 · Linux, 끝 줄 WINDOWS_OK=<sha> · VERIFIED=<sha>(--from · --no-linux · --record · --show · --dry-run)"
+    help = "묶음 끝 전체 검증(입구는 bash Scripts/dev/preflight.sh 하나) — 린트 · 빌드 · 단위 · 체인 · Linux, 끝 줄 WINDOWS_OK=<sha> · VERIFIED=<sha>(--from · --no-linux · --record · --show · --dry-run)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.prog = "bash Scripts/dev/preflight.sh"
         parser.allow_abbrev = False
         list_stage = list_stages()
         parser.epilog = f"{parser.epilog}\n단계(도는 차례):\n" + "\n".join(f"  {stage.name:<12} {inspect.cleandoc(type(stage).__doc__)}" for stage in list_stage)

@@ -29,7 +29,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 
 ## 파이썬 도구
 
-검증 · 다시 돌리기에 쓰는 파이썬 도구는 `py -3 -m Scripts <명령>` 표 하나다(`py -3 -m Scripts --help`). 묶음 검증도 그 하나(`preflight`)이고 부를 때는 `bash Scripts/dev/preflight.sh` 다(도구 정책 훅이 이 이름을 본다).
+검증 · 다시 돌리기에 쓰는 파이썬 도구는 `py -3 -m Scripts <명령>` 표 하나다(`py -3 -m Scripts --help`). 묶음 검증의 입구는 `bash Scripts/dev/preflight.sh` 하나다.
 
 | 명령 | 쓰는 때 |
 | --- | --- |
