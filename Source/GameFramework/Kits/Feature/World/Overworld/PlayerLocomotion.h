@@ -48,7 +48,7 @@ namespace sw
         /** @brief 타일 스텝이 시작됐음을 알립니다. */
         void notifyStepStarted( float32 stepSeconds );
         /**
-         * @brief 타일 스텝을 **지금 당장** 끝냅니다. 텔레포트처럼 걷는 시간이 없을 때만 씁니다.
+         * @brief 타일 스텝을 지금 당장 끝냅니다. 텔레포트처럼 걷는 시간이 없을 때만 씁니다.
          * @warning 걸음을 시작한 그 프레임에 이 함수를 부르면 `Walk` 상태가 한 프레임도 유지되지 못합니다.
          *          그러면 `LocomotionState::Walk` 가 바깥에서 관측되지 않아 걷는 애니메이션을 고를 근거가 사라집니다.
          *          보통은 이 함수를 부르지 말고 `update( deltaTime )` 이 걸음 시간(`OverworldTileMoverSettings::_stepSeconds`) 뒤에 스스로 끝내게 둡니다.

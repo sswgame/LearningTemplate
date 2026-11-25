@@ -31,7 +31,7 @@ namespace sw
      * @brief HD-2D 오버월드 타일 그리드입니다.
      * @details 맵 데이터는 파일 스키마 `TileMapXMLData` 를 그대로 가지고 있으므로 플래그 레이어, 비주얼, 워프를 필드마다 복사하지 않습니다.
      *          타일 속성은 Engine 레이어 테이블(`kArrTileFlagLayerInfo`)의 레이어로 조회합니다(`isFlagSet`).
-     *          조우가 **일어나는 타일**은 `TileFlagLayer::Encounter` 이고, 무엇을 만나는지는 장르 키트의 지역 테이블이 정합니다.
+     *          조우가 일어나는 타일은 `TileFlagLayer::Encounter` 이고, 무엇을 만나는지는 장르 키트의 지역 테이블이 정합니다.
      *          지역은 존 id 와 태그로 구분합니다(`OverworldZoneTracker`).
      */
     class SW_KIT_API TileMap

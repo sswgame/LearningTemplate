@@ -1,6 +1,6 @@
 /**
  * @file PlatformLoginProviderConfig.h
- * @brief 외부 로그인 제공자의 설정입니다. 제공자는 코드가 아니라 **데이터**로 정의합니다.
+ * @brief 외부 로그인 제공자의 설정입니다. 제공자는 코드가 아니라 데이터로 정의합니다.
  * @details 설정은 이름, 방식(OIDC 또는 액세스 토큰으로 프로필 조회), 발급자와 JWKS 주소 또는 프로필 주소, client id(aud), 주체 필드 경로로 이루어진다.
  *          팩토리가 설정에서 공통 구현(`OidcLoginProvider`, `ProfileAPILoginProvider`)을 만들고, 서버 설정 JSON 의 목록을 읽는다.
  *          구글, 애플, 카카오는 OIDC ID 토큰을 쓰므로 Oidc 이고, 네이버는 OIDC 가 없어서 액세스 토큰으로 프로필 API 를 부르므로 AccessTokenProfile 이다.
@@ -56,7 +56,7 @@ namespace sw
         string                    _keyParam{};             ///< TicketQuery — 서버 비밀 키를 싣는 쿼리 인자 이름
         string                    _keySecretEnvironment{}; ///< TicketQuery — 서버 비밀 키를 담은 환경 변수 이름(키는 설정 파일에 쓰지 않는다)
         string                    _identityParam{};        ///< TicketQuery — 티켓을 받을 서비스의 이름을 싣는 쿼리 인자 이름(스팀 AuthenticateUserTicket 의 `identity`, 필수)
-        string                    _identity{};             ///< TicketQuery — 그 서비스 이름. 클라이언트가 티켓을 만들 때 같은 글을 넘긴다(스팀 `GetAuthTicketForWebApi( pchIdentity )` — 다르면 확인이 실패한다)
+        string                    _identity{};             ///< TicketQuery 의 서비스 이름. 클라이언트가 티켓을 만들 때 같은 글을 넘긴다(스팀 `GetAuthTicketForWebApi( pchIdentity )` — 다르면 확인이 실패한다)
         string                    _resultPath{};           ///< TicketQuery — 확인 결과 글의 점 경로(예: "response.params.result")
         string                    _resultValue{};          ///< TicketQuery — 성공일 때 그 경로의 글(예: "OK")
         string                    _teamID{};               ///< AppleSignIn — 개발자 팀 id(client secret 의 `iss`)

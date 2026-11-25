@@ -4,14 +4,14 @@
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 한 칸 걸음 · 바라보는 칸 · 상호작용 요청은 키트(`OverworldTileMover`)가,
  *          걸을 수 있는 칸은 키트 타일맵(`TileMap`)이 정합니다. 이 컴포넌트는 그 둘을 씬의 데이터에 잇습니다.
  *
- *          - **맵은 씬의 렌더러가 읽은 것 그대로다.** 땅(`_ground`)과 소품(`_props`) 오브젝트의 `TileMapComponent` 가 읽은 맵과 타일셋을 받아
+ *          - 맵은 씬의 렌더러가 읽은 것 그대로다. 땅(`_ground`)과 소품(`_props`) 오브젝트의 `TileMapComponent` 가 읽은 맵과 타일셋을 받아
  *            걷는 맵을 만든다. 막히는 칸의 기준은 타일셋 브러시의 `solid`(물 · 집 · 나무) 하나이고, 그리는 맵과 걷는 맵이 갈라지지 않는다.
- *          - **주민은 대화 러너(`DialogueRunnerComponent`)를 단 오브젝트다.** 판을 열 때 씬의 러너마다 그 오브젝트가 선 칸을 막고 말 상대로 적는다.
- *          - **입력은 폰의 의도다.** 주인공(`_hero`)의 `PawnComponent` 가 낸 이동 축과 버튼(`Interact`)만 읽고 입력 맵을 읽지 않는다.
- *          - **대화는 틱 뒤 게임 스레드에서 돈다.** 규칙 틱(PrePhysics, 워커)은 "말을 걸었다 · 다음 줄"을 쌓기만 하고, 러너 호출과 자막은 플러시(`onFlush`)에서 한다.
+ *          - 주민은 대화 러너(`DialogueRunnerComponent`)를 단 오브젝트다. 판을 열 때 씬의 러너마다 그 오브젝트가 선 칸을 막고 말 상대로 적는다.
+ *          - 입력은 폰의 의도다. 주인공(`_hero`)의 `PawnComponent` 가 낸 이동 축과 버튼(`Interact`)만 읽고 입력 맵을 읽지 않는다.
+ *          - 대화는 틱 뒤 게임 스레드에서 돈다. 규칙 틱(PrePhysics, 워커)은 "말을 걸었다 · 다음 줄"을 쌓기만 하고, 러너 호출과 자막은 플러시(`onFlush`)에서 한다.
  *            대화 중에는 걸음 입력을 막는다.
  *
- *          모습(주인공 스프라이트의 자리와 애니메이션)은 뷰 컴포넌트(`OverworldWalkerViewComponent`)가 이 컴포넌트를 **읽기만** 해서 맞춘다.
+ *          모습(주인공 스프라이트의 자리와 애니메이션)은 뷰 컴포넌트(`OverworldWalkerViewComponent`)가 이 컴포넌트를 읽기만 해서 맞춘다.
  */
 #pragma once
 #include "Core/Container/vector.h"

@@ -71,7 +71,7 @@ namespace
  */
 SW_TEST_CASE( JSONWebTokenTest, AcceptsAValidToken )
 {
-    sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
+    sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모르므로 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
     const SigningKey          key      = makeKey( provider );
     const sw::string          compact  = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );
 
@@ -88,7 +88,7 @@ SW_TEST_CASE( JSONWebTokenTest, AcceptsAValidToken )
  */
 SW_TEST_CASE( JSONWebTokenTest, RejectsCraftedOrStaleTokens )
 {
-    sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
+    sw::INetSecurityProvider& provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모르므로 게임 범위의 공급자      provider = sw::game::getSubsystem<sw::INetSecurityProvider>(); // 키트는 공급자 구현을 모른다 — 게임 범위의 공급자를 쓴다
     const SigningKey          key      = makeKey( provider );
     const SigningKey          other    = makeKey( provider );
     const sw::string          valid    = sign( provider, key, makePayload( kIssuer, kAudience, kNowMs / 1000 + 3600 ) );

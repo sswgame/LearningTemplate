@@ -283,7 +283,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
     SW_EXPECT_TRUE( driver.getOpenCount() - attemptsBefore < kJobCount / 2 );
 
     driver.setAllowedOpenCount( -1 );
-    // 다시 붙는 것은 풀의 백오프(실제 시계 — 재시도 간격이라 판정이 아니다)가 정한다. 붙을 때까지 일을 맡겨 본다 — 상한(5 초)을 넘겨 기다린다.
+    // 다시 붙는 것은 풀의 백오프(실제 시계, 재시도 간격이라 판정이 아니다)가 정한다. 붙을 때까지 일을 맡겨 본다. 상한(5 초)을 넘겨 기다린다.
     const bool bRecovered = test::waitUntil( [&pool]()
     { return SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok; }, 15.0 );
     SW_EXPECT_TRUE( bRecovered );

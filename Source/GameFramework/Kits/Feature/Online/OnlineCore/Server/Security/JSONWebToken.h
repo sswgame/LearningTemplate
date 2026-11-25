@@ -2,7 +2,7 @@
  * @file JSONWebToken.h
  * @brief JWT(JWS 압축 형식)를 읽고 서명하며 JWKS 키를 캐시합니다. OIDC ID 토큰 확인, 클라이언트 비밀 JWT(애플), 테스트 발급자가 씁니다.
  * @details 받아들이는 알고리즘은 RS256 과 ES256 뿐이다. 알고리즘 바꿔치기 공격을 막으려고 `none` 과 HS256 은 거절한다. 서명 확인은 네트워크 보안 제공자(OpenSSL)가 한다.
- *          **클레임은 서명을 확인한 형식(`JWTVerified`)에서만 읽는다.** 읽기만 한 토큰(`JWTUnverified`)은 머리(알고리즘 · kid · x5c)만 보이고,
+ *          클레임은 서명을 확인한 형식(`JWTVerified`)에서만 읽는다. 읽기만 한 토큰(`JWTUnverified`)은 머리(알고리즘 · kid · x5c)만 보이고,
  *          `verify` 가 서명과 시각 · 발급자 · 대상 클레임(`JWTClaimRule`)을 한 번에 확인한 뒤에야 본문을 넘긴다. 호출부마다 exp · iss · aud 검사를 빠뜨릴 틈을 없앤다.
  */
 #pragma once

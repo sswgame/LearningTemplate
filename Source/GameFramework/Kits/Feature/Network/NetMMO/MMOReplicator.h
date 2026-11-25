@@ -132,7 +132,7 @@ namespace sw
      * @class IInterestPolicy
      * @brief 관찰자가 어떤 엔티티를 얼마나 원하는지 정하는 정책입니다. 게임마다 교체합니다.
      * @details 예를 들어 파티원은 항상 보임 후보로 표시하고 같은 파티의 관찰자에게만 보이게 할 수 있다.
-     * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
+     * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 여러 스레드에서 동시에 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
      */
     class SW_KIT_API IInterestPolicy
     {

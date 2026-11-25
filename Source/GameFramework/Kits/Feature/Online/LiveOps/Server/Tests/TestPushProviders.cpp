@@ -1,4 +1,4 @@
-// FCMPushProviderTest · APNSPushProviderTest · PushProviderSetTest — 실제 푸시 제공자의 요청 모양과 응답 대응, 설정 읽기. FCM 은 실제 HTTP 클라이언트가 루프백 망의 가짜 서버와 말한다 — 바깥 서비스는 없다.
+// FCMPushProviderTest · APNSPushProviderTest · PushProviderSetTest: 실제 푸시 제공자의 요청 모양과 응답 대응, 설정 읽기. FCM 은 실제 HTTP 클라이언트가 루프백 망의 가짜 서버와 말한다 — 바깥 서비스는 없다.
 // APNs 는 HTTP/2 전용이라 가짜 서버가 없어 요청 만들기와 응답 분류를 정적 함수로 본다. 결과에 따른 재시도 · 기기 지우기는 PushDispatcherTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 

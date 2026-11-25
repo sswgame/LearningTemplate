@@ -4,12 +4,12 @@
  * @details 가상 서버 하니스의 파괴 시나리오(`NetSimDestructionScenario.h`)가 월드마다 하던 일을 한 곳으로 모았다. 하니스는 루프백 망 위의
  *          `NetSimWorld` 를, 실제 실행은 `GameNetSession`(`DestructionNetSessionComponent`)을 넘긴다 — 같은 코드가 두 길을 탄다.
  *
- *          - **번호**: 씬의 번호표(`NetObjectTable`)의 번호다. 씬 오브젝트는 이름 해시라 서버와 클라이언트가 같은 씬 문서에서 같은 번호를 얻는다(한쪽에만 있는
+ *          - 번호: 씬의 번호표(`NetObjectTable`)의 번호다. 씬 오브젝트는 이름 해시라 서버와 클라이언트가 같은 씬 문서에서 같은 번호를 얻는다(한쪽에만 있는
  *            오브젝트가 번호를 밀지 않는다). 플레이 중에 생긴 파괴 오브젝트는 서버가 `NetObjectTable::registerSpawned` 로, 클라이언트가 게임의 스폰 복제로
  *            `bindSpawned` 하면 다음 `update` 에서 등록된다 — 번호가 없는 오브젝트는 복제하지 않는다.
- *          - **권한**: 서버만 피해를 만든다. 클라이언트는 컴포넌트 권한을 끄고(`DestructionReplicationClient::registerObject`) 서버의 사건을 받는다.
+ *          - 권한: 서버만 피해를 만든다. 클라이언트는 컴포넌트 권한을 끄고(`DestructionReplicationClient::registerObject`) 서버의 사건을 받는다.
  *            폭발 드럼통(`ExplosiveBarrelComponent`)처럼 피해를 내는 기믹은 서버의 게임플레이라 클라이언트에서 끈다.
- *          - **해시 로그**: 오브젝트의 사건 수가 바뀔 때마다 id 가 `DestructionNetSession.HashLine` 인 로그 줄 하나를 JSON 본문(`side` · `id` · `events` · `hash` · `name`)으로 남긴다.
+ *          - 해시 로그: 오브젝트의 사건 수가 바뀔 때마다 id 가 `DestructionNetSession.HashLine` 인 로그 줄 하나를 JSON 본문(`side` · `id` · `events` · `hash` · `name`)으로 남긴다.
  *            같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시다(`DestructionState::computeStateHash`) — 다른 컴파일러 · 플랫폼의 서버와 클라이언트
  *            로그를 `py -3 -m Scripts destruction-net compare`(`Scripts/net/destruction_net_pair.py`)가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
  *            로그 매크로를 쓰므로 Shipping 에는 줄이 없다.

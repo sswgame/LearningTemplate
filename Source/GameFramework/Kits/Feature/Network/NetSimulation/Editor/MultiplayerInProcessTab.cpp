@@ -32,7 +32,7 @@ namespace sw::editor
     /**
      * @class MultiplayerInProcessTab
      * @brief Multiplayer 창의 In process 탭 — 한 프로세스 재생(`EditorNetSimSession`)을 시작 · 멈추고 월드마다 뷰포트를 나란히 그립니다(ServerDebug S8).
-     * @details 세션은 에디터 서브시스템이고 탭이 그리는 프레임에 진행하므로 하니스는 **탭이 보이는 프레임에만** 진행한다(뷰포트도 보일 때만 그린다). 월드 칸을 클릭하면 그 월드가 입력 초점을 받는다.
+     * @details 세션은 에디터 서브시스템이고 탭이 그리는 프레임에 진행하므로 하니스는 탭이 보이는 프레임에만 진행한다(뷰포트도 보일 때만 그린다). 월드 칸을 클릭하면 그 월드가 입력 초점을 받는다.
      *          게임 목록이 비면(키트 세션을 구현한 게임이 없으면) 시작 단추가 꺼진다. 세션은 `MultiplayerInProcessViewModel` 로만 본다(MVVM 계약).
      */
     class MultiplayerInProcessTab final : public IMultiplayerTab

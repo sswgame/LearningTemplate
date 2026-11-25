@@ -837,7 +837,7 @@ namespace sw
             const LoginServiceResult sanction = evaluateSanction( session._accountID, nowMs, outGrant );
             if ( sanction != LoginResult::Ok )
                 return sanction;
-            // 신원은 비밀을 바꾸기 **전에** 읽는다. 못 읽었는데 빈 신원으로 Ok 를 주면 안 되고, 클라이언트가 가진 토큰도 살려 둬야 하기 때문이다. validateSession 과 같은 결과이다.
+            // 신원은 비밀을 바꾸기 전에 읽는다. 못 읽었는데 빈 신원으로 Ok 를 주면 안 되고, 클라이언트가 가진 토큰도 살려 둬야 하기 때문이다. validateSession 과 같은 결과이다.
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, session._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginServiceResult::fail( OnlineError::kUnavailable );

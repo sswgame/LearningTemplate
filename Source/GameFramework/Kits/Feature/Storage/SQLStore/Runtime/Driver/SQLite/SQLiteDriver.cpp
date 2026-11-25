@@ -21,7 +21,7 @@ namespace sw
     {
         struct SQLiteDriverInternal
         {
-            /** @brief 다른 연결의 잠금을 기다리는 시한입니다. `sqlite3_busy_timeout` 으로 **열자마자** 건다 - 설정 문장에 섞어 적으면 순서에 기대게 된다. */
+            /** @brief 다른 연결의 잠금을 기다리는 시한입니다. `sqlite3_busy_timeout` 으로 열자마자 건다 - 설정 문장에 섞어 적으면 순서에 기대게 된다. */
             static constexpr int32 kBusyTimeoutMilliseconds = 5000;
 
             /** @brief 파일이 아닌 메모리 DB 의 연결 이름입니다(SQLite 규약). */

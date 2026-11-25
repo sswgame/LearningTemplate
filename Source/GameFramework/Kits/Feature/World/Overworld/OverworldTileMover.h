@@ -63,7 +63,7 @@ namespace sw
         /** @brief 충돌과 워프 조회에 쓸 타일맵을 설정합니다. */
         void setTileMap( TileMap* pTileMap ) { _pTileMap = pTileMap; }
         /**
-         * @brief 조우 타일에서 전투가 날 확률을 설정합니다. **0 이면 나지 않습니다.**
+         * @brief 조우 타일에서 전투가 날 확률을 설정합니다. 0 이면 나지 않습니다.
          * @details 0 ~ 1 로 읽습니다. 0.33 이면 세 걸음마다 한 번꼴이고, 1 이상이면 매 걸음입니다.
          */
         void                              setEncounterRate( float32 rate ) { _settings._encounterRate = rate; }
