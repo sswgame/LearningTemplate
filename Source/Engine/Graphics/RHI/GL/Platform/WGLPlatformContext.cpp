@@ -158,7 +158,7 @@ namespace sw
         if ( _pDeviceContext == nullptr || _pRenderContext == nullptr )
             return false;
 
-        // **로그를 남기지 않는다.** 다른 스레드가 컨텍스트를 가지고 있는 것(ERROR_BUSY)은 정상
+        // 로그를 남기지 않는다. 다른 스레드가 컨텍스트를 가지고 있는 것(ERROR_BUSY)은 정상
         // 경합이고, 기다릴지 포기할지는 부르는 쪽이 정한다. 실패를 알려야 하는 쪽은
         // `OpenGLRHIDevice::bindGraphicsContext` 가, 기다리는 쪽은
         // `acquireGraphicsContextBlocking` 이 각자 로그를 남긴다.

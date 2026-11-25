@@ -55,7 +55,7 @@ namespace sw
 
     /**
      * @struct RHIShaderSlots
-     * @brief 바인드 포인트(그래픽스 · 컴퓨트) 하나의 셰이더 슬롯 표입니다. 걸린 비트와 **아직 내지 않은 비트**를 종류마다 셉니다.
+     * @brief 바인드 포인트(그래픽스 · 컴퓨트) 하나의 셰이더 슬롯 표입니다. 걸린 비트와 아직 내지 않은 비트를 종류마다 셉니다.
      * @details 바뀐 비트 가운데 걸린 칸은 걸고 걸리지 않은 칸은 뗀다 — 파이프라인이 바뀌어 비운 칸이 네이티브에 남지 않는다. 언리얼 RHI 의 state cache 와 같은 자리다.
      */
     struct SW_API RHIShaderSlots

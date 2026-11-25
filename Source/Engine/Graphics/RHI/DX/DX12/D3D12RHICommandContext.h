@@ -97,7 +97,7 @@ namespace sw
         /**
          * @brief 바뀐 셰이더 슬롯과 루트 상수를 겁니다 — b 는 루트 CBV, t/u 는 바뀐 테이블만 온라인 블록에 확정한 루트 테이블이다. 드로우와 디스패치 직전에 부릅니다(Vulkan 의 flushSlotSet 에 해당합니다).
          * @return 바뀐 것을 모두 걸었으면 true 입니다. 온라인 블록을 빌리지 못해 걸지 못했으면 false 이고, 부르는 쪽은 그 드로우나 디스패치를 건너뜁니다.
-         *         주의: 실패를 삼키고 그리면 이전 드로우의 테이블, 이 리스트에서 처음이면 **바인딩된 적 없는 테이블**을 읽어 장치 제거로 이어집니다.
+         *         주의: 실패를 삼키고 그리면 이전 드로우의 테이블, 이 리스트에서 처음이면 바인딩된 적 없는 테이블을 읽어 장치 제거로 이어집니다.
          */
         [[nodiscard]] bool flushBindings( RHIBindPoint point );
         /** @brief 드로우 하나의 준비입니다 — PSO · 위상 · 슬롯 · 정점(@p bIndexed 면 인덱스도). 걸 수 없으면 false 이고 드로우를 내지 않습니다. 모든 드로우 진입점이 부릅니다. */
@@ -108,7 +108,7 @@ namespace sw
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
         /** @brief PSO 가 읽는(@p layout) 정점 버퍼 슬롯(메시 · 인스턴스 슬롯 스트림)만 바인딩합니다. 읽는 슬롯에 버퍼가 없거나 설정한 버퍼가 파괴됐으면 알리고 false 를 반환하며, 부르는 쪽은 드로우를 버립니다(네 백엔드가 같습니다). */
         [[nodiscard]] bool bindMeshVertexBufferForDraw( const RHIVertexLayout& layout );
-        /** @brief 디스패치 하나의 준비입니다 — 컴퓨트 PSO · 슬롯 · 루트 상수. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약 — 네 백엔드가 같습니다). */
+        /** @brief 디스패치 하나의 준비입니다: 컴퓨트 PSO · 슬롯 · 루트 상수. 등록된 컴퓨트 PSO 가 없으면 오류로 멈춥니다(드로우의 그래픽스 PSO 와 같은 계약이고 네 백엔드가 같습니다). */
         [[nodiscard]] bool prepareDispatch();
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();

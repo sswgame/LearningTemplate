@@ -4,7 +4,7 @@
  *
  * @details GL 만 컨텍스트를 OS 가 만들어 줍니다(DX 와 Vulkan 은 API 가 직접 만듭니다). 그래서 WGL / GLX
  *          분기가 필요하고, 그 분기를 `OpenGLRHIDevice` 에 두지 않고 플랫폼마다 구현 파일 하나로 나눕니다.
- *          플랫폼을 하나 더 지원하려면 **한 파일을 더하고 팩토리에 한 줄** 추가합니다.
+ *          플랫폼을 하나 더 지원하려면 한 파일을 더하고 팩토리에 한 줄 추가합니다.
  *
  *          `Window/Windows|Linux` 와 `Core/File/Windows|Linux` 가 폴더로 나뉜 것과 같은 구조입니다.
  *
@@ -69,7 +69,7 @@ namespace sw
 
         /**
          * @brief 이 스레드에 컨텍스트를 바인딩합니다.
-         * @note 실패해도 **로그를 남기지 않습니다.** 다른 스레드가 가지고 있는 것은 정상 경합이고,
+         * @note 실패해도 로그를 남기지 않습니다. 다른 스레드가 가지고 있는 것은 정상 경합이고,
          *       기다릴지 포기할지와 알릴지는 부르는 쪽이 정합니다
          *       (`OpenGLRHIDevice::bindGraphicsContext` / `acquireGraphicsContextBlocking`).
          */

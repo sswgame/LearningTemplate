@@ -2,7 +2,7 @@
  * @file RHISurfaceTransform.h
  * @brief 스왑체인 서피스의 회전(pre-rotation)과 논리 크기 ↔ 실제 이미지 크기 · 좌표 대응입니다.
  * @details 회전한 휴대 기기 화면(Android)에서 Vulkan 스왑체인을 서피스의 지금 회전(`currentTransform`)으로 만들면 합성기가 다시 돌리지 않는다 —
- *          대신 엔진이 그림을 미리 돌려 써야 한다. 엔진의 모든 쓰기(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · UI)는 **논리 크기**(사용자가 보는 방향) 대기
+ *          대신 엔진이 그림을 미리 돌려 써야 한다. 엔진의 모든 쓰기(Present · Canvas · 캡처 → 화면 · 개발 겹치기 · UI)는 논리 크기(사용자가 보는 방향) 대기
  *          텍스처에 하고, 끝에 출력 패스 하나(`RenderPassKind::ScreenRotation`)가 이 대응으로 실제 스왑체인 이미지에 돌려 그린다(`FrameScreenRotation`).
  *          언리얼 모바일도 백버퍼 앞 마지막 패스에서 돌리고, Godot 은 Vulkan 스왑체인을 currentTransform 으로 만들어 블릿에서 돌린다(기억에 의존한 비교).
  */

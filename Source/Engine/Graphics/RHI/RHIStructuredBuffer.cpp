@@ -169,7 +169,7 @@ namespace sw
             return;
         }
 
-        // **뷰를 먼저 놓는다.** 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
+        // 뷰를 먼저 놓는다. 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
         if ( _srv != kInvalidDescriptorIndex )
         {
             if constexpr ( build::kShipping == false )

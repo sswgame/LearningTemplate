@@ -450,7 +450,7 @@ namespace sw
                     vkDestroyImageView( _device, sliceView, nullptr );
                 }
                 record._listSliceView.clear();
-                // 뷰는 이미지보다 **반드시 먼저** 없앤다. 깊이 텍스처의 `_sampleView` 도 포함한다(빠뜨리면 살아 있는 뷰를
+                // 뷰는 이미지보다 반드시 먼저 없앤다. 깊이 텍스처의 `_sampleView` 도 포함한다(빠뜨리면 살아 있는 뷰를
                 // 두고 vkDestroyImage 를 부른다). destroyTexture 경로도 둘 다 지운다.
                 if ( record._imageView != VK_NULL_HANDLE )
                     vkDestroyImageView( _device, record._imageView, nullptr );
@@ -2182,11 +2182,11 @@ namespace sw
         if ( bNoTimestampsToRead )
             return;
 
-        // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다.** 이번 프레임에 안 쓰인
+        // 칸마다 [값][가용 여부] 두 개가 온다. 가용 비트가 반드시 필요하다. 이번 프레임에 안 쓰인
         // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
         uint64       arrResult[constant::render::kMaxGPUTimestampSlot * 2]{};
         const uint32 base = getTimestampBase();
-        // **기다리지 않는다**(WAIT 비트 없음). 측정하려던 파이프라인을 멈추면 숫자가 거짓이 된다.
+        // 기다리지 않는다(WAIT 비트 없음). 측정하려던 파이프라인을 멈추면 숫자가 거짓이 된다.
         // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
         const VkResult result =
             vkGetQueryPoolResults( _device, _timestampPool, base, constant::render::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,
@@ -2224,7 +2224,7 @@ namespace sw
             return;
         savePipelineCacheIfDue(); // 실행 중에 죽어도 주기 앞까지의 컴파일이 남는다(R-13)
 
-        // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
+        // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 영영 건너뛴다
         // (창이 검은 채로 멈춤).
         // 서피스를 잃은 채면(지난 present · 재생성 실패) 서피스부터 다시 만든다. 실패하면 이 프레임은 건너뛰고 다음 프레임에 다시 시도한다.
         if ( _bSurfaceLost == SW_TRUE )
@@ -2257,7 +2257,7 @@ namespace sw
         // 펜스 대기에서 잃었음을 봤으면 이 프레임을 바로 건너뛴다 — 획득 · 기록으로 이어가면 잃은 장치에 대기와 제출을 더 낸다.
         if ( isDeviceLost() )
             return;
-        // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
+        // 여기가 타임스탬프를 읽는 유일한 안전한 자리다. 이 슬롯의 펜스를 방금 통과했다.
         ensureTimestampPool();
         collectTimestampsForSlot();
         _timestampRing.beginFrame( getFrameSlot() );
@@ -2333,7 +2333,7 @@ namespace sw
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         requireVk( vkBeginCommandBuffer( _listCommandBuffer[getFrameSlot()], &beginInfo ), "beginFrame: vkBeginCommandBuffer" );
-        // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
+        // Vulkan 은 쓰기 전에 반드시 리셋해야 한다. 안 하면 결과가 정의되지 않는다.
         if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
             vkCmdResetQueryPool( _listCommandBuffer[getFrameSlot()], _timestampPool, getTimestampBase(), constant::render::kMaxGPUTimestampSlot );
 
@@ -3953,7 +3953,7 @@ namespace sw
                 barrier.subresourceRange.baseArrayLayer = subresource / mipLevels;
                 barrier.subresourceRange.layerCount     = 1;
             }
-            // UNDEFINED 로 "돌아가는" 배리어는 쓸 수 없다(명세 — newLayout 은 UNDEFINED 가 될 수 없다). 그 서브리소스는 복사로 정의된 레이아웃에 남는다 — 추적은 부르는 쪽이 고친다.
+            // UNDEFINED 로 "돌아가는" 배리어는 쓸 수 없다(명세상 newLayout 은 UNDEFINED 가 될 수 없다). 그 서브리소스는 복사로 정의된 레이아웃에 남고, 추적은 부르는 쪽이 고친다.
             if ( barrier.newLayout == VK_IMAGE_LAYOUT_UNDEFINED )
                 return;
             vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );

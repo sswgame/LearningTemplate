@@ -106,14 +106,14 @@ namespace sw
      *          기록 스트림은 두 가지다. 하나는 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)이고,
      *          다른 하나는 패스마다 만드는 커맨드 리스트(`createCommandList`)다.
      *
-     *          **완료 · 동기화 계약** — 다섯 백엔드가 모두 같은 약속을 지킨다. 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
+     *          완료 · 동기화 계약 — 다섯 백엔드가 모두 같은 약속을 지킨다. 한 백엔드만 약하면 그 백엔드에서만 되읽기가 실패하거나 자원이 일찍 풀린다.
      *          각 줄을 `RHIDeviceTest` 의 네 백엔드 테스트가 건다(괄호 안).
-     *          - `waitIdle`: 앞서 제출한 **모든** GPU 작업이 끝난 뒤 돌아오고 해제 큐를 비운다. 돌아온 직후 읽기 버퍼를 콜백 없이 읽을 수 있다
+     *          - `waitIdle`: 앞서 제출한 모든 GPU 작업이 끝난 뒤 돌아오고 해제 큐를 비운다. 돌아온 직후 읽기 버퍼를 콜백 없이 읽을 수 있다
      *            (`WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend`). 잃은 장치(DX12 제거, Vulkan 손실)는 끝나지 않을 일을 기다리지 않고 큐만 비운다.
      *            기다림을 확인했으면 남은 통지(`notifyFrameCompletion`)는 `Completed`, 못 기다렸으면(잃은 장치 · 시간 초과) `Abandoned` 다. 해제(`enqueueGPURelease`)는 어느 쪽이든 놓는다.
      *            구현: DX11 이벤트 쿼리(상한 10 초, 넘으면 오류), DX12 펜스, Vulkan `vkDeviceWaitIdle`, GL `glFinish`, WebGPU 낸 프레임마다 프레임 펜스(`wgpuInstanceWaitAny`).
      *            브라우저는 DOM 이벤트 콜백 스택을 멈출 수 없다 — 창 콜백에서 부르지 않는다(적어 두고 프레임에서, `WebWindow`).
-     *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 **뒤에만** 부른다. 프레임 수를 세어 짐작하지 않는다
+     *          - `enqueueGPURelease`: 맡긴 프레임의 GPU 작업이 끝난 뒤에만 부른다. 프레임 수를 세어 짐작하지 않는다
      *            (`EnqueuedGPUReleaseRunsOnlyAfterTheFrameGPUWorkIsDone`, `EnqueuedGPUReleaseRunsOnceAfterItsFrame`). 구현: DX12 · Vulkan 펜스, DX11 프레임 끝 이벤트 쿼리 링, GL 프레임 끝 `glFenceSync` 링,
      *            WebGPU 프레임 펜스(`onSubmittedWorkDone` 퓨처). `notifyFrameCompletion` 의 `Completed` 도 같은 자리에서만 나간다.
      *          - 앞서가기 제한: GPU 가 `constant::render::kMaxFrameCountInFlight` 프레임보다 더 뒤처지지 못한다. 링이 차면 가장 오래된 프레임을 기다린다
@@ -201,7 +201,7 @@ namespace sw
 
         /**
          * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다. 돌아오면 앞서 제출한 모든 작업이 GPU 에서 끝나 있고 해제 큐가 비어 있습니다(클래스 머리말의 완료 계약).
-         * @details **렌더 스레드가 실행 중일 때 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다린다**
+         * @details 렌더 스레드가 실행 중일 때 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다린다
          *          (`setRenderThreadFlush`). 실제 대기는 백엔드의 `waitIdleInternal` 이 한다. 자원을 바꿔 끼우는 일은 이것을 쓰지 않는다 — `flushRenderThread` 와 지연 해제가 그 길이다.
          * @warning 렌더 스레드가 프레임을 기록하거나 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면, DX12 는 아직 실행 전인 커맨드
          *          얼로케이터를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어긴다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
@@ -222,11 +222,11 @@ namespace sw
         /**
          * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다. 프레임 밖이면 다음에 제출하는 프레임을 기준으로 합니다.
          * @details 장치 해제 큐(`RHIReleaseQueue`)에 기록 중인 프레임의 시리얼(`RHIFrameFenceRing::getRecordingSerial`)로 넣는다. DX12 와 Vulkan 은 GPU 펜스를, DX11 은 프레임 끝 이벤트 쿼리를, GL 은 프레임 끝 `glFenceSync` 를 쓴다.
-         *          네 백엔드 모두 **GPU 가 그 프레임을 끝낸 뒤에만** 부른다(프레임 수로 짐작하지 않는다). 그래서 콜백 안에서 `readReadbackBuffer` 를 기다리지 않고 부를 수 있다.
+         *          네 백엔드 모두 GPU 가 그 프레임을 끝낸 뒤에만 부른다(프레임 수로 짐작하지 않는다). 그래서 콜백 안에서 `readReadbackBuffer` 를 기다리지 않고 부를 수 있다.
          *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 해제할 때 쓰는 함수다.
-         *          **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
+         *          프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다. 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞는다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` 과 `shutdown` 이 남은 콜백을 모두 부른다.
-         *          **놓기 전용이다** — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
+         *          놓기 전용이다 — 기다리지 못한 비우기(잃은 장치 · 시간 초과 · 종료)에서도 불린다. "GPU 가 끝났다" 를 믿고 읽거나 다시 쓰는 일은 `notifyFrameCompletion` 으로 한다.
          */
         void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) { _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceRing.getRecordingSerial() ); }
         /**
@@ -238,7 +238,7 @@ namespace sw
         /** @brief 해제 큐에서 아직 불리지 않은 해제 · 통지 수입니다(전송을 기다리는 해제는 그 전송이 끝난 뒤부터 센다). `waitIdle` 과 `shutdown` 뒤에는 0 이어야 합니다(`shutdown` 이 단언한다). */
         uint32 getPendingReleaseCount() const { return _releaseQueue.getPendingReleaseCount(); }
         /**
-         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 — `ID3D12Device5::RemoveDevice`, Vulkan · DX11 · GL — 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` · `DXGI_ERROR_DEVICE_REMOVED` · 실패한 펜스를 처음 본 뒤의 상태로 둔다. DX11 · GL 은 전송 제출이 거절되는 것만 만들고 GPU 는 살아 있다).
+         * @brief 장치 제거(TDR)를 흉내 냅니다(개발 명령 `rhi.removeDevice`). 할 수 있는 백엔드만 true 를 반환합니다(DX12 는 `ID3D12Device5::RemoveDevice`, Vulkan · DX11 · GL 은 제거 API 가 없어 `VK_ERROR_DEVICE_LOST` · `DXGI_ERROR_DEVICE_REMOVED` · 실패한 펜스를 처음 본 뒤의 상태로 둔다. DX11 · GL 은 전송 제출이 거절되는 것만 만들고 GPU 는 살아 있다).
          * @details 실제 TDR 은 되풀이하면 어댑터가 망가지므로, 제거 뒤의 대기 · 종료 경로가 멈추지 않는지는 이것으로 확인한다. 어느 스레드에서 불러도 된다.
          */
         virtual bool debugRemoveDevice() { return false; }
@@ -293,7 +293,7 @@ namespace sw
 
         /**
          * @brief 버퍼 하나를 해제합니다 — 자원 해제의 진입점은 이 오버로드 묶음 하나다(종류는 핸들 형식이 고른다, 팩터리의 파괴 함수는 장치만 부른다).
-         *        렌더 스레드가 떠 있을 때 다른 스레드가 부르면, **다음에 넘길 프레임**이 끝날 때(병렬 기록 밖)까지 미룹니다. 그 뒤 백엔드가 GPU 펜스가 지난 뒤 놓는다.
+         *        렌더 스레드가 떠 있을 때 다른 스레드가 부르면, 다음에 넘길 프레임이 끝날 때(병렬 기록 밖)까지 미룹니다. 그 뒤 백엔드가 GPU 펜스가 지난 뒤 놓는다.
          *        핸들 0 은 무시하고, 이미 놓은(또는 모르는) 핸들은 검사 구성에서 단언한다(같은 핸들 두 번 해제).
          * @details 게임 스레드는 GPU 자원을 가진 객체(`Material`, `MaterialInstance`, `Texture2D`)의 마지막 소유를 아무 때나 놓을 수 있다.
          *          GPUScene 후보를 덮는 수집 잡, 핫 리로드로 정리한 뷰, 로드 중 텍스처를 진짜로 바꾸는 머티리얼이 그 예다. 그 순간 렌더 스레드가 기록 중이면 bindless 테이블을
@@ -316,7 +316,7 @@ namespace sw
         void releaseBindlessIndex( RHITextureSRVIndex index );
         void releaseBindlessIndex( RHIBufferSRVIndex index );
         /**
-         * @brief 텍스처 번호 하나를 예약하고 @p placeholder 를 가리키게 할 일을 줄에 넣습니다. **어느 스레드에서든** 부른다(감사 R-6 — 텍스처 캐시가 로드를 시작할 때).
+         * @brief 텍스처 번호 하나를 예약하고 @p placeholder 를 가리키게 할 일을 줄에 넣습니다. 어느 스레드에서든 부른다(감사 R-6 — 텍스처 캐시가 로드를 시작할 때).
          * @details 번호는 곧바로 돌려주지만 산 칸은 렌더 스레드가 `activateReservedBindlessTextures` 로 디스크립터를 쓴 뒤다. 그 함수는 프레임 시작(`beginFrame`)과
          *          텍스처 업로드 펌프가 기록 전에 부르므로, 그 번호를 실은 렌더 사본이 그려지기 전에 산다. 해제는 등록한 번호와 같다(`releaseBindlessIndex( RHITextureSRVIndex )`).
          * @return 표가 차면 kInvalidDescriptorIndex 입니다.
@@ -363,7 +363,7 @@ namespace sw
         [[nodiscard]] virtual bool supportsTextureFormat( RHIFormat format ) const = 0;
         /**
          * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
-         * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.
+         * @details 수명주기 전용이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.
          *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 `kRHIBackBufferTexture`)가 명시적으로 한다(`RenderThread::executeFrameBody`).
          *          프레임 수명주기(beginFrame, endFrame, resize)는 디바이스의 일이다. 스왑체인 쪽에 두면 디바이스의 private 상태를 건드려야 한다.
          * @note 스왑체인 자체(백버퍼, 이미지 인덱스, 동기화, present)는 `IRHISwapChain` 의 백엔드 구현이 소유합니다. 메인 창도 그 가운데 하나이고,
@@ -393,7 +393,7 @@ namespace sw
         IRHITimestampProvider* findTimestampProvider() const { return _pTimestampProvider; }
         /**
          * @brief 백버퍼 크기를 바꿉니다. 채택된 크기는 `getBackBufferWidth/Height` 가 알려 줍니다.
-         * @details 크기를 여기에 기록하는 이유는 렌더러가 첨부 크기를 정할 때 **창이 아니라 디바이스에 묻게**
+         * @details 크기를 여기에 기록하는 이유는 렌더러가 첨부 크기를 정할 때 창이 아니라 디바이스에 묻게
          *          하려는 것이다. 렌더러가 보는 것은 OS 창이 아니라 스왑체인이다(언리얼 `FRHIViewport` 에 해당한다).
          *          그래서 Graphics 는 Window 를 include 하지 않는다.
          */
@@ -404,7 +404,7 @@ namespace sw
          */
         virtual void refreshDisplayOutputSupport() {}
         /**
-         * @brief 주 스왑체인의 색 공간을 바꿉니다 — 백버퍼 포맷이 함께 바뀐다(`getSwapChainFormat`). 렌더 스레드를 세운 뒤 부른다(창 크기 바뀜과 같은 길 — 이 함수가 GPU 를 비운다).
+         * @brief 주 스왑체인의 색 공간을 바꿉니다. 백버퍼 포맷이 함께 바뀐다(`getSwapChainFormat`). 렌더 스레드를 세운 뒤 부른다(창 크기 바뀜과 같은 길이고 이 함수가 GPU 를 비운다).
          * @details 능력(`RHICapabilities::_displayOutputSupport`)에 없는 색 공간이면 오류를 남기고 false 이며 색 공간은 그대로다 — 부르는 쪽이 `DisplayOutputDesc::resolve` 로 먼저 맞춘다.
          *          HDR10 이면 @p metadata 를 스왑체인에 알린다(DXGI `SetHDRMetaData` · Vulkan `vkSetHdrMetadataEXT`). 언리얼 `RHIHDRChangeColorSpace` 자리다.
          */
@@ -425,7 +425,7 @@ namespace sw
         virtual IRHIResourceFactory* getResourceFactory() = 0;
 
         /**
-         * @brief 디바이스가 소유한 **프레임 스트림**에 기록하는 컨텍스트입니다.
+         * @brief 디바이스가 소유한 프레임 스트림에 기록하는 컨텍스트입니다.
          * @details beginFrame/endFrame 이 여는 디바이스 커맨드 리스트(버퍼)에 그대로 기록한다.
          *          RenderThread 가 백버퍼 렌더 패스를 여는 경로가 이것이다. 패스별 기록은 자기
          *          네이티브 버퍼를 소유하는 IRHICommandList 가 따로 한다. 프레임 스트림은 디바이스마다 하나다.
@@ -534,12 +534,12 @@ namespace sw
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
         /**
          * @brief 실제로 채택된 VSync 값입니다. 설정값을 먼저 적용하고, CLI `-vsync` 가 있으면 그 값으로 덮어씁니다.
-         * @details **프레젠트 경로가 읽어야 하는 값이 이것이다.** 주의: `endFrame` 의 vsync 인자를 상수로 박으면 설정도
+         * @details 프레젠트 경로가 읽어야 하는 값이 이것이다. 주의: `endFrame` 의 vsync 인자를 상수로 박으면 설정도
          *          CLI 도 효과가 없어 프레임이 모니터 주사율에 묶인다.
          */
         bool isVSyncEnabled() const { return _bPreferredVSync; }
         /**
-         * @brief 실행 중에 VSync 를 바꿉니다. **렌더 스레드가 멈춘 상태에서만** 부릅니다(`RenderThread::waitIdle` 뒤이며 리사이즈와 같은 규칙입니다).
+         * @brief 실행 중에 VSync 를 바꿉니다. 렌더 스레드가 멈춘 상태에서만 부릅니다(`RenderThread::waitIdle` 뒤이며 리사이즈와 같은 규칙입니다).
          * @details 다음 `endFrame` 부터 새 값으로 프레젠트한다. DXGI 스왑체인은 티어링을 지원하면 항상 티어링을 허용하도록 만들어 두므로 다시 만들지
          *          않는다. Vulkan 은 present 모드가 바뀌므로 다음 `beginFrame` 에서 스왑체인을 다시 만든다.
          */
@@ -548,7 +548,7 @@ namespace sw
         /**
          * @brief 창 하나에 스왑체인을 더 만듭니다(에디터 플로팅 창). 메인 창의 스왑체인은 `initialize` 가 만든다. 실패하면 이유를 남기고 nullptr 입니다.
          * @details 언리얼 `RHICreateViewport` 자리다. 그리기는 `RHIRenderPassInfo::_pSwapChain` 으로 고르고, 그 프레임의 `endFrame` 이 함께 표시한다.
-         *          **생성 · 크기 변경 · 파괴는 렌더 스레드와 GPU 를 비운 뒤에 한다**(`waitIdle`). 창이 생기고 사라지는 일은 드물고, 렌더 스레드는 스왑체인 목록을
+         *          생성 · 크기 변경 · 파괴는 렌더 스레드와 GPU 를 비운 뒤에 한다(`waitIdle`). 창이 생기고 사라지는 일은 드물고, 렌더 스레드는 스왑체인 목록을
          *          잠금 없이 읽기 때문이다(목록을 바꾸는 쪽은 프레임을 넘기는 게임 스레드라, 비운 뒤에는 렌더 스레드가 다음 프레임 전까지 쉰다).
          *          @p desc 의 창 핸들 · 디스플레이 · 표면 종류 · 크기를 읽는다. 버퍼 수 · 포맷 · VSync 는 메인 창과 같은 값을 쓴다(같은 렌더 패스 · 파이프라인을 쓴다).
          */
@@ -582,7 +582,7 @@ namespace sw
         virtual unique_ptr<IRHICommandList> createCommandList() = 0;
 
         /**
-         * @brief 커맨드 리스트를 **프레임 스트림 순서에 맞춰** 제출 대기열에 넣습니다.
+         * @brief 커맨드 리스트를 프레임 스트림 순서에 맞춰 제출 대기열에 넣습니다.
          * @details beginFrame 과 endFrame 사이에서 쓴다. 디바이스는 이 지점에서 프레임 스트림을 잘라
          *          [지금까지의 세그먼트][이 리스트][새 세그먼트] 순서로 연결하고 endFrame 에서 한 번에
          *          큐로 넘긴다. 같은 큐의 제출 순서가 곧 실행 순서다. 그래픽스 실행 스레드 전용이다.
@@ -590,7 +590,7 @@ namespace sw
         void executeCommandList( RHIClosedCommandList list ) { executeCommandListInternal( list.get() ); }
 
         /**
-         * @brief 프레임 스트림과 무관하게 **곧바로** 큐에 제출합니다.
+         * @brief 프레임 스트림과 무관하게 곧바로 큐에 제출합니다.
          * @details 프레임 밖의 일회성 작업(오프스크린 스모크, 리소스 업로드, 썸네일 렌더 등)에 쓴다.
          *          프레임 순서 보장이 필요 없고 beginFrame 이 열려 있지 않을 때만 써야 한다.
          *          프레임 중에 부르면 스트림 순서를 건너뛰므로 렌더 결과가 어긋난다.
@@ -621,7 +621,7 @@ namespace sw
         virtual void waitForAsyncCompute( RHIQueueSyncPoint point );
 
         /**
-         * @brief 커맨드 리스트가 제출될 때마다 프레임 스트림을 **곧바로** 큐로 내보낼지 정합니다.
+         * @brief 커맨드 리스트가 제출될 때마다 프레임 스트림을 곧바로 큐로 내보낼지 정합니다.
          * @details 기본값(false)은 프레임 끝에 한 번에 제출한다. 켜면 executeCommandList 마다 큐 제출이
          *          한 번씩 일어나 오버헤드가 크지만, 두 모드 모두 [세그먼트][리스트] 순서를 지키므로
          *          실행 순서는 같다. 달라지는 것은 제출 '시점'뿐이다. GPU 오류(DEVICE_HUNG, 검증 레이어)가
@@ -638,14 +638,14 @@ namespace sw
 
         /**
          * @brief 지금이 여러 스레드가 동시에 패스를 기록하는 구간인지 알립니다.
-         * @details **이 구간에서는 bindless 레지스트리를 바꿀 수 없다.** 레지스트리는 기록 중에
+         * @details 이 구간에서는 bindless 레지스트리를 바꿀 수 없다. 레지스트리는 기록 중에
          *          드로우마다 읽히는데, 그 사이에 register/unregister 가 resize 를 일으키면 읽는
          *          쪽이 잡아 둔 참조가 dangling 이 되고 GPU 가 쓰레기 디스크립터를 읽는다.
          *
-         *          그래서 등록은 모두 기록 **밖**(그래프 셋업, 리소스 로드)에서 끝낸다. 그러면
+         *          그래서 등록은 모두 기록 밖(그래프 셋업, 리소스 로드)에서 끝낸다. 그러면
          *          기록 중 레지스트리는 불변이라 읽기에 락이 필요 없다. 락을 잘 거는 대신 애초에
          *          공유하지 않는 쪽을 택한 것이고, 상용 엔진(UE RDG)도 같은 방식이다.
-         * @note 이 플래그는 그 규칙을 **감시**하기 위한 것이다. 디버그 빌드에서 규칙이 깨지면
+         * @note 이 플래그는 그 규칙을 감시하기 위한 것이다. 디버그 빌드에서 규칙이 깨지면
          *       백엔드가 로그로 알린다. 규칙이 조용히 무너지는 것을 막는 것이 목적이다.
          * @note 값의 출처는 `RenderGraph::executeParallel` 이다. 백엔드는 MODULE DLL 로 따로
          *       빌드되므로 전역 변수를 export 하지 않는다. 정책은 Engine, 메커니즘은 디바이스가 맡는다.
@@ -671,11 +671,11 @@ namespace sw
 
         /**
          * @brief 버퍼 갱신 하나가 기록하는 프레임과 순서가 맞는 자리인지 봅니다(다섯 백엔드가 같다). 갱신의 공통 입구(`IRHIResourceFactory::updateStructuredBufferRegions` · `updateGeometryBufferRegions`)가 부릅니다.
-         * @details **렌더 스레드**의 갱신은 패스 밖이어야 한다(전송 계약 3 — 업로드는 그리기 기록 전). 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다 — 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 **앞에**
+         * @details 렌더 스레드의 갱신은 패스 밖이어야 한다(전송 계약 3: 업로드는 그리기 기록 전). 렌더 그래프를 기록하는 동안(`PassRecordingScope`)의 갱신이면 개발 구성에서 멈춘다. 패스는 자기 리스트에 기록하고 갱신은 프레임 스트림에 기록해 그 리스트 앞에
          *          실행된다. 그래프가 이미 기록한 전이(추적 상태)와 어긋나고(D3D12 상태 오류), 앞 패스가 새 내용을 읽는다. 그래프 앞(준비 단계)에서 올린다.
          *          프레임 스트림에 렌더 패스를 연 채면 알리고(`RHI.BufferUpdateInsideRenderPass`) 그 패스를 닫는다 — Vulkan 은 패스 안에 복사를 기록할 수 없다. 어느 백엔드에서든 같은
          *          오류로 드러나게 하고, 패스를 닫아 그 뒤의 드로우도 같게 버린다. 에디터 UI 가 열린 백버퍼 패스 안에서 올려 Vulkan 화면에서만 사라졌던 결함이 이 모양이다.
-         *          **다른 스레드**의 갱신은 다음 제출의 맨 앞에 실행되어 지금 기록하는 프레임과 순서가 없다. 그 프레임이 쓰는 버퍼(`RHIUploadLog`)면 개발 구성에서 멈춘다 — 갱신을
+         *          다른 스레드의 갱신은 다음 제출의 맨 앞에 실행되어 지금 기록하는 프레임과 순서가 없다. 그 프레임이 쓰는 버퍼(`RHIUploadLog`)면 개발 구성에서 멈춘다 — 갱신을
          *          렌더 스레드(패킷)로 보낸다. 새 버퍼의 첫 내용은 지나간다.
          * @param buffer 갱신할 버퍼입니다.
          * @param pWhat  로그에 남길 호출 지점 이름입니다.
@@ -695,12 +695,12 @@ namespace sw
         void beginTextureReadback( RHITextureHandle texture, const utf8* pWhat );
 
         /**
-         * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
+         * @brief 병렬 기록 중에 배리어가 나왔음을 진단으로만 남깁니다(디버그 전용, 8회까지).
          * @details 배리어는 레벨 프롤로그(`RenderGraph::setLevelPrologue`)가 단일 스레드에서 미리
-         *          발행하는 것이 원칙이다. 다만 프롤로그는 그래프가 **선언한** 입출력만 알 수 있어서
+         *          발행하는 것이 원칙이다. 다만 프롤로그는 그래프가 선언한 입출력만 알 수 있어서
          *          선언이 빠진 자원(패스 콜백이 직접 바인딩하는 텍스처)은 놓친다. 그래서 이것은 assert 가 아니다 — 패스가 쓰기로 선언한 자원의 패스 안 왕복
          *          (`RenderGraphPassContext::transition`)도 여기 오는데 그것은 맞는 길이고, RHI 는 둘을 가를 수 없다.
-         *          선언이 빠진 자원의 전이는 **안전하지 않다** — 추적 상태의 비교 교환은 배리어를 낼 쪽 하나만 정하고 실행 순서를 정하지 않는다(뒤 리스트가 먼저 기록하면
+         *          선언이 빠진 자원의 전이는 안전하지 않다 — 추적 상태의 비교 교환은 배리어를 낼 쪽 하나만 정하고 실행 순서를 정하지 않는다(뒤 리스트가 먼저 기록하면
          *          앞 리스트가 배리어 없이 먼저 실행된다). 여기 찍히는 이름이 곧 "패스 선언을 채워야 할 항목" 이다.
          * @note 레지스트리 쪽(`requireRegistryMutableNow`)은 불변식이 확실해서 멈춘다.
          *       두 감시의 강도가 다른 이유가 이것이다.
@@ -724,7 +724,7 @@ namespace sw
         ConstantBufferPagePool& getConstantBufferPagePool() { return *_pConstantBufferPagePool; }
         /**
          * @brief 드라이버에게 GPU 메모리 사용량과 예산을 물어 추적기에 기록합니다(`RHIMemoryTracker::getDriverBudget`). 백엔드가 물을 수 없으면 모든 항목이 "모름" 입니다.
-         * @details **프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다.** GL 은 컨텍스트를 가진 채 묻는데, 다른 스레드에서 부르면 렌더 스레드가 그 프레임의
+         * @details 프레임을 기록하는 스레드(렌더 스레드)에서 불러야 한다. GL 은 컨텍스트를 가진 채 묻는데, 다른 스레드에서 부르면 렌더 스레드가 그 프레임의
          *          컨텍스트를 놓을 때까지 기다린다. 엔진은 Present 뒤 몇 프레임마다 부르고(`RenderThread`), 읽는 쪽(프로파일 보고, 에디터 패널)은
          *          추적기에 기록된 마지막 값을 본다.
          */
@@ -829,7 +829,7 @@ namespace sw
         /** @brief 핸들 하나를 지금 그 종류의 백엔드 파괴 함수로 내립니다. 백엔드가 산 핸들이 아니었다고 하면 단언한다(같은 핸들 두 번 해제). */
         void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 packed );
         /**
-         * @brief 지금 리소스 테이블(bindless 레지스트리 · 자원 해제)을 바꿔도 되는 시점인지 **모든 구성에서** 확인하고, 어기면 오류를 남기고 멈춥니다.
+         * @brief 지금 리소스 테이블(bindless 레지스트리 · 자원 해제)을 바꿔도 되는 시점인지 모든 구성에서 확인하고, 어기면 오류를 남기고 멈춥니다.
          * @details 등록 · 해제의 공통 입구(`IRHIResourceFactory`)와 핸들 해제(`releaseNow`)가 부른다. 어긴 호출이 곧 다른 스레드의 기록이 읽는 표를 바꾸는 데이터 경쟁이라
          *          한 프레임 낡은 바인딩으로 그리거나 GPU 가 쓰레기 디스크립터를 읽고 죽는다. 비용은 원자 읽기 한 번이라 Release 에서도 확인한다.
          *          디버그에서만 멈추는 단언 변형은 두지 않는다 — 강도가 둘이면 Release 에서만 어긋나는 경로가 생긴다.

@@ -18,10 +18,10 @@ namespace sw
 {
     /**
      * @class D3D12RHISwapChain
-     * @brief 창 하나의 백버퍼 모음입니다. **스왑체인을 만들고, 크기를 바꾸고, 다음 백버퍼를 고르고, 화면에 표시합니다.**
+     * @brief 창 하나의 백버퍼 모음입니다. 스왑체인을 만들고, 크기를 바꾸고, 다음 백버퍼를 고르고, 화면에 표시합니다.
      * @details 백버퍼 리소스 상태와 그 상태를 바꾸는 배리어를 이 객체가 함께 가집니다. 상태를 바꾸는 곳
      *          (`beginRenderPass` / `blitTexture` / `endFrame`)이 각자 배리어를 기록하면 서로 어긋납니다.
-     * @note 메인 창의 RTV 힙은 **디바이스가 소유합니다.** 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
+     * @note 메인 창의 RTV 힙은 디바이스가 소유합니다. 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
      *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 슬롯을 차지하고, 오프스크린은 그 뒤부터 씁니다.
      *       다른 창(`IRHIDevice::createSwapChain`)은 백버퍼 수만큼의 RTV 힙을 스스로 가진다(`createOwnedRTVHeap`) — 디바이스 힙의 칸 배치를 건드리지 않는다.
      */
@@ -35,7 +35,7 @@ namespace sw
 
         /**
          * @brief DXGI 스왑체인을 만듭니다.
-         * @details 창 핸들이 없거나 크기가 0 이면 **네이티브 스왑체인 없이 크기만 기억한 상태**로
+         * @details 창 핸들이 없거나 크기가 0 이면 네이티브 스왑체인 없이 크기만 기억한 상태로
          *          성공합니다. 오프스크린 전용(테스트, 헤드리스) 디바이스가 그 경로입니다.
          */
         [[nodiscard]] bool initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc );
@@ -50,7 +50,7 @@ namespace sw
 
         /**
          * @brief 백버퍼를 얻어 RTV 를 만듭니다. RTV 힙의 앞쪽 `bufferCount()` 슬롯을 씁니다.
-         * @note 하나라도 실패하면 **전부 비웁니다.** 일부만 null 인 채로 두면 크기는 정상이라
+         * @note 하나라도 실패하면 전부 비웁니다. 일부만 null 인 채로 두면 크기는 정상이라
          *       범위 검사를 통과해버리고, null 리소스가 그대로 배리어에 들어가 GPU PageFault 가 됩니다.
          */
         void createBackBuffers( ID3D12Device* pDevice, ID3D12DescriptorHeap* pRTVHeap, uint32 rtvDescriptorSize );
@@ -79,14 +79,14 @@ namespace sw
 
         /**
          * @brief 화면에 표시합니다. 네이티브 스왑체인이 없으면 S_OK 로 아무것도 하지 않습니다.
-         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘깁니다. 스왑체인 생성 플래그와 **짝이어야**
+         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘깁니다. 스왑체인 생성 플래그와 짝이어야
          *          합니다(RHIDxgiTearing.h). 짝이 맞지 않으면 DXGI 가 INVALID_CALL 을 반환합니다.
          */
         HRESULT present( bool vsync );
 
         /**
          * @brief 현재 백버퍼를 `stateAfter` 로 전이합니다. 이미 그 상태면 아무것도 하지 않습니다.
-         * @details 백버퍼의 리소스 상태는 커맨드 리스트가 아니라 **리소스 자체에 속한 전역 상태**라
+         * @details 백버퍼의 리소스 상태는 커맨드 리스트가 아니라 리소스 자체에 속한 전역 상태라
          *          이 객체가 보관합니다.
          */
         void transitionTo( ID3D12GraphicsCommandList* pCmdList, D3D12_RESOURCE_STATES stateAfter );

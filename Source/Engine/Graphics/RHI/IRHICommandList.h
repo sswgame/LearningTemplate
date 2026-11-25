@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @class IRHIPassCommandList
-     * @brief 패스 몸통이 받는 기록 면입니다 — 그리기 · 바인딩 · 디스패치 · 렌더 패스는 있고 **자원 상태 전이 · UAV 배리어 · 버퍼 복사와 기록 범위(열기 · 닫기)는 없다**.
+     * @brief 패스 몸통이 받는 기록 면입니다 — 그리기 · 바인딩 · 디스패치 · 렌더 패스는 있고 자원 상태 전이 · UAV 배리어 · 버퍼 복사와 기록 범위(열기 · 닫기)는 없다.
      * @details 그래프 패스 몸통(뷰 · 프레임)이 이 형식을 받는다. 전이는 그래프가 선언에서 내고(레벨 프롤로그 · 실행 끝의 되돌림), 패스 안 왕복과 연속 디스패치의 UAV 배리어는
      *          쓰기로 선언한 자원만 `RenderGraphPassContext::transition` · `uavBarrier` 로 한다 — 병렬 기록에서 선언하지 않은 자원의 추적 상태를 워커가 바꾸던 모양(RHI 검토 S1)을
      *          쓸 수 없게 한다. wgpu 의 `RenderPassEncoder` 가 전이 · 복사를 받지 않고 언리얼 RDG 패스가 전이를 선언에서 받는 것과 같은 자리다.
@@ -36,7 +36,7 @@ namespace sw
         // 2) 뷰포트, PSO, 렌더 패스
         // ------------------------------------------------------------------------------
         /**
-         * @brief 열린 패스의 뷰포트를 설정합니다. **가위 사각형도 이 뷰포트 전체로 되돌립니다**(`beginRenderPass` 도 그 패스 크기로 되돌립니다). 패스 밖에서는 아무 일도 하지 않습니다.
+         * @brief 열린 패스의 뷰포트를 설정합니다. 가위 사각형도 이 뷰포트 전체로 되돌립니다(`beginRenderPass` 도 그 패스 크기로 되돌립니다). 패스 밖에서는 아무 일도 하지 않습니다.
          * @details 가위를 설정하고 잊어버려도 다음 뷰포트나 다음 패스로 새지 않는다(언리얼 `RHISetViewport` 가 가위를 끄는 것과 같다).
          */
         virtual void setViewport( const RHIViewport& viewport ) = 0;
@@ -53,7 +53,7 @@ namespace sw
         virtual void writeTimestamp( uint32 slotIndex ) { (void)slotIndex; }
 
         /**
-         * @brief 그래픽스 PSO 를 겁니다. **다른 PSO 면 셰이더 슬롯과 정점 버퍼 슬롯을 비운다**(같은 PSO 면 그대로) — 버퍼 · 텍스처 · 정점 스트림은 패스를 열고 PSO 를 건 뒤에 건다.
+         * @brief 그래픽스 PSO 를 겁니다. 다른 PSO 면 셰이더 슬롯과 정점 버퍼 슬롯을 비운다(같은 PSO 면 그대로) — 버퍼 · 텍스처 · 정점 스트림은 패스를 열고 PSO 를 건 뒤에 건다.
          * @details 앞 드로우의 스트림이 남으면 그 슬롯을 읽는 다음 PSO 가 남은 스트림을 조용히 읽는다. 비워 두면 거는 것을 잊은 드로우는
          *          버려지고 알려진다(`RHIDrawDiagnostics::validateVertexSlotsBound`). 백엔드는 드로우마다 바인딩 표에서 정점 버퍼를 다시 걸므로 비용이 없다.
          */
@@ -102,15 +102,15 @@ namespace sw
         // 4) 컴퓨트: PSO, 디스패치, 루트 상수, UAV
         // ------------------------------------------------------------------------------
         /**
-         * @brief 컴퓨트 PSO 를 건다. **다른 PSO 면 컴퓨트 셰이더 슬롯을 비운다** — 슬롯은 PSO 뒤에 건다. 등록되지 않은 핸들도 기록하므로 앞 컴퓨트 PSO 가 남지 않는다.
-         * @note 디스패치(`dispatchCompute` · `dispatchIndirect`)는 **등록된 컴퓨트 PSO 가 걸려 있어야** 한다 — 없으면 네 백엔드 모두 오류로 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
+         * @brief 컴퓨트 PSO 를 건다. 다른 PSO 면 컴퓨트 셰이더 슬롯을 비운다 — 슬롯은 PSO 뒤에 건다. 등록되지 않은 핸들도 기록하므로 앞 컴퓨트 PSO 가 남지 않는다.
+         * @note 디스패치(`dispatchCompute` · `dispatchIndirect`)는 등록된 컴퓨트 PSO 가 걸려 있어야 한다 — 없으면 네 백엔드 모두 오류로 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
          *       PSO 가 0 이면 부르는 쪽이 디스패치를 건너뛰는 것이 렌더러의 규칙이다.
          */
         virtual void setComputePipelineState( RHIPipelineStateHandle pso )                                           = 0;
         virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
         /**
          * @brief 일의 크기(스레드 수)로 디스패치합니다 — 그룹 수는 축마다 올림( 스레드 / 그룹 크기 )이고, 일이 없는 축(0)이 있으면 디스패치하지 않습니다.
-         * @details 그룹 크기는 **걸려 있는 컴퓨트 PSO 의 셰이더**(`[numthreads]` 리플렉션, `IRHIResourceFactory::getThreadGroupSize`)가 정한다 — 부르는 쪽이 같은 수를 다시 적으면 셰이더만 고쳤을 때
+         * @details 그룹 크기는 걸려 있는 컴퓨트 PSO 의 셰이더(`[numthreads]` 리플렉션, `IRHIResourceFactory::getThreadGroupSize`)가 정한다 — 부르는 쪽이 같은 수를 다시 적으면 셰이더만 고쳤을 때
          *          조용히 덜 · 더 돈다(유니티 `GetKernelThreadGroupSizes` 자리). 컴퓨트 PSO 가 걸려 있지 않으면 assert 뒤 건너뛴다.
          */
         virtual void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ ) = 0;
@@ -121,7 +121,7 @@ namespace sw
          */
         virtual void setComputeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         /**
-         * @brief 그래픽스 스테이지에 루트 상수(푸시 상수)를 씁니다. **드로우마다 바뀌는 소수의 값** 전용입니다.
+         * @brief 그래픽스 스테이지에 루트 상수(푸시 상수)를 씁니다. 드로우마다 바뀌는 소수의 값 전용입니다.
          * @details 언리얼이 `FMeshDrawCommand` 의 느슨한 파라미터를 드로우별로 싣는 방식에 해당한다. 상수 버퍼로
          *          보내면 드로우마다 버퍼를 새로 잡거나(할당과 디스크립터) 덮어써야 한다. 덮어쓰면 GPU 는 마지막
          *          값만 본다. 루트 상수와 푸시 상수는 커맨드 리스트에 값이 그대로 실려 그 문제가 없다.
@@ -130,7 +130,7 @@ namespace sw
          */
         virtual void setGraphicsRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         /**
-         * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
+         * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 뒤 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
          * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
          *          렌더 타깃 유지 형식이다. DX11 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리라 @p slot 이 지금 건 렌더 타깃 수보다 작으면 걸지 않는다(오류를 한 번 남긴다 — 셰이더의 쓰기는 버려진다).
          *          `RHICapabilities::_bGraphicsShaderWrites` 가 거짓인 백엔드는 아무것도 하지 않는다.
@@ -138,14 +138,14 @@ namespace sw
         virtual void bindGraphicsUAV( RHIUnorderedAccessIndex index, uint32 slot ) = 0;
         virtual void bindShaderResource( RHITextureSRVIndex index, uint32 slot )   = 0;
         /**
-         * @brief 셰이더가 읽을 텍스처 @p srv 를 걸고, 셰이더에 넘길 번호(루트 상수 · 상수 버퍼의 텍스처 번호 칸)를 돌려줍니다. PSO 를 건 **뒤** 부릅니다.
+         * @brief 셰이더가 읽을 텍스처 @p srv 를 걸고, 셰이더에 넘길 번호(루트 상수 · 상수 버퍼의 텍스처 번호 칸)를 돌려줍니다. PSO 를 건 뒤 부릅니다.
          * @details 네이티브 bindless(DX12 · Vulkan · WebGPU)는 걸 것이 없고 @p srv 그대로다. 에뮬(DX11 · GL)은 @p emulatedSlot(t#) 에 걸고 0 을 돌려준다 — 셰이더는
          *          `SW_PASS_FLAG_NATIVE_BINDLESS` 가 꺼져 있으면 번호 대신 그 칸을 읽는다. 부르는 쪽이 백엔드 능력을 묻고 갈래를 쓰면 한쪽 갈래만 고쳐 다른 백엔드가 검은 화면이 된다.
          *          언리얼은 텍스처가 셰이더 매개변수라 호출자가 bindless 여부를 모른다 — 그 자리다.
          */
         [[nodiscard]] virtual uint32 bindSampledTexture( RHITextureSRVIndex srv, uint32 emulatedSlot ) = 0;
         /**
-         * @brief 머티리얼 텍스처 칸 @p ordinal 로 읽는 셰이더(`MaterialTexture::sampleIndex` — 캔버스 · 입자 · ImGui · 층 굽기)에 텍스처 @p srv 를 걸고, 셰이더에 넘길 번호를 돌려줍니다. PSO 를 건 **뒤** 부릅니다.
+         * @brief 머티리얼 텍스처 칸 @p ordinal 로 읽는 셰이더(`MaterialTexture::sampleIndex` — 캔버스 · 입자 · ImGui · 층 굽기)에 텍스처 @p srv 를 걸고, 셰이더에 넘길 번호를 돌려줍니다. PSO 를 건 뒤 부릅니다.
          * @details 네이티브 bindless 는 걸 것이 없고 @p srv 그대로다. 에뮬(DX11 · GL)은 머티리얼 칸 t(16 + @p ordinal) 에 걸고 @p ordinal 을 돌려준다 — 셰이더는 그 서수로 칸을 고른다.
          *          `bindSampledTexture`(에뮬이 0 을 받는 엔진 칸 규약)와 반환 규약만 다르다. 기록 전에 값만 정하는 자리는 `IRHIDevice::getMaterialTextureIndex` 를 쓴다.
          */
@@ -166,9 +166,9 @@ namespace sw
          * @brief 기록 중에 상수 버퍼 내용을 갱신합니다. 이 리스트의 드로우와 디스패치가 이 값을 봅니다(언리얼 `RHIUpdateUniformBuffer( RHICmdList, … )`).
          * @details 기록 밖(머티리얼 파라미터)에서 쓰는 값은 페이지 구간(`ConstantBufferPagePool::write` — 쓸 때마다 새 구간)이고, 기록 경로(패스 CB,
          *          컴퓨트 CB)는 이 함수를 쓴다. DX11 은 이 리스트의 Deferred Context 에 `Map(WRITE_DISCARD)` 해서 런타임이 리스트 단위로 버퍼를
-         *          버저닝하고 WebGPU 는 상수 링의 새 칸을 받지만, DX12, Vulkan, GL 은 버퍼의 이번 프레임 슬롯에 쓴다. 그래서 **한 버퍼는 프레임에 한 번만** 쓴다
+         *          버저닝하고 WebGPU 는 상수 링의 새 칸을 받지만, DX12, Vulkan, GL 은 버퍼의 이번 프레임 슬롯에 쓴다. 그래서 한 버퍼는 프레임에 한 번만 쓴다
          *          (드로우마다 다른 값이면 슬롯을 나눈다. `PassConstantRing` 참고). 두 번째 쓰기는 다섯 백엔드가 `IRHICommandContext::updateConstantBuffer` 에서
-         *          진단 오류로 알린다(`RHI.ConstantBufferRewrittenInFrame` — 개발 구성). @p size 는 **`createConstantBuffer` 에 준 크기를 넘으면 안 된다** — 백엔드가 검사하지 않고 그대로 복사한다
+         *          진단 오류로 알린다(`RHI.ConstantBufferRewrittenInFrame`, 개발 구성). @p size 는 `createConstantBuffer` 에 준 크기를 넘으면 안 된다. 백엔드가 검사하지 않고 그대로 복사한다
          *          (GL 만 `glBufferSubData` 가 거절한다).
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
@@ -185,11 +185,11 @@ namespace sw
         // ------------------------------------------------------------------------------
 
         /**
-         * @brief 텍스처 전체를 다른 텍스처로 복사합니다. **`kRHIBackBufferTexture` 는 백버퍼다.** dst 가 백버퍼면 화면으로 내보내고, src 가 백버퍼면 화면에 나갈 이미지를 읽는다(테스트와 진단용).
+         * @brief 텍스처 전체를 다른 텍스처로 복사합니다. `kRHIBackBufferTexture` 는 백버퍼다. dst 가 백버퍼면 화면으로 내보내고, src 가 백버퍼면 화면에 나갈 이미지를 읽는다(테스트와 진단용).
          * @details 둘 다 백버퍼면 아무것도 하지 않는다. 0 은 오류로 알리고 버린다. 백버퍼에서 텍스처로 복사할 때는 크기가 백버퍼와 같아야 하고, D3D 는 포맷도 같아야 한다(`getBackBufferFormat` 으로 만든다.
          *          Vulkan 은 블릿이라 변환한다). GL 은 창의 0행이 아래쪽이라 읽을 때 뒤집으므로, 결과 텍스처의 0행은 항상 화면 위쪽이다.
          *          주의: 백버퍼는 Present 뒤에 내용이 버려지므로(플립 모델) Present 전에 프레임 스트림에 기록한다.
-         *          끝 상태(텍스처끼리 · 텍스처 → 백버퍼): **원본은 셰이더 읽기, 대상 텍스처는 렌더 타깃**이다 — 그래프는 원본을 읽기로 선언했으므로 복사 뒤의 다른 읽기가 전이를 다시 받지 않는다.
+         *          끝 상태(텍스처끼리 · 텍스처 → 백버퍼): 원본은 셰이더 읽기, 대상 텍스처는 렌더 타깃이다 — 그래프는 원본을 읽기로 선언했으므로 복사 뒤의 다른 읽기가 전이를 다시 받지 않는다.
          */
         virtual void blitTexture( RHITextureHandle src, RHITextureHandle dst ) = 0;
 
@@ -197,7 +197,7 @@ namespace sw
         // 6) 인디렉트: 드로우, 디스패치
         // ------------------------------------------------------------------------------
         /**
-         * @brief 간접 인자로 그립니다. **한 번 그리는 것은 drawCount == 1 인 멀티 드로우입니다.**
+         * @brief 간접 인자로 그립니다. 한 번 그리는 것은 drawCount == 1 인 멀티 드로우입니다.
          * @details 단일 드로우와 멀티 드로우를 한 함수로 둔다. 개수만 다른 두 경로로 나누면 안 쓰이는 쪽이 조용히 틀린다
          *          (PSO 프로그램, 토폴로지, 정점 버퍼 바인딩 누락).
          * @param argumentBuffer       `RHIDrawIndirectCommand` 배열입니다.
@@ -211,7 +211,7 @@ namespace sw
                                    RHIBufferHandle countBuffer = 0, uint32 countBufferOffset = 0 ) = 0;
         /**
          * @brief 스레드 그룹 수를 GPU 가 기록해 둔 버퍼로 컴퓨트를 디스패치합니다.
-         * @param argumentBuffer `RHIDispatchIndirectCommand` 하나입니다. **그 구조체가 이 버퍼의 레이아웃 기준입니다.**
+         * @param argumentBuffer `RHIDispatchIndirectCommand` 하나입니다. 그 구조체가 이 버퍼의 레이아웃 기준입니다.
          *        값을 채우는 것은 C++ 이 아니라 컴퓨트 셰이더라서, 여기 말고는 그 이름이 불릴 곳이 없습니다.
          * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
          */
@@ -330,11 +330,11 @@ namespace sw
 
         /**
          * @brief 텍스처를 렌더 타깃(또는 뎁스)으로 쓸 수 있는 상태로 만듭니다.
-         * @details `prepareTextureForShaderRead` 와 짝을 이룬다. 그래프가 레벨을 **병렬로 기록하기 전에**
+         * @details `prepareTextureForShaderRead` 와 짝을 이룬다. 그래프가 레벨을 병렬로 기록하기 전에
          *          단일 스레드에서 미리 불러 두는 용도다. 그러면 패스 콜백이 이미 맞는 상태를 보므로
          *          기록 중에 리소스 상태 같은 공유 데이터를 바꾸지 않는다. 배리어를 기록
          *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌다.
-         * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단한다.** 호출하는 쪽이
+         * @note 컬러인지 뎁스인지는 백엔드가 자기 텍스처 레코드를 보고 판단한다. 호출하는 쪽이
          *       그것을 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋난다.
          * @note GL 은 상태가 없어 아무 일도 하지 않는다. DX11 은 전이가 없지만 이 텍스처가 바인딩된 PS SRV 슬롯을 해제한다. 그대로 두면
          *       첨부로 바인딩할 때 런타임이 SRV 를 NULL 로 강제하고 해저드 경고를 낸다.
@@ -411,7 +411,7 @@ namespace sw
         /**
          * @brief 앞선 디스패치의 UAV 쓰기가 끝난 뒤에 다음 디스패치가 읽도록 막습니다.
          * @details 상태가 바뀌지 않는 전이(UAV → UAV)는 `transitionBuffer` 가 아무것도 하지 않는다.
-         *          그런데 컴퓨트 두 개가 **같은 버퍼를 이어서** 쓰고 읽으면 그 사이에 장벽이 필요하다.
+         *          그런데 컴퓨트 두 개가 같은 버퍼를 이어서 쓰고 읽으면 그 사이에 장벽이 필요하다.
          *          컬링이 채운 가시 목록을 정렬이 바로 읽는 경우가 그렇다. 없으면 정렬이 아직 채워지지 않은
          *          목록을 읽는다(드라이버와 백엔드마다 결과가 달라져 재현이 어렵다).
          *          DX12 는 UAV 배리어, Vulkan 은 버퍼 메모리 배리어, GL 은 glMemoryBarrier 를 쓰고,

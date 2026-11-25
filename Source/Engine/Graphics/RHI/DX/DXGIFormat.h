@@ -61,7 +61,7 @@ namespace sw
 
     /**
      * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다(DX11, DX12 공유).
-     * @details 입력 레이아웃은 **공용 테이블**(`constant::render::getMeshVertexAttributes`)에서 만들고, 그 테이블의 한 항목을
+     * @details 입력 레이아웃은 공용 테이블(`constant::render::getMeshVertexAttributes`)에서 만들고, 그 테이블의 한 항목을
      *          DXGI 포맷으로 옮기는 판단은 두 백엔드가 이 함수 하나를 씁니다. `default:` 를 두지 않는다 — 형식을 더하면 `-Werror=switch` 가 여기를 가리킨다.
      */
     inline DXGI_FORMAT toDXGIVertexFormat( const RHIVertexAttribute& attribute )

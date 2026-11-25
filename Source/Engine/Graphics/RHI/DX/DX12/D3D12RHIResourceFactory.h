@@ -82,14 +82,14 @@ namespace sw
         RHIBufferHandle createDefaultBufferWithData( const void* pData, uint32 sizeBytes, D3D12_RESOURCE_STATES readState );
         /**
          * @brief bindless 힙에서 디스크립터 인덱스를 하나 가져옵니다.
-         * @param lock 부르는 쪽이 **이미 잡고 있는** `_bindlessMutex` 잠금.
+         * @param lock 부르는 쪽이 이미 잡고 있는 `_bindlessMutex` 잠금.
          * @return 힙이 가득 찼으면 `kInvalidDescriptorIndex`.
-         * @details 여기서 잠그지 않고 이미 잡은 잠금을 받는 이유는, 인덱스를 가져오는 것과 **그 자리에 뷰를 만드는 것**이
+         * @details 여기서 잠그지 않고 이미 잡은 잠금을 받는 이유는, 인덱스를 가져오는 것과 그 자리에 뷰를 만드는 것이
          *          한 임계 구역이어야 합니다. 여기서 잠갔다 풀면 그 틈에 다른 스레드가 같은 인덱스를 받습니다.
          *          잠금 객체를 인자로 받아 그 전제가 부르는 쪽에게 보입니다.
          * @note 네 등록 함수(`registerBindlessTexture`, `registerBindlessBufferSRV`, `registerBindlessBufferUAV`,
          *       `registerBindlessTextureUAV`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
-         *       고치고 넘어가기 쉽고, 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
+         *       고치고 넘어가기 쉽고, 그 결과는 디스크립터가 어긋나 화면이 조용히 깨지는 것입니다.
          */
         RHIDescriptorIndex acquireBindlessIndex( UniqueLock<shared_mutex>& lock ); // 잠금 자체를 받는 것이 전제의 증거다 — `requires_capability` 는 capability 형식(뮤텍스)만 받아 std 잠금 객체에는 걸 수 없다
 
@@ -101,7 +101,7 @@ namespace sw
         };
         /**
          * @brief 힙 인덱스의 디스크립터 핸들 쌍을 계산합니다.
-         * @details 뷰는 온라인 힙과 오프라인 힙에 **같이** 만듭니다(슬롯 테이블 t#/u# 은 오프라인에서 온라인 블록으로 복사합니다).
+         * @details 뷰는 온라인 힙과 오프라인 힙에 같이 만듭니다(슬롯 테이블 t#/u# 은 오프라인에서 온라인 블록으로 복사합니다).
          *          네 등록 함수가 같이 씁니다. 한 곳이 오프라인 힙을 빠뜨리면 그 종류의 리소스만 슬롯 테이블에서 사라집니다.
          */
         BindlessHandleSet bindlessHandlesAt( RHIDescriptorIndex index ) const;
@@ -109,7 +109,7 @@ namespace sw
         static D3D12_SHADER_RESOURCE_VIEW_DESC makeBindlessTextureDesc( ID3D12Resource* pResource );
 
         /**
-         * @brief 어느 bindless 레지스트리인지 나타냅니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
+         * @brief 어느 bindless 레지스트리인지 나타냅니다. 힙 인덱스 공간은 하나지만 기록은 둘로 나뉩니다.
          * @details 둘이 같은 번호 발급기를 쓰므로(`_bindlessIndexAllocator`) 인덱스는 섞이지 않습니다.
          *          나뉘는 것은 그 슬롯이 무엇을 보관했는지뿐입니다.
          */
@@ -121,7 +121,7 @@ namespace sw
 
         /**
          * @brief 레지스트리의 슬롯 하나를 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
-         * @details **이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다.** 그 검사를 SRV/CBV 쪽과
+         * @details 이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다. 그 검사를 SRV/CBV 쪽과
          *          UAV 쪽이 같이 씁니다. 산 칸이 아니면 false 입니다(입구가 알린다).
          */
         [[nodiscard]] bool releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );

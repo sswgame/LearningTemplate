@@ -53,9 +53,9 @@ namespace sw
      *          소유하는데 이 캐시가 디바이스 전역이면 서로의 바인딩 캐시를 덮어써서, 병렬 기록에서 한 패스의
      *          드로우가 다른 패스의 PSO 와 정점 버퍼로 나간다. 주의: 인자 둘짜리 컨텍스트 생성자는 디바이스의
      *          것을 가리키므로 즉시 컨텍스트 전용이다. `D3D11RHICommandList` 는 자기 상태를 넘기는 생성자를 쓴다.
-     * @note `OpenGLRecordingState` 는 **반대로 디바이스가 소유하는 것이 맞다.** GL 은 커맨드 버퍼가
+     * @note `OpenGLRecordingState` 는 반대로 디바이스가 소유하는 것이 맞다. GL 은 커맨드 버퍼가
      *       없는 상태 머신이라 실제 상태가 하나뿐이다. 기준은 "리스트마다 하나" 가 아니라
-     *       **"기록 스트림마다 하나"** 다.
+     *       "기록 스트림마다 하나" 다.
      */
     /**
      * @struct D3D11ConstantBufferBindings
@@ -79,9 +79,9 @@ namespace sw
     struct D3D11RecordingState
     {
         /**
-         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼입니다(바인드 포인트마다). **기록 스트림마다** 따로 있습니다.
+         * @brief 루트 상수 에뮬레이션(계약 슬롯 b2)의 버퍼입니다(바인드 포인트마다). 기록 스트림마다 따로 있습니다.
          * @details D3D11 에는 루트 상수가 없어 작은 상수 버퍼로 흉내 낸다. 이것이 디바이스 전역이면
-         *          병렬로 기록하는 두 패스가 같은 버퍼를 번갈아 덮어써서, 한쪽 패스의 드로우가 **다른 패스의 월드 행렬**로 그려진다.
+         *          병렬로 기록하는 두 패스가 같은 버퍼를 번갈아 덮어써서, 한쪽 패스의 드로우가 다른 패스의 월드 행렬로 그려진다.
          */
         Microsoft::WRL::ComPtr<ID3D11Buffer> _arrRootConstantCb[RHIRecordingBindings::kBindPointCount];
 
@@ -92,7 +92,7 @@ namespace sw
         /**
          * @brief CS UAV 슬롯마다 지금 바인딩되어 있는 버퍼입니다(0이면 없음).
          * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 바인딩할 수 없다. UAV 를 해제하지 않으면
-         *          런타임이 **SRV 쪽을 조용히 NULL 로 강제한다**(경고만 나온다). 그래서 어느 슬롯에
+         *          런타임이 SRV 쪽을 조용히 NULL 로 강제한다(경고만 나온다). 그래서 어느 슬롯에
          *          어떤 버퍼가 바인딩되어 있는지 기록해 두고, transitionBuffer 가 읽기 상태로 돌릴 때 해제한다.
          */
         RHIBufferHandle _arrComputeUAVBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
@@ -100,7 +100,7 @@ namespace sw
         uint32 _boundRenderTargetCount{ 0 };
         /**
          * @brief PS SRV 슬롯마다 지금 바인딩되어 있는 텍스처입니다(0이면 없음이거나 버퍼).
-         * @details 같은 리소스를 입력(SRV)과 출력(RTV, DSV)에 동시에 바인딩하면 `OMSetRenderTargets` 가 **SRV 를 NULL 로 강제하고** 경고만 낸다.
+         * @details 같은 리소스를 입력(SRV)과 출력(RTV, DSV)에 동시에 바인딩하면 `OMSetRenderTargets` 가 SRV 를 NULL 로 강제하고 경고만 낸다.
          *          `prepareTextureForRenderTarget` 가 이 테이블을 보고 그 텍스처가 바인딩된 슬롯만 해제한다(언리얼 D3D11 RHI 의
          *          `ConditionalClearShaderResource` 에 해당한다).
          */
@@ -165,7 +165,7 @@ namespace sw
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
         bool               isGPUClockReadCheap() const { return false; }
         /**
-         * @brief 커맨드 리스트가 **자기 Deferred Context 에** 타임스탬프를 기록합니다.
+         * @brief 커맨드 리스트가 자기 Deferred Context 에 타임스탬프를 기록합니다.
          * @details 슬롯 번호는 패스 인덱스로 고정이라 쿼리 객체 하나를 두 컨텍스트가 건드릴 일이 없다.
          *          D3D11 이 금지하는 것이 바로 그 경우다.
          */
@@ -532,7 +532,7 @@ namespace sw
         ID3D11ShaderResourceView* resolveBufferSRV( RHIBufferHandle handle ) const;
         /**
          * @brief 버퍼(와 있으면 SRV)를 핸들 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 크기(`ByteWidth`)를 올리는 유일한 지점입니다.
-         * @details SRV 는 넣기 **전에** 레코드에 싣는다. 넣은 뒤에 붙이면 다른 스레드가 SRV 없는 레코드를 볼 수 있다.
+         * @details SRV 는 넣기 전에 레코드에 싣는다. 넣은 뒤에 붙이면 다른 스레드가 SRV 없는 레코드를 볼 수 있다.
          */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv = nullptr );
         /**
@@ -598,7 +598,7 @@ namespace sw
 
         /**
          * @brief GPU 타임스탬프입니다. 프레임 링만큼 묶음을 돌려 씁니다.
-         * @details 읽기는 그 묶음을 **다시 쓰기 직전**(링 한 바퀴 뒤)에 DONOTFLUSH 로 한 번만 묻는다.
+         * @details 읽기는 그 묶음을 다시 쓰기 직전(링 한 바퀴 뒤)에 DONOTFLUSH 로 한 번만 묻는다.
          *          아직 결과가 없으면 이번 바퀴는 건너뛴다. 기다리면 측정하려던 파이프라인을 멈춰 세운다.
          */
         D3D11TimestampFrame _arrTimestampFrame[constant::render::kMaxFrameCountInFlight];
@@ -631,7 +631,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11Query> _arrFrameDoneQuery[RHIFrameFenceRing::kSlotCount];
         uint64                              _lastTimestampFrequency; ///< 마지막으로 읽은 disjoint 의 주파수(틱/초)
 
-        /// @brief UAV 번호 하나입니다 — 뷰와 그 원본(버퍼 UAV 면 버퍼 — SRV/UAV 해저드를 풀 때 본다, 텍스처 UAV 면 텍스처 — 텍스처를 부술 때 번호를 놓는다).
+        /// @brief UAV 번호 하나입니다. 뷰와 그 원본(버퍼 UAV 면 버퍼로 SRV/UAV 해저드를 풀 때 본다, 텍스처 UAV 면 텍스처로 텍스처를 부술 때 번호를 놓는다).
         struct UAVEntry
         {
             Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> _uav{};
@@ -662,7 +662,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
         HWND                                       _pHWnd;
 
-        /// @brief 살아 있는 `D3D11RHICommandList` 들입니다. **소유하지 않습니다.** 리사이즈 직전에
+        /// @brief 살아 있는 `D3D11RHICommandList` 들입니다. 소유하지 않습니다. 리사이즈 직전에
         ///        기록물을 버리게 하려고 가지고 있습니다(백버퍼 참조를 붙들고 있기 때문입니다).
         mutex                        _liveCmdListMutex;
         vector<D3D11RHICommandList*> _listLiveCmd;

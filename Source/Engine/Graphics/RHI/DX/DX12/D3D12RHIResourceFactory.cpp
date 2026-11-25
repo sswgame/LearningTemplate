@@ -145,7 +145,7 @@ namespace sw
         // 프레임 스트림에 기록한 복사가 아직 나가지 않았으면 그 구간이 이어진다 — 프레임 도중의 장치 대기가 펜스 값을 올려도 스테이징을 되감지 않는다.
         if ( slot._bFrameCopies != SW_FALSE || slot._resetFence == _pDevice->_frameFenceRing.getRecordingSerial() )
             return true;
-        // 구간이 바뀌었는데 이 슬롯의 리스트가 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 **지금** 구간이 되므로
+        // 구간이 바뀌었는데 이 슬롯의 리스트가 열려 있다면 프레임 제출과 Signal 사이에 연 복사다. 지금 내보낸다. 내보내면 `_resetFence` 가 지금 구간이 되므로
         // (그 복사는 이번 구간의 Signal 에서야 끝난다) 얼로케이터를 Reset 하지 않고 이어 쓴다.
         if ( _pDevice->_openUploadSlotIndex == slotIndex )
         {
@@ -154,7 +154,7 @@ namespace sw
         }
         if ( slot._resetFence != UINT64_MAX )
         {
-            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
+            // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 큐에 들어갔다는 뜻이지 GPU 가 그 구간의 복사를
             // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
             // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 하게 된다
             // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
@@ -224,7 +224,7 @@ namespace sw
 
         // 프레임 링 슬롯 하나를 재사용한다(매 호출마다 업로드 힙 · 얼로케이터 · 리스트를 새로 만들지 않는다).
         // 이 슬롯을 다시 쓸 차례가 됐다는 것은 waitForRingSlot() 이 이미 constant::render::kMaxFrameCountInFlight 프레임 전 제출의
-        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다. **프레임 사이에는**.
+        // GPU 완료를 보장했다는 뜻이라 별도 대기(waitForPreviousFrame) 없이 안전하다. 프레임 사이에는.
         // 같은 프레임 안의 두 번째 호출은 첫 번째 복사가 GPU 에서 아직 도는 중일 수 있으므로, 펜스 구간이
         // 바뀌었을 때만 얼로케이터를 Reset 하고 스테이징은 오프셋을 이어 쓴다.
         // 펜스 구간이 바뀌었으면 여기서 오프셋이 0 으로 되감긴다.
@@ -299,7 +299,7 @@ namespace sw
         const ScopedDeferredLog deferredLog;
         ScopedLock<mutex>       uploadLock{ _pDevice->_uploadSlotMutex };
 
-        // **조각을 모두 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
+        // 조각을 모두 한 스테이징에 모아 한 번만 제출한다. 조각마다 부르면 스테이징 확보와 큐
         // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(호출당 ~3.3 us).
         constexpr uint32 kCopyAlignment = 4;
         uint32           totalSize      = 0;
@@ -370,7 +370,7 @@ namespace sw
             cursor += MathUtil::align( region._sizeBytes, kCopyAlignment );
         }
 
-        // 올린 뒤에는 **셰이더 읽기** 상태로 둔다. 주의: UAV 로 끝내면 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전
+        // 올린 뒤에는 셰이더 읽기 상태로 둔다. 주의: UAV 로 끝내면 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전
         // 인스턴스가 없을 때의 인스턴스 버퍼)가 UAV 상태로 읽힌다(GPU 검증이 짚고, 드라이버 관용에 기대 동작한다). 컴퓨트로 쓰는 버퍼는 쓰기 전에
         // `transitionBuffer( UnorderedAccess )` 가 기록된 상태에서 옮긴다.
         D3D12_RESOURCE_BARRIER toShaderRead{};
@@ -1376,7 +1376,7 @@ namespace sw
         if ( pResource == nullptr || pResource->GetDesc().Width < 4 )
             return kInvalidDescriptorIndex;
 
-        // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간**을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
+        // UAV 도 SRV/CBV 와 같은 힙 인덱스 공간을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
         // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다
         // (UAV 목록 안의 순번을 돌려주면 안 된다).
         UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };

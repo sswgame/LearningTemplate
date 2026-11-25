@@ -49,7 +49,7 @@ namespace sw
         /** @brief 이번 프레임에 슬롯 @p timestampSlot 을 적었습니다. 병렬 기록 스레드에서 불러도 된다(슬롯은 패스 인덱스로 고정이다). */
         void markWritten( uint32 timestampSlot ) { _currentMask.set( timestampSlot ); }
 
-        /** @brief 이번 프레임에 **비동기 컴퓨트 큐 리스트**가 슬롯 @p timestampSlot 을 적었습니다(`markWritten` 을 겸한다). 그래픽스 큐와 시간이 겹치는 슬롯이라 따로 가린다. */
+        /** @brief 이번 프레임에 비동기 컴퓨트 큐 리스트가 슬롯 @p timestampSlot 을 적었습니다(`markWritten` 을 겸한다). 그래픽스 큐와 시간이 겹치는 슬롯이라 따로 가린다. */
         void markComputeQueueWritten( uint32 timestampSlot )
         {
             _currentMask.set( timestampSlot );

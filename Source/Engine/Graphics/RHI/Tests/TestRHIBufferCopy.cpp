@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 
-// 버퍼 구간 복사(R-15 — 정점 풀이 GPU 원본에서 채운다) — 명령 리스트 계약의 인자가 그대로 기록된다(가짜 리스트가 받은 순서대로 적는다).
+// 버퍼 구간 복사(R-15, 정점 풀이 GPU 원본에서 채운다): 명령 리스트 계약의 인자가 그대로 기록된다(가짜 리스트가 받은 순서대로 적는다).
 
 using namespace sw;
 

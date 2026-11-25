@@ -223,9 +223,9 @@ namespace sw
         if ( _parallelBarrierReportCount.load( std::memory_order_relaxed ) >= 8 )
             return;
 
-        // 진단이다. 병렬 구간의 배리어는 둘 중 하나다: (1) 패스가 **쓰기로 선언한** 자원의 패스 안 왕복(`RenderGraphPassContext::transition`) — 쓰기 선언은
+        // 진단이다. 병렬 구간의 배리어는 둘 중 하나다: (1) 패스가 쓰기로 선언한 자원의 패스 안 왕복(`RenderGraphPassContext::transition`) — 쓰기 선언은
         // 그래프가 레벨 안 독점으로 가르므로 같은 레벨의 다른 리스트가 그 자원을 만지지 않아 맞다. (2) 렌더 패스 · 블릿이 대상 상태를 스스로 옮기는 것 · 선언이 빠진 자원 —
-        // 이것은 **안전하지 않다**: 추적 상태는 자원마다 값 하나이고 기록 시점의 비교 교환(RHITrackedState)은 "배리어를 낼 쪽 하나" 만 정한다. 같은 레벨의 리스트는 정한
+        // 이것은 안전하지 않다: 추적 상태는 자원마다 값 하나이고 기록 시점의 비교 교환(RHITrackedState)은 "배리어를 낼 쪽 하나" 만 정한다. 같은 레벨의 리스트는 정한
         // 순서로 실행되는데 기록 순서는 워커 경합이라, 뒤 리스트가 먼저 기록하며 전이를 가져가면 앞 리스트는 배리어 없이 먼저 실행된다(틀린 상태 — 둘의 상태가 다르면
         // DX12 장치 제거). RHI 는 어느 쪽인지 가를 수 없어 멈추지 않고 이름을 남긴다 — 여기 뜨는 이름이 (2) 라면 그 자원을 패스 선언에 넣는다.
         if ( _parallelBarrierReportCount.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
@@ -652,7 +652,7 @@ namespace sw
     IRHIDevice::~IRHIDevice()
     {
         // shutdown 을 거치지 않고 사라지는 디바이스(초기화 실패 경로 등)를 위한 안전망이다. 이 시점에는 백엔드 자원이
-        // 이미 없으므로 **돌려줄 수 없다.** 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
+        // 이미 없으므로 돌려줄 수 없다. 든 쪽이 핸들만 잊게 한다. 정상 경로는 아래 shutdown() 이다.
         RHIRenderResource::clearAllForDevice( this );
     }
 
@@ -924,7 +924,7 @@ namespace sw
         if ( _bShutDown )
             SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# GPU releases were queued after %# shut down - they run against destroyed native objects",
                            getPendingReleaseCount(), getBackendName() );
-        // 1 은 **자원을 내리기 전에** 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
+        // 1 은 자원을 내리기 전에 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
         RHIRenderResource::releaseAllForDevice( this );
         _pConstantBufferPagePool->releaseAllPages( *this ); // 구간을 든 쪽이 모두 놓은 뒤 — 남은 페이지는 없어야 하지만 새지 않게 돌려준다
         flushDeferredHandleReleases();

@@ -122,7 +122,7 @@ namespace sw
     RHIBufferHandle D3D11RHIResourceFactory::createBufferNative( const RHIBufferDesc& desc )
     {
         // 인다이렉트 인자 버퍼만 따로 만든다. D3D11 은 `DRAWINDIRECT_ARGS` 를 `BUFFER_STRUCTURED` 와
-        // **함께 쓸 수 없다.** 기본 경로(createStructuredBuffer)는 항상 STRUCTURED 로 만들므로, 간접 인자
+        // 함께 쓸 수 없다. 기본 경로(createStructuredBuffer)는 항상 STRUCTURED 로 만들므로, 간접 인자
         // 버퍼가 그리로 가면 DrawInstancedIndirect 가 조용히 아무것도 하지 않는다(디버그 레이어를 켜지
         // 않으면 흔적도 없다).
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) == false )
@@ -180,7 +180,7 @@ namespace sw
             if ( region._sizeBytes == 0 )
                 continue;
 
-            // 상자 없는 UpdateSubresource 는 버퍼 **전체**(ByteWidth)를 원본에서 읽는다 — 원본이 버퍼보다 짧으면(용량을 남겨 둔 풀이 줄었을 때)
+            // 상자 없는 UpdateSubresource 는 버퍼 전체(ByteWidth)를 원본에서 읽는다 — 원본이 버퍼보다 짧으면(용량을 남겨 둔 풀이 줄었을 때)
             // 원본 뒤를 넘어 읽어 드라이버 안에서 죽는다. 버퍼 전체를 덮는 조각일 때만 상자를 뺀다.
             if ( region._dstOffset == 0 && regionCount == 1 )
             {
@@ -919,7 +919,7 @@ namespace sw
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( stages._bHasVertexShader != SW_FALSE )
         {
-            // 셰이더 객체를 만들지 못하면 PSO 도 만들지 않는다(핸들 0). 주의: 실패를 그릴 때 "PS 가 없으면 건너뛴다" 로 삼키면 **원래 PS 가 없는**
+            // 셰이더 객체를 만들지 못하면 PSO 도 만들지 않는다(핸들 0). 주의: 실패를 그릴 때 "PS 가 없으면 건너뛴다" 로 삼키면 원래 PS 가 없는
             // 깊이 전용 PSO(그림자, 깊이 프리패스)의 드로우까지 버려진다(bindGraphicsPipelineForDraw 참고).
             const vector<uint8>& vsBytecode            = stages._vertex._bytecode;
             const bool           bShaderCreationFailed = isHrSuccess( _pDevice->_device->CreateVertexShader( vsBytecode.data(), vsBytecode.size(), nullptr, pso._vs.GetAddressOf() ), "CreateVertexShader" ) == false ||

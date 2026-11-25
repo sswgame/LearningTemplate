@@ -30,7 +30,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 2D 색 이미지의 **전체 밉 체인** 배리어 뼈대입니다. 레이아웃과 접근 마스크만 채우면 됩니다.
+         * @brief 2D 색 이미지의 전체 밉 체인 배리어 뼈대입니다. 레이아웃과 접근 마스크만 채우면 됩니다.
          * @details `transitionImageLayout` 은 밉 하나만 다루므로 업로드 · 리드백은 전체 밉 배리어를
          *          직접 씁니다. `aspectMask` 나 `layerCount` 를
          *          빠뜨린 새 배리어는 검증 계층이 잡아 주지만, **잡히는 곳이 배리어를 건 자리가 아니라
@@ -226,7 +226,7 @@ namespace sw
         if ( bInvalidBufferRegionUpload )
             return;
 
-        // **조각을 모두 한 스테이징에 모아 배리어 한 쌍 · 복사 한 번으로 끝낸다.** 조각마다 부르면
+        // 조각을 모두 한 스테이징에 모아 배리어 한 쌍 · 복사 한 번으로 끝낸다. 조각마다 부르면
         // 스테이징 확보와 제출이 그만큼 되풀이된다(DX12 에서 호출당 ~3.3 us).
         // `vkCmdCopyBuffer` 는 영역 배열을 그대로 받으므로 여기서는 나눌 이유가 아예 없다.
         constexpr uint32     kCopyAlignment = 4;
@@ -276,7 +276,7 @@ namespace sw
             if ( region._sizeBytes == 0 || region._dstOffset >= pRecord->_sizeBytes )
                 continue;
 
-            // 클램프는 **오프셋을 포함해서** 해야 한다(크기만 보면 앞에서부터 쓸 때만 맞는다).
+            // 클램프는 오프셋을 포함해서 해야 한다(크기만 보면 앞에서부터 쓸 때만 맞는다).
             uint32 copySize = region._sizeBytes;
             if ( copySize > pRecord->_sizeBytes - region._dstOffset )
                 copySize = static_cast<uint32>( pRecord->_sizeBytes - region._dstOffset );
@@ -302,7 +302,7 @@ namespace sw
 
         // 앞 프레임의 읽기(셰이더 · 간접 인자 · 컴퓨트 쓰기) 가 끝난 뒤에 복사하고, 복사가 끝난 뒤에 이번
         // 프레임이 읽는다. 상태 추적(_state)은 건드리지 않는다. 보수적인 마스크로 양쪽을 다 덮는다.
-        // 정점 · 인덱스 버퍼도 이 길로 올린다(기기 로컬 정적 자원 · 정점 풀 — R-15) — 정점 입력 단계의 읽기도 덮는다.
+        // 정점 · 인덱스 버퍼도 이 길로 올린다(기기 로컬 정적 자원 · 정점 풀, R-15). 정점 입력 단계의 읽기도 덮는다.
         constexpr VkAccessFlags kConsumerAccess = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
                                                   VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT;
         constexpr VkPipelineStageFlags kConsumerStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
@@ -930,7 +930,7 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 검사 · 링 할당 · 기록 · 제출 · 보관의 순서가 곧 의미라 나누지 않는다.
     RHITransferSubmit VulkanRHIResourceFactory::submitTextureReadbackNative( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
-        // **여기의 실패는 모두 소리를 낸다**(형제인 submitTextureUpload 와 같다). 리드백은 오프스크린 렌더 문제가
+        // 여기의 실패는 모두 소리를 낸다(형제인 submitTextureUpload 와 같다). 리드백은 오프스크린 렌더 문제가
         // 드러나는 경로라 "거절인데 이유가 없다" 가 곧 긴 추적이 된다.
         VulkanRHIDevice::VulkanTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureReadbackUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
@@ -1229,7 +1229,7 @@ namespace sw
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_textureRegistry.isLive( index ) )
             return false;
-        // 새 번호다 — 등록과 같은 길로 세트에 쓴다(`writeBindlessTextureSlot` — 장치에 맞는 링 쓰기).
+        // 새 번호라 등록과 같은 길로 세트에 쓴다(`writeBindlessTextureSlot`, 장치에 맞는 링 쓰기).
         _pDevice->writeBindlessTextureSlot( index, view, layout );
         return _pDevice->_textureRegistry.assign( index, texture, RHIBindlessLink::Borrowed ); // 예약한 번호는 받은 쪽(텍스처 캐시)의 것이다
     }
@@ -1431,8 +1431,8 @@ namespace sw
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-        // 정점 속성은 **공용 표**(메시 정점 형식의 표 — constant::render::getMeshVertexAttributes)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
-        // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다. 바인딩도 읽는 슬롯만 선언한다 — 정점 입력이 없는 셰이더는
+        // 정점 속성은 공용 표(메시 정점 형식의 표 — constant::render::getMeshVertexAttributes)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
+        // 뗀 입력)은 빼고 건다. 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다. 바인딩도 읽는 슬롯만 선언한다. 정점 입력이 없는 셰이더는
         // 바인딩이 없어 정점 버퍼 없이 그린다. stride 는 슬롯의 원소 크기(위치 · 인스턴스 슬롯 · 형식의 속성), 인스턴스 슬롯 스트림만 인스턴스 스텝이다.
         const uint32                    consumedMask    = stages._consumedAttributeMask;
         const uint32                    vertexSlotMask  = stages._vertexSlotMask;
