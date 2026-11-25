@@ -18,6 +18,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
@@ -317,8 +318,8 @@ namespace sw
         /** @brief 게임이 주는 부스트(대시 판, 버섯)를 겁니다. 남은 시간보다 길 때만 바꿉니다. 부스트 모듈이 꺼져 있으면 아무 일도 없습니다. */
         void startBoost( float32 duration, int32 source = -1 );
 
-        /** @brief 한 걸음 나아갑니다. */
-        void update( const KinematicVehicleInput& input, float32 deltaTime );
+        /** @brief 고정 걸음 하나 @p step 만큼 나아갑니다. 프레임 시간은 `advance` 가 걸음으로 나눠 받는다 — 걸음이 없는 프레임의 눌림을 쥐는 자리가 거기다(결함 511b3359). */
+        void update( const KinematicVehicleInput& input, StepSeconds step );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 다음 걸음 하나에 주며(걸음이 없는 프레임의 눌림은 다음 걸음까지 남는다), 진행한 걸음 수를 반환합니다. */
         int32 advance( const KinematicVehicleInput& input, GameSeconds frameTime );
         void  pollEvents( vector<KinematicVehicleEvent>& outListEvent );

@@ -16,6 +16,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -224,7 +225,7 @@ namespace sw
          * @details 예산은 그 걸음의 시간 @p stepSeconds 가 채운다 — 시계를 따로 재지 않는다. 걸음 수(흐른 시간)는 서버의 입력 몫(`ReplicationServer::accumulateInputBudget`)이 막는다.
          *          예산을 게임 시간으로 채우면 입력 몫(실제 시간)과 흐름이 달라, 서버가 프레임을 놓칠 때마다 몫이 모자라 정직한 걸음을 되돌렸다.
          */
-        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, float32 stepSeconds, bool bRiding );
+        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, StepSeconds stepSeconds, bool bRiding );
         HubActionResult inviteToParty( uint32 avatarID, uint32 targetAvatarID );
         HubActionResult acceptPartyInvite( uint32 avatarID, uint32 leaderAvatarID );
         HubActionResult leaveParty( uint32 avatarID );

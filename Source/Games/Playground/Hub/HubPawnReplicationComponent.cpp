@@ -368,7 +368,7 @@ namespace sw
             pRemote->getOwner()->setAlwaysLoaded( true );
             // 저장된 자리 · 시작 자리에 다른 몸이 서 있으면 곁의 빈 자리에 세운다(언리얼 `FindTeleportSpot`). 빈 자리가 없거나 규칙이 받지 않으면 그 자리 그대로다(서로 밀려난다).
             const optional<float3> spot = pObject->getComponent<CharacterControllerComponent>()->findFreeSpot( origin.toLocal( session._position ), _spawnSearchRadius );
-            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, AbsolutePosition{ origin.toAbsolute( *spot ) }, 0.0f, false ) == HubActionResult::Ok )
+            if ( spot.has_value() && hub.findServer()->moveAvatar( session._avatarID, AbsolutePosition{ origin.toAbsolute( *spot ) }, StepSeconds{}, false ) == HubActionResult::Ok )
             {
                 pawn._acceptedPosition = AbsolutePosition{ origin.toAbsolute( *spot ) };
                 pObject->getPrimarySceneComponent()->teleportTo( *spot );
@@ -438,7 +438,7 @@ namespace sw
             if ( pRemote != nullptr )
                 pRemote->receiveIntent( *inputTick, bOwnPawn ? input._intent : Internal::makeNeutralIntent( input._intent ) ); // 상호작용(타기 · 내리기)은 이 의도로 서버의 폰이 한다
             state = simulateTick( manager, hub, *pObject, state, input, pawn._avatarID, CharacterMotionPass::Live );
-            if ( hub.findServer()->moveAvatar( pawn._avatarID, Internal::getPosition( state ), _tickInterval, state._mountNumber != 0 ) == HubActionResult::Ok )
+            if ( hub.findServer()->moveAvatar( pawn._avatarID, Internal::getPosition( state ), StepSeconds{ _tickInterval }, state._mountNumber != 0 ) == HubActionResult::Ok )
                 pawn._acceptedPosition = Internal::getPosition( state );
             else
             {

@@ -9,7 +9,15 @@
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 #include "GameFramework/Runtime/World/Spline/SplinePath.h"
 
+#include <type_traits>
+
 using namespace sw;
+
+// 결함 511b3359(높은 프레임률에서 걸음이 없는 프레임의 부스트 · 점프 누름이 사라졌다): 프레임 시간은 눌림을 쥐는 `advance` 만 받고, 한 걸음(`update`)은 고정 스텝만 받는다 —
+// 프레임 시간을 걸음 함수에 바로 넣거나 걸음 길이를 프레임 진입점에 넣는 꼴이 컴파일되지 않는다.
+static_assert( std::is_invocable_v<decltype( &KinematicVehicleMotor::update ), KinematicVehicleMotor&, const KinematicVehicleInput&, StepSeconds>, "a step advances by one fixed step" );
+static_assert( std::is_invocable_v<decltype( &KinematicVehicleMotor::update ), KinematicVehicleMotor&, const KinematicVehicleInput&, GameSeconds> == false, "a frame time is not one step" );
+static_assert( std::is_invocable_v<decltype( &KinematicVehicleMotor::advance ), KinematicVehicleMotor&, const KinematicVehicleInput&, StepSeconds> == false, "the frame entry takes the frame time" );
 
 namespace
 {
@@ -59,7 +67,7 @@ namespace
         {
             const int32 stepCount = static_cast<int32>( seconds / kStep + 0.5f );
             for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
-                motor.update( KinematicVehicleInput{}, kStep );
+                motor.update( KinematicVehicleInput{}, sw::StepSeconds{ kStep } );
         }
 
         /** @brief @p rise 비탈 위에서 @p yaw 로 놓고 @p speed 로 밀어 @p seconds 뒤의 앞 속도입니다. */
@@ -212,7 +220,7 @@ SW_TEST_CASE( KinematicVehicleMotorTest, DisabledModulesDoNothing )
     SW_EXPECT_FALSE( motor.isBoosting() );
     KinematicVehicleInput jump;
     jump._bJumpPressed = SW_TRUE;
-    motor.update( jump, Util::kStep );
+    motor.update( jump, sw::StepSeconds{ Util::kStep } );
     SW_EXPECT_FALSE( motor.isAirborne() );
     SW_EXPECT_NEAR( 0.0f, motor.getPosition()._y, 1.0e-5f );
 }

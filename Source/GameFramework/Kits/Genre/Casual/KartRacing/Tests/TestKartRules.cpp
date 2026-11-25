@@ -355,7 +355,7 @@ SW_TEST_CASE( KartTrackTest, SlopeAndSurfaceZonesChangeTheKart )
         input._throttle = 1.0f;
         input._steer    = steer;
         for ( int32 stepIndex = 0; stepIndex < static_cast<int32>( seconds * 60.0f + 0.5f ); ++stepIndex )
-            motor.update( input, 1.0f / 60.0f );
+            motor.update( input, sw::StepSeconds{ 1.0f / 60.0f } );
         outLateral = sw::MathUtil::abs( motor.getLateralSpeed() );
         return motor.getForwardSpeed();
     };

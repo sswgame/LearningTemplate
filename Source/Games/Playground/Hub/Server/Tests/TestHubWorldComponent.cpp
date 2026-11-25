@@ -30,7 +30,7 @@ namespace
         void            update( float32 ) override {}
         void            shutdown() override { ++_shutdownCount; }
         void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override { outListSession.clear(); }
-        HubActionResult moveAvatar( uint32, const AbsolutePosition&, float32, bool ) override { return HubActionResult::Ok; }
+        HubActionResult moveAvatar( uint32, const AbsolutePosition&, StepSeconds, bool ) override { return HubActionResult::Ok; }
 
     private:
         int32& _shutdownCount;

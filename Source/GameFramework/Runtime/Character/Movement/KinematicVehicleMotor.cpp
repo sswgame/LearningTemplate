@@ -127,8 +127,9 @@ namespace sw
         pushEvent( KinematicVehicleEvent::Kind::BoostStarted, source );
     }
 
-    void KinematicVehicleMotor::update( const KinematicVehicleInput& input, float32 deltaTime )
+    void KinematicVehicleMotor::update( const KinematicVehicleInput& input, const StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         if ( deltaTime <= 0.0f )
             return;
         KinematicVehicleInput clamped = input;
@@ -239,7 +240,7 @@ namespace sw
         _bJumpQueued             = SW_FALSE;
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
-            update( stepInput, _timer.getStep().count() );
+            update( stepInput, _timer.getStep() );
             stepInput._bBoostPressed = SW_FALSE;
             stepInput._bJumpPressed  = SW_FALSE;
         }

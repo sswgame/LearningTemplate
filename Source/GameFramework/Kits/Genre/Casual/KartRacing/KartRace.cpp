@@ -314,7 +314,7 @@ namespace sw
             updateRubberBand( racer );
 
             kart._previousPosition = kart._motor.getPosition();
-            kart._motor.update( input, deltaTime );
+            kart._motor.update( input, StepSeconds{ deltaTime } );
             if ( _pTrack->applyBoostPad( kart._motor, kart._lastBoostPad ) )
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, nullopt, kart._lastBoostPad, _raceTime );
             pushVehicleEvents( racer );
