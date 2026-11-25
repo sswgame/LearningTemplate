@@ -80,6 +80,8 @@ namespace sw
     private:
         PROPERTY( Category = "Combat", DisplayName = "Boss Delay", Tooltip = "Seconds between clearing the hall (or entering a boss region) and the boss fight", Min = 0.1, Units = s )
         float32 _bossDelaySeconds;
+        PROPERTY( Required, Category = "Player", DisplayName = "Room", Tooltip = "Dash, invulnerability, attack cooldown and damage of the player; every value is required" )
+        ActionRoomSettings _roomSettings;
 
         SW_TRANSIENT ActionRoom   _room;
         SW_TRANSIENT Countdown    _bossDelay;

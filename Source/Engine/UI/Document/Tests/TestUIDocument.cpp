@@ -136,32 +136,30 @@ SW_TEST_CASE( UIDocumentTest, SelectedOptionShowsItsText )
     SW_EXPECT_EQUAL( constant::invalid_index::kUint32, pOutOfRange->getSelectedIndex() );
 }
 
-/** @brief [UIDocumentTest] 문서에 적은 슬라이더 값 · 진행 비율 · 불투명도 · 줄 높이는 세터와 같은 범위로 제한된다 */
+/** @brief [UIDocumentTest] 문서에 적은 슬라이더 값 · 줄 높이는 세터와 같은 범위로 제한되고, 칸이 선언한 범위 밖의 값(음수 걸음 · 1 넘는 진행 비율 · 불투명도)은 읽기가 거절한다 */
 SW_TEST_CASE( UIDocumentTest, WrittenValuesAreLimitedLikeTheSetters )
 {
-    // 음수 걸음(`_step`)은 칸의 `Min = 0` 이 읽기에서 거절한다(Serialization.ValueOutOfRange) — 세터처럼 제한되는 것은 범위가 칸 사이에 걸린 값뿐이다.
-    UIDocumentWidgets        document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _value=\"25\" />"
-                                              "<SliderWidget _name=\"Inverted\" _minValue=\"5\" _maxValue=\"1\" _value=\"3\" />"
-                                              "<ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" _opacity=\"2\" />"
-                                              "<ListViewWidget _name=\"List\" _rowHeight=\"0\" />" );
-    const SliderWidget*      pSlider   = document.find<SliderWidget>( "Slider" );
-    const SliderWidget*      pInverted = document.find<SliderWidget>( "Inverted" );
-    const ProgressBarWidget* pProgress = document.find<ProgressBarWidget>( "Progress" );
-    const ListViewWidget*    pList     = document.find<ListViewWidget>( "List" );
-    SW_REQUIRE_TRUE( pSlider != nullptr && pInverted != nullptr && pProgress != nullptr && pList != nullptr );
+    // 칸의 `Min` · `Max` 가 막는 값(`_step` · `_percent` · `_opacity`)은 읽기에서 거절한다(Serialization.ValueOutOfRange) — 세터처럼 제한되는 것은 범위가 칸 사이에 걸린 값뿐이다.
+    UIDocumentWidgets     document( "<SliderWidget _name=\"Slider\" _minValue=\"0\" _maxValue=\"10\" _value=\"25\" />"
+                                        "<SliderWidget _name=\"Inverted\" _minValue=\"5\" _maxValue=\"1\" _value=\"3\" />"
+                                        "<ListViewWidget _name=\"List\" _rowHeight=\"0\" />" );
+    const SliderWidget*   pSlider   = document.find<SliderWidget>( "Slider" );
+    const SliderWidget*   pInverted = document.find<SliderWidget>( "Inverted" );
+    const ListViewWidget* pList     = document.find<ListViewWidget>( "List" );
+    SW_REQUIRE_TRUE( pSlider != nullptr && pInverted != nullptr && pList != nullptr );
     SW_EXPECT_EQUAL( 10.0f, pSlider->getValue() );
     SW_EXPECT_EQUAL( 5.0f, pInverted->getValue() );
-    SW_EXPECT_EQUAL( 1.0f, pProgress->getPercent() );
-    SW_EXPECT_EQUAL( 1.0f, pProgress->getOpacity() );
     SW_EXPECT_EQUAL( 1.0f, pList->getRowHeight() );
 
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    UIDocumentAsset negativeStep;
-    SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( "<BoxPanel><SliderWidget _name=\"Slider\" _step=\"-1\" /></BoxPanel>" ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), negativeStep )
-                         .has_value() );
-    UIDocumentCache      cache;
-    vector<UIBindingDef> listBinding;
-    SW_EXPECT_TRUE( UIDocumentLoader::instantiate( negativeStep, cache, ResourceTagSet{}, listBinding ).value_or( nullptr ) == nullptr );
+    for ( const char* pWidget : { "<SliderWidget _name=\"Slider\" _step=\"-1\" />", "<ProgressBarWidget _name=\"Progress\" _percent=\"1.5\" />", "<ProgressBarWidget _name=\"Progress\" _opacity=\"2\" />" } )
+    {
+        UIDocumentAsset outOfRange;
+        SW_REQUIRE_TRUE( UIDocumentLoader::parse( makeDocument( formatstring( "<BoxPanel>%#</BoxPanel>", pWidget ).c_str() ), "engine/ui/test.ui.xml", ResourceContext::forDocument(), outOfRange ).has_value() );
+        UIDocumentCache      cache;
+        vector<UIBindingDef> listBinding;
+        SW_EXPECT_TRUE( UIDocumentLoader::instantiate( outOfRange, cache, ResourceTagSet{}, listBinding ).value_or( nullptr ) == nullptr );
+    }
 }
 
 /** @brief [UIDocumentTest] 문서에 적은 글 입력 칸은 글이 있으면 글(커서는 글 끝), 없으면 힌트를 보인다 */

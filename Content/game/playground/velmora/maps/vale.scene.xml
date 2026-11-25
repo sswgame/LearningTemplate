@@ -135,7 +135,9 @@
 					</AdventureGameModeComponent>
 					<VelmoraEncounterGameModeComponent _localID="4127093356280147511" _componentName="VelmoraEncounterGameModeComponent"
 					                                   _bActive="true"
-					                                   _bossDelaySeconds="1" />
+					                                   _bossDelaySeconds="1">
+						<_roomSettings _dashCooldownSeconds="0.85" _dashInvulnerableSeconds="0.22" _hitInvulnerableSeconds="0.7" _attackCooldownSeconds="0.28" _playerAttackDamage="34" />
+					</VelmoraEncounterGameModeComponent>
 					<AdventureAvatarComponent _localID="2290617745103849062" _componentName="AdventureAvatarComponent"
 					                          _bActive="true"
 					                          _moveAction="Move"

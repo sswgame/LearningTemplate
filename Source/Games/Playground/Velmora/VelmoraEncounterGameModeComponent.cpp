@@ -42,6 +42,7 @@ namespace sw
 
     VelmoraEncounterGameModeComponent::VelmoraEncounterGameModeComponent()
         : _bossDelaySeconds{ 1.0f }
+        , _roomSettings{}
         , _room{}
         , _bossDelay{}
         , _phase{ VelmoraPhase::Explore }
@@ -127,6 +128,7 @@ namespace sw
         ActionRoomLayout layout;
         layout._listHallSpawn = VelmoraEncounterGameModeComponentInternal::makeRoomSpawns( region._listHallSpawn );
         layout._listBossSpawn = VelmoraEncounterGameModeComponentInternal::makeRoomSpawns( region._listBossSpawn );
+        _room.setSettings( _roomSettings ); // 룸 규칙에는 기본값이 없다 — 씬 데이터가 그대로 들어간다(ActionCombatGameModeComponent 와 같다)
         _room.setLayout( layout );
         if ( region._listHallSpawn.empty() )
         {
