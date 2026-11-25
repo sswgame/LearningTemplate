@@ -791,3 +791,23 @@ namespace sw::editor
         return true;
     }
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    ContentBrowserReferenceSearch::ContentBrowserReferenceSearch()
+        : _queryID{}
+        , _listResult{}
+        , _bDependencyQuery{ SW_FALSE }
+    {
+    }
+
+    void ContentBrowserReferenceSearch::query( const EditorAssetIndex& index, const AbsolutePath& absolutePath, bool bDependencies )
+    {
+        _queryID          = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
+        _bDependencyQuery = bDependencies ? SW_TRUE : SW_FALSE;
+        if ( bDependencies )
+            index.findDependencies( _queryID, _listResult );
+        else
+            index.findReferrers( _queryID, _listResult );
+    }
+} // namespace sw::editor

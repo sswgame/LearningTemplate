@@ -17,7 +17,6 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
-#include "Editor/Panels/Catalog/Model/CatalogFileList.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"

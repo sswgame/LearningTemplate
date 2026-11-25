@@ -2,14 +2,39 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickCircuitEditSession.h"
 
+#include "Core/Foundation/Types.h"
+
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/TypeInfo.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickGraphBridge.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickGraphEditModel.h"
+#include "GameFramework/Runtime/Foundation/Service/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.h"
+
+// `GimmickGraphEditModel` 과 `GimmickCircuitComponent` 사이의 읽기 · 쓰기입니다. 컴포넌트의 저장 목록(비공개 PROPERTY)을 리플렉션으로 읽고 씁니다. 컴포넌트는 노드 · 대상 · 배선 목록을 getter 없이 비공개 PROPERTY 로만 둔다(인스펙터와 직렬화기가 리플렉션으로 만진다). 에디터도 같은 길을 쓴다 — 컴포넌트 헤더에 편집기 전용 getter 를 더하지 않는다. 쓴 뒤에는 컴포넌트의 `onPropertyChanged` 를 불러 회로를 다시 짓는다(인스펙터가 속성을 고친 것과 같은 알림).
+namespace sw::editor
+{
+    namespace
+    {
+        /**
+         * @struct GimmickGraphBridge
+         * @brief 모델 ↔ 컴포넌트 변환입니다.
+         */
+        struct GimmickGraphBridge
+        {
+            /** @brief 컴포넌트가 저장한 목록으로 @p outModel 을 채웁니다. 리플렉션에서 속성을 못 찾으면 false 입니다. */
+            [[nodiscard]] static bool load( const GimmickCircuitComponent& component, GimmickGraphEditModel& outModel );
+            /** @brief 모델의 목록을 컴포넌트에 쓰고 회로를 다시 짓습니다. 속성을 못 찾으면 false 이고 컴포넌트는 그대로입니다. */
+            [[nodiscard]] static bool apply( GimmickCircuitComponent& component, const GimmickGraphEditModel& model );
+            /** @brief 컴포넌트가 저장한 내용의 서명입니다(`GimmickGraphEditModel::computeSignature` 와 같은 값). 읽지 못하면 0 입니다. 에디터가 바깥 변경(되돌리기 · 인스펙터)을 알아볼 때 부릅니다. */
+            static uint64 computeSignature( const GimmickCircuitComponent& component );
+        };
+    } // namespace
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -109,6 +134,71 @@ namespace sw::editor
         if ( GimmickGraphBridge::apply( *pCircuit, model ) == false )
             return false;
         transaction.recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), pLabel );
+        return true;
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief 컴포넌트 타입에서 PROPERTY 하나를 찾습니다. 상속분도 봅니다. */
+        const PropertyInfo* findProperty( const GimmickCircuitComponent& component, const utf8* pName )
+        {
+            const TypeInfo* pType = component.getTypeInfo();
+            return pType != nullptr ? pType->findPropertyInHierarchy( hashed_string( pName ) ) : nullptr;
+        }
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    bool GimmickGraphBridge::load( const GimmickCircuitComponent& component, GimmickGraphEditModel& outModel )
+    {
+        const PropertyInfo* pNode            = findProperty( component, "_listNode" );
+        const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
+        const PropertyInfo* pWire            = findProperty( component, "_listWire" );
+        const PropertyInfo* pComment         = findProperty( component, "_listComment" );
+        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr || pComment == nullptr;
+        if ( bMissingProperty )
+            return false;
+        const vector<GimmickNodeDesc>*  pListNode        = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<const void*>( &component ) );
+        const vector<GameObjectHandle>* pListTarget      = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<const void*>( &component ) );
+        const vector<GimmickWireDesc>*  pListWire        = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<const void*>( &component ) );
+        const vector<GraphCommentBox>*  pListComment     = pComment->getValuePtr<vector<GraphCommentBox>>( static_cast<const void*>( &component ) );
+        const bool                      bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr || pListComment == nullptr;
+        if ( bMissingValuePtr )
+            return false;
+        outModel.populate( *pListNode, *pListTarget, *pListWire, *pListComment );
+        return true;
+    }
+
+    uint64 GimmickGraphBridge::computeSignature( const GimmickCircuitComponent& component )
+    {
+        GimmickGraphEditModel scratch( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
+        if ( load( component, scratch ) == false )
+            return 0;
+        return scratch.computeSignature();
+    }
+
+    bool GimmickGraphBridge::apply( GimmickCircuitComponent& component, const GimmickGraphEditModel& model )
+    {
+        const PropertyInfo* pNode            = findProperty( component, "_listNode" );
+        const PropertyInfo* pTarget          = findProperty( component, "_listNodeTarget" );
+        const PropertyInfo* pWire            = findProperty( component, "_listWire" );
+        const PropertyInfo* pComment         = findProperty( component, "_listComment" );
+        const bool          bMissingProperty = pNode == nullptr || pTarget == nullptr || pWire == nullptr || pComment == nullptr;
+        if ( bMissingProperty )
+            return false;
+        vector<GimmickNodeDesc>*  pListNode        = pNode->getValuePtr<vector<GimmickNodeDesc>>( static_cast<void*>( &component ) );
+        vector<GameObjectHandle>* pListTarget      = pTarget->getValuePtr<vector<GameObjectHandle>>( static_cast<void*>( &component ) );
+        vector<GimmickWireDesc>*  pListWire        = pWire->getValuePtr<vector<GimmickWireDesc>>( static_cast<void*>( &component ) );
+        vector<GraphCommentBox>*  pListComment     = pComment->getValuePtr<vector<GraphCommentBox>>( static_cast<void*>( &component ) );
+        const bool                bMissingValuePtr = pListNode == nullptr || pListTarget == nullptr || pListWire == nullptr || pListComment == nullptr;
+        if ( bMissingValuePtr )
+            return false;
+        model.exportTo( *pListNode, *pListTarget, *pListWire, *pListComment );
+        component.onPropertyChanged( hashed_string( "_listNode" ) ); // 인스펙터가 속성을 고쳤을 때와 같은 알림 - 회로를 다시 짓는다
         return true;
     }
 } // namespace sw::editor

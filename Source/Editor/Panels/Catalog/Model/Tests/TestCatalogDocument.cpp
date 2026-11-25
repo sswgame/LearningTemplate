@@ -8,7 +8,6 @@
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
-#include "Editor/Panels/Catalog/Model/CatalogFileList.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
 #include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"

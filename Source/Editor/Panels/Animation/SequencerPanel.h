@@ -7,7 +7,6 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
-#include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
 #include "Editor/Panels/Animation/Model/SequenceEditModel.h"
 #include "Editor/Panels/Animation/Model/SequencerViewModel.h"
 
