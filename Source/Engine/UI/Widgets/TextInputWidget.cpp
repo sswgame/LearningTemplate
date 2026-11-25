@@ -119,8 +119,10 @@ namespace sw
         , _caretByte{ 0 }
         , _anchorByte{ 0 }
         , _bKeepCaretOnFocus{ false }
+        , _bHintShown{ false }
         , _text{}
         , _hintText{}
+        , _bLocalized{ true }
         , _maxLength{ 0 }
         , _textColor{ UIWidgetSkin::get()._textInput._textColor }
         , _hintColor{ UIWidgetSkin::get()._textInput._hintColor }
@@ -198,7 +200,7 @@ namespace sw
         BorderPanel::synchronizeProperties();
         // 바인딩이 되쓴 값(우리가 방금 편집한 글)은 커서를 그대로 두고, 더 짧은 글로 바뀌었으면 글 안으로 물린다.
         // 힌트를 보이던(빈) 칸에 글이 들어왔으면 세터처럼 글 끝이다.
-        const bool bWasEmpty = _pDisplay->isLocalized();
+        const bool bWasEmpty = _bHintShown;
         _caretByte           = bWasEmpty ? static_cast<uint32>( _text.size() ) : TextInputWidgetInternal::snapToBoundary( _text, _caretByte );
         _anchorByte          = bWasEmpty ? _caretByte : TextInputWidgetInternal::snapToBoundary( _text, _anchorByte );
         refreshDisplay();
@@ -207,7 +209,8 @@ namespace sw
     void TextInputWidget::refreshDisplay()
     {
         const bool bHint = _text.empty() && _composition.empty();
-        _pDisplay->setLocalized( bHint ); // 힌트는 현지화 키일 수 있고, 사용자가 입력한 텍스트는 해석하지 않는다
+        _bHintShown      = bHint;
+        _pDisplay->setLocalized( bHint && _bLocalized ); // 힌트는 현지화 키일 수 있고, 사용자가 입력한 텍스트는 해석하지 않는다
         if ( bHint )
         {
             _pDisplay->setText( _hintText );

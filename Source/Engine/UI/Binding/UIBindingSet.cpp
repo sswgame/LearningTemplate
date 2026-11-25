@@ -241,7 +241,7 @@ namespace sw
         const Widget* pWidget = _pScreen->getTree().findWidgetByID( desc._widget );
         if ( pWidget == nullptr || pWidget->getTypeInfo() == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "the widget is not in the screen" } );
-        if ( expected<void> resolved = UIBindingValue::resolvePath( *pWidget->getTypeInfo(), desc._propertyPath, binding._target ); resolved.has_value() == false )
+        if ( expected<void> resolved = UIBindingValue::resolveWidgetTarget( *pWidget->getTypeInfo(), desc._propertyPath, binding._target ); resolved.has_value() == false )
             return resolved;
         UIBindingValueKind sourceKind     = UIBindingValueKind::None;
         hashed_string      sourceTypeName = {};

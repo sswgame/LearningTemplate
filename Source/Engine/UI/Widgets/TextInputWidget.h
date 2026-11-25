@@ -113,10 +113,13 @@ namespace sw
         uint32       _caretByte;
         uint32       _anchorByte;
         bool         _bKeepCaretOnFocus; ///< 포인터로 눌러 정한 커서를 곧 올 포커스 알림이 글 끝으로 덮지 않게 합니다.
-        PROPERTY( DisplayName = "Text" )
+        bool         _bHintShown;        ///< 지금 힌트를 보이고 있습니다(글과 조합이 비었다).
+        PROPERTY( DisplayName = "Text", Meta = "NotLocalizable" )
         string _text;
-        PROPERTY( DisplayName = "Hint Text", Tooltip = "Shown dimmed while the field is empty" )
+        PROPERTY( DisplayName = "Hint Text", Meta = "Localizable, LocalizableIf=_bLocalized", Tooltip = "Shown dimmed while the field is empty (localization key, or the text itself when the tables have no such key)" )
         string _hintText;
+        PROPERTY( DisplayName = "Localized", Tooltip = "Resolve the hint as a localization key" )
+        bool _bLocalized;
         PROPERTY( DisplayName = "Max Length", Tooltip = "Maximum code points; 0 = unlimited" )
         uint32 _maxLength;
         PROPERTY( DisplayName = "Text Color" )

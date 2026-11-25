@@ -102,7 +102,7 @@
 						<_style _fontSize="18" />
 						<_slot _widthOverride="140" _verticalAlignment="Center" />
 					</TextWidget>
-					<TextInputWidget _name="NameInput" _hintText="Player name">
+					<TextInputWidget _name="NameInput" _hintText="Player name" _bLocalized="false">
 						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
 					</TextInputWidget>
 				</BoxPanel>

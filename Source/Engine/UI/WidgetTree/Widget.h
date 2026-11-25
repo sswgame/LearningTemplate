@@ -157,6 +157,8 @@ namespace sw
         virtual void synchronizeProperties();
         /** @brief 바인딩 · 애니메이션 · 편집기가 필드 @p property(경로의 맨 위 필드)에 리플렉션으로 값을 쓴 뒤 부릅니다. 파생 상태를 맞추고 무효화합니다. */
         void notifyPropertyWritten( const PropertyInfo& property );
+        /** @brief @p property 가 위젯의 식별자(`_name`)이면 true 입니다. 바인딩 · 애니메이션의 대상이 될 수 없습니다(편집기만 쓴다). */
+        static bool isIdentityProperty( const PropertyInfo& property );
         /** @brief 텍스트 버전(현지화: 언어 변경, 테이블 다시 읽기)이 바뀌었을 때 부릅니다. 텍스트 위젯은 키를 다시 찾고 kLayout 으로 무효화합니다. 기본은 아무것도 하지 않습니다. */
         virtual void onTextRevisionChanged();
         /** @brief 입력 장치 종류(글리프: 키보드, 패드)가 바뀌었을 때 부릅니다. 액션 태그(`[action=이름]`)를 가진 텍스트 위젯은 다시 해석하고 kLayout 으로 무효화합니다. 기본은 아무것도 하지 않습니다. */

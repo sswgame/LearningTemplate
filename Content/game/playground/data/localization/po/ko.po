@@ -474,6 +474,56 @@ msgctxt "Hour"
 msgid "Hour"
 msgstr "시각"
 
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Blue"
+msgid "B"
+msgstr "파랑"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Card"
+msgid "{color}{value}"
+msgstr "{color}{value}"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.DrawTwo"
+msgid "+2"
+msgstr "+2"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Green"
+msgid "G"
+msgstr "초록"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Red"
+msgid "R"
+msgstr "빨강"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Reverse"
+msgid "V"
+msgstr "리버스"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Skip"
+msgid "S"
+msgstr "스킵"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Wild"
+msgid "W"
+msgstr "와일드"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.WildDrawFour"
+msgid "W+4"
+msgstr "와일드+4"
+
+#: Source/Games/Playground/Hub/HubCardHUDViewModel.cpp
+msgctxt "HubCard.Yellow"
+msgid "Y"
+msgstr "노랑"
+
 #. Context: TextWidget._text
 #: game/playground/coopscavenger/ui/hud.ui.xml
 msgctxt "In orbit - Move and Use buy from the terminal, the lever lands"

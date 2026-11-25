@@ -316,8 +316,15 @@ namespace sw
 
     void Widget::notifyPropertyWritten( const PropertyInfo& property )
     {
+        if ( _pTree != nullptr && isIdentityProperty( property ) )
+            _pTree->refreshName( *this ); // 편집기가 세터를 거치지 않고 이름을 썼다 — 옛 이름으로 찾히지 않게 한다
         synchronizeProperties();
         onBoundPropertyChanged( property );
+    }
+
+    bool Widget::isIdentityProperty( const PropertyInfo& property )
+    {
+        return &property == StaticType()->findPropertyInHierarchy( hashed_string( "_name" ) );
     }
 
     void Widget::onBoundPropertyChanged( const PropertyInfo& property )

@@ -471,6 +471,7 @@ namespace sw::editor
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( _selected ) : nullptr;
         if ( pWidget == nullptr || _selectedOrdinal.has_value() == false )
             return;
+        pWidget->notifyPropertyWritten( prop ); // 인스펙터는 칸에 바로 쓴다 — 파생 상태 · 이름 표 · 무효화를 맞춘다
         setDirty( true );
         if ( prop._containerKind != ContainerKind::None )
         {

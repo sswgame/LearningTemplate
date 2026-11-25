@@ -8,6 +8,8 @@
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/UI/Animation/UIAnimatedProperty.h"
+#include "Engine/UI/Binding/UIBindingValue.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
@@ -193,6 +195,44 @@ SW_TEST_CASE( UIDocumentTest, WritingOnePropertySynchronizesAndInvalidates )
     SW_REQUIRE_TRUE( ( pCheck->getDirtyFlags() & WidgetDirty::kStyle ) == 0 );
     pCheck->notifyPropertyWritten( *pChecked );
     SW_EXPECT_TRUE( ( pCheck->getDirtyFlags() & WidgetDirty::kStyle ) != 0 );
+}
+
+/** @brief [UIDocumentTest] 편집기가 리플렉션으로 이름을 쓴 뒤의 알림은 이름 표를 옮긴다 — 옛 이름으로는 찾히지 않는다 */
+SW_TEST_CASE( UIDocumentTest, WritingTheNameMovesItInTheTree )
+{
+    UIDocumentWidgets   document( "<TextWidget _name=\"Old\" />" );
+    TextWidget*         pText = document.find<TextWidget>( "Old" );
+    const PropertyInfo* pName = TextWidget::StaticType()->findPropertyInHierarchy( hashed_string( "_name" ) );
+    SW_REQUIRE_TRUE( pText != nullptr && pName != nullptr );
+    *pName->getValuePtr<hashed_string>( pText ) = hashed_string( "New" );
+    pText->notifyPropertyWritten( *pName );
+    SW_EXPECT_NULL( document.find<TextWidget>( "Old" ) );
+    SW_EXPECT_TRUE( document.find<TextWidget>( "New" ) == pText );
+}
+
+/** @brief [UIDocumentTest] 위젯의 이름은 바인딩 · 애니메이션 대상이 아니다 — 다른 칸은 된다 */
+SW_TEST_CASE( UIDocumentTest, NameIsNotABindingTarget )
+{
+    UIPropertyPath     path{};
+    UIAnimatedProperty animated{};
+    SW_EXPECT_TRUE( UIBindingValue::resolveWidgetTarget( *TextWidget::StaticType(), "_text", path ).has_value() );
+    const expected<void> bound = UIBindingValue::resolveWidgetTarget( *TextWidget::StaticType(), "_name", path );
+    SW_REQUIRE_TRUE( bound.has_value() == false );
+    SW_EXPECT_TRUE( bound.error().kind() == ErrorKind::Unsupported );
+    SW_EXPECT_FALSE( path.isValid() );
+    SW_EXPECT_TRUE( UIAnimatedProperty::resolve( *TextWidget::StaticType(), "_opacity", animated ).has_value() );
+    SW_EXPECT_FALSE( UIAnimatedProperty::resolve( *TextWidget::StaticType(), "_name", animated ).has_value() );
+}
+
+/** @brief [UIDocumentTest] 힌트는 기본이 현지화 키이고, 끄면 글 그대로다 */
+SW_TEST_CASE( UIDocumentTest, HintFollowsItsLocalizedSwitch )
+{
+    UIDocumentWidgets      document( "<TextInputWidget _name=\"Key\" _hintText=\"Player name\" /><TextInputWidget _name=\"Plain\" _hintText=\"Player name\" _bLocalized=\"false\" />" );
+    const TextInputWidget* pKey   = document.find<TextInputWidget>( "Key" );
+    const TextInputWidget* pPlain = document.find<TextInputWidget>( "Plain" );
+    SW_REQUIRE_TRUE( pKey != nullptr && pPlain != nullptr );
+    SW_EXPECT_TRUE( castTo<TextWidget>( pKey->getChild( 0 ) )->isLocalized() );
+    SW_EXPECT_FALSE( castTo<TextWidget>( pPlain->getChild( 0 ) )->isLocalized() );
 }
 
 /** @brief [UIDocumentTest] 거절: 문법 · 루트 · 버전 · 모르는 요소와 속성 · 패널 아닌 부모 · 루트 위젯 수 · 빈 목록 항목 · 겹친 애니메이션 이름 */

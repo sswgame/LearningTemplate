@@ -126,6 +126,8 @@ namespace sw
         void registerName( Widget& widget );
         /** @brief 이름을 제거합니다(이 위젯이 그 이름의 주인일 때만). */
         void unregisterName( Widget& widget );
+        /** @brief @p widget 의 이름이 이미 바뀐 뒤에 이름 표를 맞춥니다 — 옛 이름을 모르므로 이 위젯을 가리키는 줄을 찾아 뺀다(편집기 이름 바꾸기). */
+        void refreshName( Widget& widget );
         /** @brief 떨어진 @p widget 을 지웁니다. 전달 중이면 보류 목록에 두고 가장 바깥 `DispatchScope` 가 끝날 때 지웁니다. */
         void retireWidget( unique_ptr<Widget> widget );
         /** @brief @p widget 을 다시 측정할 루트로 적습니다(이미 적혀 있으면 아무것도 하지 않습니다). */
