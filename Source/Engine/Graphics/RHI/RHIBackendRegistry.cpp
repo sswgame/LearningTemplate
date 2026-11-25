@@ -166,13 +166,8 @@ namespace sw
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
-        StringBuilder<constant::buffer::kMax128> stampSymbolName;
-        stampSymbolName.appendFormat( "sw_moduleEngineABIStamp_%#", pInfo->_pModuleName );
-        const utf8* pModuleStamp = static_cast<const utf8*>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, stampSymbolName.view() ) );
-        if ( pModuleStamp == nullptr || StringUtil::equals( pModuleStamp, engine::getEngineABIStamp() ) == false )
+        if ( engine::isModuleBuiltWithThisEngine( pModuleHandle, pInfo->_pModuleName ) == false )
         {
-            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIStamp", "RHI MODULE engine ABI stamp mismatch or missing %# (%#; expected %#) - rebuild the engine and the RHI modules together.",
-                             stampSymbolName.view(), modulePath, engine::getEngineABIStamp() );
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }

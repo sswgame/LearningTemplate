@@ -42,7 +42,7 @@ namespace sw
     //    IEditor 구현은 EditorModule 안에 두고, App 은 이 포인터만 부른다
     // ------------------------------------------------------------------------------
     /**
-     * @brief `EditorAPI` 표의 항목 목록입니다 — `X( 반환형, 이름, ( 매개변수 ) )`. 구조체 멤버와 스탬프(`kEditorModuleABIStamp`)가 둘 다 여기서 나옵니다.
+     * @brief `EditorAPI` 표의 항목 목록입니다 — `X( 반환형, 이름, ( 매개변수 ) )`. 구조체 멤버가 둘 다 여기서 나옵니다.
      * @details 항목을 더하거나 순서 · 시그니처를 바꾸면 스탬프가 저절로 바뀌어 옛 모듈 DLL 은 로드 때 거부됩니다(`ModuleABI.h`).
      *          줄 연결 매크로 안이라 설명은 블록 주석으로 씁니다(줄 주석은 다음 줄을 삼킨다).
      */
@@ -115,7 +115,7 @@ namespace sw
 
     /**
      * @brief 이름으로 찾는 헤드리스 진입점(에디터 인스턴스 없이 모듈만 올려 부른다)의 목록입니다 — `X( 반환형, 형 이름, ( 매개변수 ) )` 가 `PFN_<형 이름>` 이 됩니다.
-     * @details 시그니처가 바뀌면 표와 같이 `kEditorModuleABIStamp` 가 바뀝니다(v2 에서 `importEditorAssets` 가 서비스 표를 받게 된 변경이 이 자리).
+     * @details 시그니처가 바뀌면 헤더 지문(엔진 ABI 스탬프)이 바뀝니다(v2 에서 `importEditorAssets` 가 서비스 표를 받게 된 변경이 이 자리).
      *          심볼 이름은 아래 `k...Symbol` 이고, 구현은 아래 extern "C" 선언입니다.
      */
 #define SW_EDITOR_HEADLESS_ENTRIES( X )                                                                                                          \
@@ -127,10 +127,6 @@ namespace sw
     X( int32, CheckEditorAssetReferences, ( const ISubsystemLocator* pService ) )
 
     SW_EDITOR_HEADLESS_ENTRIES( SW_MODULE_ABI_ENTRY_PFN )
-
-    /** @brief 에디터 모듈 경계의 스탬프입니다 — `EditorAPI` 표와 헤드리스 진입점 목록의 글. 에디터 모듈이 내보내고(`getEditorModuleABIStamp`) 호스트가 로드 전에 대조합니다. */
-    inline constexpr uint64 kEditorModuleABIStamp =
-        ModuleABIUtil::computeStamp( SW_EDITOR_API_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) SW_EDITOR_HEADLESS_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) );
 
     /** @brief 에디터 모듈 경계의 할당 태그입니다 — 표 항목(`EditorModuleForwardUtil`)과 모듈 매니저의 로드 · 리로드가 이 값 하나를 쓴다. */
     inline constexpr MemoryTag kEditorModuleMemoryTag = MemoryTag::Editor;
@@ -159,9 +155,6 @@ extern "C"
     // ------------------------------------------------------------------------------
     // 2) export — EditorModule 이 채우는 진입점
     // ------------------------------------------------------------------------------
-    /** @brief 이 모듈이 빌드된 경계 스탬프(`sw::kEditorModuleABIStamp`)입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
-    SW_MODULE_API uint64 getEditorModuleABIStamp();
-
     /** @brief EditorModule API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutAPI );
 

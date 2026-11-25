@@ -315,7 +315,7 @@ namespace sw
 
     const ModuleAPISymbols& GameModuleManager::getModuleSymbols()
     {
-        static constexpr ModuleAPISymbols kGameSymbols{ kGameModuleABIStamp, "getGameModuleABIStamp", "exportGameAPI", "Game" };
+        static constexpr ModuleAPISymbols kGameSymbols{ config::kTargetGameModule, "exportGameAPI", "Game" };
         return kGameSymbols;
     }
 

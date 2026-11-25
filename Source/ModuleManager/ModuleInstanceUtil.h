@@ -8,12 +8,15 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
 
 #include "ModuleManager/ModuleLibraryHandle.h"
+
+#include "sw/config/ConfigConstants.h"
 
 namespace sw
 {
@@ -25,14 +28,13 @@ namespace sw
      */
     struct ModuleAPISymbols
     {
-        uint64      _expectedStamp; ///< 호스트가 빌드된 표 스탬프(`kGameModuleABIStamp` · `kEditorModuleABIStamp`)
-        const utf8* _pStampSymbol;
+        const utf8* _pModuleName; ///< 모듈 이름 — 빌드가 박은 엔진 ABI 스탬프 심볼(`sw_moduleEngineABIStamp_<이름>`)을 고른다
         const utf8* _pExportSymbol;
         const utf8* _pModuleLabel;
     };
 
     /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로(`ClientModuleManager`)와 헤드리스 작업(`DevTools/Host/EditorModuleHeadlessTasks`)이 같이 씁니다. */
-    inline constexpr ModuleAPISymbols kEditorModuleSymbols{ kEditorModuleABIStamp, "getEditorModuleABIStamp", "exportEditorAPI", "Editor" };
+    inline constexpr ModuleAPISymbols kEditorModuleSymbols{ config::kTargetEditorModule, "exportEditorAPI", "Editor" };
 } // namespace sw
 
 namespace sw
@@ -48,21 +50,12 @@ namespace sw
         using InstanceHandleOf = decltype( std::declval<const TAPI&>().create() );
 
         /**
-         * @brief 모듈이 호스트와 **같은 테이블 구조**로 빌드됐는지 대조합니다.
-         * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
-         *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** `create != nullptr && destroy != nullptr`
-         *          만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
-         *          어긋남이 생기는 바로 그 상황입니다. 스탬프는 표 선언 글의 해시라 표를 고치면 저절로 바뀝니다(`ModuleABI.h`).
+         * @brief 모듈이 이 호스트와 같은 헤더(표 구조 · 경계 구조체)로 빌드됐는지 대조합니다 — 모든 동적 모듈과 같은 엔진 ABI 스탬프 대조다(`engine::isModuleBuiltWithThisEngine`).
+         * @details `create != nullptr && destroy != nullptr` 만으로는 막지 못합니다 — 그 둘은 표 **맨 앞**이라 가운데에 끼워도 채워진다. 핫 리로드는 모듈만 다시 빌드해 이 어긋남이 생기는 바로 그 상황이다.
          */
         static bool matchesModuleABI( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )
         {
-            const PFN_GetModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetModuleABIStamp>( library.findSymbol( symbols._pStampSymbol ) );
-            if ( pfnStamp == nullptr || pfnStamp() != symbols._expectedStamp )
-            {
-                SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIStampDiffers", "The %# module ABI stamp differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, symbols._expectedStamp );
-                return false;
-            }
-            return true;
+            return engine::isModuleBuiltWithThisEngine( library.getOSHandle(), symbols._pModuleName );
         }
 
         /**
