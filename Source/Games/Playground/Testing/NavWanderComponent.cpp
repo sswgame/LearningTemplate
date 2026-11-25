@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Playground/NavWanderComponent.h"
+#include "Games/Playground/Testing/NavWanderComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
