@@ -4,6 +4,6 @@
 <MaterialDef formatVersion="0" name="foliage_leaves_normaltree" _base="guid:64c6d0e9764de443927f7f27cd2b5964" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_alphaCutoff" defaultValue="0.2" />
-		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/leaves_normaltree_c.dds" />
+		<item name="_albedoMap" assetPath="guid:eeb623460ae3bb7442c775751c6d6540" />
 	</_properties>
 </MaterialDef>

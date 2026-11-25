@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -14,6 +15,8 @@
 namespace sw
 {
     SW_ASSET_TYPE( MaterialGraph, MaterialGraphDef::kAssetType );
+
+    MaterialGraphNodeDef::MaterialGraphNodeDef() = default;
 
     const MaterialGraphValue* MaterialGraphNodeDef::findValue( string_view name ) const
     {

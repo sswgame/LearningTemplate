@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -53,7 +54,7 @@ namespace sw
         /** @brief 베이크가 거칠기 단계마다 텍셀 하나에 쓰는 GGX 표본 수입니다. */
         uint32 getBakeSampleCount() const { return _bakeSampleCount; }
         /** @brief 베이크 결과(`.reflprobe`) 경로입니다. 비었으면 베이크하지 않은 프로브입니다. */
-        const string& getProbeDataPath() const { return _probeDataPath; }
+        const string& getProbeDataPath() const { return _probeDataPath.path(); }
 
         /** @brief 쓸 수 있는 베이크 데이터입니다. 베이크하지 않았거나, 읽지 못했거나, 찍은 위치가 지금 위치와 다르면 nullptr 입니다. */
         const ReflectionProbeAsset* findProbeData() const;
@@ -83,7 +84,7 @@ namespace sw
         PROPERTY( Category = "Reflection Probe", DisplayName = "Blend Distance", Min = 0.0, Tooltip = "Width inside the box border where the reflection fades to the ambient one", Units = m )
         float32 _blendDistance;
         PROPERTY( Category = "Reflection Probe", DisplayName = "Baked Reflection", Tooltip = "Baked .reflprobe resource path (written by the reflection bake)", Validate = validateProbeData )
-        string _probeDataPath;
+        AssetRef<ReflectionProbeAsset> _probeDataPath;
         PROPERTY( Category = "Reflection Probe Bake", DisplayName = "Resolution", Min = 4, Max = 256, Tooltip = "Octahedral texels per side of each roughness level" )
         uint32 _resolution;
         PROPERTY( Category = "Reflection Probe Bake", DisplayName = "Capture Resolution", Min = 16, Max = 1024, Tooltip = "Pixels per side of each of the six captured faces" )

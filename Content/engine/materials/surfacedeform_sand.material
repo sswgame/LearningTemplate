@@ -5,6 +5,6 @@
 	<_properties>
 		<item name="_color" defaultValue="1.0 0.92 0.78 1.0" />
 		<item name="_roughness" defaultValue="0.95" />
-		<item name="_albedoMap" assetPath="engine/textures/prototype/grid_orange.dds" />
+		<item name="_albedoMap" assetPath="guid:e2a3e153a66a28a1f4491c33730128d1" />
 	</_properties>
 </MaterialDef>

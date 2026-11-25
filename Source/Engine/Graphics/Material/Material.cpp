@@ -1162,7 +1162,7 @@ namespace sw
             if ( prop._value.empty() == false && prop._value != prop._defaultValue )
                 MaterialXML::appendAttribute( item, "value", prop._value );
             if ( prop._assetPath.empty() == false )
-                MaterialXML::appendAttribute( item, "assetPath", prop._assetPath );
+                MaterialXML::appendReference( item, "assetPath", prop._assetPath );
             if ( prop._enumType.empty() == false )
                 MaterialXML::appendAttribute( item, "enumType", prop._enumType );
             if ( prop._displayName.empty() == false )
@@ -1175,7 +1175,7 @@ namespace sw
                 MaterialXML::appendAttribute( item, "shaderKeyword", prop._shaderKeyword );
             if ( prop._collectionPath.empty() == false )
             {
-                MaterialXML::appendAttribute( item, "collection", prop._collectionPath );
+                MaterialXML::appendReference( item, "collection", prop._collectionPath );
                 MaterialXML::appendAttribute( item, "collectionParameter", prop._collectionParameter );
             }
             if ( prop._type == MaterialPropertyKind::Range )
@@ -1243,7 +1243,7 @@ namespace sw
         _desc             = MaterialDef{};
         _desc._name       = rootParams._name;
         _desc._parentPath = parentPath;
-        setShaderPath( rootParams._shaderPath );
+        setShaderPath( rootParams._shaderPath.path() );
 
         vector<MaterialProperty> listProperty;
         XMLNode                  props = root.findChild( "_properties" );

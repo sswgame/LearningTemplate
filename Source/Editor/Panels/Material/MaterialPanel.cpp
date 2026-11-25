@@ -21,6 +21,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -227,14 +228,8 @@ namespace sw::editor
                     case MaterialPropertyKind::Texture3D:
                     case MaterialPropertyKind::Texture2DArray:
                     {
-                        string     path     = prop._assetPath.empty() ? prop._value : prop._assetPath;
-                        const bool bChanged = EditorWidgets::drawAssetSlot( pLabel, path, ".png" );
-                        if ( bChanged )
-                        {
-                            prop._assetPath = path;
-                            prop._value     = path;
-                        }
-                        return bChanged;
+                        // 텍스처는 값 글이 아니라 에셋 칸 하나다 — 파일의 칸(`MaterialPropertyParams::_assetPath`)이 받는 쿠킹본(.dds)만 놓는다.
+                        return EditorWidgets::drawAssetSlot( pLabel, prop._assetPath, Texture2D::kArrAssetSuffix[0]._text.data() );
                     }
                     case MaterialPropertyKind::Float4x4:
                     case MaterialPropertyKind::Uint:

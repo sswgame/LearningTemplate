@@ -13,6 +13,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -316,7 +317,7 @@ namespace sw
                                 report( scope, node._name, "UnknownValue", std::move( message ) );
                             }
                         }
-                        if ( isAttributeSafe( node._assetPath ) == false )
+                        if ( isAttributeSafe( node._texture.path() ) == false )
                             report( scope, node._name, "BadValue", "asset path holds a character that cannot be written to the material" );
                     }
                     return _listIssue.size() == issueCount;
@@ -419,7 +420,7 @@ namespace sw
                     field._name         = name;
                     field._hlslType     = string{ kind.getParameterHLSLType() };
                     field._propertyType = string{ kind.getParameterPropertyType() };
-                    field._assetPath    = node._assetPath;
+                    field._assetPath    = node._texture.path();
                     if ( kind.findSetting( "Default" ) != nullptr )
                         field._defaultValue = readSettingText( kind, node, "Default" );
                     if ( kind.findSetting( "Min" ) != nullptr )
@@ -608,33 +609,33 @@ namespace sw
                 }
 
                 /** @brief 하위 그래프 노드를 펼칩니다(언리얼 Material Function 처럼 호출이 아니라 펼침이다 — 칸 · 순열이 머티리얼 하나로 모인다). */
-                /** @brief 하위 그래프 · 층 노드가 가리키는 그래프(`_assetPath`)를 읽습니다. 경로 없음 · 순환 · 읽기 실패 · 하위 그래프가 아님은 문제를 남기고 false 입니다. */
+                /** @brief 하위 그래프 · 층 노드가 가리키는 그래프(`_subgraph`)를 읽습니다. 경로 없음 · 순환 · 읽기 실패 · 하위 그래프가 아님은 문제를 남기고 false 입니다. */
                 [[nodiscard]] bool loadSubgraph( const MaterialGraphNodeDef& node, string_view scope, MaterialGraphDef& outGraph )
                 {
-                    if ( node._assetPath.empty() )
+                    if ( node._subgraph.empty() )
                     {
-                        report( scope, node._name, "MissingSubgraph", "subgraph node has no graph (_assetPath)" );
+                        report( scope, node._name, "MissingSubgraph", "subgraph node has no graph (_subgraph)" );
                         return false;
                     }
                     for ( const string& stacked : _listGraphStack )
                     {
-                        if ( stacked != node._assetPath )
+                        if ( node._subgraph != stacked )
                             continue;
                         string message{ "subgraph cycle through " };
-                        message.append( node._assetPath );
+                        message.append( node._subgraph.path() );
                         report( scope, node._name, "SubgraphCycle", std::move( message ) );
                         return false;
                     }
-                    if ( outGraph.loadFromAsset( AssetID{ node._assetPath } ) == false )
+                    if ( outGraph.loadFromAsset( node._subgraph.id() ) == false )
                     {
                         string message{ "subgraph cannot be read: " };
-                        message.append( node._assetPath );
+                        message.append( node._subgraph.path() );
                         report( scope, node._name, "SubgraphUnreadable", std::move( message ) );
                         return false;
                     }
                     if ( MaterialGraphCompileResult::isSubgraph( outGraph ) == false )
                     {
-                        string message{ node._assetPath };
+                        string message{ node._subgraph.path() };
                         message.append( " has no GraphOutput node or has an Output node - it is not a subgraph" );
                         report( scope, node._name, "NotSubgraph", std::move( message ) );
                         return false;
@@ -685,7 +686,7 @@ namespace sw
                         return;
                     string innerScope{ scope };
                     innerScope.append( node._name ).append( "/" );
-                    _listGraphStack.push_back( node._assetPath );
+                    _listGraphStack.push_back( node._subgraph.path() );
                     (void)emitGraph( subgraph, innerScope, listArgument, false, outResult._listOutput ); // 문제는 목록에 남았다
                     _listGraphStack.pop_back();
                 }
@@ -814,7 +815,7 @@ namespace sw
                     StringBuilder<constant::buffer::kMax128> prefixBuilder;
                     prefixBuilder.appendFormat( "_%#", node._name );
                     _parameterPrefix = string( prefixBuilder.view() );
-                    _listGraphStack.push_back( node._assetPath );
+                    _listGraphStack.push_back( node._subgraph.path() );
                     vector<NamedValue> listLayerOutput;
                     const bool         bLayerEmitted = emitGraph( layer, innerScope, listArgument, false, listLayerOutput );
                     _listGraphStack.pop_back();
@@ -825,7 +826,7 @@ namespace sw
                     const uint32                           variable = _nextVariable++;
                     fixed_string<constant::buffer::kMax64> maskName;
                     formatstring( maskName.data(), maskName.capacity(), "n%#_Mask", variable );
-                    _outputLines.append( "    // " ).append( scope ).append( node._name ).append( " (Layer " ).append( node._assetPath ).append( ")\n" );
+                    _outputLines.append( "    // " ).append( scope ).append( node._name ).append( " (Layer " ).append( node._subgraph.path() ).append( ")\n" );
                     _outputLines.append( "    const float " ).append( maskName.c_str() ).append( " = saturate( " ).append( mask ).append( " * context._material." ).append( weightName ).append( " );\n" );
                     for ( const NamedValue& output : listLayerOutput )
                     {
@@ -1095,7 +1096,7 @@ namespace sw
         text.append( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- Generated from " ).append( sourceName ).append( " by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->\n" );
         // 표면 모델은 셰이더 뼈대의 조명 훅과 짝이다(material_graph.hlsli) — 후처리는 조명이 없고, Hair 는 포워드 전용을 모델이 낸다.
         const utf8* pSurfaceModel = result._bPostProcess ? "Unlit" : ( result._bHair ? "Hair" : ( result._bEmissive ? "Emissive" : "Lit" ) );
-        text.append( "<MaterialDef formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( shaderPath ).append( "\" surfaceModel=\"" ).append( pSurfaceModel );
+        text.append( "<MaterialDef formatVersion=\"0\" name=\"" ).append( materialName ).append( "\" shaderPath=\"" ).append( AssetRegistry::makeReferenceText( shaderPath, AssetRegistry::resolveGUID( shaderPath ) ) ).append( "\" surfaceModel=\"" ).append( pSurfaceModel );
         text.append( "\" alphaMode=\"Opaque\">\n\t<_properties>\n" );
         for ( const MaterialGraphField& field : result._listField )
         {
@@ -1103,7 +1104,7 @@ namespace sw
             if ( field._defaultValue.empty() == false )
                 text.append( " defaultValue=\"" ).append( field._defaultValue ).append( "\"" );
             if ( field._assetPath.empty() == false )
-                text.append( " assetPath=\"" ).append( field._assetPath ).append( "\"" );
+                text.append( " assetPath=\"" ).append( AssetRegistry::makeReferenceText( field._assetPath, AssetRegistry::resolveGUID( field._assetPath ) ) ).append( "\"" );
             if ( field._propertyType == "Range" )
                 text.append( " min=\"" ).append( MaterialGraphCompilerInternal::formatPlainFloat( field._min ) ).append( "\" max=\"" ).append( MaterialGraphCompilerInternal::formatPlainFloat( field._max ) ).append( "\"" );
             if ( field._propertyType == "Color" )
@@ -1135,10 +1136,10 @@ namespace sw
             return false;
         if ( pKind->getRole() == MaterialGraphNodeRole::Subgraph )
         {
-            if ( node._assetPath.empty() )
+            if ( node._subgraph.empty() )
                 return true; // 아직 그래프를 고르지 않았다 — 핀이 없다
             MaterialGraphDef subgraph;
-            if ( subgraph.loadFromAsset( AssetID{ node._assetPath } ) == false )
+            if ( subgraph.loadFromAsset( node._subgraph.id() ) == false )
                 return false;
             for ( const MaterialGraphNodeDef& inner : subgraph._listNode )
             {

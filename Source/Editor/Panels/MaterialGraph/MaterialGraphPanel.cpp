@@ -35,7 +35,7 @@ namespace sw::editor
             /** @brief 캔버스가 차지하는 폭의 비율입니다(나머지는 미리보기 · 값). */
             static constexpr float32 kCanvasWidthRatio = 0.68f;
             /** @brief 텍스처 노드가 받는 원본 확장자입니다 — 값 칸의 에셋 슬롯과 캔버스에 놓기가 같은 거르개를 쓴다. */
-            static constexpr const utf8* kTextureAssetExtension = ".png";
+            static constexpr const utf8* kTextureAssetExtension = ".dds"; // 칸이 쿠킹본만 받는다(`AssetRef<Texture2D>`)
             /** @brief 텍스처를 캔버스에 놓으면 만드는 노드 종류 이름입니다(언리얼 머티리얼 그래프의 Texture Sample). */
             static constexpr string_view kTextureSampleKindName = "TextureSample";
             /** @brief 미리보기의 세로 / 가로 비율입니다. */
@@ -409,7 +409,7 @@ namespace sw::editor
         const bool bSubgraph    = pKind->getRole() == MaterialGraphNodeRole::Subgraph || pKind->getRole() == MaterialGraphNodeRole::Layer; // 층도 그래프 파일을 가리킨다
         if ( bTextureNode || bSubgraph )
         {
-            string     assetPath = node._assetPath;
+            string     assetPath = bSubgraph ? node._subgraph.path() : node._texture.path();
             const bool bChanged  = EditorWidgets::drawAssetSlot( SW_LOCKEY( "EditorMaterialGraph", "AssetSlot" ), assetPath, bSubgraph ? MaterialGraphDef::kExtension.data() : MaterialGraphPanelInternal::kTextureAssetExtension );
             if ( bChanged )
                 _model.setAssetPath( nodeIndex, assetPath );

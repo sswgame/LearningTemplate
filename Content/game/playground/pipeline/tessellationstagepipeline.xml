@@ -14,7 +14,7 @@
 				<item>SceneDepth</item>
 			</_listOutput>
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Tonemap" _type="Tonemap" _shaderPath="game/playground/shaders/optional_stages.hlsl" _vertexEntryPoint="VSPatchMain" _hullEntryPoint="HSMain" _domainEntryPoint="DSMain" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false">
+		<RenderGraphPassDesc _name="Tonemap" _type="Tonemap" _shaderPath="guid:196d33b31093e843d7ad8f2e73e2b262" _vertexEntryPoint="VSPatchMain" _hullEntryPoint="HSMain" _domainEntryPoint="DSMain" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false">
 			<_listInput>
 				<item>SceneColor</item>
 			</_listInput>
@@ -37,7 +37,7 @@
 		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-		<item>engine/renderpass/framecomputerenderpass.xml</item>
+		<item>guid:57bd09488b11feda78cbced691b416fe</item>
+		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

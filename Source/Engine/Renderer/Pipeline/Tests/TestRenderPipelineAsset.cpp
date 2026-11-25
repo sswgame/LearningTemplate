@@ -331,7 +331,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ChildPipelineMergesItsBase )
     { return pass._name == "Present"; } );
     SW_REQUIRE_TRUE( pPresent != nullptr );
     SW_EXPECT_TRUE( pPresent->_listPermutation.empty() );
-    SW_EXPECT_EQUAL( string( "engine/shaders/post_chain.hlsl" ), pPresent->_shaderPath ); // 적지 않은 칸은 부모 것
+    SW_EXPECT_EQUAL( string( "engine/shaders/post_chain.hlsl" ), pPresent->_shaderPath.path() ); // 적지 않은 칸은 부모 것
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

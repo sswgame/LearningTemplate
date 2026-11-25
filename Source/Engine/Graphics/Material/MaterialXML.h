@@ -6,13 +6,18 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
+    class Texture2D;
+    struct MaterialParameterCollectionDef;
+
     /**
      * @brief 머티리얼 속성 항목 하나(`<_properties><item name type …>`)의 칸입니다. 칸 · 기본값은 여기 PROPERTY 가 정본이다(`MaterialXML::parsePropertyNode` 가 `MaterialProperty` 로 옮긴다).
      * @details 종류(`type` · `shaderType`)는 패킹의 종류 이름(`MaterialPacking::stringToType`)이라 글로 받는다. 깃발 칸은 파일 철자 그대로(`bHdr` · `bSrgb` …)다.
@@ -31,8 +36,8 @@ namespace sw
         string _defaultValue{};
         PROPERTY()
         string _value{};
-        PROPERTY( AssetPath )
-        string _assetPath{};
+        PROPERTY()
+        AssetRef<Texture2D> _assetPath;
         PROPERTY()
         string _enumType{};
         PROPERTY()
@@ -43,8 +48,8 @@ namespace sw
         string _tooltip{};
         PROPERTY()
         string _shaderKeyword{};
-        PROPERTY( AssetPath, Tooltip = "Material parameter collection (.matparams.xml) that gives this property its value" )
-        string _collection{};
+        PROPERTY( Tooltip = "Material parameter collection (.matparams.xml) that gives this property its value" )
+        AssetRef<MaterialParameterCollectionDef> _collection;
         PROPERTY( Tooltip = "Name inside the collection; required with _collection" )
         string _collectionParameter{};
         PROPERTY()
@@ -59,6 +64,8 @@ namespace sw
         bool _bHidden{ false };
         PROPERTY( Name = "bAdvanced" )
         bool _bAdvanced{ false };
+
+        MaterialPropertyParams(); // 텍스처 · 묶음이 완전한 자리(.cpp)에서 짓는다
     };
 
     /** @brief 열거 프로퍼티의 항목 하나(`<_enumEntries><item name value/>`)입니다. */
@@ -85,8 +92,8 @@ namespace sw
 
         PROPERTY()
         string _name{};
-        PROPERTY( AssetPath )
-        string _shaderPath{};
+        PROPERTY()
+        AssetRef<ShaderSourceAsset> _shaderPath;
         PROPERTY()
         MaterialAlphaMode _alphaMode{ MaterialAlphaMode::Opaque };
         PROPERTY( Required, Tooltip = "How the surface values meet light (MaterialSurfaceModel) - the shader's lighting hook must match it" )
@@ -156,6 +163,8 @@ namespace sw
         [[nodiscard]] static bool parsePropertyNode( XMLNode item, MaterialProperty& outProp );
 
         static void appendAttribute( XMLNode parent, const utf8* pName, string_view value );
+        /** @brief 에셋 경로 @p path 를 참조 글(GUID, 정체성이 없으면 경로)로 적습니다. 빈 경로는 적지 않습니다. */
+        static void appendReference( XMLNode parent, const utf8* pName, string_view path );
 
         static void appendBoolAttribute( XMLNode parent, const utf8* pName, bool value );
 

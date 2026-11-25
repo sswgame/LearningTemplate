@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
@@ -16,6 +17,8 @@
 
 namespace sw
 {
+    struct ShaderSourceAsset;
+
     /**
      * @enum RenderPassKind
      * @brief 파이프라인 XML 의 `_type` 이 가리키는 패스 종류입니다.
@@ -485,9 +488,11 @@ namespace sw
      *          코드를 고치지 않고 데이터로 패스를 바꾼다. 패스 실행이 받아 줄 수 없는 조합(깊이를 붙이지 않는 패스의 깊이 테스트 등)은 무시하지 않고 읽기 오류다(`RenderPipelineAsset::validate`).
      */
     REFLECT()
-    struct RenderGraphPassDesc : public FixedRenderState
+    struct SW_API RenderGraphPassDesc : public FixedRenderState
     {
         REFLECT_BODY();
+        RenderGraphPassDesc(); // 셰이더 종류(`ShaderSourceAsset`)가 완전한 자리(.cpp)에서 짓는다
+
         PROPERTY( Required, InheritKey )
         string _name;
 
@@ -571,8 +576,8 @@ namespace sw
         vector<ResolvedAttachment> _listResolvedColorOutput;
 
         /** @brief HLSL 경로(engine/... 또는 common/...)입니다. 비면 FrameRenderer 가 패스 타입의 기본 셰이더를 씁니다. */
-        PROPERTY( SkipIfEmpty, AssetPath )
-        string _shaderPath;
+        PROPERTY( SkipIfEmpty )
+        AssetRef<ShaderSourceAsset> _shaderPath;
 
         /** @brief 정점 셰이더 진입점입니다. 비면 스테이지 기본값을 씁니다(`resolveEntryPoint`, getShaderStageInfo 테이블). */
         PROPERTY( SkipIfEmpty )

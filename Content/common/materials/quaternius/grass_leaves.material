@@ -4,6 +4,6 @@
 <MaterialDef formatVersion="0" name="grass_leaves" _base="guid:1259c59255193befd5cea3a0fd0b9676" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_alphaCutoff" defaultValue="0.2" />
-		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/leaves.dds" />
+		<item name="_albedoMap" assetPath="guid:a81558dbc1cca5b9568a909b35367e4f" />
 	</_properties>
 </MaterialDef>

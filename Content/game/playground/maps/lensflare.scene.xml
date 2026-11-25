@@ -37,7 +37,7 @@
 					                     _color="1,0.85,0.6"
 					                     _intensity="6"
 					                     _radius="10"
-					                     _lensFlarePath="engine/lensflares/sun.lensflare.xml" />
+					                     _lensFlarePath="guid:0a81c8c24bd6c559139aa960af2f50f5" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -52,7 +52,7 @@
 					                     _color="0.6,0.8,1"
 					                     _intensity="6"
 					                     _radius="10"
-					                     _lensFlarePath="engine/lensflares/sun.lensflare.xml" />
+					                     _lensFlarePath="guid:0a81c8c24bd6c559139aa960af2f50f5" />
 				</_listComponent>
 			</GameObject>
 		</entity>

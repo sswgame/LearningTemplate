@@ -4,6 +4,6 @@
 <MaterialDef formatVersion="0" name="foliage_flowers" _base="guid:64c6d0e9764de443927f7f27cd2b5964" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_alphaCutoff" defaultValue="0.2" />
-		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/flowers.dds" />
+		<item name="_albedoMap" assetPath="guid:25b2e3da9ccf1b8038cfbc46c757db46" />
 	</_properties>
 </MaterialDef>

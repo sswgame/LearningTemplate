@@ -4,7 +4,7 @@
 <MaterialDef formatVersion="0" name="PrototypeGridDark" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
 		<item name="_roughness" defaultValue="0.8" />
-		<item name="_albedoMap" assetPath="engine/textures/prototype/grid_dark.dds" />
+		<item name="_albedoMap" assetPath="guid:4b84344e72f162199c17c32c1fc51dbe" />
 	</_properties>
 	<_permutations>
 		<_alwaysDefines>

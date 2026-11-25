@@ -3,6 +3,6 @@
 <!-- KayKit 스켈레톤 아틀라스 머티리얼 — _albedoMap 이 원본 GLB 에 든 텍스처(textures_raw/kaykit_skeleton.png)다. _color 는 외형 꾸미기의 염색(MaterialColor → color)이 곱한다. 캐릭터 몸과 그 장비 프리팹이 나눠 쓴다. -->
 <MaterialDef formatVersion="0" name="KayKitSkeleton" _base="guid:5634e58d4c5e4c2b50d7902ed885a5cb">
 	<_properties>
-		<item name="_albedoMap" assetPath="common/textures/kaykit_skeleton.dds" />
+		<item name="_albedoMap" assetPath="guid:5ad6a63ceff5b4a3f0ffa9d8389af734" />
 	</_properties>
 </MaterialDef>

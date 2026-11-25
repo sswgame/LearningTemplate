@@ -123,10 +123,10 @@ namespace sw
         /// @brief 선언 차례마다의 검사 결과입니다(`findPassCheck`). 프레임을 넘어 남는다.
         vector<PassDeclarationCheck> _listPassCheck;
         /// @brief `_listPassCheck` 를 낸 파이프라인 첨부 · 확장 셰이더 목록 · 임시 텍스처 요청입니다(바뀌면 결과를 버린다).
-        vector<RenderPassAttachment> _listCheckedAttachment;
-        vector<string>               _listCheckedShader;
-        vector<ExtensionTextureDesc> _listCheckedTexture;
-        vector<ExtensionDrawElement> _listDrawElement;
+        vector<RenderPassAttachment>        _listCheckedAttachment;
+        vector<AssetRef<ShaderSourceAsset>> _listCheckedShader;
+        vector<ExtensionTextureDesc>        _listCheckedTexture;
+        vector<ExtensionDrawElement>        _listDrawElement;
         /// @brief 요소가 쓰는 메시를 쥐는 표입니다(`MeshUtil::acquirePrimitive` · `MeshCache` 는 약한 참조라 렌더러 쪽이 쥔다). 기록 전(셋업)에만 바꾼다.
         unordered_map<hashed_string, shared_ptr<Mesh>> _mapMesh;
         /// @brief 워커가 아직 읽는 `.mesh` 요소 메시입니다(`MeshCache::request`). 준비되면 `_mapMesh` 로 옮긴다. 기록 전(셋업)에만 바꾼다.

@@ -24,6 +24,22 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct MaterialGraphViewModelInternal
+        {
+            /** @brief 노드 종류가 가리키는 에셋 칸입니다 — 하위 그래프 · 층은 그래프, 그 밖(텍스처 파라미터)은 텍스처다. */
+            static AssetRefBase& selectAssetField( MaterialGraphNodeDef& node )
+            {
+                const MaterialGraphNodeKind* const pKind  = MaterialGraphNodeRegistry::find( node._kind );
+                const bool                         bGraph = pKind != nullptr && ( pKind->getRole() == MaterialGraphNodeRole::Subgraph || pKind->getRole() == MaterialGraphNodeRole::Layer );
+                if ( bGraph )
+                    return node._subgraph;
+                return node._texture;
+            }
+        };
+    } // namespace
+
     MaterialGraphViewModel::MaterialGraphViewModel()
         : _graph{}
         , _result{}
@@ -211,9 +227,10 @@ namespace sw::editor
         if ( MaterialGraphNodeRegistry::find( kindName ) == nullptr )
             return false;
         MaterialGraphNodeDef node;
-        node._kind      = string{ kindName };
-        node._position  = canvasPosition;
-        node._assetPath = string{ assetPath };
+        node._kind     = string{ kindName };
+        node._position = canvasPosition;
+        if ( MaterialGraphViewModelInternal::selectAssetField( node ).assign( assetPath ) == false )
+            return false; // 종류가 다른 에셋을 놓았다 — 칸이 이유를 남겼다
         for ( uint32 number = 1; node._name.empty(); ++number )
         {
             fixed_string<constant::buffer::kMax64> name;
@@ -309,7 +326,8 @@ namespace sw::editor
 
     void MaterialGraphViewModel::setAssetPath( uint32 nodeIndex, string_view path )
     {
-        _graph._listNode[nodeIndex]._assetPath = string{ path };
+        if ( MaterialGraphViewModelInternal::selectAssetField( _graph._listNode[nodeIndex] ).assign( path ) == false )
+            return; // 종류가 다른 에셋이다 — 칸이 이유를 남겼다
         rebuildPins();
         recordEdit( "Edit Material Graph Asset", true );
     }
