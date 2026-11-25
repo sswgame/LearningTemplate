@@ -1,4 +1,4 @@
-// EditorBackgroundTaskTest — 백그라운드 잡의 규약: 상태(없음 · 도는 중 · 끝남), 결과는 한 번만, 새 요청 뒤의 옛 세대는 입력도 결과도 쓰지 못한다(워커 없이 규약만 — nogpu).
+// EditorBackgroundTaskTest: 백그라운드 잡의 규약: 상태(없음 · 도는 중 · 끝남), 결과는 한 번만, 새 요청 뒤의 옛 세대는 입력도 결과도 쓰지 못한다(워커 없이 규약만, nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

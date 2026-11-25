@@ -6,7 +6,7 @@
  *          다시 불러도 값이 남거나 사라지는 때가 코드로 정해지지 않는다. 이 저장소는 상태를 에디터 범위(`EditorContext` 의 `SubsystemScope`)에 둔다 —
  *          컨텍스트와 함께 생기고 사라지고, 범위마다 따로이며, 테스트는 자기 범위를 만들어 건다(`ScopedEditorScope`).
  *          값은 처음 물을 때 `TState{}` 로 만든다. 주인이 분명한 상태(패널만 쓰는 값은 패널 멤버, 테마는 `EditorTheme`)는 그 주인에게 두고 여기 넣지 않는다.
- *          **EditorModule 안의 코드만 쓴다.** 확장 모듈(플러그인) 코드는 모듈이 언로드될 때 vtable 이 사라지므로 `SW_EDITOR_SUBSYSTEM` 서브시스템을 쓴다.
+ *          EditorModule 안의 코드만 쓴다. 확장 모듈(플러그인) 코드는 모듈이 언로드될 때 vtable 이 사라지므로 `SW_EDITOR_SUBSYSTEM` 서브시스템을 쓴다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

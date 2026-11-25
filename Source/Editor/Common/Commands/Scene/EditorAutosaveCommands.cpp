@@ -341,7 +341,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 후보 @p index 를 엽니다(게임 단계 — `requestRestore` 가 남긴 요청). 씬 열기와 같은 입구다 — Play 중이면 거절하고, 지금 씬이 dirty 면 미저장 확인 뒤로 미룬다(E-1).
+             * @brief 후보 @p index 를 엽니다(게임 단계, `requestRestore` 가 남긴 요청). 씬 열기와 같은 입구라 Play 중이면 거절하고, 지금 씬이 dirty 면 미저장 확인 뒤로 미룬다(E-1).
              *        후보는 사본이 실제로 열린 뒤 뺀다(`finishPendingRestore`). 거절 · Play 중이면 false 입니다.
              */
             static bool restoreEntry( uint32 index )

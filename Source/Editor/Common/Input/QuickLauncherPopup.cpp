@@ -349,7 +349,7 @@ namespace sw::editor
 
     void QuickLauncherPopup::drawContent()
     {
-        // 파일 목록이 아직 안 왔는지는 꺼내기 **전에** 한 번 읽고, 이 프레임은 그 값만 쓴다. 꺼낸 뒤에 다시 물으면 그 사이 워커가 끝낸 결과가
+        // 파일 목록이 아직 안 왔는지는 꺼내기 전에 한 번 읽고, 이 프레임은 그 값만 쓴다. 꺼낸 뒤에 다시 물으면 그 사이 워커가 끝낸 결과가
         // "대기 아님 · 목록 비어 있음" 으로 보여 미뤄 둔 Enter 를 버린다(결과는 다음 프레임에야 꺼낸다).
         const bool bIndexOutstanding = _fileIndexJob.isPending();
         pollFileIndex();

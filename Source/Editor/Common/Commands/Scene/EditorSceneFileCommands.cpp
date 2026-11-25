@@ -40,7 +40,7 @@ namespace sw::editor
     {
         struct EditorSceneFileCommandsInternal
         {
-            /// @brief 파일 대화상자의 결과를 받습니다(UI 프레임 — `FileDialog::pollResults`). 씬을 쓰지 않고 요청만 남긴다 — 게임 단계 `sceneSession` 이 `saveSceneAsRequested` 로 쓴다.
+            /// @brief 파일 대화상자의 결과를 받습니다(UI 프레임, `FileDialog::pollResults`). 씬을 쓰지 않고 요청만 남기고 게임 단계 `sceneSession` 이 `saveSceneAsRequested` 로 쓴다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() == false )

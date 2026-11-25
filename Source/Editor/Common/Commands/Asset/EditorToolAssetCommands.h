@@ -94,7 +94,7 @@ namespace sw::editor
          *          되돌린 값이 화면에 반영되지 않는다.
          */
         [[nodiscard]] static bool revertComponentOverride( GameObject* pInstance, GameObject* pCdo, PrefabOverrideItem& item );
-        /** @brief 인스턴스 상태를 **그 인스턴스의** 프리팹 템플릿에 저장합니다. 쓸 프리팹을 부르는 쪽이 고르지 못한다. 프리팹 인스턴스가 아니면 false 입니다. */
+        /** @brief 인스턴스 상태를 그 인스턴스의 프리팹 템플릿에 저장합니다. 쓸 프리팹을 부르는 쪽이 고르지 못한다. 프리팹 인스턴스가 아니면 false 입니다. */
         [[nodiscard]] static bool applyPrefabOverridesToTemplate( sw::GameObject* pInstance );
         /** @brief 인스턴스를 그 프리팹의 CDO 로 되돌립니다. 프리팹 인스턴스가 아니면 false 입니다. */
         [[nodiscard]] static bool revertAllPrefabOverrides( sw::GameObject* pInstance );

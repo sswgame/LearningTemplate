@@ -39,7 +39,7 @@ namespace sw::editor
         static void drawMenuItems( string_view menuPath );
         /**
          * @brief 패널 도구줄에 명령 하나를 단추로 그립니다. 눌렸으면 다음 프레임 첫머리에 대상 없이 실행하고(`queueCommand`) true 입니다.
-         * @details 아이콘이 있는 명령은 정사각 아이콘 단추, 없으면 이름표 단추다. 툴팁은 "이름 — 설명 (단축키)" 이고, 꺼진 명령은 회색으로 그린다(UI 프레임 앞에서 Model 이 낸 켜짐 값 묶음 — `isEnabledInSnapshot`).
+         * @details 아이콘이 있는 명령은 정사각 아이콘 단추, 없으면 이름표 단추다. 툴팁은 "이름 — 설명 (단축키)" 이고, 꺼진 명령은 회색으로 그린다(UI 프레임 앞에서 Model 이 낸 켜짐 값 묶음, `isEnabledInSnapshot`).
          *          이름표 · 꺼짐 · 단축키 글자를 명령 하나에서 읽으므로 메뉴 · 팔레트 · 도구줄이 서로 다른 글을 보이지 않는다
          *          (언리얼 FUICommandInfo 가 메뉴 항목과 툴바 단추를 같은 명령에서 만드는 것과 같다). 표식은 `toolbar.<명령 id>` 다.
          *          없는 명령 id 는 부른 쪽의 잘못이라 멈춘다.

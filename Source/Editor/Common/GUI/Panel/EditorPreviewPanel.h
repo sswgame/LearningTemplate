@@ -30,11 +30,11 @@ namespace sw::editor
      * @brief 문서 패널(`EditorDocumentPanel`)에 미리보기 씬 뷰포트와 창 범위의 선택, Undo 를 더한 기반 클래스입니다.
      * @details 언리얼의 `FAssetEditorToolkit` 과 `FPreviewScene`, 유니티의 `EditorWindow` 와 `PreviewRenderUtility` 에 해당합니다.
      *
-     *          **파생 창이 지킬 계약**
+     *          파생 창이 지킬 계약
      *          - 내용을 그릴 때 먼저 `beginPreviewFrame()` 을 부른다. 처음 부를 때 씬을 만들고(`getPreviewPolicy`, `getPreviewEnvironment`)
      *            `populatePreviewScene` 을 한 번 부른다. 포커스가 바뀌면 초점 씬을 등록하거나 해제한다(Undo 스택은 문서 패널 기반의 것을 패널 관리자가 건다).
      *          - 뷰포트 위치에서 `drawPreviewViewport( size )` 를 부른다. 이 함수를 부른 프레임만 그리므로, 가려진 탭은 그리지 않는다.
-     *          - 미리보기 씬의 오브젝트 편집은 `recordPreviewModify` 와 `getPreviewCommandStack` 으로 **창의 스택**(문서의 스택)에 남긴다. 창이 포커스일 때
+     *          - 미리보기 씬의 오브젝트 편집은 `recordPreviewModify` 와 `getPreviewCommandStack` 으로 창의 스택(문서의 스택)에 남긴다. 창이 포커스일 때
      *            Ctrl+Z 는 이 스택만 되돌리고(`editor::getFocusedCommandStack`), 메인 씬 기록은 그대로 둔다. 창을 닫으면 스택도 사라진다
      *            (되돌리기 어려운 결정 4). 문서 텍스트 편집(`DocumentEditRecorder`)도 이 스택에 남는다(`getDocumentCommandStack`, 감사 P0-2) —
      *            창에 포커스를 둔 Ctrl+Z 가 그 편집을 되돌리고, 창을 닫으면(`releasePreview`) 씬 편집과 함께 버린다.
@@ -44,7 +44,7 @@ namespace sw::editor
      *          - 창 스택이 늘거나 줄면 기반 클래스가 문서를 dirty 로 표시한다(`syncDocumentDirty`, 닫기 확인보다 먼저 돈다). 그래서 파생 창이
      *            미리보기 씬 편집을 따로 알릴 필요가 없다. 저장에 성공하면 `acknowledgePreviewEdits`, 문서를 다시 만들면 `resetDocumentHistory` 를
      *            부른다. 닫기 확인은 `EditorPanel::requestClose` 가 한다.
-     *          - 창을 **닫거나**(`onPanelClosed`) 종료할 때(`shutdown`) 기반 클래스가 씬, 렌더 타깃, 초점, 창 스택을 한 곳(`releasePreview`)에서 놓는다.
+     *          - 창을 닫거나(`onPanelClosed`) 종료할 때(`shutdown`) 기반 클래스가 씬, 렌더 타깃, 초점, 창 스택을 한 곳(`releasePreview`)에서 놓는다.
      *            다시 열면 첫 `beginPreviewFrame` 이 씬을 새로 만들고 `populatePreviewScene` 을 다시 부른다 — 파생 창은 거기서 앞 씬을 가리키던
      *            핸들 · "놓았다" 표시를 모두 비운다(objectID 는 씬의 매니저마다 따로 세므로 낡은 핸들이 새 씬의 다른 오브젝트로 풀릴 수 있다).
      *            열린 문서(편집 사본)는 패널에 남는다. 닫기는 미저장 확인(`requestClose`)을 거친 뒤라 버릴 편집이 없다.
@@ -69,7 +69,7 @@ namespace sw::editor
         const EditorSelection& getPreviewSelection() const { return *_pSelection; }
 
         /**
-         * @brief 미리보기 씬 오브젝트 @p obj 의 수정 전후 상태를 **창의 스택**에 남깁니다. 명령은 그 씬의 키를 기억하므로 활성 씬이 바뀌어도 이 씬에서 되돌린다.
+         * @brief 미리보기 씬 오브젝트 @p obj 의 수정 전후 상태를 창의 스택에 남깁니다. 명령은 그 씬의 키를 기억하므로 활성 씬이 바뀌어도 이 씬에서 되돌린다.
          * @return 남겼으면 true 입니다(씬 매니저가 없으면 false).
          */
         bool recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label );
@@ -136,7 +136,7 @@ namespace sw::editor
          */
         void drawPreviewBar( const float2& origin, const float2& size );
         /**
-         * @brief 재생 막대가 고친 값을 미리보기 씬에 겁니다(Model) — 바뀐 바닥 보임(`_bFloorChanged`)을 바닥 오브젝트에, 멈춤 · 속도(@p speed — 고른 칸) · 한 프레임 요청을 시간 배율에.
+         * @brief 재생 막대가 고친 값을 미리보기 씬에 겁니다(Model). 바뀐 바닥 보임(`_bFloorChanged`)을 바닥 오브젝트에, 멈춤 · 속도(@p speed, 고른 칸) · 한 프레임 요청을 시간 배율에.
          * @details 막대(View)는 값만 고치고 씬을 만지지 않는다. 막대를 그린 뒤 같은 프레임에 부르므로 예전처럼 그 프레임의 씬 틱부터 따른다.
          */
         void applyPreviewBar( float32 speed );

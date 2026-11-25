@@ -33,7 +33,7 @@ namespace sw::editor
         void                         resetToFreshEditor() override { clear(); }
 
         /**
-         * @brief 알림을 하나 쌓습니다. **메인 스레드에서만 부릅니다.**
+         * @brief 알림을 하나 쌓습니다. 메인 스레드에서만 부릅니다.
          * @details @p durationSec 은 0 보다 커야 합니다(아니면 단언하며, 다른 값으로 바꿔 쓰지 않습니다).
          * 목록에는 락이 없습니다. `update` 와 그리기가 프레임마다 같은 벡터를 순회하고 지우므로, 다른 스레드에서 push
          *          하면 순회 중 재할당으로 죽습니다. 백그라운드에서 알리고 싶으면 결과를 큐에 담아 메인 스레드에서 꺼내 push

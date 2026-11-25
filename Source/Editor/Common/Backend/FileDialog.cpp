@@ -73,7 +73,7 @@ namespace sw
                         path = ProcessRoots::get()._content.join( StringUtil::toLower( relative.c_str() ) ).str();
                 }
             }
-            // **여기서 델리게이트를 부르지 않는다** — 콜백은 메인 스레드가 매 프레임 만지는 상태(씬 · 컴포넌트)를 고친다.
+            // 여기서 델리게이트를 부르지 않는다 — 콜백은 메인 스레드가 매 프레임 만지는 상태(씬 · 컴포넌트)를 고친다.
             if ( bSuccess )
                 pDialog->_listPath = std::move( listResult );
             pDialog->_bDone.store( true, std::memory_order_release );

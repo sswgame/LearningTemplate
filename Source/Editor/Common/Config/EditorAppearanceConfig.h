@@ -18,7 +18,7 @@ namespace sw::editor
 {
     /**
      * @brief 에디터가 저장하는 상태입니다(Shipping 에는 없습니다).
-     * @details 지금은 테마뿐입니다. **필드를 늘리기 전에** 그 값을 앱이 쓰는지 사람이 쓰는지 확인하십시오. 사람이 쓰는
+     * @details 지금은 테마뿐입니다. 필드를 늘리기 전에 그 값을 앱이 쓰는지 사람이 쓰는지 확인하십시오. 사람이 쓰는
      *          것은 `EditorToolDefaults` 에 둡니다.
      */
     REFLECT()

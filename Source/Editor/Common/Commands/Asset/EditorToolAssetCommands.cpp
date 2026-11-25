@@ -94,7 +94,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 문서 경로입니다. 열린 문서 경로가 비면 기본 문서 경로이고, **둘 다 없으면 빈 문자열**입니다.
+             * @brief 문서 경로입니다. 열린 문서 경로가 비면 기본 문서 경로이고, 둘 다 없으면 빈 문자열입니다.
              * @details 빈 경로를 파일 계층까지 넘기면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 그래서 부르는 쪽(`loadToolDocument`,
              *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
@@ -145,7 +145,7 @@ namespace sw::editor
             static string makeShownPath( string_view path, const string& resolved ) { return path.empty() ? resolved : string{ path }; }
 
             /**
-             * @brief 도구 문서를 읽고 **어떻게 됐는지** 돌려줍니다. 파일이 없음(새 문서), 읽음, 있는데 읽지 못함(깨졌거나 새 형식) 중 하나입니다.
+             * @brief 도구 문서를 읽고 어떻게 됐는지 돌려줍니다. 파일이 없음(새 문서), 읽음, 있는데 읽지 못함(깨졌거나 새 형식) 중 하나입니다.
              * @details 다섯 종류가 같은 형태로 알린다. 읽지 못하면 경고 한 줄(`Could not read the <종류> '<경로>'`)을 남기고, @p pOutStatus 가
              *          있으면 패널 상태 문구(`No file yet: …`, `Failed to read …`, `Loaded …`)를 쓴다.
              */
@@ -332,7 +332,7 @@ namespace sw::editor
         if ( pInstance == nullptr )
             return;
 
-        // 비교용 원형(CDO)은 **씬 밖**에서 만든다. 언리얼 CDO 처럼 월드에 들어가지 않는다. 활성 씬 매니저 안에 임시 오브젝트로 만들면
+        // 비교용 원형(CDO)은 씬 밖에서 만든다. 언리얼 CDO 처럼 월드에 들어가지 않는다. 활성 씬 매니저 안에 임시 오브젝트로 만들면
         // 지울 때까지 틱, 계층, 저장에 보인다.
         GameObjectManager scratch;
         GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabDiffCdo" ) );

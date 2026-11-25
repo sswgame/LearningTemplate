@@ -76,7 +76,7 @@ namespace sw::editor
                 return;
             EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, assetPaths );
         }
-        // 곁 파일(텍스처 형식 변형 · 파생 데이터 — `SW_ASSET_COMPANION`)은 원본 에셋의 일부다 — 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
+        // 곁 파일(텍스처 형식 변형 · 파생 데이터, `SW_ASSET_COMPANION`)은 원본 에셋의 일부라 따로 보이지 않는다. 보이면 썸네일 · 열기가 이 플랫폼이 못 읽는
         // 형식(ASTC · ETC2 를 데스크톱 D3D12)을 텍스처로 만들다 실패했다(언리얼 콘텐츠 브라우저도 플랫폼 파생 데이터를 에셋으로 보이지 않는다).
         vector<string> listCompanion;
         for ( const EditorFolderListingEntry& entry : outList )

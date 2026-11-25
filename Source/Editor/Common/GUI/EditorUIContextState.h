@@ -29,7 +29,7 @@ namespace sw::editor
     /**
      * @struct EditorUIBinderRegistration
      * @brief DLL 하나의 결속 함수입니다. 확장 모듈마다 CMake 가 만든 소스(`<모듈>UIBinder.cpp`)가 하나 둡니다.
-     * @details vcpkg imgui 는 정적 라이브러리라 DLL 마다 `GImGui` · 할당자 사본이 생깁니다. 결속 함수는 **그 DLL 의** ImGui 사본에
+     * @details vcpkg imgui 는 정적 라이브러리라 DLL 마다 `GImGui` · 할당자 사본이 생깁니다. 결속 함수는 그 DLL 의 ImGui 사본에
      *          `SetAllocatorFunctions` · `SetCurrentContext` 를 겁니다(Dear ImGui FAQ "DLL 경계"). 할당자는 엔진 Memory 라 어느 DLL 이 잡고 풀어도 같습니다.
      */
     struct EditorUIBinderRegistration : EditorExtensionRegistration

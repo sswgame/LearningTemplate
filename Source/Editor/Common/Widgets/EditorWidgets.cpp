@@ -529,7 +529,7 @@ namespace sw::editor
         }
         hintState._filteredHintFrame = static_cast<uint32>( ImGui::GetFrameCount() );
 
-        // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '{' · '%' 가 들어와도 서식으로 해석되지 않는다.
+        // 필터를 서식 인자로 넘긴다. 그래서 검색어에 '{' · '%' 가 들어와도 서식으로 해석되지 않는다.
         const string text = SW_LOCKEYFORMAT( "EdCommon", "NoMatchesForFilter", TextArgumentList().addText( "filter", filter ) );
         ImGui::TextDisabled( "%s", text.c_str() );
     }

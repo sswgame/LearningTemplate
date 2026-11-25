@@ -192,7 +192,7 @@ namespace sw
             }
 
             /**
-             * @brief zenity · yad 계열 도구의 명령줄을 만듭니다. **두 도구의 차이는 파일 선택 플래그 하나뿐입니다.**
+             * @brief zenity · yad 계열 도구의 명령줄을 만듭니다. 두 도구의 차이는 파일 선택 플래그 하나뿐입니다.
              * @param pFileSelectionFlag 파일 선택 모드를 켜는 플래그(zenity `--file-selection`, yad `--file`)
              * @details 선언한 확장자 필터 뒤에 "All files | *" 필터를 하나 더 붙여 그 밖의 파일도 고를 수 있게 합니다 —
              *          zenity · yad 모두 `--file-filter` 를 여러 번 받습니다(yad man File filters 절: "This option may be used multiple times").

@@ -100,10 +100,10 @@ namespace sw::editor
                 int32             _overlayDepth{ 0 };
 
                 /**
-                 * @brief 깊이 상한을 넘겨 **담지 못한** begin 의 수입니다. 두 스택이 각자 하나씩 듭니다.
-                 * @details 상한을 넘은 begin 은 스택에 담기지 않는데, 그 짝인 end 는 그것을 모르고 **한 칸을 꺼냅니다.** 그 순간부터
+                 * @brief 깊이 상한을 넘겨 담지 못한 begin 의 수입니다. 두 스택이 각자 하나씩 듭니다.
+                 * @details 상한을 넘은 begin 은 스택에 담기지 않는데, 그 짝인 end 는 그것을 모르고 한 칸을 꺼냅니다. 그 순간부터
                  *          모든 짝이 한 칸씩 어긋납니다. 섹션 쪽은 엉뚱한 `kind` 로 닫히고(그룹을 자식으로 닫습니다), 오버레이 쪽은
-                 *          **틀린 개수로 `PopStyleVar`** 를 불러 그 프레임의 스타일 스택이 통째로 무너집니다. 담지 못한 수를 세어 두면
+                 *          틀린 개수로 `PopStyleVar` 를 불러 그 프레임의 스타일 스택이 통째로 무너집니다. 담지 못한 수를 세어 두면
                  *          end 가 그만큼을 먼저 흘려보내 짝이 맞습니다.
                  */
                 int32 _sectionOverflow{ 0 };
@@ -425,7 +425,7 @@ namespace sw::editor
         }
         else
         {
-            // 담지 못한 것은 **여기서 바로 되돌린다.** 아래 `Begin` 뒤의 짝인 end 는 이 개수를 알 길이 없고, 틀린 개수로
+            // 담지 못한 것은 여기서 바로 되돌린다. 아래 `Begin` 뒤의 짝인 end 는 이 개수를 알 길이 없고, 틀린 개수로
             // `PopStyleVar` 를 부르면 스타일 스택이 무너진다.
             if ( styleVarCount > 0 )
                 ImGui::PopStyleVar( styleVarCount );

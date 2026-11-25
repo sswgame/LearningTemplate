@@ -20,7 +20,7 @@ namespace sw::editor
     /**
      * @class InspectorFavorites
      * @brief 즐겨찾기한 프로퍼티의 키(`<선언한 타입 이름>.<프로퍼티 이름>`)를 정렬된 집합으로 가집니다.
-     * @details 언리얼 Details 패널의 Favorites 에 해당한다. 키의 타입은 그 프로퍼티를 **선언한** 타입이라(`makePropertyKey`), 기반 클래스의 프로퍼티를
+     * @details 언리얼 Details 패널의 Favorites 에 해당한다. 키의 타입은 그 프로퍼티를 선언한 타입이라(`makePropertyKey`), 기반 클래스의 프로퍼티를
      *          즐겨찾기하면 그 기반을 잇는 모든 타입에 함께 보인다(파생 타입마다 따로 저장하지 않는다).
      *          저장 형식은 줄마다 키 하나인 텍스트다. 에디터 상태 폴더에 두고 파일 이름은 집합마다 만들 때 정한다 — 프로퍼티(`kPropertyFileName`)와
      *          메서드 액션(`kActionFileName`)을 한 파일에 섞으면 메서드만 즐겨찾은 타입에 빈 프로퍼티 즐겨찾기 구역이 선다. 사용자 파일이므로 읽기 실패는 빈 집합이다.

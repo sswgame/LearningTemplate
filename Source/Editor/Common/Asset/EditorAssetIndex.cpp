@@ -184,7 +184,7 @@ namespace sw::editor
                 }
             };
 
-            /** @brief 전체 스캔의 병렬 본문입니다. 파일마다 **자기 칸**에만 쓰므로 잠금이 없다. */
+            /** @brief 전체 스캔의 병렬 본문입니다. 파일마다 자기 칸에만 쓰므로 잠금이 없다. */
             struct ScanJob
             {
                 AbsolutePath    _resourceRoot;

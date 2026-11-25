@@ -40,7 +40,7 @@ namespace sw::editor
                         return string{ afterText };
                     string result;
                     result.reserve( prefixLength + _removed.size() + suffixLength );
-                    // `data()` 를 넘기지만 **길이도 함께** 넘기므로, 널 종료를 기대하는 호출이 아니다.
+                    // `data()` 를 넘기지만 길이도 함께 넘기므로, 널 종료를 기대하는 호출이 아니다.
                     // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 알아보지 못한다.
                     // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
                     result.append( afterText.data(), prefixLength );
@@ -107,7 +107,7 @@ namespace sw::editor
 
             /**
              * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다 — 선택에 입힐 일(지운 오브젝트 빼기 · 되살린 오브젝트 고르기)은 줄에 남기고, 씬을 dirty 로 표시합니다.
-             * @details 선택은 바로 고치지 않는다 — 선택은 UI 상태이고 되돌리기 기록 밖이다(`EditorSelectionUpdateQueue`). 이 처리기는 전역 스택에만 걸린다 — 전역 스택은 메인 씬
+             * @details 선택은 바로 고치지 않는다. 선택은 UI 상태이고 되돌리기 기록 밖이다(`EditorSelectionUpdateQueue`). 이 처리기는 전역 스택에만 걸린다. 전역 스택은 메인 씬
              *          오브젝트만 받는다(미리보기 씬 것은 창의 스택, `findPreviewScopeOf`).
              */
             static void onObjectEdit( const CommandStack::ObjectEditEvent& event )
@@ -137,7 +137,7 @@ namespace sw::editor
 
             /**
              * @brief @p obj 가 미리보기 씬에 살면 그 씬에 묶인 선택(창의 범위)입니다. 메인 씬 오브젝트면 nullptr 입니다.
-             * @details 기록이 갈 스택은 부른 쪽의 포커스가 아니라 **오브젝트가 사는 씬**이 정한다 — 명령이 창 선택의 오브젝트를 고쳐도 전역 스택 ·
+             * @details 기록이 갈 스택은 부른 쪽의 포커스가 아니라 오브젝트가 사는 씬이 정한다 — 명령이 창 선택의 오브젝트를 고쳐도 전역 스택 ·
              *          메인 씬 dirty 로 새지 않는다(창을 닫으면 그 기록도 함께 사라진다, 계획의 되돌리기 어려운 결정 4).
              */
             static EditorSelection* findPreviewScopeOf( const GameObject& obj )

@@ -1,4 +1,4 @@
-// EditorIconNames — 아이콘 이름 → 코드포인트 표(`sweditoricons.glyphs.xml`)가 엄격하게 읽히고, 코드가 쓰는 이름 목록(`EditorIconNameList` — 목록 밖의 리터럴은 컴파일되지 않는다) ·
+// EditorIconNames: 아이콘 이름 → 코드포인트 표(`sweditoricons.glyphs.xml`)가 엄격하게 읽히고, 코드가 쓰는 이름 목록(`EditorIconNameList`, 목록 밖의 리터럴은 컴파일되지 않는다) ·
 // 컴포넌트 메타(`Icon=`) · 컴포넌트 아이콘 표가 쓰는 이름이 모두 표에 있으며, 깨진 표(겹친 이름 · Missing 없음 · 틀린 코드포인트)는 읽지 않는다. 테마 키 검사(`EditorThemeKeys`)와 같은 자리다(nogpu).
 #include "pch.h"
 

@@ -1,7 +1,7 @@
 /**
  * @file EditorContentScan.h
  * @brief 에디터가 리소스 트리를 디스크에서 훑는 한 입구입니다 — 원본 곁 서술(`.meta`)과 작업 도메인의 옛 자리(`Content/scratch/`)에 남은 찌꺼기를 뺀 목록을 돌려줍니다.
- * @details 작업 도메인(`scratch/` — 시나리오 사본)은 이 프로세스의 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 리소스 루트를 훑어도 남의 실행 사본은 나오지 않고,
+ * @details 작업 도메인(`scratch/`, 시나리오 사본)은 이 프로세스의 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`). 그래서 리소스 루트를 훑어도 남의 실행 사본은 나오지 않고,
  *          이 실행의 사본은 그 폴더를 따로 훑는다(`collectTreeFiles`). 예전 자리(`Content/scratch/`)에 남은 폴더가 원본과 같은 파일 이름으로 보이면 Quick Open 이 그것을 집으므로 뺀다.
  *          에디터 코드는 리소스 트리를 `FileUtil::collectFiles` · `collectFolders` 로 직접 훑지 않고 이것을 부른다(린트 common-shapes 의 editorContentScan).
  *          쿠킹 · 팩은 작업 도메인을 빼는 `AssetPaths::collectContentFiles` 를 쓴다(규칙이 다르다).
@@ -41,7 +41,7 @@ namespace sw::editor
         /** @brief @p folder(디스크 경로) 아래 폴더입니다. */
         [[nodiscard]] static bool collectFolders( const AbsolutePath& folder, vector<AbsolutePath>& outListFolder, bool bRecursive );
         /**
-         * @brief 에디터의 리소스 트리 전체 — 리소스 루트 @p contentRoot 와 작업 도메인 폴더(@p scratchFolder, 아직 없으면 뺀다) — 아래 파일입니다.
+         * @brief 에디터의 리소스 트리 전체, 곧 리소스 루트 @p contentRoot 와 작업 도메인 폴더(@p scratchFolder, 아직 없으면 뺀다) 아래 파일입니다.
          * @details 트리 전체를 보는 쪽(에셋 색인)이 부른다. 작업 도메인 파일의 id 는 `AssetPaths::toAssetID` 로 푼다(루트 기준 상대 경로가 아니다).
          */
         [[nodiscard]] static bool collectTreeFiles( const AbsolutePath& contentRoot, const AbsolutePath& scratchFolder, vector<EditorContentFile>& outListFile, const StopToken& stopToken = {} );

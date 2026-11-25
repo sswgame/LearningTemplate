@@ -25,7 +25,7 @@ namespace sw::editor
         [[nodiscard]] static bool loadLocalizationProject( string_view projectPath, LocalizationSheet& outSheet );
         /**
          * @brief 고친 줄을 원문 테이블과 번역 테이블에 씁니다. 번역을 고친 항목은 지금 원문의 해시를 받고 검토 표시가 해제됩니다. 원문만 고친 줄의 번역은 낡은 것이 됩니다.
-         * @details **읽지 못한 기존 파일은 덮어쓰지 않는다.** 깨진 번역 테이블을 덮어쓰면 그 문화권의 번역이 모두 지워지기 때문이다.
+         * @details 읽지 못한 기존 파일은 덮어쓰지 않는다. 깨진 번역 테이블을 덮어쓰면 그 문화권의 번역이 모두 지워지기 때문이다.
          *          하나라도 못 썼으면 false 이고 고친 표시가 남는다.
          *          다 쓰면 실행 중인 `LocalizationManager` 가 그 프로젝트를 다시 읽습니다(핫 리로드).
          */

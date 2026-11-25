@@ -1244,7 +1244,7 @@ namespace sw::editor
                 notifyRowEdited( rowID );
             return;
         }
-        // 씬 대상 — UI 프레임은 씬 메모리에 쓰지 않는다. 편집 구간은 지금 연다(쓰기 전 값 — 앞 요청은 지난 게임 단계가 이미 적용했다).
+        // 씬 대상: UI 프레임은 씬 메모리에 쓰지 않는다. 편집 구간은 지금 연다(쓰기 전 값. 앞 요청은 지난 게임 단계가 이미 적용했다).
         ensureEditSpan( *pBinding, undoLabel );
         vector<PropertyEditTarget> listOther;
         uint32                     sceneKey = 0;

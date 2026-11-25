@@ -71,7 +71,7 @@ namespace sw::editor
 
             /**
              * @brief 오브젝트를 월드 축 `axis` 의 값이 `targetValue` 가 되도록 옮기고 되돌리기 기록을 남깁니다. 정렬과 분배가 함께 씁니다.
-             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 월드 차이만큼 **로컬** 위치를 옮기면 부모에 회전이나 크기가 있을 때 틀린다.
+             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 월드 차이만큼 로컬 위치를 옮기면 부모에 회전이나 크기가 있을 때 틀린다.
              *          주 씬 컴포넌트가 없으면 아무것도 하지 않습니다.
              */
             static void moveAlongWorldAxis( GameObject* pGo, AlignAxis axis, float32 targetValue, string_view actionName )

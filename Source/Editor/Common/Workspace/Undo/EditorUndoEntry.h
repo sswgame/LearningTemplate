@@ -16,7 +16,7 @@ namespace sw::editor
      * @details 예전에는 History 창이 그리는 도중 스택을 바로 불러 편집 잠금을 건너뛰었다 — 베이크 중에도 기록 줄을 누르면 씬이 되돌아갔다(감사 E-2).
      *          언리얼 `UTransBuffer::CanUndo`(열린 트랜잭션 · PIE 면 거절)를 메뉴 · 단축키 · Undo History 창이 함께 묻는 것과 같은 자리다.
      *          대상 스택은 부르는 순간의 포커스 창의 것이다(`getFocusedCommandStack`). 거절하거나 스택이 없으면 false 다.
-     *          **게임 스레드에서 부른다**(게임 단계 · 콘솔 · 자동화) — 되돌리기 실행은 씬을 바꾼다. UI 는 `edit.undo` · `edit.redo`(`EditorCommandEdit::History` — `request` 가
+     *          게임 스레드에서 부른다(게임 단계 · 콘솔 · 자동화). 되돌리기 실행이 씬을 바꾸기 때문이다. UI 는 `edit.undo` · `edit.redo`(`EditorCommandEdit::History`, `request` 가
      *          게임 단계로 넘긴다)와 `EditorCommandRegistry::requestHistoryMove` 로 요청하고, 선택 갱신은 다음 UI 프레임 시작이 입힌다(`EditorSelectionUpdateQueue`).
      */
     struct SW_EDITOR_API EditorUndoEntry

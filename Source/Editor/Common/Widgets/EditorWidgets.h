@@ -27,8 +27,8 @@ namespace sw::editor
      * @class EditorWidgetID
      * @brief `##` 로 시작하는 ImGui 위젯 id 입니다. 리터럴은 `SW_WIDGET_ID` 로, 실행 중에는 `fromString` 으로 만듭니다.
      * @details 에디터 입력 위젯(`EditorWidgets::inputInt` · `dragFloat` · `sliderFloat` · `combo` …)이 받는 숨은 id 다 — 보이는 이름표를 담을 수 없다.
-     *          ImGui 는 이름표를 칸 **오른쪽**에 붙여 좁은 칸에서 잘렸다(uiaudit). 이름표는 앞(왼쪽)에 따로 그린다 — 행이면 `drawPropertyRowLabel`, 도구줄이면 `drawInlineLabel`.
-     *          린트는 리터럴만 볼 수 있어 실행 중 만든 이름표를 놓쳤다 — 형식이 가른다: 리터럴은 `SW_WIDGET_ID` 가 컴파일 때 보고(C++17 — consteval 이 없다), 실행 중 만든 id 는
+     *          ImGui 는 이름표를 칸 오른쪽에 붙여 좁은 칸에서 잘렸다(uiaudit). 이름표는 앞(왼쪽)에 따로 그린다 — 행이면 `drawPropertyRowLabel`, 도구줄이면 `drawInlineLabel`.
+     *          린트는 리터럴만 볼 수 있어 실행 중 만든 이름표를 놓쳐서 형식이 가른다. 리터럴은 `SW_WIDGET_ID` 가 컴파일 때 보고(C++17 이라 consteval 이 없다), 실행 중 만든 id 는
      *          이름 붙은 입구 `fromString` 만 받는다. 에디터 코드는 ImGui 입력 위젯을 직접 부르지 못한다(`EditorInputBan.h`). 언리얼 Slate 도 칸과 이름표가 서로 다른 위젯이다.
      *          클래스는 내보내지 않고 실행 중 입구만 내보낸다.
      */
@@ -111,7 +111,7 @@ namespace sw::editor
         /**
          * @brief 토글 · 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.
          * @details 켜짐은 중립 한 단계(`_toggleActive`)다 — 단추마다 색을 받던 겹쳐 쓰기를 없앴다(초록 "Collapse" · 빨간 "Error Pause" 처럼 크롬이 신호색을 띠어
-         *          진짜 신호 — 오류 수 — 와 구분되지 않았다). 뜻이 있는 색은 글자(데이터)에 둔다.
+         *          진짜 신호(오류 수)와 구분되지 않았다). 뜻이 있는 색은 글자(데이터)에 둔다.
          */
         static bool drawToggleButton( const utf8* pLabel, bool bActive );
         /**
@@ -231,7 +231,7 @@ namespace sw::editor
          *       이 함수를 쓰세요.
          * @details ImGui 의 크기 변경 콜백으로 `string` 자체를 버퍼로 쓰므로 길이 제한이 없다. `fixed_string<N>` 임시 버퍼에
          *          복사해 편집한 뒤 되쓰면 그 크기를 넘는 문자열이 잘려서 긴 대사의 뒷부분이 사라진다.
-         * @param pLabel ImGui 라벨입니다. `##` 로 시작하면 라벨을 감추고, 보이는 부분이 있으면 칸 **앞**(왼쪽)에 흐린 이름표로 그립니다(ImGui 기본은 오른쪽).
+         * @param pLabel ImGui 라벨입니다. `##` 로 시작하면 라벨을 감추고, 보이는 부분이 있으면 칸 앞(왼쪽)에 흐린 이름표로 그립니다(ImGui 기본은 오른쪽).
          * @param text   편집 대상입니다. 값이 바뀔 때만 갱신됩니다.
          * @param width  0 이면 ImGui 기본 폭, 음수면 남은 폭 전부, 양수면 그 폭입니다.
          */
@@ -350,7 +350,7 @@ namespace sw::editor
         static void popInspectorStyle();
 
         /**
-         * @brief 에셋 페이로드 id 를 만듭니다. 에셋 id 의 이름은 **리소스 id(상대 경로)** 한 형식이다 — 끌기 · 콘텐츠 브라우저 명령 · 인스펙터 에셋 칸 메뉴가 모두 이것을 쓴다.
+         * @brief 에셋 페이로드 id 를 만듭니다. 에셋 id 의 이름은 리소스 id(상대 경로) 한 형식이다 — 끌기 · 콘텐츠 브라우저 명령 · 인스펙터 에셋 칸 메뉴가 모두 이것을 쓴다.
          * @details 예전에는 끌기가 상대 경로, 콘텐츠 브라우저 명령이 절대 경로를 올려 같은 에셋이 두 id 였다(한쪽에서 만든 id 를 다른 쪽이 풀면 다른 글이 나왔다).
          *          디스크 경로(절대)는 받지 않는다 — 넘기면 멈춘다. 디스크 자리가 필요한 쪽은 `findAssetPayload` 로 받은 리소스 id 를 `AssetPaths::findLooseFile` 로 푼다.
          */

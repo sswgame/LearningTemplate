@@ -32,7 +32,7 @@ namespace sw::editor
          */
         static void update();
         /**
-         * @brief F8 — Eject/Possess 를 UI 명령으로 보냅니다(`EditorUICommandKind::ToggleEject`). 이 UI 프레임 뒤 게임 틱 시작에 적용됩니다 — 플레이어 조종 중이면 Simulate 로 바꾸고
+         * @brief F8: Eject/Possess 를 UI 명령으로 보냅니다(`EditorUICommandKind::ToggleEject`). 이 UI 프레임 뒤 게임 틱 시작에 적용됩니다. 플레이어 조종 중이면 Simulate 로 바꾸고
          *        씬 뷰를 앞으로(Eject), Eject 한 세션이면 다시 조종하고 게임 뷰를 앞으로 둡니다(Possess).
          * @details UI(메뉴 · 단축키 · 게임 뷰 툴바)는 세션을 바로 바꾸지 않는다 — UI 출력 계약(`EditorUICommandQueue`).
          */
