@@ -3,10 +3,15 @@
 #include "DevTools/DevToolsHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/string_splitter.h"
+#include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
@@ -15,14 +20,11 @@
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Diagnostics/FileReadDiagnostics.h"
-#include "DevTools/Diagnostics/ReflectionDump.h"
-#include "DevTools/Diagnostics/StateHashRecorder.h"
 #include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 #include "DevTools/Network/NetLineEmulation.h"
 #include "DevTools/Network/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
-#include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
 #include "DevTools/Profiling/Memory/MemoryExportSubsystem.h"
 #include "DevTools/Profiling/ProfilerLaunchSubsystem.h"
 #include "DevTools/Profiling/ProfilerTraceExport.h"
@@ -37,7 +39,9 @@
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneObjectHash.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw
@@ -49,6 +53,81 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
 
+    /**
+     * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
+     * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다. 묻는 창구는 엔진에 두고 언제 무엇을 찍을지는 개발 도구가 정한다(언리얼 `obj classes` 자리).
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalString, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
+
+    /**
+     * @brief `-gv_stateHashHistory=N`: 틱마다 씬 상태 해시를 남기고 최근 N 틱을 보관합니다(0=끄기). 개발 명령 `state.hashes` 로 읽습니다.
+     * @details 에디터 멀티 프로세스 재생이 전용 서버와 클라이언트 둘 다에 준다(`EditorNetPlaySession`).
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stateHashHistory, 0, "틱별 씬 상태 해시 이력 길이 (0=끄기)" );
+
+    /**
+     * @brief `-gv_leakWindowFullStacks`: 기준선 창을 `FullStacks` 로 엽니다(`MemoryProfiler::captureMemoryLeakBaseline`). 종료 누수 보고가 줄마다 첫 프레임(누가 할당했나)을 적습니다.
+     * @details 창 안의 모든 할당이 스택을 잡아 Debug 실행이 느려진다 — 누수 출처를 찾을 때만 켠다. 꺼 두면 `TagTotals`(태그별 바이트 · 개수만)다. 값은 기준선을 잡는 순간에 읽는다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_leakWindowFullStacks, false, "기동 뒤 누수 기준선 창을 FullStacks 로 연다 - 종료 보고가 줄마다 할당한 코드의 첫 프레임을 적는다(Debug 가 느려지므로 누수 출처를 찾을 때만)" );
+
+    namespace
+    {
+        /**
+         * @class StateHashRecorder
+         * @brief 기동 단계 서브시스템입니다 — 초기화 때 `-gv_stateHashHistory` 가 0 보다 크면 엔진 서비스 `StateHashHistory` 의 용량을 그만큼 둡니다(서버 디버깅 S7).
+         * @details 서비스 범위는 기동 단계보다 먼저 서므로 초기화 때 이력이 이미 있다. 배포 호스트는 DevTools 를 링크하지 않아 늘 꺼져 있다.
+         */
+        class StateHashRecorder final : public Subsystem
+        {
+        public:
+            static constexpr const utf8* kSubsystemName = "StateHashRecorder";
+
+            SubsystemInitResult initializeSubsystem() override
+            {
+                if ( gv_stateHashHistory <= 0 )
+                    return SubsystemInitResult::Succeeded;
+                StateHashHistory* const pHistory = engine::findSubsystem<StateHashHistory>();
+                if ( pHistory == nullptr )
+                {
+                    // 켜 달라는 요청을 조용히 버리지 않는다 — 이 호스트는 이력 서비스를 세우지 않는다.
+                    SW_LOG_ERROR_ID( "StateHashRecorder.NoHistory", "-gv_stateHashHistory=%# asked for but this host has no StateHashHistory service", static_cast<int32>( gv_stateHashHistory ) );
+                    return SubsystemInitResult::Succeeded;
+                }
+                pHistory->setCapacity( static_cast<uint32>( gv_stateHashHistory ) );
+                return SubsystemInitResult::Succeeded;
+            }
+            void        shutdownSubsystem() override {}
+            const utf8* getSubsystemName() const override { return kSubsystemName; }
+        };
+
+        struct DevToolsHostInternal
+        {
+            /** @brief 누수 기준선 질의의 답입니다 — 스위치를 그 자리에서 읽는다(`MemoryProfiler::setLeakBaselineDetailQuery`). */
+            static LeakWindowDetail queryLeakBaselineDetail() { return gv_leakWindowFullStacks ? LeakWindowDetail::FullStacks : LeakWindowDetail::TagTotals; }
+
+            /** @brief `-gv_dumpReflection` 요청이 있으면 그 이름들의 등록 내용을 로그로 남기고 요청을 비웁니다. */
+            static void dumpPendingReflection()
+            {
+                const string nameList = gv_dumpReflection.get();
+                if ( nameList.empty() )
+                    return;
+                const TypeRegistry&   registry = engine::getSubsystem<TypeRegistry>();
+                const string_splitter parts( string_view{ nameList }, { "," } );
+                for ( const string_view part : parts.getSplitList() )
+                {
+                    const string_view name = StringUtil::trim( part );
+                    if ( name.empty() )
+                        continue;
+                    const hashed_string key( name );
+                    const string        text = ( registry.findType( key ) == nullptr && registry.findEnum( key ) != nullptr ) ? registry.describeEnum( key ) : registry.describeType( key );
+                    SW_LOG_INFO_ID( "Engine.ReflectionDump", "[gv_dumpReflection]\n%#", text.c_str() );
+                }
+                gv_dumpReflection.set( {} ); // 한 번만
+            }
+        };
+    } // namespace
+
     DevToolsHost::DevToolsHost( FileWatchService& fileWatch )
         : _fileWatch{ fileWatch }
         , _pConsole{}
@@ -56,12 +135,12 @@ namespace sw
         , _pFileReadDiagnostics{ make_unique<FileReadDiagnostics>() }
         , _frameStall{}
     {
-        LeakBaselineDetailSwitch::install(); // 기동 기준선(엔진 초기화 끝 · 헤드리스 진입)보다 먼저다 — 호스트 범위가 엔진보다 먼저 선다
+        MemoryProfiler::setLeakBaselineDetailQuery( &DevToolsHostInternal::queryLeakBaselineDetail ); // 기동 기준선(엔진 초기화 끝 · 헤드리스 진입)보다 먼저다 — 호스트 범위가 엔진보다 먼저 선다
     }
 
     DevToolsHost::~DevToolsHost()
     {
-        LeakBaselineDetailSwitch::uninstall();
+        MemoryProfiler::setLeakBaselineDetailQuery( nullptr ); // 기본 `TagTotals` 로 돌아간다
     }
 
     EngineStartupExtensionDelegate DevToolsHost::makeStartupExtension()
@@ -101,7 +180,7 @@ namespace sw
         // 시작 명령(`-gv_devConsoleExec`)은 시작 씬이 열린 뒤 한 번 — 이 프레임의 입력 재생 앞이다.
         if ( _pConsole != nullptr )
             _pConsole->runPendingExec();
-        ReflectionDump::runPending(); // `-gv_dumpReflection` — 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다
+        DevToolsHostInternal::dumpPendingReflection(); // `-gv_dumpReflection` — 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다
     }
 
     void DevToolsHost::addStartupSubsystems( SubsystemScope& startup )
