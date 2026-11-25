@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Shader/Binding/ComputeShaderParameters.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -69,6 +71,10 @@ namespace sw
                     break;
                 }
             }
+            // 에뮬 RW 칸(g_SwRWSlot0..2)은 공용 도우미(`Bindless::loadRwTexture2D` · `storeRwTexture2D`)가 셋 모두 선언한다 — 번호로 고르므로 패스는 쓰는 칸만 표에 적고,
+            // 적지 않은 칸은 걸지 않은 채 둔다(에뮬 백엔드의 빈 UAV 는 0 을 읽고 쓰기를 버린다). 다른 자원은 표가 모르면 거절한다.
+            if ( found == table._count && StringUtil::startsWith( slot._name.view(), shaderslot::resname::kRwTextureSlot ) )
+                continue;
             if ( found == table._count )
             {
                 SW_LOG_ERROR_ID( "ComputeShaderBindings.UndeclaredParameter", "Compute shader '%#' declares '%#' (register %#) but its C++ parameter table does not - the PSO is not used",

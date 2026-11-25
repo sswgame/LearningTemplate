@@ -109,6 +109,27 @@ SW_TEST_CASE( ComputeShaderParametersTest, UndeclaredShaderResourceFailsResolve 
     SW_EXPECT_FALSE( bindings.isResolvedFor( TestComputeShader::kParameters ) );
 }
 
+/**
+ * @brief [ComputeShaderParametersTest] 공용 도우미가 선언한 에뮬 RW 칸(g_SwRWSlot1 · 2)은 표에 없어도 푼다 — 번호로 고르는 칸이라 패스는 쓰는 칸만 적는다
+ * @details vfx_simulate 가 칸 0 만 적었는데 도우미가 셋을 모두 선언해 DX11 · GL 에서 PSO 를 버렸다. 변이: 이름 접두를 보지 않으면 이 케이스가 풀지 못한다.
+ */
+SW_TEST_CASE( ComputeShaderParametersTest, EmulatedRwSlotsOutsideTheTableResolve )
+{
+    using Util = ComputeShaderParametersTestUtil;
+    ShaderReflectionData reflection{};
+    Util::addResource( reflection, "g_Input", ShaderBindingKind::StructuredBuffer, 3 );
+    Util::addResource( reflection, "g_Extra", ShaderBindingKind::StructuredBuffer, 1 );
+    Util::addResource( reflection, "g_OutputRW", ShaderBindingKind::RwStructuredBuffer, 2 );
+    Util::addResource( reflection, "g_SwRWSlot1", ShaderBindingKind::RwTexture, 6 );
+    Util::addResource( reflection, "g_SwRWSlot2", ShaderBindingKind::RwTexture, 7 );
+    vector<pair<ShaderStage, const ShaderReflectionData*>> listStage;
+    listStage.push_back( { ShaderStage::Compute, &reflection } );
+    const ShaderBindingLayout layout = ShaderBindingLayout::make( listStage );
+    ComputeShaderBindings     bindings;
+    SW_EXPECT_TRUE( ComputeShaderBindings::resolve( layout, TestComputeShader::kParameters, "test.hlsl", bindings ) );
+    SW_EXPECT_TRUE( bindings.isResolvedFor( TestComputeShader::kParameters ) );
+}
+
 /** @brief [ComputeShaderParametersTest] 다른 셰이더 형식의 표로 푼 PSO 에는 걸지 않는다. 변이: 표를 대조하지 않으면 남의 서수로 칸을 고른다. */
 SW_TEST_CASE( ComputeShaderParametersTest, PipelineResolvedForAnotherShaderIsNotApplied )
 {

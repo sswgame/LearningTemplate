@@ -118,9 +118,13 @@ namespace sw
     void RHIDrawDiagnostics::reportDescriptorNotRegistered( const utf8* pKind, uint32 slot, RHIDescriptorIndex index ) const
     {
         const uint32 count = countReport();
-        if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DescriptorNotRegistered", "%# shader slot %# %#: descriptor index %# is not registered (released, or another kind of index) - the slot is left empty", getBackendName(),
-                             pKind, slot, index.getValue() );
+        if ( count >= kMaxReportedDraw )
+            return;
+        // 부른 자리를 함께 남긴다 — 놓은 번호를 아직 쥔 쪽이 곧 그 호출자다(크기 바뀜 · 다시 만들기 뒤의 낡은 번호).
+        CallStack stack{};
+        CallStackCapture::capture( stack, 2 );
+        SW_LOG_ERROR_ID( "RHI.DescriptorNotRegistered", "%# shader slot %# %#: descriptor index %# is not registered (released, or another kind of index) - the slot is left empty\n%#",
+                         getBackendName(), pKind, slot, index.getValue(), CallStackCapture::symbolize( stack ).c_str() );
     }
 
     void RHIDrawDiagnostics::reportIndexBufferUnbound() const

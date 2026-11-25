@@ -1107,6 +1107,34 @@ SW_TEST_CASE( RenderGraphTest, UnorderedAccessReadWaitsForPriorWrite )
 }
 
 /**
+ * @brief [RenderGraphTest] 그래프가 처음 병렬로 도는 실행도 `allocateBuffers` 가 마련한 버퍼를 그대로 쓴다 — 표에 적은 번호가 풀리지 않는다
+ * @details 첫 병렬 실행은 커맨드 리스트를 처음 만드는 "디바이스 바뀜" 이라 예전에는 버퍼 풀까지 놓았다(디퍼드 전환 뒤 타일 분류가 풀린 UAV 를 걸었다).
+ *          변이: 리스트를 버릴 때 풀까지 놓으면 실행 뒤 칸이 0 이다.
+ */
+SW_TEST_CASE( RenderGraphTest, FirstParallelRunKeepsTheAllocatedBuffers )
+{
+    const hashed_string buffer( "TransientParallel" );
+    RenderGraph         graph;
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Write" ), { RenderGraphBufferUAV{ buffer } } ) );
+    SW_REQUIRE_TRUE( graph.addPass( hashed_string( "Read" ), { RenderGraphBufferSRV{ buffer }, RenderGraphTextureUAV{ hashed_string( "Out" ) } } ) );
+    SW_REQUIRE_TRUE( graph.compile() );
+    test::FakeRHIBufferFactory factory;
+    factory._bufferSRV = RHIBufferSRVIndex{ 1 };
+    test::FakeRHIDevice device;
+    device._pResourceFactory = &factory;
+    FrameBufferTable table;
+    graph.importResources( table );
+    graph.createBuffer( buffer, RenderGraphBufferDesc{ sizeof( uint32 ), 64, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource } );
+    graph.allocateBuffers( device, table );
+    SW_REQUIRE_EQUAL( 1u, graph.getBufferSlotCount() );
+    RenderGraphExecutionContext context;
+    SW_REQUIRE_TRUE( graph.executeParallel( context, engine::getSubsystem<TaskManager>(), device ) );
+    SW_EXPECT_EQUAL( 1u, graph.getBufferSlotCount() );
+    SW_EXPECT_EQUAL( 1u, factory._structuredCreateCount );
+    graph.releaseDeviceResources();
+}
+
+/**
  * @brief [RenderGraphTest] 그래프가 만든 버퍼는 레벨 구간이 겹치지 않으면 한 버퍼를 나눠 쓰고, 다음 실행(다음 뷰)도 같은 버퍼를 다시 쓴다
  * @details 사슬 Write A → Read A(Write B) → Read B(Write C) → Read C 에서 A · B, B · C 는 한 레벨에서 겹치고 A · C 는 겹치지 않는다.
  *          변이: 겹침을 보지 않으면 칸이 하나, 나눠 쓰지 않으면 셋이다. 등록을 들이면 첫 사용의 전이가 사라진다.

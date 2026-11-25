@@ -1138,7 +1138,11 @@ namespace sw
             _pParallelScratch = make_unique<ParallelScratch>();
         if ( _pParallelScratch->_pCmdListDevice != &device )
         {
-            releaseDeviceResources(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다.
+            // 지난 디바이스의 리스트만 버린다 — 그래프가 만든 버퍼는 이번 실행 앞에서 `allocateBuffers` 가 이 디바이스로 마련해 표에 적었다(디바이스가 바뀌면 그쪽이 다시 만든다).
+            // 예전에는 버퍼 풀까지 놓아, 그래프가 처음 병렬로 도는 프레임(앞 디바이스 없음)에 방금 적은 UAV · SRV 번호가 풀린 채 패스가 걸었다(디퍼드 전환 뒤 타일 분류).
+            _pParallelScratch->_listNodeCmdList.clear();
+            _pParallelScratch->_pReturnCmdList.reset();
+            _pParallelScratch->_listPassEntry.clear();
             _pParallelScratch->_pCmdListDevice = &device;
         }
         ParallelScratch& scratch = *_pParallelScratch;
