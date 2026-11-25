@@ -106,7 +106,7 @@ namespace sw
         void resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UIActionGlyphSource* pActionGlyphs ) const;
 
     private:
-        PROPERTY( DisplayName = "Text", Meta = "Localizable", Tooltip = "Localization key, or the text itself when the tables have no such key" )
+        PROPERTY( DisplayName = "Text", Meta = "Localizable, LocalizableIf=_bLocalized", Tooltip = "Localization key, or the text itself when the tables have no such key" )
         string _text;
         PROPERTY( DisplayName = "Style" )
         TextLayoutStyle _style;
