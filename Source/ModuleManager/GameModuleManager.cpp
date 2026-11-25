@@ -67,6 +67,7 @@ namespace sw
         , _listGameSavedState{}
         , _listGameScopeModule{}
         , _frameState{}
+        , _views{}
         , _listReloadSubscription{}
     {
     }
@@ -315,7 +316,7 @@ namespace sw
 
     const ModuleAPISymbols& GameModuleManager::getModuleSymbols()
     {
-        static constexpr ModuleAPISymbols kGameSymbols{ kGameModuleABIStamp, "getGameModuleABIStamp", "exportGameAPI", "Game" };
+        static constexpr ModuleAPISymbols kGameSymbols{ config::kTargetGameModule, "exportGameAPI", "Game" };
         return kGameSymbols;
     }
 
@@ -345,7 +346,7 @@ namespace sw
         const bool bSuspendHostModule = scope != ModuleScope::Game;
         const bool bSuspendGame       = scope != ModuleScope::Host;
 
-        // 무엇을 언로드하든 호스트 모듈(에디터)에 먼저 묻는다 — 플레이 세션을 이을지(리로드), 멈출지(종료). 이유는 `ClientModuleManager::onBeforeSuspendModules` 에 있다.
+        // 무엇을 언로드하든 호스트 모듈(에디터)에 먼저 묻는다 — 플레이 세션을 이을지(리로드), 멈출지(종료). 이유는 `EditorGameModuleManager::onBeforeSuspendModules` 에 있다.
         const bool bKeepWorldPlaying = onBeforeSuspendModules( reason );
 
         // 무엇이든 언로드하기 전에 저장한다. 저장하지 못했으면(리로드 직전일 때만) 여기서 멈춘다. 아직 아무것도 언로드하지 않았다.

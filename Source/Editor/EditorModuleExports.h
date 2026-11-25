@@ -36,10 +36,6 @@ namespace sw
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                                                                                              \
-    extern "C" SW_MODULE_API uint64 getEditorModuleABIStamp()                                                                                                                                                                  \
-    {                                                                                                                                                                                                                          \
-        return sw::kEditorModuleABIStamp;                                                                                                                                                                                      \
-    }                                                                                                                                                                                                                          \
     extern "C" SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutAPI )                                                                                                                                                    \
     {                                                                                                                                                                                                                          \
         if ( pOutAPI == nullptr )                                                                                                                                                                                              \

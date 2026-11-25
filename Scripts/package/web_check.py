@@ -61,7 +61,7 @@ CHECK_PAGE_NAME = "check.html"
 REPORT_PREFIX = "/__swcheck/"
 DEFAULT_PORT = 8090
 DEFAULT_SECONDS = 20
-#: 표지 파일 — AppEntry.cpp 의 kWebPersistentRoot(IDBFS 마운트) 아래다. 두 곳이 같은 자리를 쓴다.
+#: 표지 파일 — App.cpp 의 kWebPersistentRoot(IDBFS 마운트) 아래다. 두 곳이 같은 자리를 쓴다.
 PROBE_PATH = "/persistent/.swwebcheck"
 #: 브라우저가 페이지를 열고 보고를 마칠 때까지의 여유(확인 시간 위에 더한다) — 묶음 내려받기 · wasm 컴파일 · IDBFS 읽기.
 LOAD_ALLOWANCE_SECONDS = 60

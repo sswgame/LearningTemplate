@@ -18,6 +18,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
+#include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleManager/Host/HostDevLayer.h"
@@ -128,6 +129,8 @@ namespace sw
                         return false;
                     }
                     _listLoadedModule.push_back( pModule ); // 올렸으면 등록이 일부 실패해도 내릴 때 거둔다
+                    if ( engine::isModuleBuiltWithThisEngine( pHandle, pModule ) == false )
+                        return false;
                     if ( engine::registerModuleTypes( pModule ) == false )
                         return false;
                     if ( string_view{ pModule } == LoadBotModuleEntry::kModuleName )

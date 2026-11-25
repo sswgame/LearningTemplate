@@ -206,7 +206,7 @@ namespace sw::editor
 
         /** @brief 앞선 에디터 인스턴스가 맡긴 플레이 세션을 되찾습니다(`carryIn`) — 에디터 모듈 리로드 · 백엔드 교체 너머로 PIE 가 이어진다. */
         SubsystemInitResult initializeSubsystem() override;
-        /** @brief 세션을 호스트에 맡깁니다(`carryOut`). 종료는 호스트가 먼저 Stop 해 정지 상태를 맡긴다(`ClientModuleManager::onBeforeSuspendModules`). */
+        /** @brief 세션을 호스트에 맡깁니다(`carryOut`). 종료는 호스트가 먼저 Stop 해 정지 상태를 맡긴다(`EditorGameModuleManager::onBeforeSuspendModules`). */
         void shutdownSubsystem() override;
 
         /** @brief "카메라 위치에서 시작" 이 먼저 찾는 태그입니다. 이 태그를 가진 오브젝트가 없으면 게임 카메라를 가진 오브젝트를 옮깁니다. */
