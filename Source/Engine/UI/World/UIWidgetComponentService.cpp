@@ -13,6 +13,11 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/UI/Document/UIBindingDef.h"
+#include "Engine/UI/Document/UIDocument.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
@@ -65,6 +70,31 @@ namespace sw
     {
         static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName };
         return kArrDependency;
+    }
+
+    const UIEngineDocuments& UIWidgetComponentService::getEngineDocuments() const
+    {
+        SW_ASSERT( _pUI != nullptr );
+        return _pUI->getEngineDocuments();
+    }
+
+    unique_ptr<Widget> UIWidgetComponentService::instantiateDocument( string_view documentPath )
+    {
+        UIDocumentCache&                                  documents = engine::getSubsystem<UIDocumentCache>();
+        const expected<shared_ptr<const UIDocumentAsset>> document  = documents.acquire( documentPath );
+        vector<UIBindingDef>                              listBinding;
+        expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, ResourceTagSet{}, listBinding ) : unexpected( document.error() );
+        if ( built.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "UIWidgetComponents.DocumentFailed", "[UI] Widget component document failed: %# (%#)", built.error().message(), built.error().detail() );
+            return {};
+        }
+        if ( listBinding.empty() == false || ( *document )->_listStyleSheet.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "UIWidgetComponents.DocumentNeedsScreen", "[UI] Widget component document '%#' has bindings or style sheets - they need a screen of their own", ( *document )->_path );
+            return {};
+        }
+        return std::move( *built );
     }
 
     void UIWidgetComponentService::registerComponent( WidgetComponent& component )

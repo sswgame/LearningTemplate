@@ -4,6 +4,6 @@
 <MaterialDef formatVersion="0" name="StarSkirmishKayKitSpace" _base="guid:5634e58d4c5e4c2b50d7902ed885a5cb">
 	<_properties>
 		<item name="_roughness" defaultValue="0.6" />
-		<item name="_albedoMap" assetPath="game/playground/starskirmish/textures/kaykit_space.dds" />
+		<item name="_albedoMap" assetPath="guid:b00394ecb047d09cc219598cc7c04907" />
 	</_properties>
 </MaterialDef>

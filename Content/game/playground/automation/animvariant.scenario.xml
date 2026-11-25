@@ -14,17 +14,17 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="animvariant_base.ppm"/>
-	<LoadScene path="game/playground/maps/animvariant_set.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:6352d889290a5d1eaf82bd9931b4230b" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Screenshot file="animvariant_set.ppm"/>
-	<LoadScene path="game/playground/maps/animvariant_graph.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:8b3a7663c2f22f3bdc8720214ceb8625" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
 	<Screenshot file="animvariant_graph.ppm"/>
-	<LoadScene path="game/playground/maps/animvariant_linked.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:06fa5cc470ee7962a0ffe7abd3581f1d" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

@@ -102,7 +102,7 @@ namespace
             for ( MaterialGraphNodeDef& node : graph._listNode )
             {
                 if ( node._kind == "Layer" )
-                    node._assetPath = string{ layerID };
+                    node._subgraph = layerID;
             }
             return MaterialGraphCompileResult::compile( graph, kSource, outResult );
         }
@@ -343,7 +343,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, SubgraphIsInlined )
     nodes.append( MaterialGraphTestUtil::makeNode( "Sub", "Subgraph", "Scale=Two.Out" ) );
     nodes.append( MaterialGraphTestUtil::makeNode( "Out", "Output", "BaseColor=Sub.Doubled" ) );
     SW_REQUIRE_TRUE( graph.loadFromXMLText( MaterialGraphTestUtil::wrapGraph( nodes ), MaterialGraphTestUtil::kSource ) );
-    graph._listNode[1]._assetPath = subgraphID;
+    graph._listNode[1]._subgraph = subgraphID;
 
     MaterialGraphCompileResult result;
     SW_EXPECT_TRUE( MaterialGraphCompileResult::compile( graph, MaterialGraphTestUtil::kSource, result ) );
@@ -361,7 +361,7 @@ SW_TEST_CASE( MaterialGraphCompilerTest, SubgraphIsInlined )
     selfNodes.append( MaterialGraphTestUtil::makeNode( "Result", "GraphOutput", "Value=Self.Doubled", "Name=Doubled" ) );
     MaterialGraphDef selfGraph;
     SW_REQUIRE_TRUE( selfGraph.loadFromXMLText( MaterialGraphTestUtil::wrapGraph( selfNodes ), "self" ) );
-    selfGraph._listNode[0]._assetPath = subgraphID;
+    selfGraph._listNode[0]._subgraph = subgraphID;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sub.matgraph.xml" ), selfGraph.saveToXMLText() ) );
     MaterialGraphCompileResult cycleResult;
     SW_EXPECT_FALSE( MaterialGraphCompileResult::compile( graph, MaterialGraphTestUtil::kSource, cycleResult ) );

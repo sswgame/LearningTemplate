@@ -154,9 +154,9 @@ namespace sw
         void updateOpenGame( GameObjectManager& manager );
 
     private:
-        GameModeViewBinding                 _binding;
-        TComponentHandle<GameModeComponent> _gameMode;
-        uint8                               _bTimeRunning : 1;
-        [[maybe_unused]] uint8              _reserved     : 7;
+        SW_TRANSIENT GameModeViewBinding _binding;
+        SW_TRANSIENT TComponentHandle<GameModeComponent> _gameMode;
+        SW_TRANSIENT uint8                               _bTimeRunning : 1;
+        [[maybe_unused]] uint8                           _reserved     : 7;
     };
 } // namespace sw

@@ -77,8 +77,8 @@
             "_name": "economy",
             "_settings": {
                 "_policy": { "_withdrawalWindowMs": 604800000, "_refundCursorRetryMs": 30000, "_deliveryScanIntervalMs": 300000, "_deliveryAlarmMarginMs": 86400000, "_deliveryScanMaxCount": 200, "_auditMinuteOfDay": 270 },
-                "_currencyCatalog": "game/playground/data/playground.currencies.xml",
-                "_offerCatalog": "game/playground/data/playground.offers.xml",
+                "_currencyCatalog": "guid:1b7458f641a694023d9c6418cd8e1977",
+                "_offerCatalog": "guid:759168d3d4fb5cdd2b8b822bf095eaf9",
                 "_refundRecovery": "Debt"
             }
         },
@@ -95,7 +95,7 @@
                 "_nameCacheTTLMs": 2592000000,
                 "_pastScoreTTL": { "_expireAfterDays": 30, "_maxScanPerSweep": 20000, "_maxDeletePerSweep": 5000 },
                 "_seasonResultTTL": { "_expireAfterDays": 365, "_maxScanPerSweep": 5000, "_maxDeletePerSweep": 1000 },
-                "_catalog": "game/playground/data/playground.leaderboards.xml"
+                "_catalog": "guid:e97704b560cb37bb9aa620461b616db3"
             }
         },
         {
@@ -128,7 +128,7 @@
                 "_partyLobby": { "_partyTTLMs": 1800000, "_lobbyTTLMs": 7200000, "_inviteTTLMs": 300000 },
                 "_queue": { "_leaseTTLMs": 10000, "_leaseRenewMs": 3000, "_noServerGiveUpMs": 30000, "_resultGraceMs": 10000, "_ratingWaitMs": 3000 },
                 "_agent": { "_expectTTLMs": 120000, "_recordRefreshMs": 1000, "_maxRecordCount": 256 },
-                "_catalog": "game/playground/data/playground.matchmodes.xml",
+                "_catalog": "guid:8fc2e4302aaac1d942a6b0ee213e4237",
                 "_reconnectGraceMs": 60000,
                 "_cancelConfirmWaitMs": 3000,
                 "_bGameServer": true

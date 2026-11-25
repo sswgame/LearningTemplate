@@ -30,6 +30,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw::editor
 {
@@ -60,7 +61,7 @@ namespace sw::editor
         PROPERTY( Required )
         hashed_string _part{};
         PROPERTY( Required )
-        string _texture{};
+        DataPath _texture; ///< 이미지 원본(.png 등 — 아틀라스로 굽기 전 파일이라 쿠킹본 종류가 아니다)
     };
 } // namespace sw::editor
 

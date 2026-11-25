@@ -77,9 +77,9 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Invulnerable Color", Tooltip = "Player color while a dash makes it invulnerable" )
         float4 _invulnerableColor;
 
-        PrefabViewBatch        _sphereViews;
-        uint8                  _bViewReset         : 1; ///< 이 판에서 HP 바 스냅숏을 연출 없이 다시 두었다
-        uint8                  _bPlayerViewMissing : 1; ///< 가리킨 뷰 오브젝트에 체력 뷰가 없다고 이미 알렸다(매 프레임 되풀이하지 않는다)
-        [[maybe_unused]] uint8 _reserved           : 6;
+        SW_TRANSIENT PrefabViewBatch _sphereViews;
+        SW_TRANSIENT uint8           _bViewReset         : 1; ///< 이 판에서 HP 바 스냅숏을 연출 없이 다시 두었다
+        uint8                        _bPlayerViewMissing : 1; ///< 가리킨 뷰 오브젝트에 체력 뷰가 없다고 이미 알렸다(매 프레임 되풀이하지 않는다)
+        [[maybe_unused]] uint8       _reserved           : 6;
     };
 } // namespace sw

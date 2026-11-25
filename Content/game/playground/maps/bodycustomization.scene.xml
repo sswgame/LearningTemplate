@@ -66,7 +66,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="0,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="BodyDemoWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="common/characters/bodyfluid.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="BodyDemoWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:75e40b1ce0da1fb0b63069543c62a109" />
 					<PoseModifierComponent _localID="8397761042515027675" _rigPath="guid:877579be2adce78498d337df54283d52" _bRigEnabled="true" />
 					<CharacterBodyDynamicsComponent _localID="101379428086715354" _eyeSocket="Eyes" _hitImpulseScale="0.02" _sunTraceDistance="50" _wipeEvent="WipeFace" _fluidSmearStrength="0.6" />
 				</_listComponent>

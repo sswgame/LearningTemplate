@@ -140,7 +140,7 @@ namespace sw
     expected<void> UIAnimatedProperty::resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty )
     {
         outProperty = UIAnimatedProperty{};
-        if ( expected<void> resolved = UIBindingValue::resolvePath( type, path, outProperty._path ); resolved.has_value() == false )
+        if ( expected<void> resolved = UIBindingValue::resolveWidgetTarget( type, path, outProperty._path ); resolved.has_value() == false )
             return resolved;
         if ( outProperty._path.getLeafProperty()._bIsContainer == SW_TRUE )
         {
@@ -213,7 +213,7 @@ namespace sw
             bChanged = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context ) != before;
         }
         if ( bChanged )
-            widget.onBoundPropertyChanged( _path.getRootProperty() );
+            widget.notifyPropertyWritten( _path.getRootProperty() );
         return bChanged;
     }
 

@@ -63,8 +63,8 @@ namespace sw
         void syncTagIndex();
 
         PROPERTY()
-        TagContainer           _tags;
-        optional<TagContainer> _spawnTags; ///< 처음 쓰기 전의 태그(쓴 적이 없으면 비었다)
-        TagIndex*              _pTagIndex; ///< 등록한 매니저의 태그 색인이다. 등록 전과 해제 뒤에는 nullptr 이다
+        TagContainer _tags;
+        SW_TRANSIENT optional<TagContainer> _spawnTags; ///< 처음 쓰기 전의 태그(쓴 적이 없으면 비었다)
+        TagIndex*                           _pTagIndex; ///< 등록한 매니저의 태그 색인이다. 등록 전과 해제 뒤에는 nullptr 이다
     };
 } // namespace sw

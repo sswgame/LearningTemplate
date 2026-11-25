@@ -23,6 +23,13 @@
 
 namespace sw
 {
+    class BodyShapeSet;
+    class FitPartDef;
+    class FitTables;
+    class RigAsset;
+    class Skeleton;
+    class SocketSet;
+    class SpriteClipAsset;
     class XMLNode;
 
     /** @brief 부품 종류입니다. 해석기는 차원을 구분하지 않으므로 메시 부품과 스프라이트 부품이 같은 경로를 탑니다. */
@@ -124,7 +131,7 @@ namespace sw
 {
     /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트) · 머티리얼 · 스켈레톤 · 구간 머티리얼 · 머티리얼 값을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
     REFLECT()
-    struct AppearancePartVariantDef
+    struct SW_GF_API AppearancePartVariantDef
     {
         REFLECT_BODY();
 
@@ -137,14 +144,16 @@ namespace sw
         AssetRef<MeshAssetFormat> _meshAsset{};
         PROPERTY( Name = "prefab" )
         AssetRef<PrefabAsset> _prefabAsset{};
-        PROPERTY( AssetPath, Name = "sprite" )
-        hashed_string _spriteAsset{};
-        hashed_string _asset{}; ///< 종류가 고른 에셋(읽기가 위 칸에서 채운다 — 데이터 칸이 아니다)
+        PROPERTY( Name = "sprite" )
+        AssetRef<SpriteClipAsset> _spriteAsset;
+        hashed_string             _asset{}; ///< 종류가 고른 에셋(읽기가 위 칸에서 채운다 — 데이터 칸이 아니다)
         PROPERTY()
         AssetRef<Material> _material{}; ///< 구간이 있는 부품이면 모든 구간의 머티리얼을 바꾼다
         /** @brief 스킨드 부품(`<Variant>`)이 이 변형에서 쓰는 스켈레톤입니다 — 스켈레톤 변형(`SkeletonVariant`)을 적으면 외형이 런타임에 뼈 비율을 고릅니다(꾸미기 선택 · 규칙 · 피해 단계가 고르는 변형과 같은 길). */
-        PROPERTY( AssetPath )
-        hashed_string _skeleton{};
+        PROPERTY()
+        AssetRef<Skeleton> _skeleton;
+
+        AppearancePartVariantDef();
     };
 } // namespace sw
 
@@ -193,23 +202,23 @@ namespace sw
         AssetRef<MeshAssetFormat> _meshAsset{};
         PROPERTY( Name = "prefab" )
         AssetRef<PrefabAsset> _prefabAsset{};
-        PROPERTY( AssetPath, Name = "sprite" )
-        hashed_string _spriteAsset{};
-        hashed_string _asset{}; ///< 메시, 프리팹, 스프라이트 경로 — 종류가 위 칸에서 고른다(읽기가 채운다 — 데이터 칸이 아니다)
+        PROPERTY( Name = "sprite" )
+        AssetRef<SpriteClipAsset> _spriteAsset;
+        hashed_string             _asset{}; ///< 메시, 프리팹, 스프라이트 경로 — 종류가 위 칸에서 고른다(읽기가 채운다 — 데이터 칸이 아니다)
         PROPERTY()
         AssetRef<Material> _material{}; ///< 비어 있으면 메시의 것
-        PROPERTY( AssetPath )
-        hashed_string _skeleton{}; ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
-        PROPERTY( AssetPath, Name = "sockets" )
-        hashed_string _socketSet{}; ///< 부품의 소켓 에셋(`*.sockets.xml`)
-        PROPERTY( AssetPath )
-        hashed_string _rig{}; ///< 스킨드 부품의 자기 후처리 리그(`*.rig.xml`). 있으면 몸을 리더로 따르지 않고 자기 스켈레톤을 리그가 움직인다(스프링 망토)
-        PROPERTY( AssetPath )
-        hashed_string _fit{}; ///< 스킨드 부품의 피팅 데이터(`*.partfit.xml` — 겹 · 프로필 · 숨김 영역). 있으면 몸과 함께 피팅해 베이크한 메시를 그린다
-        PROPERTY( AssetPath )
-        hashed_string _fitTables{}; ///< 몸 부품의 피팅 표(`*.fit.xml` — 겹 · 영역 · 프로필 · 상호작용). 몸에만 적는다
-        PROPERTY( AssetPath )
-        hashed_string _bodyShapes{}; ///< 몸 부품의 체형 축 데이터(`*.bodyshape.xml`). 꾸미기의 `BoneProportion` 대상 이름이 이 축 이름이다. 몸에만 적는다
+        PROPERTY()
+        AssetRef<Skeleton> _skeleton; ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
+        PROPERTY( Name = "sockets" )
+        AssetRef<SocketSet> _socketSet; ///< 부품의 소켓 에셋(`*.sockets.xml`)
+        PROPERTY()
+        AssetRef<RigAsset> _rig; ///< 스킨드 부품의 자기 후처리 리그(`*.rig.xml`). 있으면 몸을 리더로 따르지 않고 자기 스켈레톤을 리그가 움직인다(스프링 망토)
+        PROPERTY()
+        AssetRef<FitPartDef> _fit; ///< 스킨드 부품의 피팅 데이터(`*.partfit.xml` — 겹 · 프로필 · 숨김 영역). 있으면 몸과 함께 피팅해 베이크한 메시를 그린다
+        PROPERTY()
+        AssetRef<FitTables> _fitTables; ///< 몸 부품의 피팅 표(`*.fit.xml` — 겹 · 영역 · 프로필 · 상호작용). 몸에만 적는다
+        PROPERTY()
+        AssetRef<BodyShapeSet> _bodyShapes; ///< 몸 부품의 체형 축 데이터(`*.bodyshape.xml`). 꾸미기의 `BoneProportion` 대상 이름이 이 축 이름이다. 몸에만 적는다
         PROPERTY()
         hashed_string _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
         PROPERTY()
@@ -226,6 +235,8 @@ namespace sw
         const AppearancePartVariantDef* findVariant( const hashed_string& name ) const;
         const AppearancePartVariantDef* findMaterialVariant( const hashed_string& name ) const;
         const AppearanceSectionDef*     findSection( const hashed_string& name ) const;
+
+        AppearancePartDef(); // 에셋 종류가 완전한 자리(.cpp)에서 짓는다
     };
 } // namespace sw
 

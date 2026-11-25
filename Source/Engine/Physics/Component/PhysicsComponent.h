@@ -224,19 +224,19 @@ namespace sw
         /** @brief 일괄 함수 @p pFunction 을 이 컴포넌트의 그룹 @p group 으로 고정 스텝 목록에 넣습니다(`registerFixedStep`). 이미 있으면 오류를 남깁니다. */
         void registerFixedStepFunction( GameObjectManager& manager, FixedStepGroup group, FixedStepBatchFunction pFunction );
 
-        ScenePhysics*         _pScenePhysics;
-        uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
-        uint32                _floorMissingIndex;      ///< 바닥 없는 자리 목록(`ScenePhysics::FloorTracking::_listMissing`)의 자리. 없으면 `kNotRegistered`
-        uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
-        float3                _syncedLocalPosition;    ///< 마지막으로 맞춘 때의 로컬 자리(`consumeTransformChange` 가 바깥이 바꾼 몫을 가른다)
-        float3                _syncedLocalRotation;    ///< 마지막으로 맞춘 때의 로컬 회전
-        float3                _shapeScale;             ///< 백엔드 셰이프를 지은 월드 배율(`isShapeScaleStale`). 바디 · 캐릭터가 없으면 뜻이 없다
-        PhysicsComponentPhase _phase;
-        bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
-        bool                  _bStreamingHeld;   ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
-        bool                  _bSyncedParented;  ///< 마지막으로 맞춘 때 부모가 있었다
-        bool                  _bBodyCreated;     ///< 등록 뒤 백엔드 객체를 한 번이라도 만들었다(`markBodyCreated` — 첫 바디만 나타남이다)
-        atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
-        SlotHandle            _spatialEntry;     ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
+        ScenePhysics*                      _pScenePhysics;
+        SW_TRANSIENT uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
+        SW_TRANSIENT uint32                _floorMissingIndex;      ///< 바닥 없는 자리 목록(`ScenePhysics::FloorTracking::_listMissing`)의 자리. 없으면 `kNotRegistered`
+        SW_TRANSIENT uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
+        SW_TRANSIENT float3                _syncedLocalPosition;    ///< 마지막으로 맞춘 때의 로컬 자리(`consumeTransformChange` 가 바깥이 바꾼 몫을 가른다)
+        SW_TRANSIENT float3                _syncedLocalRotation;    ///< 마지막으로 맞춘 때의 로컬 회전
+        SW_TRANSIENT float3                _shapeScale;             ///< 백엔드 셰이프를 지은 월드 배율(`isShapeScaleStale`). 바디 · 캐릭터가 없으면 뜻이 없다
+        SW_TRANSIENT PhysicsComponentPhase _phase;
+        SW_TRANSIENT bool                  _bRebuildPending; ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
+        SW_TRANSIENT bool                  _bStreamingHeld;  ///< 물리 서비스만 쓴다(`ScenePhysics::updateStreamingHolds`, 게임 스레드 — 단계 훅보다 앞)
+        SW_TRANSIENT bool                  _bSyncedParented; ///< 마지막으로 맞춘 때 부모가 있었다
+        SW_TRANSIENT bool                  _bBodyCreated;    ///< 등록 뒤 백엔드 객체를 한 번이라도 만들었다(`markBodyCreated` — 첫 바디만 나타남이다)
+        SW_TRANSIENT atomic<bool> _bTeleportPending;         ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
+        SW_TRANSIENT SlotHandle   _spatialEntry;             ///< 씬 공간 색인 항목(3D 캐릭터 · 강체만, 등록 ~ 해제)
     };
 } // namespace sw

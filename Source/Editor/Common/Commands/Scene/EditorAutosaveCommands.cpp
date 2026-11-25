@@ -290,7 +290,7 @@ namespace sw::editor
                     return false;
                 }
                 StringBuilder<constant::buffer::kMax256> metaBuilder;
-                metaBuilder.appendFormat( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", AssetRegistry::makeReferenceText( sourceID, AssetRegistry::resolveGUID( sourceID ) ), ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
+                metaBuilder.appendFormat( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", AssetRegistry::makeIndexedReferenceText( sourceID ), ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
                 const string meta{ metaBuilder.view() };
                 if ( FileUtil::writeTextFile( makeMetaPath( slotFolder, generation ), meta ) == false )
                 {
@@ -769,7 +769,7 @@ namespace sw::editor
     string EditorAutosaveCommands::makeSlotName( string_view sourceID )
     {
         // 칸은 자리가 아니라 정체다 — 옮긴 뒤의 사본 · 저장이 같은 칸을 잇고, 옛 자리에 새로 생긴 에셋이 남의 사본을 이어받지 않는다.
-        const string identity = AssetRegistry::makeReferenceText( sourceID, AssetRegistry::resolveGUID( sourceID ) );
+        const string identity = AssetRegistry::makeIndexedReferenceText( sourceID );
         string       slot;
         slot.reserve( identity.size() );
         for ( const utf8 ch : identity )

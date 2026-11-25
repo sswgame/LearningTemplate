@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -56,6 +57,15 @@ namespace sw
 
 namespace sw
 {
+    RetargetProfileRootParams::RetargetProfileRootParams()
+        : _sourceSkeleton{}
+        , _targetSkeleton{}
+        , _translation{ RetargetTranslationMode::ScaleByPelvisHeight }
+        , _bMapSameNames{ false }
+        , _heightRatio{ 0.0f }
+    {
+    }
+
     RetargetProfile::RetargetProfile()
         : _listChain{}
         , _listBonePair{}
@@ -225,8 +235,8 @@ namespace sw
         RigXMLReader              reader( root, sourceLabel );
         RetargetProfileRootParams rootParams;
         bool                      bOk = reader.readProperties( rootParams ); // 높이 비 > 0(적었을 때)은 PROPERTY( Min ) 가 본다
-        _sourceSkeletonPath           = rootParams._sourceSkeleton;
-        _targetSkeletonPath           = rootParams._targetSkeleton;
+        _sourceSkeletonPath           = rootParams._sourceSkeleton.path();
+        _targetSkeletonPath           = rootParams._targetSkeleton.path();
         _translationMode              = rootParams._translation;
 
         const XMLNode    arrPair[2] = { reader.readObject( "root", false ), reader.readObject( "pelvis", false ) }; // 없으면 아직 고르지 않은 쌍이다(새 문서)

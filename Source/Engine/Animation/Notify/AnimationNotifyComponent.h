@@ -170,20 +170,20 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Notify Table", Tooltip = "Notify name to handler table (*.notifies.xml)" )
         AssetRef<AnimationNotifyTable> _notifyTablePath;
 
-        AnimationNotifyListenerBinding         _binding;
-        SharedAssetRef<AnimationNotifyTable>   _table;
-        vector<ActiveState>                    _listActiveState;
-        vector<AnimationNotifyAction>          _listAction;
-        vector<AnimationFiredNotify>           _listPendingFired;    ///< 2D 에서 워커가 복사한 이번 틱의 알림이다.
-        vector<const IAnimationPlayable*>      _listPendingActive;   ///< 2D 에서 워커가 복사한 재생 중인 항목이다.
-        vector<AnimationFootContactTracker>    _listFootContact;     ///< 테이블의 `<FootContact>` 와 인덱스가 같은 발 상태다.
-        const AnimationNotifyTable*            _pFootContactTable;   ///< `_listFootContact` 를 만든 테이블이다. 바뀌면 상태를 새로 만든다.
-        ComponentHandle                        _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
-        SceneTeleportCursor                    _teleport;            ///< 순간이동하면 열린 칼 궤적의 지난 자리를 잊는다
-        float32                                _pendingDeltaSeconds; ///< 2D 에서 복사한 프레임의 이동 구간이다.
-        AssetReloadWatch<AnimationNotifyTable> _tableReload;
-        Subscription                           _boneRequirement;   ///< 발 닿음 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requireFootBones`)
-        uint8                                  _bPendingFrame;     ///< 2D: 처리를 기다리는 프레임이 있다
-        uint8                                  _bPendingRestarted; ///< 2D: 베낀 프레임 중 재생할 것이 바뀐 것이 있었다
+        SW_TRANSIENT AnimationNotifyListenerBinding _binding;
+        SharedAssetRef<AnimationNotifyTable>        _table;
+        SW_TRANSIENT vector<ActiveState> _listActiveState;
+        SW_TRANSIENT vector<AnimationNotifyAction> _listAction;
+        SW_TRANSIENT vector<AnimationFiredNotify> _listPendingFired;           ///< 2D 에서 워커가 복사한 이번 틱의 알림이다.
+        SW_TRANSIENT vector<const IAnimationPlayable*> _listPendingActive;     ///< 2D 에서 워커가 복사한 재생 중인 항목이다.
+        SW_TRANSIENT vector<AnimationFootContactTracker> _listFootContact;     ///< 테이블의 `<FootContact>` 와 인덱스가 같은 발 상태다.
+        const AnimationNotifyTable*                      _pFootContactTable;   ///< `_listFootContact` 를 만든 테이블이다. 바뀌면 상태를 새로 만든다.
+        SW_TRANSIENT ComponentHandle                     _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
+        SW_TRANSIENT SceneTeleportCursor                 _teleport;            ///< 순간이동하면 열린 칼 궤적의 지난 자리를 잊는다
+        SW_TRANSIENT float32                             _pendingDeltaSeconds; ///< 2D 에서 복사한 프레임의 이동 구간이다.
+        SW_TRANSIENT AssetReloadWatch<AnimationNotifyTable> _tableReload;
+        Subscription                                        _boneRequirement;   ///< 발 닿음 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requireFootBones`)
+        SW_TRANSIENT uint8                                  _bPendingFrame;     ///< 2D: 처리를 기다리는 프레임이 있다
+        SW_TRANSIENT uint8                                  _bPendingRestarted; ///< 2D: 베낀 프레임 중 재생할 것이 바뀐 것이 있었다
     };
 } // namespace sw

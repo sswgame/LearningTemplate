@@ -58,6 +58,6 @@ namespace sw
         PROPERTY( Category = "Auto Play", DisplayName = "Block Look Ahead", Tooltip = "Distance ahead checked for a blocking block", Min = 0.0, Units = m )
         float32 _blockLookAhead;
 
-        float32 _timer; ///< 행동 주기를 측정하는 시간(감각이 판이 도는 판단마다 더한다)
+        SW_TRANSIENT float32 _timer; ///< 행동 주기를 측정하는 시간(감각이 판이 도는 판단마다 더한다)
     };
 } // namespace sw

@@ -261,7 +261,7 @@ namespace sw
         // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
         // 배치 · 규칙은 열 때 값으로 옮겨 쥔다 — 연 공원은 다시 읽힌 배치를 따라가지 않는다(다음 판이 쓴다).
         shared_ptr<const ParkLayout> pLayout;
-        if ( acquireRequiredSnapshot( _parkDataPath, pLayout ) == false )
+        if ( acquireRequiredSnapshot( _parkDataPath.isSet() ? string_view{ _parkDataPath.get() } : string_view{}, pLayout ) == false )
             return false;
         const ParkLayout& layout = *pLayout;
         _pLayoutCatalog          = layout.getCoasterLayouts().snapshot();

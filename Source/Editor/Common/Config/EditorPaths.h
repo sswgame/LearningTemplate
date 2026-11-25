@@ -36,17 +36,10 @@ namespace sw::editor
         static constexpr const utf8* kSpriteClipDocumentFileName     = "SpriteClip.xml";           ///< 경로가 없는 스프라이트 클립 문서
         static constexpr const utf8* kTextureImportConfigFileName    = "TextureImportConfig.json";
         static constexpr const utf8* kModelImportConfigFileName      = "ModelImportConfig.json";
-        /** @brief 에디터 UI 문구의 로컬라이제이션 프로젝트(리소스 경로)입니다. 에디터가 시작할 때 로드하고 끝날 때 언로드합니다. 엔진 테이블과 따로 있으므로 배포본에 실리지 않습니다. */
-        static constexpr const utf8* kLocalizationProject = "editor/localization/editor.locproject.xml";
-
         /** @brief 에디터 팩(`constant::path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
         static constexpr const utf8* kFontsFolderName = "fonts";
-        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`kIconGlyphTable` 과 짝). */
+        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`EditorDefaultAssets::_iconGlyphTable` 과 짝). */
         static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";
-        /** @brief 아이콘 폰트의 이름 → 코드포인트 표입니다(`EditorIconGlyphTable`). */
-        static constexpr const utf8* kIconGlyphTable = "editor/fonts/sweditoricons.glyphs.xml";
-        /** @brief 컴포넌트 아이콘 표입니다(`EditorComponentIconTable` — Category → 아이콘 · 색 이름). */
-        static constexpr const utf8* kComponentIconTable = "editor/data/componenticons.xml";
 
         /**
          * @brief 리소스 폴더 id(`game/playground/maps` · `editor/theme`)의 디스크 폴더를 반환합니다. 폴더가 없으면 빈 문자열입니다.

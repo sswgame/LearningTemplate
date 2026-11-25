@@ -228,20 +228,20 @@ namespace sw
         PROPERTY( Category = "Cutscene", DisplayName = "Skippable", Tooltip = "The cutscene input map's Cutscene.Skip jumps to the end" )
         uint8 _bSkippable : 1;
         PROPERTY( Category = "Cutscene", DisplayName = "Fast Forward", Tooltip = "Holding Cutscene.FastForward multiplies the play rate (EngineConfig _sequencer._fastForwardRate)" )
-        uint8                  _bAllowFastForward : 1;
-        uint8                  _bFastForwardHeld  : 1; ///< 빨리감기 배율이 걸렸다. 저장하지 않는다
-        uint8                  _bTimelineOnly     : 1; ///< 시간만 잰다(`copyTimelineFrom`). 저장하지 않는다
-        [[maybe_unused]] uint8 _reserved          : 2;
-        Subscription           _hudHide;       ///< 재생 동안 건 HUD 숨김 요청(`IUILayerVisibility`). 저장하지 않는다
-        Subscription           _cutsceneLayer; ///< 재생 동안 켠 컷씬 레이어(`InputManager::enableSharedLayer`). 저장하지 않는다
-        Subscription           _cutsceneBlock; ///< 막기(Blocked)라 스택에 올린 컷씬 레이어. 저장하지 않는다
-        SequencePlayer         _player;
+        uint8                       _bAllowFastForward : 1;
+        SW_TRANSIENT uint8          _bFastForwardHeld  : 1; ///< 빨리감기 배율이 걸렸다. 저장하지 않는다
+        SW_TRANSIENT uint8          _bTimelineOnly     : 1; ///< 시간만 잰다(`copyTimelineFrom`). 저장하지 않는다
+        [[maybe_unused]] uint8      _reserved          : 2;
+        Subscription                _hudHide;       ///< 재생 동안 건 HUD 숨김 요청(`IUILayerVisibility`). 저장하지 않는다
+        Subscription                _cutsceneLayer; ///< 재생 동안 켠 컷씬 레이어(`InputManager::enableSharedLayer`). 저장하지 않는다
+        Subscription                _cutsceneBlock; ///< 막기(Blocked)라 스택에 올린 컷씬 레이어. 저장하지 않는다
+        SW_TRANSIENT SequencePlayer _player;
         /** @brief 이번 틱이 민 재생 구간입니다 — 틱 뒤 작업이 묶인 오브젝트에 적용한다(틱 뒤 작업은 값을 캡처하지 않는다). 저장하지 않는다. */
-        SequencePlaybackStep _pendingStep;
+        SW_TRANSIENT SequencePlaybackStep _pendingStep;
         /** @brief 재생이 쥔 것(스폰 · 구간 · 되돌릴 값)입니다. 저장하지 않는다 — 재생이 만들고 끝내기가 거둔다. */
-        SequencePlaybackState _state;
+        SW_TRANSIENT SequencePlaybackState _state;
         /** @brief 최근 재생 기록입니다. 저장하지 않는다. */
-        SequencePlaybackHistory _history;
+        SW_TRANSIENT SequencePlaybackHistory _history;
         /** @brief 이벤트 항목 구독자들입니다. 저장하지 않습니다. 코드가 등록하는 것이기 때문입니다. */
         MulticastDelegate<void( const SequenceFiredEvent& )> _sequenceEventMulticast;
         /** @brief 카메라 신호 구독자들입니다. 저장하지 않습니다. */

@@ -60,9 +60,9 @@ namespace sw
                 { game::getSubsystem<MinigameFlow>().requestQuit(); } ) ) );
                 scope.addCleanup( SW_DELEGATE_LAMBDA( Delegate<void()>, [pLeaveCommand]()
                 { pLeaveCommand->reset(); } ) );
-                for ( const string& document : definition._listUI )
+                for ( const DataPath& document : definition._listUI )
                 {
-                    const shared_ptr<UIOwnedScreen> pScreen = sw::make_shared<UIOwnedScreen>( *pUI, pUI->openScreen( document ) );
+                    const shared_ptr<UIOwnedScreen> pScreen = sw::make_shared<UIOwnedScreen>( *pUI, pUI->openScreen( document.get() ) );
                     if ( pScreen->isHeld() == false )
                     {
                         SW_LOG_ERROR_ID( "GameInstanceClient.MinigameUINotOpened", "Minigame '%#': UI document '%#' could not be opened (see the messages above)", definition._name.c_str(),

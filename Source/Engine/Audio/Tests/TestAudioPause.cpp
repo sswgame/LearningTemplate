@@ -15,7 +15,7 @@ namespace
         static sw::shared_ptr<const sw::AudioMusicDef> makeTwoSegmentMusic()
         {
             sw::AudioMusicLayerDef layer;
-            layer._path                              = sw::hashed_string( sw::test::OfflineAudioEngine::kClipPath );
+            layer._path                              = sw::test::OfflineAudioEngine::kClipPath;
             sw::shared_ptr<sw::AudioMusicDef> pMusic = sw::make_shared<sw::AudioMusicDef>();
             pMusic->_bus                             = sw::hashed_string( sw::AudioBusNames::kMusic );
             pMusic->_defaultSync                     = sw::AudioMusicSync::NextBeat;

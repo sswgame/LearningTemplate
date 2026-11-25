@@ -426,7 +426,7 @@ namespace sw
         if ( _shopProvider != nullptr )
             return _shopProvider.get();
         const DataPath& offerCatalog = session.getGameSettings()._onlineOfferCatalog;
-        if ( requireSetting( offerCatalog.get(), "onlineOfferCatalog" ) == false )
+        if ( requireSetting( offerCatalog.isSet() ? string_view( offerCatalog.get() ) : string_view{}, "onlineOfferCatalog" ) == false )
             return nullptr;
         _offers = SharedAssetCache<OfferCatalog>::acquire( offerCatalog.get() ).snapshot();
         if ( _offers == nullptr )

@@ -39,6 +39,6 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Min Squash Ratio", Tooltip = "Height the fallen body keeps at the end, as a share of its spawn height", Min = 0.0, Max = 1.0 )
         float32 _minSquashRatio;
 
-        optional<float3> _spawnScale; ///< 줄이기 시작할 때의 크기. 줄이지 않았으면 비어 있다
+        SW_TRANSIENT optional<float3> _spawnScale; ///< 줄이기 시작할 때의 크기. 줄이지 않았으면 비어 있다
     };
 } // namespace sw

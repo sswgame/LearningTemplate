@@ -131,7 +131,7 @@ namespace sw
             if ( role._startSeconds != 0.0f || bWriteAll )
                 node.appendAttribute( "start", CharacterDataReader::formatFloat( role._startSeconds ).c_str() );
             if ( role._skeletonPath.empty() == false || bWriteAll )
-                node.appendAttribute( "skeleton", role._skeletonPath.c_str() );
+                node.appendAttribute( "skeleton", string_view{ role._skeletonPath.toText() } );
             if ( role._bAnchor == false )
                 node.appendAttribute( "align", PairedAnimationDefInternal::formatAlign( role._align ) );
             const bool bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;

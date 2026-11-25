@@ -15,6 +15,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
+#include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/PortableObjectFile.h"
 #include "Editor/Common/Localization/TranslationMemory.h"
@@ -432,8 +433,9 @@ namespace sw
             /** @brief 에셋 루트 아래의 XML · 대화 파일에서 문구를 모읍니다. 출처는 리소스 id 입니다. */
             static void gatherAssetRoots( const LocalizationProject& project, TextGatherer& gatherer )
             {
-                for ( const string& assetRoot : project._listAssetRoot )
+                for ( const DataPath& assetRootPath : project._listAssetRoot )
                 {
+                    const string&        assetRoot   = assetRootPath.get();
                     const AbsolutePath   assetFolder = resolveAbsolutePath( assetRoot );
                     vector<AbsolutePath> listFile;
                     // 에셋 루트가 리소스 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다
@@ -471,7 +473,12 @@ namespace sw
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() ).str() );
         else
             SW_LOG_ERROR_ID( "LocalizationTools.EngineDefaultAssetsNot", "Engine default assets are not loaded - the engine localization project is left out" );
-        outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editor::EditorPaths::kLocalizationProject ).str() ); // 에디터 UI 문구
+        // 에디터 UI 문구 — 명령줄 도구는 에디터 컨텍스트 없이 돌므로 표를 직접 읽는다.
+        editor::EditorDefaultAssets editorAssets;
+        if ( editor::EditorDefaultAssets::load( editorAssets ) )
+            outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editorAssets._localizationProject.get() ).str() );
+        else
+            SW_LOG_ERROR_ID( "LocalizationTools.EditorDefaultAssetsNot", "Editor default assets are not loaded - the editor localization project is left out" );
 
         const string         localizationFolder = FileUtil::joinPath( constant::path::kDataFolder, constant::path::kLocalizationFolder );
         vector<AbsolutePath> listGameFolder;

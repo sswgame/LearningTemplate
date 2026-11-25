@@ -67,6 +67,6 @@ namespace sw
         PROPERTY( Category = "Minigame", DisplayName = "Slot Spacing", Tooltip = "Distance between slots along X and Z", Units = m )
         float2 _slotSpacing;
 
-        vector<GameObjectHandle> _listPortal; ///< 세운 입구와 미리 읽기 볼륨
+        SW_TRANSIENT vector<GameObjectHandle> _listPortal; ///< 세운 입구와 미리 읽기 볼륨
     };
 } // namespace sw

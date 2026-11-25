@@ -13,13 +13,25 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Presentation/ISubtitleSink.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameService.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct DialogueRunnerComponentInternal
+        {
+            static constexpr FormatDef kStateFormat{ "DLGR" };
+        };
+
+        const StatefulComponentRegistrar<DialogueRunnerComponent> s_stateRegistration{ "DialogueRunnerComponent" };
+    } // namespace
+
     DialogueRunnerComponent::DialogueRunnerComponent()
         : _graphPath{}
         , _bPostSubtitles{ false }
@@ -36,6 +48,7 @@ namespace sw
         , _onChoices{}
         , _onEvent{}
         , _onFinished{}
+        , _restore{}
         , _state{ DialogueRunnerState::Idle }
         , _currentNodeID{ 0 }
         , _currentSpeakerID{ kDialogueNoSpeaker }
@@ -50,6 +63,45 @@ namespace sw
         Component::onBeginPlay();
         if ( _graph._listNode.empty() )
             loadGraphFromPath();
+        (void)_restore.open( *this );
+    }
+
+    void DialogueRunnerComponent::serializeState( StateIO& io )
+    {
+        if ( _restore.writeHeldBytes( io ) )
+            return;
+        DialogueRunnerState state            = _state;
+        int32               currentNodeID    = _currentNodeID;
+        uint32              transitionSerial = _transitionSerial;
+        io.header( DialogueRunnerComponentInternal::kStateFormat );
+        io.enumValue( state, DialogueRunnerState::Finished );
+        io.value( currentNodeID );
+        io.value( transitionSerial );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        const bool               bWaiting = state == DialogueRunnerState::ShowingDialogue || state == DialogueRunnerState::WaitingForChoice;
+        const DialogueAssetNode* pNode    = bWaiting ? _graph.findNode( currentNodeID ) : nullptr;
+        // 기다리던 노드가 그래프에서 사라졌거나 종류가 바뀌었으면 이어 갈 수 없다.
+        const DialogueAssetNodeKind expectedKind = state == DialogueRunnerState::WaitingForChoice ? DialogueAssetNodeKind::Choice : DialogueAssetNodeKind::Dialogue;
+        io.check( bWaiting == false || ( pNode != nullptr && pNode->_type == expectedKind ) );
+        if ( io.isOk() == false )
+            return;
+        removePostedSubtitle();
+        _state            = state;
+        _currentNodeID    = currentNodeID;
+        _transitionSerial = transitionSerial;
+        _currentSpeakerID = kDialogueNoSpeaker;
+        _currentSpeaker.clear();
+        _currentText.clear();
+        _listCurrentChoice.clear();
+        if ( pNode != nullptr )
+            showNode( *pNode );
+    }
+
+    void DialogueRunnerComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _restore.receive( *this, std::move( bytes ) );
     }
 
     void DialogueRunnerComponent::onPostLoad()
@@ -403,6 +455,21 @@ namespace sw
         finishDialogue();
     }
 
+    void DialogueRunnerComponent::showNode( const DialogueAssetNode& node )
+    {
+        _currentSpeakerID = node._speaker;
+        _currentSpeaker   = _graph.getSpeakerName( node._speaker );
+        _currentText      = node._text;
+        _listCurrentChoice.clear();
+        if ( node._type == DialogueAssetNodeKind::Choice )
+        {
+            _listCurrentChoice = node._listChoice;
+            notifyChoices();
+            return;
+        }
+        notifyLine();
+    }
+
     bool DialogueRunnerComponent::runNode( optional<int32> nextNodeID, optional<int32>& outNextNodeID )
     {
         ++_transitionSerial;
@@ -433,22 +500,14 @@ namespace sw
             }
             case DialogueAssetNodeKind::Dialogue:
             {
-                _state            = DialogueRunnerState::ShowingDialogue;
-                _currentSpeakerID = node._speaker;
-                _currentSpeaker   = _graph.getSpeakerName( node._speaker );
-                _currentText      = node._text;
-                _listCurrentChoice.clear();
-                notifyLine();
+                _state = DialogueRunnerState::ShowingDialogue;
+                showNode( node );
                 return false;
             }
             case DialogueAssetNodeKind::Choice:
             {
-                _state             = DialogueRunnerState::WaitingForChoice;
-                _currentSpeakerID  = node._speaker;
-                _currentSpeaker    = _graph.getSpeakerName( node._speaker );
-                _currentText       = node._text;
-                _listCurrentChoice = node._listChoice;
-                notifyChoices();
+                _state = DialogueRunnerState::WaitingForChoice;
+                showNode( node );
                 return false;
             }
             case DialogueAssetNodeKind::Branch:

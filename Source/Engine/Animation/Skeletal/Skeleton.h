@@ -145,8 +145,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Required, AssetPath, AssetType = "Skeleton", Tooltip = "The base skeleton (a variant may base on a variant)" )
-        string _base;
+        PROPERTY( Required, Tooltip = "The base skeleton (a variant may base on a variant)" )
+        AssetRef<Skeleton> _base;
         PROPERTY( Tooltip = "Bones appended after the base bones; base bone numbers stay, so its meshes and clips keep working" )
         vector<SkeletonAddedBone> _listAddedBone;
         PROPERTY( Tooltip = "Reference pose and proportion changes of base bones" )

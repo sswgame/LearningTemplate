@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
@@ -59,15 +60,15 @@ namespace sw
 
     private:
         PROPERTY( Category = "Track", DisplayName = "Track File", Tooltip = "Intent recording (.swintent) to play when play starts; empty: a script or scenario fills the track" )
-        string _trackFile;
+        DataPath _trackFile;
         PROPERTY( Category = "Track", DisplayName = "Track Name", Tooltip = "Pawn name of the track to play; empty: the possessed pawn's object name" )
         hashed_string _trackName;
         PROPERTY( Category = "Track", DisplayName = "Release When Done", Tooltip = "Give the pawn back to its previous controller when the track ends" )
         bool _bReleaseWhenDone;
 
-        vector<ControlIntent>                 _listIntent;
-        TComponentHandle<ControllerComponent> _returnController; ///< 끝나면 폰을 돌려줄 조종자(무효면 놓기만)
-        size_t                                _cursor;           ///< 다음에 낼 의도
-        bool                                  _bReturnPending;   ///< 목록이 끝나면 폰 돌려주기를 한 번 요청해야 한다
+        SW_TRANSIENT vector<ControlIntent> _listIntent;
+        SW_TRANSIENT TComponentHandle<ControllerComponent> _returnController; ///< 끝나면 폰을 돌려줄 조종자(무효면 놓기만)
+        SW_TRANSIENT size_t                                _cursor;           ///< 다음에 낼 의도
+        SW_TRANSIENT bool                                  _bReturnPending;   ///< 목록이 끝나면 폰 돌려주기를 한 번 요청해야 한다
     };
 } // namespace sw

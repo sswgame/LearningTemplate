@@ -10,10 +10,13 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 namespace sw
 {
@@ -57,16 +60,16 @@ namespace sw
          * @details 읽을 때 적은 순서대로 그 파일의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합친다(`RenderPipelineAsset::mergeRenderPassRefs`) — 렌더러는 합친 목록만 본다.
          *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다.
          */
-        PROPERTY( SkipIfEmpty, AssetPath )
-        vector<string> _listRenderPassRef;
+        PROPERTY( SkipIfEmpty )
+        vector<DataPath> _listRenderPassRef;
 
         /**
          * @brief 모듈 확장이 패스 프로그램(`ExtensionProgramDesc::_shaderPath`)으로 쓸 수 있는 셰이더 경로입니다(ExtensionRenderPass).
          * @details 모듈이 런타임에 고르는 셰이더는 쿠커가 미리 구워 두어야 하므로(Shipping 은 PSO 를 컴파일하지 못한다) 데이터로 선언한다. 쿠커는 각 경로의 VS · PS 를 define 없이
          *          굽고, 런타임은 여기 없는 경로를 요청한 모듈 패스를 오류로 막는다.
          */
-        PROPERTY( SkipIfEmpty, AssetPath )
-        vector<string> _listExtensionShader;
+        PROPERTY( SkipIfEmpty )
+        vector<AssetRef<ShaderSourceAsset>> _listExtensionShader;
     };
 } // namespace sw
 

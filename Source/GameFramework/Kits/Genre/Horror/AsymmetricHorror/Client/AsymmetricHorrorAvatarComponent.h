@@ -61,7 +61,7 @@ namespace sw
         PROPERTY( Required, Category = "Look", DisplayName = "Marker Prefab", Tooltip = "Prefab with one mesh, spawned for everything the view shows" )
         AssetRef<PrefabAsset> _markerPrefab;
 
-        PrefabViewBatch                          _markers;
+        SW_TRANSIENT PrefabViewBatch             _markers;
         unique_ptr<AsymmetricHorrorHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
     };
 } // namespace sw

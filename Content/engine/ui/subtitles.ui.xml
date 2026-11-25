@@ -1,7 +1,7 @@
 <?asset guid="c80bf1c757c5b5cf86efb67366e30766"?>
 <UIDocument _schemaVersion="0">
 	<_listStyleSheet>
-		<item>engine/ui/styles/subtitles.uistyle.xml</item>
+		<item>guid:078a9345d9bf3e6c6a3bc7a4ff0e781a</item>
 	</_listStyleSheet>
 	<!-- 자막 화면 — UISubtitleService 가 연다. 줄 자리는 이름 Line<n>(바탕) · Speaker<n> · Text<n>, 글 크기 · 바탕 알파는 사용자 설정이 바꾼다(자리 0 의 값이 기준). -->
 	<UIScreenDef _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />

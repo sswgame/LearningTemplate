@@ -5,6 +5,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
@@ -241,4 +242,31 @@ SW_TEST_CASE( AIPerceptionTest, SoundIsHeardNotSeen )
     SW_EXPECT_TRUE( pTarget->_bSeen == SW_FALSE );
     SW_EXPECT_TRUE( pTarget->_bHeard == SW_TRUE );
     SW_EXPECT_NEAR( 0.0f, pTarget->_age, 1.0e-6f );
+}
+
+/** @brief [AIPerceptionTest] 기억한 대상은 상태로 남는다 — 되살린 감각이 같은 자리 · 나이를 기억하고 이어서 잊는다 */
+SW_TEST_CASE( AIPerceptionTest, MemorySurvivesRestore )
+{
+    AIPerceptionSettings settings;
+    settings._memoryDuration = 2.0f;
+    AIPerception perception;
+    perception.setSettings( settings );
+    const float3 eye{ 0.0f, 1.6f, 0.0f };
+    const float3 forward{ 0.0f, 0.0f, 1.0f };
+    perception.sense( eye, forward, { AIStimulus::makeHearing( float3{ 3.0f, 0.0f, 2.0f }, 7u, 10.0f ) }, nullptr, 0.1f );
+    perception.sense( eye, forward, {}, nullptr, 1.0f );
+    SW_REQUIRE_EQUAL( size_t( 1 ), perception.getTargets().size() );
+    Archive written;
+    perception.writeState( written );
+
+    AIPerception restored;
+    restored.setSettings( settings );
+    Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    const AIPerceivedTarget* pTarget = restored.findTarget( 7u );
+    SW_REQUIRE_NOT_NULL( pTarget );
+    SW_EXPECT_TRUE( ( pTarget->_lastKnownPosition == float3{ 3.0f, 0.0f, 2.0f } ) );
+    SW_EXPECT_TRUE( pTarget->_age == perception.findTarget( 7u )->_age );
+    restored.sense( eye, forward, {}, nullptr, 1.5f );
+    SW_EXPECT_NULL( restored.findTarget( 7u ) );
 }

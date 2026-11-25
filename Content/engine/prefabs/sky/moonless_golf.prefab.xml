@@ -3,7 +3,7 @@
 <Prefab formatVersion="0" name="Sky_moonless_golf">
 	<GameObject _schemaVersion="0" _name="Sky_moonless_golf" _bActive="true">
 		<_listComponent>
-			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:6e9d4ba6f7f13cf7e7d96ffa009e9ffb" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/moonless_golf.radiancemap">
+			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:6e9d4ba6f7f13cf7e7d96ffa009e9ffb" _hdriRotation="0" _hdriRadianceMap="guid:a007e9dd38b6d26ffb0855cac6404eb4">
 				<_listHdriAmbient>
 					<item>0.681568</item>
 					<item>0.583370</item>

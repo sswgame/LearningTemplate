@@ -4,4 +4,4 @@
   한 화면 두 사람 미니게임 — 로컬 멀티(localPlayers)의 입력 사용자를 켜는 동안 연다. 키트는 게임 기능으로 걸 것이 없다(등록하지 않는다) — 맵의 폰 둘을 로컬 플레이어 0 · 1 이 조종한다.
   시나리오 automation/localplayers 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="localplayers" map="game/playground/maps/localplayers.scene.xml" entry="SceneSwitch" localPlayers="2" save="Blocked" inputContexts="Movement"/>
+<Minigame name="localplayers" map="guid:02cb87ae09004926a4246e6e63b1ef27" entry="SceneSwitch" localPlayers="2" save="Blocked" inputContexts="Movement"/>

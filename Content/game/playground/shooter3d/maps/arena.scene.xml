@@ -610,7 +610,7 @@
 					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
-					                          _pacingProfile="game/playground/shooter3d/data/arena.director.xml"
+					                          _pacingProfile="guid:9d8ded789d178770ce902adcf06cb327"
 					                          _spawnTable="guid:12cb4974b26306129fddf631e4704b55"
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"

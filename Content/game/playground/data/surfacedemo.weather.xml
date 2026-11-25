@@ -3,7 +3,7 @@
 <!-- 표면 상호작용 무대(maps/surfaceinteraction)의 날씨 — wetness 는 CharacterWetnessComponent 가 비의 세기로 읽는다(_precipitationValue).
      시나리오가 cheat.weather 로 바꾸므로 맑음만 고를 무게를 갖고, 비 · 눈은 무게 0 이다(저절로 오지 않는다). -->
 <!-- 비 · 눈은 지면 머티리얼 묶음에도 간다 — Weather.x 젖음 · Weather.z 눈 · Rain.x 빗방울 링(판 상태가 쓴다, WeatherMaterialWriter). -->
-<WeatherCatalog transition="5" materialCollection="engine/materials/weather.matparams.xml">
+<WeatherCatalog transition="5" materialCollection="guid:d4a6dcfaefbfafcfd96263788f8a8e54">
 	<MaterialBinding parameter="Weather" valueX="wetness" valueZ="snowfall"/>
 	<MaterialBinding parameter="Rain" valueX="wetness"/>
 	<Weather id="clear" weight="1" minDuration="100000" maxDuration="100000">

@@ -10,6 +10,8 @@
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -54,6 +56,23 @@ namespace sw
                     if ( string_view{ element.getName() } != kItemTag )
                         return false;
                     outList.push_back( string{ element.getText() } );
+                }
+                return true;
+            }
+
+            /** @brief 경로 목록(`<item>`)을 읽습니다 — 글은 참조 글 처리기("DataPath")가 푼다. */
+            [[nodiscard]] static bool readPathList( const XMLNode& listNode, vector<DataPath>& outList )
+            {
+                vector<string> listText;
+                if ( readStringList( listNode, listText ) == false )
+                    return false;
+                outList.clear();
+                for ( const string& text : listText )
+                {
+                    DataPath path;
+                    if ( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, hashed_string( "DataPath" ), text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                        return false;
+                    outList.push_back( std::move( path ) );
                 }
                 return true;
             }
@@ -409,7 +428,7 @@ namespace sw
                                 Internal::readStringList( root.findChild( "stagedCultures" ), loaded._listStagedCulture ) &&
                                 Internal::readStringList( root.findChild( "stringTables" ), loaded._listStringTable ) &&
                                 Internal::readStringList( root.findChild( "codeRoots" ), loaded._listCodeRoot ) &&
-                                Internal::readStringList( root.findChild( "assetRoots" ), loaded._listAssetRoot );
+                                Internal::readPathList( root.findChild( "assetRoots" ), loaded._listAssetRoot );
         size_t ruleIndex{ 0 };
         for ( XMLNode ruleNode = root.findChild( "assetRules" ).findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
         {

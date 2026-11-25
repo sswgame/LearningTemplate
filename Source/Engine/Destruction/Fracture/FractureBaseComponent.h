@@ -378,37 +378,37 @@ namespace sw
         PROPERTY( Category = "Fracture", DisplayName = "Authority", Tooltip = "Physics impacts create damage events (turn off on network clients)" )
         bool _bAuthority;
 
-        shared_ptr<const FractureAsset>        _asset;
-        unique_ptr<IFracturePhysics>           _physics;
-        FractureLeafShapeTable*                _pLeafShapeTable; ///< 등록된 씬의 잎 셰이프 표(등록되지 않았으면 nullptr)
-        SharedAssetRef<DestructionProfile>     _pProfile;        ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
-        DestructionState                       _state;
-        DestructionEventLog                    _eventLog;
-        vector<optional<FractureGroupPose>>    _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다(없으면 비어 있다).
-        FractureNetworkSync                    _networkSync;        ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
-        vector<uint8>                          _pendingStateBytes;  ///< 되돌렸지만 아직 적용하지 않은 상태(`restoreState`)
-        LockedSwapQueue<FracturePendingDamage> _pendingDamage;      ///< 맞은 사건(물리 콜백 · 네트워크가 쌓고 틱이 가져간다)
-        vector<PhysicsBodyHandle>              _listLeafStaticBody; ///< 잎마다 정적 바디다(앵커 그룹의 잎만).
-        vector<FractureGroupRuntime>           _listRuntime;        ///< 그룹 번호 오름차순이다.
-        vector<BoneTransform>                  _listPiecePose;      ///< 잎마다 본 로컬 변환이다.
-        vector<uint32>                         _listRuntimeOfLeaf;  ///< 잎에서 `_listRuntime` 인덱스로 가는 테이블이다(그때마다 다시 만든다).
-        FractureRenderUnits                    _renderUnits;        ///< 스킨드 메시 둘과 베이크한 정적 메시 둘이다.
-        TComponentHandle<MeshComponent>        _intactMesh;
-        ComponentHandle                        _intactBody;     ///< 3D 는 `RigidBodyComponent`, 2D 는 `RigidBody2DComponent` 라 타입 없는 핸들로 둔다
-        float3                                 _objectPosition; ///< 쪼갤 때의 오브젝트 자세(메시 공간 → 월드)
-        quaternion                             _objectRotation;
-        float3                                 _intactLinearVelocity;
-        float3                                 _intactAngularVelocity;
-        float32                                _objectScale;        ///< 고른 배율(축 배율의 평균)
-        float32                                _leafShapeScale;     ///< 쥔 잎 셰이프 묶음의 배율이다(0 = 아직 받지 않았다).
-        float32                                _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
-        uint32                                 _nextSpawnOrder;
-        DebrisOwnerID                          _debrisOwner;     ///< 씬 파편 장부의 주인 번호(첫 바디를 올릴 때 받는다)
-        uint32                                 _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
-        AssetReloadWatch<DestructionProfile>   _profileReload;   ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수
-        uint8                                  _bStateReady;
-        uint8                                  _bFractured;
-        uint8                                  _bPoseDirty;
-        uint8                                  _bFractureMissing; ///< 데이터(파쇄 에셋 · 프로필)를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
+        shared_ptr<const FractureAsset> _asset;
+        SW_TRANSIENT unique_ptr<IFracturePhysics> _physics;
+        FractureLeafShapeTable*                   _pLeafShapeTable; ///< 등록된 씬의 잎 셰이프 표(등록되지 않았으면 nullptr)
+        SharedAssetRef<DestructionProfile>        _pProfile;        ///< 상태를 시작할 때 받은 프로필(공유 캐시의 한 벌). 구조 상태는 그때의 값을 따로 든다
+        SW_CODEC_STATE DestructionState           _state;
+        SW_TRANSIENT DestructionEventLog          _eventLog;
+        SW_TRANSIENT vector<optional<FractureGroupPose>> _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다(없으면 비어 있다).
+        SW_TRANSIENT FractureNetworkSync                 _networkSync;        ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
+        SW_TRANSIENT vector<uint8> _pendingStateBytes;                        ///< 되돌렸지만 아직 적용하지 않은 상태(`restoreState`)
+        SW_TRANSIENT LockedSwapQueue<FracturePendingDamage> _pendingDamage;   ///< 맞은 사건(물리 콜백 · 네트워크가 쌓고 틱이 가져간다)
+        SW_TRANSIENT vector<PhysicsBodyHandle> _listLeafStaticBody;           ///< 잎마다 정적 바디다(앵커 그룹의 잎만).
+        SW_CODEC_STATE vector<FractureGroupRuntime> _listRuntime;             ///< 그룹 번호 오름차순이다.
+        SW_TRANSIENT vector<BoneTransform> _listPiecePose;                    ///< 잎마다 본 로컬 변환이다.
+        SW_TRANSIENT vector<uint32>      _listRuntimeOfLeaf;                  ///< 잎에서 `_listRuntime` 인덱스로 가는 테이블이다(그때마다 다시 만든다).
+        SW_TRANSIENT FractureRenderUnits _renderUnits;                        ///< 스킨드 메시 둘과 베이크한 정적 메시 둘이다.
+        SW_TRANSIENT TComponentHandle<MeshComponent> _intactMesh;
+        SW_TRANSIENT ComponentHandle                 _intactBody;     ///< 3D 는 `RigidBodyComponent`, 2D 는 `RigidBody2DComponent` 라 타입 없는 핸들로 둔다
+        SW_TRANSIENT float3                          _objectPosition; ///< 쪼갤 때의 오브젝트 자세(메시 공간 → 월드)
+        SW_TRANSIENT quaternion                      _objectRotation;
+        SW_TRANSIENT float3                          _intactLinearVelocity;
+        SW_TRANSIENT float3                          _intactAngularVelocity;
+        SW_TRANSIENT float32                         _objectScale;        ///< 고른 배율(축 배율의 평균)
+        SW_TRANSIENT float32                         _leafShapeScale;     ///< 쥔 잎 셰이프 묶음의 배율이다(0 = 아직 받지 않았다).
+        SW_TRANSIENT float32                         _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).
+        SW_TRANSIENT uint32                          _nextSpawnOrder;
+        SW_TRANSIENT DebrisOwnerID                   _debrisOwner;        ///< 씬 파편 장부의 주인 번호(첫 바디를 올릴 때 받는다)
+        SW_TRANSIENT uint32                          _stillFrameCount;    ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
+        SW_TRANSIENT AssetReloadWatch<DestructionProfile> _profileReload; ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수
+        SW_CODEC_STATE uint8                              _bStateReady;
+        SW_TRANSIENT uint8                                _bFractured;
+        SW_TRANSIENT uint8                                _bPoseDirty;
+        SW_TRANSIENT uint8                                _bFractureMissing; ///< 데이터(파쇄 에셋 · 프로필)를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
     };
 } // namespace sw

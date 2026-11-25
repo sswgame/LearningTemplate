@@ -295,19 +295,19 @@ namespace sw
         AABB playerAttackBox( float32 x, float32 y, FacingDirection facing ) const;
 
     private:
-        ActionRoomSite     _site;
-        ActionRoomSettings _settings;
-        ActionRoomLayout   _layout;
+        SW_TRANSIENT ActionRoomSite     _site;
+        SW_TRANSIENT ActionRoomSettings _settings;
+        SW_TRANSIENT ActionRoomLayout   _layout;
         PROPERTY( RuntimeState )
         ActionRoomKind               _kind;
-        CollisionLayers              _layers;
-        vector<Actor>                _listActor;
-        ProjectileSimulation         _projectiles;
-        vector<MonsterDef>           _listMonsterDef;  ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
-        vector<vector<ResolvedShot>> _listMonsterShot; ///< `_listMonsterDef` 와 같은 순서로, 그 종의 사격 줄마다 푼 탄(싸움 도중 탄 카탈로그를 다시 읽어도 그대로다)
-        Countdown                    _attackCooldown;
-        Countdown                    _dashCooldown;
-        Countdown                    _invulnerable; ///< 피격 후 무적 시간
+        SW_TRANSIENT CollisionLayers _layers;
+        SW_CODEC_STATE vector<Actor>        _listActor;
+        SW_CODEC_STATE ProjectileSimulation _projectiles;
+        SW_CODEC_STATE vector<MonsterDef> _listMonsterDef;          ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
+        SW_TRANSIENT vector<vector<ResolvedShot>> _listMonsterShot; ///< `_listMonsterDef` 와 같은 순서로, 그 종의 사격 줄마다 푼 탄(싸움 도중 탄 카탈로그를 다시 읽어도 그대로다)
+        SW_CODEC_STATE Countdown                  _attackCooldown;
+        SW_CODEC_STATE Countdown                  _dashCooldown;
+        SW_CODEC_STATE Countdown                  _invulnerable; ///< 피격 후 무적 시간
         PROPERTY( RuntimeState )
         uint8                  _bCleared : 1;
         [[maybe_unused]] uint8 _reserved : 7;

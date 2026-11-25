@@ -2,7 +2,7 @@
 <UIDocument _schemaVersion="0">
 	<UIScreenDef _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
 	<_listStyleSheet>
-		<item>engine/ui/styles/notifications.uistyle.xml</item>
+		<item>guid:9734f709e1c5798e62f259405550df05</item>
 	</_listStyleSheet>
 	<SafeZonePanel>
 		<CanvasPanel _visibility="SelfHitTestInvisible">

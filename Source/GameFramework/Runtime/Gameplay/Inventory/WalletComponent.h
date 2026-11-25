@@ -49,7 +49,7 @@ namespace sw
         const Wallet& getWallet() const { return _wallet; }
 
     private:
-        Wallet               _wallet;
-        DeferredStateRestore _restore;
+        SW_CODEC_STATE Wallet               _wallet;
+        SW_CODEC_STATE DeferredStateRestore _restore;
     };
 } // namespace sw

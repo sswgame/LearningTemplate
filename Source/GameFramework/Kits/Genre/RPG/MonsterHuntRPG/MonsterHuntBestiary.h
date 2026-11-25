@@ -95,9 +95,9 @@ namespace sw
 
     private:
         PROPERTY( RuntimeState )
-        vector<Entry>                                _listEntry;
-        NotificationBuffer<MonsterHuntBestiaryEvent> _eventBuffer;
-        const MonsterHuntCatalog*                    _pCatalog;
-        const ElementChart*                          _pChart;
+        vector<Entry> _listEntry;
+        SW_TRANSIENT NotificationBuffer<MonsterHuntBestiaryEvent> _eventBuffer;
+        const MonsterHuntCatalog*                                 _pCatalog;
+        const ElementChart*                                       _pChart;
     };
 } // namespace sw

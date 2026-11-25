@@ -146,23 +146,23 @@ namespace sw
         PROPERTY( Category = "Blocks", DisplayName = "Start Blocks", Tooltip = "Blocks in the first hotbar (64 each)" )
         vector<CatalogKey<VoxelBlockDef>> _listStartBlock;
 
-        VoxelBody         _body;
-        VoxelHotbar       _hotbar;
-        VoxelRayHit       _target;
-        vector<BlockEdit> _listPendingEdit;
-        GameSoundQueue    _soundQueue;        ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
-        vector<uint8>     _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
-        IntentSlots       _intentSlots;
-        AbsolutePosition  _startPosition; ///< 몸을 처음 놓은 절대 자리(복셀 월드 좌표)
-        float32           _breakProgress;
-        Countdown         _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
+        SW_CODEC_STATE VoxelBody   _body;
+        SW_CODEC_STATE VoxelHotbar _hotbar;
+        SW_TRANSIENT VoxelRayHit   _target;
+        SW_TRANSIENT vector<BlockEdit> _listPendingEdit;
+        SW_TRANSIENT GameSoundQueue    _soundQueue;        ///< 재생할 소리입니다. 오디오는 게임 스레드에서 틱이 끝난 뒤 재생합니다.
+        vector<uint8>                  _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트입니다(`restoreState`).
+        SW_TRANSIENT IntentSlots       _intentSlots;
+        AbsolutePosition               _startPosition; ///< 몸을 처음 놓은 절대 자리(복셀 월드 좌표)
+        SW_TRANSIENT float32           _breakProgress;
+        Countdown                      _placeCooldown; ///< 버튼을 누르고 있을 때의 놓기 간격입니다(늦은 만큼 이어서 셉니다).
         PROPERTY( RuntimeState )
         uint32 _brokenCount;
         PROPERTY( RuntimeState )
         uint32                 _placedCount;
-        uint8                  _bHasTarget      : 1;
-        uint8                  _bBodyPlaced     : 1; ///< 월드가 생성된 뒤 첫 땅에 몸을 놓았는지입니다.
-        uint8                  _bFlushScheduled : 1;
+        SW_TRANSIENT uint8     _bHasTarget      : 1;
+        SW_CODEC_STATE uint8   _bBodyPlaced     : 1; ///< 월드가 생성된 뒤 첫 땅에 몸을 놓았는지입니다.
+        SW_TRANSIENT uint8     _bFlushScheduled : 1;
         [[maybe_unused]] uint8 _reserved        : 5;
     };
 } // namespace sw

@@ -7,13 +7,7 @@
 <ModSupportSettings contentVersion="0" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
 	<Overridable prefix="game/playground/data/mods/"/>
 	<!-- 액션 어드벤처 미니게임(minigames/velmora)의 확장 팩이 층으로 항목을 더하는 표 셋(Test/Mods/velmora_tidecaves) -->
-	<Overridable path="game/playground/data/regions.xml"/>
-	<Overridable path="game/playground/data/quests.xml"/>
-	<Overridable path="game/playground/data/monsters.xml"/>
-	<!-- 모드 팩에 압축하지 않고 담는 확장자(PackEntryStorageRule — 배포 팩 PackConfig.json 의 _listStoredExtension 과 같은 값). 밉 스트리밍이 .dds 구간만 읽는다 -->
-	<Stored extension=".dds"/>
-	<Stored extension=".ktx2"/>
-	<Stored extension=".png"/>
-	<Stored extension=".jpg"/>
-	<Stored extension=".ogg"/>
+	<Overridable path="guid:8059e7a6ebaa444e5fba17a13f2ee967"/>
+	<Overridable path="guid:303ab1f11945fa0218a42f1f1f910801"/>
+	<Overridable path="guid:c9af8efa8d9ae611e85c423caa3f34e1"/>
 </ModSupportSettings>

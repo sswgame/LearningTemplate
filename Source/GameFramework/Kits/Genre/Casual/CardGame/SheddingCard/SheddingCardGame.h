@@ -183,15 +183,17 @@ namespace sw
         bool        hasColor( int32 player, SheddingCardColor color, uint16 exceptCardID ) const;
 
     private:
-        vector<CardPile>                      _listHand;
-        NotificationBuffer<SheddingCardEvent> _eventBuffer;
-        CardPile                              _drawPile;
-        CardPile                              _discardPile;
-        SheddingCardSettings                  _settings;
-        GameRandom                            _random;
-        optional<SipHashKey>                  _shuffleKey;   ///< 있으면 다시 섞을 때 난수 대신 이 키를 쓴다(`initializeSecret`)
-        uint64                                _dealID;       ///< 비밀 섞기의 판 번호
-        uint32                                _shuffleCount; ///< 비밀 섞기를 한 횟수(섞을 때마다 순서가 다르게)
+        SW_CODEC_STATE vector<CardPile> _listHand;
+        SW_TRANSIENT NotificationBuffer<SheddingCardEvent> _eventBuffer;
+        SW_CODEC_STATE CardPile                            _drawPile;
+        SW_CODEC_STATE CardPile                            _discardPile;
+        SW_TRANSIENT SheddingCardSettings                  _settings;
+        SW_CODEC_STATE GameRandom                          _random;
+        SW_TRANSIENT optional<SipHashKey> _shuffleKey; ///< 있으면 다시 섞을 때 난수 대신 이 키를 쓴다(`initializeSecret`)
+        PROPERTY( RuntimeState )
+        uint64 _dealID; ///< 비밀 섞기의 판 번호
+        PROPERTY( RuntimeState )
+        uint32 _shuffleCount; ///< 비밀 섞기를 한 횟수(섞을 때마다 순서가 다르게)
         PROPERTY( RuntimeState, Min = 0 )
         int32 _currentPlayer;
         PROPERTY( RuntimeState, Min = -1, Max = 1 )

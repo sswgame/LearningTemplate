@@ -50,9 +50,10 @@ namespace sw
     namespace
     {
         /** @brief 시트를 캐시에서 읽습니다(변형 @p tagOverride — 빈 집합이면 엔진 판. 읽지 못한 것은 오류를 남기고 제외합니다). */
-        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<string>& listPath, const ResourceTagSet& tagOverride, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
+        template <typename TPath>
+        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<TPath>& listPath, const ResourceTagSet& tagOverride, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
         {
-            for ( const string& path : listPath )
+            for ( const TPath& path : listPath )
             {
                 const expected<shared_ptr<const UIStyleSheetAsset>> sheet = styleSheetCache.acquire( path, tagOverride );
                 if ( sheet.has_value() == false )

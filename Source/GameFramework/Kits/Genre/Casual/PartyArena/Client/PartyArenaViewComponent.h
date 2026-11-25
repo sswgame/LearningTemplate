@@ -77,9 +77,9 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Item Color" )
         float4 _itemColor;
 
-        PrefabViewBatch               _floorViews;
-        PrefabViewBatch               _playerViews;
-        PrefabViewBatch               _itemViews;
+        SW_TRANSIENT PrefabViewBatch  _floorViews;
+        SW_TRANSIENT PrefabViewBatch  _playerViews;
+        SW_TRANSIENT PrefabViewBatch  _itemViews;
         unique_ptr<PartyHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
     };
 } // namespace sw

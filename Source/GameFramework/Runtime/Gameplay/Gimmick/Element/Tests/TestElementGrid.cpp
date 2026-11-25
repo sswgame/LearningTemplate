@@ -1,13 +1,21 @@
 // ElementGridTest — 규칙표 원소 격자: 표 읽기의 거절, 자극 규칙의 차례, 번짐(이웃 · 바람 · 옆바람 · 지연), 다 탐 · 이웃 바꾸기, 대전의 수명과 이어 퍼지기, 고정 스텝, 상태 왕복(nogpu).
 #include "pch.h"
 
+#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementGrid.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementStatusComponent.h"
 
 using namespace sw;
 
@@ -222,4 +230,36 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     SW_REQUIRE_TRUE( reduced.initialize( 4, 2, &small ) );
     Archive forReduced( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( reduced.readState( forReduced ) ); // 풀 · 물 번호가 이 표에 없다
+}
+
+/** @brief [ElementGridTest] 오브젝트의 원소 상태는 상태로 남는다 — 플레이가 붙인 불은 되살린 뒤에도 타고, 시작 자극이 상태를 덮지 않는다 */
+SW_TEST_CASE( ElementGridTest, ObjectStatusSurvivesRestore )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "rules.elements.xml" ), ElementGridTestTable::kXML ) );
+    StringBuilder<constant::buffer::kMax512> text;
+    text.appendFormat( "<ElementStatusComponent _tablePath=\"%#\" _elementMaterial=\"Wood\" _signalStatus=\"Burning\"/>", test::ScopedScratchDomain::makeID( "rules.elements.xml" ).str() );
+    const auto addTorch = [&text]( GameObjectManager& manager )
+    {
+        ElementStatusComponent* pTorch = manager.createGameObject( hashed_string( "Torch" ) )->addComponent<ElementStatusComponent>();
+        SW_EXPECT_TRUE( XMLSerializer::deserialize( pTorch, *ElementStatusComponent::StaticType(), text.view() ) );
+        return pTorch;
+    };
+    GameObjectManager       manager;
+    ElementStatusComponent* pTorch = addTorch( manager );
+    manager.beginPlay();
+    SW_REQUIRE_TRUE( pTorch->applyStimulus( hashed_string( "Fire" ) ) );
+    SW_REQUIRE_TRUE( pTorch->hasStatus( hashed_string( "Burning" ) ) );
+    Archive archive;
+    pTorch->writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    GameObjectManager       restoredManager;
+    ElementStatusComponent* pRestored = addTorch( restoredManager );
+    pRestored->restoreState( std::move( bytes ) ); // 시작 전에 받은 것은 테이블을 읽은 뒤 적용한다
+    restoredManager.beginPlay();
+    SW_EXPECT_TRUE( pRestored->hasStatus( hashed_string( "Burning" ) ) );
+    manager.endPlay();
+    restoredManager.endPlay();
 }

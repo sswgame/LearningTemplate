@@ -3,7 +3,7 @@
 <!-- 외형 머티리얼 라이브러리의 뿌리(appearance_lit.hlsl) — 프로퍼티 이름 · 순서 · 형식은 셰이더의 SW_MATERIAL 구조체와 1:1 이다. 엽 · 무늬가 없는 PBR + 코트(기름 · 젖음) 바탕이다.
      갈래 바탕(<갈래>/base.material)이 _permutations 에 엽 · 무늬 define 을 더하고, 프리셋은 _base 로 값만 바꾼다(같은 셰이더 변형 · PSO).
      칸의 뜻은 appearance_lit.hlsl · appearance_pattern.hlsli · appearance_eye.hlsli · appearance_fur.hlsli 머리말, 고른 까닭은 appearance_lit.hlsl 머리말의 결정 표. -->
-<MaterialDef formatVersion="0" name="Appearance" shaderPath="engine/shaders/appearance_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+<MaterialDef formatVersion="0" name="Appearance" shaderPath="guid:cc75566a67207c4a8f8779b8012b2938" surfaceModel="Lit" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="0.8 0.8 0.8 1" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_secondaryColor" type="Color" defaultValue="0.3 0.3 0.3 1" displayName="Secondary Color" group="Pattern" bHdr="0" bSrgb="1"/>

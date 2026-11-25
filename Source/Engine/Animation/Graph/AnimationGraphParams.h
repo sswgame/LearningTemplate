@@ -11,6 +11,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -204,8 +205,8 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string _name{};
-        PROPERTY( AssetPath )
-        string _file{};
+        PROPERTY()
+        AssetRef<AnimationBoneMaskDef> _file;
     };
 
     /** @brief 본 마스크의 `<roots>` · `<bones>` 아래 `<entry>` 입니다(그래프 안에 적은 마스크와 프리셋 파일 `*.bonemask.xml` 이 같다). */

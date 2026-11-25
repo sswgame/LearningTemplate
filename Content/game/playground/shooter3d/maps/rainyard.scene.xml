@@ -21,7 +21,7 @@
 					                          _autoPlayPrefab="guid:db9836711aca7b372e2ebbb9fc0c0eae"
 					                          _player="50"
 					                          _arenaHalfSize="20"
-					                          _pacingProfile="game/playground/shooter3d/data/arena.director.xml"
+					                          _pacingProfile="guid:9d8ded789d178770ce902adcf06cb327"
 					                          _spawnTable="guid:a4ea400538e948a2a07b6a6a2c8276dd"
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
@@ -112,7 +112,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="16,0.05,-18" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Walking_A" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:41d588160a20a771c2a97324cfa7aca3" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 				</_listComponent>

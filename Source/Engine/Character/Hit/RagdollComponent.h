@@ -224,43 +224,43 @@ namespace sw
         PROPERTY( Category = "Ragdoll", DisplayName = "Auto Get Up", Tooltip = "Get up by itself once the ragdoll settles" )
         bool _bAutoGetUp;
 
-        RagdollAnimationBinding        _binding;
-        Subscription                   _bindingRegistration;  ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        Subscription                   _boneRequirement;      ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
-        Subscription                   _controllerSuspension; ///< 래그돌 동안 쥐는 캐릭터 컨트롤러 멈춤
-        Subscription                   _hitSubscription;      ///< 맞음 사건 구독(`handleHit`)
-        SharedAssetRef<PhysicsAsset>   _asset;
-        PhysicsRagdoll                 _ragdoll;
-        vector<hashed_string>          _listBoneName;
-        vector<float32>                _listBodyWeight;       ///< 바디마다 물리 섞임 가중치다.
-        vector<float32>                _listReactionTime;     ///< 바디마다 남은 맞음 반응 시간이다(초).
-        vector<uint8>                  _listBodyDynamic;      ///< 바디마다 동적이어야 하는지 나타낸다(가중치 > 0).
-        vector<uint8>                  _listAppliedDynamic;   ///< 바디에 실제로 적용된 종류다.
-        vector<uint8>                  _listPartialMask;      ///< 부분 래그돌에 속한 바디다.
-        vector<float32>                _listBlendStartWeight; ///< 돌아가기를 시작할 때의 바디 가중치다.
-        vector<float32>                _listBoneWeight;       ///< 뼈마다 섞임 가중치다(후처리가 읽는다).
-        vector<float4x4>               _listPhysicsModel;     ///< 지난 물리 프레임의 뼈 모델 공간 행렬이다(오브젝트 기준).
-        vector<float4x4>               _listAnimationModel;   ///< 물리를 섞기 전 애니메이션 포즈의 뼈 모델 공간 행렬이다(파워드 래그돌 모터의 목표).
-        vector<float3>                 _listKinematicStartPosition;
-        vector<float3>                 _listKinematicTargetPosition;
-        vector<quaternion>             _listKinematicStartRotation;
-        vector<quaternion>             _listKinematicTargetRotation;
-        vector<PendingImpulse>         _listPendingImpulse;
-        vector<hashed_string>          _listDetachedBone; ///< 떼어 낸 뼈(절단) — 바디를 다시 지어도 떼어 둔다
-        Pose                           _physicsPose;      ///< 후처리용 스크래치 버퍼다.
-        const Skeleton*                _pBoneNameSkeleton;
-        SkeletalMeshComponent*         _pUnit;
-        AssetReloadWatch<PhysicsAsset> _assetReload;
-        optional<uint32>               _flinchLayer; ///< 움찔 레이어 — 첫 맞음에 더한다
-        float32                        _partialWeight;
-        float32                        _sleepElapsed;
-        float32                        _blendBackElapsed;
-        float32                        _flinchElapsed;
-        float32                        _lastDeltaSeconds;
-        bool                           _bHasPhysicsPose;
-        bool                           _bAsleep;
-        bool                           _bRebuild;
-        bool                           _bGettingUp;    ///< 기상 클립을 재생 중이다. 끝나면 `_getUpExitState` 로 간다.
-        bool                           _bMotorsDriven; ///< 파워드 래그돌 모터를 켜 두었다. 래그돌을 벗어날 때 한 번 끈다.
+        SW_TRANSIENT RagdollAnimationBinding _binding;
+        Subscription                         _bindingRegistration;  ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        Subscription                         _boneRequirement;      ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
+        Subscription                         _controllerSuspension; ///< 래그돌 동안 쥐는 캐릭터 컨트롤러 멈춤
+        Subscription                         _hitSubscription;      ///< 맞음 사건 구독(`handleHit`)
+        SharedAssetRef<PhysicsAsset>         _asset;
+        SW_TRANSIENT PhysicsRagdoll          _ragdoll;
+        SW_TRANSIENT vector<hashed_string> _listBoneName;
+        SW_TRANSIENT vector<float32> _listBodyWeight;       ///< 바디마다 물리 섞임 가중치다.
+        SW_TRANSIENT vector<float32> _listReactionTime;     ///< 바디마다 남은 맞음 반응 시간이다(초).
+        SW_TRANSIENT vector<uint8> _listBodyDynamic;        ///< 바디마다 동적이어야 하는지 나타낸다(가중치 > 0).
+        SW_TRANSIENT vector<uint8> _listAppliedDynamic;     ///< 바디에 실제로 적용된 종류다.
+        SW_TRANSIENT vector<uint8> _listPartialMask;        ///< 부분 래그돌에 속한 바디다.
+        SW_TRANSIENT vector<float32> _listBlendStartWeight; ///< 돌아가기를 시작할 때의 바디 가중치다.
+        SW_TRANSIENT vector<float32> _listBoneWeight;       ///< 뼈마다 섞임 가중치다(후처리가 읽는다).
+        SW_TRANSIENT vector<float4x4> _listPhysicsModel;    ///< 지난 물리 프레임의 뼈 모델 공간 행렬이다(오브젝트 기준).
+        SW_TRANSIENT vector<float4x4> _listAnimationModel;  ///< 물리를 섞기 전 애니메이션 포즈의 뼈 모델 공간 행렬이다(파워드 래그돌 모터의 목표).
+        SW_TRANSIENT vector<float3> _listKinematicStartPosition;
+        SW_TRANSIENT vector<float3> _listKinematicTargetPosition;
+        SW_TRANSIENT vector<quaternion> _listKinematicStartRotation;
+        SW_TRANSIENT vector<quaternion> _listKinematicTargetRotation;
+        SW_TRANSIENT vector<PendingImpulse> _listPendingImpulse;
+        SW_TRANSIENT vector<hashed_string> _listDetachedBone; ///< 떼어 낸 뼈(절단) — 바디를 다시 지어도 떼어 둔다
+        SW_TRANSIENT Pose                  _physicsPose;      ///< 후처리용 스크래치 버퍼다.
+        const Skeleton*                    _pBoneNameSkeleton;
+        SkeletalMeshComponent*             _pUnit;
+        SW_TRANSIENT AssetReloadWatch<PhysicsAsset> _assetReload;
+        SW_TRANSIENT optional<uint32> _flinchLayer; ///< 움찔 레이어 — 첫 맞음에 더한다
+        SW_TRANSIENT float32          _partialWeight;
+        SW_TRANSIENT float32          _sleepElapsed;
+        SW_TRANSIENT float32          _blendBackElapsed;
+        SW_TRANSIENT float32          _flinchElapsed;
+        SW_TRANSIENT float32          _lastDeltaSeconds;
+        SW_TRANSIENT bool             _bHasPhysicsPose;
+        SW_TRANSIENT bool             _bAsleep;
+        SW_TRANSIENT bool             _bRebuild;
+        SW_TRANSIENT bool             _bGettingUp;    ///< 기상 클립을 재생 중이다. 끝나면 `_getUpExitState` 로 간다.
+        SW_TRANSIENT bool             _bMotorsDriven; ///< 파워드 래그돌 모터를 켜 두었다. 래그돌을 벗어날 때 한 번 끈다.
     };
 } // namespace sw

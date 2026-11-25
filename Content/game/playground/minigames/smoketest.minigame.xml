@@ -4,4 +4,4 @@
   가장 작은 미니게임 — 게임 기능 · 입력 문맥 · UI 없이 맵만 연다. 개발 명령 minigame.enter 의 길(읽기 → 검사 → 켜기 → 맵 요청)과
   돌아올 자리 없이 나가기(입구 씬)를 시나리오 automation/minigame.scenario.xml 이 본다. 장르 미니게임이 같은 길을 쓴다.
 -->
-<Minigame name="smoketest" map="game/playground/maps/editortest.scene.xml" entry="SceneSwitch"/>
+<Minigame name="smoketest" map="guid:3fcd0f83c113a08accb7a73b7f3ca1bc" entry="SceneSwitch"/>

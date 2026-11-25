@@ -20,7 +20,7 @@
 				<MaterialGraphLink _pin="In" _fromNode="Up" _fromPin="Out" />
 			</_listLink>
 		</MaterialGraphNodeDef>
-		<MaterialGraphNodeDef _name="Dirt" _kind="Layer" _assetPath="game/playground/materials/matgraph/layer_dirt.matgraph.xml" _position="440,200">
+		<MaterialGraphNodeDef _name="Dirt" _kind="Layer" _subgraph="guid:af31ce0205f2b79f785990f597a676ce" _position="440,200">
 			<_listLink>
 				<MaterialGraphLink _pin="Mask" _fromNode="UpY" _fromPin="Y" />
 			</_listLink>

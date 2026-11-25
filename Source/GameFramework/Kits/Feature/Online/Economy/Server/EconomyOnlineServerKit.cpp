@@ -54,8 +54,8 @@ namespace sw
                 const expected<optional<AbsolutePath>> trustFile = entry.resolveFile( kitConfig._receiptTrustFile, "_receiptTrustFile" );
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
-                const string& currencyPath = kitConfig._currencyCatalog;
-                const string& offerPath    = kitConfig._offerCatalog;
+                const string& currencyPath = kitConfig._currencyCatalog.path();
+                const string& offerPath    = kitConfig._offerCatalog.path();
                 _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath ).snapshot();
                 if ( _pCurrencyCatalog == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "the currency catalog could not be read", currencyPath } );

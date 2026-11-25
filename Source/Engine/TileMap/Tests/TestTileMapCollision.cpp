@@ -16,6 +16,7 @@
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/Component/TileMapComponent.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
@@ -302,4 +303,39 @@ SW_TEST_CASE( TileMapCollisionTest, NavCostsFollowTheTileSet )
         SW_EXPECT_EQUAL( 255, static_cast<int32>( listCost[index] ) );
         SW_EXPECT_EQUAL( 10, static_cast<int32>( listCost[index + 3] ) );
     }
+}
+
+/** @brief [TileMapCollisionTest] 플레이 중에 칠한 칸은 상태로 남는다 — 같은 맵을 다시 읽고 되살리면 충돌이 같고, 브러시가 사라진 세이브는 통째로 거절한다 */
+SW_TEST_CASE( TileMapCollisionTest, PaintedCellsSurviveRestore )
+{
+    using Internal = TestTileMapCollisionInternal;
+    Internal::Rig rig( 8, 2, { 0 } );
+    SW_REQUIRE_NOT_NULL( rig._pScene );
+    Archive untouched;
+    rig._pTiles->writeState( untouched );
+    SW_EXPECT_EQUAL( uint64{ 0 }, static_cast<uint64>( untouched.getSize() ) ); // 칠하지 않은 맵은 파일에서 그대로 선다
+
+    SW_REQUIRE_TRUE( rig._pTiles->setTileBrush( 3, 0, "" ) );
+    SW_REQUIRE_TRUE( rig._pTiles->setTileBrush( 5, 1, "wall" ) );
+    rig.update( 1 );
+    Archive archive;
+    rig._pTiles->writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+
+    Internal::Rig restored( 8, 2, { 0 } );
+    SW_REQUIRE_NOT_NULL( restored._pScene );
+    restored._pTiles->restoreState( vector<uint8>( bytes ) );
+    restored.update( 1 );
+    SW_EXPECT_EQUAL( rig._pTiles->getSolidRects().size(), restored._pTiles->getSolidRects().size() );
+    SW_EXPECT_TRUE( restored.overlapAt( restored.toWorld( 3.5f, -0.5f ) ).empty() );
+    SW_EXPECT_FALSE( restored.overlapAt( restored.toWorld( 5.5f, -1.5f ) ).empty() );
+
+    Internal::Rig narrow( 4, 1, { 0 } ); // 칸 번호가 맵 밖이다
+    SW_REQUIRE_NOT_NULL( narrow._pScene );
+    const size_t rectCount = narrow._pTiles->getSolidRects().size();
+    SW_EXPECT_LOG( "TileMap.SavedPaintUnreadable" );
+    narrow._pTiles->restoreState( std::move( bytes ) );
+    narrow.update( 1 );
+    SW_EXPECT_EQUAL( rectCount, narrow._pTiles->getSolidRects().size() );
 }

@@ -51,6 +51,6 @@
 		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>
-		<item>engine/renderpass/framecomputerenderpass.xml</item>
+		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

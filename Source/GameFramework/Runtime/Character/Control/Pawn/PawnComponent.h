@@ -183,16 +183,16 @@ namespace sw
         PROPERTY( Category = "Control", DisplayName = "Lock Mouse", Tooltip = "Lock and hide the cursor while a player possesses this pawn (first person); the player's mouse lock action toggles it" )
         bool _bLockMouse;
 
-        ControlIntent                         _intent;
-        TComponentHandle<ControllerComponent> _controller;           ///< 쥔 조종자 컴포넌트
-        TComponentHandle<ControllerComponent> _ridingController;     ///< 탈것을 모는 동안 탈것을 쥔 조종자(`setRidingController`)
-        atomic<int32>                         _yawOffsetUnits;       ///< 쌓인 요 오프셋(`kRotationOffsetUnitsPerRadian` 단위 고정소수점)
-        atomic<int32>                         _pitchOffsetUnits;     ///< 쌓인 피치 오프셋
-        atomic<int32>                         _requestedYawUnits;    ///< 요청된 조종 요(오프셋과 같은 단위)
-        atomic<int32>                         _requestedPitchUnits;  ///< 요청된 조종 피치
-        atomic<bool>                          _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 설정한다)
-        uint32                                _inputPeer;            ///< 의도를 내는 연결(0 = 로컬)
-        uint8                                 _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다 — 풀 반환만 되돌린다)
-        [[maybe_unused]] uint8                _reserved         : 7;
+        SW_CODEC_STATE ControlIntent _intent;
+        SW_TRANSIENT TComponentHandle<ControllerComponent> _controller;       ///< 쥔 조종자 컴포넌트
+        SW_TRANSIENT TComponentHandle<ControllerComponent> _ridingController; ///< 탈것을 모는 동안 탈것을 쥔 조종자(`setRidingController`)
+        SW_TRANSIENT atomic<int32> _yawOffsetUnits;                           ///< 쌓인 요 오프셋(`kRotationOffsetUnitsPerRadian` 단위 고정소수점)
+        SW_TRANSIENT atomic<int32> _pitchOffsetUnits;                         ///< 쌓인 피치 오프셋
+        SW_TRANSIENT atomic<int32> _requestedYawUnits;                        ///< 요청된 조종 요(오프셋과 같은 단위)
+        SW_TRANSIENT atomic<int32> _requestedPitchUnits;                      ///< 요청된 조종 피치
+        SW_TRANSIENT atomic<bool> _bRotationRequested;                        ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 설정한다)
+        SW_TRANSIENT uint32       _inputPeer;                                 ///< 의도를 내는 연결(0 = 로컬)
+        SW_TRANSIENT uint8        _bAutoPossessDone : 1;                      ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다 — 풀 반환만 되돌린다)
+        [[maybe_unused]] uint8    _reserved         : 7;
     };
 } // namespace sw

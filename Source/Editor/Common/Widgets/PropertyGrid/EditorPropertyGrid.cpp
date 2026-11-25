@@ -524,8 +524,7 @@ namespace sw::editor
     void EditorPropertyGrid::drawAssetRowMenuItems( const PropertyValueRow& row )
     {
         // 에셋 칸은 콘텐츠 브라우저의 에셋 명령을 빌린다(R13 — 언리얼 Details 의 Browse to Asset · 참조 찾기). 대상 id 는 끌기 · 콘텐츠 브라우저와 같은 리소스 id 의 에셋 페이로드 id 다.
-        const bool bAssetRow = row._bAssetPath != SW_FALSE || row._typeName == hashed_string( AssetRefBase::kTypeName );
-        if ( bAssetRow == false )
+        if ( row._bAssetPath == SW_FALSE )
             return;
         const string        assetPath = row._kind == PropertyRowKind::Text ? row._valueText : _model.formatPropertyText( row._rowID );
         EditorCommandTarget target{};

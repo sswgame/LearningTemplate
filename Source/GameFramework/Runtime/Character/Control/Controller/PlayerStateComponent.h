@@ -48,6 +48,6 @@ namespace sw
         void restoreState( vector<uint8>&& bytes );
 
     private:
-        GameFlags _progressFlags;
+        SW_CODEC_STATE GameFlags _progressFlags;
     };
 } // namespace sw

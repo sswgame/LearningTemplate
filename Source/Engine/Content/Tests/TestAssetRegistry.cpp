@@ -152,8 +152,12 @@ SW_TEST_CASE( AssetRegistryTest, ReferenceTextReadsAndWritesOneWay )
     const expected<AssetReferenceTarget> empty     = AssetRegistry::readReferenceText( "" );
     SW_EXPECT_TRUE( AssetRegistry::readReferenceText( "guid:NOPE" ).error().kind() == ErrorKind::InvalidArgument );
     SW_EXPECT_TRUE( AssetRegistry::readReferenceText( "guid:0000000000000000000000000000dead" ).error().kind() == ErrorKind::NotFound );
+    const string indexedText   = AssetRegistry::makeIndexedReferenceText( "engine/shaders/toon.hlsl" );
+    const string unindexedText = AssetRegistry::makeIndexedReferenceText( "game/playground" );
     (void)AssetRegistry::install( std::move( previous ) );
 
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000f00d" ), indexedText );
+    SW_EXPECT_EQUAL( string( "game/playground" ), unindexedText );
     SW_REQUIRE_TRUE( byGUID.has_value() && byPath.has_value() && unindexed.has_value() && empty.has_value() );
     SW_EXPECT_EQUAL( string( "engine/shaders/toon.hlsl" ), byGUID->_path );
     SW_EXPECT_TRUE( byPath->_guid == guid );

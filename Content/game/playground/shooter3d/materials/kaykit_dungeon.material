@@ -4,6 +4,6 @@
 <MaterialDef formatVersion="0" name="ShooterKayKitDungeon" _base="guid:5634e58d4c5e4c2b50d7902ed885a5cb">
 	<_properties>
 		<item name="_roughness" defaultValue="0.6" />
-		<item name="_albedoMap" assetPath="game/playground/shooter3d/textures/kaykit_dungeon.dds" />
+		<item name="_albedoMap" assetPath="guid:f7f65edfd2a660c716dde07d37b5c46b" />
 	</_properties>
 </MaterialDef>

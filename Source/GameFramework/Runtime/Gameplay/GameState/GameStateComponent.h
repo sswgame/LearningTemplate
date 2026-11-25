@@ -165,21 +165,21 @@ namespace sw
         void rebindWeatherCatalog();
 
     private:
-        GameFlags                        _flags;
-        WorldClock                       _clock;
-        SharedAssetRef<WeatherCatalog>   _weatherCatalog;  ///< 날씨를 연 카탈로그(다시 읽히면 새 판을 가리킨다)
-        uint32                           _weatherSeed;     ///< 날씨를 연 씨앗(다시 묶을 때 같은 씨앗으로 연다)
-        shared_ptr<const WeatherCatalog> _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
-        WeatherSystem                    _weather;
-        WeatherMaterialWriter            _weatherMaterial; ///< 날씨 → 지면 머티리얼 묶음(카탈로그의 바인딩). `_pWeatherCatalog` 뒤에 둔다 — 먼저 사라진다
-        WeatherSceneWriter               _weatherScene;    ///< 날씨 → 빛 · 하늘 · 안개 · 바람 · 소리(카탈로그의 바인딩). 카탈로그보다 먼저 사라진다
-        LandRegistry                     _land;            ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
-        vector<WorldClockEvent>          _listClockEvent;
-        DeferredStateRestore             _restore;      ///< 열리기 전에 받은 복원 바이트 · 열림 · 새 판
-        uint8                            _bWeather : 1; ///< 날씨 카탈로그로 열었는지 여부
+        SW_CODEC_STATE GameFlags           _flags;
+        SW_CODEC_STATE WorldClock          _clock;
+        SharedAssetRef<WeatherCatalog>     _weatherCatalog;  ///< 날씨를 연 카탈로그(다시 읽히면 새 판을 가리킨다)
+        SW_TRANSIENT uint32                _weatherSeed;     ///< 날씨를 연 씨앗(다시 묶을 때 같은 씨앗으로 연다)
+        shared_ptr<const WeatherCatalog>   _pWeatherCatalog; ///< 날씨가 가리키는 카탈로그의 판(열 때의 스냅숏 — 다시 읽기 정리가 놓아도 날씨의 항목 포인터가 끊기지 않는다)
+        SW_CODEC_STATE WeatherSystem       _weather;
+        SW_TRANSIENT WeatherMaterialWriter _weatherMaterial; ///< 날씨 → 지면 머티리얼 묶음(카탈로그의 바인딩). `_pWeatherCatalog` 뒤에 둔다 — 먼저 사라진다
+        SW_TRANSIENT WeatherSceneWriter    _weatherScene;    ///< 날씨 → 빛 · 하늘 · 안개 · 바람 · 소리(카탈로그의 바인딩). 카탈로그보다 먼저 사라진다
+        SW_CODEC_STATE LandRegistry        _land;            ///< 공유 땅. 격자와 배치 키트가 셀을 얻어 쓴다
+        SW_TRANSIENT vector<WorldClockEvent> _listClockEvent;
+        SW_CODEC_STATE DeferredStateRestore  _restore;      ///< 열리기 전에 받은 복원 바이트 · 열림 · 새 판
+        SW_TRANSIENT uint8                   _bWeather : 1; ///< 날씨 카탈로그로 열었는지 여부
         PROPERTY( Tooltip = "Open with default settings at begin play - only for scenes without a kit director (showcases, tests); a director opens it with its own settings" )
         uint8                  _bOpenAtBeginPlay : 1;
-        uint8                  _bRefusedInScene  : 1; ///< 같은 씬에 이미 월드 상태가 있어 등록에서 거절됐다(`onRegister`) — 열리지 않는다
+        SW_TRANSIENT uint8     _bRefusedInScene  : 1; ///< 같은 씬에 이미 월드 상태가 있어 등록에서 거절됐다(`onRegister`) — 열리지 않는다
         [[maybe_unused]] uint8 _reserved         : 5;
 
     private:

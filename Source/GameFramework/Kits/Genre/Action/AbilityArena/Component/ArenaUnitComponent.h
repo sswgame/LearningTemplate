@@ -90,11 +90,13 @@ namespace sw
         PROPERTY( Category = "Arena", DisplayName = "Ability Buttons", Tooltip = "Pawn buttons and the ability input each presses; a unit without rows presses no ability" )
         vector<ArenaAbilityButton> _listAbilityButton;
 
-        float3                  _facing;             ///< XZ 단위 벡터
-        float32                 _deathRemainRatio;   ///< 쓰러진 뒤 걷기까지 남은 비율(서 있으면 1 — 디렉터의 Death Linger 동안 0 으로 준다)
-        vector<optional<int32>> _listButtonIndex;    ///< `_listAbilityButton` 마다 폰 버튼의 인덱스(없으면 비어 있다)
-        uint32                  _previousButtonDown; ///< 지난 틱에 누르고 있던 폰 버튼(뗌을 알아챈다)
-        uint8                   _bButtonsResolved : 1;
-        [[maybe_unused]] uint8  _reserved         : 7;
+        PROPERTY( RuntimeState )
+        float3 _facing; ///< XZ 단위 벡터
+        PROPERTY( RuntimeState )
+        float32      _deathRemainRatio;                           ///< 쓰러진 뒤 걷기까지 남은 비율(서 있으면 1 — 디렉터의 Death Linger 동안 0 으로 준다)
+        SW_TRANSIENT vector<optional<int32>> _listButtonIndex;    ///< `_listAbilityButton` 마다 폰 버튼의 인덱스(없으면 비어 있다)
+        SW_TRANSIENT uint32                  _previousButtonDown; ///< 지난 틱에 누르고 있던 폰 버튼(뗌을 알아챈다)
+        SW_TRANSIENT uint8                   _bButtonsResolved : 1;
+        [[maybe_unused]] uint8               _reserved         : 7;
     };
 } // namespace sw

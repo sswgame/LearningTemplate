@@ -142,14 +142,14 @@ namespace sw
         void      collectArmy( vector<RTSUnitID>& outListUnit ) const;
 
     private:
-        BehaviorTree           _tree;
-        BehaviorTreeRunner     _runner;
-        Blackboard             _blackboard;
-        RTSCommanderAISettings _settings;
-        RTSCommanderUnits      _units;
-        RTSWorld*              _pWorld;
-        Countdown              _thinkTimer;
-        int32                  _player;
+        SW_TRANSIENT BehaviorTree           _tree;
+        SW_TRANSIENT BehaviorTreeRunner     _runner;
+        SW_TRANSIENT Blackboard             _blackboard;
+        SW_TRANSIENT RTSCommanderAISettings _settings;
+        SW_TRANSIENT RTSCommanderUnits      _units;
+        RTSWorld*                           _pWorld;
+        SW_CODEC_STATE Countdown            _thinkTimer;
+        SW_TRANSIENT int32                  _player;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _attackWaveCount;
     };

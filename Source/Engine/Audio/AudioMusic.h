@@ -14,8 +14,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -41,8 +43,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Tooltip = "Clip of this layer; as long as the segment" )
-        hashed_string _path{};
+        PROPERTY( Tooltip = "Clip of this layer; as long as the segment" )
+        AssetRef<AudioPlayableAsset> _path;
         PROPERTY( Tooltip = "Game parameter that drives this layer's volume; empty plays it always" )
         hashed_string _parameter{};
         PROPERTY( Tooltip = "(parameter value, volume dB) points" )
@@ -90,7 +92,7 @@ namespace sw
         PROPERTY( Tooltip = "Destination segment" )
         hashed_string _to{};
         PROPERTY( Tooltip = "Clip played on the switch point (one shot)" )
-        hashed_string _stinger{};
+        AssetRef<AudioPlayableAsset> _stinger;
         PROPERTY( Min = 0.0, Tooltip = "Fade out of the old segment from the switch point", Units = s )
         float32 _fadeOutSeconds{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Fade in of the new segment from the switch point", Units = s )
@@ -109,14 +111,14 @@ namespace sw
      *         <_listSegment>
      *             <AudioMusicSegmentDef _name="Explore" _bars="8">
      *                 <_listLayer>
-     *                     <AudioMusicLayerDef _path="game/x/music/explore_pad.ogg" />
-     *                     <AudioMusicLayerDef _path="game/x/music/explore_drums.ogg" _parameter="Danger">
+     *                     <AudioMusicLayerDef _path="guid:…" />
+     *                     <AudioMusicLayerDef _path="guid:…" _parameter="Danger">
      *                         <_listPoint><AudioCurvePoint _x="0" _y="-96" /><AudioCurvePoint _x="1" _y="0" /></_listPoint>
      *                     </AudioMusicLayerDef>
      *                 </_listLayer>
      *             </AudioMusicSegmentDef>
      *         </_listSegment>
-     *         <_listTransition><AudioMusicTransitionDef _from="*" _to="Combat" _sync="NextBar" _stinger="game/x/music/hit.ogg" /></_listTransition>
+     *         <_listTransition><AudioMusicTransitionDef _from="*" _to="Combat" _sync="NextBar" _stinger="guid:…" /></_listTransition>
      *     </AudioMusicDef>
      * @endcode
      */

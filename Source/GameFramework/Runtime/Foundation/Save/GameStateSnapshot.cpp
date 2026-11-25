@@ -320,7 +320,7 @@ namespace sw
         arch << ObjectStateSerializer::getProcessToken();
         // 이 세이브를 찍은 씬 — 읽는 쪽이 같은 씬 위인지 봉투를 풀기 전에 본다(씬이 없으면 빈 글). 세이브가 남은 뒤 씬을 옮겨도 풀리게 GUID 로 적는다.
         const string sceneID = GameStateSnapshotInternal::findActiveSceneID();
-        arch.writeString( AssetRegistry::makeReferenceText( sceneID, AssetRegistry::resolveGUID( sceneID ) ) );
+        arch.writeString( AssetRegistry::makeIndexedReferenceText( sceneID ) );
         // 이 세이브를 만든 콘텐츠 구성(켠 모드) — 읽는 쪽이 같은 구성인지 봉투를 풀기 전에 본다(없으면 빈 글).
         const IContentConfiguration* const pContent = StateEnvelopeInternal::findContent();
         arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );

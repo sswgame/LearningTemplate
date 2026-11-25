@@ -704,8 +704,8 @@
 		</RenderGraphPassDesc>
 	</_listPass>
 	<_listRenderPassRef>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-		<item>engine/renderpass/scenecopyrenderpass.xml</item>
-		<item>engine/renderpass/framecomputerenderpass.xml</item>
+		<item>guid:57bd09488b11feda78cbced691b416fe</item>
+		<item>guid:85dda27761602296f8342aa3e0fda17e</item>
+		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

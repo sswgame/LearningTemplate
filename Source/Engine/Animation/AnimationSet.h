@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -23,9 +24,13 @@ namespace sw
 {
     struct ResourceContext;
 
+    class AnimationClip;
+    class AnimationSet;
+    class RetargetProfile;
+
     /**
      * @brief 셋의 클립 한 줄(`<clip name path/>` · `<clip name set [source] [retarget]/>`)입니다. 경로와 셋 중 하나만 적는다.
-     * @details `path` 는 임포트가 쓰는 공유 파일이다 — 손으로 쓰는 셋은 키가 내용과 함께 바뀌는 경로를 적지 않고 `set`(그 셋의 같은 이름, 또는 `source` 이름)으로 가리킨다.
+     * @details `path` 는 임포트가 쓰는 공유 파일이다 — 파일 이름이 곧 내용 키라 원본에서 나오는 정체성이 없고 저장 글도 경로 그대로다(`AssetRefBase::toText`). 손으로 쓰는 셋은 키가 내용과 함께 바뀌는 경로를 적지 않고 `set`(그 셋의 같은 이름, 또는 `source` 이름)으로 가리킨다.
      *          바탕의 `path` 줄을 `set` 으로 바꾸는 차이는 `_op="Replace"` 를 적는다(칸을 합치면 둘 다 남아 오류다).
      */
     REFLECT()
@@ -34,15 +39,17 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        string _name{};
-        PROPERTY( AssetPath )
-        string _path{};
-        PROPERTY( AssetPath )
-        string _set{};
+        string _name;
         PROPERTY()
-        string _source{};
-        PROPERTY( AssetPath )
-        string _retarget{}; ///< 다른 뼈대의 클립이면 그 리타깃 프로필(`.retarget.xml`). 가져오기(`--import-models`)가 구운 클립(`AnimationSet::makeRetargetedClipPath`)을 쓴다 — 언리얼 리타깃 배치처럼 구운 결과는 가져오기 산출물이다
+        AssetRef<AnimationClip> _path;
+        PROPERTY()
+        AssetRef<AnimationSet> _set;
+        PROPERTY()
+        string _source;
+        PROPERTY()
+        AssetRef<RetargetProfile> _retarget; ///< 다른 뼈대의 클립이면 그 리타깃 프로필(`.retarget.xml`). 가져오기(`--import-models`)가 구운 클립(`AnimationSet::makeRetargetedClipPath`)을 쓴다 — 언리얼 리타깃 배치처럼 구운 결과는 가져오기 산출물이다
+
+        AnimationSetClipParams();
     };
 
     /**
@@ -82,7 +89,7 @@ namespace sw
 
         /** @brief 이름의 클립 경로입니다(대소문자 무시). 없으면 nullptr 입니다. */
         [[nodiscard]] const string* findClipPath( const hashed_string& name ) const;
-        /** @brief 원본 클립을 프로필로 구운 클립의 자원 경로입니다(`common/models/_retargeted/<프로필 이름>/<원본 클립 파일 이름>`). 가져오기가 쓰고 셋이 읽는다 — 두 쪽이 이 하나로 맞춘다. */
+        /** @brief 원본 클립을 프로필로 구운 클립의 자원 경로입니다(`EngineConfig::_retargetedClipFolder/<프로필 이름>/<원본 클립 파일 이름>`). 가져오기가 쓰고 셋이 읽는다 — 두 쪽이 이 하나로 맞춘다. */
         [[nodiscard]] static string makeRetargetedClipPath( string_view profilePath, string_view sourceClipPath );
         /** @brief 이름순 표입니다. */
         [[nodiscard]] const vector<AnimationSetEntry>& getEntries() const { return _listEntry; }

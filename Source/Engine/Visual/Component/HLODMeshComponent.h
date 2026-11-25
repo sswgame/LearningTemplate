@@ -57,6 +57,6 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "Parts", Tooltip = "Meshes merged into the one this component draws" )
         vector<HLODMeshPart> _listPart;
 
-        vector<MeshHandle> _listPartLoad; ///< 읽는 중인 부품 메시(합친 뒤 놓는다)
+        SW_TRANSIENT vector<MeshHandle> _listPartLoad; ///< 읽는 중인 부품 메시(합친 뒤 놓는다)
     };
 } // namespace sw

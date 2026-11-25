@@ -22,7 +22,7 @@ class AssetRefsRule(LintRule):
     id = "asset-refs"
     group = "참조"
     blocks = "끊어진 에셋 경로 · 옮긴 에셋의 옛 id(지우거나 옮긴 에셋을 가리키던 다른 파일도)"
-    why_not_type = "에셋은 글 경로로 가리킨다 — 있는지는 형식이 말하지 못한다(고치는 것은 `py -3 -m Scripts move-asset`)"
+    why_not_type = "에셋 칸은 AssetRef<T> · DataPath 이고 저장 꼴은 GUID 다(글 칸에 경로 표시를 다는 것은 파서 오류) — 글로 남는 참조(CMake · 명령 줄 · 정체성 없는 폴더 · 작업 사본)가 있는지는 형식이 말하지 못한다(고치는 것은 `py -3 -m Scripts move-asset`)"
     inputs = ("Config/Dev/AssetReferenceFields.json", "Config/Dev/AssetReferenceFields.generated.json", "Config/Dev/AssetIdentity.json")
 
     def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:

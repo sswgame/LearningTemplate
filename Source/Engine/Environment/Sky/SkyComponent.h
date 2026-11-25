@@ -21,6 +21,7 @@ namespace sw
 {
     class GameObjectManager;
     class Texture2D;
+    struct OctahedralRadianceMap;
 } // namespace sw
 
 namespace sw
@@ -49,7 +50,7 @@ namespace sw
         void setIntensityScale( float32 scale ) { _intensityScale = scale > 0.0f ? scale : 0.0f; }
         void setMode( SkyMode mode ) { _mode = mode; }
         void setHdriTexture( string_view path );
-        void setHdriRadianceMap( string_view path ) { _hdriRadianceMap = string( path ); }
+        void setHdriRadianceMap( string_view path ) { _hdriRadianceMap = path; }
         void setHdriAmbient( const SH9Color& ambient ) { _listHdriAmbient.assign( ambient._arrCoefficient, ambient._arrCoefficient + SH9Color::kCoefficientCount ); }
 
         /** @brief @p manager 의 켜진 하늘(씬에 하나)입니다. 없거나 둘 이상이면(오류) @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
@@ -72,8 +73,8 @@ namespace sw
         AssetRef<Texture2D> _hdriTexture;
         PROPERTY( Category = "HDRI", DisplayName = "Rotation", EditCondition = "_mode == Hdri", Tooltip = "Turns the sky around the vertical axis" )
         Radians _hdriRotation;
-        PROPERTY( AssetPath, Category = "HDRI", DisplayName = "Radiance Map", EditCondition = "_mode == Hdri", Tooltip = "Octahedral .radiancemap of the source image the sky light filters for reflections (roughness to level); written by Scripts/dev/make_sky_hdri_prefabs.py" )
-        string _hdriRadianceMap;
+        PROPERTY( Category = "HDRI", DisplayName = "Radiance Map", EditCondition = "_mode == Hdri", Tooltip = "Octahedral .radiancemap of the source image the sky light filters for reflections (roughness to level); written by Scripts/dev/make_sky_hdri_prefabs.py" )
+        AssetRef<OctahedralRadianceMap> _hdriRadianceMap;
         PROPERTY( Category = "HDRI", DisplayName = "Ambient SH", EditCondition = "_mode == Hdri", Tooltip = "27 SH9 coefficients of the source image (basis * 3 + channel) lighting the probes; written by Scripts/dev/make_sky_hdri_prefabs.py" )
         vector<float32> _listHdriAmbient;
         PROPERTY( Category = "Atmosphere", DisplayName = "Rayleigh Scale", Min = 0.0, EditCondition = "_mode == Atmosphere", Tooltip = "Multiplies the Rayleigh scattering (blue sky); 0 removes it" )
@@ -121,6 +122,6 @@ namespace sw
         PROPERTY( Category = "Clouds", DisplayName = "Ground Light", Min = 0.0, EditCondition = "_cloudMode == Volumetric", Tooltip = "Multiplies the light bounced off the ground onto the cloud bottoms" )
         float32 _cloudGroundLight;
 
-        float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
+        SW_TRANSIENT float32 _intensityScale; ///< 날씨 같은 실행 중 배율(저장하지 않는다)
     };
 } // namespace sw

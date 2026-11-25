@@ -134,12 +134,12 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Runtime", DisplayName = "Growth", Units = m, Tooltip = "Runtime: how far the size has grown" )
         float32 _growth;
 
-        ZoneCompiledProfile           _compiled;
-        ZoneTracker                   _tracker;
-        vector<ZoneOccupantCandidate> _listCandidateScratch; ///< 격자 질의 결과 재사용 버퍼
-        vector<Component*>            _listKeyScratch;       ///< 색인 질의의 열쇠 버퍼(재사용)
-        uint8                         _bReady   : 1;
-        uint8                         _bOpened  : 1; ///< 시작을 시도했다(실패도 — 다시 오류를 내지 않는다)
-        [[maybe_unused]] uint8        _reserved : 6;
+        SW_TRANSIENT ZoneCompiledProfile _compiled;
+        SW_TRANSIENT ZoneTracker         _tracker;
+        SW_TRANSIENT vector<ZoneOccupantCandidate> _listCandidateScratch; ///< 격자 질의 결과 재사용 버퍼
+        SW_TRANSIENT vector<Component*> _listKeyScratch;                  ///< 색인 질의의 열쇠 버퍼(재사용)
+        SW_TRANSIENT uint8              _bReady   : 1;
+        SW_TRANSIENT uint8              _bOpened  : 1; ///< 시작을 시도했다(실패도 — 다시 오류를 내지 않는다)
+        [[maybe_unused]] uint8          _reserved : 6;
     };
 } // namespace sw

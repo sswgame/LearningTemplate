@@ -169,13 +169,13 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Volume", DisplayName = "Fire Count", Tooltip = "Runtime" )
         int32 _fireCount;
         PROPERTY( Category = "Volume", DisplayName = "Progress Flag", Tooltip = "Session flag that records the activation (saved with the session, shared by volumes with the same flag, read by conditions); empty: this volume's fire count" )
-        hashed_string      _progressFlag;
-        TriggerSpawnWindow _spawnWindow; ///< 나타남 판정(`_spawnInside` 가 Ignore 일 때 쓴다)
-        TriggerAuthority   _authority;   ///< 판정 자리(파생이 정한다)
+        hashed_string                   _progressFlag;
+        SW_TRANSIENT TriggerSpawnWindow _spawnWindow; ///< 나타남 판정(`_spawnInside` 가 Ignore 일 때 쓴다)
+        SW_TRANSIENT TriggerAuthority   _authority;   ///< 판정 자리(파생이 정한다)
         PROPERTY( Category = "Volume", DisplayName = "Once", Tooltip = "Fire only the first time" )
         bool _bOnce;
         PROPERTY( Category = "Volume", DisplayName = "Spawn Inside", Tooltip = "An activator that appears already inside (spawn, login, respawn, load, the volume streaming in or turning on): Activate counts it as entering, Ignore waits until it leaves and comes back" )
         TriggerSpawnInside _spawnInside;
-        bool               _bActivatorInside; ///< 지난 틱에 활성자가 반지름 안에 있었다(들어오는 순간만 일을 한다)
+        SW_TRANSIENT bool  _bActivatorInside; ///< 지난 틱에 활성자가 반지름 안에 있었다(들어오는 순간만 일을 한다)
     };
 } // namespace sw

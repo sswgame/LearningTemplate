@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -109,6 +110,10 @@ namespace sw
         const float3& getAgentPosition() const { return _agentPosition; }
         /** @brief 상태 해시에 군중 자리 · 실제 속도 · 이동 상태를 접습니다. */
         void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
+        /** @brief 걸어 둔 목적지(절대 자리)입니다. 경로 · 군중 자리 · 속도는 목적지와 트랜스폼에서 다시 선다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다. 다음 내비게이션 갱신이 목적지를 군중에 넣습니다. */
+        void restoreState( vector<uint8>&& bytes );
         /** @brief 다음 모퉁이입니다. */
         const float3& getNextCorner() const { return _nextCorner; }
         /** @brief 군중에 들어가 내비메시 위에 있으면 true 입니다. */
@@ -183,38 +188,38 @@ namespace sw
         PROPERTY( Category = "Movement", Tooltip = "Turns the object to face its velocity" )
         bool _bUpdateRotation;
 
-        NavMeshAgentMover      _mover;
-        SceneNavigation*       _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
-        float3                 _destination;
-        float3                 _pendingWarp;
-        float3                 _velocity;
-        float3                 _desiredVelocity;
-        float3                 _agentPosition;
-        float3                 _nextCorner;
-        float3                 _writtenPosition; ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
-        NavLinkTraversal       _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
-        hashed_string          _linkType;        ///< 건너는 링크의 종류 이름
-        vector<float3>         _listRoutePoint;  ///< 먼 경로 — 중간 목표 너머의 대략 점(`NavStreamRoute`)
-        float3                 _routeTarget;     ///< 먼 경로 — 군중에 건 중간 목표
-        NavCrowdAgentID        _crowdAgentID;
-        uint32                 _navIndex;                ///< `SceneNavigation` 의 목록 자리
-        Subscription           _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
-        uint32                 _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
-        SceneTeleportCursor    _teleport;                ///< 바깥이 순간이동시켰는지 읽는 자리(`Transform`)
-        uint32                 _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
-        uint32                 _routeRevision;           ///< 먼 경로를 계획한 때의 내비메시 판 번호(바뀌면 타일이 오르내렸다 — 다시 계획)
-        uint32                 _routeReplanCount;        ///< `getRouteReplanCount`
-        NavMoveStatus          _moveStatus;
-        uint8                  _bHasDestination    : 1;
-        uint8                  _bDestinationDirty  : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤
-        uint8                  _bWarpPending       : 1;
-        uint8                  _bOnNavMesh         : 1;
-        uint8                  _bHasWritten        : 1;
-        uint8                  _bParamsDirty       : 1;
-        uint8                  _bOnOffMeshLink     : 1;
-        uint8                  _bRouteIntermediate : 1; ///< 군중 목표가 목적지가 아니라 중간 목표다(`NavStreamRoute`)
-        uint8                  _bVirtualMove       : 1; ///< 내려간 타일 위를 가상 이동한다(`NavStreamRoute`)
-        uint8                  _bVirtualOverLoaded : 1; ///< 가상 이동이 지난 갱신에 오른 타일 위였다(새로 든 것을 알아본다)
-        [[maybe_unused]] uint8 _reserved           : 6;
+        SW_TRANSIENT NavMeshAgentMover _mover;
+        SceneNavigation*               _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
+        SW_CODEC_STATE float3          _destination;
+        SW_TRANSIENT float3            _pendingWarp;
+        SW_TRANSIENT float3            _velocity;
+        SW_TRANSIENT float3            _desiredVelocity;
+        SW_TRANSIENT float3            _agentPosition;
+        SW_TRANSIENT float3            _nextCorner;
+        SW_TRANSIENT float3            _writtenPosition;  ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
+        SW_TRANSIENT NavLinkTraversal  _linkTraversal;    ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
+        SW_TRANSIENT hashed_string     _linkType;         ///< 건너는 링크의 종류 이름
+        SW_TRANSIENT vector<float3>      _listRoutePoint; ///< 먼 경로 — 중간 목표 너머의 대략 점(`NavStreamRoute`)
+        SW_TRANSIENT float3              _routeTarget;    ///< 먼 경로 — 군중에 건 중간 목표
+        SW_TRANSIENT NavCrowdAgentID     _crowdAgentID;
+        SW_TRANSIENT uint32              _navIndex;                ///< `SceneNavigation` 의 목록 자리
+        Subscription                     _navRegistration;         ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        SW_TRANSIENT uint32              _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
+        SW_TRANSIENT SceneTeleportCursor _teleport;                ///< 바깥이 순간이동시켰는지 읽는 자리(`Transform`)
+        SW_TRANSIENT uint32              _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
+        SW_TRANSIENT uint32              _routeRevision;           ///< 먼 경로를 계획한 때의 내비메시 판 번호(바뀌면 타일이 오르내렸다 — 다시 계획)
+        SW_TRANSIENT uint32              _routeReplanCount;        ///< `getRouteReplanCount`
+        SW_TRANSIENT NavMoveStatus       _moveStatus;
+        SW_CODEC_STATE uint8             _bHasDestination    : 1;
+        SW_TRANSIENT uint8               _bDestinationDirty  : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤
+        SW_TRANSIENT uint8               _bWarpPending       : 1;
+        SW_TRANSIENT uint8               _bOnNavMesh         : 1;
+        SW_TRANSIENT uint8               _bHasWritten        : 1;
+        SW_TRANSIENT uint8               _bParamsDirty       : 1;
+        SW_TRANSIENT uint8               _bOnOffMeshLink     : 1;
+        SW_TRANSIENT uint8               _bRouteIntermediate : 1; ///< 군중 목표가 목적지가 아니라 중간 목표다(`NavStreamRoute`)
+        SW_TRANSIENT uint8               _bVirtualMove       : 1; ///< 내려간 타일 위를 가상 이동한다(`NavStreamRoute`)
+        SW_TRANSIENT uint8               _bVirtualOverLoaded : 1; ///< 가상 이동이 지난 갱신에 오른 타일 위였다(새로 든 것을 알아본다)
+        [[maybe_unused]] uint8           _reserved           : 6;
     };
 } // namespace sw

@@ -14,7 +14,7 @@
 	<SkipUnless watch="RHI.MaterialTessellation" reason="this backend declares no material tessellation - displaced materials are not drawn (FramePSOManager.DisplacementUnsupported)"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="displacement_off.ppm"/>
-	<LoadScene path="game/playground/maps/displacement.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:5a6fb4ee62d919294b65969606272a2d" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

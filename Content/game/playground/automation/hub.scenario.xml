@@ -19,7 +19,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 
 	<!-- ① 마을 — 미니게임 없음 -->
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Expect watch="Scene.SubLevelCount" equals="0"/>
@@ -41,7 +41,7 @@
 	<DevCommand line="teleport Player -6 0.05 0"/>
 	<WaitUntil watch="Minigame.Active" is="cardtable" timeoutFrames="30"/>
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutFrames="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<Expect watch="Object.Property" target="CardTableGate" key="MinigameTriggerComponent._fireCount" equals="1"/>
 	<DevCommand line="minigame.leave"/>
 	<ExpectLog id="DevCommand.Reply" contains="minigame.leave: leaving" atLeast="1"/>
@@ -55,11 +55,11 @@
 	<!-- ③ 씬 전환 미니게임 — 마을을 찍고 바꾸며, 돌아와 복원한다 -->
 	<DevCommand line="teleport Player 6 0.05 0"/>
 	<WaitUntil watch="Minigame.Active" is="kitdemo_actioncombat" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/kitdemo_actioncombat.scene.xml"/>
+	<ExpectActiveScene path="guid:82019e554e14d0606d7f73c46418d3cb"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave win heal=30 haste=1 money=15 honor=10 round=1"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Object.X" target="Marker" sameAs="markerX" tolerance="0.001"/>
 	<Expect watch="Object.Z" target="Marker" sameAs="markerZ" tolerance="0.001"/>

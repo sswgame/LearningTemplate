@@ -75,8 +75,8 @@ namespace sw
         PROPERTY( Category = "Parallax", DisplayName = "Repeat Size", Tooltip = "Content repeats every this many units per axis (0 = no wrap)", Min = 0.0, Units = m )
         float2 _repeatSize;
         PROPERTY( Category = "Parallax", DisplayName = "Reference Point", Tooltip = "Camera position at which the layer sits where it was authored", Units = m )
-        float2 _referencePoint;
-        float3 _origin;     ///< 저작한 자리(`getZeroOriginPosition` — 시작할 때 잡습니다). 저장하지 않습니다
-        uint8  _bHasOrigin; ///< `_origin` 을 잡았는가
+        float2              _referencePoint;
+        SW_TRANSIENT float3 _origin;     ///< 저작한 자리(`getZeroOriginPosition` — 시작할 때 잡습니다). 저장하지 않습니다
+        SW_TRANSIENT uint8  _bHasOrigin; ///< `_origin` 을 잡았는가
     };
 } // namespace sw

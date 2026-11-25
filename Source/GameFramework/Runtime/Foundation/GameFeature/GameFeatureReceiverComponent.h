@@ -61,7 +61,7 @@ namespace sw
         PROPERTY( Category = "Game Feature", DisplayName = "Receiver", Tooltip = "Receiver name the game features use (Player, Combatant ...)", Required )
         hashed_string _receiver;
 
-        vector<AddedEntry>     _listAdded;   ///< 실행 중 상태 — 저장하지 않는다
-        GameFeatureComponents* _pComponents; ///< 시작할 때 든 목록(빌림). 시작 전이거나 목록이 사라졌으면 nullptr
+        SW_TRANSIENT vector<AddedEntry> _listAdded;   ///< 실행 중 상태 — 저장하지 않는다
+        GameFeatureComponents*          _pComponents; ///< 시작할 때 든 목록(빌림). 시작 전이거나 목록이 사라졌으면 nullptr
     };
 } // namespace sw

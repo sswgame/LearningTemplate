@@ -28,6 +28,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
@@ -44,7 +45,8 @@ namespace sw
         {
             /** @brief 덮어쓴 시점 프리셋의 id 입니다. 카탈로그에 없으므로 저장하면 고정 포즈로 돌아온다. */
             /** @brief 포토 모드 동안 게임 입력 레이어를 막는 칸의 이름입니다(액션이 없는 빈 레이어). */
-            static constexpr const utf8* kPhotoModeLayer   = "PhotoMode";
+            static constexpr const utf8* kPhotoModeLayer = "PhotoMode";
+            static constexpr FormatDef   kStateFormat{ "CAMC" };
             static constexpr const utf8* kOverridePresetID = "__viewOverride";
             /** @brief 덮어쓴 원근 시점의 가까운 면(m)입니다. 탑승 카메라가 바로 앞 레일을 자르지 않게 짧게 둔다. */
             static constexpr float32 kOverrideNearPlane = 0.1f;
@@ -285,9 +287,9 @@ namespace sw
             const hashed_string startID = resolveStartPreset();
             if ( _director.activatePreset( *_pCatalog, startID ) == false )
                 SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath.c_str() );
+            _selectedPreset = _director.getActivePresetID();
+            _contextPreset  = _selectedPreset;
         }
-        _selectedPreset = _director.getActivePresetID();
-        _contextPreset  = _selectedPreset;
         updateCamera( 0.0f );
     }
 
@@ -437,7 +439,25 @@ namespace sw
     {
         if ( io.isReading() && io.check( _pCatalog != nullptr ) == false )
             return; // 카탈로그 전에는 프리셋을 찾을 수 없다 — 부르는 쪽(`applyPendingState`)은 시작 뒤에만 읽는다
+        // 고른 프리셋과 켜진 상황은 카메라 스택에서 되짚을 수 없다 — 상황(조준) 중에 뜬 스택의 활성 프리셋은 고른 것이 아니라 상황의 것이다.
+        hashed_string         selectedPreset = _selectedPreset;
+        vector<hashed_string> listContext    = _listContext;
+        io.header( CameraDirectorComponentInternal::kStateFormat );
+        io.value( selectedPreset );
+        io.list( listContext );
+        io.check( io.isWriting() || selectedPreset.empty() || _pCatalog->find( selectedPreset ) != nullptr );
+        for ( const hashed_string& context : listContext )
+        {
+            io.check( io.isWriting() || _pCatalog->findContext( context ) != nullptr );
+        }
+        if ( io.isOk() == false )
+            return;
         _director.serializeState( io, io.isReading() ? _pCatalog.get() : nullptr );
+        if ( io.isWriting() || io.isOk() == false )
+            return;
+        _selectedPreset = selectedPreset;
+        _listContext    = std::move( listContext );
+        _contextPreset  = _director.getActivePresetID();
     }
 
     void CameraDirectorComponent::restoreState( vector<uint8>&& bytes )

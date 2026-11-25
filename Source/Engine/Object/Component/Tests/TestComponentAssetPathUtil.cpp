@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 using namespace sw;
 
@@ -38,4 +39,27 @@ SW_TEST_CASE( ComponentAssetPathUtilTest, AssetPathWalkReachesNestedValues )
     SW_EXPECT_TRUE( ( listPath == vector<string>{ "game/a/inner.reftarget.xml", "game/a/listed.reftarget.xml", "game/a/deep.reftarget.xml" } ) );
     SW_EXPECT_TRUE( ( listTop == vector<string>{ "_inner", "_listInner", "_listInner" } ) );
     SW_EXPECT_TRUE( holder._listInner[0]._listReference[0] == "game/b/deep.reftarget.xml" );
+}
+
+/**
+ * @brief [ComponentAssetPathUtilTest] 데이터 경로(`DataPath`) 칸과 그 시퀀스도 돌고, 데이터 읽기와 같은 처리기로 바뀐다. 글 목록(`<item>`)은 원소마다 읽힌다
+ */
+SW_TEST_CASE( ComponentAssetPathUtilTest, AssetPathWalkReachesDataPaths )
+{
+    AssetRefSampleHolder holder;
+    const string         xml = "<AssetRefSampleHolder _dataPath=\"game/a/data.xml\"><_listDataPath><item>game/a/one.xml</item><item>game/a/two.xml</item></_listDataPath></AssetRefSampleHolder>";
+    SW_REQUIRE_TRUE( XMLSerializer::deserialize( &holder, *AssetRefSampleHolder::StaticType(), xml ) );
+
+    vector<string> listPath;
+    ComponentAssetPathUtil::forEachAssetPath( *AssetRefSampleHolder::StaticType(), &holder, SW_DELEGATE_LAMBDA( AssetPathVisitor, [&listPath]( const AssetPathValue& value )
+    {
+        if ( value.getPath().empty() )
+            return;
+        listPath.emplace_back( value.getPath() );
+        if ( value.getPath() == "game/a/two.xml" )
+            SW_EXPECT_TRUE( value.assign( "game/b/two.xml" ) );
+    } ) );
+    SW_EXPECT_TRUE( ( listPath == vector<string>{ "game/a/data.xml", "game/a/one.xml", "game/a/two.xml" } ) );
+    SW_REQUIRE_TRUE( holder._listDataPath.size() == 2 );
+    SW_EXPECT_TRUE( holder._listDataPath[1] == "game/b/two.xml" );
 }

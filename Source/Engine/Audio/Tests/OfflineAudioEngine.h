@@ -41,7 +41,7 @@ namespace sw::test
             _engine.getClipStore().addClip( hashed_string( kClipPath ), std::move( pClip ) );
 
             AudioClipEntry clip;
-            clip._path = hashed_string( kClipPath );
+            clip._path = kClipPath;
             AudioEventDef event;
             event._name           = hashed_string( kLoopEvent );
             event._bus            = hashed_string( AudioBusNames::kSFX );

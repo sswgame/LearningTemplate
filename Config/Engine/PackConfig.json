@@ -3,8 +3,7 @@
     "_codec": "Zlib",
     "_level": 0,
     "_blockSize": 131072,
-    "_writeWindowBytes": 67108864,
-    "_listStoredExtension": [ ".dds", ".ktx2", ".png", ".jpg", ".ogg" ]
+    "_writeWindowBytes": 67108864
   },
   "_layout": {
     "_mode": "Sorted",
@@ -17,10 +16,6 @@
   },
   "_bExcludeRawShaderSource": true,
   "_listGlobalExcludeDirectory": [
-    "textures_raw",
-    "shaders_raw",
-    "models_raw",
-    "heightfields_raw",
     "rigs_raw",
     "docs",
     ".git",
@@ -42,26 +37,6 @@
   ],
   "_listRule": [
     {
-      "_name": "Exclude_Raw_Source_Assets",
-      "_listExcludeDirectory": [
-        "textures_raw",
-        "shaders_raw",
-        "models_raw",
-        "heightfields_raw",
-        "rigs_raw"
-      ],
-      "_listExcludePattern": [],
-      "_bRecursive": true
-    },
-    {
-      "_name": "Exclude_Documentation",
-      "_listExcludeDirectory": [
-        "docs"
-      ],
-      "_listExcludePattern": [],
-      "_bRecursive": true
-    },
-    {
       "_name": "Exclude_Localization_Authoring_Tables",
       "_listExcludeDirectory": [],
       "_listExcludePattern": [
@@ -74,7 +49,6 @@
   "_cookRules": {
     "_listAlwaysCook": [
       { "_name": "EngineLocalizationTables_NamedRelativeToTheProject", "_listPattern": [ "engine/localization/*" ], "_bAutomationOnly": false },
-      { "_name": "GameCodeLiterals_EngineAssets", "_listPattern": [ "engine/textures/test/checker.dds", "engine/shaders/extension_pass_demo.hlsl", "engine/shaders/extension_draw_demo.hlsl" ], "_bAutomationOnly": false },
       { "_name": "GameData_FoundByKindPathRule", "_listPattern": [ "game/*/data/**" ], "_bAutomationOnly": false },
       { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ], "_bAutomationOnly": false },
       { "_name": "GameMinigames_ReadByName", "_listPattern": [ "game/*/minigames/**" ], "_bAutomationOnly": false },

@@ -72,7 +72,7 @@ namespace sw
         PROPERTY( Category = "Reaction", DisplayName = "Capsule Step", Min = 0.01, Units = m, Tooltip = "The character capsule shortens by the sink depth in steps of this size (hits follow the sunk body)" )
         float32 _capsuleStep;
 
-        vector<SunkVisual> _listVisual;
-        float32            _appliedDepth;
+        SW_TRANSIENT vector<SunkVisual> _listVisual;
+        SW_TRANSIENT float32            _appliedDepth;
     };
 } // namespace sw

@@ -1,0 +1,16 @@
+<?asset guid="1879eebe7a562de889bff2b98543345d"?>
+<UIDocument _schemaVersion="0">
+	<!-- 목표 마커의 내용(`ObjectiveMarkerComponent`) — 방향 막대 `Arrow`(가장자리에 붙었을 때만 보인다), 이름 `Label`, 거리 `Distance`. 막대의 색 · 크기와 글자 크기는 컴포넌트 칸이 정한다. -->
+	<BoxPanel _spacing="2" _orientation="Vertical">
+		<BorderPanel _name="Arrow" _visibility="Hidden">
+			<_slot _horizontalAlignment="Center" />
+			<_background _cornerRadius="2,2,2,2" />
+		</BorderPanel>
+		<TextWidget _name="Label">
+			<_style _alignment="Center" />
+		</TextWidget>
+		<TextWidget _name="Distance" _bLocalized="false">
+			<_style _alignment="Center" />
+		</TextWidget>
+	</BoxPanel>
+</UIDocument>

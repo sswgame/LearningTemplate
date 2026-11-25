@@ -447,7 +447,7 @@ namespace sw
         for ( const SubLevel* pSubLevel : listSaved )
         {
             // 씬은 GUID 로 적는다 — 세이브가 남은 뒤 씬을 옮겨도 풀린다.
-            const string sceneReference = AssetRegistry::makeReferenceText( pSubLevel->_scenePath, AssetRegistry::resolveGUID( pSubLevel->_scenePath ) );
+            const string sceneReference = AssetRegistry::makeIndexedReferenceText( pSubLevel->_scenePath );
             arch << string_view( pSubLevel->_name ) << string_view( sceneReference ) << pSubLevel->_placement._position << pSubLevel->_placement._rotation;
             // 다 지었으면 지금 떠서(앵커 포함 — 앵커가 옮겨졌을 수 있다), 짓는 중이면 아직 지을 내용 그대로다(앵커는 다시 세울 때 만든다).
             vector<SceneDocument::SceneObjectNode> listCaptured;

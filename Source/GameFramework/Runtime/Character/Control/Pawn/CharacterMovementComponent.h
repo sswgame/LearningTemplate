@@ -171,11 +171,12 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Movement", DisplayName = "Climbing", Tooltip = "Runtime" )
         bool _bClimbing;
 
-        SceneTeleportCursor    _teleport;  ///< 운동을 지우는 순간이동이면 걷는 속도 · 매달림도 지운다
-        float32                _facingYaw; ///< 몸의 요
-        optional<int32>        _sprintIndex;
-        optional<int32>        _jumpIndex;
-        uint8                  _bNetDriven : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
-        [[maybe_unused]] uint8 _reserved   : 7;
+        SW_TRANSIENT SceneTeleportCursor _teleport; ///< 운동을 지우는 순간이동이면 걷는 속도 · 매달림도 지운다
+        PROPERTY( RuntimeState )
+        float32      _facingYaw; ///< 몸의 요
+        SW_TRANSIENT optional<int32> _sprintIndex;
+        SW_TRANSIENT optional<int32> _jumpIndex;
+        SW_TRANSIENT uint8           _bNetDriven : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
+        [[maybe_unused]] uint8       _reserved   : 7;
     };
 } // namespace sw

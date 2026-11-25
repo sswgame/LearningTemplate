@@ -125,7 +125,7 @@
 	<ExpectLog id="AssetHotReload.HotReloadSkippedRunning" count="1"/> <!-- 다시 읽기에 진 카탈로그 — 실행 중인 씬은 이전 판으로 돈다는 알림 -->
 
 	<!-- 틀린 설정 JSON: 설정 리로드가 지고 이전 값으로 돈다 -->
-	<OverwriteConfig configFile="Editor/editortooldefaults.json" from="game/playground/automation/desktop/editor/playreload/tooldefaults_broken.json"/>
+	<OverwriteConfig configFile="Editor/editortooldefaults.json" from="guid:735b0c218f654ed9919824fa259ec606"/>
 	<WaitUntil watch="Reload.FailedCount" increaseFrom="failedAfterCatalog" increaseBy="1" timeoutWallSeconds="30"/>
 	<EditorWaitStable/>
 	<ExpectLog id="Config.NotJSONObject" count="1"/>

@@ -15,6 +15,9 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw
 {
@@ -22,17 +25,20 @@ namespace sw
     {
         struct ComponentAssetPathUtilInternal
         {
-            /** @brief 형식(이름 @p typeName · 사실 @p facts)이 에셋 경로 값의 형식이면 그 종류입니다(`AssetRef` · `string` · `hashed_string`). 아니면 nullopt 입니다. */
-            static optional<AssetPathValueKind> findValueKind( const hashed_string& typeName, const ReflectValueFacts& facts )
+            static const hashed_string& getDataPathType()
+            {
+                static const hashed_string s_dataPathType( "DataPath" );
+                return s_dataPathType;
+            }
+
+            /** @brief 형식 @p typeName 이 에셋 경로 값의 형식이면 그 종류입니다(`AssetRef` · `DataPath`). 아니면 nullopt 입니다. */
+            static optional<AssetPathValueKind> findValueKind( const hashed_string& typeName )
             {
                 static const hashed_string s_assetRefType( AssetRefBase::kTypeName );
                 if ( typeName == s_assetRefType )
                     return AssetPathValueKind::AssetRef;
-                // 읽을 C++ 타입과 같은 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 글과 캐스트 타입이 따로 놀지 않고 별칭도 같은 자리가 된다.
-                if ( facts._builtinIndex == ReflectBuiltinOf<string>::kIndex )
-                    return AssetPathValueKind::String;
-                if ( facts._builtinIndex == ReflectBuiltinOf<hashed_string>::kIndex )
-                    return AssetPathValueKind::HashedString;
+                if ( typeName == getDataPathType() )
+                    return AssetPathValueKind::DataPath;
                 return nullopt;
             }
 
@@ -43,7 +49,7 @@ namespace sw
                     return;
                 if ( bAssetPath )
                 {
-                    const optional<AssetPathValueKind> kind = findValueKind( typeName, facts );
+                    const optional<AssetPathValueKind> kind = findValueKind( typeName );
                     if ( kind.has_value() )
                         visit( AssetPathValue{ pValue, *kind, &topProperty } );
                     return;
@@ -62,7 +68,7 @@ namespace sw
                     if ( prop._bIsBitField == SW_TRUE || prop.hasValueAccessor() )
                         return; // 비트필드는 경로가 아니고, 접근자 칸은 값이 객체 밖이라 주소로 고칠 수 없다
                     const PropertyInfo& topProperty = pTopProperty != nullptr ? *pTopProperty : prop;
-                    const bool          bAssetPath  = prop._metadata->_bAssetPath == SW_TRUE || prop._metadata->_assetType.empty() == false;
+                    const bool          bAssetPath  = prop._metadata->_bAssetPath == SW_TRUE;
                     void* const         pValue      = prop.getValuePtr<void>( pInstance );
                     if ( prop._bIsContainer == SW_FALSE )
                     {
@@ -89,10 +95,11 @@ namespace sw
                 const AssetRefBase* const pValue = static_cast<const AssetRefBase*>( _pValue );
                 return pValue->isBuiltin() ? string_view{} : string_view( pValue->path() ); // 내장 에셋(`Cube`) · 렌더 텍스처는 파일이 아니다 — 프리로드 · 핫 리로드가 파일로 찾지 않게
             }
-            case AssetPathValueKind::String:
-                return string_view( *static_cast<const string*>( _pValue ) );
-            case AssetPathValueKind::HashedString:
-                return string_view( static_cast<const hashed_string*>( _pValue )->c_str() );
+            case AssetPathValueKind::DataPath:
+            {
+                const DataPath& value = *static_cast<const DataPath*>( _pValue );
+                return value.isSet() ? string_view( value.get() ) : string_view{};
+            }
         }
         return {};
     }
@@ -103,12 +110,8 @@ namespace sw
         {
             case AssetPathValueKind::AssetRef:
                 return static_cast<AssetRefBase*>( _pValue )->assign( path ); // 종류가 맞지 않으면 이유를 남긴다
-            case AssetPathValueKind::String:
-                *static_cast<string*>( _pValue ) = string{ path };
-                return true;
-            case AssetPathValueKind::HashedString:
-                *static_cast<hashed_string*>( _pValue ) = hashed_string( path );
-                return true;
+            case AssetPathValueKind::DataPath:                                // 데이터 읽기와 같은 처리기가 넣는다 — 코드는 값을 대입하지 못한다
+                return SerializerUtil::parseTextValue( MutableValueAddress{ _pValue }, ComponentAssetPathUtilInternal::getDataPathType(), path, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         }
         return false;
     }

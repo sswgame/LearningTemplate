@@ -235,6 +235,8 @@ namespace sw
         void onDocumentReloaded( string_view documentPath );
         /** @brief 스타일 시트 @p sheetPath 가 바뀌었을 때, 그 시트를 쓰는 화면의 스타일 시트를 다시 적용하고 위젯을 다시 맞춥니다(트리는 그대로). */
         void onStyleSheetReloaded( string_view sheetPath );
+        /** @brief 엔진 위젯 기본 겉모습(`UIWidgetSkin`)이 바뀌었을 때, 문서로 연 화면을 새로 지어 위젯이 새 기본값을 받게 합니다. */
+        void onWidgetSkinChanged();
 
         // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
         /**
@@ -484,6 +486,7 @@ namespace sw
         Subscription                 _uiKeyBindingRegistration;       ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
         Subscription                 _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
         Subscription                 _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
+        Subscription                 _widgetSkinChangedSubscription;  ///< 위젯 기본 겉모습이 바뀐 알림 구독
         Subscription                 _moduleUnloadingSubscription;    ///< 모듈 내림 알림 구독(`initializeSubsystem` 이 걸고 `shutdownSubsystem` 이 놓는다)
         UIThemeController*           _pThemes;                        ///< 테마(서브시스템 `UIThemes` — 기동이 찾는다)
         Subscription                 _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)

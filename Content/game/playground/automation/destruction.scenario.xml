@@ -8,7 +8,7 @@
 <Scenario name="game.playground.destruction" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/playground/maps/rendertest3d.scene.xml"/> <!-- 무대는 아래에서 연다 — 도화선이 흐르기 전 상태를 보려고 -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
-	<LoadScene path="game/playground/maps/destructionshowcase.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:f42e9a703e73a46622781523326ae007" timeoutFrames="600"/>
 	<!-- ① 온전 -->
 	<Expect watch="Fracture.Fractured" target="BrickWall" equals="0"/>
 	<Expect watch="Fracture.Fractured" target="CrateRight" equals="0"/>

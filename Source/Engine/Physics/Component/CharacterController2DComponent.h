@@ -120,16 +120,16 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Character", Tooltip = "Runtime: stood on a floor after the last step" )
         bool _bGrounded;
 
-        PhysicsCharacterHandle                  _character;
-        PhysicsCharacterState2D                 _state;
+        SW_TRANSIENT PhysicsCharacterHandle     _character;
+        SW_TRANSIENT PhysicsCharacterState2D    _state;
         PhysicsCommandPage<CharacterCommand2D>* _pCommandPage; ///< 입력 칸이 든 페이지 — 이동 요청 · 점프 대기(`PhysicsPoseStore::getCommandStore`)
-        uint32                                  _commandSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
-        float2                                  _previousPosition;
-        float3                                  _worldPosition;      ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
-        quaternion                              _worldRotation;      ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
-        float3                                  _worldScale;         ///< 마지막으로 읽은 월드 배율
-        float2                                  _frameClimbVelocity; ///< 이번 물리 프레임의 오르기 속도(`_bFrameClimb` 일 때)
-        uint8                                   _bFrameClimb : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
+        SW_TRANSIENT uint32                     _commandSlot;  ///< 입력 칸 번호(컴포넌트 수명 동안 그대로)
+        SW_TRANSIENT float2                     _previousPosition;
+        SW_TRANSIENT float3                     _worldPosition;      ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        SW_TRANSIENT quaternion                 _worldRotation;      ///< 마지막으로 읽은 월드 회전(캐릭터는 회전을 바꾸지 않는다)
+        SW_TRANSIENT float3                     _worldScale;         ///< 마지막으로 읽은 월드 배율
+        SW_TRANSIENT float2                     _frameClimbVelocity; ///< 이번 물리 프레임의 오르기 속도(`_bFrameClimb` 일 때)
+        SW_TRANSIENT uint8                      _bFrameClimb : 1;    ///< 이번 물리 프레임에 오르기 요청이 있다
         [[maybe_unused]] uint8                  _reserved    : 7;
     };
 } // namespace sw

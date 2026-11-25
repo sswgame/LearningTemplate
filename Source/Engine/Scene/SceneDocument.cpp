@@ -225,7 +225,7 @@ namespace sw
                 outNode._fileID        = params._id;
                 outNode._name          = std::move( params._name );
                 outNode._prefab        = params._prefab.path();
-                outNode._sceneInstance = std::move( params._scene );
+                outNode._sceneInstance = params._scene.path();
                 parseDataLayers( params._layers, outNode._listDataLayer );
 
                 const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
@@ -594,7 +594,7 @@ namespace sw
                 return false;
             }
             XMLNode sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            XMLFields::writeProperties( sceneObjectNode, SceneEntityParams{ entity._fileID, entity._name, AssetRef<PrefabAsset>{ entity._prefab }, entity._sceneInstance, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
+            XMLFields::writeProperties( sceneObjectNode, SceneEntityParams{ entity._fileID, entity._name, AssetRef<PrefabAsset>{ entity._prefab }, AssetRef<SceneDocument>{ entity._sceneInstance }, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
             if ( entity._prefabOverrideXML.empty() == false )
             {
                 XMLDocument overrideDoc;

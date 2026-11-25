@@ -4,6 +4,6 @@
      임포트가 만든 PBR 머티리얼(mi_hair_1) 대신 itemvisuals.xml 의 머리카락 부품이 이것을 든다. 가닥 축은 V(바이탄젠트), 뿌리 V 0 → 끝 V 1 로 둔다. -->
 <MaterialDef formatVersion="0" name="hair_1" _base="guid:5bdd4d3bbfd48b5adcb65cc5d000738f">
 	<_properties>
-		<item name="_albedoMap" assetPath="common/textures/quaternius/hair/t_hair_1_basecolor.dds" />
+		<item name="_albedoMap" assetPath="guid:c336d6ad28ab516c025e22f811dbe846" />
 	</_properties>
 </MaterialDef>

@@ -40,7 +40,7 @@ namespace sw
      *          ```xml
      *          <UIDocument _schemaVersion="0">
      *              <UIScreenDef _layer="Menu" _defaultFocus="Resume" />   (없으면 기본값)
-     *              <_listStyleSheet><item>engine/ui/styles/default.uistyle.xml</item></_listStyleSheet>
+     *              <_listStyleSheet><item>guid:…</item></_listStyleSheet>
      *              <_listAnimation><UIAnimation _name="Open"> … 트랙(_listTrack), 키(_listKey), 이벤트(_listEvent) … </UIAnimation></_listAnimation>
      *              <SafeZonePanel> … 위젯 요소는 리플렉션 타입이고, 속성과 구조체 자식은 PROPERTY 이며, 위젯 자식은 자식 위젯이다 … </SafeZonePanel>
      *          </UIDocument>

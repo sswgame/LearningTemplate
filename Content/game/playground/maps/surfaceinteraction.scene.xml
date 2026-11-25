@@ -158,7 +158,7 @@
 					<CharacterControllerComponent _localID="1851894784675401076" _localPosition="-3,0.05,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _radius="0.3" _halfHeight="0.6" _stepHeight="0.3" _maxSlopeAngle="45" _gravityScale="1" _mass="70" _layer="Character" />
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="#19b3407eb1f9cd74" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Walking_A" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<AnimationNotifyComponent _localID="3803990792213876096" _notifyTablePath="guid:41d588160a20a771c2a97324cfa7aca3" />
 					<GroundSurfaceComponent _localID="15610695408950179667" _probeLength="0.6" />
 					<CharacterWetnessComponent _localID="11376761862312545975" _wetChannel="Wet" _precipitationValue="wetness" _rainWetPerSecond="0.2" _shelterDistance="20" _immersionWetPerSecond="0.5" _bodyHeight="1.8" />

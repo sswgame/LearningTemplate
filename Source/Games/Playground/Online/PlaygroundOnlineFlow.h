@@ -103,7 +103,7 @@ namespace sw
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }
         /**
-         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 세션의 경제 클라이언트와 상품 카탈로그(`kOfferCatalog`)로 세운다. 카탈로그를 읽지 못하면 nullptr 입니다.
+         * @brief 상점 화면(`ShopScreen`)에 꽂을 온라인 구매 공급자입니다. 처음 부를 때 세션의 경제 클라이언트와 상품 카탈로그(gamesettings `onlineOfferCatalog`)로 세운다. 적지 않았거나 카탈로그를 읽지 못하면 nullptr 입니다.
          * @details 공급자는 이 흐름(게임 범위)이 든다 — 화면은 빌려 쓰고, 게임이 내려가면 늦게 온 답은 공급자의 약한 참조가 버린다.
          */
         EconomyShopPurchaseProvider* findShopProvider( OnlineSession& session );

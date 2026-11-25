@@ -115,12 +115,12 @@ namespace sw
         void                         spendCharge( const hashed_string& itemID );
 
     private:
-        Crafter _crafter;
+        SW_CODEC_STATE Crafter _crafter;
         PROPERTY( RuntimeState )
-        vector<ChargeEntry>             _listCharge;
-        vector<MonsterHuntActiveEffect> _listEffect;
-        const MonsterHuntCatalog*       _pCatalog;
-        const RecipeCatalog*            _pRecipeCatalog;
+        vector<ChargeEntry> _listCharge;
+        SW_CODEC_STATE vector<MonsterHuntActiveEffect> _listEffect;
+        const MonsterHuntCatalog*                      _pCatalog;
+        const RecipeCatalog*                           _pRecipeCatalog;
         PROPERTY( RuntimeState )
         hashed_string _oilID;
         PROPERTY( RuntimeState, Min = 0 )

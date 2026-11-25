@@ -75,7 +75,7 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Goal Color" )
         float4 _goalColor;
 
-        PrefabViewBatch _cubeViews;
-        PrefabViewBatch _secretViews;
+        SW_TRANSIENT PrefabViewBatch _cubeViews;
+        SW_TRANSIENT PrefabViewBatch _secretViews;
     };
 } // namespace sw

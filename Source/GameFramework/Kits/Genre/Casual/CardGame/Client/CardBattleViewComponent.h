@@ -78,10 +78,10 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Enemy Color" )
         float4 _enemyColor;
 
-        PrefabViewBatch                    _cardViews;
-        PrefabViewBatch                    _enemyViews;
+        SW_TRANSIENT PrefabViewBatch       _cardViews;
+        SW_TRANSIENT PrefabViewBatch       _enemyViews;
         unique_ptr<CardBattleHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        int32                              _selectedCard; ///< 고른 손패 자리
+        SW_TRANSIENT int32                 _selectedCard; ///< 고른 손패 자리
         int32                              _lastStep;     ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 장으로 옮긴다
     };
 } // namespace sw

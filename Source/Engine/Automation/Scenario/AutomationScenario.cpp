@@ -472,12 +472,12 @@ namespace sw
             }
             if ( elementName == "Scratch" )
             {
-                // 칸은 리플렉션 구조체가 정한다 — 원본 폴더는 경로 칸이라 참조 검사 · 옮기기가 따라간다(`AssetPath`).
+                // 칸은 리플렉션 구조체가 정한다 — 원본 폴더는 경로 칸(`DataPath`)이라 참조 검사 · 옮기기가 따라간다.
                 AutomationScratchParams params;
                 if ( XMLFields::readProperties( atNode, params, _sourcePath ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> needs from=\"<source folder>\" and as=\"scratch/<folder>\"", _sourcePath } );
                 AutomationScratchFolder folder;
-                folder._sourceID  = std::move( params._from );
+                folder._sourceID  = params._from.isSet() ? params._from.get() : string{};
                 folder._scratchID = std::move( params._as );
                 if ( expected<void> valid = folder.validate(); valid.has_value() == false )
                     return valid;

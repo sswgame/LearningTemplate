@@ -153,14 +153,15 @@ namespace sw
         if ( widget.getVisibility() == WidgetVisibility::Collapsed )
             return float2{};
 
-        const WidgetLayoutSlot& slot  = widget.getLayoutSlot();
-        float2                  inner = availableSize;
-        if ( slot._widthOverride > 0.0f )
-            inner._x = slot._widthOverride;
+        const WidgetLayoutSlot& slot      = widget.getLayoutSlot();
+        const float2            fixedSize = widget.computeFixedSize();
+        float2                  inner     = availableSize;
+        if ( fixedSize._x > 0.0f )
+            inner._x = fixedSize._x;
         else if ( slot._maxSize._x > 0.0f )
             inner._x = MathUtil::min( inner._x, slot._maxSize._x );
-        if ( slot._heightOverride > 0.0f )
-            inner._y = slot._heightOverride;
+        if ( fixedSize._y > 0.0f )
+            inner._y = fixedSize._y;
         else if ( slot._maxSize._y > 0.0f )
             inner._y = MathUtil::min( inner._y, slot._maxSize._y );
 
@@ -172,10 +173,10 @@ namespace sw
         WidgetTree* const pTree   = widget.getTree(); // 순회 번호 · 측정 수는 트리가 든다 — 떨어진 위젯은 캐시하지 않는다(번호 0)
         if ( pTree != nullptr )
             ++pTree->_measureCount;
-        if ( slot._widthOverride > 0.0f )
-            desired._x = slot._widthOverride;
-        if ( slot._heightOverride > 0.0f )
-            desired._y = slot._heightOverride;
+        if ( fixedSize._x > 0.0f )
+            desired._x = fixedSize._x;
+        if ( fixedSize._y > 0.0f )
+            desired._y = fixedSize._y;
         desired._x = MathUtil::max( desired._x, slot._minSize._x );
         desired._y = MathUtil::max( desired._y, slot._minSize._y );
         if ( slot._maxSize._x > 0.0f )
@@ -214,9 +215,9 @@ namespace sw
         float2 position{};
         float2 size{};
         if ( bParentRightToLeft )
-            applySlot( UILayoutPassInternal::makeMirroredSlot( widget.getLayoutSlot() ), widget.getDesiredSize(), slotPosition, slotSize, position, size );
+            applySlot( UILayoutPassInternal::makeMirroredSlot( widget.getLayoutSlot() ), widget.computeFixedSize(), widget.getDesiredSize(), slotPosition, slotSize, position, size );
         else
-            applySlot( widget.getLayoutSlot(), widget.getDesiredSize(), slotPosition, slotSize, position, size );
+            applySlot( widget.getLayoutSlot(), widget.computeFixedSize(), widget.getDesiredSize(), slotPosition, slotSize, position, size );
         if ( parentGeometry.isAxisAligned() && context._uiScale > 0.0f )
         {
             UILayoutPassInternal::snapAxis( parentGeometry._translation._x, context._uiScale, position._x, size._x );
@@ -287,15 +288,15 @@ namespace sw
         return MathUtil::max( 0.0f, available - used );
     }
 
-    void UILayoutPass::applySlot( const WidgetLayoutSlot& slot, const float2& desired, const float2& slotPosition, const float2& slotSize, float2& outPosition,
-                                  float2& outSize )
+    void UILayoutPass::applySlot( const WidgetLayoutSlot& slot, const float2& fixedSize, const float2& desired, const float2& slotPosition, const float2& slotSize,
+                                  float2& outPosition, float2& outSize )
     {
         const float32 innerWidth  = MathUtil::max( 0.0f, slotSize._x - slot._padding._x - slot._padding._z );
         const float32 innerHeight = MathUtil::max( 0.0f, slotSize._y - slot._padding._y - slot._padding._w );
         float32       offsetX     = 0.0f;
         float32       offsetY     = 0.0f;
-        UILayoutPassInternal::applySlotAxis( slot._horizontalAlignment, slot._widthOverride, slot._maxSize._x, desired._x, innerWidth, offsetX, outSize._x );
-        UILayoutPassInternal::applySlotAxis( slot._verticalAlignment, slot._heightOverride, slot._maxSize._y, desired._y, innerHeight, offsetY, outSize._y );
+        UILayoutPassInternal::applySlotAxis( slot._horizontalAlignment, fixedSize._x, slot._maxSize._x, desired._x, innerWidth, offsetX, outSize._x );
+        UILayoutPassInternal::applySlotAxis( slot._verticalAlignment, fixedSize._y, slot._maxSize._y, desired._y, innerHeight, offsetY, outSize._y );
         outPosition._x = slotPosition._x + slot._padding._x + offsetX;
         outPosition._y = slotPosition._y + slot._padding._y + offsetY;
     }

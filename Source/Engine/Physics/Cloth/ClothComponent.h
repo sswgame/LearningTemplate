@@ -181,13 +181,13 @@ namespace sw
         PROPERTY( Category = "LOD", Tooltip = "Solver iterations from LOD grade 1 upward (grade 0 uses Iteration Count; past the end the last entry holds; empty: Iteration Count at every grade)", Validate = validateLOD )
         vector<uint32> _listLODIterationCount;
 
-        vector<float3>         _listVertex;       ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다). LOD 로 내린 동안은 쉬는 격자다
-        vector<float4x4>       _listPinBoneWorld; ///< 스킨 고정이 프레임마다 넘기는 뼈 월드 행렬(`applySkinningPose` 의 임시 — 할당을 재사용한다)
-        PhysicsSoftBodyHandle  _softBody;
-        float32                _windTime;                  ///< 돌풍의 시각(고정 스텝으로 흐른다 — 저장하지 않는다)
-        uint32                 _appliedIterationCount;     ///< 지금 소프트 바디에 준 반복 수(천이 없으면 0)
-        uint8                  _bPinBoneErrorReported : 1; ///< 설정 오류(본 없음 · 스켈레탈 메시 덮어쓰기)를 이미 냈다(본을 바꾸면 다시 낸다)
-        uint8                  _bLODSuspended         : 1; ///< LOD 등급이 `_maxLOD` 를 넘어 천을 내렸다
-        [[maybe_unused]] uint8 _reserved              : 6;
+        SW_TRANSIENT vector<float3> _listVertex;              ///< 마지막 물리 프레임 끝의 정점 월드 위치(게임 스레드가 쓴다). LOD 로 내린 동안은 쉬는 격자다
+        SW_TRANSIENT vector<float4x4>      _listPinBoneWorld; ///< 스킨 고정이 프레임마다 넘기는 뼈 월드 행렬(`applySkinningPose` 의 임시 — 할당을 재사용한다)
+        SW_TRANSIENT PhysicsSoftBodyHandle _softBody;
+        SW_TRANSIENT float32               _windTime;                  ///< 돌풍의 시각(고정 스텝으로 흐른다 — 저장하지 않는다)
+        SW_TRANSIENT uint32                _appliedIterationCount;     ///< 지금 소프트 바디에 준 반복 수(천이 없으면 0)
+        SW_TRANSIENT uint8                 _bPinBoneErrorReported : 1; ///< 설정 오류(본 없음 · 스켈레탈 메시 덮어쓰기)를 이미 냈다(본을 바꾸면 다시 낸다)
+        SW_TRANSIENT uint8                 _bLODSuspended         : 1; ///< LOD 등급이 `_maxLOD` 를 넘어 천을 내렸다
+        [[maybe_unused]] uint8             _reserved              : 6;
     };
 } // namespace sw

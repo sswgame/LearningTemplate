@@ -7,7 +7,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 
 namespace sw
 {
@@ -53,12 +57,12 @@ namespace sw
     struct EconomyKitConfig
     {
         REFLECT_BODY();
-        /** @brief 화폐 카탈로그입니다(리소스 경로, `<CurrencyCatalog>`). */
+        /** @brief 화폐 카탈로그입니다(`<CurrencyCatalog>`). */
         PROPERTY( Required )
-        string _currencyCatalog{};
-        /** @brief 상품 카탈로그입니다(리소스 경로, `<OfferCatalog>`). */
+        AssetRef<CurrencyCatalog> _currencyCatalog{};
+        /** @brief 상품 카탈로그입니다(`<OfferCatalog>`). */
         PROPERTY( Required )
-        string _offerCatalog{};
+        AssetRef<OfferCatalog> _offerCatalog{};
         /** @brief 가짜 영수증 제공자("fake")를 등록합니다(DevOnline 단위만 — 확장점 `EconomyDevOptions`, 그 단위가 없는 구성은 기동 실패). */
         PROPERTY()
         bool _bFakeReceipts{ false };

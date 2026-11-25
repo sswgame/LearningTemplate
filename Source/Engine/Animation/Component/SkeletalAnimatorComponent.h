@@ -615,13 +615,13 @@ namespace sw
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 
-        SkeletalAnimatorBinding      _binding;
-        SkeletalAnimatorClipSource   _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
-        Subscription                 _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        AnimationGraphAsset          _graph;
-        AnimationGraphPlayer         _graphPlayer;
-        AnimationParameterSet        _parameters;
-        SharedAssetRef<AnimationSet> _animationSet; ///< `_animationSetPath` 의 셋(`refreshAnimationSet`)
+        SW_TRANSIENT SkeletalAnimatorBinding    _binding;
+        SW_TRANSIENT SkeletalAnimatorClipSource _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
+        Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        SW_TRANSIENT AnimationGraphAsset        _graph;
+        SW_TRANSIENT AnimationGraphPlayer       _graphPlayer;
+        SW_TRANSIENT AnimationParameterSet      _parameters;
+        SharedAssetRef<AnimationSet>            _animationSet; ///< `_animationSetPath` 의 셋(`refreshAnimationSet`)
         /** @brief 시작 때 요청한 클립 하나입니다. */
         struct ClipLoad
         {
@@ -629,50 +629,50 @@ namespace sw
             SharedAssetHandle<AnimationClip> _load;
         };
 
-        unordered_map<hashed_string, SharedAssetRef<AnimationClip>>   _mapClip;
-        vector<ClipLoad>                                              _listClipLoad;      ///< 시작 때 요청해 아직 표에 넣지 않은 클립(`requestClipLoads`)
-        hashed_string                                                 _deferredPlayState; ///< 클립을 기다리는 동안 미룬 `play` 의 상태
-        float32                                                       _deferredPlayBlend; ///< 미룬 `play` 의 섞기 시간
-        unordered_map<const AnimationClip*, vector<optional<uint32>>> _mapTrackToBone;
-        AssetReloadWatch<AnimationClip>                               _clipReload; ///< 클립을 빌린 것을 지은 때의 클립 캐시 다시 읽기 횟수(`refreshReloadedClips`)
-        const Skeleton*                                               _pTrackMapSkeleton;
-        vector<LayerState>                                            _listLayer;
-        vector<LayerState>                                            _listGraphLayer;  ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
-        vector<unique_ptr<SkeletalBlendSpaceState>>                   _listBlendSpace;  ///< 그래프의 블렌드 스페이스 상태다(상태 기계가 포인터를 빌린다)
-        AnimationPoseNodeSet                                          _poseNodes;       ///< 그래프의 포즈 노드 상태다 — 상태마다 인스턴스 하나(몽타주는 섹션 위치를 든다). 블렌드 스페이스 상태를 입력으로 빌린다
-        const vector<uint32>*                                         _pMirroredBone;   ///< 이번 기본 포즈 단계의 짝 본 번호 표(`SkeletalMeshComponent::findMirroredBones`, 없으면 nullptr)
-        vector<unique_ptr<LinkedLayerGraph>>                          _listLinkedGraph; ///< `_listLinkedLayer` 의 그래프를 읽은 것이다
-        vector<Pose>                                                  _listScratchSamplePose;
-        vector<const Pose*>                                           _listScratchSamplePosePointer;
-        vector<float32>                                               _listScratchSampleWeight;
-        vector<AnimationFiredNotify>                                  _listFiredNotify;
-        vector<const IAnimationPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
-        vector<IRootMotionModifier*>                                  _listRootMotionModifier;
-        ItemSubscriptionList<IRootMotionModifier>                     _rootMotionModifierSubscriptions; ///< `_listRootMotionModifier` 의 등록 구독을 내준다(풀리면 `releaseRootMotionModifier`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        CurveAccumulator                                              _curves;                          ///< 이번 프레임 커브(이름 → 값)
-        Pose                                                          _scratchPose;
-        Pose                                                          _scratchTrackPose;
-        Pose                                                          _scratchLayerPose;
-        vector<float4x4>                                              _listBaseModelScratch;  ///< 메시 공간 덮기의 기준 포즈 모델 공간(프레임마다 다시 쓴다)
-        vector<float4x4>                                              _listLayerModelScratch; ///< 메시 공간 덮기의 레이어 포즈 모델 공간
-        Pose                                                          _scratchLinkedPose;
-        vector<uint8>                                                 _listScratchTrackMask;           ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
-        PoseHistory                                                   _baseHistory;                    ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
-        Pose                                                          _carryOverPose;                  ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
-        PoseInertializer                                              _inertializer;                   ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
-        vector<SequencerOverride>                                     _listSequencerOverride;          ///< 열린 시퀀서 덮어쓰기(연 순서)
-        SubscriptionList                                              _sequencerOverrideSubscriptions; ///< `openSequencerOverride` 가 낸 구독
-        uint64                                                        _nextSequencerOverrideID;
-        BoneTransform                                                 _rootMotionDelta;
-        SkeletalMeshComponent*                                        _pSkeletalMesh;
-        IAnimationNotifyListener*                                     _pNotifyListener;
-        float32                                                       _lastDeltaSeconds; ///< 마지막 시간 단계의 델타 시간(배율 적용)
-        float32                                                       _initialTime;      ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
-        float32                                                       _carryOverElapsed;
-        float32                                                       _carryOverDuration;
-        uint32                                                        _seenInterruptCount;       ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
-        uint32                                                        _seenInertializationCount; ///< 플레이어의 inertialization 횟수를 마지막으로 확인한 값
-        uint64                                                        _lastTimeFrameIndex;       ///< 마지막 시간 단계의 프레임 번호다. 사이가 비면(쉬었다) 지난 포즈가 낡았다
+        SW_TRANSIENT unordered_map<hashed_string, SharedAssetRef<AnimationClip>> _mapClip;
+        SW_TRANSIENT vector<ClipLoad> _listClipLoad;      ///< 시작 때 요청해 아직 표에 넣지 않은 클립(`requestClipLoads`)
+        SW_TRANSIENT hashed_string    _deferredPlayState; ///< 클립을 기다리는 동안 미룬 `play` 의 상태
+        SW_TRANSIENT float32          _deferredPlayBlend; ///< 미룬 `play` 의 섞기 시간
+        SW_TRANSIENT unordered_map<const AnimationClip*, vector<optional<uint32>>> _mapTrackToBone;
+        SW_TRANSIENT AssetReloadWatch<AnimationClip> _clipReload; ///< 클립을 빌린 것을 지은 때의 클립 캐시 다시 읽기 횟수(`refreshReloadedClips`)
+        const Skeleton*                              _pTrackMapSkeleton;
+        SW_TRANSIENT vector<LayerState> _listLayer;
+        SW_TRANSIENT vector<LayerState> _listGraphLayer;                          ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
+        SW_TRANSIENT vector<unique_ptr<SkeletalBlendSpaceState>> _listBlendSpace; ///< 그래프의 블렌드 스페이스 상태다(상태 기계가 포인터를 빌린다)
+        SW_TRANSIENT AnimationPoseNodeSet                        _poseNodes;      ///< 그래프의 포즈 노드 상태다 — 상태마다 인스턴스 하나(몽타주는 섹션 위치를 든다). 블렌드 스페이스 상태를 입력으로 빌린다
+        const vector<uint32>*                                    _pMirroredBone;  ///< 이번 기본 포즈 단계의 짝 본 번호 표(`SkeletalMeshComponent::findMirroredBones`, 없으면 nullptr)
+        SW_TRANSIENT vector<unique_ptr<LinkedLayerGraph>> _listLinkedGraph;       ///< `_listLinkedLayer` 의 그래프를 읽은 것이다
+        SW_TRANSIENT vector<Pose> _listScratchSamplePose;
+        SW_TRANSIENT vector<const Pose*> _listScratchSamplePosePointer;
+        SW_TRANSIENT vector<float32> _listScratchSampleWeight;
+        SW_TRANSIENT vector<AnimationFiredNotify> _listFiredNotify;
+        SW_TRANSIENT vector<const IAnimationPlayable*> _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
+        SW_TRANSIENT vector<IRootMotionModifier*> _listRootMotionModifier;
+        ItemSubscriptionList<IRootMotionModifier> _rootMotionModifierSubscriptions; ///< `_listRootMotionModifier` 의 등록 구독을 내준다(풀리면 `releaseRootMotionModifier`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        SW_TRANSIENT CurveAccumulator             _curves;                          ///< 이번 프레임 커브(이름 → 값)
+        SW_TRANSIENT Pose                         _scratchPose;
+        SW_TRANSIENT Pose                         _scratchTrackPose;
+        SW_TRANSIENT Pose                         _scratchLayerPose;
+        SW_TRANSIENT vector<float4x4> _listBaseModelScratch;  ///< 메시 공간 덮기의 기준 포즈 모델 공간(프레임마다 다시 쓴다)
+        SW_TRANSIENT vector<float4x4> _listLayerModelScratch; ///< 메시 공간 덮기의 레이어 포즈 모델 공간
+        SW_TRANSIENT Pose             _scratchLinkedPose;
+        SW_TRANSIENT vector<uint8>    _listScratchTrackMask;                    ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
+        SW_TRANSIENT PoseHistory      _baseHistory;                             ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
+        SW_TRANSIENT Pose             _carryOverPose;                           ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다
+        SW_TRANSIENT PoseInertializer _inertializer;                            ///< inertialization 전이의 남은 차이다(기본 포즈에 더한다)
+        SW_TRANSIENT vector<SequencerOverride> _listSequencerOverride;          ///< 열린 시퀀서 덮어쓰기(연 순서)
+        SubscriptionList                       _sequencerOverrideSubscriptions; ///< `openSequencerOverride` 가 낸 구독
+        SW_TRANSIENT uint64                    _nextSequencerOverrideID;
+        SW_TRANSIENT BoneTransform             _rootMotionDelta;
+        SkeletalMeshComponent*                 _pSkeletalMesh;
+        IAnimationNotifyListener*              _pNotifyListener;
+        SW_TRANSIENT float32                   _lastDeltaSeconds; ///< 마지막 시간 단계의 델타 시간(배율 적용)
+        SW_TRANSIENT float32                   _initialTime;      ///< 시작 상태의 첫 시각(초, 저장하지 않는 런타임 값)
+        SW_TRANSIENT float32                   _carryOverElapsed;
+        SW_TRANSIENT float32                   _carryOverDuration;
+        SW_TRANSIENT uint32                    _seenInterruptCount;       ///< 플레이어의 중단 횟수를 마지막으로 확인한 값
+        SW_TRANSIENT uint32                    _seenInertializationCount; ///< 플레이어의 inertialization 횟수를 마지막으로 확인한 값
+        SW_TRANSIENT uint64                    _lastTimeFrameIndex;       ///< 마지막 시간 단계의 프레임 번호다. 사이가 비면(쉬었다) 지난 포즈가 낡았다
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )
         uint8 _bExtractRootMotion : 1;
         PROPERTY( Category = "Animation", DisplayName = "Play On Begin", Tooltip = "Start the initial state at begin play" )
@@ -680,13 +680,13 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Root Motion Through Controller",
                   Tooltip = "Move by root motion through the sibling character controller (collides, climbs steps) instead of writing the transform" )
         uint8                  _bRootMotionThroughController : 1;
-        uint8                  _bPoseShownThisFrame          : 1; ///< 이번 프레임에 포즈를 만들었거나 지난 포즈가 화면에 그대로 보인다(다음 시간 단계가 기록의 유효를 판정한다)
-        uint8                  _bCarryingOver                : 1;
-        uint8                  _bInertializationPending      : 1; ///< 새 inertialization 이 다음 포즈 계산에서 시작되기를 기다린다
-        uint8                  _bClipsPending                : 1; ///< 시작 때 요청한 클립을 읽는 중이다(`isWaitingForAnimationAssets`)
-        uint8                  _bStartPending                : 1; ///< 클립이 다 읽히면 시작 상태를 재생한다
-        uint8                  _bPlayDeferred                : 1; ///< 클립이 다 읽히면 미룬 play 를 한다
-        uint8                  _bDeferredPlayLoop            : 1; ///< 미룬 `play` 의 반복 여부
+        SW_TRANSIENT uint8     _bPoseShownThisFrame          : 1; ///< 이번 프레임에 포즈를 만들었거나 지난 포즈가 화면에 그대로 보인다(다음 시간 단계가 기록의 유효를 판정한다)
+        SW_TRANSIENT uint8     _bCarryingOver                : 1;
+        SW_TRANSIENT uint8     _bInertializationPending      : 1; ///< 새 inertialization 이 다음 포즈 계산에서 시작되기를 기다린다
+        SW_TRANSIENT uint8     _bClipsPending                : 1; ///< 시작 때 요청한 클립을 읽는 중이다(`isWaitingForAnimationAssets`)
+        SW_TRANSIENT uint8     _bStartPending                : 1; ///< 클립이 다 읽히면 시작 상태를 재생한다
+        SW_TRANSIENT uint8     _bPlayDeferred                : 1; ///< 클립이 다 읽히면 미룬 play 를 한다
+        SW_TRANSIENT uint8     _bDeferredPlayLoop            : 1; ///< 미룬 `play` 의 반복 여부
         [[maybe_unused]] uint8 _reserved                     : 6;
     };
 } // namespace sw

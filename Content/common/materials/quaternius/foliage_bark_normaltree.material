@@ -4,6 +4,6 @@
 <MaterialDef formatVersion="0" name="foliage_bark_normaltree" _base="guid:64c6d0e9764de443927f7f27cd2b5964" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_alphaCutoff" defaultValue="0.2" />
-		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/bark_normaltree.dds" />
+		<item name="_albedoMap" assetPath="guid:b83ac6185083b4ffc3d5ab6ad93d2195" />
 	</_properties>
 </MaterialDef>

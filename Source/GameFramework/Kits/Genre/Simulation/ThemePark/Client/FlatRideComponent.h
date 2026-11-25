@@ -40,6 +40,6 @@ namespace sw
         PROPERTY( Category = "Ride", DisplayName = "Spin", Tooltip = "Turn rate while riders are on", Units = "rad/s" )
         float32 _spin;
 
-        float32 _angle;
+        SW_TRANSIENT float32 _angle;
     };
 } // namespace sw

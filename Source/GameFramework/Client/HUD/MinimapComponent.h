@@ -79,9 +79,9 @@ namespace sw
         PROPERTY( Category = "Minimap", DisplayName = "Rotate With View", Tooltip = "Up is the pawn's control yaw; off: up is world +Z" )
         bool _bRotateWithView;
         PROPERTY( Category = "Minimap", DisplayName = "Capture Camera", Tooltip = "Object with a capture camera that paints the map picture; kept above this object, its height is authored on the camera" )
-        GameObjectHandle _captureCamera;
-        GameObjectHandle _followTarget; ///< 빙의를 따라가 지금 보는 폰(무효면 이 오브젝트)
-        Subscription     _possessionSubscription;
-        vector<uint64>   _listDotMarker; ///< 점(패널의 자식 차례)마다 마지막으로 보인 표시의 컴포넌트 id — 바뀐 때만 크기 · 색을 다시 쓴다
+        GameObjectHandle              _captureCamera;
+        SW_TRANSIENT GameObjectHandle _followTarget; ///< 빙의를 따라가 지금 보는 폰(무효면 이 오브젝트)
+        Subscription                  _possessionSubscription;
+        SW_TRANSIENT vector<uint64> _listDotMarker; ///< 점(패널의 자식 차례)마다 마지막으로 보인 표시의 컴포넌트 id — 바뀐 때만 크기 · 색을 다시 쓴다
     };
 } // namespace sw

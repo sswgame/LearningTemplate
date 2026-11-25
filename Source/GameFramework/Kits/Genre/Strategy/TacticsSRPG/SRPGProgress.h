@@ -118,7 +118,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        RunMap _runMap;
+        SW_CODEC_STATE RunMap _runMap;
         PROPERTY( RuntimeState )
         vector<SRPGRosterEntry> _listRoster;
         PROPERTY( RuntimeState )

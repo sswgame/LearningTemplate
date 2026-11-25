@@ -4,6 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -165,7 +166,7 @@ namespace sw
             const XMLNode list = documentRoot.appendChild( "_listStyleSheet" );
             for ( const string& path : listStyleSheet )
             {
-                list.appendChild( "item" ).setValue( string_view( path ) );
+                list.appendChild( "item" ).setValue( string_view{ AssetRegistry::makeIndexedReferenceText( path ) } );
             }
         }
 

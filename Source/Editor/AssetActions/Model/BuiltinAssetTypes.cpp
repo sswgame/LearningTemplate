@@ -6,6 +6,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorThemeKey.h"
@@ -24,6 +25,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/TileMap/TileMapXML.h"
@@ -37,10 +39,8 @@ namespace sw::editor
     {
         struct BuiltinAssetTypesInternal
         {
-            /** @brief 스프라이트 시트로 쓰는 이미지입니다. 텍스처가 먼저 가져가고(`Fallback`), 스프라이트 클립 패널이 시트로 열 때만 이 종류로 본다. */
-            static constexpr string_view kArrSpriteImageExt[] = { ".png", ".jpg", ".jpeg", ".dds", ".tga" };
-            /** @brief `heightfields_raw/` 의 높이장 원본과 구멍 마스크입니다. 같은 `.png` 라도 텍스처 원본이 아니다. 임포트하는 것이 리로드다. */
-            static constexpr string_view kArrHeightfieldRawExt[] = { ".png", ".r16" };
+            /** @brief 시트로 열 수 있는 텍스처 원본입니다 — HDR(`.hdr`)은 밝기 원본(하늘 · 조명)이라 스프라이트 색이 아니다. */
+            static bool isSheetSource( string_view path ) { return FileUtil::hasExtension( path, ".hdr" ) == false; }
             /** @brief 에디터 테마 토큰 파일입니다. 바뀌면 그 자리에서 테마를 다시 적용한다. */
             static constexpr string_view kArrThemeTokenSuffix[] = { EditorThemeTokens::kExtension };
             /** @brief 모듈이 로드한 데이터 테이블 캐시입니다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블). 에디터는 GameFramework 를 모른다. */
@@ -53,11 +53,24 @@ namespace sw::editor
             static constexpr string_view kArrDataXMLExt[]  = { ".xml" };
             static constexpr string_view kArrDataJSONExt[] = { ".json" };
 
-            /** @brief 높이장 원본 규칙입니다. `heightfields_raw/` 아래에서 임포트 결과 경로가 나오는 원본만 높이장이다(`HeightfieldImporter::isRawHeightfieldPath`). */
+            /** @brief 스프라이트 시트로 쓰는 이미지 규칙들입니다 — 텍스처가 먼저 가져가고(`Fallback`), 스프라이트 클립 패널이 시트로 열 때만 이 종류로 본다. 텍스처의 원본(HDR 빼고)과 임포트한 텍스처다. */
+            static EditorAssetMatchRule makeSheetSourceRule()
+            {
+                EditorAssetMatchRule rule = EditorAssetMatchRule::importSource( TextureImporter::kRawFolder, EditorAssetMatchPriority::Fallback );
+                rule._pfnAcceptPath       = &isSheetSource;
+                return rule;
+            }
+            static EditorAssetMatchRule makeSheetTextureRule()
+            {
+                EditorAssetMatchRule rule = EditorAssetMatchRule::engineType( Texture2D::kAssetType );
+                rule._priority            = EditorAssetMatchPriority::Fallback;
+                return rule;
+            }
+
+            /** @brief 높이장 원본 규칙입니다. 같은 `.png` 라도 텍스처 원본이 아니고 임포트하는 것이 리로드다. `heightfields_raw/` 아래에서 임포트 결과 경로가 나오는 원본만 높이장이다(`HeightfieldImporter::isRawHeightfieldPath`). */
             static EditorAssetMatchRule makeRawHeightfieldRule()
             {
-                EditorAssetMatchRule rule = EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrHeightfieldRawExt, SW_COUNT_OF( kArrHeightfieldRawExt ), EditorAssetMatchPriority::Path,
-                                                                            { nullptr, &HeightfieldImporter::importChangedSourceHeightfield, AssetImportThread::WorkerParallel } );
+                EditorAssetMatchRule rule = EditorAssetMatchRule::importSource( HeightfieldImporter::kRawFolder, EditorAssetMatchPriority::Path, { nullptr, nullptr, &HeightfieldImporter::importChangedSources } );
                 rule._pfnAcceptPath       = &HeightfieldImporter::isRawHeightfieldPath;
                 return rule;
             }
@@ -67,8 +80,8 @@ namespace sw::editor
         const EditorAssetMatchRule kArrDialogueGraphRule[]  = { EditorAssetMatchRule::engineType( DialogueGraphAsset::kAssetType ) };
         const EditorAssetMatchRule kArrSpriteClipRule[]     = {
             EditorAssetMatchRule::engineType( SpriteClipAsset::kAssetType, AssetReloadRoute::sharedCache( SpriteClipAsset::kAssetType ) ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrSpriteImageExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrSpriteImageExt ),
-                                                EditorAssetMatchPriority::Fallback ),
+            BuiltinAssetTypesInternal::makeSheetSourceRule(),
+            BuiltinAssetTypesInternal::makeSheetTextureRule(),
         };
         const EditorAssetMatchRule kArrTileMapRule[]       = { EditorAssetMatchRule::engineType( TileMapXMLData::kAssetType ) };
         const EditorAssetMatchRule kArrTileSetRule[]       = { EditorAssetMatchRule::engineType( TileSetAsset::kAssetType, AssetReloadRoute::sharedCache( TileSetAsset::kAssetType ) ) };
@@ -100,11 +113,11 @@ namespace sw::editor
             EditorAssetMatchRule::engineType( LocalizationProject::kAssetType, { "StringTable" } ),
             EditorAssetMatchRule::engineType( UIStyleSheetAsset::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::EndsWith, BuiltinAssetTypesInternal::kArrModuleDataSuffix, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrModuleDataSuffix ),
-                                            EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
+                                            EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::engineType( AudioMixerDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataXMLExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataXMLExt ),
-                                            EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
+                                            EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataJSONExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataJSONExt ),
                                             EditorAssetMatchPriority::Catchall ),
         };

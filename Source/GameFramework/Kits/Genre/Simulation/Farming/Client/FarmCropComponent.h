@@ -55,6 +55,6 @@ namespace sw
         PROPERTY( Category = "Tile", DisplayName = "Soil Top", Tooltip = "Height of the soil block's top the crop stands on", Min = 0.0, Units = m )
         float32 _soilTop;
 
-        int32 _cropState; ///< 지금 그린 작물 상태(−1 이면 아직 없다)
+        SW_TRANSIENT int32 _cropState; ///< 지금 그린 작물 상태(−1 이면 아직 없다)
     };
 } // namespace sw

@@ -83,7 +83,7 @@ namespace sw
         uint32 _projectilePoolSize;
 
         unique_ptr<MechArenaHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
-        PrefabPool                        _projectilePool;
+        SW_TRANSIENT PrefabPool           _projectilePool;
         vector<GameObjectHandle>          _listProjectileView; ///< 꺼낸 탄 모습(판의 탄 목록 순서)
     };
 } // namespace sw

@@ -135,7 +135,7 @@ namespace sw
         void releaseLockIfRecovered();
 
     private:
-        ResourceGaugeSettings _settings;
+        SW_TRANSIENT ResourceGaugeSettings _settings;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _value;
         PROPERTY( RuntimeState )
@@ -143,8 +143,8 @@ namespace sw
         PROPERTY( RuntimeState )
         float32 _regenScale;
         PROPERTY( RuntimeState )
-        float32   _timeSinceUse; ///< 마지막으로 쓴 뒤 지난 시간
-        Countdown _overheatPenalty;
+        float32                  _timeSinceUse; ///< 마지막으로 쓴 뒤 지난 시간
+        SW_CODEC_STATE Countdown _overheatPenalty;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         uint8 _bLocked; ///< 탈진 · 과열 잠금
     };

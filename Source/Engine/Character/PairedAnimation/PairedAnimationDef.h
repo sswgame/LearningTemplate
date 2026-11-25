@@ -26,6 +26,8 @@
 #include "Core/Math/Radians.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -59,7 +61,7 @@ namespace sw
         hashed_string        _name{};
         hashed_string        _clip{};
         hashed_string        _exitState{};
-        string               _skeletonPath{};       ///< 비었으면 스켈레톤을 묻지 않는다
+        AssetRef<Skeleton>   _skeletonPath{};       ///< 비었으면 스켈레톤을 묻지 않는다
         float3               _offset{};             ///< 앵커 요로 돌릴 앵커 기준 자리(m)
         Radians              _yaw{};                ///< 앵커 요에 더할 요
         float32              _startSeconds{ 0.0f }; ///< 공유 타임라인에서 들어오는 시각
@@ -129,7 +131,7 @@ namespace sw
         PROPERTY( Required )
         hashed_string _exitState{};
         PROPERTY()
-        string _skeleton{};
+        AssetRef<Skeleton> _skeleton{};
         PROPERTY( Required )
         bool _bRequired{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         PROPERTY()

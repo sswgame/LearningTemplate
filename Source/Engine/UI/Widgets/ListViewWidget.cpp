@@ -31,6 +31,12 @@ namespace sw
         return StaticType();
     }
 
+    void ListViewWidget::synchronizeProperties()
+    {
+        PanelWidget::synchronizeProperties();
+        _rowHeight = MathUtil::max( kMinRowHeight, _rowHeight );
+    }
+
     void ListViewWidget::setItemCount( uint32 itemCount )
     {
         _itemCount = itemCount;
@@ -44,7 +50,7 @@ namespace sw
 
     void ListViewWidget::setRowHeight( float32 rowHeight )
     {
-        const float32 clamped = MathUtil::max( 1.0f, rowHeight );
+        const float32 clamped = MathUtil::max( kMinRowHeight, rowHeight );
         if ( _rowHeight == clamped )
             return;
         _rowHeight = clamped;

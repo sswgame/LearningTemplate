@@ -87,14 +87,16 @@ SW_TEST_CASE( AnimationSetTest, RejectsBrokenLines )
 {
     AnimationSet animationSet;
     SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
-    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" set="y"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x.animclip" set="y.animset.xml"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "AnimationSet.DuplicateClip" );
-    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x"/><clip name="A" path="y"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x.animclip"/><clip name="A" path="y.animclip"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "AnimationSet.NameHasPath" );
-    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a/b" path="x"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a/b" path="x.animclip"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "XMLFields.UnknownField" );
-    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" speed="2"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x.animclip" speed="2"/></AnimationSet>)", "<test>" ) );
+    SW_EXPECT_LOG( "AssetRef.WrongType" ); // 다른 종류의 파일을 가리키면 읽지 않는다
+    SW_EXPECT_FALSE( animationSet.loadFromXMLText( R"(<AnimationSet formatVersion="0"><clip name="a" path="x.mesh"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_TRUE( animationSet.getEntries().empty() );
 
     const test::ScopedScratchDomain domain;

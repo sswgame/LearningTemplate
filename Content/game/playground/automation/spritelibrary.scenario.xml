@@ -9,7 +9,7 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/spritelibrary_base.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="spritelibrary_base.ppm"/>
-	<LoadScene path="game/playground/maps/spritelibrary_variant.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:d91234cb9db6a037e9ab8607f01e48d1" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

@@ -208,17 +208,17 @@ namespace sw
         void huntRemaining( int32 player, int32 enemy );
 
     private:
-        RTSWorld              _world;
-        ConsumerLease         _eventLease; ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
-        vector<Player>        _listPlayer; ///< 판을 열 때 크기를 정한다 — 월드가 지갑의 주소를 쥔다
-        vector<RTSEvent>      _listEvent;  ///< 화면이 꺼내 갈 사본
-        vector<RTSEvent>      _listFrameEvent;
-        SkirmishMatchSettings _settings;
+        SW_CODEC_STATE RTSWorld _world;
+        ConsumerLease           _eventLease;       ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
+        SW_CODEC_STATE vector<Player> _listPlayer; ///< 판을 열 때 크기를 정한다 — 월드가 지갑의 주소를 쥔다
+        SW_TRANSIENT vector<RTSEvent> _listEvent;  ///< 화면이 꺼내 갈 사본
+        SW_TRANSIENT vector<RTSEvent>      _listFrameEvent;
+        SW_TRANSIENT SkirmishMatchSettings _settings;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _statusTimer;
         PROPERTY( RuntimeState, Min = 0 )
-        float32 _huntTimer;
-        uint8   _humanMask; ///< 사람이 맡은 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`)
+        float32              _huntTimer;
+        SW_CODEC_STATE uint8 _humanMask; ///< 사람이 맡은 플레이어 깃발(`kHumanPlayer0` · `kHumanPlayer1`)
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         uint8 _bReportedOver;
     };

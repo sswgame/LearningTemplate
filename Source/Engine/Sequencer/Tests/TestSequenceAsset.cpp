@@ -211,7 +211,7 @@ SW_TEST_CASE( SequencerTest, ScenarioItemNeedsItsScenario )
     SW_EXPECT_TRUE( asset.loadFromXMLText(
         R"(<SequenceAsset _frameMin="0" _frameMax="10" _whenFinished="RestoreState"><_listItem><SequenceTrackItem _name="Demo" _scenario="game/playground/automation/loadscene.scenario.xml" _start="3" _end="3" _kind="Scenario" /></_listItem></SequenceAsset>)" ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, asset._listItem.size() );
-    SW_EXPECT_EQUAL( string( "game/playground/automation/loadscene.scenario.xml" ), asset._listItem[0]._scenario );
+    SW_EXPECT_EQUAL( string( "game/playground/automation/loadscene.scenario.xml" ), asset._listItem[0]._scenario.path() );
 
     SW_EXPECT_LOG( "SequenceAsset.SequenceItemField" );
     SW_EXPECT_FALSE(

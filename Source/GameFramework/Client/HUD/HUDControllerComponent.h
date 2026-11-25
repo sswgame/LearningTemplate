@@ -93,11 +93,11 @@ namespace sw
         };
 
     private:
-        UISystem*      _pUISystem; ///< 화면을 연 UI 시스템(없으면 nullptr)
-        UIOwnedScreen  _screen;
-        UIViewModel*   _pViewModel; ///< HUD 문서의 바인딩 소스. 게임이 소유하고 이 컴포넌트와 화면은 빌려 쓴다
-        ViewModelWatch _viewModelWatch;
-        Subscription   _viewModelSubscription; ///< 뷰모델의 관찰자 등록(뷰모델이 지워지면 `_viewModelWatch` 가 뗀다)
+        UISystem*                   _pUISystem; ///< 화면을 연 UI 시스템(없으면 nullptr)
+        SW_TRANSIENT UIOwnedScreen  _screen;
+        UIViewModel*                _pViewModel; ///< HUD 문서의 바인딩 소스. 게임이 소유하고 이 컴포넌트와 화면은 빌려 쓴다
+        SW_TRANSIENT ViewModelWatch _viewModelWatch;
+        Subscription                _viewModelSubscription; ///< 뷰모델의 관찰자 등록(뷰모델이 지워지면 `_viewModelWatch` 가 뗀다)
         PROPERTY( DisplayName = "Document", Tooltip = "HUD document (*.ui.xml) opened on the HUD layer" )
         AssetRef<UIDocumentAsset> _documentPath;
     };

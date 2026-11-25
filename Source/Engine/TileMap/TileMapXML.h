@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -17,6 +18,9 @@
 
 namespace sw
 {
+    struct SceneDocument;
+    class TileSetAsset;
+
     /**
      * @brief 워프(`<warps><warp x y map tx ty pair/>`) 하나의 칸입니다. 자리 · 도착 맵(같은 맵이면 빈 글) · 도착 자리는 필수다 — 빠진 좌표를 (0, 0) 으로 두지 않는다.
      * @details 칸 순서가 파일의 속성 순서다(저장 바이트를 기존 형식 그대로 지킨다 — `TileMapXMLTest.SavedBytesMatchTheExistingFormat`).
@@ -55,10 +59,12 @@ namespace sw
         int32 _width{ 0 };
         PROPERTY( Required )
         int32 _height{ 0 };
-        PROPERTY( AssetPath )
-        string _scene{};
+        PROPERTY()
+        AssetRef<SceneDocument> _scene;
         PROPERTY()
         string _role{};
+
+        TileMapHeaderParams();
     };
 
     /** @brief 스폰(`<spawn x y/>`)의 칸입니다. 맵 안의 자리인지는 크기를 아는 읽기가 본다. */
@@ -79,8 +85,10 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath )
-        string _tileSet{};
+        PROPERTY()
+        AssetRef<TileSetAsset> _tileSet;
+
+        TileLayerParams();
     };
 
     /** @brief 팔레트 줄(`<palette><b name/>`)의 칸입니다. */

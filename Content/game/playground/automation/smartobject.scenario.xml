@@ -47,7 +47,7 @@
 	<Store watch="Save.Written" as="writtenBefore"/>
 	<DevCommand line="game.save playground/smartobject"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
-	<LoadScene path="game/playground/maps/smartobject.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:b4c8f610e90b8bdf47937581e352e433" timeoutFrames="600"/>
 	<WaitUntil watch="SmartObject.FreeSlots" target="Bench" equals="2" timeoutFrames="30"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
 	<Store watch="Save.Loaded" as="loadedBefore"/>
 	<DevCommand line="game.load playground/smartobject"/>

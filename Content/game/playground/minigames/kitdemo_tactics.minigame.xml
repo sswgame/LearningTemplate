@@ -4,4 +4,4 @@
   장르 키트 시연 미니게임 — TacticsSRPG 키트. 맵의 디렉터(GameModeComponent 파생)가 읽는 지형 · 무기 · 유닛 · 파일럿(data/srpg.xml)을 게임 기능 TacticsSRPG 가 미니게임 범위에 건다.
   시나리오 automation/kitdemo_tactics.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="kitdemo_tactics" map="game/playground/maps/kitdemo_tactics.scene.xml" entry="SceneSwitch" features="TacticsSRPG" catalogs="SRPGCatalog"/>
+<Minigame name="kitdemo_tactics" map="guid:48c8ff4a8e1b3f7aef57ff6b3c264b0e" entry="SceneSwitch" features="TacticsSRPG" catalogs="SRPGCatalog"/>

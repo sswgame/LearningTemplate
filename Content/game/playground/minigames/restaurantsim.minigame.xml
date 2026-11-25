@@ -7,4 +7,4 @@
   입력은 걷기 공통 레이어(줄 고르기)와 Restaurant 레이어(restaurantsim/data/restaurant.input.xml)만 켠다. 안에서 저장한다(영업 중의 손님 · 주문까지 실린다).
   시나리오 automation/restaurantsim_slice.scenario.xml 이 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="restaurantsim" map="game/playground/restaurantsim/maps/diner.scene.xml" entry="SceneSwitch" portalSlot="27" save="Allowed" features="RestaurantSim" inputContexts="Movement,Restaurant" catalogs="RestaurantCatalog,RecipeCatalog"/>
+<Minigame name="restaurantsim" map="guid:47387cd0b8c5442883c6dbaa7b1bd108" entry="SceneSwitch" portalSlot="27" save="Allowed" features="RestaurantSim" inputContexts="Movement,Restaurant" catalogs="RestaurantCatalog,RecipeCatalog"/>

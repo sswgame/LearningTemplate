@@ -11,13 +11,13 @@
 	<DevCommand line="minigame.enter smoketest"/>
 	<ExpectLog id="DevCommand.Reply" contains="minigame.enter: entering 'smoketest'" atLeast="1"/>
 	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/> <!-- 맵 로드(워커)가 끝났다 -->
-	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<ExpectActiveScene path="guid:3fcd0f83c113a08accb7a73b7f3ca1bc"/>
 	<ExpectLog id="MinigameFlow.Activated" contains="'smoketest' is active (0 features)" count="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<ExpectLog id="DevCommand.Reply" contains="minigame.leave: leaving" atLeast="1"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/fogshowcase.scene.xml"/>
+	<ExpectActiveScene path="guid:18182025ed2be61069d33dff8765efc9"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<ExpectLog id="MinigameFlow.Restored" count="1"/>

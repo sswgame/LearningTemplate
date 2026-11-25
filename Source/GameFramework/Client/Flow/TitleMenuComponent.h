@@ -30,6 +30,6 @@ namespace sw
         void onEndPlay() override;
 
     private:
-        UIOwnedScreen _menu;
+        SW_TRANSIENT UIOwnedScreen _menu;
     };
 } // namespace sw

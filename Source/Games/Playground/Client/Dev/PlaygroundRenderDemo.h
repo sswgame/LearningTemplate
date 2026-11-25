@@ -7,6 +7,7 @@
  *          셰이더가 선언되지 않았으므로 두 패스는 오류를 한 번 남기고 넣어지지 않는다(대체 셰이더 없음).
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -14,6 +15,8 @@
 
 namespace sw
 {
+    struct StressTestSceneSettings;
+
     /** @brief 큐브 요소를 내는 렌더 스레드 프록시입니다. 값은 `setElements`(프레임 시작에 렌더 스레드가 적용하는 갱신)로만 바뀝니다. */
     class PlaygroundDrawDemoProxy final : public IExtensionSceneProxy
     {
@@ -29,7 +32,14 @@ namespace sw
     class PlaygroundRenderExtension final : public IRenderExtension
     {
     public:
+        /** @brief 두 패스가 프로그램으로 쓰는 셰이더를 받습니다(파이프라인 `_listExtensionShader` 에 선언돼 있어야 한다). */
+        PlaygroundRenderExtension( string_view tintShader, string_view drawShader );
+
         void declarePasses( ExtensionPassBuilder& builder ) override;
+
+    private:
+        string _tintShader;
+        string _drawShader;
     };
 
     /**
@@ -40,7 +50,7 @@ namespace sw
     class PlaygroundRenderDemo
     {
     public:
-        explicit PlaygroundRenderDemo( RenderExtensionRegistry& registry );
+        PlaygroundRenderDemo( RenderExtensionRegistry& registry, const StressTestSceneSettings& settings );
 
     private:
         PlaygroundRenderExtension       _extension;

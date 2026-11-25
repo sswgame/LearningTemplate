@@ -6,4 +6,4 @@
   맵의 House 오브젝트에 SurvivalHorrorGameModeComponent → SurvivalHorrorAvatarComponent(GF_Client_SurvivalHorror) → HUDControllerComponent 가 그 순서로 붙는다.
   타자기 세이브가 있는 긴 판이라 안에서 저장한다. 입력은 걷기 공통 레이어와 SurvivalHorror 레이어(survivalhorror/data/survivalhorror.input.xml)만 켠다. 시나리오 automation/survivalhorror_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="survivalhorror" map="game/playground/survivalhorror/maps/house.scene.xml" entry="SceneSwitch" portalSlot="23" save="Allowed" features="SurvivalHorror" inputContexts="Movement,SurvivalHorror" catalogs="SurvivalHorrorCatalog"/>
+<Minigame name="survivalhorror" map="guid:e7d142e6c46a4ef5b1f973ddfdc2b4ce" entry="SceneSwitch" portalSlot="23" save="Allowed" features="SurvivalHorror" inputContexts="Movement,SurvivalHorror" catalogs="SurvivalHorrorCatalog"/>

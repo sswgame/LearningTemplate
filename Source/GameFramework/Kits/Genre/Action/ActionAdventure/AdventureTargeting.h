@@ -102,12 +102,12 @@ namespace sw
         void refreshTargetPosition( const vector<LockOnCandidate>& listCandidate );
 
     private:
-        AdventureTargetingSettings _settings;
-        LockOnSelector             _selector;
+        SW_TRANSIENT AdventureTargetingSettings _settings;
+        SW_CODEC_STATE LockOnSelector           _selector;
         PROPERTY( RuntimeState )
-        float3    _targetPosition;
-        Countdown _evade;
-        Countdown _invulnerable;
+        float3                   _targetPosition;
+        SW_CODEC_STATE Countdown _evade;
+        SW_CODEC_STATE Countdown _invulnerable;
         PROPERTY( RuntimeState )
         AdventureTargetingState _state;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

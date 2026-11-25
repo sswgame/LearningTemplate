@@ -64,7 +64,7 @@
 	<Store watch="Save.Written" as="writtenBefore"/>
 	<DevCommand line="game.save playground/crafting"/>
 	<WaitUntil watch="Save.Written" differsFrom="writtenBefore" timeoutWallSeconds="10"/>
-	<LoadScene path="game/playground/maps/inventorydemo.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:5e4824070a8d6dfc5280c9330cd91a9b" timeoutFrames="600"/>
 	<WaitUntil watch="Appearance.Idle" target="Player" equals="1" timeoutFrames="300"/>
 	<Expect watch="Object.Property" target="CraftingStation" key="CraftingDemoComponent._queueCount" equals="0"/> <!-- 새 판 — 불러오기가 정말 되돌리는지 가린다 -->
 	<Expect watch="Equipment.ItemCount" target="Player" key="helmet_knight" equals="0"/>

@@ -1,0 +1,7 @@
+<?asset guid="dc9f21b98dc42f4bc5279f5d028da974"?>
+<!-- 에디터 기본 에셋 경로(EditorDefaultAssets.h) — 모든 칸이 필수다. 빠지거나 가리키는 파일이 없으면 에디터 기동이 오류로 멈춘다. -->
+<EditorDefaultAssets _localizationProject="guid:fb907e48bbc1b7988533a46e358d6592"
+                     _iconGlyphTable="guid:c7d6b8910dc317fa95ac1a7c072cd5f3"
+                     _componentIconTable="guid:d58b12565b984cb97a7f9886a13a7b4b"
+                     _panelNames="guid:7cce7c104422af68ed7afd0da1c239df"
+                     _contentBrowserFavorites="guid:0a0875637433fc573242bcef5add189e" />

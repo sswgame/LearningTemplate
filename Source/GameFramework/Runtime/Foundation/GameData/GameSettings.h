@@ -105,6 +105,9 @@ namespace sw
         DataPath _onlineOfferCatalog; ///< 상점 화면의 상품(`*.offers.xml`, `OfferCatalog` — 서버 경제 키트와 같은 파일). 적지 않으면 온라인 상점이 없다
 
         PROPERTY()
+        DataPath _onlineShopDocument; ///< 온라인 상점 화면 문서(`*.ui.xml`). 적지 않으면 온라인 상점 화면이 없다
+
+        PROPERTY()
         string _onlineSoftCurrency; ///< 놀며 얻는 재화의 자산 id(경제 키트 통화 카탈로그). 우편 · 거래가 싣는다
 
         PROPERTY()

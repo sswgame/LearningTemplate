@@ -59,7 +59,7 @@ namespace sw
         PROPERTY( Category = "Water", DisplayName = "Layer Mask", Tooltip = "Physics layers (bit per layer index) that float" )
         uint32 _layerMask;
 
-        vector<PhysicsBodyHandle> _listOverlapBody;    ///< 고정 스텝마다 다시 채우는 겹친 바디(할당을 되풀이하지 않는다)
-        uint32                    _submergedBodyCount; ///< 지난 고정 스텝의 잠긴 바디 수
+        SW_TRANSIENT vector<PhysicsBodyHandle> _listOverlapBody;    ///< 고정 스텝마다 다시 채우는 겹친 바디(할당을 되풀이하지 않는다)
+        SW_TRANSIENT uint32                    _submergedBodyCount; ///< 지난 고정 스텝의 잠긴 바디 수
     };
 } // namespace sw

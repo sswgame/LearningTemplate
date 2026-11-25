@@ -130,15 +130,15 @@ namespace sw
                   Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
         vector<AssetRef<MeshAssetFormat>> _listDefaultGrowingModel;
 
-        vector<GameObjectHandle>     _listTileObject; ///< 세운 칸 오브젝트(흙 · 작물)
-        MaterialTintCache            _tintCache;      ///< 흙과 작물 색(같은 색은 나눠 쓴다).
-        vector<CropLook>             _listCropLook;
-        vector<MeshHandle>           _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        shared_ptr<MaterialInstance> _arrSoilLook[3];
-        shared_ptr<MaterialInstance> _plainCropLook;
-        shared_ptr<MaterialInstance> _witheredCropLook;
-        uint8                        _bSpawned  : 1; ///< 칸 오브젝트가 서 있다
-        uint8                        _bRejected : 1; ///< 작물 모델 표가 틀려 세우지 않는다(`validateModels`)
-        [[maybe_unused]] uint8       _reserved  : 6;
+        vector<GameObjectHandle> _listTileObject; ///< 세운 칸 오브젝트(흙 · 작물)
+        MaterialTintCache        _tintCache;      ///< 흙과 작물 색(같은 색은 나눠 쓴다).
+        SW_TRANSIENT vector<CropLook> _listCropLook;
+        vector<MeshHandle>            _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
+        shared_ptr<MaterialInstance>  _arrSoilLook[3];
+        SW_TRANSIENT shared_ptr<MaterialInstance> _plainCropLook;
+        SW_TRANSIENT shared_ptr<MaterialInstance> _witheredCropLook;
+        SW_TRANSIENT uint8                        _bSpawned  : 1; ///< 칸 오브젝트가 서 있다
+        uint8                                     _bRejected : 1; ///< 작물 모델 표가 틀려 세우지 않는다(`validateModels`)
+        [[maybe_unused]] uint8                    _reserved  : 6;
     };
 } // namespace sw

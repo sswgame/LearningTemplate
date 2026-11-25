@@ -706,23 +706,10 @@ namespace sw::editor
                     return true;
                 }
 
-                string edited   = *pValue;
-                bool   bChanged = false;
-                bool   bApplied = false;
-                if ( row._bAssetPath != SW_FALSE )
-                {
-                    string                 droppedPath;
-                    const AssetFieldAction action = drawAssetPathField(
-                        [&edited, &bChanged]( const utf8* pID )
-                    { bChanged = EditorWidgets::drawTextField( pID, edited ); }, row, model, string_view{ *pValue }, droppedPath );
-                    bApplied = applyAssetFieldAction( action, row, model, droppedPath );
-                }
-                else if ( row._bMultiline != SW_FALSE )
-                    bChanged = EditorWidgets::drawTextFieldMultiline( _pLabel, edited );
-                else
-                    bChanged = EditorWidgets::drawTextField( _pLabel, edited );
+                string     edited   = *pValue;
+                const bool bChanged = row._bMultiline != SW_FALSE ? EditorWidgets::drawTextFieldMultiline( _pLabel, edited ) : EditorWidgets::drawTextField( _pLabel, edited );
                 showTooltipIfHovered( row );
-                if ( bChanged && bApplied == false )
+                if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ std::move( edited ) } );
                 return true;
             }
@@ -742,28 +729,16 @@ namespace sw::editor
                     return true;
                 }
 
-                hashed_string edited   = *pValue;
-                bool          bChanged = false;
-                bool          bApplied = false;
-                if ( row._bAssetPath != SW_FALSE )
-                {
-                    string                 droppedPath;
-                    const AssetFieldAction action = drawAssetPathField(
-                        [&edited, &bChanged]( const utf8* pID )
-                    { bChanged = drawNameInput( EditorWidgetID::fromString( pID ), edited ); }, row, model, pValue->view(), droppedPath );
-                    bApplied = applyAssetFieldAction( action, row, model, droppedPath );
-                }
-                else
-                {
-                    bool bUnknownSource = row._nameSource.empty();
-                    if ( bUnknownSource == false )
-                        bChanged = drawNameChoice( kValueWidgetID, row._nameSource, edited, bUnknownSource );
-                    if ( bUnknownSource )
-                        bChanged = drawNameInput( kValueWidgetID, edited );
-                }
+                hashed_string edited         = *pValue;
+                bool          bChanged       = false;
+                bool          bUnknownSource = row._nameSource.empty();
+                if ( bUnknownSource == false )
+                    bChanged = drawNameChoice( kValueWidgetID, row._nameSource, edited, bUnknownSource );
+                if ( bUnknownSource )
+                    bChanged = drawNameInput( kValueWidgetID, edited );
                 showTooltipIfHovered( row );
                 // 되돌리기는 프로퍼티 값 글(이름 글)로 남는다 — 인턴된 문자열은 해제되지 않으므로 되돌린 이름도 언제나 다시 인턴된다.
-                if ( bChanged && bApplied == false )
+                if ( bChanged )
                     model.setRowValue( row._rowID, TaskValue{ edited } );
                 return true;
             }

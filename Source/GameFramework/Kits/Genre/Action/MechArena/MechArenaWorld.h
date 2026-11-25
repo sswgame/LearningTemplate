@@ -339,19 +339,19 @@ namespace sw
         void pushEvent( MechArenaEvent::Kind kind, optional<int32> pilot, optional<int32> other, float32 value, const hashed_string& id );
 
     private:
-        MechArenaSettings    _settings;
-        vector<MechPilot>    _listPilot;
-        ProjectileSimulation _projectiles;
+        SW_TRANSIENT MechArenaSettings _settings;
+        SW_CODEC_STATE vector<MechPilot>    _listPilot;
+        SW_CODEC_STATE ProjectileSimulation _projectiles;
         PROPERTY( RuntimeState )
-        vector<hashed_string>              _listTeamName;
-        NotificationBuffer<MechArenaEvent> _eventBuffer;
-        vector<LockOnCandidate>            _listCandidateScratch;
-        MatchState                         _match;
-        FixedStepTimer                     _timer;
-        const MechCatalog*                 _pMechCatalog; ///< 빌린 카탈로그 — 넷은 `initialize` 가 함께 정한다(조종사는 그 뒤에만 들어와 조종사가 있으면 늘 있다)
-        const WeaponCatalog*               _pWeaponCatalog;
-        const ProjectileCatalog*           _pProjectileCatalog;
-        const MoveCatalog*                 _pMoveCatalog;
+        vector<hashed_string> _listTeamName;
+        SW_TRANSIENT NotificationBuffer<MechArenaEvent> _eventBuffer;
+        SW_TRANSIENT vector<LockOnCandidate> _listCandidateScratch;
+        SW_CODEC_STATE MatchState            _match;
+        SW_CODEC_STATE FixedStepTimer        _timer;
+        const MechCatalog*                   _pMechCatalog; ///< 빌린 카탈로그 — 넷은 `initialize` 가 함께 정한다(조종사는 그 뒤에만 들어와 조종사가 있으면 늘 있다)
+        const WeaponCatalog*                 _pWeaponCatalog;
+        const ProjectileCatalog*             _pProjectileCatalog;
+        const MoveCatalog*                   _pMoveCatalog;
         PROPERTY( RuntimeState )
         uint32 _tick;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

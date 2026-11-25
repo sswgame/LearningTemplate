@@ -26,7 +26,7 @@ namespace sw
             /** @brief 씬을 GUID 참조로 적습니다 — 세이브가 남은 뒤 씬을 옮겨도 풀린다. */
             static void writeScene( Archive& arch, const string& scenePath )
             {
-                arch.writeString( AssetRegistry::makeReferenceText( scenePath, AssetRegistry::resolveGUID( scenePath ) ) );
+                arch.writeString( AssetRegistry::makeIndexedReferenceText( scenePath ) );
             }
 
             /** @brief 넘기지 못한 결과 하나를 씁니다. */

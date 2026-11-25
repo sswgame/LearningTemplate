@@ -27,6 +27,7 @@ namespace sw
     class GameObjectManager;
     class RhythmGameModeComponent;
     class RhythmHUDViewModel;
+    struct AudioMusicAsset;
 
     /**
      * @class RhythmViewComponent
@@ -70,8 +71,8 @@ namespace sw
         void updateHUD( const RhythmGameModeComponent& director );
 
     private:
-        PROPERTY( Category = "Song", AssetPath, DisplayName = "Music", Required, Tooltip = "Adaptive music (*.music.xml) whose start segment is the song" )
-        string _music;
+        PROPERTY( Category = "Song", DisplayName = "Music", Required, Tooltip = "Adaptive music (*.music.xml) whose start segment is the song" )
+        AssetRef<AudioMusicAsset> _music;
         PROPERTY( Required, Category = "Input", DisplayName = "Lane Actions", Tooltip = "InputMap action of each lane, left to right (one per chart lane)" )
         vector<hashed_string> _listLaneAction;
         PROPERTY( Category = "View", DisplayName = "Note Prefab", Required, Tooltip = "Unit piece used for lanes, the judge line and notes" )
@@ -89,13 +90,13 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Note Color" )
         float4 _noteColor;
 
-        PrefabViewBatch                _laneViews;
-        PrefabViewBatch                _noteViews;
-        unique_ptr<RhythmHUDViewModel> _hudViewModel;     ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        vector<uint8>                  _listLaneHeld;     ///< 레인마다 지난 프레임에 눌려 있었는가
-        float32                        _musicStart;       ///< 음악을 튼 때의 곡 시각(초) — 되살린 판은 그 자리부터 흐른다
-        MusicPhase                     _musicPhase;       ///< 음악의 단계
-        uint8                          _bMusicPaused : 1; ///< 게임이 멈춰 음악을 멈춰 두었다
-        [[maybe_unused]] uint8         _reserved     : 7;
+        SW_TRANSIENT PrefabViewBatch   _laneViews;
+        SW_TRANSIENT PrefabViewBatch   _noteViews;
+        unique_ptr<RhythmHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT vector<uint8> _listLaneHeld;     ///< 레인마다 지난 프레임에 눌려 있었는가
+        float32                    _musicStart;       ///< 음악을 튼 때의 곡 시각(초) — 되살린 판은 그 자리부터 흐른다
+        SW_TRANSIENT MusicPhase    _musicPhase;       ///< 음악의 단계
+        SW_TRANSIENT uint8         _bMusicPaused : 1; ///< 게임이 멈춰 음악을 멈춰 두었다
+        [[maybe_unused]] uint8     _reserved     : 7;
     };
 } // namespace sw

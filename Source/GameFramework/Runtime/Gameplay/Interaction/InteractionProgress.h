@@ -132,12 +132,12 @@ namespace sw
         void pushEvent( InteractionEvent::Kind kind, uint32 actorID, float32 value = 0.0f );
 
     private:
-        InteractionConfig _config;
+        SW_CODEC_STATE InteractionConfig _config;
         PROPERTY( RuntimeState )
-        vector<uint32>                       _listParticipant; ///< 붙은 순서
-        NotificationBuffer<InteractionEvent> _eventBuffer;
-        const TimingJudge*                   _pJudge;
-        GameRandom                           _random;
+        vector<uint32> _listParticipant; ///< 붙은 순서
+        SW_TRANSIENT NotificationBuffer<InteractionEvent> _eventBuffer;
+        const TimingJudge*                                _pJudge;
+        SW_CODEC_STATE GameRandom                         _random;
         PROPERTY( RuntimeState )
         uint32 _seed;
         PROPERTY( RuntimeState )
@@ -145,8 +145,8 @@ namespace sw
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
         float32 _progress;
         PROPERTY( RuntimeState )
-        float32   _time;
-        Countdown _skillCheckCountdown; ///< 다음 체크까지 남은 시간. 참가자가 있는 동안에만 줄어든다
+        float32                  _time;
+        SW_CODEC_STATE Countdown _skillCheckCountdown; ///< 다음 체크까지 남은 시간. 참가자가 있는 동안에만 줄어든다
         PROPERTY( RuntimeState )
         float32 _skillCheckTarget;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )

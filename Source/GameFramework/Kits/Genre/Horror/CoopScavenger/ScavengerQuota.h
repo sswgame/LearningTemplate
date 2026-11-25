@@ -61,7 +61,7 @@ namespace sw
         bool  isGameOver() const { return _bGameOver == SW_TRUE; }
 
     private:
-        ScavengerQuotaDef _settings;
+        SW_TRANSIENT ScavengerQuotaDef _settings;
         PROPERTY( RuntimeState, Min = 1 )
         int32 _quota;
         PROPERTY( RuntimeState, Min = 0 )

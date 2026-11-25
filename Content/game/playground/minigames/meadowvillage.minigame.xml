@@ -9,4 +9,4 @@
   대화(CreatureTown.Talk)는 꺼진 입력 레이어 CreatureTown(meadowvillage/data/town.input.xml)이고 미니게임이 켠다 — 빨리 감기 Space 와 타일 마을 말 걸기(Interact)의 Space 가 함께 발화하지 않는다.
   걷는 폰이 없어 Movement 는 켜지 않는다. 시나리오 automation/meadowvillage_* 가 실행 전역 변수 gv_firstMinigame 로, 하우징 서버 권위는 automation/editor/meadowvillage_nethousing 이 본다.
 -->
-<Minigame name="meadowvillage" map="game/playground/meadowvillage/maps/meadow.scene.xml" entry="SceneSwitch" portalSlot="4" inputContexts="Menu,FastForward,CreatureTown"/>
+<Minigame name="meadowvillage" map="guid:8685ba5dc56189cf33cde66eb51d7133" entry="SceneSwitch" portalSlot="4" inputContexts="Menu,FastForward,CreatureTown"/>

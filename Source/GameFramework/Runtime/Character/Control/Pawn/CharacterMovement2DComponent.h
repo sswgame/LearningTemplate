@@ -73,6 +73,6 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Movement", DisplayName = "Climbing", Tooltip = "Runtime" )
         bool _bClimbing;
 
-        optional<int32> _jumpIndex;
+        SW_TRANSIENT optional<int32> _jumpIndex;
     };
 } // namespace sw

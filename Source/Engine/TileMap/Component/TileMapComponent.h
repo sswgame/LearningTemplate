@@ -18,6 +18,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Physics/IPhysicsSceneFwd.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
@@ -85,6 +86,10 @@ namespace sw
         bool rebuild();
         /** @brief 칸에 브러시를 칠합니다(빈 이름은 지우기). 그 칸과 이웃의 모습 · 바디 · 외곽선을 다시 맞춥니다. 모르는 브러시 · 맵 밖은 false 입니다. */
         bool setTileBrush( int32 x, int32 y, string_view brushName );
+        /** @brief 맵을 읽은 뒤 칠한 칸(`setTileBrush`)의 자리와 브러시 이름입니다. 칠하지 않은 맵은 쓰는 것이 없습니다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        /** @brief `serializeState` 의 바이트를 되돌립니다 — 읽은 맵 위에 다시 칠합니다. */
+        void restoreState( vector<uint8>&& bytes );
 
         /** @brief 칸 하나가 지금 보이는 아틀라스 칸입니다(빈 칸이면 -1). 시각은 애니메이션 시각입니다. */
         optional<int32> getDisplayedCell( int32 x, int32 y ) const;
@@ -168,25 +173,26 @@ namespace sw
         PROPERTY( Category = "Physics", DisplayName = "Generate Colliders", Tooltip = "Turn solid tiles into merged rectangle bodies" )
         bool _bGenerateColliders;
 
-        TileMapXMLData                          _map;               ///< 읽은 맵. 저장하지 않습니다
-        shared_ptr<const TileSetAsset>          _pTileSet;          ///< 읽은 타일셋(공유 캐시의 한 벌). 읽기 전이면 nullptr
-        TileChunkGrid                           _chunkGrid;         ///< 칸 → 청크 배치
-        vector<uint16>                          _listBrushIndex;    ///< 칸마다 타일셋 브러시 번호 + 1 (0 = 빈 칸)
-        vector<uint8>                           _listAnimatedFlag;  ///< 칸마다 `_listAnimatedCell` 에 들었는지(찾기를 선형 탐색으로 하지 않는다)
-        vector<uint32>                          _listAnimatedCell;  ///< 애니메이션 모습을 보이는 칸 번호
-        vector<TileRect>                        _listSolidRect;     ///< 병합한 충돌 사각형
-        vector<TileEdge>                        _listOutlineEdge;   ///< 외곽선 토막
-        vector<PhysicsBodyHandle>               _listChunkBody;     ///< 청크마다 2D 물리 정적 바디 하나(셰이프 여럿, 빈 청크는 무효 핸들) — 맵 원점에 놓아 오브젝트를 따라 옮긴다
-        vector<uint8>                           _listChunkDirty;    ///< 칠해서 바디를 다시 만들 청크(`flushCollision`)
-        float2                                  _colliderScale;     ///< 바디 셰이프를 만든 배율 — 바뀌면 다시 만든다
-        vector<unique_ptr<SpriteInstanceBatch>> _listChunkBatch;    ///< 청크마다 배치(빈 청크는 nullptr). 청크 안 칸마다 항목 하나
-        float4x4                                _lastOwnerWorld;    ///< 마지막으로 칸을 놓은 오브젝트 월드 행렬
-        const SceneComponent*                   _pLastOwnerRoot;    ///< `_lastOwnerWorld` 를 읽은 장면 컴포넌트(비교만 한다 — 번호는 같은 칸끼리만 견준다)
-        uint32                                  _lastOwnerVersion;  ///< 그때의 월드 변경 번호 — 같으면 행렬을 읽어 비교하지 않는다
-        AssetReloadWatch<TileSetAsset>          _tileSetReload;     ///< 타일셋을 받을 때의 타일셋 캐시 다시 읽기 횟수(바뀌면 새 객체를 받아 다시 짓는다)
-        float32                                 _elapsedSeconds;    ///< 애니메이션 시각
-        uint8                                   _bLoaded;           ///< 맵 · 타일셋을 읽었는가
-        uint8                                   _bChunkBuildQueued; ///< 빈 청크에 칠해 배치를 틱 뒤에 만들기로 했는가
-        uint8                                   _bCollisionDirty;   ///< 표시된 청크가 있는가(`flushCollision`)
+        SW_TRANSIENT TileMapXMLData    _map;                                    ///< 읽은 맵에 칠한 것을 얹은 것. 맵 파일과 칠한 칸에서 다시 선다
+        shared_ptr<const TileSetAsset> _pTileSet;                               ///< 읽은 타일셋(공유 캐시의 한 벌). 읽기 전이면 nullptr
+        SW_TRANSIENT TileChunkGrid     _chunkGrid;                              ///< 칸 → 청크 배치
+        SW_CODEC_STATE vector<uint8> _listPaintedFlag;                          ///< 칸마다 맵을 읽은 뒤 칠했는지(`serializeState` 가 그 칸의 브러시 이름을 싣는다)
+        SW_TRANSIENT vector<uint16> _listBrushIndex;                            ///< 칸마다 타일셋 브러시 번호 + 1 (0 = 빈 칸)
+        SW_TRANSIENT vector<uint8> _listAnimatedFlag;                           ///< 칸마다 `_listAnimatedCell` 에 들었는지(찾기를 선형 탐색으로 하지 않는다)
+        SW_TRANSIENT vector<uint32> _listAnimatedCell;                          ///< 애니메이션 모습을 보이는 칸 번호
+        SW_TRANSIENT vector<TileRect> _listSolidRect;                           ///< 병합한 충돌 사각형
+        SW_TRANSIENT vector<TileEdge> _listOutlineEdge;                         ///< 외곽선 토막
+        SW_TRANSIENT vector<PhysicsBodyHandle> _listChunkBody;                  ///< 청크마다 2D 물리 정적 바디 하나(셰이프 여럿, 빈 청크는 무효 핸들) — 맵 원점에 놓아 오브젝트를 따라 옮긴다
+        SW_TRANSIENT vector<uint8> _listChunkDirty;                             ///< 칠해서 바디를 다시 만들 청크(`flushCollision`)
+        SW_TRANSIENT float2        _colliderScale;                              ///< 바디 셰이프를 만든 배율 — 바뀌면 다시 만든다
+        SW_TRANSIENT vector<unique_ptr<SpriteInstanceBatch>> _listChunkBatch;   ///< 청크마다 배치(빈 청크는 nullptr). 청크 안 칸마다 항목 하나
+        SW_TRANSIENT float4x4                                _lastOwnerWorld;   ///< 마지막으로 칸을 놓은 오브젝트 월드 행렬
+        const SceneComponent*                                _pLastOwnerRoot;   ///< `_lastOwnerWorld` 를 읽은 장면 컴포넌트(비교만 한다 — 번호는 같은 칸끼리만 견준다)
+        SW_TRANSIENT uint32                                  _lastOwnerVersion; ///< 그때의 월드 변경 번호 — 같으면 행렬을 읽어 비교하지 않는다
+        SW_TRANSIENT AssetReloadWatch<TileSetAsset> _tileSetReload;             ///< 타일셋을 받을 때의 타일셋 캐시 다시 읽기 횟수(바뀌면 새 객체를 받아 다시 짓는다)
+        SW_TRANSIENT float32                        _elapsedSeconds;            ///< 애니메이션 시각
+        SW_TRANSIENT uint8                          _bLoaded;                   ///< 맵 · 타일셋을 읽었는가
+        SW_TRANSIENT uint8                          _bChunkBuildQueued;         ///< 빈 청크에 칠해 배치를 틱 뒤에 만들기로 했는가
+        SW_TRANSIENT uint8                          _bCollisionDirty;           ///< 표시된 청크가 있는가(`flushCollision`)
     };
 } // namespace sw

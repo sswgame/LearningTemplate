@@ -85,10 +85,10 @@ namespace sw
         PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
         AssetRef<PrefabAsset> _markerPrefab;
 
-        PrefabViewBatch                    _bodies;
-        PrefabViewBatch                    _markers;
+        SW_TRANSIENT PrefabViewBatch       _bodies;
+        SW_TRANSIENT PrefabViewBatch       _markers;
         unique_ptr<JRPGBattleHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
-        int32                              _target;       ///< 고른 적
+        SW_TRANSIENT int32                 _target;       ///< 고른 적
         int32                              _lastStep;     ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 적을 고른다
     };
 } // namespace sw

@@ -27,11 +27,11 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 지난 프레임에 엔진에 넣은 상태입니다(속도는 자리 차이로, 트랜스폼이 그대로면 자리 · 앞 · 위를 이것에서 잇는다). `SceneAudio` 만 씁니다. */
-        AudioListenerState _lastState;
+        SW_TRANSIENT AudioListenerState _lastState;
         /** @brief `_lastState` 를 만든 때의 월드 변경 번호입니다(`getWorldTransformVersion`). `SceneAudio` 만 씁니다. */
-        uint32 _seenTransformVersion;
+        SW_TRANSIENT uint32 _seenTransformVersion;
         /** @brief `_lastState` 가 유효한지입니다. `SceneAudio` 만 씁니다. */
-        bool _bHasLastState;
+        SW_TRANSIENT bool _bHasLastState;
 
         /** @brief 칸 0 · 3D 로 만듭니다. */
         AudioListenerComponent();

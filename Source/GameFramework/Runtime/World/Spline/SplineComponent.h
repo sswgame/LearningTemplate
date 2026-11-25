@@ -65,8 +65,8 @@ namespace sw
         PROPERTY( Category = "Spline", DisplayName = "Closed", Tooltip = "Loop back from the last point to the first" )
         bool _bClosed;
 
-        SplinePath _localPath;
-        SplinePath _worldPath;
-        uint32     _pathRevision;
+        SW_TRANSIENT SplinePath _localPath;
+        SW_TRANSIENT SplinePath _worldPath;
+        SW_TRANSIENT uint32     _pathRevision;
     };
 } // namespace sw

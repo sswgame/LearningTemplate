@@ -81,7 +81,7 @@ namespace sw
          */
         [[nodiscard]] bool writeReflectedTypesList() const;
         /**
-         * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath` · `PROPERTY( AssetPath )`)을 `<이름>\t<대상>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
+         * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath`)을 `<이름>\t<대상>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
          * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/asset_reference_field_list.py` 가 모은다).
          */
         [[nodiscard]] bool writeAssetFieldList() const;

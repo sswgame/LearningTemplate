@@ -380,24 +380,24 @@ namespace sw
         float32    nextRandom() { return _random.nextFloat(); }
 
     private:
-        ThemeParkSettings _settings;
+        SW_CODEC_STATE ThemeParkSettings _settings;
         PROPERTY( RuntimeState )
         vector<ParkRide> _listRide;
         PROPERTY( RuntimeState )
-        vector<ParkGuest> _listGuest;
-        RateAccumulator   _arrival;     ///< 손님 도착(명)
-        RateAccumulator   _runningCost; ///< 운영비(돈)
+        vector<ParkGuest>              _listGuest;
+        SW_CODEC_STATE RateAccumulator _arrival;     ///< 손님 도착(명)
+        SW_CODEC_STATE RateAccumulator _runningCost; ///< 운영비(돈)
         PROPERTY( RuntimeState, Min = 0 )
-        float32        _elapsedTime;
-        FixedStepTimer _stepTimer;
-        GameRandom     _random;
-        Wallet*        _pWallet;    ///< 빌린 지갑(공원 돈 — `initialize` 뒤 늘 있다)
-        LandRegistry*  _pLand;      ///< 빌린 공유 땅(없으면 단독 동작)
-        const NavGrid* _pWalkGrid;  ///< 빌린 걷기 격자(`initialize` 뒤 늘 있다)
-        GridPathfinder _pathfinder; ///< 길 찾기의 작업 배열 — 싣지 않는다
+        float32                       _elapsedTime;
+        SW_CODEC_STATE FixedStepTimer _stepTimer;
+        SW_CODEC_STATE GameRandom     _random;
+        Wallet*                       _pWallet;    ///< 빌린 지갑(공원 돈 — `initialize` 뒤 늘 있다)
+        LandRegistry*                 _pLand;      ///< 빌린 공유 땅(없으면 단독 동작)
+        const NavGrid*                _pWalkGrid;  ///< 빌린 걷기 격자(`initialize` 뒤 늘 있다)
+        SW_TRANSIENT GridPathfinder   _pathfinder; ///< 길 찾기의 작업 배열 — 싣지 않는다
         PROPERTY( RuntimeState, Min = 0, Max = ThemeParkSimulation::kMaxParkRating )
-        int32  _parkRating;
-        uint16 _landOwner;
+        int32               _parkRating;
+        SW_TRANSIENT uint16 _landOwner;
         PROPERTY( RuntimeState, Min = 1 )
         uint32 _nextGuestID;
         PROPERTY( RuntimeState )

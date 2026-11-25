@@ -73,9 +73,9 @@ namespace sw
         PROPERTY( Category = "River", DisplayName = "Sample Spacing", Min = 0.1, Units = m, Tooltip = "Distance between river points taken from the spline" )
         float32 _sampleSpacing;
 
-        uint32 _lastRevision;      ///< 마지막으로 넘긴 스플라인 곡선 번호
-        float3 _lastWaterPosition; ///< 마지막으로 넘길 때의 물 월드 위치
-        bool   _bHasPushed;        ///< 한 번이라도 넘겼다
-        bool   _bReportedMissing;  ///< 물 · 스플라인이 없다는 오류를 남겼다
+        SW_TRANSIENT uint32 _lastRevision;      ///< 마지막으로 넘긴 스플라인 곡선 번호
+        SW_TRANSIENT float3 _lastWaterPosition; ///< 마지막으로 넘길 때의 물 월드 위치
+        SW_TRANSIENT bool   _bHasPushed;        ///< 한 번이라도 넘겼다
+        SW_TRANSIENT bool   _bReportedMissing;  ///< 물 · 스플라인이 없다는 오류를 남겼다
     };
 } // namespace sw

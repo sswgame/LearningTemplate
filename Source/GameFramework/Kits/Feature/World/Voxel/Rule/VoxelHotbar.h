@@ -68,8 +68,8 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        VoxelHotbarSlot          _arrSlot[kSlotCount];
-        const VoxelBlockCatalog* _pCatalog;
+        SW_CODEC_STATE VoxelHotbarSlot _arrSlot[kSlotCount];
+        const VoxelBlockCatalog*       _pCatalog;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _selectedIndex; ///< 위 끝(칸 수)은 열린 경계라 손 본문이 본다
     };

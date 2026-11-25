@@ -137,8 +137,8 @@ namespace sw
         {
             for ( const AppearancePartDef& part : visual._listPart )
             {
-                if ( part._fitTables.empty() == false && uniqueSetTablesPath.insert( part._fitTables ).second )
-                    listTablesPath.push_back( part._fitTables );
+                if ( part._fitTables.empty() == false && uniqueSetTablesPath.insert( part._fitTables.key() ).second )
+                    listTablesPath.push_back( part._fitTables.key() );
             }
         }
         unordered_set<hashed_string> uniqueSetRegion;

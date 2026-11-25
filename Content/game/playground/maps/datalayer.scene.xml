@@ -29,14 +29,14 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="4" name="HouseLeft" scene="game/playground/maps/datalayer_house.scene.xml">
+		<entity id="4" name="HouseLeft" scene="guid:4588d06a105a67a9294144c019d3433c">
 			<GameObject _schemaVersion="0" _name="HouseLeft" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localID="12574257654564749349" _localPosition="-3,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="5" name="HouseRight" scene="game/playground/maps/datalayer_house.scene.xml">
+		<entity id="5" name="HouseRight" scene="guid:4588d06a105a67a9294144c019d3433c">
 			<PrefabOverrides>
 				<Part path="1">
 					<PrefabOverrides>

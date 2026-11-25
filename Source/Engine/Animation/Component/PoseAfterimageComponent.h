@@ -90,11 +90,11 @@ namespace sw
         PROPERTY( Category = "Afterimage", DisplayName = "Capture On Begin Play", Tooltip = "Start capturing when play begins" )
         uint8 _bCaptureOnBeginPlay : 1;
 
-        uint8                  _bCapturing : 1;
+        SW_TRANSIENT uint8     _bCapturing : 1;
         [[maybe_unused]] uint8 _reserved   : 6;
-        vector<Ghost>          _listGhost;
-        float32                _sinceCapture;
-        uint32                 _captureCount;
-        float32                _pendingGhostStep; ///< 틱이 쌓고 틱 뒤 `advanceGhosts` 가 쓰는 시간
+        SW_TRANSIENT vector<Ghost> _listGhost;
+        SW_TRANSIENT float32       _sinceCapture;
+        SW_TRANSIENT uint32        _captureCount;
+        SW_TRANSIENT float32       _pendingGhostStep; ///< 틱이 쌓고 틱 뒤 `advanceGhosts` 가 쓰는 시간
     };
 } // namespace sw

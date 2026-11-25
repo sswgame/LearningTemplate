@@ -86,8 +86,8 @@ namespace sw
         PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
         AssetRef<PrefabAsset> _markerPrefab;
 
-        PrefabViewBatch                     _bodies;
-        PrefabViewBatch                     _markers;
+        SW_TRANSIENT PrefabViewBatch        _bodies;
+        SW_TRANSIENT PrefabViewBatch        _markers;
         unique_ptr<MonsterHuntHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
     };
 } // namespace sw

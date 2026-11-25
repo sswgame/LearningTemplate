@@ -20,6 +20,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -121,8 +122,8 @@ namespace sw
         [[nodiscard]] bool hasRide( int32 rideIndex ) const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Park Layout", AssetPath, Tooltip = "Gate, cash and ride placement XML" )
-        string _parkDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Park Layout", Tooltip = "Gate, cash and ride placement XML" )
+        DataPath _parkDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Gate", Tooltip = "Object whose position is the park gate; empty uses the park layout" )
         GameObjectHandle _gate;
         PROPERTY( Category = "Park", DisplayName = "Walk Blockers", Tooltip = "Scene objects with a static body (stalls, benches, bins) that guests and paths go around" )

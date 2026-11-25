@@ -27,6 +27,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -67,6 +68,9 @@ namespace sw
         friend struct AssetTypeLoader;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `SurfaceState.cpp` 의 캐시 등록 줄이 로더를 더한다). 타입 있는 참조 `AssetRef<SurfaceChannelTable>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "surfacechannels", AssetPathRule{ {}, {}, ".surfacechannels.xml" }, {} );
+
         /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 모르는 속성이나 원소, 겹친 이름은 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 채널을 더합니다(같은 이름은 바꿈). */

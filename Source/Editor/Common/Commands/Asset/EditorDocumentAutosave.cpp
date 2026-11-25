@@ -41,7 +41,7 @@ namespace sw::editor
         if ( FileUtil::writeTextFile( textPath, _text ) == false )
             return false;
         StringBuilder<constant::buffer::kMax512> metaBuilder;
-        metaBuilder.appendFormat( "document=%#\npanel=%#\nproject=%#\nsourceHash=%#\nsaved=%#\n", AssetRegistry::makeReferenceText( _documentPath, AssetRegistry::resolveGUID( _documentPath ) ), _panelID, _projectRoot, _sourceContentHash,
+        metaBuilder.appendFormat( "document=%#\npanel=%#\nproject=%#\nsourceHash=%#\nsaved=%#\n", AssetRegistry::makeIndexedReferenceText( _documentPath ), _panelID, _projectRoot, _sourceContentHash,
                                   FileUtil::getCurrentFileWriteTime() );
         if ( FileUtil::writeTextFile( Internal::makePath( sessionFolder, _documentPath, Internal::kMetaSuffix ), metaBuilder.view() ) == false )
         {

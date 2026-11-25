@@ -149,3 +149,34 @@ namespace sw
         SW_SERVICE_SLOT( ContentHashCache, Required );
     };
 } // namespace sw
+
+namespace sw
+{
+    /** @enum LocalContentHashCacheUse @brief 헤드리스 작업이 로컬 영속 해시 캐시를 쓰는 방법입니다. */
+    enum class LocalContentHashCacheUse : uint8
+    {
+        LoadOnly,    ///< 싣기만 한다 — 검사(`--check-*`)는 아무 파일도 쓰지 않는다
+        LoadAndSave, ///< 싣고, 끝에 이 실행이 구한 해시를 저장한다(쿠킹 · 임포트)
+    };
+
+    /**
+     * @class LocalContentHashCacheScope
+     * @brief 쿠킹 · 임포트 한 번 동안 내용 해시 캐시를 로컬 파일(`ContentHashCache::makeLocalCachePath`)과 잇는 범위입니다 — 변경 없는 다음 실행이 입력 · 산출물을 도장만 보고 넘긴다.
+     * @details 캐시라 못 읽거나 못 써도 경고만 남기고 빈 채로 계속한다. 저장 앞에 파일을 다시 실어, 그 사이 다른 프로세스가 저장한 항목을 지우지 않는다(이 프로세스가 구한 항목이 이긴다).
+     */
+    class SW_API LocalContentHashCacheScope
+    {
+    public:
+        explicit LocalContentHashCacheScope( LocalContentHashCacheUse use );
+        ~LocalContentHashCacheScope();
+        LocalContentHashCacheScope( const LocalContentHashCacheScope& )            = delete;
+        LocalContentHashCacheScope& operator=( const LocalContentHashCacheScope& ) = delete;
+
+    private:
+        /** @brief 로컬 캐시 파일을 싣습니다. 못 읽으면 경고합니다. */
+        static void loadLocalCache();
+
+    private:
+        const LocalContentHashCacheUse _use;
+    };
+} // namespace sw

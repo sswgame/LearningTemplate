@@ -631,7 +631,7 @@
 					                _attachComponent="None" />
 					<ParkGameModeComponent _localID="7846510615290749096" _componentName="ParkGameModeComponent"
 					                       _bActive="true"
-					                       _parkDataPath="game/playground/data/rides.xml"
+					                       _parkDataPath="guid:8bb1bf80a75061ae63c2edc0278ca335"
 					                       _gate="4"
 					                       _autoBuildInterval="20"
 					                       _walkCellSize="1"

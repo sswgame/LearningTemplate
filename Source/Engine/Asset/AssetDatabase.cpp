@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
@@ -118,6 +119,32 @@ namespace sw
         _listKeptDerived    = std::move( loaded._listKeptDerived );
         _listImportedFolder = std::move( loaded._listImportedFolder );
         return true;
+    }
+
+    const AssetIdentityRules& AssetIdentityRules::getProjectRules()
+    {
+        const auto loadOrStop = []()
+        {
+            AssetIdentityRules rules;
+            if ( rules.load( ProcessRoots::get()._project ) == false )
+                reportFatalError( "Asset identity rules %# could not be loaded (see the log)", kConfigFile );
+            return rules;
+        };
+        static const AssetIdentityRules s_rules = loadOrStop(); // 스레드 안전 초기화
+        return s_rules;
+    }
+
+    void AssetIdentityRules::assertSourceFolder( [[maybe_unused]] bool bFound, [[maybe_unused]] string_view sourceFolder )
+    {
+        SW_LOG_ASSERT( bFound, "%# names no source folder '%#' - the importer and the rules disagree", kConfigFile, sourceFolder );
+    }
+
+    bool AssetIdentityRules::isImportSource( string_view sourceFolder, string_view path ) const
+    {
+        bool bSource = false;
+        forEachSourceExtension( sourceFolder, [&bSource, path]( string_view extension )
+        { bSource = bSource || FileUtil::hasExtension( path, extension ); } );
+        return bSource;
     }
 
     AssetIdentityKind AssetIdentityRules::classify( string_view assetID ) const

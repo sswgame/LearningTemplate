@@ -96,8 +96,8 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<hashed_string> _listClothing;
         PROPERTY( RuntimeState )
-        vector<uint64> _listMark;
-        ResourceGauge  _arrGauge[kCoreCount];
+        vector<uint64>               _listMark;
+        SW_CODEC_STATE ResourceGauge _arrGauge[kCoreCount];
         PROPERTY( RuntimeState, Min = 0, Max = WesternSurvival::kCoreMax )
         float32               _arrCore[kCoreCount];
         const WesternCatalog* _pCatalog;

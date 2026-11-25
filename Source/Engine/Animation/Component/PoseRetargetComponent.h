@@ -91,19 +91,19 @@ namespace sw
         PROPERTY( Category = "Retarget", DisplayName = "Profile", Tooltip = "Retarget profile (*.retarget.xml)" )
         AssetRef<RetargetProfile> _profilePath;
 
-        PoseRetargetBinding                     _binding;
-        Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        SharedAssetRef<RetargetProfile>         _pProfile;            ///< 쥔 프로필(경로로 받았으면 공유 캐시의 한 벌)
-        PoseRetargeter                          _retargeter;
-        Pose                                    _targetReference;
-        TComponentHandle<SkeletalMeshComponent> _source;
-        SkeletalMeshComponent*                  _pSkeletalMesh;
-        const Skeleton*                         _pBoundSourceSkeleton; ///< 리타기터를 묶은 원본 스켈레톤(정체성만 본다)
-        const Skeleton*                         _pBoundTargetSkeleton;
+        SW_TRANSIENT PoseRetargetBinding _binding;
+        Subscription                     _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        SharedAssetRef<RetargetProfile>  _pProfile;            ///< 쥔 프로필(경로로 받았으면 공유 캐시의 한 벌)
+        SW_TRANSIENT PoseRetargeter      _retargeter;
+        SW_TRANSIENT Pose                _targetReference;
+        SW_TRANSIENT TComponentHandle<SkeletalMeshComponent> _source;
+        SkeletalMeshComponent*                               _pSkeletalMesh;
+        const Skeleton*                                      _pBoundSourceSkeleton; ///< 리타기터를 묶은 원본 스켈레톤(정체성만 본다)
+        const Skeleton*                                      _pBoundTargetSkeleton;
         PROPERTY( Category = "Retarget", DisplayName = "Source From Parent", Tooltip = "Use the parent object's skeletal mesh as the source" )
         uint8                  _bSourceFromParent  : 1;
-        uint8                  _bProfileReady      : 1;
-        uint8                  _bReferenceOverride : 1;
+        SW_TRANSIENT uint8     _bProfileReady      : 1;
+        SW_TRANSIENT uint8     _bReferenceOverride : 1;
         [[maybe_unused]] uint8 _reserved           : 5;
     };
 } // namespace sw

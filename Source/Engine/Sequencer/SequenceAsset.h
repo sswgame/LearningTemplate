@@ -16,6 +16,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/PrefabAssetKind.h"
+#include "Engine/Automation/Scenario/ScenarioAssetKind.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
@@ -233,9 +234,9 @@ namespace sw
         string _preset;
         /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 리소스 id)입니다. 다른 종류는 비운다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Scenario: scenario (.scenario.xml) played when the start frame is crossed" )
-        string _scenario;
-        /** @brief 애니메이션: 구간 동안 섞을 클립입니다 — 대상 애니메이션 셋의 클립 이름, 또는 클립 파일 경로(`SkeletalAnimatorComponent::makeClipPath`). 다른 종류는 비운다. */
-        PROPERTY( AssetPath, AssetType = "AnimationClip", SkipIfEmpty, Tooltip = "Animation: clip blended over the target's animation during the span (a clip name of the target's animation set, or a clip file)" )
+        AssetRef<ScenarioAsset> _scenario;
+        /** @brief 애니메이션: 구간 동안 섞을 클립입니다 — 대상 애니메이션 셋의 클립 이름(`SkeletalAnimatorComponent::makeClipPath`, 파일이 아니다). 다른 종류는 비운다. */
+        PROPERTY( SkipIfEmpty, Tooltip = "Animation: clip blended over the target's animation during the span (a clip name of the target's animation set)" )
         string _clip;
         /** @brief 소리: 시작 프레임을 지날 때 낼 오디오 이벤트 이름입니다. 다른 종류는 비운다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Audio: audio event posted when the start frame is crossed and stopped when the span ends" )

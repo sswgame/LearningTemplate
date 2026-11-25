@@ -240,16 +240,16 @@ namespace sw
         void applyEffect( const CardBattleEffect& effect );
 
     private:
-        vector<int32> _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
-        CardPile      _drawPile;
-        CardPile      _hand;
-        CardPile      _discardPile;
-        CardPile      _exhaustPile;
+        SW_CODEC_STATE vector<int32> _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
+        SW_CODEC_STATE CardPile      _drawPile;
+        SW_CODEC_STATE CardPile      _hand;
+        SW_CODEC_STATE CardPile      _discardPile;
+        SW_CODEC_STATE CardPile      _exhaustPile;
         PROPERTY( RuntimeState )
-        CardBattleEnemy          _enemy;
-        CardBattleSettings       _settings;
-        GameRandom               _random;
-        const CardBattleCatalog* _pCatalog;
+        CardBattleEnemy                   _enemy;
+        SW_CODEC_STATE CardBattleSettings _settings;
+        SW_CODEC_STATE GameRandom         _random;
+        const CardBattleCatalog*          _pCatalog;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _playerHP;
         PROPERTY( RuntimeState, Min = 0 )

@@ -7,6 +7,7 @@
 
 #include "Engine/Environment/Surface/SurfaceKind.h"
 #include "Engine/Environment/Surface/SurfaceSample.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -14,9 +15,11 @@
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/World/Spline/SplineComponent.h"
 
 namespace sw
@@ -28,8 +31,11 @@ namespace sw
             /** @brief 땅 광선을 차 위 몇 미터에서 쏘는지 나타냅니다. */
             static constexpr float32 kProbeAbove = 2.0f;
             /** @brief 땅 광선의 길이입니다(미터). */
-            static constexpr float32 kProbeLength = 50.0f;
+            static constexpr float32   kProbeLength = 50.0f;
+            static constexpr FormatDef kStateFormat{ "KVEH" };
         };
+
+        const StatefulComponentRegistrar<KinematicVehicleComponent> s_stateRegistration{ "KinematicVehicleComponent" };
     } // namespace
 } // namespace sw
 
@@ -83,6 +89,7 @@ namespace sw
         , _jumpButton{}
         , _bUsePhysicsGround{ true }
         , _motor{}
+        , _restore{}
         , _ground{}
         , _teleport{}
         , _listFrameEvent{}
@@ -132,7 +139,36 @@ namespace sw
         (void)_teleport.consume( *pRoot ); // 시작 전의 순간이동은 시작 자리에 이미 들었다
         if ( pTuning->_rail._bEnabled && attachRail() == false )
             return;
+        (void)_restore.open( *this );
         _bReady = true;
+    }
+
+    void KinematicVehicleComponent::serializeState( StateIO& io )
+    {
+        const GameObject* pOwner          = getOwner();
+        const bool        bNothingToWrite = io.isWriting() && ( _restore.writeHeldBytes( io ) || _restore.isOpen() == false );
+        if ( bNothingToWrite || pOwner == nullptr || pOwner->getManager() == nullptr )
+            return; // 들고 있던 바이트를 썼거나, 아직 시작하지 않은 모터는 실을 것이 없다
+        // 뜬 때와 되돌릴 때의 월드 원점이 다를 수 있다 — 자리는 절대로 싣는다. 사본에 받아 끝까지 맞을 때만 옮긴다.
+        const WorldOrigin&    origin = pOwner->getManager()->getWorldOrigin();
+        KinematicVehicleMotor motor  = _motor;
+        motor.setPosition( origin.toAbsolute( motor.getPosition() ) );
+        io.header( KinematicVehicleComponentInternal::kStateFormat );
+        io.value( motor );
+        if ( io.isWriting() )
+            return;
+        io.end();
+        if ( io.isOk() == false )
+            return;
+        motor.setPosition( origin.toLocal( motor.getPosition() ) );
+        _motor = motor;
+        if ( const SceneComponent* pRoot = pOwner->getPrimarySceneComponent() )
+            (void)_teleport.consume( *pRoot ); // 트랜스폼 복원의 순간이동은 되돌린 자리다 — 다음 틱이 모터를 멈추지 않게
+    }
+
+    void KinematicVehicleComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _restore.receive( *this, std::move( bytes ) );
     }
 
     bool KinematicVehicleComponent::attachRail()

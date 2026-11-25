@@ -618,8 +618,7 @@ namespace sw
             stamp._listFixedSchema.push_back( fixedCodec.makeSchemaLine( typeIndex ) );
             for ( const ParsedPropertyInfo& prop : parsed._listType[typeIndex]._listProperty )
             {
-                const bool bPathField = prop._bAssetPath == SW_TRUE || prop._typeName == "DataPath" || prop._elementTypeName == "DataPath";
-                if ( bPathField == false )
+                if ( prop._bAssetPath == SW_FALSE )
                     continue;
                 const string                             target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
                 StringBuilder<constant::buffer::kMax256> textBuilder3;

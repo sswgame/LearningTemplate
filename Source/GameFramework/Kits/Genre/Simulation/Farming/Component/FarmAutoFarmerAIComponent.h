@@ -67,6 +67,6 @@ namespace sw
         PROPERTY( Category = "Auto Play", DisplayName = "Cultivate Limit", Tooltip = "Tiles the auto farmer tills at most (what one day of stamina covers); TillTile stays empty beyond it", Min = 0 )
         int32 _cultivateLimit;
 
-        GameObjectHandle _gameMode; ///< 따르는 디렉터의 오브젝트
+        SW_TRANSIENT GameObjectHandle _gameMode; ///< 따르는 디렉터의 오브젝트
     };
 } // namespace sw

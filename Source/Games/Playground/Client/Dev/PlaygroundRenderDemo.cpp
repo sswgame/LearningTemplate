@@ -4,16 +4,14 @@
 
 #include "Core/Math/MatrixMath.h"
 
+#include "Games/Playground/Client/Dev/StressTestSceneSettings.h"
+
 // 렌더러 헤더를 쓰는 시연이라 클라이언트 전용 소스(`Client/`)다 — 전용 서버는 짓지 않는다.
 
 namespace sw
 {
     namespace
     {
-        /// @brief 두 패스가 프로그램으로 쓰는 셰이더입니다(파이프라인 `_listExtensionShader` 에 선언돼 있어야 한다).
-        constexpr const utf8* kTintShader = "engine/shaders/extension_pass_demo.hlsl";
-        constexpr const utf8* kDrawShader = "engine/shaders/extension_draw_demo.hlsl";
-
         /// @brief 셰이더의 PassCB 칸 `g_OutlineColor` 를 요소 색 · 틴트로 빌린다(두 셰이더 머리 주석).
         constexpr const utf8* kColorConstant = "g_OutlineColor";
 
@@ -45,7 +43,7 @@ namespace sw
         drawParams._stage                = ExtensionHookStage::PrePostProcess;
         drawParams._listWrite            = { "SceneColor" };
         drawParams._depthAttachment      = "SceneDepth";
-        drawParams._program._shaderPath  = kDrawShader;
+        drawParams._program._shaderPath  = _drawShader;
         drawParams._program._bCullBack   = true;
         drawParams._program._bDepthWrite = true;
         builder.addPass( std::move( drawParams ), ExtensionPassExecuteFn( []( ExtensionPassContext& context )
@@ -56,7 +54,7 @@ namespace sw
         tintParams._name                = "Playground.TintDemo";
         tintParams._stage               = ExtensionHookStage::PrePostProcess;
         tintParams._listWrite           = { "SceneColor" };
-        tintParams._program._shaderPath = kTintShader;
+        tintParams._program._shaderPath = _tintShader;
         tintParams._program._bBlend     = true;
         builder.addPass( std::move( tintParams ), ExtensionPassExecuteFn(
                                                       []( ExtensionPassContext& context )
@@ -68,8 +66,14 @@ namespace sw
         } ) );
     }
 
-    PlaygroundRenderDemo::PlaygroundRenderDemo( RenderExtensionRegistry& registry )
-        : _extension{}
+    PlaygroundRenderExtension::PlaygroundRenderExtension( string_view tintShader, string_view drawShader )
+        : _tintShader{ tintShader }
+        , _drawShader{ drawShader }
+    {
+    }
+
+    PlaygroundRenderDemo::PlaygroundRenderDemo( RenderExtensionRegistry& registry, const StressTestSceneSettings& settings )
+        : _extension{ settings._extensionTintShader.get(), settings._extensionDrawShader.get() }
         , _extensionRegistration{ registry, _extension }
         , _proxyRegistration{ registry, make_unique<PlaygroundDrawDemoProxy>() }
     {

@@ -59,6 +59,8 @@ namespace sw
         float32 _opacity{ 1.0f };
         PROPERTY( DisplayName = "Transition", Tooltip = "Property Seconds Curve, ... (style transitions)" )
         string _transition{};
+        PROPERTY( DisplayName = "Size", Tooltip = "Width, height of the widget (0 = sized by its content; the slot override wins) or of a widget part in the engine widget skin (check box, slider thumb)", Meta = "Units=ui" )
+        float2 _size{};
     };
 } // namespace sw
 
@@ -88,6 +90,7 @@ namespace sw
         FocusRingColor,
         Opacity,
         Transition,
+        Size,
         Count
     };
 
@@ -154,6 +157,7 @@ namespace sw
     SW_UI_STYLE_FIELD_MEMBER( FocusRingColor, _focusRingColor );
     SW_UI_STYLE_FIELD_MEMBER( Opacity, _opacity );
     SW_UI_STYLE_FIELD_MEMBER( Transition, _transition );
+    SW_UI_STYLE_FIELD_MEMBER( Size, _size );
 #undef SW_UI_STYLE_FIELD_MEMBER
 } // namespace sw
 

@@ -91,7 +91,7 @@ namespace sw
          *          런타임 경고가 아니라 컴파일 오류다(언리얼 메타 `DefaultValue` 는 글이라 로드 때에야 드러난다). C++ 멤버 초기화자와는 별개다.
          */
         PropertyDefaultApplyFunction _pApplyDefault;
-        /** @brief 소프트 에셋의 타입 힌트입니다(`PROPERTY( AssetPath )`, `AssetType = "Texture"`). */
+        /** @brief 에셋 칸의 대상 종류입니다(파서가 `AssetRef<T>` 칸에 적는다). */
         string _assetType;
         /** @brief `CatalogKey<T>` 칸의 항목 종류 이름 `T` 입니다(파서가 적는다). 참조 표(`DataCatalogReferenceRules`)의 `<CatalogKey tag>` 로 카탈로그를 찾는다. 아니면 빈 글이다. */
         string _catalogKeyTag;

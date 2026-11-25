@@ -20,6 +20,7 @@
 namespace sw
 {
     class AssetPaths;
+    class TaskManager;
     struct RHIVertex;
 } // namespace sw
 
@@ -28,9 +29,25 @@ namespace sw::editor
     enum class AssetImportMode : uint8;
 
     struct AssetImportSummary;
+    struct AssetSourceBatch;
     struct ModelImportRule;
 
     class ModelImportConfig;
+    class TextureImportConfig;
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 원본 해시에 섞는, 원본마다 같은 재료입니다(`ModelImporter::computeSourceHash`). 한 실행에 한 번 읽는다 - 예전에는 모델마다 기본 에셋 표와 견본을 다시 읽었다. */
+    struct ModelImportHashInput
+    {
+        string _imageRuleText;    ///< 꺼낼 이미지의 텍스처 규칙을 고르는 글(`TextureImportConfig::makeSelectionText`) - 이미지를 꺼내는 모델에만 섞는다
+        string _toonTemplateText; ///< VRM 머티리얼의 견본 글. 못 읽었으면 빈 글이다
+        string _pbrTemplateText;  ///< 그 밖의 머티리얼 견본 글. 못 읽었으면 빈 글이다
+
+        /** @brief 재료를 모읍니다. 견본을 못 읽으면 그 칸이 비고, 그 견본을 쓰는 원본의 해시가 오류(0)가 됩니다. */
+        [[nodiscard]] static ModelImportHashInput collect( const TextureImportConfig& textureConfig );
+    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -187,14 +204,17 @@ namespace sw::editor
      */
     struct ModelImporter
     {
+        /** @brief 모델 원본을 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(정체성 규칙 `AssetIdentity.json` 의 원본 폴더). 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
+        static constexpr string_view kRawFolder = "models_raw";
+
         /** @brief glTF 파일 하나를 메시, 스켈레톤, 부착 메시, 클립으로 읽습니다. 파일은 쓰지 않습니다. 규칙이나 부가 데이터가 잘못되었으면 false 입니다. */
-        [[nodiscard]] static bool readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult );
+        [[nodiscard]] static bool readModelAsset( const AbsolutePath& sourcePath, const ModelImportRule& rule, ModelImportResult& outResult, TaskManager* pTaskManager = nullptr );
 
         /**
          * @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. 스킨드 모델이면 옆 폴더에도 씁니다.
          * @param assetPaths 산출물 경로를 리소스 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
          */
-        [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath );
+        [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath, TaskManager* pTaskManager = nullptr );
         /**
          * @brief 규칙의 몸 메시(`body_surface`)에서 스킨 · 체형 모프를 장비 메시 @p inoutMesh 로 옮깁니다(`CharacterMeshUtil::transferBodySurface`).
          * @return 몸 메시를 읽지 못했거나 몸 표면에서 `body_surface_distance` 보다 먼 정점이 있으면 오류를 남기고 false 입니다(메시는 그대로).
@@ -202,14 +222,12 @@ namespace sw::editor
         [[nodiscard]] static bool transferBodySurface( string_view sourcePath, const ModelImportRule& rule, MeshAssetData& inoutMesh );
 
         /**
-         * @brief 핫 리로드가 넘긴 파일이 모델 원본이면 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
+         * @brief 핫 리로드가 넘긴 파일 가운데 모델 원본을 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
          * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 즉시 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
-         *          **바뀐 원본 하나만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
-         *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다.
-         *          경로 상태 @p assetPaths 는 잡을 올린 에디터 스레드가 찾아 넘긴다(`AssetSourceImporterFunc`).
-         * @return 모델 원본이었으면 true 입니다. 임포트했든 경고만 했든 같으며, 호출자는 캐시를 다시 읽지 않습니다. `.mesh` 이면 false 입니다.
+         *          **바뀐 원본만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
+         *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 모델 원본은 임포트했든 경고만 했든 처리한 것이고 `.mesh` 는 처리하지 않은 것이다.
          */
-        [[nodiscard]] static bool importChangedSourceModel( const AssetPaths& assetPaths, string_view relativePath );
+        static void importChangedSources( AssetSourceBatch& batch );
 
         /**
          * @brief 리소스 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.
@@ -239,9 +257,9 @@ namespace sw::editor
 
         /**
          * @brief 원본 바이트, 부가 데이터, 적용한 규칙, 임포터 버전을 섞어 FNV-1a 64 해시를 계산합니다. `.gltf` 이면 그것이 가리키는 외부 버퍼 파일도 포함합니다. 읽지 못하면 0 입니다.
-         * @param imageRuleText 꺼낼 이미지의 텍스처 규칙을 고르는 글(`TextureImportConfig::makeSelectionText`)입니다. 이미지를 꺼내는 모델에만 섞는다.
+         * @param input 원본마다 같은 재료입니다(`ModelImportHashInput::collect` — 한 실행에 한 번 읽는다).
          */
-        static uint64 computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, string_view imageRuleText );
+        static uint64 computeSourceHash( const AbsolutePath& sourcePath, const ModelImportRule& rule, const ModelImportHashInput& input );
         /** @brief 임포트 결과 전체(`.mesh` 와 옆 폴더의 파일들)의 해시를 계산합니다. `.mesh` 가 없으면 0 입니다. */
         static uint64 computeImportedHash( const AbsolutePath& importedMeshPath );
         /** @brief `computeImportedHash` 가 섞는 결과 파일(`.mesh` · `.fracture` · 옆 폴더 파일 · 그것이 가리키는 공유 파일)을 모읍니다(DDC 덩어리). `.mesh` 가 없으면 아무것도 더하지 않습니다. */

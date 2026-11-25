@@ -4,8 +4,8 @@
 <MaterialDef formatVersion="0" name="ShooterFloor" _base="guid:fccdbe62f6e4804ccde68cd398d3273f">
 	<_properties>
 		<item name="_worldTileSize" defaultValue="3.0" />
-		<item name="_albedoMap" assetPath="common/textures/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_diff_2k.dds" />
-		<item name="_normalMap" assetPath="common/textures/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_nor_gl_2k.dds" />
-		<item name="_ormMap" assetPath="common/textures/polyhaven/concrete_floor_worn_001/concrete_floor_worn_001_arm_2k.dds" />
+		<item name="_albedoMap" assetPath="guid:89a6329de80c6b0446d30123da8c1138" />
+		<item name="_normalMap" assetPath="guid:9d3b182f3840a3b49f77fa1cb88aceef" />
+		<item name="_ormMap" assetPath="guid:481ca81d63cb83e9fe3876f845a7fe69" />
 	</_properties>
 </MaterialDef>

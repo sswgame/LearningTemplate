@@ -15,6 +15,7 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -73,15 +74,10 @@ namespace sw
         {
             /** @brief 목록과 상자 사이 틈(UI 단위)입니다. */
             static constexpr float32 kPopupGap = 2.0f;
-            /** @brief 오른쪽 화살표 영역(안쪽 여백)입니다. */
-            static constexpr float32 kArrowSpace = 32.0f;
             /** @brief 화살표 삼각형 — 쌓는 가로 막대의 너비(위에서 아래)와 두께(UI 단위)입니다. */
             static constexpr float32 kArrArrowWidth[] = { 10.0f, 6.0f, 2.0f };
             static constexpr float32 kArrowStepHeight = 2.0f;
             static constexpr float32 kArrowHalfHeight = kArrowStepHeight * static_cast<float32>( SW_COUNT_OF( kArrArrowWidth ) ) * 0.5f;
-            static constexpr float32 kDisabledAlpha   = 0.4f; ///< 꺼진 위젯의 화살표가 넘지 않는 불투명도
-            static constexpr float32 kContentPaddingX = 12.0f;
-            static constexpr float32 kContentPaddingY = 8.0f;
 
             static hashed_string makeOptionName( uint32 index )
             {
@@ -102,20 +98,17 @@ namespace sw
         , _popupScreen{ kInvalidUIScreenHandle }
         , _listOption{}
         , _selectedIndex{ constant::invalid_index::kUint32 }
-        , _popupBackground{ UIBrush::makeSolid( float4{ 0.1f, 0.11f, 0.14f, 0.98f }, 6.0f ) }
-        , _popupPadding{ 2.0f, 2.0f, 2.0f, 2.0f }
-        , _popupShadowColor{ 0.0f, 0.0f, 0.0f, 0.5f }
-        , _popupShadowOffset{ 0.0f, 4.0f }
-        , _popupShadowBlur{ 8.0f }
-        , _optionHeight{ 32.0f }
-        , _optionPadding{ 10.0f, 6.0f, 10.0f, 6.0f }
-        , _optionCornerRadius{ 4.0f }
-        , _arrowColor{ 0.85f, 0.88f, 0.95f, 1.0f }
+        , _popupBackground{ UIWidgetSkin::get()._comboBox._popup }
+        , _popupPadding{ UIWidgetSkin::get()._comboBox._popupPadding }
+        , _popupShadowColor{ UIWidgetSkin::get()._comboBox._popupShadowColor }
+        , _popupShadowOffset{ UIWidgetSkin::get()._comboBox._popupShadowOffset }
+        , _popupShadowBlur{ UIWidgetSkin::get()._comboBox._popupShadowBlur }
+        , _optionHeight{ UIWidgetSkin::get()._comboBox._optionHeight }
+        , _optionPadding{ UIWidgetSkin::get()._comboBox._optionPadding }
+        , _optionCornerRadius{ UIWidgetSkin::get()._comboBox._optionCornerRadius }
+        , _arrowColor{ UIWidgetSkin::get()._comboBox._arrow._color }
     {
-        using Internal                = ComboBoxWidgetInternal;
-        _popupBackground._borderColor = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
-        _popupBackground._borderWidth = 1.0f;
-        setContentPadding( float4{ Internal::kContentPaddingX, Internal::kContentPaddingY, Internal::kArrowSpace, Internal::kContentPaddingY } );
+        setContentPadding( UIWidgetSkin::get()._comboBox._padding );
         unique_ptr<TextWidget> label = make_unique<TextWidget>();
         TextLayoutStyle        style = label->getTextStyle();
         style._bWrap                 = false;
@@ -145,16 +138,12 @@ namespace sw
         refreshLabel();
     }
 
-    void ComboBoxWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    void ComboBoxWidget::synchronizeProperties()
     {
-        if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )
-        {
-            if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
-                _selectedIndex = constant::invalid_index::kUint32;
-            refreshLabel();
-            return;
-        }
-        ButtonWidget::onBoundPropertyChanged( property );
+        ButtonWidget::synchronizeProperties();
+        if ( _selectedIndex != constant::invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+            _selectedIndex = constant::invalid_index::kUint32;
+        refreshLabel();
     }
 
     void ComboBoxWidget::refreshLabel()
@@ -245,13 +234,14 @@ namespace sw
         (void)context;
         using Internal = ComboBoxWidgetInternal;
         // 아래 화살표: 가로 막대 셋을 줄여 쌓은 삼각형이다(오른쪽 끝에 놓으며, 오른쪽에서 왼쪽이면 왼쪽 끝).
-        const float2& size    = getGeometry()._size;
-        const float32 centerX = isRightToLeft() ? Internal::kArrowSpace * 0.5f : size._x - Internal::kArrowSpace * 0.5f;
-        const float32 top     = size._y * 0.5f - Internal::kArrowHalfHeight;
-        CanvasBrush   arrow{};
+        const float2&              size    = getGeometry()._size;
+        const UIWidgetSkin::Arrow& skin    = UIWidgetSkin::get()._comboBox._arrow;
+        const float32              centerX = isRightToLeft() ? skin._areaWidth * 0.5f : size._x - skin._areaWidth * 0.5f;
+        const float32              top     = size._y * 0.5f - Internal::kArrowHalfHeight;
+        CanvasBrush                arrow{};
         arrow._color = _arrowColor;
         if ( isEnabledInHierarchy() == false )
-            arrow._color._w = MathUtil::min( _arrowColor._w, Internal::kDisabledAlpha );
+            arrow._color._w = MathUtil::min( _arrowColor._w, skin._disabledAlpha );
         for ( size_t step = 0; step < SW_COUNT_OF( Internal::kArrArrowWidth ); ++step )
         {
             const float32 width = Internal::kArrArrowWidth[step];

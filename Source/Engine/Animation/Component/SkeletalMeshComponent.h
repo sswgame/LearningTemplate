@@ -358,58 +358,58 @@ namespace sw
         VisibilityBasedAnimationTickOption _visibilityBasedTickOption;
         SharedAssetRef<Skeleton>           _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다. 동일성 확인과 핫 리로드 대조에 씁니다. 이 컴포넌트의 메시는 그 복사본입니다.
-        shared_ptr<Mesh>                                _skinSourceMesh;
-        IdentityToken                                   _skinSourceContentID; ///< 스킨 원본 메시의 내용 토큰(들고 있어 지운 원본의 주소가 새 메시와 같아 보이지 않는다)
-        Pose                                            _localPose;
-        vector<float4x4>                                _listModelSpace;
-        vector<float4x4>                                _listSkinPalette;
-        vector<TComponentHandle<SkeletalMeshComponent>> _listDependency;
-        vector<IAnimationPhaseTask*>                    _listTask;
-        ItemSubscriptionList<IAnimationPhaseTask>       _phaseTaskSubscriptions; ///< `_listTask` 의 등록 구독을 내준다(풀리면 `detachAnimationPhaseTask`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        vector<optional<uint32>>                        _listLeaderBone;         ///< 내 본에서 리더 본으로 가는 인덱스다(리더에 없으면 없음 — 지을 때 알린다)
-        TComponentHandle<SkeletalMeshComponent>         _leader;
-        const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
-        IdentityToken                                   _skinBindingContentID;  ///< `refreshSkinBinding` 이 마지막으로 본 스킨 메시의 내용 토큰
-        const Skeleton*                                 _pSkinBindingSkeleton;  ///< `refreshSkinBinding` 이 마지막으로 본 스켈레톤이다(동일성만 확인한다)
-        AnimationSystem*                                _pAnimationSystem;
-        AnimationFrameContext                           _frameContext;
-        SkeletalMeshLODClient                           _lodClient;
-        Subscription                                    _lodRegistration; ///< LOD 클라이언트 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
-        AnimationLODState                               _lodState;
-        SharedAssetRef<SkeletonBoneLOD>                 _boneLOD;
-        vector<vector<uint8>>                           _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크
-        IdentityToken                                   _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 토큰이다(비면 다시 만든다)
-        const Skeleton*                                 _pBoneLODMaskSkeleton; ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)
-        IdentityToken                                   _boneLODMeshContentID; ///< 마스크를 만든 스킨 원본 메시의 내용 토큰이다
-        vector<uint32>                                  _listBoneLODMaskCount; ///< 마스크마다 남는 본 수(`getEvaluatedBoneCount`)
-        vector<BoneRequirement>                         _listBoneRequirement;  ///< 사용처가 알린 핵심 본(`requireBones`)
-        SkeletonMirrorBoneMap                           _mirrorBoneMap;        ///< 스켈레톤 옆 미러 표와 그 짝 번호 표(`findMirroredBones`)
-        SubscriptionList                                _boneRequirementSubscriptions;
-        uint64                                          _nextBoneRequirementID;
-        Pose                                            _interpolationFrom;   ///< 마지막 평가 때 표시하던 포즈
-        Pose                                            _interpolationTarget; ///< 마지막으로 평가한 포즈
-        uint32                                          _updatePhase;
-        uint32                                          _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임 수
-        uint32                                          _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
-        vector<float32>                                 _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
-        AnimationCrowdBucket*                           _pCrowdBucket;          ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
-        const AnimationClip*                            _pVertexAnimationClip;  ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
-        AnimationCrowdMode                              _crowdMode;
-        AnimationSkinSlot                               _skinSlot;      ///< 이 유닛의 스킨 결과 칸(`getSkinSlot`)
-        uint32                                          _drawnSkinSlot; ///< 지난번 알린 그리는 칸 — 바뀌면 인스턴스를 다시 싣게 한다(`refreshDrawnSkinSlot`)
+        SW_TRANSIENT shared_ptr<Mesh> _skinSourceMesh;
+        IdentityToken                 _skinSourceContentID; ///< 스킨 원본 메시의 내용 토큰(들고 있어 지운 원본의 주소가 새 메시와 같아 보이지 않는다)
+        SW_TRANSIENT Pose             _localPose;
+        SW_TRANSIENT vector<float4x4> _listModelSpace;
+        SW_TRANSIENT vector<float4x4> _listSkinPalette;
+        SW_TRANSIENT vector<TComponentHandle<SkeletalMeshComponent>> _listDependency;
+        SW_TRANSIENT vector<IAnimationPhaseTask*> _listTask;
+        ItemSubscriptionList<IAnimationPhaseTask> _phaseTaskSubscriptions; ///< `_listTask` 의 등록 구독을 내준다(풀리면 `detachAnimationPhaseTask`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        SW_TRANSIENT vector<optional<uint32>> _listLeaderBone;             ///< 내 본에서 리더 본으로 가는 인덱스다(리더에 없으면 없음 — 지을 때 알린다)
+        SW_TRANSIENT TComponentHandle<SkeletalMeshComponent> _leader;
+        const Skeleton*                                      _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
+        IdentityToken                                        _skinBindingContentID;  ///< `refreshSkinBinding` 이 마지막으로 본 스킨 메시의 내용 토큰
+        const Skeleton*                                      _pSkinBindingSkeleton;  ///< `refreshSkinBinding` 이 마지막으로 본 스켈레톤이다(동일성만 확인한다)
+        AnimationSystem*                                     _pAnimationSystem;
+        SW_TRANSIENT AnimationFrameContext                   _frameContext;
+        SW_TRANSIENT SkeletalMeshLODClient                   _lodClient;
+        Subscription                                         _lodRegistration; ///< LOD 클라이언트 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        SW_TRANSIENT AnimationLODState                       _lodState;
+        SharedAssetRef<SkeletonBoneLOD>                      _boneLOD;
+        SW_TRANSIENT vector<vector<uint8>> _listBoneLODMask;       ///< 본 LOD 단계 n + 1 의 본 마스크
+        IdentityToken                      _boneLODRevision;       ///< 마스크를 만든 본 LOD 내용 토큰이다(비면 다시 만든다)
+        const Skeleton*                    _pBoneLODMaskSkeleton;  ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)
+        IdentityToken                      _boneLODMeshContentID;  ///< 마스크를 만든 스킨 원본 메시의 내용 토큰이다
+        SW_TRANSIENT vector<uint32> _listBoneLODMaskCount;         ///< 마스크마다 남는 본 수(`getEvaluatedBoneCount`)
+        SW_TRANSIENT vector<BoneRequirement> _listBoneRequirement; ///< 사용처가 알린 핵심 본(`requireBones`)
+        SW_TRANSIENT SkeletonMirrorBoneMap   _mirrorBoneMap;       ///< 스켈레톤 옆 미러 표와 그 짝 번호 표(`findMirroredBones`)
+        SubscriptionList                     _boneRequirementSubscriptions;
+        SW_TRANSIENT uint64                  _nextBoneRequirementID;
+        SW_TRANSIENT Pose                    _interpolationFrom;   ///< 마지막 평가 때 표시하던 포즈
+        SW_TRANSIENT Pose                    _interpolationTarget; ///< 마지막으로 평가한 포즈
+        SW_TRANSIENT uint32                  _updatePhase;
+        SW_TRANSIENT uint32                  _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임 수
+        SW_TRANSIENT uint32                  _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
+        SW_TRANSIENT vector<float32>    _listMorphWeight;            ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
+        AnimationCrowdBucket*           _pCrowdBucket;               ///< 나누는 묶음이다. 군중이 소유하며 참조 수로 보호된다
+        const AnimationClip*            _pVertexAnimationClip;       ///< VAT 로 그리는 클립이다. 바뀌면 시간 오프셋을 다시 기록한다
+        SW_TRANSIENT AnimationCrowdMode _crowdMode;
+        SW_TRANSIENT AnimationSkinSlot  _skinSlot;      ///< 이 유닛의 스킨 결과 칸(`getSkinSlot`)
+        SW_TRANSIENT uint32             _drawnSkinSlot; ///< 지난번 알린 그리는 칸 — 바뀌면 인스턴스를 다시 싣게 한다(`refreshDrawnSkinSlot`)
         PROPERTY( Category = "Animation", DisplayName = "Follow Parent Pose", Tooltip = "Use the parent object's skeletal mesh as the leader pose" )
-        uint8 _bFollowParentPose   : 1;
-        uint8 _bVisibleHint        : 1;
-        uint8 _bPoseDirty          : 1;
-        uint8 _bInterpolateFrame   : 1; ///< 이번 프레임은 평가 없이 보간만 한다
-        uint8 _bInterpolationReady : 1; ///< 보간할 두 포즈가 있다
+        uint8              _bFollowParentPose   : 1;
+        SW_TRANSIENT uint8 _bVisibleHint        : 1;
+        SW_TRANSIENT uint8 _bPoseDirty          : 1;
+        SW_TRANSIENT uint8 _bInterpolateFrame   : 1; ///< 이번 프레임은 평가 없이 보간만 한다
+        SW_TRANSIENT uint8 _bInterpolationReady : 1; ///< 보간할 두 포즈가 있다
         PROPERTY( Category = "Animation", DisplayName = "Share Crowd Pose",
                   Tooltip = "Share one evaluated pose and skinned vertex range with skeletalMeshes in the same state (crowds); far skeletalMeshes switch to vertex animation" )
         uint8                  _bShareCrowdPose  : 1;
-        uint8                  _bHasDependents   : 1; ///< 다른 유닛이 이 유닛의 포즈를 읽는다(VAT 로 넘기지 않는다)
-        uint8                  _bRuntimeSkeleton : 1; ///< 스켈레톤을 코드가 정했다(`setSkeleton`) — 빈 경로로 다시 풀 때 지키지 않는다
-        uint8                  _bBoneLODDirty    : 1; ///< 핵심 본이 바뀌어 마스크를 다시 짓는다
-        uint8                  _bBoneLODAuto     : 1; ///< 마스크를 메시 LOD 에서 자동으로 만들었다(손 파일이 아니다)
+        SW_TRANSIENT uint8     _bHasDependents   : 1; ///< 다른 유닛이 이 유닛의 포즈를 읽는다(VAT 로 넘기지 않는다)
+        SW_TRANSIENT uint8     _bRuntimeSkeleton : 1; ///< 스켈레톤을 코드가 정했다(`setSkeleton`) — 빈 경로로 다시 풀 때 지키지 않는다
+        SW_TRANSIENT uint8     _bBoneLODDirty    : 1; ///< 핵심 본이 바뀌어 마스크를 다시 짓는다
+        SW_TRANSIENT uint8     _bBoneLODAuto     : 1; ///< 마스크를 메시 LOD 에서 자동으로 만들었다(손 파일이 아니다)
         [[maybe_unused]] uint8 _reserved         : 6;
     };
 } // namespace sw

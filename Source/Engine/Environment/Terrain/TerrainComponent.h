@@ -369,23 +369,23 @@ namespace sw
         PROPERTY( Category = "LOD", DisplayName = "Geomorph", Tooltip = "Blend vertices to the next coarser LOD height near the LOD switch distance so the switch does not pop (uses the geomorph terrain material - the terrain then leaves the depth prepass)" )
         uint8 _bGeomorph;
 
-        TerrainHeightfield  _heightfield;
-        TerrainChunkLayout  _layout;
-        vector<Chunk>       _listChunk;
-        vector<uint32>      _listWantedLOD;          ///< updateLODs 의 스크래치(청크마다 고른 LOD)
-        vector<uint32>      _listChunkGeneration;    ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
-        vector<uint32>      _listChunkSplatRevision; ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
-        vector<uint32>      _listStaleChunk;         ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
-        DevCounter          _chunkMeshBuildCount;    ///< CPU 로 새로 만든 청크 메시 수(`getChunkMeshBuildCount`)
-        EnvironmentMaterial _material;
-        string              _arrCPUSplatPath[SurfaceLayerWeights::kPlaneCount]; ///< 가중치로 만든 자기 스플랫 텍스처 둘(`getCPUSplatPath` - 평면 0 은 레이어 0..3, 1 은 4..7)
-        PrimitiveRegistry*  _pPrimitiveRegistry;                                ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
-        uint32              _heightfieldGeneration;                             ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
-        uint32              _splatRevision;                                     ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
-        atomic<bool>        _bOriginDirty;                                      ///< 오너가 움직여 지형 원점이 낡았다
-        bool                _bHeightsWritten;                                   ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
-        bool                _bHolesWritten;                                     ///< 마지막 `reloadTerrain` 뒤에 `writeHoles` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
-        bool                _bResolutionReplaced;                               ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 복원한다
-        string              _loadedHeightfieldPath;                             ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
+        SW_CODEC_STATE TerrainHeightfield _heightfield;
+        SW_TRANSIENT TerrainChunkLayout   _layout;
+        SW_TRANSIENT vector<Chunk> _listChunk;
+        SW_TRANSIENT vector<uint32> _listWantedLOD;            ///< updateLODs 의 스크래치(청크마다 고른 LOD)
+        SW_TRANSIENT vector<uint32> _listChunkGeneration;      ///< 청크마다 높이를 마지막으로 바꾼 세대(`getChunkGenerations`)
+        SW_TRANSIENT vector<uint32> _listChunkSplatRevision;   ///< 청크마다 가중치를 마지막으로 바꾼 스플랫 세대(`findEditedArea`)
+        SW_TRANSIENT vector<uint32>      _listStaleChunk;      ///< 메시를 다시 만들 청크(쓴 순서, `rebuildStaleChunkMeshes`)
+        DevCounter                       _chunkMeshBuildCount; ///< CPU 로 새로 만든 청크 메시 수(`getChunkMeshBuildCount`)
+        SW_TRANSIENT EnvironmentMaterial _material;
+        SW_TRANSIENT string              _arrCPUSplatPath[SurfaceLayerWeights::kPlaneCount]; ///< 가중치로 만든 자기 스플랫 텍스처 둘(`getCPUSplatPath` - 평면 0 은 레이어 0..3, 1 은 4..7)
+        PrimitiveRegistry*               _pPrimitiveRegistry;                                ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
+        SW_TRANSIENT uint32              _heightfieldGeneration;                             ///< `reloadTerrain` 과 `writeHeights` 마다 오른다(`getHeightfieldGeneration`)
+        SW_CODEC_STATE uint32            _splatRevision;                                     ///< `writeLayerWeights` 마다 오른다(`getSplatRevision`)
+        SW_TRANSIENT atomic<bool> _bOriginDirty;                                             ///< 오너가 움직여 지형 원점이 낡았다
+        SW_CODEC_STATE bool       _bHeightsWritten;                                          ///< 마지막 `reloadTerrain` 뒤에 `writeHeights` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
+        SW_CODEC_STATE bool       _bHolesWritten;                                            ///< 마지막 `reloadTerrain` 뒤에 `writeHoles` · `replaceHeightfield` 가 성공했다(`writeState` 가 싣는다)
+        SW_TRANSIENT bool         _bResolutionReplaced;                                      ///< 마지막 `reloadTerrain` 뒤에 `replaceHeightfield` 가 성공했다 — 이때만 다른 해상도의 상태를 복원한다
+        SW_TRANSIENT string       _loadedHeightfieldPath;                                    ///< 마지막으로 읽은 높이장 경로 — 같은 경로를 다시 읽을 때만 편집을 넘긴다
     };
 } // namespace sw

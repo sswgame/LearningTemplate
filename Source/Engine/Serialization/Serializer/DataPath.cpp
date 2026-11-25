@@ -17,7 +17,7 @@ namespace sw
             []( const void* pPtr )
         {
             const string& path = static_cast<const DataPath*>( pPtr )->_path;
-            return AssetRegistry::makeReferenceText( path, AssetRegistry::resolveGUID( path ) );
+            return AssetRegistry::makeIndexedReferenceText( path );
         },
             []( void* pPtr, string_view strView )
         {

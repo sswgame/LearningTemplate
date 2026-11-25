@@ -224,16 +224,17 @@ namespace sw
         PROPERTY( Category = "Underwater", DisplayName = "Fog Density", Min = 0.0 )
         float32 _fogDensity;
 
-        EnvironmentMaterial           _material;
-        unique_ptr<MeshInstanceBatch> _batch;
-        PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
-        float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치다.
-        float32                       _waveTime;
-        float32                       _waveAmplitudeScale;  ///< 런타임 진폭 배율(저장하지 않는다 — 날씨가 정한다)
-        float32                       _boundsWaveScale;     ///< 지금 바운드가 든 진폭 배율. 배율이 바뀌면 틱이 바운드를 고친다
-        float32                       _surfaceBoundsRadius; ///< 파도를 뺀 수면 바운드 반지름(메시를 만들 때)
-        atomic<bool>                  _bOriginDirty;        ///< 오너가 움직여 수면 원점이 낡았다
-        bool                          _bBuiltOnTerrain;     ///< 마지막 수면이 지형 깊이를 구웠다
-        bool                          _bRebuildQueued;      ///< 다시 만들기가 틱 뒤로 줄 서 있다(`queueRebuild` 가 세우고 `rebuildSurface` 가 지운다)
+        SW_TRANSIENT EnvironmentMaterial _material;
+        SW_TRANSIENT unique_ptr<MeshInstanceBatch> _batch;
+        PrimitiveRegistry*                         _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
+        SW_TRANSIENT float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치다.
+        PROPERTY( RuntimeState )
+        float32              _waveTime;
+        SW_TRANSIENT float32 _waveAmplitudeScale;   ///< 런타임 진폭 배율(저장하지 않는다 — 날씨가 정한다)
+        SW_TRANSIENT float32 _boundsWaveScale;      ///< 지금 바운드가 든 진폭 배율. 배율이 바뀌면 틱이 바운드를 고친다
+        SW_TRANSIENT float32 _surfaceBoundsRadius;  ///< 파도를 뺀 수면 바운드 반지름(메시를 만들 때)
+        SW_TRANSIENT atomic<bool> _bOriginDirty;    ///< 오너가 움직여 수면 원점이 낡았다
+        SW_TRANSIENT bool         _bBuiltOnTerrain; ///< 마지막 수면이 지형 깊이를 구웠다
+        SW_TRANSIENT bool         _bRebuildQueued;  ///< 다시 만들기가 틱 뒤로 줄 서 있다(`queueRebuild` 가 세우고 `rebuildSurface` 가 지운다)
     };
 } // namespace sw

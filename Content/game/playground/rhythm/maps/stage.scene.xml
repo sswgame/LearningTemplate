@@ -71,7 +71,7 @@
 						</_playSettings>
 					</RhythmGameModeComponent>
 					<RhythmViewComponent _localID="5675568754244570621" _componentName="RhythmViewComponent" _bActive="true"
-					                     _music="game/playground/rhythm/data/stage1.music.xml"
+					                     _music="guid:987d6cf72602b158423bdce5fabf78e3"
 					                     _notePrefab="guid:f6418ed33e7a72367fdefc36aae0f8d5"
 					                     _laneWidth="1.2"
 					                     _hiSpeed="8"

@@ -49,9 +49,10 @@ namespace sw
         {
             void onHealthChanged( const HealthChangedEvent& event ) override;
         };
-        HealthListenerPort     _healthListenerPort;
-        Subscription           _movementSuspension; ///< 물리로 떨어진 뒤 부활까지 쥔 걷기 멈춤
-        uint8                  _bFallen  : 1;       ///< 물리로 떨어져 걷기가 꺼져 있다
+        HealthListenerPort _healthListenerPort;
+        Subscription       _movementSuspension; ///< 물리로 떨어진 뒤 부활까지 쥔 걷기 멈춤
+        PROPERTY( RuntimeState )
+        uint8                  _bFallen  : 1; ///< 물리로 떨어져 걷기가 꺼져 있다
         [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw

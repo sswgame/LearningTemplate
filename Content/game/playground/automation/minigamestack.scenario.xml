@@ -18,12 +18,12 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.enter pixeltown"/>
 	<WaitUntil watch="Minigame.Active" is="pixeltown" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/pixeltown/maps/town.scene.xml"/>
+	<ExpectActiveScene path="guid:a022cb5ceed46f84dc9d6576fe13181f"/>
 	<Expect watch="Minigame.Depth" equals="2"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave win"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="1" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<ExpectActiveScene path="guid:3fcd0f83c113a08accb7a73b7f3ca1bc"/>
 	<Expect watch="Minigame.Active" is="smoketest"/> <!-- 덮였던 미니게임이 다시 켜졌다 -->
 	<Expect watch="Minigame.Depth" equals="1"/>
 	<Expect watch="Minigame.LastResult" is="win"/>
@@ -33,7 +33,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave lose"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="2" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/fogshowcase.scene.xml"/>
+	<ExpectActiveScene path="guid:18182025ed2be61069d33dff8765efc9"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.Depth" equals="0"/>
 	<Expect watch="Minigame.LastResult" is="lose"/>
@@ -50,7 +50,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<WaitUntil watch="Minigame.RestoreCount" equals="3" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/fogshowcase.scene.xml"/>
+	<ExpectActiveScene path="guid:18182025ed2be61069d33dff8765efc9"/>
 	<Expect watch="Minigame.Depth" equals="0"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

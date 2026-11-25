@@ -8,14 +8,14 @@
 <Scenario name="game.playground.minigamefirst" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstMinigame" value="smoketest"/>
 	<WaitUntil watch="Minigame.Active" is="smoketest" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/editortest.scene.xml"/>
+	<ExpectActiveScene path="guid:3fcd0f83c113a08accb7a73b7f3ca1bc"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<DevCommand line="minigame.leave"/>
 	<ExpectLog id="DevCommand.Reply" contains="minigame.leave: leaving" atLeast="1"/>
 	<Expect watch="Minigame.Active" is="none"/> <!-- 나가기는 맵을 요청하기 전에 끈다 -->
 	<AdvanceSimulation frames="2"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/> <!-- 입구 씬이 섰다 -->
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<Expect watch="Minigame.RestoreCount" equals="0"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
 	<Pass/>

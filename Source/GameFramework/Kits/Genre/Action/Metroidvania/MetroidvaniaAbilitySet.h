@@ -64,8 +64,8 @@ namespace sw
         static bool isMotorSettingName( const hashed_string& name );
 
     private:
-        const MetroidvaniaCatalog* _pCatalog;
-        PlatformerSettings         _baseSettings;
+        const MetroidvaniaCatalog*      _pCatalog;
+        SW_TRANSIENT PlatformerSettings _baseSettings;
         PROPERTY( RuntimeState )
         vector<hashed_string> _listAbility; ///< 얻은 순서
     };

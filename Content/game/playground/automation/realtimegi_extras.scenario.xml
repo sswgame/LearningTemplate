@@ -12,7 +12,7 @@
 	<WaitUntil watch="Render.GIError" atMost="1" timeoutFrames="300"/> <!-- 실시간 프로브가 돌기 시작했다(그 전에는 값이 없다 — 정착 조건이 해당 없음으로 지나가지 않게) -->
 	<Screenshot file="realtimegi_extras_off.ppm" stability="Render"/>
 	<Expect watch="Render.GIError" atMost="0.0002"/> <!-- 사진이 실시간 GI 정착(RenderRealtimeGI — 30 번 갱신, 주기 4 · 섞기 0.25 의 남은 몫 0.75^30)을 기다렸다 -->
-	<LoadScene path="game/playground/maps/realtimegi_extras.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:07c42e3304836cc68a6cba3eec9d7495" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Render.GIError" atMost="1" timeoutFrames="300"/> <!-- 실시간 프로브가 돌기 시작했다(그 전에는 값이 없다 — 정착 조건이 해당 없음으로 지나가지 않게) -->

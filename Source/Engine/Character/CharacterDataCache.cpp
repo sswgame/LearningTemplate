@@ -47,7 +47,7 @@ namespace sw
 {
     SW_SHARED_ASSET_CACHE( SocketSet, SocketSet, SocketSet::kAssetType.withLoader( AssetTypeLoader::with<SocketSet, &CharacterDataCacheInternal::loadSocketSet>( MemoryTag::Animation ) ) );
     SW_SHARED_ASSET_CACHE( BodyShapeSet, BodyShapeSet,
-                           AssetTypeDef::makeDataFile( "bodyshape", AssetPathRule{ {}, {}, ".bodyshape.xml" }, AssetTypeLoader::of<BodyShapeSet>( MemoryTag::Animation ) ) );
+                           BodyShapeSet::kAssetType.withLoader( AssetTypeLoader::of<BodyShapeSet>( MemoryTag::Animation ) ) );
     /** 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. */
     SW_SHARED_ASSET_CACHE( PairedAnimationDef, PairedAnimationDef,
                            PairedAnimationDef::kAssetType.withLoader( AssetTypeLoader::of<PairedAnimationDef>( MemoryTag::Animation ) ) );

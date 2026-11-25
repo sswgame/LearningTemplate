@@ -5,4 +5,4 @@
   씬의 타일 레이어 · 대화 러너로 판을 돌린다. 말 걸기(Interact)는 팩 입력 묶음(data/gamesettings.xml 의 pixeltown/data/town.input.xml)이 Space · E 로 묶는다.
   시나리오 automation/pixeltown_talk · pixeltown_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="pixeltown" map="game/playground/pixeltown/maps/town.scene.xml" entry="SceneSwitch" portalSlot="0"/>
+<Minigame name="pixeltown" map="guid:a022cb5ceed46f84dc9d6576fe13181f" entry="SceneSwitch" portalSlot="0"/>

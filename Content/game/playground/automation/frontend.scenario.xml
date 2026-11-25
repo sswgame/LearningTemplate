@@ -42,7 +42,7 @@
 	<!-- 첫 화면의 뒤로 가기는 아무것도 하지 않는다(일어나지 않음 — 시간이 내용) -->
 	<Tap slot="Gamepad.B" hold="1"/>
 	<AdvanceSimulation frames="10"/>
-	<ExpectUI screen="engine/ui/mainmenu.ui.xml" focus="QuitGame"/>
+	<ExpectUI screen="guid:bf80ccef202c6b984f26e57be78425bd" focus="QuitGame"/>
 	<ExpectLog id="App.QuitRequested" count="0"/>
 
 	<!-- 키보드로 바꾸면 버튼 글리프가 키보드 것이 된다 -->
@@ -76,7 +76,7 @@
 	<WaitUntil watch="UI.FocusedWidget" is="StartGame" timeoutFrames="10"/>
 	<Tap slot="Gamepad.A" hold="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
-	<ExpectActiveScene path="game/playground/maps/hub.scene.xml"/>
+	<ExpectActiveScene path="guid:57d6125ff94a46bfb947271e54e65b52"/>
 	<WaitUntil watch="UI.ActiveScreen" is="none" timeoutFrames="60"/>
 	<ExpectLog id="App.QuitRequested" count="0"/>
 	<ExpectImage file="mainmenu.ppm" golden="mainmenu" region="0.25,0.2,0.75,0.8"/>

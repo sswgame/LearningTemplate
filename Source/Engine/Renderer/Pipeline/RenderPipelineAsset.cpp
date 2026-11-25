@@ -92,18 +92,20 @@ namespace sw
         return listAccess;
     }
 
+    RenderGraphPassDesc::RenderGraphPassDesc() = default;
+
     bool RenderPipelineAsset::mergeRenderPassRefs( string_view sourcePath )
     {
         // 묶음의 원소가 앞, 이 파이프라인의 원소가 뒤다 — 세 목록이 같은 규칙이다. 이름이 겹치면 덮어쓰지 않고 검증이 알린다.
         vector<RenderPassAttachment>    listAttachment;
         vector<RenderGraphResourceDesc> listResource;
         vector<RenderGraphPassDesc>     listFramePass;
-        for ( const string& passRef : _desc._listRenderPassRef )
+        for ( const DataPath& passRef : _desc._listRenderPassRef )
         {
             RenderPassAsset renderPass;
-            if ( renderPass.loadFromXMLFile( AssetID{ passRef } ) == false )
+            if ( renderPass.loadFromXMLFile( AssetID{ passRef.get() } ) == false )
             {
-                SW_LOG_ERROR_ID( "RenderPipelineAsset.RenderPassRefNotLoaded", "[%#] render pass '%#' could not be loaded", sourcePath, passRef );
+                SW_LOG_ERROR_ID( "RenderPipelineAsset.RenderPassRefNotLoaded", "[%#] render pass '%#' could not be loaded", sourcePath, passRef.get() );
                 return false;
             }
             const RenderPassDesc& refDesc = renderPass.getDesc();
@@ -693,7 +695,7 @@ namespace sw
                     {
                         if ( desc._listExtensionShader[earlierIndex] == desc._listExtensionShader[shaderIndex] )
                         {
-                            SW_LOG_ERROR_ID( "RenderPipelineAsset.ListExtensionShaderListsTwice", "[%#] _listExtensionShader lists '%#' twice", sourcePath, desc._listExtensionShader[shaderIndex] );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.ListExtensionShaderListsTwice", "[%#] _listExtensionShader lists '%#' twice", sourcePath, desc._listExtensionShader[shaderIndex].path() );
                             ++issueCount;
                             break;
                         }

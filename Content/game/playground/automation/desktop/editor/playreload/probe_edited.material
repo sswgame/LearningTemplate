@@ -6,6 +6,6 @@
 		<item name="_color" defaultValue="0.4 0.8 1 1" />
 		<item name="_roughness" defaultValue="0.7" />
 		<item name="_metallic" defaultValue="0" />
-		<item name="_albedoMap" assetPath="game/playground/automation/desktop/editor/playreload/probe.dds" />
+		<item name="_albedoMap" assetPath="guid:f24e5ae6be7c41ef90a3b93ae4804b37" />
 	</_properties>
 </MaterialDef>

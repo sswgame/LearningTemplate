@@ -40,7 +40,7 @@
 				<_listComponent>
 					<SkeletalMeshComponent _localID="15127961318995883145" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="" _materialPath="" _boundsRadius="2" _visibilityBasedTickOption="AlwaysTickPoseAndRefreshBones" />
 					<SkeletalAnimatorComponent _localID="6157124105282015569" _animationGraphPath="guid:8d5a84b9050b8cadf1d06d0d49363c85" _animationSetPath="guid:f16f0881b585be5590c84b56aa39346f" _initialState="Idle_Combat" _bPlayOnBegin="true" />
-					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+					<CharacterAppearanceComponent _localID="13827364293183997314" _presetID="SkeletonWarrior" _seed="0" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 					<RagdollComponent _localID="3882491709238727780" _physicsAssetPath="guid:838a817bb59114526689cc7f27a02f17" _bRagdollOnFatalHit="true" _bAutoGetUp="false" />
 					<SkeletalSeveringComponent _localID="12034596935017574515" _severedSurfaceChannel="Blood" _regionTablePath="guid:9fb8f706daaf99963cf9c891924fce5a">
 						<_listSeverableRegion>

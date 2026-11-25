@@ -169,14 +169,19 @@ namespace sw
         PROPERTY( Category = "Mount", DisplayName = "Inertia", Tooltip = "Slope pull and air drag on top of the gait speed (same model as kinematic vehicles)" )
         InertiaSettings _inertia;
 
-        float32                _forwardSpeed;
-        float32                _facingYaw;
-        optional<int32>        _sprintIndex;
-        MountGait              _gait;
-        MountGait              _maxGait;
-        float3                 _netPosition; ///< 네트가 움직이는 동안의 시뮬레이션 자리(트랜스폼은 그릴 자리다)
+        PROPERTY( RuntimeState )
+        float32 _forwardSpeed;
+        PROPERTY( RuntimeState )
+        float32      _facingYaw;
+        SW_TRANSIENT optional<int32> _sprintIndex;
+        PROPERTY( RuntimeState )
+        MountGait _gait;
+        PROPERTY( RuntimeState )
+        MountGait           _maxGait;
+        SW_TRANSIENT float3 _netPosition; ///< 네트가 움직이는 동안의 시뮬레이션 자리(트랜스폼은 그릴 자리다)
+        PROPERTY( RuntimeState )
         uint8                  _bGallopAllowed : 1;
-        uint8                  _bNetDriven     : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
+        SW_TRANSIENT uint8     _bNetDriven     : 1; ///< 고정 넷 틱이 움직인다(`setNetDriven`)
         [[maybe_unused]] uint8 _reserved       : 6;
     };
 } // namespace sw

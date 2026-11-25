@@ -36,8 +36,13 @@ namespace sw
     {
         GameObject*             pOwner  = getOwner();
         GimmickSensorComponent* pSensor = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
-        if ( pSensor == nullptr || isDestroyed() )
+        if ( pSensor == nullptr )
             return;
+        if ( isDestroyed() )
+        {
+            pSensor->setSignal( static_cast<float32>( _stage ) ); // 되살린 판의 센서는 신호를 싣지 않는다 — 부서진 단계에서 다시 낸다
+            return;
+        }
         _damageTaken += pSensor->consumeDamage();
         const int32            stageCount = static_cast<int32>( _listStageThreshold.size() );
         FractureBaseComponent* pFracture  = pOwner->getComponent<FractureBaseComponent>();

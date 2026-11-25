@@ -155,7 +155,7 @@ namespace sw
             return false;
         }
         _probeData     = std::move( grid );
-        _probeDataPath = string( path );
+        _probeDataPath = path;
         ++_probeDataRevision;
         return true;
     }
@@ -180,7 +180,7 @@ namespace sw
         _probeData.clear();
         if ( _probeDataPath.empty() )
             return;
-        if ( const expected<void> loaded = _probeData.loadFromAsset( AssetID{ _probeDataPath } ); loaded.has_value() == false )
+        if ( const expected<void> loaded = _probeData.loadFromAsset( _probeDataPath.id() ); loaded.has_value() == false )
         {
             SW_LOG_ERROR_ID( "LightProbeVolume.LightProbeDataCould", "Light probe data '%#' could not be loaded (%#) - the volume gives no indirect light until it is baked again", _probeDataPath.c_str(),
                              loaded.error().message() );

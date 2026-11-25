@@ -13,7 +13,7 @@
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="renderstate_stencil_off.ppm"/>
-	<LoadScene path="game/playground/maps/renderstate_stencil.scene.xml" timeoutFrames="600"/>
+	<LoadScene path="guid:05eeee126939818e462f26380f3e64d1" timeoutFrames="600"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>

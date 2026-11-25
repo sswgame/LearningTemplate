@@ -154,10 +154,10 @@ namespace sw
         [[nodiscard]] bool resetHealth();
 
     private:
-        AdventureVitalsSettings _settings;
-        HealthStateMachine      _health;
-        ResourceGauge           _magic;
-        ResourceGauge           _stamina;
+        SW_CODEC_STATE AdventureVitalsSettings _settings;
+        SW_CODEC_STATE HealthStateMachine      _health;
+        SW_CODEC_STATE ResourceGauge           _magic;
+        SW_CODEC_STATE ResourceGauge           _stamina;
         PROPERTY( RuntimeState, Min = 1 )
         int32 _heartCount;
         PROPERTY( RuntimeState, Min = 0 )

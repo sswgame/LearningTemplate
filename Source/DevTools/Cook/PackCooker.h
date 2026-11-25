@@ -49,6 +49,7 @@ namespace sw
         AbsolutePath          _packOutputDir;                                        ///< 팩을 쓸 폴더(`--pack-dir`)
         string                _shaderFolder;                                         ///< 담을 셰이더 바이너리 폴더(`dx12` 등, 쿠킹 표의 `shader_folder`)
         string                _buildTarget;                                          ///< 빌드 타깃(`Game` · `Client` · `Server`) — 그 타깃이 빼는 종류를 팩에 넣지 않는다
+        vector<string>        _listStoredExtension;                                  ///< 압축하지 않고 담는 확장자(`PackStorageSettings` — 모드 팩 빌더와 같은 파일)
         PackAutomationContent _automationContent{ PackAutomationContent::Excluded }; ///< 자동화 콘텐츠(시나리오)를 담는가 — 쿠킹하는 구성에 자동화 실행기가 있으면 `Included`
         string                _gamePackFolder;                                       ///< 비우면 `Content/game/` 의 모든 팩, 아니면 그 폴더(`empty`) 하나만 베이크한다
         /**

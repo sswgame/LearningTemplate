@@ -47,7 +47,7 @@ namespace sw
      * @struct UIAnimatedProperty
      * @brief 위젯 타입 기준으로 해석한 프로퍼티 경로(`_opacity`, `_renderTransform._translation`, `_slot._widthOverride`)입니다.
      * @details 경로는 트랙이나 트윈을 연결할 때 한 번 해석하고(바인딩과 같은 `UIPropertyPath` 를 쓰므로 경로 해석은 한 곳에 있다), 프레임마다는 연쇄를 따라 주소만 계산한다.
-     *          쓰기는 값이 바뀌었을 때만 하며, 바뀌면 `Widget::onBoundPropertyChanged( 맨 위 필드 )` 가 그 필드의 세터와 같은 무효화를 건다
+     *          쓰기는 값이 바뀌었을 때만 하며, 바뀌면 `Widget::notifyPropertyWritten( 맨 위 필드 )` 가 파생 상태를 맞추고 그 필드의 세터와 같은 무효화를 건다
      *          (렌더 변환과 불투명도는 레이아웃 없이 처리하므로 애니메이션에 값싸다).
      */
     struct SW_API UIAnimatedProperty

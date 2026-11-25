@@ -17,10 +17,12 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTeleportCursor.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Movement/IBoostReceiver.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
+#include "GameFramework/Runtime/Gameplay/GameState/DeferredStateRestore.h"
 
 namespace sw
 {
@@ -54,6 +56,9 @@ namespace sw
         void onTick( TickContext& context ) override;
         /** @brief 모터의 자리를 옮깁니다 — 모터가 자리를 정하고 트랜스폼은 따라간다. */
         void onWorldOriginShifted( const float3& delta ) override;
+        /** @brief 모터 상태(속도 · 드리프트 · 부스트 …, 자리는 절대)입니다. 튜닝을 읽은 뒤(`onBeginPlay`)에 되돌린다. */
+        SW_DECLARE_STATE_IO_IN_PLACE();
+        void restoreState( vector<uint8>&& bytes );
 
         /**
          * @brief 의도를 모터 입력으로 바꿉니다. 의도의 월드 이동을 차 방향(@p vehicleYaw)으로 투영해서, 앞 성분은 가속(음수이면 브레이크나 후진), 옆 성분은 조향으로 씁니다.
@@ -102,14 +107,15 @@ namespace sw
         PROPERTY( Category = "Vehicle", DisplayName = "Use Physics Ground", Tooltip = "Ground height and surface from a downward physics ray (off: flat at the start height, no surface)" )
         bool _bUsePhysicsGround;
 
-        KinematicVehicleMotor         _motor;
-        PhysicsGround                 _ground;
-        SceneTeleportCursor           _teleport;       ///< 바깥의 순간이동을 모터에 옮긴다(모터가 자리를 쥔다)
-        vector<KinematicVehicleEvent> _listFrameEvent; ///< 이번 틱에 모터가 낸 일
-        optional<int32>               _driftIndex;
-        optional<int32>               _boostIndex;
-        optional<int32>               _jumpIndex;
-        bool                          _bReady;
+        SW_CODEC_STATE KinematicVehicleMotor _motor;
+        SW_CODEC_STATE DeferredStateRestore  _restore; ///< 튜닝을 읽기 전에 받은 복원 바이트
+        SW_TRANSIENT PhysicsGround           _ground;
+        SW_TRANSIENT SceneTeleportCursor     _teleport;             ///< 바깥의 순간이동을 모터에 옮긴다(모터가 자리를 쥔다)
+        SW_TRANSIENT vector<KinematicVehicleEvent> _listFrameEvent; ///< 이번 틱에 모터가 낸 일
+        SW_TRANSIENT optional<int32> _driftIndex;
+        SW_TRANSIENT optional<int32> _boostIndex;
+        SW_TRANSIENT optional<int32> _jumpIndex;
+        SW_TRANSIENT bool            _bReady;
 
         /** @brief 부스트 계약을 주인의 모터(`KinematicVehicleMotor::startBoost`)로 넘기는 포트입니다(`REFLECT_INTERFACE`). */
         struct BoostReceiverPort final : IBoostReceiver

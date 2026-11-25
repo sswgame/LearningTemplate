@@ -37,7 +37,7 @@ namespace sw
             return false;
         }
         // 스켈레톤 · 클립은 쿠킹 작업의 입력으로 기록되도록 이 자리에서 읽는다(공유 캐시를 거치지 않는다 — `CookJob`).
-        if ( skeleton.loadCopyFromAsset( AssetID{ list._skeletonPath } ) == false )
+        if ( skeleton.loadCopyFromAsset( list._skeletonPath.id() ) == false )
         {
             SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationCookCould2", "Vertex animation cook: could not read skeleton '%#'", list._skeletonPath.c_str() );
             return false;

@@ -33,7 +33,7 @@
 		<entity id="4" name="Probe" layers="Probe">
 			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
 				<_listComponent>
-					<ReflectionProbeComponent _localID="12336293822305597558" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _extent="12,6,12" _blendDistance="0.5" _probeDataPath="game/playground/maps/reflectionprobe.reflprobe" _resolution="16" _captureResolution="64" _bakeSampleCount="16" />
+					<ReflectionProbeComponent _localID="12336293822305597558" _localPosition="0,2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _extent="12,6,12" _blendDistance="0.5" _probeDataPath="guid:eec8a97dc1f43c8c393f5fd8047fcba3" _resolution="16" _captureResolution="64" _bakeSampleCount="16" />
 				</_listComponent>
 			</GameObject>
 		</entity>

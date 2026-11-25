@@ -166,8 +166,8 @@ namespace sw
     private:
         const MetroidvaniaCatalog* _pCatalog;
         PROPERTY( RuntimeState )
-        vector<MetroidvaniaKillRecord>                 _listKill;
-        NotificationBuffer<MetroidvaniaDeathRestEvent> _eventBuffer;
+        vector<MetroidvaniaKillRecord> _listKill;
+        SW_TRANSIENT NotificationBuffer<MetroidvaniaDeathRestEvent> _eventBuffer;
         PROPERTY( RuntimeState )
         MetroidvaniaCorpse _corpse;
         PROPERTY( RuntimeState )

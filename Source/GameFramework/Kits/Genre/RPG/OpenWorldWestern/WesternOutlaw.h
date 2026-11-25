@@ -126,29 +126,29 @@ namespace sw
         void logLawEvents();
 
     private:
-        WesternHonor                        _honor;
-        WesternLawState                     _law;
-        NotificationBuffer<WesternLawEvent> _lawEventBuffer; ///< `pollLawEvents`
-        WesternSurvival                     _survival;
-        WesternPerceptionSight              _sight;
-        GameRandom                          _random;
+        SW_TRANSIENT WesternHonor      _honor;
+        SW_CODEC_STATE WesternLawState _law;
+        SW_TRANSIENT NotificationBuffer<WesternLawEvent> _lawEventBuffer; ///< `pollLawEvents`
+        SW_CODEC_STATE WesternSurvival                   _survival;
+        SW_TRANSIENT WesternPerceptionSight              _sight;
+        SW_CODEC_STATE GameRandom                        _random;
         PROPERTY( RuntimeState )
         vector<WesternCarcass> _listCarcass;
         PROPERTY( RuntimeState )
-        vector<WesternPelt>   _listPelt;
-        Wallet*               _pWallet;     ///< 빌린 지갑(`initialize` 뒤 늘 있다)
-        ReputationState*      _pReputation; ///< 빌린 평판(`initialize` 뒤 늘 있다)
-        WorldClock*           _pClock;      ///< 빌린 시계(`initialize` 뒤 늘 있다)
-        GameFlags*            _pFlags;      ///< 빌린 플래그(`initialize` 뒤 늘 있다)
-        WeatherSystem*        _pWeather;    ///< 빌린 날씨(`initialize` 뒤 늘 있다)
-        Inventory*            _pInventory;  ///< 빌린 가방(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
-        hashed_string         _regionID;
-        const WesternCatalog* _pCatalog;
-        const LootCatalog*    _pLoot;          ///< 빌린 전리품 카탈로그(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
-        float64               _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
-        float32               _regionBaseTemperature;
+        vector<WesternPelt>        _listPelt;
+        Wallet*                    _pWallet;     ///< 빌린 지갑(`initialize` 뒤 늘 있다)
+        ReputationState*           _pReputation; ///< 빌린 평판(`initialize` 뒤 늘 있다)
+        WorldClock*                _pClock;      ///< 빌린 시계(`initialize` 뒤 늘 있다)
+        GameFlags*                 _pFlags;      ///< 빌린 플래그(`initialize` 뒤 늘 있다)
+        WeatherSystem*             _pWeather;    ///< 빌린 날씨(`initialize` 뒤 늘 있다)
+        Inventory*                 _pInventory;  ///< 빌린 가방(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
+        SW_TRANSIENT hashed_string _regionID;
+        const WesternCatalog*      _pCatalog;
+        const LootCatalog*         _pLoot;          ///< 빌린 전리품 카탈로그(전리품을 적은 동물이 없으면 nullptr 일 수 있다)
+        SW_CODEC_STATE float64     _lastClockHours; ///< 지난 `update` 의 시계(날 × 24 + 시)
+        SW_TRANSIENT float32       _regionBaseTemperature;
         PROPERTY( RuntimeState )
-        int32 _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
-        uint8 _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
+        int32                _centsCarry;     ///< 팔고 남은 센트(1 달러 아래)
+        SW_CODEC_STATE uint8 _bClockSeen : 1; ///< `_lastClockHours` 를 잡았다(불러온 뒤에는 다시 잡는다)
     };
 } // namespace sw

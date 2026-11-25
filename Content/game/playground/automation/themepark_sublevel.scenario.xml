@@ -17,7 +17,7 @@
 	<!-- ① 얹은 자리에서 열린다 -->
 	<DevCommand line="minigame.enter themepark FarEntrance"/>
 	<WaitUntil watch="Scene.LoadedSubLevelCount" equals="1" timeoutFrames="60"/>
-	<ExpectActiveScene path="game/playground/automation/themepark_stage/stage.scene.xml"/>
+	<ExpectActiveScene path="guid:f947709c4342f28d37ed4bf6089d2700"/>
 	<Expect watch="Minigame.Active" is="themepark"/>
 	<WaitUntil watch="Object.Exists" target="ParkGuest[3]" equals="1" timeoutFrames="60"/>
 	<Expect watch="Object.X" target="themepark/ParkGate" near="460" tolerance="0.05"/>
@@ -46,7 +46,7 @@
 	<Expect watch="Object.Exists" target="RideEntrance[0]" equals="0"/>
 	<Expect watch="Minigame.Active" is="none"/>
 	<Expect watch="Minigame.LeakCount" equals="0"/>
-	<ExpectActiveScene path="game/playground/automation/themepark_stage/stage.scene.xml"/>
+	<ExpectActiveScene path="guid:f947709c4342f28d37ed4bf6089d2700"/>
 
 	<!-- ④ 다시 들어가면 새 공원이다 -->
 	<DevCommand line="minigame.enter themepark ParkEntrance"/>

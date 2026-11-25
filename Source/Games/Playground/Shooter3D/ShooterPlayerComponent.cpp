@@ -122,7 +122,7 @@ namespace sw
                 for ( const AppearancePartDef& part : pVisual->_listPart )
                 {
                     if ( part._socketSet.empty() == false )
-                        return part._socketSet;
+                        return part._socketSet.key();
                 }
                 return hashed_string{};
             }

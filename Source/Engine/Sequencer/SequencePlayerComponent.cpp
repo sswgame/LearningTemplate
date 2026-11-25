@@ -668,7 +668,7 @@ namespace sw
             // 시나리오 항목은 엔진이 바로 재생기로 넘긴다(`ScenarioPlayback` — 재생기가 없거나 무엇이 돌고 있으면 그쪽이 까닭을 남긴다). 듣는 쪽에도 같은 이벤트로 알린다.
             const SequenceItemKindInfo* pKindInfo = SequenceAsset::findItemKindInfo( event._item._kind );
             if ( pKindInfo != nullptr && pKindInfo->_bPlaysScenario )
-                (void)ScenarioPlayback::play( AssetID{ event._item._scenario } );
+                (void)ScenarioPlayback::play( event._item._scenario.id() );
             _sequenceEventMulticast.broadcast( event );
         }
     }

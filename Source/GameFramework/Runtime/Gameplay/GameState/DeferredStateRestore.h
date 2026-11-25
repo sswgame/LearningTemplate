@@ -101,11 +101,20 @@ namespace sw
         {
             if ( io.isWriting() == false )
                 return StateSectionTableUtil::read( io, format, sectionCount, forEachSection, pOwnerName );
-            Archive& archive = io.getArchive();
-            if ( _bOpen == SW_FALSE && _heldBytes.empty() == false )
-                archive.writeBytes( _heldBytes.data(), _heldBytes.size() );
-            else
-                StateSectionTableUtil::write( archive, format, sectionCount, forEachSection );
+            if ( writeHeldBytes( io ) == false )
+                StateSectionTableUtil::write( io.getArchive(), format, sectionCount, forEachSection );
+            return true;
+        }
+
+        /**
+         * @brief 열리기 전에 들고 있는 바이트가 있으면 그대로 씁니다(true — 컴포넌트의 `serializeState` 는 자기 본문을 쓰지 않고 돌아간다). 읽기면 늘 false 입니다.
+         * @details 들고 있는 동안은 그 바이트가 곧 상태다 — 지금 값을 쓰면 세이브를 기본값으로 덮는다.
+         */
+        [[nodiscard]] bool writeHeldBytes( StateIO& io ) const
+        {
+            if ( io.isReading() || _bOpen == SW_TRUE || _heldBytes.empty() )
+                return false;
+            io.getArchive().writeBytes( _heldBytes.data(), _heldBytes.size() );
             return true;
         }
 

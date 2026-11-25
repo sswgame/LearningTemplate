@@ -6,7 +6,7 @@
 		<item name="_color" defaultValue="0.85 0.8 0.7 1" />
 		<item name="_roughness" defaultValue="0.8" />
 		<item name="_metallic" defaultValue="0" />
-		<item name="_displacementMap" assetPath="engine/textures/test/checker.dds" />
+		<item name="_displacementMap" assetPath="guid:2f8ecca6a35bee326d0d3e97b4feb7c7" />
 		<item name="_displacementScale" defaultValue="0.35" />
 		<item name="_displacementMidLevel" defaultValue="0" />
 		<item name="_tessellationDensity" defaultValue="200" />

@@ -232,25 +232,25 @@ namespace sw
         uint32          computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 
     private:
-        AIDirectorContext        _context;
-        AIDirectorIntensityModel _builtinModel;
-        SpawnDirector            _spawnDirector;
+        SW_TRANSIENT AIDirectorContext          _context;
+        SW_CODEC_STATE AIDirectorIntensityModel _builtinModel;
+        SW_CODEC_STATE SpawnDirector            _spawnDirector;
         PROPERTY( RuntimeState )
-        vector<PoolState>                           _listPoolState;
-        NotificationBuffer<AIDirectorEvent>         _eventBuffer;
-        RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
-        vector<float32>                             _listScratchWeight;
-        const AIDirectorProfile*                    _pProfile;
-        const SpawnTable*                           _pSpawnTable;
-        IAIDirectorIntensityModel*                  _pCustomModel;
-        GameRandom                                  _random;
+        vector<PoolState> _listPoolState;
+        SW_TRANSIENT NotificationBuffer<AIDirectorEvent> _eventBuffer;
+        SW_TRANSIENT RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
+        SW_TRANSIENT vector<float32> _listScratchWeight;
+        const AIDirectorProfile*     _pProfile;
+        const SpawnTable*            _pSpawnTable;
+        IAIDirectorIntensityModel*   _pCustomModel;
+        SW_CODEC_STATE GameRandom    _random;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _time;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _phaseTime;
         PROPERTY( RuntimeState, Min = 0 )
-        float32 _intensity;
-        uint32  _seed;
+        float32             _intensity;
+        SW_TRANSIENT uint32 _seed;
         PROPERTY( RuntimeState )
         uint32 _pickSerial; ///< 고른 횟수. 확률 절의 해시 키로 쓴다
         PROPERTY( RuntimeState, Min = 0 )

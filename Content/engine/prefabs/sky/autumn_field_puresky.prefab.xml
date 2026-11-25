@@ -3,7 +3,7 @@
 <Prefab formatVersion="0" name="Sky_autumn_field_puresky">
 	<GameObject _schemaVersion="0" _name="Sky_autumn_field_puresky" _bActive="true">
 		<_listComponent>
-			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:c9194ee823e0fd30b705d9c7c97ed456" _hdriRotation="0" _hdriRadianceMap="engine/prefabs/sky/autumn_field_puresky.radiancemap">
+			<SkyComponent _localID="14376368575749838118" _intensity="1" _mode="Hdri" _hdriTexture="guid:c9194ee823e0fd30b705d9c7c97ed456" _hdriRotation="0" _hdriRadianceMap="guid:25b75101fef4f2e9acfdcfc84bc70aee">
 				<_listHdriAmbient>
 					<item>3.463545</item>
 					<item>3.624593</item>

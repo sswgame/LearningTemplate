@@ -22,72 +22,72 @@
     <item>Shooter3D</item>
   </gameFeatures>
   <!-- 장르 키트 시연(maps/kitdemo_*)의 입력 — 기본 맵 · 걷기 축 · 시연 액션(docs/agents/DataInheritance.md "입력 맵 묶음" 절). 다른 씬은 이 액션을 묻지 않는다. -->
-  <inputMap path="common/input/base.input.xml"/>
-  <inputMap path="common/input/move.input.xml"/>
-  <inputMap path="game/playground/data/kitdemo.input.xml"/>
+  <inputMap path="guid:ea15272d6f5bbf0f7477d016bf1eec84"/>
+  <inputMap path="guid:9388b05f69f96a839b1b3c45255de35d"/>
+  <inputMap path="guid:3de8648c2f5e58acc80ac4165db01947"/>
   <!-- 타일 걸음 마을 미니게임(minigames/pixeltown)의 말 걸기 — 공통 상호작용 액션 Interact 에 Space 를 더한다(Interaction 레이어라 시연 점프 Space 와 겹치지 않는다). -->
-  <inputMap path="common/input/interact.input.xml"/>
-  <inputMap path="game/playground/pixeltown/data/town.input.xml"/>
+  <inputMap path="guid:e3d45bed337e154204cf24b626a3481b"/>
+  <inputMap path="guid:571a8d2965e699bc57a96a8e7be01bd4"/>
   <!-- 몸 이동(점프 · 달리기) — 서부 평원의 질주와 야외 활동 장소(maps/outdoors)의 점프가 함께 쓴다. Traversal 레이어라 시연 점프(Gameplay) · 상호작용(Interaction)의 Space 와 겹치지 않는다. -->
-  <inputMap path="common/input/traversal.input.xml"/>
+  <inputMap path="guid:822cfbe204ffa909045f4e7b99be6b7a"/>
   <!-- 야외 활동 장소의 위아래(헤엄 · 사다리) · 이모트. -->
-  <inputMap path="game/playground/data/outdoors.input.xml"/>
+  <inputMap path="guid:3540b4e29d394c97aa8bd78a7959cc72"/>
   <!-- 서부 평원(maps/prairie · 마을 maps/hub)의 조작 — 휘파람 · 행동 · 들기와 말의 질주(공통 Sprint). -->
-  <inputMap path="game/playground/wildwest/data/wildwest.input.xml"/>
+  <inputMap path="guid:48766c9ec15ed0d52c1c17547ef58206"/>
   <!-- 허브 농장 미니게임(minigames/harvestvalley) — 현황(Status)은 공통 메뉴, 농사 키는 꺼진 레이어 Farming(미니게임이 켠다). -->
-  <inputMap path="common/input/menu.input.xml"/>
-  <inputMap path="game/playground/harvestvalley/data/farm.input.xml"/>
+  <inputMap path="guid:06c8634f2342d055ce8367ab05a04cf1"/>
+  <inputMap path="guid:4bf0eeada78fa960bf149d76f64924c3"/>
   <!-- 초원 마을 미니게임(minigames/meadowvillage)의 대화 — 꺼진 레이어 CreatureTown(미니게임이 켠다) -->
-  <inputMap path="game/playground/meadowvillage/data/town.input.xml"/>
+  <inputMap path="guid:07503c87cd4e494eaac958a0995da095"/>
   <!-- 복셀 광산 미니게임(minigames/voxelcraft) — 달리기 · 시선은 공통, 부수기 · 놓기 · 핫바는 Voxel 레이어(미니게임이 켠다) -->
-  <inputMap path="common/input/look.input.xml"/>
-  <inputMap path="game/playground/voxelcraft/data/voxel.input.xml"/>
+  <inputMap path="guid:1abeeec10d6bebf4200fea820d7eab36"/>
+  <inputMap path="guid:bb1d2a4d11a76f92b88d1fc819943a1c"/>
   <!-- 도시 건설 미니게임(minigames/frontiertown)의 빨리 감기 — 제 레이어(FastForward)라 시연 점프 · 말 걸기의 Space 와 겹치지 않는다. -->
-  <inputMap path="common/input/fastforward.input.xml"/>
+  <inputMap path="guid:dbf00c6192e2e9a4276a25eb6df84427"/>
   <!-- RTS 매치 미니게임(minigames/starskirmish) — 확대 · 이동 · 속도는 공통, 고르기 · 명령 · 부대는 Skirmish 레이어(미니게임이 켜고, 켜진 동안 패드 가상 커서도 켜진다). -->
-  <inputMap path="common/input/camera.input.xml"/>
-  <inputMap path="common/input/camerapan.input.xml"/>
-  <inputMap path="common/input/time.input.xml"/>
-  <inputMap path="game/playground/starskirmish/data/skirmish.input.xml"/>
+  <inputMap path="guid:7c0b760a7298e015942786e642d03eaa"/>
+  <inputMap path="guid:81403123e7b7787d7f8e69b8ec08209c"/>
+  <inputMap path="guid:c8fd0b4facf3656e888ac4df13a1c625"/>
+  <inputMap path="guid:3edf4481128b17ccbe8e542bbaae84d9"/>
   <!-- 액션 어드벤처 미니게임(minigames/velmora) — 걷기는 공통 Move, 공격 · 대시 · 쓰기는 꺼진 레이어 Velmora(미니게임이 켠다). -->
-  <inputMap path="game/playground/velmora/data/velmora.input.xml"/>
+  <inputMap path="guid:9c01afe3c83ced813d5406130766ff69"/>
   <!-- 테마파크 미니게임(minigames/themepark) — 내려다보는 카메라는 공통(위 RTS 매치와 같은 파일), 공원 액션은 ThemePark 레이어(미니게임이 켠다) -->
-  <inputMap path="game/playground/themepark/data/park.input.xml"/>
+  <inputMap path="guid:90459f4d2a06cb7fd14602588d38a6f1"/>
   <!-- 아레나 미니게임(minigames/abilityarena)의 근접 · 화염구 · 회복 · 대시 — 꺼진 레이어 Arena(미니게임이 켠다). -->
-  <inputMap path="game/playground/abilityarena/data/arena.input.xml"/>
+  <inputMap path="guid:56d8ba33b0251ecefba47b522bc2ede2"/>
   <!-- 사격장 미니게임(minigames/shooter3d)의 사격 · 재장전 · 무기 고르기 · 시점 — 꺼진 레이어 Shooter(미니게임이 켠다). 시점 확대 · 궤도는 공통. -->
-  <inputMap path="common/input/cameraorbit.input.xml"/>
-  <inputMap path="game/playground/shooter3d/data/shooter.input.xml"/>
+  <inputMap path="guid:90222917d5e41d211f7ff9b71a32827f"/>
+  <inputMap path="guid:35a96724b302fdec07899de72055b030"/>
   <!-- 메트로배니아 미니게임(minigames/metroidvania)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
-  <inputMap path="game/playground/metroidvania/data/metroidvania.input.xml"/>
+  <inputMap path="guid:4a40a26d405a4aa082ed206870ebc8f2"/>
   <!-- 기체 대전 미니게임(minigames/mecharena)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
-  <inputMap path="game/playground/mecharena/data/mecharena.input.xml"/>
+  <inputMap path="guid:55135b13066d49b9a4d05a40fd908339"/>
   <!-- 배틀로얄 미니게임(minigames/battleroyale)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
-  <inputMap path="game/playground/battleroyale/data/battleroyale.input.xml"/>
+  <inputMap path="guid:40265e9564804dfaae65f2cec96b5da7"/>
   <!-- 격투 미니게임(minigames/fighting)의 입력 — 꺼진 레이어(미니게임이 켠다). 걷기는 공통. -->
-  <inputMap path="game/playground/fighting/data/fighting.input.xml"/>
+  <inputMap path="guid:a532fcce7ad94928aa79c69800493497"/>
   <!-- 비대칭 공포 미니게임(minigames/asymmetrichorror)의 쓰기 — 꺼진 레이어 AsymmetricHorror(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
-  <inputMap path="game/playground/asymmetrichorror/data/asymmetrichorror.input.xml"/>
+  <inputMap path="guid:8b1179647f9f4f86b7276529aee4c9a5"/>
   <!-- 협동 수집 공포 미니게임(minigames/coopscavenger)의 쓰기 · 레버 — 꺼진 레이어 CoopScavenger(미니게임이 켠다). 로컬 사용자 둘이 같은 액션을 자기 장치로 읽는다. -->
-  <inputMap path="game/playground/coopscavenger/data/coopscavenger.input.xml"/>
+  <inputMap path="guid:9654fa8fe5534610b5c9c237e9b164a9"/>
   <!-- 유령 사냥 미니게임(minigames/ghosthunt)의 손전등 · 스트로브 · 청소기 · 쓰기 — 꺼진 레이어 GhostHunt(미니게임이 켠다). -->
-  <inputMap path="game/playground/ghosthunt/data/ghosthunt.input.xml"/>
+  <inputMap path="guid:4c6a99ae12634acab278511a6f4b1ced"/>
   <!-- 생존 공포 미니게임(minigames/survivalhorror)의 쓰기 · 손전등 · 회복 — 꺼진 레이어 SurvivalHorror(미니게임이 켠다). -->
-  <inputMap path="game/playground/survivalhorror/data/survivalhorror.input.xml"/>
+  <inputMap path="guid:06384c0b8fad442da831256abbfdc9f0"/>
   <!-- 카트 경기(minigames/kartracing) · 파티 아레나(minigames/partyarena) · 리듬(minigames/rhythm) · 덱 전투(minigames/cardgame) · 정복(minigames/sidescrollconquest) — 저마다 꺼진 레이어(미니게임이 켠다). -->
-  <inputMap path="game/playground/kartracing/data/kartracing.input.xml"/>
-  <inputMap path="game/playground/partyarena/data/partyarena.input.xml"/>
-  <inputMap path="game/playground/rhythm/data/rhythm.input.xml"/>
-  <inputMap path="game/playground/cardgame/data/cardgame.input.xml"/>
-  <inputMap path="game/playground/sidescrollconquest/data/sidescrollconquest.input.xml"/>
+  <inputMap path="guid:ceea64493b28511537e77f90ef617a8e"/>
+  <inputMap path="guid:04e0bcaa0255f99487fe4328b1c7f252"/>
+  <inputMap path="guid:066b7d32a258421655a850e0ee1f8278"/>
+  <inputMap path="guid:a607d92ed9fdaceaa9ca710f14b866f8"/>
+  <inputMap path="guid:ba9e21a841a2866ff3441acabb29b13e"/>
   <!-- 등불 길 미니게임(minigames/classicjrpg)의 공격 · 주문 · 방어 · 도망 · 쉬기 — 꺼진 레이어 JRPG(미니게임이 켠다). -->
-  <inputMap path="game/playground/classicjrpg/data/jrpg.input.xml"/>
+  <inputMap path="guid:ba657f7694adfc4d129184809dde6004"/>
   <!-- 풀밭 수집 미니게임(minigames/monstercollector)의 기술 · 볼 · 교체 · 도망 · 쉬기 — 꺼진 레이어 MonsterCollector(미니게임이 켠다). -->
-  <inputMap path="game/playground/monstercollector/data/collector.input.xml"/>
+  <inputMap path="guid:5bfe2f55557d33d4fdb5d045bfdbf6c3"/>
   <!-- 늪지 사냥 미니게임(minigames/monsterhuntrpg)의 공격 · 회피 · 표식 · 오일 · 물약 · 조사 — 꺼진 레이어 MonsterHunt(미니게임이 켠다). -->
-  <inputMap path="game/playground/monsterhuntrpg/data/hunt.input.xml"/>
+  <inputMap path="guid:c21f2c53456fa858465fd54daa39e5e2"/>
   <!-- 항구 식당 미니게임(minigames/restaurantsim)의 사기 · 가격 · 열기 — 꺼진 레이어 Restaurant(미니게임이 켠다). -->
-  <inputMap path="game/playground/restaurantsim/data/restaurant.input.xml"/>
+  <inputMap path="guid:6daddf826b0f060c7432f01d06267673"/>
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다(접속하지 않으면 혼자 하는 허브다). 서버 설정은 Config/Server/Online/Playground.json.
        onlineHubServerID 는 매치(minigames/shooter3d_match)를 마친 클라이언트가 돌아올 허브 서버의 접속 티켓 이름이다.
        onlineHubReconnectSeconds 는 잃은 허브(서버 재시작)에 다시 붙기를 기다리는 최대 초다 — 넘으면 접속 전 자리로 돌아간다 -->
@@ -96,6 +96,7 @@
   <onlineHubReconnectSeconds>30</onlineHubReconnectSeconds>
   <onlineRegion>local</onlineRegion>
   <onlineOfferCatalog>guid:759168d3d4fb5cdd2b8b822bf095eaf9</onlineOfferCatalog>
+  <onlineShopDocument>guid:31d3621cede3fdd40788ddaf304c9288</onlineShopDocument>
   <onlineSoftCurrency>cur.gold</onlineSoftCurrency>
   <onlineHardCurrency>cur.gem</onlineHardCurrency>
   <onlineLeaderboard>arena_kills</onlineLeaderboard>

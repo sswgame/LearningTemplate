@@ -14,9 +14,11 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -69,8 +71,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Tooltip = "Resource path of the clip (wav, ogg) or of a sound graph (.audiograph.xml)" )
-        hashed_string _path{};
+        PROPERTY( Tooltip = "The clip (wav, ogg) or the sound graph (.audiograph.xml)" )
+        AssetRef<AudioPlayableAsset> _path;
         PROPERTY( Meta = "Localizable", Tooltip = "Subtitle text key (Namespace.Key in a string table) shown when this clip starts; empty shows none" )
         hashed_string _subtitleKey{};
         PROPERTY( Min = 0.0, Tooltip = "Random container weight" )
@@ -127,7 +129,7 @@ namespace sw
      * @code
      *     <AudioEventDef _name="Footstep" _bus="sfx" _attenuation="Small" _container="Random" _maxInstances="4" _steal="Oldest"
      *                     _priority="40" _cooldownSeconds="0.05" _volumeDbMin="-3" _pitchMin="-1" _pitchMax="1">
-     *         <_listClip><AudioClipEntry _path="game/x/sounds/step_0.ogg" /><AudioClipEntry _path="game/x/sounds/step_1.ogg" /></_listClip>
+     *         <_listClip><AudioClipEntry _path="guid:…" /><AudioClipEntry _path="guid:…" /></_listClip>
      *     </AudioEventDef>
      *     <AudioEventDef _name="FootstepHeavy" _parentEvent="Footstep" _volumeDbMin="0" _pitchMin="-4" _pitchMax="-2" />
      * @endcode

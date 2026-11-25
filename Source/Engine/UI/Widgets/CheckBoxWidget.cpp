@@ -8,6 +8,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
+#include "Engine/UI/Style/UIWidgetSkin.h"
 
 namespace sw
 {
@@ -15,16 +16,10 @@ namespace sw
     {
         struct CheckBoxWidgetInternal
         {
-            static constexpr float32 kBoxBorderWidth   = 2.0f;
-            static constexpr float32 kBoxCornerRadius  = 4.0f;
-            static constexpr float32 kMarkInset        = 5.0f;
-            static constexpr float32 kMarkCornerRadius = 2.0f;
-            /** @brief 꺼진 위젯의 색이 넘지 않는 불투명도입니다. */
-            static constexpr float32 kDisabledAlpha = 0.4f;
-
-            static float4 makeStateColor( const float4& color, bool bEnabled )
+            /** @brief 꺼진 위젯의 색은 @p disabledAlpha 를 넘지 않습니다. */
+            static float4 makeStateColor( const float4& color, bool bEnabled, float32 disabledAlpha )
             {
-                return float4{ color._x, color._y, color._z, bEnabled ? color._w : MathUtil::min( color._w, kDisabledAlpha ) };
+                return float4{ color._x, color._y, color._z, bEnabled ? color._w : MathUtil::min( color._w, disabledAlpha ) };
             }
         };
     } // namespace
@@ -32,16 +27,15 @@ namespace sw
     CheckBoxWidget::CheckBoxWidget()
         : ButtonWidget{}
         , _onCheckedChanged{}
-        , _boxColor{ 0.08f, 0.09f, 0.12f, 0.9f }
-        , _boxBorderColor{ 0.85f, 0.88f, 0.95f, 1.0f }
-        , _markColor{ 0.95f, 0.75f, 0.2f, 1.0f }
+        , _boxColor{ UIWidgetSkin::get()._checkBox._box._color }
+        , _boxBorderColor{ UIWidgetSkin::get()._checkBox._box._borderColor }
+        , _markColor{ UIWidgetSkin::get()._checkBox._mark._color }
         , _bChecked{ false }
     {
-        // 상자가 겉모습이다. 바탕은 투명하고 호버와 누름에서만 옅게 칠한다.
-        setBackground( UIBrush::makeSolid( float4{}, 0.0f ) );
-        setStateBrushes( UIBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.06f }, 4.0f ), UIBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.12f }, 4.0f ),
-                         UIBrush::makeSolid( float4{}, 0.0f ) );
-        setContentPadding( float4{} );
+        const UIWidgetSkin::CheckBox& skin = UIWidgetSkin::get()._checkBox;
+        setBackground( skin._brush._normal );
+        setStateBrushes( skin._brush._hovered, skin._brush._pressed, skin._brush._disabled );
+        setContentPadding( skin._padding );
     }
 
     CheckBoxWidget::~CheckBoxWidget() = default;
@@ -68,7 +62,7 @@ namespace sw
     {
         if ( property._name == hashed_string( "_bChecked" ) )
         {
-            invalidate( WidgetDirty::kPaint );
+            invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // 세터와 같다(:checked)
             return;
         }
         ButtonWidget::onBoundPropertyChanged( property );
@@ -84,12 +78,13 @@ namespace sw
 
     float2 CheckBoxWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
-        const float32 boxSpan = kBoxSize + kBoxGap;
+        const UIWidgetSkin::CheckBox& skin    = UIWidgetSkin::get()._checkBox;
+        const float32                 boxSpan = skin._boxSize._x + skin._labelGap;
         if ( getChildCount() == 0 )
-            return float2{ kBoxSize, kBoxSize };
+            return skin._boxSize;
         const float2 childAvailable{ UILayoutPass::computeRemaining( availableSize._x, boxSpan ), availableSize._y };
         const float2 desired = UILayoutPass::measure( *getChild( 0 ), context, childAvailable );
-        return float2{ boxSpan + desired._x, MathUtil::max( kBoxSize, desired._y ) };
+        return float2{ boxSpan + desired._x, MathUtil::max( skin._boxSize._y, desired._y ) };
     }
 
     void CheckBoxWidget::arrangeChildren( const UILayoutContext& context, const float2& size )
@@ -97,7 +92,8 @@ namespace sw
         if ( getChildCount() == 0 )
             return;
         // 왼쪽에서 오른쪽으로 배치한다. 오른쪽에서 왼쪽이면 arrangeChild 가 거울 배치해 텍스트가 상자 왼쪽에 간다.
-        const float32 boxSpan = kBoxSize + kBoxGap;
+        const UIWidgetSkin::CheckBox& skin    = UIWidgetSkin::get()._checkBox;
+        const float32                 boxSpan = skin._boxSize._x + skin._labelGap;
         arrangeChild( context, *getChild( 0 ), float2{ boxSpan, 0.0f }, float2{ MathUtil::max( 0.0f, size._x - boxSpan ), size._y } );
     }
 
@@ -105,23 +101,23 @@ namespace sw
     {
         using Internal = CheckBoxWidgetInternal;
         ButtonWidget::paint( painter, context ); // 호버와 누름 바탕
-        const float2& size = getGeometry()._size;
-        const float2  boxPosition{ isRightToLeft() ? size._x - kBoxSize : 0.0f, ( size._y - kBoxSize ) * 0.5f };
-        const bool    bEnabled = isEnabledInHierarchy();
-        CanvasBrush   box{};
-        box._color        = Internal::makeStateColor( _boxColor, bEnabled );
-        box._borderColor  = Internal::makeStateColor( _boxBorderColor, bEnabled );
-        box._borderWidth  = Internal::kBoxBorderWidth;
-        box._cornerRadius = float4{ Internal::kBoxCornerRadius, Internal::kBoxCornerRadius, Internal::kBoxCornerRadius, Internal::kBoxCornerRadius };
-        painter.fillRect( boxPosition, float2{ kBoxSize, kBoxSize }, box );
+        const UIWidgetSkin::CheckBox& skin = UIWidgetSkin::get()._checkBox;
+        const float2&                 size = getGeometry()._size;
+        const float2                  boxPosition{ isRightToLeft() ? size._x - skin._boxSize._x : 0.0f, ( size._y - skin._boxSize._y ) * 0.5f };
+        const bool                    bEnabled = isEnabledInHierarchy();
+        CanvasBrush                   box{};
+        box._color        = Internal::makeStateColor( _boxColor, bEnabled, skin._disabledAlpha );
+        box._borderColor  = Internal::makeStateColor( _boxBorderColor, bEnabled, skin._disabledAlpha );
+        box._borderWidth  = skin._box._borderWidth;
+        box._cornerRadius = skin._box._cornerRadius;
+        painter.fillRect( boxPosition, skin._boxSize, box );
         if ( _bChecked == false )
             return;
-        const float32 markSize = kBoxSize - 2.0f * Internal::kMarkInset;
+        const float4& inset = skin._boxPadding;
         CanvasBrush   mark{};
-        mark._color        = Internal::makeStateColor( _markColor, bEnabled );
-        mark._cornerRadius = float4{ Internal::kMarkCornerRadius, Internal::kMarkCornerRadius, Internal::kMarkCornerRadius, Internal::kMarkCornerRadius };
-        painter.fillRect( float2{ boxPosition._x + Internal::kMarkInset, boxPosition._y + Internal::kMarkInset }, float2{ markSize, markSize },
-                          mark );
+        mark._color        = Internal::makeStateColor( _markColor, bEnabled, skin._disabledAlpha );
+        mark._cornerRadius = skin._mark._cornerRadius;
+        painter.fillRect( float2{ boxPosition._x + inset._x, boxPosition._y + inset._y }, float2{ skin._boxSize._x - inset._x - inset._z, skin._boxSize._y - inset._y - inset._w }, mark );
     }
 } // namespace sw
 

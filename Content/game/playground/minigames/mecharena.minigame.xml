@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 MechArena 레이어(mecharena/data/mecharena.input.xml)만 켠다. 짧은 대전이라 안에서 저장하지 않는다.
   시나리오 automation/mecharena_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="mecharena" map="game/playground/mecharena/maps/colony.scene.xml" entry="SceneSwitch" portalSlot="13" save="Blocked" features="MechArena" inputContexts="Movement,MechArena" catalogs="MechCatalog"/>
+<Minigame name="mecharena" map="guid:af80aec1d890484aadbdd6a1855e3957" entry="SceneSwitch" portalSlot="13" save="Blocked" features="MechArena" inputContexts="Movement,MechArena" catalogs="MechCatalog"/>

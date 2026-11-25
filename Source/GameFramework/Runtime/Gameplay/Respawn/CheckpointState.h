@@ -101,7 +101,7 @@ namespace sw
         PROPERTY( RuntimeState )
         vector<CheckpointRecord> _listActivated; ///< 켠 순서
         PROPERTY( RuntimeState, Min = -1 )
-        int32 _currentIndex; ///< 지금 부활 지점의 목록 자리(−1 이면 없음)
-        uint8 _bForwardOnly; ///< 규칙 — 상태 바이트에 싣지 않는다
+        int32              _currentIndex; ///< 지금 부활 지점의 목록 자리(−1 이면 없음)
+        SW_TRANSIENT uint8 _bForwardOnly; ///< 규칙 — 상태 바이트에 싣지 않는다
     };
 } // namespace sw

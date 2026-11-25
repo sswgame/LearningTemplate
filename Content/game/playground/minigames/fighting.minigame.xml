@@ -6,4 +6,4 @@
   입력은 걷기 공통 레이어와 Fighting 레이어(fighting/data/fighting.input.xml)만 켠다. 짧은 대전이라 안에서 저장하지 않는다.
   시나리오 automation/fighting_slice 가 실행 전역 변수 gv_firstMinigame 로 들어간다.
 -->
-<Minigame name="fighting" map="game/playground/fighting/maps/ring.scene.xml" entry="SceneSwitch" portalSlot="11" save="Blocked" features="Fighting" inputContexts="Movement,Fighting" catalogs="FighterCatalog"/>
+<Minigame name="fighting" map="guid:24f6c7c80c9e4535a5c65c5a86276e71" entry="SceneSwitch" portalSlot="11" save="Blocked" features="Fighting" inputContexts="Movement,Fighting" catalogs="FighterCatalog"/>

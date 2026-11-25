@@ -405,7 +405,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, HandlesAreSavedByStableKey )
                                            sw::hashed_string( "ComponentHandle" ) );
     SW_EXPECT_TRUE( sw::ReflectBuiltinTraitTable::get( sw::ReflectBuiltinIndex::kGameObjectHandle ).hasRole( sw::ReflectBuiltinRole::State ) );
 
-    const sw::TypeInfo* pOwner = sw::AssetPathActor::StaticType(); // SaveGame 칸이 없는 타입 — 세이브가 모든 칸을 쓴다
+    const sw::TypeInfo* pOwner = sw::AnyValueActor::StaticType(); // SaveGame 칸이 없는 타입 — 세이브가 모든 칸을 쓴다
     SW_REQUIRE_NOT_NULL( pOwner );
     const sw::SerializeContext saveContext = makeSaveContext();
     SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleProp, saveContext ) );

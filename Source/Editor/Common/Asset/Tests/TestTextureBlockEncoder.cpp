@@ -5,11 +5,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -173,6 +175,31 @@ SW_TEST_CASE( TextureBlockEncoderTest, ETC2AndEACRoundTripNearTheSourceDetermini
     SW_REQUIRE_EQUAL( size_t( 4 * 8 ), listBlock.size() );
     listDecoded = Util::decodeETC( RHIFormat::EAC_R11_UNORM, listBlock, Util::kSize, Util::kSize );
     SW_EXPECT_TRUE_MSG( Util::measureMaxError( listSource, listDecoded, 0, 0 ) <= 8, "EAC R11 is far from the source" );
+}
+
+/**
+ * @brief [TextureBlockEncoderTest] 띠로 나눠 인코딩한 밉(작업 시스템이 있든 없든)은 블록 행을 하나씩 따로 인코딩해 이은 바이트와 같다 — 띠 크기 · 스레드 수가 결과에 남지 않는다(쿠킹 결과가 DDC 키다)
+ */
+SW_TEST_CASE( TextureBlockEncoderTest, BandsDoNotChangeTheBytes )
+{
+    constexpr uint32 kWidth  = 8;
+    constexpr uint32 kHeight = 138; // 띠 셋 — 마지막 띠와 마지막 블록 행이 짧다
+    constexpr uint32 kRows   = 4;
+    vector<uint8>    listSource( static_cast<size_t>( kWidth ) * kHeight * 4 );
+    for ( size_t index = 0; index < listSource.size(); ++index )
+        listSource[index] = static_cast<uint8>( index * 37 + index / 91 );
+    for ( const RHIFormat format : { RHIFormat::ASTC_4x4_UNORM, RHIFormat::ETC2_RGBA8_UNORM, RHIFormat::EAC_RG11_UNORM, RHIFormat::EAC_R11_UNORM } )
+    {
+        vector<uint8> listRow;
+        for ( uint32 firstRow = 0; firstRow < kHeight; firstRow += kRows )
+            SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( format, listSource.data() + static_cast<size_t>( firstRow ) * kWidth * 4, kWidth, MathUtil::min( kRows, kHeight - firstRow ), listRow ) );
+        vector<uint8> listSerial;
+        vector<uint8> listParallel;
+        SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( format, listSource.data(), kWidth, kHeight, listSerial ) );
+        SW_REQUIRE_TRUE( TextureBlockEncoder::encodeMip( format, listSource.data(), kWidth, kHeight, listParallel, editor::findSubsystem<TaskManager>() ) );
+        SW_EXPECT_TRUE( listSerial == listRow );
+        SW_EXPECT_TRUE( listParallel == listRow );
+    }
 }
 
 /**

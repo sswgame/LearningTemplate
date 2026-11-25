@@ -23,7 +23,7 @@
 			</SkeletalSeveringComponent>
 		</Add>
 		<Override key="#bfe4aa906b270582">
-			<CharacterAppearanceComponent _presetID="SkeletonMinion" _bMergeParts="true" _surfaceChannelsPath="engine/character/default.surfacechannels.xml" />
+			<CharacterAppearanceComponent _presetID="SkeletonMinion" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />
 		</Override>
 		<Override key="#9d5e0490028b69ab">
 			<WidgetComponent _worldOffset="0,2.45,0" />

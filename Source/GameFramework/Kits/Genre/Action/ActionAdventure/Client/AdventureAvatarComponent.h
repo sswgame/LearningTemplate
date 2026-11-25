@@ -84,7 +84,7 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Player Color" )
         float4 _playerColor;
 
-        PrefabViewBatch _cubeViews;
-        PrefabViewBatch _sphereViews;
+        SW_TRANSIENT PrefabViewBatch _cubeViews;
+        SW_TRANSIENT PrefabViewBatch _sphereViews;
     };
 } // namespace sw

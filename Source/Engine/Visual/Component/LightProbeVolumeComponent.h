@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -50,7 +51,7 @@ namespace sw
         /** @brief 목표 간격을 설정합니다. */
         void setSpacing( float32 spacing );
         /** @brief 베이크 결과(`.probes`) 경로입니다. 비었으면 베이크하지 않은 볼륨입니다. */
-        const string& getProbeDataPath() const { return _probeDataPath; }
+        const string& getProbeDataPath() const { return _probeDataPath.path(); }
         /** @brief 베이크가 프로브마다 쏘는 균일 구 방향 수입니다(`LightProbeBakeInput`). */
         uint32 getBakeSampleCount() const { return _bakeSampleCount; }
         /**
@@ -127,7 +128,7 @@ namespace sw
         PROPERTY( Category = "Light Probe", DisplayName = "Spacing", Min = 0.1, Tooltip = "Target distance between neighbouring probes", Units = m )
         float32 _spacing;
         PROPERTY( Category = "Light Probe", DisplayName = "Baked Probes", Tooltip = "Baked .probes resource path (written by the probe bake)", Validate = validateProbeData )
-        string _probeDataPath;
+        AssetRef<LightProbeGrid> _probeDataPath;
         PROPERTY( Category = "Light Probe Bake", DisplayName = "Samples Per Probe", Min = 16, Max = 65536, Tooltip = "Uniform sphere rays each probe casts while baking" )
         uint32 _bakeSampleCount;
         PROPERTY( Category = "Light Probe Bake", DisplayName = "Bounce Albedo", Min = 0.0, Max = 1.0, Tooltip = "Reflectance assumed for every surface a bake ray hits" )
@@ -147,13 +148,13 @@ namespace sw
         PROPERTY( Category = "Light Probe Realtime", DisplayName = "Emissive Intensity", Min = 0.0, Tooltip = "Scale on emissive meshes (material _emissiveColor) a probe ray hits (0 ignores emission)" )
         float32 _realtimeEmissiveIntensity;
 
-        LightProbeGrid _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
-        uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
+        SW_TRANSIENT LightProbeGrid _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
+        SW_TRANSIENT uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
         /// @brief 실시간 갱신의 복셀 장면 캐시입니다(`findRealtimeVoxelScene`). 게임 스레드의 수집 경로만 만진다.
         mutable shared_ptr<const SceneVoxelScene> _pRealtimeVoxelScene;
-        mutable uint64                            _realtimeVoxelSetGeneration;    ///< 캐시를 만들 때의 프리미티브 집합 세대
-        mutable uint64                            _realtimeVoxelChangeGeneration; ///< 캐시를 만들 때의 메시 변경 세대
-        mutable AABB                              _realtimeVoxelBounds;           ///< 캐시를 만들 때의 상자
-        mutable float32                           _realtimeVoxelCellSize;         ///< 캐시를 만들 때의 목표 칸 크기
+        SW_TRANSIENT mutable uint64               _realtimeVoxelSetGeneration;    ///< 캐시를 만들 때의 프리미티브 집합 세대
+        SW_TRANSIENT mutable uint64               _realtimeVoxelChangeGeneration; ///< 캐시를 만들 때의 메시 변경 세대
+        SW_TRANSIENT mutable AABB                 _realtimeVoxelBounds;           ///< 캐시를 만들 때의 상자
+        SW_TRANSIENT mutable float32              _realtimeVoxelCellSize;         ///< 캐시를 만들 때의 목표 칸 크기
     };
 } // namespace sw

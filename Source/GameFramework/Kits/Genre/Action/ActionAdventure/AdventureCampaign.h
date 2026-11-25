@@ -85,9 +85,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        AdventureVitals _vitals; ///< 리플렉션 형식이 아니다 — 손 본문이 그 형식의 `serializeState` 로 싣는다
+        SW_CODEC_STATE AdventureVitals _vitals; ///< 리플렉션 형식이 아니다 — 손 본문이 그 형식의 `serializeState` 로 싣는다
         PROPERTY( RuntimeState )
-        hashed_string _respawnRegion;
-        hashed_string _flagPrefix; ///< 깃발 이름의 접두(판의 데이터)
+        hashed_string              _respawnRegion;
+        SW_TRANSIENT hashed_string _flagPrefix; ///< 깃발 이름의 접두(판의 데이터)
     };
 } // namespace sw

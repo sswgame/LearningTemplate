@@ -21,6 +21,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {
@@ -38,6 +39,11 @@ namespace sw
     struct SW_API OctahedralRadianceMap
     {
         static constexpr string_view kExtension = ".radiancemap";
+        /** @brief 참조(`AssetRef<OctahedralRadianceMap>`)의 대상 종류입니다. 공유 캐시가 없어 표에 올리지 않고 참조의 검사에만 쓴다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        static constexpr AssetTypeDef kAssetType{ "RadianceMap", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
         /// @brief 밉 0 한 변 텍셀 수의 범위 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다.
         static constexpr uint32 kMinResolution = 4;
         static constexpr uint32 kMaxResolution = 1024;
@@ -81,6 +87,11 @@ namespace sw
     struct SW_API ReflectionProbeAsset
     {
         static constexpr string_view kExtension = ".reflprobe";
+        /** @brief 참조(`AssetRef<ReflectionProbeAsset>`)의 대상 종류입니다. 공유 캐시가 없어 표에 올리지 않고 참조의 검사에만 쓴다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        static constexpr AssetTypeDef kAssetType{ "ReflectionProbe", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
         /// @brief 한 변 텍셀 수의 범위 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다.
         static constexpr uint32 kMinResolution = 4;
         static constexpr uint32 kMaxResolution = 256;

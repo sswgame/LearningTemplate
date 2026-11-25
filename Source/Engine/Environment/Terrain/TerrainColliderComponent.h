@@ -93,10 +93,10 @@ namespace sw
         PROPERTY( Category = "Collision", Tooltip = "Physics material name (empty: the first material)", Validate = validateMaterial, Meta = "NameSource=PhysicsMaterial" )
         hashed_string _material;
 
-        vector<PhysicsBodyHandle> _listBody;            ///< 청크마다 바디 하나(모두 구멍인 청크는 무효 핸들)
-        vector<uint32>            _listBuiltGeneration; ///< 청크 바디를 만들 때의 청크 세대(`TerrainComponent::getChunkGenerations`)
-        vector<uint32>            _listTriangleCount;   ///< 청크 바디의 삼각형 수
-        uint32                    _triangleCount;
-        DevCounter                _chunkBuildCount;
+        SW_TRANSIENT vector<PhysicsBodyHandle> _listBody; ///< 청크마다 바디 하나(모두 구멍인 청크는 무효 핸들)
+        SW_TRANSIENT vector<uint32> _listBuiltGeneration; ///< 청크 바디를 만들 때의 청크 세대(`TerrainComponent::getChunkGenerations`)
+        SW_TRANSIENT vector<uint32> _listTriangleCount;   ///< 청크 바디의 삼각형 수
+        SW_TRANSIENT uint32         _triangleCount;
+        DevCounter                  _chunkBuildCount;
     };
 } // namespace sw

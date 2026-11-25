@@ -231,8 +231,8 @@ namespace sw
         void pushEvent( HealthEventKind type, float32 amount, optional<int32> instigatorID );
 
     private:
-        HealthSettings                  _settings;
-        NotificationBuffer<HealthEvent> _eventBuffer;
+        SW_CODEC_STATE HealthSettings _settings;
+        SW_TRANSIENT NotificationBuffer<HealthEvent> _eventBuffer;
         PROPERTY( RuntimeState, Min = 0 )
         float32 _health;
         PROPERTY( RuntimeState, Min = 0 )
@@ -244,22 +244,22 @@ namespace sw
         PROPERTY( RuntimeState )
         float32 _timeSinceDamage; ///< 마지막 피해 뒤 지난 시간(재생 지연)
         PROPERTY( RuntimeState )
-        float32   _timeSincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
-        Countdown _poiseBreak;
-        Countdown _invulnerable;
+        float32                  _timeSincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
+        SW_CODEC_STATE Countdown _poiseBreak;
+        SW_CODEC_STATE Countdown _invulnerable;
         PROPERTY( RuntimeState )
         float32 _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
         PROPERTY( RuntimeState )
         float32 _reviveSpeedScale;
         PROPERTY( RuntimeState )
-        int32           _reviverID;
-        optional<int32> _lastInstigatorID; ///< 상태 바이트에는 `kNoInstigator` 로 적는다
+        int32          _reviverID;
+        SW_CODEC_STATE optional<int32> _lastInstigatorID; ///< 상태 바이트에는 `kNoInstigator` 로 적는다
         PROPERTY( RuntimeState, Min = 0 )
         int32 _downCount;
         PROPERTY( RuntimeState )
         LifeState _state;
         PROPERTY( RuntimeState, Min = 0, Max = 1 )
-        uint8 _bReviving;
-        uint8 _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
+        uint8                _bReviving;
+        SW_CODEC_STATE uint8 _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
     };
 } // namespace sw

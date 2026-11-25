@@ -256,12 +256,12 @@ namespace sw
         bool areHandsEmpty() const;
 
     private:
-        vector<MatgoPlayer>            _listPlayer;
-        NotificationBuffer<MatgoEvent> _eventBuffer;
-        vector<int32>                  _listSettlement;
-        CardPile                       _floor;
-        CardPile                       _drawPile;
-        MatgoSettings                  _settings;
+        SW_CODEC_STATE vector<MatgoPlayer> _listPlayer;
+        SW_TRANSIENT NotificationBuffer<MatgoEvent> _eventBuffer;
+        SW_CODEC_STATE vector<int32> _listSettlement;
+        SW_CODEC_STATE CardPile      _floor;
+        SW_CODEC_STATE CardPile      _drawPile;
+        SW_CODEC_STATE MatgoSettings _settings;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _currentPlayer;
         PROPERTY( RuntimeState, Min = -1 )

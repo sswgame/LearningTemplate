@@ -3,6 +3,6 @@
 <!-- 핫 리로드 확인(editor/matparamreload)의 머티리얼 — 색이 사본 묶음의 WorldTint 를 읽는다. -->
 <MaterialDef formatVersion="0" name="matparamreload_bound" _base="guid:0e23c2ee4018be638b51655cf03239d2">
 	<_properties>
-		<item name="_color" collection="game/playground/automation/editor/matparamreload/world.matparams.xml" collectionParameter="WorldTint"/>
+		<item name="_color" collection="guid:bccb9b634055abc04fb5d14c2125a074" collectionParameter="WorldTint"/>
 	</_properties>
 </MaterialDef>

@@ -264,9 +264,9 @@ namespace sw
         PROPERTY( Category = "Clipping", DisplayName = "Far Plane", Tooltip = "Far clipping distance", Min = 1.0, Max = 100000.0, Units = m )
         float32 _farZ;
         PROPERTY( Category = "Projection", DisplayName = "Ortho Height", Tooltip = "Orthographic view height", Min = 0.1, Max = 1000.0 )
-        float32 _orthoHeight;
-        float3  _viewOffset;  ///< 그리기 전용 눈 위치 오프셋(월드). 저장하지 않습니다
-        float32 _drawnAspect; ///< 마지막으로 그린 뷰의 가로세로 비(0 은 그린 적 없음). 저장하지 않습니다
+        float32              _orthoHeight;
+        SW_TRANSIENT float3  _viewOffset;  ///< 그리기 전용 눈 위치 오프셋(월드). 저장하지 않습니다
+        SW_TRANSIENT float32 _drawnAspect; ///< 마지막으로 그린 뷰의 가로세로 비(0 은 그린 적 없음). 저장하지 않습니다
         PROPERTY( Category = "General", DisplayName = "Priority", Tooltip = "Camera selection priority" )
         int32 _priority;
         PROPERTY( Category = "General", DisplayName = "Role", Tooltip = "Camera usage role" )
@@ -280,10 +280,10 @@ namespace sw
         PROPERTY( Category = "Lens", DisplayName = "Lens Shift", Tooltip = "Projection centre shift as a fraction of the screen; +x moves the view right, +y up" )
         float2 _lensShift;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
-        bool                               _bOrthographic;
-        uint64                             _cutFrame;           ///< 마지막 `markCut` 의 씬 프레임 번호입니다(저장하지 않는다)
-        uint32                             _cutStamp;           ///< `markCut` 을 부를 때마다 오르는 차례입니다(0 은 컷 없음)
-        EnumArray<CameraCutReader, uint32> _arrCutSeenStamp;    ///< 읽는 쪽마다 마지막으로 본 차례입니다
-        Subscription                       _cameraRegistration; ///< 카메라 레지스트리 등록 구독입니다(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        bool                _bOrthographic;
+        SW_TRANSIENT uint64 _cutFrame;                                       ///< 마지막 `markCut` 의 씬 프레임 번호입니다(저장하지 않는다)
+        SW_TRANSIENT uint32 _cutStamp;                                       ///< `markCut` 을 부를 때마다 오르는 차례입니다(0 은 컷 없음)
+        SW_TRANSIENT EnumArray<CameraCutReader, uint32> _arrCutSeenStamp;    ///< 읽는 쪽마다 마지막으로 본 차례입니다
+        Subscription                                    _cameraRegistration; ///< 카메라 레지스트리 등록 구독입니다(`onRegister` 가 받고 `onUnregister` 가 놓는다)
     };
 } // namespace sw

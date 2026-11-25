@@ -2,5 +2,5 @@
 <?asset guid="3200aaf818729aff2040384d4db70384"?>
 <!-- 교체표 — 그래프가 쓰는 슬롯 idle 의 내용만 다른 클립으로 바꾼다. -->
 <AnimationSet formatVersion="0" _base="guid:5cdc50168836caff61298efe87d056fc">
-	<clip name="idle" _op="Replace" set="common/models/kaykit/knight/knight.animset.xml" source="cheer" />
+	<clip name="idle" _op="Replace" set="guid:5cdc50168836caff61298efe87d056fc" source="cheer" />
 </AnimationSet>

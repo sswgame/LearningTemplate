@@ -7,6 +7,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
@@ -28,9 +30,9 @@ namespace
                 <ItemVisual id="helm"><Part name="Shell" kind="SocketPrefab" prefab="helm.prefab" socket="Head"/></ItemVisual></ItemVisualCatalog>)" );
             load( R"(<CustomizationSchemaCatalog><Palette id="Lips"><Swatch name="Red" color="0.8 0.05 0.1 1"/><Swatch name="Nude" color="0.7 0.45 0.4 1"/></Palette></CustomizationSchemaCatalog>)" );
             load( R"(<SkinLayerCatalog>
-                <SkinLayer id="lipstick" category="Makeup" mask="lips.png" palette="Lips" roughness="0.15" roughnessWeight="1" smearResistance="0.2"/>
-                <SkinLayer id="mascara" category="Makeup" mask="lashes.png" blend="Multiply" smearResistance="0"/>
-                <SkinLayer id="rose_tattoo" category="Tattoo" mask="rose.png" placeable="true" regionMin="0.5 0" regionMax="1 0.5" smearResistance="1"/>
+                <SkinLayer id="lipstick" category="Makeup" mask="lips.dds" palette="Lips" roughness="0.15" roughnessWeight="1" smearResistance="0.2"/>
+                <SkinLayer id="mascara" category="Makeup" mask="lashes.dds" blend="Multiply" smearResistance="0"/>
+                <SkinLayer id="rose_tattoo" category="Tattoo" mask="rose.dds" placeable="true" regionMin="0.5 0" regionMax="1 0.5" smearResistance="1"/>
             </SkinLayerCatalog>)" );
             load( R"(<CharacterAppearanceCatalog><CharacterAppearance id="Base" body="body"/></CharacterAppearanceCatalog>)" );
             SW_REQUIRE_TRUE( _database.finishLoad( nullptr ) );
@@ -226,4 +228,29 @@ SW_TEST_CASE_F( SkinLayerSelectionTest, ShareCodeOfANewerVersionIsRefused )
     SW_EXPECT_FALSE( future );
     SW_EXPECT_EQUAL( string( "unsupported share code version" ), future.has_value() ? string{} : string( future.error().message() ) );
     SW_EXPECT_TRUE( AppearanceSelection::decode( encodeWithVersion( makeSelection(), AppearanceSelection::kShareCodeVersion ), _database, decoded ) );
+}
+
+/** @brief [SkinLayerTest] 번짐은 상태로 남는다 — 되살린 격자가 같은 값을 내고, 해상도가 다르면 거절하고 그대로 둔다 */
+SW_TEST_CASE( SkinLayerTest, SmearStateRoundTrips )
+{
+    const float2        eye{ 0.4f, 0.4f };
+    SkinLayerSmearState smear;
+    smear.initialize( 64 );
+    smear.advect( eye, float2{ 0.0f, 1.0f }, 0.05f, 0.8f, 0.0f, 0.5f );
+    Archive written;
+    smear.writeState( written );
+
+    SkinLayerSmearState restored;
+    restored.initialize( 64 );
+    Archive reading( written.getData(), written.getSize() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_FALSE( restored.isClean() );
+    SW_EXPECT_TRUE( restored.sampleOffset( eye ) == smear.sampleOffset( eye ) );
+    SW_EXPECT_TRUE( restored.sampleDilution( eye ) == smear.sampleDilution( eye ) );
+
+    SkinLayerSmearState coarse;
+    coarse.initialize( 32 );
+    Archive forCoarse( written.getData(), written.getSize() );
+    SW_EXPECT_FALSE( coarse.readState( forCoarse ) );
+    SW_EXPECT_TRUE( coarse.isClean() );
 }

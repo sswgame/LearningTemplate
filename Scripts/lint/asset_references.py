@@ -1,7 +1,7 @@
 """
 Scripts/lint/asset_references.py
 
-에셋 참조 검사 — 경로 글로 적은 참조(`PROPERTY( AssetPath )` 칸 · CMake · 아직 옮기지 않은 파일)가 끊어지면 커밋 전에 잡는다.
+에셋 참조 검사 — 경로 글로 적은 참조(CMake · 정체성이 없는 폴더 · 작업 사본처럼 글로 남는 것)가 끊어지면 커밋 전에 잡는다.
 GUID 로 적은 참조(`guid:<32자>`)는 색인을 짓는 쪽(`App --check-asset-refs` · 쿠킹)이 본다. 정체성(GUID · `.meta`)의 짝은 `asset_identity.py`(`asset-ids`)가 본다.
 
 - 어떤 칸이 경로인지는 리플렉션 선언이 정하고 파서가 낸 표(`Config/Dev/AssetReferenceFields.generated.json`) 한 곳에 모인다. 도메인 · 확장자는
