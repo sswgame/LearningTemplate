@@ -190,6 +190,8 @@ namespace sw
 
         /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `allowDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
         [[nodiscard]] bool recordDiskInput( const AbsolutePath& diskPath, uint64 contentHash );
+        /** @brief 디스크 파일 @p diskPath 의 입력 값입니다(`recordDiskInput` 이 기록하는 것 — 붙인 도메인 · 리소스 루트 아래면 리소스). 만들지 못하면 오류를 남기고 빈 값입니다. */
+        [[nodiscard]] static optional<CookInput> makeDiskInput( const AbsolutePath& diskPath, uint64 contentHash );
         /** @brief 입력 하나를 기록합니다. 같은 입력이 있으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
         void recordInput( const CookInput& input );
 

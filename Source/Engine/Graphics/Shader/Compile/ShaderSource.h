@@ -6,7 +6,9 @@
  *          상용 엔진: 언리얼 가상 셰이더 경로(`/Engine/Private/…`)와 `AddShaderSourceDirectoryMapping`.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -14,6 +16,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/CookJob.h"
 
 namespace sw
 {
@@ -107,6 +110,33 @@ namespace sw
     };
 
     /**
+     * @class ShaderIncludeCache
+     * @brief include 후보 파일의 바이트와 작업 입력 값의 표입니다. 컴파일 묶음 하나가 함께 씁니다(`ShaderCompileSession` — 그동안 파일이 바뀌지 않는다). 여러 워커가 동시에 부른다.
+     */
+    class SW_API ShaderIncludeCache
+    {
+    public:
+        /** @brief 후보 파일 하나입니다. */
+        struct File
+        {
+            vector<uint8>       _bytes;
+            optional<CookInput> _input;                 ///< 작업에 적을 입력(없는 후보면 해시 0). 만들지 못했으면 빈 값이고 그 파일은 못 읽은 것이다
+            uint8               _bReadable{ SW_FALSE }; ///< 정규 파일이고 바이트를 읽었다
+        };
+
+        ShaderIncludeCache();
+        ShaderIncludeCache( const ShaderIncludeCache& )            = delete;
+        ShaderIncludeCache& operator=( const ShaderIncludeCache& ) = delete;
+
+        /** @brief 후보 @p candidate 를 처음이면 디스크에서 읽고, 다음부터는 표에서 줍니다. 없는 파일도 기억합니다. */
+        [[nodiscard]] shared_ptr<const File> read( const AbsolutePath& candidate );
+
+    private:
+        mutex                                         _mutex;
+        unordered_map<string, shared_ptr<const File>> _mapFile;
+    };
+
+    /**
      * @class ShaderIncludeResolver
      * @brief `#include` 를 푸는 규칙 하나입니다. DXC include 처리기 · FXC include 처리기 · 가림 검사가 같은 루트 목록을 함께 씁니다.
      * @details 예전에는 include 루트를 셋이 따로 풀었다 — 컴파일러는 리소스 경로로, 쿠킹 판정 · 가림 검사는 "리소스 루트/<도메인>/shaders" 로 이어 붙여 붙인 디스크 도메인의 헤더가 판정에 안 보였다.
@@ -115,7 +145,8 @@ namespace sw
     class SW_API ShaderIncludeResolver
     {
     public:
-        explicit ShaderIncludeResolver( vector<ShaderIncludeRootDomain> listRootDomain );
+        /** @param pCache 파일을 한 번만 읽는 표(컴파일 묶음). nullptr 이면 부를 때마다 디스크를 본다(실행 중 컴파일) */
+        explicit ShaderIncludeResolver( vector<ShaderIncludeRootDomain> listRootDomain, shared_ptr<ShaderIncludeCache> pCache = nullptr );
 
         /** @brief include 루트 도메인입니다(검색 순서 — engine, common). */
         [[nodiscard]] const vector<ShaderIncludeRootDomain>& getRootDomains() const { return _listRootDomain; }
@@ -137,6 +168,7 @@ namespace sw
 
     private:
         vector<ShaderIncludeRootDomain> _listRootDomain;
+        shared_ptr<ShaderIncludeCache>  _pCache;
     };
 
     /**
@@ -147,8 +179,8 @@ namespace sw
     class SW_API ShaderSourceResolver
     {
     public:
-        /** @brief @p assetPaths 의 우선순위 설정에서 include 루트 도메인(engine · common)의 `shaders` 폴더를 풉니다. 설정에 없거나 폴더가 없으면 오류를 남기고 빈 값입니다. */
-        [[nodiscard]] static optional<ShaderSourceResolver> make( const AssetPaths& assetPaths );
+        /** @brief @p assetPaths 의 우선순위 설정에서 include 루트 도메인(engine · common)의 `shaders` 폴더를 풉니다. 설정에 없거나 폴더가 없으면 오류를 남기고 빈 값입니다. @p pCache 는 include 파일 표(컴파일 묶음)입니다. */
+        [[nodiscard]] static optional<ShaderSourceResolver> make( const AssetPaths& assetPaths, shared_ptr<ShaderIncludeCache> pCache = nullptr );
 
         /** @brief include 규칙입니다. */
         [[nodiscard]] const ShaderIncludeResolver& getIncludeResolver() const { return _includeResolver; }

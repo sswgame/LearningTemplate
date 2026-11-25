@@ -264,6 +264,11 @@ namespace sw
 
 namespace sw
 {
+    class ShaderCompileSession;
+
+    /** @brief 묶음 컴파일의 결과 하나를 받습니다 — 요청 번호(목록의 자리)와 결과. */
+    using ShaderCompiledDelegate = Delegate<void( uint32 requestIndex, const ShaderCompileResult& result )>;
+
     /**
      * @class ShaderCompiler
      * @brief HLSL 소스를 RHI 백엔드별 바이트코드(DXIL, SPIR-V, DXBC)로 컴파일하는 파사드입니다.
@@ -280,11 +285,13 @@ namespace sw
          */
         static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
         /**
-         * @brief @p listDesc 중 아직 DDC 에 없는 요청을 병렬로 전처리해, 글이 서로 다른 것만 하나씩 병렬로 컴파일합니다 — 뒤이은 `compileHLSL` 이 나머지 변형을 글로 맞힌다.
-         * @details 묶음(데우기 · 쿠킹)이 먼저 부른다. 부르지 않아도 결과는 같다 — 같은 글의 변형이 동시에 돌면 서로의 결과를 보지 못해 같은 컴파일을 되풀이할 뿐이다.
-         *          실패는 여기서 세지 않는다(같은 요청을 컴파일하는 쪽이 세고 오류를 다시 남긴다). 게임 · 기동 스레드에서 부른다.
+         * @brief 요청 묶음을 병렬로 컴파일하고 요청마다 결과를 @p onCompiled 에 한 번씩 넘깁니다(쿠킹 · 데우기).
+         * @details 요청마다 DDC 를 보고, 없는 것만 **한 번** 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).
+         *          같은 글 가운데 목록에서 가장 앞선 요청이 컴파일하므로 워커 수와 무관하게 같은 바이트다. 소스는 묶음 동안 한 번만 읽는다(`ShaderCompileSession`).
+         *          언리얼 `FShaderCompilingManager` 의 작업 묶음 · 중복 작업 합치기(`FShaderJobCache`) 자리다.
+         * @param onCompiled 워커에서 동시에 불린다(요청 번호 순서가 아니다)
          */
-        static void compileDistinct( const vector<ShaderCompileDesc>& listDesc );
+        static void compileBatch( const vector<ShaderCompileDesc>& listDesc, const ShaderCompiledDelegate& onCompiled );
 
         /**
          * @brief 엔진이 모든 컴파일에 넣는 define(엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>` · `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index`, 렌더 정책 `SW_TAA_*` · `SW_PROBE_*` · `SW_AUTO_EXPOSURE_*`)을 @p inoutList 뒤에 더합니다.
@@ -298,9 +305,9 @@ namespace sw
 
         /**
          * @brief 요청 @p desc 의 컴파일 기록이 지금 소스 · 헤더 · 도구와 맞으면 그 기록입니다 — 없거나 낡았으면 빈 값입니다. 컴파일하지 않습니다(쿠킹본 판정).
-         * @details @p desc 는 `compileHLSL` 에 넣는 것과 같다(엔진 define 은 안에서 더한다).
+         * @details @p desc 는 `compileHLSL` 에 넣는 것과 같다(엔진 define 은 안에서 더한다). @p session 은 판정 한 번의 표다.
          */
-        [[nodiscard]] static optional<CookRecord> findCurrentRecord( const ShaderCompileDesc& desc );
+        [[nodiscard]] static optional<CookRecord> findCurrentRecord( const ShaderCompileDesc& desc, ShaderCompileSession& session );
         /** @brief 컴파일 결과 @p result 가 요청 @p desc 에 지금도 맞으면 true 입니다(메모리 캐시). 입력을 기록하지 않은 결과는 맞을 수 없습니다. */
         [[nodiscard]] static bool isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc );
 

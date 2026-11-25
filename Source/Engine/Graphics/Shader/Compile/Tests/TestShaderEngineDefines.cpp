@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -16,6 +17,18 @@ namespace
 {
     struct ShaderEngineDefinesTestUtil
     {
+        /** @brief 묶음 컴파일의 실패 결과를 요청마다 셉니다(워커에서 불린다). */
+        struct BatchCounter
+        {
+            atomic<uint32> _arrFailedCount[3]{};
+
+            void recordResult( uint32 requestIndex, const ShaderCompileResult& result )
+            {
+                if ( result._bSuccess == false )
+                    _arrFailedCount[requestIndex].fetch_add( 1 );
+            }
+        };
+
         /** @brief @p listDefine 에서 이름이 @p pName 인 define 의 수를 세고, 하나라도 있으면 마지막 값을 @p outValue 에 둡니다. */
         static uint32 countDefine( const vector<ShaderMacroDefine>& listDefine, const utf8* pName, string& outValue )
         {
@@ -104,6 +117,22 @@ SW_TEST_CASE( ShaderEngineDefinesTest, CompileWithoutEnginePolicyFails )
     const ShaderCompileResult result = ShaderCompiler::compileHLSL( desc );
     SW_EXPECT_FALSE( result._bSuccess );
     SW_EXPECT_TRUE( StringUtil::contains( result._errorMessage, "engine policy" ) );
+}
+
+/** @brief [ShaderEngineDefinesTest] 묶음 컴파일은 요청마다 결과를 한 번씩 넘긴다 — 컴파일하지 못하는 요청도 실패 결과를 받는다 */
+SW_TEST_CASE( ShaderEngineDefinesTest, BatchReportsEveryRequestOnce )
+{
+    ShaderCompileDesc desc{};
+    desc._entryPoint = "PSMain";
+    desc._stage      = ShaderStage::Pixel;
+    const vector<ShaderCompileDesc>           listDesc( 3, desc );
+    ShaderEngineDefinesTestUtil::BatchCounter counter;
+    SW_EXPECT_LOG( "ShaderCompiler.EnginePolicyMissing" );
+    ShaderCompiler::compileBatch( listDesc, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderEngineDefinesTestUtil::BatchCounter::recordResult, &counter ) );
+    for ( const atomic<uint32>& count : counter._arrFailedCount )
+    {
+        SW_EXPECT_EQUAL( 1u, count.load() );
+    }
 }
 
 /**

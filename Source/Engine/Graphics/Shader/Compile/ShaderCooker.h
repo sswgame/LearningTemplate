@@ -17,39 +17,6 @@ namespace sw
     class AssetPaths;
 
     /**
-     * @struct ShaderCookResult
-     * @brief 셰이더 하나를 컴파일하고 쿠킹한 결과입니다.
-     */
-    struct ShaderCookResult
-    {
-        string                 _sourcePath;
-        string                 _outputPath;
-        string                 _entryPoint;
-        ShaderStage            _stage;
-        ShaderTargetFormat     _targetFormat;
-        vector<uint8>          _bytecode; ///< 쓴(또는 이미 같은 내용인) 바이너리의 바이트 — 부르는 쪽이 다시 읽지 않고 리플렉션을 뽑는다
-        uint8                  _bSuccess : 1;
-        uint8                  _bWritten : 1; ///< 출력 파일이 다른 내용이라 새로 썼다(거짓이면 이미 같은 내용이다)
-        [[maybe_unused]] uint8 _reserved : 6;
-
-        ShaderCookResult()
-            : _sourcePath{}
-            , _outputPath{}
-            , _entryPoint{}
-            , _stage{ ShaderStage::Vertex }
-            , _targetFormat{ ShaderTargetFormat::SPIRV_Vulkan }
-            , _bytecode{}
-            , _bSuccess{ SW_FALSE }
-            , _bWritten{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @struct ShaderCookRequest
      * @brief 쿠킹할 대상 하나입니다(셰이더, 진입점, 스테이지, define).
      * @details "무엇을 쿠킹할지"는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderCookRequestCollector`), "어떻게 쿠킹하는지"는
@@ -110,12 +77,11 @@ namespace sw
         [[nodiscard]] static ShaderCompileDesc makeCompileDesc( const ShaderSourceID& source, string_view entryPoint, ShaderStage stage, ShaderTargetFormat targetFormat,
                                                                 const ShaderEnginePolicy& enginePolicy, const vector<string>& listPermutation );
         /**
-         * @brief 컴파일 요청 @p desc 를 컴파일해 @p outputPath 에 둡니다. 이미 같은 내용이면 다시 쓰지 않습니다.
-         * @param outputPath 출력 바이너리 파일 경로
-         * @param outResult 바이트 · 새로 썼는지
-         * @return 성공하면 true 입니다.
+         * @brief 컴파일 결과 @p compileResult 를 @p outputPath 에 둡니다. 이미 같은 내용이면 다시 쓰지 않습니다(@p outWritten 은 새로 썼는지).
+         * @param desc 그 결과의 컴파일 요청(로그)
+         * @return 컴파일이 성공했고 파일이 그 바이트이면 true 입니다. 실패는 로그로 남습니다.
          */
-        [[nodiscard]] static bool cookShader( const ShaderCompileDesc& desc, const AbsolutePath& outputPath, ShaderCookResult& outResult );
+        [[nodiscard]] static bool writeBinary( const ShaderCompileDesc& desc, const ShaderCompileResult& compileResult, const AbsolutePath& outputPath, bool& outWritten );
 
         // "무엇을 쿠킹할지"와 "모두 쿠킹"은 여기 없다. 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라 `Renderer/Cook/ShaderCookDriver` 에 있다.
         // 산출물이 최신인지는 컴파일의 쿠킹 기록(`ShaderCompiler::findCurrentRecord`) 하나로 본다 — 최신이면 컴파일은 DDC 적중이라 쿠커가 따로 판정하지 않는다.

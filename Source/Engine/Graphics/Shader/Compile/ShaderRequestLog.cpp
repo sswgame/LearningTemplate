@@ -2,13 +2,13 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderRequestLog.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderSource.h"
@@ -48,16 +48,16 @@ namespace sw
                 return nullopt;
             }
 
-            /** @brief 병렬 컴파일 한 번의 입력과 요청마다의 결과 칸입니다 — 워커는 제 칸에만 쓴다. */
-            struct CompileJob
+            /** @brief 묶음 컴파일에서 진 요청을 셉니다(워커에서 불린다). */
+            struct FailureCounter
             {
-                const vector<ShaderCompileDesc>* _pListDesc{ nullptr };
+                atomic<uint32> _failedCount{ 0 };
 
-                /** @brief 요청 @p index 를 컴파일하고, 지면 제 칸 @p outFailed 에 1 을 씁니다(`runParallelInto` 본문). */
-                void operator()( uint32 index, uint8& outFailed ) const
+                void recordResult( uint32 requestIndex, const ShaderCompileResult& result )
                 {
-                    const ShaderCompileResult result = ShaderCompiler::compileHLSL( ( *_pListDesc )[index] );
-                    outFailed                        = result._bSuccess ? 0 : 1;
+                    (void)requestIndex;
+                    if ( result._bSuccess == false )
+                        _failedCount.fetch_add( 1 );
                 }
             };
         };
@@ -232,14 +232,9 @@ namespace sw
             desc._enginePolicy = enginePolicy;
         }
 
-        ShaderCompiler::compileDistinct( listDesc ); // 글이 같은 변형은 하나만 컴파일한다 — 아래 컴파일은 나머지를 글로 맞힌다
-        vector<uint8>              listFailed( listDesc.size(), 0 );
-        const Internal::CompileJob job{ &listDesc };
-        engine::runParallelInto<uint8>( listFailed, 1, job );
-        for ( const uint8 bFailed : listFailed )
-        {
-            summary._failedCount += bFailed;
-        }
+        Internal::FailureCounter counter;
+        ShaderCompiler::compileBatch( listDesc, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &Internal::FailureCounter::recordResult, &counter ) );
+        summary._failedCount = counter._failedCount.load();
         return summary;
     }
 

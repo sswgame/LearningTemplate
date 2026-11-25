@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -161,8 +162,38 @@ namespace sw
         return AssetID{ id };
     }
 
-    ShaderIncludeResolver::ShaderIncludeResolver( vector<ShaderIncludeRootDomain> listRootDomain )
+    ShaderIncludeCache::ShaderIncludeCache()
+        : _mutex{}
+        , _mapFile{}
+    {
+    }
+
+    shared_ptr<const ShaderIncludeCache::File> ShaderIncludeCache::read( const AbsolutePath& candidate )
+    {
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        iter = _mapFile.find( candidate.str() );
+            if ( iter != _mapFile.end() )
+                return iter->second;
+        }
+        // 디스크는 잠금 밖에서 읽는다 — 두 워커가 함께 읽어도 먼저 넣은 것을 둘 다 쓴다.
+        auto pFile = sw::make_shared<File>();
+        if ( FileUtil::isRegularFile( candidate ) == false )
+        {
+            pFile->_input = CookJob::makeDiskInput( candidate, 0 );
+        }
+        else if ( FileUtil::readFile( candidate, pFile->_bytes ) ) // 실패 로그는 readFile 이 남긴다
+        {
+            pFile->_input     = CookJob::makeDiskInput( candidate, ContentHash::computeBytes( pFile->_bytes ) );
+            pFile->_bReadable = pFile->_input.has_value() ? SW_TRUE : SW_FALSE;
+        }
+        ScopedLock<mutex> lock{ _mutex };
+        return _mapFile.emplace( candidate.str(), std::move( pFile ) ).first->second;
+    }
+
+    ShaderIncludeResolver::ShaderIncludeResolver( vector<ShaderIncludeRootDomain> listRootDomain, shared_ptr<ShaderIncludeCache> pCache )
         : _listRootDomain{ std::move( listRootDomain ) }
+        , _pCache{ std::move( pCache ) }
     {
     }
 
@@ -182,6 +213,17 @@ namespace sw
     optional<AbsolutePath> ShaderIncludeResolver::readInclude( const AbsolutePath& candidate, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
+        CookJob* const pJob = CookJob::findCurrent();
+        if ( _pCache != nullptr && pJob != nullptr )
+        {
+            const shared_ptr<const ShaderIncludeCache::File> pFile = _pCache->read( candidate );
+            if ( pFile->_input.has_value() )
+                pJob->recordInput( *pFile->_input );
+            if ( pFile->_bReadable == SW_FALSE )
+                return nullopt;
+            outBytes = pFile->_bytes;
+            return candidate;
+        }
         if ( FileUtil::isRegularFile( candidate ) == false )
         {
             CookJob::allowMissingDiskRead( candidate ); // 작업이 없으면 적지 않는다
@@ -214,7 +256,7 @@ namespace sw
         return true;
     }
 
-    optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths )
+    optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths, shared_ptr<ShaderIncludeCache> pCache )
     {
         vector<string> listDomain;
         if ( collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
@@ -230,7 +272,9 @@ namespace sw
             }
             listRootDomain.push_back( ShaderIncludeRootDomain{ std::move( domain ), *folder } );
         }
-        return ShaderSourceResolver{ assetPaths, ShaderIncludeResolver{ std::move( listRootDomain ) } };
+        return ShaderSourceResolver{
+            assetPaths, ShaderIncludeResolver{ std::move( listRootDomain ), std::move( pCache ) }
+        };
     }
 
     expected<ShaderCompileInput> ShaderSourceResolver::resolve( const ShaderSourceID& source ) const
