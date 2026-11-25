@@ -1,8 +1,8 @@
-# Test — 단위 테스트와 시나리오
+# IntegrationTests — 단위 테스트와 시나리오
 
 > 질문: 테스트와 시나리오를 어디에 쓰고 어떻게 돌리는가?
 > 독자: 기능을 고치거나 더하는 사람과 에이전트.
-> 결론: GPU 없이 되는 확인은 기능 폴더 옆 `Tests/` 의 `SW_TEST_CASE`(`App --test` 한 번이 모두 돈다), 그림 · 입력 · 씬이 돌아야 하는 확인은 `Content/**/automation/*.scenario.xml` 시나리오(적은 순서대로 도는 단계 · 백엔드별 골든 이미지)다. 이 폴더(`Test/`)는 CTest 등록만 한다.
+> 결론: GPU 없이 되는 확인은 기능 폴더 옆 `Tests/` 의 `SW_TEST_CASE`(`App --test` 한 번이 모두 돈다), 그림 · 입력 · 씬이 돌아야 하는 확인은 `Content/**/automation/*.scenario.xml` 시나리오(적은 순서대로 도는 단계 · 백엔드별 골든 이미지)다. 이 폴더(`IntegrationTests/`)는 CTest 항목 등록과, 실행 파일을 띄워 보는 항목(시나리오 체인 · 넷 · 퍼즈 · 팩 · 셰이더 · 도구 · 리플렉션 파서)의 `cmake -P` 드라이버 · 픽스처를 둔다.
 
 ## 무엇을 어디에
 
@@ -98,7 +98,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 
 ## 리플렉션 파서
 
-`ReflectionParser` 는 Engine 을 링크하지 못해 위 틀에 들어가지 못한다. `Test/ReflectionParser/Fixtures/<이름>.h` 하나가 `ReflectionParser.<이름>` 하나이고(`ctest -L nogpu`), 실제 실행 파일을 빌드와 같은 인자로 돌려 헤더 맨 앞의 기대 줄(`// EXPECT-ERROR:` · `EXPECT-GEN:` · `EXPECT-NOT-GEN:` · `EXPECT-TYPE:`)과 대조한다 — 형식은 `RunParserFixture.cmake`. 잘못된 입력을 일부러 담으므로 린트 범위(`Source/`) 밖에 둔다.
+`ReflectionParser` 는 Engine 을 링크하지 못해 위 틀에 들어가지 못한다. `IntegrationTests/ReflectionParser/Fixtures/<이름>.h` 하나가 `ReflectionParser.<이름>` 하나이고(`ctest -L nogpu`), 실제 실행 파일을 빌드와 같은 인자로 돌려 헤더 맨 앞의 기대 줄(`// EXPECT-ERROR:` · `EXPECT-GEN:` · `EXPECT-NOT-GEN:` · `EXPECT-TYPE:`)과 대조한다 — 형식은 `RunParserFixture.cmake`. 잘못된 입력을 일부러 담으므로 린트 범위(`Source/`) 밖에 둔다.
 
 ## 시나리오
 
@@ -174,7 +174,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 - **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 - **새 테스트 · 기준 파일 먼저(`changed` 단계)**: push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 들어온 것은 돈 적이 없다. 묶음 검증(`Scripts/dev/preflight.sh`)은 빌드 직후 `py -3 Scripts/dev/test_history.py changed --preset Ninja-Release` 로 `git diff origin/main...HEAD` 의 (a) 바뀐 소스 · 테스트의 기능 폴더를 그 폴더를 싣는 단위 항목(`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits`)에 `--test-source` 로 좁혀, (b) 더해지거나 바뀐 시나리오(골든이 바뀌면 그 시나리오)를 하나씩 제 프로세스로 그 체인의 백엔드마다 돈다. 기준 파일은 없는 것만 쓰고(`--record-missing-snapshots` · `-scenario-record-missing-golden` — 쓴 것은 `MissingBaseline` 으로 진다), 출력은 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 그 파일을 더한 갈래)다. 새 시나리오가 모든 백엔드에서 같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>` 으로 묶는다. 지거나 처음 쓴 기준 파일(추적 안 된 `golden/` · `Snapshots/`)이 있으면 cpu · gpu-release 를 시작하지 않는다(끝 줄 `CHANGED_FAILED`, 통과는 `CHANGED_OK=<sha>`) — 그림 · 글을 보고 커밋한 뒤 `--from changed` 로 기록 없이 통과시킨다. 골든은 이렇게 혼자 돈 실행에서 기록하고 체인(gpu-release)으로 검증한다. 에디터 폴더(`/Editor/`)의 케이스는 `App --test` 에 없어 이 단계가 고르지 않는다(편집기 체인이 돈다).
 - **시간 기록**: 실행이 끝날 때마다 `[Scenario] <이름> timeline:` 한 줄이 남는다 — 프레임 종류(시작 · 붙잡기 · 단계 · 고정 대기)별 ms 와 무거운 단계 종류, 가장 긴 대기. 단계 사이 초기화는 `stage reset took`. 무엇이 느린지는 새로 재지 말고 이 줄을 모은다. `<WaitUntil>` 이 기다리지 않고 지나가면 `was already true` 가 남는다 — 고정 대기를 조건 대기로 바꿀 때 부정형 단언(일어나지 않음을 보는 것)을 가려낸다.
-- **어디서 시간이 드는가**: 게임 시나리오에서 카메라 · 애니메이션이 자리 잡기를 기다리던 고정 대기는 조건 대기(정착 · 끝 · 잠듦 감시 값)로 바꾼다 — 골든은 그 조건이 선 순간을 찍는다. 시간 자체가 내용인 구간만 `<AdvanceSimulation>` 이다(위 "대기 고르기"). 무거운 장면은 포커스 없는 백엔드 넷이 함께 돌면 프레임이 크게 느려져 함께 도는 이득이 없으므로 그 체인은 `-scenario-backend-slots=1`(`Test/Scenario/CMakeLists.txt` 의 `swSequentialScenarioPacks`)로 차례로 돈다. 가벼운 체인은 기동이 겹쳐 함께 도는 편이 빠르다. 백엔드 교체 시간은 `Backend swap with modules took` 줄(엔진 · 모듈 몫)과 `ImGuiEditor.ShutdownMs` · `EditorContext.ShutdownMs`(에디터 몫, 서브시스템별)가 나눈다.
+- **어디서 시간이 드는가**: 게임 시나리오에서 카메라 · 애니메이션이 자리 잡기를 기다리던 고정 대기는 조건 대기(정착 · 끝 · 잠듦 감시 값)로 바꾼다 — 골든은 그 조건이 선 순간을 찍는다. 시간 자체가 내용인 구간만 `<AdvanceSimulation>` 이다(위 "대기 고르기"). 무거운 장면은 포커스 없는 백엔드 넷이 함께 돌면 프레임이 크게 느려져 함께 도는 이득이 없으므로 그 체인은 `-scenario-backend-slots=1`(`IntegrationTests/Scenario/CMakeLists.txt` 의 `swSequentialScenarioPacks`)로 차례로 돈다. 가벼운 체인은 기동이 겹쳐 함께 도는 편이 빠르다. 백엔드 교체 시간은 `Backend swap with modules took` 줄(엔진 · 모듈 몫)과 `ImGuiEditor.ShutdownMs` · `EditorContext.ShutdownMs`(에디터 몫, 서브시스템별)가 나눈다.
 - **끝에서만 기다리는 일**: 판정이 다음 단계 진행에 쓰이지 않는 일은 프레임에서 뺀다. 패킷 스크린샷 · 편집기 UI 캡처의 파일 쓰기(편집기 캡처는 RGBA 풀기 · 마젠타 비율까지)는 워커가 하고, `<ExpectImage>` · `<CaptureEditorUI>` 의 마젠타는 미뤄 두었다가(`IAutomationStepContext::deferExpectAtMost`) `<Pass/>` 가 남은 쓰기 · 끝 차단 조건(`SW_AUTOMATION_FINISH_BLOCKER`)을 기다린 뒤 한 번에 판정한다. 그래서 한 시나리오 안에서 같은 파일을 두 번 찍을 수 없다(읽을 때 거절).
 - **백엔드 사이의 기록 대조**: `<Record watch="…"/>` 는 값을 보고의 `records[]` 에 남기고, 부모 App(`AutomationPerBackend`)가 시나리오마다 통과한 백엔드들의 기록을 순번대로 견준다 — 하나라도 다르면 실행이 실패(10)이고 로그에 `record mismatch - <시나리오>: record #N '<이름>': dx11=… vk=…` 가 남는다(부모 보고의 `recordMismatches`). 게임 상태는 CPU 에서만 정해지므로 같아야 한다(예: `game.nilecity.determinism`). `<Record>` 가 있는 시나리오는 `independent` 로 나눌 때(`-scenario-backend-split=independent`)도 모든 백엔드에서 돈다(Debug 체인의 `all` 은 모두 하나씩 — 대조는 Release 가 맡는다).
 - **보이는 실행의 상태 표시**: 창이 보이는 실행(`--show` · `SW_SHOW_WINDOWS=1`, `-unattended` 없음)은 디버그 HUD 맨 위에 Scenario 섹션(`DebugHUDSectionFlag::kAutomationRun` — 시나리오 · 체인 n/N · 단계 · 상태 · 첫 실패 줄 · Warning/Error 수)을 그린다. 실행기는 HUD 를 모르고 HUD 가 `IAutomationRuntime::findRunStatus` 만 읽는다. 사용자 설정에 쓰지 않고(`gv_debugHUDScenario` 로 끈다), 감시 값 `DebugHUD.Shown` · `SectionCount` 는 사용자 HUD 만 센다 — 보이는 실행과 숨김 실행의 판정이 같다.

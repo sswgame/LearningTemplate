@@ -25,7 +25,7 @@ SW_TEST_CASE( ScenarioFilesTest, AllScenariosParseResolveAndValidate )
     (void)test::validateScenarioFolder( gameFolder.view(), pModuleLoader );           // 시나리오가 없는 게임도 있다
     (void)test::validateScenarioFolder( "engine/automation/render", pModuleLoader );
     (void)test::validateScenarioFolder( "engine/automation/load", pModuleLoader );
-    // desktop: 혼자 도는 데스크톱 시나리오(Test/Scenario 가 따로 등록한다), sequence: 두 번 기동 쌍, showcase: 따로 띄우는 쇼케이스 씬, load: 부하 측정, netpair: 여러 프로세스(Test/Net),
+    // desktop: 혼자 도는 데스크톱 시나리오(IntegrationTests/Scenario 가 따로 등록한다), sequence: 두 번 기동 쌍, showcase: 따로 띄우는 쇼케이스 씬, load: 부하 측정, netpair: 여러 프로세스(IntegrationTests/Net),
     // debugger · web: 도구가 띄우는 것(Config/Rules/Test/ManualScenarios.json) — 손으로만 도는 것일수록 여기서 이름(감시 값 · 명령)이 썩지 않는지 본다
     for ( const string_view subFolder : { "desktop", "sequence", "showcase", "load", "netpair", "debugger", "web" } )
     {

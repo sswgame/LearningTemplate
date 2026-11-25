@@ -1,5 +1,5 @@
 {
-    "_comment": "ctest 항목이 띄울 수 없는 시나리오(Content 기준 경로). 까닭(reason)과 돌리는 명령(command)이 필수다. 여기 없는데 어느 항목도 띄우지 않는 시나리오가 있거나, 항목이 띄우는 것이 여기 있으면 구성이 선다(Test/Scenario/CMakeLists.txt). changed 단계의 표가 까닭을 그대로 낸다(Scripts/dev/test_history.py).",
+    "_comment": "ctest 항목이 띄울 수 없는 시나리오(Content 기준 경로). 까닭(reason)과 돌리는 명령(command)이 필수다. 여기 없는데 어느 항목도 띄우지 않는 시나리오가 있거나, 항목이 띄우는 것이 여기 있으면 구성이 선다(IntegrationTests/Scenario/CMakeLists.txt). changed 단계의 표가 까닭을 그대로 낸다(Scripts/dev/test_history.py).",
     "_scenarios": [
         {
             "path": "game/playground/automation/debugger/hotreloadbreakpoint.scenario.xml",

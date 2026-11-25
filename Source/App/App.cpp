@@ -528,7 +528,7 @@ namespace sw
 
     void App::logStartupPhases( [[maybe_unused]] const StartupTimings& timings ) const
     {
-        // 시동 요약 한 줄 — 단계별 ms 와 오래 걸린 서브시스템(`Test/Load/Baselines.json` 의 `startup_ms` 와 별개의 진단 값이다).
+        // 시동 요약 한 줄 — 단계별 ms 와 오래 걸린 서브시스템(진단 값이다).
         [[maybe_unused]] const int64     showEndMicro = MonotonicClock::nowMicroseconds();
         [[maybe_unused]] constexpr int64 kMs          = constant::time::kMicrosecondsPerMillisecond;
         SW_LOG_INFO_ID( "App.StartupPhasesHostScopeMs", "Startup phases: hostScope %# ms, engine %# ms, window %# ms, modules %# ms, finalize+show %# ms, total %# ms | subsystems: %#",

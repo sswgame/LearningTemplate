@@ -1,5 +1,5 @@
 // 셰이더 요청 기록(`ShaderRequestLog`) — 실행이 쓴 요청을 형식별로 중복 없이 모으고, 자식마다 따로 쓴 파일을 읽을 때 합치고, 소스가 없어진 요청은 뺀다(nogpu · 컴파일 없음).
-// 기록대로 컴파일해 셰이더 DDC 가 차는지는 ctest `ShaderCache.WarmFromRequestLog`(Test/Shader/RunShaderWarm.cmake)가 본다 — DDC 폴더를 케이스마다 가를 수 없어 여기서 컴파일하지 않는다.
+// 기록대로 컴파일해 셰이더 DDC 가 차는지는 ctest `ShaderCache.WarmFromRequestLog`(IntegrationTests/Shader/RunShaderWarm.cmake)가 본다 — DDC 폴더를 케이스마다 가를 수 없어 여기서 컴파일하지 않는다.
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"

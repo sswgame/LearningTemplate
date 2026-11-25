@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file Test/Net/CMakeLists.txt
+# @file IntegrationTests/Net/CMakeLists.txt
 # @brief 여러 프로세스 네트워크 실행을 CTest 항목으로(`Net.<이름>`, 라벨 net) — 전용 서버 · 클라이언트를 띄우는 판정 명령(`Scripts/net`)마다 하나다.
 #        목록이 없다 — `Scripts/net/ctest_items.py` 가 그 폴더의 모듈을 훑어 준다(모듈에 `CTEST_ITEMS` 가 없으면 구성이 멈춘다). 손으로만 돌리던 때 한 번도 통과할 수 없던
 #        기대 · 로그 글이 바뀌어 지는 정규식이 쌓였다.

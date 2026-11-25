@@ -12,7 +12,7 @@
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 
-// `App -make-patch` 명령줄 길(ctest `Pack.MakePatch` — Test/Pack/RunMakePatch.cmake)의 앞뒤 단계다. 팩 쿠킹은 셰이더까지 굽느라 수백 초라 입력 팩은 이 역할이 작게 쓰고,
+// `App -make-patch` 명령줄 길(ctest `Pack.MakePatch` — IntegrationTests/Pack/RunMakePatch.cmake)의 앞뒤 단계다. 팩 쿠킹은 셰이더까지 굽느라 수백 초라 입력 팩은 이 역할이 작게 쓰고,
 // 명령줄이 만든 패치는 런타임 적용 길(`PackManager::setPatchTrust` → `scanAndMountPacks`)로 얹어 새 빌드의 내용과 견준다 — 언리얼 `-generatepatch` 의 기준 → 새 빌드 → 패치 → 적용과 같은 한 바퀴.
 // 서명 키는 실행마다 새로 만드는 테스트 키다(저장소에 개인 키를 두지 않는다).
 

@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 POLICY_FILE = ROOT / "cmake/Toolchain/Vcpkg/VcpkgInstallPolicy.cmake"
-CMAKE_ENVIRONMENT = "SW_CMAKE_COMMAND"  # Test/CMakeLists.txt 가 스크립트 테스트 모두에 ${CMAKE_COMMAND} 를 준다
+CMAKE_ENVIRONMENT = "SW_CMAKE_COMMAND"  # IntegrationTests/CMakeLists.txt 가 스크립트 테스트 모두에 ${CMAKE_COMMAND} 를 준다
 CMAKE = ""
 
 

@@ -1,5 +1,5 @@
 """
-여러 프로세스 네트워크 실행의 ctest 항목 — 이 폴더의 모듈을 훑어 `CTEST_ITEMS` 를 모은다. `Test/Net/CMakeLists.txt` 가 `py -3 Scripts/net/ctest_items.py` 의 줄로 항목을 만든다.
+여러 프로세스 네트워크 실행의 ctest 항목 — 이 폴더의 모듈을 훑어 `CTEST_ITEMS` 를 모은다. `IntegrationTests/Net/CMakeLists.txt` 가 `py -3 Scripts/net/ctest_items.py` 의 줄로 항목을 만든다.
 
 모듈마다 `CTEST_ITEMS` 를 **반드시** 둔다(없으면 구성이 멈춘다) — 판정 명령을 만들고 등록을 잊으면 아무도 돌리지 않아 썩는다(`online-local people` 의 거래 단계는 한 번도 통과할 수 없던 기대를 품고 있었다).
 판정이 없는 도구(fileserve)는 빈 튜플이다.

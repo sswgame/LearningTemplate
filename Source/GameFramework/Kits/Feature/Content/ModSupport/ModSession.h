@@ -61,7 +61,7 @@ namespace sw
         [[nodiscard]] bool apply( const ContentPreparationToken& token, const ModSessionRequest& request, const ModSupportSettings& settings );
 
         /**
-         * @brief 게임의 표준 자리로 `apply` 를 부릅니다 — 켤 모드는 `-gv_modList=a,b`, 설치 폴더는 저장소 `Test/Mods` · 패키지 실행 파일 옆 `Mods`, 정책은 게임 팩의 `modsupport` 데이터(@p packRoot 아래).
+         * @brief 게임의 표준 자리로 `apply` 를 부릅니다 — 켤 모드는 `-gv_modList=a,b`, 설치 폴더는 저장소 `IntegrationTests/Mods` · 패키지 실행 파일 옆 `Mods`, 정책은 게임 팩의 `modsupport` 데이터(@p packRoot 아래).
          * @details 켤 모드가 없으면 정책 데이터도 읽지 않고 true 다 — 모드를 쓰지 않는 실행은 이 키트가 있어도 그대로다. 언리얼 UGC 예제가 프로젝트의 `Mods/` 를 훑는 자리다(기억에 의존).
          *          @p token 은 게임 인스턴스의 준비 훅(`onPrepareContent`)만 가진다 — 넷 세션 · 첫 씬 · 선언한 데이터를 읽은 뒤에 구성을 바꾸는 호출은 컴파일되지 않는다(감사 K-9).
          */
@@ -81,7 +81,7 @@ namespace sw
         /** @brief 세이브 머리의 구성 글을 읽어 지금 구성과 견줍니다(`ModSetDigest::validateSaveCompatible`). 글이 틀렸으면 거절한다. */
         [[nodiscard]] bool validateSaveCompatible( string_view savedText ) const override;
 
-        /** @brief 모드 설치 폴더입니다 — 패키지는 실행 파일 옆 `Mods`, 저장소는 `Test/Mods`(시연 모드는 시나리오 · 테스트 자료). */
+        /** @brief 모드 설치 폴더입니다 — 패키지는 실행 파일 옆 `Mods`, 저장소는 `IntegrationTests/Mods`(시연 모드는 시나리오 · 테스트 자료). */
         static AbsolutePath getInstallFolder();
         /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/pack.py --mods`)가 여기서 베낀다. */
         static AbsolutePath getExportFolder();

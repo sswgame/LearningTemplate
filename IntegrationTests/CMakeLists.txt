@@ -1,7 +1,8 @@
 # ==============================================================================
-# @file Test/CMakeLists.txt
-# @brief CTest 등록만 한다 — 테스트 코드는 여기 없다. 단위 테스트는 기능 폴더 옆 `Tests/`(`SW_TEST_CASE`)에 있고 `App --test` 한 번이 모두 돈다.
-#        시나리오는 `Content/**/automation/*.scenario.xml` 이고 `Test/Scenario/` 가 하나씩 올린다. 형식과 쓰는 법은 Test/README.md.
+# @file IntegrationTests/CMakeLists.txt
+# @brief CTest 항목 등록 · 실행 파일을 띄워 보는 항목의 드라이버 · 픽스처. 단위 테스트 코드는 여기 없다 — 기능 폴더 옆 `Tests/`(`SW_TEST_CASE`)에 있고 `App --test` 한 번이 모두 돈다.
+#        시나리오는 `Content/**/automation/*.scenario.xml` 이고 `IntegrationTests/Scenario/` 가 하나씩 올린다. 형식과 쓰는 법은 IntegrationTests/README.md.
+#        이름: 모듈 옆 `Tests/`(단위)와 갈라 프로세스를 띄워 보는 테스트 자리다(LLVM `test/` 대 `unittests/`, 언리얼 Gauntlet 자리).
 # ==============================================================================
 
 if(NOT TARGET App)
@@ -229,7 +230,7 @@ if(TARGET OnlineLoadBot)
 	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 120)
 
 	# 대상 인자의 짝 규칙 — 전용 서버에 붙는 길(`--server` · `--tls` · `--game`)과 외부 저장소(`--store-config` — PostgreSQL · RESP)는 띄울 서버 · 서비스가 있어야 해
-	# 여기서 돌지 않는다(`Net.*` 항목 몫 — Test/Net). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
+	# 여기서 돌지 않는다(`Net.*` 항목 몫 — IntegrationTests/Net). 대신 그 인자를 읽고 맞지 않는 짝을 거절하는지 본다(종료 코드가 아니라 거절 글로 판정한다).
 	set(load_bot_base_argument --scenario=${load_bot_dir}/Scenarios/smoke.json --load=${load_bot_dir}/Scenarios/smoke.load.xml -unattended)
 	add_test(NAME OnlineLoadBot.RejectsTwoTargets
 		COMMAND $<TARGET_FILE:OnlineLoadBot> ${load_bot_base_argument} --server=127.0.0.1:1 --local-server=0

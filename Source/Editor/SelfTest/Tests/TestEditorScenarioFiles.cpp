@@ -24,7 +24,7 @@ SW_TEST_CASE( EditorScenarioFilesTest, AllEditorScenariosParseResolveAndValidate
     fixed_string<constant::buffer::kMax256> folder;
     formatstring( folder.data(), folder.capacity(), "game/%#/automation/editor", gameName );
     (void)test::validateScenarioFolder( folder, pModuleLoader );
-    // 편집기를 켜고 혼자 도는 데스크톱 시나리오(플레이 중 리로드 — Test/Scenario 가 따로 등록한다)
+    // 편집기를 켜고 혼자 도는 데스크톱 시나리오(플레이 중 리로드 — IntegrationTests/Scenario 가 따로 등록한다)
     formatstring( folder.data(), folder.capacity(), "game/%#/automation/desktop/editor", gameName );
     (void)test::validateScenarioFolder( folder, pModuleLoader );
 }

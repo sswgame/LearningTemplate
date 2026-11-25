@@ -16,7 +16,7 @@ namespace sw::editor
         string _file{};
         uint32 _line{ 0 };
 
-        // 로그 행을 IDE 로 여는 판단과 명령을 ImGui 없이 만듭니다. `Test/EditorTest` 가 테스트합니다.
+        // 로그 행을 IDE 로 여는 판단과 명령을 ImGui 없이 만듭니다. 단위 테스트(`Tests/`) 가 테스트합니다.
         /** @brief IDE 명령 템플릿에서 파일 경로로 치환되는 자리 표시자입니다. */
         static constexpr const utf8* kFilePlaceholder = "{file}";
         /** @brief IDE 명령 템플릿에서 줄 번호로 치환되는 자리 표시자입니다. */

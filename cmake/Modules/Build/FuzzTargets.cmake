@@ -9,11 +9,11 @@
 # 기본 구현이 아니라 libFuzzer 의 콜백에 묶인다. 빠지면 돌기는 하는데 커버리지가 실행 파일에만 닿는 조용한 결함이라, 스모크 테스트가 `Loaded N modules`
 # (N ≥ 2 — 실행 파일 + 엔진 .so)를 요구한다.
 #
-# 말뭉치: 씨앗은 `Test/Fuzz/Seeds/<이름>/`(커밋, 작은 것 몇 개 — 없으면 구성 오류), 자라는 말뭉치는 `<빌드>/Saved/Fuzz/<이름>/`(커밋하지 않는다).
+# 말뭉치: 씨앗은 `IntegrationTests/Fuzz/Seeds/<이름>/`(커밋, 작은 것 몇 개 — 없으면 구성 오류), 자라는 말뭉치는 `<빌드>/Saved/Fuzz/<이름>/`(커밋하지 않는다).
 # libFuzzer 는 첫 폴더에 새 입력을 쓰므로 자라는 말뭉치를 앞에 둔다 — 씨앗 폴더(소스 트리)를 더럽히지 않는다.
 
 # sw_add_fuzz_target(<이름> SOURCES <소스…> LINK <타깃…> [MODULES <모듈 타깃…>])
-#   MODULES 는 링크하지 않고 엔진 기동의 `ModuleTypes` 단계에서 순서대로 올릴 동적 모듈이다(`SW_FUZZ_MODULES`, Test/Fuzz/FuzzEngineScope.cpp).
+#   MODULES 는 링크하지 않고 엔진 기동의 `ModuleTypes` 단계에서 순서대로 올릴 동적 모듈이다(`SW_FUZZ_MODULES`, IntegrationTests/Fuzz/FuzzEngineScope.cpp).
 #   실행 파일 `Fuzz_<이름>`(`-fsanitize=fuzzer` 링크)과 CTest `Fuzz.<이름>.Smoke` 를 만든다. SW_ENABLE_FUZZING 구성에서만 부른다.
 function(sw_add_fuzz_target FUZZ_NAME)
 	cmake_parse_arguments(PARSE_ARGV 1 fuzz "" "" "SOURCES;LINK;MODULES")
@@ -26,7 +26,7 @@ function(sw_add_fuzz_target FUZZ_NAME)
 	if(fuzz_UNPARSED_ARGUMENTS)
 		message(FATAL_ERROR "[Fuzz] sw_add_fuzz_target(${FUZZ_NAME}) got unknown arguments: ${fuzz_UNPARSED_ARGUMENTS}")
 	endif()
-	set(seed_dir "${CMAKE_SOURCE_DIR}/Test/Fuzz/Seeds/${FUZZ_NAME}")
+	set(seed_dir "${CMAKE_SOURCE_DIR}/IntegrationTests/Fuzz/Seeds/${FUZZ_NAME}")
 	if(NOT IS_DIRECTORY "${seed_dir}")
 		message(FATAL_ERROR "[Fuzz] sw_add_fuzz_target(${FUZZ_NAME}) needs seed inputs in ${seed_dir}")
 	endif()
@@ -42,7 +42,7 @@ function(sw_add_fuzz_target FUZZ_NAME)
 		add_dependencies(${target_name} ${fuzz_MODULES}) # 이름으로 올리므로 링크 의존이 없다 — 실행 파일을 지으면 올릴 모듈도 선다
 	endif()
 	sw_configure_pch(${target_name} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-	set_target_properties(${target_name} PROPERTIES SW_FUZZ_TARGET TRUE FOLDER "Test/Fuzz")
+	set_target_properties(${target_name} PROPERTIES SW_FUZZ_TARGET TRUE FOLDER "IntegrationTests/Fuzz")
 
 	set(corpus_dir "${CMAKE_BINARY_DIR}/Saved/Fuzz/${FUZZ_NAME}")
 	file(MAKE_DIRECTORY "${corpus_dir}")

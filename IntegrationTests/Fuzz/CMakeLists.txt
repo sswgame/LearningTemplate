@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file Test/Fuzz/CMakeLists.txt
+# @file IntegrationTests/Fuzz/CMakeLists.txt
 # @brief 퍼저 타깃 — 신뢰 경계의 파서만(`security-and-hardening`). 프리셋 Linux-Fuzz(SW_ENABLE_FUZZING)에서만 짓는다.
 #        타깃마다 `Fuzz_<이름>` 과 `Fuzz.<이름>.Smoke`(cmake/Modules/Build/FuzzTargets.cmake). 씨앗은 `Seeds/<이름>/`.
 #        찾은 크래시는 바이트를 `Tests/Snapshots/` 에 넣고 단위 테스트 케이스로 남긴다 — 퍼저 없는 구성(Windows 포함)에서 회귀를 본다.
@@ -23,7 +23,7 @@ target_compile_definitions(FuzzSaveHeaderCore PRIVATE "SW_LOG_TAG=\"FuzzSaveHead
 sw_configure_dll_exports(FuzzSaveHeaderCore SHARED MODULE_SHARED)
 sw_configure_pch(FuzzSaveHeaderCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(FuzzSaveHeaderCore PROPERTIES
-	FOLDER "Test/Fuzz"
+	FOLDER "IntegrationTests/Fuzz"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
 	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
 )

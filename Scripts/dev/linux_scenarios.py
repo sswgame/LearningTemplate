@@ -17,7 +17,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
   all [--record]         build → (Release 단위 ‖ 서버 빌드 · 기동 · 단위) → 모든 체인(병렬, Release · Vulkan). 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다(어디서 지든 LINUX_FAILED)
   sanitize [address|thread]  새니타이저 Debug(프리셋 Linux-Debug-ASan · Linux-Debug-TSan)로 App 을 짓고 단위 테스트를 돈다. address 는 끝에 퍼저를 타깃마다 30 초. 끝 줄 SANITIZE_OK=<종류>
-  fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, Test/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 Test/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
+  fuzz [이름…] [--minutes N]  퍼저(프리셋 Linux-Fuzz, IntegrationTests/Fuzz)를 짓고 타깃마다 N 분(기본 0.5) 돌린다. 이름이 없으면 IntegrationTests/Fuzz/Seeds 의 모든 타깃. 끝 줄 FUZZ_OK
 """
 import argparse
 import concurrent.futures
@@ -605,10 +605,10 @@ def evaluate_fuzz_log(text):
 
 
 def run_fuzz(names, seconds, sync=True):
-    """Linux-Fuzz 를 짓고 타깃마다 seconds 초 돌린다. 자라는 말뭉치는 빌드 폴더의 Saved/Fuzz/<이름>(커밋하지 않는다), 씨앗은 Test/Fuzz/Seeds/<이름>."""
+    """Linux-Fuzz 를 짓고 타깃마다 seconds 초 돌린다. 자라는 말뭉치는 빌드 폴더의 Saved/Fuzz/<이름>(커밋하지 않는다), 씨앗은 IntegrationTests/Fuzz/Seeds/<이름>."""
     if sync:
         sync_clone()
-    seeds_root = pathlib.Path(f'{CLONE}/Test/Fuzz/Seeds')
+    seeds_root = pathlib.Path(f'{CLONE}/IntegrationTests/Fuzz/Seeds')
     names = names or sorted(path.name for path in seeds_root.iterdir() if path.is_dir())
     if configure_and_build('Linux-Fuzz', [f'Fuzz_{name}' for name in names]) != 0:
         return 1, 'FUZZ_FAILED'

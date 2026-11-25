@@ -108,7 +108,7 @@ SHELL_FUNCTION = re.compile(r"^[ \t]*(?:function[ \t]+)?([A-Za-z_]\w*)[ \t]*\(\)
 CMAKE_FUNCTION = re.compile(r"\b(?:function|macro)\s*\(\s*([A-Za-z_]\w*)", re.I)
 CMAKE_OPTION = re.compile(r"\boption\s*\(\s*([A-Za-z_]\w*)", re.I)
 CMAKE_FUNCTION_SHAPE = re.compile(r"sw_[a-z0-9]+(?:_[a-z0-9]+)*")
-CMAKE_OUTSIDE_ROOTS = ("Source", "Test", "ThirdParty")   # cmake/ 밖의 CMake — 함수 꼴만 본다(파일 · 폴더 이름은 그 뿌리의 규칙이 본다)
+CMAKE_OUTSIDE_ROOTS = ("Source", "IntegrationTests", "ThirdParty")   # cmake/ 밖의 CMake — 함수 꼴만 본다(파일 · 폴더 이름은 그 뿌리의 규칙이 본다)
 FOREIGN_CMAKE_PART = "vcpkg-port"                        # 받아 온 vcpkg 포트는 남의 코드다
 
 

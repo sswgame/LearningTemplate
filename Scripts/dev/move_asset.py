@@ -14,7 +14,7 @@
      옮겨도 그대로라 리다이렉트가 필요 없다(유니티 · Godot). 표는 경로를 적던 때의 세이브만 읽는다(C++ `AssetRedirect::readSavedReference`).
   4. 팩 이름 바꾸기(`game/<옛>` → `game/<새>`)면 팩 이름이 든 이름도 함께: 골든 파일(`<Scenario name>.<이름>.<백엔드>…` — `AutomationGoldenUtil::makeGoldenID`)의
      `game.<옛>.` 접두, 글 파일(C++ · 파이썬 · CMake · JSON · XML) 속 시나리오 이름 `game.<옛>.`, 콘텐츠 경로 문자열 `game/<옛>/`, CTest 체인 이름
-     `Scenario.<옛>`(`Test/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 끝나는 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`), 팩 줄기 `game_<옛>`,
+     `Scenario.<옛>`(`IntegrationTests/Scenario/CMakeLists.txt` 가 팩 이름으로 짓는다 — 격리 표 · 로그 이름), 따옴표로 끝나는 도메인 `"game/<옛>"`(게임 프리셋 `_packRoot`), 팩 줄기 `game_<옛>`,
      씬 청크 이름 `scene_<옛>_`, 대소문자 · 구분자가 다른 경로 `Game/<Old>/` · `Game\\<Old>/`(옛 이름의 대소문자 꼴을 새 이름에 옮긴다).
      정확한 접두만 바꾼다(앞 글자가 낱말 글자면 다른 낱말이다) — 일반 낱말 `Empty` 는 건드리지 않는다. 리다이렉트 표는 옛 id 를 적으려고 있어 건너뛴다.
      팩 흡수(`game/<옛>` → `game/<새>/<하위>` — 폐기할 게임을 허브 팩의 미니게임 폴더로)면 콘텐츠 경로 `game/<옛>/` 와 도메인 `"game/<옛>"` 만 새 자리로 바꾸고,

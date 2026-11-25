@@ -4,7 +4,7 @@
  * @details 출시 뒤 첫 판 올림에서 사용자 데이터(세이브)와 저장소 밖 데이터(모드 · 사용자 에셋)를 잃지 않게 한다. 빠진 단계는 오류다 — 옛 판을 그대로 읽거나
  *          기본값으로 채우는 폴백은 없다. 표가 빈 종류는 예전처럼 판이 다르면 거절한다(그 종류에 아직 이관이 없다).
  *          언리얼 `FCustomVersion`(종류마다 판 + Serialize 안의 판 분기)을 분기 대신 등록된 순수 함수 사슬로 둔 자리다 — 단계마다 단위 테스트가
- *          `Test/Fixtures/formats/<종류>/v<n>/` 의 표본을 올려 본다.
+ *          옛 판 표본을 올려 본다(`Tests/TestFormatUpgrade.cpp`).
  */
 #pragma once
 #include "Core/Container/vector.h"
