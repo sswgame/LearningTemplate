@@ -641,12 +641,12 @@ namespace sw
 
     bool FarmGameModeComponent::isNearShippingBin() const
     {
-        return float3::getHorizontalDistance( _playerPosition, _shippingBinPosition ) < _nearDistance;
+        return float3::getHorizontalDistance( _playerPosition, _shippingBinPosition._value ) < _nearDistance;
     }
 
     bool FarmGameModeComponent::isNearShop() const
     {
-        return float3::getHorizontalDistance( _playerPosition, _shopPosition ) < _nearDistance + 0.5f;
+        return float3::getHorizontalDistance( _playerPosition, _shopPosition._value ) < _nearDistance + 0.5f;
     }
 
     const hashed_string& FarmGameModeComponent::getSelectedSeed() const
@@ -672,14 +672,14 @@ namespace sw
         return _handStaminaCost;
     }
 
-    bool FarmGameModeComponent::tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const
+    bool FarmGameModeComponent::tryGetObjectPosition( GameObjectHandle handle, AbsolutePosition& outPosition ) const
     {
         const GameObjectManager* pManager = getObjectManager();
         const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
         const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
         if ( pScene == nullptr )
             return false;
-        outPosition = pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ); // 밭 시뮬레이션은 절대 자리로 돈다
+        outPosition = AbsolutePosition{ pManager->getWorldOrigin().toAbsolute( pScene->getWorldPosition() ) }; // 밭 시뮬레이션은 절대 자리로 돈다
         return true;
     }
 } // namespace sw

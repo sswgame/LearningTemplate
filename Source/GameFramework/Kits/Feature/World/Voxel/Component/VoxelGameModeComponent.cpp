@@ -117,7 +117,7 @@ namespace sw
         return _world.setBlock( coord, block );
     }
 
-    float3 VoxelGameModeComponent::findSpawnPosition() const
+    AbsolutePosition VoxelGameModeComponent::findSpawnPosition() const
     {
         // 가운데에서 시작해 나선으로 찾은, 물이 아닌 첫 땅입니다.
         // 게임이 시작되었다면 카탈로그와 블록 이름은 startGame 이 이미 확인했습니다.
@@ -137,11 +137,15 @@ namespace sw
                     const optional<int32> topY         = _world.findTopSolidY( x, z );
                     const bool            bOpenAirSpot = topY.has_value() && _world.getBlock( x, *topY + 1, z ) != water && _world.getBlock( x, *topY + 1, z ) == kVoxelAirBlock;
                     if ( bOpenAirSpot )
-                        return float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( *topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f };
+                        return AbsolutePosition{
+                            float3{ static_cast<float32>( x ) + 0.5f, static_cast<float32>( *topY + 1 ) + 0.01f, static_cast<float32>( z ) + 0.5f }
+                        };
                 }
             }
         }
-        return float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f };
+        return AbsolutePosition{
+            float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f }
+        };
     }
 
     void VoxelGameModeComponent::serializeGameState( StateIO& io )

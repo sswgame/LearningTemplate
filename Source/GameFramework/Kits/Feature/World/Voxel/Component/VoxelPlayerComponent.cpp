@@ -73,7 +73,7 @@ namespace sw
 
             [[nodiscard]] static bool readWalkedDistance( const VoxelPlayerComponent& player, float64& outValue )
             {
-                const float3 delta = player.getBody().getPosition() - player.getStartPosition();
+                const float3 delta = player.getBody().getPosition() - player.getStartPosition()._value;
                 outValue           = static_cast<float64>( MathUtil::sqrt( delta._x * delta._x + delta._z * delta._z ) );
                 return true;
             }
@@ -168,7 +168,7 @@ namespace sw
         , _soundQueue{}
         , _pendingStateBytes{}
         , _intentSlots{}
-        , _startPosition{ 0.0f, 0.0f, 0.0f }
+        , _startPosition{}
         , _breakProgress{ 0.0f }
         , _placeCooldown{}
         , _brokenCount{ 0 }
@@ -292,7 +292,7 @@ namespace sw
             _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventLand );
         // 월드 밖으로 떨어지면 처음 위치로 되돌립니다.
         if ( _body.getPosition()._y < -10.0f )
-            _body.setPosition( pGameMode->findSpawnPosition() );
+            _body.setPosition( pGameMode->findSpawnPosition()._value );
         pCamera->setEyePosition( getOwner()->getManager()->getWorldOrigin().toLocal( _body.getEyePosition() ) ); // 복셀 월드는 절대 자리다
 
         updateTarget( *pGameMode, *pCamera );
@@ -318,8 +318,8 @@ namespace sw
     void VoxelPlayerComponent::initializeBody( const VoxelGameModeComponent& gameMode )
     {
         _body.setSettings( _bodySettings );
-        _body.setPosition( gameMode.findSpawnPosition() );
-        _startPosition                      = _body.getPosition();
+        _startPosition = gameMode.findSpawnPosition();
+        _body.setPosition( _startPosition._value );
         _bBodyPlaced                        = SW_TRUE;
         GameObject*                 pOwner  = getOwner();
         FirstPersonCameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;

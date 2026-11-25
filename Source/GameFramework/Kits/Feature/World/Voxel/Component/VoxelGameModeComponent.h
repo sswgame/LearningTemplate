@@ -19,6 +19,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -69,7 +70,7 @@ namespace sw
         /** @brief 뷰가 그릴 반경(청크)입니다 — 상주 반경보다 한 칸 안쪽이라 그리는 청크의 이웃은 늘 올라와 있다. */
         int32 getViewChunkRadius() const { return _residentChunkRadius - 1; }
         /** @brief 가운데에서 시작해 나선으로 찾은 첫 땅(물이 아닌 곳)의 위쪽 위치입니다. */
-        float3 findSpawnPosition() const;
+        AbsolutePosition findSpawnPosition() const;
 
     protected:
         /** @brief 시드로 지형을 생성합니다. 블록 카탈로그가 없거나 블록 이름 PROPERTY 가 카탈로그에 없으면 오류를 남기고 false 를 반환합니다. */
